@@ -142,18 +142,31 @@ optional `component` label. Any other field is refused with 422, and a body over
 client has `client_error_client_limit` reports per
 `client_error_window_seconds` (`config/abuse.ts`), then 429 with `Retry-After`.
 
-It works signed in or out. The reporting user and workspace come only from the
-session (the active workspace as a flat route resolves it); a missing or stale
-session reports with neither. The API answers 204 and writes one structured
-`client.error` record on the `api.client_errors` logger (a `warning` for
-`chunk_load`, an `error` otherwise) after removing query strings and fragments
-from any URL in the message and stack. Cloud Logging collects it; nothing is
-stored in PostgreSQL and nothing is sent to a third party.
+It works signed in or out. The reporting user comes only from the session; a
+missing or stale session reports no user. The workspace is the
+`X-Workspace-Id` the browser sends, as on any other call, recorded only when
+the session's membership resolution accepts it: a request without the header,
+or naming a workspace the user is not a member of, records no workspace and
+never falls back to the user's earliest one. The API answers 204 and writes one
+structured `client.error` record on the `api.client_errors` logger (a `warning`
+for `chunk_load`, an `error` otherwise). Before logging, it removes the query
+string and fragment from every URL in the message and stack: absolute,
+root-relative (`/projects?q=…`) and relative (`../report?token=…`), where a
+word counts as a URL when the part before its `?` or `#` holds a `/` or a
+scheme, or what follows is a `key=value` query. A stack frame keeps its
+`:line:column`. Cloud Logging collects the record; nothing is stored in
+PostgreSQL and nothing is sent to a third party.
 
 `frontend/lib/client-errors.ts` sends the reports: fire-and-forget with
 `keepalive`, one report per error per page load, and at most
-`CLIENT_ERROR_REPORTS_PER_SESSION` (`lib/config/operational.ts`) per tab. The
-callers are `LazyIsland` (which keeps its quiet fallback for a chunk that cannot
-load and hands any other error on to the screen's boundary), `ScreenError` and
-`RouteError`, and the window `error` and `unhandledrejection` listeners the app
-installs once at start.
+`CLIENT_ERROR_REPORTS_PER_SESSION` (`lib/config/operational.ts`) per tab. It
+reads the release at report time from the `<meta name="citeladder-release">`
+the app build writes into `index.html`, so no hashed script chunk changes with
+the commit. The project context hands it the active workspace. The callers are
+`LazyIsland`, `ScreenError` and `RouteError`, and the window `error` and
+`unhandledrejection` listeners the app installs once at start. Every
+`LazyIsland` shows its quiet fallback for a chunk that cannot load, and its
+caller chooses what any other error does: `defects="surface"` (charts,
+execution evidence) hands it to the screen's boundary, and `defects="contain"`
+(the navigation's open-actions count) reports it and renders the fallback in
+place, so shell chrome never takes the shell down.

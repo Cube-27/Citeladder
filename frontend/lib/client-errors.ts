@@ -13,13 +13,18 @@ import {
   type ClientErrorReport,
 } from '@citeladder/contracts/client-errors';
 
-import { API_BASE_URL, CLIENT_ERROR_REPORTS_PER_SESSION } from '@/lib/config/operational';
+import {
+  API_BASE_URL,
+  CLIENT_ERROR_REPORTS_PER_SESSION,
+  RELEASE_META_NAME,
+} from '@/lib/config/operational';
 
 const COUNT_KEY = 'citeladder.client-error-reports';
 const sent = new Set<string>();
 const sentErrors = new WeakSet<object>();
 let memoryCount = 0;
 let listening = false;
+let reportingWorkspace: string | null = null;
 
 /** What browsers say when a lazily imported module (a code chunk) cannot load. */
 const CHUNK_LOAD_MESSAGES = [
@@ -38,9 +43,21 @@ export function isChunkLoadError(error: unknown): boolean {
   );
 }
 
+/** Read at report time from index.html, which the build writes and no chunk hash covers. */
 function releaseId(): string {
-  const value = process.env.PUBLIC_APP_RELEASE;
+  const value = document
+    .querySelector<HTMLMetaElement>(`meta[name="${RELEASE_META_NAME}"]`)
+    ?.getAttribute('content');
   return value && /^[\w.-]{1,64}$/u.test(value) ? value : 'development';
+}
+
+/**
+ * The active workspace, sent as `X-Workspace-Id` the way other API calls send
+ * it. The API records it only when the session is a member; with none, a
+ * report names no workspace.
+ */
+export function setReportingWorkspace(workspaceId: string | null): void {
+  reportingWorkspace = workspaceId;
 }
 
 function clip(text: string, max: number): string {
@@ -103,7 +120,10 @@ export function reportClientError({
     method: 'POST',
     keepalive: true,
     credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(reportingWorkspace ? { 'X-Workspace-Id': reportingWorkspace } : {}),
+    },
     body: JSON.stringify(report),
   }).catch(() => undefined);
 }

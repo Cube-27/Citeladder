@@ -47,14 +47,19 @@ export type ClientErrorReport = z.infer<typeof clientErrorReportSchema>;
 
 /**
  * Text with every URL's query string and fragment removed, since either can
- * carry what a reader searched for or a token a link handed them. A stack
- * frame's trailing `:line:column` stays.
+ * carry what a reader searched for or a token a link handed them. Absolute,
+ * root-relative and relative URLs all count: a word is treated as a URL when
+ * the part before its `?` or `#` holds a `/` (or a scheme), or what follows
+ * is a `key=value` query. A stack frame's trailing `:line:column` stays.
  */
 export function withoutQueryStrings(text: string): string {
-  return text.replaceAll(/\b[a-z][\w+.-]*:\/\/[^\s'"`)]+/giu, (url) => {
-    const position = /(?::\d+){1,2}$/u.exec(url)?.[0] ?? '';
-    const address = url.slice(0, url.length - position.length);
+  return text.replaceAll(/[^\s'"`()<>]+/gu, (word) => {
+    const position = /(?::\d+){1,2}$/u.exec(word)?.[0] ?? '';
+    const address = word.slice(0, word.length - position.length);
     const cut = address.search(/[?#]/u);
-    return cut === -1 ? url : address.slice(0, cut) + position;
+    if (cut === -1) return word;
+    const head = address.slice(0, cut);
+    const urlLike = head.includes('/') || address.slice(cut + 1).includes('=');
+    return urlLike ? head + position : word;
   });
 }

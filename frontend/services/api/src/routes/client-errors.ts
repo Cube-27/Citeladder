@@ -21,18 +21,23 @@ import { getLogger } from '../logging.ts';
 import { definePostRoute } from './define.ts';
 
 /**
- * The reporting user and active workspace, read the way an ordinary route
- * reads them. A signed-out, stale or workspace-less session reports with
- * whatever it proved: the user without a workspace, or nobody.
+ * The reporting user and, when the request names one in `X-Workspace-Id`,
+ * that workspace once the session's membership resolution accepts it. A
+ * request naming none records none: it never falls back to the user's
+ * earliest workspace. A signed-out or stale session, or a workspace the user
+ * is not a member of, reports with whatever was proved: the user alone, or
+ * nobody.
  */
 async function reporter(c: Context<AppEnv>, config: ServiceConfig, db: Database) {
   const seen: { workspaceId: string | null } = { workspaceId: null };
+  const named = c.req.header('x-workspace-id') !== undefined;
   try {
     await sessionUser(
       config,
       db,
-      activeWorkspaceMembership(),
+      named ? activeWorkspaceMembership() : undefined,
     )(c, () => {
+      if (!named) return Promise.resolve();
       seen.workspaceId = c.get('workspace').workspaceId;
       return Promise.resolve();
     });

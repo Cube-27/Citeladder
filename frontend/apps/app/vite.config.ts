@@ -6,6 +6,7 @@ import { defineConfig, type ViteUserConfig, loadEnv } from 'vite-plus';
 import { createServerProxy } from './server-proxy.ts';
 import { publicApiOrigin, publicOrigins } from '../../lib/config/public-origins.ts';
 import { TURNSTILE_TEST_SITE_KEY } from '../../lib/config/turnstile.ts';
+import { RELEASE_META_NAME } from '../../lib/config/operational.ts';
 
 const appRoot = fileURLToPath(new URL('.', import.meta.url));
 const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
@@ -27,6 +28,12 @@ function turnstileSiteKey(
       environment.PUBLIC_TURNSTILE_SITE_KEY ||
       TURNSTILE_TEST_SITE_KEY,
   );
+}
+
+/** The build's commit, when CI names one; the reporter treats absence as `development`. */
+function releaseId(): string {
+  const value = process.env.PUBLIC_APP_RELEASE || process.env.GITHUB_SHA || '';
+  return /^[\w.-]{1,64}$/u.test(value) ? value : '';
 }
 
 // Explicit return type: without it, tsc compares the inferred literal against
@@ -78,6 +85,24 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
           );
         },
       },
+      {
+        // The commit error reports name (lib/client-errors.ts), written into the
+        // unhashed index.html rather than a script chunk: a value in a chunk would
+        // change that chunk's hash, and the boot cache with it, on every deploy.
+        name: 'citeladder:release-meta',
+        transformIndexHtml() {
+          const release = releaseId();
+          return release
+            ? [
+                {
+                  tag: 'meta',
+                  attrs: { name: RELEASE_META_NAME, content: release },
+                  injectTo: 'head',
+                },
+              ]
+            : [];
+        },
+      },
     ],
     define: {
       'process.env.NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS': publicValue(
@@ -99,10 +124,6 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
         process.env.PUBLIC_DOCS_ORIGIN ?? environment.PUBLIC_DOCS_ORIGIN ?? '',
       ),
       'process.env.LOCAL_COMPOSE_BUILD': JSON.stringify(process.env.LOCAL_COMPOSE_BUILD ?? ''),
-      // Optional: the commit an error report names; empty reports as `development`.
-      'process.env.PUBLIC_APP_RELEASE': JSON.stringify(
-        process.env.PUBLIC_APP_RELEASE ?? process.env.GITHUB_SHA ?? '',
-      ),
       // Sign-up and email-link forms; workers-app-deploy.yml names the real key.
       'process.env.PUBLIC_TURNSTILE_SITE_KEY': turnstileSiteKey(
         command === 'serve',

@@ -105,6 +105,12 @@ export const LOADING_INDICATOR_DELAY_MS = 300;
  */
 export const CLIENT_ERROR_REPORTS_PER_SESSION = 10;
 
+/**
+ * The `<meta>` the app build writes into index.html with the commit it was
+ * built from; error reports read it so no hashed chunk depends on the commit.
+ */
+export const RELEASE_META_NAME = 'citeladder-release';
+
 // Evidence request/display bounds.
 export const EVIDENCE_LIMIT = 100;
 export const FANOUT_SEARCH_DEBOUNCE_MS = 300;

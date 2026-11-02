@@ -55,6 +55,7 @@ describe('Lazy island', () => {
         <h2>Source usage</h2>
         <LazyIsland
           label="chart"
+          defects="surface"
           loading={<p>Loading chart</p>}
           failed={<IslandUnavailable message="Couldn't load chart." />}
         >
@@ -88,7 +89,11 @@ describe('Lazy island', () => {
     }
     const tree = () => (
       <ScreenBoundary>
-        <LazyIsland label="chart" failed={<IslandUnavailable message="Couldn't load chart." />}>
+        <LazyIsland
+          label="chart"
+          defects="surface"
+          failed={<IslandUnavailable message="Couldn't load chart." />}
+        >
           <BrokenPlot />
         </LazyIsland>
       </ScreenBoundary>

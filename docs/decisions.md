@@ -452,11 +452,13 @@ error, a route error, an error nothing caught) to a small same-origin endpoint,
 which writes one structured log line that Cloud Logging collects. There is no
 new table and no third-party error service. A report carries the error, a
 truncated stack, the screen's path without its query string, the build and an
-optional component label; the user and workspace come only from the session.
+optional component label. The user comes only from the session, and the
+workspace only when the session is a member of the one the request names.
 Reports are rate-limited per client, sent once per error per page load and
-capped per tab. A lazy piece's quiet "Couldn't load" fallback now covers only a
-chunk that cannot load; any other error goes to the screen's error boundary,
-so a chart handed the wrong data shape no longer hides as "Couldn't load chart."
+capped per tab. A chart's or evidence panel's quiet "Couldn't load" fallback now
+covers only a chunk that cannot load; any other error goes to the screen's
+error boundary, so a chart handed the wrong data shape no longer hides as
+"Couldn't load chart."
 
 Source: owner, 2 November 2026, approving the proposed client error reporting
 and the AI Traffic export change with "ok proceed and include the two items".

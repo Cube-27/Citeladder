@@ -96,6 +96,37 @@ describe('client error sink', () => {
     ]);
   });
 
+  it('records a workspace only when the session is a member of the one the request names', async () => {
+    const cookie = `${config.session.cookieName}=${await sessionToken({ sub: userId, ver: 0 })}`;
+    const stranger = await fixtures.user();
+    const foreign = await fixtures.ownedWorkspace(stranger);
+    const reporters = [];
+    for (const headers of [{ cookie }, { cookie, 'x-workspace-id': foreign }]) {
+      const result = await send(report, headers);
+      expect(result.status).toBe(204);
+      reporters.push(result.records.map((r) => [r.user_id, r.workspace_id]));
+    }
+    // No header never falls back to the user's own workspace; a foreign one is never trusted.
+    expect(reporters).toEqual([[[userId, null]], [[userId, null]]]);
+  });
+
+  it('strips query strings and fragments from absolute, root-relative and relative URLs', async () => {
+    const result = await send({
+      ...report,
+      message:
+        'Loading /projects?search=private#top and ../report?token=abc failed. Was item #3 ok?',
+      stack:
+        'Error\n    at x (/app-assets/a.js?v=2:3:9)\n    at y@screens/b.js#frag:4\n    at z (https://h.test/c.js?q=1:5:6)',
+    });
+    expect(result.records).toEqual([
+      expect.objectContaining({
+        message: 'Loading /projects and ../report failed. Was item #3 ok?',
+        stack:
+          'Error\n    at x (/app-assets/a.js:3:9)\n    at y@screens/b.js:4\n    at z (https://h.test/c.js:5:6)',
+      }),
+    ]);
+  });
+
   it('refuses reporter fields, unknown kinds, query strings and oversized fields', async () => {
     const refused = [
       { ...report, user_id: randomUUID() },

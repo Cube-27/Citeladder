@@ -305,7 +305,7 @@ interaction recipes live only in [`design.md`](design.md).
 | Record tables: header, toolbar, rows, pager, states | `frontend/components/ui/data-table.tsx` (`DataTable`) |
 | Screen templates (bands, band gaps, detail split) | `frontend/components/layout/page-shell.tsx` (`ListScreen`, `DetailScreen`) |
 | Router-level not-found and render-failure screens | `frontend/apps/app/src/route-error.tsx` |
-| Lazy piece in held space: chunk-failure fallback, other errors to the screen | `frontend/components/ui/lazy-island.tsx` (`LazyIsland`) |
+| Lazy piece in held space: chunk-failure fallback; other errors surfaced to the screen or contained, as the caller chooses | `frontend/components/ui/lazy-island.tsx` (`LazyIsland`) |
 | Browser error reports to the API's sink | `frontend/lib/client-errors.ts` ([contract](api-error-contract.md#6-browser-error-reports)) |
 | Recoverable persisted-read failure | `frontend/components/ui/read-error.tsx`; domain owners supply the exact read and decide whether cached content remains usable |
 | Select, Search field, Tabs | `frontend/components/ui/select.tsx`, `frontend/components/ui/search-field.tsx`, `frontend/components/ui/tabs.tsx` |
