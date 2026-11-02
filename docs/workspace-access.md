@@ -237,6 +237,10 @@ geometry; only a confirmed 401 clears session state and redirects to sign-in.
 directly. Otherwise explicit workspace selection wins, then session/device
 selection, then the first membership. Device storage is convenience, never
 authorization. Conflicting project/workspace URL parameters are rejected.
+A cold load of a project address asks the remembered workspace's project list
+first; a listed project needs no separate detail read, and any other project is
+still authorized by its own detail read. Every project list seeds the details
+of the projects it returns.
 
 Project lists, provider state, usage and entitlements carry workspace identity
 in both query key and request. Late responses cannot answer for a workspace
