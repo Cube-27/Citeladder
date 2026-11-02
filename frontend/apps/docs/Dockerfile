@@ -1,6 +1,6 @@
 # Node 26 bookworm-slim. The tag keeps Dependabot's digest updates on this
 # image family; a bare digest let it pick the full `node` image.
-FROM node:26-bookworm-slim@sha256:298992629d69bbd5b2b03ad57094d8e4fcb3a8eeb7c4e25d29de656519568913 AS dependencies
+FROM node:26-bookworm-slim@sha256:bc0a2afd3b74ce12222fc8bab99271e66257f021078f5f4a5d687a77d280c1d9 AS dependencies
 
 ENV PNPM_HOME=/pnpm
 ENV PATH="${PNPM_HOME}:${PATH}"
@@ -19,7 +19,7 @@ FROM dependencies AS wrangler
 COPY frontend/scripts/copy-wrangler-runtime.mjs ./scripts/
 RUN node scripts/copy-wrangler-runtime.mjs /wrangler
 
-FROM node:26-bookworm-slim@sha256:298992629d69bbd5b2b03ad57094d8e4fcb3a8eeb7c4e25d29de656519568913 AS builder
+FROM node:26-bookworm-slim@sha256:bc0a2afd3b74ce12222fc8bab99271e66257f021078f5f4a5d687a77d280c1d9 AS builder
 
 ARG PUBLIC_DOCS_ORIGIN
 ARG PUBLIC_WEBSITE_ORIGIN
@@ -38,7 +38,7 @@ RUN pnpm build:docs
 
 # Local Compose only: run the same static-assets Worker production deploys
 # (apps/docs/wrangler.jsonc) over the built output.
-FROM node:26-bookworm-slim@sha256:298992629d69bbd5b2b03ad57094d8e4fcb3a8eeb7c4e25d29de656519568913 AS runtime
+FROM node:26-bookworm-slim@sha256:bc0a2afd3b74ce12222fc8bab99271e66257f021078f5f4a5d687a77d280c1d9 AS runtime
 
 ENV NODE_ENV=production     HOME=/tmp     WRANGLER_SEND_METRICS=false
 WORKDIR /app
