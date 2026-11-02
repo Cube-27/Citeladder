@@ -181,6 +181,58 @@ type Summary = {
   rows: GroupRow[];
 };
 
+/** The keyset condition past the cursor's row, in the page's direction. */
+function keysetAfter(position: string[] | null, backwards: boolean) {
+  if (!position) return sql<boolean>`true`;
+  const responses = Number(position[1]);
+  return backwards
+    ? sql<boolean>`responses > ${responses} or (responses = ${responses} and key collate "C" < ${position[2]})`
+    : sql<boolean>`responses < ${responses} or (responses = ${responses} and key collate "C" > ${position[2]})`;
+}
+
+const present = (values: (string | null)[]) =>
+  values.filter((value): value is string => Boolean(value)).sort(compareText);
+
+/** One grouped row as the table serves it, before page facts and brands fill in. */
+function sourceItem(
+  row: GroupRow,
+  totals: { pages: boolean; responses: number; prompts: number; citations: number },
+): SourceRow {
+  const { pages } = totals;
+  return {
+    key: row.key,
+    retrieved: null,
+    url_hash: pages ? row.url_hash : null,
+    // "Last seen" is asked of a page, never of a publisher.
+    last_cited_at: pages ? wireUtcOrNull(row.last_cited_at) : null,
+    responses: row.responses,
+    prompts: row.prompts,
+    annotations: row.annotations,
+    urls: row.urls,
+    response_rate: ratio(row.responses, totals.responses),
+    prompt_coverage: ratio(row.prompts, totals.prompts),
+    // How much of a publisher the engines reached; a page is one URL.
+    retrieval_rate: pages ? null : ratio(row.urls, totals.responses),
+    citation_share: ratio(row.annotations, totals.citations),
+    // Per answer the source was retrieved in, never per answer selected.
+    citation_rate: ratio(row.annotations, row.responses),
+    ownership: present(row.ownership),
+    categories: present(row.categories),
+    taxonomy_versions: present(row.versions),
+    category_unavailable: row.categories.includes(null),
+    response_delta: null,
+    inspection_state: null,
+    opportunity_id: null,
+    standing: null,
+    action_id: null,
+    title: null,
+    page_format: null,
+    page_format_method: null,
+    mentions: 0,
+    brands: [],
+  };
+}
+
 export async function getVisibilitySources(
   db: Database,
   requested: RunSelection,
@@ -209,11 +261,7 @@ export async function getVisibilitySources(
   const backwards = position?.[3] === 'prev';
   const order = backwards ? sql`asc` : sql`desc`;
   const keyOrder = backwards ? sql`desc` : sql`asc`;
-  let after = sql<boolean>`true`;
-  if (position)
-    after = backwards
-      ? sql<boolean>`responses > ${Number(position[1])} or (responses = ${Number(position[1])} and key collate "C" < ${position[2]})`
-      : sql<boolean>`responses < ${Number(position[1])} or (responses = ${Number(position[1])} and key collate "C" > ${position[2]})`;
+  const after = keysetAfter(position, backwards);
   // One round trip: the rates' denominator, the runs without persisted
   // facts, the totals and the page of rows. A key's distinct answers, prompts
   // and URLs are counted over the union of its rows' arrays, never summed.
@@ -268,50 +316,14 @@ export async function getVisibilitySources(
   if (!summary) throw new Error('The sources summary returned no row');
   if (summary.missing)
     throw new AnalysisNotFoundError('Sources not computed for a selected run', 'metrics_pending');
-  const responses = summary.responses;
-  const prompts = summary.prompts;
-  const total = summary.total;
-  const totalCitations = summary.citations;
+  const { responses, prompts, total, citations: totalCitations } = summary;
   const rows = summary.rows.slice(0, query.limit);
   if (backwards) rows.reverse();
   const last = rows.at(-1);
   const first = rows[0];
-  const items: SourceRow[] = rows.map((row) => {
-    const present = (values: (string | null)[]) =>
-      values.filter((value): value is string => Boolean(value)).sort(compareText);
-    return {
-      key: row.key,
-      retrieved: null,
-      url_hash: pages ? row.url_hash : null,
-      // "Last seen" is asked of a page, never of a publisher.
-      last_cited_at: pages ? wireUtcOrNull(row.last_cited_at) : null,
-      responses: row.responses,
-      prompts: row.prompts,
-      annotations: row.annotations,
-      urls: row.urls,
-      response_rate: ratio(row.responses, responses),
-      prompt_coverage: ratio(row.prompts, prompts),
-      // How much of a publisher the engines reached; a page is one URL.
-      retrieval_rate: pages ? null : ratio(row.urls, responses),
-      citation_share: ratio(row.annotations, totalCitations),
-      // Per answer the source was retrieved in, never per answer selected.
-      citation_rate: ratio(row.annotations, row.responses),
-      ownership: present(row.ownership),
-      categories: present(row.categories),
-      taxonomy_versions: present(row.versions),
-      category_unavailable: row.categories.includes(null),
-      response_delta: null,
-      inspection_state: null,
-      opportunity_id: null,
-      standing: null,
-      action_id: null,
-      title: null,
-      page_format: null,
-      page_format_method: null,
-      mentions: 0,
-      brands: [],
-    };
-  });
+  const items = rows.map((row) =>
+    sourceItem(row, { pages, responses, prompts, citations: totalCitations }),
+  );
   // Each step fills its own fields of the loaded rows, so they run together.
   const [, , retrieval] = await Promise.all([
     attachPageLinks(db, selection, items),

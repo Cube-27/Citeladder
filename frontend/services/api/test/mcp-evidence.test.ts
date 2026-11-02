@@ -139,6 +139,7 @@ it('pins the Visibility review to canonical measures and source-to-answer eviden
     answerText: 'Acme retained answer',
     analysis: { citations: [{ url: 'https://publisher.example/a', domain: 'publisher.example' }] },
   });
+  await fixtures.sourceAggregates(tenant, auditId);
   const rendered = await read('render_visibility', { view: 'overview' });
   const handoff = new URL((rendered.links as { application: string }).application);
   expect([handoff.pathname, handoff.searchParams.get('project')]).toEqual([
