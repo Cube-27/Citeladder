@@ -2,10 +2,10 @@
 
 import { useRef, useState } from 'react';
 
+import { useAutoplay } from '@/lib/accessibility/use-autoplay';
 import { cycled } from '@/lib/utils';
 
 import { EngineLogo, type OfficialEngineKey } from '../primitives/engine-logo';
-import { useAutoplay } from './use-autoplay';
 
 const ENGINES = [
   ['openai', 'ChatGPT'],

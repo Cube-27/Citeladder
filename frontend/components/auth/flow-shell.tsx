@@ -19,7 +19,6 @@ export function FlowShell({
   steps,
   currentStep = 0,
   actions,
-  footer,
   exitHref,
   trailing,
   mainLabel,
@@ -30,7 +29,6 @@ export function FlowShell({
   steps?: readonly FlowStep[];
   currentStep?: number;
   actions?: ReactNode;
-  footer?: ReactNode;
   exitHref?: string;
   /**
    * The flow bar's right-hand slot, when the caller owns something better than
@@ -40,7 +38,7 @@ export function FlowShell({
   trailing?: ReactNode;
   mainLabel: string;
   align?: 'start' | 'center';
-  measure?: 'default' | 'wide' | 'auth';
+  measure?: 'default' | 'wide';
 }>) {
   return (
     <div
@@ -59,7 +57,7 @@ export function FlowShell({
           {children}
         </div>
       </main>
-      {actions ?? (footer ? <footer className="flow-footer">{footer}</footer> : null)}
+      {actions ?? null}
     </div>
   );
 }

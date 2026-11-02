@@ -325,10 +325,10 @@
      the same 45rem as every other step, which is why it scrolled for a page and
      a half with both margins empty. */
   --flow-measure-wide: 64rem;
-  --flow-auth-measure: 27.5rem;
-  /* Account access splits one sheet into the form column and a brand panel. */
-  --flow-auth-form-column: 30rem;
-  --flow-auth-split-measure: 62rem;
+  /* Account access: the form column's width, and the showcase panel's inset
+     from the viewport edge. */
+  --flow-auth-measure: 25rem;
+  --auth-showcase-inset: 0.75rem;
   --flow-gutter: 1.5rem;
   --flow-header-gap: 2.5rem;
   --flow-block: 2rem;
@@ -757,66 +757,214 @@
   width: min(100%, var(--flow-measure-wide));
 }
 
-/* Auth has no step list and one short form, so its sheet is narrower than the
-   onboarding measure. It is still the SAME sheet: the auth layout used to wrap
-   its children in a second surface inside this one, which is how login ended up
-   as a white card sitting on a white card. */
-/* Below the split breakpoint the sheet is the form alone; from it up, the same
-   sheet carries the form column and a calm brand panel side by side. */
-.flow-content[data-flow-measure='auth'] {
-  width: min(100%, var(--flow-auth-measure));
-  padding: 0;
+/* Account access (sign-in, sign-up and the mailbox screens) spans the
+   viewport: the logo and form in a roomy column on white, and from 900px a
+   showcase panel on a light grained field beside it. Below that the panel
+   drops away and the form has the width. The document scrolls, so a tall form
+   on a short laptop never squeezes; the panel stays pinned beside it. */
+.auth-split {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 100dvh;
+}
+
+/* The form sits on plain white: the flow stage's lattice stays off it, and
+   the root's reserved scrollbar track takes the page's paper, not the ground. */
+.auth-split::before {
+  display: none;
+}
+
+:root:has(.auth-split) {
+  background: var(--color-panel);
+}
+
+.auth-split-main {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 100dvh;
+  padding-inline: var(--flow-gutter);
+}
+
+.auth-split-content {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  padding-block: var(--flow-header-gap) var(--flow-block);
 }
 
 .auth-split-form {
-  min-width: 0;
-  padding: var(--flow-block) var(--flow-gutter);
+  display: grid;
+  gap: var(--flow-header-gap);
+  width: min(100%, var(--flow-auth-measure));
 }
 
-.auth-brand-panel {
+.auth-split-footer {
+  padding-block: var(--flow-answer);
+}
+
+.auth-showcase {
   display: none;
 }
 
 @media (min-width: 900px) {
-  .flow-content[data-flow-measure='auth'] {
+  /* The showcase takes slightly more than half, so its pictures stay legible
+     at the owner's 982px desktop. */
+  .auth-split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  }
+
+  .auth-showcase {
+    position: sticky;
+    top: 0;
     display: grid;
-    grid-template-columns: minmax(0, var(--flow-auth-form-column)) minmax(0, 1fr);
-    width: min(100%, var(--flow-auth-split-measure));
-    overflow: clip;
-  }
-
-  .auth-split-form {
-    align-self: center;
-    padding: var(--flow-header-gap);
-  }
-
-  .auth-brand-panel {
-    position: relative;
-    isolation: isolate;
-    display: grid;
-    align-content: center;
-    gap: var(--flow-header-gap);
-    padding: var(--flow-header-gap);
-    background: var(--color-field-mint);
-    overflow: clip;
-  }
-
-  /* The shared stage lattice, masked away from the tagline. */
-  .auth-brand-panel::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background: var(--lattice);
-    mask-image: radial-gradient(90% 70% at 70% 80%, black, transparent);
-    opacity: 0.6;
+    height: 100dvh;
+    padding: var(--auth-showcase-inset);
   }
 }
 
-.auth-brand-tagline {
+/* A light mint field washed with lime and accent tints, under fine grain
+   (owner, 2026-11-02: the one gradient on account access). */
+.auth-showcase-field {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  align-content: center;
+  gap: var(--flow-block);
+  min-height: 0;
+  padding: var(--flow-block);
+  overflow: clip;
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(80% 60% at 100% 0%, var(--color-field-lime), transparent 70%),
+    radial-gradient(70% 60% at 0% 100%, var(--color-accent-soft), transparent 75%),
+    var(--color-field-mint);
+}
+
+.auth-showcase-field::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--grain);
+  opacity: 0.18;
+}
+
+/* Every slide shares one grid cell, so the stage and copy keep the largest
+   slide's footprint and nothing moves between slides. */
+.auth-showcase-slides {
+  display: grid;
+}
+
+.auth-showcase-slide {
+  grid-area: 1 / 1;
+  display: grid;
+  justify-items: center;
+  gap: var(--flow-block);
+  opacity: 0;
+  visibility: hidden;
+  /* Visibility is discrete: it turns on as a slide starts to fade in and off
+     only once it has faded out, so hidden slides leave the tab order. */
+  transition:
+    opacity var(--motion-slow) var(--ease-standard),
+    visibility var(--motion-slow) var(--ease-standard);
+}
+
+.auth-showcase-slide[data-current='true'] {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* A fixed stage: every slide's pictures are placed inside the same box. */
+.auth-showcase-stage {
+  position: relative;
+  width: min(100%, 36rem);
+  aspect-ratio: 5 / 3;
+}
+
+/* The soft round stage under the pictures, carrying the shared lattice. */
+.auth-showcase-stage::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: -1;
+  width: 96%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-full);
+  background: var(--lattice), radial-gradient(closest-side, var(--color-panel) 40%, transparent);
+  mask-image: radial-gradient(closest-side, black 60%, transparent);
+}
+
+.auth-shot {
+  position: absolute;
+  display: block;
+}
+
+.auth-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-overlay);
+}
+
+.auth-shot[data-shot='accent'] {
+  z-index: 1;
+}
+
+.auth-shot[data-shot='accent'] img {
+  border-radius: var(--radius-card);
+}
+
+/* Each slide's window and floating card, placed in the shared stage. */
+[data-slide='mcp'] [data-shot='main'] {
+  top: 0;
+  right: 0;
+  width: 82%;
+}
+
+[data-slide='mcp'] [data-shot='accent'] {
+  bottom: 0;
+  left: 0;
+  width: 88%;
+}
+
+[data-slide='search'] [data-shot='main'] {
+  top: 7%;
+  left: 0;
+  width: 70%;
+}
+
+[data-slide='search'] [data-shot='accent'] {
+  top: 45%;
+  right: 0;
+  width: 40%;
+}
+
+[data-slide='site-health'] [data-shot='main'] {
+  top: 22%;
+  left: 3%;
+  width: 94%;
+}
+
+[data-slide='site-health'] [data-shot='accent'] {
+  top: 7%;
+  right: 0;
+  width: 30%;
+}
+
+.auth-showcase-copy {
+  display: grid;
+  gap: var(--flow-stack);
+  max-width: 26rem;
+  text-align: center;
+}
+
+.auth-showcase-caption {
   margin: 0;
-  max-width: 18ch;
   font-family: var(--font-display);
   font-size: var(--text-2xl);
   line-height: var(--text-2xl--line-height);
@@ -826,153 +974,63 @@
   text-wrap: balance;
 }
 
-/* An illustrative answer with one cited source, then a rising citation share.
-   Pure shape: it carries no claims, so it is hidden from assistive tech. */
-.auth-brand-scene {
-  display: grid;
-  gap: var(--flow-answer);
+.auth-showcase-line {
+  margin: 0;
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
+  color: var(--color-secondary);
+  text-wrap: pretty;
 }
 
-.auth-brand-card {
-  display: grid;
-  gap: 0.75rem;
-  width: min(100%, 20rem);
-  padding: 1rem;
-  border-radius: var(--radius-card);
-  background: var(--color-panel);
-}
-
-.auth-brand-dots,
-.auth-brand-sources {
+.auth-showcase-controls {
   display: flex;
-  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: var(--flow-stack);
 }
 
-.auth-brand-dots span {
+.auth-showcase-dots {
+  display: flex;
+}
+
+/* A fixed 24px target per dot: the current one only widens inside it. */
+.auth-showcase-dot,
+.auth-showcase-toggle {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-full);
+}
+
+.auth-showcase-dot span {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: var(--radius-full);
-  background: var(--color-ink-faint);
+  background: var(--color-muted);
+  transition:
+    width var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
 }
 
-.auth-brand-line {
-  display: block;
-  height: 0.5rem;
-  border-radius: var(--radius-full);
-  background: var(--color-track);
+.auth-showcase-dot[aria-current='true'] span {
+  width: 1.25rem;
+  background: var(--color-accent-fill);
 }
 
-.auth-brand-line[data-length='long'] {
-  width: 85%;
+.auth-showcase-toggle {
+  color: var(--color-secondary);
+  transition: color var(--motion-fast) var(--ease-standard);
 }
 
-.auth-brand-line[data-length='short'] {
-  width: 55%;
+.auth-showcase-toggle:hover {
+  color: var(--color-foreground);
 }
 
-.auth-brand-sources span {
-  width: 3.5rem;
-  height: 1.25rem;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-full);
-  background: var(--color-track);
-}
-
-.auth-brand-sources span[data-cited='true'] {
-  border-color: var(--color-accent-border);
-  background: var(--color-accent-soft);
-}
-
-.auth-brand-chart {
-  display: flex;
-  align-items: flex-end;
-  justify-self: end;
-  width: min(100%, 12rem);
-  height: 6rem;
-  margin-top: -2rem;
-}
-
-.auth-brand-chart span {
-  flex: 1;
-  border-radius: var(--radius-xs);
-  background: var(--color-track);
-}
-
-.auth-brand-chart span[data-step='1'] {
-  height: 20%;
-}
-
-.auth-brand-chart span[data-step='2'] {
-  height: 35%;
-}
-
-.auth-brand-chart span[data-step='3'] {
-  height: 50%;
-}
-
-.auth-brand-chart span[data-step='4'] {
-  height: 70%;
-  background: var(--color-accent-border);
-}
-
-.auth-brand-chart span[data-step='5'] {
-  height: 100%;
-  background: var(--color-accent);
-}
-
-/* The scene assembles once on arrival: the answer card rises, the cited
-   source lights, then the citation share grows bar by bar. Only `from`
-   frames, so every part rests on its own style. */
-@media (prefers-reduced-motion: no-preference) {
-  .auth-brand-card {
-    animation: auth-brand-rise var(--motion-reveal) var(--ease-standard) both var(--motion-fast);
-  }
-
-  .auth-brand-sources span[data-cited='true'] {
-    animation: auth-brand-light var(--motion-reveal) var(--ease-standard) both
-      calc(var(--motion-stagger) * 6);
-  }
-
-  .auth-brand-chart span {
-    transform-origin: bottom;
-    animation: auth-brand-grow var(--motion-reveal) var(--ease-standard) both
-      calc(var(--motion-stagger) * (6 + var(--auth-bar, 0)));
-  }
-
-  .auth-brand-chart span[data-step='2'] {
-    --auth-bar: 1;
-  }
-
-  .auth-brand-chart span[data-step='3'] {
-    --auth-bar: 2;
-  }
-
-  .auth-brand-chart span[data-step='4'] {
-    --auth-bar: 3;
-  }
-
-  .auth-brand-chart span[data-step='5'] {
-    --auth-bar: 4;
-  }
-}
-
-@keyframes auth-brand-rise {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-}
-
-@keyframes auth-brand-light {
-  from {
-    background: var(--color-track);
-    border-color: var(--color-border-subtle);
-  }
-}
-
-@keyframes auth-brand-grow {
-  from {
-    transform: scaleY(0);
+@media (prefers-reduced-motion: reduce) {
+  .auth-showcase-slide,
+  .auth-showcase-dot span {
+    transition: none;
   }
 }
 
@@ -982,12 +1040,6 @@
    buttons line up with the pane, but it is a row on the ground. */
 .flow-content {
   padding: var(--flow-block) var(--flow-gutter);
-}
-
-.flow-footer {
-  position: relative;
-  z-index: 1;
-  padding: var(--flow-answer) var(--flow-gutter);
 }
 
 .flow-actions {
@@ -1564,30 +1616,6 @@
     --flow-bar-height: 3.5rem;
     --flow-header-gap: 1.5rem;
     --flow-block: 1.5rem;
-  }
-
-  .flow-main[data-flow-measure='auth'] {
-    padding-block: 1rem;
-  }
-
-  .auth-split-form {
-    padding-block: 1rem;
-  }
-
-  .auth-form-shell {
-    gap: 1rem;
-  }
-
-  .auth-form-body {
-    gap: 0.75rem;
-  }
-
-  .auth-email-form {
-    gap: 0.5rem;
-  }
-
-  .auth-form-submit {
-    margin-top: 0.25rem;
   }
 }
 
