@@ -504,7 +504,9 @@ submitted paid search-surface request is bounded by its poll ceiling or recovery
 deadline, never the run cap, since retrieval is free and the query is already
 paid. The worker caches the workspace access check for a short TTL
 (`access_check_ttl_seconds`); the per-task ownership lock is never cached. It
-finalizes an audit only once no task is open. Lease recovery and stuck-audit
+finalizes an audit only once no task is open. The run's metric snapshot also
+records its owned citations (count and exact citation IDs), the persisted fact
+behind the [AI Traffic](ai-traffic.md) Overview figure. Lease recovery and stuck-audit
 repair run in the periodic `audit-maintenance` lane, not in the worker.
 Attempts per task default to the `max_attempts` setting.
 

@@ -20,6 +20,21 @@ leg states, coverage, reasons, bots, AI sources, GA4 quality flags) reach the
 reader only as labels from `lib/ai-traffic/vocabulary.ts`; record IDs are never
 shown.
 
+The Overview citation figure is a persisted per-run fact. In its finalizing
+transaction, [audit finalization](../frontend/services/api/src/analysis/finalization.ts)
+records each run's `owned_citation_count` and the exact `owned_citation_ids`
+(every cohort) on the run's workspace/project-scoped `metric_snapshots` row,
+beside its analyzer version and source analysis/artifact IDs. The read takes
+the fact of each audit scope's newest `completed` run created inside the window
+(a preset or explicit dates, in the reporting timezone) and sums the facts. It
+never counts citation rows. The response is either `measured`, with a count
+(zero included) and each source run's audit ID and analyzer version, or
+`not_available`, with reason `no_completed_run` or `not_computed` (a selected
+run that has no fact). The screen shows `not_available` as "Not available yet",
+never as zero. Explicit dates are arbitrary, so the implementer chose per-run
+facts over per-window projections. Selecting the run is a fixed ordering over
+persisted keys, so the read resolves no ambiguity.
+
 Crawl collection is **available** when ingestion is enabled for the workspace or
 the project already has a source. When it is not, the screen opens on Referrals,
 the Crawlers and Activity tabs, connect buttons and the verification control are
