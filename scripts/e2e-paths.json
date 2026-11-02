@@ -95,6 +95,7 @@
   },
   {
     "sources": [
+      "frontend/apps/app/src/product-routes-actions.tsx",
       "frontend/apps/app/src/product-routes-agent.tsx",
       "frontend/components/agent/**",
       "frontend/lib/agent/**",

@@ -243,6 +243,12 @@ export const siteHealthRoutes = [
           scalar: { kind: 'literal', values: ['defect', 'advisory'] },
           default: 'defect',
         },
+        // Opt-in: embed the first row's detail (`first_issue`) with this many
+        // occurrences, so a list-detail reader's default selection needs no
+        // second request.
+        detail_limit: {
+          scalar: { kind: 'int', ge: 1, le: policy.site_health.reads.page_max_limit },
+        },
       },
     },
     response: siteIssuesPageSchema,
@@ -263,6 +269,7 @@ export const siteHealthRoutes = [
             findingClass: query.finding_class,
           },
           query,
+          query.detail_limit ?? null,
         ),
       ),
   }),
