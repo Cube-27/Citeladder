@@ -14,8 +14,10 @@ Site Health's config-versioned extractor, analyzer and classifier emit generic
 category and PDP facts. The config-versioned Commerce projector creates catalog
 rows from crawled pages only for brands whose confirmed business model, primary
 or secondary, sells a catalog; unknown context fails closed. Any business can
-import a CSV. The catalog read reports whether crawl projection applies, and the
-empty catalog says so instead of telling every business to run a crawl.
+import a CSV. The catalog read reports whether crawl projection is applicable,
+not applicable (a recognized model that sells no catalog) or unknown (no
+recognized model confirmed); the header and the empty catalog say which instead
+of telling every business to run a crawl.
 
 Structured Product price is preferred; when it is absent, a validated visible
 PDP price is retained with its evidence path. The normalized, in-scope declared
@@ -47,7 +49,11 @@ Permanent projection failures (missing source analysis, unreadable facts, no
 usable URL) end the task at once with a specific code instead of retrying.
 
 The header shows projections in flight, then failed or cancelled projections of
-the latest projected crawl only, and polls only while work is in flight. The
+the latest projected crawl only. While work is in flight it polls only the
+projection state, then re-reads the catalog once when that reports nothing in
+flight. The catalog read is navigation: product and category names, memberships
+and counts, never a row's evidence; products are listed first by name up to the
+configured `catalog_product_limit`, beside the full product count. The
 rail renders products beneath every category they belong to, keeps products
 without a category under `Uncategorized`, and keeps catalog search pinned while
 the list scrolls. Categories are ordered by descending product count, then
