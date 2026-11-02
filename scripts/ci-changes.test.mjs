@@ -162,6 +162,15 @@ test('a shared contract change runs every E2E spec', () => {
   assert.equal(classifyPaths(['frontend/lib/api/projects.ts']).e2e, false);
 });
 
+test('a Search Intelligence view change runs its E2E spec', () => {
+  const path = 'frontend/components/search-intelligence/search-intelligence-dataset-view.tsx';
+  assert.equal(classifyPaths([path]).e2e, true);
+  assert.deepEqual(e2eSpecArgs([path]), ['e2e/search-intelligence.spec.ts']);
+  assert.deepEqual(e2eSpecArgs(['frontend/lib/api/search-intelligence.ts']), [
+    'e2e/search-intelligence.spec.ts',
+  ]);
+});
+
 test('Terraform and workflow changes are validated before deploy', () => {
   assert.equal(classifyPaths(['infra/gcp/run.tf']).infra, true);
   assert.equal(classifyPaths(['.github/workflows/compose-smoke.yml']).infra, true);
