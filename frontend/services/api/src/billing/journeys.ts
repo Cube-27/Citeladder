@@ -12,14 +12,12 @@ import { policy } from '../config.ts';
 import { uuidV5 } from '../uuid-v5.ts';
 import { firstOf } from '../lists.ts';
 
-export const claimRequest = z
-  .object({
-    campaign_id: z.uuid(),
-    terms_consent: z.boolean(),
-    data_sharing_consent: z.boolean(),
-    operator_code: z.string().min(16).max(255).nullable().default(null),
-  })
-  .strict();
+export const claimRequest = z.strictObject({
+  campaign_id: z.uuid(),
+  terms_consent: z.boolean(),
+  data_sharing_consent: z.boolean(),
+  operator_code: z.string().min(16).max(255).nullable().default(null),
+});
 
 /** RFC 9562 v5 identity persists across catalog revisions and both stacks. */
 function campaignId(key: string) {

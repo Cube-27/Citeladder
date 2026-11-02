@@ -35,9 +35,9 @@ export function docsArticleJsonLd({
   };
 }
 
+const UPDATED_FORMAT = new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeZone: 'UTC' });
+
 /** The visible form of an article's updated date, in UTC so the build host's zone cannot shift it. */
 export function updatedLabel(updated: string) {
-  return new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeZone: 'UTC' }).format(
-    new Date(`${updated}T00:00:00Z`),
-  );
+  return UPDATED_FORMAT.format(new Date(`${updated}T00:00:00Z`));
 }
