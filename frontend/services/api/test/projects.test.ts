@@ -18,14 +18,69 @@ import { advisoryXactLock } from '../src/db/advisory-lock.ts';
 import { commandCenter } from '../src/projects/command-center.ts';
 import { getVisibility } from '../src/visibility/dashboard.ts';
 import { persistComparisonBaselines } from '../src/visibility/baselines.ts';
+import type { Database } from '../src/db/database.ts';
 import { purgeExpiredTrialProjects } from '../src/projects/trial-purge.ts';
 import { createDiscovery } from '../src/projects/discovery.ts';
 import { discoveryCreate } from '../src/projects/discovery-inputs.ts';
 import { policy } from '../src/config.ts';
 import { billingAccount, grant, prompt, promptSet } from './prompt-fixtures.ts';
 import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
-import { VisibilityFixtures } from './visibility-fixtures.ts';
+import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
+
+/** One frozen ChatGPT-only brand run identity: runs carrying it compare. */
+const comparedConfiguration = {
+  brand_name: 'Acme Corp',
+  brand_aliases: [],
+  owned_domains: ['acme.example'],
+  competitors: [],
+  country_code: 'US',
+  language_code: 'en',
+  benchmark_mode: 'consumer_like',
+  panel_hash: 'panel-1',
+  engine_routes: { chatgpt: { transport_provider: 'test', transport_model: 'test' } },
+  measurement_policy: { retrieval_enabled: true, max_output_tokens: 1000, answer_instruction: '' },
+};
+
+/** A two-answer run's aggregate where `count` answers mention the brand. */
+function mentionAggregate(count: number) {
+  const metrics = {
+    total_completed: 2,
+    brand_mention_count: count,
+    owned_citation_response_count: 0,
+    brand_mention_rate: count / 2,
+    owned_citation_rate: 0,
+    competitor_mention_rate: {},
+    competitor_citation_rate: {},
+    share_of_voice: { mention_counts: { 'Acme Corp': count } },
+    coverage: { requested: 2, failed: 0, not_run: 0 },
+  };
+  return { ...metrics, per_engine: { chatgpt: metrics } };
+}
+
+/** A run's metric snapshot written directly: no baseline is persisted by it. */
+async function rawSnapshot(database: Database, t: Tenant, auditId: string, count: number) {
+  await database
+    .insertInto('metric_snapshots')
+    .values({
+      id: randomUUID(),
+      workspace_id: t.workspaceId,
+      project_id: t.projectId,
+      audit_id: auditId,
+      analyzer_version: 'test',
+      scoring_rule_version: 'test',
+      total_completed: 2,
+      total_failed: 0,
+      visibility_score: 0,
+      metrics: JSON.stringify(mentionAggregate(count)),
+      source_analysis_ids: '[]',
+      source_artifact_ids: '[]',
+      owned_citation_count: 0,
+      owned_citation_ids: '[]',
+      created_at: new Date(),
+    })
+    .execute();
+}
 
 describe('project owner', () => {
   const db = testDatabase();
@@ -618,22 +673,7 @@ describe('project owner', () => {
       .where('id', '=', t.projectId)
       .execute();
     await measurements.brand(t.projectId, 'Acme Corp');
-    const configuration = {
-      brand_name: 'Acme Corp',
-      brand_aliases: [],
-      owned_domains: ['acme.example'],
-      competitors: [],
-      country_code: 'US',
-      language_code: 'en',
-      benchmark_mode: 'consumer_like',
-      panel_hash: 'panel-1',
-      engine_routes: { chatgpt: { transport_provider: 'test', transport_model: 'test' } },
-      measurement_policy: {
-        retrieval_enabled: true,
-        max_output_tokens: 1000,
-        answer_instruction: '',
-      },
-    };
+    const configuration = comparedConfiguration;
     async function measured(
       at: string,
       count: number,
@@ -716,64 +756,16 @@ describe('project owner', () => {
       .where('id', '=', t.projectId)
       .execute();
     await measurements.brand(t.projectId, 'Acme Corp');
-    const configuration = {
-      brand_name: 'Acme Corp',
-      brand_aliases: [],
-      owned_domains: ['acme.example'],
-      competitors: [],
-      country_code: 'US',
-      language_code: 'en',
-      benchmark_mode: 'consumer_like',
-      panel_hash: 'panel-1',
-      engine_routes: { chatgpt: { transport_provider: 'test', transport_model: 'test' } },
-      measurement_policy: {
-        retrieval_enabled: true,
-        max_output_tokens: 1000,
-        answer_instruction: '',
-      },
-    };
-    const aggregate = (count: number) => {
-      const metrics = {
-        total_completed: 2,
-        brand_mention_count: count,
-        owned_citation_response_count: 0,
-        brand_mention_rate: count / 2,
-        owned_citation_rate: 0,
-        competitor_mention_rate: {},
-        competitor_citation_rate: {},
-        share_of_voice: { mention_counts: { 'Acme Corp': count } },
-        coverage: { requested: 2, failed: 0, not_run: 0 },
-      };
-      return { ...metrics, per_engine: { chatgpt: metrics } };
-    };
+    const configuration = comparedConfiguration;
     const run = async (at: string, count: number) => {
       const id = await measurements.audit(t, { completedAt: new Date(at), configuration });
-      await measurements.metricSnapshot(t, id, { metrics: aggregate(count) });
+      await measurements.metricSnapshot(t, id, { metrics: mentionAggregate(count) });
       return id;
     };
     /** A snapshot no finalization wrote: nothing persisted its baseline. */
     const raw = async (at: string, count: number) => {
       const id = await measurements.audit(t, { completedAt: new Date(at), configuration });
-      await db
-        .insertInto('metric_snapshots')
-        .values({
-          id: randomUUID(),
-          workspace_id: t.workspaceId,
-          project_id: t.projectId,
-          audit_id: id,
-          analyzer_version: 'test',
-          scoring_rule_version: 'test',
-          total_completed: 2,
-          total_failed: 0,
-          visibility_score: 0,
-          metrics: JSON.stringify(aggregate(count)),
-          source_analysis_ids: '[]',
-          source_artifact_ids: '[]',
-          owned_citation_count: 0,
-          owned_citation_ids: '[]',
-          created_at: new Date(),
-        })
-        .execute();
+      await rawSnapshot(db, t, id, count);
       return id;
     };
     const visibilityOf = (auditId: string | null) =>
@@ -832,36 +824,7 @@ describe('project owner', () => {
   });
 
   it('two runs finalizing together still name each other, in either commit order', async () => {
-    const configuration = {
-      brand_name: 'Acme Corp',
-      brand_aliases: [],
-      owned_domains: ['acme.example'],
-      competitors: [],
-      country_code: 'US',
-      language_code: 'en',
-      benchmark_mode: 'consumer_like',
-      panel_hash: 'panel-1',
-      engine_routes: { chatgpt: { transport_provider: 'test', transport_model: 'test' } },
-      measurement_policy: {
-        retrieval_enabled: true,
-        max_output_tokens: 1000,
-        answer_instruction: '',
-      },
-    };
-    const aggregate = (count: number) => {
-      const metrics = {
-        total_completed: 2,
-        brand_mention_count: count,
-        owned_citation_response_count: 0,
-        brand_mention_rate: count / 2,
-        owned_citation_rate: 0,
-        competitor_mention_rate: {},
-        competitor_citation_rate: {},
-        share_of_voice: { mention_counts: { 'Acme Corp': count } },
-        coverage: { requested: 2, failed: 0, not_run: 0 },
-      };
-      return { ...metrics, per_engine: { chatgpt: metrics } };
-    };
+    const configuration = comparedConfiguration;
     for (const laterCommitsFirst of [true, false]) {
       const t = await measurements.tenant();
       await measurements.brand(t.projectId, 'Acme Corp');
@@ -869,13 +832,13 @@ describe('project owner', () => {
         completedAt: new Date('2026-04-01T00:00:00Z'),
         configuration,
       });
-      await measurements.metricSnapshot(t, first, { metrics: aggregate(0) });
+      await measurements.metricSnapshot(t, first, { metrics: mentionAggregate(0) });
       const unsettled = { completedAt: null, status: 'analyzing', configuration };
       const earlier = await measurements.audit(t, unsettled);
       const later = await measurements.audit(t, unsettled);
       // One finalization's measured run and baselines, uncommitted until its transaction ends.
       const finalize = async (
-        trx: typeof db,
+        trx: Database,
         { auditId, at, count }: { auditId: string; at: string; count: number },
       ) => {
         await trx
@@ -883,26 +846,7 @@ describe('project owner', () => {
           .set({ status: 'completed', completed_at: new Date(at) })
           .where('id', '=', auditId)
           .execute();
-        await trx
-          .insertInto('metric_snapshots')
-          .values({
-            id: randomUUID(),
-            workspace_id: t.workspaceId,
-            project_id: t.projectId,
-            audit_id: auditId,
-            analyzer_version: 'test',
-            scoring_rule_version: 'test',
-            total_completed: 2,
-            total_failed: 0,
-            visibility_score: 0,
-            metrics: JSON.stringify(aggregate(count)),
-            source_analysis_ids: '[]',
-            source_artifact_ids: '[]',
-            owned_citation_count: 0,
-            owned_citation_ids: '[]',
-            created_at: new Date(),
-          })
-          .execute();
+        await rawSnapshot(trx, t, auditId, count);
         await persistComparisonBaselines(trx, { workspaceId: t.workspaceId, auditId });
       };
       const runs = [
