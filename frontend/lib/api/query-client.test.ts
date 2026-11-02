@@ -95,9 +95,9 @@ describe('retainPreviousDataForScope', () => {
     expect(retainPreviousDataForScope('project-a', previousData, { queryKey: key })).toBe(
       previousData,
     );
-    expect(retainPreviousDataForScope('project-b', previousData, { queryKey: key })).toBe(
-      undefined,
-    );
+    expect(
+      retainPreviousDataForScope('project-b', previousData, { queryKey: key }),
+    ).toBeUndefined();
   });
 });
 

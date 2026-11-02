@@ -444,16 +444,10 @@ type PerceptionParams = Parameters<typeof visibilityApi.getPerception>[1];
  */
 export const visibilityQueries = {
   /**
-   * The selected measurement's projection, or `null` when the selection has no
-   * metrics: no dashboard-ready run yet, a range that pooled none, or a run
-   * whose snapshot is still being written. The server answers those with 404.
-   *
-   * That 404 is a settled answer, so it is cached as `null` rather than as an
-   * error. TanStack treats an errored query as stale whatever its age, so every
-   * mount re-sent it: the route warmup asked, the screen mounted and asked
-   * again for the identical 404, and each Overview widget mount did the same.
-   * A run arriving or finishing invalidates `visibility.all`, which is what
-   * replaces the `null` with the written projection.
+   * The selection's projection, or `null` for the server's 404 "no metrics yet"
+   * (no dashboard-ready run, an empty range, a snapshot still being written).
+   * Cached as an error it was always stale, so every mount re-asked for the
+   * same 404; a run arriving or finishing invalidates `visibility.all` instead.
    */
   project: (workspaceId: string, projectId: string, params: ProjectVisibilityParams) =>
     queryOptions({

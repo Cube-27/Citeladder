@@ -11,6 +11,7 @@ import {
   vi,
 } from 'vite-plus/test';
 
+import { pendingOverviewHandlers, recordedProjectRead } from '@/test/fixtures/overview';
 import { makeSiteCrawl } from '@/test/fixtures/site-health';
 import { mswServer } from '@/test/msw-server';
 import { prefetchRoute } from './route-prefetch';
@@ -91,45 +92,21 @@ describe('prefetchRoute', () => {
   });
 
   it('warms the Overview layout beside the command center, then the reads its widgets make', async () => {
-    const root = `/api/v1/projects/${PROJECT_ID}`;
     const asked: string[] = [];
+    const widgets = [
+      'project_state',
+      'missing_prompts',
+      'visibility_trend',
+      'ai_traffic',
+      'search_console',
+    ] as const;
     mswServer.use(
-      // Never answers: everything else must already have been asked for.
-      http.get(`${root}/command-center`, () => {
-        asked.push('command-center');
-        return new Promise<never>(() => {});
-      }),
-      http.get(`${root}/overview/layout`, () => {
-        asked.push('layout');
-        return HttpResponse.json({
-          widgets: [
-            { key: 'project_state', size: 'half' },
-            { key: 'missing_prompts', size: 'full' },
-            { key: 'visibility_trend', size: 'half' },
-            { key: 'ai_traffic', size: 'half' },
-            { key: 'search_console', size: 'half' },
-          ],
-          version: 0,
-          customized: true,
-          updated_at: null,
-        });
-      }),
-      http.get(`${root}/visibility/prompts`, () => {
-        asked.push('prompts');
-        return HttpResponse.json([]);
-      }),
-      http.get(`${root}/visibility/trends`, ({ request }) => {
-        asked.push('trends ' + new URL(request.url).search);
-        return HttpResponse.json([]);
-      }),
-      http.get(`${root}/ai-traffic/overview`, ({ request }) => {
-        asked.push('traffic ' + new URL(request.url).search);
-        return HttpResponse.json({});
-      }),
-      http.get(`${root}/performance`, () => {
-        asked.push('performance');
-        return HttpResponse.json({});
-      }),
+      // The command center never answers: everything else is asked beside it.
+      ...pendingOverviewHandlers(PROJECT_ID, widgets, asked),
+      recordedProjectRead(PROJECT_ID, 'visibility/prompts', 'prompts', asked, []),
+      recordedProjectRead(PROJECT_ID, 'visibility/trends', 'trends', asked, []),
+      recordedProjectRead(PROJECT_ID, 'ai-traffic/overview', 'traffic', asked, {}),
+      recordedProjectRead(PROJECT_ID, 'performance', 'performance', asked, {}),
     );
 
     prefetchRoute(client, '/projects', PROJECT);
@@ -138,57 +115,40 @@ describe('prefetchRoute', () => {
       expect([...asked].sort()).toEqual([
         'command-center',
         'layout',
-        'performance',
+        'performance?range=last_synced&granularity=day&compare=none',
         'prompts',
-        'traffic ?range=30d',
-        'trends ?cohort=core',
+        'traffic?range=30d',
+        'trends?cohort=core',
       ]),
     );
   });
 
   it('does not ask for a widget read that needs a measured run when there is none', async () => {
-    const root = `/api/v1/projects/${PROJECT_ID}`;
     const asked: string[] = [];
     mswServer.use(
-      http.get(`${root}/command-center`, () => new Promise<never>(() => {})),
-      http.get(`${root}/overview/layout`, () =>
-        HttpResponse.json({
-          widgets: [{ key: 'perception', size: 'half' }],
-          version: 0,
-          customized: true,
-          updated_at: null,
-        }),
-      ),
-      http.get(`${root}/visibility`, () => {
+      ...pendingOverviewHandlers(PROJECT_ID, ['perception'], asked),
+      http.get(`/api/v1/projects/${PROJECT_ID}/visibility`, () => {
         asked.push('visibility');
         return HttpResponse.json(
           { error: { message: 'No visibility metrics available for the selected measurement' } },
           { status: 404 },
         );
       }),
-      http.get(`${root}/visibility/perception`, () => {
-        asked.push('perception');
-        return HttpResponse.json({});
-      }),
+      recordedProjectRead(PROJECT_ID, 'visibility/perception', 'perception', asked, {}),
     );
 
     prefetchRoute(client, '/projects', PROJECT);
 
+    const latest = ['visibility', 'project', PROJECT_ID, 'latest'];
     await vi.waitFor(() =>
       expect(
-        client.getQueryData([
-          'visibility',
-          'project',
-          PROJECT_ID,
-          'latest',
-          { cohort: 'core', selection_mode: 'latest' },
-        ]),
-      ).toBe(null),
+        client.getQueryData([...latest, { cohort: 'core', selection_mode: 'latest' }]),
+      ).toBeNull(),
     );
     await new Promise((resolve) => {
       setTimeout(resolve, 0);
     });
-    expect(asked).toEqual(['visibility']);
+    expect([...asked].sort()).toEqual(['command-center', 'layout', 'visibility']);
   });
 
   it('leaves an already-failed query untouched so a settled error cannot flicker', async () => {

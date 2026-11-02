@@ -117,9 +117,9 @@ export function useSearchPerformance(project: Project) {
  * that already failed stays as it is (see `warmQuery`), and its dependents wait
  * for the widget to retry it.
  */
-async function warmedVisibility(client: QueryClient, project: WidgetProject) {
+function warmedVisibility(client: QueryClient, project: WidgetProject) {
   const options = latestVisibilityQuery(project);
-  if (client.getQueryState(options.queryKey)?.status === 'error') return null;
+  if (client.getQueryState(options.queryKey)?.status === 'error') return Promise.resolve(null);
   return client.ensureQueryData(options).catch(() => null);
 }
 
@@ -173,5 +173,5 @@ export async function warmOverviewWidgets(
   project: WidgetProject,
   widgets: readonly Pick<OverviewWidget, 'key'>[],
 ): Promise<void> {
-  await Promise.all(widgets.map(({ key }) => WIDGET_WARMUPS[key]?.(client, project)));
+  await Promise.all(widgets.map(async ({ key }) => WIDGET_WARMUPS[key]?.(client, project)));
 }
