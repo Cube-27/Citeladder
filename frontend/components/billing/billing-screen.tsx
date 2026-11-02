@@ -16,7 +16,6 @@ import { QueryState } from '@/components/ui/query-state';
 import { ListScreen } from '@/components/layout/page-shell';
 import { Alert } from '@/components/ui/alert';
 import { Stack } from '@/components/ui/layout';
-import { splitPaneClasses } from '@/components/ui/workspace';
 import {
   billingApi,
   createIdempotencyKey,
@@ -188,22 +187,18 @@ export function BillingScreen() {
             renewsOn={entitlement?.subscription?.current_period_end ?? null}
           />
         ) : null}
-        <div className={splitPaneClasses('main-aside')}>
-          <Stack gap="workspace">
-            <PlanSection
-              catalog={catalog}
-              catalogLoading={catalogQuery.isLoading}
-              catalogError={catalogQuery.isError}
-              entitlement={entitlement}
-              canManage={canManage}
-              checkout={checkout}
-              planChanges={planChanges}
-              onBuyExtra={buyExtra}
-              newSubscription={{ country, setCountry, details, setDetails, subscribe }}
-            />
-          </Stack>
-          <UsageMeters />
-        </div>
+        <UsageMeters />
+        <PlanSection
+          catalog={catalog}
+          catalogLoading={catalogQuery.isLoading}
+          catalogError={catalogQuery.isError}
+          entitlement={entitlement}
+          canManage={canManage}
+          checkout={checkout}
+          planChanges={planChanges}
+          onBuyExtra={buyExtra}
+          newSubscription={{ country, setCountry, details, setDetails, subscribe }}
+        />
         <InvoiceHistory
           invoices={invoiceQuery.data ?? []}
           loading={invoiceQuery.isLoading}

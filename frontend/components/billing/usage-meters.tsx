@@ -6,7 +6,7 @@ import { Alert } from '@/components/ui/alert';
 import { QueryState } from '@/components/ui/query-state';
 import { Stack } from '@/components/ui/layout';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
+import { EditorialSectionHeader, splitPaneClasses } from '@/components/ui/workspace';
 import { UsageMeter } from '@/components/billing/usage-meter';
 import { billingApi, type UsageItem } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -26,8 +26,16 @@ const PREFERRED_ORDER = [
   'ai_credits',
 ];
 
+/**
+ * A finite allowance of zero with nothing used is not something the grants
+ * provide, so it is left out rather than drawn as an empty meter.
+ */
+function provided(item: UsageItem) {
+  return !(item.limit_state === 'finite' && item.allowance === 0 && !item.consumed);
+}
+
 function ordered(items: readonly UsageItem[]): UsageItem[] {
-  return [...items].sort((a, b) => {
+  return items.filter(provided).sort((a, b) => {
     const ai = PREFERRED_ORDER.indexOf(a.key);
     const bi = PREFERRED_ORDER.indexOf(b.key);
     if (ai === -1 && bi === -1) return a.key.localeCompare(b.key);
@@ -92,16 +100,17 @@ function UsageBody({
       </Alert>
     );
   }
-  if (query.data.items.length === 0) {
+  const items = ordered(query.data.items);
+  if (items.length === 0) {
     return (
       <QueryState kind="empty" inline message="No measurable allowances on this account yet." />
     );
   }
   return (
-    <>
-      {ordered(query.data.items).map((item) => (
+    <div className={splitPaneClasses('thirds')}>
+      {items.map((item) => (
         <UsageMeter key={item.key} item={item} />
       ))}
-    </>
+    </div>
   );
 }

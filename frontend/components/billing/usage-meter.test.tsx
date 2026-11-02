@@ -41,10 +41,27 @@ describe('UsageMeter', () => {
   afterEach(() => {
     document.cookie = `${DISPLAY_TIME_ZONE_COOKIE}=; Path=/; Max-Age=0`;
   });
-  it('humanises the backend key into a label', () => {
-    render(<UsageMeter item={item({ key: 'prompt_slots' })} />);
+  it('names known counters in reader terms with their own unit', () => {
+    render(
+      <UsageMeter
+        item={item({
+          key: 'prompt_runs_per_period',
+          unit: 'credits',
+          allowance: 150,
+          consumed: 40,
+        })}
+      />,
+    );
 
-    expect(screen.getByText('Prompt slots')).toBeVisible();
+    expect(screen.getByText('Prompt runs')).toBeVisible();
+    expect(screen.getByText('40 / 150 runs')).toBeVisible();
+  });
+
+  it('humanises a counter key it does not know', () => {
+    render(<UsageMeter item={item({ key: 'new_counter', unit: 'slots' })} />);
+
+    expect(screen.getByText('New counter')).toBeVisible();
+    expect(screen.getByText('10 / 100 slots')).toBeVisible();
   });
 
   it('says an unresolved allowance is unavailable and draws no bar', () => {
@@ -60,24 +77,24 @@ describe('UsageMeter', () => {
     render(<UsageMeter item={item({ limit_state: 'unlimited', allowance: null, consumed: 42 })} />);
 
     expect(screen.getByText('Unlimited')).toBeVisible();
-    expect(screen.getByText('42 slots')).toBeVisible();
+    expect(screen.getByText('42 prompts')).toBeVisible();
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   });
 
   it('treats a null consumption on an unlimited row as zero, not blank', () => {
     render(<UsageMeter item={item({ limit_state: 'unlimited', consumed: null })} />);
 
-    expect(screen.getByText('0 slots')).toBeVisible();
+    expect(screen.getByText('0 prompts')).toBeVisible();
   });
 
   it('renders a finite row as an accessible meter', () => {
     render(<UsageMeter item={item({ allowance: 100, consumed: 25, remaining: 75 })} />);
 
-    const bar = screen.getByRole('meter', { name: 'Prompt slots usage' });
+    const bar = screen.getByRole('meter', { name: 'Prompts usage' });
     expect(bar).toHaveAttribute('aria-valuemin', '0');
     expect(bar).toHaveAttribute('aria-valuemax', '100');
     expect(bar).toHaveAttribute('aria-valuenow', '25');
-    expect(screen.getByText('25 / 100 slots')).toBeVisible();
+    expect(screen.getByText('25 / 100 prompts')).toBeVisible();
     expect(screen.getByText(/75 remaining/)).toBeVisible();
   });
 
@@ -116,8 +133,16 @@ describe('UsageMeter', () => {
     expect(screen.getByText(/Resets/)).toBeVisible();
   });
 
-  it('warns that unused credits are forfeited at the earliest expiry', () => {
-    render(<UsageMeter item={item({ earliest_expiry: '2026-09-15T00:00:00Z' })} />);
+  it('warns that an unused consumable balance expires at the earliest expiry', () => {
+    render(
+      <UsageMeter
+        item={item({
+          key: 'ai_credits',
+          capability_type: 'counter.consumable',
+          earliest_expiry: '2026-09-15T00:00:00Z',
+        })}
+      />,
+    );
 
     // A consumable balance that silently disappears is the surprise this line
     // exists to prevent.
@@ -125,7 +150,21 @@ describe('UsageMeter', () => {
       'datetime',
       '2026-09-15T00:00:00Z',
     );
-    expect(screen.getByText(/forfeited/)).toBeVisible();
+    expect(screen.getByText(/Unused credits expire/)).toBeVisible();
+  });
+
+  it('says a slot allowance ends, not that it is forfeited', () => {
+    render(
+      <UsageMeter
+        item={item({
+          capability_type: 'counter.occupancy',
+          earliest_expiry: '2026-09-15T00:00:00Z',
+        })}
+      />,
+    );
+
+    expect(screen.getByText(/^Ends/)).toBeVisible();
+    expect(screen.queryByText(/expire/)).not.toBeInTheDocument();
   });
 
   it('prefers the reset date over the expiry when both are present', () => {
@@ -136,12 +175,12 @@ describe('UsageMeter', () => {
     );
 
     expect(screen.getByText('Sep 1, 2026')).toBeVisible();
-    expect(screen.queryByText(/Earliest expiry/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Sep 15, 2026')).not.toBeInTheDocument();
   });
 
   it('renders no timing line when the row carries neither date', () => {
     render(<UsageMeter item={item()} />);
 
-    expect(screen.queryByText(/Resets|Earliest expiry/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Resets|expire|Ends/)).not.toBeInTheDocument();
   });
 });
