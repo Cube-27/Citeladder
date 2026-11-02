@@ -324,5 +324,6 @@ omits an empty added or removed kind list rather than printing "None".
 
 Source: owner report of 2 November 2026 on a new crawl whose Overview showed the
 note twice for one page of drift (Category 52 to 53 of about 200, all deltas 0),
-which the owner judged meaningless for a new crawl or a recrawl.
-[Site Health](site-health.md) owns the shipped behavior.
+which the owner judged meaningless for a new crawl or a recrawl. The share rule
+and its 10-point default are the implementer's, not an owner choice; the owner
+may retune the threshold. [Site Health](site-health.md) owns the shipped behavior.
