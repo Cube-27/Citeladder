@@ -159,7 +159,11 @@ async function reserveFresh(
 ) {
   const ids = new Map<string, string>();
   const order = await lockedDrawOrder(db, { accountId, capability, state });
-  const balances = await ledgerBalances(db, accountId);
+  const balances = await ledgerBalances(
+    db,
+    accountId,
+    order.map((grant) => grant.id),
+  );
   const rows = [];
   for (const hold of fresh) {
     const { allocations, left } = allocate(order, balances, hold.units);
@@ -347,14 +351,21 @@ export async function projectHoldsReservations(
   return open !== undefined;
 }
 
-export async function ledgerBalances(db: Database, accountId: string) {
+/**
+ * Reserved and consumed units of these grants. The ledger is append-only and
+ * keeps every expired grant's history, so a balance reads only the grants
+ * the caller selected (`ix_consumable_ledger_grant_key_created`).
+ */
+export async function ledgerBalances(db: Database, accountId: string, grantIds: readonly string[]) {
+  const balances = new Map<string, { reserved: number; consumed: number }>();
+  if (!grantIds.length) return balances;
   const rows = await db
     .selectFrom('consumable_ledger')
     .select(['grant_id', 'entry_kind', sql<string>`sum(units)`.as('units')])
     .where('billing_account_id', '=', accountId)
+    .where('grant_id', 'in', [...new Set(grantIds)])
     .groupBy(['grant_id', 'entry_kind'])
     .execute();
-  const balances = new Map<string, { reserved: number; consumed: number }>();
   for (const row of rows) {
     const value = balances.get(row.grant_id) ?? { reserved: 0, consumed: 0 };
     const units = Number(row.units);

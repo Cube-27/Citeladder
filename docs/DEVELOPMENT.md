@@ -645,7 +645,7 @@ cannot reproduce the failure.
 
 **Fix:** the browser never talks cross-origin to the backend. The Vite development proxy and the production app Worker route relative
 `/api/*` to the native API, so all browser calls are **same-origin**. The API
-client uses a relative base (`/api/v1`), `cache: 'no-store'`, and
+client uses a relative base (`/api/v1`), `cache: 'no-cache'`, and
 `credentials: 'include'`.
 
 **Always test this in a real browser, not curl.**

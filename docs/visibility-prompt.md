@@ -771,8 +771,10 @@ or scoring, and no other engine reads as zero ads.
 ## Read and UI surface
 
 Visibility has Trends, Sources, Perception, Ads and Query Fanout; Trends is default. Trends
-bucket runs first and then cap the number of points (`trend_max_points`), so a
-long window is not silently truncated to its latest runs. A range selection pools
+read the newest `trend_max_runs` runs in the window, bucket them and then cap the
+number of points (`trend_max_points`), so a run-heavy week stays one point. When
+the run bound cuts history, the bucket holding the cut is dropped whole rather
+than folded from part of its runs. A range selection pools
 counts, average position and model provenance across its runs and omits citation
 totals. Overview reads one run's persisted projection without a baseline
 comparison, from completed and partially completed runs, like the Visibility page.

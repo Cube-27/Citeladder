@@ -256,11 +256,20 @@ export async function entitlementRead(
 }
 
 export async function usageRead(db: Database, workspaceId: string, at: Date) {
-  const account = await workspaceAccount(db, workspaceId);
-  const state = await accountState(db, workspaceId, account.id, at);
-  const balances = await ledgerBalances(db, account.id);
-  const occupancy = await occupancyCounts(db, workspaceId, at);
-  const manualRuns = await manualRunUsage(db, account.id, { at, launchId: null });
+  // Independent pool reads run together; balances need the selected grants.
+  const [account, occupancy] = await Promise.all([
+    workspaceAccount(db, workspaceId),
+    occupancyCounts(db, workspaceId, at),
+  ]);
+  const [state, manualRuns] = await Promise.all([
+    accountState(db, workspaceId, account.id, at, account),
+    manualRunUsage(db, account.id, { at, launchId: null }),
+  ]);
+  const balances = await ledgerBalances(
+    db,
+    account.id,
+    state.selected.map((grant) => grant.id),
+  );
   const rates = new Map([['manual_runs_per_day', manualRuns]]);
   /**
    * A consumable sums its grants' ledger balances. Occupancy and rate counters

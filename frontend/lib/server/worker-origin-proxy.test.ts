@@ -79,4 +79,43 @@ describe('Worker origin transport', () => {
     expect(response.status).toBe(200);
     expect(transport).toHaveBeenCalledOnce();
   });
+
+  it("keeps the origin's revalidated policy and validator, and stores nothing else", async () => {
+    const tag = 'W/"snapshot-tag"';
+    const policies: Record<string, string> = {
+      overview: 'private, no-cache',
+      cached: 'private, max-age=86400',
+      other: 'no-store',
+    };
+    const transport = vi.fn(async (request: Request) =>
+      request.headers.get('if-none-match') === tag
+        ? new Response(null, {
+            status: 304,
+            headers: { etag: tag, 'cache-control': 'private, no-cache' },
+          })
+        : new Response('{}', {
+            headers: {
+              etag: tag,
+              'cache-control': policies[new URL(request.url).pathname.split('/').at(-1)!]!,
+            },
+          }),
+    );
+    const send = (path: string, headers: Record<string, string> = {}) =>
+      proxyWorkerRequest(
+        new Request(`https://app.citeladder.com${path}`, { headers }),
+        config,
+        transport,
+      );
+
+    const snapshot = await send('/api/v1/overview');
+    expect([snapshot.headers.get('cache-control'), snapshot.headers.get('etag')]).toEqual([
+      'private, no-cache',
+      tag,
+    ]);
+    const revalidated = await send('/api/v1/overview', { 'If-None-Match': tag });
+    expect([revalidated.status, await revalidated.text()]).toEqual([304, '']);
+    // A private max-age would serve a cached copy without re-checking access.
+    for (const path of ['/api/v1/cached', '/api/v1/other'])
+      expect((await send(path)).headers.get('cache-control')).toBe('private, no-store');
+  });
 });

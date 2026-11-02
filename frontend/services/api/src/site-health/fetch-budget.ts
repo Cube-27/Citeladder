@@ -45,7 +45,11 @@ export async function budgetedPageLimit(
   if (state.error) throw unresolvedEntitlement();
   const grants = state.selected.filter((grant) => grant.key === capability);
   if (!grants.length) return { limit: requested, accountId: null };
-  const balances = await ledgerBalances(db, account.id);
+  const balances = await ledgerBalances(
+    db,
+    account.id,
+    grants.map((grant) => grant.id),
+  );
   const available = grants.reduce((sum, grant) => {
     const balance = balances.get(grant.id);
     return sum + Math.max(0, grant.value - (balance?.reserved ?? 0) - (balance?.consumed ?? 0));

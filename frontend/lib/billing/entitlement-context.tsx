@@ -155,13 +155,6 @@ export function useEntitlement() {
 }
 
 /**
- * Re-exported so existing consumers keep one import site. The function itself
- * lives in `entitlement-capability` because the route loader's bootstrap needs
- * it without this provider.
- */
-export { capabilityRemaining } from '@/lib/billing/entitlement-capability';
-
-/**
  * Whether the workspace is on a managed plan (B32). Fails closed like every
  * entitlement hint: outside a resolved entitlement it reads as BYOK.
  */

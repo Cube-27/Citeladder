@@ -6,6 +6,7 @@
  */
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
+import { compress } from 'hono/compress';
 import { sql } from 'kysely';
 
 import type { ServiceConfig } from './config.ts';
@@ -14,6 +15,7 @@ import type { AppEnv } from './context.ts';
 import type { Database } from './db/database.ts';
 import { ApiError, onError, onNotFound } from './errors.ts';
 import { apiNoStore } from './http/no-store.ts';
+import { conditionalReads } from './http/revalidate.ts';
 import { getLogger } from './logging.ts';
 import { requestId } from './request-id.ts';
 import { PRODUCT_ROUTES } from './routes/index.ts';
@@ -60,7 +62,17 @@ export function createApp(
 ): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
   app.use(requestId(config.requestIdHeader));
+  // JSON only: an event stream or a streamed export must reach the client
+  // chunk by chunk, which a compressor's buffering would hold back. The
+  // Cloud Run to Worker hop is metered egress, so the origin compresses.
+  app.use(
+    compress({
+      threshold: policy.api.response_compression_min_bytes,
+      contentTypeFilter: /^application\/(?:[\w.+-]+\+)?json(?:[;\s]|$)/i,
+    }),
+  );
   app.use(apiNoStore());
+  app.use(conditionalReads());
   app.use(originToken(config));
   const startRunner = options.startRunner ?? runnerStarter(config, db);
   app.use((_c, next) => observeCommittedWork(next, startRunner));

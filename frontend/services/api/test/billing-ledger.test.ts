@@ -172,10 +172,12 @@ describe('shared consumable ledger', () => {
     await db
       .transaction()
       .execute((trx) => debitUsage(trx, { ...first, key: 'same-dispatch-retry' }));
-    expect((await ledgerBalances(db, t.accountId)).get(t.grantId)).toEqual({
+    expect((await ledgerBalances(db, t.accountId, [t.grantId])).get(t.grantId)).toEqual({
       consumed: 2,
       reserved: 2,
     });
+    // A balance reads only the grants asked for, never the rest of the account's ledger.
+    expect([...(await ledgerBalances(db, t.accountId, [randomUUID()])).entries()]).toEqual([]);
     await expect(
       db
         .transaction()
@@ -278,7 +280,7 @@ describe('shared consumable ledger', () => {
       .execute((trx) =>
         debitUsage(trx, { ...debit, key: 'new-worker-replay', dispatchKey: 'attempt-1' }),
       );
-    expect((await ledgerBalances(db, t.accountId)).get(t.grantId)).toEqual({
+    expect((await ledgerBalances(db, t.accountId, [t.grantId])).get(t.grantId)).toEqual({
       consumed: 1,
       reserved: 2,
     });
@@ -322,7 +324,7 @@ describe('shared consumable ledger', () => {
       at: new Date(),
     };
     await Promise.all([1, 2].map(() => db.transaction().execute((trx) => debitUsage(trx, debit))));
-    expect((await ledgerBalances(db, t.accountId)).get(t.grantId)).toEqual({
+    expect((await ledgerBalances(db, t.accountId, [t.grantId])).get(t.grantId)).toEqual({
       consumed: 2,
       reserved: 1,
     });
@@ -348,7 +350,7 @@ describe('shared consumable ledger', () => {
     await Promise.all(
       [1, 2].map(() => db.transaction().execute((trx) => refundUsage(trx, refund))),
     );
-    expect((await ledgerBalances(db, t.accountId)).get(t.grantId)).toEqual({
+    expect((await ledgerBalances(db, t.accountId, [t.grantId])).get(t.grantId)).toEqual({
       consumed: 1,
       reserved: 0,
     });

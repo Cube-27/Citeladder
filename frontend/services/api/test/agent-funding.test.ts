@@ -53,7 +53,7 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     const { run: saved, lease } = await run(scope);
     const io = {
       fetch: vi.fn<typeof fetch>(async () => {
-        expect((await ledgerBalances(db, accountId)).get(grantId)?.reserved).toBe(HOLD);
+        expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)?.reserved).toBe(HOLD);
         return Response.json({
           choices: [{ message: { content: 'Answer' }, finish_reason: 'stop' }],
           usage: { prompt_tokens: 20, completion_tokens: 10 },
@@ -74,7 +74,7 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       pricing_revision: 'ai-pricing-v1',
     });
     await calls.receipt(scope.workspaceId, attempt.id, result(reply('changed late answer')));
-    expect((await ledgerBalances(db, accountId)).get(grantId)).toEqual({
+    expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
       reserved: 0,
       consumed: 1,
     });
@@ -114,7 +114,7 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       .where('run_id', '=', saved.id)
       .executeTakeFirstOrThrow();
     await calls.receipt(scope.workspaceId, attempt.id, null);
-    expect((await ledgerBalances(db, accountId)).get(grantId)).toEqual({
+    expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
       reserved: 0,
       consumed: 0,
     });
@@ -125,7 +125,7 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     const calls = new ModelCalls(db, agentFunding(settings, platform));
     const attempt = await calls.dispatch(lease, 1, await agentModels(platform)(saved), request);
     await calls.receipt(scope.workspaceId, attempt.id, result(reply(), { usage: {} }));
-    expect((await ledgerBalances(db, accountId)).get(grantId)).toEqual({
+    expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
       reserved: 0,
       consumed: 10,
     });
@@ -144,7 +144,7 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       reasoning_tokens: 1_500,
     };
     await calls.receipt(scope.workspaceId, attempt.id, result(reply(), { usage }));
-    expect((await ledgerBalances(db, accountId)).get(grantId)).toEqual({
+    expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
       reserved: 0,
       consumed: 8,
     });
@@ -189,7 +189,7 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     expect(outcomes.find((outcome) => outcome.status === 'rejected')).toMatchObject({
       reason: { code: 'funding_unavailable' },
     });
-    expect((await ledgerBalances(db, accountId)).get(grantId)).toEqual({
+    expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
       reserved: HOLD,
       consumed: 0,
     });
