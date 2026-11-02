@@ -410,8 +410,9 @@ export async function urlRead(
       where workspace_id=${scope.workspaceId}::uuid and project_id=${scope.projectId}::uuid and url_hash=${urlHash}
       and reporting_date between ${w.start}::date and ${w.end}::date
       group by ai_source order by sum(sessions) desc,ai_source asc limit ${cap + 1}`.execute(db),
-    // The page's owned citations in the window's persisted run facts.
-    sql`select to_char(r.created_at at time zone 'UTC','YYYY-MM-DD') as date,c.id as citation_id,r.audit_id
+    // The page's owned citations in the window's persisted run facts, dated
+    // on the reporting day the run was selected by.
+    sql`select to_char(r.created_at at time zone ${options.reporting_timezone},'YYYY-MM-DD') as date,c.id as citation_id,r.audit_id
       from (${citationRuns(db, scope, bounds).select('m.owned_citation_pages')}) r
       cross join lateral jsonb_to_recordset(r.owned_citation_pages) as p(url_hash text,citation_ids jsonb)
       cross join lateral jsonb_array_elements_text(p.citation_ids) as c(id)
