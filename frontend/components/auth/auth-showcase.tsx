@@ -24,7 +24,7 @@ type Slide = Readonly<{
  * Captured from the website's coded product views (synthetic `.example`
  * records) at device scale 2, so no picture shows a real customer's data.
  */
-export const AUTH_SHOWCASE_SLIDES: readonly Slide[] = [
+const AUTH_SHOWCASE_SLIDES: readonly Slide[] = [
   {
     id: 'mcp',
     name: 'Connect MCP',
