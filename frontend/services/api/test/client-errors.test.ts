@@ -101,7 +101,8 @@ describe('client error sink', () => {
     const stranger = await fixtures.user();
     const foreign = await fixtures.ownedWorkspace(stranger);
     const reporters = [];
-    for (const headers of [{ cookie }, { cookie, 'x-workspace-id': foreign }]) {
+    const requests: Record<string, string>[] = [{ cookie }, { cookie, 'x-workspace-id': foreign }];
+    for (const headers of requests) {
       const result = await send(report, headers);
       expect(result.status).toBe(204);
       reporters.push(result.records.map((r) => [r.user_id, r.workspace_id]));
