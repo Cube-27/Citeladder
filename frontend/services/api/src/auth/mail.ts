@@ -1,5 +1,6 @@
 import { policy, type ServiceConfig } from '../config.ts';
 import { getLogger } from '../logging.ts';
+import { inReservedDomain } from './reserved-domains.ts';
 
 const cfg = policy.auth.mailbox;
 const escapeHtml = (value: string) =>
@@ -9,7 +10,12 @@ const escapeHtml = (value: string) =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!,
   );
 
-/** Caller commits before sending. Acceptance is not inbox delivery. */
+/**
+ * Every CiteLadder auth and invitation mail goes through here. Caller commits
+ * before sending. Acceptance is not inbox delivery. A recipient in a reserved
+ * domain is refused without reaching the provider: no mailbox exists there,
+ * and such addresses are test fixtures.
+ */
 export async function sendAuthMail(
   config: ServiceConfig,
   input: {
@@ -21,6 +27,10 @@ export async function sendAuthMail(
   },
 ): Promise<boolean> {
   if (!config.auth.mailKey) return false;
+  if (inReservedDomain(input.email)) {
+    getLogger('app.auth').debug('auth.mail_reserved_recipient');
+    return false;
+  }
   try {
     const response = await (config.auth.fetch ?? fetch)(cfg.endpoint, {
       method: 'POST',

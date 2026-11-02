@@ -38,6 +38,7 @@ import {
   withoutTrailingSlashes,
 } from '../auth/oauth.ts';
 import { trustedClientIdentity } from '../auth/client-identity.ts';
+import { assertSignupDomainAllowed } from '../auth/reserved-domains.ts';
 import { enforceSubjectRequest, releaseSubjectBudget } from '../abuse/usage.ts';
 import type { Context } from 'hono';
 import type { Database } from '../db/database.ts';
@@ -287,6 +288,7 @@ export const authRoutes = [
       if (config.demo.enabled || !config.auth.publicSignup)
         throw new ApiError(403, 'Registration is disabled');
       const payload = await readBody(c, signInSchema);
+      assertSignupDomainAllowed(config, payload.email);
       await meter(db, c, config, true);
       await mailboxMeter(db, c, config, payload.email);
       await registerUser(db, payload.email, payload.password, payload.terms_revision);

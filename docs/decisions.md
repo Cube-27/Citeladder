@@ -346,3 +346,17 @@ need to add a separate screen." The earlier fix was #198 (Terms on the sign-in
 form); #348 and #367 moved it to sign-up only, which brought back the review
 screen for sign-ins. [Workspace access](workspace-access.md) owns the shipped
 behavior.
+
+## Public sign-up refuses reserved mail domains
+
+Public sign-up, by email and password or by Google, refuses an address in a
+domain reserved by RFC 2606 and RFC 6761 (`.test`, `.example`, `.invalid`,
+`.localhost`, `example.com`, `example.net`, `example.org`): no mail can ever
+reach one, so no real person signs up with it. Tests still create such users
+directly. The same configured list stops auth and invitation mail to those
+addresses and keeps them out of the owner's signup notices.
+
+Source: owner, 2 November 2026, answering "Reject reserved domains like `.test`
+at sign-up? Tests can still create these users directly." with "yes", after
+signup notices for `@example.test` test fixtures reached the owner's inbox.
+[Workspace access](workspace-access.md) owns the shipped behavior.

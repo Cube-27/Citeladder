@@ -337,6 +337,12 @@ export type ServiceConfig = {
     publicSignup: boolean;
     mailKey: string;
     mailTimeoutMs: number;
+    /**
+     * Domains public sign-up refuses: `mailbox.reserved_domains`. Tests of the
+     * sign-up routes admit reserved fixtures by setting it empty; the mail
+     * guard and signup notices always read the configured list.
+     */
+    signupReservedDomains: readonly string[];
     frontendUrl: string;
     /** The machine host (`api.citeladder.com`); only it serves `/v1/...` and MCP protocol routes. */
     publicApiUrl: string;
@@ -533,6 +539,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       publicSignup: setting('public_signup_enabled') as boolean,
       mailKey: setting('resend_api_key') as string,
       mailTimeoutMs: setting('auth_mail_timeout_ms') as number,
+      signupReservedDomains: policy.auth.mailbox.reserved_domains,
       frontendUrl: setting('frontend_url') as string,
       publicApiUrl: setting('public_api_url') as string,
       publicWebsiteUrl: setting('public_website_url') as string,

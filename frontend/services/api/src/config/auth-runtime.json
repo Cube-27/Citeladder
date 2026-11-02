@@ -126,7 +126,16 @@
     "endpoint": "https://api.resend.com/emails",
     "signup_notice_recipient": "abhineet.jain@cube27.com",
     "signup_notice_batch": 25,
-    "signup_notice_window_seconds": 259200
+    "signup_notice_window_seconds": 259200,
+    "reserved_domains": [
+      "test",
+      "example",
+      "invalid",
+      "localhost",
+      "example.com",
+      "example.net",
+      "example.org"
+    ]
   },
   "privacy_revision": "2026-09-28",
   "session": { "clock_tolerance_seconds": 30 },

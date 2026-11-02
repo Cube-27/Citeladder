@@ -25,6 +25,16 @@ export function testConfig(overrides: Record<string, string> = {}): ServiceConfi
   });
 }
 
+/**
+ * A test config whose public sign-up admits reserved `example.test` fixtures.
+ * Mail to them is still refused, and signup notices still skip them.
+ */
+export function signupTestConfig(overrides: Record<string, string> = {}): ServiceConfig {
+  const config = testConfig(overrides);
+  config.auth.signupReservedDomains = [];
+  return config;
+}
+
 export function testDatabase(config: ServiceConfig = testConfig()): Database {
   return createDatabase(config);
 }
