@@ -417,13 +417,11 @@ export function verifyCallback(
   fields: Record<string, string>,
 ) {
   const order = stored.startsWith('order_');
-  const schema = z
-    .object({
-      razorpay_payment_id: reference,
-      razorpay_signature: z.string(),
-      ...(order ? { razorpay_order_id: reference } : { razorpay_subscription_id: reference }),
-    })
-    .strict();
+  const schema = z.strictObject({
+    razorpay_payment_id: reference,
+    razorpay_signature: z.string(),
+    ...(order ? { razorpay_order_id: reference } : { razorpay_subscription_id: reference }),
+  });
   const parsed = schema.safeParse(fields);
   if (
     !parsed.success ||

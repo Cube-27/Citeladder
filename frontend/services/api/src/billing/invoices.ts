@@ -165,8 +165,11 @@ function address(value: z.infer<typeof identity>, customer = false): string {
   return rows.filter(Boolean).join('\n');
 }
 
-const date = (value: Date) =>
-  new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'long' }).format(value);
+const DATE_FORMAT = new Intl.DateTimeFormat('en-IN', {
+  timeZone: 'Asia/Kolkata',
+  dateStyle: 'long',
+});
+const date = (value: Date) => DATE_FORMAT.format(value);
 /** A frozen period that does not parse is shown as stored rather than failing the document. */
 function periodDate(value: string): string {
   const parsed = new Date(value);

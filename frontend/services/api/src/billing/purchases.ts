@@ -30,32 +30,30 @@ import {
 const credentialMode = z.enum(['byok', 'funded']);
 
 const nullableState = z.string().trim().nullable().default(null);
-export const baseRequest = z
-  .object({
-    catalog_key: z.enum(['tier_1', 'tier_2', 'tier_3']),
-    credential_mode: credentialMode,
-    country_code: z
-      .string()
-      .trim()
-      .toUpperCase()
-      .regex(/^[A-Z]{2}$/u),
-    billing_name: z.string().trim().min(1).max(160),
-    billing_address_line1: z.string().trim().min(1).max(240),
-    billing_city: z.string().trim().min(1).max(100),
-    billing_postal_code: z.string().trim().toUpperCase().min(1).max(24),
-    billing_state_code: nullableState.refine(
-      (value) => !value || identitySchema.shape.state_code.safeParse(value).success,
-    ),
-    customer_gstin: nullableState.refine(
-      (value) =>
-        !value || identitySchema.shape.customer_gstin.safeParse(value.toUpperCase()).success,
-    ),
-    export_eligibility_attested: z.boolean().default(false),
-  })
-  .strict();
-export const packRequest = z
-  .object({ catalog_key: z.string().trim().min(1).max(64), quantity: amount.min(1) })
-  .strict();
+export const baseRequest = z.strictObject({
+  catalog_key: z.enum(['tier_1', 'tier_2', 'tier_3']),
+  credential_mode: credentialMode,
+  country_code: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z]{2}$/u),
+  billing_name: z.string().trim().min(1).max(160),
+  billing_address_line1: z.string().trim().min(1).max(240),
+  billing_city: z.string().trim().min(1).max(100),
+  billing_postal_code: z.string().trim().toUpperCase().min(1).max(24),
+  billing_state_code: nullableState.refine(
+    (value) => !value || identitySchema.shape.state_code.safeParse(value).success,
+  ),
+  customer_gstin: nullableState.refine(
+    (value) => !value || identitySchema.shape.customer_gstin.safeParse(value.toUpperCase()).success,
+  ),
+  export_eligibility_attested: z.boolean().default(false),
+});
+export const packRequest = z.strictObject({
+  catalog_key: z.string().trim().min(1).max(64),
+  quantity: amount.min(1),
+});
 export function idempotencyKey(raw: string | undefined) {
   const key = raw?.trim();
   if (

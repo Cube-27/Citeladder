@@ -53,13 +53,11 @@ const activationParams = {
   query: {},
 } as const;
 const keyHeaders = z.object({ 'idempotency-key': z.string().nullable().optional() });
-const verifyRequest = z
-  .object({
-    fields: z
-      .record(z.string().regex(/^\w{1,64}$/u), z.string().max(512))
-      .refine((fields) => Object.keys(fields).length <= 8),
-  })
-  .strict();
+const verifyRequest = z.strictObject({
+  fields: z
+    .record(z.string().regex(/^\w{1,64}$/u), z.string().max(512))
+    .refine((fields) => Object.keys(fields).length <= 8),
+});
 
 export const billingRoutes = [
   defineRoute({

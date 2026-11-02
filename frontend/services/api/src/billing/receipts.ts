@@ -26,13 +26,15 @@ const invoiceAmounts = z.object({
   tax_treatment: z.string(),
 });
 
+const INVOICE_DAY_FORMAT = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Kolkata',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
 function invoiceDay(at: Date): { day: string; year: string } {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Kolkata',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(at);
+  const parts = INVOICE_DAY_FORMAT.formatToParts(at);
   const fields = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   const year = Number(fields.year) - (Number(fields.month) < 4 ? 1 : 0);
   return {
