@@ -86,6 +86,13 @@
   },
   {
     "sources": [
+      "frontend/components/search-intelligence/**",
+      "frontend/lib/api/search-intelligence.ts"
+    ],
+    "frontendE2E": ["e2e/search-intelligence.spec.ts"]
+  },
+  {
+    "sources": [
       "frontend/apps/app/src/product-routes-visibility-runs.tsx",
       "frontend/components/runs/**",
       "frontend/lib/runs/**",
