@@ -401,3 +401,21 @@ accounts, sign-in and mailbox requests are unaffected.
 Source: owner, 2 November 2026, answering "Block disposable email domains at
 sign-up? It would use a maintained list kept in config," with "yes".
 [Workspace access](workspace-access.md) owns the shipped behavior.
+
+## Site Health responses do not carry provenance id lists
+
+Browser-facing Site Health reads (dashboard and crawl score summary, Overview,
+AEO Readiness, change summary) no longer return the provenance id lists:
+classification source analysis, artifact and task ids, Web Fundamentals source
+analysis, artifact and evaluation ids (also per top finding), and the readiness
+and change snapshots' source analysis ids. The rows keep every list unchanged,
+so derived results still retain their exact sources under
+[invariant 5](invariants.md#5-derived-artifacts-record-provenance); no screen
+rendered them, and they made a large crawl's Overview a few hundred kilobytes.
+Single source references a reader acts on (an evidence page's analysis, a
+change observation's sources, an eligibility checkpoint's sources) stay. The
+public API's dashboard schema follows the shared contract.
+
+Source: owner, 2 November 2026, asked "Remove the provenance ID lists from the
+Site Health responses the browser gets? They stay in the database", answered
+"yes". [Site Health](site-health.md) owns the shipped behavior.

@@ -569,7 +569,13 @@ non-empty added or removed lists.
 
 Crawls freeze these in their configuration. Final analyses keep
 `supersedes_analysis_id`, `source_evaluation_ids`, `source_artifact_ids` and a
-frozen `expected_checkpoint_profile`. Any classification edit changes the
+frozen `expected_checkpoint_profile`. Snapshots, score summaries and change
+snapshots keep their provenance id lists too, but browser responses (dashboard,
+crawl score summary, Overview, AEO Readiness, change summary) do not carry them,
+and each read selects only the columns it renders
+([decision](decisions.md#site-health-responses-do-not-carry-provenance-id-lists)).
+Single references a reader acts on, such as an evidence page's
+`source_analysis_id`, stay. Any classification edit changes the
 classifier digest. Versions stay at 1 until customers exist; after that, other
 semantic changes bump their version under
 [invariant 5](invariants.md#5-derived-artifacts-record-provenance).
@@ -616,6 +622,21 @@ promote metadata or cosmetic-refresh actions (`config/site-health/change-intel.t
 
 Page detail, Issues, history, Changes, snapshots, exports, the Agent and MCP
 read the same persisted final results.
+
+A crawl's current issues are those whose evaluation a current, finalized
+analysis names, plus its architecture findings. `site_issues.is_current`
+persists that, and the Issues catalog, detail and export filter on it
+(`issue-currency.ts`). The terminal publication, an analysis appended over a
+finalized one, and a duplicate alias retiring analyses recompute it in their own
+transaction; architecture findings are written current. Issues and evaluations
+are otherwise never rewritten.
+
+`GET /projects/{id}/site-health/pages` and `/issues` answer the crawl-scoped
+pages and issues reads for the project's newest crawl (the dashboard's) and name
+it (`crawl_id`, and the pages read's `crawl_status`). The Website and Issues
+route prefetchers use them on a cold load, beside the dashboard rather than
+after it, and file the answer under that crawl's key; a cached dashboard warms
+the crawl-scoped reads directly.
 
 A URL's issue history lists only resolved issues: rules recorded on the page in
 the selected crawl's superseded analyses or the project's earlier crawls that its
@@ -679,6 +700,6 @@ All paths are under `frontend/services/api/src/`.
 | Crawl, stop, selection | `site-health/planner.ts`, `controls.ts`, `selection.ts` |
 | Admission | `site-health/url-admission.ts`, `url-identity.ts`, `frontier.ts` |
 | Executors | `site-health/site-setup-task.ts`, `discover-task.ts`, `analyze-task.ts`, `page-fetch.ts` |
-| Terminal and measurement | `site-health/lifecycle*.ts`, `terminal-analysis.ts`, `canonical-alias.ts`, `score-summary.ts`, `coverage.ts` |
+| Terminal and measurement | `site-health/lifecycle*.ts`, `terminal-analysis.ts`, `issue-currency.ts`, `canonical-alias.ts`, `score-summary.ts`, `coverage.ts` |
 | Analysis | `site-health/analysis/` (`page-kinds.ts`, `rules.ts`, `*-checks.ts`, `scoring.ts`) |
 | Policy | `config/site-health.ts`, `config/site-health/*.json`, `config/crawlers.json` |

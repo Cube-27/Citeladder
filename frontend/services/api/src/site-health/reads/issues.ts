@@ -55,31 +55,24 @@ export type IssueFilters = {
 };
 
 /**
- * Evaluation ids of the crawl's current, finalized analyses (optionally one
- * page kind), plus its site-level architecture evaluations, which the
- * snapshot's issue counts include.
+ * Evaluation ids that the crawl's current, finalized analyses of one page kind
+ * name. Only the page-kind filter reads this; currency itself is the persisted
+ * `is_current` flag.
  */
-function currentEvaluations(crawl: Crawl, pageKind: string | null = null) {
-  const kindFilter = pageKind ? sql`and a.page_kind = ${pageKind}` : sql``;
-  const architecture = pageKind
-    ? sql``
-    : sql`union all
-  select e.id from site_rule_evaluations e
-  join site_observed_architectures o
-    on o.id = e.source_architecture_id and o.workspace_id = e.workspace_id
-  where o.workspace_id = ${crawl.workspace_id} and o.crawl_id = ${crawl.id}`;
+function kindEvaluations(crawl: Crawl, pageKind: string) {
   return sql`(
   select unnest(a.source_evaluation_ids) from site_page_analyses a
   where a.workspace_id = ${crawl.workspace_id} and a.crawl_id = ${crawl.id}
-    and a.is_current and a.finalized_at is not null
-    ${kindFilter}
-  ${architecture})`;
+    and a.is_current and a.finalized_at is not null and a.page_kind = ${pageKind})`;
 }
 
-/** Issues of the crawl's current analyses. */
+/**
+ * Issues of the crawl's current, finalized analyses and its site-level
+ * architecture findings, which the snapshot's issue counts include. The
+ * writers keep `is_current` (`issue-currency.ts`).
+ */
 const currentIssues = (crawl: Crawl) =>
-  sql`i.workspace_id = ${crawl.workspace_id} and i.crawl_id = ${crawl.id}
-    and i.evaluation_id in ${currentEvaluations(crawl)}`;
+  sql`i.workspace_id = ${crawl.workspace_id} and i.crawl_id = ${crawl.id} and i.is_current`;
 
 function issueWhere(
   crawl: Crawl,
@@ -94,7 +87,7 @@ function issueWhere(
   if (filters.rule) clauses.push(sql`i.rule_id = ${filters.rule}`);
   if (filters.siteUrlId) clauses.push(sql`i.site_url_id = ${filters.siteUrlId}`);
   if (filters.pageKind)
-    clauses.push(sql`i.evaluation_id in ${currentEvaluations(crawl, filters.pageKind)}`);
+    clauses.push(sql`i.evaluation_id in ${kindEvaluations(crawl, filters.pageKind)}`);
   if (filters.findingClass) clauses.push(sql`i.finding_class = ${filters.findingClass}`);
   if (filters.query) {
     // The reader searches the titles they see ("broken internal links"), not rule ids.
@@ -341,7 +334,7 @@ export async function issueDetail(
   );
   if (group === undefined) throw notFound('Issue');
   const kindFilter = pageKind
-    ? sql`and i.evaluation_id in ${currentEvaluations(crawl, pageKind)}`
+    ? sql`and i.evaluation_id in ${kindEvaluations(crawl, pageKind)}`
     : sql``;
   const inGroup = sql`${currentIssues(crawl)} and i.rule_id = ${group.rule_id}
     and i.finding_class = ${group.finding_class} ${kindFilter}`;

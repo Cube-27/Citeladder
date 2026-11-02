@@ -2831,6 +2831,7 @@ export interface SiteIssues {
   evidence: Json | null;
   finding_class: string;
   id: string;
+  is_current: Generated<boolean>;
   project_id: string;
   remediation: string;
   rule_id: string;
