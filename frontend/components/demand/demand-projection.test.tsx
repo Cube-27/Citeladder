@@ -398,8 +398,8 @@ describe('DemandProjection', () => {
     const user = userEvent.setup();
     renderProjection();
 
-    expect(await screen.findByRole('button', { name: /^CTR gaps/ })).toHaveTextContent(
-      /^CTR gaps1$/,
+    expect((await screen.findByRole('button', { name: /^CTR gaps/ })).textContent).toBe(
+      'CTR gaps1',
     );
     await user.hover(
       screen.getByRole('button', { name: 'How the CTR gap and Low CTR detectors work' }),
