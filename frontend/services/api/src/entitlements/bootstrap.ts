@@ -11,7 +11,7 @@ import { requirePlatformAdmin } from '../auth/operators.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { getLogger } from '../logging.ts';
 import { stripTrailing } from '../text-order.ts';
-import { resolveAccountEntitlement } from './resolve.ts';
+import { resolveAccountEntitlement } from './state.ts';
 
 async function projectRuntime(
   db: Database,

@@ -3,7 +3,7 @@ import { sql } from 'kysely';
 
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
-import { resolveAccountEntitlement } from '../entitlements/resolve.ts';
+import { resolveAccountEntitlement } from '../entitlements/state.ts';
 import { codes, integrationPolicy, integrationSettings } from './config.ts';
 import { policy } from '../config.ts';
 import { enforceWorkspaceRequest } from '../abuse/usage.ts';

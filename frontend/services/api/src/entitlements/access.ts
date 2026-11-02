@@ -2,7 +2,7 @@ import type { z } from 'zod';
 import type { workspaceAccessSchema } from '@citeladder/contracts/auth';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
-import { accountState, grantExpiry } from './state.ts';
+import { entitlementOf, grantExpiry, loadAccountState, type AccountState } from './state.ts';
 import { policy } from '../config.ts';
 
 export type WorkspaceAccess = z.infer<typeof workspaceAccessSchema>['status'];
@@ -21,21 +21,22 @@ export function accessGranted(status: WorkspaceAccess): status is 'active' | 'tr
   return status === 'active' || status === 'trial_active';
 }
 
+type AccessResult = { status: WorkspaceAccess; expires_at: string | null };
+
 /** Persisted authority plus wall time; this read never repairs a projection. */
 export async function workspaceAccess(
   db: Database,
   workspaceId: string,
   at = new Date(),
-): Promise<{ status: WorkspaceAccess; expires_at: string | null }> {
-  const account = await db
-    .selectFrom('billing_accounts')
-    .selectAll()
-    .where('workspace_id', '=', workspaceId)
-    .executeTakeFirst();
+): Promise<AccessResult> {
+  return accessOf(await loadAccountState(db, workspaceId, at), at);
+}
+
+/** The access a loaded account state grants at `at`. */
+function accessOf(state: AccountState | null, at: Date): AccessResult {
   const unresolved = { status: 'access_unresolved' as const, expires_at: null };
-  if (account?.status !== 'active') return unresolved;
-  const state = await accountState(db, workspaceId, account.id, at, account);
-  if (state.error) return unresolved;
+  if (state?.account.status !== 'active' || state.error) return unresolved;
+  const { account } = state;
   const selected = state.grants.filter((grant) =>
     state.selected.some((row) => row.id === grant.id),
   );
@@ -87,17 +88,63 @@ export async function workspaceAccess(
   return unresolved;
 }
 
-export async function requireWorkspaceAccess(db: Database, workspaceId: string) {
-  const access = await workspaceAccess(db, workspaceId);
+/** The access result, or the 403 its denied state carries. */
+function admitted(access: AccessResult): AccessResult {
   if (!accessGranted(access.status))
     throw new ApiError(403, DENIALS[access.status], { code: access.status });
   return access;
 }
 
+export async function requireWorkspaceAccess(db: Database, workspaceId: string) {
+  return admitted(await workspaceAccess(db, workspaceId));
+}
+
+/**
+ * One workspace's entitlement state, read once on first use and then shared by
+ * everything that asks: the access gate, capability flags and allowances. A
+ * request keeps one on its context (`entitlements`), so a revocation applies
+ * from the next request; it is never kept across requests. Code holding a
+ * transaction, or a worker, builds its own from that executor.
+ */
+export class WorkspaceEntitlements {
+  readonly workspaceId: string;
+  readonly #db: Database;
+  readonly #at: Date;
+  #state: Promise<AccountState | null> | undefined;
+
+  constructor(db: Database, workspaceId: string, at = new Date()) {
+    this.#db = db;
+    this.workspaceId = workspaceId;
+    this.#at = at;
+  }
+
+  #load(): Promise<AccountState | null> {
+    this.#state ??= loadAccountState(this.#db, this.workspaceId, this.#at);
+    return this.#state;
+  }
+
+  /** 403 unless the workspace's access state admits work. */
+  async requireAccess(): Promise<AccessResult> {
+    return admitted(accessOf(await this.#load(), this.#at));
+  }
+
+  /** The granted capability values; `null` when the account is missing or unresolvable. */
+  async granted(): Promise<ReadonlyMap<string, number> | null> {
+    const entitlement = entitlementOf(await this.#load());
+    return entitlement.status === 'resolved' ? entitlement.values : null;
+  }
+
+  /** Whether the plan currently grants flag `key`; unresolvable grants fail closed. */
+  async grants(key: string): Promise<boolean> {
+    return ((await this.granted())?.get(key) ?? 0) >= 1;
+  }
+}
+
 /**
  * `requireWorkspaceAccess` for a long-running worker: a grant is reused for
  * `ttlMs`, so a revocation takes effect within that window, while a denial or
- * failure is never cached and concurrent checks share one read.
+ * failure is never cached and concurrent checks share one read. Requests never
+ * use it: they read access once per request (`WorkspaceEntitlements`).
  */
 export function cachedWorkspaceAccess(db: Database, ttlMs: number, now = () => performance.now()) {
   const granted = new Map<string, { until: number; check: Promise<unknown> }>();

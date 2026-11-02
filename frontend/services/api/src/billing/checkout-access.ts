@@ -1,6 +1,6 @@
 import { policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { hasGrantedFlag } from '../entitlements/occupancy.ts';
+import { WorkspaceEntitlements } from '../entitlements/access.ts';
 import { audienceRestricted } from './razorpay.ts';
 
 /**
@@ -14,5 +14,5 @@ export async function onCheckoutAllowList(
   workspaceId: string,
 ) {
   if (!audienceRestricted(config.billing, config.razorpay)) return false;
-  return hasGrantedFlag(db, workspaceId, policy.entitlements.billing_checkout);
+  return new WorkspaceEntitlements(db, workspaceId).grants(policy.entitlements.billing_checkout);
 }

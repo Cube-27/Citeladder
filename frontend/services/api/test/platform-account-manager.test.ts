@@ -11,7 +11,7 @@ import {
   type PlatformAction,
   type PlatformSession,
 } from '../src/workspaces/account-manager.ts';
-import { resolveAccountEntitlement } from '../src/entitlements/resolve.ts';
+import { resolveAccountEntitlement } from '../src/entitlements/state.ts';
 import { billingAccount } from './prompt-fixtures.ts';
 import { Fixtures, testDatabase } from './support.ts';
 

@@ -24,6 +24,7 @@ import {
 import { gcpLogLine } from './gcp-entry.ts';
 import { recordVerification, verifyPullSource } from './gcp-verify.ts';
 import { ingest } from './ingest.ts';
+import { WorkspaceEntitlements } from '../entitlements/access.ts';
 import { crawlLogAvailability, findLivePullSource } from './sources.ts';
 import { CHECK_HELD_STALLS, markStalled } from './stall.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
@@ -150,7 +151,7 @@ export function crawlLogPull(readerFor: () => PubSubReader | null = defaultPubSu
     // Committed before any Google call: the tick schedules the next attempt from this time.
     const [, availability] = await Promise.all([
       touch(db, source, 'last_pull_at'),
-      crawlLogAvailability(db, task.workspace_id),
+      crawlLogAvailability(new WorkspaceEntitlements(db, task.workspace_id)),
     ]);
     if (availability === 'not_in_plan') await markStalled(db, source, 'not_in_plan');
     if (availability !== 'available') return;

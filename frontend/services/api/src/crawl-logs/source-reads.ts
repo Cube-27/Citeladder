@@ -6,6 +6,7 @@ import type { CrawlScope } from './state.ts';
 import type { Selectable } from 'kysely';
 import type { CrawlLogSources } from '../generated/db-schema.ts';
 import { crawlers } from '../config/crawlers.ts';
+import { WorkspaceEntitlements } from '../entitlements/access.ts';
 import { crawlLogAvailability } from './sources.ts';
 import { crawlLogReaderEmail } from './gcp-client.ts';
 import { gcpLogFilter } from './gcp-filter.ts';
@@ -52,6 +53,7 @@ function pullView(s: Source) {
 export async function sourceList(
   db: Database,
   scope: CrawlScope,
+  entitlements = new WorkspaceEntitlements(db, scope.workspaceId),
 ): Promise<z.input<typeof crawlSourceListSchema>> {
   const [rows, batches, uploads] = await Promise.all([
     db
@@ -119,7 +121,7 @@ export async function sourceList(
   });
   const readerEmail = crawlLogReaderEmail();
   return crawlSourceListSchema.parse({
-    availability: await crawlLogAvailability(db, scope.workspaceId),
+    availability: await crawlLogAvailability(entitlements),
     gcp_pull: {
       availability: readerEmail ? 'available' : 'pull_unavailable',
       reader_email: readerEmail || null,

@@ -61,7 +61,7 @@ export const publicApiRoutes: readonly ProductRoute[] = [
     response: pageSchema(projectSchema),
     async handle({ c, db }, { query }) {
       const allowed = c.get('apiKey')?.projectIds ?? null;
-      const projects = (await listProjects(db, c.get('workspace').workspaceId)).filter(
+      const projects = (await listProjects(db, c.get('entitlements'))).filter(
         (item) => allowed === null || allowed.includes(item.id),
       );
       return pageAfter(projects, query, { endpoint: 'projects', filters: {} });
@@ -72,8 +72,7 @@ export const publicApiRoutes: readonly ProductRoute[] = [
     path: `${project}/prompt-sets`,
     params: { path: projectPath, query: {} },
     response: z.array(promptSetSchema),
-    handle: ({ c, db }, { path }) =>
-      listPromptSets(db, c.get('workspace').workspaceId, path.project_id),
+    handle: ({ c, db }, { path }) => listPromptSets(db, c.get('entitlements'), path.project_id),
   }),
   defineGetRoute({
     ...base,
@@ -91,6 +90,7 @@ export const publicApiRoutes: readonly ProductRoute[] = [
     handle: ({ c, db }, { path, query }) =>
       listPublicPrompts(
         db,
+        c.get('entitlements'),
         { workspaceId: c.get('workspace').workspaceId, projectId: path.project_id },
         { promptSetId: query.prompt_set_id, topicId: query.topic_id, status: query.status },
         { cursor: query.cursor, limit: query.limit },

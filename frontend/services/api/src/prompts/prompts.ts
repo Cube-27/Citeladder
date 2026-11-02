@@ -25,6 +25,7 @@ import { inTransaction, type Database } from '../db/database.ts';
 import { isUniqueViolation } from '../db/errors.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { DB } from '../generated/db-schema.ts';
+import { WorkspaceEntitlements } from '../entitlements/access.ts';
 import { admitPrompts, overLimitPromptIds } from '../entitlements/occupancy.ts';
 import {
   BINDING_FAILURES,
@@ -150,10 +151,10 @@ async function requireBinding(
 
 export async function listPrompts(
   db: Database,
-  workspaceId: string,
+  entitlements: WorkspaceEntitlements,
   promptSetId: string,
 ): Promise<PromptView[]> {
-  return (await readPromptSet(db, workspaceId, promptSetId)).prompts;
+  return (await readPromptSet(db, entitlements, promptSetId)).prompts;
 }
 
 export async function createPrompt(
@@ -359,7 +360,7 @@ async function applyPromptUpdate(
     .where('id', '=', prompt.id)
     .returningAll()
     .executeTakeFirstOrThrow();
-  return promptView(row, await overLimitPromptIds(db, workspaceId));
+  return promptView(row, await overLimitPromptIds(db, new WorkspaceEntitlements(db, workspaceId)));
 }
 
 export async function deletePrompt(
@@ -429,7 +430,7 @@ export async function bulkSetStatus(
       throw new ApiError(404, 'Prompt(s) not found in this set');
     }
   });
-  return readPromptSet(db, workspaceId, promptSetId);
+  return readPromptSet(db, new WorkspaceEntitlements(db, workspaceId), promptSetId);
 }
 
 /**
@@ -510,5 +511,5 @@ export async function importPrompts(
       .onConflict((conflict) => conflict.constraint(UNIQUE_TEXT).doNothing())
       .execute();
   });
-  return readPromptSet(db, workspaceId, promptSetId);
+  return readPromptSet(db, new WorkspaceEntitlements(db, workspaceId), promptSetId);
 }

@@ -9,7 +9,7 @@ import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
 import { lockCrawlState, enqueueRollup, type CrawlScope } from './state.ts';
 import { enqueueTrafficInsights } from './insights-enqueue.ts';
 import { markStalled } from './stall.ts';
-import { hasGrantedFlag } from '../entitlements/occupancy.ts';
+import { WorkspaceEntitlements } from '../entitlements/access.ts';
 import { policy } from '../config.ts';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { crawlers } from '../config/crawlers.ts';
@@ -130,15 +130,14 @@ const { codes } = policy.entitlements;
  * Unlocked: a grant change racing one batch admits or refuses that batch only.
  */
 export async function crawlLogAvailability(
-  db: Database,
-  workspaceId: string,
+  entitlements: WorkspaceEntitlements,
 ): Promise<CrawlLogAvailability> {
   if (!crawlLogs.ingestion_enabled) return 'disabled';
-  const granted = await hasGrantedFlag(db, workspaceId, policy.entitlements.crawl_logs);
+  const granted = await entitlements.grants(policy.entitlements.crawl_logs);
   return granted ? 'available' : 'not_in_plan';
 }
 export async function requireCrawlLogs(db: Database, workspaceId: string) {
-  refuseUnavailable(await crawlLogAvailability(db, workspaceId));
+  refuseUnavailable(await crawlLogAvailability(new WorkspaceEntitlements(db, workspaceId)));
 }
 function refuseUnavailable(availability: CrawlLogAvailability) {
   if (availability === 'disabled')
@@ -371,7 +370,9 @@ export async function authorizeToken(db: Database, id: string, authorization: st
     throw new ApiError(401, 'Invalid crawl log token');
   if (source.status !== 'active') throw new ApiError(409, 'Crawl log source revoked');
   // A lapsed plan refuses the sender; the source row says why.
-  const availability = await crawlLogAvailability(db, source.workspace_id);
+  const availability = await crawlLogAvailability(
+    new WorkspaceEntitlements(db, source.workspace_id),
+  );
   if (availability === 'not_in_plan') await markStalled(db, source, 'not_in_plan');
   refuseUnavailable(availability);
   return source;

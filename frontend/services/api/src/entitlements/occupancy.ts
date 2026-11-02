@@ -20,7 +20,8 @@ import type { Database } from '../db/database.ts';
 import { advisoryXactLock } from '../db/advisory-lock.ts';
 import { ApiError } from '../errors.ts';
 import { getLogger } from '../logging.ts';
-import { resolveAccountEntitlement } from './resolve.ts';
+import type { WorkspaceEntitlements } from './access.ts';
+import { resolveAccountEntitlement } from './state.ts';
 
 const logger = getLogger('api.entitlements');
 const { capacity_lock: CAPACITY_LOCK, codes, prompt_slots: PROMPT_SLOTS } = policy.entitlements;
@@ -174,41 +175,6 @@ async function requireGrantedFlag(
     });
 }
 
-/**
- * Whether the workspace's plan currently grants flag `key`. Takes no lock, so
- * it suits reads and gates that need not serialize with grant issuance; a
- * missing account or unresolvable grants fail closed.
- */
-export async function hasGrantedFlag(
-  db: Database,
-  workspaceId: string,
-  key: string,
-): Promise<boolean> {
-  return ((await grantedValues(db, workspaceId))?.get(key) ?? 0) >= 1;
-}
-
-/**
- * The workspace's currently granted capability values, unlocked; `null` when
- * the account is missing or its grants cannot resolve.
- */
-export async function grantedValues(
-  db: Database,
-  workspaceId: string,
-): Promise<ReadonlyMap<string, number> | null> {
-  const account = await db
-    .selectFrom('billing_accounts')
-    .select('id')
-    .where('workspace_id', '=', workspaceId)
-    .executeTakeFirst();
-  if (account === undefined) return null;
-  const resolved = await resolveAccountEntitlement(
-    db,
-    { accountId: account.id, workspaceId },
-    new Date(),
-  );
-  return resolved.status === 'resolved' ? resolved.values : null;
-}
-
 export function requireProjectDeletion(db: Database, workspaceId: string): Promise<void> {
   return requireGrantedFlag(
     db,
@@ -248,17 +214,24 @@ async function promptCount(db: Database, accountId: string): Promise<number> {
 /**
  * Prompts beyond the workspace's `prompt_slots` allowance, the newest first
  * out: after a downgrade they are kept, shown, and never measured. Unlocked,
- * so reads can use it. Like admission it fails closed: with no grant, or grants
- * that cannot resolve, no prompt is within the limit.
+ * so reads can use it. With no `prompt_slots` grant every prompt is over the
+ * limit. Grants that cannot resolve are unavailable, not a zero allowance: like
+ * admission it refuses (403 `occupancy_unresolved`) instead of marking every
+ * prompt over the limit. A request that passed the access gate always resolves.
  */
 export async function overLimitPromptIds(
   db: Database,
-  workspaceId: string,
+  entitlements: WorkspaceEntitlements,
 ): Promise<ReadonlySet<string>> {
-  const allowance = (await grantedValues(db, workspaceId))?.get(PROMPT_SLOTS) ?? 0;
+  const granted = await entitlements.granted();
+  if (granted === null)
+    throw new ApiError(403, 'Billing entitlement is unavailable for this account', {
+      code: UNRESOLVED,
+    });
+  const allowance = granted.get(PROMPT_SLOTS) ?? 0;
   const rows = await slotPrompts(db)
     .select('prompts.id')
-    .where('projects.workspace_id', '=', workspaceId)
+    .where('projects.workspace_id', '=', entitlements.workspaceId)
     .orderBy('prompts.created_at')
     .orderBy('prompts.id')
     .offset(allowance)

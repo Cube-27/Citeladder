@@ -16,7 +16,9 @@ import type { ServiceConfig } from '../config.ts';
 const logger = getLogger('app.auth');
 class CredentialsChanged extends Error {}
 
-export function sessionView(user: User) {
+export function sessionView(
+  user: Pick<User, 'id' | 'email' | 'role' | 'is_active' | 'created_at' | 'updated_at'>,
+) {
   return {
     id: user.id,
     email: user.email,

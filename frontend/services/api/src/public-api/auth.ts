@@ -25,8 +25,7 @@ import {
 import { policy, type ServiceConfig } from '../config.ts';
 import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
-import { requireWorkspaceAccess } from '../entitlements/access.ts';
-import { hasGrantedFlag } from '../entitlements/occupancy.ts';
+import { WorkspaceEntitlements } from '../entitlements/access.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { requireProject } from '../projects/access.ts';
 import { requirePathOwnership } from './ownership.ts';
@@ -59,8 +58,9 @@ export function apiKeyAuth(
       throw new ApiError(401, 'This API key no longer has workspace access', {
         code: 'invalid_api_key',
       });
-    await requireWorkspaceAccess(db, key.workspace_id);
-    if (!(await hasGrantedFlag(db, key.workspace_id, policy.entitlements.api_access)))
+    const entitlements = new WorkspaceEntitlements(db, key.workspace_id);
+    await entitlements.requireAccess();
+    if (!(await entitlements.grants(policy.entitlements.api_access)))
       throw new ApiError(403, "API access is not included in this workspace's plan", {
         code: 'api_access_not_in_plan',
       });
@@ -77,12 +77,18 @@ export function apiKeyAuth(
       ),
     };
     requireCapability(actor, operation.capability, operation.scope);
-    const projectId = await pathProject(db, member, c.req.param('project_id'), key.project_ids);
+    const projectId = await pathProject(
+      db,
+      key.workspace_id,
+      c.req.param('project_id'),
+      key.project_ids,
+    );
     if (projectId !== null)
       await requirePathOwnership(db, key.workspace_id, projectId, c.req.param());
     c.set('actor', actor);
     c.set('apiKey', { id: key.id, projectIds: key.project_ids });
     c.set('workspace', new WorkspaceContext(key.workspace_id, member.role, projectId));
+    c.set('entitlements', entitlements);
     await touchApiKey(db, key);
     await next();
   };
@@ -91,13 +97,13 @@ export function apiKeyAuth(
 /** The path's project, which must be in the key's workspace and allowlist (else 404). */
 async function pathProject(
   db: Database,
-  workspace: WorkspaceContext,
+  workspaceId: string,
   raw: string | undefined,
   allowlist: readonly string[] | null,
 ): Promise<string | null> {
   if (raw === undefined) return null;
   const projectId = pathUuid(raw, 'project_id');
   if (allowlist !== null && !allowlist.includes(projectId)) throw notFound('Project');
-  await requireProject(db, workspace, projectId);
+  await requireProject(db, { workspaceId, projectId });
   return projectId;
 }

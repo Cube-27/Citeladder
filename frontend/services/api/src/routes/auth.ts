@@ -374,14 +374,8 @@ export const authRoutes = [
     authorize: 'session',
     path: '/api/v1/auth/me',
     response: authResponseSchema,
-    async handle({ c, db }) {
-      const user = await db
-        .selectFrom('users')
-        .selectAll()
-        .where('id', '=', c.get('user').id)
-        .executeTakeFirstOrThrow();
-      return { user: sessionView(user) };
-    },
+    // The session read already holds the account; this never reads it again.
+    handle: ({ c }) => Promise.resolve({ user: sessionView(c.get('user').profile) }),
   }),
   definePostRoute({
     ...base,

@@ -1,51 +1,120 @@
 import type { Selectable } from 'kysely';
 import type { Database } from '../db/database.ts';
-import type { BillingAccounts } from '../generated/db-schema.ts';
+import type {
+  AccountGrants,
+  BillingAccounts,
+  BillingSubscriptions,
+} from '../generated/db-schema.ts';
 import { policy } from '../config.ts';
-import { expiryMs, selectedGrants, foldEntitlement, type GrantRow } from './resolve.ts';
+import {
+  CorruptGrant,
+  entitlementChangeAt,
+  expiryMs,
+  selectedGrants,
+  foldEntitlement,
+  type Entitlement,
+  type GrantRow,
+  type RevocationRow,
+} from './resolve.ts';
 
 /**
- * One persisted projection reused by usage, reads and admission. Never
- * provisions. A caller that already read the account row passes it to save a
- * round trip.
+ * The one entitlement loader: the workspace's billing account, every grant and
+ * revocation, and the current base subscription, read as one parallel batch
+ * keyed by workspace (one round trip), in the caller's transaction when it
+ * holds one. Usage, reads, admission and the access gate all fold this. Never
+ * provisions. `null` when the workspace has no billing account, or when
+ * `accountId` names another one.
  */
+export async function loadAccountState(
+  db: Database,
+  workspaceId: string,
+  at: Date,
+  accountId?: string,
+): Promise<AccountState | null> {
+  // A workspace has one billing account (unique index), so rows joined through
+  // the workspace are exactly that account's.
+  const [account, grants, revocations, subscription] = await Promise.all([
+    db
+      .selectFrom('billing_accounts')
+      .selectAll()
+      .where('workspace_id', '=', workspaceId)
+      .executeTakeFirst(),
+    db
+      .selectFrom('account_grants')
+      .innerJoin('billing_accounts', 'billing_accounts.id', 'account_grants.billing_account_id')
+      .selectAll('account_grants')
+      .where('billing_accounts.workspace_id', '=', workspaceId)
+      .orderBy('account_grants.id')
+      .execute(),
+    db
+      .selectFrom('grant_revocations')
+      .innerJoin('account_grants', 'account_grants.id', 'grant_revocations.grant_id')
+      .innerJoin('billing_accounts', 'billing_accounts.id', 'account_grants.billing_account_id')
+      .select(['grant_revocations.grant_id', 'grant_revocations.effective_from'])
+      .where('billing_accounts.workspace_id', '=', workspaceId)
+      .execute(),
+    db
+      .selectFrom('billing_subscriptions')
+      .innerJoin(
+        'billing_accounts',
+        'billing_accounts.id',
+        'billing_subscriptions.billing_account_id',
+      )
+      .selectAll('billing_subscriptions')
+      .where('billing_accounts.workspace_id', '=', workspaceId)
+      .where('billing_subscriptions.is_current', '=', true)
+      .where(
+        'billing_subscriptions.subscription_kind',
+        '=',
+        policy.entitlements.base_subscription_kind,
+      )
+      .executeTakeFirst(),
+  ]);
+  if (account === undefined || (accountId !== undefined && account.id !== accountId)) return null;
+  return foldState(account, grants, revocations, subscription ?? null, at);
+}
+
+/** `loadAccountState` for a caller that already read the account row: it must exist. */
 export async function accountState(
   db: Database,
   workspaceId: string,
   accountId: string,
   at: Date,
-  known?: Selectable<BillingAccounts>,
+): Promise<AccountState> {
+  const state = await loadAccountState(db, workspaceId, at, accountId);
+  if (state === null) throw new Error('Billing account is not in this workspace');
+  return state;
+}
+
+/** The capability values a loaded state resolves to, as admission and projections read them. */
+export function entitlementOf(state: AccountState | null): Entitlement {
+  if (state === null) return { status: 'unresolved', error: 'billing_account_missing' };
+  if (state.error !== null) return { status: 'unresolved', error: state.error };
+  return {
+    status: 'resolved',
+    values: state.values,
+    validUntil: entitlementChangeAt(state.grants, state.revocations, state.end, state.at),
+  };
+}
+
+/** Resolve the account that bills `workspaceId`, in the caller's transaction. */
+export async function resolveAccountEntitlement(
+  db: Database,
+  { accountId, workspaceId }: { accountId: string; workspaceId: string },
+  at: Date,
+): Promise<Entitlement> {
+  return entitlementOf(await loadAccountState(db, workspaceId, at, accountId));
+}
+
+export type AccountState = ReturnType<typeof foldState>;
+
+function foldState(
+  account: Selectable<BillingAccounts>,
+  grants: Selectable<AccountGrants>[],
+  revocations: RevocationRow[],
+  subscription: Selectable<BillingSubscriptions> | null,
+  at: Date,
 ) {
-  const account =
-    known?.id === accountId && known.workspace_id === workspaceId
-      ? known
-      : await db
-          .selectFrom('billing_accounts')
-          .selectAll()
-          .where('workspace_id', '=', workspaceId)
-          .where('id', '=', accountId)
-          .executeTakeFirstOrThrow();
-  const [grants, revocations, subscription] = await Promise.all([
-    db
-      .selectFrom('account_grants')
-      .selectAll()
-      .where('billing_account_id', '=', accountId)
-      .orderBy('id')
-      .execute(),
-    db
-      .selectFrom('grant_revocations')
-      .innerJoin('account_grants', 'account_grants.id', 'grant_revocations.grant_id')
-      .select(['grant_revocations.grant_id', 'grant_revocations.effective_from'])
-      .where('account_grants.billing_account_id', '=', accountId)
-      .execute(),
-    db
-      .selectFrom('billing_subscriptions')
-      .selectAll()
-      .where('billing_account_id', '=', accountId)
-      .where('is_current', '=', true)
-      .where('subscription_kind', '=', 'base')
-      .executeTakeFirst(),
-  ]);
   const end = subscription?.current_period_end ?? null;
   const revokedAt = new Map<string, Date>();
   for (const row of revocations) {
@@ -59,7 +128,8 @@ export async function accountState(
     selected = selectedGrants(grants, revocations, end, at);
     values = foldEntitlement(grants, revocations, end, at);
   } catch (cause) {
-    error = cause instanceof Error ? cause.message : 'entitlement_unresolved';
+    if (!(cause instanceof CorruptGrant)) throw cause;
+    error = cause.message;
   }
   const changes = grants.flatMap((grant) => [
     grant.valid_from.getTime(),
@@ -73,10 +143,11 @@ export async function accountState(
   const validUntil = future.length ? new Date(Math.min(...future)) : null;
   return {
     account,
+    at,
     grants,
     revocations,
     revokedAt,
-    subscription: subscription ?? null,
+    subscription,
     selected,
     values,
     error,
