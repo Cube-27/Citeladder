@@ -68,12 +68,17 @@ export type IssueFilters = {
 function ofPageKind(crawl: Crawl, pageKind: string) {
   return sql`(case when ${siteLevelRule}
     then coalesce(i.evidence -> 'page_kind_counts' ? ${pageKind}, false)
-    else exists (
-      select 1 from site_page_analyses a
-      where a.workspace_id = ${crawl.workspace_id} and a.crawl_id = ${crawl.id}
-        and a.site_url_id = i.site_url_id and a.is_current and a.finalized_at is not null
-        and a.page_kind = ${pageKind} and i.evaluation_id = any(a.source_evaluation_ids))
+    else ${onPageOfKind(crawl, pageKind, sql`and i.evaluation_id = any(a.source_evaluation_ids)`)}
     end)`;
+}
+
+/** The issue's own page has a current, finalized analysis of the kind (and `also` holds). */
+function onPageOfKind(crawl: Crawl, pageKind: string, also = sql``) {
+  return sql`exists (
+    select 1 from site_page_analyses a
+    where a.workspace_id = ${crawl.workspace_id} and a.crawl_id = ${crawl.id}
+      and a.site_url_id = i.site_url_id and a.is_current and a.finalized_at is not null
+      and a.page_kind = ${pageKind} ${also})`;
 }
 
 /**
@@ -147,6 +152,12 @@ async function issueSummary(db: Database, crawl: Crawl, filters: IssueFilters) {
   const unchipped = { ...filters, severity: null, dimension: null };
   const scoped = issueWhere(crawl, unchipped);
   const anyClass = issueWhere(crawl, { ...unchipped, findingClass: null });
+  // Under a page-kind filter the homepage row that carries a site-level
+  // finding is a page of that kind only when the homepage itself is one; the
+  // finding's own pages of the kind come from its evidence (`siteLevelScope`).
+  const countedPage = filters.pageKind
+    ? sql`not ${siteLevelRule} or ${onPageOfKind(crawl, filters.pageKind)}`
+    : sql`true`;
   const [classes, severities, dimensions, totals, siteLevel] = await Promise.all([
     sql<{ finding_class: string; count: number }>`
       select i.finding_class, count(distinct i.rule_id)::int as count
@@ -159,8 +170,9 @@ async function issueSummary(db: Database, crawl: Crawl, filters: IssueFilters) {
       select i.dimension, count(distinct i.rule_id)::int as count
       from site_issues i where ${scoped} group by i.dimension`.execute(db),
     sql<{ affected: number; occurrences: number; monitored: number }>`
-      select count(distinct i.site_url_id)::int as affected, count(*)::int as occurrences,
-        count(distinct i.site_url_id) filter (where exists (
+      select count(distinct i.site_url_id) filter (where ${countedPage})::int as affected,
+        count(*)::int as occurrences,
+        count(distinct i.site_url_id) filter (where (${countedPage}) and exists (
           select 1 from monitored_site_urls m
           where m.workspace_id = i.workspace_id and m.site_url_id = i.site_url_id and m.active
         ))::int as monitored

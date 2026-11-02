@@ -443,6 +443,7 @@ describe('issue catalog', () => {
     const other = await page(seed, '/product-2');
     const all = [product, other];
     await issue(seed, product, 'technical.indexable');
+    await issue(seed, other, 'technical.title_present');
     // Site checks fail once, on the root, and every page's analysis names them.
     await siteIssue(seed, home, all, 'technical.ai_crawler_access');
     await siteIssue(seed, home, all, 'technical.sitewide_broken_link', {
@@ -455,19 +456,20 @@ describe('issue catalog', () => {
       linking_page_kinds: ['homepage'],
       page_kind_counts: { homepage: 1 },
     });
-    const affected = async (pageKind: string) => {
-      const body = await json(
-        seed,
-        `/site-crawls/${seed.crawlId}/issues?page_kind=${pageKind}`,
-        siteIssuesPageSchema,
+    const ofKind = (pageKind: string) =>
+      json(seed, `/site-crawls/${seed.crawlId}/issues?page_kind=${pageKind}`, siteIssuesPageSchema);
+    const affected = async (pageKind: string) =>
+      Object.fromEntries(
+        (await ofKind(pageKind)).items.map((row) => [row.rule_id, row.affected_url_count]),
       );
-      return Object.fromEntries(body.items.map((row) => [row.rule_id, row.affected_url_count]));
-    };
 
     expect(await affected('product')).toEqual({
       'technical.indexable': 1,
+      'technical.title_present': 1,
       'technical.sitewide_broken_link': 2,
     });
+    // The two product pages, never the homepage that carries the site-level rows.
+    expect((await ofKind('product')).summary.affected_url_count).toBe(2);
     expect(await affected('homepage')).toEqual({
       'technical.ai_crawler_access': 1,
       'technical.sitewide_broken_link': 1,
@@ -842,6 +844,10 @@ describe('conditional snapshot reads', () => {
     expect(growing.status).toBe(200);
     expect(growing.headers.get('etag')).toBeNull();
     expect(growing.headers.get('cache-control')).toBe('private, no-store, max-age=0');
+    // The project's newest-crawl read follows the same rule.
+    const latest = (seed: SiteSeed) => get(seed, `/projects/${seed.projectId}/site-health/issues`);
+    expect((await latest(terminal)).headers.get('etag')).toMatch(/^W\/"[\w-]{43}"$/);
+    expect((await latest(running)).headers.get('etag')).toBeNull();
   });
 });
 
