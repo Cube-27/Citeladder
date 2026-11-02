@@ -22,7 +22,7 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import { factTopicOrder } from '../config/perception.ts';
 import type { Database } from '../db/database.ts';
-import { hasGrantedFlag } from '../entitlements/occupancy.ts';
+import { WorkspaceEntitlements } from '../entitlements/access.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { BrandFacts } from '../generated/db-schema.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
@@ -54,7 +54,7 @@ export const brandFactUpdate = z.object({
 
 /** Whether the workspace is in the fact-checking pilot (unlocked read of its grants). */
 export function factCheckingEnabled(db: Database, workspaceId: string): Promise<boolean> {
-  return hasGrantedFlag(db, workspaceId, policy.entitlements.fact_checking);
+  return new WorkspaceEntitlements(db, workspaceId).grants(policy.entitlements.fact_checking);
 }
 
 async function requireFactChecking(db: Database, workspaceId: string) {

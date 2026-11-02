@@ -64,6 +64,8 @@ import { robotsHistory } from '../site-health/reads/robots-history.ts';
 import { defineGetRoute } from './define.ts';
 
 const family = 'site-health';
+/** Project routes read the path project inside the active workspace (else 404). */
+const projectFamily = { family, authorize: 'active-project' } as const;
 const crawlRoot = '/api/v1/site-crawls/{crawl_id}';
 const projectRoot = '/api/v1/projects/{project_id}/site-health';
 const publicCrawlRoot = `${policy.api.machine_prefix}/projects/{project_id}/site-crawls/{crawl_id}`;
@@ -197,7 +199,7 @@ function exportRoute(format: 'csv' | 'md') {
 
 export const siteHealthRoutes = [
   defineGetRoute({
-    family,
+    ...projectFamily,
     path: `${projectRoot}/robots-history`,
     params: {
       path: projectPath,
@@ -358,7 +360,7 @@ export const siteHealthRoutes = [
   exportRoute('csv'),
   exportRoute('md'),
   defineGetRoute({
-    family,
+    ...projectFamily,
     exposure: 'both',
     path: projectRoot,
     params: { path: projectPath, query: { crawl_id: optionalUuid } },
@@ -370,7 +372,7 @@ export const siteHealthRoutes = [
   // crawl yet: the route prefetchers start them beside the dashboard rather
   // than after it.
   defineGetRoute({
-    family,
+    ...projectFamily,
     path: `${projectRoot}/pages`,
     params: { path: projectPath, query: pagesQuery },
     response: latestCrawlPagesPageSchema,
@@ -386,7 +388,7 @@ export const siteHealthRoutes = [
     },
   }),
   defineGetRoute({
-    family,
+    ...projectFamily,
     path: `${projectRoot}/issues`,
     params: { path: projectPath, query: issuesQuery },
     response: latestCrawlIssuesPageSchema,
@@ -399,7 +401,7 @@ export const siteHealthRoutes = [
     },
   }),
   defineGetRoute({
-    family,
+    ...projectFamily,
     path: `${projectRoot}/overview`,
     params: { path: projectPath, query: { crawl_id: optionalUuid } },
     response: siteHealthOverviewSchema,
@@ -411,7 +413,7 @@ export const siteHealthRoutes = [
       ),
   }),
   defineGetRoute({
-    family,
+    ...projectFamily,
     path: `${projectRoot}/aeo-readiness`,
     params: { path: projectPath, query: { crawl_id: optionalUuid } },
     response: aeoReadinessSchema,
@@ -427,7 +429,7 @@ export const siteHealthRoutes = [
     },
   }),
   defineGetRoute({
-    family,
+    ...projectFamily,
     path: `${projectRoot}/architecture`,
     params: { path: projectPath, query: { crawl_id: optionalUuid } },
     response: architectureSchema,
@@ -435,7 +437,7 @@ export const siteHealthRoutes = [
       architecture(db, c.get('workspace').workspaceId, path.project_id, query.crawl_id),
   }),
   defineGetRoute({
-    family,
+    ...projectFamily,
     path: `${projectRoot}/changes/summary`,
     params: { path: projectPath, query: { crawl_a_id: optionalUuid, crawl_b_id: optionalUuid } },
     response: changeSummarySchema,
@@ -446,7 +448,7 @@ export const siteHealthRoutes = [
       }),
   }),
   defineGetRoute({
-    family,
+    ...projectFamily,
     path: `${projectRoot}/changes`,
     params: {
       path: projectPath,

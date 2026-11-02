@@ -37,7 +37,10 @@ forward-publication, never rewriting historical terms.
 
 The [TypeScript resolver](../frontend/services/api/src/entitlements/resolve.ts) chooses the active
 primary profile, retaining eligible non-public free baselines, then applies deliberate
-supplements. Grants/revocations remain append-only. Occupancy admission uses
+supplements. One [loader](../frontend/services/api/src/entitlements/state.ts) reads an
+account's grants, revocations and current base subscription for every caller, as one
+batch keyed by workspace; a request reads it at most once and shares it between the
+access gate and its handler, never across requests. Grants/revocations remain append-only. Occupancy admission uses
 locked current counts; reads expose persisted/current projections without
 repairing provisioning or acquiring admission locks. Missing authority is not
 unlimited access. The TypeScript prompt writers resolve the same grants and

@@ -18,6 +18,7 @@ import {
   overLimitPromptIds,
   requireProjectDeletion,
 } from '../entitlements/occupancy.ts';
+import { WorkspaceEntitlements } from '../entitlements/access.ts';
 import { projectHoldsReservations } from '../entitlements/ledger.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { Projects } from '../generated/db-schema.ts';
@@ -43,69 +44,61 @@ async function projectRow(db: Database, scope: ProjectScope) {
   return row;
 }
 
-/** Batch the embedded identity and prompt library for the entire project list. */
+/**
+ * Batch the embedded identity and prompt library for the entire project list:
+ * independent reads, run together on the pool (callers never hold a transaction).
+ */
 async function views(
   db: Database,
-  workspaceId: string,
+  entitlements: WorkspaceEntitlements,
   rows: Selectable<Projects>[],
 ): Promise<ProjectView[]> {
   if (!rows.length) return [];
+  const { workspaceId } = entitlements;
   const ids = rows.map((row) => row.id);
-  const brands = await db.selectFrom('brands').selectAll().where('project_id', 'in', ids).execute();
-  const aliases = brands.length
-    ? await db
+  const [brands, aliases, competitors, owned, unintended, profiles, sets, prompts, overLimit] =
+    await Promise.all([
+      db.selectFrom('brands').selectAll().where('project_id', 'in', ids).execute(),
+      db
         .selectFrom('brand_aliases')
+        .innerJoin('brands', 'brands.id', 'brand_aliases.brand_id')
+        .selectAll('brand_aliases')
+        .where('brands.project_id', 'in', ids)
+        .execute(),
+      db
+        .selectFrom('competitors')
         .selectAll()
-        .where(
-          'brand_id',
-          'in',
-          brands.map((brand) => brand.id),
-        )
-        .execute()
-    : [];
-  const competitors = await db
-    .selectFrom('competitors')
-    .selectAll()
-    .where('project_id', 'in', ids)
-    .orderBy('created_at')
-    .orderBy('id')
-    .execute();
-  const owned = await db
-    .selectFrom('owned_domains')
-    .selectAll()
-    .where('project_id', 'in', ids)
-    .execute();
-  const unintended = await db
-    .selectFrom('unintended_domains')
-    .selectAll()
-    .where('project_id', 'in', ids)
-    .execute();
-  const profiles = await db
-    .selectFrom('brand_profiles')
-    .select(['project_id', 'business_context', 'products_services'])
-    .where('workspace_id', '=', workspaceId)
-    .where('project_id', 'in', ids)
-    .execute();
-  const sets = await db
-    .selectFrom('prompt_sets')
-    .selectAll()
-    .where('project_id', 'in', ids)
-    .orderBy('created_at')
-    .orderBy('id')
-    .execute();
-  const [prompts, overLimit] = await Promise.all([
-    db
-      .selectFrom('prompts')
-      .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
-      .innerJoin('projects', 'projects.id', 'prompt_sets.project_id')
-      .selectAll('prompts')
-      .where('projects.workspace_id', '=', workspaceId)
-      .where('projects.id', 'in', ids)
-      .orderBy('prompts.created_at')
-      .orderBy('prompts.id')
-      .execute(),
-    overLimitPromptIds(db, workspaceId),
-  ]);
+        .where('project_id', 'in', ids)
+        .orderBy('created_at')
+        .orderBy('id')
+        .execute(),
+      db.selectFrom('owned_domains').selectAll().where('project_id', 'in', ids).execute(),
+      db.selectFrom('unintended_domains').selectAll().where('project_id', 'in', ids).execute(),
+      db
+        .selectFrom('brand_profiles')
+        .select(['project_id', 'business_context', 'products_services'])
+        .where('workspace_id', '=', workspaceId)
+        .where('project_id', 'in', ids)
+        .execute(),
+      db
+        .selectFrom('prompt_sets')
+        .selectAll()
+        .where('project_id', 'in', ids)
+        .orderBy('created_at')
+        .orderBy('id')
+        .execute(),
+      db
+        .selectFrom('prompts')
+        .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
+        .innerJoin('projects', 'projects.id', 'prompt_sets.project_id')
+        .selectAll('prompts')
+        .where('projects.workspace_id', '=', workspaceId)
+        .where('projects.id', 'in', ids)
+        .orderBy('prompts.created_at')
+        .orderBy('prompts.id')
+        .execute(),
+      overLimitPromptIds(db, entitlements),
+    ]);
   return rows.map((row) => {
     const brand = brands.find((item) => item.project_id === row.id);
     const brandName = brand?.name ?? row.brand_name;
@@ -157,19 +150,27 @@ async function views(
   });
 }
 
-export async function readProject(db: Database, scope: ProjectScope): Promise<ProjectView> {
-  const result = await views(db, scope.workspaceId, [await projectRow(db, scope)]);
+/** One project's view; a request passes its own entitlements so they are read once. */
+export async function readProject(
+  db: Database,
+  scope: ProjectScope,
+  entitlements = new WorkspaceEntitlements(db, scope.workspaceId),
+): Promise<ProjectView> {
+  const result = await views(db, entitlements, [await projectRow(db, scope)]);
   return firstOf(result, 'the view built for the loaded project');
 }
-export async function listProjects(db: Database, workspaceId: string): Promise<ProjectView[]> {
+export async function listProjects(
+  db: Database,
+  entitlements: WorkspaceEntitlements,
+): Promise<ProjectView[]> {
   const rows = await db
     .selectFrom('projects')
     .selectAll()
-    .where('workspace_id', '=', workspaceId)
+    .where('workspace_id', '=', entitlements.workspaceId)
     .orderBy('created_at', 'desc')
     .orderBy('id', 'desc')
     .execute();
-  return views(db, workspaceId, rows);
+  return views(db, entitlements, rows);
 }
 
 /** Caller owns the transaction, including onboarding's atomic completion. */

@@ -4,7 +4,7 @@ import { Hono } from 'hono';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { sessionUser } from '../src/auth/session.ts';
-import { workspaceMember } from '../src/auth/workspace.ts';
+import { pathWorkspaceMembership } from '../src/auth/workspace.ts';
 import type { AppEnv } from '../src/context.ts';
 import { onError } from '../src/errors.ts';
 import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
@@ -17,12 +17,15 @@ const cookie = config.session.cookieName;
 function probeApp(serviceConfig = config) {
   const app = new Hono<AppEnv>();
   app.onError(onError);
-  app.use('*', sessionUser(serviceConfig, db));
-  app.get('/me', (c) => c.json({ id: c.get('user').id }));
-  app.get('/w/:workspace_id', workspaceMember(db), (c) =>
+  app.get('/me', sessionUser(serviceConfig, db), (c) => c.json({ id: c.get('user').id }));
+  app.get('/w/:workspace_id', sessionUser(serviceConfig, db, pathWorkspaceMembership()), (c) =>
     c.json({ id: c.get('workspace').workspaceId, capabilities: c.get('workspace').capabilities() }),
   );
-  app.post('/w/:workspace_id', workspaceMember(db, 'write'), (c) => c.json({ ok: true }));
+  app.post(
+    '/w/:workspace_id',
+    sessionUser(serviceConfig, db, pathWorkspaceMembership('write')),
+    (c) => c.json({ ok: true }),
+  );
   return app;
 }
 

@@ -31,7 +31,7 @@ export const projectRoutes = [
     path: root,
     params: { path: {}, query: {} },
     response: z.array(projectSchema),
-    handle: ({ c, db }) => listProjects(db, c.get('workspace').workspaceId),
+    handle: ({ c, db }) => listProjects(db, c.get('entitlements')),
   }),
   definePostRoute({
     family,
@@ -58,7 +58,11 @@ export const projectRoutes = [
     params: { path: projectPath, query: {} },
     response: projectSchema,
     handle: ({ c, db }, { path }) =>
-      readProject(db, { workspaceId: c.get('workspace').workspaceId, projectId: path.project_id }),
+      readProject(
+        db,
+        { workspaceId: c.get('workspace').workspaceId, projectId: path.project_id },
+        c.get('entitlements'),
+      ),
   }),
   definePatchRoute({
     family,

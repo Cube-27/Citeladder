@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
+import { WorkspaceEntitlements } from '../src/entitlements/access.ts';
 import { admitPrompts } from '../src/entitlements/occupancy.ts';
 import {
   entitlementChangeAt,
@@ -183,11 +184,24 @@ describe('admitPrompts', () => {
     const start = Date.now() - 60_000;
     for (const [index, text] of ['acme oldest', 'acme middle', 'acme newest'].entries())
       await prompt(db, t.setId, text, { createdAt: new Date(start + index * 1000) });
-    const view = await readPromptSet(db, t.workspaceId, t.setId);
+    const view = await readPromptSet(db, new WorkspaceEntitlements(db, t.workspaceId), t.setId);
     expect(view.prompts.map((row) => [row.text, row.over_plan_limit])).toEqual([
       ['acme oldest', false],
       ['acme middle', false],
       ['acme newest', true],
+    ]);
+  });
+
+  it('refuses a prompt read whose grants are unavailable instead of flagging every prompt', async () => {
+    const t = await tenant();
+    await prompt(db, t.setId, 'acme only prompt');
+    expect(
+      await denial(() => readPromptSet(db, new WorkspaceEntitlements(db, t.workspaceId), t.setId)),
+    ).toMatchObject({ status: 403, code: 'occupancy_unresolved' });
+    await billingAccount(db, t.workspaceId);
+    const view = await readPromptSet(db, new WorkspaceEntitlements(db, t.workspaceId), t.setId);
+    expect(view.prompts.map((row) => [row.text, row.over_plan_limit])).toEqual([
+      ['acme only prompt', true],
     ]);
   });
 

@@ -19,7 +19,7 @@ export const API_KEY_ROUTES: readonly ProductRoute[] = [
     path: root,
     params: { path: {}, query: {} },
     response: apiKeyListSchema,
-    handle: ({ c, db }) => listApiKeys(db, c.get('workspace').workspaceId),
+    handle: ({ c, db }) => listApiKeys(db, c.get('entitlements')),
   }),
   definePostRoute({
     ...keys,

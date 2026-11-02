@@ -262,7 +262,7 @@ export async function usageRead(db: Database, workspaceId: string, at: Date) {
     occupancyCounts(db, workspaceId, at),
   ]);
   const [state, manualRuns] = await Promise.all([
-    accountState(db, workspaceId, account.id, at, account),
+    accountState(db, workspaceId, account.id, at),
     manualRunUsage(db, account.id, { at, launchId: null }),
   ]);
   const balances = await ledgerBalances(

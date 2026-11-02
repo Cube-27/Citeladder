@@ -2,9 +2,8 @@
  * Entitlement resolution: fold one billing account's grants into capability
  * values at an instant.
  *
- * Billing writes grants, revocations and subscriptions; this reads
- * them in the caller's transaction on every call (no cache, since
- * authorization must see the rows that transaction sees). One corrupt grant
+ * Billing writes grants, revocations and subscriptions; `entitlements/state.ts`
+ * reads them (the one loader) and this folds what it read. One corrupt grant
  * makes the whole account unresolved, which callers treat as a denial.
  *
  * Selection: exactly one primary bundle (highest `profile_priority`, then
@@ -13,7 +12,6 @@
  * subscription has a readable period end, and never past it.
  */
 import { policy } from '../config.ts';
-import type { Database } from '../db/database.ts';
 
 export type GrantRow = {
   id: string;
@@ -40,7 +38,8 @@ const PAID_ACCESS = new Set(policy.entitlements.paid_access_sources);
 const PRIMARY = 'primary';
 const SUPPLEMENT = 'supplement';
 
-class CorruptGrant extends Error {}
+/** A grant row outside the registry; the account it belongs to is unresolved. */
+export class CorruptGrant extends Error {}
 
 /** Flags are 0 or 1, levels an ordinal of the definition, counters non-negative. */
 function valueFits(definition: { type: string; levels: number }, value: number): boolean {
@@ -171,70 +170,4 @@ export function foldEntitlement(
     );
   }
   return values;
-}
-
-/** Resolve the account that bills `workspaceId`, in the caller's transaction. */
-export async function resolveAccountEntitlement(
-  db: Database,
-  { accountId, workspaceId }: { accountId: string; workspaceId: string },
-  at: Date,
-): Promise<Entitlement> {
-  const account = await db
-    .selectFrom('billing_accounts')
-    .select('id')
-    .where('id', '=', accountId)
-    .where('workspace_id', '=', workspaceId)
-    .executeTakeFirst();
-  if (account === undefined) return { status: 'unresolved', error: 'billing_account_missing' };
-  const [grants, revocations, subscription] = await Promise.all([
-    db
-      .selectFrom('account_grants')
-      .select([
-        'id',
-        'key',
-        'value',
-        'source_kind',
-        'valid_from',
-        'valid_until',
-        'bundle_role',
-        'bundle_id',
-        'profile_priority',
-      ])
-      .where('billing_account_id', '=', accountId)
-      .execute(),
-    db
-      .selectFrom('grant_revocations')
-      .innerJoin('account_grants', 'account_grants.id', 'grant_revocations.grant_id')
-      .select(['grant_revocations.grant_id', 'grant_revocations.effective_from'])
-      .where('account_grants.billing_account_id', '=', accountId)
-      .execute(),
-    db
-      .selectFrom('billing_subscriptions')
-      .select('current_period_end')
-      .where('billing_account_id', '=', accountId)
-      .where('is_current', '=', true)
-      .where('subscription_kind', '=', policy.entitlements.base_subscription_kind)
-      .executeTakeFirst(),
-  ]);
-  try {
-    const values = foldEntitlement(
-      grants,
-      revocations,
-      subscription?.current_period_end ?? null,
-      at,
-    );
-    return {
-      status: 'resolved',
-      values,
-      validUntil: entitlementChangeAt(
-        grants,
-        revocations,
-        subscription?.current_period_end ?? null,
-        at,
-      ),
-    };
-  } catch (error) {
-    if (error instanceof CorruptGrant) return { status: 'unresolved', error: error.message };
-    throw error;
-  }
 }

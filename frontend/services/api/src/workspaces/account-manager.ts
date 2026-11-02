@@ -11,7 +11,7 @@ import { revokeCreatorKeys } from '../api-keys/revocation.ts';
 import { revokeDelegatedAccess } from '../auth/challenges.ts';
 import { baselineGrantKey, fullAccessSpecs } from '../entitlements/bootstrap.ts';
 import { issueBundle, revokeBundle } from '../entitlements/grants.ts';
-import { resolveAccountEntitlement } from '../entitlements/resolve.ts';
+import { resolveAccountEntitlement } from '../entitlements/state.ts';
 import { operatorTransaction } from '../db/operator-transaction.ts';
 import { bootstrapWorkspace } from '../auth/bootstrap.ts';
 import { policy } from '../config.ts';

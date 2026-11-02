@@ -14,6 +14,7 @@ import { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
 import type { DB } from '../generated/db-schema.ts';
+import type { WorkspaceEntitlements } from '../entitlements/access.ts';
 import { overLimitPromptIds } from '../entitlements/occupancy.ts';
 import { acquireProjectLock, acquirePromptSetLock } from './locks.ts';
 import { promptSetView, WITHIN_LIMIT, type PromptSetRow, type PromptSetView } from './views.ts';
@@ -48,12 +49,12 @@ export async function scopedPromptSet(
 /** The sets' views, each with its prompts in creation order. */
 async function views(
   db: Database,
-  workspaceId: string,
+  entitlements: WorkspaceEntitlements,
   sets: readonly PromptSetRow[],
 ): Promise<PromptSetView[]> {
   if (sets.length === 0) return [];
   const [overLimit, prompts] = await Promise.all([
-    overLimitPromptIds(db, workspaceId),
+    overLimitPromptIds(db, entitlements),
     db
       .selectFrom('prompts')
       .selectAll()
@@ -70,33 +71,38 @@ async function views(
   return sets.map((set) => promptSetView(set, bySet.get(set.id) ?? [], overLimit));
 }
 
+/**
+ * One set of the entitlements' workspace. A request passes its own
+ * (`c.get('entitlements')`), so the prompt allowance is not read again.
+ */
 export async function readPromptSet(
   db: Database,
-  workspaceId: string,
+  entitlements: WorkspaceEntitlements,
   promptSetId: string,
 ): Promise<PromptSetView> {
-  const [view] = await views(db, workspaceId, [
-    await scopedPromptSet(db, workspaceId, promptSetId),
+  const [view] = await views(db, entitlements, [
+    await scopedPromptSet(db, entitlements.workspaceId, promptSetId),
   ]);
   return view!;
 }
 
+/** The entitlements' workspace's sets, optionally of one project. */
 export async function listPromptSets(
   db: Database,
-  workspaceId: string,
+  entitlements: WorkspaceEntitlements,
   projectId: string | null,
 ): Promise<PromptSetView[]> {
   let query = db
     .selectFrom('prompt_sets')
     .innerJoin('projects', 'projects.id', 'prompt_sets.project_id')
     .selectAll('prompt_sets')
-    .where('projects.workspace_id', '=', workspaceId);
+    .where('projects.workspace_id', '=', entitlements.workspaceId);
   if (projectId !== null) query = query.where('prompt_sets.project_id', '=', projectId);
   const sets = await query
     .orderBy('prompt_sets.created_at', 'desc')
     .orderBy('prompt_sets.id')
     .execute();
-  return views(db, workspaceId, sets);
+  return views(db, entitlements, sets);
 }
 
 export async function createPromptSet(
@@ -129,11 +135,11 @@ export async function createPromptSet(
 
 export async function updatePromptSet(
   db: Database,
-  workspaceId: string,
+  entitlements: WorkspaceEntitlements,
   promptSetId: string,
   input: z.infer<typeof promptSetUpdate>,
 ): Promise<PromptSetView> {
-  const set = await scopedPromptSet(db, workspaceId, promptSetId);
+  const set = await scopedPromptSet(db, entitlements.workspaceId, promptSetId);
   const changes = {
     ...(input.name == null ? {} : { name: input.name }),
     ...(input.description == null ? {} : { description: input.description }),
@@ -145,7 +151,7 @@ export async function updatePromptSet(
       .where('id', '=', set.id)
       .execute();
   }
-  return readPromptSet(db, workspaceId, promptSetId);
+  return readPromptSet(db, entitlements, promptSetId);
 }
 
 export async function deletePromptSet(

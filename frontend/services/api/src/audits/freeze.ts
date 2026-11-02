@@ -16,6 +16,7 @@ import {
   overLimitSelection,
   requireCommerce,
 } from '../entitlements/occupancy.ts';
+import { WorkspaceEntitlements } from '../entitlements/access.ts';
 import { marketLabel } from '@citeladder/contracts/markets';
 import type { Market } from '../projects/markets.ts';
 import {
@@ -111,7 +112,7 @@ async function loadPrompts(
   if (input.prompt_ids.length && new Set(input.prompt_ids).size !== selected.length)
     throw invalid('Selected prompts must be active, enabled and in this project');
   // Prompts beyond the plan's slots (after a downgrade) are kept but never measured.
-  const overLimit = await overLimitPromptIds(db, workspaceId);
+  const overLimit = await overLimitPromptIds(db, new WorkspaceEntitlements(db, workspaceId));
   const prompts = selected.filter((prompt) => !overLimit.has(prompt.id));
   if (input.prompt_ids.length && prompts.length !== selected.length)
     throw overLimitSelection(selected.length - prompts.length);

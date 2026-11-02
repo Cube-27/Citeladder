@@ -14,7 +14,7 @@ import {
   ensureWorkspaceBilling,
   provisionWorkspaceBilling,
 } from '../src/entitlements/bootstrap.ts';
-import { resolveAccountEntitlement } from '../src/entitlements/resolve.ts';
+import { resolveAccountEntitlement } from '../src/entitlements/state.ts';
 
 const db = testDatabase(),
   fixtures = new Fixtures(db);

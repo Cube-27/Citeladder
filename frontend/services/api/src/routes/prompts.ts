@@ -79,7 +79,7 @@ export const promptRoutes = [
     params: { path: {}, query: { project_id: { scalar: { kind: 'uuid' } } } },
     response: z.array(promptSetSchema),
     handle: ({ c, db }, { query }) =>
-      listPromptSets(db, c.get('workspace').workspaceId, query.project_id ?? null),
+      listPromptSets(db, c.get('entitlements'), query.project_id ?? null),
   }),
   definePostRoute({
     family,
@@ -101,8 +101,7 @@ export const promptRoutes = [
     path: setRoot,
     params: { path: setPath, query: noQuery },
     response: promptSetSchema,
-    handle: ({ c, db }, { path }) =>
-      readPromptSet(db, c.get('workspace').workspaceId, path.prompt_set_id),
+    handle: ({ c, db }, { path }) => readPromptSet(db, c.get('entitlements'), path.prompt_set_id),
   }),
   definePatchRoute({
     family,
@@ -113,7 +112,7 @@ export const promptRoutes = [
     response: promptSetSchema,
     async handle({ c, db }, { path }) {
       const input = await readBody(c, promptSetUpdate);
-      return updatePromptSet(db, c.get('workspace').workspaceId, path.prompt_set_id, input);
+      return updatePromptSet(db, c.get('entitlements'), path.prompt_set_id, input);
     },
   }),
   defineDeleteRoute({
@@ -129,8 +128,7 @@ export const promptRoutes = [
     path: `${setRoot}/prompts`,
     params: { path: setPath, query: noQuery },
     response: z.array(promptSchema),
-    handle: ({ c, db }, { path }) =>
-      listPrompts(db, c.get('workspace').workspaceId, path.prompt_set_id),
+    handle: ({ c, db }, { path }) => listPrompts(db, c.get('entitlements'), path.prompt_set_id),
   }),
   definePostRoute({
     family,

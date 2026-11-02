@@ -27,11 +27,11 @@ import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { readBody } from '../http/body.ts';
-import { requireProject } from '../projects/access.ts';
 import { requireCommerce } from '../entitlements/occupancy.ts';
 import { defineGetRoute, definePatchRoute, definePostRoute } from './define.ts';
 
-const family = 'commerce';
+/** Every route here reads the path project inside the active workspace. */
+const family = { family: 'commerce', authorize: 'active-project' } as const;
 const root = '/api/v1/projects/{project_id}/commerce';
 const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const projectPath = { project_id: uuid } as const;
@@ -53,22 +53,20 @@ const executeDiscoveriesBody = z.strictObject({
   task_ids: z.array(z.uuid()).min(1).max(COMMERCE_TARGETS_MAX),
 });
 
-async function scopeOf(db: Database, c: Context<AppEnv>, projectId: string) {
-  const workspace = c.get('workspace');
-  await requireProject(db, workspace, projectId);
-  return { workspaceId: workspace.workspaceId, projectId };
+function scopeOf(c: Context<AppEnv>, projectId: string) {
+  return { workspaceId: c.get('workspace').workspaceId, projectId };
 }
 
 /** Changes and new work need Commerce in the plan; reads of collected data do not. */
 async function writeScopeOf(db: Database, c: Context<AppEnv>, projectId: string) {
-  const scope = await scopeOf(db, c, projectId);
+  const scope = scopeOf(c, projectId);
   await requireCommerce(db, scope.workspaceId);
   return scope;
 }
 
 export const commerceRoutes = [
   definePostRoute({
-    family,
+    ...family,
     path: `${root}/competitors/discoveries/run`,
     capability: 'run',
     params: { path: projectPath, query: {} },
@@ -81,7 +79,7 @@ export const commerceRoutes = [
     },
   }),
   definePostRoute({
-    family,
+    ...family,
     path: `${root}/competitors/discover`,
     capability: 'run',
     status: 202,
@@ -97,7 +95,7 @@ export const commerceRoutes = [
     },
   }),
   definePostRoute({
-    family,
+    ...family,
     path: `${root}/buyer-prompts/generate`,
     capability: 'run',
     status: 201,
@@ -113,7 +111,7 @@ export const commerceRoutes = [
     },
   }),
   definePostRoute({
-    family,
+    ...family,
     path: `${root}/buyer-prompts/manual`,
     capability: 'write',
     status: 201,
@@ -129,16 +127,16 @@ export const commerceRoutes = [
     },
   }),
   defineGetRoute({
-    family,
+    ...family,
     path: `${root}/catalog`,
     params: { path: projectPath, query: {} },
     response: commerceCatalogSchema,
     async handle({ c, db }, { path }) {
-      return catalog(db, await scopeOf(db, c, path.project_id));
+      return catalog(db, scopeOf(c, path.project_id));
     },
   }),
   definePostRoute({
-    family,
+    ...family,
     path: `${root}/catalog/import`,
     capability: 'run',
     status: 201,
@@ -151,25 +149,25 @@ export const commerceRoutes = [
     },
   }),
   defineGetRoute({
-    family,
+    ...family,
     path: `${root}/competitors`,
     params: { path: projectPath, query: {} },
     response: z.array(competitorCandidateSchema),
     async handle({ c, db }, { path }) {
-      return candidates(db, await scopeOf(db, c, path.project_id));
+      return candidates(db, scopeOf(c, path.project_id));
     },
   }),
   defineGetRoute({
-    family,
+    ...family,
     path: `${root}/competitors/discoveries`,
     params: { path: projectPath, query: { task_ids: { scalar: { kind: 'uuid' }, list: true } } },
     response: z.array(competitorDiscoveryTaskSchema),
     async handle({ c, db }, { path, query }) {
-      return discoveries(db, await scopeOf(db, c, path.project_id), query.task_ids);
+      return discoveries(db, scopeOf(c, path.project_id), query.task_ids);
     },
   }),
   definePatchRoute({
-    family,
+    ...family,
     path: `${root}/competitors/{candidate_id}`,
     capability: 'write',
     params: { path: { ...projectPath, candidate_id: uuid }, query: {} },
@@ -186,16 +184,16 @@ export const commerceRoutes = [
     },
   }),
   defineGetRoute({
-    family,
+    ...family,
     path: `${root}/buyer-prompts`,
     params: { path: projectPath, query: {} },
     response: z.array(buyerPromptSchema),
     async handle({ c, db }, { path }) {
-      return buyerPrompts(db, await scopeOf(db, c, path.project_id));
+      return buyerPrompts(db, scopeOf(c, path.project_id));
     },
   }),
   definePatchRoute({
-    family,
+    ...family,
     path: `${root}/buyer-prompts/{prompt_id}`,
     capability: 'write',
     params: { path: { ...projectPath, prompt_id: uuid }, query: {} },
@@ -207,7 +205,7 @@ export const commerceRoutes = [
     },
   }),
   defineGetRoute({
-    family,
+    ...family,
     path: `${root}/ai-shelf`,
     params: {
       path: projectPath,
@@ -218,7 +216,7 @@ export const commerceRoutes = [
     },
     response: shelfSchema,
     async handle({ c, db }, { path, query }) {
-      const scope = await scopeOf(db, c, path.project_id);
+      const scope = scopeOf(c, path.project_id);
       if (!query.target_kind || !query.target_id)
         throw new ApiError(422, 'AI Shelf requires a product or category target', {
           code: 'commerce_target_required',

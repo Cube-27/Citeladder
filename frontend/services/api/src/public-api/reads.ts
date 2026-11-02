@@ -9,6 +9,7 @@ import { z } from 'zod';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import type { WorkspaceEntitlements } from '../entitlements/access.ts';
 import { listPromptSets } from '../prompts/prompt-sets.ts';
 import { getPromptMetrics, type PromptMetricItem } from '../visibility/prompts.ts';
 import { cursorId, nextCursor, pageAfter } from './pagination.ts';
@@ -79,11 +80,12 @@ function latestMeasurement(cohort: string, measured: PromptMetricItem | undefine
 }
 export async function listPublicPrompts(
   db: Database,
+  entitlements: WorkspaceEntitlements,
   scope: Scope,
   filters: PromptFilters,
   page: { cursor: string | null; limit: number },
 ) {
-  const sets = await listPromptSets(db, scope.workspaceId, scope.projectId);
+  const sets = await listPromptSets(db, entitlements, scope.projectId);
   const prompts = sets
     .filter((set) => filters.promptSetId === null || set.id === filters.promptSetId)
     .flatMap((set) => set.prompts)

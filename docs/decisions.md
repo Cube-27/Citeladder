@@ -431,3 +431,16 @@ Overview and moved the selection whenever a crawl started.
 Source: owner, 2 November 2026: "site health should always open on pages not
 overview — currently it switches to overview on starting crawl which is
 wrong." [Site Health](site-health.md) owns the shipped behavior.
+
+## Access is looked up once per request
+
+A request reads its session, membership and workspace entitlement state once
+and reuses them for every check and handler in that request. Access is never
+cached across requests, so a removed member, a revoked grant or an ended trial
+loses access on the very next request rather than after a cache lifetime.
+Long-running workers keep their separate, bounded access reuse.
+
+Source: owner, 2 November 2026, answering "ok" to the recommendation to look
+access up once per request and not cache access checks across requests (which
+would delay a revoked user losing access by up to the cache lifetime).
+[Workspace access](workspace-access.md) owns the shipped behavior.

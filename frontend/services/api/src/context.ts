@@ -1,6 +1,7 @@
 import type { Actor } from './auth/actor.ts';
 import type { SessionUser } from './auth/session.ts';
 import type { WorkspaceContext } from './auth/workspace.ts';
+import type { WorkspaceEntitlements } from './entitlements/access.ts';
 
 /** Hono context variables every route and middleware can rely on. */
 export type AppEnv = {
@@ -8,6 +9,8 @@ export type AppEnv = {
     requestId: string;
     user: SessionUser;
     workspace: WorkspaceContext;
+    /** The workspace's entitlement state, read at most once for this request. */
+    entitlements: WorkspaceEntitlements;
     /** Set only for a public API request: the key acting for its creator. */
     actor?: Actor;
     /** The authenticated key of a public API request and its project allowlist. */

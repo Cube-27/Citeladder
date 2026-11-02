@@ -24,7 +24,8 @@ import type { SessionUser } from '../auth/session.ts';
 import { policy } from '../config.ts';
 import { base62, base62Length } from '../crypto-text.ts';
 import type { Database } from '../db/database.ts';
-import { admitApiKey, grantedValues } from '../entitlements/occupancy.ts';
+import type { WorkspaceEntitlements } from '../entitlements/access.ts';
+import { admitApiKey } from '../entitlements/occupancy.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { ApiKeys } from '../generated/db-schema.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
@@ -77,14 +78,19 @@ function keysWithCreator(db: Database, workspaceId: string) {
     .where('api_keys.workspace_id', '=', workspaceId);
 }
 
-export async function listApiKeys(db: Database, workspaceId: string): Promise<ApiKeyList> {
+export async function listApiKeys(
+  db: Database,
+  entitlements: WorkspaceEntitlements,
+): Promise<ApiKeyList> {
   const now = new Date();
-  const granted = await grantedValues(db, workspaceId);
+  const [granted, rows] = await Promise.all([
+    entitlements.granted(),
+    keysWithCreator(db, entitlements.workspaceId)
+      .orderBy('api_keys.created_at', 'desc')
+      .orderBy('api_keys.id')
+      .execute(),
+  ]);
   const available = (granted?.get(policy.entitlements.api_access) ?? 0) >= 1;
-  const rows = await keysWithCreator(db, workspaceId)
-    .orderBy('api_keys.created_at', 'desc')
-    .orderBy('api_keys.id')
-    .execute();
   return {
     available,
     limit: available ? (granted?.get(policy.entitlements.api_keys) ?? 0) : null,
@@ -106,7 +112,7 @@ export async function createApiKey(
   db: Database,
   pepper: string,
   workspaceId: string,
-  creator: SessionUser,
+  creator: Pick<SessionUser, 'id' | 'sessionVersion'>,
   input: z.output<typeof apiKeyCreateSchema>,
 ): Promise<ApiKeyCreated> {
   const userId = creator.id;

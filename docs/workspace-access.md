@@ -113,9 +113,29 @@ the CORS preflight never reaches them. Google is the only sign-in provider.
 [TypeScript authorization](../frontend/services/api/src/auth/workspace.ts) resolves
 membership and exposes safe capabilities; it is the one owner of the role
 matrix, which other modules query through it. Flat APIs use an explicit
-workspace header or the user's default membership. Routes under a project path
-resolve membership through the project ID, never trusting that ID alone. Foreign
-and missing objects do not reveal product data.
+workspace header or, without one, the user's default membership (the earliest,
+ties broken by membership ID); a header that is empty or not a UUID is a 400,
+never the default. Routes under a project path
+declare their project rule, never trusting the ID alone:
+`authorize: 'active-project'` requires the active workspace (resolved as for a
+flat route) to hold the project, and `authorize: 'project'`, for the detail read
+a link opens and for logos an `<img>` requests, resolves membership through the
+project ID without reading the header. Handlers never re-check the project. A
+project ID from a body, a query or an API key's path goes through the one
+[project guard](../frontend/services/api/src/projects/access.ts).
+Foreign and missing objects do not reveal product data.
+
+Each browser request authorizes in two round trips
+([session](../frontend/services/api/src/auth/session.ts),
+[route definition](../frontend/services/api/src/routes/define.ts)): one statement
+proves the session and resolves its membership (and the path's project), then one
+parallel batch reads the workspace's entitlement state for the access gate. The
+resolved user, workspace and entitlement state stay on the request context, so a
+handler that needs the account, a capability flag or an allowance reuses them
+instead of reading again; `/auth/me` answers from the session read. Nothing is
+cached across requests, so removed membership, a revoked grant or an ended trial
+applies from the next request ([decision](decisions.md#access-is-looked-up-once-per-request)).
+Workers keep their own short-lived access reuse (`cachedWorkspaceAccess`).
 
 The [native role policy](../frontend/services/api/src/config/workspaces.json)
 owns the authorization matrix:
