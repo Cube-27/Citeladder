@@ -102,9 +102,10 @@ or planned page, a product or category, a Search Console query or a visibility
 prompt), plus any Agent work on that target. The refresh re-derives every Action
 ([action sync](../frontend/services/api/src/opportunities/action-sync.ts))
 inside the same transaction and project lock as the snapshot it describes, so
-members, priority and diagnosis always match that snapshot. Grouping,
-convergence across evidence families, priority and the deterministic diagnosis
-(approach and recommended skill) are pure functions of the members under
+members, priority and diagnosis always match that snapshot. Grouping, priority
+(the strongest member's score; agreement between sources earns no bonus,
+because most findings on a page come from the one crawl) and the deterministic
+diagnosis (approach and recommended skill) are pure functions of the members under
 [Action policy](../frontend/services/api/src/config/actions.ts), stamped with their
 versions. A model does not score or diagnose an Action.
 
