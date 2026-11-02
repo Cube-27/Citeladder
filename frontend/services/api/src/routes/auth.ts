@@ -39,6 +39,7 @@ import {
 } from '../auth/oauth.ts';
 import { trustedClientIdentity } from '../auth/client-identity.ts';
 import { assertSignupDomainAllowed } from '../auth/reserved-domains.ts';
+import { requireHumanVerification, turnstileTokenSchema } from '../auth/human-verification.ts';
 import { enforceSubjectRequest, releaseSubjectBudget } from '../abuse/usage.ts';
 import type { Context } from 'hono';
 import type { Database } from '../db/database.ts';
@@ -69,6 +70,8 @@ const termsDecisionSchema = z.object({
   accept_terms: z.literal(true),
 });
 const signInSchema = credentialsSchema.extend(termsDecisionSchema.shape);
+// Sign-up, unlike sign-in, also carries the Turnstile token solved on the form.
+const signUpSchema = signInSchema.extend({ turnstile_token: turnstileTokenSchema });
 const base = { family: 'auth', authorize: 'public', params: { path: {}, query: {} } } as const;
 const oauthPath = { provider: { scalar: { kind: 'str' }, required: true } } as const;
 const oauth = policy.auth.oauth;
@@ -78,6 +81,7 @@ const acknowledgment = {
 const emailSchema = z.object({
   email: z.email().trim().max(255),
   return_to: z.string().max(1024).optional(),
+  turnstile_token: turnstileTokenSchema,
 });
 const challengeSchema = z.object({
   token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
@@ -88,7 +92,18 @@ const changePasswordSchema = z.object({
   password: passwordSchema,
 });
 
-async function mailboxMeter(db: Database, c: Context, config: ServiceConfig, subject?: string) {
+/**
+ * The mailbox request budget. A challenged request verifies its Turnstile
+ * token after spending its own client's unit and before the address's, so an
+ * unverified sender cannot use up someone else's mailbox allowance.
+ */
+async function mailboxMeter(
+  db: Database,
+  c: Context,
+  config: ServiceConfig,
+  subject?: string,
+  verification?: Parameters<typeof requireHumanVerification>[2],
+) {
   const cfg = policy.auth.mailbox;
   const budget = {
     operation: 'auth.mailbox.request',
@@ -96,6 +111,7 @@ async function mailboxMeter(db: Database, c: Context, config: ServiceConfig, sub
     windowSeconds: cfg.request_window_seconds,
   };
   await enforceSubjectRequest(db, 'client', trustedClientIdentity(c, config), budget);
+  if (verification) await requireHumanVerification(c, config, verification);
   if (subject) await enforceSubjectRequest(db, 'email', subject, budget);
 }
 
@@ -225,7 +241,10 @@ export const authRoutes = [
       body: emailSchema,
       async handle({ c, db, config }) {
         const payload = await readBody(c, emailSchema);
-        await mailboxMeter(db, c, config, payload.email);
+        await mailboxMeter(db, c, config, payload.email, {
+          token: payload.turnstile_token,
+          action: operation,
+        });
         await requestChallenge(
           db,
           config,
@@ -280,17 +299,41 @@ export const authRoutes = [
   }),
   definePostRoute({
     ...base,
+    authorize: 'session',
+    // The signed-in person's own password link (setting one up after Google
+    // sign-up, say). The session already proves a person, so no Turnstile.
+    path: '/api/v1/auth/password-link',
+    response: registrationResponseSchema,
+    status: 202,
+    async handle({ c, db, config }) {
+      const user = await db
+        .selectFrom('users')
+        .select('email')
+        .where('id', '=', c.get('user').id)
+        .executeTakeFirstOrThrow();
+      await mailboxMeter(db, c, config, user.email);
+      await requestChallenge(db, config, user.email, 'password_reset');
+      return acknowledgment;
+    },
+  }),
+  definePostRoute({
+    ...base,
     path: '/api/v1/auth/register',
     response: registrationResponseSchema,
     status: 202,
-    body: signInSchema,
+    body: signUpSchema,
     async handle({ c, db, config }) {
       if (config.demo.enabled || !config.auth.publicSignup)
         throw new ApiError(403, 'Registration is disabled');
-      const payload = await readBody(c, signInSchema);
+      const payload = await readBody(c, signUpSchema);
+      // Refusals that need no verification come first, so they spend no token.
       assertSignupDomainAllowed(config, payload.email);
+      requireCurrentRevision(payload.terms_revision);
       await meter(db, c, config, true);
-      await mailboxMeter(db, c, config, payload.email);
+      await mailboxMeter(db, c, config, payload.email, {
+        token: payload.turnstile_token,
+        action: 'signup',
+      });
       await registerUser(db, payload.email, payload.password, payload.terms_revision);
       await requestChallenge(db, config, payload.email, 'verification', payload.return_to);
       return acknowledgment;
@@ -395,6 +438,9 @@ export const authRoutes = [
         accept_terms: { scalar: { kind: 'str' }, default: '' },
         terms_revision: { scalar: { kind: 'str' }, default: '' },
         signup: { scalar: { kind: 'str' }, default: '' },
+        // A sign-up start is where an automated sign-up would begin, so it
+        // carries the Turnstile token solved on the sign-up form.
+        turnstile_token: { scalar: { kind: 'str' }, default: '' },
       },
     },
     response: oauthStartResponseSchema,
@@ -403,6 +449,11 @@ export const authRoutes = [
       if (query.accept_terms !== 'true' || !query.terms_revision)
         throw new ApiError(422, 'Google sign-in needs the Terms decision and its revision.');
       requireCurrentRevision(query.terms_revision);
+      if (query.signup === 'true')
+        await requireHumanVerification(c, config, {
+          token: query.turnstile_token,
+          action: 'signup',
+        });
       const { authorize_url, state, nonce } = await startSignIn(
         config,
         knownProvider(path.provider),

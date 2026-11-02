@@ -52,6 +52,17 @@ describe('product Worker routing', () => {
     }
   });
 
+  it('lets the sign-up and email-link pages load the Turnstile widget and its frame', async () => {
+    const document = await handleAppRequest(request('/register'), env);
+    const directives = document.headers.get('content-security-policy')!.split('; ');
+    expect(directives).toContain(
+      'frame-src https://api.razorpay.com https://challenges.cloudflare.com',
+    );
+    expect(directives.find((directive) => directive.startsWith('script-src '))).toContain(
+      ' https://challenges.cloudflare.com ',
+    );
+  });
+
   it('preserves an upstream consent or sandbox policy instead of weakening it', async () => {
     const policy = "default-src 'none'; sandbox";
     const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(

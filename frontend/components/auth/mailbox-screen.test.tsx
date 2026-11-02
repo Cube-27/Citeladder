@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import { StrictMode } from 'react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vite-plus/test';
@@ -45,3 +45,43 @@ it('explains an incomplete link instead of asking for a password it cannot use',
     '/forgot-password',
   );
 });
+
+it.each(['forgot-password', 'resend-verification'])(
+  'asks for a %s email only once the check is solved, sending its token',
+  async (operation) => {
+    let solve: (token: string) => void = () => {};
+    let action = '';
+    vi.stubEnv('PUBLIC_TURNSTILE_SITE_KEY', 'test-site-key');
+    window.turnstile = {
+      render: (_container, options) => {
+        action = options.action;
+        solve = (token) => act(() => options.callback(token));
+        return 'widget';
+      },
+      reset: () => {},
+      remove: () => {},
+    };
+    try {
+      window.history.replaceState(null, '', `/${operation}`);
+      renderWithProviders(<MailboxScreen />, { initialEntries: [`/${operation}`] });
+      const user = userEvent.setup();
+      await user.type(screen.getByLabelText(/Email address/u), 'reader@example.com');
+      const request = screen.getByRole('button', { name: 'Request email' });
+      expect(request).toBeDisabled();
+
+      await waitFor(() => expect(action).toBe(operation));
+      solve('solved-token');
+      await user.click(request);
+      await waitFor(() =>
+        expect(mailbox).toHaveBeenCalledWith(operation, {
+          email: 'reader@example.com',
+          return_to: '',
+          turnstile_token: 'solved-token',
+        }),
+      );
+    } finally {
+      vi.unstubAllEnvs();
+      delete window.turnstile;
+    }
+  },
+);

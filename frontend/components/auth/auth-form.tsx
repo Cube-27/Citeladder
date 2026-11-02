@@ -16,6 +16,7 @@ import { safeAuthReturnPath } from '@/lib/auth/auth-return-path';
 import { ApiError } from '@/lib/api/errors';
 import { websiteHref } from '@/lib/config/app-link';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
+import type { Turnstile } from '@/lib/turnstile/use-turnstile';
 import { cn } from '@/lib/utils';
 
 type InputProps = Omit<ComponentProps<typeof FlowInput>, 'icon'>;
@@ -170,6 +171,25 @@ function TermsConsent({
  */
 type TermsDecision = { revision: string | undefined; signup: boolean };
 
+/** A Google start's input: a sign-up start (given its widget) also carries the token. */
+function googleStartInput(
+  termsRevision: string,
+  verification: Turnstile | undefined,
+): Parameters<typeof authApi.oauthStart>[1] {
+  const returnTo = safeAuthReturnPath(new URLSearchParams(window.location.search).get('return_to'));
+  return verification
+    ? { returnTo, termsRevision, signup: true, turnstileToken: verification.token() }
+    : { returnTo, termsRevision, signup: false };
+}
+
+/** Why a Google start failed: the verification refusal says what to do itself. */
+function googleStartNotice(err: unknown): string {
+  if (!(err instanceof ApiError)) return 'Unable to start Google sign-in. Please try email below.';
+  if (err.code?.startsWith('human_verification_')) return err.message;
+  if (err.status === 503) return 'Google sign-in is coming soon — please use email below.';
+  return 'Unable to start Google sign-in. Please try email below.';
+}
+
 /**
  * Continue with Google. The start carries the Terms decision, sealed in the
  * signed state for the callback to record; only a sign-up start can create an
@@ -179,37 +199,38 @@ function GoogleEntry({
   revision,
   signup,
   consentHint,
+  verification,
 }: Readonly<{
   revision: string | undefined;
   signup: boolean;
   consentHint: string | undefined;
+  /** Sign-up's Turnstile widget: a sign-up start carries its token. */
+  verification: Turnstile | undefined;
 }>) {
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const unverified = signup && !verification?.solved;
 
   async function start() {
     // The button stays live for the whole round trip otherwise, and a second
     // click starts a second authorization before the first can redirect.
-    if (pending || consentHint || !revision) return;
+    if (pending || consentHint || !revision || unverified) return;
     setPending(true);
     setNotice(null);
     try {
-      const { authorize_url } = await authApi.oauthStart('google', {
-        returnTo: safeAuthReturnPath(new URLSearchParams(window.location.search).get('return_to')),
-        termsRevision: revision,
-        signup,
-      });
+      const { authorize_url } = await authApi.oauthStart(
+        'google',
+        googleStartInput(revision, signup ? verification : undefined),
+      );
       hardNavigate(authorize_url);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 503) {
-        setNotice('Google sign-in is coming soon — please use email below.');
-      } else {
-        setNotice('Unable to start Google sign-in. Please try email below.');
-      }
+      setNotice(googleStartNotice(err));
     } finally {
       // Cleared even on the success path: `hardNavigate` may be a no-op in a
       // test, and a permanently disabled button would strand the user.
       setPending(false);
+      // The token is single-use, spent or not.
+      if (signup) verification?.reset();
     }
   }
 
@@ -217,7 +238,7 @@ function GoogleEntry({
     <>
       <FlowButton
         variant="secondary"
-        disabled={pending || Boolean(consentHint) || !revision}
+        disabled={pending || Boolean(consentHint) || !revision || unverified}
         aria-describedby={consentHint}
         onClick={() => void start()}
       >
@@ -244,6 +265,7 @@ export function AuthFormShell({
   showForm = true,
   showFooter = true,
   terms,
+  verification,
   children,
 }: Readonly<{
   title: string;
@@ -266,9 +288,16 @@ export function AuthFormShell({
    * and omit it.
    */
   terms?: TermsDecision;
+  /**
+   * Sign-up and the email-link requests: the Turnstile widget, in a reserved
+   * slot between the fields (and Terms box) and submit. Submit, and a sign-up's
+   * Continue with Google, stay disabled until it hands over a token. Sign-in
+   * omits it.
+   */
+  verification?: Turnstile;
   children: ReactNode;
 }>) {
-  const consent = useConsentGate(showForm ? terms : undefined);
+  const consent = useConsentGate(showForm ? terms : undefined, showForm ? verification : undefined);
 
   const handleSubmit: NonNullable<ComponentProps<'form'>['onSubmit']> = (event) => {
     if (consent.held) {
@@ -292,6 +321,7 @@ export function AuthFormShell({
               revision={consent.terms.revision}
               signup={consent.terms.signup}
               consentHint={consent.hint}
+              verification={consent.verification}
             />
             <p className="auth-form-divider flow-meta text-center">or</p>
           </>
@@ -309,6 +339,13 @@ export function AuthFormShell({
                   agreed={consent.agreed}
                   onChange={consent.setAgreed}
                   hintId={consent.hintId}
+                />
+              ) : null}
+
+              {consent.verification ? (
+                <HumanCheck
+                  container={consent.verification.container}
+                  failed={consent.verification.failed}
                 />
               ) : null}
 
@@ -337,17 +374,37 @@ export function AuthFormShell({
 }
 
 /**
- * The Terms box's state for a form that authenticates (`terms` given), or
- * nothing to hold for one that does not. `hint` is the id the disabled ways in
- * point to while the box is unticked; `held` stays true until it is ticked
- * and the published revision has loaded.
+ * The Turnstile widget's slot. Its height is reserved before the widget loads
+ * and kept after it completes, so nothing below it moves; if no widget can
+ * render, a notice takes the same footprint.
  */
-function useConsentGate(terms: TermsDecision | undefined) {
+function HumanCheck({ container, failed }: Readonly<Pick<Turnstile, 'container' | 'failed'>>) {
+  return (
+    <fieldset className="auth-human-check" aria-label="Verification">
+      <div ref={container} />
+      {failed ? (
+        <p className="flow-meta">Verification could not load. Refresh the page to try again.</p>
+      ) : null}
+    </fieldset>
+  );
+}
+
+/**
+ * What holds a form's ways in: the Terms box for a form that authenticates
+ * (`terms` given) and the Turnstile token for one that is challenged
+ * (`verification` given). `hint` is the id the disabled ways in point to while
+ * the box is unticked; `held` stays true until it is ticked, the published
+ * revision has loaded and the widget has handed over a token.
+ */
+function useConsentGate(terms: TermsDecision | undefined, verification: Turnstile | undefined) {
   const [agreed, setAgreed] = useState(false);
   const hintId = useId();
   const hint = terms && !agreed ? hintId : undefined;
-  const held = Boolean(hint) || (terms !== undefined && !terms.revision);
-  return { terms, agreed, setAgreed, hintId, hint, held };
+  const held =
+    Boolean(hint) ||
+    (terms !== undefined && !terms.revision) ||
+    (verification !== undefined && !verification.solved);
+  return { terms, verification, agreed, setAgreed, hintId, hint, held };
 }
 
 /** The line under the form that switches between sign-in and sign-up, or back to sign-in. */

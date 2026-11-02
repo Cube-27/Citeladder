@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
@@ -13,10 +13,29 @@ const noParams = new URLSearchParams();
 const PUBLISHED = { terms_revision: '2026-09-24', privacy_notice_revision: '2026-09-24' };
 const TERMS_BOX = { name: 'I agree to the Terms of Service' };
 
+// Cloudflare's widget cannot run here: a stand-in renders nothing and hands
+// the form a token when the test "solves" it.
+let solveChallenge: (token: string) => void = () => {};
+let widgetHost: HTMLElement | null = null;
 beforeEach(() => {
   vi.spyOn(authApi, 'policies').mockResolvedValue(PUBLISHED);
+  vi.stubEnv('PUBLIC_TURNSTILE_SITE_KEY', 'test-site-key');
+  window.turnstile = {
+    render: (container, options) => {
+      widgetHost = container;
+      solveChallenge = (token) => act(() => options.callback(token));
+      return 'widget';
+    },
+    reset: () => {},
+    remove: () => {},
+  };
 });
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+  delete window.turnstile;
+  widgetHost = null;
+});
 
 describe('account entry', () => {
   it('guides an existing account to credential-authorized Google linking', () => {
@@ -103,6 +122,8 @@ describe('account entry', () => {
     }
     await user.click(email);
 
+    // Sign-in is never challenged: no widget, and the request carries no token.
+    expect(screen.queryByRole('group', { name: 'Verification' })).not.toBeInTheDocument();
     await waitFor(() =>
       expect(login).toHaveBeenCalledWith({
         email: 'reader@example.com',
@@ -158,7 +179,7 @@ describe('account entry', () => {
     );
   });
 
-  it('holds account creation until the Terms box is ticked, then sends the decision', async () => {
+  it('holds account creation until the Terms box is ticked and the check is solved, then sends both', async () => {
     const registerAccount = vi.spyOn(authApi, 'register').mockReturnValue(new Promise(() => {}));
     const user = userEvent.setup();
     renderWithProviders(
@@ -169,10 +190,19 @@ describe('account entry', () => {
     await user.type(screen.getByLabelText(/^Password/), 'correct horse battery');
     await user.type(screen.getByLabelText(/^Confirm password/), 'correct horse battery');
     const create = screen.getByRole('button', { name: 'Create account' });
+    const google = screen.getByRole('button', { name: 'Continue with Google' });
     expect(create).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeDisabled();
+    expect(google).toBeDisabled();
 
     await user.click(screen.getByRole('checkbox', TERMS_BOX));
+    // Terms alone is not enough: the widget has not handed over a token yet.
+    await waitFor(() => expect(widgetHost).not.toBeNull());
+    expect(create).toBeDisabled();
+    expect(google).toBeDisabled();
+
+    solveChallenge('solved-token');
+    expect(create).toBeEnabled();
+    expect(google).toBeEnabled();
     await user.click(create);
 
     await waitFor(() =>
@@ -180,12 +210,68 @@ describe('account entry', () => {
         email: 'reader@example.com',
         password: 'correct horse battery',
         termsRevision: '2026-09-24',
+        turnstileToken: 'solved-token',
         returnTo: undefined,
       }),
     );
   });
 
-  it('starts a Google sign-up with the same Terms decision', async () => {
+  it('reserves the widget slot between the Terms box and submit, so solving it moves nothing', async () => {
+    renderWithProviders(
+      <RegisterScreen demoMode={false} signupOpen replace={vi.fn()} searchParams={noParams} />,
+    );
+
+    const slot = screen.getByRole('group', { name: 'Verification' });
+    const terms = screen.getByRole('checkbox', TERMS_BOX);
+    const create = screen.getByRole('button', { name: 'Create account' });
+    const follows = (a: Node, b: Node) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect([follows(terms, slot), follows(slot, create)]).toEqual([true, true]);
+
+    await waitFor(() => expect(widgetHost).not.toBeNull());
+    expect(slot).toContainElement(widgetHost);
+    const rows = [...slot.parentElement!.children];
+    solveChallenge('solved-token');
+    // The same reserved element holds the completed widget; nothing appeared around it.
+    expect(screen.getByRole('group', { name: 'Verification' })).toBe(slot);
+    expect([...slot.parentElement!.children]).toEqual(rows);
+  });
+
+  it('shows a refused disposable address under the email field, not as a form alert', async () => {
+    vi.spyOn(authApi, 'register').mockRejectedValue(
+      new ApiError(
+        'Use a permanent email address. Disposable addresses cannot sign up.',
+        422,
+        '',
+        undefined,
+        { code: 'disposable_email_domain' },
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(
+      <RegisterScreen demoMode={false} signupOpen replace={vi.fn()} searchParams={noParams} />,
+    );
+
+    await user.type(screen.getByLabelText(/^Email address/), 'reader@mailinator.com');
+    await user.type(screen.getByLabelText(/^Password/), 'correct horse battery');
+    await user.type(screen.getByLabelText(/^Confirm password/), 'correct horse battery');
+    await user.click(screen.getByRole('checkbox', TERMS_BOX));
+    await waitFor(() => expect(widgetHost).not.toBeNull());
+    solveChallenge('solved-token');
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText(/^Email address/)).toHaveAccessibleDescription(
+        expect.stringContaining('Disposable addresses cannot sign up.'),
+      ),
+    );
+    // Said once, under the field: the form's alert does not repeat it.
+    expect(
+      screen.getAllByText('Use a permanent email address. Disposable addresses cannot sign up.'),
+    ).toHaveLength(1);
+  });
+
+  it('starts a Google sign-up with the same Terms decision and the solved token', async () => {
     const oauthStart = vi.spyOn(authApi, 'oauthStart').mockReturnValue(new Promise(() => {}));
     const user = userEvent.setup();
     renderWithProviders(
@@ -193,6 +279,8 @@ describe('account entry', () => {
     );
 
     await user.click(screen.getByRole('checkbox', TERMS_BOX));
+    await waitFor(() => expect(widgetHost).not.toBeNull());
+    solveChallenge('solved-token');
     const google = screen.getByRole('button', { name: 'Continue with Google' });
     await waitFor(() => expect(google).toBeEnabled());
     await user.click(google);
@@ -202,6 +290,7 @@ describe('account entry', () => {
         returnTo: undefined,
         termsRevision: '2026-09-24',
         signup: true,
+        turnstileToken: 'solved-token',
       }),
     );
   });

@@ -64,7 +64,12 @@ require existing cookie consent and contain only the source page.
 
 The product Worker runs before asset matching, so root, deep-link and direct
 HTML responses all carry the same enforced Content Security Policy and no-store
-policy. Fingerprinted resources retain immutable caching. Marketing pages and
+policy. That policy allows the Turnstile origin for scripts and frames, which
+the sign-up and email-link forms load; the API, not the Worker, verifies their
+tokens ([workspace access](workspace-access.md)), and the product build bakes
+the public site key `PUBLIC_TURNSTILE_SITE_KEY` (Cloudflare's always-pass test
+key when served locally or built for Compose). Fingerprinted resources retain
+immutable caching. Marketing pages and
 resources use Cloudflare asset delivery; unmatched routes reach the Worker.
 Astro hashes compiled hydration scripts into the policy: prerendered pages carry
 it as a `<meta>` element, and on-demand responses as a header that the marketing

@@ -11,8 +11,11 @@ import { makeProject } from '@/test/fixtures/project';
 const { entitlementState } = vi.hoisted(() => ({
   entitlementState: { canDeleteProject: false, roleMayDelete: true, managed: false },
 }));
-const { security, mailbox } = vi.hoisted(() => ({ security: vi.fn(), mailbox: vi.fn() }));
-vi.mock('@/lib/api/auth', () => ({ authApi: { security, mailbox } }));
+const { security, passwordLink } = vi.hoisted(() => ({
+  security: vi.fn(),
+  passwordLink: vi.fn(),
+}));
+vi.mock('@/lib/api/auth', () => ({ authApi: { security, passwordLink } }));
 
 // Session is mocked per test so the screen renders without a real SessionGuard.
 const user: SessionUser = {
@@ -105,8 +108,8 @@ function renderScreen() {
 describe('SettingsScreen', () => {
   beforeEach(() => {
     security.mockResolvedValue({ email: user.email, email_verified: true, methods: ['google'] });
-    mailbox.mockReset();
-    mailbox.mockResolvedValue({ message: 'Check your email for the password setup link.' });
+    passwordLink.mockReset();
+    passwordLink.mockResolvedValue({ message: 'Check your email for the password setup link.' });
     deleteProject.mockClear();
     listProjects.mockReset();
     listProjects.mockResolvedValue([]);
@@ -121,9 +124,8 @@ describe('SettingsScreen', () => {
     renderScreen();
     const ue = userEvent.setup();
     await ue.click(await screen.findByRole('button', { name: 'Email password setup link' }));
-    await waitFor(() =>
-      expect(mailbox).toHaveBeenCalledWith('forgot-password', { email: user.email }),
-    );
+    // A signed-in request for the session's own address: no Turnstile, no address sent.
+    await waitFor(() => expect(passwordLink).toHaveBeenCalledWith());
     expect(await screen.findByText('Check your email for the password setup link.')).toBeVisible();
     expect(window.location.pathname).toBe('/settings');
     expect(screen.getByRole('tab', { name: 'Account' })).toHaveAttribute('aria-selected', 'true');

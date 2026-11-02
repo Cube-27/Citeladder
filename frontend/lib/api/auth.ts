@@ -50,9 +50,25 @@ export const authApi = {
     const response = await apiClient.post<RegistrationResponse>(`/auth/${operation}`, body);
     return strictValidate(registrationResponseSchema, response, `auth.${operation}`);
   },
-  /** Create an account; the request carries the Terms decision made on the form. */
+  /** Email the signed-in person a link to set or reset their own password. */
+  passwordLink: async () =>
+    strictValidate(
+      registrationResponseSchema,
+      await apiClient.post('/auth/password-link', undefined),
+      'auth.passwordLink',
+    ),
+  /**
+   * Create an account; the request carries the Terms decision and the
+   * Turnstile token solved on the form.
+   */
   register: async (
-    input: { email: string; password: string; termsRevision: string; returnTo?: string },
+    input: {
+      email: string;
+      password: string;
+      termsRevision: string;
+      turnstileToken: string;
+      returnTo?: string;
+    },
     options?: ApiRequestOptions,
   ) => {
     const res = await apiClient.post<RegistrationResponse>(
@@ -62,6 +78,7 @@ export const authApi = {
         password: input.password,
         terms_revision: input.termsRevision,
         accept_terms: true,
+        turnstile_token: input.turnstileToken,
         return_to: input.returnTo,
       },
       options,
@@ -96,17 +113,23 @@ export const authApi = {
   //
   // Every start carries the Terms decision made on the form; only a sign-up
   // start may create an account, and a sign-in start for an unknown address
-  // lands on sign-up instead.
+  // lands on sign-up instead. A sign-up start also carries the Turnstile token.
   oauthStart: async (
     provider: OAuthProvider,
-    input: { returnTo?: string; termsRevision: string; signup: boolean },
+    input: { returnTo?: string; termsRevision: string } & (
+      | { signup: true; turnstileToken: string }
+      | { signup: false }
+    ),
     options?: ApiRequestOptions,
   ) => {
     const query = new URLSearchParams({
       accept_terms: 'true',
       terms_revision: input.termsRevision,
     });
-    if (input.signup) query.set('signup', 'true');
+    if (input.signup) {
+      query.set('signup', 'true');
+      query.set('turnstile_token', input.turnstileToken);
+    }
     if (input.returnTo) query.set('return_to', input.returnTo);
     const res = await apiClient.get<OAuthStartResponse>(
       `/auth/oauth/${provider}/start?${query}`,

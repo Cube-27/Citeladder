@@ -644,6 +644,24 @@
   color: var(--color-secondary);
 }
 
+/* The Turnstile widget's slot: the flexible widget's fixed 65px height,
+   reserved before it loads and kept after it completes, so submit never
+   moves. A load-failure notice shares the same cell. */
+.auth-human-check {
+  display: grid;
+  block-size: 4.0625rem;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+}
+
+.auth-human-check > * {
+  grid-area: 1 / 1;
+  align-self: center;
+}
+
 .auth-legal-link {
   color: inherit;
   font: inherit;

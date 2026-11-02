@@ -21,12 +21,14 @@ const CLOUDFLARE_BEACON_SOURCES = [
   'https://static.cloudflareinsights.com/beacon.min.js/',
 ];
 
+// Sign-up and the email-link forms load the Turnstile widget from its origin
+// and render its challenge in a frame from it.
 export const APP_CONTENT_SECURITY_POLICY = [
   ...DOCUMENT_DIRECTIVES,
-  `script-src 'self' https://checkout.razorpay.com/v1/checkout.js ${CLOUDFLARE_BEACON_SOURCES.join(' ')}`,
+  `script-src 'self' https://checkout.razorpay.com/v1/checkout.js ${TURNSTILE_ORIGIN} ${CLOUDFLARE_BEACON_SOURCES.join(' ')}`,
   "img-src 'self' data: blob: https://img.logo.dev",
   "connect-src 'self' https://api.razorpay.com https://cloudflareinsights.com/cdn-cgi/rum",
-  'frame-src https://api.razorpay.com',
+  `frame-src https://api.razorpay.com ${TURNSTILE_ORIGIN}`,
   "form-action 'self'",
 ].join('; ');
 

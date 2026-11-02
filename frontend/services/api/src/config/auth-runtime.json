@@ -1,6 +1,7 @@
 {
   "settings": {
     "resend_api_key": { "env": ["RESEND_API_KEY"], "type": "str", "default": "" },
+    "turnstile_secret_key": { "env": ["TURNSTILE_SECRET_KEY"], "type": "str", "default": "" },
     "auth_mail_timeout_ms": {
       "env": ["AUTH_MAIL_TIMEOUT_MS"],
       "type": "int",

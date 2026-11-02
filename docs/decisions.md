@@ -373,3 +373,31 @@ chunk graph.
 
 Source: owner, 2 November 2026, answering "Replace Recharts with the app's own
 chart component?" with "no replace".
+
+## Turnstile guards sign-up and email-link requests, never sign-in
+
+Cloudflare Turnstile (free, already on the contact form) protects account
+creation and every public "email me a link" request: email sign-up, a Google
+sign-up start, resend verification and forgot password. Sign-in is never
+challenged. The API verifies the token, before any account row or mail exists,
+so the SPA and any non-browser caller meet one rule in one owner; its secret is
+an API secret, and outside development a missing one fails closed.
+
+Source: owner, 2 November 2026, answering "Add Turnstile to sign-up? It's free
+and you already use it on the contact form. I'd add it only to sign-up and to
+email-link requests, not to sign-in," with "yes".
+[Workspace access](workspace-access.md) owns the shipped behavior.
+
+## Public sign-up refuses disposable email domains
+
+Public sign-up, by email and password or by Google, also refuses an address on
+a maintained disposable-mailbox list kept as configuration in the repository
+(`config/disposable-email-domains.json`, from the CC0-1.0
+disposable-email-domains project, refreshed by a person with
+`pnpm --filter @citeladder/api disposable-domains:refresh`, never at runtime).
+It shares one sign-up domain gate with the reserved-domain refusal. Existing
+accounts, sign-in and mailbox requests are unaffected.
+
+Source: owner, 2 November 2026, answering "Block disposable email domains at
+sign-up? It would use a maintained list kept in config," with "yes".
+[Workspace access](workspace-access.md) owns the shipped behavior.

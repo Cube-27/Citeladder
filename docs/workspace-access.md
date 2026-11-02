@@ -33,7 +33,37 @@ Public sign-up refuses them before writing or mailing anything:
 `field: email`), and a Google sign-up redirects with
 `oauth_signin_email_reserved`. Operator and test fixtures may still hold such
 addresses; no auth or invitation mail is sent to them and no signup notice
-reports them.
+reports them. The same sign-up domain gate refuses a disposable-mailbox domain,
+or any name under one, from the configured
+[disposable list](../frontend/services/api/src/config/disposable-email-domains.json)
+(CC0-1.0 disposable-email-domains project; its header names the pinned source
+commit and date; a person refreshes it with
+`pnpm --filter @citeladder/api disposable-domains:refresh` and commits the diff):
+422 `disposable_email_domain` (details `field: email`), or a Google sign-up
+redirect with `oauth_signin_email_disposable`. Existing accounts on such
+domains keep signing in. Invitations create no account (the invitee signs up),
+so they pass through the same gate.
+
+Cloudflare Turnstile guards account creation and the public email-link
+requests, never sign-in
+([human verification](../frontend/services/api/src/auth/human-verification.ts)).
+`POST /auth/register`, `POST /auth/resend-verification`,
+`POST /auth/forgot-password` (body `turnstile_token`) and a Google sign-up start
+(`signup=true&turnstile_token=…`) are verified in the API, after the request's
+own client budget and before the address's budget, any account row or any mail.
+The widget must have been solved for that request's action (`signup`,
+`resend-verification`, `forgot-password`) on the app host (`FRONTEND_URL`). A
+missing, invalid, replayed or mismatched token answers 403
+`human_verification_failed`; a missing secret outside development, a Cloudflare
+test secret in production, or siteverify being unreachable answers 503
+`human_verification_unavailable` (fail closed). Development and test default to
+Cloudflare's always-pass test secret, answered locally without a network call
+(it accepts only the dummy token `XXXX.DUMMY.TOKEN.XXXX`). A signed-in person
+asks for their own password link with the session-authorized
+`POST /auth/password-link`, which needs no token. The sign-up and email-link
+forms hold submit (and a sign-up's Continue with Google) until both the Terms box
+is ticked, where present, and the widget has handed over a token; the widget
+sits in a fixed-height slot between the Terms box and submit.
 Once a public identity's mailbox is verified (mailed link, reset or Google), the
 runner tick's `signup-notices` phase
 ([signup notifications](../frontend/services/api/src/auth/signup-notifications.ts))

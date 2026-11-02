@@ -52,6 +52,7 @@ import { promptGeneration } from './config/prompt-generation.ts';
 import { brandLogos } from './config/brand-logos.ts';
 import { internalLinks } from './config/internal-links.ts';
 import { perception } from './config/perception.ts';
+import { turnstile } from './config/turnstile.ts';
 import {
   billingSettings,
   razorpaySettings,
@@ -94,6 +95,7 @@ export const policy = {
     terms_revision: authRuntime.terms_revision,
     privacy_revision: authRuntime.privacy_revision,
     oauth: authOAuth,
+    turnstile,
   },
   search_intelligence: {
     ...searchIntelligence,
@@ -353,6 +355,12 @@ export type ServiceConfig = {
     trustedProxies: TrustedProxies;
     oauthSettings: Record<string, string | number | boolean>;
     limits: Record<keyof typeof policy.abuse, number>;
+    /**
+     * Turnstile siteverify secret for sign-up and email-link requests. Empty
+     * outside development means unconfigured, and those requests fail closed;
+     * Cloudflare's test secrets are honoured only where `testKeysAllowed`.
+     */
+    turnstile: { secret: string; testKeysAllowed: boolean };
     /** Injected provider transport for recorded-fixture tests. */
     fetch?: typeof fetch;
   };
@@ -374,6 +382,15 @@ function parsePort(raw: string | undefined): number {
 
 function isDevelopmentEnv(appEnv: string): boolean {
   return policy.development_env_names.includes(appEnv.trim().toLowerCase());
+}
+
+/** Development and test default to Cloudflare's always-pass test secret; nowhere else does. */
+function turnstileSettings(configured: string, appEnv: string): ServiceConfig['auth']['turnstile'] {
+  const development = isDevelopmentEnv(appEnv);
+  return {
+    secret: configured || (development ? turnstile.development_secret : ''),
+    testKeysAllowed: development,
+  };
 }
 
 /** Deployment secret-strength admission. */
@@ -462,6 +479,11 @@ export function assertDeployable(
   const issues = productionSecretProblems(config, env);
   if (config.auth.publicSignup && !config.auth.mailKey)
     issues.push('RESEND_API_KEY is required for public signup');
+  if (
+    !config.auth.turnstile.testKeysAllowed &&
+    turnstile.test_secrets.has(config.auth.turnstile.secret)
+  )
+    issues.push('TURNSTILE_SECRET_KEY must not be a Cloudflare test secret in production');
   if (
     config.auth.oauthSettings.google_enabled === true &&
     (!config.auth.oauthSettings.google_client_id ||
@@ -556,6 +578,10 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       limits: Object.fromEntries(
         Object.entries(policy.abuse).map(([name, spec]) => [name, resolveSettingSpec(spec, env)]),
       ) as ServiceConfig['auth']['limits'],
+      turnstile: turnstileSettings(
+        setting('turnstile_secret_key') as string,
+        setting('app_env') as string,
+      ),
     },
     demo: {
       enabled: setting('demo_mode') as boolean,

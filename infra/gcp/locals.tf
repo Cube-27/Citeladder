@@ -48,6 +48,8 @@ locals {
   }
   api_secret_env = {
     CITELADDER_ORIGIN_TOKEN = "citeladder-worker-origin-token"
+    # Verifies Turnstile on sign-up and email-link requests; without it they fail closed.
+    TURNSTILE_SECRET_KEY = "citeladder-turnstile-secret"
   }
   api_optional_secret_env = {
     CITELADDER_ORIGIN_TOKEN_PREVIOUS = "citeladder-worker-origin-token-previous"
