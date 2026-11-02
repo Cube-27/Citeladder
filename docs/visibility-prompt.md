@@ -822,10 +822,17 @@ queries settle on each response analysis, retaining its artifact/task provenance
 and fanout projection version. Source/fanout totals are server aggregates over
 the full selection; source, fanout and answer keyset cursors bind filters and the
 snapshot boundary. Original answers use /runs/{runId}?execution={taskId}.
-The Sources table still aggregates `citations` over the selection per request
-(its denominator, totals and page of rows in one statement), then fills page
-facts, co-cited brands and retrieval coverage concurrently; per-run source
-aggregates are not persisted yet.
+The Sources table reads per-run facts that audit finalization writes in its
+transaction: `audit_answer_aggregates` (per engine and cohort, the exact
+successful answer IDs and prompt keys) and `audit_source_aggregates` (per
+engine, cohort, dimension, key and citation class, the exact answer, prompt,
+URL and citation IDs). Its denominator, totals and page of rows come from one
+statement that counts distinct values over the selected runs' arrays, so a
+prompt or URL in two runs counts once; only the page-format and gap filters
+read current `source_pages`. A selected run without persisted facts is
+`metrics_pending`, never zero. Co-cited brands and the baseline comparison use
+the same facts; page facts and retrieval coverage fill in concurrently.
+Series, movers, near misses and one URL's page still read `citations`.
 
 Citation rate is citations over the responses a source was RETRIEVED in, never
 over the responses in the selection, and never over a stored retrieval counter.
