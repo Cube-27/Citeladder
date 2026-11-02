@@ -65,7 +65,7 @@ export const PLACEHOLDER = availabilityLabel('not_measured');
  * default. Every first-page request names it, so the progress strip's preview
  * and the browser share one cache entry instead of fetching the same rows.
  */
-export const DEFAULT_PAGES_SORT = 'status' satisfies PagesSort;
+export const DEFAULT_PAGES_SORT: PagesSort = 'status';
 
 /** Poll cadence for the Site Health screen's active-crawl queries. */
 export const POLL_INTERVAL_MS = 4_000;
