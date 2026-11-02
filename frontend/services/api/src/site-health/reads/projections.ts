@@ -94,14 +94,27 @@ const OVERVIEW_COLUMNS = [
   'change_summary',
 ] as const;
 
+/**
+ * The frozen Web Fundamentals without provenance id lists: neither its own
+ * nor each area finding's leave the database on an Overview read.
+ */
+const withoutOwnIds = sql`web_fundamentals - 'source_analysis_ids' - 'source_artifact_ids' - 'source_evaluation_ids'`;
+const webFundamentals = sql<unknown>`case when jsonb_typeof(web_fundamentals -> 'areas') = 'array'
+  then ${withoutOwnIds} || jsonb_build_object('areas', (
+    select coalesce(jsonb_agg(
+      case when jsonb_typeof(area -> 'top_findings') = 'array'
+        then jsonb_set(area, '{top_findings}', (
+          select coalesce(jsonb_agg(finding - 'source_evaluation_ids' order by f.n), '[]'::jsonb)
+          from jsonb_array_elements(area -> 'top_findings') with ordinality f(finding, n)))
+        else area end
+      order by a.n), '[]'::jsonb)
+    from jsonb_array_elements(web_fundamentals -> 'areas') with ordinality a(area, n)))
+  else ${withoutOwnIds} end`;
+
 function overviewSnapshot(db: Database, crawl: Crawl) {
   return snapshotOf(db, crawl)
     .select(OVERVIEW_COLUMNS)
-    .select(
-      sql<unknown>`web_fundamentals - 'source_analysis_ids' - 'source_artifact_ids' - 'source_evaluation_ids'`.as(
-        'web_fundamentals',
-      ),
-    )
+    .select(webFundamentals.as('web_fundamentals'))
     .executeTakeFirst();
 }
 

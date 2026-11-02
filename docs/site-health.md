@@ -631,6 +631,14 @@ finalized one, and a duplicate alias retiring analyses recompute it in their own
 transaction; architecture findings are written current. Issues and evaluations
 are otherwise never rewritten.
 
+The Issues page-kind filter (`page_kind`) files a per-page finding under its own
+page's current, finalized analysis kind; every analysis names the crawl's site
+checks, so those sources alone would file a site check under every kind. A
+site-level finding (a sitewide link or an architecture rule) belongs to the
+kinds its evidence's `page_kind_counts` names, counted over every affected
+page rather than the sample, and its group and rail count only that kind's
+pages.
+
 `GET /projects/{id}/site-health/pages` and `/issues` answer the crawl-scoped
 pages and issues reads for the project's newest crawl (the dashboard's) and name
 it (`crawl_id`, and the pages read's `crawl_status`). The Website and Issues

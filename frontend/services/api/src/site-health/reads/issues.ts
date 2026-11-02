@@ -35,8 +35,8 @@ import {
   rulesTitled,
   ruleTitle,
   severityRank,
+  siteLevelRule,
   siteLevelScope,
-  sitewideLinkRules,
   type IssueRow,
 } from './rules.ts';
 
@@ -55,15 +55,25 @@ export type IssueFilters = {
 };
 
 /**
- * Evaluation ids that the crawl's current, finalized analyses of one page kind
- * name. Only the page-kind filter reads this; currency itself is the persisted
- * `is_current` flag.
+ * Issues that belong to one page kind, for the page-kind filter (currency
+ * itself is the persisted `is_current` flag).
+ *
+ * Every finalized analysis names the crawl's site checks among its sources, so
+ * matching on those sources alone would file a site-level finding under every
+ * kind. A per-page finding belongs to the kind of its own page's current,
+ * finalized analysis; a finding persisted once for the site (a sitewide link,
+ * an architecture rule) belongs to the kinds its evidence counts pages of, and
+ * `siteLevelScope` counts only those pages.
  */
-function kindEvaluations(crawl: Crawl, pageKind: string) {
-  return sql`(
-  select unnest(a.source_evaluation_ids) from site_page_analyses a
-  where a.workspace_id = ${crawl.workspace_id} and a.crawl_id = ${crawl.id}
-    and a.is_current and a.finalized_at is not null and a.page_kind = ${pageKind})`;
+function ofPageKind(crawl: Crawl, pageKind: string) {
+  return sql`(case when ${siteLevelRule}
+    then coalesce(i.evidence -> 'page_kind_counts' ? ${pageKind}, false)
+    else exists (
+      select 1 from site_page_analyses a
+      where a.workspace_id = ${crawl.workspace_id} and a.crawl_id = ${crawl.id}
+        and a.site_url_id = i.site_url_id and a.is_current and a.finalized_at is not null
+        and a.page_kind = ${pageKind} and i.evaluation_id = any(a.source_evaluation_ids))
+    end)`;
 }
 
 /**
@@ -86,8 +96,7 @@ function issueWhere(
   if (filters.dimension) clauses.push(sql`i.dimension = ${filters.dimension}`);
   if (filters.rule) clauses.push(sql`i.rule_id = ${filters.rule}`);
   if (filters.siteUrlId) clauses.push(sql`i.site_url_id = ${filters.siteUrlId}`);
-  if (filters.pageKind)
-    clauses.push(sql`i.evaluation_id in ${kindEvaluations(crawl, filters.pageKind)}`);
+  if (filters.pageKind) clauses.push(ofPageKind(crawl, filters.pageKind));
   if (filters.findingClass) clauses.push(sql`i.finding_class = ${filters.findingClass}`);
   if (filters.query) {
     // The reader searches the titles they see ("broken internal links"), not rule ids.
@@ -116,7 +125,8 @@ async function issueGroups(db: Database, crawl: Crawl, filters: IssueFilters): P
     .map((row) => ({
       ...row,
       affected_url_count:
-        siteLevelScope(row.rule_id, row.evidence)?.affected ?? row.affected_url_count,
+        siteLevelScope(row.rule_id, row.evidence, filters.pageKind)?.affected ??
+        row.affected_url_count,
       group_id: issueGroupId(crawl.id, row.rule_id, filters.findingClass),
     }))
     .sort(compareGroups);
@@ -157,10 +167,7 @@ async function issueSummary(db: Database, crawl: Crawl, filters: IssueFilters) {
       from site_issues i where ${scoped}`.execute(db),
     sql<{ rule_id: string; evidence: unknown }>`
       select i.rule_id, i.evidence from site_issues i
-      where ${scoped}
-        and (i.rule_id like 'architecture.%' or i.rule_id = any(${sitewideLinkRules}::text[]))`.execute(
-      db,
-    ),
+      where ${scoped} and ${siteLevelRule}`.execute(db),
   ]);
   const byClass = Object.fromEntries(classes.rows.map((row) => [row.finding_class, row.count]));
   const severityCounts: Record<string, number> = {
@@ -185,7 +192,9 @@ async function issueSummary(db: Database, crawl: Crawl, filters: IssueFilters) {
   // exactly: the total is at least its largest group, never the homepage alone.
   const siteLevelAffected = Math.max(
     0,
-    ...siteLevel.rows.map((row) => siteLevelScope(row.rule_id, row.evidence)?.affected ?? 0),
+    ...siteLevel.rows.map(
+      (row) => siteLevelScope(row.rule_id, row.evidence, filters.pageKind)?.affected ?? 0,
+    ),
   );
   return {
     issue_count: byClass.defect ?? 0,
@@ -333,9 +342,7 @@ export async function issueDetail(
     (row) => issueGroupId(crawl.id, row.rule_id, row.finding_class) === groupId,
   );
   if (group === undefined) throw notFound('Issue');
-  const kindFilter = pageKind
-    ? sql`and i.evaluation_id in ${kindEvaluations(crawl, pageKind)}`
-    : sql``;
+  const kindFilter = pageKind ? sql`and ${ofPageKind(crawl, pageKind)}` : sql``;
   const inGroup = sql`${currentIssues(crawl)} and i.rule_id = ${group.rule_id}
     and i.finding_class = ${group.finding_class} ${kindFilter}`;
   const fingerprint = {
@@ -397,7 +404,8 @@ export async function issueDetail(
     occurrences: page.map((row) => issueOccurrence(row, row)),
     occurrence_count: total.occurrences,
     affected_url_count:
-      siteLevelScope(representative.rule_id, representative.evidence)?.affected ?? total.affected,
+      siteLevelScope(representative.rule_id, representative.evidence, pageKind)?.affected ??
+      total.affected,
     analyzer_version: representative.analyzer_version,
     rule_version: representative.rule_version,
     created_at: representative.created_at.toISOString(),

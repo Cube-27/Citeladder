@@ -16,6 +16,7 @@ import {
   siteIssueDetailSchema,
   siteIssuesPageSchema,
 } from '@citeladder/contracts/site-health';
+import { sql } from 'kysely';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
@@ -124,7 +125,7 @@ async function page(seed: SiteSeed, path: string, options: { current?: boolean }
 }
 
 /** A failing evaluation of `ruleId` on the page's analysis, and its persisted issue. */
-async function issue(seed: SiteSeed, target: Page, ruleId: string) {
+async function issue(seed: SiteSeed, target: Page, ruleId: string, evidence: object = {}) {
   const rule = policy.site_health.rule_catalog.find((item) => item.rule_id === ruleId)!;
   const [analysis] = await db
     .selectFrom('site_page_analyses')
@@ -156,11 +157,38 @@ async function issue(seed: SiteSeed, target: Page, ruleId: string) {
       finding_class: rule.finding_class,
       description: rule.description,
       remediation: rule.remediation,
+      evidence: JSON.stringify(evidence),
       analyzer_version: policy.site_health.versions.analyzer,
       created_at: new Date(),
     })
     .execute();
   // What the terminal publication does after writing the analyses above.
+  await refreshIssueCurrency(db, { id: seed.crawlId, workspace_id: seed.workspaceId });
+  return evaluationId;
+}
+
+/**
+ * A site check failing on the root, named by every page's finalized analysis
+ * as the terminal publication names it: each page scores the site's checks.
+ */
+async function siteIssue(
+  seed: SiteSeed,
+  root: Page,
+  pages: readonly Page[],
+  ruleId: string,
+  evidence: object = {},
+) {
+  const evaluationId = await issue(seed, root, ruleId, evidence);
+  for (const other of pages)
+    await db
+      .updateTable('site_page_analyses')
+      .set({
+        source_evaluation_ids: sql<
+          string[]
+        >`array_append(source_evaluation_ids, ${evaluationId}::uuid)`,
+      })
+      .where('id', '=', other.analysisId)
+      .execute();
   await refreshIssueCurrency(db, { id: seed.crawlId, workspace_id: seed.workspaceId });
 }
 
@@ -406,6 +434,62 @@ describe('issue catalog', () => {
         'product',
       ),
     ).rejects.toThrow('cursor');
+  });
+
+  it('files a site-level finding only under the page kinds it was found on, counting their pages', async () => {
+    const seed = await fixtures.crawl();
+    const home = await page(seed, '/');
+    const product = await page(seed, '/product');
+    const other = await page(seed, '/product-2');
+    const all = [product, other];
+    await issue(seed, product, 'technical.indexable');
+    // Site checks fail once, on the root, and every page's analysis names them.
+    await siteIssue(seed, home, all, 'technical.ai_crawler_access');
+    await siteIssue(seed, home, all, 'technical.sitewide_broken_link', {
+      count: 3,
+      linking_page_kinds: ['homepage', 'product'],
+      page_kind_counts: { homepage: 1, product: 2 },
+    });
+    await siteIssue(seed, home, all, 'technical.sitewide_link_redirect', {
+      count: 1,
+      linking_page_kinds: ['homepage'],
+      page_kind_counts: { homepage: 1 },
+    });
+    const affected = async (pageKind: string) => {
+      const body = await json(
+        seed,
+        `/site-crawls/${seed.crawlId}/issues?page_kind=${pageKind}`,
+        siteIssuesPageSchema,
+      );
+      return Object.fromEntries(body.items.map((row) => [row.rule_id, row.affected_url_count]));
+    };
+
+    expect(await affected('product')).toEqual({
+      'technical.indexable': 1,
+      'technical.sitewide_broken_link': 2,
+    });
+    expect(await affected('homepage')).toEqual({
+      'technical.ai_crawler_access': 1,
+      'technical.sitewide_broken_link': 1,
+      'technical.sitewide_link_redirect': 1,
+    });
+    // The rail counts what its list row counted.
+    const rail = await json(
+      seed,
+      `/site-crawls/${seed.crawlId}/issues/${issueGroupId(seed.crawlId, 'technical.sitewide_broken_link', 'defect')}?page_kind=product`,
+      siteIssueDetailSchema,
+    );
+    expect(rail.affected_url_count).toBe(2);
+    // Unfiltered, a site-level finding counts every page it names.
+    const unfiltered = await json(
+      seed,
+      `/site-crawls/${seed.crawlId}/issues`,
+      siteIssuesPageSchema,
+    );
+    expect(
+      unfiltered.items.find((row) => row.rule_id === 'technical.sitewide_broken_link')
+        ?.affected_url_count,
+    ).toBe(3);
   });
 
   it('groups current issues by rule and counts groups, folding critical into high', async () => {
