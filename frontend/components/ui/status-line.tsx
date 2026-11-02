@@ -5,7 +5,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { ICONS } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-export type StatusTone = 'info' | 'warning' | 'danger' | 'neutral';
+type StatusTone = 'info' | 'warning' | 'danger' | 'neutral';
 
 /** One thing the screen has to say, most important first in the list. */
 export type StatusMessage = Readonly<{
