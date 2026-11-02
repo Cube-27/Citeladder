@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { GateNoticeFrame } from '@/components/layout/gate-notice-frame';
 import { Button } from '@/components/ui/button';
-import { QueryState } from '@/components/ui/query-state';
+import { RouteLoadingScreen } from '@/components/layout/page-shell';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { useCanonicalProjectUrl, workspaceDestination } from '@/lib/navigation/project-destination';
@@ -81,8 +81,10 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
   useOnboardingRedirect(state === 'redirecting', activeWorkspaceId);
   useCanonicalProjectUrl(status === 'ready' && projectRequired);
 
-  if (state === 'redirecting') return <QueryState kind="loading" label="Opening project setup…" />;
-  if (state === 'loading') return <QueryState kind="loading" label="Loading your workspace…" />;
+  // The route's own loading frame, so this wait and the page's first read are
+  // one loading state in one place rather than a bare box, then a header.
+  if (state === 'redirecting') return <RouteLoadingScreen label="Opening project setup…" />;
+  if (state === 'loading') return <RouteLoadingScreen label="Loading your workspace…" />;
   if (state !== 'ready') {
     return (
       <GateNotice
