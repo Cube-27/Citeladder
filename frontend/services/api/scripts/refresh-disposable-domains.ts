@@ -29,6 +29,7 @@ const commit = z
     JSON.parse(await fetchText(`https://api.github.com/repos/${REPOSITORY}/commits/main`)),
   ).sha;
 const source = `https://raw.githubusercontent.com/${REPOSITORY}/${commit}/${LIST_PATH}`;
+// Code-unit order, not locale order: the committed file sorts the same on every machine.
 const domains = [
   ...new Set(
     (await fetchText(source))
@@ -36,7 +37,7 @@ const domains = [
       .map((line) => line.trim().toLowerCase())
       .filter((line) => line && !line.startsWith('#')),
   ),
-].sort();
+].sort((a, b) => (a < b ? -1 : Number(a > b)));
 const malformed = domains.filter((domain) => !DOMAIN.test(domain));
 if (malformed.length) throw new Error(`Unexpected entries: ${malformed.slice(0, 5).join(', ')}`);
 if (domains.length < 1_000) throw new Error(`Only ${domains.length} domains; refusing to shrink.`);

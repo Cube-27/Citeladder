@@ -393,6 +393,14 @@ function turnstileSettings(configured: string, appEnv: string): ServiceConfig['a
   };
 }
 
+/** A Cloudflare test secret would accept the public dummy token: never outside development. */
+function turnstileProblems(config: ServiceConfig): string[] {
+  const { secret, testKeysAllowed } = config.auth.turnstile;
+  return !testKeysAllowed && turnstile.test_secrets.has(secret)
+    ? ['TURNSTILE_SECRET_KEY must not be a Cloudflare test secret in production']
+    : [];
+}
+
 /** Deployment secret-strength admission. */
 export function secretIsWeak(value: string): boolean {
   const rules = policy.secret_policy;
@@ -479,11 +487,7 @@ export function assertDeployable(
   const issues = productionSecretProblems(config, env);
   if (config.auth.publicSignup && !config.auth.mailKey)
     issues.push('RESEND_API_KEY is required for public signup');
-  if (
-    !config.auth.turnstile.testKeysAllowed &&
-    turnstile.test_secrets.has(config.auth.turnstile.secret)
-  )
-    issues.push('TURNSTILE_SECRET_KEY must not be a Cloudflare test secret in production');
+  issues.push(...turnstileProblems(config));
   if (
     config.auth.oauthSettings.google_enabled === true &&
     (!config.auth.oauthSettings.google_client_id ||
