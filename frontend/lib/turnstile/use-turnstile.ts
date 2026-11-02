@@ -1,5 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
-import { TURNSTILE_SCRIPT_URL } from '@/lib/config/turnstile';
+import { TURNSTILE_FLEXIBLE_MIN_WIDTH_PX, TURNSTILE_SCRIPT_URL } from '@/lib/config/turnstile';
+
+/** Flexible fills its slot from 300px up, 65px tall; compact is 150px by 140px. */
+export type TurnstileSize = 'flexible' | 'compact';
 
 type TurnstileApi = {
   render(
@@ -7,7 +10,7 @@ type TurnstileApi = {
     options: {
       sitekey: string;
       action: string;
-      size: 'flexible';
+      size: TurnstileSize;
       'response-field': boolean;
       callback(token: string): void;
       'expired-callback'(): void;
@@ -51,6 +54,11 @@ function loadTurnstile(): Promise<TurnstileApi> {
  * no widget can render at all (no site key, or the script would not load).
  * Tokens are single-use: call `reset` after every submission.
  *
+ * `size` is the widget size the element's width allows, measured when the
+ * element mounts and before the first paint, so a slot sized from it is
+ * already the widget's height when the widget arrives. A rendered widget keeps
+ * its size; so does the slot.
+ *
  * The site key is public and baked in at build (`PUBLIC_TURNSTILE_SITE_KEY`
  * for each of the marketing and product builds). Without one no widget
  * renders, no token arrives, and a form that requires one stays held.
@@ -60,10 +68,14 @@ export function useTurnstile(action: string) {
   const token = useRef('');
   const [solved, setSolved] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [size, setSize] = useState<TurnstileSize>('flexible');
 
   const container = useCallback(
     (element: HTMLDivElement | null) => {
       if (!element) return;
+      const fits = element.getBoundingClientRect().width >= TURNSTILE_FLEXIBLE_MIN_WIDTH_PX;
+      const chosen: TurnstileSize = fits ? 'flexible' : 'compact';
+      setSize(chosen);
       const sitekey = process.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       if (!sitekey) {
         setFailed(true);
@@ -81,7 +93,7 @@ export function useTurnstile(action: string) {
           const id = api.render(element, {
             sitekey,
             action,
-            size: 'flexible',
+            size: chosen,
             'response-field': false,
             callback: settle,
             'expired-callback': () => settle(''),
@@ -109,7 +121,7 @@ export function useTurnstile(action: string) {
     if (widget.current) widget.current.api.reset(widget.current.id);
   }, []);
 
-  return { container, token: () => token.current, solved, failed, reset };
+  return { container, token: () => token.current, solved, failed, size, reset };
 }
 
 export type Turnstile = ReturnType<typeof useTurnstile>;

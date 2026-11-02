@@ -657,6 +657,12 @@
   overflow: hidden;
 }
 
+/* Narrower than the flexible widget's 300px minimum (a 320px phone), the slot
+   holds the compact widget and reserves its fixed 140px height instead. */
+.auth-human-check[data-size='compact'] {
+  block-size: 8.75rem;
+}
+
 .auth-human-check > * {
   grid-area: 1 / 1;
   align-self: center;
