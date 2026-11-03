@@ -23,8 +23,8 @@ const repository = 'Cube-27/cube27-fonts';
 // Pinned so every deploy ships the same bytes; bump it to adopt a font change.
 const revision = '8b0146c1033075d3a7092b1ce2ec71ee6f93be17';
 const licensedFonts = [
-  'LexendDeca-Variable.woff2',
-  'Syne-Variable.woff2',
+  'Switzer-Variable.woff2',
+  'Plein-Variable.woff2',
   'JetBrainsMono-Variable.woff2',
 ];
 

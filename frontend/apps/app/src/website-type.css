@@ -11,7 +11,7 @@
    the one rung below it. */
 :where([data-public-surface], [data-flow-surface]) {
   /* The public and focused-flow type world (docs/design.md §Typography):
-     Lexend Deca carries body, UI and data, Syne the display headings, as in
+     Switzer carries body, UI and data, Plein the display headings, as in
      the product. The scale is the product's (globals.css @theme), unchanged;
      being "roomier" is a job for measure and rhythm, not for resizing rungs. */
   --tracking-tight: -0.02em;
@@ -399,8 +399,8 @@
    travel as one contract. The low-specificity colour defaults let explicit
    semantic utilities override them for warnings and evidence states.
 
-   Display rungs set in Syne at 500 with no tracking: the face's own
-   spacing holds at every size. The feature heading and body rungs set in Lexend Deca
+   Display rungs set in Plein at 500 with no tracking: the face's own
+   spacing holds at every size. The feature heading and body rungs set in Switzer
    at 400/500. */
 .website-hero-display,
 .website-page-title,
@@ -439,7 +439,7 @@
   letter-spacing: -0.02em;
 }
 
-/* Card and feature titles: Lexend Deca at the 500 ceiling, a size step
+/* Card and feature titles: Switzer at the 500 ceiling, a size step
    (20 over 16) above the card's text, since weight cannot carry it. */
 .website-feature-heading {
   font-family: var(--font-sans);
