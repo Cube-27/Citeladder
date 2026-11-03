@@ -295,12 +295,17 @@ describe('bootstrapPrivateRoutes', () => {
   });
 
   describe('the workspace chooser sign-in lands on', () => {
-    function memberOf(workspaces: unknown[]) {
+    function memberOf(workspaces: unknown, status = 200) {
       mswServer.use(
         http.get('/api/v1/auth/me', () => HttpResponse.json({ user: USER })),
-        http.get('/api/v1/workspaces', () => HttpResponse.json(workspaces)),
+        http.get('/api/v1/workspaces', () => HttpResponse.json(workspaces, { status })),
       );
     }
+
+    it('leaves a failed membership read to the chooser, which owns that notice', async () => {
+      memberOf({ error: { message: 'nope' } }, 403);
+      expect(await run('/workspaces')).toBeNull();
+    });
 
     it('goes straight into the only workspace a person owns, before it paints', async () => {
       memberOf([WORKSPACE_ROW]);
@@ -323,16 +328,6 @@ describe('bootstrapPrivateRoutes', () => {
       expect(await run('/workspaces')).toBeNull();
       setAppQueryClient(createAppQueryClient());
       memberOf([invited]);
-      expect(await run('/workspaces')).toBeNull();
-    });
-
-    it('leaves a failed membership read to the chooser', async () => {
-      mswServer.use(
-        http.get('/api/v1/auth/me', () => HttpResponse.json({ user: USER })),
-        http.get('/api/v1/workspaces', () =>
-          HttpResponse.json({ error: { message: 'nope' } }, { status: 500 }),
-        ),
-      );
       expect(await run('/workspaces')).toBeNull();
     });
 
