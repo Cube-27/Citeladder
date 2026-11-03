@@ -232,13 +232,10 @@
   min-width: 0;
 }
 
-/* From a tablet up the hero is the whole app window, sidebar included, at
-   its app width; a phone takes the shared 420px layout, without the
-   sidebar (product-views.css). */
-@media (min-width: 40rem) {
-  .lp-hero-frame.product-fit {
-    --product-fit-width: 1184px;
-  }
+/* The hero is the whole app window, sidebar included, at its app width;
+   smaller screens see it scaled down. */
+.lp-hero-frame.product-fit {
+  --product-fit-width: 1184px;
 }
 
 /* Engines ────────────────────────────────────────────────────────────────── */
@@ -361,16 +358,14 @@
 
 /* The panel lays out at the width the tile shows it (the tile's content
    width at the full 80rem frame: 384px, 632px for a wide tile), so its text
-   renders at full size there and zooms down only on a narrower screen.
-   Stacked tiles share the narrow width. */
+   renders at full size there; a narrower screen, a phone included, sees the
+   same picture zoomed down. */
 .lp-tile-visual.product-fit {
   --product-fit-width: 384px;
 }
 
-@media (min-width: 64rem) {
-  .lp-tile-wide .lp-tile-visual.product-fit {
-    --product-fit-width: 632px;
-  }
+.lp-tile-wide .lp-tile-visual.product-fit {
+  --product-fit-width: 632px;
 }
 
 /* Deep dives ─────────────────────────────────────────────────────────────── */
@@ -522,8 +517,8 @@
 /* A phone keeps the centred composition of every width (owner, 2026-10-31,
    replacing the 2026-10-21 left-aligned phone copy), with thumb-width
    actions. Type comes from the site roles (website-type.css), never from
-   here. Product views take the shared phone layout (`.product-fit`,
-   marketing.css): one column at 420px, the hero without its sidebar. */
+   here. Product views are the desktop picture scaled down (`.product-fit`,
+   marketing.css); nothing here reshapes them. */
 @media (max-width: 39.99rem) {
   .lp-hero-lead {
     margin-top: 1rem;
