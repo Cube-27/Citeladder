@@ -108,7 +108,7 @@ the Colour section above. Every token must have a consumer.
 | `--color-accent-soft` | `#ecf8f0` | `rgb(118 223 156 / 12%)` |
 | `--color-accent-subtle` | `#d3f6df` | `rgb(118 223 156 / 18%)` |
 | `--color-accent-text` | `#067a3c` | `#86e5a6` |
-| `--color-active` | `#e3e3e3` | `#2c2c2c` |
+| `--color-active` | `#e4e4e4` | `#2c2c2c` |
 | `--color-background` | `#f5f5f5` | `#111111` |
 | `--color-background-alt` | `#f2f2f2` | `#242424` |
 | `--color-border` | `#e5e5e5` | `#2a2a2a` |
@@ -144,7 +144,7 @@ the Colour section above. Every token must have a consumer.
 | `--color-elevated` | `#ffffff` | `#262626` |
 | `--color-field-lime` | `#e4fb9b` | `rgb(228 251 155 / 12%)` |
 | `--color-field-mint` | `#e8f9ee` | `rgb(118 223 156 / 16%)` |
-| `--color-foreground` | `#171717` | `#f5f5f5` |
+| `--color-foreground` | `#212121` | `#e9e9e9` |
 | `--color-hover` | `#f6f6f6` | `#212121` |
 | `--color-info` | `#2f6fdb` | `#7aa7f5` |
 | `--color-info-bg` | `#eef4fd` | `rgb(122 167 245 / 12%)` |
@@ -159,11 +159,11 @@ the Colour section above. Every token must have a consumer.
 | `--color-panel` | `#ffffff` | `#1c1c1c` |
 | `--color-panel-tonal` | `#f2f2f2` | `#242424` |
 | `--color-secondary` | `#525252` | `#a3a3a3` |
-| `--color-selected` | `#ececec` | `#272727` |
+| `--color-selected` | `#ededed` | `#272727` |
 | `--color-selection` | `#b5efca` | `rgb(118 223 156 / 35%)` |
-| `--color-selection-fg` | `#171717` | `#f5f5f5` |
+| `--color-selection-fg` | `#212121` | `#e9e9e9` |
 | `--color-sheet` | `#fafafa` | `#161616` |
-| `--color-state-ink` | `#171717` | `#a3a3a3` |
+| `--color-state-ink` | `#212121` | `#a3a3a3` |
 | `--color-success` | `#00a650` | `#47c27a` |
 | `--color-success-bg` | `#ecf8f0` | `rgb(91 214 138 / 12%)` |
 | `--color-success-text` | `#067a3c` | `#86e5a6` |

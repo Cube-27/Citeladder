@@ -15,15 +15,15 @@
       }
     },
     "heading": {
-      "family": "Plein",
-      "file": "Plein-Variable.woff2",
+      "family": "Rajdhani",
+      "file": "Rajdhani-Variable.woff2",
       "preload": ["app", "public"],
       "weights": "300 500",
       "fallback": {
-        "sizeAdjust": "102.12%",
-        "ascentOverride": "100.86%",
-        "descentOverride": "26.44%",
-        "lineGapOverride": "9.79%"
+        "sizeAdjust": "115.22%",
+        "ascentOverride": "77.24%",
+        "descentOverride": "20.83%",
+        "lineGapOverride": "6.94%"
       }
     },
     "figure": {
