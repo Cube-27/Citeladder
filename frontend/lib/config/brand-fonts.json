@@ -15,15 +15,15 @@
       }
     },
     "heading": {
-      "family": "Rajdhani",
-      "file": "Rajdhani-Variable.woff2",
+      "family": "Exo 2",
+      "file": "Exo2-Variable.woff2",
       "preload": ["app", "public"],
       "weights": "300 500",
       "fallback": {
-        "sizeAdjust": "115.22%",
-        "ascentOverride": "77.24%",
-        "descentOverride": "20.83%",
-        "lineGapOverride": "6.94%"
+        "sizeAdjust": "93.83%",
+        "ascentOverride": "106.46%",
+        "descentOverride": "21.42%",
+        "lineGapOverride": "0%"
       }
     },
     "figure": {
