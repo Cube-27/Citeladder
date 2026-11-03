@@ -85,9 +85,13 @@ their first. After sign-in the
 `/workspaces` goes straight into the only workspace a person owns, sends someone
 with none to set one up, and otherwise lists their own workspace (or "Set up your
 own workspace" when they own none) beside every workspace they were invited to,
-with each one's access. The frontend crosses the
+with each one's access; the route loader takes those two shortcuts before the
+chooser paints. The frontend crosses the
 identity boundary with full-document navigation so a prefetched anonymous
-layout cannot be reused.
+layout cannot be reused. Crossing cancels in-flight requests and removes the
+stored project selection first; the departing page stays drawn until the next
+document replaces it, its query cache is dropped when the page is hidden, and a
+copy restored from the back-forward cache reloads.
 
 TypeScript issues sessions and owns OAuth, abuse policy and Argon2 parameters.
 Native account administration, local login and deployment bootstrap share the

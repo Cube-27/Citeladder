@@ -188,7 +188,10 @@ describe('SessionGuard', () => {
 
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/login'));
     expect(navigate).toHaveBeenCalledTimes(1);
-    // Session cache was cleared.
+    // The page stays as it was until the sign-in document replaces it…
+    expect(screen.getByText(/signed in as guarded@example.com/i)).toBeInTheDocument();
+    // …and the session cache goes with the document.
+    window.dispatchEvent(new Event('pagehide'));
     expect(queryClient.getQueryData(queryKeys.auth.me())).toBeUndefined();
     expect(window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY)).toBeNull();
     expect(window.localStorage.getItem('citeladder-theme')).toBe('dark');

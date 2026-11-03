@@ -12,6 +12,8 @@
  * redirect before anything mounts and the gate render a notice after.
  */
 import type { WorkspaceEntitlement } from '@/lib/api/billing';
+import type { Workspace } from '@/lib/api/types';
+import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 import { capabilityRemaining } from '@/lib/billing/entitlement-capability';
 import type { SelectionStatus } from '@/lib/project/selection';
@@ -50,6 +52,42 @@ export function isWorkspaceOnlyRoute(pathname: string | null): boolean {
 /** Whether the person owns one of these workspaces (a person owns at most one). */
 export function ownsWorkspace(workspaces: readonly { role: string }[]): boolean {
   return workspaces.some((workspace) => workspace.role === 'owner');
+}
+
+/**
+ * The chooser's only destination, when it has one: the workspace a person owns
+ * when it is the only one they belong to. Anyone invited elsewhere, or owning
+ * none, chooses.
+ */
+export function soleOwnedWorkspace<T extends { role: string }>(
+  workspaces: readonly T[],
+): T | undefined {
+  const [only, ...others] = workspaces;
+  return only?.role === 'owner' && others.length === 0 ? only : undefined;
+}
+
+/**
+ * Where the chooser goes without asking, decided by the route loader before
+ * it paints; null when the person has a choice to make.
+ *
+ * Sign-in lands on the chooser. Deciding there, in an effect, meant a fresh
+ * document drew the chooser's loader, read the workspace's projects, access
+ * and Terms one batch at a time, and only then moved on, discarding what the
+ * shell then asked for again. Answered by the loader instead, the same
+ * document goes on while the shell fallback is still up: someone with no
+ * workspace to set one up, and someone whose only workspace is their own into
+ * it, where the loader reads its gates in one round and picks the project.
+ * A failed membership read (`undefined`) is left to the chooser, which owns
+ * that notice.
+ */
+export function chooserShortcut(
+  pathname: string,
+  workspaces: readonly Workspace[] | undefined,
+): string | null {
+  if (routePath(pathname) !== WORKSPACE_CHOOSER_PATH || !workspaces) return null;
+  if (workspaces.length === 0) return WORKSPACE_SETUP_PATH;
+  const only = soleOwnedWorkspace(workspaces);
+  return only ? workspaceDestination('/projects', null, only.id) : null;
 }
 
 /**

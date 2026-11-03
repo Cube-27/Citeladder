@@ -19,7 +19,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import type { Workspace } from '@/lib/api/types';
 import { workspacesApi } from '@/lib/api/workspaces';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
-import { ownsWorkspace, WORKSPACE_SETUP_PATH } from '@/lib/project/bootstrap';
+import { ownsWorkspace, soleOwnedWorkspace, WORKSPACE_SETUP_PATH } from '@/lib/project/bootstrap';
 import { useProjectContext } from '@/lib/project/project-context';
 
 /**
@@ -31,7 +31,9 @@ export function WorkspaceChooser() {
   const { workspaces, status, setActiveWorkspaceId } = useProjectContext();
   const navigate = useNavigate();
   const ownsOne = ownsWorkspace(workspaces);
-  const only = ownsOne && workspaces.length === 1 ? workspaces[0] : undefined;
+  // A fresh document never shows this: the route loader sends it on before
+  // anything paints. This covers arriving here from inside the app.
+  const only = soleOwnedWorkspace(workspaces);
 
   useEffect(() => {
     if (status === 'no_workspace') navigate(WORKSPACE_SETUP_PATH, { replace: true });
