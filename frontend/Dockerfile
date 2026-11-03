@@ -37,6 +37,12 @@ ENV PUBLIC_DOCS_ORIGIN=${PUBLIC_DOCS_ORIGIN}
 ENV LOCAL_COMPOSE_BUILD=true
 WORKDIR /app
 
+# The marketing build prerenders through workerd, which refuses to start
+# without a system CA store; the slim image omits it.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 RUN npm install --global --ignore-scripts pnpm@12.16.1
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
