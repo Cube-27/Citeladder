@@ -3,7 +3,7 @@ title: 'Your first project'
 description: 'Create a useful baseline, inspect one finding, and choose a concrete next step.'
 group: 'Start here'
 order: 20
-updated: '2026-10-10'
+updated: '2026-11-03'
 ---
 
 You will need access to a CiteLadder workspace, your website address and a clear idea of the market you serve. Available runs and features depend on your workspace's access and allowances.
@@ -18,7 +18,7 @@ Suggestions are a starting point. Remove companies that do not compete for your 
 
 ## 2. Choose your prompts
 
-A new project starts with no prompts. Open **Prompts** and generate questions, or add your own. Generated questions arrive as candidates: read them as if you were a potential customer and accept the ones worth measuring. Keep a focused set that covers the decisions buyers make, and distinguish general discovery questions from questions that name your brand.
+A new project starts with no prompts. Open **Prompts** and use the **Prompt Builder** to confirm your offerings and topics and choose the mix of questions, or add your own. Generated questions arrive as candidates: read them as if you were a potential customer and accept the ones worth measuring. Keep a focused set that covers the decisions buyers make, and distinguish general discovery questions from questions that name your brand.
 
 For a fictional scheduling product, a useful discovery question might be "Which scheduling tools work well for a small consultancy?" A question such as "How does Example Scheduler handle reminders?" answers a different, brand-specific question.
 

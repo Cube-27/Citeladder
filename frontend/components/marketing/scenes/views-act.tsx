@@ -169,7 +169,7 @@ export function SkillsView() {
     ['Page edit', 'Proposed changes to an existing page'],
     ['Content', 'Outline-first article or page'],
     ['Internal links', 'Link plan across your pages'],
-    ['Prompt discovery', 'Proposed prompt portfolio'],
+    ['Prompt discovery', 'Prompt plan for the builder'],
   ] as const;
   return (
     <div className="pv-view">

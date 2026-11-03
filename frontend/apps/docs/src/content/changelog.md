@@ -3,10 +3,71 @@ title: 'Changelog'
 description: 'Product changes and what they mean for your workflow.'
 group: 'Updates'
 order: 400
-updated: '2026-10-18'
+updated: '2026-11-03'
 ---
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
+
+## November 3, 2026: A faster app and quicker sign-in
+
+Each screen now loads its data in one round of requests instead of several, opens without waiting on code for other screens, and shows one loading state rather than several in turn. Refreshing keeps the data you were reading in place. Signing in and out is faster and keeps the page drawn while it happens.
+
+**For your team:** nothing to change; screens and tables should open and settle sooner.
+
+## November 2, 2026: Safer sign-up
+
+Sign-in and sign-up now carry the Terms of Service checkbox on the form itself, so there is no separate review screen after you sign in. Sign-up, verification-email and password-reset requests are protected by a Cloudflare Turnstile check, and sign-up refuses disposable email domains. Signing in has no Turnstile check. Sign-in and sign-up also have a new full-page layout.
+
+**For your team:** invite colleagues with their work address; disposable inboxes cannot create an account.
+
+## November 2, 2026: Faster, more reliable audits
+
+Audits now run several answers at once instead of one at a time, and a Site Health crawl can no longer hold up a visibility run. ChatGPT API answers use a faster OpenAI model and one search round per answer, as the ChatGPT app does. An answer that comes back with no text is now a failed answer and is retried, never counted as an answer that did not mention you. When the Google AI Overviews provider pauses or refuses the account, the rest of that engine's answers stop with a clear reason, and run progress counts failed answers as finished.
+
+**For your team:** expect runs to finish sooner. Brand mention rates can rise slightly where empty answers used to count as "not mentioned"; compare runs from after this change.
+
+[Run a useful audit](/visibility/#run-a-useful-audit)
+
+## November 2, 2026: Action priority reads High, Medium or Low
+
+Actions now show priority as **High**, **Medium** or **Low** instead of a raw score, on the list, the detail page and New chat. Priority comes from the Action's strongest finding, and the "evidence systems" count is gone because it did not measure independent evidence; the detail page names the source instead, such as Site Health. Long Action titles stay on one line, with the full title on hover.
+
+**For your team:** sort by priority and start with the High items; the order may differ from before.
+
+[Choose what to work on](/agent/actions/#choose-what-to-work-on)
+
+## November 2, 2026: Site Health issues you can act on
+
+A page's detail view now leads with the issues on that page, worst first, each with its evidence and fix, followed by advisories, scores and a collapsed **Technical details** section. "Defects" are now called issues. A broken or redirecting link that appears across most of the site, such as a footer link, is reported once with the pages that carry it, instead of once per page. A new check names sections that have internal links but cannot be reached from the homepage, and a sitemap listing a page you chose to noindex is now advisory.
+
+Crawls also reach their page limit when some URLs turn out not to be pages, follow links through repaired tracking URLs, and stop counting non-HTML links as failures. The Overview only reports a scored-cohort change when a page kind joined or left or its share moved materially, and says so once.
+
+**For your team:** run a new crawl to see the regrouped issues; counts can drop sharply where one sitewide link used to raise an issue on every page.
+
+[Work through an issue](/site-health/#work-through-an-issue)
+
+## November 1, 2026: The Prompt Builder
+
+Generating prompts now happens in the **Prompt Builder**, a four-step sheet on **Prompts** that replaces the Generate dialog and **Build with Agent**:
+
+1. **About your business:** confirm what you sell, who buys it, the situations and attributes that shape the choice, and more, plus a note for this run only.
+2. **Topics:** keep, rename or add topics, or ask for buyer-facing suggestions built from your offerings.
+3. **Distribution:** choose the count, branded share, competitor-alternative share, intent mix, personas and whether to use your Search Console or keyword-research searches, with each search shown so you can untick it.
+4. **Review:** accept suggestions with a coverage line per topic and per share, and generate more where one comes up short.
+
+Suggestions are now short buyer questions about one need each, capped at 16 words and planned across awareness, consideration and decision. Near-duplicates and questions joining two alternatives are dropped, topics get questions in proportion to the offerings they cover, and a branded question may only describe you with attributes you confirmed. Each candidate is also checked for whether a good answer would have to name a business.
+
+**Agent → Context** shows the business map read-only with **Edit in Prompt Builder**, and Brand facts is its own tab. The Agent's prompt discovery skill now writes a prompt plan following the builder's steps and links to it, without writing prompts. A connection with **Allow changes** can follow the same steps over MCP with `preview_topics`, `confirm_topics`, `read_seed_queries` and `generate_prompts`; suggestions it creates wait in **Prompts** for you to accept.
+
+**For your team:** open the Prompt Builder from **Prompts**, check the first step's business facts, and confirm topics before generating your next set.
+
+[Build prompts with the Prompt Builder](/prompts/#build-prompts-with-the-prompt-builder)
+
+## November 1, 2026: A branded Overview PDF
+
+The Overview PDF now opens with a CiteLadder cover, a strip of headline figures with what each measures, the next action with its target, and a plain-English "How to read this report" in place of internal codes. Engines appear by name, dates read naturally, missing values print as a dash rather than "Unknown", and change figures appear only once a comparable earlier run exists.
+
+**For your team:** share the PDF with stakeholders as it is; it no longer needs editing to remove IDs or jargon.
 
 ## October 18, 2026: Remove competitors and delete topics through MCP
 
