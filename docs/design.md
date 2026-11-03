@@ -10,12 +10,12 @@ Tests verify shared ownership, accessibility, and product correctness—not exac
 
 One system covers every surface (owner decision, 2026-10-07): the public site, docs, auth, onboarding and the authenticated app share the light B2B SaaS system executed at Attio/Linear craft. The product's material is crisp hairlines, not lift (owner decision, 2026-10-16), over a ladder of fills (owner, 2026-11-01): each surface is a visible tone step from the one it sits on, so cards carry only a subtle one-pixel edge and the workspace sheet a one-pixel `border` edge, secondary controls add only a one-pixel contact shadow, and the primary action is one flat fill; nothing glows, carries a bevel or a sheen. CiteLadder keeps its content, routes and workflows; since the brighter refresh (owner decision, 2026-10-21) its one accent is signal green, and its self-hosted type is a display face over a text face, both named only in `frontend/lib/config/brand-fonts.json` (the owner changes them often), with figures' digits in a monospace figure face (owner decision, 2026-11-01). The public website and docs are the exception: they are flat (owner decision, 2026-10-16; see Public website below).
 
-CiteLadder (`citeladder.com`) is an evidence-led enterprise system. The app puts a quiet green-tinted neutral ground behind the chrome and floats the work on one sheet that holds white cards, using near-black green-tinted ink, signal-green actions, semantic evidence washes, useful density, and deliberate negative space. Prioritise current state → movement → next action → evidence, not equal-weight KPI cards. Voice is direct, confident, specific, and evidence-led: one idea per sentence.
+CiteLadder (`citeladder.com`) is an evidence-led enterprise system. The app puts a calm pure-neutral ground behind the chrome (owner, 2026-11-03: no tint; green is the accent alone) and floats the work on one sheet that holds white cards, using near-black ink, green actions, semantic evidence washes, useful density, and deliberate negative space. Prioritise current state → movement → next action → evidence, not equal-weight KPI cards. Voice is direct, confident, specific, and evidence-led: one idea per sentence.
 
 - **Logo:** `frontend/components/ui/logo-mark.tsx` owns every surface's lockup and draws it inline from the shared outline data in `frontend/packages/contracts/src/brand-logo.ts` (the API's PDF documents draw the same data) in exactly two tokens: ink (`currentColor`, the speech bubble and "Ladder") and the accent (the bars and "Cite"). Both forms therefore follow the theme without a filter, and the mark-only glyph always matches the lockup. `frontend/public/citeladder-logo.svg` is the same drawing in the light values (ink `#0b0f0d`, signal green `#00a650`) for structured data and the docs build; the policy check maps each of its fills to its token. `BRAND_LOGO_SIZES` owns standard heights; explicit `size` supports exceptional layouts; non-empty `alt` supplies the accessible name. `frontend/public/favicon.ico` owns browser/installable-app icons with the same ink silhouette.
 - **Typography:** three self-hosted faces, each a role: the text face (`--font-text`) on every surface for body, UI, labels and small headings; the display face (`--font-heading`) for display headings: the product page title, public hero, page and section headings, the flow title and Markdown `h2`; and the figure face (`--font-figure`) for the digits of figures in data roles, reached through `--font-numeric` (owner decisions, 2026-10-31 and 2026-11-01). Which family fills each role, its file, weight range and metric-matched fallback live only in `frontend/lib/config/brand-fonts.json`; changing a face is an edit to its `family` and `file` there and `pnpm fonts:pull`, which recomputes the rest (owner, 2026-11-03: "I change fonts a lot"). No document or stylesheet names a face. The figure face's `unicode-range` covers only digits and the marks inside a number (`. , : % + - −`), so letters, units and spaces beside a figure stay in the text face and the line box keeps its metrics. All three come from the private Cube27 font repository and are capped at weight 500 by their `@font-face` ranges on every surface (owner, 2026-11-02), with `font-synthesis-weight: none` so a bold request never renders a faux bold; 14px working baseline, except on the website and docs, whose type steps through the `--text-site-*` tokens. Each semantic role owns size, leading, weight, tracking, and ink together. In the product, hierarchy comes from size and weight together through the closed `.type-*` roles (see Product app ladder); shared fields and dropdowns use the 14px `--text-field` role on every surface.
 - **Icons:** Lucide only; import concepts from `frontend/lib/icons.ts` where available. Call sites set size only: `size-3`/`size-3.5` for dense tables, toolbars, and chips; `size-4` for chrome; `size-5` for empty states and marketing wells; larger only for decorative marks. The global stroke ladder derives approximately 1.3px stems from size. Keep `currentColor`; do not override stroke weight locally.
-- **Surface identity:** Light is the default. The app header carries a one-click circular light/dark toggle beside the account menu (`frontend/lib/theme/theme.ts` owns the per-device preference; the semantic tokens rebind under `[data-theme='dark']`). There is no automatic system-theme following. Marketing is light-only and never applies the preference. Signal green is the sole action accent on public and product surfaces, and the logo is drawn in the same ink and green. Provider marks retain their own brand colours. The app's sidebar shares the neutral shell ground, and the work floats beside it on one workspace sheet. Auth and onboarding share the public website's light world (white stage, public palette, flat task sheet); in dark mode they keep the app's dark rebinds. Dark mode keeps the same tonal order in near-black neutrals with the same slight green tint, each surface lighter than the one it sits on (ground → sheet → card → nested), with hairlines secondary. Controls retain white fills and distinct edges in light mode. Marketing and docs remain light-only.
+- **Surface identity:** Light is the default. The app header carries a one-click circular light/dark toggle beside the account menu (`frontend/lib/theme/theme.ts` owns the per-device preference; the semantic tokens rebind under `[data-theme='dark']`). There is no automatic system-theme following. Marketing is light-only and never applies the preference. Signal green is the sole action accent on public and product surfaces, and the logo is drawn in the same ink and green. Provider marks retain their own brand colours. The app's sidebar shares the neutral shell ground, and the work floats beside it on one workspace sheet. Auth and onboarding share the public website's light world (white stage, public palette, flat task sheet); in dark mode they keep the app's dark rebinds. Dark mode keeps the same tonal order in pure-neutral near-blacks, each surface lighter than the one it sits on (ground → sheet → card → nested), with hairlines secondary. Controls retain white fills and distinct edges in light mode. Marketing and docs remain light-only.
 
 ## Source of truth and implementation rules
 
@@ -35,7 +35,7 @@ Do not add raw hex colours, `@theme`, shared control recipes, or unregistered an
 
 ## Colour
 
-Consume semantic roles, never page-local values. Every neutral keeps the same slight green tint, including interaction tints. Two things that mean the same thing share a token; two things that mean different things never share a value (`audit-design-tokens.mjs --check` fails on an undeclared duplicate).
+Consume semantic roles, never page-local values. Neutrals carry no tint, interaction tints included. A screen shows at most three surface levels (canvas, card, one inset); a box inside an inset is a border or a divider, never another fill. Two things that mean the same thing share a token; two things that mean different things never share a value (`audit-design-tokens.mjs --check` fails on an undeclared duplicate).
 
 | Role | Tokens | Use |
 | --- | --- | --- |
@@ -51,7 +51,7 @@ Consume semantic roles, never page-local values. Every neutral keeps the same sl
 | Series | `chart-1..8`; `citation-*` aliases | Categorical identity in charts and legends only |
 | Identity | `brand-google-*`, `brand-claude`, `brand-gemini` | Google's own mark (sign-in, engine logo) and the Claude and Gemini marks in the homepage engine rotor; never state |
 
-**Outcome scale.** One scale carries run status, score bands, sentiment, alerts and badges; there are no per-feature status palettes. `danger` is bad, `warning` is mixed or partial, `success` is good, `info` is active or in progress, `neutral` is not started, queued or cancelled. Each family is a mark (dots, rings, icons, bars), a `-text` ink that passes 4.5:1 on its `-bg` and on paper, and a quiet `-bg`. The marks separate by lightness as well as hue (bad is dark red, good is mid teal, mixed is light amber, neutral is the palest), so every pair stays apart under deuteranopia and protanopia: ΔL* of at least 15, or ΔE2000 of at least 10 under simulation, checked by `pnpm check:policy`. Success is teal so it never reads as the forest action. Score bands map low → danger, mid → warning, good → success at a lighter step, high → success. Colour is never the only cue: every mark ships with a label or an icon.
+**Outcome scale.** One scale carries run status, score bands, sentiment, alerts and badges; there are no per-feature status palettes. `danger` is bad, `warning` is mixed or partial, `success` is good, `info` is active or in progress, `neutral` is not started, queued or cancelled. Each family is a mark (dots, rings, icons, bars), a `-text` ink that passes 4.5:1 on its `-bg` and on paper, and a quiet `-bg`. The marks separate by lightness as well as hue (in light, bad is dark red, good is the accent's mid green, mixed is light amber; dark keeps the same lightness steps), so every pair stays apart under deuteranopia and protanopia: ΔL* of at least 15, or ΔE2000 of at least 10 under simulation, checked by `pnpm check:policy`. Success is the accent's green family: one green (owner, 2026-11-03). Colour means state only (status badges, up/down deltas, issue severity); a score, count or KPI keeps the foreground ink and the delta beside it carries the colour. Score bands map low → danger, mid → warning, good → success at a lighter step, high → success. Colour is never the only cue: every mark ships with a label or an icon.
 
 **Series.** `chart-1..8` is purely categorical and never equals an action or outcome value. Each step holds 3:1 on paper in both themes, and each neighbour stays separable under red–green colour-vision loss, so series are assigned in order. Citation classes are series with fixed meanings in both themes: owned `chart-1`, competitor `chart-2`, third party `chart-8`.
 
@@ -68,7 +68,7 @@ blue and company offerings use purple; colors label categories, never status.
 keyboard/touch support and `aria-expanded`; long labels wrap. Semantic `Badge`
 status dots and their meanings remain separate.
 
-**Borders.** Controls, inset panels, overlays and status objects retain semantic edges. Default cards and table wrappers separate from the sheet by their fill and keep a subtle hairline without changing their box geometry; a table header row separates from its rows by the nested fill over a subtle rule. Selected sidebar destinations and list rows take the neutral selected tint; segments use a raised neutral face. Tinted inset boxes use their fill as the boundary; status cards retain a hairline to carry meaning. Sections are separated by space. Lines use semantic tokens; transparent layers belong only to the centralized elevation recipes. On the public website there are no dividers or 1px outlined boxes outside real tables, form fields, controls and the marketing site grid's frame lines, card rings and secondary-button ring (every marketing page; see the public website below): rows and lists separate by space, and objects by a tone step from the band they sit on.
+**Borders.** Controls, inset panels, overlays and status objects retain semantic edges. Default cards and table wrappers separate from the sheet by their fill and keep a subtle hairline without changing their box geometry; a table header row separates from its rows by the nested fill over a subtle rule. Selected sidebar destinations take the neutral selected tint; a selected list row, table row or KPI segment keeps its surface's fill and takes a 2px accent bar (start edge for rows, foot for a KPI segment) with the foreground ink, never a fill block (owner, 2026-11-03); segments use a raised neutral face. Tinted inset boxes use their fill as the boundary; status cards retain a hairline to carry meaning. Sections are separated by space. Lines use semantic tokens; transparent layers belong only to the centralized elevation recipes. On the public website there are no dividers or 1px outlined boxes outside real tables, form fields, controls and the marketing site grid's frame lines, card rings and secondary-button ring (every marketing page; see the public website below): rows and lists separate by space, and objects by a tone step from the band they sit on.
 
 Reading text must meet 4.5:1 contrast. Use primary ink on selected surfaces when secondary ink would lose contrast. Accent denotes action, never success or positive metric deltas. Metrics use data-viz or neutral signed/directional treatments. Decorative icons and category labels use neutral ink. Dark mode keeps colour concentrated in actions and meaningful evidence. Never communicate meaning through colour alone.
 
@@ -101,27 +101,27 @@ the Colour section above. Every token must have a consumer.
 | `--color-accent-active` | `#009447` | `#b2f4c6` |
 | `--color-accent-border` | `#7fdca7` | `rgb(118 223 156 / 45%)` |
 | `--color-accent-fg` | `#ffffff` | `#0d2618` |
-| `--color-accent-fill` | `#00873f` | `#76df9c` |
-| `--color-accent-fill-active` | `#006d33` | `#b2f4c6` |
-| `--color-accent-fill-hover` | `#007a39` | `#94ebb0` |
+| `--color-accent-fill` | `#15803d` | `#76df9c` |
+| `--color-accent-fill-active` | `#14532d` | `#b2f4c6` |
+| `--color-accent-fill-hover` | `#166534` | `#94ebb0` |
 | `--color-accent-hover` | `#00b85a` | `#94ebb0` |
-| `--color-accent-soft` | `#edfbf2` | `rgb(118 223 156 / 12%)` |
+| `--color-accent-soft` | `#ecf8f0` | `rgb(118 223 156 / 12%)` |
 | `--color-accent-subtle` | `#d3f6df` | `rgb(118 223 156 / 18%)` |
-| `--color-accent-text` | `#08773b` | `#86e5a6` |
-| `--color-active` | `#e4e8e6` | `#303432` |
-| `--color-background` | `#eaedeb` | `#0b0d0c` |
-| `--color-background-alt` | `#f6f7f6` | `#1f2421` |
-| `--color-border` | `#e1e4e2` | `#2b302d` |
-| `--color-border-bold` | `#858d88` | `#737b76` |
-| `--color-border-strong` | `#cfd4d1` | `#3d433f` |
-| `--color-border-subtle` | `#eceeed` | `#222724` |
+| `--color-accent-text` | `#067a3c` | `#86e5a6` |
+| `--color-active` | `#e3e3e3` | `#2c2c2c` |
+| `--color-background` | `#f5f5f5` | `#111111` |
+| `--color-background-alt` | `#f2f2f2` | `#242424` |
+| `--color-border` | `#e5e5e5` | `#2a2a2a` |
+| `--color-border-bold` | `#939393` | `#686868` |
+| `--color-border-strong` | `#d4d4d4` | `#3a3a3a` |
+| `--color-border-subtle` | `#efefef` | `#222222` |
 | `--color-brand-claude` | `#d97757` | `#d97757` |
 | `--color-brand-gemini` | `#3186ff` | `#3186ff` |
 | `--color-brand-google-blue` | `#4285f4` | `#4285f4` |
 | `--color-brand-google-green` | `#34a853` | `#34a853` |
 | `--color-brand-google-red` | `#ea4335` | `#ea4335` |
 | `--color-brand-google-yellow` | `#fbbc05` | `#fbbc05` |
-| `--color-brand-ink` | `#0b0f0d` | `#e1e5e2` |
+| `--color-brand-ink` | `#0b0f0d` | `#fafafa` |
 | `--color-chart-1` | `#16a34a` | `#4ade80` |
 | `--color-chart-2` | `#2563eb` | `#60a5fa` |
 | `--color-chart-3` | `#d97706` | `#fbbf24` |
@@ -129,50 +129,50 @@ the Colour section above. Every token must have a consumer.
 | `--color-chart-5` | `#0891b2` | `#22d3ee` |
 | `--color-chart-6` | `#7c3aed` | `#a78bfa` |
 | `--color-chart-7` | `#ea580c` | `#fb923c` |
-| `--color-chart-8` | `#6b746f` | `#9aa29d` |
+| `--color-chart-8` | `#737373` | `#a3a3a3` |
 | `--color-citation-competitor` | `#2563eb` | `#60a5fa` |
 | `--color-citation-owned` | `#16a34a` | `#4ade80` |
-| `--color-citation-third-party` | `#6b746f` | `#9aa29d` |
-| `--color-danger` | `#b42332` | `#ef6b73` |
-| `--color-danger-bg` | `#fff0f1` | `rgb(243 151 158 / 13%)` |
-| `--color-danger-border` | `#f2c6cb` | `rgb(243 151 158 / 38%)` |
+| `--color-citation-third-party` | `#737373` | `#a3a3a3` |
+| `--color-danger` | `#b42332` | `#d95767` |
+| `--color-danger-bg` | `#fff0f1` | `rgb(239 107 115 / 12%)` |
+| `--color-danger-border` | `#f2c6cb` | `rgb(239 107 115 / 38%)` |
 | `--color-danger-fg` | `#ffffff` | `#350b10` |
 | `--color-danger-solid` | `#b42332` | `#d95767` |
 | `--color-danger-solid-hover` | `#8f1d29` | `#eb7481` |
 | `--color-danger-text` | `#b42332` | `#f6abb1` |
-| `--color-disabled` | `#f8f9f9` | `#202422` |
-| `--color-elevated` | `#ffffff` | `#202522` |
+| `--color-disabled` | `#f8f8f8` | `#202020` |
+| `--color-elevated` | `#ffffff` | `#262626` |
 | `--color-field-lime` | `#e4fb9b` | `rgb(228 251 155 / 12%)` |
 | `--color-field-mint` | `#e8f9ee` | `rgb(118 223 156 / 16%)` |
-| `--color-foreground` | `#2f3431` | `#d3d8d5` |
-| `--color-hover` | `#f6f7f7` | `#212523` |
+| `--color-foreground` | `#171717` | `#f5f5f5` |
+| `--color-hover` | `#f6f6f6` | `#212121` |
 | `--color-info` | `#2f6fdb` | `#7aa7f5` |
-| `--color-info-bg` | `#eef4fd` | `rgb(122 167 245 / 13%)` |
+| `--color-info-bg` | `#eef4fd` | `rgb(122 167 245 / 12%)` |
 | `--color-info-text` | `#1d4fae` | `#a9c6f8` |
-| `--color-ink-faint` | `#8e9690` | `#6d746f` |
-| `--color-input` | `#ffffff` | `#0f1210` |
-| `--color-muted` | `#616964` | `#969d99` |
-| `--color-neutral` | `#aab2ad` | `#5f6762` |
-| `--color-neutral-bg` | `#eff1f0` | `#2a2f2c` |
-| `--color-on-inverse` | `#ffffff` | `#0b0d0c` |
-| `--color-overlay-scrim` | `rgb(11 15 13 / 32%)` | `rgb(0 0 0 / 72%)` |
-| `--color-panel` | `#ffffff` | `#1a1e1c` |
-| `--color-panel-tonal` | `#edf0ee` | `#252a27` |
-| `--color-secondary` | `#4e5551` | `#a9b0ac` |
-| `--color-selected` | `#edefee` | `#292d2b` |
+| `--color-ink-faint` | `#a3a3a3` | `#6b6b6b` |
+| `--color-input` | `#ffffff` | `#141414` |
+| `--color-muted` | `#636363` | `#939393` |
+| `--color-neutral` | `#a3a3a3` | `#525252` |
+| `--color-neutral-bg` | `#f2f2f2` | `#262626` |
+| `--color-on-inverse` | `#ffffff` | `#111111` |
+| `--color-overlay-scrim` | `rgb(10 10 10 / 32%)` | `rgb(0 0 0 / 72%)` |
+| `--color-panel` | `#ffffff` | `#1c1c1c` |
+| `--color-panel-tonal` | `#f2f2f2` | `#242424` |
+| `--color-secondary` | `#525252` | `#a3a3a3` |
+| `--color-selected` | `#ececec` | `#272727` |
 | `--color-selection` | `#b5efca` | `rgb(118 223 156 / 35%)` |
-| `--color-selection-fg` | `#2f3431` | `#f1f4f2` |
-| `--color-sheet` | `#f2f4f3` | `#101311` |
-| `--color-state-ink` | `#1c3d2c` | `#d3d8d5` |
-| `--color-success` | `#0d9488` | `#2ec4b0` |
-| `--color-success-bg` | `#ecf8f5` | `rgb(46 196 176 / 13%)` |
-| `--color-success-text` | `#0f766e` | `#7fe0d0` |
-| `--color-surface-inverse` | `#0b0f0d` | `#e1e5e2` |
-| `--color-track` | `#e6e9e7` | `#252a27` |
-| `--color-warning` | `#e0900f` | `#f2c879` |
-| `--color-warning-bg` | `#fff5db` | `rgb(242 200 121 / 13%)` |
+| `--color-selection-fg` | `#171717` | `#f5f5f5` |
+| `--color-sheet` | `#fafafa` | `#161616` |
+| `--color-state-ink` | `#171717` | `#a3a3a3` |
+| `--color-success` | `#00a650` | `#47c27a` |
+| `--color-success-bg` | `#ecf8f0` | `rgb(91 214 138 / 12%)` |
+| `--color-success-text` | `#067a3c` | `#86e5a6` |
+| `--color-surface-inverse` | `#0b0f0d` | `#fafafa` |
+| `--color-track` | `#f2f2f2` | `#242424` |
+| `--color-warning` | `#f2b33d` | `#f7d99e` |
+| `--color-warning-bg` | `#fff5db` | `rgb(242 200 121 / 12%)` |
 | `--color-warning-text` | `#8a4600` | `#f7d99e` |
-| `--color-well` | `#eff1f0` | `#0e100f` |
+| `--color-well` | `#f7f7f7` | `#141414` |
 <!-- generated:tokens:end -->
 
 ## Typography
@@ -499,7 +499,7 @@ The contents panels include H2/H3 entries, omit leading step-number prefixes fro
 | Fields | Input surface, stronger enabled hover border, central outline | Text selection remains browser-native | Disabled neutral fill; invalid danger edge with owner-provided error text |
 | Select family / menus | Shared menu-height, hover and pressed tints | Selected tint and check/ARIA selection, distinct from highlight | Muted disabled rows; existing field invalid contracts retained |
 | Tabs / segments | Neutral hover and pressed tints | Tabs have accent underline; segments raised neutral face | Muted disabled controls; roving keyboard model retained |
-| Tables | Standard 36px or opt-in dense 32px rows, hover/pressed tints | Highlight/selected tint; sorted headers use primary ink and existing sort indicator | Existing semantic table contracts retained |
+| Tables | Standard 36px or opt-in dense 32px rows, hover/pressed tints | Highlight/selected: 2px accent bar at the first cell's start and foreground ink; sorted headers use primary ink and existing sort indicator | Existing semantic table contracts retained |
 | Navigation / palette | Neutral hover and pressed tints | Current sidebar selection uses raised paper and primary ink; palette selection retains its neutral tint | Existing entitlement availability retained |
 | Checkbox / radio / switch | Neutral unchecked surface and hover feedback | Accent check/dot/track; checkbox indeterminate mark | Neutral disabled fill; radio dot remains visible in forced colours |
 | Filter chips / badges | Chip hover/pressed tints; badges static | Chips selected tint with pressed semantics | Neutral disabled chips |
