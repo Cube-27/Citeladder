@@ -266,14 +266,6 @@ export function AuthFormShell({
 }>) {
   const consent = useConsentGate(showForm ? terms : undefined, showForm ? verification : undefined);
 
-  const handleSubmit: NonNullable<ComponentProps<'form'>['onSubmit']> = (event) => {
-    if (consent.held) {
-      event.preventDefault();
-      return;
-    }
-    onSubmit?.(event);
-  };
-
   return (
     <Stack gap="section" className="auth-form-shell w-full">
       <Stack gap="compact" className="auth-form-heading text-center">
@@ -285,21 +277,15 @@ export function AuthFormShell({
         {error ? <MktAlert>{error}</MktAlert> : null}
 
         {showForm ? (
-          <form noValidate onSubmit={handleSubmit}>
-            <Stack gap="workspace" className="auth-email-form">
-              {children}
-
-              {consent.verification ? <HumanCheck widget={consent.verification} /> : null}
-
-              <FlowButton
-                type="submit"
-                disabled={pending || consent.held}
-                aria-describedby={consent.terms ? consent.noticeId : undefined}
-              >
-                {pending ? pendingLabel : submitLabel}
-              </FlowButton>
-            </Stack>
-          </form>
+          <AuthEmailForm
+            consent={consent}
+            onSubmit={onSubmit}
+            pending={pending}
+            submitLabel={submitLabel}
+            pendingLabel={pendingLabel}
+          >
+            {children}
+          </AuthEmailForm>
         ) : null}
 
         {consent.terms ? (
@@ -326,6 +312,52 @@ export function AuthFormShell({
         {consent.terms ? <TermsNotice id={consent.noticeId} signup={consent.terms.signup} /> : null}
       </Stack>
     </Stack>
+  );
+}
+
+/**
+ * The fields, the Turnstile slot (when challenged) and submit. A held form
+ * swallows submit (Enter in a field) until the gate opens.
+ */
+function AuthEmailForm({
+  consent,
+  onSubmit,
+  pending,
+  submitLabel,
+  pendingLabel,
+  children,
+}: Readonly<{
+  consent: ReturnType<typeof useConsentGate>;
+  onSubmit: ComponentProps<'form'>['onSubmit'];
+  pending: boolean;
+  submitLabel: string;
+  pendingLabel: string;
+  children: ReactNode;
+}>) {
+  const handleSubmit: NonNullable<ComponentProps<'form'>['onSubmit']> = (event) => {
+    if (consent.held) {
+      event.preventDefault();
+      return;
+    }
+    onSubmit?.(event);
+  };
+
+  return (
+    <form noValidate onSubmit={handleSubmit}>
+      <Stack gap="workspace" className="auth-email-form">
+        {children}
+
+        {consent.verification ? <HumanCheck widget={consent.verification} /> : null}
+
+        <FlowButton
+          type="submit"
+          disabled={pending || consent.held}
+          aria-describedby={consent.terms ? consent.noticeId : undefined}
+        >
+          {pending ? pendingLabel : submitLabel}
+        </FlowButton>
+      </Stack>
+    </form>
   );
 }
 
