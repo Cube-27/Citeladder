@@ -231,23 +231,16 @@
    whole dashboard. The design width (`--product-fit-width`) is the frame's
    own desktop width: 720px for a product shot (the wide cell of a split),
    the tile widths for the homepage tiles, and the 1184px app window for the
-   homepage hero. A narrower frame zooms the view down to fit; a wider one
-   lays it out at the frame's width and never scales up. On a phone every
-   view lays out at 420px and its side-by-side panels stack (the container
-   rules in product-views.css), so it zooms by about 0.8, not 0.3.
+   homepage hero. A narrower frame, a phone included, zooms the same desktop
+   picture down to fit, never restacked or trimmed; a wider one lays it out
+   at the frame's width and never scales up.
    tan(atan2(a, b)) is the unitless ratio a / b. Design widths are in px, not
    rem: a larger root font size then enlarges the text inside the frame
    instead of widening the frame and zooming it back. Nothing inside a view
-   steps by viewport; it resolves against its frame (`@container`). */
+   steps by viewport. */
 .product-fit {
   --product-fit-width: 720px;
   container-type: inline-size;
-}
-
-@media (max-width: 39.99rem) {
-  .product-fit {
-    --product-fit-width: 420px;
-  }
 }
 
 .product-fit > * {
