@@ -357,8 +357,7 @@ export function PromptLibrary({
     libraryBody = <PromptEmptyState onGenerate={() => openBuilder('business')} onAdd={openAdd} />;
   }
 
-  // Active / Archived lead the route in the template's tab band, above the
-  // filters, as every other route's tabs do (2026-11-03 app review).
+  // Active / Archived lead the route in the tab band, above the filters.
   const statusTabs: TabRowProps<PromptStatus> = {
     ariaLabel: 'Prompt status',
     items: STATUS_TABS.map((tab) => ({
@@ -377,9 +376,8 @@ export function PromptLibrary({
     })),
   };
 
-  // The library's search and filters ride a control band once it loads; the
-  // first load holds that band (and the tab band) so the table starts where
-  // the box stood.
+  // Search and filters ride a control band once loaded; the first load holds
+  // it (and the tab band) so the table starts where the box stood.
   const figuresRead = measurements !== undefined;
   if (awaitingFirstLoad({ promptsLoading: isLoading, hasPrompts, figuresRead })) {
     return (

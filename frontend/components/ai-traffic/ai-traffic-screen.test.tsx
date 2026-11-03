@@ -791,8 +791,6 @@ describe('AI Traffic state and navigation', () => {
     await user.click(screen.getByRole('tab', { name: 'Overview' }));
     expect(await screen.findByText(/not available for this workspace yet/)).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Connect crawl logs' })).not.toBeInTheDocument();
-    // Verification is the Overview's only picked narrowing; without crawl logs
-    // there is nothing to filter, so the band holds the range alone.
     expect(screen.queryByRole('button', { name: /^Filter/ })).not.toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Reporting range' })).toHaveTextContent(
       'Last 90 days',
