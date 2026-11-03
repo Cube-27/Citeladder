@@ -1,4 +1,4 @@
-import { delay, http, HttpResponse, type DefaultBodyType } from 'msw';
+import { delay, http, HttpResponse, type DefaultBodyType, type JsonBodyType } from 'msw';
 import { waitFor } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vite-plus/test';
 
@@ -295,7 +295,7 @@ describe('bootstrapPrivateRoutes', () => {
   });
 
   describe('the workspace chooser sign-in lands on', () => {
-    function memberOf(workspaces: unknown, status = 200) {
+    function memberOf(workspaces: JsonBodyType, status = 200) {
       mswServer.use(
         http.get('/api/v1/auth/me', () => HttpResponse.json({ user: USER })),
         http.get('/api/v1/workspaces', () => HttpResponse.json(workspaces, { status })),
