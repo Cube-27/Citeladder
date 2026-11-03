@@ -7,7 +7,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     title: 'AEO Website Audit & Technical SEO Checks | CiteLadder',
     description:
       'Crawl your site for technical SEO, answer-readiness and AI crawler access issues, with page-level evidence for every finding and a recrawl to verify fixes.',
-    heading: 'Find the site issues that keep you out of answers.',
+    heading: 'Find the site issues that keep you out of answers',
     lead: 'Crawl your site and get page-level findings with the evidence attached. Checks cover indexing, structure, structured data, answer-readiness and which AI crawlers your robots.txt lets in.',
     cta: 'demo',
     visual: 'site-health',
@@ -28,7 +28,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     ],
     features: [
       {
-        title: 'Two scores, each with a clear meaning.',
+        title: 'Two scores, each with a clear meaning',
         body: 'Web Fundamentals covers the basics every page needs: indexability, HTTPS, titles, canonicals, language, mobile viewport and more. AEO Readiness scores what answer engines rely on across seven pillars. Only checks that matter for visibility or performance count toward a score; the rest stay visible as advice.',
         points: [
           'Crawlability, machine readability, structure and answerability',
@@ -39,7 +39,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
         visual: 'pillars',
       },
       {
-        title: 'Technical and answer-readiness checks together.',
+        title: 'Technical and answer-readiness checks together',
         body: 'Review website fundamentals alongside the structure, evidence and machine readability that answer engines rely on. Server-rendered content, valid structured data that matches the page, and clear headings are checked page by page. Unresolved checks stay visible instead of passing silently.',
         points: [
           'Grouped issues with every affected page',
@@ -50,7 +50,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
         visual: 'page-evidence',
       },
       {
-        title: 'Know which AI crawlers you let in.',
+        title: 'Know which AI crawlers you let in',
         body: 'Site Health reads your robots.txt and reports access for each known crawler by purpose. Blocking a search crawler such as OAI-SearchBot or Claude-SearchBot is scored, because it can keep you out of answers. Blocking training crawlers is your choice, so it is shown without a penalty.',
         points: [
           'Search, AI search, training and user-fetch crawlers kept apart',
@@ -60,7 +60,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
         visual: 'site-health',
       },
       {
-        title: 'From a finding to a verified fix.',
+        title: 'From a finding to a verified fix',
         body: 'Hand any issue to the Agent to prepare a bounded developer brief. Your team implements it, marks it done, and a later crawl checks the result against the same evidence.',
         points: [
           'Ask the Agent from any issue group',
@@ -141,7 +141,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     title: 'Search Demand & GSC Opportunity Analysis | CiteLadder',
     description:
       'Turn Search Console queries and landing pages into ranked opportunities: striking-distance queries, CTR gaps, cannibalization, relevance gaps and demand shifts.',
-    heading: 'Find the opportunities already in your search data.',
+    heading: 'Find the opportunities already in your search data',
     lead: 'Connect Search Console to see which queries reach which pages, and get the signals worth acting on instead of another unranked keyword list.',
     cta: 'demo',
     visual: 'demand',
@@ -162,7 +162,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     ],
     features: [
       {
-        title: 'Signals, not another keyword list.',
+        title: 'Signals, not another keyword list',
         body: 'Demand Intelligence reads your Search Console queries and pages and raises the specific patterns worth acting on. Each signal names the page and query involved and the reporting window it came from.',
         points: [
           'High impressions with low click-through',
@@ -173,7 +173,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
         visual: 'demand',
       },
       {
-        title: 'Queries in their landing-page context.',
+        title: 'Queries in their landing-page context',
         body: 'See what each page appears for before you decide how to change it. Where the page can be read, its title, H1 and content are compared with the queries it wins, so a mismatch between search intent and page copy is easy to spot.',
         points: [
           'Grouped by page or by query',
@@ -184,7 +184,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
         visual: 'query-page',
       },
       {
-        title: 'From a signal to a reviewable edit.',
+        title: 'From a signal to a reviewable edit',
         body: 'Signals become page Actions beside your Site Health and visibility findings. Open the evidence behind any Action and hand it to the Agent to draft a focused change. Later data shows what happened next.',
         points: [
           'Signals become page Actions',
@@ -258,7 +258,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     title: 'Keyword, Competitor & Backlink Research | CiteLadder',
     description:
       'Research keywords, competing domains, top pages and backlinks with optional DataForSEO datasets, priced and confirmed before collection.',
-    heading: 'Keyword and backlink research beside your AI evidence.',
+    heading: 'Keyword and backlink research beside your AI evidence',
     lead: 'Add external research when your own data cannot answer the question: ranked keywords, competitors, top pages and backlinks. Each collection shows its scope and price before you confirm it.',
     cta: 'setup',
     visual: 'search',
@@ -279,7 +279,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     ],
     features: [
       {
-        title: 'Review the scope and cost first.',
+        title: 'Review the scope and cost first',
         body: 'New research uses a review-and-confirm step: you see the target, market, row limit and maximum cost before anything is bought. Opening a saved dataset never buys a refresh, and missing results are never rewritten as zero.',
         points: [
           'Target, market and row limit up front',
@@ -290,7 +290,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
         visual: 'acquisition',
       },
       {
-        title: 'See where competitors win and you do not.',
+        title: 'See where competitors win and you do not',
         body: 'Compare ranking keywords across your domain and competitors to find the keywords they rank for that you miss. Strong gaps become keyword Actions beside your other evidence, so research turns into planned pages instead of a spreadsheet.',
         points: [
           'Ranking, shared and missing keywords',

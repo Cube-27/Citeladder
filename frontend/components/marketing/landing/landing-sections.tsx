@@ -54,7 +54,7 @@ export function Integrations() {
     <section className="lp-section site-band" id="integrations">
       <div className="lp-wrap site-wrap site-split">
         <div className="lp-head">
-          <h2 className="website-section-heading">Works with the data you already have.</h2>
+          <h2 className="website-section-heading">Works with the data you already have</h2>
           <p className="website-lead">
             Start with AI answers alone. Connect search, analytics and research sources when the
             question needs them.
@@ -83,7 +83,7 @@ export function Teams() {
     <section className="lp-section site-band" id="teams">
       <div className="lp-wrap site-wrap lp-stack">
         <div className="lp-head lp-head-split">
-          <h2 className="website-section-heading">Built for the teams responsible for search.</h2>
+          <h2 className="website-section-heading">Built for the teams responsible for search</h2>
           <TextLink href="/solutions">Explore solutions</TextLink>
         </div>
         <ul className="lp-teams site-cards">
@@ -119,7 +119,7 @@ export function Trust() {
     <section className="lp-section site-band" id="trust">
       <div className="lp-wrap site-wrap site-split">
         <div className="lp-head">
-          <h2 className="website-section-heading">How CiteLadder handles your data.</h2>
+          <h2 className="website-section-heading">How CiteLadder handles your data</h2>
           <TextLink href="/enterprise">Enterprise</TextLink>
         </div>
         <ul className="lp-trust">

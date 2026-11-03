@@ -90,7 +90,7 @@ export function ToolsIndex() {
   return (
     <>
       <PageHero
-        title="Free tools for crawler rules and page markup."
+        title="Free tools for crawler rules and page markup"
         lead="Test robots.txt rules, inspect indexing directives and build cleaner markup. All six tools run in your browser on the input you supply."
       >
         <div className="mt-9 flex flex-wrap gap-3">
@@ -101,7 +101,7 @@ export function ToolsIndex() {
       </PageHero>
       <Section tone="soft" aria-label="All free tools">
         <SectionHeader
-          title="Pick the task in front of you."
+          title="Pick the task in front of you"
           lead="Paste text, enter details or choose a local file."
         />
         <ToolDirectory tools={FREE_TOOLS} />
@@ -110,7 +110,7 @@ export function ToolsIndex() {
         <div className="mk-split">
           <SectionHeader
             headingId="tools-limits-title"
-            title="What these tools can and cannot check."
+            title="What these tools can and cannot check"
           />
           <ul className="cp-facts">
             {TOOL_FACTS.map((fact) => (

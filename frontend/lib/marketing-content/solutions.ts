@@ -20,7 +20,7 @@ export type SolutionSegment = {
 };
 
 export const SOLUTIONS_HERO = {
-  title: 'AI visibility workflows for the teams behind your brand.',
+  title: 'AI visibility workflows for the teams behind your brand',
   lead: 'Each team asks a different question of the same evidence. Use tracked answers and website findings to explain a result, choose what to investigate and agree on the next step.',
 } as const;
 
@@ -28,7 +28,7 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
   {
     id: 'agencies',
     label: 'Agencies',
-    title: 'Agencies: client reports that hold up to questions.',
+    title: 'Agencies: client reports that hold up to questions',
     lead: 'Report on a defined prompt portfolio with clear measurement rules and the underlying answers in view. Explain what changed, which questions were covered and what remains uncertain.',
     body: 'Turn findings into specific proposals, such as correcting a product explanation or investigating a repeatedly cited source.',
     guide: { label: 'Explore AI Visibility', href: '/platform/ai-visibility' },
@@ -38,7 +38,7 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
   {
     id: 'in-house',
     label: 'In-house teams',
-    title: 'In-house teams: one view for content and web.',
+    title: 'In-house teams: one view for content and web',
     lead: 'Review the questions where your brand appears, the sources behind those answers and the website findings worth investigating. Decide together what to improve.',
     body: 'Observed visibility stays separate from referral traffic and commercial outcomes, so internal reports do not mix them.',
     guide: { label: 'Explore Demand Intelligence', href: '/platform/demand-intelligence' },
@@ -48,7 +48,7 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
   {
     id: 'founders',
     label: 'Founders',
-    title: 'Founders: see whether AI engines recommend you.',
+    title: 'Founders: see whether AI engines recommend you',
     lead: 'Start with a limited AI visibility trial and inspect the collected answers and competitor observations. Discuss broader diagnostics and content workflows in a demo.',
     guide: { label: 'Explore the platform', href: '/platform' },
     cta: 'Request a first audit sample',
@@ -57,7 +57,7 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
   {
     id: 'commerce',
     label: 'Ecommerce',
-    title: 'Ecommerce: the product questions buyers ask.',
+    title: 'Ecommerce: the product questions buyers ask',
     lead: 'Start with use cases, compatibility, selection criteria and product limitations. Review how those questions are answered and whether your own pages explain them clearly.',
     body: 'Use source analysis and page-level checks to choose focused improvements to product, category or buying-guide content.',
     guide: {
@@ -70,7 +70,7 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
   {
     id: 'pr',
     label: 'PR & communications',
-    title: 'PR and communications: how your brand appears in answers.',
+    title: 'PR and communications: how your brand appears in answers',
     lead: 'Inspect cited domains and pages in their answer context. Available retrieval evidence can support an investigation. It does not prove why an engine selected a source.',
     guide: { label: 'Explore Citation Intelligence', href: '/platform/citation-intelligence' },
     cta: 'See citation evidence',

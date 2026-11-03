@@ -405,6 +405,7 @@
 .website-hero-display,
 .website-page-title,
 .website-section-heading {
+  max-width: var(--site-measure-display);
   font-family: var(--font-display);
   font-optical-sizing: auto;
   font-weight: 500;
@@ -486,9 +487,9 @@
 }
 
 /* The section subtitle under a section heading (the subtitle role), held to
-   a 60-character measure wherever it sits. */
+   the reading measure wherever it sits. */
 .website-lead {
-  max-width: 60ch;
+  max-width: var(--site-measure-reading);
   font-size: var(--text-site-subtitle);
   line-height: var(--text-site-subtitle--line-height);
   font-weight: 400;
@@ -498,9 +499,9 @@
 
 /* The hero lead: the intro under a page's opening heading on every page
    (the homepage hero, page heroes, article and contact heads), the subtitle
-   size and measure. */
+   size and the reading measure. */
 .website-hero-lead {
-  max-width: 60ch;
+  max-width: var(--site-measure-reading);
   font-size: var(--text-site-subtitle);
   line-height: var(--text-site-subtitle--line-height);
   font-weight: 400;

@@ -43,7 +43,7 @@ export function PricingFaq() {
     <Section tone="paper" aria-label="Pricing questions">
       <div className="mk-split">
         <SectionHeader
-          title="Pricing questions."
+          title="Pricing questions"
           lead={
             <>
               More answers on data, security and billing in the{' '}
@@ -66,7 +66,7 @@ export function PricingCta() {
     <Section className="marketing-closing-band" aria-label="Get started">
       <div className="flex flex-col items-center gap-8 text-center" data-cta-placement="closing">
         <SectionHeader
-          title="See it on your own category first."
+          title="See it on your own category first"
           lead="Walk through your prompts, competitors and cited sources with us, then pick the volume you need."
           align="center"
         />

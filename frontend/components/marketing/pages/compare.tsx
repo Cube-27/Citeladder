@@ -60,7 +60,7 @@ export function CompareIndex() {
   return (
     <>
       <PageHero
-        title="Compare AI visibility software around your workflow."
+        title="Compare AI visibility software around your workflow"
         lead="Start with the questions your team needs to answer and the evidence it needs to inspect. Each comparison summarizes a product's public positioning and links to its official source."
       >
         <p className="website-label text-muted mt-6 max-w-[68ch]">
@@ -95,7 +95,7 @@ export function CompareIndex() {
         <div className="mk-split">
           <SectionHeader
             headingId="compare-fair-title"
-            title="Agree on the measurement before comparing the score."
+            title="Agree on the measurement before comparing the score"
             lead="Ask each vendor what it observes, how it selects prompts, what it counts and how you can inspect the evidence."
           />
           <div className="grid gap-8">
@@ -123,7 +123,7 @@ export function CompareIndex() {
       </Section>
 
       <Section aria-labelledby="compare-guides-title">
-        <SectionHeader headingId="compare-guides-title" title="Related guides." />
+        <SectionHeader headingId="compare-guides-title" title="Related guides" />
         <ul className="mk-related ed-guides">
           {GUIDES.map((guide) => (
             <li key={guide.href}>
@@ -140,7 +140,7 @@ export function CompareIndex() {
       <Section className="marketing-closing-band" aria-label="Get started">
         <div className="flex flex-col items-center gap-8 text-center" data-cta-placement="closing">
           <SectionHeader
-            title="Evaluate CiteLadder with your own questions."
+            title="Evaluate CiteLadder with your own questions"
             lead="Bring a small prompt portfolio and the reporting questions your team needs to answer."
             align="center"
           />

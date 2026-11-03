@@ -106,7 +106,7 @@ export function EnterpriseHero() {
   return (
     <PageHero
       centered
-      title="The AEO platform whose scoring you can audit."
+      title="The AEO platform whose scoring you can audit"
       lead="Enterprise AEO measurement for how ChatGPT, Gemini, Claude and Google AI Overviews describe your brand. Every score traces to a stored answer, the scoring code is public, and evidence stays inside your workspace."
     >
       <div className="mt-9 flex flex-wrap justify-center gap-3">
@@ -128,7 +128,7 @@ export function EnterpriseEvidence() {
       <div className="mk-dive">
         <div className="mk-dive-copy">
           <h2 className="website-page-title mk-dive-title">
-            Every number traces to a stored answer and a published rule.
+            Every number traces to a stored answer and a published rule
           </h2>
           <p className="website-body">
             Security, analytics and growth teams read the same{' '}
@@ -161,7 +161,7 @@ export function EnterpriseGovernance() {
     <Section id="security" tone="soft" aria-label="Security and governance">
       <div className="mk-split">
         <SectionHeader
-          title="Every boundary has one owner."
+          title="Every boundary has one owner"
           lead="Credentials, evidence and execution are each handled in one place, so a security reviewer can check them one at a time and read the code behind each."
           headingId="enterprise-governance-title"
         />
@@ -189,7 +189,7 @@ export function EnterpriseDataFlow() {
   return (
     <Section aria-label="How a request travels">
       <SectionHeader
-        title="How a request travels."
+        title="How a request travels"
         lead="The hosted platform runs in a managed cloud behind one same-origin boundary. Every read is checked against the workspace, and provider keys are resolved only when a worker calls an engine."
         headingId="enterprise-flow-title"
       />
@@ -210,7 +210,7 @@ export function EnterpriseFit() {
   return (
     <Section id="fit" tone="soft" aria-label="Who Enterprise is for">
       <SectionHeader
-        title="Who Enterprise is for."
+        title="Who Enterprise is for"
         lead="Enterprise fits when your AEO program needs more scope, more review and clearer boundaries than a self-serve plan provides."
         headingId="enterprise-fit-title"
       />
@@ -231,7 +231,7 @@ export function EnterpriseLimits() {
     <Section id="limits" aria-label="Custom limits">
       <div className="mk-split">
         <SectionHeader
-          title="Scope the agreement around the work."
+          title="Scope the agreement around the work"
           lead="Six inputs set an Enterprise agreement. Each is quoted to fit your program, and none changes how a score is computed."
           headingId="enterprise-limits-title"
         />
@@ -256,7 +256,7 @@ export function EnterpriseContactCta() {
     <Section id="contact" className="marketing-closing-band" aria-label="Contact sales">
       <div className="flex flex-col items-center gap-8 text-center" data-cta-placement="closing">
         <SectionHeader
-          title="Bring your volumes and your review questions."
+          title="Bring your volumes and your review questions"
           lead="Tell us your prompt volumes, engines and security requirements. We will walk your reviewers through the evidence trail and the code that scores it."
           align="center"
         />

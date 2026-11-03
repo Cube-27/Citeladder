@@ -128,7 +128,7 @@ export const POSTS: readonly BlogPost[] = [
 ] as const;
 
 export const BLOG_EMPTY_STATE = {
-  heading: 'Articles are on their way.',
+  heading: 'Articles are on their way',
   body: 'We publish practical guides to answer-engine optimization, evidence-led measurement, and the work between a finding and the next audit. Check back soon or explore the documentation.',
 } as const;
 

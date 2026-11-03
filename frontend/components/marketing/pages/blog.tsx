@@ -108,7 +108,7 @@ function StartPaths() {
       <div className="mk-split">
         <SectionHeader
           headingId="blog-start-title"
-          title="Start with the question you have."
+          title="Start with the question you have"
           lead="Three guides cover the questions most teams ask first."
         />
         <ul className="cp-link-list">
@@ -172,7 +172,7 @@ export function BlogIndex({
   return (
     <>
       <PageHero
-        title="Practical guides to AI visibility."
+        title="Practical guides to AI visibility"
         lead="How to build a baseline, trace the sources behind an answer and check that your website can be read. Start with the question your team is asking."
       />
 
@@ -185,7 +185,7 @@ export function BlogIndex({
       {researchGuides.length > 0 && <ResearchGuides guides={researchGuides} />}
 
       <BlogCta
-        title="Put the method into practice."
+        title="Put the method into practice"
         body="See how CiteLadder brings answer observations, source analysis and website findings into one workflow."
         secondary={{ href: '/compare', label: 'Compare AI visibility tools' }}
       />

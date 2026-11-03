@@ -4,7 +4,7 @@ import { BLOG_SOURCES } from '../blog-sources';
 
 export const POST_AUDIT: BlogPost = {
   slug: 'auditing-content-for-llms-ai-search',
-  title: 'How to audit a website for AI search readiness.',
+  title: 'How to audit a website for AI search readiness',
   seoTitle: 'AI Website Readiness Audit and Crawlability Checklist | CiteLadder',
   seoDescription:
     'Check crawl access, indexing controls, public content, factual clarity and internal links. A practical website audit for teams investigating AI search visibility.',
@@ -29,7 +29,7 @@ export const POST_AUDIT: BlogPost = {
     'Updated to clarify measurement definitions, evidence limits and practical checks.',
   closing: {
     secondary: { href: '/platform/site-health', label: 'Explore Site Health' },
-    heading: 'Connect website findings with answer evidence.',
+    heading: 'Connect website findings with answer evidence',
     body: 'Explore how CiteLadder helps your team investigate site readiness alongside AI visibility.',
   },
   body: [

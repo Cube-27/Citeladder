@@ -4,7 +4,7 @@ import { BLOG_SOURCES } from '../blog-sources';
 
 export const POST_PLAYBOOK: BlogPost = {
   slug: 'action-playbook-winning-ai-citations',
-  title: 'How to turn AI citation findings into useful website improvements.',
+  title: 'How to turn AI citation findings into useful website improvements',
   seoTitle: 'How to Investigate and Improve AI Citation Opportunities | CiteLadder',
   seoDescription:
     'Investigate cited sources, check content gaps and choose focused website improvements. A practical AI citation workflow without promises of guaranteed inclusion.',
@@ -24,7 +24,7 @@ export const POST_PLAYBOOK: BlogPost = {
     'Updated to clarify measurement definitions, evidence limits and practical checks.',
   closing: {
     secondary: { href: '/solutions', label: 'Explore team workflows' },
-    heading: 'Investigate the sources behind your visibility.',
+    heading: 'Investigate the sources behind your visibility',
     body: 'See how CiteLadder connects recorded answers with cited domains, URLs and website findings.',
   },
   body: [

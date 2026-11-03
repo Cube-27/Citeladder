@@ -111,7 +111,7 @@ export function BlogIndexExplorer({ posts }: Readonly<{ posts: readonly BlogPost
           visiblePosts.map((post) => <ArticleRow key={post.slug} post={post} />)
         ) : (
           <div className="cp-empty">
-            <h2 className="website-feature-heading">No articles match this filter.</h2>
+            <h2 className="website-feature-heading">No articles match this filter</h2>
             <p className="website-body">Show every topic to see all guides.</p>
             <button
               type="button"

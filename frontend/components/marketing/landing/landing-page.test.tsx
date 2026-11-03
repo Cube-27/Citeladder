@@ -25,7 +25,7 @@ describe('LandingPage', () => {
     render(<LandingPage rotor={<EngineRotor />} />);
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName(
-      'Analyze what ChatGPT, Gemini and Claude tell your buyers about you.',
+      'Analyze what ChatGPT, Gemini and Claude tell your buyers about you',
     );
   });
 

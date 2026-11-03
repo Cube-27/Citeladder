@@ -83,7 +83,7 @@ export function PricingTrial({
       <Section tone="paper" aria-label="Early access">
         <div className="cm-access">
           <SectionHeader
-            title="Paid plans are not open for self-serve checkout."
+            title="Paid plans are not open for self-serve checkout"
             lead="Contact us to discuss early access and the volume your team needs."
             size="h3"
           />
@@ -103,7 +103,7 @@ export function PricingTrial({
       <div className="cm-access">
         <div className="cm-access-copy">
           <SectionHeader
-            title="Start with a seven-day trial."
+            title="Start with a seven-day trial"
             lead="See how ChatGPT answers your buyers' questions before you commit. Paid checkout is not open; contact us to continue after the trial."
             size="h3"
           />
