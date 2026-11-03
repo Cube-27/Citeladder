@@ -28,7 +28,7 @@
 /* ── Header ─────────────────────────────────────────────────────────────── */
 
 .nav-link {
-  color: var(--color-site-nav);
+  color: var(--color-site-body);
   transition:
     color var(--motion-fast) var(--ease-standard),
     background-color var(--motion-fast) var(--ease-standard);
@@ -71,10 +71,10 @@
 }
 
 /* The one label over a group of rows in every dropdown and the phone sheet
-   (owner, 2026-10-31): 14px at 400 in the navigation ink. */
+   (owner, 2026-10-31): 14px at 400 in the secondary grey. */
 .nav-group-label {
   padding: 0.75rem 0.75rem 0.5rem;
-  color: var(--color-site-nav);
+  color: var(--color-site-body);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
   font-weight: 400;
@@ -173,11 +173,10 @@
   letter-spacing: 0;
 }
 
-/* Footer links take the nav grey; on a phone they read larger, in the
-   footer grey. */
+/* Footer links take the secondary grey. */
 .footer-link,
 .footer-legal-link {
-  color: var(--color-site-footer);
+  color: var(--color-site-body);
   font-size: var(--text-site-footer);
   line-height: var(--text-site-footer--line-height);
   font-weight: 400;
@@ -188,13 +187,6 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-}
-
-@media (min-width: 810px) {
-  .footer-link,
-  .footer-legal-link {
-    color: var(--color-site-nav);
-  }
 }
 
 .footer-link:hover,
@@ -234,23 +226,28 @@
   border-radius: var(--radius-lg);
 }
 
-/* Every product view is a snapshot of the app at the app's own dimensions
-   (owner, 2026-10-31): a scaled-down snapshot, a whole view laid out at its
-   app width and zoomed down to fit its frame, or a focused snapshot, a crop
-   of a real-width view (the homepage tiles). It never reflows to a narrower
-   layout, wraps, or hides a control: the design width is the app's layout
-   width for that view, and the frame only decides the zoom and the crop.
-   A content view's app width is 960px, the content column beside the app's
-   240px sidebar on a 1200px screen; the whole app window (the homepage
-   hero, sidebar included) is 1184px. A frame wider than its design width
-   lays the view out at the frame's width; it never scales up.
+/* Every product view is laid out at the width it is shown at (2026-11-03),
+   so its 12px and 14px text reads at that size instead of a zoomed-down
+   whole dashboard. The design width (`--product-fit-width`) is the frame's
+   own desktop width: 720px for a product shot (the wide cell of a split),
+   the tile widths for the homepage tiles, and the 1184px app window for the
+   homepage hero. A narrower frame zooms the view down to fit; a wider one
+   lays it out at the frame's width and never scales up. On a phone every
+   view lays out at 420px and its side-by-side panels stack (the container
+   rules in product-views.css), so it zooms by about 0.8, not 0.3.
    tan(atan2(a, b)) is the unitless ratio a / b. Design widths are in px, not
    rem: a larger root font size then enlarges the text inside the frame
    instead of widening the frame and zooming it back. Nothing inside a view
-   may step by viewport; it resolves against this width. */
+   steps by viewport; it resolves against its frame (`@container`). */
 .product-fit {
-  --product-fit-width: 960px;
+  --product-fit-width: 720px;
   container-type: inline-size;
+}
+
+@media (max-width: 39.99rem) {
+  .product-fit {
+    --product-fit-width: 420px;
+  }
 }
 
 .product-fit > * {
@@ -269,12 +266,6 @@
   color: var(--color-muted);
   font-size: var(--text-site-caption);
   line-height: var(--text-site-caption--line-height);
-}
-
-.product-caption {
-  color: var(--color-site-body);
-  font-size: var(--text-site-secondary);
-  line-height: var(--text-site-secondary--line-height);
 }
 
 /* ── Closing band ───────────────────────────────────────────────────────── */
@@ -341,25 +332,22 @@
   transform: translateX(2px);
 }
 
+/* Three category cards (a site-grid card row): the group name as the card
+   title, its capabilities as rows inside. */
 .mk-capabilities {
   display: grid;
-  gap: 2rem;
 }
 
 @media (min-width: 64rem) {
   .mk-capabilities {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1.5rem;
   }
 }
 
-.mk-group-label {
-  margin-bottom: 0.5rem;
-  color: var(--color-site-ink);
-  font-size: var(--text-site-control);
-  line-height: var(--text-site-control--line-height);
-  font-weight: 500;
-  letter-spacing: -0.2px;
+.mk-capability-group {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
 }
 
 .mk-capability-group ul {
@@ -409,7 +397,7 @@
   justify-content: space-between;
   gap: 1.5rem;
   padding-block: 1.25rem;
-  color: var(--color-site-ink-strong);
+  color: var(--color-site-ink);
   font-size: var(--text-site-question);
   line-height: var(--text-site-question--line-height);
   font-weight: 500;
@@ -443,23 +431,11 @@
   letter-spacing: 0;
 }
 
-/* A split of the site grid (`site-grid.css` spaces and divides it). */
+/* A split of the site grid (`site-grid.css` spaces, columns and divides
+   it): copy in the narrow cell, the product shot in the wide one, in every
+   row, so the divider never moves between rows. */
 .mk-dive {
   display: grid;
-}
-
-@media (min-width: 64rem) {
-  .mk-dive {
-    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-  }
-
-  .mk-dive-reverse {
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
-  }
-
-  .mk-dive-reverse .mk-dive-copy {
-    order: 2;
-  }
 }
 
 .mk-dive-copy {
@@ -594,15 +570,9 @@
   display: grid;
 }
 
-/* A split of the site grid (`site-grid.css` spaces and divides it). */
+/* A split of the site grid (`site-grid.css` spaces, columns and divides it). */
 .mk-split {
   display: grid;
-}
-
-@media (min-width: 64rem) {
-  .mk-split {
-    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-  }
 }
 
 .mk-related {

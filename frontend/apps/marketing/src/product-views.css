@@ -356,8 +356,8 @@
   font-weight: 500;
 }
 
-/* Views always lay out at desktop width: `.product-fit` scales them on a
-   phone instead of reflowing them, so none of these steps by viewport. */
+/* Views lay out at their frame's design width (`.product-fit`, marketing.css)
+   and never step by viewport; narrow frames stack (end of file). */
 .pv-split {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1060,4 +1060,26 @@ li[data-own] .pv-rank {
   font-size: var(--text-xs);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
+}
+
+/* Narrow frames ─────────────────────────────────────────────────────────── */
+
+/* A frame under 30rem (a phone, a narrow tile) is the one place a view
+   changes shape: side-by-side panels stack and the hero's app window drops
+   its sidebar, so each panel keeps a readable width instead of the whole
+   view shrinking. Last in the file so it outranks the layouts above. */
+@container (max-width: 30rem) {
+  :is(.pv-split, .pv-split-wide, .pv-split-chart, .pv-agent) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pv-shell {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+    padding-left: 0.5rem;
+  }
+
+  .pv-shell > .pv-sidebar {
+    display: none;
+  }
 }

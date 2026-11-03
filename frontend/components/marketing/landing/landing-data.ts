@@ -1,17 +1,53 @@
 /** Public copy for the landing page's integration list and FAQ. */
 
-export const INTEGRATIONS = [
-  ['GSC', 'Google Search Console', 'Queries, pages and clicks from your verified property.'],
-  ['GA4', 'Google Analytics 4', 'AI referral sessions, landing pages and key events.'],
-  ['BING', 'Bing Webmaster Tools', 'Bing search data through its own consent flow.'],
-  ['AI', 'Model providers', 'OpenAI, Google and Anthropic accounts for audits.'],
-  ['DFS', 'DataForSEO', 'Optional keyword, competitor and backlink research.'],
-  [
-    'MCP',
-    'MCP clients',
-    'Read your project evidence and make changes you confirm from compatible assistants.',
-  ],
-] as const;
+import type { OfficialEngineKey } from '../primitives/engine-logo';
+
+/**
+ * An integration's logo: brand marks the site already draws inline, or a
+ * logo file fetched once from logo.dev and served from `public/brand/integrations`.
+ */
+export type IntegrationMark =
+  | { readonly kind: 'engines'; readonly engines: readonly OfficialEngineKey[] }
+  | { readonly kind: 'image'; readonly src: string };
+
+export type Integration = {
+  readonly title: string;
+  readonly body: string;
+  readonly mark: IntegrationMark;
+};
+
+export const INTEGRATIONS: readonly Integration[] = [
+  {
+    title: 'Google Search Console',
+    body: 'Queries, pages and clicks from your verified property.',
+    mark: { kind: 'engines', engines: ['google'] },
+  },
+  {
+    title: 'Google Analytics 4',
+    body: 'AI referral sessions, landing pages and key events.',
+    mark: { kind: 'engines', engines: ['google'] },
+  },
+  {
+    title: 'Bing Webmaster Tools',
+    body: 'Bing search data through its own consent flow.',
+    mark: { kind: 'image', src: '/brand/integrations/bing.png' },
+  },
+  {
+    title: 'Model providers',
+    body: 'OpenAI, Google and Anthropic accounts for audits.',
+    mark: { kind: 'engines', engines: ['openai', 'gemini', 'claude'] },
+  },
+  {
+    title: 'DataForSEO',
+    body: 'Optional keyword, competitor and backlink research.',
+    mark: { kind: 'image', src: '/brand/integrations/dataforseo.png' },
+  },
+  {
+    title: 'MCP clients',
+    body: 'Read your project evidence and make changes you confirm from compatible assistants.',
+    mark: { kind: 'image', src: '/brand/integrations/mcp.png' },
+  },
+];
 
 export const FAQS = [
   {

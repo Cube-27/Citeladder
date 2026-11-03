@@ -66,18 +66,16 @@
   position: relative;
 }
 
-.lp-soft {
-  background: var(--color-background-alt);
-}
-
 .lp-anchor {
   position: absolute;
   top: calc(var(--marketing-nav-offset) * -1);
 }
 
+/* Heading to content is one distance in every band, the shared section's
+   (`Container`) 56px. */
 .lp-stack {
   display: grid;
-  gap: 3rem;
+  gap: 3.5rem;
 }
 
 .lp-head {
@@ -87,14 +85,11 @@
   gap: 1rem;
 }
 
-/* Headings run the full wrap; only the lead keeps a reading measure. */
-.lp-head .website-lead {
-  max-width: 60rem;
-}
-
+/* Headings run the full wrap; the lead keeps its role's 60ch measure. A
+   link beside a heading sits on the heading's last baseline. */
 .lp-head-split {
   max-width: none;
-  align-items: end;
+  align-items: last baseline;
 }
 
 @media (min-width: 48rem) {
@@ -213,12 +208,14 @@
 }
 
 .lp-hero-lead {
-  max-width: 54rem;
   margin-top: 1.5rem;
   margin-bottom: 2.25rem;
 }
 
+/* The trial and plan note: a step smaller than the lead, so it reads as a
+   note without a lighter grey. */
 .lp-hero-note {
+  max-width: 60ch;
   margin-top: 1rem;
   color: var(--color-site-body);
   font-size: var(--text-site-secondary);
@@ -228,7 +225,6 @@
 /* The hero's product is one still AI Visibility page: no tabs, no motion. */
 .lp-hero-shot {
   display: grid;
-  gap: 1rem;
   margin-top: var(--site-cell-y);
 }
 
@@ -236,12 +232,21 @@
   min-width: 0;
 }
 
-/* The hero is the whole app window, sidebar included, at its app width. */
-.lp-hero-frame.product-fit {
-  --product-fit-width: 1184px;
+/* From a tablet up the hero is the whole app window, sidebar included, at
+   its app width; a phone takes the shared 420px layout, without the
+   sidebar (product-views.css). */
+@media (min-width: 40rem) {
+  .lp-hero-frame.product-fit {
+    --product-fit-width: 1184px;
+  }
 }
 
 /* Engines ────────────────────────────────────────────────────────────────── */
+
+/* The foot of the hero, under the product. */
+.lp-engines {
+  margin-top: var(--site-cell-y);
+}
 
 .lp-engines-inner {
   display: grid;
@@ -250,11 +255,10 @@
 }
 
 .lp-engines-label {
-  color: var(--color-site-lead-in);
+  color: var(--color-site-body);
   font-size: var(--text-site-lead-in);
   line-height: var(--text-site-lead-in--line-height);
   font-weight: 500;
-  letter-spacing: -0.02em;
 }
 
 .lp-engines ul {
@@ -269,26 +273,28 @@
   align-items: center;
   gap: 0.5rem;
   color: var(--color-foreground);
-  font-size: var(--text-site-card);
-  line-height: var(--text-site-card--line-height);
+  font-size: var(--text-site-card-compact);
+  line-height: var(--text-site-card-compact--line-height);
   font-weight: 500;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.01em;
 }
 
 /* Statement ──────────────────────────────────────────────────────────────── */
 
+/* The intro to "How it works", above its heading. */
 .lp-statement-text {
+  max-width: 48ch;
   color: var(--color-site-ink);
   font-family: var(--font-display);
   font-size: var(--text-site-statement);
   line-height: var(--text-site-statement--line-height);
   font-weight: 500;
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
   text-wrap: pretty;
 }
 
 .lp-statement-text span {
-  color: var(--color-site-ink-soft);
+  color: var(--color-site-body);
 }
 
 /* Bento ──────────────────────────────────────────────────────────────────── */
@@ -312,10 +318,12 @@
   }
 }
 
+/* Copy takes the row's spare height, so every tile's product view sits on
+   the tile's bottom edge at one height. */
 .lp-tile {
   position: relative;
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: 1fr auto;
   min-width: 0;
   overflow: hidden;
   border-radius: var(--radius-lg);
@@ -329,6 +337,7 @@
 
 .lp-tile-copy {
   display: grid;
+  align-content: start;
   gap: 0.5rem;
   padding: 1.5rem 1.5rem 1.25rem;
 }
@@ -337,42 +346,31 @@
   max-width: 44ch;
 }
 
-/* The tile shows a cropped top corner of a real view, clipped at the tile's
-   bottom edge. Its window material is the shared product frame's (marketing.css). The crop
-   sits on the view, inside the product-fit zoom, so a scaled-down tile shows
-   the same corner of the view as the desktop one. */
+/* The tile shows one panel of the product (a focused view), in the shared
+   window material (marketing.css), clipped at the tile's bottom edge so it
+   runs off the card. */
 .lp-tile-visual {
   position: relative;
-  align-self: start;
-  margin-left: 1.5rem;
+  height: 18rem;
+  margin-inline: 1.5rem;
   padding: 1rem 1rem 0;
   overflow: hidden;
-  border-top-left-radius: var(--radius-lg);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   pointer-events: none;
 }
 
-.lp-tile-visual > * {
-  height: 360px;
-  overflow: hidden;
-}
-
-/* A tile's view lays out at the app's real content width (960px), so it
-   reads exactly as the product does, and is scaled so a fixed share of it
-   (`--product-fit-width`, the left 572px or 916px of the view) fills the
-   tile at every width; the rest is cropped off the right. At 1440px both
-   tiles scale the view to 0.7; a tile wider than its share (a stacked tile
-   on a tablet) shows the view at full size instead of enlarging it. */
+/* The panel lays out at the width the tile shows it (the tile's content
+   width at the full 80rem frame: 384px, 632px for a wide tile), so its text
+   renders at full size there and zooms down only on a narrower screen.
+   Stacked tiles share the narrow width. */
 .lp-tile-visual.product-fit {
-  --product-fit-width: 572px;
+  --product-fit-width: 384px;
 }
 
-.lp-tile-wide .lp-tile-visual.product-fit {
-  --product-fit-width: 916px;
-}
-
-.lp-tile-visual.product-fit > * {
-  width: 960px;
-  zoom: min(1, tan(atan2(100cqi, var(--product-fit-width))));
+@media (min-width: 64rem) {
+  .lp-tile-wide .lp-tile-visual.product-fit {
+    --product-fit-width: 632px;
+  }
 }
 
 /* Deep dives ─────────────────────────────────────────────────────────────── */
@@ -381,23 +379,9 @@
   display: grid;
 }
 
-/* Capabilities ───────────────────────────────────────────────────────────── */
-
 /* Integrations ───────────────────────────────────────────────────────────── */
 
-.lp-integrations {
-  display: grid;
-  gap: 3rem;
-}
-
-@media (min-width: 64rem) {
-  .lp-integrations {
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-    align-items: start;
-    gap: 4.5rem;
-  }
-}
-
+/* A split of the site grid, on its shared column line. */
 .lp-integration-list {
   display: grid;
   gap: 0.75rem;
@@ -417,19 +401,41 @@
   padding-block: 0.75rem;
 }
 
+/* Each source's own logo at 24px on a white tile; the model providers'
+   three marks share one tile. */
 .lp-integration-mark {
   display: grid;
   flex: none;
   width: 2.5rem;
   height: 2.5rem;
-  place-items: center;
+  place-content: center;
   border-radius: var(--radius-control);
   background: var(--color-panel);
   color: var(--color-foreground);
-  font-size: var(--text-site-caption);
-  line-height: var(--text-site-caption--line-height);
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  box-shadow: 0 0 0 1px var(--color-site-line);
+}
+
+.lp-integration-glyph {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.lp-integration-mark[data-count='3'] {
+  grid-template-columns: repeat(2, auto);
+  gap: 0.125rem;
+}
+
+.lp-integration-mark[data-count='3'] .lp-integration-glyph {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.lp-integration-mark [data-engine-logo='claude'] {
+  color: var(--color-brand-claude);
+}
+
+.lp-integration-mark [data-engine-logo='gemini'] {
+  color: var(--color-brand-gemini);
 }
 
 /* Teams ──────────────────────────────────────────────────────────────────── */
@@ -469,6 +475,7 @@
 
 /* Trust ──────────────────────────────────────────────────────────────────── */
 
+/* The wide cell of a split: two by two beside the heading. */
 .lp-trust {
   display: grid;
   gap: 2rem;
@@ -480,12 +487,6 @@
   }
 }
 
-@media (min-width: 64rem) {
-  .lp-trust {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
 .lp-trust li {
   display: grid;
   align-content: start;
@@ -494,16 +495,9 @@
 
 /* FAQ ────────────────────────────────────────────────────────────────────── */
 
+/* A split of the site grid, on its shared column line. */
 .lp-faq {
   display: grid;
-  gap: 2.5rem;
-}
-
-@media (min-width: 64rem) {
-  .lp-faq {
-    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-    gap: 4.5rem;
-  }
 }
 
 /* Closing ────────────────────────────────────────────────────────────────── */
@@ -528,9 +522,8 @@
 /* A phone keeps the centred composition of every width (owner, 2026-10-31,
    replacing the 2026-10-21 left-aligned phone copy), with thumb-width
    actions. Type comes from the site roles (website-type.css), never from
-   here. The product view stays a card in the site grid's frame, the desktop
-   picture scaled down, sidebar and all (`.product-fit`, marketing.css);
-   nothing here reshapes it. */
+   here. Product views take the shared phone layout (`.product-fit`,
+   marketing.css): one column at 420px, the hero without its sidebar. */
 @media (max-width: 39.99rem) {
   .lp-hero-lead {
     margin-top: 1rem;

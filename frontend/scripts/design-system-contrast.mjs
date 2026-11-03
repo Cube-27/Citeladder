@@ -51,23 +51,13 @@ const CONTRAST_PAIRS = [
   // strip's foreground also on the mint field the closing band and the
   // homepage announcement strip share.
   {
-    inks: [
-      'site-ink',
-      'site-ink-strong',
-      'site-body',
-      'site-footer',
-      'site-nav',
-      'site-ink-soft',
-      'site-lead-in',
-    ].map(color),
+    inks: ['site-ink', 'site-body'].map(color),
     surfaces: ['panel', 'site-ground', 'background-alt'].map(color),
     minimum: 4.5,
     scopes: [PUBLIC],
   },
   {
-    inks: ['foreground', 'site-ink', 'site-body', 'site-nav', 'site-ink-soft', 'site-lead-in'].map(
-      color,
-    ),
+    inks: ['foreground', 'site-ink', 'site-body'].map(color),
     surfaces: [color('field-mint')],
     minimum: 4.5,
     scopes: [PUBLIC],

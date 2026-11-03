@@ -415,14 +415,9 @@
 
 /* ── Contact ──────────────────────────────────────────────────────────── */
 
+/* A split of the site grid, on its shared column line. */
 .cm-contact-grid {
   display: grid;
-}
-
-@media (min-width: 64rem) {
-  .cm-contact-grid {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
 }
 
 .cm-contact-copy {

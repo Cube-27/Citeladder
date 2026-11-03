@@ -11,7 +11,6 @@ import type {
   PlatformPage,
   PlatformVisual,
 } from '@/lib/marketing-content/platform-pages';
-import { cn } from '@/lib/utils';
 
 import { ConnectStrip } from '@/components/mcp/connect-strip';
 
@@ -227,13 +226,13 @@ export function PlatformActions({
   );
 }
 
-/** Every published capability, grouped as in the navigation. */
+/** Every published capability, one card per navigation group. */
 export function CapabilityGrid() {
   return (
-    <div className="mk-capabilities">
+    <div className="mk-capabilities site-cards">
       {PLATFORM_GROUPS.map((group) => (
-        <div key={group.label} className="mk-capability-group">
-          <p className="mk-group-label site-chip">{group.label}</p>
+        <div key={group.label} className="mk-capability-group site-card">
+          <h3 className="website-feature-heading">{group.label}</h3>
           <ul>
             {group.items.map((item) => {
               return (
@@ -326,11 +325,8 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
       {page.features.length > 0 && (
         <Section tone="soft">
           <div className="mk-features site-rows">
-            {page.features.map((feature, index) => (
-              <div
-                key={feature.title}
-                className={cn('mk-dive', index % 2 === 1 && 'mk-dive-reverse')}
-              >
+            {page.features.map((feature) => (
+              <div key={feature.title} className="mk-dive">
                 <div className="mk-dive-copy">
                   <h2 className="website-page-title mk-dive-title">{feature.title}</h2>
                   <p className="website-body">{feature.body}</p>

@@ -12,11 +12,10 @@
      right) from the header's foot, where a full-bleed rule also crosses the
      page.
    - `.site-band`: a band that opens with a full-bleed rule and pads its
-     content one cell height (`--site-cell-y`) from its rules, top and
-     bottom. `Section` and `PageHero` are bands; the band that opens a page
-     sits under the header's rule and draws none of its own. A band that
-     ends on a row of cards closes a card gap under them, so the cards sit
-     against the rule as they sit against the frame.
+     content one band height (`--site-band-y`) from its rules, top and
+     bottom, whatever it ends on. `Section` and `PageHero` are bands; the
+     band that opens a page sits under the header's rule and draws none of
+     its own.
    - `.site-wrap`: a band's content, its copy a cell inset inside the frame
      (`Container`). `.site-wrap-cards`: content that is itself a card or
      product view, a card gap inside the frame.
@@ -24,8 +23,9 @@
      lines; `.site-card`: one white card, padded `--site-card-pad`.
    - `.site-split` (and the shared `.mk-split` and `.mk-dive`): side-by-side
      cells with a divider down the middle of the gap from 64rem, stacked
-     below it with a frame-wide rule between them. The divider is drawn on
-     the grid's second column line, so it holds when the cells swap order.
+     below it with a frame-wide rule between them. Every split on every page
+     shares one column template, narrow copy beside the wider cell, so all
+     dividers fall on one vertical line.
    - `.site-rows`: a stack of rows (usually splits) with a frame-wide rule
      between rows, each row a cell height from its rules.
    - `.site-cell-card`: a cell that holds a card or product view, a card gap
@@ -65,17 +65,13 @@
 /* Bands ──────────────────────────────────────────────────────────────────── */
 
 .site-frame .site-band {
-  padding-block: var(--site-cell-y);
+  padding-block: var(--site-band-y);
   border-top: 1px solid var(--color-site-line);
 }
 
 /* Structured-data scripts can precede it, so "first" skips them. */
 .site-frame main > .site-band:nth-child(1 of :not(script)) {
   border-top: 0;
-}
-
-.site-frame .site-band:has(> * > :is(.site-cards, .mk-related):last-child) {
-  padding-bottom: var(--site-card-gap);
 }
 
 /* Every band is the one neutral ground; the closing band keeps its mint
@@ -173,6 +169,7 @@
    the top of its cell. */
 .site-frame :is(.site-split, .mk-split, .mk-dive) {
   position: relative;
+  display: grid;
   gap: calc(var(--site-cell-y) * 2) calc(var(--site-cell-inset) * 2);
   align-items: stretch;
 }
@@ -194,9 +191,14 @@
   pointer-events: none;
 }
 
-/* Side by side, the divider sits on the second column's line, midway
-   through the gap, and runs a cell height past the cells to the rules. */
+/* Side by side, every split takes the one template, so the divider sits on
+   the same line in every band; it is drawn midway through the gap and runs
+   a cell height past the cells to the rules. */
 @media (min-width: 64rem) {
+  .site-frame :is(.site-split, .mk-split, .mk-dive) {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  }
+
   .site-frame :is(.site-split, .mk-split, .mk-dive)::after {
     grid-row: 1;
     grid-column: 2;

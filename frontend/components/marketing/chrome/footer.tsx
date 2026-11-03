@@ -131,7 +131,9 @@ export function MarketingFooter() {
   return (
     <footer className="site-footer">
       <Container className="pt-16 pb-10 md:pt-20">
-        <div className="grid gap-12 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,4fr)] lg:gap-16">
+        {/* The brand sits above the columns, so the columns get the full
+            width and each sizes to its longest label instead of wrapping. */}
+        <div className="grid gap-12 lg:gap-16">
           <div className="flex flex-col items-start gap-5">
             <a href="/" aria-label="CiteLadder home" className="focus-ring inline-block rounded-xs">
               <LogoMark />
@@ -186,7 +188,7 @@ export function MarketingFooter() {
 
           <nav
             aria-label="Footer"
-            className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-3 lg:grid-cols-5"
+            className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-3 lg:grid-cols-[repeat(5,auto)] lg:justify-between"
           >
             {FOOTER_COLUMNS.map((column) => (
               <div key={column.key} className="min-w-0">
@@ -203,7 +205,9 @@ export function MarketingFooter() {
           </nav>
         </div>
 
-        <div className="mt-16 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        {/* The ownership line above the policies, so the policy row keeps
+            the full width and one line. */}
+        <div className="mt-16 flex flex-col gap-4">
           {/* CiteLadder is a Cube27 product, so the parent company is named in
               the ownership line rather than tucked into a link column alone. */}
           <p className="website-label text-muted">
@@ -218,7 +222,7 @@ export function MarketingFooter() {
             </a>{' '}
             product. All rights reserved.
           </p>
-          <nav aria-label="Legal" className="flex flex-wrap gap-x-5 gap-y-2 lg:justify-end">
+          <nav aria-label="Legal" className="flex flex-wrap gap-x-5 gap-y-2">
             {/* Contact already sits in the Company column. */}
             {FOOTER_LEGAL_LINKS.filter((link) => link.href !== '/contact').map((link) => (
               <a key={link.href} className="footer-legal-link" href={link.href}>

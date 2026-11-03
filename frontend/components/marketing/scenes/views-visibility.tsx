@@ -65,9 +65,9 @@ const KPIS = [
   ['Owned citation rate', '29%', '+11 pp'],
 ] as const;
 
-export function VisibilityView() {
+function VisibilityStats() {
   return (
-    <div className="pv-view">
+    <>
       <div className="pv-stats">
         {KPIS.map(([label, value, delta]) => (
           <div key={label} className="pv-stat">
@@ -88,117 +88,141 @@ export function VisibilityView() {
         Based on 168 of 168 expected answers across 4 engines. Change compares with the run on Jul
         8.
       </p>
-      <div className="pv-split pv-split-chart">
-        <div className="pv-panel">
-          <div className="pv-panel-head pv-panel-head-center">
-            <span className="pv-panel-title pv-card-title">Over time</span>
-            <span className="pv-button pv-button-quiet">Visibility</span>
-          </div>
-          <div className="pv-plot">
-            <span className="pv-plot-y" aria-hidden>
-              <span>100%</span>
-              <span>50%</span>
-              <span>0%</span>
-            </span>
-            <svg
-              className="pv-chart"
-              viewBox={`0 0 ${CHART_W} ${CHART_H}`}
-              preserveAspectRatio="none"
-              aria-hidden
-            >
-              {[0, 50, 100].map((tick) => (
-                <line key={tick} x1="0" x2={CHART_W} y1={chartY(tick)} y2={chartY(tick)} />
-              ))}
-              {BRANDS.map((brand) => (
-                <g
-                  key={brand.name}
-                  data-series={brand.series}
-                  data-own={'own' in brand || undefined}
-                >
-                  <polyline
-                    points={brand.points
-                      .map((value, i) => `${chartX(i)},${chartY(value)}`)
-                      .join(' ')}
-                  />
-                  <line
-                    className="pv-chart-end"
-                    x1={CHART_W}
-                    x2={CHART_W}
-                    y1={chartY(latest(brand))}
-                    y2={chartY(latest(brand))}
-                  />
-                </g>
-              ))}
-            </svg>
-            <span className="pv-plot-x" aria-hidden>
-              {RUN_DATES.map((date) => (
-                <span key={date}>{date}</span>
-              ))}
-            </span>
-          </div>
-          <div className="pv-legend">
-            {BRANDS.map((brand) => (
-              <span key={brand.name} data-series={brand.series}>
-                {'own' in brand ? 'You' : brand.name}
-              </span>
-            ))}
-          </div>
-          <p className="sr-only">
-            Example trend: Zernovelle rises from 38% to 64% visibility across seven runs while
-            Brelovanta slips to 58%.
-          </p>
-        </div>
-        <div className="pv-panel pv-panel-flush">
-          <div className="pv-card-head">
-            <span className="pv-panel-title pv-card-title">Brand and competitors</span>
-            <span className="pv-meta">How often each brand is named, across the same answers.</span>
-          </div>
-          <table className="pv-table pv-table-brands">
-            <thead>
-              <tr>
-                <th scope="col">Brand</th>
-                <th scope="col">Visibility</th>
-                <th scope="col">Position</th>
-                <th scope="col">Share of voice</th>
-                <th scope="col">Citations</th>
-              </tr>
-            </thead>
-            <tbody>
-              {BRANDS.map((brand) => (
-                <tr key={brand.name} data-own={'own' in brand || undefined}>
-                  <td>
-                    <span className="pv-domain">
-                      <Favicon
-                        letter={brand.name.charAt(0)}
-                        tone={'own' in brand ? 'owned' : 'neutral'}
-                      />
-                      {brand.name}
-                      {'own' in brand && <span className="pv-you">You</span>}
-                    </span>
-                  </td>
-                  <td>{latest(brand)}%</td>
-                  <td>#{brand.position}</td>
-                  <td>{brand.share}%</td>
-                  <td>{brand.citations}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="pv-pager">
-            <span className="pv-meta">1–5 of 5 brands</span>
-            <span className="pv-pager-buttons" aria-hidden>
-              <span className="pv-button pv-button-quiet">
-                <ChevronLeft className="size-3" />
-                Prev
-              </span>
-              <span className="pv-button pv-button-quiet">
-                Next
-                <ChevronRight className="size-3" />
-              </span>
-            </span>
-          </div>
-        </div>
+    </>
+  );
+}
+
+function VisibilityTrendPanel() {
+  return (
+    <div className="pv-panel">
+      <div className="pv-panel-head pv-panel-head-center">
+        <span className="pv-panel-title pv-card-title">Over time</span>
+        <span className="pv-button pv-button-quiet">Visibility</span>
       </div>
+      <div className="pv-plot">
+        <span className="pv-plot-y" aria-hidden>
+          <span>100%</span>
+          <span>50%</span>
+          <span>0%</span>
+        </span>
+        <svg
+          className="pv-chart"
+          viewBox={`0 0 ${CHART_W} ${CHART_H}`}
+          preserveAspectRatio="none"
+          aria-hidden
+        >
+          {[0, 50, 100].map((tick) => (
+            <line key={tick} x1="0" x2={CHART_W} y1={chartY(tick)} y2={chartY(tick)} />
+          ))}
+          {BRANDS.map((brand) => (
+            <g key={brand.name} data-series={brand.series} data-own={'own' in brand || undefined}>
+              <polyline
+                points={brand.points.map((value, i) => `${chartX(i)},${chartY(value)}`).join(' ')}
+              />
+              <line
+                className="pv-chart-end"
+                x1={CHART_W}
+                x2={CHART_W}
+                y1={chartY(latest(brand))}
+                y2={chartY(latest(brand))}
+              />
+            </g>
+          ))}
+        </svg>
+        <span className="pv-plot-x" aria-hidden>
+          {RUN_DATES.map((date) => (
+            <span key={date}>{date}</span>
+          ))}
+        </span>
+      </div>
+      <div className="pv-legend">
+        {BRANDS.map((brand) => (
+          <span key={brand.name} data-series={brand.series}>
+            {'own' in brand ? 'You' : brand.name}
+          </span>
+        ))}
+      </div>
+      <p className="sr-only">
+        Example trend: Zernovelle rises from 38% to 64% visibility across seven runs while
+        Brelovanta slips to 58%.
+      </p>
+    </div>
+  );
+}
+
+function VisibilityBrandsPanel() {
+  return (
+    <div className="pv-panel pv-panel-flush">
+      <div className="pv-card-head">
+        <span className="pv-panel-title pv-card-title">Brand and competitors</span>
+        <span className="pv-meta">How often each brand is named, across the same answers.</span>
+      </div>
+      <table className="pv-table pv-table-brands">
+        <thead>
+          <tr>
+            <th scope="col">Brand</th>
+            <th scope="col">Visibility</th>
+            <th scope="col">Position</th>
+            <th scope="col">Share of voice</th>
+            <th scope="col">Citations</th>
+          </tr>
+        </thead>
+        <tbody>
+          {BRANDS.map((brand) => (
+            <tr key={brand.name} data-own={'own' in brand || undefined}>
+              <td>
+                <span className="pv-domain">
+                  <Favicon
+                    letter={brand.name.charAt(0)}
+                    tone={'own' in brand ? 'owned' : 'neutral'}
+                  />
+                  {brand.name}
+                  {'own' in brand && <span className="pv-you">You</span>}
+                </span>
+              </td>
+              <td>{latest(brand)}%</td>
+              <td>#{brand.position}</td>
+              <td>{brand.share}%</td>
+              <td>{brand.citations}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="pv-pager">
+        <span className="pv-meta">1–5 of 5 brands</span>
+        <span className="pv-pager-buttons" aria-hidden>
+          <span className="pv-button pv-button-quiet">
+            <ChevronLeft className="size-3" />
+            Prev
+          </span>
+          <span className="pv-button pv-button-quiet">
+            Next
+            <ChevronRight className="size-3" />
+          </span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+export function VisibilityView() {
+  return (
+    <div className="pv-view">
+      <VisibilityStats />
+      <div className="pv-split pv-split-chart">
+        <VisibilityTrendPanel />
+        <VisibilityBrandsPanel />
+      </div>
+    </div>
+  );
+}
+
+/** A focused snapshot: the headline figures over the trend chart, one panel. */
+export function VisibilityTrendView() {
+  return (
+    <div className="pv-view">
+      <VisibilityStats />
+      <VisibilityTrendPanel />
     </div>
   );
 }

@@ -3,18 +3,47 @@ import { Favicon, Pill, PanelHead } from './product-view-parts';
 
 /** Diagnosis views: Site Health, search demand, research and connections. Synthetic records only. */
 
+const CRAWLERS = [
+  ['OAI-SearchBot', 'AI search', 'Allowed'],
+  ['GPTBot', 'Training', 'Blocked'],
+  ['ChatGPT-User', 'User fetch', 'Allowed'],
+  ['Google-Extended', 'Training', 'Allowed'],
+] as const;
+
+function CrawlerAccessPanel() {
+  return (
+    <div className="pv-panel">
+      <PanelHead title="AI crawler access" meta="robots.txt" />
+      <ul className="pv-list">
+        {CRAWLERS.map(([bot, purpose, state]) => (
+          <li key={bot}>
+            <span className="pv-list-main">
+              <span>{bot}</span>
+              <span className="pv-meta">{purpose}</span>
+            </span>
+            <Pill tone={state === 'Allowed' ? 'accent' : 'danger'}>{state}</Pill>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** A focused snapshot: Site Health's AI crawler access panel alone. */
+export function CrawlerAccessView() {
+  return (
+    <div className="pv-view">
+      <CrawlerAccessPanel />
+    </div>
+  );
+}
+
 export function SiteHealthView() {
   const findings = [
     ['Indexing blocked by noindex', '2 pages', 'danger'],
     ['Invalid structured data syntax', '4 pages', 'warning'],
     ['Missing canonical reference', '6 pages', 'warning'],
     ['Missing H1 heading', '9 pages', 'info'],
-  ] as const;
-  const crawlers = [
-    ['OAI-SearchBot', 'AI search', 'Allowed'],
-    ['GPTBot', 'Training', 'Blocked'],
-    ['ChatGPT-User', 'User fetch', 'Allowed'],
-    ['Google-Extended', 'Training', 'Allowed'],
   ] as const;
   return (
     <div className="pv-view">
@@ -50,20 +79,7 @@ export function SiteHealthView() {
             ))}
           </ul>
         </div>
-        <div className="pv-panel">
-          <PanelHead title="AI crawler access" meta="robots.txt" />
-          <ul className="pv-list">
-            {crawlers.map(([bot, purpose, state]) => (
-              <li key={bot}>
-                <span className="pv-list-main">
-                  <span>{bot}</span>
-                  <span className="pv-meta">{purpose}</span>
-                </span>
-                <Pill tone={state === 'Allowed' ? 'accent' : 'danger'}>{state}</Pill>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <CrawlerAccessPanel />
       </div>
     </div>
   );
