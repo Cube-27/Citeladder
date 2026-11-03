@@ -18,16 +18,15 @@ import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-p
 import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { SessionUser } from '@/lib/api/types';
-import { clearAccountScopedClientState } from '@/lib/auth/account-transition';
+import { isDeparting, restartAt } from '@/lib/auth/account-transition';
 import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
-import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { textRole } from '@/components/ui/typography';
 
 export type SessionContextValue = {
   user: SessionUser;
-  /** Clear all cached session state and send the user back to `/login`. */
+  /** Leave for `/login` with no account state carried over (see `restartAt`); never resolves. */
   clearSession: () => Promise<void>;
 };
 
@@ -93,14 +92,15 @@ export function SessionGuard({
   });
 
   const clearSession = useCallback(async () => {
-    // Clearing the cache removes the active `me` query. Without this latch,
-    // the still-mounted guard immediately recreates it and can hammer the
-    // backend with 401s until the browser leaves this document.
-    if (redirectingRef.current) return;
+    // Once per document: a sign-out already leaving, or a burst of 401s, must
+    // not start a second navigation. The cache is dropped when the document
+    // is left, which removes the active `me` query; disabling it keeps the
+    // still-mounted guard from recreating it and asking again.
+    if (redirectingRef.current || isDeparting(queryClient)) return;
     redirectingRef.current = true;
     setIsRedirecting(true);
-    await clearAccountScopedClientState(queryClient);
-    hardNavigate(
+    await restartAt(
+      queryClient,
       withAuthReturnPath(
         '/login',
         safeAuthReturnPath(window.location.pathname + window.location.search),
@@ -154,8 +154,10 @@ export function SessionGuard({
     [user, clearSession],
   );
 
-  if (isLoading || isRedirecting) {
-    // Loading, or unauthenticated and mid-redirect: never render protected UI.
+  if (isLoading) {
+    // Never render protected UI before the session is known. A session that
+    // ends while the page is open keeps the page as it is until the sign-in
+    // document replaces it, rather than collapsing it into this fallback.
     return <>{renderSessionFallback(fallback)}</>;
   }
 

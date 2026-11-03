@@ -1,4 +1,4 @@
-import { delay, http, HttpResponse, type DefaultBodyType } from 'msw';
+import { delay, http, HttpResponse, type DefaultBodyType, type JsonBodyType } from 'msw';
 import { waitFor } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vite-plus/test';
 
@@ -292,6 +292,50 @@ describe('bootstrapPrivateRoutes', () => {
   it('does not offer creation when the workspace has no slots left', async () => {
     stub({ projects: [], slots: 0 });
     expect(await run('/projects')).toBeNull();
+  });
+
+  describe('the workspace chooser sign-in lands on', () => {
+    function memberOf(workspaces: JsonBodyType, status = 200) {
+      mswServer.use(
+        http.get('/api/v1/auth/me', () => HttpResponse.json({ user: USER })),
+        http.get('/api/v1/workspaces', () => HttpResponse.json(workspaces, { status })),
+      );
+    }
+
+    it('leaves a failed membership read to the chooser, which owns that notice', async () => {
+      memberOf({ error: { message: 'nope' } }, 403);
+      expect(await run('/workspaces')).toBeNull();
+    });
+
+    it('goes straight into the only workspace a person owns, before it paints', async () => {
+      memberOf([WORKSPACE_ROW]);
+      expect(await run('/workspaces')).toBe(`/projects?workspace=${WORKSPACE}`);
+    });
+
+    it('sends someone who belongs to no workspace to set up their own', async () => {
+      memberOf([]);
+      expect(await run('/workspaces')).toBe('/onboarding?setup=workspace');
+    });
+
+    it('lets someone with a workspace to choose, or none of their own, choose', async () => {
+      const invited = {
+        ...WORKSPACE_ROW,
+        id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        name: 'Invited',
+        role: 'member',
+      };
+      memberOf([WORKSPACE_ROW, invited]);
+      expect(await run('/workspaces')).toBeNull();
+      setAppQueryClient(createAppQueryClient());
+      memberOf([invited]);
+      expect(await run('/workspaces')).toBeNull();
+    });
+
+    it('lands the redirected address on its project in the same document', async () => {
+      stub({ projects: [PROJECT_ROW] });
+      expect(await run('/workspaces')).toBe(`/projects?workspace=${WORKSPACE}`);
+      expect(await run(`/projects?workspace=${WORKSPACE}`)).toBe(`/projects?project=${PROJECT}`);
+    });
   });
 
   describe('a reload of a project address', () => {

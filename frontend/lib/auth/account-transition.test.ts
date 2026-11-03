@@ -1,31 +1,79 @@
 import { QueryClient } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
-import { clearAccountScopedClientState } from '@/lib/auth/account-transition';
+import { restartAt } from '@/lib/auth/account-transition';
+import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import {
   ACTIVE_PROJECT_STORAGE_KEY,
   ACTIVE_WORKSPACE_STORAGE_KEY,
 } from '@/lib/project/active-project-storage';
 
+vi.mock('@/lib/navigation/hard-navigate', () => ({ hardNavigate: vi.fn() }));
+const navigate = vi.mocked(hardNavigate);
+
 afterEach(() => {
+  navigate.mockReset();
   window.localStorage.clear();
 });
 
-describe('clearAccountScopedClientState', () => {
-  it('contains cancellation errors and always clears account state', async () => {
+/** Let `restartAt` run up to its navigation; it never resolves by design. */
+async function startRestart(queryClient: QueryClient, path: string) {
+  let settled = false;
+  void restartAt(queryClient, path).finally(() => {
+    settled = true;
+  });
+  await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith(path));
+  return () => settled;
+}
+
+describe('restartAt', () => {
+  it('keeps the departing page drawn and drops its cache only once the document is left', async () => {
     const queryClient = new QueryClient();
     queryClient.setQueryData(['old-account'], { private: true });
-    vi.spyOn(queryClient, 'cancelQueries').mockRejectedValueOnce(new Error('cancellation failed'));
     window.localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, 'old-project');
     window.localStorage.setItem(
       ACTIVE_WORKSPACE_STORAGE_KEY,
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     );
+    window.localStorage.setItem('citeladder-theme', 'dark');
 
-    await expect(clearAccountScopedClientState(queryClient)).resolves.toBeUndefined();
+    const settled = await startRestart(queryClient, '/login');
 
-    expect(queryClient.getQueryData(['old-account'])).toBeUndefined();
+    // The page on screen still has what it was showing while the next loads…
+    expect(queryClient.getQueryData(['old-account'])).toEqual({ private: true });
+    // …but the next document cannot pick up the old account's selection.
     expect(window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY)).toBeNull();
     expect(window.localStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem('citeladder-theme')).toBe('dark');
+
+    window.dispatchEvent(new Event('pagehide'));
+    expect(queryClient.getQueryData(['old-account'])).toBeUndefined();
+    // Callers stay pending until the page has changed.
+    expect(settled()).toBe(false);
+  });
+
+  it('aborts the old account requests and still navigates when cancellation fails', async () => {
+    const queryClient = new QueryClient();
+    let aborted = false;
+    const inFlight = queryClient
+      .fetchQuery({
+        queryKey: ['old-account', 'in-flight'],
+        queryFn: ({ signal }) =>
+          new Promise<never>((_resolve, reject) => {
+            signal.addEventListener('abort', () => {
+              aborted = true;
+              reject(signal.reason);
+            });
+          }),
+      })
+      .catch(() => 'cancelled');
+
+    await startRestart(queryClient, '/workspaces');
+    expect(await inFlight).toBe('cancelled');
+    expect(aborted).toBe(true);
+
+    const failing = new QueryClient();
+    vi.spyOn(failing, 'cancelQueries').mockRejectedValueOnce(new Error('cancellation failed'));
+    await startRestart(failing, '/login?error=terms_changed');
   });
 });

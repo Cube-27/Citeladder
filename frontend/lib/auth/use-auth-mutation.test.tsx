@@ -4,7 +4,6 @@ import type { ReactNode } from 'react';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 
 import { createAppQueryClient } from '@/lib/api/query-client';
-import { queryKeys } from '@/lib/api/query-keys';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import {
   ACTIVE_PROJECT_STORAGE_KEY,
@@ -56,18 +55,21 @@ describe('useAuthMutation', () => {
   // only have read it UNSCOPED — no workspace is resolved at this point — so
   // the answer came from whichever workspace the backend defaulted to. The
   // shell's gate makes that decision from the resolved workspace instead.
-  it('primes the me cache and routes to the workspace chooser', async () => {
-    const { result, queryClient } = setup();
+  it('routes to the workspace chooser and stays signing in until the page changes', async () => {
+    const { result } = setup();
 
     act(() => {
       void result.current.submit({});
     });
 
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/workspaces'));
-    expect(queryClient.getQueryData(queryKeys.auth.me())).toMatchObject({ id: sessionUser.id });
+    await new Promise((resolve) => {
+      setTimeout(resolve, 20);
+    });
+    expect(result.current.mutation.isPending).toBe(true);
   });
 
-  it('cancels old-account queries and clears only account-scoped state before seeding login', async () => {
+  it('cancels old-account queries and leaves no account-scoped state past the boundary', async () => {
     const { result, queryClient } = setup();
     queryClient.setQueryData(['old-account', 'private'], { secret: 'stale' });
     window.localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, project.id);
@@ -105,8 +107,8 @@ describe('useAuthMutation', () => {
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/workspaces'));
     await oldRequest;
     expect(wasAborted).toBe(true);
+    window.dispatchEvent(new Event('pagehide'));
     expect(queryClient.getQueryData(['old-account', 'private'])).toBeUndefined();
-    expect(queryClient.getQueryData(queryKeys.auth.me())).toMatchObject({ id: sessionUser.id });
     expect(window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY)).toBeNull();
     expect(window.localStorage.getItem('citeladder-theme')).toBe('dark');
     expect(window.localStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY)).toBeNull();

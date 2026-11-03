@@ -50,6 +50,7 @@ import {
   isWorkspaceOnlyRoute,
   resolveAllowance,
   resolveGate,
+  chooserShortcut,
 } from '@/lib/project/bootstrap';
 import {
   pickActiveProject,
@@ -426,6 +427,12 @@ function resolveSelection(scope: Scope, listed: Project[]) {
   return { activeProjectId, status };
 }
 
+function skipChooser(client: QueryClient, url: URL) {
+  const memberships = client.getQueryData<Workspace[]>(queryKeys.workspaces.list());
+  const shortcut = chooserShortcut(url.pathname, memberships);
+  if (shortcut) throw redirect(shortcut);
+}
+
 /** A public pricing selection arriving on `/pricing` is captured, then the URL cleaned. */
 async function capturePricingSelection(url: URL) {
   if (url.pathname !== '/pricing') return;
@@ -449,6 +456,7 @@ export async function bootstrapPrivateRoutes({ request }: { request: Request }) 
     requireSession(client),
     resolveScope(client, url, guess),
   ]);
+  if (sessionResolved) skipChooser(client, url);
   if (!sessionResolved || !scope) return null;
 
   // The chooser and workspace setup read nothing of the selected workspace.

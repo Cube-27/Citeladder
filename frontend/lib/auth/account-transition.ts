@@ -5,36 +5,60 @@ import { TERMS_CHANGED_CODE } from '@/lib/auth/forms';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { clearActiveProjectSelection } from '@/lib/project/active-project-storage';
 
+/** Query clients whose document is already leaving across an identity boundary. */
+const departing = new WeakSet<QueryClient>();
+
+/** Whether this client's document has already started leaving for another identity. */
+export function isDeparting(queryClient: QueryClient): boolean {
+  return departing.has(queryClient);
+}
+
 /**
- * Remove every account-scoped client value at a confirmed identity boundary.
- *
- * Cancellation happens before cache destruction so an old account's request
- * cannot repopulate the shared QueryClient after login/logout has crossed to a
- * different identity. Project selection is account-scoped; theme and other
- * device preferences deliberately survive.
+ * Drop the in-memory cache when the document is actually left, and never show
+ * a back-forward-cached copy of it again: a page restored from that cache
+ * reloads, so the server decides what the next identity may see.
  */
-export async function clearAccountScopedClientState(queryClient: QueryClient) {
+function discardWhenLeft(queryClient: QueryClient) {
+  window.addEventListener('pagehide', () => queryClient.clear(), { once: true });
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) window.location.reload();
+  });
+}
+
+/**
+ * Cross an identity or membership boundary: reload at `path` with nothing of
+ * the previous account carried over.
+ *
+ * The departing page keeps drawing what it shows until the next document
+ * replaces it. Clearing the cache first redrew it as empty placeholders for
+ * the whole time the next document loaded, though a full-document navigation
+ * discards in-memory state anyway. So in-flight requests are cancelled (none
+ * can land after the boundary), the account-scoped project selection is
+ * removed from device storage now (theme and other device preferences
+ * survive), and the cache itself goes when the page is hidden.
+ *
+ * Never resolves: the document is leaving, and every caller's pending state
+ * ("Signing in…", "Signing out…") holds until it has.
+ */
+export async function restartAt(queryClient: QueryClient, path: string): Promise<never> {
+  departing.add(queryClient);
   try {
     await queryClient.cancelQueries();
   } catch {
-    // Cancellation is best-effort. Identity-boundary cleanup must still
-    // resolve successfully so a confirmed login/logout can navigate.
-  } finally {
-    queryClient.clear();
-    clearActiveProjectSelection();
+    // Cancellation is best-effort: a confirmed boundary must still navigate.
   }
-}
-
-/** Cross an identity or membership boundary: clear account state, then reload at `path`. */
-export async function restartAt(queryClient: QueryClient, path: string) {
-  await clearAccountScopedClientState(queryClient);
+  clearActiveProjectSelection();
+  discardWhenLeft(queryClient);
   hardNavigate(path);
+  return new Promise<never>(() => {
+    // Settled by the next document replacing this one.
+  });
 }
 
 /** Sign out from a screen outside the account menu: revoke, then restart at sign-in. */
-export async function signOut(queryClient: QueryClient) {
+export async function signOut(queryClient: QueryClient): Promise<never> {
   await authApi.logout();
-  await restartAt(queryClient, '/login');
+  return restartAt(queryClient, '/login');
 }
 
 /**
@@ -42,7 +66,7 @@ export async function signOut(queryClient: QueryClient) {
  * says why and asks for the decision on its required box. No consent screen
  * inside the app asks instead.
  */
-export async function signOutForChangedTerms(queryClient: QueryClient) {
+export async function signOutForChangedTerms(queryClient: QueryClient): Promise<never> {
   await authApi.logout();
-  await restartAt(queryClient, `/login?error=${TERMS_CHANGED_CODE}`);
+  return restartAt(queryClient, `/login?error=${TERMS_CHANGED_CODE}`);
 }

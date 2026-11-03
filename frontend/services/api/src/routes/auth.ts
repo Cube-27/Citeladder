@@ -357,13 +357,17 @@ export const authRoutes = [
       await enforceSubjectRequest(db, 'email', payload.email, loginFailureBudget(config));
       const user = await authenticateUser(db, payload.email, payload.password);
       if (!user) throw new ApiError(401, 'Invalid credentials');
-      await releaseSubjectBudget(db, 'email', payload.email, LOGIN_FAILURE_OPERATION);
-      // The box ticked on the sign-in form, recorded once per revision with the account.
-      await recordAccountTermsDecision(db, {
-        actorId: user.id,
-        revision: payload.terms_revision,
-        context: 'signin',
-      });
+      // Two independent writes, both done before the session is issued: sent
+      // together they cost one database round trip instead of two.
+      await Promise.all([
+        releaseSubjectBudget(db, 'email', payload.email, LOGIN_FAILURE_OPERATION),
+        // The box ticked on the sign-in form, recorded once per revision with the account.
+        recordAccountTermsDecision(db, {
+          actorId: user.id,
+          revision: payload.terms_revision,
+          context: 'signin',
+        }),
+      ]);
       clearOAuthCookies(c, config);
       setSessionCookie(c, config, await issueSession(config, user));
       return { user: sessionView(user) };
