@@ -3,7 +3,7 @@ title: 'Prompts and topics'
 description: 'Track questions that represent real buying decisions, and keep their purpose clear.'
 group: 'Measure and understand'
 order: 100
-updated: '2026-10-10'
+updated: '2026-11-03'
 ---
 
 A prompt is a question you want to investigate in AI search. Topics organize related questions; the prompt's cohort preserves what kind of question it is.
@@ -20,13 +20,26 @@ For a fictional analytics company:
 
 The comparison prompt names a brand. Keep that framing separate from discovery questions where the answer has to introduce brands itself.
 
+## Build prompts with the Prompt Builder
+
+Open **Prompts** and choose **Prompt Builder**. It opens beside the prompt library in four steps, each prefilled from your project. Nothing is saved until a step's save or confirm button is used.
+
+1. **About your business.** Check what you sell, who buys each offering, the situations and attributes that shape the choice, buyer roles, category terms, jobs to be done and your business model. Service areas appear for local and regional businesses. **Anything else for this run** steers this run only, without changing saved facts.
+2. **Topics.** Keep, rename or remove your topics, or add your own. **Suggest topics** proposes buyer-facing categories from your saved offerings, without your brand or product-line names; each suggestion uses AI credits. **Confirm topics** saves the whole plan at once.
+3. **Distribution.** Choose the number of prompts, the branded share (20% by default), the share of competitor-alternative questions (available once you track a competitor), the intent mix (25/50/25 by default), the personas to balance across, and whether to use your search data. Each search the run would use is listed by topic, and you can untick any of them.
+4. **Review.** Accept the suggestions worth tracking. A coverage line for each topic and each part of the mix shows whether it is on target, short or empty; **More** on a short or empty line generates again for just that topic or share.
+
+Suggestions are short questions about one need each, planned across awareness, consideration and decision. Questions that join two alternatives, run past 16 words or closely repeat another prompt are dropped before you see them, and a branded question may only describe you with attributes you confirmed.
+
+The in-app Agent's prompt discovery skill writes a prompt plan following the same steps and links to the builder; it never writes or activates prompts. An assistant connected over [MCP](/mcp/tools/#make-changes) can run the same steps with your agreement.
+
 ## Review generated suggestions
 
-Generated prompts use your project context. If the context is wrong, fix it before growing the portfolio. Check for irrelevant markets, unsupported product claims and repetitive questions.
+Generated prompts use your project context. If the context is wrong, fix it in the builder's first step before growing the portfolio. Check for irrelevant markets, unsupported product claims and repetitive questions.
 
 ### Grounded in your search data
 
-When Search Console is connected or you have published keyword research, generation looks at how your buyers already search for each topic and uses those searches as wording examples. It never copies a search as a prompt, ignores searches that name your brand or a competitor, and needs no extra step: without that data, generation works exactly as before. Suggestions phrased this way are tagged **Informed by your search data**. Search impressions and keyword volume only decide which searches are used as examples; they are never presented as how often people ask AI assistants a prompt.
+When Search Console is connected or you have published keyword research, generation looks at how your buyers already search for each topic and uses those searches as wording examples. Choose the source in the builder's **Distribution** step, or **None** to leave it out. Generation never copies a search as a prompt and ignores searches that name your brand or a competitor. Suggestions phrased this way are tagged **Informed by your search data**. Search impressions and keyword volume only decide which searches are used as examples; they are never presented as how often people ask AI assistants a prompt.
 
 A suggestion is not permission to activate or run it. Use the review and activation controls in the app, then select the portfolio you want to measure.
 

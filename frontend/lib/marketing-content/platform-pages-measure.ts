@@ -171,7 +171,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     features: [
       {
         title: 'Start from the questions your buyers ask.',
-        body: 'Generate suggestions from your site and competitors, build a portfolio with the Agent, import a CSV or write prompts yourself. Suggestions cover awareness, consideration, decision and implementation, and are checked for quality before you see them. When Search Console or keyword research is connected, generation uses how your buyers already search to phrase suggestions. Nothing is tracked until you accept it.',
+        body: 'Build suggestions in the Prompt Builder from your offerings, topics and the mix you choose, import a CSV or write prompts yourself. Suggestions are short buyer questions across awareness, consideration and decision, and are checked for quality before you see them. When Search Console or keyword research is connected, generation uses how your buyers already search to phrase suggestions. Nothing is tracked until you accept it.',
         points: [
           'Suggestions grouped by topic and buyer stage',
           'Unbranded discovery prompts never name you or a competitor',
