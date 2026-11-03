@@ -3,6 +3,40 @@ import { Pill, PanelHead } from './product-view-parts';
 
 /** Action views: Actions, the Agent and MCP. Synthetic records only. */
 
+function AgentBrief() {
+  return (
+    <div className="pv-doc">
+      <div className="pv-doc-head">
+        <span className="pv-panel-title">Technical fix brief</span>
+        <Pill>Revision 2</Pill>
+      </div>
+      <p className="pv-doc-h">Review the page indexing policy</p>
+      <p className="pv-doc-p">
+        Confirm whether /platform should be indexed. If yes, remove the noindex directive and
+        request a fresh crawl to verify the change.
+      </p>
+      <p className="pv-doc-h">Evidence</p>
+      <ul className="pv-doc-list">
+        <li>Robots directive captured on Sep 19 crawl</li>
+        <li>Page cited in 6 tracked answers</li>
+      </ul>
+      <div className="pv-doc-foot">
+        <span className="pv-meta">Sources: Site Health · AI Visibility</span>
+        <span className="pv-button pv-button-quiet">Mark implemented</span>
+      </div>
+    </div>
+  );
+}
+
+/** A focused snapshot: the brief the Agent drafted, one panel. */
+export function AgentBriefView() {
+  return (
+    <div className="pv-view">
+      <AgentBrief />
+    </div>
+  );
+}
+
 export function AgentView() {
   return (
     <div className="pv-view pv-agent">
@@ -26,26 +60,7 @@ export function AgentView() {
           </span>
         </div>
       </div>
-      <div className="pv-doc">
-        <div className="pv-doc-head">
-          <span className="pv-panel-title">Technical fix brief</span>
-          <Pill>Revision 2</Pill>
-        </div>
-        <p className="pv-doc-h">Review the page indexing policy</p>
-        <p className="pv-doc-p">
-          Confirm whether /platform should be indexed. If yes, remove the noindex directive and
-          request a fresh crawl to verify the change.
-        </p>
-        <p className="pv-doc-h">Evidence</p>
-        <ul className="pv-doc-list">
-          <li>Robots directive captured on Sep 19 crawl</li>
-          <li>Page cited in 6 tracked answers</li>
-        </ul>
-        <div className="pv-doc-foot">
-          <span className="pv-meta">Sources: Site Health · AI Visibility</span>
-          <span className="pv-button pv-button-quiet">Mark implemented</span>
-        </div>
-      </div>
+      <AgentBrief />
     </div>
   );
 }

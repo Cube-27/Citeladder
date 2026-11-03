@@ -118,7 +118,7 @@ export function SectionHeader({
       >
         {title}
       </Heading>
-      {lead && <p className="website-lead max-w-[72ch]">{lead}</p>}
+      {lead && <p className="website-lead">{lead}</p>}
     </div>
   );
 }

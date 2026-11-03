@@ -7,7 +7,6 @@ import {
   SOLUTIONS_HERO,
   type SolutionScene,
 } from '@/lib/marketing-content/solutions';
-import { cn } from '@/lib/utils';
 
 import { ButtonLink, DemoButtonLink, DemoTextLink } from '../primitives/button';
 import { PageHero } from '../primitives/page-hero';
@@ -64,11 +63,11 @@ export function SolutionsHero() {
 export function SolutionSegments() {
   return (
     <>
-      {SOLUTION_SEGMENTS.map((segment, index) => {
+      {SOLUTION_SEGMENTS.map((segment) => {
         const { title, View } = SCENE_VIEWS[segment.scene];
         return (
           <Section key={segment.id} id={segment.id} aria-labelledby={`${segment.id}-title`}>
-            <div className={cn('mk-dive', index % 2 === 1 && 'mk-dive-reverse')}>
+            <div className="mk-dive">
               <div className="mk-dive-copy">
                 <h2
                   id={`${segment.id}-title`}

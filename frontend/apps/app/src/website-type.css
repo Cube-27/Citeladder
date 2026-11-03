@@ -93,8 +93,11 @@
        size = floor + (desktop − floor) × factor, rounded to a whole pixel
 
        display roles (headings, titles)  1 desktop · 0.68 tablet · 0.36 phone
+       the subtitle (lead) role          1 desktop · 1 tablet    · 0.67 phone
        reading roles (text, controls)    1 desktop · 1 tablet    · 0 phone
 
+     Desktop sizes keep to one set, 12 / 14 / 16 / 20 / 24 / 32 / 40 / 64
+     (2026-11-03): the subtitle under a heading is 20 (18 on a phone).
      The display factors give the hero 64 → 48 → 32; the hero alone takes its
      own phone factor (0.32, so 30px) so it does not wrap to a fourth line
      on a phone (owner, 2026-11-02). Reading text
@@ -106,25 +109,26 @@
   --site-type-display: 0.36;
   --site-type-hero: 0.32;
   --site-type-reading: 0;
+  --site-type-lead: 0.67;
   --site-type-floor: var(--text-sm);
   /* Display roles. */
   --site-role-hero: 4rem;
-  --site-role-title: 3.5rem;
-  --site-role-section: 2.4375rem;
+  --site-role-title: 4rem;
+  --site-role-section: 2.5rem;
   --site-role-feature: var(--text-4xl);
-  --site-role-statement: var(--text-3xl);
+  --site-role-statement: var(--text-2xl);
   --site-role-prose-heading: var(--text-2xl);
-  --site-role-card: var(--text-lg);
+  --site-role-card: var(--text-xl);
   --site-role-card-compact: var(--text-base);
   --site-role-question: var(--text-base);
   /* Reading roles. */
-  --site-role-subtitle: var(--text-base);
+  --site-role-subtitle: var(--text-xl);
   --site-role-body: var(--text-base);
   --site-role-label: var(--text-sm);
   --site-role-secondary: var(--text-sm);
   --site-role-footer: var(--text-sm);
   --site-role-lead-in: var(--text-sm);
-  --site-role-cta: 0.9375rem;
+  --site-role-cta: var(--text-sm);
   --site-role-control: var(--text-sm);
   --site-role-nav: var(--text-sm);
 
@@ -216,7 +220,7 @@
     nearest,
     calc(
       var(--site-type-floor) + (var(--site-role-subtitle) - var(--site-type-floor)) *
-        var(--site-type-reading)
+        var(--site-type-lead)
     ),
     1px
   );
@@ -303,6 +307,7 @@
     --site-type-display: 0.68;
     --site-type-hero: 0.68;
     --site-type-reading: 1;
+    --site-type-lead: 1;
   }
 }
 
@@ -409,18 +414,19 @@
 /* The hero and section headings read the site tokens above (phone, 810px,
    1200px). The page title keeps its own ladder: on a phone it tracks the
    viewport so it holds two lines (an article title, which runs twice as long,
-   three) from 360px up, and steps at 768px below. */
+   three) from 360px up, and steps at 768px below. Display headings tighten
+   by 0.02em: the wide face at 500 reads heavy at its own spacing. */
 .website-hero-display {
   font-size: var(--text-site-hero);
   line-height: var(--text-site-hero--line-height);
   font-weight: 500;
-  letter-spacing: 0;
+  letter-spacing: -0.02em;
 }
 
 .website-page-title {
   font-size: clamp(1.5rem, 6.4vw, 1.75rem);
   line-height: 1.2;
-  letter-spacing: 0;
+  letter-spacing: -0.02em;
 }
 
 .website-article-title {
@@ -430,16 +436,17 @@
 .website-section-heading {
   font-size: var(--text-site-section);
   line-height: var(--text-site-section--line-height);
-  letter-spacing: 0;
+  letter-spacing: -0.02em;
 }
 
-/* Card and feature titles: Lexend Deca at the 500 ceiling. */
+/* Card and feature titles: Lexend Deca at the 500 ceiling, a size step
+   (20 over 16) above the card's text, since weight cannot carry it. */
 .website-feature-heading {
   font-family: var(--font-sans);
   font-size: var(--text-site-card);
   line-height: var(--text-site-card--line-height);
   font-weight: 500;
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
   text-wrap: balance;
 }
 
@@ -465,46 +472,39 @@
 }
 
 /* The public inks (globals.css `--color-site-*`): headings and titles in the
-   ink, the subtitle under a heading in the soft ink, sentences in the body grey,
-   navigation in the nav grey. */
+   ink; subtitles, sentences and navigation in the one secondary grey. */
 :where(.website-hero-display, .website-section-heading, .website-feature-heading) {
   color: var(--color-site-ink);
 }
 
-:where(.website-lead) {
-  color: var(--color-site-ink-soft);
-}
-
-:where(.website-hero-lead, .website-body) {
+:where(.website-lead, .website-hero-lead, .website-body, .website-nav) {
   color: var(--color-site-body);
-}
-
-:where(.website-nav) {
-  color: var(--color-site-nav);
 }
 
 :where(.website-label) {
   color: var(--color-muted);
 }
 
-/* The section subtitle under a section heading (the subtitle role), at 500
-   in the soft ink. */
+/* The section subtitle under a section heading (the subtitle role), held to
+   a 60-character measure wherever it sits. */
 .website-lead {
+  max-width: 60ch;
   font-size: var(--text-site-subtitle);
   line-height: var(--text-site-subtitle--line-height);
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  font-weight: 400;
+  letter-spacing: -0.01em;
   text-wrap: pretty;
 }
 
 /* The hero lead: the intro under a page's opening heading on every page
-   (the homepage hero, page heroes, article and contact heads). The subtitle
-   size at 400 in the body ink, as the homepage hero defines it. */
+   (the homepage hero, page heroes, article and contact heads), the subtitle
+   size and measure. */
 .website-hero-lead {
+  max-width: 60ch;
   font-size: var(--text-site-subtitle);
   line-height: var(--text-site-subtitle--line-height);
   font-weight: 400;
-  letter-spacing: -0.2px;
+  letter-spacing: -0.01em;
   text-wrap: pretty;
 }
 

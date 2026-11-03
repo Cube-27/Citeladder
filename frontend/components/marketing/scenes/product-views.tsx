@@ -17,9 +17,10 @@ export {
   ShelfSetupView,
   SourcesView,
 } from './views-measure';
-export { VisibilityView } from './views-visibility';
+export { VisibilityTrendView, VisibilityView } from './views-visibility';
 export {
   AcquisitionView,
+  CrawlerAccessView,
   DemandView,
   IntegrationsView,
   PageEvidenceView,
@@ -33,6 +34,7 @@ export { AdsView, EnginesView, PerceptionView } from './views-signals';
 export { CrawlerView, EarnedSourceView, PillarsView } from './views-evidence';
 export {
   ActionsView,
+  AgentBriefView,
   AgentView,
   McpToolsView,
   McpView,

@@ -9,13 +9,15 @@ import { EngineLogo, type OfficialEngineKey } from '../primitives/engine-logo';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { CapabilityGrid, FaqList } from '../pages/platform';
 import {
-  AgentView,
+  AgentBriefView,
   AnswerView,
   AppShellFrame,
+  CrawlerAccessView,
   DemandView,
   ProductShot,
   SiteHealthView,
   SourcesView,
+  VisibilityTrendView,
   VisibilityView,
 } from '../scenes/product-views';
 
@@ -62,11 +64,12 @@ function HeroShot() {
           </AppShellFrame>
         </div>
       </div>
-      <p className="product-caption text-center">Engine availability depends on your plan.</p>
     </div>
   );
 }
 
+/* The hero opens on the copy and the product, then closes on the engines
+   the answers come from: no separate strip between it and the first band. */
 function Hero({ rotor }: Readonly<{ rotor?: ReactNode }>) {
   return (
     <header className="lp-hero">
@@ -86,13 +89,15 @@ function Hero({ rotor }: Readonly<{ rotor?: ReactNode }>) {
           visibility.
         </p>
         <PrimaryActions />
-        {selfServeSignupOpen() && (
-          <p className="lp-hero-note">7-day free trial on ChatGPT answers. Trial limits apply.</p>
-        )}
+        <p className="lp-hero-note">
+          {selfServeSignupOpen() && '7-day free trial on ChatGPT answers. Trial limits apply. '}
+          Engine availability depends on your plan.
+        </p>
       </div>
       <div className="lp-wrap site-wrap-cards">
         <HeroShot />
       </div>
+      <EngineStrip />
     </header>
   );
 }
@@ -106,7 +111,7 @@ const ENGINES: readonly [OfficialEngineKey, string][] = [
 
 function EngineStrip() {
   return (
-    <section className="lp-engines site-band" aria-label="Monitored answer engines">
+    <section className="lp-engines" aria-label="Monitored answer engines">
       <div className="lp-wrap site-wrap lp-engines-inner">
         <p className="lp-engines-label">Answers collected from</p>
         <ul>
@@ -122,21 +127,18 @@ function EngineStrip() {
   );
 }
 
-/* ── Statement and the loop ─────────────────────────────────────────────── */
+/* ── The loop ───────────────────────────────────────────────────────────── */
 
+/** The statement that introduces "How it works", above its heading. */
 function Statement() {
   return (
-    <section className="lp-section lp-statement site-band">
-      <div className="lp-wrap site-wrap">
-        <p className="lp-statement-text">
-          Buyers ask AI before they ask you.{' '}
-          <span>
-            The answer names a few brands, cites a few pages and moves on. CiteLadder shows whether
-            you are in it, why, and the next change most likely to put you there.
-          </span>
-        </p>
-      </div>
-    </section>
+    <p className="lp-statement-text">
+      Buyers ask AI before they ask you.{' '}
+      <span>
+        The answer names a few brands, cites a few pages and moves on. CiteLadder shows whether you
+        are in it, why, and the next change most likely to put you there.
+      </span>
+    </p>
   );
 }
 
@@ -171,6 +173,7 @@ function Loop() {
     <section className="lp-section site-band" id="how-it-works">
       <span id="see-it" className="lp-anchor" aria-hidden />
       <div className="lp-wrap site-wrap lp-stack">
+        <Statement />
         <div className="lp-head">
           <h2 className="website-section-heading">From an AI answer to the fix that moves it.</h2>
           <p className="website-lead">
@@ -185,7 +188,7 @@ function Loop() {
             body="Brand mentions, position and competitors across the prompts your buyers actually ask."
             href="/platform/ai-visibility"
           >
-            <VisibilityView />
+            <VisibilityTrendView />
           </BentoTile>
           <BentoTile
             title="See which pages get cited"
@@ -199,7 +202,7 @@ function Loop() {
             body="Technical and answer-readiness checks per page, including which AI crawlers you allow."
             href="/platform/site-health"
           >
-            <SiteHealthView />
+            <CrawlerAccessView />
           </BentoTile>
           <BentoTile
             className="lp-tile-wide"
@@ -207,7 +210,7 @@ function Loop() {
             body="The Agent drafts briefs, page edits and plans from your saved evidence. Nothing publishes without you."
             href="/platform/agents"
           >
-            <AgentView />
+            <AgentBriefView />
           </BentoTile>
         </div>
       </div>
@@ -222,18 +225,16 @@ function DeepDive({
   body,
   points,
   link,
-  reverse = false,
   children,
 }: Readonly<{
   title: string;
   body: string;
   points: readonly string[];
   link: { href: string; label: string };
-  reverse?: boolean;
   children: ReactNode;
 }>) {
   return (
-    <div className={cn('mk-dive', reverse && 'mk-dive-reverse')}>
+    <div className="mk-dive">
       <div className="mk-dive-copy">
         <h3 className="website-page-title mk-dive-title">{title}</h3>
         <p className="website-body">{body}</p>
@@ -254,51 +255,60 @@ function DeepDive({
 
 function DeepDives() {
   return (
-    <section className="lp-section lp-soft site-band" id="why">
-      <div className="lp-wrap site-wrap lp-dives site-rows">
-        <DeepDive
-          title="Every number opens the answer behind it."
-          body="Click any metric and read the recorded answer: the engine, the prompt, the date, where your brand appeared and which sources it cited."
-          points={[
-            'Mentions, citations and referral visits stay separate signals',
-            'Answers are kept as recorded, never rewritten',
-            'Later audits compare like with like',
-          ]}
-          link={{ href: '/platform/citation-intelligence', label: 'Explore Citation Intelligence' }}
-        >
-          <ProductShot title="Answer record">
-            <AnswerView />
-          </ProductShot>
-        </DeepDive>
-        <DeepDive
-          reverse
-          title="Fix the site issues that keep you out of answers."
-          body="Crawl your site and get page-level findings with the evidence attached, from indexing and structured data to which AI crawlers your robots.txt lets in."
-          points={[
-            'Technical and answer-readiness checks per page',
-            'AI crawler permissions by purpose: search, training, user fetch',
-            'Coverage shown next to every score',
-          ]}
-          link={{ href: '/platform/site-health', label: 'Explore Site Health' }}
-        >
-          <ProductShot title="Site Health">
-            <SiteHealthView />
-          </ProductShot>
-        </DeepDive>
-        <DeepDive
-          title="Bring in the search data you already trust."
-          body="Connect Search Console and GA4 to see the queries that reach your pages and the visits AI assistants send, then add keyword and backlink research when you need it."
-          points={[
-            'Striking-distance queries and CTR gaps from Search Console',
-            'AI referral sessions and landing pages from GA4',
-            'Optional DataForSEO research, priced before you confirm',
-          ]}
-          link={{ href: '/platform/demand-intelligence', label: 'Explore Demand Intelligence' }}
-        >
-          <ProductShot title="Search Demand">
-            <DemandView />
-          </ProductShot>
-        </DeepDive>
+    <section className="lp-section site-band" id="why" aria-labelledby="why-title">
+      <div className="lp-wrap site-wrap lp-stack">
+        <div className="lp-head">
+          <h2 id="why-title" className="website-section-heading">
+            Check the evidence, fix the site, add your search data.
+          </h2>
+        </div>
+        <div className="lp-dives site-rows">
+          <DeepDive
+            title="Every number opens the answer behind it."
+            body="Click any metric and read the recorded answer: the engine, the prompt, the date, where your brand appeared and which sources it cited."
+            points={[
+              'Mentions, citations and referral visits stay separate signals',
+              'Answers are kept as recorded, never rewritten',
+              'Later audits compare like with like',
+            ]}
+            link={{
+              href: '/platform/citation-intelligence',
+              label: 'Explore Citation Intelligence',
+            }}
+          >
+            <ProductShot title="Answer record">
+              <AnswerView />
+            </ProductShot>
+          </DeepDive>
+          <DeepDive
+            title="Fix the site issues that keep you out of answers."
+            body="Crawl your site and get page-level findings with the evidence attached, from indexing and structured data to which AI crawlers your robots.txt lets in."
+            points={[
+              'Technical and answer-readiness checks per page',
+              'AI crawler permissions by purpose: search, training, user fetch',
+              'Coverage shown next to every score',
+            ]}
+            link={{ href: '/platform/site-health', label: 'Explore Site Health' }}
+          >
+            <ProductShot title="Site Health">
+              <SiteHealthView />
+            </ProductShot>
+          </DeepDive>
+          <DeepDive
+            title="Bring in the search data you already trust."
+            body="Connect Search Console and GA4 to see the queries that reach your pages and the visits AI assistants send, then add keyword and backlink research when you need it."
+            points={[
+              'Striking-distance queries and CTR gaps from Search Console',
+              'AI referral sessions and landing pages from GA4',
+              'Optional DataForSEO research, priced before you confirm',
+            ]}
+            link={{ href: '/platform/demand-intelligence', label: 'Explore Demand Intelligence' }}
+          >
+            <ProductShot title="Search Demand">
+              <DemandView />
+            </ProductShot>
+          </DeepDive>
+        </div>
       </div>
     </section>
   );
@@ -357,8 +367,6 @@ export function LandingPage({ rotor }: Readonly<{ rotor?: ReactNode }>) {
   return (
     <div className="lp">
       <Hero rotor={rotor} />
-      <EngineStrip />
-      <Statement />
       <Loop />
       <DeepDives />
       <PlatformGrid />

@@ -9,7 +9,7 @@
    and grain give way to it. The closing band keeps its mint field and
    lattice, as on every other page, and the announcement strip above the bar
    takes the same mint. The accent stays on buttons, links and the logo. */
-.lp :is(.lp-soft, .lp-hero) {
+.lp .lp-hero {
   background-color: var(--color-site-ground);
 }
 
@@ -17,25 +17,22 @@
   content: none;
 }
 
-/* A bento tile pads its copy, not its product view, which runs to the
-   tile's right and bottom edges. */
+/* A bento tile pads its copy and its product view on the top and sides;
+   the view has no bottom padding and runs off the tile's bottom edge. */
 .site-frame .lp .lp-tile {
   padding: 0;
 }
 
 .lp .lp-tile-copy {
-  padding: var(--site-card-pad) var(--site-card-pad) 1.25rem;
+  padding: var(--site-card-pad) var(--site-card-pad) 1.5rem;
 }
 
 .lp .lp-tile-visual {
-  margin-left: var(--site-card-pad);
+  margin-inline: var(--site-card-pad);
 }
 
-/* Cards stay white on hover; the ring darkens a step instead. A capability
-   row lifts into the same card on hover; it reaches just past the copy so
-   its own text stays aligned with the label chip. */
-.lp :is(.lp-tile, .lp-team):hover,
-.lp .mk-capability:hover {
+/* Cards stay white on hover; the ring darkens a step instead. */
+.lp :is(.lp-tile, .lp-team):hover {
   background: var(--color-panel);
   box-shadow:
     0 0 0 1px var(--color-site-divider),

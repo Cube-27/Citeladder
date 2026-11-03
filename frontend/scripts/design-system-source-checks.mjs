@@ -1208,7 +1208,6 @@ export function productContractViolations(root) {
     '--text-lg',
     '--text-xl',
     '--text-2xl',
-    '--text-3xl',
     '--text-4xl',
     '--content-gutter',
     '--workspace-gap',
@@ -1246,7 +1245,6 @@ export function productContractViolations(root) {
     '--text-lg',
     '--text-xl',
     '--text-2xl',
-    '--text-3xl',
     '--text-4xl',
   ];
   const scale = TYPE_SCALE.map((token) => {

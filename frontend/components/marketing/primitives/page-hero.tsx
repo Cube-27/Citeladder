@@ -72,9 +72,7 @@ export function PageHero({
           {title}
         </h1>
         {lead && (
-          <p className={cn('website-hero-lead mx-auto mt-5 max-w-[72ch]', !centered && 'sm:mx-0')}>
-            {lead}
-          </p>
+          <p className={cn('website-hero-lead mx-auto mt-5', !centered && 'sm:mx-0')}>{lead}</p>
         )}
         {children}
       </Container>

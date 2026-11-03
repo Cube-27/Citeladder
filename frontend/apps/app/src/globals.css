@@ -221,8 +221,6 @@
   --text-xl--line-height: 1.75rem;
   --text-2xl: 1.5rem;
   --text-2xl--line-height: 2rem;
-  --text-3xl: 1.75rem;
-  --text-3xl--line-height: 2.25rem;
   --text-4xl: 2rem;
   --text-4xl--line-height: 2.5rem;
   /* Field text: 14px on every surface. */
@@ -450,17 +448,15 @@
 
 /* The public website's neutral inks and homepage ground (owner decision,
    2026-10-31). Only the site's own type roles and the homepage's cards and
-   chips read these; coded product views keep the product inks above. */
+   chips read these; coded product views keep the product inks above. Two
+   inks carry every public role (2026-11-03): the ink for headings, titles
+   and questions, and one secondary grey for sentences, subtitles, navigation,
+   notes and the footer. The grey is the lightest that still holds 4.5:1 on
+   white, the ground, the footer's `background-alt` and the mint closing
+   band; small notes step down in size, never to a lighter grey. */
 [data-public-surface] {
   --color-site-ink: #171717;
-  --color-site-ink-strong: #000000;
-  /* The lighter inks sit just past 4.5:1 on white, the ground, the footer's
-     `background-alt` and the mint closing band. */
-  --color-site-ink-soft: rgb(23 23 23 / 60%);
   --color-site-body: #707070;
-  --color-site-nav: rgb(23 23 23 / 60%);
-  --color-site-lead-in: rgb(0 0 0 / 55%);
-  --color-site-footer: #6d6d6d;
   --color-site-ground: #f7f7f7;
   --color-site-divider: #e5e5e5;
   /* The site grid's frame lines, band rules, cell dividers and card rings
@@ -472,10 +468,12 @@
      far inside the shared 80rem container, so it meets the header's logo and
      its right-most action; copy sits a cell inset from any line; cards and
      product views sit a card gap from any line and pad their copy by the
-     card padding; copy starts and ends a cell height from any rule. */
+     card padding; copy starts and ends a cell height from any rule inside a
+     band, and a band's content sits a band height from its own rules. */
   --site-frame-inset: var(--site-gutter);
   --site-cell-inset: 32px;
   --site-cell-y: 64px;
+  --site-band-y: 96px;
   --site-card-gap: 8px;
   --site-card-pad: 32px;
 }
@@ -484,6 +482,7 @@
 @media (max-width: 63.99rem) {
   [data-public-surface] {
     --site-cell-y: 48px;
+    --site-band-y: 64px;
   }
 }
 
@@ -494,6 +493,7 @@
     --site-frame-inset: 4px;
     --site-cell-inset: 16px;
     --site-cell-y: 40px;
+    --site-band-y: 48px;
     --site-card-gap: 4px;
     --site-card-pad: 20px;
   }
