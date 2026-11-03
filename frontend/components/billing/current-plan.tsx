@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Inline, Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
+import { cardClasses } from '@/components/ui/card-variants';
 import { textRole } from '@/components/ui/typography';
 import type { BillingEntitlement, CatalogPlan } from '@/lib/api/billing';
 import { billingErrorMessage } from '@/lib/billing/reason-copy';
@@ -97,7 +97,7 @@ export function CurrentPlan({
 }>) {
   const subscription = entitlement?.subscription ?? null;
   return (
-    <Stack as="section" gap="compact" className={panelClasses()} aria-label="Current plan">
+    <Stack as="section" gap="compact" className={cardClasses()} aria-label="Current plan">
       <Inline gap="compact" className="flex-wrap items-start justify-between">
         <Stack gap="tight" className="min-w-0">
           <p className={textRole('label')}>Current plan</p>
@@ -105,9 +105,9 @@ export function CurrentPlan({
             <p className={textRole('sectionTitle')}>
               {currentPlan?.name ?? subscription?.catalog_key ?? 'No active plan'}
             </p>
-            <Badge variant="status" value={entitlement ? 'success' : 'info'}>
-              {accessLabel(entitlement)}
-            </Badge>
+            {/* The kind of access is a classification, not a state: neutral.
+                The unresolved case is a fault, and the warning below says so. */}
+            <Badge>{accessLabel(entitlement)}</Badge>
           </Inline>
           <SubscriptionDetail
             subscription={subscription}

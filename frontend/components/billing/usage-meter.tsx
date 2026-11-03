@@ -6,7 +6,7 @@ import type { DataTone } from '@/components/ui/data-tone';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Meter } from '@/components/ui/meter';
-import { textRole } from '@/components/ui/typography';
+import { InlineFigure, textRole } from '@/components/ui/typography';
 
 /**
  * One usage counter.
@@ -45,8 +45,8 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
       <Stack gap="tight">
         <Inline gap="compact" className="justify-between">
           <span className={textRole('label')}>{label}</span>
-          <span className={textRole('label', 'tabular-nums')}>
-            {item.consumed ?? 0} {unit}
+          <span className={textRole('label')}>
+            <InlineFigure>{item.consumed ?? 0}</InlineFigure> {unit}
           </span>
         </Inline>
         <Inline gap="compact" className="justify-between">
@@ -78,8 +78,11 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
     <Stack gap="tight">
       <Inline gap="compact" className="justify-between">
         <span className={textRole('label')}>{label}</span>
-        <span className={textRole('label', 'tabular-nums')}>
-          {consumed} / {allowance} {unit}
+        <span className={textRole('label')}>
+          <InlineFigure>
+            {consumed} / {allowance}
+          </InlineFigure>{' '}
+          {unit}
         </span>
       </Inline>
       <Meter

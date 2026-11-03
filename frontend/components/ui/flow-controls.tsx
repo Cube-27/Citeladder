@@ -16,7 +16,7 @@ const FLOW_FIELD_TEXT = 'leading-[calc(var(--control-height-xl)_-_2px)]';
 
 type FlowInputProps = Omit<
   ComponentProps<typeof Input>,
-  'size' | 'width' | 'raised' | 'startContent' | 'containerClassName' | 'className'
+  'size' | 'width' | 'startContent' | 'containerClassName' | 'className'
 >;
 
 /** A full-width 44px field: label above, placeholder inside, no glyph. */
