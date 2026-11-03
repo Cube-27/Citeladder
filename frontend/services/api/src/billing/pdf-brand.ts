@@ -1,11 +1,13 @@
 /**
  * CiteLadder's identity in PDF documents: the light design tokens read from
- * the app's token owner, the brand faces (Syne display, Lexend Deca text,
- * a monospace figure face for digits, all capped at weight 500) with Noto Sans behind
- * them for scripts the brand faces lack, and the logo drawn from the same
+ * the app's token owner, its own faces (Inter for headings and text, a
+ * monospace figure face for digits, all capped at weight 500) with Noto Sans
+ * behind them for scripts Inter lacks, and the logo drawn from the same
  * outline data as the app's `LogoMark`.
- * Every face is an OFL-licensed npm package, which permits embedding the
- * subsets a document uses.
+ * Documents do not follow the web's brand faces (lib/config/brand-fonts.json):
+ * those come only from a private repository and as variable files, while every
+ * face here is an OFL-licensed npm package with static weights, which permits
+ * embedding the subsets a document uses.
  */
 import { readFile, readdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -44,9 +46,9 @@ export type Tone = keyof typeof TOKENS;
 export type Palette = Readonly<Record<Tone, string>>;
 
 /**
- * `display` sets headings in Syne; `text` and `medium` set Lexend Deca;
+ * `display` sets headings in Inter 500; `text` and `medium` set Inter;
  * `figure` (a figure cell) and `figureMedium` (a headline figure, a rank) set
- * their digits in the figure face and everything else in Lexend Deca, as the app's
+ * their digits in the figure face and everything else in Inter, as the app's
  * figure roles do.
  */
 export type Style = 'text' | 'medium' | 'display' | 'figure' | 'figureMedium';
@@ -63,7 +65,7 @@ const STYLES: Record<Style, { families: readonly Family[]; weight: Weight }> = {
 /**
  * What the figure face sets: digits and the marks inside a number
  * (`. , : % + - −`), the same range as the web face's `unicode-range`
- * (apps/app/index.html). Letters and spaces fall through to Lexend Deca.
+ * (lib/fonts/brand-fonts.ts). Letters and spaces fall through to Inter.
  */
 const FIGURE_CHARACTERS: ReadonlySet<number> = new Set(
   [...'0123456789.,:%+-−'].map((character) => character.codePointAt(0) ?? 0),
@@ -82,14 +84,14 @@ type Source = {
 const SOURCES: readonly Source[] = [
   {
     family: 'display',
-    directory: fontDirectory(require.resolve('@fontsource/syne/package.json')),
-    prefix: 'syne',
+    directory: fontDirectory(require.resolve('@fontsource/inter/package.json')),
+    prefix: 'inter',
     weights: [500],
   },
   {
     family: 'text',
-    directory: fontDirectory(require.resolve('@fontsource/lexend-deca/package.json')),
-    prefix: 'lexend-deca',
+    directory: fontDirectory(require.resolve('@fontsource/inter/package.json')),
+    prefix: 'inter',
     weights: [400, 500],
   },
   {
@@ -249,8 +251,8 @@ export async function registerFaces(
  * fontkit applies the faces' standard ligatures by default, and the text layer
  * then maps an fi, ff or fl glyph back to its first letter only, so copied or
  * searched text reads "frst". Tabular figures keep any digit in a heading's
- * Syne aligned; figures in data roles use the `figure` styles,
- * whose digits are one width already (Lexend Deca has no `tnum`).
+ * Inter aligned; figures in data roles use the `figure` styles,
+ * whose digits come from the figure face, as on the web.
  * @types/pdfkit types only the tag-list form; pdfkit hands the value to
  * fontkit, whose tag-to-boolean form is the only way to turn a default off.
  */

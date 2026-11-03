@@ -92,6 +92,12 @@ are licensed for self-hosting, not redistribution). `pnpm fonts:pull` uses your
 `check:policy` fails if any font file is ever tracked. Without them the UI
 renders in metric-matched system fallbacks.
 
+To change a face, edit its `family` and `file` in
+`frontend/lib/config/brand-fonts.json` and run `pnpm fonts:pull` (with
+`--latest` after uploading a new file to the font repo, to re-pin its
+revision). The pull recomputes the face's weight range and fallback metrics in
+that JSON; commit it. Nothing else names a face.
+
 Astro owns marketing and public routes; Vite owns authenticated product routes.
 They share dependencies, API client, styles and public assets. Vite reads the
 server-only `API_SERVICE_ORIGIN`; the marketing Worker uses `ORIGIN_UPSTREAM`:

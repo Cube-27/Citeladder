@@ -1,0 +1,42 @@
+{
+  "repository": "Cube-27/cube27-fonts",
+  "revision": "8b0146c1033075d3a7092b1ce2ec71ee6f93be17",
+  "faces": {
+    "text": {
+      "family": "Switzer",
+      "file": "Switzer-Variable.woff2",
+      "preload": ["app", "public"],
+      "weights": "300 500",
+      "fallback": {
+        "sizeAdjust": "102.31%",
+        "ascentOverride": "95.79%",
+        "descentOverride": "24.44%",
+        "lineGapOverride": "8.8%"
+      }
+    },
+    "heading": {
+      "family": "Plein",
+      "file": "Plein-Variable.woff2",
+      "preload": ["app", "public"],
+      "weights": "300 500",
+      "fallback": {
+        "sizeAdjust": "102.12%",
+        "ascentOverride": "100.86%",
+        "descentOverride": "26.44%",
+        "lineGapOverride": "9.79%"
+      }
+    },
+    "figure": {
+      "family": "JetBrains Mono",
+      "file": "JetBrainsMono-Variable.woff2",
+      "preload": ["app"],
+      "weights": "300 500",
+      "fallback": {
+        "sizeAdjust": "107.91%",
+        "ascentOverride": "94.52%",
+        "descentOverride": "27.8%",
+        "lineGapOverride": "0%"
+      }
+    }
+  }
+}
