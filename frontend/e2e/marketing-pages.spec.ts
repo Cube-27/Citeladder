@@ -6,6 +6,7 @@ import { DEMO_HREF } from '@/lib/marketing-content/nav';
 import { POSTS } from '@/lib/marketing-content/blog';
 import { COMPETITORS } from '@/lib/marketing-content/compare';
 import { filterAndSortPosts, toBlogPostSummary } from '@/lib/marketing-content/blog-index';
+import { brandFontName } from '@/lib/fonts/brand-fonts';
 
 /**
  * Internal links answer 200. E2E runs the marketing Worker with no reachable
@@ -157,14 +158,13 @@ test.describe('marketing routes', () => {
         // WebKit's fonts.ready waits for document readiness, which the held
         // module scripts prevent. Load the used faces without that dependency.
         // Builds without the private font files settle on the fallback faces.
-        await page.evaluate(() =>
-          Promise.allSettled(
-            [
-              '400 14px "Switzer Variable"',
-              '500 14px "Switzer Variable"',
-              '500 32px "Plein Variable"',
-            ].map((font) => document.fonts.load(font)),
-          ),
+        await page.evaluate(
+          (fonts) => Promise.allSettled(fonts.map((font) => document.fonts.load(font))),
+          [
+            `400 14px "${brandFontName('text')}"`,
+            `500 14px "${brandFontName('text')}"`,
+            `500 32px "${brandFontName('heading')}"`,
+          ],
         );
         // A loaded sheet can reach computed style only at the next rendering
         // update; before it, getComputedStyle reports a state never painted.

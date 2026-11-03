@@ -7,6 +7,10 @@ import { createServerProxy } from './server-proxy.ts';
 import { publicApiOrigin, publicOrigins } from '../../lib/config/public-origins.ts';
 import { TURNSTILE_TEST_SITE_KEY } from '../../lib/config/turnstile.ts';
 import { RELEASE_META_NAME } from '../../lib/config/operational.ts';
+import { brandFontHead } from '../../lib/fonts/brand-fonts.ts';
+
+/** Where index.html takes the brand faces' preloads and @font-face rules. */
+const BRAND_FONTS_MARKER = '<!-- brand-fonts -->';
 
 const appRoot = fileURLToPath(new URL('.', import.meta.url));
 const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
@@ -73,6 +77,14 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
     publicDir: fileURLToPath(new URL('../../public', import.meta.url)),
     plugins: [
       react(),
+      {
+        name: 'citeladder:brand-fonts',
+        transformIndexHtml(html) {
+          if (!html.includes(BRAND_FONTS_MARKER))
+            throw new Error('index.html lost its brand-fonts marker');
+          return html.replace(BRAND_FONTS_MARKER, brandFontHead('app'));
+        },
+      },
       {
         name: 'citeladder:report-empty-public-values',
         // `configResolved` rather than the factory body: `define` above has
