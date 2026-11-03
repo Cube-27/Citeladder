@@ -19,7 +19,7 @@ export function AuthRouteShell({ children }: Readonly<{ children: ReactNode }>) 
       <div className="auth-split-main">
         <main id="main" aria-label="Account access" className="auth-split-content">
           <div className="auth-split-form">
-            <div>
+            <div className="flex justify-center">
               <AuthWordmark />
             </div>
             {children}

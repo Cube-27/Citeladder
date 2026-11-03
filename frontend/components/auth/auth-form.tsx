@@ -1,11 +1,10 @@
 'use client';
 
-import { Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { type ComponentProps, type ReactNode, useId, useState } from 'react';
 
 import { Alert as MktAlert } from '@/components/ui/alert';
-import { Checkbox, CheckboxCaption } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { FlowButton, FlowInput } from '@/components/ui/flow-controls';
 import { type BrandGlyph, Icon } from '@/components/ui/icon';
@@ -19,7 +18,7 @@ import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import type { Turnstile } from '@/lib/turnstile/use-turnstile';
 import { cn } from '@/lib/utils';
 
-type InputProps = Omit<ComponentProps<typeof FlowInput>, 'icon'>;
+type InputProps = ComponentProps<typeof FlowInput>;
 
 /** The Google "G", a brand glyph `Icon` sizes. */
 const GoogleGlyph: BrandGlyph = (props) => {
@@ -55,11 +54,10 @@ export function AuthEmailField({
         <FlowInput
           {...props}
           {...inputProps}
-          icon={Mail}
           type="email"
           autoComplete="email"
           spellCheck={false}
-          placeholder="hello@app.com"
+          placeholder="Your email address"
         />
       )}
     </Field>
@@ -88,7 +86,6 @@ export function AuthPasswordField({
         <FlowInput
           {...props}
           {...inputProps}
-          icon={LockKeyhole}
           type={visible ? 'text' : 'password'}
           autoComplete={autoComplete}
           placeholder={placeholder}
@@ -108,60 +105,29 @@ export function AuthPasswordField({
 
 /**
  * The Terms decision, made on the sign-in and sign-up forms for email and
- * Google alike, so no screen after sign-in asks again.
- *
- * Unticked by default and required. The Privacy Policy is linked as notice,
- * not bundled into the agreement: processing does not rest on this consent.
- * While unticked, a hint (which the disabled ways in point to) says why they
- * wait; ticked, it keeps its line invisibly, so nothing moves.
+ * Google alike, so no screen after sign-in asks again: continuing is agreeing.
+ * Every way in points to this line as its description. The Privacy Policy is
+ * acknowledged as notice, not bundled into the agreement: processing does not
+ * rest on this consent.
  */
-function TermsConsent({
-  agreed,
-  onChange,
-  hintId,
-}: Readonly<{
-  agreed: boolean;
-  onChange: (agreed: boolean) => void;
-  hintId: string;
-}>) {
-  const noticeId = useId();
+function TermsNotice({ id, signup }: Readonly<{ id: string; signup: boolean }>) {
   return (
-    <div className="auth-terms-consent grid">
-      <Checkbox
-        checked={agreed}
-        onCheckedChange={(value) => onChange(value === true)}
-        required
-        aria-describedby={agreed ? noticeId : `${noticeId} ${hintId}`}
-        label={
-          <>
-            I agree to the{' '}
-            <a
-              href={websiteHref('/terms')}
-              target="_blank"
-              rel="noreferrer"
-              className="auth-legal-link"
-            >
-              Terms of Service
-            </a>
-          </>
-        }
-      />
-      <CheckboxCaption id={noticeId}>
-        Our{' '}
-        <a
-          href={websiteHref('/privacy')}
-          target="_blank"
-          rel="noreferrer"
-          className="auth-legal-link"
-        >
-          Privacy Policy
-        </a>{' '}
-        explains how we process your data.
-      </CheckboxCaption>
-      <CheckboxCaption id={hintId} shown={!agreed}>
-        Agree to the Terms of Service to continue.
-      </CheckboxCaption>
-    </div>
+    <p id={id} className="auth-terms-notice flow-help text-center">
+      By {signup ? 'creating an account' : 'continuing'}, you agree to the{' '}
+      <a href={websiteHref('/terms')} target="_blank" rel="noreferrer" className="auth-legal-link">
+        Terms of Service
+      </a>{' '}
+      and acknowledge the{' '}
+      <a
+        href={websiteHref('/privacy')}
+        target="_blank"
+        rel="noreferrer"
+        className="auth-legal-link"
+      >
+        Privacy Policy
+      </a>
+      .
+    </p>
   );
 }
 
@@ -193,17 +159,17 @@ function googleStartNotice(err: unknown): string {
 /**
  * Continue with Google. The start carries the Terms decision, sealed in the
  * signed state for the callback to record; only a sign-up start can create an
- * account. `consentHint` points the disabled button at why it waits.
+ * account. `termsNoticeId` is the agreement line the button is described by.
  */
 function GoogleEntry({
   revision,
   signup,
-  consentHint,
+  termsNoticeId,
   verification,
 }: Readonly<{
   revision: string | undefined;
   signup: boolean;
-  consentHint: string | undefined;
+  termsNoticeId: string;
   /** Sign-up's Turnstile widget: a sign-up start carries its token. */
   verification: Turnstile | undefined;
 }>) {
@@ -214,7 +180,7 @@ function GoogleEntry({
   async function start() {
     // The button stays live for the whole round trip otherwise, and a second
     // click starts a second authorization before the first can redirect.
-    if (pending || consentHint || !revision || unverified) return;
+    if (pending || !revision || unverified) return;
     setPending(true);
     setNotice(null);
     try {
@@ -238,8 +204,8 @@ function GoogleEntry({
     <>
       <FlowButton
         variant="secondary"
-        disabled={pending || Boolean(consentHint) || !revision || unverified}
-        aria-describedby={consentHint}
+        disabled={pending || !revision || unverified}
+        aria-describedby={termsNoticeId}
         onClick={() => void start()}
       >
         <Icon icon={GoogleGlyph} />
@@ -269,7 +235,8 @@ export function AuthFormShell({
   children,
 }: Readonly<{
   title: string;
-  description: string;
+  /** A line under the title; sign-in and sign-up have none unless they report something. */
+  description?: string;
   error?: string;
   onSubmit: ComponentProps<'form'>['onSubmit'];
   pending: boolean;
@@ -282,15 +249,15 @@ export function AuthFormShell({
   showForm?: boolean;
   showFooter?: boolean;
   /**
-   * Sign-in and sign-up: the required Terms box, and Continue with Google.
-   * Every way in stays disabled until the box is ticked and the published
+   * Sign-in and sign-up: Continue with Google, and the agreement line every
+   * way in is described by. Every way in stays disabled until the published
    * revision has loaded. Mailbox and unavailable screens authenticate no one
    * and omit it.
    */
   terms?: TermsDecision;
   /**
    * Sign-up and the email-link requests: the Turnstile widget, in a reserved
-   * slot between the fields (and Terms box) and submit. Submit, and a sign-up's
+   * slot between the fields and submit. Submit, and a sign-up's
    * Continue with Google, stay disabled until it hands over a token. Sign-in
    * omits it.
    */
@@ -299,60 +266,38 @@ export function AuthFormShell({
 }>) {
   const consent = useConsentGate(showForm ? terms : undefined, showForm ? verification : undefined);
 
-  const handleSubmit: NonNullable<ComponentProps<'form'>['onSubmit']> = (event) => {
-    if (consent.held) {
-      event.preventDefault();
-      return;
-    }
-    onSubmit?.(event);
-  };
-
   return (
     <Stack gap="section" className="auth-form-shell w-full">
-      <Stack gap="compact" className="auth-form-heading">
+      <Stack gap="compact" className="auth-form-heading text-center">
         <h1 className="flow-title">{title}</h1>
-        <p className="flow-help">{description}</p>
+        {description ? <p className="flow-help">{description}</p> : null}
       </Stack>
 
       <Stack gap="workspace" className="auth-form-body">
-        {consent.terms ? (
-          <>
-            <GoogleEntry
-              revision={consent.terms.revision}
-              signup={consent.terms.signup}
-              consentHint={consent.hint}
-              verification={consent.verification}
-            />
-            <p className="auth-form-divider flow-meta text-center">or</p>
-          </>
-        ) : null}
-
         {error ? <MktAlert>{error}</MktAlert> : null}
 
         {showForm ? (
-          <form noValidate onSubmit={handleSubmit}>
-            <Stack gap="workspace" className="auth-email-form">
-              {children}
+          <AuthEmailForm
+            consent={consent}
+            onSubmit={onSubmit}
+            pending={pending}
+            submitLabel={submitLabel}
+            pendingLabel={pendingLabel}
+          >
+            {children}
+          </AuthEmailForm>
+        ) : null}
 
-              {consent.terms ? (
-                <TermsConsent
-                  agreed={consent.agreed}
-                  onChange={consent.setAgreed}
-                  hintId={consent.hintId}
-                />
-              ) : null}
-
-              {consent.verification ? <HumanCheck widget={consent.verification} /> : null}
-
-              <FlowButton
-                type="submit"
-                disabled={pending || consent.held}
-                aria-describedby={consent.hint}
-              >
-                {pending ? pendingLabel : submitLabel}
-              </FlowButton>
-            </Stack>
-          </form>
+        {consent.terms ? (
+          <>
+            <p className="auth-form-divider flow-meta">OR</p>
+            <GoogleEntry
+              revision={consent.terms.revision}
+              signup={consent.terms.signup}
+              termsNoticeId={consent.noticeId}
+              verification={consent.verification}
+            />
+          </>
         ) : null}
 
         {showFooter ? (
@@ -363,8 +308,56 @@ export function AuthFormShell({
             emphasis={footerLinkVariant === 'emphasis'}
           />
         ) : null}
+
+        {consent.terms ? <TermsNotice id={consent.noticeId} signup={consent.terms.signup} /> : null}
       </Stack>
     </Stack>
+  );
+}
+
+/**
+ * The fields, the Turnstile slot (when challenged) and submit. A held form
+ * swallows submit (Enter in a field) until the gate opens.
+ */
+function AuthEmailForm({
+  consent,
+  onSubmit,
+  pending,
+  submitLabel,
+  pendingLabel,
+  children,
+}: Readonly<{
+  consent: ReturnType<typeof useConsentGate>;
+  onSubmit: ComponentProps<'form'>['onSubmit'];
+  pending: boolean;
+  submitLabel: string;
+  pendingLabel: string;
+  children: ReactNode;
+}>) {
+  const handleSubmit: NonNullable<ComponentProps<'form'>['onSubmit']> = (event) => {
+    if (consent.held) {
+      event.preventDefault();
+      return;
+    }
+    onSubmit?.(event);
+  };
+
+  return (
+    <form noValidate onSubmit={handleSubmit}>
+      <Stack gap="workspace" className="auth-email-form">
+        {children}
+
+        {consent.verification ? <HumanCheck widget={consent.verification} /> : null}
+
+        <FlowButton
+          type="submit"
+          disabled={pending || consent.held}
+          aria-describedby={consent.terms ? consent.noticeId : undefined}
+        >
+          {pending ? pendingLabel : submitLabel}
+        </FlowButton>
+      </Stack>
+    </form>
   );
 }
 
@@ -388,21 +381,18 @@ function HumanCheck({
 }
 
 /**
- * What holds a form's ways in: the Terms box for a form that authenticates
- * (`terms` given) and the Turnstile token for one that is challenged
- * (`verification` given). `hint` is the id the disabled ways in point to while
- * the box is unticked; `held` stays true until it is ticked, the published
- * revision has loaded and the widget has handed over a token.
+ * What holds a form's ways in: the published Terms revision for a form that
+ * authenticates (`terms` given) and the Turnstile token for one that is
+ * challenged (`verification` given). `noticeId` is the agreement line's id;
+ * `held` stays true until the revision has loaded and the widget has handed
+ * over a token.
  */
 function useConsentGate(terms: TermsDecision | undefined, verification: Turnstile | undefined) {
-  const [agreed, setAgreed] = useState(false);
-  const hintId = useId();
-  const hint = terms && !agreed ? hintId : undefined;
+  const noticeId = useId();
   const held =
-    Boolean(hint) ||
     (terms !== undefined && !terms.revision) ||
     (verification !== undefined && !verification.solved);
-  return { terms, verification, agreed, setAgreed, hintId, hint, held };
+  return { terms, verification, noticeId, held };
 }
 
 /** The line under the form that switches between sign-in and sign-up, or back to sign-in. */

@@ -61,9 +61,9 @@ Cloudflare's always-pass test secret, answered locally without a network call
 (it accepts only the dummy token `XXXX.DUMMY.TOKEN.XXXX`). A signed-in person
 asks for their own password link with the session-authorized
 `POST /auth/password-link`, which needs no token. The sign-up and email-link
-forms hold submit (and a sign-up's Continue with Google) until both the Terms box
-is ticked, where present, and the widget has handed over a token; the widget
-sits in a fixed-height slot between the Terms box and submit.
+forms hold submit (and a sign-up's Continue with Google) until the widget has
+handed over a token; the widget sits in a fixed-height slot between the fields
+and submit.
 Once a public identity's mailbox is verified (mailed link, reset or Google), the
 runner tick's `signup-notices` phase
 ([signup notifications](../frontend/services/api/src/auth/signup-notifications.ts))
@@ -168,10 +168,11 @@ authorized to publish the global billing catalog or administer other workspaces.
 Every workspace a person opens needs their acceptance of the current Terms
 revision (`/workspaces/{id}/policies`). This covers password, Google-created and
 operator-created identities. There is no consent screen after sign-in: the
-sign-in and sign-up forms carry one unticked, required checkbox (the Terms
-agreement, with the Privacy Policy linked as notice), and every way in on them
-(email and password, Google) stays disabled until it is ticked, with a hint the
-disabled buttons point to. `POST /auth/register`, `POST /auth/login` and every
+sign-in and sign-up forms close with one agreement statement ("By continuing"
+or "By creating an account, you agree to the Terms of Service and acknowledge
+the Privacy Policy", the Privacy Policy linked as notice), and every way in on
+them (email and password, Google) is described by it and stays disabled only
+until the published revision loads. `POST /auth/register`, `POST /auth/login` and every
 Google start refuse a request without `accept_terms` and the published revision
 (`GET /auth/policies`, public). The decision is recorded in
 `account_policy_acceptances` (actor, revision, context `signup` or `signin`,
@@ -187,7 +188,7 @@ workspace the person opens without one (one they joined) behind the shell's
 loading frame. A session older than the published revision holds no decision
 on it: the gate and workspace setup sign the person out (which ends every
 session of theirs, all of which predate the revision) and send them to sign in
-with a notice (`/login?error=terms_changed`), where the checkbox takes the
+with a notice (`/login?error=terms_changed`), where signing in takes the
 decision. A revision republished between the gate's read and its record is
 re-read, not treated as a missing decision; a sign-in or sign-up form that names
 a superseded revision is refused (409) and re-reads the published one. The chooser and workspace setup never wait on the selected

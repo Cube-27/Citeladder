@@ -638,14 +638,26 @@
   text-underline-offset: 0.1875rem;
 }
 
-.auth-terms-consent {
-  margin-top: 0.5rem;
+/* "OR" between the email form and Google: a hairline either side. */
+.auth-form-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
 }
 
-.auth-terms-consent .type-body {
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
-  color: var(--color-secondary);
+.auth-form-divider::before,
+.auth-form-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border-subtle);
+}
+
+/* The agreement line closes the column, set apart from the switch link. */
+.auth-terms-notice {
+  margin-top: var(--flow-block);
+  text-wrap: balance;
 }
 
 /* The Turnstile widget's slot: the flexible widget's fixed 65px height,
