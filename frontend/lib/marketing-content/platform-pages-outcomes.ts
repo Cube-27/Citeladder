@@ -7,7 +7,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
     title: 'AI Referral Analytics, AI Crawler Logs & ChatGPT Traffic | CiteLadder',
     description:
       'See the visits ChatGPT, Gemini and other AI assistants send to your site from GA4, and the AI crawlers that fetch your pages from your own server logs.',
-    heading: 'See the traffic AI sends your way.',
+    heading: 'See the traffic AI sends your way',
     lead: 'Connect GA4 to see sessions from recognized AI assistants, the pages they land on and what happens next. Add your server logs to see which AI crawlers fetch those pages.',
     cta: 'setup',
     visual: 'referrals',
@@ -28,7 +28,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
     ],
     features: [
       {
-        title: 'Find the pages AI visitors land on.',
+        title: 'Find the pages AI visitors land on',
         body: 'Move from source totals to landing pages and compare engagement. Page-level scope stays distinct from property-wide channel totals, and data quality notes sit beside the numbers so a gap in GA4 never reads as a drop in traffic.',
         points: [
           'Sessions and engaged sessions per assistant',
@@ -39,7 +39,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
         visual: 'page-report',
       },
       {
-        title: 'See which AI crawlers fetch your pages.',
+        title: 'See which AI crawlers fetch your pages',
         body: 'On paid plans, send your server logs and CiteLadder identifies requests from known crawlers such as OAI-SearchBot, ChatGPT-User, ClaudeBot, PerplexityBot and Googlebot. Requests are checked against published IP ranges, so a spoofed user agent is reported as unverified rather than counted as the real bot.',
         points: [
           'Cloudflare, Amazon CloudFront, Google Cloud, webhook or file upload',
@@ -50,7 +50,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
         visual: 'crawlers',
       },
       {
-        title: 'Put crawls and visits side by side.',
+        title: 'Put crawls and visits side by side',
         body: 'The Overview highlights pages that AI search crawlers fetch but that receive no identifiable AI visits, pages with AI visits but no recent crawls, and verified errors on pages that matter. Each pattern is described as co-occurrence, with links to the pages behind it.',
         points: [
           'Patterns only when logs and GA4 cover the whole window',
@@ -129,7 +129,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
     title: 'AI Product Visibility & Share of Shelf | CiteLadder',
     description:
       'Measure how your products and categories appear in AI buying answers, including share of shelf and first-position wins where answers rank products.',
-    heading: 'See how your products show up in AI buying answers.',
+    heading: 'See how your products show up in AI buying answers',
     lead: 'Track a product or category across buyer prompts, compare it with competing products, and see where answers rank it. Catalogs come from your site or a CSV import.',
     cta: 'demo',
     visual: 'commerce',
@@ -151,7 +151,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
     ],
     features: [
       {
-        title: 'Review prompts and rivals before you measure.',
+        title: 'Review prompts and rivals before you measure',
         body: 'Approve the buyer prompts and competitor products for each target, check engines and repetitions, then run. Each run keeps its catalog and competitor context, so later runs compare like with like.',
         points: [
           'Target-specific buyer prompts',
@@ -162,7 +162,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
         visual: 'shelf-setup',
       },
       {
-        title: 'Shelf metrics that only count real rankings.',
+        title: 'Shelf metrics that only count real rankings',
         body: 'Product Visibility shows how often a product appears. Share of Shelf, Average Shelf Position and First-Position Win Rate count only answers that present products as an ordered list, so a passing mention is never scored as a ranking.',
         points: [
           'Product Visibility per target',

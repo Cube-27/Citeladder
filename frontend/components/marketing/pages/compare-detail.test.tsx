@@ -25,7 +25,7 @@ describe('comparison evidence and next steps', () => {
       );
     }
     expect(
-      within(screen.getByRole('list', { name: 'Questions to ask both vendors.' })).getAllByRole(
+      within(screen.getByRole('list', { name: 'Questions to ask both vendors' })).getAllByRole(
         'listitem',
       ).length,
     ).toBeGreaterThan(0);

@@ -295,7 +295,7 @@ export function PublicPricingCatalog({
       </Section>
       <Section tone="soft" aria-label="Plan comparison">
         <SectionHeader
-          title="Compare every published limit."
+          title="Compare every published limit"
           lead="Every value comes from the live plan catalog. A dash means the plan does not include it."
           headingId="pricing-compare-title"
         />
@@ -305,7 +305,7 @@ export function PublicPricingCatalog({
         <Section tone="paper" aria-label="Add-ons and top-ups">
           <div className="mk-split">
             <SectionHeader
-              title="Add capacity when you need it."
+              title="Add capacity when you need it"
               lead="One-time purchases on top of an active plan."
               headingId="pricing-extras-title"
             />

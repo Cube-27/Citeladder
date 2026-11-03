@@ -347,7 +347,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
       )}
 
       <Section aria-label="How it works">
-        <SectionHeader title="How it works." />
+        <SectionHeader title="How it works" />
         <ol className="mk-steps">
           {page.steps.map((step, index) => (
             <li key={step.title}>
@@ -363,7 +363,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
 
       <Section tone="soft" aria-label="Questions you can answer">
         <SectionHeader
-          title="Questions you can answer."
+          title="Questions you can answer"
           lead="Asked the way your team asks them, answered from recorded evidence."
         />
         <ul className="mk-questions">
@@ -379,7 +379,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
       {overview && (
         <Section id="capabilities">
           <SectionHeader
-            title="Everything in one project."
+            title="Everything in one project"
             lead="Start with AI visibility. Add the capabilities your questions need."
           />
           <CapabilityGrid />
@@ -388,7 +388,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
 
       <Section tone={overview ? 'soft' : 'paper'}>
         <div className="mk-split">
-          <SectionHeader title="Frequently asked questions." />
+          <SectionHeader title="Frequently asked questions" />
           <FaqList faqs={page.faqs} />
         </div>
       </Section>
@@ -420,7 +420,7 @@ function Related({ page }: Readonly<{ page: PlatformPage }>) {
   if (!items.length) return null;
   return (
     <Section tone="soft" aria-label="Related capabilities and guides">
-      <SectionHeader title="Keep exploring." />
+      <SectionHeader title="Keep exploring" />
       <ul className="mk-related">
         {items.map((item) => {
           return (

@@ -21,12 +21,12 @@ export type CommercialPage = {
 export const SHARE_OF_VOICE_PAGE: CommercialPage = {
   kind: 'share',
   breadcrumb: 'AI share of voice',
-  heading: 'Know where your brand stands in AI answers.',
+  heading: 'Know where your brand stands in AI answers',
   introduction:
     'Compare your brand with competitors across a defined set of buyer questions. Keep the measurement scope visible and inspect the answers behind a change in visibility.',
   secondary: { label: 'Explore cited sources', href: '/platform/citation-intelligence' },
   overview: {
-    heading: 'A percentage only helps when you know what it counts.',
+    heading: 'A percentage only helps when you know what it counts',
     lead: '"Share of voice" can describe different calculations. Read the definition and denominator before comparing brands, tools or reporting periods.',
   },
   definitions: [
@@ -40,7 +40,7 @@ export const SHARE_OF_VOICE_PAGE: CommercialPage = {
     },
   ],
   workflow: {
-    heading: 'Build a comparison your team can explain.',
+    heading: 'Build a comparison your team can explain',
     lead: 'A useful benchmark starts with buyer questions and ends with the evidence behind the numbers.',
     steps: [
       {

@@ -76,12 +76,12 @@ function Hero({ rotor }: Readonly<{ rotor?: ReactNode }>) {
       <div className="lp-wrap site-wrap lp-hero-copy mk-hero-in">
         <h1 className="website-hero-display">
           <span className="sr-only">
-            Analyze what ChatGPT, Gemini and Claude tell your buyers about you.
+            Analyze what ChatGPT, Gemini and Claude tell your buyers about you
           </span>
           <span aria-hidden>
             Analyze what {rotor ?? <EngineRotor />}
             <br />
-            tells your buyers about you.
+            tells your buyers about you
           </span>
         </h1>
         <p className="website-hero-lead lp-hero-lead">
@@ -89,10 +89,9 @@ function Hero({ rotor }: Readonly<{ rotor?: ReactNode }>) {
           visibility.
         </p>
         <PrimaryActions />
-        <p className="lp-hero-note">
-          {selfServeSignupOpen() && '7-day free trial on ChatGPT answers. Trial limits apply. '}
-          Engine availability depends on your plan.
-        </p>
+        {selfServeSignupOpen() ? (
+          <p className="lp-hero-note">7-day free trial on ChatGPT answers. Trial limits apply.</p>
+        ) : null}
       </div>
       <div className="lp-wrap site-wrap-cards">
         <HeroShot />
@@ -175,7 +174,7 @@ function Loop() {
       <div className="lp-wrap site-wrap lp-stack">
         <Statement />
         <div className="lp-head">
-          <h2 className="website-section-heading">From an AI answer to the fix that moves it.</h2>
+          <h2 className="website-section-heading">From an AI answer to the fix that moves it</h2>
           <p className="website-lead">
             Measure the questions your buyers ask, trace each result to its sources, and turn what
             you find into reviewable work. Then measure again.
@@ -259,12 +258,12 @@ function DeepDives() {
       <div className="lp-wrap site-wrap lp-stack">
         <div className="lp-head">
           <h2 id="why-title" className="website-section-heading">
-            Check the evidence, fix the site, add your search data.
+            Check the evidence, fix the site, add your search data
           </h2>
         </div>
         <div className="lp-dives site-rows">
           <DeepDive
-            title="Every number opens the answer behind it."
+            title="Every number opens the answer behind it"
             body="Click any metric and read the recorded answer: the engine, the prompt, the date, where your brand appeared and which sources it cited."
             points={[
               'Mentions, citations and referral visits stay separate signals',
@@ -281,7 +280,7 @@ function DeepDives() {
             </ProductShot>
           </DeepDive>
           <DeepDive
-            title="Fix the site issues that keep you out of answers."
+            title="Fix the site issues that keep you out of answers"
             body="Crawl your site and get page-level findings with the evidence attached, from indexing and structured data to which AI crawlers your robots.txt lets in."
             points={[
               'Technical and answer-readiness checks per page',
@@ -295,7 +294,7 @@ function DeepDives() {
             </ProductShot>
           </DeepDive>
           <DeepDive
-            title="Bring in the search data you already trust."
+            title="Bring in the search data you already trust"
             body="Connect Search Console and GA4 to see the queries that reach your pages and the visits AI assistants send, then add keyword and backlink research when you need it."
             points={[
               'Striking-distance queries and CTR gaps from Search Console',
@@ -321,7 +320,7 @@ function PlatformGrid() {
     <section className="lp-section site-band" id="platform">
       <div className="lp-wrap site-wrap lp-stack">
         <div className="lp-head lp-head-split">
-          <h2 className="website-section-heading">Everything in one project.</h2>
+          <h2 className="website-section-heading">Everything in one project</h2>
           <TextLink href="/platform">See the whole platform</TextLink>
         </div>
         <CapabilityGrid />
@@ -335,7 +334,7 @@ function Faq() {
     <section className="lp-section site-band" id="landing-faq">
       <div className="lp-wrap site-wrap lp-faq site-split">
         <div className="lp-head">
-          <h2 className="website-section-heading">Questions, answered.</h2>
+          <h2 className="website-section-heading">Questions, answered</h2>
           <TextLink href="/faq">All questions</TextLink>
         </div>
         <FaqList faqs={FAQS} />
@@ -348,7 +347,7 @@ function Closing() {
   return (
     <section className="lp-section marketing-closing-band site-band" id="get-started">
       <div className="lp-wrap site-wrap lp-closing">
-        <h2 className="website-section-heading">See what AI says about you today.</h2>
+        <h2 className="website-section-heading">See what AI says about you today</h2>
         <p className="website-lead">
           Add your site and a few questions your buyers ask. Get your first baseline, then decide
           what to fix.

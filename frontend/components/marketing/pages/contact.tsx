@@ -220,7 +220,7 @@ export function ContactPage() {
           <div className="cm-contact-copy">
             {/* Centred on a phone like every opening band (owner, 2026-10-31). */}
             <header className="grid justify-items-center gap-5 text-center sm:justify-items-start sm:text-start">
-              <h1 className="website-page-title text-foreground">Talk to the CiteLadder team.</h1>
+              <h1 className="website-page-title text-foreground">Talk to the CiteLadder team</h1>
               <p className="website-hero-lead">
                 Ask a question, book a demo or check whether CiteLadder fits your team.
               </p>

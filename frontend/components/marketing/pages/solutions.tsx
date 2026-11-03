@@ -106,7 +106,7 @@ export function SolutionsCta() {
     <Section className="marketing-closing-band" aria-label="Get started">
       <div className="flex flex-col items-center gap-8 text-center" data-cta-placement="closing">
         <SectionHeader
-          title="See the workflow that matches how you are measured."
+          title="See the workflow that matches how you are measured"
           lead="Each team reads the same evidence differently. We will walk through the view your team reports on."
           align="center"
         />

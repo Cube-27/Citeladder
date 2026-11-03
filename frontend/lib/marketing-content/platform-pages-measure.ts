@@ -7,7 +7,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     title: 'AI Search Intelligence Platform | CiteLadder',
     description:
       'One project for AI visibility, citation analysis, site health, search data, referral analytics and reviewable content work.',
-    heading: 'One platform from AI answer to shipped fix.',
+    heading: 'One platform from AI answer to shipped fix',
     lead: 'Track how AI engines answer your buyers, trace every result to the pages behind it, and turn what you find into work your team can review and ship.',
     cta: 'trial',
     visual: 'visibility',
@@ -29,7 +29,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     ],
     features: [
       {
-        title: 'Every number opens the evidence behind it.',
+        title: 'Every number opens the evidence behind it',
         body: 'A visibility score is only useful if you can check it. In CiteLadder every trend point opens the recorded answer, the engine and date it came from, and the sources it cited. Mentions, citations, sentiment, ads and visits stay separate, so nobody reads one signal as another.',
         points: [
           'Recorded answers with engine, prompt and collection date',
@@ -40,7 +40,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
         visual: 'answer',
       },
       {
-        title: 'See how answers talk about you, not only whether they do.',
+        title: 'See how answers talk about you, not only whether they do',
         body: 'Perception reads each tracked answer for sentiment, the themes it praises or criticizes, and whether it actually recommends you. On ChatGPT Search, Ads shows which advertisers appear beside your prompts, recorded apart from citations so paid placements never inflate a score.',
         points: [
           'Net sentiment with how many answers were classified',
@@ -51,7 +51,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
         visual: 'perception',
       },
       {
-        title: 'Connect answers to what happens on your site.',
+        title: 'Connect answers to what happens on your site',
         body: 'Read GA4 sessions from recognized AI assistants and, on paid plans, your own server logs for AI crawler requests. Site Health shows which of those crawlers your robots.txt allows. Together they show whether engines can reach a page, whether they fetch it, and whether people arrive.',
         points: [
           'AI referral sessions, landing pages and key events from GA4',
@@ -61,7 +61,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
         visual: 'crawlers',
       },
       {
-        title: 'Findings become ranked, reviewable work.',
+        title: 'Findings become ranked, reviewable work',
         body: 'Site, demand, citation and visibility evidence rolls up into one Action per target page, ranked by deterministic rules rather than a model’s opinion. Hand any Action to the Agent for a brief or edit. Your team decides what ships, then later evidence shows what changed.',
         points: [
           'One Action per page, query, prompt or product',
@@ -148,7 +148,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     title: 'AI Visibility Tracking & Brand Monitoring | CiteLadder',
     description:
       'Track brand mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude and Google AI Overviews, with every result tied to its recorded answer.',
-    heading: 'See how often AI recommends you.',
+    heading: 'See how often AI recommends you',
     lead: 'Track your brand across the questions buyers ask ChatGPT, Gemini, Claude and Google AI Overviews. Compare competitors, follow the trend, and open the exact answer behind every number.',
     cta: 'trial',
     visual: 'visibility',
@@ -170,7 +170,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     ],
     features: [
       {
-        title: 'Start from the questions your buyers ask.',
+        title: 'Start from the questions your buyers ask',
         body: 'Build suggestions in the Prompt Builder from your offerings, topics and the mix you choose, import a CSV or write prompts yourself. Suggestions are short buyer questions across awareness, consideration and decision, and are checked for quality before you see them. When Search Console or keyword research is connected, generation uses how your buyers already search to phrase suggestions. Nothing is tracked until you accept it.',
         points: [
           'Suggestions grouped by topic and buyer stage',
@@ -181,7 +181,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
         visual: 'prompts',
       },
       {
-        title: 'One portfolio across every engine.',
+        title: 'One portfolio across every engine',
         body: 'Run the same prompts across ChatGPT, Gemini, Claude and Google AI Overviews and compare how each one treats your brand. Repeat each prompt several times per run to smooth out answer variation, and schedule runs so the trend stays comparable.',
         points: [
           'Consumer answers and model APIs, labeled by surface',
@@ -192,7 +192,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
         visual: 'engines',
       },
       {
-        title: 'Read the answer behind the trend.',
+        title: 'Read the answer behind the trend',
         body: 'Open any result to see whether your brand was mentioned, where it ranked among the brands named and whether your own pages were cited. Query fan-out shows the searches an engine ran when it exposes them, and stays marked unavailable when it does not.',
         points: [
           'Mention, position and citation per answer',
@@ -203,7 +203,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
         visual: 'answer',
       },
       {
-        title: 'Know how answers describe you.',
+        title: 'Know how answers describe you',
         body: 'Perception classifies each answer’s sentiment toward you and your competitors, groups what it says into themes like pricing, quality and support, and keeps the quotes that support each theme. Recommended rate shows how often you are actually recommended, not just named.',
         points: [
           'Net sentiment from −100 to +100, with classified counts',
@@ -214,7 +214,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
         visual: 'perception',
       },
       {
-        title: 'See who is paying to appear beside your prompts.',
+        title: 'See who is paying to appear beside your prompts',
         body: 'ChatGPT Search can show sponsored placements next to an answer. CiteLadder records them apart from citations: which advertisers appear, on which prompts, and how often. Ads never count as citations or change your visibility scores.',
         points: [
           'Ad presence across your tracked prompts',
@@ -308,7 +308,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     title: 'AI Citation Tracking Software & Source Analysis | CiteLadder',
     description:
       'See which domains and pages AI answers cite, compare owned and third-party sources, and find cited pages that list competitors but not you.',
-    heading: 'Know which pages AI answers cite.',
+    heading: 'Know which pages AI answers cite',
     lead: 'See every domain and URL your tracked answers reference, whether it belongs to you, a competitor or a publisher, and read each citation in the answer that used it.',
     cta: 'demo',
     visual: 'sources',
@@ -329,7 +329,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     ],
     features: [
       {
-        title: 'From a source pattern to the exact page.',
+        title: 'From a source pattern to the exact page',
         body: 'A domain that keeps appearing is a starting point. Open its cited URLs and the questions behind them to see whether it is a product page, a guide or an independent comparison, and which engines rely on it.',
         points: [
           'Domain and URL views of the same citations',
@@ -339,7 +339,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
         visual: 'cited-url',
       },
       {
-        title: 'Find the third-party pages that leave you out.',
+        title: 'Find the third-party pages that leave you out',
         body: 'After an audit, CiteLadder reads the third-party pages your answers cite, respecting robots.txt. When a recurring listicle, comparison, directory or review page names your competitors but not you, it becomes an Action with the quoted passage attached, ready for an outreach brief.',
         points: [
           'Brand and competitor presence on each cited page',
@@ -350,7 +350,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
         visual: 'earned',
       },
       {
-        title: 'Brand presence and source use are different.',
+        title: 'Brand presence and source use are different',
         body: 'Your product can be named while a reviewer gets the citation. Your docs can be cited without a recommendation. Seeing both tells you whether to fix a page on your site or reach a publisher.',
         points: [
           'Mentions and citations reported separately',

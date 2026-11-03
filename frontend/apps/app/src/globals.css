@@ -487,6 +487,14 @@
      card padding; copy starts and ends a cell height from any rule inside a
      band, and a band's content sits a band height from its own rules. */
   --site-frame-inset: var(--site-gutter);
+  /* A heading-and-lead stack has two widths (owner, 2026-11-03): headings and
+     the statement fill at most the display measure, and everything under a
+     heading (lead, note) shares the one reading measure, so a centred stack
+     ends on matching edges. Pixels, not `ch`: a `ch` follows each element's
+     own size, which gave every role its own width. On a phone both are the
+     column. Long-form prose keeps its own reading column. */
+  --site-measure-display: 880px;
+  --site-measure-reading: 640px;
   --site-cell-inset: 32px;
   --site-cell-y: 64px;
   --site-band-y: 96px;

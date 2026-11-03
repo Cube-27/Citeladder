@@ -234,7 +234,7 @@ test.describe('marketing routes', () => {
         ),
       );
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-        'Talk to the CiteLadder team.',
+        'Talk to the CiteLadder team',
       );
       await expect(page).toHaveTitle('Contact CiteLadder');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(

@@ -440,7 +440,6 @@
 /* The feature heading beside a product shot is the feature role, in the
    site ink. */
 .mk-dive-title {
-  max-width: 24ch;
   color: var(--color-site-ink);
 }
 

@@ -8,7 +8,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     title: 'Evidence-Backed AI Content Optimization | CiteLadder',
     description:
       'Prepare content briefs, page edits, comparison pages, internal-link plans and outreach briefs from your CiteLadder evidence, and review every revision before it ships.',
-    heading: 'Content work that starts from the evidence.',
+    heading: 'Content work that starts from the evidence',
     lead: 'Turn a site finding, buyer question or citation pattern into a brief, a page edit or an internal-link plan. The Agent drafts it from your project evidence, and your team reviews it.',
     cta: 'demo',
     visual: 'agent',
@@ -30,7 +30,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     ],
     features: [
       {
-        title: 'Start from a gap you can see.',
+        title: 'Start from a gap you can see',
         body: 'Every piece of content work starts from evidence already in your project: an Action, a Site Health issue, a Search Console signal, a cited page that leaves you out, or a prompt you lose. The Agent reads that evidence first, so the draft answers the gap instead of a generic brief.',
         points: [
           'Pick up any Action or finding as the starting point',
@@ -40,7 +40,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         visual: 'actions',
       },
       {
-        title: 'Formats for where answers come from.',
+        title: 'Formats for where answers come from',
         body: 'AI answers draw on your site and on the places people discuss your category. Content workflows cover both: new pages and edits on your site, plus drafts for the channels engines cite.',
         points: [
           'Briefs, new pages, comparison pages and FAQ pages',
@@ -51,7 +51,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         visual: 'skills',
       },
       {
-        title: 'Revise until it is right.',
+        title: 'Revise until it is right',
         body: 'Every deliverable keeps its revisions. Long pieces start from an outline you approve. Edit sections yourself, ask for a change to one part, and compare any version with the latest.',
         points: [
           'Outline first for long-form content',
@@ -121,7 +121,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     title: 'AI SEO Assistant Grounded in Your Evidence | CiteLadder',
     description:
       'An AI assistant that reads your saved CiteLadder evidence and produces briefs, edits and plans you review. It never publishes on its own.',
-    heading: 'An assistant that starts from your evidence.',
+    heading: 'An assistant that starts from your evidence',
     lead: 'Ask a question or pick up an Action. The Agent reads your saved project evidence, explains what it found, and drafts the brief, edit or plan you asked for.',
     cta: 'demo',
     visual: 'agent',
@@ -143,7 +143,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     ],
     features: [
       {
-        title: 'Hand off from any finding.',
+        title: 'Hand off from any finding',
         body: 'Ask the Agent from Site Health, Demand or Search Intelligence and the evidence comes with it. Mention open Actions to bring their diagnoses into the conversation. Each step it reads is shown as it works.',
         points: [
           'Typed handoffs, no copy and paste',
@@ -153,7 +153,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         visual: 'skills',
       },
       {
-        title: 'Skills that know the job.',
+        title: 'Skills that know the job',
         body: 'Each skill guides the Agent through a specific piece of work with the right evidence and output format, so you get a usable deliverable rather than a chat transcript.',
         points: [
           'AI visibility diagnosis and growth plans',
@@ -165,7 +165,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         visual: 'actions',
       },
       {
-        title: 'Bounded by design.',
+        title: 'Bounded by design',
         body: 'The Agent uses the same read tools as the CiteLadder MCP server, inside limits set for each run. It cannot crawl, buy data, change prompts, publish, browse the open web or contact anyone, and it never declares that a change worked without new evidence.',
         points: [
           'Reads only the project you are in',
@@ -235,7 +235,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     title: 'AI Visibility MCP Server for Claude, ChatGPT & More | CiteLadder',
     description:
       'Connect Claude, ChatGPT, Gemini, Grok, Cursor and other MCP clients to your CiteLadder visibility, site and search evidence, with changes only after you confirm them.',
-    heading: 'Your CiteLadder evidence, in your AI assistant.',
+    heading: 'Your CiteLadder evidence, in your AI assistant',
     lead: 'Ask Claude, ChatGPT and other assistants about your AI visibility, cited sources, Site Health and search performance, and let them manage your prompts, competitors and audits when you allow it. They answer from your saved CiteLadder records, for the workspaces you approve.',
     cta: 'mcp',
     visual: 'mcp',
@@ -256,7 +256,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     ],
     features: [
       {
-        title: 'Ask questions grounded in recorded evidence.',
+        title: 'Ask questions grounded in recorded evidence',
         body: 'Read visibility results and trends, perception, ads, cited sources, Actions, Site Health, performance, AI referrals, AI crawler logs, the AI Shelf, demand and saved Search Intelligence datasets. Every answer comes from a dated record, not a guess.',
         points: [
           'Interactive visibility and Site Health views in assistants that show apps',
@@ -266,7 +266,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         visual: 'mcp-tools',
       },
       {
-        title: 'Turn evidence into the work your team already does.',
+        title: 'Turn evidence into the work your team already does',
         body: 'Use the assistant your team already works in to prepare briefs, reports and fix lists from the same evidence as the app.',
         points: [
           'Weekly AI visibility brief across engines and competitors',
@@ -344,7 +344,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     title: 'Search, Analytics, Log & AI Integrations | CiteLadder',
     description:
       'Connect Google Search Console, GA4, Bing Webmaster Tools, Cloudflare, Amazon CloudFront and Google Cloud logs, model providers, DataForSEO and MCP clients to CiteLadder.',
-    heading: 'Connect your search, analytics and research data.',
+    heading: 'Connect your search, analytics and research data',
     lead: 'Bring in first-party search, analytics and server-log data, configure model providers, and add research when it helps. Each connection does a specific job, and you can start without any of them.',
     cta: 'setup',
     visual: 'integrations',
@@ -365,7 +365,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     ],
     features: [
       {
-        title: 'Know what is connected and what is missing.',
+        title: 'Know what is connected and what is missing',
         body: 'Property mapping, imported windows, freshness and quality notes sit with every connection, so a missing number is never read as zero.',
         points: [
           'Search Console queries and pages',
@@ -375,7 +375,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         visual: 'property-mapping',
       },
       {
-        title: 'Send AI crawler logs your way.',
+        title: 'Send AI crawler logs your way',
         body: 'On paid plans, connect the edge you already run. Use a Cloudflare Worker or Logpush job, stream Amazon CloudFront logs, route Google Cloud load balancer and Cloud Run logs through Pub/Sub, post batches to a webhook, or upload a file. CiteLadder shows log coverage per day, so gaps are visible.',
         points: [
           'Cloudflare Worker and Cloudflare Logpush',

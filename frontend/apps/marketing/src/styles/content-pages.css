@@ -74,10 +74,6 @@
   padding: var(--site-card-pad);
 }
 
-.cp-feature-title {
-  max-width: 32ch;
-}
-
 .cp-feature-outline {
   display: grid;
   align-content: start;

@@ -105,7 +105,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
         <div className="mk-split">
           <SectionHeader
             headingId="compare-checklist-title"
-            title="Questions to ask both vendors."
+            title="Questions to ask both vendors"
             lead="Compare the same use case across vendors rather than one aggregate percentage."
           />
           <ol className="ed-steps" aria-labelledby="compare-checklist-title">
@@ -174,7 +174,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
       <Section className="marketing-closing-band" aria-label="Get started">
         <div className="flex flex-col items-center gap-8 text-center" data-cta-placement="closing">
           <SectionHeader
-            title="Run the same investigation in both demos."
+            title="Run the same investigation in both demos"
             lead="Bring a small prompt portfolio and one question your team needs to answer."
             align="center"
           />
