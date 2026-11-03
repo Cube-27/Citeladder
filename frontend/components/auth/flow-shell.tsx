@@ -5,6 +5,7 @@ import '@/apps/app/src/website-type.css';
 
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
+import { InlineFigure } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 import { AuthWordmark } from './brand-panel';
@@ -128,11 +129,12 @@ function FlowProgress({
                 )}
                 aria-hidden="true"
               >
-                {isDone ? <Icon icon={Check} /> : index + 1}
+                {isDone ? <Icon icon={Check} /> : <InlineFigure>{index + 1}</InlineFigure>}
               </span>
               <span className="flow-step-label">
                 <span className="flow-step-mobile-prefix">
-                  Step {index + 1} of {steps.length} ·{' '}
+                  Step <InlineFigure>{index + 1}</InlineFigure> of{' '}
+                  <InlineFigure>{steps.length}</InlineFigure> ·{' '}
                 </span>
                 {step.label}
               </span>

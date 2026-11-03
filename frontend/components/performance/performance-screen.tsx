@@ -173,8 +173,6 @@ function SearchConsoleWorkspace({
   activeMetrics,
   onToggleMetric,
   series,
-  granularity,
-  onGranularityChange,
   refreshing,
 }: Readonly<{
   available: boolean;
@@ -185,17 +183,12 @@ function SearchConsoleWorkspace({
   activeMetrics: ReadonlySet<PerformanceMetricKey>;
   onToggleMetric: (metric: PerformanceMetricKey) => void;
   series: ChartSeries[];
-  granularity: PerformanceDashboard['granularity'];
-  onGranularityChange: (value: PerformanceDashboard['granularity']) => void;
   refreshing: boolean;
 }>) {
   if (!available) return null;
   return (
     <Card className="overflow-hidden">
-      <CardHeader
-        bordered
-        actions={<GranularitySelect value={granularity} onChange={onGranularityChange} />}
-      >
+      <CardHeader bordered>
         <MetricCards
           data-testid="metric-card-strip"
           className="min-w-0"
@@ -348,6 +341,12 @@ export function PerformanceScreen() {
         />
       }
       controls={{
+        // The chart's bucket size is a control of what is shown, so it rides
+        // the one control band, not the KPI card's header (2026-11-03 review),
+        // at its end so it does not read as part of the range.
+        actions: evidence.hasSearchConsoleTotals ? (
+          <GranularitySelect value={granularity} onChange={setGranularity} />
+        ) : undefined,
         filters: (
           <PerformanceToolbar
             selection={selection}
@@ -406,8 +405,6 @@ export function PerformanceScreen() {
               activeMetrics={activeMetrics}
               onToggleMetric={toggleMetric}
               series={series}
-              granularity={granularity}
-              onGranularityChange={setGranularity}
               refreshing={refreshing}
             />
             <Ga4Workspace

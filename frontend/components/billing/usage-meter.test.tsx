@@ -34,6 +34,10 @@ function item(overrides: Partial<UsageItem> = {}): UsageItem {
   } as UsageItem;
 }
 
+/** A usage line as the reader sees it; its digits sit in their own figure-face span. */
+const line = (text: string) => (_content: string, element: Element | null) =>
+  element?.tagName === 'SPAN' && element.textContent === text;
+
 describe('UsageMeter', () => {
   beforeEach(() => {
     document.cookie = `${DISPLAY_TIME_ZONE_COOKIE}=UTC; Path=/`;
@@ -54,14 +58,14 @@ describe('UsageMeter', () => {
     );
 
     expect(screen.getByText('Prompt runs')).toBeVisible();
-    expect(screen.getByText('40 / 150 runs')).toBeVisible();
+    expect(screen.getByText(line('40 / 150 runs'))).toBeVisible();
   });
 
   it('humanises a counter key it does not know', () => {
     render(<UsageMeter item={item({ key: 'new_counter', unit: 'slots' })} />);
 
     expect(screen.getByText('New counter')).toBeVisible();
-    expect(screen.getByText('10 / 100 slots')).toBeVisible();
+    expect(screen.getByText(line('10 / 100 slots'))).toBeVisible();
   });
 
   it('says an unresolved allowance is unavailable and draws no bar', () => {
@@ -77,14 +81,14 @@ describe('UsageMeter', () => {
     render(<UsageMeter item={item({ limit_state: 'unlimited', allowance: null, consumed: 42 })} />);
 
     expect(screen.getByText('Unlimited')).toBeVisible();
-    expect(screen.getByText('42 prompts')).toBeVisible();
+    expect(screen.getByText(line('42 prompts'))).toBeVisible();
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   });
 
   it('treats a null consumption on an unlimited row as zero, not blank', () => {
     render(<UsageMeter item={item({ limit_state: 'unlimited', consumed: null })} />);
 
-    expect(screen.getByText('0 prompts')).toBeVisible();
+    expect(screen.getByText(line('0 prompts'))).toBeVisible();
   });
 
   it('renders a finite row as an accessible meter', () => {
@@ -94,7 +98,7 @@ describe('UsageMeter', () => {
     expect(bar).toHaveAttribute('aria-valuemin', '0');
     expect(bar).toHaveAttribute('aria-valuemax', '100');
     expect(bar).toHaveAttribute('aria-valuenow', '25');
-    expect(screen.getByText('25 / 100 prompts')).toBeVisible();
+    expect(screen.getByText(line('25 / 100 prompts'))).toBeVisible();
     expect(screen.getByText(/75 remaining/)).toBeVisible();
   });
 
@@ -112,7 +116,7 @@ describe('UsageMeter', () => {
     render(<UsageMeter item={item({ allowance: 0, consumed: 2, remaining: 0 })} />);
 
     expect(screen.getByRole('meter')).toHaveAttribute('aria-valuemax', '0');
-    expect(screen.getByText('2 / 0 prompts')).toBeVisible();
+    expect(screen.getByText(line('2 / 0 prompts'))).toBeVisible();
   });
 
   it('never overfills the bar past full', () => {

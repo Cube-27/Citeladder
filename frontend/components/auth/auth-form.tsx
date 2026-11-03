@@ -1,6 +1,5 @@
 'use client';
 
-import { Eye, EyeOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { type ComponentProps, type ReactNode, useId, useState } from 'react';
 
@@ -8,7 +7,7 @@ import { Alert as MktAlert } from '@/components/ui/alert';
 import { Field } from '@/components/ui/field';
 import { FlowButton, FlowInput } from '@/components/ui/flow-controls';
 import { type BrandGlyph, Icon } from '@/components/ui/icon';
-import { FieldEndButton } from '@/components/ui/input';
+import { type PasswordFieldProps, PasswordFieldFrame } from '@/components/ui/password-field';
 import { Stack } from '@/components/ui/layout';
 import { authApi } from '@/lib/api/auth';
 import { safeAuthReturnPath } from '@/lib/auth/auth-return-path';
@@ -64,43 +63,9 @@ export function AuthEmailField({
   );
 }
 
-export function AuthPasswordField({
-  label,
-  error,
-  inputProps,
-  autoComplete,
-  placeholder,
-  visibilityLabel = label,
-}: Readonly<{
-  label: string;
-  error?: string;
-  inputProps: InputProps;
-  autoComplete: 'current-password' | 'new-password';
-  placeholder: string;
-  visibilityLabel?: string;
-}>) {
-  const [visible, setVisible] = useState(false);
-  return (
-    <Field label={label} required error={error}>
-      {(props) => (
-        <FlowInput
-          {...props}
-          {...inputProps}
-          type={visible ? 'text' : 'password'}
-          autoComplete={autoComplete}
-          placeholder={placeholder}
-          endContentFlush
-          endContent={
-            <FieldEndButton
-              icon={visible ? EyeOff : Eye}
-              label={`${visible ? 'Hide' : 'Show'} ${visibilityLabel}`}
-              onClick={() => setVisible((current) => !current)}
-            />
-          }
-        />
-      )}
-    </Field>
-  );
+/** Account access's password field: the 44px flow field. */
+export function AuthPasswordField(props: PasswordFieldProps) {
+  return <PasswordFieldFrame control={FlowInput} {...props} />;
 }
 
 /**

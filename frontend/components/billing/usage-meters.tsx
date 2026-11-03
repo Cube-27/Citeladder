@@ -10,7 +10,7 @@ import { EditorialSectionHeader, splitPaneClasses } from '@/components/ui/worksp
 import { UsageMeter } from '@/components/billing/usage-meter';
 import { billingApi, type UsageItem } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
-import { panelClasses } from '@/components/ui/panel';
+import { cardClasses } from '@/components/ui/card-variants';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 /**
@@ -54,7 +54,7 @@ export function UsageMeters({ enabled = true }: Readonly<{ enabled?: boolean }>)
   });
 
   return (
-    <Stack gap="compact" className={panelClasses()}>
+    <Stack gap="compact" className={cardClasses()}>
       <EditorialSectionHeader
         title="Usage"
         description="Measured against the allowances your active grants provide."

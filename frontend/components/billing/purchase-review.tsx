@@ -4,7 +4,7 @@ import { CheckoutConsent } from '@/components/billing/billing-policies';
 import { BillingQuoteSummary } from '@/components/billing/quote-summary';
 import { Button } from '@/components/ui/button';
 import { Inline, Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
+import { cardClasses } from '@/components/ui/card-variants';
 import { textRole } from '@/components/ui/typography';
 import { DisplayTime } from '@/components/ui/display-time';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
@@ -46,7 +46,7 @@ export function PurchaseReview({
     <Stack
       as="section"
       gap="compact"
-      className={panelClasses()}
+      className={cardClasses()}
       aria-labelledby="purchase-review-title"
     >
       <EditorialSectionHeader

@@ -8,7 +8,7 @@ import { PlanRow } from '@/components/billing/plan-row';
 import { Alert } from '@/components/ui/alert';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
+import { cardClasses } from '@/components/ui/card-variants';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type {
@@ -89,7 +89,7 @@ export function ChoosePlan({
       <Stack
         as="section"
         gap="workspace"
-        className={panelClasses()}
+        className={cardClasses()}
         aria-labelledby="choose-plan-title"
       >
         <EditorialSectionHeader
@@ -114,7 +114,7 @@ export function ChoosePlan({
     <Stack
       as="section"
       gap="workspace"
-      className={panelClasses()}
+      className={cardClasses()}
       aria-labelledby="choose-plan-title"
     >
       <EditorialSectionHeader

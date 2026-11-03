@@ -15,14 +15,14 @@
       }
     },
     "heading": {
-      "family": "Exo 2",
-      "file": "Exo2-Variable.woff2",
+      "family": "TASA Orbiter",
+      "file": "TASAOrbiter-Variable.woff2",
       "preload": ["app", "public"],
-      "weights": "300 500",
+      "weights": "400 500",
       "fallback": {
-        "sizeAdjust": "93.83%",
-        "ascentOverride": "106.46%",
-        "descentOverride": "21.42%",
+        "sizeAdjust": "96.34%",
+        "ascentOverride": "97.57%",
+        "descentOverride": "26.99%",
         "lineGapOverride": "0%"
       }
     },

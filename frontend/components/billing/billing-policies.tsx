@@ -4,7 +4,7 @@ import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { contactSalesHref } from '@/lib/config/contact';
 
 import { Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
+import { cardClasses } from '@/components/ui/card-variants';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
@@ -58,7 +58,7 @@ export function BillingSupport({
     <Stack
       as="section"
       gap="compact"
-      className={panelClasses()}
+      className={cardClasses()}
       aria-labelledby="billing-support-title"
     >
       <EditorialSectionHeader title="Billing help" headingId="billing-support-title" />

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ControlRow } from '@/components/ui/control-row';
 import { Dialog } from '@/components/ui/dialog';
 import { Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
+import { cardClasses } from '@/components/ui/card-variants';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type {
@@ -77,7 +77,7 @@ export function PlanChanges({
     <Stack
       as="section"
       gap="compact"
-      className={panelClasses()}
+      className={cardClasses()}
       aria-labelledby="plan-changes-title"
     >
       <EditorialSectionHeader

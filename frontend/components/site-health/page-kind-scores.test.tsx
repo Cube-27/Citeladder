@@ -42,9 +42,12 @@ function crawl(scoreSummary: SiteScoreSummary | null): SiteCrawl {
 }
 
 describe('PageKindScores', () => {
-  it('renders nothing before any score summary exists', () => {
-    const { container } = render(<PageKindScores crawl={null} dashboard={undefined} />);
-    expect(container).toBeEmptyDOMElement();
+  it('keeps its section with an empty state before any score summary exists', () => {
+    render(<PageKindScores crawl={null} dashboard={undefined} />);
+    expect(screen.getByRole('heading', { name: 'Scores by Page Kind' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Per-page-kind scores appear once the analysis classifies your pages'),
+    ).toBeInTheDocument();
   });
 
   it('renders the empty state when no page has been classified yet', () => {

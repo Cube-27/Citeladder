@@ -28,7 +28,7 @@ export function BillingDetailsForm({ country, details, setDetails }: BillingDeta
   const india = country.trim().toUpperCase() === 'IN';
 
   return (
-    <Stack as="fieldset" gap="compact" className={panelClasses()}>
+    <Stack as="fieldset" gap="compact" className={panelClasses({ tone: 'tonal' })}>
       <legend className={textRole('label')}>Billing details</legend>
       <Stack gap="compact" className="desktop:grid-cols-2">
         {addressFields.map(([key, label, autoComplete]) => (

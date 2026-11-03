@@ -8,7 +8,7 @@ import { restartAt } from '@/lib/auth/account-transition';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Alert } from '@/components/ui/alert';
-import { AuthPasswordField } from '@/components/auth/auth-form';
+import { PasswordField } from '@/components/ui/password-field';
 import { FactList } from '@/components/ui/facts';
 import { Inline, Stack } from '@/components/ui/layout';
 import { SettingsSection } from '@/components/ui/settings-section';
@@ -114,7 +114,7 @@ export default function AccountSecurity() {
               mutation.mutate('change-password');
             }}
           >
-            <AuthPasswordField
+            <PasswordField
               label="Current password"
               autoComplete="current-password"
               placeholder="Current password"
@@ -124,7 +124,7 @@ export default function AccountSecurity() {
                 required: true,
               }}
             />
-            <AuthPasswordField
+            <PasswordField
               label="New password"
               autoComplete="new-password"
               placeholder={passwordHint}

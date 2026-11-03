@@ -710,8 +710,9 @@ describe('AI Traffic state and navigation', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Folder' }), {
       target: { value: '/page' },
     });
-    await user.click(screen.getByRole('combobox', { name: 'Resource class' }));
-    await user.click(screen.getByRole('option', { name: 'Page' }));
+    await user.click(screen.getByRole('button', { name: 'Filter' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Page' }));
+    expect(screen.getByRole('button', { name: 'Filter, 1 active' })).toBeVisible();
     await user.click(screen.getByRole('combobox', { name: 'Sort pages' }));
     await user.click(screen.getByRole('option', { name: 'AI referral sessions' }));
     await user.click(screen.getByRole('button', { name: 'Export CSV' }));
@@ -790,7 +791,9 @@ describe('AI Traffic state and navigation', () => {
     await user.click(screen.getByRole('tab', { name: 'Overview' }));
     expect(await screen.findByText(/not available for this workspace yet/)).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Connect crawl logs' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('combobox', { name: 'Verification' })).not.toBeInTheDocument();
+    // Verification is the Overview's only picked narrowing; without crawl logs
+    // there is nothing to filter, so the band holds the range alone.
+    expect(screen.queryByRole('button', { name: /^Filter/ })).not.toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Reporting range' })).toHaveTextContent(
       'Last 90 days',
     );

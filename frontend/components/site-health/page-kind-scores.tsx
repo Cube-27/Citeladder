@@ -32,10 +32,10 @@ export function PageKindScores({
   crawl: SiteCrawl | null;
   dashboard: SiteHealthDashboard | undefined;
 }>) {
+  // The section keeps its place with no summary yet: it draws its own empty
+  // state instead of vanishing and pulling the sections below it up.
   const summary = dashboard?.score_summary ?? crawl?.score_summary ?? null;
-  if (summary === null) return null;
-
-  const rows = byPageKindRows(summary.by_page_kind);
+  const rows = summary === null ? [] : byPageKindRows(summary.by_page_kind);
 
   return (
     <div data-testid="page-kind-scores" className="grid min-w-0">
@@ -60,7 +60,7 @@ export function PageKindScores({
             <TableCell className="whitespace-nowrap">
               <PageKindBadge pageKind={row.page_kind} />
             </TableCell>
-            <TableCell numeric className="text-secondary tabular-nums">
+            <TableCell numeric className="text-secondary">
               {row.analyzed_count}
             </TableCell>
             <TableCell numeric className={scoreTextClass(row.web_fundamentals_score)}>
