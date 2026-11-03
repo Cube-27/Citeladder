@@ -11,7 +11,10 @@ import { RegisterScreen } from './register-screen';
 
 const noParams = new URLSearchParams();
 const PUBLISHED = { terms_revision: '2026-09-24', privacy_notice_revision: '2026-09-24' };
-const TERMS_BOX = { name: 'I agree to the Terms of Service' };
+const SIGN_IN_AGREEMENT =
+  'By continuing, you agree to the Terms of Service and acknowledge the Privacy Policy.';
+const SIGN_UP_AGREEMENT =
+  'By creating an account, you agree to the Terms of Service and acknowledge the Privacy Policy.';
 
 // Cloudflare's widget cannot run here: a stand-in renders nothing and hands
 // the form a token when the test "solves" it.
@@ -65,7 +68,7 @@ describe('account entry', () => {
       />,
     );
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Our Terms of Service changed. Agree to them to sign in again.',
+      'Our Terms of Service changed. Sign in again to agree to them.',
     );
   });
 
@@ -102,27 +105,26 @@ describe('account entry', () => {
     expect(screen.queryByRole('link', { name: 'Sign up' })).not.toBeInTheDocument();
   });
 
-  it('holds every way to sign in until the Terms box is ticked, then sends the decision', async () => {
+  it('states the Terms agreement on every way to sign in, with no box to tick, and sends the decision', async () => {
     const login = vi.spyOn(authApi, 'login').mockReturnValue(new Promise(() => {}));
     const user = userEvent.setup();
     renderWithProviders(<LoginScreen demoMode={false} signupOpen searchParams={noParams} />);
 
-    const box = await screen.findByRole('checkbox', TERMS_BOX);
-    expect(box).not.toBeChecked();
     const email = screen.getByRole('button', { name: 'Continue' });
     const google = screen.getByRole('button', { name: 'Continue with Google' });
+    await waitFor(() => expect(email).toBeEnabled());
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     for (const way of [email, google]) {
-      expect(way).toBeDisabled();
-      expect(way).toHaveAccessibleDescription('Agree to the Terms of Service to continue.');
+      expect(way).toBeEnabled();
+      expect(way).toHaveAccessibleDescription(SIGN_IN_AGREEMENT);
     }
+    expect(screen.getByRole('link', { name: 'Terms of Service' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/terms'),
+    );
 
     await user.type(screen.getByLabelText(/^Email address/), 'reader@example.com');
     await user.type(screen.getByLabelText(/^Password/), 'correct horse');
-    await user.click(box);
-    for (const way of [email, google]) {
-      expect(way).toBeEnabled();
-      expect(way).toHaveAccessibleDescription('');
-    }
     await user.click(email);
 
     // Sign-in is never challenged: no widget, and the request carries no token.
@@ -151,8 +153,9 @@ describe('account entry', () => {
 
     await user.type(screen.getByLabelText(/^Email address/), 'reader@example.com');
     await user.type(screen.getByLabelText(/^Password/), 'correct horse');
-    await user.click(await screen.findByRole('checkbox', TERMS_BOX));
-    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    const signIn = screen.getByRole('button', { name: 'Continue' });
+    await waitFor(() => expect(signIn).toBeEnabled());
+    await user.click(signIn);
     expect(await screen.findByRole('alert')).toHaveTextContent('The Terms changed.');
     await user.click(screen.getByRole('button', { name: 'Continue' }));
 
@@ -170,8 +173,9 @@ describe('account entry', () => {
     const user = userEvent.setup();
     renderWithProviders(<LoginScreen demoMode={false} signupOpen searchParams={noParams} />);
 
-    await user.click(await screen.findByRole('checkbox', TERMS_BOX));
-    await user.click(screen.getByRole('button', { name: 'Continue with Google' }));
+    const google = screen.getByRole('button', { name: 'Continue with Google' });
+    await waitFor(() => expect(google).toBeEnabled());
+    await user.click(google);
 
     await waitFor(() =>
       expect(oauthStart).toHaveBeenCalledWith('google', {
@@ -182,7 +186,7 @@ describe('account entry', () => {
     );
   });
 
-  it('holds account creation until the Terms box is ticked and the check is solved, then sends both', async () => {
+  it('holds account creation until the check is solved, then sends the Terms decision and token', async () => {
     const registerAccount = vi.spyOn(authApi, 'register').mockReturnValue(new Promise(() => {}));
     const user = userEvent.setup();
     renderWithProviders(
@@ -194,11 +198,10 @@ describe('account entry', () => {
     await user.type(screen.getByLabelText(/^Confirm password/), 'correct horse battery');
     const create = screen.getByRole('button', { name: 'Create account' });
     const google = screen.getByRole('button', { name: 'Continue with Google' });
-    expect(create).toBeDisabled();
-    expect(google).toBeDisabled();
-
-    await user.click(screen.getByRole('checkbox', TERMS_BOX));
-    // Terms alone is not enough: the widget has not handed over a token yet.
+    for (const way of [create, google]) {
+      expect(way).toHaveAccessibleDescription(SIGN_UP_AGREEMENT);
+    }
+    // The widget has not handed over a token yet.
     await waitFor(() => expect(widgetHost).not.toBeNull());
     expect(create).toBeDisabled();
     expect(google).toBeDisabled();
@@ -219,17 +222,17 @@ describe('account entry', () => {
     );
   });
 
-  it('reserves the widget slot between the Terms box and submit, so solving it moves nothing', async () => {
+  it('reserves the widget slot between the fields and submit, so solving it moves nothing', async () => {
     renderWithProviders(
       <RegisterScreen demoMode={false} signupOpen replace={vi.fn()} searchParams={noParams} />,
     );
 
     const slot = screen.getByRole('group', { name: 'Verification' });
-    const terms = screen.getByRole('checkbox', TERMS_BOX);
+    const confirm = screen.getByLabelText(/^Confirm password/);
     const create = screen.getByRole('button', { name: 'Create account' });
     const follows = (a: Node, b: Node) =>
       Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-    expect([follows(terms, slot), follows(slot, create)]).toEqual([true, true]);
+    expect([follows(confirm, slot), follows(slot, create)]).toEqual([true, true]);
 
     await waitFor(() => expect(widgetHost).not.toBeNull());
     expect(slot).toContainElement(widgetHost);
@@ -283,7 +286,6 @@ describe('account entry', () => {
     await user.type(screen.getByLabelText(/^Email address/), 'reader@mailinator.com');
     await user.type(screen.getByLabelText(/^Password/), 'correct horse battery');
     await user.type(screen.getByLabelText(/^Confirm password/), 'correct horse battery');
-    await user.click(screen.getByRole('checkbox', TERMS_BOX));
     await waitFor(() => expect(widgetHost).not.toBeNull());
     solveChallenge('solved-token');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
@@ -306,7 +308,6 @@ describe('account entry', () => {
       <RegisterScreen demoMode={false} signupOpen replace={vi.fn()} searchParams={noParams} />,
     );
 
-    await user.click(screen.getByRole('checkbox', TERMS_BOX));
     await waitFor(() => expect(widgetHost).not.toBeNull());
     solveChallenge('solved-token');
     const google = screen.getByRole('button', { name: 'Continue with Google' });
@@ -337,7 +338,6 @@ describe('account entry', () => {
 
     expect(screen.getByLabelText(/^Email address/)).toHaveValue('new@gmail.com');
     expect(screen.getByText(/No account uses that Google address/)).toBeVisible();
-    expect(screen.getByRole('checkbox', TERMS_BOX)).not.toBeChecked();
   });
 
   it('shows no registration form on a direct visit to the sign-up page', () => {
@@ -352,7 +352,7 @@ describe('account entry', () => {
 
     expect(screen.getByRole('heading', { name: 'Registration unavailable' })).toBeInTheDocument();
     expect(screen.queryByLabelText(/Password/)).not.toBeInTheDocument();
-    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.queryByText(/you agree to the/)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sign in' })).toBeInTheDocument();
   });
 });

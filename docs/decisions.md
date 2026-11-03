@@ -330,22 +330,25 @@ may retune the threshold. [Site Health](site-health.md) owns the shipped behavio
 
 ## Terms are accepted on the sign-in and sign-up forms, never on a later screen
 
-The Terms of Service and Privacy Policy decision is one required checkbox on
-the sign-in and sign-up pages themselves; there is no separate acceptance
-screen after login. Every way in on those pages waits for the box, and the
-server records the decision against the published revision when the person
-authenticates. A session that predates a new revision is ended and the person
-signs in again, ticking the box, rather than being shown an in-app consent
-screen (the implementer's choice for that edge case, as the least intrusive
-behaviour that is not a separate screen; there are no customers yet).
+The Terms of Service decision is made on the sign-in and sign-up pages
+themselves; there is no separate acceptance screen after login. Since
+3 November 2026 it is a statement, not a checkbox: "By continuing (creating an
+account), you agree to the Terms of Service and acknowledge the Privacy
+Policy" under the form, which every way in is described by. The server records
+the decision against the published revision when the person authenticates. A
+session that predates a new revision is ended and the person signs in again,
+agreeing as they do, rather than being shown an in-app consent screen (the
+implementer's choice for that edge case, as the least intrusive behaviour that
+is not a separate screen; there are no customers yet).
 
 Source: owner, 2 November 2026: "This was fixed first and then again ruined:
 the TOS and privacy policy acceptance should not be a separate screen post
 login, but there should be a check mark on the signup/login page itself — no
 need to add a separate screen." The earlier fix was #198 (Terms on the sign-in
 form); #348 and #367 moved it to sign-up only, which brought back the review
-screen for sign-ins. [Workspace access](workspace-access.md) owns the shipped
-behavior.
+screen for sign-ins. Owner, 3 November 2026, restyling the sign-up page after
+Goodie's: "we can also replace the tick box with just the statement like
+higoodie". [Workspace access](workspace-access.md) owns the shipped behavior.
 
 ## Public sign-up refuses reserved mail domains
 

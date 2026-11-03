@@ -33,7 +33,7 @@ export function LoginScreen({
   const description =
     searchParams.get('registered') === '1'
       ? 'Check your email to verify your account. Your trial starts when you set up your workspace.'
-      : 'Sign in to continue to your workspace.';
+      : undefined;
   // The Google callback is a full-page navigation, so it reports failure as a
   // coded query parameter rather than a response body.
   const oauthError = oauthSignInErrorMessage(searchParams.get('error'));
@@ -57,7 +57,7 @@ export function LoginScreen({
 
   return (
     <AuthFormShell
-      title="Sign in"
+      title="Welcome back"
       description={description}
       error={failure ? authErrorMessage(failure) : oauthError}
       onSubmit={handleSubmit(signIn)}

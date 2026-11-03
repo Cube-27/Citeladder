@@ -86,10 +86,7 @@ const OAUTH_SIGNIN_ERRORS = new Map<string, string>([
     'oauth_signin_link_required',
     'Sign in with your existing password and connect Google from Account security. If you need a password, use the password reset link.',
   ],
-  [
-    'oauth_signin_no_account',
-    'No account uses that Google address. Agree to the Terms to create one.',
-  ],
+  ['oauth_signin_no_account', 'No account uses that Google address. Sign up to create one.'],
   ['oauth_signin_email_reserved', 'That Google address cannot receive mail. Use another account.'],
   [
     'oauth_signin_email_disposable',
@@ -98,7 +95,7 @@ const OAUTH_SIGNIN_ERRORS = new Map<string, string>([
   ['oauth_signin_disabled', 'Google sign-in is unavailable right now. Please use email below.'],
   ['oauth_signin_failed', OAUTH_SIGNIN_FALLBACK],
   // Not Google's: the app ended a session that predates the published Terms.
-  [TERMS_CHANGED_CODE, 'Our Terms of Service changed. Agree to them to sign in again.'],
+  [TERMS_CHANGED_CODE, 'Our Terms of Service changed. Sign in again to agree to them.'],
 ]);
 
 export function oauthSignInErrorMessage(code: string | null): string | undefined {

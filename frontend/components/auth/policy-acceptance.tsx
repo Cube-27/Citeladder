@@ -30,7 +30,7 @@ export function PolicyAcceptanceGate({ children }: Readonly<{ children: ReactNod
  * without an acceptance of the current revision (one they joined, say) gets
  * it recorded from that decision, which the server checks, behind the shell's
  * loading frame. A session older than the published revision carries no
- * decision on it, so it ends and the person signs in again, ticking the box.
+ * decision on it, so it ends and the person signs in again, agreeing as they do.
  *
  * While the status is unknown or being recorded the gate draws the shell's own
  * loading frame; product content never renders without the acceptance.
