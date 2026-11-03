@@ -8,7 +8,8 @@
  * and recomputes the weight range and fallback metrics stored beside them.
  * Nothing else names a face.
  */
-import config from '../config/brand-fonts.json';
+// The attribute is required where Node loads this module itself (Playwright).
+import config from '../config/brand-fonts.json' with { type: 'json' };
 
 type FontRole = 'text' | 'heading' | 'figure';
 type FontSurface = 'app' | 'public';
