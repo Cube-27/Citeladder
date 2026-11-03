@@ -160,9 +160,9 @@ test.describe('marketing routes', () => {
         await page.evaluate(() =>
           Promise.allSettled(
             [
-              '400 14px "Lexend Deca Variable"',
-              '500 14px "Lexend Deca Variable"',
-              '500 32px "Syne Variable"',
+              '400 14px "Switzer Variable"',
+              '500 14px "Switzer Variable"',
+              '500 32px "Plein Variable"',
             ].map((font) => document.fonts.load(font)),
           ),
         );

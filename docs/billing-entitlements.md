@@ -127,9 +127,10 @@ the commercial mutations. Reads require the active workspace's billing
 permission and select its account, independently of owner-user metadata. A
 workspace without an account reads as having no receipts; reads never
 provision one.
-Documents validate stored amounts and are set in the brand faces (Syne and
-Lexend Deca, from OFL font packages, with the digits of right-aligned amounts,
-headline figures and ranks in the figure face) with Noto Sans behind them for other scripts,
+Documents validate stored amounts and are set in Syne and Lexend Deca, from
+OFL font packages (the web's Plein and Switzer come only from the private font
+repository, which the API image does not pull), with the digits of right-aligned amounts,
+headline figures and ranks in the figure face, and Noto Sans behind them for other scripts,
 with measured wrapping and pagination; ligatures are off so copied and
 searched text stays intact. The [renderer](../frontend/services/api/src/billing/pdf.ts)
 draws the logo from the app's shared outline data and paints with the light
