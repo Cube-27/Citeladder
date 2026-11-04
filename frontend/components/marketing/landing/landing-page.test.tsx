@@ -21,11 +21,30 @@ describe('LandingPage', () => {
     expect(within(hero).getAllByRole('link', { name: label })[0]).toHaveAttribute('href', href);
   });
 
-  it('names the hero by its full sentence while the rotor cycles', () => {
+  it('names every answer surface in the lead while the rotor cycles', () => {
     render(<LandingPage rotor={<EngineRotor />} />);
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName(
-      'Analyze what ChatGPT, Gemini and Claude tell your buyers about you',
+      'See how AI and search find you, then fix what holds you back',
+    );
+    expect(
+      screen.getByText(
+        'CiteLadder tracks what ChatGPT, Gemini, Claude and Google AI Overviews say',
+      ),
+    ).toHaveClass('sr-only');
+  });
+
+  it('links each pillar module by its published name', () => {
+    render(<LandingPage />);
+
+    const pillars = screen.getByRole('region', { name: 'Measure, diagnose, improve' });
+    expect(within(pillars).getByRole('link', { name: 'Search Intelligence' })).toHaveAttribute(
+      'href',
+      '/platform/search-intelligence',
+    );
+    expect(within(pillars).getByRole('link', { name: 'MCP' })).toHaveAttribute(
+      'href',
+      '/platform/mcp',
     );
   });
 

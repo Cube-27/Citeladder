@@ -139,7 +139,30 @@
   text-align: center;
 }
 
-/* The headline's engine rotor: one line whose items share a single grid
+/* The four pillars above the headline, on the site's white chip. */
+.lp-hero-pillars {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  color: var(--color-site-body);
+}
+
+.lp-hero-pillars::before {
+  content: '';
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+}
+
+/* The headline's second clause is the payoff: the accent ink. */
+.lp-hero-title span {
+  color: var(--color-accent-text);
+}
+
+/* The lead's engine rotor: one line whose items share a single grid
    cell. Hidden copies of every name hold it at the widest name's width, so
    the centred line never shifts; each name dissolves into the next. */
 .lp-rotor {
@@ -368,10 +391,41 @@
   --product-fit-width: 632px;
 }
 
-/* Deep dives ─────────────────────────────────────────────────────────────── */
+/* Measure, diagnose, improve ─────────────────────────────────────────────── */
 
 .lp-dives {
   display: grid;
+}
+
+/* The pillar above each dive's heading, in the accent ink. */
+.lp-pillar-stage {
+  color: var(--color-accent-text);
+}
+
+/* Every module the pillar covers, by its published name. */
+.lp-pillar-modules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+
+.lp-pillar-module {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-control);
+  background: var(--color-field-mint);
+  color: var(--color-site-ink);
+}
+
+.lp-pillar-module:hover {
+  background: var(--color-field-lime);
+}
+
+.lp-pillar-module svg {
+  color: var(--color-accent-text);
 }
 
 /* Integrations ───────────────────────────────────────────────────────────── */

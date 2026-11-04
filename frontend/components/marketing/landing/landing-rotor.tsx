@@ -26,9 +26,9 @@ function RotorItem({ index, state }: Readonly<{ index: number; state?: 'in' | 'o
 }
 
 /**
- * The hero headline's answer-engine rotor. The server renders ChatGPT, so the
- * headline reads whole without hydration; the heading's accessible name comes
- * from its visually hidden sentence, so the rotor stays out of the tree.
+ * The hero lead's answer-engine rotor. The server renders ChatGPT, so the
+ * lead reads whole without hydration; its accessible text comes from a
+ * visually hidden sentence, so the rotor stays out of the tree.
  */
 export function EngineRotor() {
   const slot = useRef<HTMLSpanElement>(null);
