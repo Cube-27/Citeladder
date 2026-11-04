@@ -42,6 +42,14 @@ async function columns(client: pg.Client, table: string) {
   return result.rows.map((row) => row.column_name);
 }
 
+async function columnType(client: pg.Client, table: string, column: string) {
+  const result = await client.query<{ data_type: string }>(
+    "select data_type from information_schema.columns where table_schema = 'public' and table_name = $1 and column_name = $2",
+    [table, column],
+  );
+  return result.rows[0]?.data_type;
+}
+
 const ledger = async (client: pg.Client) =>
   (await client.query('select version from public.schema_migrations order by version')).rows;
 
@@ -58,13 +66,18 @@ describe('a fresh database', () => {
     const { client } = await freshDatabase();
     clients.push(client);
 
-    expect(await applyMigrations(client)).toEqual(['0001_baseline', '0002_agent_single_draft']);
+    expect(await applyMigrations(client)).toEqual([
+      '0001_baseline',
+      '0002_agent_single_draft',
+      '0003_agent_cache_replay',
+    ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
     );
     expect(await ledger(client)).toEqual([
       { version: '0001_baseline' },
       { version: '0002_agent_single_draft' },
+      { version: '0003_agent_cache_replay' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -80,8 +93,8 @@ describe('a fresh database', () => {
     );
     expect(await publicTables(client)).not.toContain('extra');
     // A release without a version the database recorded is refused, not rolled back.
-    await expect(applyMigrations(client, [baseline!])).rejects.toThrow(
-      'This database recorded migration 0002_agent_single_draft, which this release does not contain.',
+    await expect(applyMigrations(client, migrations.slice(0, 2))).rejects.toThrow(
+      'This database recorded migration 0003_agent_cache_replay, which this release does not contain.',
     );
   }, 120000);
 });
@@ -93,12 +106,22 @@ describe('an existing database', () => {
 
     expect(await applyMigrations(client, [baseline!])).toEqual(['0001_baseline']);
     expect(await columns(client, 'agent_runs')).toContain('mode');
-    expect(await applyMigrations(client)).toEqual(['0002_agent_single_draft']);
+    expect(await columnType(client, 'agent_run_transcripts', 'messages')).toBe('jsonb');
+    expect(await applyMigrations(client)).toEqual([
+      '0002_agent_single_draft',
+      '0003_agent_cache_replay',
+    ]);
     expect(await columns(client, 'agent_runs')).not.toContain('mode');
     expect(await columns(client, 'agent_output_revisions')).not.toContain('approved_at');
+    // Transcripts keep their bytes; each model call records its cache use.
+    expect(await columnType(client, 'agent_run_transcripts', 'messages')).toBe('json');
+    expect(await columns(client, 'agent_model_attempts')).toEqual(
+      expect.arrayContaining(['response_id', 'cache_miss_reason', 'usage_iterations']),
+    );
     expect(await ledger(client)).toEqual([
       { version: '0001_baseline' },
       { version: '0002_agent_single_draft' },
+      { version: '0003_agent_cache_replay' },
     ]);
   }, 120000);
 });

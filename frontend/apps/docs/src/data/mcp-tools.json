@@ -619,6 +619,40 @@
       "access": "read"
     },
     {
+      "name": "read_page_text",
+      "title": "Read page text",
+      "description": "Read the words of one crawled page of the project's site, by URL or by site_url_id from read_site_pages: its title, meta description, h1-h3 headings, then the visible body text (up to 36000 characters in all; text_chars_omitted counts any body text left out), with its URL, page type and when it was fetched. Use it to quote, review or rewrite what a page actually says. It reads the latest crawl, or crawl_id; it never fetches the live page, so the copy is as of fetched_at. unavailable page_not_crawled means the crawl has no page at that address, and crawled_urls lists the nearest crawled addresses to try; no_site_crawl means no crawl exists.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
+          },
+          "crawl_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A crawl id that read_site_health returned; omit for the latest crawl."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "The page address, such as https://example.com/pricing; scheme, www and a trailing slash are ignored."
+          },
+          "site_url_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A page id (site_url_id) from read_site_pages; pass this or url."
+          }
+        },
+        "required": ["project_id"],
+        "additionalProperties": false
+      },
+      "access": "read"
+    },
+    {
       "name": "read_perception",
       "title": "Read answer perception",
       "description": "Read how AI answers portray the brand and competitors in the latest or a chosen run: net sentiment (-100 to +100) per brand, engine, topic and prompt, each with its coverage; praise and criticism by theme; how often answers recommend or advise against the brand; and the sources cited alongside criticism. The summary view returns all of that; the quotes view lists the verified quotes behind it, paged (50 by default, pass next_cursor). The response is always available: read perception_state, where pending, unavailable or no_mentions means there is no value, never zero. Always state the coverage. Sources are cited alongside criticism, never its cause. Use read_fact_checks for whether answers are factually right, and read_visibility_overview for how often the brand is mentioned at all.",
@@ -1036,7 +1070,7 @@
     {
       "name": "read_site_pages",
       "title": "Read site pages",
-      "description": "Pages from a crawl, paged: URL, title, page type, status, scores, issue count and the rule ids of each page's issues by finding class. Pass rule_id (from read_site_health top_issues or an issue group) to list exactly the pages affected by that issue, each with rule_evidence: what that check found on that page (a site-level architecture issue is recorded once on the home page, and its rule_evidence names the affected pages); filter by page_kind or status to find pages by type or status. read_site_health gives the totals.",
+      "description": "Pages from a crawl, paged: URL, title, page type, status, scores, issue count and the rule ids of each page's issues by finding class. Pass url to find a page by its address, rule_id (from read_site_health top_issues or an issue group) to list exactly the pages affected by that issue, each with rule_evidence: what that check found on that page (a site-level architecture issue is recorded once on the home page, and its rule_evidence names the affected pages); filter by page_kind or status to find pages by type or status. This returns metadata, not page copy: use read_page_text for a page's words. read_site_health gives the totals.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -1049,6 +1083,12 @@
             "type": "string",
             "format": "uuid",
             "description": "A crawl id that read_site_health returned; omit for the latest crawl."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "A page address or part of one, such as https://example.com/pricing or /pricing; keeps pages whose URL contains it, ignoring scheme, www and a trailing slash."
           },
           "rule_id": {
             "type": "string",
