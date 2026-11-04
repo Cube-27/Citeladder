@@ -57,7 +57,7 @@ describe('Agent built-in tools', () => {
       loadSkill(catalog, state({ outputKind: 'content' }), { skill_id: 'plan' }, bounds),
     ).toEqual({
       ok: false,
-      text: 'This chat’s document is a content, so a plan cannot be saved here. Answer in your reply instead, or offer to continue in a new chat.',
+      text: 'This chat’s document is of kind “content” and this methodology writes “plan”, so it cannot be used here. Answer in your reply instead, or offer to continue in a new chat.',
     });
     expect(loadSkill(catalog, state(), { skill: 'plan' }, bounds).text).toMatch(
       /^Invalid arguments: skill_id: /u,

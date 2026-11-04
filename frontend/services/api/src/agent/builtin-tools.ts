@@ -151,7 +151,7 @@ export function loadSkill(
   if (kind && skill.outputKind !== kind)
     return {
       ok: false,
-      text: `This chat’s document is a ${kind}, so a ${skill.outputKind} cannot be saved here. Answer in your reply instead, or offer to continue in a new chat.`,
+      text: `This chat’s document is of kind “${kind}” and this methodology writes “${skill.outputKind}”, so it cannot be used here. Answer in your reply instead, or offer to continue in a new chat.`,
     };
   state.skill = skill;
   state.skillSource = 'model';

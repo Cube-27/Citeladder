@@ -395,7 +395,7 @@ describe('Agent runtime on PostgreSQL', () => {
       {
         error: true,
         content:
-          'This turn already uses the plan methodology. A different deliverable belongs in a new chat the user starts; suggest it as a next step.',
+          'This chat’s document is of kind “plan” and this methodology writes “content”, so it cannot be used here. Answer in your reply instead, or offer to continue in a new chat.',
       },
     ]);
     const detail = await readChat(db, scope, run.chat_id);
