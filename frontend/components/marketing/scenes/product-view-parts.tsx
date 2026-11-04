@@ -96,7 +96,7 @@ const DASHBOARD_NAV = [
       ['Website', ICONS.site],
       ['Search Demand', ICONS.demand],
       ['Issues', ICONS.issues],
-      ['Search Intelligence', ICONS.searchIntelligence],
+      ['Keyword Research', ICONS.searchIntelligence],
       ['Performance', ICONS.performance],
       ['Commerce Suite', ICONS.products],
     ],

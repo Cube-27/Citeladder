@@ -189,7 +189,7 @@ export const POST_INTERNAL_LINKS: BlogPost = {
           href: '/blog/verify-improve-ai-search-visibility',
         },
         ' to check what changed. ',
-        { type: 'link', text: 'Content Intelligence', href: '/platform/content-intelligence' },
+        { type: 'link', text: 'Content Briefs', href: '/platform/content-briefs' },
         ' explains the Agent-supported internal-link planning workflow. Agent access is not included in the current public trial.',
       ],
     },

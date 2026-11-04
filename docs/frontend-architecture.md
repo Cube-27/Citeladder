@@ -136,7 +136,7 @@ Canonical article paths use the site's no-trailing-slash convention:
 | Reference discovery | `/blog/can-chatgpt-find-citations` |
 
 The citation destination retains its research body and a compact contextual link
-to `/platform/citation-intelligence`; it no longer appends a full commercial page.
+to `/platform/cited-sources`; it no longer appends a full commercial page.
 The guide and product page self-canonicalize separately. The existing measurement
 destination retains the distinct share-of-appearances worked example. The older
 `/blog/tracking-brand-visibility-ai-search` and `/check-ai-visibility` redirect
@@ -175,7 +175,7 @@ markup. Sitemap indexes compare declared child sitemap addresses without recursi
 |---|---|---|
 | Overview and company facts | /projects | [Onboarding](onboarding.md) |
 | Website and issues | /site, /issues | [Site Health](site-health.md) |
-| Search Demand, Search Intelligence, Performance | /demand, /search-intelligence, /performance | [Connected data](integrations-traffic-analytics.md) |
+| Search Demand, Keyword Research, Performance | /demand, /search-intelligence, /performance | [Connected data](integrations-traffic-analytics.md) |
 | AI Traffic: Overview, Crawlers, Referrals, Activity | /ai-traffic | [AI Traffic](ai-traffic.md) |
 | Agent: chats, Actions, Skills and Context | /agent, /agent/chats/:chatId, /agent/actions, /agent/actions/:actionId, /agent/skills, /agent/context | [Agent](agents.md), [Actions](opportunities.md#actions) |
 | Prompts, Visibility and runs | /prompts, /visibility, /runs | [Visibility](visibility-prompt.md) |

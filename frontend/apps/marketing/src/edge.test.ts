@@ -38,6 +38,20 @@ describe('marketing Worker edge', () => {
   });
 
   it.each([
+    ['/platform/citation-intelligence', 'https://citeladder.com/platform/cited-sources'],
+    ['/platform/commerce-intelligence/', 'https://citeladder.com/platform/product-visibility'],
+    ['/platform/demand-intelligence', 'https://citeladder.com/platform/search-demand'],
+    ['/platform/search-intelligence', 'https://citeladder.com/platform/keyword-research'],
+    ['/platform/content-intelligence', 'https://citeladder.com/platform/content-briefs'],
+  ])('permanently redirects the renamed platform page %s', async (path, target) => {
+    const render = vi.fn(async () => notFoundPage());
+    const response = await serveMarketingRequest(get(path), env, render);
+    expect(response.status).toBe(301);
+    expect(response.headers.get('location')).toBe(target);
+    expect(render).not.toHaveBeenCalled();
+  });
+
+  it.each([
     ['/mcp', 'https://api.citeladder.com/mcp'],
     ['/docs/mcp', 'https://docs.citeladder.com/mcp/'],
     ['/docs/mcp/connect/', 'https://docs.citeladder.com/mcp/'],

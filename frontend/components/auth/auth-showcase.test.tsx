@@ -57,11 +57,11 @@ describe('AuthShowcase', () => {
     const carousel = screen.getByRole('complementary', { name: 'CiteLadder features' });
 
     wait(7000);
-    expect(shownSlide()).toHaveAccessibleName('2 of 3: Search Intelligence');
+    expect(shownSlide()).toHaveAccessibleName('2 of 3: Keyword Research');
 
     fireEvent.pointerEnter(carousel);
     wait(21000);
-    expect(shownSlide()).toHaveAccessibleName('2 of 3: Search Intelligence');
+    expect(shownSlide()).toHaveAccessibleName('2 of 3: Keyword Research');
 
     fireEvent.pointerLeave(carousel);
     wait(7000);
@@ -79,7 +79,7 @@ describe('AuthShowcase', () => {
 
     act(() => dot.blur());
     wait(7000);
-    expect(shownSlide()).toHaveAccessibleName('2 of 3: Search Intelligence');
+    expect(shownSlide()).toHaveAccessibleName('2 of 3: Keyword Research');
   });
 
   it('stops turning when paused and turns again when played', () => {
@@ -92,7 +92,7 @@ describe('AuthShowcase', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Play slides' }));
     wait(7000);
-    expect(shownSlide()).toHaveAccessibleName('2 of 3: Search Intelligence');
+    expect(shownSlide()).toHaveAccessibleName('2 of 3: Keyword Research');
   });
 
   it('never turns on its own under reduced motion, and offers no pause control', () => {
@@ -103,7 +103,7 @@ describe('AuthShowcase', () => {
 
     expect(shownSlide()).toHaveAccessibleName('1 of 3: Connect MCP');
     expect(screen.queryByRole('button', { name: 'Pause slides' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Search Intelligence' }));
-    expect(shownSlide()).toHaveAccessibleName('2 of 3: Search Intelligence');
+    fireEvent.click(screen.getByRole('button', { name: 'Keyword Research' }));
+    expect(shownSlide()).toHaveAccessibleName('2 of 3: Keyword Research');
   });
 });

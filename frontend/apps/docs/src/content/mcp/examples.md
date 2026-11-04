@@ -78,10 +78,10 @@ without reconstructing missing headline totals from dimension rows.
 
 If the requested windows do not exist, have the client report what is available before proceeding.
 
-## Explore Search Intelligence
+## Explore Keyword Research
 
 ```text
-List saved Search Intelligence datasets, including target, market,
+List saved Keyword Research datasets, including target, market,
 scope, acquisition time and coverage.
 Wait for me to choose a dataset before reading its rows.
 Do not acquire or refresh data.

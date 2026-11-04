@@ -212,7 +212,7 @@ grounding: the
 reads the project's persisted Search Console queries (latest query snapshot,
 `observed.gsc_window_days`, summed impressions at least
 `observed.gsc_min_impressions`) and the keywords of the latest published
-Search Intelligence dataset of each `observed.si_dataset_kinds` kind in the
+Keyword Research dataset of each `observed.si_dataset_kinds` kind in the
 project language. It keeps non-branded (branded and ambiguous classifications
 drop), competitor-free, query-shaped searches bound to a topic by shared
 tokens, at most `observed.max_per_topic` per topic, Search Console impressions

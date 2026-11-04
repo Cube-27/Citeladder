@@ -21,7 +21,7 @@ checked against the shared route-ownership manifest.
 
 Audit admission, providers and answer-engine transports, immutable execution
 persistence, scoring, funded settlement, scheduling and maintenance are native
-TypeScript owners. Search Intelligence review and acquisition use the same
+TypeScript owners. Keyword Research review and acquisition use the same
 native provider custody and PostgreSQL capacity boundary. Site Health acquisition,
 check catalogs, allowance projections and worker settings are native.
 Native audit config owns lifecycle, scoring, read limits and runtime settings;

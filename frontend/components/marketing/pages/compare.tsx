@@ -45,8 +45,8 @@ const GUIDES = [
     desc: 'What a share-of-voice percentage actually counts.',
   },
   {
-    href: '/platform/citation-intelligence',
-    title: 'Citation Intelligence',
+    href: '/platform/cited-sources',
+    title: 'Cited Sources',
     desc: 'Inspect the domains and URLs your tracked answers cite.',
   },
 ] as const;

@@ -8,7 +8,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
     description:
       'See the visits ChatGPT, Gemini and other AI assistants send to your site from GA4, and the AI crawlers that fetch your pages from your own server logs.',
     heading: 'See the traffic AI sends your way',
-    lead: 'Connect GA4 to see sessions from recognized AI assistants, the pages they land on and what happens next. Add your server logs to see which AI crawlers fetch those pages.',
+    lead: 'Connect GA4 and you get sessions from ChatGPT, Gemini and other recognized AI assistants, the pages those visitors land on and what they do next. Add your server logs and you also see which AI crawlers fetch those pages.',
     cta: 'setup',
     visual: 'referrals',
     visualTitle: 'AI Traffic · Referrals',
@@ -29,7 +29,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
     features: [
       {
         title: 'Find the pages AI visitors land on',
-        body: 'Move from source totals to landing pages and compare engagement. Page-level scope stays distinct from property-wide channel totals, and data quality notes sit beside the numbers so a gap in GA4 never reads as a drop in traffic.',
+        body: 'Start with sessions per assistant, then open the landing pages behind them and compare engagement. Page figures and property-wide channel totals are shown separately. Data quality notes sit next to the numbers, so you can tell a gap in GA4 from a real fall in traffic.',
         points: [
           'Sessions and engaged sessions per assistant',
           'Landing pages ranked by AI sessions',
@@ -40,18 +40,18 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'See which AI crawlers fetch your pages',
-        body: 'On paid plans, send your server logs and CiteLadder identifies requests from known crawlers such as OAI-SearchBot, ChatGPT-User, ClaudeBot, PerplexityBot and Googlebot. Requests are checked against published IP ranges, so a spoofed user agent is reported as unverified rather than counted as the real bot.',
+        body: 'On paid plans, send your server logs and CiteLadder picks out requests from known crawlers such as OAI-SearchBot, ChatGPT-User, ClaudeBot, PerplexityBot and Googlebot. Each request is checked against the crawler’s published IP ranges. A request with a spoofed user agent shows up as unverified.',
         points: [
           'Cloudflare, Amazon CloudFront, Google Cloud, webhook or file upload',
           'Requests by crawler, purpose and page',
           'Verified, unverifiable and failed checks counted apart',
-          'Log coverage shown, so a gap is not read as no crawls',
+          'Log coverage shown next to every count',
         ],
         visual: 'crawlers',
       },
       {
         title: 'Put crawls and visits side by side',
-        body: 'The Overview highlights pages that AI search crawlers fetch but that receive no identifiable AI visits, pages with AI visits but no recent crawls, and verified errors on pages that matter. Each pattern is described as co-occurrence, with links to the pages behind it.',
+        body: 'The Overview lists pages that AI search crawlers fetch but that get no identifiable AI visits, pages with AI visits but no recent crawls, and verified crawler errors on your pages. Each pattern only says the two things happened together. Click it to open the pages behind it.',
         points: [
           'Patterns only when logs and GA4 cover the whole window',
           'Partial coverage flagged on screen',
@@ -92,15 +92,15 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Can this find all traffic influenced by AI?',
-        a: 'No. It reports sources your analytics can identify. Visits with missing attribution stay unknown rather than being relabeled.',
+        a: 'No. It reports the AI sources your analytics can identify. Visits that arrive without attribution are counted as unknown.',
       },
       {
         q: 'Are key events the same as leads?',
-        a: 'They follow your GA4 configuration. CiteLadder reports them as configured and does not turn event counts into conversion rates.',
+        a: 'Only if your GA4 property counts leads as key events. CiteLadder shows key events exactly as GA4 reports them and does not convert the counts into conversion rates.',
       },
       {
         q: 'How do AI crawler logs reach CiteLadder?',
-        a: 'From a Cloudflare Worker, Cloudflare Logpush, an Amazon CloudFront log stream, Google Cloud load balancer and Cloud Run logs through Pub/Sub, a webhook you call, or a file upload. CiteLadder does not observe crawlers on its own; it needs your site’s logs.',
+        a: 'From a Cloudflare Worker, Cloudflare Logpush, an Amazon CloudFront log stream, Google Cloud load balancer and Cloud Run logs through Pub/Sub, a webhook you call, or a file upload. CiteLadder only sees crawlers through the logs you send.',
       },
       {
         q: 'Are crawler logs in the free trial?',
@@ -115,22 +115,22 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
         a: 'IP addresses are used only while verifying a crawler against published ranges and are never stored, nor are full user agents, cookies or request bodies. Raw log rows are kept for a limited period.',
       },
     ],
-    closing: 'See what happens after an AI assistant sends a visit.',
+    closing: 'See what AI visitors do on your site',
     related: [
       '/platform/integrations',
-      '/platform/citation-intelligence',
+      '/platform/cited-sources',
       '/platform/site-health',
-      '/platform/demand-intelligence',
+      '/platform/search-demand',
       '/blog/ai-referral-traffic-statistics-2026',
     ],
   },
   {
-    path: '/platform/commerce-intelligence',
+    path: '/platform/product-visibility',
     title: 'AI Product Visibility & Share of Shelf | CiteLadder',
     description:
       'Measure how your products and categories appear in AI buying answers, including share of shelf and first-position wins where answers rank products.',
     heading: 'See how your products show up in AI buying answers',
-    lead: 'Track a product or category across buyer prompts, compare it with competing products, and see where answers rank it. Catalogs come from your site or a CSV import.',
+    lead: 'Pick a product or category and CiteLadder asks the engines the buyer questions around it. You get its position in each ranked answer, next to the competing products. Your catalog comes from your site or a CSV import.',
     cta: 'demo',
     visual: 'commerce',
     visualTitle: 'AI Shelf',
@@ -163,7 +163,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Shelf metrics that only count real rankings',
-        body: 'Product Visibility shows how often a product appears. Share of Shelf, Average Shelf Position and First-Position Win Rate count only answers that present products as an ordered list, so a passing mention is never scored as a ranking.',
+        body: 'Product Visibility shows how often a product appears. Share of Shelf, Average Shelf Position and First-Position Win Rate count only answers that list products in order. A product mentioned in passing is not scored as ranked.',
         points: [
           'Product Visibility per target',
           'Share of Shelf: your slots out of all recognized slots',
@@ -199,7 +199,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
     ],
     faqs: [
       {
-        q: 'Who can use Commerce Intelligence?',
+        q: 'Who can use Product Visibility?',
         a: 'Projects that sell from a catalog can use products found on their site. Any project can import products and categories from a CSV file. Book a demo to check your catalog.',
       },
       {
@@ -208,7 +208,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Does this cover every place AI shows products?',
-        a: "No. It reports product and category answers under CiteLadder's supported audits, not every shopping carousel in every assistant.",
+        a: 'No. It reports the product and category answers from the audits CiteLadder runs. It does not cover every shopping carousel in every assistant.',
       },
       {
         q: 'Do I need a Shopify connection?',
@@ -216,14 +216,14 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Does it report sales or revenue from AI answers?',
-        a: 'No. Commerce Intelligence measures how products appear in answers. For visits and revenue, use AI Referral Analytics with GA4.',
+        a: 'No. Product Visibility measures how products appear in answers. For visits and revenue, use AI Referral Analytics with GA4.',
       },
     ],
-    closing: 'Explore the buyer questions around your catalog.',
+    closing: 'See where your products rank in AI answers',
     related: [
       '/platform/ai-visibility',
-      '/platform/citation-intelligence',
-      '/platform/content-intelligence',
+      '/platform/cited-sources',
+      '/platform/content-briefs',
       '/solutions#commerce',
       '/blog/agentic-commerce-statistics-2026',
     ],

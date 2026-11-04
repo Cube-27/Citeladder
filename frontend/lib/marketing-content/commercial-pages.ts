@@ -23,8 +23,8 @@ export const SHARE_OF_VOICE_PAGE: CommercialPage = {
   breadcrumb: 'AI share of voice',
   heading: 'Know where your brand stands in AI answers',
   introduction:
-    'Compare your brand with competitors across a defined set of buyer questions. Keep the measurement scope visible and inspect the answers behind a change in visibility.',
-  secondary: { label: 'Explore cited sources', href: '/platform/citation-intelligence' },
+    'You use this when you need to know how often AI answers name you compared with your competitors. You see how often each brand appears across the same buyer questions, and you can open the recorded answers behind any change.',
+  secondary: { label: 'Explore cited sources', href: '/platform/cited-sources' },
   overview: {
     heading: 'A percentage only helps when you know what it counts',
     lead: '"Share of voice" can describe different calculations. Read the definition and denominator before comparing brands, tools or reporting periods.',
@@ -41,7 +41,7 @@ export const SHARE_OF_VOICE_PAGE: CommercialPage = {
   ],
   workflow: {
     heading: 'Build a comparison your team can explain',
-    lead: 'A useful benchmark starts with buyer questions and ends with the evidence behind the numbers.',
+    lead: 'Start with the questions your buyers ask. Finish with the answers behind each number.',
     steps: [
       {
         heading: 'Choose questions that reflect buying decisions',
@@ -53,13 +53,13 @@ export const SHARE_OF_VOICE_PAGE: CommercialPage = {
       },
       {
         heading: 'Inspect the answers behind a change',
-        body: 'Check whether the brand was recommended, compared or simply mentioned, and which sources were cited. Use the pattern to choose a research question. Repeated observations do not prove that a website change caused the movement.',
+        body: 'Check whether the brand was recommended, compared or only mentioned, and which sources were cited. Use what you find to pick the next question to research. Repeated observations cannot prove that a website change caused the movement.',
       },
     ],
   },
   contextHeading: 'Put visibility in business context',
   context:
-    'A visibility observation is not a sales result. Use it to identify questions, sources and pages worth investigating. Then examine referral visits and relevant business outcomes separately.',
+    'A brand mention in an AI answer is not a sale. Use it to choose which questions, sources and pages to look into. Check referral visits and business outcomes as separate numbers.',
   related: [
     { label: 'AI citation tracking guide', href: '/ai-citation-tracking' },
     { label: 'AI Referral Analytics', href: '/platform/ai-referral-analytics' },

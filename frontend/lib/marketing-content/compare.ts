@@ -31,8 +31,8 @@ export const COMPARISON_DISCLOSURE =
 /** CiteLadder's side of every comparison table; the same claims the leads make. */
 export const CITELADDER_POSITION = {
   focus:
-    'Tracked AI answers, cited-source analysis and Site Health findings in one project workflow.',
-  when: 'Your team needs to inspect a recorded answer, follow its cited sources and review the relevant website findings.',
+    'Records AI answers to your prompts, analyses the sources they cite and checks your own pages in Site Health, in one project.',
+  when: 'You want to open a recorded answer, follow the sources it cites and check the matching findings on your own site.',
   openSource:
     'The source, including the visibility scoring, is public under AGPL-3.0; run it yourself or use the hosted version.',
 } as const;
@@ -70,9 +70,9 @@ export const COMPETITORS: readonly Competitor[] = [
     name: 'Profound',
     tagline:
       'A broad AI marketing platform: answer-engine insights, prompt intelligence, agent analytics and marketing agents.',
-    lead: "Profound presents a broad AI marketing platform with answer-engine insights, prompt intelligence, agent analytics and marketing agents. CiteLadder's workflow brings AI visibility, citation analysis and website findings together.",
+    lead: 'Profound presents a broad AI marketing platform with answer-engine insights, prompt intelligence, agent analytics and marketing agents. CiteLadder records AI answers to your prompts, analyses the sources they cite and checks your own site.',
     context:
-      'The useful comparison is the work your team needs to complete: monitoring a defined set of questions, investigating the supporting sources, or running a broader set of marketing workflows.',
+      'Start from the work your team has to do. That might be monitoring a fixed set of questions, investigating the sources behind the answers, or running a wider set of marketing workflows.',
     metaTitle: 'CiteLadder vs Profound for AI visibility | CiteLadder',
     metaDescription:
       'Compare CiteLadder and Profound by product focus, evidence access and workflow needs. Use a practical checklist and current official product sources.',
@@ -96,9 +96,9 @@ export const COMPETITORS: readonly Competitor[] = [
     name: 'Otterly AI',
     tagline:
       'AI search monitoring and optimization: brand visibility, cited sources and website-related recommendations.',
-    lead: 'Otterly AI presents an AI search monitoring and optimization workflow covering brand visibility, cited sources and website-related recommendations. CiteLadder connects tracked answer observations with source analysis and Site Health.',
+    lead: 'Otterly AI presents an AI search monitoring and optimization workflow covering brand visibility, cited sources and website-related recommendations. CiteLadder links each tracked answer to the sources it cites and to Site Health findings on your pages.',
     context:
-      'Compare how each workflow supports the questions your team tracks and the investigation it needs to perform after a change appears.',
+      'Compare how each product handles the questions you track, and what you can do in each one when a result changes.',
     metaTitle: 'CiteLadder vs Otterly AI for AI search monitoring | CiteLadder',
     metaDescription:
       'Compare CiteLadder and Otterly AI for monitoring and citation investigation. Review evaluation questions, evidence access and official product information.',
@@ -113,7 +113,7 @@ export const COMPETITORS: readonly Competitor[] = [
       'Include Otterly AI in your evaluation when recurring AI search monitoring and related optimization work are the starting point. Confirm the exact engine selection, observation cadence, reporting and usage limits for the proposed plan.',
     openSource:
       'Hosted service with published subscription tiers. Its official site lists no public source code or self-hosted edition (reviewed 20 October 2026).',
-    conclusionHeading: 'Test the investigation as well as the dashboard',
+    conclusionHeading: 'Test what happens after a result changes',
     conclusion:
       'Choose a prompt where your brand and a competitor appear differently. Ask to inspect the answer, citation details and the route from that observation to a specific task. Compare how much context survives when the finding is exported or shared.',
   },
@@ -122,9 +122,9 @@ export const COMPETITORS: readonly Competitor[] = [
     name: 'Scrunch',
     tagline:
       'AI visibility monitoring, content diagnostics, bot observability and agent delivery through its Agent Experience Platform.',
-    lead: 'Scrunch describes a platform spanning AI visibility monitoring, content diagnostics, bot observability and its Agent Experience Platform for agent delivery. CiteLadder combines answer observations, cited-source analysis and website findings.',
+    lead: 'Scrunch describes a platform spanning AI visibility monitoring, content diagnostics, bot observability and its Agent Experience Platform for agent delivery. CiteLadder records AI answers, shows the sources they cite and reports findings on your own website.',
     context:
-      'Treat monitoring, diagnostics and changes to content delivery as distinct requirements when evaluating the two products.',
+      'Monitoring, site diagnostics and changes to how content is delivered are separate requirements. Evaluate each one on its own.',
     metaTitle: 'CiteLadder vs Scrunch for AI search visibility | CiteLadder',
     metaDescription:
       'Compare CiteLadder and Scrunch across visibility investigation, site diagnostics and workflow needs. Review the questions to ask and official product sources.',
@@ -148,9 +148,9 @@ export const COMPETITORS: readonly Competitor[] = [
     name: 'Peec AI',
     tagline:
       'AI search analytics for marketing teams, with visibility reporting and reporting/export integrations.',
-    lead: 'Peec AI presents AI search analytics for marketing teams, with visibility reporting and reporting/export integrations. CiteLadder brings tracked AI answers, cited-source analysis and Site Health into a shared project workflow.',
+    lead: 'Peec AI presents AI search analytics for marketing teams, with visibility reporting and reporting/export integrations. CiteLadder keeps tracked AI answers, the sources they cite and Site Health findings in one shared project.',
     context:
-      'Compare the reporting questions your team needs to answer and how easily it can move from an aggregate result to the underlying evidence.',
+      'List the reporting questions your team has to answer. Then check how quickly each product takes you from a summary number to the answers behind it.',
     metaTitle: 'CiteLadder vs Peec AI for AI search analytics | CiteLadder',
     metaDescription:
       'Compare CiteLadder and Peec AI for AI search analytics and reporting. Review measurement definitions, source investigation and official product information.',
@@ -167,6 +167,6 @@ export const COMPETITORS: readonly Competitor[] = [
       'Hosted service with plans sized by prompts and models. Its official site lists no public source code or self-hosted edition (reviewed 20 October 2026).',
     conclusionHeading: 'Compare definitions before percentages',
     conclusion:
-      'Use the same business question and inspect how each product defines visibility, position and competitor presence. Check the observation set, available source context and export format. A difference between dashboard percentages can reflect a different method rather than a different underlying business outcome.',
+      'Use the same business question and inspect how each product defines visibility, position and competitor presence. Check the observation set, the source detail you can see and the export format. Two dashboards can show different percentages for the same business because they measure it differently.',
   },
 ];

@@ -90,7 +90,7 @@ const VIEW_TITLES: Readonly<Record<PlatformVisual, string>> = {
   'site-health': 'Site Health',
   referrals: 'AI Traffic · Referrals',
   demand: 'Search Demand',
-  search: 'Search Intelligence',
+  search: 'Keyword Research',
   agent: 'Agent',
   commerce: 'AI Shelf',
   mcp: 'MCP client',
@@ -101,7 +101,7 @@ const VIEW_TITLES: Readonly<Record<PlatformVisual, string>> = {
   'page-evidence': 'Site Health · Page',
   'page-report': 'Page report',
   'query-page': 'Search Demand · Page',
-  acquisition: 'Search Intelligence · Review',
+  acquisition: 'Keyword Research · Review',
   revisions: 'Agent · Output',
   skills: 'Agent · New chat',
   'shelf-setup': 'AI Shelf · Setup',
@@ -123,7 +123,7 @@ const GUIDES: Readonly<Record<string, { title: string; desc: string }>> = {
   },
   '/ai-search-share-of-voice': {
     title: 'AI share of voice',
-    desc: 'Compare brand presence across AI answers.',
+    desc: 'Your share of brand mentions in AI answers, beside each competitor.',
   },
   '/llm-rank-tracker': {
     title: 'LLM rank tracker',
@@ -163,7 +163,7 @@ const GUIDES: Readonly<Record<string, { title: string; desc: string }>> = {
   },
   '/blog/action-playbook-winning-ai-citations': {
     title: 'AI citation action playbook',
-    desc: 'Investigate and improve the citation opportunities you find.',
+    desc: 'What to do with a page that cites your competitors and not you.',
   },
   '/blog/how-accurate-are-ai-citations': {
     title: 'How accurate are AI citations?',
@@ -364,7 +364,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
       <Section tone="soft" aria-label="Questions you can answer">
         <SectionHeader
           title="Questions you can answer"
-          lead="Asked the way your team asks them, answered from recorded evidence."
+          lead="CiteLadder answers each one from the AI answers and site data it has recorded."
         />
         <ul className="mk-questions">
           {page.questions.map((question) => (
@@ -379,8 +379,8 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
       {overview && (
         <Section id="capabilities">
           <SectionHeader
-            title="Everything in one project"
-            lead="Start with AI visibility. Add the capabilities your questions need."
+            title="What a project includes"
+            lead="Every project starts with AI visibility. Add the rest when you have a question it cannot answer."
           />
           <CapabilityGrid />
         </Section>
@@ -451,7 +451,7 @@ function Related({ page }: Readonly<{ page: PlatformPage }>) {
 
 const MODULE_VISUALS: Readonly<Record<string, PlatformVisual>> = {
   '/platform/ai-visibility': 'visibility',
-  '/platform/citation-intelligence': 'sources',
+  '/platform/cited-sources': 'sources',
 };
 
 /** A compact product callout for research guides: copy beside one product view. */

@@ -4,7 +4,7 @@ import { AGENT_NOTE, type PlatformPage } from './platform-page-types';
 /** Action and connection capabilities: content, the Agent, MCP and integrations. */
 export const IMPROVE_PAGES: readonly PlatformPage[] = [
   {
-    path: '/platform/content-intelligence',
+    path: '/platform/content-briefs',
     title: 'Evidence-Backed AI Content Optimization | CiteLadder',
     description:
       'Prepare content briefs, page edits, comparison pages, internal-link plans and outreach briefs from your CiteLadder evidence, and review every revision before it ships.',
@@ -21,7 +21,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Edits to existing pages',
-        body: 'Focused proposals for one target page, never a promise to fix the whole site.',
+        body: 'A proposed edit for one target page at a time, which your team reviews before it ships.',
       },
       {
         title: 'Links and earned media',
@@ -31,7 +31,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     features: [
       {
         title: 'Start from a gap you can see',
-        body: 'Every piece of content work starts from evidence already in your project: an Action, a Site Health issue, a Search Console signal, a cited page that leaves you out, or a prompt you lose. The Agent reads that evidence first, so the draft answers the gap instead of a generic brief.',
+        body: 'Every piece of content work starts from evidence already in your project: an Action, a Site Health issue, a Search Console signal, a cited page that leaves you out, or a prompt you lose. The Agent reads that evidence first and writes the draft to close that gap.',
         points: [
           'Pick up any Action or finding as the starting point',
           'Business context and competitors carried into every draft',
@@ -40,8 +40,8 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         visual: 'actions',
       },
       {
-        title: 'Formats for where answers come from',
-        body: 'AI answers draw on your site and on the places people discuss your category. Content workflows cover both: new pages and edits on your site, plus drafts for the channels engines cite.',
+        title: 'Drafts for your site and the places engines cite',
+        body: 'AI answers draw on your site and on the places people discuss your category. The Agent drafts new pages and edits for your site, and social posts, forum answers and outreach briefs for the channels engines cite.',
         points: [
           'Briefs, new pages, comparison pages and FAQ pages',
           'Page edits and internal-link plans',
@@ -51,8 +51,8 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         visual: 'skills',
       },
       {
-        title: 'Revise until it is right',
-        body: 'Every deliverable keeps its revisions. The Agent writes the whole piece and edits it in place. Edit sections yourself, ask for a change to one part, and compare any version with the latest.',
+        title: 'Every draft keeps its revisions',
+        body: 'The Agent writes the whole piece and edits it in place. Edit sections yourself, ask for a change to one part, and compare any version with the latest.',
         points: [
           'The full draft first, edited in place',
           'Section-level edits and follow-ups',
@@ -107,13 +107,13 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         a: 'No. Content workflows run in the Agent, which is not part of the free trial. Book a demo to try it with your own project.',
       },
     ],
-    closing: 'Turn an observed gap into content your team can ship.',
+    closing: 'Turn a gap you can see into a draft your team can ship',
     related: [
       '/platform/agents',
       '/platform/site-health',
-      '/platform/demand-intelligence',
-      '/platform/search-intelligence',
-      '/platform/citation-intelligence',
+      '/platform/search-demand',
+      '/platform/keyword-research',
+      '/platform/cited-sources',
     ],
   },
   {
@@ -137,24 +137,24 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         body: 'Diagnosis, content, technical fixes, internal links, earned media, growth plans and prompt portfolios.',
       },
       {
-        title: 'You stay in control',
-        body: 'It reads; it never publishes, contacts anyone or changes your site.',
+        title: 'Read-only',
+        body: 'It reads your project. It cannot publish, contact anyone or change your site.',
       },
     ],
     features: [
       {
         title: 'Hand off from any finding',
-        body: 'Ask the Agent from Site Health, Demand or Search Intelligence and the evidence comes with it. Mention open Actions to bring their diagnoses into the conversation. Each step it reads is shown as it works.',
+        body: 'Ask the Agent from Site Health, Search Demand or Keyword Research and the evidence comes with it. Mention open Actions to bring their diagnoses into the conversation. Each step it reads is shown as it works.',
         points: [
-          'Typed handoffs, no copy and paste',
+          'The evidence travels with the handoff',
           'One deliverable per conversation',
           'Step-by-step reads shown as it works',
         ],
         visual: 'skills',
       },
       {
-        title: 'Skills that know the job',
-        body: 'Each skill guides the Agent through a specific piece of work with the right evidence and output format, so you get a usable deliverable rather than a chat transcript.',
+        title: 'One skill per job',
+        body: 'Each skill tells the Agent which evidence to read and what to hand back, such as a growth plan, a fix brief or a comparison page.',
         points: [
           'AI visibility diagnosis and growth plans',
           'Technical health and internal links',
@@ -165,7 +165,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         visual: 'actions',
       },
       {
-        title: 'Bounded by design',
+        title: 'What the Agent cannot do',
         body: 'The Agent uses the same read tools as the CiteLadder MCP server, inside limits set for each run. It cannot crawl, buy data, change prompts, publish, browse the open web or contact anyone, and it never declares that a change worked without new evidence.',
         points: [
           'Reads only the project you are in',
@@ -211,7 +211,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Which model does it use?',
-        a: 'CiteLadder runs the Agent on a hosted model by default. Teams that need their own provider can connect an OpenAI-compatible API.',
+        a: 'The Agent runs on models CiteLadder hosts, and each turn uses AI credits from your plan.',
       },
       {
         q: 'Can it take actions on my behalf?',
@@ -222,13 +222,8 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         a: 'No. Book a demo to try it with your own project.',
       },
     ],
-    closing: 'Bring your evidence. Leave with a clear next step.',
-    related: [
-      '/platform/content-intelligence',
-      '/platform/site-health',
-      '/platform/mcp',
-      '/platform',
-    ],
+    closing: 'Ask about your project and get a draft you can review',
+    related: ['/platform/content-briefs', '/platform/site-health', '/platform/mcp', '/platform'],
   },
   {
     path: '/platform/mcp',
@@ -257,7 +252,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     features: [
       {
         title: 'Ask questions grounded in recorded evidence',
-        body: 'Read visibility results and trends, perception, ads, cited sources, Actions, Site Health, performance, AI referrals, AI crawler logs, the AI Shelf, demand and saved Search Intelligence datasets. Every answer comes from a dated record, not a guess.',
+        body: 'Read visibility results and trends, perception, ads, cited sources, Actions, Site Health, performance, AI referrals, AI crawler logs, the AI Shelf, search performance and saved Keyword Research datasets. Every answer comes from a dated record.',
         points: [
           'Interactive visibility and Site Health views in assistants that show apps',
           'Unavailable data is reported as unavailable, never as zero',
@@ -266,7 +261,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         visual: 'mcp-tools',
       },
       {
-        title: 'Turn evidence into the work your team already does',
+        title: 'Briefs and fix lists in your assistant',
         body: 'Use the assistant your team already works in to prepare briefs, reports and fix lists from the same evidence as the app.',
         points: [
           'Weekly AI visibility brief across engines and competitors',
@@ -336,7 +331,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         a: 'Yes: on paid plans the same data and scoped actions are available through a REST API at https://api.citeladder.com/v1, with keys from Settings → API keys.',
       },
     ],
-    closing: 'Give your assistant the context behind the chart.',
+    closing: 'Ask your assistant about your AI visibility',
     related: ['/platform/integrations', '/platform/agents', '/platform'],
   },
   {
@@ -366,7 +361,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     features: [
       {
         title: 'Know what is connected and what is missing',
-        body: 'Property mapping, imported windows, freshness and quality notes sit with every connection, so a missing number is never read as zero.',
+        body: 'Property mapping, imported windows, freshness and quality notes sit with every connection, so you can tell missing data from a real zero.',
         points: [
           'Search Console queries and pages',
           'GA4 sessions, AI referrals and key events',
@@ -375,8 +370,8 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         visual: 'property-mapping',
       },
       {
-        title: 'Send AI crawler logs your way',
-        body: 'On paid plans, connect the edge you already run. Use a Cloudflare Worker or Logpush job, stream Amazon CloudFront logs, route Google Cloud load balancer and Cloud Run logs through Pub/Sub, post batches to a webhook, or upload a file. CiteLadder shows log coverage per day, so gaps are visible.',
+        title: 'Send AI crawler logs from your CDN or server',
+        body: 'On paid plans, connect the edge you already run. Use a Cloudflare Worker or Logpush job, stream Amazon CloudFront logs, route Google Cloud load balancer and Cloud Run logs through Pub/Sub, post batches to a webhook, or upload a file. CiteLadder shows log coverage per day, so you can see the days with no logs.',
         points: [
           'Cloudflare Worker and Cloudflare Logpush',
           'Amazon CloudFront log streams',
@@ -430,13 +425,13 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Can I use my own model provider?',
-        a: 'Yes. The Agent can run on your own OpenAI-compatible API instead of the hosted model.',
+        a: 'For answer-engine and research providers, yes: connect your own keys and those calls bill to your provider account. The Agent always runs on models CiteLadder hosts.',
       },
     ],
-    closing: 'Pick a starting point for your project.',
+    closing: 'Start with AI visibility and add data sources as you need them',
     related: [
-      '/platform/demand-intelligence',
-      '/platform/search-intelligence',
+      '/platform/search-demand',
+      '/platform/keyword-research',
       '/platform/ai-referral-analytics',
       '/platform/ai-visibility',
       '/platform/mcp',

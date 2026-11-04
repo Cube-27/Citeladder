@@ -138,7 +138,7 @@ it('says when saved results can no longer be refreshed', async () => {
 it('never sends a managed workspace to provider settings it does not have', async () => {
   renderPage({ ...readiness, credential_mode: 'funded', connected: false, connection_id: null });
   expect(
-    await screen.findByRole('heading', { name: 'Search Intelligence is unavailable' }),
+    await screen.findByRole('heading', { name: 'Keyword Research is unavailable' }),
   ).toBeInTheDocument();
   expect(screen.queryByRole('link', { name: 'Open provider settings' })).toBeNull();
 });

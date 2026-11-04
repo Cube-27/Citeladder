@@ -562,3 +562,22 @@ against a `comparable` baseline.
 Source: owner, 2 November 2026, approving the read-projection work that
 included unifying the baseline rule: "ok proceed and include the two items".
 [Visibility](visibility-prompt.md) owns the shipped behavior.
+
+## Plain module names and redirects on the public website
+
+The website names each module by its job, not as an "Intelligence":
+Cited Sources (`/platform/cited-sources`), Product Visibility
+(`/platform/product-visibility`), Search Demand
+(`/platform/search-demand`, the app's own name for it), Keyword Research (`/platform/keyword-research`)
+and Content Briefs (`/platform/content-briefs`). The website has been live for
+months, so a renamed or moved public URL keeps a permanent (301) redirect from
+its old path, served by the marketing Worker before Astro
+(`frontend/apps/marketing/src/edge.ts`). This replaces the no-redirect rule for
+public website URLs only; inside the app and API there are still no aliases or
+shims. Marketing copy says what each module does and what the reader gets, with
+no "X instead of Y" contrast or filler.
+
+Source: owner, 4 November 2026, agreeing with an external review that the site
+had "too much unnecessary intelligence": "since this is a live website now for a
+few months the no redirect rule does not apply so rename and redirect
+accordingly".

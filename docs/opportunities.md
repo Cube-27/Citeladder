@@ -54,12 +54,12 @@ and only with complete, extractor-compatible text coverage. Query relevance may 
 gap action over the same scope; it never creates a duplicate action or asserts
 causation. Anchor diagnostics do not promote.
 
-Keyword gaps come from the [Search Intelligence](integrations-traffic-analytics.md#search-intelligence-acquisition)
+Keyword gaps come from the [Keyword Research](integrations-traffic-analytics.md#keyword-research-acquisition)
 datasets a user reviewed and paid for, read by
 [`search-gap-hits.ts`](../frontend/services/api/src/opportunities/search-gap-hits.ts)
 as rule `search_keyword_gap` (family `search_intelligence`). Per saved
 competitor, the latest published missing-keywords dataset for an owned website
-in the project's Search Intelligence market, at most 90 days old, qualifies;
+in the project's Keyword Research market, at most 90 days old, qualifies;
 failed or unknown coverage never does, an empty dataset supersedes older gaps,
 and partial data adds a limitation. A row promotes only with search volume ≥ 50
 and the competitor ranking in the top 10; unknown volume or rank abstains and is
@@ -183,7 +183,7 @@ changed:
 | Site Health rule | the rule passes on the page | the next crawl that analyzes the page after go-live |
 | Contextual link | the selected link is in main content | the next compatible crawl |
 | Search Console (page or query) | clicks per day on that page or query rise against the rate in the last daily window that ended before go-live (sync windows differ in length, so windows compare as rates) | each synced daily window that starts after the go-live day (that day is partly before the change) |
-| Keyword gap | the project appears for the search: Search Console impressions, or an owned ranking in a later Search Intelligence dataset whose provider check postdates go-live; still missing or not ranking yet reads `waiting`, never `unmet` | each synced window that starts after go-live, and each later published ranking, shared or missing-keyword dataset for the same website and market |
+| Keyword gap | the project appears for the search: Search Console impressions, or an owned ranking in a later Keyword Research dataset whose provider check postdates go-live; still missing or not ranking yet reads `waiting`, never `unmet` | each synced window that starts after go-live, and each later published ranking, shared or missing-keyword dataset for the same website and market |
 | Prompt-targeted visibility | the prompt's composite score rises against its score in the snapshot's audit | the next audit that ran the prompt |
 | Earned page | each tracked prompt whose answers cited the page: its composite score rises against its score in the snapshot's audit | the next audit that ran the prompt |
 
@@ -216,7 +216,7 @@ listing went live shows on the cited URL's page from the next reading, and the
 outcome that matters is visibility on the prompts that cite it. Neither claims
 the listing caused a movement.
 
-Later crawl, audit, traffic or Search Intelligence
+Later crawl, audit, traffic or Keyword Research
 keyword-dataset completion enqueues
 [TypeScript verification](../frontend/services/api/src/opportunities/verification.ts)
 through the [TypeScript enqueue owner](../frontend/services/api/src/opportunities/enqueue.ts)

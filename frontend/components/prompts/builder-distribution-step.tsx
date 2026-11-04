@@ -27,7 +27,7 @@ const INTENT_LABELS = {
 } as const satisfies Record<(typeof INTENT_KEYS)[number], string>;
 const SOURCE_LABELS: Record<SeedChoice, string> = {
   search_console: 'Search Console',
-  search_intelligence: 'Search Intelligence',
+  search_intelligence: 'Keyword Research',
   none: 'None',
 };
 
@@ -275,7 +275,7 @@ export function BuilderDistributionStep({
             <span className="type-caption">
               {sources.length > 1
                 ? 'Searches steer wording only: a query is never copied into a prompt, and no search volume is shown as AI volume.'
-                : 'No search data is connected. Connect Search Console or run Search Intelligence to ground wording in real searches.'}
+                : 'No search data is connected. Connect Search Console or run Keyword Research to ground wording in real searches.'}
             </span>
             <SeedList seeds={seeds.data} settings={settings} topics={topics} onChange={onChange} />
           </>

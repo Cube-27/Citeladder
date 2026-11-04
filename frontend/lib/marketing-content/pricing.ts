@@ -11,11 +11,11 @@ export type PlanPresentation = {
 export const PLAN_PRESENTATION: Readonly<Record<PlanKey, PlanPresentation>> = {
   tier_1: { blurb: 'Daily AI visibility tracking for one brand.' },
   tier_2: {
-    blurb: 'Add the Agent and its content skills to your workflow.',
+    blurb: 'Adds the Agent, which drafts briefs and page edits from your project data.',
     highlighted: true,
   },
-  tier_3: { blurb: 'Higher limits and priority support for expanding teams.' },
-  enterprise: { blurb: 'Custom scale and evidence-workflow support.' },
+  tier_3: { blurb: 'Higher limits and priority support for growing teams.' },
+  enterprise: { blurb: 'Custom limits and support for your team’s workflows.' },
 };
 
 export const BYOK_SWITCH_LABEL = 'Use your own API keys';
@@ -36,7 +36,7 @@ const CAPABILITY_LABELS: Readonly<Record<string, string>> = {
   market_slots: 'Additional markets',
   ai_credits: 'AI credits',
   commerce: 'Commerce',
-  search_intelligence: 'Search Intelligence',
+  search_intelligence: 'Keyword research',
 };
 
 export function capabilityLabel(key: string): string {

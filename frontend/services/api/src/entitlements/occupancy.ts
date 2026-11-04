@@ -326,6 +326,6 @@ export function requireSearchIntelligence(db: Database, workspaceId: string): Pr
     db,
     workspaceId,
     policy.entitlements.search_intelligence,
-    'Search Intelligence is not included in your plan',
+    'Keyword Research is not included in your plan',
   );
 }

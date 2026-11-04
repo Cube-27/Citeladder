@@ -33,9 +33,9 @@ describe('comparison evidence and next steps', () => {
       'href',
       '/pricing',
     );
-    expect(screen.getByRole('link', { name: 'Citation Intelligence' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Cited Sources' })).toHaveAttribute(
       'href',
-      '/platform/citation-intelligence',
+      '/platform/cited-sources',
     );
     expect(screen.getByRole('link', { name: 'AI share of voice' })).toHaveAttribute(
       'href',

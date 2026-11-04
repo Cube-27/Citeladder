@@ -84,7 +84,7 @@ Before the first model call each run freezes a
 [context manifest](../frontend/services/api/src/agent/context.ts): reviewed business
 context, the target page and a bounded related-page set, the attached Action's
 diagnosis, the diagnoses of up to five @-mentioned Actions, any Opportunity,
-Site Health, Demand or Search Intelligence evidence the request named, an exact
+Site Health, Demand or Keyword Research evidence the request named, an exact
 upstream output revision, and the project's versioned Agent instructions. The
 [context builder](../frontend/services/api/src/agent/context-adapter.ts) authorizes
 each identifier; missing optional evidence is recorded as an omission. Crawl
@@ -445,7 +445,7 @@ a `growth_plan` chat mentioning the top open Actions.
 Evidence screens hand work to New chat through the
 [handoff codec](../frontend/lib/agent/handoff.ts): **Work on this** attaches an
 Action; **Ask agent** carries typed references only (an Opportunity, a Demand
-signal, a page or URL, up to 100 Search Intelligence rows of one dataset, an
+signal, a page or URL, up to 100 Keyword Research rows of one dataset, an
 issue group, a Site Facts crawl, or an exact output revision) plus an optional
 question, skill or workflow. The browser never embeds evidence content, and the
 context builder authorizes every reference at admission. The Dashboard

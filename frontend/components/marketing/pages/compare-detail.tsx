@@ -161,8 +161,8 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
             <a className="ed-link" href="/pricing">
               CiteLadder pricing
             </a>
-            <a className="ed-link" href="/platform/citation-intelligence">
-              Citation Intelligence
+            <a className="ed-link" href="/platform/cited-sources">
+              Cited Sources
             </a>
             <a className="ed-link" href="/ai-search-share-of-voice">
               AI share of voice

@@ -15,7 +15,7 @@ the `analytics/ai-referrals.ts` reader and its extended `read_ai_referrals` cont
 Native [connected-data config](../frontend/services/api/src/config/connected-data.ts)
 owns sync settings, transports, dataset grains, traffic and referral catalogs,
 analytics task kinds and OAuth policy. [Demand config](../frontend/services/api/src/config/demand.json)
-owns query/lexical policy and [Search Intelligence config](../frontend/services/api/src/config/search-intelligence.json)
+owns query/lexical policy and [Keyword Research config](../frontend/services/api/src/config/search-intelligence.json)
 owns acquisition and pricing. The [schema baseline](../frontend/services/api/migrations/0001_baseline.sql) holds column defaults.
 Dataset arity and
 dimension separators derive from the native integration catalog.
@@ -185,7 +185,7 @@ Source identity and contributing revisions belong in refresh idempotency.
 [TypeScript analytics worker](../frontend/services/api/src/workers/analytics-worker.ts)
 owns every analytics kind: the AI Referrals chain, Traffic and Performance
 projections, Demand, Opportunity refresh and verification, source-page inspection,
-Search Intelligence acquisition, internal links, catalog projection and Commerce
+Keyword Research acquisition, internal links, catalog projection and Commerce
 competitor discovery. Its bounded lease recovery runs before each claim,
 including an empty drain. Splitting ownership requires restoring an executor
 and recovery path; changing a kind list alone cannot establish another executor.
@@ -240,9 +240,9 @@ The property-wide channel comparison separates AI referrals, Organic Search and
 all other sessions. Engagement rate is engaged sessions divided by sessions;
 there is no key-events/session rate. Incompatible or missing measures stay unavailable.
 
-## Search Intelligence acquisition
+## Keyword Research acquisition
 
-[Search Intelligence](../frontend/services/api/src/search-intelligence/) acquires explicit, reviewed DataForSEO Labs and Backlinks Live datasets for one saved apex or www project target and saved competitor targets. The review endpoint is provider-free: it freezes canonical scope, exact request pages, endpoint/version pricing, credential revision, an opaque HMAC account identity, and the estimated cost. The estimate is a ceiling: before each request, a call whose estimate would take reported spend past it is not sent and the run ends `cost_ceiling_reached`; a provider charge above a call's estimate stops the remaining calls after it (`cost_ceiling_exceeded`). Only the separate confirmation action enqueues paid work. The plan picks the account ([credentials](../frontend/services/api/src/search-intelligence/credentials.ts)): a BYOK workspace uses its one eligible DataForSEO connection; a managed workspace uses the platform's connection, sees its estimate and charge only in AI credits, and holds the estimate at confirmation (see [billing](billing-entitlements.md#metered-execution)). Reads render immutable published datasets and never call DataForSEO. Review creation and paid acquisition share the TypeScript owner with readiness, preferences, confirmation, cancellation, dataset reads, the Agent's row handoff (resolved server-side; there is no HTTP route) and citation matching, including Agent/MCP readers. Paid dispatch intent commits before I/O, and every local check (allowed endpoint, readable credential, approved base URL) runs before that commit, so a configuration error is a failed call with no dispatch evidence, never possible spend. Unknown submission or cost state stops acquisition rather than authorizing another paid call.
+[Keyword Research](../frontend/services/api/src/search-intelligence/) acquires explicit, reviewed DataForSEO Labs and Backlinks Live datasets for one saved apex or www project target and saved competitor targets. The review endpoint is provider-free: it freezes canonical scope, exact request pages, endpoint/version pricing, credential revision, an opaque HMAC account identity, and the estimated cost. The estimate is a ceiling: before each request, a call whose estimate would take reported spend past it is not sent and the run ends `cost_ceiling_reached`; a provider charge above a call's estimate stops the remaining calls after it (`cost_ceiling_exceeded`). Only the separate confirmation action enqueues paid work. The plan picks the account ([credentials](../frontend/services/api/src/search-intelligence/credentials.ts)): a BYOK workspace uses its one eligible DataForSEO connection; a managed workspace uses the platform's connection, sees its estimate and charge only in AI credits, and holds the estimate at confirmation (see [billing](billing-entitlements.md#metered-execution)). Reads render immutable published datasets and never call DataForSEO. Review creation and paid acquisition share the TypeScript owner with readiness, preferences, confirmation, cancellation, dataset reads, the Agent's row handoff (resolved server-side; there is no HTTP route) and citation matching, including Agent/MCP readers. Paid dispatch intent commits before I/O, and every local check (allowed endpoint, readable credential, approved base URL) runs before that commit, so a configuration error is a failed call with no dispatch evidence, never possible spend. Unknown submission or cost state stops acquisition rather than authorizing another paid call.
 
 Account identity uses a purpose-specific key derived from the configured encryption secret, so JWT signing-key rotation does not change account capacity pools.
 
@@ -306,7 +306,7 @@ detector including the low-CTR detector. Every signal carries the
 impression-weighted position of its evidence where one was reported.
 
 Prompt generation reads the latest query snapshot's non-branded queries, and
-the latest published Search Intelligence keyword datasets in the project
+the latest published Keyword Research keyword datasets in the project
 language, to phrase grounding examples for draft batches
 ([Prompts and Visibility](visibility-prompt.md#context-topics-and-generation)).
 It reads persisted rows only, never fetches, and never presents impressions or
