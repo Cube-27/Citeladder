@@ -4,16 +4,17 @@ import { Building2, Check, ChevronsUpDown, Plus, Settings } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Tooltip } from '@/components/ui/tooltip';
 import {
-  Dropdown,
-  DropdownContent,
-  DropdownItem,
-  DropdownLabel,
-  DropdownSeparator,
-  DropdownTrigger,
-} from '@/components/ui/dropdown';
-import { BrandLogo } from '@/components/ui/brand-logo';
+  Menu,
+  MenuContent,
+  MenuItem,
+  MenuLabel,
+  MenuSeparator,
+  MenuTrigger,
+} from '@/components/ui/menu';
+import { BrandMark } from '@/components/ui/brand-mark';
 import {
   newProjectDestination,
   scopedNavigationDestination,
@@ -62,28 +63,28 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
 
   return (
     <div className={cn('flex w-full min-w-0 items-center gap-1', className)}>
-      <Dropdown>
-        <DropdownTrigger
+      <Menu>
+        <MenuTrigger
           className="focus-ring hover:bg-surface-sunken active:bg-surface-sunken data-[state=open]:bg-surface-sunken hover:text-ink disabled:bg-surface-sunken disabled:text-ink-muted flex h-[var(--control-md)] min-w-0 flex-1 items-center gap-2 rounded-md px-3 text-left transition-colors disabled:pointer-events-none"
           disabled={isLoading}
         >
-          <BrandLogo
+          <BrandMark
             name={label}
             logoUrl={activeProject?.brand.logo_url}
             websiteUrl={activeProject?.website_url}
           />
           <span className={textRole('itemTitle', 'min-w-0 flex-1 truncate')}>{label}</span>
           <ChevronsUpDown className="text-ink-muted size-3.5 shrink-0" aria-hidden />
-        </DropdownTrigger>
-        <DropdownContent align="start" width="panel">
+        </MenuTrigger>
+        <MenuContent align="start">
           {workspaces.length > 1 ? (
             <>
-              <DropdownLabel>Workspaces</DropdownLabel>
-              <DropdownSeparator />
+              <MenuLabel>Workspaces</MenuLabel>
+              <MenuSeparator />
               {workspaces.map((workspace) => {
                 const selected = workspace.id === activeWorkspaceId;
                 return (
-                  <DropdownItem
+                  <MenuItem
                     key={workspace.id}
                     data-active={selected}
                     // A different workspace shares none of this route's
@@ -101,30 +102,30 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
                     {selected ? (
                       <Check className="text-accent size-4 shrink-0" aria-hidden />
                     ) : null}
-                  </DropdownItem>
+                  </MenuItem>
                 );
               })}
-              <DropdownSeparator />
+              <MenuSeparator />
             </>
           ) : null}
-          <DropdownLabel>Projects</DropdownLabel>
-          <DropdownSeparator />
+          <MenuLabel>Projects</MenuLabel>
+          <MenuSeparator />
           {projects.length === 0 ? (
-            <DropdownItem disabled>
+            <MenuItem disabled>
               <span className="text-ink-muted min-w-0 flex-1 truncate">
                 No projects in {activeWorkspace?.name ?? 'this workspace'}
               </span>
-            </DropdownItem>
+            </MenuItem>
           ) : null}
           {projects.map((project) => {
             const selected = project.id === activeProjectId;
             return (
-              <DropdownItem
+              <MenuItem
                 key={project.id}
                 data-active={selected}
                 onSelect={() => selectProject(project.id)}
               >
-                <BrandLogo
+                <BrandMark
                   name={project.brand_name || project.name}
                   logoUrl={project.brand.logo_url}
                   websiteUrl={project.website_url}
@@ -133,13 +134,13 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
                   {project.brand_name || project.name}
                 </span>
                 {selected ? <Check className="text-accent size-4 shrink-0" aria-hidden /> : null}
-              </DropdownItem>
+              </MenuItem>
             );
           })}
           {mayCreate ? (
             <>
-              <DropdownSeparator />
-              <DropdownItem
+              <MenuSeparator />
+              <MenuItem
                 disabled={!canAddProject}
                 onSelect={() => router(newProjectDestination(activeWorkspaceId))}
               >
@@ -155,11 +156,11 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
                     <span className="type-caption">Project limit reached</span>
                   )}
                 </span>
-              </DropdownItem>
+              </MenuItem>
             </>
           ) : null}
-        </DropdownContent>
-      </Dropdown>
+        </MenuContent>
+      </Menu>
       <SettingsLink />
     </div>
   );
@@ -175,10 +176,10 @@ function SettingsLink() {
     activeWorkspaceId,
   );
   return (
-    <Tooltip content="Settings" side="bottom">
-      <Button variant="ghost" size="icon" asChild>
+    <Tooltip content="Settings" side="bottom" describe={false}>
+      <Button variant="ghost" asChild className="w-[var(--control-md)] gap-0 px-0">
         <Link to={href} aria-label="Settings">
-          <Settings className="size-4" aria-hidden />
+          <Icon icon={Settings} />
         </Link>
       </Button>
     </Tooltip>

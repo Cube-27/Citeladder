@@ -35,7 +35,7 @@ export function AgentNav({ onNavigate }: Readonly<{ onNavigate?: () => void }>) 
 
   return (
     <nav aria-label="Agent" className="flex min-h-0 flex-col gap-3">
-      <Button asChild size="md" className="w-full justify-start">
+      <Button asChild variant="primary" className="w-full justify-start">
         <Link to={scoped(AGENT_HOME)} onClick={onNavigate}>
           <NewChatIcon className="size-4" aria-hidden />
           New chat

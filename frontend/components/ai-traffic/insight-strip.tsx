@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { aiTrafficQueries } from '@/lib/api/ai-traffic';
 import { projectDestination } from '@/lib/navigation/project-destination';
-import { Alert } from '@/components/ui/alert';
+import { Callout } from '@/components/ui/callout';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { TextLink } from '@/components/ui/text-link';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,7 +45,7 @@ export function InsightStrip({
         {nothingObserved ? (
           <p className="type-body text-ink-secondary">{nothingObservedLine(data.coverage)}</p>
         ) : null}
-        {data?.coverage.notice ? <Alert tone="info">{data.coverage.notice}</Alert> : null}
+        {data?.coverage.notice ? <Callout tone="info">{data.coverage.notice}</Callout> : null}
         {data ? (
           <p className="type-caption">
             {data.window_start} – {data.window_end} · Co-occurrence only. AI apps can strip

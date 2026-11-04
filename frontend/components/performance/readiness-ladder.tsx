@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Circle, CircleCheck } from 'lucide-react';
 
-import { Alert } from '@/components/ui/alert';
+import { Callout } from '@/components/ui/callout';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
@@ -116,7 +116,7 @@ export function ReadinessLadder({ data }: Readonly<{ data: ProjectReadiness | un
   if (!data || data.stage === 'analysis_ready' || data.stage === 'not_connected') return null;
 
   if (data.stage === 'import_failed') {
-    return <Alert tone="danger">{EXPLANATION.import_failed}</Alert>;
+    return <Callout tone="negative">{EXPLANATION.import_failed}</Callout>;
   }
 
   const reached = stageIndex(data.stage);

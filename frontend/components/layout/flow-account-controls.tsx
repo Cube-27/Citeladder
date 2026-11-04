@@ -1,4 +1,4 @@
-import { ThemeSwitch } from './theme-switch';
+import { ThemeSwitch } from '@/components/ui/theme-switch';
 import { UserMenuTrigger } from './user-menu';
 
 /** The signed-in flow bar's right-hand controls: theme and the account menu. */

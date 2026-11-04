@@ -48,7 +48,7 @@ export function SearchIntelligenceHistory({
   });
   if (query.isError)
     return <ReadError {...readErrorProps(query)} fallback="Saved history could not be loaded." />;
-  if (query.isPending) return <Skeleton shape="chart" />;
+  if (query.isPending) return <Skeleton variant="chart" />;
   const rows = query.data.rows;
   const observations = rows
     .map((row) => ({

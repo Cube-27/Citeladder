@@ -6,9 +6,9 @@ import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { cardClasses } from '@/components/ui/card-variants';
 import { CopyButton } from '@/components/ui/copy-button';
-import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
+import { Menu, MenuContent, MenuLinkItem, MenuTrigger } from '@/components/ui/menu';
 import { CodeToken, textRole } from '@/components/ui/typography';
 import { MCP_CLIENT_LINKS, MCP_SERVER_URL, type McpClientLink } from '@/lib/config/mcp-clients';
 import { cn } from '@/lib/utils';
@@ -92,11 +92,11 @@ export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
       aria-label="Connect CiteLadder to an AI assistant"
       className={cn(cardClasses(), 'w-fit max-w-full flex-wrap', className)}
     >
-      <Dropdown open={menu.open} onOpenChange={menu.setOpen} modal={false}>
+      <Menu open={menu.open} onOpenChange={menu.setOpen} modal={false}>
         {/* The menu anchors on this wrapper, so the button keeps its face while it is open. */}
-        <DropdownTrigger asChild>
+        <MenuTrigger asChild>
           <span className="group inline-flex shrink-0">
-            <Button asChild>
+            <Button asChild variant="primary">
               <a
                 ref={link}
                 href={primary.href}
@@ -125,8 +125,8 @@ export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
               </a>
             </Button>
           </span>
-        </DropdownTrigger>
-        <DropdownContent
+        </MenuTrigger>
+        <MenuContent
           align="start"
           width="trigger"
           onPointerEnter={menu.enter}
@@ -138,9 +138,8 @@ export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
           }}
         >
           {others.map((client) => (
-            <DropdownItem
+            <MenuLinkItem
               key={client.id}
-              asChild
               // A pointer highlights with the hover fill alone; moving focus would ring the item.
               onPointerMove={keepFocus}
               onPointerLeave={keepFocus}
@@ -150,10 +149,10 @@ export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
                 <span className="flex-1">{client.label}</span>
                 <Icon icon={ExternalLink} />
               </a>
-            </DropdownItem>
+            </MenuLinkItem>
           ))}
-        </DropdownContent>
-      </Dropdown>
+        </MenuContent>
+      </Menu>
       <Inline>
         <span className={textRole('label', 'shrink-0')}>MCP URL</span>
         <CodeToken>{MCP_SERVER_URL}</CodeToken>

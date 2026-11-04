@@ -197,7 +197,7 @@ function EvidenceDrawer({
       {selected ? (
         <Inline className="flex-wrap">
           {selected.action_id ? (
-            <Button asChild className="w-fit">
+            <Button variant="primary" asChild className="w-fit">
               <ProjectLink href={`/agent/actions/${selected.action_id}`}>Open Action</ProjectLink>
             </Button>
           ) : null}

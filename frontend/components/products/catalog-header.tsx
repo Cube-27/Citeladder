@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { CsvImportTrigger } from '@/components/ui/csv-import';
@@ -230,7 +230,7 @@ function CatalogActions({
         pending={importing}
         onSelect={onImport}
       />
-      <Button disabled={refreshing} onClick={onRefresh}>
+      <Button variant="primary" disabled={refreshing} onClick={onRefresh}>
         {crawl ? 'Refresh from Site Health' : 'Run Site Health crawl'}
       </Button>
     </>
@@ -247,9 +247,9 @@ function CatalogNotices({
   return (
     <Stack>
       {result ? <p className={textRole('body')}>{result}</p> : null}
-      {importFailed ? <Alert tone="danger">The catalog import failed.</Alert> : null}
+      {importFailed ? <Callout tone="negative">The catalog import failed.</Callout> : null}
       {refreshFailed ? (
-        <Alert tone="danger">Site Health progress could not be refreshed.</Alert>
+        <Callout tone="negative">Site Health progress could not be refreshed.</Callout>
       ) : null}
     </Stack>
   );

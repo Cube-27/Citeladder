@@ -6,13 +6,14 @@ import { Link } from 'react-router-dom';
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
 import {
-  Dropdown,
-  DropdownContent,
-  DropdownItem,
-  DropdownLabel,
-  DropdownSeparator,
-  DropdownTrigger,
-} from '@/components/ui/dropdown';
+  Menu,
+  MenuContent,
+  MenuItem,
+  MenuLabel,
+  MenuLinkItem,
+  MenuSeparator,
+  MenuTrigger,
+} from '@/components/ui/menu';
 import { authApi } from '@/lib/api/auth';
 import { useSession } from '@/lib/auth/session-guard';
 import { ICONS } from '@/lib/icons';
@@ -59,48 +60,44 @@ function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter 
       )
     : '/settings?tab=connections';
   return (
-    <DropdownContent
-      align={compact ? 'end' : 'start'}
-      side={compact ? 'bottom' : 'top'}
-      width="panel"
-    >
-      <DropdownLabel>{email}</DropdownLabel>
-      <DropdownSeparator />
-      <DropdownItem asChild>
+    <MenuContent align={compact ? 'end' : 'start'} side={compact ? 'bottom' : 'top'}>
+      <MenuLabel>{email}</MenuLabel>
+      <MenuSeparator />
+      <MenuLinkItem>
         <Link to={settingsHref}>
           <SettingsIcon className="size-4 shrink-0" aria-hidden />
           <span>Settings</span>
         </Link>
-      </DropdownItem>
-      <DropdownItem asChild>
+      </MenuLinkItem>
+      <MenuLinkItem>
         <Link to={billingHref}>
           <BillingIcon className="size-4 shrink-0" aria-hidden />
           <span>Billing</span>
         </Link>
-      </DropdownItem>
-      <DropdownItem asChild>
+      </MenuLinkItem>
+      <MenuLinkItem>
         <Link to={connectHref}>
           <Plug className="size-4 shrink-0" aria-hidden />
           <span>Connect AI assistants</span>
         </Link>
-      </DropdownItem>
-      <DropdownSeparator />
-      <DropdownItem
+      </MenuLinkItem>
+      <MenuSeparator />
+      <MenuItem
+        icon={<LogOut aria-hidden />}
         onSelect={(event) => {
           event.preventDefault();
           logout.mutate();
         }}
         disabled={logout.isPending}
       >
-        <LogOut className="size-4 shrink-0" aria-hidden />
-        <span>{logout.isPending ? 'Signing out…' : 'Sign out'}</span>
-      </DropdownItem>
+        {logout.isPending ? 'Signing out…' : 'Sign out'}
+      </MenuItem>
       {logout.isError ? (
         <p role="alert" className="type-caption text-negative px-2 py-2">
           Sign out failed. Your session is still active; please try again.
         </p>
       ) : null}
-    </DropdownContent>
+    </MenuContent>
   );
 }
 
@@ -113,8 +110,8 @@ export function UserMenuTrigger({
   const compact = presenter !== 'sidebar';
   return (
     <div className={cn('flex items-center gap-1', className)}>
-      <Dropdown open={open} onOpenChange={(next) => setOpen(presenter, next)}>
-        <DropdownTrigger
+      <Menu open={open} onOpenChange={(next) => setOpen(presenter, next)}>
+        <MenuTrigger
           aria-label={compact ? `Account menu for ${email}` : undefined}
           className={cn(
             'focus-ring hover:bg-surface-sunken active:bg-surface-sunken data-[state=open]:bg-surface-sunken hover:text-ink flex min-w-0 items-center gap-2 rounded-md text-left transition-colors',
@@ -125,9 +122,9 @@ export function UserMenuTrigger({
         >
           <Avatar name={email} />
           {compact ? null : <span className="type-body min-w-0 flex-1 truncate">{email}</span>}
-        </DropdownTrigger>
+        </MenuTrigger>
         {open ? <UserMenuContent presenter={presenter} /> : null}
-      </Dropdown>
+      </Menu>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
-import { buttonVariants } from '@/components/ui/button-variants';
+import { buttonClasses } from '@/components/ui/button';
 import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
@@ -29,7 +29,7 @@ export function buttonLinkAttributes({ variant = 'primary', size = 'lg', classNa
     'data-button-variant': shared,
     'data-button-size': size,
     className: cn(
-      buttonVariants({ variant: shared, size }),
+      buttonClasses(shared),
       '[&_svg]:size-4 [&_svg]:shrink-0',
       variant !== 'ghost' && variant !== 'nav' && 'marketing-cta-button',
       variant === 'soft' && 'marketing-soft-button',

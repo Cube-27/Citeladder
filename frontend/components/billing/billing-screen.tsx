@@ -14,7 +14,7 @@ import { PurchaseReview } from '@/components/billing/purchase-review';
 import { UsageMeters } from '@/components/billing/usage-meters';
 import { QueryState } from '@/components/ui/query-state';
 import { ListScreen } from '@/components/layout/page-shell';
-import { Alert } from '@/components/ui/alert';
+import { Callout } from '@/components/ui/callout';
 import { Stack } from '@/components/ui/layout';
 import {
   billingApi,
@@ -152,10 +152,10 @@ export function BillingScreen() {
   if (entitlementQuery.isError) {
     return (
       <ListScreen>
-        <Alert tone="danger">
+        <Callout tone="negative">
           Your entitlement could not be resolved, so no billing change is offered. No paid
           capability is active until it does; reload the page or contact support.
-        </Alert>
+        </Callout>
       </ListScreen>
     );
   }
@@ -168,9 +168,9 @@ export function BillingScreen() {
       <Stack gap="section">
         <CheckoutStatus checkout={checkout} />
         {canManage ? null : (
-          <Alert tone="info">
+          <Callout tone="info">
             Only a workspace Owner or Admin can change this workspace’s plan or buy add-ons.
-          </Alert>
+          </Callout>
         )}
         <CurrentPlan
           entitlement={entitlement}
@@ -236,7 +236,9 @@ function PlanSection({
 }>) {
   if (catalogError) {
     return (
-      <Alert tone="danger">Could not load the plan catalog. Check your connection and retry.</Alert>
+      <Callout tone="negative">
+        Could not load the plan catalog. Check your connection and retry.
+      </Callout>
     );
   }
   if (catalogLoading || !catalog) return <QueryState kind="loading" label="Loading plans…" />;

@@ -11,7 +11,7 @@ import { SearchIntelligenceReviewDrawer } from '@/components/search-intelligence
 import { SearchIntelligenceOverview } from '@/components/search-intelligence/search-intelligence-overview';
 import { referringLists } from './search-intelligence-format';
 import { CostDetails, RunNotice } from './search-intelligence-runs';
-import { Alert } from '@/components/ui/alert';
+import { Callout } from '@/components/ui/callout';
 import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
 import { QueryState } from '@/components/ui/query-state';
@@ -217,7 +217,11 @@ export function SearchIntelligencePage() {
         </ListScreen>
       </TabsRoot>
     );
-  const firstRun = <Button onClick={() => openReview('analysis')}>Review first analysis</Button>;
+  const firstRun = (
+    <Button variant="primary" onClick={() => openReview('analysis')}>
+      Review first analysis
+    </Button>
+  );
   return (
     <TabsRoot value={tab} onValueChange={setTab}>
       <ListScreen
@@ -357,10 +361,14 @@ function PageActions({
           <Button variant="secondary" onClick={() => onReview('analysis')}>
             New analysis
           </Button>
-          <Button onClick={() => onReview('refresh')}>Refresh</Button>
+          <Button variant="primary" onClick={() => onReview('refresh')}>
+            Refresh
+          </Button>
         </>
       ) : (
-        <Button onClick={() => onReview('analysis')}>Review first analysis</Button>
+        <Button variant="primary" onClick={() => onReview('analysis')}>
+          Review first analysis
+        </Button>
       )}
     </>
   );
@@ -408,14 +416,14 @@ function UnavailableNotice({
   if (data.connected) return null;
   if (data.credential_mode === 'funded')
     return (
-      <Alert>
+      <Callout tone="negative">
         Research is temporarily unavailable, so saved results can be read but not refreshed.
-      </Alert>
+      </Callout>
     );
   return (
-    <Alert>
+    <Callout tone="negative">
       DataForSEO is not connected, so saved results can be read but not refreshed.{' '}
       <TextLink href={PROVIDER_SETTINGS}>Open provider settings</TextLink>
-    </Alert>
+    </Callout>
   );
 }

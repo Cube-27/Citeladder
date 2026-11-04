@@ -1,5 +1,5 @@
 ---
-import { buttonVariants } from '@/components/ui/button-variants';
+import { buttonClasses } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 import { CONSENT_CHOICE_ATTRIBUTE } from './cookie-banner';
@@ -20,8 +20,8 @@ import { CONSENT_CHOICE_ATTRIBUTE } from './cookie-banner';
 const MARKETING_SECONDARY =
   'border-line bg-surface hover:border-line-control hover:bg-surface-sunken';
 
-const reject = cn(buttonVariants({ variant: 'secondary' }), 'relative', MARKETING_SECONDARY, 'w-full');
-const accept = cn(buttonVariants({ variant: 'primary' }), 'relative', 'w-full');
+const reject = cn(buttonClasses('secondary'), MARKETING_SECONDARY, 'w-full');
+const accept = cn(buttonClasses('primary'), 'w-full');
 const choice = (decision: 'accepted' | 'rejected') => ({ [CONSENT_CHOICE_ATTRIBUTE]: decision });
 ---
 

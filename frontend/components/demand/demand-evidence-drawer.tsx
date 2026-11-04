@@ -58,7 +58,6 @@ function DemandEvidenceContent({
       open={open}
       onOpenChange={onOpenChange}
       title="Signal evidence"
-      className="desktop:max-w-lg max-w-md"
       footer={
         <div className="flex flex-wrap items-center justify-between">
           <Button variant="secondary" asChild>
@@ -76,7 +75,7 @@ function DemandEvidenceContent({
       <Stack gap="workspace">
         <Stack>
           <Inline className="flex-wrap">
-            <Badge variant="neutral">{details.targetKind}</Badge>
+            <Badge>{details.targetKind}</Badge>
             <SignalChip signalType={signal.signal_type} />
           </Inline>
           <h2 className={textRole('sectionTitle', 'break-words')}>{details.target}</h2>

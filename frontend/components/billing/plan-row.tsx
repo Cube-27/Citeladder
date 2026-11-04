@@ -73,6 +73,7 @@ export function PlanRow({
           </Button>
         ) : (
           <Button
+            variant="primary"
             disabled={!canCheckout || locked}
             onClick={() => selection.ok && onCheckout(selection.catalog_key, billingDetails)}
           >

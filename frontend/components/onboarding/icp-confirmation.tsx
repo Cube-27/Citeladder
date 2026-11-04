@@ -86,7 +86,6 @@ export function IcpCategory({ profile, onChange }: IcpPart) {
     >
       <Stack gap="tight">
         <RadioGroup
-          variant="row"
           className="border-y-0"
           ariaLabel="What you sell"
           value={isOther ? OTHER_CATEGORY : profile.category}
@@ -138,7 +137,8 @@ export function IcpAudience({ profile, onChange }: IcpPart) {
     <>
       <FlowGroup title="Who buys it">
         <RadioGroup
-          variant="chip"
+          variant="cards"
+          columns={3}
           ariaLabel="Who buys it"
           value={profile.business_type ?? ''}
           options={BUYER_TYPE_CHOICES}
@@ -150,7 +150,8 @@ export function IcpAudience({ profile, onChange }: IcpPart) {
 
       <FlowGroup title="Where they buy it">
         <RadioGroup
-          variant="chip"
+          variant="cards"
+          columns={3}
           ariaLabel="Where they buy it"
           value={profile.market_scope ?? ''}
           options={MARKET_SCOPE_CHOICES}

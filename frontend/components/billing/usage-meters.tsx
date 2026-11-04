@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { Alert } from '@/components/ui/alert';
+import { Callout } from '@/components/ui/callout';
 import { QueryState } from '@/components/ui/query-state';
 import { Stack } from '@/components/ui/layout';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
@@ -86,10 +86,10 @@ function UsageBody({
   }
   if (query.data.status !== 'resolved') {
     return (
-      <Alert tone="warning">
+      <Callout tone="warning">
         Your entitlement could not be resolved, so usage is unavailable. Contact support if this
         persists.
-      </Alert>
+      </Callout>
     );
   }
   const items = ordered(query.data.items);

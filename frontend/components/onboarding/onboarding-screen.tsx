@@ -140,7 +140,7 @@ function OnboardingActions({
           ) : undefined
         }
         primary={
-          <Button type="submit" form="onboarding-brand-form">
+          <Button type="submit" variant="primary" form="onboarding-brand-form">
             Continue
           </Button>
         }
@@ -159,7 +159,7 @@ function OnboardingActions({
           </Button>
         }
         primary={
-          <Button onClick={() => flow.setStep(2)} disabled={!discoveryReady}>
+          <Button variant="primary" onClick={() => flow.setStep(2)} disabled={!discoveryReady}>
             {flow.discovery.isRunning ? 'Searching…' : 'Review'}
           </Button>
         }
@@ -177,6 +177,7 @@ function OnboardingActions({
       }
       primary={
         <Button
+          variant="primary"
           onClick={() => flow.complete.mutate()}
           pending={flow.isCompleting}
           pendingLabel="Creating…"

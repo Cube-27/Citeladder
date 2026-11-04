@@ -121,13 +121,7 @@ function ContactForm() {
     >
       <Field label="Name" required error={errors.name}>
         {(props) => (
-          <Input
-            {...props}
-            name="name"
-            autoComplete="name"
-            maxLength={CONTACT_LIMITS.name}
-            size="lg"
-          />
+          <Input {...props} name="name" autoComplete="name" maxLength={CONTACT_LIMITS.name} />
         )}
       </Field>
       <Field label="Work email" required error={errors.email}>
@@ -138,7 +132,6 @@ function ContactForm() {
             type="email"
             autoComplete="email"
             maxLength={CONTACT_LIMITS.email}
-            size="lg"
           />
         )}
       </Field>
@@ -149,7 +142,6 @@ function ContactForm() {
             name="company"
             autoComplete="organization"
             maxLength={CONTACT_LIMITS.company}
-            size="lg"
           />
         )}
       </Field>
@@ -186,7 +178,7 @@ function ContactForm() {
           {'.'}
         </div>
       )}
-      <Button type="submit" size="marketing" disabled={state === 'sending'}>
+      <Button type="submit" variant="primary" disabled={state === 'sending'}>
         {state === 'sending' ? 'Sending…' : 'Send message'}
       </Button>
     </form>

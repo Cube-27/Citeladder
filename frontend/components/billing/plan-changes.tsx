@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { ControlRow } from '@/components/ui/control-row';
 import { Dialog } from '@/components/ui/dialog';
 import { Stack } from '@/components/ui/layout';
@@ -93,6 +93,7 @@ export function PlanChanges({
             controls={
               option.direction === 'upgrade' ? (
                 <Button
+                  variant="primary"
                   disabled={held || !option.plan.checkout_available}
                   onClick={() => controls.upgrade(option.key)}
                 >
@@ -121,7 +122,7 @@ export function PlanChanges({
         <p className="type-caption">Upgrades are unavailable while checkout is closed.</p>
       ) : null}
       {controls.downgradeError ? (
-        <Alert tone="danger">{humanizeApiError(controls.downgradeError).message}</Alert>
+        <Callout tone="negative">{humanizeApiError(controls.downgradeError).message}</Callout>
       ) : null}
       <Dialog
         open={downgradeTo !== null}
@@ -136,6 +137,7 @@ export function PlanChanges({
               Keep {currentPlan.name}
             </Button>
             <Button
+              variant="primary"
               onClick={() => {
                 if (downgradeTo) controls.downgrade(downgradeTo.key);
                 setDowngradeTo(null);

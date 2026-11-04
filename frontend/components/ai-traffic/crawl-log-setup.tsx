@@ -20,7 +20,7 @@ import { Field } from '@/components/ui/field';
 import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { RadioGroup } from '@/components/ui/radio-group';
-import { Alert } from '@/components/ui/alert';
+import { Callout } from '@/components/ui/callout';
 import { CopyButton } from '@/components/ui/copy-button';
 import { TextLink } from '@/components/ui/text-link';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -49,7 +49,6 @@ export function CrawlLogSetup({
   return (
     <Stack gap="section">
       <RadioGroup
-        variant="row"
         ariaLabel="Collection method"
         value={setup}
         onValueChange={(value) => {
@@ -93,7 +92,7 @@ export function CrawlLogSetup({
         </Field>
         {fields}
       </Stack>
-      {mutation.isError ? <Alert tone="danger">{mutation.error.message}</Alert> : null}
+      {mutation.isError ? <Callout tone="negative">{mutation.error.message}</Callout> : null}
       {setup === 'upload' ? <UploadForm model={model} /> : null}
     </Stack>
   );
@@ -236,7 +235,7 @@ export function CrawlLogCredential({
       />
     );
   return issued ? (
-    <Alert tone="info">
+    <Callout tone="info">
       <Stack>
         {issued.token ? (
           <>
@@ -247,7 +246,7 @@ export function CrawlLogCredential({
           </>
         ) : null}
       </Stack>
-    </Alert>
+    </Callout>
   ) : null;
 }
 /** The dialog's one committing action, held in its footer. */
@@ -257,6 +256,7 @@ export function CrawlLogSetupSubmit({
   const { canManage, sources, mutation, issued } = model;
   return (
     <Button
+      variant="primary"
       disabled={!canManage || sources.data?.availability !== 'available' || issued !== null}
       pending={mutation.isPending}
       onClick={() => mutation.mutate({ kind: 'create' })}
@@ -284,10 +284,10 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
   );
   if (!uploadSources.length) {
     return (
-      <Alert tone="info">
+      <Callout tone="info">
         First, create an upload source using the settings above and Create source below. Then choose
         your log file here to upload recognized requests.
-      </Alert>
+      </Callout>
     );
   }
   return (
@@ -334,14 +334,14 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
         </output>
       ) : null}
       {upload.isSuccess ? (
-        <Alert tone={processing ? 'info' : 'success'}>
+        <Callout tone={processing ? 'info' : 'positive'}>
           {processing
             ? 'Upload complete. Results appear here once processing finishes, usually within a few minutes.'
             : 'Upload processed. Coverage for these days is declared by the file.'}
-        </Alert>
+        </Callout>
       ) : null}
       {upload.isError ? (
-        <Alert tone="danger">
+        <Callout tone="negative">
           <Stack>
             <p>{upload.error.message}</p>
             {progress ? (
@@ -354,7 +354,7 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
               </Button>
             ) : null}
           </Stack>
-        </Alert>
+        </Callout>
       ) : null}
     </Stack>
   );

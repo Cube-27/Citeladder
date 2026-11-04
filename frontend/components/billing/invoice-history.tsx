@@ -6,8 +6,8 @@ import { billingApi, type BillingInvoice } from '@/lib/api/billing';
 import { formatMoney } from '@/lib/billing/catalog';
 import { DisplayTime } from '@/components/ui/display-time';
 
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
 import { ClampText, TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
@@ -69,8 +69,10 @@ export function InvoiceHistory({
 
   return (
     <Stack gap="compact">
-      {error ? <Alert tone="danger">Receipts could not be loaded.</Alert> : null}
-      {downloadError ? <Alert tone="danger">Receipt download failed. Please retry.</Alert> : null}
+      {error ? <Callout tone="negative">Receipts could not be loaded.</Callout> : null}
+      {downloadError ? (
+        <Callout tone="negative">Receipt download failed. Please retry.</Callout>
+      ) : null}
       {error ? null : (
         <DataTable
           title="Invoices, receipts and credit notes"

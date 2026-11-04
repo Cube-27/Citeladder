@@ -3,8 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -56,7 +56,7 @@ export function AuditSchedules({
   promptSets,
 }: Readonly<{ projectId: string; promptSets: PromptSet[] }>) {
   const workspaceId = useActiveWorkspaceId();
-  if (!workspaceId) return <Alert tone="info">Loading your workspace…</Alert>;
+  if (!workspaceId) return <Callout tone="info">Loading your workspace…</Callout>;
   return (
     <WorkspaceSchedules
       key={`${workspaceId}:${projectId}`}
@@ -149,7 +149,7 @@ function WorkspaceSchedules({
             <QueryState kind="empty" inline message="No scheduled audits yet." />
           ) : null}
           {promptSets.length === 0 ? (
-            <Alert tone="info">Add prompts before scheduling an audit.</Alert>
+            <Callout tone="info">Add prompts before scheduling an audit.</Callout>
           ) : (
             <Stack className="desktop:grid-cols-3">
               <Stack gap="item" className={textRole('label')}>
@@ -220,7 +220,11 @@ function WorkspaceSchedules({
               </Stack>
               <MarketChecklist markets={markets} marketIds={marketIds} onToggle={setMarketIds} />
               <div className="flex items-end">
-                <Button onClick={() => createMutation.mutate()} disabled={!canCreate}>
+                <Button
+                  variant="primary"
+                  onClick={() => createMutation.mutate()}
+                  disabled={!canCreate}
+                >
                   {createMutation.isPending ? 'Scheduling…' : 'Schedule audit'}
                 </Button>
               </div>

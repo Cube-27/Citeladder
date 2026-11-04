@@ -6,7 +6,7 @@ import { Link, useLocation } from 'react-router-dom';
 
 import { AgentPanelHost, AgentPanelTrigger } from '@/components/agent/agent-panel-host';
 import { CommandPalette, CommandPaletteTrigger } from '@/components/ui/command-palette';
-import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
 import { LogoMark } from '@/components/ui/logo-mark';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -14,7 +14,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { CompactPageTitleContext } from './compact-page-title-context';
 import { ProjectSwitcher } from './project-switcher';
 import { SidebarNav } from './sidebar-nav';
-import { ThemeSwitch } from './theme-switch';
+import { ThemeSwitch } from '@/components/ui/theme-switch';
 import { UserMenuTrigger } from './user-menu';
 import { resolveTitle } from './page-titles';
 import { useRouteAnnouncement } from './use-route-announcement';
@@ -119,15 +119,12 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                   adds no second bar above the work. */}
               <header className="bg-paper border-line z-sticky desktop:hidden sticky top-0 grid h-[var(--compact-topbar-height)] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b px-[var(--content-gutter)]">
                 <div className="flex items-center">
-                  <Button
-                    variant="ghost"
-                    size="icon"
+                  <IconButton
+                    icon={Menu}
+                    label="Open navigation"
                     ref={navigationTriggerRef}
-                    aria-label="Open navigation"
                     onClick={() => setNavigationOpen(true)}
-                  >
-                    <Menu className="size-4" aria-hidden />
-                  </Button>
+                  />
                 </div>
                 <div className="type-body min-w-0 truncate">{compactTitle}</div>
                 <div className="flex items-center justify-end gap-2 justify-self-end">
@@ -175,7 +172,6 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                 hideHeader
                 closeLabel="Close navigation"
                 side="left"
-                className="bg-surface w-[min(17rem,100vw)] max-w-none border-l-0"
               >
                 <div className="grid gap-4">
                   <Link

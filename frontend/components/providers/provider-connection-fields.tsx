@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert } from '@/components/ui/alert';
+import { Callout } from '@/components/ui/callout';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { splitPaneClasses } from '@/components/ui/workspace';
@@ -93,11 +93,13 @@ export function ProviderConnectionFields({
       )}
 
       {saveMutation.isError ? (
-        <Alert tone="danger">{errorMessage(saveMutation.error)}</Alert>
+        <Callout tone="negative">{errorMessage(saveMutation.error)}</Callout>
       ) : null}
 
       {testResult ? (
-        <Alert tone={testResult.status === 'ok' ? 'success' : 'danger'}>{testResult.message}</Alert>
+        <Callout tone={testResult.status === 'ok' ? 'positive' : 'negative'}>
+          {testResult.message}
+        </Callout>
       ) : null}
     </>
   );

@@ -100,7 +100,7 @@ export function RunActions({
       <Button variant="secondary" onClick={() => onExport('md')} disabled={exporting !== null}>
         {exporting === 'md' ? 'Exporting…' : 'Export MD'}
       </Button>
-      <Button variant="destructive" onClick={onCancel} disabled={!cancelable || cancelPending}>
+      <Button variant="danger" onClick={onCancel} disabled={!cancelable || cancelPending}>
         {cancelPending ? 'Cancelling…' : 'Cancel run'}
       </Button>
       {audit.failed_count > 0 && onRerunFailures ? (
@@ -118,10 +118,10 @@ function ProgressStatus({ audit, polling }: Readonly<{ audit: Audit; polling: bo
       <Badge variant="run-status" value={auditBadgeValue(audit.status)}>
         {auditStatusLabel(audit.status)}
       </Badge>
-      <Badge variant="neutral">{marketLabel(audit.market)}</Badge>
+      <Badge>{marketLabel(audit.market)}</Badge>
       <MeasurementContext provenance={audit.model_provenance} />
       {audit.not_applicable_engines.length ? (
-        <Badge variant="neutral">
+        <Badge>
           Not available in this market:{' '}
           {audit.not_applicable_engines.map((engine) => ENGINE_LABELS[engine]).join(', ')}
         </Badge>
