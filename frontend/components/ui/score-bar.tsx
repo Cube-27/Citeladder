@@ -50,9 +50,9 @@ export function ScoreBar({
   const fill = SEGMENT_FILL[scoreFill(tone, score)];
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <span
+      <span // NOSONAR -- a native <meter> cannot draw twenty segments
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- A native <meter> cannot draw twenty segments.
-        role="meter" // NOSONAR -- a native <meter> cannot draw twenty segments
+        role="meter"
         aria-label={label}
         aria-valuemin={0}
         aria-valuemax={100}

@@ -50,9 +50,9 @@ function MeterTrack({
 }>) {
   const percent = percentOf(value, max);
   return (
-    <div
+    <div // NOSONAR -- a native <meter> cannot draw the token fill or the unmeasured state
       // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- A native <meter> cannot draw the token fill or the unmeasured state.
-      role="meter" // NOSONAR -- a native <meter> cannot draw the token fill or the unmeasured state
+      role="meter"
       aria-labelledby={labelledBy}
       aria-label={labelledBy ? undefined : label}
       aria-valuemin={0}
