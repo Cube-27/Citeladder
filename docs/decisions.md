@@ -94,8 +94,8 @@ entitlements](billing-entitlements.md) and [Agent](agents.md) own shipped behavi
 
 The separate Content and Growth Agent runtimes are replaced by one in-app Agent.
 It reads through the same registered read tools as MCP, applies internal skills
-the user may pick by name but never sees, and keeps one versioned deliverable
-per chat; the chat is the saved work. Target-level work converges on one Action
+the user may pick by name but never sees, and keeps its versioned deliverables
+in the chat; the chat is the saved work. Target-level work converges on one Action
 per target, grouped and diagnosed deterministically from live Opportunities.
 Skills stay internal: they are not exposed through MCP or offered as a
 download, and the MCP surface is otherwise unchanged apart from removing its
@@ -147,6 +147,29 @@ fixed within replay. Processing, policy, runtime and protocol versions stay at
 Source: owner, 4 November 2026 (Agent chat-behaviour request; efficiency and
 message threads in the follow-up of the same day). [Agent](agents.md)
 owns the shipped behavior and limits.
+
+## Agent chats search the web and hold several documents
+
+The Agent may search the web through the model provider's hosted search
+(Anthropic `web_search_20250305`) when saved CiteLadder data cannot answer,
+within `max_web_searches` per turn (5). Searched pages are untrusted
+observations: replies cite them and they are shown as web sources, apart from
+the CiteLadder records a turn read ([invariant 13](invariants.md#13-the-agent-is-bounded-orchestration)).
+Searches are internal cost at the provider's published rate and customers see
+credits ([B59](billing-decisions.md#agent-chat-behaviour-2026-11-04)). The
+OpenAI-compatible route offers no hosted search, so a turn there answers from
+CiteLadder data alone. Fetching a found page in full (web fetch) is not
+included.
+
+A chat holds several documents, numbered Document 1, Document 2 and so on in
+creation order. Saving without a number adds a document; a number replaces or
+edits that document. Any methodology may write in any chat, so the one-kind
+rule and `agent_skill_kind_conflict` are removed. Each document keeps its own
+revisions, edits and restores, and a targeted document attaches its chat's
+Action as before.
+
+Source: owner, 4 November 2026: "PR3 can include web search tool and multiple
+doc". [Agent](agents.md) owns the shipped behavior.
 
 ## Onboarding creates no prompts
 

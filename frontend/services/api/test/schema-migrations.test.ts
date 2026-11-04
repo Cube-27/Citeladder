@@ -70,6 +70,7 @@ describe('a fresh database', () => {
       '0001_baseline',
       '0002_agent_single_draft',
       '0003_agent_cache_replay',
+      '0004_agent_documents_web_search',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -78,6 +79,7 @@ describe('a fresh database', () => {
       { version: '0001_baseline' },
       { version: '0002_agent_single_draft' },
       { version: '0003_agent_cache_replay' },
+      { version: '0004_agent_documents_web_search' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -110,6 +112,7 @@ describe('an existing database', () => {
     expect(await applyMigrations(client)).toEqual([
       '0002_agent_single_draft',
       '0003_agent_cache_replay',
+      '0004_agent_documents_web_search',
     ]);
     expect(await columns(client, 'agent_runs')).not.toContain('mode');
     expect(await columns(client, 'agent_output_revisions')).not.toContain('approved_at');
@@ -122,7 +125,37 @@ describe('an existing database', () => {
       { version: '0001_baseline' },
       { version: '0002_agent_single_draft' },
       { version: '0003_agent_cache_replay' },
+      { version: '0004_agent_documents_web_search' },
     ]);
+  }, 120000);
+});
+
+describe('a chat with a document before multi-document chats', () => {
+  it('keeps the document as Document 1 and then numbers a chat’s documents uniquely', async () => {
+    const { client } = await freshDatabase();
+    clients.push(client);
+    await applyMigrations(client, migrations.slice(0, 3));
+    const [workspace, project, chat, first, second, third] = Array.from({ length: 6 }, () =>
+      randomUUID(),
+    );
+    // Only the document rows matter here; the referenced rows are not built.
+    await client.query('SET session_replication_role = replica');
+    const insert = (id: string, number?: number) =>
+      client.query(
+        `insert into public.agent_outputs (id, chat_id, kind, skill_id, created_at, updated_at, workspace_id, project_id${
+          number ? ', number' : ''
+        }) values ($1, $2, 'page_rewrite', 'content_writer', now(), now(), $3, $4${number ? ', $5' : ''})`,
+        number ? [id, chat, workspace, project, number] : [id, chat, workspace, project],
+      );
+    await insert(first!);
+
+    expect(await applyMigrations(client)).toEqual(['0004_agent_documents_web_search']);
+    const kept = await client.query('select id, number from public.agent_outputs');
+    expect(kept.rows).toEqual([{ id: first, number: 1 }]);
+    await insert(second!, 2);
+    await expect(insert(third!, 2)).rejects.toThrow(/uq_agent_output_chat_number/u);
+    expect(await columns(client, 'agent_messages')).toContain('web_sources');
+    expect(await columns(client, 'agent_model_attempts')).toContain('web_search_requests');
   }, 120000);
 });
 

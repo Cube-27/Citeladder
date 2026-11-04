@@ -1,7 +1,8 @@
 /**
  * Agent funding: the Agent always uses the platform gateway and spends AI
  * credits (B19). Each dispatch holds its maximum cost at the shared token
- * prices and settles once to the reported tokens, and a failed turn's debits
+ * prices, plus every web search it may run (B59), and settles once to the
+ * reported tokens and searches, and a failed turn's debits
  * are refunded (B58); the ledger and the pricing
  * are the same ones every other platform AI call uses (B12-B15).
  */
@@ -120,6 +121,7 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
         price,
         conversationInputBytes(request),
         platform.maxOutputTokens,
+        request.webSearches,
       );
       try {
         const reservationId = await reserveUsage(db, {

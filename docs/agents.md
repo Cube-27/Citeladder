@@ -10,8 +10,9 @@ It owns chats, runs, model and tool attempts, outputs and their revisions. It
 does not own business evidence, Actions or measurement and has no second
 knowledge store. It cannot publish, contact third parties, activate prompts,
 run crawls or paid pulls, change a customer site, declare implementation or
-claim an improvement without new measured evidence. Web research is out of
-scope.
+claim an improvement without new measured evidence. Its one reach beyond
+CiteLadder data is the model provider's hosted [web search](#web-search),
+bounded per turn; it never fetches, submits to or changes a page it finds.
 
 Questions, discussion and clarification are replies; they never require a
 deliverable, and a question about a saved document leaves it unchanged. The
@@ -52,15 +53,18 @@ catalog, tool registry, protocol or runtime version changed before it ran ends
 with `skills_changed` ("the agent was updated; send it again") before any model
 call.
 
-A chat owns one deliverable of one kind. Agent saves and user edits both append
-an immutable [output revision](../frontend/services/api/src/agent/outputs.ts): an
-edit against a stale base conflicts, restoring appends a new revision, and a
-follow-up revises the latest revision, including the user's own edit. Edits and
-restores are refused while a turn is queued or running, and a turn whose output
-moved on from the revision it read saves nothing. Because a chat keeps one
-document, explicitly picking a skill that produces a different kind is refused
-(`agent_skill_kind_conflict`), and so is the model loading one once the chat's
-document exists; the Agent answers in its reply or offers a new chat instead.
+A chat holds any number of documents
+([decision](decisions.md#agent-chats-search-the-web-and-hold-several-documents)),
+numbered in creation order (`agent_outputs.number`, unique per chat) and named
+"Document N" to the model and the reader, never by ID. Each has its own kind
+and format, and any methodology may write in any chat. Agent saves and user
+edits both append an immutable
+[output revision](../frontend/services/api/src/agent/outputs.ts) to one
+document: an edit against a stale base conflicts, restoring appends a new
+revision, and a follow-up revises the latest revision, including the user's own
+edit. Edits and restores (`…/outputs/{output_id}/revisions`) are refused while
+a turn is queued or running, and a turn whose document moved on from the
+revision it read saves nothing.
 
 A document has one draft state: every deliverable is written whole straight
 away, and an outline is given in the reply only when asked for. The completion
@@ -103,10 +107,11 @@ calls none. Its final text is the reply.
   format. It holds nothing per chat, so providers serve it from cache for every
   chat. Earlier turns of the chat follow, replayed exactly as stored. The turn's
   opening message then adds the frozen context (only when it changed since a
-  replayed turn), the current document (unless the model saved it whole with
-  `save_document` in a replayed turn, so a user's edit or the result of
-  `edit_document` is always supplied exactly), a pinned methodology (unless
-  already loaded) and the request.
+  replayed turn), a list of the chat's documents (number, title, kind, format
+  and revision), each document's current text (unless the model saved it whole
+  with `save_document` in a replayed turn or that text was already supplied,
+  so a user's edit or the result of `edit_document` is always supplied
+  exactly), a pinned methodology (unless already loaded) and the request.
 - **Memory.** Each run's exchange, including thinking and compaction blocks, is
   saved in `agent_run_transcripts` with the reply in one transaction. A
   transcript is a run record for replay, not a knowledge store: no read returns
@@ -123,16 +128,18 @@ calls none. Its final text is the reply.
   turn start beyond `replay_max_chars`.
 - **Tools.** The model has the [read tools](#read-tools) and three built-ins
   ([`builtin-tools.ts`](../frontend/services/api/src/agent/builtin-tools.ts)).
-  `load_skill` returns a methodology and its saving rules; a turn may switch to
-  another methodology of the same kind, and one whose kind differs from the
-  chat's document is refused. `save_document` stages the whole deliverable after
-  a methodology is loaded, checked against the output and format rules.
-  `edit_document` stages exact `old_string` → `new_string` replacements on the
-  chat's current document (this turn's staged one, else the latest revision):
-  each must match exactly once, all apply or none, and it writes nothing
-  outside the chat's own document. Either way the staged document is committed
-  as a new revision only with the reply, with the same sources and Action
-  attachment. Questions need no methodology. The skill is
+  `load_skill` returns a methodology and its saving rules; a turn may switch
+  methodology at any time. `save_document` stages a whole deliverable after a
+  methodology is loaded, checked against the output and format rules: without
+  `document` it adds a new document, and with a document's number it replaces
+  that document, which must be of the loaded methodology's kind. `edit_document`
+  stages exact `old_string` → `new_string` replacements on one document (this
+  turn's staged version, else its latest revision), named by `document` when
+  the chat has more than one: each must match exactly once, all apply or none,
+  and it writes nothing outside the chat's own documents. Each result starts
+  with the document's label ("Document 2: …"). Every staged document is
+  committed as a new revision only with the reply, with the same sources and
+  Action attachment. Questions need no methodology. The skill is
   taken, in order, from the user's pick or workflow, the chat's pin, the
   attached Action's diagnosis, and otherwise the model's `load_skill`; a pinned
   methodology is supplied in the opening message. Fixed handoffs such as Site
@@ -142,10 +149,11 @@ calls none. Its final text is the reply.
   provider's call ID. Every call gets a result in call order. A refused,
   unknown, invalid or over-budget call returns an error result saying how to
   correct it, so the model fixes the call instead of the turn ending. Only the
-  first `save_document` in one response is kept; edits apply in call order.
+  first `save_document` of each document in one response is kept; edits apply
+  in call order.
 - **Limits.** [Agent runtime configuration](../frontend/services/api/src/config/agent-runtime.json)
   bounds model calls per turn, tool calls per turn, parallel reads per response,
-  result size and the turn's time. Near the cap, a note appended after the tool
+  web searches per turn, result size and the turn's time. Near the cap, a note appended after the tool
   results says how many calls are left; the tools never change, so the cache
   holds. Tool calls in the last call are refused and its text is the reply. A
   last call with no text ends with a fixed reply naming the reads made and
@@ -186,6 +194,28 @@ machine-readable submission, so Copy and Export never carry an ID. The UI
 groups sources in plain
 words (for example "Search Console query · 3") with links to the screen that
 shows them.
+
+### Web search
+
+On Anthropic each call may offer the hosted `web_search_20250305` tool (the
+basic version, available on every model including Haiku 5.5), declared after
+the sorted tools with `max_uses` set to the searches left of the turn's
+`max_web_searches` (5). The tool is omitted once the budget is spent and on the
+last call, except that a search the provider left waiting (`pause_turn`, or a
+search pending beside client tool calls) is offered one more use so the
+continuation stays valid. The definition therefore changes only after a turn
+has searched, which costs one cache miss on the next call. `pause_turn` is
+continued by sending the conversation back unchanged. Search blocks, including
+their encrypted content, are stored and replayed byte-identically.
+
+Searched pages are untrusted observations, never sources: a reply's and a
+revision's `web_sources` (`{url, title}`, deduplicated, carried forward like
+sources) are kept apart from its CiteLadder records, and each search is a
+`search` step with its query. Each model attempt records
+`web_search_requests` (null when unknown), and funding holds and settles them
+([B59](billing-decisions.md#agent-chat-behaviour-2026-11-04)). The
+OpenAI-compatible route offers no hosted search, so a turn there answers from
+CiteLadder data alone. Web fetch is not offered.
 
 ### Terminal turns
 
@@ -335,7 +365,8 @@ The runtime emits display-only events
 - `thinking`: the next piece of its thinking summary;
 - `document_delta`: the document being saved so far, as a throttled snapshot;
 - `tool`: one call's state (`started`, then `completed`, `unavailable`,
-  `refused` or `failed`), keyed by call ID.
+  `refused` or `failed`), keyed by call ID; a hosted web search is the tool
+  `web_search`.
 
 The settlement transaction saves the validated message and revision; partial
 text is never persisted.
@@ -378,13 +409,18 @@ The full chat and the Dashboard panel share one thread and composer
   are written;
 - the activity line names the current call in plain words with elapsed time,
   and lists the reads a response runs together;
-- a saved reply's run summary counts its model calls and data reads;
+- a saved reply's run summary counts its model calls, data reads and web
+  searches, and its web sources are listed under the reply as links apart
+  from its cited CiteLadder records;
 - **Context used** lists the included context in plain words, without record
   identities, budgets or omission codes.
 
-The [conversation](../frontend/components/agent/conversation.tsx) places the
-document after the reply that produced it; each section can be edited or sent
-back with a scoped instruction, and History compares revisions. **Retry send**
+The [conversation](../frontend/components/agent/conversation.tsx) places each
+document after the reply that last wrote it, labelled "Document N"; with more
+than one, a **Documents** list above the thread jumps to each. Each section
+can be edited or sent back with a scoped instruction naming its document, a
+document's Sources tab lists its CiteLadder records and web sources
+separately, and History compares that document's revisions. **Retry send**
 replays a failed submission with its original idempotency key.
 
 ## Workspace and handoffs
@@ -448,7 +484,8 @@ append-only ledger refunds while every attempt keeps its tokens and debit
 ([B58](billing-decisions.md#agent-chat-behaviour-2026-11-04)); a cancelled turn
 stays charged. The output cap in the hold is the gateway's
 `DEFAULT_AGENT_MAX_OUTPUT_TOKENS` (64 000), so each call needs that much
-headroom in the balance (about 42 credits at Haiku 5.5 prices, plus input). The configured development
+headroom in the balance (about 42 credits at Haiku 5.5 prices, plus input,
+plus 13 credits for each web search the call may run). The configured development
 login (`DEV_LOGIN_EMAIL`, an active admin) runs as `development` funding with
 no hold or debit but the same dispatch evidence. Capability and credit rate are
 keyed `agent`; [Billing](billing-entitlements.md) owns the ledger.
@@ -466,9 +503,12 @@ scripted models and real PostgreSQL, never live providers:
   (thinking and compaction included) byte for byte through PostgreSQL, a
   byte-identical prefix across calls and chats, the previous response named on
   every call with each call's cache diagnosis recorded, an `edit_document` revision and its supply in the next turn, carried
-  sources, workflow pinning, recovery replies and fencing.
-- `agent-builtin-tools.test.ts`: the built-ins' refusals, exact-match edits and
-  staging rules.
+  sources, workflow pinning, recovery replies and fencing, several documents
+  in one chat with per-document edits and restores, and web searches within
+  the turn's budget (allowance per call, `pause_turn`, web sources, recorded
+  search counts).
+- `agent-builtin-tools.test.ts`: the built-ins' refusals, exact-match edits,
+  document numbering and staging rules.
 - `agent-owner-adapters.test.ts`: tool binding and project pinning, excluded
   tools, replayed reads versus sources, Action attachment and next-step
   revisions.
@@ -478,13 +518,14 @@ scripted models and real PostgreSQL, never live providers:
   fingerprints and workflow validation.
 - `models.test.ts`: `converse` for both providers (streamed tool calls, empty
   content, usage with compaction steps and one-hour writes, one-hour
-  breakpoints and the cache diagnosis).
+  breakpoints and the cache diagnosis, hosted web search on Anthropic only).
 - `agent-cutover.test.ts`: HTTP admission, the SSE route (thinking, tool, document
   and reply events, the saved reply, no re-execution, a closed stream ending the
   turn as interrupted), catalog projection, recovery and cancellation.
 - `agent-funding.test.ts`: holds before I/O, settlement with cache writes and
-  thinking, unknown usage, development funding, and a failed turn refunded
-  once (B58) with its attempts kept.
+  thinking, unknown usage, development funding, a failed turn refunded once
+  (B58) with its attempts kept, and web searches held per call and charged as
+  reported (B59).
 
 Live quality and speed are measured outside CI by the operator-only eval,
 `pnpm --filter @citeladder/api agent:eval --live --label <name>`:
@@ -501,7 +542,9 @@ Live quality and speed are measured outside CI by the operator-only eval,
 In the browser, `chat-screen.test.tsx` covers the streamed-then-saved reply,
 thinking and parallel reads, Regenerate, Stop, section edits, sources and next
 steps; `live-turns.test.ts` the stream reducer; `conversation.test.tsx` the run
-summary; `new-chat-screen.test.tsx`
+summary, web sources and several documents' placement and list;
+`new-chat-screen.test.tsx`
 the workflow form, pinned next steps, handoffs and commands;
-`output-pane.test.tsx` the prompt plan's Prompt Builder handoff; and
+`output-pane.test.tsx` the prompt plan's Prompt Builder handoff and a
+document's separate sources; and
 `agent-panel.test.tsx` the panel.

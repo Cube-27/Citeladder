@@ -28,6 +28,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import {
   CHAT,
   NOW,
+  OUTPUT,
   PROJECT,
   REV1,
   REV2,
@@ -75,7 +76,7 @@ describe('ChatScreen', () => {
       http.get(`/api/v1/agent/chats/${CHAT}`, () =>
         HttpResponse.json({
           ...detail(revision(REV1, 1, 'agent', 'Body.')),
-          output: null,
+          outputs: [],
         }),
       ),
     );
@@ -116,7 +117,7 @@ describe('ChatScreen', () => {
     mswServer.use(
       http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
       http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(current)),
-      http.post(`/api/v1/agent/chats/${CHAT}/output/revisions`, async ({ request }) => {
+      http.post(`/api/v1/agent/chats/${CHAT}/outputs/${OUTPUT}/revisions`, async ({ request }) => {
         edits.push(await request.json());
         const saved = revision(REV2, 2, 'user', 'New title tag.');
         current = detail(saved);
@@ -174,7 +175,7 @@ describe('ChatScreen', () => {
     await vi.waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0]).toMatchObject({
       message:
-        'Revise only the section "Title tag": Shorter. Keep every other section exactly as it is.',
+        'In Document 1, revise only the section "Title tag": Shorter. Keep every other section exactly as it is.',
     });
   });
 
@@ -186,7 +187,7 @@ describe('ChatScreen', () => {
       http.get(`/api/v1/agent/chats/${CHAT}`, () =>
         HttpResponse.json(detail(revision(REV1, 1, 'agent', body))),
       ),
-      http.post(`/api/v1/agent/chats/${CHAT}/output/revisions`, async ({ request }) => {
+      http.post(`/api/v1/agent/chats/${CHAT}/outputs/${OUTPUT}/revisions`, async ({ request }) => {
         edits.push(await request.json());
         return HttpResponse.json(revision(REV2, 2, 'user', 'x'), { status: 201 });
       }),
@@ -268,7 +269,7 @@ describe('ChatScreen', () => {
 
   it('compares an earlier revision with the current one', async () => {
     mswServer.use(
-      http.get(`/api/v1/agent/chats/${CHAT}/output/revisions`, () =>
+      http.get(`/api/v1/agent/chats/${CHAT}/outputs/${OUTPUT}/revisions`, () =>
         HttpResponse.json({
           items: [
             revision(REV1, 1, 'agent', 'Keep.\nOld line.'),
@@ -282,6 +283,7 @@ describe('ChatScreen', () => {
       <OutputHistory
         workspaceId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
         chatId={CHAT}
+        outputId={OUTPUT}
         latestRevisionId={REV2}
         canRestore={false}
       />,

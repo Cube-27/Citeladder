@@ -201,6 +201,28 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       debited_credits: '8',
     });
   });
+  it('holds a call’s web search allowance and charges only the searches it ran (B59)', async () => {
+    const { scope, accountId, grantId } = await tenant();
+    const { run: saved, lease } = await run(scope);
+    const calls = new ModelCalls(db, agentFunding(settings, platform));
+    const searching = { ...request, webSearches: 2 };
+    const attempt = await calls.dispatch(lease, 1, await agentModels(platform)(saved), searching);
+    // Two searches at $10 per 1,000 with the 130% markup add 26 credits to the token hold.
+    expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)?.reserved).toBe(HOLD + 26);
+    const usage = { input_tokens: 20, output_tokens: 10, web_search_requests: 1 };
+    await calls.receipt(scope.workspaceId, attempt.id, result(reply(), { usage }));
+    expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
+      reserved: 0,
+      consumed: 14,
+    });
+    expect(
+      await db
+        .selectFrom('agent_model_attempts')
+        .select(['web_search_requests', 'debited_credits'])
+        .where('id', '=', attempt.id)
+        .executeTakeFirst(),
+    ).toEqual({ web_search_requests: 1, debited_credits: '14' });
+  });
   it('refuses a dispatch the remaining credits cannot hold, recording nothing', async () => {
     const { scope } = await tenant(HOLD - 1);
     const { run: saved, lease } = await run(scope);

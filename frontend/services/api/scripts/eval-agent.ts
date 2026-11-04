@@ -321,7 +321,9 @@ async function turn(
     await (await call(client, `/agent/chats/${accepted.chat_id}`)).json(),
   );
   const reply = detail.messages.findLast((message) => message.role === 'agent');
-  const revision = detail.output?.latest_revision;
+  // The document this turn's reply saved, when it saved one.
+  const saved = detail.outputs.findLast((output) => reply && output.message_id === reply.id);
+  const revision = saved?.latest_revision;
   return {
     chat_id: accepted.chat_id,
     run_id: accepted.run.id,
@@ -331,14 +333,13 @@ async function turn(
     ...timing,
     ...(await attempts(db, project.workspaceId, accepted.run.id)),
     reply: reply?.content ?? null,
-    output:
-      detail.output && revision
-        ? {
-            revision: revision.number,
-            title: revision.title,
-            body: revision.body,
-          }
-        : null,
+    output: revision
+      ? {
+          revision: revision.number,
+          title: revision.title,
+          body: revision.body,
+        }
+      : null,
   };
 }
 

@@ -167,7 +167,7 @@ describe('per-request access', () => {
     const answers = [];
     for (const path of [
       `/api/v1/agent/chats/${chatId}`,
-      `/api/v1/agent/chats/${chatId}/output/revisions`,
+      `/api/v1/agent/chats/${chatId}/outputs/${randomUUID()}/revisions`,
     ]) {
       const { status } = await call(path);
       answers.push([status, authReads(executed), readsOf(executed, 'agent_chats')]);
@@ -258,7 +258,10 @@ describe('routes that authorize the path project or chat', () => {
     ['POST', '/api/v1/projects/{project}/topics/preview'],
     ['POST', '/api/v1/projects/{project}/topics/confirm'],
   ];
-  const CHAT_READS = ['/api/v1/agent/chats/{chat}', '/api/v1/agent/chats/{chat}/output/revisions'];
+  const CHAT_READS = [
+    '/api/v1/agent/chats/{chat}',
+    `/api/v1/agent/chats/{chat}/outputs/${randomUUID()}/revisions`,
+  ];
   // Its own tenant: the per-request suite revokes the shared one's access.
   let workspaceId: string;
   let projectId: string;
