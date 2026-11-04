@@ -443,18 +443,22 @@ at sign-up? Tests can still create these users directly." with "yes", after
 signup notices for `@example.test` test fixtures reached the owner's inbox.
 [Workspace access](workspace-access.md) owns the shipped behavior.
 
-## Product charts stay on Recharts
+## Product charts are plain SVG, without a chart library
 
-Line charts (`SeriesChart`, the Performance chart, Search Intelligence history)
-keep Recharts rather than moving to the app's own `TrendChart`. Its weight is
-kept off the critical path instead: the drawing is a lazy module inside a
-`ChartContainer` box that already holds the plot's height, so no screen
-downloads the chart library before it draws a chart and nothing moves when the
-drawing arrives. [Frontend architecture](frontend-architecture.md) owns the
-chunk graph.
+Every product chart draws with the design system's own chart kit in
+`components/ui/` (`TrendChart`, `DonutChart`, `BarList`, `StackedBar`,
+`Sparkline` and the shared `chart.tsx` pieces): plain SVG and the chart tokens.
+The app carries no chart library, Recharts included. That covers the source
+usage chart, the Performance chart and Search Intelligence history.
+[Frontend architecture](frontend-architecture.md) owns the chunk graph.
 
-Source: owner, 2 November 2026, answering "Replace Recharts with the app's own
-chart component?" with "no replace".
+Source: owner, 5 November 2026, asked in the design-system orchestration session
+"On 2 Nov you answered "no replace" to replacing Recharts with the app's own
+chart component (recorded in docs/decisions.md). The design system draws every
+chart as plain SVG, and PR 2c has already moved all charts to it locally,
+uncommitted. Remove Recharts now, or keep it?", answering "Remove Recharts".
+This supersedes the 2 November 2026 answer "no replace", which had kept
+Recharts.
 
 ## Turnstile guards sign-up and email-link requests, never sign-in
 

@@ -322,7 +322,7 @@ describe('OverviewPanel', () => {
       />,
     );
 
-    expect(await screen.findByText('AEO Readiness trend')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'AEO Readiness trend' })).toBeVisible();
     expect(screen.getAllByText('Scored cohort composition changed.')).toHaveLength(1);
     expect(
       screen.getByText(

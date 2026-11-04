@@ -241,9 +241,9 @@ React Router and Zod as their own cache-stable vendor files and everything else
 the entry reaches statically as one boot file; each screen is its own route
 chunk, so a destination never downloads an unrelated screen. Heavy pieces a
 screen does not draw on arrival load lazily inside space already reserved for
-them: Recharts drawings inside the `ChartContainer` box, the execution evidence
-card (and its markdown renderer) inside the open drawer, and the Actions count
-beside its navigation row. `scripts/check-bundle-budget.mjs` holds the boot
+them: the execution evidence card (and its markdown renderer) inside the open
+drawer, and the Actions count beside its navigation row. Charts are plain SVG
+drawn by the screen's own chunk, with no chart library to load. `scripts/check-bundle-budget.mjs` holds the boot
 bytes.
 
 Route matching starts code downloads alongside session bootstrap. Pre-session

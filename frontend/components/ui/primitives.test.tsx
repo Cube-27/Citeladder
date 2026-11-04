@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { createRef } from 'react';
 import { describe, expect, it } from 'vite-plus/test';
 
@@ -248,109 +249,129 @@ describe('ScoreBar', () => {
   });
 });
 
-describe('TrendChart (cross-run Visibility trend)', () => {
-  it('renders with an ARIA label describing the trend', () => {
+describe('TrendChart', () => {
+  const rows = () =>
+    within(screen.getByRole('table', { name: 'Visibility trend' }))
+      .getAllByRole('row')
+      .map((row) => row.textContent);
+  /** The drawn runs of the first line: each `M` lifts the pen after a gap. */
+  const runsOf = (container: HTMLElement) =>
+    container.querySelector('[data-trend-line="1"] path')?.getAttribute('d')?.split('M').length ??
+    1;
+
+  it('tabulates every line and value, with a missing value named rather than zero', () => {
     render(
+      <TrendChart
+        label="Visibility trend"
+        name="You"
+        data={[
+          { label: 'Jun', value: 40 },
+          { label: 'Jul', value: null },
+        ]}
+        series={[{ label: 'Globex', values: [30, 35] }]}
+        yFormat={(value) => `${value}%`}
+      />,
+    );
+    expect(rows()).toEqual(['SeriesJunJul', 'You40%Not measured', 'Globex30%35%']);
+  });
+
+  it('keys each line with its latest value, and reads any point with the arrow keys', async () => {
+    const user = userEvent.setup();
+    render(
+      <TrendChart
+        label="Visibility trend"
+        name="You"
+        data={[
+          { label: '1 Jun 2026', value: 40 },
+          { label: '1 Jul 2026', value: 70 },
+        ]}
+        yFormat={(value) => `${value}%`}
+      />,
+    );
+    expect(screen.getAllByText('70%').length).toBeGreaterThan(0);
+
+    await user.tab();
+    expect(
+      screen.getByRole('group', {
+        name: 'Visibility trend. Use the left and right arrow keys to read each point.',
+      }),
+    ).toHaveFocus();
+    await user.keyboard('{ArrowLeft}');
+    expect(screen.getByText('1 Jun 2026', { selector: 'p' })).toBeVisible();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByText('1 Jun 2026', { selector: 'p' })).toBeNull();
+  });
+
+  it('breaks the line at a missing value and at a point measured under changed conditions', () => {
+    const { container, rerender } = render(
       <TrendChart
         label="Visibility trend"
         data={[
           { label: 'Jun', value: 40 },
-          { label: 'Jul', value: 70 },
+          { label: 'Jul', value: 50 },
+          { label: 'Aug', value: 60 },
         ]}
       />,
     );
-    const chart = screen.getByRole('img', {
-      name: 'Visibility trend: Trend from Jun (40) to Jul (70)',
-    });
-    expect(chart).toBeInTheDocument();
-  });
+    expect(runsOf(container)).toBe(2);
 
-  it('renders a single point without a misleading slope or area', () => {
-    render(<TrendChart label="Visibility trend" data={[{ label: 'Jul', value: 55 }]} />);
-    const chart = screen.getByRole('img', {
-      name: 'Visibility trend: Single point Jul (55)',
-    });
-    expect(chart).toBeInTheDocument();
-    expect(chart.querySelector(':scope > path')).toBeNull();
-    expect(chart.querySelectorAll(':scope > circle')).toHaveLength(1);
-  });
-
-  it('draws no axes, ticks or gridlines unless an axis is named', () => {
-    render(
+    rerender(
       <TrendChart
         label="Visibility trend"
         data={[
           { label: 'Jun', value: 40 },
-          { label: 'Jul', value: 70 },
+          { label: 'Jul', value: null },
+          { label: 'Aug', value: 60, breakBefore: true },
+          { label: 'Sep', value: 70 },
         ]}
       />,
     );
-    const chart = screen.getByRole('img', { name: /Visibility trend/ });
-    expect(chart.querySelector('text')).toBeNull();
-    expect(chart.querySelector('line')).toBeNull();
+    expect(runsOf(container)).toBe(3);
   });
 
-  it('labels both axes and scales the y ticks to the domain', () => {
-    render(
+  it('dots a value standing alone between gaps, so it is not drawn as nothing', () => {
+    const { container } = render(
       <TrendChart
         label="Visibility trend"
         data={[
-          { label: '1 Jun', value: 40 },
-          { label: '1 Jul', value: 55 },
-          { label: '1 Aug', value: 70 },
+          { label: 'Jun', value: null },
+          { label: 'Jul', value: 55 },
+          { label: 'Aug', value: null },
         ]}
-        xAxisLabel="Run date"
-        yAxisLabel="Visibility"
-        formatTick={(value) => `${Math.round(value)}%`}
       />,
     );
-    const chart = screen.getByRole('img', { name: /Visibility trend/ });
-    const text = [...chart.querySelectorAll('text')].map((node) => node.textContent);
-    expect(text).toContain('Run date');
-    expect(text).toContain('Visibility');
-    // Floor, midpoint and ceiling of the 0–100 domain.
-    expect(text).toContain('0%');
-    expect(text).toContain('50%');
-    expect(text).toContain('100%');
-    // First, middle and last point, so a reader can place the x positions.
-    expect(text).toContain('1 Jun');
-    expect(text).toContain('1 Jul');
-    expect(text).toContain('1 Aug');
+    expect(container.querySelectorAll('[data-trend-line="1"] circle')).toHaveLength(1);
   });
 
-  it('ticks the x axis with the short label, not the full point description', () => {
-    render(
+  it('dates the axis with the short label and ticks the scale with the y format', () => {
+    const { container } = render(
       <TrendChart
         label="Visibility trend"
         data={[
           { label: '1 Jun 2026 · 40%', axisLabel: '1 Jun', value: 40 },
           { label: '1 Jul 2026 · 70%', axisLabel: '1 Jul', value: 70 },
         ]}
-        xAxisLabel="Run date"
-        yAxisLabel="Visibility"
+        yMax={100}
+        yFormat={(value) => `${value}%`}
       />,
     );
-    const chart = screen.getByRole('img', { name: /Visibility trend/ });
-    const text = [...chart.querySelectorAll('text')].map((node) => node.textContent);
-    expect(text).toContain('1 Jun');
-    expect(text).not.toContain('1 Jun 2026 · 40%');
+    const text = [...container.querySelectorAll('svg text')].map((node) => node.textContent);
+    expect(text).toEqual(['0%', '20%', '40%', '60%', '80%', '100%', '1 Jun', '1 Jul']);
   });
 
-  it('renders an empty state with no data points', () => {
-    render(<TrendChart label="Visibility trend" data={[]} />);
-    expect(
-      screen.getByRole('img', { name: 'Visibility trend: No trend data' }),
-    ).toBeInTheDocument();
-  });
-
-  it('marks events inside the plotted time span and names them to a screen reader', () => {
+  it('marks only the events inside the plotted span, and names method changes and events', () => {
     const day = (date: string) => new Date(`${date}T00:00:00Z`).getTime();
-    render(
+    const { container } = render(
       <TrendChart
         label="Mention rate"
         data={[
           { label: '1 Mar', value: 40, timestamp: day('2026-03-01') },
-          { label: '15 Mar', value: 70, timestamp: day('2026-03-15') },
+          {
+            label: '15 Mar',
+            value: 70,
+            timestamp: day('2026-03-15'),
+            versionChange: { note: 'Scoring rule scoring-v2 applied' },
+          },
         ]}
         events={[
           { key: 'inside', timestamp: day('2026-03-05'), label: 'Implemented: reviews page' },
@@ -358,105 +379,15 @@ describe('TrendChart (cross-run Visibility trend)', () => {
         ]}
       />,
     );
-    const chart = screen.getByRole('img', {
-      name: 'Mention rate: Trend from 1 Mar (40) to 15 Mar (70) Marked: Implemented: reviews page.',
-    });
-    expect(chart.querySelectorAll('[data-event-marker]')).toHaveLength(1);
-  });
-
-  it('marks a version boundary with an accessible warning marker', () => {
-    render(
-      <TrendChart
-        label="Visibility trend"
-        data={[
-          { label: 'Jun', value: 40 },
-          { label: 'Jul', value: 70, versionChange: { note: 'Scoring rule scoring-v2 applied' } },
-        ]}
-      />,
-    );
-    const chart = screen.getByRole('img');
-    const marker = chart.querySelector('[data-version-marker]');
-    expect(marker).not.toBeNull();
+    expect(container.querySelectorAll('[data-event-marker]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-version-marker]')).toHaveLength(1);
     expect(
-      within(chart as unknown as HTMLElement).getByText(/Scoring rule scoring-v2 applied/),
-    ).toBeInTheDocument();
-  });
-
-  it('renders null values as gaps, announces them, and never draws a zero dot', () => {
-    render(
-      <TrendChart
-        label="Visibility trend"
-        data={[
-          { label: 'Jun', value: 40 },
-          { label: 'Jul', value: 50 },
-          { label: 'Aug', value: null },
-          { label: 'Sep', value: 60 },
-          { label: 'Oct', value: 70 },
-        ]}
-      />,
-    );
-    const chart = screen.getByRole('img');
-    expect(chart).toHaveAttribute(
-      'aria-label',
-      'Visibility trend: Trend from Jun (40) to Oct (70) Some points are unavailable and shown as gaps.',
-    );
-    expect(chart.querySelectorAll(':scope > circle')).toHaveLength(4);
-    expect(chart.querySelectorAll(':scope > path')).toHaveLength(2);
-  });
-
-  it('announces an unavailable endpoint value as "unavailable"', () => {
-    render(
-      <TrendChart
-        label="Visibility trend"
-        data={[
-          { label: 'Jun', value: null },
-          { label: 'Jul', value: 55 },
-        ]}
-      />,
-    );
-    expect(
-      screen.getByRole('img', {
-        name: 'Visibility trend: Trend from Jun (unavailable) to Jul (55) Some points are unavailable and shown as gaps.',
-      }),
-    ).toBeInTheDocument();
-  });
-
-  it('renders a single available point among nulls as a lone dot (no slope)', () => {
-    render(
-      <TrendChart
-        label="Visibility trend"
-        data={[
-          { label: 'Jun', value: null },
-          { label: 'Jul', value: 55 },
-          { label: 'Aug', value: null },
-        ]}
-      />,
-    );
-    const chart = screen.getByRole('img');
-    expect(chart.querySelectorAll(':scope > circle')).toHaveLength(1);
-    expect(chart.querySelector(':scope > path')).toBeNull();
-  });
-
-  it('scales count metrics against a custom domainMax instead of clamping to 100', () => {
-    const data = [
-      { label: 'Jun', value: 250 },
-      { label: 'Jul', value: 500 },
-    ];
-    const { unmount } = render(<TrendChart label="Clicks trend" data={data} domainMax={500} />);
-    let chart = screen.getByRole('img', {
-      name: 'Clicks trend: Trend from Jun (250) to Jul (500)',
-    });
-    let dots = chart.querySelectorAll(':scope > circle');
-    expect(Number(dots[0]?.getAttribute('cy'))).toBeGreaterThan(
-      Number(dots[1]?.getAttribute('cy')),
-    );
-    unmount();
-
-    render(<TrendChart label="Clicks trend" data={data} />);
-    chart = screen.getByRole('img', {
-      name: 'Clicks trend: Trend from Jun (250) to Jul (500)',
-    });
-    dots = chart.querySelectorAll(':scope > circle');
-    expect(dots[0]!.getAttribute('cy')).toBe(dots[1]!.getAttribute('cy'));
+      within(screen.getByRole('list', { name: 'Mention rate: marked' }))
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual([
+      'Method changed at 15 Mar: Scoring rule scoring-v2 applied',
+      'Implemented: reviews page',
+    ]);
   });
 });

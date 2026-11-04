@@ -8,7 +8,7 @@ import { ApiError } from '@/lib/api/errors';
 import { Avatar } from './avatar';
 import { Button } from './button';
 import { Card, CardHeader, CardTitle } from './card';
-import { LegendSwatch } from './chart';
+import { ChartSwatch } from './chart';
 import { Delta } from './delta';
 import { FilterBar, FilterTrigger } from './filter-bar';
 import { DataTable } from './data-table';
@@ -423,11 +423,11 @@ describe('NoProjectState', () => {
   });
 });
 
-describe('LegendSwatch', () => {
+describe('ChartSwatch', () => {
   it('is decorative so the legend text alone names the series', () => {
     render(
       <p>
-        <LegendSwatch tone={{ series: 2 }} />
+        <ChartSwatch tone={2} />
         Competitors
       </p>,
     );

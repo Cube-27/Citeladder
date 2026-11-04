@@ -1,8 +1,8 @@
 /**
  * The colour vocabulary a data mark may speak: an outcome family, a chart
- * series, or neutral. `Meter`, `LegendSwatch` and the chart series tokens all
- * resolve their fill here, so a bar and its legend key can never pick
- * different tokens for the same meaning.
+ * series, or neutral. `MeterRow` and the distribution bars resolve their fill
+ * here, so a bar and its key can never pick different tokens for the same
+ * meaning. A chart's own series take `ChartTone` (`chart.tsx`) by position.
  *
  *   - outcome (`success` … `neutral`) — a state: good, bad, mixed, informative.
  *     `success-soft` is the lighter good step, for a passing band that must
