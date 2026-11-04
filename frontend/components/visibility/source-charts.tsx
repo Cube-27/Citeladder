@@ -1,6 +1,6 @@
 'use client';
 
-import { BusyBar } from '@/components/ui/busy-bar';
+import { BusyBar } from '@/components/ui/progress-bar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartFrame } from '@/components/ui/chart';
 import { DonutChart } from '@/components/ui/donut-chart';
@@ -75,7 +75,7 @@ function UsagePlot({
       />
     );
   }
-  if (query.isLoading) return <Skeleton className="size-full" />;
+  if (query.isLoading) return <Skeleton variant="chart" />;
   if (!series.length) {
     return (
       <div className="grid place-items-center">
@@ -141,7 +141,7 @@ function TypesRing({
       />
     );
   }
-  if (query.isLoading) return <Skeleton className="size-full" />;
+  if (query.isLoading) return <Skeleton variant="chart" />;
   return (
     <DonutChart
       slices={slices}

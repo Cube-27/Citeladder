@@ -9,8 +9,8 @@ import { LiveReply } from '@/components/agent/live-reply';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { WebSources } from '@/components/agent/web-sources';
 import { ProjectLink } from '@/components/layout/scoped-link';
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { cardClasses } from '@/components/ui/card-variants';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Disclosure } from '@/components/ui/disclosure';
@@ -412,9 +412,9 @@ function RunState({
       return <RunningState run={outcome.run} queued={outcome.queued} live={live} />;
     // Every ended turn now answers with its own reply; older ones may not have.
     case 'stopped_at_limit':
-      return answered ? null : <Alert tone="warning">{runErrorCopy('stopped_at_limit')}</Alert>;
+      return answered ? null : <Callout tone="warning">{runErrorCopy('stopped_at_limit')}</Callout>;
     case 'failed':
-      return answered ? null : <Alert tone="danger">{runErrorCopy(outcome.code)}</Alert>;
+      return answered ? null : <Callout tone="negative">{runErrorCopy(outcome.code)}</Callout>;
     default:
       return null;
   }

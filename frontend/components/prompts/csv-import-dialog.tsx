@@ -3,8 +3,8 @@
 import { Download } from 'lucide-react';
 import { useMemo } from 'react';
 
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { CsvImportFileInput, CsvImportPreview, useCsvImportFile } from '@/components/ui/csv-import';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Dialog } from '@/components/ui/dialog';
@@ -82,7 +82,7 @@ export function CsvImportDialog({
       onOpenChange={handleOpenChange}
       title="Import prompts from CSV"
       description="Columns: topic, prompt. New topic names are created; rows without a topic import without one."
-      width="review"
+      width="wide"
       footer={
         <>
           <Button variant="ghost" onClick={() => handleOpenChange(false)}>
@@ -99,7 +99,7 @@ export function CsvImportDialog({
       }
     >
       <Stack gap="workspace">
-        {error ? <Alert tone="danger">{error}</Alert> : null}
+        {error ? <Callout tone="negative">{error}</Callout> : null}
 
         <Stack gap="compact">
           <CsvImportFileInput inputRef={inputRef} onSelect={(file) => void selectFile(file)} />
@@ -110,7 +110,7 @@ export function CsvImportDialog({
         </Stack>
 
         {parsed && parsed.errors.length > 0 ? (
-          <Alert tone="danger">{parsed.errors.join(' ')}</Alert>
+          <Callout tone="negative">{parsed.errors.join(' ')}</Callout>
         ) : null}
 
         {parsed && parsed.rows.length > 0 ? (

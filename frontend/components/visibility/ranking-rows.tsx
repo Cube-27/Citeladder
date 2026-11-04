@@ -5,7 +5,7 @@ import { Users } from 'lucide-react';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Inline } from '@/components/ui/layout';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
-import { BrandLogo } from '@/components/ui/brand-logo';
+import { BrandMark } from '@/components/ui/brand-mark';
 import { Pressable } from '@/components/ui/pressable';
 import { MissingValue } from '@/components/ui/unavailable-value';
 import type { RankingRow } from '@/lib/api/types';
@@ -18,7 +18,7 @@ import {
 } from '@/lib/visibility/dashboard';
 import { Delta } from '@/components/ui/delta';
 import { textRole } from '@/components/ui/typography';
-import { tagClasses } from '@/components/ui/tag-variants';
+import { TAG_FACE } from '@/components/ui/tag';
 
 /**
  * Where you stand against the brands you track.
@@ -226,11 +226,9 @@ export function RankingRowsTable({
           >
             <TableCell>
               <Inline as="span">
-                <BrandLogo name={row.name} logoUrl={row.logo_url} websiteUrl={row.website_url} />
+                <BrandMark name={row.name} logoUrl={row.logo_url} websiteUrl={row.website_url} />
                 <BrandName row={row} selected={selected} onSelect={onSelect} />
-                {row.is_brand ? (
-                  <span className={textRole('label', tagClasses('well', 'shrink-0'))}>You</span>
-                ) : null}
+                {row.is_brand ? <span className={textRole('label', TAG_FACE)}>You</span> : null}
               </Inline>
               <ClampText
                 lines={1}

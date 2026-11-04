@@ -3,7 +3,7 @@
 import type { VisibilityAdsResponse } from '@citeladder/contracts/visibility-ads';
 import { Megaphone } from 'lucide-react';
 
-import { BusyBar } from '@/components/ui/busy-bar';
+import { BusyBar } from '@/components/ui/progress-bar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { QueryState } from '@/components/ui/query-state';
@@ -68,8 +68,8 @@ export function VisibilityAds({
 function AdsLoading() {
   return (
     <Stack gap="workspace" aria-busy>
-      <Skeleton shape="block" />
-      <Skeleton shape="chart" />
+      <Skeleton variant="block" />
+      <Skeleton variant="chart" />
     </Stack>
   );
 }

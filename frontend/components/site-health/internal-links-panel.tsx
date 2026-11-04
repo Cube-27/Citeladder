@@ -6,8 +6,8 @@ import { useSearchParams } from 'react-router-dom';
 import type { InternalLink, InternalLinkAnalysis } from '@citeladder/contracts/site-health';
 
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { DisplayTime } from '@/components/ui/display-time';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -217,6 +217,7 @@ function RunControls({ read, running }: Readonly<{ read: LinksRead; running: boo
     );
   return (
     <Button
+      variant="primary"
       disabled={!read.data?.crawl_id || read.query.isError}
       pending={read.analyze.isPending}
       onClick={() => read.analyze.mutate()}
@@ -239,7 +240,9 @@ function Notices({ read }: Readonly<{ read: LinksRead }>) {
         />
       ) : null}
       {mutationError ? (
-        <Alert>{humanizeApiError(mutationError, 'Analysis could not be started.').message}</Alert>
+        <Callout tone="negative">
+          {humanizeApiError(mutationError, 'Analysis could not be started.').message}
+        </Callout>
       ) : null}
       {read.query.isPending ? <QueryState kind="loading" label="Loading internal links…" /> : null}
     </>
@@ -267,7 +270,11 @@ function StartState({ read }: Readonly<{ read: LinksRead }>) {
       description="Compare related pages from your latest crawl and suggest the contextual links each page is missing."
       action={
         canRun ? (
-          <Button pending={read.analyze.isPending} onClick={() => read.analyze.mutate()}>
+          <Button
+            variant="primary"
+            pending={read.analyze.isPending}
+            onClick={() => read.analyze.mutate()}
+          >
             Analyze internal links
           </Button>
         ) : undefined
@@ -302,12 +309,12 @@ function LinksResult({
   return (
     <>
       {analysis.stale ? (
-        <Alert tone="warning">
+        <Callout tone="warning">
           These suggestions use an earlier crawl.{' '}
           {canAnalyze ? 'Analyze again before making edits.' : null}
-        </Alert>
+        </Callout>
       ) : null}
-      {notice ? <Alert tone="info">{notice}</Alert> : null}
+      {notice ? <Callout tone="info">{notice}</Callout> : null}
       {/* A run that could not check pairs has no result; never render it as empty. */}
       {['unavailable', 'failed', 'cancelled'].includes(analysis.state) &&
       !analysis.recommendations.length ? null : (

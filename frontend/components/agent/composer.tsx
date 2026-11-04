@@ -109,7 +109,7 @@ export function Composer({
             {stopping ? 'Stopping…' : 'Stop'}
           </Button>
         ) : (
-          <Button type="submit" disabled={!canSend}>
+          <Button type="submit" variant="primary" disabled={!canSend}>
             <Icon icon={SendHorizontal} />
             {pending ? 'Sending…' : 'Send'}
           </Button>

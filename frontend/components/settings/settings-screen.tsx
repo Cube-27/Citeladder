@@ -5,10 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
-import { Alert } from '@/components/ui/alert';
 import { Avatar } from '@/components/ui/avatar';
-import { BrandLogo } from '@/components/ui/brand-logo';
+import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { Card } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
 import { IntegrationSettings } from '@/components/settings/integration-settings';
@@ -118,18 +118,18 @@ function ProjectDeletionControls() {
           <>
             <IdentityRow
               media={
-                <BrandLogo
+                <BrandMark
                   name={activeProject.brand_name}
                   logoUrl={activeProject.brand?.logo_url}
                   websiteUrl={activeProject.website_url}
-                  placement="identity"
+                  placement="header"
                 />
               }
               title={<div className={textRole('itemTitle', 'truncate')}>{activeProject.name}</div>}
               caption={<p className="type-caption">Brand: {activeProject.brand_name}</p>}
               actions={
                 <Button
-                  variant="destructive"
+                  variant="danger"
                   onClick={() => setConfirmOpen(true)}
                   disabled={deleteMutation.isPending}
                 >
@@ -138,12 +138,12 @@ function ProjectDeletionControls() {
                 </Button>
               }
             />
-            <Alert tone="danger">
+            <Callout tone="negative">
               Deleting a project removes all of its prompts, topics, audits, visibility history, and
               generated content. This cannot be undone.
-            </Alert>
+            </Callout>
             {deleteMutation.isError ? (
-              <Alert tone="danger">{humanizeApiError(deleteMutation.error).message}</Alert>
+              <Callout tone="negative">{humanizeApiError(deleteMutation.error).message}</Callout>
             ) : null}
           </>
         ) : (
@@ -167,7 +167,7 @@ function ProjectDeletionControls() {
               Cancel
             </Button>
             <Button
-              variant="destructive"
+              variant="danger"
               onClick={() => activeProject && deleteMutation.mutate(activeProject.id)}
               disabled={deleteMutation.isPending || !activeProject}
             >
@@ -242,7 +242,7 @@ export function SettingsScreen() {
             <SettingsSections>
               <SettingsSection title="Profile" description="Your sign-in email and workspace role.">
                 <IdentityRow
-                  media={<Avatar name={user.email} placement="identity" />}
+                  media={<Avatar name={user.email} placement="profile" />}
                   title={<div className={textRole('itemTitle', 'truncate')}>{user.email}</div>}
                   caption={
                     activeWorkspace ? (

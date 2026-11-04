@@ -4,10 +4,10 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { LogOut } from 'lucide-react';
 import { useState } from 'react';
 
-import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Callout } from '@/components/ui/callout';
+import { ConfirmDialog } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
@@ -50,7 +50,7 @@ export function WorkspacePanel() {
           <h2 id="workspace-panel-title" className={textRole('sectionTitle')}>
             {activeWorkspace.name}
           </h2>
-          <Badge variant="neutral">{roleLabel(activeWorkspace.role)}</Badge>
+          <Badge>{roleLabel(activeWorkspace.role)}</Badge>
         </Inline>
         <p className={textRole('body')}>{ROLE_SUMMARY[activeWorkspace.role]}</p>
         {isOwner ? (
@@ -60,7 +60,7 @@ export function WorkspacePanel() {
         ) : (
           <Button
             type="button"
-            variant="destructiveGhost"
+            variant="danger"
             className="w-fit"
             onClick={() => setConfirmLeave(true)}
           >
@@ -69,22 +69,22 @@ export function WorkspacePanel() {
           </Button>
         )}
         {leave.isError ? (
-          <Alert tone="danger">{humanizeApiError(leave.error).message}</Alert>
+          <Callout tone="negative">{humanizeApiError(leave.error).message}</Callout>
         ) : null}
       </Stack>
 
       {mayManage && !mayInvite ? (
-        <Alert tone="info">
+        <Callout tone="info">
           Inviting team members is part of a paid plan. During the trial, this workspace is yours
           alone. <TextLink href={PLANS_HREF}>See plans</TextLink>
-        </Alert>
+        </Callout>
       ) : null}
       {mayManage ? (
         <MemberSettings mayInvite={mayInvite} />
       ) : (
-        <Alert tone="info">
+        <Callout tone="info">
           The owner and admins manage who belongs to this workspace and what each person may do.
-        </Alert>
+        </Callout>
       )}
 
       <ConfirmDialog

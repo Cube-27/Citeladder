@@ -4,8 +4,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
@@ -57,9 +57,9 @@ export function AcceptInvitationScreen() {
           title="Invitation"
           description="This link is missing its invitation token."
         />
-        <Alert tone="danger">
+        <Callout tone="negative">
           Open the invitation link exactly as it was sent to you, or ask for a new one.
-        </Alert>
+        </Callout>
       </Stack>
     );
   }
@@ -84,11 +84,11 @@ export function AcceptInvitationScreen() {
           </div>
         </Stack>
       ) : (
-        <Alert tone="info">
+        <Callout tone="info">
           {accept.isSuccess
             ? 'You have joined. Taking you there now.'
             : 'Checking your invitation.'}
-        </Alert>
+        </Callout>
       )}
     </Stack>
   );

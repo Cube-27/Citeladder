@@ -3,9 +3,9 @@
 import type { ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-import { Alert } from '@/components/ui/alert';
 import { ProjectRequiredState } from '@/components/layout/project-required-state';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { TabsRoot } from '@/components/ui/tabs';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -219,7 +219,7 @@ function SiteHealthNotices({
 }>) {
   return (
     <>
-      {screen.exportError ? <Alert tone="danger">{screen.exportError}</Alert> : null}
+      {screen.exportError ? <Callout tone="negative">{screen.exportError}</Callout> : null}
       {mutationsAllowed && screen.createMutation.isError ? (
         <MutationNotice
           notice={mutationNoticeForError(screen.createMutation.error, {
@@ -237,10 +237,10 @@ function SiteHealthNotices({
         />
       ) : null}
       {screen.stalled ? (
-        <Alert tone="warning">
+        <Callout tone="warning">
           This crawl stopped making progress. It resumes automatically if it can; results so far are
           shown below.
-        </Alert>
+        </Callout>
       ) : null}
     </>
   );
@@ -325,7 +325,7 @@ function AnalysisPanel({
     return <InternalLinksPanel key={projectId} projectId={projectId} workspaceId={workspaceId} />;
   if (tab === 'changes')
     return <ChangesPanel key={projectId} projectId={projectId} workspaceId={workspaceId} />;
-  return <Alert tone="info">Run a crawl before opening Website analysis.</Alert>;
+  return <Callout tone="info">Run a crawl before opening Website analysis.</Callout>;
 }
 
 function screenBlockingState({
@@ -369,10 +369,10 @@ function screenBlockingState({
     return {
       kind: 'state',
       node: (
-        <Alert tone="warning">
+        <Callout tone="warning">
           Site Health access could not be resolved. Refresh to try again, or contact your workspace
           administrator if this continues.
-        </Alert>
+        </Callout>
       ),
     };
   if (entitlement.isLoading || dashboard.isLoading || phase === 'resolving')
@@ -416,11 +416,11 @@ function CrawlActions({
         </Button>
       </Tooltip>
       {active ? (
-        <Button variant="destructive" onClick={onCancel} disabled={cancelPending}>
+        <Button variant="danger" onClick={onCancel} disabled={cancelPending}>
           {cancelPending ? 'Stopping…' : 'Stop crawl'}
         </Button>
       ) : (
-        <Button onClick={() => onStart()} disabled={startPending}>
+        <Button variant="primary" onClick={() => onStart()} disabled={startPending}>
           {startPending ? 'Starting…' : 'Run new crawl'}
         </Button>
       )}

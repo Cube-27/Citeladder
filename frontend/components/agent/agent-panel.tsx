@@ -16,8 +16,8 @@ import { useFollowLatest } from '@/components/agent/use-follow-latest';
 import { useChatDetail, useCreateChat } from '@/components/agent/use-chat-turns';
 import { navigationMode } from '@/components/layout/nav-items';
 import { ProjectLink } from '@/components/layout/scoped-link';
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { DockedThread } from '@/components/ui/chat-dock';
 import { Drawer } from '@/components/ui/drawer';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -159,8 +159,8 @@ function PanelStart({
             : 'The agent reads your CiteLadder evidence and answers with sources.'}
         </p>
       </Stack>
-      {access.canSend ? null : <Alert tone="info">{access.message}</Alert>}
-      {create.failure ? <Alert tone="danger">{create.failure.message}</Alert> : null}
+      {access.canSend ? null : <Callout tone="info">{access.message}</Callout>}
+      {create.failure ? <Callout tone="negative">{create.failure.message}</Callout> : null}
     </DockedThread>
   );
 }
@@ -199,7 +199,7 @@ function PanelChat({
   if (query.data.chat.project_id !== projectId)
     return (
       <DockedThread>
-        <Alert tone="danger">This chat belongs to another project.</Alert>
+        <Callout tone="negative">This chat belongs to another project.</Callout>
       </DockedThread>
     );
   return (

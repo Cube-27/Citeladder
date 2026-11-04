@@ -58,7 +58,11 @@ export function SiteHealthDashboardLayout({
             heading="Run your first site crawl"
             description="Crawl your site to see page health, issues, and recommendations as results arrive."
             action={
-              <Button onClick={() => startCrawl()} disabled={startPending || !mutationsAllowed}>
+              <Button
+                variant="primary"
+                onClick={() => startCrawl()}
+                disabled={startPending || !mutationsAllowed}
+              >
                 {startPending ? 'Starting…' : 'Run new crawl'}
               </Button>
             }

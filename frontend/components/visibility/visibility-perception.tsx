@@ -8,7 +8,7 @@ import type {
 import { MessageSquareQuote } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { BusyBar } from '@/components/ui/busy-bar';
+import { BusyBar } from '@/components/ui/progress-bar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -64,8 +64,8 @@ export function VisibilityPerception({
 function PerceptionLoading() {
   return (
     <Stack gap="workspace" aria-busy>
-      <Skeleton shape="block" />
-      <Skeleton shape="chart" />
+      <Skeleton variant="block" />
+      <Skeleton variant="chart" />
     </Stack>
   );
 }

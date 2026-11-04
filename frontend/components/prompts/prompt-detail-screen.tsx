@@ -6,7 +6,7 @@ import { useParams } from 'react-router-dom';
 
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { DetailScreen } from '@/components/layout/page-shell';
-import { Alert } from '@/components/ui/alert';
+import { Callout } from '@/components/ui/callout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartKey } from '@/components/ui/chart';
 import { Stack } from '@/components/ui/layout';
@@ -68,7 +68,7 @@ export function PromptDetailScreen() {
   if (!activeWorkspaceId)
     return (
       <DetailScreen back={BACK}>
-        <Alert tone="info">Choose a workspace to open this prompt.</Alert>
+        <Callout tone="info">Choose a workspace to open this prompt.</Callout>
       </DetailScreen>
     );
   if (!query.data)

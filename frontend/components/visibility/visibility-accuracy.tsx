@@ -9,10 +9,10 @@ import {
 import { Globe, ShieldCheck } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { BusyBar } from '@/components/ui/busy-bar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
+import { BusyBar } from '@/components/ui/progress-bar';
 import { QueryState } from '@/components/ui/query-state';
 import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -66,8 +66,8 @@ export function VisibilityAccuracy({
   if (!query.data)
     return (
       <Stack gap="workspace" aria-busy>
-        <Skeleton shape="block" />
-        <Skeleton shape="chart" />
+        <Skeleton variant="block" />
+        <Skeleton variant="chart" />
       </Stack>
     );
   return (

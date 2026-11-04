@@ -3,13 +3,12 @@ import { KeyRound } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { CopyButton } from '@/components/ui/copy-button';
 import { DateField } from '@/components/ui/date-field';
-import { Dialog } from '@/components/ui/dialog';
+import { ConfirmDialog, Dialog } from '@/components/ui/dialog';
 import { DisplayTime, TableTime } from '@/components/ui/display-time';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -163,9 +162,16 @@ function CreateKeyDialog({
       title={created ? 'Copy your API key' : 'Create an API key'}
       footer={
         created ? (
-          <Button onClick={close}>Done</Button>
+          <Button variant="primary" onClick={close}>
+            Done
+          </Button>
         ) : (
-          <Button pending={create.isPending} disabled={!ready} onClick={() => create.mutate()}>
+          <Button
+            variant="primary"
+            pending={create.isPending}
+            disabled={!ready}
+            onClick={() => create.mutate()}
+          >
             Create key
           </Button>
         )
@@ -173,7 +179,9 @@ function CreateKeyDialog({
     >
       {created ? (
         <Stack gap="compact">
-          <Alert tone="warning">You won’t see this key again. Store it somewhere safe now.</Alert>
+          <Callout tone="warning">
+            You won’t see this key again. Store it somewhere safe now.
+          </Callout>
           <code className="type-caption break-all">{created.secret}</code>
           <div>
             <CopyButton value={created.secret}>Copy key</CopyButton>
@@ -240,7 +248,7 @@ function CreateKeyDialog({
             )}
           </Field>
           {create.isError ? (
-            <Alert tone="danger">{humanizeApiError(create.error).message}</Alert>
+            <Callout tone="negative">{humanizeApiError(create.error).message}</Callout>
           ) : null}
         </Stack>
       )}
@@ -257,7 +265,7 @@ function keysToolbar({
   return {
     status: `${live} of ${limit ?? 0} keys in use`,
     actions: (
-      <Button onClick={onCreate} disabled={limit !== null && live >= limit}>
+      <Button variant="primary" onClick={onCreate} disabled={limit !== null && live >= limit}>
         Create key
       </Button>
     ),
@@ -304,7 +312,7 @@ export function ApiKeys() {
           description={`Read your reports and manage prompts, competitors, audits and actions from your own code through the REST API at ${API_BASE_URL}.`}
         />
         {available ? null : (
-          <Alert tone="info">
+          <Callout tone="info">
             The REST API is included in paid plans.{' '}
             <Link
               to={workspaceDestination('/billing', null, workspaceId)}
@@ -312,7 +320,7 @@ export function ApiKeys() {
             >
               Choose a plan
             </Link>
-          </Alert>
+          </Callout>
         )}
       </Stack>
       {keys.length === 0 && !available ? null : (
@@ -365,7 +373,7 @@ export function ApiKeys() {
               <Stack gap="compact">
                 <p>Requests with this key are refused at once. This cannot be undone.</p>
                 {revoke.isError ? (
-                  <Alert tone="danger">{humanizeApiError(revoke.error).message}</Alert>
+                  <Callout tone="negative">{humanizeApiError(revoke.error).message}</Callout>
                 ) : null}
               </Stack>
             ),

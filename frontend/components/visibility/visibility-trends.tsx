@@ -3,7 +3,7 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { FilterChoice } from '@/components/ui/filter-bar';
-import { Alert } from '@/components/ui/alert';
+import { Callout } from '@/components/ui/callout';
 import { Button } from '@/components/ui/button';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -78,9 +78,9 @@ export function VisibilityTrends({
     return <QueryState kind="empty" inline message="No measured run for this selection yet." />;
   if (isMetricsPending(visibilityQuery.error))
     return (
-      <Alert tone="info">
+      <Callout tone="info">
         Results for this run are still being prepared. They appear here as soon as they are ready.
-      </Alert>
+      </Callout>
     );
   if (visibilityQuery.isError) {
     return (
@@ -153,9 +153,9 @@ function PooledSelectionNote({ selected }: Readonly<{ selected: Visibility }>) {
   const pooled = selected.source_audit_ids?.length ?? 0;
   if (Object.keys(groups).length < 2 || pooled >= total) return null;
   return (
-    <Alert tone="info">
+    <Callout tone="info">
       {`Pooled the ${pooled} of ${total} runs in this period that share one measurement setup. The other ${total - pooled} used a different set of models or prompts, so their answers are not comparable with these and are not counted here — open them individually from the measurement menu.`}
-    </Alert>
+    </Callout>
   );
 }
 

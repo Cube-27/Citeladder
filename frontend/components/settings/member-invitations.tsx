@@ -2,9 +2,9 @@
 
 import { useState, type FormEvent } from 'react';
 
-import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { CopyButton } from '@/components/ui/copy-button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Dialog } from '@/components/ui/dialog';
@@ -84,7 +84,13 @@ export function InviteDialog({
           <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="submit" form={INVITE_FORM_ID} disabled={!email.trim()} pending={pending}>
+          <Button
+            type="submit"
+            variant="primary"
+            form={INVITE_FORM_ID}
+            disabled={!email.trim()}
+            pending={pending}
+          >
             Send invitation
           </Button>
         </>
@@ -115,9 +121,9 @@ export function InviteDialog({
               />
             )}
           </Field>
-          {error ? <Alert tone="danger">{error}</Alert> : null}
+          {error ? <Callout tone="negative">{error}</Callout> : null}
           {issuedToken ? (
-            <Alert tone="info">
+            <Callout tone="info">
               <Stack gap="compact" className="justify-items-start">
                 <span>
                   {deliveryNotice(delivery)}
@@ -129,7 +135,7 @@ export function InviteDialog({
                 </code>
                 <CopyButton value={acceptanceLink(issuedToken)}>Copy link</CopyButton>
               </Stack>
-            </Alert>
+            </Callout>
           ) : null}
         </Stack>
       </form>
@@ -169,7 +175,7 @@ export function PendingInvitations({
             <ClampText lines={1}>{invitation.email}</ClampText>
           </TableCell>
           <TableCell className="whitespace-nowrap">
-            <Badge variant="neutral">{roleLabel(invitation.role)}</Badge>
+            <Badge>{roleLabel(invitation.role)}</Badge>
           </TableCell>
           <TableCell numeric className="type-caption">
             <TableTime value={invitation.expires_at} />

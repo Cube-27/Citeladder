@@ -3,8 +3,8 @@
 import { Plus, RotateCcw, Sparkles, Tags, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
-import { Alert } from '@/components/ui/alert';
 import { Button, IconButton } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -120,9 +120,9 @@ export function BuilderTopicsStep({ topics }: Readonly<{ topics: BuilderTopics }
         />
       ) : null}
       {topics.confirm.error ? (
-        <Alert tone="danger">{humanizeApiError(topics.confirm.error).message}</Alert>
+        <Callout tone="negative">{humanizeApiError(topics.confirm.error).message}</Callout>
       ) : null}
-      {topics.problem ? <Alert tone="warning">{topics.problem}</Alert> : null}
+      {topics.problem ? <Callout tone="warning">{topics.problem}</Callout> : null}
       {topics.rows.length ? (
         <Stack as="ul" gap="item" aria-label="Topics">
           {topics.rows.map((row) => (
