@@ -60,13 +60,12 @@ const CONTROL_BAND_HEIGHT = 53;
 const SECTION_GAP = 32;
 const CARD_GAP = 16;
 /**
- * One box recipe: padding 24 on the box element, radius 14 (rounded-lg). A
- * card is lifted by its shadow and draws no border; a panel keeps its 1px edge.
+ * One box recipe: padding 24 on the box element, radius 14 (rounded-lg), and
+ * no border: a box is lifted by its shadow.
  */
 const CARD_INSET = 24;
 const BOX_RADIUS = 14;
-const CARD_BORDER = 0;
-const PANEL_BORDER = 1;
+const BOX_BORDER = 0;
 /**
  * Loading, read-error and first-use empty share one footprint: the block
  * EmptyState's. The state draws no box of its own (its Skeleton, Callout or
@@ -236,11 +235,7 @@ function measure(route: string) {
     const boxStyle = getComputedStyle(box);
     add('box.padding', box, px(boxStyle.paddingTop));
     add('box.radius', box, px(boxStyle.borderTopLeftRadius));
-    add(
-      box.matches('.surface-card') ? 'card.border' : 'panel.border',
-      box,
-      px(boxStyle.borderTopWidth),
-    );
+    add('box.border', box, px(boxStyle.borderTopWidth));
     const next = box.nextElementSibling;
     if (
       next?.matches(boxes) &&
@@ -512,8 +507,7 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'card.gap', CARD_GAP);
   expectOneValue(records, 'box.padding', CARD_INSET);
   expectOneValue(records, 'box.radius', BOX_RADIUS);
-  expectOneValue(records, 'card.border', CARD_BORDER);
-  expectOneValue(records, 'panel.border', PANEL_BORDER);
+  expectOneValue(records, 'box.border', BOX_BORDER);
   expectOneValue(records, 'card.inset-top', CARD_INSET);
   expectOneValue(records, 'card.inset-left', CARD_INSET);
   expectOneValue(records, 'query-state.height', QUERY_STATE_HEIGHT);
