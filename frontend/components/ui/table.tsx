@@ -137,11 +137,11 @@ export function TableRow({
       {...props}
       className={cn(
         'hover:bg-hover active:bg-active h-[var(--table-row-height)] transition-colors',
-        // A selected or highlighted row keeps the card's fill and takes the
-        // short accent pill on its first cell's start edge and the foreground
-        // ink: no fill block.
-        'selection-bar-cells aria-selected:text-foreground',
-        highlight && 'selection-bar-cells-on text-foreground',
+        // A selected or highlighted row takes the shared selected tint and the
+        // foreground ink, the one selected face (owner, 2026-11-04); hover
+        // never lightens it.
+        'aria-selected:bg-selected aria-selected:hover:bg-selected aria-selected:text-foreground',
+        highlight && 'bg-selected hover:bg-selected text-foreground',
         className,
       )}
     >

@@ -166,17 +166,16 @@ function textRows(segment: StatSegment) {
 }
 
 /**
- * A pressable segment's state. Selected keeps the card's own fill and takes a
- * 2px accent bar along its foot and the foreground ink; there is no fill
- * block, so the first segment, flush with the card's inset, never shows a box
- * edge against its label.
+ * A pressable segment's state: selected takes the shared selected tint and
+ * the foreground ink, the same filled face as a selected tab or segment
+ * (owner, 2026-11-04); unselected takes the neutral hover and pressed tints.
  */
 function statSelectionClasses(selected: boolean) {
   return cn(
     'transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]',
     selected
-      ? "text-foreground after:bg-accent after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:content-['']"
-      : 'text-secondary hover:text-foreground',
+      ? 'bg-selected text-foreground active:bg-active'
+      : 'text-secondary hover:bg-hover hover:text-foreground active:bg-active',
   );
 }
 
@@ -190,7 +189,13 @@ function Segment({ segment }: Readonly<{ segment: StatSegment }>) {
       className={cn(
         'grid min-w-0 content-start gap-1 py-3 desktop:px-4 desktop:first:ps-0 desktop:last:pe-0',
         segment.score && 'grid-cols-[minmax(0,1fr)_auto] gap-x-4',
-        pressable && cn('relative', statSelectionClasses(segment.selected ?? false)),
+        // A pressable segment's fill needs its own inset at the card's edges
+        // too, so its label never touches the selected pill's edge.
+        pressable &&
+          cn(
+            'relative rounded-[var(--radius-control)] px-4 desktop:first:ps-4 desktop:last:pe-4',
+            statSelectionClasses(segment.selected ?? false),
+          ),
       )}
     >
       {segment.score ? (

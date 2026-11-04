@@ -99,7 +99,6 @@ function TabStrip<T extends string>({
   fill = false,
   controls,
 }: Readonly<TabStripProps<T> & { ruled: boolean; controls?: ReactNode }>) {
-  const value = useContext(ActiveTabContext);
   return (
     // The rule sits on the wrapper; the strip overhangs it by the tab padding,
     // so a padded tab's label still starts on the content edge.
@@ -120,7 +119,7 @@ function TabStrip<T extends string>({
           className,
         )}
       >
-        <TabTriggers items={items} value={value} fill={fill} onIntent={onIntent} />
+        <TabTriggers items={items} fill={fill} onIntent={onIntent} />
       </TabsPrimitive.List>
       {controls == null ? null : (
         <div data-tab-controls="" className="flex shrink-0 items-center">
@@ -132,15 +131,16 @@ function TabStrip<T extends string>({
 }
 
 /**
- * Each tab is a padded, button-shaped target: hover fills a rounded box inset
- * from the strip, and the active underline spans the label.
+ * Each tab is a padded, button-shaped target: hover fills its rounded box and
+ * the selected tab is the shared filled selected pill, the same face as a
+ * selected segment (owner, 2026-11-04: active states are buttons, not
+ * underlines).
  */
 function TabTriggers<T extends string>({
   items,
-  value,
   fill,
   onIntent,
-}: Readonly<Pick<TabStripProps<T>, 'items' | 'onIntent'> & { value: unknown; fill: boolean }>) {
+}: Readonly<Pick<TabStripProps<T>, 'items' | 'onIntent'> & { fill: boolean }>) {
   return (
     <>
       {items.map((item) => (
@@ -158,20 +158,12 @@ function TabTriggers<T extends string>({
               'label',
               'focus-ring text-secondary enabled:hover:text-foreground data-[state=active]:text-foreground disabled:text-muted relative inline-flex h-[var(--tab-height)] items-center rounded-[var(--radius-control)] px-[var(--tab-pad-x)] whitespace-nowrap transition-colors',
             ),
-            'before:absolute before:inset-x-0 before:inset-y-1 before:rounded-[var(--radius-control)] before:transition-colors enabled:hover:before:bg-hover enabled:active:before:bg-active disabled:before:bg-disabled',
+            'before:absolute before:inset-0 before:rounded-[var(--radius-control)] before:transition-colors data-[state=active]:before:bg-selected data-[state=inactive]:enabled:hover:before:bg-hover enabled:active:before:bg-active disabled:before:bg-disabled',
             fill ? 'min-w-max flex-1 basis-0 justify-center' : 'shrink-0',
           )}
         >
-          {/* Positioned, so the label paints above the hover fill. */}
+          {/* Positioned, so the label paints above the fill. */}
           <span className="relative">{item.label}</span>
-          {item.value === value ? (
-            <span
-              className={cn(
-                'bg-accent absolute bottom-0 h-0.5',
-                fill ? 'inset-x-0' : 'inset-x-[var(--tab-pad-x)]',
-              )}
-            />
-          ) : null}
         </TabsPrimitive.Trigger>
       ))}
     </>
