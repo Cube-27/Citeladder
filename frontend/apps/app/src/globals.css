@@ -406,10 +406,6 @@
   /* The product ground's grain (Windows acrylic/Mica): the same tile, faded
      until it reads only up close. Dark inverts it to light noise. */
   --ground-grain-opacity: 0.07;
-  /* The vertical selection mark (Windows style): a short rounded pill centred
-     on a row's start edge, never the row's full height. */
-  --selection-pill-length: 16px;
-  --selection-pill-thickness: 3px;
   --site-gutter: 20px;
   --marketing-nav-offset: calc(4rem + env(safe-area-inset-top, 0px));
   --skeleton-base: var(--color-well);
@@ -1077,45 +1073,9 @@ a.focus-ring:active .type-caption {
   box-shadow: 0 0 0 1px var(--surface-ring);
 }
 
-/* Selection is an accent mark plus foreground ink, never a fill block
-   (owner, 2026-11-03): the start edge for a current navigation or list row,
-   the foot for a selected segment or filter chip. The item keeps its own fill.
-   The start-edge mark is the Windows pill (owner, 2026-11-04): 3px wide, 16px
-   tall, centred on the row. Both are drawn out of flow, so the row's size and
-   its label never move. A table row's mark sits on its first cell, since rows
-   cannot position a mark in every engine. */
-.selection-bar,
-.selection-bar-foot {
-  position: relative;
-}
-/* Layered, so a pinned column's `sticky` utility (also a containing block for
-   the mark) still wins over this default. */
-@layer components {
-  .selection-bar-cells > :first-child {
-    position: relative;
-  }
-}
-.selection-bar::before,
-.selection-bar-foot::before,
-.selection-bar-cells:is([aria-selected='true'], .selection-bar-cells-on) > :first-child::after {
-  content: '';
-  position: absolute;
-  background: var(--color-accent);
-  border-radius: var(--radius-full);
-  pointer-events: none;
-}
-.selection-bar::before,
-.selection-bar-cells:is([aria-selected='true'], .selection-bar-cells-on) > :first-child::after {
-  inset-inline-start: 0;
-  top: calc(50% - var(--selection-pill-length) / 2);
-  height: var(--selection-pill-length);
-  width: var(--selection-pill-thickness);
-}
-.selection-bar-foot::before {
-  inset-inline: var(--tab-pad-x);
-  bottom: 0;
-  height: 2px;
-}
+/* Selection is one filled face everywhere (owner, 2026-11-04): a current
+   navigation row, selected tab, segment, list row or table row takes the
+   surface-derived `selected` tint and foreground ink, never an accent mark. */
 
 /* The rail shares the card fill (owner, 2026-11-03): the darker workspace
    sheet beside it is the separation, so the rail draws no edge of its own. */
