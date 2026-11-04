@@ -62,7 +62,6 @@ export function AgentPanel() {
       closeLabel="Close agent"
       // The panel body lays out its own scroll area and bottom-pinned composer.
       body="dock"
-      bodyLabel="Agent conversation"
     >
       {chatId ? (
         <PanelChat
@@ -182,16 +181,27 @@ function PanelChat({
   const query = useChatDetail(workspaceId, chatId);
   if (query.isError && !query.data)
     return (
-      <ReadError
-        error={query.error}
-        fallback="This chat could not be loaded."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
-      />
+      <DockedThread>
+        <ReadError
+          error={query.error}
+          fallback="This chat could not be loaded."
+          onRetry={() => void query.refetch()}
+          pending={query.isFetching}
+        />
+      </DockedThread>
     );
-  if (!query.data) return <QueryState kind="loading" label="Loading chat…" />;
+  if (!query.data)
+    return (
+      <DockedThread>
+        <QueryState kind="loading" label="Loading chat…" />
+      </DockedThread>
+    );
   if (query.data.chat.project_id !== projectId)
-    return <Alert tone="danger">This chat belongs to another project.</Alert>;
+    return (
+      <DockedThread>
+        <Alert tone="danger">This chat belongs to another project.</Alert>
+      </DockedThread>
+    );
   return (
     <PanelConversation
       workspaceId={workspaceId}
@@ -222,10 +232,11 @@ function PanelConversation({
     onLeave();
     navigate(projectHref(`/agent/chats/${chatId}`));
   };
-  const { endRef, showJump, jumpToLatest } = useFollowLatest(detail);
+  const { scrollRef, showJump, jumpToLatest } = useFollowLatest();
   return (
     <DockedThread
-      end={<div ref={endRef} />}
+      label="Agent conversation"
+      scrollRef={scrollRef}
       floating={showJump ? <JumpToLatest onJump={jumpToLatest} /> : null}
       dock={
         <ReplyComposer

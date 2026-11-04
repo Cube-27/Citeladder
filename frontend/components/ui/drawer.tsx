@@ -43,8 +43,8 @@ export function Drawer({
   className?: string;
   /**
    * `scroll`: the body scrolls as one padded column. `dock`: the body is a
-   * `DockedThread` — its content scrolls and a composer docks to the bottom
-   * edge, so the body drops its bottom inset and lays out as a column.
+   * `DockedThread` — its thread scrolls in its own padded region and a
+   * composer docks under it, so the body itself neither scrolls nor pads.
    */
   body?: 'scroll' | 'dock';
   /** Names a scrolling content region when it has independent navigation. */
@@ -141,8 +141,10 @@ export function Drawer({
           <Body
             aria-label={bodyLabel}
             className={cn(
-              'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-[var(--modal-padding)] py-4',
-              body === 'dock' && 'flex flex-col pb-0',
+              'min-h-0 flex-1',
+              body === 'dock'
+                ? 'flex flex-col overflow-hidden'
+                : 'overflow-x-hidden overflow-y-auto overscroll-contain px-[var(--modal-padding)] py-4',
             )}
           >
             {children}

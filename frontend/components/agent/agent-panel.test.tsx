@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { useEffect, useState } from 'react';
@@ -19,6 +19,7 @@ import { AgentPanelProvider, useAgentPanelSeed } from '@/lib/agent/panel-context
 import { queryKeys } from '@/lib/api/query-keys';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
+import { expectThreadFollowsLatest } from '@/test/chat-follow';
 
 vi.mock('@/lib/billing/entitlement-context', () => ({
   useEntitlement: () => ({ hasCapability: (key: string) => key === 'agent' }),
@@ -198,7 +199,7 @@ describe('AgentPanel', () => {
     expect(screen.queryByRole('button', { name: 'Open agent' })).not.toBeInTheDocument();
   });
 
-  it('keeps the drawer reading position while the persisted chat updates', async () => {
+  it('follows the drawer thread in its own region until the reader scrolls up', async () => {
     let current = DETAIL;
     mswServer.use(
       http.get('/api/v1/agent/skills', () => HttpResponse.json({ skills: [] })),
@@ -207,49 +208,31 @@ describe('AgentPanel', () => {
       ),
       http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(current)),
     );
-    const scroll = vi.fn();
-    const oldScroll = HTMLElement.prototype.scrollIntoView;
-    const oldStyle = window.getComputedStyle;
-    let scrollRoot: HTMLElement | null = null;
-    vi.spyOn(window, 'getComputedStyle').mockImplementation((element) =>
-      element === scrollRoot ? ({ overflowY: 'auto' } as CSSStyleDeclaration) : oldStyle(element),
-    );
-    HTMLElement.prototype.scrollIntoView = scroll;
-    try {
-      const user = userEvent.setup();
-      const { queryClient } = renderShell('/site');
-      await user.click(await screen.findByRole('button', { name: 'Open agent' }));
-      const panel = await screen.findByRole('dialog', { name: 'Agent' });
-      scrollRoot = within(panel).getByRole('region', { name: 'Agent conversation' });
-      Object.defineProperties(scrollRoot, {
-        scrollHeight: { configurable: true, value: 3000 },
-        clientHeight: { configurable: true, value: 600 },
-        scrollTop: { configurable: true, writable: true, value: 0 },
-      });
-      await user.click(within(panel).getByRole('button', { name: 'Send' }));
-      await within(panel).findByLabelText('Reply to the agent');
-      const initialScrolls = scroll.mock.calls.length;
-      fireEvent.scroll(scrollRoot!);
-      current = {
-        ...DETAIL,
-        messages: [
-          ...DETAIL.messages,
-          {
-            ...DETAIL.messages[1]!,
-            id: '77777777-7777-4777-8777-777777777773',
-            sequence: 3,
-            content: 'More detail.',
-          },
-        ],
-      };
-      await act(() => queryClient.invalidateQueries({ queryKey: queryKeys.agent.chat(CHAT) }));
-      await within(panel).findByText('More detail.');
-      expect(scroll).toHaveBeenCalledTimes(initialScrolls);
-      await user.click(within(panel).getByRole('button', { name: 'Jump to latest' }));
-      expect(scroll).toHaveBeenCalledTimes(initialScrolls + 1);
-    } finally {
-      HTMLElement.prototype.scrollIntoView = oldScroll;
-      vi.restoreAllMocks();
-    }
+    const user = userEvent.setup();
+    const { queryClient } = renderShell('/site');
+    await user.click(await screen.findByRole('button', { name: 'Open agent' }));
+    const panel = await screen.findByRole('dialog', { name: 'Agent' });
+    await user.click(within(panel).getByRole('button', { name: 'Send' }));
+    await within(panel).findByLabelText('Reply to the agent');
+    await expectThreadFollowsLatest({
+      scope: panel,
+      user,
+      newerReply: async () => {
+        current = {
+          ...DETAIL,
+          messages: [
+            ...DETAIL.messages,
+            {
+              ...DETAIL.messages[1]!,
+              id: '77777777-7777-4777-8777-777777777773',
+              sequence: 3,
+              content: 'More detail.',
+            },
+          ],
+        };
+        await act(() => queryClient.invalidateQueries({ queryKey: queryKeys.agent.chat(CHAT) }));
+        await within(panel).findByText('More detail.');
+      },
+    });
   });
 });

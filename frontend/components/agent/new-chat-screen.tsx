@@ -106,8 +106,8 @@ function NewChat({
 
   return (
     <ListScreen
-      // Fill the viewport below the shell chrome so the composer sits at the
-      // bottom of a short thread. Kept identical in chat- and new-chat-screen.
+      // Fill the viewport below the shell chrome: only the content scrolls and
+      // the window never moves. Kept identical in chat- and new-chat-screen.
       fill
     >
       <Stack gap="section" className="my-auto">

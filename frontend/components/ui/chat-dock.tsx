@@ -1,7 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
-import type { FormEvent, ReactNode } from 'react';
+import type { FormEvent, ReactNode, RefObject } from 'react';
 
 import { Icon } from '@/components/ui/icon';
 import { menuItemVariants, menuPanelClasses } from '@/components/ui/menu-variants';
@@ -10,42 +10,58 @@ import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 /**
- * The chat template: a thread that scrolls and a composer docked to the
- * bottom edge of whatever scrolls it (the window on a chat route, the drawer
- * body in the panel — give that `Drawer` the `dock` body).
+ * The chat template: a thread that scrolls in its own region and a composer
+ * docked under that region, so only the thread moves while a reply streams.
+ * A chat route gets it from `ListScreen fill` with a `ComposerDock` as its
+ * `dock`; the panel uses `DockedThread` (give that `Drawer` the `dock` body).
  *
- * `DockedThread` is the panel's column: the thread's parts 16 apart, the
- * dock under them, and `end` (the follow-latest sentinel) after the dock.
- * A chat route lays its thread out in its screen template and closes it with
- * `ComposerDock` alone.
+ * `DockedThread` is the panel's column: the thread's parts 16 apart in a
+ * region that scrolls (`scrollRef`, named by `label`), the dock under it.
  */
 export function DockedThread({
   children,
   dock,
   floating,
-  end,
-}: Readonly<{ children: ReactNode; dock: ReactNode; floating?: ReactNode; end?: ReactNode }>) {
+  label,
+  scrollRef,
+}: Readonly<{
+  children: ReactNode;
+  /** The composer; omitted while the chat loads or cannot be shown. */
+  dock?: ReactNode;
+  floating?: ReactNode;
+  label?: string;
+  scrollRef?: RefObject<HTMLElement | null>;
+}>) {
   return (
-    <div className="flex min-h-full flex-1 flex-col gap-4">
-      <div className="flex min-w-0 flex-1 flex-col gap-4">{children}</div>
-      <ComposerDock floating={floating}>{dock}</ComposerDock>
-      {end}
+    <div className="flex min-h-0 flex-1 flex-col">
+      <section
+        ref={scrollRef}
+        aria-label={label}
+        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-[var(--modal-padding)]"
+      >
+        <div className="flex min-h-full min-w-0 flex-col gap-4 py-4">{children}</div>
+      </section>
+      {dock ? (
+        <div className="px-[var(--modal-padding)]">
+          <ComposerDock floating={floating}>{dock}</ComposerDock>
+        </div>
+      ) : null}
     </div>
   );
 }
 
 /**
- * The composer's dock: sticky to the bottom edge on the surface's own fill,
- * 8 above the composer and 16 under it. `floating` (a "Jump to latest"
- * control) floats centred just above the dock, out of flow, so showing it
- * never moves the composer or changes the page height while a reply streams.
+ * The composer's dock: under the thread's scrolling region, 8 above the
+ * composer and 16 under it. `floating` (a "Jump to latest" control) floats
+ * centred just above the dock, over the end of the thread and out of flow,
+ * so showing it never moves the composer or resizes the thread.
  */
 export function ComposerDock({
   children,
   floating,
 }: Readonly<{ children: ReactNode; floating?: ReactNode }>) {
   return (
-    <div className="surface-fill z-sticky sticky bottom-0 pt-2 pb-4">
+    <div className="z-sticky relative shrink-0 pt-2 pb-4">
       {floating ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-full flex justify-center pb-2">
           <div className="pointer-events-auto">{floating}</div>
