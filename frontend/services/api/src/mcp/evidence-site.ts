@@ -451,14 +451,22 @@ function pageCopy(page: CrawledPage) {
     meta_description: textValue(facts.meta_description),
     headings: { h1: level('h1_texts'), h2: level('h2_texts'), h3: level('h3_texts') },
   };
-  const used = JSON.stringify(copy).length;
+  // Sized as serialized, the way a tool result is bounded: escapes and
+  // surrogate pairs count at their encoded length.
+  const room = mcpPolicy.page_text_max_chars - JSON.stringify(copy).length;
   const text = Array.from(textValue(body.text));
-  const room = Math.max(0, mcpPolicy.page_text_max_chars - used);
-  const kept = text.slice(0, room);
+  let size = 0,
+    kept = 0;
+  for (const character of text) {
+    const width = JSON.stringify(character).length - 2;
+    if (size + width > room) break;
+    size += width;
+    kept += 1;
+  }
   return {
     ...copy,
-    text: kept.join(''),
-    text_chars_omitted: text.length - kept.length,
+    text: text.slice(0, kept).join(''),
+    text_chars_omitted: text.length - kept,
     // The crawler's own cap: the stored text already stopped short of the page.
     crawl_text_truncated: body.truncated === true,
     word_count: typeof body.word_count === 'number' ? body.word_count : null,

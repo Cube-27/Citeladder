@@ -226,7 +226,7 @@ describe('Agent persisted context binding', () => {
       db,
       seed,
       {},
-      'Tighten the copy on www.example.test/pricing/, and email kerry@example.test when done.',
+      'Tighten the copy on www.example.test/pricing/?utm_source=mail, and email kerry@example.test when done.',
     );
     expect(context.summary).toMatchObject({ target_url: 'https://www.example.test/pricing/' });
     expect(context.sections?.target_page).toMatchObject({

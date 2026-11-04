@@ -975,6 +975,16 @@ it("finds a crawled page by the address a person types and reads its copy, never
     artifact_refs: [{ kind: 'site_crawl', id: seed.crawlId, record_uri: expect.any(String) }],
   });
   await expect(call('read_page_text', {})).rejects.toThrow('Pass url');
+  // The cap counts copy as serialized: a quote escapes to two characters, so 36 000
+  // less the 77 the title and empty headings take holds 17 961 of 40 000 quotes.
+  await siteFixtures.page(
+    seed,
+    '/quotes',
+    { title: 'Quotes', body: { text: '"'.repeat(40_000) } },
+    { observed: true },
+  );
+  const quoted = await call('read_page_text', { url: 'example.test/quotes' });
+  expect([(quoted.text as string).length, quoted.text_chars_omitted]).toEqual([17_961, 22_039]);
   // Another project's crawl stays out of reach.
   const foreign = await siteFixtures.crawl();
   const hidden = await siteFixtures.page(

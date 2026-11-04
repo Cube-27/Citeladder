@@ -46,7 +46,10 @@ function requestedPageUrl(request: string, website: string) {
   const site = hostOf(website);
   if (!site) return '';
   for (const word of request.split(/\s+/u)) {
-    const url = stripTrailing(stripLeading(word, QUOTES), `${QUOTES}.,;:!?`);
+    const bare = stripTrailing(stripLeading(word, QUOTES), `${QUOTES}.,;:!?`);
+    // A query or fragment never names another page, and crawled URLs carry none.
+    const cut = bare.search(/[?#]/u);
+    const url = cut < 0 ? bare : bare.slice(0, cut);
     if (!url.includes('.') || url.includes('@')) continue;
     const absolute = /^https?:\/\//iu.test(url) ? url : `https://${url}`;
     if (hostOf(absolute) === site) return absolute;
