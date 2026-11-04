@@ -92,22 +92,24 @@
 
        size = floor + (desktop − floor) × factor, rounded to a whole pixel
 
-       display roles (headings, titles)  1 desktop · 0.68 tablet · 0.36 phone
+       display roles (headings)          1 desktop · 0.68 tablet · 0.36 phone
+       opening headings (hero, titles)   1 desktop · 0.6 tablet  · 0.32 phone
        the subtitle (lead) role          1 desktop · 1 tablet    · 0.67 phone
        reading roles (text, controls)    1 desktop · 1 tablet    · 0 phone
 
      Desktop sizes keep to one set, 12 / 14 / 16 / 20 / 24 / 32 / 40 / 64
      (2026-11-03): the subtitle under a heading is 20 (18 on a phone).
-     The display factors give the hero 64 → 48 → 32; the hero alone takes its
-     own phone factor (0.32, so 30px) so it does not wrap to a fourth line
-     on a phone (owner, 2026-11-02). Reading text
+     A page's opening heading (the homepage hero and every page title) takes
+     its own factor, 1 · 0.6 · 0.32, so 64 → 44 → 30: 4px under the display
+     factor on a tablet (owner, 2026-11-04), and on a phone it does not wrap
+     to a fourth line (owner, 2026-11-02). Reading text
      keeps its desktop size until a phone, where it sits on the floor: pure
      scaling would put it under the 12px minimum there (16 × 0.5 = 8). The
      caption is that 12px minimum at every width. Components read the
      `--text-site-*` sizes, never a literal; change a desktop size or a factor
      and every viewport follows. Weight, tracking and ink live on each role. */
   --site-type-display: 0.36;
-  --site-type-hero: 0.32;
+  --site-type-opening: 0.32;
   --site-type-reading: 0;
   --site-type-lead: 0.67;
   --site-type-floor: var(--text-sm);
@@ -136,7 +138,7 @@
     nearest,
     calc(
       var(--site-type-floor) + (var(--site-role-hero) - var(--site-type-floor)) *
-        var(--site-type-hero)
+        var(--site-type-opening)
     ),
     1px
   );
@@ -145,7 +147,7 @@
     nearest,
     calc(
       var(--site-type-floor) + (var(--site-role-title) - var(--site-type-floor)) *
-        var(--site-type-display)
+        var(--site-type-opening)
     ),
     1px
   );
@@ -305,7 +307,7 @@
 @media (min-width: 810px) {
   :where([data-marketing-surface]) {
     --site-type-display: 0.68;
-    --site-type-hero: 0.68;
+    --site-type-opening: 0.6;
     --site-type-reading: 1;
     --site-type-lead: 1;
   }
@@ -314,7 +316,7 @@
 @media (min-width: 1200px) {
   :where([data-marketing-surface]) {
     --site-type-display: 1;
-    --site-type-hero: 1;
+    --site-type-opening: 1;
   }
 }
 
