@@ -16,7 +16,7 @@ const FLOW_FIELD_TEXT = 'leading-[calc(var(--control-lg)_-_2px)]';
 
 type FlowInputProps = Omit<
   ComponentProps<typeof Input>,
-  'size' | 'width' | 'startContent' | 'containerClassName' | 'className'
+  'width' | 'startContent' | 'containerClassName' | 'className'
 >;
 
 /** A full-width 44px field: label above, placeholder inside, no glyph. */
@@ -25,6 +25,9 @@ export function FlowInput(props: Readonly<FlowInputProps>) {
 }
 
 /** A full-width 44px action: the primary submit or the secondary "Continue with Google". */
-export function FlowButton(props: Readonly<Omit<ButtonProps, 'size' | 'className' | 'asChild'>>) {
-  return <Button {...props} size="marketing" className="w-full" />;
+export function FlowButton({
+  variant = 'primary',
+  ...props
+}: Readonly<Omit<ButtonProps, 'className' | 'asChild'>>) {
+  return <Button {...props} variant={variant} className="h-[var(--control-lg)] w-full" />;
 }

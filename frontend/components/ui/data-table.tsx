@@ -2,7 +2,7 @@
 
 import { useId, type ComponentProps, type CSSProperties, type ReactNode } from 'react';
 
-import { BusyBar } from '@/components/ui/busy-bar';
+import { BusyBar } from '@/components/ui/progress-bar';
 import { cardClasses } from '@/components/ui/card-variants';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';

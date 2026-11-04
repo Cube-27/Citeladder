@@ -5,13 +5,13 @@ import { ChevronDown } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
-  Dropdown,
-  DropdownContent,
-  DropdownLabel,
-  DropdownRadioGroup,
-  DropdownRadioItem,
-  DropdownTrigger,
-} from '@/components/ui/dropdown';
+  Menu,
+  MenuContent,
+  MenuLabel,
+  MenuRadioGroup,
+  MenuRadioItem,
+  MenuTrigger,
+} from '@/components/ui/menu';
 import { cn } from '@/lib/utils';
 
 /**
@@ -125,7 +125,7 @@ export function FilterDivider() {
  *   - `active` marks a filter moved off its default with the selected tint, so
  *     a narrowed view is visible at a glance; the value or count says how.
  *
- * Use it as `<DropdownTrigger asChild><FilterTrigger …/></DropdownTrigger>`;
+ * Use it as `<MenuTrigger asChild><FilterTrigger …/></DropdownTrigger>`;
  * it forwards the ref and the trigger's props to the button.
  */
 export function FilterTrigger({
@@ -213,29 +213,29 @@ export function FilterChoice<T extends string>({
   onChange: (value: T) => void;
 }>) {
   return (
-    <Dropdown>
-      <DropdownTrigger asChild>
+    <Menu>
+      <MenuTrigger asChild>
         <FilterTrigger
           label={label}
           hideLabel
           value={options.find((option) => option.value === value)?.label ?? label}
           active={defaultValue !== undefined && value !== defaultValue}
         />
-      </DropdownTrigger>
-      <DropdownContent>
-        <DropdownLabel>{menuLabel}</DropdownLabel>
-        <DropdownRadioGroup value={value}>
+      </MenuTrigger>
+      <MenuContent>
+        <MenuLabel>{menuLabel}</MenuLabel>
+        <MenuRadioGroup value={value}>
           {options.map((option) => (
-            <DropdownRadioItem
+            <MenuRadioItem
               key={option.value}
               value={option.value}
               onSelect={() => onChange(option.value)}
             >
               {option.label}
-            </DropdownRadioItem>
+            </MenuRadioItem>
           ))}
-        </DropdownRadioGroup>
-      </DropdownContent>
-    </Dropdown>
+        </MenuRadioGroup>
+      </MenuContent>
+    </Menu>
   );
 }

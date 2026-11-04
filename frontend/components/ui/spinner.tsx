@@ -1,39 +1,58 @@
-import { LoaderCircle } from 'lucide-react';
-
 import { cn } from '@/lib/utils';
 
 /**
- * Spinner — the one in-place loading indicator.
+ * Spinner — a 16px arc for short waits inside a control or beside a sentence:
+ * a 2.5px arc in `currentColor` (`ink-secondary` by default; a button's text
+ * colour inside one) over a `line` track, one turn per 800ms (1.6s under
+ * reduced motion). Tables, lists and charts load with `Skeleton` instead, and
+ * long waits with `ProgressBar`.
  *
- * Loading is a THIRD state, distinct from a measured value and from an
- * explicit missing one (invariant 7). A surface that renders "Not measured"
- * while a refetch is in flight states something it does not know yet, and the
- * placeholder flashing in and out of a value slot reads as data that appeared
- * and vanished. The spinner is what occupies that slot until the answer
- * arrives.
- *
- * One form: the 16px glyph, the same size as every icon beside a control's
- * text. It used to come in three sizes (14, 16, 20) chosen per call site, so
- * the same "loading" read at a different weight on every screen.
+ * Loading is its own state, distinct from a measured value and from an
+ * explicit missing one (invariant 7): the spinner holds the slot until the
+ * answer arrives.
  */
 export function Spinner({
   label,
+  showLabel = false,
   className,
 }: Readonly<{
   /**
-   * What is loading, for assistive technology. Omit ONLY when a visible
-   * label beside the spinner already says it — an unlabelled spinner in an
-   * otherwise empty slot announces nothing at all.
+   * What is loading, present tense ("Saving"). Omit ONLY when a visible label
+   * beside the spinner already says it.
    */
   label?: string;
+  /** Print the label beside the arc. */
+  showLabel?: boolean;
   className?: string;
 }>) {
   return (
-    <LoaderCircle
-      className={cn('size-4 shrink-0 animate-spin', className)}
+    <span
       role={label ? 'status' : undefined}
-      aria-label={label}
+      aria-label={label && !showLabel ? label : undefined}
       aria-hidden={label ? undefined : true}
-    />
+      className={cn(
+        'text-ink-secondary in-data-[button-variant]:text-inherit inline-flex shrink-0 items-center gap-2 align-middle',
+        className,
+      )}
+    >
+      {/* Under reduced motion the turn slows to 1.6s; it never stops, since a
+          still arc would read as a stuck one. */}
+      <svg viewBox="0 0 16 16" className="animate-spinner size-4" fill="none" aria-hidden>
+        <circle
+          cx="8"
+          cy="8"
+          r="6.25"
+          strokeWidth="2.5"
+          className="stroke-line in-data-[button-variant]:stroke-current in-data-[button-variant]:opacity-25"
+        />
+        <path
+          d="M8 1.75a6.25 6.25 0 0 1 6.25 6.25"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          stroke="currentColor"
+        />
+      </svg>
+      {label && showLabel ? <span className="text-body-sm text-ink-secondary">{label}</span> : null}
+    </span>
   );
 }

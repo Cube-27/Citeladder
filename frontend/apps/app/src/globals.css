@@ -186,6 +186,12 @@
   --ease-linear: linear;
   --default-transition-duration: var(--motion-fast);
   --default-transition-timing-function: var(--ease-standard);
+  /* Loops that say "working": the Spinner turns in 800ms, a Skeleton pulses
+     in 1.6s and a busy ProgressBar slides in 1.4s. Reduced motion slows the
+     spinner and the bar (below) and holds the skeleton still. */
+  --animate-spinner: spinner-turn 800ms linear infinite;
+  --animate-skeleton-pulse: skeleton-pulse 1.6s ease-in-out infinite;
+  --animate-progress-busy: progress-busy 1.4s ease-in-out infinite;
   --z-index-sticky: 20;
   --z-index-overlay: 40;
   --z-index-modal: 50;
@@ -278,7 +284,6 @@
   /* Website gutters: 20 below 768px, 40 to 1279px, 64 from 1280px. */
   --site-gutter: 20px;
   --marketing-nav-offset: calc(var(--nav-height) + 8px + env(safe-area-inset-top, 0px));
-  --skeleton-base: var(--color-surface-sunken);
   --value-placeholder: var(--color-ink-muted);
 }
 
@@ -805,20 +810,6 @@ a.focus-ring:active .type-caption {
   box-shadow: var(--shadow-press);
 }
 
-/* Buttons: primary is `ink` with the press shadow, secondary `surface` with
-   the xs shadow, ghost clear. Primary and secondary move down 1px on press. */
-.control-raised:not(:disabled, [aria-disabled='true']) {
-  box-shadow: var(--shadow-xs);
-}
-
-.control-raised[data-button-variant='primary']:not(:disabled, [aria-disabled='true']) {
-  box-shadow: var(--shadow-press);
-}
-
-.control-raised:not(:disabled, [aria-disabled='true']):active {
-  transform: translateY(1px);
-}
-
 .shell-rail {
   background-color: var(--color-surface);
 }
@@ -992,7 +983,9 @@ input:-webkit-autofill:focus {
 
 /* Box shadows disappear in forced colours; retain a system-colour boundary. */
 @media (forced-colors: active) {
-  .control-raised,
+  [data-button-variant='primary'],
+  [data-button-variant='secondary'],
+  [data-button-variant='danger'],
   .shell-link[aria-current='page'] {
     outline: 1px solid ButtonText;
     outline-offset: -1px;
@@ -1131,11 +1124,28 @@ samp {
   }
 }
 
-/* A placeholder is a flat bar at the size and real row height of the value
-   it stands for: no shimmer, so a loading screen holds still. */
-.skeleton {
-  border-radius: var(--radius-xs);
-  background-color: var(--skeleton-base);
+/* Skeleton bars pulse their opacity (never a shimmer); reduced motion holds
+   them still through the global rule below. */
+@keyframes spinner-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ProgressBar's busy state: a 36% segment slides across the track. */
+@keyframes progress-busy {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(280%);
+  }
 }
 
 /* Live-activity marker: the dot holds still and a ring expands out of it. */
@@ -1215,6 +1225,15 @@ samp {
   .activity-dot::after,
   .activity-check::before {
     display: none;
+  }
+  /* "Still working" must keep moving, at half speed. */
+  .animate-spinner {
+    animation-duration: 1600ms !important;
+    animation-iteration-count: infinite !important;
+  }
+  .animate-progress-busy {
+    animation-duration: 2800ms !important;
+    animation-iteration-count: infinite !important;
   }
 }
 

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 
-import { BusyBar } from '@/components/ui/busy-bar';
+import { BusyBar } from '@/components/ui/progress-bar';
 import { Card } from '@/components/ui/card';
 import { listRowClasses } from '@/components/ui/list-row';
 import { Pressable } from '@/components/ui/pressable';

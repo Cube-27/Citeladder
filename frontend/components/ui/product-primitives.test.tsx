@@ -19,7 +19,9 @@ import { QueryState } from './query-state';
 import { StatRow } from './stat-row';
 import { Table, TableCell, TableHeader, TableRow } from './table';
 import { SortableTableHead } from './table-heads';
-import { TextLink } from './text-link';
+import { renderWithProviders } from '@/test/render';
+
+import { ArrowLink, TextLink } from './text-link';
 import { TooltipProvider } from './tooltip';
 
 describe('CardHeader actions', () => {
@@ -263,6 +265,20 @@ describe('TextLink', () => {
     expect(screen.queryByRole('link')).toBeNull();
     expect(screen.getByText('unsafe')).toBeInTheDocument();
     expect(screen.queryByText('(opens in a new tab)')).toBeNull();
+  });
+});
+
+describe('ArrowLink', () => {
+  it('links to a route under its label, and is plain text inside a linked card', () => {
+    const { unmount } = renderWithProviders(<ArrowLink href="/runs">View all runs</ArrowLink>, {
+      projectSelection: null,
+    });
+    expect(screen.getByRole('link', { name: 'View all runs' })).toHaveAttribute('href', '/runs');
+    unmount();
+
+    render(<ArrowLink>Open the report</ArrowLink>);
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.getByText('Open the report')).toBeInTheDocument();
   });
 });
 
