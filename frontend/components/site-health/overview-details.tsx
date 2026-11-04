@@ -101,7 +101,11 @@ function DimensionLedger({
                   : statusLabel(dimension.dimension_measurement_state)}
               </ClampText>
             ) : (
-              <ScoreBar value={dimension.score} label={`${dimension.label} score`} />
+              <ScoreBar
+                value={dimension.score}
+                label={`${dimension.label} score`}
+                showValue={false}
+              />
             )}
           </TableCell>
           <TableCell numeric>

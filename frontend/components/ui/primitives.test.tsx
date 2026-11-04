@@ -13,12 +13,11 @@ import { Input } from './input';
 import { Kbd } from './kbd';
 import { BusyBar, ProgressBar } from './progress-bar';
 import { Rungs } from './rungs';
-import { ScoreBar } from './score-bar';
+import { ScoreBar, scoreFill } from './score-bar';
 import { ScoreRing } from './score-ring';
 import { Skeleton } from './skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
 import { TrendChart } from './trend-chart';
-import { scoreBand } from './score-band';
 
 describe('Button', () => {
   it('defaults to a non-submitting button', () => {
@@ -218,43 +217,34 @@ describe('EngineMark', () => {
   });
 });
 
-describe('scoreBand mapping', () => {
-  it('maps values to the four bands', () => {
-    expect(scoreBand(10)).toBe('low');
-    expect(scoreBand(30)).toBe('mid');
-    expect(scoreBand(60)).toBe('good');
-    expect(scoreBand(90)).toBe('high');
+describe('scoreFill', () => {
+  it('keeps one ink, or bands a compared score at 80 and 50', () => {
+    expect(scoreFill('ink', 20)).toBe('ink');
+    expect(scoreFill('auto', 80)).toBe('positive');
+    expect(scoreFill('auto', 79)).toBe('warning');
+    expect(scoreFill('auto', 50)).toBe('warning');
+    expect(scoreFill('auto', 49)).toBe('negative');
   });
 });
 
 describe('ScoreRing', () => {
-  it('announces the score and renders its value', () => {
-    render(<ScoreRing value={82} />);
-    const ring = screen.getByRole('img', { name: 'Visibility score: 82%' });
-    expect(ring).toBeInTheDocument();
-    expect(screen.getByText('82')).toBeInTheDocument();
-  });
-
-  it('clamps out-of-range values', () => {
-    render(<ScoreRing value={140} label="Overflow" />);
-    expect(screen.getByRole('img', { name: 'Overflow' })).toBeInTheDocument();
-    expect(screen.getByText('100')).toBeInTheDocument();
-  });
-
-  it('announces the score once, not again through its numeral', () => {
-    render(<ScoreRing value={82} />);
-    const numeral = screen.getByText('82');
-    expect(numeral).toHaveAttribute('aria-hidden', 'true');
-    expect(screen.getByRole('img', { name: 'Visibility score: 82%' })).toBeInTheDocument();
+  it('announces the clamped score once, not again through its numeral', () => {
+    render(<ScoreRing value={140} label="Site Health score" />);
+    expect(screen.getByRole('img', { name: 'Site Health score: 100 out of 100' })).toBeVisible();
+    expect(screen.getByText('100')).toHaveAttribute('aria-hidden', 'true');
   });
 });
 
 describe('ScoreBar', () => {
-  it('renders a clamped accessible meter', () => {
-    render(<ScoreBar value={140} label="Readiness score" />);
+  it('renders a clamped accessible meter with its number beside it', () => {
+    const { rerender } = render(<ScoreBar value={140} label="Readiness score" />);
     const meter = screen.getByRole('meter', { name: 'Readiness score' });
     expect(meter).toHaveAttribute('aria-valuenow', '100');
     expect(meter).toHaveAttribute('aria-valuetext', '100 out of 100');
+    expect(screen.getByText('100')).toHaveAttribute('aria-hidden', 'true');
+
+    rerender(<ScoreBar value={64} label="Readiness score" showValue={false} />);
+    expect(screen.queryByText('64')).toBeNull();
   });
 });
 

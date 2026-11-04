@@ -94,7 +94,7 @@ describe('UsageMeter', () => {
   it('renders a finite row as an accessible meter', () => {
     render(<UsageMeter item={item({ allowance: 100, consumed: 25, remaining: 75 })} />);
 
-    const bar = screen.getByRole('meter', { name: 'Prompts usage' });
+    const bar = screen.getByRole('meter', { name: 'Prompts' });
     expect(bar).toHaveAttribute('aria-valuemin', '0');
     expect(bar).toHaveAttribute('aria-valuemax', '100');
     expect(bar).toHaveAttribute('aria-valuenow', '25');

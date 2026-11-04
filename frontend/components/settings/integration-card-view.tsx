@@ -98,7 +98,6 @@ function GrantHeader({
 
   return (
     <CardHeader
-      bordered
       actions={
         badge.variant === 'status' ? (
           <Badge variant="status" value={badge.value} data-testid={`grant-status-${family}`}>

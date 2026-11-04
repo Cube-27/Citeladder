@@ -9,7 +9,7 @@ import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
-import { cardClasses } from '@/components/ui/card-variants';
+import { cardClasses } from '@/components/ui/card';
 import { Pressable } from '@/components/ui/pressable';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';

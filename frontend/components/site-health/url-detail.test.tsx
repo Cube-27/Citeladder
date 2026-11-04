@@ -378,7 +378,7 @@ describe('UrlDetail', () => {
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
     expect(screen.queryByText(/purpose unresolved/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: /^AEO Readiness score:/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('meter', { name: /^AEO Readiness score:/ })).not.toBeInTheDocument();
   });
 
   it('renders the not-measured state for a missing score, never a zero', async () => {
@@ -401,7 +401,7 @@ describe('UrlDetail', () => {
     expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
     // No score ring at all: a missing measurement never renders as 0.
     expect(
-      screen.queryByRole('img', { name: /^(Web Fundamentals|AEO Readiness) score:/ }),
+      screen.queryByRole('meter', { name: /^(Web Fundamentals|AEO Readiness) score:/ }),
     ).toBeNull();
   });
 
@@ -442,9 +442,11 @@ describe('UrlDetail', () => {
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    expect(screen.getByRole('img', { name: 'Web Fundamentals score: 46' })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'AEO Readiness score: 64' })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'AEO Checklist Completion: 75%' })).toBeInTheDocument();
+    expect(screen.getByRole('meter', { name: 'Web Fundamentals score: 46' })).toBeInTheDocument();
+    expect(screen.getByRole('meter', { name: 'AEO Readiness score: 64' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('meter', { name: 'AEO Checklist Completion: 75%' }),
+    ).toBeInTheDocument();
   });
 
   it('preserves the AEO state when measurement coverage is unavailable', async () => {
@@ -769,7 +771,7 @@ describe('UrlDetail', () => {
     expect(within(advisory).getByText('Advisory')).toBeInTheDocument();
     expect(within(advisory).queryByText('Medium')).not.toBeInTheDocument();
     // The scores come after the fixes.
-    const score = screen.getByRole('img', { name: 'Web Fundamentals score: 46' });
+    const score = screen.getByRole('meter', { name: 'Web Fundamentals score: 46' });
     expect(heading.compareDocumentPosition(score) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 

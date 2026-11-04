@@ -21,7 +21,7 @@ import { Callout } from '@/components/ui/callout';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
-import { cardClasses } from '@/components/ui/card-variants';
+import { cardClasses } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';

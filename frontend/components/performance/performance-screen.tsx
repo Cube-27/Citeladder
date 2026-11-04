@@ -188,7 +188,7 @@ function SearchConsoleWorkspace({
   if (!available) return null;
   return (
     <Card className="overflow-hidden">
-      <CardHeader bordered>
+      <CardHeader>
         <MetricCards
           data-testid="metric-card-strip"
           className="min-w-0"

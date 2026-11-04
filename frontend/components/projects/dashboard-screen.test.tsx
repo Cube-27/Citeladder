@@ -224,11 +224,11 @@ describe('DashboardScreen', () => {
       within(screen.getByRole('region', { name: 'Project state' })).getByText('72.5%'),
     ).toBeInTheDocument();
     // Rank is better when it falls, so climbing one place reads as an improvement.
-    expect(
-      within(screen.getByRole('region', { name: 'Project state' }))
-        .getByText('−1.0 vs previous')
-        .closest('[data-outcome]'),
-    ).toHaveAttribute('data-outcome', 'improved');
+    const rankChange = within(screen.getByRole('region', { name: 'Project state' }))
+      .getAllByText('vs previous')
+      .map((context) => context.closest('[data-outcome]'))
+      .find((delta) => delta?.textContent === '↓down 1.0vs previous');
+    expect(rankChange).toHaveAttribute('data-outcome', 'improved');
     expect(screen.getByRole('heading', { name: 'Project state' })).toBeInTheDocument();
     expect(
       within(screen.getByRole('region', { name: 'Movement' })).getByText('68.3%'),

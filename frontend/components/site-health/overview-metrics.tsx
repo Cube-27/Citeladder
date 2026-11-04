@@ -7,7 +7,7 @@ import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { ICONS } from '@/lib/icons';
 import type { SiteCrawl, SiteHealthDashboard, SiteHealthOverview } from '@/lib/api/types';
 
-/** One Site Health score as a `StatRow` segment: the ring and where to act. */
+/** One Site Health score as a `StatRow` segment: the score bar and where to act. */
 export type AuditMetric = {
   title: string;
   value: number | null;

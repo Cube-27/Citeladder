@@ -7,7 +7,7 @@ import { Callout } from '@/components/ui/callout';
 import { ControlRow } from '@/components/ui/control-row';
 import { Dialog } from '@/components/ui/dialog';
 import { Stack } from '@/components/ui/layout';
-import { cardClasses } from '@/components/ui/card-variants';
+import { cardClasses } from '@/components/ui/card';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type {

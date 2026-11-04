@@ -7,7 +7,7 @@ import { Callout } from '@/components/ui/callout';
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Inline, Stack } from '@/components/ui/layout';
-import { cardClasses } from '@/components/ui/card-variants';
+import { cardClasses } from '@/components/ui/card';
 import { textRole } from '@/components/ui/typography';
 import type { BillingEntitlement, CatalogPlan } from '@/lib/api/billing';
 import { billingErrorMessage } from '@/lib/billing/reason-copy';

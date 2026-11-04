@@ -94,7 +94,6 @@ export function IssueDetailRail({
           // stack and Previous would need two presses to undo one: `busy`
           // holds both steps until the page lands.
           <Pager
-            frame="table"
             hideWhenSinglePage
             canPrev={canPrevious}
             canNext={Boolean(detail.next_cursor)}

@@ -245,7 +245,7 @@ function EmptyDataset({
 }: Readonly<{ dataset: SearchIntelligenceDataset; title: string }>) {
   return (
     <Card>
-      <CardHeader bordered>
+      <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>

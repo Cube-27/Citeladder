@@ -40,19 +40,18 @@ describe('CardHeader actions', () => {
 });
 
 describe('Delta', () => {
-  it('signs the rounded change, tones it by policy and never fakes a zero', () => {
-    const { rerender } = render(<Delta value={-1.24} unit=" pp" policy="lower-is-better" />);
-    const fall = screen.getByText('−1.2 pp').closest('[data-direction]');
-    expect(fall).toHaveAttribute('data-direction', 'down');
+  it('says the rounded direction in words, tones it by policy and never fakes a zero', () => {
+    const { container, rerender } = render(
+      <Delta value={-1.24} unit=" pp" policy="lower-is-better" context="vs last week" />,
+    );
+    const fall = screen.getByText('1.2 pp').closest('[data-direction]');
+    expect(fall?.textContent).toBe('↓down 1.2 ppvs last week');
     // A falling rank is an improvement under lower-is-better.
     expect(fall).toHaveAttribute('data-outcome', 'improved');
 
-    // +0.04 rounds to a displayed 0.0: flat, unsigned.
+    // +0.04 rounds to a displayed 0.0: flat, spoken as no change.
     rerender(<Delta value={0.04} />);
-    expect(screen.getByText('0.0').closest('[data-direction]')).toHaveAttribute(
-      'data-direction',
-      'flat',
-    );
+    expect(container.textContent).toBe('→no change 0.0');
 
     rerender(
       <TooltipProvider>
@@ -64,7 +63,7 @@ describe('Delta', () => {
 });
 
 describe('StatRow', () => {
-  it('names a missing value, draws a score as a ring and makes a pressable stat a toggle', () => {
+  it('names a missing value, draws a score as a bar and makes a pressable stat a toggle', () => {
     const onSelect = vi.fn();
     render(
       <StatRow
@@ -87,7 +86,10 @@ describe('StatRow', () => {
     expect(within(group).getByText('TTFB').closest('[data-stat-segment]')).toHaveTextContent(
       'Not measured',
     );
-    expect(within(group).getByRole('img', { name: 'Crawl score: 72' })).toBeInTheDocument();
+    expect(within(group).getByRole('meter', { name: 'Crawl score: 72' })).toHaveAttribute(
+      'aria-valuenow',
+      '72',
+    );
     const toggle = within(group).getByRole('button', { name: 'View 3 orphaned pages' });
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(toggle);
@@ -189,17 +191,27 @@ describe('DataTable', () => {
 });
 
 describe('Meter', () => {
-  it('exposes a clamped value and spoken text by kind', () => {
-    const { rerender } = render(<Meter label="Prompt runs usage" value={60} max={50} />);
-    const meter = screen.getByRole('meter', { name: 'Prompt runs usage' });
+  it('names the bar by its visible label and speaks the shown value, clamped to the maximum', () => {
+    const { rerender } = render(<Meter label="Prompt runs" value={60} max={50} />);
+    const meter = screen.getByRole('meter', { name: 'Prompt runs' });
     expect(meter).toHaveAttribute('aria-valuenow', '50');
-    expect(meter).toHaveAttribute('aria-valuetext', '50 of 50');
+    expect(meter).toHaveAttribute('aria-valuetext', '60 / 50');
+    expect(screen.getByText('60 / 50')).toBeVisible();
 
-    rerender(<Meter label="Run progress" value={40} kind="progress" tone="info" />);
-    expect(screen.getByRole('progressbar', { name: 'Run progress' })).toHaveAttribute(
-      'aria-valuetext',
-      '40%',
+    rerender(
+      <Meter
+        label="AI credits"
+        value={1240}
+        max={5000}
+        valueLabel="1,240 of 5,000 credits"
+        hint="Runs pause at the limit"
+      />,
     );
+    expect(screen.getByRole('meter', { name: 'AI credits' })).toHaveAttribute(
+      'aria-valuetext',
+      '1,240 of 5,000 credits',
+    );
+    expect(screen.getByText('Runs pause at the limit')).toBeVisible();
   });
 
   it('announces an unmeasured value instead of drawing it as zero', () => {
@@ -309,7 +321,8 @@ describe('Pager', () => {
         {...pageNumberControls(1, 2, onPageChange)}
       />,
     );
-    expect(screen.getByText('prompts', { exact: false })).toHaveTextContent('1–10 of 12 prompts');
+    // The range is a polite status, so a page turn is announced.
+    expect(screen.getByRole('status')).toHaveTextContent('1–10 of 12 prompts');
     expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
     expect(onPageChange).toHaveBeenCalledWith(2);

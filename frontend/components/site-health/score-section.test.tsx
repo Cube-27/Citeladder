@@ -56,8 +56,10 @@ describe('ScoreSection', () => {
 
     render(<ScoreSection crawl={null} dashboard={dashboard} />);
 
-    expect(screen.getByRole('img', { name: 'Web Fundamentals score: 73' })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'AEO Readiness score: 61' })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'AEO Checklist Completion: 70%' })).toBeInTheDocument();
+    expect(screen.getByRole('meter', { name: 'Web Fundamentals score: 73' })).toBeInTheDocument();
+    expect(screen.getByRole('meter', { name: 'AEO Readiness score: 61' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('meter', { name: 'AEO Checklist Completion: 70%' }),
+    ).toBeInTheDocument();
   });
 });

@@ -282,7 +282,10 @@ function QualityCell({
   state,
 }: Readonly<{ dimension: ReadinessDimension; state: DimensionState }>) {
   if (dimension.score !== null) {
-    return <ScoreBar value={dimension.score} label={`${dimension.label} score`} />;
+    // The score column beside it already gives the number.
+    return (
+      <ScoreBar value={dimension.score} label={`${dimension.label} score`} showValue={false} />
+    );
   }
   if (dimension.dimension_measurement_state === 'not_measured') {
     return <UnavailableValue state="not_measured" />;

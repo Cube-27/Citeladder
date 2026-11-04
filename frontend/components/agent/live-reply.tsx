@@ -4,7 +4,7 @@ import { memo, useDeferredValue } from 'react';
 
 import { Disclosure } from '@/components/ui/disclosure';
 import { Stack } from '@/components/ui/layout';
-import { cardClasses } from '@/components/ui/card-variants';
+import { cardClasses } from '@/components/ui/card';
 import { textRole } from '@/components/ui/typography';
 import type { LiveTurn } from '@/lib/agent/live-turns';
 import { ContentMarkdown } from '@/lib/markdown/markdown';

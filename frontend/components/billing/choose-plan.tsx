@@ -8,7 +8,7 @@ import { PlanRow } from '@/components/billing/plan-row';
 import { Callout } from '@/components/ui/callout';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Stack } from '@/components/ui/layout';
-import { cardClasses } from '@/components/ui/card-variants';
+import { cardClasses } from '@/components/ui/card';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type {

@@ -4,7 +4,7 @@ import { CheckoutConsent } from '@/components/billing/billing-policies';
 import { BillingQuoteSummary } from '@/components/billing/quote-summary';
 import { Button } from '@/components/ui/button';
 import { Inline, Stack } from '@/components/ui/layout';
-import { cardClasses } from '@/components/ui/card-variants';
+import { cardClasses } from '@/components/ui/card';
 import { textRole } from '@/components/ui/typography';
 import { DisplayTime } from '@/components/ui/display-time';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
