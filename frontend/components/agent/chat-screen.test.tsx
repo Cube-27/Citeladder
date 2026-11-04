@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes } from 'react-router-dom';
@@ -15,7 +15,7 @@ import {
 
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
-import { emitResize } from '@/test/resize-observer';
+import { expectThreadFollowsLatest } from '@/test/chat-follow';
 
 const mocks = vi.hoisted(() => ({ saveBlob: vi.fn(), agentEnabled: true }));
 vi.mock('@/lib/download', () => ({ saveBlob: mocks.saveBlob }));
@@ -754,31 +754,14 @@ describe('ChatScreen', () => {
     const user = userEvent.setup();
     const { queryClient } = renderChat();
     await screen.findByLabelText('Reply to the agent');
-    const thread = screen.getByRole('region', { name: 'Agent conversation' });
-    // The composer is docked under the region that scrolls, not inside it.
-    expect(within(thread).queryByLabelText('Reply to the agent')).not.toBeInTheDocument();
-    let height = 3000;
-    Object.defineProperties(thread, {
-      scrollHeight: { configurable: true, get: () => height },
-      clientHeight: { configurable: true, value: 600 },
-      scrollTop: { configurable: true, writable: true, value: 0 },
+    await expectThreadFollowsLatest({
+      scope: document.body,
+      user,
+      newerReply: async () => {
+        current = detail(revision(REV2, 2, 'agent', 'Updated body.'));
+        await act(() => queryClient.invalidateQueries({ queryKey: queryKeys.agent.chat(CHAT) }));
+        await screen.findByText('Updated body.');
+      },
     });
-
-    // A streamed reply grows the thread while the reader is at the end.
-    act(() => emitResize(thread));
-    expect(thread.scrollTop).toBe(3000);
-
-    // The reader scrolls up; a newer reply no longer moves them.
-    thread.scrollTop = 1000;
-    fireEvent.scroll(thread);
-    current = detail(revision(REV2, 2, 'agent', 'Updated body.'));
-    await act(() => queryClient.invalidateQueries({ queryKey: queryKeys.agent.chat(CHAT) }));
-    height = 4000;
-    act(() => emitResize(thread));
-    expect(thread.scrollTop).toBe(1000);
-
-    await user.click(screen.getByRole('button', { name: 'Jump to latest' }));
-    expect(thread.scrollTop).toBe(4000);
-    expect(screen.queryByRole('button', { name: 'Jump to latest' })).not.toBeInTheDocument();
   });
 });
