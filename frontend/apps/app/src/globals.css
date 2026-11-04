@@ -226,7 +226,7 @@
   --sidebar-pad-y: 8px;
   --sidebar-group-gap: 4px;
   --sidebar-item-gap: 4px;
-  --content-gutter: 48px;
+  --content-gutter: 32px;
   --content-max-width: var(--container-app);
   --workflow-max-width: 1040px;
   /* The sanctioned two-column split. A screen picks a role, never a ratio. */
@@ -259,7 +259,7 @@
   --page-header-padding-bottom: 24px;
   --page-header-gap: 16px;
   --page-title-min-width: 10rem;
-  --table-row-height: 40px;
+  --table-row-height: 44px;
   --table-header-height: var(--control-md);
   /* A DataTable's title-and-toolbar row: 8 + a control + 8 and its hairline. */
   --data-table-header-height: calc(var(--control-md) + 17px);

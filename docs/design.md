@@ -188,7 +188,7 @@ in `website-type.css`.
 | `--menu-item-height` | `36px` |
 | `--badge-height-sm` | `22px` |
 | `--tab-height` | `36px` |
-| `--table-row-height` | `40px` |
+| `--table-row-height` | `44px` |
 | `--table-header-height` | `36px` |
 <!-- generated:controls:end -->
 

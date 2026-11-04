@@ -141,8 +141,8 @@ test('contents omit step numbering without changing article anchors and follow t
   expect(headingTop).toBeGreaterThanOrEqual(headerBottom);
 });
 
-// Docs is its own design: the marketing site's scaled type roles and white
-// secondary button must not reach it, although both share the public surface.
+// Docs reads at the system's roles at every width (body 16; lead 18 on a
+// phone, 20 above), and its search trigger is a field, not a raised button.
 test('docs keeps its own reading type and a field-like search trigger', async ({ page }) => {
   const reading = async () =>
     page.evaluate(() => {
@@ -159,9 +159,9 @@ test('docs keeps its own reading type and a field-like search trigger', async ({
     });
   await page.setViewportSize({ width: 375, height: 800 });
   await page.goto('/');
-  expect(await reading()).toEqual({ body: '17px', lead: '16px', searchShadow: 'none' });
+  expect(await reading()).toEqual({ body: '16px', lead: '18px', searchShadow: 'none' });
   await page.setViewportSize({ width: 982, height: 800 });
-  expect(await reading()).toEqual({ body: '14px', lead: '16px', searchShadow: 'none' });
+  expect(await reading()).toEqual({ body: '16px', lead: '20px', searchShadow: 'none' });
   await page.setViewportSize({ width: 1440, height: 900 });
-  expect(await reading()).toEqual({ body: '16px', lead: '16px', searchShadow: 'none' });
+  expect(await reading()).toEqual({ body: '16px', lead: '20px', searchShadow: 'none' });
 });

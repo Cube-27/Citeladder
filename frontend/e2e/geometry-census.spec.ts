@@ -63,7 +63,7 @@ const BOX_RADIUS = 14;
 const BOX_BORDER = 1;
 /** Loading, read-error and first-use empty share one footprint. */
 const QUERY_STATE_HEIGHT = 160;
-const TABLE_ROW_HEIGHT = 40;
+const TABLE_ROW_HEIGHT = 44;
 const TABLE_CELL_PADDING_Y = 8;
 /** A DataTable's header row is the control band again: 8 + 36 + 8 and its rule. */
 const DATA_TABLE_HEADER_HEIGHT = 53;
