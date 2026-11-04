@@ -4,7 +4,6 @@ import type { ReactNode } from 'react';
 
 import { BusyBar } from '@/components/ui/progress-bar';
 import { Card } from '@/components/ui/card';
-import { listRowClasses } from '@/components/ui/list-row';
 import { Pressable } from '@/components/ui/pressable';
 import { splitPaneClasses } from '@/components/ui/workspace';
 import { cn } from '@/lib/utils';
@@ -30,7 +29,7 @@ export function ListDetailCard({
     >
       {/* One vertical list at every width: above the detail when the panes
           stack, beside it on desktop. */}
-      <div className="border-line divide-line desktop:border-r desktop:border-b-0 grid min-w-0 divide-y border-b">
+      <div className="border-line desktop:border-r desktop:border-b-0 grid min-w-0 content-start gap-0.5 border-b p-2">
         {list}
       </div>
       {detail}
@@ -38,7 +37,10 @@ export function ListDetailCard({
   );
 }
 
-/** One row of the list: a pressed toggle for the item it selects. */
+/**
+ * One row of the list: a pressed toggle for the item it selects, at least
+ * 56px, `radius-sm`, `surface-sunken` when hovered or selected.
+ */
 export function ListDetailRow({
   selected,
   onSelect,
@@ -50,8 +52,8 @@ export function ListDetailRow({
       onClick={onSelect}
       aria-pressed={selected}
       className={cn(
-        'focus-ring grid w-full gap-2 px-4 py-3 text-left',
-        listRowClasses({ selected }),
+        'focus-ring hover:bg-surface-sunken grid min-h-14 w-full gap-1 rounded-sm px-3 py-2 text-left transition-colors focus-visible:-outline-offset-2',
+        selected && 'bg-surface-sunken',
       )}
     >
       {children}

@@ -11,7 +11,7 @@ import { WebSources } from '@/components/agent/web-sources';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
-import { cardClasses } from '@/components/ui/card-variants';
+import { cardClasses } from '@/components/ui/card';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Icon } from '@/components/ui/icon';

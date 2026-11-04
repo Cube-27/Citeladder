@@ -199,13 +199,15 @@ describe('OverviewPanel', () => {
       />,
     );
 
-    expect(screen.getByRole('img', { name: 'Web Fundamentals score: 81' })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'AEO Checklist Completion: 50%' })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'AEO Readiness score: 62' })).toBeInTheDocument();
+    expect(screen.getByRole('meter', { name: 'Web Fundamentals score: 81' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('meter', { name: 'AEO Checklist Completion: 50%' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('meter', { name: 'AEO Readiness score: 62' })).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'Classification completeness' }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Crawl Coverage score: 40' })).toBeInTheDocument();
+    expect(screen.getByRole('meter', { name: 'Crawl Coverage score: 40' })).toBeInTheDocument();
     expect(screen.queryByLabelText('Loading Overview details')).not.toBeInTheDocument();
     expect(overviewRequests).toBe(0);
   });
@@ -241,7 +243,7 @@ describe('OverviewPanel', () => {
 
     // 20 analyzed of 100 found is 20% coverage, not 100% of the 20 selected.
     expect(
-      await screen.findByRole('img', { name: 'Crawl Coverage score: 20' }),
+      await screen.findByRole('meter', { name: 'Crawl Coverage score: 20' }),
     ).toBeInTheDocument();
   });
 
@@ -274,8 +276,10 @@ describe('OverviewPanel', () => {
       />,
     );
 
-    expect(await screen.findByRole('img', { name: /Web Fundamentals score/ })).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: /Crawl Coverage score/ })).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole('meter', { name: /Web Fundamentals score/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('meter', { name: /Crawl Coverage score/ })).not.toBeInTheDocument();
   });
 
   it('explains a changed scored cohort once, beside the score changes', async () => {

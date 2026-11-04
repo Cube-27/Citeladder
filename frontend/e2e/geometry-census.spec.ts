@@ -59,10 +59,14 @@ const CONTROL_BAND_HEIGHT = 53;
 /** Sections in the content region stand 32 apart; cards inside a section 16. */
 const SECTION_GAP = 32;
 const CARD_GAP = 16;
-/** One box recipe: padding 24 on the box element, radius 14 (rounded-lg), a 1px border. */
+/**
+ * One box recipe: padding 24 on the box element, radius 14 (rounded-lg). A
+ * card is lifted by its shadow and draws no border; a panel keeps its 1px edge.
+ */
 const CARD_INSET = 24;
 const BOX_RADIUS = 14;
-const BOX_BORDER = 1;
+const CARD_BORDER = 0;
+const PANEL_BORDER = 1;
 /**
  * Loading, read-error and first-use empty share one footprint: the block
  * EmptyState's. The state draws no box of its own (its Skeleton, Callout or
@@ -72,11 +76,12 @@ const QUERY_STATE_HEIGHT = 200;
 const QUERY_STATE_PADDING = 0;
 const TABLE_ROW_HEIGHT = 44;
 const TABLE_CELL_PADDING_Y = 8;
-/** A DataTable's header row is the control band again: 8 + 36 + 8 and its rule. */
-const DATA_TABLE_HEADER_HEIGHT = 53;
-/** That header row (or the column header) starts at the card's top edge. */
-const DATA_TABLE_PADDING_TOP = 0;
-/** A StatRow segment is padded 12 above and below; a row's segments share one height. */
+/** A DataTable's title-and-toolbar row is one control high; the card's 24 insets it. */
+const DATA_TABLE_HEADER_HEIGHT = 36;
+/**
+ * A StatRow segment is padded 12 above and below (cancelled by its margin, so
+ * a pressable segment's fill has room); a row's segments share one height.
+ */
 const STAT_SEGMENT_PADDING_Y = 12;
 const STAT_ROW_HEIGHT_SPREAD = 0;
 /** The Icon atom's one glyph size. */
@@ -229,14 +234,13 @@ function measure(route: string) {
   for (const box of all(boxes)) {
     if (nestedState(box)) continue;
     const boxStyle = getComputedStyle(box);
-    // A record table's first row is its own top inset (data-table.tsx).
-    add(
-      box.matches('[data-data-table]') ? 'data-table.padding-top' : 'box.padding',
-      box,
-      px(boxStyle.paddingTop),
-    );
+    add('box.padding', box, px(boxStyle.paddingTop));
     add('box.radius', box, px(boxStyle.borderTopLeftRadius));
-    add('box.border', box, px(boxStyle.borderTopWidth));
+    add(
+      box.matches('.surface-card') ? 'card.border' : 'panel.border',
+      box,
+      px(boxStyle.borderTopWidth),
+    );
     const next = box.nextElementSibling;
     if (
       next?.matches(boxes) &&
@@ -280,7 +284,7 @@ function measure(route: string) {
   // height (the spread between the tallest and the shortest).
   for (const element of all('[data-stat-segment]'))
     add('stat-segment.padding-y', element, px(getComputedStyle(element).paddingTop));
-  for (const row of all('[data-stat-row] > dl')) {
+  for (const row of all('dl[data-stat-row]')) {
     const heights = Array.from(row.children)
       .filter(visible)
       .map((segment) => segment.getBoundingClientRect().height);
@@ -507,9 +511,9 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'section.gap', SECTION_GAP);
   expectOneValue(records, 'card.gap', CARD_GAP);
   expectOneValue(records, 'box.padding', CARD_INSET);
-  expectOneValue(records, 'data-table.padding-top', DATA_TABLE_PADDING_TOP);
   expectOneValue(records, 'box.radius', BOX_RADIUS);
-  expectOneValue(records, 'box.border', BOX_BORDER);
+  expectOneValue(records, 'card.border', CARD_BORDER);
+  expectOneValue(records, 'panel.border', PANEL_BORDER);
   expectOneValue(records, 'card.inset-top', CARD_INSET);
   expectOneValue(records, 'card.inset-left', CARD_INSET);
   expectOneValue(records, 'query-state.height', QUERY_STATE_HEIGHT);

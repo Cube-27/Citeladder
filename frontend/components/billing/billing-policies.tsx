@@ -4,7 +4,7 @@ import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { contactSalesHref } from '@/lib/config/contact';
 
 import { Stack } from '@/components/ui/layout';
-import { cardClasses } from '@/components/ui/card-variants';
+import { cardClasses } from '@/components/ui/card';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';

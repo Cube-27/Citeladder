@@ -221,7 +221,8 @@ export function RankingRowsTable({
         return (
           <TableRow
             key={`${row.is_brand}-${row.name}`}
-            highlight={row.is_brand || selected}
+            highlight={row.is_brand}
+            aria-selected={selected || undefined}
             {...selectionProps(row, selected, onSelect)}
           >
             <TableCell>

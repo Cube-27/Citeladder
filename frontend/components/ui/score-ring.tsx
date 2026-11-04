@@ -1,96 +1,69 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-
 import { cn } from '@/lib/utils';
-import { scoreBand, scoreBandStroke } from './score-band';
 
-/** The ring's one form: a 48px dial with a 4px track and the `figureSm` numeral. */
-const RING_SIZE = 48;
-const RING_STROKE = 4;
+import { clampScore, scoreFill, type ScoreTone } from './score-bar';
+
+const RING_STROKE = {
+  ink: 'stroke-ink',
+  positive: 'stroke-positive',
+  warning: 'stroke-warning',
+  negative: 'stroke-negative',
+} as const;
+
+const RADIUS = 42;
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 /**
- * ScoreRing (§8) — circular progress. Color from the score-band token, center
- * shows the display number in the `figureSm` role. Carries an ARIA label with the percentage
- * (role="img") so the value is announced to assistive tech.
- *
- * One form: the ring sits in a `StatRow` segment beside its label, so it is
- * the same 48px dial wherever a score is drawn. The size, stroke and numeral
- * props it used to take are gone; a bigger ring would out-shout the page title.
- *
- * The arc carries the score band's colour; the numeral keeps the foreground ink.
- *
- * The arc sweeps to its value with the slow motion role on mount. `motion-reduce` drops the
- * transition so the ring simply appears at its final value.
+ * ScoreRing — a 0–100 score as a 96px ring with the number in Cal Sans
+ * (`display` 32) at its centre: the Site Health score, a page's readiness.
+ * An 8px `chart-grid` track; the arc is `ink`, or banded with `tone="auto"`
+ * where several scores are compared. Pair it with the failing count and the
+ * crawl time beside it, never alone; shares are a `DonutChart`. It does not
+ * scale and shows no percent sign.
  */
 export function ScoreRing({
   value,
   label,
-  className,
+  tone = 'ink',
 }: Readonly<{
   /** Score 0–100. */
   value: number;
-  /** Accessible label; defaults to "Visibility score: N%". */
-  label?: string;
-  className?: string;
+  /** The accessible name, e.g. "Site Health score". */
+  label: string;
+  tone?: ScoreTone;
 }>) {
-  const clamped = Math.max(0, Math.min(100, Math.round(value)));
-  const band = scoreBand(clamped);
-  const radius = (RING_SIZE - RING_STROKE) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const dashOffset = circumference * (1 - clamped / 100);
-  const ariaLabel = label ?? `Visibility score: ${clamped}%`;
-
-  // A CSS transition only animates a CHANGE, so the arc has to be painted empty
-  // first and moved to its value afterwards — rendering it at `dashOffset` from
-  // the start would just appear there with the transition never firing. Under
-  // `motion-reduce` the transition is off, so the same two paints read as the
-  // ring simply appearing at its final value.
-  const [swept, setSwept] = useState(false);
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setSwept(true));
-    return () => cancelAnimationFrame(frame);
-  }, []);
-
+  const score = clampScore(value);
   return (
-    <div className={cn('relative inline-flex size-12 items-center justify-center', className)}>
-      <svg
-        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- SVG is the semantic image; img cannot render this generated score ring.
-        role="img"
-        aria-label={ariaLabel}
-        width={RING_SIZE}
-        height={RING_SIZE}
-        viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
-        className="-rotate-90"
-      >
+    <div
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- The ring and its numeral are one generated image; <img> cannot hold them.
+      role="img" // NOSONAR -- the ring and its numeral are one generated image
+      aria-label={`${label}: ${score} out of 100`}
+      className="relative inline-grid size-24 shrink-0 place-items-center"
+    >
+      <svg width={96} height={96} viewBox="0 0 96 96" aria-hidden className="absolute inset-0">
         <circle
-          cx={RING_SIZE / 2}
-          cy={RING_SIZE / 2}
-          r={radius}
+          cx={48}
+          cy={48}
+          r={RADIUS}
           fill="none"
-          strokeWidth={RING_STROKE}
-          className="stroke-surface-sunken"
+          strokeWidth={8}
+          className="stroke-chart-grid"
         />
-        <circle
-          cx={RING_SIZE / 2}
-          cy={RING_SIZE / 2}
-          r={radius}
-          fill="none"
-          strokeWidth={RING_STROKE}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={swept ? dashOffset : circumference}
-          className={cn(
-            'transition-[stroke-dashoffset] duration-[var(--motion-slow)] ease-[var(--ease-standard)] motion-reduce:transition-none',
-            scoreBandStroke[band],
-          )}
-        />
+        {score > 0 ? (
+          <circle
+            cx={48}
+            cy={48}
+            r={RADIUS}
+            fill="none"
+            strokeWidth={8}
+            strokeLinecap="round"
+            strokeDasharray={`${(CIRCUMFERENCE * score) / 100} ${CIRCUMFERENCE}`}
+            transform="rotate(-90 48 48)"
+            className={cn(RING_STROKE[scoreFill(tone, score)])}
+          />
+        ) : null}
       </svg>
-      <span
-        aria-hidden
-        className="type-figure-sm text-ink absolute inset-0 flex items-center justify-center"
-      >
-        {clamped}
+      <span aria-hidden className="font-display text-display-lg text-ink relative">
+        {score}
       </span>
     </div>
   );

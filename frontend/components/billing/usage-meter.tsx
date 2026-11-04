@@ -2,10 +2,9 @@
 
 import { USAGE_METER_CRITICAL_RATIO, USAGE_METER_WARNING_RATIO } from '@/lib/config/billing';
 import type { UsageItem } from '@/lib/api/billing';
-import type { DataTone } from '@/components/ui/data-tone';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Inline, Stack } from '@/components/ui/layout';
-import { Meter } from '@/components/ui/meter';
+import { Meter, type MeterTone } from '@/components/ui/meter';
 import { InlineFigure, textRole } from '@/components/ui/typography';
 
 /**
@@ -19,10 +18,10 @@ import { InlineFigure, textRole } from '@/components/ui/typography';
  * left" when it means "we don't know".
  */
 /** Two thresholds, three bands — the bar's only colour decision. */
-function usageTone(ratio: number): DataTone {
-  if (ratio >= USAGE_METER_CRITICAL_RATIO) return 'danger';
+function usageTone(ratio: number): MeterTone {
+  if (ratio >= USAGE_METER_CRITICAL_RATIO) return 'negative';
   if (ratio >= USAGE_METER_WARNING_RATIO) return 'warning';
-  return 'neutral';
+  return 'ink';
 }
 
 export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
@@ -76,21 +75,12 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
 
   return (
     <Stack gap="tight">
-      <Inline gap="compact" className="justify-between">
-        <span className={textRole('label')}>{label}</span>
-        <span className={textRole('label')}>
-          <InlineFigure>
-            {consumed} / {allowance}
-          </InlineFigure>{' '}
-          {unit}
-        </span>
-      </Inline>
       <Meter
-        label={`${label} usage`}
+        label={label}
         value={consumed}
         max={allowance}
+        valueLabel={`${consumed} / ${allowance} ${unit}`}
         tone={usageTone(ratio)}
-        valueText={`${consumed} of ${allowance} ${unit}`}
       />
       <Inline gap="compact" className="justify-between">
         <span className="type-caption whitespace-nowrap">

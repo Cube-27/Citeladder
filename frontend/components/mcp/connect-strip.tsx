@@ -4,7 +4,7 @@ import { ChevronDown, ExternalLink } from 'lucide-react';
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { cardClasses } from '@/components/ui/card-variants';
+import { cardClasses } from '@/components/ui/card';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';

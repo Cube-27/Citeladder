@@ -8,7 +8,7 @@ import { ProjectLink } from '@/components/layout/scoped-link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Inline, Stack } from '@/components/ui/layout';
-import { cardClasses } from '@/components/ui/card-variants';
+import { cardClasses } from '@/components/ui/card';
 import { QueryState } from '@/components/ui/query-state';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader, splitPaneClasses } from '@/components/ui/workspace';

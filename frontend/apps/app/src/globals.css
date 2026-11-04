@@ -268,8 +268,6 @@
   --page-title-min-width: 10rem;
   --table-row-height: 44px;
   --table-header-height: var(--control-md);
-  /* A DataTable's title-and-toolbar row: 8 + a control + 8 and its hairline. */
-  --data-table-header-height: calc(var(--control-md) + 17px);
   --table-cell-padding-x: 12px;
   --table-cell-padding-y: 8px;
   --table-min-width-sm: 36rem;

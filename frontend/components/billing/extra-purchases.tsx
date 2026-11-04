@@ -7,7 +7,7 @@ import { ControlRow } from '@/components/ui/control-row';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
-import { cardClasses } from '@/components/ui/card-variants';
+import { cardClasses } from '@/components/ui/card';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type {

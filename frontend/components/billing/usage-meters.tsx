@@ -10,7 +10,7 @@ import { EditorialSectionHeader, splitPaneClasses } from '@/components/ui/worksp
 import { UsageMeter } from '@/components/billing/usage-meter';
 import { billingApi, type UsageItem } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
-import { cardClasses } from '@/components/ui/card-variants';
+import { cardClasses } from '@/components/ui/card';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 /**
