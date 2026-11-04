@@ -158,7 +158,7 @@ function DiagramArchitecture({
           </div>
         ))}
       </div>
-      <ArrowDown className="text-muted mx-auto size-4" aria-hidden="true" />
+      <ArrowDown className="text-ink-muted mx-auto size-4" aria-hidden="true" />
       {data.destination && (
         <div className="cp-node cp-node-strong text-center">
           <h4 className="cp-node-title">{data.destination.title}</h4>
@@ -265,7 +265,7 @@ function PostDiagram({ block }: Readonly<{ block: Extract<BlogBlock, { type: 'di
 const CALLOUT_TONES = {
   warning: { icon: AlertTriangle, mark: 'text-warning' },
   info: { icon: Info, mark: 'text-info' },
-  accent: { icon: CheckCircle2, mark: 'text-accent-text' },
+  accent: { icon: CheckCircle2, mark: 'text-accent-ink' },
 } as const;
 
 function PostCallout({

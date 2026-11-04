@@ -350,7 +350,7 @@ function analysisCounts(crawl: SiteCrawl, selected: number): ProgressCount[] {
   ];
   const robots = counters.failure_breakdown.robots_denied;
   if (robots > 0) {
-    fixed.push({ label: 'Blocked by robots.txt', value: robots, className: 'text-warning-text' });
+    fixed.push({ label: 'Blocked by robots.txt', value: robots, className: 'text-warning' });
   }
   return [
     ...fixed,
@@ -359,7 +359,7 @@ function analysisCounts(crawl: SiteCrawl, selected: number): ProgressCount[] {
       .map((code) => ({
         label: code === 'timeout' ? 'Timeouts' : code.replace('_', ' ').toUpperCase(),
         value: counters.failure_breakdown[code],
-        className: 'text-danger-text',
+        className: 'text-negative',
       })),
   ];
 }

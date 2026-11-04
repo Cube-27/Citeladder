@@ -18,18 +18,18 @@
   align-items: center;
   gap: 0.5rem;
   padding-block: 0.5rem;
-  color: var(--color-secondary);
+  color: var(--color-ink-secondary);
   transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .ed-jump a svg {
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .ed-jump a:hover,
 .ed-jump a:hover svg {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .ed-segment-links {
@@ -77,7 +77,7 @@
 
 .ed-rail-title {
   margin-bottom: 0.75rem;
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .ed-rail ol {
@@ -87,12 +87,12 @@
 .ed-rail a {
   display: block;
   padding-block: 0.25rem;
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .ed-rail a:hover {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 /* The article column holds a ~68ch measure; wide figures may use the track. */
@@ -138,14 +138,14 @@
 }
 
 .ed-prose ul.ed-bullets li::marker {
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
 }
 
 /* Short reference notes: a quiet tinted block, no accent border. */
 .ed-note {
   padding: 1rem 1.25rem;
-  border-radius: var(--radius-card);
-  background: var(--color-background-alt);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-sunken);
 }
 
 /* Document header meta line under the lead. */
@@ -158,16 +158,16 @@
 }
 
 .ed-doc-meta a[aria-current='page'] {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .ed-doc-meta a {
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .ed-doc-meta a:hover {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .ed-doc-footer {
@@ -193,7 +193,7 @@
 .ed-table th,
 .ed-table td {
   padding: 0.75rem 1rem 0.75rem 0;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-line);
   vertical-align: top;
 }
 
@@ -204,20 +204,20 @@
 
 .ed-table thead th {
   padding-block: 0.5rem;
-  border-bottom-color: var(--color-border);
-  color: var(--color-muted);
+  border-bottom-color: var(--color-line);
+  color: var(--color-ink-muted);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
   font-weight: 500;
 }
 
 .ed-table tbody th {
-  color: var(--color-foreground);
+  color: var(--color-ink);
   font-weight: 500;
 }
 
 .ed-table td {
-  color: var(--color-secondary);
+  color: var(--color-ink-secondary);
 }
 
 .ed-num {
@@ -229,7 +229,7 @@
 .ed-example {
   margin-top: 1.5rem;
   border-radius: var(--radius-lg);
-  background: var(--color-background-alt);
+  background: var(--color-surface-sunken);
 }
 
 .ed-example-body {
@@ -279,7 +279,7 @@
   content: counter(ed-step);
   grid-row: span 2;
   padding-top: 0.25rem;
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
   font-variant-numeric: tabular-nums;
@@ -298,8 +298,8 @@
   gap: 0.25rem 2rem;
   align-items: baseline;
   padding: 1.25rem;
-  border-radius: var(--radius-card);
-  background: var(--color-background-alt);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-sunken);
   transition: background-color var(--motion-fast) var(--ease-standard);
 }
 
@@ -310,13 +310,13 @@
 }
 
 .ed-ledger a:hover {
-  background: var(--color-well);
+  background: var(--color-surface-sunken);
 }
 
 .ed-ledger svg {
   display: none;
   align-self: center;
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   transition:
     transform var(--motion-normal) var(--ease-standard),
     color var(--motion-fast) var(--ease-standard);
@@ -329,7 +329,7 @@
 }
 
 .ed-ledger a:hover svg {
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
   transform: translateX(2px);
 }
 
@@ -346,18 +346,18 @@
   justify-content: space-between;
   gap: 1rem;
   padding-block: 0.75rem;
-  color: var(--color-foreground);
+  color: var(--color-ink);
   transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .ed-links a svg {
   flex: none;
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   transition: transform var(--motion-normal) var(--ease-standard);
 }
 
 .ed-links a:hover {
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
 }
 
 .ed-links a:hover svg {
@@ -373,7 +373,7 @@
 }
 
 .ed-compare thead th {
-  color: var(--color-foreground);
+  color: var(--color-ink);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
   font-weight: 500;
@@ -386,7 +386,7 @@
 }
 
 .ed-compare tbody th {
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
   font-weight: 500;
@@ -415,7 +415,7 @@
 
   .ed-compare tr {
     padding-block: 1rem;
-    border-bottom: 1px solid var(--color-border-subtle);
+    border-bottom: 1px solid var(--color-line);
   }
 
   .ed-compare tbody th,
@@ -431,7 +431,7 @@
   .ed-compare td::before {
     content: attr(data-label);
     display: block;
-    color: var(--color-foreground);
+    color: var(--color-ink);
     font-size: var(--text-site-label);
     line-height: var(--text-site-label--line-height);
     font-weight: 500;
@@ -468,15 +468,15 @@
   align-items: center;
   min-height: 1.5rem;
   padding-inline: 0.5rem;
-  border-radius: var(--radius-control);
-  background: var(--color-background-alt);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
 }
 
 /* Inline document link: underline stays visible inside running text. */
 .ed-link {
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
   text-decoration-line: underline;
-  text-decoration-color: var(--color-border-strong);
+  text-decoration-color: var(--color-line);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
   transition: text-decoration-color var(--motion-fast) var(--ease-standard);

@@ -113,19 +113,19 @@ function QueryRelevanceEvidence({ signal }: Readonly<{ signal: DemandSignal }>) 
         </Stack>
         <dl className={splitPaneClasses('thirds', 'type-caption')}>
           <div>
-            <dt className="text-muted">Title</dt>
+            <dt className="text-ink-muted">Title</dt>
             <dd className={textRole('emphasis', 'tabular-nums')}>
               {coverageLabel(relevance.title_coverage)}
             </dd>
           </div>
           <div>
-            <dt className="text-muted">H1</dt>
+            <dt className="text-ink-muted">H1</dt>
             <dd className={textRole('emphasis', 'tabular-nums')}>
               {coverageLabel(relevance.h1_coverage)}
             </dd>
           </div>
           <div>
-            <dt className="text-muted">Page text</dt>
+            <dt className="text-ink-muted">Page text</dt>
             <dd className={textRole('emphasis', 'tabular-nums')}>
               {coverageLabel(relevance.primary_content_coverage)}
             </dd>

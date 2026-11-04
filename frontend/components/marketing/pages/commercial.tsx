@@ -145,17 +145,17 @@ function WorkedExample() {
               </tr>
             </tbody>
           </table>
-          <p className="website-label text-muted mt-3">
+          <p className="website-label text-ink-muted mt-3">
             Missing or failed observations are counted separately.
           </p>
         </div>
         <dl className="ed-example-results">
           <div>
-            <dt className="website-label text-muted">Answer-level mention rate</dt>
+            <dt className="website-label text-ink-muted">Answer-level mention rate</dt>
             <dd className="website-feature-heading tabular-nums">30 / 100 = 30%</dd>
           </div>
           <div>
-            <dt className="website-label text-muted">Share of tracked brand appearances</dt>
+            <dt className="website-label text-ink-muted">Share of tracked brand appearances</dt>
             <dd className="website-feature-heading">Not calculated here</dd>
             <dd className="website-body">
               Needs competitor counts and a stated counting rule. Several brands can appear in one
@@ -164,7 +164,7 @@ function WorkedExample() {
           </div>
         </dl>
       </div>
-      <figcaption className="website-label text-muted">
+      <figcaption className="website-label text-ink-muted">
         Illustrative example. A teaching aid, not a benchmark or CiteLadder&apos;s scoring formula.
       </figcaption>
     </figure>

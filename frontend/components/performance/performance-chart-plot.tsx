@@ -81,7 +81,7 @@ export function PerformancePlot({
           />
         ))}
         <Tooltip
-          cursor={{ className: 'stroke-border' }}
+          cursor={{ className: 'stroke-line' }}
           content={<ChartTooltip series={series} dateSource={axisEntry} />}
         />
         {series.flatMap((entry) => [

@@ -13,6 +13,7 @@ import {
   ACTIVE_WORKSPACE_STORAGE_KEY,
 } from '@/lib/project/active-project-storage';
 import { ProjectProvider } from '@/lib/project/project-context';
+import { THEME_COOKIE, setThemePreference } from '@/lib/theme/theme';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
@@ -42,6 +43,7 @@ afterEach(() => {
   mswServer.resetHandlers();
   navigate.mockReset();
   window.localStorage.clear();
+  document.cookie = `${THEME_COOKIE}=; Max-Age=0; Path=/`;
 });
 afterAll(() => mswServer.close());
 
@@ -174,7 +176,7 @@ describe('SessionGuard', () => {
     }
 
     window.localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, 'old-project');
-    window.localStorage.setItem('citeladder-theme', 'dark');
+    setThemePreference('dark');
     window.localStorage.setItem(
       ACTIVE_WORKSPACE_STORAGE_KEY,
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -194,7 +196,7 @@ describe('SessionGuard', () => {
     window.dispatchEvent(new Event('pagehide'));
     expect(queryClient.getQueryData(queryKeys.auth.me())).toBeUndefined();
     expect(window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY)).toBeNull();
-    expect(window.localStorage.getItem('citeladder-theme')).toBe('dark');
+    expect(document.cookie).toContain(`${THEME_COOKIE}=dark`);
     expect(window.localStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY)).toBeNull();
   });
 

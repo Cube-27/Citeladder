@@ -69,7 +69,7 @@ export const stickyPaneClasses =
 export type LedgerShell = 'open' | 'boxed';
 
 export function ledgerClasses(shell: LedgerShell = 'open', className?: string) {
-  return cn('divide-border-subtle grid divide-y', shell === 'boxed' && panelClasses(), className);
+  return cn('divide-line grid divide-y', shell === 'boxed' && panelClasses(), className);
 }
 
 /**
@@ -89,7 +89,7 @@ export function ledgerItemClasses(className?: string) {
  * an item for the next level.
  */
 export function treeBranchClasses(className?: string) {
-  return cn('border-border-subtle grid min-w-0 gap-2 border-l pl-4', className);
+  return cn('border-line grid min-w-0 gap-2 border-l pl-4', className);
 }
 
 /**
@@ -104,12 +104,12 @@ export function MetaFooter({
 }: Readonly<{ children: ReactNode; trailing?: ReactNode }>) {
   if (!trailing)
     return (
-      <footer className="type-caption border-border-subtle flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3">
+      <footer className="type-caption border-line flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3">
         {children}
       </footer>
     );
   return (
-    <footer className="type-caption border-border-subtle flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+    <footer className="type-caption border-line flex flex-wrap items-center justify-between gap-2 border-t pt-3">
       <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">{children}</div>
       {trailing}
     </footer>
@@ -225,7 +225,7 @@ export function EditorialSectionHeader({
  */
 export function FloatingToolbar({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="bg-elevated shadow-overlay absolute end-3 top-3 z-10 flex gap-1 rounded-[var(--radius-card)] p-1">
+    <div className="bg-surface shadow-pop absolute end-3 top-3 z-10 flex gap-1 rounded-lg p-1">
       {children}
     </div>
   );

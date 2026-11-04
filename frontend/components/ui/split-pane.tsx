@@ -146,7 +146,7 @@ export function ResizableSplitPane({
       >
         <span
           aria-hidden
-          className="bg-border group-hover:bg-border-strong group-focus-visible:bg-accent group-data-[dragging]:bg-accent w-px transition-colors motion-reduce:transition-none"
+          className="bg-line group-hover:bg-line-control group-focus-visible:bg-ink group-data-[dragging]:bg-ink w-px transition-colors motion-reduce:transition-none"
         />
         <span id={helpId} className="sr-only">
           Use the left and right arrow keys to resize. Hold Shift for larger steps.

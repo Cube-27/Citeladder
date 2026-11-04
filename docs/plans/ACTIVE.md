@@ -5,6 +5,9 @@ Remaining work is consolidated in the backlog; historical plans are not active a
 
 ## Active
 
+- [Design system rollout](design-system-rollout.md) (owner decisions recorded
+  2026-11-05): the new design system replaces the design on every surface in
+  eight PRs; PR 1 (foundation) in progress.
 - [Billing improvement](billing-improvement.md) (feature 11, owner decisions
   recorded 2026-10-11): billing fully operational but hidden, in three PRs, so
   that enablement is a configuration-only PR.

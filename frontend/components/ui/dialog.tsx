@@ -8,8 +8,8 @@ import { cn } from '@/lib/utils';
 import { IconButton } from './button';
 
 /**
- * Dialog (§8) — Radix modal. Scrim = --color-overlay-scrim, surface = bg-elevated,
- * shadow-modal, and the shared overlay radius. Header, body, and footer use
+ * Dialog (§8) — Radix modal. Scrim = --color-scrim, surface = bg-surface,
+ * shadow-pop, and the shared overlay radius. Header, body, and footer use
  * the modal-padding rhythm and include a built-in close button. Focus opens on
  * the first tabbable element (the close button) unless `initialFocusRef` is set.
  *
@@ -66,7 +66,7 @@ export function Dialog({
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="dialog-overlay bg-overlay-scrim z-overlay fixed inset-0" />
+        <DialogPrimitive.Overlay className="dialog-overlay bg-scrim z-overlay fixed inset-0" />
         <DialogPrimitive.Content
           // Without a description, opt out of the one Radix otherwise wires up
           // and warns about. With one, Radix's own id must stay in place.
@@ -84,11 +84,11 @@ export function Dialog({
             returnFocusRef.current = null;
           }}
           className={cn(
-            'dialog-panel border-transparent bg-elevated shadow-modal z-modal fixed top-1/2 left-1/2 flex max-h-[calc(100dvh-2.5rem)] max-w-[calc(100vw-2.5rem)] min-w-0 -translate-x-1/2 -translate-y-1/2 flex-col box-border rounded-[var(--radius-card)] border focus-ring',
+            'dialog-panel border-transparent bg-surface shadow-pop z-modal fixed top-1/2 left-1/2 flex max-h-[calc(100dvh-2.5rem)] max-w-[calc(100vw-2.5rem)] min-w-0 -translate-x-1/2 -translate-y-1/2 flex-col box-border rounded-lg border focus-ring',
             DIALOG_WIDTH[width],
           )}
         >
-          <header className="border-border flex items-start justify-between gap-4 border-b px-[var(--modal-padding)] pt-[var(--modal-padding)] pb-4">
+          <header className="border-line flex items-start justify-between gap-4 border-b px-[var(--modal-padding)] pt-[var(--modal-padding)] pb-4">
             <div className="grid min-w-0 gap-1">
               <DialogPrimitive.Title className="type-section-title">{title}</DialogPrimitive.Title>
               {description ? (
@@ -105,7 +105,7 @@ export function Dialog({
             {children}
           </div>
           {footer ? (
-            <footer className="border-border flex items-center justify-end gap-2 border-t px-[var(--modal-padding)] pt-4 pb-[var(--modal-padding)]">
+            <footer className="border-line flex items-center justify-end gap-2 border-t px-[var(--modal-padding)] pt-4 pb-[var(--modal-padding)]">
               {footer}
             </footer>
           ) : null}

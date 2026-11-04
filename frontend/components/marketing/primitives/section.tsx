@@ -111,7 +111,7 @@ export function SectionHeader({
       <Heading
         id={headingId}
         className={cn(
-          'text-foreground text-balance',
+          'text-ink text-balance',
           size === 'h3' ? 'max-w-[48ch]' : 'max-w-[32ch]',
           SECTION_HEADING_CLASSES[size],
         )}

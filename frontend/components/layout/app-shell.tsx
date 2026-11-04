@@ -75,13 +75,13 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
     <CompactPageTitleContext.Provider value={setCompactTitleOverride}>
       <AgentPanelProvider>
         <TooltipProvider>
-          <div data-app-surface className="ground-grain bg-panel relative flex min-h-dvh">
+          <div data-app-surface className="bg-surface relative flex min-h-dvh">
             <a href="#main" className="skip-link">
               Skip to main content
             </a>
             {/* The rail starts one sheet inset down, so its rows line up with
                 the bands of the floating sheet beside it. */}
-            <aside className="shell-rail ground-grain bg-panel desktop:flex sticky top-0 z-1 hidden h-dvh w-[var(--sidebar-width)] shrink-0 flex-col pt-[var(--workspace-inset)]">
+            <aside className="shell-rail bg-surface desktop:flex sticky top-0 z-1 hidden h-dvh w-[var(--sidebar-width)] shrink-0 flex-col pt-[var(--workspace-inset)]">
               {/* The project selector is the sidebar's first row, at the same
                   height as the header beside it. The rail reads project →
                   tools → destinations → brand: the switcher is the thing a
@@ -117,7 +117,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               {/* Compact only, exactly as before. On desktop the account
                   trigger rides the route's own header row instead, so the shell
                   adds no second bar above the work. */}
-              <header className="bg-sheet border-border-subtle z-sticky desktop:hidden sticky top-0 grid h-[var(--compact-topbar-height)] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b px-[var(--content-gutter)]">
+              <header className="bg-paper border-line z-sticky desktop:hidden sticky top-0 grid h-[var(--compact-topbar-height)] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b px-[var(--content-gutter)]">
                 <div className="flex items-center">
                   <Button
                     variant="ghost"
@@ -175,12 +175,12 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                 hideHeader
                 closeLabel="Close navigation"
                 side="left"
-                className="bg-panel w-[min(17rem,100vw)] max-w-none border-l-0"
+                className="bg-surface w-[min(17rem,100vw)] max-w-none border-l-0"
               >
                 <div className="grid gap-4">
                   <Link
                     to={overviewHref}
-                    className="focus-ring flex items-center rounded-[var(--radius-control)] px-2 py-1"
+                    className="focus-ring flex items-center rounded-md px-2 py-1"
                     onClick={() => setNavigationOpen(false)}
                     aria-label="CiteLadder command center"
                   >

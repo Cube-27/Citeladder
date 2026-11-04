@@ -325,7 +325,7 @@ function PageBand({
       data-page-band={kind}
       // Every band is the sheet itself, closed by its rule; cards on the
       // sheet are the raised step, so a band never wears a card's fill.
-      className="bg-sheet border-border-subtle border-b"
+      className="bg-paper border-line border-b"
     >
       <div className={cn(pageGutterClasses, 'flex', className)}>{children}</div>
     </div>
@@ -353,7 +353,7 @@ function IdentityBand({
     <div
       data-page-band="identity"
       className={cn(
-        'bg-sheet border-border-subtle border-b',
+        'bg-paper border-line border-b',
         // Below the desktop breakpoint the compact topbar already names the
         // page, so a band holding only a screen-reader title would be an
         // empty ruled row. A back button is visible content, so it keeps the band.
@@ -399,10 +399,10 @@ function IdentityBand({
           // Desktop-only, because that is the only width the glyphs appear at.
           <div
             className={cn(
-              'flex min-w-0 min-h-[var(--control-height-md)] flex-wrap items-center gap-2 desktop:justify-end',
+              'flex min-w-0 min-h-[var(--control-md)] flex-wrap items-center gap-2 desktop:justify-end',
               navigationMode(pathname) === 'dashboard'
-                ? 'desktop:pe-[calc(3*var(--control-height-md)+1.25rem)]'
-                : 'desktop:pe-[calc(2*var(--control-height-md)+1rem)]',
+                ? 'desktop:pe-[calc(3*var(--control-md)+1.25rem)]'
+                : 'desktop:pe-[calc(2*var(--control-md)+1rem)]',
             )}
           >
             {actions}

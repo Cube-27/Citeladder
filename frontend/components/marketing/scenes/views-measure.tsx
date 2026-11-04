@@ -313,13 +313,13 @@ export function ShelfSetupView() {
           <PanelHead title="Buyer prompts" meta="8 approved" />
           <ul className="pv-list">
             <li>
-              <Check className="text-accent-text size-3.5 shrink-0" aria-hidden />
+              <Check className="text-accent-ink size-3.5 shrink-0" aria-hidden />
               <span className="pv-list-main">
                 <span>Which daypacks suit a short hike?</span>
               </span>
             </li>
             <li>
-              <Check className="text-accent-text size-3.5 shrink-0" aria-hidden />
+              <Check className="text-accent-ink size-3.5 shrink-0" aria-hidden />
               <span className="pv-list-main">
                 <span>Best lightweight daypack under $100</span>
               </span>

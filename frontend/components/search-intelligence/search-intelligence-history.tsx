@@ -79,11 +79,11 @@ export function SearchIntelligenceHistory({
       </p>
       <Stack gap="compact" className="min-w-0 content-start">
         <Inline as="h3" className={textRole('itemTitle', 'min-h-6')}>
-          <LegendSwatch color="var(--color-chart-1)" shape="line" />
+          <LegendSwatch color="var(--color-data-1)" shape="line" />
           Total backlinks
         </Inline>
         <ChartContainer
-          config={{ backlinks: { label: 'Backlinks', color: 'var(--color-chart-1)' } }}
+          config={{ backlinks: { label: 'Backlinks', color: 'var(--color-data-1)' } }}
           description="Saved monthly backlink totals; missing observations break the line."
         >
           <BacklinkTotalPlot data={data} />
@@ -94,19 +94,19 @@ export function SearchIntelligenceHistory({
           <h3 className={textRole('itemTitle')}>Monthly changes</h3>
           <Inline gap="meta" className="type-caption">
             <Inline as="span">
-              <LegendSwatch color="var(--color-chart-2)" shape="line" />
+              <LegendSwatch color="var(--color-data-2)" shape="line" />
               New backlinks
             </Inline>
             <Inline as="span">
-              <LegendSwatch color="var(--color-chart-3)" shape="line" />
+              <LegendSwatch color="var(--color-data-3)" shape="line" />
               Lost backlinks
             </Inline>
           </Inline>
         </Inline>
         <ChartContainer
           config={{
-            new: { label: 'New backlinks', color: 'var(--color-chart-2)' },
-            lost: { label: 'Lost backlinks', color: 'var(--color-chart-3)' },
+            new: { label: 'New backlinks', color: 'var(--color-data-2)' },
+            lost: { label: 'Lost backlinks', color: 'var(--color-data-3)' },
           }}
           description="Saved monthly new and lost backlinks, shown as separate labelled lines."
         >

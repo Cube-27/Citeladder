@@ -26,7 +26,7 @@ import { cn } from '@/lib/utils';
  *    carries the same --table-cell-padding-y, and text never runs past two
  *    lines — `ClampText` cuts it there and moves the rest into a tooltip, so
  *    a row is either one line or two, never a three-line outlier
- *  - --text-sm cells, subtle ROW hairlines only
+ *  - --text-body-sm cells, subtle ROW hairlines only
  *  - data columns are centred and tabular, so digits line up place by place
  *    under a header centred on the same axis (owner, 2026-11-01); text
  *    columns stay left
@@ -82,7 +82,7 @@ export function Table({
     <div
       ref={wrapperRef}
       className={cn(
-        'table-frame bg-panel relative w-full max-w-full min-w-0 overflow-auto rounded-[var(--radius-card)]',
+        'table-frame bg-surface relative w-full max-w-full min-w-0 overflow-auto rounded-lg',
         wrapperClassName,
       )}
     >
@@ -136,12 +136,12 @@ export function TableRow({
     <tr
       {...props}
       className={cn(
-        'hover:bg-hover active:bg-active h-[var(--table-row-height)] transition-colors',
+        'hover:bg-surface-sunken active:bg-surface-sunken h-[var(--table-row-height)] transition-colors',
         // A selected or highlighted row takes the shared selected tint and the
         // foreground ink, the one selected face (owner, 2026-11-04); hover
         // never lightens it.
-        'aria-selected:bg-selected aria-selected:hover:bg-selected aria-selected:text-foreground',
-        highlight && 'bg-selected hover:bg-selected text-foreground',
+        'aria-selected:bg-surface-sunken aria-selected:hover:bg-surface-sunken aria-selected:text-ink',
+        highlight && 'bg-surface-sunken hover:bg-surface-sunken text-ink',
         className,
       )}
     >
@@ -200,11 +200,11 @@ export function TableHead({
       {...props}
       className={cn(
         tableHeadClasses,
-        'aria-[sort=ascending]:text-foreground aria-[sort=descending]:text-foreground',
+        'aria-[sort=ascending]:text-ink aria-[sort=descending]:text-ink',
         // The header row sits on the table's own paper (owner, 2026-11-01): a
         // tinted header matched the selected-row tint. Its rule separates it,
         // and the opaque fill keeps a sticky header over scrolled rows.
-        'border-border-subtle bg-panel sticky top-0 z-10 h-[var(--table-header-height)] border-b px-[var(--table-cell-padding-x)] text-left align-middle',
+        'border-line bg-surface sticky top-0 z-10 h-[var(--table-header-height)] border-b px-[var(--table-cell-padding-x)] text-left align-middle',
         numeric && 'tabular-nums text-center',
         trailing && 'text-right',
         desktopOnly && desktopOnlyClasses,
@@ -290,12 +290,12 @@ export function ClampText({
 
 const cellClasses = ({ numeric, desktopOnly }: CellOptions) =>
   cn(
-    'type-body text-foreground border-border-subtle px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)] text-left align-middle',
+    'type-body text-ink border-line px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)] text-left align-middle',
     // Row rule, dropped on the last row.
     'border-b [tr:last-child>&]:border-b-0',
     // A value never wraps: "Not measured" split over two lines read as two values.
     // Its digits take the figure face, so a column lines up place by place.
-    numeric && 'whitespace-nowrap font-numeric text-center',
+    numeric && 'whitespace-nowrap font-mono text-center',
     desktopOnly && desktopOnlyClasses,
   );
 

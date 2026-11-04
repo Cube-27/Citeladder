@@ -96,7 +96,7 @@ function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter 
         <span>{logout.isPending ? 'Signing out…' : 'Sign out'}</span>
       </DropdownItem>
       {logout.isError ? (
-        <p role="alert" className="type-caption text-danger-text px-2 py-2">
+        <p role="alert" className="type-caption text-negative px-2 py-2">
           Sign out failed. Your session is still active; please try again.
         </p>
       ) : null}
@@ -117,10 +117,10 @@ export function UserMenuTrigger({
         <DropdownTrigger
           aria-label={compact ? `Account menu for ${email}` : undefined}
           className={cn(
-            'focus-ring hover:bg-hover active:bg-active data-[state=open]:bg-selected hover:text-foreground flex min-w-0 items-center gap-2 rounded-[var(--radius-control)] text-left transition-colors',
+            'focus-ring hover:bg-surface-sunken active:bg-surface-sunken data-[state=open]:bg-surface-sunken hover:text-ink flex min-w-0 items-center gap-2 rounded-md text-left transition-colors',
             compact
-              ? 'size-[var(--control-height-md)] shrink-0 justify-center'
-              : 'h-[var(--control-height-md)] flex-1 px-2',
+              ? 'size-[var(--control-md)] shrink-0 justify-center'
+              : 'h-[var(--control-md)] flex-1 px-2',
           )}
         >
           <Avatar name={email} />

@@ -14,10 +14,10 @@ import {
 import { cn } from '@/lib/utils';
 
 /**
- * Tooltip — Radix. The shared inverse chip uses a dark `bg-surface-inverse`
- * fill with `text-on-inverse` copy and NO border (an inverse chip needs
+ * Tooltip — Radix. The shared inverse chip uses a dark `bg-ink`
+ * fill with `text-on-ink` copy and NO border (an inverse chip needs
  * none), so it reads against every surface including a white card (the
- * Phase 1 `bg-elevated` version was ΔE 0.00 against one). Wrap the app (or a
+ * Phase 1 `bg-surface` version was ΔE 0.00 against one). Wrap the app (or a
  * subtree) once in <TooltipProvider>; each Tooltip pairs a trigger with
  * short text `content`.
  *
@@ -86,12 +86,12 @@ export function Tooltip({
           align={align}
           sideOffset={6}
           className={cn(
-            'tooltip-panel bg-surface-inverse text-on-inverse shadow-overlay z-modal max-w-[18rem] rounded-[var(--radius-card)] px-3 py-2 type-caption text-on-inverse',
+            'tooltip-panel bg-ink text-on-ink shadow-pop z-modal max-w-[18rem] rounded-lg px-3 py-2 type-caption text-on-ink',
             className,
           )}
         >
           {content}
-          <TooltipPrimitive.Arrow className="fill-surface-inverse" />
+          <TooltipPrimitive.Arrow className="fill-ink" />
         </TooltipPrimitive.Content>
       </TooltipPrimitive.Portal>
     </TooltipPrimitive.Root>

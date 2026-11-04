@@ -127,7 +127,7 @@ function NeighbourList({
               )}
               <Inline as="span" className="shrink-0">
                 {neighbour.main_content ? <Badge>Main</Badge> : null}
-                {neighbour.nofollow ? <Badge className="text-muted">nofollow</Badge> : null}
+                {neighbour.nofollow ? <Badge className="text-ink-muted">nofollow</Badge> : null}
                 <span className="type-caption tabular-nums">×{neighbour.anchor_count}</span>
               </Inline>
             </Inline>

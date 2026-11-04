@@ -42,7 +42,7 @@ export function PageHero({
           <nav aria-label="Breadcrumb" className="mb-6">
             <ol
               className={cn(
-                'website-label text-muted flex flex-wrap items-center justify-center gap-1.5',
+                'website-label text-ink-muted flex flex-wrap items-center justify-center gap-1.5',
                 !centered && 'sm:justify-start',
               )}
             >
@@ -50,11 +50,11 @@ export function PageHero({
                 <li key={crumb.label} className="inline-flex items-center gap-1.5">
                   {index > 0 && <ChevronRight aria-hidden className="size-3.5 opacity-60" />}
                   {crumb.href ? (
-                    <a className="hover:text-foreground transition-colors" href={crumb.href}>
+                    <a className="hover:text-ink transition-colors" href={crumb.href}>
                       {crumb.label}
                     </a>
                   ) : (
-                    <span aria-current="page" className="text-foreground">
+                    <span aria-current="page" className="text-ink">
                       {crumb.label}
                     </span>
                   )}
@@ -65,7 +65,7 @@ export function PageHero({
         )}
         <h1
           className={cn(
-            'website-page-title text-foreground mx-auto max-w-[30ch] text-balance',
+            'website-page-title text-ink mx-auto max-w-[30ch] text-balance',
             !centered && 'sm:mx-0',
           )}
         >

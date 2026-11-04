@@ -2,26 +2,46 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 
-import { THEME_STORAGE_KEY } from '@/lib/theme/theme';
+import { themeCookieDomain } from '@/lib/theme/theme';
 
 import { ThemeSwitch } from './theme-switch';
 
+function themeCookie(): string | undefined {
+  return document.cookie
+    .split('; ')
+    .find((part) => part.startsWith('citeladder_theme='))
+    ?.slice('citeladder_theme='.length);
+}
+
 describe('ThemeSwitch', () => {
   afterEach(() => {
-    window.localStorage.clear();
+    document.cookie = 'citeladder_theme=; Max-Age=0; Path=/';
     delete document.documentElement.dataset.theme;
   });
 
-  it('flips light and dark in one click, remembering the choice on this device', async () => {
+  it('flips light and dark in one click, remembering the choice in the shared cookie', async () => {
     const user = userEvent.setup();
     render(<ThemeSwitch />);
 
     await user.click(screen.getByRole('button', { name: 'Switch to dark theme' }));
     expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
-    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
+    expect(themeCookie()).toBe('dark');
 
     await user.click(screen.getByRole('button', { name: 'Switch to light theme' }));
-    expect(document.documentElement).not.toHaveAttribute('data-theme');
-    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light');
+    expect(themeCookie()).toBe('light');
+  });
+});
+
+describe('themeCookieDomain', () => {
+  it('shares the choice across the app, docs and website hosts', () => {
+    expect(themeCookieDomain('app.citeladder.com')).toBe('citeladder.com');
+    expect(themeCookieDomain('docs.citeladder.com')).toBe('citeladder.com');
+    expect(themeCookieDomain('citeladder.com')).toBe('citeladder.com');
+  });
+
+  it('keeps the cookie host-only where a Domain attribute is rejected', () => {
+    expect(themeCookieDomain('localhost')).toBeNull();
+    expect(themeCookieDomain('127.0.0.1')).toBeNull();
   });
 });

@@ -54,7 +54,7 @@ function SignalCell({ present, label }: Readonly<{ present: boolean; label: stri
     <TableCell>
       <Inline
         as="span"
-        className={cn('type-body inline-flex', present ? 'text-success-text' : 'text-muted')}
+        className={cn('type-body inline-flex', present ? 'text-positive' : 'text-ink-muted')}
       >
         <Icon icon={present ? Check : Minus} />
         <span className="sr-only">{label}: </span>
@@ -80,7 +80,7 @@ function EntityRow({ entity }: Readonly<{ entity: SurfaceEntity }>) {
         {/* Null is "never named", which is not last place, so it says so
             rather than taking a number one position behind everyone else. */}
         {entity.mention_order === null ? (
-          <span className="text-muted">Not named</span>
+          <span className="text-ink-muted">Not named</span>
         ) : (
           `#${entity.mention_order}`
         )}

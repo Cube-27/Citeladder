@@ -125,7 +125,7 @@ function AccuracyState({
 }
 
 function CoverageNote({ coverage }: Readonly<{ coverage: AccuracyCoverage }>) {
-  return <p className={textRole('caption', 'text-muted')}>{accuracyCoverageLine(coverage)}</p>;
+  return <p className={textRole('caption', 'text-ink-muted')}>{accuracyCoverageLine(coverage)}</p>;
 }
 
 function Headline({ data }: Readonly<{ data: AccuracyResponse }>) {
@@ -197,11 +197,11 @@ function ContradictedClaims({ claims }: Readonly<{ claims: AccuracyClaim[] }>) {
               <Stack as="li" gap="tight" key={`${claim.execution_id}:${claim.quote}`}>
                 <ClaimLink claim={claim} />
                 {claim.facts.map((fact) => (
-                  <span key={fact.statement} className="type-caption text-secondary">
+                  <span key={fact.statement} className="type-caption text-ink-secondary">
                     Your fact: {fact.statement}
                   </span>
                 ))}
-                <Inline as="span" className={textRole('caption', 'text-muted flex-wrap')}>
+                <Inline as="span" className={textRole('caption', 'text-ink-muted flex-wrap')}>
                   <Badge variant="sentiment" value="negative">
                     {TOPIC_LABELS[claim.topic]}
                   </Badge>

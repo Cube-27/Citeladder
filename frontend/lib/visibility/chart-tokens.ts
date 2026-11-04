@@ -6,14 +6,25 @@ type ChartSeries = (typeof SERIES)[number];
 
 /** Literal classes stay visible to Tailwind's source scanner. */
 const STROKE: Record<ChartSeries, string> = {
-  1: 'stroke-chart-1',
-  2: 'stroke-chart-2',
-  3: 'stroke-chart-3',
-  4: 'stroke-chart-4',
-  5: 'stroke-chart-5',
-  6: 'stroke-chart-6',
-  7: 'stroke-chart-7',
-  8: 'stroke-chart-8',
+  1: 'stroke-data-1',
+  2: 'stroke-data-2',
+  3: 'stroke-data-3',
+  4: 'stroke-data-other',
+  5: 'stroke-data-other',
+  6: 'stroke-data-other',
+  7: 'stroke-data-other',
+  8: 'stroke-data-other',
+};
+
+const COLOR: Record<ChartSeries, string> = {
+  1: 'var(--color-data-1)',
+  2: 'var(--color-data-2)',
+  3: 'var(--color-data-3)',
+  4: 'var(--color-data-other)',
+  5: 'var(--color-data-other)',
+  6: 'var(--color-data-other)',
+  7: 'var(--color-data-other)',
+  8: 'var(--color-data-other)',
 };
 
 /**
@@ -25,7 +36,7 @@ export function chartToken(index: number) {
   return {
     strokeClass: STROKE[series],
     swatchClass: dataFillClass({ series }),
-    color: `var(--color-chart-${series})`,
+    color: COLOR[series],
   };
 }
 

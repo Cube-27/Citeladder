@@ -85,7 +85,7 @@ export function Meter({
       aria-valuemax={max}
       aria-valuenow={clamped ?? undefined}
       aria-valuetext={valueText ?? defaultValueText(clamped, max)}
-      className={cn('bg-well w-full overflow-hidden rounded-full', SIZE[size], className)}
+      className={cn('bg-surface-sunken w-full overflow-hidden rounded-full', SIZE[size], className)}
     >
       {clamped === null ? null : (
         <div
@@ -117,7 +117,7 @@ export function MeterRow({
     <div className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-[var(--compact-gap)]">
       <span className="type-caption">{name}</span>
       <Meter {...meter} />
-      <span className="type-label font-numeric text-right">{figure}</span>
+      <span className="type-label text-right font-mono">{figure}</span>
     </div>
   );
 }

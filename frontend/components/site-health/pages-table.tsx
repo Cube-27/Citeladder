@@ -180,7 +180,7 @@ export function PagesTable({
                 fixed column and carry the full value in a tooltip when cut. */}
           <TableCell>
             <span className="flex min-w-0 flex-col">
-              <ClampText lines={1} className={textRole('emphasis', 'text-foreground')}>
+              <ClampText lines={1} className={textRole('emphasis', 'text-ink')}>
                 {pageDisplayTitle(page.title, page.display_url)}
               </ClampText>
               <ClampText lines={1} className="type-caption tabular-nums">
@@ -225,7 +225,10 @@ export function PagesTable({
               <TableCell
                 key={column.sort}
                 numeric
-                className={cn('tabular-nums', value === null ? 'type-caption' : 'text-secondary')}
+                className={cn(
+                  'tabular-nums',
+                  value === null ? 'type-caption' : 'text-ink-secondary',
+                )}
               >
                 {value ?? <UnavailableValue state="not_measured" />}
               </TableCell>

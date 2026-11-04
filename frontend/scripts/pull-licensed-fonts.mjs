@@ -30,12 +30,12 @@ const GH_EXECUTABLE =
 const frontendRoot = resolve(import.meta.dirname, '..');
 const configPath = join(frontendRoot, 'lib', 'config', 'brand-fonts.json');
 
-/** Arial's x-height and tabular digit advance (em), which the fallbacks scale to. */
+/** Arial's x-height and Courier New's advance (em), which the fallbacks scale to. */
 const ARIAL_X_HEIGHT = 0.519;
-const ARIAL_DIGIT_ADVANCE = 0.556;
-/** The design's weight ceiling and the lightest weight any face is asked for. */
-const WEIGHT_CEILING = 500;
-const WEIGHT_FLOOR = 300;
+const COURIER_ADVANCE = 0.6;
+/** The design's weight ceiling (the 600 `heading` role) and its lightest weight (400). */
+const WEIGHT_CEILING = 600;
+const WEIGHT_FLOOR = 400;
 
 const args = process.argv.slice(2);
 const latest = args.includes('--latest');
@@ -164,35 +164,40 @@ function woff2Tables(bytes) {
 
 const percent = (value) => `${Math.round(value * 10000) / 100}%`;
 
-/** The face's requestable weight range and its Arial fallback's overrides. */
+/** A variable face's weight range clamped to the design's, or a static face's one weight. */
+function weightRange(fvar, os2) {
+  if (!fvar) return String(os2.readUInt16BE(4));
+  const axesOffset = fvar.readUInt16BE(4);
+  const axisCount = fvar.readUInt16BE(8);
+  const axisSize = fvar.readUInt16BE(10);
+  for (let index = 0; index < axisCount; index += 1) {
+    const axis = axesOffset + index * axisSize;
+    if (fvar.toString('latin1', axis, axis + 4) !== 'wght') continue;
+    const minimum = Math.round(fvar.readInt32BE(axis + 4) / 65536);
+    const maximum = Math.round(fvar.readInt32BE(axis + 12) / 65536);
+    return `${Math.max(minimum, WEIGHT_FLOOR)} ${Math.min(maximum, WEIGHT_CEILING)}`;
+  }
+  throw new Error('A variable face without a weight axis is not supported.');
+}
+
+/** The face's requestable weight range and its local fallback's overrides. */
 function derivedFields(role, bytes) {
   if (bytes.subarray(0, 4).toString('latin1') !== 'wOF2') throw new Error('Not a WOFF2 file.');
   const tables = woff2Tables(bytes);
   const head = tables.get('head');
   const hhea = tables.get('hhea');
   const os2 = tables.get('OS/2');
-  const fvar = tables.get('fvar');
   if (!head || !hhea || !os2) throw new Error('The face lacks head, hhea or OS/2.');
-  if (!fvar) throw new Error('Only variable faces are supported (no fvar table).');
   const unitsPerEm = head.readUInt16BE(18);
-  const axesOffset = fvar.readUInt16BE(4);
-  const axisCount = fvar.readUInt16BE(8);
-  const axisSize = fvar.readUInt16BE(10);
-  let minimum = WEIGHT_FLOOR;
-  for (let index = 0; index < axisCount; index += 1) {
-    const axis = axesOffset + index * axisSize;
-    if (fvar.toString('latin1', axis, axis + 4) === 'wght')
-      minimum = Math.max(WEIGHT_FLOOR, Math.round(fvar.readInt32BE(axis + 4) / 65536));
-  }
-  // The figure face is matched on its digit advance (a monospace face's
-  // average width), every other face on its x-height.
+  // The mono face is matched on its advance (a monospace face's average
+  // width) against Courier New, every other face on its x-height against Arial.
   const scale =
-    role === 'figure'
-      ? os2.readInt16BE(2) / unitsPerEm / ARIAL_DIGIT_ADVANCE
+    role === 'mono'
+      ? os2.readInt16BE(2) / unitsPerEm / COURIER_ADVANCE
       : os2.readInt16BE(86) / unitsPerEm / ARIAL_X_HEIGHT;
   const metric = (value) => percent(Math.abs(value) / unitsPerEm / scale);
   return {
-    weights: `${Math.min(minimum, WEIGHT_CEILING)} ${WEIGHT_CEILING}`,
+    weights: weightRange(tables.get('fvar'), os2),
     fallback: {
       sizeAdjust: percent(scale),
       ascentOverride: metric(hhea.readInt16BE(4)),

@@ -24,7 +24,7 @@ function CodeText({ value, label }: Readonly<{ value: string; label: string }>) 
       <pre
         className={panelClasses(
           { tone: 'well' },
-          'type-caption overflow-x-auto font-mono break-all whitespace-pre-wrap',
+          'type-code overflow-x-auto break-all whitespace-pre-wrap',
         )}
       >
         {value}
@@ -75,7 +75,7 @@ export function GcpFields({ model }: Readonly<{ model: ReturnType<typeof useCraw
 /** What the setup involves before the source, and its label nonce, exist. */
 export function GcpSteps() {
   return (
-    <p className="type-body text-secondary">
+    <p className="type-body text-ink-secondary">
       CiteLadder pulls a Pub/Sub subscription in your Google Cloud project that a Cloud Logging sink
       fills with crawler requests to your load balancer or Cloud Run services. Create the source
       first: the setup commands then include its verification label. You pay Google for log routing

@@ -25,8 +25,18 @@ import {
   websiteContractViolations,
   tsxGeometryFindings,
   featureLayeringViolations,
+  jsxClassData,
 } from './design-system-source-checks.mjs';
 import { tokenAuditViolations } from './audit-design-tokens.mjs';
+import {
+  accentFillClassFindings,
+  accentHeadingFindings,
+  displayFaceClassFindings,
+  isWebsiteSource,
+  stylesheetContractFindings,
+  tokenContractViolations,
+  websiteTypeCeilingClassFindings,
+} from './design-system-contract.mjs';
 import { brandTokenViolations, svgColorScan } from './design-system-asset-checks.mjs';
 import { resolvePalette } from './design-system-contrast.mjs';
 import { cssPolicyScan } from './design-system-css-checks.mjs';
@@ -70,6 +80,9 @@ function files(directory) {
   });
 }
 
+const tokenCss = readFileSync(tokenOwner, 'utf8');
+const ownsStyles = (label) => /^(?:apps|components|packages)\//.test(label);
+
 for (const path of files(root)) {
   const extension = extname(path);
   if (!sourceExtensions.has(extension) && extension !== '.astro') continue;
@@ -78,7 +91,24 @@ for (const path of files(root)) {
   if (/^(?:apps|components|lib)\//.test(label) && /\.(?:tsx|ts|astro)$/.test(label)) {
     violations.push(...headingPunctuationViolations(source, label));
   }
+  // Cal Sans, Flare and the website's type ceiling, in every stylesheet and
+  // Astro <style> block.
+  if (ownsStyles(label) && extension === '.css') {
+    violations.push(...stylesheetContractFindings(source, label, tokenCss));
+  }
+  if (ownsStyles(label) && extension === '.astro') {
+    for (const [, css] of source.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g))
+      violations.push(...stylesheetContractFindings(css, label, tokenCss));
+  }
   if (extension === '.astro') continue;
+  if (/^(?:apps|components|lib)\//.test(label) && /\.tsx?$/.test(label)) {
+    violations.push(
+      ...displayFaceClassFindings(source, label),
+      ...accentFillClassFindings(source, label),
+      ...(label.endsWith('.tsx') ? accentHeadingFindings(jsxClassData(source, label), label) : []),
+      ...(isWebsiteSource(label) ? websiteTypeCeilingClassFindings(source, label) : []),
+    );
+  }
   if (/\.tsx?$/.test(label) && !/\.test\.tsx?$/.test(label)) scriptSources.push({ label, source });
   const legacyIdentifiers = [
     ['Search', 'ify'].join(''),
@@ -90,9 +120,26 @@ for (const path of files(root)) {
     ['Public', '_Sans'].join(''),
     ['font', '-public-sans'].join(''),
     ['marketing', '-atmosphere'].join(''),
+    // The design before the 2026-11 system: green palette, grain ground,
+    // dot lattice, tinted fields, flat-surface elevation, the old faces.
+    ['ground', '-grain'].join(''),
+    ['--', 'lattice'].join(''),
+    ['--', 'grain'].join(''),
+    ['field', '-mint'].join(''),
+    ['field', '-lime'].join(''),
+    ['--', 'elevation-'].join(''),
+    ['--', 'tag-'].join(''),
+    ['font', '-numeric'].join(''),
+    ['TASA', ' Orbiter'].join(''),
+    ['Swit', 'zer'].join(''),
+    ['JetBrains', ' Mono'].join(''),
   ];
   for (const legacy of legacyIdentifiers) {
-    if (source.includes(legacy)) violations.push(`${label}: legacy identifier ${legacy}`);
+    // A whole identifier: the retired text face is not the country it prefixes.
+    const escaped = legacy.replaceAll(/[.*+?^$(){}|[\]\\]/g, String.raw`\$&`);
+    if (new RegExp(`${escaped}(?![a-z])`).test(source)) {
+      violations.push(`${label}: legacy identifier ${legacy}`);
+    }
   }
   if (
     path !== tokenOwner &&
@@ -151,10 +198,7 @@ for (const path of files(root)) {
   if (typeSource(label)) typeFindings.push(...typeDisciplineFindings(source, label));
 }
 
-const lightPalette = resolvePalette(
-  readFileSync(tokenOwner, 'utf8'),
-  ':root:not([data-public-surface])',
-);
+const lightPalette = resolvePalette(tokenCss, ':root');
 findings.push(...cssPolicyScan(root), ...svgColorScan(root, lightPalette));
 for (const [path, ratcheted] of [
   [baselinePath, findings],
@@ -176,6 +220,7 @@ for (const [path, ratcheted] of [
 
 violations.push(
   ...brandTokenViolations(lightPalette),
+  ...tokenContractViolations(root),
   ...tokenAuditViolations(root),
   ...websiteContractViolations(root),
   ...textContrastViolations(root),

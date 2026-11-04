@@ -91,7 +91,7 @@ export function AdsView({
 }
 
 function CoverageNote() {
-  return <p className={textRole('caption', 'text-muted')}>{ADS_COVERAGE_NOTE}</p>;
+  return <p className={textRole('caption', 'text-ink-muted')}>{ADS_COVERAGE_NOTE}</p>;
 }
 
 /** A read with no ads to show, with each engine's applicability named. */
@@ -122,7 +122,7 @@ function AdsState({
 function EngineApplicability({ engines }: Readonly<{ engines: VisibilityAdsResponse['engines'] }>) {
   if (!engines.length) return null;
   return (
-    <Inline as="ul" gap="meta" className={textRole('caption', 'text-muted')}>
+    <Inline as="ul" gap="meta" className={textRole('caption', 'text-ink-muted')}>
       {engines.map((engine) => (
         <li key={engine.engine}>
           {engineLabel(engine.engine)}: {AD_APPLICABILITY[engine.applicability]}
@@ -197,7 +197,7 @@ function AdvertiserTable({
                 <ClampText lines={1}>{advertiser.name}</ClampText>
                 <AdOwnershipChip ownership={advertiser.ownership} />
               </Inline>
-              <ClampText lines={1} className={textRole('caption', 'text-muted')}>
+              <ClampText lines={1} className={textRole('caption', 'text-ink-muted')}>
                 {advertiser.domain}
               </ClampText>
             </span>
@@ -298,9 +298,11 @@ function CreativeList({
                     <AdOwnershipChip ownership={creative.ownership} />
                   </Inline>
                   {creative.snippet ? (
-                    <span className={textRole('body', 'text-secondary')}>{creative.snippet}</span>
+                    <span className={textRole('body', 'text-ink-secondary')}>
+                      {creative.snippet}
+                    </span>
                   ) : null}
-                  <span className={textRole('caption', 'text-muted')}>
+                  <span className={textRole('caption', 'text-ink-muted')}>
                     {creative.advertiser_name} · {landingLabel(creative.landing_url)} ·{' '}
                     {pluralCount(creative.appearances, 'appearance')}
                   </span>

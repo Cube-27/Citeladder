@@ -19,8 +19,7 @@ import { cn } from '@/lib/utils';
  * card, panel and bare table shares the one `border` edge (2026-11-03 app
  * review: one border colour for every box).
  */
-const CARD_BOX =
-  'surface-card bg-panel rounded-[var(--radius-card)] border border-border p-[var(--card-padding)]';
+const CARD_BOX = 'surface-card bg-surface rounded-lg border border-line p-[var(--card-padding)]';
 
 export type CardTone = 'default' | 'danger';
 
@@ -28,7 +27,7 @@ const CARD_TONE = {
   default: '',
   // Colour means state only (owner, 2026-11-03): a recommendation is a
   // default card; only a failure tints its edge.
-  danger: 'border-danger-border',
+  danger: 'border-negative',
 } as const satisfies Record<CardTone, string>;
 
 export const cardClasses = (tone: CardTone = 'default') => cn(CARD_BOX, CARD_TONE[tone]);

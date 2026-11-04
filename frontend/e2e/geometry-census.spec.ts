@@ -9,7 +9,7 @@ import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/
  * `check:policy` guards the inputs (tokens, classes). It cannot see a 28px
  * button beside a 32px tab, a toolbar rebinding a token, or an error block
  * that is 88px on one route and 152px on the next — and those are what made
- * the app look inconsistent (docs/design.md, Data and geometry). So this
+ * the app look inconsistent (docs/design.md, Behaviour every surface keeps). So this
  * walks every product route at the owner's viewport (982×900, DPR 1) and at
  * 1280×900, in light and dark, measures every visible control, badge, tab,
  * band, box and query state, and asserts ONE value per role — the same
@@ -45,28 +45,28 @@ const ROUTES = [
   '/agent/context',
 ] as const;
 
-/** One control height for the product. */
-const CONTROL_HEIGHT = 32;
+/** One control height for the product: the system's control-md. */
+const CONTROL_HEIGHT = 36;
 /** One badge height. */
-const BADGE_HEIGHT = 20;
+const BADGE_HEIGHT = 22;
 /** Text controls and tabs share one horizontal padding; icon-only controls have none. */
 const TEXT_CONTROL_PADDING_X = 12;
 const ICON_CONTROL_PADDING_X = 0;
-/** The control band: 8 + a 32px row + 8, closed by a 1px rule. */
-const CONTROL_BAND_HEIGHT = 49;
-/** Sections in the content region stand 24 apart; cards inside a section 16. */
-const SECTION_GAP = 24;
+/** The control band: 8 + a 36px row + 8, closed by a 1px rule. */
+const CONTROL_BAND_HEIGHT = 53;
+/** Sections in the content region stand 32 apart; cards inside a section 16. */
+const SECTION_GAP = 32;
 const CARD_GAP = 16;
-/** One box recipe: padding 16 on the box element, radius 12, a 1px border. */
-const CARD_INSET = 16;
-const BOX_RADIUS = 12;
+/** One box recipe: padding 24 on the box element, radius 14 (rounded-lg), a 1px border. */
+const CARD_INSET = 24;
+const BOX_RADIUS = 14;
 const BOX_BORDER = 1;
 /** Loading, read-error and first-use empty share one footprint. */
 const QUERY_STATE_HEIGHT = 160;
-const TABLE_ROW_HEIGHT = 36;
-const TABLE_CELL_PADDING_Y = 6;
-/** A DataTable's header row is the control band again: 8 + 32 + 8 and its rule. */
-const DATA_TABLE_HEADER_HEIGHT = 49;
+const TABLE_ROW_HEIGHT = 44;
+const TABLE_CELL_PADDING_Y = 8;
+/** A DataTable's header row is the control band again: 8 + 36 + 8 and its rule. */
+const DATA_TABLE_HEADER_HEIGHT = 53;
 /** That header row (or the column header) starts at the card's top edge. */
 const DATA_TABLE_PADDING_TOP = 0;
 /** A StatRow segment is padded 12 above and below; a row's segments share one height. */
@@ -75,13 +75,13 @@ const STAT_ROW_HEIGHT_SPREAD = 0;
 /** The Icon atom's one glyph size. */
 const ICON_SIZE = 16;
 /** A row's kind mark (an IconTile) is a control-sized square. */
-const ICON_TILE_SIZE = 32;
+const ICON_TILE_SIZE = 36;
 /** A ControlRow and an IdentityRow hold their parts 12 apart. */
 const ROW_PART_GAP = 12;
 /** A ruled fact list pads each fact 8 above and below. */
 const FACT_ROW_PADDING_Y = 8;
 /** A field's end target (clear, reveal) is the field less its 2px inset each side. */
-const FIELD_END_TARGET_SIZE = 28;
+const FIELD_END_TARGET_SIZE = 32;
 /** An inline code token is padded 8 across and 4 down. */
 const CODE_TOKEN_PADDING_X = 8;
 const CODE_TOKEN_PADDING_Y = 4;
@@ -430,11 +430,7 @@ for (const theme of ['light', 'dark'] as const) {
 
     test('every product route renders one value per geometric role', async ({ page }) => {
       test.setTimeout(240_000);
-      // The product theme is a stored per-device choice, not the OS scheme.
-      await page.addInitScript(
-        (value) => window.localStorage.setItem('citeladder.theme', value),
-        theme,
-      );
+      // With no stored choice the theme follows the emulated device scheme.
       await expectOneGeometry(page);
     });
   });
@@ -514,6 +510,6 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'code-token.padding-x', CODE_TOKEN_PADDING_X);
   expectOneValue(records, 'code-token.padding-y', CODE_TOKEN_PADDING_Y);
 
-  // The account menu is a 32px control like every other one in its row.
-  await expect(page.getByRole('button', { name: /^Account menu/ })).toHaveCSS('height', '32px');
+  // The account menu is a 36px control like every other one in its row.
+  await expect(page.getByRole('button', { name: /^Account menu/ })).toHaveCSS('height', '36px');
 }

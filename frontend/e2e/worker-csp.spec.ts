@@ -41,7 +41,9 @@ test('built app hydrates root, deep links and direct HTML while blocking injecte
   });
   await expect(page.locator('html')).not.toHaveAttribute('data-injected', 'executed');
   await checkInjectedBeacon(page);
-  await page.evaluate(() => localStorage.setItem('citeladder.theme', 'dark'));
+  await page.evaluate(() => {
+    document.cookie = 'citeladder_theme=dark; Path=/';
+  });
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 });

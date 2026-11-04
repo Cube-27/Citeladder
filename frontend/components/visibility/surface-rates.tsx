@@ -142,7 +142,7 @@ export function SurfaceRatesPanel({
       </CardHeader>
       <CardContent>
         <Stack gap="workspace">
-          <div className="border-border-subtle border-b">
+          <div className="border-line border-b">
             <StatRow
               segments={[
                 rateStat({

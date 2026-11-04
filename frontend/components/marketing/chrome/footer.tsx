@@ -178,7 +178,7 @@ export function MarketingFooter() {
                   href="https://launchmcp.co/?utm_source=badge&utm_medium=referral"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-muted hover:text-foreground text-xs font-medium"
+                  className="text-ink-muted hover:text-ink text-caption font-medium"
                 >
                   Launch MCP
                 </a>
@@ -210,13 +210,13 @@ export function MarketingFooter() {
         <div className="mt-16 flex flex-col gap-4">
           {/* CiteLadder is a Cube27 product, so the parent company is named in
               the ownership line rather than tucked into a link column alone. */}
-          <p className="website-label text-muted">
+          <p className="website-label text-ink-muted">
             © {year} CiteLadder. A{' '}
             <a
               href={PARENT_COMPANY.href}
               target="_blank"
               rel="noreferrer"
-              className="hover:text-foreground underline-offset-4 transition-colors hover:underline"
+              className="hover:text-ink underline-offset-4 transition-colors hover:underline"
             >
               {PARENT_COMPANY.name}
             </a>{' '}

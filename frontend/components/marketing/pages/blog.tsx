@@ -204,7 +204,7 @@ function AuthorName({ post }: Readonly<{ post: BlogPost }>) {
           target="_blank"
           rel="noreferrer"
           aria-label={`${post.author} on LinkedIn`}
-          className="text-muted hover:text-accent-text focus-ring inline-flex rounded-xs"
+          className="text-ink-muted hover:text-accent-ink focus-ring inline-flex rounded-xs"
         >
           <LinkedInMark />
         </a>

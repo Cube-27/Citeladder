@@ -36,7 +36,9 @@ const tabs = [
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="light dark" />
+    <!-- The shared light/dark/system choice (lib/theme/theme.ts), before first paint. -->
+    <script is:inline src="/theme-preference.js"></script>
     <title>{title} · CiteLadder Docs</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={docsHref(path)} />
@@ -50,7 +52,7 @@ const tabs = [
     {jsonLd && <script type="application/ld+json" set:html={serializeJsonLd(jsonLd)} />}
     <PublicFonts />
   </head>
-  <body class="bg-background text-foreground">
+  <body class="bg-surface text-ink">
     <a href="#main" class="skip-link">Skip to content</a>
     <header class="docs-header">
       <div class="docs-header-inner">

@@ -28,7 +28,7 @@ import { EVIDENCE_LIMIT } from '@/lib/visibility/use-visibility-dashboard';
 
 /** A counted nought in a column of chips, kept apart from an absent one. */
 function ObservedNone() {
-  return <span className={textRole('caption', 'text-secondary tabular-nums')}>0</span>;
+  return <span className={textRole('caption', 'text-ink-secondary tabular-nums')}>0</span>;
 }
 
 /** Chips a cell carries before it stops being a cell; the rest become "+N". */
@@ -166,7 +166,7 @@ function PromptRow({
           <BrandLogo name={engineLabel(item.logical_engine) || item.logical_engine} />
           <span className="grid min-w-0">
             <ClampText lines={1}>{item.prompt_text || 'Untitled prompt'}</ClampText>
-            <ClampText lines={1} className={textRole('caption', 'text-secondary')}>
+            <ClampText lines={1} className={textRole('caption', 'text-ink-secondary')}>
               {productModelLabel(item.logical_engine, item.transport_model) ||
                 engineLabel(item.logical_engine) ||
                 item.logical_engine}
@@ -255,7 +255,7 @@ function ChipRow({ children, overflow }: Readonly<{ children: ReactNode; overflo
     <Inline as="span" gap="tight">
       {children}
       {overflow > 0 ? (
-        <span className={textRole('caption', 'text-secondary tabular-nums')}>+{overflow}</span>
+        <span className={textRole('caption', 'text-ink-secondary tabular-nums')}>+{overflow}</span>
       ) : null}
     </Inline>
   );

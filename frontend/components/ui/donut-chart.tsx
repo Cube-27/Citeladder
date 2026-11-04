@@ -28,9 +28,9 @@ export type DonutSlice = {
   key: string;
   label: string;
   value: number;
-  /** Stroke class from the categorical chart tokens, e.g. `stroke-chart-2`. */
+  /** Stroke class from the categorical chart tokens, e.g. `stroke-data-2`. */
   strokeClass: string;
-  /** Matching fill for the legend swatch, e.g. `bg-chart-2`. */
+  /** Matching fill for the legend swatch, e.g. `bg-data-2`. */
   swatchClass: string;
 };
 
@@ -90,7 +90,7 @@ export function DonutChart({
   const unaccounted = Math.max(whole - sum, 0);
 
   if (!drawn.length || whole <= 0) {
-    return <p className={textRole('caption', cn('text-secondary', className))}>{emptyLabel}</p>;
+    return <p className={textRole('caption', cn('text-ink-secondary', className))}>{emptyLabel}</p>;
   }
 
   const arcs = ringArcs(drawn, whole);
@@ -146,7 +146,7 @@ export function DonutChart({
                 strokeWidth={STROKE}
                 strokeDasharray={`${remainderLength} ${CIRCUMFERENCE - remainderLength}`}
                 strokeDashoffset={-(CIRCUMFERENCE - remainderLength)}
-                className="stroke-border-subtle"
+                className="stroke-line"
               />
             ) : null}
           </g>
@@ -160,14 +160,14 @@ export function DonutChart({
           {highlighted ? (
             <div className="grid gap-0.5">
               <span className={textRole('figure')}>{highlighted.value}</span>
-              <span className={textRole('caption', 'text-secondary')}>
+              <span className={textRole('caption', 'text-ink-secondary')}>
                 {shareText(highlighted.value, whole)}
               </span>
             </div>
           ) : (
             <div className="grid gap-0.5">
               <span className={textRole('figure')}>{formatCount(total)}</span>
-              <span className={textRole('caption', 'text-secondary')}>{totalLabel}</span>
+              <span className={textRole('caption', 'text-ink-secondary')}>{totalLabel}</span>
             </div>
           )}
         </div>
@@ -188,7 +188,9 @@ export function DonutChart({
             >
               <LegendSwatch fillClass={slice.swatchClass} />
               <span className={textRole('caption', 'truncate')}>{slice.label}</span>
-              <span className={textRole('caption', 'text-secondary font-numeric ml-auto shrink-0')}>
+              <span
+                className={textRole('caption', 'text-ink-secondary font-mono ml-auto shrink-0')}
+              >
                 {shareText(slice.value, whole)}
               </span>
             </button>

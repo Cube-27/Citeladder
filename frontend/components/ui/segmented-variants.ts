@@ -6,18 +6,18 @@ import { cva } from 'class-variance-authority';
 // shares (owner, 2026-11-04: active states are buttons, not underlines).
 export const segmentedTrackVariants = cva(
   // `segmented-track` is a marker only (the geometry census measures it).
-  'segmented-track inline-flex max-w-full overflow-x-auto h-[var(--control-height-md)] items-center gap-0.5',
+  'segmented-track inline-flex max-w-full overflow-x-auto h-[var(--control-md)] items-center gap-0.5',
 );
 
 export const segmentedItemVariants = cva(
   // A segment is a control, so it sets control text (14), not badge text.
-  'focus-ring type-control shrink-0 inline-flex h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] px-[var(--tab-pad-x)] whitespace-nowrap transition-[background-color,color] disabled:cursor-not-allowed disabled:text-muted',
+  'focus-ring type-control shrink-0 inline-flex h-[var(--control-md)] items-center justify-center rounded-md px-[var(--tab-pad-x)] whitespace-nowrap transition-[background-color,color] disabled:cursor-not-allowed disabled:text-ink-muted',
   {
     variants: {
       selected: {
-        true: 'bg-selected text-foreground enabled:active:bg-active',
+        true: 'bg-surface-sunken text-ink enabled:active:bg-surface-sunken',
         false:
-          'text-secondary enabled:hover:bg-hover enabled:hover:text-foreground enabled:active:bg-active',
+          'text-ink-secondary enabled:hover:bg-surface-sunken enabled:hover:text-ink enabled:active:bg-surface-sunken',
       },
     },
     defaultVariants: { selected: false },

@@ -18,7 +18,7 @@ import { CONSENT_CHOICE_ATTRIBUTE } from './cookie-banner';
  * flows' tonal quiet action and reads wrong on the marketing paper ground.
  */
 const MARKETING_SECONDARY =
-  'border-border-strong bg-panel hover:border-border-bold hover:bg-background-alt';
+  'border-line bg-surface hover:border-line-control hover:bg-surface-sunken';
 
 const reject = cn(buttonVariants({ variant: 'secondary' }), 'relative', MARKETING_SECONDARY, 'w-full');
 const accept = cn(buttonVariants({ variant: 'primary' }), 'relative', 'w-full');
@@ -36,10 +36,10 @@ const choice = (decision: 'accepted' | 'rejected') => ({ [CONSENT_CHOICE_ATTRIBU
   <div class="pb-[max(1rem,env(safe-area-inset-bottom))]">
     {/* Compact on phones, where a full-size panel covered a quarter of every screen. */}
     <div
-      class="bg-panel shadow-overlay grid gap-3 rounded-[var(--radius-card)] p-4 sm:gap-4 sm:p-5"
+      class="bg-surface shadow-pop grid gap-3 rounded-lg p-4 sm:gap-4 sm:p-5"
     >
       <div class="grid gap-2">
-        <h2 class="website-feature-heading text-foreground sr-only sm:not-sr-only">
+        <h2 class="website-feature-heading text-ink sr-only sm:not-sr-only">
           Cookie settings
         </h2>
         <p class="website-body consent-copy">
@@ -47,7 +47,7 @@ const choice = (decision: 'accepted' | 'rejected') => ({ [CONSENT_CHOICE_ATTRIBU
           non-essential cookies help us understand site usage. Read our{' '}
           <a
             href="/cookies"
-            class="text-foreground underline underline-offset-4 hover:no-underline"
+            class="text-ink underline underline-offset-4 hover:no-underline"
           >
             Cookie Policy.
           </a>

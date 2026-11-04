@@ -25,7 +25,7 @@ export type Fact = Readonly<{ label: ReactNode; value: ReactNode; key?: string }
 export type FactLayout = 'ruled' | 'inline' | 'spread' | 'columns';
 
 const LIST = {
-  ruled: 'divide-border-subtle grid divide-y',
+  ruled: 'divide-line grid divide-y',
   inline: 'flex flex-wrap items-center gap-x-6 gap-y-3',
   spread: 'grid gap-2',
   columns: 'grid gap-3 desktop:grid-flow-col desktop:auto-cols-fr',
@@ -43,16 +43,16 @@ const ROW = {
 const TERM = {
   ruled: textRole('label'),
   inline: textRole('label'),
-  spread: textRole('body', 'text-muted'),
+  spread: textRole('body', 'text-ink-muted'),
   columns: textRole('label'),
 } as const;
 
 const DETAIL = {
-  ruled: textRole('body', 'text-foreground tabular-nums'),
+  ruled: textRole('body', 'text-ink tabular-nums'),
   inline: textRole('body'),
   // A spread row's value is a right-aligned amount or count (a quote line),
   // so its digits take the figure face and line up with the total under it.
-  spread: textRole('body', 'text-foreground font-numeric'),
+  spread: textRole('body', 'text-ink font-mono'),
   columns: textRole(
     'caption',
     'flex h-[var(--badge-height-sm)] min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap tabular-nums',
@@ -86,9 +86,9 @@ export function FactList({
         </div>
       ))}
       {total && layout === 'spread' ? (
-        <div className={cn(ROW.spread, 'border-border border-t pt-2')}>
+        <div className={cn(ROW.spread, 'border-line border-t pt-2')}>
           <dt className={textRole('emphasis')}>{total.label}</dt>
-          <dd className={textRole('emphasis', 'font-numeric')}>{total.value}</dd>
+          <dd className={textRole('emphasis', 'font-mono')}>{total.value}</dd>
         </div>
       ) : null}
     </dl>
@@ -118,14 +118,14 @@ export function ValueLedger({
       {items.map((item) => (
         <li
           key={item.key}
-          className="flex h-[var(--control-height-md)] items-center justify-between gap-3"
+          className="flex h-[var(--control-md)] items-center justify-between gap-3"
         >
           <span className={textRole('body', 'min-w-0 truncate')}>{item.label}</span>
-          <span className={textRole('label', 'shrink-0 font-numeric')}>{item.value}</span>
+          <span className={textRole('label', 'shrink-0 font-mono')}>{item.value}</span>
         </li>
       ))}
       {padding.map((slot) => (
-        <li key={slot} aria-hidden className="h-[var(--control-height-md)]" />
+        <li key={slot} aria-hidden className="h-[var(--control-md)]" />
       ))}
     </ol>
   );

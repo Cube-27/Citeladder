@@ -381,7 +381,7 @@ export default function PricingRoute() {
     <ListScreen
       title="Review your selection"
       actions={
-        <a className="type-control text-accent-text underline" href={websitePricing}>
+        <a className="type-control text-accent-ink underline" href={websitePricing}>
           View public pricing
         </a>
       }

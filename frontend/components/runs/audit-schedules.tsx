@@ -310,11 +310,9 @@ function ScheduleRow({
 }>) {
   return (
     <Inline as="li" className={ledgerItemClasses('type-body flex-wrap justify-between')}>
-      <span className={textRole('emphasis', 'text-foreground')}>
-        {CADENCE_LABELS[schedule.cadence]}
-      </span>
+      <span className={textRole('emphasis', 'text-ink')}>{CADENCE_LABELS[schedule.cadence]}</span>
       {schedule.enabled ? (
-        <span className="text-secondary">
+        <span className="text-ink-secondary">
           {schedule.engines.join(', ')} · next{' '}
           {schedule.next_run_at ? (
             <DisplayTime value={schedule.next_run_at} />
@@ -326,7 +324,7 @@ function ScheduleRow({
           {marketSummary(schedule, markets)}
         </span>
       ) : (
-        <Inline as="span" className="text-secondary flex-wrap">
+        <Inline as="span" className="text-ink-secondary flex-wrap">
           {pauseLabel(schedule)}
           {/* A one-time schedule that ran is finished, not paused; resuming would run it again. */}
           {finishedOnce(schedule) ? null : (

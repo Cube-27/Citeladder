@@ -105,7 +105,7 @@ function TabStrip<T extends string>({
     <div
       className={cn(
         'min-w-0',
-        ruled && 'border-border border-b',
+        ruled && 'border-line border-b',
         controls != null && 'flex items-center gap-x-4',
       )}
     >
@@ -156,9 +156,9 @@ function TabTriggers<T extends string>({
           className={cn(
             textRole(
               'label',
-              'focus-ring text-secondary enabled:hover:text-foreground data-[state=active]:text-foreground disabled:text-muted relative inline-flex h-[var(--tab-height)] items-center rounded-[var(--radius-control)] px-[var(--tab-pad-x)] whitespace-nowrap transition-colors',
+              'focus-ring text-ink-secondary enabled:hover:text-ink data-[state=active]:text-ink disabled:text-ink-muted relative inline-flex h-[var(--tab-height)] items-center rounded-md px-[var(--tab-pad-x)] whitespace-nowrap transition-colors',
             ),
-            'before:absolute before:inset-0 before:rounded-[var(--radius-control)] before:transition-colors data-[state=active]:before:bg-selected data-[state=inactive]:enabled:hover:before:bg-hover enabled:active:before:bg-active disabled:before:bg-disabled',
+            'before:absolute before:inset-0 before:rounded-md before:transition-colors data-[state=active]:before:bg-surface-sunken data-[state=inactive]:enabled:hover:before:bg-surface-sunken enabled:active:before:bg-surface-sunken disabled:before:bg-surface-sunken',
             fill ? 'min-w-max flex-1 basis-0 justify-center' : 'shrink-0',
           )}
         >

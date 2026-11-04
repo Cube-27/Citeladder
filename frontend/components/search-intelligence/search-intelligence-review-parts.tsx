@@ -372,7 +372,7 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
                     {comparison ? ` vs ${comparison}` : ''}
                   </span>
                   {call.estimated_cost_usd === undefined ? null : (
-                    <span className="text-muted">
+                    <span className="text-ink-muted">
                       ${estimateUsd(String(call.estimated_cost_usd))}
                     </span>
                   )}

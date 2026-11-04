@@ -82,7 +82,9 @@ const sharedJsonLd = [organizationJsonLd(), websiteJsonLd(), softwareApplication
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="light dark" />
+    <!-- The shared light/dark/system choice (lib/theme/theme.ts), before first paint. -->
+    <script is:inline src="/theme-preference.js"></script>
     <meta name="description" content={description} />
     {keywords.length > 0 && <meta name="keywords" content={keywords.join(', ')} />}
     <meta name="application-name" content={SITE_NAME} />
@@ -114,7 +116,7 @@ const sharedJsonLd = [organizationJsonLd(), websiteJsonLd(), softwareApplication
     ))}
     {jsonLd.map((data) => <script type="application/ld+json" set:html={serializeJsonLd(data)} />)}
   </head>
-  <body class="bg-background text-foreground relative isolate min-h-dvh">
+  <body class="bg-surface text-ink relative isolate min-h-dvh">
     {gaMeasurementId && <GoogleAnalytics />}
     <a href="#main" class="skip-link">Skip to main content</a>
     <MarketingNav path={Astro.url.pathname} />

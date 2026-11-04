@@ -25,7 +25,7 @@ function topicErrorMessage(loadError?: boolean, actionError?: string | null): st
 /**
  * Topics selection (prompt library). Two responsive variants sharing one
  * selection model:
- *  - Desktop: a contained `bg-panel` rail listing the
+ *  - Desktop: a contained `bg-surface` rail listing the
  *    project's topics with per-status counts, an "All topics" bucket, an inline
  *    add-topic form (optionally under a top-level topic, one level deep), and
  *    per-topic inline rename and delete.

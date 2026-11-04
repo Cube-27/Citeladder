@@ -30,7 +30,7 @@ export function GateNoticeScreen({
   return (
     <main
       id="main"
-      className="bg-background grid min-h-dvh place-items-center p-[var(--content-gutter)]"
+      className="bg-paper grid min-h-dvh place-items-center p-[var(--content-gutter)]"
     >
       <GateNoticeFrame title={title}>{children}</GateNoticeFrame>
     </main>

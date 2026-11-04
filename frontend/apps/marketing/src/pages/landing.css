@@ -30,7 +30,7 @@
   height: 2.25rem;
   padding-inline: calc(var(--site-gutter) + 2.25rem);
   /* The closing band's mint field (owner, 2026-10-31). */
-  background: var(--color-field-mint);
+  background: var(--color-surface-sunken);
 }
 
 .lp-announcement-close {
@@ -41,12 +41,12 @@
   place-items: center;
   width: 2rem;
   height: 2rem;
-  border-radius: var(--radius-control);
-  color: var(--color-foreground);
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
 }
 
 .lp-announcement-close:hover {
-  background: var(--color-panel);
+  background: var(--color-surface);
 }
 
 .lp-announcement a {
@@ -54,7 +54,7 @@
   align-items: center;
   gap: 0.5rem;
   min-width: 0;
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .lp-announcement a:hover {
@@ -118,18 +118,7 @@
      rule, and the band closes a cell height under the caption. */
   padding-top: calc(var(--marketing-nav-offset) + var(--site-cell-y));
   padding-bottom: var(--site-cell-y);
-  background: var(--color-field-mint);
-}
-
-.lp-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: var(--grain);
-  opacity: 0.12;
-  mask-image: linear-gradient(to bottom, black, transparent 70%);
-  pointer-events: none;
+  background: var(--color-surface-sunken);
 }
 
 .lp-hero-copy {
@@ -145,7 +134,7 @@
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 1.5rem;
-  color: var(--color-site-body);
+  color: var(--color-ink-secondary);
 }
 
 .lp-hero-pillars::before {
@@ -154,12 +143,12 @@
   width: 0.5rem;
   height: 0.5rem;
   border-radius: var(--radius-full);
-  background: var(--color-accent);
+  background: var(--color-ink);
 }
 
 /* The headline's second clause is the payoff: the accent ink. */
 .lp-hero-title span {
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
 }
 
 /* The lead's engine rotor: one line whose items share a single grid
@@ -240,7 +229,7 @@
 .lp-hero-note {
   max-width: var(--site-measure-reading);
   margin-top: 1rem;
-  color: var(--color-site-body);
+  color: var(--color-ink-secondary);
   font-size: var(--text-site-secondary);
   line-height: var(--text-site-secondary--line-height);
 }
@@ -275,7 +264,7 @@
 }
 
 .lp-engines-label {
-  color: var(--color-site-body);
+  color: var(--color-ink-secondary);
   font-size: var(--text-site-lead-in);
   line-height: var(--text-site-lead-in--line-height);
   font-weight: 500;
@@ -292,7 +281,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  color: var(--color-foreground);
+  color: var(--color-ink);
   font-size: var(--text-site-card-compact);
   line-height: var(--text-site-card-compact--line-height);
   font-weight: 500;
@@ -304,17 +293,17 @@
 /* The intro to "How it works", above its heading. */
 .lp-statement-text {
   max-width: var(--site-measure-display);
-  color: var(--color-site-ink);
+  color: var(--color-ink);
   font-family: var(--font-display);
   font-size: var(--text-site-statement);
   line-height: var(--text-site-statement--line-height);
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: -0.01em;
   text-wrap: pretty;
 }
 
 .lp-statement-text span {
-  color: var(--color-site-body);
+  color: var(--color-ink-secondary);
 }
 
 /* Bento ──────────────────────────────────────────────────────────────────── */
@@ -347,12 +336,12 @@
   min-width: 0;
   overflow: hidden;
   border-radius: var(--radius-lg);
-  background: var(--color-background-alt);
+  background: var(--color-surface-sunken);
   transition: background-color var(--motion-normal) var(--ease-standard);
 }
 
 .lp-tile:hover {
-  background: var(--color-well);
+  background: var(--color-surface-sunken);
 }
 
 .lp-tile-copy {
@@ -399,7 +388,7 @@
 
 /* The pillar above each dive's heading, in the accent ink. */
 .lp-pillar-stage {
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
 }
 
 /* Every module the pillar covers, by its published name. */
@@ -415,17 +404,17 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.25rem 0.75rem;
-  border-radius: var(--radius-control);
-  background: var(--color-field-mint);
-  color: var(--color-site-ink);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink);
 }
 
 .lp-pillar-module:hover {
-  background: var(--color-field-lime);
+  background: var(--color-surface-sunken);
 }
 
 .lp-pillar-module svg {
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
 }
 
 /* Integrations ───────────────────────────────────────────────────────────── */
@@ -458,10 +447,10 @@
   width: 2.5rem;
   height: 2.5rem;
   place-content: center;
-  border-radius: var(--radius-control);
-  background: var(--color-panel);
-  color: var(--color-foreground);
-  box-shadow: 0 0 0 1px var(--color-site-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: 0 0 0 1px var(--color-line);
 }
 
 .lp-integration-glyph {
@@ -514,12 +503,12 @@
   gap: 0.5rem;
   height: 100%;
   padding: 1.5rem;
-  background: var(--color-background-alt);
+  background: var(--color-surface-sunken);
   transition: background-color var(--motion-fast) var(--ease-standard);
 }
 
 .lp-team:hover {
-  background: var(--color-well);
+  background: var(--color-surface-sunken);
 }
 
 /* Trust ──────────────────────────────────────────────────────────────────── */

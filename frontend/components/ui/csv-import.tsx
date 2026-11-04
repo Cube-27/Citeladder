@@ -94,7 +94,7 @@ export function CsvImportFileInput({
           onSelect(file);
           event.currentTarget.value = '';
         }}
-        className="focus-ring border-border bg-well text-foreground file:bg-background-alt file:text-foreground type-body type-control-file block w-full rounded-[var(--radius-control)] border px-2 py-2 file:me-2 file:rounded-[var(--radius-control)] file:border-0 file:px-2 file:py-1"
+        className="focus-ring border-line bg-surface-sunken text-ink file:bg-surface-sunken file:text-ink type-body type-control-file block w-full rounded-md border px-2 py-2 file:me-2 file:rounded-md file:border-0 file:px-2 file:py-1"
       />
     </label>
   );
@@ -116,7 +116,7 @@ export function CsvImportPreview({
     <div className="grid gap-2">
       <div className="type-body flex items-center gap-3">
         <span>
-          Parsed <strong className="text-foreground">{rowCount}</strong> row
+          Parsed <strong className="text-ink">{rowCount}</strong> row
           {rowCount === 1 ? '' : 's'}
           {fileName ? ` from ${fileName}` : ''}.
         </span>
@@ -126,9 +126,7 @@ export function CsvImportPreview({
           </Badge>
         ) : null}
       </div>
-      <div className="border-border max-h-85 overflow-auto rounded-[var(--radius-control)] border">
-        {children}
-      </div>
+      <div className="border-line max-h-85 overflow-auto rounded-md border">{children}</div>
     </div>
   );
 }

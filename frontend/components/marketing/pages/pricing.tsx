@@ -47,7 +47,7 @@ export function PricingFaq() {
           lead={
             <>
               More answers on data, security and billing in the{' '}
-              <a href="/faq" className="text-accent-text underline underline-offset-2">
+              <a href="/faq" className="text-accent-ink underline underline-offset-2">
                 full FAQ
               </a>
               {'.'}

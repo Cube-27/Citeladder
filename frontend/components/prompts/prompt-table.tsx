@@ -120,7 +120,7 @@ export function PromptTable({
               primary={
                 <ProjectLink
                   href={promptHistoryHref(prompt.id)}
-                  className="text-foreground hover:underline"
+                  className="text-ink hover:underline"
                 >
                   {prompt.text}
                 </ProjectLink>
@@ -172,7 +172,7 @@ export function PromptTable({
                 <DropdownSeparator />
                 <DropdownItem
                   onSelect={() => onDelete(prompt)}
-                  className="text-danger-text data-[highlighted]:bg-danger-bg"
+                  className="text-negative data-[highlighted]:bg-negative-soft"
                 >
                   <Icon icon={Trash2} />
                   Delete

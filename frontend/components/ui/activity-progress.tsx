@@ -24,7 +24,7 @@ export type ActivityStep = {
  */
 function StepCheck() {
   return (
-    <span className="activity-check text-success-text size-4">
+    <span className="activity-check text-positive size-4">
       <svg viewBox="0 0 16 16" className="size-4" fill="none" aria-hidden>
         <path
           d="M3.5 8.5 L6.5 11.5 L12.5 5"
@@ -42,7 +42,7 @@ function StepIndicator({ state }: Readonly<{ state: ActivityStepState }>) {
   if (state === 'complete') return <StepCheck />;
   if (state === 'attention') return <CircleAlert className="size-4" />;
   if (state === 'active') return <span className="activity-dot bg-info size-2" />;
-  return <span className="bg-border-subtle size-1.5 rounded-full" />;
+  return <span className="bg-line size-1.5 rounded-full" />;
 }
 
 function progressAnnouncement(activeStep: ActivityStep | undefined, completed: number): string {
@@ -143,7 +143,7 @@ export function ActivityProgress({
   return (
     <section aria-label={label} className="grid gap-4">
       <progress
-        className="bg-neutral-bg [&::-webkit-progress-bar]:bg-neutral-bg [&::-webkit-progress-value]:bg-info [&::-moz-progress-bar]:bg-info h-1.5 w-full appearance-none overflow-hidden rounded-full border-0"
+        className="bg-surface-sunken [&::-webkit-progress-bar]:bg-surface-sunken [&::-webkit-progress-value]:bg-info [&::-moz-progress-bar]:bg-info h-1.5 w-full appearance-none overflow-hidden rounded-full border-0"
         aria-label={progressLabel}
         aria-valuemin={0}
         aria-valuemax={steps.length}
@@ -159,21 +159,21 @@ export function ActivityProgress({
               <span
                 className={cn(
                   'relative z-1 flex size-6 shrink-0 items-center justify-center rounded-full',
-                  step.state === 'complete' && 'bg-success-bg text-success-text',
-                  step.state === 'active' && 'bg-info-bg text-info-text',
-                  step.state === 'attention' && 'bg-warning-bg text-warning-text',
-                  step.state === 'pending' && 'border-border bg-panel text-muted border',
+                  step.state === 'complete' && 'bg-positive-soft text-positive',
+                  step.state === 'active' && 'bg-info-soft text-info',
+                  step.state === 'attention' && 'bg-warning-soft text-warning',
+                  step.state === 'pending' && 'border-line bg-surface text-ink-muted border',
                 )}
               >
                 <StepIndicator state={step.state} />
               </span>
               {index < renderedSteps.length - 1 ? (
-                <span className="bg-border-subtle min-h-5 w-px flex-1" />
+                <span className="bg-line min-h-5 w-px flex-1" />
               ) : null}
             </div>
 
             <div className={cn('min-w-0 pb-4', index === renderedSteps.length - 1 && 'pb-0')}>
-              <p className={cn('type-item-title', step.state === 'pending' && 'text-muted')}>
+              <p className={cn('type-item-title', step.state === 'pending' && 'text-ink-muted')}>
                 {step.label}
               </p>
               {step.detail ? <p className="type-caption mt-0.5">{step.detail}</p> : null}

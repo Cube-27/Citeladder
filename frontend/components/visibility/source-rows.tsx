@@ -54,7 +54,7 @@ function OpenSource({ onOpen, children }: Readonly<{ onOpen: () => void; childre
   return (
     <Pressable
       onClick={onOpen}
-      className="hover:text-accent-text flex max-w-full min-w-0 items-center transition-colors"
+      className="hover:text-accent-ink flex max-w-full min-w-0 items-center transition-colors"
     >
       {children}
     </Pressable>
@@ -248,7 +248,7 @@ function MentionedChips({
         </Tooltip>
       ))}
       {overflow > 0 ? (
-        <span className={textRole('caption', 'text-secondary tabular-nums')}>+{overflow}</span>
+        <span className={textRole('caption', 'text-ink-secondary tabular-nums')}>+{overflow}</span>
       ) : null}
     </Inline>
   );
@@ -277,7 +277,7 @@ function PageStandingCell({
           {label}
         </Badge>
       ) : (
-        <ClampText lines={1} className={textRole('caption', 'text-secondary')}>
+        <ClampText lines={1} className={textRole('caption', 'text-ink-secondary')}>
           {label}
         </ClampText>
       )}

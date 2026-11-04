@@ -142,18 +142,16 @@ function DemandEvidenceContent({
         {details.pages.length > 0 && (
           <Stack as="section">
             <Inline as="h3" className={textRole('label')}>
-              <Icon icon={Split} className="text-muted" />
+              <Icon icon={Split} className="text-ink-muted" />
               Competing pages ({details.pages.length})
             </Inline>
             <div className={ledgerClasses('boxed')}>
               {details.pages.map((page) => (
                 <Stack key={page.url} gap="tight" className={ledgerItemClasses('type-caption')}>
-                  <div className={textRole('emphasis', 'text-foreground break-all')}>
-                    {page.url}
-                  </div>
+                  <div className={textRole('emphasis', 'text-ink break-all')}>{page.url}</div>
                   <div className="type-caption flex items-center justify-between">
                     <span>{formatCount(page.impressions)} impressions</span>
-                    <span className={textRole('emphasis', 'text-foreground tabular-nums')}>
+                    <span className={textRole('emphasis', 'text-ink tabular-nums')}>
                       {(page.share * 100).toFixed(0)}% query share
                     </span>
                   </div>
@@ -168,9 +166,9 @@ function DemandEvidenceContent({
             <h3 className={textRole('label')}>Position benchmark</h3>
             <Stack className={panelClasses({}, 'type-caption')}>
               <div className="flex justify-between">
-                <span className="text-muted">Position band</span>
+                <span className="text-ink-muted">Position band</span>
                 {details.positionBand !== null ? (
-                  <span className={textRole('emphasis', 'text-foreground')}>
+                  <span className={textRole('emphasis', 'text-ink')}>
                     Positions {details.positionBand}.0 – {details.positionBand}.9
                   </span>
                 ) : (
@@ -178,15 +176,15 @@ function DemandEvidenceContent({
                 )}
               </div>
               <div className="flex justify-between">
-                <span className="text-muted">Median CTR in this band</span>
-                <span className={textRole('emphasis', 'text-secondary tabular-nums')}>
+                <span className="text-ink-muted">Median CTR in this band</span>
+                <span className={textRole('emphasis', 'text-ink-secondary tabular-nums')}>
                   {formatPercent(details.cohortMedianCtr, 1)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted">This query’s CTR</span>
+                <span className="text-ink-muted">This query’s CTR</span>
                 {numericMetric(signal, 'ctr') !== null ? (
-                  <span className={textRole('emphasis', 'text-secondary tabular-nums')}>
+                  <span className={textRole('emphasis', 'text-ink-secondary tabular-nums')}>
                     {formatPercent(numericMetric(signal, 'ctr'), 1)}
                   </span>
                 ) : (
@@ -200,7 +198,7 @@ function DemandEvidenceContent({
         {/* Where the figures came from, as counts and a date; internal IDs stay out of view. */}
         <Stack as="section" aria-labelledby="demand-provenance">
           <Inline as="h3" id="demand-provenance" className={textRole('label')}>
-            <Icon icon={ShieldCheck} className="text-muted" />
+            <Icon icon={ShieldCheck} className="text-ink-muted" />
             Provenance
           </Inline>
           <Stack as="dl" className={panelClasses({ tone: 'well' }, 'type-caption')}>
@@ -223,8 +221,8 @@ function DemandEvidenceContent({
 function ProvenanceRow({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
   return (
     <Inline gap="workspace" className="justify-between">
-      <dt className="text-muted">{label}</dt>
-      <dd className="text-foreground tabular-nums">{children}</dd>
+      <dt className="text-ink-muted">{label}</dt>
+      <dd className="text-ink tabular-nums">{children}</dd>
     </Inline>
   );
 }

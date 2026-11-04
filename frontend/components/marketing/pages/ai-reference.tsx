@@ -32,7 +32,7 @@ function ReferencePage({
     <main id="main">
       <PageHero title={title} lead={description}>
         <div className="ed-doc-meta website-label">
-          <span className="text-muted tabular-nums">
+          <span className="text-ink-muted tabular-nums">
             Last updated · <time dateTime={AI_REFERENCE_UPDATED}>{AI_REFERENCE_UPDATED}</time>
           </span>
           <nav aria-label="Company references" className="flex flex-wrap gap-x-5 gap-y-1">
@@ -74,7 +74,7 @@ function ReferencePage({
 function Sources({ links }: Readonly<{ links: readonly { label: string; href: string }[] }>) {
   return (
     <div className="ed-sources website-body">
-      <span className="website-label text-muted">Official sources</span>
+      <span className="website-label text-ink-muted">Official sources</span>
       {links.map((link) => (
         <a key={link.href} href={link.href} className="ed-link">
           {link.label}
@@ -110,8 +110,8 @@ export function AiInstructionsPage() {
             <dl className="ed-facts website-body">
               {section.facts.map((fact) => (
                 <div key={fact.label}>
-                  <dt className="text-foreground">{fact.label}</dt>
-                  <dd className="text-muted">
+                  <dt className="text-ink">{fact.label}</dt>
+                  <dd className="text-ink-muted">
                     {fact.href ? (
                       <a href={fact.href} className="ed-link">
                         {fact.value}
@@ -156,13 +156,13 @@ export function EntityMapPage() {
             <h2 id={`${entity.id}-heading`} className="website-feature-heading ed-h2">
               {entity.name}
             </h2>
-            <span className="ed-kind website-label text-muted">{entity.kind}</span>
+            <span className="ed-kind website-label text-ink-muted">{entity.kind}</span>
           </div>
           <p className="website-body">{entity.description}</p>
           <dl className="ed-facts website-body">
             {entity.relations.map((relation) => (
               <div key={`${relation.label}-${relation.target.href}`}>
-                <dt className="text-muted">{relation.label}</dt>
+                <dt className="text-ink-muted">{relation.label}</dt>
                 <dd>
                   <a href={relation.target.href} className="ed-link">
                     {relation.target.label}

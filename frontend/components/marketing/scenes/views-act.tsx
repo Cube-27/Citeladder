@@ -107,7 +107,7 @@ export function ActionsView() {
         <ul className="pv-list">
           {actions.map(([target, title, source, priority]) => (
             <li key={title}>
-              <CircleAlert className="text-muted size-3.5 shrink-0" aria-hidden />
+              <CircleAlert className="text-ink-muted size-3.5 shrink-0" aria-hidden />
               <span className="pv-list-main">
                 <span>{title}</span>
                 <span className="pv-meta">
@@ -178,7 +178,7 @@ export function SkillsView() {
         <ul className="pv-list">
           {skills.map(([skill, output], index) => (
             <li key={skill} data-own={index === 0 || undefined}>
-              <FileText className="text-muted size-3.5 shrink-0" aria-hidden />
+              <FileText className="text-ink-muted size-3.5 shrink-0" aria-hidden />
               <span className="pv-list-main">
                 <span>{skill}</span>
                 <span className="pv-meta">{output}</span>
@@ -211,7 +211,7 @@ export function McpToolsView() {
         <ul className="pv-list">
           {tools.map(([tool, purpose]) => (
             <li key={tool}>
-              <Bot className="text-muted size-3.5 shrink-0" aria-hidden />
+              <Bot className="text-ink-muted size-3.5 shrink-0" aria-hidden />
               <span className="pv-list-main">
                 <span className="pv-mono">{tool}</span>
                 <span className="pv-meta">{purpose}</span>

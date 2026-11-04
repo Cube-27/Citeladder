@@ -7,15 +7,15 @@
 .pv-view {
   display: grid;
   gap: 0.75rem;
-  color: var(--color-secondary);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
 }
 
 .pv-meta {
-  color: var(--color-muted);
-  font-size: var(--text-xs);
-  line-height: var(--text-xs--line-height);
+  color: var(--color-ink-muted);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
   font-variant-numeric: tabular-nums;
 }
 
@@ -27,54 +27,54 @@
 /* Series and tones ─────────────────────────────────────────────────────── */
 
 [data-series='1'] {
-  --pv-series: var(--color-chart-1);
+  --pv-series: var(--color-data-1);
 }
 [data-series='2'] {
-  --pv-series: var(--color-chart-2);
+  --pv-series: var(--color-data-2);
 }
 [data-series='3'] {
-  --pv-series: var(--color-chart-3);
+  --pv-series: var(--color-data-3);
 }
 [data-series='4'] {
-  --pv-series: var(--color-chart-4);
+  --pv-series: var(--color-data-other);
 }
 [data-series='5'] {
-  --pv-series: var(--color-chart-6);
+  --pv-series: var(--color-data-other);
 }
 
 [data-tone='owned'],
 [data-tone='accent'] {
-  --pv-tone: var(--color-chart-1);
+  --pv-tone: var(--color-data-1);
   --pv-tone-bg: var(--color-accent-soft);
-  --pv-tone-ink: var(--color-accent-text);
+  --pv-tone-ink: var(--color-accent-ink);
 }
 [data-tone='review'],
 [data-tone='warning'] {
-  --pv-tone: var(--color-chart-3);
-  --pv-tone-bg: var(--color-warning-bg);
-  --pv-tone-ink: var(--color-warning-text);
+  --pv-tone: var(--color-data-3);
+  --pv-tone-bg: var(--color-warning-soft);
+  --pv-tone-ink: var(--color-warning);
 }
 [data-tone='editorial'],
 [data-tone='info'] {
-  --pv-tone: var(--color-chart-2);
-  --pv-tone-bg: var(--color-info-bg);
-  --pv-tone-ink: var(--color-info-text);
+  --pv-tone: var(--color-data-2);
+  --pv-tone-bg: var(--color-info-soft);
+  --pv-tone-ink: var(--color-info);
 }
 [data-tone='community'] {
-  --pv-tone: var(--color-chart-6);
-  --pv-tone-bg: var(--tag-purple-bg);
-  --pv-tone-ink: var(--tag-purple-text);
+  --pv-tone: var(--color-data-other);
+  --pv-tone-bg: var(--color-surface);
+  --pv-tone-ink: var(--color-ink);
 }
 [data-tone='competitor'],
 [data-tone='danger'] {
-  --pv-tone: var(--color-chart-4);
-  --pv-tone-bg: var(--color-danger-bg);
-  --pv-tone-ink: var(--color-danger-text);
+  --pv-tone: var(--color-data-other);
+  --pv-tone-bg: var(--color-negative-soft);
+  --pv-tone-ink: var(--color-negative);
 }
 [data-tone='neutral'] {
-  --pv-tone: var(--color-chart-8);
-  --pv-tone-bg: var(--color-background-alt);
-  --pv-tone-ink: var(--color-secondary);
+  --pv-tone: var(--color-data-other);
+  --pv-tone-bg: var(--color-surface-sunken);
+  --pv-tone-ink: var(--color-ink-secondary);
 }
 
 /* Shell ─────────────────────────────────────────────────────────────────── */
@@ -86,7 +86,7 @@
   grid-template-columns: 12.5rem minmax(0, 1fr);
   min-height: 36rem;
   padding: 0.5rem 0.5rem 0.5rem 0;
-  background: var(--color-background-alt);
+  background: var(--color-surface-sunken);
   text-align: left;
 }
 
@@ -102,8 +102,8 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.25rem 0.5rem;
-  color: var(--color-foreground);
-  font-size: var(--text-sm);
+  color: var(--color-ink);
+  font-size: var(--text-body-sm);
   font-weight: 500;
 }
 
@@ -116,11 +116,11 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-control);
-  background: var(--color-panel);
-  color: var(--color-muted);
-  box-shadow: inset 0 0 0 1px var(--color-border-subtle);
-  font-size: var(--text-xs);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  box-shadow: inset 0 0 0 1px var(--color-line);
+  font-size: var(--text-caption);
 }
 
 .pv-search-text {
@@ -133,34 +133,34 @@
 .pv-search kbd {
   padding: 0 0.25rem;
   border-radius: var(--radius-xs);
-  background: var(--color-background-alt);
+  background: var(--color-surface-sunken);
   font: inherit;
-  font-size: var(--text-xs);
+  font-size: var(--text-caption);
 }
 
 .pv-mode {
   display: grid;
   grid-template-columns: 1fr 1fr;
   padding: 0.125rem;
-  border-radius: var(--radius-control);
-  background: var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-line);
 }
 
 .pv-mode span {
   display: grid;
   place-items: center;
-  min-height: calc(var(--control-height-sm) - 4px);
-  border-radius: var(--radius-control);
-  color: var(--color-secondary);
-  font-size: var(--text-xs);
+  min-height: calc(var(--control-sm) - 4px);
+  border-radius: var(--radius-md);
+  color: var(--color-ink-secondary);
+  font-size: var(--text-caption);
   font-weight: 500;
   text-align: center;
 }
 
 .pv-mode span[data-active] {
-  background: var(--color-panel);
-  color: var(--color-foreground);
-  box-shadow: var(--elevation-card);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-card);
 }
 
 .pv-nav-group {
@@ -170,8 +170,8 @@
 
 .pv-nav-title {
   padding: 0.25rem 0.5rem;
-  color: var(--color-muted);
-  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-size: var(--text-caption);
   font-weight: 500;
 }
 
@@ -181,16 +181,16 @@
   gap: 0.5rem;
   min-height: var(--nav-item-height);
   padding: 0 0.5rem;
-  border-radius: var(--radius-control);
-  color: var(--color-secondary);
-  font-size: var(--text-sm);
+  border-radius: var(--radius-md);
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body-sm);
   font-weight: 500;
 }
 
 .pv-nav[data-active] {
-  background: var(--color-panel);
-  color: var(--color-foreground);
-  box-shadow: var(--elevation-card);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-card);
 }
 
 .pv-chat-row {
@@ -211,10 +211,10 @@
   min-width: 0;
   overflow: hidden;
   border-radius: var(--radius-lg);
-  background: var(--color-panel);
+  background: var(--color-surface);
   box-shadow:
-    inset 0 0 0 1px var(--color-border-subtle),
-    var(--elevation-card);
+    inset 0 0 0 1px var(--color-line),
+    var(--shadow-card);
 }
 
 .pv-sheet-head {
@@ -234,11 +234,11 @@
 .pv-icon-button {
   display: inline-grid;
   place-items: center;
-  width: var(--control-height-sm);
-  height: var(--control-height-sm);
-  border-radius: var(--radius-control);
-  color: var(--color-foreground);
-  box-shadow: var(--elevation-card);
+  width: var(--control-sm);
+  height: var(--control-sm);
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-card);
 }
 
 .pv-avatar {
@@ -247,9 +247,9 @@
   width: 1.75rem;
   height: 1.75rem;
   border-radius: var(--radius-full);
-  background: var(--color-background-alt);
-  color: var(--color-secondary);
-  font-size: var(--text-xs);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink-secondary);
+  font-size: var(--text-caption);
   font-weight: 500;
 }
 
@@ -257,18 +257,18 @@
   display: flex;
   gap: 1.25rem;
   padding: 0 1.25rem;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-line);
 }
 
 .pv-tabs span {
   padding: 0.25rem 0 0.5rem;
-  color: var(--color-secondary);
-  font-size: var(--text-sm);
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body-sm);
   font-weight: 500;
 }
 
 .pv-tabs span[data-active] {
-  color: var(--color-foreground);
+  color: var(--color-ink);
   box-shadow: inset 0 -2px 0 var(--color-accent);
 }
 
@@ -277,8 +277,8 @@
   flex-wrap: wrap;
   gap: 0.5rem;
   padding: 0.5rem 1.25rem;
-  border-bottom: 1px solid var(--color-border-subtle);
-  background: var(--color-background-alt);
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface-sunken);
 }
 
 .pv-filter-group {
@@ -288,7 +288,7 @@
 
 .pv-filter-group + .pv-filter-group {
   padding-left: 0.5rem;
-  border-left: 1px solid var(--color-border);
+  border-left: 1px solid var(--color-line);
 }
 
 .pv-filter {
@@ -296,11 +296,11 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-control);
-  background: var(--color-panel);
-  color: var(--color-foreground);
-  box-shadow: inset 0 0 0 1px var(--color-border-subtle);
-  font-size: var(--text-xs);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: inset 0 0 0 1px var(--color-line);
+  font-size: var(--text-caption);
   font-weight: 500;
 }
 
@@ -313,9 +313,9 @@
 }
 
 .pv-main-title {
-  color: var(--color-foreground);
-  font-size: var(--text-xl);
-  line-height: var(--text-xl--line-height);
+  color: var(--color-ink);
+  font-size: var(--text-lead);
+  line-height: var(--text-lead--line-height);
   font-weight: 500;
   letter-spacing: -0.016em;
 }
@@ -329,7 +329,7 @@
   width: 0.5rem;
   height: 0.5rem;
   border-radius: var(--radius-full);
-  background: var(--color-border);
+  background: var(--color-line);
 }
 
 /* Panels ────────────────────────────────────────────────────────────────── */
@@ -337,9 +337,9 @@
 .pv-panel {
   min-width: 0;
   padding: var(--card-padding);
-  border-radius: var(--radius-card);
-  background: var(--color-panel);
-  box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-line);
 }
 
 .pv-panel-head {
@@ -351,8 +351,8 @@
 }
 
 .pv-panel-title {
-  color: var(--color-foreground);
-  font-size: var(--text-sm);
+  color: var(--color-ink);
+  font-size: var(--text-body-sm);
   font-weight: 500;
 }
 
@@ -379,26 +379,26 @@
 .pv-segment {
   display: inline-flex;
   padding: 0.125rem;
-  border-radius: var(--radius-control);
-  background: var(--color-background-alt);
-  box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--color-line);
 }
 
 .pv-segment span {
   display: inline-flex;
   align-items: center;
-  min-height: calc(var(--control-height-sm) - 4px);
+  min-height: calc(var(--control-sm) - 4px);
   padding: 0 0.75rem;
-  border-radius: var(--radius-control);
-  color: var(--color-muted);
-  font-size: var(--text-xs);
+  border-radius: var(--radius-md);
+  color: var(--color-ink-muted);
+  font-size: var(--text-caption);
   font-weight: 500;
 }
 
 .pv-segment span[data-active] {
-  background: var(--color-panel);
-  color: var(--color-foreground);
-  box-shadow: var(--elevation-card);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-card);
 }
 
 /* KPIs and charts ───────────────────────────────────────────────────────── */
@@ -413,27 +413,27 @@
   display: grid;
   gap: 0.25rem;
   padding: 0.75rem 1rem;
-  border-radius: var(--radius-card);
-  box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 0 0 1px var(--color-line);
 }
 
 /* The product's figure role, drawn in the scene: figure-face digits. */
 .pv-kpi strong {
-  color: var(--color-foreground);
-  font-family: var(--font-numeric);
-  font-size: var(--text-2xl);
-  line-height: var(--text-2xl--line-height);
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-title);
+  line-height: var(--text-title--line-height);
   font-weight: 500;
   letter-spacing: -0.02em;
 }
 
 .pv-delta {
-  font-size: var(--text-xs);
+  font-size: var(--text-caption);
   font-weight: 500;
 }
 
 .pv-delta[data-direction='up'] {
-  color: var(--color-success-text);
+  color: var(--color-positive);
 }
 
 .pv-legend {
@@ -441,7 +441,7 @@
   flex-wrap: wrap;
   gap: 0.75rem;
   margin-bottom: 0.5rem;
-  font-size: var(--text-xs);
+  font-size: var(--text-caption);
 }
 
 .pv-legend span,
@@ -468,7 +468,7 @@
 }
 
 .pv-chart line {
-  stroke: var(--color-border-subtle);
+  stroke: var(--color-line);
   stroke-width: 1;
 }
 
@@ -512,15 +512,15 @@
 }
 
 .pv-stat + .pv-stat {
-  border-left: 1px solid var(--color-border-subtle);
+  border-left: 1px solid var(--color-line);
 }
 
 .pv-stat-label {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  color: var(--color-secondary);
-  font-size: var(--text-xs);
+  color: var(--color-ink-secondary);
+  font-size: var(--text-caption);
 }
 
 .pv-stat-value {
@@ -530,10 +530,10 @@
 }
 
 .pv-stat-value strong {
-  color: var(--color-foreground);
-  font-family: var(--font-numeric);
-  font-size: var(--text-2xl);
-  line-height: var(--text-2xl--line-height);
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-title);
+  line-height: var(--text-title--line-height);
   font-weight: 500;
   letter-spacing: -0.02em;
 }
@@ -548,7 +548,7 @@
 }
 
 .pv-card-title {
-  font-size: var(--text-sm);
+  font-size: var(--text-body-sm);
 }
 
 .pv-panel-flush {
@@ -587,9 +587,9 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  margin: calc(var(--text-xs) / -2) 0;
-  color: var(--color-muted);
-  font-size: var(--text-xs);
+  margin: calc(var(--text-caption) / -2) 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-caption);
   text-align: right;
 }
 
@@ -602,8 +602,8 @@
   grid-column: 2;
   justify-content: space-between;
   margin-top: 0.5rem;
-  color: var(--color-muted);
-  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-size: var(--text-caption);
 }
 
 .pv-table-brands th,
@@ -621,20 +621,20 @@
 
 .pv-table-brands th {
   padding-top: 0.5rem;
-  background: var(--color-background-alt);
+  background: var(--color-surface-sunken);
 }
 
 .pv-table-brands tr[data-own] td {
-  background: var(--color-background-alt);
+  background: var(--color-surface-sunken);
 }
 
 .pv-you {
   padding: 0 0.25rem;
   border-radius: var(--radius-full);
-  background: var(--color-panel);
-  color: var(--color-muted);
-  box-shadow: inset 0 0 0 1px var(--color-border-subtle);
-  font-size: var(--text-xs);
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  box-shadow: inset 0 0 0 1px var(--color-line);
+  font-size: var(--text-caption);
   font-weight: 500;
 }
 
@@ -643,7 +643,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 1rem;
-  border-top: 1px solid var(--color-border-subtle);
+  border-top: 1px solid var(--color-line);
 }
 
 .pv-pager-buttons {
@@ -674,22 +674,22 @@
 
 .pv-table th {
   padding: 0 0.5rem 0.5rem 0;
-  border-bottom: 1px solid var(--color-border-subtle);
-  color: var(--color-muted);
-  font-size: var(--text-xs);
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink-muted);
+  font-size: var(--text-caption);
   font-weight: 500;
   text-align: left;
 }
 
 .pv-table td {
   padding: 0.5rem 0.5rem 0.5rem 0;
-  border-bottom: 1px solid var(--color-border-subtle);
-  color: var(--color-secondary);
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink-secondary);
   vertical-align: middle;
 }
 
 .pv-table .pv-cell-stack {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .pv-cell-stack > span {
@@ -701,7 +701,7 @@
 }
 
 .pv-table tr[data-own] td {
-  color: var(--color-foreground);
+  color: var(--color-ink);
   font-weight: 500;
 }
 
@@ -747,7 +747,7 @@
   align-items: center;
   gap: 0.5rem;
   min-height: 2.5rem;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-line);
 }
 
 .pv-list li:last-child {
@@ -755,14 +755,14 @@
 }
 
 .pv-list li[data-own] {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .pv-list-main {
   display: grid;
   flex: 1;
   min-width: 0;
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .pv-list-main > span:first-child {
@@ -778,9 +778,9 @@
   height: 1.25rem;
   place-items: center;
   border-radius: var(--radius-xs);
-  background: var(--pv-tone-bg, var(--color-background-alt));
-  color: var(--pv-tone-ink, var(--color-secondary));
-  font-size: var(--text-xs);
+  background: var(--pv-tone-bg, var(--color-surface-sunken));
+  color: var(--pv-tone-ink, var(--color-ink-secondary));
+  font-size: var(--text-caption);
   font-weight: 500;
 }
 
@@ -790,9 +790,9 @@
   width: 1.5rem;
   height: 1.5rem;
   place-items: center;
-  border-radius: var(--radius-control);
-  color: var(--color-foreground);
-  box-shadow: inset 0 0 0 1px var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+  box-shadow: inset 0 0 0 1px var(--color-line);
 }
 
 .pv-pill {
@@ -805,8 +805,8 @@
   border-radius: var(--radius-full);
   background: var(--pv-tone-bg);
   color: var(--pv-tone-ink);
-  font-size: var(--text-xs);
-  line-height: var(--text-xs--line-height);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -826,15 +826,15 @@
   flex: none;
   place-items: center;
   border-radius: var(--radius-full);
-  background: var(--color-background-alt);
-  color: var(--color-foreground);
-  font-size: var(--text-xs);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink);
+  font-size: var(--text-caption);
   font-weight: 500;
 }
 
 li[data-own] .pv-rank {
-  background: var(--color-accent-fill);
-  color: var(--color-accent-fg);
+  background: var(--color-ink);
+  color: var(--color-on-ink);
 }
 
 .pv-dl {
@@ -850,12 +850,12 @@ li[data-own] .pv-rank {
 }
 
 .pv-dl dt {
-  color: var(--color-muted);
-  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-size: var(--text-caption);
 }
 
 .pv-dl dd {
-  color: var(--color-foreground);
+  color: var(--color-ink);
   font-weight: 500;
   text-align: right;
 }
@@ -865,10 +865,10 @@ li[data-own] .pv-rank {
   justify-content: center;
   width: 100%;
   padding: 0.25rem 0.75rem;
-  border-radius: var(--radius-control);
-  background: var(--color-accent-fill);
-  color: var(--color-accent-fg);
-  font-size: var(--text-sm);
+  border-radius: var(--radius-md);
+  background: var(--color-ink);
+  color: var(--color-on-ink);
+  font-size: var(--text-body-sm);
   font-weight: 500;
 }
 
@@ -880,9 +880,9 @@ li[data-own] .pv-rank {
 }
 
 .pv-button-quiet {
-  background: var(--color-panel);
-  color: var(--color-foreground);
-  box-shadow: var(--elevation-card);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-card);
 }
 
 /* Answers ───────────────────────────────────────────────────────────────── */
@@ -899,31 +899,31 @@ li[data-own] .pv-rank {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  color: var(--color-foreground);
+  color: var(--color-ink);
   font-weight: 500;
 }
 
 .pv-prompt {
-  color: var(--color-foreground);
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  color: var(--color-ink);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
   font-weight: 500;
   letter-spacing: -0.01em;
 }
 
 .pv-answer {
   padding: var(--card-padding);
-  border-radius: var(--radius-card);
-  background: var(--color-background-alt);
-  color: var(--color-secondary);
-  line-height: var(--text-sm--line-height);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink-secondary);
+  line-height: var(--text-body-sm--line-height);
 }
 
 .pv-answer mark {
   padding: 0 0.125rem;
   border-radius: var(--radius-xs);
-  background: var(--color-accent-subtle);
-  color: var(--color-accent-text);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-ink);
   font-weight: 500;
 }
 
@@ -931,10 +931,10 @@ li[data-own] .pv-rank {
   margin-left: 0.25rem;
   padding: 0 0.25rem;
   border-radius: var(--radius-xs);
-  background: var(--color-panel);
-  color: var(--color-muted);
-  font-size: var(--text-xs);
-  box-shadow: inset 0 0 0 1px var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  font-size: var(--text-caption);
+  box-shadow: inset 0 0 0 1px var(--color-line);
 }
 
 .pv-chip-row {
@@ -961,32 +961,32 @@ li[data-own] .pv-rank {
   display: grid;
   gap: 0.25rem;
   padding: 0.75rem 1rem;
-  border-radius: var(--radius-card);
-  background: var(--color-panel);
-  box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-line);
 }
 
 .pv-message-user {
   justify-self: end;
   max-width: 85%;
-  background: var(--color-background-alt);
+  background: var(--color-surface-sunken);
   box-shadow: none;
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .pv-message code {
   padding: 0 0.25rem;
   border-radius: var(--radius-xs);
-  background: var(--color-background-alt);
-  font-size: var(--text-xs);
+  background: var(--color-surface-sunken);
+  font-size: var(--text-caption);
 }
 
 .pv-agent-name {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  color: var(--color-accent-text);
-  font-size: var(--text-xs);
+  color: var(--color-accent-ink);
+  font-size: var(--text-caption);
   font-weight: 500;
 }
 
@@ -994,17 +994,17 @@ li[data-own] .pv-rank {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  color: var(--color-muted);
-  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-size: var(--text-caption);
 }
 
 .pv-doc {
   display: grid;
   gap: 0.5rem;
   padding: var(--card-padding);
-  border-radius: var(--radius-card);
-  background: var(--color-panel);
-  box-shadow: var(--elevation-card);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
 }
 
 .pv-doc-head {
@@ -1012,17 +1012,17 @@ li[data-own] .pv-rank {
   align-items: center;
   justify-content: space-between;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-line);
 }
 
 .pv-doc-h {
   margin-top: 0.25rem;
-  color: var(--color-foreground);
+  color: var(--color-ink);
   font-weight: 500;
 }
 
 .pv-doc-p {
-  color: var(--color-secondary);
+  color: var(--color-ink-secondary);
 }
 
 .pv-doc-list {
@@ -1039,7 +1039,7 @@ li[data-own] .pv-rank {
   gap: 0.75rem;
   margin-top: 0.25rem;
   padding-top: 0.5rem;
-  border-top: 1px solid var(--color-border-subtle);
+  border-top: 1px solid var(--color-line);
 }
 
 .pv-tool-call {
@@ -1048,16 +1048,16 @@ li[data-own] .pv-rank {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.5rem 0.75rem;
-  border-radius: var(--radius-control);
-  background: var(--color-background-alt);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
 }
 
 .pv-tool-name {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  color: var(--color-foreground);
-  font-size: var(--text-xs);
+  color: var(--color-ink);
+  font-size: var(--text-caption);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }

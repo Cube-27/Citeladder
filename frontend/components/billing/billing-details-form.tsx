@@ -70,7 +70,7 @@ export function BillingDetailsForm({ country, details, setDetails }: BillingDeta
         </>
       ) : (
         <Checkbox
-          className="text-secondary items-start"
+          className="text-ink-secondary items-start"
           label="I confirm this purchase qualifies as an export of service."
           checked={details.export_eligibility_attested}
           onCheckedChange={(checked) => update('export_eligibility_attested', checked === true)}

@@ -30,7 +30,7 @@ export function ListDetailCard({
     >
       {/* One vertical list at every width: above the detail when the panes
           stack, beside it on desktop. */}
-      <div className="border-border-subtle divide-border-subtle desktop:border-r desktop:border-b-0 grid min-w-0 divide-y border-b">
+      <div className="border-line divide-line desktop:border-r desktop:border-b-0 grid min-w-0 divide-y border-b">
         {list}
       </div>
       {detail}
@@ -83,13 +83,13 @@ export function ListDetailPane({
     >
       <div className="desktop:max-h-[calc(100dvh-2*var(--workspace-gap))] relative flex flex-col">
         {busy ? <BusyBar active={busy.active} label={busy.label} /> : null}
-        <header className="border-border-subtle grid min-w-0 shrink-0 gap-[var(--compact-gap)] border-b p-[var(--card-padding)]">
+        <header className="border-line grid min-w-0 shrink-0 gap-[var(--compact-gap)] border-b p-[var(--card-padding)]">
           {header}
         </header>
         <div className="content-scroll desktop:flex-1 desktop:overflow-y-auto grid min-h-0 gap-[var(--workspace-gap)] p-[var(--card-padding)]">
           {children}
         </div>
-        {footer ? <div className="bg-panel shrink-0">{footer}</div> : null}
+        {footer ? <div className="bg-surface shrink-0">{footer}</div> : null}
       </div>
     </section>
   );

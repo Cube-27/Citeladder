@@ -67,7 +67,7 @@ export function WorkflowGallery({
                     <Pressable
                       disabled={disabled}
                       onClick={() => onPick(workflow)}
-                      className={cn(cardClasses(), 'hover:bg-hover')}
+                      className={cn(cardClasses(), 'hover:bg-surface-sunken')}
                     >
                       <Stack as="span" gap="tight">
                         <span className={textRole('sectionTitle')}>{workflow.label}</span>

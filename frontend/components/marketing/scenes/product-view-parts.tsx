@@ -148,7 +148,7 @@ function ShellSidebar({
       <span className="pv-workspace">
         <Favicon letter="Z" tone="owned" />
         <span className="pv-workspace-name">Zernovelle</span>
-        <ChevronsUpDown className="text-muted size-3.5" />
+        <ChevronsUpDown className="text-ink-muted size-3.5" />
       </span>
       <span className="pv-search">
         <Search className="size-3.5" />

@@ -33,7 +33,7 @@ export function SeriesPlot({
       <LineChart data={rows} margin={CHART_MARGIN}>
         {/* Horizontal only: a vertical rule under every bucket competes with
             the lines it sits behind, and the x tick already places them. */}
-        <CartesianGrid vertical={false} className="stroke-border-subtle" />
+        <CartesianGrid vertical={false} className="stroke-line" />
         <XAxis
           {...axisProps}
           dataKey="label"
@@ -57,7 +57,7 @@ export function SeriesPlot({
           }
         />
         <Tooltip
-          cursor={{ className: 'stroke-border' }}
+          cursor={{ className: 'stroke-line' }}
           content={<ChartTooltipContent formatValue={formatTick} />}
         />
         {series.map((one) => (

@@ -306,7 +306,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
           ) : (
             <PlatformActions cta={page.cta} />
           )}
-          {page.note && <p className="website-label text-muted">{page.note}</p>}
+          {page.note && <p className="website-label text-ink-muted">{page.note}</p>}
         </div>
       </PageHero>
 

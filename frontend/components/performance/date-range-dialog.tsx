@@ -113,7 +113,7 @@ function DateRangeFields({
             />
           )}
         </Field>
-        <span className="text-muted">–</span>
+        <span className="text-ink-muted">–</span>
         <Field label="End date">
           {(props) => (
             <DateField

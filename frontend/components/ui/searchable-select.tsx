@@ -164,7 +164,7 @@ export function SearchableSelect({
                 menuItemVariants({ selected: option.value === value }),
                 'grid gap-x-3',
                 optionGridClass(Boolean(renderLeading), Boolean(renderOptionEnd)),
-                index === activeIndex && option.value !== value && 'bg-hover',
+                index === activeIndex && option.value !== value && 'bg-surface-sunken',
               )}
               onMouseDown={(event) => {
                 event.preventDefault();
@@ -176,7 +176,7 @@ export function SearchableSelect({
               <span className="grid min-w-0 gap-0.5">
                 <span className="truncate">{option.label}</span>
                 {option.detail ? (
-                  <span className="text-muted truncate">{option.detail}</span>
+                  <span className="text-ink-muted truncate">{option.detail}</span>
                 ) : null}
               </span>
               {renderOptionEnd ? renderOptionEnd(option) : null}

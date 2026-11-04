@@ -35,7 +35,7 @@ export function Avatar({
     <span
       aria-hidden
       className={cn(
-        'bg-well text-secondary flex shrink-0 items-center justify-center rounded-full uppercase',
+        'bg-surface-sunken text-ink-secondary flex shrink-0 items-center justify-center rounded-full uppercase',
         PLACEMENT[placement],
       )}
     >

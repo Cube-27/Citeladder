@@ -24,29 +24,32 @@
 export type BadgeTone = { label: string; dot: string };
 
 export const statusBadge = {
-  success: { label: 'bg-success-bg text-success-text', dot: 'bg-success' },
-  warning: { label: 'bg-warning-bg text-warning-text', dot: 'bg-warning' },
-  danger: { label: 'bg-danger-bg text-danger-text', dot: 'bg-danger' },
-  info: { label: 'bg-info-bg text-info-text', dot: 'bg-info' },
+  success: { label: 'bg-positive-soft text-positive', dot: 'bg-positive' },
+  warning: { label: 'bg-warning-soft text-warning', dot: 'bg-warning' },
+  danger: { label: 'bg-negative-soft text-negative', dot: 'bg-negative' },
+  info: { label: 'bg-info-soft text-info', dot: 'bg-info' },
 } as const satisfies Record<string, BadgeTone>;
 
 export const sentimentBadge = {
   positive: statusBadge.success,
   neutral: {
-    label: 'bg-neutral-bg text-secondary',
-    dot: 'bg-neutral',
+    label: 'bg-surface-sunken text-ink-secondary',
+    dot: 'bg-line-control',
   },
   negative: statusBadge.danger,
   mixed: statusBadge.warning,
 } as const satisfies Record<string, BadgeTone>;
 
 export const classificationBadge = {
-  owned: { label: 'text-secondary', dot: 'bg-citation-owned' },
-  competitor: { label: 'text-secondary', dot: 'bg-citation-competitor' },
-  'third-party': { label: 'text-secondary', dot: 'bg-citation-third-party' },
+  owned: { label: 'text-ink-secondary', dot: 'bg-data-1' },
+  competitor: { label: 'text-ink-secondary', dot: 'bg-data-2' },
+  'third-party': { label: 'text-ink-secondary', dot: 'bg-data-other' },
 } as const satisfies Record<string, BadgeTone>;
 
-export const neutralBadge = { label: 'bg-neutral-bg text-secondary', dot: 'bg-neutral' } as const;
+export const neutralBadge = {
+  label: 'bg-surface-sunken text-ink-secondary',
+  dot: 'bg-line-control',
+} as const;
 
 // A run's state is the same badge wherever it shows (owner review,
 // 2026-11-03): a summary line and a table cell both draw the outcome scale's
@@ -74,11 +77,11 @@ export type RunStatusValue = keyof typeof runStatusBadge;
  * call site so product nouns keep their capitalization.
  */
 export const badgeBase =
-  'type-badge inline-flex min-h-[var(--badge-height-sm)] shrink-0 items-center gap-2 rounded-[var(--radius-xs)] px-2 py-0.5 whitespace-nowrap';
+  'type-badge inline-flex min-h-[var(--badge-height-sm)] shrink-0 items-center gap-2 rounded-xs px-2 py-0.5 whitespace-nowrap';
 
 /**
  * A link whose face is a badge (a cited-evidence group that opens its
  * screen): the focus ring follows the badge's corners and the label
  * underlines on hover, so it reads as a link without becoming a control.
  */
-export const badgeLinkClasses = 'rounded-[var(--radius-xs)] underline-offset-2 hover:underline';
+export const badgeLinkClasses = 'rounded-xs underline-offset-2 hover:underline';

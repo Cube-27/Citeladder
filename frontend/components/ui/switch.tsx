@@ -3,10 +3,10 @@
 import { cn } from '@/lib/utils';
 
 function switchTrackClass(checked: boolean, disabled: boolean) {
-  if (disabled) return 'border-border-subtle bg-disabled';
+  if (disabled) return 'border-line bg-surface-sunken';
   return checked
-    ? 'border-accent bg-accent group-hover:bg-accent-hover group-active:bg-accent-active'
-    : 'border-border-bold bg-track group-hover:bg-hover group-active:bg-active';
+    ? 'border-ink bg-ink group-hover:bg-ink-hover group-active:bg-ink-hover'
+    : 'border-line-control bg-surface-sunken group-hover:bg-surface-sunken group-active:bg-surface-sunken';
 }
 
 /**
@@ -47,8 +47,8 @@ export function Switch({
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
-        'focus-ring group inline-grid min-h-[var(--control-height-md)] min-w-[var(--control-height-md)] shrink-0 place-items-center rounded-full',
-        'disabled:cursor-not-allowed enabled:hover:bg-hover enabled:active:bg-active',
+        'focus-ring group inline-grid min-h-[var(--control-md)] min-w-[var(--control-md)] shrink-0 place-items-center rounded-full',
+        'disabled:cursor-not-allowed enabled:hover:bg-surface-sunken enabled:active:bg-surface-sunken',
         className,
       )}
     >
@@ -61,7 +61,7 @@ export function Switch({
       >
         <span
           className={cn(
-            'bg-panel border-border-strong group-disabled:bg-muted group-disabled:border-border-subtle absolute top-1/2 left-0.5 size-5 -translate-y-1/2 rounded-full border transition-transform duration-[var(--motion-normal)] ease-[var(--ease-standard)]',
+            'bg-surface border-line group-disabled:bg-ink-muted group-disabled:border-line absolute top-1/2 left-0.5 size-5 -translate-y-1/2 rounded-full border transition-transform duration-[var(--motion-normal)] ease-[var(--ease-standard)]',
             checked ? 'translate-x-5' : 'translate-x-px',
           )}
         />

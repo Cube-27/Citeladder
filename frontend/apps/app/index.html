@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="robots" content="noindex" />
-    <!-- Apply a stored dark preference before first paint so a dark reader
-        never sees a light frame. Light is the default. The key must match
-        THEME_STORAGE_KEY in lib/theme/theme.ts, which owns the preference. -->
+    <!-- Apply the shared light/dark/system choice before first paint so a dark
+        reader never sees a light frame. The cookie name must match
+        THEME_COOKIE in lib/theme/theme.ts, which owns the preference. -->
     <script src="/theme-preference.js"></script>
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="manifest" href="/site.webmanifest" />

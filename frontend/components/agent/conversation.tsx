@@ -134,7 +134,7 @@ function DocumentList({ outputs }: Readonly<{ outputs: readonly AgentOutput[] }>
         {outputs.map((output) => (
           <li key={output.id}>
             <Pressable
-              className={textRole('caption', 'hover:text-accent-text w-auto')}
+              className={textRole('caption', 'hover:text-accent-ink w-auto')}
               onClick={() =>
                 document
                   .getElementById(documentAnchor(output.id))
@@ -433,7 +433,7 @@ function RunningState({
   return (
     <Stack gap="compact">
       <Inline as="span" gap="compact" className={textRole('caption')}>
-        <Spinner className="text-muted" />
+        <Spinner className="text-ink-muted" />
         <output aria-live="polite" className="flex-1">
           {label}
           <Elapsed since={live?.startedAt ?? Date.parse(run.created_at)} />
@@ -465,7 +465,7 @@ function liveStepLabel(live: LiveTurn | undefined) {
 function Elapsed({ since }: Readonly<{ since: number }>) {
   const now = useNow(1000);
   const seconds = Math.max(0, Math.round((now - since) / 1000));
-  return seconds >= 3 ? <span className="text-muted"> · {seconds}s</span> : null;
+  return seconds >= 3 ? <span className="text-ink-muted"> · {seconds}s</span> : null;
 }
 function useNow(intervalMs: number) {
   const [now, setNow] = useState(() => Date.now());

@@ -26,12 +26,10 @@ export type CheckboxProps = AccessibleCheckbox & {
 };
 
 function checkboxStateClass(checked: boolean | 'indeterminate', disabled: boolean | undefined) {
-  if (disabled) return 'border-border-subtle bg-disabled text-muted';
+  if (disabled) return 'border-line bg-surface-sunken text-ink-muted';
   return cn(
-    'text-accent-fg',
-    checked
-      ? 'border-accent-fill bg-accent-fill'
-      : 'border-border-bold bg-input group-hover:border-border-strong',
+    'text-on-ink',
+    checked ? 'border-ink bg-ink' : 'border-line-control bg-surface group-hover:border-ink-muted',
   );
 }
 
@@ -63,7 +61,7 @@ export function Checkbox({
       disabled={disabled}
       aria-label={ariaLabel}
       aria-describedby={ariaDescribedBy}
-      className="focus-ring group enabled:hover:bg-hover enabled:active:bg-active disabled:bg-disabled grid min-h-[var(--control-height-md)] min-w-[var(--control-height-md)] shrink-0 place-items-center rounded-[var(--radius-control)] disabled:cursor-not-allowed"
+      className="focus-ring group enabled:hover:bg-surface-sunken enabled:active:bg-surface-sunken disabled:bg-surface-sunken grid min-h-[var(--control-md)] min-w-[var(--control-md)] shrink-0 place-items-center rounded-md disabled:cursor-not-allowed"
     >
       <span
         className={cn(
@@ -89,14 +87,14 @@ export function Checkbox({
   return (
     <label
       className={cn(
-        'type-body text-foreground inline-flex items-center gap-2',
+        'type-body text-ink inline-flex items-center gap-2',
         // A sub-option sits one checkbox in from its parent, so the tree reads.
         nested && 'ms-6',
         className,
       )}
     >
       {control}
-      <span className={cn(disabled && 'text-muted')}>{label}</span>
+      <span className={cn(disabled && 'text-ink-muted')}>{label}</span>
     </label>
   );
 }
