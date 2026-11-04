@@ -501,8 +501,8 @@
      ends on matching edges. Pixels, not `ch`: a `ch` follows each element's
      own size, which gave every role its own width. On a phone both are the
      column. Long-form prose keeps its own reading column. */
-  --site-measure-display: 880px;
-  --site-measure-reading: 640px;
+  --site-measure-display: 960px;
+  --site-measure-reading: 720px;
   --site-cell-inset: 32px;
   --site-cell-y: 64px;
   --site-band-y: 96px;

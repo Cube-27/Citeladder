@@ -570,6 +570,15 @@
    here. Product views are the desktop picture scaled down (`.product-fit`,
    marketing.css); nothing here reshapes them. */
 @media (max-width: 39.99rem) {
+  /* The pillars chip stays one row on a phone: the caption size, a tighter
+     dot gap (about 335px wide, inside a 375px phone's column). */
+  .lp-hero-pillars {
+    gap: 0.25rem;
+    font-size: var(--text-site-caption);
+    line-height: var(--text-site-caption--line-height);
+    white-space: nowrap;
+  }
+
   .lp-hero-lead {
     margin-top: 1rem;
     margin-bottom: 1.5rem;
