@@ -31,7 +31,7 @@ import { hasPageTitle } from './page-titles';
 export function ShellFallback({ children }: Readonly<{ children?: ReactNode }>) {
   return (
     <div
-      className="ground-grain bg-panel relative flex min-h-dvh"
+      className="bg-surface relative flex min-h-dvh"
       aria-busy={children === undefined ? 'true' : undefined}
     >
       {/* The rail's place, showing the grained ground it shares with the

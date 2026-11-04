@@ -7,9 +7,9 @@
 @source '../../../components/marketing/primitives/button.tsx';
 
 /* The docs subdomain wears the public site's system (docs/design.md, Public
-   website): white paper, hairline chrome, compact rows, signal green for the
-   current place only and the site's lime on the brand tag. Reading comfort
-   comes from measure and rhythm. */
+   website): a `surface` ground, `line` hairlines, compact rows, the `accent`
+   mark for the current place only and `surface-sunken` behind the brand tag.
+   Reading comfort comes from measure and rhythm. */
 
 :root {
   --docs-header-height: 3.75rem;
@@ -22,7 +22,7 @@
   position: sticky;
   top: 0;
   z-index: var(--z-index-sticky);
-  background: var(--color-panel);
+  background: var(--color-surface);
 }
 
 .docs-header-inner,
@@ -52,10 +52,10 @@
   min-height: 1.25rem;
   padding-inline: 0.5rem;
   border-radius: var(--radius-full);
-  background: var(--color-field-lime);
-  color: var(--color-foreground);
-  font-size: var(--text-xs);
-  line-height: var(--text-xs--line-height);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
   font-weight: 500;
 }
 
@@ -73,9 +73,9 @@
   align-items: center;
   gap: 0.5rem;
   padding-inline: 0.75rem;
-  color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
   font-weight: 500;
   white-space: nowrap;
   transition: color var(--motion-fast) var(--ease-standard);
@@ -94,11 +94,11 @@
 }
 
 .docs-tabs a:hover {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .docs-tabs a[aria-current] {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .docs-tabs a[aria-current]::after {
@@ -112,18 +112,18 @@
 
 /* The search trigger reads as a field, not a button. */
 .docs-search [aria-haspopup='dialog'] {
-  min-height: var(--control-height-lg);
-  border-color: var(--color-border);
-  background: var(--color-background-alt);
+  min-height: var(--control-md);
+  border-color: var(--color-line);
+  background: var(--color-surface-sunken);
   box-shadow: none;
-  color: var(--color-muted);
-  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
   font-weight: 400;
 }
 
 .docs-search [aria-haspopup='dialog']:hover {
-  border-color: var(--color-border-strong);
-  background: var(--color-panel);
+  border-color: var(--color-line);
+  background: var(--color-surface);
 }
 
 .docs-header-actions {
@@ -135,19 +135,19 @@
 
 /* Same compact face as the marketing header's Sign up. */
 .docs-header-actions .marketing-cta-button {
-  min-height: var(--control-height-lg);
-  border-radius: var(--radius-control);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  min-height: var(--control-md);
+  border-radius: var(--radius-md);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
 }
 
 .docs-site-link {
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .docs-site-link:hover {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 /* ── Three-column frame ─────────────────────────────────────────────────── */
@@ -167,7 +167,7 @@
   overflow-y: auto;
   padding-block: 2rem;
   scrollbar-width: thin;
-  scrollbar-color: var(--color-border) transparent;
+  scrollbar-color: var(--color-line) transparent;
 }
 
 .docs-nav {
@@ -186,14 +186,14 @@
   gap: 0.5rem;
   margin-bottom: 0.5rem;
   padding-inline: 0.75rem;
-  color: var(--color-foreground);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  color: var(--color-ink);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
   font-weight: 500;
 }
 
 .docs-nav-heading svg {
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
 }
 
 .docs-nav a {
@@ -202,10 +202,10 @@
   align-items: center;
   min-height: var(--docs-row);
   padding: 0.25rem 0.75rem 0.25rem 2.25rem;
-  border-radius: var(--radius-control);
-  color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  border-radius: var(--radius-md);
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
   transition:
     background-color var(--motion-fast) var(--ease-standard),
     color var(--motion-fast) var(--ease-standard);
@@ -218,17 +218,17 @@
   top: 0.5rem;
   bottom: 0.5rem;
   width: 1px;
-  background: var(--color-border);
+  background: var(--color-line);
 }
 
 .docs-nav a:hover {
-  background: var(--color-background-alt);
-  color: var(--color-foreground);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink);
 }
 
 .docs-nav a[aria-current] {
-  background: var(--color-accent-subtle);
-  color: var(--color-accent-text);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-ink);
   font-weight: 500;
 }
 
@@ -256,16 +256,16 @@
 }
 
 .docs-article-group {
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
   font-weight: 500;
 }
 
 .docs-article-updated {
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
 }
 
 .docs-prose {
-  color: var(--color-secondary);
+  color: var(--color-ink-secondary);
   overflow-wrap: anywhere;
 }
 
@@ -275,7 +275,7 @@
 
 .docs-main :is(h2, h3)[id] {
   scroll-margin-top: var(--docs-header-offset, 6rem);
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .docs-prose :where(h2, h3) {
@@ -284,14 +284,16 @@
 
 .docs-prose h2 {
   margin-top: 2.75rem;
-  font-size: var(--text-2xl);
-  line-height: var(--text-2xl--line-height);
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  line-height: var(--text-title--line-height);
+  font-weight: 400;
 }
 
 .docs-prose h3 {
   margin-top: 2rem;
-  font-size: var(--text-lg);
-  line-height: var(--text-lg--line-height);
+  font-size: var(--text-body-lg);
+  line-height: var(--text-body-lg--line-height);
 }
 
 .docs-prose h2 + *,
@@ -300,7 +302,7 @@
 }
 
 .docs-prose strong {
-  color: var(--color-foreground);
+  color: var(--color-ink);
   font-weight: 500;
 }
 
@@ -322,13 +324,13 @@
 }
 
 .docs-prose li::marker {
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
 }
 
 .docs-prose a {
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
   text-decoration-line: underline;
-  text-decoration-color: var(--color-accent-border);
+  text-decoration-color: var(--color-line-control);
   text-decoration-thickness: 1px;
   text-underline-offset: 0.25em;
   transition: text-decoration-color var(--motion-fast) var(--ease-standard);
@@ -338,14 +340,13 @@
   text-decoration-color: currentColor;
 }
 
-/* Notes read as a quiet callout with a forest rail. */
 .docs-prose blockquote {
-  /* The one callout treatment, shared with the marketing articles: a quiet
-     neutral tint at the card radius. Accent is for actions, not notes. */
+  /* The one callout treatment, shared with the marketing articles:
+     `surface-sunken` at the card radius. Accent is a mark, not a note. */
   padding: 1rem 1.25rem;
-  border-radius: var(--radius-card);
-  background: var(--color-background-alt);
-  color: var(--color-foreground);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink);
 }
 
 .docs-prose blockquote > * + * {
@@ -356,9 +357,9 @@
   padding: 1rem 1.25rem;
   overflow-x: auto;
   border-radius: var(--radius-lg);
-  background: var(--color-background-alt);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  background: var(--color-surface-sunken);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
   white-space: pre-wrap;
 }
 
@@ -370,8 +371,8 @@
 .docs-prose :not(pre) > code {
   padding: 0 0.25rem;
   border-radius: var(--radius-xs);
-  background: var(--color-background-alt);
-  color: var(--color-foreground);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink);
 }
 
 /* Tables sit in one rounded panel with quiet headers and no outer frame. */
@@ -383,15 +384,15 @@
   border-radius: var(--radius-lg);
   border-collapse: separate;
   border-spacing: 0;
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
 }
 
 .docs-prose th,
 .docs-prose td {
   min-width: 10rem;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-line);
   text-align: left;
   vertical-align: top;
 }
@@ -401,26 +402,26 @@
 }
 
 .docs-prose th {
-  background: var(--color-background-alt);
-  border-bottom-color: var(--color-border);
-  color: var(--color-muted);
-  font-size: var(--text-sm);
+  background: var(--color-surface-sunken);
+  border-bottom-color: var(--color-line);
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
   font-weight: 500;
 }
 
 .docs-prose td:first-child {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .docs-prose details {
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-line);
   padding-block: 0.75rem;
 }
 
 .docs-prose summary {
-  min-height: var(--control-height-lg);
+  min-height: var(--control-md);
   align-content: center;
-  color: var(--color-foreground);
+  color: var(--color-ink);
   font-weight: 500;
   cursor: pointer;
 }
@@ -446,9 +447,9 @@
   margin-left: -1px;
   padding: 0.25rem 0 0.25rem 0.75rem;
   border-left: 1px solid transparent;
-  color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
   text-decoration: none;
   transition:
     color var(--motion-fast) var(--ease-standard),
@@ -460,12 +461,12 @@
 }
 
 .docs-contents-links a:hover {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .docs-contents-links a[aria-current='location'] {
   border-left-color: var(--color-accent);
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
   font-weight: 500;
 }
 
@@ -474,14 +475,14 @@
   align-items: center;
   gap: 0.25rem;
   margin-top: 2.5rem;
-  color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
   transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .docs-toc-help:hover {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 /* ── Previous / next and footer ─────────────────────────────────────────── */
@@ -498,12 +499,12 @@
   gap: 0.25rem;
   padding: 1rem 1.25rem;
   border-radius: var(--radius-lg);
-  background: var(--color-background-alt);
+  background: var(--color-surface-sunken);
   transition: background-color var(--motion-normal) var(--ease-standard);
 }
 
 .docs-pagination a:hover {
-  background: var(--color-well);
+  background: var(--color-surface-sunken);
 }
 
 .docs-pagination .website-label {
@@ -513,9 +514,9 @@
 }
 
 .docs-pagination-title {
-  color: var(--color-foreground);
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  color: var(--color-ink);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
   font-weight: 500;
 }
 
@@ -541,7 +542,7 @@
 }
 
 .docs-footer a:hover {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .docs-mobile-nav,
@@ -566,15 +567,15 @@
     margin-bottom: 1.5rem;
     padding: 0.25rem 1rem;
     border-radius: var(--radius-lg);
-    background: var(--color-background-alt);
-    color: var(--color-muted);
+    background: var(--color-surface-sunken);
+    color: var(--color-ink-muted);
   }
 
   .docs-mobile-toc summary {
-    min-height: var(--control-height-xl);
+    min-height: var(--control-lg);
     align-content: center;
-    color: var(--color-foreground);
-    font-size: var(--text-sm);
+    color: var(--color-ink);
+    font-size: var(--text-body-sm);
     font-weight: 500;
     cursor: pointer;
   }
@@ -634,14 +635,14 @@
     margin-top: 1rem;
     padding: 0.25rem 1rem;
     border-radius: var(--radius-lg);
-    background: var(--color-background-alt);
+    background: var(--color-surface-sunken);
   }
 
   .docs-mobile-nav > summary {
-    min-height: var(--control-height-xl);
+    min-height: var(--control-lg);
     align-content: center;
-    color: var(--color-foreground);
-    font-size: var(--text-sm);
+    color: var(--color-ink);
+    font-size: var(--text-body-sm);
     font-weight: 500;
     cursor: pointer;
   }
@@ -655,7 +656,7 @@
   }
 
   .docs-nav a {
-    min-height: var(--control-height-xl);
+    min-height: var(--control-lg);
   }
 
   .docs-main {

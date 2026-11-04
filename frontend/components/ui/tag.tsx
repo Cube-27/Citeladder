@@ -36,13 +36,16 @@ export function TagGroup({
       {labels.length > 2 ? (
         <button
           type="button"
-          className={tagClasses('neutral', 'control-raised focus-ring border-0 hover:bg-hover')}
+          className={tagClasses(
+            'neutral',
+            'control-raised focus-ring border-0 hover:bg-surface-sunken',
+          )}
           aria-expanded={expanded}
           aria-controls={id}
           aria-label={expanded ? 'Show fewer tags' : `Show ${labels.length - 2} more tags`}
           onClick={() => setExpanded(!expanded)}
         >
-          {expanded ? 'Show less' : <span className="font-numeric">{`+${labels.length - 2}`}</span>}
+          {expanded ? 'Show less' : <span className="font-mono">{`+${labels.length - 2}`}</span>}
         </button>
       ) : null}
     </div>

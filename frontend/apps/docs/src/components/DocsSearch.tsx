@@ -57,7 +57,7 @@ export function DocsSearch() {
       >
         <Search className="size-4" aria-hidden />
         <span>Search docs</span>
-        <kbd className="type-badge bg-well text-muted ml-auto hidden rounded-xs px-1 py-0.5 sm:inline">
+        <kbd className="type-badge bg-surface-sunken text-ink-muted ml-auto hidden rounded-xs px-1 py-0.5 sm:inline">
           Ctrl K
         </kbd>
       </Button>
@@ -97,7 +97,7 @@ export function DocsSearch() {
             <li key={result.href}>
               <a
                 href={result.href}
-                className="focus-ring hover:bg-accent-soft grid gap-1 rounded-[var(--radius-control)] p-3"
+                className="focus-ring hover:bg-accent-soft grid gap-1 rounded-md p-3"
               >
                 <span className={textRole('itemTitle')}>{result.title}</span>
                 <span className={textRole('body')}>{result.description}</span>

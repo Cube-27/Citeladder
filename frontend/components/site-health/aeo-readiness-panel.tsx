@@ -313,7 +313,7 @@ function FailingPages({
             <Stack as="ul" gap="tight">
               {page.failed_checks.map((check) => (
                 <Inline as="li" key={check.rule_id} className="type-caption items-baseline">
-                  <Dot className="bg-danger" />
+                  <Dot className="bg-negative" />
                   <span>
                     {check.title}: {check.expected_capability}
                   </span>

@@ -225,9 +225,9 @@ function ConnectionStatus({
       </>
     );
   if (activeRun) return <RunSummary run={activeRun} runActive={runActive} />;
-  if (!grantConnected) return <span className="text-muted">Reconnect to sync</span>;
-  if (!hasProperty) return <span className="text-muted">Select a property to import</span>;
-  return <span className="text-muted">Ready to sync</span>;
+  if (!grantConnected) return <span className="text-ink-muted">Reconnect to sync</span>;
+  if (!hasProperty) return <span className="text-ink-muted">Select a property to import</span>;
+  return <span className="text-ink-muted">Ready to sync</span>;
 }
 
 function ConnectionRowView({

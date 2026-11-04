@@ -15,7 +15,7 @@ import { AuthWordmark } from './brand-panel';
  */
 export function AuthRouteShell({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div data-flow-surface className="auth-split bg-background text-foreground antialiased">
+    <div data-flow-surface className="auth-split bg-paper text-ink antialiased">
       <div className="auth-split-main">
         <main id="main" aria-label="Account access" className="auth-split-content">
           <div className="auth-split-form">
@@ -39,7 +39,10 @@ const COPYRIGHT_YEAR = new Date().getFullYear();
 
 function AuthLegalFooter() {
   return (
-    <Inline gap="tight" className="website-label text-muted flex-wrap justify-center text-center">
+    <Inline
+      gap="tight"
+      className="website-label text-ink-muted flex-wrap justify-center text-center"
+    >
       <span>
         © {COPYRIGHT_YEAR} CiteLadder, a {PARENT_COMPANY.name} product
       </span>
@@ -48,7 +51,7 @@ function AuthLegalFooter() {
         href={websiteHref('/privacy')}
         target="_blank"
         rel="noreferrer"
-        className="hover:text-foreground transition-colors"
+        className="hover:text-ink transition-colors"
       >
         Privacy
       </a>
@@ -57,7 +60,7 @@ function AuthLegalFooter() {
         href={websiteHref('/terms')}
         target="_blank"
         rel="noreferrer"
-        className="hover:text-foreground transition-colors"
+        className="hover:text-ink transition-colors"
       >
         Terms
       </a>

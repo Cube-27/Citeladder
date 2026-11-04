@@ -10,7 +10,7 @@
    lattice, as on every other page, and the announcement strip above the bar
    takes the same mint. The accent stays on buttons, links and the logo. */
 .lp .lp-hero {
-  background-color: var(--color-site-ground);
+  background-color: var(--color-surface);
 }
 
 .lp .lp-hero::before {
@@ -33,8 +33,6 @@
 
 /* Cards stay white on hover; the ring darkens a step instead. */
 .lp :is(.lp-tile, .lp-team):hover {
-  background: var(--color-panel);
-  box-shadow:
-    0 0 0 1px var(--color-site-divider),
-    var(--shadow-site-chip);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-line);
 }

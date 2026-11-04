@@ -68,7 +68,7 @@ export function CrawlLogSetup({
             disabled: unavailable,
             label: (
               <span className="grid">
-                <span className="type-control text-foreground">{s.label}</span>
+                <span className="type-control text-ink">{s.label}</span>
                 <span className="type-caption">
                   {unavailable ? 'Not available in this environment.' : s.description}
                 </span>
@@ -78,7 +78,7 @@ export function CrawlLogSetup({
         })}
       />
       <Stack className={panelClasses({ tone: 'well' })}>
-        {steps ? <p className="type-body text-secondary">{steps}</p> : null}
+        {steps ? <p className="type-body text-ink-secondary">{steps}</p> : null}
         {firehose ? <FirehoseSteps interval={model.bufferInterval} /> : null}
         {gcp ? <GcpSteps /> : null}
         <TextLink variant="external" href={chosen.guide} className="w-fit">
@@ -189,7 +189,7 @@ function FirehoseFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlC
 /** Generated AWS console steps; the endpoint and token appear once the source exists. */
 function FirehoseSteps({ interval }: Readonly<{ interval: string }>) {
   return (
-    <Stack as="ol" gap="tight" className="type-body text-secondary list-inside list-decimal">
+    <Stack as="ol" gap="tight" className="type-body text-ink-secondary list-inside list-decimal">
       <li>
         In us-east-1, create an Amazon Data Firehose stream: source Direct PUT, destination HTTP
         endpoint. Use the endpoint URL and the token (as the access key) shown after you create the

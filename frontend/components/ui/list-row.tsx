@@ -27,10 +27,10 @@ import { cn } from '@/lib/utils';
  */
 export function listRowClasses({ selected = false }: Readonly<{ selected?: boolean }> = {}) {
   return cn(
-    'relative rounded-[var(--radius-control)] transition-[background-color,color] duration-[var(--motion-fast)] ease-[var(--ease-standard)]',
+    'relative rounded-md transition-[background-color,color] duration-[var(--motion-fast)] ease-[var(--ease-standard)]',
     selected
-      ? 'bg-selected text-foreground active:bg-active'
-      : 'text-secondary hover:bg-hover hover:text-foreground active:bg-active',
+      ? 'bg-surface-sunken text-ink active:bg-surface-sunken'
+      : 'text-ink-secondary hover:bg-surface-sunken hover:text-ink active:bg-surface-sunken',
   );
 }
 
@@ -87,7 +87,7 @@ export function OptionRow({
       className={cn(
         listRowClasses({ selected }),
         paddedRowClasses,
-        'disabled:pointer-events-none disabled:[&_.type-item-title]:text-muted',
+        'disabled:pointer-events-none disabled:[&_.type-item-title]:text-ink-muted',
       )}
     >
       <span className="min-w-0 flex-1">
@@ -96,7 +96,7 @@ export function OptionRow({
           <span className="type-caption block truncate tabular-nums">{caption}</span>
         ) : null}
       </span>
-      {pending ? <Spinner className="text-muted" /> : null}
+      {pending ? <Spinner className="text-ink-muted" /> : null}
       {selected && !pending ? <Icon icon={Check} className="text-accent" /> : null}
     </Pressable>
   );
@@ -143,7 +143,7 @@ export function RailItem({
         aria-label={accessibleName}
         aria-current={selected ? 'true' : undefined}
         className={cn(
-          'focus-ring flex h-[var(--nav-item-height)] min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-3 text-left type-control',
+          'focus-ring flex h-[var(--nav-item-height)] min-w-0 flex-1 items-center gap-2 rounded-md px-3 text-left type-control',
           selected && textRole('emphasis'),
         )}
       >
@@ -151,7 +151,7 @@ export function RailItem({
           {label}
         </ClampText>
         {typeof count === 'number' ? (
-          <span className="type-caption font-numeric shrink-0">{count}</span>
+          <span className="type-caption shrink-0 font-mono">{count}</span>
         ) : null}
       </Pressable>
       {actions}

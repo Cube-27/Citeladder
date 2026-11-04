@@ -6,10 +6,10 @@ import { cva } from 'class-variance-authority';
  * becomes the visible edge in forced colours, where shadows are dropped.
  */
 export const menuPanelClasses =
-  'menu-panel border-transparent bg-elevated shadow-overlay z-modal overflow-hidden rounded-[var(--radius-card)] border p-1 focus-ring';
+  'menu-panel border-transparent bg-surface shadow-pop z-modal overflow-hidden rounded-lg border p-1 focus-ring';
 
 export const menuItemVariants = cva(
-  'text-foreground hover:bg-hover data-[highlighted]:bg-hover active:bg-active data-[active=true]:bg-selected data-[state=checked]:bg-selected data-[active=true]:hover:bg-selected data-[state=checked]:hover:bg-selected data-[active=true]:data-[highlighted]:bg-selected data-[state=checked]:data-[highlighted]:bg-selected relative flex min-h-[var(--menu-item-height)] cursor-pointer items-center gap-2 rounded-[var(--radius-control)] py-1 type-control transition-colors focus-ring data-[disabled]:pointer-events-none data-[disabled]:bg-disabled data-[disabled]:text-muted data-[state=checked]:data-[disabled]:bg-disabled data-[active=true]:data-[disabled]:bg-disabled',
+  'text-ink hover:bg-surface-sunken data-[highlighted]:bg-surface-sunken active:bg-surface-sunken data-[active=true]:bg-surface-sunken data-[state=checked]:bg-surface-sunken data-[active=true]:hover:bg-surface-sunken data-[state=checked]:hover:bg-surface-sunken data-[active=true]:data-[highlighted]:bg-surface-sunken data-[state=checked]:data-[highlighted]:bg-surface-sunken relative flex min-h-[var(--menu-item-height)] cursor-pointer items-center gap-2 rounded-md py-1 type-control transition-colors focus-ring data-[disabled]:pointer-events-none data-[disabled]:bg-surface-sunken data-[disabled]:text-ink-muted data-[state=checked]:data-[disabled]:bg-surface-sunken data-[active=true]:data-[disabled]:bg-surface-sunken',
   {
     variants: {
       inset: {
@@ -17,7 +17,7 @@ export const menuItemVariants = cva(
         false: 'px-2',
       },
       selected: {
-        true: 'bg-selected text-foreground hover:bg-selected',
+        true: 'bg-surface-sunken text-ink hover:bg-surface-sunken',
         false: null,
       },
     },

@@ -37,9 +37,9 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
             onOpenChange={(open) => {
               if (!open) setMessages((current) => current.filter((item) => item.id !== message.id));
             }}
-            className="toast-panel bg-elevated shadow-modal grid w-[min(24rem,calc(100vw-2rem))] grid-cols-[auto_1fr_auto] items-start gap-2 rounded-[var(--radius-card)] border border-transparent p-3"
+            className="toast-panel bg-surface shadow-pop grid w-[min(24rem,calc(100vw-2rem))] grid-cols-[auto_1fr_auto] items-start gap-2 rounded-lg border border-transparent p-3"
           >
-            <CheckCircle2 className="text-success mt-0.5 size-4" aria-hidden />
+            <CheckCircle2 className="text-positive mt-0.5 size-4" aria-hidden />
             <div className="min-w-0">
               <ToastPrimitive.Title className="type-item-title text-current">
                 {message.title}
@@ -52,7 +52,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
             </div>
             <ToastPrimitive.Close asChild>
               <Pressable
-                className="text-muted hover:bg-hover active:bg-active grid size-[var(--control-height-md)] place-items-center"
+                className="text-ink-muted hover:bg-surface-sunken active:bg-surface-sunken grid size-[var(--control-md)] place-items-center"
                 aria-label="Dismiss notification"
               >
                 <X className="size-3.5" aria-hidden />

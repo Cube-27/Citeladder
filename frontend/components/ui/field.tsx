@@ -40,7 +40,7 @@ export function Field({
     <div className={cn('grid gap-2', className)}>
       <label htmlFor={id} className={textRole('label', labelClassName)}>
         {label}
-        {required ? <span className="text-muted ms-0.5">*</span> : null}
+        {required ? <span className="text-ink-muted ms-0.5">*</span> : null}
       </label>
       {children({
         id,
@@ -54,7 +54,7 @@ export function Field({
         </span>
       ) : null}
       {error ? (
-        <span id={errorId} role="alert" className="type-caption text-danger-text">
+        <span id={errorId} role="alert" className="type-caption text-negative">
           {error}
         </span>
       ) : null}

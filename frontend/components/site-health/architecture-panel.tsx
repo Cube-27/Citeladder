@@ -246,7 +246,7 @@ function PageKindTable({
                   className="w-auto"
                 >
                   <Inline as="span">
-                    <Icon icon={open ? ChevronDown : ChevronRight} className="text-muted" />
+                    <Icon icon={open ? ChevronDown : ChevronRight} className="text-ink-muted" />
                     <PageKindBadge pageKind={pageKind.page_kind} />
                   </Inline>
                 </Pressable>
@@ -285,7 +285,7 @@ function PageKindPages({
   crawlId,
 }: Readonly<{ pages: ArchitectureNode[]; crawlId: string | null }>) {
   return (
-    <TableRow className="bg-panel-tonal hover:bg-panel-tonal">
+    <TableRow className="bg-surface-sunken hover:bg-surface-sunken">
       <TableCell colSpan={6}>
         {pages.length === 0 ? (
           <QueryState
@@ -310,7 +310,7 @@ function PageKindPages({
                     <ClampText lines={1}>{page.url}</ClampText>
                   </TextLink>
                 ) : (
-                  <ClampText lines={1} className="type-body text-foreground">
+                  <ClampText lines={1} className="type-body text-ink">
                     {page.url}
                   </ClampText>
                 )}
@@ -334,7 +334,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
           <CardHeader>
             <CardTitle>
               <Inline as="span">
-                <Icon icon={Link2} className="text-muted" />
+                <Icon icon={Link2} className="text-ink-muted" />
                 Internal linking
               </Inline>
             </CardTitle>
@@ -374,7 +374,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
           <CardHeader>
             <CardTitle>
               <Inline as="span">
-                <Icon icon={ListTree} className="text-muted" />
+                <Icon icon={ListTree} className="text-ink-muted" />
                 Structure depth
               </Inline>
             </CardTitle>

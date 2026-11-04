@@ -37,7 +37,7 @@ const signupOpen = selfServeSignupOpen();
 
 const NAV_LINK =
   'nav-link website-nav relative inline-flex items-center gap-1 whitespace-nowrap ' +
-  'rounded-[var(--radius-control)] px-3 py-2';
+  'rounded-md px-3 py-2';
 // Log in is the secondary button atom at the 14px control type, on every width.
 const { className: logInClass, ...logInData } = buttonLinkAttributes({ variant: 'soft' });
 const { className: signUpClass, ...signUpData } = buttonLinkAttributes({
@@ -188,7 +188,7 @@ function panelStyle(key: NavDropKey) {
         rel="noreferrer"
         aria-label="CiteLadder on GitHub"
         title="CiteLadder on GitHub"
-        class="nav-link grid size-10 place-items-center rounded-[var(--radius-control)]"
+        class="nav-link grid size-10 place-items-center rounded-md"
       >
         <GitHubMark className="size-5" />
       </a>
@@ -204,7 +204,7 @@ function panelStyle(key: NavDropKey) {
       </div>
       <button
         type="button"
-        class="text-foreground hover:bg-background-alt grid size-10 place-items-center rounded-[var(--radius-control)] lg:hidden"
+        class="text-ink hover:bg-surface-sunken grid size-10 place-items-center rounded-md lg:hidden"
         aria-label="Open menu"
         aria-expanded="false"
         aria-controls="mobile-menu"
@@ -219,7 +219,7 @@ function panelStyle(key: NavDropKey) {
     {/* A sheet, not a dropdown card: it fills the viewport below the bar and pins the two account actions to its foot. */}
     <div
       id="mobile-menu"
-      class="safe-bottom bg-panel flex max-h-[calc(100dvh-var(--marketing-nav-offset))] min-h-[calc(100dvh-var(--marketing-nav-offset))] flex-col overflow-y-auto overscroll-contain px-[var(--site-gutter)] pt-2 pb-4 lg:hidden"
+      class="safe-bottom bg-surface flex max-h-[calc(100dvh-var(--marketing-nav-offset))] min-h-[calc(100dvh-var(--marketing-nav-offset))] flex-col overflow-y-auto overscroll-contain px-[var(--site-gutter)] pt-2 pb-4 lg:hidden"
     >
       <div class="grid">
         {
@@ -234,7 +234,7 @@ function panelStyle(key: NavDropKey) {
               ),
             ];
             return (
-              <div class="border-border-subtle border-b">
+              <div class="border-line border-b">
                 <button
                   type="button"
                   class="mobile-nav-trigger"
@@ -244,7 +244,7 @@ function panelStyle(key: NavDropKey) {
                   {label}
                   <ChevronDown
                     aria-hidden
-                    className="text-muted size-4 transition-transform duration-[var(--motion-normal)]"
+                    className="text-ink-muted size-4 transition-transform duration-[var(--motion-normal)]"
                   />
                 </button>
                 <div id={`acc-${key}`} hidden class="-mx-3 pb-3">
@@ -264,7 +264,7 @@ function panelStyle(key: NavDropKey) {
             <a
               href={href}
               aria-current={path === href ? 'page' : undefined}
-              class="mobile-nav-trigger border-border-subtle border-b"
+              class="mobile-nav-trigger border-line border-b"
             >
               {label}
             </a>

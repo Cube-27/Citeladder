@@ -244,7 +244,7 @@ export function DataTable({
       {footer ? (
         <div
           className={cn(
-            'type-caption border-border-subtle grid gap-1 border-t px-[var(--table-cell-padding-x)] py-2',
+            'type-caption border-line grid gap-1 border-t px-[var(--table-cell-padding-x)] py-2',
             fit.row,
           )}
         >
@@ -311,7 +311,7 @@ const FITS = {
 
 /** The first column stays in view while a wide table scrolls in its frame. */
 const PINNED_FIRST_COLUMN =
-  '[&_tr>:first-child]:sticky [&_tr>:first-child]:left-0 [&_tbody_tr>:first-child]:z-10 [&_tbody_tr>:first-child]:bg-panel [&_thead_tr>:first-child]:z-20';
+  '[&_tr>:first-child]:sticky [&_tr>:first-child]:left-0 [&_tbody_tr>:first-child]:z-10 [&_tbody_tr>:first-child]:bg-surface [&_thead_tr>:first-child]:z-20';
 
 /** The column widths and the header row, with the select-all column first. */
 function DataTableColumns({
@@ -355,7 +355,7 @@ function DataTableHeader({
     <header
       data-data-table-header=""
       className={cn(
-        'border-border-subtle flex min-h-[var(--data-table-header-height)] min-w-0 flex-wrap items-center gap-x-4 border-b',
+        'border-line flex min-h-[var(--data-table-header-height)] min-w-0 flex-wrap items-center gap-x-4 border-b',
         className,
       )}
     >
@@ -432,7 +432,7 @@ function DataTableBody({
  */
 const ROW_HEIGHT = {
   1: 'var(--table-row-height)',
-  2: 'calc(2*var(--table-cell-padding-y)+var(--text-sm--line-height)+var(--text-xs--line-height))',
+  2: 'calc(2*var(--table-cell-padding-y)+var(--text-body-sm--line-height)+var(--text-caption--line-height))',
 } as const;
 
 /** A non-breaking space: a blank line that still takes a line's height. */

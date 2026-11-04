@@ -72,10 +72,7 @@ export function CodeToken({ children }: Readonly<{ children: string }>) {
   return (
     <code
       data-code-token=""
-      className={textRole(
-        'emphasis',
-        'bg-well min-w-0 truncate rounded-[var(--radius-xs)] px-2 py-1',
-      )}
+      className={textRole('emphasis', 'bg-surface-sunken min-w-0 truncate rounded-xs px-2 py-1')}
     >
       {children}
     </code>
@@ -94,7 +91,7 @@ export function InlineFigure({
   ...props
 }: Readonly<ComponentPropsWithoutRef<'span'>>) {
   return (
-    <span {...props} className={cn('font-numeric', className)}>
+    <span {...props} className={cn('font-mono', className)}>
       {children}
     </span>
   );

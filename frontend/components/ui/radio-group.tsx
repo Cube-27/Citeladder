@@ -44,7 +44,7 @@ export function RadioGroup<T extends string>({
         onValueChange={(next) => onValueChange(next as T)}
         aria-label={ariaLabel}
         data-radio-variant="row"
-        className={cn('border-border divide-border-subtle grid divide-y border-y', className)}
+        className={cn('border-line divide-line grid divide-y border-y', className)}
       >
         {options.map((option) => (
           <RadioRow key={option.value} option={option} />
@@ -69,18 +69,18 @@ export function RadioGroup<T extends string>({
         options.map((option) => (
           <label
             key={option.value}
-            className="type-body text-foreground inline-flex min-h-[var(--control-height-md)] items-center gap-2"
+            className="type-body text-ink inline-flex min-h-[var(--control-md)] items-center gap-2"
           >
             <RadioGroupPrimitive.Item
               value={option.value}
               disabled={option.disabled}
-              className="focus-ring group border-border-bold bg-input enabled:hover:border-border-strong enabled:active:bg-active data-[state=checked]:border-accent disabled:bg-disabled disabled:text-muted disabled:border-border-subtle data-[state=checked]:disabled:border-border-subtle grid size-4 shrink-0 place-items-center rounded-full border"
+              className="focus-ring group border-line-control bg-surface enabled:hover:border-ink-muted enabled:active:bg-surface-sunken data-[state=checked]:border-ink disabled:bg-surface-sunken disabled:text-ink-muted disabled:border-line data-[state=checked]:disabled:border-line grid size-4 shrink-0 place-items-center rounded-full border"
             >
               <RadioGroupPrimitive.Indicator>
-                <span className="bg-accent group-disabled:bg-muted block size-2 rounded-full" />
+                <span className="bg-ink group-disabled:bg-ink-muted block size-2 rounded-full" />
               </RadioGroupPrimitive.Indicator>
             </RadioGroupPrimitive.Item>
-            <span className={cn(option.disabled && 'text-muted')}>{option.label}</span>
+            <span className={cn(option.disabled && 'text-ink-muted')}>{option.label}</span>
           </label>
         ))
       )}
@@ -94,15 +94,15 @@ function RadioRow<T extends string>({ option }: Readonly<{ option: RadioOption<T
     <RadioGroupPrimitive.Item
       value={option.value}
       disabled={option.disabled}
-      className="group focus-ring enabled:hover:bg-hover enabled:active:bg-active data-[state=checked]:bg-selected data-[state=checked]:enabled:hover:bg-selected data-[state=checked]:disabled:bg-disabled text-foreground type-control disabled:bg-disabled disabled:text-muted disabled:border-border-subtle data-[state=checked]:disabled:border-border-subtle flex min-h-[var(--menu-item-height)] w-full items-center justify-between gap-3 rounded-[var(--radius-control)] px-2 text-left disabled:cursor-not-allowed"
+      className="group focus-ring enabled:hover:bg-surface-sunken enabled:active:bg-surface-sunken data-[state=checked]:bg-surface-sunken data-[state=checked]:enabled:hover:bg-surface-sunken data-[state=checked]:disabled:bg-surface-sunken text-ink type-control disabled:bg-surface-sunken disabled:text-ink-muted disabled:border-line data-[state=checked]:disabled:border-line flex min-h-[var(--menu-item-height)] w-full items-center justify-between gap-3 rounded-md px-2 text-left disabled:cursor-not-allowed"
     >
       <span className="min-w-0">{option.label}</span>
       <span
         aria-hidden
-        className="border-border-strong group-data-[state=checked]:border-accent group-disabled:border-border-subtle group-data-[state=checked]:group-disabled:border-border-subtle grid size-4 shrink-0 place-items-center rounded-full border"
+        className="border-line group-data-[state=checked]:border-ink group-disabled:border-line group-data-[state=checked]:group-disabled:border-line grid size-4 shrink-0 place-items-center rounded-full border"
       >
         <RadioGroupPrimitive.Indicator>
-          <span className="bg-accent group-disabled:bg-muted block size-2 rounded-full" />
+          <span className="bg-ink group-disabled:bg-ink-muted block size-2 rounded-full" />
         </RadioGroupPrimitive.Indicator>
       </span>
     </RadioGroupPrimitive.Item>
@@ -138,7 +138,7 @@ function RadioChip<T extends string>({ option }: Readonly<{ option: RadioOption<
       // A chip the user clicks is a control: the 32px secondary button face.
       className={cn(
         buttonVariants({ variant: 'secondary' }),
-        'data-[state=checked]:bg-selected data-[state=checked]:text-foreground data-[state=checked]:enabled:hover:bg-selected data-[state=checked]:disabled:bg-disabled data-[state=checked]:disabled:text-muted disabled:cursor-not-allowed disabled:bg-disabled disabled:text-muted disabled:border-border-subtle data-[state=checked]:disabled:border-border-subtle',
+        'data-[state=checked]:bg-surface-sunken data-[state=checked]:text-ink data-[state=checked]:enabled:hover:bg-surface-sunken data-[state=checked]:disabled:bg-surface-sunken data-[state=checked]:disabled:text-ink-muted disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-ink-muted disabled:border-line data-[state=checked]:disabled:border-line',
       )}
     >
       <span aria-hidden className="grid size-3.5 shrink-0 place-items-center">

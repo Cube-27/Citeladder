@@ -111,7 +111,7 @@ function PerceptionState({
 }
 
 function CoverageNote({ coverage }: Readonly<{ coverage: PerceptionCoverage }>) {
-  return <p className={textRole('caption', 'text-muted')}>{coverageLine(coverage)}</p>;
+  return <p className={textRole('caption', 'text-ink-muted')}>{coverageLine(coverage)}</p>;
 }
 
 function Headline({ data }: Readonly<{ data: PerceptionResponse }>) {
@@ -178,7 +178,7 @@ function EntityTable({ entities }: Readonly<{ entities: PerceptionResponse['enti
             <Inline as="span">
               <ClampText>{entity.name}</ClampText>
               {entity.is_brand ? (
-                <span className={textRole('caption', 'text-muted shrink-0')}>You</span>
+                <span className={textRole('caption', 'text-ink-muted shrink-0')}>You</span>
               ) : null}
             </Inline>
           </TableCell>
@@ -268,7 +268,7 @@ function NegativeQuotes({ quotes }: Readonly<{ quotes: PerceptionQuote[] }>) {
             {quotes.map((quote) => (
               <Stack as="li" gap="tight" key={`${quote.execution_id}:${quote.text}`}>
                 <QuoteLink quote={quote} />
-                <Inline as="span" className={textRole('caption', 'text-muted flex-wrap')}>
+                <Inline as="span" className={textRole('caption', 'text-ink-muted flex-wrap')}>
                   <Badge variant="sentiment" value="negative">
                     {themeLabel(quote.theme)}
                   </Badge>

@@ -68,10 +68,7 @@ export function FaqGroups() {
               aria-labelledby={`${groupAnchor(group)}-title`}
               className="cm-faq-group"
             >
-              <h2
-                id={`${groupAnchor(group)}-title`}
-                className="website-feature-heading text-foreground"
-              >
+              <h2 id={`${groupAnchor(group)}-title`} className="website-feature-heading text-ink">
                 {group.heading}
               </h2>
               <div className="mk-faq-list">
@@ -88,7 +85,7 @@ export function FaqGroups() {
                           {' '}
                           <a
                             href={link.href}
-                            className="text-accent-text underline underline-offset-2"
+                            className="text-accent-ink underline underline-offset-2"
                           >
                             {link.label}
                           </a>

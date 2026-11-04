@@ -40,10 +40,10 @@ export function InsightStrip({
           <ReadError {...readErrorProps(query)} fallback="Could not read insights" />
         ) : null}
         {query.isLoading ? (
-          <p className="type-body text-secondary">Loading persisted insights…</p>
+          <p className="type-body text-ink-secondary">Loading persisted insights…</p>
         ) : null}
         {nothingObserved ? (
-          <p className="type-body text-secondary">{nothingObservedLine(data.coverage)}</p>
+          <p className="type-body text-ink-secondary">{nothingObservedLine(data.coverage)}</p>
         ) : null}
         {data?.coverage.notice ? <Alert tone="info">{data.coverage.notice}</Alert> : null}
         {data ? (

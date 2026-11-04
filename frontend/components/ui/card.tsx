@@ -55,10 +55,7 @@ export function CardHeader({
   // The card owns the 16 inset; the header only keeps the 12 heading→content
   // step below it (and a hairline under it when `bordered`), and neither when
   // it is the card's only content.
-  const edge = cn(
-    'not-last:pb-3',
-    bordered && 'border-border-subtle not-last:mb-3 not-last:border-b',
-  );
+  const edge = cn('not-last:pb-3', bordered && 'border-line not-last:mb-3 not-last:border-b');
   if (!actions) {
     return (
       <header {...props} className={cn('flex flex-col gap-1', edge, className)}>

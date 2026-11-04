@@ -100,10 +100,10 @@ function InlineState({ message, icon: Icon, action }: InlineEmpty) {
     <div
       data-query-state="empty"
       data-query-state-inline=""
-      className="flex min-h-[var(--control-height-md)] min-w-0 flex-wrap items-center gap-x-2"
+      className="flex min-h-[var(--control-md)] min-w-0 flex-wrap items-center gap-x-2"
     >
-      {Icon ? <Icon className="text-muted size-4 shrink-0" aria-hidden /> : null}
-      <p className={textRole('body', 'text-muted min-w-0')}>{message}</p>
+      {Icon ? <Icon className="text-ink-muted size-4 shrink-0" aria-hidden /> : null}
+      <p className={textRole('body', 'text-ink-muted min-w-0')}>{message}</p>
       {action}
     </div>
   );
@@ -128,7 +128,7 @@ function BlockBody(props: Exclude<QueryStateProps, InlineEmpty>) {
       return (
         <>
           <div className="flex items-center gap-2">
-            <Icon className="text-muted size-4 shrink-0" aria-hidden />
+            <Icon className="text-ink-muted size-4 shrink-0" aria-hidden />
             <Heading className={textRole('sectionTitle')}>{props.heading}</Heading>
           </div>
           {props.description ? <p className="type-body max-w-[52ch]">{props.description}</p> : null}
@@ -178,7 +178,7 @@ function DelayedSpinner({ label }: Readonly<{ label: string }>) {
   }, [revealed]);
   return (
     <span className={continued ? undefined : 'loading-delayed'}>
-      <Spinner label={revealed ? label : undefined} className="text-muted" />
+      <Spinner label={revealed ? label : undefined} className="text-ink-muted" />
     </span>
   );
 }

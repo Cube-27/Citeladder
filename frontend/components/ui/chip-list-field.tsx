@@ -18,8 +18,8 @@ const sameValue = (a: string, b: string) => a.trim().toLowerCase() === b.trim().
 /** The chip face: the 32px control height, edge and radius; a suggestion's edge is dashed. */
 const chipFaceClasses = (suggested: boolean | undefined, className: string) =>
   cn(
-    'type-control text-foreground inline-flex h-[var(--control-height-md)] max-w-full items-center rounded-[var(--radius-control)] border',
-    suggested ? 'border-border-strong border-dashed' : 'border-border',
+    'type-control text-ink inline-flex h-[var(--control-md)] max-w-full items-center rounded-md border',
+    suggested ? 'border-line border-dashed' : 'border-line',
     className,
   );
 
@@ -51,7 +51,7 @@ function Chip({
           aria-label={`Confirm ${item.value}`}
           disabled={disabled}
           onClick={onConfirm}
-          className="focus-ring text-secondary hover:text-foreground disabled:text-muted grid h-full w-8 shrink-0 place-items-center rounded-[var(--radius-control)]"
+          className="focus-ring text-ink-secondary hover:text-ink disabled:text-ink-muted grid h-full w-8 shrink-0 place-items-center rounded-md"
         >
           <Icon icon={Check} />
         </button>
@@ -61,7 +61,7 @@ function Chip({
         aria-label={`Remove ${item.value}`}
         disabled={disabled}
         onClick={onRemove}
-        className="focus-ring text-secondary hover:text-foreground disabled:text-muted grid h-full w-8 shrink-0 place-items-center rounded-[var(--radius-control)]"
+        className="focus-ring text-ink-secondary hover:text-ink disabled:text-ink-muted grid h-full w-8 shrink-0 place-items-center rounded-md"
       >
         <Icon icon={X} />
       </button>

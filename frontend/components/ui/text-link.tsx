@@ -34,7 +34,7 @@ function textLinkClasses({
   text,
 }: Readonly<{ variant: TextLinkVariant; text: TextLinkText }>) {
   const recipe = cn(
-    'focus-ring text-accent-text rounded-xs underline-offset-2 hover:underline',
+    'focus-ring text-accent-ink rounded-xs underline-offset-2 hover:underline',
     variant === 'external' && 'inline-flex items-center gap-1',
   );
   return text === 'inherit' ? recipe : textRole(text, recipe);

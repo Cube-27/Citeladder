@@ -38,7 +38,11 @@ export function SearchField({
       containerClassName={className}
       className="[appearance:textfield] [&::-webkit-search-cancel-button]:hidden"
       startContent={
-        pending ? <Spinner className="text-muted" /> : <Icon icon={Search} className="text-muted" />
+        pending ? (
+          <Spinner className="text-ink-muted" />
+        ) : (
+          <Icon icon={Search} className="text-ink-muted" />
+        )
       }
       endContentFlush
       endContent={

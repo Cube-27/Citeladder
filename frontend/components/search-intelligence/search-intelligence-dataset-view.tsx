@@ -231,7 +231,7 @@ function RowFields({ row }: Readonly<{ row: SearchIntelligenceRow }>) {
     <dl className={ledgerClasses('open', 'type-body')}>
       {evidenceFields(row, labels, timeZone).map((field) => (
         <Stack key={field.key} gap="tight" className={ledgerItemClasses()}>
-          <dt className="text-muted">{field.label}</dt>
+          <dt className="text-ink-muted">{field.label}</dt>
           <dd className="break-all">{field.value ?? <MissingValue />}</dd>
         </Stack>
       ))}

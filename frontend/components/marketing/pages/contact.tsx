@@ -99,7 +99,7 @@ function ContactForm() {
         aria-live="polite"
         className="grid gap-4"
       >
-        <h2 id="contact-sent-title" className="website-feature-heading text-foreground">
+        <h2 id="contact-sent-title" className="website-feature-heading text-ink">
           Message sent
         </h2>
         <p className="website-body">
@@ -178,7 +178,7 @@ function ContactForm() {
       </div>
       <div ref={turnstileContainer} />
       {failure && (
-        <div ref={status} tabIndex={-1} role="alert" className="website-body text-danger-text">
+        <div ref={status} tabIndex={-1} role="alert" className="website-body text-negative">
           {failure}
           <a href={`mailto:${CONTACT_EMAIL}`} className="underline">
             {CONTACT_EMAIL}
@@ -220,17 +220,17 @@ export function ContactPage() {
           <div className="cm-contact-copy">
             {/* Centred on a phone like every opening band (owner, 2026-10-31). */}
             <header className="grid justify-items-center gap-5 text-center sm:justify-items-start sm:text-start">
-              <h1 className="website-page-title text-foreground">Talk to the CiteLadder team</h1>
+              <h1 className="website-page-title text-ink">Talk to the CiteLadder team</h1>
               <p className="website-hero-lead">
                 Ask a question, book a demo or check whether CiteLadder fits your team.
               </p>
             </header>
             <div className="grid gap-5">
-              <h2 className="website-feature-heading text-foreground">What happens next</h2>
+              <h2 className="website-feature-heading text-ink">What happens next</h2>
               <ol className="cm-steps">
                 {NEXT_STEPS.map((step) => (
                   <li key={step.title}>
-                    <h3 className="website-feature-heading text-foreground">{step.title}</h3>
+                    <h3 className="website-feature-heading text-ink">{step.title}</h3>
                     <p className="website-body">{step.body}</p>
                   </li>
                 ))}
@@ -247,7 +247,7 @@ export function ContactPage() {
               <div className="grid gap-6 pt-6">
                 {CONTACT_PAGE.sections.map((section) => (
                   <section key={section.id} id={section.id} className="grid gap-3">
-                    <h2 className="website-feature-heading text-foreground">{section.title}</h2>
+                    <h2 className="website-feature-heading text-ink">{section.title}</h2>
                     {section.paragraphs?.map((paragraph) => (
                       <p key={paragraph} className="website-body">
                         <Linkify text={paragraph} />

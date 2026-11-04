@@ -257,10 +257,7 @@ const NEXT_ACTION_COPY: Record<
 
 export function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <Card
-      aria-labelledby="next-action"
-      className="text-foreground flex h-full flex-col justify-between"
-    >
+    <Card aria-labelledby="next-action" className="text-ink flex h-full flex-col justify-between">
       <CardHeader
         actions={
           <span className={textRole('label')}>

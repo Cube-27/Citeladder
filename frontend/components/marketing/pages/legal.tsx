@@ -36,7 +36,7 @@ export function LegalDocumentView({ document }: Readonly<{ document: LegalDocume
   return (
     <main id="main">
       <PageHero title={document.title} lead={document.description}>
-        <p className="website-label text-muted mt-6 tabular-nums">
+        <p className="website-label text-ink-muted mt-6 tabular-nums">
           Last updated · <time dateTime={updated}>{formatUpdated(updated)}</time>
         </p>
       </PageHero>

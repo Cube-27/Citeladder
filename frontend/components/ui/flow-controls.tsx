@@ -11,8 +11,8 @@ import { Input } from '@/components/ui/input';
  * `Input` and `Button` stay as they are; only these screens compose these.
  */
 
-const FLOW_FIELD_FRAME = 'h-[var(--control-height-xl)]';
-const FLOW_FIELD_TEXT = 'leading-[calc(var(--control-height-xl)_-_2px)]';
+const FLOW_FIELD_FRAME = 'h-[var(--control-lg)]';
+const FLOW_FIELD_TEXT = 'leading-[calc(var(--control-lg)_-_2px)]';
 
 type FlowInputProps = Omit<
   ComponentProps<typeof Input>,

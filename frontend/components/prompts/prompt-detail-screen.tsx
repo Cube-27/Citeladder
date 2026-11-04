@@ -147,7 +147,7 @@ function HistoryCard({ history }: Readonly<{ history: PromptHistory }>) {
                 {
                   label: 'Owned citation rate',
                   values: ownedCitationValues(history.points),
-                  strokeClass: 'stroke-chart-2',
+                  strokeClass: 'stroke-data-2',
                 },
               ]}
               events={implementationEvents(history.implementations, timeZone)}

@@ -65,7 +65,7 @@ export function WorkspaceChooser() {
               onSelect={() => enter(workspace)}
               trailing={<AccessBadge workspaceId={workspace.id} />}
             >
-              <span className="type-body-strong text-foreground truncate">{workspace.name}</span>
+              <span className="type-body-strong text-ink truncate">{workspace.name}</span>
               <span className="type-caption">
                 {workspace.role === 'owner' ? 'Your workspace' : roleLabel(workspace.role)}
               </span>

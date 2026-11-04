@@ -90,7 +90,7 @@ function PagerSummary({
     return (
       // The figure face holds every digit to one width, so the summary does
       // not change width as the reader pages.
-      <span className="type-caption font-numeric" aria-live="polite">
+      <span className="type-caption font-mono" aria-live="polite">
         {range.from}–{range.to}
         {range.total === undefined ? null : ` of ${formatCount(range.total)}`} {range.noun}
       </span>
@@ -98,7 +98,7 @@ function PagerSummary({
   }
   if (!page) return <span />;
   return (
-    <span className="type-caption font-numeric" aria-live="polite">
+    <span className="type-caption font-mono" aria-live="polite">
       Page {page}
       {pageCount ? ` of ${pageCount}` : null}
     </span>
@@ -121,7 +121,7 @@ function PageSizeSelect({ pageSize, noun }: Readonly<{ pageSize: PagerPageSize; 
           value: String(size),
           label: String(size),
         }))}
-        className="font-numeric w-20"
+        className="w-20 font-mono"
       />
     </div>
   );
@@ -177,7 +177,7 @@ export function Pager({
     <div
       className={cn(
         'flex flex-wrap items-center justify-between gap-3',
-        frame === 'table' && 'border-border border-t px-[var(--table-cell-padding-x)] py-2',
+        frame === 'table' && 'border-line border-t px-[var(--table-cell-padding-x)] py-2',
         className,
       )}
     >

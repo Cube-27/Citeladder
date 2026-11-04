@@ -67,7 +67,7 @@ export function PageKindScores({
             <TableCell className="whitespace-nowrap">
               <PageKindBadge pageKind={row.page_kind} />
             </TableCell>
-            <TableCell numeric className="text-secondary">
+            <TableCell numeric className="text-ink-secondary">
               {row.analyzed_count}
             </TableCell>
             <TableCell numeric className={scoreTextClass(row.web_fundamentals_score)}>

@@ -58,7 +58,7 @@ export function OutputCanvas({
               section.heading === null ? null : (
                 <li key={section.start}>
                   <Pressable
-                    className={textRole('caption', 'hover:text-accent-text w-auto')}
+                    className={textRole('caption', 'hover:text-accent-ink w-auto')}
                     onClick={() =>
                       document
                         .getElementById(sectionId(revision.id, index))

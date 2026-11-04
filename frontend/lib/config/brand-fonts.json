@@ -1,40 +1,40 @@
 {
   "repository": "Cube-27/cube27-fonts",
-  "revision": "8b0146c1033075d3a7092b1ce2ec71ee6f93be17",
+  "revision": "8760c6313a683d427a923a434689f529ee006411",
   "faces": {
-    "text": {
-      "family": "Switzer",
-      "file": "Switzer-Variable.woff2",
+    "display": {
+      "family": "Cal Sans",
+      "file": "CalSans.woff2",
       "preload": ["app", "public"],
-      "weights": "300 500",
+      "weights": "400",
       "fallback": {
-        "sizeAdjust": "102.31%",
-        "ascentOverride": "95.79%",
-        "descentOverride": "24.44%",
-        "lineGapOverride": "8.8%"
-      }
-    },
-    "heading": {
-      "family": "TASA Orbiter",
-      "file": "TASAOrbiter-Variable.woff2",
-      "preload": ["app", "public"],
-      "weights": "400 500",
-      "fallback": {
-        "sizeAdjust": "96.34%",
-        "ascentOverride": "97.57%",
-        "descentOverride": "26.99%",
+        "sizeAdjust": "100.19%",
+        "ascentOverride": "99.81%",
+        "descentOverride": "29.94%",
         "lineGapOverride": "0%"
       }
     },
-    "figure": {
-      "family": "JetBrains Mono",
-      "file": "JetBrainsMono-Variable.woff2",
-      "preload": ["app"],
-      "weights": "300 500",
+    "sans": {
+      "family": "Geist",
+      "file": "Geist-Variable.woff2",
+      "preload": ["app", "public"],
+      "weights": "400 600",
       "fallback": {
-        "sizeAdjust": "107.91%",
-        "ascentOverride": "94.52%",
-        "descentOverride": "27.8%",
+        "sizeAdjust": "102.12%",
+        "ascentOverride": "98.41%",
+        "descentOverride": "28.89%",
+        "lineGapOverride": "0%"
+      }
+    },
+    "mono": {
+      "family": "Geist Mono",
+      "file": "GeistMono-Variable.woff2",
+      "preload": ["app"],
+      "weights": "400 600",
+      "fallback": {
+        "sizeAdjust": "100%",
+        "ascentOverride": "100.5%",
+        "descentOverride": "29.5%",
         "lineGapOverride": "0%"
       }
     }

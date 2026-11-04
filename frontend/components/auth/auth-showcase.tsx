@@ -107,8 +107,8 @@ function useHeld(target: RefObject<HTMLElement | null>): boolean {
 }
 
 /**
- * The account-access showcase: one product feature per slide over a light
- * grained field. Every slide shares one grid cell, so the stage and caption
+ * The account-access showcase: one product feature per slide on a flat
+ * `surface-sunken` field. Every slide shares one grid cell, so the stage and caption
  * keep the tallest slide's size and nothing moves between slides. It turns
  * slowly, pauses while hovered or focused, and never turns on its own under
  * reduced motion; the dots and the pause control are keyboard reachable.

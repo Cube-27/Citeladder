@@ -4,11 +4,11 @@ import { cva } from 'class-variance-authority';
 export const alertVariants = cva('type-body flex items-start gap-2', {
   variants: {
     tone: {
-      danger: 'text-danger-text',
-      warning: 'text-warning-text',
-      success: 'text-success-text',
-      info: 'text-info-text',
-      neutral: 'text-secondary',
+      danger: 'text-negative',
+      warning: 'text-warning',
+      success: 'text-positive',
+      info: 'text-info',
+      neutral: 'text-ink-secondary',
     },
   },
   defaultVariants: {

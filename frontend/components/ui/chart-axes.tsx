@@ -55,7 +55,7 @@ export function ChartAxes({
           textAnchor="end"
           dominantBaseline="middle"
           fontSize={TICK_FONT_SIZE}
-          className="fill-muted font-numeric"
+          className="fill-ink-muted font-mono"
         >
           {tick.text}
         </text>
@@ -69,7 +69,7 @@ export function ChartAxes({
         y2={y + innerHeight}
         strokeWidth={1}
         vectorEffect="non-scaling-stroke"
-        className="stroke-border"
+        className="stroke-line"
       />
       <line
         x1={x}
@@ -78,7 +78,7 @@ export function ChartAxes({
         y2={y + innerHeight}
         strokeWidth={1}
         vectorEffect="non-scaling-stroke"
-        className="stroke-border"
+        className="stroke-line"
       />
       {xTicks.map((tick) => (
         <text
@@ -87,7 +87,7 @@ export function ChartAxes({
           y={y + innerHeight + TICK_FONT_SIZE + 3}
           textAnchor={tick.anchor}
           fontSize={TICK_FONT_SIZE}
-          className="fill-muted"
+          className="fill-ink-muted"
         >
           {tick.text}
         </text>
@@ -98,7 +98,7 @@ export function ChartAxes({
           y={height - 1}
           textAnchor="middle"
           fontSize={TICK_FONT_SIZE}
-          className="fill-secondary"
+          className="fill-ink-secondary"
         >
           {xAxisLabel}
         </text>
@@ -110,7 +110,7 @@ export function ChartAxes({
           y={y + innerHeight / 2}
           textAnchor="middle"
           fontSize={TICK_FONT_SIZE}
-          className="fill-secondary"
+          className="fill-ink-secondary"
         >
           {yAxisLabel}
         </text>

@@ -2,8 +2,8 @@
 
    Every marketing page is one grid of cells, frame columns by band rows,
    and every element sits in a cell with the same spacing and padding. The
-   geometry is the `--site-*` tokens in globals.css and the lines are
-   `--color-site-line`: subtle and solid, never dark, faded or gradient.
+   geometry is the `--site-*` roles declared below and the lines are
+   `--color-line`: subtle and solid, never dark, faded or gradient.
    MarketingLayout puts `.site-frame` on every page, so every rule here sits
    under it and the docs site, which has no frame, is untouched.
 
@@ -32,13 +32,43 @@
      from its lines instead of a cell inset (`ProductShot`).
    - `.site-chip`: a small white label chip aligned with the copy. */
 
+/* Website layout roles until PR 6 replaces the site grid. */
+[data-public-surface] {
+  --site-frame-inset: var(--site-gutter);
+  --site-measure-display: 960px;
+  --site-measure-reading: var(--container-prose);
+  --site-cell-inset: 32px;
+  --site-cell-y: 64px;
+  --site-band-y: 96px;
+  --site-card-gap: 8px;
+  --site-card-pad: 32px;
+}
+
+@media (max-width: 63.99rem) {
+  [data-public-surface] {
+    --site-cell-y: 48px;
+    --site-band-y: 64px;
+  }
+}
+
+@media (max-width: 39.99rem) {
+  [data-public-surface] {
+    --site-frame-inset: 4px;
+    --site-cell-inset: 16px;
+    --site-cell-y: 40px;
+    --site-band-y: 48px;
+    --site-card-gap: 4px;
+    --site-card-pad: 20px;
+  }
+}
+
 .site-frame {
   /* The page's content starts under the fixed header bar. */
   --site-frame-top: var(--marketing-nav-offset);
 
   position: relative;
   overflow-x: clip;
-  background: var(--color-site-ground);
+  background: var(--color-surface);
 }
 
 .site-frame::before,
@@ -53,20 +83,20 @@
 .site-frame::before {
   right: 0;
   left: 0;
-  border-top: 1px solid var(--color-site-line);
+  border-top: 1px solid var(--color-line);
 }
 
 .site-frame::after {
   bottom: 0;
   inset-inline: max(var(--site-frame-inset), calc(50% - 40rem + var(--site-frame-inset)));
-  border-inline: 1px solid var(--color-site-line);
+  border-inline: 1px solid var(--color-line);
 }
 
 /* Bands ──────────────────────────────────────────────────────────────────── */
 
 .site-frame .site-band {
   padding-block: var(--site-band-y);
-  border-top: 1px solid var(--color-site-line);
+  border-top: 1px solid var(--color-line);
 }
 
 /* Structured-data scripts can precede it, so "first" skips them. */
@@ -77,7 +107,7 @@
 /* Every band is the one neutral ground; the closing band keeps its mint
    field and lattice. */
 .site-frame [data-citeladder-section='soft']:not(.marketing-closing-band) {
-  background-color: var(--color-site-ground);
+  background-color: var(--color-surface);
 }
 
 .site-frame :is(.site-wrap, .site-wrap-cards) {
@@ -113,11 +143,9 @@
     .cm-access,
     .cm-contact-panel
   ) {
-  border-radius: var(--radius-card);
-  background: var(--color-panel);
-  box-shadow:
-    0 0 0 1px var(--color-site-line),
-    var(--shadow-site-chip);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-line);
 }
 
 .site-frame
@@ -136,15 +164,13 @@
 
 /* Cards stay white on hover; the ring darkens a step instead. */
 .site-frame :is(a.site-card, .mk-related-card, .ed-ledger a, .cp-tool-row):hover {
-  background: var(--color-panel);
-  box-shadow:
-    0 0 0 1px var(--color-site-divider),
-    var(--shadow-site-chip);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-line);
 }
 
 /* A mark inside a white card steps down to the soft tone. */
 .site-frame :is(.mk-related-card, .cp-tool-row) .nav-row-icon {
-  background: var(--color-background-alt);
+  background: var(--color-surface-sunken);
 }
 
 .site-frame .site-cell-card {
@@ -155,10 +181,8 @@
   width: fit-content;
   padding: 0.25rem 0.5rem;
   border-radius: var(--radius-xs);
-  background: var(--color-panel);
-  box-shadow:
-    var(--shadow-site-chip),
-    0 0 0 1px var(--color-site-line);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-line);
 }
 
 /* Splits and rows ────────────────────────────────────────────────────────── */
@@ -187,7 +211,7 @@
   top: calc(var(--site-cell-y) * -1);
   right: calc(var(--site-cell-inset) * -1);
   left: calc(var(--site-cell-inset) * -1);
-  border-top: 1px solid var(--color-site-line);
+  border-top: 1px solid var(--color-line);
   pointer-events: none;
 }
 
@@ -207,7 +231,7 @@
     bottom: calc(var(--site-cell-y) * -1);
     left: calc(var(--site-cell-inset) * -1);
     border-top: 0;
-    border-left: 1px solid var(--color-site-line);
+    border-left: 1px solid var(--color-line);
   }
 }
 
@@ -225,6 +249,6 @@
   top: calc(var(--site-cell-y) * -1);
   right: calc(var(--site-cell-inset) * -1);
   left: calc(var(--site-cell-inset) * -1);
-  border-top: 1px solid var(--color-site-line);
+  border-top: 1px solid var(--color-line);
   pointer-events: none;
 }

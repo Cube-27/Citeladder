@@ -193,7 +193,7 @@ function ProgressNotices({
 }>) {
   return (
     <>
-      {errorMessage ? <p className="type-body text-danger-text">{errorMessage}</p> : null}
+      {errorMessage ? <p className="type-body text-negative">{errorMessage}</p> : null}
       {cancelNotice ? <MutationNotice notice={cancelNotice} onRetry={onCancelRetry} /> : null}
       {rerunNotice ? <MutationNotice notice={rerunNotice} onRetry={onRerunRetry} /> : null}
     </>

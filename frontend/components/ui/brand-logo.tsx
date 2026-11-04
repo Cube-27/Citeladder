@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 const PLACEMENT = {
   mark: { pixels: 16, className: 'size-4 rounded-xs type-badge' },
   row: { pixels: 20, className: 'size-5 rounded-xs type-badge' },
-  identity: { pixels: 40, className: 'size-10 rounded-[var(--radius-control)] type-figure-sm' },
+  identity: { pixels: 40, className: 'size-10 rounded-md type-figure-sm' },
 } as const;
 
 export type BrandLogoPlacement = keyof typeof PLACEMENT;
@@ -73,14 +73,14 @@ export function BrandLogo({
           height={spec.pixels}
           // The plate stays: fetched marks are frequently transparent with dark
           // glyphs, and the app-shell rows these sit in are tonal, not white.
-          className="bg-panel size-full object-contain p-0.5"
+          className="bg-surface size-full object-contain p-0.5"
           onError={() => setFailed((prev) => ({ ...prev, [src]: true }))}
         />
       ) : (
         // Only the initials fallback gets a ground: it is generated text, not
         // a logo asset. Brand marks are transparent and render on the surface
         // they sit on.
-        <span className="bg-well text-secondary grid size-full place-items-center">
+        <span className="bg-surface-sunken text-ink-secondary grid size-full place-items-center">
           {brandInitials(name)}
         </span>
       )}

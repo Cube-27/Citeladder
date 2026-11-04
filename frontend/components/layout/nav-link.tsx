@@ -46,21 +46,21 @@ export function NavLink({
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'shell-link focus-ring group relative flex h-[var(--nav-item-height)] items-center gap-2 rounded-[var(--radius-control)] px-3 transition-colors duration-[var(--motion-fast)]',
+        'shell-link focus-ring group relative flex h-[var(--nav-item-height)] items-center gap-2 rounded-md px-3 transition-colors duration-[var(--motion-fast)]',
         // The current destination is the shared filled selected pill, the
         // same face as a selected tab or segment (owner, 2026-11-04).
         active
-          ? textRole('control', 'bg-selected text-foreground active:bg-active')
+          ? textRole('control', 'bg-surface-sunken text-ink active:bg-surface-sunken')
           : textRole(
               'control',
-              'text-secondary hover:bg-hover active:bg-active hover:text-foreground',
+              'text-ink-secondary hover:bg-surface-sunken active:bg-surface-sunken hover:text-ink',
             ),
       )}
     >
       <Icon
         className={cn(
           'size-4 shrink-0 transition-colors duration-[var(--motion-fast)]',
-          active ? 'text-foreground' : 'text-muted group-hover:text-foreground',
+          active ? 'text-ink' : 'text-ink-muted group-hover:text-ink',
         )}
         aria-hidden
       />

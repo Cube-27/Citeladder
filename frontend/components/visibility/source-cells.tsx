@@ -20,7 +20,7 @@ export function SourceName({
       <span className="grid min-w-0">
         <ClampText lines={secondary ? 1 : 2}>{name}</ClampText>
         {secondary ? (
-          <ClampText lines={1} className={textRole('caption', 'text-secondary')}>
+          <ClampText lines={1} className={textRole('caption', 'text-ink-secondary')}>
             {secondary}
           </ClampText>
         ) : null}

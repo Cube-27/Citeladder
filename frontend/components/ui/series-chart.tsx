@@ -41,9 +41,9 @@ type SeriesPoint = {
 export type ChartSeries = {
   key: string;
   label: string;
-  /** Stroke class from the categorical chart tokens, e.g. `stroke-chart-2`. */
+  /** Stroke class from the categorical chart tokens, e.g. `stroke-data-2`. */
   strokeClass: string;
-  /** Matching fill for the legend swatch, e.g. `bg-chart-2`. */
+  /** Matching fill for the legend swatch, e.g. `bg-data-2`. */
   swatchClass: string;
   /** The same token as a value, for the chart's own colour props. */
   color: string;

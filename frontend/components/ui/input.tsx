@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 
 /** Fields share a hairline boundary whose colour shows keyboard focus. */
 const inputClasses =
-  'focus-input h-[var(--control-height-md)] w-full rounded-[var(--radius-control)] border border-border-bold bg-input px-3 text-field text-foreground leading-[calc(var(--control-height-md)_-_2px)] transition-[border-color,background-color] placeholder:text-muted enabled:hover:border-muted aria-invalid:border-danger aria-invalid:enabled:hover:border-danger disabled:cursor-not-allowed disabled:bg-disabled disabled:text-muted disabled:border-border-subtle';
+  'focus-input h-[var(--control-md)] w-full rounded-md border border-line-control bg-surface px-3 text-body-sm text-ink leading-[calc(var(--control-md)_-_2px)] transition-[border-color,background-color] placeholder:text-ink-muted enabled:hover:border-ink-muted aria-invalid:border-negative aria-invalid:enabled:hover:border-negative disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-ink-muted disabled:border-line';
 
 /**
  * The roomier field of the public website's forms. The product field —
@@ -16,7 +16,7 @@ const inputClasses =
  */
 const inputSizes = {
   md: '',
-  lg: 'h-[var(--control-height-lg)] px-3 leading-[calc(var(--control-height-lg)_-_2px)]',
+  lg: 'h-[var(--control-md)] px-3 leading-[calc(var(--control-md)_-_2px)]',
 } as const;
 
 /**
@@ -30,8 +30,8 @@ const inputWidths = {
 } as const;
 
 const adornedLineHeights = {
-  md: 'leading-[calc(var(--control-height-md)_-_2px)]',
-  lg: 'leading-[calc(var(--control-height-lg)_-_2px)]',
+  md: 'leading-[calc(var(--control-md)_-_2px)]',
+  lg: 'leading-[calc(var(--control-md)_-_2px)]',
 } as const;
 
 export function Input({
@@ -81,20 +81,20 @@ export function Input({
   return (
     <div
       className={cn(
-        'focus-frame bg-input has-[[aria-invalid=true]]:border-danger has-[[aria-invalid=true]]:has-[:enabled]:hover:border-danger flex h-[var(--control-height-md)] w-full items-center gap-2 rounded-[var(--radius-control)] px-3 border border-border-bold transition-[border-color,background-color] has-[:enabled]:hover:border-muted',
-        size === 'lg' && 'h-[var(--control-height-lg)] px-3',
-        props.disabled && 'cursor-not-allowed bg-disabled text-muted border-border-subtle',
+        'focus-frame bg-surface has-[[aria-invalid=true]]:border-negative has-[[aria-invalid=true]]:has-[:enabled]:hover:border-negative flex h-[var(--control-md)] w-full items-center gap-2 rounded-md px-3 border border-line-control transition-[border-color,background-color] has-[:enabled]:hover:border-ink-muted',
+        size === 'lg' && 'h-[var(--control-md)] px-3',
+        props.disabled && 'cursor-not-allowed bg-surface-sunken text-ink-muted border-line',
         endContentFlush && 'pe-1',
         containerClassName,
       )}
     >
       {startContent ? (
-        <span className="text-muted flex shrink-0 items-center">{startContent}</span>
+        <span className="text-ink-muted flex shrink-0 items-center">{startContent}</span>
       ) : null}
       <input
         ref={ref}
         className={cn(
-          'placeholder:text-muted min-w-0 flex-1 self-stretch bg-transparent text-field text-foreground disabled:cursor-not-allowed disabled:text-muted',
+          'placeholder:text-ink-muted min-w-0 flex-1 self-stretch bg-transparent text-body-sm text-ink disabled:cursor-not-allowed disabled:text-ink-muted',
           // Match the frame's control height so selections fill the pill.
           adornedLineHeights[size],
           className,
@@ -127,7 +127,7 @@ export function FieldEndButton({
   return (
     <Pressable
       data-field-end-target=""
-      className="text-muted enabled:hover:bg-hover enabled:hover:text-foreground enabled:active:bg-active grid size-[var(--field-end-target)] place-items-center"
+      className="text-ink-muted enabled:hover:bg-surface-sunken enabled:hover:text-ink enabled:active:bg-surface-sunken grid size-[var(--field-end-target)] place-items-center"
       disabled={disabled}
       onClick={onClick}
       aria-label={label}

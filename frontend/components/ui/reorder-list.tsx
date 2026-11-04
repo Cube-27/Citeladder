@@ -94,13 +94,13 @@ function ReorderRow({
         if (!pending) onDropped(event.dataTransfer.getData(ROW_DRAG_TYPE));
       }}
       className={cn(
-        'hover:bg-hover active:bg-active desktop:grid-cols-[auto_minmax(0,1fr)_auto] desktop:items-center grid gap-3 py-3 transition-colors',
+        'hover:bg-surface-sunken active:bg-surface-sunken desktop:grid-cols-[auto_minmax(0,1fr)_auto] desktop:items-center grid gap-3 py-3 transition-colors',
         dragging && 'opacity-60',
       )}
     >
       <div className="flex items-center gap-2">
-        <Icon icon={GripVertical} className="text-muted hover:text-foreground cursor-grab" />
-        <span className={textRole('label', 'font-numeric w-5 text-center')}>{index + 1}</span>
+        <Icon icon={GripVertical} className="text-ink-muted hover:text-ink cursor-grab" />
+        <span className={textRole('label', 'font-mono w-5 text-center')}>{index + 1}</span>
       </div>
       <div className="min-w-0">{item.content}</div>
       <div className="flex items-center justify-end gap-2">

@@ -102,7 +102,7 @@ function ChatHistory({
 
   return (
     <section aria-labelledby="agent-chat-history" className="flex min-h-0 flex-col gap-2">
-      <h2 id="agent-chat-history" className={textRole('label', 'text-secondary px-3 pt-2')}>
+      <h2 id="agent-chat-history" className={textRole('label', 'text-ink-secondary px-3 pt-2')}>
         Chats
       </h2>
       <SearchField
@@ -173,13 +173,13 @@ function ChatRows({
               onClick={onNavigate}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'focus-ring grid gap-0.5 rounded-[var(--radius-control)] border px-3 py-2',
+                'focus-ring grid gap-0.5 rounded-md border px-3 py-2',
                 active
-                  ? 'border-transparent bg-selected text-foreground active:bg-active'
-                  : 'hover:bg-hover active:bg-active border-transparent text-secondary',
+                  ? 'border-transparent bg-surface-sunken text-ink active:bg-surface-sunken'
+                  : 'hover:bg-surface-sunken active:bg-surface-sunken border-transparent text-ink-secondary',
               )}
             >
-              <span className={textRole('label', 'truncate text-foreground')}>{chat.title}</span>
+              <span className={textRole('label', 'truncate text-ink')}>{chat.title}</span>
               <ChatMeta chat={chat} />
             </Link>
           </li>
@@ -195,7 +195,7 @@ function ChatMeta({ chat }: Readonly<{ chat: AgentChatSummary }>) {
   if (chat.running)
     return (
       <span className={textRole('caption', 'flex items-center gap-2')}>
-        <Spinner className="text-muted" />
+        <Spinner className="text-ink-muted" />
         Working…
       </span>
     );

@@ -123,7 +123,7 @@ export function EnginesCard({
                 {engineLabel(row.logical_engine) || row.logical_engine}
               </ClampText>
               {productModelLabel(row.logical_engine, row.transport_model) ? (
-                <ClampText lines={1} className={textRole('caption', 'text-secondary')}>
+                <ClampText lines={1} className={textRole('caption', 'text-ink-secondary')}>
                   {productModelLabel(row.logical_engine, row.transport_model)}
                 </ClampText>
               ) : null}

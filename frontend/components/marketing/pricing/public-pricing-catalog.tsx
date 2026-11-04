@@ -135,15 +135,15 @@ function PlanCard({
   return (
     <article className={cn('cm-plan', highlighted && 'cm-plan-highlighted')}>
       <div className="cm-plan-head">
-        <h3 className="website-feature-heading text-foreground">{plan.name}</h3>
+        <h3 className="website-feature-heading text-ink">{plan.name}</h3>
         <p className="website-body">{presentation?.blurb ?? plan.description}</p>
       </div>
       <div className="cm-plan-price">
-        <p className="website-data-display text-foreground">
+        <p className="website-data-display text-ink">
           {priceLabel(price, catalog.currency_minor_units)}
         </p>
         {price.kind === 'price' && (
-          <p className="website-label text-muted">per month · {taxNote(catalog.currency)}</p>
+          <p className="website-label text-ink-muted">per month · {taxNote(catalog.currency)}</p>
         )}
       </div>
       <PlanAction plan={plan} href={href} highlighted={highlighted} />
@@ -187,17 +187,17 @@ function ExtraRow({
   return (
     <li className="cm-extra">
       <div className="cm-extra-copy">
-        <h3 className="website-feature-heading text-foreground">{entry.name}</h3>
+        <h3 className="website-feature-heading text-ink">{entry.name}</h3>
         <p className="website-body">{entry.description}</p>
       </div>
       <div className="cm-extra-price">
-        <p className="website-body text-foreground">
+        <p className="website-body text-ink">
           {entry.unit_price
             ? formatMoney(entry.unit_price, catalog.currency_minor_units)
             : 'Not yet priced'}
         </p>
         {entry.unit_price ? (
-          <p className="website-label text-muted">
+          <p className="website-label text-ink-muted">
             one-time · {taxNote(catalog.currency)} · usable for {entry.expiry_days} days while your
             plan is active
           </p>
@@ -209,7 +209,7 @@ function ExtraRow({
             Choose {entry.name}
           </a>
         ) : (
-          <p className="website-label text-muted">Unavailable</p>
+          <p className="website-label text-ink-muted">Unavailable</p>
         )}
       </div>
     </li>
@@ -235,7 +235,7 @@ function ByokSwitch({
         <label htmlFor={`${id}-input`} className="cm-byok-label">
           {BYOK_SWITCH_LABEL}
         </label>
-        <span id={`${id}-hint`} className="website-label text-muted">
+        <span id={`${id}-hint`} className="website-label text-ink-muted">
           {BYOK_DISCLOSURE}
         </span>
       </span>
@@ -268,7 +268,7 @@ export function PublicPricingCatalog({
               window.history.replaceState(null, '', url);
             }}
           />
-          <p className="website-label text-muted cm-plans-currency">
+          <p className="website-label text-ink-muted cm-plans-currency">
             Prices shown in {catalog.currency}
             {catalog.currency === 'INR' ? ', exclusive of GST' : ''}. Your billing country sets the
             final currency and tax, confirmed in the app before payment.
@@ -286,7 +286,7 @@ export function PublicPricingCatalog({
               />
             ))}
           </div>
-          <p className="website-label text-muted">
+          <p className="website-label text-ink-muted">
             Provider usage may be billed separately from your CiteLadder plan. Review the selected
             usage option and its costs before starting a run.
           </p>

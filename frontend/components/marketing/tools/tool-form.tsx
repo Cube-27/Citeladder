@@ -109,7 +109,7 @@ export function ToolForm({
           </Button>
         </div>
         {error && (
-          <p role="alert" className="text-danger-text website-body">
+          <p role="alert" className="text-negative website-body">
             {error}
           </p>
         )}

@@ -27,8 +27,8 @@ const { item, path, compact = false, plain = false } = Astro.props;
 const external = 'external' in item && item.external === true;
 const icon = !plain && hasNavIcon(item.href);
 const ROW =
-  'nav-row group flex items-start gap-3 rounded-[var(--radius-control)] px-3 py-2.5 ' +
-  'transition-colors duration-[var(--motion-normal)] hover:bg-background-alt focus-visible:bg-background-alt';
+  'nav-row group flex items-start gap-3 rounded-md px-3 py-2.5 ' +
+  'transition-colors duration-[var(--motion-normal)] hover:bg-surface-sunken focus-visible:bg-surface-sunken';
 ---
 
 {
@@ -45,7 +45,7 @@ const ROW =
           {!compact && <span class="nav-row-desc">{item.desc}</span>}
         </span>
       </span>
-      <ArrowUpRight className="text-muted mt-0.5 size-3.5 shrink-0" aria-hidden />
+      <ArrowUpRight className="text-ink-muted mt-0.5 size-3.5 shrink-0" aria-hidden />
       <span class="sr-only">(opens in a new tab)</span>
     </a>
   ) : (

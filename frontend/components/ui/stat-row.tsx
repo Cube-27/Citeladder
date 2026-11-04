@@ -124,13 +124,13 @@ export function StatRow({
       // four sides: the segments keep their 12 above and below, and the row
       // pulls back by that much so the first figure starts where the card's
       // other content would.
-      className="divide-border-subtle -my-3 grid min-w-0 divide-y"
+      className="divide-line -my-3 grid min-w-0 divide-y"
     >
       {rows.map((row) => (
         <dl
           key={row.map((segment) => segment.key).join('|')}
           className={cn(
-            'divide-border-subtle grid min-w-0 divide-y',
+            'divide-line grid min-w-0 divide-y',
             'desktop:divide-x desktop:divide-y-0',
             DESKTOP_COLUMNS[columns],
           )}
@@ -174,8 +174,8 @@ function statSelectionClasses(selected: boolean) {
   return cn(
     'transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]',
     selected
-      ? 'bg-selected text-foreground active:bg-active'
-      : 'text-secondary hover:bg-hover hover:text-foreground active:bg-active',
+      ? 'bg-surface-sunken text-ink active:bg-surface-sunken'
+      : 'text-ink-secondary hover:bg-surface-sunken hover:text-ink active:bg-surface-sunken',
   );
 }
 
@@ -193,7 +193,7 @@ function Segment({ segment }: Readonly<{ segment: StatSegment }>) {
         // too, so its label never touches the selected pill's edge.
         pressable &&
           cn(
-            'relative rounded-[var(--radius-control)] px-4 desktop:first:ps-4 desktop:last:pe-4',
+            'relative rounded-md px-4 desktop:first:ps-4 desktop:last:pe-4',
             statSelectionClasses(segment.selected ?? false),
           ),
       )}
@@ -232,7 +232,7 @@ function SegmentLabel({ segment, className }: SegmentPart) {
       )}
     >
       <span className="flex min-w-0 items-center gap-2">
-        {Icon ? <Icon className="text-muted size-4 shrink-0" aria-hidden /> : null}
+        {Icon ? <Icon className="text-ink-muted size-4 shrink-0" aria-hidden /> : null}
         <span className="line-clamp-2 min-w-0">{segment.label}</span>
       </span>
       {segment.marker ? (
@@ -284,10 +284,7 @@ function SegmentComparison({
   return (
     <dd
       data-stat-comparison=""
-      className={textRole(
-        'caption',
-        cn('border-border-subtle grid min-w-0 border-t pt-1', className),
-      )}
+      className={textRole('caption', cn('border-line grid min-w-0 border-t pt-1', className))}
     >
       <span>{segment.comparison.label}</span>
       <ComparisonValue

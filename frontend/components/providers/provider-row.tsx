@@ -68,7 +68,7 @@ function LastFailure({ group }: Readonly<{ group: ProviderGroup }>) {
   )?.latest_probe;
   if (!probe) return null;
   return (
-    <p className="type-caption text-danger-text">
+    <p className="type-caption text-negative">
       Last test failed
       {probe.safe_reason ? `: ${probe.safe_reason}` : ''}
       {probe.model ? ` (model ${probe.model})` : ''}.

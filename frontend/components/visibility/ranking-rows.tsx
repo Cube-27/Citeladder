@@ -131,7 +131,7 @@ function BrandName({
     <Pressable
       aria-pressed={selected}
       aria-label={selected ? `Stop plotting ${row.name} on its own` : `Plot ${row.name} on its own`}
-      className="hover:text-accent-text w-auto min-w-0"
+      className="hover:text-accent-ink w-auto min-w-0"
       onClick={(event) => {
         event.stopPropagation();
         onSelect(selected ? null : row.name);
@@ -232,7 +232,10 @@ export function RankingRowsTable({
                   <span className={textRole('label', tagClasses('well', 'shrink-0'))}>You</span>
                 ) : null}
               </Inline>
-              <ClampText lines={1} className={textRole('caption', 'text-secondary desktop:hidden')}>
+              <ClampText
+                lines={1}
+                className={textRole('caption', 'text-ink-secondary desktop:hidden')}
+              >
                 {formatRate(row.share_of_voice)} share of voice · {formatRate(row.citation_rate)}{' '}
                 citations
               </ClampText>

@@ -20,10 +20,10 @@ export function scoreBand(score: number): ScoreBand {
  * so the ring still separates them by lightness.
  */
 export const scoreBandStroke: Record<ScoreBand, string> = {
-  low: 'stroke-danger',
+  low: 'stroke-negative',
   mid: 'stroke-warning',
-  good: 'stroke-success/55',
-  high: 'stroke-success',
+  good: 'stroke-positive/55',
+  high: 'stroke-positive',
 };
 
 /** Horizontal meter tone per band, on the same outcome steps as the ring. */
@@ -41,5 +41,5 @@ export const scoreBandTone: Record<ScoreBand, DataTone> = {
  * by every score table so the missing-score treatment never diverges.
  */
 export function scoreTextClass(score: number | null): string {
-  return score === null ? 'text-muted' : 'text-foreground';
+  return score === null ? 'text-ink-muted' : 'text-ink';
 }

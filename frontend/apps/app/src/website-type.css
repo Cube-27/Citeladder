@@ -1,330 +1,67 @@
-/* Public and focused-flow typography is intentionally roomier than the dense
-   product ladder. Both surfaces share the product palette and geometry
-   (globals.css); this scope changes type scale only.
-
-   Two public ladders read the same `--text-site-*` names (docs/design.md
-   §Typography). Docs (`[data-public-surface]` alone) keeps fixed steps, phone
-   first, at 810px and 1200px. The marketing site (`[data-marketing-surface]`,
-   which also carries `data-public-surface`) redefines them as roles set at
-   their desktop size and scaled down by one rule. The page title, article
-   title and data display keep one step at 768px; labels hold 14, and 12 is
-   the one rung below it. */
+/* Public and focused-flow typography: the system's website roles (docs/design.md
+   §Typography) mapped onto the `website-*` and `flow-*` classes the current
+   pages use, until PR 6 moves those pages onto the system's components and
+   retires this file. Colours, faces, radii and shadows all come from
+   globals.css; this file adds no token. */
 :where([data-public-surface], [data-flow-surface]) {
-  /* The public and focused-flow type world (docs/design.md §Typography):
-     The text face carries body, UI and data, the display face the headings, as in
-     the product. The scale is the product's (globals.css @theme), unchanged;
-     being "roomier" is a job for measure and rhythm, not for resizing rungs. */
   --tracking-tight: -0.02em;
   --tracking-wide: 0.02em;
   --tracking-wider: 0.06em;
   --leading-relaxed: 1.5;
-  /* The website's coded product views (apps/marketing/src/product-views.css)
-     draw a reduced app at 28. The product itself has no 28 rung. */
-  --control-height-sm: 28px;
-  /* The docs ladder (owner, 2026-10-31), phone first; the two blocks below
-     step it at 810px (tablet) and 1200px (desktop). The marketing site
-     overrides every size with its roles further down. The roles below read
-     these, never a literal. Weight,
-     tracking and ink live on each role. A size on the shared scale reads its
-     rung; the rest (15, 17, 26, 39, 48, 64) are the site's own. */
-  --text-site-hero: var(--text-4xl);
-  --text-site-hero--line-height: 1;
-  --text-site-section: 1.625rem;
-  --text-site-section--line-height: 1.05;
-  --text-site-card: var(--text-base);
-  --text-site-card--line-height: 1.2;
-  --text-site-body: 1.0625rem;
-  --text-site-body--line-height: 1.4;
-  --text-site-footer: 1.0625rem;
-  --text-site-footer--line-height: 1.4;
-  --text-site-lead-in: var(--text-xs);
-  --text-site-lead-in--line-height: 1.375rem;
-  /* One size at every width. Every subtitle and page intro is 16px (owner,
-     2026-10-31). */
-  --text-site-subtitle: var(--text-base);
-  --text-site-subtitle--line-height: 1.4;
-  --text-site-card-compact: var(--text-base);
-  --text-site-card-compact--line-height: 1.2;
-  --text-site-question: var(--text-base);
-  --text-site-question--line-height: 1;
-  --text-site-secondary: var(--text-sm);
-  --text-site-secondary--line-height: 1.6;
-  --text-site-cta: 0.9375rem;
-  --text-site-cta--line-height: 1rem;
-  --text-site-control: var(--text-sm);
-  --text-site-control--line-height: 1rem;
-  --text-site-nav: var(--text-sm);
-  --text-site-nav--line-height: 1.2;
-  --text-site-label: var(--text-sm);
-  --text-site-label--line-height: 1.25rem;
+  /* The `--text-site-*` sizes the marketing stylesheets still read, each
+     pointing at the system role it now is. The display ones step down below
+     1024px and 768px (the blocks after this one). */
+  --text-site-title: var(--text-display-2xl);
+  --text-site-title--line-height: var(--text-display-2xl--line-height);
+  --text-site-feature: var(--text-display-lg);
+  --text-site-feature--line-height: var(--text-display-lg--line-height);
+  --text-site-statement: var(--text-title);
+  --text-site-statement--line-height: var(--text-title--line-height);
+  --text-site-prose-heading: var(--text-title);
+  --text-site-prose-heading--line-height: var(--text-title--line-height);
+  --text-site-card: var(--text-title);
+  --text-site-card--line-height: var(--text-title--line-height);
+  --text-site-card-compact: var(--text-heading);
+  --text-site-card-compact--line-height: var(--text-heading--line-height);
+  --text-site-question: var(--text-heading);
+  --text-site-question--line-height: var(--text-heading--line-height);
+  --text-site-body: var(--text-body);
+  --text-site-body--line-height: var(--text-body--line-height);
+  --text-site-label: var(--text-label);
+  --text-site-label--line-height: var(--text-label--line-height);
+  --text-site-control: var(--text-label);
+  --text-site-control--line-height: var(--text-label--line-height);
+  --text-site-secondary: var(--text-body-sm);
+  --text-site-secondary--line-height: var(--text-body-sm--line-height);
+  --text-site-footer: var(--text-body-sm);
+  --text-site-footer--line-height: var(--text-body-sm--line-height);
+  --text-site-lead-in: var(--text-body-sm);
+  --text-site-lead-in--line-height: var(--text-body-sm--line-height);
+  --text-site-caption: var(--text-caption);
+  --text-site-caption--line-height: var(--text-caption--line-height);
 }
 
-@media (min-width: 810px) {
-  :where([data-public-surface]) {
-    --text-site-hero: 3rem;
-    --text-site-section: var(--text-4xl);
-    --text-site-card: var(--text-lg);
-    --text-site-body: var(--text-sm);
-    --text-site-footer: var(--text-sm);
-    --text-site-footer--line-height: 1.2;
-    --text-site-lead-in: var(--text-sm);
+@media (min-width: 768px) and (max-width: 1023px) {
+  :where([data-public-surface], [data-flow-surface]) {
+    --text-site-title: var(--text-display-xl);
+    --text-site-title--line-height: var(--text-display-xl--line-height);
   }
 }
 
-@media (min-width: 1200px) {
-  :where([data-public-surface]) {
-    --text-site-hero: 4rem;
-    --text-site-section: 2.4375rem;
-    --text-site-body: var(--text-base);
-  }
-}
-
-:where([data-marketing-surface]) {
-  /* The public site's type roles (owner, 2026-10-31): "keep the desktop as
-     reference and then apply a rule for every size so we dont have to change
-     multiple places, define roles not individual arbitrary values". The
-     homepage defines them; every other marketing page inherits them.
-
-     Each role is defined once, at its desktop size (`--site-role-*`, the only
-     hand-chosen sizes), with a unitless line height that carries to every
-     width. A smaller viewport scales the part of each size above the 14px
-     reading floor by one factor per band (the 810px and 1200px blocks below):
-
-       size = floor + (desktop − floor) × factor, rounded to a whole pixel
-
-       display roles (headings)          1 desktop · 0.68 tablet · 0.36 phone
-       opening headings (hero, titles)   1 desktop · 0.6 tablet  · 0.32 phone
-       the subtitle (lead) role          1 desktop · 1 tablet    · 0.67 phone
-       reading roles (text, controls)    1 desktop · 1 tablet    · 0 phone
-
-     Desktop sizes keep to one set, 12 / 14 / 16 / 20 / 24 / 32 / 40 / 64
-     (2026-11-03): the subtitle under a heading is 20 (18 on a phone).
-     A page's opening heading (the homepage hero and every page title) takes
-     its own factor, 1 · 0.6 · 0.32, so 64 → 44 → 30: 4px under the display
-     factor on a tablet (owner, 2026-11-04), and on a phone it does not wrap
-     to a fourth line (owner, 2026-11-02). Reading text
-     keeps its desktop size until a phone, where it sits on the floor: pure
-     scaling would put it under the 12px minimum there (16 × 0.5 = 8). The
-     caption is that 12px minimum at every width. Components read the
-     `--text-site-*` sizes, never a literal; change a desktop size or a factor
-     and every viewport follows. Weight, tracking and ink live on each role. */
-  --site-type-display: 0.36;
-  --site-type-opening: 0.32;
-  --site-type-reading: 0;
-  --site-type-lead: 0.67;
-  --site-type-floor: var(--text-sm);
-  /* Display roles. */
-  --site-role-hero: 4rem;
-  --site-role-title: 4rem;
-  --site-role-section: 2.5rem;
-  --site-role-feature: var(--text-4xl);
-  --site-role-statement: var(--text-2xl);
-  --site-role-prose-heading: var(--text-2xl);
-  --site-role-card: var(--text-xl);
-  --site-role-card-compact: var(--text-base);
-  --site-role-question: var(--text-base);
-  /* Reading roles. */
-  --site-role-subtitle: var(--text-xl);
-  --site-role-body: var(--text-base);
-  --site-role-label: var(--text-sm);
-  --site-role-secondary: var(--text-sm);
-  --site-role-footer: var(--text-sm);
-  --site-role-lead-in: var(--text-sm);
-  --site-role-cta: var(--text-sm);
-  --site-role-control: var(--text-sm);
-  --site-role-nav: var(--text-sm);
-
-  --text-site-hero: round(
-    nearest,
-    calc(
-      var(--site-type-floor) + (var(--site-role-hero) - var(--site-type-floor)) *
-        var(--site-type-opening)
-    ),
-    1px
-  );
-  --text-site-hero--line-height: 1;
-  --text-site-title: round(
-    nearest,
-    calc(
-      var(--site-type-floor) + (var(--site-role-title) - var(--site-type-floor)) *
-        var(--site-type-opening)
-    ),
-    1px
-  );
-  --text-site-title--line-height: 1.1;
-  --text-site-section: round(
-    nearest,
-    calc(
-      var(--site-type-floor) + (var(--site-role-section) - var(--site-type-floor)) *
-        var(--site-type-display)
-    ),
-    1px
-  );
-  --text-site-section--line-height: 1.05;
-  /* The feature heading beside a product shot. */
-  --text-site-feature: round(
-    nearest,
-    calc(
-      var(--site-type-floor) + (var(--site-role-feature) - var(--site-type-floor)) *
-        var(--site-type-display)
-    ),
-    1px
-  );
-  --text-site-feature--line-height: 1.25;
-  --text-site-statement: round(
-    nearest,
-    calc(
-      var(--site-type-floor) + (var(--site-role-statement) - var(--site-type-floor)) *
-        var(--site-type-display)
-    ),
-    1px
-  );
-  --text-site-statement--line-height: 1.3;
-  /* Article and document section headings: a step above body copy, where the
-     full section rung would shout on every section. */
-  --text-site-prose-heading: round(
-    nearest,
-    calc(
-      var(--site-type-floor) + (var(--site-role-prose-heading) - var(--site-type-floor)) *
-        var(--site-type-display)
-    ),
-    1px
-  );
-  --text-site-prose-heading--line-height: 1.3;
-  --text-site-card: round(
-    nearest,
-    calc(
-      var(--site-type-floor) + (var(--site-role-card) - var(--site-type-floor)) *
-        var(--site-type-display)
-    ),
-    1px
-  );
-  --text-site-card--line-height: 1.2;
-  --text-site-card-compact: round(
-    nearest,
-    calc(
-      var(--site-type-floor) + (var(--site-role-card-compact) - var(--site-type-floor)) *
-        var(--site-type-display)
-    ),
-    1px
-  );
-  --text-site-card-compact--line-height: 1.2;
-  --text-site-question: round(
-    nearest,
-    calc(
-      var(--site-type-floor) + (var(--site-role-question) - var(--site-type-floor)) *
-        var(--site-type-display)
-    ),
-    1px
-  );
-  --text-site-question--line-height: 1;
-  --text-site-subtitle: round(
-    nearest,
-    calc(
-      var(--site-type-floor) + (var(--site-role-subtitle) - var(--site-type-floor)) *
-        var(--site-type-lead)
-    ),
-    1px
-  );
-  --text-site-subtitle--line-height: 1.4;
-  --text-site-body: round(
-    nearest,
-    calc(
-      var(--site-type-floor) + (var(--site-role-body) - var(--site-type-floor)) *
-        var(--site-type-reading)
-    ),
-    1px
-  );
-  --text-site-body--line-height: 1.4;
-  --text-site-label: round(
-    nearest,
-    calc(
-      var(--site-type-floor) + (var(--site-role-label) - var(--site-type-floor)) *
-        var(--site-type-reading)
-    ),
-    1px
-  );
-  --text-site-label--line-height: 1.43;
-  --text-site-secondary: round(
-    nearest,
-    calc(
-      var(--site-type-floor) + (var(--site-role-secondary) - var(--site-type-floor)) *
-        var(--site-type-reading)
-    ),
-    1px
-  );
-  --text-site-secondary--line-height: 1.6;
-  --text-site-footer: round(
-    nearest,
-    calc(
-      var(--site-type-floor) + (var(--site-role-footer) - var(--site-type-floor)) *
-        var(--site-type-reading)
-    ),
-    1px
-  );
-  --text-site-footer--line-height: 1.2;
-  --text-site-lead-in: round(
-    nearest,
-    calc(
-      var(--site-type-floor) + (var(--site-role-lead-in) - var(--site-type-floor)) *
-        var(--site-type-reading)
-    ),
-    1px
-  );
-  --text-site-lead-in--line-height: 1.57;
-  --text-site-cta: round(
-    nearest,
-    calc(
-      var(--site-type-floor) + (var(--site-role-cta) - var(--site-type-floor)) *
-        var(--site-type-reading)
-    ),
-    1px
-  );
-  --text-site-cta--line-height: 1.07;
-  --text-site-control: round(
-    nearest,
-    calc(
-      var(--site-type-floor) + (var(--site-role-control) - var(--site-type-floor)) *
-        var(--site-type-reading)
-    ),
-    1px
-  );
-  --text-site-control--line-height: 1.15;
-  --text-site-nav: round(
-    nearest,
-    calc(
-      var(--site-type-floor) + (var(--site-role-nav) - var(--site-type-floor)) *
-        var(--site-type-reading)
-    ),
-    1px
-  );
-  --text-site-nav--line-height: 1.2;
-  /* The caption: the 12px minimum, one size at every width. */
-  --text-site-caption: var(--text-xs);
-  --text-site-caption--line-height: 1.33;
-}
-
-@media (min-width: 810px) {
-  :where([data-marketing-surface]) {
-    --site-type-display: 0.68;
-    --site-type-opening: 0.6;
-    --site-type-reading: 1;
-    --site-type-lead: 1;
-  }
-}
-
-@media (min-width: 1200px) {
-  :where([data-marketing-surface]) {
-    --site-type-display: 1;
-    --site-type-opening: 1;
+@media (max-width: 767px) {
+  :where([data-public-surface], [data-flow-surface]) {
+    --text-site-title: 30px;
+    --text-site-title--line-height: 36px;
+    --text-site-feature: 26px;
+    --text-site-feature--line-height: 32px;
   }
 }
 
 /* Public pages set no font-size here: their attribute sits on <html>, where
    any value rebases every rem on the site and rescales all type and widths. */
 :where([data-flow-surface]) {
-  font-size: 0.875rem;
-  line-height: 1.375rem;
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
 }
 
 /* Authentication and onboarding are one focused, touch-friendly flow. These
@@ -351,106 +88,105 @@
   --flow-result-stagger: var(--motion-stagger);
 }
 
+/* The flow's step title: display-md. */
 .flow-title {
   font-family: var(--font-display);
-  font-size: 1.75rem;
-  line-height: 2.25rem;
-  font-weight: 500;
-  letter-spacing: 0;
-  color: var(--color-foreground);
+  font-size: var(--text-display-md);
+  line-height: var(--text-display-md--line-height);
+  font-weight: 400;
+  letter-spacing: var(--text-display-md--letter-spacing);
+  color: var(--color-ink);
 }
 
 .flow-group-title {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 1rem;
-  line-height: 1.5rem;
+  font-size: var(--text-label-lg);
+  line-height: var(--text-label-lg--line-height);
   font-weight: 500;
-  letter-spacing: -0.005em;
-  color: var(--color-foreground);
+  letter-spacing: 0;
+  color: var(--color-ink);
 }
 
 .flow-help {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 0.875rem;
-  line-height: 1.25rem;
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
   font-weight: 400;
   letter-spacing: 0;
-  color: var(--color-secondary);
+  color: var(--color-ink-secondary);
 }
 
 .flow-meta {
   font-family: var(--font-sans);
-  font-size: 0.75rem;
-  line-height: 1rem;
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
   font-weight: 500;
   letter-spacing: 0;
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   font-variant-numeric: tabular-nums;
 }
 
-:where([data-public-surface], [data-flow-surface])
-  :where(h1, h2, h3, h4, h5, h6):not(.app-type-scale *) {
-  font-family: var(--font-display);
-  font-weight: 500;
-  letter-spacing: 0;
-}
-
-/* Named website/auth roles. Size, leading, weight, tracking, and default colour
-   travel as one contract. The low-specificity colour defaults let explicit
-   semantic utilities override them for warnings and evidence states.
-
-   Display rungs set in the display face at 500. The feature heading and body
-   rungs set in the text face
-   at 400/500. */
+/* Named website roles, each one of the system's styles. Size, leading,
+   weight, tracking, and default colour travel as one contract; the
+   low-specificity colour defaults let explicit semantic utilities override
+   them. Cal Sans sets the display roles at its one weight, 400. */
 .website-hero-display,
 .website-page-title,
 .website-section-heading {
   max-width: var(--site-measure-display);
+}
+
+.website-hero-display,
+.website-page-title,
+.website-article-title,
+.website-section-heading,
+.website-feature-heading,
+.website-data-display {
   font-family: var(--font-display);
   font-optical-sizing: auto;
-  font-weight: 500;
+  font-weight: 400;
   text-wrap: balance;
 }
 
-/* The hero and section headings read the site tokens above (phone, 810px,
-   1200px). The page title keeps its own ladder: on a phone it tracks the
-   viewport so it holds two lines (an article title, which runs twice as long,
-   three) from 360px up, and steps at 768px below. Display headings tighten
-   by 0.02em: the wide face at 500 reads heavy at its own spacing. */
-.website-hero-display {
-  font-size: var(--text-site-hero);
-  line-height: var(--text-site-hero--line-height);
-  font-weight: 500;
-  letter-spacing: -0.02em;
-}
-
-.website-page-title {
-  font-size: clamp(1.5rem, 6.4vw, 1.75rem);
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-}
-
+/* Every page's opening heading: display-2xl, never larger than 44. */
+.website-hero-display,
+.website-page-title,
 .website-article-title {
-  font-size: clamp(1.25rem, 5.6vw, 1.5rem);
+  font-size: var(--text-display-2xl);
+  line-height: var(--text-display-2xl--line-height);
+  letter-spacing: var(--text-display-2xl--letter-spacing);
 }
 
 .website-section-heading {
-  font-size: var(--text-site-section);
-  line-height: var(--text-site-section--line-height);
-  letter-spacing: -0.02em;
+  font-size: var(--text-display-xl);
+  line-height: var(--text-display-xl--line-height);
+  letter-spacing: var(--text-display-xl--letter-spacing);
 }
 
-/* Card and feature titles: the text face at the 500 ceiling, a size step
-   (20 over 16) above the card's text, since weight cannot carry it. */
+/* Card and feature titles: the title role. */
 .website-feature-heading {
-  font-family: var(--font-sans);
-  font-size: var(--text-site-card);
-  line-height: var(--text-site-card--line-height);
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  text-wrap: balance;
+  font-size: var(--text-title);
+  line-height: var(--text-title--line-height);
+  letter-spacing: 0;
+}
+
+/* A price: display-lg. */
+.website-data-display {
+  font-size: var(--text-display-lg);
+  line-height: var(--text-display-lg--line-height);
+  letter-spacing: var(--text-display-lg--letter-spacing);
+}
+
+:where(
+  .website-hero-display,
+  .website-page-title,
+  .website-section-heading,
+  .website-feature-heading,
+  .website-data-display
+) {
+  color: var(--color-ink);
 }
 
 .website-lead,
@@ -459,91 +195,92 @@
 .website-nav,
 .website-label {
   font-family: var(--font-sans);
-}
-
-/* A price is a data figure: its digits take the figure face. */
-.website-data-display {
-  font-family: var(--font-numeric);
-  font-size: 1.75rem;
-  line-height: 2.25rem;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-}
-
-:where(.website-page-title, .website-data-display) {
-  color: var(--color-foreground);
-}
-
-/* The public inks (globals.css `--color-site-*`): headings and titles in the
-   ink; subtitles, sentences and navigation in the one secondary grey. */
-:where(.website-hero-display, .website-section-heading, .website-feature-heading) {
-  color: var(--color-site-ink);
+  letter-spacing: 0;
 }
 
 :where(.website-lead, .website-hero-lead, .website-body, .website-nav) {
-  color: var(--color-site-body);
+  color: var(--color-ink-secondary);
 }
 
 :where(.website-label) {
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
 }
 
-/* The section subtitle under a section heading (the subtitle role), held to
-   the reading measure wherever it sits. */
-.website-lead {
-  max-width: var(--site-measure-reading);
-  font-size: var(--text-site-subtitle);
-  line-height: var(--text-site-subtitle--line-height);
-  font-weight: 400;
-  letter-spacing: -0.01em;
-  text-wrap: pretty;
-}
-
-/* The hero lead: the intro under a page's opening heading on every page
-   (the homepage hero, page heroes, article and contact heads), the subtitle
-   size and the reading measure. */
+/* The lead under a heading (the section subtitle and the hero intro): the
+   lead role, held to the reading measure wherever it sits. */
+.website-lead,
 .website-hero-lead {
   max-width: var(--site-measure-reading);
-  font-size: var(--text-site-subtitle);
-  line-height: var(--text-site-subtitle--line-height);
+  font-size: var(--text-lead);
+  line-height: var(--text-lead--line-height);
   font-weight: 400;
-  letter-spacing: -0.01em;
   text-wrap: pretty;
 }
 
 /* Reading text (the body role). The focused flow does not use this role. */
 .website-body {
-  font-size: var(--text-site-body);
-  line-height: var(--text-site-body--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
   font-weight: 400;
-  letter-spacing: -0.2px;
   text-wrap: pretty;
 }
 
 .website-nav {
-  font-size: var(--text-site-nav);
-  line-height: var(--text-site-nav--line-height);
-  font-weight: 400;
-  letter-spacing: -0.2px;
+  font-size: var(--text-label-lg);
+  line-height: var(--text-label-lg--line-height);
+  font-weight: 500;
 }
 
 .website-label {
-  font-size: var(--text-site-label);
-  line-height: var(--text-site-label--line-height);
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
   font-weight: 500;
-  letter-spacing: 0;
 }
 
-/* The website's buttons take its 36 rung. The auth and onboarding flow does
-   not: its buttons are the product's one 32px control, the height of the
-   fields beside them. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .website-hero-display,
+  .website-page-title,
+  .website-article-title {
+    font-size: var(--text-display-xl);
+    line-height: var(--text-display-xl--line-height);
+  }
+}
+
+@media (max-width: 767px) {
+  .website-hero-display,
+  .website-page-title,
+  .website-article-title {
+    font-size: 30px;
+    line-height: 36px;
+  }
+
+  .website-section-heading {
+    font-size: var(--text-display-md);
+    line-height: var(--text-display-md--line-height);
+  }
+
+  .website-data-display {
+    font-size: 26px;
+    line-height: 32px;
+  }
+
+  .website-lead,
+  .website-hero-lead {
+    font-size: 18px;
+    line-height: 28px;
+  }
+}
+
+/* The website's buttons take the control-md row. The auth and onboarding flow
+   does not: its buttons are the product's control, the height of the fields
+   beside them. */
 :where([data-public-surface]) [data-button-size='md']:not(.app-type-scale *),
 :where([data-public-surface]) [data-button-size='lg']:not(.app-type-scale *) {
-  min-height: var(--control-height-lg);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  min-height: var(--control-md);
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
   font-weight: 500;
-  letter-spacing: -0.005em;
+  letter-spacing: 0;
 }
 
 /* The hero CTA is the one pill: it opts in with `data-shape='pill'`. */
@@ -551,35 +288,17 @@
   border-radius: var(--radius-full);
 }
 
-/* The flow sits on the website's flat stage: white paper and a faint dot
-   lattice, with the task sheet lying on it rather than floating. */
-:root:not([data-theme='dark']) [data-flow-surface] {
-  background: var(--color-panel);
-}
-
-:root:not([data-theme='dark']) [data-flow-surface]::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background: var(--lattice);
-  mask-image: radial-gradient(80% 60% at 50% 20%, black, transparent);
-  opacity: 0.5;
-}
-
-/* Opaque so a long step scrolls cleanly beneath it. Like the site header it
-   has no rule in light mode; dark mode keeps one below. */
+/* Opaque on the flow's `paper` ground so a long step scrolls cleanly beneath
+   it. It has no rule in light mode; dark mode keeps one below. */
 .flow-bar {
-  background: var(--color-panel);
+  background: var(--color-paper);
   position: sticky;
   top: 0;
   z-index: var(--z-index-sticky);
 }
 
 [data-theme='dark'] .flow-bar {
-  background: var(--color-panel);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-line);
 }
 
 .flow-bar-content {
@@ -598,21 +317,21 @@
 
 .flow-exit {
   justify-self: end;
-  color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
   font-weight: 500;
   text-decoration: none;
   transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .flow-exit:hover {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .flow-auth-switch-link,
 .flow-auth-switch-link:hover {
-  color: var(--color-foreground);
+  color: var(--color-ink);
   text-decoration: underline;
   text-underline-offset: 0.25rem;
 }
@@ -620,15 +339,15 @@
 /* Auth is a compact task: title, field labels, actions, then supporting copy.
    Keep recovery and legal links below the controls in the type hierarchy. */
 .auth-form-shell .type-label {
-  color: var(--color-foreground);
+  color: var(--color-ink);
   font-weight: 500;
 }
 
 .auth-recovery-links {
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
   font-weight: 500;
-  color: var(--color-secondary);
+  color: var(--color-ink-secondary);
 }
 
 .auth-recovery-links a {
@@ -654,7 +373,7 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--color-border-subtle);
+  background: var(--color-line);
 }
 
 /* The agreement line closes the column, set apart from the switch link. */
@@ -693,12 +412,12 @@
 }
 
 .auth-legal-link:hover {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .auth-form-footer {
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
 }
 
 .flow-progress ol {
@@ -713,15 +432,15 @@
   display: flex;
   align-items: center;
   gap: var(--flow-stack);
-  color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
   font-weight: 500;
   white-space: nowrap;
 }
 
 .flow-progress li[aria-current='step'] {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .flow-step-mark {
@@ -730,31 +449,31 @@
   height: var(--flow-step-mark);
   flex: none;
   place-items: center;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-full);
-  background: var(--color-panel);
-  color: var(--color-muted);
-  font-size: var(--text-sm);
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
   line-height: 1;
 }
 
 .flow-step-mark-current {
-  border-color: var(--color-accent-fill);
-  background: var(--color-accent-fill);
-  color: var(--color-accent-fg);
+  border-color: var(--color-ink);
+  background: var(--color-ink);
+  color: var(--color-on-ink);
 }
 
 .flow-step-mark-done {
-  border-color: var(--color-border-strong);
-  background: var(--color-track);
-  color: var(--color-secondary);
+  border-color: var(--color-line);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink-secondary);
 }
 
 .flow-step-connector {
   width: var(--flow-step-connector);
   height: 1px;
   margin-inline: var(--flow-stack);
-  background: var(--color-border-strong);
+  background: var(--color-line);
 }
 
 .flow-step-mobile-prefix {
@@ -764,14 +483,14 @@
 .flow-progress-rule {
   height: 2px;
   overflow: hidden;
-  background: var(--color-border-subtle);
+  background: var(--color-line);
 }
 
 .flow-progress-rule span {
   display: block;
   width: 100%;
   height: 100%;
-  background: var(--color-accent-border);
+  background: var(--color-line-control);
   transform-origin: left center;
   transition: transform var(--motion-slow) var(--ease-standard);
 }
@@ -801,8 +520,8 @@
 }
 
 /* Account access (sign-in, sign-up and the mailbox screens) spans the
-   viewport: the logo and form in a roomy column on white, and from 900px a
-   showcase panel on a light grained field beside it. Below that the panel
+   viewport: the logo and form in a roomy column on `paper`, and from 900px a
+   showcase panel on a `surface-sunken` field beside it. Below that the panel
    drops away and the form has the width. The document scrolls, so a tall form
    on a short laptop never squeezes; the panel stays pinned beside it. */
 .auth-split {
@@ -810,16 +529,6 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   min-height: 100dvh;
-}
-
-/* The form sits on plain white: the flow stage's lattice stays off it, and
-   the root's reserved scrollbar track takes the page's paper, not the ground. */
-.auth-split::before {
-  display: none;
-}
-
-:root:has(.auth-split) {
-  background: var(--color-panel);
 }
 
 .auth-split-main {
@@ -866,8 +575,7 @@
   }
 }
 
-/* A light mint field washed with lime and accent tints, under fine grain
-   (owner, 2026-11-02: the one gradient on account access). */
+/* The showcase field: one flat `surface-sunken` panel. */
 .auth-showcase-field {
   position: relative;
   isolation: isolate;
@@ -878,20 +586,7 @@
   padding: var(--flow-block);
   overflow: clip;
   border-radius: var(--radius-lg);
-  background:
-    radial-gradient(80% 60% at 100% 0%, var(--color-field-lime), transparent 70%),
-    radial-gradient(70% 60% at 0% 100%, var(--color-accent-soft), transparent 75%),
-    var(--color-field-mint);
-}
-
-.auth-showcase-field::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: var(--grain);
-  opacity: 0.18;
+  background: var(--color-surface-sunken);
 }
 
 /* Every slide shares one grid cell, so the stage and copy keep the largest
@@ -926,21 +621,6 @@
   aspect-ratio: 5 / 3;
 }
 
-/* The soft round stage under the pictures, carrying the shared lattice. */
-.auth-showcase-stage::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: -1;
-  width: 96%;
-  aspect-ratio: 1;
-  translate: -50% -50%;
-  border-radius: var(--radius-full);
-  background: var(--lattice), radial-gradient(closest-side, var(--color-panel) 40%, transparent);
-  mask-image: radial-gradient(closest-side, black 60%, transparent);
-}
-
 .auth-shot {
   position: absolute;
   display: block;
@@ -951,15 +631,11 @@
   width: 100%;
   height: auto;
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-overlay);
+  box-shadow: var(--shadow-pop);
 }
 
 .auth-shot[data-shot='accent'] {
   z-index: 1;
-}
-
-.auth-shot[data-shot='accent'] img {
-  border-radius: var(--radius-card);
 }
 
 /* Each slide's window and floating card, placed in the shared stage. */
@@ -1006,22 +682,23 @@
   text-align: center;
 }
 
+/* The slide caption: the title role. */
 .auth-showcase-caption {
   margin: 0;
   font-family: var(--font-display);
-  font-size: var(--text-2xl);
-  line-height: var(--text-2xl--line-height);
-  font-weight: 500;
+  font-size: var(--text-title);
+  line-height: var(--text-title--line-height);
+  font-weight: 400;
   letter-spacing: 0;
-  color: var(--color-foreground);
+  color: var(--color-ink);
   text-wrap: balance;
 }
 
 .auth-showcase-line {
   margin: 0;
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
-  color: var(--color-secondary);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  color: var(--color-ink-secondary);
   text-wrap: pretty;
 }
 
@@ -1050,7 +727,7 @@
   width: 0.5rem;
   height: 0.5rem;
   border-radius: var(--radius-full);
-  background: var(--color-muted);
+  background: var(--color-ink-muted);
   transition:
     width var(--motion-fast) var(--ease-standard),
     background-color var(--motion-fast) var(--ease-standard);
@@ -1058,16 +735,16 @@
 
 .auth-showcase-dot[aria-current='true'] span {
   width: 1.25rem;
-  background: var(--color-accent-fill);
+  background: var(--color-ink);
 }
 
 .auth-showcase-toggle {
-  color: var(--color-secondary);
+  color: var(--color-ink-secondary);
   transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .auth-showcase-toggle:hover {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1077,26 +754,16 @@
   }
 }
 
-/* The task column is the white paper (it carries `app-pane` at its call site);
-   this is the inset that keeps its content off the sheet's edge.
+/* The task column is the `surface` card (it carries `app-pane` at its call
+   site); this is the inset that keeps its content off the card's edge.
    `.flow-action-content` is deliberately excluded: it shares the measure so its
    buttons line up with the pane, but it is a row on the ground. */
 .flow-content {
   padding: var(--card-padding);
 }
 
-/* The onboarding sheet is the product's one box recipe (docs/design.md
-   §Component recipes): the card radius, a one-pixel subtle edge and no
-   shadow ring. The extra attribute outranks the pane's own elevation rule in
-   globals.css whichever stylesheet loads last. */
-[data-flow-surface] .flow-content.app-pane {
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-card);
-  box-shadow: none;
-}
-
 .flow-actions {
-  background: var(--color-panel);
+  background: var(--color-paper);
   position: sticky;
   bottom: 0;
   z-index: var(--z-index-sticky);
@@ -1104,7 +771,7 @@
 }
 
 [data-theme='dark'] .flow-actions {
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-line);
 }
 
 .flow-actions.safe-bottom {
@@ -1161,9 +828,9 @@
    yet, not a button, and twelve outlined rectangles read as a form to fill in
    rather than a list to check. Selection alone carries a fill. */
 [data-flow-surface] [data-radio-variant='chip'] button {
-  border-radius: var(--radius-control);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  border-radius: var(--radius-md);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
   box-shadow: none;
 }
 
@@ -1179,8 +846,9 @@
 }
 
 .flow-content[data-flow-measure='wide'] .flow-title {
-  font-size: var(--text-2xl);
-  line-height: var(--text-2xl--line-height);
+  font-size: var(--text-title);
+  line-height: var(--text-title--line-height);
+  letter-spacing: 0;
 }
 
 /* The review step is one grid in reading order: the two business questions
@@ -1260,13 +928,13 @@
    questions. */
 .flow-review-card {
   padding: 1.25rem;
-  border-radius: var(--radius-card);
-  background: var(--color-background-alt);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-sunken);
 }
 
 .flow-review-card .flow-help {
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
 }
 
 .flow-review-card .flow-group-copy {
@@ -1281,11 +949,11 @@
 
 /* Short single-answer choices read as a set of options, not loose words. */
 .flow-review-card [data-radio-variant='chip'] button {
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-line);
 }
 
 .flow-review-card [data-radio-variant='chip'] button[data-state='checked'] {
-  border-color: var(--color-accent-border);
+  border-color: var(--color-line-control);
 }
 
 .flow-review-notices {
@@ -1304,9 +972,9 @@
 .flow-review-hint {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
-  color: var(--color-warning-text);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+  color: var(--color-warning);
   scroll-margin-block: var(--flow-block);
 }
 
@@ -1314,11 +982,11 @@
    in two equal columns so ten choices occupy five rows. */
 .flow-entity-list {
   display: grid;
-  border-block: 1px solid var(--color-border-subtle);
+  border-block: 1px solid var(--color-line);
 }
 
 .flow-entity-list > li + li {
-  border-top: 1px solid var(--color-border-subtle);
+  border-top: 1px solid var(--color-line);
 }
 
 .flow-entity {
@@ -1348,11 +1016,11 @@
   gap: 0.75rem;
   min-height: 2.5rem;
   padding-inline: 0.5rem;
-  border-radius: var(--radius-control);
+  border-radius: var(--radius-md);
 }
 
 .flow-entity-row:hover {
-  background: var(--color-background-alt);
+  background: var(--color-surface-sunken);
 }
 
 .flow-entity-row[aria-pressed='false'] .flow-entity-identity {
@@ -1366,8 +1034,8 @@
 }
 
 .flow-entity-name {
-  color: var(--color-foreground);
-  font-size: var(--text-sm);
+  color: var(--color-ink);
+  font-size: var(--text-body-sm);
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1375,8 +1043,8 @@
 }
 
 .flow-entity-meta {
-  color: var(--color-muted);
-  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-size: var(--text-caption);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1389,13 +1057,13 @@
   inline-size: 1.25rem;
   block-size: 1.25rem;
   border-radius: var(--radius-xs);
-  border: 1px solid var(--color-border-strong);
-  color: var(--color-accent-fg);
+  border: 1px solid var(--color-line);
+  color: var(--color-on-ink);
 }
 
 .flow-entity-row[aria-pressed='true'] .flow-entity-mark {
-  background: var(--color-accent-fill);
-  border-color: var(--color-accent-fill);
+  background: var(--color-ink);
+  border-color: var(--color-ink);
 }
 
 /* The mark sizes its own check: 14 inside the 20 box. A 16px glyph filled
@@ -1413,8 +1081,8 @@
 .flow-competitor-chips > li,
 .flow-website-chips > li {
   min-width: 0;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-control);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
 }
 
 .flow-competitor-chips > li {
@@ -1422,12 +1090,12 @@
 }
 
 .flow-competitor-chips > li + li {
-  border-top: 1px solid var(--color-border-subtle);
+  border-top: 1px solid var(--color-line);
 }
 
 .flow-competitor-chips > li:has([aria-pressed='true']),
 .flow-website-chips > li:has([aria-pressed='true']) {
-  border-color: var(--color-border-strong);
+  border-color: var(--color-line);
 }
 
 .flow-competitor-chips .flow-entity-row {
@@ -1476,7 +1144,7 @@
   width: 1.5rem;
   height: 1.5rem;
   place-items: center;
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
 }
 
 .flow-activity-indicator svg {
@@ -1486,23 +1154,23 @@
 
 .flow-activity-row[data-state='complete'] .flow-help,
 .flow-activity-row[data-state='active'] .flow-help {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .flow-activity-row[data-state='active'] .flow-activity-indicator {
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
 }
 
 .flow-activity-row[data-state='attention'] {
   margin-inline: calc(var(--flow-stack) * -1);
   padding-inline: var(--flow-stack);
-  border-radius: var(--radius-control);
-  background: var(--color-warning-bg);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-soft);
 }
 
 .flow-activity-row[data-state='attention'] .flow-activity-indicator,
 .flow-activity-row[data-state='attention'] .flow-help {
-  color: var(--color-warning-text);
+  color: var(--color-warning);
 }
 
 /* A stage's results band (warnings, the failed discovery, the next step)
@@ -1513,7 +1181,7 @@
 
 .flow-found {
   margin-top: var(--flow-block);
-  border-top: 1px solid var(--color-border-subtle);
+  border-top: 1px solid var(--color-line);
   padding-top: var(--flow-answer);
 }
 
@@ -1527,9 +1195,9 @@
 }
 
 .flow-found-item {
-  color: var(--color-secondary);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
   animation: flow-result-in var(--motion-slow) var(--ease-standard) both;
   animation-delay: calc(var(--flow-result-index, 0) * var(--flow-result-stagger));
 }
@@ -1537,7 +1205,7 @@
 .flow-found-item:not(:last-child)::after {
   content: '·';
   margin-left: var(--flow-stack);
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
 }
 
 @keyframes flow-result-in {
@@ -1611,7 +1279,7 @@
   }
 
   .flow-action-content > div:last-child [data-button-size] {
-    min-height: var(--control-height-xl);
+    min-height: var(--control-lg);
   }
 
   .flow-activity-row {
@@ -1623,7 +1291,7 @@
   .flow-review .flow-review-card {
     padding: var(--flow-block) 0 0;
     border: 0;
-    border-top: 1px solid var(--color-border-subtle);
+    border-top: 1px solid var(--color-line);
     border-radius: 0;
     background: none;
   }
@@ -1636,7 +1304,7 @@
 
   .flow-review-audience > * + * {
     padding-top: var(--flow-block);
-    border-top: 1px solid var(--color-border-subtle);
+    border-top: 1px solid var(--color-line);
   }
 
   .flow-review {
@@ -1655,11 +1323,6 @@
     --flow-block: 1.5rem;
     --flow-answer: 0.75rem;
   }
-
-  .flow-title {
-    font-size: 1.5rem;
-    line-height: 2rem;
-  }
 }
 
 /* Keep the focused workflow usable on a laptop with limited vertical room.
@@ -1673,38 +1336,22 @@
 }
 
 /* A coded product preview is product UI, not marketing copy: it resets the
-   public roles it embeds back to the product ladder. */
+   public roles it embeds back to the product's, in Geist, since Cal Sans
+   never sets type under 18px. */
 .app-type-scale {
   --leading-relaxed: 1.625;
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
 }
 
 .app-type-scale :where(.website-feature-heading) {
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  font-family: var(--font-sans);
+  font-size: var(--text-heading);
+  line-height: var(--text-heading--line-height);
+  font-weight: 600;
 }
 
 .app-type-scale :where(.website-body) {
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
-}
-
-/* The page title, article title and data display step once at 768px; the
-   hero, section, card, lead and body roles step through the site tokens. */
-@media (min-width: 768px) {
-  .website-page-title {
-    font-size: 2.25rem;
-    line-height: 2.75rem;
-  }
-
-  .website-article-title {
-    font-size: var(--text-4xl);
-    line-height: var(--text-4xl--line-height);
-  }
-
-  .website-data-display {
-    font-size: 2rem;
-    line-height: 2.5rem;
-  }
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
 }

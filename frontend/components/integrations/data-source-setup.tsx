@@ -117,7 +117,7 @@ function RowFrame({
         className="desktop:flex-row desktop:items-center flex-col items-stretch"
       >
         <Inline gap="compact" className="flex-1 items-start">
-          <Icon icon={glyph} className="text-secondary" />
+          <Icon icon={glyph} className="text-ink-secondary" />
           <div className="min-w-0">
             <div className={textRole('itemTitle', 'truncate')}>{title}</div>
             <div className="type-caption">{status}</div>

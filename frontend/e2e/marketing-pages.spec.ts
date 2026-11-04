@@ -159,9 +159,9 @@ test.describe('marketing routes', () => {
         await page.evaluate(
           (fonts) => Promise.allSettled(fonts.map((font) => document.fonts.load(font))),
           [
-            `400 14px "${brandFontName('text')}"`,
-            `500 14px "${brandFontName('text')}"`,
-            `500 32px "${brandFontName('heading')}"`,
+            `400 14px "${brandFontName('sans')}"`,
+            `500 14px "${brandFontName('sans')}"`,
+            `400 44px "${brandFontName('display')}"`,
           ],
         );
         // A loaded sheet can reach computed style only at the next rendering

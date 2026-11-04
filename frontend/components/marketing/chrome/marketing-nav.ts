@@ -333,7 +333,7 @@ function mountMobileSheet(chrome: HTMLElement) {
   let releasePage: (() => void) | null = null;
 
   const render = () => {
-    chrome.classList.toggle('bg-panel', mobileOpen);
+    chrome.classList.toggle('bg-surface', mobileOpen);
     chrome.classList.toggle('bg-transparent', !mobileOpen);
     // While the sheet is open it owns the account actions. Hidden in CSS so a
     // phone-width menu left open across a resize keeps the desktop actions.

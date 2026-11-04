@@ -7,9 +7,9 @@ const series = [
   {
     key: 'example',
     label: 'example.test',
-    strokeClass: 'stroke-chart-1',
-    swatchClass: 'bg-chart-1',
-    color: 'var(--color-chart-1)',
+    strokeClass: 'stroke-data-1',
+    swatchClass: 'bg-data-1',
+    color: 'var(--color-data-1)',
     points: [
       { value: 20, label: 'Jan 15' },
       { value: 40, label: 'Jan 16' },

@@ -64,7 +64,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
     <div className={cn('flex w-full min-w-0 items-center gap-1', className)}>
       <Dropdown>
         <DropdownTrigger
-          className="focus-ring hover:bg-hover active:bg-active data-[state=open]:bg-selected hover:text-foreground disabled:bg-disabled disabled:text-muted flex h-[var(--control-height-md)] min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-3 text-left transition-colors disabled:pointer-events-none"
+          className="focus-ring hover:bg-surface-sunken active:bg-surface-sunken data-[state=open]:bg-surface-sunken hover:text-ink disabled:bg-surface-sunken disabled:text-ink-muted flex h-[var(--control-md)] min-w-0 flex-1 items-center gap-2 rounded-md px-3 text-left transition-colors disabled:pointer-events-none"
           disabled={isLoading}
         >
           <BrandLogo
@@ -73,7 +73,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
             websiteUrl={activeProject?.website_url}
           />
           <span className={textRole('itemTitle', 'min-w-0 flex-1 truncate')}>{label}</span>
-          <ChevronsUpDown className="text-muted size-3.5 shrink-0" aria-hidden />
+          <ChevronsUpDown className="text-ink-muted size-3.5 shrink-0" aria-hidden />
         </DropdownTrigger>
         <DropdownContent align="start" width="panel">
           {workspaces.length > 1 ? (
@@ -96,7 +96,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
                       selectWorkspace(workspace.id, selected ? undefined : '/projects')
                     }
                   >
-                    <Building2 className="text-muted size-4 shrink-0" aria-hidden />
+                    <Building2 className="text-ink-muted size-4 shrink-0" aria-hidden />
                     <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
                     {selected ? (
                       <Check className="text-accent size-4 shrink-0" aria-hidden />
@@ -111,7 +111,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
           <DropdownSeparator />
           {projects.length === 0 ? (
             <DropdownItem disabled>
-              <span className="text-muted min-w-0 flex-1 truncate">
+              <span className="text-ink-muted min-w-0 flex-1 truncate">
                 No projects in {activeWorkspace?.name ?? 'this workspace'}
               </span>
             </DropdownItem>
@@ -145,7 +145,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
               >
                 <span
                   aria-hidden
-                  className="bg-well text-secondary flex size-6 shrink-0 items-center justify-center rounded-[var(--radius-control)]"
+                  className="bg-surface-sunken text-ink-secondary flex size-6 shrink-0 items-center justify-center rounded-md"
                 >
                   <Plus className="size-4" />
                 </span>

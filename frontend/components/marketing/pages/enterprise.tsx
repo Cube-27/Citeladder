@@ -168,7 +168,7 @@ export function EnterpriseGovernance() {
         <div className="cm-groups">
           {GOVERNANCE.map((group) => (
             <div key={group.title} className="cm-group">
-              <h3 className="website-feature-heading text-foreground">{group.title}</h3>
+              <h3 className="website-feature-heading text-ink">{group.title}</h3>
               <ul className="mk-checks">
                 {group.points.map((point) => (
                   <li key={point}>
@@ -197,8 +197,8 @@ export function EnterpriseDataFlow() {
         {DATA_FLOW.map((step, index) => (
           <li key={step.title}>
             <span className="cm-flow-step">{index + 1}</span>
-            <h3 className="website-feature-heading text-foreground">{step.title}</h3>
-            <p className="website-label text-muted">{step.detail}</p>
+            <h3 className="website-feature-heading text-ink">{step.title}</h3>
+            <p className="website-label text-ink-muted">{step.detail}</p>
           </li>
         ))}
       </ol>

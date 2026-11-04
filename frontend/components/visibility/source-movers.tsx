@@ -139,7 +139,7 @@ function MoverTable({
           <TableCell>
             <ClampText lines={1}>{dimension === 'url' ? pathOf(mover.key) : mover.key}</ClampText>
           </TableCell>
-          <TableCell numeric className="text-secondary">
+          <TableCell numeric className="text-ink-secondary">
             {`${percent(mover.previous_share, 1)} → ${percent(mover.current_share, 1)}`}
           </TableCell>
           <TableCell numeric>

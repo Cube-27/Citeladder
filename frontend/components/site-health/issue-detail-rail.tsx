@@ -67,7 +67,7 @@ export function IssueDetailRail({
             <h2 className={textRole('sectionTitle')}>{issueTitle(issue)}</h2>
             <IssueMetadata issue={issue} />
             <Inline gap="meta" className="type-body">
-              <span className="text-secondary whitespace-nowrap tabular-nums">
+              <span className="text-ink-secondary whitespace-nowrap tabular-nums">
                 {issue.affected_url_count} {issue.affected_url_count === 1 ? 'page' : 'pages'}{' '}
                 affected
               </span>

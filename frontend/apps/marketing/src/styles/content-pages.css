@@ -11,8 +11,8 @@
   padding: 0 0.75rem;
   border-radius: var(--radius-full);
   /* The well step reads on paper and on the soft tiles chips sit in. */
-  background: var(--color-well);
-  color: var(--color-secondary);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink-secondary);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
   font-weight: 500;
@@ -25,7 +25,7 @@
   align-items: center;
   column-gap: 0.5rem;
   row-gap: 0.25rem;
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
   font-variant-numeric: tabular-nums;
@@ -34,11 +34,11 @@
 .cp-meta > * + *::before {
   content: '·';
   margin-right: 0.5rem;
-  color: var(--color-border-strong);
+  color: var(--color-line);
 }
 
 .cp-meta-strong {
-  color: var(--color-foreground);
+  color: var(--color-ink);
   font-weight: 500;
 }
 
@@ -48,7 +48,7 @@
 }
 
 .cp-title-link:hover {
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
 }
 
 /* ── Blog index ─────────────────────────────────────────────────────────── */
@@ -57,7 +57,7 @@
   display: grid;
   overflow: hidden;
   border-radius: var(--radius-lg);
-  background: var(--color-background-alt);
+  background: var(--color-surface-sunken);
 }
 
 @media (min-width: 64rem) {
@@ -79,7 +79,7 @@
   align-content: start;
   gap: 0.75rem;
   padding: var(--site-card-pad);
-  background: var(--color-well);
+  background: var(--color-surface-sunken);
 }
 
 .cp-feature-outline ol {
@@ -95,7 +95,7 @@
   display: flex;
   gap: 0.75rem;
   padding-block: 0.75rem;
-  color: var(--color-secondary);
+  color: var(--color-ink-secondary);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
   transition: color var(--motion-fast) var(--ease-standard);
@@ -104,12 +104,12 @@
 .cp-feature-outline a::before {
   content: counter(cp-outline);
   flex: none;
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   font-variant-numeric: tabular-nums;
 }
 
 .cp-feature-outline a:hover {
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
 }
 
 .cp-toolbar {
@@ -132,10 +132,10 @@
   align-items: center;
   min-height: 2rem;
   padding: 0 0.75rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-full);
-  background: var(--color-panel);
-  color: var(--color-secondary);
+  background: var(--color-surface);
+  color: var(--color-ink-secondary);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
   font-weight: 500;
@@ -147,14 +147,14 @@
 }
 
 .cp-filter:hover {
-  border-color: var(--color-border-strong);
-  color: var(--color-foreground);
+  border-color: var(--color-line);
+  color: var(--color-ink);
 }
 
 .cp-filter[aria-pressed='true'] {
-  border-color: var(--color-foreground);
-  background: var(--color-foreground);
-  color: var(--color-background);
+  border-color: var(--color-ink);
+  background: var(--color-ink);
+  color: var(--color-surface);
 }
 
 .cp-rows > article {
@@ -173,7 +173,7 @@
 
 .cp-row-date {
   padding-top: 0.25rem;
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
   font-variant-numeric: tabular-nums;
@@ -231,23 +231,23 @@
   grid-row: 1 / span 2;
   grid-column: 2;
   align-self: center;
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   transition:
     color var(--motion-fast) var(--ease-standard),
     transform var(--motion-normal) var(--ease-standard);
 }
 
 .cp-link-row:hover > svg {
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
   transform: translateX(2px);
 }
 
 .cp-link-row:hover .cp-link-title {
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
 }
 
 .cp-link-title {
-  color: var(--color-foreground);
+  color: var(--color-ink);
   font-size: var(--text-site-card-compact);
   line-height: var(--text-site-card-compact--line-height);
   font-weight: 500;
@@ -256,7 +256,7 @@
 }
 
 .cp-link-desc {
-  color: var(--color-secondary);
+  color: var(--color-ink-secondary);
   font-size: var(--text-site-body);
   line-height: var(--text-site-body--line-height);
 }
@@ -302,7 +302,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
 }
@@ -310,7 +310,7 @@
 .cp-crumbs li + li::before {
   content: '/';
   margin-right: 0.5rem;
-  color: var(--color-border-strong);
+  color: var(--color-line);
 }
 
 .cp-crumbs a {
@@ -318,7 +318,7 @@
 }
 
 .cp-crumbs a:hover {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .cp-byline {
@@ -367,14 +367,14 @@
 .cp-toc a {
   display: block;
   padding-block: 0.25rem;
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
   transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .cp-toc a:hover {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 
 .cp-author {
@@ -393,7 +393,7 @@
 
 .cp-prose {
   min-width: 0;
-  color: var(--color-secondary);
+  color: var(--color-ink-secondary);
 }
 
 /* Article copy reads at the website body size, 16px (docs/design.md), on a
@@ -427,18 +427,18 @@
 }
 
 .cp-prose > :is(ul, ol) li::marker {
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
 }
 
 .cp-prose strong {
-  color: var(--color-foreground);
+  color: var(--color-ink);
   font-weight: 500;
 }
 
 .cp-prose code {
   padding: 0 0.25rem;
   border-radius: var(--radius-xs);
-  background: var(--color-background-alt);
+  background: var(--color-surface-sunken);
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 0.875em;
 }
@@ -448,9 +448,9 @@
 .cp-prose > p a,
 .cp-prose > :is(ul, ol) li a,
 .cp-prose td a {
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
   text-decoration-line: underline;
-  text-decoration-color: var(--color-accent-border);
+  text-decoration-color: var(--color-line-control);
   text-decoration-thickness: 1px;
   text-underline-offset: 0.25em;
   overflow-wrap: anywhere;
@@ -492,9 +492,9 @@
 .cp-prose > blockquote {
   margin-block: 1.75rem;
   padding: 1rem 1.25rem;
-  border-radius: var(--radius-card);
-  background: var(--color-background-alt);
-  color: var(--color-foreground);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink);
 }
 
 .cp-prose > blockquote p {
@@ -507,8 +507,8 @@
   margin-block: 1.75rem;
   overflow-x: auto;
   padding: 1.25rem;
-  border-radius: var(--radius-card);
-  background: var(--color-background-alt);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-sunken);
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
@@ -516,7 +516,7 @@
 
 .cp-cite {
   margin-left: 0.25rem;
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
   font-size: var(--text-site-caption);
   font-weight: 500;
   vertical-align: super;
@@ -546,7 +546,7 @@
 .cp-table caption {
   caption-side: top;
   padding: 0.75rem 0;
-  color: var(--color-foreground);
+  color: var(--color-ink);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
   font-weight: 500;
@@ -555,8 +555,8 @@
 
 .cp-table th {
   padding: 0.75rem 1rem 0.5rem 0;
-  border-bottom: 1px solid var(--color-border);
-  color: var(--color-muted);
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink-muted);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
   font-weight: 500;
@@ -565,18 +565,18 @@
 
 .cp-table td {
   padding: 0.75rem 1rem 0.75rem 0;
-  border-bottom: 1px solid var(--color-border-subtle);
-  color: var(--color-secondary);
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink-secondary);
   vertical-align: top;
 }
 
 .cp-table td:first-child {
-  color: var(--color-foreground);
+  color: var(--color-ink);
   font-weight: 500;
 }
 
 .cp-table td[data-emphasised] {
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
   font-weight: 500;
 }
 
@@ -589,7 +589,7 @@
   margin-block: 2.25rem;
   padding: var(--site-card-pad);
   border-radius: var(--radius-lg);
-  background: var(--color-background-alt);
+  background: var(--color-surface-sunken);
 }
 
 .cp-figure-title {
@@ -601,8 +601,8 @@
   align-content: start;
   gap: 0.5rem;
   padding: var(--card-padding);
-  border-radius: var(--radius-card);
-  background: var(--color-panel);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
 }
 
 .cp-node-strong {
@@ -610,14 +610,14 @@
 }
 
 .cp-node-title {
-  color: var(--color-foreground);
+  color: var(--color-ink);
   font-size: var(--text-site-card-compact);
   line-height: var(--text-site-card-compact--line-height);
   font-weight: 500;
 }
 
 .cp-node-text {
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
 }
@@ -625,7 +625,7 @@
 .cp-node-list {
   display: grid;
   gap: 0.5rem;
-  color: var(--color-secondary);
+  color: var(--color-ink-secondary);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
 }
@@ -642,15 +642,15 @@
   height: 0.3125rem;
   margin-top: 0.5rem;
   border-radius: var(--radius-full);
-  background: var(--color-border-strong);
+  background: var(--color-line);
 }
 
 .cp-node-strong .cp-node-list li::before {
-  background: var(--color-accent);
+  background: var(--color-ink);
 }
 
 .cp-step {
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
   font-weight: 500;
@@ -672,7 +672,7 @@
 .cp-checklist li > svg {
   grid-row: 1 / span 2;
   margin-top: 0.25rem;
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
 }
 
 /* Callout: a quiet tinted note, no coloured rail. */
@@ -682,8 +682,8 @@
   gap: 0.75rem;
   margin-block: 1.75rem;
   padding: 1rem 1.25rem;
-  border-radius: var(--radius-card);
-  background: var(--color-background-alt);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-sunken);
 }
 
 .cp-callout > svg {
@@ -691,7 +691,7 @@
 }
 
 .cp-callout p {
-  color: var(--color-secondary);
+  color: var(--color-ink-secondary);
   font-size: var(--text-site-body);
   line-height: var(--text-site-body--line-height);
 }
@@ -710,16 +710,16 @@
   margin-bottom: 0;
   gap: 0.5rem;
   padding-left: 1.25rem;
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
   list-style: decimal;
 }
 
 .cp-sources a {
-  color: var(--color-foreground);
+  color: var(--color-ink);
   text-decoration-line: underline;
-  text-decoration-color: var(--color-border-strong);
+  text-decoration-color: var(--color-line);
   text-underline-offset: 0.25em;
   transition: text-decoration-color var(--motion-fast) var(--ease-standard);
 }
@@ -746,7 +746,7 @@
 }
 
 .cp-pager a:hover .cp-link-title {
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
 }
 
 .cp-pager-next {
@@ -794,40 +794,40 @@
   align-items: center;
   gap: 0.25rem 1rem;
   padding: 1.25rem 1.5rem;
-  border-radius: var(--radius-card);
-  background: var(--color-background-alt);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-sunken);
   transition: background-color var(--motion-fast) var(--ease-standard);
 }
 
 [data-citeladder-section='soft'] .cp-tool-row {
-  background: var(--color-panel);
+  background: var(--color-surface);
 }
 
 .cp-tool-row .nav-row-icon {
-  background: var(--color-panel);
+  background: var(--color-surface);
 }
 
 [data-citeladder-section='soft'] .cp-tool-row .nav-row-icon {
-  background: var(--color-background-alt);
+  background: var(--color-surface-sunken);
 }
 
 .cp-tool-row:hover {
-  background: var(--color-well);
+  background: var(--color-surface-sunken);
 }
 
 .cp-tool-row:hover .nav-row-icon,
 .cp-tool-row:hover > svg {
-  color: var(--color-accent-text);
+  color: var(--color-accent-ink);
 }
 
 .cp-tool-row > svg {
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .cp-tool-row-input {
   display: none;
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
 }
@@ -865,7 +865,7 @@
   gap: 0.5rem;
   max-width: 60ch;
   margin-top: 1.75rem;
-  color: var(--color-muted);
+  color: var(--color-ink-muted);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);
 }
@@ -876,7 +876,7 @@
   min-width: 0;
   overflow: hidden;
   border-radius: var(--radius-lg);
-  background: var(--color-background-alt);
+  background: var(--color-surface-sunken);
 }
 
 @media (min-width: 64rem) {
@@ -894,7 +894,7 @@
 }
 
 .cp-tool-result {
-  background: var(--color-well);
+  background: var(--color-surface-sunken);
 }
 
 .cp-tool-head {
@@ -914,15 +914,15 @@
   gap: 0.75rem;
   padding: var(--site-card-pad);
   border-radius: var(--radius-lg);
-  background: var(--color-background-alt);
+  background: var(--color-surface-sunken);
 }
 
 .cp-tool-extra pre {
   overflow-x: auto;
   padding: 1rem;
-  border-radius: var(--radius-card);
-  background: var(--color-background-alt);
-  color: var(--color-secondary);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink-secondary);
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: var(--text-site-label);
   line-height: var(--text-site-label--line-height);

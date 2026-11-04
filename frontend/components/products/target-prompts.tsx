@@ -184,7 +184,7 @@ function PromptRows({
     <ul className={ledgerClasses()}>
       {rows.map((row) => (
         <Inline as="li" key={row.id} gap="compact" className={ledgerItemClasses('flex-wrap')}>
-          <span className="text-secondary min-w-0 flex-1">{row.text}</span>
+          <span className="text-ink-secondary min-w-0 flex-1">{row.text}</span>
           <Button
             variant={row.enabled ? 'secondary' : 'primary'}
             disabled={pending}

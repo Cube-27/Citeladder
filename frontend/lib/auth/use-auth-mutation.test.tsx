@@ -9,6 +9,7 @@ import {
   ACTIVE_PROJECT_STORAGE_KEY,
   ACTIVE_WORKSPACE_STORAGE_KEY,
 } from '@/lib/project/active-project-storage';
+import { THEME_COOKIE, setThemePreference } from '@/lib/theme/theme';
 import { mswServer } from '@/test/msw-server';
 import { makeProject } from '@/test/fixtures/project';
 
@@ -46,6 +47,7 @@ afterEach(() => {
   mswServer.resetHandlers();
   navigate.mockReset();
   window.localStorage.clear();
+  document.cookie = `${THEME_COOKIE}=; Max-Age=0; Path=/`;
   globalThis.sessionStorage.clear();
 });
 afterAll(() => mswServer.close());
@@ -73,7 +75,7 @@ describe('useAuthMutation', () => {
     const { result, queryClient } = setup();
     queryClient.setQueryData(['old-account', 'private'], { secret: 'stale' });
     window.localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, project.id);
-    window.localStorage.setItem('citeladder-theme', 'dark');
+    setThemePreference('dark');
     window.localStorage.setItem(ACTIVE_WORKSPACE_STORAGE_KEY, project.workspace_id);
 
     let requestStarted: (() => void) | undefined;
@@ -110,7 +112,7 @@ describe('useAuthMutation', () => {
     window.dispatchEvent(new Event('pagehide'));
     expect(queryClient.getQueryData(['old-account', 'private'])).toBeUndefined();
     expect(window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY)).toBeNull();
-    expect(window.localStorage.getItem('citeladder-theme')).toBe('dark');
+    expect(document.cookie).toContain(`${THEME_COOKIE}=dark`);
     expect(window.localStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY)).toBeNull();
   });
 

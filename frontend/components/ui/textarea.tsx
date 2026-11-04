@@ -3,7 +3,7 @@ import type { ComponentPropsWithoutRef, Ref } from 'react';
 import { cn } from '@/lib/utils';
 
 const textareaClasses =
-  'focus-input min-h-[var(--textarea-min-height)] w-full resize-y rounded-[var(--radius-control)] border border-border-bold bg-input p-3 text-field text-foreground transition-[border-color,background-color] placeholder:text-muted enabled:hover:border-muted aria-invalid:border-danger aria-invalid:enabled:hover:border-danger disabled:cursor-not-allowed disabled:bg-disabled disabled:text-muted disabled:border-border-subtle';
+  'focus-input min-h-[var(--textarea-min-height)] w-full resize-y rounded-md border border-line-control bg-surface p-3 text-body-sm text-ink transition-[border-color,background-color] placeholder:text-ink-muted enabled:hover:border-ink-muted aria-invalid:border-negative aria-invalid:enabled:hover:border-negative disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-ink-muted disabled:border-line';
 
 /**
  * Inside a `ComposerFrame` the frame is the box: the field keeps its focus

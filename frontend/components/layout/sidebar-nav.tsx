@@ -86,7 +86,7 @@ function DashboardNav({ onNavigate }: Readonly<{ onNavigate?: () => void }>) {
       {NAV_GROUPS.map((group) => (
         <div key={group.title ?? 'overview'} className="flex flex-col gap-0">
           {group.title ? (
-            <p className="type-caption text-muted px-3 pt-4 pb-2">{group.title}</p>
+            <p className="type-caption text-ink-muted px-3 pt-4 pb-2">{group.title}</p>
           ) : null}
           <StationLinks items={group.items} onNavigate={onNavigate} />
         </div>

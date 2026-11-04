@@ -7,6 +7,7 @@ import {
   ACTIVE_PROJECT_STORAGE_KEY,
   ACTIVE_WORKSPACE_STORAGE_KEY,
 } from '@/lib/project/active-project-storage';
+import { THEME_COOKIE, setThemePreference } from '@/lib/theme/theme';
 
 vi.mock('@/lib/navigation/hard-navigate', () => ({ hardNavigate: vi.fn() }));
 const navigate = vi.mocked(hardNavigate);
@@ -14,6 +15,7 @@ const navigate = vi.mocked(hardNavigate);
 afterEach(() => {
   navigate.mockReset();
   window.localStorage.clear();
+  document.cookie = `${THEME_COOKIE}=; Max-Age=0; Path=/`;
 });
 
 /** Let `restartAt` run up to its navigation; it never resolves by design. */
@@ -35,7 +37,7 @@ describe('restartAt', () => {
       ACTIVE_WORKSPACE_STORAGE_KEY,
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     );
-    window.localStorage.setItem('citeladder-theme', 'dark');
+    setThemePreference('dark');
 
     const settled = await startRestart(queryClient, '/login');
 
@@ -44,7 +46,8 @@ describe('restartAt', () => {
     // …but the next document cannot pick up the old account's selection.
     expect(window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY)).toBeNull();
     expect(window.localStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY)).toBeNull();
-    expect(window.localStorage.getItem('citeladder-theme')).toBe('dark');
+    // A device preference, not the account's, so it survives the change.
+    expect(document.cookie).toContain(`${THEME_COOKIE}=dark`);
 
     window.dispatchEvent(new Event('pagehide'));
     expect(queryClient.getQueryData(['old-account'])).toBeUndefined();

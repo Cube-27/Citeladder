@@ -59,7 +59,7 @@ export function FilterBar({ view, search, filters, status, actions }: FilterBarP
   return (
     <div
       data-filter-bar=""
-      className="flex min-h-[var(--control-height-md)] w-full min-w-0 flex-wrap items-center gap-2 py-2"
+      className="flex min-h-[var(--control-md)] w-full min-w-0 flex-wrap items-center gap-2 py-2"
     >
       {view ? <div className="me-auto flex min-w-0">{view}</div> : null}
       {search ? <div className="desktop:w-44 w-full min-w-0">{search}</div> : null}
@@ -108,7 +108,7 @@ export function FilterField({ children }: Readonly<{ children: ReactNode }>) {
  * filter takes its own row and the groups need no separator.
  */
 export function FilterDivider() {
-  return <span className="bg-border desktop:block mx-1 hidden h-5 w-px" aria-hidden />;
+  return <span className="bg-line desktop:block mx-1 hidden h-5 w-px" aria-hidden />;
 }
 
 /**
@@ -153,7 +153,7 @@ export function FilterTrigger({
       ref={ref}
       variant="secondary"
       data-active={active || showCount || undefined}
-      className={cn((active || showCount) && 'bg-selected', className)}
+      className={cn((active || showCount) && 'bg-surface-sunken', className)}
       {...props}
     >
       {/* One form at every width: the name, the count and the chevron. A
@@ -164,14 +164,14 @@ export function FilterTrigger({
         <>
           <span
             aria-hidden
-            className="type-badge font-numeric bg-neutral-bg text-foreground min-w-5 rounded-full px-2"
+            className="type-badge bg-surface-sunken text-ink min-w-5 rounded-full px-2 font-mono"
           >
             {count}
           </span>
           <span className="sr-only">, {count} active</span>
         </>
       ) : null}
-      <ChevronDown className="text-muted size-4 shrink-0" aria-hidden />
+      <ChevronDown className="text-ink-muted size-4 shrink-0" aria-hidden />
     </Button>
   );
 }
@@ -184,8 +184,8 @@ function FilterTriggerText({
   if (value === undefined || value === null) return <span>{label}</span>;
   return (
     <span className="min-w-0 truncate">
-      <span className={hideLabel ? 'sr-only' : 'text-muted'}>{label}:</span>{' '}
-      <span className="text-foreground">{value}</span>
+      <span className={hideLabel ? 'sr-only' : 'text-ink-muted'}>{label}:</span>{' '}
+      <span className="text-ink">{value}</span>
     </span>
   );
 }

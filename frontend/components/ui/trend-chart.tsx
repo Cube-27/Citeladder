@@ -28,7 +28,7 @@ export type TrendPoint = {
 export type TrendSeries = {
   label: string;
   values: readonly (number | null)[];
-  /** Stroke class from the categorical chart tokens, e.g. `stroke-chart-2`. */
+  /** Stroke class from the categorical chart tokens, e.g. `stroke-data-2`. */
   strokeClass: string;
 };
 
@@ -63,7 +63,7 @@ const valueText = (value: number | null) => (value === null ? 'unavailable' : `$
 function TrendPointMark({ x, y, point }: Readonly<{ x: number; y: number; point: TrendPoint }>) {
   const description = `${point.label}: ${point.value}`;
   const mark = (
-    <circle cx={x} cy={y} r={2.5} className="fill-chart-1" aria-label={description}>
+    <circle cx={x} cy={y} r={2.5} className="fill-data-1" aria-label={description}>
       <title>{description}</title>
     </circle>
   );
@@ -426,7 +426,7 @@ export function TrendChart({
           vectorEffect="non-scaling-stroke"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="stroke-chart-1"
+          className="stroke-data-1"
         />
       ))}
       {markers.map(({ event, x }) => (
@@ -438,7 +438,7 @@ export function TrendChart({
             y2={padding + innerHeight}
             strokeWidth={1}
             strokeDasharray="2 3"
-            className="stroke-chart-6 opacity-70"
+            className="stroke-data-other opacity-70"
             aria-hidden
           />
           <rect
@@ -446,7 +446,7 @@ export function TrendChart({
             y={padding + innerHeight - 3}
             width={6}
             height={6}
-            className="fill-chart-6"
+            className="fill-data-other"
           >
             <title>{event.label}</title>
           </rect>

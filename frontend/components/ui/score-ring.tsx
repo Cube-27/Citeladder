@@ -69,7 +69,7 @@ export function ScoreRing({
           r={radius}
           fill="none"
           strokeWidth={RING_STROKE}
-          className="stroke-well"
+          className="stroke-surface-sunken"
         />
         <circle
           cx={RING_SIZE / 2}
@@ -88,7 +88,7 @@ export function ScoreRing({
       </svg>
       <span
         aria-hidden
-        className="type-figure-sm text-foreground absolute inset-0 flex items-center justify-center"
+        className="type-figure-sm text-ink absolute inset-0 flex items-center justify-center"
       >
         {clamped}
       </span>

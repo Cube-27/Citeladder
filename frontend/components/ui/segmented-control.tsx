@@ -128,9 +128,11 @@ export function SegmentedControl<T extends string>({
               {option.label}
               {/* Each part leads with a space, so the radio's accessible name
                   reads "CTR gaps · Partial 50"; the flex gap draws the space. */}
-              {option.detail ? <span className="text-muted">{` · ${option.detail}`}</span> : null}
+              {option.detail ? (
+                <span className="text-ink-muted">{` · ${option.detail}`}</span>
+              ) : null}
               {option.count === undefined ? null : (
-                <span className="text-muted font-numeric">{` ${option.count.toLocaleString()}`}</span>
+                <span className="text-ink-muted font-mono">{` ${option.count.toLocaleString()}`}</span>
               )}
             </button>
           );

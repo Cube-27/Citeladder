@@ -38,10 +38,10 @@ function outcomeOf(direction: Direction, policy: DeltaPolicy): Outcome {
 }
 
 const OUTCOME_INK: Record<Outcome, string> = {
-  improved: 'text-success-text',
-  worsened: 'text-danger-text',
-  changed: 'text-secondary',
-  unchanged: 'text-muted',
+  improved: 'text-positive',
+  worsened: 'text-negative',
+  changed: 'text-ink-secondary',
+  unchanged: 'text-ink-muted',
 };
 
 /** A true minus sign, so a screen reader says "minus" rather than "dash". */
@@ -80,7 +80,7 @@ export function Delta({
 }>) {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     return (
-      <span className={textRole('delta', cn('text-muted', className))}>
+      <span className={textRole('delta', cn('text-ink-muted', className))}>
         <MissingValue reason={missingReason} />
       </span>
     );

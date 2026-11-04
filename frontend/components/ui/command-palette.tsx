@@ -59,7 +59,7 @@ type Command = {
 
 /** Chrome shared by the empty state and each row, so heights never drift. */
 const ROW =
-  'type-control flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 text-left min-h-[var(--menu-item-height)]';
+  'type-control flex w-full items-center gap-3 rounded-md px-3 text-left min-h-[var(--menu-item-height)]';
 
 function subscribeToPlatform() {
   return () => {};
@@ -97,11 +97,14 @@ export function CommandPaletteTrigger({
       }}
       aria-label="Search or jump to"
       aria-keyshortcuts="Meta+K Control+K"
-      className={cn('text-muted min-w-0 w-full justify-start text-left [&>span]:w-full', className)}
+      className={cn(
+        'text-ink-muted min-w-0 w-full justify-start text-left [&>span]:w-full',
+        className,
+      )}
     >
-      <Search className="text-muted size-4 shrink-0" aria-hidden />
+      <Search className="text-ink-muted size-4 shrink-0" aria-hidden />
       <span className="min-w-0 truncate">Search or jump to…</span>
-      <kbd className="bg-well text-muted type-badge desktop:inline ms-auto hidden shrink-0 rounded-xs px-1 py-0.5">
+      <kbd className="bg-surface-sunken text-ink-muted type-badge desktop:inline ms-auto hidden shrink-0 rounded-xs px-1 py-0.5">
         {isMac ? '⌘K' : 'Ctrl K'}
       </kbd>
     </Button>
@@ -298,7 +301,7 @@ export function CommandPalette() {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={setOpenState}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="bg-overlay-scrim z-overlay fixed inset-0" />
+        <DialogPrimitive.Overlay className="bg-scrim z-overlay fixed inset-0" />
         <DialogPrimitive.Content
           // Radix requires a Title for the dialog's accessible name and
           // warns when one is absent. The palette has no visible heading —
@@ -314,11 +317,11 @@ export function CommandPalette() {
             event.preventDefault();
             restoreFocus();
           }}
-          className="bg-elevated shadow-overlay z-modal focus-ring fixed top-24 left-1/2 flex max-h-3/5 w-full max-w-xl -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-[var(--radius-card)] border border-transparent"
+          className="bg-surface shadow-pop z-modal focus-ring fixed top-24 left-1/2 flex max-h-3/5 w-full max-w-xl -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-lg border border-transparent"
         >
           <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
-          <div className="focus-frame border-border-subtle flex items-center gap-3 border-b px-4">
-            <Search className="text-muted size-4 shrink-0" aria-hidden />
+          <div className="focus-frame border-line flex items-center gap-3 border-b px-4">
+            <Search className="text-ink-muted size-4 shrink-0" aria-hidden />
             <input
               ref={inputRef}
               value={query}
@@ -333,9 +336,9 @@ export function CommandPalette() {
               aria-activedescendant={
                 results[activeIndex] ? `${listboxId}-${results[activeIndex].id}` : undefined
               }
-              className="type-body text-foreground placeholder:text-muted h-[var(--control-height-md)] min-w-0 flex-1 bg-transparent"
+              className="type-body text-ink placeholder:text-ink-muted h-[var(--control-md)] min-w-0 flex-1 bg-transparent"
             />
-            <kbd className="bg-well text-muted type-badge shrink-0 rounded-xs px-1 py-0.5 tabular-nums">
+            <kbd className="bg-surface-sunken text-ink-muted type-badge shrink-0 rounded-xs px-1 py-0.5 tabular-nums">
               esc
             </kbd>
           </div>
@@ -347,7 +350,7 @@ export function CommandPalette() {
             {/* The empty state is a message, not an option, so it sits
                   beside the listbox rather than inside it. */}
             {results.length === 0 ? (
-              <p className={cn(ROW, 'text-muted')}>No matches for “{query}”</p>
+              <p className={cn(ROW, 'text-ink-muted')}>No matches for “{query}”</p>
             ) : null}
             <div
               id={listboxId}
@@ -387,15 +390,15 @@ export function CommandPalette() {
                           onClick={() => runCommand(command)}
                           className={cn(
                             ROW,
-                            'focus-ring transition-colors active:bg-active',
+                            'focus-ring transition-colors active:bg-surface-sunken',
                             isActive
-                              ? 'bg-selected text-foreground'
-                              : 'text-secondary hover:bg-hover hover:text-foreground',
+                              ? 'bg-surface-sunken text-ink'
+                              : 'text-ink-secondary hover:bg-surface-sunken hover:text-ink',
                           )}
                         >
                           {Icon ? (
                             <Icon
-                              className={cn('size-4 shrink-0', !isActive && 'text-muted')}
+                              className={cn('size-4 shrink-0', !isActive && 'text-ink-muted')}
                               aria-hidden
                             />
                           ) : (
@@ -410,7 +413,10 @@ export function CommandPalette() {
                             <span className="type-caption shrink-0">{command.hint}</span>
                           ) : null}
                           {isActive ? (
-                            <CornerDownLeft className="text-muted size-4 shrink-0" aria-hidden />
+                            <CornerDownLeft
+                              className="text-ink-muted size-4 shrink-0"
+                              aria-hidden
+                            />
                           ) : null}
                         </button>
                       );
@@ -423,18 +429,18 @@ export function CommandPalette() {
 
           {/* Keyboard legend — the palette is a keyboard surface first, so
                 it states its own controls rather than assuming they are known. */}
-          <div className="border-border-subtle type-caption flex shrink-0 items-center gap-4 border-t px-4 py-3">
+          <div className="border-line type-caption flex shrink-0 items-center gap-4 border-t px-4 py-3">
             <span className="flex items-center gap-1">
-              <kbd className="bg-well text-muted type-badge rounded-xs px-1 py-0.5 tabular-nums">
+              <kbd className="bg-surface-sunken text-ink-muted type-badge rounded-xs px-1 py-0.5 tabular-nums">
                 ↑
               </kbd>
-              <kbd className="bg-well text-muted type-badge rounded-xs px-1 py-0.5 tabular-nums">
+              <kbd className="bg-surface-sunken text-ink-muted type-badge rounded-xs px-1 py-0.5 tabular-nums">
                 ↓
               </kbd>
               {'navigate'}
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="bg-well text-muted type-badge rounded-xs px-1 py-0.5 tabular-nums">
+              <kbd className="bg-surface-sunken text-ink-muted type-badge rounded-xs px-1 py-0.5 tabular-nums">
                 ↵
               </kbd>
               {'select'}

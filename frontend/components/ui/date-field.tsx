@@ -53,12 +53,12 @@ export function DateField({
   return (
     <div
       className={cn(
-        'focus-frame bg-input flex h-[var(--control-height-md)] w-full items-center gap-2 rounded-[var(--radius-control)] px-3 transition-[border-color,background-color]',
+        'focus-frame bg-surface flex h-[var(--control-md)] w-full items-center gap-2 rounded-md px-3 transition-[border-color,background-color]',
         // Invalid fields retain their semantic boundary on hover.
         isInvalid
-          ? 'border border-danger hover:border-danger'
-          : 'border border-border-bold has-[:enabled]:hover:border-muted',
-        disabled && 'cursor-not-allowed bg-disabled border-border-subtle',
+          ? 'border border-negative hover:border-negative'
+          : 'border border-line-control has-[:enabled]:hover:border-ink-muted',
+        disabled && 'cursor-not-allowed bg-surface-sunken border-line',
         className,
       )}
     >
@@ -73,7 +73,7 @@ export function DateField({
         disabled={disabled}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="text-foreground disabled:text-muted placeholder:text-muted text-field min-w-0 flex-1 bg-transparent tabular-nums"
+        className="text-ink disabled:text-ink-muted placeholder:text-ink-muted text-body-sm min-w-0 flex-1 bg-transparent tabular-nums"
       />
       <DropdownPrimitive.Root open={open} onOpenChange={setOpen}>
         <DropdownPrimitive.Trigger asChild>
@@ -81,7 +81,7 @@ export function DateField({
             type="button"
             aria-label={`${ariaLabel}: open calendar`}
             disabled={disabled}
-            className="text-muted enabled:hover:text-foreground enabled:hover:bg-hover enabled:active:bg-active data-[state=open]:bg-selected inline-flex size-[var(--field-end-target)] shrink-0 items-center justify-center rounded-[var(--radius-control)]"
+            className="text-ink-muted enabled:hover:text-ink enabled:hover:bg-surface-sunken enabled:active:bg-surface-sunken data-[state=open]:bg-surface-sunken inline-flex size-[var(--field-end-target)] shrink-0 items-center justify-center rounded-md"
           >
             <CalendarDays className="size-4" aria-hidden />
           </Pressable>

@@ -44,7 +44,7 @@ export function SettingsSection({
 export function SettingsSections({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div className="@container">
-      <div className="divide-border-subtle grid divide-y">{children}</div>
+      <div className="divide-line grid divide-y">{children}</div>
     </div>
   );
 }

@@ -82,7 +82,7 @@ function DimensionLedger({
                 surface, and a wrapping sentence pushes the score columns
                 off a screenful. Full text stays available on hover. */}
             <div className="grid min-w-0">
-              <ClampText lines={1} className={textRole('emphasis', 'text-foreground')}>
+              <ClampText lines={1} className={textRole('emphasis', 'text-ink')}>
                 {dimension.label}
               </ClampText>
               <ClampText lines={1} className="type-caption">
@@ -261,7 +261,7 @@ function ChangeSummaryCard({ data }: Readonly<{ data: SiteHealthOverview['change
         <Stack>
           {data.metrics.map((metric) => (
             <Inline gap="compact" key={metric.key} className="type-body justify-between">
-              <span className="text-secondary">
+              <span className="text-ink-secondary">
                 {CHANGE_METRIC_LABELS[metric.key] ?? metric.label}
               </span>
               <ChangeDelta metricKey={metric.key} delta={metric.delta} />

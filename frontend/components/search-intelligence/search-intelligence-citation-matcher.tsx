@@ -121,7 +121,7 @@ export function SearchIntelligenceCitationMatcher({
               onCheckedChange={() => toggle(audit.id)}
               label={formatDisplayTimestamp(audit.created_at, timeZone)}
             />
-            <span className="text-muted">{pluralCount(audit.completed_count, 'answer')}</span>
+            <span className="text-ink-muted">{pluralCount(audit.completed_count, 'answer')}</span>
           </Inline>
         ))}
       </div>

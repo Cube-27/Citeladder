@@ -28,10 +28,7 @@ export function SocialPreview() {
     return () => reader.abort();
   }, [file]);
   const preview = (
-    <div
-      className="bg-panel border-border-subtle overflow-hidden rounded-[var(--radius-card)] border"
-      data-ui
-    >
+    <div className="bg-surface border-line overflow-hidden rounded-lg border" data-ui>
       {file && localImage ? (
         <img
           src={localImage}
@@ -44,12 +41,12 @@ export function SocialPreview() {
           }}
         />
       ) : (
-        <div className="bg-background-alt website-body flex aspect-[1.91/1] items-center justify-center p-6 text-center">
+        <div className="bg-surface-sunken website-body flex aspect-[1.91/1] items-center justify-center p-6 text-center">
           Select a local image to preview its crop
         </div>
       )}
       <div className="flex flex-col gap-2 p-5">
-        <p className="website-label text-muted truncate">{url || 'https://example.com'}</p>
+        <p className="website-label text-ink-muted truncate">{url || 'https://example.com'}</p>
         <h3 className="website-feature-heading break-words">{title || 'Your page title'}</h3>
         <p className="website-body break-words">
           {description || 'Your page description appears here.'}

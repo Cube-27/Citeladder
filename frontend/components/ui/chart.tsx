@@ -119,7 +119,7 @@ export function ChartContainer({
 type SwatchPaint =
   | { tone: DataTone; color?: never; fillClass?: never }
   | {
-      /** A token value such as `var(--color-chart-2)`, for `ChartConfig` series. */
+      /** A token value such as `var(--color-data-2)`, for `ChartConfig` series. */
       color: string;
       tone?: never;
       fillClass?: never;
@@ -189,7 +189,7 @@ export const axisProps = {
   tickLine: false,
   axisLine: false,
   tickMargin: 8,
-  tick: { fontSize: 11, className: 'fill-muted' },
+  tick: { fontSize: 11, className: 'fill-ink-muted' },
 } as const;
 
 /**
@@ -234,7 +234,7 @@ export function ChartLegend({
 
 /**
  * The one chart hover-card surface: inverse ink on the inverse fill, so every
- * chart's tooltip reads as the same object. Its contents use `text-on-inverse`.
+ * chart's tooltip reads as the same object. Its contents use `text-on-ink`.
  */
 export function ChartTooltipPanel({
   children,
@@ -242,10 +242,7 @@ export function ChartTooltipPanel({
 }: Readonly<{ children: ReactNode; className?: string }>) {
   return (
     <div
-      className={cn(
-        'tooltip-panel bg-surface-inverse text-on-inverse shadow-overlay rounded-[var(--radius-card)] px-3 py-2',
-        className,
-      )}
+      className={cn('tooltip-panel bg-ink text-on-ink shadow-pop rounded-lg px-3 py-2', className)}
     >
       {children}
     </div>
@@ -276,11 +273,11 @@ export function ChartTooltipContent({
         {measured.map((entry) => (
           <li
             key={entry.dataKey ?? entry.name}
-            className="type-caption text-on-inverse flex items-center gap-2"
+            className="type-caption text-on-ink flex items-center gap-2"
           >
             {entry.color ? <LegendSwatch color={entry.color} /> : null}
             <span className="max-w-[16ch] truncate">{entry.name}</span>
-            <span className="font-numeric ml-auto">{formatValue(entry.value as number)}</span>
+            <span className="ml-auto font-mono">{formatValue(entry.value as number)}</span>
           </li>
         ))}
       </ul>

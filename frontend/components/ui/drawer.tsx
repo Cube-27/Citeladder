@@ -79,7 +79,7 @@ export function Drawer({
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="drawer-overlay bg-overlay-scrim z-overlay fixed inset-0" />
+        <DialogPrimitive.Overlay className="drawer-overlay bg-scrim z-overlay fixed inset-0" />
         <DialogPrimitive.Content
           onCloseAutoFocus={(event) => {
             const returnTarget = returnFocusRef.current;
@@ -92,11 +92,9 @@ export function Drawer({
           }}
           data-side={side}
           className={cn(
-            'drawer-panel border-transparent bg-elevated shadow-modal z-modal fixed inset-y-0 flex w-full flex-col focus-ring',
+            'drawer-panel border-transparent bg-surface shadow-pop z-modal fixed inset-y-0 flex w-full flex-col focus-ring',
             DRAWER_WIDTH[width],
-            side === 'left'
-              ? 'left-0 rounded-r-[var(--radius-card)] border-r'
-              : 'right-0 rounded-l-[var(--radius-card)] border-l',
+            side === 'left' ? 'left-0 rounded-r-lg border-r' : 'right-0 rounded-l-lg border-l',
             className,
           )}
         >
@@ -120,7 +118,7 @@ export function Drawer({
               </DialogPrimitive.Close>
             </>
           ) : (
-            <header className="border-border flex items-start justify-between gap-3 border-b p-[var(--modal-padding)]">
+            <header className="border-line flex items-start justify-between gap-3 border-b p-[var(--modal-padding)]">
               <div className="min-w-0">
                 <DialogPrimitive.Title className="type-section-title truncate">
                   {title}
@@ -150,7 +148,7 @@ export function Drawer({
             {children}
           </Body>
           {footer ? (
-            <footer className="border-border border-t px-[var(--modal-padding)] pt-4 pb-[var(--modal-padding)]">
+            <footer className="border-line border-t px-[var(--modal-padding)] pt-4 pb-[var(--modal-padding)]">
               {footer}
             </footer>
           ) : null}

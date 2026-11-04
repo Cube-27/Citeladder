@@ -31,8 +31,8 @@ import {
  */
 function RowStatus({ errors }: Readonly<{ errors: readonly string[] }>) {
   if (errors.length > 0)
-    return <ClampText className="type-caption text-danger-text">{errors.join(' ')}</ClampText>;
-  return <span className="type-caption text-success-text">Ready</span>;
+    return <ClampText className="type-caption text-negative">{errors.join(' ')}</ClampText>;
+  return <span className="type-caption text-positive">Ready</span>;
 }
 
 const PREVIEW_COLUMNS: readonly DataTableColumn[] = [
@@ -124,7 +124,7 @@ export function CsvImportDialog({
                 const invalid = row.errors.length > 0;
                 return (
                   <TableRow key={row.line} className={invalid ? 'opacity-60' : undefined}>
-                    <TableCell numeric className="text-muted">
+                    <TableCell numeric className="text-ink-muted">
                       {row.line}
                     </TableCell>
                     <TableCell>{row.input.topic || <UnavailableValue state="not_set" />}</TableCell>

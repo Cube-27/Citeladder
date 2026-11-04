@@ -124,7 +124,7 @@ function TextLink({
     <a
       href={href}
       className={cn(
-        'group text-foreground inline-flex items-center gap-1.5 font-medium',
+        'group text-ink inline-flex items-center gap-1.5 font-medium',
         'underline decoration-transparent decoration-1 underline-offset-4 transition-[text-decoration-color] duration-[var(--motion-menu)] hover:decoration-current',
         '[&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:transition-transform [&_svg]:duration-[var(--motion-slow)] [&_svg]:ease-[var(--ease-standard)] group-hover:[&_svg]:translate-x-0.5 group-hover:[&_svg]:-translate-y-0.5',
         className,

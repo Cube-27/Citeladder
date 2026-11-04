@@ -108,7 +108,7 @@ export function BrandFactsPanel({
         </Stack>
       )}
       {retired.length ? (
-        <p className={textRole('caption', 'text-muted')}>
+        <p className={textRole('caption', 'text-ink-muted')}>
           {retired.length} retired {retired.length === 1 ? 'fact is' : 'facts are'} kept for earlier
           runs and no longer checked.
         </p>
@@ -216,7 +216,7 @@ function FactRow({
         />
       )}
       {fact.source_url ? (
-        <span className={textRole('caption', 'text-muted break-all')}>{fact.source_url}</span>
+        <span className={textRole('caption', 'text-ink-muted break-all')}>{fact.source_url}</span>
       ) : null}
       {mayEdit ? (
         <Inline as="span" className="flex-wrap">
