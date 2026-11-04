@@ -269,6 +269,7 @@ describe('Agent runtime on PostgreSQL', () => {
       .object({ tools: z.array(z.object({ name: z.string() })) })
       .parse(JSON.parse([...prefixes][0]!));
     expect(prefix.tools.map((tool) => tool.name)).toEqual([
+      'edit_document',
       'load_skill',
       'read_evidence',
       'save_document',
@@ -383,7 +384,7 @@ describe('Agent runtime on PostgreSQL', () => {
       {
         error: false,
         content:
-          'Staged the final; it is saved with your reply. Now reply briefly; do not repeat the document.',
+          'Staged the document; it is saved with your reply. Now reply briefly; do not repeat the document.',
       },
       {
         error: true,
@@ -1022,7 +1023,7 @@ describe('Agent runtime on PostgreSQL', () => {
       )
       .execute(followup.lease);
     expect(opening).toEqual([
-      'The chat\'s current document (draft), which a revision updates:\n{"title":"My draft","body":"User edited draft"}',
+      'The chat\'s current document, which edit_document or save_document updates:\n{"title":"My draft","body":"User edited draft"}',
       'Refine the current draft',
     ]);
     expect(

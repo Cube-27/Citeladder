@@ -111,13 +111,12 @@ export async function applyMigrations(
     await client.query('set local statement_timeout = 0; set local lock_timeout = 0');
     await client.query('select pg_advisory_xact_lock($1::bigint)', [LOCK_KEY.toString()]);
     const todo = await pending(client, migrations);
-    for (const migration of todo) {
-      await client.query(migration.sql); // NOSONAR: files apply in order in one transaction.
+    for (const migration of todo) await client.query(migration.sql); // NOSONAR -- files apply in order in one transaction.
+    if (todo.length)
       await client.query(
-        'insert into public.schema_migrations (version, checksum) values ($1, $2)',
-        [migration.version, checksum(migration.sql)],
-      ); // NOSONAR
-    }
+        'insert into public.schema_migrations (version, checksum) select * from unnest($1::text[], $2::text[])',
+        [todo.map((m) => m.version), todo.map((m) => checksum(m.sql))],
+      );
     await client.query('commit');
     return todo.map((migration) => migration.version);
   } catch (error) {

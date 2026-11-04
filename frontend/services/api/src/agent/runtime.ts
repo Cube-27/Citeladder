@@ -94,7 +94,18 @@ function withSummary(summary: PromptSummary) {
   };
 }
 function savedNotice(formatLabel: string | null) {
-  return `Document saved${formatLabel ? ` in ${formatLabel} format` : ''}.`;
+  const format = formatLabel ? ` in ${formatLabel} format` : '';
+  return `Document saved${format}.`;
+}
+/**
+ * Thinking shares the output cap, so a cut-off call is discarded and asked
+ * once more with low effort as the next call of the turn; a cut-off retry, or
+ * a cut-off last call, ends the turn.
+ */
+function retryEffort(effort: Budget['reasoning_effort'], ordinal: number, budget: Budget) {
+  if (effort === 'low' || ordinal === budget.max_model_calls)
+    throw new AgentError('output_too_long');
+  return 'low' as const;
 }
 /** A turn never ends without a reply, even when the model wrote none. */
 function noReply(reads: number) {
@@ -242,11 +253,7 @@ export class AgentRuntime {
       };
       const response = await this.callModel(lease, ordinal, model, request, signal, events);
       if (response.stop === 'max_tokens') {
-        // Thinking shares the output cap, so a cut-off call is discarded and
-        // asked once more with low effort, as the next call of the turn.
-        if (effort === 'low' || ordinal === budget.max_model_calls)
-          throw new AgentError('output_too_long');
-        effort = 'low';
+        effort = retryEffort(effort, ordinal, budget);
         continue;
       }
       effort = budget.reasoning_effort;

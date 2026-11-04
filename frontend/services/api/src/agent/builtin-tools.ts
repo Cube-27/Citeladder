@@ -236,6 +236,10 @@ function replaced(
   return { ok: true, text };
 }
 
+function editLabel(count: number) {
+  return count === 1 ? 'the edit' : `${count} edits`;
+}
+
 export function editDocument(
   catalog: SkillCatalog,
   state: DocumentState,
@@ -267,6 +271,6 @@ export function editDocument(
       body: scrubRecordRefs(result.text),
     },
     bounds,
-    `Applied ${count === 1 ? 'the edit' : `${count} edits`}`,
+    `Applied ${editLabel(count)}`,
   );
 }

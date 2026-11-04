@@ -80,7 +80,7 @@ the `validate-change` skill.
   (`frontend/services/api/migrations/0002_<name>.sql` onwards) that apply to the
   existing production schema in place; never edit an applied migration,
   `0001_baseline.sql` included, and never rely on a database reset. Verify on the
-  one local development database (bring it forward with `pnpm migrate`; run
+  one local development database (bring it forward with `pnpm --filter @citeladder/api migrate`; run
   tests with `pnpm test:api <files>`, never create per-branch databases). Never
   reset staging or production data.
 - Never reset, deploy, call live providers, activate payments or mutate external

@@ -190,15 +190,17 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
         .orderBy('id')
         .execute();
       const at = new Date();
-      for (const debit of debits)
-        await refundUsage(db, {
+      for (const debit of debits) {
+        const refund = {
           workspaceId: run.workspace_id,
           accountId,
           debitId: debit.id,
           units: debit.units,
           key: `agent:${run.id}:refund:${debit.id}`,
           at,
-        }); // NOSONAR: refunds share the caller's ordered transaction.
+        };
+        await refundUsage(db, refund); // NOSONAR -- refunds share the caller's ordered transaction.
+      }
     },
   };
 }
