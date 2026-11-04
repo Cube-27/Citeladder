@@ -84,9 +84,7 @@ test.describe('marketing routes', () => {
     expect(redirect.headers().location).toBe('/platform/site-health?source=test');
     await page.goto('/ai-citation-tracking');
     await expect(page.locator('h1')).toHaveCount(1);
-    await expect(
-      page.locator('main a[href="/platform/citation-intelligence"]').first(),
-    ).toBeVisible();
+    await expect(page.locator('main a[href="/platform/cited-sources"]').first()).toBeVisible();
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
       'href',
       new URL('/ai-citation-tracking', baseURL).href,
