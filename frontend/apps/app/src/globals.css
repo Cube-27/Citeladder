@@ -334,6 +334,17 @@
   box-shadow: var(--shadow-press);
 }
 
+/* Between the desktop edge and 1200px (the owner's 982px desktop) the shell
+   gives the content 40px back: a narrower sidebar and gutter keep every
+   filter band on one row. The App PR replaces this step with the system's
+   61px icon rail below 1280px (decision D3). */
+@media (min-width: 981px) and (max-width: 1200px) {
+  :root {
+    --sidebar-width: 224px;
+    --content-gutter: 24px;
+  }
+}
+
 @media (max-width: 980px) {
   :root {
     --content-gutter: 20px;
