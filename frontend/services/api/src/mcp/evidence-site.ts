@@ -266,7 +266,10 @@ function ruleEvidenceSummary(value: unknown): Record<string, string | number | b
  * matches its target page, without query or fragment: a user's
  * `https://www.site.com/a/` and a crawled `https://site.com/a` are one page.
  */
-const matchableUrl = (value: string) => comparableUrl(value.replace(/[?#].*$/u, ''));
+function matchableUrl(value: string) {
+  const end = value.search(/[?#]/u);
+  return comparableUrl(end < 0 ? value : value.slice(0, end));
+}
 function urlFilter(value: string | null | undefined) {
   if (value === null || value === undefined) return null;
   const url = matchableUrl(value);

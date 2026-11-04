@@ -13,6 +13,7 @@ import { comparableUrl, selectContentFragments } from '../site-health/reads/cont
 import { issueDetail } from '../site-health/reads/issues.ts';
 import { crawlability } from '../mcp/evidence-site.ts';
 import { McpInputError } from '../mcp/types.ts';
+import { stripLeading, stripTrailing } from '../text-order.ts';
 import { revisionRefs } from './outputs.ts';
 import type { ContextReader } from './context.ts';
 import { AgentError } from './contracts.ts';
@@ -35,18 +36,18 @@ const hostOf = (value: string) => {
     return '';
   }
 };
-// An address starts a word: an email's domain (`name@site.com`) is not a page.
-const URL_TOKEN = /(?<![@\w.-])(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s<>"'`)\]]*)?/giu;
+const QUOTES = '<>"\'`()[]';
 /**
  * The first address in the person's message on the project's own site, with
- * or without a scheme or `www.`: the page the request is about. Another site's
- * URL is never a target.
+ * or without a scheme or `www.`: the page the request is about. Each word is
+ * read apart; an email (`name@site.com`) or another site's URL is never a target.
  */
 function requestedPageUrl(request: string, website: string) {
   const site = hostOf(website);
   if (!site) return '';
-  for (const [token] of request.matchAll(URL_TOKEN)) {
-    const url = token.replace(/[.,;:!?]+$/u, '');
+  for (const word of request.split(/\s+/u)) {
+    const url = stripTrailing(stripLeading(word, QUOTES), `${QUOTES}.,;:!?`);
+    if (!url.includes('.') || url.includes('@')) continue;
     const absolute = /^https?:\/\//iu.test(url) ? url : `https://${url}`;
     if (hostOf(absolute) === site) return absolute;
   }
