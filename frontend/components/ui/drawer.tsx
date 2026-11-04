@@ -94,32 +94,13 @@ export function Drawer({
             side === 'right' && (width === 'wide' ? 'max-w-220' : 'max-w-narrow'),
           )}
         >
-          {hideHeader ? (
-            <>
-              <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
-              {description ? (
-                <DialogPrimitive.Description className="sr-only">
-                  {description}
-                </DialogPrimitive.Description>
-              ) : null}
-              {close}
-            </>
-          ) : (
-            <header className="border-line flex items-start justify-between gap-4 border-b px-[var(--card-padding)] py-4">
-              <div className="min-w-0">
-                {eyebrow ? <p className="type-eyebrow mb-1">{eyebrow}</p> : null}
-                <DialogPrimitive.Title className="font-display text-title text-ink truncate">
-                  {title}
-                </DialogPrimitive.Title>
-                {description ? (
-                  <DialogPrimitive.Description asChild>
-                    <div className="text-body-sm text-ink-secondary mt-1">{description}</div>
-                  </DialogPrimitive.Description>
-                ) : null}
-              </div>
-              {close}
-            </header>
-          )}
+          <DrawerHeader
+            title={title}
+            eyebrow={eyebrow}
+            description={description}
+            hidden={hideHeader}
+            close={close}
+          />
           <Body
             aria-label={bodyLabel}
             className={cn(
@@ -140,5 +121,53 @@ export function Drawer({
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
+  );
+}
+
+/**
+ * The fixed header: eyebrow, title, description and the close button. When
+ * `hidden`, the title and description stay for assistive technology only.
+ */
+function DrawerHeader({
+  title,
+  eyebrow,
+  description,
+  hidden,
+  close,
+}: Readonly<{
+  title: ReactNode;
+  eyebrow?: string;
+  description?: ReactNode;
+  hidden: boolean;
+  close: ReactNode;
+}>) {
+  if (hidden) {
+    return (
+      <>
+        <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
+        {description ? (
+          <DialogPrimitive.Description className="sr-only">
+            {description}
+          </DialogPrimitive.Description>
+        ) : null}
+        {close}
+      </>
+    );
+  }
+  return (
+    <header className="border-line flex items-start justify-between gap-4 border-b px-[var(--card-padding)] py-4">
+      <div className="min-w-0">
+        {eyebrow ? <p className="type-eyebrow mb-1">{eyebrow}</p> : null}
+        <DialogPrimitive.Title className="font-display text-title text-ink truncate">
+          {title}
+        </DialogPrimitive.Title>
+        {description ? (
+          <DialogPrimitive.Description asChild>
+            <div className="text-body-sm text-ink-secondary mt-1">{description}</div>
+          </DialogPrimitive.Description>
+        ) : null}
+      </div>
+      {close}
+    </header>
   );
 }

@@ -270,7 +270,7 @@ export function SegmentedControl<T extends string>({
   };
 
   return (
-    <div className={cn(TAB_TRACK, className)}>
+    <div data-segmented-track="" className={cn(TAB_TRACK, className)}>
       {/* A nested flex row, NOT `display: contents`: some browsers drop a
           contents box from the accessibility tree, costing the group its name. */}
       <div

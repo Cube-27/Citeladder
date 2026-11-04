@@ -229,6 +229,8 @@ function RunControls({ read, running }: Readonly<{ read: LinksRead; running: boo
 
 function Notices({ read }: Readonly<{ read: LinksRead }>) {
   const mutationError = read.analyze.error || read.cancel.error;
+  const failure =
+    mutationError && humanizeApiError(mutationError, 'Analysis could not be started.').message;
   return (
     <>
       {read.query.isError ? (
@@ -239,11 +241,7 @@ function Notices({ read }: Readonly<{ read: LinksRead }>) {
           onRetry={() => void read.query.refetch()}
         />
       ) : null}
-      {mutationError ? (
-        <Callout tone="negative">
-          {humanizeApiError(mutationError, 'Analysis could not be started.').message}
-        </Callout>
-      ) : null}
+      {failure ? <Callout tone="negative">{failure}</Callout> : null}
       {read.query.isPending ? <QueryState kind="loading" label="Loading internal links…" /> : null}
     </>
   );

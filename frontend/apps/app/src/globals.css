@@ -244,16 +244,17 @@
   --compact-gap: 12px;
   --card-padding: 24px;
   --modal-padding: 24px;
-  /* An icon target inside a field (clear, calendar): the field's height less
-     its 2px border inset on each side. */
+  /* DateField's calendar trigger: the field's height less its 2px border
+     inset on each side. */
   --field-end-target: calc(var(--control-md) - 4px);
   --filter-width: 160px;
   --menu-item-height: var(--control-md);
   --badge-height-sm: 22px;
   --textarea-min-height: 112px;
   /* The one footprint a read's loading, error and first-use empty states
-     share (QueryState), so a read changing state never moves the page. */
-  --query-state-height: 160px;
+     share (QueryState), so a read changing state never moves the page: the
+     block EmptyState's height (48 + 40 icon + 16 + title + line + 48). */
+  --query-state-height: 200px;
   --chart-height-sm: 160px;
   --chart-height-md: 240px;
   --chart-height-lg: 320px;
@@ -1214,9 +1215,11 @@ samp {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  /* Everything but the two "still working" marks below, which slow down
+     instead of stopping. */
+  :not(.animate-spinner, .animate-progress-busy),
+  ::before,
+  ::after {
     scroll-behavior: auto !important;
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
@@ -1226,14 +1229,15 @@ samp {
   .activity-check::before {
     display: none;
   }
-  /* "Still working" must keep moving, at half speed. */
+  /* "Still working" must keep moving, at half speed. These rules sit outside
+     Tailwind's layers, so they win over the utilities' own timing. */
   .animate-spinner {
-    animation-duration: 1600ms !important;
-    animation-iteration-count: infinite !important;
+    animation-duration: 1600ms;
+    animation-iteration-count: infinite;
   }
   .animate-progress-busy {
-    animation-duration: 2800ms !important;
-    animation-iteration-count: infinite !important;
+    animation-duration: 2800ms;
+    animation-iteration-count: infinite;
   }
 }
 

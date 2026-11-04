@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useRef, type InputHTMLAttributes } from 'react';
+import { useEffect, useRef, type InputHTMLAttributes, type ReactNode } from 'react';
 import { Search, X } from 'lucide-react';
 
 import { Icon } from './icon';
-import { Input } from './input';
+import { FieldEndButton, Input } from './input';
 import { Kbd } from './kbd';
 import { Spinner } from './spinner';
 
@@ -63,6 +63,15 @@ export function SearchField({
     ref.current?.focus();
   };
 
+  let end: ReactNode = null;
+  if (value) {
+    end = (
+      <FieldEndButton icon={X} label="Clear search" disabled={props.disabled} onClick={clear} />
+    );
+  } else if (cap) {
+    end = <Kbd>{cap}</Kbd>;
+  }
+
   return (
     <Input
       {...props}
@@ -82,23 +91,7 @@ export function SearchField({
       containerClassName={className}
       className="[appearance:textfield] [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
       startContent={pending ? <Spinner /> : <Icon icon={Search} className="text-ink-muted" />}
-      endContent={
-        <span className="inline-flex h-5 min-w-7 items-center justify-end">
-          {value ? (
-            <button
-              type="button"
-              aria-label="Clear search"
-              disabled={props.disabled}
-              onClick={clear}
-              className="focus-ring text-ink-muted enabled:hover:bg-surface-sunken enabled:hover:text-ink grid size-5 place-items-center rounded-xs transition-colors"
-            >
-              <Icon icon={X} />
-            </button>
-          ) : cap ? (
-            <Kbd>{cap}</Kbd>
-          ) : null}
-        </span>
-      }
+      endContent={<span className="inline-flex h-5 min-w-7 items-center justify-end">{end}</span>}
     />
   );
 }

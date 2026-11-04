@@ -25,9 +25,10 @@ export function Spinner({
   showLabel?: boolean;
   className?: string;
 }>) {
+  // With a label it is a polite status (the native <output>); without, decoration.
+  const Root = label ? 'output' : 'span';
   return (
-    <span
-      role={label ? 'status' : undefined}
+    <Root
       aria-label={label && !showLabel ? label : undefined}
       aria-hidden={label ? undefined : true}
       className={cn(
@@ -53,6 +54,6 @@ export function Spinner({
         />
       </svg>
       {label && showLabel ? <span className="text-body-sm text-ink-secondary">{label}</span> : null}
-    </span>
+    </Root>
   );
 }

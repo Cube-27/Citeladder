@@ -68,19 +68,24 @@ function FieldFoot({
   count?: { used: number; max: number };
 }>) {
   if (!hint && !error && !count) return null;
+  // The error replaces the hint while it stands; an empty slot keeps the count right.
+  let note: ReactNode = <span />;
+  if (error) {
+    note = (
+      <p id={id} role="alert" className="text-caption text-negative">
+        {error}
+      </p>
+    );
+  } else if (hint) {
+    note = (
+      <p id={id} className="text-caption text-ink-muted">
+        {hint}
+      </p>
+    );
+  }
   return (
     <div className="flex items-start justify-between gap-3">
-      {error ? (
-        <p id={id} role="alert" className="text-caption text-negative">
-          {error}
-        </p>
-      ) : hint ? (
-        <p id={id} className="text-caption text-ink-muted">
-          {hint}
-        </p>
-      ) : (
-        <span />
-      )}
+      {note}
       {count ? (
         <span
           className={cn(

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { FIXTURE_WORKSPACE_ID, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
 
-test('the first-load indicator keeps rotating until the workspace answers', async ({ page }) => {
+test('the first-load indicator keeps pulsing until the workspace answers', async ({ page }) => {
   await stubAuthedShell(page);
   let release!: () => void;
   const pending = new Promise<void>((resolve) => {
@@ -17,9 +17,11 @@ test('the first-load indicator keeps rotating until the workspace answers', asyn
   const indicator = page.getByRole('status', { name: 'Loading your workspace…' });
   try {
     await expect(indicator).toBeVisible();
-    const initial = await indicator.evaluate((element) => getComputedStyle(element).transform);
+    // The skeleton's bars pulse their opacity; a still bar would read as stuck.
+    const bar = indicator.locator('.animate-skeleton-pulse').first();
+    const initial = await bar.evaluate((element) => getComputedStyle(element).opacity);
     await expect
-      .poll(() => indicator.evaluate((element) => getComputedStyle(element).transform))
+      .poll(() => bar.evaluate((element) => getComputedStyle(element).opacity))
       .not.toBe(initial);
   } finally {
     release();

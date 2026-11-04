@@ -57,9 +57,13 @@ export function Callout({
   if (children == null && title == null) return null;
   const style = TONE[tone];
   const word = <span className="sr-only">{`${style.word}: `}</span>;
+  // A negative or warning callout interrupts (alert); the rest are a polite
+  // status, which the native <output> carries.
+  const urgent = tone === 'negative' || tone === 'warning';
+  const Root = urgent ? 'div' : 'output';
   return (
-    <div
-      role={tone === 'negative' || tone === 'warning' ? 'alert' : 'status'}
+    <Root
+      role={urgent ? 'alert' : undefined}
       data-callout-tone={tone}
       className={cn(
         'flex items-start gap-3 rounded-md px-4 py-3 text-body-sm',
@@ -82,6 +86,6 @@ export function Callout({
         {children != null ? <div>{children}</div> : null}
       </div>
       {action ? <div className="flex shrink-0 items-center gap-2 self-center">{action}</div> : null}
-    </div>
+    </Root>
   );
 }

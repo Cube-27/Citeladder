@@ -43,6 +43,7 @@ export function ThemeSwitch({
     <div
       role="radiogroup"
       aria-label="Theme"
+      data-theme-switch=""
       // The group is a focus target only by script; the tab stop is the checked option.
       tabIndex={-1}
       onKeyDown={onKeyDown}

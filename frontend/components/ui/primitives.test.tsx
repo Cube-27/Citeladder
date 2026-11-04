@@ -159,14 +159,14 @@ describe('ProgressBar', () => {
       <ProgressBar label="Running prompts" value={48} max={120} valueLabel="48 of 120 prompts" />,
     );
     const bar = screen.getByRole('progressbar', { name: 'Running prompts' });
-    expect(bar).toHaveAttribute('aria-valuenow', '48');
-    expect(bar).toHaveAttribute('aria-valuemax', '120');
+    expect(bar).toHaveAttribute('value', '48');
+    expect(bar).toHaveAttribute('max', '120');
     expect(screen.getByText('48 of 120 prompts')).toBeInTheDocument();
 
     rerender(<ProgressBar label="Running prompts" />);
     const busy = screen.getByRole('progressbar', { name: 'Running prompts' });
     expect(busy).toHaveAttribute('aria-busy', 'true');
-    expect(busy).not.toHaveAttribute('aria-valuenow');
+    expect(busy).not.toHaveAttribute('value');
   });
 
   it('shows a background refresh only while active', () => {

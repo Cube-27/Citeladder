@@ -28,18 +28,18 @@ describe('BrandMark', () => {
     fireEvent.error(image!);
 
     expect(container.querySelector('img')).toBeNull();
-    expect(container).toHaveTextContent(/^A$/);
+    expect(container.textContent).toBe('A');
   });
 
   it('renders the letter immediately when no cache entry exists', () => {
     const { container } = render(<BrandMark name="Globex" logoUrl={null} />);
     expect(container.querySelector('img')).toBeNull();
-    expect(container).toHaveTextContent(/^G$/);
+    expect(container.textContent).toBe('G');
   });
 
   it('keeps a whole code point as the letter', () => {
     const { container } = render(<BrandMark name={'\u{1D54F} Corp'} />);
-    expect(container).toHaveTextContent(/^\u{1D54F}$/u);
+    expect(container.textContent).toBe('\u{1D54F}');
   });
 
   describe('with a Logo.dev token configured', () => {
@@ -81,7 +81,7 @@ describe('BrandMark', () => {
 
       // 3. the first letter
       expect(container.querySelector('img')).toBeNull();
-      expect(container).toHaveTextContent(/^A$/);
+      expect(container.textContent).toBe('A');
     });
 
     it('uses the CDN directly when there is no cached asset', async () => {
@@ -98,7 +98,7 @@ describe('BrandMark', () => {
         <Mark name="No Site" logoUrl={null} websiteUrl="not a url" />
       ));
       expect(container.querySelector('img')).toBeNull();
-      expect(container).toHaveTextContent(/^N$/);
+      expect(container.textContent).toBe('N');
     });
   });
 });

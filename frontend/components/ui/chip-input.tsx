@@ -1,7 +1,7 @@
 'use client';
 
 import { Check, X } from 'lucide-react';
-import { useId, useRef, useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 
 import { Icon } from '@/components/ui/icon';
 import { Tag } from '@/components/ui/tag';
@@ -97,7 +97,6 @@ export function ChipInput({
   onPendingChange?: (value: string) => void;
 }>) {
   const id = useId();
-  const field = useRef<HTMLInputElement>(null);
   const [ownPending, setOwnPending] = useState('');
   const pending = heldPending ?? ownPending;
   const setPending = onPendingChange ?? setOwnPending;
@@ -113,10 +112,9 @@ export function ChipInput({
     // is "Add to …", so each part says what it belongs to.
     <fieldset className="flex min-w-0 flex-col gap-2">
       <legend className="text-label text-ink mb-2">{label}</legend>
-      {/* The box forwards a press on its empty space to the add field. */}
-      {/* oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- The add field inside is the keyboard target; this only widens the pointer target. */}
+      {/* The add field grows to fill the rest of its line, so a press on the
+          box's empty space lands in it. */}
       <div
-        onClick={() => field.current?.focus()}
         className={cn(
           'focus-frame bg-surface border-line-control flex min-h-[var(--control-md)] w-full cursor-text flex-wrap items-center gap-1 rounded-md border p-1 transition-[border-color,box-shadow]',
           disabled && 'cursor-not-allowed opacity-45',
@@ -138,7 +136,6 @@ export function ChipInput({
           </ul>
         ) : null}
         <input
-          ref={field}
           aria-label={`Add to ${label}`}
           value={pending}
           placeholder={placeholder}
@@ -158,28 +155,39 @@ export function ChipInput({
           className="text-ink placeholder:text-ink-muted text-body-sm h-6 min-w-36 flex-1 bg-transparent px-2 disabled:cursor-not-allowed"
         />
       </div>
-      {hint || max !== undefined ? (
-        <div className="flex items-start justify-between gap-3">
-          {hint ? (
-            <p id={`${id}-hint`} className="text-caption text-ink-muted">
-              {hint}
-            </p>
-          ) : (
-            <span />
-          )}
-          {max !== undefined ? (
-            <span
-              className={cn(
-                'ms-auto shrink-0 font-mono text-caption',
-                full ? 'text-ink' : 'text-ink-muted',
-              )}
-            >
-              {`${items.length}/${max}`}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
+      <ChipInputNote hintId={`${id}-hint`} hint={hint} count={items.length} max={max} />
     </fieldset>
+  );
+}
+
+/** The hint on the left and, with `max`, the "n/max" counter on the right. */
+function ChipInputNote({
+  hintId,
+  hint,
+  count,
+  max,
+}: Readonly<{ hintId: string; hint?: string; count: number; max?: number }>) {
+  if (!hint && max === undefined) return null;
+  return (
+    <div className="flex items-start justify-between gap-3">
+      {hint ? (
+        <p id={hintId} className="text-caption text-ink-muted">
+          {hint}
+        </p>
+      ) : (
+        <span />
+      )}
+      {max !== undefined ? (
+        <span
+          className={cn(
+            'ms-auto shrink-0 font-mono text-caption',
+            count >= max ? 'text-ink' : 'text-ink-muted',
+          )}
+        >
+          {`${count}/${max}`}
+        </span>
+      ) : null}
+    </div>
   );
 }
 

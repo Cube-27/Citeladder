@@ -37,7 +37,7 @@ export function ModeSwitch({ onNavigate }: Readonly<{ onNavigate?: () => void }>
   }, [activeProjectId, current, pathname, search]);
 
   return (
-    <nav aria-label="Mode" className={cn(TAB_TRACK, 'flex w-full')}>
+    <nav aria-label="Mode" data-segmented-track="" className={cn(TAB_TRACK, 'flex w-full')}>
       {MODES.map(({ mode, label, home }) => {
         const selected = mode === current;
         const target = rememberedModeRoute(mode, activeProjectId) ?? home;

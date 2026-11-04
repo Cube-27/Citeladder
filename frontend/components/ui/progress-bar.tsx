@@ -33,30 +33,19 @@ export function ProgressBar({
   const shown = valueLabel ?? (busy ? null : `${Math.round(percent)}%`);
   return (
     <div className={cn('flex min-w-0 flex-col gap-2', className)}>
-      {label || shown ? (
-        <div className="flex items-baseline justify-between gap-3">
-          <span id={labelId} className="text-label text-ink">
-            {label}
-          </span>
-          {shown ? (
-            <span className="text-ink-secondary text-data font-mono whitespace-nowrap">
-              {shown}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-      <div
-        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- A native <progress> cannot hold the sliding busy segment or the 200ms fill.
-        role="progressbar"
+      <ProgressCaption labelId={labelId} label={label} shown={shown} />
+      {/* The native bar carries the value to assistive technology (no value
+          is busy); the drawn track beside it is decoration. */}
+      <progress
+        className="sr-only"
         aria-labelledby={label ? labelId : undefined}
         aria-label={label ? undefined : 'Progress'}
-        aria-valuemin={busy ? undefined : 0}
-        aria-valuemax={busy ? undefined : max}
-        aria-valuenow={busy ? undefined : value}
+        max={max}
+        value={busy ? undefined : value}
         aria-valuetext={valueLabel}
         aria-busy={busy || undefined}
-        className="bg-line relative h-1.5 overflow-hidden rounded-full"
-      >
+      />
+      <div aria-hidden className="bg-line relative h-1.5 overflow-hidden rounded-full">
         {busy ? (
           <span className={BUSY_FILL} />
         ) : (
@@ -70,22 +59,36 @@ export function ProgressBar({
   );
 }
 
+/** The label on the left and the shown value on the right, when either exists. */
+function ProgressCaption({
+  labelId,
+  label,
+  shown,
+}: Readonly<{ labelId: string; label?: string; shown: string | null }>) {
+  if (!label && !shown) return null;
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <span id={labelId} className="text-label text-ink">
+        {label}
+      </span>
+      {shown ? (
+        <span className="text-ink-secondary text-data font-mono whitespace-nowrap">{shown}</span>
+      ) : null}
+    </div>
+  );
+}
+
 /**
- * BusyBar — a background refresh over content that stays visible: the
+ * BusyBar —a background refresh over content that stays visible: the
  * ProgressBar's busy segment on a 2px track along the region's top edge,
  * positioned so appearing and disappearing never moves the content.
  */
 export function BusyBar({ active, label }: Readonly<{ active: boolean; label: string }>) {
   if (!active) return null;
   return (
-    <div
-      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- A native <progress> cannot hold the sliding busy segment.
-      role="progressbar"
-      aria-label={label}
-      aria-busy
-      className="bg-line absolute inset-x-0 top-0 z-1 h-0.5 overflow-hidden"
-    >
-      <span className={BUSY_FILL} />
+    <div className="bg-line absolute inset-x-0 top-0 z-1 h-0.5 overflow-hidden">
+      <progress className="sr-only" aria-label={label} aria-busy />
+      <span aria-hidden className={BUSY_FILL} />
     </div>
   );
 }
