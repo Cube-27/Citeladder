@@ -137,12 +137,11 @@ export function TableRow({
       {...props}
       className={cn(
         'hover:bg-hover active:bg-active h-[var(--table-row-height)] transition-colors',
-        // A selected or highlighted row keeps the card's fill and takes a 2px
-        // accent bar at its first cell's start (rows cannot position a mark
-        // in every engine) and the foreground ink: no fill block.
-        "[&>*:first-child]:relative aria-selected:text-foreground aria-selected:[&>*:first-child]:after:bg-accent aria-selected:[&>*:first-child]:after:absolute aria-selected:[&>*:first-child]:after:inset-y-0 aria-selected:[&>*:first-child]:after:start-0 aria-selected:[&>*:first-child]:after:w-0.5 aria-selected:[&>*:first-child]:after:content-['']",
-        highlight &&
-          "text-foreground [&>*:first-child]:after:bg-accent [&>*:first-child]:after:absolute [&>*:first-child]:after:inset-y-0 [&>*:first-child]:after:start-0 [&>*:first-child]:after:w-0.5 [&>*:first-child]:after:content-['']",
+        // A selected or highlighted row keeps the card's fill and takes the
+        // short accent pill on its first cell's start edge and the foreground
+        // ink: no fill block.
+        'selection-bar-cells aria-selected:text-foreground',
+        highlight && 'selection-bar-cells-on text-foreground',
         className,
       )}
     >
