@@ -72,8 +72,7 @@ IDs and every relevant extractor, classifier, analyzer, rule, scoring, formula,
 template, provider, and model version. Until customers exist, every processing
 base version stays at 1 (a derived suffix such as the classifier's input
 digest still changes with its inputs): a semantic change does not bump it, because pre-launch data
-is reset under the `0001_baseline.sql` policy rather than compared across
-versions. Once customers exist, a semantic change bumps the affected version
+is not compared across versions. Once customers exist, a semantic change bumps the affected version
 once per release, so persisted results from before and after it are never
 compared as like for like, and production data is never reset to avoid a bump.
 Resetting an existing database requires explicit authorization and
@@ -209,7 +208,7 @@ bounded, versioned, and idempotent where required. The Agent has no write tool,
 arbitrary SQL, unrestricted URL access, provider impersonation, private data
 store, autonomous recursion, or unapproved external mutation. Persisted run
 transcripts are run records replayed to the model, never a knowledge store: no
-read returns them and they are never shown. Generating or approving an output never declares
+read returns them and they are never shown. Generating an output never declares
 implementation or claims an improvement without new measured evidence.
 
 ## 14. Secrets and private evidence do not leak
@@ -259,19 +258,21 @@ reasoned, idempotent, dry-run reviewed, and redacted. Operators correct by
 append-only grant/revocation/refund evidence or catalog forward-publication,
 never ad-hoc mutation of historical rows.
 
-## 17. The migration baseline remains singular
+## 17. Schema changes are forward migrations
 
-Before launch, schema changes are folded into the single SQL baseline
-`frontend/services/api/migrations/0001_baseline.sql`; do not add `0002+` without
-an explicit policy change. The migrate CLI (`pnpm migrate`) applies it to an
-empty database in one transaction and records its SHA-256 in `schema_migrations`;
-a rerun is a no-op. A changed baseline or unledgered tables fail the migrate
-job, so a changed baseline reaches a populated database
-only by replacing it (the deploy's confirmed `reset_database`), never by adapting
-it in place. Verify a change from an empty disposable database with `pnpm migrate`
-and `pnpm db:types:check`. Semantic versions follow invariant 5. The baseline is
-the only schema author: TypeScript services hold generated Kysely types and
-contain no other migration files or DDL (`scripts/quality.mjs --scope api`).
+The schema is `frontend/services/api/migrations/0001_baseline.sql` followed by
+numbered forward migrations (`0002_<name>.sql`, `0003_<name>.sql`, …, no gaps).
+Every schema change is a new numbered file that applies cleanly to the existing
+production schema and its rows; an applied file, the baseline included, never
+changes, and production never needs a reset to take a schema change. The
+migrate CLI (`pnpm migrate`) applies the pending files in order in one
+transaction under an advisory lock and records each SHA-256 in
+`schema_migrations`; a rerun is a no-op. A changed applied file, a recorded
+version the release lacks, a skipped version or unledgered tables fail the
+migrate job. Verify a change from an empty disposable database with
+`pnpm migrate` and `pnpm db:types:check`. Semantic versions follow invariant 5.
+The migration files are the only schema author: TypeScript services hold
+generated Kysely types and contain no other DDL (`scripts/quality.mjs --scope api`).
 
 ## 18. Input and extraction boundaries
 

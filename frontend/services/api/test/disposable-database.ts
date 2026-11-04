@@ -7,7 +7,7 @@ import pg from 'pg';
 import { beforeAll, afterAll } from 'vitest';
 import { createDatabase } from '../src/db/database.ts';
 import { loadConfig } from '../src/config.ts';
-import { applyBaseline, baselineClient } from '../src/cli/schema-baseline.ts';
+import { applyMigrations, migrationClient } from '../src/cli/schema-migrations.ts';
 
 export function disposableDatabase() {
   const root = fileURLToPath(new URL('../../../../', import.meta.url));
@@ -43,10 +43,10 @@ export function disposableDatabase() {
     await connection.connect();
     await connection.query(`CREATE DATABASE "${name}"`);
     created = true;
-    const schema = baselineClient(url.href, env);
+    const schema = migrationClient(url.href, env);
     await schema.connect();
     try {
-      await applyBaseline(schema);
+      await applyMigrations(schema);
     } finally {
       await schema.end();
     }

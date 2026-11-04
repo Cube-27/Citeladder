@@ -3,7 +3,7 @@ title: 'Actions and measurement'
 description: 'Choose one target, review its supporting findings, and follow the work through to later evidence.'
 group: 'Improve with Agent'
 order: 210
-updated: '2026-10-10'
+updated: '2026-11-04'
 ---
 
 An Action groups work around a target: an owned page, planned page, earned-source page, product, category, search query or visibility prompt. Multiple findings can support the same Action.
@@ -37,7 +37,7 @@ You can dismiss or reopen eligible Actions. Declared work follows its measuremen
 
 First make the change in your website, publishing workflow or external process. Then use **Mark implemented** for the relevant Action and choose the day it went live: today or any day in the last 30 days. Readings from before that day are not counted.
 
-When work came from the Agent, confirm the output revision that matches what you shipped. An outline is not an implemented draft. Work done outside CiteLadder can be declared without an Agent output.
+When work came from the Agent, confirm the output revision that matches what you shipped. Work done outside CiteLadder can be declared without an Agent output.
 
 CiteLadder uses the Action's current findings to determine the expected checks, and the dialog shows what each finding will be measured by before you declare. Some findings, such as a product or theme with no specific prompt, have no reading that isolates your change; they are recorded but not measured automatically. An Action without a current finding cannot be declared merely to create a measurement plan.
 

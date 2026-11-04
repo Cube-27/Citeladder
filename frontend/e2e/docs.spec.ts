@@ -20,7 +20,7 @@ test('search recovers, supports keyboard dismissal and navigates to a guide', as
   await expect(page.getByRole('button', { name: /Search docs/ })).toBeFocused();
   await page.keyboard.press('Control+k');
   await expect(dialog.getByRole('textbox', { name: 'Search terms' })).toBeFocused();
-  await page.keyboard.type('outline approval');
+  await page.keyboard.type('revision history');
   await expect(dialog.getByRole('link').first()).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Retry search' })).toHaveCount(0);
   await dialog.getByRole('textbox', { name: 'Search terms' }).fill('zzzz-no-such-guide');

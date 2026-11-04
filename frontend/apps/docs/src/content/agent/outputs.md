@@ -3,7 +3,7 @@ title: 'Outputs and revisions'
 description: 'Review, edit and export Agent work while preserving the history of what changed.'
 group: 'Improve with Agent'
 order: 230
-updated: '2026-11-01'
+updated: '2026-11-04'
 ---
 
 The output is the working document for a chat. It appears in the conversation right after the reply that produced it, so you can refine the deliverable without losing the discussion around it. While the Agent writes, the reply and the document fill in as they are generated; the saved version replaces them when the turn finishes. The document is saved together with the reply, so a turn that stops early saves neither.
@@ -14,17 +14,13 @@ Check the target, intended audience and supporting sources. Each reply lists the
 
 Ask for a focused revision when necessary: "Keep the structure, remove the unsupported claim, and explain which data supports the second recommendation."
 
-## Approve an outline before drafting
+## Ask for an outline when you want one
 
-Long-form content, such as articles, web pages and YouTube scripts, is outline-first. Short formats, such as social posts and forum answers, are drafted directly. Review the outline's scope, structure and factual assumptions, then explicitly approve the outline revision you want to use.
-
-Approval allows the draft to be written. It does not publish the draft or declare an Action implemented.
-
-If you change direction later, review and approve the relevant outline revision rather than assuming an earlier approval covers every future structure.
+The Agent writes the whole deliverable straight away. If you would rather agree the structure first, ask for an outline; it answers in the chat, and you can then ask for the full draft. When you ask for a change to an existing document, the Agent edits just the parts that change and keeps the rest.
 
 ## Edit without losing history
 
-Edits append a new revision. They do not overwrite the earlier one. The next Agent turn works from the latest revision, including your own changes.
+Edits, yours and the Agent's, append a new revision. They do not overwrite the earlier one. The next Agent turn works from the latest revision, including your own changes.
 
 Restoring a previous revision also creates a new revision. Use history to inspect earlier work and deliberately bring back the version you want.
 
@@ -40,7 +36,7 @@ Review the destination after pasting, especially tables, links and formatting. E
 
 After your team makes the actual change, use **Mark implemented** for the attached Action and confirm the revision you shipped. CiteLadder preserves that relationship for later measurement.
 
-Do not declare an outline, a speculative draft or a different Action's output as implemented.
+Do not declare a speculative draft or a different Action's output as implemented.
 
 ## Recover from an interrupted turn
 

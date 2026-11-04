@@ -139,10 +139,10 @@
         "action": { "skill_id": "content_create", "target_kind": "prompt" }
       },
       {
-        "message": "Make the outline shorter and add a section on the returns policy."
+        "message": "Make the introduction shorter and add a section on the returns policy."
       }
     ],
-    "review": "Turn 1 saves an outline for the Action's prompt; turn 2 revises that outline and keeps the rest."
+    "review": "Turn 1 saves the whole page for the Action's prompt; turn 2 edits only the introduction and the new section and keeps the rest."
   },
   {
     "id": "s14-social-post",
@@ -153,7 +153,7 @@
         "skill_id": "content_create"
       }
     ],
-    "review": "Drafted directly (no outline); no invented prices, policies or statistics."
+    "review": "Drafted directly; no invented prices, policies or statistics."
   },
   {
     "id": "s15-internal-links",
@@ -168,13 +168,13 @@
   },
   {
     "id": "s16-comparison",
-    "kind": "skill deliverable, outline first",
+    "kind": "skill deliverable",
     "turns": [
       {
-        "message": "Outline a comparison page: {{brand}} vs {{competitor}} for our core products.",
+        "message": "Write a comparison page: {{brand}} vs {{competitor}} for our core products.",
         "skill_id": "comparison_content"
       }
     ],
-    "review": "Saves an outline; competitor claims are marked as needing checking unless read from evidence."
+    "review": "Saves the whole page; competitor claims come only from evidence read in the chat."
   }
 ]

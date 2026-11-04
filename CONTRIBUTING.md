@@ -51,10 +51,10 @@ Raw chat and generated bodies are not approved memory; promotion requires its
 explicit, audited transition. Grounding instructions do not certify factual
 correctness; the Agent owner defines the review boundary.
 
-The [single-baseline migration policy](docs/invariants.md#17-the-migration-baseline-remains-singular)
-remains in force. Follow [the migration procedure](docs/DEVELOPMENT.md#migrations-single-greenfield-baseline)
-only against explicitly authorized disposable data. Never downgrade or reset a
-shared, staging or production database.
+Schema changes are [forward migrations](docs/invariants.md#17-schema-changes-are-forward-migrations):
+add a new numbered file and follow [the migration procedure](docs/DEVELOPMENT.md#migrations-forward-only).
+Never edit an applied migration, and never downgrade or reset a shared, staging
+or production database.
 
 ## Pull requests and verification
 

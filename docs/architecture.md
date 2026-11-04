@@ -84,8 +84,8 @@ Every route family, task kind and table has one writing owner. Every native
 OpenAPI operation declares one family from the manifest in
 `frontend/packages/contracts/src/route-ownership.ts`.
 
-The schema is one SQL file, `frontend/services/api/migrations/0001_baseline.sql`,
-applied by the TypeScript migrate CLI (`src/cli/migrate.ts`) from the API
+The schema is `frontend/services/api/migrations/0001_baseline.sql` plus numbered
+forward migrations, applied by the TypeScript migrate CLI (`src/cli/migrate.ts`) from the API
 image. Product operators, login/seeding and
 acquisition controls run under their native owners and use the same PostgreSQL
 authorization, provenance and lock contracts. TypeScript tests against real
@@ -99,12 +99,12 @@ and retry classification.
 
 Application policy lives in native config, including security, roles,
 capabilities, provider catalogs and queue bounds. The migration job applies the
-SQL baseline once under an advisory lock (recording its SHA-256 in
-`schema_migrations`; a changed baseline or unledgered tables fail the job), then runs native identity/grant/catalog bootstrap; successful job
+pending SQL migrations in order under an advisory lock (recording each SHA-256 in
+`schema_migrations`; an edited applied file or unledgered tables fail the job), then runs native identity/grant/catalog bootstrap; successful job
 completion admits API/worker rollout. Auth, workspace, commercial and product writes are native.
 
-The SQL baseline is the only schema author, so the service holds Kysely types
-generated from a baseline-migrated database.
+The SQL migrations are the only schema author, so the service holds Kysely types
+generated from a migrated database.
 
 ## Delivery topology
 

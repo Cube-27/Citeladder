@@ -253,10 +253,11 @@ function frontendChecks() {
   pnpm('Frontend dead-code and dependency policy', ['check:dead-code']);
 }
 
-// The SQL baseline is the only schema author (docs/invariants.md 17): every
-// other service file holds generated types and queries, never migration files
-// or DDL. The migrate CLI applies the baseline; it does not author schema.
-const SCHEMA_BASELINE = '/api/migrations/0001_baseline.sql';
+// The numbered SQL migrations are the only schema author (docs/invariants.md 17):
+// every other service file holds generated types and queries, never DDL. The
+// migrate CLI applies the migrations; it does not author schema.
+const SCHEMA_MIGRATIONS = 'api/migrations/<NNNN>_<name>.sql';
+const SCHEMA_MIGRATION = /^\/api\/migrations\/\d{4}_[a-z0-9_]+\.sql$/u;
 const SCHEMA_AUTHORING = [
   /\b(?:Migrator|FileMigrationProvider)\b/u,
   /\.schema\s*\.\s*(?:create|alter|drop)(?:Table|Index|Type|View|Schema)\b/u,
@@ -269,7 +270,7 @@ function schemaAuthorityViolations(root) {
     .map((entry) => join(entry.parentPath, entry.name))
     .filter((path) => {
       const relative = path.slice(root.length).replaceAll(sep, '/');
-      if (relative === SCHEMA_BASELINE) return false;
+      if (SCHEMA_MIGRATION.test(relative)) return false;
       if (/\/migrations?\//u.test(relative) || relative.endsWith('.sql')) return true;
       // Tests build disposable databases and constraint fixtures; only shipped source is policed.
       if (relative.includes('/test/')) return false;
@@ -301,7 +302,7 @@ function apiServiceChecks() {
   if (violations.length) {
     failedSteps.push('API service schema authority');
     process.stderr.write(
-      `Schema changes belong in ${SCHEMA_BASELINE.slice(1)}, not elsewhere in a TS service:\n${violations.join('\n')}\n`,
+      `Schema changes belong in a new numbered migration (${SCHEMA_MIGRATIONS}), not elsewhere in a TS service:\n${violations.join('\n')}\n`,
     );
   }
   pnpm('API route ownership', ['--filter', '@citeladder/api', 'check:routes']);

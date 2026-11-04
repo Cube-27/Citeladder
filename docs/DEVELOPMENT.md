@@ -43,7 +43,7 @@ repository check script includes the documentation build.
 cd frontend
 pnpm install
 export DATABASE_URL="postgresql://postgres:<password>@localhost:5432/citeladder"
-pnpm --filter @citeladder/api migrate   # applies the SQL baseline to an empty database
+pnpm --filter @citeladder/api migrate   # applies the pending SQL migrations
 pnpm --filter @citeladder/api start
 ```
 
@@ -140,7 +140,7 @@ from, and does not replace, the Playwright Test runner used by `pnpm test:e2e`.
 ## Running the full stack with Docker Compose
 
 The Compose path is the clean-clone workflow. From the repository root, it builds and starts
-PostgreSQL, applies the migration baseline once, then starts the native API, the
+PostgreSQL, applies the pending migrations, then starts the native API, the
 `runner` loop and the three Workers under `wrangler dev`. Do not run host-side
 migrations or `pnpm dev` alongside this stack.
 
@@ -234,8 +234,8 @@ customers, so it runs against the one local development database (`citeladder`
 in docker compose; plain `docker compose up -d` starts only it); do not create
 per-branch copies. Run it with `pnpm test:api` from `frontend/`, which drops
 the provider credentials the test guard (`test/inherited-credentials.ts`)
-refuses and logs to `<git-dir>/api-test.log`. After a baseline change the owner
-resets that database (`scripts/reset-db.ps1`). Tests never read `.env`
+refuses and logs to `<git-dir>/api-test.log`. After a new migration, bring that
+database forward with `pnpm --filter @citeladder/api migrate`. Tests never read `.env`
 (`test/environment.ts` sets `CITELADDER_DISABLE_DOTENV`), and the schema,
 bootstrap and seed tests create and drop their own `citeladder_*_test_*`
 databases on that server. Before each file, `test/queue-isolation.ts` settles
@@ -391,7 +391,7 @@ browser E2E. Browser-sensitive paths run only the specs mapped in
 for `main`, merge-queue validation, unknown shared paths, changes to
 Playwright's global configuration, and paths mapped to `"frontendE2E": "all"`
 (the shared API schemas in `frontend/packages/contracts/`). Shared, configuration, and
-contract paths select native API/browser checks; the SQL baseline selects the
+contract paths select native API/browser checks; the SQL migrations select the
 native API owner and the Compose smoke. The clean-clone Compose smoke runs
 on application/Compose-sensitive PR
 changes, merge queue validation, and every push to `main`.
@@ -538,7 +538,7 @@ From the repository root, reset and recreate the database named by
 ```
 
 The wrapper runs `pnpm --filter @citeladder/api reset:db`: it authorizes the
-explicit target once, drops and recreates it and applies the SQL baseline
+explicit target once, drops and recreates it and applies every SQL migration
 (`src/cli/reset-schema.ts`), then sequences bounded native login/catalog
 provisioning with the same environment. Dotenv-disable admission applies to both
 stages. Failures stop the sequence.
@@ -548,29 +548,28 @@ value and `DATABASE_URL` targets `localhost`, `127.0.0.1`, or `::1`. A remote
 host is refused even under `APP_ENV=development`; the exceptional case requires
 the explicit `RESET_CONFIRM_DESTRUCTIVE=drop-and-recreate` token.
 
-## Migrations (single greenfield baseline)
+## Migrations (forward only)
 
-The schema is one SQL file,
-[`frontend/services/api/migrations/0001_baseline.sql`](../frontend/services/api/migrations/0001_baseline.sql),
-and nothing else authors DDL (invariant 17). `pnpm --filter @citeladder/api migrate`
-(`src/cli/migrate.ts`) applies it under an advisory lock in one transaction and
-records its SHA-256 in `schema_migrations`. A rerun on a current database is a
-no-op. The command fails, and the deploy stops before the API rolls forward, when:
+The schema is
+[`frontend/services/api/migrations/0001_baseline.sql`](../frontend/services/api/migrations/0001_baseline.sql)
+followed by numbered forward migrations (`0002_<name>.sql`, …, lowercase
+snake-case names, no gaps), and nothing else authors DDL (invariant 17).
+`pnpm --filter @citeladder/api migrate` (`src/cli/migrate.ts`, owner
+`src/cli/schema-migrations.ts`) applies the pending files in order under an
+advisory lock in one transaction and records each SHA-256 in
+`schema_migrations`. A rerun on a current database is a no-op. The command
+fails, and the deploy stops before the API rolls forward, when:
 
-- the recorded checksum differs from the file (the baseline changed);
-- the database has tables but no ledger (including one created before the
-  baseline existed).
+- an applied file's recorded checksum differs from the file (it was edited);
+- the database recorded a version this release lacks, or skipped one;
+- the database has tables but no ledger.
 
-Each message says to redeploy with `reset_database`
-([GCP runbook](operations/GCP_RUNBOOK.md)). Locally, `./scripts/reset-db.ps1`
-replaces a development database the same way. `DATABASE_URL` must be explicit;
-`DB_SSL_MODE=require` encrypts the connection. `--wait-seconds N` retries the
-first connection, for a database VM that is still starting.
-
-CiteLadder is greenfield and keeps one complete baseline. Fold every schema
-change into the SQL file, reset only disposable databases, and verify the
-complete schema from scratch. Do not introduce additive migration files while
-this policy is in effect. Verify against a disposable database only:
+Every schema change is a new file that applies cleanly to the production
+schema and its existing rows; never edit an applied file, the baseline
+included. `DATABASE_URL` must be explicit; `DB_SSL_MODE=require` encrypts the
+connection. `--wait-seconds N` retries the first connection, for a database VM
+that is still starting. Bring the local development database forward with the
+same command; verify the complete schema from an empty disposable database:
 
 ```bash
 cd frontend/services/api

@@ -159,7 +159,7 @@ the Search Demand "Act on this" band.
 implemented ([implementation events](../frontend/services/api/src/opportunities/declarations.ts)).
 It is anchored on the Action and, when the work came from the Agent, on the
 exact output revision the user shipped; a revision from another Action's output
-or an outline is refused, and null means work done outside CiteLadder. The
+is refused, and null means work done outside CiteLadder. The
 caller names that revision and the go-live time, which may be neither in the
 future (beyond clock skew) nor earlier than the verification window. For
 contextual-link findings, the caller also selects saved recommendation IDs in

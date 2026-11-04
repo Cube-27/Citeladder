@@ -217,7 +217,7 @@ Backend schemas own the wire contract. Coordinate frontend schemas and API
 clients when a DTO changes. [API errors](api-error-contract.md) owns coded
 cross-stack error shapes; domain errors are translated at the HTTP boundary,
 not leaked as provider bodies or secret-bearing diagnostics.
-[Invariants](invariants.md) owns correctness, provenance and the single-baseline
+[Invariants](invariants.md) owns correctness, provenance and the forward-only
 migration policy. Setup and validation commands live in
 [Development](DEVELOPMENT.md).
 

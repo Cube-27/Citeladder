@@ -438,6 +438,15 @@ are on every plan, including the free trial. They read persisted data only, so
 they add no entitlement, grant or credit charge. See the
 [Insight parity plan](plans/insight-parity.md).
 
+## Agent chat behaviour (2026-11-04)
+
+**B58 — Owner, 2026-11-04.** A failed Agent turn that ends with nothing saved
+is not charged. Engineering: its model calls still hold and settle as usual,
+and every model attempt keeps its tokens and debit for the internal record;
+when the turn ends failed, append-only refunds return the AI credits its calls
+debited. A turn the person stops is cancelled, not failed, and is charged as
+before.
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,

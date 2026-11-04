@@ -1,0 +1,147 @@
+/** The migrate CLI's admission against real PostgreSQL: numbered forward migrations, each applied once. */
+import { randomUUID } from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
+
+import pg from 'pg';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+
+import { applyMigrations, readMigrations } from '../src/cli/schema-migrations.ts';
+
+const base = new URL(process.env.API_TEST_DATABASE_URL!);
+const admin = new pg.Client({
+  connectionString: Object.assign(new URL(base), { pathname: '/postgres' }).href,
+});
+const created: string[] = [];
+const migrations = readMigrations();
+const [baseline] = migrations;
+
+async function freshDatabase() {
+  const name = `citeladder_baseline_test_${randomUUID().replaceAll('-', '')}`;
+  await admin.query(`CREATE DATABASE "${name}"`);
+  created.push(name);
+  const url = Object.assign(new URL(base), { pathname: `/${name}` }).href;
+  const client = new pg.Client({ connectionString: url });
+  await client.connect();
+  return { client, url };
+}
+
+async function publicTables(client: pg.Client) {
+  const result = await client.query<{ tablename: string }>(
+    "select tablename from pg_tables where schemaname = 'public' order by tablename",
+  );
+  return result.rows.map((row) => row.tablename);
+}
+
+async function columns(client: pg.Client, table: string) {
+  const result = await client.query<{ column_name: string }>(
+    "select column_name from information_schema.columns where table_schema = 'public' and table_name = $1",
+    [table],
+  );
+  return result.rows.map((row) => row.column_name);
+}
+
+const ledger = async (client: pg.Client) =>
+  (await client.query('select version from public.schema_migrations order by version')).rows;
+
+const clients: pg.Client[] = [];
+beforeAll(() => admin.connect());
+afterAll(async () => {
+  await Promise.all(clients.map((client) => client.end()));
+  for (const name of created) await admin.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
+  await admin.end();
+});
+
+describe('a fresh database', () => {
+  it('applies every migration once, reruns as a no-op and refuses an edited applied file', async () => {
+    const { client } = await freshDatabase();
+    clients.push(client);
+
+    expect(await applyMigrations(client)).toEqual(['0001_baseline', '0002_agent_single_draft']);
+    expect(await publicTables(client)).toEqual(
+      expect.arrayContaining(['schema_migrations', 'workspaces']),
+    );
+    expect(await ledger(client)).toEqual([
+      { version: '0001_baseline' },
+      { version: '0002_agent_single_draft' },
+    ]);
+
+    // A CRLF checkout is the same file.
+    const crlf = migrations.map((file) => ({ ...file, sql: file.sql.replaceAll('\n', '\r\n') }));
+    expect(await applyMigrations(client, crlf)).toEqual([]);
+    const edited = migrations.map((file, index) =>
+      index === 0
+        ? { ...file, sql: `${file.sql}\nCREATE TABLE public.extra (id integer);\n` }
+        : file,
+    );
+    await expect(applyMigrations(client, edited)).rejects.toThrow(
+      /Migration 0001_baseline changed after this database applied it.*new numbered migration/u,
+    );
+    expect(await publicTables(client)).not.toContain('extra');
+    // A release without a version the database recorded is refused, not rolled back.
+    await expect(applyMigrations(client, [baseline!])).rejects.toThrow(
+      'This database recorded migration 0002_agent_single_draft, which this release does not contain.',
+    );
+  }, 120000);
+});
+
+describe('an existing database', () => {
+  it('takes only the pending migrations, in place', async () => {
+    const { client } = await freshDatabase();
+    clients.push(client);
+
+    expect(await applyMigrations(client, [baseline!])).toEqual(['0001_baseline']);
+    expect(await columns(client, 'agent_runs')).toContain('mode');
+    expect(await applyMigrations(client)).toEqual(['0002_agent_single_draft']);
+    expect(await columns(client, 'agent_runs')).not.toContain('mode');
+    expect(await columns(client, 'agent_output_revisions')).not.toContain('approved_at');
+    expect(await ledger(client)).toEqual([
+      { version: '0001_baseline' },
+      { version: '0002_agent_single_draft' },
+    ]);
+  }, 120000);
+});
+
+describe('a database the migrations must not touch', () => {
+  it('refuses unledgered tables, and a failing migration leaves nothing behind', async () => {
+    const { client } = await freshDatabase();
+    clients.push(client);
+
+    await client.query('CREATE TABLE public.users (id integer)');
+    await expect(applyMigrations(client)).rejects.toThrow(
+      /tables but no schema_migrations ledger.*reset_database/u,
+    );
+    expect(await publicTables(client)).toEqual(['users']);
+    await client.query('DROP TABLE public.users');
+
+    // Admission reads only emptiness, so a short failing script proves the rollback.
+    const broken = {
+      version: '0001_broken',
+      sql: 'CREATE TABLE public.partial (id integer);\nSELECT 1 / 0;\n',
+    };
+    await expect(applyMigrations(client, [broken])).rejects.toThrow('division by zero');
+    expect(await publicTables(client)).toEqual([]);
+  }, 120000);
+
+  it('fails the migrate job with the reason', async () => {
+    const { client, url } = await freshDatabase();
+    // Any schema the ledger did not record, such as a database from before the ledger existed.
+    await client.query('CREATE TABLE public.unrecorded_table (id integer PRIMARY KEY)');
+    await client.end();
+    const run = promisify(execFile)(
+      process.execPath,
+      [fileURLToPath(new URL('../src/cli/migrate.ts', import.meta.url))],
+      {
+        env: { PATH: process.env.PATH, SYSTEMROOT: process.env.SYSTEMROOT, DATABASE_URL: url },
+        timeout: 60000,
+      },
+    );
+    await expect(run).rejects.toMatchObject({
+      code: 1,
+      stderr: expect.stringContaining(
+        'no schema_migrations ledger, so migrations were not applied over them.',
+      ),
+    });
+  }, 90000);
+});

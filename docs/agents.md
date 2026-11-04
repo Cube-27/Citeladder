@@ -15,8 +15,9 @@ scope.
 
 Questions, discussion and clarification are replies; they never require a
 deliverable, and a question about a saved document leaves it unchanged. The
-supplied history is bounded working context, and task preferences do not
-become reviewed company facts.
+supplied history is bounded working context. Facts the person gives in a chat
+count as confirmed for that chat; they never become reviewed company facts.
+Accepting something the Agent offered is a request to do it.
 
 ## Model destination
 
@@ -56,19 +57,16 @@ an immutable [output revision](../frontend/services/api/src/agent/outputs.ts): a
 edit against a stale base conflicts, restoring appends a new revision, and a
 follow-up revises the latest revision, including the user's own edit. Edits and
 restores are refused while a turn is queued or running, and a turn whose output
-moved on from the revision it read saves nothing. Explicitly picking a skill
-that produces a different kind is refused (`agent_skill_kind_conflict`); that
-work belongs in a new chat.
+moved on from the revision it read saves nothing. Because a chat keeps one
+document, explicitly picking a skill that produces a different kind is refused
+(`agent_skill_kind_conflict`), and so is the model loading one once the chat's
+document exists; the Agent answers in its reply or offers a new chat instead.
 
-Long-form content formats (marked `[long-form]` in
-[`content_formats.md`](../frontend/services/api/assets/agent-skills/content_formats.md))
-are outline-first: a draft is written only after the user approves an outline
-revision. Short formats (social posts, definitions, forum answers) and every
-other deliverable kind are drafted directly. Approval is a turn tied to the approved
-revision, and the completion line states the saved phase and format. Approving
-or generating an output is not an implementation declaration: **Mark
-implemented** declares the attached Action implemented with the revision on
-screen; see [declaration](opportunities.md#explicit-implementation-declaration).
+A document has one draft state: every deliverable is written whole straight
+away, and an outline is given in the reply only when asked for. The completion
+line states the saved format. Generating an output is not an implementation
+declaration: **Mark implemented** declares the attached Action implemented with
+the revision on screen; see [declaration](opportunities.md#explicit-implementation-declaration).
 
 A targeted output (a page or a planned page) attaches the chat to the existing
 [Action](opportunities.md#actions) for that target or creates one, so work on
@@ -101,9 +99,10 @@ calls none. Its final text is the reply.
   format. It holds nothing per chat, so providers serve it from cache for every
   chat. Earlier turns of the chat follow, replayed exactly as stored. The turn's
   opening message then adds the frozen context (only when it changed since a
-  replayed turn), the current document (unless the model saved it in a
-  replayed turn, so a user's edit is always supplied), a pinned methodology
-  (unless already loaded) and the request.
+  replayed turn), the current document (unless the model saved it whole with
+  `save_document` in a replayed turn, so a user's edit or the result of
+  `edit_document` is always supplied exactly), a pinned methodology (unless
+  already loaded) and the request.
 - **Memory.** Each run's exchange, including thinking and compaction blocks, is
   saved in `agent_run_transcripts` with the reply in one transaction. A
   transcript is a run record for replay, not a knowledge store: no read returns
@@ -113,14 +112,18 @@ calls none. Its final text is the reply.
   `compaction_trigger_tokens`, sits below Haiku 5.5's long-context price tier).
   Chat completions return no compaction, so the oldest whole turns are dropped at
   turn start beyond `replay_max_chars`.
-- **Tools.** The model has the [read tools](#read-tools) and two built-ins
+- **Tools.** The model has the [read tools](#read-tools) and three built-ins
   ([`builtin-tools.ts`](../frontend/services/api/src/agent/builtin-tools.ts)).
-  `load_skill` returns a methodology and its saving rules; a turn uses one
-  methodology, and a methodology whose kind differs from the chat's document is
-  refused. `save_document` stages the deliverable after a methodology is loaded:
-  it is checked against the output, format and outline rules, its phase is
-  forced to `outline` while an outline is unapproved, and the staged document is
-  committed only with the reply. Questions need no methodology. The skill is
+  `load_skill` returns a methodology and its saving rules; a turn may switch to
+  another methodology of the same kind, and one whose kind differs from the
+  chat's document is refused. `save_document` stages the whole deliverable after
+  a methodology is loaded, checked against the output and format rules.
+  `edit_document` stages exact `old_string` → `new_string` replacements on the
+  chat's current document (this turn's staged one, else the latest revision):
+  each must match exactly once, all apply or none, and it writes nothing
+  outside the chat's own document. Either way the staged document is committed
+  as a new revision only with the reply, with the same sources and Action
+  attachment. Questions need no methodology. The skill is
   taken, in order, from the user's pick or workflow, the chat's pin, the
   attached Action's diagnosis, and otherwise the model's `load_skill`; a pinned
   methodology is supplied in the opening message. Fixed handoffs such as Site
@@ -130,7 +133,7 @@ calls none. Its final text is the reply.
   provider's call ID. Every call gets a result in call order. A refused,
   unknown, invalid or over-budget call returns an error result saying how to
   correct it, so the model fixes the call instead of the turn ending. Only the
-  first `save_document` in one response is kept.
+  first `save_document` in one response is kept; edits apply in call order.
 - **Limits.** [Agent runtime configuration](../frontend/services/api/src/config/agent-runtime.json)
   bounds model calls per turn, tool calls per turn, parallel reads per response,
   result size and the turn's time. Near the cap, a note appended after the tool
@@ -140,10 +143,13 @@ calls none. Its final text is the reply.
   asking the user to narrow the request, so a turn never finishes without a
   reply.
 
-A response cut off by the model's output limit ends the turn as
-`output_too_long`, and a model refusal as `model_refused`, after that one call;
-asking again would be cut or refused again. A turn that ends early saves no
-partial deliverable.
+Thinking counts toward the output cap, so a response cut off by it
+(`max_tokens`) is discarded and the same request is sent once more at low
+effort as the turn's next call; if that is cut off too the turn ends as
+`output_too_long`. A request past the model's context window ends as
+`context_too_long`, and a refusal as `model_refused`, after that one call;
+asking again would fail the same way. A turn that ends early saves no partial
+deliverable and, when it ends failed, is not charged (B58).
 
 ### Size budget
 
@@ -272,8 +278,8 @@ input. After a fresh deliverable, refinements prefill the composer for review,
 and next steps open a new chat with their workflow pinned and the exact output
 revision as the brief.
 
-To add a deliverable type, add a format section in `content_formats.md` (mark
-it `[long-form]` if it should start from an outline) and/or a `SKILL.md`, then
+To add a deliverable type, add a format section in `content_formats.md` and/or
+a `SKILL.md`, then
 add workflow entries and, for a new output kind, its `kinds` presentation. No
 browser change is needed. Validate with the
 [skill loader tests](../frontend/services/api/test/agent-skills.test.ts).
@@ -316,7 +322,7 @@ The runtime emits display-only events
 The settlement transaction saves the validated message and revision; partial
 text is never persisted.
 
-After accepting a new chat, message or outline approval, the browser
+After accepting a new chat or message, the browser
 ([`live-turns.ts`](../frontend/lib/agent/live-turns.ts)) opens
 `POST …/runs/{run_id}/run` with `Accept: text/event-stream`. The route answers
 those events, `done` (with the run view) and `error`, and a keep-alive comment
@@ -417,7 +423,13 @@ compaction on) at the dearer of the base and cache-write rates, plus the full
 output cap. It settles against returned usage, with cache reads, cache writes
 and output (thinking included) at their own rates
 ([B53](billing-decisions.md#agent-native-runtime-2026-10-12)); a lost result
-settles once as bounded unknown usage. The configured development
+settles once as bounded unknown usage. When a turn ends failed, whether in the
+runtime or by lane recovery, its settled debits are refunded once by
+append-only ledger refunds while every attempt keeps its tokens and debit
+([B58](billing-decisions.md#agent-chat-behaviour-2026-11-04)); a cancelled turn
+stays charged. The output cap in the hold is the gateway's
+`DEFAULT_AGENT_MAX_OUTPUT_TOKENS` (64 000), so each call needs that much
+headroom in the balance (about 42 credits at Haiku 5.5 prices, plus input). The configured development
 login (`DEV_LOGIN_EMAIL`, an active admin) runs as `development` funding with
 no hold or debit but the same dispatch evidence. Capability and credit rate are
 keyed `agent`; [Billing](billing-entitlements.md) owns the ledger.
@@ -430,17 +442,19 @@ scripted models and real PostgreSQL, never live providers:
 - `agent-runtime.test.ts`: admission, idempotency, isolation, parallel reads
   recorded per call, error results the model corrects, `save_document` refused
   before a methodology and committed only with the reply, the cap's final
-  answer, `output_too_long` and `model_refused`, transcripts replayed unchanged
+  answer, the low-effort retry after a cut-off response, `output_too_long`,
+  `context_too_long` and `model_refused`, transcripts replayed unchanged
   (thinking and compaction included), a byte-identical prefix across calls and
-  chats, outline-first by format, carried sources, workflow pinning, recovery
-  replies and fencing.
-- `agent-builtin-tools.test.ts`: the built-ins' refusals and staging rules.
+  chats, an `edit_document` revision and its supply in the next turn, carried
+  sources, workflow pinning, recovery replies and fencing.
+- `agent-builtin-tools.test.ts`: the built-ins' refusals, exact-match edits and
+  staging rules.
 - `agent-owner-adapters.test.ts`: tool binding and project pinning, excluded
   tools, replayed reads versus sources, Action attachment and next-step
   revisions.
 - `agent-prompt.test.ts` and `agent-context.test.ts`: context and tool results
   under size pressure, replay bounds, and context resolution.
-- `agent-skills.test.ts`: catalog loading, vocabularies, the long-form marker,
+- `agent-skills.test.ts`: catalog loading, vocabularies, format headings,
   fingerprints and workflow validation.
 - `models.test.ts`: `converse` for both providers (streamed tool calls, empty
   content, usage).
@@ -448,7 +462,8 @@ scripted models and real PostgreSQL, never live providers:
   and reply events, the saved reply, no re-execution, a closed stream ending the
   turn as interrupted), catalog projection, recovery and cancellation.
 - `agent-funding.test.ts`: holds before I/O, settlement with cache writes and
-  thinking, unknown usage and development funding.
+  thinking, unknown usage, development funding, and a failed turn refunded
+  once (B58) with its attempts kept.
 
 Live quality and speed are measured outside CI by the operator-only eval,
 `pnpm --filter @citeladder/api agent:eval --live --label <name>`:
