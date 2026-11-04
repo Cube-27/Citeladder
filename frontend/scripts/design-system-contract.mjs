@@ -40,9 +40,9 @@ function normalShadow(value) {
   return String(value)
     .replaceAll(/rgba?\([^)]*\)/gi, (colour) => normalColour(colour))
     .replaceAll(/#1{6}/gi, 'var(--color-ink)')
-    .replaceAll(/\s+/g, ' ')
-    .replaceAll(/\s*,\s*/g, ', ')
-    .trim()
+    .split(',')
+    .map((layer) => layer.replaceAll(/\s+/g, ' ').trim())
+    .join(', ')
     .toLowerCase();
 }
 
@@ -121,6 +121,14 @@ function typeFindings(contract, scopes) {
   return findings;
 }
 
+/** Radii globals.css declares that the system does not have. */
+function extraRadiusFindings(contract, scopes) {
+  const names = new Set(contract.radius.tokens.map(({ name }) => `--${name}`));
+  return [...scopes.light.keys()]
+    .filter((token) => token.startsWith('--radius-') && !token.includes('*') && !names.has(token))
+    .map((token) => `${token} is not a system radius`);
+}
+
 /** Tokens a single-value family must carry exactly, keyed as globals.css names them. */
 function scalarFindings(contract, scopes) {
   const findings = [];
@@ -132,12 +140,7 @@ function scalarFindings(contract, scopes) {
   for (const { name, value } of contract.radius.tokens) expect(`--${name}`, value);
   for (const { name, value } of contract.control.tokens) expect(`--${name}`, value);
   for (const { name, value } of contract.layout.tokens) expect(`--${name}`, value);
-  for (const token of scopes.light.keys()) {
-    if (/^--radius-/.test(token) && !token.includes('*')) {
-      if (!contract.radius.tokens.some(({ name }) => `--${name}` === token))
-        findings.push(`${token} is not a system radius`);
-    }
-  }
+  findings.push(...extraRadiusFindings(contract, scopes));
   // space-N is Tailwind's N on a 4px step.
   const steps = contract.spacing.tokens.map(({ name, value }) => [
     Number(name.replace('space-', '')),

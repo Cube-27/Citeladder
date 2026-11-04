@@ -15,8 +15,37 @@ import {
 } from './source-ast.mjs';
 
 const EDITORIAL_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p']);
-const EDITORIAL_SIZE =
-  /(?<![\w-])text-(?:2xs|xs|sm|base|lg|xl|[2-5]xl|caption|body(?:-sm|-lg)?|lead|label(?:-lg)?|heading|title(?:-sm)?|display-(?:md|lg|xl|2xl)|stat)(?![\w-])/;
+/** Size utilities an editorial heading or paragraph must take from its role instead. */
+const EDITORIAL_SIZES = [
+  '2xs',
+  'xs',
+  'sm',
+  'base',
+  'lg',
+  'xl',
+  '2xl',
+  '3xl',
+  '4xl',
+  '5xl',
+  'caption',
+  'body',
+  'body-sm',
+  'body-lg',
+  'lead',
+  'label',
+  'label-lg',
+  'heading',
+  'title',
+  'title-sm',
+  'display-md',
+  'display-lg',
+  'display-xl',
+  'display-2xl',
+  'stat',
+];
+const EDITORIAL_SIZE = new RegExp(
+  String.raw`(?<![\w-])text-(?:${EDITORIAL_SIZES.join('|')})(?![\w-])`,
+);
 const WEBSITE_CSS = 'apps/app/src/website-type.css';
 const TOKEN_CSS = 'apps/app/src/globals.css';
 const LANDING_CSS = 'apps/marketing/src/pages/landing.css';
@@ -108,7 +137,7 @@ export function focusRoleViolations(source, label, ownsProductUi) {
 }
 
 /** The system's four shadows (and none) are the whole elevation vocabulary. */
-const SHADOW_ROLES = ['none', 'xs', 'card', 'pop', 'press'];
+const SHADOW_ROLES = new Set(['none', 'xs', 'card', 'pop', 'press']);
 
 export function shadowRoleViolations(source, label, ownsProductUi) {
   if (!ownsProductUi || label === TOKEN_CSS) return [];
@@ -119,7 +148,7 @@ export function shadowRoleViolations(source, label, ownsProductUi) {
     [...text.matchAll(/box-shadow\s*:([^;]+);/g)].some(
       ([, value]) => !/^(?:none|var\(--shadow-(?:xs|card|pop|press)\))$/.test(value.trim()),
     );
-  if ([...shadows].some(([, role]) => !SHADOW_ROLES.includes(role)) || rawDeclaration) {
+  if ([...shadows].some(([, role]) => !SHADOW_ROLES.has(role)) || rawDeclaration) {
     return [
       `${label}: elevation must use shadow-xs, shadow-card, shadow-pop, shadow-press or none`,
     ];
@@ -246,11 +275,31 @@ const classToken = (utility, end) => new RegExp(String.raw`(?<![\w-])(?:[\w-]+:)
 
 /** Every `--text-*` role in globals.css, plus Tailwind's own scale names. */
 const TYPE_SIZES = [
-  ...['2xs', 'xs', 'sm', 'base', 'lg', 'xl'],
+  '2xs',
+  'xs',
+  'sm',
+  'base',
+  'lg',
+  'xl',
   ...['2', '3', '4', '5', '6', '7', '8', '9'].map((step) => `${step}xl`),
-  ...['display-2xl', 'display-xl', 'display-lg', 'display-md', 'title', 'title-sm', 'stat'],
-  ...['lead', 'body-lg', 'body', 'body-sm', 'label', 'label-lg', 'heading'],
-  ...['caption', 'eyebrow', 'data', 'code'],
+  'display-2xl',
+  'display-xl',
+  'display-lg',
+  'display-md',
+  'title',
+  'title-sm',
+  'stat',
+  'lead',
+  'body-lg',
+  'body',
+  'body-sm',
+  'label',
+  'label-lg',
+  'heading',
+  'caption',
+  'eyebrow',
+  'data',
+  'code',
 ];
 const SPACING_UTILITIES = [
   'gap',
@@ -953,7 +1002,7 @@ function isRawRadiusToken(token) {
   const utility = token.slice(utilityStart).replace(/^!/, '');
   if (!/^rounded(?:-|$)/.test(utility)) return false;
   // `inherit` lets an overlay follow its frame's corner, so it names no value.
-  if (/^rounded(?:-[a-z]+)?-\[/.test(utility)) return !/-\[inherit\]$/.test(utility);
+  if (/^rounded(?:-[a-z]+)?-\[/.test(utility)) return !utility.endsWith('-[inherit]');
   const suffixes = utility.split('-').slice(1);
   if (suffixes.length === 2) {
     return !(RADIUS_SIDES.includes(suffixes[0]) && SYSTEM_RADII.has(suffixes[1]));

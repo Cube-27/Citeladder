@@ -25,6 +25,7 @@ import {
   websiteContractViolations,
   tsxGeometryFindings,
   featureLayeringViolations,
+  jsxClassData,
 } from './design-system-source-checks.mjs';
 import { tokenAuditViolations } from './audit-design-tokens.mjs';
 import {
@@ -36,7 +37,6 @@ import {
   tokenContractViolations,
   websiteTypeCeilingClassFindings,
 } from './design-system-contract.mjs';
-import { jsxClassData } from './design-system-source-checks.mjs';
 import { brandTokenViolations, svgColorScan } from './design-system-asset-checks.mjs';
 import { resolvePalette } from './design-system-contrast.mjs';
 import { cssPolicyScan } from './design-system-css-checks.mjs';

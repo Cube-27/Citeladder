@@ -49,9 +49,9 @@ export function themeCookieDomain(hostname: string): string | null {
 
 function writePreference(preference: ThemePreference) {
   const domain = themeCookieDomain(window.location.hostname);
-  const scope = `; Path=/; SameSite=Lax${domain ? `; Domain=${domain}` : ''}${
-    window.location.protocol === 'https:' ? '; Secure' : ''
-  }`;
+  const domainPart = domain ? '; Domain=' + domain : '';
+  const securePart = window.location.protocol === 'https:' ? '; Secure' : '';
+  const scope = '; Path=/; SameSite=Lax' + domainPart + securePart;
   document.cookie =
     preference === 'system'
       ? `${THEME_COOKIE}=; Max-Age=0${scope}`
