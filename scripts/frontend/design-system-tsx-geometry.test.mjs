@@ -15,10 +15,9 @@ test('arbitrary radii are raw, including inside cva recipes and constants', () =
     'tsx-radius',
   ]);
   assert.deepEqual(rules('export const frame = "md:rounded-t-[0.75rem]";'), ['tsx-radius']);
-  assert.deepEqual(
-    rules('<div className="rounded-[var(--radius-card)] rounded-[inherit] rounded-full" />'),
-    [],
-  );
+  // A var() is still an arbitrary value: radius is the rounded-* scale.
+  assert.deepEqual(rules('<div className="rounded-[var(--radius-lg)]" />'), ['tsx-radius']);
+  assert.deepEqual(rules('<div className="rounded-lg rounded-[inherit] rounded-full" />'), []);
 });
 
 test('literal dimensions belong to components/ui owners', () => {

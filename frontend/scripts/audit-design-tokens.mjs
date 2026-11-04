@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import postcss from 'postcss';
 
 import { paletteDeclarations, resolvePalette } from './design-system-contrast.mjs';
+import { contractTokenNames } from './design-system-contract.mjs';
 import { parseSource, stringFragments } from './source-ast.mjs';
 
 /**
@@ -19,7 +20,7 @@ const root = resolve(import.meta.dirname, '..');
 const TOKEN_CSS = 'apps/app/src/globals.css';
 const WEBSITE_CSS = 'apps/app/src/website-type.css';
 const DESIGN_DOC = '../docs/design.md';
-const LIGHT = ':root:not([data-public-surface])';
+const LIGHT = ':root';
 const DARK = ":root[data-theme='dark']";
 const THEMES = [
   ['light', LIGHT],
@@ -48,32 +49,37 @@ const AUDITED_FAMILY = /^--(?:color|tag|radius|shadow|elevation|motion|ease|text
 const SAME_AS = [
   {
     theme: 'light',
-    tokens: [
-      '--color-panel',
-      '--color-elevated',
-      '--color-input',
-      '--color-on-inverse',
-      '--color-accent-fg',
-      '--color-danger-fg',
-    ],
-    reason:
-      'paper, layers, fields and labels on solid fills are one white in light; dark splits them',
+    tokens: ['--color-surface', '--color-on-ink'],
+    reason: 'a label on the ink button is cut out in the card white in light',
   },
   {
     theme: 'light',
-    tokens: ['--color-border-subtle', '--color-track'],
-    reason: 'the recessed track is drawn in the hairline tone in light',
+    tokens: ['--color-ink', '--color-on-accent', '--color-focus', '--color-data-2'],
+    reason: 'Flare carries an ink label, and the focus ring and second series are ink',
+  },
+  {
+    theme: 'light',
+    tokens: ['--color-surface-sunken', '--color-chart-grid'],
+    reason: 'the chart grid is drawn in the sunken tone in light; dark splits them',
   },
   {
     theme: 'dark',
-    tokens: ['--color-background', '--color-on-inverse'],
-    reason: 'a label on the dark inverse surface is cut out in the ground colour',
+    tokens: ['--color-on-ink', '--color-on-accent'],
+    reason: 'labels on the light ink button and on Flare are one near-black in dark',
+  },
+  {
+    theme: 'dark',
+    tokens: ['--color-ink-muted', '--color-data-3'],
+    reason: 'the third series is the muted ink in dark',
   },
 ];
 
-/** Status and action values a chart series must never wear. */
-const NON_SERIES =
-  /^--color-(?:accent(?:-[\w-]+)?|(?:success|warning|danger|info|neutral)(?:-[\w-]+)?)$/;
+/**
+ * Status values a chart series must never wear. The own-brand series is
+ * Flare (data-1) and the second is ink by the system's design, so accent and
+ * ink are not in this set.
+ */
+const NON_SERIES = /^--color-(?:positive|negative|warning|info)(?:-soft)?$/;
 
 const escaped = (value) => value.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 const byName = (left, right) => {
@@ -127,7 +133,7 @@ const sameAsAllowed = (sameAs, theme, first, second) =>
 
 /** The finding for two colour tokens sharing a value, or null when allowed. */
 function pairFinding({ theme, declarations, sameAs, value }, first, second) {
-  const series = [first, second].find((token) => token.startsWith('--color-chart-'));
+  const series = [first, second].find((token) => token.startsWith('--color-data-'));
   const other = series === first ? second : first;
   if (series && NON_SERIES.test(other)) {
     return `${TOKEN_CSS}: ${theme} ${series} equals ${other} (${value}); chart series never wear a status or action value`;
@@ -258,12 +264,15 @@ function textCompanion(token) {
  * Declared tokens that no source file consumes.
  * @public — also imported by the scripts/frontend fixture tests.
  */
-export function zeroConsumerTokens(source, files) {
+export function zeroConsumerTokens(source, files, required = new Set()) {
   const consumed = new Set();
   for (const file of files) for (const token of consumedTokens(file)) consumed.add(token);
   return [...declaredTokens(source)]
     .filter((token) => {
       if (consumed.has(token)) return false;
+      // The system's contract requires the token whether or not a page has
+      // reached for it yet (design-system-contract.mjs pins its value).
+      if (required.has(token) || required.has(textCompanion(token))) return false;
       // `--text-sm--line-height` travels with the `text-sm` utility.
       const companion = textCompanion(token);
       return !(companion && consumed.has(companion));
@@ -355,7 +364,7 @@ export function generatedBlocks(tokenCss, websiteCss) {
     websiteCss,
     /^\.(?:website-[\w-]+|flow-(?:title|group-title|help|meta))$/,
     publicScale,
-    /min-width:\s*(?:768px|48rem)/,
+    /min-width:\s*(?:768px|48rem)\)\s*and\s*\(max-width:\s*(?:1023px|63\.9375rem)/,
   );
   const radii = [...light]
     .filter(([token]) => token.startsWith('--radius-') && !token.includes('*'))
@@ -363,7 +372,7 @@ export function generatedBlocks(tokenCss, websiteCss) {
     .sort(([, first], [, second]) => Number.parseFloat(first) - Number.parseFloat(second));
   const controls = [...light]
     .filter(([token]) =>
-      /^--(?:control-height|menu-item-height|badge-height|table-row-height|table-header-height|tab-height|nav-item-height)/.test(
+      /^--(?:control-|container-|nav-height|sidebar-width|menu-item-height|badge-height|table-row-height|table-header-height|tab-height|nav-item-height)/.test(
         token,
       ),
     )
@@ -390,7 +399,7 @@ export function generatedBlocks(tokenCss, websiteCss) {
     [
       'type',
       table(
-        ['Role', 'Surface', 'Size / line height', '≥768px'],
+        ['Role', 'Surface', 'Size / line height', '768–1023px'],
         [
           ...[...product]
             .sort(([first], [second]) => byName(first, second))
@@ -466,7 +475,7 @@ export function tokenAuditViolations(base = root) {
   const { stale, missing } = refreshDesignDoc(sources);
   return [
     ...duplicateTokenFindings(tokenCss),
-    ...zeroConsumerTokens(tokenCss, files).map(
+    ...zeroConsumerTokens(tokenCss, files, contractTokenNames(base)).map(
       (token) => `${TOKEN_CSS}: ${token} has no consumer; remove it or use it`,
     ),
     ...stale.map(
