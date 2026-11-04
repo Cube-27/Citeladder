@@ -19,6 +19,7 @@ import { AgentPanelProvider, useAgentPanelSeed } from '@/lib/agent/panel-context
 import { queryKeys } from '@/lib/api/query-keys';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
+import { emitResize } from '@/test/resize-observer';
 
 vi.mock('@/lib/billing/entitlement-context', () => ({
   useEntitlement: () => ({ hasCapability: (key: string) => key === 'agent' }),
@@ -198,7 +199,7 @@ describe('AgentPanel', () => {
     expect(screen.queryByRole('button', { name: 'Open agent' })).not.toBeInTheDocument();
   });
 
-  it('keeps the drawer reading position while the persisted chat updates', async () => {
+  it('follows the drawer thread in its own region until the reader scrolls up', async () => {
     let current = DETAIL;
     mswServer.use(
       http.get('/api/v1/agent/skills', () => HttpResponse.json({ skills: [] })),
@@ -207,49 +208,47 @@ describe('AgentPanel', () => {
       ),
       http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(current)),
     );
-    const scroll = vi.fn();
-    const oldScroll = HTMLElement.prototype.scrollIntoView;
-    const oldStyle = window.getComputedStyle;
-    let scrollRoot: HTMLElement | null = null;
-    vi.spyOn(window, 'getComputedStyle').mockImplementation((element) =>
-      element === scrollRoot ? ({ overflowY: 'auto' } as CSSStyleDeclaration) : oldStyle(element),
-    );
-    HTMLElement.prototype.scrollIntoView = scroll;
-    try {
-      const user = userEvent.setup();
-      const { queryClient } = renderShell('/site');
-      await user.click(await screen.findByRole('button', { name: 'Open agent' }));
-      const panel = await screen.findByRole('dialog', { name: 'Agent' });
-      scrollRoot = within(panel).getByRole('region', { name: 'Agent conversation' });
-      Object.defineProperties(scrollRoot, {
-        scrollHeight: { configurable: true, value: 3000 },
-        clientHeight: { configurable: true, value: 600 },
-        scrollTop: { configurable: true, writable: true, value: 0 },
-      });
-      await user.click(within(panel).getByRole('button', { name: 'Send' }));
-      await within(panel).findByLabelText('Reply to the agent');
-      const initialScrolls = scroll.mock.calls.length;
-      fireEvent.scroll(scrollRoot!);
-      current = {
-        ...DETAIL,
-        messages: [
-          ...DETAIL.messages,
-          {
-            ...DETAIL.messages[1]!,
-            id: '77777777-7777-4777-8777-777777777773',
-            sequence: 3,
-            content: 'More detail.',
-          },
-        ],
-      };
-      await act(() => queryClient.invalidateQueries({ queryKey: queryKeys.agent.chat(CHAT) }));
-      await within(panel).findByText('More detail.');
-      expect(scroll).toHaveBeenCalledTimes(initialScrolls);
-      await user.click(within(panel).getByRole('button', { name: 'Jump to latest' }));
-      expect(scroll).toHaveBeenCalledTimes(initialScrolls + 1);
-    } finally {
-      HTMLElement.prototype.scrollIntoView = oldScroll;
-      vi.restoreAllMocks();
-    }
+    const user = userEvent.setup();
+    const { queryClient } = renderShell('/site');
+    await user.click(await screen.findByRole('button', { name: 'Open agent' }));
+    const panel = await screen.findByRole('dialog', { name: 'Agent' });
+    await user.click(within(panel).getByRole('button', { name: 'Send' }));
+    await within(panel).findByLabelText('Reply to the agent');
+    const thread = within(panel).getByRole('region', { name: 'Agent conversation' });
+    // The composer is docked under the region that scrolls, not inside it.
+    expect(within(thread).queryByLabelText('Reply to the agent')).not.toBeInTheDocument();
+    let height = 3000;
+    Object.defineProperties(thread, {
+      scrollHeight: { configurable: true, get: () => height },
+      clientHeight: { configurable: true, value: 600 },
+      scrollTop: { configurable: true, writable: true, value: 0 },
+    });
+
+    act(() => emitResize(thread));
+    expect(thread.scrollTop).toBe(3000);
+
+    thread.scrollTop = 1000;
+    fireEvent.scroll(thread);
+    current = {
+      ...DETAIL,
+      messages: [
+        ...DETAIL.messages,
+        {
+          ...DETAIL.messages[1]!,
+          id: '77777777-7777-4777-8777-777777777773',
+          sequence: 3,
+          content: 'More detail.',
+        },
+      ],
+    };
+    await act(() => queryClient.invalidateQueries({ queryKey: queryKeys.agent.chat(CHAT) }));
+    await within(panel).findByText('More detail.');
+    height = 4000;
+    act(() => emitResize(thread));
+    expect(thread.scrollTop).toBe(1000);
+
+    await user.click(within(panel).getByRole('button', { name: 'Jump to latest' }));
+    expect(thread.scrollTop).toBe(4000);
+    expect(within(panel).queryByRole('button', { name: 'Jump to latest' })).not.toBeInTheDocument();
   });
 });

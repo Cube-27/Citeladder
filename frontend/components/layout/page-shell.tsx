@@ -1,6 +1,6 @@
 'use client';
 
-import { useContext, useLayoutEffect, type ReactNode } from 'react';
+import { useContext, useLayoutEffect, type ReactNode, type RefObject } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
@@ -75,13 +75,29 @@ type ScreenBands<T extends string> = Readonly<{
 }>;
 
 /**
+ * A screen that fills the viewport below the shell chrome (a chat): the
+ * content scrolls in its own region and `dock` (a `ComposerDock`) stays under
+ * it, so the window, the bands and the dock never move while the content
+ * grows. `scrollRef` reaches the scrolling region (`useFollowLatest`);
+ * `scrollLabel` names it when it holds a conversation.
+ */
+type FillLayout =
+  | Readonly<{ fill?: false; dock?: never; scrollRef?: never; scrollLabel?: never }>
+  | Readonly<{
+      fill: true;
+      dock?: ReactNode;
+      scrollRef?: RefObject<HTMLElement | null>;
+      scrollLabel?: string;
+    }>;
+
+/**
  * ListScreen — the template for a collection, dashboard or workspace route:
  * identity band → optional `TabRow` → optional `FilterBar` → the content
  * stack, its sections 24 apart.
  *
  *   `fill` — the content is one column that fills the viewport below the
- *            shell chrome, so a chat's composer sits at the bottom of a
- *            short thread.
+ *            shell chrome and scrolls on its own, with an optional `dock`
+ *            pinned under it (see `FillLayout`).
  *
  * The content measure is the route's (`resolveMeasure`): the narrower reading
  * measure on Agent, Settings and Billing, analytical everywhere else. A page
@@ -90,12 +106,9 @@ type ScreenBands<T extends string> = Readonly<{
  * A page passes data, organisms and slots; the template owns every band and
  * every band-to-band gap.
  */
-export function ListScreen<T extends string = string>({
-  fill = false,
-  ...bands
-}: ScreenBands<T> & Readonly<{ fill?: boolean }>) {
+export function ListScreen<T extends string = string>(props: ScreenBands<T> & FillLayout) {
   const measure = resolveMeasure(useLocation().pathname ?? '');
-  return <PageShell {...bands} measure={measure} fill={fill} />;
+  return <PageShell {...props} measure={measure} />;
 }
 
 /**
@@ -150,7 +163,7 @@ export function DetailScreen<T extends string = string>({
     split?: Extract<SplitPaneRole, 'main-aside' | 'list-detail'>;
   }>) {
   return (
-    <PageShell {...bands} back={back} measure="analytical" fill={false}>
+    <PageShell {...bands} back={back} measure="analytical">
       {lead}
       {aside ? (
         <div className={splitPaneClasses(split)}>
@@ -174,12 +187,12 @@ function PageShell<T extends string>({
   controls,
   children,
   measure,
-  fill,
+  ...layout
 }: ScreenBands<T> &
+  FillLayout &
   Readonly<{
     back?: PageBack;
     measure: PageMeasure;
-    fill: boolean;
   }>) {
   return (
     <>
@@ -197,23 +210,84 @@ function PageShell<T extends string>({
           <FilterBar {...controls} />
         </PageBand>
       ) : null}
-      {/* The content region owns the section rhythm: its sections stand 24px
-          apart, whatever each one is. */}
-      <div
-        data-page-measure={measure}
-        className={cn(
-          pageGutterClasses,
-          measure === 'workflow' && 'max-w-[var(--workflow-max-width)]',
-          'grid grid-cols-[minmax(0,1fr)] content-start gap-[var(--page-section-gap)] pt-[var(--content-gutter)] pb-[var(--page-section-gap)]',
-          // `--route-chrome-height` (globals.css) owns the chrome above the
-          // route at each breakpoint; the gutter is the shell's padding under it.
-          fill &&
-            'flex min-h-[calc(100dvh-var(--route-chrome-height)-var(--content-gutter))] flex-col pb-0',
-        )}
-      >
-        {children}
-      </div>
+      {layout.fill ? (
+        <FillContent
+          measure={measure}
+          // The identity band is hidden below the desktop breakpoint when it
+          // has no actions and no back button (`IdentityBand`).
+          titled={Boolean(actions || back)}
+          dock={layout.dock}
+          scrollRef={layout.scrollRef}
+          scrollLabel={layout.scrollLabel}
+        >
+          {children}
+        </FillContent>
+      ) : (
+        // The content region owns the section rhythm: its sections stand 24px
+        // apart, whatever each one is.
+        <div
+          data-page-measure={measure}
+          className={cn(
+            measureClasses(measure),
+            'grid grid-cols-[minmax(0,1fr)] content-start gap-[var(--page-section-gap)] pt-[var(--content-gutter)] pb-[var(--page-section-gap)]',
+          )}
+        >
+          {children}
+        </div>
+      )}
     </>
+  );
+}
+
+/**
+ * A fill screen's content: exactly the viewport below the shell chrome, so
+ * the window never scrolls. The column scrolls in a full-width region (its
+ * scrollbar on the sheet's edge, not beside the text) and the dock sits under
+ * that region on the same measure.
+ */
+function FillContent({
+  measure,
+  titled,
+  dock,
+  scrollRef,
+  scrollLabel,
+  children,
+}: Readonly<{
+  measure: PageMeasure;
+  titled: boolean;
+  dock: ReactNode;
+  scrollRef: RefObject<HTMLElement | null> | undefined;
+  scrollLabel: string | undefined;
+  children: ReactNode;
+}>) {
+  return (
+    <div
+      className={cn(
+        'flex flex-col',
+        // `--route-chrome-height` (globals.css) owns the chrome above the
+        // route at each breakpoint; the gutter is the shell's padding under it.
+        titled
+          ? 'h-[calc(100dvh-var(--route-chrome-height)-var(--content-gutter))]'
+          : 'h-[calc(100dvh-var(--route-chrome-height-untitled)-var(--content-gutter))]',
+      )}
+    >
+      <section
+        ref={scrollRef}
+        aria-label={scrollLabel}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+      >
+        <div
+          data-page-measure={measure}
+          className={cn(
+            measureClasses(measure),
+            'flex min-h-full flex-col gap-[var(--page-section-gap)] pt-[var(--content-gutter)] pb-[var(--page-section-gap)]',
+          )}
+        >
+          {children}
+        </div>
+      </section>
+      {dock ? <div className={measureClasses(measure)}>{dock}</div> : null}
+    </div>
   );
 }
 
@@ -223,6 +297,11 @@ function PageShell<T extends string>({
  */
 const pageGutterClasses =
   'mx-auto w-full max-w-[var(--content-max-width)] px-[var(--content-gutter)]';
+
+/** The content's measure: the paper's, narrowed on workflow routes. */
+function measureClasses(measure: PageMeasure) {
+  return cn(pageGutterClasses, measure === 'workflow' && 'max-w-[var(--workflow-max-width)]');
+}
 
 /**
  * One row of the grammar: a full-width rule with a gutter-padded row inside it.

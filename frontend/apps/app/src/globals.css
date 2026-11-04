@@ -393,6 +393,9 @@
      (the Agent thread): on desktop the identity band, its rule and the sheet's
      inset above and below. Rebound below for the compact layouts. */
   --route-chrome-height: calc(var(--page-band-identity) + 1px + 2 * var(--workspace-inset));
+  /* The same chrome for a route whose identity band has no actions and no back
+     button: the band only hides below the desktop breakpoint. */
+  --route-chrome-height-untitled: var(--route-chrome-height);
   /* Public-surface rhythm. Marketing consumes these directly; the phone values
      are the base and the media queries below step them up. */
   /* The public dot lattice: one recipe on the 4px grid for every stage that
@@ -543,11 +546,6 @@
 .bg-input { --state-surface: var(--color-input); }
 .bg-elevated { --state-surface: var(--color-elevated); }
 .bg-track { --state-surface: var(--color-track); }
-
-/* A sticky layer (a docked composer) paints the fill of the surface it sits
-   on — the sheet on a route, the overlay in a drawer — so it never shows a
-   second tone over its own container. */
-.surface-fill { background-color: var(--state-surface); }
 
 @media (min-width: 981px) and (max-width: 1200px) {
   :root {
@@ -1462,6 +1460,8 @@ input:-webkit-autofill:focus {
       var(--compact-topbar-height) + var(--page-header-padding-top) +
         var(--page-header-padding-bottom) + var(--control-height-md) + 1px
     );
+    /* Without actions or a back button the compact identity band is hidden. */
+    --route-chrome-height-untitled: var(--compact-topbar-height);
   }
   .app-pane,
   .app-pane-workspace {
