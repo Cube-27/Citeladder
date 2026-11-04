@@ -228,7 +228,11 @@ test('invalid field edges survive keyboard focus in both themes', async ({ page 
   const field = page.getByLabel(/^Brand name/);
   await expect(field).toBeVisible();
   for (const theme of ['light', 'dark']) {
-    if (theme === 'dark') await page.getByRole('button', { name: /Switch to dark theme/ }).click();
+    if (theme === 'dark')
+      await page
+        .getByRole('radiogroup', { name: 'Theme' })
+        .getByRole('radio', { name: 'Dark' })
+        .click();
     await field.evaluate((node) => {
       node.removeAttribute('aria-invalid');
       node.blur();
