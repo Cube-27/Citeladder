@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { CopyButton } from '@/components/ui/copy-button';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Drawer } from '@/components/ui/drawer';
@@ -114,10 +114,10 @@ export function AeoReadinessPanel({
     );
   if (!readiness.data || readiness.data.crawl_id === null) {
     return (
-      <Alert tone="info">
+      <Callout tone="info">
         {readiness.data?.limitations[0] ??
           'AEO Readiness appears once a crawl has finished analyzing pages.'}
-      </Alert>
+      </Callout>
     );
   }
 
@@ -125,7 +125,9 @@ export function AeoReadinessPanel({
   const selected = data.dimensions.find((dimension) => dimension.key === detailKey) ?? null;
   return (
     <Stack gap="workspace" className="min-w-0" data-testid="aeo-readiness">
-      {data.limitations.length > 0 ? <Alert tone="info">{data.limitations.join(' ')}</Alert> : null}
+      {data.limitations.length > 0 ? (
+        <Callout tone="info">{data.limitations.join(' ')}</Callout>
+      ) : null}
       <ReadinessLedger dimensions={data.dimensions} onOpen={setDetailKey} />
       <DimensionDrawer dimension={selected} crawlId={crawlId} onClose={() => setDetailKey(null)} />
     </Stack>

@@ -2,8 +2,8 @@ import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 
 import { ActivityProgress, type ActivityStep } from '@/components/ui/activity-progress';
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -147,12 +147,12 @@ export function DiscoveryStage({
       ) : null}
       <Stack gap="workspace" className="flow-stage-band">
         {(discovery.discovery?.warnings ?? []).map((warning) => (
-          <Alert key={warning} tone="warning">
+          <Callout key={warning} tone="warning">
             {warningMessage(warning)}
-          </Alert>
+          </Callout>
         ))}
         {discovery.discovery?.status === 'failed' ? (
-          <Alert tone="danger">
+          <Callout tone="negative">
             <Inline gap="compact" className="justify-between">
               <span>
                 {discovery.discovery.error_code === 'invalid_url'
@@ -163,17 +163,17 @@ export function DiscoveryStage({
                 Edit website
               </Button>
             </Inline>
-          </Alert>
+          </Callout>
         ) : null}
         {discovery.error ? (
-          <Alert tone="warning">
+          <Callout tone="warning">
             <Inline gap="compact" className="justify-between">
               <span>{onboardingErrorMessage(discovery.error)}</span>
               <Button variant="ghost" onClick={discovery.retry}>
                 Retry
               </Button>
             </Inline>
-          </Alert>
+          </Callout>
         ) : null}
       </Stack>
     </div>
@@ -237,17 +237,17 @@ export function ReviewStage({
       </StageHeader>
       <ReviewNotices failed={complete.isError}>
         {catalog.isError ? (
-          <Alert tone="warning">
+          <Callout tone="warning">
             <Inline gap="compact" className="justify-between">
               <span>We could not load the competitor limit.</span>
               <Button variant="ghost" onClick={() => catalog.refetch()}>
                 Try again
               </Button>
             </Inline>
-          </Alert>
+          </Callout>
         ) : null}
         {complete.isError ? (
-          <Alert tone="warning">{onboardingErrorMessage(complete.error)}</Alert>
+          <Callout tone="warning">{onboardingErrorMessage(complete.error)}</Callout>
         ) : null}
         <CompletionStateAlert failed={completionFailed} />
       </ReviewNotices>
@@ -334,9 +334,9 @@ function withoutTrailingSlashes(value: string): string {
 function CompletionStateAlert({ failed }: Readonly<{ failed: boolean }>) {
   if (failed) {
     return (
-      <Alert tone="danger">
+      <Callout tone="negative">
         Project creation did not finish. Go back, confirm the website again, and retry.
-      </Alert>
+      </Callout>
     );
   }
   return null;

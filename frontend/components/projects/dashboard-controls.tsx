@@ -2,8 +2,8 @@ import { ChevronDown, Pencil, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
-import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown';
 import { Icon } from '@/components/ui/icon';
+import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { useProjectCreation } from '@/components/layout/use-project-creation';
 import type { Project } from '@/lib/api/types';
 import { newProjectDestination } from '@/lib/navigation/project-destination';
@@ -22,33 +22,33 @@ export function ProjectControls({
     useProjectCreation();
   if (!onEditProject && !mayCreate) return null;
   return (
-    <Dropdown>
-      <DropdownTrigger asChild>
+    <Menu>
+      <MenuTrigger asChild>
         <Button variant="secondary">
           Manage project <Icon icon={ChevronDown} className="opacity-80" />
         </Button>
-      </DropdownTrigger>
-      <DropdownContent align="end" width="panel">
+      </MenuTrigger>
+      <MenuContent align="end">
         {onEditProject ? (
-          <DropdownItem onSelect={() => onEditProject(activeProject)}>
-            <Icon icon={Pencil} /> Edit active project
-          </DropdownItem>
+          <MenuItem icon={<Icon icon={Pencil} />} onSelect={() => onEditProject(activeProject)}>
+            Edit active project
+          </MenuItem>
         ) : null}
         {mayCreate ? (
-          <DropdownItem
+          <MenuItem
+            icon={<Icon icon={Plus} />}
             disabled={!canAddProject}
             onSelect={() => router(newProjectDestination(activeWorkspaceId))}
           >
-            <Icon icon={Plus} />
             <span className="grid min-w-0 flex-1">
               <span>Add project</span>
               {remainingProjectSlots === 0 && (
                 <span className="type-caption">Project limit reached</span>
               )}
             </span>
-          </DropdownItem>
+          </MenuItem>
         ) : null}
-      </DropdownContent>
-    </Dropdown>
+      </MenuContent>
+    </Menu>
   );
 }

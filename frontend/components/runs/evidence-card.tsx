@@ -78,9 +78,9 @@ function EvidencePromptHeader({
   return (
     <Stack as="section" gap="item" className="min-w-0">
       <Inline className="flex-wrap justify-between">
-        <Badge variant="neutral">Prompt #{promptBadgeNumber}</Badge>
+        <Badge>Prompt #{promptBadgeNumber}</Badge>
         <Inline className="flex-wrap">
-          <Badge variant="neutral">
+          <Badge>
             {engineLabel(evidence.logical_engine)}
             {transport ? ` · ${transport}` : ''}
           </Badge>

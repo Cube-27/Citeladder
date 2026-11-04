@@ -32,6 +32,7 @@ export function AgentPanelTrigger() {
       <IconButton
         icon={ICONS.agent}
         label="Open agent"
+        tooltip={false}
         aria-haspopup="dialog"
         onClick={() => panel.setOpen(true)}
       />

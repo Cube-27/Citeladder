@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { expect, it } from 'vite-plus/test';
+import { expect, it, vi } from 'vite-plus/test';
 
-import { TagGroup } from './tag';
+import { Tag, TagGroup } from './tag';
 
 it('reveals overflow labels from the keyboard and keeps the disclosure focused', async () => {
   const user = userEvent.setup();
@@ -18,6 +18,14 @@ it('reveals overflow labels from the keyboard and keeps the disclosure focused',
   await user.keyboard('{Enter}');
   expect(screen.queryByText('Consulting')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Show 2 more tags' })).toHaveFocus();
+});
+
+it('removes a tag from its named remove button', async () => {
+  const user = userEvent.setup();
+  const onRemove = vi.fn();
+  render(<Tag onRemove={onRemove}>ChatGPT</Tag>);
+  await user.click(screen.getByRole('button', { name: 'Remove ChatGPT' }));
+  expect(onRemove).toHaveBeenCalledTimes(1);
 });
 
 it('does not offer a disclosure when all labels fit', () => {

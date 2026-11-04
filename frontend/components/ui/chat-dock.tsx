@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 import type { FormEvent, ReactNode, RefObject } from 'react';
 
 import { Icon } from '@/components/ui/icon';
-import { menuItemVariants, menuPanelClasses } from '@/components/ui/menu-variants';
+import { MENU_PANEL, menuItemClasses } from '@/components/ui/menu';
 import { Pressable } from '@/components/ui/pressable';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
@@ -172,7 +172,7 @@ export function SuggestionList({
       role="listbox"
       aria-label={label}
       hidden={!open}
-      className={cn(menuPanelClasses, 'absolute inset-x-0 bottom-full mb-0.5 grid')}
+      className={cn(MENU_PANEL, 'absolute inset-x-0 bottom-full mb-0.5 grid')}
     >
       {options.map((option, index) => (
         <li
@@ -182,7 +182,7 @@ export function SuggestionList({
           role="option"
           aria-selected={index === selected}
           data-active={index === selected}
-          className={cn(menuItemVariants(), 'grid gap-0.5 py-2')}
+          className={menuItemClasses({ className: 'grid h-auto gap-0.5 py-2' })}
           onMouseDown={(event) => {
             event.preventDefault();
             onPick(index);

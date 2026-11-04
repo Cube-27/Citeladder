@@ -37,10 +37,8 @@ export function EarnedPageHandoff({ detail }: Readonly<{ detail: OpportunityDeta
           Get listed on this page. Competitors are on it and you are not.
         </p>
         <Inline className="flex-wrap">
-          {handoff.canonical_domain ? (
-            <Badge variant="neutral">{handoff.canonical_domain}</Badge>
-          ) : null}
-          {format ? <Badge variant="neutral">{format}</Badge> : null}
+          {handoff.canonical_domain ? <Badge>{handoff.canonical_domain}</Badge> : null}
+          {format ? <Badge>{format}</Badge> : null}
         </Inline>
         {handoff.ask ? (
           <Stack gap="tight">
@@ -111,9 +109,7 @@ function NamedInAnswers({ names }: Readonly<{ names?: string[] }>) {
       <p className={textRole('label')}>Named in the answers, not on the page</p>
       <Inline className="flex-wrap">
         {names.map((name) => (
-          <Badge key={name} variant="neutral">
-            {name}
-          </Badge>
+          <Badge key={name}>{name}</Badge>
         ))}
       </Inline>
       <p className="type-caption">

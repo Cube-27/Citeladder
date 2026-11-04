@@ -81,6 +81,7 @@ export function PurchaseReview({
       <CheckoutConsent recurring={prepared.kind === 'base'} />
       <Inline className="flex-wrap">
         <Button
+          variant="primary"
           disabled={checkout.confirming}
           onClick={() => void checkout.confirmPrepared().catch(() => undefined)}
         >

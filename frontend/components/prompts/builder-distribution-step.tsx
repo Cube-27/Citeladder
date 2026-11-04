@@ -264,7 +264,8 @@ export function BuilderDistributionStep({
         {seeds.data ? (
           <>
             <RadioGroup<SeedChoice>
-              variant="chip"
+              variant="cards"
+              columns={sources.length >= 3 ? 3 : 2}
               ariaLabel="Search data source"
               value={seedSourceOf(settings, seeds.data)}
               options={sources.map((source) => ({ value: source, label: SOURCE_LABELS[source] }))}

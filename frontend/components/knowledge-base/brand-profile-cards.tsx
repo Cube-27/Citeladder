@@ -3,15 +3,15 @@
 import { useState } from 'react';
 
 import { ProjectEditPanel } from '@/components/projects/project-edit-panel';
-import { Alert } from '@/components/ui/alert';
-import { BrandLogo } from '@/components/ui/brand-logo';
+import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChipList, ChipListField } from '@/components/ui/chip-list-field';
+import { ChipInput, ChipList } from '@/components/ui/chip-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
-import { SegmentedControl } from '@/components/ui/segmented-control';
+import { SegmentedControl } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { textRole } from '@/components/ui/typography';
 import { splitPaneClasses } from '@/components/ui/workspace';
@@ -24,8 +24,8 @@ import type { BrandProfileForm } from './use-brand-profile-form';
 
 /** The profile save's outcome, above the tab it was saved from. */
 export function ProfileSaveNotices({ form }: Readonly<{ form: BrandProfileForm }>) {
-  if (form.error) return <Alert tone="danger">{humanizeApiError(form.error).message}</Alert>;
-  return form.notice ? <Alert tone="success">{form.notice}</Alert> : null;
+  if (form.error) return <Callout tone="negative">{humanizeApiError(form.error).message}</Callout>;
+  return form.notice ? <Callout tone="positive">{form.notice}</Callout> : null;
 }
 
 /**
@@ -165,7 +165,7 @@ export function AudienceCard({ form }: Readonly<{ form: BrandProfileForm }>) {
             />
           )}
         </Field>
-        <ChipListField
+        <ChipInput
           label="Products and services"
           hint="One offering per entry, named as a buyer would."
           items={draft.products_services.map((value) => ({ value }))}
@@ -208,7 +208,7 @@ export function TrackedCompetitorsCard({ project }: Readonly<{ project: Project 
           key: `${competitor.name}:${competitor.domains[0] ?? ''}`,
           value: competitor.name,
           media: (
-            <BrandLogo
+            <BrandMark
               name={competitor.name}
               logoUrl={competitor.logo_url}
               websiteUrl={competitor.domains[0]}

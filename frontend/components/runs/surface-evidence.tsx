@@ -70,7 +70,7 @@ function EntityRow({ entity }: Readonly<{ entity: SurfaceEntity }>) {
       <TableRowHeader>
         <Inline as="span">
           <ClampText>{entity.name}</ClampText>
-          {entity.kind === 'brand' ? <Badge variant="neutral">Your brand</Badge> : null}
+          {entity.kind === 'brand' ? <Badge>Your brand</Badge> : null}
         </Inline>
       </TableRowHeader>
       <SignalCell present={entity.mentioned} label="Named in the answer" />

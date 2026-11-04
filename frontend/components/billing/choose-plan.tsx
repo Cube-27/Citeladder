@@ -5,11 +5,11 @@ import { useState, type ReactNode } from 'react';
 import { BillingCountryInput } from '@/components/billing/billing-account-details';
 import { BillingDetailsForm } from '@/components/billing/billing-details-form';
 import { PlanRow } from '@/components/billing/plan-row';
-import { Alert } from '@/components/ui/alert';
+import { Callout } from '@/components/ui/callout';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Stack } from '@/components/ui/layout';
 import { cardClasses } from '@/components/ui/card-variants';
-import { SegmentedControl } from '@/components/ui/segmented-control';
+import { SegmentedControl } from '@/components/ui/tabs';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type {
   BillingCatalog,
@@ -97,7 +97,7 @@ export function ChoosePlan({
           title="Choose a plan"
           description="Self-serve plans are not open yet."
         />
-        <Alert tone="info">
+        <Callout tone="info">
           To start a plan now, contact us and we will set it up for this workspace.{' '}
           <ExternalHttpLink
             href={contactSalesHref(
@@ -107,7 +107,7 @@ export function ChoosePlan({
           >
             Contact us
           </ExternalHttpLink>
-        </Alert>
+        </Callout>
       </Stack>
     );
   return (

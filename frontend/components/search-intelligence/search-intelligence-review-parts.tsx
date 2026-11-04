@@ -7,8 +7,8 @@ import {
   searchScopeLabel,
 } from '@/lib/config/search-intelligence';
 
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Field } from '@/components/ui/field';
@@ -283,7 +283,7 @@ export function ReviewFooter({
         <Button variant="secondary" onClick={onBack}>
           Back
         </Button>
-        <Button disabled={busy} onClick={onConfirm}>
+        <Button variant="primary" disabled={busy} onClick={onConfirm}>
           Confirm {runEstimate(review)} analysis
         </Button>
       </Inline>
@@ -291,7 +291,7 @@ export function ReviewFooter({
   return (
     <Inline gap="compact" className="justify-between">
       <span className={textRole('caption')}>{pluralCount(selected, 'dataset')} selected</span>
-      <Button disabled={busy || !canReview} onClick={onReview}>
+      <Button variant="primary" disabled={busy || !canReview} onClick={onReview}>
         Review cost
       </Button>
     </Inline>
@@ -304,10 +304,10 @@ export function HistoryScopeNotice({
 }: Readonly<{ scope: ResearchScope; selections: DatasetSelection[] }>) {
   if (!historyScopeConflict(selections, scope)) return null;
   return (
-    <Alert>
+    <Callout tone="negative">
       Backlink history covers the whole domain. Deselect it or set the research scope to Domain +
       subdomains.
-    </Alert>
+    </Callout>
   );
 }
 

@@ -116,7 +116,7 @@ function ConnectionActions({
           </Button>
           {hasProperty ? (
             <Button
-              variant="destructiveGhost"
+              variant="danger"
               onClick={onRemove}
               disabled={busy}
               pending={removePending}

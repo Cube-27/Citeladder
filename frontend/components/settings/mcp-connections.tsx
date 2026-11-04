@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tan
 import { useState } from 'react';
 
 import { ConnectStrip } from '@/components/mcp/connect-strip';
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -135,7 +135,7 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
         }
         footer={
           <Button
-            variant="destructive"
+            variant="danger"
             pending={revoke.isPending}
             onClick={() => {
               if (pending) revoke.mutate(pending.id);
@@ -152,7 +152,7 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
               : 'The assistant stops reading or changing CiteLadder at once. Connect it again to restore access.'}
           </p>
           {revoke.isError ? (
-            <Alert tone="danger">{humanizeApiError(revoke.error).message}</Alert>
+            <Callout tone="negative">{humanizeApiError(revoke.error).message}</Callout>
           ) : null}
         </Stack>
       </Dialog>

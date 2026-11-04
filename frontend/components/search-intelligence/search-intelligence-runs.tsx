@@ -156,7 +156,7 @@ export function CostDetails({
     content = (
       <ReadError error={error} fallback="Cost history could not be loaded." onRetry={onRetry} />
     );
-  if (pending) content = <Skeleton shape="block" />;
+  if (pending) content = <Skeleton variant="block" />;
   return (
     <Drawer
       open={open}

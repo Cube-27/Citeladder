@@ -117,8 +117,8 @@ export function MetaFooter({
 }
 
 /**
- * Who or what a screen or section is about: the 40px mark (a `BrandLogo` or
- * `Avatar` at its `identity` placement), the title, one caption line under
+ * Who or what a screen or section is about: the 40px mark (a `BrandMark` at
+ * its `header` placement or an `Avatar` at `profile`), the title, one caption line under
  * it, and the actions that act on it at the row's end, wrapping under the
  * text when the row is full. The page supplies the text in its roles; the
  * row owns the alignment and every gap.

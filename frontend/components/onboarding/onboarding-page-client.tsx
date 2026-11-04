@@ -160,12 +160,12 @@ function ProjectSetupBlocked({
     <GateNoticeScreen title={title}>
       <p>{children}</p>
       {onRetry && (
-        <Button onClick={onRetry} className="w-fit">
+        <Button variant="primary" onClick={onRetry} className="w-fit">
           Retry
         </Button>
       )}
       {plans ? (
-        <Button asChild className="w-fit">
+        <Button asChild variant="primary" className="w-fit">
           <Link to={PLANS_HREF}>See plans</Link>
         </Button>
       ) : null}

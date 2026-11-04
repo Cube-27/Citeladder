@@ -47,6 +47,7 @@ export function BriefingCard({
         description={`${basis} Runs once when you ask; nothing is scheduled.`}
         actions={
           <Button
+            variant="primary"
             disabled={disabled || pending || actions.isPending}
             onClick={() =>
               onStart({

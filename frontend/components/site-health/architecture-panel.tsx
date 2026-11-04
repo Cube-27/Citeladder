@@ -11,8 +11,8 @@ import {
   orphanSegment,
 } from '@/components/site-health/architecture-orphans';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
-import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Callout } from '@/components/ui/callout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Icon } from '@/components/ui/icon';
@@ -95,10 +95,10 @@ export function ArchitecturePanel({
     );
   if (!architecture.data || architecture.data.state === 'unavailable') {
     return (
-      <Alert tone="info">
+      <Callout tone="info">
         {architecture.data?.limitations[0] ??
           'Page kinds appear once a crawl has finished and its structure has been derived.'}
-      </Alert>
+      </Callout>
     );
   }
   return <ArchitectureLedger data={architecture.data} />;

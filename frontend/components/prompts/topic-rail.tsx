@@ -3,8 +3,8 @@
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useId, useState, type FormEvent } from 'react';
 
-import { Alert } from '@/components/ui/alert';
 import { Button, IconButton } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -88,7 +88,7 @@ export function TopicRail({
   };
 
   const errorBanner = topicErrorMessage(loadError, actionError) ? (
-    <Alert tone="danger">{topicErrorMessage(loadError, actionError)}</Alert>
+    <Callout tone="negative">{topicErrorMessage(loadError, actionError)}</Callout>
   ) : null;
 
   return (
@@ -210,7 +210,7 @@ function TopicSelect({
         ]}
       />
       {topicErrorMessage(loadError, actionError) ? (
-        <Alert tone="danger">{topicErrorMessage(loadError, actionError)}</Alert>
+        <Callout tone="negative">{topicErrorMessage(loadError, actionError)}</Callout>
       ) : null}
     </Stack>
   );

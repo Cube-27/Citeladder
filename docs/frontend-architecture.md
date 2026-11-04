@@ -305,8 +305,10 @@ interaction recipes live only in [`design.md`](design.md).
 | Capability | Owner |
 |---|---|
 | Button, Card, Input, Textarea, Field | `frontend/components/ui/` |
-| Dropdown Menu, Dialog, Drawer, Tooltip | `frontend/components/ui/` Radix wrappers |
-| Table, Badge, Alert, Skeleton, progress, pagination, segmented control | `frontend/components/ui/` |
+| Menu, Dialog, Drawer, Tooltip | `frontend/components/ui/` Radix wrappers (`menu.tsx`, `dialog.tsx`, `drawer.tsx`, `tooltip.tsx`); Popover is `popover.tsx` |
+| Table, Badge, Tag, Callout, EmptyState, Skeleton, ProgressBar, pagination | `frontend/components/ui/` |
+| Segmented control | `frontend/components/ui/tabs.tsx` (`SegmentedControl`) |
+| Kbd, ChipInput, ThemeSwitch, BrandMark, EngineMark, Citation, Rungs | `frontend/components/ui/` (`kbd.tsx`, `chip-input.tsx`, `theme-switch.tsx`, `brand-mark.tsx`, `engine-mark.tsx`, `citation.tsx`, `rungs.tsx`) |
 | Read states: loading, read error, empty (block and inline) | `frontend/components/ui/query-state.tsx` (`QueryState`) |
 | KPI and fact rows | `frontend/components/ui/stat-row.tsx` (`StatRow`) |
 | Record tables: header, toolbar, rows, pager, states | `frontend/components/ui/data-table.tsx` (`DataTable`) |
@@ -331,7 +333,7 @@ interaction recipes live only in [`design.md`](design.md).
 | Gate pages before the shell opens | `frontend/components/layout/shell-fallback.tsx` (`GateScreen`), `frontend/components/layout/gate-notice-frame.tsx` (`GateNoticeScreen`) |
 | Chat thread and composer dock | `frontend/components/ui/chat-dock.tsx` (`DockedThread`, `ComposerDock`, `ComposerFrame`, `RemovableChip`, `SuggestionList`) |
 | Panel (`panelClasses`) and card content (one box recipe) | `frontend/components/ui/panel.tsx`, `frontend/components/ui/card.tsx` |
-| Menu separator | `frontend/components/ui/dropdown.tsx` |
+| Menu separator and link rows | `frontend/components/ui/menu.tsx` (`MenuSeparator`, `MenuLinkItem`) |
 | Pagination (`Pager`) | `frontend/components/ui/pager.tsx` |
 | Date field and calendar | `frontend/components/ui/date-field.tsx`, `frontend/components/ui/calendar.tsx` |
 | Avatar, Disclosure, Donut chart | `avatar.tsx`, `disclosure.tsx`, `donut-chart.tsx` |

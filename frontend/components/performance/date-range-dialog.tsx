@@ -201,6 +201,7 @@ export function DateRangeDialog({
             Cancel
           </Button>
           <Button
+            variant="primary"
             disabled={!isApplicable(draft, coverage)}
             onClick={() => {
               onApply(draft);

@@ -7,7 +7,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Inline } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
-import { BrandLogo } from '@/components/ui/brand-logo';
+import { BrandMark } from '@/components/ui/brand-mark';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
 import { MissingValue } from '@/components/ui/unavailable-value';
@@ -72,7 +72,7 @@ function TypeChip({
   // simply not been read and its address did not settle the question. The
   // column header carries that explanation for the whole column.
   if (!label) return <MissingValue />;
-  const chip = <Badge variant="neutral">{label}</Badge>;
+  const chip = <Badge>{label}</Badge>;
   const basis = pageFormatBasis(method);
   if (!basis) return chip;
   // The tooltip serves a pointer; the hidden text gives keyboard and screen
@@ -220,7 +220,7 @@ export function DomainTable({
 /**
  * The brands named alongside this source, as the marks a reader recognises.
  *
- * Real logos only — `BrandLogo` falls back to initials rather than inventing a
+ * Real logos only — `BrandMark` falls back to initials rather than inventing a
  * mark. The overflow count is the rest of the distinct brands, so the cell
  * never grows past three chips no matter how crowded the answer was.
  */
@@ -238,11 +238,11 @@ function MentionedChips({
           content={`${brand.name} — named in ${brand.responses} of the answers citing this URL`}
         >
           <span className="inline-flex">
-            <BrandLogo
+            <BrandMark
               name={brand.name}
               logoUrl={brand.logo_url}
               websiteUrl={brand.website}
-              placement="mark"
+              placement="inline"
             />
           </span>
         </Tooltip>

@@ -228,7 +228,11 @@ test('invalid field edges survive keyboard focus in both themes', async ({ page 
   const field = page.getByLabel(/^Brand name/);
   await expect(field).toBeVisible();
   for (const theme of ['light', 'dark']) {
-    if (theme === 'dark') await page.getByRole('button', { name: /Switch to dark theme/ }).click();
+    if (theme === 'dark')
+      await page
+        .getByRole('radiogroup', { name: 'Theme' })
+        .getByRole('radio', { name: 'Dark' })
+        .click();
     await field.evaluate((node) => {
       node.removeAttribute('aria-invalid');
       node.blur();
@@ -252,17 +256,13 @@ test('invalid field edges survive keyboard focus in both themes', async ({ page 
     const focused = await field.evaluate(async (node) => {
       await Promise.all(node.getAnimations().map((animation) => animation.finished));
       const style = getComputedStyle(node);
-      return {
-        edge: style.borderColor,
-        ring: style.outlineColor,
-        offset: Number.parseFloat(style.outlineOffset),
-      };
+      return { edge: style.borderColor, outline: style.outlineStyle, halo: style.boxShadow };
     });
-    // The danger edge survives focus, and the focus ring inside it takes the
-    // same danger colour, drawn inside the field so its box never grows.
+    // The danger edge survives focus. Focus adds the field's halo, a shadow
+    // that never grows its box, and no outline ring of its own.
     expect(focused.edge).toBe(edge);
-    expect(focused.ring).toBe(edge);
-    expect(focused.offset).toBeLessThan(0);
+    expect(focused.outline).toBe('none');
+    expect(focused.halo).not.toBe('none');
   }
   await page.emulateMedia({ forcedColors: 'active' });
   await field.focus();
@@ -284,18 +284,16 @@ test('password and Agent text entry paint one focus boundary', async ({ page }) 
     const edge = await frame.evaluate((node) => getComputedStyle(node).borderColor);
     expect(edge).not.toBe(restingEdge);
   }).toPass();
-  // One ring: the frame draws it inside its own edge; the input inside the
-  // frame draws none of its own.
+  // One boundary: the frame draws the halo around its own edge; neither the
+  // frame nor the input inside it draws an outline ring.
   expect(await password.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('none');
-  expect(
-    await frame.evaluate((node) => Number.parseFloat(getComputedStyle(node).outlineOffset)),
-  ).toBeLessThan(0);
+  expect(await frame.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('none');
+  expect(await frame.evaluate((node) => getComputedStyle(node).boxShadow)).not.toBe('none');
   await page.keyboard.press('Tab');
   const reveal = page.getByRole('button', { name: 'Show Password' });
   await expect(reveal).toBeFocused();
-  expect(
-    await reveal.evaluate((node) => Number.parseFloat(getComputedStyle(node).outlineOffset)),
-  ).toBeLessThan(0);
+  // The end target keeps a ring of its own.
+  expect(await reveal.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('solid');
 
   // A framed invalid field keeps its danger edge while it holds focus.
   await password.evaluate((node) => node.setAttribute('aria-invalid', 'true'));
@@ -323,9 +321,9 @@ test('password and Agent text entry paint one focus boundary', async ({ page }) 
     expect(await prompt.evaluate((node) => getComputedStyle(node).borderColor)).not.toBe(inputEdge);
   }).toPass();
   expect(await form.evaluate((node) => getComputedStyle(node).borderColor)).toBe(outerEdge);
-  // The composer's outer form draws no second ring around the field's own.
+  // The composer's outer form draws no second ring around the field's own
+  // halo, and the field draws no outline ring.
   expect(await form.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('none');
-  expect(
-    await prompt.evaluate((node) => Number.parseFloat(getComputedStyle(node).outlineOffset)),
-  ).toBeLessThan(0);
+  expect(await prompt.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('none');
+  expect(await prompt.evaluate((node) => getComputedStyle(node).boxShadow)).not.toBe('none');
 });

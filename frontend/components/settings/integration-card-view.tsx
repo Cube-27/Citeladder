@@ -12,9 +12,9 @@ import {
   type GrantModel,
 } from '@/components/settings/grant-model';
 import { useRefreshImportedReads } from '@/components/integrations/data-sources';
-import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import {
   Card,
   CardContent,
@@ -55,33 +55,33 @@ function GrantAlert({ family, status }: Readonly<{ family: GrantFamily; status: 
 
   if (status === 'needs_reauth') {
     return (
-      <Alert tone="warning">
+      <Callout tone="warning">
         {title} requires renewed consent for this grant. Reconnect to resume syncing — previously
         imported data is unaffected.
-      </Alert>
+      </Callout>
     );
   }
   if (status === 'error') {
     return (
-      <Alert tone="danger">
+      <Callout tone="negative">
         The last connection test failed — {title}&nbsp;rejected this grant&rsquo;s refresh.
         Reconnect to resume syncing.
-      </Alert>
+      </Callout>
     );
   }
   if (status === 'pending_revocation') {
     return (
-      <Alert tone="warning">
+      <Callout tone="warning">
         Disconnect is finishing — CiteLadder is retrying the {title} revocation in the background.
         Previously imported data is kept.
-      </Alert>
+      </Callout>
     );
   }
   if (status === 'revoked') {
     return (
-      <Alert tone="neutral">
+      <Callout tone="neutral">
         {title} is disconnected. Imported data is kept; reconnect to resume syncing.
-      </Alert>
+      </Callout>
     );
   }
 
@@ -105,9 +105,7 @@ function GrantHeader({
             {label}
           </Badge>
         ) : (
-          <Badge variant="neutral" data-testid={`grant-status-${family}`}>
-            {label}
-          </Badge>
+          <Badge data-testid={`grant-status-${family}`}>{label}</Badge>
         )
       }
     >
@@ -171,7 +169,7 @@ function DisconnectGrant({ grant }: Readonly<{ grant: GrantModel }>) {
   const sources = joinProviderLabels(grant.connections.map((item) => item.provider));
   return (
     <>
-      <Button variant="destructiveGhost" onClick={() => setOpen(true)}>
+      <Button variant="danger" onClick={() => setOpen(true)}>
         Disconnect {title}
       </Button>
       <Dialog
@@ -191,7 +189,7 @@ function DisconnectGrant({ grant }: Readonly<{ grant: GrantModel }>) {
               Cancel
             </Button>
             <Button
-              variant="destructive"
+              variant="danger"
               onClick={() => disconnect.mutate()}
               pending={disconnect.isPending}
               pendingLabel="Disconnecting…"
@@ -207,7 +205,7 @@ function DisconnectGrant({ grant }: Readonly<{ grant: GrantModel }>) {
             one property, use Remove on its row instead.
           </p>
           {disconnect.isError ? (
-            <Alert tone="danger">{humanizeApiError(disconnect.error).message}</Alert>
+            <Callout tone="negative">{humanizeApiError(disconnect.error).message}</Callout>
           ) : null}
         </Stack>
       </Dialog>

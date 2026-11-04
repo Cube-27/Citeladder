@@ -67,6 +67,7 @@ function ExtraRow({
             width="quantity"
           />
           <Button
+            variant="primary"
             disabled={!purchasable || disabled}
             onClick={() => onBuy(kind, entry.key, quantity)}
           >

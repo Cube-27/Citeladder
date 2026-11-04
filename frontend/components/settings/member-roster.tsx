@@ -10,7 +10,6 @@ import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Inline } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { ClampText, TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
-import { Tooltip } from '@/components/ui/tooltip';
 import type { AssignableWorkspaceRole, WorkspaceMember } from '@/lib/api/workspaces';
 
 import { ROLE_OPTIONS, roleLabel } from './member-roles';
@@ -130,12 +129,12 @@ function MemberRow({
         <Inline>
           <Avatar name={member.email} />
           <ClampText lines={1}>{member.email}</ClampText>
-          {member.is_self ? <Badge variant="neutral">You</Badge> : null}
+          {member.is_self ? <Badge>You</Badge> : null}
         </Inline>
       </TableCell>
       <TableCell className="whitespace-nowrap">
         {inert ? (
-          <Badge variant="neutral">{roleLabel(member.role)}</Badge>
+          <Badge>{roleLabel(member.role)}</Badge>
         ) : (
           <Select
             value={member.role as AssignableWorkspaceRole}
@@ -159,15 +158,12 @@ function MemberRow({
                 Make owner
               </Button>
             ) : null}
-            <Tooltip content={`Remove ${member.email}`}>
-              <IconButton
-                icon={Trash2}
-                variant="destructiveGhost"
-                label={`Remove ${member.email} from this workspace`}
-                disabled={busy}
-                onClick={() => onRemove(member)}
-              />
-            </Tooltip>
+            <IconButton
+              icon={Trash2}
+              label={`Remove ${member.email} from this workspace`}
+              disabled={busy}
+              onClick={() => onRemove(member)}
+            />
           </>
         )}
       </TableActionsCell>

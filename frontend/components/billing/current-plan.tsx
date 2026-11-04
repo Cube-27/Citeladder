@@ -1,9 +1,9 @@
 'use client';
 
 import { SubscriptionDetail } from '@/components/billing/billing-account-details';
-import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -32,7 +32,7 @@ type Subscription = NonNullable<BillingEntitlement['subscription']>;
  * means the plan summary above says enough.
  */
 const STATUS_NOTICE: Readonly<
-  Record<string, { tone: 'info' | 'warning' | 'danger'; text: string }>
+  Record<string, { tone: 'info' | 'warning' | 'negative'; text: string }>
 > = {
   pending: {
     tone: 'info',
@@ -43,7 +43,7 @@ const STATUS_NOTICE: Readonly<
     text: 'The latest renewal payment did not go through. The payment provider will retry it. Contact billing help if it keeps failing.',
   },
   unpaid: {
-    tone: 'danger',
+    tone: 'negative',
     text: 'Renewal payment failed and paid access has stopped. Choose a plan again to restore it.',
   },
   cancelled: { tone: 'info', text: 'This subscription has ended.' },
@@ -67,18 +67,18 @@ function ScheduledChange({
   if (!change) return null;
   if (change.state === 'provider_rejected') {
     return (
-      <Alert tone="warning">
+      <Callout tone="warning">
         The change to {planName(change.catalog_key)} was not accepted by the payment provider. Your
         current plan continues unchanged.
-      </Alert>
+      </Callout>
     );
   }
   return (
-    <Alert tone="info">
+    <Callout tone="info">
       {change.direction === 'downgrade' ? 'Downgrade' : 'Change'} to {planName(change.catalog_key)}{' '}
       scheduled for <DisplayTime value={change.effective_at} dateOnly />. Your current plan and its
       allowances continue until then.
-    </Alert>
+    </Callout>
   );
 }
 
@@ -165,9 +165,9 @@ function ResumeNotice({
         </p>
       ) : null}
       {cancellation.resumeError ? (
-        <Alert tone="danger">
+        <Callout tone="negative">
           {billingErrorMessage(cancellation.resumeError, 'The plan could not be resumed.')}
-        </Alert>
+        </Callout>
       ) : null}
     </>
   );
@@ -185,24 +185,24 @@ function PlanNotices({
   );
   return (
     <>
-      {notice ? <Alert tone={notice.tone}>{notice.text}</Alert> : null}
+      {notice ? <Callout tone={notice.tone}>{notice.text}</Callout> : null}
       {subscription ? <ScheduledChange subscription={subscription} planName={planName} /> : null}
       {override ? (
-        <Alert tone="info">
+        <Callout tone="info">
           Operator override applied. It is read-only here and expires according to the grant shown
           by the server; it does not imply a paid subscription or funded AI credits.
-        </Alert>
+        </Callout>
       ) : null}
       {entitlement?.trial_grant ? (
-        <Alert tone="info">
+        <Callout tone="info">
           Temporary access ends <DisplayTime value={entitlement.trial_grant.deadline} dateOnly />.
           No card is on file, nothing renews, and access returns to free at expiry.
-        </Alert>
+        </Callout>
       ) : null}
       {entitlement === null ? (
-        <Alert tone="warning">
+        <Callout tone="warning">
           Your entitlement could not be resolved. No paid capability is active until it does.
-        </Alert>
+        </Callout>
       ) : null}
     </>
   );
@@ -226,11 +226,7 @@ function CancelDialog({ cancellation }: Readonly<{ cancellation: BillingCancella
           >
             Keep plan
           </Button>
-          <Button
-            variant="destructive"
-            disabled={cancellation.pending}
-            onClick={cancellation.confirm}
-          >
+          <Button variant="danger" disabled={cancellation.pending} onClick={cancellation.confirm}>
             {cancellation.pending ? 'Scheduling cancellation…' : 'Cancel at period end'}
           </Button>
         </>
@@ -242,9 +238,9 @@ function CancelDialog({ cancellation }: Readonly<{ cancellation: BillingCancella
         deleted when a plan ends.
       </p>
       {cancellation.error ? (
-        <Alert tone="danger">
+        <Callout tone="negative">
           {billingErrorMessage(cancellation.error, 'The cancellation could not be scheduled.')}
-        </Alert>
+        </Callout>
       ) : null}
     </Dialog>
   );

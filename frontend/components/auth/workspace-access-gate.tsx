@@ -14,7 +14,7 @@ import { websiteHref } from '@/lib/config/app-link';
 import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import { signOut } from '@/lib/auth/account-transition';
 import { Button } from '@/components/ui/button';
-import { Alert } from '@/components/ui/alert';
+import { Callout } from '@/components/ui/callout';
 import { GateScreen, ShellFallback } from '@/components/layout/shell-fallback';
 import { Dialog } from '@/components/ui/dialog';
 import AccountSecurity from '@/components/settings/account-security';
@@ -179,14 +179,14 @@ function AccessEnded({
   return (
     <GateScreen>
       <h1>{title}</h1>
-      <Alert tone="info">
+      <Callout tone="info">
         {canRestore
           ? 'Your data is retained. Choose a plan to continue, contact support, or switch to another workspace.'
           : 'Your data is retained. Contact support to restore access, or switch to another workspace.'}
-      </Alert>
+      </Callout>
       {activeWorkspaceId && canRestore ? <RestorePlan workspaceId={activeWorkspaceId} /> : null}
       <a href={contactSalesHref(undefined, websiteHref('/contact'))}>Contact support</a>
-      <Button className="w-fit" onClick={onRetry}>
+      <Button className="w-fit" variant="primary" onClick={onRetry}>
         Retry
       </Button>
       {workspaces

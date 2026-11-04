@@ -3,9 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { brandInitials } from '@/lib/brand/initials';
 
-import { BrandLogo } from './brand-logo';
+import { BrandMark } from './brand-mark';
 
-describe('BrandLogo', () => {
+describe('BrandMark', () => {
   it('derives stable one- and two-word initials', () => {
     expect(brandInitials('Acme')).toBe('AC');
     expect(brandInitials('Acme Corporation')).toBe('AC');
@@ -18,9 +18,9 @@ describe('BrandLogo', () => {
     expect(brandInitials('\u{1D54F} Corp')).toBe('\u{1D54F}C');
   });
 
-  it('renders the cached logo URL and falls back after an image error', () => {
+  it('renders the cached logo URL and falls back to the first letter after an image error', () => {
     const { container } = render(
-      <BrandLogo name="Acme Corporation" logoUrl="/api/v1/projects/acme/logo" />,
+      <BrandMark name="Acme Corporation" logoUrl="/api/v1/projects/acme/logo" />,
     );
     const image = container.querySelector('img');
     expect(image?.getAttribute('src')).toMatch(/\/api\/v1\/projects\/acme\/logo$/);
@@ -28,23 +28,27 @@ describe('BrandLogo', () => {
     fireEvent.error(image!);
 
     expect(container.querySelector('img')).toBeNull();
-    expect(container).toHaveTextContent('AC');
+    expect(container.textContent).toBe('A');
   });
 
-  it('renders initials immediately when no cache entry exists', () => {
-    const { container } = render(<BrandLogo name="Globex" logoUrl={null} />);
+  it('renders the letter immediately when no cache entry exists', () => {
+    const { container } = render(<BrandMark name="Globex" logoUrl={null} />);
     expect(container.querySelector('img')).toBeNull();
-    expect(container).toHaveTextContent('GL');
+    expect(container.textContent).toBe('G');
+  });
+
+  it('keeps a whole code point as the letter', () => {
+    const { container } = render(<BrandMark name={'\u{1D54F} Corp'} />);
+    expect(container.textContent).toBe('\u{1D54F}');
   });
 
   describe('with a Logo.dev token configured', () => {
     // The module reads the token at import time, so set it before importing.
-    async function renderWithToken(ui: (mod: typeof import('./brand-logo')) => React.ReactElement) {
+    async function renderWithToken(ui: (mod: typeof import('./brand-mark')) => React.ReactElement) {
       process.env.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE = 'pk_test';
       vi.resetModules();
-      const mod = await import('./brand-logo');
-      const result = render(ui(mod));
-      return result;
+      const mod = await import('./brand-mark');
+      return render(ui(mod));
     }
 
     afterEach(() => {
@@ -52,9 +56,9 @@ describe('BrandLogo', () => {
       vi.resetModules();
     });
 
-    it('falls back to the CDN when the cached asset fails, then to initials', async () => {
-      const { container } = await renderWithToken(({ BrandLogo: Logo }) => (
-        <Logo
+    it('falls back to the CDN when the cached asset fails, then to the letter', async () => {
+      const { container } = await renderWithToken(({ BrandMark: Mark }) => (
+        <Mark
           name="Acme Corporation"
           logoUrl="/api/v1/projects/acme/logo"
           websiteUrl="https://www.acme.com/store"
@@ -75,26 +79,26 @@ describe('BrandLogo', () => {
 
       fireEvent.error(remote!);
 
-      // 3. our own initials
+      // 3. the first letter
       expect(container.querySelector('img')).toBeNull();
-      expect(container).toHaveTextContent('AC');
+      expect(container.textContent).toBe('A');
     });
 
     it('uses the CDN directly when there is no cached asset', async () => {
-      const { container } = await renderWithToken(({ BrandLogo: Logo }) => (
-        <Logo name="Myntra" logoUrl={null} websiteUrl="https://www.myntra.com" />
+      const { container } = await renderWithToken(({ BrandMark: Mark }) => (
+        <Mark name="Myntra" logoUrl={null} websiteUrl="https://www.myntra.com" />
       ));
       expect(container.querySelector('img')?.getAttribute('src')).toContain(
         'https://img.logo.dev/www.myntra.com?',
       );
     });
 
-    it('shows initials when the website URL cannot yield a domain', async () => {
-      const { container } = await renderWithToken(({ BrandLogo: Logo }) => (
-        <Logo name="No Site" logoUrl={null} websiteUrl="not a url" />
+    it('shows the letter when the website URL cannot yield a domain', async () => {
+      const { container } = await renderWithToken(({ BrandMark: Mark }) => (
+        <Mark name="No Site" logoUrl={null} websiteUrl="not a url" />
       ));
       expect(container.querySelector('img')).toBeNull();
-      expect(container).toHaveTextContent('NS');
+      expect(container.textContent).toBe('N');
     });
   });
 });

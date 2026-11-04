@@ -95,7 +95,9 @@ export function ToolForm({
         <h2 className="website-feature-heading cp-tool-head">Your input</h2>
         {children}
         <div className="cp-tool-actions">
-          <Button type="submit">{action}</Button>
+          <Button type="submit" variant="primary">
+            {action}
+          </Button>
           <Button
             type="button"
             variant="secondary"

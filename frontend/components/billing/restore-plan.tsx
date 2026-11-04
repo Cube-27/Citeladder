@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { CheckoutStatus } from '@/components/billing/checkout-status';
 import { ChoosePlan, subscribeWith } from '@/components/billing/choose-plan';
 import { PurchaseReview } from '@/components/billing/purchase-review';
-import { Alert } from '@/components/ui/alert';
+import { Callout } from '@/components/ui/callout';
 import { Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
 import { emptyBillingCustomerDetails } from '@/lib/api/billing';
@@ -30,7 +30,7 @@ export function RestorePlan({ workspaceId }: Readonly<{ workspaceId: string }>) 
   }, [workspaceId, country, details, resetPrepared]);
   if (!canManage) return <p>Ask a workspace Owner or Admin to choose a plan for this workspace.</p>;
   if (catalogQuery.isError)
-    return <Alert tone="danger">Plans could not be loaded. Retry, or contact support.</Alert>;
+    return <Callout tone="negative">Plans could not be loaded. Retry, or contact support.</Callout>;
   const catalog = catalogQuery.data;
   if (!catalog) return <QueryState kind="loading" label="Loading plans…" />;
   return (

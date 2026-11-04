@@ -169,7 +169,7 @@ function AddFact({
         )}
       </Field>
       <div>
-        <Button type="submit" disabled={pending || !draft.statement.trim()}>
+        <Button type="submit" variant="primary" disabled={pending || !draft.statement.trim()}>
           Add draft fact
         </Button>
       </div>
@@ -224,6 +224,7 @@ function FactRow({
             <>
               {fact.status === 'draft' ? (
                 <Button
+                  variant="primary"
                   disabled={pending}
                   onClick={() => void onChange({ status: 'confirmed' }).catch(() => undefined)}
                 >
@@ -244,6 +245,7 @@ function FactRow({
           ) : (
             <>
               <Button
+                variant="primary"
                 disabled={pending || !editing.trim()}
                 onClick={() => {
                   // Keep the draft open until the save lands, so a failed save loses nothing.

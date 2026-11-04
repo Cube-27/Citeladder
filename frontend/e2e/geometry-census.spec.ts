@@ -47,6 +47,8 @@ const ROUTES = [
 
 /** One control height for the product: the system's control-md. */
 const CONTROL_HEIGHT = 36;
+/** The ThemeSwitch is the system's one control-sm atom. */
+const THEME_SWITCH_HEIGHT = 28;
 /** One badge height. */
 const BADGE_HEIGHT = 22;
 /** Text controls and tabs share one horizontal padding; icon-only controls have none. */
@@ -61,8 +63,13 @@ const CARD_GAP = 16;
 const CARD_INSET = 24;
 const BOX_RADIUS = 14;
 const BOX_BORDER = 1;
-/** Loading, read-error and first-use empty share one footprint. */
-const QUERY_STATE_HEIGHT = 160;
+/**
+ * Loading, read-error and first-use empty share one footprint: the block
+ * EmptyState's. The state draws no box of its own (its Skeleton, Callout or
+ * EmptyState does), so it has no padding.
+ */
+const QUERY_STATE_HEIGHT = 200;
+const QUERY_STATE_PADDING = 0;
 const TABLE_ROW_HEIGHT = 44;
 const TABLE_CELL_PADDING_Y = 8;
 /** A DataTable's header row is the control band again: 8 + 36 + 8 and its rule. */
@@ -80,8 +87,8 @@ const ICON_TILE_SIZE = 36;
 const ROW_PART_GAP = 12;
 /** A ruled fact list pads each fact 8 above and below. */
 const FACT_ROW_PADDING_Y = 8;
-/** A field's end target (clear, reveal) is the field less its 2px inset each side. */
-const FIELD_END_TARGET_SIZE = 32;
+/** A field's end target (clear, reveal) is SearchField's 20px clear square. */
+const FIELD_END_TARGET_SIZE = 20;
 /** An inline code token is padded 8 across and 4 down. */
 const CODE_TOKEN_PADDING_X = 8;
 const CODE_TOKEN_PADDING_Y = 4;
@@ -153,31 +160,37 @@ function measure(route: string) {
   }
   for (const element of all('select, [role="combobox"], button[aria-haspopup="listbox"]'))
     add('select.height', element, element.getBoundingClientRect().height);
-  for (const element of all('[role="tab"]')) {
+  // Tabs and segmented switches are measured by their track: the tabs and
+  // segments sit inside it.
+  for (const element of all('[role="tablist"]'))
     add('tab.height', element, element.getBoundingClientRect().height);
+  for (const element of all('[role="tab"]'))
     add('tab.padding-x', element, px(getComputedStyle(element).paddingLeft));
-  }
-  // A segmented switch is measured by its track: segments sit inside it.
-  for (const element of all('[role="radiogroup"], .segmented-track'))
+  for (const element of all(
+    '[data-segmented-track], [role="radiogroup"]:not([data-segmented-track] *, [data-theme-switch])',
+  ))
     add('segmented.height', element, element.getBoundingClientRect().height);
+  for (const element of all('[data-theme-switch]'))
+    add('theme-switch.height', element, element.getBoundingClientRect().height);
   for (const element of all('aside a, nav a')) {
-    if (element.closest('[role="radiogroup"], [role="tablist"], .segmented-track')) continue;
+    if (element.closest('[role="radiogroup"], [role="tablist"], [data-segmented-track]')) continue;
     if (!hasText(element)) continue;
     add('nav-row.height', element, element.getBoundingClientRect().height);
   }
   // Badges: status and count objects in text or cells, never inside a control.
-  for (const element of all('.type-badge')) {
+  for (const element of all('[data-badge-tone]')) {
     if (element.closest('button, a, [role="radiogroup"], [role="tab"]')) continue;
     const display = getComputedStyle(element).display;
     if (!display.includes('flex')) continue;
     add('badge.height', element, element.getBoundingClientRect().height);
   }
   // The header cluster: every control on the identity band's row, the
-  // shell's own glyphs included.
+  // shell's own glyphs included; the ThemeSwitch is its own role above.
   const identity = document.querySelector('[data-page-band="identity"]');
   if (identity && visible(identity)) {
     const band = identity.getBoundingClientRect();
     for (const element of all('button, a[role="button"]')) {
+      if (element.closest('[data-theme-switch]')) continue;
       const rect = element.getBoundingClientRect();
       if (rect.top >= band.top && rect.bottom <= band.bottom && rect.left >= band.left)
         add('header-cluster.height', element, rect.height);
@@ -200,11 +213,14 @@ function measure(route: string) {
   // section, and where their content starts — the ink, not the CSS, because
   // the same 16 can sit on the box or on a child.
   const boxes = '.surface-card, .surface-panel';
+  // A Callout is a drawn box of its own: its edge is the ink, not its text.
   const isContent = (element: Element) =>
-    element.matches('button, input, select, textarea, svg, img, [role="combobox"]') ||
-    Array.from(element.childNodes).some(
-      (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
-    );
+    element.matches('[data-callout-tone]') ||
+    (!element.parentElement?.closest('[data-callout-tone]') &&
+      (element.matches('button, input, select, textarea, svg, img, [role="combobox"]') ||
+        Array.from(element.childNodes).some(
+          (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
+        )));
   // A state nested in a container shares that container's surface and inset
   // (globals.css), so it is not a box of its own.
   const nestedState = (element: Element) =>
@@ -481,6 +497,7 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'segmented.height', CONTROL_HEIGHT);
   expectOneValue(records, 'nav-row.height', CONTROL_HEIGHT);
   expectOneValue(records, 'header-cluster.height', CONTROL_HEIGHT);
+  expectOneValue(records, 'theme-switch.height', THEME_SWITCH_HEIGHT);
   expectOneValue(records, 'control.font-size', 14);
   expectOneValue(records, 'badge.height', BADGE_HEIGHT);
   expectOneValue(records, 'button.padding-x.text', TEXT_CONTROL_PADDING_X);
@@ -496,7 +513,7 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'card.inset-top', CARD_INSET);
   expectOneValue(records, 'card.inset-left', CARD_INSET);
   expectOneValue(records, 'query-state.height', QUERY_STATE_HEIGHT);
-  expectOneValue(records, 'query-state.padding', CARD_INSET);
+  expectOneValue(records, 'query-state.padding', QUERY_STATE_PADDING);
   expectOneValue(records, 'table-row.height', TABLE_ROW_HEIGHT);
   expectOneValue(records, 'table-cell.padding-y', TABLE_CELL_PADDING_Y);
   expectOneValue(records, 'data-table-header.height', DATA_TABLE_HEADER_HEIGHT);

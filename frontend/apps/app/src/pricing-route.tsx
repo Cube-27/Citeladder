@@ -114,6 +114,7 @@ function PurchaseButton({
   const label = pending ? 'Preparing…' : 'Review current quote';
   return (
     <Button
+      variant="primary"
       disabled={!canBuy || !workspaceId || pending || quoted || priceUnavailable}
       onClick={onPurchase}
     >
@@ -265,7 +266,7 @@ function QuoteConfirmation({
         currencyMinorUnits={catalog.currency_minor_units}
       />
       <CheckoutConsent recurring={checkout.prepared.kind === 'base'} />
-      <Button disabled={pending} onClick={onConfirm}>
+      <Button variant="primary" disabled={pending} onClick={onConfirm}>
         {pending ? 'Opening checkout…' : 'Confirm and continue to payment'}
       </Button>
     </Stack>
@@ -309,12 +310,20 @@ function PricingState({
 }>) {
   return (
     <>
-      {workspaceError ? <Button onClick={retryWorkspace}>Retry workspace</Button> : null}
+      {workspaceError ? (
+        <Button variant="primary" onClick={retryWorkspace}>
+          Retry workspace
+        </Button>
+      ) : null}
       {workspaceName ? <p>Workspace: {workspaceName}</p> : <p>Loading workspace…</p>}
       {!canBuy && workspaceName ? (
         <p>Ask a workspace Owner or Admin to make this purchase.</p>
       ) : null}
-      {catalogError ? <Button onClick={retryCatalog}>Retry catalog</Button> : null}
+      {catalogError ? (
+        <Button variant="primary" onClick={retryCatalog}>
+          Retry catalog
+        </Button>
+      ) : null}
       {selection && offered === false ? (
         <p>
           This selection is no longer in the current catalog. Choose again on the public pricing

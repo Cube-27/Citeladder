@@ -2,11 +2,17 @@ import { render, screen, within } from '@testing-library/react';
 import { createRef } from 'react';
 import { describe, expect, it } from 'vite-plus/test';
 
-import { Alert } from './alert';
 import { Button } from './button';
+import { Callout } from './callout';
 import { Card, CardContent, CardHeader, CardTitle } from './card';
-import { Field } from './field';
+import { Citation } from './citation';
+import { EmptyState } from './empty-state';
+import { EngineMark } from './engine-mark';
+import { Field, FormRow } from './field';
 import { Input } from './input';
+import { Kbd } from './kbd';
+import { BusyBar, ProgressBar } from './progress-bar';
+import { Rungs } from './rungs';
 import { ScoreBar } from './score-bar';
 import { ScoreRing } from './score-ring';
 import { Skeleton } from './skeleton';
@@ -86,19 +92,129 @@ describe('Input + Field', () => {
   });
 });
 
-describe('Alert', () => {
-  it('announces feedback in an alert region', () => {
-    render(<Alert tone="danger">Something failed</Alert>);
-    const alert = screen.getByRole('alert');
-    expect(alert).toHaveTextContent('Something failed');
+describe('FormRow', () => {
+  it('names its control by the row label', () => {
+    render(
+      <FormRow label="Workspace name" description="Shown on invoices" htmlFor="workspace-name">
+        <Input id="workspace-name" />
+      </FormRow>,
+    );
+    expect(screen.getByRole('textbox', { name: 'Workspace name' })).toBeInTheDocument();
+    expect(screen.getByText('Shown on invoices')).toBeInTheDocument();
+  });
+});
+
+describe('Callout', () => {
+  it('announces negative and warning callouts as alerts and the rest as status, with the tone word', () => {
+    const { rerender } = render(
+      <Callout tone="negative" title="Crawl failed">
+        The site returned 503.
+      </Callout>,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Error: Crawl failedThe site returned 503.',
+    );
+
+    rerender(<Callout tone="positive">Saved</Callout>);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Saved');
+  });
+
+  it('renders nothing without a title or body', () => {
+    const { container } = render(<Callout tone="info" />);
+    expect(container).toBeEmptyDOMElement();
+    render(<Callout tone="info">Data refreshes nightly</Callout>);
+    expect(screen.getByRole('status')).toHaveTextContent('Data refreshes nightly');
+  });
+});
+
+describe('EmptyState', () => {
+  it('names the empty view with a heading at the requested level and offers its actions', () => {
+    render(
+      <EmptyState
+        title="No prompts yet"
+        description="Add a prompt to start measuring."
+        headingLevel={2}
+        primary={<Button variant="primary">Add prompt</Button>}
+      />,
+    );
+    expect(screen.getByRole('heading', { level: 2, name: 'No prompts yet' })).toBeInTheDocument();
+    expect(screen.getByText('Add a prompt to start measuring.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add prompt' })).toBeInTheDocument();
   });
 });
 
 describe('Skeleton', () => {
-  it('hides loading decoration from assistive technology', () => {
-    render(<Skeleton data-testid="loading-placeholder" />);
-    const el = screen.getByTestId('loading-placeholder');
-    expect(el).toHaveAttribute('aria-hidden', 'true');
+  it('announces one busy status by its label while the bars stay hidden', () => {
+    render(<Skeleton variant="row" rows={3} label="Loading prompts" />);
+    const status = screen.getByRole('status', { name: 'Loading prompts' });
+    expect(status).toHaveAttribute('aria-busy', 'true');
+    expect(status).toHaveTextContent('');
+  });
+});
+
+describe('ProgressBar', () => {
+  it('reports its value in the product units and goes busy without one', () => {
+    const { rerender } = render(
+      <ProgressBar label="Running prompts" value={48} max={120} valueLabel="48 of 120 prompts" />,
+    );
+    const bar = screen.getByRole('progressbar', { name: 'Running prompts' });
+    expect(bar).toHaveAttribute('value', '48');
+    expect(bar).toHaveAttribute('max', '120');
+    expect(screen.getByText('48 of 120 prompts')).toBeInTheDocument();
+
+    rerender(<ProgressBar label="Running prompts" />);
+    const busy = screen.getByRole('progressbar', { name: 'Running prompts' });
+    expect(busy).toHaveAttribute('aria-busy', 'true');
+    expect(busy).not.toHaveAttribute('value');
+  });
+
+  it('shows a background refresh only while active', () => {
+    const { rerender } = render(<BusyBar active={false} label="Updating usage" />);
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    rerender(<BusyBar active label="Updating usage" />);
+    expect(screen.getByRole('progressbar', { name: 'Updating usage' })).toBeInTheDocument();
+  });
+});
+
+describe('Kbd', () => {
+  it('renders a combination as one key cap per key', () => {
+    render(<Kbd keys={['⌘', 'K']} />);
+    expect([...document.querySelectorAll('kbd')].map((key) => key.textContent)).toEqual(['⌘', 'K']);
+  });
+});
+
+describe('Rungs', () => {
+  it('always carries the citation level as words', () => {
+    const { rerender } = render(<Rungs level={2} />);
+    expect(screen.getByText('Cited')).toHaveClass('sr-only');
+    rerender(<Rungs level={3} showLabel />);
+    expect(screen.getByText('Top source')).not.toHaveClass('sr-only');
+  });
+});
+
+describe('Citation', () => {
+  it('links to the cited page in a new tab under its footnote and bare domain', () => {
+    render(
+      <Citation
+        index={2}
+        domain="www.example.com"
+        title="Best running shoes"
+        href="https://www.example.com/shoes"
+      />,
+    );
+    const link = screen.getByRole('link', { name: /example\.com/ });
+    expect(link).toHaveAttribute('href', 'https://www.example.com/shoes');
+    expect(link).toHaveTextContent('2Eexample.comBest running shoes');
+  });
+});
+
+describe('EngineMark', () => {
+  it('draws the named engine as decoration only', () => {
+    const { container } = render(<EngineMark engine="claude" />);
+    const mark = container.querySelector('svg');
+    expect(mark).toHaveAttribute('data-engine-mark', 'claude');
+    expect(mark).toHaveAttribute('aria-hidden', 'true');
   });
 });
 

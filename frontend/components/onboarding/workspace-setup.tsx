@@ -6,8 +6,8 @@ import { useNavigate } from 'react-router-dom';
 
 import { FlowActions, FlowShell } from '@/components/auth/flow-shell';
 import { FlowAccountControls } from '@/components/layout/flow-account-controls';
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
@@ -101,6 +101,7 @@ function NameWorkspace({ termsRevision }: Readonly<{ termsRevision: string }>) {
         <FlowActions
           primary={
             <Button
+              variant="primary"
               type="submit"
               form={FORM_ID}
               disabled={create.isPending}
@@ -137,7 +138,7 @@ function NameWorkspace({ termsRevision }: Readonly<{ termsRevision: string }>) {
             )}
           </Field>
           {create.error ? (
-            <Alert tone="danger">{humanizeApiError(create.error).message}</Alert>
+            <Callout tone="negative">{humanizeApiError(create.error).message}</Callout>
           ) : null}
         </Stack>
       </form>

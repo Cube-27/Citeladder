@@ -1,9 +1,9 @@
 'use client';
 
-import { BrandLogo } from '@/components/ui/brand-logo';
-import { BusyBar } from '@/components/ui/busy-bar';
+import { BrandMark } from '@/components/ui/brand-mark';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Inline, Stack } from '@/components/ui/layout';
+import { BusyBar } from '@/components/ui/progress-bar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ReadError } from '@/components/ui/read-error';
 import { StatRow } from '@/components/ui/stat-row';
@@ -83,7 +83,7 @@ export function SourceUrlDetail({
               pending={query.isFetching}
             />
           ) : null}
-          {query.isLoading ? <Skeleton shape="block" /> : null}
+          {query.isLoading ? <Skeleton variant="block" /> : null}
           {data ? <Overview data={data} /> : null}
         </CardContent>
       </Card>
@@ -116,10 +116,10 @@ function PageIdentity({ title, url }: Readonly<{ title: string; url: string }>) 
   return (
     <CardHeader>
       <Inline gap="compact" className="items-start">
-        <BrandLogo
+        <BrandMark
           name={host ?? url}
           websiteUrl={host ? `https://${host}` : null}
-          placement="identity"
+          placement="header"
         />
         <Stack gap="tight" className="min-w-0">
           <CardTitle className="truncate">{title}</CardTitle>

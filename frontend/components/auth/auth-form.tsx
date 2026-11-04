@@ -3,7 +3,7 @@
 import { Link } from 'react-router-dom';
 import { type ComponentProps, type ReactNode, useId, useState } from 'react';
 
-import { Alert as MktAlert } from '@/components/ui/alert';
+import { Callout } from '@/components/ui/callout';
 import { Field } from '@/components/ui/field';
 import { FlowButton, FlowInput } from '@/components/ui/flow-controls';
 import { type BrandGlyph, Icon } from '@/components/ui/icon';
@@ -176,7 +176,7 @@ function GoogleEntry({
         <Icon icon={GoogleGlyph} />
         <span>{pending ? 'Starting Google sign-in…' : 'Continue with Google'}</span>
       </FlowButton>
-      {notice ? <MktAlert>{notice}</MktAlert> : null}
+      {notice ? <Callout tone="negative">{notice}</Callout> : null}
     </>
   );
 }
@@ -239,7 +239,7 @@ export function AuthFormShell({
       </Stack>
 
       <Stack gap="workspace" className="auth-form-body">
-        {error ? <MktAlert>{error}</MktAlert> : null}
+        {error ? <Callout tone="negative">{error}</Callout> : null}
 
         {showForm ? (
           <AuthEmailForm

@@ -13,8 +13,8 @@ import {
   joinProviderLabels,
   type GrantFamily,
 } from '@/components/settings/grant-model';
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -188,7 +188,9 @@ function SourceRow({
         status={`${familyName} needs your consent again. Imported data is kept.`}
         action={
           canManage ? (
-            <Button onClick={() => startConnect(family)}>Reconnect {familyName}</Button>
+            <Button variant="primary" onClick={() => startConnect(family)}>
+              Reconnect {familyName}
+            </Button>
           ) : null
         }
       />
@@ -290,9 +292,9 @@ export function DataSourceSetup({
         <p className="type-body max-w-[60ch]">{description}</p>
       </CardHeader>
       <Stack gap="compact">
-        {oauth.error ? <Alert tone="danger">{oauthErrorMessage(oauth.error)}</Alert> : null}
+        {oauth.error ? <Callout tone="negative">{oauthErrorMessage(oauth.error)}</Callout> : null}
         {oauth.connected ? (
-          <Alert tone="success">{FAMILY_META[oauth.connected].title} connected.</Alert>
+          <Callout tone="positive">{FAMILY_META[oauth.connected].title} connected.</Callout>
         ) : null}
         {sources.error ? (
           <ReadError

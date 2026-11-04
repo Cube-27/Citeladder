@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 
-import { Alert } from '@/components/ui/alert';
+import { Callout } from '@/components/ui/callout';
 import { Dot } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
@@ -95,11 +95,11 @@ function StripContent({
 }>) {
   if (startPending) {
     return (
-      <Alert tone="info">
+      <Callout tone="info">
         {crawl
           ? 'Starting a fresh crawl — current results stay visible until the new run completes.'
           : 'Starting crawl — pages will appear below as they are found.'}
-      </Alert>
+      </Callout>
     );
   }
 
@@ -158,9 +158,9 @@ function TerminalNotice({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
   const failure = crawl.status === 'failed' ? crawlFailureCopy(crawl) : null;
   const message = terminalMessage(crawl.status, failure);
   return (
-    <Alert tone={failure ? 'danger' : 'info'}>
+    <Callout tone={failure ? 'negative' : 'info'}>
       <RunNotice crawl={crawl} message={message} />
-    </Alert>
+    </Callout>
   );
 }
 
@@ -317,10 +317,10 @@ function AnalysisStrip({
       counts={analysisCounts(crawl, selected)}
     >
       {selectedError ? (
-        <Alert tone="warning">
+        <Callout tone="warning">
           Could not load the monitored-page count — progress totals may be approximate until it
           refreshes.
-        </Alert>
+        </Callout>
       ) : null}
     </ProgressRow>
   );

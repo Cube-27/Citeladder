@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
-import { segmentedItemVariants, segmentedTrackVariants } from '@/components/ui/segmented-variants';
+import { TAB_TRACK, tabClasses } from '@/components/ui/tabs';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
 import {
   rememberModeRoute,
@@ -37,7 +37,7 @@ export function ModeSwitch({ onNavigate }: Readonly<{ onNavigate?: () => void }>
   }, [activeProjectId, current, pathname, search]);
 
   return (
-    <nav aria-label="Mode" className={cn(segmentedTrackVariants(), 'flex w-full')}>
+    <nav aria-label="Mode" data-segmented-track="" className={cn(TAB_TRACK, 'flex w-full')}>
       {MODES.map(({ mode, label, home }) => {
         const selected = mode === current;
         const target = rememberedModeRoute(mode, activeProjectId) ?? home;
@@ -47,7 +47,7 @@ export function ModeSwitch({ onNavigate }: Readonly<{ onNavigate?: () => void }>
             to={scopedNavigationDestination(target, 'project', activeProjectId, activeWorkspaceId)}
             aria-current={selected ? 'page' : undefined}
             onClick={onNavigate}
-            className={cn(segmentedItemVariants({ selected }), 'flex-1')}
+            className={tabClasses(selected, 'flex-1')}
           >
             {label}
           </Link>

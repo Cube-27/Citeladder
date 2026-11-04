@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { UserPlus } from 'lucide-react';
 
-import { ConfirmDialog, type ConfirmRequest } from '@/components/ui/confirm-dialog';
+import { ConfirmDialog, type ConfirmRequest } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
@@ -264,7 +264,7 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
             />
           ),
           actions: mayInvite ? (
-            <Button type="button" onClick={() => setInviteOpen(true)}>
+            <Button type="button" variant="primary" onClick={() => setInviteOpen(true)}>
               <Icon icon={UserPlus} />
               Invite
             </Button>

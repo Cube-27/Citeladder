@@ -16,8 +16,8 @@ import { WorkflowGallery, WorkflowStart } from '@/components/agent/workflow-gall
 import { ListScreen } from '@/components/layout/page-shell';
 import { ProjectRequiredState } from '@/components/layout/project-required-state';
 import { ProjectLink } from '@/components/layout/scoped-link';
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -115,8 +115,8 @@ function NewChat({
         {handoff.actionId ? (
           <AttachedAction workspaceId={workspaceId} actionId={handoff.actionId} />
         ) : null}
-        {access.canSend ? null : <Alert tone="info">{access.message}</Alert>}
-        {failure ? <Alert tone="danger">{failure.message}</Alert> : null}
+        {access.canSend ? null : <Callout tone="info">{access.message}</Callout>}
+        {failure ? <Callout tone="negative">{failure.message}</Callout> : null}
         <Composer
           id="new-chat-message"
           label="Message the agent"
@@ -196,7 +196,9 @@ function AttachedAction({
 }: Readonly<{ workspaceId: string; actionId: string }>) {
   const query = useQuery(actionsQueries.detail(workspaceId, actionId));
   if (query.isError)
-    return <Alert tone="danger">This Action is unavailable. The chat will start without it.</Alert>;
+    return (
+      <Callout tone="negative">This Action is unavailable. The chat will start without it.</Callout>
+    );
   if (!query.data) return null;
   const action = query.data;
   return (

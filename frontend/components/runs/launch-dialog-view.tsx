@@ -275,7 +275,7 @@ export function LaunchDialogView({
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={onLaunch} disabled={!selectionReady || launchPending}>
+          <Button variant="primary" onClick={onLaunch} disabled={!selectionReady || launchPending}>
             {launchPending ? 'Launching…' : 'Launch audit'}
           </Button>
         </>

@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react';
 
 import { FlowGroup } from '@/components/auth/flow-shell';
 import { EntityRow } from '@/components/onboarding/choice-controls';
-import { BrandLogo } from '@/components/ui/brand-logo';
+import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
@@ -78,7 +78,12 @@ function CompetitorRow({
           placeholder="acme.com"
           aria-label={`Website for ${displayName}`}
         />
-        <Button type="button" onClick={save} disabled={!draft.trim() || !draftName.trim()}>
+        <Button
+          type="button"
+          variant="primary"
+          onClick={save}
+          disabled={!draft.trim() || !draftName.trim()}
+        >
           Save
         </Button>
         <Button type="button" variant="ghost" onClick={cancel}>
@@ -96,7 +101,7 @@ function CompetitorRow({
       selected={competitor.selected}
       disabled={disabled}
       onToggle={onToggle}
-      leading={<BrandLogo name={displayName} websiteUrl={primaryDomain} />}
+      leading={<BrandMark name={displayName} websiteUrl={primaryDomain} />}
       onEdit={() => {
         setDraft(primaryDomain);
         setDraftName(competitor.name);

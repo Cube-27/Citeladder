@@ -6,8 +6,8 @@ import { authErrorMessage } from '@/lib/auth/forms';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { restartAt } from '@/lib/auth/account-transition';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { Dialog } from '@/components/ui/dialog';
-import { Alert } from '@/components/ui/alert';
 import { PasswordField } from '@/components/ui/password-field';
 import { FactList } from '@/components/ui/facts';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -42,12 +42,12 @@ function SignInSection({
     <SettingsSection title="Sign-in" description="How you sign in to CiteLadder.">
       {security.isPending && <p className={textRole('body')}>Loading account security…</p>}
       {security.isError && (
-        <Alert tone="danger">
+        <Callout tone="negative">
           {authErrorMessage(security.error)}{' '}
-          <Button className="w-fit" onClick={() => void security.refetch()}>
+          <Button variant="primary" className="w-fit" onClick={() => void security.refetch()}>
             Retry
           </Button>
-        </Alert>
+        </Callout>
       )}
       <SecurityIdentity data={security.data} />
     </SettingsSection>
@@ -58,9 +58,9 @@ function SignInSection({
 function ErrorAlerts({ errors }: Readonly<{ errors: Readonly<Record<string, Error | null>> }>) {
   return Object.entries(errors).map(([name, error]) =>
     error ? (
-      <Alert key={name} tone="danger">
+      <Callout key={name} tone="negative">
         {authErrorMessage(error)}
-      </Alert>
+      </Callout>
     ) : null,
   );
 }
@@ -137,7 +137,7 @@ export default function AccountSecurity() {
               }}
             />
             <Inline className="flex-wrap">
-              <Button type="submit" disabled={mutation.isPending}>
+              <Button type="submit" variant="primary" disabled={mutation.isPending}>
                 Change password and sign out
               </Button>
               {canLinkGoogle && (
@@ -154,6 +154,7 @@ export default function AccountSecurity() {
           </Stack>
         ) : (
           <Button
+            variant="primary"
             className="w-fit"
             disabled={!security.data || setup.isPending}
             onClick={() => setup.mutate()}
@@ -161,7 +162,7 @@ export default function AccountSecurity() {
             Email password setup link
           </Button>
         )}
-        {setup.isSuccess && <Alert tone="info">{setup.data.message}</Alert>}
+        {setup.isSuccess && <Callout tone="info">{setup.data.message}</Callout>}
         <ErrorAlerts errors={{ setup: setup.error, session: mutation.error, link: link.error }} />
       </SettingsSection>
       <SettingsSection title="Sessions" description="Sign out every device, including this one.">
@@ -169,7 +170,7 @@ export default function AccountSecurity() {
           <Button variant="secondary" onClick={() => setConfirm('sign-out')}>
             Sign out all sessions
           </Button>
-          <Button variant="destructiveGhost" onClick={() => setConfirm('disconnect')}>
+          <Button variant="danger" onClick={() => setConfirm('disconnect')}>
             Sign out everywhere and disconnect integrations
           </Button>
         </Inline>
@@ -179,7 +180,11 @@ export default function AccountSecurity() {
         onOpenChange={(open) => setConfirm(open ? 'sign-out' : null)}
         title="Sign out all sessions?"
         footer={
-          <Button disabled={mutation.isPending} onClick={() => mutation.mutate('sign-out')}>
+          <Button
+            variant="primary"
+            disabled={mutation.isPending}
+            onClick={() => mutation.mutate('sign-out')}
+          >
             Sign out everywhere
           </Button>
         }
@@ -192,7 +197,7 @@ export default function AccountSecurity() {
         title="Disconnect integrations and sign out?"
         footer={
           <Button
-            variant="destructive"
+            variant="danger"
             disabled={mutation.isPending}
             onClick={() => mutation.mutate('disconnect')}
           >

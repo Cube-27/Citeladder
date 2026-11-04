@@ -5,7 +5,7 @@ import { Globe } from 'lucide-react';
 
 import type { DataTableState } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
-import { SegmentedControl } from '@/components/ui/segmented-control';
+import { SegmentedControl } from '@/components/ui/tabs';
 import { splitPaneClasses } from '@/components/ui/workspace';
 import { SourceDomainDetail } from '@/components/visibility/source-domain-detail';
 import {

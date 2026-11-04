@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { cardClasses } from '@/components/ui/card-variants';
 import { Pressable } from '@/components/ui/pressable';
-import { SegmentedControl } from '@/components/ui/segmented-control';
+import { SegmentedControl } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
 import { splitPaneClasses } from '@/components/ui/workspace';
 import { cn } from '@/lib/utils';
@@ -149,7 +149,7 @@ export function WorkflowStart({
             <Icon icon={ArrowLeft} />
             All workflows
           </Button>
-          <Button type="submit" disabled={disabled || pending}>
+          <Button type="submit" variant="primary" disabled={disabled || pending}>
             {pending ? 'Starting…' : 'Start'}
           </Button>
         </Inline>
