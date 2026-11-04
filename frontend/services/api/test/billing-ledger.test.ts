@@ -118,7 +118,6 @@ describe('shared consumable ledger', () => {
         lease_expires_at: null,
         lease_owner: null,
         max_attempts: 1,
-        mode: 'read',
         priority: 0,
         protocol_version: 'fixture',
         randomized_position: 0,

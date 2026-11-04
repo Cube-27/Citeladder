@@ -86,7 +86,7 @@ const recordSchema = z.looseObject({
   output_tokens: z.number().nullish(),
   message: z.string().optional(),
   reply: z.string().nullish(),
-  output: z.looseObject({ phase: z.string(), title: z.string(), body: z.string() }).nullish(),
+  output: z.looseObject({ title: z.string(), body: z.string() }).nullish(),
 });
 type EvalRecord = z.infer<typeof recordSchema>;
 // Event shapes differ between runtimes; only the type tag is required.
@@ -334,7 +334,6 @@ async function turn(
     output:
       detail.output && revision
         ? {
-            phase: detail.output.phase,
             revision: revision.number,
             title: revision.title,
             body: revision.body,
@@ -552,7 +551,7 @@ function answer(label: string, record: EvalRecord | undefined) {
   if (record?.failed) parts.push(`Failed: ${record.failed}`);
   else parts.push(record?.reply ?? '(no turn)');
   const output = record?.failed ? null : record?.output;
-  if (output) parts.push(`**Document (${output.phase}): ${output.title}**`, output.body);
+  if (output) parts.push(`**Document: ${output.title}**`, output.body);
   return parts.join('\n\n');
 }
 

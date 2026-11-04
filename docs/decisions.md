@@ -6,23 +6,29 @@ rules belong in [invariants](invariants.md). Visual choices (faces, colours,
 material, table styling, page layouts) are recorded in [design](design.md)
 with their owner source, not here. Git and PRs retain superseded history.
 
-## TypeScript application, SQL schema baseline
+## TypeScript application, forward SQL migrations
 
-The application uses TypeScript with Hono, Kysely and Zod. The schema is one SQL file,
-`frontend/services/api/migrations/0001_baseline.sql`, the only schema author
-under [invariant 17](invariants.md#17-the-migration-baseline-remains-singular).
-The TypeScript migrate CLI (`src/cli/migrate.ts`, `pnpm migrate`) applies it
-once under an advisory lock in one transaction and records its SHA-256 in
-`schema_migrations`; it runs from the API image, so the deploy builds one
-application image. Kysely types are generated from a baseline-migrated database.
+The application uses TypeScript with Hono, Kysely and Zod. The schema is
+`frontend/services/api/migrations/0001_baseline.sql` followed by numbered
+forward migrations (`0002_<name>.sql`, …), the only schema author under
+[invariant 17](invariants.md#17-schema-changes-are-forward-migrations).
+The TypeScript migrate CLI (`src/cli/migrate.ts`, `pnpm migrate`) applies the
+pending files in order under an advisory lock in one transaction and records
+each SHA-256 in `schema_migrations`; it runs from the API image, so the deploy
+builds one application image. Kysely types are generated from a migrated
+database.
 
-There is no adoption shim: a non-empty database without the ledger, or a
-ledger checksum that differs from the file, fails the migrate job with an instruction to redeploy with `reset_database`.
-Until there are live customers every schema change is folded into the baseline
-and reaches production only through that reset option, whose confirmation check
-stays.
+There is no adoption shim: a non-empty database without the ledger, or an
+applied file whose checksum changed, fails the migrate job. Every schema change
+is a new numbered migration that applies to the existing production database in
+place; the baseline and every applied file stay unchanged, and production is
+never reset for a schema change. `reset_database` remains only for disposable
+data, with its confirmation check.
 
-Source: owner decision of 10 October 2026 (feature 14, execution platform).
+Source: owner decision of 10 October 2026 (feature 14, execution platform),
+superseded for schema changes by the owner on 4 November 2026: "from now
+onwards schema changes go into 002 onwards instead of resetting and deleting
+existing db for migration to avoid production resets".
 
 ## One commercial account per workspace
 
@@ -106,8 +112,8 @@ own shipped behavior.
 ## The Agent uses native tool calling
 
 The Agent runs a native tool-calling loop on the providers' own APIs with no
-agent framework (A1): the model calls reads and two built-ins (`load_skill`,
-`save_document`) directly, one response's reads run together, and a chat's
+agent framework (A1): the model calls reads and the built-ins (`load_skill`,
+`save_document`, `edit_document`) directly, one response's reads run together, and a chat's
 earlier turns are replayed append-only so the prompt cache and thinking carry
 across turns. It keeps both providers, Anthropic and OpenAI-compatible (A2),
 behind the platform gateway. The default model is Claude Haiku 5.5 at medium
@@ -118,6 +124,22 @@ Source: owner decisions A1–A3 of 12 October 2026 in the
 [Agent native runtime plan](plans/agent-native-runtime.md); pricing in
 [B53](billing-decisions.md#agent-native-runtime-2026-10-12). [Agent](agents.md)
 owns the shipped behavior.
+
+## The Agent behaves like a normal Claude chat
+
+The Agent should behave like an ordinary Claude chat rather than a gated
+workflow. A deliverable has one draft state: the outline-first phase and its
+approval step are removed, an outline is written only when the person asks for
+one, and the model revises a document with exact edits (`edit_document`)
+instead of rewriting it. Limits are raised so long work finishes: 64 000 output
+tokens per call, a 600-second model call, and larger per-turn call, tool,
+message, reply and turn-time limits. A response cut off by the output cap is
+retried once at low effort, and a failed turn that saved nothing is not charged
+([B58](billing-decisions.md#agent-chat-behaviour-2026-11-04)). The removal keeps
+no compatibility path, and processing versions stay at 1.
+
+Source: owner, 4 November 2026 (Agent chat-behaviour request). [Agent](agents.md)
+owns the shipped behavior and limits.
 
 ## Onboarding creates no prompts
 

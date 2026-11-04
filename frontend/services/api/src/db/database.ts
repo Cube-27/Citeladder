@@ -2,9 +2,9 @@
  * PostgreSQL pool and Kysely instance.
  *
  * Pool size, recycle age, acquisition and command timeouts, and the
- * server-side statement, lock and idle-in-transaction timeouts. The SQL
- * baseline (`migrations/0001_baseline.sql`) is the only schema author; this
- * module holds generated types, never DDL.
+ * server-side statement, lock and idle-in-transaction timeouts. The numbered
+ * SQL migrations (`migrations/`) are the only schema author; this module
+ * holds generated types, never DDL.
  */
 import { Kysely, PostgresDialect } from 'kysely';
 import pg from 'pg';

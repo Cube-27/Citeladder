@@ -40,6 +40,8 @@ export type Funding = {
     attempt: ModelAttempt,
     result: ModelResult | null,
   ) => Promise<{ credits: number; status: string }>;
+  /** Refunds every credit the run's settled calls debited; idempotent (B58). */
+  refund: (db: Database, run: Run) => Promise<void>;
 };
 const hash = (text: string) => createHash('sha256').update(text).digest('hex');
 export class ModelCalls {
@@ -275,6 +277,11 @@ export class ModelCalls {
         .where('id', '=', attempt.id)
         .execute();
     }
+  }
+  /** A failed turn saves nothing: its calls settle as recorded, then their credits are refunded. */
+  async settleFailed(db: Database, run: Run) {
+    await this.reconcile(db, run);
+    await this.funding.refund(db, run);
   }
   recoverCancelled(workspaceIds: readonly string[], limit: number, graceSeconds: number) {
     if (!workspaceIds.length) return Promise.resolve(0);

@@ -3,9 +3,9 @@ import pg from 'pg';
 import { localEnvironment } from './local-environment.ts';
 import { operatorMain } from './operator.ts';
 import { resetTarget } from './reset-sequence.ts';
-import { applyBaseline, baselineClient } from './schema-baseline.ts';
+import { applyMigrations, migrationClient, migrationSummary } from './schema-migrations.ts';
 
-/** Drop and recreate one authorized database, then apply the SQL baseline. */
+/** Drop and recreate one authorized database, then apply every migration. */
 await operatorMain(async () => {
   const env = localEnvironment();
   const target = resetTarget(env);
@@ -22,10 +22,10 @@ await operatorMain(async () => {
   } finally {
     await admin.end();
   }
-  const schema = baselineClient(target.databaseUrl, env);
+  const schema = migrationClient(target.databaseUrl, env);
   await schema.connect();
   try {
-    console.log(`Schema baseline ${await applyBaseline(schema)}.`);
+    console.log(migrationSummary(await applyMigrations(schema)));
   } finally {
     await schema.end();
   }

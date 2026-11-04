@@ -76,10 +76,13 @@ the `validate-change` skill.
   meaningful safety coverage to make validation green.
 - Tests disable dotenv and use deterministic configuration; inherited live
   provider credentials must never reach a test run.
-- Pre-launch schema changes stay in `frontend/services/api/migrations/0001_baseline.sql`
-  and are verified on the one local development database (no customers yet; run
-  tests with `pnpm test:api <files>`, never create per-branch databases). Only the
-  owner resets it. Never reset staging or production data under that policy.
+- Schema changes are new numbered forward migrations
+  (`frontend/services/api/migrations/0002_<name>.sql` onwards) that apply to the
+  existing production schema in place; never edit an applied migration,
+  `0001_baseline.sql` included, and never rely on a database reset. Verify on the
+  one local development database (bring it forward with `pnpm migrate`; run
+  tests with `pnpm test:api <files>`, never create per-branch databases). Never
+  reset staging or production data.
 - Never reset, deploy, call live providers, activate payments or mutate external
   systems unless the task explicitly authorizes the operation.
 - Edit files with your editing tool (`apply_patch` or equivalent), not shell

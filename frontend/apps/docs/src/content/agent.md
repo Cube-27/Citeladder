@@ -3,7 +3,7 @@ title: 'Meet the Agent'
 description: "Work through a question or Action and turn your project's saved evidence into a reviewable deliverable."
 group: 'Improve with Agent'
 order: 200
-updated: '2026-10-12'
+updated: '2026-11-04'
 ---
 
 The Agent is CiteLadder's in-app assistant. It can investigate saved project evidence, apply a skill and help you refine a plan, diagnosis, page edit or content draft.
@@ -39,7 +39,7 @@ A chat has one deliverable. The conversation helps you refine it; the output pan
 
 Follow-up messages revise the same deliverable. Start a new chat when you want a different kind of output or another project.
 
-Long-form content starts with an outline. Review and explicitly approve that outline before the Agent writes the draft. See [Outputs and revisions](/agent/outputs/).
+The Agent writes the whole deliverable straight away; ask for an outline first if you want to agree the structure. See [Outputs and revisions](/agent/outputs/).
 
 ## Watch it work
 

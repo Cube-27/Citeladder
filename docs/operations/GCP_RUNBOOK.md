@@ -326,21 +326,21 @@ Other operator entry points under `src/cli/` (for example `catalog-seed` in
 
 Merge to `main`, wait for CI, and rerun **GCP - Deploy**. Each run builds
 digests (reused on retry), applies secrets, migrates before the API rolls
-forward, applies Terraform and smokes. The migrate job applies
-`frontend/services/api/migrations/0001_baseline.sql` to an empty database and is a
-no-op when the recorded checksum matches. A changed baseline or
-unledgered tables fail the job, which stops the deploy before the API
-changes; the log names the cause and says to redeploy with `reset_database`.
+forward, applies Terraform and smokes. The migrate job applies the pending
+numbered migrations in `frontend/services/api/migrations/` in order, in place on
+the existing database, and is a no-op when every file is recorded. An edited
+applied file, a missing or skipped version, or unledgered tables fail the job,
+which stops the deploy before the API changes; the log names the cause.
 
 - **API rollback:** Cloud Run → `citeladder-api` → Revisions, then route
   100% to the previous revision (or
   `gcloud run services update-traffic citeladder-api --region us-central1 --to-revisions <REVISION>=100`).
   The next deploy from `main` takes traffic back.
-- **Database reset (pre-launch only):** rerun **GCP - Deploy** with
+- **Database reset (disposable data only):** rerun **GCP - Deploy** with
   `reset_database` checked and the exact project ID. It replaces the VM, which
   deletes every row with no backup, and then migrates. It refuses demo mode.
-  This is how a changed pre-launch baseline is applied: a database that has
-  tables but no `schema_migrations` ledger is refused by the migrate job.
+  Schema changes never need it: they arrive as forward migrations. Production
+  is never reset.
 - **PostgreSQL image update:** a deploy that changes `infra/gcp/postgres/Dockerfile`
   updates the VM's startup script in place. The new image runs after the next
   restart (`gcloud compute instances reset citeladder-db --zone us-central1-a`),

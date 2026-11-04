@@ -3,7 +3,7 @@ title: 'Choose a skill'
 description: 'Select the kind of help you need while keeping one conversation and one deliverable.'
 group: 'Improve with Agent'
 order: 220
-updated: '2026-11-01'
+updated: '2026-11-04'
 ---
 
 Skills give the Agent a method for a particular job. They run inside the same Agent workspace and use the same access and evidence boundaries.
@@ -18,17 +18,17 @@ After a deliverable is ready, the chat suggests refinements and next steps. A ne
 
 ## Choose by the outcome
 
-| What you need                                 | Look for a skill producing         |
-| --------------------------------------------- | ---------------------------------- |
-| A prioritized approach to a problem           | A plan or diagnosis                |
-| A way to evaluate work later                  | A measurement deliverable          |
-| A review of saved findings                    | Research                           |
-| Proposed changes to an existing page          | Page edits or a technical fix      |
-| A proposed internal-link approach             | A link plan                        |
-| A brief for an external publisher opportunity | An earned brief                    |
-| A new long-form piece                         | Content, beginning with an outline |
-| A social post, short script or forum answer   | Content, drafted directly          |
-| A plan for your next prompt generation run    | A prompt plan                      |
+| What you need                                 | Look for a skill producing    |
+| --------------------------------------------- | ----------------------------- |
+| A prioritized approach to a problem           | A plan or diagnosis           |
+| A way to evaluate work later                  | A measurement deliverable     |
+| A review of saved findings                    | Research                      |
+| Proposed changes to an existing page          | Page edits or a technical fix |
+| A proposed internal-link approach             | A link plan                   |
+| A brief for an external publisher opportunity | An earned brief               |
+| A new long-form piece                         | Content                       |
+| A social post, short script or forum answer   | Content                       |
+| A plan for your next prompt generation run    | A prompt plan                 |
 
 Use the descriptions in the current catalog to choose the exact skill. Availability can change as the product evolves.
 

@@ -151,14 +151,14 @@ export class AgentQueue {
   /**
    * Turns run only inside the browser's stream, so nothing here replays one.
    * A turn whose process stopped heartbeating, or that no stream ever claimed,
-   * ends as interrupted with its reply. Caller supplies accounting; recovery
-   * cannot abandon an open credit hold.
+   * ends as interrupted with its reply. Caller supplies accounting (a failed
+   * turn's settlement and refund); recovery cannot abandon an open credit hold.
    */
   recover(
     workspaceIds: readonly string[],
     limit: number,
     unclaimedGraceSeconds: number,
-    reconcile: (db: Database, run: Run) => Promise<void>,
+    settleFailed: (db: Database, run: Run) => Promise<void>,
   ) {
     if (!workspaceIds.length) return Promise.resolve(0);
     return this.db.transaction().execute(async (trx) => {
@@ -190,7 +190,7 @@ export class AgentQueue {
         .execute();
       for (const run of rows) {
         // Ledger settlement and terminal writes share one ordered transaction.
-        await reconcile(trx, run); // NOSONAR
+        await settleFailed(trx, run); // NOSONAR
         await trx // NOSONAR
           .updateTable('agent_runs')
           .set({

@@ -1,7 +1,8 @@
 /**
  * Agent funding: the Agent always uses the platform gateway and spends AI
  * credits (B19). Each dispatch holds its maximum cost at the shared token
- * prices and settles once to the reported tokens; the ledger and the pricing
+ * prices and settles once to the reported tokens, and a failed turn's debits
+ * are refunded (B58); the ledger and the pricing
  * are the same ones every other platform AI call uses (B12-B15).
  */
 import { sql } from 'kysely';
@@ -9,7 +10,13 @@ import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
 import { accountState } from '../entitlements/state.ts';
-import { reserveUsage, debitUsage, releaseUsage, LedgerError } from '../entitlements/ledger.ts';
+import {
+  reserveUsage,
+  debitUsage,
+  refundUsage,
+  releaseUsage,
+  LedgerError,
+} from '../entitlements/ledger.ts';
 import {
   PRICING_REVISION,
   cachedReservationCredits,
@@ -168,6 +175,30 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
         at,
       });
       return { credits, status: credits ? 'settled' : 'zero_debit' };
+    },
+    // A failed turn is not charged (B58): each debit gets one append-only refund.
+    refund: async (db, run) => {
+      if (run.funding_source !== 'platform') return;
+      const accountId = await account(db, run.workspace_id);
+      const debits = await db
+        .selectFrom('consumable_ledger')
+        .select(['id', 'units'])
+        .where('workspace_id', '=', run.workspace_id)
+        .where('billing_account_id', '=', accountId)
+        .where('agent_run_id', '=', run.id)
+        .where('entry_kind', '=', 'debit')
+        .orderBy('id')
+        .execute();
+      const at = new Date();
+      for (const debit of debits)
+        await refundUsage(db, {
+          workspaceId: run.workspace_id,
+          accountId,
+          debitId: debit.id,
+          units: debit.units,
+          key: `agent:${run.id}:refund:${debit.id}`,
+          at,
+        }); // NOSONAR: refunds share the caller's ordered transaction.
     },
   };
 }

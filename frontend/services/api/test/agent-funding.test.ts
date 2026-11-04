@@ -119,6 +119,47 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       consumed: 0,
     });
   });
+  it('refunds a failed turn’s settled calls once, keeping each attempt’s debit on record (B58)', async () => {
+    const { scope, accountId, grantId } = await tenant();
+    const { run: saved, lease } = await run(scope);
+    const balances: unknown[] = [];
+    const model = {
+      ...(await agentModels(platform)(saved)),
+      // Every call is cut off, so the turn fails after its low-effort retry.
+      converse: async () => {
+        balances.push((await ledgerBalances(db, accountId, [grantId])).get(grantId)?.consumed);
+        return result(reply('Cut off'), { stop: 'max_tokens' });
+      },
+    };
+    const calls = new ModelCalls(db, agentFunding(settings, platform));
+    await agents.runtime(scope, model, { models: calls }).execute(lease);
+    // The first call was charged before the retry ran.
+    expect(balances).toEqual([0, 1]);
+    expect(await agents.run(saved.id)).toMatchObject({
+      status: 'failed',
+      error_code: 'output_too_long',
+    });
+    expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
+      reserved: 0,
+      consumed: 0,
+    });
+    expect(
+      await db
+        .selectFrom('agent_model_attempts')
+        .select(['ordinal', 'debited_credits', 'input_tokens'])
+        .where('run_id', '=', saved.id)
+        .orderBy('ordinal')
+        .execute(),
+    ).toEqual([
+      { ordinal: 1, debited_credits: '1', input_tokens: '20' },
+      { ordinal: 2, debited_credits: '1', input_tokens: '20' },
+    ]);
+    // A repeated settlement of the same failed turn refunds nothing more.
+    await db.transaction().execute(async (trx) => {
+      await calls.settleFailed(trx, await agents.run(saved.id));
+    });
+    expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)?.consumed).toBe(0);
+  });
   it('settles an answer with unreadable usage at the fixed fallback, within the hold', async () => {
     const { scope, accountId, grantId } = await tenant();
     const { run: saved, lease } = await run(scope);
