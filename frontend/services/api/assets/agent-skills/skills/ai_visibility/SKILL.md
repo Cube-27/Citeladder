@@ -27,7 +27,7 @@ Find where relevant buyer questions fail to produce a useful, accurate mention o
 - Cited, mentioned, recommended, recommended against and misstated are different outcomes. A citation is not an endorsement.
 - Name the failure type: weak prompts (fix them first), access, answer gap on an owned page, source gap on an independent page, fit gap, or volatility across runs.
 - Map cited sources to who controls them; a brand's own channels are not independent validation.
-- Coverage for tone and fact checks is "N of M mentions"; sources listed beside criticism were not shown to cause it.
+- State tone coverage as "N of M mentions classified" and fact-check coverage as the claims it checked; sources listed beside criticism or a contradiction were not shown to cause it.
 
 ## Deliver
 

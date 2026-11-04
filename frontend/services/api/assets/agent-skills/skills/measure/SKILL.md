@@ -16,7 +16,7 @@ Whether an implemented change was followed by a meaningful measured change, and 
 
 ## Where the data is
 
-- `read_actions`: what changed and when it went live.
+- `read_actions` with the Action's id, or filtered to implemented or measuring Actions: what changed and when it went live.
 - `read_visibility_trends` for a window, and `read_visibility_overview` with a baseline run for a direct comparison of two runs.
 - `read_performance` with a comparison period, and `read_query_evidence` for one page's queries.
 - `read_perception`: tone, comparable only between runs of the same version.
