@@ -37,7 +37,7 @@ import {
   type SkillCatalog,
 } from './contracts.ts';
 import { contextCitations, manifestSchema, suppliedManifest } from './context.ts';
-import { ModelCalls, type AgentModel, type ModelRequest } from './model-calls.ts';
+import { ModelCalls, RefusedDispatch, type AgentModel, type ModelRequest } from './model-calls.ts';
 import {
   chatDocuments,
   latestDocument,
@@ -151,8 +151,7 @@ function noReply(reads: number) {
     : 'I reached this turn’s limit before writing an answer. Nothing was saved. Narrow the request and ask again.';
 }
 const UNFUNDED_REPLY = 'I ran out of AI credits before writing a summary.';
-const unfunded = (error: unknown) =>
-  error instanceof AgentError && error.code === 'funding_unavailable';
+const unfunded = (error: unknown) => error instanceof RefusedDispatch;
 /** Appended after a step's tool results, never deleted, so the cached history stays exact. */
 function reminder(
   budget: Budget,

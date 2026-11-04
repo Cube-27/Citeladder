@@ -51,6 +51,16 @@ export type Funding = {
   refund: (db: Database, run: Run) => Promise<void>;
 };
 const hash = (text: string) => createHash('sha256').update(text).digest('hex');
+/**
+ * A dispatch refused for funding before anything was reserved, recorded or
+ * sent: the turn may still end with work it already staged (B60). A funding
+ * failure later in a call (at settlement) is a plain `funding_unavailable`.
+ */
+export class RefusedDispatch extends AgentError {
+  constructor() {
+    super('funding_unavailable');
+  }
+}
 export class ModelCalls {
   readonly db: Database;
   readonly funding: Funding;
@@ -243,7 +253,12 @@ export class ModelCalls {
     listener?: ConversationListener,
   ) {
     executionSignal?.throwIfAborted();
-    const attempt = await this.dispatch(lease, ordinal, model, request);
+    const attempt = await this.dispatch(lease, ordinal, model, request).catch((error: unknown) => {
+      // The dispatch transaction rolled back: no hold, attempt or request exists.
+      if (error instanceof AgentError && error.code === 'funding_unavailable')
+        throw new RefusedDispatch();
+      throw error;
+    });
     // A call the balance covers only in part is sent with the output cap it was held for.
     const sent =
       attempt.max_output_tokens === null

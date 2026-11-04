@@ -1287,6 +1287,40 @@ describe('Agent runtime on PostgreSQL', () => {
     expect(sent).toEqual([2, 1, 0]);
     expect((await fixtures.run(run.id)).status).toBe('succeeded');
   });
+  it('fails a turn whose funding breaks after a call was sent, even with a staged document', async () => {
+    const scope = await fixtures.scope();
+    const { run, lease } = await fixtures.claimed(scope, { skillId: 'plan' });
+    let receipts = 0;
+    const funding: Funding = {
+      ...zeroFunding,
+      // The second call's receipt cannot settle; recovery then settles it as unknown.
+      settle: async (_db, _attempt, received) => {
+        if (received && ++receipts === 2) throw new AgentError('funding_unavailable');
+        return { credits: 0, status: 'zero_debit' };
+      },
+    };
+    await fixtures
+      .runtime(scope, scripted([save('Staged plan.'), reply('Done.')]), {
+        models: new ModelCalls(db, funding),
+      })
+      .execute(lease);
+    expect(await fixtures.run(run.id)).toMatchObject({
+      status: 'failed',
+      error_code: 'funding_unavailable',
+    });
+    expect((await readChat(db, scope, run.chat_id)).outputs).toEqual([]);
+    expect(
+      await db
+        .selectFrom('agent_model_attempts')
+        .select(['ordinal', 'outcome'])
+        .where('run_id', '=', run.id)
+        .orderBy('ordinal')
+        .execute(),
+    ).toEqual([
+      { ordinal: 1, outcome: 'completed' },
+      { ordinal: 2, outcome: 'recovered_unknown' },
+    ]);
+  });
   it('appends user edits and restores per document while refusing stale bases and other chats', async () => {
     const scope = await fixtures.scope();
     const { run, lease } = await fixtures.claimed(scope, { skillId: 'plan' });
