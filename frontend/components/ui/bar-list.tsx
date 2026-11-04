@@ -100,15 +100,24 @@ function BarListRow({
 }: Readonly<{ item: BarListItem; width: number; value: string; share: string }>) {
   const tone = barTone(item);
   return (
-    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- see BarList's table
-    <div role="row" className={cn(ROW, 'text-body-sm h-10')}>
-      {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- see BarList's table */}
-      <span role="cell" className="text-ink flex min-w-0 items-center gap-2">
+    <div // NOSONAR -- see BarList's table: <tr> cannot lay out the fixed bar columns
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- see BarList's table
+      role="row"
+      className={cn(ROW, 'text-body-sm h-10')}
+    >
+      <span // NOSONAR -- see BarList's table
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- see BarList's table
+        role="cell"
+        className="text-ink flex min-w-0 items-center gap-2"
+      >
         {item.mark ?? null}
         <span className={cn('truncate', item.own && 'font-medium')}>{item.label}</span>
       </span>
-      {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- see BarList's table */}
-      <span role="cell" className="flex h-full min-w-0 items-center">
+      <span // NOSONAR -- see BarList's table
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- see BarList's table
+        role="cell"
+        className="flex h-full min-w-0 items-center"
+      >
         {/* A zero is no bar at all, never a sliver that reads as a little. */}
         {width > 0 ? (
           <span
@@ -123,12 +132,18 @@ function BarListRow({
           </span>
         ) : null}
       </span>
-      {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- see BarList's table */}
-      <span role="cell" className="text-ink text-right font-medium whitespace-nowrap tabular-nums">
+      <span // NOSONAR -- see BarList's table
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- see BarList's table
+        role="cell"
+        className="text-ink text-right font-medium whitespace-nowrap tabular-nums"
+      >
         {value}
       </span>
-      {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- see BarList's table */}
-      <span role="cell" className="text-ink-muted text-right whitespace-nowrap tabular-nums">
+      <span // NOSONAR -- see BarList's table
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- see BarList's table
+        role="cell"
+        className="text-ink-muted text-right whitespace-nowrap tabular-nums"
+      >
         {share}
       </span>
     </div>

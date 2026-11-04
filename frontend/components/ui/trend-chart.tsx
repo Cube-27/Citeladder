@@ -107,12 +107,21 @@ export function TrendChart({
 }>) {
   const [plotRef, width] = useChartWidth<HTMLDivElement>();
   const [active, setActive] = useState<number | null>(null);
-  const lines: Line[] = [
+  const plotted: readonly Readonly<{
+    name: string;
+    values: readonly (number | null)[];
+    other?: boolean;
+  }>[] = [
     { name: name ?? label, values: data.map((point) => point.value) },
     ...series
       .slice(0, 3)
       .map((entry) => ({ name: entry.label, values: entry.values, other: entry.other })),
-  ].map((line, index) => ({ name: line.name, values: line.values, tone: chartTone(line, index) }));
+  ];
+  const lines: Line[] = plotted.map((line, index) => ({
+    name: line.name,
+    values: line.values,
+    tone: chartTone(line, index),
+  }));
   const shown = (value: number | null | undefined) =>
     value === null || value === undefined ? availabilityLabel('not_measured') : format(value);
   const scale = trendScale({
@@ -157,7 +166,7 @@ export function TrendChart({
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- no native element reads a plot point by point
         role="group"
         // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the arrow keys need focus on the plot
-        tabIndex={count ? 0 : undefined}
+        tabIndex={count ? 0 : undefined} // NOSONAR -- the arrow keys need focus on the plot
         aria-label={`${label}. Use the left and right arrow keys to read each point.`}
         onKeyDown={onKeyDown}
         onMouseMove={(event) =>
@@ -394,7 +403,7 @@ function placedEvents(
   scale: TrendScale,
 ) {
   const stamps = data.map((point) => point.timestamp);
-  if (stamps.length < 2 || stamps.some((stamp) => stamp === undefined)) return [];
+  if (stamps.length < 2 || stamps.includes(undefined)) return [];
   const first = Math.min(...(stamps as number[]));
   const span = Math.max(...(stamps as number[])) - first;
   if (span <= 0) return [];

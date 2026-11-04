@@ -158,7 +158,7 @@ export function PerformancePlot({
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- no native element reads a plot point by point
         role="group"
         // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the arrow keys need focus on the plot
-        tabIndex={0}
+        tabIndex={0} // NOSONAR -- the arrow keys need focus on the plot
         aria-label={`${label}. Use the left and right arrow keys to read each point.`}
         onKeyDown={onKeyDown}
         onMouseMove={(event) =>

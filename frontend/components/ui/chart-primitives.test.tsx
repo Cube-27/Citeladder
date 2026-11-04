@@ -159,8 +159,8 @@ describe('ChartCard', () => {
     );
     expect(screen.getByRole('heading', { name: 'Mention rate' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '30 days' })).toBeInTheDocument();
-    expect(screen.getByTestId('card')).toHaveTextContent(
-      /^VisibilityMention rate30 days42%PlotSource: 412 answers$/,
+    expect(screen.getByTestId('card').textContent).toBe(
+      'VisibilityMention rate30 days42%PlotSource: 412 answers',
     );
   });
 });
