@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
-import { Check } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 
 import { appHref } from '@/lib/config/app-link';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
+import { platformLabel } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
 import { EngineLogo, type OfficialEngineKey } from '../primitives/engine-logo';
@@ -10,11 +11,12 @@ import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { CapabilityGrid, FaqList } from '../pages/platform';
 import {
   AgentBriefView,
+  AgentView,
   AnswerView,
   AppShellFrame,
   CrawlerAccessView,
-  DemandView,
   ProductShot,
+  SearchView,
   SiteHealthView,
   SourcesView,
   VisibilityTrendView,
@@ -74,19 +76,21 @@ function Hero({ rotor }: Readonly<{ rotor?: ReactNode }>) {
   return (
     <header className="lp-hero">
       <div className="lp-wrap site-wrap lp-hero-copy mk-hero-in">
-        <h1 className="website-hero-display">
-          <span className="sr-only">
-            Analyze what ChatGPT, Gemini and Claude tell your buyers about you
-          </span>
-          <span aria-hidden>
-            Analyze what {rotor ?? <EngineRotor />}
-            <br />
-            tells your buyers about you
-          </span>
+        <p className="lp-hero-pillars site-chip website-label">
+          AI visibility · Search intelligence · Site health · Agent
+        </p>
+        <h1 className="website-hero-display lp-hero-title">
+          See how AI and search find you, <span>then fix what holds you back</span>
         </h1>
         <p className="website-hero-lead lp-hero-lead">
-          See which brands AI recommends, which pages it cites, and what to fix to improve
-          visibility.
+          <span className="sr-only">
+            CiteLadder tracks what ChatGPT, Gemini, Claude and Google AI Overviews say
+          </span>
+          <span aria-hidden>
+            CiteLadder tracks what {rotor ?? <EngineRotor />} and Google AI Overviews say
+          </span>{' '}
+          about your brand, adds your keyword, backlink and Search Console data, audits your site,
+          and turns it all into work your team can ship.
         </p>
         <PrimaryActions />
         {selfServeSignupOpen() ? (
@@ -217,102 +221,6 @@ function Loop() {
   );
 }
 
-/* ── Deep dives ─────────────────────────────────────────────────────────── */
-
-function DeepDive({
-  title,
-  body,
-  points,
-  link,
-  children,
-}: Readonly<{
-  title: string;
-  body: string;
-  points: readonly string[];
-  link: { href: string; label: string };
-  children: ReactNode;
-}>) {
-  return (
-    <div className="mk-dive">
-      <div className="mk-dive-copy">
-        <h3 className="website-page-title mk-dive-title">{title}</h3>
-        <p className="website-body">{body}</p>
-        <ul className="mk-checks">
-          {points.map((point) => (
-            <li key={point}>
-              <Check aria-hidden className="size-4" />
-              {point}
-            </li>
-          ))}
-        </ul>
-        <TextLink href={link.href}>{link.label}</TextLink>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function DeepDives() {
-  return (
-    <section className="lp-section site-band" id="why" aria-labelledby="why-title">
-      <div className="lp-wrap site-wrap lp-stack">
-        <div className="lp-head">
-          <h2 id="why-title" className="website-section-heading">
-            Check the evidence, fix the site, add your search data
-          </h2>
-        </div>
-        <div className="lp-dives site-rows">
-          <DeepDive
-            title="Every number opens the answer behind it"
-            body="Click any metric and read the recorded answer: the engine, the prompt, the date, where your brand appeared and which sources it cited."
-            points={[
-              'Mentions, citations and referral visits stay separate signals',
-              'Answers are kept as recorded, never rewritten',
-              'Later audits compare like with like',
-            ]}
-            link={{
-              href: '/platform/citation-intelligence',
-              label: 'Explore Citation Intelligence',
-            }}
-          >
-            <ProductShot title="Answer record">
-              <AnswerView />
-            </ProductShot>
-          </DeepDive>
-          <DeepDive
-            title="Fix the site issues that keep you out of answers"
-            body="Crawl your site and get page-level findings with the evidence attached, from indexing and structured data to which AI crawlers your robots.txt lets in."
-            points={[
-              'Technical and answer-readiness checks per page',
-              'AI crawler permissions by purpose: search, training, user fetch',
-              'Coverage shown next to every score',
-            ]}
-            link={{ href: '/platform/site-health', label: 'Explore Site Health' }}
-          >
-            <ProductShot title="Site Health">
-              <SiteHealthView />
-            </ProductShot>
-          </DeepDive>
-          <DeepDive
-            title="Bring in the search data you already trust"
-            body="Connect Search Console and GA4 to see the queries that reach your pages and the visits AI assistants send, then add keyword and backlink research when you need it."
-            points={[
-              'Striking-distance queries and CTR gaps from Search Console',
-              'AI referral sessions and landing pages from GA4',
-              'Optional DataForSEO research, priced before you confirm',
-            ]}
-            link={{ href: '/platform/demand-intelligence', label: 'Explore Demand Intelligence' }}
-          >
-            <ProductShot title="Search Demand">
-              <DemandView />
-            </ProductShot>
-          </DeepDive>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 /* ── Platform, integrations, teams, trust ───────────────────────────────── */
 
 function PlatformGrid() {
@@ -324,6 +232,130 @@ function PlatformGrid() {
           <TextLink href="/platform">See the whole platform</TextLink>
         </div>
         <CapabilityGrid />
+      </div>
+    </section>
+  );
+}
+
+/* ── Measure, diagnose, improve ─────────────────────────────────────────── */
+
+type Pillar = {
+  readonly stage: string;
+  readonly title: string;
+  readonly body: string;
+  readonly points: readonly string[];
+  /** Platform routes; each link takes its module's published name. */
+  readonly modules: readonly string[];
+  readonly shot: string;
+  readonly view: ReactNode;
+};
+
+const PILLARS: readonly Pillar[] = [
+  {
+    stage: 'Measure',
+    title: 'Know how often AI recommends you, and who it cites instead',
+    body: 'Run the short, buyer-style questions people actually ask. Every score opens the recorded answer: the engine, the prompt, the date, your position and every source it cited.',
+    points: [
+      'Competitors side by side on the same prompts',
+      'Mentions, citations and referral visits kept as separate signals',
+      'Product and category answers for ecommerce teams',
+    ],
+    modules: [
+      '/platform/ai-visibility',
+      '/platform/citation-intelligence',
+      '/platform/ai-referral-analytics',
+      '/platform/commerce-intelligence',
+    ],
+    shot: 'Answer record',
+    view: <AnswerView />,
+  },
+  {
+    stage: 'Diagnose · Search Intelligence',
+    title: 'Keyword and backlink research beside your AI evidence',
+    body: 'See the keywords competitors rank for and you do not, the domains linking to them and not to you, and the pages that win. Each dataset shows its cost before you confirm.',
+    points: [
+      'Keyword gaps and competitor rankings',
+      'Backlink and referring-domain overlap',
+      'Competing domains and their top pages',
+      'No surprise spend: review scope and cost first',
+    ],
+    modules: ['/platform/search-intelligence', '/platform/demand-intelligence'],
+    shot: 'Search Intelligence',
+    view: <SearchView />,
+  },
+  {
+    stage: 'Diagnose · Site Health and Demand',
+    title: 'Fix the site issues and search gaps that keep you out',
+    body: 'Crawl your site for page-level findings, from indexing and structured data to which AI crawlers robots.txt lets in. Add Search Console to find queries one edit away from page one.',
+    points: [
+      'AI crawler permissions by purpose: search, training, user fetch',
+      'Striking-distance queries and CTR gaps per landing page',
+      'Coverage shown next to every score',
+    ],
+    modules: ['/platform/site-health', '/platform/demand-intelligence'],
+    shot: 'Site Health',
+    view: <SiteHealthView />,
+  },
+  {
+    stage: 'Improve',
+    title: 'Turn findings into work your team can ship, then measure again',
+    body: 'The Agent and Content Intelligence draft briefs, page edits and outreach plans from your saved evidence. Use the same evidence from your own assistant over MCP. Nothing publishes without you.',
+    points: [
+      'Briefs and new pages for gaps you can see',
+      'Edits to existing pages, with the reason attached',
+      'Re-run the same prompts to verify the change',
+    ],
+    modules: ['/platform/content-intelligence', '/platform/agents', '/platform/mcp'],
+    shot: 'Agent',
+    view: <AgentView />,
+  },
+];
+
+function PillarDive({ stage, title, body, points, modules, shot, view }: Pillar) {
+  return (
+    <div className="mk-dive">
+      <div className="mk-dive-copy">
+        <p className="website-label lp-pillar-stage">{stage}</p>
+        <h3 className="website-page-title mk-dive-title">{title}</h3>
+        <p className="website-body">{body}</p>
+        <ul className="mk-checks">
+          {points.map((point) => (
+            <li key={point}>
+              <Check aria-hidden className="size-4" />
+              {point}
+            </li>
+          ))}
+        </ul>
+        <ul className="lp-pillar-modules">
+          {modules.map((href) => (
+            <li key={href}>
+              <a className="lp-pillar-module website-label" href={href}>
+                {platformLabel(href)}
+                <ArrowRight aria-hidden className="size-3.5" />
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <ProductShot title={shot}>{view}</ProductShot>
+    </div>
+  );
+}
+
+function Pillars() {
+  return (
+    <section className="lp-section site-band" id="pillars" aria-labelledby="pillars-title">
+      <div className="lp-wrap site-wrap lp-stack">
+        <div className="lp-head">
+          <h2 id="pillars-title" className="website-section-heading">
+            Measure, diagnose, improve
+          </h2>
+        </div>
+        <div className="lp-dives site-rows">
+          {PILLARS.map((pillar) => (
+            <PillarDive key={pillar.title} {...pillar} />
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -359,16 +391,16 @@ function Closing() {
 }
 
 /**
- * Server-rendered; `rotor` is the hydrated headline rotor (see
- * `EngineRotor`). Without it the headline renders its static first engine.
+ * Server-rendered; `rotor` is the lead's hydrated engine rotor (see
+ * `EngineRotor`). Without it the lead renders its static first engine.
  */
 export function LandingPage({ rotor }: Readonly<{ rotor?: ReactNode }>) {
   return (
     <div className="lp">
       <Hero rotor={rotor} />
       <Loop />
-      <DeepDives />
       <PlatformGrid />
+      <Pillars />
       <Integrations />
       <Teams />
       <Trust />
