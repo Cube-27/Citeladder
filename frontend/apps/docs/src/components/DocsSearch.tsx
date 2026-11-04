@@ -76,7 +76,7 @@ export function DocsSearch() {
           ref={input}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Try outline approval or citations"
+          placeholder="Try revisions or citations"
         />
         <output className={textRole('caption', 'block py-4')}>
           {searchStatus(failed, entries, query, results.length)}

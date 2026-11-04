@@ -17,7 +17,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     highlights: [
       {
         title: 'Briefs and new pages',
-        body: 'Outline-first drafts for the audience and evidence you choose, including comparison pages and FAQs.',
+        body: 'Full drafts for the audience and evidence you choose, including comparison pages and FAQs.',
       },
       {
         title: 'Edits to existing pages',
@@ -52,9 +52,9 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Revise until it is right',
-        body: 'Every deliverable keeps its revisions. Long pieces start from an outline you approve. Edit sections yourself, ask for a change to one part, and compare any version with the latest.',
+        body: 'Every deliverable keeps its revisions. The Agent writes the whole piece and edits it in place. Edit sections yourself, ask for a change to one part, and compare any version with the latest.',
         points: [
-          'Outline first for long-form content',
+          'The full draft first, edited in place',
           'Section-level edits and follow-ups',
           'Full revision history',
         ],
@@ -67,12 +67,12 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         body: 'Choose an Action, finding or question, or start a new chat with a content skill.',
       },
       {
-        title: 'Approve the outline',
-        body: 'The Agent proposes the structure and evidence; you adjust it before drafting.',
+        title: 'Get the full draft',
+        body: 'The Agent writes the whole piece from the evidence it read, and lists the context it used.',
       },
       {
         title: 'Review the draft',
-        body: 'Edit sections, ask for changes and compare revisions.',
+        body: 'Edit sections, ask for changes the Agent makes in place, and compare revisions.',
       },
       {
         title: 'Ship and measure',

@@ -862,17 +862,6 @@
     height: 100dvh;
     padding: var(--auth-showcase-inset);
   }
-
-  /* The showcase pictures and its mint field are light artwork: in dark mode
-     they would be white blocks beside a dark form, so the panel drops away
-     and the form has the width, as it does below 900px. */
-  [data-theme='dark'] .auth-split {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  [data-theme='dark'] .auth-showcase {
-    display: none;
-  }
 }
 
 /* A light mint field washed with lime and accent tints, under fine grain

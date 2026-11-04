@@ -127,7 +127,7 @@ export function RevisionsView() {
   const revisions = [
     ['Revision 3', 'You · edited Evidence', 'Current'],
     ['Revision 2', 'Agent · revised summary', ''],
-    ['Revision 1', 'Agent · outline approved', ''],
+    ['Revision 1', 'Agent · first draft', ''],
   ] as const;
   return (
     <div className="pv-view">
@@ -167,7 +167,7 @@ export function SkillsView() {
   const skills = [
     ['Technical fix', 'Developer brief for one finding'],
     ['Page edit', 'Proposed changes to an existing page'],
-    ['Content', 'Outline-first article or page'],
+    ['Content', 'Full article or page draft'],
     ['Internal links', 'Link plan across your pages'],
     ['Prompt discovery', 'Prompt plan for the builder'],
   ] as const;
