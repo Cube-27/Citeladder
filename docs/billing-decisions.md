@@ -459,6 +459,27 @@ turn's searches are refunded with its other debits (B58). Source: the owner's
 approval of Agent web search, "PR3 can include web search tool and multiple
 doc".
 
+**B60 — Owner, 2026-11-04.** Agent credit holds must not refuse work the
+balance can actually pay for. Engineering: a call holds only the web searches
+it can run (`max_web_searches_per_call`, 2, never more than the turn has left;
+none when the turn's are spent, and then the tool is not offered). A turn's
+first call holds every input byte as a token; a later call holds the previous
+call's reported input and output tokens plus the bytes added since and a
+2,048-token margin (`hold_input_margin_tokens`), never more than the byte
+bound, all at the dearest input rate, so a call still cannot cost more than
+its hold. When the available balance (the ledger's, under the same capacity
+lock as the hold) is below that hold but covers the input, the searches and a
+minimum reply (`hold_min_reply_tokens`, 4,096 output tokens), the call is sent
+with its output cap lowered to what the balance covers and holds that; only
+below that floor is it refused (`funding_unavailable`). If a turn has already
+written a document and a later call is refused for funding, the turn ends by
+saving the document with a fixed reply ("I ran out of AI credits before writing
+a summary."); the turn succeeded and delivered work, so its calls are charged
+and B58's refund does not apply. Source: owner, 4 November 2026, after two
+production runs failed for funding with holds of 130–143 credits against
+debits of 2–9: "Credit holds must not refuse work the balance can actually
+pay for."
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,

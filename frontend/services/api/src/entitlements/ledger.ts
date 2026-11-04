@@ -187,6 +187,31 @@ async function reserveFresh(
   return ids;
 }
 
+/**
+ * Units of a consumable capability the account can hold now: what its
+ * selected grants have left after reservations and debits. It takes the
+ * capacity lock a reservation takes, so a hold sized from it in the same
+ * transaction draws against exactly this balance.
+ */
+export async function availableUnits(
+  db: Database,
+  request: { accountId: string; workspaceId: string; capability: string; at: Date },
+): Promise<number> {
+  const { accountId, workspaceId, capability, at } = request;
+  await advisoryXactLock(db, policy.entitlements.capacity_lock, accountId);
+  const state = await accountState(db, workspaceId, accountId, at);
+  const order = await lockedDrawOrder(db, { accountId, capability, state });
+  const balances = await ledgerBalances(
+    db,
+    accountId,
+    order.map((grant) => grant.id),
+  );
+  return order.reduce((sum, grant) => {
+    const balance = balances.get(grant.id) ?? { reserved: 0, consumed: 0 };
+    return sum + Math.max(0, grant.value - balance.reserved - balance.consumed);
+  }, 0);
+}
+
 /** The request fingerprint an idempotent replay of this hold must repeat. */
 function holdFingerprint(accountId: string, capability: string, { subject, units }: Hold) {
   return subject.kind === 'audit'

@@ -161,13 +161,14 @@ export function reservationCredits(price: ModelPrice, inputBytes: number, maxOut
 }
 
 /**
- * The most a cached call can cost: every input byte at the dearest of the
- * base, five-minute and one-hour cache-write rates, plus the full output cap
- * and every web search the call may run.
+ * The most a cached call can cost: `maxInputTokens` (an upper bound on the
+ * input tokens, such as the input's UTF-8 bytes) at the dearest of the base,
+ * five-minute and one-hour cache-write rates, plus the output cap and every
+ * web search the call may run.
  */
 export function cachedReservationCredits(
   price: ModelPrice,
-  inputBytes: number,
+  maxInputTokens: number,
   maxOutputTokens: number,
   maxWebSearches = 0,
 ) {
@@ -179,14 +180,41 @@ export function cachedReservationCredits(
   return Math.max(
     1,
     credits(price, {
-      input: inputBytes,
+      input: maxInputTokens,
       cached: 0,
-      written: hourDearest || minutesDearest ? inputBytes : 0,
-      writtenHour: hourDearest ? inputBytes : 0,
+      written: hourDearest || minutesDearest ? maxInputTokens : 0,
+      writtenHour: hourDearest ? maxInputTokens : 0,
       output: maxOutputTokens,
       searches: maxWebSearches,
     }),
   );
+}
+
+/**
+ * The largest output cap, at most `maxOutputTokens`, whose cached hold fits in
+ * `credits`; 0 when even no output does not fit. Holds grow with the cap, so
+ * a binary search finds it.
+ */
+export function affordableOutputTokens(
+  price: ModelPrice,
+  {
+    credits: available,
+    maxInputTokens,
+    maxOutputTokens,
+    maxWebSearches,
+  }: { credits: number; maxInputTokens: number; maxOutputTokens: number; maxWebSearches: number },
+) {
+  const hold = (output: number) =>
+    cachedReservationCredits(price, maxInputTokens, output, maxWebSearches);
+  if (hold(0) > available) return 0;
+  let low = 0,
+    high = maxOutputTokens;
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2);
+    if (hold(middle) <= available) low = middle;
+    else high = middle - 1;
+  }
+  return low;
 }
 
 /** What an unreadable settlement charges: a fixed fallback, never above the hold. */

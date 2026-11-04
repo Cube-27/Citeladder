@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { testDatabase } from './support.ts';
-import { AgentFixtures, reply, request, result } from './agent-support.ts';
+import { AgentFixtures, reply, request, result, save, text } from './agent-support.ts';
 import { BillingFixtures } from './billing-support.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { agentSettings } from '../src/agent/config.ts';
@@ -40,9 +40,13 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     const grantId = await grant(db, accountId, { key: 'ai_credits', value: credits });
     return { scope, accountId, grantId };
   }
-  async function run(scope: Awaited<ReturnType<typeof agents.scope>>) {
+  async function run(scope: Awaited<ReturnType<typeof agents.scope>>, skillId?: string) {
     const store = agents.store({ admission: agentAdmission(settings, platform) });
-    const run = await store.enqueue(scope, { key: randomUUID(), message: 'Answer from evidence.' });
+    const run = await store.enqueue(scope, {
+      key: randomUUID(),
+      message: 'Answer from evidence.',
+      ...(skillId ? { skillId } : {}),
+    });
     const queue = new AgentQueue(db, 30);
     const claimed = await queue.claim('funding-test', [scope.workspaceId]);
     if (!claimed || claimed.id !== run.id) throw new Error('Unexpected claim');
@@ -223,8 +227,40 @@ describe('Agent funding through the production ledger and shared pricing', () =>
         .executeTakeFirst(),
     ).toEqual({ web_search_requests: 1, debited_credits: '14' });
   });
-  it('refuses a dispatch the remaining credits cannot hold, recording nothing', async () => {
-    const { scope } = await tenant(HOLD - 1);
+  it('shrinks a call the balance covers only in part to the output it can pay for (B60)', async () => {
+    const { scope, accountId, grantId } = await tenant(5);
+    const { run: saved, lease } = await run(scope);
+    const sent: unknown[] = [];
+    const io = {
+      fetch: vi.fn<typeof fetch>(async (_url, init) => {
+        sent.push(JSON.parse(String(init?.body)).max_completion_tokens);
+        return Response.json({
+          choices: [{ message: { content: 'Answer' }, finish_reason: 'stop' }],
+          usage: { prompt_tokens: 20, completion_tokens: 10 },
+        });
+      }),
+      sleep: vi.fn(async () => {}),
+    };
+    const calls = new ModelCalls(db, agentFunding(settings, platform));
+    await calls.call(lease, 1, await agentModels(platform, io)(saved), request);
+    // Five credits pay for the 99 input bytes and 7 652 output tokens, not the 16 384 cap.
+    expect(sent).toEqual([7652]);
+    expect(
+      await db
+        .selectFrom('agent_model_attempts')
+        .select(['reserved_credits', 'max_output_tokens'])
+        .where('run_id', '=', saved.id)
+        .executeTakeFirst(),
+    ).toEqual({ reserved_credits: '5', max_output_tokens: 7652 });
+    expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
+      reserved: 0,
+      consumed: 1,
+    });
+  });
+  it('refuses a call below a minimum reply, counting only its own workspace’s credits', async () => {
+    // Another workspace's large balance is never drawn on.
+    await tenant(1_000);
+    const { scope } = await tenant(2);
     const { run: saved, lease } = await run(scope);
     const calls = new ModelCalls(db, agentFunding(settings, platform));
     await expect(
@@ -237,6 +273,90 @@ describe('Agent funding through the production ledger and shared pricing', () =>
         .where('run_id', '=', saved.id)
         .execute(),
     ).toEqual([]);
+  });
+  it('holds a later call for the input the previous call reported, never below what it can cost', async () => {
+    const { scope, accountId, grantId } = await tenant(1_000);
+    const { run: saved, lease } = await run(scope);
+    const calls = new ModelCalls(db, agentFunding(settings, platform));
+    const model = await agentModels(platform)(saved);
+    const opening = { role: 'user' as const, content: [text('x'.repeat(100_000))] };
+    const first = await calls.dispatch(lease, 1, model, { ...request, messages: [opening] });
+    // 100 095 bytes held as one-hour cache writes, plus the output cap.
+    expect(first.reserved_credits).toBe('37');
+    const reported = { input_tokens: 25_000, output_tokens: 1_000 };
+    await calls.receipt(scope.workspaceId, first.id, result(reply(), { usage: reported }));
+    const next = {
+      ...request,
+      messages: [
+        opening,
+        { role: 'assistant' as const, content: [text('ok')] },
+        { role: 'user' as const, content: [text('more')] },
+      ],
+    };
+    const second = await calls.dispatch(lease, 2, model, next);
+    // 26 000 tokens read before, 119 bytes added and the 2 048-token margin.
+    expect(second.reserved_credits).toBe('18');
+    // The most it can cost: everything it reads written to the one-hour cache, the whole cap.
+    const worst = {
+      input_tokens: 26_119,
+      cache_write_input_tokens: 26_119,
+      cache_write_1h_input_tokens: 26_119,
+      output_tokens: 16_384,
+    };
+    await calls.receipt(scope.workspaceId, second.id, result(reply(), { usage: worst }));
+    expect(
+      await db
+        .selectFrom('agent_model_attempts')
+        .select(['ordinal', 'reserved_credits', 'debited_credits', 'input_bytes'])
+        .where('run_id', '=', saved.id)
+        .orderBy('ordinal')
+        .execute(),
+    ).toEqual([
+      { ordinal: 1, reserved_credits: '37', debited_credits: '4', input_bytes: '100095' },
+      { ordinal: 2, reserved_credits: '18', debited_credits: '18', input_bytes: '100214' },
+    ]);
+    expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
+      reserved: 0,
+      consumed: 22,
+    });
+  });
+  it('keeps a document already written when a later call is refused, and charges for it', async () => {
+    const { scope, accountId, grantId } = await tenant(8);
+    const { run: saved, lease } = await run(scope, 'plan');
+    const responses = [
+      // The first call writes the document and is charged everything it held.
+      result(save('The finished plan.'), {
+        usage: { input_tokens: 100_000, output_tokens: 16_384 },
+      }),
+      result(reply('Never reached.')),
+    ];
+    const model = {
+      ...(await agentModels(platform)(saved)),
+      converse: async () => responses.shift()!,
+    };
+    const calls = new ModelCalls(db, agentFunding(settings, platform));
+    await agents.runtime(scope, model, { models: calls }).execute(lease);
+    expect(await agents.run(saved.id)).toMatchObject({ status: 'succeeded', error_code: '' });
+    const message = await db
+      .selectFrom('agent_messages')
+      .select('content')
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('reply_to_message_id', '=', saved.user_message_id)
+      .executeTakeFirstOrThrow();
+    expect(message.content).toBe(
+      'I ran out of AI credits before writing a summary.\n\nDocument 1 saved.',
+    );
+    const revision = await db
+      .selectFrom('agent_output_revisions')
+      .select('body')
+      .where('run_id', '=', saved.id)
+      .executeTakeFirstOrThrow();
+    expect(revision.body).toBe('The finished plan.');
+    // Work was delivered, so the call is not refunded.
+    expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
+      reserved: 0,
+      consumed: 8,
+    });
   });
   it('serializes concurrent dispatch holds against the same finite credit balance', async () => {
     const { scope, accountId, grantId } = await tenant(HOLD);

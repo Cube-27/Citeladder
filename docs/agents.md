@@ -200,7 +200,10 @@ shows them.
 On Anthropic each call may offer the hosted `web_search_20250305` tool (the
 basic version, available on every model including Haiku 5.5), declared after
 the sorted tools with `max_uses` set to the searches left of the turn's
-`max_web_searches` (5). The tool is omitted once the budget is spent and on the
+`max_web_searches` (5), at most `max_web_searches_per_call` (2), which is also
+what the call holds. The operating contract tells the model to search only
+when the person asks or the answer needs outside facts, never as a routine
+step. The tool is omitted once the budget is spent and on the
 last call, except that a search the provider left waiting (`pause_turn`, or a
 search pending beside client tool calls) is offered one more use so the
 continuation stays valid. The definition therefore changes only after a turn
@@ -247,7 +250,11 @@ the same catalogue, including `read_actions`, `read_content_differentiation`, `r
 and `read_page_text` (a crawled page's copy by URL, from persisted crawl
 artifacts only, sized to fit one tool result); there are no Agent-only reads. A caller's mistake (a bad cursor, window or
 filter) is refused with the owner's reason so the model can correct the call.
-No tool writes: the MCP write catalogue and `confirm_change` are not Agent
+A paged read whose `limit` takes any size returns the Agent `read_default_limit`
+(20) rows when the model names none and accepts at most `read_max_limit` (50),
+so a representative sample comes first and more is one cursor away; MCP
+clients keep the catalogue's own page sizes, and fixed-size or self-defaulting
+limits are unchanged. No tool writes: the MCP write catalogue and `confirm_change` are not Agent
 tools, and the Agent stays read-only.
 
 Each tool attempt (`agent_tool_attempts` in the [schema baseline](../frontend/services/api/migrations/0001_baseline.sql)) records the model call
@@ -278,10 +285,15 @@ them read-only. A body may name an application vocabulary as `{{name}}`, which
 the loader expands from its owner's listing. The catalog version is a content
 fingerprint of every file after expansion, including `workflows.json`.
 
-The contract and skills are lean: each states the deliverable's shape, the data
-to read and a few hard rules (no invented facts, real dates and units,
-unavailable is not zero, no record references in user text). They do not
-require evidence manifests or per-claim labels. Where a public plugin skill
+The contract and skills are lean
+([decision](decisions.md#the-agent-works-proportionately-with-simple-skills)).
+The contract holds the hard rules once (no invented facts, real dates and
+units, unavailable is not zero, no record references in user text) and how to
+work proportionately: supplied evidence first, a 3–5 page sample for an issue
+across many pages, web search only when asked or needed. Each skill gives its
+goal, where the data is, a few points of domain judgement and the
+deliverable's shape, with no numbered methods or exhaustive verification. They
+do not require evidence manifests or per-claim labels. Where a public plugin skill
 mirrors an in-app methodology (`ai-visibility-review` ↔ `ai_visibility`,
 `ai-search-change-review` ↔ `measure`, `technical-seo-triage` ↔
 `technical_health`, `prompt-discovery` ↔ `prompt_discovery`), a methodology
@@ -472,9 +484,20 @@ stay fenced, and recovery runs accounting in the same transaction as its
 terminal write.
 
 Every model call is funded independently. Platform funding reserves a finite
-AI-credit hold per call: every input byte the provider reads (from the last
-compaction on) at the dearest of the base and cache-write rates (the one-hour
-write rate, twice the base), plus the full output cap. It settles against
+AI-credit hold per call
+([B60](billing-decisions.md#agent-chat-behaviour-2026-11-04)): an input bound
+at the dearest of the base and cache-write rates (the one-hour write rate,
+twice the base), plus the output cap, plus the searches the call may run. The
+input bound of a turn's first call is every byte the provider reads (from the
+last compaction on); a later call's is the previous call's reported input and
+output tokens plus the bytes added since and `hold_input_margin_tokens`
+(2 048), never above the byte bound. Each attempt records `input_bytes` for the
+next call. When the ledger's available balance (read under the hold's capacity
+lock) is below the full hold but covers a `hold_min_reply_tokens` (4 096)
+reply, the call is sent with `max_output_tokens` lowered to what the balance
+covers, recorded on the attempt; below that floor it is refused with
+`funding_unavailable`. A turn refused for funding after it staged a document
+saves the document with a fixed reply and is charged. It settles against
 returned usage, with cache reads, five-minute and one-hour cache writes and
 output (thinking included) at their own rates
 ([B53](billing-decisions.md#agent-native-runtime-2026-10-12)); a lost result
@@ -482,10 +505,9 @@ settles once as bounded unknown usage. When a turn ends failed, whether in the
 runtime or by lane recovery, its settled debits are refunded once by
 append-only ledger refunds while every attempt keeps its tokens and debit
 ([B58](billing-decisions.md#agent-chat-behaviour-2026-11-04)); a cancelled turn
-stays charged. The output cap in the hold is the gateway's
-`DEFAULT_AGENT_MAX_OUTPUT_TOKENS` (64 000), so each call needs that much
-headroom in the balance (about 42 credits at Haiku 5.5 prices, plus input,
-plus 13 credits for each web search the call may run). The configured development
+stays charged. The full output cap is the gateway's
+`DEFAULT_AGENT_MAX_OUTPUT_TOKENS` (64 000, about 42 credits at Haiku 5.5
+prices; each web search adds 13). The configured development
 login (`DEV_LOGIN_EMAIL`, an active admin) runs as `development` funding with
 no hold or debit but the same dispatch evidence. Capability and credit rate are
 keyed `agent`; [Billing](billing-entitlements.md) owns the ledger.
@@ -505,8 +527,9 @@ scripted models and real PostgreSQL, never live providers:
   every call with each call's cache diagnosis recorded, an `edit_document` revision and its supply in the next turn, carried
   sources, workflow pinning, recovery replies and fencing, several documents
   in one chat with per-document edits and restores, and web searches within
-  the turn's budget (allowance per call, `pause_turn`, web sources, recorded
-  search counts).
+  the turn's budget (allowance per call and its per-call cap, no search tool
+  once the turn's are spent, `pause_turn`, web sources, recorded search
+  counts).
 - `agent-builtin-tools.test.ts`: the built-ins' refusals, exact-match edits,
   document numbering and staging rules.
 - `agent-owner-adapters.test.ts`: tool binding and project pinning, excluded
@@ -524,8 +547,11 @@ scripted models and real PostgreSQL, never live providers:
   turn as interrupted), catalog projection, recovery and cancellation.
 - `agent-funding.test.ts`: holds before I/O, settlement with cache writes and
   thinking, unknown usage, development funding, a failed turn refunded once
-  (B58) with its attempts kept, and web searches held per call and charged as
-  reported (B59).
+  (B58) with its attempts kept, web searches held per call and charged as
+  reported (B59), a later call's input hold from the previous call's reported
+  tokens and never below its worst-case charge, a short balance shrinking the
+  call's output cap, the minimum-reply floor and a staged document kept when a
+  later call is refused (B60).
 
 Live quality and speed are measured outside CI by the operator-only eval,
 `pnpm --filter @citeladder/api agent:eval --live --label <name>`:

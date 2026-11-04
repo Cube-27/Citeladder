@@ -1259,6 +1259,34 @@ describe('Agent runtime on PostgreSQL', () => {
       JSON.stringify(found('srvtoolu_2', 'https://b.test/')),
     );
   });
+  it('offers each call at most its per-call searches and none once the turn’s are spent', async () => {
+    const scope = await fixtures.scope();
+    const { run, lease } = await fixtures.claimed(scope);
+    await budget(run, { max_web_searches: 3, max_web_searches_per_call: 2 });
+    const searched = (count: number) => ({
+      input_tokens: 20,
+      output_tokens: 10,
+      web_search_requests: count,
+    });
+    const sent: number[] = [];
+    const model = {
+      ...scripted(
+        [
+          result(read(), { usage: searched(2) }),
+          result(read(), { usage: searched(1) }),
+          result(reply('Done.'), { usage: searched(0) }),
+        ],
+        async (request) => {
+          sent.push(request.webSearches);
+        },
+      ),
+      adapter: 'anthropic',
+    };
+    await fixtures.runtime(scope, model).execute(lease);
+    // Two of three by the per-call cap, the one left, then no search tool at all.
+    expect(sent).toEqual([2, 1, 0]);
+    expect((await fixtures.run(run.id)).status).toBe('succeeded');
+  });
   it('appends user edits and restores per document while refusing stale bases and other chats', async () => {
     const scope = await fixtures.scope();
     const { run, lease } = await fixtures.claimed(scope, { skillId: 'plan' });

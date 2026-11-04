@@ -1,10 +1,11 @@
 /**
  * Agent funding: the Agent always uses the platform gateway and spends AI
  * credits (B19). Each dispatch holds its maximum cost at the shared token
- * prices, plus every web search it may run (B59), and settles once to the
- * reported tokens and searches, and a failed turn's debits
- * are refunded (B58); the ledger and the pricing
- * are the same ones every other platform AI call uses (B12-B15).
+ * prices, plus the web searches that call may run (B59), shrinking its output
+ * cap when the balance covers less (B60); it settles once to the reported
+ * tokens and searches, and a failed turn's debits are refunded (B58). The
+ * ledger and the pricing are the same ones every other platform AI call uses
+ * (B12-B15).
  */
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
@@ -12,6 +13,7 @@ import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
 import { accountState } from '../entitlements/state.ts';
 import {
+  availableUnits,
   reserveUsage,
   debitUsage,
   refundUsage,
@@ -20,15 +22,17 @@ import {
 } from '../entitlements/ledger.ts';
 import {
   PRICING_REVISION,
+  affordableOutputTokens,
   cachedReservationCredits,
   chargeCredits,
   modelPrice,
   unknownUsageCredits,
+  type ModelPrice,
 } from '../billing/ai-pricing.ts';
 import { conversationInputBytes } from '../models/conversation.ts';
 import { enforceWorkspaceRequest } from '../abuse/usage.ts';
 import { agentSettings } from './config.ts';
-import { AgentError, type Run, type Scope } from './contracts.ts';
+import { AgentError, agentPolicy, type Run, type Scope } from './contracts.ts';
 import type { Admission, FundingIdentity } from './store.ts';
 import type { Funding } from './model-calls.ts';
 import type { GatewaySettings } from '../models/gateway.ts';
@@ -109,6 +113,68 @@ async function recheck(db: Database, run: Run, settings: Settings, platform: Gat
   if (run.funding_source === 'development' && !(await development(db, run.user_id, settings)))
     throw new AgentError('funding_unavailable');
 }
+/**
+ * An upper bound on the input tokens of a call. A turn's first call holds
+ * every byte as a token (a byte-level tokenizer never emits more tokens than
+ * bytes). A later call reads what the turn's previous call read, which that
+ * call reported, plus what was added since: its answer (at most its reported
+ * output, thinking included) and the new messages' bytes, plus a margin for
+ * tool definitions that differ between calls, such as the search tool. The
+ * byte bound still applies when it is lower.
+ */
+async function inputBound(db: Database, run: Run, bytes: number) {
+  const previous = await db
+    .selectFrom('agent_model_attempts')
+    .select(['input_tokens', 'output_tokens', 'input_bytes'])
+    .where('workspace_id', '=', run.workspace_id)
+    .where('run_id', '=', run.id)
+    .where('run_attempt', '=', run.attempt_count)
+    .where('outcome', '=', 'completed')
+    .orderBy('ordinal', 'desc')
+    .limit(1)
+    .executeTakeFirst();
+  if (
+    !previous ||
+    previous.input_tokens === null ||
+    previous.output_tokens === null ||
+    previous.input_bytes === null
+  )
+    return bytes;
+  const read = Number(previous.input_tokens) + Number(previous.output_tokens);
+  const added = Math.max(0, bytes - Number(previous.input_bytes));
+  return Math.min(bytes, read + added + agentPolicy.hold_input_margin_tokens);
+}
+/**
+ * The hold for a call: its full cost bound when the balance covers it.
+ * Otherwise the call is shrunk, not refused: its output cap is lowered to what
+ * the balance covers, down to a minimum reply; only a balance below that floor
+ * refuses it (B60).
+ */
+function sizedHold(
+  price: ModelPrice,
+  available: number,
+  bound: { maxInputTokens: number; maxOutputTokens: number; maxWebSearches: number },
+) {
+  const full = cachedReservationCredits(
+    price,
+    bound.maxInputTokens,
+    bound.maxOutputTokens,
+    bound.maxWebSearches,
+  );
+  if (full <= available) return { credits: full, outputTokens: bound.maxOutputTokens };
+  const outputTokens = affordableOutputTokens(price, { ...bound, credits: available });
+  if (outputTokens < Math.min(agentPolicy.hold_min_reply_tokens, bound.maxOutputTokens))
+    throw new AgentError('funding_unavailable');
+  return {
+    credits: cachedReservationCredits(
+      price,
+      bound.maxInputTokens,
+      outputTokens,
+      bound.maxWebSearches,
+    ),
+    outputTokens,
+  };
+}
 export function agentFunding(settings: Settings, platform: GatewaySettings): Funding {
   return {
     reserve: async (db, run, dispatchId, _model, request) => {
@@ -117,22 +183,30 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
         return { reservationId: null, credits: 0, pricingRevision: '' };
       const price = modelPrice(run.requested_model, platform.model);
       if (!price) throw new AgentError('funding_unavailable');
-      const credits = cachedReservationCredits(
-        price,
-        conversationInputBytes(request),
-        platform.maxOutputTokens,
-        request.webSearches,
-      );
+      const maxInputTokens = await inputBound(db, run, conversationInputBytes(request));
+      const accountId = await account(db, run.workspace_id);
+      const at = new Date();
       try {
+        const available = await availableUnits(db, {
+          accountId,
+          workspaceId: run.workspace_id,
+          capability: policy.entitlements.ai_credits,
+          at,
+        });
+        const { credits, outputTokens } = sizedHold(price, available, {
+          maxInputTokens,
+          maxOutputTokens: platform.maxOutputTokens,
+          maxWebSearches: request.webSearches,
+        });
         const reservationId = await reserveUsage(db, {
-          accountId: await account(db, run.workspace_id),
+          accountId,
           capability: policy.entitlements.ai_credits,
           subject: { kind: 'agent', id: run.id, workspaceId: run.workspace_id },
           units: credits,
           key: `agent:${dispatchId}:hold`,
-          at: new Date(),
+          at,
         });
-        return { reservationId, credits, pricingRevision: PRICING_REVISION };
+        return { reservationId, credits, pricingRevision: PRICING_REVISION, outputTokens };
       } catch (error) {
         if (
           error instanceof LedgerError &&
