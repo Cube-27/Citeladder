@@ -86,7 +86,11 @@ upstream output revision, and the project's versioned Agent instructions. The
 each identifier; missing optional evidence is recorded as an omission. Crawl
 text remains untrusted observation. Issue groups keep complete owner counts
 beside a labelled bounded sample, and background pages are dropped before the
-selected issue or page.
+selected issue or page. Without a named or handed-off page, the first address
+on the project's own site in the request (with or without scheme or `www.`)
+is the target page; the target carries a longer body excerpt
+(`content_context_target_body_chars`) than related pages, and `read_page_text`
+reads its whole crawled copy.
 
 The [runtime](../frontend/services/api/src/agent/runtime.ts) runs a native
 tool-calling loop ([decision](decisions.md#the-agent-uses-native-tool-calling)):
@@ -107,9 +111,14 @@ calls none. Its final text is the reply.
   saved in `agent_run_transcripts` with the reply in one transaction. A
   transcript is a run record for replay, not a knowledge store: no read returns
   it and it is never shown. Rewriting or dropping an earlier block would miss the
-  cache and invalidate later thinking, so replay never edits history. On
-  Anthropic, server-side compaction bounds a long chat (its trigger,
-  `compaction_trigger_tokens`, sits below Haiku 5.5's long-context price tier).
+  cache and invalidate later thinking, so replay never edits history. The
+  column is `json`, not `jsonb` (which re-sorts object keys), and blocks are
+  validated without being rebuilt, so a replayed turn is byte-identical to what
+  the provider returned. On Anthropic, server-side compaction bounds a long
+  chat; its trigger, `compaction_trigger_tokens` (80 000), keeps every call,
+  the compaction step included, below Haiku 5.5's long-context price tier
+  (100 000 prompt tokens, B53), and a replayed compaction block is not
+  compacted again.
   Chat completions return no compaction, so the oldest whole turns are dropped at
   turn start beyond `replay_max_chars`.
 - **Tools.** The model has the [read tools](#read-tools) and three built-ins
@@ -204,8 +213,9 @@ from another project. `list_projects` and the MCP App views (`render_visibility`
 `render_site_health`, `open_analytics`) are not Agent tools. Each call runs as
 the chat member through MCP's membership predicate, and workspace access
 (trial and plan) is rechecked before every model call. The Agent and MCP read
-the same catalogue, including `read_actions`, `read_content_differentiation`, `read_perception`, `read_fact_checks` and `read_ai_ads`;
-there are no Agent-only reads. A caller's mistake (a bad cursor, window or
+the same catalogue, including `read_actions`, `read_content_differentiation`, `read_perception`, `read_fact_checks`, `read_ai_ads`
+and `read_page_text` (a crawled page's copy by URL, from persisted crawl
+artifacts only, sized to fit one tool result); there are no Agent-only reads. A caller's mistake (a bad cursor, window or
 filter) is refused with the owner's reason so the model can correct the call.
 No tool writes: the MCP write catalogue and `confirm_change` are not Agent
 tools, and the Agent stays read-only.
@@ -294,10 +304,18 @@ consumer, not only the Agent:
 - `api.anthropic.com` uses the native Messages API through the official SDK
   ([`anthropic.ts`](../frontend/services/api/src/models/anthropic.ts)). The
   Agent's `converse` streams with adaptive thinking (summarized), the configured
-  effort, a cache breakpoint on the system text plus automatic caching of the
-  conversation, server-side compaction, and `save_document`'s input streamed as
-  it is written. Usage counts cache reads and writes as input and reports cache
-  writes and thinking tokens separately.
+  effort, server-side compaction, and `save_document`'s input streamed as it is
+  written. Every cache breakpoint lives one hour, so a person who pauses
+  between turns still reads the chat from cache: one on the system text,
+  automatic caching of the conversation, one where the previous call's
+  automatic breakpoint wrote (so a step with many parallel reads still reads
+  the whole history) and one on the newest compaction block. Each call names
+  the chat's previous response (`diagnostics.previous_message_id`, kept on the
+  model attempt), and the provider's cache-miss reason and missed tokens are
+  logged on the `default agent call ok` line and saved on the attempt with its
+  response id, one-hour cache writes and per-step usage (compaction steps
+  flagged). Usage counts cache reads and writes as input and reports cache
+  writes, one-hour writes and thinking tokens separately.
 - Any other endpoint is OpenAI-compatible chat completions
   ([`openai-conversation.ts`](../frontend/services/api/src/models/openai-conversation.ts)).
   The gateway translates the same blocks to messages with `tool_calls`, sends
@@ -419,9 +437,10 @@ terminal write.
 
 Every model call is funded independently. Platform funding reserves a finite
 AI-credit hold per call: every input byte the provider reads (from the last
-compaction on) at the dearer of the base and cache-write rates, plus the full
-output cap. It settles against returned usage, with cache reads, cache writes
-and output (thinking included) at their own rates
+compaction on) at the dearest of the base and cache-write rates (the one-hour
+write rate, twice the base), plus the full output cap. It settles against
+returned usage, with cache reads, five-minute and one-hour cache writes and
+output (thinking included) at their own rates
 ([B53](billing-decisions.md#agent-native-runtime-2026-10-12)); a lost result
 settles once as bounded unknown usage. When a turn ends failed, whether in the
 runtime or by lane recovery, its settled debits are refunded once by
@@ -444,8 +463,9 @@ scripted models and real PostgreSQL, never live providers:
   before a methodology and committed only with the reply, the cap's final
   answer, the low-effort retry after a cut-off response, `output_too_long`,
   `context_too_long` and `model_refused`, transcripts replayed unchanged
-  (thinking and compaction included), a byte-identical prefix across calls and
-  chats, an `edit_document` revision and its supply in the next turn, carried
+  (thinking and compaction included) byte for byte through PostgreSQL, a
+  byte-identical prefix across calls and chats, the previous response named on
+  every call with each call's cache diagnosis recorded, an `edit_document` revision and its supply in the next turn, carried
   sources, workflow pinning, recovery replies and fencing.
 - `agent-builtin-tools.test.ts`: the built-ins' refusals, exact-match edits and
   staging rules.
@@ -457,7 +477,8 @@ scripted models and real PostgreSQL, never live providers:
 - `agent-skills.test.ts`: catalog loading, vocabularies, format headings,
   fingerprints and workflow validation.
 - `models.test.ts`: `converse` for both providers (streamed tool calls, empty
-  content, usage).
+  content, usage with compaction steps and one-hour writes, one-hour
+  breakpoints and the cache diagnosis).
 - `agent-cutover.test.ts`: HTTP admission, the SSE route (thinking, tool, document
   and reply events, the saved reply, no re-execution, a closed stream ending the
   turn as interrupted), catalog projection, recovery and cancellation.
