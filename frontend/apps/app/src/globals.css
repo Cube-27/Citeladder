@@ -403,6 +403,13 @@
   --lattice: radial-gradient(var(--color-border-strong) 1px, transparent 1px) 0 0 / 16px 16px;
   /* Fine film grain: tiled fractal noise, laid over a wash at low opacity. */
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E") 0 0 / 160px 160px;
+  /* The product ground's grain (Windows acrylic/Mica): the same tile, faded
+     until it reads only up close. Dark inverts it to light noise. */
+  --ground-grain-opacity: 0.07;
+  /* The vertical selection mark (Windows style): a short rounded pill centred
+     on a row's start edge, never the row's full height. */
+  --selection-pill-length: 16px;
+  --selection-pill-thickness: 3px;
   --site-gutter: 20px;
   --marketing-nav-offset: calc(4rem + env(safe-area-inset-top, 0px));
   --skeleton-base: var(--color-well);
@@ -1070,25 +1077,39 @@ a.focus-ring:active .type-caption {
   box-shadow: 0 0 0 1px var(--surface-ring);
 }
 
-/* Selection is a 2px accent bar plus foreground ink, never a fill block
-   (owner, 2026-11-03): the start edge for a current navigation row, the foot
-   for a selected segment or filter chip. The item keeps its own fill. */
+/* Selection is an accent mark plus foreground ink, never a fill block
+   (owner, 2026-11-03): the start edge for a current navigation or list row,
+   the foot for a selected segment or filter chip. The item keeps its own fill.
+   The start-edge mark is the Windows pill (owner, 2026-11-04): 3px wide, 16px
+   tall, centred on the row. Both are drawn out of flow, so the row's size and
+   its label never move. A table row's mark sits on its first cell, since rows
+   cannot position a mark in every engine. */
 .selection-bar,
 .selection-bar-foot {
   position: relative;
 }
+/* Layered, so a pinned column's `sticky` utility (also a containing block for
+   the mark) still wins over this default. */
+@layer components {
+  .selection-bar-cells > :first-child {
+    position: relative;
+  }
+}
 .selection-bar::before,
-.selection-bar-foot::before {
+.selection-bar-foot::before,
+.selection-bar-cells:is([aria-selected='true'], .selection-bar-cells-on) > :first-child::after {
   content: '';
   position: absolute;
   background: var(--color-accent);
   border-radius: var(--radius-full);
   pointer-events: none;
 }
-.selection-bar::before {
-  inset-block: 0;
+.selection-bar::before,
+.selection-bar-cells:is([aria-selected='true'], .selection-bar-cells-on) > :first-child::after {
   inset-inline-start: 0;
-  width: 2px;
+  top: calc(50% - var(--selection-pill-length) / 2);
+  height: var(--selection-pill-length);
+  width: var(--selection-pill-thickness);
 }
 .selection-bar-foot::before {
   inset-inline: var(--tab-pad-x);
@@ -1100,6 +1121,26 @@ a.focus-ring:active .type-caption {
    sheet beside it is the separation, so the rail draws no edge of its own. */
 .shell-rail {
   background-color: var(--color-panel);
+}
+
+/* The ground and the rail carry a fine monochrome grain, like Windows acrylic
+   (owner, 2026-11-04). It is a static tile under the element's children, so
+   the sheet, cards and every text surface on them stay clean and no frame
+   pays for it. The element must already be positioned. */
+.ground-grain {
+  isolation: isolate;
+}
+.ground-grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--grain);
+  opacity: var(--ground-grain-opacity);
+}
+:root[data-theme='dark'] .ground-grain::before {
+  filter: invert(1);
 }
 
 [data-marketing-nav][data-scrolled='true'] {

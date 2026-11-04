@@ -48,7 +48,7 @@ export function NavLink({
       className={cn(
         'shell-link focus-ring group relative flex h-[var(--nav-item-height)] items-center gap-2 rounded-[var(--radius-control)] px-3 transition-colors duration-[var(--motion-fast)]',
         // The current destination keeps the neutral tint and adds the 2px
-        // accent bar on its start edge (owner, 2026-11-03).
+        // short accent pill on its start edge (owner, 2026-11-04).
         active
           ? textRole('control', 'selection-bar bg-selected text-foreground active:bg-active')
           : textRole(

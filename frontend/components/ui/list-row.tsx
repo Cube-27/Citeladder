@@ -14,8 +14,8 @@ import { cn } from '@/lib/utils';
  * The one selected-row treatment for a selectable list beside its detail
  * (catalog tree, issue list).
  *
- * Selected keeps the surface's own fill and takes a 2px accent bar at its
- * start edge and the foreground ink (owner, 2026-11-03: no lighter fill
+ * Selected keeps the surface's own fill and takes the short accent pill
+ * centred on its start edge (`selection-bar`) and the foreground ink (owner, 2026-11-03: no lighter fill
  * blocks), so a selected row reads as part of its list rather than as a card
  * lifted off it. Unselected rows take the neutral hover and pressed tints. The state itself must also be in the markup — the caller
  * sets `aria-current` (navigation-like lists), `aria-selected` (a
@@ -29,7 +29,7 @@ export function listRowClasses({ selected = false }: Readonly<{ selected?: boole
   return cn(
     'relative rounded-[var(--radius-control)] transition-[background-color,color] duration-[var(--motion-fast)] ease-[var(--ease-standard)]',
     selected
-      ? "text-foreground after:bg-accent after:absolute after:inset-y-1 after:start-0 after:w-0.5 after:rounded-full after:content-['']"
+      ? 'selection-bar text-foreground'
       : 'text-secondary hover:bg-hover hover:text-foreground active:bg-active',
   );
 }
