@@ -48,7 +48,7 @@ The declaration keeps the target, baseline and expected checks tied to that impl
 - a Site Health check by the next crawl that reads the page;
 - a prompt by the next visibility run;
 - Search Console clicks per day on the page or query by each synced window that starts after the go-live day;
-- a keyword gap by whether your site now appears for that search, in Search Console or in a later Search Intelligence dataset.
+- a keyword gap by whether your site now appears for that search, in Search Console or in a later Keyword Research dataset.
 
 Each check keeps its own latest reading, so a crawl and a Search Console window together can complete an Action that neither completes alone.
 

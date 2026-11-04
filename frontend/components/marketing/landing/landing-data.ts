@@ -44,19 +44,19 @@ export const INTEGRATIONS: readonly Integration[] = [
   },
   {
     title: 'MCP clients',
-    body: 'Read your project evidence and make changes you confirm from compatible assistants.',
+    body: 'Use your project evidence from your own AI assistant.',
     mark: { kind: 'image', src: '/brand/integrations/mcp.png' },
   },
 ];
 
 export const FAQS = [
   {
-    q: 'Is CiteLadder just an AI visibility tracker?',
-    a: 'No. Visibility is where it starts. CiteLadder also traces the sources behind each answer, audits your site, brings in Search Console and GA4 data, and helps your team turn findings into reviewable work.',
+    q: 'What does CiteLadder do besides tracking AI answers?',
+    a: 'It lists the sources behind each answer, crawls your site, adds Search Console and GA4 data, and drafts fixes for you to review.',
   },
   {
     q: 'Which AI engines do you track?',
-    a: 'ChatGPT, Gemini, Claude and Google AI Overviews, depending on your plan. The free trial covers ChatGPT answers. CiteLadder collects answers to your prompts from the consumer apps and from provider APIs, and a collected answer can differ from what a signed-in user sees.',
+    a: 'ChatGPT, Gemini, Claude and Google AI Overviews, depending on your plan. The free trial covers ChatGPT answers. Answers come from the consumer apps and provider APIs, so one can differ from what a signed-in user sees.',
   },
   {
     q: 'What does the free trial include?',
@@ -64,10 +64,10 @@ export const FAQS = [
   },
   {
     q: 'Does CiteLadder change my website or publish content?',
-    a: 'Never on its own. The Agent prepares briefs, edits and plans for your team to review. Publishing and site changes stay with you.',
+    a: 'Not on its own. The Agent prepares briefs, edits and plans for your team to review. You publish them.',
   },
   {
     q: 'Can CiteLadder prove that a change caused a visibility gain?',
-    a: 'No tool can prove that. CiteLadder keeps each measurement comparable and records what changed and when, so your team can judge the evidence instead of trusting a guess.',
+    a: 'No tool can. CiteLadder records what changed and when, and keeps measurements comparable.',
   },
 ] as const;

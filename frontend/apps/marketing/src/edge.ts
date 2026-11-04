@@ -12,6 +12,15 @@ function movedOffSite(path: string): string | undefined {
   return undefined;
 }
 
+/** Platform pages renamed from "… Intelligence" (owner, 2026-11-04); inbound links keep working. */
+const RENAMED_PLATFORM_PAGES: Readonly<Record<string, string>> = {
+  '/platform/citation-intelligence': '/platform/cited-sources',
+  '/platform/commerce-intelligence': '/platform/product-visibility',
+  '/platform/demand-intelligence': '/platform/search-demand',
+  '/platform/search-intelligence': '/platform/keyword-research',
+  '/platform/content-intelligence': '/platform/content-briefs',
+};
+
 /**
  * Everything the marketing Worker decides before Astro renders. The 404 page
  * is prerendered (so scanner traffic stays inside the free 10 ms CPU limit),
@@ -28,7 +37,7 @@ export async function serveMarketingRequest(
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/$/, '');
   const read = request.method === 'GET' || request.method === 'HEAD';
-  const destination = RESEARCH_REDIRECTS[path];
+  const destination = RESEARCH_REDIRECTS[path] ?? RENAMED_PLATFORM_PAGES[path];
   if (destination && read) {
     url.pathname = destination;
     return withSiteHeaders(request, Response.redirect(url, 301));

@@ -331,7 +331,7 @@ Tax receipts and GST treatment are owned by billing-entitlements.md and
 [legal-decisions.md](legal-decisions.md); this guide does not restate them.
 
 For platform spend inspect `platform_calls` (every metered call: model gateway,
-managed Search Intelligence on DataForSEO, JEV, Tavily, Keenable) and
+managed Keyword Research on DataForSEO, JEV, Tavily, Keenable) and
 `agent_model_attempts` (the Agent's per-step dispatch records). Credit rules are
 B11-B14 and B53 of the [decision log](../billing-decisions.md).
 

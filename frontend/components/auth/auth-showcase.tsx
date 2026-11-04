@@ -35,9 +35,9 @@ const AUTH_SHOWCASE_SLIDES: readonly Slide[] = [
   },
   {
     id: 'search',
-    name: 'Search Intelligence',
+    name: 'Keyword Research',
     caption: 'See the keywords you share with competitors.',
-    line: 'Search Intelligence lists the keywords you rank for, the domains you compete with and your backlinks.',
+    line: 'Keyword Research lists the keywords you rank for, the domains you compete with and your backlinks.',
     main: { file: 'search-main', width: 471, height: 283 },
     accent: { file: 'search-accent', width: 252, height: 184 },
   },

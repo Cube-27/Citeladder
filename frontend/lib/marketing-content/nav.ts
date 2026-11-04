@@ -26,7 +26,7 @@ export type NavDrop =
 
 export const PLATFORM_OVERVIEW = {
   title: 'Platform overview',
-  desc: 'AI visibility, website evidence and action.',
+  desc: 'AI answers, site checks and content work.',
   href: '/platform',
 } as const;
 
@@ -39,23 +39,23 @@ export const PLATFORM_GROUPS: readonly {
     items: [
       {
         title: 'AI Visibility',
-        desc: 'Track brand presence across your buyer questions.',
+        desc: 'See which AI answers name your brand.',
         href: '/platform/ai-visibility',
       },
       {
-        title: 'Citation Intelligence',
-        desc: 'Inspect the domains and pages cited in answers.',
-        href: '/platform/citation-intelligence',
+        title: 'Cited Sources',
+        desc: 'See the domains and pages AI answers cite.',
+        href: '/platform/cited-sources',
       },
       {
         title: 'AI Referral Analytics',
-        desc: 'Review identifiable AI visits and landing-page outcomes.',
+        desc: 'See visits from AI assistants and where they land.',
         href: '/platform/ai-referral-analytics',
       },
       {
-        title: 'Commerce Intelligence',
-        desc: 'Measure product and category appearances in AI answers.',
-        href: '/platform/commerce-intelligence',
+        title: 'Product Visibility',
+        desc: 'See where your products rank in AI answers.',
+        href: '/platform/product-visibility',
       },
     ],
   },
@@ -64,18 +64,18 @@ export const PLATFORM_GROUPS: readonly {
     items: [
       {
         title: 'Site Health',
-        desc: 'Investigate technical, content and crawler-access findings.',
+        desc: 'Find technical, content and crawler-access issues.',
         href: '/platform/site-health',
       },
       {
-        title: 'Demand Intelligence',
-        desc: 'Find opportunities in your first-party search data.',
-        href: '/platform/demand-intelligence',
+        title: 'Search Demand',
+        desc: 'Find gaps in your own search and analytics data.',
+        href: '/platform/search-demand',
       },
       {
-        title: 'Search Intelligence',
+        title: 'Keyword Research',
         desc: 'Research keywords, competitors and backlinks.',
-        href: '/platform/search-intelligence',
+        href: '/platform/keyword-research',
       },
     ],
   },
@@ -83,18 +83,18 @@ export const PLATFORM_GROUPS: readonly {
     label: 'Improve & connect',
     items: [
       {
-        title: 'Content Intelligence',
+        title: 'Content Briefs',
         desc: 'Prepare briefs, page edits and internal-link plans.',
-        href: '/platform/content-intelligence',
+        href: '/platform/content-briefs',
       },
       {
         title: 'AI Agent',
-        desc: 'Work through findings with saved project context.',
+        desc: 'Ask about your project data and plan the work.',
         href: '/platform/agents',
       },
       {
         title: 'MCP',
-        desc: 'Read CiteLadder evidence and make changes you approve from AI assistants.',
+        desc: 'Use your CiteLadder data from your own AI assistant.',
         href: '/platform/mcp',
       },
       {
@@ -142,7 +142,7 @@ export const NAV_DROPS: readonly NavDrop[] = [
           { title: 'Founders', desc: 'See if engines recommend you', href: '/solutions#founders' },
           {
             title: 'Ecommerce',
-            desc: 'Product and category answer evidence',
+            desc: 'How AI answers rank your products',
             href: '/solutions#commerce',
           },
           {
@@ -165,12 +165,12 @@ export const NAV_DROPS: readonly NavDrop[] = [
         items: [
           {
             title: 'GEO guide',
-            desc: 'Understand generated answers and where to start',
+            desc: 'What GEO is and where to start',
             href: '/generative-engine-optimization',
           },
           {
             title: 'AI citation tracking guide',
-            desc: 'Learn citation measurement and interpretation',
+            desc: 'How to measure and read AI citations',
             href: '/ai-citation-tracking',
           },
           {
@@ -180,7 +180,7 @@ export const NAV_DROPS: readonly NavDrop[] = [
           },
           {
             title: 'Blog & guides',
-            desc: 'Practical guides to AI visibility and site evidence',
+            desc: 'Guides and research on AI visibility',
             href: '/blog',
           },
         ],
@@ -200,7 +200,7 @@ export const NAV_DROPS: readonly NavDrop[] = [
             href: docsHref('/changelog/'),
             external: true,
           },
-          { title: 'FAQ', desc: 'Answers on AEO, evidence, security, and billing', href: '/faq' },
+          { title: 'FAQ', desc: 'AEO, evidence, security and billing questions', href: '/faq' },
           {
             title: 'Open source',
             desc: 'Self-host CiteLadder or use the hosted version',
@@ -223,7 +223,7 @@ export const NAV_DROPS: readonly NavDrop[] = [
           },
           {
             title: 'Compare',
-            desc: 'Evidence-led notes on AI visibility platforms',
+            desc: 'How CiteLadder compares with other tools',
             href: '/compare',
           },
         ],

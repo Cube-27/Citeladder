@@ -57,8 +57,8 @@ holds what plans grant. Every paid plan bundle grants `workspace_access`,
 ([B5](billing-decisions.md)). Flags are checked without the capacity lock:
 [crawl logs](ai-traffic.md) refuse with 409 `crawl_logs_not_in_plan`, the
 [public API](public-api.md) with 403 `api_access_not_in_plan`, and Commerce and
-Search Intelligence work (Commerce writes and Commerce-scope audits; Search
-Intelligence reviews, confirmations and citation matching) with 403
+Keyword Research work (Commerce writes and Commerce-scope audits; Keyword
+Research reviews, confirmations and citation matching) with 403
 `capability_not_granted`. Data already collected stays readable after a
 downgrade. The non-public flag `fact_checking` is in no bundle; operators grant
 it per pilot workspace with `billing:admin grant`, and
@@ -242,7 +242,7 @@ and always uses the platform gateway.
 DataForSEO surfaces included, on the platform's keys; the request never chooses
 the mode. Its monthly platform budget admits a launch while the month's recorded
 spend is below the ceiling (`BILLING_FUNDED_MONTHLY_BUDGET_MINOR`).
-Search Intelligence on a managed plan researches on the platform's DataForSEO
+Keyword Research on a managed plan researches on the platform's DataForSEO
 account and spends AI credits: the review prices the estimate in credits (the
 DataForSEO cost converted exactly as token cost is), confirmation holds it in the
 same transaction, and the ended analysis is charged the cost of the requests

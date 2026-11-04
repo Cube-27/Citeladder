@@ -459,8 +459,8 @@ Thinking (reasoning) tokens are billed as output by every provider above.
 |---|---|---|---|
 | SERP Google Organic `task_post` (10 results) | Google AI Overview surface | Standard $0.0006, priority $0.0012, live $0.002 per SERP; async AI Overview loading adds one base price | `observed_standard_task_cost_microusd` 1,200 and `async_ai_overview_surcharge_microusd` 600 (`dataforseo.json`). The 1,200 matches the priority-queue price and was observed live; check which queue the task uses before relying on either figure |
 | AI Optimization LLM Scraper (ChatGPT, Gemini) | ChatGPT Search and Gemini consumer surfaces | Standard $0.0012, priority $0.0024, live $0.004 per results page | Priority 1 (standard queue) in `dataforseo.json` |
-| DataForSEO Labs live endpoints (ranked keywords, page and domain intersection, keyword suggestions, relevant pages, subdomains, domain rank overview) | Search Intelligence | $0.012 per task plus $0.00012 per returned item | `rates.labs_task` and `rates.labs_item` (`search-intelligence.json`) — match |
-| Backlinks API | Search Intelligence | $0.024 per request plus $0.000036 per row | `rates.backlinks_request` and `rates.backlinks_row` — match |
+| DataForSEO Labs live endpoints (ranked keywords, page and domain intersection, keyword suggestions, relevant pages, subdomains, domain rank overview) | Keyword Research | $0.012 per task plus $0.00012 per returned item | `rates.labs_task` and `rates.labs_item` (`search-intelligence.json`) — match |
+| Backlinks API | Keyword Research | $0.024 per request plus $0.000036 per row | `rates.backlinks_request` and `rates.backlinks_row` — match |
 
 The DataForSEO account needs a minimum $50 payment. Prices are per call
 regardless of who supplies the key; on bring-your-own-key plans the customer's

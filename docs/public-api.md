@@ -109,7 +109,7 @@ comparison (each visibility read takes `market`, a market id; omitted is the
 default market), actions,
 Site Health's latest snapshot, crawl pages and issues, AI Traffic overview,
 pages and crawl-log coverage, Performance totals and dimension tables, and
-Search Intelligence runs and dataset rows.
+Keyword Research runs and dataset rows.
 
 Writes: topics and prompts (create 1–50 atomically, edit, status and enabled,
 delete, import), prompt generation and candidate review (`prompts:write`);

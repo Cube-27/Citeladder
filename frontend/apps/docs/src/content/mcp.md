@@ -20,7 +20,7 @@ The hosted endpoint is `https://api.citeladder.com/mcp`. One address works for e
 
 ## What you can read
 
-The server exposes project discovery, business context, prompts, visibility results and sources, Actions, the AI Shelf, Site Health and crawler access, AI traffic and crawl logs, connected-data status, performance, AI referrals, search demand and saved Search Intelligence datasets.
+The server exposes project discovery, business context, prompts, visibility results and sources, Actions, the AI Shelf, Site Health and crawler access, AI traffic and crawl logs, connected-data status, performance, AI referrals, search demand and saved Keyword Research datasets.
 
 Use the [tool reference](/mcp/tools/) for the registered catalog and [example requests](/mcp/examples/) for practical starting points.
 
@@ -38,7 +38,7 @@ The Agent reads evidence through the same catalogue of read tools, limited to it
 
 ## What the connection cannot do
 
-MCP cannot make a change you did not allow or confirm. It cannot start a crawl, sync a provider, buy a Search Intelligence dataset, generate through CiteLadder's Agent runtime, publish content, delete projects or change billing, members or credentials.
+MCP cannot make a change you did not allow or confirm. It cannot start a crawl, sync a provider, buy a Keyword Research dataset, generate through CiteLadder's Agent runtime, publish content, delete projects or change billing, members or credentials.
 
 If evidence is stale or unavailable, refresh or acquire it through the appropriate CiteLadder workflow, then ask the client to read again.
 

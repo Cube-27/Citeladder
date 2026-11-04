@@ -120,7 +120,7 @@ If the sample is small or selected for convenience, say so. Readers can still us
 
 ## 6. Consolidate overlapping and outdated pages
 
-For a bounded brief, proposed page edit or internal-link plan, explore [Content Intelligence](/platform/content-intelligence). These Agent workflows prepare work for review and are not included in the current public trial.
+For a bounded brief, proposed page edit or internal-link plan, explore [Content Briefs](/platform/content-briefs). These Agent workflows prepare work for review and are not included in the current public trial.
 
 When several pages answer the same question with conflicting details, decide which one should be maintained as the primary resource. Redirect or consolidate only after checking traffic, links, user needs and technical consequences.
 

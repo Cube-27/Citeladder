@@ -23,13 +23,13 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Coverage beside every score',
-        body: 'Scores come with what was checked, so a partial crawl never reads as a full audit.',
+        body: 'Each score shows how much of your site it covers, so you can see when a crawl was partial.',
       },
     ],
     features: [
       {
-        title: 'Two scores, each with a clear meaning',
-        body: 'Web Fundamentals covers the basics every page needs: indexability, HTTPS, titles, canonicals, language, mobile viewport and more. AEO Readiness scores what answer engines rely on across seven pillars. Only checks that matter for visibility or performance count toward a score; the rest stay visible as advice.',
+        title: 'Two scores: Web Fundamentals and AEO Readiness',
+        body: 'Web Fundamentals covers the basics every page needs, such as indexability, HTTPS, titles, canonicals, language and the mobile viewport. AEO Readiness scores what answer engines rely on across seven pillars. Only checks that affect visibility or performance count toward a score. The rest appear as advice.',
         points: [
           'Crawlability, machine readability, structure and answerability',
           'Evidence, provenance and freshness',
@@ -40,7 +40,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Technical and answer-readiness checks together',
-        body: 'Review website fundamentals alongside the structure, evidence and machine readability that answer engines rely on. Server-rendered content, valid structured data that matches the page, and clear headings are checked page by page. Unresolved checks stay visible instead of passing silently.',
+        body: 'CiteLadder checks each page for server-rendered content, structured data that is valid and matches what the page says, and clear headings. A check that could not run is marked unresolved, so you know what was not tested.',
         points: [
           'Grouped issues with every affected page',
           'Structured data validated against visible content',
@@ -126,10 +126,10 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
         a: 'No. Site Health reports server response time as a diagnostic, but it does not produce field Core Web Vitals.',
       },
     ],
-    closing: 'Give your developers a clear starting point.',
+    closing: 'Hand your developers a fix list with the evidence attached',
     related: [
-      '/platform/content-intelligence',
-      '/platform/demand-intelligence',
+      '/platform/content-briefs',
+      '/platform/search-demand',
       '/platform/agents',
       '/platform/ai-visibility',
       '/tools',
@@ -137,55 +137,55 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     ],
   },
   {
-    path: '/platform/demand-intelligence',
+    path: '/platform/search-demand',
     title: 'Search Demand & GSC Opportunity Analysis | CiteLadder',
     description:
-      'Turn Search Console queries and landing pages into ranked opportunities: striking-distance queries, CTR gaps, cannibalization, relevance gaps and demand shifts.',
-    heading: 'Find the opportunities already in your search data',
-    lead: 'Connect Search Console to see which queries reach which pages, and get the signals worth acting on instead of another unranked keyword list.',
+      'Find the Search Console queries ranking at positions 4 to 15, pages with weak click-through, two pages competing for one query, and queries rising or falling.',
+    heading: 'Find the pages your search data says to update first',
+    lead: 'Connect Search Console and CiteLadder reads the last 28 days of your queries and pages. You see which non-branded queries sit at positions 4 to 15, and the page that ranks for each, so you know which pages to update first.',
     cta: 'demo',
     visual: 'demand',
     visualTitle: 'Search Demand',
     highlights: [
       {
         title: 'Striking distance',
-        body: 'Queries ranking just off page one, tied to the page that ranks for them.',
+        body: 'Non-branded queries at an average position of 4 to 15 with at least 50 impressions, each tied to the page that ranks.',
       },
       {
         title: 'CTR gaps',
-        body: "Pages earning fewer clicks than your property's norm for their position.",
+        body: 'Queries clicked at least 25% and 2 points less often than your median for the same position.',
       },
       {
         title: 'Demand shifts',
-        body: 'Emerging and declining queries between periods, with branded demand kept separate.',
+        body: 'Queries whose impressions rose or fell sharply between the last two 14-day periods. Branded searches are counted separately.',
       },
     ],
     features: [
       {
-        title: 'Signals, not another keyword list',
-        body: 'Demand Intelligence reads your Search Console queries and pages and raises the specific patterns worth acting on. Each signal names the page and query involved and the reporting window it came from.',
+        title: 'Seven signals, each tied to a page',
+        body: 'Search Demand reads your Search Console queries and pages and raises a signal when a pattern passes its threshold. Each signal names the query, the page and the reporting window it came from.',
         points: [
-          'High impressions with low click-through',
-          'Striking-distance queries and CTR gaps against your own norm',
-          'Two pages competing for the same query',
-          'Emerging and declining queries, with branded demand apart',
+          'Queries with 10 or more impressions and a click-through of 2% or less',
+          'Queries at positions 4 to 15, and click-through below your own norm',
+          'Two pages each taking at least 10% of one query’s impressions',
+          'Emerging and declining queries, with branded searches counted apart',
         ],
         visual: 'demand',
       },
       {
         title: 'Queries in their landing-page context',
-        body: 'See what each page appears for before you decide how to change it. Where the page can be read, its title, H1 and content are compared with the queries it wins, so a mismatch between search intent and page copy is easy to spot.',
+        body: 'See what each page appears for before you change it. Where CiteLadder can read the page, it checks whether the query’s terms appear in the title, H1 and main content, and lists the terms that are missing.',
         points: [
           'Grouped by page or by query',
           'Reporting window and source on every row',
-          'Query-to-page relevance checks',
-          'Unknown and ambiguous states kept visible',
+          'Missing query terms listed for the title and H1',
+          'Ambiguous queries labelled as ambiguous',
         ],
         visual: 'query-page',
       },
       {
         title: 'From a signal to a reviewable edit',
-        body: 'Signals become page Actions beside your Site Health and visibility findings. Open the evidence behind any Action and hand it to the Agent to draft a focused change. Later data shows what happened next.',
+        body: 'Signals become page Actions beside your Site Health and visibility findings. Open the evidence behind any Action and hand it to the Agent to draft a change to that page. The next reporting window shows whether the query moved.',
         points: [
           'Signals become page Actions',
           'The handoff includes the evidence',
@@ -213,7 +213,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
       },
     ],
     questions: [
-      'Which queries are one push away from page one?',
+      'Which queries rank between 4 and 15, and which page ranks for each?',
       'Which pages get impressions but not clicks?',
       'Are two of our pages competing for the same query?',
       'Which queries are rising or falling, outside our brand name?',
@@ -221,16 +221,16 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     ],
     faqs: [
       {
-        q: 'Which signals does Demand Intelligence find?',
-        a: 'High impressions with low click-through, striking-distance queries, click-through gaps against your property’s norm, two pages competing for one query, weak query-to-page relevance, emerging and declining queries, and branded query performance.',
+        q: 'Which signals does Search Demand find?',
+        a: 'Seven signals: high impressions with low click-through, striking-distance queries at positions 4 to 15, click-through below your median for the same position, two pages competing for one query, query terms missing from the ranking page, and emerging and declining queries. Branded query performance is reported separately.',
       },
       {
         q: 'Is this data from private AI conversations?',
-        a: 'No. Demand Intelligence uses your connected Search Console data. Suggested prompts are suggestions, not AI search volumes.',
+        a: 'No. Search Demand uses your connected Search Console data. Suggested prompts are suggestions, not AI search volumes.',
       },
       {
-        q: 'How is this different from Search Intelligence?',
-        a: 'Demand uses your own first-party data. Search Intelligence adds external keyword, competitor and backlink research when you need it.',
+        q: 'How is this different from Keyword Research?',
+        a: 'Search Demand uses your own Search Console data. Keyword Research adds external keyword, competitor and backlink research when you need it.',
       },
       {
         q: 'Why is branded demand kept separate?',
@@ -245,16 +245,16 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
         a: 'No. A signal shows where your data suggests an opportunity. CiteLadder compares later windows after a change so you can judge the result.',
       },
     ],
-    closing: 'Use the search data you already have to choose better work.',
+    closing: 'Start with the queries you already rank for',
     related: [
-      '/platform/search-intelligence',
+      '/platform/keyword-research',
       '/platform/site-health',
-      '/platform/content-intelligence',
+      '/platform/content-briefs',
       '/platform/integrations',
     ],
   },
   {
-    path: '/platform/search-intelligence',
+    path: '/platform/keyword-research',
     title: 'Keyword, Competitor & Backlink Research | CiteLadder',
     description:
       'Research keywords, competing domains, top pages and backlinks with optional DataForSEO datasets, priced and confirmed before collection.',
@@ -262,7 +262,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     lead: 'Add external research when your own data cannot answer the question: ranked keywords, competitors, top pages and backlinks. Each collection shows its scope and price before you confirm it.',
     cta: 'setup',
     visual: 'search',
-    visualTitle: 'Search Intelligence',
+    visualTitle: 'Keyword Research',
     highlights: [
       {
         title: 'Keywords and competitors',
@@ -273,14 +273,14 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
         body: 'Referring domains, linked pages and link history, matched to cited sources where the data allows.',
       },
       {
-        title: 'No surprise spend',
+        title: 'Cost shown before you buy',
         body: 'Every new collection shows its scope and maximum cost, and runs only after you confirm.',
       },
     ],
     features: [
       {
         title: 'Review the scope and cost first',
-        body: 'New research uses a review-and-confirm step: you see the target, market, row limit and maximum cost before anything is bought. Opening a saved dataset never buys a refresh, and missing results are never rewritten as zero.',
+        body: 'New research uses a review-and-confirm step: you see the target, market, row limit and maximum cost before anything is bought. Opening a saved dataset never buys a refresh, and results the provider did not return stay marked as missing.',
         points: [
           'Target, market and row limit up front',
           'Maximum cost before you confirm',
@@ -290,12 +290,12 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
         visual: 'acquisition',
       },
       {
-        title: 'See where competitors win and you do not',
-        body: 'Compare ranking keywords across your domain and competitors to find the keywords they rank for that you miss. Strong gaps become keyword Actions beside your other evidence, so research turns into planned pages instead of a spreadsheet.',
+        title: 'Keywords your competitors rank for and you miss',
+        body: 'Compare ranking keywords across your domain and your competitors. A keyword with a search volume of 50 or more, where a competitor ranks in the top ten and you do not, becomes a keyword Action beside your other evidence.',
         points: [
           'Ranking, shared and missing keywords',
           'Keyword suggestions around a seed',
-          'Keyword-gap Actions with a bounded number per refresh',
+          'Up to 25 keyword-gap Actions per refresh',
         ],
         visual: 'search',
       },
@@ -326,7 +326,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     ],
     faqs: [
       {
-        q: 'Is Search Intelligence in the free trial?',
+        q: 'Is Keyword Research in the free trial?',
         a: 'No. It needs your own DataForSEO connection and a confirmation for each collection. Contact us to discuss your use case.',
       },
       {
@@ -343,14 +343,14 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'What is a keyword-gap Action?',
-        a: 'A keyword with meaningful search volume where a competitor ranks in the top ten and you do not. A limited number are raised per refresh, so the list stays workable.',
+        a: 'A keyword with a search volume of 50 or more where a competitor ranks in the top ten and you do not. Navigational keywords are left out, and up to 25 are raised per refresh.',
       },
     ],
-    closing: 'Research the questions your own data cannot answer.',
+    closing: 'Research the questions your own data cannot answer',
     related: [
-      '/platform/demand-intelligence',
-      '/platform/citation-intelligence',
-      '/platform/content-intelligence',
+      '/platform/search-demand',
+      '/platform/cited-sources',
+      '/platform/content-briefs',
       '/platform/integrations',
     ],
   },

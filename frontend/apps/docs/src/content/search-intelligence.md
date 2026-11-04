@@ -1,12 +1,12 @@
 ---
-title: 'Search Intelligence'
+title: 'Keyword Research'
 description: 'Research keywords, competitors and backlinks with reviewed acquisitions and saved datasets.'
 group: 'Measure and understand'
 order: 160
-updated: '2026-10-10'
+updated: '2026-11-04'
 ---
 
-Search Intelligence combines an overview with **Keywords**, **Competitors** and **Backlinks** views. Each result belongs to a saved dataset with its own target, market, scope and acquisition time.
+Keyword Research combines an overview with **Keywords**, **Competitors** and **Backlinks** views. Each result belongs to a saved dataset with its own target, market, scope and acquisition time.
 
 ## Review before acquiring
 

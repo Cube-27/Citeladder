@@ -173,7 +173,7 @@ export const POST_PLAYBOOK: BlogPost = {
         'Use ',
         { type: 'link', text: 'AI citation tracking', href: '/ai-citation-tracking' },
         ' to inspect ',
-        { type: 'link', text: 'source patterns', href: '/platform/citation-intelligence' },
+        { type: 'link', text: 'source patterns', href: '/platform/cited-sources' },
         ' and the ',
         {
           type: 'link',

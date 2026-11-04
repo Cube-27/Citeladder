@@ -186,7 +186,7 @@ Deferred by the [Search Intelligence review](../archive/search-intelligence-impr
   provenance. Retention needs the same reference inventory as the Connected data
   snapshot-retention item.
 
-Owner: [Connected data](../integrations-traffic-analytics.md#search-intelligence-acquisition).
+Owner: [Connected data](../integrations-traffic-analytics.md#keyword-research-acquisition).
 
 ### Public site remainder
 

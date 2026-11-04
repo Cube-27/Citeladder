@@ -1,4 +1,4 @@
-# Commerce Intelligence
+# Commerce
 
 Commerce measures how AI answers recommend a business's products and
 categories, and turns that measurement into Actions. It has one `/products`

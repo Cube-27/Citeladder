@@ -200,7 +200,7 @@ CiteLadder runs your buyer questions on a schedule across ChatGPT, Gemini, Claud
 
 1. **Set up questions and competitors.** Generate buyer-style questions for your market and name the competitors to compare against.
 2. **Collect answers.** Each run stores the raw answer, its citations and, where the engine exposes them, the sources it retrieved.
-3. **Inspect citations.** Citation Intelligence groups cited domains and URLs by ownership, so you can see competitor share, mention-without-citation and new or lost sources, then open the exact answer behind any number.
+3. **Inspect citations.** Cited Sources groups cited domains and URLs by ownership, so you can see competitor share, mention-without-citation and new or lost sources, then open the exact answer behind any number.
 4. **Act.** Move from a source pattern to the page or publisher worth investigating.
 
 [See the broader GEO workflow](/generative-engine-optimization) or [compare AI visibility tools](/best-ai-visibility-platforms).

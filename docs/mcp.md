@@ -181,7 +181,7 @@ catalogue (below).
 | App | `render_visibility`, `render_site_health`, `open_analytics` |
 
 Each tool is a thin adapter over its owner (Visibility, Actions, Site Health,
-AI Traffic, Commerce, Search Intelligence, brand memory), so a correction in the
+AI Traffic, Commerce, Keyword Research, brand memory), so a correction in the
 owner reaches the app, the Agent and MCP together. Enumerated arguments are enums
 (the engine set comes from the visibility configuration); paged tools take
 `cursor` and `limit`, and a cursor continues only the selection that produced it.

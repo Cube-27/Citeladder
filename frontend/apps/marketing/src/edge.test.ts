@@ -27,21 +27,20 @@ describe('marketing Worker edge', () => {
     expect(render).not.toHaveBeenCalled();
   });
 
-  it('permanently redirects retired research URLs before Astro', async () => {
-    const render = vi.fn(async () => notFoundPage());
-    const response = await serveMarketingRequest(get('/check-ai-visibility/'), env, render);
-    expect(response.status).toBe(301);
-    expect(response.headers.get('location')).toBe(
-      'https://citeladder.com/blog/verify-improve-ai-search-visibility',
-    );
-    expect(render).not.toHaveBeenCalled();
-  });
-
   it.each([
+    // A retired research URL.
+    ['/check-ai-visibility/', 'https://citeladder.com/blog/verify-improve-ai-search-visibility'],
+    // Platform pages renamed from "… Intelligence".
+    ['/platform/citation-intelligence', 'https://citeladder.com/platform/cited-sources'],
+    ['/platform/commerce-intelligence/', 'https://citeladder.com/platform/product-visibility'],
+    ['/platform/demand-intelligence', 'https://citeladder.com/platform/search-demand'],
+    ['/platform/search-intelligence', 'https://citeladder.com/platform/keyword-research'],
+    ['/platform/content-intelligence', 'https://citeladder.com/platform/content-briefs'],
+    // Former apex MCP addresses, now off the site.
     ['/mcp', 'https://api.citeladder.com/mcp'],
     ['/docs/mcp', 'https://docs.citeladder.com/mcp/'],
     ['/docs/mcp/connect/', 'https://docs.citeladder.com/mcp/'],
-  ])('permanently redirects the former apex MCP address %s off the site', async (path, target) => {
+  ])('permanently redirects %s before Astro', async (path, target) => {
     const render = vi.fn(async () => notFoundPage());
     const response = await serveMarketingRequest(get(path), env, render);
     expect(response.status).toBe(301);

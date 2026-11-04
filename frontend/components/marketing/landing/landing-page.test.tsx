@@ -25,11 +25,11 @@ describe('LandingPage', () => {
     render(<LandingPage rotor={<EngineRotor />} />);
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName(
-      'See how AI and search find you, then fix what holds you back',
+      'See whether AI recommends you, and what to fix when it does not',
     );
     expect(
       screen.getByText(
-        'CiteLadder tracks what ChatGPT, Gemini, Claude and Google AI Overviews say',
+        'CiteLadder is the tool you use when you want ChatGPT, Gemini, Claude and Google AI Overviews to recommend your business',
       ),
     ).toHaveClass('sr-only');
   });
@@ -38,9 +38,9 @@ describe('LandingPage', () => {
     render(<LandingPage />);
 
     const pillars = screen.getByRole('region', { name: 'Measure, diagnose, improve' });
-    expect(within(pillars).getByRole('link', { name: 'Search Intelligence' })).toHaveAttribute(
+    expect(within(pillars).getByRole('link', { name: 'Keyword Research' })).toHaveAttribute(
       'href',
-      '/platform/search-intelligence',
+      '/platform/keyword-research',
     );
     expect(within(pillars).getByRole('link', { name: 'MCP' })).toHaveAttribute(
       'href',

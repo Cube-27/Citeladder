@@ -54,10 +54,9 @@ export function Integrations() {
     <section className="lp-section site-band" id="integrations">
       <div className="lp-wrap site-wrap site-split">
         <div className="lp-head">
-          <h2 className="website-section-heading">Works with the data you already have</h2>
+          <h2 className="website-section-heading">Connect the data you already have</h2>
           <p className="website-lead">
-            Start with AI answers alone. Connect search, analytics and research sources when the
-            question needs them.
+            Start with AI answers. Add other sources when you need them.
           </p>
           <TextLink href="/platform/integrations">Explore integrations</TextLink>
         </div>
@@ -83,7 +82,7 @@ export function Teams() {
     <section className="lp-section site-band" id="teams">
       <div className="lp-wrap site-wrap lp-stack">
         <div className="lp-head lp-head-split">
-          <h2 className="website-section-heading">Built for the teams responsible for search</h2>
+          <h2 className="website-section-heading">Who uses CiteLadder</h2>
           <TextLink href="/solutions">Explore solutions</TextLink>
         </div>
         <ul className="lp-teams site-cards">
@@ -104,13 +103,10 @@ export function Teams() {
 }
 
 const TRUST = [
-  ['Workspace isolation', 'Every read and write is authorized to its workspace and project.'],
+  ['Workspace isolation', 'Each read and write is checked against its workspace.'],
   ['Encrypted credentials', 'Provider keys and connections are stored encrypted.'],
-  ['Evidence you can audit', 'Raw answers and crawls are append-only; results keep their sources.'],
-  [
-    'You stay in control',
-    'Nothing publishes, contacts third parties or changes your site on its own.',
-  ],
+  ['Evidence you can audit', 'Raw answers and crawls are never overwritten.'],
+  ['You approve changes', 'CiteLadder does not publish or edit your site on its own.'],
 ] as const;
 
 /* A split, not another card row: the heading beside a two-by-two list. */

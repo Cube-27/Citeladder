@@ -19,7 +19,7 @@ export const FREE_TOOLS = [
     title: 'Robots.txt generator',
     category: 'Crawl access',
     description:
-      'Choose crawler permissions, add your sitemap and download a tested starting point.',
+      'Choose which crawlers to allow, add your sitemap and download a robots.txt to start from.',
     input: 'Choose permissions',
     limitation:
       'Review and merge with your existing file before publishing. Robots.txt is not access control and does not remove indexed pages.',
@@ -43,7 +43,7 @@ export const FREE_TOOLS = [
     description: 'Create Article, Organization or Breadcrumb JSON-LD from facts you provide.',
     input: 'Enter page details',
     limitation:
-      'This is a markup builder, not a rich-result eligibility test. Use accurate facts visible on the page; markup does not guarantee rankings or citations.',
+      'It builds markup and does not test rich-result eligibility. Use accurate facts that are visible on the page. Markup does not guarantee rankings or citations.',
   },
   {
     slug: 'sitemap-comparison',
@@ -122,7 +122,7 @@ export const TOOL_GUIDES: Partial<Record<FreeToolSlug, ToolGuide>> = {
       'Malformed input: unclosed tags, entries with no loc or more than one, and document type or entity declarations, which are refused.',
     ],
     reading: [
-      'Removed URLs left the sitemap. Confirm each one was retired on purpose and now redirects or returns 404 or 410, rather than being dropped by a CMS or plugin change.',
+      'Removed URLs left the sitemap. Confirm each one was retired on purpose and now redirects or returns 404 or 410. A CMS or plugin update can drop URLs without anyone noticing.',
       'Added URLs should each return 200, declare themselves as canonical and carry no noindex. A sitemap should list only pages you want indexed.',
       'Matching is exact, so https://example.com/a and https://example.com/a/ are different URLs. Long added and removed lists of near-identical URLs usually mean a trailing slash, protocol or host change.',
       'Duplicates do not harm crawling but usually point to a bug in the sitemap generator.',
