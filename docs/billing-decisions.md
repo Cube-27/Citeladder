@@ -447,6 +447,18 @@ when the turn ends failed, append-only refunds return the AI credits its calls
 debited. A turn the person stops is cancelled, not failed, and is charged as
 before.
 
+**B59 — Owner, 2026-11-04.** Agent web searches are internal cost at the
+provider's published per-search rate (Anthropic: $10 per 1,000 searches,
+`web_search_microusd_per_request` in the
+[AI credit configuration](../frontend/services/api/src/config/ai-credits.json));
+customers see AI credits only, with the usual markup. Engineering: each model
+call's hold adds that rate for every search the call may run (its share of the
+turn's `max_web_searches`), and settlement charges the searches the provider
+reports; search result tokens are input tokens at the model's rates. A failed
+turn's searches are refunded with its other debits (B58). Source: the owner's
+approval of Agent web search, "PR3 can include web search tool and multiple
+doc".
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,

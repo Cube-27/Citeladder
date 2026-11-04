@@ -193,8 +193,9 @@ price, policy, statistic, and competitor facts; there is no second model call or
 deterministic claim-validator layer. A turn's sources are the records its
 executed reads returned plus the attached or mentioned Actions' findings; the
 model does not repeat record references, which are removed from user-facing
-text. The output remains a reviewable deliverable, and the UI labels the
-context actually used.
+text. A fact from a web search is attributed to the page it came from; that
+page is shown as a web source, never as a CiteLadder record. The output remains
+a reviewable deliverable, and the UI labels the context actually used.
 
 Where structured data mirrors visible content, such as `FAQPage`, markup is
 generated from reviewed visible content rather than substituted for it.
@@ -206,7 +207,12 @@ config-owned budgets frozen per run: model calls, tool calls, parallel reads per
 response, result size and time. Every call is authorized as the chat member,
 bounded, versioned, and idempotent where required. The Agent has no write tool,
 arbitrary SQL, unrestricted URL access, provider impersonation, private data
-store, autonomous recursion, or unapproved external mutation. Persisted run
+store, autonomous recursion, or unapproved external mutation. Its one reach
+outside CiteLadder data is the model provider's hosted web search, within a
+config-owned per-turn search budget that each call's funding hold covers:
+searched pages are untrusted observations kept apart from the records a turn
+read, never CiteLadder sources, facts or evidence, and the Agent never fetches,
+submits to or changes a page it found. Persisted run
 transcripts are run records replayed to the model, never a knowledge store: no
 read returns them and they are never shown. Generating an output never declares
 implementation or claims an improvement without new measured evidence.
