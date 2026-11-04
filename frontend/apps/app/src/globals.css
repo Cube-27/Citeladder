@@ -1085,9 +1085,15 @@ a.focus-ring:active .type-caption {
    its label never move. A table row's mark sits on its first cell, since rows
    cannot position a mark in every engine. */
 .selection-bar,
-.selection-bar-foot,
-.selection-bar-cells > :first-child {
+.selection-bar-foot {
   position: relative;
+}
+/* Layered, so a pinned column's `sticky` utility (also a containing block for
+   the mark) still wins over this default. */
+@layer components {
+  .selection-bar-cells > :first-child {
+    position: relative;
+  }
 }
 .selection-bar::before,
 .selection-bar-foot::before,
