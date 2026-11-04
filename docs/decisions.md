@@ -171,6 +171,33 @@ Action as before.
 Source: owner, 4 November 2026: "PR3 can include web search tool and multiple
 doc". [Agent](agents.md) owns the shipped behavior.
 
+## The Agent works proportionately, with simple skills
+
+The Agent analyses proportionately: a representative sample is enough unless
+the person asks for every page. It starts from the evidence already supplied
+(an issue's sampled occurrences, the context), reads 3–5 representative pages
+for an issue across many pages and says how many of the total the sample
+covers, and reads a page's full text only when that page is directly relevant.
+Agent page reads return 20 rows by default and at most 50 (MCP clients keep
+their own larger pages). Web search runs only when the person asks for it or
+the answer genuinely needs outside information; it is not a default step.
+
+Skills are simple: each gives the goal, where the data is, a few points of
+domain judgement the model would not reliably bring, and the deliverable's
+shape, with no numbered methods, exhaustive verification demands or repeated
+caveats the operating contract already states. The models are capable enough
+that brittle skills hinder useful results. The in-app skills, the content
+formats and the public plugin's twins follow this shape. Credit holds follow
+[B60](billing-decisions.md#agent-chat-behaviour-2026-11-04).
+
+Source: owner, 4 November 2026: "the model doesnt need to analyze everything
+in one go, if i sent 112 pages it doesnt mean all needs to be checked and even
+for web search why 5 calls? unless the user specifically asks or a analysis
+needs web search", and "review all skills - we need to simplify most skills so
+that model can actually deliver useful results and improve user experience,
+the models are themself good enough that overly brittle skills can actually be
+a hindrance". [Agent](agents.md) owns the shipped behavior.
+
 ## Onboarding creates no prompts
 
 Onboarding confirms business context and competitors, then creates the project

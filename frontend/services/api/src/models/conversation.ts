@@ -42,7 +42,19 @@ export type ConversationRequest = {
    * Anthropic only: chat completions have no hosted search and ignore it.
    */
   webSearches: number;
+  /**
+   * The output cap (thinking included) this call's credit hold covers, which
+   * a short balance lowers; omitted is the route's configured cap.
+   */
+  maxOutputTokens?: number;
 };
+/** The output cap a call is sent with: its own when lower, else the route's. */
+export function outputCap(
+  request: Pick<ConversationRequest, 'maxOutputTokens'>,
+  configured: number,
+) {
+  return Math.min(configured, request.maxOutputTokens ?? configured);
+}
 /**
  * Why the prompt cache could not reuse the previous call's prefix. `not_requested`
  * had no previous response to compare; `none` compared and found no change;

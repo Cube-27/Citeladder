@@ -71,6 +71,7 @@ describe('a fresh database', () => {
       '0002_agent_single_draft',
       '0003_agent_cache_replay',
       '0004_agent_documents_web_search',
+      '0005_agent_call_hold_basis',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -80,6 +81,7 @@ describe('a fresh database', () => {
       { version: '0002_agent_single_draft' },
       { version: '0003_agent_cache_replay' },
       { version: '0004_agent_documents_web_search' },
+      { version: '0005_agent_call_hold_basis' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -113,19 +115,28 @@ describe('an existing database', () => {
       '0002_agent_single_draft',
       '0003_agent_cache_replay',
       '0004_agent_documents_web_search',
+      '0005_agent_call_hold_basis',
     ]);
     expect(await columns(client, 'agent_runs')).not.toContain('mode');
     expect(await columns(client, 'agent_output_revisions')).not.toContain('approved_at');
     // Transcripts keep their bytes; each model call records its cache use.
     expect(await columnType(client, 'agent_run_transcripts', 'messages')).toBe('json');
     expect(await columns(client, 'agent_model_attempts')).toEqual(
-      expect.arrayContaining(['response_id', 'cache_miss_reason', 'usage_iterations']),
+      expect.arrayContaining([
+        'response_id',
+        'cache_miss_reason',
+        'usage_iterations',
+        // What each call's credit hold was sized from.
+        'input_bytes',
+        'max_output_tokens',
+      ]),
     );
     expect(await ledger(client)).toEqual([
       { version: '0001_baseline' },
       { version: '0002_agent_single_draft' },
       { version: '0003_agent_cache_replay' },
       { version: '0004_agent_documents_web_search' },
+      { version: '0005_agent_call_hold_basis' },
     ]);
   }, 120000);
 });
@@ -149,7 +160,9 @@ describe('a chat with a document before multi-document chats', () => {
       );
     await insert(first!);
 
-    expect(await applyMigrations(client)).toEqual(['0004_agent_documents_web_search']);
+    expect(await applyMigrations(client, migrations.slice(0, 4))).toEqual([
+      '0004_agent_documents_web_search',
+    ]);
     const kept = await client.query('select id, number from public.agent_outputs');
     expect(kept.rows).toEqual([{ id: first, number: 1 }]);
     await insert(second!, 2);
