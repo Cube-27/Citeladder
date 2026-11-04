@@ -138,7 +138,14 @@ retried once at low effort, and a failed turn that saved nothing is not charged
 ([B58](billing-decisions.md#agent-chat-behaviour-2026-11-04)). The removal keeps
 no compatibility path, and processing versions stay at 1.
 
-Source: owner, 4 November 2026 (Agent chat-behaviour request). [Agent](agents.md)
+The chat should also be efficient. Anthropic's message threads (beta) are
+rejected: they expire after five minutes, do not compact and are not durable.
+Transcripts stay append-only and durable in PostgreSQL, and prompt caching is
+fixed within replay. Processing, policy, runtime and protocol versions stay at
+1, with no back-compatibility shims.
+
+Source: owner, 4 November 2026 (Agent chat-behaviour request; efficiency and
+message threads in the follow-up of the same day). [Agent](agents.md)
 owns the shipped behavior and limits.
 
 ## Onboarding creates no prompts

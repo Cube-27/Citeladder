@@ -94,8 +94,27 @@ describe('platform AI metering', () => {
         output_tokens: 1,
       }),
     ).toBeNull();
-    // A cached call's hold prices every input byte at the write rate: 1M bytes → $0.125 → 163.
-    expect(cachedReservationCredits(haiku, 1_000_000, 0)).toBe(163);
+    // One-hour writes cost twice the base rate: $0.01 + $0.008 + $0.02 + $0.05 = $0.088 → 115.
+    expect(
+      chargeCredits(haiku, {
+        input_tokens: 1_000_000,
+        cached_input_tokens: 800_000,
+        cache_write_input_tokens: 100_000,
+        cache_write_1h_input_tokens: 100_000,
+        output_tokens: 100_000,
+      }),
+    ).toBe(115);
+    expect(
+      chargeCredits(haiku, {
+        input_tokens: 10,
+        cache_write_input_tokens: 2,
+        cache_write_1h_input_tokens: 3,
+        output_tokens: 1,
+      }),
+    ).toBeNull();
+    // A cached call's hold prices every input byte at the dearest (one-hour) write rate:
+    // 1M bytes → $0.20 → 260.
+    expect(cachedReservationCredits(haiku, 1_000_000, 0)).toBe(260);
     expect(reservationCredits(haiku, 1_000_000, 0)).toBe(130);
     // An unpriced model has no price, except the configured gateway model at the default rate.
     expect(modelPrice('unpriced-model', 'gateway-model')).toBeNull();

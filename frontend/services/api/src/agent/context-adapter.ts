@@ -28,6 +28,30 @@ function owned(candidate: unknown, website: string) {
     return '';
   }
 }
+const hostOf = (value: string) => {
+  try {
+    return new URL(value).hostname.toLowerCase().replace(/^www\./u, '');
+  } catch {
+    return '';
+  }
+};
+// An address starts a word: an email's domain (`name@site.com`) is not a page.
+const URL_TOKEN = /(?<![@\w.-])(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s<>"'`)\]]*)?/giu;
+/**
+ * The first address in the person's message on the project's own site, with
+ * or without a scheme or `www.`: the page the request is about. Another site's
+ * URL is never a target.
+ */
+function requestedPageUrl(request: string, website: string) {
+  const site = hostOf(website);
+  if (!site) return '';
+  for (const [token] of request.matchAll(URL_TOKEN)) {
+    const url = token.replace(/[.,;:!?]+$/u, '');
+    const absolute = /^https?:\/\//iu.test(url) ? url : `https://${url}`;
+    if (hostOf(absolute) === site) return absolute;
+  }
+  return '';
+}
 type OriginDb = Parameters<ContextReader>[0];
 type OriginScope = Parameters<ContextReader>[1];
 type OriginRefs = z.infer<typeof agentContextRefsSchema>;
@@ -86,6 +110,7 @@ async function resolveOrigins(
   db: Parameters<ContextReader>[0],
   scope: Parameters<ContextReader>[1],
   refs: z.infer<typeof agentContextRefsSchema>,
+  request: string,
 ) {
   const project = await db
     .selectFrom('projects')
@@ -151,6 +176,7 @@ async function resolveOrigins(
     (groupRef?.site_url_id ? issueGroup?.occurrences[0]?.display_url : '') ||
     owned(opportunity?.target_url, project.website_url) ||
     owned(demand?.signal.page_url, project.website_url) ||
+    requestedPageUrl(request, project.website_url) ||
     '';
   return {
     project,
@@ -180,7 +206,7 @@ export const readAgentContext: ContextReader = async (db, scope, raw, request) =
       issueGroup,
       siteFacts,
       upstream,
-    } = await resolveOrigins(db, scope, refs);
+    } = await resolveOrigins(db, scope, refs, request);
     const query = [request, opportunity?.target_theme, demand?.signal.topic_cluster]
       .filter(Boolean)
       .join(' ');
