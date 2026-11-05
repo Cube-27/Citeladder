@@ -330,10 +330,10 @@ interaction recipes live only in [`design.md`](design.md).
 | Offer and connection rows; identity rows | `frontend/components/ui/control-row.tsx` (`ControlRow`); `frontend/components/ui/workspace.tsx` (`IdentityRow`) |
 | Fact lists and fixed-height ledgers | `frontend/components/ui/facts.tsx` (`FactList`, `ValueLedger`) |
 | Settings sections | `frontend/components/ui/settings-section.tsx` (`SettingsSections`, `SettingsSection`) |
-| List rows: option, navigation and tree-rail rows | `frontend/components/ui/list-row.tsx` (`OptionRow`, `NavRow`, `RailItem`, `RailItemForm`) |
+| List rows: option and tree-rail rows | `frontend/components/ui/list-row.tsx` (`OptionRow`, `RailItem`, `RailItemForm`) |
 | Reorderable list | `frontend/components/ui/reorder-list.tsx` (`ReorderList`; it replaced the Ranked actions list's own drag-and-move mechanics) |
 | Widget editing toolbar | `frontend/components/ui/workspace.tsx` (`FloatingToolbar`) |
-| Gate pages before the shell opens | `frontend/components/layout/shell-fallback.tsx` (`GateScreen`), `frontend/components/layout/gate-notice-frame.tsx` (`GateNoticeScreen`) |
+| Gate pages before the shell opens | `frontend/components/layout/shell-fallback.tsx` (`GateScreen`); project setup's blocked states use `frontend/components/ui/auth-shell.tsx` (`AuthShell`, `AuthCard`) |
 | Chat thread and composer dock | `frontend/components/ui/chat-dock.tsx` (`DockedThread`, `ComposerDock`, `ComposerFrame`, `RemovableChip`, `SuggestionList`) |
 | Panel (`panelClasses`) and card content (one box recipe) | `frontend/components/ui/panel.tsx`, `frontend/components/ui/card.tsx` |
 | Menu separator and link rows | `frontend/components/ui/menu.tsx` (`MenuSeparator`, `MenuLinkItem`) |
@@ -373,7 +373,7 @@ screen from its internal presentation files.
 | Surface | Coordinator boundary | Focused owners |
 |---|---|---|
 | AI Traffic | `components/ai-traffic/ai-traffic-screen.tsx` owns URL tabs, scoped queries, verification filters and cursor tables | `crawl-log-connections.tsx` owns source setup and local streaming uploads; `referrals-screen.tsx` preserves referral controls and measurements |
-| Onboarding | `components/onboarding/onboarding-screen.tsx` selects the active stage and actions | `onboarding-flow.ts` owns transaction state, stage owners render domain UI, and `components/auth/flow-shell.tsx` owns shared auth/onboarding chrome |
+| Onboarding | `components/onboarding/onboarding-screen.tsx` selects the active stage and actions | `onboarding-flow.ts` owns transaction state, stage owners render domain UI, and `components/ui/auth-shell.tsx` and `components/ui/onboarding-shell.tsx` own the shared auth/onboarding chrome |
 | Projects dashboard | `components/projects/dashboard-screen.tsx` owns query gates and project context | dashboard controls, primitives, sections, and command-center action hook own reusable UI and mutations |
 | Performance | `components/performance/performance-screen.tsx` owns project/range/compare selection and the range-projection hand-off | date-range dialog, metric cards, chart, dimension table, and synchronization hook own their scoped behavior |
 | Site Health URL detail | `components/site-health/url-detail.tsx` owns query/rerun control and polling | `url-detail-view.tsx` owns the persisted-detail presentation; `internal-links-card.tsx` owns the link-metric section |

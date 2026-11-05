@@ -126,7 +126,7 @@ test('the radius table lists the ladder from CSS in size order', () => {
 test('a public role scaled from a desktop size is documented as that desktop size', () => {
   const type = generatedBlocks(
     '@theme { --text-sm: 0.875rem; }',
-    `:where([data-public-surface], [data-flow-surface]) {
+    `:where([data-public-surface]) {
       --site-type-floor: var(--text-sm);
       --site-role-body: 1rem;
       --text-site-body: calc(var(--site-type-floor) + (var(--site-role-body) - var(--site-type-floor)) * var(--site-type-reading));

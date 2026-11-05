@@ -97,9 +97,7 @@ test('working surfaces preserve their actions without viewport overflow', async 
       if (route === '/onboarding') {
         await expect(page.getByLabel(/^Brand name/)).toBeVisible();
         const logo = await page.getByRole('link', { name: 'CiteLadder home' }).boundingBox();
-        const progress = await page
-          .getByRole('navigation', { name: 'Setup progress' })
-          .boundingBox();
+        const progress = await page.getByRole('region', { name: 'Setup progress' }).boundingBox();
         expect(
           logo &&
             progress &&
