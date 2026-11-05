@@ -203,6 +203,14 @@
   --motion-reveal: 200ms;
   --ease-standard: ease-out;
   --ease-exit: ease-in;
+  /* The website's shared nav popup (D22): it opens over --motion-menu and
+     closes over 100ms on a decelerating curve; menus inside it fade over
+     --motion-fast, unblur over 180ms and settle in 160ms steps of 20ms. */
+  --motion-menu-exit: 100ms;
+  --motion-menu-blur: 180ms;
+  --motion-menu-settle: 160ms;
+  --motion-menu-step: 20ms;
+  --ease-menu: cubic-bezier(0.22, 1, 0.36, 1);
   --default-transition-duration: var(--motion-fast);
   --default-transition-timing-function: var(--ease-standard);
   /* Loops that say "working": the Spinner turns in 800ms, a Skeleton pulses
@@ -408,7 +416,8 @@
 }
 
 /* The marketing site's responsive display sizes: the page title (H1) is 44,
-   36 from 768 to 1023px and 30 on phones; display-lg is 32, 26 on phones.
+   42 from 768 to 1023px (D23: the owner's 982px desktop) and 30 on phones;
+   display-lg is 32, 26 on phones.
    Marketing pages only, so a docs article title keeps its own fallback. */
 [data-marketing-surface] {
   --text-site-title: var(--text-display-2xl);
@@ -419,8 +428,8 @@
 
 @media (min-width: 768px) and (max-width: 1023px) {
   [data-marketing-surface] {
-    --text-site-title: var(--text-display-xl);
-    --text-site-title--line-height: var(--text-display-xl--line-height);
+    --text-site-title: 42px;
+    --text-site-title--line-height: 46px;
   }
 }
 

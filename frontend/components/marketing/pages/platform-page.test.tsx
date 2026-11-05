@@ -107,7 +107,9 @@ it('never shows one screen twice on a platform page', () => {
   for (const page of PLATFORM_PAGES) {
     const screens = [
       page.screen,
-      ...page.features.flatMap((feature) => (feature.media.screen ? [feature.media.screen] : [])),
+      ...page.features.flatMap((feature) =>
+        feature.media.kind === 'card' ? [] : [feature.media.screen],
+      ),
     ];
     expect(new Set(screens).size, page.path).toBe(screens.length);
   }

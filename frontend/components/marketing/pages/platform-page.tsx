@@ -136,6 +136,8 @@ function cardSpans(count: number): readonly BentoSpan[] {
 
 function FeatureCards({ features }: Readonly<{ features: readonly Feature[] }>) {
   const spans = cardSpans(features.length);
+  // A card alone in its row spreads its copy and points across the width (D21).
+  const wide = features.length === 1;
   return (
     <Bento
       cells={features.map((feature, index) => ({
@@ -145,14 +147,10 @@ function FeatureCards({ features }: Readonly<{ features: readonly Feature[] }>) 
           <FeatureCard
             as="h2"
             size="lg"
+            wide={wide}
             title={feature.title}
             body={feature.body}
             points={feature.points}
-            media={
-              feature.media.kind === 'card' && feature.media.screen ? (
-                <CatalogFrame screen={feature.media.screen} />
-              ) : undefined
-            }
           />
         ),
       }))}
@@ -177,13 +175,13 @@ function Features({ page }: Readonly<{ page: PlatformPage }>) {
         switch (group.kind) {
           case 'full': {
             const { feature, screen } = group.item;
+            // Title, copy and points stack together over the screen (D21).
             return (
               <PageSection
                 key={feature.title}
                 title={feature.title}
                 lead={feature.body}
                 action={<CheckList items={feature.points} />}
-                headerLayout="split"
               >
                 <CatalogFrame screen={screen} />
               </PageSection>
@@ -270,7 +268,6 @@ function Related({ page }: Readonly<{ page: PlatformPage }>) {
   return (
     <PageSection
       title="Keep exploring"
-      headerLayout="split"
       action={
         page.cta === 'mcp' ? (
           <SiteArrowLink href={docsHref('/mcp/')}>MCP setup and tool reference</SiteArrowLink>
@@ -337,7 +334,6 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
       <PageSection
         title="Questions you can answer"
         lead="CiteLadder answers each one from the AI answers and site data it has recorded."
-        headerLayout="split"
       >
         <QuestionCards items={page.questions.map((question) => ({ question, eyebrow: false }))} />
       </PageSection>
@@ -347,13 +343,12 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
           id="capabilities"
           title="What a project includes"
           lead="Every project starts with AI visibility. Add the rest when you have a question it cannot answer."
-          headerLayout="split"
         >
           <CapabilityGrid />
         </PageSection>
       )}
 
-      <PageSection id="faq" title="Frequently asked questions" layout="aside">
+      <PageSection id="faq" title="Frequently asked questions" measure="reading">
         <FaqList items={page.faqs.map((faq) => ({ question: faq.q, answer: faq.a }))} exclusive />
       </PageSection>
 

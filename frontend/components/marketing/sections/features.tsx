@@ -8,6 +8,7 @@ import { CheckList, Eyebrow, SiteArrowLink } from './site-parts';
  * FeatureCard: a surface card with an optional product image on top, an
  * eyebrow, a title (title, or display-md at `lg`), body, an optional check
  * list and, as a link, an arrow line. With an `href` the whole card is the link.
+ * A `wide` card (alone in its row) sets its points beside the copy, not under it.
  */
 export function FeatureCard({
   href,
@@ -17,6 +18,7 @@ export function FeatureCard({
   body,
   points,
   size = 'md',
+  wide = false,
   as: Heading = 'h3',
   media,
 }: Readonly<{
@@ -28,12 +30,19 @@ export function FeatureCard({
   /** What the card covers, as a small check list under the body. */
   points?: readonly string[];
   size?: 'md' | 'lg';
+  /** The card fills a full row: the points sit in a column beside the copy (D21). */
+  wide?: boolean;
   /** `h2` when the card heads its own part of the page (no section title above it). */
   as?: 'h2' | 'h3';
   /** The card's product image (a ProductFrame well), above the copy. */
   media?: ReactNode;
 }>) {
-  const className = cn('cl-fcard', size === 'lg' && 'cl-fcard--lg', href && 'focus-ring');
+  const className = cn(
+    'cl-fcard',
+    size === 'lg' && 'cl-fcard--lg',
+    wide && 'cl-fcard--wide',
+    href && 'focus-ring',
+  );
   const content = (
     <>
       {media}

@@ -212,7 +212,7 @@ supersedes D11's 64px header band and its 16px top inset.
 | D12 | What frames the top of an app page? | One sticky top bar with no blank gap above or below the title: the sidebar's project switcher cell and the PageHeader row are one 56px bar (the 40px title row, 8 above and below) ruled underneath with a 1px `line`, the switcher level with the title. Content scrolls under it |
 | D13 | Where are links underlined? | Links that stand in lists, tables, rows and cards (Site Health affected pages, page URLs, "Ask agent about this page", ranked action titles and the same pattern on every app page) show no underline at rest, only on hover and keyboard focus. Links inside a sentence keep theirs |
 | D14 | What does a ranked action row show? | Its title and severity badge, with no numeric score: the High/Medium/Low badge carries it, everywhere the ranked list renders. The badge stays on the title's line; a long title truncates |
-| D15 | How big is a metric's number? | 28px (`stat`, Geist 500, 28/36), the cards still in one row |
+| D15 | How big is a metric's number? | 28px (`stat`, Geist 500, 28/36), the cards still in one row. The website's stat and highlight figures use the same 28px token; there is no larger website size (owner, 5 November 2026) |
 | D16 | How do tabs and filter chips show a count? | In Geist sans, in brackets after the label: "All signals (107)", "CTR gaps · Partial (50)". Never mono |
 | D17 | How do the Agent's workflow cards read? | Card titles at the card-title size (`heading`, 16/24, 500) under the "Or start from a workflow" section heading, and one fill on every card: hover no longer tints a card |
 
@@ -220,6 +220,20 @@ The repository follows the design-system artifact's version 13 for D5–D11:
 `frontend/scripts/design-system-tokens.json` is its `tokens.json` verbatim
 (`line-strong`, `shadow-edge`, `heading-lg`, `row-app`, `control-md` 32 and
 `stat` at Geist 500).
+
+The owner then reviewed the public website and decided D18–D23 and D25
+(source: the owner's review in the orchestration session, 5 November 2026).
+
+| ID | Question | Decision |
+| --- | --- | --- |
+| D18 | How do landing pages align? | Centred: on home, platform and product pages, solutions, enterprise, pricing and compare, the opening heading, section headings and intro copy sit centred within the 960 display and 720 reading measures. Section headers stack (title, lead, action); there is no split header. Long-form reading (blog, docs, legal) and the utility pages (contact, tools, 404) stay left-aligned |
+| D19 | How wide is the floating top nav? | Slightly wider than the page column: the bar overhangs the content edges by 16px on each side (12px on phones) instead of matching them |
+| D20 | Where do the social links go? | Out of the footer's Company column, into one row of icon-only links (each with an accessible name) directly below the launch-directory badges |
+| D21 | How is content placed? | A heading and its copy sit together with no dead space: no empty column beside copy, no heading stranded at the bottom of a tall column, no oversized gap. Every website page was swept for the fault |
+| D22 | How do the nav dropdowns open? | As one shared Radix NavigationMenu popup that stays open and morphs between menus. The popup is sized to the open menu: its width and height follow it (Solutions narrow, Platform wide), anchored under the left edge of the trigger row, never stretched to the full bar. The content crossfades, a hover pill slides between triggers, and a hover bridge keeps it open on the way down. It closes in about 100ms, opens over 200ms, and reduced motion drops the slide, blur and stagger. Rows set the title at 14px (500) over a 12px description; an external row's arrow sits inline after its label without wrapping; Solutions is one column. Below the desktop breakpoint the mobile menu is unchanged |
+| D23 | How large is the page H1 on the owner's 982px desktop? | 42px. The opening-heading ladder is 44 from 1024px, 42 from 768 to 1023px and 30 on phones; pages never set their own size |
+| D25 | What does the home page's first product view show? | The real app, as before the 6b screens: the app chrome (sidebar with the project switcher and navigation, page header, tabs, metric cards and a table) with the same screen content, restyled to the app as shipped (current tokens, soft edges, radius ≤8, 24px Cal Sans page title, Geist ≤500, no sidebar logo, score rings, one-row metrics, 40px rows, 32px controls, no underlines at rest, 28px stat, counts in brackets, no score beside a priority badge) |
+
 
 The owner decided D24 on the same day, after the shipped sign-in page ("the
 earlier sign in page was actually good … only differnce would be there will no

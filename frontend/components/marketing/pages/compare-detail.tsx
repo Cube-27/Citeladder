@@ -70,12 +70,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
         actions={<CompareActions />}
       />
 
-      <PageSection
-        spacing="compact"
-        title="Side-by-side comparison"
-        lead={competitor.context}
-        headerLayout="split"
-      >
+      <PageSection spacing="compact" title="Side-by-side comparison" lead={competitor.context}>
         <PricingTable
           caption={`CiteLadder and ${competitor.name} compared by public product information`}
           plans={[{ name: 'CiteLadder' }, { name: competitor.name }]}
@@ -129,7 +124,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
 
       <PageSection
         id="checklist"
-        layout="aside"
+        measure="reading"
         title="Questions to ask both vendors"
         lead="Compare the same use case across vendors rather than one aggregate percentage."
       >

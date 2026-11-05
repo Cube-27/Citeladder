@@ -209,7 +209,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
           'Sources cited beside criticism',
           'Included with visibility tracking, no extra credits',
         ],
-        media: { kind: 'card', screen: 'perception' },
+        media: { kind: 'split', screen: 'perception' },
       },
       {
         title: 'See who is paying to appear beside your prompts',

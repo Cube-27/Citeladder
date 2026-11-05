@@ -36,13 +36,14 @@ export type PlatformScreen =
 
 /**
  * How a feature is shown: its copy beside its screen (`split`), its screen
- * full width under the copy (`full`), or a card, with or without a screen,
- * set in a row with the cards next to it (`card`).
+ * full width under the copy (`full`), or a text card set in a row with the
+ * cards next to it (`card`). A card never carries a screen, so a row never
+ * sets a short text card beside a tall screenshot card (D21).
  */
 type PlatformFeatureMedia =
   | { kind: 'split'; screen: PlatformScreen }
   | { kind: 'full'; screen: PlatformScreen }
-  | { kind: 'card'; screen?: PlatformScreen };
+  | { kind: 'card' };
 
 /** Which primary action a page leads with. */
 export type PlatformCta = 'trial' | 'demo' | 'mcp' | 'setup';

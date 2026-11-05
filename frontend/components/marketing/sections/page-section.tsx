@@ -10,12 +10,10 @@ type SectionHeaderProps = Readonly<{
   eyebrow?: ReactNode;
   title: ReactNode;
   lead?: ReactNode;
-  /** One action under the lead (an ArrowLink or a button). */
+  /** One action under the lead (an ArrowLink, a button or a short note). */
   action?: ReactNode;
-  /** `center` for a section that stands alone; `left` beside content. */
+  /** `center` for a section that stands alone (D18); `left` in an aside column beside content. */
   align?: 'left' | 'center';
-  /** `split` puts the lead and action beside the title (left alignment only). */
-  layout?: 'stack' | 'split';
   as?: HeadingTag;
   /** The heading's id, for the section it names. */
   titleId?: string;
@@ -23,22 +21,21 @@ type SectionHeaderProps = Readonly<{
 
 /**
  * SectionHeader: an eyebrow, the section's display-xl title (36, 28 on
- * phones) and its lead. Every website section heads with this, so section
- * titles never vary in size page to page.
+ * phones), its lead and one action, stacked so the copy always sits under its
+ * heading. Every website section heads with this, so section titles never
+ * vary in size page to page.
  */
 export function SectionHeader({
   eyebrow,
   title,
   lead,
   action,
-  align = 'left',
-  layout = 'stack',
+  align = 'center',
   as: Heading = 'h2',
   titleId,
 }: SectionHeaderProps) {
-  const split = align === 'left' && layout === 'split';
   return (
-    <header className={cn('cl-shead', `cl-shead--${align}`, split && 'cl-shead--split')}>
+    <header className={cn('cl-shead', `cl-shead--${align}`)}>
       <div className="cl-shead-main">
         {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
         <Heading id={titleId} className="cl-shead-title">
@@ -55,16 +52,20 @@ export function SectionHeader({
   );
 }
 
-type PageSectionProps = Omit<SectionHeaderProps, 'title' | 'layout' | 'titleId'> &
+type PageSectionProps = Omit<SectionHeaderProps, 'title' | 'align' | 'titleId'> &
   Readonly<{
     id?: string;
     title?: ReactNode;
     /** The landmark's name when the section has no title. */
     label?: string;
-    headerLayout?: 'stack' | 'split';
-    /** `aside` puts the header (and `aside` content) in a sticky 4/12 column. */
+    /**
+     * `aside` puts the left-aligned header (and `aside` content) in a sticky
+     * 4/12 column, for long-form and utility pages; landing pages stack (D18).
+     */
     layout?: 'stack' | 'aside';
     aside?: ReactNode;
+    /** `reading` holds the body to the 720 reading measure, centred, for FAQs and lists. */
+    measure?: 'full' | 'reading';
     /** `compact` is the one tighter rhythm (64, 48 under 1024), for strips. */
     spacing?: 'default' | 'compact';
     children?: ReactNode;
@@ -72,8 +73,8 @@ type PageSectionProps = Omit<SectionHeaderProps, 'title' | 'layout' | 'titleId'>
 
 /**
  * PageSection: one band of a website page, 128px above (96 under 1024), the
- * header 48px over its content, inside the 1320 container. Pages compose
- * sections and never set spacing themselves.
+ * centred header 48px over its content, inside the 1320 container. Pages
+ * compose sections and never set spacing themselves.
  */
 export function PageSection({
   id,
@@ -82,10 +83,9 @@ export function PageSection({
   eyebrow,
   lead,
   action,
-  align,
-  headerLayout,
   layout = 'stack',
   aside,
+  measure = 'full',
   spacing = 'default',
   as,
   children,
@@ -99,14 +99,22 @@ export function PageSection({
         title={title}
         lead={lead}
         action={action}
-        align={isAside ? 'left' : align}
-        layout={isAside ? 'stack' : headerLayout}
+        align={isAside ? 'left' : 'center'}
         as={as}
         titleId={titleId}
       />
     );
   const body =
-    children === undefined ? null : <div className="cl-page-section-body">{children}</div>;
+    children === undefined ? null : (
+      <div
+        className={cn(
+          'cl-page-section-body',
+          measure === 'reading' && 'cl-page-section-body--reading',
+        )}
+      >
+        {children}
+      </div>
+    );
   return (
     <section
       id={id}

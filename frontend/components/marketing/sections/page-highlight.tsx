@@ -41,8 +41,10 @@ export function PageHighlight({
   as?: 'h2' | 'h3';
   children?: ReactNode;
 }>) {
+  // A tile with only its copy is a statement band: the copy centres so no side sits empty (D21).
+  const statement = stats.length === 0 && steps.length === 0 && !children && !action;
   return (
-    <div className="cl-page-hl">
+    <div className={cn('cl-page-hl', statement && 'cl-page-hl--statement')}>
       <div className="cl-page-hl-inner">
         <div className="cl-page-hl-copy">
           {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}

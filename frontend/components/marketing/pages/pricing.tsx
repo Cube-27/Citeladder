@@ -57,7 +57,6 @@ export function PricingUnavailable() {
       spacing="compact"
       title="Plans are temporarily unavailable"
       lead="Please try again shortly. No price is shown while the public catalog is unavailable."
-      headerLayout="split"
     />
   );
 }
@@ -66,7 +65,7 @@ export function PricingFaq() {
   return (
     <PageSection
       id="faq"
-      layout="aside"
+      measure="reading"
       title="Pricing questions"
       lead={
         <>

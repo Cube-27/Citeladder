@@ -19,7 +19,8 @@ import { ProductFrame } from '../screens/product-frame';
 import { ScreenAgentBrief, ScreenAgentChat } from '../screens/screens-agent';
 import { ScreenEngines, ScreenKeywords } from '../screens/screens-search';
 import { ScreenCrawlerAccess, ScreenSiteHealth } from '../screens/screens-site';
-import { ScreenAnswer, ScreenSources, ScreenVisibility } from '../screens/screens-visibility';
+import { ScreenAnswer, ScreenSources } from '../screens/screens-visibility';
+import { ScreenAppVisibility } from '../screens/screen-app';
 
 import { FAQS, INTEGRATIONS, type IntegrationMark } from './landing-data';
 import { EngineRotor } from './landing-rotor';
@@ -70,8 +71,9 @@ function Hero({ rotor }: Readonly<{ rotor?: ReactNode }>) {
         selfServeSignupOpen() ? '7-day free trial on ChatGPT answers. Trial limits apply.' : null
       }
       frame={
-        <ProductFrame aspect="hero" inset={48} label="AI Visibility">
-          <ScreenVisibility />
+        // D25: the real app, chrome and all, as the page's first product view.
+        <ProductFrame aspect="hero" inset={32} label="The AI Visibility page in the CiteLadder app">
+          <ScreenAppVisibility />
         </ProductFrame>
       }
     />
@@ -279,7 +281,6 @@ function Integrations() {
       title="Connect the data you already have"
       lead="Start with AI answers. Add other sources when you need them."
       action={<SiteArrowLink href="/platform/integrations">Explore integrations</SiteArrowLink>}
-      layout="aside"
     >
       <ul className="cl-tiles cl-cols-3">
         {INTEGRATIONS.map((integration) => (
@@ -302,7 +303,6 @@ function Teams() {
     <PageSection
       id="teams"
       title="Who uses CiteLadder"
-      headerLayout="split"
       action={<SiteArrowLink href="/solutions">Explore solutions</SiteArrowLink>}
     >
       <ul className={`cl-tiles cl-cols-${columnsFor(solutions.length)}`}>
@@ -329,9 +329,8 @@ function Trust() {
       id="trust"
       title="How CiteLadder handles your data"
       action={<SiteArrowLink href="/enterprise">Enterprise</SiteArrowLink>}
-      layout="aside"
     >
-      <ul className="cl-tiles cl-cols-2">
+      <ul className={`cl-tiles cl-cols-${columnsFor(TRUST.length)}`}>
         {TRUST.map(([title, body]) => (
           <li key={title}>
             <FeatureCard title={title} body={body} />
@@ -367,7 +366,6 @@ export function LandingPage({ rotor }: Readonly<{ rotor?: ReactNode }>) {
       <PageSection
         id="platform"
         title="Everything in one project"
-        headerLayout="split"
         action={<SiteArrowLink href="/platform">See the whole platform</SiteArrowLink>}
       >
         <CapabilityGrid />
@@ -380,7 +378,7 @@ export function LandingPage({ rotor }: Readonly<{ rotor?: ReactNode }>) {
         id="landing-faq"
         title="Questions, answered"
         action={<SiteArrowLink href="/faq">All questions</SiteArrowLink>}
-        layout="aside"
+        measure="reading"
       >
         <FaqList items={FAQS.map((faq) => ({ question: faq.q, answer: faq.a }))} />
       </PageSection>

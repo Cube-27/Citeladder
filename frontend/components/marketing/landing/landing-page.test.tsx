@@ -29,6 +29,17 @@ describe('LandingPage', () => {
     expect(announcement).toHaveAttribute('href', '/platform/mcp');
   });
 
+  it('shows the app page as one named picture without a second page heading', () => {
+    render(<LandingPage />);
+
+    const [hero] = screen.getAllByRole('img', {
+      name: 'The AI Visibility page in the CiteLadder app',
+    });
+    expect(hero).toHaveTextContent('Search or jump to…');
+    expect(hero).toHaveTextContent('Launch audit');
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+  });
+
   it('names every answer surface in the lead while the rotor cycles', () => {
     render(<LandingPage rotor={<EngineRotor />} />);
 

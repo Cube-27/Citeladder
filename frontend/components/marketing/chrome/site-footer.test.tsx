@@ -117,21 +117,22 @@ describe('SiteFooter', () => {
     );
   });
 
-  it('links the CiteLadder social profiles by their domains', () => {
+  it('links the CiteLadder social profiles as icons named by their domains, outside the columns', () => {
     render(<SiteFooter />);
 
-    const footerNav = screen.getByRole('navigation', { name: 'Footer' });
-    expect(within(footerNav).getByRole('link', { name: 'x.com' })).toHaveAttribute(
-      'href',
-      'https://x.com/CiteLadderAI',
-    );
-    expect(within(footerNav).getByRole('link', { name: 'linkedin.com' })).toHaveAttribute(
-      'href',
-      'https://www.linkedin.com/company/citeladder',
-    );
-    expect(within(footerNav).getByRole('link', { name: 'github.com' })).toHaveAttribute(
-      'href',
-      'https://github.com/abhij1306/CiteLadder',
-    );
+    const footer = screen.getByRole('contentinfo');
+    const footerNav = within(footer).getByRole('navigation', { name: 'Footer' });
+    const profiles = [
+      ['github.com', 'https://github.com/abhij1306/CiteLadder'],
+      ['x.com', 'https://x.com/CiteLadderAI'],
+      ['linkedin.com', 'https://www.linkedin.com/company/citeladder'],
+    ] as const;
+    for (const [name, href] of profiles) {
+      const link = within(footer).getByRole('link', { name });
+      expect(link).toHaveAttribute('href', href);
+      // Icon-only: the domain is its accessible name, not visible text.
+      expect(link.textContent).toBe('');
+      expect(within(footerNav).queryByRole('link', { name })).toBeNull();
+    }
   });
 });

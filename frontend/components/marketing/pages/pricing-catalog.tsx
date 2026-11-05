@@ -286,7 +286,6 @@ function PricingTrial({
             <ArrowRight aria-hidden />
           </DemoButtonLink>
         }
-        headerLayout="split"
       />
     );
   }
@@ -333,7 +332,6 @@ function PricingComparison({ catalog }: Readonly<{ catalog: BillingCatalog }>) {
       id="compare"
       title="Compare every published limit"
       lead="Every value comes from the live plan catalog. A dash means the plan does not include it."
-      headerLayout="split"
     >
       <PricingTable
         plans={plans.map((plan) => ({ name: plan.name }))}
@@ -412,7 +410,6 @@ export function PublicPricingCatalog({
         <PageSection
           title="Add capacity when you need it"
           lead="One-time purchases on top of an active plan."
-          headerLayout="split"
         >
           <PagePlans>
             {extras.map(({ entry, kind }) => (
