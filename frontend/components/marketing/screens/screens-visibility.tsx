@@ -51,7 +51,7 @@ function Cite({ index }: Readonly<{ index: number }>) {
 /** One engine's answer to one prompt: the brand passage highlighted, each claim with its source. */
 export function ScreenAnswer() {
   return (
-    <ScreenRoot name="answer" width={640}>
+    <ScreenRoot name="answer" width={640} height={400}>
       <ScreenCard
         eyebrow={`ChatGPT · ${CHECKED}`}
         title="Best product analytics for startups"
@@ -125,7 +125,7 @@ const RETRIEVAL_COLUMNS: readonly ScreenColumn<(typeof PAGE_RETRIEVALS)[number]>
 /** The AI Visibility overview: the KPI row, the trend against competitors and the brand ranking. */
 export function ScreenVisibility() {
   return (
-    <ScreenRoot name="visibility" width={1200}>
+    <ScreenRoot name="visibility" width={1200} height={680}>
       <Card>
         <div className="cl-screen-kpis">
           {KPIS.map((kpi) => (
@@ -194,7 +194,7 @@ export function ScreenVisibility() {
 /** Cited sources: the domains answers cite and the share each holds, beside your own pages. */
 export function ScreenSources() {
   return (
-    <ScreenRoot name="sources" width={960}>
+    <ScreenRoot name="sources" width={960} height={600}>
       <ScreenBar
         start={
           <ScreenTabs
@@ -246,7 +246,7 @@ export function ScreenSources() {
 /** The tracked prompts: which engines name the brand for each, its visibility and change. */
 export function ScreenPrompts() {
   return (
-    <ScreenRoot name="prompts" width={640}>
+    <ScreenRoot name="prompts" width={640} height={400}>
       <ScreenTableCard title="Prompts" meta="120 tracked · 412 answers this week">
         <ScreenTable
           caption="Tracked prompts"
@@ -262,7 +262,7 @@ export function ScreenPrompts() {
 /** One of your cited pages: its citation figures and which engines fetched and cited it. */
 export function ScreenCitedUrl() {
   return (
-    <ScreenRoot name="cited-url" width={640}>
+    <ScreenRoot name="cited-url" width={640} height={400}>
       <ScreenTableCard
         title="acme.com/pricing"
         action={<Badge tone="accent">Your page</Badge>}

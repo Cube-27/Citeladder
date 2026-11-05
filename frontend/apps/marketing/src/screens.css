@@ -95,6 +95,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  width: var(--screen-w);
+  height: var(--screen-h);
   overflow: hidden;
   color: var(--color-ink);
   font-family: var(--font-sans);
@@ -103,32 +105,42 @@
   text-align: left;
 }
 
+/* Natural sizes: a width and a height, each from its own short list
+   (ScreenRoot's `width` and `height`; docs/design.md "Website product
+   images" says which pairs are used for what). 480 is a vignette, one
+   subject in one card (see "Vignettes" below); 640 a card image, the width
+   of a split's well at 1440 (656), so it renders at its natural size there
+   and at 982 (826). */
+.cl-screen--w480 {
+  --screen-w: 480px;
+}
+
+.cl-screen--w640 {
+  --screen-w: 640px;
+}
+
 .cl-screen--w960 {
   --screen-w: 960px;
-  --screen-h: 600px;
 }
 
 .cl-screen--w1200 {
   --screen-w: 1200px;
-  --screen-h: 680px;
 }
 
-.cl-screen--w960,
-.cl-screen--w1200,
-.cl-screen--app {
-  width: var(--screen-w);
-  height: var(--screen-h);
+.cl-screen--h360 {
+  --screen-h: 360px;
 }
 
-/* A card image: one focused element (a table, an answer) at 640 × 400, the
-   width of a split's well at 1440 (656), so it renders at its natural size
-   there and at 982 (826) and only scales down on narrower wells. */
-.cl-screen--w640 {
-  --screen-w: 640px;
+.cl-screen--h400 {
   --screen-h: 400px;
+}
 
-  width: var(--screen-w);
-  height: var(--screen-h);
+.cl-screen--h600 {
+  --screen-h: 600px;
+}
+
+.cl-screen--h680 {
+  --screen-h: 680px;
 }
 
 /* ---------- The app in its chrome (D25): the home page's first view ----------
@@ -545,19 +557,6 @@
   gap: 16px;
 }
 
-.cl-screen-pstats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 24px;
-}
-
-.cl-screen-pstat {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
 .cl-screen-kpis {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -722,12 +721,6 @@
 
 .cl-screen-rank-row:first-child {
   border-top: 0;
-}
-
-.cl-screen-rank-row--tall {
-  grid-template-columns: 20px minmax(0, 1fr) auto;
-  gap: 12px;
-  min-height: 56px;
 }
 
 .cl-screen-rank-n {
@@ -916,47 +909,116 @@
   box-shadow: var(--shadow-xs);
 }
 
-/* ---------- Commerce ---------- */
-.cl-screen-ld {
-  display: grid;
-  grid-template-columns: 224px minmax(0, 1fr);
-  gap: 24px;
+/* ---------- Vignettes (480 × 360): Demand, Referrals, Perception, Engines, Commerce ----------
+   One card fills the screen: its title row, then one focused element (three
+   figures over a small chart, or a short list of 3 to 5 rows). Each list has
+   one fixed column template, so a row never reflows to its text. */
+.cl-screen--w480 {
+  --card-padding: 20px;
 }
 
-.cl-screen-ld-list {
+.cl-screen-vcard {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 0;
+}
+
+.cl-screen-vcard > header:not(:last-child) {
+  padding-bottom: 0;
+}
+
+.cl-screen-vfigure {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0;
+}
+
+.cl-screen-vstats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+
+.cl-screen-vstats > div {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cl-screen-vstats dd {
   margin: 0;
-  padding: 0 8px 0 0;
-  border-right: 1px solid var(--color-line);
+}
+
+.cl-screen-area {
+  margin: 0;
+}
+
+/* The list takes the card's remaining height and shares it evenly between
+   its rows, so a short list breathes instead of leaving a gap below it. */
+.cl-screen-vrows {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
   list-style: none;
 }
 
-.cl-screen-ld-row {
+.cl-screen-vrow {
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
+  flex: 1;
   align-items: center;
   gap: 12px;
-  min-height: 56px;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
+  min-height: 48px;
+  border-top: 1px solid var(--color-line);
 }
 
-.cl-screen-ld-row.is-selected {
-  background: var(--color-surface-sunken);
+.cl-screen-vrow:first-child {
+  border-top: 0;
 }
 
-.cl-screen-shelf-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.cl-screen-vrow > :last-child {
+  justify-self: end;
 }
 
-.cl-screen-shelf-head .cl-screen-meta {
-  margin-left: auto;
+.cl-screen-vrows--sources .cl-screen-vrow {
+  grid-template-columns: 112px minmax(0, 1fr) 56px;
 }
 
-.cl-screen--commerce .cl-screen-pstats {
-  gap: 16px;
+.cl-screen-vrows--engines .cl-screen-vrow {
+  grid-template-columns: 168px minmax(0, 1fr) 48px 80px;
+}
+
+.cl-screen-vrows--themes .cl-screen-vrow {
+  grid-template-columns: 168px minmax(0, 1fr) 72px;
+}
+
+.cl-screen-vrows--shelf .cl-screen-vrow {
+  grid-template-columns: 24px minmax(0, 1fr) 72px 88px;
+}
+
+.cl-screen-vnum {
+  color: var(--color-ink);
+  font-weight: 500;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A share as a thin bar on the chart track, as the app's Meter draws it. */
+.cl-screen-vbar {
+  display: block;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-2xs);
+  background: var(--color-chart-grid);
+}
+
+.cl-screen-vbar > span {
+  display: block;
+  height: 100%;
 }

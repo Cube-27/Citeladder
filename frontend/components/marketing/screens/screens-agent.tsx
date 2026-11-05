@@ -2,21 +2,18 @@ import { ArrowUp, Copy, Download } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { BrandMark } from '@/components/ui/brand-mark';
-import { Card } from '@/components/ui/card';
 import { Citation } from '@/components/ui/citation';
 import { FactList } from '@/components/ui/facts';
-import { SearchField } from '@/components/ui/search-field';
 import { StepList } from '@/components/ui/step-list';
 import { cn } from '@/lib/utils';
 
-import { ACTION_STATUS_TONE, ACTIONS, CATALOG, SHELF, type ActionStatus } from './demo-data';
+import { ACTION_STATUS_TONE, ACTIONS, SHELF, type ActionStatus } from './demo-data';
 import {
   ScreenBar,
   ScreenButton,
   ScreenCard,
   ScreenCols,
   ScreenMeta,
-  ScreenNotedStat,
   ScreenRoot,
   ScreenSection,
   ScreenTable,
@@ -24,8 +21,7 @@ import {
   ScreenTabs,
   type ScreenColumn,
 } from './screen-parts';
-
-const still = () => undefined;
+import { VignetteCard, VignetteRows } from './screen-vignette';
 
 const quoted = (kind: string) => kind === 'Prompt' || kind === 'Search query';
 
@@ -61,7 +57,7 @@ const ACTION_COLUMNS: readonly ScreenColumn<(typeof ACTIONS)[number]>[] = [
 /** Actions: prioritised work with its linked evidence, one action open beside the list. */
 export function ScreenActions() {
   return (
-    <ScreenRoot name="actions" width={1200}>
+    <ScreenRoot name="actions" width={1200} height={680}>
       <ScreenBar
         start={
           <ScreenTabs
@@ -139,7 +135,7 @@ export function ScreenActions() {
 /** The Agent answering "Why did we drop on Gemini this week?" and the action it added. */
 export function ScreenAgentChat() {
   return (
-    <ScreenRoot name="agent-chat" width={960}>
+    <ScreenRoot name="agent-chat" width={960} height={600}>
       <div className="cl-screen-chat">
         <div className="cl-screen-thread">
           <p className="cl-screen-user">Why did we drop on Gemini this week?</p>
@@ -224,7 +220,7 @@ const BRIEF_CONTENTS = [
 /** A content brief the Agent drafted, with its contents beside it. */
 export function ScreenAgentBrief() {
   return (
-    <ScreenRoot name="agent-brief" width={960}>
+    <ScreenRoot name="agent-brief" width={960} height={600}>
       <ScreenBar
         start={
           <ScreenTabs
@@ -286,97 +282,27 @@ export function ScreenAgentBrief() {
   );
 }
 
-function Shelf() {
+/** Commerce: who held the AI shelf for one product, the products answers recommended. */
+export function ScreenCommerce() {
   return (
-    <div className="cl-screen-detail">
-      <div className="cl-screen-shelf-head">
-        <span className="cl-screen-heading">Acme Startup</span>
-        <Badge>Product</Badge>
-        <ScreenMeta>48 answers · 2 Nov 2026</ScreenMeta>
-      </div>
-      <div className="cl-screen-pstats">
-        <ScreenNotedStat
-          label="Product visibility"
-          value="41.7"
-          unit="%"
-          note="Share of answers that recommended you"
-        />
-        <ScreenNotedStat
-          label="Share of shelf"
-          value="24.0"
-          unit="%"
-          note="37 of 154 recommendations"
-        />
-        <ScreenNotedStat
-          label="Average position"
-          value="2.3"
-          note="In answers that ranked products"
-        />
-        <ScreenNotedStat
-          label="First-position rate"
-          value="18.8"
-          unit="%"
-          note="9 of 48 ranked answers"
-        />
-      </div>
-      <ScreenSection label="Who held the shelf">
-        <ol className="cl-screen-rank">
-          {SHELF.map((entry) => (
-            <li key={entry.product} className="cl-screen-rank-row cl-screen-rank-row--tall">
+    <ScreenRoot name="commerce" width={480} height={360}>
+      <VignetteCard title="Acme Startup on the AI shelf" badge={<Badge>48 answers</Badge>}>
+        <VignetteRows layout="shelf" rows={SHELF} rowKey={(entry) => entry.product}>
+          {(entry) => (
+            <>
               <BrandMark name={entry.brand} />
               <span className="cl-screen-lines">
                 <span className="cl-screen-strong">{entry.product}</span>
-                <span className="cl-screen-muted">
-                  {`${entry.brand} · ${entry.domain} · In ${entry.answers} of 48 answers · best #${entry.best}`}
-                </span>
+                <span className="cl-screen-muted">{entry.domain}</span>
               </span>
+              <span className="cl-screen-muted">{`In ${entry.answers} of 48`}</span>
               <Badge tone={entry.own ? 'accent' : 'neutral'}>
                 {entry.own ? 'You' : 'Competitor'}
               </Badge>
-            </li>
-          ))}
-        </ol>
-      </ScreenSection>
-    </div>
-  );
-}
-
-/** Commerce: the product catalogue beside who held the AI shelf for one product. */
-export function ScreenCommerce() {
-  return (
-    <ScreenRoot name="commerce" width={960}>
-      <ScreenBar
-        start={
-          <div className="cl-screen-search">
-            <SearchField
-              value=""
-              onValueChange={still}
-              placeholder="Search categories and products"
-              aria-label="Search categories and products"
-            />
-          </div>
-        }
-        end={<ScreenMeta>5 products · 2 categories</ScreenMeta>}
-      />
-      <Card>
-        <div className="cl-screen-ld">
-          <ul className="cl-screen-ld-list">
-            {CATALOG.map((item) => (
-              <li
-                key={item.title}
-                className={cn('cl-screen-ld-row', item.title === 'Acme Startup' && 'is-selected')}
-              >
-                <BrandMark name="Acme Analytics" />
-                <span className="cl-screen-lines">
-                  <span className="cl-screen-strong">{item.title}</span>
-                  <span className="cl-screen-muted">{item.group}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-          <Shelf />
-        </div>
-      </Card>
+            </>
+          )}
+        </VignetteRows>
+      </VignetteCard>
     </ScreenRoot>
   );
 }

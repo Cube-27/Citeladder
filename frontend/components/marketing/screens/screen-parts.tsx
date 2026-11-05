@@ -22,18 +22,36 @@ import { ENGINE_KEYS, ENGINE_NAMES, type Change } from './demo-data';
 
 /**
  * The parts every product screen shares. A screen is an app content crop at
- * a fixed natural size (640 × 400, 960 × 600 or 1200 × 680; see
- * screens.css) built from the app's own
- * components; it is a still, so its controls are drawn, never wired.
+ * a fixed natural size built from the app's own components; it is a still,
+ * so its controls are drawn, never wired.
  */
+
+/**
+ * A screen's natural width and height, two independent lists (docs/design.md,
+ * "Website product images"): screens.css has one `cl-screen--w*` class per
+ * width and one `cl-screen--h*` class per height, so a new size adds a value
+ * here and a class there.
+ */
+type ScreenWidth = 480 | 640 | 960 | 1200;
+type ScreenHeight = 360 | 400 | 600 | 680;
 
 export function ScreenRoot({
   name,
   width,
+  height,
   children,
-}: Readonly<{ name: string; width: 640 | 960 | 1200; children: ReactNode }>) {
+}: Readonly<{ name: string; width: ScreenWidth; height: ScreenHeight; children: ReactNode }>) {
   return (
-    <div className={cn('cl-screen', `cl-screen--w${width}`, `cl-screen--${name}`)}>{children}</div>
+    <div
+      className={cn(
+        'cl-screen',
+        `cl-screen--w${width}`,
+        `cl-screen--h${height}`,
+        `cl-screen--${name}`,
+      )}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -179,21 +197,6 @@ export function ScreenStat({
         {unit && <span className="cl-screen-stat-unit">{unit}</span>}
       </span>
       {change && <ScreenDelta change={change} period={period} />}
-    </div>
-  );
-}
-
-/** A figure with a sentence saying what it counts. */
-export function ScreenNotedStat({
-  label,
-  value,
-  unit,
-  note,
-}: Readonly<{ label: string; value: string; unit?: string; note: string }>) {
-  return (
-    <div className="cl-screen-pstat">
-      <ScreenStat label={label} value={value} unit={unit} />
-      <ScreenNote>{note}</ScreenNote>
     </div>
   );
 }

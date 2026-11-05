@@ -73,7 +73,7 @@ type rule of the same day.
 | `frontend/components/ui/logo-mark.tsx`, `packages/contracts/src/brand-logo.ts` | The logo, drawn inline in ink (`currentColor`) and the accent |
 | `frontend/components/ui/`, `frontend/components/layout/` | The app's components and shell, composed by feature folders that set no geometry of their own |
 | `frontend/apps/marketing/src/site.css`, `frontend/components/marketing/chrome/`, `frontend/components/marketing/sections/` | The website's components: SiteNav, SiteFooter, CookieBanner, Breadcrumbs, AnnouncementPill and the page sections, the system's `cl-*` geometry on the tokens above, and the website's type roles (the `cl-*` titles, lead, body and note) |
-| `frontend/apps/marketing/src/screens.css`, `frontend/components/marketing/screens/` | The website's product images: ProductFrame and the `Screen*` components, app views at a fixed natural 640 × 400, 960 × 600 or 1200 × 680 composed from `components/ui` and scaled whole to fit their frame (never cropped), with their demo data in one typed module; the home page's first view (`ScreenAppVisibility`, D25) is the whole app at 1440 × 820, its chrome drawn at the app's density |
+| `frontend/apps/marketing/src/screens.css`, `frontend/components/marketing/screens/` | The website's product images: ProductFrame and the `Screen*` components, app views at a fixed natural size (the list is under "Website product images" in Screen contracts) composed from `components/ui` and scaled whole to fit their frame (never cropped), with their demo data in one typed module; the home page's first view (`ScreenAppVisibility`, D25) is the whole app at 1440 × 820, its chrome drawn at the app's density |
 | `frontend/services/api/src/billing/pdf-brand.ts` | The PDF palette, read from `globals.css` |
 
 ## Token contract
@@ -331,8 +331,24 @@ cropped, so no text is cut at any viewport. The frame and the FeatureCard
 around it are flat: a 1px soft border, radius at most 8px, no shadow; in a
 FeatureCard the well sits straight in the card above an optional step number,
 the title, body and link. A screen whose text would be too small once scaled
-is redesigned smaller, never cropped. A card image (a split, tile or feature
-card) is one focused element at 640 × 400 (`cl-screen--w640`): one table of
-4–6 rows and at most 4 columns, or one answer, with no tabs, toolbars,
-pagination or second pane, so it renders at its natural size in a split at
-982 and 1440 and only scales down on narrower wells.
+is redesigned smaller, never cropped.
+
+A screen's natural size is a width and a height, each from a short list:
+`ScreenRoot` takes both and screens.css maps them to one class per width
+(`cl-screen--w480`, `--w640`, `--w960`, `--w1200`) and one per height
+(`cl-screen--h360`, `--h400`, `--h600`, `--h680`). The sizes in use:
+
+- 1200 × 680: a full-width screen.
+- 960 × 600: a screen in a split or tile that needs the room.
+- 640 × 400: a card image (a split, tile or feature card) of one focused
+  element: one table of 4–6 rows and at most 4 columns, or one answer, with
+  no tabs, toolbars, pagination or second pane, so it renders at its natural
+  size in a split at 982 and 1440 and only scales down on narrower wells.
+- 480 × 360: a vignette, one card holding one focused element (three figures
+  over one small chart, or a list of 3 to 5 rows on a fixed column template),
+  no tabs, toolbars or pagination, so it renders near its natural size in a
+  7-of-12 tile or a split (text at least 11px at 982px wide).
+- 1440 × 820: the home page's app in its chrome (`cl-screen--app`).
+
+A new size adds its width or height to both lists rather than a new
+width class with its own height.
