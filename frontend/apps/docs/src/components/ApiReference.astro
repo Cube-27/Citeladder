@@ -1,42 +1,128 @@
 ---
+/**
+ * The API reference appended to its article: every operation as an
+ * ApiOperation under its resource, then the shared schemas, each a
+ * disclosure with its fields. A link to a schema opens its entry.
+ */
+import { ChevronDown } from 'lucide-react';
 import { API_REFERENCE_HEADING, API_SCHEMAS_HEADING } from '../lib/content';
-import { API_OPERATIONS, API_SCHEMAS, schemaAnchor } from '../lib/api-reference';
-import SchemaFields from './SchemaFields.astro';
+import { API_GROUPS, API_SCHEMAS } from '../lib/api-reference';
+import { schemaAnchor } from '../lib/json-schema';
+import ApiOperation from './ApiOperation.astro';
+import ParamTable from './ParamTable.astro';
+import Prose from './Prose.astro';
 import TypeLabel from './TypeLabel.astro';
-
-const operations = API_OPERATIONS;
-const groups = [...new Set(operations.map((operation) => operation.group))];
 ---
-<section class="docs-tool-reference docs-prose website-body" aria-labelledby={API_REFERENCE_HEADING.slug}>
-  <h2 id={API_REFERENCE_HEADING.slug}>{API_REFERENCE_HEADING.text}</h2>
-  <p>Generated from the API's own route declarations; <a href="https://api.citeladder.com/v1/openapi.json">openapi.json</a> holds the same document. Linked types are listed under <a href={`#${API_SCHEMAS_HEADING.slug}`}>{API_SCHEMAS_HEADING.text}</a>.</p>
-  {groups.map((group) => <details>
-    <summary><code>{group}</code></summary>
-    <ul>
-      {operations.filter((operation) => operation.group === group).map((operation) => <li>
-        <code>{operation.method} {operation.path}</code>
-        {operation.scope && <span class="website-label"> · scope {operation.scope}</span>}
-        {operation.query.length > 0 && <span class="website-label"> · query: {operation.query.join(', ')}</span>}
-        <ul>
-          {operation.request && <li>Request body: <TypeLabel parts={operation.request.type} />
-            <SchemaFields fields={operation.request.fields} />
-          </li>}
-          <li>Response: {operation.response ? <TypeLabel parts={operation.response.type} /> : 'no body'}
-            {operation.response && <SchemaFields fields={operation.response.fields} />}
-          </li>
-        </ul>
-      </li>)}
-    </ul>
-  </details>)}
+
+<section class="cl-docs-ref" aria-labelledby={API_REFERENCE_HEADING.slug}>
+  <Prose>
+    <h2 id={API_REFERENCE_HEADING.slug}>{API_REFERENCE_HEADING.text}</h2>
+    <p>
+      Generated from the API's own route declarations; <a
+        href="https://api.citeladder.com/v1/openapi.json">openapi.json</a
+      > holds the same document. Linked types are listed under <a
+        href={`#${API_SCHEMAS_HEADING.slug}`}>{API_SCHEMAS_HEADING.text}</a
+      >.
+    </p>
+  </Prose>
+  {
+    API_GROUPS.map(({ group, operations }) => (
+      <section class="cl-docs-ref-group" aria-label={group}>
+        <p class="type-eyebrow">{group}</p>
+        {operations.map((operation) => (
+          <ApiOperation operation={operation} />
+        ))}
+      </section>
+    ))
+  }
 </section>
-<section class="docs-tool-reference docs-prose website-body" aria-labelledby={API_SCHEMAS_HEADING.slug}>
-  <h2 id={API_SCHEMAS_HEADING.slug}>{API_SCHEMAS_HEADING.text}</h2>
-  <p>Shapes shared between operations, each defined once under <code>components.schemas</code>.</p>
-  {API_SCHEMAS.map((schema) => <details id={schemaAnchor(schema.name)}>
-    <summary><code>{schema.name}</code></summary>
-    {schema.fields.length > 0 ? <SchemaFields fields={schema.fields} /> : <p><TypeLabel parts={schema.type} /></p>}
-  </details>)}
+<section class="cl-docs-ref" aria-labelledby={API_SCHEMAS_HEADING.slug}>
+  <Prose>
+    <h2 id={API_SCHEMAS_HEADING.slug}>{API_SCHEMAS_HEADING.text}</h2>
+    <p>Shapes shared between operations, each defined once under <code>components.schemas</code>.</p>
+  </Prose>
+  <div class="cl-docs-schemas">
+    {
+      API_SCHEMAS.map((schema) => (
+        <details class="cl-docs-schema" id={schemaAnchor(schema.name)}>
+          <summary class="cl-docs-schema-head">
+            <code>{schema.name}</code>
+            <ChevronDown className="cl-docs-schema-caret size-4" aria-hidden />
+          </summary>
+          <div class="cl-docs-schema-body">
+            {schema.rows.length > 0 ? (
+              <ParamTable title="Fields" rows={schema.rows} />
+            ) : (
+              <TypeLabel parts={schema.type} />
+            )}
+          </div>
+        </details>
+      ))
+    }
+  </div>
 </section>
+
+<style>
+  .cl-docs-ref,
+  .cl-docs-ref-group {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    min-width: 0;
+  }
+  .cl-docs-ref-group {
+    padding-top: 24px;
+    border-top: 1px solid var(--color-line);
+  }
+  .cl-docs-schemas {
+    border-top: 1px solid var(--color-line);
+  }
+  .cl-docs-schema {
+    border-bottom: 1px solid var(--color-line);
+    scroll-margin-top: calc(var(--nav-height) + 32px);
+  }
+  .cl-docs-schema-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: var(--control-lg);
+    padding: 0 12px;
+    list-style: none;
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+    line-height: var(--text-data--line-height);
+    font-weight: 500;
+    transition: background-color var(--motion-fast) var(--ease-standard);
+  }
+  .cl-docs-schema-head::-webkit-details-marker {
+    display: none;
+  }
+  .cl-docs-schema-head:hover {
+    background: var(--color-surface-sunken);
+  }
+  .cl-docs-schema-caret {
+    color: var(--color-ink-muted);
+    transition: transform var(--motion-fast) var(--ease-standard);
+  }
+  .cl-docs-schema[open] .cl-docs-schema-caret {
+    transform: rotate(180deg);
+  }
+  .cl-docs-schema-body {
+    padding: 0 12px 24px;
+    color: var(--color-ink-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+    line-height: var(--text-data--line-height);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cl-docs-schema-caret {
+      transition: none;
+    }
+  }
+</style>
+
 <script>
   // A link to a schema opens its entry; a closed <details> would hide the target.
   const reveal = () => {

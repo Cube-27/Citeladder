@@ -88,6 +88,12 @@ function matchesAny(path, patterns) {
   return patterns.some((pattern) => globRegex(pattern).test(path));
 }
 
+// Specs frontend/playwright.config.ts ignores because another config owns
+// them: docs.spec.ts runs in the docs job (`pnpm test:docs`) and
+// worker-csp.spec.ts under playwright.workers.config.ts. Passing one to the
+// app E2E job makes Playwright fail with "No tests found".
+const OTHER_CONFIG_SPECS = new Set(['e2e/docs.spec.ts', 'e2e/worker-csp.spec.ts']);
+
 export function selectE2EFiles(paths) {
   const selected = new Set();
   const addTest = (test) => {
@@ -97,8 +103,9 @@ export function selectE2EFiles(paths) {
     selected.add(test);
   };
   for (const path of paths) {
-    if (/^frontend\/e2e\/.+\.spec\.ts$/u.test(path)) {
-      addTest(path.slice('frontend/'.length));
+    const spec = path.slice('frontend/'.length);
+    if (/^frontend\/e2e\/.+\.spec\.ts$/u.test(path) && !OTHER_CONFIG_SPECS.has(spec)) {
+      addTest(spec);
     }
     for (const rule of E2E_RULES) {
       if (Array.isArray(rule.frontendE2E) && matchesAny(path, rule.sources)) {

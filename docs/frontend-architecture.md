@@ -25,10 +25,11 @@ Worker at `frontend/apps/marketing` builds every page at deploy time
 search engines and AI crawlers read, without a Worker invocation per visit.
 The shared chrome (navigation, cookie consent banner and the consent-gated
 Google tag) is Astro markup with small module scripts in
-`frontend/components/marketing/chrome/` and `frontend/components/analytics/`,
-so content pages ship no framework JavaScript; React islands hydrate only on
-pages with interactive tools, such as the homepage engine rotor, blog explorer,
-contact form, pricing and the free tools.
+`frontend/components/marketing/chrome/` and `frontend/components/analytics/`;
+the page sections in `frontend/components/marketing/sections/` render to
+static HTML. The navbar's ThemeSwitch is the one island every page hydrates;
+other React islands hydrate only on pages with interactive tools, such as the
+homepage engine rotor, blog explorer, contact form, pricing and the free tools.
 Only routes that read the request opt out with `prerender = false`: `/pricing`,
 the contact intake and `/health`. The 404 page is prerendered so scanner
 traffic never renders on demand (the free Workers plan stops a request past

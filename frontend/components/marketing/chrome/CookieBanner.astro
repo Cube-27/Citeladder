@@ -1,80 +1,32 @@
 ---
 import { buttonClasses } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 
 import { CONSENT_CHOICE_ATTRIBUTE } from './cookie-banner';
 
 /**
- * The cookie consent banner. Server-rendered hidden; `cookie-banner.ts`
- * reveals it only for an undecided visitor or a reopened preference.
+ * The cookie consent banner (the system's CookieBanner): a surface card at
+ * the bottom left with Reject and Accept at equal size. Server-rendered
+ * hidden; `cookie-banner.ts` reveals it only for an undecided visitor or a
+ * reopened preference. A landmark section, not a dialog: it does not trap
+ * focus or block the page.
  *
  * There are no category toggles: nothing non-essential is installed beyond
  * the optional analytics tag this gates.
  */
-
-/**
- * The public website's outlined alternate action, matching `ButtonLink`'s
- * `dark`/`nav` treatment. The shared `secondary` fill is the authenticated
- * flows' tonal quiet action and reads wrong on the marketing paper ground.
- */
-const MARKETING_SECONDARY =
-  'border-line bg-surface hover:border-line-control hover:bg-surface-sunken';
-
-const reject = cn(buttonClasses('secondary'), MARKETING_SECONDARY, 'w-full');
-const accept = cn(buttonClasses('primary'), 'w-full');
 const choice = (decision: 'accepted' | 'rejected') => ({ [CONSENT_CHOICE_ATTRIBUTE]: decision });
 ---
 
-<section
-  hidden
-  aria-label="Cookie consent"
-  tabindex="-1"
-  data-cookie-banner
-  class="fixed right-4 bottom-0 left-4 z-[var(--z-index-overlay)] sm:right-6 sm:left-auto sm:w-[27rem] print:hidden"
->
-  {/* A landmark section, not a dialog: it does not trap focus or block the page. */}
-  <div class="pb-[max(1rem,env(safe-area-inset-bottom))]">
-    {/* Compact on phones, where a full-size panel covered a quarter of every screen. */}
-    <div
-      class="bg-surface shadow-pop grid gap-3 rounded-lg p-4 sm:gap-4 sm:p-5"
-    >
-      <div class="grid gap-2">
-        <h2 class="website-feature-heading text-ink sr-only sm:not-sr-only">
-          Cookie settings
-        </h2>
-        <p class="website-body consent-copy">
-          We use essential cookies to keep you signed in and secure. With your permission,
-          non-essential cookies help us understand site usage. Read our{' '}
-          <a
-            href="/cookies"
-            class="text-ink underline underline-offset-4 hover:no-underline"
-          >
-            Cookie Policy.
-          </a>
-        </p>
-      </div>
-      {/* Reject first in the DOM so it is the first tab stop, and visually equal in weight. */}
-      <div class="grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          data-button-variant="secondary"
-          data-button-size="md"
-          class={reject}
-          {...choice('rejected')}
-        >
-          <span class="inline-flex items-center gap-2">Reject</span>
-        </button>
-        <button
-          type="button"
-          data-button-variant="primary"
-          data-button-size="md"
-          class={accept}
-          {...choice('accepted')}
-        >
-          <span class="inline-flex items-center gap-2">Accept</span>
-        </button>
-      </div>
-    </div>
+<section hidden aria-label="Cookie consent" tabindex="-1" data-cookie-banner class="cl-cookie print:hidden">
+  <h2 class="cl-cookie-title">Cookie settings</h2>
+  <p class="cl-cookie-text">
+    We use essential cookies to keep you signed in and secure. With your permission,
+    non-essential cookies help us understand site usage. Read our{' '}
+    <a href="/cookies" class="focus-ring">Cookie Policy.</a>
+  </p>
+  {/* Reject first in the DOM so it is the first tab stop, and equal in weight. */}
+  <div class="cl-cookie-actions">
+    <button type="button" class={buttonClasses('secondary')} {...choice('rejected')}>Reject</button>
+    <button type="button" class={buttonClasses('primary')} {...choice('accepted')}>Accept</button>
   </div>
 </section>
 

@@ -13,54 +13,6 @@
   padding-inline: var(--site-gutter);
 }
 
-/* A thin band above the nav bar; the link is the whole message. It rides in
-   the fixed chrome, so the page clears it through the nav offset, and a
-   dismissed band is removed, so the offset falls back with it. */
-:root:has(.lp-announcement) {
-  --marketing-nav-offset: calc(4rem + 2.25rem + env(safe-area-inset-top, 0px));
-}
-
-/* Both sides reserve the close button's width, so the message stays centred
-   and never runs under it. */
-.lp-announcement {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 2.25rem;
-  padding-inline: calc(var(--site-gutter) + 2.25rem);
-  /* The closing band's mint field (owner, 2026-10-31). */
-  background: var(--color-surface-sunken);
-}
-
-.lp-announcement-close {
-  position: absolute;
-  top: 0.125rem;
-  right: calc(var(--site-gutter) - 0.5rem);
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: var(--radius-md);
-  color: var(--color-ink);
-}
-
-.lp-announcement-close:hover {
-  background: var(--color-surface);
-}
-
-.lp-announcement a {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 0;
-  color: var(--color-ink);
-}
-
-.lp-announcement a:hover {
-  text-decoration: underline;
-}
-
 /* Bands take their padding from the site grid (`.site-band`). */
 .lp-section {
   position: relative;

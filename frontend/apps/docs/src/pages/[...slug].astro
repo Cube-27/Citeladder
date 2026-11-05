@@ -2,11 +2,12 @@
 import { websiteHref } from '@/lib/config/app-link';
 import { docsHref } from '@/lib/config/docs';
 import { articleHeadings, articles } from '../lib/content';
-import { docsArticleJsonLd, updatedLabel } from '../lib/structured-data';
-import DocsLayout from '../layouts/DocsLayout.astro';
-import ToolReference from '../components/ToolReference.astro';
+import { docsArticleJsonLd } from '../lib/structured-data';
+import DocsShell from '../layouts/DocsShell.astro';
 import ApiReference from '../components/ApiReference.astro';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import ArticleHeader from '../components/ArticleHeader.astro';
+import Prose from '../components/Prose.astro';
+import ToolReference from '../components/ToolReference.astro';
 
 export function getStaticPaths() {
   return articles.map((article, index) => ({
@@ -25,21 +26,28 @@ const jsonLd = docsArticleJsonLd({
   updated: article.updated,
   websiteUrl: websiteHref('/'),
 });
+// The Toc drops a heading's step number ("2. Pick prompts"); its anchor keeps it.
+const toc = headings.map((heading) => ({
+  id: heading.slug,
+  label: heading.text.replace(/^\d+[.)]\s+/, ''),
+  level: heading.depth,
+}));
 ---
-<DocsLayout title={article.title} description={article.description} updated={article.updated} jsonLd={jsonLd} headings={headings.map((heading) => ({ ...heading, label: heading.text.replace(/^\d+[.)]\s+/, '') }))}>
-  <article>
-    <header class="docs-article-header">
-      <p class="docs-article-group website-label">{article.group}</p>
-      <h1 class="website-page-title docs-title">{article.title}</h1>
-      <p class="website-lead">{article.description}</p>
-      <p class="docs-article-updated website-label">Updated <time datetime={article.updated}>{updatedLabel(article.updated)}</time></p>
-    </header>
-    <div class="docs-prose website-body"><Content /></div>
-    {article.toolReference && <ToolReference />}
-    {article.apiReference && <ApiReference />}
-  </article>
-  <nav class="docs-pagination" aria-label="Adjacent articles">
-    {previous ? <a href={previous.href}><span class="website-label"><ArrowLeft className="size-3.5" aria-hidden />Previous</span><span class="docs-pagination-title">{previous.title}</span></a> : <span />}
-    {next && <a href={next.href} class="docs-pagination-next"><span class="website-label">Next<ArrowRight className="size-3.5" aria-hidden /></span><span class="docs-pagination-title">{next.title}</span></a>}
-  </nav>
-</DocsLayout>
+
+<DocsShell
+  title={article.title}
+  description={article.description}
+  updated={article.updated}
+  jsonLd={jsonLd}
+  toc={toc}
+  wide={article.toolReference || article.apiReference}
+  previous={previous && { title: previous.title, href: previous.href }}
+  next={next && { title: next.title, href: next.href }}
+>
+  <ArticleHeader title={article.title} eyebrow={article.group} updated={article.updated}>
+    {article.description}
+  </ArticleHeader>
+  <Prose><Content /></Prose>
+  {article.toolReference && <ToolReference />}
+  {article.apiReference && <ApiReference />}
+</DocsShell>

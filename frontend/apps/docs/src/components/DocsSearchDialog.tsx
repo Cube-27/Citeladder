@@ -1,0 +1,256 @@
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { FileText, Search } from 'lucide-react';
+import { Button, IconButton } from '@/components/ui/button';
+import { Kbd } from '@/components/ui/kbd';
+import { cn } from '@/lib/utils';
+import { groupResults, highlight, searchArticles, type SearchEntry } from '../lib/search';
+
+/**
+ * DocsSearchDialog — docs search on the command palette's frame: a 48px
+ * query row, results grouped by docs group as 64px two-line rows (title in
+ * `ink` 500, the description with matched words in `cl-mark`, both cut to
+ * one line so rows never grow) in a list of one fixed height, and the
+ * keyboard legend. Type, ↑↓, ↵ and Esc; Ctrl K or ⌘K opens it from anywhere.
+ * The DocsTopBar shows the field trigger from 900px and the icon below.
+ *
+ * A native modal <dialog>: the top layer, the focus trap and Esc come from
+ * the browser, and the guide index loads on first open.
+ */
+export function DocsSearchDialog() {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [active, setActive] = useState(0);
+  const [entries, setEntries] = useState<SearchEntry[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+
+  const show = (from: HTMLElement | null) => {
+    opener.current = from;
+    setOpen(true);
+    dialog.current?.showModal();
+    input.current?.focus();
+  };
+
+  useEffect(() => {
+    const shortcut = (event: globalThis.KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.key?.toLowerCase() !== 'k') return;
+      event.preventDefault();
+      if (dialog.current?.open) {
+        dialog.current.close();
+        return;
+      }
+      // The visible trigger takes focus back on close, as if it had been pressed.
+      const triggers = document.querySelectorAll<HTMLElement>('[data-docs-search-trigger]');
+      show([...triggers].find((trigger) => trigger.offsetParent !== null) ?? null);
+    };
+    document.addEventListener('keydown', shortcut);
+    return () => document.removeEventListener('keydown', shortcut);
+  }, []);
+
+  // A click on the backdrop lands on the <dialog> itself and closes it; the
+  // keyboard path is Esc, which the browser handles.
+  useEffect(() => {
+    const frame = dialog.current;
+    if (!frame) return;
+    const dismiss = (event: MouseEvent) => {
+      if (event.target === frame) frame.close();
+    };
+    frame.addEventListener('click', dismiss);
+    return () => frame.removeEventListener('click', dismiss);
+  }, []);
+
+  useEffect(() => {
+    if (!open || entries) return;
+    const controller = new AbortController();
+    void fetch('/search-index.json', { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error('Search unavailable');
+        return response.json() as Promise<SearchEntry[]>;
+      })
+      .then((data) => {
+        setEntries(data);
+        setFailed(false);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setFailed(true);
+      });
+    return () => controller.abort();
+  }, [open, entries, attempt]);
+
+  const groups = groupResults(searchArticles(entries ?? [], query));
+  const results = groups.flatMap((group) => group.items);
+  const cursor = active < results.length ? active : 0;
+
+  const onInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (!results.length) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const step = event.key === 'ArrowDown' ? 1 : results.length - 1;
+      setActive((cursor + step) % results.length);
+    } else if (event.key === 'Enter') {
+      const target = results[cursor];
+      if (!target) return;
+      event.preventDefault();
+      window.location.assign(target.href);
+    }
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        data-docs-search-trigger="field"
+        aria-label="Search docs"
+        aria-haspopup="dialog"
+        aria-keyshortcuts="Control+K Meta+K"
+        onClick={(event) => show(event.currentTarget)}
+        className="focus-ring bg-surface border-line-control text-ink-muted hover:border-ink-secondary text-body-sm h-[var(--control-md)] items-center gap-2 rounded-md border pr-2 pl-3 text-left transition-colors"
+      >
+        <Search className="size-4 shrink-0" aria-hidden />
+        <span className="min-w-0 flex-1 truncate" aria-hidden>
+          Search docs
+        </span>
+        <Kbd keys={['Ctrl', 'K']} />
+      </button>
+      <IconButton
+        icon={Search}
+        label="Search docs"
+        data-docs-search-trigger="icon"
+        aria-haspopup="dialog"
+        tooltip={false}
+        onClick={(event) => show(event.currentTarget)}
+      />
+      <dialog
+        ref={dialog}
+        aria-labelledby="docs-search-title"
+        aria-describedby="docs-search-description"
+        onClose={() => {
+          setOpen(false);
+          if (opener.current?.isConnected) opener.current.focus();
+        }}
+        className="bg-surface text-ink shadow-pop backdrop:bg-scrim mx-auto mt-16 w-full max-w-160 flex-col overflow-hidden rounded-lg p-0 open:flex"
+      >
+        <h2 id="docs-search-title" className="sr-only">
+          Search documentation
+        </h2>
+        <p id="docs-search-description" className="sr-only">
+          Find guides across the product, Agent and MCP.
+        </p>
+        <div className="focus-frame border-line text-ink-muted flex h-[var(--control-lg)] shrink-0 items-center gap-3 border-b px-4">
+          <Search className="size-4 shrink-0" aria-hidden />
+          <label htmlFor="docs-query" className="sr-only">
+            Search terms
+          </label>
+          <input
+            id="docs-query"
+            ref={input}
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setActive(0);
+            }}
+            onKeyDown={onInputKeyDown}
+            placeholder="Try revisions or citations"
+            autoComplete="off"
+            className="text-body text-ink placeholder:text-ink-muted h-full min-w-0 flex-1 bg-transparent"
+          />
+          <Kbd>Esc</Kbd>
+        </div>
+        <div className="h-100 min-h-0 shrink overflow-y-auto overscroll-contain p-2">
+          <div className="flex min-h-[var(--control-md)] items-center justify-between gap-3 px-2">
+            <output className="text-caption text-ink-muted">
+              {searchStatus(failed, entries, query, results.length)}
+            </output>
+            {failed && (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setFailed(false);
+                  setAttempt((value) => value + 1);
+                }}
+              >
+                Retry search
+              </Button>
+            )}
+          </div>
+          {groups.map((group) => (
+            <section key={group.label} aria-label={group.label} className="mt-2">
+              <p className="text-caption text-ink-muted px-2 py-1 font-medium">{group.label}</p>
+              <ul>
+                {group.items.map((result) => {
+                  const index = results.indexOf(result);
+                  return (
+                    <li key={result.href}>
+                      <a
+                        href={result.href}
+                        data-active={index === cursor}
+                        onMouseMove={() => setActive(index)}
+                        className={cn(
+                          'focus-ring flex h-16 items-start gap-3 rounded-sm p-3 no-underline',
+                          index === cursor && 'bg-surface-sunken',
+                        )}
+                      >
+                        <FileText className="text-ink-muted mt-0.5 size-4 shrink-0" aria-hidden />
+                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className="text-body-sm text-ink truncate font-medium">
+                            <Marked text={result.title} query={query} />
+                          </span>
+                          <span className="text-body-sm text-ink-secondary truncate">
+                            <Marked text={result.description} query={query} />
+                          </span>
+                        </span>
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
+        <div className="border-line text-ink-muted text-caption flex shrink-0 items-center gap-4 border-t px-4 py-2">
+          <span className="inline-flex items-center gap-2">
+            <Kbd keys={['↑', '↓']} />
+            navigate
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <Kbd>↵</Kbd>
+            select
+          </span>
+        </div>
+      </dialog>
+    </>
+  );
+}
+
+function Marked({ text, query }: Readonly<{ text: string; query: string }>) {
+  // A run's offset in the text is its stable key: the same text and query
+  // always split at the same places.
+  let offset = 0;
+  return highlight(text, query).map((segment) => {
+    const start = offset;
+    offset += segment.text.length;
+    return segment.match ? (
+      <mark key={start} className="cl-mark">
+        {segment.text}
+      </mark>
+    ) : (
+      segment.text
+    );
+  });
+}
+
+function searchStatus(
+  failed: boolean,
+  entries: SearchEntry[] | null,
+  query: string,
+  count: number,
+): string {
+  if (failed) return 'Search could not load. Browse the navigation or retry.';
+  if (!entries) return 'Loading search…';
+  if (!query.trim()) return 'Search titles and the full text of every guide.';
+  if (count) return `${count} matching guides`;
+  return 'No matching guides. Try fewer words or a feature name.';
+}

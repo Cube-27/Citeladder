@@ -1,0 +1,195 @@
+---
+/**
+ * ParamTable — the reference blocks' parameter table (DocsParams in the
+ * system): the Table component's 36px `surface-sunken` header and `line`
+ * rules with wrapping cells. The Parameter cell holds the mono name, its
+ * type and whether it is required; Description shows only when the source
+ * describes a row, with the allowed values and the default under it. Named
+ * API schemas link to their entry. Columns are fixed, so rows never reflow.
+ */
+import { schemaAnchor, type ReferenceRow } from '../lib/json-schema';
+
+interface Props {
+  title: string;
+  rows: readonly ReferenceRow[];
+}
+const { title, rows } = Astro.props;
+const described = rows.some((row) => row.description || row.values.length || row.defaultValue);
+---
+
+<div class="cl-docs-params">
+  <h4 class="cl-docs-sub">{title}</h4>
+  <div class="cl-docs-params-frame">
+    <table class:list={['cl-docs-params-table', { 'is-described': described }]}>
+      <caption class="sr-only">{title}</caption>
+      <thead>
+        <tr>
+          <th scope="col">Parameter</th>
+          {described && <th scope="col">Description</th>}
+        </tr>
+      </thead>
+      <tbody>
+        {
+          rows.map((row) => (
+            <tr>
+              <td>
+                <div class="cl-docs-param">
+                  <code class="cl-docs-param-name">{row.name}</code>
+                  <span class="cl-docs-param-meta">
+                    <span>
+                      {row.type.map((part) =>
+                        part.schema ? <a href={`#${schemaAnchor(part.schema)}`}>{part.text}</a> : part.text,
+                      )}
+                    </span>
+                    <span class:list={{ 'cl-docs-param-req': row.required }}>
+                      {row.required ? 'Required' : 'Optional'}
+                    </span>
+                  </span>
+                </div>
+              </td>
+              {described && (
+                <td>
+                  <div class="cl-docs-param-desc">
+                    {row.description}
+                    {row.values.length > 0 && (
+                      <span class="cl-docs-param-values">
+                        <span class="cl-docs-param-values-label">One of</span>
+                        {row.values.map((value) => (
+                          <code>{value}</code>
+                        ))}
+                      </span>
+                    )}
+                    {row.defaultValue && (
+                      <span class="cl-docs-param-values">
+                        <span class="cl-docs-param-values-label">Default</span>
+                        <code>{row.defaultValue}</code>
+                      </span>
+                    )}
+                  </div>
+                </td>
+              )}
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .cl-docs-params {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+  .cl-docs-sub {
+    color: var(--color-ink);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
+    font-weight: 600;
+  }
+  .cl-docs-params-frame {
+    overflow-x: auto;
+  }
+  .cl-docs-params-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    color: var(--color-ink);
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  .cl-docs-params-table.is-described th:first-child {
+    width: 40%;
+  }
+  th {
+    height: var(--table-header-height);
+    padding: 0 12px;
+    background: var(--color-surface-sunken);
+    color: var(--color-ink-secondary);
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
+    font-weight: 500;
+    text-align: left;
+    white-space: nowrap;
+  }
+  th:first-child {
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  }
+  th:last-child {
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  }
+  th:only-child {
+    border-radius: var(--radius-sm);
+  }
+  td {
+    padding: 12px;
+    border-bottom: 1px solid var(--color-line);
+    vertical-align: top;
+  }
+  .cl-docs-param {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .cl-docs-param-name {
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+    line-height: var(--text-data--line-height);
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+  .cl-docs-param-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 8px;
+    color: var(--color-ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
+    overflow-wrap: anywhere;
+  }
+  .cl-docs-param-meta a {
+    color: var(--color-accent-ink);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+  .cl-docs-param-req {
+    color: var(--color-ink);
+  }
+  .cl-docs-param-desc {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--color-ink-secondary);
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  .cl-docs-param-values {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+  }
+  .cl-docs-param-values-label {
+    margin-right: 4px;
+    color: var(--color-ink-muted);
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
+  }
+  .cl-docs-param-values code {
+    padding: 1px 4px;
+    border-radius: var(--radius-xs);
+    background: var(--color-surface-sunken);
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
+    overflow-wrap: anywhere;
+  }
+</style>

@@ -1,6 +1,14 @@
 ---
-import { schemaAnchor, type TypePart } from '../lib/api-reference';
+/** A schema type in mono, its named schemas linked to their entry on the API reference. */
+import { schemaAnchor, type TypePart } from '../lib/json-schema';
 
-const { parts } = Astro.props as { parts: TypePart[] };
+const { parts } = Astro.props as { parts: readonly TypePart[] };
 ---
-<code>{parts.map((part) => part.schema ? <a href={`#${schemaAnchor(part.schema)}`}>{part.text}</a> : part.text)}</code>
+
+<code
+  >{
+    parts.map((part) =>
+      part.schema ? <a href={`#${schemaAnchor(part.schema)}`}>{part.text}</a> : part.text,
+    )
+  }</code
+>
