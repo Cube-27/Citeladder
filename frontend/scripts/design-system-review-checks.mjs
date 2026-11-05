@@ -133,12 +133,11 @@ function displayScopeCssFindings(css, label) {
 // ── D28: on the website Cal Sans is the H1 and one heading per section ──────
 
 /**
- * The website's styles and the long-form components it shares with the docs.
- * The product screens are pictures of the app and follow its rules instead.
+ * The website's styles, its product screens and the long-form components it
+ * shares with the docs.
  */
 const isWebsiteType = (label) =>
-  /^(?:apps\/marketing\/src\/|components\/marketing\/|components\/content\/)/.test(label) &&
-  !/^(?:apps\/marketing\/src\/screens\.css$|components\/marketing\/screens\/)/.test(label);
+  /^(?:apps\/marketing\/src\/|components\/marketing\/|components\/content\/)/.test(label);
 
 /** The headings that may set Cal Sans: hero, article, section, CTA, index group, prose h2. */
 const WEBSITE_HEADING =
