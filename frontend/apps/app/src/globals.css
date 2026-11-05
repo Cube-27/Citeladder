@@ -291,6 +291,9 @@
   --table-header-height: var(--control-md);
   --table-cell-padding-x: 12px;
   --table-cell-padding-y: 8px;
+  /* The row's 1px rule comes out of the row, not on top of it: a cell
+     holding a 24px title line is still `table-row-height` tall. */
+  --table-cell-padding-bottom: calc(var(--table-cell-padding-y) - 1px);
   --table-min-width-sm: 36rem;
   --table-min-width-md: 48rem;
   --table-min-width-lg: 64rem;

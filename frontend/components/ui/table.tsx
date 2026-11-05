@@ -279,7 +279,7 @@ export function ClampText({
 
 const cellClasses = ({ numeric, desktopOnly }: CellOptions) =>
   cn(
-    'text-body-sm text-ink border-line px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)] text-left align-middle',
+    'text-body-sm text-ink border-line px-[var(--table-cell-padding-x)] pt-[var(--table-cell-padding-y)] pb-[var(--table-cell-padding-bottom)] text-left align-middle',
     // Row rule, dropped on the last row.
     'border-b [tr:last-child>&]:border-b-0',
     // A value never wraps: "Not measured" split over two lines read as two values.
