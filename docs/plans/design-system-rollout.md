@@ -208,6 +208,15 @@ The repository follows the design-system artifact's version 13 for D5–D11:
 (`line-strong`, `shadow-edge`, `heading-lg`, `row-app`, `control-md` 32 and
 `stat` at Geist 500).
 
+The owner decided D24 on the same day, after the shipped sign-in page ("the
+earlier sign in page was actually good … only differnce would be there will no
+green color in right panel just black and white with grains"; source: the
+orchestration session).
+
+| ID | Question | Decision |
+| --- | --- | --- |
+| D24 | What does account access look like? | The pre-redesign layout returns for sign-in, sign-up and the mailbox screens (`AuthSplitShell`): the card in a column on `paper` with the ThemeSwitch above it and the copyright and legal line under it, and from `desktop:` the product showcase beside it, now black and white with a fine grain (grayscale captures on a grained `surface-sunken` field, no colour). The logo sits inside the card, centred, over a centred heading; the column is 480px, narrower than `container-narrow`; buttons and fields inside the card are 44px (the old auth size), an exception to D11's 32 scoped to that card. The workspace chooser, setup and onboarding keep AuthShell, as before the redesign they kept their own flow shell |
+
 ## Known gaps in the system
 
 - Long prompt and action names in ScreenPrompts and ScreenActions end in "…" at
