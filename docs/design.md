@@ -50,7 +50,7 @@ code. Light and dark on every surface, defaulting to the system preference.
 | `frontend/components/ui/logo-mark.tsx`, `packages/contracts/src/brand-logo.ts` | The logo, drawn inline in ink (`currentColor`) and the accent |
 | `frontend/components/ui/`, `frontend/components/layout/` | The app's components and shell, composed by feature folders that set no geometry of their own |
 | `frontend/apps/marketing/src/site.css`, `frontend/components/marketing/chrome/`, `frontend/components/marketing/sections/` | The website's components: SiteNav, SiteFooter, CookieBanner, Breadcrumbs, AnnouncementPill and the page sections, the system's `cl-*` geometry on the tokens above |
-| `frontend/apps/app/src/website-type.css` | The responsive `--text-site-*` sizes the website components read, and the `website-*` and `flow-*` roles the docs, the auth flow and the marketing pages not yet recomposed still use |
+| `frontend/apps/app/src/website-type.css` | The responsive `--text-site-*` sizes the website components read, and the `website-*` roles the docs and the marketing pages not yet recomposed still use |
 | `frontend/services/api/src/billing/pdf-brand.ts` | The PDF palette, read from `globals.css` |
 
 ## Token contract
@@ -135,8 +135,8 @@ code. Light and dark on every surface, defaulting to the system preference.
 ### Type
 
 Product roles are the `.type-*` classes in `globals.css`, reached through
-`textRole()` in `components/ui/typography.tsx`; the website and flow roles are
-in `website-type.css`.
+`textRole()` in `components/ui/typography.tsx`; the website roles are in
+`website-type.css`.
 
 <!-- generated:type:start -->
 | Role | Surface | Size / line height | 768–1023px |
@@ -154,10 +154,6 @@ in `website-type.css`.
 | `.type-label` | product | `14px / 20px` | — |
 | `.type-page-title` | product | `28px / 34px` | — |
 | `.type-section-title` | product | `22px / 28px` | — |
-| `.flow-group-title` | public | `16px / 24px` | — |
-| `.flow-help` | public | `14px / 20px` | — |
-| `.flow-meta` | public | `12px / 16px` | — |
-| `.flow-title` | public | `28px / 34px` | — |
 | `.website-article-title` | public | `44px / 48px` | `36px / 42px` |
 | `.website-body` | public | `16px / 26px` | — |
 | `.website-data-display` | public | `32px / 38px` | — |

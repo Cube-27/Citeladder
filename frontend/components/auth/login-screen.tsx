@@ -3,8 +3,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 
-import { AuthEmailField, AuthFormShell, AuthPasswordField } from '@/components/auth/auth-form';
-import { Inline } from '@/components/ui/layout';
+import {
+  AuthEmailField,
+  AuthFormShell,
+  AuthPasswordField,
+  AuthRecoveryLinks,
+} from '@/components/auth/auth-form';
 import { authApi } from '@/lib/api/auth';
 import {
   authErrorMessage,
@@ -14,7 +18,6 @@ import {
 } from '@/lib/auth/forms';
 import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-path';
 import { usePublishedTerms } from '@/lib/auth/terms-consent';
-import { Link } from 'react-router-dom';
 import { useAuthMutation } from '@/lib/auth/use-auth-mutation';
 
 type SearchParams = Pick<URLSearchParams, 'get'>;
@@ -69,7 +72,6 @@ export function LoginScreen({
       // registration, so the validated resume path travels with the link.
       footerHref={withAuthReturnPath('/register', returnTo)}
       footerLabel="Sign up"
-      footerLinkVariant="emphasis"
       // Signing in records the Terms decision with the account, so no screen
       // after sign-in asks again. Google from here never creates an account:
       // an unknown address is sent to sign up.
@@ -84,12 +86,15 @@ export function LoginScreen({
         autoComplete="current-password"
         placeholder="••••••••"
       />
-      <Inline gap="meta" className="auth-recovery-links justify-between">
-        <Link to={withAuthReturnPath('/forgot-password', returnTo)}>Forgot password?</Link>
-        <Link to={withAuthReturnPath('/resend-verification', returnTo)}>
-          Resend verification email
-        </Link>
-      </Inline>
+      <AuthRecoveryLinks
+        links={[
+          { href: withAuthReturnPath('/forgot-password', returnTo), label: 'Forgot password?' },
+          {
+            href: withAuthReturnPath('/resend-verification', returnTo),
+            label: 'Resend verification email',
+          },
+        ]}
+      />
     </AuthFormShell>
   );
 }

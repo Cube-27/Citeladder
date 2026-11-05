@@ -1,8 +1,9 @@
 import { useLayoutEffect, useState } from 'react';
-import { useLocation, useSearchParams, Link } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
-import { AuthRouteShell } from './auth-route-shell';
-import { AuthEmailField, AuthFormShell, AuthPasswordField } from './auth-form';
+import { Mail } from 'lucide-react';
+import { AuthShell } from '@/components/ui/auth-shell';
+import { AuthEmailField, AuthFormShell, AuthPasswordField, AuthRecoveryLinks } from './auth-form';
 import { authApi } from '@/lib/api/auth';
 import { authFormPolicy, passwordHint } from '@/lib/config/auth';
 import { authErrorMessage } from '@/lib/auth/forms';
@@ -85,9 +86,10 @@ export default function MailboxScreen() {
     ? mutation.data.message
     : mailboxDescription(operation, incomplete);
   return (
-    <AuthRouteShell>
+    <AuthShell mainLabel="Account access">
       <AuthFormShell
         title={title}
+        icon={Mail}
         description={description}
         onSubmit={(event) => {
           event.preventDefault();
@@ -124,12 +126,17 @@ export default function MailboxScreen() {
           />
         )}
         {operation === 'verify-email' && (
-          <Link to={withAuthReturnPath('/forgot-password', secrets.returnTo)}>
-            Didn’t sign up or don’t know the password? Reset it.
-          </Link>
+          <AuthRecoveryLinks
+            links={[
+              {
+                href: withAuthReturnPath('/forgot-password', secrets.returnTo),
+                label: 'Didn’t sign up or don’t know the password? Reset it.',
+              },
+            ]}
+          />
         )}
       </AuthFormShell>
-    </AuthRouteShell>
+    </AuthShell>
   );
 }
 

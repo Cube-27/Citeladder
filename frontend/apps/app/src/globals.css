@@ -763,6 +763,13 @@ a.focus-ring:active .type-caption {
   outline-offset: 2px;
 }
 
+/* A whole-row control inside a bordered list that clips its corners: the
+   same ring, drawn 2px inside the row. */
+.focus-ring-inset:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
 .focus-input:focus-visible,
 .focus-frame:has(:where(input:focus-visible, textarea:focus-visible, select:focus-visible)) {
   border-color: var(--color-focus);
@@ -787,14 +794,6 @@ a.focus-ring:active .type-caption {
   border: 0;
   box-shadow: none;
   padding: 0;
-}
-
-.flow-content.app-pane {
-  box-shadow: var(--shadow-card);
-}
-
-.flow-step-mark-current {
-  box-shadow: var(--shadow-press);
 }
 
 /* Public CTAs: the website's buttons are control-md; the hero rung is
@@ -922,20 +921,6 @@ input:-webkit-autofill:focus {
 .loading-delayed {
   opacity: 0;
   animation: citeladder-loading-appear var(--motion-fast) var(--ease-standard) 300ms forwards;
-}
-
-/* The login and onboarding card: one `surface` card on paper. */
-.app-pane {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
-}
-
-@media (max-width: 980px) {
-  .app-pane {
-    border-radius: 0;
-    box-shadow: none;
-  }
 }
 
 /* Box shadows disappear in forced colours; retain a system-colour boundary. */

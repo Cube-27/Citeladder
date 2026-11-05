@@ -204,16 +204,10 @@ export function densityRoleViolations(source, label, ownsProductUi) {
  * retuned without editing a gate.
  */
 const REQUIRED_WEBSITE_ROLES = [
-  '[data-flow-surface]',
-  '.flow-actions.safe-bottom',
   '.website-hero-display',
   '.website-page-title',
   '.website-section-heading',
   '.website-feature-heading',
-  '.flow-title',
-  '.flow-group-title',
-  '.flow-help',
-  '.flow-meta',
   '.website-lead',
   '.website-body',
   '.website-nav',
@@ -231,12 +225,10 @@ const REQUIRED_WEBSITE_ROLES = [
 const WEBSITE_TYPE_LADDER = [
   '.website-hero-display',
   '.website-page-title',
-  '.flow-title',
+  '.website-section-heading',
   '.website-lead',
-  '.flow-group-title',
   '.website-body',
-  '.flow-help',
-  '.flow-meta',
+  '.website-label',
 ];
 
 /** Geometry roles belong to one ladder in globals.css; no surface re-scales them. */
@@ -258,13 +250,9 @@ const TOKEN_COLORED_ROLES = [
   '.website-feature-heading',
   '.website-nav',
   '.website-data-display',
-  '.flow-title',
-  '.flow-group-title',
   '.website-lead',
   '.website-body',
   '.website-label',
-  '.flow-help',
-  '.flow-meta',
 ];
 
 /** Alternation over literal values, escaped for use inside a RegExp. */
@@ -618,7 +606,7 @@ function staticAssertionText(node) {
 }
 
 function isSemanticTestClass(token) {
-  return SEMANTIC_TEST_CLASSES.has(token) || /^(?:flow-|website-)|(?:-hook)$/.test(token);
+  return SEMANTIC_TEST_CLASSES.has(token) || /^website-|(?:-hook)$/.test(token);
 }
 
 function rawStyleAssertionTokens(text) {

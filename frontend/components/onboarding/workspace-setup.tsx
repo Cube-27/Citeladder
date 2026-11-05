@@ -4,9 +4,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { FlowActions, FlowShell } from '@/components/auth/flow-shell';
-import { FlowAccountControls } from '@/components/layout/flow-account-controls';
+import { UserMenuTrigger } from '@/components/layout/user-menu';
+import { AuthShell } from '@/components/ui/auth-shell';
 import { Button } from '@/components/ui/button';
+import { OnboardingStep } from '@/components/ui/onboarding-shell';
 import { Callout } from '@/components/ui/callout';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -50,7 +51,7 @@ export function WorkspaceSetup() {
   const failure = terms.error ?? leave.error;
   if (failure)
     return (
-      <FlowShell mainLabel="Workspace setup" trailing={<FlowAccountControls />}>
+      <AuthShell mainLabel="Workspace setup" barEnd={<UserMenuTrigger presenter="compact" />}>
         <QueryState
           kind="error"
           error={failure}
@@ -58,9 +59,9 @@ export function WorkspaceSetup() {
           onRetry={() => (terms.error ? void terms.refetch() : signOut())}
           pending={terms.isFetching || leave.isPending}
         />
-      </FlowShell>
+      </AuthShell>
     );
-  if (!terms.data?.accepted_at) return <FlowShell mainLabel="Workspace setup">{null}</FlowShell>;
+  if (!terms.data?.accepted_at) return <AuthShell mainLabel="Workspace setup">{null}</AuthShell>;
   return <NameWorkspace termsRevision={terms.data.terms_revision} />;
 }
 
@@ -94,54 +95,46 @@ function NameWorkspace({ termsRevision }: Readonly<{ termsRevision: string }>) {
   };
 
   return (
-    <FlowShell
-      mainLabel="Workspace setup"
-      trailing={<FlowAccountControls />}
-      actions={
-        <FlowActions
-          primary={
-            <Button
-              variant="primary"
-              type="submit"
-              form={FORM_ID}
-              disabled={create.isPending}
-              pending={create.isPending}
-              pendingLabel="Creating…"
-            >
-              Create workspace
-            </Button>
-          }
-        />
-      }
-    >
-      <form id={FORM_ID} noValidate onSubmit={submit}>
-        <Stack gap="workspace">
-          <div className="flow-header">
-            <h1 className="flow-title">Set up your workspace</h1>
-            <p className="flow-help">
-              Your projects and team live here. Your trial starts when you create it.
-            </p>
-          </div>
-          <Field
-            label="Workspace name"
-            required
-            error={nameMissing ? 'Name your workspace.' : undefined}
+    <AuthShell mainLabel="Workspace setup" barEnd={<UserMenuTrigger presenter="compact" />}>
+      <OnboardingStep
+        title="Set up your workspace"
+        help="Your projects and team live here. Your trial starts when you create it."
+        next={
+          <Button
+            variant="primary"
+            type="submit"
+            form={FORM_ID}
+            disabled={create.isPending}
+            pending={create.isPending}
+            pendingLabel="Creating…"
           >
-            {(props) => (
-              <Input
-                {...props}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Acme"
-                maxLength={255}
-              />
-            )}
-          </Field>
-          {create.error ? (
-            <Callout tone="negative">{humanizeApiError(create.error).message}</Callout>
-          ) : null}
-        </Stack>
-      </form>
-    </FlowShell>
+            Create workspace
+          </Button>
+        }
+      >
+        <form id={FORM_ID} noValidate onSubmit={submit}>
+          <Stack gap="workspace">
+            <Field
+              label="Workspace name"
+              required
+              error={nameMissing ? 'Name your workspace.' : undefined}
+            >
+              {(props) => (
+                <Input
+                  {...props}
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Acme"
+                  maxLength={255}
+                />
+              )}
+            </Field>
+            {create.error ? (
+              <Callout tone="negative">{humanizeApiError(create.error).message}</Callout>
+            ) : null}
+          </Stack>
+        </form>
+      </OnboardingStep>
+    </AuthShell>
   );
 }
