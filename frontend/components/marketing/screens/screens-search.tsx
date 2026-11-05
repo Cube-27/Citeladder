@@ -1,6 +1,5 @@
 import { Badge } from '@/components/ui/badge';
 import { Callout } from '@/components/ui/callout';
-import { Card } from '@/components/ui/card';
 import { ChartCard } from '@/components/ui/chart';
 import { TrendChart } from '@/components/ui/trend-chart';
 
@@ -37,14 +36,6 @@ const count = (value: number) => value.toLocaleString('en-US');
 const points = (values: readonly number[]) =>
   WEEKS.map((week, index) => ({ label: week, value: values[index] ?? null }));
 
-const KEYWORD_STATS = [
-  { label: 'Organic keywords', value: '1,284', change: { value: 96, precision: 0 } },
-  { label: 'Est. monthly traffic', value: '3,920', change: { value: 8.4, unit: '%' } },
-  { label: 'Top-10 keywords', value: '186', change: { value: 14, precision: 0 } },
-  { label: 'Referring domains', value: '318', change: { value: 6, precision: 0 } },
-  { label: 'Backlinks', value: '9,640', change: { value: 2.1, unit: '%' } },
-] as const;
-
 const KEYWORD_COLUMNS: readonly ScreenColumn<(typeof KEYWORDS)[number]>[] = [
   {
     header: 'Keyword',
@@ -52,16 +43,11 @@ const KEYWORD_COLUMNS: readonly ScreenColumn<(typeof KEYWORDS)[number]>[] = [
   },
   { header: 'Position', width: 'sm', numeric: true, cell: (row) => row.position },
   { header: 'Volume', width: 'sm', numeric: true, cell: (row) => count(row.volume) },
-  {
-    header: 'Ranking page',
-    width: 'xl',
-    cell: (row) => <span className="cl-screen-mono">{row.page}</span>,
-  },
-  { header: 'Est. traffic', width: 'md', numeric: true, cell: (row) => row.traffic },
-  { header: 'CPC (USD)', width: 'sm', numeric: true, cell: (row) => row.cpc },
-  { header: 'Difficulty', width: 'sm', numeric: true, cell: (row) => row.difficulty },
   { header: 'Intent', width: 'md', cell: (row) => <Badge>{row.intent}</Badge> },
 ];
+
+/** The keywords the vignette lists: a spread of positions and intents. */
+const KEYWORD_ROWS = KEYWORDS.slice(2, 7);
 
 const QUERY_COLUMNS: readonly ScreenColumn<(typeof QUERIES)[number]>[] = [
   {
@@ -123,39 +109,18 @@ const ENGINE_COLUMNS: readonly ScreenColumn<(typeof ENGINE_ROWS)[number]>[] = [
   { header: 'Answers', width: 'sm', numeric: true, cell: (row) => row.answers },
 ];
 
-/** Keyword Research: the domain's ranking figures and the keywords it ranks for. */
+/** Keyword Research: keywords the domain ranks for, with position, volume and intent. */
 export function ScreenKeywords() {
   return (
-    <ScreenRoot name="keywords" width={1200}>
-      <ScreenBar
-        start={
-          <ScreenTabs
-            items={[
-              { label: 'Overview' },
-              { label: 'Keywords' },
-              { label: 'Competitors' },
-              { label: 'Backlinks' },
-            ]}
-            selected="Keywords"
-          />
-        }
-        end={<ScreenMeta>DataForSEO · United States · 2 Nov 2026</ScreenMeta>}
-      />
-      <div className="cl-screen-statrow cl-screen-statrow--5">
-        {KEYWORD_STATS.map((stat) => (
-          <Card key={stat.label}>
-            <ScreenStat {...stat} period="vs Oct" />
-          </Card>
-        ))}
-      </div>
+    <ScreenRoot name="keywords" width={640}>
       <ScreenTableCard
         title="Ranked keywords"
-        meta="Positions are DataForSEO estimates for google.com, not Search Console data."
-        pages="1–8 of 1,284 keywords"
+        action={<ScreenMeta>1,284 keywords</ScreenMeta>}
+        meta="acme.com on google.com, United States · 2 Nov 2026"
       >
         <ScreenTable
           caption="Keywords acme.com ranks for"
-          rows={KEYWORDS}
+          rows={KEYWORD_ROWS}
           rowKey={(row) => row.keyword}
           columns={KEYWORD_COLUMNS}
         />

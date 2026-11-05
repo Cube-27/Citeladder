@@ -22,7 +22,8 @@ import { ENGINE_KEYS, ENGINE_NAMES, type Change } from './demo-data';
 
 /**
  * The parts every product screen shares. A screen is an app content crop at
- * a fixed natural size (960 × 600 or 1200 × 680) built from the app's own
+ * a fixed natural size (640 × 400, 960 × 600 or 1200 × 680; see
+ * screens.css) built from the app's own
  * components; it is a still, so its controls are drawn, never wired.
  */
 
@@ -30,7 +31,7 @@ export function ScreenRoot({
   name,
   width,
   children,
-}: Readonly<{ name: string; width: 960 | 1200; children: ReactNode }>) {
+}: Readonly<{ name: string; width: 640 | 960 | 1200; children: ReactNode }>) {
   return (
     <div className={cn('cl-screen', `cl-screen--w${width}`, `cl-screen--${name}`)}>{children}</div>
   );
@@ -294,20 +295,18 @@ export function ScreenTable<Row>({
   );
 }
 
-/** A table in a card: its title row, a line saying what it counts, and an optional page summary. */
+/** A table in a card: its title row and a line saying what it counts. */
 export function ScreenTableCard({
   eyebrow,
   title,
   action,
   meta,
-  pages,
   children,
 }: Readonly<{
   eyebrow?: string;
   title: string;
   action?: ReactNode;
   meta?: string;
-  pages?: string;
   children: ReactNode;
 }>) {
   return (
@@ -318,7 +317,6 @@ export function ScreenTableCard({
         {meta && <ScreenNote>{meta}</ScreenNote>}
       </CardHeader>
       {children}
-      {pages && <p className="cl-screen-pages">{pages}</p>}
     </Card>
   );
 }

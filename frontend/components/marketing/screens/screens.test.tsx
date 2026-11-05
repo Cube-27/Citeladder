@@ -25,10 +25,7 @@ describe('screens', () => {
   it('highlights the passage that names the tracked brand in an answer', () => {
     render(<ScreenAnswer />);
 
-    expect(
-      screen.getByText('the easiest place to start: a free tier up to 10,000 events a month')
-        .tagName,
-    ).toBe('MARK');
+    expect(screen.getByText('the easiest place to start').tagName).toBe('MARK');
   });
 
   it.each([

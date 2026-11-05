@@ -120,6 +120,17 @@
   height: var(--screen-h);
 }
 
+/* A card image: one focused element (a table, an answer) at 640 × 400, the
+   width of a split's well at 1440 (656), so it renders at its natural size
+   there and at 982 (826) and only scales down on narrower wells. */
+.cl-screen--w640 {
+  --screen-w: 640px;
+  --screen-h: 400px;
+
+  width: var(--screen-w);
+  height: var(--screen-h);
+}
+
 /* ---------- The app in its chrome (D25): the home page's first view ----------
    The shell's own geometry: the sidebar column, the ruled top bar
    (`page-header-band`) shared by the project switcher and the page title,
@@ -376,13 +387,6 @@
   line-height: var(--text-heading--line-height);
 }
 
-.cl-screen-title {
-  color: var(--color-ink);
-  font-family: var(--font-display);
-  font-size: var(--text-title);
-  line-height: var(--text-title--line-height);
-}
-
 .cl-screen-body {
   margin: 0;
   color: var(--color-ink);
@@ -541,10 +545,6 @@
   gap: 16px;
 }
 
-.cl-screen-statrow--5 {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-
 .cl-screen-pstats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -621,14 +621,6 @@
   white-space: nowrap;
 }
 
-.cl-screen-pages {
-  margin: 16px 0 0;
-  color: var(--color-ink-muted);
-  font-size: var(--text-caption);
-  line-height: var(--text-caption--line-height);
-  text-align: right;
-}
-
 .cl-screen-target {
   display: inline-flex;
   align-items: baseline;
@@ -686,6 +678,7 @@
   flex-direction: column;
   gap: 12px;
   color: var(--color-ink);
+  font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }
 
@@ -744,34 +737,36 @@
   line-height: var(--text-caption--line-height);
 }
 
-.cl-screen-cites {
+/* ---------- Prompts, answer, cited page and keywords card images ----------
+   Each is one card filling the screen. Figures take the app's `stat` role
+   (Geist 500), never the display face. */
+:is(.cl-screen--prompts, .cl-screen--answer, .cl-screen--cited-url, .cl-screen--keywords)
+  > section {
+  flex: 1;
+  min-height: 0;
+}
+
+/* The answer's foot (citation level, source count) sits at the card's foot. */
+.cl-screen--answer > section {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
-.cl-screen-cites li {
-  max-width: 100%;
+.cl-screen--answer .cl-screen-answer-foot {
+  margin-top: auto;
 }
 
-/* ---------- One cited page ---------- */
-.cl-screen-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+:is(.cl-screen--visibility, .cl-screen--cited-url) .cl-screen-stat-value {
+  font-family: var(--font-sans);
+  font-size: var(--text-stat);
+  font-weight: var(--text-stat--font-weight);
+  line-height: var(--text-stat--line-height);
+  letter-spacing: var(--text-stat--letter-spacing);
 }
 
-.cl-screen-head-copy,
-.cl-screen-quote {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
+.cl-screen--cited-url .cl-screen-statrow {
+  gap: 24px;
+  padding-bottom: 16px;
 }
 
 /* ---------- Agent chat: the thread and composer beside the action it added ---------- */
