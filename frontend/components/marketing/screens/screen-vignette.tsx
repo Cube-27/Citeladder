@@ -1,61 +1,119 @@
 import type { ReactNode } from 'react';
 
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
-import { CHART_AXIS_TEXT, CHART_FILL, CHART_STROKE, chartPath } from '@/components/ui/chart';
+import { CHART_FILL, CHART_STROKE, chartPath } from '@/components/ui/chart';
 import { cn } from '@/lib/utils';
 
 import type { Change } from './demo-data';
 import { ScreenDelta } from './screen-parts';
 
 /**
- * The parts of a vignette: a 480-wide screen (`width={480}`) that shows
- * one subject in one card, at close to the size it is displayed, so it reads
- * at real size instead of as a whole page shrunk down.
+ * The website's one card image: a vignette. One white card at the width of
+ * its well (never scaled), a title over an optional meta line with an
+ * optional badge at the right, then one body: four rows, three figures over
+ * a small chart, or a short panel. Every vignette uses the same type scale,
+ * so neighbouring tiles read alike (docs/design.md, "Website product images").
  */
-
-/** A vignette card's content width: the 480 screen less the card's 20px inset each side. */
-export const VIGNETTE_PLOT_WIDTH = 440;
-
-/** The vignette's one card: its title row with a range or count at the right, then the content. */
-export function VignetteCard({
+export function Vignette({
   title,
+  meta,
   badge,
   children,
-}: Readonly<{ title: string; badge: ReactNode; children: ReactNode }>) {
+}: Readonly<{
+  title: string;
+  /** One line under the title saying what the card counts. */
+  meta?: string;
+  badge?: ReactNode;
+  children: ReactNode;
+}>) {
   return (
-    <Card className="cl-screen-vcard">
-      <CardHeader actions={badge}>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
+    <div className="cl-vig">
+      <div className="cl-vig-head">
+        <div className="cl-vig-heading">
+          <p className="cl-vig-title">{title}</p>
+          {meta && <p className="cl-vig-meta">{meta}</p>}
+        </div>
+        {badge && <div className="cl-vig-badge">{badge}</div>}
+      </div>
       {children}
-    </Card>
+    </div>
   );
 }
 
-/** The headline figure and its change. */
-export function VignetteFigure({
-  value,
-  change,
-  period,
-}: Readonly<{ value: string; change: Change; period: string }>) {
+export type VignetteRow = Readonly<{
+  key: string;
+  /** A 20px mark or icon before the label. */
+  lead?: ReactNode;
+  label: ReactNode;
+  /** A muted line under the label. */
+  secondary?: ReactNode;
+  /** A middle column (a bar, marks or a badge) dropped when the card is narrow. */
+  extra?: ReactNode;
+  /** The figure or state at the right. */
+  value: ReactNode;
+}>;
+
+/** Exactly four rows, so every row-list vignette is the same height as its neighbours. */
+export type VignetteFourRows = readonly [VignetteRow, VignetteRow, VignetteRow, VignetteRow];
+
+/**
+ * The first four of a demo list as rows. The demo data is static, so a list
+ * shorter than four fails the build, never a visitor's page.
+ */
+export function fourRows<Item>(
+  items: readonly Item[],
+  toRow: (item: Item) => VignetteRow,
+): VignetteFourRows {
+  const [a, b, c, d] = items;
+  if (a === undefined || b === undefined || c === undefined || d === undefined) {
+    throw new Error(`A vignette list needs four rows; it has ${items.length}.`);
+  }
+  return [toRow(a), toRow(b), toRow(c), toRow(d)];
+}
+
+/**
+ * The vignette's list. Every row in a list has the same parts, so its
+ * columns line up; the middle column drops below 420px of card width.
+ */
+export function VignetteRows({
+  label,
+  rows,
+  ordered = false,
+}: Readonly<{ label: string; rows: VignetteFourRows; ordered?: boolean }>) {
+  const List = ordered ? 'ol' : 'ul';
+  const lead = rows.some((row) => row.lead !== undefined);
+  const extra = rows.some((row) => row.extra !== undefined);
   return (
-    <p className="cl-screen-vfigure">
-      <span className="type-figure">{value}</span>
-      <ScreenDelta change={change} period={period} />
-    </p>
+    <List
+      aria-label={label}
+      className={cn('cl-vig-rows', lead && 'cl-vig-rows--lead', extra && 'cl-vig-rows--extra')}
+    >
+      {rows.map((row) => (
+        <li key={row.key} className="cl-vig-row">
+          {lead && <span className="cl-vig-lead">{row.lead}</span>}
+          <span className="cl-vig-main">
+            <span className="cl-vig-label">{row.label}</span>
+            {row.secondary && <span className="cl-vig-secondary">{row.secondary}</span>}
+          </span>
+          {extra && <span className="cl-vig-extra">{row.extra}</span>}
+          <span className="cl-vig-value">{row.value}</span>
+        </li>
+      ))}
+    </List>
   );
 }
 
-/** Three figures in a row, each under its label and over its change. */
+type VignetteStat = Readonly<{ label: string; value: string; change: Change }>;
+
+/** Three figures in a row, each label over its value over its change. */
 export function VignetteStats({
   stats,
-}: Readonly<{ stats: readonly Readonly<{ label: string; value: string; change: Change }>[] }>) {
+}: Readonly<{ stats: readonly [VignetteStat, VignetteStat, VignetteStat] }>) {
   return (
-    <dl className="cl-screen-vstats">
+    <dl className="cl-vig-stats">
       {stats.map((stat) => (
         <div key={stat.label}>
-          <dt className="type-caption">{stat.label}</dt>
-          <dd className="type-figure">{stat.value}</dd>
+          <dt className="cl-vig-stat-label">{stat.label}</dt>
+          <dd className="cl-vig-stat-value">{stat.value}</dd>
           <dd>
             <ScreenDelta change={stat.change} />
           </dd>
@@ -69,56 +127,25 @@ export function VignetteStats({
 export function VignetteBar({ share }: Readonly<{ share: number }>) {
   const width = Math.min(1, Math.max(0, share)) * 100;
   return (
-    <span aria-hidden className="cl-screen-vbar">
+    <span aria-hidden className="cl-vig-bar">
       <span className={CHART_FILL[1]} style={{ width: `${width}%` }} />
     </span>
   );
 }
 
-/**
- * The vignette's list: 3 to 5 rows on a fixed column template named by
- * `layout` (see screens.css), so a row's columns never follow its text.
- */
-export function VignetteRows<Row>({
-  layout,
-  rows,
-  rowKey,
-  children,
-}: Readonly<{
-  layout: 'sources' | 'themes' | 'engines' | 'shelf';
-  rows: readonly Row[];
-  rowKey: (row: Row) => string;
-  children: (row: Row) => ReactNode;
-}>) {
-  return (
-    <ul className={cn('cl-screen-vrows', `cl-screen-vrows--${layout}`)}>
-      {rows.map((row) => (
-        <li key={rowKey(row)} className="cl-screen-vrow">
-          {children(row)}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-/** Room for the y-axis labels at the left and the week labels under the plot. */
-const AXIS_LEFT = 40;
-const AXIS_BOTTOM = 20;
-const PAD_TOP = 6;
+/** Plot coordinates run 0–100 on both axes and stretch to the plot's box. */
+const PLOT = 100;
 
 /**
- * One series over time, drawn for a vignette: the TrendChart's marks (a 2px
- * `data-1` line, `chart-grid` gridlines, 12px mono axis text) at a fixed
- * width, since a screen has a fixed natural size and a still has no hover.
- * The area under the line is a flat, faint `data-1`; the latest point has a
- * dot. Every week is read from the hidden list.
+ * One series over time at the width of its card: the TrendChart's marks (a
+ * 2px `data-1` line that never scales, `chart-grid` gridlines, a faint area
+ * and a dot on the latest point) in a stretched plot, with the axis labels
+ * in HTML at real size. Every week is read from the hidden caption.
  */
-export function ScreenAreaChart({
+export function VignetteChart({
   label,
   weeks,
   values,
-  width,
-  height,
   ticks,
   format,
 }: Readonly<{
@@ -126,72 +153,70 @@ export function ScreenAreaChart({
   label: string;
   weeks: readonly string[];
   values: readonly number[];
-  width: number;
-  height: number;
   /** The y-axis gridlines, lowest first; the first and last bound the plot. */
   ticks: readonly [number, number, ...number[]];
   format: (value: number) => string;
 }>) {
   const low = ticks[0];
   const high = ticks.at(-1) ?? low + 1;
-  const plotWidth = width - AXIS_LEFT;
-  const bottom = height - AXIS_BOTTOM;
-  const x = (index: number) =>
-    AXIS_LEFT + (values.length > 1 ? (index / (values.length - 1)) * plotWidth : 0);
-  const y = (value: number) => PAD_TOP + (1 - (value - low) / (high - low)) * (bottom - PAD_TOP);
+  const x = (index: number) => (values.length > 1 ? (index / (values.length - 1)) * PLOT : 0);
+  const y = (value: number) => (1 - (value - low) / (high - low)) * PLOT;
   const points = values.map((value, index) => [x(index), y(value)] as const);
   const line = chartPath(points);
   const last = points.at(-1);
-  const first = points[0];
-  const area =
-    first && last
-      ? `${line}L${last[0].toFixed(1)} ${bottom}L${first[0].toFixed(1)} ${bottom}Z`
-      : '';
+  const area = last ? `${line}L${PLOT} ${PLOT}L0 ${PLOT}Z` : '';
   return (
-    <figure className="cl-screen-area">
-      <svg
-        aria-hidden
-        focusable="false"
-        width={width}
-        height={height}
-        viewBox={`0 0 ${width} ${height}`}
-        className="block overflow-visible"
-      >
-        {ticks.map((tick) => {
-          const tickY = Math.round(y(tick)) + 0.5;
-          return (
-            <g key={tick}>
+    <figure className="cl-vig-chart">
+      <div className="cl-vig-plot" aria-hidden>
+        <div className="cl-vig-yaxis">
+          {ticks.map((tick) => (
+            <span key={tick} style={{ top: `${y(tick)}%` }}>
+              {format(tick)}
+            </span>
+          ))}
+        </div>
+        <div className="cl-vig-area">
+          <svg
+            focusable="false"
+            viewBox={`0 0 ${PLOT} ${PLOT}`}
+            preserveAspectRatio="none"
+            className="block size-full overflow-visible"
+          >
+            {ticks.map((tick) => (
               <line
-                x1={AXIS_LEFT}
-                x2={width}
-                y1={tickY}
-                y2={tickY}
+                key={tick}
+                x1={0}
+                x2={PLOT}
+                y1={y(tick)}
+                y2={y(tick)}
                 className="stroke-chart-grid"
                 strokeWidth={1}
+                vectorEffect="non-scaling-stroke"
               />
-              <text x={0} y={tickY + 4} className={CHART_AXIS_TEXT}>
-                {format(tick)}
-              </text>
-            </g>
-          );
-        })}
-        <path d={area} className={CHART_FILL[1]} fillOpacity={0.12} />
-        <path
-          d={line}
-          fill="none"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={CHART_STROKE[1]}
-        />
-        {last ? <circle cx={last[0]} cy={last[1]} r={4} className={CHART_FILL[1]} /> : null}
-        <text x={AXIS_LEFT} y={height - 4} className={CHART_AXIS_TEXT}>
-          {weeks[0]}
-        </text>
-        <text x={width} y={height - 4} textAnchor="end" className={CHART_AXIS_TEXT}>
-          {weeks.at(-1)}
-        </text>
-      </svg>
+            ))}
+            <path d={area} className={CHART_FILL[1]} fillOpacity={0.12} />
+            <path
+              d={line}
+              fill="none"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+              className={CHART_STROKE[1]}
+            />
+          </svg>
+          {last ? (
+            <span
+              className={cn('cl-vig-dot', CHART_FILL[1])}
+              style={{ left: `${last[0]}%`, top: `${last[1]}%` }}
+            />
+          ) : null}
+        </div>
+        <div className="cl-vig-xaxis">
+          <span>{weeks[0]}</span>
+          <span>{weeks.at(-1)}</span>
+        </div>
+      </div>
       <figcaption className="sr-only">
         {`${label}: ${values.map((value, index) => `${weeks[index] ?? ''} ${format(value)}`).join(', ')}`}
       </figcaption>

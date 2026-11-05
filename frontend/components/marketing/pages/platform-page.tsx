@@ -16,11 +16,10 @@ import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { EngineStrip, QuestionCards, RelatedCards } from '../sections/cards';
 import { Bento, FeatureCard, FeatureSplit, type BentoSpan } from '../sections/features';
 import { PageHero } from '../sections/heroes';
-import { PageHighlight } from '../sections/page-highlight';
 import { PageSection } from '../sections/page-section';
 import { CheckList, SiteArrowLink, columnsFor } from '../sections/site-parts';
 import { CtaBand, FaqList, Steps } from '../sections/steps-faq-cta';
-import { CatalogFrame, SCREEN_CATALOG, SCREEN_KEY_NUMBERS } from '../screens/screen-catalog';
+import { CatalogFrame, SCREEN_CATALOG } from '../screens/screen-catalog';
 
 /** The page's primary and secondary actions, chosen by what a visitor can do today. */
 export function PlatformActions({ cta }: Readonly<{ cta: PlatformCta }>) {
@@ -99,6 +98,16 @@ type FeatureGroup =
   | { kind: 'cards'; features: Feature[] }
   | { kind: 'full'; item: ScreenedFeature };
 
+/**
+ * How a feature's screen is laid out: a full app screen keeps the full width;
+ * a vignette asked to go full width sits beside its copy as a split, so a
+ * card image is never stretched across the page.
+ */
+function featureLayout(media: Feature['media']): Feature['media']['kind'] {
+  if (media.kind === 'full' && SCREEN_CATALOG[media.screen].fit === 'fluid') return 'split';
+  return media.kind;
+}
+
 function groupFeatures(features: readonly Feature[]): FeatureGroup[] {
   const groups: FeatureGroup[] = [];
   for (const feature of features) {
@@ -106,7 +115,10 @@ function groupFeatures(features: readonly Feature[]): FeatureGroup[] {
     const { media } = feature;
     switch (media.kind) {
       case 'full':
-        groups.push({ kind: 'full', item: { feature, screen: media.screen } });
+        if (featureLayout(media) === 'split') {
+          if (last?.kind === 'splits') last.items.push({ feature, screen: media.screen });
+          else groups.push({ kind: 'splits', items: [{ feature, screen: media.screen }] });
+        } else groups.push({ kind: 'full', item: { feature, screen: media.screen } });
         break;
       case 'split':
         if (last?.kind === 'splits') last.items.push({ feature, screen: media.screen });
@@ -166,7 +178,7 @@ function Features({ page }: Readonly<{ page: PlatformPage }>) {
   // Splits alternate across the whole page, not per section.
   const splitSide = new Map(
     page.features
-      .filter((feature) => feature.media.kind === 'split')
+      .filter((feature) => featureLayout(feature.media) === 'split')
       .map((feature, index) => [feature.title, index % 2 === 1]),
   );
   return (
@@ -220,36 +232,6 @@ function Features({ page }: Readonly<{ page: PlatformPage }>) {
       })}
     </>
   );
-}
-
-/**
- * The hero's product image. A 1200 screen fills the frame; a smaller screen sits
- * beside the page's lead tile: the screen's key numbers, or, for a
- * screen without numbers, the page's own how-to.
- */
-function HeroMedia({ page }: Readonly<{ page: PlatformPage }>) {
-  if (SCREEN_CATALOG[page.screen].width === 1200) return <CatalogFrame screen={page.screen} />;
-  return (
-    <Bento
-      cells={[
-        { key: 'screen', span: 7, content: <CatalogFrame screen={page.screen} /> },
-        { key: 'tile', span: 5, content: <HeroTile page={page} /> },
-      ]}
-    />
-  );
-}
-
-function HeroTile({ page }: Readonly<{ page: PlatformPage }>) {
-  const numbers = SCREEN_KEY_NUMBERS[page.screen];
-  if (numbers) {
-    return <PageHighlight eyebrow={numbers.eyebrow} title={numbers.title} stats={numbers.stats} />;
-  }
-  return <PageHighlight title="Connect your assistant" steps={page.highlights} />;
-}
-
-/** Highlights go in the hero tile when the hero screen has no key numbers. */
-function highlightsInTile(page: PlatformPage): boolean {
-  return SCREEN_CATALOG[page.screen].width !== 1200 && !SCREEN_KEY_NUMBERS[page.screen];
 }
 
 function Related({ page }: Readonly<{ page: PlatformPage }>) {
@@ -306,24 +288,23 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
         actions={page.cta === 'mcp' ? <ConnectStrip /> : <PlatformActions cta={page.cta} />}
         meta={page.note}
       >
-        <HeroMedia page={page} />
+        {/* The page's one product image: a full app screen fills the width, a vignette centres. */}
+        <CatalogFrame screen={page.screen} />
       </PageHero>
 
       <PageSection spacing="compact" label="Engines">
         <EngineStrip />
       </PageSection>
 
-      {!highlightsInTile(page) && (
-        <PageSection spacing="compact" label={`${label} highlights`}>
-          <ul className={`cl-tiles cl-cols-${columnsFor(page.highlights.length)}`}>
-            {page.highlights.map((highlight) => (
-              <li key={highlight.title}>
-                <FeatureCard as="h2" title={highlight.title} body={highlight.body} />
-              </li>
-            ))}
-          </ul>
-        </PageSection>
-      )}
+      <PageSection spacing="compact" label={`${label} highlights`}>
+        <ul className={`cl-tiles cl-cols-${columnsFor(page.highlights.length)}`}>
+          {page.highlights.map((highlight) => (
+            <li key={highlight.title}>
+              <FeatureCard as="h2" title={highlight.title} body={highlight.body} />
+            </li>
+          ))}
+        </ul>
+      </PageSection>
 
       <Features page={page} />
 

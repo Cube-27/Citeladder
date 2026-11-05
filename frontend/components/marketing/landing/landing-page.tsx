@@ -71,7 +71,7 @@ function Hero({ rotor }: Readonly<{ rotor?: ReactNode }>) {
       }
       frame={
         // D25: the real app, chrome and all, as the page's first product view.
-        <ProductFrame label="The AI Visibility page in the CiteLadder app">
+        <ProductFrame label="The AI Visibility page in the CiteLadder app" fit="scale">
           <ScreenAppVisibility />
         </ProductFrame>
       }

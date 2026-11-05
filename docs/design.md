@@ -74,7 +74,7 @@ type rule of the same day.
 | `frontend/components/ui/logo-mark.tsx`, `packages/contracts/src/brand-logo.ts` | The logo, drawn inline in ink (`currentColor`) and the accent |
 | `frontend/components/ui/`, `frontend/components/layout/` | The app's components and shell, composed by feature folders that set no geometry of their own |
 | `frontend/apps/marketing/src/site.css`, `frontend/components/marketing/chrome/`, `frontend/components/marketing/sections/` | The website's components: SiteNav, SiteFooter, CookieBanner, Breadcrumbs, AnnouncementPill and the page sections, the system's `cl-*` geometry on the tokens above, and the website's type roles (the `cl-*` titles, lead, body and note) |
-| `frontend/apps/marketing/src/screens.css`, `frontend/components/marketing/screens/` | The website's product images: ProductFrame and the `Screen*` components, app views at a fixed natural size (the list is under "Website product images" in Screen contracts) composed from `components/ui` and scaled whole to fit their frame (never cropped), with their demo data in one typed module; the home page's first view (`ScreenAppVisibility`, D25) is the whole app at 1440 × 820, its chrome drawn at the app's density |
+| `frontend/apps/marketing/src/screens.css`, `frontend/components/marketing/screens/` | The website's product images: ProductFrame and the `Screen*` components ("Website product images" in Screen contracts): fluid card vignettes at real type size, and two full app screens scaled whole to fit their frame (never cropped), with their demo data in one typed module; the home page's first view (`ScreenAppVisibility`, D25) is the whole app at 1440 × 820, its chrome drawn at the app's density |
 | `frontend/services/api/src/billing/pdf-brand.ts` | The PDF palette, read from `globals.css` |
 
 ## Token contract
@@ -325,39 +325,30 @@ and stopped-at-limit are distinct states with Stop while active. Actions list by
 deterministic priority (High, Medium, Low); neither chats nor Actions count
 evidence sources. Context is one `ListScreen` whose subjects are its tabs.
 
-**Website product images.** A `Screen*` is laid out once at its natural size
-and `ProductFrame` shows all of it: the frame's well takes the screen's ratio
-with even padding and scales the screen down to the well's width (CSS
-container query units, no script, no layout shift), never up and never
-cropped, so no text is cut at any viewport. The frame and the FeatureCard
-around it are flat: a 1px soft border, radius at most 8px, no shadow; in a
-FeatureCard the well sits straight in the card above an optional step number,
-the title, body and link. A screen whose text would be too small once scaled
-is redesigned smaller, never cropped.
+**Website product images.** `ProductFrame` shows a screen in a paper well
+with even padding (24, 16 under 768px) inside a flat card (1px soft border,
+radius at most 8px, no shadow); in a FeatureCard the well sits straight in
+the card above an optional step number, the title, body and link. Screens
+come in two kinds, named by the frame's `fit`:
 
-A screen's natural size is a width and a height, each from a short list:
-`ScreenRoot` takes both and screens.css maps them to one class per width
-(`cl-screen--w480`, `--w640`, `--w800`, `--w960`, `--w1200`) and one per
-height (`cl-screen--h320`, `--h360`, `--h400`, `--h500`, `--h600`,
-`--h680`). The sizes in use:
-
-- 1200 × 680: a full-width screen.
-- 960 × 600: a screen in a split or tile that needs the room.
-- 800 × 500: one list of rows wide enough for its labels (Actions).
-- 640 × 400: a card image (a split, tile or feature card) of one focused
-  element: one table of 4–6 rows and at most 4 columns, or one answer, with
-  no tabs, toolbars, pagination or second pane, so it renders at its natural
-  size in a split at 982 and 1440 and only scales down on narrower wells.
-- 480 wide: a vignette, one focused element (three figures over one small
-  chart, a list of 3 to 5 rows on a fixed column template, one panel or one
-  exchange) with no tabs, toolbars, filters, rails, pagination or second
-  pane, so it shows at 1:1 in a split and at 0.9 or more in a span-7 tile at
-  982px (text at least 11px). Its height fits its content: 320 for a short
-  stack or one exchange, 360 for figures over a chart or a 3 to 5 row list,
-  400 for a large-type panel (a title, one line under it, three or four rows
-  in `title-sm`) that still reads at 11px scaled down to a 300px tile.
-- 1440 × 820: the home page's app in its chrome (`cl-screen--app`).
-
-A new size adds its width or height to both lists rather than a new
-width class with its own height; a vignette takes the shortest height its
-content fills without a gap.
+- **Vignette (`fluid`, every card image).** One `Vignette`
+  (`screen-vignette.tsx`, `.cl-vig`): a white card, 1px `line` border, radius
+  8, padding 20, laid out at the width of its well, never scaled, its height
+  from its content. Header: title (Geist 500, 16/24), an optional meta line
+  (14/20, muted) and an optional badge at the right. Body: exactly four rows
+  (a 20px mark or icon, label 14/20 500, a muted secondary line 14/20, an
+  optional middle column, a value 14 tabular), or three figures (label 12,
+  value `stat` 28/36 Geist 500, change) over one small chart, or a short
+  panel of the same height. Every vignette uses this one type scale, no Cal
+  Sans and nothing over 28px, so tiles in a bento row match; in a taller row
+  the vignette fills its well and its rows share the extra height. Key text
+  wraps, never ellipsizes; below 420px of card width a row drops its middle
+  column. A vignette's frame is at most 760px wide and centres in a wider
+  slot: a platform hero shows its one vignette centred, and a feature asking
+  for a full-width vignette is laid out as a split beside its copy.
+- **Full app screen (`scale`).** Laid out once at a natural size
+  (`--screen-w` by `--screen-h`) and scaled down whole to the well's width
+  (CSS container query units, no script, no layout shift), never up and
+  never cropped: the home page's app in its chrome (`cl-screen--app`,
+  1440 × 820, D25) and the AI Visibility overview (`cl-screen--visibility`,
+  1200 × 680), each in a full-width frame.

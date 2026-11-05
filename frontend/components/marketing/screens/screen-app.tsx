@@ -169,7 +169,7 @@ export function ScreenAppVisibility() {
               delta: <ScreenDelta change={kpi.change} period="vs last week" />,
             }))}
           />
-          <ScreenCols layout="main-aside">
+          <ScreenCols>
             <ChartCard
               title="Visibility over time"
               footnote="412 answers to 120 prompts across 4 engines, week of 27 Oct – 2 Nov 2026"
