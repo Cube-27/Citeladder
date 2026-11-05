@@ -159,7 +159,7 @@ function TopIssues({ issues }: Readonly<{ issues: SiteHealthOverview['top_issues
           <TableCell>
             <Inline>
               <TextLink
-                text="inherit"
+                text="body"
                 href={issueHref(issue.rule_id, issue.finding_class)}
                 className="min-w-0"
               >

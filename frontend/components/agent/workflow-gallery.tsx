@@ -63,13 +63,22 @@ export function WorkflowGallery({
                 .filter((workflow) => workflow.group === option.id)
                 .map((workflow) => (
                   <li key={workflow.id} className="flex">
+                    {/* Every card keeps the plain card's one fill (decision
+                        D17); hover underlines its title, as a link's does. */}
                     <Pressable
                       disabled={disabled}
                       onClick={() => onPick(workflow)}
-                      className={cn(cardClasses(), 'hover:bg-surface-sunken')}
+                      className={cn(cardClasses(), 'group')}
                     >
                       <Stack as="span" gap="tight">
-                        <span className={textRole('sectionTitle')}>{workflow.label}</span>
+                        <span
+                          className={textRole(
+                            'itemTitle',
+                            'decoration-1 underline-offset-3 group-hover:underline',
+                          )}
+                        >
+                          {workflow.label}
+                        </span>
                         <span className={textRole('caption')}>{workflow.description}</span>
                       </Stack>
                     </Pressable>
@@ -118,7 +127,7 @@ export function WorkflowStart({
     >
       <Stack gap="workspace">
         <Stack gap="tight">
-          <h3 id="workflow-title" className={textRole('sectionTitle')}>
+          <h3 id="workflow-title" className={textRole('itemTitle')}>
             {workflow.label}
           </h3>
           <p className={textRole('caption')}>{workflow.description}</p>

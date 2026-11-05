@@ -28,6 +28,16 @@ it('removes a tag from its named remove button', async () => {
   expect(onRemove).toHaveBeenCalledTimes(1);
 });
 
+it('carries a long label in full in its tooltip', () => {
+  // The cut itself is geometry; e2e/surface-layout.spec.ts holds the page to
+  // the viewport with this label at 982px.
+  const long =
+    'AI Visibility tracking (brand mentions, position, sentiment and competitors across AI answers)';
+  render(<TagGroup labels={[long, 'Citation Intelligence']} />);
+  expect(screen.getByTitle(long)).toHaveTextContent(long);
+  expect(screen.getByTitle('Citation Intelligence')).toHaveTextContent('Citation Intelligence');
+});
+
 it('does not offer a disclosure when all labels fit', () => {
   render(<TagGroup labels={['Analytics', 'Research']} />);
   expect(screen.getByText('Research')).toBeVisible();

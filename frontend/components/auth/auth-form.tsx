@@ -1,12 +1,11 @@
 'use client';
 
 import { Link } from 'react-router-dom';
-import type { LucideIcon } from 'lucide-react';
 import { type ComponentProps, type ReactNode, useId, useState } from 'react';
 
 import {
   AuthButton,
-  AuthCard,
+  AuthSignInCard,
   AuthDivider,
   AuthForm,
   AuthHumanCheck,
@@ -190,7 +189,7 @@ function GoogleEntry({
 }
 
 /**
- * Sign-in, sign-up and the mailbox screens on the AuthCard: the title and
+ * Sign-in, sign-up and the mailbox screens on the AuthSignInCard: the title and
  * line, the form's one alert, Continue with Google and the "or" rule (when the
  * form authenticates), the fields, the Turnstile slot (when challenged) and
  * the submit, the agreement line, and the switch under the card.
@@ -198,7 +197,6 @@ function GoogleEntry({
 export function AuthFormShell({
   title,
   description,
-  icon,
   error,
   onSubmit,
   pending,
@@ -216,8 +214,6 @@ export function AuthFormShell({
   title: string;
   /** A line under the title; sign-in and sign-up have none unless they report something. */
   description?: string;
-  /** The tile above the title (the mailbox screens' envelope). */
-  icon?: LucideIcon;
   error?: string;
   onSubmit: NonNullable<ComponentProps<'form'>['onSubmit']>;
   pending: boolean;
@@ -247,10 +243,9 @@ export function AuthFormShell({
   const consent = useConsentGate(showForm ? terms : undefined, showForm ? verification : undefined);
 
   return (
-    <AuthCard
+    <AuthSignInCard
       title={title}
       sub={description}
-      icon={icon}
       after={
         showFooter ? (
           <>
@@ -289,7 +284,7 @@ export function AuthFormShell({
       ) : null}
 
       {consent.terms ? <TermsNotice id={consent.noticeId} signup={consent.terms.signup} /> : null}
-    </AuthCard>
+    </AuthSignInCard>
   );
 }
 

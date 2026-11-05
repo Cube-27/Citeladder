@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
-import { AuthCard, AuthShell } from './auth-shell';
+import { AuthCard, AuthShell, AuthSignInCard, AuthSplitShell } from './auth-shell';
 import { ChecklistField } from './checklist-field';
 import { OnboardingShell, OnboardingStep } from './onboarding-shell';
 
@@ -27,6 +27,31 @@ describe('AuthShell', () => {
     expect(screen.getByRole('radiogroup', { name: 'Theme' })).toBeVisible();
     const main = screen.getByRole('main', { name: 'Account access' });
     expect(within(main).getByRole('region', { name: 'Welcome back' })).toHaveTextContent('form');
+  });
+});
+
+describe('AuthSplitShell', () => {
+  it('puts the logo inside the sign-in card beside the product showcase', () => {
+    vi.stubEnv('PUBLIC_WEBSITE_ORIGIN', 'https://citeladder.com');
+    vi.stubEnv('PUBLIC_APP_ORIGIN', 'https://app.citeladder.com');
+    render(
+      <AuthSplitShell footer="© CiteLadder">
+        <AuthSignInCard title="Welcome back">form</AuthSignInCard>
+      </AuthSplitShell>,
+    );
+
+    const main = screen.getByRole('main', { name: 'Account access' });
+    const card = within(main).getByRole('region', { name: 'Welcome back' });
+    expect(within(card).getByRole('link', { name: 'CiteLadder home' })).toHaveAttribute(
+      'href',
+      'https://citeladder.com/',
+    );
+    expect(card).toHaveTextContent('form');
+    expect(screen.getByRole('radiogroup', { name: 'Theme' })).toBeVisible();
+    expect(screen.getByRole('complementary', { name: 'CiteLadder features' })).toHaveTextContent(
+      'Ask your AI assistant about your visibility.',
+    );
+    expect(screen.getByRole('contentinfo')).toHaveTextContent('© CiteLadder');
   });
 });
 
