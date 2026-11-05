@@ -51,6 +51,13 @@
   --color-footer-ink-muted: #a6a6a6;
   --color-footer-line: #2a2a2a;
   --color-nav-glass: rgb(244 244 244 / 78%);
+  /* The website's stages (D35): soft tints mixed into the grained field a
+     product image, a hero's wash and the CtaBand sit on. Text, buttons and
+     cards stay black and white. */
+  --color-stage-sky: #d2e2f8;
+  --color-stage-mint: #cdeedf;
+  --color-stage-lilac: #dfd6f7;
+  --color-stage-peach: #fcdac6;
   --color-line: #e5e5e5;
   --color-line-strong: #d4d4d4;
   --color-line-control: #858585;
@@ -214,6 +221,15 @@
   --motion-menu-settle: 160ms;
   --motion-menu-step: 20ms;
   --ease-menu: cubic-bezier(0.22, 1, 0.36, 1);
+  /* The website's entrances (D35): a part rises 16px and fades in over 700ms
+     as it scrolls into view, its siblings 80ms apart; a product image's rows,
+     bars and chart then play out over 1.2s, and its latest point pings every
+     2.4s. */
+  --motion-reveal: 700ms;
+  --motion-reveal-step: 80ms;
+  --motion-draw: 1200ms;
+  --motion-ping: 2400ms;
+  --ease-reveal: cubic-bezier(0.22, 1, 0.36, 1);
   --default-transition-duration: var(--motion-fast);
   --default-transition-timing-function: var(--ease-standard);
   /* Loops that say "working": the Spinner turns in 800ms, a Skeleton pulses
@@ -335,6 +351,10 @@
   --color-surface: #151515;
   --color-surface-sunken: #1e1e1e;
   --color-nav-glass: rgb(30 30 30 / 78%);
+  --color-stage-sky: #13223d;
+  --color-stage-mint: #0f2a26;
+  --color-stage-lilac: #231b3d;
+  --color-stage-peach: #2f1b22;
   --color-line: #2a2a2a;
   --color-line-strong: #3a3a3a;
   --color-line-control: #747474;

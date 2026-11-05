@@ -23,6 +23,8 @@ import '@/apps/marketing/src/marketing.css';
 // utilities so they win.
 import '@/apps/marketing/src/site.css';
 import '@/apps/marketing/src/screens.css';
+// The depth layer (D35): stages, washes, frosted rims and the entrances.
+import '@/apps/marketing/src/layers.css';
 
 interface Props {
   title?: string;
@@ -84,6 +86,8 @@ const sharedJsonLd = [organizationJsonLd(), websiteJsonLd(), softwareApplication
     <meta name="color-scheme" content="light dark" />
     <!-- The shared light/dark/system choice (lib/theme/theme.ts), before first paint. -->
     <script is:inline src="/theme-preference.js"></script>
+    <!-- The entrances (D35): turns the motion styles on before first paint. -->
+    <script is:inline src="/site-motion.js"></script>
     <meta name="description" content={description} />
     {keywords.length > 0 && <meta name="keywords" content={keywords.join(', ')} />}
     <meta name="application-name" content={SITE_NAME} />

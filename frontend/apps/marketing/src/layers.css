@@ -1,0 +1,374 @@
+/*
+ * The website's depth layer (docs/design.md D35), over site.css and
+ * screens.css: colour and depth live in the pictures, never in the type or
+ * the controls, which stay black and white.
+ *
+ * - Stages: a product image, a FeatureCard's well and the CtaBand sit on a
+ *   grained field of soft tints (`stage-*`) over the paper, the grain a tiled
+ *   noise blended soft-light so it reads as film in both themes.
+ * - Washes: each hero has a tinted glow at its top that fades into the page,
+ *   and a full app screen fades out at its foot into its stage.
+ * - Frosted rims: a product image on a stage sits in a translucent white rim
+ *   that blurs the grain under it, then on its own white card with the pop
+ *   shadow, so the picture has three planes.
+ * - Entrances: the hero rises in on load; every later part rises in as it
+ *   scrolls into view and a product image plays out (public/site-motion.js
+ *   sets the attributes). Nothing here moves under reduced motion, and no
+ *   part is hidden unless the script has turned the motion on.
+ */
+
+/* ---------- The stage: tints over paper, with grain ---------- */
+
+.cl-site {
+  /* The default stage mix; a context re-mixes it by setting the three tints. */
+  --stage-a: var(--color-stage-peach);
+  --stage-b: var(--color-stage-lilac);
+  --stage-c: var(--color-stage-sky);
+  --stage-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --stage-wash: 0.8;
+}
+
+/* Soft-light grain reads far louder on a dark ground: the same noise at a
+   third of its strength, and a dimmer hero wash. */
+:root[data-theme='dark'] .cl-site {
+  --stage-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='0.3' filter='url(%23n)'/%3E%3C/svg%3E");
+  --stage-wash: 0.6;
+}
+
+.cl-frame-card,
+.cl-fcard > .cl-frame .cl-frame-well,
+.cl-cta {
+  background-color: var(--color-paper);
+  background-image:
+    var(--stage-grain), radial-gradient(90% 120% at 0% 0%, var(--stage-a) 0%, transparent 70%),
+    radial-gradient(90% 120% at 100% 100%, var(--stage-b) 0%, transparent 70%),
+    radial-gradient(70% 90% at 100% 0%, var(--stage-c) 0%, transparent 70%);
+  background-size:
+    200px 200px,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+  background-blend-mode: soft-light, normal, normal, normal;
+}
+
+/* Neighbouring tiles and splits take different mixes, so a row of cards is
+   four colours of one light, never one colour four times. */
+.cl-bento-cell:nth-child(4n + 2),
+.cl-split--reverse {
+  --stage-a: var(--color-stage-sky);
+  --stage-b: var(--color-stage-mint);
+  --stage-c: var(--color-stage-lilac);
+}
+
+.cl-bento-cell:nth-child(4n + 3) {
+  --stage-a: var(--color-stage-mint);
+  --stage-b: var(--color-stage-sky);
+  --stage-c: var(--color-stage-peach);
+}
+
+.cl-bento-cell:nth-child(4n + 4) {
+  --stage-a: var(--color-stage-lilac);
+  --stage-b: var(--color-stage-peach);
+  --stage-c: var(--color-stage-mint);
+}
+
+/* ---------- A product image on its own: stage, frosted rim, card ---------- */
+
+/* The frame's card becomes the stage: no edge or shadow of its own. */
+.cl-frame-card {
+  padding: 48px;
+  border: 0;
+  border-radius: 24px;
+  box-shadow: none;
+}
+
+/* The rim: translucent white over the stage, blurring the grain beneath. */
+.cl-frame-card > .cl-frame-well {
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--color-surface) 70%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--color-surface) 42%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+/* The picture's own white card, lifted off the rim. */
+.cl-frame-card > .cl-frame-well > .cl-frame-screen {
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-pop);
+}
+
+@media (max-width: 767px) {
+  .cl-frame-card {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .cl-frame-card > .cl-frame-well {
+    padding: 4px;
+    border-radius: 16px;
+  }
+}
+
+/* A full app screen rises out of the bottom of its stage and fades into the
+   page there, like a window seen through the paper. */
+.cl-frame--scale > .cl-frame-card {
+  padding-bottom: 0;
+  -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+}
+
+.cl-frame--scale > .cl-frame-card > .cl-frame-well {
+  border-bottom: 0;
+  border-radius: 18px 18px 0 0;
+}
+
+.cl-frame--scale > .cl-frame-card > .cl-frame-well > .cl-frame-screen {
+  border-radius: 12px 12px 0 0;
+}
+
+/* ---------- A FeatureCard: its well is a small stage ---------- */
+
+.cl-fcard > .cl-frame .cl-frame-well {
+  padding: 24px;
+  border: 0;
+}
+
+.cl-fcard > .cl-frame .cl-vig {
+  border-color: transparent;
+  box-shadow: var(--shadow-card);
+}
+
+@media (max-width: 767px) {
+  .cl-fcard > .cl-frame .cl-frame-well {
+    padding: 12px;
+  }
+}
+
+/* ---------- The CtaBand: the page's last stage ---------- */
+
+.cl-cta {
+  border: 0;
+  border-radius: 24px;
+  box-shadow: none;
+}
+
+/* ---------- Hero washes: a tinted glow that fades into the page ---------- */
+
+.cl-phero,
+.cl-lhero {
+  position: relative;
+  isolation: isolate;
+}
+
+/* Behind the floating navbar too, so the glow starts at the top of the
+   window; it never takes pointer events. */
+.cl-phero::before,
+.cl-lhero::before {
+  position: absolute;
+  inset: -112px 0 auto;
+  z-index: -1;
+  height: 720px;
+  background-image:
+    var(--stage-grain), radial-gradient(45% 60% at 20% 30%, var(--stage-a) 0%, transparent 70%),
+    radial-gradient(45% 60% at 80% 25%, var(--stage-c) 0%, transparent 70%),
+    radial-gradient(50% 60% at 50% 70%, var(--stage-b) 0%, transparent 70%);
+  background-size:
+    200px 200px,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+  background-blend-mode: soft-light, normal, normal, normal;
+  -webkit-mask-image: linear-gradient(to bottom, black 30%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 30%, transparent 100%);
+  opacity: var(--stage-wash);
+  content: '';
+  pointer-events: none;
+}
+
+/* ---------- Hover depth: a linked card lifts ---------- */
+
+a.cl-fcard,
+.cl-related-card {
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-slow) var(--ease-standard),
+    box-shadow var(--motion-slow) var(--ease-standard);
+}
+
+a.cl-fcard:hover,
+.cl-related-card:hover {
+  box-shadow: var(--shadow-pop);
+  transform: translateY(-4px);
+}
+
+/* ---------- Entrances ---------- */
+
+@keyframes cl-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes cl-rise-sm {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes cl-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes cl-wipe {
+  from {
+    clip-path: inset(-8px 100% -8px -8px);
+  }
+
+  to {
+    clip-path: inset(-8px -8px -8px -8px);
+  }
+}
+
+@keyframes cl-ping {
+  0% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+
+  60%,
+  100% {
+    opacity: 0;
+    transform: scale(3);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The hero rises in on load, part by part. */
+  [data-reveal] :is(.cl-phero-inner, .cl-lhero-copy) > *,
+  [data-reveal] :is(.cl-phero-media, .cl-lhero-frame) {
+    animation: cl-rise var(--motion-reveal) var(--ease-reveal) backwards;
+  }
+
+  [data-reveal] :is(.cl-phero-inner, .cl-lhero-copy) > :nth-child(2) {
+    animation-delay: var(--motion-reveal-step);
+  }
+
+  [data-reveal] :is(.cl-phero-inner, .cl-lhero-copy) > :nth-child(3) {
+    animation-delay: calc(var(--motion-reveal-step) * 2);
+  }
+
+  [data-reveal] :is(.cl-phero-inner, .cl-lhero-copy) > :nth-child(4) {
+    animation-delay: calc(var(--motion-reveal-step) * 3);
+  }
+
+  [data-reveal] :is(.cl-phero-inner, .cl-lhero-copy) > :nth-child(n + 5) {
+    animation-delay: calc(var(--motion-reveal-step) * 4);
+  }
+
+  [data-reveal] :is(.cl-phero-media, .cl-lhero-frame) {
+    animation-delay: calc(var(--motion-reveal-step) * 4);
+  }
+
+  /* A later part waits unseen until it scrolls in, then rises after its
+     earlier siblings. */
+  [data-reveal] [data-rise]:not([data-revealed]) {
+    opacity: 0;
+  }
+
+  [data-reveal] [data-rise][data-revealed] {
+    animation: cl-rise var(--motion-reveal) var(--ease-reveal) backwards;
+    animation-delay: calc(var(--reveal-index, 0) * var(--motion-reveal-step));
+  }
+
+  /* A product image plays out: in the hero once it has risen, elsewhere once
+     it is in view. Its parts wait unseen until then. */
+  [data-reveal]
+    [data-play]:not([data-played])
+    :is(.cl-vig-row, .cl-vig-stats > div, .cl-screen-kpi) {
+    opacity: 0;
+  }
+
+  [data-reveal]
+    [data-play]:not([data-played])
+    :is(.cl-vig-area svg, .cl-vig-bar > span, .cl-vig-dot) {
+    visibility: hidden;
+  }
+
+  [data-reveal] :is(.cl-phero-media, .cl-lhero-frame),
+  [data-reveal] [data-played] {
+    --play-start: calc(var(--motion-reveal-step) * 2);
+  }
+
+  [data-reveal] :is(.cl-phero-media, .cl-lhero-frame) {
+    --play-start: calc(var(--motion-reveal-step) * 8);
+  }
+
+  [data-reveal]
+    :is(.cl-phero-media, .cl-lhero-frame, [data-played])
+    :is(.cl-vig-row, .cl-vig-stats > div, .cl-screen-kpi) {
+    animation: cl-rise-sm var(--motion-reveal) var(--ease-reveal) backwards;
+    animation-delay: var(--play-start);
+  }
+
+  [data-reveal]
+    :is(.cl-phero-media, .cl-lhero-frame, [data-played])
+    :is(.cl-vig-row, .cl-vig-stats > div, .cl-screen-kpi):nth-child(2) {
+    animation-delay: calc(var(--play-start) + var(--motion-reveal-step));
+  }
+
+  [data-reveal]
+    :is(.cl-phero-media, .cl-lhero-frame, [data-played])
+    :is(.cl-vig-row, .cl-vig-stats > div, .cl-screen-kpi):nth-child(3) {
+    animation-delay: calc(var(--play-start) + var(--motion-reveal-step) * 2);
+  }
+
+  [data-reveal]
+    :is(.cl-phero-media, .cl-lhero-frame, [data-played])
+    :is(.cl-vig-row, .cl-vig-stats > div, .cl-screen-kpi):nth-child(n + 4) {
+    animation-delay: calc(var(--play-start) + var(--motion-reveal-step) * 3);
+  }
+
+  /* Bars grow from the left and charts draw left to right, after the rows. */
+  [data-reveal] :is(.cl-phero-media, .cl-lhero-frame, [data-played]) .cl-vig-bar > span {
+    transform-origin: left center;
+    animation: cl-grow var(--motion-draw) var(--ease-reveal) backwards;
+    animation-delay: calc(var(--play-start) + var(--motion-reveal-step) * 3);
+  }
+
+  [data-reveal]
+    :is(.cl-phero-media, .cl-lhero-frame, [data-played])
+    :is(.cl-vig-area svg, .cl-screen svg.overflow-visible:not(.lucide)) {
+    animation: cl-wipe var(--motion-draw) var(--ease-reveal) backwards;
+    animation-delay: calc(var(--play-start) + var(--motion-reveal-step) * 3);
+  }
+
+  [data-reveal] :is(.cl-phero-media, .cl-lhero-frame, [data-played]) .cl-vig-dot {
+    animation: cl-rise-sm var(--motion-reveal) var(--ease-reveal) backwards;
+    animation-delay: calc(var(--play-start) + var(--motion-draw));
+  }
+
+  /* The latest point stays live: a ring pings out from it. */
+  .cl-vig-dot::after {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: inherit;
+    animation: cl-ping var(--motion-ping) var(--ease-standard) infinite;
+    content: '';
+  }
+}
+
+@media print {
+  [data-reveal] [data-rise],
+  [data-reveal] [data-play] * {
+    visibility: visible;
+    opacity: 1;
+  }
+}
