@@ -382,12 +382,13 @@
 }
 
 /* A short panel (an answer, a chat, a brief) holds the rows' height; in a
-   taller well its parts share the extra height, its foot at the bottom. */
+   taller well its parts stay together at the top and only its foot drops
+   to the bottom, so no gap opens between them. */
 .cl-vig-panel {
   display: flex;
   flex-direction: column;
   flex: 1;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
   min-height: 224px;
   color: var(--color-ink-secondary);
@@ -416,6 +417,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin-top: auto;
   padding-top: 12px;
   border-top: 1px solid var(--color-line);
 }

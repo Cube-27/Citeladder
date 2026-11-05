@@ -294,7 +294,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
           'Keyword suggestions around a seed',
           'Up to 25 keyword-gap Actions per refresh',
         ],
-        media: { kind: 'split', screen: 'sources' },
+        media: { kind: 'split', screen: 'actions' },
       },
     ],
     steps: [
