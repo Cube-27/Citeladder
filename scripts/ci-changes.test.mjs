@@ -50,6 +50,17 @@ test('browser-sensitive frontend paths select E2E without escalating every front
   ]);
   assert.deepEqual(selectE2EFiles(['frontend/e2e/shell.spec.ts']), ['e2e/shell.spec.ts']);
   assert.deepEqual(selectE2EFiles(['frontend/e2e/shell.spec.mjs']), []);
+  // The docs and Worker specs belong to their own Playwright configs, so a
+  // change to one never sends it to the app E2E job.
+  assert.deepEqual(
+    selectE2EFiles([
+      'frontend/e2e/docs.spec.ts',
+      'frontend/e2e/worker-csp.spec.ts',
+      'frontend/e2e/shell.spec.ts',
+    ]),
+    ['e2e/shell.spec.ts'],
+  );
+  assert.equal(classifyPaths(['frontend/e2e/docs.spec.ts']).e2e, false);
   assert.equal(classifyPaths(['scripts/quality.mjs', '.github/workflows/ci.yml']).e2e, false);
 });
 
