@@ -1,0 +1,125 @@
+---
+/**
+ * A policy page (the WebLegal template): a compact PageSection holding
+ * DocLayout, the policies on its rail, the ArticleHeader with the
+ * last-updated date, the numbered clauses in Prose and a numbered On this
+ * page. Each clause heading is "n. Title" and each of its paragraphs starts
+ * with a bold "n.m", so a clause can be cited by number. No CTA.
+ * Every string comes verbatim from the legal content modules.
+ */
+import ArticleHeader from '@/components/content/ArticleHeader.astro';
+import DocLayout from '@/components/content/DocLayout.astro';
+import Prose from '@/components/content/Prose.astro';
+import { Breadcrumbs } from '@/components/marketing/chrome/breadcrumbs';
+import { Linkify } from '@/components/marketing/primitives/linkify';
+import { PageSection } from '@/components/marketing/sections/page-section';
+import { FOOTER_LEGAL_LINKS, LEGAL_ENTITY, type LegalDocument } from '@/lib/marketing-content/legal';
+import MarketingLayout from './MarketingLayout.astro';
+
+interface Props {
+  document: LegalDocument;
+  /** The browser title, such as "Terms of Service · CiteLadder". */
+  title: string;
+}
+const { document, title } = Astro.props;
+
+const UPDATED_DATE_FORMATTER = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+const updated = document.lastUpdated ?? LEGAL_ENTITY.lastUpdated;
+const updatedDate = new Date(`${updated}T00:00:00Z`);
+const updatedLabel = Number.isNaN(updatedDate.getTime())
+  ? updated
+  : UPDATED_DATE_FORMATTER.format(updatedDate);
+
+const path = `/${document.slug}`;
+const clauses = document.sections.map((section, index) => ({
+  ...section,
+  number: index + 1,
+  heading: `${index + 1}. ${section.title}`,
+}));
+---
+
+<MarketingLayout title={title} description={document.description} canonical={path}>
+  <PageSection label={document.title} spacing="compact">
+    <DocLayout
+      nav={FOOTER_LEGAL_LINKS.map((link) => ({ ...link, current: link.href === path }))}
+      navLabel="Policies"
+      navSummary="All policies"
+      toc={clauses.map((clause) => ({ id: clause.id, label: clause.heading, level: 2 }))}
+    >
+      <ArticleHeader
+        title={document.title}
+        meta={[{ prefix: 'Last updated', text: updatedLabel, dateTime: updated }]}
+      >
+        <Breadcrumbs
+          slot="crumbs"
+          items={[{ label: 'Home', href: '/' }, { label: document.title }]}
+        />
+        {document.description}
+      </ArticleHeader>
+      <Prose as="article" label={document.title}>
+        {
+          clauses.map((clause) => (
+            <>
+              <h2 id={clause.id}>{clause.heading}</h2>
+              {/* Policy text names sibling policies by path; Linkify keeps
+                  those references navigable. */}
+              {clause.paragraphs?.map((paragraph, index) => (
+                <p>
+                  <strong>{`${clause.number}.${index + 1}`}</strong> <Linkify text={paragraph} />
+                </p>
+              ))}
+              {clause.bullets && clause.bullets.length > 0 && (
+                <ul>
+                  {clause.bullets.map((item) => (
+                    <li>
+                      <Linkify text={item} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {clause.table && (
+                <div class="cl-prose-table">
+                  <table>
+                    <caption class="sr-only">{clause.table.caption}</caption>
+                    <thead>
+                      <tr>
+                        {clause.table.headings.map((heading) => (
+                          <th scope="col">{heading}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {clause.table.rows.map(([header, ...cells]) => (
+                        <tr>
+                          <th scope="row">{header}</th>
+                          {cells.map((cell) => (
+                            <td>{cell}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {clause.note && <p class="cl-legal-note">{clause.note}</p>}
+            </>
+          ))
+        }
+      </Prose>
+    </DocLayout>
+  </PageSection>
+</MarketingLayout>
+
+<style>
+  /* A clause's note: a sunken panel under its text. */
+  .cl-legal-note {
+    padding: 16px 20px;
+    border-radius: var(--radius-lg);
+    background: var(--color-surface-sunken);
+  }
+</style>

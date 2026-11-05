@@ -6,3 +6,4 @@
    docs component owns its CSS in its own <style> block. */
 @source './..';
 @source '../../../../components/ui';
+@source '../../../../components/content';

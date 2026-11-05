@@ -1,13 +1,6 @@
 ---
-import { LegalDocumentView } from '@/components/marketing/pages/legal';
 import { REFUND_POLICY } from '@/lib/marketing-content/legal-billing';
-import MarketingLayout from '../layouts/MarketingLayout.astro';
+import LegalLayout from '../layouts/LegalLayout.astro';
 ---
 
-<MarketingLayout
-  title="Refund Policy · CiteLadder"
-  description={REFUND_POLICY.description}
-  canonical="/refund-policy"
->
-  <LegalDocumentView document={REFUND_POLICY} />
-</MarketingLayout>
+<LegalLayout document={REFUND_POLICY} title="Refund Policy · CiteLadder" />

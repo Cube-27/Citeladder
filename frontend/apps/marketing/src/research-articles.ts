@@ -58,24 +58,79 @@ function plainText(markdown: string) {
     .trim();
 }
 
-/**
- * The guide's "Frequently asked questions" section as question/answer pairs:
- * each `### ` heading is a question and the prose under it, up to the next
- * heading, its answer. Guides without the section have none.
- */
-export function researchFaqs(markdown: string): { q: string; a: string }[] {
-  const heading = /^## Frequently asked questions[^\S\n]*$/m.exec(markdown);
-  if (!heading) return [];
-  const rest = markdown.slice(heading.index + heading[0].length);
-  const section = rest.slice(0, /^## /m.exec(rest)?.index ?? rest.length);
-  if (!section) return [];
+type ResearchQuestion = { question: string; answer: string };
+type ResearchSource = { n: number; markdown: string; href?: string };
+
+/** A guide's Markdown, split into the parts its page lays out separately. */
+export type ResearchParts = {
+  /** Everything before the FAQ (or before the sources, without one). */
+  body: string;
+  /** The "Frequently asked questions" section: each `### ` heading and the Markdown under it. */
+  faq: { title: string; items: ResearchQuestion[] } | null;
+  /** Sections between the FAQ and the sources. */
+  after: string;
+  /** The `## Sources…` section: any lead-in lines, then the numbered list. */
+  sources: { title: string; notes: string[]; items: ResearchSource[] } | null;
+};
+
+const FAQ_HEADING = /^## (Frequently asked questions)[^\S\n]*$/m;
+const SOURCES_HEADING = /^## (Sources\b.*)$/m;
+const SOURCE_LINE = /^(\d+)\. (?:<span id="source-\d+"><\/span> )?(.+)$/;
+const FIRST_LINK = /\]\(([^)\s]+)\)/;
+
+function faqItems(section: string): ResearchQuestion[] {
   return section
     .split(/^### /m)
     .slice(1)
     .map((block) => {
       const [question = '', ...answer] = block.split('\n');
-      return { q: plainText(question), a: plainText(answer.join(' ')) };
+      return { question: question.trim(), answer: answer.join('\n').trim() };
     })
+    .filter((item) => item.question && item.answer);
+}
+
+function sourceParts(title: string, section: string): NonNullable<ResearchParts['sources']> {
+  const notes: string[] = [];
+  const items: ResearchSource[] = [];
+  for (const line of section.split('\n').map((value) => value.trim())) {
+    if (!line) continue;
+    const source = SOURCE_LINE.exec(line);
+    if (!source) {
+      notes.push(line);
+      continue;
+    }
+    // Both groups take part in every match.
+    const [, n = '', text = ''] = source;
+    items.push({ n: Number(n), markdown: text, href: FIRST_LINK.exec(text)?.[1] });
+  }
+  return { title, notes, items };
+}
+
+export function researchParts(markdown: string): ResearchParts {
+  const sourcesAt = SOURCES_HEADING.exec(markdown);
+  const content = sourcesAt ? markdown.slice(0, sourcesAt.index) : markdown;
+  const sources = sourcesAt
+    ? sourceParts(sourcesAt[1] ?? 'Sources', markdown.slice(sourcesAt.index + sourcesAt[0].length))
+    : null;
+  const faqAt = FAQ_HEADING.exec(content);
+  if (!faqAt) return { body: content, faq: null, after: '', sources };
+  const rest = content.slice(faqAt.index + faqAt[0].length);
+  const end = /^## /m.exec(rest)?.index ?? rest.length;
+  return {
+    body: content.slice(0, faqAt.index),
+    faq: { title: faqAt[1] ?? 'Frequently asked questions', items: faqItems(rest.slice(0, end)) },
+    after: rest.slice(end),
+    sources,
+  };
+}
+
+/**
+ * The guide's "Frequently asked questions" section as plain-text
+ * question/answer pairs, for FAQPage data. Guides without the section have none.
+ */
+export function researchFaqs(markdown: string): { q: string; a: string }[] {
+  return (researchParts(markdown).faq?.items ?? [])
+    .map((item) => ({ q: plainText(item.question), a: plainText(item.answer) }))
     .filter((item) => item.q && item.a);
 }
 

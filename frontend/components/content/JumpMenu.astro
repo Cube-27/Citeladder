@@ -1,0 +1,115 @@
+---
+/**
+ * JumpMenu — where a rail or Toc goes on narrow screens (DocLayout,
+ * ContentArticle): a 48px `surface` summary with the menu's name and a caret,
+ * closed by default, whose panel overlays the page, so opening it moves
+ * nothing. It closes on a link, a click outside or Esc (focus back on its
+ * summary). A panel holding a Toc hides the Toc's own title, which the
+ * summary already shows.
+ */
+import { ChevronDown } from 'lucide-react';
+
+interface Props {
+  label: string;
+}
+const { label } = Astro.props;
+---
+
+<details class="cl-jump" data-jump>
+  <summary class="cl-jump-summary focus-ring">
+    <span class="cl-jump-label">{label}</span>
+    <ChevronDown className="cl-jump-caret size-4" aria-hidden />
+  </summary>
+  <div class="cl-jump-panel">
+    <slot />
+  </div>
+</details>
+
+<style>
+  .cl-jump {
+    position: relative;
+    min-width: 0;
+  }
+  .cl-jump-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    height: var(--control-lg);
+    padding: 0 16px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-xs);
+    color: var(--color-ink);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
+    font-weight: 500;
+    list-style: none;
+    transition: background-color var(--motion-fast) var(--ease-standard);
+  }
+  .cl-jump-summary::-webkit-details-marker {
+    display: none;
+  }
+  .cl-jump-summary:hover {
+    background: var(--color-surface-sunken);
+  }
+  .cl-jump-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cl-jump :global(.cl-jump-caret) {
+    color: var(--color-ink-secondary);
+    transition: transform var(--motion-fast) var(--ease-standard);
+  }
+  .cl-jump[open] :global(.cl-jump-caret) {
+    transform: rotate(180deg);
+  }
+  .cl-jump-panel {
+    position: absolute;
+    z-index: var(--z-index-sticky);
+    top: calc(100% + 8px);
+    left: 0;
+    width: max(100%, 280px);
+    max-width: calc(100vw - 40px);
+    max-height: min(60vh, 480px);
+    overflow: auto;
+    padding: 12px 12px 12px 8px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-pop);
+  }
+  .cl-jump + .cl-jump .cl-jump-panel {
+    right: 0;
+    left: auto;
+  }
+  .cl-jump-panel :global(.cl-toc > .type-eyebrow) {
+    display: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cl-jump :global(.cl-jump-caret) {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  for (const jump of document.querySelectorAll<HTMLDetailsElement>('[data-jump]')) {
+    jump.addEventListener('click', (event) => {
+      if (event.target instanceof Element && event.target.closest('.cl-jump-panel a'))
+        jump.open = false;
+    });
+    document.addEventListener('pointerdown', (event) => {
+      if (jump.open && event.target instanceof Node && !jump.contains(event.target))
+        jump.open = false;
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || !jump.open) return;
+      jump.open = false;
+      jump.querySelector('summary')?.focus();
+    });
+  }
+</script>

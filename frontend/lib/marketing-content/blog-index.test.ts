@@ -1,59 +1,37 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vite-plus/test';
 
-import type { BlogPostSummary } from './blog-index';
-import { blogCategories, filterAndSortPosts } from './blog-index';
+import { newestFirst } from './blog-index';
 
-const summary = (slug: string, date: string | undefined, category: string): BlogPostSummary => ({
-  slug,
-  title: slug,
-  excerpt: `${slug} excerpt`,
-  image: `/${slug}.webp`,
-  date,
-  tags: [category],
-});
+const post = (slug: string, date: string | undefined) => ({ slug, date });
 
-describe('blog index explorer logic', () => {
+describe('blog index ordering', () => {
   const posts = [
-    summary('tie-first', '2026-09-03', 'Audit'),
-    summary('older', '2026-08-01', 'Playbook'),
-    summary('tie-second', '2026-09-03', 'Audit'),
-    summary('undated-first', undefined, 'Notes'),
-    summary('undated-second', undefined, 'Notes'),
+    post('tie-first', '2026-09-03'),
+    post('older', '2026-08-01'),
+    post('undated-first', undefined),
+    post('tie-second', '2026-09-03'),
+    post('undated-second', undefined),
   ] as const;
 
-  it('derives categories from first tags in source order', () => {
-    expect(blogCategories(posts)).toEqual(['Audit', 'Playbook', 'Notes']);
-  });
-
-  it('filters by the primary category and resets with a null category', () => {
-    expect(filterAndSortPosts(posts, 'Audit', 'latest').map((post) => post.slug)).toEqual([
-      'tie-first',
-      'tie-second',
-    ]);
-    expect(filterAndSortPosts(posts, null, 'latest')).toHaveLength(posts.length);
-  });
-
-  it('sorts latest and oldest while preserving date ties', () => {
-    expect(filterAndSortPosts(posts, null, 'latest').map((post) => post.slug)).toEqual([
+  it('puts the newest first, keeps date ties in order and undated posts last', () => {
+    expect(newestFirst(posts).map((entry) => entry.slug)).toEqual([
       'tie-first',
       'tie-second',
       'older',
-      'undated-first',
-      'undated-second',
-    ]);
-    expect(filterAndSortPosts(posts, null, 'oldest').map((post) => post.slug)).toEqual([
-      'older',
-      'tie-first',
-      'tie-second',
       'undated-first',
       'undated-second',
     ]);
   });
 
   it('does not mutate the source post order', () => {
-    const before = posts.map((post) => post.slug);
-    filterAndSortPosts(posts, null, 'oldest');
-    expect(posts.map((post) => post.slug)).toEqual(before);
+    newestFirst(posts);
+    expect(posts.map((entry) => entry.slug)).toEqual([
+      'tie-first',
+      'older',
+      'undated-first',
+      'tie-second',
+      'undated-second',
+    ]);
   });
 });

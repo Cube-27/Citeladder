@@ -1,8 +1,26 @@
 ---
+/**
+ * A blog post (the WebBlogPost template): a centred ContentArticle with the
+ * ArticleHeader, the typed body blocks in Prose, then the sources, author
+ * and pager; related reading and the closing band after it. Research guides
+ * filed under /blog render through ResearchLayout.
+ */
 import type { GetStaticPaths } from 'astro';
-import { BlogPostView } from '@/components/marketing/pages/blog';
-import { POSTS } from '@/lib/marketing-content/blog';
-import { breadcrumbJsonLd } from '@/lib/seo/json-ld';
+import ArticleHeader from '@/components/content/ArticleHeader.astro';
+import ArticlePager from '@/components/content/ArticlePager.astro';
+import Prose from '@/components/content/Prose.astro';
+import { Breadcrumbs } from '@/components/marketing/chrome/breadcrumbs';
+import AuthorCard from '@/components/marketing/content/AuthorCard.astro';
+import ContentArticle from '@/components/marketing/content/ContentArticle.astro';
+import { PostBody } from '@/components/marketing/content/post-blocks';
+import SourceRow from '@/components/marketing/content/SourceRow.astro';
+import SourcesList from '@/components/marketing/content/SourcesList.astro';
+import { ContentCta } from '@/components/marketing/content/content-cta';
+import { RelatedCards } from '@/components/marketing/sections/cards';
+import { PageSection } from '@/components/marketing/sections/page-section';
+import { POSTS, type BlogPost } from '@/lib/marketing-content/blog';
+import { formatBlogDate } from '@/lib/marketing-content/blog-index';
+import { blogPostingJsonLd, breadcrumbJsonLd } from '@/lib/seo/json-ld';
 import MarketingLayout from '../../layouts/MarketingLayout.astro';
 import ResearchLayout from '../../layouts/ResearchLayout.astro';
 import { RESEARCH_ARTICLES } from '../../research-articles';
@@ -18,31 +36,150 @@ export const getStaticPaths = (() => [
 ]) satisfies GetStaticPaths;
 
 const route = Astro.props;
-const breadcrumb =
-  route.kind === 'post'
-    ? breadcrumbJsonLd([
-        { name: 'Home', path: '/' },
-        { name: 'Blog', path: '/blog' },
-        { name: route.post.title, path: `/blog/${route.post.slug}` },
-      ])
-    : null;
+
+function postView(post: BlogPost) {
+  const updated = post.dateModified && post.dateModified !== post.date ? post.dateModified : null;
+  const index = POSTS.findIndex((candidate) => candidate.slug === post.slug);
+  const link = (candidate: BlogPost | undefined) =>
+    candidate && { title: candidate.title, href: `/blog/${candidate.slug}` };
+  return {
+    breadcrumb: breadcrumbJsonLd([
+      { name: 'Home', path: '/' },
+      { name: 'Blog', path: '/blog' },
+      { name: post.title, path: `/blog/${post.slug}` },
+    ]),
+    posting: { ...blogPostingJsonLd(post), articleSection: post.tags, keywords: post.tags },
+    meta: [
+      ...(post.date
+        ? [{ prefix: 'Published', text: formatBlogDate(post.date), dateTime: post.date }]
+        : []),
+      ...(updated ? [{ prefix: 'Updated', text: formatBlogDate(updated), dateTime: updated }] : []),
+      ...(post.readTime ? [{ text: post.readTime }] : []),
+    ],
+    related: post.relatedSlugs
+      .map((slug) => POSTS.find((candidate) => candidate.slug === slug))
+      .filter((candidate): candidate is BlogPost => candidate !== undefined),
+    previous: link(index > 0 ? POSTS[index - 1] : undefined),
+    next: link(index >= 0 ? POSTS[index + 1] : undefined),
+  };
+}
+const view = route.kind === 'post' ? postView(route.post) : null;
 ---
 
-{route.kind === 'guide' ? <ResearchLayout article={route.article} /> : <MarketingLayout
-  title={route.post.seoTitle.endsWith(' | CiteLadder') ? route.post.seoTitle : `${route.post.seoTitle} · CiteLadder`}
-  description={route.post.seoDescription}
-  canonical={`/blog/${route.post.slug}`}
-  keywords={[...route.post.tags, 'AI visibility', 'AEO']}
-  openGraphType="article"
-  image={route.post.image}
-  publishedTime={route.post.date}
-  modifiedTime={route.post.dateModified ?? route.post.date}
-  author={route.post.author}
-  tags={route.post.tags}
-  twitterCard={route.post.image ? 'summary_large_image' : undefined}
-  jsonLd={breadcrumb ? [breadcrumb] : []}
->
-  <main id="main">
-    <BlogPostView post={route.post} />
-  </main>
-</MarketingLayout>}
+{
+  route.kind === 'guide' ? (
+    <ResearchLayout article={route.article} />
+  ) : (
+    view && (
+      <MarketingLayout
+        title={
+          route.post.seoTitle.endsWith(' | CiteLadder')
+            ? route.post.seoTitle
+            : `${route.post.seoTitle} · CiteLadder`
+        }
+        description={route.post.seoDescription}
+        canonical={`/blog/${route.post.slug}`}
+        keywords={[...route.post.tags, 'AI visibility', 'AEO']}
+        openGraphType="article"
+        image={route.post.image}
+        publishedTime={route.post.date}
+        modifiedTime={route.post.dateModified ?? route.post.date}
+        author={route.post.author}
+        tags={route.post.tags}
+        twitterCard={route.post.image ? 'summary_large_image' : undefined}
+        jsonLd={[view.posting, ...(view.breadcrumb ? [view.breadcrumb] : [])]}
+      >
+        <main id="main">
+          <ContentArticle>
+            <ArticleHeader
+              slot="header"
+              title={route.post.title}
+              tags={route.post.tags}
+              author={
+                route.post.author
+                  ? { name: route.post.author, role: route.post.authorRole }
+                  : undefined
+              }
+              meta={view.meta}
+            >
+              <Breadcrumbs
+                slot="crumbs"
+                items={[
+                  { label: 'Home', href: '/' },
+                  { label: 'Blog', href: '/blog' },
+                  { label: route.post.title },
+                ]}
+              />
+              {route.post.excerpt}
+              {route.post.editorialNote && (
+                <p slot="note" class="cl-ahead-note">
+                  {route.post.editorialNote}
+                </p>
+              )}
+            </ArticleHeader>
+            <Prose as="article" label="Post content">
+              <PostBody blocks={route.post.body} sources={route.post.sources} />
+            </Prose>
+            <Fragment slot="end">
+              {route.post.sources.length > 0 && (
+                <SourcesList>
+                  {route.post.sources.map((source, index) => (
+                    <SourceRow n={index + 1} href={source.url}>
+                      <p>
+                        <a href={source.url} target="_blank" rel="noreferrer">
+                          {source.title}
+                        </a>
+                        {`, ${source.publisher}`}
+                        {source.publishedDate ? ` (${formatBlogDate(source.publishedDate)})` : null}
+                      </p>
+                    </SourceRow>
+                  ))}
+                </SourcesList>
+              )}
+              {route.post.author && (
+                <AuthorCard
+                  name={route.post.author}
+                  role={route.post.authorRole}
+                  links={route.post.authorUrl ? [{ label: 'LinkedIn', href: route.post.authorUrl }] : []}
+                />
+              )}
+              {(view.previous || view.next) && (
+                <ArticlePager
+                  previous={view.previous}
+                  next={view.next}
+                  label="Previous and next articles"
+                />
+              )}
+            </Fragment>
+          </ContentArticle>
+          {view.related.length > 0 && (
+            <PageSection title="Related reading" layout="aside" spacing="compact">
+              <RelatedCards
+                items={view.related.map((post) => ({
+                  href: `/blog/${post.slug}`,
+                  eyebrow: post.tags[0],
+                  title: post.title,
+                  body: post.excerpt,
+                }))}
+              />
+            </PageSection>
+          )}
+          <ContentCta
+            title={route.post.closing?.heading ?? 'Make AI visibility measurable'}
+            lead={route.post.closing?.body ?? 'Measure AI visibility with evidence your team can inspect.'}
+            secondary={route.post.closing?.secondary ?? { href: '/blog', label: 'All guides' }}
+          />
+        </main>
+      </MarketingLayout>
+    )
+  )
+}
+
+<style>
+  .cl-ahead-note {
+    margin: 0;
+    color: var(--color-ink-muted);
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+</style>

@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vite-plus/test';
 import type { BlogBlock } from '@/lib/marketing-content/blog';
 import { POSTS } from '@/lib/marketing-content/blog';
 
-import { blockIdentity, headingId, PostBlock, withOccurrenceKeys } from './post-blocks';
+import { headingId, withOccurrenceKeys } from './heading-id';
+import { blockIdentity, PostBlock } from './post-blocks';
 
 /**
  * The rich block renderers behind a guide body. The plain blocks (heading,
@@ -14,7 +15,7 @@ import { blockIdentity, headingId, PostBlock, withOccurrenceKeys } from './post-
  */
 
 describe('PostBlock', () => {
-  it('renders typed internal links and directly followable source citations', () => {
+  it('renders typed internal links and citations that point at the listed source', () => {
     render(
       <PostBlock
         block={{
@@ -42,10 +43,9 @@ describe('PostBlock', () => {
     expect(external).toHaveAttribute('href', 'https://example.com/product');
     expect(external).toHaveAttribute('target', '_blank');
     expect(external).toHaveAttribute('rel', 'noreferrer');
-    expect(screen.getByRole('link', { name: /Source 1: Official guidance/ })).toHaveAttribute(
-      'href',
-      'https://example.com/guidance',
-    );
+    const citation = screen.getByRole('link', { name: 'Source 1: Official guidance' });
+    expect(citation).toHaveAttribute('href', '#source-1');
+    expect(citation).toHaveTextContent('[1]');
   });
 
   it('renders a table with column headers and its caption', () => {
@@ -112,81 +112,44 @@ describe('PostBlock', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Writing checklist' })).toBeInTheDocument();
-    expect(screen.getByText('Add statistics')).toBeInTheDocument();
-    expect(screen.getByText('High')).toBeInTheDocument();
-    expect(screen.getByText('Put the definition first.')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Add statistics High: Ground claims in numbers.',
+      'Lead with the answer: Put the definition first.',
+    ]);
   });
 
-  it.each([
-    [
-      'architecture',
-      {
-        type: 'diagram',
-        variant: 'architecture',
-        title: 'Ingestion',
-        data: {
-          sources: [{ title: 'Site health', badge: 'DOM', description: 'Semantic HTML.' }],
-          destination: { title: 'Evidence base', description: 'Versioned store.' },
-        },
-      },
-      ['Site health', 'DOM', 'Evidence base'],
-    ],
-    [
-      'split',
-      {
-        type: 'diagram',
-        variant: 'split',
-        data: {
-          leftTitle: 'Legacy audit',
-          leftBadge: 'Heuristics',
-          leftItems: ['Keyword density'],
-          rightTitle: 'Answer audit',
-          rightBadge: 'Evidence',
-          rightItems: ['Citation coverage'],
-        },
-      },
-      ['Legacy audit', 'Keyword density', 'Answer audit', 'Citation coverage'],
-    ],
-    [
-      'flow',
-      {
-        type: 'diagram',
-        variant: 'flow',
-        data: { steps: [{ step: '01', title: 'Crawl', desc: 'Fetch the owned site.' }] },
-      },
-      ['01', 'Crawl', 'Fetch the owned site.'],
-    ],
-    [
-      'taxonomy',
-      {
-        type: 'diagram',
-        variant: 'taxonomy',
-        data: {
-          root: 'Topic: solar',
-          nodes: [
-            { category: 'solar panel cost', intent: 'Commercial', details: 'Pricing tables.' },
-          ],
-        },
-      },
-      ['Topic: solar', 'solar panel cost', 'Commercial', 'Pricing tables.'],
-    ],
-  ] as const)('renders the %s diagram with its payload', (_variant, block, expected) => {
-    render(<PostBlock block={block as BlogBlock} />);
-    for (const text of expected) expect(screen.getByText(text)).toBeInTheDocument();
+  it('renders a flow diagram as its numbered steps under the diagram title', () => {
+    render(
+      <PostBlock
+        block={{
+          type: 'diagram',
+          variant: 'flow',
+          title: 'The pipeline',
+          data: { steps: [{ step: '01', title: 'Crawl', desc: 'Fetch the owned site.' }] },
+        }}
+      />,
+    );
+    expect(screen.getByRole('heading', { level: 3, name: 'The pipeline' })).toBeInTheDocument();
+    const steps = within(screen.getByRole('list')).getAllByRole('listitem');
+    expect(steps.map((step) => step.textContent)).toEqual(['Crawl: Fetch the owned site.']);
   });
 
-  it('renders a callout for each tone without leaking a raw palette colour', () => {
-    for (const tone of ['accent', 'warning', 'info'] as const) {
+  it('renders each post tone as the matching system callout, the accent as a neutral note', () => {
+    const tones = (['accent', 'warning', 'info'] as const).map((tone) => {
       const { container, unmount } = render(
         <PostBlock
           block={{ type: 'callout', tone, title: `A ${tone} note`, text: 'Body copy.' }}
         />,
       );
-      expect(screen.getByRole('heading', { name: `A ${tone} note` })).toBeInTheDocument();
-      expect(screen.getByText('Body copy.')).toBeInTheDocument();
-      expect(container.innerHTML).not.toMatch(/amber-\d|sky-\d/);
+      expect(container).toHaveTextContent(`A ${tone} note`);
+      expect(container).toHaveTextContent('Body copy.');
+      const rendered = container
+        .querySelector('[data-callout-tone]')
+        ?.getAttribute('data-callout-tone');
       unmount();
-    }
+      return rendered;
+    });
+    expect(tones).toEqual(['neutral', 'warning', 'info']);
   });
 
   it('gives an ordered list a different element from a bulleted one', () => {
@@ -259,14 +222,6 @@ describe('heading outline', () => {
     },
   );
 
-  it('gives a titled callout an h3, so it never skips under a section h2', () => {
-    const levels = renderedLevels([
-      { type: 'heading', text: 'A section' },
-      { type: 'callout', tone: 'accent', title: 'A note', text: 'Body copy.' },
-    ]);
-    expect(levels).toEqual([2, 3]);
-  });
-
   it('keeps a diagram h3 even when the block carries no visible title', () => {
     const levels = renderedLevels([
       { type: 'heading', text: 'A section' },
@@ -276,7 +231,7 @@ describe('heading outline', () => {
         data: { steps: [{ step: '1', title: 'Connect', desc: 'Link the sources.' }] },
       },
     ]);
-    // Without the unconditional h3 the diagram's h4s hang under the h2.
-    expect(levels).toEqual([2, 3, 4]);
+    // The unconditional h3 keeps the diagram's steps one level under their section.
+    expect(levels).toEqual([2, 3]);
   });
 });

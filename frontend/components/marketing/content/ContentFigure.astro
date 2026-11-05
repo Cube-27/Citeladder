@@ -1,0 +1,48 @@
+---
+/**
+ * ContentFigure — a product image in long-form copy that may leave the 720px
+ * prose column: inside a ContentArticle's Prose it holds one ProductFrame
+ * (the default slot). `wide`, on a centred article, centres on the column at
+ * up to 1080px; on a Toc article it starts at the column's left edge and,
+ * from 1280px, extends into the empty right margin. `prose` keeps the column
+ * width. 48px above and 24px below, so the figure reads as a break.
+ */
+interface Props {
+  width?: 'wide' | 'prose';
+}
+const { width = 'wide' } = Astro.props;
+---
+
+<div class:list={['cl-cpage-figure', `cl-cpage-figure--${width}`]}>
+  <slot />
+</div>
+
+<style is:global>
+  .cl-cpage-figure {
+    min-width: 0;
+  }
+  .cl-cpage-article--centred .cl-cpage-figure--wide {
+    width: min(1080px, 100cqw);
+    margin-left: calc((100% - min(1080px, 100cqw)) / 2);
+  }
+  @media (min-width: 1280px) {
+    .cl-cpage-article--toc .cl-cpage-figure--wide {
+      width: calc(100% + (100cqw - 100%) / 2);
+    }
+  }
+  .cl-prose > .cl-cpage-figure {
+    margin-top: 48px;
+    margin-bottom: 24px;
+  }
+  .cl-cpage-figure > .cl-frame {
+    margin: 0;
+  }
+  .cl-prose .cl-cpage-figure :is(.cl-frame-caption, .cl-frame-text) {
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+  .cl-prose .cl-cpage-figure .cl-frame-title {
+    font-size: var(--text-body-lg);
+    line-height: var(--text-body-lg--line-height);
+  }
+</style>

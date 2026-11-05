@@ -78,32 +78,7 @@ const current = (href: string) => (href.replace(/\/$/, '') || '/') === path;
   .cl-docs-side-group:not([open]) .cl-docs-side-caret {
     transform: rotate(-90deg);
   }
-  .cl-doc-list {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 0;
-    list-style: none;
-  }
-  .cl-doc-link {
-    display: flex;
-    align-items: center;
-    min-height: var(--control-md);
-    padding: 8px 12px;
-    border-radius: var(--radius-sm);
-    color: var(--color-ink-secondary);
-    font-size: var(--text-body-sm);
-    line-height: var(--text-body-sm--line-height);
-    text-decoration: none;
-    transition:
-      background-color var(--motion-fast) var(--ease-standard),
-      color var(--motion-fast) var(--ease-standard);
-  }
-  .cl-doc-link:hover,
-  .cl-doc-link.is-active {
-    background: var(--color-surface-sunken);
-    color: var(--color-ink);
-  }
+  /* The rows ride on DocLayout's `cl-doc-list` and `cl-doc-link`. */
   .cl-docs-side-text {
     flex: 1;
     min-width: 0;

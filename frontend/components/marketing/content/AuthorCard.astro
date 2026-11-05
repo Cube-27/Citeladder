@@ -1,0 +1,118 @@
+---
+/**
+ * AuthorCard — about the author, after an article: a 56px initials avatar on
+ * `ink`, an eyebrow, the name in Cal Sans, the role and links, on a `surface`
+ * card (1px `line`, `radius-xl`, `shadow-xs`) as wide as the prose column.
+ */
+interface Props {
+  name: string;
+  role?: string;
+  eyebrow?: string;
+  links?: readonly Readonly<{ label: string; href: string }>[];
+}
+const { name, role, eyebrow = 'Written by', links = [] } = Astro.props;
+const words = name.split(/\s+/).filter(Boolean);
+const initials = [words[0], words.length > 1 ? words.at(-1) : undefined]
+  .map((word) => word?.charAt(0) ?? '')
+  .join('')
+  .toUpperCase();
+---
+
+<aside class="cl-author" aria-label="About the author">
+  <span class="cl-author-avatar" aria-hidden="true">{initials}</span>
+  <div class="cl-author-body">
+    <p class="type-eyebrow cl-author-eyebrow">{eyebrow}</p>
+    <p class="cl-author-name">{name}</p>
+    {role && <p class="cl-author-role">{role}</p>}
+    {
+      links.length > 0 && (
+        <ul class="cl-author-links">
+          {links.map((link) => (
+            <li>
+              <a href={link.href} class="focus-ring" target="_blank" rel="noreferrer">
+                {link.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </div>
+</aside>
+
+<style is:global>
+  .cl-author {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 20px;
+    max-width: var(--container-prose);
+    padding: 24px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xs);
+  }
+  .cl-author-avatar {
+    display: inline-grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-full);
+    background: var(--color-ink);
+    color: var(--color-on-ink);
+    font-size: var(--text-label-lg);
+    line-height: var(--text-label-lg--line-height);
+    font-weight: 600;
+  }
+  .cl-author-body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .cl-author-body p {
+    margin: 0;
+  }
+  .cl-author-eyebrow {
+    margin-bottom: 8px;
+  }
+  .cl-author-name {
+    color: var(--color-ink);
+    font-family: var(--font-display);
+    font-size: var(--text-title-sm);
+    line-height: var(--text-title-sm--line-height);
+    font-weight: 400;
+  }
+  .cl-author-role {
+    margin-top: 2px;
+    color: var(--color-ink-muted);
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  .cl-author-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    margin: 16px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .cl-author-links a {
+    color: var(--color-ink);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
+    font-weight: 500;
+    text-decoration: none;
+    border-radius: var(--radius-xs);
+  }
+  .cl-author-links a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  @media (max-width: 767px) {
+    .cl-author {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 16px;
+      padding: 20px;
+    }
+  }
+</style>
