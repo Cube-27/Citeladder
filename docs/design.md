@@ -25,9 +25,9 @@ second visual authority.
 Monochrome with one accent. Ink (`#111111`, `#f4f4f4` in dark) carries every
 primary action, heading and figure; Flare (`#e8501a`, `#ff6a33` in dark) is a
 mark only: the logo's bars, the own-brand chart series, a 2px rung, a dot, a
-link's ink as `accent-ink`. Cal Sans sets display type at its one weight, 400,
-and never under 18px: on the website only the H1 and one heading per section
-(D28), in the docs its headings, and in the app only the page title. Geist sets everything else, never above 500; Geist Mono sets data
+link's ink as `accent-ink`. Cal Sans sets display type at its one weight, 400:
+on the website the H1 and one heading per section (D28), in the docs its
+headings, and in the app the page title. Geist sets everything else; Geist Mono sets data
 and code. Fields, composers and cards wear a soft edge, never a dark hairline.
 Light and dark on every surface, defaulting to the system preference.
 
@@ -60,10 +60,10 @@ Light and dark on every surface, defaulting to the system preference.
 | D31 | Website cards follow the owner's Cal.com reference (owner, 5 November 2026): a FeatureCard or product frame is a 20px `surface` card with a small 8px inset. Only a card with supporting text (a FeatureCard) gets the grey well: `paper` with its own 1px `line` edge, a concentric 14px radius and compact padding (12/16, 8/12 on phones), the vignette inside it a white 10px card with 16px padding, and the copy below 16px under the well, 12px from the card's foot, title and text 4px apart. A frame with no supporting text is one card: no well fill or edge, and the screen sits straight on it. D29's fill-less well therefore holds only for text-less frames; the app keeps its ≤8px radii. |
 | D32 | The ThemeSwitch is one ghost IconButton on every surface (owner, 5 November 2026): a visitor starts on the device's theme (`system`, never shown as an option), and a click stores the opposite of the theme on screen, its icon (moon or sun) the theme it turns on. Replaces the three-segment light, dark and system switch and its 28px `control-sm` height. |
 | D33 | Only a page's opening (its hero) and its closing CtaBand are centred on the website (owner, 5 November 2026); every section header is left-aligned, a reading-measure list sits at the left under it, and an FAQ is the aside layout: "Frequently asked questions" in the 4/12 column on the left, the questions on the right. Supersedes D18's centred section headers. |
+| D34 | Website headings match the owner's Cal.com reference (owner, 5 November 2026): the H1 (`--text-site-title`) is 80/86 and a section heading (`--text-site-section`) 56/60 from 768px up, the owner's 982px desktop included; phones keep 32/38 and 28/34. Every Cal Sans heading on the website is tracked -0.01em, and hero titles run to 1120px (960 left-aligned). The landing announcement is a borderless pill: the white pill with its grey "New" pill inside, both fully round, no edge or ring. `check:policy` no longer bans styles: the type ceiling, the Cal Sans weight, size and placement rules, the accent-as-mark rule, the review rules D5–D28, the heading full-stop rule and the retired-identifier list are deleted; it keeps the token plumbing (token contract, no raw colours outside `globals.css`, the 4px grid, motion and shadow tokens), WCAG contrast and the app's component layering. Supersedes D30's sizes and ceiling and D26's untracked Cal Sans. |
 
 D5–D17 come from the owner's reviews of the shipped app and docs on 5 November
-2026; `frontend/scripts/design-system-review-checks.mjs` keeps them in
-`pnpm check:policy`. D18–D25 are the website review rounds in the
+2026. D18–D25 are the website review rounds in the
 [rollout plan](plans/design-system-rollout.md); D26 is the owner's website
 type rule of the same day.
 
@@ -95,28 +95,6 @@ type rule of the same day.
   system's space-N.
 - **Faces.** `brand-fonts.json` names Cal Sans, Geist and Geist Mono for the
   display, sans and mono roles.
-- **Cal Sans** is weight 400 only and never under 18px, in class strings and in
-  every stylesheet; in the app no class or role but `type-page-title` sets it
-  (D7), and on the website only the hero, article, section, CTA, index-group
-  and lone-split headings and the prose h2 set it (D28).
-- **Geist is never above 500** on any surface: no `font-semibold` or
-  `font-bold`, no 600 or 700 (D6).
-- **Soft edges.** `line-control` appears only in the non-border mark owners
-  listed under D5; no field, box, card or slot edge wears it.
-- **One-row metrics.** No grid adds columns between `desktop:` and `shell:`,
-  so a row of figures never wraps at 982px (D9).
-- **Slightly rounded.** `rounded-full` and `var(--radius-full)` appear only on
-  avatars, status dots, switch tracks and count pills, and no stylesheet sets
-  a corner rounder than 8px (D10).
-- **Compact app.** `globals.css`'s `:root:not([data-public-surface])` block
-  holds the D11 values (table rows `row-app`, card and dialog padding 16,
-  section gap 16, card gap 12), `.type-page-title` is `display-sm`, and the
-  app sidebar draws no logo. The tables below show the system's `:root`
-  values, which the website and docs keep.
-- **Flare is a mark.** No `bg-`, `from-`, `via-` or `to-accent` larger than a
-  2px mark, no accent background on a box over 4px, no heading in accent.
-  Primary actions are ink; a highlighted surface is `accent-soft`.
-- **The website's H1 is the ceiling.** No website or docs type exceeds 60px (D30).
 - **Contrast.** Every ink on every ground holds 4.5:1 in both themes, each
   status on its own soft, the labels on ink and on Flare; marks, control
   borders, the focus ring and the chart series hold 3:1; positive against
@@ -126,8 +104,7 @@ type rule of the same day.
   owned; radius is the `rounded-*` scale with no arbitrary value; shadows are
   `shadow-xs|card|pop|press`; spacing stays on the 4px grid; type sizes,
   leading, tracking and faces outside `components/ui/` come from a type role;
-  no text ink becomes a background; the retired design's identifiers do not
-  return. Debt older than a rule is ratcheted in
+  no text ink becomes a background. Debt older than a rule is ratcheted in
   `frontend/scripts/design-system-baseline.json` and only falls.
 - **Documentation.** The tables below are generated from `globals.css` by
   `node frontend/scripts/audit-design-tokens.mjs --write`; a stale table, a
@@ -206,10 +183,10 @@ Product roles are the `.type-*` classes in `globals.css`, reached through
 | `.cl-body` | public | `16px / 26px` | — |
 | `.cl-fcard-title` | public | `22px / 28px` | — |
 | `.cl-lead` | public | `18px / 30px` | — |
-| `.cl-lhero-title` | public | `60px / 64px` | — |
+| `.cl-lhero-title` | public | `80px / 86px` | — |
 | `.cl-note` | public | `14px / 20px` | — |
-| `.cl-phero-title` | public | `60px / 64px` | — |
-| `.cl-shead-title` | public | `44px / 50px` | — |
+| `.cl-phero-title` | public | `80px / 86px` | — |
+| `.cl-shead-title` | public | `56px / 60px` | — |
 <!-- generated:type:end -->
 
 ### Controls and layout
@@ -270,7 +247,6 @@ These hold whatever a component looks like:
 - **Accessibility.** WCAG 2.1 AA; visible keyboard focus (2px of
   `--color-focus`, offset 2px); meaning never by colour alone; all motion stops
   under `prefers-reduced-motion`; forced colours and print stay usable.
-- **No heading ends in a full stop**, on any surface.
 
 ### Availability vocabulary
 

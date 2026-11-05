@@ -25,23 +25,12 @@ import {
   websiteContractViolations,
   tsxGeometryFindings,
   featureLayeringViolations,
-  jsxClassData,
 } from './design-system-source-checks.mjs';
 import { tokenAuditViolations } from './audit-design-tokens.mjs';
-import {
-  accentFillClassFindings,
-  accentHeadingFindings,
-  displayFaceClassFindings,
-  isWebsiteSource,
-  stylesheetContractFindings,
-  tokenContractViolations,
-  websiteTypeCeilingClassFindings,
-} from './design-system-contract.mjs';
+import { tokenContractViolations } from './design-system-contract.mjs';
 import { brandTokenViolations, svgColorScan } from './design-system-asset-checks.mjs';
-import { reviewScriptFindings, reviewStylesheetFindings } from './design-system-review-checks.mjs';
 import { resolvePalette } from './design-system-contrast.mjs';
 import { cssPolicyScan } from './design-system-css-checks.mjs';
-import { headingPunctuationViolations } from './design-system-copy-checks.mjs';
 import { ratchetVerdict, readBaseline, writeBaseline } from './design-system-ratchet.mjs';
 import { typeDisciplineFindings } from './type-discipline-checks.mjs';
 
@@ -82,79 +71,14 @@ function files(directory) {
 }
 
 const tokenCss = readFileSync(tokenOwner, 'utf8');
-const ownsStyles = (label) => /^(?:apps|components|packages)\//.test(label);
 
 for (const path of files(root)) {
   const extension = extname(path);
   if (!sourceExtensions.has(extension) && extension !== '.astro') continue;
   const source = readFileSync(path, 'utf8');
   const label = relative(root, path).replaceAll('\\', '/');
-  if (/^(?:apps|components|lib)\//.test(label) && /\.(?:tsx|ts|astro)$/.test(label)) {
-    violations.push(...headingPunctuationViolations(source, label));
-  }
-  // Cal Sans, Flare and the website's type ceiling, in every stylesheet and
-  // Astro <style> block.
-  if (ownsStyles(label) && extension === '.css') {
-    violations.push(
-      ...stylesheetContractFindings(source, label, tokenCss),
-      ...reviewStylesheetFindings(source, label),
-    );
-  }
-  if (ownsStyles(label) && extension === '.astro') {
-    for (const [, css] of source.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g))
-      violations.push(
-        ...stylesheetContractFindings(css, label, tokenCss),
-        ...reviewStylesheetFindings(css, label),
-      );
-  }
   if (extension === '.astro') continue;
-  if (/^(?:apps|components|lib)\//.test(label) && /\.tsx?$/.test(label)) {
-    violations.push(
-      ...reviewScriptFindings(source, label),
-      ...displayFaceClassFindings(source, label),
-      ...accentFillClassFindings(source, label),
-      ...(label.endsWith('.tsx') ? accentHeadingFindings(jsxClassData(source, label), label) : []),
-      ...(isWebsiteSource(label) ? websiteTypeCeilingClassFindings(source, label) : []),
-    );
-  }
   if (/\.tsx?$/.test(label) && !/\.test\.tsx?$/.test(label)) scriptSources.push({ label, source });
-  const legacyIdentifiers = [
-    ['Search', 'ify'].join(''),
-    ['search', 'ify'].join(''),
-    ['--', 'ds-'].join(''),
-    ['--', 'mkt-'].join(''),
-    ['Theme', 'Toggle'].join(''),
-    ['Public', ' Sans'].join(''),
-    ['Public', '_Sans'].join(''),
-    ['font', '-public-sans'].join(''),
-    ['marketing', '-atmosphere'].join(''),
-    // The design before the 2026-11 system: green palette, grain ground,
-    // dot lattice, tinted fields, flat-surface elevation, the old faces.
-    ['ground', '-grain'].join(''),
-    ['--', 'lattice'].join(''),
-    ['--', 'grain'].join(''),
-    ['field', '-mint'].join(''),
-    ['field', '-lime'].join(''),
-    ['--', 'elevation-'].join(''),
-    ['--', 'tag-'].join(''),
-    ['font', '-numeric'].join(''),
-    ['TASA', ' Orbiter'].join(''),
-    ['Swit', 'zer'].join(''),
-    ['JetBrains', ' Mono'].join(''),
-    // Decision D8 (2026-11-05): a score is a ring or its number, never a
-    // segmented bar.
-    ['Score', 'Bar'].join(''),
-    ['score', '-bar'].join(''),
-    // Decision D11 (2026-11-05): the app sidebar carries no logo.
-    ['SIDEBAR', '_LOGO_CLASSES'].join(''),
-  ];
-  for (const legacy of legacyIdentifiers) {
-    // A whole identifier: the retired text face is not the country it prefixes.
-    const escaped = legacy.replaceAll(/[.*+?^$(){}|[\]\\]/g, String.raw`\$&`);
-    if (new RegExp(`${escaped}(?![a-z])`).test(source)) {
-      violations.push(`${label}: legacy identifier ${legacy}`);
-    }
-  }
   if (
     path !== tokenOwner &&
     path !== import.meta.filename &&
