@@ -39,7 +39,7 @@ export type PlatformScreen =
  * full width under the copy (`full`), or a card, with or without a screen,
  * set in a row with the cards next to it (`card`).
  */
-export type PlatformFeatureMedia =
+type PlatformFeatureMedia =
   | { kind: 'split'; screen: PlatformScreen }
   | { kind: 'full'; screen: PlatformScreen }
   | { kind: 'card'; screen?: PlatformScreen };
