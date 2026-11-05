@@ -61,6 +61,7 @@ Light and dark on every surface, defaulting to the system preference.
 | D32 | The ThemeSwitch is one ghost IconButton on every surface (owner, 5 November 2026): a visitor starts on the device's theme (`system`, never shown as an option), and a click stores the opposite of the theme on screen, its icon (moon or sun) the theme it turns on. Replaces the three-segment light, dark and system switch and its 28px `control-sm` height. |
 | D33 | Only a page's opening (its hero) and its closing CtaBand are centred on the website (owner, 5 November 2026); every section header is left-aligned, a reading-measure list sits at the left under it, and an FAQ is the aside layout: "Frequently asked questions" in the 4/12 column on the left, the questions on the right. Supersedes D18's centred section headers. |
 | D34 | Website headings match the owner's Cal.com reference (owner, 5 November 2026): the H1 (`--text-site-title`) is 80/86 and a section heading (`--text-site-section`) 56/60 from 768px up, the owner's 982px desktop included; phones keep 32/38 and 28/34. Every Cal Sans heading on the website is tracked -0.01em, and hero titles run to 1120px (960 left-aligned). The landing announcement is a borderless pill: the white pill with its grey "New" pill inside, both fully round, no edge or ring. `check:policy` no longer bans styles: the type ceiling, the Cal Sans weight, size and placement rules, the accent-as-mark rule, the review rules D5–D28, the heading full-stop rule and the retired-identifier list are deleted; it keeps the token plumbing (token contract, no raw colours outside `globals.css`, the 4px grid, motion and shadow tokens), WCAG contrast and the app's component layering. Supersedes D30's sizes and ceiling and D26's untracked Cal Sans. |
+| D35 | The website gets depth from its pictures, never its type or controls, which stay black and white (owner, 5 November 2026, from the Cal.com, Semrush, Profound and Linear references: fade-in and wash, subtle colours, grain gradients, product animation, layers and frosted glass). Four soft tints (`stage-sky`, `stage-mint`, `stage-lilac`, `stage-peach`) over `paper` with a soft-light film grain make a stage: a product image sits on one (48px in, 16 on phones, 24px radius) inside a translucent frosted rim that blurs the grain, on its own white card with `shadow-pop`; a FeatureCard's well and the CtaBand are stages, and neighbouring bento tiles and reversed splits take different mixes. Each hero has a tinted, grained glow that fades into the page, and a full app screen fades out at its foot. Parts rise 16px and fade in as they enter view (hero on load, the rest on scroll, siblings 80ms apart); product images play out (rows rise, bars grow, charts draw left to right, the latest point pings); linked cards lift 4px on hover. Reduced motion, no script or a failed script leaves the page static and fully visible. Supersedes D29's white frame card and D31's grey well. |
 
 D5–D17 come from the owner's reviews of the shipped app and docs on 5 November
 2026. D18–D25 are the website review rounds in the
@@ -80,6 +81,7 @@ type rule of the same day.
 | `frontend/components/ui/`, `frontend/components/layout/` | The app's components and shell, composed by feature folders that set no geometry of their own |
 | `frontend/apps/marketing/src/site.css`, `frontend/components/marketing/chrome/`, `frontend/components/marketing/sections/` | The website's components: SiteNav, SiteFooter, CookieBanner, Breadcrumbs, AnnouncementPill and the page sections, the system's `cl-*` geometry on the tokens above, and the website's type roles (the `cl-*` titles, lead, body and note) |
 | `frontend/apps/marketing/src/screens.css`, `frontend/components/marketing/screens/` | The website's product images: ProductFrame and the `Screen*` components ("Website product images" in Screen contracts): fluid card vignettes at real type size, and two full app screens scaled whole to fit their frame (never cropped), with their demo data in one typed module; the home page's first view (`ScreenAppVisibility`, D25) is the whole app at 1440 × 820, its chrome drawn at the app's density |
+| `frontend/apps/marketing/src/layers.css`, `frontend/public/site-motion.js` | The website's depth layer (D35): stages, hero washes, frosted rims, hover lift and the entrances; the script turns the motion on before first paint and marks parts as they scroll into view |
 | `frontend/services/api/src/billing/pdf-brand.ts` | The PDF palette, read from `globals.css` |
 
 ## Token contract
@@ -151,6 +153,10 @@ type rule of the same day.
 | `--color-positive` | `#0b6e69` | `#4fd1c5` |
 | `--color-positive-soft` | `#d6f2ef` | `#0e2e2b` |
 | `--color-scrim` | `rgb(17 17 17 / 32%)` | `rgb(0 0 0 / 64%)` |
+| `--color-stage-lilac` | `#dfd6f7` | `#231b3d` |
+| `--color-stage-mint` | `#cdeedf` | `#0f2a26` |
+| `--color-stage-peach` | `#fcdac6` | `#2f1b22` |
+| `--color-stage-sky` | `#d2e2f8` | `#13223d` |
 | `--color-surface` | `#ffffff` | `#151515` |
 | `--color-surface-sunken` | `#ececec` | `#1e1e1e` |
 | `--color-warning` | `#8a5000` | `#f5b84a` |

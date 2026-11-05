@@ -78,6 +78,38 @@
         "usage": "The floating website navbar's translucent fill, always with a 16px backdrop blur. Used nowhere else."
       },
       {
+        "name": "stage-sky",
+        "value": {
+          "light": "#d2e2f8",
+          "dark": "#13223d"
+        },
+        "usage": "One tint of the website's grained stages: behind a product image, a hero's wash and the CtaBand (D35). Never text, a button or a card."
+      },
+      {
+        "name": "stage-mint",
+        "value": {
+          "light": "#cdeedf",
+          "dark": "#0f2a26"
+        },
+        "usage": "One tint of the website's grained stages: behind a product image, a hero's wash and the CtaBand (D35). Never text, a button or a card."
+      },
+      {
+        "name": "stage-lilac",
+        "value": {
+          "light": "#dfd6f7",
+          "dark": "#231b3d"
+        },
+        "usage": "One tint of the website's grained stages: behind a product image, a hero's wash and the CtaBand (D35). Never text, a button or a card."
+      },
+      {
+        "name": "stage-peach",
+        "value": {
+          "light": "#fcdac6",
+          "dark": "#2f1b22"
+        },
+        "usage": "One tint of the website's grained stages: behind a product image, a hero's wash and the CtaBand (D35). Never text, a button or a card."
+      },
+      {
         "name": "line",
         "value": {
           "light": "#e5e5e5",
