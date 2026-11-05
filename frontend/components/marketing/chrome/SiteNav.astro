@@ -1,0 +1,190 @@
+---
+import { ArrowRight, ChevronDown, Menu, X } from 'lucide-react';
+
+import { buttonClasses } from '@/components/ui/button';
+import { LogoMark } from '@/components/ui/logo-mark';
+import { ThemeSwitch } from '@/components/ui/theme-switch';
+import { appHref } from '@/lib/config/app-link';
+import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
+import { NAV_DROPS, NAV_LINKS, PLATFORM_OVERVIEW } from '@/lib/marketing-content/nav';
+import { cn } from '@/lib/utils';
+
+import MegaMenu from './MegaMenu.astro';
+import { NavIcon } from './nav-icons';
+import { inSection, routePath } from './site-nav';
+
+/**
+ * The website's navbar (the system's SiteNav): a floating glass bar, sticky
+ * 8px under the viewport top, with the three mega menus, Enterprise and
+ * Pricing, the ThemeSwitch and the account actions. Below 1024px the links
+ * fold into a sheet under the bar.
+ *
+ * Every menu and the sheet are server-rendered, hidden; `site-nav.ts` adds
+ * the behaviour with plain listeners, so pages ship no framework script for
+ * the navigation. The ThemeSwitch is the one island.
+ */
+interface Props {
+  path: string;
+}
+
+const path = routePath(Astro.props.path);
+const signupOpen = selfServeSignupOpen();
+const login = appHref('/login');
+const register = appHref('/register');
+---
+
+<header class="cl-navbar safe-top" data-site-nav>
+  <div class="cl-container">
+    <div class="cl-navbar-anchor">
+      <nav aria-label="Main navigation" class="cl-navbar-bar">
+        <a href="/" aria-label="CiteLadder home" class="cl-navbar-logo focus-ring">
+          <LogoMark />
+        </a>
+        <ul class="cl-navbar-links">
+          {
+            NAV_DROPS.map((drop) => (
+              <li>
+                <button
+                  id={`desktop-nav-trigger-${drop.key}`}
+                  type="button"
+                  class="cl-navbar-link focus-ring"
+                  data-current={inSection(path, drop.href) ? '' : undefined}
+                  aria-expanded="false"
+                  aria-controls={`desktop-nav-panel-${drop.key}`}
+                >
+                  {drop.label}
+                  <ChevronDown aria-hidden className="cl-navbar-caret size-4" />
+                </button>
+                {/* Right after its trigger, so Tab moves into the open menu; it hangs under the whole bar. */}
+                <div id={`desktop-nav-panel-${drop.key}`} class="cl-navbar-panel" hidden>
+                  <MegaMenu drop={drop} path={path} />
+                </div>
+              </li>
+            ))
+          }
+          {
+            NAV_LINKS.map(({ label, href }) => (
+              <li>
+                <a
+                  href={href}
+                  class="cl-navbar-link focus-ring"
+                  aria-current={path === href ? 'page' : undefined}
+                >
+                  {label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+        <div class="cl-navbar-end">
+          <div class="cl-navbar-actions cl-navbar-hide-sm">
+            <ThemeSwitch client:load />
+          </div>
+          <a href={login} class={buttonClasses('ghost', 'cl-navbar-hide-sm')}>Log in</a>
+          {signupOpen && <a href={register} class={buttonClasses('primary')}>Sign up</a>}
+          <button
+            type="button"
+            class="cl-navbar-toggle focus-ring"
+            aria-label="Open menu"
+            aria-expanded="false"
+            aria-controls="mobile-menu"
+          >
+            <Menu aria-hidden className="size-5" data-icon-open />
+            <X aria-hidden className="size-5" data-icon-close hidden />
+          </button>
+        </div>
+      </nav>
+
+      <div id="mobile-menu" class="cl-navbar-sheet" hidden>
+        <ul class="cl-sheet-list">
+          {
+            NAV_DROPS.map(({ key, label, groups }) => (
+              <li>
+                <button
+                  type="button"
+                  class="cl-sheet-row focus-ring"
+                  aria-expanded="false"
+                  aria-controls={`acc-${key}`}
+                >
+                  {label}
+                  <ChevronDown aria-hidden className="cl-navbar-caret size-4" />
+                </button>
+                <div id={`acc-${key}`} hidden>
+                  {groups.map((group) => (
+                    <div class="cl-sheet-subgroup">
+                      {group.label && (
+                        <p class="type-eyebrow cl-eyebrow cl-sheet-head">{group.label}</p>
+                      )}
+                      <ul class="cl-sheet-sub">
+                        {group.items.map((item) => {
+                          const external = 'external' in item && item.external === true;
+                          return (
+                            <li>
+                              <a
+                                class="cl-sheet-subrow focus-ring"
+                                href={item.href}
+                                aria-current={path === item.href ? 'page' : undefined}
+                                target={external ? '_blank' : undefined}
+                                rel={external ? 'noopener' : undefined}
+                              >
+                                <NavIcon href={item.href} className="size-4" />
+                                {item.title}
+                                {external && <span class="sr-only">(opens in a new tab)</span>}
+                              </a>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ))}
+                  {key === 'platform' && (
+                    <a
+                      class="cl-sheet-subrow cl-sheet-overview focus-ring"
+                      href={PLATFORM_OVERVIEW.href}
+                    >
+                      {PLATFORM_OVERVIEW.title}
+                      <ArrowRight aria-hidden className="size-4" />
+                    </a>
+                  )}
+                </div>
+              </li>
+            ))
+          }
+          {
+            NAV_LINKS.map(({ label, href }) => (
+              <li>
+                <a
+                  href={href}
+                  class="cl-sheet-row focus-ring"
+                  aria-current={path === href ? 'page' : undefined}
+                >
+                  {label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+        <div class="cl-sheet-foot">
+          <div class="cl-sheet-actions">
+            <ThemeSwitch client:load />
+          </div>
+          <a href={login} class={buttonClasses('secondary', 'cl-btn-lg')}>Log in</a>
+          {
+            signupOpen && (
+              <a href={register} class={cn(buttonClasses('primary'), 'cl-btn-lg')}>
+                Sign up
+              </a>
+            )
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<script>
+  import { mountSiteNav } from './site-nav';
+
+  const chrome = document.querySelector<HTMLElement>('[data-site-nav]');
+  if (chrome) mountSiteNav(chrome);
+</script>

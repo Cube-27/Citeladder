@@ -1,0 +1,89 @@
+---
+import { ArrowRight, ArrowUpRight } from 'lucide-react';
+
+import { PLATFORM_OVERVIEW, type NavDrop } from '@/lib/marketing-content/nav';
+import { cn } from '@/lib/utils';
+
+import { NavIcon, hasNavIcon } from './nav-icons';
+
+/**
+ * One navbar menu (the system's MegaMenu): its groups side by side, or a lone
+ * group spread across columns, with Platform's overview as the footer row.
+ * Rows are ordinary links, never ARIA `menuitem`s: the menu does not
+ * implement arrow-key navigation, and the role would promise it. External
+ * rows (CiteLadder's own docs) open in a new tab and say so.
+ */
+interface Props {
+  drop: NavDrop;
+  path: string;
+}
+
+const { drop, path } = Astro.props;
+const single = drop.groups.length === 1;
+const columns = drop.key === 'platform' ? 3 : drop.key === 'solutions' ? 2 : drop.groups.length;
+const headId = (index: number) => `desktop-nav-${drop.key}-section-${index}`;
+---
+
+<div class="cl-mega">
+  <div class={cn('cl-mega-groups', single ? 'cl-cols-1' : `cl-cols-${columns}`)}>
+    {
+      drop.groups.map((group, index) => (
+        <div
+          class="cl-mega-group"
+          role={group.label ? 'group' : undefined}
+          aria-labelledby={group.label ? headId(index) : undefined}
+        >
+          {group.label && (
+            <p id={headId(index)} class="type-eyebrow cl-eyebrow cl-mega-head">
+              {group.label}
+            </p>
+          )}
+          <ul
+            class={cn('cl-mega-list', single && columns > 1 && `cl-mega-list--spread cl-cols-${columns}`)}
+          >
+            {group.items.map((item) => {
+              const external = 'external' in item && item.external === true;
+              const icon = hasNavIcon(item.href);
+              return (
+                <li>
+                  <a
+                    class={cn('cl-mega-item focus-ring', !icon && 'cl-mega-item--text')}
+                    href={item.href}
+                    aria-current={path === item.href ? 'page' : undefined}
+                    target={external ? '_blank' : undefined}
+                    rel={external ? 'noopener' : undefined}
+                  >
+                    {icon && (
+                      <span class="cl-mega-icon" aria-hidden="true">
+                        <NavIcon href={item.href} className="size-5" />
+                      </span>
+                    )}
+                    <span class="cl-mega-copy">
+                      <span class="cl-mega-title">
+                        {item.title}
+                        {external && <ArrowUpRight aria-hidden className="cl-mega-ext size-3.5" />}
+                        {external && <span class="sr-only">(opens in a new tab)</span>}
+                      </span>
+                      <span class="cl-mega-desc">{item.desc}</span>
+                    </span>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))
+    }
+  </div>
+  {
+    drop.key === 'platform' && (
+      <a class="cl-mega-foot focus-ring" href={PLATFORM_OVERVIEW.href}>
+        <span class="cl-mega-title">{PLATFORM_OVERVIEW.title}</span>
+        <span class="cl-mega-desc">
+          How measurement, diagnosis and action connect in one project.
+        </span>
+        <ArrowRight aria-hidden className="cl-mega-foot-arrow size-4" />
+      </a>
+    )
+  }
+</div>

@@ -1,10 +1,15 @@
 /**
- * Navigation content for the marketing chrome (desktop dropdowns + the mobile
- * accordions, footer, product cards and published platform routes).
+ * The website chrome's content in one place: the navbar's menus and links,
+ * the footer's columns, tagline and policy row, and the published platform
+ * routes. SiteNav and SiteFooter render only this, so a destination added
+ * here reaches the header, the footer and every page together.
  */
 import { docsHref } from '@/lib/config/docs';
 
-export type NavDropKey = 'platform' | 'solutions' | 'resources';
+import { FOOTER_LEGAL_LINKS, PARENT_COMPANY } from './legal';
+import { CITELADDER_GITHUB, CITELADDER_LINKEDIN, CITELADDER_X } from './social';
+
+type NavDropKey = 'platform' | 'solutions' | 'resources';
 
 export type NavDropItem =
   | { title: string; desc: string; href: string; external?: boolean }
@@ -233,7 +238,7 @@ export const NAV_DROPS: readonly NavDrop[] = [
 ];
 
 /** Data-led guides the footer links from every page; too many for the Resources menu. */
-export const RESEARCH_LINKS = [
+const RESEARCH_LINKS = [
   { title: 'AI search market share 2026', href: '/blog/ai-search-market-share-2026' },
   { title: 'AI referral traffic statistics', href: '/blog/ai-referral-traffic-statistics-2026' },
   { title: 'Google AI Overviews statistics', href: '/blog/google-ai-overviews-statistics-2026' },
@@ -247,6 +252,72 @@ export const NAV_LINKS = [
   { label: 'Enterprise', href: '/enterprise' },
   { label: 'Pricing', href: '/pricing' },
 ] as const;
+
+export type SocialNetwork = 'github' | 'linkedin' | 'x';
+
+export type FooterLink = {
+  label: string;
+  href: string;
+  external?: boolean;
+  /** A social profile shows its network's mark in place of the external arrow. */
+  social?: SocialNetwork;
+};
+
+export type FooterColumn = { key: string; label: string; links: readonly FooterLink[] };
+
+export const FOOTER_TAGLINE = 'See what AI answers say about your brand, and what to fix next.';
+
+/**
+ * The footer's columns, derived from the menus above so a published
+ * destination cannot drift between the header and the footer. Platform reads
+ * as one list: the overview first, then every capability in menu order.
+ */
+export const FOOTER_COLUMNS: readonly FooterColumn[] = [
+  {
+    key: 'platform',
+    label: 'Platform',
+    links: [
+      { label: PLATFORM_OVERVIEW.title, href: PLATFORM_OVERVIEW.href },
+      ...PLATFORM_GROUPS.flatMap((group) =>
+        group.items.map((item) => ({ label: item.title, href: item.href })),
+      ),
+    ],
+  },
+  ...NAV_DROPS.filter((drop) => drop.key !== 'platform').map((drop) => ({
+    key: drop.key,
+    label: drop.label,
+    links: drop.groups.flatMap((group) =>
+      group.items.map((item) => ({
+        label: item.title,
+        href: item.href,
+        external: 'external' in item && item.external,
+      })),
+    ),
+  })),
+  {
+    key: 'research',
+    label: 'Research',
+    links: RESEARCH_LINKS.map((item) => ({ label: item.title, href: item.href })),
+  },
+  {
+    key: 'company',
+    label: 'Company',
+    links: [
+      { label: 'Contact', href: '/contact' },
+      { label: 'Enterprise', href: '/enterprise' },
+      { label: 'Pricing', href: '/pricing' },
+      { label: PARENT_COMPANY.name, href: PARENT_COMPANY.href, external: true },
+      { label: 'AI Instructions', href: '/ai-instructions' },
+      { label: 'Entity Map', href: '/entity-map' },
+      { label: 'github.com', href: CITELADDER_GITHUB, external: true, social: 'github' },
+      { label: 'x.com', href: CITELADDER_X, external: true, social: 'x' },
+      { label: 'linkedin.com', href: CITELADDER_LINKEDIN, external: true, social: 'linkedin' },
+    ],
+  },
+];
+
+/** The policy row under the ownership line; Contact already sits in Company. */
+export const FOOTER_POLICY_LINKS = FOOTER_LEGAL_LINKS.filter((link) => link.href !== '/contact');
 
 /**
  * Demo enquiries use CiteLadder's own contact page in the same tab.
