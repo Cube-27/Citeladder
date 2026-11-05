@@ -37,7 +37,8 @@
 
 .cl-frame-card,
 .cl-fcard > .cl-frame .cl-frame-well,
-.cl-cta {
+.cl-cta,
+.cl-page-form {
   background-color: var(--color-paper);
   background-image:
     var(--stage-grain), radial-gradient(90% 120% at 0% 0%, var(--stage-a) 0%, transparent 70%),
@@ -153,6 +154,27 @@
   border: 0;
   border-radius: 24px;
   box-shadow: none;
+}
+
+/* ---------- A PageForm: its fields are solid wells on a stage ---------- */
+
+.cl-page-form {
+  --stage-a: var(--color-stage-mint);
+  --stage-b: var(--color-stage-sky);
+  --stage-c: var(--color-stage-lilac);
+  border: 1px solid color-mix(in srgb, var(--color-surface) 70%, transparent);
+  border-radius: 24px;
+}
+
+/* The stage's own rules are translucent, so the tint runs through them. */
+.cl-page-form :is(.cl-page-form-head, .cl-page-form-foot) {
+  border-color: color-mix(in srgb, var(--color-ink) 10%, transparent);
+}
+
+@media (max-width: 767px) {
+  .cl-page-form {
+    border-radius: 20px;
+  }
 }
 
 /* ---------- Hero washes: a tinted glow that fades into the page ---------- */
