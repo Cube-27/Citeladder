@@ -2621,15 +2621,16 @@ a.cl-logotile:hover {
   }
 }
 
-/* ---------- PageForm: a reserved Turnstile slot keeps the submit button still ---------- */
+/* ---------- PageForm: a reserved Turnstile slot keeps the submit button still ----------
+   The form reads at a 600px measure on a grained stage (layers.css), so its
+   solid fields stand out as wells; fields and buttons inside are 44px, the
+   account-access height (D24). */
 .cl-page-form {
+  --control-md: 44px;
   display: flex;
   flex-direction: column;
-  padding: 32px;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-xl);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  max-width: 600px;
+  padding: 40px;
   color: var(--color-ink);
 }
 
@@ -2678,8 +2679,12 @@ a.cl-logotile:hover {
   border-top: 1px solid var(--color-line);
 }
 
+/* A definite 300px slot: the widget container fills it, so the hook measures
+   300 and renders the 300 × 65 flexible widget, never the 150 × 140 compact one. */
 .cl-page-form-turnstile {
   display: flex;
+  width: 300px;
+  max-width: 100%;
   min-height: 65px;
 }
 

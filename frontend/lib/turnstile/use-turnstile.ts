@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { TURNSTILE_FLEXIBLE_MIN_WIDTH_PX, TURNSTILE_SCRIPT_URL } from '@/lib/config/turnstile';
+import { useTheme, type Theme } from '@/lib/theme/theme';
 
 /** Flexible fills its slot from 300px up, 65px tall; compact is 150px by 140px. */
 export type TurnstileSize = 'flexible' | 'compact';
@@ -11,6 +12,7 @@ type TurnstileApi = {
       sitekey: string;
       action: string;
       size: TurnstileSize;
+      theme: Theme;
       'response-field': boolean;
       callback(token: string): void;
       'expired-callback'(): void;
@@ -59,6 +61,10 @@ function loadTurnstile(): Promise<TurnstileApi> {
  * already the widget's height when the widget arrives. A rendered widget keeps
  * its size; so does the slot.
  *
+ * The widget wears the page's resolved theme, not the operating system's
+ * (Turnstile's `auto`); switching the theme renders a fresh widget, so the
+ * visitor solves the check again.
+ *
  * The site key is public and baked in at build (`PUBLIC_TURNSTILE_SITE_KEY`
  * for each of the marketing and product builds). Without one no widget
  * renders, no token arrives, and a form that requires one stays held.
@@ -69,6 +75,7 @@ export function useTurnstile(action: string) {
   const [solved, setSolved] = useState(false);
   const [failed, setFailed] = useState(false);
   const [size, setSize] = useState<TurnstileSize>('flexible');
+  const theme = useTheme();
 
   const container = useCallback(
     (element: HTMLDivElement | null) => {
@@ -96,6 +103,7 @@ export function useTurnstile(action: string) {
             sitekey,
             action,
             size: chosen,
+            theme,
             'response-field': false,
             callback: settle,
             'expired-callback': () => settle(''),
@@ -112,9 +120,10 @@ export function useTurnstile(action: string) {
         widget.current?.api.remove(widget.current.id);
         widget.current = null;
         token.current = '';
+        setSolved(false);
       };
     },
-    [action],
+    [action, theme],
   );
 
   const reset = useCallback(() => {
