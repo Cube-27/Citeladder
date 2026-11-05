@@ -12,7 +12,6 @@ import { Drawer } from '@/components/ui/drawer';
 import { Dot } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
-import { ScoreBar } from '@/components/ui/score-bar';
 import { TextLink } from '@/components/ui/text-link';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
@@ -154,10 +153,9 @@ function ReadinessLedger({
                 </ClampText>
               </div>
             </TableCell>
+            {/* The number only (decision D8); the State column says why a
+                dimension has none. */}
             <TableCell numeric>{formatScore(dimension.score)}</TableCell>
-            <TableCell>
-              <QualityCell dimension={dimension} state={state} />
-            </TableCell>
             <TableCell numeric>
               {dimension.coverage === null ? (
                 <UnavailableValue state="not_measured" />
@@ -185,7 +183,6 @@ function ReadinessLedger({
 const READINESS_COLUMNS: readonly DataTableColumn[] = [
   { key: 'dimension', label: 'Dimension' },
   { key: 'score', label: 'Score', width: 'figure', numeric: true },
-  { key: 'quality', label: 'Quality', width: 'status' },
   { key: 'coverage', label: 'Coverage', width: 'figure', numeric: true },
   { key: 'state', label: 'State', width: 'status' },
   { key: 'actions', label: 'Actions', width: 'date', hideLabel: true },
@@ -268,29 +265,6 @@ function failingPagesCaption(shown: number, total: number): string {
   if (shown < total) return `Showing the ${shown} most affected of ${total} pages, worst first.`;
   const noun = total === 1 ? 'page' : 'pages';
   return `${total} ${noun} failed at least one check, worst first.`;
-}
-
-/**
- * The quality column: a bar when there is a score, and otherwise the reason.
- *
- * A dimension with no score is either one nothing measured or one the state
- * already explains, and those read differently — "not measured" is an absence
- * of evidence, the state is a finding.
- */
-function QualityCell({
-  dimension,
-  state,
-}: Readonly<{ dimension: ReadinessDimension; state: DimensionState }>) {
-  if (dimension.score !== null) {
-    // The score column beside it already gives the number.
-    return (
-      <ScoreBar value={dimension.score} label={`${dimension.label} score`} showValue={false} />
-    );
-  }
-  if (dimension.dimension_measurement_state === 'not_measured') {
-    return <UnavailableValue state="not_measured" />;
-  }
-  return <span className="type-caption">{state}</span>;
 }
 
 function FailingPages({

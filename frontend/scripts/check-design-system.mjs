@@ -38,6 +38,7 @@ import {
   websiteTypeCeilingClassFindings,
 } from './design-system-contract.mjs';
 import { brandTokenViolations, svgColorScan } from './design-system-asset-checks.mjs';
+import { reviewScriptFindings, reviewStylesheetFindings } from './design-system-review-checks.mjs';
 import { resolvePalette } from './design-system-contrast.mjs';
 import { cssPolicyScan } from './design-system-css-checks.mjs';
 import { headingPunctuationViolations } from './design-system-copy-checks.mjs';
@@ -94,15 +95,22 @@ for (const path of files(root)) {
   // Cal Sans, Flare and the website's type ceiling, in every stylesheet and
   // Astro <style> block.
   if (ownsStyles(label) && extension === '.css') {
-    violations.push(...stylesheetContractFindings(source, label, tokenCss));
+    violations.push(
+      ...stylesheetContractFindings(source, label, tokenCss),
+      ...reviewStylesheetFindings(source, label),
+    );
   }
   if (ownsStyles(label) && extension === '.astro') {
     for (const [, css] of source.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g))
-      violations.push(...stylesheetContractFindings(css, label, tokenCss));
+      violations.push(
+        ...stylesheetContractFindings(css, label, tokenCss),
+        ...reviewStylesheetFindings(css, label),
+      );
   }
   if (extension === '.astro') continue;
   if (/^(?:apps|components|lib)\//.test(label) && /\.tsx?$/.test(label)) {
     violations.push(
+      ...reviewScriptFindings(source, label),
       ...displayFaceClassFindings(source, label),
       ...accentFillClassFindings(source, label),
       ...(label.endsWith('.tsx') ? accentHeadingFindings(jsxClassData(source, label), label) : []),
@@ -133,6 +141,10 @@ for (const path of files(root)) {
     ['TASA', ' Orbiter'].join(''),
     ['Swit', 'zer'].join(''),
     ['JetBrains', ' Mono'].join(''),
+    // Decision D8 (2026-11-05): a score is a ring or its number, never a
+    // segmented bar.
+    ['Score', 'Bar'].join(''),
+    ['score', '-bar'].join(''),
   ];
   for (const legacy of legacyIdentifiers) {
     // A whole identifier: the retired text face is not the country it prefixes.

@@ -114,7 +114,7 @@ export function Popover({
             align === 'end' ? 'right-0 left-auto' : 'right-auto left-0',
           )}
         >
-          {title ? <p className="text-body-sm text-ink font-semibold">{title}</p> : null}
+          {title ? <p className="text-body-sm text-ink font-medium">{title}</p> : null}
           {children}
         </dialog>
       ) : null}

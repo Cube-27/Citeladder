@@ -40,8 +40,8 @@ export function useReturnFocus(open: boolean) {
 /**
  * Dialog — a modal panel for one short task, centred on the scrim: `surface`,
  * `radius-lg`, `shadow-pop`, 24px padding and gaps, `container-narrow` wide.
- * The title is Cal Sans 22/28, the description `ink-secondary`, the footer
- * right-aligned (Cancel first, then the action). `tone="danger"` is a
+ * The title is the section title (Geist 500 22/28), the description
+ * `ink-secondary`, the footer right-aligned (Cancel first, then the action). `tone="danger"` is a
  * confirmation: an `alertdialog`, 440px, a `negative` warning icon by the
  * title and no close button, so the person picks Cancel or the named action.
  * Focus opens on the first tabbable element unless `initialFocusRef` is set,
@@ -101,9 +101,7 @@ export function Dialog({
               </span>
             ) : null}
             <div className="min-w-0">
-              <DialogPrimitive.Title className="font-display text-title text-ink">
-                {title}
-              </DialogPrimitive.Title>
+              <DialogPrimitive.Title className="type-section-title">{title}</DialogPrimitive.Title>
               {description ? (
                 <DialogPrimitive.Description asChild>
                   <div className="text-body-sm text-ink-secondary mt-2">{description}</div>

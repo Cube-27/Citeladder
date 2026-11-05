@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import type { FormEvent, ReactNode, RefObject } from 'react';
 
 import { Icon } from '@/components/ui/icon';
+import { FIELD_EDGE } from '@/components/ui/input';
 import { LogoMark } from '@/components/ui/logo-mark';
 import { MENU_PANEL, menuItemClasses } from '@/components/ui/menu';
 import { Pressable } from '@/components/ui/pressable';
@@ -77,7 +78,8 @@ export function ComposerDock({
  * AgentComposer's frame: one framed field (three lines) with its context
  * chips above it and one 36px control row under it, the tools on the left
  * and Send or Stop always at the right end. The frame is the box (`surface`,
- * `radius-lg`, the `line-control` edge, an 8 inset); while the field has focus
+ * `radius-lg`, the soft xs ring a field wears, an 8 inset), as wide as the
+ * thread above it (`max-w-thread`, 1040); while the field has focus
  * the frame takes the field focus (a `focus` edge and a 3px `line` halo).
  * The field inside is a `Textarea` with the `composer` placement. Chips
  * render only when there are any.
@@ -100,7 +102,10 @@ export function ComposerFrame({
 }>) {
   return (
     <form
-      className="focus-frame bg-surface border-line-control mx-auto grid w-full max-w-prose gap-1 rounded-lg border p-2 transition-[border-color,box-shadow] duration-[var(--motion-fast)]"
+      className={cn(
+        'focus-frame max-w-thread mx-auto grid w-full gap-1 rounded-lg p-2 transition-[border-color,box-shadow] duration-[var(--motion-fast)]',
+        FIELD_EDGE,
+      )}
       onSubmit={(event: FormEvent) => {
         event.preventDefault();
         onSubmit();
@@ -121,12 +126,12 @@ export function ComposerFrame({
 }
 
 /**
- * AgentThread — the conversation's column: the prose measure (720), centred
+ * AgentThread — the conversation's column: the thread measure (1040), centred
  * in the page or panel, its turns 24 apart.
  */
 export function AgentThread({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="mx-auto flex w-full max-w-prose min-w-0 flex-col gap-[var(--card-padding)]">
+    <div className="max-w-thread mx-auto flex w-full min-w-0 flex-col gap-[var(--card-padding)]">
       {children}
     </div>
   );

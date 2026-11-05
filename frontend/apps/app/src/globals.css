@@ -81,9 +81,11 @@
   --color-brand-claude: #d97757;
   --color-brand-gemini: #3186ff;
 
-  /* Type. Each role owns size, leading, weight and tracking; the display
-     roles (display-*, title, title-sm, stat) pair with `font-display`, the
-     mono roles (eyebrow, data, code) with `font-mono`, the rest are Geist. */
+  /* Type. Each role owns size, leading, weight and tracking; on the website
+     and docs the display roles (display-*, title, title-sm, stat) pair with
+     `font-display`. In the app only the page title is Cal Sans (D7): its other
+     titles and figures set these sizes in Geist 500. The mono roles (eyebrow,
+     data, code) pair with `font-mono`, the rest are Geist, never above 500. */
   --text-*: initial;
   --text-display-2xl: 44px;
   --text-display-2xl--line-height: 48px;
@@ -131,7 +133,8 @@
   --text-label-lg--font-weight: 500;
   --text-heading: 16px;
   --text-heading--line-height: 24px;
-  --text-heading--font-weight: 600;
+  /* Geist never sets above 500 (decision D6). */
+  --text-heading--font-weight: 500;
   --text-caption: 12px;
   --text-caption--line-height: 16px;
   --text-caption--font-weight: 400;
@@ -168,10 +171,12 @@
   --shadow-*: initial;
 
   /* Containers: `max-w-site` (website sections, navbar, footer), `max-w-app`
-     (an app page's content), `max-w-prose` (articles, legal, docs) and
-     `max-w-narrow` (section headers, auth cards, onboarding, empty states). */
+     (an app page's content), `max-w-thread` (the Agent thread and its
+     composer), `max-w-prose` (articles, legal, docs) and `max-w-narrow`
+     (section headers, auth cards, onboarding, empty states). */
   --container-site: 1320px;
   --container-app: 1440px;
+  --container-thread: 1040px;
   --container-prose: 720px;
   --container-narrow: 560px;
 
@@ -455,19 +460,21 @@ html[data-public-surface] body {
     letter-spacing: var(--text-display-md--letter-spacing);
     color: var(--color-ink);
   }
+  /* In the app Cal Sans is the page title's alone (decision D7): every other
+     title and number is Geist, never above 500 (D6). */
   .type-section-title {
-    font-family: var(--font-display);
+    font-family: var(--font-sans);
     font-size: var(--text-title);
     line-height: var(--text-title--line-height);
-    font-weight: 400;
-    letter-spacing: 0;
+    font-weight: 500;
+    letter-spacing: -0.01em;
     color: var(--color-ink);
   }
   .type-item-title {
     font-family: var(--font-sans);
     font-size: var(--text-heading);
     line-height: var(--text-heading--line-height);
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 0;
     color: var(--color-ink);
   }
@@ -504,13 +511,15 @@ html[data-public-surface] body {
     letter-spacing: 0;
     color: var(--color-ink-muted);
   }
-  /* The number in a Stat: Cal Sans at its one weight. */
+  /* The number in a Stat, a ScoreRing or a donut's centre: Geist 500 with
+     digits of one width. */
   .type-figure {
-    font-family: var(--font-display);
+    font-family: var(--font-sans);
     font-size: var(--text-stat);
     line-height: var(--text-stat--line-height);
-    font-weight: 400;
+    font-weight: 500;
     letter-spacing: var(--text-stat--letter-spacing);
+    font-variant-numeric: tabular-nums;
     color: var(--color-ink);
   }
   /* A number inside a row: the card-title size with digits of one width. */
@@ -518,7 +527,7 @@ html[data-public-surface] body {
     font-family: var(--font-sans);
     font-size: var(--text-heading);
     line-height: var(--text-heading--line-height);
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 0;
     font-variant-numeric: tabular-nums;
     color: var(--color-ink);
@@ -561,15 +570,13 @@ html[data-public-surface] body {
   .prose-content > :last-child { margin-bottom: 0; }
   .prose-content :where(h2, h3, h4, h5, h6) {
     font-family: var(--font-sans);
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 0;
     color: var(--color-ink);
     margin: 1.5rem 0 0.75rem;
   }
   .prose-content > :where(h2, h3, h4, h5, h6):first-child { margin-top: 0; }
   .prose-content h2 {
-    font-family: var(--font-display);
-    font-weight: 400;
     font-size: var(--text-title);
     line-height: var(--text-title--line-height);
   }
@@ -580,7 +587,7 @@ html[data-public-surface] body {
   .prose-content ul { list-style: disc; }
   .prose-content ol { list-style: decimal; }
   .prose-content li + li { margin-top: 0.5rem; }
-  .prose-content strong { font-weight: 600; color: var(--color-ink); }
+  .prose-content strong { font-weight: 500; color: var(--color-ink); }
   .prose-content a {
     color: var(--color-accent-ink);
     text-decoration: underline;
@@ -654,7 +661,7 @@ html[data-public-surface] body {
   }
   .prose-compact { font-size: var(--text-body-sm); line-height: var(--text-body-sm--line-height); }
   .prose-compact :where(h2, h3, h4, h5, h6) { margin: 1rem 0 0.5rem; }
-  .prose-compact h2 { font-family: var(--font-sans); font-weight: 600; font-size: var(--text-heading); line-height: var(--text-heading--line-height); }
+  .prose-compact h2 { font-size: var(--text-heading); line-height: var(--text-heading--line-height); }
   .prose-compact :is(h3, h4, h5, h6) { font-size: var(--text-label); line-height: var(--text-label--line-height); }
   .prose-compact :where(p, ul, ol, pre, table, blockquote) { margin-bottom: 0.75rem; }
   .prose-compact pre { padding: 0.75rem; }
@@ -698,7 +705,7 @@ html[data-public-surface] body {
   h6 {
     margin: 0;
     font-family: var(--font-sans);
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: normal;
     line-height: 1.25;
     color: var(--color-ink);
@@ -836,6 +843,14 @@ a.focus-ring:active .type-caption {
 /* Text entry belongs to the field frame. Auxiliary buttons keep their own
    focus edge and do not also highlight the surrounding frame. */
 .focus-frame :is(input, textarea, select):focus-visible {
+  outline: none;
+}
+
+/* A palette's search row (the command palette, docs search): the input is
+   the dialog's only field and holds focus while it is open, so the caret is
+   the focus cue and the row's divider stays the soft `line` rule, never a
+   dark edge. */
+.palette-field input:focus-visible {
   outline: none;
 }
 

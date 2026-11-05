@@ -63,14 +63,14 @@ describe('Delta', () => {
 });
 
 describe('StatRow', () => {
-  it('names a missing value, draws a score as a bar and makes a pressable stat a toggle', () => {
+  it('names a missing value, draws a score as a ring and makes a pressable stat a toggle', () => {
     const onSelect = vi.fn();
     render(
       <StatRow
         label="Delivery"
         segments={[
           { key: 'ttfb', label: 'TTFB', value: null },
-          { key: 'score', label: 'Crawl', score: { value: 72, label: 'Crawl score: 72' } },
+          { key: 'score', label: 'Crawl', score: { value: 72, label: 'Crawl score' } },
           {
             key: 'orphans',
             label: 'Orphaned pages',
@@ -86,10 +86,9 @@ describe('StatRow', () => {
     expect(within(group).getByText('TTFB').closest('[data-stat-segment]')).toHaveTextContent(
       'Not measured',
     );
-    expect(within(group).getByRole('meter', { name: 'Crawl score: 72' })).toHaveAttribute(
-      'aria-valuenow',
-      '72',
-    );
+    // A score is its ring (decision D8): one image named with the number, no bar.
+    expect(within(group).getByRole('img', { name: 'Crawl score: 72 out of 100' })).toBeVisible();
+    expect(within(group).queryByRole('meter')).not.toBeInTheDocument();
     const toggle = within(group).getByRole('button', { name: 'View 3 orphaned pages' });
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(toggle);

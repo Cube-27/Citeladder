@@ -1,18 +1,21 @@
 import type { ComponentPropsWithoutRef, Ref } from 'react';
 
+import { FIELD_EDGE } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 /**
- * Textarea — the multi-line field. It looks like Input: `surface`, 1px
- * `line-control`, `radius-md`, 8/12px padding, 14/20 text, at least two
+ * Textarea — the multi-line field. It looks like Input: `surface` with the
+ * soft xs ring, `radius-md`, 8/12px padding, 14/20 text, at least two
  * control heights tall, resizing vertically only. Focus and error come from
  * the shared `.focus-input` rule.
  */
 const textareaClasses =
   'text-ink placeholder:text-ink-muted block w-full rounded-md border text-body-sm disabled:cursor-not-allowed disabled:opacity-45';
 
-const fieldClasses =
-  'focus-input bg-surface border-line-control min-h-[calc(var(--control-md)*2)] resize-y px-3 py-2 transition-[border-color,box-shadow] duration-[var(--motion-fast)]';
+const fieldClasses = cn(
+  'focus-input min-h-[calc(var(--control-md)*2)] resize-y px-3 py-2 transition-[border-color,box-shadow] duration-[var(--motion-fast)]',
+  FIELD_EDGE,
+);
 
 /**
  * Inside the Agent composer the composer is the box and draws the one focus

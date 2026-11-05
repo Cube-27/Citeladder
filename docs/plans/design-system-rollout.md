@@ -101,7 +101,7 @@ route group (Track and Analyze, then Act, Agent and Settings).
 Port the system's atoms and molecules into `frontend/components/ui/`: Button,
 IconButton, ArrowLink, TextLink, Input, Textarea, SearchField, Select,
 Checkbox, RadioGroup, Switch, ChipInput, FormRow, Badge, Tag, Tabs, Card, Stat,
-Delta, Meter, ScoreRing, ScoreBar, Citation, Rungs, Kbd, Tooltip, Popover,
+Delta, Meter, ScoreRing, ScoreBar (retired by D8), Citation, Rungs, Kbd, Tooltip, Popover,
 Menu, Dialog, Drawer, CommandPalette, Toast, Callout, EmptyState, Skeleton,
 Spinner, ProgressBar, ThemeSwitch, Table, Pager, Avatar, BrandMark,
 EngineMark, StepList, Passage, FactList, ListDetail and the charts (TrendChart,
@@ -178,6 +178,20 @@ session that produced this plan.
 | D2 | Does the theme choice follow a person between the website, app and docs? | Yes: one cookie on the parent domain, defaulting to system |
 | D3 | At the owner's 982px desktop, does the app sidebar keep its labels? | No: a 61px icon rail below 1280px, so tables keep their width |
 | D4 | Do PDFs and emails move to Geist? | PDFs keep Inter for now; only the logo accent changes |
+
+On 5 November 2026 the owner reviewed the shipped app and docs and decided
+D5–D9 (source: the owner's review in the orchestration session).
+`frontend/scripts/design-system-review-checks.mjs` enforces D5, D6, D7 and D9
+in `pnpm check:policy`; D8 retired the bar component, whose name the policy
+now rejects as legacy.
+
+| ID | Question | Decision |
+| --- | --- | --- |
+| D5 | What edge do fields, composers and cards wear? | The soft `line` edge with the faint xs smudge a secondary Button wears (the sidebar's "Search… Ctrl K" field), never the dark `line-control` hairline. Select, Input, SearchField, Textarea, ChipInput, the Agent composer, the docs search trigger and cards all follow; `line-control` stays only for marks too small to read without it (checkbox, radio, switch, the pending step ring, chart rules, the link underline). Focus stays clearly visible |
+| D6 | How heavy can Geist be? | Never above 500: the `heading` token is 500, and no `font-semibold`, `font-bold`, 600 or 700 remains in the app, docs or `components/ui`; Agent Markdown `strong` is 500 |
+| D7 | Where does the app use Cal Sans? | Only in the PageHeader title. Score and stat numbers, ScoreRing and donut centres, dialog, drawer and card titles and the sign-in shell are Geist. The website and docs keep their display use |
+| D8 | How does a score card draw a score? | Its number in a ScoreRing on the right, as before PR 3; a table cell shows the number only. No segmented bars |
+| D9 | How do metric cards lay out at app widths? | In one row: 4 across at every app width, 982px included; never 2 × 2 and never 2 + 1 |
 
 ## Known gaps in the system
 

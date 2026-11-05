@@ -71,7 +71,7 @@ export function BrandMark({
       ) : (
         <span
           className={cn(
-            'bg-ink text-on-ink grid place-items-center leading-none font-semibold uppercase',
+            'bg-ink text-on-ink grid place-items-center leading-none font-medium uppercase',
             placement === 'header' ? 'size-full' : spec.image,
           )}
         >

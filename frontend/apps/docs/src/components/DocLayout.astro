@@ -1,7 +1,8 @@
 ---
 /**
  * DocLayout — the docs columns: a `sidebar-width` (248) rail, the reading
- * column and a 200px "On this page" column, 48px apart, the rail and Toc
+ * column and a 232px "On this page" column (its right edge fixed, so the
+ * extra width comes from the reading column), 48px apart, the rail and Toc
  * sticky under the top bar. Below 1200px the Toc leaves the grid for an
  * "On this page" jump menu above the article (a 48px summary whose panel
  * overlays the page, closed by default, so opening it moves nothing); below
@@ -55,7 +56,7 @@ const hasToc = toc.length > 0;
     align-items: start;
   }
   .cl-doc--toc {
-    grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 200px;
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 232px;
   }
   .cl-doc-rail,
   .cl-doc-toc {

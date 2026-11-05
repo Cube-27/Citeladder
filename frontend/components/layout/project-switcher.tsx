@@ -1,6 +1,6 @@
 'use client';
 
-import { Building2, Check, Plus } from 'lucide-react';
+import { Building2, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { SidebarIdentButton, SidebarRowTooltip } from '@/components/ui/app-shell';
@@ -94,10 +94,10 @@ export function ProjectSwitcher() {
                   // will only resolve to "unavailable". Re-picking the active
                   // workspace stays the no-op it looks like.
                   onSelect={() => selectWorkspace(workspace.id, selected ? undefined : '/projects')}
+                  icon={<Building2 aria-hidden />}
+                  selected={selected}
                 >
-                  <Building2 className="text-ink-muted size-4 shrink-0" aria-hidden />
-                  <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
-                  {selected ? <Check className="text-accent size-4 shrink-0" aria-hidden /> : null}
+                  {workspace.name}
                 </MenuItem>
               );
             })}
@@ -120,14 +120,17 @@ export function ProjectSwitcher() {
               key={project.id}
               data-active={selected}
               onSelect={() => selectProject(project.id)}
+              icon={
+                <BrandMark
+                  name={project.brand_name || project.name}
+                  logoUrl={project.brand.logo_url}
+                  websiteUrl={project.website_url}
+                  placement="inline"
+                />
+              }
+              selected={selected}
             >
-              <BrandMark
-                name={project.brand_name || project.name}
-                logoUrl={project.brand.logo_url}
-                websiteUrl={project.website_url}
-              />
-              <span className="min-w-0 flex-1 truncate">{project.brand_name || project.name}</span>
-              {selected ? <Check className="text-accent size-4 shrink-0" aria-hidden /> : null}
+              {project.brand_name || project.name}
             </MenuItem>
           );
         })}

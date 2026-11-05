@@ -386,7 +386,7 @@
             "name": "heading",
             "fontSize": "16px",
             "lineHeight": "24px",
-            "fontWeight": 600,
+            "fontWeight": 500,
             "sample": "Visibility by engine",
             "usage": "App card titles and table group headings."
           },

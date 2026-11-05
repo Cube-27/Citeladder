@@ -26,8 +26,10 @@ Monochrome with one accent. Ink (`#111111`, `#f4f4f4` in dark) carries every
 primary action, heading and figure; Flare (`#e8501a`, `#ff6a33` in dark) is a
 mark only: the logo's bars, the own-brand chart series, a 2px rung, a dot, a
 link's ink as `accent-ink`. Cal Sans sets display type at its one weight, 400,
-and never under 18px; Geist sets everything else; Geist Mono sets data and
-code. Light and dark on every surface, defaulting to the system preference.
+and never under 18px, on the website and docs; in the app it sets only the
+page title. Geist sets everything else, never above 500; Geist Mono sets data
+and code. Fields, composers and cards wear a soft edge, never a dark hairline.
+Light and dark on every surface, defaulting to the system preference.
 
 ## Decisions
 
@@ -37,6 +39,15 @@ code. Light and dark on every surface, defaulting to the system preference.
 | D2 | One theme store for the app, website and docs (`frontend/lib/theme/theme.ts`): light, dark or system, persisted in the `citeladder_theme` cookie on the parent domain so one choice follows the reader across subdomains. System is the default. |
 | D3 | The logo drawing (`packages/contracts/src/brand-logo.ts`) is unchanged; its accent is Flare everywhere: the inline mark, `public/citeladder-logo.svg`, the favicon, the social card and the billing PDFs. |
 | D4 | PDFs keep Inter as their text face; only their colours follow the system. |
+| D5 | Fields, composers and cards wear the soft edge a secondary Button wears: `surface` with the xs ring (`FIELD_EDGE` in `components/ui/input.tsx`), a transparent 1px border holding the place focus paints in `focus` with its 3px `line` halo. `line-control` is kept for marks too small to read without a 3:1 edge: the checkbox, radio and switch, the pending step ring, chart rules and event markers, the link underline, the split-pane handle, the neutral data swatch and the dashed create tile. |
+| D6 | Geist is never set above 500: the `heading` token, the title, item-title, figure and heading roles, Markdown `strong` and the docs' own styles are all 500. |
+| D7 | In the app Cal Sans is the PageHeader title's (`type-page-title`) alone. Section, card, dialog and drawer titles, stat and score figures, ScoreRing and donut centres and the sign-in shell's title are Geist 500. The website and docs keep their display use. |
+| D8 | A score card shows its score as a `ScoreRing` (the number at its centre) in the Stat's right column; a table cell shows the number only. There is no segmented score bar. |
+| D9 | Metric cards sit in one row from the `desktop:` breakpoint: `AppGrid` quarters are 4 across at 982px, fifths 5, a pair 2; never 2 × 2 and never 2 + 1. |
+
+D5–D9 come from the owner's review of the shipped app and docs on 5 November
+2026; `frontend/scripts/design-system-review-checks.mjs` keeps them in
+`pnpm check:policy`.
 
 ## Ownership
 
@@ -68,7 +79,14 @@ code. Light and dark on every surface, defaulting to the system preference.
 - **Faces.** `brand-fonts.json` names Cal Sans, Geist and Geist Mono for the
   display, sans and mono roles.
 - **Cal Sans** is weight 400 only and never under 18px, in class strings and in
-  every stylesheet.
+  every stylesheet; in the app no class or role but `type-page-title` sets it
+  (D7).
+- **Geist is never above 500** in the app, the docs or `components/ui`: no
+  `font-semibold` or `font-bold`, no 600 or 700 (D6).
+- **Soft edges.** `line-control` appears only in the small-mark owners listed
+  under D5; a field, composer or card never wears it.
+- **One-row metrics.** No grid adds columns between `desktop:` and `shell:`,
+  so a row of figures never wraps at 982px (D9).
 - **Flare is a mark.** No `bg-`, `from-`, `via-` or `to-accent` larger than a
   2px mark, no accent background on a box over 4px, no heading in accent.
   Primary actions are ink; a highlighted surface is `accent-soft`.
@@ -175,6 +193,7 @@ Product roles are the `.type-*` classes in `globals.css`, reached through
 | --- | --- |
 | `--container-site` | `1320px` |
 | `--container-app` | `1440px` |
+| `--container-thread` | `1040px` |
 | `--container-prose` | `720px` |
 | `--container-narrow` | `560px` |
 | `--control-sm` | `28px` |
@@ -213,8 +232,9 @@ These hold whatever a component looks like:
   option; a pending button keeps its label's box.
 - **The app has one component breakpoint**, `desktop:` (981px), and one shell
   breakpoint, `shell:` (1280px). Below 1280px the sidebar is the 61px icon
-  rail, `AppGrid` halves and main-aside stack, quarters go 2 × 2 and the
-  `FilterBar` puts its filters on a second row; a child spanning an AppGrid
+  rail, `AppGrid` halves and main-aside stack, the KPI layouts (quarters,
+  fifths, pair, thirds) stay one row from `desktop:` and the `FilterBar` puts
+  its filters on a second row; a child spanning an AppGrid
   row spans at `shell:` too. Product components use no other breakpoint.
 - **Atoms have one form.** Geometry lives in `components/ui` and
   `components/layout`; a feature folder composes them and sets no spacing,

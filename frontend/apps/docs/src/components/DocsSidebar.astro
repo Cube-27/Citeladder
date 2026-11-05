@@ -17,7 +17,7 @@ const current = (href: string) => (href.replace(/\/$/, '') || '/') === path;
     groups.map((group) => (
       <details class="cl-docs-side-group" open>
         <summary class="cl-docs-side-head">
-          <span class="type-eyebrow">{group}</span>
+          <span class="type-eyebrow text-ink">{group}</span>
           <ChevronDown className="cl-docs-side-caret size-3.5" aria-hidden />
         </summary>
         <ul class="cl-doc-list">
@@ -67,9 +67,6 @@ const current = (href: string) => (href.replace(/\/$/, '') || '/') === path;
   }
   .cl-docs-side-head:hover {
     background: var(--color-surface-sunken);
-  }
-  .cl-docs-side-head:hover .type-eyebrow {
-    color: var(--color-ink);
   }
   .cl-docs-side-caret {
     color: var(--color-ink-muted);

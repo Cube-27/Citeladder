@@ -312,8 +312,9 @@ export function CommandPalette() {
           className="dialog-panel bg-surface text-ink shadow-pop z-modal fixed top-16 left-1/2 flex max-h-[calc(100dvh-8rem)] w-[calc(100vw-3rem)] max-w-160 -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-lg border border-transparent"
         >
           <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
-          {/* The search row is the field frame: its rule turns `focus` while typing. */}
-          <div className="focus-frame border-line text-ink-muted flex h-[var(--control-lg)] shrink-0 items-center gap-3 border-b px-4">
+          {/* The search row is the dialog's header: the open dialog is the
+              focus context, so its divider stays the soft `line` rule. */}
+          <div className="palette-field border-line text-ink-muted flex h-[var(--control-lg)] shrink-0 items-center gap-3 border-b px-4">
             <Search className="size-4 shrink-0" aria-hidden />
             <input
               ref={inputRef}

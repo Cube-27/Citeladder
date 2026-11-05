@@ -1,20 +1,36 @@
 import { cn } from '@/lib/utils';
 
-import { clampScore, scoreFill, type ScoreTone } from './score-bar';
+/**
+ * A score's tone: `ink` for a single score; `auto` colours by band where
+ * scores are compared — `positive` from 80, `warning` from 50, `negative`
+ * below. The numeral inside the ring keeps the foreground ink.
+ */
+export type ScoreTone = 'ink' | 'auto';
+
+type ScoreFill = 'ink' | 'positive' | 'warning' | 'negative';
+
+export function scoreFill(tone: ScoreTone, value: number): ScoreFill {
+  if (tone === 'ink') return 'ink';
+  if (value >= 80) return 'positive';
+  return value >= 50 ? 'warning' : 'negative';
+}
+
+const clampScore = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
 
 const RING_STROKE = {
   ink: 'stroke-ink',
   positive: 'stroke-positive',
   warning: 'stroke-warning',
   negative: 'stroke-negative',
-} as const;
+} as const satisfies Record<ScoreFill, string>;
 
 const RADIUS = 42;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 /**
- * ScoreRing — a 0–100 score as a 96px ring with the number in Cal Sans
- * (`display` 32) at its centre: the Site Health score, a page's readiness.
+ * ScoreRing — a 0–100 score as a 96px ring with the number in the `figure`
+ * role (Geist 500) at its centre: the Site Health score, a page's readiness,
+ * a score Stat (never a bar, decision D8).
  * An 8px `chart-grid` track; the arc is `ink`, or banded with `tone="auto"`
  * where several scores are compared. Pair it with the failing count and the
  * crawl time beside it, never alone; shares are a `DonutChart`. It does not
@@ -62,7 +78,7 @@ export function ScoreRing({
           />
         ) : null}
       </svg>
-      <span aria-hidden className="font-display text-display-lg text-ink relative">
+      <span aria-hidden className="type-figure relative">
         {score}
       </span>
     </div>

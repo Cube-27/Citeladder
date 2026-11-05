@@ -4,6 +4,7 @@ import { Check, X } from 'lucide-react';
 import { useId, useState, type ReactNode } from 'react';
 
 import { Icon } from '@/components/ui/icon';
+import { FIELD_EDGE } from '@/components/ui/input';
 import { Tag } from '@/components/ui/tag';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { cn } from '@/lib/utils';
@@ -64,7 +65,7 @@ function Chip({
 
 /**
  * ChipInput — a list of short values as removable chips with an add field at
- * the end, all inside Input's box (36px minimum, `line-control`, `radius-md`),
+ * the end, all inside Input's box (36px minimum, the soft xs ring, `radius-md`),
  * wrapping to more lines as chips are added. Enter or leaving the field adds
  * what was typed; Backspace in an empty add field removes the last chip; a
  * repeat (any case) is ignored. A value is one entry however many commas it
@@ -116,7 +117,8 @@ export function ChipInput({
           box's empty space lands in it. */}
       <div
         className={cn(
-          'focus-frame bg-surface border-line-control flex min-h-[var(--control-md)] w-full cursor-text flex-wrap items-center gap-1 rounded-md border p-1 transition-[border-color,box-shadow]',
+          'focus-frame flex min-h-[var(--control-md)] w-full cursor-text flex-wrap items-center gap-1 rounded-md p-1 transition-[border-color,box-shadow]',
+          FIELD_EDGE,
           disabled && 'cursor-not-allowed opacity-45',
         )}
       >

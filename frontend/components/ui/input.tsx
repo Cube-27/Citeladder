@@ -6,12 +6,14 @@ import { cn } from '@/lib/utils';
 
 /**
  * The field box every text control shares (Input, SearchField, Select's
- * trigger, ChipInput): `surface`, a 1px `line-control` border, `radius-md`,
- * 36px tall. Focus turns the border `focus` with a 3px `line` halo; an
+ * trigger, ChipInput): `surface` with the soft xs ring a secondary Button
+ * wears (no dark hairline), `radius-md`, 36px tall. A transparent 1px border
+ * holds the place focus paints: it turns `focus` with a 3px `line` halo; an
  * invalid field turns it `negative` (globals.css `.focus-input`/`.focus-frame`).
  */
-export const FIELD_BOX =
-  'bg-surface border-line-control h-[var(--control-md)] w-full rounded-md border px-3 text-body-sm text-ink transition-[border-color,box-shadow] duration-[var(--motion-fast)]';
+export const FIELD_EDGE = 'bg-surface shadow-xs border border-transparent';
+
+export const FIELD_BOX = `${FIELD_EDGE} h-[var(--control-md)] w-full rounded-md px-3 text-body-sm text-ink transition-[border-color,box-shadow] duration-[var(--motion-fast)]`;
 
 /**
  * A field fills its column (`fill`) unless its role is narrower: `quantity`

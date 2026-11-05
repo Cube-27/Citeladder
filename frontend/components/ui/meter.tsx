@@ -13,7 +13,8 @@ import { cn } from '@/lib/utils';
  *
  * `tone` is `ink` by default; `accent` only for your own brand's share;
  * `warning` from about 90% of a limit and `negative` when a limit is hit.
- * A score out of 100 is a `ScoreBar`, and work in progress a `ProgressBar`.
+ * A score out of 100 is a `ScoreRing` (its number alone in a table), and
+ * work in progress a `ProgressBar`.
  *
  * `value: null` is an unmeasured value, never zero: an empty track, no
  * `aria-valuenow`, and "Not measured" as the spoken value.

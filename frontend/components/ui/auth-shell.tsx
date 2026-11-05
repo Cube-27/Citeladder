@@ -56,7 +56,7 @@ export function AuthShell({
 }
 
 /**
- * The card's head: an optional 40px icon tile, the title in Cal Sans 32/38 and
+ * The card's head: an optional 40px icon tile, the title in Geist 500 32/38 and
  * a 16/26 line under it. The title is the page's one `h1`; it takes focus by
  * script (`tabIndex -1`) when a flow moves to a new step.
  */
@@ -76,7 +76,7 @@ function AuthHead({
           <Icon icon={icon} />
         </span>
       ) : null}
-      <h1 id={id} tabIndex={-1} className="font-display text-display-lg text-ink text-balance">
+      <h1 id={id} tabIndex={-1} className="text-display-lg text-ink font-medium text-balance">
         {title}
       </h1>
       {sub ? <p className="text-body text-ink-secondary">{sub}</p> : null}

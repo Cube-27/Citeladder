@@ -58,10 +58,11 @@ const { previous, next } = Astro.props;
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-xs);
     text-decoration: none;
-    transition: border-color var(--motion-fast) var(--ease-standard);
+    transition: background-color var(--motion-fast) var(--ease-standard);
   }
+  /* A card keeps its soft edge on hover (D5); the fill answers instead. */
   .cl-pager-link:hover {
-    border-color: var(--color-line-control);
+    background: var(--color-surface-sunken);
   }
   .cl-pager-link--next {
     grid-column: 2;

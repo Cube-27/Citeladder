@@ -146,8 +146,9 @@ test('contents omit step numbering without changing article anchors and follow t
 });
 
 // Docs reads at the system's roles at every width (body 16; lead 18 on a
-// phone, 20 above), and its search trigger is a field, not a raised button.
-test('docs keeps its own reading type and a field-like search trigger', async ({ page }) => {
+// phone, 20 above), and its search trigger wears the app's soft field edge —
+// the xs ring a secondary Button wears, never a dark hairline (decision D5).
+test('docs keeps its own reading type and a soft-edged search trigger', async ({ page }) => {
   const reading = async () =>
     page.evaluate(() => {
       const size = (selector: string) =>
@@ -155,17 +156,24 @@ test('docs keeps its own reading type and a field-like search trigger', async ({
       const search = getComputedStyle(
         document.querySelector('[data-docs-search-trigger="field"]') as Element,
       );
+      // The xs ring as this page resolves it, for comparison.
+      const probe = document.body.appendChild(document.createElement('div'));
+      probe.style.boxShadow = 'var(--shadow-xs)';
+      const softEdge = getComputedStyle(probe).boxShadow;
+      probe.remove();
       return {
         body: size('main .cl-prose p'),
         lead: size('.cl-ahead-lead'),
-        searchShadow: search.boxShadow,
+        softEdge: search.boxShadow === softEdge && softEdge !== 'none',
+        hairline: search.borderTopWidth,
       };
     });
   await page.setViewportSize({ width: 375, height: 800 });
   await page.goto('/');
-  expect(await reading()).toEqual({ body: '16px', lead: '18px', searchShadow: 'none' });
+  const soft = { softEdge: true, hairline: '0px' };
+  expect(await reading()).toEqual({ body: '16px', lead: '18px', ...soft });
   await page.setViewportSize({ width: 982, height: 800 });
-  expect(await reading()).toEqual({ body: '16px', lead: '20px', searchShadow: 'none' });
+  expect(await reading()).toEqual({ body: '16px', lead: '20px', ...soft });
   await page.setViewportSize({ width: 1440, height: 900 });
-  expect(await reading()).toEqual({ body: '16px', lead: '20px', searchShadow: 'none' });
+  expect(await reading()).toEqual({ body: '16px', lead: '20px', ...soft });
 });

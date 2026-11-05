@@ -131,7 +131,9 @@ function BrandName({
     <Pressable
       aria-pressed={selected}
       aria-label={selected ? `Stop plotting ${row.name} on its own` : `Plot ${row.name} on its own`}
-      className="hover:text-accent-ink w-auto min-w-0"
+      // The name truncates inside its own box before the "You" tag beside it,
+      // never running under it.
+      className="hover:text-accent-ink w-auto min-w-0 overflow-hidden"
       onClick={(event) => {
         event.stopPropagation();
         onSelect(selected ? null : row.name);
