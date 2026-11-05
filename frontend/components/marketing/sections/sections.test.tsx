@@ -147,7 +147,10 @@ describe('feature sections', () => {
       <FeatureSplit
         title="Cited sources"
         points={['Every domain', 'Every page']}
-        link={{ href: '/platform/cited-sources', label: 'See sources' }}
+        links={[
+          { href: '/platform/cited-sources', label: 'See sources' },
+          { href: '/platform/ai-visibility', label: 'See visibility' },
+        ]}
         media={<div>Frame</div>}
       />,
     );
@@ -155,10 +158,12 @@ describe('feature sections', () => {
       'Every domain',
       'Every page',
     ]);
-    expect(screen.getByRole('link', { name: 'See sources' })).toHaveAttribute(
-      'href',
-      '/platform/cited-sources',
-    );
+    expect(
+      screen.getAllByRole('link').map((link) => [link.textContent, link.getAttribute('href')]),
+    ).toEqual([
+      ['See sources', '/platform/cited-sources'],
+      ['See visibility', '/platform/ai-visibility'],
+    ]);
   });
 
   it('numbers steps from 01 in order', () => {
@@ -239,6 +244,15 @@ describe('cards and strips', () => {
         .getAllByRole('listitem')
         .map((item) => item.textContent),
     ).toEqual(['ChatGPT', 'Claude', 'Gemini', 'Google AI Overviews']);
+  });
+
+  it('names an engine by the source its answers come through when given one', () => {
+    render(<EngineStrip engines={['chatgpt', 'google']} names={{ chatgpt: 'OpenAI API' }} />);
+    expect(
+      within(screen.getByRole('list', { name: 'Answers collected from' }))
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['OpenAI API', 'Google AI Overviews']);
   });
 });
 

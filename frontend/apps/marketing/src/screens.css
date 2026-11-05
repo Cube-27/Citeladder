@@ -1,0 +1,762 @@
+/*
+ * Product images: ProductFrame and the Screen* components
+ * (components/marketing/screens). A screen is an app content crop at a fixed
+ * natural size built from the app's own components; the frame crops it and
+ * never scales it. Viewport breakpoints never reflow a screen, so every grid
+ * a screen composes is pinned here. Type comes from the `--text-*` roles.
+ */
+
+/* ---------- ProductFrame ---------- */
+.cl-frame {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+}
+
+.cl-frame-card {
+  padding: 8px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.cl-frame-well {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--color-paper);
+}
+
+.cl-frame-well--hero {
+  aspect-ratio: 16 / 9;
+}
+
+.cl-frame-well--wide {
+  aspect-ratio: 16 / 10;
+}
+
+.cl-frame-well--standard {
+  aspect-ratio: 4 / 3;
+}
+
+.cl-frame-well--square {
+  aspect-ratio: 1 / 1;
+}
+
+.cl-frame-well--tall {
+  aspect-ratio: 3 / 4;
+}
+
+.cl-frame-screen {
+  position: absolute;
+}
+
+.cl-frame-screen--inset-24 {
+  top: 24px;
+  left: 24px;
+}
+
+.cl-frame-screen--inset-32 {
+  top: 32px;
+  left: 32px;
+}
+
+.cl-frame-screen--inset-48 {
+  top: 48px;
+  left: 48px;
+}
+
+.cl-frame-caption {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px 8px 0;
+}
+
+.cl-frame-title {
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: var(--text-title-sm);
+  line-height: var(--text-title-sm--line-height);
+}
+
+.cl-frame-text {
+  max-width: var(--container-narrow);
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+
+/* ---------- Screen root and shared parts ---------- */
+.cl-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+  text-align: left;
+}
+
+.cl-screen--w960 {
+  width: 960px;
+  height: 600px;
+}
+
+.cl-screen--w1200 {
+  width: 1200px;
+  height: 680px;
+}
+
+.cl-screen-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: var(--control-md);
+}
+
+.cl-screen-bar-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cl-screen-search {
+  width: 320px;
+}
+
+.cl-screen-meta,
+.cl-screen-tab-count {
+  color: var(--color-ink-muted);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.cl-screen-meta {
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+}
+
+.cl-screen-tab-count {
+  font-size: var(--text-eyebrow);
+  line-height: var(--text-eyebrow--line-height);
+}
+
+.cl-screen-strong {
+  color: var(--color-ink);
+  font-weight: 500;
+}
+
+.cl-screen-muted {
+  color: var(--color-ink-muted);
+}
+
+.cl-screen-mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-data);
+  line-height: var(--text-data--line-height);
+}
+
+.cl-screen-heading {
+  color: var(--color-ink);
+  font-size: var(--text-heading);
+  font-weight: 600;
+  line-height: var(--text-heading--line-height);
+}
+
+.cl-screen-title {
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  line-height: var(--text-title--line-height);
+}
+
+.cl-screen-body {
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.cl-screen-note {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+}
+
+.cl-screen-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cl-screen-lines > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cl-screen-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cl-screen-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.cl-screen-actions,
+.cl-screen-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.cl-screen-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* ---------- Columns: one fixed template per subject ---------- */
+.cl-screen-cols {
+  display: grid;
+  align-items: start;
+  gap: 16px;
+  min-width: 0;
+}
+
+.cl-screen-cols > * {
+  min-width: 0;
+}
+
+.cl-screen-cols--halves {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cl-screen-cols--main-aside {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+
+.cl-screen-cols--aside-main {
+  grid-template-columns: 304px minmax(0, 1fr);
+}
+
+.cl-screen-cols--main-side {
+  grid-template-columns: minmax(0, 1fr) 336px;
+}
+
+.cl-screen-cols--actions {
+  grid-template-columns: minmax(0, 1fr) 416px;
+}
+
+.cl-screen-cols--brief {
+  grid-template-columns: 200px minmax(0, 1fr);
+}
+
+.cl-screen-cols--mcp {
+  grid-template-columns: 360px minmax(0, 1fr);
+}
+
+/* ---------- Engines and sites ---------- */
+.cl-screen-engine,
+.cl-screen-site {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--color-ink);
+  vertical-align: middle;
+}
+
+.cl-screen-marks {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  vertical-align: middle;
+}
+
+.cl-screen-mark {
+  display: inline-flex;
+  color: var(--color-ink);
+}
+
+.cl-screen-mark.is-off {
+  color: var(--color-line-control);
+}
+
+.cl-screen-site-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Figures ---------- */
+.cl-screen-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cl-screen-stat-value {
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: var(--text-display-md);
+  line-height: var(--text-display-md--line-height);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cl-screen-stat-unit {
+  margin-left: 2px;
+  color: var(--color-ink-secondary);
+  font-size: var(--text-label-lg);
+  line-height: var(--text-label-lg--line-height);
+}
+
+.cl-screen-statrow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.cl-screen-statrow--5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.cl-screen-pstats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.cl-screen-pstat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cl-screen-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 32px;
+}
+
+.cl-screen-kpi {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* Engine meters flow down two columns; the second, holding "Google AI Overviews", is wider. */
+.cl-screen-meters {
+  display: grid;
+  grid-template-rows: repeat(2, auto);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  grid-auto-flow: column;
+  gap: 16px 24px;
+}
+
+.cl-screen-meters--stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cl-screen-score {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ---------- Tables ---------- */
+.cl-screen-col--xs {
+  width: 80px;
+}
+
+.cl-screen-col--sm {
+  width: 96px;
+}
+
+.cl-screen-col--md {
+  width: 128px;
+}
+
+.cl-screen-col--lg {
+  width: 160px;
+}
+
+.cl-screen-col--xl {
+  width: 200px;
+}
+
+.cl-screen-cell {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cl-screen-pages {
+  margin: 16px 0 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+  text-align: right;
+}
+
+.cl-screen-target {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.cl-screen-target > :first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cl-screen-target > :last-child {
+  flex-shrink: 0;
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+}
+
+/* ---------- Code ---------- */
+.cl-screen-code {
+  overflow: hidden;
+  margin: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.cl-screen-code-bar {
+  display: flex;
+  align-items: center;
+  height: var(--control-md);
+  padding: 0 16px;
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+}
+
+.cl-screen-code-pre {
+  overflow: hidden;
+  margin: 0;
+  padding: 12px 16px;
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-code);
+  line-height: var(--text-code--line-height);
+}
+
+/* ---------- Answer ---------- */
+.cl-screen-answer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--color-ink);
+  line-height: var(--text-body--line-height);
+}
+
+.cl-screen-answer p {
+  margin: 0;
+}
+
+.cl-screen-answer strong {
+  font-weight: 600;
+}
+
+.cl-screen-answer-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-line);
+}
+
+.cl-screen-answer-foot .cl-screen-meta {
+  margin-left: auto;
+}
+
+.cl-screen-rank {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-screen-rank-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  border-top: 1px solid var(--color-line);
+}
+
+.cl-screen-rank-row:first-child {
+  border-top: 0;
+}
+
+.cl-screen-rank-row--tall {
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  gap: 12px;
+  min-height: 56px;
+}
+
+.cl-screen-rank-n {
+  color: var(--color-ink-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+}
+
+.cl-screen-cites {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-screen-cites li {
+  max-width: 100%;
+}
+
+/* ---------- One cited page ---------- */
+.cl-screen-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cl-screen-head-copy,
+.cl-screen-quote {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* ---------- Agent chat: the thread and composer beside the action it added ---------- */
+.cl-screen--agent-chat {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.cl-screen--agent-chat > section {
+  flex: 1;
+  min-width: 0;
+}
+
+.cl-screen-chat {
+  display: flex;
+  flex: 0 0 576px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+  height: 100%;
+}
+
+.cl-screen-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cl-screen-user {
+  align-self: flex-end;
+  margin: 0;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.cl-screen-reply {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  line-height: var(--text-body--line-height);
+}
+
+.cl-screen-reply p {
+  margin: 0;
+}
+
+.cl-screen-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.cl-screen-composer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ---------- Agent brief ---------- */
+.cl-screen-toc {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cl-screen-toc ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-screen-toc li {
+  padding: 4px 12px;
+  border-left: 2px solid var(--color-line);
+  color: var(--color-ink-secondary);
+}
+
+.cl-screen-toc li.is-active {
+  border-left-color: var(--color-ink);
+  color: var(--color-ink);
+  font-weight: 500;
+}
+
+.cl-screen-prose {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--color-ink-secondary);
+}
+
+.cl-screen-prose p,
+.cl-screen-prose ol {
+  margin: 0;
+}
+
+.cl-screen-prose ol {
+  padding-left: 20px;
+}
+
+.cl-screen-prose .cl-screen-prose-heading {
+  margin-top: 12px;
+  color: var(--color-ink);
+  font-size: var(--text-heading);
+  font-weight: 600;
+  line-height: var(--text-heading--line-height);
+}
+
+.cl-screen-prose .cl-screen-prose-heading:first-child {
+  margin-top: 0;
+}
+
+/* ---------- Integrations ---------- */
+.cl-screen-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.cl-screen-int {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 16px;
+  min-height: 64px;
+  border-top: 1px solid var(--color-line);
+}
+
+.cl-screen-int:first-child {
+  border-top: 0;
+}
+
+.cl-screen-int-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-xs);
+}
+
+/* ---------- Commerce ---------- */
+.cl-screen-ld {
+  display: grid;
+  grid-template-columns: 224px minmax(0, 1fr);
+  gap: 24px;
+}
+
+.cl-screen-ld-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0 8px 0 0;
+  border-right: 1px solid var(--color-line);
+  list-style: none;
+}
+
+.cl-screen-ld-row {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+}
+
+.cl-screen-ld-row.is-selected {
+  background: var(--color-surface-sunken);
+}
+
+.cl-screen-shelf-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cl-screen-shelf-head .cl-screen-meta {
+  margin-left: auto;
+}
+
+.cl-screen--commerce .cl-screen-pstats {
+  gap: 16px;
+}

@@ -48,7 +48,8 @@ const EDITORIAL_SIZE = new RegExp(
 );
 const WEBSITE_CSS = 'apps/app/src/website-type.css';
 const TOKEN_CSS = 'apps/app/src/globals.css';
-const LANDING_CSS = 'apps/marketing/src/pages/landing.css';
+/** The stylesheets the landing page is drawn with: the website components and the product screens. */
+const LANDING_CSS = ['apps/marketing/src/site.css', 'apps/marketing/src/screens.css'];
 
 const LINE_TERMINATOR = /[\n\r\p{Zl}\p{Zp}]/u;
 const WHITESPACE = /\s/;
@@ -1335,22 +1336,25 @@ export function productContractViolations(root) {
   return violations;
 }
 
+/** The landing page's theme rules, on every stylesheet that draws it. */
 export function landingThemeViolations(root) {
-  const css = readFileSync(join(root, ...LANDING_CSS.split('/')), 'utf8').replace(
-    /\/\*[\s\S]*?\*\//g,
-    '',
-  );
-  const violations = [];
-  if (/#[\da-f]{3,8}\b/i.test(css))
-    violations.push(`${LANDING_CSS}: component colours must use semantic tokens`);
-  if (/font-size\s*:\s*(?:1[01](?:\.\d+)?|\d(?:\.\d+)?|\.\d+)px\b/i.test(css))
-    violations.push(`${LANDING_CSS}: rendered text must be at least 12px`);
-  const transitionDeclarations = css.matchAll(
-    /(?:^|[;{])\s*transition(?:-property)?\s*:\s*([^;{}]*)/gi,
-  );
-  if ([...transitionDeclarations].some(([, value]) => /(?:^|[\s,])all(?=$|[\s,])/i.test(value)))
-    violations.push(`${LANDING_CSS}: transitions must name their properties`);
-  return violations;
+  return LANDING_CSS.flatMap((file) => {
+    const css = readFileSync(join(root, ...file.split('/')), 'utf8').replace(
+      /\/\*[\s\S]*?\*\//g,
+      '',
+    );
+    const violations = [];
+    if (/#[\da-f]{3,8}\b/i.test(css))
+      violations.push(`${file}: component colours must use semantic tokens`);
+    if (/font-size\s*:\s*(?:1[01](?:\.\d+)?|\d(?:\.\d+)?|\.\d+)px\b/i.test(css))
+      violations.push(`${file}: rendered text must be at least 12px`);
+    const transitionDeclarations = css.matchAll(
+      /(?:^|[;{])\s*transition(?:-property)?\s*:\s*([^;{}]*)/gi,
+    );
+    if ([...transitionDeclarations].some(([, value]) => /(?:^|[\s,])all(?=$|[\s,])/i.test(value)))
+      violations.push(`${file}: transitions must name their properties`);
+    return violations;
+  });
 }
 
 /** The index just past the `}` that balances the `{` at `open`, or -1 when unbalanced. */

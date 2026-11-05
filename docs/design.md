@@ -50,6 +50,7 @@ code. Light and dark on every surface, defaulting to the system preference.
 | `frontend/components/ui/logo-mark.tsx`, `packages/contracts/src/brand-logo.ts` | The logo, drawn inline in ink (`currentColor`) and the accent |
 | `frontend/components/ui/`, `frontend/components/layout/` | The app's components and shell, composed by feature folders that set no geometry of their own |
 | `frontend/apps/marketing/src/site.css`, `frontend/components/marketing/chrome/`, `frontend/components/marketing/sections/` | The website's components: SiteNav, SiteFooter, CookieBanner, Breadcrumbs, AnnouncementPill and the page sections, the system's `cl-*` geometry on the tokens above |
+| `frontend/apps/marketing/src/screens.css`, `frontend/components/marketing/screens/` | The website's product images: ProductFrame and the `Screen*` components, app crops at a fixed 960 × 600 or 1200 × 680 composed from `components/ui`, with their demo data in one typed module |
 | `frontend/apps/app/src/website-type.css` | The responsive `--text-site-*` sizes the website components read, and the `website-*` and `flow-*` roles the docs, the auth flow and the marketing pages not yet recomposed still use |
 | `frontend/services/api/src/billing/pdf-brand.ts` | The PDF palette, read from `globals.css` |
 
