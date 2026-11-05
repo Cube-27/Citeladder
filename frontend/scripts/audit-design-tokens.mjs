@@ -18,7 +18,12 @@ import { parseSource, stringFragments } from './source-ast.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const TOKEN_CSS = 'apps/app/src/globals.css';
-const WEBSITE_CSS = 'apps/app/src/website-type.css';
+/** The website's components, which own its type roles. */
+const WEBSITE_CSS = 'apps/marketing/src/site.css';
+/** The website's type roles: the page, section and card titles, lead, body and note. */
+const WEBSITE_ROLE = /^\.cl-(?:(?:phero|lhero|shead|fcard)-title|lead|body|note)$/;
+const MARKETING_SURFACE = '[data-marketing-surface]';
+const WIDE_MEDIA = /min-width:\s*(?:768px|48rem)\)\s*and\s*\(max-width:\s*(?:1023px|63\.9375rem)/;
 const DESIGN_DOC = '../docs/design.md';
 const LIGHT = ':root';
 const DARK = ":root[data-theme='dark']";
@@ -295,13 +300,6 @@ function resolveLength(value, declarations, seen = new Set()) {
   if (alias && !seen.has(alias) && declarations.has(alias)) {
     return resolveLength(declarations.get(alias), declarations, new Set([...seen, alias]));
   }
-  // A size computed from one desktop role by the viewport scale rule
-  // (website-type.css) is documented as that role's desktop size.
-  const roles = new Set(value.match(/--site-role-[\w-]+/g) ?? []);
-  if (/^(?:calc|max|min|clamp)\(/.test(value.trim()) && roles.size === 1) {
-    const [role] = roles;
-    return `${resolveLength(`var(${role})`, declarations, seen)} desktop, scaled`;
-  }
   // Convert whole rem words; splitting first keeps the match linear.
   return value
     .split(/([\s,()/]+)/)
@@ -313,6 +311,24 @@ function resolveLength(value, declarations, seen = new Set()) {
 function typeColumn(media, wideMedia) {
   if (!media) return 'base';
   return wideMedia?.test(media) ? 'wide' : null;
+}
+
+/**
+ * The light palette with the marketing surface's custom properties applied:
+ * the base rule, then the rule inside `media` when one is given.
+ */
+function marketingScale(tokenCss, light, media = null) {
+  const scale = new Map(light);
+  const rules = [];
+  postcss.parse(tokenCss).walkRules((rule) => {
+    if (rule.selector.trim() !== MARKETING_SURFACE) return;
+    const parent = rule.parent?.type === 'atrule' && rule.parent.name === 'media';
+    rules.push({ rule, params: parent ? rule.parent.params : null });
+  });
+  const apply = ({ rule }) => rule.walkDecls(/^--/, (decl) => scale.set(decl.prop, decl.value));
+  rules.filter(({ params }) => params === null).forEach(apply);
+  if (media) rules.filter(({ params }) => params && media.test(params)).forEach(apply);
+  return scale;
 }
 
 function typeRoles(css, selectorPart, declarations, wideMedia = null) {
@@ -350,18 +366,16 @@ const typeCell = (metrics) =>
  */
 export function generatedBlocks(tokenCss, websiteCss) {
   const light = paletteDeclarations(tokenCss, LIGHT);
-  const publicScale = new Map(light);
-  postcss.parse(websiteCss).walkRules((rule) => {
-    if (rule.selector.replace(/\s+/g, ' ').trim() !== ':where([data-public-surface])') return;
-    rule.walkDecls(/^--/, (decl) => publicScale.set(decl.prop, decl.value));
-  });
   const product = typeRoles(tokenCss, /^\.type-[\w-]+$/, light);
-  const site = typeRoles(
-    websiteCss,
-    /^\.website-[\w-]+$/,
-    publicScale,
-    /min-width:\s*(?:768px|48rem)\)\s*and\s*\(max-width:\s*(?:1023px|63\.9375rem)/,
-  );
+  // A website role reads the marketing surface's responsive sizes (globals.css):
+  // its base column resolves them at desktop, its 768–1023px column where the
+  // tablet override changes the result.
+  const site = typeRoles(websiteCss, WEBSITE_ROLE, marketingScale(tokenCss, light));
+  const tablet = typeRoles(websiteCss, WEBSITE_ROLE, marketingScale(tokenCss, light, WIDE_MEDIA));
+  for (const [role, metrics] of site) {
+    const wide = tablet.get(role)?.base ?? {};
+    if (wide['font-size'] && wide['font-size'] !== metrics.base['font-size']) metrics.wide = wide;
+  }
   const radii = [...light]
     .filter(([token]) => token.startsWith('--radius-') && !token.includes('*'))
     .map(([token, value]) => [token, resolveLength(value, light)])

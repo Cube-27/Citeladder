@@ -123,15 +123,21 @@ test('the radius table lists the ladder from CSS in size order', () => {
   assert.match(radii, /`--radius-card` \| `12px`/);
 });
 
-test('a public role scaled from a desktop size is documented as that desktop size', () => {
+test('a website role reading the marketing sizes is documented at desktop and tablet', () => {
   const type = generatedBlocks(
-    '@theme { --text-sm: 0.875rem; }',
-    `:where([data-public-surface]) {
-      --site-type-floor: var(--text-sm);
-      --site-role-body: 1rem;
-      --text-site-body: calc(var(--site-type-floor) + (var(--site-role-body) - var(--site-type-floor)) * var(--site-type-reading));
+    `@theme { --text-display-2xl: 44px; --text-display-xl: 36px; --text-body: 1rem; }
+    [data-marketing-surface] { --text-site-title: var(--text-display-2xl); }
+    @media (min-width: 768px) and (max-width: 1023px) {
+      [data-marketing-surface] { --text-site-title: var(--text-display-xl); }
     }
-    .website-body { font-size: var(--text-site-body); line-height: 1.4; }`,
+    @media (max-width: 767px) { [data-marketing-surface] { --text-site-title: 30px; } }`,
+    `.cl-phero-title { font-size: var(--text-site-title); line-height: 1.1; }
+    .cl-body { font-size: var(--text-body); line-height: 1.6; }
+    .cl-phero--lg .cl-phero-title { font-size: 2rem; }
+    .cl-frame { font-size: var(--text-body); }`,
   ).get('type');
-  assert.match(type, /\| `\.website-body` \| public \| `16px desktop, scaled \/ 1\.4` \| — \|/);
+  assert.match(type, /\| `\.cl-phero-title` \| public \| `44px \/ 1\.1` \| `36px \/ 1\.1` \|/);
+  assert.match(type, /\| `\.cl-body` \| public \| `16px \/ 1\.6` \| — \|/);
+  // Only the roles themselves: a modifier rule or another component is not a role.
+  assert.doesNotMatch(type, /cl-frame|32px/);
 });

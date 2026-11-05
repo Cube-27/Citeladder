@@ -46,7 +46,8 @@ const EDITORIAL_SIZES = [
 const EDITORIAL_SIZE = new RegExp(
   String.raw`(?<![\w-])text-(?:${EDITORIAL_SIZES.join('|')})(?![\w-])`,
 );
-const WEBSITE_CSS = 'apps/app/src/website-type.css';
+/** The website's components, which own its type roles (the `cl-*` titles, lead, body and note). */
+const WEBSITE_CSS = 'apps/marketing/src/site.css';
 const TOKEN_CSS = 'apps/app/src/globals.css';
 /** The stylesheets the landing page is drawn with: the website components and the product screens. */
 const LANDING_CSS = ['apps/marketing/src/site.css', 'apps/marketing/src/screens.css'];
@@ -103,7 +104,7 @@ function hasRawTiming(value) {
 
 /** Only motion declarations and utilities are policy: measured durations are data. */
 export function motionRoleViolations(source, label, ownsProductUi) {
-  if (!ownsProductUi || label === TOKEN_CSS || label === WEBSITE_CSS) return [];
+  if (!ownsProductUi || label === TOKEN_CSS) return [];
   const text = withoutComments(source);
   const declarations = text.matchAll(
     /(?:animation|transition)(?:-(?:duration|delay|timing-function))?\s*:\s*['"]?([^;\n}'"]+)/g,
@@ -205,15 +206,14 @@ export function densityRoleViolations(source, label, ownsProductUi) {
  * retuned without editing a gate.
  */
 const REQUIRED_WEBSITE_ROLES = [
-  '.website-hero-display',
-  '.website-page-title',
-  '.website-section-heading',
-  '.website-feature-heading',
-  '.website-lead',
-  '.website-body',
-  '.website-nav',
-  '.website-label',
-  '.website-data-display',
+  '.cl-phero-title',
+  '.cl-lhero-title',
+  '.cl-shead-title',
+  '.cl-fcard-title',
+  '.cl-lead',
+  '.cl-body',
+  '.cl-note',
+  '.cl-eyebrow',
 ];
 
 /**
@@ -224,12 +224,13 @@ const REQUIRED_WEBSITE_ROLES = [
  * heading. Any absolute scale satisfying the order passes.
  */
 const WEBSITE_TYPE_LADDER = [
-  '.website-hero-display',
-  '.website-page-title',
-  '.website-section-heading',
-  '.website-lead',
-  '.website-body',
-  '.website-label',
+  '.cl-lhero-title',
+  '.cl-phero-title',
+  '.cl-shead-title',
+  '.cl-fcard-title',
+  '.cl-lead',
+  '.cl-body',
+  '.cl-note',
 ];
 
 /** Geometry roles belong to one ladder in globals.css; no surface re-scales them. */
@@ -245,15 +246,13 @@ const SHARED_GEOMETRY_ROLES = ['2xs', 'xs', 'sm', 'md', 'lg', 'xl', 'full'].map(
  * a raw hex is not, because it escapes theming and the contrast check below.
  */
 const TOKEN_COLORED_ROLES = [
-  '.website-hero-display',
-  '.website-page-title',
-  '.website-section-heading',
-  '.website-feature-heading',
-  '.website-nav',
-  '.website-data-display',
-  '.website-lead',
-  '.website-body',
-  '.website-label',
+  '.cl-phero-title',
+  '.cl-lhero-title',
+  '.cl-shead-title',
+  '.cl-fcard-title',
+  '.cl-lead',
+  '.cl-body',
+  '.cl-note',
 ];
 
 /** Alternation over literal values, escaped for use inside a RegExp. */
@@ -757,7 +756,9 @@ const PRODUCT_UI_CLASS_RULES = [
   },
   {
     test: (classes) =>
-      /\bwebsite-(?:hero|page|section|feature|small|lead|body|nav|label)/.test(classes),
+      /\bwebsite-(?:hero|page|section|feature|small|lead|body|nav|label)|(?<![\w-])cl-(?:(?:phero|lhero|shead|fcard)-title|lead|body|note)(?![\w-])/.test(
+        classes,
+      ),
     message: 'product UI must not consume website type roles',
   },
   {
@@ -1229,13 +1230,26 @@ export function textRoleBackgroundViolations(source, label) {
 }
 
 /** `--text-*` role → px size, from the token stylesheet. */
+/**
+ * Every `--text-*` role's desktop size in px. The first declaration is the
+ * base (later ones are breakpoint overrides), and an alias such as
+ * `--text-site-title: var(--text-display-2xl)` takes its target's size.
+ */
 function textRoleSizes(tokenCss) {
-  return new Map(
-    [...tokenCss.matchAll(/(--text-[\w-]+)\s*:\s*([\d.]+)px\s*;/g)].map(([, token, px]) => [
-      token,
-      Number(px),
-    ]),
-  );
+  const sizes = new Map();
+  const aliases = new Map();
+  for (const [, token, raw] of tokenCss.matchAll(/(--text-[\w-]+)\s*:\s*([^;{}]+);/g)) {
+    if (sizes.has(token) || aliases.has(token)) continue;
+    const value = raw.trim();
+    const px = /^([\d.]+)px$/.exec(value)?.[1];
+    const alias = /^var\((--text-[\w-]+)\)$/.exec(value)?.[1];
+    if (px) sizes.set(token, Number(px));
+    else if (alias) aliases.set(token, alias);
+  }
+  for (const [token, alias] of aliases) {
+    if (sizes.has(alias)) sizes.set(token, sizes.get(alias));
+  }
+  return sizes;
 }
 
 /**

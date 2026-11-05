@@ -15,7 +15,6 @@ import valueParser from 'postcss-value-parser';
  */
 
 const TOKEN_CSS = 'apps/app/src/globals.css';
-const WEBSITE_CSS = 'apps/app/src/website-type.css';
 const SCANNED_ROOTS = ['apps', 'components'];
 const IGNORED_DIRECTORIES = new Set([
   'node_modules',
@@ -42,14 +41,6 @@ const EASING_KEYWORDS = new Set([
 ]);
 const EASING_FUNCTIONS = new Set(['cubic-bezier', 'steps', 'linear']);
 const WIDE_KEYWORDS = new Set(['inherit', 'initial', 'unset', 'revert', 'revert-layer']);
-
-/**
- * The website ladder owners: these roles define the public type scale, so
- * their literal sizes are the scale itself, not a deviation from it.
- */
-// The public attribute sits on <html>, so no surface selector owns a base
-// size: a font-size on the public root rebases every rem on the site.
-const TYPE_ROLE_PART = /^\.website-[\w-]+$/;
 
 const RULE_MESSAGES = {
   'css-radius': 'radius must be var(--radius-*) or 0',
@@ -192,22 +183,6 @@ function outlineAllowed(property, value) {
   return property === 'outline' && ['none', '0'].includes(value.trim());
 }
 
-/** True when every selector of the rule is a website ladder owner. */
-function ownsTypeLadder(rule, label) {
-  if (label !== WEBSITE_CSS || !rule?.selector) return false;
-  const unwrapped = rule.selector.replace(/^:where\(([\s\S]*)\)$/, '$1');
-  return unwrapped
-    .split(',')
-    .map((part) => part.trim())
-    .every((part) => TYPE_ROLE_PART.test(part));
-}
-
-function enclosingRule(node) {
-  let current = node.parent;
-  while (current && current.type !== 'rule') current = current.parent;
-  return current;
-}
-
 /** Every literal of a value that breaks its rule, as a finding detail. */
 const listedFinding = (rule, property, found) =>
   found.length ? [rule, `${property}: ${found.join(' ')}`] : null;
@@ -223,10 +198,8 @@ const PROPERTY_FAMILIES = [
   },
   {
     matches: (property) => property === 'font-size' || property === 'line-height',
-    finding: (property, value, decl, label) =>
-      typeAllowed(property, value) || ownsTypeLadder(enclosingRule(decl), label)
-        ? null
-        : ['css-type', `${property}: ${value}`],
+    finding: (property, value) =>
+      typeAllowed(property, value) ? null : ['css-type', `${property}: ${value}`],
   },
   {
     matches: (property) => SPACING_PROPERTY.test(property),
