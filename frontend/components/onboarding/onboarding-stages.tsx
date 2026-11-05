@@ -1,6 +1,7 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 
+import { AppGrid } from '@/components/ui/app-grid';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
 import { Field } from '@/components/ui/field';
@@ -8,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { MarketSelect } from '@/components/ui/market-select';
 import { StepList, type Step } from '@/components/ui/step-list';
-import { splitPaneClasses } from '@/components/ui/workspace';
 import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@citeladder/contracts/markets';
 import { discoveryActivity } from '@/lib/onboarding/discovery-activity';
 import { onboardingErrorMessage, type BrandStepValues } from '@/lib/onboarding/forms';
@@ -46,7 +46,7 @@ export function BrandStage({
       <StageHeader title={isAdditional ? 'Add a project' : "Let's get started"}>
         We&apos;ll review your website, suggest comparable brands, and prepare balanced questions.
       </StageHeader>
-      <div className={splitPaneClasses('peers')}>
+      <AppGrid layout="halves">
         <Field label="Brand name" required error={form.formState.errors.brand_name?.message}>
           {(props) => <Input {...props} {...form.register('brand_name')} placeholder="Acme" />}
         </Field>
@@ -97,7 +97,7 @@ export function BrandStage({
             />
           )}
         </Field>
-      </div>
+      </AppGrid>
     </form>
   );
 }

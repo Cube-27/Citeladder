@@ -28,6 +28,21 @@ export function tabClasses(selected: boolean, className?: string) {
   );
 }
 
+/**
+ * The sidebar's mode switch: the track stretched to two equal segments, and
+ * in the rail (below the `shell:` breakpoint) the same track stacked as two
+ * icon segments one control wide.
+ */
+export const MODE_TRACK =
+  'bg-surface-sunken shell:h-[var(--control-md)] shell:w-full shell:flex-row shell:items-center flex w-[var(--control-md)] flex-col gap-0.5 rounded-md p-0.5';
+
+export function modeSegmentClasses(selected: boolean) {
+  return tabClasses(
+    selected,
+    'shell:h-full shell:flex-1 shell:basis-0 shell:px-3 h-[calc(var(--control-md)-6px)] w-full px-0',
+  );
+}
+
 function TabCount({ count }: Readonly<{ count: number }>) {
   return (
     <span className="text-ink-muted text-eyebrow font-mono tracking-normal">

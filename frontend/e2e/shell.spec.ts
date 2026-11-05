@@ -86,23 +86,28 @@ test('runs resolve on their own while the schedules empty state waits for its re
   await expect(page.getByRole('heading', { name: 'No runs yet' })).toBeVisible();
 });
 
-test('compact navigation hands focus to the command palette and returns it on Escape', async ({
+test('below 1280px the icon rail keeps every destination named and the palette on the keyboard', async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 982, height: 900 });
   await stubAuthedShell(page);
   await page.goto(fixtureProjectPath('/projects'));
-  const menu = page.getByRole('button', { name: 'Open navigation' });
 
-  await menu.click();
-  const navigation = page.getByRole('dialog', { name: 'Navigation', exact: true });
-  await navigation.getByRole('button', { name: 'Search or jump to', exact: true }).click();
-  await expect(navigation).not.toBeVisible();
+  // The rail draws icons only; each destination keeps its name and still navigates.
+  const nav = page.getByRole('navigation', { name: 'Primary' });
+  const performance = nav.getByRole('link', { name: 'Performance', exact: true });
+  await expect(performance).toBeVisible();
+  await performance.click();
+  await page.waitForURL((url) => url.pathname === '/performance');
+  await expect(page.getByRole('heading', { level: 1, name: 'Performance' })).toBeVisible();
+
+  // The rail has no room for the palette's button; its shortcut still opens it.
+  await expect(page.getByRole('button', { name: /search or jump to/i })).toBeHidden();
+  await page.keyboard.press('Control+k');
   const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
   await expect(palette).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(palette).not.toBeVisible();
-  await expect(menu).toBeFocused();
 });
 
 test('project lookup failure retries in place and only confirmed empty projects enter onboarding', async ({

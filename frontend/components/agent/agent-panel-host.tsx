@@ -22,11 +22,21 @@ function useDashboardProject(): boolean {
   return Boolean(activeProjectId && activeWorkspaceId) && navigationMode(pathname) === 'dashboard';
 }
 
-/** The top-bar button that opens the agent panel on Dashboard screens. */
+/**
+ * The page header's button that opens the agent panel on Dashboard screens.
+ * The header draws it on every page; a page rendered outside the shell (a
+ * preview, a test) has no panel and so no trigger, and never reads the
+ * project context it lacks.
+ */
 export function AgentPanelTrigger() {
   const panel = useAgentPanel();
+  if (!panel) return null;
+  return <PanelTrigger open={() => panel.setOpen(true)} />;
+}
+
+function PanelTrigger({ open }: Readonly<{ open: () => void }>) {
   const available = useDashboardProject();
-  if (!panel || !available) return null;
+  if (!available) return null;
   return (
     <Tooltip content="Ask the agent about this screen" side="bottom">
       <IconButton
@@ -34,7 +44,7 @@ export function AgentPanelTrigger() {
         label="Open agent"
         tooltip={false}
         aria-haspopup="dialog"
-        onClick={() => panel.setOpen(true)}
+        onClick={open}
       />
     </Tooltip>
   );

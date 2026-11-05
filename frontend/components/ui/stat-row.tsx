@@ -3,6 +3,8 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
+import { AppGrid, type AppGridLayout } from '@/components/ui/app-grid';
+import { cardClasses } from '@/components/ui/card';
 import { ComparisonValue, MetricValue } from '@/components/ui/metric-value';
 import { ScoreBar } from '@/components/ui/score-bar';
 import { availabilityLabel } from '@/lib/format';
@@ -107,9 +109,53 @@ export function StatRow({
       )}
     >
       {segments.map((segment) => (
-        <Stat key={segment.key} segment={segment} />
+        <Stat key={segment.key} segment={segment} framed={false} />
       ))}
     </dl>
+  );
+}
+
+/**
+ * The KPI row's grid by count: four go 4 → 2 × 2 (below 1280px) → 1, five
+ * go 5 → 3 + 2, three stay one row, two stay a pair; never 2 + 1.
+ */
+function kpiLayout(count: number): AppGridLayout {
+  if (count === 5) return 'fifths';
+  if (count === 3) return 'thirds';
+  if (count === 2) return 'halves';
+  return 'quarters';
+}
+
+/**
+ * KpiRow — the row of numbers that opens a report page: each Stat in a Card
+ * of its own (`surface`, `shadow-card`, 24 inset), up to four in a row, the
+ * cards of a row at one height. A page's headline figures are a KpiRow; a
+ * group of figures inside a card that also holds other content is a
+ * `StatRow`.
+ */
+export function KpiRow({
+  segments,
+  label,
+  testId,
+}: Readonly<{
+  segments: readonly StatSegment[];
+  /** Accessible name for the group, when the section heading does not give one. */
+  label?: string;
+  testId?: string;
+}>) {
+  return (
+    <AppGrid
+      as="dl"
+      layout={kpiLayout(segments.length)}
+      role={label ? 'group' : undefined}
+      aria-label={label}
+      data-kpi-row=""
+      data-testid={testId}
+    >
+      {segments.map((segment) => (
+        <Stat key={segment.key} segment={segment} framed />
+      ))}
+    </AppGrid>
   );
 }
 
@@ -124,16 +170,19 @@ function statSelectionClasses(selected: boolean) {
   );
 }
 
-function Stat({ segment }: Readonly<{ segment: StatSegment }>) {
+function Stat({ segment, framed }: Readonly<{ segment: StatSegment; framed: boolean }>) {
   const pressable = Boolean(segment.onSelect);
   return (
     <div
-      data-stat-segment=""
+      data-stat-segment={framed ? undefined : ''}
       className={cn(
-        // Every Stat carries the inset a pressable one's fill needs, so its
-        // label never touches the selected fill's edge; the matching negative
-        // margin keeps the figures on the row's grid either way.
-        '-m-3 grid min-w-0 content-start gap-1 rounded-md p-3',
+        framed
+          ? // A KPI is its own card; a pressable one is pressed as a whole card.
+            cn(cardClasses(), 'relative grid min-w-0 content-start gap-1')
+          : // Every Stat in a row carries the inset a pressable one's fill
+            // needs, so its label never touches the selected fill's edge; the
+            // matching negative margin keeps the figures on the row's grid.
+            '-m-3 grid min-w-0 content-start gap-1 rounded-md p-3',
         pressable && cn('relative', statSelectionClasses(segment.selected ?? false)),
       )}
     >

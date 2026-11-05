@@ -7,10 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
 import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { CsvImportTrigger } from '@/components/ui/csv-import';
 import { Stack } from '@/components/ui/layout';
-import { StatRow, type StatSegment } from '@/components/ui/stat-row';
+import { KpiRow, type StatSegment } from '@/components/ui/stat-row';
 import { textRole } from '@/components/ui/typography';
 import { commerceApi } from '@/lib/api/commerce';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -98,15 +97,7 @@ function CatalogStats({
   ];
   const badge = projectionBadge(projection);
   if (badge) items.push({ key: 'projection', label: 'Projection', value: badge });
-  // A strip on the card fill, like every other metric row in the app, rather
-  // than bare figures on the page sheet.
-  return (
-    <Card>
-      <CardContent>
-        <StatRow segments={items} />
-      </CardContent>
-    </Card>
-  );
+  return <KpiRow segments={items} />;
 }
 
 /**

@@ -12,11 +12,12 @@ import { ProjectLink } from '@/components/layout/scoped-link';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
 import { cardClasses } from '@/components/ui/card';
+import { AgentThread, AgentTurn, UserTurn } from '@/components/ui/chat-dock';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Disclosure } from '@/components/ui/disclosure';
+import { DisplayTime } from '@/components/ui/display-time';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
 import { Pressable } from '@/components/ui/pressable';
 import { Spinner } from '@/components/ui/spinner';
 import { TextLink } from '@/components/ui/text-link';
@@ -75,7 +76,7 @@ export function Conversation({
         ))
       : null;
   return (
-    <Stack gap="workspace">
+    <AgentThread>
       <ContextUsed context={detail.context} />
       {renderOutput ? <DocumentList outputs={detail.outputs} /> : null}
       <Stack as="ol" gap="workspace" aria-label="Messages">
@@ -106,7 +107,7 @@ export function Conversation({
           onRefine={onRefine}
         />
       ) : null}
-    </Stack>
+    </AgentThread>
   );
 }
 
@@ -189,14 +190,15 @@ function TurnActions({
 
 function PendingMessage({ text }: Readonly<{ text: string }>) {
   return (
-    <div className="flex justify-end">
-      <Stack gap="tight" className={panelClasses({ tone: 'well' }, 'max-w-[85%]')}>
-        <p className={textRole('body', 'whitespace-pre-wrap')}>{text}</p>
+    <UserTurn
+      footer={
         <output aria-live="polite" className={textRole('caption')}>
           Sending…
         </output>
-      </Stack>
-    </div>
+      }
+    >
+      <p className={textRole('body', 'whitespace-pre-wrap')}>{text}</p>
+    </UserTurn>
   );
 }
 
@@ -221,10 +223,9 @@ function MessageBubble({
 }: Readonly<{ message: AgentMessage; skill: string | null }>) {
   if (message.role === 'user')
     return (
-      <div className="flex justify-end">
-        <Stack gap="compact" className={panelClasses({ tone: 'well' }, 'max-w-[85%]')}>
-          <p className={textRole('body', 'whitespace-pre-wrap')}>{message.content}</p>
-          {message.mentions.length > 0 ? (
+      <UserTurn
+        footer={
+          message.mentions.length > 0 ? (
             <Inline as="ul" aria-label="Mentioned Actions" className="flex-wrap">
               {message.mentions.map((mention) => (
                 <li key={mention.id}>
@@ -234,16 +235,17 @@ function MessageBubble({
                 </li>
               ))}
             </Inline>
-          ) : null}
-        </Stack>
-      </div>
+          ) : null
+        }
+      >
+        <p className={textRole('body', 'whitespace-pre-wrap')}>{message.content}</p>
+      </UserTurn>
     );
   return (
-    <Stack as="article" gap="compact" aria-label="Agent reply">
-      <Inline className="flex-wrap">
-        <span className={textRole('label')}>Agent</span>
-        {skill ? <span className={textRole('caption')}>Skill: {skill}</span> : null}
-      </Inline>
+    <AgentTurn
+      time={<DisplayTime value={message.created_at} />}
+      meta={skill ? `Skill: ${skill}` : undefined}
+    >
       <ContentMarkdown markdown={message.content} density="compact" />
       <Inline className="flex-wrap">
         <EvidenceChips refs={message.evidence_refs} />
@@ -263,7 +265,7 @@ function MessageBubble({
           </Stack>
         </Disclosure>
       ) : null}
-    </Stack>
+    </AgentTurn>
   );
 }
 function ContextUsed({ context }: Readonly<{ context: AgentChatDetail['context'] }>) {

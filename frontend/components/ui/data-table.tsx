@@ -239,8 +239,18 @@ export function DataTable({
           </DataTableBody>
         </TableTextLinesContext>
       </Table>
-      {paging.pager ? <Pager {...paging.pager} /> : null}
-      {footer ? <div className="text-caption text-ink-muted grid gap-1">{footer}</div> : null}
+      {paging.pager || footer ? (
+        // The foot: the note (source, period or row count) on the left, the
+        // Pager on the right, one control tall.
+        <div className="flex min-h-[var(--control-md)] min-w-0 flex-wrap items-center justify-between gap-4">
+          {footer ? <div className="type-caption grid min-w-0 gap-1">{footer}</div> : null}
+          {paging.pager ? (
+            <div className="ms-auto min-w-0">
+              <Pager {...paging.pager} />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -332,10 +342,7 @@ function DataTableHeader({
       className="flex min-h-[var(--control-md)] min-w-0 flex-wrap items-center gap-x-4 gap-y-2"
     >
       {title ? (
-        <h3
-          id={headingId}
-          className="text-label-lg text-ink min-w-0 truncate font-semibold tracking-[-0.01em]"
-        >
+        <h3 id={headingId} className={textRole('itemTitle', 'min-w-0 truncate')}>
           {title}
         </h3>
       ) : null}

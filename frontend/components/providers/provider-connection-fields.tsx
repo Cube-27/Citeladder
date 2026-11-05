@@ -1,9 +1,9 @@
 'use client';
 
+import { AppGrid } from '@/components/ui/app-grid';
 import { Callout } from '@/components/ui/callout';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { splitPaneClasses } from '@/components/ui/workspace';
 import { errorMessage, type useProviderConnection } from '@/lib/providers/use-provider-connection';
 
 type ConnectionState = ReturnType<typeof useProviderConnection>;
@@ -39,7 +39,7 @@ function ApiKeyField({ state }: Readonly<{ state: ConnectionState }>) {
 function BasicAuthFields({ state }: Readonly<{ state: ConnectionState }>) {
   const { configured, apiLogin, setApiLogin, apiPassword, setApiPassword } = state;
   return (
-    <div className={splitPaneClasses('peers')}>
+    <AppGrid layout="halves">
       <Field label={configured ? 'API login (enter both fields to rotate)' : 'API login'}>
         {(props) => (
           <Input
@@ -64,7 +64,7 @@ function BasicAuthFields({ state }: Readonly<{ state: ConnectionState }>) {
           />
         )}
       </Field>
-    </div>
+    </AppGrid>
   );
 }
 

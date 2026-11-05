@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
+import { AppGrid } from '@/components/ui/app-grid';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
@@ -13,7 +14,6 @@ import { cardClasses } from '@/components/ui/card';
 import { Pressable } from '@/components/ui/pressable';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
-import { splitPaneClasses } from '@/components/ui/workspace';
 import { cn } from '@/lib/utils';
 import { missingInputs, workflowMessage, type WorkflowValues } from '@/lib/agent/workflows';
 import type { AgentWorkflow } from '@/lib/api/agent';
@@ -51,14 +51,13 @@ export function WorkflowGallery({
         {catalog.workflow_groups.map((option) => {
           const live = option.id === group;
           return (
-            <ul
+            <AppGrid
+              as="ul"
+              layout="halves"
               key={option.id}
               inert={!live}
               aria-hidden={!live || undefined}
-              className={splitPaneClasses(
-                'peers',
-                cn('col-start-1 row-start-1 content-start items-stretch', !live && 'invisible'),
-              )}
+              className={cn('col-start-1 row-start-1 content-start', !live && 'invisible')}
             >
               {catalog.workflows
                 .filter((workflow) => workflow.group === option.id)
@@ -76,7 +75,7 @@ export function WorkflowGallery({
                     </Pressable>
                   </li>
                 ))}
-            </ul>
+            </AppGrid>
           );
         })}
       </div>

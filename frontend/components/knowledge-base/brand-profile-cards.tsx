@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { ProjectEditPanel } from '@/components/projects/project-edit-panel';
+import { AppGrid } from '@/components/ui/app-grid';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
@@ -14,7 +15,6 @@ import { Stack } from '@/components/ui/layout';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { textRole } from '@/components/ui/typography';
-import { splitPaneClasses } from '@/components/ui/workspace';
 import { humanizeApiError } from '@/lib/api/errors';
 import type { Project } from '@/lib/api/types';
 import { BUYER_TYPE_CHOICES, MARKET_SCOPE_CHOICES } from '@/lib/project/identity-facets';
@@ -57,7 +57,7 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
             />
           )}
         </Field>
-        <div className={splitPaneClasses('peers')}>
+        <AppGrid layout="halves">
           <FacetChoice
             label="Who buys it"
             value={identity.buyer_type}
@@ -72,7 +72,7 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
             disabled={saving}
             onPick={(market_scope) => form.setIdentity({ ...identity, market_scope })}
           />
-        </div>
+        </AppGrid>
         <Field label="Description" hint="Core mission, value proposition, and brand summary.">
           {(field) => (
             <Textarea

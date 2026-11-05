@@ -1,5 +1,6 @@
 'use client';
 
+import { AppGrid } from '@/components/ui/app-grid';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -8,7 +9,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ReadError } from '@/components/ui/read-error';
 import { StatRow } from '@/components/ui/stat-row';
 import { TextLink } from '@/components/ui/text-link';
-import { splitPaneClasses } from '@/components/ui/workspace';
 import { SourceBreadcrumb } from '@/components/visibility/source-breadcrumb';
 import { SourcePrompts } from '@/components/visibility/source-prompts';
 import type { SourceFilters } from '@/components/visibility/source-rows';
@@ -100,10 +100,10 @@ export function SourceUrlDetail({
         }}
       />
 
-      <div className={splitPaneClasses('peers')}>
+      <AppGrid layout="halves">
         <EnginesCard engines={data?.engines} loading={query.isLoading} errored={query.isError} />
         <BrandsCard brands={data?.brands} loading={query.isLoading} errored={query.isError} />
-      </div>
+      </AppGrid>
 
       <SourcePrompts filters={filters} queries={queries} url={url} />
     </Stack>

@@ -14,9 +14,15 @@
  */
 @import "./ui-motion.css";
 
-/* The product's layout breakpoint for the current shell. Product components
-   change layout only through `desktop:`; `sm:`/`md:`/`lg:`/`xl:` (640, 768,
-   1024, 1280) and `2xl:` (1440) are the system's breakpoints. */
+/* The product's two layout variants. `shell:` is the system's one shell
+   breakpoint (1280px): from it the sidebar shows its labels, the main gutter
+   is 32, AppGrid and KPI rows take their full columns and the FilterBar is one
+   row; below it the sidebar is a 61px icon rail. `desktop:` (981px) is the
+   width at which a component's own internals (a form's two columns, a
+   table's secondary columns, a list beside its detail) stop stacking.
+   `sm:`/`md:`/`lg:`/`xl:` (640, 768, 1024, 1280) and `2xl:` (1440) are the
+   website's. */
+@custom-variant shell (@media (min-width: 1280px));
 @custom-variant desktop (@media (min-width: 981px));
 
 @theme {
@@ -222,23 +228,20 @@
   --control-lg: 48px;
   --nav-height: 64px;
   --sidebar-width: 248px;
+  /* The sidebar below 1280px: one control wide inside its 12px inset, plus
+     its 1px edge (61px, decision D3). */
+  --sidebar-rail-width: calc(var(--control-md) + 24px + 1px);
 
-  /* Component geometry the current components read until PR 2 and PR 3 port
-     them onto the system's components. Each derives from a system token. */
-  --compact-topbar-height: 56px;
+  /* Component geometry the components read. Each derives from a system token. */
   --sticky-header-offset: 0px;
   --nav-item-height: var(--control-md);
-  --sidebar-pad-x: 12px;
-  --sidebar-pad-y: 8px;
-  --sidebar-group-gap: 4px;
-  --sidebar-item-gap: 4px;
+  /* The main column's gutter: 32 from 1280px, 24 below (rebound below). */
   --content-gutter: 32px;
   --content-max-width: var(--container-app);
-  --workflow-max-width: 1040px;
-  /* The sanctioned two-column split. A screen picks a role, never a ratio. */
+  /* A list beside its selected item's detail. */
   --pane-list-detail: minmax(18rem, 0.9fr) minmax(0, 2fr);
-  --pane-main-aside: minmax(0, 2fr) minmax(18rem, 1fr);
-  /* App rhythm: header → 32 → content; cards gap 16; card padding 24. */
+  /* App rhythm: header → 32 → controls → 16 → content; cards gap 16; card
+     padding 24. */
   --page-section-gap: 32px;
   --workspace-gap: 16px;
   --compact-gap: 12px;
@@ -247,7 +250,8 @@
   /* DateField's calendar trigger: the field's height less its 2px border
      inset on each side. */
   --field-end-target: calc(var(--control-md) - 4px);
-  --filter-width: 160px;
+  /* A FilterBar filter trigger: one width whatever its value says. */
+  --filter-width: 224px;
   --menu-item-height: var(--control-md);
   --badge-height-sm: 22px;
   --textarea-min-height: 112px;
@@ -261,11 +265,6 @@
   --tab-height: var(--control-md);
   --tab-pad-x: 12px;
   --tab-gap: 4px;
-  --page-band-identity: var(--compact-topbar-height);
-  --page-header-padding-top: 24px;
-  --page-header-padding-bottom: 24px;
-  --page-header-gap: 16px;
-  --page-title-min-width: 10rem;
   --table-row-height: 44px;
   --table-header-height: var(--control-md);
   --table-cell-padding-x: 12px;
@@ -274,12 +273,10 @@
   --table-min-width-md: 48rem;
   --table-min-width-lg: 64rem;
   --table-min-width-xl: 76rem;
-  /* The app page's inset from the viewport and the sidebar. */
-  --workspace-inset: 8px;
-  /* Shell chrome above a route's content, for screens that fill the viewport
-     (the Agent thread). Rebound below for the compact layouts. */
-  --route-chrome-height: calc(var(--page-band-identity) + 1px + 2 * var(--workspace-inset));
-  --route-chrome-height-untitled: var(--route-chrome-height);
+  /* What a screen that fills the viewport (the Agent thread) leaves for the
+     header: the main gutter above and below, the one-control header row and
+     the 32 under it. */
+  --route-chrome-height: calc(2 * var(--content-gutter) + var(--control-md) + 32px);
   /* Website gutters: 20 below 768px, 40 to 1279px, 64 from 1280px. */
   --site-gutter: 20px;
   --marketing-nav-offset: calc(var(--nav-height) + 8px + env(safe-area-inset-top, 0px));
@@ -338,20 +335,11 @@
   box-shadow: var(--shadow-press);
 }
 
-/* Between the desktop edge and 1200px (the owner's 982px desktop) the shell
-   gives the content 40px back: a narrower sidebar and gutter keep every
-   filter band on one row. The App PR replaces this step with the system's
-   61px icon rail below 1280px (decision D3). */
-@media (min-width: 981px) and (max-width: 1200px) {
+/* Below the shell breakpoint the sidebar is the rail and the main gutter
+   narrows to space-6. */
+@media (max-width: 1279px) {
   :root {
-    --sidebar-width: 224px;
     --content-gutter: 24px;
-  }
-}
-
-@media (max-width: 980px) {
-  :root {
-    --content-gutter: 20px;
   }
 }
 
@@ -809,10 +797,6 @@ a.focus-ring:active .type-caption {
   box-shadow: var(--shadow-press);
 }
 
-.shell-rail {
-  background-color: var(--color-surface);
-}
-
 [data-marketing-nav][data-scrolled='true'] {
   background-color: var(--color-nav-glass);
   backdrop-filter: blur(16px);
@@ -952,31 +936,10 @@ input:-webkit-autofill:focus {
   box-shadow: var(--shadow-card);
 }
 
-/* The app page: `paper` ground; its cards are `surface` with `shadow-card`. */
-.app-pane-workspace {
-  background: var(--color-paper);
-  margin: var(--workspace-inset) var(--workspace-inset) var(--workspace-inset) 0;
-  min-height: calc(100dvh - 2 * var(--workspace-inset));
-  overflow: clip;
-}
-
 @media (max-width: 980px) {
-  :root {
-    --sticky-header-offset: var(--compact-topbar-height);
-    /* The compact topbar, then the identity band in its padded compact form. */
-    --route-chrome-height: calc(
-      var(--compact-topbar-height) + var(--page-header-padding-top) +
-        var(--page-header-padding-bottom) + var(--control-md) + 1px
-    );
-    --route-chrome-height-untitled: var(--compact-topbar-height);
-  }
   .app-pane {
     border-radius: 0;
     box-shadow: none;
-  }
-  .app-pane-workspace {
-    margin: 0;
-    min-height: 0;
   }
 }
 
@@ -985,17 +948,9 @@ input:-webkit-autofill:focus {
   [data-button-variant='primary'],
   [data-button-variant='secondary'],
   [data-button-variant='danger'],
-  .shell-link[aria-current='page'] {
+  [data-app-surface] a[aria-current='page'] {
     outline: 1px solid ButtonText;
     outline-offset: -1px;
-  }
-}
-
-@media (max-width: 700px) {
-  :root {
-    --page-header-padding-top: 20px;
-    --page-header-padding-bottom: 16px;
-    --page-header-gap: 12px;
   }
 }
 
