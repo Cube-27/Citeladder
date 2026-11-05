@@ -2339,6 +2339,38 @@ a.cl-logotile:hover {
   gap: 12px;
 }
 
+/* A tile with no numbers carries a short how-to: each step's title over its
+   line, hairlines between, so the steps read as one list. */
+.cl-page-hl-steps {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-page-hl-steps li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 0;
+  border-top: 1px solid var(--color-line);
+  /* A step can name a URL, which must wrap inside the tile. */
+  overflow-wrap: anywhere;
+}
+
+.cl-page-hl-steps li:last-child {
+  padding-bottom: 0;
+}
+
+.cl-page-hl-step {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-body);
+  font-weight: 500;
+  line-height: var(--text-body--line-height);
+}
+
 @media (max-width: 767px) {
   .cl-page-hl-inner {
     gap: 32px;

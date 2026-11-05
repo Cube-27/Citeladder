@@ -6,6 +6,14 @@ import { Eyebrow } from './site-parts';
 
 export type HighlightStat = Readonly<{ label: string; value: string; sub?: ReactNode }>;
 
+/** Stat columns: one row up to four; six as two rows of three, never 4 + 2. */
+function statColumns(count: number): 1 | 2 | 3 | 4 {
+  if (count <= 1) return 1;
+  if (count === 2) return 2;
+  if (count === 3 || count === 6) return 3;
+  return 4;
+}
+
 /**
  * PageHighlight: the page's one inverted tile. Its ground is the page's ink
  * and its ink the page's surface, remapped in CSS (site.css), so it inverts
@@ -17,6 +25,7 @@ export function PageHighlight({
   title,
   body,
   stats = [],
+  steps = [],
   action,
   as: Heading = 'h3',
   children,
@@ -25,6 +34,8 @@ export function PageHighlight({
   title: ReactNode;
   body?: ReactNode;
   stats?: readonly HighlightStat[];
+  /** A short ordered how-to (for a tile with no numbers), each title over its line. */
+  steps?: readonly Readonly<{ title: string; body: ReactNode }>[];
   action?: ReactNode;
   as?: 'h2' | 'h3';
   children?: ReactNode;
@@ -38,7 +49,7 @@ export function PageHighlight({
           {body && <p className="cl-page-hl-text">{body}</p>}
         </div>
         {stats.length > 0 && (
-          <dl className={cn('cl-page-hl-stats', `cl-page-hl-stats--${Math.min(stats.length, 4)}`)}>
+          <dl className={cn('cl-page-hl-stats', `cl-page-hl-stats--${statColumns(stats.length)}`)}>
             {stats.map((stat) => (
               <div key={stat.label} className="cl-page-hl-stat">
                 <dt className="type-eyebrow">{stat.label}</dt>
@@ -47,6 +58,16 @@ export function PageHighlight({
               </div>
             ))}
           </dl>
+        )}
+        {steps.length > 0 && (
+          <ol className="cl-page-hl-steps">
+            {steps.map((step) => (
+              <li key={step.title}>
+                <p className="cl-page-hl-step">{step.title}</p>
+                <p className="cl-page-hl-text">{step.body}</p>
+              </li>
+            ))}
+          </ol>
         )}
         {children}
         {action && <div className="cl-page-hl-action">{action}</div>}

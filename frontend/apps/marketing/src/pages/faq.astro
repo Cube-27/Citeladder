@@ -1,6 +1,15 @@
 ---
-import { FaqCta, FaqGroups } from '@/components/marketing/pages/faq';
-import { PageHero } from '@/components/marketing/primitives/page-hero';
+/**
+ * The FAQ (the WebFaq template): ContentArticle with a Toc titled Topics,
+ * the ArticleHeader, each group's heading and FaqList in Prose, then the
+ * closing band.
+ */
+import ArticleHeader from '@/components/content/ArticleHeader.astro';
+import Prose from '@/components/content/Prose.astro';
+import { Breadcrumbs } from '@/components/marketing/chrome/breadcrumbs';
+import ContentArticle from '@/components/marketing/content/ContentArticle.astro';
+import { ContentCta } from '@/components/marketing/content/content-cta';
+import { FAQ_TOPICS, FaqGroups } from '@/components/marketing/content/faq-groups';
 import { FAQ_GROUPS } from '@/lib/marketing-content/faq';
 import { faqPageJsonLd } from '@/lib/seo/json-ld';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
@@ -16,11 +25,19 @@ const description =
   jsonLd={[faqPageJsonLd(FAQ_GROUPS.flatMap((group) => group.items))]}
 >
   <main id="main">
-    <PageHero
-      title="Frequently asked questions"
-      lead="Short answers on AEO, AI visibility, evidence, security and billing, written by the product team at Cube27."
+    <ContentArticle toc={FAQ_TOPICS} tocTitle="Topics">
+      <ArticleHeader slot="header" title="Frequently asked questions">
+        <Breadcrumbs slot="crumbs" items={[{ label: 'Home', href: '/' }, { label: 'Frequently asked questions' }]} />
+        Short answers on AEO, AI visibility, evidence, security and billing, written by the product team at Cube27.
+      </ArticleHeader>
+      <Prose as="article" label="Frequently asked questions">
+        <FaqGroups />
+      </Prose>
+    </ContentArticle>
+    <ContentCta
+      title="Still have a question?"
+      lead="Ask us directly, or see the product on your own category."
+      secondary={{ href: '/pricing', label: 'See pricing' }}
     />
-    <FaqGroups />
-    <FaqCta />
   </main>
 </MarketingLayout>

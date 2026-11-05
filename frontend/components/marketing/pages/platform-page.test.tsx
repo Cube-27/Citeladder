@@ -3,7 +3,7 @@ import { afterEach, expect, it, vi } from 'vite-plus/test';
 
 import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
 
-import { PlatformActions, PlatformPageContent } from './platform';
+import { PlatformActions, PlatformPageContent } from './platform-page';
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -22,31 +22,45 @@ it.each([
   }
 });
 
-it('renders the steps, questions and FAQ a capability page declares', () => {
+it('renders the hero screen with its key numbers and the steps, questions and FAQ a page declares', () => {
   render(
     <PlatformPageContent
       page={{
         path: '/platform/site-health',
         title: 'Site Health | CiteLadder',
         description: 'Crawl your site.',
-        heading: 'Find site issues.',
+        heading: 'Find site issues',
         lead: 'Crawl and review.',
         cta: 'demo',
-        visual: 'pillars',
-        visualTitle: 'Site Health · Overview',
-        highlights: [],
-        features: [],
+        screen: 'site-health',
+        highlights: [{ title: 'Page-level evidence', body: 'Every finding names its page.' }],
+        features: [
+          {
+            title: 'Know which AI crawlers you let in',
+            body: 'Read robots.txt by purpose.',
+            points: ['Search, training and user fetch'],
+            media: { kind: 'split', screen: 'crawler-access' },
+          },
+        ],
         steps: [
           { title: 'Crawl', body: 'Sample the site.' },
           { title: 'Recrawl', body: 'Verify the fix.' },
         ],
         questions: ['Did our fixes land?'],
         faqs: [{ q: 'Does it score llms.txt?', a: 'No, it is a diagnostic.' }],
-        closing: 'Start here.',
-        related: [],
+        closing: 'Start here',
+        related: ['/platform/search-demand'],
       }}
     />,
   );
+  expect(
+    screen.getByRole('img', { name: 'Site Health for acme.com: score 82, 7 failed checks' }),
+  ).toHaveTextContent('AEO Readiness');
+  expect(screen.getByText('Pages blocked').parentElement).toHaveTextContent('Pages blocked14');
+  expect(
+    screen.getByRole('img', { name: 'AI crawler access to acme.com from robots.txt' }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 2, name: 'Page-level evidence' })).toBeVisible();
   const steps = screen.getByRole('region', { name: 'How it works' });
   expect(
     within(steps)
@@ -59,21 +73,25 @@ it('renders the steps, questions and FAQ a capability page declares', () => {
     ),
   ).toBeInTheDocument();
   expect(screen.getByText('Does it score llms.txt?')).toBeInTheDocument();
-  expect(screen.getByRole('img', { name: 'Site Health · Overview' })).toHaveTextContent(
-    'AEO Readiness',
-  );
+  expect(
+    within(screen.getByRole('region', { name: 'Keep exploring' })).getByRole('link', {
+      name: /Search Demand/,
+    }),
+  ).toHaveAttribute('href', '/platform/search-demand');
 });
 
-it('leads the MCP page with the connect strip and closes it with the guide and a demo', () => {
+it('leads the MCP page with the connect strip and its steps, and closes it with the guide and a demo', () => {
   const page = PLATFORM_PAGES.find((candidate) => candidate.path === '/platform/mcp');
   if (!page) throw new Error('MCP page missing');
   render(<PlatformPageContent page={page} />);
-  const hero = document.querySelector('[data-cta-placement="hero"]') as HTMLElement;
-  const closing = document.querySelector('[data-cta-placement="closing"]') as HTMLElement;
+  const hero = screen.getByRole('heading', { level: 1 }).closest('section');
+  if (!hero) throw new Error('hero missing');
+  const closing = screen.getByRole('region', { name: 'Get started' });
   expect(within(hero).getByRole('link', { name: 'Connect to Claude' })).toHaveAttribute(
     'href',
     'https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=CiteLadder&connectorUrl=https%3A%2F%2Fapi.citeladder.com%2Fmcp',
   );
+  expect(within(hero).getByText('2. Sign in and approve')).toBeInTheDocument();
   expect(within(hero).queryByRole('link', { name: 'Book a demo' })).not.toBeInTheDocument();
   expect(within(closing).getByRole('link', { name: 'Read the MCP docs' })).toHaveAttribute(
     'href',
@@ -83,4 +101,14 @@ it('leads the MCP page with the connect strip and closes it with the guide and a
   expect(
     within(closing).queryByRole('link', { name: 'Connect to Claude' }),
   ).not.toBeInTheDocument();
+});
+
+it('never shows one screen twice on a platform page', () => {
+  for (const page of PLATFORM_PAGES) {
+    const screens = [
+      page.screen,
+      ...page.features.flatMap((feature) => (feature.media.screen ? [feature.media.screen] : [])),
+    ];
+    expect(new Set(screens).size, page.path).toBe(screens.length);
+  }
 });

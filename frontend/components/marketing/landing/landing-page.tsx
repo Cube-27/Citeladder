@@ -6,7 +6,7 @@ import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { NAV_DROPS, platformLabel } from '@/lib/marketing-content/nav';
 
 import { AnnouncementPill } from '../chrome/announcement-pill';
-import { CapabilityGrid } from '../pages/platform';
+import { CapabilityGrid } from '../pages/platform-page';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { EngineStrip, LogoTile } from '../sections/cards';
 import { Bento, FeatureCard, FeatureSplit } from '../sections/features';

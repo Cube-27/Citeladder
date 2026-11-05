@@ -1,16 +1,24 @@
 ---
+/**
+ * A free tool (the WebTool template): the hero with the privacy note, the
+ * tool in a ToolPanel (the only island), the notes in a centred
+ * ContentArticle, then the other tools.
+ */
 import type { GetStaticPaths } from 'astro';
-import MarketingLayout from '../../layouts/MarketingLayout.astro';
-import { PageHero } from '@/components/marketing/primitives/page-hero';
-import { Section } from '@/components/marketing/primitives/section';
-import { FREE_TOOLS, TOOL_GUIDES } from '@/lib/marketing-content/tools';
-import { faqPageJsonLd } from '@/lib/seo/json-ld';
-import { ToolNotes } from '@/components/marketing/tools/tools-index';
-import { CrawlerChecker, RobotsGenerator } from '@/components/marketing/tools/robots-tools';
+import Prose from '@/components/content/Prose.astro';
+import ContentArticle from '@/components/marketing/content/ContentArticle.astro';
+import ContentIndex from '@/components/marketing/content/ContentIndex.astro';
+import { ToolNotes, otherTools } from '@/components/marketing/content/tool-notes';
+import { PageHero } from '@/components/marketing/sections/heroes';
+import { PageSection } from '@/components/marketing/sections/page-section';
 import { MetaChecker, StructuredDataBuilder } from '@/components/marketing/tools/markup-tools';
+import { CrawlerChecker, RobotsGenerator } from '@/components/marketing/tools/robots-tools';
 import { SitemapComparison } from '@/components/marketing/tools/sitemap-tool';
 import { SocialPreview } from '@/components/marketing/tools/social-tool';
+import { FREE_TOOLS, TOOL_GUIDES } from '@/lib/marketing-content/tools';
+import { faqPageJsonLd } from '@/lib/seo/json-ld';
 import catalog from '@/services/api/src/config/crawlers.json';
+import MarketingLayout from '../../layouts/MarketingLayout.astro';
 
 export const getStaticPaths = (() =>
   FREE_TOOLS.map((tool) => ({ params: { slug: tool.slug }, props: { tool } }))) satisfies GetStaticPaths;
@@ -20,20 +28,74 @@ const guide = TOOL_GUIDES[tool.slug];
 // Project only the public catalog fields; no server configuration enters the browser.
 const bots = catalog.bots.map((bot) => ({ label: bot.label, purpose: bot.purpose, tokens: bot.robots_tokens }));
 ---
-<MarketingLayout title={`Free ${tool.title} | CiteLadder`} description={tool.description} canonical={`/tools/${tool.slug}`} jsonLd={guide ? [faqPageJsonLd(guide.faqs)] : []}>
+
+<MarketingLayout
+  title={`Free ${tool.title} | CiteLadder`}
+  description={tool.description}
+  canonical={`/tools/${tool.slug}`}
+  jsonLd={guide ? [faqPageJsonLd(guide.faqs)] : []}
+>
   <main id="main">
-    <PageHero title={tool.title} lead={tool.description} breadcrumb={[{ label: 'Free tools', href: '/tools' }, { label: tool.title }]}>
-      <p class="cp-privacy">Your input is processed in this browser. Text and files are not uploaded or saved by this tool. Use up to 200,000 characters per text area.</p>
-    </PageHero>
-    <Section tone="soft" aria-label={tool.title}>
-      <noscript><p class="website-body">Enable JavaScript to run this browser-based tool. No account is required.</p></noscript>
+    <PageHero
+      crumbs={[{ label: 'Free tools', href: '/tools' }, { label: tool.title }]}
+      title={tool.title}
+      lead={tool.description}
+      meta="Your input is processed in this browser. Text and files are not uploaded or saved by this tool. Use up to 200,000 characters per text area."
+    />
+    <PageSection label={tool.title} spacing="compact">
+      <noscript><p>Enable JavaScript to run this browser-based tool. No account is required.</p></noscript>
       {tool.slug === 'ai-crawler-checker' && <CrawlerChecker bots={bots} client:load />}
       {tool.slug === 'robots-txt-generator' && <RobotsGenerator bots={bots} client:load />}
       {tool.slug === 'meta-directive-checker' && <MetaChecker client:load />}
       {tool.slug === 'structured-data-builder' && <StructuredDataBuilder client:load />}
       {tool.slug === 'sitemap-comparison' && <SitemapComparison client:load />}
       {tool.slug === 'social-preview' && <SocialPreview client:load />}
-    </Section>
-    <ToolNotes slug={tool.slug} />
+    </PageSection>
+    <ContentArticle>
+      <Prose>
+        <ToolNotes slug={tool.slug} />
+      </Prose>
+    </ContentArticle>
+    <PageSection label="More free tools">
+      <ContentIndex groups={otherTools(tool.slug)} />
+    </PageSection>
   </main>
 </MarketingLayout>
+
+<style is:global>
+  /* A tool's input and result columns: fields, then the actions on one row. */
+  .cl-tool-run {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .cl-tool-run-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  /* The robots generator's test of its own rules, under the tool. */
+  .cl-tool-extra {
+    display: grid;
+    gap: 12px;
+    margin-top: 24px;
+    padding: 24px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-xs);
+  }
+  .cl-tool-extra pre {
+    overflow-x: auto;
+    margin: 0;
+    padding: 16px;
+    border-radius: var(--radius-md);
+    background: var(--color-surface-sunken);
+    color: var(--color-ink-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+    line-height: var(--text-data--line-height);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+</style>

@@ -1,4 +1,4 @@
-import { Children, type ReactNode } from 'react';
+import { Children, type ReactElement, type ReactNode } from 'react';
 import { Check, Minus } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -75,8 +75,11 @@ export function PagePlans({
   );
 }
 
-/** A plan's cell: included, not included, or a value such as a limit. */
-export type PlanCell = boolean | string;
+/**
+ * A plan's cell: included, not included, or a value such as a limit (text,
+ * or a link where the value is a source).
+ */
+export type PlanCell = boolean | string | ReactElement;
 
 function PlanValue({ value }: Readonly<{ value: PlanCell }>) {
   if (value === true) {

@@ -1,12 +1,15 @@
 ---
-import { AiInstructionsPage } from '@/components/marketing/pages/ai-reference';
-import MarketingLayout from '../layouts/MarketingLayout.astro';
+import { AiInstructionSections } from '@/components/marketing/content/reference-sections';
+import { AI_INSTRUCTIONS } from '@/lib/marketing-content/ai-reference';
+import ReferenceLayout from '../layouts/ReferenceLayout.astro';
 ---
 
-<MarketingLayout
-  title="AI Instructions · CiteLadder"
+<ReferenceLayout
+  title="AI Instructions"
+  pageTitle="AI Instructions · CiteLadder"
   description="Official CiteLadder facts and guidance for AI assistants: product identity, capabilities, evidence, pricing sources, and accurate attribution."
-  canonical="/ai-instructions"
+  lead="First-party facts about CiteLadder for AI assistants, researchers, and anyone describing the product. Use the linked sources to check details and keep observations separate from claims."
+  sections={AI_INSTRUCTIONS}
 >
-  <AiInstructionsPage />
-</MarketingLayout>
+  <AiInstructionSections />
+</ReferenceLayout>
