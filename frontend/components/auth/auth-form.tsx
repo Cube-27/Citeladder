@@ -1,25 +1,34 @@
 'use client';
 
 import { Link } from 'react-router-dom';
+import type { LucideIcon } from 'lucide-react';
 import { type ComponentProps, type ReactNode, useId, useState } from 'react';
 
+import {
+  AuthButton,
+  AuthCard,
+  AuthDivider,
+  AuthForm,
+  AuthHumanCheck,
+  AuthLegal,
+  AuthLinkRow,
+} from '@/components/ui/auth-shell';
 import { Callout } from '@/components/ui/callout';
 import { Field } from '@/components/ui/field';
-import { FlowButton, FlowInput } from '@/components/ui/flow-controls';
 import { type BrandGlyph, Icon } from '@/components/ui/icon';
-import { type PasswordFieldProps, PasswordFieldFrame } from '@/components/ui/password-field';
-import { Stack } from '@/components/ui/layout';
+import { Input } from '@/components/ui/input';
+import { PasswordField, type PasswordFieldProps } from '@/components/ui/password-field';
+import { TextLink } from '@/components/ui/text-link';
 import { authApi } from '@/lib/api/auth';
 import { safeAuthReturnPath } from '@/lib/auth/auth-return-path';
 import { ApiError } from '@/lib/api/errors';
 import { websiteHref } from '@/lib/config/app-link';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import type { Turnstile } from '@/lib/turnstile/use-turnstile';
-import { cn } from '@/lib/utils';
 
-type InputProps = ComponentProps<typeof FlowInput>;
+type InputProps = ComponentProps<typeof Input>;
 
-/** The Google "G", a brand glyph `Icon` sizes. */
+/** The Google "G" in Google's own four colours, a brand glyph `Icon` sizes. */
 const GoogleGlyph: BrandGlyph = (props) => {
   return (
     <svg viewBox="0 0 24 24" {...props}>
@@ -50,7 +59,7 @@ export function AuthEmailField({
   return (
     <Field label="Email address" required error={error}>
       {(props) => (
-        <FlowInput
+        <Input
           {...props}
           {...inputProps}
           type="email"
@@ -63,9 +72,9 @@ export function AuthEmailField({
   );
 }
 
-/** Account access's password field: the 44px flow field. */
+/** Account access's password field: the product's field with its reveal control. */
 export function AuthPasswordField(props: PasswordFieldProps) {
-  return <PasswordFieldFrame control={FlowInput} {...props} />;
+  return <PasswordField {...props} />;
 }
 
 /**
@@ -77,22 +86,21 @@ export function AuthPasswordField(props: PasswordFieldProps) {
  */
 function TermsNotice({ id, signup }: Readonly<{ id: string; signup: boolean }>) {
   return (
-    <p id={id} className="auth-terms-notice flow-help text-center">
+    <AuthLegal id={id}>
       By {signup ? 'creating an account' : 'continuing'}, you agree to the{' '}
-      <a href={websiteHref('/terms')} target="_blank" rel="noreferrer" className="auth-legal-link">
-        Terms of Service
-      </a>{' '}
-      and acknowledge the{' '}
-      <a
-        href={websiteHref('/privacy')}
-        target="_blank"
-        rel="noreferrer"
-        className="auth-legal-link"
-      >
-        Privacy Policy
+      <LegalLink href={websiteHref('/terms')}>Terms of Service</LegalLink> and acknowledge the{' '}
+      <LegalLink href={websiteHref('/privacy')}>Privacy Policy</LegalLink>.
+    </AuthLegal>
+  );
+}
+
+function LegalLink({ href, children }: Readonly<{ href: string; children: string }>) {
+  return (
+    <TextLink asChild tone="muted" text="inherit">
+      <a href={href} target="_blank" rel="noreferrer">
+        {children}
       </a>
-      .
-    </p>
+    </TextLink>
   );
 }
 
@@ -167,7 +175,7 @@ function GoogleEntry({
 
   return (
     <>
-      <FlowButton
+      <AuthButton
         variant="secondary"
         disabled={pending || !revision || unverified}
         aria-describedby={termsNoticeId}
@@ -175,15 +183,22 @@ function GoogleEntry({
       >
         <Icon icon={GoogleGlyph} />
         <span>{pending ? 'Starting Google sign-in…' : 'Continue with Google'}</span>
-      </FlowButton>
+      </AuthButton>
       {notice ? <Callout tone="negative">{notice}</Callout> : null}
     </>
   );
 }
 
+/**
+ * Sign-in, sign-up and the mailbox screens on the AuthCard: the title and
+ * line, the form's one alert, Continue with Google and the "or" rule (when the
+ * form authenticates), the fields, the Turnstile slot (when challenged) and
+ * the submit, the agreement line, and the switch under the card.
+ */
 export function AuthFormShell({
   title,
   description,
+  icon,
   error,
   onSubmit,
   pending,
@@ -192,7 +207,6 @@ export function AuthFormShell({
   footerPrompt,
   footerHref,
   footerLabel,
-  footerLinkVariant = 'default',
   showForm = true,
   showFooter = true,
   terms,
@@ -202,15 +216,16 @@ export function AuthFormShell({
   title: string;
   /** A line under the title; sign-in and sign-up have none unless they report something. */
   description?: string;
+  /** The tile above the title (the mailbox screens' envelope). */
+  icon?: LucideIcon;
   error?: string;
-  onSubmit: ComponentProps<'form'>['onSubmit'];
+  onSubmit: NonNullable<ComponentProps<'form'>['onSubmit']>;
   pending: boolean;
   submitLabel: string;
   pendingLabel: string;
   footerPrompt: string;
   footerHref: string;
   footerLabel: string;
-  footerLinkVariant?: 'default' | 'emphasis';
   showForm?: boolean;
   showFooter?: boolean;
   /**
@@ -232,51 +247,49 @@ export function AuthFormShell({
   const consent = useConsentGate(showForm ? terms : undefined, showForm ? verification : undefined);
 
   return (
-    <Stack gap="section" className="auth-form-shell w-full">
-      <Stack gap="compact" className="auth-form-heading text-center">
-        <h1 className="flow-title">{title}</h1>
-        {description ? <p className="flow-help">{description}</p> : null}
-      </Stack>
-
-      <Stack gap="workspace" className="auth-form-body">
-        {error ? <Callout tone="negative">{error}</Callout> : null}
-
-        {showForm ? (
-          <AuthEmailForm
-            consent={consent}
-            onSubmit={onSubmit}
-            pending={pending}
-            submitLabel={submitLabel}
-            pendingLabel={pendingLabel}
-          >
-            {children}
-          </AuthEmailForm>
-        ) : null}
-
-        {consent.terms ? (
+    <AuthCard
+      title={title}
+      sub={description}
+      icon={icon}
+      after={
+        showFooter ? (
           <>
-            <p className="auth-form-divider flow-meta">OR</p>
-            <GoogleEntry
-              revision={consent.terms.revision}
-              signup={consent.terms.signup}
-              termsNoticeId={consent.noticeId}
-              verification={consent.verification}
-            />
+            {footerPrompt}{' '}
+            <TextLink asChild text="inherit">
+              <Link to={footerHref}>{footerLabel}</Link>
+            </TextLink>
           </>
-        ) : null}
+        ) : undefined
+      }
+    >
+      {error ? <Callout tone="negative">{error}</Callout> : null}
 
-        {showFooter ? (
-          <AuthFormFooter
-            prompt={footerPrompt}
-            href={footerHref}
-            label={footerLabel}
-            emphasis={footerLinkVariant === 'emphasis'}
+      {consent.terms ? (
+        <>
+          <GoogleEntry
+            revision={consent.terms.revision}
+            signup={consent.terms.signup}
+            termsNoticeId={consent.noticeId}
+            verification={consent.verification}
           />
-        ) : null}
+          {showForm ? <AuthDivider /> : null}
+        </>
+      ) : null}
 
-        {consent.terms ? <TermsNotice id={consent.noticeId} signup={consent.terms.signup} /> : null}
-      </Stack>
-    </Stack>
+      {showForm ? (
+        <AuthEmailForm
+          consent={consent}
+          onSubmit={onSubmit}
+          pending={pending}
+          submitLabel={submitLabel}
+          pendingLabel={pendingLabel}
+        >
+          {children}
+        </AuthEmailForm>
+      ) : null}
+
+      {consent.terms ? <TermsNotice id={consent.noticeId} signup={consent.terms.signup} /> : null}
+    </AuthCard>
   );
 }
 
@@ -293,7 +306,7 @@ function AuthEmailForm({
   children,
 }: Readonly<{
   consent: ReturnType<typeof useConsentGate>;
-  onSubmit: ComponentProps<'form'>['onSubmit'];
+  onSubmit: NonNullable<ComponentProps<'form'>['onSubmit']>;
   pending: boolean;
   submitLabel: string;
   pendingLabel: string;
@@ -304,44 +317,24 @@ function AuthEmailForm({
       event.preventDefault();
       return;
     }
-    onSubmit?.(event);
+    onSubmit(event);
   };
 
   return (
-    <form noValidate onSubmit={handleSubmit}>
-      <Stack gap="workspace" className="auth-email-form">
-        {children}
+    <AuthForm onSubmit={handleSubmit}>
+      {children}
 
-        {consent.verification ? <HumanCheck widget={consent.verification} /> : null}
+      {consent.verification ? <AuthHumanCheck widget={consent.verification} /> : null}
 
-        <FlowButton
-          type="submit"
-          disabled={pending || consent.held}
-          aria-describedby={consent.terms ? consent.noticeId : undefined}
-        >
-          {pending ? pendingLabel : submitLabel}
-        </FlowButton>
-      </Stack>
-    </form>
-  );
-}
-
-/**
- * The Turnstile widget's slot. Its height is reserved before the widget loads
- * and kept after it completes, so nothing below it moves; if no widget can
- * render, a notice takes the same footprint. A slot too narrow for the flexible
- * widget holds the taller compact one.
- */
-function HumanCheck({
-  widget: { container, failed, size },
-}: Readonly<{ widget: Pick<Turnstile, 'container' | 'failed' | 'size'> }>) {
-  return (
-    <fieldset className="auth-human-check" data-size={size} aria-label="Verification">
-      <div ref={container} />
-      {failed ? (
-        <p className="flow-meta">Verification could not load. Refresh the page to try again.</p>
-      ) : null}
-    </fieldset>
+      <AuthButton
+        type="submit"
+        variant="primary"
+        disabled={pending || consent.held}
+        aria-describedby={consent.terms ? consent.noticeId : undefined}
+      >
+        {pending ? pendingLabel : submitLabel}
+      </AuthButton>
+    </AuthForm>
   );
 }
 
@@ -360,19 +353,17 @@ function useConsentGate(terms: TermsDecision | undefined, verification: Turnstil
   return { terms, verification, noticeId, held };
 }
 
-/** The line under the form that switches between sign-in and sign-up, or back to sign-in. */
-function AuthFormFooter({
-  prompt,
-  href,
-  label,
-  emphasis,
-}: Readonly<{ prompt: string; href: string; label: string; emphasis: boolean }>) {
+/** The links under the sign-in fields: recovery and a new verification email. */
+export function AuthRecoveryLinks({
+  links,
+}: Readonly<{ links: readonly { href: string; label: string }[] }>) {
   return (
-    <p className="auth-form-footer flow-help text-center">
-      {prompt}{' '}
-      <Link to={href} className={cn('flow-exit', emphasis && 'flow-auth-switch-link')}>
-        {label}
-      </Link>
-    </p>
+    <AuthLinkRow>
+      {links.map((link) => (
+        <TextLink key={link.href} asChild tone="muted" text="inherit">
+          <Link to={link.href}>{link.label}</Link>
+        </TextLink>
+      ))}
+    </AuthLinkRow>
   );
 }

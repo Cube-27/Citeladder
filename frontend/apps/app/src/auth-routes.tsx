@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { AuthRouteShell } from '@/components/auth/auth-route-shell';
 import { LoginScreen } from '@/components/auth/login-screen';
 import { RegisterScreen } from '@/components/auth/register-screen';
+import { AuthShell } from '@/components/ui/auth-shell';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 
 const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
@@ -12,13 +12,13 @@ export function LoginRoute() {
   const [searchParams] = useSearchParams();
 
   return (
-    <AuthRouteShell>
+    <AuthShell mainLabel="Account access">
       <LoginScreen
         demoMode={demoMode}
         signupOpen={selfServeSignupOpen()}
         searchParams={searchParams}
       />
-    </AuthRouteShell>
+    </AuthShell>
   );
 }
 
@@ -33,13 +33,13 @@ export function RegisterRoute() {
   );
 
   return (
-    <AuthRouteShell>
+    <AuthShell mainLabel="Account access">
       <RegisterScreen
         demoMode={demoMode}
         signupOpen={selfServeSignupOpen()}
         replace={replace}
         searchParams={searchParams}
       />
-    </AuthRouteShell>
+    </AuthShell>
   );
 }

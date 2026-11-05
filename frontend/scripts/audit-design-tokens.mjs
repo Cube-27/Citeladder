@@ -352,17 +352,13 @@ export function generatedBlocks(tokenCss, websiteCss) {
   const light = paletteDeclarations(tokenCss, LIGHT);
   const publicScale = new Map(light);
   postcss.parse(websiteCss).walkRules((rule) => {
-    if (
-      rule.selector.replace(/\s+/g, ' ').trim() !==
-      ':where([data-public-surface], [data-flow-surface])'
-    )
-      return;
+    if (rule.selector.replace(/\s+/g, ' ').trim() !== ':where([data-public-surface])') return;
     rule.walkDecls(/^--/, (decl) => publicScale.set(decl.prop, decl.value));
   });
   const product = typeRoles(tokenCss, /^\.type-[\w-]+$/, light);
   const site = typeRoles(
     websiteCss,
-    /^\.(?:website-[\w-]+|flow-(?:title|group-title|help|meta))$/,
+    /^\.website-[\w-]+$/,
     publicScale,
     /min-width:\s*(?:768px|48rem)\)\s*and\s*\(max-width:\s*(?:1023px|63\.9375rem)/,
   );

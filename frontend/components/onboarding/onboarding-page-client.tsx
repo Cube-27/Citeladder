@@ -4,8 +4,9 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Suspense, useEffect, useState, type ReactNode } from 'react';
 
-import { GateNoticeScreen } from '@/components/layout/gate-notice-frame';
 import { ShellFallback } from '@/components/layout/shell-fallback';
+import { UserMenuTrigger } from '@/components/layout/user-menu';
+import { AuthActions, AuthCard, AuthShell } from '@/components/ui/auth-shell';
 import { Button } from '@/components/ui/button';
 import { QueryState } from '@/components/ui/query-state';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -157,21 +158,24 @@ function ProjectSetupBlocked({
   plans?: boolean;
 }>) {
   return (
-    <GateNoticeScreen title={title}>
-      <p>{children}</p>
-      {onRetry && (
-        <Button variant="primary" onClick={onRetry} className="w-fit">
-          Retry
-        </Button>
-      )}
-      {plans ? (
-        <Button asChild variant="primary" className="w-fit">
-          <Link to={PLANS_HREF}>See plans</Link>
-        </Button>
-      ) : null}
-      <Button asChild variant="secondary" className="w-fit">
-        <Link to={projectsHref}>Back to projects</Link>
-      </Button>
-    </GateNoticeScreen>
+    <AuthShell mainLabel="Project setup" barEnd={<UserMenuTrigger presenter="compact" />}>
+      <AuthCard title={title} sub={children}>
+        <AuthActions>
+          {onRetry && (
+            <Button variant="primary" onClick={onRetry}>
+              Retry
+            </Button>
+          )}
+          {plans ? (
+            <Button asChild variant="primary">
+              <Link to={PLANS_HREF}>See plans</Link>
+            </Button>
+          ) : null}
+          <Button asChild variant="secondary">
+            <Link to={projectsHref}>Back to projects</Link>
+          </Button>
+        </AuthActions>
+      </AuthCard>
+    </AuthShell>
   );
 }
