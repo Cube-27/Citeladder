@@ -73,6 +73,8 @@ export function useTurnstile(action: string) {
   const container = useCallback(
     (element: HTMLDivElement | null) => {
       if (!element) return;
+      // The container must fill its slot (`w-full`): an empty shrink-wrapped
+      // box measures 0px and would always pick the 150×140 compact widget.
       const fits = element.getBoundingClientRect().width >= TURNSTILE_FLEXIBLE_MIN_WIDTH_PX;
       const chosen: TurnstileSize = fits ? 'flexible' : 'compact';
       setSize(chosen);
