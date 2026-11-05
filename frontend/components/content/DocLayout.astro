@@ -1,0 +1,213 @@
+---
+/**
+ * DocLayout — a rail, the reading column and a 200px "On this page" column,
+ * 48px apart, the rail and Toc sticky under the bar. The docs pass their
+ * sidebar in the `rail` slot; the website's legal pages pass `nav`, a list of
+ * pages drawn on the rail's 36px rows (the current one on `surface-sunken`).
+ * Below 1200px the Toc leaves the grid for an "On this page" JumpMenu above
+ * the article; below 900px the rail leaves too: the docs move it into the
+ * top bar's sheet, and `nav` becomes a second JumpMenu named `navSummary`.
+ */
+import JumpMenu from './JumpMenu.astro';
+import Toc, { type TocItem } from './Toc.astro';
+
+type DocNavItem =Readonly<{ label: string; href: string; current?: boolean }>;
+
+interface Props {
+  toc: readonly TocItem[];
+  /** The rail's pages, under the `navLabel` landmark name. */
+  nav?: readonly DocNavItem[];
+  navLabel?: string;
+  /** The rail's JumpMenu name below 900px. */
+  navSummary?: string;
+}
+const { toc, nav, navLabel = 'Pages', navSummary = navLabel } = Astro.props;
+const hasToc = toc.length > 0;
+const hasBar = hasToc || nav !== undefined;
+---
+
+<div class:list={['cl-doc', { 'cl-doc--toc': hasToc }]}>
+  <aside class="cl-doc-rail">
+    {
+      nav ? (
+        <nav aria-label={navLabel}>
+          <ul class="cl-doc-list">
+            {nav.map((item) => (
+              <li>
+                <a
+                  class:list={['cl-doc-link focus-ring', { 'is-active': item.current }]}
+                  href={item.href}
+                  aria-current={item.current ? 'page' : undefined}
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      ) : (
+        <slot name="rail" />
+      )
+    }
+  </aside>
+  <main id="main" class="cl-doc-main" tabindex="-1">
+    {
+      hasBar && (
+        <div class:list={['cl-doc-bar', { 'cl-doc-bar--nav': nav, 'cl-doc-bar--toc': hasToc }]}>
+          {nav && (
+            <div class="cl-doc-bar-nav">
+              <JumpMenu label={navSummary}>
+                <ul class="cl-doc-list">
+                  {nav.map((item) => (
+                    <li>
+                      <a
+                        class:list={['cl-doc-link focus-ring', { 'is-active': item.current }]}
+                        href={item.href}
+                        aria-current={item.current ? 'page' : undefined}
+                      >
+                        {item.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </JumpMenu>
+            </div>
+          )}
+          {hasToc && (
+            <div class="cl-doc-bar-toc">
+              <JumpMenu label="On this page">
+                <Toc items={toc} />
+              </JumpMenu>
+            </div>
+          )}
+        </div>
+      )
+    }
+    <slot />
+  </main>
+  {
+    hasToc && (
+      <aside class="cl-doc-toc">
+        <Toc items={toc} />
+        <slot name="toc-end" />
+      </aside>
+    )
+  }
+</div>
+
+<style is:global>
+  .cl-doc {
+    display: grid;
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    gap: 48px;
+    align-items: start;
+  }
+  .cl-doc--toc {
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 200px;
+  }
+  .cl-doc-rail,
+  .cl-doc-toc {
+    position: sticky;
+    top: calc(var(--nav-height) + 40px);
+  }
+  .cl-doc-rail {
+    max-height: calc(100vh - var(--nav-height) - 64px);
+    margin: 0 -4px;
+    padding: 0 4px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line) transparent;
+  }
+  .cl-doc-toc {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+  .cl-doc-main {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    min-width: 0;
+  }
+  .cl-doc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .cl-doc-link {
+    display: flex;
+    align-items: center;
+    min-height: var(--control-md);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    color: var(--color-ink-secondary);
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+    text-decoration: none;
+    transition:
+      background-color var(--motion-fast) var(--ease-standard),
+      color var(--motion-fast) var(--ease-standard);
+  }
+  .cl-doc-link:hover,
+  .cl-doc-link.is-active {
+    background: var(--color-surface-sunken);
+    color: var(--color-ink);
+  }
+  .cl-doc-bar {
+    display: none;
+    gap: 12px;
+    max-width: var(--container-prose);
+  }
+  .cl-doc-bar-nav {
+    display: none;
+  }
+  @media (max-width: 1199px) {
+    .cl-doc,
+    .cl-doc--toc {
+      grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    }
+    .cl-doc-toc {
+      display: none;
+    }
+    .cl-doc-bar--toc {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 899px) {
+    .cl-doc,
+    .cl-doc--toc {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 32px;
+    }
+    .cl-doc-rail {
+      display: none;
+    }
+    .cl-doc-bar--nav {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .cl-doc-bar-nav {
+      display: block;
+    }
+  }
+  @media (max-width: 639px) {
+    .cl-doc-bar {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  @media print {
+    .cl-doc,
+    .cl-doc--toc {
+      display: block;
+    }
+    .cl-doc-rail,
+    .cl-doc-toc,
+    .cl-doc-bar {
+      display: none;
+    }
+  }
+</style>

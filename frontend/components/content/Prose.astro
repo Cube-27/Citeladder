@@ -1,0 +1,292 @@
+---
+/**
+ * Prose — the system's long-form reading wrapper, shared by the website and
+ * the docs. It styles raw HTML from Markdown (and the website's typed post
+ * blocks) in `ink-secondary`, `container-prose` wide.
+ *
+ * - `article` (guides, blog, legal, AI reference): `body-lg` (18/30), 24px
+ *   between blocks; h2 `display-md` 64px above, h3 `title` 40px above, h4
+ *   `body-lg` medium (500); 12px after a heading.
+ * - `docs`: the denser reference rhythm, `body` (16/26), 20px between
+ *   blocks; h2 `title` 48px above, h3 `title-sm` 32px above, h4 `heading`.
+ *
+ * Both: links `accent-ink` with a 1px underline; inline code mono on
+ * `surface-sunken`; tables in a scroll frame with mono header rows; quotes
+ * in Cal Sans with a mono attribution and no rule; `hr` a `line` hairline;
+ * InlineCitation markers (`sup.cl-icite`). Fenced code is a CodeBlock, which
+ * this component renders once per page.
+ */
+import CodeBlock from './CodeBlock.astro';
+
+interface Props {
+  variant?: 'article' | 'docs';
+  as?: 'div' | 'article' | 'section';
+  /** The landmark's name, for `article` or `section`. */
+  label?: string;
+}
+const { variant = 'article', as: Tag = 'div', label } = Astro.props;
+---
+
+<Tag
+  class:list={['cl-prose', { 'cl-prose--docs': variant === 'docs' }]}
+  aria-label={Tag === 'div' ? undefined : label}
+>
+  <slot />
+</Tag>
+<CodeBlock />
+
+<style is:global>
+  .cl-prose {
+    max-width: var(--container-prose);
+    color: var(--color-ink-secondary);
+    font-size: var(--text-body-lg);
+    line-height: var(--text-body-lg--line-height);
+    overflow-wrap: break-word;
+  }
+  .cl-prose > * {
+    margin: 0;
+  }
+  .cl-prose > * + * {
+    margin-top: 24px;
+  }
+  .cl-prose :is(h2, h3, h4):not([class]) {
+    color: var(--color-ink);
+    text-wrap: balance;
+    scroll-margin-top: calc(var(--nav-height) + 32px);
+  }
+  .cl-prose :is(h2, h3):not([class]) {
+    font-family: var(--font-display);
+    font-weight: 400;
+  }
+  .cl-prose h2:not([class]) {
+    margin-top: 64px;
+    font-size: var(--text-display-md);
+    line-height: var(--text-display-md--line-height);
+    letter-spacing: var(--text-display-md--letter-spacing);
+  }
+  .cl-prose h3:not([class]) {
+    margin-top: 40px;
+    font-size: var(--text-title);
+    line-height: var(--text-title--line-height);
+  }
+  .cl-prose h4:not([class]) {
+    margin-top: 32px;
+    font-size: var(--text-body-lg);
+    line-height: var(--text-body-lg--line-height);
+    font-weight: 500;
+  }
+  .cl-prose > :is(h2, h3, h4):not([class]) + * {
+    margin-top: 12px;
+  }
+  .cl-prose > :first-child {
+    margin-top: 0;
+  }
+  .cl-prose a {
+    color: var(--color-accent-ink);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    border-radius: var(--radius-xs);
+  }
+  .cl-prose a:hover {
+    text-decoration-thickness: 2px;
+  }
+  .cl-prose strong {
+    color: var(--color-ink);
+    font-weight: 500;
+  }
+  .cl-prose em {
+    font-style: italic;
+  }
+  .cl-prose :not(pre) > code {
+    padding: 2px 4px;
+    border-radius: var(--radius-xs);
+    background: var(--color-surface-sunken);
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: 0.8em;
+  }
+  .cl-prose :is(ul, ol):not([class]) {
+    padding-left: 24px;
+  }
+  .cl-prose ul:not([class]) {
+    list-style: disc;
+  }
+  .cl-prose ol:not([class]) {
+    list-style: decimal;
+  }
+  .cl-prose li:not([class]) + li {
+    margin-top: 8px;
+  }
+  .cl-prose li:not([class]) > :is(ul, ol) {
+    margin-top: 8px;
+  }
+  .cl-prose li:not([class])::marker {
+    color: var(--color-ink-muted);
+  }
+  .cl-prose ol:not([class]) > li::marker {
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+  }
+  .cl-prose blockquote:not([class]) {
+    margin-top: 40px;
+    margin-bottom: 16px;
+    padding: 0 24px;
+  }
+  .cl-prose blockquote:not([class]) p {
+    margin: 0;
+    color: var(--color-ink);
+    font-family: var(--font-display);
+    font-size: var(--text-title);
+    line-height: var(--text-title--line-height);
+    font-weight: 400;
+  }
+  .cl-prose blockquote:not([class]) p + p {
+    margin-top: 12px;
+  }
+  .cl-prose blockquote:not([class]) :is(footer, cite) {
+    display: block;
+    margin-top: 12px;
+    color: var(--color-ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+    line-height: var(--text-data--line-height);
+    font-style: normal;
+  }
+  .cl-prose hr:not([class]) {
+    height: 0;
+    margin: 48px 0;
+    border: 0;
+    border-top: 1px solid var(--color-line);
+  }
+  .cl-prose figure:not([class]) {
+    margin-top: 40px;
+    margin-bottom: 16px;
+  }
+  .cl-prose figcaption:not([class]) {
+    margin-top: 12px;
+    color: var(--color-ink-muted);
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  .cl-prose-table {
+    overflow-x: auto;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xs);
+  }
+  .cl-prose table:not([class]) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  .cl-prose caption:not([class]) {
+    padding: 12px 16px;
+    color: var(--color-ink);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
+    font-weight: 500;
+    text-align: left;
+  }
+  .cl-prose th:not([class]) {
+    padding: 12px 16px;
+    background: var(--color-surface-sunken);
+    color: var(--color-ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-eyebrow);
+    line-height: var(--text-eyebrow--line-height);
+    font-weight: 500;
+    letter-spacing: var(--text-eyebrow--letter-spacing);
+    text-align: left;
+    text-transform: uppercase;
+    vertical-align: bottom;
+  }
+  .cl-prose td:not([class]),
+  .cl-prose tbody th:not([class]) {
+    padding: 12px 16px;
+    border-top: 1px solid var(--color-line);
+    background: none;
+    color: var(--color-ink);
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    letter-spacing: normal;
+    text-align: left;
+    text-transform: none;
+    vertical-align: top;
+  }
+  /* A row header reads as the row's term, not a column label. */
+  .cl-prose tbody th:not([class]) {
+    font-weight: 500;
+  }
+  .cl-prose sup {
+    line-height: 0;
+  }
+  .cl-prose > .cl-code {
+    margin-top: 24px;
+  }
+
+  /* InlineCitation: a mono [n] in accent-ink, raised without opening the line. */
+  .cl-icite {
+    position: relative;
+    top: -0.5em;
+    font-size: inherit;
+    line-height: 0;
+    vertical-align: baseline;
+  }
+  .cl-icite a,
+  .cl-prose .cl-icite a {
+    padding: 0 1px;
+    color: var(--color-accent-ink);
+    font-family: var(--font-mono);
+    font-size: var(--text-eyebrow);
+    line-height: var(--text-eyebrow--line-height);
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .cl-icite a:hover,
+  .cl-prose .cl-icite a:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+
+  /* Docs: the denser reference rhythm. */
+  .cl-prose--docs {
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+  .cl-prose--docs > * + * {
+    margin-top: 20px;
+  }
+  .cl-prose--docs h2:not([class]) {
+    margin-top: 48px;
+    font-size: var(--text-title);
+    line-height: var(--text-title--line-height);
+    letter-spacing: 0;
+  }
+  .cl-prose--docs h3:not([class]) {
+    margin-top: 32px;
+    font-size: var(--text-title-sm);
+    line-height: var(--text-title-sm--line-height);
+  }
+  .cl-prose--docs h4:not([class]) {
+    margin-top: 24px;
+    font-size: var(--text-heading);
+    line-height: var(--text-heading--line-height);
+  }
+  .cl-prose--docs > :is(h2, h3, h4):not([class]) + * {
+    margin-top: 12px;
+  }
+  .cl-prose--docs > :first-child {
+    margin-top: 0;
+  }
+  .cl-prose--docs blockquote:not([class]) p {
+    font-size: var(--text-title-sm);
+    line-height: var(--text-title-sm--line-height);
+  }
+  .cl-prose--docs > .cl-code {
+    margin-top: 20px;
+  }
+</style>

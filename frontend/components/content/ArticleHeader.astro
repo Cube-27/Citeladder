@@ -1,0 +1,203 @@
+---
+/**
+ * ArticleHeader — the head of a guide, post, policy or docs page:
+ * breadcrumbs (the `crumbs` slot), an eyebrow, up to three topic tags, the
+ * page's one h1 (`display-2xl`, 44/48; 36/42 from 768 to 1023px; 30/36 on
+ * the website and 28/34 in the docs below), the lead (the default slot;
+ * `lead`, 20/30; 18/30 below 768px), and a byline row between two `line`
+ * hairlines: the author (a 32px initials avatar on `ink`, name and role) and
+ * the meta in mono `ink-muted`, separated by middle dots. Prose-wide.
+ */
+import { Tag } from '@/components/ui/tag';
+
+type ArticleMeta =Readonly<{
+  text: string;
+  /** Machine date for a `<time>`, when the text is a date. */
+  dateTime?: string;
+  /** Words before the date, such as "Reviewed". */
+  prefix?: string;
+}>;
+
+interface Props {
+  title: string;
+  eyebrow?: string;
+  tags?: readonly string[];
+  author?: Readonly<{ name: string; role?: string }>;
+  meta?: readonly ArticleMeta[];
+}
+const { title, eyebrow, tags = [], author, meta = [] } = Astro.props;
+const initials = author?.name
+  .split(/\s+/)
+  .filter(Boolean)
+  .map((word) => word.charAt(0))
+  .filter((_, index, letters) => index === 0 || index === letters.length - 1)
+  .join('')
+  .toUpperCase();
+---
+
+<header class="cl-ahead">
+  <slot name="crumbs" />
+  {eyebrow && <p class="type-eyebrow">{eyebrow}</p>}
+  {
+    tags.length > 0 && (
+      <ul class="cl-ahead-tags" aria-label="Topics">
+        {tags.slice(0, 3).map((tag) => (
+          <li>
+            <Tag>{tag}</Tag>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+  <h1 class="cl-ahead-title">{title}</h1>
+  {Astro.slots.has('default') && <p class="cl-ahead-lead"><slot /></p>}
+  {
+    (author || meta.length > 0) && (
+      <div class="cl-ahead-byline">
+        {author && (
+          <div class="cl-byline">
+            <span class="cl-ahead-avatar" aria-hidden="true">
+              {initials}
+            </span>
+            <p>
+              <span class="cl-byline-name">{author.name}</span>
+              {author.role && <span class="cl-byline-role">{author.role}</span>}
+            </p>
+          </div>
+        )}
+        {meta.length > 0 && (
+          <p class="cl-ahead-meta">
+            {meta.map((item, index) => (
+              <span>
+                {index > 0 && <span aria-hidden="true">·</span>}
+                {item.prefix && `${item.prefix} `}
+                {item.dateTime ? <time datetime={item.dateTime}>{item.text}</time> : item.text}
+              </span>
+            ))}
+          </p>
+        )}
+      </div>
+    )
+  }
+  <slot name="note" />
+</header>
+
+<style>
+  .cl-ahead {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+    max-width: var(--container-prose);
+  }
+  .cl-ahead :global(.cl-crumbs) {
+    margin-bottom: 12px;
+  }
+  .cl-ahead-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .cl-ahead-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-display-2xl);
+    line-height: var(--text-display-2xl--line-height);
+    font-weight: 400;
+    letter-spacing: var(--text-display-2xl--letter-spacing);
+    color: var(--color-ink);
+    text-wrap: balance;
+  }
+  .cl-ahead-lead {
+    margin: 0;
+    color: var(--color-ink-secondary);
+    font-size: var(--text-lead);
+    line-height: var(--text-lead--line-height);
+  }
+  .cl-ahead-lead :global(a) {
+    color: var(--color-accent-ink);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+  .cl-ahead-byline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px 32px;
+    width: 100%;
+    margin-top: 12px;
+    padding: 20px 0;
+    border-top: 1px solid var(--color-line);
+    border-bottom: 1px solid var(--color-line);
+  }
+  .cl-byline {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .cl-byline p {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+  }
+  .cl-ahead-avatar {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    background: var(--color-ink);
+    color: var(--color-on-ink);
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
+    font-weight: 500;
+  }
+  .cl-byline-name {
+    color: var(--color-ink);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
+    font-weight: 500;
+  }
+  .cl-byline-role {
+    color: var(--color-ink-muted);
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  .cl-ahead-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    color: var(--color-ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+    line-height: var(--text-data--line-height);
+  }
+  .cl-ahead-meta > span {
+    display: inline-flex;
+    gap: 8px;
+  }
+  @media (max-width: 1023px) {
+    .cl-ahead-title {
+      font-size: var(--text-display-xl);
+      line-height: var(--text-display-xl--line-height);
+    }
+  }
+  @media (max-width: 767px) {
+    /* The website's phone H1 (30/36, website-type.css); the docs fall back to display-md. */
+    .cl-ahead-title {
+      font-size: var(--text-site-title, var(--text-display-md));
+      line-height: var(--text-site-title--line-height, var(--text-display-md--line-height));
+    }
+    .cl-ahead-lead {
+      font-size: var(--text-body-lg);
+      line-height: var(--text-body-lg--line-height);
+    }
+  }
+</style>

@@ -1,0 +1,168 @@
+---
+/**
+ * ContentArticle — the website's reading layout for research guides, blog
+ * posts, the FAQ and the AI reference: the `header` slot (an ArticleHeader)
+ * and the body (Prose) in one 720px column, the end matter (the `end` slot:
+ * FAQ, sources, author, pager) under the body, 64px under the navbar.
+ *
+ * - **With `toc`:** from 1280px the column sits in the middle of the
+ *   container with the Toc at its left edge; 900–1279px a 200px rail beside
+ *   the column; below 900px an "On this page" JumpMenu between the header and
+ *   the body, its closed height reserved. The Toc starts level with the body
+ *   and stops being sticky where the end matter begins.
+ * - **Without:** the column is centred, and a ContentFigure may leave it.
+ */
+import JumpMenu from '@/components/content/JumpMenu.astro';
+import Toc, { type TocItem } from '@/components/content/Toc.astro';
+
+interface Props {
+  toc?: readonly TocItem[];
+  tocTitle?: string;
+}
+const { toc = [], tocTitle = 'On this page' } = Astro.props;
+const hasToc = toc.length > 0;
+const hasEnd = Astro.slots.has('end');
+---
+
+<div class:list={['cl-cpage-article', hasToc ? 'cl-cpage-article--toc' : 'cl-cpage-article--centred']}>
+  <div class="cl-container">
+    <div class="cl-cpage-article-grid">
+      <div class="cl-cpage-article-head"><slot name="header" /></div>
+      {
+        hasToc && (
+          <>
+            <div class="cl-cpage-article-toc">
+              <Toc items={toc} title={tocTitle} />
+            </div>
+            <div class="cl-cpage-article-jump">
+              <JumpMenu label={tocTitle}>
+                <Toc items={toc} title={tocTitle} />
+              </JumpMenu>
+            </div>
+          </>
+        )
+      }
+      <div class="cl-cpage-article-body"><slot /></div>
+      {
+        hasEnd && (
+          <div class="cl-cpage-article-end">
+            <slot name="end" />
+          </div>
+        )
+      }
+    </div>
+  </div>
+</div>
+
+<style is:global>
+  .cl-cpage-article {
+    padding-top: 64px;
+  }
+  .cl-cpage-article-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, var(--container-prose)) minmax(0, 1fr);
+    column-gap: 48px;
+    container-type: inline-size;
+  }
+  .cl-cpage-article-head,
+  .cl-cpage-article-body,
+  .cl-cpage-article-end {
+    grid-column: 2;
+    min-width: 0;
+  }
+  .cl-cpage-article-head {
+    grid-row: 1;
+    padding-bottom: 48px;
+  }
+  .cl-cpage-article-toc {
+    position: sticky;
+    top: calc(var(--nav-height) + 40px);
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+    justify-self: start;
+    width: 100%;
+    max-width: 240px;
+  }
+  .cl-cpage-article-body {
+    grid-row: 2;
+  }
+  .cl-cpage-article-body > .cl-prose {
+    max-width: none;
+  }
+  .cl-cpage-article-jump {
+    display: none;
+  }
+  .cl-cpage-article-end {
+    display: flex;
+    flex-direction: column;
+    grid-row: 3;
+    gap: 48px;
+    padding-top: 64px;
+  }
+  @media (max-width: 1279px) {
+    .cl-cpage-article--toc .cl-cpage-article-grid {
+      grid-template-columns: 200px minmax(0, var(--container-prose));
+      justify-content: center;
+    }
+    .cl-cpage-article--toc :is(.cl-cpage-article-head, .cl-cpage-article-body, .cl-cpage-article-end) {
+      grid-column: 2;
+    }
+  }
+  @media (max-width: 899px) {
+    .cl-cpage-article--toc .cl-cpage-article-grid {
+      grid-template-columns: minmax(0, var(--container-prose));
+    }
+    .cl-cpage-article--toc :is(.cl-cpage-article-head, .cl-cpage-article-body, .cl-cpage-article-end) {
+      grid-column: 1;
+    }
+    .cl-cpage-article-toc {
+      display: none;
+    }
+    .cl-cpage-article--toc .cl-cpage-article-jump {
+      display: block;
+      grid-column: 1;
+      grid-row: 2;
+      height: var(--control-lg);
+      margin-bottom: 32px;
+    }
+    .cl-cpage-article--toc .cl-cpage-article-body {
+      grid-row: 3;
+    }
+    .cl-cpage-article--toc .cl-cpage-article-end {
+      grid-row: 4;
+    }
+  }
+  @media (max-width: 767px) {
+    .cl-cpage-article {
+      padding-top: 48px;
+    }
+    .cl-cpage-article-head {
+      padding-bottom: 40px;
+    }
+    .cl-cpage-article-grid {
+      column-gap: 0;
+    }
+    .cl-cpage-article-end {
+      gap: 40px;
+      padding-top: 48px;
+    }
+  }
+
+  /* Website scale for the shared Callout inside an article (brand book, Callout). */
+  .cl-cpage-article [data-callout-tone] {
+    gap: 16px;
+    padding: 20px 24px;
+    border-radius: var(--radius-lg);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+  .cl-cpage-article [data-callout-tone] > span:first-child {
+    height: var(--text-body--line-height);
+  }
+  @media (max-width: 767px) {
+    .cl-cpage-article [data-callout-tone] {
+      padding: 16px 20px;
+    }
+  }
+</style>

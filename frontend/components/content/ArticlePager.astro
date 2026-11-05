@@ -11,11 +11,13 @@ type Link = { title: string; href: string };
 interface Props {
   previous?: Link;
   next?: Link;
+  /** The navigation landmark's name. */
+  label?: string;
 }
-const { previous, next } = Astro.props;
+const { previous, next, label = 'Adjacent articles' } = Astro.props;
 ---
 
-<nav class="cl-pager" aria-label="Adjacent articles">
+<nav class="cl-pager" aria-label={label}>
   {
     previous && (
       <a class="cl-pager-link" href={previous.href} rel="prev">
@@ -58,10 +60,6 @@ const { previous, next } = Astro.props;
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-xs);
     text-decoration: none;
-    transition: border-color var(--motion-fast) var(--ease-standard);
-  }
-  .cl-pager-link:hover {
-    border-color: var(--color-line-control);
   }
   .cl-pager-link--next {
     grid-column: 2;

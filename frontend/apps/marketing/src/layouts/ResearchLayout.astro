@@ -1,14 +1,51 @@
 ---
-import type { ResearchArticle as ResearchArticleData } from '../research-articles';
-import { researchFaqs, researchParent } from '../research-articles';
-import ResearchArticle from '../components/ResearchArticle.astro';
+/**
+ * A research guide (the WebResearchGuide template): ContentArticle with a
+ * Toc, the ArticleHeader with the review date, the guide's Markdown in
+ * Prose with its FAQ as a FaqList, an optional product section (a heading,
+ * the page's own copy in the default slot, a ContentFigure with the module's
+ * screen and a link to it), then the sources and More guides.
+ */
+import ArticleHeader from '@/components/content/ArticleHeader.astro';
+import Prose from '@/components/content/Prose.astro';
+import { Breadcrumbs } from '@/components/marketing/chrome/breadcrumbs';
+import ContentArticle from '@/components/marketing/content/ContentArticle.astro';
+import ContentFigure from '@/components/marketing/content/ContentFigure.astro';
+import { headingId } from '@/components/marketing/content/heading-id';
+import {
+  InlineMarkdown,
+  MarkdownFaq,
+  ProseMarkdown,
+  researchHeadings,
+} from '@/components/marketing/content/prose-markdown';
+import SourceRow from '@/components/marketing/content/SourceRow.astro';
+import SourcesList from '@/components/marketing/content/SourcesList.astro';
+import { ProductFrame } from '@/components/marketing/screens/product-frame';
+import { ScreenSources, ScreenVisibility } from '@/components/marketing/screens/screens-visibility';
+import { RelatedCards } from '@/components/marketing/sections/cards';
+import { PageSection } from '@/components/marketing/sections/page-section';
+import { formatBlogDate } from '@/lib/marketing-content/blog-index';
+import { platformLabel } from '@/lib/marketing-content/nav';
 import { breadcrumbJsonLd, faqPageJsonLd, researchArticleJsonLd } from '@/lib/seo/json-ld';
+import type { ResearchArticle } from '../research-articles';
+import { moreGuides, researchFaqs, researchParent, researchParts } from '../research-articles';
 import MarketingLayout from './MarketingLayout.astro';
 
-interface Props { article: ResearchArticleData }
-const { article } = Astro.props;
+/** The product modules a guide can put into practice, each with its screen. */
+const PRODUCT_SCREENS = {
+  '/platform/cited-sources': { screen: ScreenSources, label: 'Cited Sources' },
+  '/platform/ai-visibility': { screen: ScreenVisibility, label: 'AI Visibility' },
+} as const;
+
+interface Props {
+  article: ResearchArticle;
+  /** The guide's product section; its copy is the default slot. */
+  product?: Readonly<{ heading: string; href: keyof typeof PRODUCT_SCREENS }>;
+}
+const { article, product } = Astro.props;
 const meta = article.frontmatter;
 const parent = researchParent(meta.slug);
+const parts = researchParts(article.markdown);
 const breadcrumb = breadcrumbJsonLd([
   { name: 'Home', path: '/' },
   { name: parent.label, path: parent.href },
@@ -23,15 +60,113 @@ const jsonLd = [
   breadcrumb,
   faqs.length > 0 ? faqPageJsonLd(faqs) : null,
 ].filter((data) => data !== null);
+const toc = [
+  ...researchHeadings(parts.body),
+  ...(parts.faq ? [{ id: headingId(parts.faq.title), label: parts.faq.title, level: 2 }] : []),
+  ...researchHeadings(parts.after),
+  ...(product ? [{ id: headingId(product.heading), label: product.heading, level: 2 }] : []),
+];
+const Screen = product ? PRODUCT_SCREENS[product.href].screen : null;
+// Curated related guides, or the next ones in publication order, so every guide ends with a way on.
+const more = moreGuides(article);
 ---
 
-<MarketingLayout title={`${meta.meta_title} · CiteLadder`} description={meta.meta_description} canonical={meta.slug} image={meta.image}
-  keywords={[meta.primary_keyword, ...meta.secondary_keywords]} jsonLd={jsonLd}>
+<MarketingLayout
+  title={`${meta.meta_title} · CiteLadder`}
+  description={meta.meta_description}
+  canonical={meta.slug}
+  image={meta.image}
+  keywords={[meta.primary_keyword, ...meta.secondary_keywords]}
+  jsonLd={jsonLd}
+>
   <main id="main">
-    <ResearchArticle article={article}>
-      <slot name="contents" slot="contents" />
-      <slot name="supplement" />
-    </ResearchArticle>
-    <slot />
+    <ContentArticle toc={toc}>
+      <ArticleHeader
+        slot="header"
+        title={meta.title}
+        meta={[
+          {
+            prefix: 'Research reviewed',
+            text: formatBlogDate(meta.reviewed_at),
+            dateTime: meta.reviewed_at,
+          },
+        ]}
+      >
+        <Breadcrumbs
+          slot="crumbs"
+          items={[
+            { label: 'Home', href: '/' },
+            { label: parent.label, href: parent.href },
+            { label: meta.title },
+          ]}
+        />
+        {meta.meta_description}
+      </ArticleHeader>
+      <Prose as="article" label="Guide content">
+        <ProseMarkdown markdown={parts.body} />
+        {
+          parts.faq && (
+            <>
+              <h2 id={headingId(parts.faq.title)}>{parts.faq.title}</h2>
+              <MarkdownFaq items={parts.faq.items} />
+            </>
+          )
+        }
+        {parts.after && <ProseMarkdown markdown={parts.after} />}
+        {
+          product && Screen && (
+            <>
+              <h2 id={headingId(product.heading)}>{product.heading}</h2>
+              <p>
+                <slot />
+              </p>
+              <ContentFigure>
+                <ProductFrame aspect="wide" label={PRODUCT_SCREENS[product.href].label}>
+                  <Screen />
+                </ProductFrame>
+              </ContentFigure>
+              <p>
+                <a href={product.href}>Explore {platformLabel(product.href)}</a>
+              </p>
+            </>
+          )
+        }
+      </Prose>
+      {
+        parts.sources && (
+          <SourcesList slot="end" title={parts.sources.title}>
+            {parts.sources.notes.length > 0 && (
+              <Fragment slot="notes">
+                {parts.sources.notes.map((note) => (
+                  <p>
+                    <InlineMarkdown markdown={note} />
+                  </p>
+                ))}
+              </Fragment>
+            )}
+            {parts.sources.items.map((source) => (
+              <SourceRow n={source.n} href={source.href}>
+                <p>
+                  <InlineMarkdown markdown={source.markdown} />
+                </p>
+              </SourceRow>
+            ))}
+          </SourcesList>
+        )
+      }
+    </ContentArticle>
+    {
+      more.length > 0 && (
+        <PageSection title="More guides" layout="aside" spacing="compact">
+          <RelatedCards
+            items={more.map((guide) => ({
+              href: guide.frontmatter.slug,
+              title: guide.frontmatter.title,
+              body: guide.frontmatter.meta_description,
+            }))}
+          />
+        </PageSection>
+      )
+    }
   </main>
 </MarketingLayout>

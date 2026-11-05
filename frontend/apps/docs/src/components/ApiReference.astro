@@ -10,12 +10,12 @@ import { API_GROUPS, API_SCHEMAS } from '../lib/api-reference';
 import { schemaAnchor } from '../lib/json-schema';
 import ApiOperation from './ApiOperation.astro';
 import ParamTable from './ParamTable.astro';
-import Prose from './Prose.astro';
+import Prose from '@/components/content/Prose.astro';
 import TypeLabel from './TypeLabel.astro';
 ---
 
 <section class="cl-docs-ref" aria-labelledby={API_REFERENCE_HEADING.slug}>
-  <Prose>
+  <Prose variant="docs">
     <h2 id={API_REFERENCE_HEADING.slug}>{API_REFERENCE_HEADING.text}</h2>
     <p>
       Generated from the API's own route declarations; <a
@@ -37,7 +37,7 @@ import TypeLabel from './TypeLabel.astro';
   }
 </section>
 <section class="cl-docs-ref" aria-labelledby={API_SCHEMAS_HEADING.slug}>
-  <Prose>
+  <Prose variant="docs">
     <h2 id={API_SCHEMAS_HEADING.slug}>{API_SCHEMAS_HEADING.text}</h2>
     <p>Shapes shared between operations, each defined once under <code>components.schemas</code>.</p>
   </Prose>

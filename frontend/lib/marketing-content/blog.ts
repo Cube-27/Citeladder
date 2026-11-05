@@ -17,37 +17,13 @@ import { POST_PLAYBOOK } from './blog-posts/playbook';
  */
 
 /**
- * Diagram payloads are a discriminated union, not a `Record<string, unknown>`.
- * The loose shape let a post author write `children` where the renderer read
- * `nodes`: the block still type-checked, still rendered its frame, and quietly
- * dropped every row inside it. Naming the payload per variant makes that a
- * compile error instead of a blank box on a published page.
+ * A diagram's payload is named per variant, never a `Record<string, unknown>`,
+ * so a misspelt field is a compile error instead of a blank figure. The posts
+ * draw one variant: a numbered flow of steps.
  */
-type DiagramSource = { title: string; badge: string; description: string };
 type DiagramFlowStep = { step: string; title: string; desc: string };
-type DiagramTaxonomyNode = { category: string; intent: string; details: string };
 
-export type BlogDiagram =
-  | {
-      variant: 'architecture';
-      data: {
-        sources: readonly DiagramSource[];
-        destination?: { title: string; description: string };
-      };
-    }
-  | {
-      variant: 'split';
-      data: {
-        leftTitle: string;
-        leftBadge: string;
-        leftItems: readonly string[];
-        rightTitle: string;
-        rightBadge: string;
-        rightItems: readonly string[];
-      };
-    }
-  | { variant: 'flow'; data: { steps: readonly DiagramFlowStep[] } }
-  | { variant: 'taxonomy'; data: { root: string; nodes: readonly DiagramTaxonomyNode[] } };
+type BlogDiagram = { variant: 'flow'; data: { steps: readonly DiagramFlowStep[] } };
 
 export type BlogBlock =
   | { type: 'heading'; text: string }

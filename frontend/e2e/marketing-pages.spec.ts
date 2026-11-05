@@ -5,7 +5,7 @@ import { PUBLISHED_PLATFORM } from '@/lib/marketing-content/nav';
 import { DEMO_HREF } from '@/lib/marketing-content/nav';
 import { POSTS } from '@/lib/marketing-content/blog';
 import { COMPETITORS } from '@/lib/marketing-content/compare';
-import { filterAndSortPosts, toBlogPostSummary } from '@/lib/marketing-content/blog-index';
+import { newestFirst } from '@/lib/marketing-content/blog-index';
 import { brandFontName } from '@/lib/fonts/brand-fonts';
 
 /**
@@ -353,41 +353,24 @@ test.describe('marketing routes', () => {
     await context.close();
   });
 
-  test('blog topic filters and sorting retain article navigation without a thumbnail', async ({
+  test('the blog index links every post newest first and posts link to their neighbours', async ({
     page,
   }) => {
-    // The explorer hydrates when it scrolls into view (`client:visible`).
-    const waitForBlog = async () => {
-      await page.getByRole('region', { name: 'Blog articles' }).scrollIntoViewIfNeeded();
-      await page.waitForFunction(() =>
-        [...document.querySelectorAll('astro-island')].some(
-          (island) =>
-            island.getAttribute('component-url')?.includes('/blog-index-explorer.') &&
-            !island.hasAttribute('ssr'),
-        ),
-      );
-    };
     await page.goto('/blog');
-    await waitForBlog();
+    const [newest, ...rest] = newestFirst(POSTS).map((post) => `/blog/${post.slug}`);
+    const featured = page.getByRole('region', { name: 'Featured article' });
+    await expect(featured.getByRole('link')).toHaveAttribute('href', newest!);
     const archive = page.getByRole('region', { name: 'Blog articles' });
-    await archive.getByRole('button', { name: 'Website readiness', exact: true }).click();
-    const card = archive.locator('article');
-    await expect(card).toHaveCount(1);
-    await expect(card.getByRole('img')).toHaveCount(0);
-    await card.getByRole('link', { name: 'Read article' }).click();
+    const rows = archive.getByRole('link');
+    await expect(rows).toHaveCount(rest.length);
+    expect(
+      await rows.evaluateAll((links) => links.map((link) => link.getAttribute('href'))),
+    ).toEqual(rest);
+    await archive.locator('a[href="/blog/auditing-content-for-llms-ai-search"]').click();
     await expect(page).toHaveURL(/\/blog\/auditing-content-for-llms-ai-search$/);
     await expect(
       page.getByRole('navigation', { name: 'Previous and next articles' }),
     ).toBeVisible();
-    await page.goto('/blog');
-    await waitForBlog();
-    await archive.getByRole('button', { name: 'All posts', exact: true }).click();
-    await archive.getByRole('combobox', { name: 'Sort', exact: true }).click();
-    await page.getByRole('option', { name: 'Oldest' }).click();
-    const expected = filterAndSortPosts(POSTS.map(toBlogPostSummary), null, 'oldest').map(
-      (post) => post.title,
-    );
-    await expect(archive.locator('article h2')).toHaveText(expected);
   });
   test('commercial entry pages deliver indexable copy and usable links without JavaScript', async ({
     browser,
