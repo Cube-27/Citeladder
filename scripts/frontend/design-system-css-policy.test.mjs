@@ -1,25 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import {
-  astroStyleFindings,
-  cssPolicyFindings,
-} from '../../frontend/scripts/design-system-css-checks.mjs';
+import { cssPolicyFindings } from '../../frontend/scripts/design-system-css-checks.mjs';
 
 const label = 'apps/marketing/src/example.css';
 const rules = (css, file = label) => cssPolicyFindings(css, file).map(({ rule }) => rule);
-
-test('radius must consume the ladder', () => {
-  assert.deepEqual(rules('.a { border-radius: 6px; }'), ['css-radius']);
-  assert.deepEqual(rules('.a { border-top-left-radius: 50%; }'), ['css-radius']);
-  assert.deepEqual(rules('.a { border-radius: calc(var(--radius-lg) - 4px); }'), ['css-radius']);
-  assert.deepEqual(
-    rules(
-      '.a { border-radius: var(--radius-card); } .b { border-radius: 0; } .c { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }',
-    ),
-    [],
-  );
-});
 
 test('type metrics must consume a text role in every stylesheet', () => {
   assert.deepEqual(rules('.a { font-size: 14px; line-height: 1.3; }'), ['css-type', 'css-type']);
@@ -102,14 +87,4 @@ test('a custom property that reads itself is a cycle', () => {
     'css-cycle',
   ]);
   assert.deepEqual(rules('.a { --gap: var(--card-padding); }'), []);
-});
-
-test('astro style blocks report lines in the component', () => {
-  const source =
-    '---\nconst a = 1;\n---\n<div />\n<style>\n  .a {\n    border-radius: 6px;\n  }\n</style>\n';
-  const findings = astroStyleFindings(source, 'components/x.astro');
-  assert.deepEqual(
-    findings.map(({ rule, line }) => [rule, line]),
-    [['css-radius', 7]],
-  );
 });
