@@ -161,15 +161,13 @@ for (const path of files(root)) {
   );
   const ownsWebsiteEditorialCopy =
     !label.includes('.test.') &&
-    ((label.startsWith('components/marketing/') &&
-      !label.startsWith('components/marketing/scenes/')) ||
-      label.startsWith('components/auth/') ||
-      label.startsWith('components/onboarding/'));
+    label.startsWith('components/marketing/') &&
+    !label.startsWith('components/marketing/scenes/');
+  // Sign-in and onboarding are product UI: they compose the system's
+  // AuthShell, AuthCard and OnboardingStep (components/ui).
   const ownsProductUi =
     !label.includes('.test.') &&
     !label.startsWith('components/marketing/') &&
-    !label.startsWith('components/auth/') &&
-    !label.startsWith('components/onboarding/') &&
     !label.startsWith('lib/marketing-content/') &&
     (label.startsWith('apps/app/src/') ||
       label.startsWith('components/') ||

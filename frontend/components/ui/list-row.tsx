@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, ChevronRight } from 'lucide-react';
+import { Check } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 
 import { Icon } from '@/components/ui/icon';
@@ -36,26 +36,6 @@ export function listRowClasses({ selected = false }: Readonly<{ selected?: boole
 
 /** A padded row's own geometry: 12 across, 8 down, its parts 12 apart. */
 const paddedRowClasses = 'focus-ring flex w-full items-center gap-3 px-3 py-2 text-start';
-
-/**
- * NavRow — a row that takes you somewhere (a workspace to enter): the
- * caller's text column, an optional trailing mark (a status badge) and the
- * chevron that says the row navigates. It owns the padded row's geometry and
- * the neutral row tints, like `OptionRow`.
- */
-export function NavRow({
-  children,
-  trailing,
-  onSelect,
-}: Readonly<{ children: ReactNode; trailing?: ReactNode; onSelect: () => void }>) {
-  return (
-    <Pressable type="button" onClick={onSelect} className={cn(listRowClasses(), paddedRowClasses)}>
-      <span className="grid min-w-0 flex-1">{children}</span>
-      {trailing}
-      <Icon icon={ChevronRight} />
-    </Pressable>
-  );
-}
 
 /**
  * One choice in a list where pressing the row IS the commit (a property to

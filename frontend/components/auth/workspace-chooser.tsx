@@ -5,15 +5,13 @@ import { Plus } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { FlowShell } from '@/components/auth/flow-shell';
-import { FlowAccountControls } from '@/components/layout/flow-account-controls';
+import { UserMenuTrigger } from '@/components/layout/user-menu';
 import { roleLabel } from '@/components/settings/member-roles';
+import { AuthCard, AuthRow, AuthRowList, AuthRowTile, AuthShell } from '@/components/ui/auth-shell';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { BrandMark } from '@/components/ui/brand-mark';
+import { Callout } from '@/components/ui/callout';
 import { DisplayTime } from '@/components/ui/display-time';
-import { Icon } from '@/components/ui/icon';
-import { Stack } from '@/components/ui/layout';
-import { NavRow } from '@/components/ui/list-row';
 import { QueryState } from '@/components/ui/query-state';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { Workspace } from '@/lib/api/types';
@@ -46,7 +44,7 @@ export function WorkspaceChooser() {
   if (status === 'error')
     return (
       <ChooserFrame>
-        <p className="flow-help">Your workspaces could not be loaded. Reload to try again.</p>
+        <Callout tone="negative">Your workspaces could not be loaded. Reload to try again.</Callout>
       </ChooserFrame>
     );
   if (workspaces.length === 0 || only)
@@ -58,44 +56,36 @@ export function WorkspaceChooser() {
   };
   return (
     <ChooserFrame>
-      <Stack as="ul" gap="tight" aria-label="Your workspaces">
+      <AuthRowList label="Your workspaces">
         {workspaces.map((workspace) => (
-          <li key={workspace.id}>
-            <NavRow
-              onSelect={() => enter(workspace)}
-              trailing={<AccessBadge workspaceId={workspace.id} />}
-            >
-              <span className="type-body-strong text-ink truncate">{workspace.name}</span>
-              <span className="type-caption">
-                {workspace.role === 'owner' ? 'Your workspace' : roleLabel(workspace.role)}
-              </span>
-            </NavRow>
-          </li>
+          <AuthRow
+            key={workspace.id}
+            lead={<BrandMark name={workspace.name} placement="header" />}
+            name={workspace.name}
+            meta={workspace.role === 'owner' ? 'Your workspace' : roleLabel(workspace.role)}
+            trailing={<AccessBadge workspaceId={workspace.id} />}
+            action={{ onSelect: () => enter(workspace) }}
+          />
         ))}
-      </Stack>
-      {ownsOne ? null : (
-        <Button asChild variant="secondary" className="w-fit">
-          <Link to={WORKSPACE_SETUP_PATH}>
-            <Icon icon={Plus} />
-            Set up your own workspace
-          </Link>
-        </Button>
-      )}
+        {ownsOne ? null : (
+          <AuthRow
+            lead={<AuthRowTile icon={Plus} />}
+            name="Set up your own workspace"
+            action={{ link: <Link to={WORKSPACE_SETUP_PATH} /> }}
+          />
+        )}
+      </AuthRowList>
     </ChooserFrame>
   );
 }
 
-function ChooserFrame({ children }: Readonly<{ children: ReactNode }>) {
+function ChooserFrame({ children }: Readonly<{ children?: ReactNode }>) {
   return (
-    <FlowShell mainLabel="Choose a workspace" align="center" trailing={<FlowAccountControls />}>
-      <Stack gap="workspace">
-        <div className="flow-header">
-          <h1 className="flow-title">Choose a workspace</h1>
-          <p className="flow-help">You can switch between workspaces at any time.</p>
-        </div>
+    <AuthShell mainLabel="Choose a workspace" barEnd={<UserMenuTrigger presenter="compact" />}>
+      <AuthCard title="Choose a workspace" sub="You can switch between workspaces at any time.">
         {children}
-      </Stack>
-    </FlowShell>
+      </AuthCard>
+    </AuthShell>
   );
 }
 

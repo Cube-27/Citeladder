@@ -47,10 +47,9 @@ const WIDE_KEYWORDS = new Set(['inherit', 'initial', 'unset', 'revert', 'revert-
  * The website ladder owners: these roles define the public type scale, so
  * their literal sizes are the scale itself, not a deviation from it.
  */
-const TYPE_ROLE_PART = /^\.(?:website-[\w-]+|flow-(?:title|group-title|help|meta))$/;
-// The public attribute sits on <html>, so only the flow surface may own a
-// base size: a font-size on the public root rebases every rem on the site.
-const FLOW_SCALE_SELECTOR = ':where([data-flow-surface])';
+// The public attribute sits on <html>, so no surface selector owns a base
+// size: a font-size on the public root rebases every rem on the site.
+const TYPE_ROLE_PART = /^\.website-[\w-]+$/;
 
 const RULE_MESSAGES = {
   'css-radius': 'radius must be var(--radius-*) or 0',
@@ -196,7 +195,6 @@ function outlineAllowed(property, value) {
 /** True when every selector of the rule is a website ladder owner. */
 function ownsTypeLadder(rule, label) {
   if (label !== WEBSITE_CSS || !rule?.selector) return false;
-  if (rule.selector.replace(/\s+/g, ' ').trim() === FLOW_SCALE_SELECTOR) return true;
   const unwrapped = rule.selector.replace(/^:where\(([\s\S]*)\)$/, '$1');
   return unwrapped
     .split(',')
