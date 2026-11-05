@@ -44,7 +44,7 @@ export function CommercialEntryPage({
           </>
         }
       >
-        <ProductFrame label="AI Visibility">
+        <ProductFrame label="AI Visibility" fit="scale">
           <ScreenVisibility />
         </ProductFrame>
       </PageHero>

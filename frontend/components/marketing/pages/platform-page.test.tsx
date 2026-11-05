@@ -22,7 +22,7 @@ it.each([
   }
 });
 
-it('renders the hero screen with its key numbers and the steps, questions and FAQ a page declares', () => {
+it('renders the hero screen alone and the highlights, steps, questions and FAQ a page declares', () => {
   render(
     <PlatformPageContent
       page={{
@@ -54,9 +54,12 @@ it('renders the hero screen with its key numbers and the steps, questions and FA
     />,
   );
   expect(
-    screen.getByRole('img', { name: 'Site Health for acme.com: score 82, 7 failed checks' }),
-  ).toHaveTextContent('7 failed checks on acme.com');
-  expect(screen.getByText('Pages blocked').parentElement).toHaveTextContent('Pages blocked14');
+    screen.getByRole('img', { name: 'Site Health for acme.com: score 82, 7 failed checks' })
+      .textContent,
+  ).toMatch(/^Site Healthacme\.com · 7 failed checksScore 82/);
+  // The screen is the hero's one image: no tile beside it restates its numbers.
+  expect(screen.getAllByText('Score 82')).toHaveLength(1);
+  expect(screen.queryByText('Pages blocked')).not.toBeInTheDocument();
   expect(
     screen.getByRole('img', { name: 'AI crawler access to acme.com from robots.txt' }),
   ).toBeInTheDocument();
@@ -80,7 +83,7 @@ it('renders the hero screen with its key numbers and the steps, questions and FA
   ).toHaveAttribute('href', '/platform/search-demand');
 });
 
-it('leads the MCP page with the connect strip and its steps, and closes it with the guide and a demo', () => {
+it('leads the MCP page with the connect strip, then its steps, and closes it with the guide and a demo', () => {
   const page = PLATFORM_PAGES.find((candidate) => candidate.path === '/platform/mcp');
   if (!page) throw new Error('MCP page missing');
   render(<PlatformPageContent page={page} />);
@@ -91,7 +94,9 @@ it('leads the MCP page with the connect strip and its steps, and closes it with 
     'href',
     'https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=CiteLadder&connectorUrl=https%3A%2F%2Fapi.citeladder.com%2Fmcp',
   );
-  expect(within(hero).getByText('2. Sign in and approve')).toBeInTheDocument();
+  // The connection steps follow the hero as the page's highlights, beside no hero tile.
+  const step = screen.getByRole('heading', { level: 2, name: '2. Sign in and approve' });
+  expect(hero).not.toContainElement(step);
   expect(within(hero).queryByRole('link', { name: 'Book a demo' })).not.toBeInTheDocument();
   expect(within(closing).getByRole('link', { name: 'Read the MCP docs' })).toHaveAttribute(
     'href',

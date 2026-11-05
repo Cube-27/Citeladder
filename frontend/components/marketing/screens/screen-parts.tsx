@@ -21,39 +21,11 @@ import { cn } from '@/lib/utils';
 import { ENGINE_KEYS, ENGINE_NAMES, type Change } from './demo-data';
 
 /**
- * The parts every product screen shares. A screen is an app content crop at
- * a fixed natural size built from the app's own components; it is a still,
- * so its controls are drawn, never wired.
+ * The parts the full app screens share (`ScreenAppVisibility`,
+ * `ScreenVisibility`): app views at a fixed natural size built from the
+ * app's own components. A screen is a still, so its controls are drawn,
+ * never wired.
  */
-
-/**
- * A screen's natural width and height, two independent lists (docs/design.md,
- * "Website product images"): screens.css has one `cl-screen--w*` class per
- * width and one `cl-screen--h*` class per height, so a new size adds a value
- * here and a class there.
- */
-type ScreenWidth = 480 | 640 | 800 | 960 | 1200;
-type ScreenHeight = 320 | 360 | 400 | 500 | 600 | 680;
-
-export function ScreenRoot({
-  name,
-  width,
-  height,
-  children,
-}: Readonly<{ name: string; width: ScreenWidth; height: ScreenHeight; children: ReactNode }>) {
-  return (
-    <div
-      className={cn(
-        'cl-screen',
-        `cl-screen--w${width}`,
-        `cl-screen--h${height}`,
-        `cl-screen--${name}`,
-      )}
-    >
-      {children}
-    </div>
-  );
-}
 
 /**
  * The app's Button, drawn: its face on a span, so a screen inside a linked
@@ -75,10 +47,6 @@ export function ScreenButton({
   );
 }
 
-export function ScreenMeta({ children }: Readonly<{ children: ReactNode }>) {
-  return <span className="cl-screen-meta">{children}</span>;
-}
-
 /**
  * The app's tab track, drawn: the first item named in `selected` lifts onto
  * surface, and a count follows its label in brackets (D16).
@@ -95,15 +63,6 @@ export function ScreenTabs({
           {item.count === undefined ? null : <ControlCount count={item.count} />}
         </span>
       ))}
-    </span>
-  );
-}
-
-export function ScreenEngine({ engine }: Readonly<{ engine: EngineKey }>) {
-  return (
-    <span className="cl-screen-engine">
-      <EngineMark engine={engine} placement="inline" />
-      {ENGINE_NAMES[engine]}
     </span>
   );
 }
@@ -139,13 +98,9 @@ function ScreenNote({ children }: Readonly<{ children: ReactNode }>) {
   return <p className="cl-screen-note">{children}</p>;
 }
 
-type ColsLayout = 'halves' | 'main-aside' | 'aside-main' | 'main-side';
-
-export function ScreenCols({
-  layout,
-  children,
-}: Readonly<{ layout: ColsLayout; children: ReactNode }>) {
-  return <div className={cn('cl-screen-cols', `cl-screen-cols--${layout}`)}>{children}</div>;
+/** A main column beside a narrower aside, the one column template the app screens use. */
+export function ScreenCols({ children }: Readonly<{ children: ReactNode }>) {
+  return <div className="cl-screen-cols">{children}</div>;
 }
 
 export function ScreenStack({ children }: Readonly<{ children: ReactNode }>) {
@@ -300,17 +255,5 @@ export function ScreenTableCard({
       </CardHeader>
       {children}
     </Card>
-  );
-}
-
-/** A code sample as the app draws it: a file bar over the code. */
-export function ScreenCode({ filename, code }: Readonly<{ filename: string; code: string }>) {
-  return (
-    <figure className="cl-screen-code">
-      <figcaption className="cl-screen-code-bar">{filename}</figcaption>
-      <pre className="cl-screen-code-pre">
-        <code>{code}</code>
-      </pre>
-    </figure>
   );
 }

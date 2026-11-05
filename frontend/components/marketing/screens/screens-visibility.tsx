@@ -3,6 +3,7 @@ import { BrandMark } from '@/components/ui/brand-mark';
 import { Card } from '@/components/ui/card';
 import { ChartCard, chartPercent } from '@/components/ui/chart';
 import { Citation } from '@/components/ui/citation';
+import { EngineMark } from '@/components/ui/engine-mark';
 import { Meter } from '@/components/ui/meter';
 import { Rungs } from '@/components/ui/rungs';
 import { Sparkline } from '@/components/ui/sparkline';
@@ -25,10 +26,7 @@ import {
   ScreenCard,
   ScreenCols,
   ScreenDelta,
-  ScreenEngine,
   ScreenEngineMarks,
-  ScreenMeta,
-  ScreenRoot,
   ScreenSite,
   ScreenStack,
   ScreenStat,
@@ -37,6 +35,7 @@ import {
   ScreenTabs,
   type ScreenColumn,
 } from './screen-parts';
+import { Vignette, VignetteBar, VignetteRows, fourRows } from './screen-vignette';
 
 function Cite({ index }: Readonly<{ index: number }>) {
   const source = ANSWER_SOURCES.find((entry) => entry.index === index);
@@ -46,35 +45,33 @@ function Cite({ index }: Readonly<{ index: number }>) {
 /** One engine's answer to one prompt: the brand passage highlighted, each claim with its source. */
 export function ScreenAnswer() {
   return (
-    <ScreenRoot name="answer" width={640} height={400}>
-      <ScreenCard
-        eyebrow={`ChatGPT · ${CHECKED}`}
-        title="Best product analytics for startups"
-        action={<Badge tone="accent">Named 1st of 3</Badge>}
-      >
-        <div className="cl-screen-answer">
-          <p>
-            <strong>Acme Analytics</strong> is{' '}
-            <mark className="cl-mark">the easiest place to start</mark>, with a free tier and
-            session replay in one plan. <Cite index={1} />
-          </p>
-          <p>
-            <strong>Northwind</strong> suits teams that already run a data warehouse.{' '}
-            <Cite index={4} />
-          </p>
-          <p>
-            <strong>Lumen</strong> is built for mobile apps. <Cite index={3} />
-          </p>
-          <p>
-            Reviewers rate Acme highest for setup time. <Cite index={2} />
-          </p>
-        </div>
-        <div className="cl-screen-answer-foot">
+    <Vignette
+      title="Best product analytics for startups"
+      meta={`ChatGPT · ${CHECKED}`}
+      badge={<Badge tone="accent">Named 1st of 3</Badge>}
+    >
+      <div className="cl-vig-panel">
+        <p>
+          <strong>Acme Analytics</strong> is{' '}
+          <mark className="cl-mark">the easiest place to start</mark>, with a free tier and session
+          replay in one plan. <Cite index={1} />
+        </p>
+        <p>
+          <strong>Northwind</strong> suits teams that already run a data warehouse.{' '}
+          <Cite index={4} />
+        </p>
+        <p>
+          <strong>Lumen</strong> is built for mobile apps. <Cite index={3} />
+        </p>
+        <p>
+          Reviewers rate Acme highest for setup time. <Cite index={2} />
+        </p>
+        <div className="cl-vig-foot">
           <Rungs level={3} showLabel />
-          <ScreenMeta>4 sources</ScreenMeta>
+          <span className="cl-vig-muted">4 sources</span>
         </div>
-      </ScreenCard>
-    </ScreenRoot>
+      </div>
+    </Vignette>
   );
 }
 
@@ -91,31 +88,13 @@ const BRAND_COLUMNS: readonly ScreenColumn<(typeof BRANDS)[number]>[] = [
   },
 ];
 
-const PROMPT_COLUMNS: readonly ScreenColumn<(typeof PROMPTS)[number]>[] = [
-  { header: 'Prompt', cell: (row) => <span className="cl-screen-strong">{row.prompt}</span> },
-  { header: 'Named by', width: 'md', cell: (row) => <ScreenEngineMarks on={row.engines} /> },
-  { header: 'Visibility', width: 'xs', numeric: true, cell: (row) => `${row.visibility}%` },
-  {
-    header: 'Change',
-    width: 'sm',
-    numeric: true,
-    cell: (row) => <ScreenDelta change={{ value: row.change, unit: ' pts', precision: 0 }} />,
-  },
-];
-
-/** The prompts the card image lists: short buyer questions with a spread of results. */
-const PROMPT_ROWS = [0, 1, 3, 5, 8].flatMap((index) => PROMPTS[index] ?? []);
-
-const RETRIEVAL_COLUMNS: readonly ScreenColumn<(typeof PAGE_RETRIEVALS)[number]>[] = [
-  { header: 'Model', cell: (row) => <ScreenEngine engine={row.engine} /> },
-  { header: 'Retrievals', width: 'sm', numeric: true, cell: (row) => row.retrievals },
-  { header: 'Citations', width: 'sm', numeric: true, cell: (row) => row.citations },
-];
-
-/** The AI Visibility overview: the KPI row, the trend against competitors and the brand ranking. */
+/**
+ * The AI Visibility overview, a full app layout at 1200 × 680 scaled to fit
+ * its frame: the KPI row, the trend against competitors and the brand ranking.
+ */
 export function ScreenVisibility() {
   return (
-    <ScreenRoot name="visibility" width={1200} height={680}>
+    <div className="cl-screen cl-screen--visibility">
       <Card>
         <div className="cl-screen-kpis">
           {KPIS.map((kpi) => (
@@ -126,7 +105,7 @@ export function ScreenVisibility() {
           ))}
         </div>
       </Card>
-      <ScreenCols layout="main-aside">
+      <ScreenCols>
         <ChartCard
           title="Visibility over time"
           controls={
@@ -177,96 +156,92 @@ export function ScreenVisibility() {
           </ScreenCard>
         </ScreenStack>
       </ScreenCols>
-    </ScreenRoot>
+    </div>
   );
 }
 
 /** Every citation this week, across every domain. */
 const CITATIONS = CITED_DOMAINS.reduce((total, domain) => total + domain.value, 0);
-/** The four most-cited domains: the card is one focused list, not every domain. */
-const TOP_DOMAINS = CITED_DOMAINS.filter((domain) => domain.other !== true).slice(0, 4);
+/** The bars scale to the most-cited domain. */
+const TOP_CITED = Math.max(1, ...CITED_DOMAINS.map((domain) => domain.value));
 
 /**
- * Cited sources, as a card vignette: the four domains answers cite most,
- * each with its mark, its share of every citation and its citation count,
- * your own site named. Large type, so it still reads scaled down in a tile.
+ * Cited sources: the four domains answers cite most, each with its share of
+ * every citation and its citation count, your own site named.
  */
 export function ScreenSources() {
   return (
-    <ScreenRoot name="sources" width={480} height={400}>
-      <Card className="cl-vignette">
-        <div className="cl-vignette-head">
-          <p className="cl-vignette-title">Cited domains</p>
-          <p className="cl-vignette-sub">{`${CITATIONS.toLocaleString('en-US')} citations this week`}</p>
-        </div>
-        <ol className="cl-vignette-list" aria-label="Citations by domain this week">
-          {TOP_DOMAINS.map((domain) => (
-            <li key={domain.label} className="cl-vignette-line">
-              <span className="cl-vignette-item">
-                <BrandMark name={domain.label} placement="header" />
-                <span className="cl-vignette-head">
-                  <span>{domain.label}</span>
-                  <span className="cl-vignette-sub">
-                    {`${domain.own ? 'Your site · ' : ''}${chartPercent(domain.value, CITATIONS)} of citations`}
-                  </span>
-                </span>
-              </span>
-              <span className="cl-vignette-figure">{domain.value}</span>
-            </li>
-          ))}
-        </ol>
-      </Card>
-    </ScreenRoot>
+    <Vignette
+      title="Cited domains"
+      meta={`${CITATIONS.toLocaleString('en-US')} citations this week`}
+      badge={<Badge tone="accent">Owned 20.3%</Badge>}
+    >
+      <VignetteRows
+        label="Citations by domain this week"
+        ordered
+        rows={fourRows(
+          CITED_DOMAINS.filter((domain) => domain.other !== true),
+          (domain) => ({
+            key: domain.label,
+            lead: <BrandMark name={domain.label} />,
+            label: domain.label,
+            secondary: `${domain.own ? 'Your site · ' : ''}${chartPercent(domain.value, CITATIONS)} of citations`,
+            extra: <VignetteBar share={domain.value / TOP_CITED} />,
+            value: domain.value,
+          }),
+        )}
+      />
+    </Vignette>
   );
 }
 
-/** The tracked prompts: which engines name the brand for each, its visibility and change. */
+/** The prompts the card lists: short buyer questions with a spread of results. */
+const PROMPT_ROWS = [0, 1, 3, 5].flatMap((index) => PROMPTS[index] ?? []);
+
+/** The tracked prompts: which engines name the brand for each, and its visibility. */
 export function ScreenPrompts() {
   return (
-    <ScreenRoot name="prompts" width={640} height={400}>
-      <ScreenTableCard title="Prompts" meta="120 tracked · 412 answers this week">
-        <ScreenTable
-          caption="Tracked prompts"
-          rows={PROMPT_ROWS}
-          rowKey={(row) => row.prompt}
-          columns={PROMPT_COLUMNS}
-        />
-      </ScreenTableCard>
-    </ScreenRoot>
+    <Vignette
+      title="Prompts"
+      meta="120 tracked · 412 answers this week"
+      badge={<Badge>4 engines</Badge>}
+    >
+      <VignetteRows
+        label="Tracked prompts"
+        rows={fourRows(PROMPT_ROWS, (row) => ({
+          key: row.prompt,
+          label: row.prompt,
+          secondary: row.topic,
+          extra: <ScreenEngineMarks on={row.engines} />,
+          value: `${row.visibility}%`,
+        }))}
+      />
+    </Vignette>
   );
 }
 
-/** One of your cited pages: its citation figures and which engines fetched and cited it. */
+/** The retrieval bars scale to the engine that fetched the page most. */
+const TOP_RETRIEVALS = Math.max(1, ...PAGE_RETRIEVALS.map((row) => row.retrievals));
+
+/** One of your cited pages: which engines fetched it and how often each cited it. */
 export function ScreenCitedUrl() {
   return (
-    <ScreenRoot name="cited-url" width={640} height={400}>
-      <ScreenTableCard
-        title="acme.com/pricing"
-        action={<Badge tone="accent">Your page</Badge>}
-        meta="First cited 14 Sep 2026 · retrieved 128 times this week"
-      >
-        <div className="cl-screen-statrow">
-          <ScreenStat label="Citations" value="74" change={{ value: 9, precision: 0 }} />
-          <ScreenStat
-            label="Citation rate"
-            value="14.8"
-            unit="%"
-            change={{ value: 1.9, unit: ' pts' }}
-          />
-          <ScreenStat
-            label="Prompts using it"
-            value="23"
-            unit=" / 120"
-            change={{ value: 3, precision: 0 }}
-          />
-        </div>
-        <ScreenTable
-          caption="Retrievals and citations of acme.com/pricing by engine"
-          rows={PAGE_RETRIEVALS}
-          rowKey={(row) => row.engine}
-          columns={RETRIEVAL_COLUMNS}
-        />
-      </ScreenTableCard>
-    </ScreenRoot>
+    <Vignette
+      title="acme.com/pricing"
+      meta="74 citations this week · 14.8% citation rate"
+      badge={<Badge tone="accent">Your page</Badge>}
+    >
+      <VignetteRows
+        label="Retrievals and citations of acme.com/pricing by engine"
+        rows={fourRows(PAGE_RETRIEVALS, (row) => ({
+          key: row.engine,
+          lead: <EngineMark engine={row.engine} />,
+          label: ENGINE_NAMES[row.engine],
+          secondary: `${row.retrievals} retrievals`,
+          extra: <VignetteBar share={row.retrievals / TOP_RETRIEVALS} />,
+          value: `${row.citations} cited`,
+        }))}
+      />
+    </Vignette>
   );
 }

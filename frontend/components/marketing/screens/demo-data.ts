@@ -305,15 +305,8 @@ export const WEEKLY_CLICKS = [701, 734, 768, 752, 801, 822, 864, 925];
 
 /* ---------- AI referrals ---------- */
 
-export const REFERRAL_SOURCES: readonly Readonly<{
-  engine: EngineKey;
-  sessions: number;
-  engaged: string;
-}>[] = [
-  { engine: 'chatgpt', sessions: 1124, engaged: '68%' },
-  { engine: 'gemini', sessions: 318, engaged: '61%' },
-  { engine: 'claude', sessions: 287, engaged: '72%' },
-];
+/** Weekly sessions from AI assistants: the last four weeks are the 1,846 of the last 28 days, 41% over the four before. */
+export const WEEKLY_REFERRALS = [300, 320, 335, 354, 410, 440, 480, 516];
 
 /* ---------- Perception ---------- */
 
@@ -366,18 +359,28 @@ export const ACTIONS: readonly Readonly<{
   approach,
 }));
 
-/* ---------- MCP ---------- */
+/* ---------- MCP and integrations ---------- */
 
-export const MCP_RESULT = JSON.stringify(
-  {
-    brand: 'Acme Analytics',
-    visibility: 38.4,
-    visibility_change_pts: 4.2,
-    citations: 212,
-  },
-  null,
-  2,
-);
+/** Read-only tool calls an assistant made this week, each with what it returned. */
+export const MCP_CALLS: readonly Readonly<{ tool: string; result: string; time: string }>[] = [
+  { tool: 'read_visibility_overview', result: 'Visibility 38.4%, up 4.2 pts', time: '0.4s' },
+  { tool: 'read_visibility_sources', result: '212 citations to acme.com', time: '0.3s' },
+  { tool: 'read_ai_crawlability', result: 'GPTBot and Google-Extended restricted', time: '0.3s' },
+  { tool: 'read_actions', result: '7 open actions, 2 High', time: '0.2s' },
+];
+
+/** The data sources CiteLadder reads for acme.com. */
+export const INTEGRATIONS: readonly Readonly<{
+  name: string;
+  detail: string;
+  google?: boolean;
+  connected: boolean;
+}>[] = [
+  { name: 'Google Search Console', detail: 'sc-domain:acme.com', google: true, connected: true },
+  { name: 'Google Analytics 4', detail: 'Acme Analytics – web', google: true, connected: true },
+  { name: 'Cloudflare Logpush', detail: 'AI crawler requests', connected: true },
+  { name: 'Bing Webmaster Tools', detail: 'Bing clicks and impressions', connected: false },
+];
 
 /* ---------- Commerce ---------- */
 
