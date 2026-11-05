@@ -16,7 +16,8 @@ import { lineIndex, parseSource, stringFragments } from './source-ast.mjs';
  *   and radius-full only for avatars, status dots, switch tracks and pills;
  * - D11: the app is compact (its density block holds the owner's values, the
  *   page title is 24/32) and its sidebar carries no logo;
- * - D15: a metric's number (`stat`) is 28px.
+ * - D15: a metric's number (`stat`) is 28px;
+ * - D28: on the website Cal Sans is the H1 and one heading per section.
  *
  * D12 (the sticky top bar) is held by the geometry census, D14 by the
  * ranked list's type (it has no figure slot).
@@ -127,6 +128,45 @@ function displayScopeCssFindings(css, label) {
       findings.push(`${label}:${decl.source?.start?.line ?? 0}: ${DISPLAY_MESSAGE}`);
   });
   return findings;
+}
+
+// ── D28: on the website Cal Sans is the H1 and one heading per section ──────
+
+/**
+ * The website's styles and the long-form components it shares with the docs.
+ * The product screens are pictures of the app and follow its rules instead.
+ */
+const isWebsiteType = (label) =>
+  /^(?:apps\/marketing\/src\/|components\/marketing\/|components\/content\/)/.test(label) &&
+  !/^(?:apps\/marketing\/src\/screens\.css$|components\/marketing\/screens\/)/.test(label);
+
+/** The headings that may set Cal Sans: hero, article, section, CTA, index group, prose h2. */
+const WEBSITE_HEADING =
+  /^\.cl-(?:lhero|phero|ahead|shead|cta|sources|cpage-index)-title$|^\.cl-prose h2:not\(\[class\]\)$/;
+/** A feature split that is its section's only heading. */
+const LONE_SPLIT_TITLE =
+  '.cl-page-section:not(:has(.cl-shead-title, .cl-split ~ .cl-split)) .cl-split-title';
+const WEBSITE_DISPLAY_MESSAGE =
+  'on the website Cal Sans is the H1 and one section heading (decision D28); set this in Geist';
+
+function websiteDisplayCssFindings(css, label) {
+  if (!isWebsiteType(label)) return [];
+  const findings = [];
+  postcss.parse(css).walkDecls('font-family', (decl) => {
+    if (!/var\(--font-display\)/.test(decl.value)) return;
+    const selectors = decl.parent?.selectors ?? [''];
+    const allowed = selectors.every(
+      (selector) => WEBSITE_HEADING.test(selector) || selector === LONE_SPLIT_TITLE,
+    );
+    if (!allowed)
+      findings.push(`${label}:${decl.source?.start?.line ?? 0}: ${WEBSITE_DISPLAY_MESSAGE}`);
+  });
+  return findings;
+}
+
+function websiteDisplayClassFindings(source, label) {
+  if (!isWebsiteType(label) || !isScript(label)) return [];
+  return classFindings(source, label, DISPLAY_CLASS, WEBSITE_DISPLAY_MESSAGE);
 }
 
 // ── D9: a row of figures is one row ─────────────────────────────────────────
@@ -263,6 +303,7 @@ export function reviewStylesheetFindings(css, label) {
     ...weightCssFindings(css, label),
     ...radiusCssFindings(css, label),
     ...densityCssFindings(css, label),
+    ...websiteDisplayCssFindings(css, label),
   ];
   if (!inScope(label)) return systemWide;
   return [...edgeCssFindings(css, label), ...displayScopeCssFindings(css, label), ...systemWide];
@@ -274,6 +315,7 @@ export function reviewScriptFindings(source, label) {
     ...weightClassFindings(source, label),
     ...edgeClassFindings(source, label),
     ...displayScopeClassFindings(source, label),
+    ...websiteDisplayClassFindings(source, label),
     ...metricRowClassFindings(source, label),
     ...fullRadiusClassFindings(source, label),
     ...sidebarLogoFindings(source, label),

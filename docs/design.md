@@ -26,8 +26,8 @@ Monochrome with one accent. Ink (`#111111`, `#f4f4f4` in dark) carries every
 primary action, heading and figure; Flare (`#e8501a`, `#ff6a33` in dark) is a
 mark only: the logo's bars, the own-brand chart series, a 2px rung, a dot, a
 link's ink as `accent-ink`. Cal Sans sets display type at its one weight, 400,
-and never under 18px, on the website and docs; in the app it sets only the
-page title. Geist sets everything else, never above 500; Geist Mono sets data
+and never under 18px: on the website only the H1 and one heading per section
+(D28), in the docs its headings, and in the app only the page title. Geist sets everything else, never above 500; Geist Mono sets data
 and code. Fields, composers and cards wear a soft edge, never a dark hairline.
 Light and dark on every surface, defaulting to the system preference.
 
@@ -41,7 +41,7 @@ Light and dark on every surface, defaulting to the system preference.
 | D4 | PDFs keep Inter as their text face; only their colours follow the system. |
 | D5 | Borders are soft grey, never a dark hairline. Fields (Input, SearchField, Select, Textarea, ChipInput, the Agent composer, the docs search trigger) and checkbox and radio boxes wear a 1px `line` edge with the faint `shadow-edge` smudge under it (`FIELD_EDGE` in `components/ui/input.tsx`); hover steps the edge to `line-strong`, focus turns it `focus` with a 3px `line` halo, and an invalid field turns it `negative`. Reserved slots (the dashed create tile, Turnstile) take a dashed `line-strong` edge, and linked website cards step to `line-strong` on hover. `line-control` survives only for marks that are not borders: the switch's off track, the ink link underline, the pending step ring, chart rules, crosshairs and event markers, the neutral data swatch and a not-cited engine mark. |
 | D6 | Geist is never set above 500 on any surface, the website included: the `heading` token, the title, item-title, figure and heading roles, Markdown `strong`, the docs' and the website's own styles are all 500, and the Geist and Geist Mono faces load only 400–500 (`lib/config/brand-fonts.json`). |
-| D7 | In the app Cal Sans is the PageHeader title's (`type-page-title`) alone. Stat and score figures are `stat` (Geist 500 28/36 since D15), ScoreRing and donut centres Geist 500 32/38 (`type-figure-ring`), dialog and drawer titles `heading-lg` (Geist 500 22/28), and card titles and the sign-in shell's title Geist 500. The website and docs keep their display use. |
+| D7 | In the app Cal Sans is the PageHeader title's (`type-page-title`) alone. Stat and score figures are `stat` (Geist 500 28/36 since D15), ScoreRing and donut centres Geist 500 32/38 (`type-figure-ring`), dialog and drawer titles `heading-lg` (Geist 500 22/28), and card titles and the sign-in shell's title Geist 500. The docs keep their display use; the website's is D28. |
 | D8 | A score card shows its number in `stat` with a bare 48px `ScoreRing` (auto tone, no centre number) centred on its right; the 96px ring with its number is for a page's headline score. A table cell shows the number only. `ScoreBar` (the segmented score bar) is deleted from `components/ui` with its tests and exports, and `check:policy` rejects its name. |
 | D9 | Metric cards sit in one row from the `desktop:` breakpoint: `AppGrid` quarters are 4 across at 982px, fifths 5, a pair 2; never 2 × 2 and never 2 + 1. |
 | D10 | Corners are only slightly rounded on every surface: `radius-2xs` and `radius-xs` 2, `radius-sm` 4, `radius-md` 6, `radius-lg` and `radius-xl` 8. `radius-full` is for avatars, status dots, switch tracks and count pills only; a chip, citation pill, meter or progress track is a small radius. No corner anywhere is rounder than 8px. |
@@ -54,6 +54,7 @@ Light and dark on every surface, defaulting to the system preference.
 | D17 | A card that is itself a control (the Agent's workflow cards) keeps the plain card's one fill; hover underlines its title instead of tinting it. Card titles in a grid of cards (workflows, skills) are `heading` (16/24, 500), under a `sectionTitle` section heading. |
 | D26 | Website type: the marketing H1 (`--text-site-title`, every hero and article title) is 48/52 from 768px up, the owner's 982px desktop included, and 32/38 on phones, replacing D23's 42. Running text, blog and article prose included, is `body` 16/26; a lead or subheading under a heading is `body-lg` 18/30, never the 20px `lead`. Cal Sans is never tracked on the website or docs: display headings set no `letter-spacing`; Geist Mono eyebrows keep theirs. The app's tokens are unchanged. |
 | D27 | No inverted cards or bands on the website: every tile, PageHighlight included, is the flat card (surface fill, 1px `line` edge, ink text) in both themes; only ink-filled buttons stay ink. Nav popups for multi-column menus (Platform, Resources) start at the navbar's left edge; one-column Solutions still hangs from the trigger row (owner, 5 November 2026; supersedes D22's anchor for those two). |
+| D28 | Cal Sans is for headings only on the website: the H1 and one section heading per section; card titles, figures and every other text are Geist (owner, 5 November 2026). Card, step, form and tool titles and article h3 are `heading-lg` (Geist 500 22/28); FAQ questions, plan names and the author's name keep `title-sm`'s size in Geist 500; stacked split titles, large tiles and the PageHighlight title keep `display-md`'s size in Geist 500; figures and prices are Geist 500; article quotes are Geist. A feature split that is its section's only heading keeps Cal Sans. `check:policy` rejects `--font-display` in a website stylesheet outside the heading selectors. |
 
 D5–D17 come from the owner's reviews of the shipped app and docs on 5 November
 2026; `frontend/scripts/design-system-review-checks.mjs` keeps them in
@@ -91,7 +92,8 @@ type rule of the same day.
   display, sans and mono roles.
 - **Cal Sans** is weight 400 only and never under 18px, in class strings and in
   every stylesheet; in the app no class or role but `type-page-title` sets it
-  (D7).
+  (D7), and on the website only the hero, article, section, CTA, index-group
+  and lone-split headings and the prose h2 set it (D28).
 - **Geist is never above 500** on any surface: no `font-semibold` or
   `font-bold`, no 600 or 700 (D6).
 - **Soft edges.** `line-control` appears only in the non-border mark owners

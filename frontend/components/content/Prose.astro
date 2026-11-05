@@ -5,14 +5,15 @@
  * blocks) in `ink-secondary`, `container-prose` wide.
  *
  * - `article` (guides, blog, legal, AI reference): `body` (16/26, D26), 24px
- *   between blocks; h2 `display-md` 64px above, h3 `title` 40px above, h4
- *   `body-lg` medium (500); 12px after a heading.
+ *   between blocks; h2 `display-md` 64px above, h3 `heading-lg` 40px above,
+ *   h4 `body-lg` medium (500); 12px after a heading.
  * - `docs`: the denser reference rhythm, `body` (16/26), 20px between
  *   blocks; h2 `title` 48px above, h3 `title-sm` 32px above, h4 `heading`.
  *
- * Both: links `accent-ink` with a 1px underline; inline code mono on
- * `surface-sunken`; tables in a scroll frame with mono header rows; quotes
- * in Cal Sans with a mono attribution and no rule; `hr` a `line` hairline;
+ * Both: only the h2 is Cal Sans (D28); h3 and h4 are Geist 500. Links
+ * `accent-ink` with a 1px underline; inline code mono on `surface-sunken`;
+ * tables in a scroll frame with mono header rows; quotes in Geist at `title`
+ * with a mono attribution and no rule; `hr` a `line` hairline;
  * InlineCitation markers (`sup.cl-icite`). Fenced code is a CodeBlock, which
  * this component renders once per page.
  */
@@ -54,19 +55,20 @@ const { variant = 'article', as: Tag = 'div', label } = Astro.props;
     text-wrap: balance;
     scroll-margin-top: calc(var(--nav-height) + 32px);
   }
-  .cl-prose :is(h2, h3):not([class]) {
-    font-family: var(--font-display);
-    font-weight: 400;
-  }
+  /* D28: the h2 is the section's one Cal Sans heading; h3 and h4 are Geist 500. */
   .cl-prose h2:not([class]) {
     margin-top: 64px;
+    font-family: var(--font-display);
     font-size: var(--text-display-md);
+    font-weight: 400;
     line-height: var(--text-display-md--line-height);
   }
   .cl-prose h3:not([class]) {
     margin-top: 40px;
-    font-size: var(--text-title);
-    line-height: var(--text-title--line-height);
+    font-size: var(--text-heading-lg);
+    font-weight: 500;
+    line-height: var(--text-heading-lg--line-height);
+    letter-spacing: var(--text-heading-lg--letter-spacing);
   }
   .cl-prose h4:not([class]) {
     margin-top: 32px;
@@ -135,7 +137,6 @@ const { variant = 'article', as: Tag = 'div', label } = Astro.props;
   .cl-prose blockquote:not([class]) p {
     margin: 0;
     color: var(--color-ink);
-    font-family: var(--font-display);
     font-size: var(--text-title);
     line-height: var(--text-title--line-height);
     font-weight: 400;
