@@ -69,7 +69,7 @@ D5–D17 come from the owner's reviews of the shipped app and docs on 5 November
 | `frontend/components/ui/logo-mark.tsx`, `packages/contracts/src/brand-logo.ts` | The logo, drawn inline in ink (`currentColor`) and the accent |
 | `frontend/components/ui/`, `frontend/components/layout/` | The app's components and shell, composed by feature folders that set no geometry of their own |
 | `frontend/apps/marketing/src/site.css`, `frontend/components/marketing/chrome/`, `frontend/components/marketing/sections/` | The website's components: SiteNav, SiteFooter, CookieBanner, Breadcrumbs, AnnouncementPill and the page sections, the system's `cl-*` geometry on the tokens above, and the website's type roles (the `cl-*` titles, lead, body and note) |
-| `frontend/apps/marketing/src/screens.css`, `frontend/components/marketing/screens/` | The website's product images: ProductFrame and the `Screen*` components, app crops at a fixed 960 × 600 or 1200 × 680 composed from `components/ui`, with their demo data in one typed module; the home page's first view (`ScreenAppVisibility`, D25) is the whole app at 1440 × 820, its chrome drawn at the app's density |
+| `frontend/apps/marketing/src/screens.css`, `frontend/components/marketing/screens/` | The website's product images: ProductFrame and the `Screen*` components, app views at a fixed natural 960 × 600 or 1200 × 680 composed from `components/ui` and scaled whole to fit their frame (never cropped), with their demo data in one typed module; the home page's first view (`ScreenAppVisibility`, D25) is the whole app at 1440 × 820, its chrome drawn at the app's density |
 | `frontend/services/api/src/billing/pdf-brand.ts` | The PDF palette, read from `globals.css` |
 
 ## Token contract
@@ -318,3 +318,13 @@ before/after provenance; observed zero says "No changes were observed".
 and stopped-at-limit are distinct states with Stop while active. Actions list by
 deterministic priority (High, Medium, Low); neither chats nor Actions count
 evidence sources. Context is one `ListScreen` whose subjects are its tabs.
+
+**Website product images.** A `Screen*` is laid out once at its natural size
+and `ProductFrame` shows all of it: the frame's well takes the screen's ratio
+with even padding and scales the screen down to the well's width (CSS
+container query units, no script, no layout shift), never up and never
+cropped, so no text is cut at any viewport. The frame and the FeatureCard
+around it are flat: a 1px soft border, radius at most 8px, no shadow; in a
+FeatureCard the well sits straight in the card above an optional step number,
+the title, body and link. A screen whose text would be too small once scaled
+is redesigned smaller, never cropped.

@@ -107,7 +107,7 @@ const BRAND_COLUMNS: readonly ScreenColumn<(typeof BRANDS)[number]>[] = [
   { header: 'Visibility', width: 'sm', numeric: true, cell: (brand) => percent(brand.visibility) },
   {
     header: 'Change',
-    width: 'md',
+    width: 'sm',
     numeric: true,
     cell: (brand) => <ScreenDelta change={brand.change} />,
   },

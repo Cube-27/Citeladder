@@ -34,7 +34,7 @@ export function FeaturedPost({ post }: Readonly<{ post: BlogPost }>) {
       body={post.excerpt}
       media={
         shot ? (
-          <ProductFrame aspect="hero" inset={48} label={shot.label}>
+          <ProductFrame label={shot.label}>
             <shot.screen />
           </ProductFrame>
         ) : undefined

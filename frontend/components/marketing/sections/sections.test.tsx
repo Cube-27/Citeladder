@@ -115,6 +115,12 @@ describe('feature sections', () => {
     ).toHaveAttribute('href', '/platform/site-health');
   });
 
+  it('shows a step number on a numbered card without reading it into the link name', () => {
+    render(<FeatureCard href="/platform/agents" step={4} title="Drafts" body="Briefs" />);
+    const card = screen.getByRole('link', { name: 'Drafts Briefs Learn more' });
+    expect(card.textContent).toBe('04DraftsBriefsLearn more');
+  });
+
   it('renders an unlinked feature card as an article with no link', () => {
     render(<FeatureCard title="Evidence" />);
     expect(screen.getByRole('article')).toHaveTextContent('Evidence');

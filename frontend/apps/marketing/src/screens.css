@@ -1,9 +1,11 @@
 /*
  * Product images: ProductFrame and the Screen* components
- * (components/marketing/screens). A screen is an app content crop at a fixed
- * natural size built from the app's own components; the frame crops it and
- * never scales it. Viewport breakpoints never reflow a screen, so every grid
- * a screen composes is pinned here. Type comes from the `--text-*` roles.
+ * (components/marketing/screens). A screen is an app view at a fixed natural
+ * size (`--screen-w` by `--screen-h`) built from the app's own components.
+ * The frame scales the whole screen down to its well's width; it never crops
+ * a screen or scales one up, and the well takes the screen's own ratio.
+ * Viewport breakpoints never reflow a screen, so every grid a screen composes
+ * is pinned here. Type comes from the `--text-*` roles.
  */
 
 /* ---------- ProductFrame ---------- */
@@ -14,58 +16,56 @@
   margin: 0;
 }
 
+/* Flat (public site): a 1px soft border, no shadow. */
 .cl-frame-card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   padding: 8px;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-xl);
   background: var(--color-surface);
-  box-shadow: var(--shadow-xs);
 }
 
+/* The well: paper with even padding round the screen. In a cell taller than
+   the screen (a bento row) it grows and centres the screen. `overflow` only
+   guards browsers without container query units. */
 .cl-frame-well {
-  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  padding: 24px;
   overflow: hidden;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   background: var(--color-paper);
 }
 
-.cl-frame-well--hero {
-  aspect-ratio: 16 / 9;
+@media (max-width: 767px) {
+  .cl-frame-well {
+    padding: 12px;
+  }
 }
 
-.cl-frame-well--wide {
-  aspect-ratio: 16 / 10;
-}
-
-.cl-frame-well--standard {
-  aspect-ratio: 4 / 3;
-}
-
-.cl-frame-well--square {
-  aspect-ratio: 1 / 1;
-}
-
-.cl-frame-well--tall {
-  aspect-ratio: 3 / 4;
-}
-
+/* The fit: this box is the query container and its screen scales to
+   min(1, container width / screen width). `tan(atan2(a, b))` is a / b as a
+   plain number (CSS cannot divide two lengths yet). A transform leaves
+   layout alone, so negative margins shrink the screen's layout box to its
+   scaled size and the well's height follows: no script, no layout shift. */
 .cl-frame-screen {
-  position: absolute;
+  display: flex;
+  justify-content: center;
+  container-type: inline-size;
 }
 
-.cl-frame-screen--inset-24 {
-  top: 24px;
-  left: 24px;
-}
+.cl-frame-screen > .cl-screen {
+  --screen-fit: min(1, tan(atan2(100cqi, var(--screen-w))));
 
-.cl-frame-screen--inset-32 {
-  top: 32px;
-  left: 32px;
-}
-
-.cl-frame-screen--inset-48 {
-  top: 48px;
-  left: 48px;
+  flex: none;
+  margin-right: calc(var(--screen-w) * (var(--screen-fit) - 1));
+  margin-bottom: calc(var(--screen-h) * (var(--screen-fit) - 1));
+  transform: scale(var(--screen-fit));
+  transform-origin: 0 0;
 }
 
 .cl-frame-caption {
@@ -104,13 +104,20 @@
 }
 
 .cl-screen--w960 {
-  width: 960px;
-  height: 600px;
+  --screen-w: 960px;
+  --screen-h: 600px;
 }
 
 .cl-screen--w1200 {
-  width: 1200px;
-  height: 680px;
+  --screen-w: 1200px;
+  --screen-h: 680px;
+}
+
+.cl-screen--w960,
+.cl-screen--w1200,
+.cl-screen--app {
+  width: var(--screen-w);
+  height: var(--screen-h);
 }
 
 /* ---------- The app in its chrome (D25): the home page's first view ----------
@@ -129,12 +136,12 @@
   --compact-gap: 8px;
   --card-padding: 16px;
   --table-row-height: var(--row-app);
+  --screen-w: 1440px;
+  --screen-h: 820px;
 
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   gap: 0;
-  width: 1440px;
-  height: 820px;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
   background: var(--color-paper);
@@ -200,7 +207,8 @@
   align-items: center;
   gap: 8px;
   height: var(--control-md);
-  padding: 0 12px;
+  /* 8px before the shortcut hint, so the placeholder shows in full. */
+  padding: 0 8px 0 12px;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
   background: var(--color-surface);

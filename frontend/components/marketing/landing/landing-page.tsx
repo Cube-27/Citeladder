@@ -72,7 +72,7 @@ function Hero({ rotor }: Readonly<{ rotor?: ReactNode }>) {
       }
       frame={
         // D25: the real app, chrome and all, as the page's first product view.
-        <ProductFrame aspect="hero" inset={32} label="The AI Visibility page in the CiteLadder app">
+        <ProductFrame label="The AI Visibility page in the CiteLadder app">
           <ScreenAppVisibility />
         </ProductFrame>
       }
@@ -89,7 +89,6 @@ const LOOP_TILES = [
     body: 'Mention rate, position and competitors for each prompt.',
     href: '/platform/ai-visibility',
     label: 'AI Visibility by engine',
-    aspect: 'wide',
     screen: <ScreenEngines />,
   },
   {
@@ -99,7 +98,6 @@ const LOOP_TILES = [
     body: 'Every cited URL, labelled owned, review, editorial, community or competitor.',
     href: '/platform/cited-sources',
     label: 'Sources',
-    aspect: 'standard',
     screen: <ScreenSources />,
   },
   {
@@ -109,7 +107,6 @@ const LOOP_TILES = [
     body: 'Technical and answer-readiness checks, plus which AI crawlers you allow.',
     href: '/platform/site-health',
     label: 'Site Health',
-    aspect: 'standard',
     screen: <ScreenSiteHealth />,
   },
   {
@@ -119,7 +116,6 @@ const LOOP_TILES = [
     body: 'The Agent drafts briefs and page edits from your evidence. You publish them.',
     href: '/platform/agents',
     label: 'Agent · Content brief',
-    aspect: 'wide',
     screen: <ScreenAgentBrief />,
   },
 ] as const;
@@ -132,19 +128,16 @@ function Loop() {
       lead="Run your buyers' questions, fix what the answers show, then run them again."
     >
       <Bento
-        cells={LOOP_TILES.map((tile) => ({
+        cells={LOOP_TILES.map((tile, index) => ({
           key: tile.key,
           span: tile.span,
           content: (
             <FeatureCard
               href={tile.href}
+              step={index + 1}
               title={tile.title}
               body={tile.body}
-              media={
-                <ProductFrame aspect={tile.aspect} label={tile.label}>
-                  {tile.screen}
-                </ProductFrame>
-              }
+              media={<ProductFrame label={tile.label}>{tile.screen}</ProductFrame>}
             />
           ),
         }))}
