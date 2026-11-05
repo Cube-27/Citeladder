@@ -90,6 +90,44 @@ test('D7: Cal Sans in the app is the page title alone; the docs keep their displ
   ]);
 });
 
+test('D28: on the website Cal Sans sets the H1 and section headings, never a card title', () => {
+  const message =
+    'on the website Cal Sans is the H1 and one section heading (decision D28); set this in Geist';
+  const css = [
+    '.cl-shead-title { font-family: var(--font-display); }',
+    '.cl-fcard-title { font-family: var(--font-display); }',
+    '.cl-prose h2:not([class]) { font-family: var(--font-display); }',
+    '.cl-prose :is(h2, h3):not([class]) { font-family: var(--font-display); }',
+    '.cl-page-section:not(:has(.cl-shead-title, .cl-split ~ .cl-split)) .cl-split-title { font-family: var(--font-display); }',
+    '.cl-split-title { font-family: var(--font-display); }',
+    '.cl-faq-q { font-family: var(--font-sans); }',
+  ].join('\n');
+  assert.deepEqual(reviewStylesheetFindings(css, 'apps/marketing/src/site.css'), [
+    `apps/marketing/src/site.css:2: ${message}`,
+    `apps/marketing/src/site.css:4: ${message}`,
+    `apps/marketing/src/site.css:6: ${message}`,
+  ]);
+  assert.deepEqual(
+    reviewStylesheetFindings(
+      '.cl-author-name { font-family: var(--font-display); }',
+      'components/marketing/content/AuthorCard.astro',
+    ),
+    [`components/marketing/content/AuthorCard.astro:1: ${message}`],
+  );
+  assert.deepEqual(
+    reviewScriptFindings(tsx('font-display text-ink'), 'components/marketing/sections/cards.tsx'),
+    [`components/marketing/sections/cards.tsx:1: ${message}`],
+  );
+  // The docs' own styles keep their display face.
+  assert.deepEqual(
+    reviewStylesheetFindings(
+      '.cl-ref-title { font-family: var(--font-display); }',
+      'apps/docs/src/components/ReferenceBlock.astro',
+    ),
+    [],
+  );
+});
+
 test('D9: a grid that adds columns between desktop and shell is a wrapped metric row', () => {
   const grid = (layout) => `const LAYOUT = { quarters: '${layout}' };\n`;
   assert.deepEqual(

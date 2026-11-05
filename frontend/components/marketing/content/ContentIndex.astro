@@ -1,8 +1,8 @@
 ---
 /**
  * ContentIndex — the listing on the research, blog and tools index pages:
- * groups of whole-row links (a Cal Sans title, a one-line excerpt and a mono
- * meta line) between hairlines, the group's title, description and count in
+ * groups of whole-row links (a Geist 500 title, a one-line excerpt and a mono
+ * meta line) between hairlines, the group's Cal Sans title, description and count in
  * a sticky 4/12 column beside its 8/12 rows. An untitled group keeps the
  * 8/12 column; below 1024px the header sits above its rows. A row's arrow
  * turns `ink` and its title underlines on hover; nothing moves.
@@ -136,10 +136,10 @@ const { groups, as: Heading = 'h2' } = Astro.props;
   }
   .cl-cpage-index-name {
     color: var(--color-ink);
-    font-family: var(--font-display);
-    font-size: var(--text-title);
-    line-height: var(--text-title--line-height);
-    font-weight: 400;
+    font-size: var(--text-heading-lg);
+    line-height: var(--text-heading-lg--line-height);
+    font-weight: 500;
+    letter-spacing: var(--text-heading-lg--letter-spacing);
     text-wrap: pretty;
   }
   .cl-cpage-index-link:hover .cl-cpage-index-name {
