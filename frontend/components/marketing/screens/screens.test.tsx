@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 
 import { ProductFrame } from './product-frame';
@@ -38,11 +38,39 @@ describe('screens', () => {
     ).toBeInTheDocument();
   });
 
-  it.each([
-    ['Site Health', <ScreenSiteHealth key="health" />, 'Run new crawl'],
-    ['Agent brief', <ScreenAgentBrief key="brief" />, 'Export'],
-    ['Sources', <ScreenSources key="sources" />, 'All sources'],
-  ])(
+  it('lists the four most-cited domains with their share of all citations, leaving out Other', () => {
+    render(<ScreenSources />);
+
+    const rows = within(screen.getByRole('list', { name: 'Citations by domain this week' }))
+      .getAllByRole('listitem')
+      .map((row) => row.textContent);
+    // Each row: the domain's letter mark, the domain, its share of every citation, its count.
+    expect(rows).toEqual([
+      'Aacme.comYour site · 20.3% of citations212',
+      'Gg2.com16.1% of citations168',
+      'Nnorthwind.io13.5% of citations141',
+      'Rreddit.com11.3% of citations118',
+    ]);
+    expect(screen.getByText('1,046 citations this week')).toBeVisible();
+  });
+
+  it('counts every failed check while listing the worst three with their pages', () => {
+    render(<ScreenSiteHealth />);
+
+    expect(screen.getByText('7 failed checks on acme.com')).toBeVisible();
+    expect(screen.getByText('4 more failed checks')).toBeVisible();
+    expect(
+      within(screen.getByRole('list', { name: 'Worst failed checks' }))
+        .getAllByRole('listitem')
+        .map((row) => row.textContent),
+    ).toEqual([
+      'Search or citation crawlers blockedHigh severity14 pages',
+      'Content not present in server HTMLHigh severity3 pages',
+      'Slow time to first byteMedium severity6 pages',
+    ]);
+  });
+
+  it.each([['Agent brief', <ScreenAgentBrief key="brief" />, 'Export']])(
     'draws the %s controls without a real control, so a linked card can hold it',
     (_, node, control) => {
       render(node);

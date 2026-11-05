@@ -1,107 +1,64 @@
 import type { ReactNode } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { Info, type LucideIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { BrandMark } from '@/components/ui/brand-mark';
+import { Card } from '@/components/ui/card';
 import { EngineMark, type EngineKey } from '@/components/ui/engine-mark';
-import { FactList } from '@/components/ui/facts';
-import { Meter } from '@/components/ui/meter';
 import { ScoreRing } from '@/components/ui/score-ring';
+import { ICONS } from '@/lib/icons';
+import { cn } from '@/lib/utils';
 
-import { BOTS, FAILED_CHECKS, MCP_RESULT, POLICY_TONE, SEVERITY_TONE } from './demo-data';
-import {
-  ScreenBar,
-  ScreenButton,
-  ScreenCard,
-  ScreenCode,
-  ScreenCols,
-  ScreenMeta,
-  ScreenRoot,
-  ScreenTable,
-  ScreenTableCard,
-  ScreenTabs,
-  type ScreenColumn,
-} from './screen-parts';
+import { BOTS, FAILED_CHECKS, MCP_RESULT, POLICY_TONE, type Severity } from './demo-data';
+import { ScreenCard, ScreenCode, ScreenMeta, ScreenRoot } from './screen-parts';
 
-const CHECK_COLUMNS: readonly ScreenColumn<(typeof FAILED_CHECKS)[number]>[] = [
-  {
-    header: 'Check',
-    cell: (row) => <span className="cl-screen-strong">{row.check}</span>,
-  },
-  {
-    header: 'Severity',
-    width: 'md',
-    cell: (row) => (
-      <Badge tone={SEVERITY_TONE[row.severity]} dot>
-        {row.severity}
-      </Badge>
-    ),
-  },
-  { header: 'Pages', width: 'sm', numeric: true, cell: (row) => `${row.pages} pages` },
-];
+/** The checks the vignette lists: the worst three of the failed ones. */
+const WORST_CHECKS = FAILED_CHECKS.slice(0, 3);
 
-/** Site Health: the score, its two halves, and the failed checks worst first. */
+/** A failed check's severity as the app's notice icons draw it: danger, warning, or muted info. */
+const SEVERITY_ICON: Readonly<Record<Severity, Readonly<{ icon: LucideIcon; tone: string }>>> = {
+  High: { icon: ICONS.danger, tone: 'text-negative' },
+  Medium: { icon: ICONS.warning, tone: 'text-warning' },
+  Low: { icon: Info, tone: 'text-ink-muted' },
+};
+
+function SeverityIcon({ severity }: Readonly<{ severity: Severity }>) {
+  const { icon: Icon, tone } = SEVERITY_ICON[severity];
+  return <Icon className={cn('size-5 shrink-0', tone)} aria-hidden />;
+}
+
+/**
+ * Site Health, as a card vignette: the score ring beside the failed-check
+ * count, then the three worst failed checks, each with its severity dot and
+ * the pages it affects. Large type, so it still reads scaled down in a tile.
+ */
 export function ScreenSiteHealth() {
   return (
-    <ScreenRoot name="site-health" width={960} height={600}>
-      <ScreenBar
-        start={
-          <ScreenTabs
-            items={[
-              { label: 'Overview' },
-              { label: 'Pages' },
-              { label: 'AEO Readiness' },
-              { label: 'Internal links' },
-              { label: 'Changes' },
-            ]}
-            selected="Overview"
-          />
-        }
-        end={<ScreenButton icon={RefreshCw}>Run new crawl</ScreenButton>}
-      />
-      <ScreenCols layout="aside-main">
-        <ScreenCard
-          title="Site Health"
-          action={
-            <Badge tone="positive" dot>
-              Good
-            </Badge>
-          }
-        >
-          <div className="cl-screen-detail">
-            <div className="cl-screen-score">
-              <ScoreRing value={82} tone="auto" label="Site Health score" />
-              <div className="cl-screen-lines">
-                <span className="cl-screen-strong">7 failed checks</span>
-                <span className="cl-screen-muted">Crawled today, 05:12</span>
-              </div>
-            </div>
-            <div className="cl-screen-meters cl-screen-meters--stack">
-              <Meter label="Web Fundamentals" value={86} valueLabel="86" />
-              <Meter label="AEO Readiness" value={78} valueLabel="78" />
-            </div>
-            <FactList
-              layout="spread"
-              facts={[
-                { label: 'Pages analyzed', value: '214 of 231' },
-                { label: 'Blocked by robots.txt', value: '14' },
-              ]}
-            />
+    <ScreenRoot name="site-health" width={480} height={400}>
+      <Card className="cl-vignette">
+        <div className="cl-vignette-score">
+          <ScoreRing value={82} tone="auto" label="Site Health score" />
+          <div className="cl-vignette-head">
+            <p className="cl-vignette-title">Site Health</p>
+            <p className="cl-vignette-sub">{`${FAILED_CHECKS.length} failed checks on acme.com`}</p>
           </div>
-        </ScreenCard>
-        <ScreenTableCard
-          title="Failed checks"
-          action={<ScreenMeta>Worst first</ScreenMeta>}
-          meta="7 checks failed on the last crawl. Advisories are listed separately."
-        >
-          <ScreenTable
-            caption="Failed Site Health checks"
-            rows={FAILED_CHECKS}
-            rowKey={(row) => row.check}
-            columns={CHECK_COLUMNS}
-          />
-        </ScreenTableCard>
-      </ScreenCols>
+        </div>
+        <ul className="cl-vignette-list cl-vignette-list--spaced" aria-label="Worst failed checks">
+          {WORST_CHECKS.map((row) => (
+            <li key={row.check} className="cl-vignette-line">
+              <span className="cl-vignette-check">
+                <SeverityIcon severity={row.severity} />
+                <span>{row.check}</span>
+                <span className="sr-only">{`${row.severity} severity`}</span>
+              </span>
+              <span className="cl-vignette-figure">{`${row.pages} pages`}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="cl-vignette-sub cl-vignette-foot">
+          {`${FAILED_CHECKS.length - WORST_CHECKS.length} more failed checks`}
+        </p>
+      </Card>
     </ScreenRoot>
   );
 }
