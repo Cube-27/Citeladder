@@ -247,6 +247,7 @@ export function ContactPage() {
       <PageSection
         id="enquiry"
         layout="aside"
+        split="even"
         title="What happens next"
         aside={
           <div className="grid gap-6">

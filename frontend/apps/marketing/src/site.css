@@ -2405,6 +2405,10 @@ a.cl-logotile:hover {
   gap: 24px;
 }
 
+.cl-page-section-grid--even {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
 .cl-page-section-aside {
   position: sticky;
   top: calc(var(--nav-height) + 32px);
@@ -2622,14 +2626,13 @@ a.cl-logotile:hover {
 }
 
 /* ---------- PageForm: a reserved Turnstile slot keeps the submit button still ----------
-   The form reads at a 600px measure on a grained stage (layers.css), so its
-   solid fields stand out as wells; fields and buttons inside are 44px, the
+   The form fills its column on a grained stage (layers.css), so its solid
+   fields stand out as wells; fields and buttons inside are 44px, the
    account-access height (D24). */
 .cl-page-form {
   --control-md: 44px;
   display: flex;
   flex-direction: column;
-  max-width: 600px;
   padding: 40px;
   color: var(--color-ink);
 }
