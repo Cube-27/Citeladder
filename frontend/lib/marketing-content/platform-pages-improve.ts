@@ -11,8 +11,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     heading: 'Content work that starts from the evidence',
     lead: 'Turn a site finding, buyer question or citation pattern into a brief, a page edit or an internal-link plan. The Agent drafts it from your project evidence, and your team reviews it.',
     cta: 'demo',
-    visual: 'agent',
-    visualTitle: 'Agent · Output',
+    screen: 'actions',
     note: AGENT_NOTE,
     highlights: [
       {
@@ -37,7 +36,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
           'Business context and competitors carried into every draft',
           'The context used is listed with each output',
         ],
-        visual: 'actions',
+        media: { kind: 'card' },
       },
       {
         title: 'Drafts for your site and the places engines cite',
@@ -48,7 +47,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
           'LinkedIn and X posts, video scripts and forum answers',
           'Outreach briefs for earned sources',
         ],
-        visual: 'skills',
+        media: { kind: 'split', screen: 'agent-brief' },
       },
       {
         title: 'Every draft keeps its revisions',
@@ -58,7 +57,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
           'Section-level edits and follow-ups',
           'Full revision history',
         ],
-        visual: 'revisions',
+        media: { kind: 'split', screen: 'agent-chat' },
       },
     ],
     steps: [
@@ -124,8 +123,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     heading: 'An assistant that starts from your evidence',
     lead: 'Ask a question or pick up an Action. The Agent reads your saved project evidence, explains what it found, and drafts the brief, edit or plan you asked for.',
     cta: 'demo',
-    visual: 'agent',
-    visualTitle: 'Agent',
+    screen: 'actions',
     note: AGENT_NOTE,
     highlights: [
       {
@@ -150,7 +148,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
           'One deliverable per conversation',
           'Step-by-step reads shown as it works',
         ],
-        visual: 'skills',
+        media: { kind: 'split', screen: 'agent-chat' },
       },
       {
         title: 'One skill per job',
@@ -162,7 +160,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
           'Search Console optimization, search opportunities and earned authority',
           'Prompt discovery and measuring results',
         ],
-        visual: 'actions',
+        media: { kind: 'card' },
       },
       {
         title: 'What the Agent cannot do',
@@ -172,7 +170,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
           'Step and size limits on every run',
           'Outputs are reviewable drafts with revisions',
         ],
-        visual: 'revisions',
+        media: { kind: 'split', screen: 'agent-brief' },
       },
     ],
     steps: [
@@ -233,8 +231,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     heading: 'Your CiteLadder evidence, in your AI assistant',
     lead: 'Ask Claude, ChatGPT and other assistants about your AI visibility, cited sources, Site Health and search performance, and let them manage your prompts, competitors and audits when you allow it. They answer from your saved CiteLadder records, for the workspaces you approve.',
     cta: 'mcp',
-    visual: 'mcp',
-    visualTitle: 'MCP client',
+    screen: 'mcp',
     highlights: [
       {
         title: '1. Connect',
@@ -258,7 +255,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
           'Unavailable data is reported as unavailable, never as zero',
           'Links back to the screen in CiteLadder that shows the record',
         ],
-        visual: 'mcp-tools',
+        media: { kind: 'card' },
       },
       {
         title: 'Briefs and fix lists in your assistant',
@@ -268,7 +265,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
           'Site fix brief from the latest Site Health crawl',
           'With Allow changes: add prompts, track or drop competitors, launch audits and schedules, and dismiss or mark Actions implemented, each after you agree; no crawls, purchases or publishing',
         ],
-        visual: 'visibility',
+        media: { kind: 'full', screen: 'visibility' },
       },
     ],
     steps: [
@@ -342,8 +339,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     heading: 'Connect your search, analytics and research data',
     lead: 'Bring in first-party search, analytics and server-log data, configure model providers, and add research when it helps. Each connection does a specific job, and you can start without any of them.',
     cta: 'setup',
-    visual: 'integrations',
-    visualTitle: 'Integrations',
+    screen: 'integrations',
     highlights: [
       {
         title: 'Search and analytics',
@@ -367,7 +363,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
           'GA4 sessions, AI referrals and key events',
           'Bing search data through its own consent',
         ],
-        visual: 'property-mapping',
+        media: { kind: 'card' },
       },
       {
         title: 'Send AI crawler logs from your CDN or server',
@@ -379,7 +375,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
           'Webhook and file upload for any other server',
           'IP addresses used for verification only, never stored',
         ],
-        visual: 'crawlers',
+        media: { kind: 'split', screen: 'crawler-access' },
       },
     ],
     steps: [

@@ -10,8 +10,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
     heading: 'See the traffic AI sends your way',
     lead: 'Connect GA4 and you get sessions from ChatGPT, Gemini and other recognized AI assistants, the pages those visitors land on and what they do next. Add your server logs and you also see which AI crawlers fetch those pages.',
     cta: 'setup',
-    visual: 'referrals',
-    visualTitle: 'AI Traffic · Referrals',
+    screen: 'referrals',
     highlights: [
       {
         title: 'Referrals by assistant',
@@ -36,7 +35,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
           'Key events and revenue as your property reports them',
           'CSV export for your own reporting',
         ],
-        visual: 'page-report',
+        media: { kind: 'split', screen: 'cited-url' },
       },
       {
         title: 'See which AI crawlers fetch your pages',
@@ -47,7 +46,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
           'Verified, unverifiable and failed checks counted apart',
           'Log coverage shown next to every count',
         ],
-        visual: 'crawlers',
+        media: { kind: 'split', screen: 'crawler-access' },
       },
       {
         title: 'Put crawls and visits side by side',
@@ -57,7 +56,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
           'Partial coverage flagged on screen',
           'Every pattern opens the page detail',
         ],
-        visual: 'referrals',
+        media: { kind: 'card' },
       },
     ],
     steps: [
@@ -132,8 +131,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
     heading: 'See how your products show up in AI buying answers',
     lead: 'Pick a product or category and CiteLadder asks the engines the buyer questions around it. You get its position in each ranked answer, next to the competing products. Your catalog comes from your site or a CSV import.',
     cta: 'demo',
-    visual: 'commerce',
-    visualTitle: 'AI Shelf',
+    screen: 'commerce',
     note: 'Catalog setup depends on your project. Book a demo to check your catalog.',
     highlights: [
       {
@@ -159,7 +157,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
           'Cost estimate before launch',
           'Catalog from your site or a CSV file',
         ],
-        visual: 'shelf-setup',
+        media: { kind: 'split', screen: 'prompts' },
       },
       {
         title: 'Shelf metrics that only count real rankings',
@@ -170,7 +168,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
           'Average Shelf Position and First-Position Win Rate',
           'Shelf evidence and Actions per product or category',
         ],
-        visual: 'commerce',
+        media: { kind: 'split', screen: 'answer' },
       },
     ],
     steps: [

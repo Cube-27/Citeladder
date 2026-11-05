@@ -41,6 +41,7 @@ export function RelatedCards({ items }: Readonly<{ items: readonly RelatedCard[]
 
 export type QuestionCard = Readonly<{
   question: string;
+  /** Defaults to "Buyer prompt"; `false` for a question that is not a prompt. */
   eyebrow?: ReactNode;
   /** The citation level the brand reached on this prompt. */
   rungs?: RungLevel;
@@ -53,7 +54,7 @@ export function QuestionCards({ items }: Readonly<{ items: readonly QuestionCard
     <ul className={cn('cl-qcards', `cl-cols-${columnsFor(items.length)}`)}>
       {items.map((item) => (
         <li key={item.question} className="cl-qcard">
-          <Eyebrow>{item.eyebrow ?? 'Buyer prompt'}</Eyebrow>
+          {item.eyebrow !== false && <Eyebrow>{item.eyebrow ?? 'Buyer prompt'}</Eyebrow>}
           <p className="cl-qcard-q">{item.question}</p>
           {(item.rungs !== undefined || item.meta) && (
             <div className="cl-qcard-foot">

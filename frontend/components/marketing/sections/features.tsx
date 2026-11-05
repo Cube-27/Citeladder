@@ -6,8 +6,8 @@ import { CheckList, Eyebrow, SiteArrowLink } from './site-parts';
 
 /**
  * FeatureCard: a surface card with an optional product image on top, an
- * eyebrow, a title (title, or display-md at `lg`), body and, as a link, an
- * arrow line. With an `href` the whole card is the link.
+ * eyebrow, a title (title, or display-md at `lg`), body, an optional check
+ * list and, as a link, an arrow line. With an `href` the whole card is the link.
  */
 export function FeatureCard({
   href,
@@ -15,7 +15,9 @@ export function FeatureCard({
   eyebrow,
   title,
   body,
+  points,
   size = 'md',
+  as: Heading = 'h3',
   media,
 }: Readonly<{
   href?: string;
@@ -23,7 +25,11 @@ export function FeatureCard({
   eyebrow?: ReactNode;
   title: ReactNode;
   body?: ReactNode;
+  /** What the card covers, as a small check list under the body. */
+  points?: readonly string[];
   size?: 'md' | 'lg';
+  /** `h2` when the card heads its own part of the page (no section title above it). */
+  as?: 'h2' | 'h3';
   /** The card's product image (a ProductFrame well), above the copy. */
   media?: ReactNode;
 }>) {
@@ -33,8 +39,9 @@ export function FeatureCard({
       {media}
       <div className="cl-fcard-body">
         {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
-        <h3 className="cl-fcard-title">{title}</h3>
+        <Heading className="cl-fcard-title">{title}</Heading>
         {body && <p className="cl-fcard-text">{body}</p>}
+        {points && points.length > 0 && <CheckList items={points} small />}
         {href && <SiteArrowLink className="cl-fcard-more">{linkLabel}</SiteArrowLink>}
       </div>
     </>
@@ -95,7 +102,8 @@ export function FeatureSplit({
 }: Readonly<{
   eyebrow?: ReactNode;
   title: ReactNode;
-  body?: ReactNode;
+  /** One paragraph, or several in reading order. */
+  body?: string | readonly string[];
   points?: readonly string[];
   /** Arrow links under the copy, one per page the split leads to. */
   links?: readonly Readonly<{ href: string; label: ReactNode }>[];
@@ -108,7 +116,11 @@ export function FeatureSplit({
       <div className="cl-split-copy">
         {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
         <Heading className="cl-split-title">{title}</Heading>
-        {body && <p className="cl-split-text">{body}</p>}
+        {(typeof body === 'string' ? [body] : (body ?? [])).map((paragraph) => (
+          <p key={paragraph} className="cl-split-text">
+            {paragraph}
+          </p>
+        ))}
         {points && points.length > 0 && <CheckList items={points} />}
         {links.length > 0 && (
           <div className="cl-split-links">

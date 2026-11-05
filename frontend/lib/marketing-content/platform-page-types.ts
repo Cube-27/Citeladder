@@ -10,37 +10,39 @@
 
 import type { FaqItem } from './faq';
 
-/** Which coded product view illustrates a page or feature. */
-export type PlatformVisual =
+/**
+ * Which product screen illustrates a page or feature: one of the website's
+ * screens (`components/marketing/screens`). A page never shows one twice.
+ */
+export type PlatformScreen =
   | 'visibility'
-  | 'answer'
-  | 'sources'
-  | 'site-health'
-  | 'referrals'
-  | 'demand'
-  | 'search'
-  | 'agent'
-  | 'commerce'
-  | 'mcp'
-  | 'integrations'
-  | 'actions'
   | 'prompts'
-  | 'cited-url'
-  | 'page-evidence'
-  | 'page-report'
-  | 'query-page'
-  | 'acquisition'
-  | 'revisions'
-  | 'skills'
-  | 'shelf-setup'
-  | 'mcp-tools'
-  | 'property-mapping'
-  | 'perception'
-  | 'ads'
   | 'engines'
-  | 'crawlers'
-  | 'earned'
-  | 'pillars';
+  | 'answer'
+  | 'perception'
+  | 'sources'
+  | 'cited-url'
+  | 'referrals'
+  | 'commerce'
+  | 'site-health'
+  | 'crawler-access'
+  | 'demand'
+  | 'keywords'
+  | 'actions'
+  | 'agent-chat'
+  | 'agent-brief'
+  | 'mcp'
+  | 'integrations';
+
+/**
+ * How a feature is shown: its copy beside its screen (`split`), its screen
+ * full width under the copy (`full`), or a card, with or without a screen,
+ * set in a row with the cards next to it (`card`).
+ */
+type PlatformFeatureMedia =
+  | { kind: 'split'; screen: PlatformScreen }
+  | { kind: 'full'; screen: PlatformScreen }
+  | { kind: 'card'; screen?: PlatformScreen };
 
 /** Which primary action a page leads with. */
 export type PlatformCta = 'trial' | 'demo' | 'mcp' | 'setup';
@@ -49,7 +51,7 @@ type PlatformFeature = {
   title: string;
   body: string;
   points: readonly string[];
-  visual: PlatformVisual;
+  media: PlatformFeatureMedia;
 };
 
 export type PlatformPage = {
@@ -59,8 +61,8 @@ export type PlatformPage = {
   heading: string;
   lead: string;
   cta: PlatformCta;
-  visual: PlatformVisual;
-  visualTitle: string;
+  /** The hero's screen. */
+  screen: PlatformScreen;
   highlights: readonly { title: string; body: string }[];
   features: readonly PlatformFeature[];
   /** How a team gets from setup to a result, in order. */

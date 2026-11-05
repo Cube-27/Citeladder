@@ -10,8 +10,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     heading: 'Find the site issues that keep you out of answers',
     lead: 'Crawl your site and get page-level findings with the evidence attached. Checks cover indexing, structure, structured data, answer-readiness and which AI crawlers your robots.txt lets in.',
     cta: 'demo',
-    visual: 'site-health',
-    visualTitle: 'Site Health',
+    screen: 'site-health',
     highlights: [
       {
         title: 'Page-level evidence',
@@ -36,7 +35,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
           'Each page classified, so only relevant checks apply',
           'Advisory and diagnostic checks shown without scoring',
         ],
-        visual: 'pillars',
+        media: { kind: 'card' },
       },
       {
         title: 'Technical and answer-readiness checks together',
@@ -47,7 +46,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
           'Broken internal links, sitemap and hreflang defects',
           'Internal links: inbound links, depth from home and anchor text',
         ],
-        visual: 'page-evidence',
+        media: { kind: 'card' },
       },
       {
         title: 'Know which AI crawlers you let in',
@@ -57,7 +56,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
           'robots.txt history across crawls',
           'llms.txt reported as a diagnostic, not scored',
         ],
-        visual: 'site-health',
+        media: { kind: 'split', screen: 'crawler-access' },
       },
       {
         title: 'From a finding to a verified fix',
@@ -68,7 +67,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
           'Recrawl to verify the change',
           'CSV and Markdown exports for your developers',
         ],
-        visual: 'agent',
+        media: { kind: 'split', screen: 'agent-chat' },
       },
     ],
     steps: [
@@ -144,8 +143,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     heading: 'Find the pages your search data says to update first',
     lead: 'Connect Search Console and CiteLadder reads the last 28 days of your queries and pages. You see which non-branded queries sit at positions 4 to 15, and the page that ranks for each, so you know which pages to update first.',
     cta: 'demo',
-    visual: 'demand',
-    visualTitle: 'Search Demand',
+    screen: 'demand',
     highlights: [
       {
         title: 'Striking distance',
@@ -170,7 +168,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
           'Two pages each taking at least 10% of one query’s impressions',
           'Emerging and declining queries, with branded searches counted apart',
         ],
-        visual: 'demand',
+        media: { kind: 'card' },
       },
       {
         title: 'Queries in their landing-page context',
@@ -181,7 +179,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
           'Missing query terms listed for the title and H1',
           'Ambiguous queries labelled as ambiguous',
         ],
-        visual: 'query-page',
+        media: { kind: 'card' },
       },
       {
         title: 'From a signal to a reviewable edit',
@@ -191,7 +189,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
           'The handoff includes the evidence',
           'Changes measured against the earlier window',
         ],
-        visual: 'actions',
+        media: { kind: 'full', screen: 'actions' },
       },
     ],
     steps: [
@@ -261,8 +259,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     heading: 'Keyword and backlink research beside your AI evidence',
     lead: 'Add external research when your own data cannot answer the question: ranked keywords, competitors, top pages and backlinks. Each collection shows its scope and price before you confirm it.',
     cta: 'setup',
-    visual: 'search',
-    visualTitle: 'Keyword Research',
+    screen: 'keywords',
     highlights: [
       {
         title: 'Keywords and competitors',
@@ -287,7 +284,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
           'Saved datasets reopen for free',
           'CSV export of saved datasets',
         ],
-        visual: 'acquisition',
+        media: { kind: 'card' },
       },
       {
         title: 'Keywords your competitors rank for and you miss',
@@ -297,7 +294,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
           'Keyword suggestions around a seed',
           'Up to 25 keyword-gap Actions per refresh',
         ],
-        visual: 'search',
+        media: { kind: 'split', screen: 'sources' },
       },
     ],
     steps: [
