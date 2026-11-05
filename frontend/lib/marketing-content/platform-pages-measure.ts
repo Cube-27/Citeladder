@@ -10,8 +10,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     heading: 'Find out what AI tells your buyers about you',
     lead: 'CiteLadder asks ChatGPT, Gemini, Claude and Google AI Overviews the questions your buyers ask. You see each answer, the brands it names, the pages it cites and a ranked list of what to change next.',
     cta: 'trial',
-    visual: 'visibility',
-    visualTitle: 'AI Visibility',
+    screen: 'visibility',
     note: TRIAL_NOTE,
     highlights: [
       {
@@ -37,7 +36,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
           'Comparable audits on the same prompts over time',
           'Missing data shown as missing, never as zero',
         ],
-        visual: 'answer',
+        media: { kind: 'split', screen: 'answer' },
       },
       {
         title: 'Read how answers describe you',
@@ -48,7 +47,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
           'Recommended rate beside mention rate',
           'Advertisers, ad presence and your own ad share',
         ],
-        visual: 'perception',
+        media: { kind: 'split', screen: 'perception' },
       },
       {
         title: 'Check whether AI crawlers and visitors reach your pages',
@@ -58,7 +57,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
           'Verified AI crawler requests from Cloudflare, CloudFront, Google Cloud, a webhook or an upload',
           'robots.txt access by crawler purpose',
         ],
-        visual: 'crawlers',
+        media: { kind: 'split', screen: 'crawler-access' },
       },
       {
         title: 'Get one ranked Action per page',
@@ -69,7 +68,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
           'Nothing is published or sent without you',
           'Shipped work checked against the next collection',
         ],
-        visual: 'actions',
+        media: { kind: 'full', screen: 'actions' },
       },
     ],
     steps: [
@@ -151,8 +150,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     heading: 'See how often AI recommends you',
     lead: 'Run the questions buyers ask through ChatGPT, Gemini, Claude and Google AI Overviews. You get your mention rate, position and share of voice beside each competitor, and every number opens the answer it came from.',
     cta: 'trial',
-    visual: 'visibility',
-    visualTitle: 'AI Visibility',
+    screen: 'visibility',
     note: TRIAL_NOTE,
     highlights: [
       {
@@ -178,7 +176,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
           'Branded and comparison prompts tracked separately',
           'Accept or reject suggestions in bulk',
         ],
-        visual: 'prompts',
+        media: { kind: 'full', screen: 'prompts' },
       },
       {
         title: 'Run the same prompts on every engine',
@@ -189,7 +187,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
           'One-off, hourly, daily or weekly schedules',
           'Metrics state how many answers they are based on',
         ],
-        visual: 'engines',
+        media: { kind: 'split', screen: 'engines' },
       },
       {
         title: 'Read the answer behind the trend',
@@ -200,7 +198,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
           'Query fan-out where the engine returns it',
           'Missing data shown as missing, never zero',
         ],
-        visual: 'answer',
+        media: { kind: 'split', screen: 'answer' },
       },
       {
         title: 'Know how answers describe you',
@@ -211,7 +209,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
           'Sources cited beside criticism',
           'Included with visibility tracking, no extra credits',
         ],
-        visual: 'perception',
+        media: { kind: 'card', screen: 'perception' },
       },
       {
         title: 'See who is paying to appear beside your prompts',
@@ -221,7 +219,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
           'Advertisers, appearances and share',
           'Your own ad share, or “Not advertising”',
         ],
-        visual: 'ads',
+        media: { kind: 'card' },
       },
     ],
     steps: [
@@ -311,8 +309,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     heading: 'Know which pages AI answers cite',
     lead: 'See every domain and URL your tracked answers reference, whether it belongs to you, a competitor or a publisher, and read each citation in the answer that used it.',
     cta: 'demo',
-    visual: 'sources',
-    visualTitle: 'Sources',
+    screen: 'sources',
     highlights: [
       {
         title: 'Domains and URLs',
@@ -336,7 +333,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
           'Prompts and engines per source',
           'Source mix across the whole portfolio',
         ],
-        visual: 'cited-url',
+        media: { kind: 'split', screen: 'cited-url' },
       },
       {
         title: 'Find cited pages that name competitors but not you',
@@ -347,7 +344,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
           'One Action per page worth earning',
           'Outreach drafted by the Agent, never sent for you',
         ],
-        visual: 'earned',
+        media: { kind: 'split', screen: 'prompts' },
       },
       {
         title: 'Mentions and citations are counted apart',
@@ -357,7 +354,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
           'Owned citations highlighted per answer',
           'Citation rate measured only where sources were returned',
         ],
-        visual: 'answer',
+        media: { kind: 'split', screen: 'answer' },
       },
     ],
     steps: [

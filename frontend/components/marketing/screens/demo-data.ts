@@ -7,6 +7,7 @@
 import type { BadgeTone } from '@/components/ui/badge';
 import type { DeltaPolicy } from '@/components/ui/delta';
 import type { EngineKey } from '@/components/ui/engine-mark';
+import type { PlatformScreen } from '@/lib/marketing-content/platform-pages';
 
 /** A change as the Delta draws it: signed, with its unit and which way is good. */
 export type Change = Readonly<{
@@ -480,3 +481,71 @@ export const CATALOG: readonly Readonly<{ title: string; group: string }>[] = [
   { title: 'Session replay', group: 'Add-ons' },
   { title: 'Warehouse sync', group: 'Add-ons' },
 ];
+
+/* ---------- Screen key numbers ---------- */
+
+type ScreenKeyNumbers = Readonly<{
+  eyebrow: string;
+  title: string;
+  stats: readonly Readonly<{ label: string; value: string; sub?: string }>[];
+}>;
+
+/**
+ * The key numbers a 960 screen leads with, for the inverted tile beside it
+ * on a platform page. Each restates figures the screen itself draws.
+ */
+export const SCREEN_KEY_NUMBERS: Readonly<Partial<Record<PlatformScreen, ScreenKeyNumbers>>> = {
+  sources: {
+    eyebrow: 'Cited sources',
+    title: 'Acme Analytics this week',
+    stats: [
+      { label: 'Citations', value: '1,046' },
+      { label: 'To acme.com', value: '212' },
+      { label: 'Owned citation rate', value: '29.4%' },
+    ],
+  },
+  referrals: {
+    eyebrow: 'AI referrals',
+    title: 'acme.com, last 28 days',
+    stats: [
+      { label: 'Sessions', value: '1,846', sub: '+41%' },
+      { label: 'Share of sessions', value: '3.0%' },
+      { label: 'Key events', value: '65' },
+    ],
+  },
+  commerce: {
+    eyebrow: 'AI Shelf',
+    title: 'Acme Startup this week',
+    stats: [
+      { label: 'Product visibility', value: '41.7%' },
+      { label: 'Share of shelf', value: '24.0%' },
+      { label: 'Avg. position', value: '2.3' },
+    ],
+  },
+  'site-health': {
+    eyebrow: 'Site Health',
+    title: 'acme.com, checked today',
+    stats: [
+      { label: 'Score', value: '82' },
+      { label: 'Failed checks', value: '7' },
+      { label: 'Pages blocked', value: '14' },
+    ],
+  },
+  demand: {
+    eyebrow: 'Search Console',
+    title: 'acme.com, last 28 days',
+    stats: [
+      { label: 'Clicks', value: '3,412', sub: '+9.8%' },
+      { label: 'CTR', value: '2.9%' },
+      { label: 'Avg. position', value: '14.2' },
+    ],
+  },
+  integrations: {
+    eyebrow: 'Integrations',
+    title: 'acme.com data sources',
+    stats: [
+      { label: 'Sources connected', value: '3' },
+      { label: 'Last sync', value: '05:40 UTC' },
+    ],
+  },
+};
