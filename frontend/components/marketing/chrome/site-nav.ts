@@ -1,10 +1,10 @@
 /**
  * Behaviour for the server-rendered website navbar (`SiteNav.astro`).
  *
- * The markup is complete without this module: every mega menu and the mobile
- * sheet are in the initial HTML, hidden. This adds hover-intent menus, the
- * mobile sheet and its accordions with plain DOM listeners, so content pages
- * ship no framework runtime for the navigation.
+ * The markup is complete without this module: the mobile sheet is in the
+ * initial HTML, hidden. This adds the sheet, its accordions and the homepage
+ * logo with plain DOM listeners. The desktop menus are the `DesktopNav`
+ * island, which also reads `routePath` and `inSection` from here.
  */
 
 /**
@@ -26,130 +26,6 @@ export function routePath(pathname: string): string {
 /** Is `href` the current route, or the section the current route sits in? */
 export function inSection(path: string, href: string): boolean {
   return path === href || path.startsWith(`${href}/`);
-}
-
-/**
- * Hover intent: a pointer must rest this long on a trigger before the first
- * menu opens, so sweeping across the bar does not flash menus. Once one is
- * open, moving to a neighbouring trigger switches at once.
- */
-const HOVER_OPEN_DELAY_MS = 200;
-/** Leaving the navbar closes the open menu after this grace period. */
-const HOVER_CLOSE_DELAY_MS = 220;
-
-/** What asked for a menu: a resting pointer, or an explicit click or focus. */
-type OpenSource = 'hover' | 'focus';
-
-type Drop = { key: string; trigger: HTMLButtonElement; panel: HTMLElement };
-
-const TRIGGER_PREFIX = 'desktop-nav-trigger-';
-
-function drops(bar: HTMLElement): Drop[] {
-  return [...bar.querySelectorAll<HTMLButtonElement>(`button[id^="${TRIGGER_PREFIX}"]`)].flatMap(
-    (trigger) => {
-      const key = trigger.id.slice(TRIGGER_PREFIX.length);
-      const panel = document.getElementById(`desktop-nav-panel-${key}`);
-      return panel ? [{ key, trigger, panel }] : [];
-    },
-  );
-}
-
-/** The desktop triggers and the mega menus under the bar. */
-function mountMenus(anchor: HTMLElement, bar: HTMLElement) {
-  const all = drops(bar);
-  let open: Drop | null = null;
-  let source: OpenSource | null = null;
-  let openTimer: number | undefined;
-  let closeTimer: number | undefined;
-  /**
-   * Set when a trigger or row is chosen. A click leaves the pointer resting on
-   * the trigger, so hover is ignored for it until the pointer leaves it.
-   */
-  let suppressed: Drop | null = null;
-
-  const render = () => {
-    for (const drop of all) {
-      const expanded = drop === open;
-      drop.trigger.setAttribute('aria-expanded', String(expanded));
-      drop.panel.hidden = !expanded;
-    }
-  };
-  const clearTimers = () => {
-    window.clearTimeout(openTimer);
-    window.clearTimeout(closeTimer);
-  };
-  const close = () => {
-    clearTimers();
-    open = null;
-    source = null;
-    render();
-  };
-  const show = (drop: Drop, from: OpenSource) => {
-    clearTimers();
-    open = drop;
-    source = from;
-    render();
-  };
-  const hoverOpen = (drop: Drop) => {
-    if (suppressed === drop || open === drop) {
-      window.clearTimeout(closeTimer);
-      return;
-    }
-    suppressed = null;
-    clearTimers();
-    // The first menu waits for a resting pointer; a neighbour switches at once.
-    if (open) show(drop, 'hover');
-    else openTimer = window.setTimeout(() => show(drop, 'hover'), HOVER_OPEN_DELAY_MS);
-  };
-  const scheduleClose = () => {
-    window.clearTimeout(openTimer);
-    window.clearTimeout(closeTimer);
-    closeTimer = window.setTimeout(close, HOVER_CLOSE_DELAY_MS);
-  };
-
-  for (const drop of all) {
-    const item = drop.trigger.parentElement ?? drop.trigger;
-    item.addEventListener('pointerenter', (event) => {
-      if (event.pointerType !== 'touch') hoverOpen(drop);
-    });
-    item.addEventListener('pointerleave', () => {
-      if (suppressed === drop) suppressed = null;
-    });
-    drop.trigger.addEventListener('click', () => {
-      // A click on a hover-opened menu pins it open; a second click closes it.
-      if (open === drop && source !== 'hover') {
-        suppressed = drop;
-        close();
-      } else show(drop, 'focus');
-    });
-    drop.panel.addEventListener('pointerenter', () => window.clearTimeout(closeTimer));
-    for (const row of drop.panel.querySelectorAll('a')) {
-      row.addEventListener('click', () => {
-        suppressed = open;
-        close();
-      });
-    }
-  }
-  // The plain top-level links (Enterprise, Pricing), not the rows inside a menu.
-  for (const link of bar.querySelectorAll<HTMLAnchorElement>('.cl-navbar-links > li > a')) {
-    link.addEventListener('pointerenter', scheduleClose);
-    link.addEventListener('focus', close);
-  }
-
-  anchor.addEventListener('pointerleave', () => {
-    suppressed = null;
-    scheduleClose();
-  });
-  anchor.addEventListener('focusout', (event) => {
-    if (!(event.relatedTarget instanceof Node) || !anchor.contains(event.relatedTarget)) close();
-  });
-  document.addEventListener('keydown', (event) => {
-    if (!open || event.key !== 'Escape') return;
-    const trigger = open.trigger;
-    // A menu opened by hover must not pull focus out of a field elsewhere.
-    if (anchor.contains(document.activeElement)) trigger.focus();
-    close();
-  });
 }
 
 /**
@@ -265,8 +141,5 @@ function mountHomeLogo(chrome: HTMLElement, closeSheet: () => void) {
 
 /** Attach the navbar's behaviour to its server-rendered markup. */
 export function mountSiteNav(chrome: HTMLElement) {
-  const anchor = chrome.querySelector<HTMLElement>('.cl-navbar-anchor');
-  const bar = chrome.querySelector<HTMLElement>('nav[aria-label="Main navigation"]');
-  if (anchor && bar) mountMenus(anchor, bar);
   mountHomeLogo(chrome, mountSheet(chrome));
 }

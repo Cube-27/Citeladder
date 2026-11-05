@@ -532,7 +532,9 @@ test.describe('marketing routes', () => {
       'href',
       'https://docs.citeladder.com/changelog/',
     );
-    await expect(footer.getByRole('link', { name: 'github.com' })).toHaveAttribute(
+    // The social row sits under the launch badges, outside the link columns (D20).
+    const siteFooter = page.getByRole('contentinfo');
+    await expect(siteFooter.getByRole('link', { name: 'github.com' })).toHaveAttribute(
       'href',
       'https://github.com/abhij1306/CiteLadder',
     );

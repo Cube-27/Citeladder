@@ -6,8 +6,8 @@ import { Breadcrumbs, type Crumb } from '../chrome/breadcrumbs';
 import { Eyebrow } from './site-parts';
 
 /**
- * PageHero: an inner page's opening, its H1 at display-2xl (44, 36 on
- * tablets, 30 on phones, never larger), the lead, actions, a mono meta line
+ * PageHero: an inner page's opening, its H1 at display-2xl (44, 42 from
+ * 768 to 1023px, 30 on phones, never larger), the lead, actions, a mono meta line
  * and the page's product image below. Landing pages centre the copy (D18);
  * long-form and utility pages pass `align="left"`. `size` only changes the
  * measure of a left-aligned hero.

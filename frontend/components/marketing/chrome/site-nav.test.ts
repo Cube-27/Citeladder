@@ -28,21 +28,13 @@ describe('inSection', () => {
   });
 });
 
-/** The navbar as SiteNav.astro renders it, reduced to one menu and the sheet. */
+/** The navbar as SiteNav.astro renders it, reduced to the sheet. */
 function renderNav(): HTMLElement {
   document.body.innerHTML = `
     <header data-site-nav>
       <div class="cl-navbar-anchor">
         <nav aria-label="Main navigation">
           <a href="/" aria-label="CiteLadder home">CiteLadder</a>
-          <ul class="cl-navbar-links">
-            <li>
-              <button id="desktop-nav-trigger-platform" type="button" aria-expanded="false"
-                aria-controls="desktop-nav-panel-platform">Platform</button>
-              <div id="desktop-nav-panel-platform" hidden><a href="/platform">Platform overview</a></div>
-            </li>
-            <li><a href="/pricing">Pricing</a></li>
-          </ul>
           <button type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu"></button>
         </nav>
         <div id="mobile-menu" hidden>
@@ -72,51 +64,6 @@ function button(selector: string): HTMLButtonElement {
 
 const press = (key: string) =>
   document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
-
-describe('the desktop menus', () => {
-  afterEach(() => {
-    document.body.innerHTML = '';
-  });
-
-  it('opens on a click, closes on a second click, and reports its state', () => {
-    renderNav();
-    const trigger = button('#desktop-nav-trigger-platform');
-
-    trigger.click();
-    expect(trigger.getAttribute('aria-expanded')).toBe('true');
-    expect(byId('desktop-nav-panel-platform').hidden).toBe(false);
-
-    trigger.click();
-    expect(trigger.getAttribute('aria-expanded')).toBe('false');
-    expect(byId('desktop-nav-panel-platform').hidden).toBe(true);
-  });
-
-  it('closes on Escape and hands focus back to its trigger', () => {
-    renderNav();
-    const trigger = button('#desktop-nav-trigger-platform');
-    trigger.focus();
-    trigger.click();
-    byId('desktop-nav-panel-platform').querySelector('a')?.focus();
-
-    press('Escape');
-
-    expect(byId('desktop-nav-panel-platform').hidden).toBe(true);
-    expect(document.activeElement).toBe(trigger);
-  });
-
-  it('stays open while focus moves into its own rows and closes on a top-level link', () => {
-    renderNav();
-    const trigger = button('#desktop-nav-trigger-platform');
-    trigger.click();
-
-    byId('desktop-nav-panel-platform').querySelector('a')?.focus();
-    expect(byId('desktop-nav-panel-platform').hidden).toBe(false);
-
-    document.querySelector<HTMLAnchorElement>('.cl-navbar-links a[href="/pricing"]')?.focus();
-    expect(byId('desktop-nav-panel-platform').hidden).toBe(true);
-    expect(trigger.getAttribute('aria-expanded')).toBe('false');
-  });
-});
 
 describe('the mobile sheet', () => {
   afterEach(() => {

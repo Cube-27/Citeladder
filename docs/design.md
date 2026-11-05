@@ -187,9 +187,9 @@ Product roles are the `.type-*` classes in `globals.css`, reached through
 | `.cl-body` | public | `16px / 26px` | — |
 | `.cl-fcard-title` | public | `22px / 28px` | — |
 | `.cl-lead` | public | `20px / 30px` | — |
-| `.cl-lhero-title` | public | `44px / 48px` | `36px / 42px` |
+| `.cl-lhero-title` | public | `44px / 48px` | `42px / 46px` |
 | `.cl-note` | public | `14px / 20px` | — |
-| `.cl-phero-title` | public | `44px / 48px` | `36px / 42px` |
+| `.cl-phero-title` | public | `44px / 48px` | `42px / 46px` |
 | `.cl-shead-title` | public | `36px / 42px` | — |
 <!-- generated:type:end -->
 

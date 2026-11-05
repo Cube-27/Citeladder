@@ -208,7 +208,7 @@ The repository follows the design-system artifact's version 13 for D5–D11:
 (`line-strong`, `shadow-edge`, `heading-lg`, `row-app`, `control-md` 32 and
 `stat` at Geist 500).
 
-The owner then reviewed the public website and decided D18–D21 (source: the
+The owner then reviewed the public website and decided D18–D23 (source: the
 owner's review in the orchestration session, 5 November 2026).
 
 | ID | Question | Decision |
@@ -217,6 +217,8 @@ owner's review in the orchestration session, 5 November 2026).
 | D19 | How wide is the floating top nav? | Slightly wider than the page column: the bar overhangs the content edges by 16px on each side (12px on phones) instead of matching them |
 | D20 | Where do the social links go? | Out of the footer's Company column, into one row of icon-only links (each with an accessible name) directly below the launch-directory badges |
 | D21 | How is content placed? | A heading and its copy sit together with no dead space: no empty column beside copy, no heading stranded at the bottom of a tall column, no oversized gap. Every website page was swept for the fault |
+| D22 | How do the nav dropdowns open? | As one shared Radix NavigationMenu popup under the whole bar (the D19 width) that stays open and morphs between menus: its height follows the open menu, the content crossfades, a hover pill slides between triggers, and a hover bridge keeps it open on the way down. It closes in about 100ms, opens over 200ms, and reduced motion drops the slide, blur and stagger. Below the desktop breakpoint the mobile menu is unchanged |
+| D23 | How large is the page H1 on the owner's 982px desktop? | 42px. The opening-heading ladder is 44 from 1024px, 42 from 768 to 1023px and 30 on phones; pages never set their own size |
 
 ## Known gaps in the system
 
