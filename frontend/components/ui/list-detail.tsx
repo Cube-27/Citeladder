@@ -79,10 +79,11 @@ export function ListDetailPane({
 }>) {
   return (
     <section
-      className="desktop:sticky desktop:top-[var(--workspace-gap)] desktop:max-h-[calc(100dvh-2*var(--workspace-gap))] desktop:overflow-hidden min-w-0"
+      // Sticks `workspace-gap` under the app's sticky top bar (D12), never beneath it.
+      className="desktop:sticky desktop:top-[calc(var(--sticky-header-offset)+var(--workspace-gap))] desktop:max-h-[calc(100dvh-var(--sticky-header-offset)-2*var(--workspace-gap))] desktop:overflow-hidden min-w-0"
       aria-busy={busy?.active}
     >
-      <div className="desktop:max-h-[calc(100dvh-2*var(--workspace-gap))] relative flex flex-col">
+      <div className="desktop:max-h-[calc(100dvh-var(--sticky-header-offset)-2*var(--workspace-gap))] relative flex flex-col">
         {busy ? <BusyBar active={busy.active} label={busy.label} /> : null}
         <header className="border-line grid min-w-0 shrink-0 gap-[var(--compact-gap)] border-b p-[var(--card-padding)]">
           {header}
