@@ -13,14 +13,13 @@ export function Steps({
   items,
   direction = 'horizontal',
 }: Readonly<{
-  items: readonly Readonly<{ title: ReactNode; body?: ReactNode; meta?: ReactNode }>[];
+  items: readonly Readonly<{ title: string; body?: ReactNode; meta?: ReactNode }>[];
   direction?: 'horizontal' | 'vertical';
 }>) {
   return (
     <ol className={cn('cl-steps', `cl-steps--${direction}`)}>
       {items.map((step, index) => (
-        // Steps are authored in order and never reorder.
-        <li key={index} className="cl-step">
+        <li key={step.title} className="cl-step">
           <span className="cl-step-n" aria-hidden>
             {String(index + 1).padStart(2, '0')}
           </span>

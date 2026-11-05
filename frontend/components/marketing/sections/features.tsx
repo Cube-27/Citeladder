@@ -96,7 +96,7 @@ export function FeatureSplit({
   eyebrow?: ReactNode;
   title: ReactNode;
   body?: ReactNode;
-  points?: readonly ReactNode[];
+  points?: readonly string[];
   link?: Readonly<{ href: string; label: ReactNode }>;
   reverse?: boolean;
   as?: 'h2' | 'h3';

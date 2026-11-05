@@ -56,7 +56,7 @@ type PageSectionProps = Omit<SectionHeaderProps, 'title' | 'layout'> &
     title?: ReactNode;
     /** The landmark's name when the section has no title. */
     label?: string;
-    headerLayout?: SectionHeaderProps['layout'];
+    headerLayout?: 'stack' | 'split';
     /** `aside` puts the header (and `aside` content) in a sticky 4/12 column. */
     layout?: 'stack' | 'aside';
     aside?: ReactNode;

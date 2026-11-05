@@ -37,12 +37,11 @@ export function Eyebrow({ children }: Readonly<{ children: ReactNode }>) {
 export function CheckList({
   items,
   small = false,
-}: Readonly<{ items: readonly ReactNode[]; small?: boolean }>) {
+}: Readonly<{ items: readonly string[]; small?: boolean }>) {
   return (
     <ul className={cn('cl-checks', small && 'cl-checks--sm')}>
-      {items.map((item, index) => (
-        // Points are static copy in authored order.
-        <li key={index}>
+      {items.map((item) => (
+        <li key={item}>
           <Check aria-hidden className="size-4" />
           <span>{item}</span>
         </li>

@@ -45,9 +45,12 @@ export function CompareTable({
   caption?: string;
 }>) {
   return (
-    // A scrolling region must be focusable so keyboard users can scroll it.
-    // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-    <section className="cl-wtable focus-ring" tabIndex={0} aria-label={caption}>
+    <section
+      className="cl-wtable focus-ring"
+      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      tabIndex={0} // NOSONAR -- WCAG 2.1.1: a region that scrolls sideways must take focus so the keyboard can scroll it
+      aria-label={caption}
+    >
       <table>
         <caption className="sr-only">{caption}</caption>
         <colgroup>
