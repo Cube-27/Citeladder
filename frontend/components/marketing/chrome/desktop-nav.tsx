@@ -46,6 +46,20 @@ function usePill() {
   return { pill, showAt, hide };
 }
 
+/** Where the popup hangs: its x offset from the trigger row, and whether it slides there. */
+type Stage = Readonly<{ shift: number; slide: boolean }>;
+
+/**
+ * The popup's x offset (D27): a multi-column menu (Platform, Resources)
+ * starts at the navbar's own left edge; a one-column menu (Solutions) hangs
+ * from the trigger row. The root's offsetLeft is its distance from the bar.
+ */
+function stageShift(key: string, root: HTMLElement | null): number {
+  const drop = NAV_DROPS.find((candidate) => candidate.key === key);
+  if (!drop || drop.groups.length < 2 || !root) return 0;
+  return -root.offsetLeft;
+}
+
 /**
  * The website navbar's desktop menus (D22): one Radix NavigationMenu whose
  * menus all render into a single shared popup under the whole bar. Moving
@@ -58,6 +72,8 @@ function usePill() {
 export function DesktopNav({ path }: Readonly<{ path: string }>) {
   const [value, setValue] = useState('');
   const { pill, showAt, hide } = usePill();
+  const [stage, setStage] = useState<Stage>({ shift: 0, slide: false });
+  const root = useRef<HTMLDivElement>(null);
   const triggers = useRef(new Map<string, HTMLElement>());
   const hovering = useRef(false);
   /**
@@ -74,6 +90,9 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
   };
 
   const onValueChange = (next: string) => {
+    // A closing popup stays where it is; an opening one jumps into place,
+    // and switching between open menus slides with the morph.
+    if (next !== '') setStage({ shift: stageShift(next, root.current), slide: value !== '' });
     setValue(next);
     const trigger = triggers.current.get(next);
     if (trigger) showAt(trigger);
@@ -103,7 +122,7 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
       delayDuration={OPEN_DELAY_MS}
       skipDelayDuration={SKIP_DELAY_MS}
     >
-      <div className="cl-navmenu">
+      <div ref={root} className="cl-navmenu">
         <List
           className="cl-navmenu-list"
           onPointerEnter={() => {
@@ -159,8 +178,13 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
             </Item>
           ))}
         </List>
-        {/* Hangs under the whole bar (D19's width), not under its trigger. */}
-        <div className="cl-navmenu-stage">
+        {/* Hangs under the bar, not under its trigger: from the trigger row, or
+            from the bar's left edge for a multi-column menu (D27). */}
+        <div
+          className="cl-navmenu-stage"
+          data-slide={stage.slide ? '' : undefined}
+          style={{ transform: `translateX(${stage.shift}px)` }}
+        >
           <Viewport className="cl-navmenu-viewport" />
         </div>
       </div>
