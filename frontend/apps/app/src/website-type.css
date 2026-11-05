@@ -1122,57 +1122,6 @@
   }
 }
 
-.flow-activity {
-  gap: var(--flow-answer);
-}
-
-.flow-activity-list {
-  display: grid;
-  gap: var(--flow-stack);
-}
-
-.flow-activity-row {
-  display: grid;
-  grid-template-columns: 1.5rem minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.75rem;
-  min-height: 2rem;
-}
-
-.flow-activity-indicator {
-  display: grid;
-  width: 1.5rem;
-  height: 1.5rem;
-  place-items: center;
-  color: var(--color-ink-muted);
-}
-
-.flow-activity-indicator svg {
-  width: 1rem;
-  height: 1rem;
-}
-
-.flow-activity-row[data-state='complete'] .flow-help,
-.flow-activity-row[data-state='active'] .flow-help {
-  color: var(--color-ink);
-}
-
-.flow-activity-row[data-state='active'] .flow-activity-indicator {
-  color: var(--color-accent-ink);
-}
-
-.flow-activity-row[data-state='attention'] {
-  margin-inline: calc(var(--flow-stack) * -1);
-  padding-inline: var(--flow-stack);
-  border-radius: var(--radius-md);
-  background: var(--color-warning-soft);
-}
-
-.flow-activity-row[data-state='attention'] .flow-activity-indicator,
-.flow-activity-row[data-state='attention'] .flow-help {
-  color: var(--color-warning);
-}
-
 /* A stage's results band (warnings, the failed discovery, the next step)
    starts one flow block under the progress above it. */
 .flow-stage-band {
@@ -1282,10 +1231,6 @@
     min-height: var(--control-lg);
   }
 
-  .flow-activity-row {
-    grid-template-columns: 1.5rem minmax(0, 1fr);
-  }
-
   /* On a phone the review sheet is already the card: its questions become
      ruled sections instead of boxes inset twice from the screen edge. */
   .flow-review .flow-review-card {
@@ -1309,10 +1254,6 @@
 
   .flow-review {
     gap: var(--flow-block);
-  }
-
-  .flow-activity-row .flow-meta {
-    grid-column: 2;
   }
 }
 

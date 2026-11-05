@@ -1173,45 +1173,6 @@ samp {
   }
 }
 
-/* The completion mark, drawn rather than swapped in, once. */
-.activity-check {
-  position: relative;
-  display: grid;
-  place-items: center;
-}
-
-.activity-check::before {
-  content: "";
-  position: absolute;
-  inset: -0.25rem;
-  border-radius: var(--radius-full);
-  border: 1px solid currentcolor;
-  animation: activity-check-ring var(--motion-slow) var(--ease-standard) both;
-}
-
-.activity-check svg path {
-  stroke-dasharray: 24;
-  stroke-dashoffset: 24;
-  animation: activity-check-draw var(--motion-normal) var(--ease-standard) var(--motion-fast) both;
-}
-
-@keyframes activity-check-draw {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-@keyframes activity-check-ring {
-  from {
-    opacity: 0.6;
-    transform: scale(0.4);
-  }
-  to {
-    opacity: 0;
-    transform: scale(1.15);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   /* Everything but the two "still working" marks below, which slow down
      instead of stopping. */
@@ -1223,8 +1184,7 @@ samp {
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
   }
-  .activity-dot::after,
-  .activity-check::before {
+  .activity-dot::after {
     display: none;
   }
   /* "Still working" must keep moving, at half speed. These rules sit outside

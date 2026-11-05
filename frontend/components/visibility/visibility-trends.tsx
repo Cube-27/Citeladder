@@ -7,7 +7,6 @@ import { Callout } from '@/components/ui/callout';
 import { Button } from '@/components/ui/button';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartKey } from '@/components/ui/chart';
 import { Delta } from '@/components/ui/delta';
 import { Stack } from '@/components/ui/layout';
 import { InfoHint } from '@/components/ui/info-hint';
@@ -297,23 +296,11 @@ function MeasurementHistory({
       <Stack gap="compact" aria-busy={query.isFetching}>
         <TrendChart
           label={`${metricLabel} over time`}
+          name={primaryLabel}
           data={chartPoints}
           series={competitors}
-          width={360}
-          height={168}
-          xAxisLabel="Run date"
-          yAxisLabel={`${metricLabel} (%)`}
-          formatTick={(value) => `${Math.round(value)}%`}
-          className="h-auto w-full"
-        />
-        <ChartKey
-          entries={[
-            { label: primaryLabel, tone: { series: 1 } },
-            ...competitors.map((entry) => ({
-              label: entry.label,
-              tone: { series: entry.series },
-            })),
-          ]}
+          yMax={100}
+          yFormat={(value) => `${Math.round(value)}%`}
         />
       </Stack>
     );

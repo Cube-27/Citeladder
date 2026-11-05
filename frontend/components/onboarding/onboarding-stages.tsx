@@ -1,19 +1,20 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 
-import { ActivityProgress, type ActivityStep } from '@/components/ui/activity-progress';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { MarketSelect } from '@/components/ui/market-select';
+import { StepList, type Step } from '@/components/ui/step-list';
 import { splitPaneClasses } from '@/components/ui/workspace';
 import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@citeladder/contracts/markets';
 import { discoveryActivity } from '@/lib/onboarding/discovery-activity';
 import { onboardingErrorMessage, type BrandStepValues } from '@/lib/onboarding/forms';
 import { hasConfirmedIcp, IcpAudience, IcpCategory } from './icp-confirmation';
 import { ReviewStep } from './review-step';
+import { useStaggeredSteps } from './use-staggered-steps';
 
 const MARKET_OPTIONS = [{ value: 'GLOBAL', label: 'Global' }, ...MARKET_COUNTRIES];
 
@@ -123,11 +124,10 @@ export function DiscoveryStage({
       <StageHeader title="Finding what to track">
         We&apos;re reading {brandName || 'your website'} and learning what you offer.
       </StageHeader>
-      <ActivityProgress
+      <StageSteps
         label="Discovering your brand"
         steps={discoveryActivity(discovery.discovery)}
-        animateCompletion
-        appearance="flow"
+        stagger
       />
       {found.length > 0 ? (
         <section className="flow-found">
@@ -184,20 +184,20 @@ export function CreationStage({
   committedProjectId,
 }: Readonly<{ committedProjectId: string | null }>) {
   const projectCommitted = committedProjectId !== null;
-  const steps: ActivityStep[] = [
+  const steps: Step[] = [
     {
       id: 'save',
       label: 'Saving your project',
       detail: projectCommitted
         ? 'Your confirmed details are saved.'
         : 'Your confirmed draft remains recoverable.',
-      state: projectCommitted ? 'complete' : 'active',
+      status: projectCommitted ? 'done' : 'running',
     },
     {
       id: 'open',
       label: 'Opening your workspace',
       detail: 'Next, choose the questions you want to track.',
-      state: projectCommitted ? 'active' : 'pending',
+      status: projectCommitted ? 'running' : 'pending',
     },
   ];
 
@@ -207,8 +207,37 @@ export function CreationStage({
         We&apos;re saving your confirmed details and will open the project as soon as it is
         committed.
       </StageHeader>
-      <ActivityProgress label="Project creation progress" steps={steps} appearance="flow" />
+      <StageSteps label="Project creation progress" steps={steps} />
     </div>
+  );
+}
+
+/**
+ * A stage's steps, with the overall count as a (visually hidden) progress bar
+ * and the step being worked on announced politely.
+ */
+function StageSteps({
+  label,
+  steps,
+  stagger = false,
+}: Readonly<{ label: string; steps: readonly Step[]; stagger?: boolean }>) {
+  const shown = useStaggeredSteps(steps, stagger);
+  return (
+    <>
+      <progress
+        className="sr-only"
+        aria-label={`${shown.done} of ${steps.length} steps complete`}
+        aria-valuemin={0}
+        aria-valuemax={steps.length}
+        aria-valuenow={shown.done}
+        value={shown.done}
+        max={Math.max(steps.length, 1)}
+      />
+      <StepList label={label} steps={shown.steps} />
+      <span className="sr-only" aria-live="polite">
+        {shown.announcement}
+      </span>
+    </>
   );
 }
 

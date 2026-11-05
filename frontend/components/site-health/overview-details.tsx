@@ -231,8 +231,9 @@ function TrendCard({ data }: Readonly<{ data: SiteHealthOverview['trend'] }>) {
           <TrendChart
             data={data.series}
             label="AEO Readiness trend"
-            height={96}
-            className="h-auto w-full"
+            name="AEO Readiness"
+            height={160}
+            yMax={100}
           />
           {data.state === 'unavailable' ? (
             <p className="type-caption">Run a second comparable crawl to establish a trend.</p>
