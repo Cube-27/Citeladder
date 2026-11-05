@@ -5,14 +5,23 @@ import { X } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
-/** The tag face: 24px, 12px medium `ink` on `surface` with the xs ring, `radius-xs`. */
+/**
+ * The tag face: 24px, the Geist label style (12px medium, normal tracking and
+ * figures, set here so a tag inside a figure never inherits the figure's
+ * tight tracking) in `ink` on `surface` with the xs ring, `radius-xs`. It is
+ * never wider than its container.
+ */
 export const TAG_FACE =
-  'bg-surface text-ink shadow-xs inline-flex h-6 max-w-full shrink-0 items-center gap-1 rounded-xs px-2 text-caption font-medium whitespace-nowrap';
+  'bg-surface text-ink shadow-xs inline-flex h-6 max-w-full min-w-0 shrink-0 items-center gap-1 rounded-xs px-2 font-sans text-caption font-medium tracking-normal normal-nums whitespace-nowrap';
 
 /**
  * Tag — a neutral chip for a topic, engine or active filter, optionally
  * removable (`onRemove` adds a remove button named "Remove …"). Status is a
  * `Badge`, never a Tag; tags are never coloured and never buttons.
+ *
+ * A tag never overflows its container: a text label is one line, cut with an
+ * ellipsis, its full text in the tooltip. A tag whose children are not plain
+ * text truncates its own label span (`min-w-0 truncate`).
  */
 export function Tag({
   className,
@@ -27,9 +36,10 @@ export function Tag({
     removeLabel?: string;
   }
 >) {
+  const text = typeof children === 'string' ? children : undefined;
   return (
-    <span {...props} className={cn(TAG_FACE, onRemove && 'pe-0.5', className)}>
-      {children}
+    <span title={text} {...props} className={cn(TAG_FACE, onRemove && 'pe-0.5', className)}>
+      {text === undefined ? children : <span className="min-w-0 truncate">{text}</span>}
       {onRemove ? (
         <button
           type="button"
@@ -65,7 +75,7 @@ export function TagGroup({ labels }: Readonly<{ labels: readonly string[] }>) {
           aria-label={expanded ? 'Show fewer tags' : `Show ${labels.length - 2} more tags`}
           onClick={() => setExpanded(!expanded)}
         >
-          {expanded ? 'Show less' : <span className="font-mono">{`+${labels.length - 2}`}</span>}
+          {expanded ? 'Show less' : `+${labels.length - 2}`}
         </button>
       ) : null}
     </div>

@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
  *
  * A Stat's anatomy, in order: the mono eyebrow label (with an optional leading
  * icon and a trailing marker), an optional caption naming the value's period,
- * the value in Geist 500 (`stat` 36), the change line (a `Delta`), a sub-line,
+ * the value in Geist 500 (`stat` 28, decision D15), the change line (a `Delta`), a sub-line,
  * a comparison window's value, and one action. A 0–100 score is its number
  * in `stat` with a bare 48px `ScoreRing` (auto tone) centred on its right —
  * never a bar (decision D8).

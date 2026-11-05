@@ -129,11 +129,11 @@ test('D10: radius-full stays on round things and no corner is rounder than 8px',
   ]);
 });
 
-test('D11: the app density block holds the owner values and the sidebar has no logo', () => {
+test('D11, D15: the app density block and stat size hold the owner values; no sidebar logo', () => {
   // Joined so this file holds no token block of its own (check:policy).
   const theme = ['@', 'theme'].join('');
   const compact = [
-    `${theme} { --radius-lg: 8px; }`,
+    `${theme} { --radius-lg: 8px; --text-stat: 28px; }`,
     '.type-page-title { font-size: var(--text-display-sm); }',
     ':root:not([data-public-surface]) {',
     '  --page-section-gap: 16px; --workspace-gap: 12px;',
@@ -145,12 +145,14 @@ test('D11: the app density block holds the owner values and the sidebar has no l
     reviewStylesheetFindings(
       compact
         .replace('--table-row-height: var(--row-app)', '--table-row-height: 44px')
-        .replace('display-sm', 'display-md'),
+        .replace('display-sm', 'display-md')
+        .replace('--text-stat: 28px', '--text-stat: 36px'),
       'apps/app/src/globals.css',
     ),
     [
       'apps/app/src/globals.css: the app is compact (decision D11): :root:not([data-public-surface]) must set --table-row-height: var(--row-app)',
       'apps/app/src/globals.css: the app is compact (decision D11): .type-page-title is var(--text-display-sm)',
+      "apps/app/src/globals.css: a metric's number is 28px (decision D15): set --text-stat: 28px",
     ],
   );
   const sidebar = "import { LogoMark } from '@/components/ui/logo-mark';\n";

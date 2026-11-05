@@ -114,9 +114,9 @@
   --text-title-sm: 18px;
   --text-title-sm--line-height: 24px;
   --text-title-sm--font-weight: 400;
-  --text-stat: 36px;
-  --text-stat--line-height: 40px;
-  /* Geist 500 since D7: an app number is never Cal Sans. */
+  --text-stat: 28px;
+  --text-stat--line-height: 36px;
+  /* Geist 500 since D7: an app number is never Cal Sans; 28 since D15. */
   --text-stat--font-weight: 500;
   --text-stat--letter-spacing: -0.02em;
   --text-lead: 20px;
@@ -251,7 +251,8 @@
   --sidebar-rail-width: calc(var(--control-md) + 24px + 1px);
 
   /* Component geometry the components read. Each derives from a system token. */
-  --sticky-header-offset: 0px;
+  /* What sticks under the app's top bar starts below it (D12). */
+  --sticky-header-offset: var(--page-header-band);
   --nav-item-height: var(--control-md);
   /* The main column's gutter: 32 from 1280px, 24 below (rebound below). */
   --content-gutter: 32px;
@@ -294,23 +295,18 @@
   --table-min-width-md: 48rem;
   --table-min-width-lg: 64rem;
   --table-min-width-xl: 76rem;
-  /* The app shell's lines (D11): the page and the sidebar both start
-     `page-top-inset` (space-4) from the top. The PageHeader is one 64px band,
-     a `row-app` title row, space-1, then a reserved 20px meta line, and the
-     sidebar's project switcher (`row-app`) sits in a band of the same height,
-     so the mode switch below it is level with the page's tabs or filters.
-     The controls band's rows sit `page-band-gap` apart (tabs → filters →
-     content). */
-  --page-top-inset: 16px;
-  --page-header-meta-height: 20px;
-  --page-header-band: calc(var(--row-app) + 4px + var(--page-header-meta-height));
+  /* The app shell's top bar (D12): the sidebar's project switcher cell and
+     the PageHeader are one sticky 56px bar at the top of the window, the
+     `row-app` title row with space-2 above and below and a 1px `line` rule
+     under it. Below it the mode switch is level with the page's tabs or
+     filters. The controls band's rows sit `page-band-gap` apart (tabs →
+     filters → content). */
+  --page-header-band: calc(var(--row-app) + 16px);
   --page-band-gap: 8px;
   /* What a screen that fills the viewport (the Agent thread) leaves for the
-     header: the top inset, the header band, the gap under it and the bottom
-     gutter. */
+     header: the top bar, the gap under it and the bottom gutter. */
   --route-chrome-height: calc(
-    var(--page-top-inset) + var(--page-header-band) + var(--page-section-gap) +
-      var(--content-gutter)
+    var(--page-header-band) + var(--page-section-gap) + var(--content-gutter)
   );
   /* Website gutters: 20 below 768px, 40 to 1279px, 64 from 1280px. */
   --site-gutter: 20px;

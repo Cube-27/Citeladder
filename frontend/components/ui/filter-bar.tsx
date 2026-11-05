@@ -12,6 +12,7 @@ import {
   MenuRadioItem,
   MenuTrigger,
 } from '@/components/ui/menu';
+import { ControlCount } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
 /**
@@ -108,7 +109,8 @@ export function FilterField({ children }: Readonly<{ children: ReactNode }>) {
  *     muted prefix ("Surface: All surfaces"); `hideLabel` keeps it for
  *     assistive tech only, so the name still contains the visible value.
  *   - `count` is the number of active selections in a multi-select menu: a
- *     count after the name, announced as "N active".
+ *     count in brackets after the name (`ControlCount`, D16), announced as
+ *     "N active".
  *   - `active` marks a filter moved off its default (`data-active`); the
  *     value or count says how.
  *
@@ -150,8 +152,8 @@ export function FilterTrigger({
       <FilterTriggerText label={label} value={value} hideLabel={hideLabel} />
       {showCount ? (
         <>
-          <span aria-hidden className="text-ink-muted font-mono">
-            {count}
+          <span aria-hidden>
+            <ControlCount count={count} />
           </span>
           <span className="sr-only">, {count} active</span>
         </>

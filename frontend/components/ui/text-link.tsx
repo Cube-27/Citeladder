@@ -8,11 +8,17 @@ import { parseAbsoluteHttpUrl } from '@/lib/safe-http-url';
 import { cn } from '@/lib/utils';
 
 /**
- * TextLink — the inline link, always underlined so it never depends on colour
- * alone, with the 2px focus ring.
+ * TextLink — the text link, with the 2px focus ring.
  *
- *   tone `ink` (default, the app): `ink` with a `line-control` underline that
- *     turns `ink` on hover.
+ * Where it stands decides its underline (decision D13). A link set at a type
+ * role stands on its own in a list, table, row or card (an item title, a
+ * URL, "Ask agent about this page"): its place says it is a link, so it is
+ * underlined only on hover and keyboard focus. A link inside a sentence
+ * (`text="inherit"`) is underlined at rest, so it never depends on colour
+ * alone.
+ *
+ *   tone `ink` (default, the app): `ink`; in a sentence a `line-control`
+ *     underline that turns `ink` on hover.
  *   tone `prose` (docs, blog and legal copy): `accent-ink` with a solid
  *     underline that thickens on hover.
  *   tone `muted` (footers, metadata): `ink-secondary`, underlined on hover.
@@ -24,22 +30,35 @@ import { cn } from '@/lib/utils';
  *     assistive tech. An unsafe or missing URL renders as plain text.
  *
  * `text` is the type role the link sits at (`control` by default; `inherit`
- * inside a sentence). `asChild` keeps the recipe on a link the caller owns.
+ * only inside a sentence: a link in a list or table cell takes the role of
+ * its text). `asChild` keeps the recipe on a link the caller owns.
  */
 type TextLinkVariant = 'internal' | 'external';
 export type TextLinkText = TextRole | 'inherit';
 export type TextLinkTone = 'ink' | 'prose' | 'muted';
 
 const TONE: Record<TextLinkTone, string> = {
-  ink: 'text-ink decoration-line-control hover:decoration-current',
-  prose: 'text-accent-ink decoration-current hover:decoration-2',
-  muted: 'text-ink-secondary decoration-transparent hover:text-ink hover:decoration-current',
+  ink: 'text-ink',
+  prose: 'text-accent-ink',
+  muted: 'text-ink-secondary hover:text-ink',
 };
+
+const UNDERLINE = {
+  prose: 'decoration-current hover:decoration-2',
+  sentence: 'decoration-line-control hover:decoration-current',
+  standing: 'decoration-transparent hover:decoration-current focus-visible:decoration-current',
+} as const;
+
+function underline(tone: TextLinkTone, text: TextLinkText) {
+  if (tone === 'prose') return UNDERLINE.prose;
+  return tone === 'ink' && text === 'inherit' ? UNDERLINE.sentence : UNDERLINE.standing;
+}
 
 function textLinkClasses({ tone, text }: Readonly<{ tone: TextLinkTone; text: TextLinkText }>) {
   const recipe = cn(
     'focus-ring rounded-2xs underline decoration-1 underline-offset-3 transition-[color,text-decoration-color]',
     TONE[tone],
+    underline(tone, text),
   );
   return text === 'inherit' ? recipe : textRole(text, recipe);
 }

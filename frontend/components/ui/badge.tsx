@@ -65,10 +65,12 @@ export type RunStatusValue = keyof typeof runStatusTone;
 /**
  * The badge face: 22px, 8px padding, `radius-xs`, 12/16 medium. Centred on
  * the line it sits in: a badge that leads with an icon would otherwise take
- * the icon's bottom edge as its baseline and stretch a 40px table row.
+ * the icon's bottom edge as its baseline and stretch a 40px table row. It
+ * sets its own family and tracking, so a badge inside a figure (a StatRow
+ * value) never inherits the figure's tight tracking.
  */
 const BADGE_FACE =
-  'inline-flex h-[var(--badge-height-sm)] shrink-0 items-center gap-1 rounded-xs px-2 align-middle text-caption font-medium whitespace-nowrap';
+  'inline-flex h-[var(--badge-height-sm)] max-w-full shrink-0 items-center gap-1 rounded-xs px-2 align-middle font-sans text-caption font-medium tracking-normal whitespace-nowrap';
 
 export type BadgeProps = {
   children: ReactNode;

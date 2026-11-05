@@ -15,7 +15,11 @@ const overview = {
     industry: 'Software',
     description: 'Analytics for growth teams',
     positioning: 'Evidence-led analytics',
-    products_services: ['Analytics'],
+    // A long offering must cut inside its chip, never widen the page.
+    products_services: [
+      'AI Visibility tracking (brand mentions, position, sentiment and competitors across AI answers and search engines)',
+      'Analytics',
+    ],
     target_audience: 'Growth teams',
     competitors: [],
   },
@@ -77,7 +81,7 @@ const catalog = {
 
 test('working surfaces preserve their actions without viewport overflow', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  for (const width of [1440, 1024, 390]) {
+  for (const width of [1440, 1024, 982, 390]) {
     await page.setViewportSize({ width, height: 1000 });
     for (const route of ['/projects', '/onboarding', '/agent']) {
       await stubAuthedShell(
