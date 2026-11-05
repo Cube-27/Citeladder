@@ -35,7 +35,9 @@ function Chip({
 }>) {
   return (
     <li className="bg-surface-sunken text-ink text-body-sm inline-flex h-6 max-w-full items-center gap-1 rounded-xs ps-2 pe-0.5 whitespace-nowrap">
-      <span className="min-w-0 truncate">{item.value}</span>
+      <span className="min-w-0 truncate" title={item.value}>
+        {item.value}
+      </span>
       {item.suggested ? (
         <span className="text-caption text-ink-muted shrink-0">Suggested</span>
       ) : null}
@@ -216,7 +218,9 @@ export function ChipList({
         <li key={item.key ?? item.value} className="max-w-full">
           <Tag>
             {item.media}
-            <span className="min-w-0 truncate">{item.value}</span>
+            <span className="min-w-0 truncate" title={item.value}>
+              {item.value}
+            </span>
             {item.suggested ? <span className="text-ink-muted shrink-0">Suggested</span> : null}
           </Tag>
         </li>
