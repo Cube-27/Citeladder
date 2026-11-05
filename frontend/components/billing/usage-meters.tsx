@@ -2,11 +2,12 @@
 
 import { useQuery } from '@tanstack/react-query';
 
+import { AppGrid } from '@/components/ui/app-grid';
 import { Callout } from '@/components/ui/callout';
 import { QueryState } from '@/components/ui/query-state';
 import { Stack } from '@/components/ui/layout';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
-import { EditorialSectionHeader, splitPaneClasses } from '@/components/ui/workspace';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { UsageMeter } from '@/components/billing/usage-meter';
 import { billingApi, type UsageItem } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -99,10 +100,10 @@ function UsageBody({
     );
   }
   return (
-    <div className={splitPaneClasses('thirds')}>
+    <AppGrid layout="thirds">
       {items.map((item) => (
         <UsageMeter key={item.key} item={item} />
       ))}
-    </div>
+    </AppGrid>
   );
 }

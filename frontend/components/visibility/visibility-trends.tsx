@@ -2,6 +2,7 @@
 
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { AppGrid } from '@/components/ui/app-grid';
 import { FilterChoice } from '@/components/ui/filter-bar';
 import { Callout } from '@/components/ui/callout';
 import { Button } from '@/components/ui/button';
@@ -12,10 +13,9 @@ import { Stack } from '@/components/ui/layout';
 import { InfoHint } from '@/components/ui/info-hint';
 import { QueryState } from '@/components/ui/query-state';
 import { ReadError } from '@/components/ui/read-error';
-import { StatRow, type StatSegment } from '@/components/ui/stat-row';
+import { KpiRow, type StatSegment } from '@/components/ui/stat-row';
 import { TrendChart } from '@/components/ui/trend-chart';
 import { textRole } from '@/components/ui/typography';
-import { splitPaneClasses } from '@/components/ui/workspace';
 import { RankingRowsTable } from '@/components/visibility/ranking-rows';
 import { EngineComparison } from '@/components/visibility/engine-comparison';
 import { SurfaceRatesPanel } from '@/components/visibility/surface-rates';
@@ -109,7 +109,7 @@ export function VisibilityTrends({
           an unfiltered cross-surface view would invite reading them as the
           whole product's numbers. */}
       {surfaceEngine ? <SurfaceRatesPanel query={surfaceRatesQuery} /> : null}
-      <div className={splitPaneClasses('peers')}>
+      <AppGrid layout="halves">
         <MeasurementHistory
           query={query}
           metric={metric}
@@ -123,7 +123,7 @@ export function VisibilityTrends({
           onSelect={setFocused}
           selectedName={focusedBrand}
         />
-      </div>
+      </AppGrid>
       <EngineComparison
         visibility={selected}
         filter={engineFilter}
@@ -224,15 +224,7 @@ function HeadlineMetrics({ selected }: Readonly<{ selected: Visibility }>) {
       value: formatPosition(position),
     });
   }
-  // A strip on the card fill, like every other metric row in the app, rather
-  // than bare figures on the page sheet.
-  return (
-    <Card>
-      <CardContent>
-        <StatRow segments={segments} />
-      </CardContent>
-    </Card>
-  );
+  return <KpiRow segments={segments} />;
 }
 
 function MeasurementHistory({

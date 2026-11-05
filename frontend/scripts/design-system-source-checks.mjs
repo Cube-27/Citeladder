@@ -1167,7 +1167,8 @@ function componentFolder(label) {
  * Geometry a feature folder chose for itself: spacing, sized boxes and radii
  * as utilities (`layer-geometry`), and `size=`/`padding=` props
  * (`layer-size-prop`); and, in every product folder including `ui/` and
- * `layout/`, a breakpoint other than `desktop:` (`layer-breakpoint`).
+ * `layout/`, a breakpoint other than `desktop:` and the shell's `shell:`
+ * (`layer-breakpoint`).
  * Every one is a violation: the layering debt was burned to zero (app
  * geometry PR 7), so none is ratcheted or baselined and none can regrow.
  */
@@ -1190,7 +1191,11 @@ export function featureLayeringViolations(source, label) {
       push('layer-geometry', line, `${token} — geometry belongs to a components/ui organism`);
     }
     if (product && variants.some((variant) => LAYER_BREAKPOINT.test(variant))) {
-      push('layer-breakpoint', line, `${token} — the product's one breakpoint is desktop:`);
+      push(
+        'layer-breakpoint',
+        line,
+        `${token} — the product's breakpoints are desktop: and shell:`,
+      );
     }
   }
   if (!feature) return findings;

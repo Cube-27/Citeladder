@@ -1,13 +1,12 @@
 import type { ReactNode } from 'react';
 
-import { Card } from '@/components/ui/card';
-import { StatRow, type StatSegment } from '@/components/ui/stat-row';
+import { KpiRow, type StatSegment } from '@/components/ui/stat-row';
 import { TextLink } from '@/components/ui/text-link';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { ICONS } from '@/lib/icons';
 import type { SiteCrawl, SiteHealthDashboard, SiteHealthOverview } from '@/lib/api/types';
 
-/** One Site Health score as a `StatRow` segment: the score bar and where to act. */
+/** One Site Health score as a `KpiRow` segment: the score bar and where to act. */
 export type AuditMetric = {
   title: string;
   value: number | null;
@@ -44,16 +43,12 @@ function auditSegment({
   };
 }
 
-/** The Site Health scores, as one card holding one `StatRow`. */
+/** The Site Health scores, as one `KpiRow`. */
 export function AuditScores({
   metrics,
   testId,
 }: Readonly<{ metrics: readonly AuditMetric[]; testId?: string }>) {
-  return (
-    <Card data-testid={testId}>
-      <StatRow segments={metrics.map(auditSegment)} />
-    </Card>
-  );
+  return <KpiRow segments={metrics.map(auditSegment)} testId={testId} />;
 }
 
 type Summary = SiteHealthDashboard['score_summary'];

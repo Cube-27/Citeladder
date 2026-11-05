@@ -178,6 +178,23 @@ export function MenuSeparator(
   return <MenuPrimitive.Separator {...props} className="bg-line -mx-1 my-1 h-px shrink-0" />;
 }
 
+/**
+ * A row that holds its own control rather than being one (the account menu's
+ * Theme row): the label on the left in the item's text, the control at the
+ * row's end, at the item's height so the menu keeps one rhythm.
+ */
+export function MenuControlRow({
+  label,
+  children,
+}: Readonly<{ label: string; children: ReactNode }>) {
+  return (
+    <div className="text-body-sm text-ink flex min-h-8 items-center justify-between gap-4 px-2 py-1">
+      <span>{label}</span>
+      {children}
+    </div>
+  );
+}
+
 /** A small group label: 12/16 medium `ink-muted`. */
 export function MenuLabel({ children }: Readonly<{ children: ReactNode }>) {
   return (

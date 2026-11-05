@@ -15,7 +15,6 @@ import { UsageMeters } from '@/components/billing/usage-meters';
 import { QueryState } from '@/components/ui/query-state';
 import { ListScreen } from '@/components/layout/page-shell';
 import { Callout } from '@/components/ui/callout';
-import { Stack } from '@/components/ui/layout';
 import {
   billingApi,
   createIdempotencyKey,
@@ -165,50 +164,45 @@ export function BillingScreen() {
 
   return (
     <ListScreen>
-      <Stack gap="section">
-        <CheckoutStatus checkout={checkout} />
-        {canManage ? null : (
-          <Callout tone="info">
-            Only a workspace Owner or Admin can change this workspace’s plan or buy add-ons.
-          </Callout>
-        )}
-        <CurrentPlan
-          entitlement={entitlement}
-          currentPlan={currentPlanOf(catalog, entitlement)}
-          planName={(key) => (catalog ? catalogItemName(catalog, key) : key)}
-          canManage={canManage}
-          cancellation={cancellation}
+      <CheckoutStatus checkout={checkout} />
+      {canManage ? null : (
+        <Callout tone="info">
+          Only a workspace Owner or Admin can change this workspace’s plan or buy add-ons.
+        </Callout>
+      )}
+      <CurrentPlan
+        entitlement={entitlement}
+        currentPlan={currentPlanOf(catalog, entitlement)}
+        planName={(key) => (catalog ? catalogItemName(catalog, key) : key)}
+        canManage={canManage}
+        cancellation={cancellation}
+      />
+      {catalog ? (
+        <PurchaseReview
+          checkout={checkout}
+          catalog={catalog}
+          itemName={(key) => catalogItemName(catalog, key)}
+          renewsOn={entitlement?.subscription?.current_period_end ?? null}
         />
-        {catalog ? (
-          <PurchaseReview
-            checkout={checkout}
-            catalog={catalog}
-            itemName={(key) => catalogItemName(catalog, key)}
-            renewsOn={entitlement?.subscription?.current_period_end ?? null}
-          />
-        ) : null}
-        {/* Usage and plan cards are neighbours: the workspace gap, not the section gap. */}
-        <Stack gap="workspace">
-          <UsageMeters />
-          <PlanSection
-            catalog={catalog}
-            catalogLoading={catalogQuery.isLoading}
-            catalogError={catalogQuery.isError}
-            entitlement={entitlement}
-            canManage={canManage}
-            checkout={checkout}
-            planChanges={planChanges}
-            onBuyExtra={buyExtra}
-            newSubscription={{ country, setCountry, details, setDetails, subscribe }}
-          />
-        </Stack>
-        <InvoiceHistory
-          invoices={invoiceQuery.data ?? []}
-          loading={invoiceQuery.isLoading}
-          error={invoiceQuery.isError}
-        />
-        <BillingSupport contact={catalog?.support_contact ?? null} />
-      </Stack>
+      ) : null}
+      <UsageMeters />
+      <PlanSection
+        catalog={catalog}
+        catalogLoading={catalogQuery.isLoading}
+        catalogError={catalogQuery.isError}
+        entitlement={entitlement}
+        canManage={canManage}
+        checkout={checkout}
+        planChanges={planChanges}
+        onBuyExtra={buyExtra}
+        newSubscription={{ country, setCountry, details, setDetails, subscribe }}
+      />
+      <InvoiceHistory
+        invoices={invoiceQuery.data ?? []}
+        loading={invoiceQuery.isLoading}
+        error={invoiceQuery.isError}
+      />
+      <BillingSupport contact={catalog?.support_contact ?? null} />
     </ListScreen>
   );
 }

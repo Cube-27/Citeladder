@@ -5,7 +5,6 @@ import type { ReactNode } from 'react';
 import { BusyBar } from '@/components/ui/progress-bar';
 import { Card } from '@/components/ui/card';
 import { Pressable } from '@/components/ui/pressable';
-import { splitPaneClasses } from '@/components/ui/workspace';
 import { cn } from '@/lib/utils';
 
 /**
@@ -24,7 +23,7 @@ export function ListDetailCard({
     <Card
       // `overflow-clip` (not `hidden`) rounds the corners without becoming a
       // scroll container, so the detail pane stays sticky against the page.
-      className={splitPaneClasses('list-detail', 'gap-0 overflow-clip')}
+      className="desktop:grid-cols-[var(--pane-list-detail)] grid min-w-0 items-start overflow-clip"
       aria-busy={busy}
     >
       {/* One vertical list at every width: above the detail when the panes

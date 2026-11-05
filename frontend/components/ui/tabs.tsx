@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
  * inset and 2px between segments. It keeps its width when the selection
  * changes.
  */
-export const TAB_TRACK =
+const TAB_TRACK =
   'bg-surface-sunken inline-flex h-[var(--control-md)] max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
 /**
@@ -20,11 +20,26 @@ export const TAB_TRACK =
  * `ink-secondary`; the selected one lifts onto `surface` with the xs ring in
  * `ink`. A count sits after the label in mono 11px `ink-muted`.
  */
-export function tabClasses(selected: boolean, className?: string) {
+function tabClasses(selected: boolean, className?: string) {
   return cn(
     'focus-ring inline-flex h-full shrink-0 items-center justify-center gap-1.5 rounded-sm px-3 text-label whitespace-nowrap transition-[background-color,color] duration-[var(--motion-fast)] focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-45',
     selected ? 'bg-surface text-ink shadow-xs' : 'text-ink-secondary not-disabled:hover:text-ink',
     className,
+  );
+}
+
+/**
+ * The sidebar's mode switch: the track stretched to two equal segments, and
+ * in the rail (below the `shell:` breakpoint) the same track stacked as two
+ * icon segments one control wide.
+ */
+export const MODE_TRACK =
+  'bg-surface-sunken shell:h-[var(--control-md)] shell:w-full shell:flex-row shell:items-center flex w-[var(--control-md)] flex-col gap-0.5 rounded-md p-0.5';
+
+export function modeSegmentClasses(selected: boolean) {
+  return tabClasses(
+    selected,
+    'shell:h-full shell:flex-1 shell:basis-0 shell:px-3 h-[calc(var(--control-md)-6px)] w-full px-0',
   );
 }
 

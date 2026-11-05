@@ -9,14 +9,17 @@ import { cn } from '@/lib/utils';
  * the shared `.focus-input` rule.
  */
 const textareaClasses =
-  'focus-input bg-surface border-line-control text-ink placeholder:text-ink-muted block min-h-[calc(var(--control-md)*2)] w-full resize-y rounded-md border px-3 py-2 text-body-sm transition-[border-color,box-shadow] duration-[var(--motion-fast)] disabled:cursor-not-allowed disabled:opacity-45';
+  'text-ink placeholder:text-ink-muted block w-full rounded-md border text-body-sm disabled:cursor-not-allowed disabled:opacity-45';
+
+const fieldClasses =
+  'focus-input bg-surface border-line-control min-h-[calc(var(--control-md)*2)] resize-y px-3 py-2 transition-[border-color,box-shadow] duration-[var(--motion-fast)]';
 
 /**
- * Inside the Agent composer the composer is the box: the field drops its
- * edge, fill, resize handle and resting height.
+ * Inside the Agent composer the composer is the box and draws the one focus
+ * boundary (its `focus-frame`): the field drops its edge, fill, resize
+ * handle, resting height and focus treatment.
  */
-const composerClasses =
-  'min-h-0 resize-none border-transparent bg-transparent px-2 py-1 focus-visible:border-transparent focus-visible:shadow-none';
+const composerClasses = 'min-h-0 resize-none border-transparent bg-transparent px-2 py-1';
 
 export function Textarea({
   className,
@@ -35,7 +38,11 @@ export function Textarea({
     <textarea
       ref={ref}
       rows={rows}
-      className={cn(textareaClasses, placement === 'composer' && composerClasses, className)}
+      className={cn(
+        textareaClasses,
+        placement === 'composer' ? composerClasses : fieldClasses,
+        className,
+      )}
       {...props}
     />
   );

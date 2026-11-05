@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
+import { AppGrid } from '@/components/ui/app-grid';
 import { formatChartCount } from '@/components/ui/chart';
 import { Stack } from '@/components/ui/layout';
-import { splitPaneClasses } from '@/components/ui/workspace';
 import { QueryState } from '@/components/ui/query-state';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -71,8 +71,8 @@ export function SearchIntelligenceHistory({
       value: value(row),
     }));
   return (
-    <section className={splitPaneClasses('peers')} aria-label="Saved backlink history">
-      <p className={textRole('caption', 'desktop:col-span-2')}>
+    <AppGrid as="section" layout="halves" aria-label="Saved backlink history">
+      <p className={textRole('caption', 'shell:col-span-2')}>
         Monthly domain-level history for {dataset.target_domain}, {first.date} to {last.date}.
         Coverage includes the provider’s historical link population and may differ from the live
         summary. Missing observations are gaps.
@@ -98,7 +98,7 @@ export function SearchIntelligenceHistory({
           format={formatChartCount}
         />
       </Stack>
-    </section>
+    </AppGrid>
   );
 }
 

@@ -11,6 +11,7 @@ import {
   orphanSegment,
 } from '@/components/site-health/architecture-orphans';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
+import { AppGrid } from '@/components/ui/app-grid';
 import { Badge } from '@/components/ui/badge';
 import { Callout } from '@/components/ui/callout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +25,6 @@ import { StatRow } from '@/components/ui/stat-row';
 import { TextLink } from '@/components/ui/text-link';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
-import { splitPaneClasses } from '@/components/ui/workspace';
 import { siteHealthQueries } from '@/lib/api/site-health';
 import type {
   ArchitectureNode,
@@ -329,7 +329,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
   const linkedShare = linking.pages_with_incoming_percentage;
   return (
     <>
-      <div className={splitPaneClasses('peers')}>
+      <AppGrid layout="halves">
         <Card>
           <CardHeader>
             <CardTitle>
@@ -399,7 +399,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
             </Stack>
           </CardContent>
         </Card>
-      </div>
+      </AppGrid>
       <TextLink className="justify-self-start" href="/site?tab=internal-links">
         Review internal link suggestions
       </TextLink>

@@ -10,42 +10,6 @@ import { cn } from '@/lib/utils';
  */
 
 /**
- * The sanctioned two-column splits. A screen picks a role, never a ratio:
- * pages had drifted to 2fr/1fr, 3fr/2fr, 1.15fr/1fr and fixed rem widths for
- * the same two layouts, so the same kind of page moved its seam on every route.
- *
- *   `list-detail` — a selectable list beside the selected item's evidence.
- *   `main-aside`  — the primary surface beside supporting context.
- *   `peers`       — two equal surfaces read side by side (e.g. two tables).
- *   `thirds`      — three equal summary cards side by side.
- *
- * All stack below the `desktop` breakpoint, with the first child first, and
- * share the workspace gap. Columns align to the top so a short aside never
- * stretches. A detail route takes its split from `DetailScreen`.
- */
-const SPLIT_PANE = {
-  'list-detail': 'desktop:grid-cols-[var(--pane-list-detail)]',
-  /**
-   * The list at the reader's width: three tracks — the list at
-   * `--split-pane-list-width`, the separator, the detail — with the gap carried
-   * by the separator itself. `ResizableSplitPane` owns the width and the
-   * separator; use it rather than this role alone.
-   */
-  'list-detail-resizable':
-    'desktop:grid-cols-[var(--split-pane-list-width)_auto_minmax(0,1fr)] desktop:gap-0',
-  'main-aside': 'desktop:grid-cols-[var(--pane-main-aside)]',
-  peers: 'desktop:grid-cols-2',
-  /** Three equal summary cards read side by side. */
-  thirds: 'desktop:grid-cols-3',
-} as const;
-
-export type SplitPaneRole = keyof typeof SPLIT_PANE;
-
-export function splitPaneClasses(role: SplitPaneRole, className?: string) {
-  return cn('grid min-w-0 items-start gap-[var(--workspace-gap)]', SPLIT_PANE[role], className);
-}
-
-/**
  * The one sticky offset for a pane that stays in view while its neighbour
  * scrolls (the list beside a long detail). It clears the compact topbar on
  * narrow screens and is 0 on desktop, where the sheet scrolls under nothing.

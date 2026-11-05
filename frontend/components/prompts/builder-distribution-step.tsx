@@ -3,6 +3,7 @@
 import { Search, Users } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import { AppGrid } from '@/components/ui/app-grid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,6 @@ import { Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { textRole } from '@/components/ui/typography';
-import { splitPaneClasses } from '@/components/ui/workspace';
 import type { SeedQueries, Topic } from '@/lib/api/types';
 import { MAX_GENERATION_COUNT, PROMPT_BUILDER } from '@/lib/config/prompts';
 import {
@@ -215,7 +215,7 @@ export function BuilderDistributionStep({
           />
         )}
       </Field>
-      <div className={splitPaneClasses('peers')}>
+      <AppGrid layout="halves">
         <PercentField
           label="Branded share"
           hint={
@@ -237,9 +237,9 @@ export function BuilderDistributionStep({
           disabled={!hasCompetitors}
           onChange={(comparisonPercent) => onChange({ ...settings, comparisonPercent })}
         />
-      </div>
+      </AppGrid>
       <Section title="Intent mix">
-        <div className={splitPaneClasses('thirds')}>
+        <AppGrid layout="thirds">
           {INTENT_KEYS.map((key) => (
             <PercentField
               key={key}
@@ -251,7 +251,7 @@ export function BuilderDistributionStep({
               }
             />
           ))}
-        </div>
+        </AppGrid>
       </Section>
       <Section title="Personas to balance across">
         <PersonaChoices

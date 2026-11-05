@@ -4,7 +4,7 @@ import { CircleHelp, Download } from 'lucide-react';
 
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { Button, IconButton } from '@/components/ui/button';
-import { FilterChoice, FilterDivider, FilterTrigger } from '@/components/ui/filter-bar';
+import { FilterChoice, FilterTrigger } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
 import {
   Menu,
@@ -99,7 +99,6 @@ export function VisibilityToolbar(props: ToolbarProps) {
       <MeasurementFilter {...props} />
       <RangeFilter {...props} />
       {props.activeTab === 'trends' ? <GranularityFilter {...props} /> : null}
-      <FilterDivider />
       <CohortFilter {...props} />
       <EngineFilterControl {...props} />
       {evidence ? <PromptFilter {...props} /> : null}

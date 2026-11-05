@@ -2,12 +2,11 @@
 
 import { SubscriptionDetail } from '@/components/billing/billing-account-details';
 import { Badge } from '@/components/ui/badge';
+import { BillingPlan } from '@/components/ui/billing-plan';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
-import { Inline, Stack } from '@/components/ui/layout';
-import { cardClasses } from '@/components/ui/card';
 import { textRole } from '@/components/ui/typography';
 import type { BillingEntitlement, CatalogPlan } from '@/lib/api/billing';
 import { billingErrorMessage } from '@/lib/billing/reason-copy';
@@ -97,31 +96,28 @@ export function CurrentPlan({
 }>) {
   const subscription = entitlement?.subscription ?? null;
   return (
-    <Stack as="section" gap="compact" className={cardClasses()} aria-label="Current plan">
-      <Inline gap="compact" className="flex-wrap items-start justify-between">
-        <Stack gap="tight" className="min-w-0">
-          <p className={textRole('label')}>Current plan</p>
-          <Inline>
-            <p className={textRole('sectionTitle')}>
-              {currentPlan?.name ?? subscription?.catalog_key ?? 'No active plan'}
-            </p>
-            {/* The kind of access is a classification, not a state: neutral.
-                The unresolved case is a fault, and the warning below says so. */}
-            <Badge>{accessLabel(entitlement)}</Badge>
-          </Inline>
-          <SubscriptionDetail
-            subscription={subscription}
-            periodEnd={subscription?.current_period_end}
-          />
-        </Stack>
-        {canManage && subscription ? (
+    <BillingPlan
+      label="Current plan"
+      name={currentPlan?.name ?? subscription?.catalog_key ?? 'No active plan'}
+      // The kind of access is a classification, not a state: neutral. The
+      // unresolved case is a fault, and the warning below says so.
+      badge={<Badge>{accessLabel(entitlement)}</Badge>}
+      detail={
+        <SubscriptionDetail
+          subscription={subscription}
+          periodEnd={subscription?.current_period_end}
+        />
+      }
+      action={
+        canManage && subscription ? (
           <CancellationControl subscription={subscription} cancellation={cancellation} />
-        ) : null}
-      </Inline>
+        ) : null
+      }
+    >
       <PlanNotices entitlement={entitlement} planName={planName} />
       <ResumeNotice subscription={subscription} cancellation={cancellation} />
       <CancelDialog cancellation={cancellation} />
-    </Stack>
+    </BillingPlan>
   );
 }
 

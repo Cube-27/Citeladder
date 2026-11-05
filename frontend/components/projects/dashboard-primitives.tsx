@@ -1,3 +1,4 @@
+import { AppGrid } from '@/components/ui/app-grid';
 import { Badge } from '@/components/ui/badge';
 import { Delta } from '@/components/ui/delta';
 import type { DataTone } from '@/components/ui/data-tone';
@@ -10,7 +11,6 @@ import type { CommandCenter, Opportunity } from '@/lib/api/types';
 import { availabilityLabel } from '@/lib/format';
 import { severityBadgeValue, severityLabel } from '@/lib/site-health/issues';
 import { textRole } from '@/components/ui/typography';
-import { splitPaneClasses } from '@/components/ui/workspace';
 
 /** A change against the previous comparable run, as every Command Center delta reads it. */
 export const VS_PREVIOUS_RUN = {
@@ -32,7 +32,7 @@ export function metricValue(value: number | null, suffix = '') {
  */
 export function MovementChart({ movements }: Readonly<{ movements: CommandCenter['movements'] }>) {
   return (
-    <div className={splitPaneClasses('peers')}>
+    <AppGrid layout="halves">
       {movements.map((row) => (
         <Stack key={row.label} gap="compact" className="min-w-0 content-start">
           <Inline className="justify-between">
@@ -48,7 +48,7 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
           />
         </Stack>
       ))}
-    </div>
+    </AppGrid>
   );
 }
 

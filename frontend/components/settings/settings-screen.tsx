@@ -9,7 +9,6 @@ import { Avatar } from '@/components/ui/avatar';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
-import { Card } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
 import { IntegrationSettings } from '@/components/settings/integration-settings';
 import { WorkspacePanel } from '@/components/settings/workspace-panel';
@@ -233,42 +232,36 @@ export function SettingsScreen() {
         }}
       >
         <TabPanel value="account" forceMount className="focus-ring data-[state=inactive]:hidden">
-          {/* One ruled list on one card, as the Providers tab is: every
-              section names itself on the left and starts its controls at the
-              same edge on the right, so the page reads top to bottom without
-              the ragged gaps of two loose columns or text set on the bare
-              page. */}
-          <Card>
-            <SettingsSections>
-              <SettingsSection title="Profile" description="Your sign-in email and workspace role.">
-                <IdentityRow
-                  media={<Avatar name={user.email} placement="profile" />}
-                  title={<div className={textRole('itemTitle', 'truncate')}>{user.email}</div>}
-                  caption={
-                    activeWorkspace ? (
-                      <div className="type-body">
-                        {activeWorkspace.role === 'owner'
-                          ? `Owner of ${activeWorkspace.name}`
-                          : `${roleLabel(activeWorkspace.role)} in ${activeWorkspace.name}`}
-                      </div>
-                    ) : null
-                  }
+          {/* One card per section, the danger zone last. */}
+          <SettingsSections>
+            <SettingsSection title="Profile" description="Your sign-in email and workspace role.">
+              <IdentityRow
+                media={<Avatar name={user.email} placement="profile" />}
+                title={<div className={textRole('itemTitle', 'truncate')}>{user.email}</div>}
+                caption={
+                  activeWorkspace ? (
+                    <div className="type-body">
+                      {activeWorkspace.role === 'owner'
+                        ? `Owner of ${activeWorkspace.name}`
+                        : `${roleLabel(activeWorkspace.role)} in ${activeWorkspace.name}`}
+                    </div>
+                  ) : null
+                }
+              />
+              {createdLabel || updatedLabel ? (
+                <FactList
+                  layout="ruled"
+                  facts={[
+                    ...(createdLabel ? [{ label: 'Account created', value: createdLabel }] : []),
+                    ...(updatedLabel ? [{ label: 'Last updated', value: updatedLabel }] : []),
+                  ]}
                 />
-                {createdLabel || updatedLabel ? (
-                  <FactList
-                    layout="ruled"
-                    facts={[
-                      ...(createdLabel ? [{ label: 'Account created', value: createdLabel }] : []),
-                      ...(updatedLabel ? [{ label: 'Last updated', value: updatedLabel }] : []),
-                    ]}
-                  />
-                ) : null}
-              </SettingsSection>
-              <TimeZoneSetting />
-              <AccountSecurity />
-              <ProjectDeletionControls />
-            </SettingsSections>
-          </Card>
+              ) : null}
+            </SettingsSection>
+            <TimeZoneSetting />
+            <AccountSecurity />
+            <ProjectDeletionControls />
+          </SettingsSections>
         </TabPanel>
 
         <TabPanel value="workspace" forceMount className="focus-ring data-[state=inactive]:hidden">

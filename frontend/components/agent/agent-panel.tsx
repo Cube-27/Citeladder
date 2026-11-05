@@ -119,7 +119,6 @@ function PanelStart({
     <DockedThread
       dock={
         <Composer
-          rows={2}
           id="agent-panel-message"
           label="Message the agent"
           value={message}

@@ -3,10 +3,10 @@
 import type { DemandSignal } from '@/lib/api/demand';
 import { numericMetric, signalTypeMeta } from '@/lib/demand/signals';
 import { availabilityLabel, formatCount } from '@/lib/format';
+import { AppGrid } from '@/components/ui/app-grid';
 import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
-import { splitPaneClasses } from '@/components/ui/workspace';
 
 /**
  * The plain-language reading of one signal, for its evidence drawer.
@@ -111,7 +111,7 @@ function QueryRelevanceEvidence({ signal }: Readonly<{ signal: DemandSignal }>) 
               'Query-term coverage measured against the currently inspected page.'}
           </p>
         </Stack>
-        <dl className={splitPaneClasses('thirds', 'type-caption')}>
+        <AppGrid as="dl" layout="thirds" className="type-caption">
           <div>
             <dt className="text-ink-muted">Title</dt>
             <dd className={textRole('emphasis', 'tabular-nums')}>
@@ -130,7 +130,7 @@ function QueryRelevanceEvidence({ signal }: Readonly<{ signal: DemandSignal }>) 
               {coverageLabel(relevance.primary_content_coverage)}
             </dd>
           </div>
-        </dl>
+        </AppGrid>
         {missing.length > 0 ? (
           <p className="type-caption">
             <span className={textRole('label')}>Missing from title or H1:</span>{' '}

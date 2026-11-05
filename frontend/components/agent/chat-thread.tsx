@@ -71,7 +71,6 @@ export function ReplyComposer({
   const { turn, access, runActive } = thread;
   return (
     <Composer
-      rows={2}
       id={id}
       label="Reply to the agent"
       value={turn.draft}

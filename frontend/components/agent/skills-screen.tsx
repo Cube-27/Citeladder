@@ -5,13 +5,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { ListScreen } from '@/components/layout/page-shell';
 import { ProjectLink } from '@/components/layout/scoped-link';
+import { AppGrid } from '@/components/ui/app-grid';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Inline, Stack } from '@/components/ui/layout';
 import { cardClasses } from '@/components/ui/card';
 import { QueryState } from '@/components/ui/query-state';
 import { textRole } from '@/components/ui/typography';
-import { EditorialSectionHeader, splitPaneClasses } from '@/components/ui/workspace';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { skillGroupLabel } from '@/lib/agent/vocabulary';
 import { agentQueries, type AgentSkill } from '@/lib/api/agent';
@@ -69,7 +70,7 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
             title={group}
             description={`${rows.length} ${rows.length === 1 ? 'skill' : 'skills'}`}
           />
-          <ul className={splitPaneClasses('peers', 'items-stretch')}>
+          <AppGrid as="ul" layout="halves">
             {rows.map((skill) => (
               <Stack as="li" key={skill.id} className={cardClasses()}>
                 <Stack gap="tight">
@@ -89,7 +90,7 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
                 </Inline>
               </Stack>
             ))}
-          </ul>
+          </AppGrid>
         </Stack>
       ))}
     </Stack>

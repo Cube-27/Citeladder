@@ -210,8 +210,11 @@ These hold whatever a component looks like:
 - **Nothing moves on interaction.** Pagination, tabs, filters, sorting, loading
   and empty states keep their footprint; a select is as wide as its widest
   option; a pending button keeps its label's box.
-- **The app has one breakpoint**, `desktop:` (981px). Product components use no
-  other breakpoint.
+- **The app has one component breakpoint**, `desktop:` (981px), and one shell
+  breakpoint, `shell:` (1280px). Below 1280px the sidebar is the 61px icon
+  rail, `AppGrid` halves and main-aside stack, quarters go 2 × 2 and the
+  `FilterBar` puts its filters on a second row; a child spanning an AppGrid
+  row spans at `shell:` too. Product components use no other breakpoint.
 - **Atoms have one form.** Geometry lives in `components/ui` and
   `components/layout`; a feature folder composes them and sets no spacing,
   sized box, radius, `size=` or `padding=` (`layer-*` rules, unratcheted).

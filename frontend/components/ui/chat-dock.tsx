@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import type { FormEvent, ReactNode, RefObject } from 'react';
 
 import { Icon } from '@/components/ui/icon';
+import { LogoMark } from '@/components/ui/logo-mark';
 import { MENU_PANEL, menuItemClasses } from '@/components/ui/menu';
 import { Pressable } from '@/components/ui/pressable';
 import { textRole } from '@/components/ui/typography';
@@ -73,10 +74,13 @@ export function ComposerDock({
 }
 
 /**
- * The message box: one framed field with its context chips above it and its
- * tools and send control under it. The frame is the box (radius 12, the strong
- * edge, an 8 inset); the field inside is a `Textarea` with the `composer`
- * placement. Chips render only when there are any.
+ * AgentComposer's frame: one framed field (three lines) with its context
+ * chips above it and one 36px control row under it, the tools on the left
+ * and Send or Stop always at the right end. The frame is the box (`surface`,
+ * `radius-lg`, the `line-control` edge, an 8 inset); while the field has focus
+ * the frame takes the field focus (a `focus` edge and a 3px `line` halo).
+ * The field inside is a `Textarea` with the `composer` placement. Chips
+ * render only when there are any.
  */
 export function ComposerFrame({
   onSubmit,
@@ -96,7 +100,7 @@ export function ComposerFrame({
 }>) {
   return (
     <form
-      className="bg-surface border-line-control grid gap-1 rounded-lg border p-2"
+      className="focus-frame bg-surface border-line-control mx-auto grid w-full max-w-prose gap-1 rounded-lg border p-2 transition-[border-color,box-shadow] duration-[var(--motion-fast)]"
       onSubmit={(event: FormEvent) => {
         event.preventDefault();
         onSubmit();
@@ -108,11 +112,69 @@ export function ComposerFrame({
         </ul>
       ) : null}
       {field}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-1">{tools}</div>
-        {submit}
+      <div className="flex min-h-[var(--control-md)] flex-wrap items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-1">{tools}</div>
+        <div className="ms-auto shrink-0">{submit}</div>
       </div>
     </form>
+  );
+}
+
+/**
+ * AgentThread — the conversation's column: the prose measure (720), centred
+ * in the page or panel, its turns 24 apart.
+ */
+export function AgentThread({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <div className="mx-auto flex w-full max-w-prose min-w-0 flex-col gap-[var(--card-padding)]">
+      {children}
+    </div>
+  );
+}
+
+/**
+ * The person's turn: a right-aligned bubble (`surface`, `shadow-xs`,
+ * `radius-lg`) at most 80% of the column, the message as written (its line
+ * breaks kept) over its `footer` (mentions, a sending state).
+ */
+export function UserTurn({ text, footer }: Readonly<{ text: string; footer?: ReactNode }>) {
+  return (
+    <div className="flex justify-end">
+      <div className="bg-surface flex max-w-[80%] min-w-0 flex-col gap-2 rounded-lg px-4 py-3 shadow-xs">
+        <p className={textRole('body', 'whitespace-pre-wrap')}>{text}</p>
+        {footer}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The agent's turn, with no bubble: the logo mark, "Agent", the time and any
+ * `meta` (the skill it used) on one line, then the reply's parts 12 apart.
+ * `inProgress` marks the reply still being written.
+ */
+export function AgentTurn({
+  time,
+  meta,
+  inProgress = false,
+  children,
+}: Readonly<{ time?: ReactNode; meta?: ReactNode; inProgress?: boolean; children: ReactNode }>) {
+  return (
+    <article
+      aria-label={inProgress ? 'Agent reply in progress' : 'Agent reply'}
+      aria-busy={inProgress || undefined}
+      className="flex min-w-0 flex-col gap-3"
+    >
+      <div className="flex min-h-6 flex-wrap items-center gap-2">
+        <LogoMark wordmark={false} variant="compact" />
+        <span className={textRole('label')}>Agent</span>
+        {time ? (
+          <span className={textRole('caption', 'font-mono tabular-nums')}>{time}</span>
+        ) : null}
+        {meta ? <span className={textRole('caption')}>{meta}</span> : null}
+      </div>
+      {children}
+    </article>
   );
 }
 

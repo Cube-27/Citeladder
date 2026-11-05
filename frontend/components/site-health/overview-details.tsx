@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { CohortCompositionContext } from './cohort-composition-context';
+import { AppGrid } from '@/components/ui/app-grid';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Delta } from '@/components/ui/delta';
@@ -26,7 +27,6 @@ import {
   EditorialSectionHeader,
   ledgerClasses,
   ledgerItemClasses,
-  splitPaneClasses,
 } from '@/components/ui/workspace';
 import { ICONS } from '@/lib/icons';
 
@@ -38,18 +38,18 @@ export function OverviewDetails({ data }: Readonly<{ data: SiteHealthOverview }>
   const [webFundamentalsOpen, setWebFundamentalsOpen] = useState(false);
   return (
     <>
-      <div className={splitPaneClasses('peers')}>
+      <AppGrid layout="halves">
         <DimensionLedger dimensions={data.aeo_dimensions} />
         <TopIssues issues={data.top_issues} />
-      </div>
-      <div className={splitPaneClasses('thirds')}>
+      </AppGrid>
+      <AppGrid layout="thirds">
         <WebFundamentalsCard
           data={data.web_fundamentals}
           onOpen={() => setWebFundamentalsOpen(true)}
         />
         <TrendCard data={data.trend} />
         <ChangeSummaryCard data={data.change_summary} />
-      </div>
+      </AppGrid>
       <WebFundamentalsDrawer
         data={data.web_fundamentals}
         open={webFundamentalsOpen}
@@ -196,7 +196,7 @@ function WebFundamentalsCard({
       </CardHeader>
       <CardContent>
         <Stack gap="workspace">
-          <div className={splitPaneClasses('peers')}>
+          <AppGrid layout="halves">
             {data.areas.map((area) => (
               <Stack
                 gap="tight"
@@ -209,7 +209,7 @@ function WebFundamentalsCard({
                 </Badge>
               </Stack>
             ))}
-          </div>
+          </AppGrid>
           <Button variant="secondary" onClick={onOpen} className="justify-self-start">
             View evidence
           </Button>
