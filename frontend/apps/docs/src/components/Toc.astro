@@ -1,0 +1,105 @@
+---
+/**
+ * Toc — "On this page": the article's h2 and h3 headings on a 1px `line`
+ * rail, h3 indented. The heading in view turns its link `ink` with a 2px
+ * `ink` marker on the rail; weight never changes, so lines never re-wrap.
+ */
+interface Props {
+  items: readonly { id: string; label: string; level: number }[];
+}
+const { items } = Astro.props;
+---
+
+<nav class="cl-toc" aria-label="On this page">
+  <p class="type-eyebrow">On this page</p>
+  <ol class="cl-toc-list">
+    {
+      items.map((item) => (
+        <li>
+          <a
+            class:list={['cl-toc-link', { 'cl-toc-link--sub': item.level === 3 }]}
+            href={`#${item.id}`}
+          >
+            {item.label}
+          </a>
+        </li>
+      ))
+    }
+  </ol>
+</nav>
+
+<style>
+  .cl-toc {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .cl-toc-list {
+    padding: 0;
+    list-style: none;
+    border-left: 1px solid var(--color-line);
+  }
+  .cl-toc-link {
+    position: relative;
+    display: block;
+    padding: 4px 16px;
+    color: var(--color-ink-muted);
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+    text-decoration: none;
+    transition: color var(--motion-fast) var(--ease-standard);
+  }
+  .cl-toc-link--sub {
+    padding-left: 32px;
+  }
+  .cl-toc-link:hover,
+  .cl-toc-link[aria-current='location'] {
+    color: var(--color-ink);
+  }
+  .cl-toc-link[aria-current='location']::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -1px;
+    width: 2px;
+    background: var(--color-ink);
+  }
+</style>
+
+<script>
+  // Mark the heading in view: the last one whose top has passed under the top
+  // bar, or the last heading once the page is scrolled to its end.
+  const links = [...document.querySelectorAll<HTMLAnchorElement>('.cl-toc-link')];
+  const ids = [...new Set(links.map((link) => decodeURIComponent(link.hash.slice(1))))];
+  const headings = ids
+    .map((id) => document.getElementById(id))
+    .filter((node): node is HTMLElement => node !== null);
+  const bar = document.querySelector<HTMLElement>('[data-docs-bar]');
+  let scheduled = false;
+  const update = () => {
+    scheduled = false;
+    const offset = (bar?.getBoundingClientRect().bottom ?? 0) + 24;
+    let current = headings[0];
+    for (const heading of headings) {
+      if (heading.getBoundingClientRect().top <= offset + 1) current = heading;
+    }
+    const end = document.documentElement.scrollHeight - 2;
+    if (window.scrollY > 0 && window.scrollY + window.innerHeight >= end) current = headings.at(-1);
+    for (const link of links) {
+      if (decodeURIComponent(link.hash.slice(1)) === current?.id)
+        link.setAttribute('aria-current', 'location');
+      else link.removeAttribute('aria-current');
+    }
+  };
+  const schedule = () => {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(update);
+  };
+  window.addEventListener('scroll', schedule, { passive: true });
+  window.addEventListener('resize', schedule);
+  window.addEventListener('hashchange', schedule);
+  void document.fonts.ready.then(schedule);
+  update();
+</script>

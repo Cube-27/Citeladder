@@ -1,0 +1,98 @@
+---
+/**
+ * ArticlePager — the previous and next guides at the foot of a page: two
+ * half-width `surface` cards (1px `line`, `radius-xl`, `shadow-xs`), the
+ * direction in `ink-muted` with a chevron and the title in `label-lg`. Next
+ * keeps the right column when there is no Previous; the two stack below 768px.
+ */
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
+type Link = { title: string; href: string };
+interface Props {
+  previous?: Link;
+  next?: Link;
+}
+const { previous, next } = Astro.props;
+---
+
+<nav class="cl-pager" aria-label="Adjacent articles">
+  {
+    previous && (
+      <a class="cl-pager-link" href={previous.href} rel="prev">
+        <span class="cl-pager-dir">
+          <ChevronLeft className="size-4" aria-hidden />
+          Previous
+        </span>
+        <span class="cl-pager-title">{previous.title}</span>
+      </a>
+    )
+  }
+  {
+    next && (
+      <a class="cl-pager-link cl-pager-link--next" href={next.href} rel="next">
+        <span class="cl-pager-dir">
+          Next
+          <ChevronRight className="size-4" aria-hidden />
+        </span>
+        <span class="cl-pager-title">{next.title}</span>
+      </a>
+    )
+  }
+</nav>
+
+<style>
+  .cl-pager {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+    max-width: var(--container-prose);
+  }
+  .cl-pager-link {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 20px 24px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xs);
+    text-decoration: none;
+    transition: border-color var(--motion-fast) var(--ease-standard);
+  }
+  .cl-pager-link:hover {
+    border-color: var(--color-line-control);
+  }
+  .cl-pager-link--next {
+    grid-column: 2;
+    align-items: flex-end;
+    text-align: right;
+  }
+  .cl-pager-dir {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--color-ink-muted);
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  .cl-pager-title {
+    color: var(--color-ink);
+    font-size: var(--text-label-lg);
+    line-height: var(--text-label-lg--line-height);
+    font-weight: 500;
+  }
+  .cl-pager-link:hover .cl-pager-title {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  @media (max-width: 767px) {
+    .cl-pager {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 16px;
+    }
+    .cl-pager-link--next {
+      grid-column: auto;
+    }
+  }
+</style>

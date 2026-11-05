@@ -1,9 +1,11 @@
 import { fileURLToPath } from 'node:url';
+import { satteri } from '@astrojs/markdown-satteri';
 import react from '@astrojs/react';
 import { defineConfig } from 'astro/config';
 import { loadEnv } from 'vite';
 import { DOCS_CONTENT_SECURITY_POLICY } from '../../lib/config/content-security-policy.ts';
 import { DOCS_ORIGIN } from '../../lib/config/docs.ts';
+import { docsMarkdownBlocks } from './src/lib/code-block.ts';
 
 const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
 
@@ -20,7 +22,8 @@ export default defineConfig({
   output: 'static',
   security: { csp: DOCS_CONTENT_SECURITY_POLICY },
   integrations: [react()],
-  markdown: { syntaxHighlight: false },
+  // Fences render as the system's CodeBlock and tables get Prose's scroll frame.
+  markdown: { syntaxHighlight: false, processor: satteri({ hastPlugins: [docsMarkdownBlocks] }) },
   server: { host: '127.0.0.1', port: 4322 },
   vite: {
     css: { postcss: frontendRoot },
