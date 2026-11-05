@@ -282,7 +282,7 @@
             "fontWeight": 400,
             "letterSpacing": "-0.01em",
             "sample": "Get cited when buyers ask AI",
-            "usage": "The H1 of every website page (landing hero, platform, pricing, articles), one per page. 36/42 from 768 to 1023px, 30/36 below 768px. Owner rule: never larger."
+            "usage": "The docs H1, one per page; 36/42 from 768 to 1023px. The marketing H1 (landing hero, platform, pricing, articles) is the site title, 48/52 from 768px up and 32/38 below (D26), with no tracking on Cal Sans."
           },
           {
             "name": "display-xl",

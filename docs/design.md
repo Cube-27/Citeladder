@@ -52,10 +52,13 @@ Light and dark on every surface, defaulting to the system preference.
 | D15 | A metric's number (`stat`) is 28/36, Geist 500; metric cards stay in one row (D9). `check:policy` holds the size. |
 | D16 | A tab, segment or filter chip shows its count after the label in Geist at the control's size, `ink-muted`, in brackets (`ControlCount`): "All signals (107)". Never mono. |
 | D17 | A card that is itself a control (the Agent's workflow cards) keeps the plain card's one fill; hover underlines its title instead of tinting it. Card titles in a grid of cards (workflows, skills) are `heading` (16/24, 500), under a `sectionTitle` section heading. |
+| D26 | Website type: the marketing H1 (`--text-site-title`, every hero and article title) is 48/52 from 768px up, the owner's 982px desktop included, and 32/38 on phones, replacing D23's 42. Running text, blog and article prose included, is `body` 16/26; a lead or subheading under a heading is `body-lg` 18/30, never the 20px `lead`. Cal Sans is never tracked on the website or docs: display headings set no `letter-spacing`; Geist Mono eyebrows keep theirs. The app's tokens are unchanged. |
 
 D5–D17 come from the owner's reviews of the shipped app and docs on 5 November
 2026; `frontend/scripts/design-system-review-checks.mjs` keeps them in
-`pnpm check:policy`.
+`pnpm check:policy`. D18–D25 are the website review rounds in the
+[rollout plan](plans/design-system-rollout.md); D26 is the owner's website
+type rule of the same day.
 
 ## Ownership
 
@@ -105,7 +108,7 @@ D5–D17 come from the owner's reviews of the shipped app and docs on 5 November
 - **Flare is a mark.** No `bg-`, `from-`, `via-` or `to-accent` larger than a
   2px mark, no accent background on a box over 4px, no heading in accent.
   Primary actions are ink; a highlighted surface is `accent-soft`.
-- **The website's H1 is the ceiling.** No website or docs type exceeds 44px.
+- **The website's H1 is the ceiling.** No website or docs type exceeds 48px (D26).
 - **Contrast.** Every ink on every ground holds 4.5:1 in both themes, each
   status on its own soft, the labels on ink and on Flare; marks, control
   borders, the focus ring and the chart series hold 3:1; positive against
@@ -192,10 +195,10 @@ Product roles are the `.type-*` classes in `globals.css`, reached through
 | `.type-section-title` | product | `22px / 28px` | — |
 | `.cl-body` | public | `16px / 26px` | — |
 | `.cl-fcard-title` | public | `22px / 28px` | — |
-| `.cl-lead` | public | `20px / 30px` | — |
-| `.cl-lhero-title` | public | `44px / 48px` | `42px / 46px` |
+| `.cl-lead` | public | `18px / 30px` | — |
+| `.cl-lhero-title` | public | `48px / 52px` | — |
 | `.cl-note` | public | `14px / 20px` | — |
-| `.cl-phero-title` | public | `44px / 48px` | `42px / 46px` |
+| `.cl-phero-title` | public | `48px / 52px` | — |
 | `.cl-shead-title` | public | `36px / 42px` | — |
 <!-- generated:type:end -->
 
