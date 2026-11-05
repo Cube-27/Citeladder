@@ -262,7 +262,8 @@ export function AuthHumanCheck({
         size === 'compact' ? 'h-[140px]' : 'h-[65px]',
       )}
     >
-      <div ref={container} />
+      {/* Full width so the hook measures the slot, not an empty box (0px → compact). */}
+      <div ref={container} className="w-full" />
       {failed ? (
         <p className="text-caption text-ink-muted text-center">
           Verification could not load. Refresh the page to try again.

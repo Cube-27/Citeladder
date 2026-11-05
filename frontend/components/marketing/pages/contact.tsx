@@ -150,7 +150,7 @@ function ContactForm() {
             </div>
           )
         }
-        turnstile={<div ref={turnstileContainer} />}
+        turnstile={<div ref={turnstileContainer} className="w-full" />}
         submit={
           <Button type="submit" variant="primary" disabled={state === 'sending'}>
             {state === 'sending' ? 'Sending…' : 'Send message'}
