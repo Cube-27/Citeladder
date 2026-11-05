@@ -1,6 +1,5 @@
 /* Page styles owned by the editorial-pages group; see MarketingLayout.astro.
-   Solutions, comparisons, the share-of-voice guide and company references.
-   Prefix: `ed-`. Tokens only. */
+   Solutions and comparisons. Prefix: `ed-`. Tokens only. */
 
 /* ── Solutions: in-page team index ─────────────────────────────────────── */
 
@@ -37,124 +36,6 @@
   flex-wrap: wrap;
   gap: 0.75rem 1.75rem;
   padding-top: 0.25rem;
-}
-
-/* ── Reading layout: contents rail + measured column ───────────────────── */
-
-.ed-doc {
-  display: grid;
-  gap: 2.5rem;
-  width: 100%;
-}
-
-@media (min-width: 64rem) {
-  .ed-doc {
-    grid-template-columns: 13.5rem minmax(0, 1fr);
-    gap: 4.5rem;
-  }
-}
-
-.ed-rail {
-  display: none;
-}
-
-@media (min-width: 64rem) {
-  .ed-rail {
-    position: sticky;
-    top: calc(var(--marketing-nav-offset, 5rem) + 1.5rem);
-    display: block;
-    align-self: start;
-    max-height: calc(100vh - var(--marketing-nav-offset, 5rem) - 3rem);
-    overflow-y: auto;
-  }
-}
-
-.ed-rail-title {
-  margin-bottom: 0.75rem;
-  color: var(--color-ink);
-}
-
-.ed-rail ol {
-  display: grid;
-}
-
-.ed-rail a {
-  display: block;
-  padding-block: 0.25rem;
-  color: var(--color-ink-muted);
-  transition: color var(--motion-fast) var(--ease-standard);
-}
-
-.ed-rail a:hover {
-  color: var(--color-ink);
-}
-
-/* The article column holds a ~68ch measure; wide figures may use the track. */
-.ed-prose {
-  min-width: 0;
-  max-width: 68ch;
-}
-
-.ed-prose-section {
-  scroll-margin-top: calc(var(--marketing-nav-offset, 5rem) + 1.5rem);
-  padding-block: 2.5rem;
-}
-
-.ed-prose-section:first-child {
-  padding-top: 0;
-}
-
-.ed-prose-section > * + * {
-  margin-top: 1rem;
-}
-
-.ed-prose-section > h2 + * {
-  margin-top: 1.25rem;
-}
-
-/* Document section heading: a step above body copy for dense policies and
-   references, where the full section rung would shout on every section. */
-.ed-h2.website-feature-heading {
-  font-size: var(--text-site-prose-heading);
-  line-height: var(--text-site-prose-heading--line-height);
-  letter-spacing: -0.012em;
-}
-
-.ed-prose-section > .ed-subsection {
-  margin-top: 1.75rem;
-}
-
-.ed-prose ul.ed-bullets {
-  display: grid;
-  gap: 0.5rem;
-  padding-left: 1.25rem;
-  list-style: disc;
-}
-
-.ed-prose ul.ed-bullets li::marker {
-  color: var(--color-ink-muted);
-}
-
-/* Document header meta line under the lead. */
-.ed-doc-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 1.5rem;
-  margin-top: 1.5rem;
-}
-
-.ed-doc-meta a[aria-current='page'] {
-  color: var(--color-ink);
-}
-
-.ed-doc-meta a {
-  color: var(--color-ink-muted);
-  transition: color var(--motion-fast) var(--ease-standard);
-}
-
-.ed-doc-meta a:hover {
-  color: var(--color-ink);
 }
 
 /* ── Quiet tables ──────────────────────────────────────────────────────── */
@@ -198,46 +79,6 @@
 
 .ed-table td {
   color: var(--color-ink-secondary);
-}
-
-.ed-num {
-  text-align: right;
-}
-
-/* ── Worked example (share-of-voice guide) ─────────────────────────────── */
-
-.ed-example {
-  margin-top: 1.5rem;
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-sunken);
-}
-
-.ed-example-body {
-  display: grid;
-  gap: 1.5rem;
-  padding: 1.25rem;
-}
-
-@media (min-width: 40rem) {
-  .ed-example-body {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 2rem;
-    padding: 1.5rem;
-  }
-}
-
-.ed-example-results {
-  display: grid;
-  align-content: start;
-  gap: 1.25rem;
-}
-
-.ed-example-results dd {
-  margin-top: 0.25rem;
-}
-
-.ed-example figcaption {
-  padding: 0 1.25rem 1rem;
 }
 
 /* ── Ordered steps (real sequence) ─────────────────────────────────────── */
@@ -319,31 +160,6 @@
   }
 }
 
-/* Compact single-column ledger for link lists inside a reading column. */
-.ed-links a {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-block: 0.75rem;
-  color: var(--color-ink);
-  transition: color var(--motion-fast) var(--ease-standard);
-}
-
-.ed-links a svg {
-  flex: none;
-  color: var(--color-ink-muted);
-  transition: transform var(--motion-normal) var(--ease-standard);
-}
-
-.ed-links a:hover {
-  color: var(--color-accent-ink);
-}
-
-.ed-links a:hover svg {
-  transform: translateX(2px);
-}
-
 /* ── Comparison table ──────────────────────────────────────────────────── */
 
 @media (min-width: 48rem) {
@@ -416,40 +232,6 @@
     line-height: var(--text-site-label--line-height);
     font-weight: 500;
   }
-}
-
-/* ── Reference documents ───────────────────────────────────────────────── */
-
-.ed-facts > div {
-  display: grid;
-  gap: 0.25rem 1.5rem;
-  padding-block: 0.75rem;
-}
-
-@media (min-width: 40rem) {
-  .ed-facts > div {
-    grid-template-columns: 10rem minmax(0, 1fr);
-  }
-}
-
-.ed-facts dd {
-  overflow-wrap: anywhere;
-}
-
-.ed-sources {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.5rem 1.25rem;
-}
-
-.ed-kind {
-  display: inline-flex;
-  align-items: center;
-  min-height: 1.5rem;
-  padding-inline: 0.5rem;
-  border-radius: var(--radius-md);
-  background: var(--color-surface-sunken);
 }
 
 /* Inline document link: underline stays visible inside running text. */

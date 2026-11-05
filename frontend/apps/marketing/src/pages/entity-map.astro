@@ -1,12 +1,15 @@
 ---
-import { EntityMapPage } from '@/components/marketing/pages/ai-reference';
-import MarketingLayout from '../layouts/MarketingLayout.astro';
+import { EntitySections } from '@/components/marketing/content/reference-sections';
+import { REFERENCE_ENTITIES } from '@/lib/marketing-content/ai-reference';
+import ReferenceLayout from '../layouts/ReferenceLayout.astro';
 ---
 
-<MarketingLayout
-  title="Entity Map · CiteLadder"
+<ReferenceLayout
+  title="Entity Map"
+  pageTitle="Entity Map · CiteLadder"
   description="Explore CiteLadder's product, Cube27 company identity, people, capabilities, and AEO concepts through linked definitions and official sources."
-  canonical="/entity-map"
+  lead="A linked reference to CiteLadder, the company behind it, its people, product capabilities, and related concepts. These definitions reflect CiteLadder's own published information; each entry links to its source."
+  sections={REFERENCE_ENTITIES.map((entity) => ({ id: entity.id, title: entity.name }))}
 >
-  <EntityMapPage />
-</MarketingLayout>
+  <EntitySections />
+</ReferenceLayout>

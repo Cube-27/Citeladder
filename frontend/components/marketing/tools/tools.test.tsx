@@ -4,7 +4,7 @@ import { CrawlerChecker, RobotsGenerator } from './robots-tools';
 import { MetaChecker, StructuredDataBuilder } from './markup-tools';
 import { SitemapComparison } from './sitemap-tool';
 import { SocialPreview } from './social-tool';
-import { ToolNotes } from './tools-index';
+import { ToolNotes } from '../content/tool-notes';
 const bots = [{ label: 'GPTBot', purpose: 'ai_training', tokens: ['GPTBot'] }];
 
 describe('free tools user workflows', () => {
@@ -32,7 +32,7 @@ describe('free tools user workflows', () => {
     expect(
       screen.getByRole<HTMLTextAreaElement>('textbox', { name: 'Generated output' }).value,
     ).toContain(evidence);
-    expect(screen.getByRole('button', { name: 'Copy result' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled();
   });
   it('hides stale results after editing and shows actionable validation errors', () => {

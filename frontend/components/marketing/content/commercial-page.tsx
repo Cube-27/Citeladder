@@ -1,0 +1,159 @@
+import { FactList } from '@/components/ui/facts';
+import type { CommercialPage } from '@/lib/marketing-content/commercial-pages';
+import { platformLabel } from '@/lib/marketing-content/nav';
+
+import { ButtonLink, DemoButtonLink } from '../primitives/button';
+import { ProductFrame } from '../screens/product-frame';
+import { ScreenEngines } from '../screens/screens-search';
+import { ScreenVisibility } from '../screens/screens-visibility';
+import { RelatedCards } from '../sections/cards';
+import { Bento, FeatureCard, FeatureSplit } from '../sections/features';
+import { PageHero } from '../sections/heroes';
+import { PageSection } from '../sections/page-section';
+import { CtaBand, FaqList, Steps } from '../sections/steps-faq-cta';
+
+/** The product module a commercial page leads to, in the page's own words. */
+type CommercialProduct = Readonly<{
+  heading: string;
+  body: string;
+  href: '/platform/ai-visibility';
+}>;
+
+/**
+ * A commercial entry page (the WebCommercial template): the product hero,
+ * the definitions as a Bento with a worked example, the method as Steps,
+ * the product split, related reading, the FAQ and the closing band.
+ */
+export function CommercialEntryPage({
+  page,
+  product,
+}: Readonly<{ page: CommercialPage; product: CommercialProduct }>) {
+  return (
+    <>
+      <PageHero
+        size="2xl"
+        crumbs={[{ label: 'Home', href: '/' }, { label: page.breadcrumb }]}
+        title={page.heading}
+        lead={page.introduction}
+        actions={
+          <>
+            <DemoButtonLink size="marketing" />
+            <ButtonLink href={page.secondary.href} variant="soft" size="marketing">
+              {page.secondary.label}
+            </ButtonLink>
+          </>
+        }
+      >
+        <ProductFrame aspect="hero" inset={48} label="AI Visibility">
+          <ScreenVisibility />
+        </ProductFrame>
+      </PageHero>
+
+      <PageSection id="definitions" title={page.overview.heading} lead={page.overview.lead}>
+        <Bento
+          cells={page.definitions.map((definition) => ({
+            key: definition.heading,
+            span: 6,
+            content: <FeatureCard title={definition.heading} body={definition.body} />,
+          }))}
+        />
+        <WorkedExample />
+      </PageSection>
+
+      <PageSection id="method" title={page.workflow.heading} lead={page.workflow.lead}>
+        <Steps
+          items={page.workflow.steps.map((step) => ({ title: step.heading, body: step.body }))}
+        />
+      </PageSection>
+
+      <PageSection label={product.heading}>
+        <FeatureSplit
+          as="h2"
+          title={product.heading}
+          body={product.body}
+          links={[{ href: product.href, label: `Explore ${platformLabel(product.href)}` }]}
+          media={
+            <ProductFrame label="Answer engines">
+              <ScreenEngines />
+            </ProductFrame>
+          }
+        />
+      </PageSection>
+
+      <PageSection
+        id="context"
+        title={page.contextHeading}
+        lead={page.context}
+        headerLayout="split"
+        spacing="compact"
+      >
+        <RelatedCards
+          items={page.related.map((link) => ({ href: link.href, title: link.label }))}
+        />
+      </PageSection>
+
+      <PageSection id="questions" title="Questions, answered" layout="aside">
+        <FaqList items={page.faqs.map((faq) => ({ question: faq.q, answer: faq.a }))} />
+      </PageSection>
+
+      <PageSection label="Get started">
+        <CtaBand
+          title={page.closingHeading}
+          lead={page.closing}
+          actions={<DemoButtonLink size="marketing" />}
+        />
+      </PageSection>
+    </>
+  );
+}
+
+/** A static teaching example, deliberately separate from product previews and live metrics. */
+function WorkedExample() {
+  return (
+    <figure className="cl-prose cl-sov-example">
+      <div className="cl-prose-table">
+        <table>
+          <caption>100 completed answers</caption>
+          <thead>
+            <tr>
+              <th scope="col">Observation</th>
+              <th scope="col">Answers</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Brand mentioned</th>
+              <td>30</td>
+            </tr>
+            <tr>
+              <th scope="row">Brand absent</th>
+              <td>70</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Missing or failed observations are counted separately.</p>
+      <FactList
+        layout="ruled"
+        facts={[
+          { label: 'Answer-level mention rate', value: '30 / 100 = 30%' },
+          {
+            label: 'Share of tracked brand appearances',
+            value: (
+              <span className="grid gap-1">
+                <span>Not calculated here</span>
+                <span>
+                  Needs competitor counts and a stated counting rule. Several brands can appear in
+                  one answer.
+                </span>
+              </span>
+            ),
+          },
+        ]}
+      />
+      <figcaption>
+        Illustrative example. A teaching aid, not a benchmark or CiteLadder&apos;s scoring formula.
+      </figcaption>
+    </figure>
+  );
+}
