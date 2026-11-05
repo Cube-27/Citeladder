@@ -367,8 +367,7 @@ export function websiteTypeCeilingClassFindings(source, label) {
   );
 }
 
-const WEBSITE_CSS_ROOTS =
-  /^(?:apps\/marketing\/|apps\/docs\/|components\/marketing\/|apps\/app\/src\/website-type\.css$)/;
+const WEBSITE_CSS_ROOTS = /^(?:apps\/marketing\/|apps\/docs\/|components\/marketing\/)/;
 
 /** Whether a stylesheet or source file belongs to the website or docs. */
 export const isWebsiteSource = (label) => WEBSITE_CSS_ROOTS.test(label);

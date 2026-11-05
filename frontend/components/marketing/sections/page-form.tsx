@@ -15,6 +15,7 @@ export function PageForm({
   submit,
   note,
   onSubmit,
+  busy = false,
   as: Heading = 'h2',
   children,
 }: Readonly<{
@@ -27,11 +28,19 @@ export function PageForm({
   submit: ReactNode;
   note?: ReactNode;
   onSubmit?: (event: FormEvent<HTMLFormElement>) => void;
+  /** True while a submission is in flight. */
+  busy?: boolean;
   as?: 'h2' | 'h3';
   children: ReactNode;
 }>) {
   return (
-    <form className="cl-page-form" noValidate aria-label={title} onSubmit={onSubmit}>
+    <form
+      className="cl-page-form"
+      noValidate
+      aria-label={title}
+      aria-busy={busy}
+      onSubmit={onSubmit}
+    >
       {(title || description) && (
         <header className="cl-page-form-head">
           {title && <Heading className="cl-page-form-title">{title}</Heading>}

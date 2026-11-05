@@ -6,11 +6,12 @@ import { Eyebrow } from './site-parts';
 
 export type HighlightStat = Readonly<{ label: string; value: string; sub?: ReactNode }>;
 
-/** Stat columns: one row up to four; six as two rows of three, never 4 + 2. */
-function statColumns(count: number): 1 | 2 | 3 | 4 {
+/** Stat columns: a set of stats holds one row (six included), never 4 + 2. */
+function statColumns(count: number): 1 | 2 | 3 | 4 | 6 {
   if (count <= 1) return 1;
   if (count === 2) return 2;
-  if (count === 3 || count === 6) return 3;
+  if (count === 3) return 3;
+  if (count === 6) return 6;
   return 4;
 }
 

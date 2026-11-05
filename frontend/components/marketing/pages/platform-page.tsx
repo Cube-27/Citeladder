@@ -2,6 +2,7 @@ import { ConnectStrip } from '@/components/mcp/connect-strip';
 import { appHref } from '@/lib/config/app-link';
 import { docsHref } from '@/lib/config/docs';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
+import { cn } from '@/lib/utils';
 import { PLATFORM_GROUPS, PLATFORM_OVERVIEW, platformLabel } from '@/lib/marketing-content/nav';
 import { PLATFORM_GUIDES } from '@/lib/marketing-content/platform-guides';
 import type {
@@ -52,30 +53,40 @@ export function PlatformActions({ cta }: Readonly<{ cta: PlatformCta }>) {
 /** Every published capability, one card per navigation group. */
 export function CapabilityGrid() {
   return (
-    <div className="mk-capabilities site-cards">
+    <ul className={cn('cl-tiles', `cl-cols-${columnsFor(PLATFORM_GROUPS.length)}`)}>
       {PLATFORM_GROUPS.map((group) => (
-        <div key={group.label} className="mk-capability-group site-card">
-          <h3 className="website-feature-heading">{group.label}</h3>
-          <ul>
-            {group.items.map((item) => (
-              <li key={item.href}>
-                <a href={item.href} className="mk-capability">
-                  {hasNavIcon(item.href) && (
-                    <span className="nav-row-icon" aria-hidden>
-                      <NavIcon href={item.href} className="size-4" />
-                    </span>
-                  )}
-                  <span>
-                    <span className="mk-capability-title">{item.title}</span>
-                    <span className="mk-capability-desc">{item.desc}</span>
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <li key={group.label}>
+          <div className="cl-fcard">
+            <div className="cl-fcard-body">
+              <h3 className="cl-fcard-title">{group.label}</h3>
+              <ul className="grid w-full gap-1">
+                {group.items.map((item) => {
+                  const icon = hasNavIcon(item.href);
+                  return (
+                    <li key={item.href}>
+                      <a
+                        href={item.href}
+                        className={cn('cl-mega-item focus-ring', !icon && 'cl-mega-item--text')}
+                      >
+                        {icon && (
+                          <span className="cl-mega-icon" aria-hidden>
+                            <NavIcon href={item.href} className="size-5" />
+                          </span>
+                        )}
+                        <span className="cl-mega-copy">
+                          <span className="cl-mega-title">{item.title}</span>
+                          <span className="cl-mega-desc">{item.desc}</span>
+                        </span>
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
 

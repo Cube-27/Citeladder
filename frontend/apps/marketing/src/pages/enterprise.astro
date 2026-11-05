@@ -1,13 +1,5 @@
 ---
-import {
-  EnterpriseContactCta,
-  EnterpriseDataFlow,
-  EnterpriseEvidence,
-  EnterpriseFit,
-  EnterpriseGovernance,
-  EnterpriseHero,
-  EnterpriseLimits,
-} from '@/components/marketing/pages/enterprise';
+import { EnterprisePage } from '@/components/marketing/pages/enterprise';
 import { absoluteUrl } from '@/lib/seo/site';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 
@@ -32,12 +24,6 @@ const serviceJsonLd = {
   jsonLd={[serviceJsonLd]}
 >
   <main id="main">
-    <EnterpriseHero />
-    <EnterpriseEvidence />
-    <EnterpriseGovernance />
-    <EnterpriseDataFlow />
-    <EnterpriseFit />
-    <EnterpriseLimits />
-    <EnterpriseContactCta />
+    <EnterprisePage />
   </main>
 </MarketingLayout>

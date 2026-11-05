@@ -55,16 +55,15 @@ D5–D11 come from the owner's review of the shipped app and docs on 5 November
 
 | Owner | Responsibility |
 | --- | --- |
-| `frontend/apps/app/src/globals.css` | Every token (the single `@theme`, `:root` and `:root[data-theme='dark']`), the type roles (`.type-*`), focus, motion and the shared component geometry derived from the tokens |
+| `frontend/apps/app/src/globals.css` | Every token (the single `@theme`, `:root` and `:root[data-theme='dark']`), the marketing site's responsive `--text-site-*` display sizes, the type roles (`.type-*`), focus, motion and the shared component geometry derived from the tokens |
 | `frontend/scripts/design-system-tokens.json` | The artifact's `tokens.json`, verbatim: the contract `globals.css` is checked against |
 | `frontend/lib/config/brand-fonts.json` | The three faces by role (`display`, `sans`, `mono`), their files and revision in the font repo; `pnpm fonts:pull` writes the metric-matched fallbacks |
 | `frontend/lib/fonts/brand-fonts.ts` | The `@font-face` rules and fallbacks each runtime (the app's Vite build, `PublicFonts.astro`) loads |
 | `frontend/lib/theme/theme.ts`, `frontend/public/theme-preference.js` | The theme preference and the pre-paint bootstrap every surface runs |
 | `frontend/components/ui/logo-mark.tsx`, `packages/contracts/src/brand-logo.ts` | The logo, drawn inline in ink (`currentColor`) and the accent |
 | `frontend/components/ui/`, `frontend/components/layout/` | The app's components and shell, composed by feature folders that set no geometry of their own |
-| `frontend/apps/marketing/src/site.css`, `frontend/components/marketing/chrome/`, `frontend/components/marketing/sections/` | The website's components: SiteNav, SiteFooter, CookieBanner, Breadcrumbs, AnnouncementPill and the page sections, the system's `cl-*` geometry on the tokens above |
+| `frontend/apps/marketing/src/site.css`, `frontend/components/marketing/chrome/`, `frontend/components/marketing/sections/` | The website's components: SiteNav, SiteFooter, CookieBanner, Breadcrumbs, AnnouncementPill and the page sections, the system's `cl-*` geometry on the tokens above, and the website's type roles (the `cl-*` titles, lead, body and note) |
 | `frontend/apps/marketing/src/screens.css`, `frontend/components/marketing/screens/` | The website's product images: ProductFrame and the `Screen*` components, app crops at a fixed 960 × 600 or 1200 × 680 composed from `components/ui`, with their demo data in one typed module |
-| `frontend/apps/app/src/website-type.css` | The responsive `--text-site-*` sizes the website components read, and the `website-*` roles the docs and the marketing pages not yet recomposed still use |
 | `frontend/services/api/src/billing/pdf-brand.ts` | The PDF palette, read from `globals.css` |
 
 ## Token contract
@@ -165,8 +164,8 @@ D5–D11 come from the owner's review of the shipped app and docs on 5 November
 ### Type
 
 Product roles are the `.type-*` classes in `globals.css`, reached through
-`textRole()` in `components/ui/typography.tsx`; the website roles are in
-`website-type.css`.
+`textRole()` in `components/ui/typography.tsx`; the website roles are the
+`cl-*` title, lead, body and note classes in `site.css`.
 
 <!-- generated:type:start -->
 | Role | Surface | Size / line height | 768–1023px |
@@ -185,17 +184,13 @@ Product roles are the `.type-*` classes in `globals.css`, reached through
 | `.type-label` | product | `14px / 20px` | — |
 | `.type-page-title` | product | `24px / 32px` | — |
 | `.type-section-title` | product | `22px / 28px` | — |
-| `.website-article-title` | public | `44px / 48px` | `36px / 42px` |
-| `.website-body` | public | `16px / 26px` | — |
-| `.website-data-display` | public | `32px / 38px` | — |
-| `.website-feature-heading` | public | `22px / 28px` | — |
-| `.website-hero-display` | public | `44px / 48px` | `36px / 42px` |
-| `.website-hero-lead` | public | `20px / 30px` | — |
-| `.website-label` | public | `14px / 20px` | — |
-| `.website-lead` | public | `20px / 30px` | — |
-| `.website-nav` | public | `16px / 24px` | — |
-| `.website-page-title` | public | `44px / 48px` | `36px / 42px` |
-| `.website-section-heading` | public | `36px / 42px` | — |
+| `.cl-body` | public | `16px / 26px` | — |
+| `.cl-fcard-title` | public | `22px / 28px` | — |
+| `.cl-lead` | public | `20px / 30px` | — |
+| `.cl-lhero-title` | public | `44px / 48px` | `36px / 42px` |
+| `.cl-note` | public | `14px / 20px` | — |
+| `.cl-phero-title` | public | `44px / 48px` | `36px / 42px` |
+| `.cl-shead-title` | public | `36px / 42px` | — |
 <!-- generated:type:end -->
 
 ### Controls and layout

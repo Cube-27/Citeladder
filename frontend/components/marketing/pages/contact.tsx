@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { TextLink } from '@/components/ui/text-link';
 import { Textarea } from '@/components/ui/textarea';
 import {
   CONTACT_API_PATH,
@@ -13,9 +15,13 @@ import {
 } from '@/lib/config/contact';
 import { trackContactSubmitted } from '@/components/analytics/google-analytics';
 import { CONTACT_PAGE } from '@/lib/marketing-content/legal-billing';
-import { Linkify } from '../primitives/linkify';
-import { Section } from '../primitives/section';
 import { useTurnstile } from '@/lib/turnstile/use-turnstile';
+
+import { Linkify } from '../primitives/linkify';
+import { PageHero } from '../sections/heroes';
+import { PageForm } from '../sections/page-form';
+import { PageSection } from '../sections/page-section';
+import { FaqList, Steps } from '../sections/steps-faq-cta';
 
 /** What each failed send tells the visitor; every one ends with the email fallback. */
 const FAILURE_COPY = {
@@ -30,9 +36,17 @@ type FormState = 'idle' | 'sending' | 'success' | Failure;
 const isFailure = (state: FormState): state is Failure => state in FAILURE_COPY;
 type FormErrors = Partial<Record<'name' | 'email' | 'company' | 'message', string>>;
 
+function EmailLink() {
+  return (
+    <TextLink asChild text="inherit">
+      <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+    </TextLink>
+  );
+}
+
 function ContactForm() {
-  const form = useRef<HTMLFormElement>(null);
-  const status = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const status = useRef<HTMLElement>(null);
   const pending = useRef(false);
   const sent = useRef(false);
   const [state, setState] = useState<FormState>('idle');
@@ -42,7 +56,7 @@ function ContactForm() {
   useEffect(() => {
     if (state === 'success' || failure) status.current?.focus();
     if (state === 'idle' && sent.current)
-      form.current?.querySelector<HTMLElement>('[name="name"]')?.focus();
+      panel.current?.querySelector<HTMLElement>('[name="name"]')?.focus();
   }, [state, failure]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -57,7 +71,7 @@ function ContactForm() {
       );
       setErrors(fields);
       const first = parsed.error.issues[0]?.path[0];
-      form.current?.querySelector<HTMLElement>(`[name="${String(first)}"]`)?.focus();
+      panel.current?.querySelector<HTMLElement>(`[name="${String(first)}"]`)?.focus();
       return;
     }
     pending.current = true;
@@ -97,91 +111,103 @@ function ContactForm() {
         tabIndex={-1}
         aria-labelledby="contact-sent-title"
         aria-live="polite"
-        className="grid gap-4"
+        className="cl-page-form"
       >
-        <h2 id="contact-sent-title" className="website-feature-heading text-ink">
-          Message sent
-        </h2>
-        <p className="website-body">
-          Thanks for reaching out. We&apos;ll get back to you at the email address you provided.
-        </p>
-        <Button variant="secondary" onClick={() => setState('idle')}>
-          Send another message
-        </Button>
+        <header className="cl-page-form-head">
+          <h2 id="contact-sent-title" className="cl-page-form-title">
+            Message sent
+          </h2>
+          <p className="cl-page-form-desc">
+            Thanks for reaching out. We&apos;ll get back to you at the email address you provided.
+          </p>
+        </header>
+        <div>
+          <Button variant="secondary" onClick={() => setState('idle')}>
+            Send another message
+          </Button>
+        </div>
       </section>
     );
 
   return (
-    <form
-      ref={form}
-      onSubmit={submit}
-      noValidate
-      className="grid gap-6"
-      aria-busy={state === 'sending'}
-    >
-      <Field label="Name" required error={errors.name}>
-        {(props) => (
-          <Input {...props} name="name" autoComplete="name" maxLength={CONTACT_LIMITS.name} />
-        )}
-      </Field>
-      <Field label="Work email" required error={errors.email}>
-        {(props) => (
-          <Input
-            {...props}
-            name="email"
-            type="email"
-            autoComplete="email"
-            maxLength={CONTACT_LIMITS.email}
-          />
-        )}
-      </Field>
-      <Field label="Company" hint="Optional" error={errors.company}>
-        {(props) => (
-          <Input
-            {...props}
-            name="company"
-            autoComplete="organization"
+    <div ref={panel}>
+      <PageForm
+        onSubmit={submit}
+        busy={state === 'sending'}
+        status={
+          failure && (
+            <div
+              ref={(node) => {
+                status.current = node;
+              }}
+              tabIndex={-1}
+            >
+              <Callout tone="negative">
+                {failure}
+                <EmailLink />
+                {'.'}
+              </Callout>
+            </div>
+          )
+        }
+        turnstile={<div ref={turnstileContainer} />}
+        submit={
+          <Button type="submit" variant="primary" disabled={state === 'sending'}>
+            {state === 'sending' ? 'Sending…' : 'Send message'}
+          </Button>
+        }
+      >
+        <Field label="Name" required error={errors.name}>
+          {(props) => (
+            <Input {...props} name="name" autoComplete="name" maxLength={CONTACT_LIMITS.name} />
+          )}
+        </Field>
+        <Field label="Work email" required error={errors.email}>
+          {(props) => (
+            <Input
+              {...props}
+              name="email"
+              type="email"
+              autoComplete="email"
+              maxLength={CONTACT_LIMITS.email}
+            />
+          )}
+        </Field>
+        <Field label="Company" hint="Optional" error={errors.company}>
+          {(props) => (
+            <Input
+              {...props}
+              name="company"
+              autoComplete="organization"
+              maxLength={CONTACT_LIMITS.company}
+            />
+          )}
+        </Field>
+        <Field label="How can we help?" required error={errors.message}>
+          {(props) => (
+            <Textarea
+              {...props}
+              name="message"
+              rows={5}
+              minLength={CONTACT_LIMITS.messageMin}
+              maxLength={CONTACT_LIMITS.message}
+              placeholder="Tell us what you're looking to accomplish."
+            />
+          )}
+        </Field>
+        <div hidden aria-hidden="true">
+          <label htmlFor="contact-website">Website</label>
+          <input
+            id="contact-website"
+            name="website"
+            type="text"
+            tabIndex={-1}
+            autoComplete="off"
             maxLength={CONTACT_LIMITS.company}
           />
-        )}
-      </Field>
-      <Field label="How can we help?" required error={errors.message}>
-        {(props) => (
-          <Textarea
-            {...props}
-            name="message"
-            rows={5}
-            minLength={CONTACT_LIMITS.messageMin}
-            maxLength={CONTACT_LIMITS.message}
-            placeholder="Tell us what you're looking to accomplish."
-          />
-        )}
-      </Field>
-      <div hidden aria-hidden="true">
-        <label htmlFor="contact-website">Website</label>
-        <input
-          id="contact-website"
-          name="website"
-          type="text"
-          tabIndex={-1}
-          autoComplete="off"
-          maxLength={CONTACT_LIMITS.company}
-        />
-      </div>
-      <div ref={turnstileContainer} />
-      {failure && (
-        <div ref={status} tabIndex={-1} role="alert" className="website-body text-negative">
-          {failure}
-          <a href={`mailto:${CONTACT_EMAIL}`} className="underline">
-            {CONTACT_EMAIL}
-          </a>
-          {'.'}
         </div>
-      )}
-      <Button type="submit" variant="primary" disabled={state === 'sending'}>
-        {state === 'sending' ? 'Sending…' : 'Send message'}
-      </Button>
-    </form>
+      </PageForm>
+    </div>
   );
 }
 
@@ -204,63 +230,54 @@ const NEXT_STEPS = [
   },
 ] as const;
 
+/**
+ * `/contact`: the opening band, the enquiry form beside what happens next,
+ * then the company, support and grievance details the legal pages point to.
+ */
 export function ContactPage() {
   return (
     <main id="main">
-      <Section className="cm-contact">
-        <div className="cm-contact-grid site-split">
-          <div className="cm-contact-copy">
-            {/* Centred on a phone like every opening band (owner, 2026-10-31). */}
-            <header className="grid justify-items-center gap-5 text-center sm:justify-items-start sm:text-start">
-              <h1 className="website-page-title text-ink">Talk to the CiteLadder team</h1>
-              <p className="website-hero-lead">
-                Ask a question, book a demo or check whether CiteLadder fits your team.
-              </p>
-            </header>
-            <div className="grid gap-5">
-              <h2 className="website-feature-heading text-ink">What happens next</h2>
-              <ol className="cm-steps">
-                {NEXT_STEPS.map((step) => (
-                  <li key={step.title}>
-                    <h3 className="website-feature-heading text-ink">{step.title}</h3>
-                    <p className="website-body">{step.body}</p>
-                  </li>
-                ))}
-              </ol>
-            </div>
-            <p className="website-body">
-              Prefer email?{' '}
-              <a href={`mailto:${CONTACT_EMAIL}`} className="mk-text-link">
-                {CONTACT_EMAIL}
-              </a>
+      <PageHero
+        crumbs={[{ label: 'Home', href: '/' }, { label: 'Contact' }]}
+        title="Talk to the CiteLadder team"
+        lead="Ask a question, book a demo or check whether CiteLadder fits your team."
+      />
+
+      <PageSection
+        id="enquiry"
+        layout="aside"
+        title="What happens next"
+        aside={
+          <div className="grid gap-6">
+            <Steps direction="vertical" items={NEXT_STEPS} />
+            <p className="cl-body">
+              Prefer email? <EmailLink />
             </p>
-            <details className="cm-legal">
-              <summary className="website-label">Company, support and grievance details</summary>
-              <div className="grid gap-6 pt-6">
-                {CONTACT_PAGE.sections.map((section) => (
-                  <section key={section.id} id={section.id} className="grid gap-3">
-                    <h2 className="website-feature-heading text-ink">{section.title}</h2>
-                    {section.paragraphs?.map((paragraph) => (
-                      <p key={paragraph} className="website-body">
-                        <Linkify text={paragraph} />
-                      </p>
-                    ))}
-                  </section>
-                ))}
-              </div>
-            </details>
           </div>
-          <div className="cm-contact-panel">
-            <ContactForm />
-            <noscript>
-              <p className="website-body mt-6">
-                Please email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> to get in
-                touch.
+        }
+      >
+        <ContactForm />
+        <noscript>
+          <p className="cl-body mt-6">
+            Please email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> to get in touch.
+          </p>
+        </noscript>
+      </PageSection>
+
+      <PageSection id="details" layout="aside" title="Company, support and grievance details">
+        <FaqList
+          exclusive
+          items={CONTACT_PAGE.sections.map((section) => ({
+            id: section.id,
+            question: section.title,
+            answer: section.paragraphs?.map((paragraph) => (
+              <p key={paragraph}>
+                <Linkify text={paragraph} />
               </p>
-            </noscript>
-          </div>
-        </div>
-      </Section>
+            )),
+          }))}
+        />
+      </PageSection>
     </main>
   );
 }

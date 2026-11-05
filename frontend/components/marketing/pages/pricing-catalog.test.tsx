@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import type { BillingCatalog } from '@/lib/api/billing';
 
-import { PublicPricingCatalog } from './public-pricing-catalog';
+import { PublicPricingCatalog } from './pricing-catalog';
 
 afterEach(() => vi.unstubAllEnvs());
 

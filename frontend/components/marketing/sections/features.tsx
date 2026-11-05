@@ -105,8 +105,8 @@ export function FeatureSplit({
   /** One paragraph, or several in reading order. */
   body?: string | readonly string[];
   points?: readonly string[];
-  /** Arrow links under the copy, one per page the split leads to. */
-  links?: readonly Readonly<{ href: string; label: ReactNode }>[];
+  /** Arrow links under the copy, one per page the split leads to; `demo` marks the demo funnel. */
+  links?: readonly Readonly<{ href: string; label: ReactNode; demo?: boolean }>[];
   reverse?: boolean;
   as?: 'h2' | 'h3';
   media: ReactNode;
@@ -125,7 +125,7 @@ export function FeatureSplit({
         {links.length > 0 && (
           <div className="cl-split-links">
             {links.map((link) => (
-              <SiteArrowLink key={link.href} href={link.href}>
+              <SiteArrowLink key={link.href} href={link.href} demo={link.demo}>
                 {link.label}
               </SiteArrowLink>
             ))}

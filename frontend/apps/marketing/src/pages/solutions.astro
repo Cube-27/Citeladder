@@ -1,5 +1,5 @@
 ---
-import { SolutionSegments, SolutionsCta, SolutionsHero } from '@/components/marketing/pages/solutions';
+import { SolutionsPage } from '@/components/marketing/pages/solutions';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 
 const title = 'AI visibility workflows for marketing teams | CiteLadder';
@@ -9,8 +9,6 @@ const description =
 
 <MarketingLayout title={title} description={description} canonical="/solutions">
   <main id="main">
-    <SolutionsHero />
-    <SolutionSegments />
-    <SolutionsCta />
+    <SolutionsPage />
   </main>
 </MarketingLayout>

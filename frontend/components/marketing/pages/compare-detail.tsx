@@ -1,191 +1,186 @@
+import { Callout } from '@/components/ui/callout';
+import { TextLink } from '@/components/ui/text-link';
+import { formatBlogDate } from '@/lib/marketing-content/blog-index';
 import {
   CITELADDER_POSITION,
   COMPARISON_CHECKLIST,
   COMPARISON_DISCLOSURE,
   type Competitor,
 } from '@/lib/marketing-content/compare';
-import { formatBlogDate } from '@/lib/marketing-content/blog-index';
 
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
-import { PageHero } from '../primitives/page-hero';
-import { Section, SectionHeader } from '../primitives/section';
+import { RelatedCards } from '../sections/cards';
+import { FeatureSplit } from '../sections/features';
+import { PageHero } from '../sections/heroes';
+import { PageSection } from '../sections/page-section';
+import { PricingTable } from '../sections/pricing';
+import { CtaBand, FaqList } from '../sections/steps-faq-cta';
+import { CatalogFrame } from '../screens/screen-catalog';
+
+/** Where to read on after a comparison. */
+const FURTHER_READING = [
+  { href: '/compare/profound-alternatives', title: 'Profound alternatives' },
+  { href: '/best-ai-visibility-platforms', title: 'AI visibility platforms compared' },
+  { href: '/platform/ai-visibility', title: 'AI visibility tracker' },
+  { href: '/pricing', title: 'CiteLadder pricing' },
+  { href: '/platform/cited-sources', title: 'Cited Sources' },
+  { href: '/ai-search-share-of-voice', title: 'AI share of voice' },
+] as const;
+
+function CompareActions() {
+  return (
+    <>
+      <DemoButtonLink size="marketing" />
+      <ButtonLink href="/compare" variant="soft" size="marketing">
+        All comparisons
+      </ButtonLink>
+    </>
+  );
+}
+
+function SourceLink({ source }: Readonly<{ source: Competitor['sources'][number] }>) {
+  return (
+    <TextLink asChild text="inherit">
+      <a href={source.url} target="_blank" rel="noreferrer">
+        {source.label}
+      </a>
+    </TextLink>
+  );
+}
 
 /**
- * `/compare/[competitor]` — a side-by-side table of public positioning, one
- * shared evaluation checklist, then the sources and vendor disclosure. Every
- * competitor statement comes from `compare.ts`, where it is tied to a
- * first-party source and its review date.
+ * `/compare/[competitor]`: a side-by-side table of public positioning, one
+ * shared evaluation checklist, CiteLadder's own case beside its answer
+ * screen, then the sources and vendor disclosure. Every competitor statement
+ * comes from `compare.ts`, where it is tied to a first-party source and its
+ * review date.
  */
 export function CompareDetailView({ competitor }: Readonly<{ competitor: Competitor }>) {
   const [source] = competitor.sources;
   return (
     <>
       <PageHero
-        title={`CiteLadder vs ${competitor.name}`}
-        lead={competitor.lead}
-        breadcrumb={[
+        crumbs={[
+          { label: 'Home', href: '/' },
           { label: 'Compare', href: '/compare' },
           { label: `CiteLadder vs ${competitor.name}` },
         ]}
+        title={`CiteLadder vs ${competitor.name}`}
+        lead={competitor.lead}
+        actions={<CompareActions />}
+      />
+
+      <PageSection
+        spacing="compact"
+        title="Side-by-side comparison"
+        lead={competitor.context}
+        headerLayout="split"
       >
-        <p className="website-body mt-5 max-w-[60ch]">{competitor.context}</p>
-      </PageHero>
-
-      <Section aria-labelledby="compare-table-title">
-        <h2 id="compare-table-title" className="sr-only">
-          Side-by-side comparison
-        </h2>
-        <div className="ed-table-wrap">
-          <table className="ed-table ed-compare website-body">
-            <caption className="sr-only">
-              CiteLadder and {competitor.name} compared by public product information
-            </caption>
-            <colgroup>
-              <col className="ed-compare-label" />
-              <col />
-              <col />
-            </colgroup>
-            <thead>
-              <tr>
-                <th scope="col">
-                  <span className="sr-only">Aspect</span>
-                </th>
-                <th scope="col">CiteLadder</th>
-                <th scope="col">{competitor.name}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th scope="row">Product focus</th>
-                <td data-label="CiteLadder">{CITELADDER_POSITION.focus}</td>
-                <td data-label={competitor.name}>{competitor.tagline}</td>
-              </tr>
-              <tr>
-                <th scope="row">Look closer when</th>
-                <td data-label="CiteLadder">{CITELADDER_POSITION.when}</td>
-                <td data-label={competitor.name}>{competitor.whenBody}</td>
-              </tr>
-              <tr>
-                <th scope="row">Open source / self-hostable</th>
-                <td data-label="CiteLadder">
-                  {CITELADDER_POSITION.openSource}{' '}
-                  <a className="ed-link" href="/open-source">
-                    Self-host or use the hosted version
-                  </a>
-                </td>
-                <td data-label={competitor.name}>{competitor.openSource}</td>
-              </tr>
-              <tr>
-                <th scope="row">Source</th>
-                <td data-label="CiteLadder">
-                  <a className="ed-link" href="/platform">
-                    Platform overview
-                  </a>
-                </td>
-                <td data-label={competitor.name}>
-                  {source && (
+        <PricingTable
+          caption={`CiteLadder and ${competitor.name} compared by public product information`}
+          plans={[{ name: 'CiteLadder' }, { name: competitor.name }]}
+          groups={[
+            {
+              rows: [
+                {
+                  label: 'Product focus',
+                  values: [CITELADDER_POSITION.focus, competitor.tagline],
+                },
+                {
+                  label: 'Look closer when',
+                  values: [CITELADDER_POSITION.when, competitor.whenBody],
+                },
+                {
+                  label: 'Open source / self-hostable',
+                  values: [
                     <>
-                      <a className="ed-link" href={source.url} target="_blank" rel="noreferrer">
-                        {source.label}
-                      </a>
-                      <span className="text-ink-muted">
-                        {' '}
-                        · reviewed {formatBlogDate(source.reviewedDate)}
-                      </span>
-                    </>
-                  )}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </Section>
+                      {CITELADDER_POSITION.openSource}{' '}
+                      <TextLink asChild text="inherit">
+                        <a href="/open-source">Self-host or use the hosted version</a>
+                      </TextLink>
+                    </>,
+                    competitor.openSource,
+                  ],
+                },
+                {
+                  label: 'Source',
+                  values: [
+                    <TextLink key="citeladder" asChild text="inherit">
+                      <a href="/platform">Platform overview</a>
+                    </TextLink>,
+                    source ? (
+                      <>
+                        <SourceLink source={source} />
+                        <span className="text-ink-muted">
+                          {' '}
+                          · reviewed {formatBlogDate(source.reviewedDate)}
+                        </span>
+                      </>
+                    ) : (
+                      false
+                    ),
+                  ],
+                },
+              ],
+            },
+          ]}
+        />
+      </PageSection>
 
-      <Section tone="soft" aria-labelledby="compare-checklist-title">
-        <div className="mk-split">
-          <SectionHeader
-            headingId="compare-checklist-title"
-            title="Questions to ask both vendors"
-            lead="Compare the same use case across vendors rather than one aggregate percentage."
-          />
-          <ol className="ed-steps" aria-labelledby="compare-checklist-title">
-            {COMPARISON_CHECKLIST.map((item) => (
-              <li key={item.heading}>
-                <h3 className="website-feature-heading">{item.heading}</h3>
-                <p className="website-body">{item.body}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </Section>
+      <PageSection
+        id="checklist"
+        layout="aside"
+        title="Questions to ask both vendors"
+        lead="Compare the same use case across vendors rather than one aggregate percentage."
+      >
+        <FaqList
+          items={COMPARISON_CHECKLIST.map((item) => ({
+            question: item.heading,
+            answer: item.body,
+          }))}
+        />
+      </PageSection>
 
-      <Section aria-labelledby="compare-method-title">
-        <div className="mk-split">
-          <SectionHeader headingId="compare-method-title" title={competitor.conclusionHeading} />
-          <div className="grid max-w-[68ch] gap-4">
-            <p className="website-body">{competitor.conclusion}</p>
-            <p className="website-body">
-              In a CiteLadder demo, inspect a recorded answer, follow its cited sources and review
-              the relevant website findings. Confirm the current collection options, plan limits and
-              provider setup for your project.
-            </p>
-          </div>
-        </div>
-      </Section>
+      <PageSection label="CiteLadder">
+        <FeatureSplit
+          as="h2"
+          title={competitor.conclusionHeading}
+          body={[
+            competitor.conclusion,
+            'In a CiteLadder demo, inspect a recorded answer, follow its cited sources and review the relevant website findings. Confirm the current collection options, plan limits and provider setup for your project.',
+          ]}
+          media={<CatalogFrame screen="answer" />}
+        />
+      </PageSection>
 
-      <Section aria-label="Comparison sources and disclosure">
-        <div className="grid max-w-[68ch] gap-3">
-          <p className="website-body">{COMPARISON_DISCLOSURE}</p>
+      <PageSection spacing="compact" label="Comparison sources and disclosure">
+        <Callout tone="neutral">
+          {COMPARISON_DISCLOSURE}
           {competitor.sources.map((item) => (
-            <p className="website-body" key={item.url}>
-              <a className="ed-link" href={item.url} target="_blank" rel="noreferrer">
-                {item.label}
-              </a>
+            <span key={item.url}>
+              {' '}
+              <SourceLink source={item} />
               {'. '}
               <time dateTime={item.reviewedDate}>
                 Source reviewed {formatBlogDate(item.reviewedDate)}
               </time>
               .
-            </p>
+            </span>
           ))}
-          <p className="website-body flex flex-wrap gap-x-5 gap-y-1">
-            <a className="ed-link" href="/compare/profound-alternatives">
-              Profound alternatives
-            </a>
-            <a className="ed-link" href="/best-ai-visibility-platforms">
-              AI visibility platforms compared
-            </a>
-            <a className="ed-link" href="/platform/ai-visibility">
-              AI visibility tracker
-            </a>
-            <a className="ed-link" href="/pricing">
-              CiteLadder pricing
-            </a>
-            <a className="ed-link" href="/platform/cited-sources">
-              Cited Sources
-            </a>
-            <a className="ed-link" href="/ai-search-share-of-voice">
-              AI share of voice
-            </a>
-          </p>
-        </div>
-      </Section>
+        </Callout>
+      </PageSection>
 
-      <Section className="marketing-closing-band" aria-label="Get started">
-        <div className="flex flex-col items-center gap-8 text-center" data-cta-placement="closing">
-          <SectionHeader
-            title="Run the same investigation in both demos"
-            lead="Bring a small prompt portfolio and one question your team needs to answer."
-            align="center"
-          />
-          <div className="flex flex-wrap justify-center gap-3">
-            <DemoButtonLink size="marketing" />
-            <ButtonLink href="/compare" variant="soft" size="marketing">
-              All comparisons
-            </ButtonLink>
-          </div>
-        </div>
-      </Section>
+      <PageSection title="Related guides">
+        <RelatedCards items={FURTHER_READING} />
+      </PageSection>
+
+      <PageSection label="Get started">
+        <CtaBand
+          title="Run the same investigation in both demos"
+          lead="Bring a small prompt portfolio and one question your team needs to answer."
+          actions={<CompareActions />}
+        />
+      </PageSection>
     </>
   );
 }

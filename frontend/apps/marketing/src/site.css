@@ -3,7 +3,7 @@
  * docs/design.md): the `cl-*` geometry from the artifact's bundle.css, mapped
  * onto the tokens in globals.css. Nothing here declares a token; type sizes
  * come from the `--text-*` roles, the responsive H1 (44 → 36 → 30) and
- * display-lg (32 → 26) from website-type.css's `--text-site-*` sizes.
+ * display-lg (32 → 26) from the marketing `--text-site-*` sizes in globals.css.
  * Keyboard focus is the shared `focus-ring` class on each control.
  */
 
@@ -49,6 +49,23 @@
     font-size: var(--text-body-lg);
     line-height: var(--text-body-lg--line-height);
   }
+}
+
+/* Body copy outside a component (an aside line, an empty state): body 16/26. */
+.cl-body {
+  margin: 0;
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  text-wrap: pretty;
+}
+
+/* A small note beside a control or under a list: body-sm 14/20, muted. */
+.cl-note {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
 }
 
 /* A check list: FeatureSplit points and PricingCard features. */
@@ -2284,6 +2301,18 @@ a.cl-logotile:hover {
 
 .cl-page-hl-stats--4 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* Six hold one row while each gets 120px, then stack: never 3 × 2. */
+.cl-page-hl-stats--6 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+@container (max-width: 879px) {
+  .cl-page-hl-stats--6 {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
 }
 
 @container (max-width: 619px) {

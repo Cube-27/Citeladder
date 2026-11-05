@@ -1,10 +1,14 @@
 ---
-import { PRICING_FAQS, PricingCta, PricingFaq } from '@/components/marketing/pages/pricing';
-import { PublicPricingCatalog } from '@/components/marketing/pricing/public-pricing-catalog';
-import { PageHero } from '@/components/marketing/primitives/page-hero';
-import { Section, SectionHeader } from '@/components/marketing/primitives/section';
-import { selfServeCheckoutComingSoon } from '@/lib/billing/catalog';
+import { PublicPricingCatalog } from '@/components/marketing/pages/pricing-catalog';
+import {
+  PRICING_FAQS,
+  PricingCta,
+  PricingFaq,
+  PricingHero,
+  PricingUnavailable,
+} from '@/components/marketing/pages/pricing';
 import { faqPageJsonLd } from '@/lib/seo/json-ld';
+import { selfServeCheckoutComingSoon } from '@/lib/billing/catalog';
 import { displayCountry, publicCatalog } from '../public-catalog';
 import { workerApexEnv } from '../worker-env';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
@@ -33,23 +37,12 @@ if (!catalog) Astro.response.status = 503;
   robots={catalog ? undefined : 'noindex'}
   jsonLd={[faqPageJsonLd(PRICING_FAQS)]}
 >
-  <main id="main" class="w-full max-w-full min-w-0 overflow-x-clip">
-    <PageHero
-      title="No markup on model calls made with your keys"
-      lead="When you use your own provider keys, model calls bill to your provider accounts at provider rates. CiteLadder charges for the workspace, the analysis and the evidence behind every recommendation."
-      centered
-    />
+  <main id="main">
+    <PricingHero />
     {catalog ? (
       <PublicPricingCatalog catalog={catalog} appOrigin={env.PUBLIC_APP_ORIGIN} initialByok={initialByok} client:load />
     ) : (
-      <Section aria-label="Plans">
-        <SectionHeader
-          title="Plans are temporarily unavailable"
-          lead="Please try again shortly. No price is shown while the public catalog is unavailable."
-          size="h3"
-          align="center"
-        />
-      </Section>
+      <PricingUnavailable />
     )}
     <PricingFaq />
     <PricingCta />

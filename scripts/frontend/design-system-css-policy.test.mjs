@@ -21,22 +21,27 @@ test('radius must consume the ladder', () => {
   );
 });
 
-test('type metrics must consume a text role outside the ladder owners', () => {
+test('type metrics must consume a text role in every stylesheet', () => {
   assert.deepEqual(rules('.a { font-size: 14px; line-height: 1.3; }'), ['css-type', 'css-type']);
   assert.deepEqual(
     rules('.a { font-size: var(--text-sm); line-height: var(--text-sm--line-height); }'),
     [],
   );
   assert.deepEqual(rules('.a { line-height: 1; } .b { font-size: inherit; }'), []);
-  const website = 'apps/app/src/website-type.css';
-  assert.deepEqual(rules('.website-lead, .website-body { font-size: 1.125rem; }', website), []);
+  // The stylesheet that owns the website's type roles reads the scale too.
+  const website = 'apps/marketing/src/site.css';
+  assert.deepEqual(rules('.cl-lead, .cl-body { font-size: 1.125rem; }', website), ['css-type']);
+  assert.deepEqual(
+    rules(
+      '.cl-phero-title { font-size: var(--text-site-title); line-height: var(--text-site-title--line-height); }',
+      website,
+    ),
+    [],
+  );
   // The public attribute is on <html>: a size there rescales every rem on the site.
   assert.deepEqual(rules(':where([data-public-surface]) { font-size: 0.875rem; }', website), [
     'css-type',
   ]);
-  // A role owner elsewhere, or a descendant of one, is not the ladder.
-  assert.deepEqual(rules('.website-lead { font-size: 1.125rem; }'), ['css-type']);
-  assert.deepEqual(rules('.auth .website-lead { font-size: 1.75rem; }', website), ['css-type']);
 });
 
 test('spacing stays on the 4px grid, with hairline insets', () => {
