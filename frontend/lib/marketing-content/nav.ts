@@ -259,9 +259,10 @@ export type FooterLink = {
   label: string;
   href: string;
   external?: boolean;
-  /** A social profile shows its network's mark in place of the external arrow. */
-  social?: SocialNetwork;
 };
+
+/** A social profile: an icon-only link whose `label` is its accessible name. */
+type SocialLink = { network: SocialNetwork; label: string; href: string };
 
 export type FooterColumn = { key: string; label: string; links: readonly FooterLink[] };
 
@@ -309,11 +310,15 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
       { label: PARENT_COMPANY.name, href: PARENT_COMPANY.href, external: true },
       { label: 'AI Instructions', href: '/ai-instructions' },
       { label: 'Entity Map', href: '/entity-map' },
-      { label: 'github.com', href: CITELADDER_GITHUB, external: true, social: 'github' },
-      { label: 'x.com', href: CITELADDER_X, external: true, social: 'x' },
-      { label: 'linkedin.com', href: CITELADDER_LINKEDIN, external: true, social: 'linkedin' },
     ],
   },
+];
+
+/** The footer's social row under the launch badges (D20), one icon each. */
+export const FOOTER_SOCIAL: readonly SocialLink[] = [
+  { network: 'github', label: 'github.com', href: CITELADDER_GITHUB },
+  { network: 'x', label: 'x.com', href: CITELADDER_X },
+  { network: 'linkedin', label: 'linkedin.com', href: CITELADDER_LINKEDIN },
 ];
 
 /** The policy row under the ownership line; Contact already sits in Company. */

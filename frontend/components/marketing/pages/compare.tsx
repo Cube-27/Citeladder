@@ -99,10 +99,10 @@ export function CompareIndex() {
 
       <PageSection
         id="checklist"
-        layout="aside"
+        measure="reading"
         title="Agree on the measurement before comparing the score"
         lead="Ask each vendor what it observes, how it selects prompts, what it counts and how you can inspect the evidence."
-        aside={
+        action={
           <p className="cl-body">
             Read{' '}
             <TextLink asChild text="inherit">

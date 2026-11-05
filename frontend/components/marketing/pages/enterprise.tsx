@@ -157,7 +157,6 @@ export function EnterprisePage() {
         id="security"
         title="Every boundary has one owner"
         lead="Credentials, evidence and execution are each handled in one place, so a security reviewer can check them one at a time and read the code behind each."
-        headerLayout="split"
       >
         <Bento
           cells={GOVERNANCE.map((group) => ({
@@ -171,7 +170,6 @@ export function EnterprisePage() {
       <PageSection
         title="How a request travels"
         lead="The hosted platform runs in a managed cloud behind one same-origin boundary. Every read is checked against the workspace, and provider keys are resolved only when a worker calls an engine."
-        headerLayout="split"
       >
         <Steps items={DATA_FLOW} />
       </PageSection>
@@ -180,7 +178,6 @@ export function EnterprisePage() {
         id="fit"
         title="Who Enterprise is for"
         lead="Enterprise fits when your AEO program needs more scope, more review and clearer boundaries than a self-serve plan provides."
-        headerLayout="split"
       >
         <ul className={`cl-tiles cl-cols-${columnsFor(FIT.length)}`}>
           {FIT.map((item) => (
@@ -195,7 +192,6 @@ export function EnterprisePage() {
         id="limits"
         title="Scope the agreement around the work"
         lead="Six inputs set an Enterprise agreement. Each is quoted to fit your program, and none changes how a score is computed."
-        headerLayout="split"
       >
         <ul className={`cl-tiles cl-cols-${columnsFor(AGREEMENT.length)}`}>
           {AGREEMENT.map((item) => (

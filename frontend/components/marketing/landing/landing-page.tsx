@@ -279,7 +279,6 @@ function Integrations() {
       title="Connect the data you already have"
       lead="Start with AI answers. Add other sources when you need them."
       action={<SiteArrowLink href="/platform/integrations">Explore integrations</SiteArrowLink>}
-      layout="aside"
     >
       <ul className="cl-tiles cl-cols-3">
         {INTEGRATIONS.map((integration) => (
@@ -302,7 +301,6 @@ function Teams() {
     <PageSection
       id="teams"
       title="Who uses CiteLadder"
-      headerLayout="split"
       action={<SiteArrowLink href="/solutions">Explore solutions</SiteArrowLink>}
     >
       <ul className={`cl-tiles cl-cols-${columnsFor(solutions.length)}`}>
@@ -329,9 +327,8 @@ function Trust() {
       id="trust"
       title="How CiteLadder handles your data"
       action={<SiteArrowLink href="/enterprise">Enterprise</SiteArrowLink>}
-      layout="aside"
     >
-      <ul className="cl-tiles cl-cols-2">
+      <ul className={`cl-tiles cl-cols-${columnsFor(TRUST.length)}`}>
         {TRUST.map(([title, body]) => (
           <li key={title}>
             <FeatureCard title={title} body={body} />
@@ -367,7 +364,6 @@ export function LandingPage({ rotor }: Readonly<{ rotor?: ReactNode }>) {
       <PageSection
         id="platform"
         title="Everything in one project"
-        headerLayout="split"
         action={<SiteArrowLink href="/platform">See the whole platform</SiteArrowLink>}
       >
         <CapabilityGrid />
@@ -380,7 +376,7 @@ export function LandingPage({ rotor }: Readonly<{ rotor?: ReactNode }>) {
         id="landing-faq"
         title="Questions, answered"
         action={<SiteArrowLink href="/faq">All questions</SiteArrowLink>}
-        layout="aside"
+        measure="reading"
       >
         <FaqList items={FAQS.map((faq) => ({ question: faq.q, answer: faq.a }))} />
       </PageSection>

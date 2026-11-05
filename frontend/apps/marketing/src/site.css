@@ -106,40 +106,58 @@
 }
 
 /* Card grids whose column count follows the item count, so 2, 3 or 4 cards
-   always fill the row. */
+   always fill the row. `--cols` carries the count to the card lists below. */
 .cl-cols-1 {
-  grid-template-columns: minmax(0, 1fr);
+  --cols: 1;
 }
 
 .cl-cols-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  --cols: 2;
 }
 
 .cl-cols-3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  --cols: 3;
 }
 
 .cl-cols-4 {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  --cols: 4;
 }
 
 @media (max-width: 1279px) {
   .cl-cols-4 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    --cols: 2;
   }
 }
 
 @media (max-width: 899px) {
   .cl-cols-3 {
-    grid-template-columns: minmax(0, 1fr);
+    --cols: 1;
   }
 }
 
 @media (max-width: 767px) {
   .cl-cols-2,
   .cl-cols-4 {
-    grid-template-columns: minmax(0, 1fr);
+    --cols: 1;
   }
+}
+
+:is(.cl-cols-1, .cl-cols-2, .cl-cols-3, .cl-cols-4) {
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+}
+
+/* D21: a card list never leaves an empty cell. A short last row (five cards
+   at three a row) sits centred under the full rows instead. */
+:is(.cl-tiles, .cl-related, .cl-qcards):is(.cl-cols-2, .cl-cols-3, .cl-cols-4) {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* `height: auto` lets a card that is itself the list item stretch to its row. */
+:is(.cl-tiles, .cl-related, .cl-qcards):is(.cl-cols-2, .cl-cols-3, .cl-cols-4) > li {
+  flex: 0 0 calc((100% - (var(--cols) - 1) * var(--cl-list-gap)) / var(--cols));
+  height: auto;
 }
 
 /* ---------- Large website buttons and the standalone arrow link ---------- */
@@ -273,8 +291,17 @@ a.cl-announce:hover {
   margin-top: 8px;
 }
 
+/* D19: the floating bar overhangs the page column a little on each side
+   (16px, 12px on phones, where the 20px gutter leaves 8px to the screen edge). */
 .cl-navbar-anchor {
   position: relative;
+  margin-inline: -16px;
+}
+
+@media (max-width: 767px) {
+  .cl-navbar-anchor {
+    margin-inline: -12px;
+  }
 }
 
 /* The bar positions the mega menus (they sit in its list, after their triggers). */
@@ -693,6 +720,34 @@ a.cl-announce:hover {
   padding-top: 8px;
 }
 
+/* D20: the social profiles, one row of icon links under the badges. The row
+   pulls left by the icon's inset so the first glyph lines up with the copy. */
+.cl-footer-social {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 0 -8px;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-footer-social-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-md);
+  height: var(--control-md);
+  border-radius: var(--radius-md);
+  color: var(--color-ink-muted);
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+
+.cl-footer-social-link:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-ink);
+}
+
 .cl-footer-cols {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -904,26 +959,15 @@ a.cl-announce:hover {
   align-items: center;
 }
 
-.cl-shead--center .cl-shead-title {
-  max-width: var(--container-prose);
-}
-
+/* D18: a centred header holds the 960 display and 720 reading measures. */
 .cl-shead--center .cl-shead-lead {
-  text-wrap: balance;
+  max-width: var(--container-prose);
+  text-wrap: pretty;
 }
 
-.cl-shead--split {
-  display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  align-items: end;
-  gap: 48px;
-}
-
-@media (max-width: 1023px) {
-  .cl-shead--split {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 20px;
-  }
+/* A check list under a centred lead is a centred block whose rows keep their marks in line. */
+.cl-shead--center .cl-checks {
+  text-align: left;
 }
 
 @media (max-width: 767px) {
@@ -964,10 +1008,6 @@ a.cl-announce:hover {
   text-wrap: balance;
 }
 
-.cl-lhero-title {
-  max-width: 1040px;
-}
-
 .cl-lhero-title .cl-mark {
   padding: 0 0.08em;
 }
@@ -982,8 +1022,9 @@ a.cl-announce:hover {
 }
 
 .cl-lhero-lead {
-  max-width: var(--container-narrow);
+  max-width: var(--container-prose);
   margin: 0;
+  text-wrap: pretty;
 }
 
 .cl-phero-actions,
@@ -1004,35 +1045,33 @@ a.cl-announce:hover {
 }
 
 .cl-phero-media,
-.cl-lhero--below .cl-lhero-frame {
+.cl-lhero-frame {
   margin-top: 64px;
 }
 
-.cl-lhero--center .cl-lhero-copy {
+/* D18: landing openings centre the copy; the title keeps 960, the lead 720. */
+.cl-phero--center .cl-phero-inner,
+.cl-lhero-copy {
   align-items: center;
   text-align: center;
 }
 
-.cl-lhero--center .cl-lhero-lead {
-  text-wrap: balance;
+.cl-phero--center .cl-phero-title {
+  max-width: 960px;
 }
 
-.cl-lhero--beside .cl-lhero-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-  align-items: center;
-  gap: 48px;
+.cl-phero--center .cl-phero-lead {
+  text-wrap: pretty;
 }
 
-@media (max-width: 1023px) {
-  .cl-lhero--beside .cl-lhero-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.cl-phero--center .cl-phero-actions,
+.cl-lhero-actions {
+  justify-content: center;
 }
 
 @media (max-width: 767px) {
   .cl-phero-media,
-  .cl-lhero--below .cl-lhero-frame {
+  .cl-lhero-frame {
     margin-top: 48px;
   }
 }
@@ -1096,6 +1135,27 @@ a.cl-announce:hover {
   padding-top: 12px;
 }
 
+/* D21: a card alone in its row sets its points in a column beside the title
+   and copy, so the row has no empty half. */
+.cl-fcard--wide .cl-fcard-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto 1fr;
+  align-items: start;
+  gap: 8px 48px;
+}
+
+.cl-fcard--wide .cl-fcard-body > .cl-checks {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+}
+
+@media (max-width: 899px) {
+  .cl-fcard--wide .cl-fcard-body {
+    display: flex;
+  }
+}
+
 /* ---------- Bento: authored spans hold to 900px, halves to 768, one column below ---------- */
 .cl-bento {
   display: grid;
@@ -1142,6 +1202,18 @@ a.cl-announce:hover {
 }
 
 .cl-bento-cell > * {
+  flex: 1;
+}
+
+/* D21: a product image beside a taller tile fills its cell; the well grows
+   and shows more of the screen instead of leaving a blank strip under it. */
+.cl-bento-cell > .cl-frame > .cl-frame-card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.cl-bento-cell > .cl-frame .cl-frame-well {
   flex: 1;
 }
 
@@ -1336,6 +1408,14 @@ a.cl-announce:hover {
     grid-auto-columns: auto;
     grid-auto-flow: row;
   }
+
+  /* D21: three or six steps go three a row, so no step sits alone. */
+  .cl-steps--horizontal:is(
+    :has(> .cl-step:nth-child(3):last-child),
+    :has(> .cl-step:nth-child(6):last-child)
+  ) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 767px) {
@@ -1414,20 +1494,23 @@ a.cl-announce:hover {
   text-underline-offset: 3px;
 }
 
-/* ---------- CtaBand: a paper well inside the container, never full-bleed ---------- */
+/* ---------- CtaBand: a paper well inside the container, never full-bleed ----------
+   D18/D21: the copy and actions stack centred, so the band has no empty side. */
 .cl-cta {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
   padding: 64px;
   border-radius: var(--radius-xl);
   background: var(--color-paper);
+  text-align: center;
 }
 
 .cl-cta-copy {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 16px;
 }
 
@@ -1446,18 +1529,20 @@ a.cl-announce:hover {
 .cl-cta-lead {
   max-width: var(--container-narrow);
   margin: 0;
+  text-wrap: pretty;
 }
 
 .cl-cta-side {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   gap: 12px;
 }
 
 .cl-cta-actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 12px;
 }
 
@@ -1471,13 +1556,7 @@ a.cl-announce:hover {
 
 @media (max-width: 1023px) {
   .cl-cta {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 32px;
     padding: 40px;
-  }
-
-  .cl-cta-side {
-    align-items: flex-start;
   }
 }
 
@@ -1490,8 +1569,10 @@ a.cl-announce:hover {
 /* ---------- RelatedCards and QuestionCards ---------- */
 .cl-related,
 .cl-qcards {
+  --cl-list-gap: 24px;
+
   display: grid;
-  gap: 24px;
+  gap: var(--cl-list-gap);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1568,29 +1649,26 @@ a.cl-announce:hover {
 @media (max-width: 767px) {
   .cl-related,
   .cl-qcards {
-    gap: 16px;
+    --cl-list-gap: 16px;
   }
 }
 
 /* ---------- EngineStrip ---------- */
+/* Centred under the landing opening it follows (D18). */
 .cl-engines,
 .cl-engines-list {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 16px 40px;
+  text-align: center;
 }
 
 .cl-engines-list {
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.cl-engines--center,
-.cl-engines--center .cl-engines-list {
-  justify-content: center;
-  text-align: center;
 }
 
 .cl-engines-label {
@@ -1894,8 +1972,10 @@ a.cl-announce:hover {
 
 /* ---------- Tile grids: cards or tiles in a list, columns from `cl-cols-*` ---------- */
 .cl-tiles {
+  --cl-list-gap: 16px;
+
   display: grid;
-  gap: 16px;
+  gap: var(--cl-list-gap);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -2165,6 +2245,12 @@ a.cl-logotile:hover {
   min-width: 0;
 }
 
+/* A centred FAQ or list under a centred header reads at the 720 measure. */
+.cl-page-section-body--reading {
+  max-width: var(--container-prose);
+  margin-inline: auto;
+}
+
 .cl-page-section-body > * + * {
   margin-top: 32px;
 }
@@ -2254,6 +2340,11 @@ a.cl-logotile:hover {
 
 .cl-page-hl-copy .cl-eyebrow {
   color: var(--color-ink-muted);
+}
+
+.cl-page-hl--statement .cl-page-hl-copy {
+  align-items: center;
+  text-align: center;
 }
 
 .cl-page-hl-copy .cl-eyebrow + .cl-page-hl-title {

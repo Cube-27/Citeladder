@@ -5,6 +5,7 @@ import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import {
   FOOTER_COLUMNS,
   FOOTER_POLICY_LINKS,
+  FOOTER_SOCIAL,
   FOOTER_TAGLINE,
   type FooterLink,
   type SocialNetwork,
@@ -31,14 +32,32 @@ function ColumnLink({ link }: Readonly<{ link: FooterLink }>) {
   }
   return (
     <a className="focus-ring" href={link.href} target="_blank" rel="noreferrer">
-      {link.social && (
-        <svg viewBox="0 0 24 24" className="size-3.5" fill="currentColor" aria-hidden>
-          <path d={SOCIAL_GLYPHS[link.social]} />
-        </svg>
-      )}
       {link.label}
-      {!link.social && <ArrowUpRight className="size-3.5" aria-hidden />}
+      <ArrowUpRight className="size-3.5" aria-hidden />
     </a>
+  );
+}
+
+/** The social profiles as one row of icon-only links, named by their domains (D20). */
+function SocialLinks() {
+  return (
+    <ul className="cl-footer-social">
+      {FOOTER_SOCIAL.map((link) => (
+        <li key={link.network}>
+          <a
+            className="cl-footer-social-link focus-ring"
+            href={link.href}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={link.label}
+          >
+            <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden>
+              <path d={SOCIAL_GLYPHS[link.network]} />
+            </svg>
+          </a>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -112,6 +131,7 @@ export function SiteFooter() {
             </a>
             <p className="cl-footer-tagline">{FOOTER_TAGLINE}</p>
             <DirectoryBadges />
+            <SocialLinks />
           </div>
           <nav aria-label="Footer" className="cl-footer-cols">
             {FOOTER_COLUMNS.map((column) => (

@@ -80,19 +80,13 @@ export function CommercialEntryPage({
         />
       </PageSection>
 
-      <PageSection
-        id="context"
-        title={page.contextHeading}
-        lead={page.context}
-        headerLayout="split"
-        spacing="compact"
-      >
+      <PageSection id="context" title={page.contextHeading} lead={page.context} spacing="compact">
         <RelatedCards
           items={page.related.map((link) => ({ href: link.href, title: link.label }))}
         />
       </PageSection>
 
-      <PageSection id="questions" title="Questions, answered" layout="aside">
+      <PageSection id="questions" title="Questions, answered" measure="reading">
         <FaqList items={page.faqs.map((faq) => ({ question: faq.q, answer: faq.a }))} />
       </PageSection>
 

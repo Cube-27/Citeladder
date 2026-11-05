@@ -208,6 +208,16 @@ The repository follows the design-system artifact's version 13 for D5–D11:
 (`line-strong`, `shadow-edge`, `heading-lg`, `row-app`, `control-md` 32 and
 `stat` at Geist 500).
 
+The owner then reviewed the public website and decided D18–D21 (source: the
+owner's review in the orchestration session, 5 November 2026).
+
+| ID | Question | Decision |
+| --- | --- | --- |
+| D18 | How do landing pages align? | Centred: on home, platform and product pages, solutions, enterprise, pricing and compare, the opening heading, section headings and intro copy sit centred within the 960 display and 720 reading measures. Section headers stack (title, lead, action); there is no split header. Long-form reading (blog, docs, legal) and the utility pages (contact, tools, 404) stay left-aligned |
+| D19 | How wide is the floating top nav? | Slightly wider than the page column: the bar overhangs the content edges by 16px on each side (12px on phones) instead of matching them |
+| D20 | Where do the social links go? | Out of the footer's Company column, into one row of icon-only links (each with an accessible name) directly below the launch-directory badges |
+| D21 | How is content placed? | A heading and its copy sit together with no dead space: no empty column beside copy, no heading stranded at the bottom of a tall column, no oversized gap. Every website page was swept for the fault |
+
 ## Known gaps in the system
 
 - Long prompt and action names in ScreenPrompts and ScreenActions end in "…" at

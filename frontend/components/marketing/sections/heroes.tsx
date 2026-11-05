@@ -8,7 +8,9 @@ import { Eyebrow } from './site-parts';
 /**
  * PageHero: an inner page's opening, its H1 at display-2xl (44, 36 on
  * tablets, 30 on phones, never larger), the lead, actions, a mono meta line
- * and the page's product image below. `size` only changes the measure.
+ * and the page's product image below. Landing pages centre the copy (D18);
+ * long-form and utility pages pass `align="left"`. `size` only changes the
+ * measure of a left-aligned hero.
  */
 export function PageHero({
   crumbs,
@@ -18,6 +20,7 @@ export function PageHero({
   actions,
   meta,
   size = 'lg',
+  align = 'center',
   children,
 }: Readonly<{
   crumbs?: readonly Crumb[];
@@ -27,12 +30,16 @@ export function PageHero({
   actions?: ReactNode;
   meta?: ReactNode;
   size?: 'lg' | '2xl';
+  align?: 'left' | 'center';
   /** The hero's product image, under the copy. */
   children?: ReactNode;
 }>) {
   return (
     // `data-cta-placement` names where a clicked call to action sat, for marketing analytics.
-    <section className={cn('cl-phero', `cl-phero--${size}`)} data-cta-placement="hero">
+    <section
+      className={cn('cl-phero', `cl-phero--${size}`, align === 'center' && 'cl-phero--center')}
+      data-cta-placement="hero"
+    >
       <div className="cl-container">
         <div className="cl-phero-inner">
           {crumbs && <Breadcrumbs items={crumbs} />}
@@ -49,9 +56,8 @@ export function PageHero({
 }
 
 /**
- * LandingHero: the home page's opening. The announcement sits over the H1,
- * then the lead, actions and note; the frame goes below the copy (or beside
- * it, 5/12 to 7/12). Centred copy only applies with the frame below.
+ * LandingHero: the home page's opening, centred (D18). The announcement sits
+ * over the H1, then the lead, actions and note; the frame goes below the copy.
  */
 export function LandingHero({
   announcement,
@@ -60,8 +66,6 @@ export function LandingHero({
   actions,
   note,
   frame,
-  layout = 'below',
-  align = 'left',
 }: Readonly<{
   announcement?: ReactNode;
   title: ReactNode;
@@ -69,23 +73,18 @@ export function LandingHero({
   actions?: ReactNode;
   note?: ReactNode;
   frame?: ReactNode;
-  layout?: 'below' | 'beside';
-  align?: 'left' | 'center';
 }>) {
-  const center = layout === 'below' && align === 'center';
   return (
-    <section className={cn('cl-lhero', `cl-lhero--${layout}`, center && 'cl-lhero--center')}>
+    <section className="cl-lhero">
       <div className="cl-container">
-        <div className="cl-lhero-grid">
-          <div className="cl-lhero-copy">
-            {announcement}
-            <h1 className="cl-lhero-title">{title}</h1>
-            {lead && <p className="cl-lead cl-lhero-lead">{lead}</p>}
-            {actions && <div className="cl-lhero-actions">{actions}</div>}
-            {note && <p className="cl-lhero-note">{note}</p>}
-          </div>
-          {frame && <div className="cl-lhero-frame">{frame}</div>}
+        <div className="cl-lhero-copy">
+          {announcement}
+          <h1 className="cl-lhero-title">{title}</h1>
+          {lead && <p className="cl-lead cl-lhero-lead">{lead}</p>}
+          {actions && <div className="cl-lhero-actions">{actions}</div>}
+          {note && <p className="cl-lhero-note">{note}</p>}
         </div>
+        {frame && <div className="cl-lhero-frame">{frame}</div>}
       </div>
     </section>
   );
