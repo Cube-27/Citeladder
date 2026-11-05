@@ -1,0 +1,110 @@
+---
+/**
+ * SourcesList — the numbered sources at the end of a guide or post: a
+ * `title` heading in Cal Sans, optional notes above the list (the `notes`
+ * slot), then one SourceRow per source between `line` hairlines. Each row is
+ * `#source-n`, the target of an InlineCitation, and takes `surface-sunken`
+ * while targeted.
+ */
+interface Props {
+  title?: string;
+}
+const { title = 'Sources' } = Astro.props;
+---
+
+<section class="cl-sources" aria-labelledby="article-sources">
+  <h2 id="article-sources" class="cl-sources-title">{title}</h2>
+  {Astro.slots.has('notes') && <div class="cl-sources-notes"><slot name="notes" /></div>}
+  <ol class="cl-sources-list">
+    <slot />
+  </ol>
+</section>
+
+<style is:global>
+  .cl-sources {
+    max-width: var(--container-prose);
+  }
+  .cl-sources-title {
+    margin: 0 0 16px;
+    color: var(--color-ink);
+    font-family: var(--font-display);
+    font-size: var(--text-title);
+    line-height: var(--text-title--line-height);
+    font-weight: 400;
+  }
+  .cl-sources-notes {
+    margin: 0 0 16px;
+    color: var(--color-ink-secondary);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+  .cl-sources-list {
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--color-line);
+    list-style: none;
+  }
+  .cl-source {
+    display: grid;
+    grid-template-columns: 32px 16px minmax(0, 1fr);
+    align-items: start;
+    gap: 12px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--color-line);
+    scroll-margin-top: calc(var(--nav-height) + 32px);
+  }
+  .cl-source:target {
+    background: var(--color-surface-sunken);
+  }
+  .cl-source-n {
+    color: var(--color-ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+    line-height: var(--text-data--line-height);
+    text-align: right;
+  }
+  .cl-source-fav {
+    display: inline-grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+    border-radius: var(--radius-full);
+    background: var(--color-ink);
+    color: var(--color-on-ink);
+    font-size: var(--text-eyebrow);
+    line-height: var(--text-eyebrow--line-height);
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+  .cl-source-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    color: var(--color-ink-secondary);
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  .cl-source-body p {
+    margin: 0;
+  }
+  .cl-source-body a {
+    color: var(--color-ink);
+    font-weight: 500;
+    text-decoration: none;
+    border-radius: var(--radius-xs);
+  }
+  .cl-source-body a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .cl-source-meta {
+    margin: 0;
+    color: var(--color-ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+    line-height: var(--text-data--line-height);
+    overflow-wrap: anywhere;
+  }
+</style>

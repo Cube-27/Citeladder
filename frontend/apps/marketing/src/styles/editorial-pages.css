@@ -1,6 +1,6 @@
 /* Page styles owned by the editorial-pages group; see MarketingLayout.astro.
-   Solutions, comparisons, the share-of-voice guide, company references and
-   legal documents. Prefix: `ed-`. Tokens only. */
+   Solutions, comparisons, the share-of-voice guide and company references.
+   Prefix: `ed-`. Tokens only. */
 
 /* ── Solutions: in-page team index ─────────────────────────────────────── */
 
@@ -51,12 +51,6 @@
   .ed-doc {
     grid-template-columns: 13.5rem minmax(0, 1fr);
     gap: 4.5rem;
-  }
-}
-
-@media (min-width: 64rem) {
-  .ed-doc.ed-doc-single {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -141,13 +135,6 @@
   color: var(--color-ink-muted);
 }
 
-/* Short reference notes: a quiet tinted block, no accent border. */
-.ed-note {
-  padding: 1rem 1.25rem;
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-sunken);
-}
-
 /* Document header meta line under the lead. */
 .ed-doc-meta {
   display: flex;
@@ -168,13 +155,6 @@
 
 .ed-doc-meta a:hover {
   color: var(--color-ink);
-}
-
-.ed-doc-footer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1.5rem;
-  margin-top: 2.5rem;
 }
 
 /* ── Quiet tables ──────────────────────────────────────────────────────── */

@@ -2,11 +2,11 @@
 import { websiteHref } from '@/lib/config/app-link';
 import { docsHref } from '@/lib/config/docs';
 import { articleHeadings, articles } from '../lib/content';
-import { docsArticleJsonLd } from '../lib/structured-data';
+import { docsArticleJsonLd, updatedLabel } from '../lib/structured-data';
 import DocsShell from '../layouts/DocsShell.astro';
 import ApiReference from '../components/ApiReference.astro';
-import ArticleHeader from '../components/ArticleHeader.astro';
-import Prose from '../components/Prose.astro';
+import ArticleHeader from '@/components/content/ArticleHeader.astro';
+import Prose from '@/components/content/Prose.astro';
 import ToolReference from '../components/ToolReference.astro';
 
 export function getStaticPaths() {
@@ -44,10 +44,16 @@ const toc = headings.map((heading) => ({
   previous={previous && { title: previous.title, href: previous.href }}
   next={next && { title: next.title, href: next.href }}
 >
-  <ArticleHeader title={article.title} eyebrow={article.group} updated={article.updated}>
+  <ArticleHeader
+    title={article.title}
+    eyebrow={article.group}
+    meta={article.updated
+      ? [{ prefix: 'Updated', text: updatedLabel(article.updated), dateTime: article.updated }]
+      : []}
+  >
     {article.description}
   </ArticleHeader>
-  <Prose><Content /></Prose>
+  <Prose variant="docs"><Content /></Prose>
   {article.toolReference && <ToolReference />}
   {article.apiReference && <ApiReference />}
 </DocsShell>

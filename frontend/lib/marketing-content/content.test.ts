@@ -7,7 +7,7 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vite-plus/test';
 
-import { headingId } from '@/components/marketing/blog/post-blocks';
+import { headingId } from '@/components/marketing/content/heading-id';
 
 import { POSTS, type BlogBlock } from './blog';
 import { COMPETITORS } from './compare';

@@ -5,7 +5,7 @@ import { defineConfig } from 'astro/config';
 import { loadEnv } from 'vite';
 import { DOCS_CONTENT_SECURITY_POLICY } from '../../lib/config/content-security-policy.ts';
 import { DOCS_ORIGIN } from '../../lib/config/docs.ts';
-import { docsMarkdownBlocks } from './src/lib/code-block.ts';
+import { proseMarkdownBlocks } from '../../components/content/prose-blocks.ts';
 
 const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
 
@@ -23,7 +23,7 @@ export default defineConfig({
   security: { csp: DOCS_CONTENT_SECURITY_POLICY },
   integrations: [react()],
   // Fences render as the system's CodeBlock and tables get Prose's scroll frame.
-  markdown: { syntaxHighlight: false, processor: satteri({ hastPlugins: [docsMarkdownBlocks] }) },
+  markdown: { syntaxHighlight: false, processor: satteri({ hastPlugins: [proseMarkdownBlocks] }) },
   server: { host: '127.0.0.1', port: 4322 },
   vite: {
     css: { postcss: frontendRoot },

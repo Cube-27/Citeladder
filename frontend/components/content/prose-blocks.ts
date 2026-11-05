@@ -1,10 +1,10 @@
 /**
- * Sätteri hast plugin for the docs' Markdown: fenced code becomes the
+ * Prose's Markdown blocks, for the docs (a Sätteri hast plugin) and the
+ * website (a rehype plugin for react-markdown): fenced code becomes the
  * system's CodeBlock (a bar with the language and a Copy button over mono
  * code, comment lines and a leading `$ ` prompt in `ink-muted`, no other
  * syntax colours), and every table gets Prose's scroll frame. The markup's
- * styles and the Copy behaviour live in components/CodeBlock.astro, which
- * Prose renders.
+ * styles and the Copy behaviour live in CodeBlock.astro, which Prose renders.
  */
 
 import type { SatteriResolvedOptions } from '@astrojs/markdown-satteri';
@@ -95,9 +95,9 @@ function fenceLanguage(code: Element): string | null {
   return match ? match.slice('language-'.length) : null;
 }
 
-/** The plugin, in the shape `satteri({ hastPlugins })` takes. */
-export const docsMarkdownBlocks = {
-  name: 'docs-markdown-blocks',
+/** The Sätteri plugin, in the shape `satteri({ hastPlugins })` takes (the docs' Markdown). */
+export const proseMarkdownBlocks = {
+  name: 'prose-markdown-blocks',
   element: {
     filter: ['pre', 'table'],
     visit(node, ctx) {
@@ -113,3 +113,63 @@ export const docsMarkdownBlocks = {
     },
   },
 } satisfies PluginDefinition;
+
+/**
+ * The unified hast tree react-markdown hands a rehype plugin, as far as this
+ * plugin reads it. Its elements have the same shape Sätteri's do, so both
+ * plugins build the one CodeBlock markup.
+ */
+type TreeNode = {
+  type: string;
+  tagName?: string;
+  value?: string;
+  properties?: Element['properties'];
+  children?: TreeNode[];
+};
+
+function treeText(node: TreeNode): string {
+  if (node.type === 'text') return node.value ?? '';
+  return (node.children ?? []).map(treeText).join('');
+}
+
+function treeElement(node: Element): TreeNode {
+  return node;
+}
+
+type BlockOptions = Readonly<{
+  /** False when the renderer frames tables itself (to name each one by its heading). */
+  tables?: boolean;
+}>;
+
+/** One node of the tree: the CodeBlock for a fence, a framed table, or itself. */
+function proseNode(node: TreeNode, options: BlockOptions): TreeNode {
+  if (node.type !== 'element') return node;
+  if (node.tagName === 'table' && options.tables !== false) {
+    return { ...treeElement(element('div', { className: ['cl-prose-table'] })), children: [node] };
+  }
+  const code =
+    node.tagName === 'pre' ? node.children?.find((child) => child.tagName === 'code') : undefined;
+  if (code) {
+    const classes = code.properties?.className;
+    const language = Array.isArray(classes)
+      ? (classes
+          .map(String)
+          .find((name) => name.startsWith('language-'))
+          ?.slice('language-'.length) ?? null)
+      : null;
+    return treeElement(codeBlock(treeText(code), language));
+  }
+  if (node.children) node.children = node.children.map((child) => proseNode(child, options));
+  return node;
+}
+
+/**
+ * The same blocks as a rehype plugin, for Markdown the website renders with
+ * react-markdown (the research guides): fences become CodeBlocks and, unless
+ * `tables` is false, tables get Prose's scroll frame.
+ */
+export function rehypeProseBlocks(options: BlockOptions = {}) {
+  return (tree: TreeNode) => {
+    if (tree.children) tree.children = tree.children.map((child) => proseNode(child, options));
+  };
+}

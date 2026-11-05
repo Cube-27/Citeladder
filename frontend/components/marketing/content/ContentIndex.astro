@@ -1,0 +1,201 @@
+---
+/**
+ * ContentIndex — the listing on the research, blog and tools index pages:
+ * groups of whole-row links (a Cal Sans title, a one-line excerpt and a mono
+ * meta line) between hairlines, the group's title, description and count in
+ * a sticky 4/12 column beside its 8/12 rows. An untitled group keeps the
+ * 8/12 column; below 1024px the header sits above its rows. A row's arrow
+ * turns `ink` and its title underlines on hover; nothing moves.
+ */
+import { ArrowRight } from 'lucide-react';
+
+type ContentIndexItem =Readonly<{
+  title: string;
+  href: string;
+  body?: string;
+  meta?: string;
+  eyebrow?: string;
+}>;
+
+type ContentIndexGroup =Readonly<{
+  id?: string;
+  title?: string;
+  description?: string;
+  /** The mono count under the description, such as "5 guides". */
+  count?: string;
+  items: readonly ContentIndexItem[];
+}>;
+
+interface Props {
+  groups: readonly ContentIndexGroup[];
+  /** The heading level of the group titles. */
+  as?: 'h2' | 'h3';
+}
+const { groups, as: Heading = 'h2' } = Astro.props;
+---
+
+<div class="cl-cpage-index">
+  {
+    groups.map((group) => (
+      <section
+        id={group.id}
+        class:list={['cl-cpage-index-group', { 'cl-cpage-index-group--untitled': !group.title }]}
+        aria-label={group.title}
+      >
+        {group.title && (
+          <div class="cl-cpage-index-head">
+            <Heading class="cl-cpage-index-title">{group.title}</Heading>
+            {group.description && <p class="cl-cpage-index-desc">{group.description}</p>}
+            {group.count && <p class="cl-cpage-index-count">{group.count}</p>}
+          </div>
+        )}
+        <ul class="cl-cpage-index-list">
+          {group.items.map((item) => (
+            <li>
+              <a href={item.href} class="cl-cpage-index-link focus-ring">
+                {item.eyebrow && <span class="type-eyebrow">{item.eyebrow}</span>}
+                <span class="cl-cpage-index-name">{item.title}</span>
+                {item.body && <span class="cl-cpage-index-body">{item.body}</span>}
+                {item.meta && <span class="cl-cpage-index-meta">{item.meta}</span>}
+                <span class="cl-cpage-index-arrow" aria-hidden="true">
+                  <ArrowRight className="size-5" />
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))
+  }
+</div>
+
+<style is:global>
+  .cl-cpage-index {
+    display: flex;
+    flex-direction: column;
+    gap: 96px;
+  }
+  .cl-cpage-index-group {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+    gap: 48px;
+    align-items: start;
+  }
+  .cl-cpage-index-group--untitled .cl-cpage-index-list {
+    grid-column: 2;
+  }
+  .cl-cpage-index-head {
+    position: sticky;
+    top: calc(var(--nav-height) + 40px);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 400px;
+  }
+  .cl-cpage-index-title {
+    margin: 0;
+    color: var(--color-ink);
+    font-family: var(--font-display);
+    font-size: var(--text-display-md);
+    line-height: var(--text-display-md--line-height);
+    font-weight: 400;
+    letter-spacing: var(--text-display-md--letter-spacing);
+    text-wrap: balance;
+  }
+  .cl-cpage-index-desc {
+    margin: 0;
+    color: var(--color-ink-secondary);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+  .cl-cpage-index-count {
+    margin: 4px 0 0;
+    color: var(--color-ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+    line-height: var(--text-data--line-height);
+  }
+  .cl-cpage-index-list {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--color-line);
+    list-style: none;
+  }
+  .cl-cpage-index-link {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 20px;
+    align-items: start;
+    gap: 8px 32px;
+    padding: 24px 0;
+    border-bottom: 1px solid var(--color-line);
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+  .cl-cpage-index-link > :not(.cl-cpage-index-arrow) {
+    grid-column: 1;
+  }
+  .cl-cpage-index-name {
+    color: var(--color-ink);
+    font-family: var(--font-display);
+    font-size: var(--text-title);
+    line-height: var(--text-title--line-height);
+    font-weight: 400;
+    text-wrap: pretty;
+  }
+  .cl-cpage-index-link:hover .cl-cpage-index-name {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+  }
+  .cl-cpage-index-body {
+    display: -webkit-box;
+    max-width: 640px;
+    overflow: hidden;
+    color: var(--color-ink-secondary);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .cl-cpage-index-meta {
+    margin-top: 4px;
+    color: var(--color-ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+    line-height: var(--text-data--line-height);
+  }
+  .cl-cpage-index-arrow {
+    display: inline-flex;
+    grid-column: 2;
+    grid-row: 1 / span 4;
+    align-self: center;
+    color: var(--color-ink-muted);
+    transition: color var(--motion-fast) var(--ease-standard);
+  }
+  .cl-cpage-index-link:hover .cl-cpage-index-arrow {
+    color: var(--color-ink);
+  }
+  @media (max-width: 1023px) {
+    .cl-cpage-index {
+      gap: 64px;
+    }
+    .cl-cpage-index-group {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 24px;
+    }
+    .cl-cpage-index-group--untitled .cl-cpage-index-list {
+      grid-column: auto;
+    }
+    .cl-cpage-index-head {
+      position: static;
+      max-width: var(--container-prose);
+    }
+  }
+  @media (max-width: 767px) {
+    .cl-cpage-index-link {
+      column-gap: 16px;
+      padding: 20px 0;
+    }
+  }
+</style>

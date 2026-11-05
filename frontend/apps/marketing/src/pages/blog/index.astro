@@ -1,8 +1,17 @@
 ---
-import { BlogIndexExplorer } from '@/components/marketing/blog/blog-index-explorer';
-import { BlogIndex } from '@/components/marketing/pages/blog';
-import { POSTS } from '@/lib/marketing-content/blog';
-import { toBlogPostSummary } from '@/lib/marketing-content/blog-index';
+/**
+ * The blog index (the WebBlogIndex template): the hero, the newest post as a
+ * featured card, the other posts and the research guides as ContentIndex
+ * listings, the start paths and the closing band. Static: nothing hydrates.
+ */
+import { ContentCta } from '@/components/marketing/content/content-cta';
+import ContentIndex from '@/components/marketing/content/ContentIndex.astro';
+import { FeaturedPost, postMeta } from '@/components/marketing/content/featured-post';
+import { RelatedCards } from '@/components/marketing/sections/cards';
+import { PageHero } from '@/components/marketing/sections/heroes';
+import { PageSection } from '@/components/marketing/sections/page-section';
+import { BLOG_EMPTY_STATE, BLOG_START_PATHS, POSTS } from '@/lib/marketing-content/blog';
+import { formatBlogDate, newestFirst, toBlogPostSummary } from '@/lib/marketing-content/blog-index';
 import { blogIndexJsonLd } from '@/lib/seo/json-ld';
 import MarketingLayout from '../../layouts/MarketingLayout.astro';
 import { RESEARCH_ARTICLES } from '../../research-articles';
@@ -14,6 +23,8 @@ const jsonLd = blogIndexJsonLd({
   posts: summaries,
   guides: RESEARCH_ARTICLES.map(({ frontmatter }) => ({ title: frontmatter.title, path: frontmatter.slug })),
 });
+// The newest post is the featured card and the rest are the index.
+const [featured, ...rest] = newestFirst(POSTS);
 ---
 
 <MarketingLayout
@@ -24,9 +35,83 @@ const jsonLd = blogIndexJsonLd({
   jsonLd={jsonLd ? [jsonLd] : []}
 >
   <main id="main">
-    {/* Only the filter and sort list hydrates, with post summaries rather than full posts. */}
-    <BlogIndex researchGuides={RESEARCH_ARTICLES.map(({ frontmatter }) => ({ title: frontmatter.title, href: frontmatter.slug, description: frontmatter.meta_description }))}>
-      <BlogIndexExplorer slot="explorer" posts={summaries} client:visible />
-    </BlogIndex>
+    <PageHero
+      crumbs={[{ label: 'Home', href: '/' }, { label: 'Blog' }]}
+      title="Practical guides to AI visibility"
+      lead="How to build a baseline, trace the sources behind an answer and check that your website can be read. Start with the question your team is asking."
+    />
+
+    {
+      featured ? (
+        <>
+          <PageSection label="Featured article" spacing="compact">
+            <FeaturedPost post={featured} />
+          </PageSection>
+          {rest.length > 0 && (
+            <PageSection label="Blog articles">
+              <ContentIndex
+                groups={[
+                  {
+                    items: rest.map((post) => ({
+                      title: post.title,
+                      href: `/blog/${post.slug}`,
+                      body: post.excerpt,
+                      meta: postMeta(post),
+                    })),
+                  },
+                ]}
+              />
+            </PageSection>
+          )}
+        </>
+      ) : (
+        <PageSection title={BLOG_EMPTY_STATE.heading} lead={BLOG_EMPTY_STATE.body} />
+      )
+    }
+
+    <PageSection
+      title="Start with the question you have"
+      lead="Three guides cover the questions most teams ask first."
+      layout="aside"
+      spacing="compact"
+    >
+      <RelatedCards
+        items={BLOG_START_PATHS.map((path) => ({
+          href: `/blog/${path.slug}`,
+          title: path.heading,
+          body: path.body,
+          linkLabel: path.label,
+        }))}
+      />
+    </PageSection>
+
+    {
+      RESEARCH_ARTICLES.length > 0 && (
+        <PageSection label="Research guides">
+          <ContentIndex
+            groups={[
+              {
+                id: 'research-guides',
+                title: 'Research guides',
+                description:
+                  'Long-form references on measuring AI visibility and tracking citations, each with its sources.',
+                items: RESEARCH_ARTICLES.map(({ frontmatter }) => ({
+                  title: frontmatter.title,
+                  href: frontmatter.slug,
+                  body: frontmatter.meta_description,
+                  meta: `Reviewed ${formatBlogDate(frontmatter.reviewed_at)}`,
+                })),
+              },
+            ]}
+          />
+        </PageSection>
+      )
+    }
+
+    <ContentCta
+      title="Put the method into practice"
+      lead="See how CiteLadder brings answer observations, source analysis and website findings into one workflow."
+      secondary={{ href: '/compare', label: 'Compare AI visibility tools' }}
+    />
   </main>
 </MarketingLayout>
