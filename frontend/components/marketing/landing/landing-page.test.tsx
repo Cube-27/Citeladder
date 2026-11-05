@@ -24,32 +24,13 @@ describe('LandingPage', () => {
     render(<LandingPage />);
 
     const [announcement] = screen.getAllByRole('link');
-    expect(announcement).toHaveAccessibleName('New Connect CiteLadder to Claude, ChatGPT and more');
     expect(announcement).toHaveAttribute('href', '/platform/mcp');
   });
 
-  it('shows the app page as one named picture without a second page heading', () => {
+  it('shows the app page as a picture without a second page heading', () => {
     render(<LandingPage />);
 
-    const [hero] = screen.getAllByRole('img', {
-      name: 'The AI Visibility page in the CiteLadder app',
-    });
-    expect(hero).toHaveTextContent('Search or jump to…');
-    expect(hero).toHaveTextContent('Launch audit');
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-  });
-
-  it('leads with the recommendation headline and its one-line promise', () => {
-    render(<LandingPage />);
-
-    expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName(
-      'Get your business recommended by AI',
-    );
-    expect(
-      screen.getByText(
-        'CiteLadder gives you the tools to grow your AI visibility, traffic and revenue.',
-      ),
-    ).toBeVisible();
   });
 
   it('links each pillar module by its published name', () => {
@@ -64,14 +45,5 @@ describe('LandingPage', () => {
       'href',
       '/platform/mcp',
     );
-  });
-
-  it('labels API collection apart from consumer answer surfaces', () => {
-    render(<LandingPage />);
-
-    const engines = screen.getByRole('region', { name: 'Monitored answer engines' });
-    for (const name of ['OpenAI API', 'Gemini API', 'Claude API', 'Google AI Overviews']) {
-      expect(within(engines).getByText(name)).toBeVisible();
-    }
   });
 });

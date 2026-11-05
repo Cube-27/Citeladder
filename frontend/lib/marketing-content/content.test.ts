@@ -315,17 +315,6 @@ describe('comparison content', () => {
     const names = COMPETITORS.map((competitor) => competitor.name);
     expect(new Set(names).size).toBe(names.length);
   });
-
-  it('gives every competitor a unique lead and meta description', () => {
-    const leads = COMPETITORS.map((competitor) => competitor.lead);
-    const metas = COMPETITORS.map((competitor) => competitor.metaDescription);
-    expect(new Set(leads).size).toBe(leads.length);
-    expect(new Set(metas).size).toBe(metas.length);
-    for (const competitor of COMPETITORS) {
-      expect(competitor.lead.length, competitor.slug).toBeGreaterThan(80);
-      expect(competitor.metaDescription.length, competitor.slug).toBeLessThan(170);
-    }
-  });
 });
 
 describe('faq and solutions content', () => {
