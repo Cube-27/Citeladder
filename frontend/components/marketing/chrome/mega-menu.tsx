@@ -20,18 +20,13 @@ export function MegaMenu({ drop, path }: Readonly<{ drop: NavDrop; path: string 
     <div className="cl-mega">
       <div className={cn('cl-mega-groups', `cl-cols-${drop.groups.length}`)}>
         {drop.groups.map((group, index) => (
-          <div
-            key={group.label ?? drop.key}
-            className="cl-mega-group"
-            role={group.label ? 'group' : undefined}
-            aria-labelledby={group.label ? headId(index) : undefined}
-          >
+          <div key={group.label ?? drop.key} className="cl-mega-group">
             {group.label && (
               <p id={headId(index)} className="type-eyebrow cl-eyebrow cl-mega-head">
                 {group.label}
               </p>
             )}
-            <ul className="cl-mega-list">
+            <ul className="cl-mega-list" aria-labelledby={group.label ? headId(index) : undefined}>
               {group.items.map((item) => {
                 const external = 'external' in item && item.external === true;
                 const icon = hasNavIcon(item.href);

@@ -79,7 +79,7 @@ describe('DesktopNav', () => {
 
     render(<DesktopNav path="/platform/mcp" />);
     await user.click(screen.getByRole('button', { name: 'Platform' }));
-    const connect = screen.getByRole('group', { name: 'Improve & connect' });
+    const connect = screen.getByRole('list', { name: 'Improve & connect' });
     expect(within(connect).getByRole('link', { name: /MCP/ })).toHaveAttribute(
       'aria-current',
       'page',

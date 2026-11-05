@@ -149,12 +149,14 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     await page.goto('/faq');
     await trigger(page, 'Resources').click();
     const panel = mainNav(page);
-    await expect(panel.getByRole('group')).toHaveText([/^Learn/, /^Product/, /^Tools/]);
+    for (const name of ['Learn', 'Product', 'Tools']) {
+      await expect(panel.getByRole('list', { name })).toBeVisible();
+    }
     await expect(
-      panel.getByRole('group', { name: 'Product' }).getByRole('link', { name: /Open source/ }),
+      panel.getByRole('list', { name: 'Product' }).getByRole('link', { name: /Open source/ }),
     ).toHaveAttribute('href', '/open-source');
     await expect(
-      panel.getByRole('group', { name: 'Tools' }).getByRole('link', { name: /LLM rank tracker/ }),
+      panel.getByRole('list', { name: 'Tools' }).getByRole('link', { name: /LLM rank tracker/ }),
     ).toHaveAttribute('href', '/llm-rank-tracker');
   });
 
