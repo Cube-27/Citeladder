@@ -351,7 +351,9 @@ height (`cl-screen--h320`, `--h360`, `--h400`, `--h500`, `--h600`,
   exchange) with no tabs, toolbars, filters, rails, pagination or second
   pane, so it shows at 1:1 in a split and at 0.9 or more in a span-7 tile at
   982px (text at least 11px). Its height fits its content: 320 for a short
-  stack or one exchange, 360 for figures over a chart or a 3 to 5 row list.
+  stack or one exchange, 360 for figures over a chart or a 3 to 5 row list,
+  400 for a large-type panel (a title, one line under it, three or four rows
+  in `title-sm`) that still reads at 11px scaled down to a 300px tile.
 - 1440 × 820: the home page's app in its chrome (`cl-screen--app`).
 
 A new size adds its width or height to both lists rather than a new

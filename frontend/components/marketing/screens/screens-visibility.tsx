@@ -1,8 +1,7 @@
 import { Badge } from '@/components/ui/badge';
-import { BarList } from '@/components/ui/bar-list';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Card } from '@/components/ui/card';
-import { ChartCard } from '@/components/ui/chart';
+import { ChartCard, chartPercent } from '@/components/ui/chart';
 import { Citation } from '@/components/ui/citation';
 import { Meter } from '@/components/ui/meter';
 import { Rungs } from '@/components/ui/rungs';
@@ -17,22 +16,18 @@ import {
   ENGINE_NAMES,
   ENGINE_ROWS,
   KPIS,
-  OWN_PAGES,
   PAGE_RETRIEVALS,
   PROMPTS,
-  THIS_WEEK,
   TREND,
   WEEKS,
 } from './demo-data';
 import {
-  ScreenBar,
   ScreenCard,
   ScreenCols,
   ScreenDelta,
   ScreenEngine,
   ScreenEngineMarks,
   ScreenMeta,
-  ScreenNote,
   ScreenRoot,
   ScreenSite,
   ScreenStack,
@@ -94,11 +89,6 @@ const BRAND_COLUMNS: readonly ScreenColumn<(typeof BRANDS)[number]>[] = [
     numeric: true,
     cell: (brand) => <ScreenDelta change={brand.change} />,
   },
-];
-
-const OWN_PAGE_COLUMNS: readonly ScreenColumn<(typeof OWN_PAGES)[number]>[] = [
-  { header: 'Page', cell: (page) => <span className="cl-screen-mono">{page.path}</span> },
-  { header: 'Citations', width: 'sm', numeric: true, cell: (page) => page.citations },
 ];
 
 const PROMPT_COLUMNS: readonly ScreenColumn<(typeof PROMPTS)[number]>[] = [
@@ -191,54 +181,41 @@ export function ScreenVisibility() {
   );
 }
 
-/** Cited sources: the domains answers cite and the share each holds, beside your own pages. */
+/** Every citation this week, across every domain. */
+const CITATIONS = CITED_DOMAINS.reduce((total, domain) => total + domain.value, 0);
+/** The four most-cited domains: the card is one focused list, not every domain. */
+const TOP_DOMAINS = CITED_DOMAINS.filter((domain) => domain.other !== true).slice(0, 4);
+
+/**
+ * Cited sources, as a card vignette: the four domains answers cite most,
+ * each with its mark, its share of every citation and its citation count,
+ * your own site named. Large type, so it still reads scaled down in a tile.
+ */
 export function ScreenSources() {
   return (
-    <ScreenRoot name="sources" width={960} height={600}>
-      <ScreenBar
-        start={
-          <ScreenTabs
-            items={[
-              { label: 'All sources', count: 186 },
-              { label: 'Your pages', count: 4 },
-              { label: 'Third-party', count: 182 },
-            ]}
-            selected="All sources"
-          />
-        }
-        end={<ScreenMeta>{THIS_WEEK}</ScreenMeta>}
-      />
-      <ScreenCols layout="main-side">
-        <ScreenCard title="Cited domains" action={<Badge>1,046 citations in 412 answers</Badge>}>
-          <BarList
-            label="Citations by domain this week"
-            header={['Domain', 'Citations', 'Share']}
-            items={CITED_DOMAINS.map((domain) => ({
-              ...domain,
-              mark: domain.other ? undefined : <BrandMark name={domain.label} placement="inline" />,
-            }))}
-          />
-        </ScreenCard>
-        <ScreenStack>
-          <Card>
-            <ScreenStat
-              label="Owned citation rate"
-              value="29.4"
-              unit="%"
-              change={{ value: 2.6, unit: ' pts' }}
-            />
-            <ScreenNote>121 of 412 answers cite an acme.com page</ScreenNote>
-          </Card>
-          <ScreenTableCard title="Your cited pages" meta="acme.com: 212 citations across 4 pages">
-            <ScreenTable
-              caption="Citations of acme.com pages this week"
-              rows={OWN_PAGES}
-              rowKey={(page) => page.path}
-              columns={OWN_PAGE_COLUMNS}
-            />
-          </ScreenTableCard>
-        </ScreenStack>
-      </ScreenCols>
+    <ScreenRoot name="sources" width={480} height={400}>
+      <Card className="cl-vignette">
+        <div className="cl-vignette-head">
+          <p className="cl-vignette-title">Cited domains</p>
+          <p className="cl-vignette-sub">{`${CITATIONS.toLocaleString('en-US')} citations this week`}</p>
+        </div>
+        <ol className="cl-vignette-list" aria-label="Citations by domain this week">
+          {TOP_DOMAINS.map((domain) => (
+            <li key={domain.label} className="cl-vignette-line">
+              <span className="cl-vignette-item">
+                <BrandMark name={domain.label} placement="header" />
+                <span className="cl-vignette-head">
+                  <span>{domain.label}</span>
+                  <span className="cl-vignette-sub">
+                    {`${domain.own ? 'Your site · ' : ''}${chartPercent(domain.value, CITATIONS)} of citations`}
+                  </span>
+                </span>
+              </span>
+              <span className="cl-vignette-figure">{domain.value}</span>
+            </li>
+          ))}
+        </ol>
+      </Card>
     </ScreenRoot>
   );
 }

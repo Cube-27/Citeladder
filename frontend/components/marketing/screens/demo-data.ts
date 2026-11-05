@@ -28,7 +28,6 @@ export const ENGINE_KEYS: readonly EngineKey[] = ['chatgpt', 'claude', 'gemini',
 
 export const WEEKS = ['8 Sep', '15 Sep', '22 Sep', '29 Sep', '6 Oct', '13 Oct', '20 Oct', '27 Oct'];
 export const CHECKED = 'Checked today, 06:00 UTC';
-export const THIS_WEEK = 'Week of 27 Oct – 2 Nov 2026';
 
 /* ---------- Brands and visibility ---------- */
 
@@ -138,13 +137,6 @@ export const CITED_DOMAINS: readonly Readonly<{
   { label: 'Other', value: 156, other: true },
 ];
 
-export const OWN_PAGES: readonly Readonly<{ path: string; citations: number }>[] = [
-  { path: '/pricing', citations: 74 },
-  { path: '/docs/setup', citations: 58 },
-  { path: '/blog/feature-adoption', citations: 47 },
-  { path: '/compare/northwind', citations: 33 },
-];
-
 /** One cited page (acme.com/pricing): how often each engine fetched and cited it. */
 export const PAGE_RETRIEVALS: readonly Readonly<{
   engine: EngineKey;
@@ -230,11 +222,6 @@ export const PROMPTS: readonly PromptRow[] = (
 /* ---------- Site Health and crawlers ---------- */
 
 export type Severity = 'High' | 'Medium' | 'Low';
-export const SEVERITY_TONE: Readonly<Record<Severity, BadgeTone>> = {
-  High: 'negative',
-  Medium: 'warning',
-  Low: 'neutral',
-};
 
 export const FAILED_CHECKS: readonly Readonly<{
   check: string;

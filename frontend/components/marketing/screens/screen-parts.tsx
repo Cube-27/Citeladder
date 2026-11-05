@@ -55,16 +55,6 @@ export function ScreenRoot({
   );
 }
 
-/** The toolbar row above a screen's content: tabs or a search on the left, meta or actions on the right. */
-export function ScreenBar({ start, end }: Readonly<{ start: ReactNode; end?: ReactNode }>) {
-  return (
-    <div className="cl-screen-bar">
-      <div className="cl-screen-bar-side">{start}</div>
-      {end && <div className="cl-screen-bar-side">{end}</div>}
-    </div>
-  );
-}
-
 /**
  * The app's Button, drawn: its face on a span, so a screen inside a linked
  * card never nests a control in a link.
@@ -145,7 +135,7 @@ export function ScreenSite({ label, mono = false }: Readonly<{ label: string; mo
   );
 }
 
-export function ScreenNote({ children }: Readonly<{ children: ReactNode }>) {
+function ScreenNote({ children }: Readonly<{ children: ReactNode }>) {
   return <p className="cl-screen-note">{children}</p>;
 }
 

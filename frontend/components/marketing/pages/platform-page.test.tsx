@@ -55,7 +55,7 @@ it('renders the hero screen with its key numbers and the steps, questions and FA
   );
   expect(
     screen.getByRole('img', { name: 'Site Health for acme.com: score 82, 7 failed checks' }),
-  ).toHaveTextContent('AEO Readiness');
+  ).toHaveTextContent('7 failed checks on acme.com');
   expect(screen.getByText('Pages blocked').parentElement).toHaveTextContent('Pages blocked14');
   expect(
     screen.getByRole('img', { name: 'AI crawler access to acme.com from robots.txt' }),
