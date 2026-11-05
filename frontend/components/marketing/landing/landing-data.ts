@@ -1,13 +1,13 @@
 /** Public copy for the landing page's integration list and FAQ. */
 
-import type { OfficialEngineKey } from '../primitives/engine-logo';
+import type { EngineKey } from '@/components/ui/engine-mark';
 
 /**
- * An integration's logo: brand marks the site already draws inline, or a
+ * An integration's logo: engine marks the site already draws inline, or a
  * logo file fetched once from logo.dev and served from `public/brand/integrations`.
  */
 export type IntegrationMark =
-  | { readonly kind: 'engines'; readonly engines: readonly OfficialEngineKey[] }
+  | { readonly kind: 'engines'; readonly engines: readonly EngineKey[] }
   | { readonly kind: 'image'; readonly src: string };
 
 export type Integration = {
@@ -35,7 +35,7 @@ export const INTEGRATIONS: readonly Integration[] = [
   {
     title: 'Model providers',
     body: 'OpenAI, Google and Anthropic accounts for audits.',
-    mark: { kind: 'engines', engines: ['openai', 'gemini', 'claude'] },
+    mark: { kind: 'engines', engines: ['chatgpt', 'gemini', 'claude'] },
   },
   {
     title: 'DataForSEO',

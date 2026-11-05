@@ -88,7 +88,7 @@ export function FeatureSplit({
   title,
   body,
   points,
-  link,
+  links = [],
   reverse = false,
   as: Heading = 'h3',
   media,
@@ -97,7 +97,8 @@ export function FeatureSplit({
   title: ReactNode;
   body?: ReactNode;
   points?: readonly string[];
-  link?: Readonly<{ href: string; label: ReactNode }>;
+  /** Arrow links under the copy, one per page the split leads to. */
+  links?: readonly Readonly<{ href: string; label: ReactNode }>[];
   reverse?: boolean;
   as?: 'h2' | 'h3';
   media: ReactNode;
@@ -109,7 +110,15 @@ export function FeatureSplit({
         <Heading className="cl-split-title">{title}</Heading>
         {body && <p className="cl-split-text">{body}</p>}
         {points && points.length > 0 && <CheckList items={points} />}
-        {link && <SiteArrowLink href={link.href}>{link.label}</SiteArrowLink>}
+        {links.length > 0 && (
+          <div className="cl-split-links">
+            {links.map((link) => (
+              <SiteArrowLink key={link.href} href={link.href}>
+                {link.label}
+              </SiteArrowLink>
+            ))}
+          </div>
+        )}
       </div>
       <div className="cl-split-media">{media}</div>
     </div>

@@ -18,69 +18,65 @@ import { NavIcon, hasNavIcon } from '../chrome/nav-icons';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { PageHero } from '../primitives/page-hero';
 import { Section, SectionHeader } from '../primitives/section';
+import { ProductFrame } from '../screens/product-frame';
 import {
-  AcquisitionView,
-  ActionsView,
-  AdsView,
-  AgentView,
-  AnswerView,
-  CitedUrlView,
-  CommerceView,
-  CrawlerView,
-  DemandView,
-  EarnedSourceView,
-  EnginesView,
-  IntegrationsView,
-  McpToolsView,
-  McpView,
-  PageEvidenceView,
-  PageReportView,
-  PerceptionView,
-  PillarsView,
-  ProductShot,
-  PromptsView,
-  PropertyMappingView,
-  QueryPageView,
-  ReferralView,
-  RevisionsView,
-  SearchView,
-  ShelfSetupView,
-  SiteHealthView,
-  SkillsView,
-  SourcesView,
-  VisibilityView,
-} from '../scenes/product-views';
+  ScreenActions,
+  ScreenAgentBrief,
+  ScreenAgentChat,
+  ScreenCommerce,
+} from '../screens/screens-agent';
+import {
+  ScreenDemand,
+  ScreenEngines,
+  ScreenKeywords,
+  ScreenPerception,
+  ScreenReferrals,
+} from '../screens/screens-search';
+import {
+  ScreenCrawlerAccess,
+  ScreenIntegrations,
+  ScreenMcp,
+  ScreenSiteHealth,
+} from '../screens/screens-site';
+import {
+  ScreenAnswer,
+  ScreenCitedUrl,
+  ScreenPrompts,
+  ScreenSources,
+  ScreenVisibility,
+} from '../screens/screens-visibility';
 
+/** The product screen each page's visual shows; the page copy keeps its own visual keys. */
 const VIEWS: Readonly<Record<PlatformVisual, () => ReactNode>> = {
-  visibility: VisibilityView,
-  answer: AnswerView,
-  sources: SourcesView,
-  'site-health': SiteHealthView,
-  referrals: ReferralView,
-  demand: DemandView,
-  search: SearchView,
-  agent: AgentView,
-  commerce: CommerceView,
-  mcp: McpView,
-  integrations: IntegrationsView,
-  actions: ActionsView,
-  prompts: PromptsView,
-  'cited-url': CitedUrlView,
-  'page-evidence': PageEvidenceView,
-  'page-report': PageReportView,
-  'query-page': QueryPageView,
-  acquisition: AcquisitionView,
-  revisions: RevisionsView,
-  skills: SkillsView,
-  'shelf-setup': ShelfSetupView,
-  'mcp-tools': McpToolsView,
-  'property-mapping': PropertyMappingView,
-  perception: PerceptionView,
-  ads: AdsView,
-  engines: EnginesView,
-  crawlers: CrawlerView,
-  earned: EarnedSourceView,
-  pillars: PillarsView,
+  visibility: ScreenVisibility,
+  answer: ScreenAnswer,
+  sources: ScreenSources,
+  'site-health': ScreenSiteHealth,
+  referrals: ScreenReferrals,
+  demand: ScreenDemand,
+  search: ScreenKeywords,
+  agent: ScreenAgentChat,
+  commerce: ScreenCommerce,
+  mcp: ScreenMcp,
+  integrations: ScreenIntegrations,
+  actions: ScreenActions,
+  prompts: ScreenPrompts,
+  'cited-url': ScreenCitedUrl,
+  'page-evidence': ScreenSiteHealth,
+  'page-report': ScreenCitedUrl,
+  'query-page': ScreenDemand,
+  acquisition: ScreenSources,
+  revisions: ScreenAgentBrief,
+  skills: ScreenAgentChat,
+  'shelf-setup': ScreenCommerce,
+  'mcp-tools': ScreenMcp,
+  'property-mapping': ScreenIntegrations,
+  perception: ScreenPerception,
+  ads: ScreenAnswer,
+  engines: ScreenEngines,
+  crawlers: ScreenCrawlerAccess,
+  earned: ScreenSources,
+  pillars: ScreenSiteHealth,
 };
 
 const VIEW_TITLES: Readonly<Record<PlatformVisual, string>> = {
@@ -261,9 +257,9 @@ export function CapabilityGrid() {
 function Shot({ visual, title }: Readonly<{ visual: PlatformVisual; title?: string }>) {
   const View = VIEWS[visual];
   return (
-    <ProductShot title={title ?? VIEW_TITLES[visual]}>
+    <ProductFrame label={title ?? VIEW_TITLES[visual]}>
       <View />
-    </ProductShot>
+    </ProductFrame>
   );
 }
 

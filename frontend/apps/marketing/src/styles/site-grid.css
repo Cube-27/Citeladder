@@ -27,10 +27,7 @@
      shares one column template, narrow copy beside the wider cell, so all
      dividers fall on one vertical line.
    - `.site-rows`: a stack of rows (usually splits) with a frame-wide rule
-     between rows, each row a cell height from its rules.
-   - `.site-cell-card`: a cell that holds a card or product view, a card gap
-     from its lines instead of a cell inset (`ProductShot`).
-   - `.site-chip`: a small white label chip aligned with the copy. */
+     between rows, each row a cell height from its rules. */
 
 /* Website layout roles until PR 6 replaces the site grid. */
 [data-public-surface] {
@@ -172,18 +169,6 @@
 /* A mark inside a white card steps down to the soft tone. */
 .site-frame :is(.mk-related-card, .cp-tool-row) .nav-row-icon {
   background: var(--color-surface-sunken);
-}
-
-.site-frame .site-cell-card {
-  margin-inline: calc(var(--site-card-gap) - var(--site-cell-inset));
-}
-
-.site-frame .site-chip {
-  width: fit-content;
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-xs);
-  background: var(--color-surface);
-  box-shadow: 0 0 0 1px var(--color-line);
 }
 
 /* Splits and rows ────────────────────────────────────────────────────────── */

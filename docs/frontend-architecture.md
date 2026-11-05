@@ -105,9 +105,11 @@ the single CiteLadder software identity, plus FAQPage markup built from the FAQ
 each page renders. Unknown or held capability paths return
 404. The `/mcp` protocol endpoint and blocked former app roots remain unchanged.
 
-Illustrative product excerpts are coded views in
-`frontend/components/marketing/scenes/product-views.tsx`; they use synthetic
-records, import no app runtime and label their scope.
+Illustrative product excerpts are the `Screen*` components in
+`frontend/components/marketing/screens/`, each shown in a `ProductFrame`: fixed-size
+crops composed from `components/ui`, drawn (no live controls) and filled from the
+one synthetic dataset in `demo-data.ts`. They import no app runtime and are named
+by the frame's label.
 Editorial publication never grants access: Agent/content workflows use demo
 CTAs, Commerce is project-dependent, and crawler analytics remains unpublished.
 Signup CTAs continue to use the existing public-signup switch and app URL helper.

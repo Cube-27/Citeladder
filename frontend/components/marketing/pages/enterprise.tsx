@@ -3,7 +3,8 @@ import { ArrowRight, Check } from 'lucide-react';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { PageHero } from '../primitives/page-hero';
 import { Section, SectionHeader } from '../primitives/section';
-import { AnswerView, ProductShot } from '../scenes/product-views';
+import { ProductFrame } from '../screens/product-frame';
+import { ScreenAnswer } from '../screens/screens-visibility';
 
 /**
  * Enterprise (`/enterprise`). Every statement here describes how the product
@@ -148,9 +149,9 @@ export function EnterpriseEvidence() {
             ))}
           </ul>
         </div>
-        <ProductShot title="Answer evidence">
-          <AnswerView />
-        </ProductShot>
+        <ProductFrame label="Answer evidence">
+          <ScreenAnswer />
+        </ProductFrame>
       </div>
     </Section>
   );

@@ -113,8 +113,15 @@ export function LogoTile({
 export function EngineStrip({
   label = 'Answers collected from',
   engines = ['chatgpt', 'claude', 'gemini', 'google'],
+  names = {},
   align = 'left',
-}: Readonly<{ label?: string; engines?: readonly EngineKey[]; align?: 'left' | 'center' }>) {
+}: Readonly<{
+  label?: string;
+  engines?: readonly EngineKey[];
+  /** What the answers are collected through, where that is not the engine's name (an API). */
+  names?: Readonly<Partial<Record<EngineKey, string>>>;
+  align?: 'left' | 'center';
+}>) {
   return (
     <div className={cn('cl-engines', align === 'center' && 'cl-engines--center')}>
       <p className="cl-engines-label">{label}</p>
@@ -122,7 +129,7 @@ export function EngineStrip({
         {engines.map((engine) => (
           <li key={engine} className="cl-engine">
             <EngineMark engine={engine} />
-            <span>{ENGINE_NAMES[engine]}</span>
+            <span>{names[engine] ?? ENGINE_NAMES[engine]}</span>
           </li>
         ))}
       </ul>

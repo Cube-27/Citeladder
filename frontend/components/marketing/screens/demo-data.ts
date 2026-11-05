@@ -1,0 +1,482 @@
+/**
+ * The website's one demo dataset: Acme Analytics (acme.com) against
+ * Northwind, Lumen and Fathom Labs, week of 27 Oct – 2 Nov 2026. Every
+ * product screen reads its figures from here, so two screens never disagree
+ * about the same number. Long tables are written as rows and named once.
+ */
+import type { BadgeTone } from '@/components/ui/badge';
+import type { DeltaPolicy } from '@/components/ui/delta';
+import type { EngineKey } from '@/components/ui/engine-mark';
+
+/** A change as the Delta draws it: signed, with its unit and which way is good. */
+export type Change = Readonly<{
+  value: number;
+  unit?: string;
+  precision?: number;
+  policy?: DeltaPolicy;
+}>;
+
+const pts = (value: number): Change => ({ value, unit: ' pts' });
+
+export const ENGINE_NAMES: Readonly<Record<EngineKey, string>> = {
+  chatgpt: 'ChatGPT',
+  claude: 'Claude',
+  gemini: 'Gemini',
+  google: 'Google AI Overviews',
+};
+export const ENGINE_KEYS: readonly EngineKey[] = ['chatgpt', 'claude', 'gemini', 'google'];
+
+export const WEEKS = ['8 Sep', '15 Sep', '22 Sep', '29 Sep', '6 Oct', '13 Oct', '20 Oct', '27 Oct'];
+export const CHECKED = 'Checked today, 06:00 UTC';
+export const THIS_WEEK = 'Week of 27 Oct – 2 Nov 2026';
+
+/* ---------- Brands and visibility ---------- */
+
+export const TREND = {
+  acme: [27.9, 29.6, 30.2, 31.8, 32.5, 33.1, 34.2, 38.4],
+  northwind: [46.0, 45.2, 45.8, 44.6, 44.1, 43.5, 42.9, 41.7],
+  lumen: [30.4, 31.0, 29.8, 30.6, 29.9, 29.2, 28.8, 27.5],
+} as const;
+
+export type Brand = Readonly<{
+  name: string;
+  domain: string;
+  visibility: number;
+  change: Change;
+  own?: boolean;
+}>;
+
+/** Ranked by visibility, leader first. */
+export const BRANDS: readonly Brand[] = [
+  { name: 'Northwind', domain: 'northwind.io', visibility: 41.7, change: pts(-1.2) },
+  { name: 'Acme Analytics', domain: 'acme.com', visibility: 38.4, change: pts(4.2), own: true },
+  { name: 'Lumen', domain: 'lumen.app', visibility: 27.5, change: pts(-1.3) },
+  { name: 'Fathom Labs', domain: 'fathomlabs.com', visibility: 16.9, change: pts(-0.2) },
+];
+
+export type Kpi = Readonly<{
+  label: string;
+  value: string;
+  unit?: string;
+  change: Change;
+  spark: readonly number[];
+}>;
+
+export const KPIS: readonly Kpi[] = [
+  { label: 'Visibility', value: '38.4', unit: '%', change: pts(4.2), spark: TREND.acme },
+  {
+    label: 'Share of voice',
+    value: '30.8',
+    unit: '%',
+    change: pts(1.9),
+    spark: [26.0, 26.9, 27.3, 27.8, 28.2, 28.5, 28.9, 30.8],
+  },
+  {
+    label: 'Citations',
+    value: '212',
+    change: { value: 18, precision: 0 },
+    spark: [151, 160, 166, 171, 178, 186, 194, 212],
+  },
+  {
+    label: 'Avg. position',
+    value: '2.6',
+    change: { value: -0.3, policy: 'lower-is-better' },
+    spark: [3.4, 3.3, 3.2, 3.1, 3.1, 3.0, 2.9, 2.6],
+  },
+];
+
+export type EngineRow = Readonly<{
+  engine: EngineKey;
+  visibility: number;
+  change: Change;
+  owned: string;
+  position: string;
+  answers: number;
+}>;
+
+export const ENGINE_ROWS: readonly EngineRow[] = (
+  [
+    ['chatgpt', 44.2, 6.7, '34.2%', '2.3', 120],
+    ['claude', 40.0, 5.8, '30.0%', '2.5', 120],
+    ['gemini', 30.0, -5.8, '18.3%', '3.4', 120],
+    ['google', 40.4, 18.0, '42.3%', '2.4', 52],
+  ] as const
+).map(([engine, visibility, change, owned, position, answers]) => ({
+  engine,
+  visibility,
+  change: pts(change),
+  owned,
+  position,
+  answers,
+}));
+
+/* ---------- One answer and the sources behind answers ---------- */
+
+export type Source = Readonly<{ index: number; domain: string; title: string; own?: boolean }>;
+
+export const ANSWER_SOURCES: readonly Source[] = [
+  { index: 1, domain: 'acme.com', title: '/pricing', own: true },
+  { index: 2, domain: 'g2.com', title: '/categories/product-analytics' },
+  { index: 3, domain: 'reddit.com', title: '/r/startups' },
+  { index: 4, domain: 'northwind.io', title: '/docs/warehouse' },
+];
+
+export const CITED_DOMAINS: readonly Readonly<{
+  label: string;
+  value: number;
+  own?: boolean;
+  other?: boolean;
+}>[] = [
+  { label: 'acme.com', value: 212, own: true },
+  { label: 'g2.com', value: 168 },
+  { label: 'northwind.io', value: 141 },
+  { label: 'reddit.com', value: 118 },
+  { label: 'capterra.com', value: 87 },
+  { label: 'producthunt.com', value: 64 },
+  { label: 'lumen.app', value: 59 },
+  { label: 'youtube.com', value: 41 },
+  { label: 'Other', value: 156, other: true },
+];
+
+export const OWN_PAGES: readonly Readonly<{ path: string; citations: number }>[] = [
+  { path: '/pricing', citations: 74 },
+  { path: '/docs/setup', citations: 58 },
+  { path: '/blog/feature-adoption', citations: 47 },
+  { path: '/compare/northwind', citations: 33 },
+];
+
+/** One cited page (acme.com/pricing): how often each engine fetched and cited it. */
+export const PAGE_RETRIEVALS: readonly Readonly<{
+  engine: EngineKey;
+  retrievals: number;
+  citations: number;
+}>[] = [
+  { engine: 'chatgpt', retrievals: 52, citations: 31 },
+  { engine: 'claude', retrievals: 38, citations: 22 },
+  { engine: 'gemini', retrievals: 21, citations: 9 },
+  { engine: 'google', retrievals: 17, citations: 12 },
+];
+
+/* ---------- Prompts ---------- */
+
+export type PromptRow = Readonly<{
+  prompt: string;
+  topic: string;
+  engines: readonly EngineKey[];
+  visibility: number;
+  owned: number;
+  position: string;
+  /** Visibility points against last week. */
+  change: number;
+}>;
+
+const ALL_ENGINES = ['chatgpt', 'claude', 'gemini', 'google'] as const;
+
+export const PROMPTS: readonly PromptRow[] = (
+  [
+    [
+      'Best product analytics for startups',
+      'Tool choice',
+      ['chatgpt', 'claude', 'google'],
+      75,
+      2,
+      '2.0',
+      25,
+    ],
+    ['Mixpanel alternatives with a free tier', 'Alternatives', ALL_ENGINES, 100, 3, '1.5', 25],
+    ['How to measure feature adoption', 'How-to', ['chatgpt', 'claude'], 50, 2, '3.0', 0],
+    ['Cheapest analytics with session replay', 'Pricing', ['claude'], 25, 0, '4.0', -25],
+    [
+      'Product analytics for a seed-stage startup',
+      'Tool choice',
+      ['chatgpt', 'claude', 'google'],
+      75,
+      2,
+      '1.3',
+      50,
+    ],
+    [
+      'Is Acme Analytics GDPR compliant',
+      'Compliance · Branded',
+      ['chatgpt', 'claude', 'gemini'],
+      100,
+      2,
+      '1.0',
+      0,
+    ],
+    [
+      'Product analytics with EU data residency',
+      'Compliance',
+      ['chatgpt', 'gemini'],
+      50,
+      1,
+      '2.5',
+      25,
+    ],
+    ['Best funnel analysis tool for SaaS', 'Tool choice', ['chatgpt'], 25, 0, '3.0', 0],
+    ['Northwind vs Acme Analytics', 'Alternatives · Branded', ALL_ENGINES, 100, 3, '1.8', 0],
+    ['How to set up product analytics in a day', 'How-to', ['claude', 'google'], 50, 1, '2.0', -25],
+  ] as const
+).map(([prompt, topic, engines, visibility, owned, position, change]) => ({
+  prompt,
+  topic,
+  engines,
+  visibility,
+  owned,
+  position,
+  change,
+}));
+
+/* ---------- Site Health and crawlers ---------- */
+
+export type Severity = 'High' | 'Medium' | 'Low';
+export const SEVERITY_TONE: Readonly<Record<Severity, BadgeTone>> = {
+  High: 'negative',
+  Medium: 'warning',
+  Low: 'neutral',
+};
+
+export const FAILED_CHECKS: readonly Readonly<{
+  check: string;
+  severity: Severity;
+  pages: number;
+}>[] = [
+  { check: 'Search or citation crawlers blocked', severity: 'High', pages: 14 },
+  { check: 'Content not present in server HTML', severity: 'High', pages: 3 },
+  { check: 'Slow time to first byte', severity: 'Medium', pages: 6 },
+  { check: 'Missing structured data', severity: 'Medium', pages: 11 },
+  { check: 'Broken internal links', severity: 'Medium', pages: 4 },
+  { check: 'Missing meta description', severity: 'Low', pages: 9 },
+  { check: 'Missing canonical URL', severity: 'Low', pages: 2 },
+];
+
+export type RobotsPolicy = 'All allowed' | 'Restricted';
+export const POLICY_TONE: Readonly<Record<RobotsPolicy, BadgeTone>> = {
+  'All allowed': 'positive',
+  Restricted: 'warning',
+};
+
+export const BOTS: readonly Readonly<{
+  bot: string;
+  operator: string;
+  purpose: string;
+  policy: RobotsPolicy;
+}>[] = [
+  { bot: 'GPTBot', operator: 'OpenAI', purpose: 'AI training', policy: 'Restricted' },
+  { bot: 'OAI-SearchBot', operator: 'OpenAI', purpose: 'AI search', policy: 'All allowed' },
+  { bot: 'ChatGPT-User', operator: 'OpenAI', purpose: 'AI user fetch', policy: 'All allowed' },
+  { bot: 'ClaudeBot', operator: 'Anthropic', purpose: 'AI training', policy: 'All allowed' },
+  { bot: 'Claude-SearchBot', operator: 'Anthropic', purpose: 'AI search', policy: 'All allowed' },
+  { bot: 'Claude-User', operator: 'Anthropic', purpose: 'AI user fetch', policy: 'All allowed' },
+  { bot: 'Google-Extended', operator: 'Google', purpose: 'AI training', policy: 'Restricted' },
+  { bot: 'PerplexityBot', operator: 'Perplexity', purpose: 'AI search', policy: 'All allowed' },
+];
+
+export const ROBOTS_TXT = [
+  'User-agent: *',
+  'Allow: /',
+  '',
+  'User-agent: GPTBot',
+  'Disallow: /docs/',
+  '',
+  'User-agent: Google-Extended',
+  'Disallow: /docs/',
+].join('\n');
+
+/* ---------- Search ---------- */
+
+export const KEYWORDS = (
+  [
+    ['acme analytics', 1, 1300, '/', 403, '2.10', 12, 'Navigational'],
+    [
+      'feature adoption metrics',
+      3,
+      1900,
+      '/blog/feature-adoption',
+      209,
+      '4.80',
+      38,
+      'Informational',
+    ],
+    [
+      'how to measure feature adoption',
+      4,
+      1000,
+      '/blog/feature-adoption',
+      82,
+      '3.90',
+      33,
+      'Informational',
+    ],
+    ['product analytics setup', 6, 720, '/docs/setup', 41, '6.20', 29, 'Informational'],
+    ['product analytics for startups', 7, 2400, '/pricing', 96, '11.40', 54, 'Commercial'],
+    ['northwind alternatives', 9, 1600, '/compare/northwind', 51, '9.70', 47, 'Commercial'],
+    ['mixpanel alternatives', 12, 6600, '/compare/northwind', 79, '13.20', 61, 'Commercial'],
+    ['session replay pricing', 18, 880, '/pricing', 9, '8.50', 45, 'Commercial'],
+  ] as const
+).map(([keyword, position, volume, page, traffic, cpc, difficulty, intent]) => ({
+  keyword,
+  position,
+  volume,
+  page,
+  traffic,
+  cpc,
+  difficulty,
+  intent,
+}));
+
+export const QUERIES = (
+  [
+    ['acme analytics', 'Branded', 1108, 5240, '21.1%', '1.2'],
+    ['product analytics for startups', 'Striking distance', 186, 9870, '1.9%', '8.4'],
+    ['mixpanel alternatives', 'CTR gap', 97, 14210, '0.7%', '11.8'],
+  ] as const
+).map(([query, signal, clicks, impressions, ctr, position]) => ({
+  query,
+  signal,
+  clicks,
+  impressions,
+  ctr,
+  position,
+}));
+export const WEEKLY_CLICKS = [701, 734, 768, 752, 801, 822, 864, 925];
+
+/* ---------- AI referrals ---------- */
+
+export const WEEKLY_AI_SESSIONS = [298, 316, 341, 352, 389, 431, 488, 538];
+export const REFERRAL_SOURCES: readonly Readonly<{
+  engine: EngineKey;
+  sessions: number;
+  engaged: string;
+}>[] = [
+  { engine: 'chatgpt', sessions: 1124, engaged: '68%' },
+  { engine: 'gemini', sessions: 318, engaged: '61%' },
+  { engine: 'claude', sessions: 287, engaged: '72%' },
+];
+export const REFERRAL_PAGES: readonly Readonly<{ path: string; sessions: number }>[] = [
+  { path: '/pricing', sessions: 612 },
+  { path: '/docs/setup', sessions: 402 },
+  { path: '/blog/feature-adoption', sessions: 377 },
+];
+
+/* ---------- Perception ---------- */
+
+export const THEMES = (
+  [
+    ['Ease of use', 34, 3, 'Positive', 'Setup takes minutes, even without an engineer'],
+    ['Pricing', 22, 9, 'Mixed', 'The free tier is generous, but session replay costs extra'],
+    ['Security and privacy', 14, 2, 'Positive', 'Keeps EU customer data in the EU'],
+    ['Integrations', 11, 5, 'Mixed', 'Fewer warehouse connectors than Northwind'],
+    ['Reputation and trust', 11, 0, 'Positive', 'Well reviewed by seed-stage founders'],
+  ] as const
+).map(([theme, positive, negative, tone, quote]) => ({ theme, positive, negative, tone, quote }));
+
+/* ---------- Actions ---------- */
+
+export type ActionStatus = 'Open' | 'In progress' | 'Measuring' | 'Done' | 'Dismissed';
+export const ACTION_STATUS_TONE: Readonly<Record<ActionStatus, BadgeTone>> = {
+  Open: 'neutral',
+  'In progress': 'neutral',
+  Measuring: 'warning',
+  Done: 'positive',
+  Dismissed: 'neutral',
+};
+
+type ActionKind = 'Page' | 'Earned page' | 'Prompt' | 'Search query';
+
+export const ACTIONS: readonly Readonly<{
+  target: string;
+  kind: ActionKind;
+  status: ActionStatus;
+  priority: Severity;
+  approach: string;
+}>[] = (
+  [
+    ['acme.com/docs/setup', 'Page', 'Open', 'High', 'Fix a technical issue'],
+    ['capterra.com/analytics-software', 'Earned page', 'Open', 'High', 'Earn a placement'],
+    ['acme.com/pricing', 'Page', 'In progress', 'Medium', 'Improve the existing page'],
+    ['Cheapest analytics with session replay', 'Prompt', 'Open', 'Medium', 'Create a new page'],
+    ['acme.com/compare/northwind', 'Page', 'Measuring', 'Medium', 'Improve the existing page'],
+    ['Is Acme Analytics GDPR compliant', 'Prompt', 'Done', 'Medium', 'Improve the existing page'],
+    ['mixpanel alternatives', 'Search query', 'Open', 'Low', 'Create a new page'],
+    ['acme.com/blog/feature-adoption', 'Page', 'Done', 'Low', 'Improve internal links'],
+    ['reddit.com/r/startups', 'Earned page', 'Dismissed', 'Low', 'Earn a placement'],
+  ] as const
+).map(([target, kind, status, priority, approach]) => ({
+  target,
+  kind,
+  status,
+  priority,
+  approach,
+}));
+
+/* ---------- MCP ---------- */
+
+export const MCP_TOOLS: readonly Readonly<{ tool: string; access: 'Read' | 'Write' }>[] = [
+  ...[
+    'read_visibility_overview',
+    'read_visibility_trends',
+    'read_visibility_sources',
+    'read_source_url',
+    'read_perception',
+    'read_site_health',
+    'read_ai_crawlability',
+    'read_ai_referrals',
+    'read_actions',
+  ].map((tool) => ({ tool, access: 'Read' as const })),
+  { tool: 'generate_prompts', access: 'Write' },
+  { tool: 'prepare_launch_audit', access: 'Write' },
+];
+
+export const MCP_ARGS = JSON.stringify({ project: 'acme.com', period: 'week' }, null, 2);
+export const MCP_RESULT = JSON.stringify(
+  {
+    brand: 'Acme Analytics',
+    week: '2026-10-27/2026-11-02',
+    visibility: 38.4,
+    visibility_change_pts: 4.2,
+    citations: 212,
+    average_position: 2.6,
+    prompts: 120,
+    answers: 412,
+  },
+  null,
+  2,
+);
+
+/* ---------- Commerce ---------- */
+
+export const SHELF: readonly Readonly<{
+  product: string;
+  brand: string;
+  domain: string;
+  answers: number;
+  best: number;
+  own?: boolean;
+}>[] = [
+  { product: 'Northwind Growth', brand: 'Northwind', domain: 'northwind.io', answers: 24, best: 1 },
+  {
+    product: 'Acme Startup',
+    brand: 'Acme Analytics',
+    domain: 'acme.com',
+    answers: 20,
+    best: 1,
+    own: true,
+  },
+  { product: 'Lumen Pro', brand: 'Lumen', domain: 'lumen.app', answers: 15, best: 2 },
+  {
+    product: 'Fathom Labs Team',
+    brand: 'Fathom Labs',
+    domain: 'fathomlabs.com',
+    answers: 9,
+    best: 3,
+  },
+];
+
+export const CATALOG: readonly Readonly<{ title: string; group: string }>[] = [
+  { title: 'Acme Free', group: 'Plans' },
+  { title: 'Acme Startup', group: 'Plans' },
+  { title: 'Acme Growth', group: 'Plans' },
+  { title: 'Session replay', group: 'Add-ons' },
+  { title: 'Warehouse sync', group: 'Add-ons' },
+];

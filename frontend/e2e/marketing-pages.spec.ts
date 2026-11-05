@@ -46,10 +46,13 @@ test.describe('marketing routes', () => {
         copy.description,
       );
       await expect(page.locator('main')).toContainText(copy.lead);
-      // The hero product view is server-rendered: its titled window and the
-      // view's figures are in the HTML even with JavaScript disabled.
-      const heroFrame = page.locator('main figure .product-frame[data-ui]').first();
-      await expect(heroFrame.locator('.product-frame-bar')).not.toBeEmpty();
+      // The page's product screen is server-rendered: the frame's name and
+      // the screen's figures are in the HTML even with JavaScript disabled.
+      const heroFrame = page.locator('main figure.cl-frame').first();
+      await expect(heroFrame.locator('.cl-frame-well[role="img"]')).toHaveAttribute(
+        'aria-label',
+        /\S/,
+      );
       await expect(heroFrame).toContainText(/\d/);
       const schemas = await page
         .locator('script[type="application/ld+json"]')
@@ -146,7 +149,7 @@ test.describe('marketing routes', () => {
           await route.continue();
         });
         await page.goto(path, { waitUntil: 'commit' });
-        const frames = page.locator('main .product-frame');
+        const frames = page.locator('main .cl-frame');
         await expect(frames.first()).toBeVisible();
         await page.waitForFunction(() =>
           [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')].every(
@@ -494,7 +497,7 @@ test.describe('marketing routes', () => {
       await page.setViewportSize({ width, height: 900 });
       for (const path of ['/', '/solutions']) {
         await page.goto(path);
-        const frames = page.locator('main .product-frame');
+        const frames = page.locator('main .cl-frame');
         await expect(frames.first()).toBeVisible();
         const widest = await frames.evaluateAll((elements) =>
           Math.max(...elements.map((element) => element.getBoundingClientRect().right)),

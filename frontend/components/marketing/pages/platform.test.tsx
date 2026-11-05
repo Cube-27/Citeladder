@@ -59,7 +59,9 @@ it('renders the steps, questions and FAQ a capability page declares', () => {
     ),
   ).toBeInTheDocument();
   expect(screen.getByText('Does it score llms.txt?')).toBeInTheDocument();
-  expect(screen.getByText('AEO Readiness')).toBeInTheDocument();
+  expect(screen.getByRole('img', { name: 'Site Health · Overview' })).toHaveTextContent(
+    'AEO Readiness',
+  );
 });
 
 it('leads the MCP page with the connect strip and closes it with the guide and a demo', () => {

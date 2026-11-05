@@ -1,88 +1,59 @@
 import type { ReactNode } from 'react';
-import { ArrowRight, Check } from 'lucide-react';
 
+import { EngineMark } from '@/components/ui/engine-mark';
 import { appHref } from '@/lib/config/app-link';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
-import { platformLabel } from '@/lib/marketing-content/nav';
-import { cn } from '@/lib/utils';
+import { NAV_DROPS, platformLabel } from '@/lib/marketing-content/nav';
 
-import { EngineLogo, type OfficialEngineKey } from '../primitives/engine-logo';
+import { AnnouncementPill } from '../chrome/announcement-pill';
+import { CapabilityGrid } from '../pages/platform';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
-import { CapabilityGrid, FaqList } from '../pages/platform';
-import {
-  AgentBriefView,
-  AgentView,
-  AnswerView,
-  AppShellFrame,
-  CrawlerAccessView,
-  ProductShot,
-  SearchView,
-  SiteHealthView,
-  SourcesView,
-  VisibilityTrendView,
-  VisibilityView,
-} from '../scenes/product-views';
+import { EngineStrip, LogoTile } from '../sections/cards';
+import { Bento, FeatureCard, FeatureSplit } from '../sections/features';
+import { LandingHero } from '../sections/heroes';
+import { PageHighlight } from '../sections/page-highlight';
+import { PageSection } from '../sections/page-section';
+import { SiteArrowLink, columnsFor } from '../sections/site-parts';
+import { CtaBand, FaqList } from '../sections/steps-faq-cta';
+import { ProductFrame } from '../screens/product-frame';
+import { ScreenAgentBrief, ScreenAgentChat } from '../screens/screens-agent';
+import { ScreenEngines, ScreenKeywords } from '../screens/screens-search';
+import { ScreenCrawlerAccess, ScreenSiteHealth } from '../screens/screens-site';
+import { ScreenAnswer, ScreenSources, ScreenVisibility } from '../screens/screens-visibility';
 
-import { FAQS } from './landing-data';
+import { FAQS, INTEGRATIONS, type IntegrationMark } from './landing-data';
 import { EngineRotor } from './landing-rotor';
-import { Integrations, Teams, TextLink, Trust } from './landing-sections';
 
-/* ── Shared bits ────────────────────────────────────────────────────────── */
-
-function PrimaryActions({ size = 'marketing' }: Readonly<{ size?: 'lg' | 'marketing' }>) {
+function PrimaryActions() {
   const signup = selfServeSignupOpen();
   return (
-    <div className="lp-actions">
+    <>
       {signup ? (
-        <ButtonLink href={appHref('/register')} size={size}>
+        <ButtonLink href={appHref('/register')} size="marketing">
           Start free trial
         </ButtonLink>
       ) : null}
-      <DemoButtonLink variant={signup ? 'soft' : 'primary'} size={size} />
-    </div>
+      <DemoButtonLink variant={signup ? 'soft' : 'primary'} size="marketing" />
+    </>
   );
 }
 
-/* ── Hero ───────────────────────────────────────────────────────────────── */
-
-/* The real AI Visibility page, still: its tabs and filter bar as shipped. */
-function HeroShot() {
-  return (
-    <div className="lp-hero-shot">
-      <div className="lp-hero-stage product-stage">
-        <div className="lp-hero-frame product-fit">
-          <AppShellFrame
-            active="AI Visibility"
-            title="AI Visibility"
-            action="Launch audit"
-            tabs={['Trends', 'Sources', 'Query fanouts']}
-            activeTab="Trends"
-            filters={[
-              ['Latest run', 'Last 90 days', 'Per run'],
-              ['Visibility prompts', 'All surfaces'],
-            ]}
-          >
-            <VisibilityView />
-          </AppShellFrame>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* The hero opens on the copy and the product, then closes on the engines
-   the answers come from: no separate strip between it and the first band. */
 function Hero({ rotor }: Readonly<{ rotor?: ReactNode }>) {
   return (
-    <header className="lp-hero">
-      <div className="lp-wrap site-wrap lp-hero-copy mk-hero-in">
-        <p className="lp-hero-pillars site-chip website-label">
-          AI visibility · Search intelligence · Site health · Agent
-        </p>
-        <h1 className="website-hero-display lp-hero-title">
-          See whether AI recommends you, <span>and what to fix when it does not</span>
-        </h1>
-        <p className="website-hero-lead lp-hero-lead">
+    <LandingHero
+      announcement={
+        <AnnouncementPill href="/platform/mcp" tag="New">
+          Connect CiteLadder to Claude, ChatGPT and more
+        </AnnouncementPill>
+      }
+      title={
+        <>
+          See whether AI recommends you,{' '}
+          <span className="cl-mark">and what to fix when it does not</span>
+        </>
+      }
+      lead={
+        <>
           <span className="sr-only">
             CiteLadder is the tool you use when you want ChatGPT, Gemini, Claude and Google AI
             Overviews to recommend your business
@@ -92,160 +63,104 @@ function Hero({ rotor }: Readonly<{ rotor?: ReactNode }>) {
             Overviews to recommend your business
           </span>
           . It shows who each answer names and cites, and what to fix on your site.
-        </p>
-        <PrimaryActions />
-        {selfServeSignupOpen() ? (
-          <p className="lp-hero-note">7-day free trial on ChatGPT answers. Trial limits apply.</p>
-        ) : null}
-      </div>
-      <div className="lp-wrap site-wrap-cards">
-        <HeroShot />
-      </div>
-      <EngineStrip />
-    </header>
+        </>
+      }
+      actions={<PrimaryActions />}
+      note={
+        selfServeSignupOpen() ? '7-day free trial on ChatGPT answers. Trial limits apply.' : null
+      }
+      frame={
+        <ProductFrame aspect="hero" inset={48} label="AI Visibility">
+          <ScreenVisibility />
+        </ProductFrame>
+      }
+    />
   );
 }
 
-const ENGINES: readonly [OfficialEngineKey, string][] = [
-  ['openai', 'OpenAI API'],
-  ['gemini', 'Gemini API'],
-  ['claude', 'Claude API'],
-  ['google', 'Google AI Overviews'],
-];
-
-function EngineStrip() {
-  return (
-    <section className="lp-engines" aria-label="Monitored answer engines">
-      <div className="lp-wrap site-wrap lp-engines-inner">
-        <p className="lp-engines-label">Answers collected from</p>
-        <ul>
-          {ENGINES.map(([engine, name]) => (
-            <li key={engine}>
-              <EngineLogo engine={engine} className="size-5" />
-              {name}
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
-  );
-}
-
-/* ── The loop ───────────────────────────────────────────────────────────── */
-
-/** The statement that introduces "How it works", above its heading. */
-function Statement() {
-  return (
-    <p className="lp-statement-text">
-      Buyers ask AI which business to pick.{' '}
-      <span>CiteLadder shows whether the answer names you and which pages it cites.</span>
-    </p>
-  );
-}
-
-function BentoTile({
-  title,
-  body,
-  href,
-  className,
-  children,
-}: Readonly<{
-  title: string;
-  body: string;
-  href: string;
-  className?: string;
-  children: ReactNode;
-}>) {
-  return (
-    <a href={href} className={cn('lp-tile site-card', className)}>
-      <div className="lp-tile-copy">
-        <h3 className="website-feature-heading">{title}</h3>
-        <p className="website-body">{body}</p>
-      </div>
-      <div className="lp-tile-visual product-fit app-type-scale" data-ui aria-hidden>
-        {children}
-      </div>
-    </a>
-  );
-}
+/** The four bento tiles: each links to its module and shows that module's screen. */
+const LOOP_TILES = [
+  {
+    key: 'named',
+    span: 7,
+    title: 'Track how often you are named',
+    body: 'Mention rate, position and competitors for each prompt.',
+    href: '/platform/ai-visibility',
+    label: 'AI Visibility by engine',
+    aspect: 'wide',
+    screen: <ScreenEngines />,
+  },
+  {
+    key: 'cited',
+    span: 5,
+    title: 'See which pages get cited',
+    body: 'Every cited URL, labelled owned, review, editorial, community or competitor.',
+    href: '/platform/cited-sources',
+    label: 'Sources',
+    aspect: 'standard',
+    screen: <ScreenSources />,
+  },
+  {
+    key: 'checked',
+    span: 5,
+    title: 'Check each page for problems',
+    body: 'Technical and answer-readiness checks, plus which AI crawlers you allow.',
+    href: '/platform/site-health',
+    label: 'Site Health',
+    aspect: 'standard',
+    screen: <ScreenSiteHealth />,
+  },
+  {
+    key: 'drafts',
+    span: 7,
+    title: 'Get drafts your team can review',
+    body: 'The Agent drafts briefs and page edits from your evidence. You publish them.',
+    href: '/platform/agents',
+    label: 'Agent · Content brief',
+    aspect: 'wide',
+    screen: <ScreenAgentBrief />,
+  },
+] as const;
 
 function Loop() {
   return (
-    <section className="lp-section site-band" id="how-it-works">
-      <span id="see-it" className="lp-anchor" aria-hidden />
-      <div className="lp-wrap site-wrap lp-stack">
-        <Statement />
-        <div className="lp-head">
-          <h2 className="website-section-heading">Measure the answer, then fix the page</h2>
-          <p className="website-lead">
-            Run your buyers&apos; questions, fix what the answers show, then run them again.
-          </p>
-        </div>
-        <div className="lp-bento site-cards">
-          <BentoTile
-            className="lp-tile-wide"
-            title="Track how often you are named"
-            body="Mention rate, position and competitors for each prompt."
-            href="/platform/ai-visibility"
-          >
-            <VisibilityTrendView />
-          </BentoTile>
-          <BentoTile
-            title="See which pages get cited"
-            body="Every cited URL, labelled owned, review, editorial, community or competitor."
-            href="/platform/cited-sources"
-          >
-            <SourcesView />
-          </BentoTile>
-          <BentoTile
-            title="Check each page for problems"
-            body="Technical and answer-readiness checks, plus which AI crawlers you allow."
-            href="/platform/site-health"
-          >
-            <CrawlerAccessView />
-          </BentoTile>
-          <BentoTile
-            className="lp-tile-wide"
-            title="Get drafts your team can review"
-            body="The Agent drafts briefs and page edits from your evidence. You publish them."
-            href="/platform/agents"
-          >
-            <AgentBriefView />
-          </BentoTile>
-        </div>
-      </div>
-    </section>
+    <PageSection
+      id="how-it-works"
+      title="Measure the answer, then fix the page"
+      lead="Run your buyers' questions, fix what the answers show, then run them again."
+    >
+      <Bento
+        cells={LOOP_TILES.map((tile) => ({
+          key: tile.key,
+          span: tile.span,
+          content: (
+            <FeatureCard
+              href={tile.href}
+              title={tile.title}
+              body={tile.body}
+              media={
+                <ProductFrame aspect={tile.aspect} label={tile.label}>
+                  {tile.screen}
+                </ProductFrame>
+              }
+            />
+          ),
+        }))}
+      />
+    </PageSection>
   );
 }
 
-/* ── Platform, integrations, teams, trust ───────────────────────────────── */
-
-function PlatformGrid() {
-  return (
-    <section className="lp-section site-band" id="platform">
-      <div className="lp-wrap site-wrap lp-stack">
-        <div className="lp-head lp-head-split">
-          <h2 className="website-section-heading">Everything in one project</h2>
-          <TextLink href="/platform">See the whole platform</TextLink>
-        </div>
-        <CapabilityGrid />
-      </div>
-    </section>
-  );
-}
-
-/* ── Measure, diagnose, improve ─────────────────────────────────────────── */
-
-type Pillar = {
-  readonly stage: string;
-  readonly title: string;
-  readonly body: string;
-  readonly points: readonly string[];
+type Pillar = Readonly<{
+  stage: string;
+  title: string;
+  body: string;
+  points: readonly string[];
   /** Platform routes; each link takes its module's published name. */
-  readonly modules: readonly string[];
-  readonly shot: string;
-  readonly view: ReactNode;
-};
+  modules: readonly string[];
+  shot: string;
+  screen: ReactNode;
+}>;
 
 const PILLARS: readonly Pillar[] = [
   {
@@ -264,7 +179,7 @@ const PILLARS: readonly Pillar[] = [
       '/platform/product-visibility',
     ],
     shot: 'Answer record',
-    view: <AnswerView />,
+    screen: <ScreenAnswer />,
   },
   {
     stage: 'Diagnose · Keyword Research',
@@ -278,7 +193,7 @@ const PILLARS: readonly Pillar[] = [
     ],
     modules: ['/platform/keyword-research', '/platform/search-demand'],
     shot: 'Keyword Research',
-    view: <SearchView />,
+    screen: <ScreenKeywords />,
   },
   {
     stage: 'Diagnose · Site Health and Search Demand',
@@ -290,8 +205,8 @@ const PILLARS: readonly Pillar[] = [
       'Coverage next to every score',
     ],
     modules: ['/platform/site-health', '/platform/search-demand'],
-    shot: 'Site Health',
-    view: <SiteHealthView />,
+    shot: 'Site Health · AI crawlers',
+    screen: <ScreenCrawlerAccess />,
   },
   {
     stage: 'Improve',
@@ -304,85 +219,126 @@ const PILLARS: readonly Pillar[] = [
     ],
     modules: ['/platform/content-briefs', '/platform/agents', '/platform/mcp'],
     shot: 'Agent',
-    view: <AgentView />,
+    screen: <ScreenAgentChat />,
   },
 ];
 
-function PillarDive({ stage, title, body, points, modules, shot, view }: Pillar) {
-  return (
-    <div className="mk-dive">
-      <div className="mk-dive-copy">
-        <p className="website-label lp-pillar-stage">{stage}</p>
-        <h3 className="website-page-title mk-dive-title">{title}</h3>
-        <p className="website-body">{body}</p>
-        <ul className="mk-checks">
-          {points.map((point) => (
-            <li key={point}>
-              <Check aria-hidden className="size-4" />
-              {point}
-            </li>
-          ))}
-        </ul>
-        <ul className="lp-pillar-modules">
-          {modules.map((href) => (
-            <li key={href}>
-              <a className="lp-pillar-module website-label" href={href}>
-                {platformLabel(href)}
-                <ArrowRight aria-hidden className="size-3.5" />
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <ProductShot title={shot}>{view}</ProductShot>
-    </div>
-  );
-}
-
 function Pillars() {
   return (
-    <section className="lp-section site-band" id="pillars" aria-labelledby="pillars-title">
-      <div className="lp-wrap site-wrap lp-stack">
-        <div className="lp-head">
-          <h2 id="pillars-title" className="website-section-heading">
-            Measure, diagnose, improve
-          </h2>
-        </div>
-        <div className="lp-dives site-rows">
-          {PILLARS.map((pillar) => (
-            <PillarDive key={pillar.title} {...pillar} />
+    <PageSection id="pillars" title="Measure, diagnose, improve">
+      {PILLARS.map((pillar, index) => (
+        <FeatureSplit
+          key={pillar.title}
+          eyebrow={pillar.stage}
+          title={pillar.title}
+          body={pillar.body}
+          points={pillar.points}
+          links={pillar.modules.map((href) => ({ href, label: platformLabel(href) ?? href }))}
+          reverse={index % 2 === 1}
+          media={<ProductFrame label={pillar.shot}>{pillar.screen}</ProductFrame>}
+        />
+      ))}
+    </PageSection>
+  );
+}
+
+/** The source's own logo: brand marks the site already draws, or a logo file. */
+function IntegrationLogo({ mark }: Readonly<{ mark: IntegrationMark }>) {
+  switch (mark.kind) {
+    case 'engines':
+      return (
+        <span className="cl-logo-group">
+          {mark.engines.map((engine) => (
+            <EngineMark key={engine} engine={engine} className="size-7" />
           ))}
-        </div>
-      </div>
-    </section>
+        </span>
+      );
+    case 'image':
+      return (
+        <img
+          src={mark.src}
+          alt=""
+          width={28}
+          height={28}
+          loading="lazy"
+          decoding="async"
+          className="size-7"
+        />
+      );
+    default: {
+      const exhaustive: never = mark;
+      return exhaustive;
+    }
+  }
+}
+
+function Integrations() {
+  return (
+    <PageSection
+      id="integrations"
+      title="Connect the data you already have"
+      lead="Start with AI answers. Add other sources when you need them."
+      action={<SiteArrowLink href="/platform/integrations">Explore integrations</SiteArrowLink>}
+      layout="aside"
+    >
+      <ul className="cl-tiles cl-cols-3">
+        {INTEGRATIONS.map((integration) => (
+          <li key={integration.title}>
+            <LogoTile
+              name={integration.title}
+              caption={integration.body}
+              logo={<IntegrationLogo mark={integration.mark} />}
+            />
+          </li>
+        ))}
+      </ul>
+    </PageSection>
   );
 }
 
-function Faq() {
+function Teams() {
+  const solutions = NAV_DROPS.find((drop) => drop.key === 'solutions')?.groups[0]?.items ?? [];
   return (
-    <section className="lp-section site-band" id="landing-faq">
-      <div className="lp-wrap site-wrap lp-faq site-split">
-        <div className="lp-head">
-          <h2 className="website-section-heading">Questions, answered</h2>
-          <TextLink href="/faq">All questions</TextLink>
-        </div>
-        <FaqList faqs={FAQS} />
-      </div>
-    </section>
+    <PageSection
+      id="teams"
+      title="Who uses CiteLadder"
+      headerLayout="split"
+      action={<SiteArrowLink href="/solutions">Explore solutions</SiteArrowLink>}
+    >
+      <ul className={`cl-tiles cl-cols-${columnsFor(solutions.length)}`}>
+        {solutions.map((item) => (
+          <li key={item.href}>
+            <FeatureCard href={item.href} title={item.title} body={item.desc} />
+          </li>
+        ))}
+      </ul>
+    </PageSection>
   );
 }
 
-function Closing() {
+const TRUST = [
+  ['Workspace isolation', 'Each read and write is checked against its workspace.'],
+  ['Encrypted credentials', 'Provider keys and connections are stored encrypted.'],
+  ['Evidence you can audit', 'Raw answers and crawls are never overwritten.'],
+  ['You approve changes', 'CiteLadder does not publish or edit your site on its own.'],
+] as const;
+
+function Trust() {
   return (
-    <section className="lp-section marketing-closing-band site-band" id="get-started">
-      <div className="lp-wrap site-wrap lp-closing">
-        <h2 className="website-section-heading">See what AI says about you today</h2>
-        <p className="website-lead">
-          Add your site and your buyers&apos; questions to get a first baseline.
-        </p>
-        <PrimaryActions />
-      </div>
-    </section>
+    <PageSection
+      id="trust"
+      title="How CiteLadder handles your data"
+      action={<SiteArrowLink href="/enterprise">Enterprise</SiteArrowLink>}
+      layout="aside"
+    >
+      <ul className="cl-tiles cl-cols-2">
+        {TRUST.map(([title, body]) => (
+          <li key={title}>
+            <FeatureCard title={title} body={body} />
+          </li>
+        ))}
+      </ul>
+    </PageSection>
   );
 }
 
@@ -392,16 +348,49 @@ function Closing() {
  */
 export function LandingPage({ rotor }: Readonly<{ rotor?: ReactNode }>) {
   return (
-    <div className="lp">
+    <>
       <Hero rotor={rotor} />
+      <PageSection label="Monitored answer engines" spacing="compact">
+        <EngineStrip
+          engines={['chatgpt', 'gemini', 'claude', 'google']}
+          names={{ chatgpt: 'OpenAI API', gemini: 'Gemini API', claude: 'Claude API' }}
+        />
+      </PageSection>
+      <PageSection label="What CiteLadder does">
+        <PageHighlight
+          as="h2"
+          title="Buyers ask AI which business to pick"
+          body="CiteLadder shows whether the answer names you and which pages it cites."
+        />
+      </PageSection>
       <Loop />
-      <PlatformGrid />
+      <PageSection
+        id="platform"
+        title="Everything in one project"
+        headerLayout="split"
+        action={<SiteArrowLink href="/platform">See the whole platform</SiteArrowLink>}
+      >
+        <CapabilityGrid />
+      </PageSection>
       <Pillars />
       <Integrations />
       <Teams />
       <Trust />
-      <Faq />
-      <Closing />
-    </div>
+      <PageSection
+        id="landing-faq"
+        title="Questions, answered"
+        action={<SiteArrowLink href="/faq">All questions</SiteArrowLink>}
+        layout="aside"
+      >
+        <FaqList items={FAQS.map((faq) => ({ question: faq.q, answer: faq.a }))} />
+      </PageSection>
+      <PageSection id="get-started">
+        <CtaBand
+          title="See what AI says about you today"
+          lead="Add your site and your buyers' questions to get a first baseline."
+          actions={<PrimaryActions />}
+        />
+      </PageSection>
+    </>
   );
 }

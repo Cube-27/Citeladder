@@ -11,14 +11,10 @@ import {
 import { ButtonLink, DemoButtonLink, DemoTextLink } from '../primitives/button';
 import { PageHero } from '../primitives/page-hero';
 import { Section, SectionHeader } from '../primitives/section';
-import {
-  AnswerView,
-  CommerceView,
-  ProductShot,
-  SiteHealthView,
-  SourcesView,
-  VisibilityView,
-} from '../scenes/product-views';
+import { ProductFrame } from '../screens/product-frame';
+import { ScreenCommerce } from '../screens/screens-agent';
+import { ScreenSiteHealth } from '../screens/screens-site';
+import { ScreenAnswer, ScreenSources, ScreenVisibility } from '../screens/screens-visibility';
 
 /**
  * `/solutions` — one page, one row per team: copy beside the product view
@@ -35,11 +31,11 @@ const SEGMENT_ICONS: Readonly<Record<string, ComponentType<{ className?: string 
 };
 
 const SCENE_VIEWS: Readonly<Record<SolutionScene, { title: string; View: ComponentType }>> = {
-  share: { title: 'AI Visibility', View: VisibilityView },
-  health: { title: 'Site Health', View: SiteHealthView },
-  sample: { title: 'Answer record', View: AnswerView },
-  commerce: { title: 'AI Shelf', View: CommerceView },
-  citations: { title: 'Sources', View: SourcesView },
+  share: { title: 'AI Visibility', View: ScreenVisibility },
+  health: { title: 'Site Health', View: ScreenSiteHealth },
+  sample: { title: 'Answer record', View: ScreenAnswer },
+  commerce: { title: 'AI Shelf', View: ScreenCommerce },
+  citations: { title: 'Sources', View: ScreenSources },
 };
 
 export function SolutionsHero() {
@@ -90,9 +86,9 @@ export function SolutionSegments() {
                   </DemoTextLink>
                 </div>
               </div>
-              <ProductShot title={title}>
+              <ProductFrame label={title}>
                 <View />
-              </ProductShot>
+              </ProductFrame>
             </div>
           </Section>
         );

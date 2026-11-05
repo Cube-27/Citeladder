@@ -5,21 +5,21 @@ import { useRef, useState } from 'react';
 import { useAutoplay } from '@/lib/accessibility/use-autoplay';
 import { cycled } from '@/lib/utils';
 
-import { EngineLogo, type OfficialEngineKey } from '../primitives/engine-logo';
+import { EngineMark, type EngineKey } from '@/components/ui/engine-mark';
 
 const ENGINES = [
-  ['openai', 'ChatGPT'],
+  ['chatgpt', 'ChatGPT'],
   ['gemini', 'Gemini'],
   ['claude', 'Claude'],
-] as const satisfies readonly (readonly [OfficialEngineKey, string])[];
+] as const satisfies readonly (readonly [EngineKey, string])[];
 
 const ROTOR_INTERVAL_MS = 2400;
 
 function RotorItem({ index, state }: Readonly<{ index: number; state?: 'in' | 'out' | 'sizer' }>) {
   const [engine, name] = cycled(ENGINES, index);
   return (
-    <span className="lp-rotor-item" data-state={state}>
-      <EngineLogo engine={engine} className="lp-rotor-logo" />
+    <span className="cl-rotor-item" data-state={state}>
+      <EngineMark engine={engine} className="cl-rotor-logo" />
       {name}
     </span>
   );
@@ -44,7 +44,7 @@ export function EngineRotor() {
   // Hidden copies of every name size the slot to the widest, so the line
   // never shifts; the live items are re-keyed each step so enter and exit replay.
   return (
-    <span ref={slot} className="lp-rotor" aria-hidden>
+    <span ref={slot} className="cl-rotor" aria-hidden>
       {ENGINES.map(([engine], sizer) => (
         <RotorItem key={engine} index={sizer} state="sizer" />
       ))}

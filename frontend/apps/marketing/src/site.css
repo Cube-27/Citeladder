@@ -1215,6 +1215,12 @@ a.cl-announce:hover {
   min-width: 0;
 }
 
+.cl-split-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}
+
 @media (max-width: 1023px) {
   .cl-split,
   .cl-split--reverse {
@@ -1866,6 +1872,92 @@ a.cl-announce:hover {
     z-index: 1;
     left: 0;
     background: var(--color-surface);
+  }
+}
+
+/* ---------- Tile grids: cards or tiles in a list, columns from `cl-cols-*` ---------- */
+.cl-tiles {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-tiles > li {
+  display: grid;
+  min-width: 0;
+}
+
+/* Several marks on one tile (the model providers' three logos). */
+.cl-logo-group {
+  display: inline-flex;
+  gap: 8px;
+}
+
+/* ---------- EngineRotor: the landing lead's answer engine, one name at a time ---------- */
+.cl-rotor {
+  display: inline-grid;
+  align-items: baseline;
+  justify-items: start;
+  white-space: nowrap;
+}
+
+.cl-rotor-item {
+  display: inline-flex;
+  grid-area: 1 / 1;
+  align-items: baseline;
+  gap: 0.2em;
+}
+
+.cl-rotor-item[data-state='sizer'] {
+  visibility: hidden;
+}
+
+.cl-rotor-logo {
+  flex: none;
+  align-self: center;
+  width: 0.8em;
+  height: 0.8em;
+}
+
+/* The marks wear their own colours; OpenAI's is monochrome, so it keeps the ink. */
+.cl-rotor-logo[data-engine-mark='claude'] {
+  color: var(--color-brand-claude);
+}
+
+.cl-rotor-logo[data-engine-mark='gemini'] {
+  color: var(--color-brand-gemini);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cl-rotor-item[data-state='in'] {
+    animation: cl-rotor-in var(--motion-reveal) var(--ease-standard) both;
+  }
+
+  .cl-rotor-item[data-state='out'] {
+    animation: cl-rotor-out var(--motion-slow) var(--ease-exit) forwards;
+  }
+}
+
+/* A reader who turns reduced motion on mid-rotation keeps one static name. */
+@media (prefers-reduced-motion: reduce) {
+  .cl-rotor-item[data-state='out'] {
+    display: none;
+  }
+}
+
+@keyframes cl-rotor-in {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+  }
+}
+
+@keyframes cl-rotor-out {
+  to {
+    opacity: 0;
+    filter: blur(6px);
   }
 }
 

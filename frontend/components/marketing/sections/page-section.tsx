@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -17,6 +17,8 @@ type SectionHeaderProps = Readonly<{
   /** `split` puts the lead and action beside the title (left alignment only). */
   layout?: 'stack' | 'split';
   as?: HeadingTag;
+  /** The heading's id, for the section it names. */
+  titleId?: string;
 }>;
 
 /**
@@ -32,13 +34,16 @@ export function SectionHeader({
   align = 'left',
   layout = 'stack',
   as: Heading = 'h2',
+  titleId,
 }: SectionHeaderProps) {
   const split = align === 'left' && layout === 'split';
   return (
     <header className={cn('cl-shead', `cl-shead--${align}`, split && 'cl-shead--split')}>
       <div className="cl-shead-main">
         {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
-        <Heading className="cl-shead-title">{title}</Heading>
+        <Heading id={titleId} className="cl-shead-title">
+          {title}
+        </Heading>
       </div>
       {(lead || action) && (
         <div className="cl-shead-side">
@@ -50,7 +55,7 @@ export function SectionHeader({
   );
 }
 
-type PageSectionProps = Omit<SectionHeaderProps, 'title' | 'layout'> &
+type PageSectionProps = Omit<SectionHeaderProps, 'title' | 'layout' | 'titleId'> &
   Readonly<{
     id?: string;
     title?: ReactNode;
@@ -85,6 +90,7 @@ export function PageSection({
   as,
   children,
 }: PageSectionProps) {
+  const titleId = useId();
   const isAside = layout === 'aside' || aside !== undefined;
   const head =
     title === undefined ? null : (
@@ -96,6 +102,7 @@ export function PageSection({
         align={isAside ? 'left' : align}
         layout={isAside ? 'stack' : headerLayout}
         as={as}
+        titleId={titleId}
       />
     );
   const body =
@@ -103,6 +110,8 @@ export function PageSection({
   return (
     <section
       id={id}
+      // A titled section is named by its heading; an untitled one by `label`.
+      aria-labelledby={head ? titleId : undefined}
       aria-label={head ? undefined : label}
       className={cn(
         'cl-section cl-page-section',

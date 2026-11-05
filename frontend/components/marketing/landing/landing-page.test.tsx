@@ -17,8 +17,16 @@ describe('LandingPage', () => {
     vi.stubEnv('PUBLIC_APP_ORIGIN', 'https://app.citeladder.com');
     render(<LandingPage />);
 
-    const hero = screen.getByRole('banner');
-    expect(within(hero).getAllByRole('link', { name: label })[0]).toHaveAttribute('href', href);
+    // The hero's action is the first one on the page; the closing band repeats it.
+    expect(screen.getAllByRole('link', { name: label })[0]).toHaveAttribute('href', href);
+  });
+
+  it('opens on the MCP announcement above the headline', () => {
+    render(<LandingPage />);
+
+    const [announcement] = screen.getAllByRole('link');
+    expect(announcement).toHaveAccessibleName('New Connect CiteLadder to Claude, ChatGPT and more');
+    expect(announcement).toHaveAttribute('href', '/platform/mcp');
   });
 
   it('names every answer surface in the lead while the rotor cycles', () => {

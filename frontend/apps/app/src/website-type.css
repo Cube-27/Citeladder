@@ -214,24 +214,3 @@
 :where([data-public-surface]) [data-shape='pill']:not(.app-type-scale *) {
   border-radius: var(--radius-full);
 }
-
-/* A coded product preview is product UI, not marketing copy: it resets the
-   public roles it embeds back to the product's, in Geist, since Cal Sans
-   never sets type under 18px. */
-.app-type-scale {
-  --leading-relaxed: 1.625;
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
-}
-
-.app-type-scale :where(.website-feature-heading) {
-  font-family: var(--font-sans);
-  font-size: var(--text-heading);
-  line-height: var(--text-heading--line-height);
-  font-weight: 600;
-}
-
-.app-type-scale :where(.website-body) {
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
-}
