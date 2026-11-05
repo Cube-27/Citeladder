@@ -325,25 +325,10 @@ export const KEYWORDS = (
   intent,
 }));
 
-export const QUERIES = (
-  [
-    ['acme analytics', 'Branded', 1108, 5240, '21.1%', '1.2'],
-    ['product analytics for startups', 'Striking distance', 186, 9870, '1.9%', '8.4'],
-    ['mixpanel alternatives', 'CTR gap', 97, 14210, '0.7%', '11.8'],
-  ] as const
-).map(([query, signal, clicks, impressions, ctr, position]) => ({
-  query,
-  signal,
-  clicks,
-  impressions,
-  ctr,
-  position,
-}));
 export const WEEKLY_CLICKS = [701, 734, 768, 752, 801, 822, 864, 925];
 
 /* ---------- AI referrals ---------- */
 
-export const WEEKLY_AI_SESSIONS = [298, 316, 341, 352, 389, 431, 488, 538];
 export const REFERRAL_SOURCES: readonly Readonly<{
   engine: EngineKey;
   sessions: number;
@@ -352,11 +337,6 @@ export const REFERRAL_SOURCES: readonly Readonly<{
   { engine: 'chatgpt', sessions: 1124, engaged: '68%' },
   { engine: 'gemini', sessions: 318, engaged: '61%' },
   { engine: 'claude', sessions: 287, engaged: '72%' },
-];
-export const REFERRAL_PAGES: readonly Readonly<{ path: string; sessions: number }>[] = [
-  { path: '/pricing', sessions: 612 },
-  { path: '/docs/setup', sessions: 402 },
-  { path: '/blog/feature-adoption', sessions: 377 },
 ];
 
 /* ---------- Perception ---------- */
@@ -471,12 +451,4 @@ export const SHELF: readonly Readonly<{
     answers: 9,
     best: 3,
   },
-];
-
-export const CATALOG: readonly Readonly<{ title: string; group: string }>[] = [
-  { title: 'Acme Free', group: 'Plans' },
-  { title: 'Acme Startup', group: 'Plans' },
-  { title: 'Acme Growth', group: 'Plans' },
-  { title: 'Session replay', group: 'Add-ons' },
-  { title: 'Warehouse sync', group: 'Add-ons' },
 ];

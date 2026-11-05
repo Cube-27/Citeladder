@@ -88,7 +88,7 @@ const TOOL_COLUMNS: readonly ScreenColumn<(typeof MCP_TOOLS)[number]>[] = [
 /** Site Health: the score, its two halves, and the failed checks worst first. */
 export function ScreenSiteHealth() {
   return (
-    <ScreenRoot name="site-health" width={960}>
+    <ScreenRoot name="site-health" width={960} height={600}>
       <ScreenBar
         start={
           <ScreenTabs
@@ -154,7 +154,7 @@ export function ScreenSiteHealth() {
 /** Crawler access: each AI crawler against robots.txt, with the change that restricted two of them. */
 export function ScreenCrawlerAccess() {
   return (
-    <ScreenRoot name="crawler-access" width={960}>
+    <ScreenRoot name="crawler-access" width={960} height={600}>
       <ScreenBar
         start={
           <ScreenTabs
@@ -230,7 +230,7 @@ const connected = (
 /** Integrations: the data sources CiteLadder reads and the assistants that read it over MCP. */
 export function ScreenIntegrations() {
   return (
-    <ScreenRoot name="integrations" width={960}>
+    <ScreenRoot name="integrations" width={960} height={600}>
       <SettingsSections>
         <SettingsSection
           title="Data sources"
@@ -294,7 +294,7 @@ export function ScreenIntegrations() {
 /** MCP: the tools an assistant sees and one call with its arguments and result. */
 export function ScreenMcp() {
   return (
-    <ScreenRoot name="mcp" width={960}>
+    <ScreenRoot name="mcp" width={960} height={600}>
       <ScreenCols layout="mcp">
         <ScreenTableCard
           eyebrow="MCP server"

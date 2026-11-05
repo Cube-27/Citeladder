@@ -223,7 +223,7 @@ function Features({ page }: Readonly<{ page: PlatformPage }>) {
 }
 
 /**
- * The hero's product image. A 1200 screen fills the frame; a 960 screen sits
+ * The hero's product image. A 1200 screen fills the frame; a smaller screen sits
  * beside the page's lead tile: the screen's key numbers, or, for a
  * screen without numbers, the page's own how-to.
  */
@@ -249,7 +249,7 @@ function HeroTile({ page }: Readonly<{ page: PlatformPage }>) {
 
 /** Highlights go in the hero tile when the hero screen has no key numbers. */
 function highlightsInTile(page: PlatformPage): boolean {
-  return SCREEN_CATALOG[page.screen].width === 960 && !SCREEN_KEY_NUMBERS[page.screen];
+  return SCREEN_CATALOG[page.screen].width !== 1200 && !SCREEN_KEY_NUMBERS[page.screen];
 }
 
 function Related({ page }: Readonly<{ page: PlatformPage }>) {
