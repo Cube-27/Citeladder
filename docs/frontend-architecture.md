@@ -29,7 +29,7 @@ Google tag) is Astro markup with small module scripts in
 the page sections in `frontend/components/marketing/sections/` render to
 static HTML. The navbar's ThemeSwitch is the one island every page hydrates;
 other React islands hydrate only on pages with interactive tools, such as the
-homepage engine rotor, blog explorer, contact form, pricing and the free tools.
+blog explorer, contact form, pricing and the free tools.
 Only routes that read the request opt out with `prerender = false`: `/pricing`,
 the contact intake and `/health`. The 404 page is prerendered so scanner
 traffic never renders on demand (the free Workers plan stops a request past

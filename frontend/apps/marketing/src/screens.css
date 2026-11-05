@@ -20,36 +20,45 @@
   margin: 0;
 }
 
-/* A surface card lifted off the paper ground (D29): a 1px soft border and the
-   card shadow. */
+/* A surface card lifted off the paper ground (D29): a 1px soft border, the
+   card shadow and the website's 20px card radius, 8px round its well (D31). */
 .cl-frame-card {
   display: flex;
   flex: 1;
   flex-direction: column;
   padding: 8px;
   border: 1px solid var(--color-line);
-  border-radius: var(--radius-xl);
+  border-radius: 20px;
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
 }
 
-/* The well: even padding round the screen, with no fill of its own, so the
-   screen sits straight on the card (D29); its height is the screen's. In a
-   cell taller than the screen (a bento row beside a taller tile) it grows and
-   centres the screen. `overflow` only guards browsers
-   without container query units. */
+/* The well holds the screen; its height is the screen's. In a cell taller
+   than the screen (a bento row beside a taller tile) it grows and centres the
+   screen. `overflow` only guards browsers without container query units.
+   With no supporting text the frame is one card (D31): the well has no fill
+   or edge and the vignette sits straight on the card. */
 .cl-frame-well {
   display: flex;
   flex: 1;
   flex-direction: column;
   justify-content: center;
-  padding: 24px;
   overflow: hidden;
 }
 
+/* Only a FeatureCard, whose copy sits under its image, gets the grey well
+   (D31): its own 1px edge, concentric with the card (20 - 8 = 12px plus its
+   edge), and small padding round the screen, tighter top and bottom. */
+.cl-fcard .cl-frame-well {
+  padding: 12px 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  background: var(--color-paper);
+}
+
 @media (max-width: 767px) {
-  .cl-frame-well {
-    padding: 16px;
+  .cl-fcard .cl-frame-well {
+    padding: 8px 12px;
   }
 }
 
@@ -126,23 +135,28 @@
    short panel. Row labels are `label` (14/20, 500), secondary lines
    `body-sm` muted, values `label` tabular; figures take `stat` (28/36). Key
    text wraps, never ellipsizes; below 420px of card width a row drops its
-   middle column. */
+   middle column. Without supporting text the frame's card is the vignette's
+   card, so it draws no second edge or fill (D31). */
 .cl-vig {
   container-type: inline-size;
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   width: 100%;
-  padding: 20px;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  padding: 16px;
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
   text-align: left;
+}
+
+/* On a FeatureCard's grey well the vignette is its own white 10px card. */
+.cl-fcard .cl-vig {
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: var(--color-surface);
 }
 
 .cl-vig p {

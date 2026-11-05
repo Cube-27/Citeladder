@@ -8,7 +8,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     description:
       'See how ChatGPT, Gemini, Claude and Google AI Overviews answer your buyers, which pages they cite, and a ranked list of what to change on your site.',
     heading: 'Find out what AI tells your buyers about you',
-    lead: 'CiteLadder asks ChatGPT, Gemini, Claude and Google AI Overviews the questions your buyers ask. You see each answer, the brands it names, the pages it cites and a ranked list of what to change next.',
+    lead: 'See what ChatGPT, Gemini, Claude and Google AI Overviews say about your business, and what to change to get recommended.',
     cta: 'trial',
     screen: 'visibility',
     note: TRIAL_NOTE,
@@ -148,7 +148,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     description:
       'Track brand mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude and Google AI Overviews, with every result tied to its recorded answer.',
     heading: 'See how often AI recommends you',
-    lead: 'Run the questions buyers ask through ChatGPT, Gemini, Claude and Google AI Overviews. You get your mention rate, position and share of voice beside each competitor, and every number opens the answer it came from.',
+    lead: 'Track how often AI answers recommend you, and how you compare with your competitors.',
     cta: 'trial',
     screen: 'visibility',
     note: TRIAL_NOTE,
@@ -307,7 +307,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     description:
       'See which domains and pages AI answers cite, compare owned and third-party sources, and find cited pages that list competitors but not you.',
     heading: 'Know which pages AI answers cite',
-    lead: 'See every domain and URL your tracked answers reference, whether it belongs to you, a competitor or a publisher, and read each citation in the answer that used it.',
+    lead: 'See the websites AI answers rely on, and which of them leave you out.',
     cta: 'demo',
     screen: 'sources',
     highlights: [

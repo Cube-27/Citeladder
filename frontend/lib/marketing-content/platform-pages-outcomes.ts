@@ -8,7 +8,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
     description:
       'See the visits ChatGPT, Gemini and other AI assistants send to your site from GA4, and the AI crawlers that fetch your pages from your own server logs.',
     heading: 'See the traffic AI sends your way',
-    lead: 'Connect GA4 and you get sessions from ChatGPT, Gemini and other recognized AI assistants, the pages those visitors land on and what they do next. Add your server logs and you also see which AI crawlers fetch those pages.',
+    lead: 'See how many visitors AI assistants send to your site and which pages they land on.',
     cta: 'setup',
     screen: 'referrals',
     highlights: [
@@ -129,7 +129,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
     description:
       'Measure how your products and categories appear in AI buying answers, including share of shelf and first-position wins where answers rank products.',
     heading: 'See how your products show up in AI buying answers',
-    lead: 'Pick a product or category and CiteLadder asks the engines the buyer questions around it. You get its position in each ranked answer, next to the competing products. Your catalog comes from your site or a CSV import.',
+    lead: 'See where your products rank when buyers ask AI what to buy.',
     cta: 'demo',
     screen: 'commerce',
     note: 'Catalog setup depends on your project. Book a demo to check your catalog.',

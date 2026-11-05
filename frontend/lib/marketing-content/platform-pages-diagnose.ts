@@ -8,7 +8,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     description:
       'Crawl your site for technical SEO, answer-readiness and AI crawler access issues, with page-level evidence for every finding and a recrawl to verify fixes.',
     heading: 'Find the site issues that keep you out of answers',
-    lead: 'Crawl your site and get page-level findings with the evidence attached. Checks cover indexing, structure, structured data, answer-readiness and which AI crawlers your robots.txt lets in.',
+    lead: 'Find the problems on your site that stop AI from reading and recommending your pages.',
     cta: 'demo',
     screen: 'site-health',
     highlights: [
@@ -141,7 +141,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     description:
       'Find the Search Console queries ranking at positions 4 to 15, pages with weak click-through, two pages competing for one query, and queries rising or falling.',
     heading: 'Find the pages your search data says to update first',
-    lead: 'Connect Search Console and CiteLadder reads the last 28 days of your queries and pages. You see which non-branded queries sit at positions 4 to 15, and the page that ranks for each, so you know which pages to update first.',
+    lead: 'Use your Google Search Console data to find the pages closest to winning more traffic.',
     cta: 'demo',
     screen: 'demand',
     highlights: [
@@ -257,7 +257,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     description:
       'Research keywords, competing domains, top pages and backlinks with optional DataForSEO datasets, priced and confirmed before collection.',
     heading: 'Keyword and backlink research beside your AI evidence',
-    lead: 'Add external research when your own data cannot answer the question: ranked keywords, competitors, top pages and backlinks. Each collection shows its scope and price before you confirm it.',
+    lead: 'See the keywords and links your competitors win, and where you can catch up.',
     cta: 'setup',
     screen: 'keywords',
     highlights: [

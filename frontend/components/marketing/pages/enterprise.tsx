@@ -1,12 +1,9 @@
-import { TextLink } from '@/components/ui/text-link';
-
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
-import { Bento, FeatureCard } from '../sections/features';
+import { Bento, FeatureCard, FeatureSplit } from '../sections/features';
 import { PageHero } from '../sections/heroes';
-import { PageHighlight } from '../sections/page-highlight';
 import { PageSection } from '../sections/page-section';
-import { CheckList, columnsFor } from '../sections/site-parts';
-import { CtaBand, Steps } from '../sections/steps-faq-cta';
+import { columnsFor } from '../sections/site-parts';
+import { CtaBand } from '../sections/steps-faq-cta';
 import { CatalogFrame } from '../screens/screen-catalog';
 
 /**
@@ -16,10 +13,9 @@ import { CatalogFrame } from '../screens/screen-catalog';
  */
 
 const EVIDENCE_POINTS = [
-  'Raw answers are stored before any metric is calculated',
-  'The scoring rules are deterministic, versioned and published in the open-source repository under AGPL-3.0',
-  'Mentions match on word boundaries; citations come only from engine citation metadata',
-  'Unavailable, not-configured and observed-zero results stay distinct from each other',
+  'Raw answers stored before any metric',
+  'Scoring rules open source under AGPL-3.0',
+  'Unavailable, not configured and zero kept apart',
 ] as const;
 
 const GOVERNANCE = [
@@ -47,15 +43,6 @@ const GOVERNANCE = [
       'Runtime Zod contracts validate the browser/API boundary',
     ],
   },
-] as const;
-
-const DATA_FLOW = [
-  { title: 'Browser', meta: 'Authenticated HTTPS' },
-  { title: 'Same-origin app', meta: 'Relative API requests' },
-  { title: 'API boundary', meta: 'Schema and workspace authorization' },
-  { title: 'PostgreSQL', meta: 'Evidence and durable queue' },
-  { title: 'Workers', meta: 'Leased execution' },
-  { title: 'Answer engines', meta: 'Your configured keys' },
 ] as const;
 
 const FIT = [
@@ -106,26 +93,17 @@ const AGREEMENT = [
   },
 ] as const;
 
-/** The evidence trail: the answer an auditor opens, beside the rules that score it. */
-function EvidenceTile() {
+/** The evidence trail: short copy beside the sources an auditor opens. */
+function EvidenceSplit() {
   return (
-    <PageHighlight
+    <FeatureSplit
       as="h2"
-      title="Every number traces to a stored answer and a published rule"
-      body={
-        <>
-          Security, analytics and growth teams read the same{' '}
-          <TextLink asChild text="inherit">
-            <a href="/platform/ai-visibility">AI visibility</a>
-          </TextLink>{' '}
-          evidence: the prompt, the engine, the answer and the sources it cited. The rules that turn
-          that evidence into a score are not a black box; they are in the open-source repository, so
-          a reviewer can check the method instead of taking a description of it.
-        </>
-      }
-    >
-      <CheckList items={EVIDENCE_POINTS} small />
-    </PageHighlight>
+      title="Every number traces to a stored answer"
+      body="Each score opens its prompt, engine, answer and cited sources, scored by public rules."
+      points={EVIDENCE_POINTS}
+      links={[{ href: '/platform/ai-visibility', label: 'AI visibility' }]}
+      media={<CatalogFrame screen="sources" />}
+    />
   );
 }
 
@@ -136,7 +114,7 @@ export function EnterprisePage() {
         size="2xl"
         crumbs={[{ label: 'Home', href: '/' }, { label: 'Enterprise' }]}
         title="The AEO platform whose scoring you can audit"
-        lead="Enterprise AEO measurement for how ChatGPT, Gemini, Claude and Google AI Overviews describe your brand. Every score traces to a stored answer, the scoring code is public, and evidence stays inside your workspace."
+        lead="Measure how AI describes your brand, with results your security and analytics teams can check."
         actions={
           <>
             <DemoButtonLink size="marketing">Book a demo</DemoButtonLink>
@@ -150,7 +128,7 @@ export function EnterprisePage() {
       </PageHero>
 
       <PageSection spacing="compact" label="Evidence">
-        <EvidenceTile />
+        <EvidenceSplit />
       </PageSection>
 
       <PageSection
@@ -165,13 +143,6 @@ export function EnterprisePage() {
             content: <FeatureCard size="lg" title={group.title} points={group.points} />,
           }))}
         />
-      </PageSection>
-
-      <PageSection
-        title="How a request travels"
-        lead="The hosted platform runs in a managed cloud behind one same-origin boundary. Every read is checked against the workspace, and provider keys are resolved only when a worker calls an engine."
-      >
-        <Steps items={DATA_FLOW} />
       </PageSection>
 
       <PageSection

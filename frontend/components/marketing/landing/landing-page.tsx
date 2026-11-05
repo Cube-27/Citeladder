@@ -22,7 +22,6 @@ import { ScreenAnswer, ScreenSources } from '../screens/screens-visibility';
 import { ScreenAppVisibility } from '../screens/screen-app';
 
 import { FAQS, INTEGRATIONS, type IntegrationMark } from './landing-data';
-import { EngineRotor } from './landing-rotor';
 
 function PrimaryActions() {
   const signup = selfServeSignupOpen();
@@ -38,7 +37,7 @@ function PrimaryActions() {
   );
 }
 
-function Hero({ rotor }: Readonly<{ rotor?: ReactNode }>) {
+function Hero() {
   return (
     <LandingHero
       announcement={
@@ -46,25 +45,8 @@ function Hero({ rotor }: Readonly<{ rotor?: ReactNode }>) {
           Connect CiteLadder to Claude, ChatGPT and more
         </AnnouncementPill>
       }
-      title={
-        <>
-          See whether AI recommends you,{' '}
-          <span className="cl-mark">and what to fix when it does not</span>
-        </>
-      }
-      lead={
-        <>
-          <span className="sr-only">
-            CiteLadder is the tool you use when you want ChatGPT, Gemini, Claude and Google AI
-            Overviews to recommend your business
-          </span>
-          <span aria-hidden>
-            CiteLadder is the tool you use when you want {rotor ?? <EngineRotor />} and Google AI
-            Overviews to recommend your business
-          </span>
-          . It shows who each answer names and cites, and what to fix on your site.
-        </>
-      }
+      title="Get your business recommended by AI"
+      lead="CiteLadder gives you the tools to grow your AI visibility, traffic and revenue."
       actions={<PrimaryActions />}
       note={
         selfServeSignupOpen() ? '7-day free trial on ChatGPT answers. Trial limits apply.' : null
@@ -332,14 +314,11 @@ function Trust() {
   );
 }
 
-/**
- * Server-rendered; `rotor` is the lead's hydrated engine rotor (see
- * `EngineRotor`). Without it the lead renders its static first engine.
- */
-export function LandingPage({ rotor }: Readonly<{ rotor?: ReactNode }>) {
+/** Server-rendered to static HTML. */
+export function LandingPage() {
   return (
     <>
-      <Hero rotor={rotor} />
+      <Hero />
       <PageSection label="Monitored answer engines" spacing="compact">
         <EngineStrip
           engines={['chatgpt', 'gemini', 'claude', 'google']}

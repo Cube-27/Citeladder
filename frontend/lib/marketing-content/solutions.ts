@@ -21,7 +21,7 @@ export type SolutionSegment = {
 
 export const SOLUTIONS_HERO = {
   title: 'How each team uses CiteLadder',
-  lead: 'Every team below works from the same tracked AI answers and website findings. Each one comes to them with a different question.',
+  lead: 'Agencies, marketing teams, founders and online stores use CiteLadder to get recommended by AI.',
 } as const;
 
 export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [

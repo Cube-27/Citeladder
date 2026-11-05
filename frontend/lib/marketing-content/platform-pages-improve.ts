@@ -9,7 +9,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     description:
       'Prepare content briefs, page edits, comparison pages, internal-link plans and outreach briefs from your CiteLadder evidence, and review every revision before it ships.',
     heading: 'Content work that starts from the evidence',
-    lead: 'Turn a site finding, buyer question or citation pattern into a brief, a page edit or an internal-link plan. The Agent drafts it from your project evidence, and your team reviews it.',
+    lead: 'Turn what you learn into page updates and new content, ready for your team to review.',
     cta: 'demo',
     screen: 'actions',
     note: AGENT_NOTE,
@@ -121,7 +121,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     description:
       'An AI assistant that reads your saved CiteLadder evidence and produces briefs, edits and plans you review. It never publishes on its own.',
     heading: 'An assistant that starts from your evidence',
-    lead: 'Ask a question or pick up an Action. The Agent reads your saved project evidence, explains what it found, and drafts the brief, edit or plan you asked for.',
+    lead: 'Ask about your AI visibility and get clear answers and drafts based on your own data.',
     cta: 'demo',
     screen: 'actions',
     note: AGENT_NOTE,
@@ -229,7 +229,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     description:
       'Connect Claude, ChatGPT, Gemini, Grok, Cursor and other MCP clients to your CiteLadder visibility, site and search evidence, with changes only after you confirm them.',
     heading: 'Your CiteLadder evidence, in your AI assistant',
-    lead: 'Ask Claude, ChatGPT and other assistants about your AI visibility, cited sources, Site Health and search performance, and let them manage your prompts, competitors and audits when you allow it. They answer from your saved CiteLadder records, for the workspaces you approve.',
+    lead: 'Ask Claude, ChatGPT and other assistants about your AI visibility, right where you already work.',
     cta: 'mcp',
     screen: 'mcp',
     highlights: [
@@ -337,7 +337,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     description:
       'Connect Google Search Console, GA4, Bing Webmaster Tools, Cloudflare, Amazon CloudFront and Google Cloud logs, model providers, DataForSEO and MCP clients to CiteLadder.',
     heading: 'Connect your search, analytics and research data',
-    lead: 'Bring in first-party search, analytics and server-log data, configure model providers, and add research when it helps. Each connection does a specific job, and you can start without any of them.',
+    lead: 'Connect the search and analytics tools you already use for a fuller picture.',
     cta: 'setup',
     screen: 'integrations',
     highlights: [

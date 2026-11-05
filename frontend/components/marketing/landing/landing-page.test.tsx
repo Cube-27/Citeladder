@@ -2,7 +2,6 @@ import { render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { LandingPage } from './landing-page';
-import { EngineRotor } from './landing-rotor';
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -40,17 +39,17 @@ describe('LandingPage', () => {
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });
 
-  it('names every answer surface in the lead while the rotor cycles', () => {
-    render(<LandingPage rotor={<EngineRotor />} />);
+  it('leads with the recommendation headline and its one-line promise', () => {
+    render(<LandingPage />);
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName(
-      'See whether AI recommends you, and what to fix when it does not',
+      'Get your business recommended by AI',
     );
     expect(
       screen.getByText(
-        'CiteLadder is the tool you use when you want ChatGPT, Gemini, Claude and Google AI Overviews to recommend your business',
+        'CiteLadder gives you the tools to grow your AI visibility, traffic and revenue.',
       ),
-    ).toHaveClass('sr-only');
+    ).toBeVisible();
   });
 
   it('links each pillar module by its published name', () => {

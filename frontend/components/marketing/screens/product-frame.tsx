@@ -12,12 +12,13 @@ import { cn } from '@/lib/utils';
 export type FrameFit = 'fluid' | 'scale';
 
 /**
- * ProductFrame: how every product image on the website is shown. A bordered
- * card holds a paper well with even padding round the screen; the well's
- * height comes from the screen, so it never shows an empty band.
+ * ProductFrame: how every product image on the website is shown. On its own
+ * it is one bordered card with the screen straight on it; the well's height
+ * comes from the screen, so it never shows an empty band.
  *
- * Inside a FeatureCard the card's own border stands in for the frame's: the
- * well sits directly in the feature card.
+ * Inside a FeatureCard the card's own border stands in for the frame's, and
+ * the well becomes a grey inset holding the screen as a white card above the
+ * card's copy (docs/design.md D31).
  *
  * The screen is `inert` (no tab stops, out of the accessibility tree); `label`
  * describes it as one image.
