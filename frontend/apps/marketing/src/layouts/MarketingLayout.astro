@@ -1,9 +1,9 @@
 ---
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics.astro';
 import CookieBanner from '@/components/marketing/chrome/CookieBanner.astro';
-import MarketingNav from '@/components/marketing/chrome/MarketingNav.astro';
 import PublicFonts from '@/components/marketing/chrome/PublicFonts.astro';
-import { MarketingFooter } from '@/components/marketing/chrome/footer';
+import SiteNav from '@/components/marketing/chrome/SiteNav.astro';
+import { SiteFooter } from '@/components/marketing/chrome/site-footer';
 import {
   organizationJsonLd,
   serializeJsonLd,
@@ -24,6 +24,8 @@ import '@/apps/marketing/src/styles/commerce-pages.css';
 import '@/apps/marketing/src/styles/content-pages.css';
 import '@/apps/marketing/src/styles/editorial-pages.css';
 import '@/apps/marketing/src/styles/site-grid.css';
+// The system's website components, after the page stylesheets so they win.
+import '@/apps/marketing/src/site.css';
 
 interface Props {
   title?: string;
@@ -116,13 +118,13 @@ const sharedJsonLd = [organizationJsonLd(), websiteJsonLd(), softwareApplication
     ))}
     {jsonLd.map((data) => <script type="application/ld+json" set:html={serializeJsonLd(data)} />)}
   </head>
-  <body class="bg-surface text-ink relative isolate min-h-dvh">
+  <body class="cl-site relative isolate min-h-dvh">
     {gaMeasurementId && <GoogleAnalytics />}
     <a href="#main" class="skip-link">Skip to main content</a>
-    <MarketingNav path={Astro.url.pathname} />
-    {/* Every marketing page sits on the site grid (marketing.css). */}
-    <div class="site-frame relative z-1 pt-[var(--marketing-nav-offset)]"><slot /></div>
-    <div class="relative z-1"><MarketingFooter /></div>
+    <SiteNav path={Astro.url.pathname} />
+    {/* Pages not yet on the system's sections still sit on the site grid (site-grid.css). */}
+    <div class="site-frame relative z-1"><slot /></div>
+    <SiteFooter />
     <CookieBanner />
   </body>
 </html>

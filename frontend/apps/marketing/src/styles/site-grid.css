@@ -63,8 +63,9 @@
 }
 
 .site-frame {
-  /* The page's content starts under the fixed header bar. */
-  --site-frame-top: var(--marketing-nav-offset);
+  /* The sticky navbar sits in the flow above the frame, so the frame's rule
+     runs along its own top edge. */
+  --site-frame-top: 0px;
 
   position: relative;
   overflow-x: clip;

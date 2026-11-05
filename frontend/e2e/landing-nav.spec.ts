@@ -6,7 +6,7 @@ import { NAV_DROPS } from '@/lib/marketing-content/nav';
  * Marketing navigation in a real engine.
  *
  * The navigation is server-rendered Astro markup with a plain script
- * (components/marketing/chrome/marketing-nav.ts), so its interaction contract
+ * (components/marketing/chrome/site-nav.ts), so its interaction contract
  * — hover intent, focus return, the inert page behind the mobile sheet — is
  * pinned here against the built site rather than in jsdom.
  */

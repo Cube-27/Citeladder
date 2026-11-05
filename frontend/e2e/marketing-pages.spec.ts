@@ -550,9 +550,5 @@ test.describe('marketing routes', () => {
       'href',
       'https://github.com/abhij1306/CiteLadder',
     );
-    await expect(page.getByRole('link', { name: 'CiteLadder on GitHub' })).toHaveAttribute(
-      'href',
-      'https://github.com/abhij1306/CiteLadder',
-    );
   });
 });

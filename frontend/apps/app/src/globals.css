@@ -813,11 +813,6 @@ a.focus-ring:active .type-caption {
   background-color: var(--color-surface);
 }
 
-[data-marketing-nav][data-scrolled='true'] {
-  background-color: var(--color-nav-glass);
-  backdrop-filter: blur(16px);
-}
-
 /* Public CTAs: the website's buttons are control-md; the hero rung is
    control-lg with the label-lg role. */
 [data-public-surface] .marketing-cta-button {
@@ -1197,67 +1192,6 @@ samp {
     animation-duration: 2800ms;
     animation-iteration-count: infinite;
   }
-}
-
-/* Header menus: the panel eases down out of the bar and folds back on close.
-   The hover-intent delay before the first open lives in the nav component. */
-@keyframes marketing-nav-panel-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-}
-
-@keyframes marketing-nav-panel-out {
-  to {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-}
-
-.marketing-nav-panel {
-  transform-origin: top center;
-  animation: marketing-nav-panel-in var(--motion-menu) var(--ease-standard) both;
-}
-
-.marketing-nav-panel-out {
-  transform-origin: top center;
-  pointer-events: none;
-  animation: marketing-nav-panel-out var(--motion-normal) var(--ease-exit) both;
-}
-
-/* Moving between open menus hands over sideways. */
-@keyframes marketing-nav-panel-slide-in {
-  from {
-    opacity: 0;
-    transform: translateX(var(--nav-slide-offset));
-  }
-}
-
-@keyframes marketing-nav-panel-slide-out {
-  to {
-    opacity: 0;
-    transform: translateX(calc(var(--nav-slide-offset) * -1));
-  }
-}
-
-.marketing-nav-panel-slide,
-.marketing-nav-panel-slide-out {
-  --nav-slide-offset: -24px;
-}
-
-.marketing-nav-panel-slide[data-slide-from='right'],
-.marketing-nav-panel-slide-out[data-slide-from='right'] {
-  --nav-slide-offset: 24px;
-}
-
-.marketing-nav-panel-slide {
-  animation: marketing-nav-panel-slide-in var(--motion-menu) var(--ease-standard) both;
-}
-
-.marketing-nav-panel-slide-out {
-  pointer-events: none;
-  animation: marketing-nav-panel-slide-out var(--motion-normal) var(--ease-exit) both;
 }
 
 /* Skip link — the first tab stop. Off-screen until focused. */

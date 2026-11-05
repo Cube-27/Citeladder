@@ -18,11 +18,8 @@ const SHARED_VARIANT: Record<Variant, 'primary' | 'secondary' | 'ghost'> = {
 
 const sharedVariant = (variant: Variant) => SHARED_VARIANT[variant];
 
-/**
- * A marketing button link's attributes, shared with server-rendered Astro
- * markup (the navigation) so both produce the same element.
- */
-export function buttonLinkAttributes({ variant = 'primary', size = 'lg', className }: VisualProps) {
+/** A marketing button link's attributes. */
+function buttonLinkAttributes({ variant = 'primary', size = 'lg', className }: VisualProps) {
   const shared = sharedVariant(variant);
   return {
     'data-marketing-cta': '',
