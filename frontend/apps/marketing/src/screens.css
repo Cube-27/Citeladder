@@ -77,7 +77,8 @@
 
 .cl-frame-title {
   color: var(--color-ink);
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
+  font-weight: 500;
   font-size: var(--text-title-sm);
   line-height: var(--text-title-sm--line-height);
 }
@@ -182,6 +183,14 @@
   border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
   background: var(--color-paper);
+}
+
+/* On the website Cal Sans is the hero's H1 alone (D28), so the drawn app's
+   page title is Geist 500 at its own size. */
+.cl-screen--app .type-page-title {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: normal;
 }
 
 .cl-app-side {
@@ -493,9 +502,10 @@
 
 .cl-screen-stat-value {
   color: var(--color-ink);
-  font-family: var(--font-display);
-  font-size: var(--text-display-md);
-  line-height: var(--text-display-md--line-height);
+  font-family: var(--font-sans);
+  font-weight: var(--text-stat--font-weight);
+  font-size: var(--text-stat);
+  line-height: var(--text-stat--line-height);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
