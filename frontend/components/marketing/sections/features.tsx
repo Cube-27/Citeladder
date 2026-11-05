@@ -5,15 +5,17 @@ import { cn } from '@/lib/utils';
 import { CheckList, Eyebrow, SiteArrowLink } from './site-parts';
 
 /**
- * FeatureCard: a surface card with an optional product image on top, an
- * eyebrow, a title (title, or display-md at `lg`), body, an optional check
- * list and, as a link, an arrow line. With an `href` the whole card is the link.
- * A `wide` card (alone in its row) sets its points beside the copy, not under it.
+ * FeatureCard: a flat bordered card with an optional product image well on
+ * top, then an eyebrow or a two-digit step number, a title (title, or
+ * display-md at `lg`), body, an optional check list and, as a link, an arrow
+ * line. With an `href` the whole card is the link. A `wide` card (alone in
+ * its row) sets its points beside the copy, not under it.
  */
 export function FeatureCard({
   href,
   linkLabel = 'Learn more',
   eyebrow,
+  step,
   title,
   body,
   points,
@@ -25,6 +27,8 @@ export function FeatureCard({
   href?: string;
   linkLabel?: string;
   eyebrow?: ReactNode;
+  /** The card's place in a numbered series (1 shows as "01"); used without an eyebrow. */
+  step?: number;
   title: ReactNode;
   body?: ReactNode;
   /** What the card covers, as a small check list under the body. */
@@ -34,7 +38,7 @@ export function FeatureCard({
   wide?: boolean;
   /** `h2` when the card heads its own part of the page (no section title above it). */
   as?: 'h2' | 'h3';
-  /** The card's product image (a ProductFrame well), above the copy. */
+  /** The card's product image (a ProductFrame; its well sits straight in the card), above the copy. */
   media?: ReactNode;
 }>) {
   const className = cn(
@@ -48,6 +52,11 @@ export function FeatureCard({
       {media}
       <div className="cl-fcard-body">
         {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
+        {step !== undefined && !eyebrow && (
+          <span className="cl-fcard-index" aria-hidden>
+            {String(step).padStart(2, '0')}
+          </span>
+        )}
         <Heading className="cl-fcard-title">{title}</Heading>
         {body && <p className="cl-fcard-text">{body}</p>}
         {points && points.length > 0 && <CheckList items={points} small />}

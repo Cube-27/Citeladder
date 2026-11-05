@@ -1259,6 +1259,8 @@ a.cl-announce:hover {
 }
 
 /* ---------- FeatureCard ---------- */
+/* Flat (public site): a 1px soft border, no shadow. The product image's well
+   sits straight in the card, 8px in, with the copy 16px in below it. */
 .cl-fcard {
   display: flex;
   flex-direction: column;
@@ -1267,25 +1269,51 @@ a.cl-announce:hover {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-xl);
   background: var(--color-surface);
-  box-shadow: var(--shadow-xs);
   color: var(--color-ink);
   text-decoration: none;
+  transition: border-color var(--motion-fast) var(--ease-standard);
+}
+
+a.cl-fcard:hover {
+  border-color: var(--color-line-strong);
+}
+
+.cl-fcard > .cl-frame {
+  flex: 1;
+}
+
+.cl-fcard > .cl-frame > .cl-frame-card {
+  padding: 0;
+  border: 0;
+  background: none;
 }
 
 .cl-fcard-body {
   display: flex;
-  flex: 1;
+  flex: none;
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
   padding: 16px;
 }
 
-.cl-fcard > .cl-frame-well + .cl-fcard-body {
+.cl-fcard:not(:has(> .cl-frame)) > .cl-fcard-body {
+  flex: 1;
+}
+
+.cl-fcard > .cl-frame + .cl-fcard-body {
   padding-top: 20px;
 }
 
-.cl-fcard-body .cl-eyebrow + .cl-fcard-title {
+.cl-fcard-index {
+  color: var(--color-ink-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-fcard-body :is(.cl-eyebrow, .cl-fcard-index) + .cl-fcard-title {
   margin-top: 4px;
 }
 
@@ -1383,19 +1411,9 @@ a.cl-announce:hover {
   grid-column: span 12;
 }
 
+/* D21: a product image beside a taller tile fills its cell; its well grows
+   and centres the screen (screens.css) instead of leaving a strip under it. */
 .cl-bento-cell > * {
-  flex: 1;
-}
-
-/* D21: a product image beside a taller tile fills its cell; the well grows
-   and shows more of the screen instead of leaving a blank strip under it. */
-.cl-bento-cell > .cl-frame > .cl-frame-card {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-}
-
-.cl-bento-cell > .cl-frame .cl-frame-well {
   flex: 1;
 }
 

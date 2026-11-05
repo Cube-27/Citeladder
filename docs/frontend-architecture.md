@@ -107,7 +107,8 @@ each page renders. Unknown or held capability paths return
 
 Illustrative product excerpts are the `Screen*` components in
 `frontend/components/marketing/screens/`, each shown in a `ProductFrame`: fixed-size
-crops composed from `components/ui`, drawn (no live controls) and filled from the
+screens, scaled whole to fit the frame and never cropped, composed from
+`components/ui`, drawn (no live controls) and filled from the
 one synthetic dataset in `demo-data.ts`. They import no app runtime and are named
 by the frame's label.
 Editorial publication never grants access: Agent/content workflows use demo

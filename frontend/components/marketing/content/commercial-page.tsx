@@ -44,7 +44,7 @@ export function CommercialEntryPage({
           </>
         }
       >
-        <ProductFrame aspect="hero" inset={48} label="AI Visibility">
+        <ProductFrame label="AI Visibility">
           <ScreenVisibility />
         </ProductFrame>
       </PageHero>
