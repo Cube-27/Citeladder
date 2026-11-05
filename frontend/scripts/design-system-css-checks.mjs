@@ -25,7 +25,6 @@ const IGNORED_DIRECTORIES = new Set([
   'coverage',
 ]);
 
-const RADIUS_PROPERTY = /^border(?:-(?:top|bottom|start|end)-(?:left|right|start|end))?-radius$/;
 const SPACING_PROPERTY =
   /^(?:(?:padding|margin|inset)(?:-[a-z-]+)?|gap|row-gap|column-gap|top|right|bottom|left)$/;
 const MOTION_PROPERTY = /^(?:transition|animation)(?:-(?:duration|timing-function|delay))?$/;
@@ -43,7 +42,6 @@ const EASING_FUNCTIONS = new Set(['cubic-bezier', 'steps', 'linear']);
 const WIDE_KEYWORDS = new Set(['inherit', 'initial', 'unset', 'revert', 'revert-layer']);
 
 const RULE_MESSAGES = {
-  'css-radius': 'radius must be var(--radius-*) or 0',
   'css-type': 'font-size and line-height must consume a var(--text-*) role',
   'css-spacing': 'spacing must sit on the 4px grid (2px and below only for hairline insets)',
   'css-motion': 'timing must consume var(--motion-*) and var(--ease-*)',
@@ -67,30 +65,6 @@ function layers(value) {
     else if (node.type !== 'space' && node.type !== 'comment') result.at(-1).push(node);
   }
   return result;
-}
-
-/** Literal dimensions anywhere in a value, skipping var() and its fallback. */
-function literalDimensions(value) {
-  const found = [];
-  valueParser(value).walk((node) => {
-    if (isVar(node)) return false;
-    if (node.type !== 'word') return undefined;
-    const unit = valueParser.unit(node.value);
-    if (unit && Number(unit.number) !== 0) found.push(node.value);
-    return undefined;
-  });
-  return found;
-}
-
-function radiusAllowed(value) {
-  if (literalDimensions(value).length) return false;
-  return topLevel(value).every(
-    (node) =>
-      (node.type === 'div' && node.value === '/') ||
-      (isVar(node) && varName(node).startsWith('--radius-')) ||
-      (node.type === 'word' && (node.value === '0' || WIDE_KEYWORDS.has(node.value))) ||
-      (node.type === 'function' && node.value === 'calc'),
-  );
 }
 
 function typeAllowed(property, value) {
@@ -192,10 +166,6 @@ const listedFinding = (rule, property, found) =>
  * decl, label)` returns `[rule, detail]` or null when the value is allowed.
  */
 const PROPERTY_FAMILIES = [
-  {
-    matches: (property) => RADIUS_PROPERTY.test(property),
-    finding: (property, value) => (radiusAllowed(value) ? null : ['css-radius', value]),
-  },
   {
     matches: (property) => property === 'font-size' || property === 'line-height',
     finding: (property, value) =>

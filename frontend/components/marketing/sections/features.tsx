@@ -5,8 +5,8 @@ import { cn } from '@/lib/utils';
 import { CheckList, Eyebrow, SiteArrowLink } from './site-parts';
 
 /**
- * FeatureCard: a flat bordered card with an optional product image well on
- * top, then an eyebrow or a two-digit step number, a title (title, or
+ * FeatureCard: a bordered surface card with the card shadow (D29), an
+ * optional product image on top, then an optional eyebrow, a title (title, or
  * display-md at `lg`), body, an optional check list and, as a link, an arrow
  * line. With an `href` the whole card is the link. A `wide` card (alone in
  * its row) sets its points beside the copy, not under it.
@@ -15,7 +15,6 @@ export function FeatureCard({
   href,
   linkLabel = 'Learn more',
   eyebrow,
-  step,
   title,
   body,
   points,
@@ -27,8 +26,6 @@ export function FeatureCard({
   href?: string;
   linkLabel?: string;
   eyebrow?: ReactNode;
-  /** The card's place in a numbered series (1 shows as "01"); used without an eyebrow. */
-  step?: number;
   title: ReactNode;
   body?: ReactNode;
   /** What the card covers, as a small check list under the body. */
@@ -52,11 +49,6 @@ export function FeatureCard({
       {media}
       <div className="cl-fcard-body">
         {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
-        {step !== undefined && !eyebrow && (
-          <span className="cl-fcard-index" aria-hidden>
-            {String(step).padStart(2, '0')}
-          </span>
-        )}
         <Heading className="cl-fcard-title">{title}</Heading>
         {body && <p className="cl-fcard-text">{body}</p>}
         {points && points.length > 0 && <CheckList items={points} small />}

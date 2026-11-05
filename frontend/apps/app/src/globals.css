@@ -44,6 +44,12 @@
   --color-paper: #f4f4f4;
   --color-surface: #ffffff;
   --color-surface-sunken: #ececec;
+  /* The website footer is dark in both themes (D29), so its four roles keep
+     one value and are not rebound in dark. */
+  --color-footer: #151515;
+  --color-footer-ink: #f4f4f4;
+  --color-footer-ink-muted: #a6a6a6;
+  --color-footer-line: #2a2a2a;
   --color-nav-glass: rgb(244 244 244 / 78%);
   --color-line: #e5e5e5;
   --color-line-strong: #d4d4d4;
@@ -241,9 +247,11 @@
   --shadow-pop:
     0 0 0 1px rgb(17 17 17 / 8%), 0 2px 6px rgb(17 17 17 / 6%),
     0 16px 40px -8px rgb(17 17 17 / 14%);
+  /* press (D29): a top highlight, a bottom inner shade, a tight drop and a
+     soft lift, so the primary button reads as a raised key. */
   --shadow-press:
-    inset 0 1px 0 rgb(255 255 255 / 16%), 0 0 0 1px var(--color-ink),
-    0 1px 2px rgb(17 17 17 / 24%);
+    inset 0 1px 0 rgb(255 255 255 / 35%), inset 0 -2px 0 rgb(0 0 0 / 20%),
+    0 1px 2px rgb(0 0 0 / 40%), 0 8px 24px -6px rgb(17 17 17 / 35%);
 
   /* Controls. Every interactive row in one view uses one height: 32 (D11),
      28 compact, 48 for website calls to action. `row-app` is the app's
@@ -358,7 +366,9 @@
   --shadow-xs: 0 0 0 1px rgb(255 255 255 / 8%), 0 1px 2px rgb(0 0 0 / 50%);
   --shadow-card: 0 0 0 1px rgb(255 255 255 / 7%), 0 1px 2px rgb(0 0 0 / 60%);
   --shadow-pop: 0 0 0 1px rgb(255 255 255 / 10%), 0 16px 40px rgb(0 0 0 / 60%);
-  --shadow-press: inset 0 1px 0 rgb(255 255 255 / 60%), 0 1px 2px rgb(0 0 0 / 60%);
+  --shadow-press:
+    inset 0 1px 0 rgb(255 255 255 / 60%), inset 0 -2px 0 rgb(0 0 0 / 20%),
+    0 1px 2px rgb(0 0 0 / 60%), 0 8px 24px -6px rgb(0 0 0 / 60%);
 }
 
 /* Tailwind folds a theme shadow into its own variable at build time, which
@@ -483,8 +493,8 @@
   background-color: color-mix(in srgb, var(--color-ink-muted) 50%, transparent);
 }
 
-/* The app, login and onboarding sit on `paper`; the website and docs
-   (`data-public-surface` on <html>) on `surface`. Wide content scrolls in its
+/* The app, login, onboarding and the website sit on `paper`; the docs
+   (`data-public-surface` alone on <html>) on `surface` (D29). Wide content scrolls in its
    owning region; document overflow stays observable. */
 html {
   min-height: 100%;
@@ -522,8 +532,8 @@ body {
   text-size-adjust: 100%;
 }
 
-html[data-public-surface],
-html[data-public-surface] body {
+html[data-public-surface]:not([data-marketing-surface]),
+html[data-public-surface]:not([data-marketing-surface]) body {
   background: var(--color-surface);
 }
 
@@ -893,6 +903,12 @@ a.focus-ring:active .type-caption {
   border: 0;
   box-shadow: none;
   padding: 0;
+}
+
+/* The primary button is a raised key (D29): a faint light-to-shade sheen over
+   its ink fill, under the press shadow; pressed, it drops to the edge shadow. */
+.button-key {
+  background-image: linear-gradient(rgb(255 255 255 / 14%), rgb(0 0 0 / 8%));
 }
 
 /* The website's shared buttons (a form's submit, a callout action) take the

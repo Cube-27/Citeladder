@@ -127,13 +127,12 @@ function Loop() {
       lead="Run your buyers' questions, fix what the answers show, then run them again."
     >
       <Bento
-        cells={LOOP_TILES.map((tile, index) => ({
+        cells={LOOP_TILES.map((tile) => ({
           key: tile.key,
           span: tile.span,
           content: (
             <FeatureCard
               href={tile.href}
-              step={index + 1}
               title={tile.title}
               body={tile.body}
               media={<ProductFrame label={tile.label}>{tile.screen}</ProductFrame>}
