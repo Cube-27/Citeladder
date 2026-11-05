@@ -57,7 +57,10 @@ export const SCREEN_CATALOG: Readonly<Record<PlatformScreen, CatalogEntry>> = {
   'cited-url': vignette(ScreenCitedUrl, 'acme.com/pricing: which engines retrieve and cite it'),
   'site-health': vignette(ScreenSiteHealth, 'Site Health for acme.com: score 82, 7 failed checks'),
   'crawler-access': vignette(ScreenCrawlerAccess, 'AI crawler access to acme.com from robots.txt'),
-  demand: vignette(ScreenDemand, 'Search Console clicks, CTR and position for acme.com'),
+  demand: vignette(
+    ScreenDemand,
+    'Search Demand signals for acme.com: a query in striking distance, a CTR gap, two pages on one query and an emerging query',
+  ),
   referrals: vignette(ScreenReferrals, 'Sessions referred to acme.com by AI assistants'),
   perception: vignette(ScreenPerception, 'How AI engines describe Acme Analytics'),
   engines: vignette(ScreenEngines, 'Acme Analytics visibility on each engine'),

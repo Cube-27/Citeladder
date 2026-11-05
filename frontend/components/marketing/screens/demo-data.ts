@@ -301,7 +301,45 @@ export const KEYWORDS = (
   intent,
 }));
 
-export const WEEKLY_CLICKS = [701, 734, 768, 752, 801, 822, 864, 925];
+/* ---------- Search Demand ---------- */
+
+/**
+ * Search Demand signals, one of each kind the page names: a query in
+ * striking distance (4 to 15), a CTR gap against the position's median, two
+ * pages splitting one query and an emerging query (last 14 days on the 14
+ * before).
+ */
+export const DEMAND_SIGNALS: readonly Readonly<{
+  query: string;
+  detail: string;
+  signal: string;
+  figure: string;
+}>[] = [
+  {
+    query: 'product analytics for startups',
+    detail: '/pricing · 1,840 impressions',
+    signal: 'Striking distance',
+    figure: 'Pos. 7.4',
+  },
+  {
+    query: 'mixpanel alternatives',
+    detail: '/compare/northwind · median 4.1%',
+    signal: 'CTR gap',
+    figure: '1.2% CTR',
+  },
+  {
+    query: 'feature adoption metrics',
+    detail: '/blog/feature-adoption and /docs/adoption',
+    signal: 'Two pages',
+    figure: '58% / 34%',
+  },
+  {
+    query: 'session replay pricing',
+    detail: '/pricing · last 14 days',
+    signal: 'Emerging',
+    figure: '+212%',
+  },
+];
 
 /* ---------- AI referrals ---------- */
 

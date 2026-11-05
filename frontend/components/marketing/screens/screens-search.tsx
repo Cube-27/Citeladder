@@ -2,11 +2,11 @@ import { Badge } from '@/components/ui/badge';
 import { EngineMark } from '@/components/ui/engine-mark';
 
 import {
+  DEMAND_SIGNALS,
   ENGINE_NAMES,
   ENGINE_ROWS,
   KEYWORDS,
   THEMES,
-  WEEKLY_CLICKS,
   WEEKLY_REFERRALS,
   WEEKS,
 } from './demo-data';
@@ -44,31 +44,23 @@ export function ScreenKeywords() {
   );
 }
 
-/** Search Demand: Search Console clicks, CTR and position, and weekly clicks. */
+/** Search Demand: the signals it raised, each with its query, page and figure. */
 export function ScreenDemand() {
   return (
     <Vignette
-      title="Google Search"
-      meta="acme.com · last 28 days"
-      badge={<Badge>Search Console</Badge>}
+      title="Search signals"
+      meta="acme.com · Search Console, last 28 days"
+      badge={<Badge>18 signals</Badge>}
     >
-      <VignetteStats
-        stats={[
-          { label: 'Clicks', value: '3,412', change: { value: 9.8, unit: '%' } },
-          { label: 'CTR', value: '2.9%', change: { value: 0.1, unit: ' pts' } },
-          {
-            label: 'Avg. position',
-            value: '14.2',
-            change: { value: -0.8, policy: 'lower-is-better' },
-          },
-        ]}
-      />
-      <VignetteChart
-        label="Weekly clicks from Google Search, acme.com"
-        weeks={WEEKS}
-        values={WEEKLY_CLICKS}
-        ticks={[600, 800, 1000]}
-        format={count}
+      <VignetteRows
+        label="Search signals, strongest first"
+        rows={fourRows(DEMAND_SIGNALS, (row) => ({
+          key: row.query,
+          label: row.query,
+          secondary: row.detail,
+          extra: <Badge>{row.signal}</Badge>,
+          value: row.figure,
+        }))}
       />
     </Vignette>
   );

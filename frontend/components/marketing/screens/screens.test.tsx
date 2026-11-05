@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import { ProductFrame } from './product-frame';
 import { fourRows } from './screen-vignette';
 import { ScreenActions } from './screens-agent';
-import { ScreenDemand } from './screens-search';
+import { ScreenDemand, ScreenReferrals } from './screens-search';
 import { ScreenSiteHealth } from './screens-site';
 import { ScreenAnswer, ScreenSources } from './screens-visibility';
 
@@ -35,13 +35,24 @@ describe('screens', () => {
   });
 
   it('reads every week of a vignette chart as text', () => {
-    render(<ScreenDemand />);
+    render(<ScreenReferrals />);
 
     expect(
       screen.getByText(
-        'Weekly clicks from Google Search, acme.com: 8 Sep 701, 15 Sep 734, 22 Sep 768, 29 Sep 752, 6 Oct 801, 13 Oct 822, 20 Oct 864, 27 Oct 925',
+        'Weekly sessions from AI assistants, acme.com: 8 Sep 300, 15 Sep 320, 22 Sep 335, 29 Sep 354, 6 Oct 410, 13 Oct 440, 20 Oct 480, 27 Oct 516',
       ),
     ).toBeInTheDocument();
+  });
+
+  it('shows one Search Demand signal of each kind with its query, page and figure', () => {
+    render(<ScreenDemand />);
+
+    expect(rowsOf('Search signals, strongest first')).toEqual([
+      'product analytics for startups/pricing · 1,840 impressionsStriking distancePos. 7.4',
+      'mixpanel alternatives/compare/northwind · median 4.1%CTR gap1.2% CTR',
+      'feature adoption metrics/blog/feature-adoption and /docs/adoptionTwo pages58% / 34%',
+      'session replay pricing/pricing · last 14 daysEmerging+212%',
+    ]);
   });
 
   it('lists the four most-cited domains with their share of all citations, leaving out Other', () => {

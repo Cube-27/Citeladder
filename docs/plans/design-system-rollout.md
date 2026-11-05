@@ -181,10 +181,9 @@ session that produced this plan.
 | D4 | Do PDFs and emails move to Geist? | PDFs keep Inter for now; only the logo accent changes |
 
 On 5 November 2026 the owner reviewed the shipped app and docs and decided
-D5–D9 (source: the owner's review in the orchestration session).
-`frontend/scripts/design-system-review-checks.mjs` enforces D5, D6, D7 and D9
-in `pnpm check:policy`; D8 retired the bar component, whose name the policy
-now rejects as legacy.
+D5–D9 (source: the owner's review in the orchestration session). Their
+`check:policy` rules were deleted with the other style bans in D34
+([design.md](../design.md#decisions)).
 
 | ID | Question | Decision |
 | --- | --- | --- |

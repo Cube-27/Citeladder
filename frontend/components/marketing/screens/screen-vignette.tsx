@@ -176,11 +176,13 @@ export function VignetteChart({
           ))}
         </div>
         <div className="cl-vig-area">
+          {/* Absolutely placed, so the plot's grid row sets its height and the
+              square viewBox never does (a hero frame has no height to fill). */}
           <svg
             focusable="false"
             viewBox={`0 0 ${PLOT} ${PLOT}`}
             preserveAspectRatio="none"
-            className="block size-full overflow-visible"
+            className="absolute inset-0 block size-full overflow-visible"
           >
             {ticks.map((tick) => (
               <line

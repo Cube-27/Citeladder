@@ -422,15 +422,15 @@
   }
 }
 
-/* The marketing site's responsive display sizes: the page title (H1) is 60
-   and a section heading 44 from 768px up, the owner's 982px desktop
-   included, and 32 and 28 on phones (D30); display-lg is 32, 26 on phones.
+/* The marketing site's responsive display sizes: the page title (H1) is 80
+   and a section heading 56 from 768px up, the owner's 982px desktop
+   included, and 32 and 28 on phones (D34); display-lg is 32, 26 on phones.
    Marketing pages only, so a docs article title keeps its own fallback. */
 [data-marketing-surface] {
-  --text-site-title: 60px;
-  --text-site-title--line-height: 64px;
-  --text-site-section: 44px;
-  --text-site-section--line-height: 50px;
+  --text-site-title: 80px;
+  --text-site-title--line-height: 86px;
+  --text-site-section: 56px;
+  --text-site-section--line-height: 60px;
   --text-site-feature: var(--text-display-lg);
   --text-site-feature--line-height: var(--text-display-lg--line-height);
 }

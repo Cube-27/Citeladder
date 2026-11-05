@@ -216,23 +216,6 @@ const REQUIRED_WEBSITE_ROLES = [
   '.cl-eyebrow',
 ];
 
-/**
- * Roles whose size must stay ordered relative to each other.
- *
- * This is the consistency the frozen font-size list was really protecting: a
- * page title must not out-size the hero, and body copy must not out-size a
- * heading. Any absolute scale satisfying the order passes.
- */
-const WEBSITE_TYPE_LADDER = [
-  '.cl-lhero-title',
-  '.cl-phero-title',
-  '.cl-shead-title',
-  '.cl-fcard-title',
-  '.cl-lead',
-  '.cl-body',
-  '.cl-note',
-];
-
 /** Geometry roles belong to one ladder in globals.css; no surface re-scales them. */
 const SHARED_GEOMETRY_ROLES = ['2xs', 'xs', 'sm', 'md', 'lg', 'xl', 'full'].map(
   (size) => `--radius-${size}`,
@@ -412,7 +395,7 @@ const CLASS_ATTRIBUTES = new Set([
 ]);
 
 /** Every JSX element's class attributes as `{ tag, classes, line }`. */
-export function jsxClassData(source, label) {
+function jsxClassData(source, label) {
   const program = parseSource(source, label);
   const lineOf = lineIndex(source);
   const bindings = staticBindings(program);
@@ -1230,48 +1213,6 @@ export function textRoleBackgroundViolations(source, label) {
   return violations;
 }
 
-/**
- * Every `--text-*` role's desktop size in px. The first declaration is the
- * base (later ones are breakpoint overrides), and an alias such as
- * `--text-site-title: var(--text-display-2xl)` takes its target's size.
- */
-function textRoleSizes(tokenCss) {
-  const sizes = new Map();
-  const aliases = new Map();
-  for (const [, token, raw] of tokenCss.matchAll(/(--text-[\w-]+)\s*:([^;{}]+);/g)) {
-    if (sizes.has(token) || aliases.has(token)) continue;
-    const value = raw.trim();
-    const px = /^([\d.]+)px$/.exec(value)?.[1];
-    const alias = /^var\((--text-[\w-]+)\)$/.exec(value)?.[1];
-    if (px) sizes.set(token, Number(px));
-    else if (alias) aliases.set(token, alias);
-  }
-  for (const [token, alias] of aliases) {
-    if (sizes.has(alias)) sizes.set(token, sizes.get(alias));
-  }
-  return sizes;
-}
-
-/**
- * A role's base font-size in px — a literal px or rem, or a `--text-*` role
- * resolved from the token stylesheet — or null when it does not set one.
- */
-function fontSizePx(rules, selector, roleSizes) {
-  const pattern = selectorPattern(selector);
-  for (const rule of rules) {
-    if (!pattern.test(rule.prelude)) continue;
-    const match = /(?:^|[;{]|\s)font-size\s*:\s*([^;]+)/.exec(rule.body);
-    if (!match) continue;
-    const value = match[1].trim();
-    const role = /^var\((--text-[\w-]+)\)$/.exec(value)?.[1];
-    if (role) return roleSizes.get(role) ?? null;
-    const literal = /^([\d.]+)(px|rem)$/.exec(value);
-    if (literal) return Number(literal[1]) * (literal[2] === 'rem' ? 16 : 1);
-    return null;
-  }
-  return null;
-}
-
 /** Shared token completeness and relative scale consistency; appearance belongs to docs/design.md. */
 export function productContractViolations(root) {
   const violations = [];
@@ -1415,49 +1356,13 @@ function missingRoleViolations(rules, cssLabel) {
   return violations;
 }
 
-function typeLadderViolations(rules, cssLabel, roleSizes) {
-  const violations = [];
-  const sizes = WEBSITE_TYPE_LADDER.map((selector) => ({
-    selector,
-    size: fontSizePx(rules, selector, roleSizes),
-  }));
-  // Every rung must resolve, or the ladder could pass by measuring nothing.
-  for (const { selector, size } of sizes) {
-    if (size === null) violations.push(`${cssLabel}: ${selector} must set a resolvable font-size`);
-  }
-  const ladder = sizes.filter((step) => step.size !== null);
-  for (let index = 1; index < ladder.length; index += 1) {
-    const previous = ladder[index - 1];
-    const current = ladder[index];
-    if (current.size > previous.size) {
-      violations.push(
-        cssLabel +
-          ': ' +
-          current.selector +
-          ' (' +
-          current.size +
-          'px) must not be larger than ' +
-          previous.selector +
-          ' (' +
-          previous.size +
-          'px)',
-      );
-    }
-  }
-  return violations;
-}
-
 export function websiteContractViolations(root) {
   const violations = [];
   const cssPath = join(root, ...WEBSITE_CSS.split('/'));
   const cssLabel = relative(root, cssPath).replaceAll('\\', '/');
   const rules = cssRules(readFileSync(cssPath, 'utf8'));
 
-  const roleSizes = textRoleSizes(readFileSync(join(root, ...TOKEN_CSS.split('/')), 'utf8'));
-  violations.push(
-    ...missingRoleViolations(rules, cssLabel),
-    ...typeLadderViolations(rules, cssLabel, roleSizes),
-  );
+  violations.push(...missingRoleViolations(rules, cssLabel));
 
   for (const selector of TOKEN_COLORED_ROLES) {
     const selectorRegex = selectorPattern(selector);
