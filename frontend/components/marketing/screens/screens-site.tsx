@@ -32,7 +32,58 @@ import {
   ScreenTable,
   ScreenTableCard,
   ScreenTabs,
+  type ScreenColumn,
 } from './screen-parts';
+
+const CHECK_COLUMNS: readonly ScreenColumn<(typeof FAILED_CHECKS)[number]>[] = [
+  {
+    header: 'Check',
+    cell: (row) => <span className="cl-screen-strong">{row.check}</span>,
+  },
+  {
+    header: 'Severity',
+    width: 'md',
+    cell: (row) => (
+      <Badge tone={SEVERITY_TONE[row.severity]} dot>
+        {row.severity}
+      </Badge>
+    ),
+  },
+  { header: 'Pages', width: 'sm', numeric: true, cell: (row) => `${row.pages} pages` },
+];
+
+const BOT_COLUMNS: readonly ScreenColumn<(typeof BOTS)[number]>[] = [
+  {
+    header: 'Bot',
+    width: 'lg',
+    cell: (row) => <span className="cl-screen-mono cl-screen-strong">{row.bot}</span>,
+  },
+  { header: 'Operator', width: 'md', cell: (row) => row.operator },
+  {
+    header: 'Purpose',
+    cell: (row) => <span className="cl-screen-muted">{row.purpose}</span>,
+  },
+  {
+    header: 'Robots policy',
+    width: 'lg',
+    cell: (row) => (
+      <Badge tone={POLICY_TONE[row.policy]} dot>
+        {row.policy}
+      </Badge>
+    ),
+  },
+];
+
+const TOOL_COLUMNS: readonly ScreenColumn<(typeof MCP_TOOLS)[number]>[] = [
+  { header: 'Tool', cell: (row) => <span className="cl-screen-mono">{row.tool}</span> },
+  {
+    header: 'Access',
+    width: 'sm',
+    cell: (row) => (
+      <Badge tone={row.access === 'Write' ? 'warning' : 'neutral'}>{row.access}</Badge>
+    ),
+  },
+];
 
 /** Site Health: the score, its two halves, and the failed checks worst first. */
 export function ScreenSiteHealth() {
@@ -92,22 +143,7 @@ export function ScreenSiteHealth() {
             caption="Failed Site Health checks"
             rows={FAILED_CHECKS}
             rowKey={(row) => row.check}
-            columns={[
-              {
-                header: 'Check',
-                cell: (row) => <span className="cl-screen-strong">{row.check}</span>,
-              },
-              {
-                header: 'Severity',
-                width: 'md',
-                cell: (row) => (
-                  <Badge tone={SEVERITY_TONE[row.severity]} dot>
-                    {row.severity}
-                  </Badge>
-                ),
-              },
-              { header: 'Pages', width: 'sm', numeric: true, cell: (row) => `${row.pages} pages` },
-            ]}
+            columns={CHECK_COLUMNS}
           />
         </ScreenTableCard>
       </ScreenCols>
@@ -139,27 +175,7 @@ export function ScreenCrawlerAccess() {
             caption="AI crawler access from robots.txt"
             rows={BOTS}
             rowKey={(row) => row.bot}
-            columns={[
-              {
-                header: 'Bot',
-                width: 'lg',
-                cell: (row) => <span className="cl-screen-mono cl-screen-strong">{row.bot}</span>,
-              },
-              { header: 'Operator', width: 'md', cell: (row) => row.operator },
-              {
-                header: 'Purpose',
-                cell: (row) => <span className="cl-screen-muted">{row.purpose}</span>,
-              },
-              {
-                header: 'Robots policy',
-                width: 'lg',
-                cell: (row) => (
-                  <Badge tone={POLICY_TONE[row.policy]} dot>
-                    {row.policy}
-                  </Badge>
-                ),
-              },
-            ]}
+            columns={BOT_COLUMNS}
           />
         </ScreenTableCard>
         <ScreenStack>
@@ -294,16 +310,7 @@ export function ScreenMcp() {
             caption="Tools the CiteLadder MCP server exposes"
             rows={MCP_TOOLS}
             rowKey={(row) => row.tool}
-            columns={[
-              { header: 'Tool', cell: (row) => <span className="cl-screen-mono">{row.tool}</span> },
-              {
-                header: 'Access',
-                width: 'sm',
-                cell: (row) => (
-                  <Badge tone={row.access === 'Write' ? 'warning' : 'neutral'}>{row.access}</Badge>
-                ),
-              },
-            ]}
+            columns={TOOL_COLUMNS}
           />
         </ScreenTableCard>
         <ScreenCard

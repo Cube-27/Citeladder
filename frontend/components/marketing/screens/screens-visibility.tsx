@@ -46,6 +46,7 @@ import {
   ScreenTable,
   ScreenTableCard,
   ScreenTabs,
+  type ScreenColumn,
 } from './screen-parts';
 
 /** A still's controls are drawn, never wired. */
@@ -128,6 +129,52 @@ export function ScreenAnswer() {
 
 const percent = (value: number) => `${value.toFixed(1)}%`;
 
+const BRAND_COLUMNS: readonly ScreenColumn<(typeof BRANDS)[number]>[] = [
+  { header: 'Brand', cell: (brand) => <ScreenSite label={brand.name} /> },
+  { header: 'Visibility', width: 'sm', numeric: true, cell: (brand) => percent(brand.visibility) },
+  {
+    header: 'Change',
+    width: 'md',
+    numeric: true,
+    cell: (brand) => <ScreenDelta change={brand.change} />,
+  },
+];
+
+const OWN_PAGE_COLUMNS: readonly ScreenColumn<(typeof OWN_PAGES)[number]>[] = [
+  { header: 'Page', cell: (page) => <span className="cl-screen-mono">{page.path}</span> },
+  { header: 'Citations', width: 'sm', numeric: true, cell: (page) => page.citations },
+];
+
+const PROMPT_COLUMNS: readonly ScreenColumn<(typeof PROMPTS)[number]>[] = [
+  { header: 'Prompt', cell: (row) => <span className="cl-screen-strong">{row.prompt}</span> },
+  {
+    header: 'Topic',
+    width: 'lg',
+    cell: (row) => <span className="cl-screen-muted">{row.topic}</span>,
+  },
+  { header: 'Named by', width: 'md', cell: (row) => <ScreenEngineMarks on={row.engines} /> },
+  { header: 'Visibility', width: 'sm', numeric: true, cell: (row) => `${row.visibility}%` },
+  { header: 'Owned citations', width: 'md', numeric: true, cell: (row) => row.owned },
+  { header: 'Avg. mention position', width: 'lg', numeric: true, cell: (row) => row.position },
+  {
+    header: 'Change',
+    width: 'sm',
+    numeric: true,
+    cell: (row) => <ScreenDelta change={{ value: row.change, unit: ' pts', precision: 0 }} />,
+  },
+  {
+    header: 'Enabled',
+    width: 'xs',
+    cell: (row) => <Switch checked onCheckedChange={still} label={`Enabled: ${row.prompt}`} />,
+  },
+];
+
+const RETRIEVAL_COLUMNS: readonly ScreenColumn<(typeof PAGE_RETRIEVALS)[number]>[] = [
+  { header: 'Model', cell: (row) => <ScreenEngine engine={row.engine} /> },
+  { header: 'Retrievals', width: 'sm', numeric: true, cell: (row) => row.retrievals },
+  { header: 'Citations', width: 'sm', numeric: true, cell: (row) => row.citations },
+];
+
 /** The AI Visibility overview: the KPI row, the trend against competitors and the brand ranking. */
 export function ScreenVisibility() {
   return (
@@ -175,21 +222,7 @@ export function ScreenVisibility() {
               rows={BRANDS}
               rowKey={(brand) => brand.name}
               own={(brand) => brand.own === true}
-              columns={[
-                { header: 'Brand', cell: (brand) => <ScreenSite label={brand.name} /> },
-                {
-                  header: 'Visibility',
-                  width: 'sm',
-                  numeric: true,
-                  cell: (brand) => percent(brand.visibility),
-                },
-                {
-                  header: 'Change',
-                  width: 'md',
-                  numeric: true,
-                  cell: (brand) => <ScreenDelta change={brand.change} />,
-                },
-              ]}
+              columns={BRAND_COLUMNS}
             />
           </ScreenTableCard>
           <ScreenCard title="Acme Analytics by engine">
@@ -254,18 +287,7 @@ export function ScreenSources() {
               caption="Citations of acme.com pages this week"
               rows={OWN_PAGES}
               rowKey={(page) => page.path}
-              columns={[
-                {
-                  header: 'Page',
-                  cell: (page) => <span className="cl-screen-mono">{page.path}</span>,
-                },
-                {
-                  header: 'Citations',
-                  width: 'sm',
-                  numeric: true,
-                  cell: (page) => page.citations,
-                },
-              ]}
+              columns={OWN_PAGE_COLUMNS}
             />
           </ScreenTableCard>
         </ScreenStack>
@@ -317,50 +339,7 @@ export function ScreenPrompts() {
           caption="Tracked prompts"
           rows={PROMPTS}
           rowKey={(row) => row.prompt}
-          columns={[
-            {
-              header: 'Prompt',
-              cell: (row) => <span className="cl-screen-strong">{row.prompt}</span>,
-            },
-            {
-              header: 'Topic',
-              width: 'lg',
-              cell: (row) => <span className="cl-screen-muted">{row.topic}</span>,
-            },
-            {
-              header: 'Named by',
-              width: 'md',
-              cell: (row) => <ScreenEngineMarks on={row.engines} />,
-            },
-            {
-              header: 'Visibility',
-              width: 'sm',
-              numeric: true,
-              cell: (row) => `${row.visibility}%`,
-            },
-            { header: 'Owned citations', width: 'md', numeric: true, cell: (row) => row.owned },
-            {
-              header: 'Avg. mention position',
-              width: 'lg',
-              numeric: true,
-              cell: (row) => row.position,
-            },
-            {
-              header: 'Change',
-              width: 'sm',
-              numeric: true,
-              cell: (row) => (
-                <ScreenDelta change={{ value: row.change, unit: ' pts', precision: 0 }} />
-              ),
-            },
-            {
-              header: 'Enabled',
-              width: 'xs',
-              cell: (row) => (
-                <Switch checked onCheckedChange={still} label={`Enabled: ${row.prompt}`} />
-              ),
-            },
-          ]}
+          columns={PROMPT_COLUMNS}
         />
       </ScreenTableCard>
     </ScreenRoot>
@@ -414,11 +393,7 @@ export function ScreenCitedUrl() {
             caption="Retrievals and citations of acme.com/pricing by engine"
             rows={PAGE_RETRIEVALS}
             rowKey={(row) => row.engine}
-            columns={[
-              { header: 'Model', cell: (row) => <ScreenEngine engine={row.engine} /> },
-              { header: 'Retrievals', width: 'sm', numeric: true, cell: (row) => row.retrievals },
-              { header: 'Citations', width: 'sm', numeric: true, cell: (row) => row.citations },
-            ]}
+            columns={RETRIEVAL_COLUMNS}
           />
         </ScreenTableCard>
         <ScreenCard title="Quoted in answers">

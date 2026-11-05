@@ -22,6 +22,7 @@ import {
   ScreenTable,
   ScreenTableCard,
   ScreenTabs,
+  type ScreenColumn,
 } from './screen-parts';
 
 const still = () => undefined;
@@ -35,6 +36,27 @@ function StatusBadge({ status }: Readonly<{ status: ActionStatus }>) {
     </Badge>
   );
 }
+
+const ACTION_COLUMNS: readonly ScreenColumn<(typeof ACTIONS)[number]>[] = [
+  {
+    header: 'Target',
+    cell: (row) => (
+      <span className="cl-screen-target">
+        <span className={cn('cl-screen-strong', !quoted(row.kind) && 'cl-screen-mono')}>
+          {quoted(row.kind) ? `“${row.target}”` : row.target}
+        </span>
+        <span className="cl-screen-muted">{row.kind}</span>
+      </span>
+    ),
+  },
+  { header: 'Status', width: 'md', cell: (row) => <StatusBadge status={row.status} /> },
+  { header: 'Priority', width: 'sm', cell: (row) => row.priority },
+  {
+    header: 'Approach',
+    width: 'xl',
+    cell: (row) => <span className="cl-screen-muted">{row.approach}</span>,
+  },
+];
 
 /** Actions: prioritised work with its linked evidence, one action open beside the list. */
 export function ScreenActions() {
@@ -62,26 +84,7 @@ export function ScreenActions() {
             rows={ACTIONS}
             rowKey={(row) => row.target}
             selected={(row) => row.target === 'acme.com/docs/setup'}
-            columns={[
-              {
-                header: 'Target',
-                cell: (row) => (
-                  <span className="cl-screen-target">
-                    <span className={cn('cl-screen-strong', !quoted(row.kind) && 'cl-screen-mono')}>
-                      {quoted(row.kind) ? `“${row.target}”` : row.target}
-                    </span>
-                    <span className="cl-screen-muted">{row.kind}</span>
-                  </span>
-                ),
-              },
-              { header: 'Status', width: 'md', cell: (row) => <StatusBadge status={row.status} /> },
-              { header: 'Priority', width: 'sm', cell: (row) => row.priority },
-              {
-                header: 'Approach',
-                width: 'xl',
-                cell: (row) => <span className="cl-screen-muted">{row.approach}</span>,
-              },
-            ]}
+            columns={ACTION_COLUMNS}
           />
         </ScreenTableCard>
         <ScreenCard

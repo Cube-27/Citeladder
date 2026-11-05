@@ -35,9 +35,9 @@ export function ProductFrame({
   return (
     <figure className="cl-frame">
       <div className="cl-frame-card">
-        <div
+        <div // NOSONAR -- a live component crop shown as one picture, named by its label; <img> cannot hold it
           className={cn('cl-frame-well', `cl-frame-well--${aspect}`)}
-          role={label ? 'img' : undefined} // NOSONAR -- a live component crop shown as one picture, named by its label; <img> cannot hold it
+          role={label ? 'img' : undefined}
           aria-label={label}
         >
           <div className={cn('cl-frame-screen', `cl-frame-screen--inset-${inset}`)} inert>

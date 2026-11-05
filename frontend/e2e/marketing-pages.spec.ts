@@ -49,7 +49,10 @@ test.describe('marketing routes', () => {
       // The page's product screen is server-rendered: the frame's name and
       // the screen's figures are in the HTML even with JavaScript disabled.
       const heroFrame = page.locator('main figure.cl-frame').first();
-      await expect(heroFrame.locator('[role="img"]')).toHaveAttribute('aria-label', /\S/);
+      await expect(heroFrame.locator('.cl-frame-well[role="img"]')).toHaveAttribute(
+        'aria-label',
+        /\S/,
+      );
       await expect(heroFrame).toContainText(/\d/);
       const schemas = await page
         .locator('script[type="application/ld+json"]')

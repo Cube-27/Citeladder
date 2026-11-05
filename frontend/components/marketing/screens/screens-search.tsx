@@ -30,6 +30,7 @@ import {
   ScreenTable,
   ScreenTableCard,
   ScreenTabs,
+  type ScreenColumn,
 } from './screen-parts';
 
 const count = (value: number) => value.toLocaleString('en-US');
@@ -43,6 +44,84 @@ const KEYWORD_STATS = [
   { label: 'Referring domains', value: '318', change: { value: 6, precision: 0 } },
   { label: 'Backlinks', value: '9,640', change: { value: 2.1, unit: '%' } },
 ] as const;
+
+const KEYWORD_COLUMNS: readonly ScreenColumn<(typeof KEYWORDS)[number]>[] = [
+  {
+    header: 'Keyword',
+    cell: (row) => <span className="cl-screen-strong">{row.keyword}</span>,
+  },
+  { header: 'Position', width: 'sm', numeric: true, cell: (row) => row.position },
+  { header: 'Volume', width: 'sm', numeric: true, cell: (row) => count(row.volume) },
+  {
+    header: 'Ranking page',
+    width: 'xl',
+    cell: (row) => <span className="cl-screen-mono">{row.page}</span>,
+  },
+  { header: 'Est. traffic', width: 'md', numeric: true, cell: (row) => row.traffic },
+  { header: 'CPC (USD)', width: 'sm', numeric: true, cell: (row) => row.cpc },
+  { header: 'Difficulty', width: 'sm', numeric: true, cell: (row) => row.difficulty },
+  { header: 'Intent', width: 'md', cell: (row) => <Badge>{row.intent}</Badge> },
+];
+
+const QUERY_COLUMNS: readonly ScreenColumn<(typeof QUERIES)[number]>[] = [
+  {
+    header: 'Query',
+    cell: (row) => <span className="cl-screen-strong">{row.query}</span>,
+  },
+  { header: 'Signal', width: 'lg', cell: (row) => <Badge>{row.signal}</Badge> },
+  { header: 'Clicks', width: 'sm', numeric: true, cell: (row) => count(row.clicks) },
+  { header: 'Impressions', width: 'md', numeric: true, cell: (row) => count(row.impressions) },
+  { header: 'CTR', width: 'xs', numeric: true, cell: (row) => row.ctr },
+  { header: 'Position', width: 'sm', numeric: true, cell: (row) => row.position },
+];
+
+const REFERRAL_SOURCE_COLUMNS: readonly ScreenColumn<(typeof REFERRAL_SOURCES)[number]>[] = [
+  { header: 'Source', cell: (row) => <ScreenEngine engine={row.engine} /> },
+  { header: 'Sessions', width: 'sm', numeric: true, cell: (row) => count(row.sessions) },
+  { header: 'Engaged', width: 'sm', numeric: true, cell: (row) => row.engaged },
+];
+
+const REFERRAL_PAGE_COLUMNS: readonly ScreenColumn<(typeof REFERRAL_PAGES)[number]>[] = [
+  {
+    header: 'Landing path',
+    cell: (row) => <span className="cl-screen-mono">{row.path}</span>,
+  },
+  { header: 'Sessions', width: 'sm', numeric: true, cell: (row) => count(row.sessions) },
+];
+
+const THEME_COLUMNS: readonly ScreenColumn<(typeof THEMES)[number]>[] = [
+  {
+    header: 'Theme',
+    width: 'xl',
+    cell: (row) => <span className="cl-screen-strong">{row.theme}</span>,
+  },
+  { header: 'Tone', width: 'sm', cell: (row) => row.tone },
+  { header: 'Positive', width: 'sm', numeric: true, cell: (row) => row.positive },
+  { header: 'Negative', width: 'sm', numeric: true, cell: (row) => row.negative },
+  {
+    header: 'Top quote',
+    cell: (row) => <span className="cl-screen-muted">“{row.quote}”</span>,
+  },
+];
+
+const ENGINE_COLUMNS: readonly ScreenColumn<(typeof ENGINE_ROWS)[number]>[] = [
+  { header: 'Engine', cell: (row) => <ScreenEngine engine={row.engine} /> },
+  {
+    header: 'Visibility',
+    width: 'sm',
+    numeric: true,
+    cell: (row) => `${row.visibility.toFixed(1)}%`,
+  },
+  {
+    header: 'Change',
+    width: 'md',
+    numeric: true,
+    cell: (row) => <ScreenDelta change={row.change} />,
+  },
+  { header: 'Owned citation rate', width: 'lg', numeric: true, cell: (row) => row.owned },
+  { header: 'Avg. position', width: 'md', numeric: true, cell: (row) => row.position },
+  { header: 'Answers', width: 'sm', numeric: true, cell: (row) => row.answers },
+];
 
 /** Keyword Research: the domain's ranking figures and the keywords it ranks for. */
 export function ScreenKeywords() {
@@ -78,23 +157,7 @@ export function ScreenKeywords() {
           caption="Keywords acme.com ranks for"
           rows={KEYWORDS}
           rowKey={(row) => row.keyword}
-          columns={[
-            {
-              header: 'Keyword',
-              cell: (row) => <span className="cl-screen-strong">{row.keyword}</span>,
-            },
-            { header: 'Position', width: 'sm', numeric: true, cell: (row) => row.position },
-            { header: 'Volume', width: 'sm', numeric: true, cell: (row) => count(row.volume) },
-            {
-              header: 'Ranking page',
-              width: 'xl',
-              cell: (row) => <span className="cl-screen-mono">{row.page}</span>,
-            },
-            { header: 'Est. traffic', width: 'md', numeric: true, cell: (row) => row.traffic },
-            { header: 'CPC (USD)', width: 'sm', numeric: true, cell: (row) => row.cpc },
-            { header: 'Difficulty', width: 'sm', numeric: true, cell: (row) => row.difficulty },
-            { header: 'Intent', width: 'md', cell: (row) => <Badge>{row.intent}</Badge> },
-          ]}
+          columns={KEYWORD_COLUMNS}
         />
       </ScreenTableCard>
     </ScreenRoot>
@@ -162,22 +225,7 @@ export function ScreenDemand() {
           caption="Top Search Console queries"
           rows={QUERIES}
           rowKey={(row) => row.query}
-          columns={[
-            {
-              header: 'Query',
-              cell: (row) => <span className="cl-screen-strong">{row.query}</span>,
-            },
-            { header: 'Signal', width: 'lg', cell: (row) => <Badge>{row.signal}</Badge> },
-            { header: 'Clicks', width: 'sm', numeric: true, cell: (row) => count(row.clicks) },
-            {
-              header: 'Impressions',
-              width: 'md',
-              numeric: true,
-              cell: (row) => count(row.impressions),
-            },
-            { header: 'CTR', width: 'xs', numeric: true, cell: (row) => row.ctr },
-            { header: 'Position', width: 'sm', numeric: true, cell: (row) => row.position },
-          ]}
+          columns={QUERY_COLUMNS}
         />
       </ScreenTableCard>
     </ScreenRoot>
@@ -242,16 +290,7 @@ export function ScreenReferrals() {
             caption="Sessions by AI assistant, last 28 days"
             rows={REFERRAL_SOURCES}
             rowKey={(row) => row.engine}
-            columns={[
-              { header: 'Source', cell: (row) => <ScreenEngine engine={row.engine} /> },
-              {
-                header: 'Sessions',
-                width: 'sm',
-                numeric: true,
-                cell: (row) => count(row.sessions),
-              },
-              { header: 'Engaged', width: 'sm', numeric: true, cell: (row) => row.engaged },
-            ]}
+            columns={REFERRAL_SOURCE_COLUMNS}
           />
         </ScreenTableCard>
         <ScreenTableCard title="AI referral landing pages">
@@ -259,18 +298,7 @@ export function ScreenReferrals() {
             caption="AI-referred sessions by landing page, last 28 days"
             rows={REFERRAL_PAGES}
             rowKey={(row) => row.path}
-            columns={[
-              {
-                header: 'Landing path',
-                cell: (row) => <span className="cl-screen-mono">{row.path}</span>,
-              },
-              {
-                header: 'Sessions',
-                width: 'sm',
-                numeric: true,
-                cell: (row) => count(row.sessions),
-              },
-            ]}
+            columns={REFERRAL_PAGE_COLUMNS}
           />
         </ScreenTableCard>
       </ScreenCols>
@@ -320,20 +348,7 @@ export function ScreenPerception() {
           caption="What engines say about Acme Analytics, by theme"
           rows={THEMES}
           rowKey={(row) => row.theme}
-          columns={[
-            {
-              header: 'Theme',
-              width: 'xl',
-              cell: (row) => <span className="cl-screen-strong">{row.theme}</span>,
-            },
-            { header: 'Tone', width: 'sm', cell: (row) => row.tone },
-            { header: 'Positive', width: 'sm', numeric: true, cell: (row) => row.positive },
-            { header: 'Negative', width: 'sm', numeric: true, cell: (row) => row.negative },
-            {
-              header: 'Top quote',
-              cell: (row) => <span className="cl-screen-muted">“{row.quote}”</span>,
-            },
-          ]}
+          columns={THEME_COLUMNS}
         />
       </ScreenTableCard>
     </ScreenRoot>
@@ -349,24 +364,7 @@ export function ScreenEngines() {
           caption="Visibility by engine"
           rows={ENGINE_ROWS}
           rowKey={(row) => row.engine}
-          columns={[
-            { header: 'Engine', cell: (row) => <ScreenEngine engine={row.engine} /> },
-            {
-              header: 'Visibility',
-              width: 'sm',
-              numeric: true,
-              cell: (row) => `${row.visibility.toFixed(1)}%`,
-            },
-            {
-              header: 'Change',
-              width: 'md',
-              numeric: true,
-              cell: (row) => <ScreenDelta change={row.change} />,
-            },
-            { header: 'Owned citation rate', width: 'lg', numeric: true, cell: (row) => row.owned },
-            { header: 'Avg. position', width: 'md', numeric: true, cell: (row) => row.position },
-            { header: 'Answers', width: 'sm', numeric: true, cell: (row) => row.answers },
-          ]}
+          columns={ENGINE_COLUMNS}
         />
       </ScreenTableCard>
       <ScreenCard

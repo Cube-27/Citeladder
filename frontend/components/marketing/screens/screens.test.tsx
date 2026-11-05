@@ -17,7 +17,7 @@ describe('ProductFrame', () => {
 
     const picture = screen.getByRole('img', { name: 'Answer record' });
     expect(picture.firstElementChild).toHaveAttribute('inert');
-    expect(screen.getByRole('figure')).toHaveTextContent(/One answer\s*Its sources and brands\./);
+    expect(screen.getByRole('figure').textContent).toMatch(/One answer\s*Its sources and brands\./);
   });
 });
 
