@@ -208,7 +208,7 @@ function mountSheet(chrome: HTMLElement) {
     for (const element of held) element.setAttribute('inert', '');
     // Widening past the sheet's breakpoint closes it, or the page would stay
     // inert behind a sheet nobody can see.
-    const desktop = window.matchMedia('(min-width: 1024px)');
+    const desktop = window.matchMedia('(min-width: 1280px)');
     const onDesktop = (event: MediaQueryListEvent) => {
       if (event.matches) closeSheet();
     };

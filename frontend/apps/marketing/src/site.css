@@ -496,7 +496,10 @@ a.cl-announce:hover {
   padding-bottom: 4px;
 }
 
-@media (max-width: 1023px) {
+/* The full bar (five links, ThemeSwitch, both account actions) needs about
+   1000px of container, so it folds into the sheet below 1280px, the same
+   breakpoint where the app's sidebar becomes its icon rail. */
+@media (max-width: 1279px) {
   .cl-navbar-links,
   .cl-navbar-hide-sm,
   .cl-navbar-panel {
@@ -512,7 +515,7 @@ a.cl-announce:hover {
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .cl-navbar-sheet {
     display: none;
   }
