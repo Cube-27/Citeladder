@@ -65,8 +65,8 @@ export function PricingFaq() {
   return (
     <PageSection
       id="faq"
-      measure="reading"
-      title="Pricing questions"
+      layout="aside"
+      title="Frequently asked questions"
       lead={
         <>
           More answers on data, security and billing in the{' '}

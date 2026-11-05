@@ -86,7 +86,7 @@ export function CommercialEntryPage({
         />
       </PageSection>
 
-      <PageSection id="questions" title="Questions, answered" measure="reading">
+      <PageSection id="questions" title="Frequently asked questions" layout="aside">
         <FaqList items={page.faqs.map((faq) => ({ question: faq.q, answer: faq.a }))} />
       </PageSection>
 

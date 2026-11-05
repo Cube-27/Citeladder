@@ -339,9 +339,9 @@ export function LandingPage() {
       <Trust />
       <PageSection
         id="landing-faq"
-        title="Questions, answered"
+        title="Frequently asked questions"
         action={<SiteArrowLink href="/faq">All questions</SiteArrowLink>}
-        measure="reading"
+        layout="aside"
       >
         <FaqList items={FAQS.map((faq) => ({ question: faq.q, answer: faq.a }))} />
       </PageSection>

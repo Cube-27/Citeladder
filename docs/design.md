@@ -56,9 +56,10 @@ Light and dark on every surface, defaulting to the system preference.
 | D27 | No inverted cards or bands on the website: every tile, PageHighlight included, is the flat card (surface fill, 1px `line` edge, ink text) in both themes; only ink-filled buttons stay ink. Nav popups for multi-column menus (Platform, Resources) start at the navbar's left edge; one-column Solutions still hangs from the trigger row (owner, 5 November 2026; supersedes D22's anchor for those two). |
 | D28 | Cal Sans is for headings only on the website: the H1 and one section heading per section; card titles, figures and every other text are Geist (owner, 5 November 2026). Card, step, form and tool titles and article h3 are `heading-lg` (Geist 500 22/28); FAQ questions, plan names and the author's name keep `title-sm`'s size in Geist 500; stacked split titles, large tiles and the PageHighlight title keep `display-md`'s size in Geist 500; figures and prices are Geist 500; article quotes are Geist. Product screens set no Cal Sans: frame captions, screen figures and the drawn app's page title are Geist 500. A feature split that is its section's only heading keeps Cal Sans. `check:policy` rejects `--font-display` in a website stylesheet outside the heading selectors. |
 | D29 | The website's ground is the other way round (owner, 5 November 2026): the page sits on `paper` (grey in light, black in dark) and every card, the CtaBand included, on `surface` (white in light, lighter in dark) with its 1px `line` edge and `shadow-card`. A product frame's well has no fill, so a screen never sits on a second, darker ground inside its card, and FeatureCards carry no step numbers. The footer is dark in both themes on its own fixed tokens (`footer`, `footer-ink`, `footer-ink-muted`, `footer-line`) with a fine film grain, and the page above it ends on a curved foot (40px, 24px under 1024px), past D10's 8px. The primary button is a raised key: `shadow-press` is a top highlight, a bottom inner shade, a tight drop and a soft lift over a faint light-to-shade sheen, and drops to `shadow-edge` while pressed; it stays ink, never the accent. The docs keep the `surface` ground. Supersedes D27's flat card and the flat-website rule for shadows. |
-| D30 | The website H1 is 56/60 from 768px up, 8px past D26's 48; phones keep 32/38, and it remains the ceiling no website or docs type exceeds (owner, 5 November 2026). The homepage hero reads "Get your business recommended by AI" over the one-sentence lead "CiteLadder gives you the tools to grow your AI visibility, traffic and revenue.", so the lead's engine rotor is retired. |
+| D30 | The website H1 (`--text-site-title`) is 60/64 from 768px up, past D26's 48, and a section heading (`--text-site-section`) is 44/50; phones keep 32/38 and 28/34, and the H1 remains the ceiling no website or docs type exceeds (owner, 5 November 2026). The homepage hero reads "Get your business recommended by AI" over the one-sentence lead "CiteLadder gives you the tools to grow your AI visibility, traffic and revenue.", so the lead's engine rotor is retired. |
 | D31 | Website cards follow the owner's Cal.com reference (owner, 5 November 2026): a FeatureCard or product frame is a 20px `surface` card with a small 8px inset. Only a card with supporting text (a FeatureCard) gets the grey well: `paper` with its own 1px `line` edge, a concentric 14px radius and compact padding (12/16, 8/12 on phones), the vignette inside it a white 10px card with 16px padding, and the copy below 16px under the well, 12px from the card's foot, title and text 4px apart. A frame with no supporting text is one card: no well fill or edge, and the screen sits straight on it. D29's fill-less well therefore holds only for text-less frames; the app keeps its ≤8px radii. |
 | D32 | The ThemeSwitch is one ghost IconButton on every surface (owner, 5 November 2026): a visitor starts on the device's theme (`system`, never shown as an option), and a click stores the opposite of the theme on screen, its icon (moon or sun) the theme it turns on. Replaces the three-segment light, dark and system switch and its 28px `control-sm` height. |
+| D33 | Only a page's opening (its hero) and its closing CtaBand are centred on the website (owner, 5 November 2026); every section header is left-aligned, a reading-measure list sits at the left under it, and an FAQ is the aside layout: "Frequently asked questions" in the 4/12 column on the left, the questions on the right. Supersedes D18's centred section headers. |
 
 D5–D17 come from the owner's reviews of the shipped app and docs on 5 November
 2026; `frontend/scripts/design-system-review-checks.mjs` keeps them in
@@ -115,7 +116,7 @@ type rule of the same day.
 - **Flare is a mark.** No `bg-`, `from-`, `via-` or `to-accent` larger than a
   2px mark, no accent background on a box over 4px, no heading in accent.
   Primary actions are ink; a highlighted surface is `accent-soft`.
-- **The website's H1 is the ceiling.** No website or docs type exceeds 56px (D30).
+- **The website's H1 is the ceiling.** No website or docs type exceeds 60px (D30).
 - **Contrast.** Every ink on every ground holds 4.5:1 in both themes, each
   status on its own soft, the labels on ink and on Flare; marks, control
   borders, the focus ring and the chart series hold 3:1; positive against
@@ -205,10 +206,10 @@ Product roles are the `.type-*` classes in `globals.css`, reached through
 | `.cl-body` | public | `16px / 26px` | — |
 | `.cl-fcard-title` | public | `22px / 28px` | — |
 | `.cl-lead` | public | `18px / 30px` | — |
-| `.cl-lhero-title` | public | `56px / 60px` | — |
+| `.cl-lhero-title` | public | `60px / 64px` | — |
 | `.cl-note` | public | `14px / 20px` | — |
-| `.cl-phero-title` | public | `56px / 60px` | — |
-| `.cl-shead-title` | public | `36px / 42px` | — |
+| `.cl-phero-title` | public | `60px / 64px` | — |
+| `.cl-shead-title` | public | `44px / 50px` | — |
 <!-- generated:type:end -->
 
 ### Controls and layout

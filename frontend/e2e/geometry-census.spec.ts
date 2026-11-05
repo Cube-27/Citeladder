@@ -537,7 +537,9 @@ async function expectOneGeometry(page: Page) {
       label: '/projects (account menu)',
       prepare: async (current) => {
         await current.getByRole('button', { name: /^Account menu/ }).click();
-        await expect(current.getByRole('radiogroup', { name: 'Theme' })).toBeVisible();
+        await expect(
+          current.getByRole('button', { name: /^Switch to (?:light|dark) theme$/ }),
+        ).toBeVisible();
       },
     })),
   );
