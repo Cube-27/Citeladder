@@ -2303,6 +2303,18 @@ a.cl-logotile:hover {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+/* Six hold one row while each gets 120px, then stack: never 3 × 2. */
+.cl-page-hl-stats--6 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+@container (max-width: 879px) {
+  .cl-page-hl-stats--6 {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+}
+
 @container (max-width: 619px) {
   .cl-page-hl-stats--4 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
