@@ -3,23 +3,12 @@ import { RefreshCw } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { BrandMark } from '@/components/ui/brand-mark';
-import { Callout } from '@/components/ui/callout';
 import { EngineMark, type EngineKey } from '@/components/ui/engine-mark';
 import { FactList } from '@/components/ui/facts';
 import { Meter } from '@/components/ui/meter';
 import { ScoreRing } from '@/components/ui/score-ring';
-import { SettingsSection, SettingsSections } from '@/components/ui/settings-section';
 
-import {
-  BOTS,
-  FAILED_CHECKS,
-  MCP_ARGS,
-  MCP_RESULT,
-  MCP_TOOLS,
-  POLICY_TONE,
-  ROBOTS_TXT,
-  SEVERITY_TONE,
-} from './demo-data';
+import { BOTS, FAILED_CHECKS, MCP_RESULT, POLICY_TONE, SEVERITY_TONE } from './demo-data';
 import {
   ScreenBar,
   ScreenButton,
@@ -28,7 +17,6 @@ import {
   ScreenCols,
   ScreenMeta,
   ScreenRoot,
-  ScreenStack,
   ScreenTable,
   ScreenTableCard,
   ScreenTabs,
@@ -50,39 +38,6 @@ const CHECK_COLUMNS: readonly ScreenColumn<(typeof FAILED_CHECKS)[number]>[] = [
     ),
   },
   { header: 'Pages', width: 'sm', numeric: true, cell: (row) => `${row.pages} pages` },
-];
-
-const BOT_COLUMNS: readonly ScreenColumn<(typeof BOTS)[number]>[] = [
-  {
-    header: 'Bot',
-    width: 'lg',
-    cell: (row) => <span className="cl-screen-mono cl-screen-strong">{row.bot}</span>,
-  },
-  { header: 'Operator', width: 'md', cell: (row) => row.operator },
-  {
-    header: 'Purpose',
-    cell: (row) => <span className="cl-screen-muted">{row.purpose}</span>,
-  },
-  {
-    header: 'Robots policy',
-    width: 'lg',
-    cell: (row) => (
-      <Badge tone={POLICY_TONE[row.policy]} dot>
-        {row.policy}
-      </Badge>
-    ),
-  },
-];
-
-const TOOL_COLUMNS: readonly ScreenColumn<(typeof MCP_TOOLS)[number]>[] = [
-  { header: 'Tool', cell: (row) => <span className="cl-screen-mono">{row.tool}</span> },
-  {
-    header: 'Access',
-    width: 'sm',
-    cell: (row) => (
-      <Badge tone={row.access === 'Write' ? 'warning' : 'neutral'}>{row.access}</Badge>
-    ),
-  },
 ];
 
 /** Site Health: the score, its two halves, and the failed checks worst first. */
@@ -151,40 +106,36 @@ export function ScreenSiteHealth() {
   );
 }
 
-/** Crawler access: each AI crawler against robots.txt, with the change that restricted two of them. */
+/** The crawlers the vignette lists: both restricted ones among the allowed. */
+const LISTED_BOTS = BOTS.filter((row) =>
+  ['GPTBot', 'OAI-SearchBot', 'ClaudeBot', 'Google-Extended', 'PerplexityBot'].includes(row.bot),
+);
+
+/** Crawler access: AI crawlers against robots.txt, the two restricted ones flagged. */
 export function ScreenCrawlerAccess() {
   return (
-    <ScreenRoot name="crawler-access" width={960} height={600}>
-      <ScreenBar
-        start={
-          <ScreenTabs
-            items={[
-              { label: 'All purposes' },
-              { label: 'AI training' },
-              { label: 'AI search' },
-              { label: 'AI user fetch' },
-            ]}
-            selected="All purposes"
-          />
+    <ScreenRoot name="crawler-access" width={480} height={320}>
+      <ScreenCard
+        title="AI crawlers"
+        meta="acme.com/robots.txt · today, 06:00 UTC"
+        action={
+          <Badge tone="warning" dot>
+            2 of 8 restricted
+          </Badge>
         }
-        end={<ScreenMeta>robots.txt fetched today, 06:00 UTC</ScreenMeta>}
-      />
-      <ScreenCols layout="main-aside">
-        <ScreenTableCard title="AI crawlers" meta="2 of 8 AI crawlers are restricted on /docs/">
-          <ScreenTable
-            caption="AI crawler access from robots.txt"
-            rows={BOTS}
-            rowKey={(row) => row.bot}
-            columns={BOT_COLUMNS}
-          />
-        </ScreenTableCard>
-        <ScreenStack>
-          <Callout tone="warning" title="Changed on 29 Oct">
-            GPTBot and Google-Extended can no longer read /docs/. 14 pages are affected.
-          </Callout>
-          <ScreenCode filename="acme.com/robots.txt" code={ROBOTS_TXT} />
-        </ScreenStack>
-      </ScreenCols>
+      >
+        <ul className="cl-screen-bots">
+          {LISTED_BOTS.map((row) => (
+            <li key={row.bot} className="cl-screen-bot">
+              <span className="cl-screen-mono cl-screen-strong">{row.bot}</span>
+              <span className="cl-screen-muted">{row.purpose}</span>
+              <Badge tone={POLICY_TONE[row.policy]} dot>
+                {row.policy === 'Restricted' ? 'Disallow /docs/' : row.policy}
+              </Badge>
+            </li>
+          ))}
+        </ul>
+      </ScreenCard>
     </ScreenRoot>
   );
 }
@@ -194,13 +145,11 @@ function IntegrationRow({
   name,
   detail,
   status,
-  action,
 }: Readonly<{
   engine?: EngineKey;
   name: string;
   detail: string;
   status: ReactNode;
-  action: 'Manage' | 'Connect';
 }>) {
   return (
     <div className="cl-screen-int">
@@ -216,7 +165,6 @@ function IntegrationRow({
         <span className="cl-screen-muted">{detail}</span>
       </span>
       {status}
-      <ScreenButton variant={action === 'Connect' ? 'primary' : 'secondary'}>{action}</ScreenButton>
     </div>
   );
 }
@@ -227,107 +175,59 @@ const connected = (
   </Badge>
 );
 
-/** Integrations: the data sources CiteLadder reads and the assistants that read it over MCP. */
+/** Integrations: the data sources CiteLadder reads for one site. */
 export function ScreenIntegrations() {
   return (
-    <ScreenRoot name="integrations" width={960} height={600}>
-      <SettingsSections>
-        <SettingsSection
-          title="Data sources"
-          description="Accounts CiteLadder reads for acme.com. Nothing is written back."
-        >
-          <div className="cl-screen-rows">
-            <IntegrationRow
-              engine="google"
-              name="Google Search Console"
-              detail="sc-domain:acme.com · synced today, 05:40 UTC"
-              status={connected}
-              action="Manage"
-            />
-            <IntegrationRow
-              engine="google"
-              name="Google Analytics 4"
-              detail="Acme Analytics – web · synced today, 05:40 UTC"
-              status={connected}
-              action="Manage"
-            />
-            <IntegrationRow
-              name="Cloudflare Logpush"
-              detail="AI crawler requests · complete for 28 days"
-              status={connected}
-              action="Manage"
-            />
-            <IntegrationRow
-              name="Bing Webmaster Tools"
-              detail="Clicks and impressions from Bing, counted separately"
-              status={<Badge>Optional</Badge>}
-              action="Connect"
-            />
-          </div>
-        </SettingsSection>
-        <SettingsSection
-          title="AI assistants"
-          description="Use your CiteLadder data from an assistant over MCP."
-        >
-          <div className="cl-screen-rows">
-            <IntegrationRow
-              engine="claude"
-              name="Claude"
-              detail="Last tool call today, 09:12 UTC"
-              status={connected}
-              action="Manage"
-            />
-            <IntegrationRow
-              engine="chatgpt"
-              name="ChatGPT"
-              detail="Add CiteLadder as a connector"
-              status={<Badge>Not connected</Badge>}
-              action="Connect"
-            />
-          </div>
-        </SettingsSection>
-      </SettingsSections>
+    <ScreenRoot name="integrations" width={480} height={320}>
+      <ScreenCard
+        title="Data sources"
+        meta="acme.com · read only · synced 05:40 UTC"
+        action={<ScreenMeta>3 connected</ScreenMeta>}
+      >
+        <div className="cl-screen-rows">
+          <IntegrationRow
+            engine="google"
+            name="Google Search Console"
+            detail="sc-domain:acme.com"
+            status={connected}
+          />
+          <IntegrationRow
+            engine="google"
+            name="Google Analytics 4"
+            detail="Acme Analytics – web"
+            status={connected}
+          />
+          <IntegrationRow
+            name="Cloudflare Logpush"
+            detail="AI crawler requests"
+            status={connected}
+          />
+          <IntegrationRow
+            name="Bing Webmaster Tools"
+            detail="Bing clicks and impressions"
+            status={<Badge>Optional</Badge>}
+          />
+        </div>
+      </ScreenCard>
     </ScreenRoot>
   );
 }
 
-/** MCP: the tools an assistant sees and one call with its arguments and result. */
+/** MCP: one tool call an assistant made, with its result. */
 export function ScreenMcp() {
   return (
-    <ScreenRoot name="mcp" width={960} height={600}>
-      <ScreenCols layout="mcp">
-        <ScreenTableCard
-          eyebrow="MCP server"
-          title="citeladder"
-          action={
-            <Badge tone="positive" dot>
-              Connected
-            </Badge>
-          }
-          meta="42 tools · writes need your confirmation"
-        >
-          <ScreenTable
-            caption="Tools the CiteLadder MCP server exposes"
-            rows={MCP_TOOLS}
-            rowKey={(row) => row.tool}
-            columns={TOOL_COLUMNS}
-          />
-        </ScreenTableCard>
-        <ScreenCard
-          eyebrow="Tool call"
-          title="read_visibility_overview"
-          action={
-            <Badge tone="positive" dot>
-              Completed in 0.4s
-            </Badge>
-          }
-        >
-          <div className="cl-screen-detail">
-            <ScreenCode filename="Arguments" code={MCP_ARGS} />
-            <ScreenCode filename="Result" code={MCP_RESULT} />
-          </div>
-        </ScreenCard>
-      </ScreenCols>
+    <ScreenRoot name="mcp" width={480} height={320}>
+      <ScreenCard
+        title="Tool call"
+        meta="citeladder MCP · acme.com, this week"
+        action={
+          <Badge tone="positive" dot>
+            Completed in 0.4s
+          </Badge>
+        }
+      >
+        <ScreenCode filename="read_visibility_overview" code={MCP_RESULT} />
+      </ScreenCard>
     </ScreenRoot>
   );
 }
