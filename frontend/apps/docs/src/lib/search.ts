@@ -15,14 +15,13 @@ function termWeight(term: string, title: string, summary: string): number {
 /** A run of result text; `match` marks a run that is one of the query's terms. */
 export type Segment = { text: string; match: boolean };
 
+const escapeRegExp = (term: string) => term.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+
 /** Split text into runs, marking every case-insensitive occurrence of a query term. */
 export function highlight(text: string, query: string): Segment[] {
   const terms = query.trim().split(/\s+/).filter(Boolean);
   if (!terms.length) return [{ text, match: false }];
-  const pattern = new RegExp(
-    `(${terms.map((term) => term.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)).join('|')})`,
-    'gi',
-  );
+  const pattern = new RegExp(`(${terms.map(escapeRegExp).join('|')})`, 'gi');
   return text
     .split(pattern)
     .filter(Boolean)

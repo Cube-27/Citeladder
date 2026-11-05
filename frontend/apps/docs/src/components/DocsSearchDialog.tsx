@@ -226,15 +226,20 @@ export function DocsSearchDialog() {
 }
 
 function Marked({ text, query }: Readonly<{ text: string; query: string }>) {
-  return highlight(text, query).map((segment, index) =>
-    segment.match ? (
-      <mark key={index} className="cl-mark">
+  // A run's offset in the text is its stable key: the same text and query
+  // always split at the same places.
+  let offset = 0;
+  return highlight(text, query).map((segment) => {
+    const start = offset;
+    offset += segment.text.length;
+    return segment.match ? (
+      <mark key={start} className="cl-mark">
         {segment.text}
       </mark>
     ) : (
       segment.text
-    ),
-  );
+    );
+  });
 }
 
 function searchStatus(
