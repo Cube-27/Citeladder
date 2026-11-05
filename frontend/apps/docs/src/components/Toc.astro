@@ -68,21 +68,26 @@ const { items } = Astro.props;
 </style>
 
 <script>
-  // Mark the heading in view: the last one whose top has passed under the top
-  // bar, or the last heading once the page is scrolled to its end.
+  // Mark the heading in view: the last one whose top has reached the line a
+  // contents link scrolls it to (its scroll-margin-top, below the top bar), or
+  // the last heading once the page is scrolled to its end.
   const links = [...document.querySelectorAll<HTMLAnchorElement>('.cl-toc-link')];
   const ids = [...new Set(links.map((link) => decodeURIComponent(link.hash.slice(1))))];
   const headings = ids
     .map((id) => document.getElementById(id))
     .filter((node): node is HTMLElement => node !== null);
   const bar = document.querySelector<HTMLElement>('[data-docs-bar]');
+  const landing = (heading: HTMLElement) =>
+    Math.max(
+      Number.parseFloat(getComputedStyle(heading).scrollMarginTop) || 0,
+      bar?.getBoundingClientRect().bottom ?? 0,
+    );
   let scheduled = false;
   const update = () => {
     scheduled = false;
-    const offset = (bar?.getBoundingClientRect().bottom ?? 0) + 24;
     let current = headings[0];
     for (const heading of headings) {
-      if (heading.getBoundingClientRect().top <= offset + 1) current = heading;
+      if (heading.getBoundingClientRect().top <= landing(heading) + 1) current = heading;
     }
     const end = document.documentElement.scrollHeight - 2;
     if (window.scrollY > 0 && window.scrollY + window.innerHeight >= end) current = headings.at(-1);
