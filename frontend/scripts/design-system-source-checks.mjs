@@ -756,7 +756,8 @@ const PRODUCT_UI_CLASS_RULES = [
   },
   {
     test: (classes) =>
-      /\bwebsite-(?:hero|page|section|feature|small|lead|body|nav|label)|(?<![\w-])cl-(?:(?:phero|lhero|shead|fcard)-title|lead|body|note)(?![\w-])/.test(
+      /\bwebsite-(?:hero|page|section|feature|small|lead|body|nav|label)/.test(classes) ||
+      /(?<![\w-])cl-(?:phero-title|lhero-title|shead-title|fcard-title|lead|body|note)(?![\w-])/.test(
         classes,
       ),
     message: 'product UI must not consume website type roles',
@@ -1229,7 +1230,6 @@ export function textRoleBackgroundViolations(source, label) {
   return violations;
 }
 
-/** `--text-*` role → px size, from the token stylesheet. */
 /**
  * Every `--text-*` role's desktop size in px. The first declaration is the
  * base (later ones are breakpoint overrides), and an alias such as
@@ -1238,7 +1238,7 @@ export function textRoleBackgroundViolations(source, label) {
 function textRoleSizes(tokenCss) {
   const sizes = new Map();
   const aliases = new Map();
-  for (const [, token, raw] of tokenCss.matchAll(/(--text-[\w-]+)\s*:\s*([^;{}]+);/g)) {
+  for (const [, token, raw] of tokenCss.matchAll(/(--text-[\w-]+)\s*:([^;{}]+);/g)) {
     if (sizes.has(token) || aliases.has(token)) continue;
     const value = raw.trim();
     const px = /^([\d.]+)px$/.exec(value)?.[1];
