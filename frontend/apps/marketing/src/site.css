@@ -213,7 +213,7 @@ a:hover .cl-arrowlink .cl-arrowlink-icon {
   height: 32px;
   padding: 0 12px 0 4px;
   border: 1px solid var(--color-line);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   box-shadow: var(--shadow-xs);
   color: var(--color-ink-secondary);
@@ -236,7 +236,7 @@ a.cl-announce:hover {
   align-items: center;
   height: 22px;
   padding: 0 8px;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-xs);
   background: var(--color-surface-sunken);
   color: var(--color-ink);
 }
@@ -1501,7 +1501,7 @@ a.cl-announce:hover {
 }
 
 .cl-related-card:hover {
-  border-color: var(--color-line-control);
+  border-color: var(--color-line-strong);
 }
 
 .cl-related-title,
@@ -1983,7 +1983,7 @@ a.cl-announce:hover {
 }
 
 a.cl-logotile:hover {
-  border-color: var(--color-line-control);
+  border-color: var(--color-line-strong);
   color: var(--color-ink);
 }
 
@@ -2450,7 +2450,7 @@ a.cl-logotile:hover {
   max-width: 100%;
   height: 65px;
   padding: 0 12px;
-  border: 1px dashed var(--color-line-control);
+  border: 1px dashed var(--color-line-strong);
   border-radius: var(--radius-sm);
   color: var(--color-ink-muted);
   font-size: var(--text-caption);

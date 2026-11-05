@@ -91,19 +91,27 @@ function Lead({ children }: Readonly<{ children?: ReactNode }>) {
   );
 }
 
+/**
+ * One row: the lead glyph (an icon, a logo), the label, then at the row's end
+ * a shortcut or, for the current choice in a switcher, the check. The label
+ * is text only, so the row stays one line and the label truncates.
+ */
 export function MenuItem({
   icon,
   shortcut,
+  selected = false,
   danger = false,
   className,
   children,
   ...props
 }: Readonly<
   ComponentPropsWithoutRef<typeof MenuPrimitive.Item> & {
-    /** A 16px glyph in the lead column. */
+    /** A 16px glyph in the lead column (an icon, an inline `BrandMark`). */
     icon?: ReactNode;
     /** A shortcut, mono 12px `ink-muted`, at the row's end. */
     shortcut?: string;
+    /** The current choice of a switcher: an `accent` check at the row's end. */
+    selected?: boolean;
     danger?: boolean;
   }
 >) {
@@ -114,6 +122,7 @@ export function MenuItem({
       {shortcut ? (
         <span className="text-ink-muted text-caption ms-4 font-mono">{shortcut}</span>
       ) : null}
+      {selected ? <Check className="text-accent size-4 shrink-0" aria-hidden /> : null}
     </MenuPrimitive.Item>
   );
 }

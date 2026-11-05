@@ -101,7 +101,7 @@ route group (Track and Analyze, then Act, Agent and Settings).
 Port the system's atoms and molecules into `frontend/components/ui/`: Button,
 IconButton, ArrowLink, TextLink, Input, Textarea, SearchField, Select,
 Checkbox, RadioGroup, Switch, ChipInput, FormRow, Badge, Tag, Tabs, Card, Stat,
-Delta, Meter, ScoreRing, ScoreBar, Citation, Rungs, Kbd, Tooltip, Popover,
+Delta, Meter, ScoreRing, ScoreBar (retired by D8), Citation, Rungs, Kbd, Tooltip, Popover,
 Menu, Dialog, Drawer, CommandPalette, Toast, Callout, EmptyState, Skeleton,
 Spinner, ProgressBar, ThemeSwitch, Table, Pager, Avatar, BrandMark,
 EngineMark, StepList, Passage, FactList, ListDetail and the charts (TrendChart,
@@ -178,6 +178,35 @@ session that produced this plan.
 | D2 | Does the theme choice follow a person between the website, app and docs? | Yes: one cookie on the parent domain, defaulting to system |
 | D3 | At the owner's 982px desktop, does the app sidebar keep its labels? | No: a 61px icon rail below 1280px, so tables keep their width |
 | D4 | Do PDFs and emails move to Geist? | PDFs keep Inter for now; only the logo accent changes |
+
+On 5 November 2026 the owner reviewed the shipped app and docs and decided
+D5–D9 (source: the owner's review in the orchestration session).
+`frontend/scripts/design-system-review-checks.mjs` enforces D5, D6, D7 and D9
+in `pnpm check:policy`; D8 retired the bar component, whose name the policy
+now rejects as legacy.
+
+| ID | Question | Decision |
+| --- | --- | --- |
+| D5 | What edge do fields, composers and cards wear? | A soft 1px `line` edge with the faint `shadow-edge` smudge under it (the sidebar's "Search… Ctrl K" look), stepping to `line-strong` on hover, never the dark `line-control` hairline. Select, Input, SearchField, Textarea, ChipInput, the Agent composer, the docs search trigger and checkbox and radio boxes all follow; dashed slots take `line-strong`. `line-control` stays only for marks that are not borders (the switch's off track, the link underline, the pending step ring, chart rules). Focus stays clearly visible |
+| D6 | How heavy can Geist be? | Never above 500: the `heading` token is 500, and no `font-semibold`, `font-bold`, 600 or 700 remains in the app, docs or `components/ui`; Agent Markdown `strong` is 500 |
+| D7 | Where does the app use Cal Sans? | Only in the PageHeader title. Score and stat numbers, ScoreRing and donut centres, dialog, drawer and card titles and the sign-in shell are Geist. The website and docs keep their display use |
+| D8 | How does a score card draw a score? | Its number, with a bare 48px ScoreRing on the right, as before PR 3; a table cell shows the number only. No segmented bars: `ScoreBar` is deleted from `components/ui` with its tests and exports, and the policy rejects its name |
+| D9 | How do metric cards lay out at app widths? | In one row: 4 across at every app width, 982px included; never 2 × 2 and never 2 + 1 |
+
+Later the same day the owner added D10 and D11 ("the rounded edges in
+components are too much … we want a compact technical design like claude
+code/github/etc not airy feeling"; source: the orchestration session). The same
+script enforces both.
+
+| ID | Question | Decision |
+| --- | --- | --- |
+| D10 | How rounded are corners? | Only slightly, system-wide (app, docs and website share the tokens): `radius-2xs` 2, `radius-xs` 2, `radius-sm` 4, `radius-md` 6, `radius-lg` 8, `radius-xl` 8. `radius-full` stays only for avatars, status dots, switch tracks and count pills; no hard-coded radius above 8px |
+| D11 | How dense is the app? | Compact and technical, GitHub / Claude Code density, app only. The sidebar has no logo: the project switcher is its first row, on the PageHeader's line, and the Dashboard/Agent switch sits on the page's tabs/filter line. The PageHeader title is 24/32 Cal Sans 400 in a tight band with its actions centred on the title row. The header is one 64px band (a 40px title row, then a reserved 20px meta line). Band gaps are about half (header → 16 → tabs → 8 → filters → 8 → content), card and dialog padding 16, controls 32 (on every surface), table rows 40 (`row-app`), card gaps 12. The docs and website keep their spacing |
+
+The repository follows the design-system artifact's version 13 for D5–D11:
+`frontend/scripts/design-system-tokens.json` is its `tokens.json` verbatim
+(`line-strong`, `shadow-edge`, `heading-lg`, `row-app`, `control-md` 32 and
+`stat` at Geist 500).
 
 ## Known gaps in the system
 

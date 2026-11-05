@@ -11,7 +11,6 @@ import { Delta } from '@/components/ui/delta';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Drawer } from '@/components/ui/drawer';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { ScoreBar } from '@/components/ui/score-bar';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { TrendChart } from '@/components/ui/trend-chart';
 import { QueryState } from '@/components/ui/query-state';
@@ -92,8 +91,8 @@ function DimensionLedger({
               </ClampText>
             </div>
           </TableCell>
-          <TableCell numeric>{formatScore(dimension.score)}</TableCell>
-          <TableCell>
+          {/* The number only (decision D8); a pillar with no score says why. */}
+          <TableCell numeric>
             {dimension.score === null ? (
               <ClampText lines={1} className="type-caption">
                 {dimension.reason === 'measured_at_site_scope'
@@ -101,11 +100,7 @@ function DimensionLedger({
                   : statusLabel(dimension.dimension_measurement_state)}
               </ClampText>
             ) : (
-              <ScoreBar
-                value={dimension.score}
-                label={`${dimension.label} score`}
-                showValue={false}
-              />
+              formatScore(dimension.score)
             )}
           </TableCell>
           <TableCell numeric>
@@ -123,8 +118,7 @@ function DimensionLedger({
 
 const PILLAR_COLUMNS: readonly DataTableColumn[] = [
   { key: 'pillar', label: 'Pillar' },
-  { key: 'score', label: 'Score', width: 'figure', numeric: true },
-  { key: 'quality', label: 'Quality', width: 'status' },
+  { key: 'score', label: 'Score', width: 'status', numeric: true },
   { key: 'coverage', label: 'Coverage', width: 'figure', numeric: true },
 ];
 

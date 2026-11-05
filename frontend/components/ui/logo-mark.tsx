@@ -22,7 +22,6 @@ import { cn } from '@/lib/utils';
 
 export const BRAND_LOGO_SIZES = {
   brand: 18,
-  sidebar: 18,
   compact: 16,
   mini: 14,
 } as const;

@@ -14,8 +14,7 @@ import { Input } from './input';
 import { Kbd } from './kbd';
 import { BusyBar, ProgressBar } from './progress-bar';
 import { Rungs } from './rungs';
-import { ScoreBar, scoreFill } from './score-bar';
-import { ScoreRing } from './score-ring';
+import { ScoreRing, scoreFill } from './score-ring';
 import { Skeleton } from './skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
 import { TrendChart } from './trend-chart';
@@ -233,19 +232,6 @@ describe('ScoreRing', () => {
     render(<ScoreRing value={140} label="Site Health score" />);
     expect(screen.getByRole('img', { name: 'Site Health score: 100 out of 100' })).toBeVisible();
     expect(screen.getByText('100')).toHaveAttribute('aria-hidden', 'true');
-  });
-});
-
-describe('ScoreBar', () => {
-  it('renders a clamped accessible meter with its number beside it', () => {
-    const { rerender } = render(<ScoreBar value={140} label="Readiness score" />);
-    const meter = screen.getByRole('meter', { name: 'Readiness score' });
-    expect(meter).toHaveAttribute('aria-valuenow', '100');
-    expect(meter).toHaveAttribute('aria-valuetext', '100 out of 100');
-    expect(screen.getByText('100')).toHaveAttribute('aria-hidden', 'true');
-
-    rerender(<ScoreBar value={64} label="Readiness score" showValue={false} />);
-    expect(screen.queryByText('64')).toBeNull();
   });
 });
 

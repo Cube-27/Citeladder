@@ -32,7 +32,7 @@ const TONE: Record<CalloutTone, { box: string; title: string; icon: LucideIcon; 
 /**
  * Callout — an in-page message that stays until the condition changes: a
  * data caveat, a finished crawl, failed checks. `radius-md`, 12/16px padding,
- * the tone's 16px icon, 14/20 text with a semibold title, and one optional
+ * the tone's 16px icon, 14/20 text with a 500-weight title, and one optional
  * action at the right. Say what is true, then what to do. Negative and
  * warning callouts are announced as alerts; the rest as status.
  */
@@ -76,7 +76,7 @@ export function Callout({
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         {title != null ? (
-          <p className={cn('font-semibold', style.title)}>
+          <p className={cn('font-medium', style.title)}>
             {word}
             {title}
           </p>

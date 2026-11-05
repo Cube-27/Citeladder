@@ -13,7 +13,8 @@ import { cn } from '@/lib/utils';
  *
  * `tone` is `ink` by default; `accent` only for your own brand's share;
  * `warning` from about 90% of a limit and `negative` when a limit is hit.
- * A score out of 100 is a `ScoreBar`, and work in progress a `ProgressBar`.
+ * A score out of 100 is a `ScoreRing` (its number alone in a table), and
+ * work in progress a `ProgressBar`.
  *
  * `value: null` is an unmeasured value, never zero: an empty track, no
  * `aria-valuenow`, and "Not measured" as the spoken value.
@@ -59,10 +60,10 @@ function MeterTrack({
       aria-valuemax={max}
       aria-valuenow={value === null ? undefined : Math.min(max, Math.max(0, value))}
       aria-valuetext={valueText}
-      className="bg-chart-grid block h-1.5 w-full overflow-hidden rounded-full"
+      className="bg-chart-grid rounded-2xs block h-1.5 w-full overflow-hidden"
     >
       {percent === null ? null : (
-        <span className={cn('block h-full rounded-full', fill)} style={{ width: `${percent}%` }} />
+        <span className={cn('block h-full', fill)} style={{ width: `${percent}%` }} />
       )}
     </div>
   );

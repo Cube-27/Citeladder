@@ -62,9 +62,13 @@ export type SentimentValue = keyof typeof sentimentTone;
 export type ClassificationValue = keyof typeof classificationTone;
 export type RunStatusValue = keyof typeof runStatusTone;
 
-/** The badge face: 22px, 8px padding, `radius-xs`, 12/16 medium. */
+/**
+ * The badge face: 22px, 8px padding, `radius-xs`, 12/16 medium. Centred on
+ * the line it sits in: a badge that leads with an icon would otherwise take
+ * the icon's bottom edge as its baseline and stretch a 40px table row.
+ */
 const BADGE_FACE =
-  'inline-flex h-[var(--badge-height-sm)] shrink-0 items-center gap-1 rounded-xs px-2 text-caption font-medium whitespace-nowrap';
+  'inline-flex h-[var(--badge-height-sm)] shrink-0 items-center gap-1 rounded-xs px-2 align-middle text-caption font-medium whitespace-nowrap';
 
 export type BadgeProps = {
   children: ReactNode;

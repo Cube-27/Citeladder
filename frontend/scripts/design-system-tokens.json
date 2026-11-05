@@ -51,7 +51,15 @@
           "light": "#e5e5e5",
           "dark": "#2a2a2a"
         },
-        "usage": "Hairlines: card and frame borders on the website, table rules, dividers between list rows. Decorative only, never the only edge of a control."
+        "usage": "Every soft edge: card and frame borders on the website, table rules, dividers, and (owner decision D5, 5 Nov 2026) the 1px edge of inputs, textareas, search fields, selects, chip inputs, checkbox and radio boxes and the Agent composer, always with shadow-edge under it. A divider inside a dialog or the search palette is line, never darker."
+      },
+      {
+        "name": "line-strong",
+        "value": {
+          "light": "#d4d4d4",
+          "dark": "#3a3a3a"
+        },
+        "usage": "One soft step darker than line: the hover edge of fields, checkbox boxes and linked website cards, and the dashed edge of reserved slots (Turnstile, the new-workspace tile). Never a resting control edge."
       },
       {
         "name": "line-control",
@@ -59,7 +67,7 @@
           "light": "#858585",
           "dark": "#747474"
         },
-        "usage": "The 1px border of inputs, checkboxes, radios and selects; at least 3:1 on surface, paper and surface-sunken in both themes."
+        "usage": "Marks that need 3:1 but are not borders: the chart crosshair, the Switch's off track, the ink TextLink underline, the StepList pending ring and a not-cited engine mark. Never the edge of a control, card or box (D5, 5 Nov 2026)."
       },
       {
         "name": "ink",
@@ -300,8 +308,17 @@
             "lineHeight": "34px",
             "fontWeight": 400,
             "letterSpacing": "-0.01em",
+            "sample": "Every engine, one report",
+            "usage": "Large feature tiles; article h2."
+          },
+          {
+            "name": "display-sm",
+            "fontSize": "24px",
+            "lineHeight": "32px",
+            "fontWeight": 400,
+            "letterSpacing": "-0.01em",
             "sample": "Visibility",
-            "usage": "The app's page title; large feature tiles; article h2."
+            "usage": "The app's PageHeader title, the only Cal Sans in the app (D7, D11), in a 40px title row with the actions centred on it."
           },
           {
             "name": "title",
@@ -309,7 +326,7 @@
             "lineHeight": "28px",
             "fontWeight": 400,
             "sample": "Cited sources this week",
-            "usage": "App section headings, feature card titles on the website, article h3, dialog titles."
+            "usage": "Website feature card titles, article h3, docs h2 and reference titles. Never in the app: there Cal Sans is the PageHeader title only (D7)."
           },
           {
             "name": "title-sm",
@@ -318,15 +335,6 @@
             "fontWeight": 400,
             "sample": "Round robin",
             "usage": "Captions under product frames, pricing plan names, footer column heads are not this (they use label)."
-          },
-          {
-            "name": "stat",
-            "fontSize": "36px",
-            "lineHeight": "40px",
-            "fontWeight": 400,
-            "letterSpacing": "-0.01em",
-            "sample": "38.4%",
-            "usage": "The number in a Stat."
           }
         ]
       },
@@ -386,9 +394,27 @@
             "name": "heading",
             "fontSize": "16px",
             "lineHeight": "24px",
-            "fontWeight": 600,
+            "fontWeight": 500,
             "sample": "Visibility by engine",
-            "usage": "App card titles and table group headings."
+            "usage": "App card titles, settings section titles and table group headings. Geist never goes above 500 (D6)."
+          },
+          {
+            "name": "heading-lg",
+            "fontSize": "22px",
+            "lineHeight": "28px",
+            "fontWeight": 500,
+            "letterSpacing": "-0.01em",
+            "sample": "Remove Northwind from tracking",
+            "usage": "Dialog and drawer titles and the billing plan name: the app's larger heading, in Geist because Cal Sans in the app is the PageHeader title only (D7)."
+          },
+          {
+            "name": "stat",
+            "fontSize": "36px",
+            "lineHeight": "40px",
+            "fontWeight": 500,
+            "letterSpacing": "-0.02em",
+            "sample": "38.4%",
+            "usage": "The number in a Stat and a KpiRow card, and the plan price in the app. Geist 500 since D7 (5 Nov 2026); the ScoreRing and DonutChart centres use the same face at 32/38."
           },
           {
             "name": "caption",
@@ -448,12 +474,12 @@
       {
         "name": "space-3",
         "value": "12px",
-        "usage": "Button horizontal padding (md); list row padding."
+        "usage": "Button horizontal padding (md); list row padding; the app's card gap (D11)."
       },
       {
         "name": "space-4",
         "value": "16px",
-        "usage": "Gap between cards in a grid on mobile; field stack gap; app card grid gap."
+        "usage": "App card padding (D11); the app page's top padding and the header-to-controls gap; field stack gap."
       },
       {
         "name": "space-5",
@@ -463,12 +489,12 @@
       {
         "name": "space-6",
         "value": "24px",
-        "usage": "Card padding; gap between cards in a website grid; caption padding inside a feature card."
+        "usage": "Website card padding; gap between cards in a website grid; caption padding inside a feature card; the app page's side padding from 1280px."
       },
       {
         "name": "space-8",
         "value": "32px",
-        "usage": "Gap between sections inside an app page; heading-to-content gap in a website section."
+        "usage": "Heading-to-content gap in a website section."
       },
       {
         "name": "space-10",
@@ -478,7 +504,7 @@
       {
         "name": "space-12",
         "value": "48px",
-        "usage": "Gap between a section header and its grid; app page side padding."
+        "usage": "Gap between a section header and its grid."
       },
       {
         "name": "space-16",
@@ -506,39 +532,47 @@
       },
       {
         "name": "radius-xs",
-        "value": "6px",
-        "usage": "Badges, favicons, checkboxes, the highlighter mark."
+        "value": "2px",
+        "usage": "Badges, favicons, checkboxes, the highlighter mark, meter and progress tracks. Only slightly rounded everywhere (D10, 5 Nov 2026)."
       },
       {
         "name": "radius-sm",
-        "value": "8px",
-        "usage": "Tabs inside a track, menu items, small icon buttons, tooltips."
+        "value": "4px",
+        "usage": "Tabs inside a track, menu items, small icon buttons, tooltips, citation pills, the announcement pill."
       },
       {
         "name": "radius-md",
-        "value": "12px",
+        "value": "6px",
         "usage": "Buttons, inputs, selects, the tab track, code blocks."
       },
       {
         "name": "radius-lg",
-        "value": "14px",
+        "value": "8px",
         "usage": "App cards and panels, menus, dialogs, the inner well of a product frame."
       },
       {
         "name": "radius-xl",
-        "value": "20px",
-        "usage": "Website cards, product frames, the floating navbar, pricing cards."
+        "value": "8px",
+        "usage": "Website cards, product frames, the floating navbar, pricing cards. The largest radius in the system: nothing is rounded past 8px (D10)."
       },
       {
         "name": "radius-full",
         "value": "9999px",
-        "usage": "Citation pills, avatars, announcement pills, status dots, switches."
+        "usage": "Only avatars, status dots, switch tracks (and their thumb), count pills (footnote numbers, nav counts) and the radio circle. Never a pill-shaped button, chip, citation or bar (D10)."
       }
     ]
   },
   "shadow": {
-    "note": "Depth is quiet: a hairline ring plus a short, soft drop. Website cards use a 1px line border with shadow-xs; app cards use shadow-card.",
+    "note": "Depth is quiet: a hairline ring plus a short, soft drop. Website cards use a 1px line border with shadow-xs; app cards use shadow-card; fields and checkbox boxes use a 1px line border with shadow-edge.",
     "tokens": [
+      {
+        "name": "shadow-edge",
+        "value": {
+          "light": "0 1px 2px rgba(17,17,17,0.05)",
+          "dark": "0 1px 2px rgba(0,0,0,0.40)"
+        },
+        "usage": "The faint smudge under a soft line edge (D5): inputs, textareas, search fields, select triggers, chip inputs, checkbox and radio boxes, the Agent composer. No ring of its own, so the 1px line border stays the only edge; shadow-xs would double it."
+      },
       {
         "name": "shadow-xs",
         "value": {
@@ -579,12 +613,17 @@
       {
         "name": "control-sm",
         "value": "28px",
-        "usage": "Dense tables, toolbar buttons, citation pills."
+        "usage": "The app's compact controls: dense tables, toolbar buttons, citation pills."
       },
       {
         "name": "control-md",
-        "value": "36px",
-        "usage": "App buttons, inputs, selects, the tab track; navbar buttons."
+        "value": "32px",
+        "usage": "App buttons, inputs, selects, the tab track, sidebar rows; navbar and docs top-bar buttons. 32 since D11 (5 Nov 2026), GitHub-style density; website CTAs stay control-lg."
+      },
+      {
+        "name": "row-app",
+        "value": "40px",
+        "usage": "App table rows, and the project switcher and PageHeader title row that align across the sidebar and the page (D11)."
       },
       {
         "name": "control-lg",

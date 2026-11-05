@@ -65,7 +65,7 @@ export function StackedBar({
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the segments are one picture of a whole
         role="img"
         aria-label={described ? `${label}: ${described}` : label}
-        className="flex h-3 gap-0.5 overflow-hidden rounded-full"
+        className="rounded-2xs flex h-3 gap-0.5 overflow-hidden"
       >
         {entries.map((entry) =>
           // A zero is left out of the bar, never drawn as a sliver.

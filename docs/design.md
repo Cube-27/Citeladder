@@ -26,8 +26,10 @@ Monochrome with one accent. Ink (`#111111`, `#f4f4f4` in dark) carries every
 primary action, heading and figure; Flare (`#e8501a`, `#ff6a33` in dark) is a
 mark only: the logo's bars, the own-brand chart series, a 2px rung, a dot, a
 link's ink as `accent-ink`. Cal Sans sets display type at its one weight, 400,
-and never under 18px; Geist sets everything else; Geist Mono sets data and
-code. Light and dark on every surface, defaulting to the system preference.
+and never under 18px, on the website and docs; in the app it sets only the
+page title. Geist sets everything else, never above 500; Geist Mono sets data
+and code. Fields, composers and cards wear a soft edge, never a dark hairline.
+Light and dark on every surface, defaulting to the system preference.
 
 ## Decisions
 
@@ -37,6 +39,17 @@ code. Light and dark on every surface, defaulting to the system preference.
 | D2 | One theme store for the app, website and docs (`frontend/lib/theme/theme.ts`): light, dark or system, persisted in the `citeladder_theme` cookie on the parent domain so one choice follows the reader across subdomains. System is the default. |
 | D3 | The logo drawing (`packages/contracts/src/brand-logo.ts`) is unchanged; its accent is Flare everywhere: the inline mark, `public/citeladder-logo.svg`, the favicon, the social card and the billing PDFs. |
 | D4 | PDFs keep Inter as their text face; only their colours follow the system. |
+| D5 | Borders are soft grey, never a dark hairline. Fields (Input, SearchField, Select, Textarea, ChipInput, the Agent composer, the docs search trigger) and checkbox and radio boxes wear a 1px `line` edge with the faint `shadow-edge` smudge under it (`FIELD_EDGE` in `components/ui/input.tsx`); hover steps the edge to `line-strong`, focus turns it `focus` with a 3px `line` halo, and an invalid field turns it `negative`. Reserved slots (the dashed create tile, Turnstile) take a dashed `line-strong` edge, and linked website cards step to `line-strong` on hover. `line-control` survives only for marks that are not borders: the switch's off track, the ink link underline, the pending step ring, chart rules, crosshairs and event markers, the neutral data swatch and a not-cited engine mark. |
+| D6 | Geist is never set above 500 on any surface, the website included: the `heading` token, the title, item-title, figure and heading roles, Markdown `strong`, the docs' and the website's own styles are all 500, and the Geist and Geist Mono faces load only 400–500 (`lib/config/brand-fonts.json`). |
+| D7 | In the app Cal Sans is the PageHeader title's (`type-page-title`) alone. Stat and score figures are `stat` (Geist 500 36/40), ScoreRing and donut centres Geist 500 32/38 (`type-figure-ring`), dialog and drawer titles `heading-lg` (Geist 500 22/28), and card titles and the sign-in shell's title Geist 500. The website and docs keep their display use. |
+| D8 | A score card shows its number in `stat` with a bare 48px `ScoreRing` (auto tone, no centre number) centred on its right; the 96px ring with its number is for a page's headline score. A table cell shows the number only. `ScoreBar` (the segmented score bar) is deleted from `components/ui` with its tests and exports, and `check:policy` rejects its name. |
+| D9 | Metric cards sit in one row from the `desktop:` breakpoint: `AppGrid` quarters are 4 across at 982px, fifths 5, a pair 2; never 2 × 2 and never 2 + 1. |
+| D10 | Corners are only slightly rounded on every surface: `radius-2xs` and `radius-xs` 2, `radius-sm` 4, `radius-md` 6, `radius-lg` and `radius-xl` 8. `radius-full` is for avatars, status dots, switch tracks and count pills only; a chip, citation pill, meter or progress track is a small radius. No corner anywhere is rounder than 8px. |
+| D11 | The app is compact and technical (GitHub, Claude Code), not airy. Controls are `control-md` 32 on every surface (28 compact). The app's document (the one without `data-public-surface`) rebinds its spacing: table and fact rows `row-app` (40), card and dialog padding 16, header → controls 16, card gaps 12, gutter 24 (16 in the rail). The PageHeader is one 64px band (`page-header-band`): a `row-app` title row with the `display-sm` (24/32) title and its actions centred, then a reserved 20px meta line holding the one-line description. The sidebar has no logo; it shares the page's lines: both start 16 from the top, the project switcher (`row-app`) sits in a band as tall as the header, so the mode switch and palette field are level with the tabs and filter rows (`page-band-gap`, 8, apart). The docs and website keep their spacing. |
+
+D5–D11 come from the owner's review of the shipped app and docs on 5 November
+2026; `frontend/scripts/design-system-review-checks.mjs` keeps them in
+`pnpm check:policy`.
 
 ## Ownership
 
@@ -68,7 +81,22 @@ code. Light and dark on every surface, defaulting to the system preference.
 - **Faces.** `brand-fonts.json` names Cal Sans, Geist and Geist Mono for the
   display, sans and mono roles.
 - **Cal Sans** is weight 400 only and never under 18px, in class strings and in
-  every stylesheet.
+  every stylesheet; in the app no class or role but `type-page-title` sets it
+  (D7).
+- **Geist is never above 500** on any surface: no `font-semibold` or
+  `font-bold`, no 600 or 700 (D6).
+- **Soft edges.** `line-control` appears only in the non-border mark owners
+  listed under D5; no field, box, card or slot edge wears it.
+- **One-row metrics.** No grid adds columns between `desktop:` and `shell:`,
+  so a row of figures never wraps at 982px (D9).
+- **Slightly rounded.** `rounded-full` and `var(--radius-full)` appear only on
+  avatars, status dots, switch tracks and count pills, and no stylesheet sets
+  a corner rounder than 8px (D10).
+- **Compact app.** `globals.css`'s `:root:not([data-public-surface])` block
+  holds the D11 values (table rows `row-app`, card and dialog padding 16,
+  section gap 16, card gap 12), `.type-page-title` is `display-sm`, and the
+  app sidebar draws no logo. The tables below show the system's `:root`
+  values, which the website and docs keep.
 - **Flare is a mark.** No `bg-`, `from-`, `via-` or `to-accent` larger than a
   2px mark, no accent background on a box over 4px, no heading in accent.
   Primary actions are ink; a highlighted surface is `accent-soft`.
@@ -118,6 +146,7 @@ code. Light and dark on every surface, defaulting to the system preference.
 | `--color-ink-secondary` | `#525252` | `#a6a6a6` |
 | `--color-line` | `#e5e5e5` | `#2a2a2a` |
 | `--color-line-control` | `#858585` | `#747474` |
+| `--color-line-strong` | `#d4d4d4` | `#3a3a3a` |
 | `--color-nav-glass` | `rgb(244 244 244 / 78%)` | `rgb(30 30 30 / 78%)` |
 | `--color-negative` | `#c4122f` | `#ff7387` |
 | `--color-negative-soft` | `#ffe2e6` | `#3d0e16` |
@@ -150,10 +179,11 @@ Product roles are the `.type-*` classes in `globals.css`, reached through
 | `.type-delta` | product | `13px / 20px` | — |
 | `.type-eyebrow` | product | `11px / 16px` | — |
 | `.type-figure` | product | `36px / 40px` | — |
+| `.type-figure-ring` | product | `32px / 38px` | — |
 | `.type-figure-sm` | product | `16px / 24px` | — |
 | `.type-item-title` | product | `16px / 24px` | — |
 | `.type-label` | product | `14px / 20px` | — |
-| `.type-page-title` | product | `28px / 34px` | — |
+| `.type-page-title` | product | `24px / 32px` | — |
 | `.type-section-title` | product | `22px / 28px` | — |
 | `.website-article-title` | public | `44px / 48px` | `36px / 42px` |
 | `.website-body` | public | `16px / 26px` | — |
@@ -175,19 +205,20 @@ Product roles are the `.type-*` classes in `globals.css`, reached through
 | --- | --- |
 | `--container-site` | `1320px` |
 | `--container-app` | `1440px` |
+| `--container-thread` | `1040px` |
 | `--container-prose` | `720px` |
 | `--container-narrow` | `560px` |
 | `--control-sm` | `28px` |
-| `--control-md` | `36px` |
+| `--control-md` | `32px` |
 | `--control-lg` | `48px` |
 | `--nav-height` | `64px` |
 | `--sidebar-width` | `248px` |
-| `--nav-item-height` | `36px` |
-| `--menu-item-height` | `36px` |
+| `--nav-item-height` | `32px` |
+| `--menu-item-height` | `32px` |
 | `--badge-height-sm` | `22px` |
-| `--tab-height` | `36px` |
+| `--tab-height` | `32px` |
 | `--table-row-height` | `44px` |
-| `--table-header-height` | `36px` |
+| `--table-header-height` | `32px` |
 <!-- generated:controls:end -->
 
 ### Radius
@@ -196,11 +227,11 @@ Product roles are the `.type-*` classes in `globals.css`, reached through
 | Token | Value |
 | --- | --- |
 | `--radius-2xs` | `2px` |
-| `--radius-xs` | `6px` |
-| `--radius-sm` | `8px` |
-| `--radius-md` | `12px` |
-| `--radius-lg` | `14px` |
-| `--radius-xl` | `20px` |
+| `--radius-xs` | `2px` |
+| `--radius-sm` | `4px` |
+| `--radius-md` | `6px` |
+| `--radius-lg` | `8px` |
+| `--radius-xl` | `8px` |
 | `--radius-full` | `9999px` |
 <!-- generated:radii:end -->
 
@@ -212,9 +243,10 @@ These hold whatever a component looks like:
   and empty states keep their footprint; a select is as wide as its widest
   option; a pending button keeps its label's box.
 - **The app has one component breakpoint**, `desktop:` (981px), and one shell
-  breakpoint, `shell:` (1280px). Below 1280px the sidebar is the 61px icon
-  rail, `AppGrid` halves and main-aside stack, quarters go 2 × 2 and the
-  `FilterBar` puts its filters on a second row; a child spanning an AppGrid
+  breakpoint, `shell:` (1280px). Below 1280px the sidebar is the 57px icon
+  rail, `AppGrid` halves and main-aside stack, the KPI layouts (quarters,
+  fifths, pair, thirds) stay one row from `desktop:` and the `FilterBar` puts
+  its filters on a second row; a child spanning an AppGrid
   row spans at `shell:` too. Product components use no other breakpoint.
 - **Atoms have one form.** Geometry lives in `components/ui` and
   `components/layout`; a feature folder composes them and sets no spacing,

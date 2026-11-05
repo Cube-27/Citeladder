@@ -41,8 +41,8 @@ function donutArcs(slices: readonly DonutSlice[], total: number) {
 }
 
 /**
- * DonutChart — share of a whole as a 152px donut: the total in the display
- * face at the centre and a legend of shares and counts beside it. Colour by
+ * DonutChart — share of a whole as a 152px donut: the total in the `figure`
+ * role (Geist 500) at the centre and a legend of shares and counts beside it. Colour by
  * order (your brand first in `data-1`, then `data-2`, `data-3`), Other
  * hatched; at most four slices. Hovering a slice or its legend row thickens
  * its arc and puts its share in the centre. The figure is one image whose
@@ -135,7 +135,7 @@ export function DonutChart({
             aria-hidden
             className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5"
           >
-            <span className="font-display text-display-lg text-ink tabular-nums">
+            <span className="type-figure-ring">
               {highlighted ? chartPercent(highlighted.value, sum) : format(total ?? sum)}
             </span>
             <span className="type-eyebrow max-w-24 truncate">

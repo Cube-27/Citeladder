@@ -4,13 +4,16 @@ import { cn } from '@/lib/utils';
 
 /**
  * AppGrid — the app's only grids, so a page picks a layout instead of
- * setting columns or gaps. The gap is always the card gap (16) and cards in a
+ * setting columns or gaps. The gap is always the card gap (`workspace-gap`,
+ * 12 in the app since decision D11) and cards in a
  * row stretch to one height.
  *
- *   `quarters`    — four equal (a KPI row): 4 from 1280px, 2 × 2 below it,
- *                   one column on a phone.
- *   `fifths`      — five equal (a five-figure KPI row): 5 from 1280px,
- *                   3 + 2 below it, one column on a phone.
+ * A KPI row is one row from 981px (decision D9: 4 across at the owner's 982px,
+ * never 2 × 2, never 2 + 1) and one column on a phone:
+ *
+ *   `quarters`    — four equal (a KPI row).
+ *   `fifths`      — five equal (a five-figure KPI row).
+ *   `pair`        — two equal (a two-figure KPI row).
  *   `thirds`      — three equal: one row from 981px, never 2 + 1.
  *   `main-aside`  — 2fr + 1fr (a chart beside a ranked list or facts);
  *                   stacks below 1280px.
@@ -21,8 +24,9 @@ import { cn } from '@/lib/utils';
  * Grids never nest a second AppGrid and never set widths on their children.
  */
 const LAYOUT = {
-  quarters: 'desktop:grid-cols-2 shell:grid-cols-4',
-  fifths: 'desktop:grid-cols-3 shell:grid-cols-5',
+  quarters: 'desktop:grid-cols-4',
+  fifths: 'desktop:grid-cols-5',
+  pair: 'desktop:grid-cols-2',
   thirds: 'desktop:grid-cols-3',
   'main-aside': 'shell:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]',
   halves: 'shell:grid-cols-2',
@@ -53,7 +57,11 @@ export function AppGrid({
     {
       ...props,
       'data-app-grid': layout,
-      className: cn('grid min-w-0 grid-cols-1 gap-4 *:min-w-0', LAYOUT[layout], className),
+      className: cn(
+        'grid min-w-0 grid-cols-1 gap-[var(--workspace-gap)] *:min-w-0',
+        LAYOUT[layout],
+        className,
+      ),
     },
     children,
   );

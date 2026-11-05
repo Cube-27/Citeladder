@@ -185,7 +185,7 @@ export function ChartSwatch({ tone, line = false }: Readonly<{ tone: ChartTone; 
       aria-hidden
       className={cn(
         'inline-block shrink-0 overflow-hidden',
-        line ? 'h-[3px] w-3 rounded-full' : 'rounded-2xs size-2',
+        line ? 'h-[3px] w-3 rounded-2xs' : 'rounded-2xs size-2',
         tone === 4 ? undefined : CHART_FILL[tone],
       )}
     >

@@ -45,5 +45,5 @@ export function SettingsSection({
 
 /** A page's settings sections, stacked at the card gap. */
 export function SettingsSections({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="flex min-w-0 flex-col gap-4">{children}</div>;
+  return <div className="flex min-w-0 flex-col gap-[var(--workspace-gap)]">{children}</div>;
 }

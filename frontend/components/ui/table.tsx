@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
  * Table — the app's data table:
  *  - the header is a sticky 36px `surface-sunken` band with `radius-sm` ends;
  *    its labels are 12/16 medium `ink-secondary`, `ink` while sorted
- *  - 44px rows divided by `line` rules, `surface-sunken` on hover and when
+ *  - `table-row-height` rows (40 in the app) divided by `line` rules, `surface-sunken` on hover and when
  *    selected; `highlight` tints the tracked brand's own row `accent-soft`
  *    (one row per table, never for emphasis); no zebra stripes, no column
  *    rules, no colour by status (that is a Badge cell)
@@ -279,7 +279,7 @@ export function ClampText({
 
 const cellClasses = ({ numeric, desktopOnly }: CellOptions) =>
   cn(
-    'text-body-sm text-ink border-line px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)] text-left align-middle',
+    'text-body-sm text-ink border-line px-[var(--table-cell-padding-x)] pt-[var(--table-cell-padding-y)] pb-[var(--table-cell-padding-bottom)] text-left align-middle',
     // Row rule, dropped on the last row.
     'border-b [tr:last-child>&]:border-b-0',
     // A value never wraps: "Not measured" split over two lines read as two values.

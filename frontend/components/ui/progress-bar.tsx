@@ -3,11 +3,11 @@ import { useId } from 'react';
 import { cn } from '@/lib/utils';
 
 /** The busy segment: 36% of the track sliding across (slower under reduced motion). */
-const BUSY_FILL = 'bg-ink absolute top-0 left-0 h-full w-[36%] rounded-full animate-progress-busy';
+const BUSY_FILL = 'bg-ink absolute top-0 left-0 h-full w-[36%] animate-progress-busy';
 
 /**
  * ProgressBar — a thin bar for work that takes more than a few seconds: a
- * prompt run, a crawl, an export. A 6px `radius-full` track in `line` with an
+ * prompt run, a crawl, an export. A 6px `radius-2xs` track in `line` with an
  * `ink` fill growing in 200ms; without `value` it is busy. The label (14/20
  * medium `ink`) sits left and the value (mono 13 `ink-secondary`) right; count
  * in the product's units with `valueLabel` ("48 of 120 prompts") when you can.
@@ -45,12 +45,12 @@ export function ProgressBar({
         aria-valuetext={valueLabel}
         aria-busy={busy || undefined}
       />
-      <div aria-hidden className="bg-line relative h-1.5 overflow-hidden rounded-full">
+      <div aria-hidden className="bg-line rounded-2xs relative h-1.5 overflow-hidden">
         {busy ? (
           <span className={BUSY_FILL} />
         ) : (
           <span
-            className="bg-ink block h-full rounded-full transition-[width] duration-[var(--motion-slow)] ease-[var(--ease-standard)]"
+            className="bg-ink block h-full transition-[width] duration-[var(--motion-slow)] ease-[var(--ease-standard)]"
             style={{ width: `${percent}%` }}
           />
         )}

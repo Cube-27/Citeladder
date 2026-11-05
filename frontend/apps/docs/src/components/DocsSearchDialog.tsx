@@ -107,7 +107,7 @@ export function DocsSearchDialog() {
         aria-haspopup="dialog"
         aria-keyshortcuts="Control+K Meta+K"
         onClick={(event) => show(event.currentTarget)}
-        className="focus-ring bg-surface border-line-control text-ink-muted hover:border-ink-secondary text-body-sm h-[var(--control-md)] items-center gap-2 rounded-md border pr-2 pl-3 text-left transition-colors"
+        className="focus-ring bg-surface text-ink-muted border-line hover:border-line-strong text-body-sm shadow-edge h-[var(--control-md)] items-center gap-2 rounded-md border pr-2 pl-3 text-left transition-colors"
       >
         <Search className="size-4 shrink-0" aria-hidden />
         <span className="min-w-0 flex-1 truncate" aria-hidden>
@@ -139,7 +139,7 @@ export function DocsSearchDialog() {
         <p id="docs-search-description" className="sr-only">
           Find guides across the product, Agent and MCP.
         </p>
-        <div className="focus-frame border-line text-ink-muted flex h-[var(--control-lg)] shrink-0 items-center gap-3 border-b px-4">
+        <div className="palette-field border-line text-ink-muted flex h-[var(--control-lg)] shrink-0 items-center gap-3 border-b px-4">
           <Search className="size-4 shrink-0" aria-hidden />
           <label htmlFor="docs-query" className="sr-only">
             Search terms

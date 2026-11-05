@@ -6,7 +6,7 @@ import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { ICONS } from '@/lib/icons';
 import type { SiteCrawl, SiteHealthDashboard, SiteHealthOverview } from '@/lib/api/types';
 
-/** One Site Health score as a `KpiRow` segment: the score bar and where to act. */
+/** One Site Health score as a `KpiRow` segment: the score ring and where to act. */
 export type AuditMetric = {
   title: string;
   value: number | null;
@@ -33,13 +33,10 @@ function auditSegment({
   if (value === null) {
     return { ...base, value: unavailable ?? <UnavailableValue state="not_measured" /> };
   }
-  const rounded = Math.round(value);
+  // The ring names itself "<label>: <n> out of 100".
   return {
     ...base,
-    score: {
-      value,
-      label: valueUnit === 'percent' ? `${title}: ${rounded}%` : `${title} score: ${rounded}`,
-    },
+    score: { value, label: valueUnit === 'percent' ? title : `${title} score` },
   };
 }
 

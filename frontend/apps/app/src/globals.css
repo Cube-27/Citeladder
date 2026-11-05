@@ -46,6 +46,7 @@
   --color-surface-sunken: #ececec;
   --color-nav-glass: rgb(244 244 244 / 78%);
   --color-line: #e5e5e5;
+  --color-line-strong: #d4d4d4;
   --color-line-control: #858585;
   --color-ink: #111111;
   --color-ink-hover: #2a2a2a;
@@ -81,9 +82,11 @@
   --color-brand-claude: #d97757;
   --color-brand-gemini: #3186ff;
 
-  /* Type. Each role owns size, leading, weight and tracking; the display
-     roles (display-*, title, title-sm, stat) pair with `font-display`, the
-     mono roles (eyebrow, data, code) with `font-mono`, the rest are Geist. */
+  /* Type. Each role owns size, leading, weight and tracking; on the website
+     and docs the display roles (display-*, title, title-sm, stat) pair with
+     `font-display`. In the app only the page title is Cal Sans (D7): its other
+     titles and figures set these sizes in Geist 500. The mono roles (eyebrow,
+     data, code) pair with `font-mono`, the rest are Geist, never above 500. */
   --text-*: initial;
   --text-display-2xl: 44px;
   --text-display-2xl--line-height: 48px;
@@ -101,6 +104,10 @@
   --text-display-md--line-height: 34px;
   --text-display-md--font-weight: 400;
   --text-display-md--letter-spacing: -0.01em;
+  --text-display-sm: 24px;
+  --text-display-sm--line-height: 32px;
+  --text-display-sm--font-weight: 400;
+  --text-display-sm--letter-spacing: -0.01em;
   --text-title: 22px;
   --text-title--line-height: 28px;
   --text-title--font-weight: 400;
@@ -109,8 +116,9 @@
   --text-title-sm--font-weight: 400;
   --text-stat: 36px;
   --text-stat--line-height: 40px;
-  --text-stat--font-weight: 400;
-  --text-stat--letter-spacing: -0.01em;
+  /* Geist 500 since D7: an app number is never Cal Sans. */
+  --text-stat--font-weight: 500;
+  --text-stat--letter-spacing: -0.02em;
   --text-lead: 20px;
   --text-lead--line-height: 30px;
   --text-lead--font-weight: 400;
@@ -131,7 +139,13 @@
   --text-label-lg--font-weight: 500;
   --text-heading: 16px;
   --text-heading--line-height: 24px;
-  --text-heading--font-weight: 600;
+  /* Geist never sets above 500 (decision D6). */
+  --text-heading--font-weight: 500;
+  /* Dialog and drawer titles and the plan name: Geist 500 22/28 (D7). */
+  --text-heading-lg: 22px;
+  --text-heading-lg--line-height: 28px;
+  --text-heading-lg--font-weight: 500;
+  --text-heading-lg--letter-spacing: -0.01em;
   --text-caption: 12px;
   --text-caption--line-height: 16px;
   --text-caption--font-weight: 400;
@@ -150,17 +164,18 @@
      system's steps are 1 2 3 4 5 6 8 10 12 16 24 32 (4 to 128px). */
   --spacing: 4px;
 
-  /* Radius. 2xs chart bars, swatches and rungs; xs badges, favicons and
-     checkboxes; sm tabs in a track and menu items; md buttons, inputs and
-     code; lg app cards, menus and dialogs; xl website cards, frames and the
-     navbar; full pills, avatars and switches. */
+  /* Radius, only slightly rounded and never over 8 (decision D10). 2xs chart
+     bars, swatches and rungs; xs badges, favicons and checkboxes; sm tabs in
+     a track, menu items and chips; md buttons, inputs and code; lg app cards,
+     menus and dialogs; xl website cards, frames and the navbar; full only
+     avatars, status dots, switch tracks and count pills. */
   --radius-*: initial;
   --radius-2xs: 2px;
-  --radius-xs: 6px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
   --radius-full: 9999px;
 
   /* Shadows are declared in :root below (they change with the theme) and
@@ -168,10 +183,12 @@
   --shadow-*: initial;
 
   /* Containers: `max-w-site` (website sections, navbar, footer), `max-w-app`
-     (an app page's content), `max-w-prose` (articles, legal, docs) and
-     `max-w-narrow` (section headers, auth cards, onboarding, empty states). */
+     (an app page's content), `max-w-thread` (the Agent thread and its
+     composer), `max-w-prose` (articles, legal, docs) and `max-w-narrow`
+     (section headers, auth cards, onboarding, empty states). */
   --container-site: 1320px;
   --container-app: 1440px;
+  --container-thread: 1040px;
   --container-prose: 720px;
   --container-narrow: 560px;
 
@@ -210,7 +227,9 @@
   /* Depth is quiet: a hairline ring plus a short, soft drop. xs on secondary
      buttons, the selected tab, pills and website cards; card on app cards and
      screens inside a frame; pop on menus, popovers, dialogs and toasts; press
-     on the primary button. Never two shadows on nested surfaces. */
+     on the primary button. Never two shadows on nested surfaces. edge is the
+     faint smudge, with no ring, under every soft field edge (decision D5). */
+  --shadow-edge: 0 1px 2px rgba(17, 17, 17, 0.05);
   --shadow-xs: 0 0 0 1px rgb(17 17 17 / 8%), 0 1px 2px rgb(17 17 17 / 6%);
   --shadow-card:
     0 0 0 1px rgb(17 17 17 / 6%), 0 1px 2px rgb(17 17 17 / 4%),
@@ -222,10 +241,13 @@
     inset 0 1px 0 rgb(255 255 255 / 16%), 0 0 0 1px var(--color-ink),
     0 1px 2px rgb(17 17 17 / 24%);
 
-  /* Controls. Every interactive row in one view uses one height. */
+  /* Controls. Every interactive row in one view uses one height: 32 (D11),
+     28 compact, 48 for website calls to action. `row-app` is the app's
+     table and fact row, its header title row and the sidebar's ident row. */
   --control-sm: 28px;
-  --control-md: 36px;
+  --control-md: 32px;
   --control-lg: 48px;
+  --row-app: 40px;
   --nav-height: 64px;
   --sidebar-width: 248px;
   /* The sidebar below 1280px: one control wide inside its 12px inset, plus
@@ -269,14 +291,31 @@
   --table-header-height: var(--control-md);
   --table-cell-padding-x: 12px;
   --table-cell-padding-y: 8px;
+  /* The row's 1px rule comes out of the row, not on top of it: a cell
+     holding a 24px title line is still `table-row-height` tall. */
+  --table-cell-padding-bottom: calc(var(--table-cell-padding-y) - 1px);
   --table-min-width-sm: 36rem;
   --table-min-width-md: 48rem;
   --table-min-width-lg: 64rem;
   --table-min-width-xl: 76rem;
+  /* The app shell's lines (D11): the page and the sidebar both start
+     `page-top-inset` (space-4) from the top. The PageHeader is one 64px band,
+     a `row-app` title row, space-1, then a reserved 20px meta line, and the
+     sidebar's project switcher (`row-app`) sits in a band of the same height,
+     so the mode switch below it is level with the page's tabs or filters.
+     The controls band's rows sit `page-band-gap` apart (tabs → filters →
+     content). */
+  --page-top-inset: 16px;
+  --page-header-meta-height: 20px;
+  --page-header-band: calc(var(--row-app) + 4px + var(--page-header-meta-height));
+  --page-band-gap: 8px;
   /* What a screen that fills the viewport (the Agent thread) leaves for the
-     header: the main gutter above and below, the one-control header row and
-     the 32 under it. */
-  --route-chrome-height: calc(2 * var(--content-gutter) + var(--control-md) + 32px);
+     header: the top inset, the header band, the gap under it and the bottom
+     gutter. */
+  --route-chrome-height: calc(
+    var(--page-top-inset) + var(--page-header-band) + var(--page-section-gap) +
+      var(--content-gutter)
+  );
   /* Website gutters: 20 below 768px, 40 to 1279px, 64 from 1280px. */
   --site-gutter: 20px;
   --marketing-nav-offset: calc(var(--nav-height) + 8px + env(safe-area-inset-top, 0px));
@@ -292,6 +331,7 @@
   --color-surface-sunken: #1e1e1e;
   --color-nav-glass: rgb(30 30 30 / 78%);
   --color-line: #2a2a2a;
+  --color-line-strong: #3a3a3a;
   --color-line-control: #747474;
   --color-ink: #f4f4f4;
   --color-ink-hover: #d6d6d6;
@@ -314,6 +354,7 @@
   --color-data-other: #4a4a4a;
   --color-scrim: rgb(0 0 0 / 64%);
   --color-chart-grid: #262626;
+  --shadow-edge: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-xs: 0 0 0 1px rgb(255 255 255 / 8%), 0 1px 2px rgb(0 0 0 / 50%);
   --shadow-card: 0 0 0 1px rgb(255 255 255 / 7%), 0 1px 2px rgb(0 0 0 / 60%);
   --shadow-pop: 0 0 0 1px rgb(255 255 255 / 10%), 0 16px 40px rgb(0 0 0 / 60%);
@@ -322,6 +363,9 @@
 
 /* Tailwind folds a theme shadow into its own variable at build time, which
    would freeze the light value; these read the live token instead. */
+@utility shadow-edge {
+  box-shadow: var(--shadow-edge);
+}
 @utility shadow-xs {
   box-shadow: var(--shadow-xs);
 }
@@ -340,6 +384,28 @@
 @media (max-width: 1279px) {
   :root {
     --content-gutter: 24px;
+  }
+}
+
+/* The app's density (decision D11): compact and technical, like GitHub or
+   Claude Code, not airy. The app's document is the one without
+   `data-public-surface`; the website and docs keep the system's spacing
+   (controls are 32 everywhere). One value per role still holds inside the
+   app: table and fact rows `row-app` (40), card and dialog padding 16,
+   header → controls 16, the controls band's rows 8 apart, peers 12 apart. */
+:root:not([data-public-surface]) {
+  --content-gutter: 24px;
+  --page-section-gap: 16px;
+  --workspace-gap: 12px;
+  --compact-gap: 8px;
+  --card-padding: 16px;
+  --modal-padding: 16px;
+  --table-row-height: var(--row-app);
+}
+
+@media (max-width: 1279px) {
+  :root:not([data-public-surface]) {
+    --content-gutter: 16px;
   }
 }
 
@@ -384,7 +450,7 @@
 
 *::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   background-color: transparent;
   background-clip: padding-box;
 }
@@ -449,25 +515,27 @@ html[data-public-surface] body {
 @layer components {
   .type-page-title {
     font-family: var(--font-display);
-    font-size: var(--text-display-md);
-    line-height: var(--text-display-md--line-height);
+    font-size: var(--text-display-sm);
+    line-height: var(--text-display-sm--line-height);
     font-weight: 400;
-    letter-spacing: var(--text-display-md--letter-spacing);
+    letter-spacing: var(--text-display-sm--letter-spacing);
     color: var(--color-ink);
   }
+  /* In the app Cal Sans is the page title's alone (decision D7): every other
+     title and number is Geist, never above 500 (D6). */
   .type-section-title {
-    font-family: var(--font-display);
-    font-size: var(--text-title);
-    line-height: var(--text-title--line-height);
-    font-weight: 400;
-    letter-spacing: 0;
+    font-family: var(--font-sans);
+    font-size: var(--text-heading-lg);
+    line-height: var(--text-heading-lg--line-height);
+    font-weight: var(--text-heading-lg--font-weight);
+    letter-spacing: var(--text-heading-lg--letter-spacing);
     color: var(--color-ink);
   }
   .type-item-title {
     font-family: var(--font-sans);
     font-size: var(--text-heading);
     line-height: var(--text-heading--line-height);
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 0;
     color: var(--color-ink);
   }
@@ -504,21 +572,34 @@ html[data-public-surface] body {
     letter-spacing: 0;
     color: var(--color-ink-muted);
   }
-  /* The number in a Stat: Cal Sans at its one weight. */
+  /* The number in a Stat, a ScoreRing or a donut's centre: Geist 500 with
+     digits of one width. */
   .type-figure {
-    font-family: var(--font-display);
+    font-family: var(--font-sans);
     font-size: var(--text-stat);
     line-height: var(--text-stat--line-height);
-    font-weight: 400;
+    font-weight: 500;
     letter-spacing: var(--text-stat--letter-spacing);
+    font-variant-numeric: tabular-nums;
     color: var(--color-ink);
   }
   /* A number inside a row: the card-title size with digits of one width. */
+  /* The ScoreRing's and the DonutChart's centre: Geist 500 32/38 (D7). */
+  .type-figure-ring {
+    font-family: var(--font-sans);
+    font-size: var(--text-display-lg);
+    line-height: var(--text-display-lg--line-height);
+    font-weight: 500;
+    letter-spacing: var(--text-display-lg--letter-spacing);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-ink);
+  }
+
   .type-figure-sm {
     font-family: var(--font-sans);
     font-size: var(--text-heading);
     line-height: var(--text-heading--line-height);
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 0;
     font-variant-numeric: tabular-nums;
     color: var(--color-ink);
@@ -561,15 +642,13 @@ html[data-public-surface] body {
   .prose-content > :last-child { margin-bottom: 0; }
   .prose-content :where(h2, h3, h4, h5, h6) {
     font-family: var(--font-sans);
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 0;
     color: var(--color-ink);
     margin: 1.5rem 0 0.75rem;
   }
   .prose-content > :where(h2, h3, h4, h5, h6):first-child { margin-top: 0; }
   .prose-content h2 {
-    font-family: var(--font-display);
-    font-weight: 400;
     font-size: var(--text-title);
     line-height: var(--text-title--line-height);
   }
@@ -580,7 +659,7 @@ html[data-public-surface] body {
   .prose-content ul { list-style: disc; }
   .prose-content ol { list-style: decimal; }
   .prose-content li + li { margin-top: 0.5rem; }
-  .prose-content strong { font-weight: 600; color: var(--color-ink); }
+  .prose-content strong { font-weight: 500; color: var(--color-ink); }
   .prose-content a {
     color: var(--color-accent-ink);
     text-decoration: underline;
@@ -654,7 +733,7 @@ html[data-public-surface] body {
   }
   .prose-compact { font-size: var(--text-body-sm); line-height: var(--text-body-sm--line-height); }
   .prose-compact :where(h2, h3, h4, h5, h6) { margin: 1rem 0 0.5rem; }
-  .prose-compact h2 { font-family: var(--font-sans); font-weight: 600; font-size: var(--text-heading); line-height: var(--text-heading--line-height); }
+  .prose-compact h2 { font-size: var(--text-heading); line-height: var(--text-heading--line-height); }
   .prose-compact :is(h3, h4, h5, h6) { font-size: var(--text-label); line-height: var(--text-label--line-height); }
   .prose-compact :where(p, ul, ol, pre, table, blockquote) { margin-bottom: 0.75rem; }
   .prose-compact pre { padding: 0.75rem; }
@@ -698,7 +777,7 @@ html[data-public-surface] body {
   h6 {
     margin: 0;
     font-family: var(--font-sans);
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: normal;
     line-height: 1.25;
     color: var(--color-ink);
@@ -836,6 +915,14 @@ a.focus-ring:active .type-caption {
 /* Text entry belongs to the field frame. Auxiliary buttons keep their own
    focus edge and do not also highlight the surrounding frame. */
 .focus-frame :is(input, textarea, select):focus-visible {
+  outline: none;
+}
+
+/* A palette's search row (the command palette, docs search): the input is
+   the dialog's only field and holds focus while it is open, so the caret is
+   the focus cue and the row's divider stays the soft `line` rule, never a
+   dark edge. */
+.palette-field input:focus-visible {
   outline: none;
 }
 

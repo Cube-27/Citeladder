@@ -327,7 +327,8 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
     <Stack gap="workspace">
       <Stack as="section" gap="compact">
         <h3 className={textRole('sectionTitle')}>What will be fetched</h3>
-        <Stack as="dl" gap="compact" className="type-body grid-cols-2">
+        {/* The three figures share one row, never 2 × 2 (decision D9). */}
+        <Stack as="dl" gap="compact" className="type-body grid-cols-3">
           <div>
             <dt className="type-label">Requests</dt>
             <dd className="type-figure">{review.planned_calls}</dd>
@@ -340,7 +341,7 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
             <dt className="type-label">Estimated cost</dt>
             <dd className="type-figure">{runEstimate(review)}</dd>
           </div>
-          <div>
+          <div className="col-span-full">
             <dt className="type-label">Scope</dt>
             <dd>{searchScopeLabel(typeof scope === 'string' ? scope : undefined)}</dd>
           </div>

@@ -6,7 +6,7 @@ import type { LucideIcon } from 'lucide-react';
 import { AppGrid, type AppGridLayout } from '@/components/ui/app-grid';
 import { cardClasses } from '@/components/ui/card';
 import { ComparisonValue, MetricValue } from '@/components/ui/metric-value';
-import { ScoreBar } from '@/components/ui/score-bar';
+import { clampScore, ScoreRing } from '@/components/ui/score-ring';
 import { availabilityLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -14,16 +14,18 @@ import { cn } from '@/lib/utils';
  * StatRow — the one KPI row: up to four Stats in one Card, separated by
  * 32px of space, never by rules.
  *
- *   - one row of up to four on desktop, balanced across rows beyond that
- *     (five → 3 + 2, six → 3 + 3), stacked below desktop; never 2 + 1;
+ *   - one row of up to four from the desktop breakpoint (982px included),
+ *     balanced across rows beyond that (five → 3 + 2, six → 3 + 3), stacked
+ *     below desktop; never 2 × 2, never 2 + 1;
  *   - the Stats of a row share one height, so a sub-line under one value and
  *     not its neighbour never staggers the row.
  *
  * A Stat's anatomy, in order: the mono eyebrow label (with an optional leading
  * icon and a trailing marker), an optional caption naming the value's period,
- * the value in Cal Sans (`stat` 36), the change line (a `Delta`), a sub-line,
- * a comparison window's value, and one action. A 0–100 score shows its number
- * with a `ScoreBar` on the value line.
+ * the value in Geist 500 (`stat` 36), the change line (a `Delta`), a sub-line,
+ * a comparison window's value, and one action. A 0–100 score is its number
+ * in `stat` with a bare 48px `ScoreRing` (auto tone) centred on its right —
+ * never a bar (decision D8).
  *
  * `value: null` is the missing state — the muted dash with `missingLabel`
  * (default "Not measured") as its accessible name. A string or number is the
@@ -37,7 +39,7 @@ import { cn } from '@/lib/utils';
 
 type StatValue =
   | { value: ReactNode; score?: undefined }
-  /** A 0–100 score: its number with a ScoreBar, named by `label`. */
+  /** A 0–100 score: its number with a bare ScoreRing, named by `label`. */
   | { score: Readonly<{ value: number; label: string }>; value?: undefined };
 
 type StatAction =
@@ -116,13 +118,13 @@ export function StatRow({
 }
 
 /**
- * The KPI row's grid by count: four go 4 → 2 × 2 (below 1280px) → 1, five
- * go 5 → 3 + 2, three stay one row, two stay a pair; never 2 + 1.
+ * The KPI row's grid by count: one row from the desktop breakpoint for up to
+ * five (decision D9: 4 across at 982px, never 2 × 2 or 2 + 1), stacked below.
  */
 function kpiLayout(count: number): AppGridLayout {
   if (count === 5) return 'fifths';
   if (count === 3) return 'thirds';
-  if (count === 2) return 'halves';
+  if (count === 2) return 'pair';
   return 'quarters';
 }
 
@@ -227,26 +229,33 @@ function StatLabel({ segment }: StatPart) {
   );
 }
 
-/** The caption, then the value: a figure, or a score's number over its ScoreBar. */
+/**
+ * The caption, then the value. A score's value is its number with the bare
+ * ring on its right, centred on the number; the ring carries the accessible
+ * "out of 100" name, so the drawn number is not read twice.
+ */
 function StatBody({ segment }: StatPart) {
   return (
     <dd className="grid min-w-0 gap-1">
       {segment.caption ? (
         <span className="text-caption text-ink-muted">{segment.caption}</span>
       ) : null}
-      {segment.score ? <StatScore score={segment.score} /> : <StatValue segment={segment} />}
+      {segment.score ? (
+        <span className="flex min-w-0 items-center justify-between gap-4">
+          <span aria-hidden className="type-figure min-w-0">
+            {clampScore(segment.score.value)}
+          </span>
+          <ScoreRing
+            value={segment.score.value}
+            label={segment.score.label}
+            tone="auto"
+            showValue={false}
+          />
+        </span>
+      ) : (
+        <StatValue segment={segment} />
+      )}
     </dd>
-  );
-}
-
-function StatScore({ score }: Readonly<{ score: Readonly<{ value: number; label: string }> }>) {
-  return (
-    <div className="grid min-w-0 gap-2">
-      <span aria-hidden className="type-figure">
-        {Math.round(score.value)}
-      </span>
-      <ScoreBar value={score.value} label={score.label} showValue={false} />
-    </div>
   );
 }
 

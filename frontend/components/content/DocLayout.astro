@@ -1,6 +1,7 @@
 ---
 /**
- * DocLayout — a rail, the reading column and a 200px "On this page" column,
+ * DocLayout — a rail, the reading column and a 232px "On this page" column
+ * (its right edge fixed, so the extra width comes from the reading column),
  * 48px apart, the rail and Toc sticky under the bar. The docs pass their
  * sidebar in the `rail` slot; the website's legal pages pass `nav`, a list of
  * pages drawn on the rail's 36px rows (the current one on `surface-sunken`).
@@ -103,7 +104,7 @@ const hasBar = hasToc || nav !== undefined;
     align-items: start;
   }
   .cl-doc--toc {
-    grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 200px;
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 232px;
   }
   .cl-doc-rail,
   .cl-doc-toc {

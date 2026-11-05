@@ -94,7 +94,7 @@ export function CardEyebrow({
   );
 }
 
-/** CardTitle — 16/24 semibold in `ink`. */
+/** CardTitle — 16/24 Geist 500 in `ink`. */
 export function CardTitle({
   children,
   className,
@@ -103,7 +103,7 @@ export function CardTitle({
   return (
     <h3
       {...props}
-      className={cn('text-label-lg text-ink font-semibold tracking-[-0.01em]', className)}
+      className={cn('text-label-lg text-ink font-medium tracking-[-0.01em]', className)}
     >
       {children}
     </h3>

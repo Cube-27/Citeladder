@@ -146,8 +146,9 @@ test('contents omit step numbering without changing article anchors and follow t
 });
 
 // Docs reads at the system's roles at every width (body 16; lead 18 on a
-// phone, 20 above), and its search trigger is a field, not a raised button.
-test('docs keeps its own reading type and a field-like search trigger', async ({ page }) => {
+// phone, 20 above), and its search trigger wears the soft field edge — a 1px
+// `line` border with the `shadow-edge` smudge, never a dark hairline (D5).
+test('docs keeps its own reading type and a soft-edged search trigger', async ({ page }) => {
   const reading = async () =>
     page.evaluate(() => {
       const size = (selector: string) =>
@@ -155,17 +156,26 @@ test('docs keeps its own reading type and a field-like search trigger', async ({
       const search = getComputedStyle(
         document.querySelector('[data-docs-search-trigger="field"]') as Element,
       );
+      // The edge tokens as this page resolves them, for comparison.
+      const probe = document.body.appendChild(document.createElement('div'));
+      probe.style.boxShadow = 'var(--shadow-edge)';
+      probe.style.color = 'var(--color-line)';
+      const softEdge = getComputedStyle(probe).boxShadow;
+      const line = getComputedStyle(probe).color;
+      probe.remove();
       return {
         body: size('main .cl-prose p'),
         lead: size('.cl-ahead-lead'),
-        searchShadow: search.boxShadow,
+        softEdge: search.boxShadow === softEdge && softEdge !== 'none',
+        edge: `${search.borderTopWidth} ${search.borderTopColor === line}`,
       };
     });
   await page.setViewportSize({ width: 375, height: 800 });
   await page.goto('/');
-  expect(await reading()).toEqual({ body: '16px', lead: '18px', searchShadow: 'none' });
+  const soft = { softEdge: true, edge: '1px true' };
+  expect(await reading()).toEqual({ body: '16px', lead: '18px', ...soft });
   await page.setViewportSize({ width: 982, height: 800 });
-  expect(await reading()).toEqual({ body: '16px', lead: '20px', searchShadow: 'none' });
+  expect(await reading()).toEqual({ body: '16px', lead: '20px', ...soft });
   await page.setViewportSize({ width: 1440, height: 900 });
-  expect(await reading()).toEqual({ body: '16px', lead: '20px', searchShadow: 'none' });
+  expect(await reading()).toEqual({ body: '16px', lead: '20px', ...soft });
 });
