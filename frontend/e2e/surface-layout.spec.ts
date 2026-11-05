@@ -315,13 +315,15 @@ test('password and Agent text entry paint one focus boundary', async ({ page }) 
   const inputEdge = await prompt.evaluate((node) => getComputedStyle(node).borderColor);
   await prompt.click();
   await expect(prompt).toBeFocused();
+  // The composer is the box: its frame takes the focus edge and the halo,
+  // like the password frame above.
   await expect(async () => {
-    expect(await prompt.evaluate((node) => getComputedStyle(node).borderColor)).not.toBe(inputEdge);
+    expect(await form.evaluate((node) => getComputedStyle(node).borderColor)).not.toBe(outerEdge);
   }).toPass();
-  expect(await form.evaluate((node) => getComputedStyle(node).borderColor)).toBe(outerEdge);
-  // The composer's outer form draws no second ring around the field's own
-  // halo, and the field draws no outline ring.
+  expect(await form.evaluate((node) => getComputedStyle(node).boxShadow)).not.toBe('none');
   expect(await form.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('none');
+  // One boundary: the field inside draws no edge, halo or outline of its own.
+  expect(await prompt.evaluate((node) => getComputedStyle(node).borderColor)).toBe(inputEdge);
+  expect(await prompt.evaluate((node) => getComputedStyle(node).boxShadow)).toBe('none');
   expect(await prompt.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('none');
-  expect(await prompt.evaluate((node) => getComputedStyle(node).boxShadow)).not.toBe('none');
 });
