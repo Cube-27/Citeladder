@@ -35,20 +35,13 @@
   margin: 0;
 }
 
-/* The lead under a heading: lead 20/30, body-lg 18/30 on phones. */
+/* The lead under a heading: body-lg 18/30 at every width (D26). */
 .cl-lead {
   margin: 0;
   color: var(--color-ink-secondary);
-  font-size: var(--text-lead);
-  line-height: var(--text-lead--line-height);
+  font-size: var(--text-body-lg);
+  line-height: var(--text-body-lg--line-height);
   text-wrap: pretty;
-}
-
-@media (max-width: 767px) {
-  .cl-lead {
-    font-size: var(--text-body-lg);
-    line-height: var(--text-body-lg--line-height);
-  }
 }
 
 /* Body copy outside a component (an aside line, an empty state): body 16/26. */
@@ -1113,7 +1106,6 @@ a.cl-announce:hover {
   font-family: var(--font-display);
   font-size: var(--text-display-xl);
   font-weight: 400;
-  letter-spacing: var(--text-display-xl--letter-spacing);
   line-height: var(--text-display-xl--line-height);
   text-wrap: balance;
 }
@@ -1159,7 +1151,7 @@ a.cl-announce:hover {
   }
 }
 
-/* ---------- Heroes: the page's H1 is display-2xl, 44 → 42 → 30, never larger ---------- */
+/* ---------- Heroes: the page's H1 is the site title, 48 → 32, never larger ---------- */
 .cl-phero,
 .cl-lhero {
   padding-top: 64px;
@@ -1185,7 +1177,6 @@ a.cl-announce:hover {
   font-family: var(--font-display);
   font-size: var(--text-site-title);
   font-weight: 400;
-  letter-spacing: var(--text-display-2xl--letter-spacing);
   line-height: var(--text-site-title--line-height);
   text-wrap: balance;
 }
@@ -1328,7 +1319,6 @@ a.cl-fcard:hover {
 
 .cl-fcard--lg .cl-fcard-title {
   font-size: var(--text-display-md);
-  letter-spacing: var(--text-display-md--letter-spacing);
   line-height: var(--text-display-md--line-height);
 }
 
@@ -1484,7 +1474,6 @@ a.cl-fcard:hover {
   font-family: var(--font-display);
   font-size: var(--text-display-md);
   font-weight: 400;
-  letter-spacing: var(--text-display-md--letter-spacing);
   line-height: var(--text-display-md--line-height);
   text-wrap: balance;
 }
@@ -1721,7 +1710,6 @@ a.cl-fcard:hover {
   font-family: var(--font-display);
   font-size: var(--text-site-feature);
   font-weight: 400;
-  letter-spacing: var(--text-display-lg--letter-spacing);
   line-height: var(--text-site-feature--line-height);
   text-wrap: balance;
 }
@@ -1963,7 +1951,6 @@ a.cl-fcard:hover {
   font-family: var(--font-display);
   font-size: var(--text-site-feature);
   font-weight: 400;
-  letter-spacing: var(--text-display-lg--letter-spacing);
   line-height: var(--text-site-feature--line-height);
 }
 
@@ -2558,7 +2545,6 @@ a.cl-logotile:hover {
   font-family: var(--font-display);
   font-size: var(--text-display-md);
   font-weight: 400;
-  letter-spacing: var(--text-display-md--letter-spacing);
   line-height: var(--text-display-md--line-height);
   text-wrap: balance;
 }
@@ -2642,7 +2628,6 @@ a.cl-logotile:hover {
   color: var(--color-ink);
   font-family: var(--font-display);
   font-size: var(--text-stat);
-  letter-spacing: var(--text-stat--letter-spacing);
   line-height: var(--text-stat--line-height);
   font-variant-numeric: tabular-nums;
 }

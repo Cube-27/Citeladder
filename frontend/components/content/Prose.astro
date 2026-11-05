@@ -4,7 +4,7 @@
  * the docs. It styles raw HTML from Markdown (and the website's typed post
  * blocks) in `ink-secondary`, `container-prose` wide.
  *
- * - `article` (guides, blog, legal, AI reference): `body-lg` (18/30), 24px
+ * - `article` (guides, blog, legal, AI reference): `body` (16/26, D26), 24px
  *   between blocks; h2 `display-md` 64px above, h3 `title` 40px above, h4
  *   `body-lg` medium (500); 12px after a heading.
  * - `docs`: the denser reference rhythm, `body` (16/26), 20px between
@@ -39,8 +39,8 @@ const { variant = 'article', as: Tag = 'div', label } = Astro.props;
   .cl-prose {
     max-width: var(--container-prose);
     color: var(--color-ink-secondary);
-    font-size: var(--text-body-lg);
-    line-height: var(--text-body-lg--line-height);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
     overflow-wrap: break-word;
   }
   .cl-prose > * {
@@ -62,7 +62,6 @@ const { variant = 'article', as: Tag = 'div', label } = Astro.props;
     margin-top: 64px;
     font-size: var(--text-display-md);
     line-height: var(--text-display-md--line-height);
-    letter-spacing: var(--text-display-md--letter-spacing);
   }
   .cl-prose h3:not([class]) {
     margin-top: 40px;
