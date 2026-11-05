@@ -5,9 +5,6 @@ Remaining work is consolidated in the backlog; historical plans are not active a
 
 ## Active
 
-- [Design system rollout](design-system-rollout.md) (owner decisions recorded
-  2026-11-05): the new design system replaces the design on every surface in
-  eight PRs; PR 1 (foundation) in progress.
 - [Billing improvement](billing-improvement.md) (feature 11, owner decisions
   recorded 2026-10-11): billing fully operational but hidden, in three PRs, so
   that enablement is a configuration-only PR.
@@ -21,6 +18,11 @@ Remaining work is consolidated in the backlog; historical plans are not active a
 - [Insight parity](insight-parity.md) (owner decisions recorded 2026-10-16 and
   2026-10-17): PR 1 (#414) and PR 2 (#419) shipped; PR 3 adds the editable
   Overview, its layout PDF and Site Health Recrawl.
+
+The [Design system rollout](design-system-rollout.md) (owner decisions D1–D25
+recorded 2026-11-05) is complete: the eight rollout PRs (#574 to #588) put
+every surface on the new design system, and the owner's review rounds shipped
+in #587, #589, #590 and #592.
 
 The [Prompt Builder](prompt-builder.md) plan (owner decisions recorded
 2026-11-01) is complete: generation quality (#483), the Prompt Builder sheet
