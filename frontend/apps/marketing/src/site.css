@@ -817,9 +817,9 @@ a.cl-announce:hover {
   align-items: center;
   gap: 4px;
   color: var(--color-ink);
-  font-size: var(--text-label);
+  font-size: var(--text-heading);
   font-weight: 500;
-  line-height: var(--text-label--line-height);
+  line-height: var(--text-heading--line-height);
   white-space: nowrap;
 }
 
@@ -835,9 +835,9 @@ a.cl-announce:hover {
 
 .cl-mega-desc {
   color: var(--color-ink-secondary);
-  font-size: var(--text-caption);
+  font-size: var(--text-body-sm);
   font-weight: 400;
-  line-height: var(--text-caption--line-height);
+  line-height: var(--text-body-sm--line-height);
 }
 
 .cl-mega-foot {
@@ -1150,9 +1150,9 @@ a.cl-announce:hover {
   margin: 0;
   color: var(--color-ink);
   font-family: var(--font-display);
-  font-size: var(--text-display-xl);
+  font-size: var(--text-site-section);
   font-weight: 400;
-  line-height: var(--text-display-xl--line-height);
+  line-height: var(--text-site-section--line-height);
   text-wrap: balance;
 }
 
@@ -1168,36 +1168,7 @@ a.cl-announce:hover {
   margin: 0;
 }
 
-.cl-shead--center {
-  align-items: center;
-  margin: 0 auto;
-  text-align: center;
-}
-
-.cl-shead--center .cl-shead-main,
-.cl-shead--center .cl-shead-side {
-  align-items: center;
-}
-
-/* D18: a centred header holds the 960 display and 720 reading measures. */
-.cl-shead--center .cl-shead-lead {
-  max-width: var(--container-prose);
-  text-wrap: pretty;
-}
-
-/* A check list under a centred lead is a centred block whose rows keep their marks in line. */
-.cl-shead--center .cl-checks {
-  text-align: left;
-}
-
-@media (max-width: 767px) {
-  .cl-shead-title {
-    font-size: var(--text-display-md);
-    line-height: var(--text-display-md--line-height);
-  }
-}
-
-/* ---------- Heroes: the page's H1 is the site title, 48 → 32, never larger ---------- */
+/* ---------- Heroes: the page's H1 is the site title, 60 → 32, never larger ---------- */
 .cl-phero,
 .cl-lhero {
   padding-top: 64px;
@@ -1296,15 +1267,15 @@ a.cl-announce:hover {
 }
 
 /* ---------- FeatureCard ---------- */
-/* Flat (public site): a 1px soft border, no shadow. The product image's well
-   sits straight in the card, 8px in, with the copy 16px in below it. */
+/* D31: a 20px card, its product image's grey well 8px in, with the copy 16px
+   in below it and tight vertically. */
 .cl-fcard {
   display: flex;
   flex-direction: column;
   height: 100%;
   padding: 8px;
   border: 1px solid var(--color-line);
-  border-radius: var(--radius-xl);
+  border-radius: 20px;
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
   color: var(--color-ink);
@@ -1332,8 +1303,8 @@ a.cl-fcard:hover {
   flex: none;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
-  padding: 16px;
+  gap: 4px;
+  padding: 12px 16px;
 }
 
 .cl-fcard:not(:has(> .cl-frame)) > .cl-fcard-body {
@@ -1341,7 +1312,7 @@ a.cl-fcard:hover {
 }
 
 .cl-fcard > .cl-frame + .cl-fcard-body {
-  padding-top: 20px;
+  padding-top: 16px;
 }
 
 .cl-fcard-body .cl-eyebrow + .cl-fcard-title {
@@ -2230,72 +2201,6 @@ a.cl-fcard:hover {
   gap: 8px;
 }
 
-/* ---------- EngineRotor: the landing lead's answer engine, one name at a time ---------- */
-.cl-rotor {
-  display: inline-grid;
-  align-items: baseline;
-  justify-items: start;
-  white-space: nowrap;
-}
-
-.cl-rotor-item {
-  display: inline-flex;
-  grid-area: 1 / 1;
-  align-items: baseline;
-  gap: 0.2em;
-}
-
-.cl-rotor-item[data-state='sizer'] {
-  visibility: hidden;
-}
-
-.cl-rotor-logo {
-  flex: none;
-  align-self: center;
-  width: 0.8em;
-  height: 0.8em;
-}
-
-/* The marks wear their own colours; OpenAI's is monochrome, so it keeps the ink. */
-.cl-rotor-logo[data-engine-mark='claude'] {
-  color: var(--color-brand-claude);
-}
-
-.cl-rotor-logo[data-engine-mark='gemini'] {
-  color: var(--color-brand-gemini);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .cl-rotor-item[data-state='in'] {
-    animation: cl-rotor-in var(--motion-reveal) var(--ease-standard) both;
-  }
-
-  .cl-rotor-item[data-state='out'] {
-    animation: cl-rotor-out var(--motion-slow) var(--ease-exit) forwards;
-  }
-}
-
-/* A reader who turns reduced motion on mid-rotation keeps one static name. */
-@media (prefers-reduced-motion: reduce) {
-  .cl-rotor-item[data-state='out'] {
-    display: none;
-  }
-}
-
-@keyframes cl-rotor-in {
-  from {
-    opacity: 0;
-    filter: blur(6px);
-  }
-}
-
-@keyframes cl-rotor-out {
-  to {
-    opacity: 0;
-    filter: blur(6px);
-  }
-}
-
 /* ---------- LogoTile ---------- */
 .cl-logotile {
   display: flex;
@@ -2483,10 +2388,9 @@ a.cl-logotile:hover {
   min-width: 0;
 }
 
-/* A centred FAQ or list under a centred header reads at the 720 measure. */
+/* A list under its left-aligned header reads at the 720 measure (D33). */
 .cl-page-section-body--reading {
   max-width: var(--container-prose);
-  margin-inline: auto;
 }
 
 .cl-page-section-body > * + * {

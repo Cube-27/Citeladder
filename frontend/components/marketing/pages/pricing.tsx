@@ -45,7 +45,7 @@ export function PricingHero() {
     <PageHero
       crumbs={[{ label: 'Home', href: '/' }, { label: 'Pricing' }]}
       title="No markup on model calls made with your keys"
-      lead="When you use your own provider keys, model calls bill to your provider accounts at provider rates. CiteLadder charges for the workspace, the analysis and the evidence behind every recommendation."
+      lead="Use your own AI provider keys and pay their rates directly, with no markup from us."
     />
   );
 }
@@ -65,8 +65,8 @@ export function PricingFaq() {
   return (
     <PageSection
       id="faq"
-      measure="reading"
-      title="Pricing questions"
+      layout="aside"
+      title="Frequently asked questions"
       lead={
         <>
           More answers on data, security and billing in the{' '}

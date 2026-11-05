@@ -329,7 +329,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
         </PageSection>
       )}
 
-      <PageSection id="faq" title="Frequently asked questions" measure="reading">
+      <PageSection id="faq" title="Frequently asked questions" layout="aside">
         <FaqList items={page.faqs.map((faq) => ({ question: faq.q, answer: faq.a }))} exclusive />
       </PageSection>
 

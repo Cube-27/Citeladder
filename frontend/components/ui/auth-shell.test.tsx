@@ -24,7 +24,7 @@ describe('AuthShell', () => {
     );
     // The link carries the name; the drawn lockup inside it is not announced again.
     expect(screen.queryByRole('img')).toBeNull();
-    expect(screen.getByRole('radiogroup', { name: 'Theme' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Switch to dark theme' })).toBeVisible();
     const main = screen.getByRole('main', { name: 'Account access' });
     expect(within(main).getByRole('region', { name: 'Welcome back' })).toHaveTextContent('form');
   });
@@ -47,7 +47,7 @@ describe('AuthSplitShell', () => {
       'https://citeladder.com/',
     );
     expect(card).toHaveTextContent('form');
-    expect(screen.getByRole('radiogroup', { name: 'Theme' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Switch to dark theme' })).toBeVisible();
     expect(screen.getByRole('complementary', { name: 'CiteLadder features' })).toHaveTextContent(
       'Ask your AI assistant about your visibility.',
     );
