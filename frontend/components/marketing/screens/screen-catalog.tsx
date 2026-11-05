@@ -27,8 +27,11 @@ import {
 
 type CatalogEntry = Readonly<{
   View: ComponentType;
-  /** 1200-wide screens fill full-width frames; 960 and 480 ones sit in splits and tiles. */
-  width: 1200 | 960 | 480;
+  /**
+   * The frame a hero gives the screen: 1200 a full-width frame, 960 a split
+   * beside the hero tile. The screen's own natural size is set in its root.
+   */
+  width: 1200 | 960;
   /** What the screen shows, for screen readers. */
   label: string;
 }>;
@@ -85,22 +88,22 @@ export const SCREEN_CATALOG: Readonly<Record<PlatformScreen, CatalogEntry>> = {
   },
   demand: {
     View: ScreenDemand,
-    width: 480,
+    width: 960,
     label: 'Search Console clicks, CTR and position for acme.com',
   },
   referrals: {
     View: ScreenReferrals,
-    width: 480,
+    width: 960,
     label: 'Sessions referred to acme.com by AI assistants',
   },
   perception: {
     View: ScreenPerception,
-    width: 480,
+    width: 960,
     label: 'How AI engines describe Acme Analytics',
   },
   engines: {
     View: ScreenEngines,
-    width: 480,
+    width: 960,
     label: 'Acme Analytics visibility on each engine',
   },
   'agent-chat': {
@@ -125,7 +128,7 @@ export const SCREEN_CATALOG: Readonly<Record<PlatformScreen, CatalogEntry>> = {
   },
   commerce: {
     View: ScreenCommerce,
-    width: 480,
+    width: 960,
     label: 'Which products AI answers recommended for Acme Startup',
   },
 };
@@ -147,7 +150,7 @@ type ScreenKeyNumbers = Readonly<{
 }>;
 
 /**
- * The key numbers a 960 or 480 screen leads with, for the inverted tile beside it
+ * The key numbers a split hero screen (width 960) leads with, for the tile beside it
  * on a platform page. Each restates figures the screen draws from the demo
  * dataset (demo-data.ts).
  */

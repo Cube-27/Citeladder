@@ -32,8 +32,8 @@ import { ENGINE_KEYS, ENGINE_NAMES, type Change } from './demo-data';
  * width and one `cl-screen--h*` class per height, so a new size adds a value
  * here and a class there.
  */
-type ScreenWidth = 480 | 640 | 960 | 1200;
-type ScreenHeight = 360 | 400 | 600 | 680;
+type ScreenWidth = 480 | 640 | 800 | 960 | 1200;
+type ScreenHeight = 320 | 360 | 400 | 500 | 600 | 680;
 
 export function ScreenRoot({
   name,
@@ -149,14 +149,7 @@ export function ScreenNote({ children }: Readonly<{ children: ReactNode }>) {
   return <p className="cl-screen-note">{children}</p>;
 }
 
-type ColsLayout =
-  | 'halves'
-  | 'main-aside'
-  | 'aside-main'
-  | 'main-side'
-  | 'actions'
-  | 'brief'
-  | 'mcp';
+type ColsLayout = 'halves' | 'main-aside' | 'aside-main' | 'main-side';
 
 export function ScreenCols({
   layout,
@@ -205,31 +198,27 @@ export function ScreenCard({
   eyebrow,
   title,
   action,
+  meta,
   children,
-}: Readonly<{ eyebrow?: string; title?: string; action?: ReactNode; children: ReactNode }>) {
+}: Readonly<{
+  eyebrow?: string;
+  title?: string;
+  action?: ReactNode;
+  /** A line under the title saying what the card holds. */
+  meta?: string;
+  children: ReactNode;
+}>) {
   return (
     <Card>
       {title && (
         <CardHeader actions={action}>
           {eyebrow && <CardEyebrow>{eyebrow}</CardEyebrow>}
           <CardTitle>{title}</CardTitle>
+          {meta && <ScreenNote>{meta}</ScreenNote>}
         </CardHeader>
       )}
       {children}
     </Card>
-  );
-}
-
-/** A labelled block inside a detail card: an eyebrow over its content. */
-export function ScreenSection({
-  label,
-  children,
-}: Readonly<{ label: string; children: ReactNode }>) {
-  return (
-    <div className="cl-screen-section">
-      <span className="type-eyebrow">{label}</span>
-      {children}
-    </div>
   );
 }
 

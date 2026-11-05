@@ -335,20 +335,25 @@ is redesigned smaller, never cropped.
 
 A screen's natural size is a width and a height, each from a short list:
 `ScreenRoot` takes both and screens.css maps them to one class per width
-(`cl-screen--w480`, `--w640`, `--w960`, `--w1200`) and one per height
-(`cl-screen--h360`, `--h400`, `--h600`, `--h680`). The sizes in use:
+(`cl-screen--w480`, `--w640`, `--w800`, `--w960`, `--w1200`) and one per
+height (`cl-screen--h320`, `--h360`, `--h400`, `--h500`, `--h600`,
+`--h680`). The sizes in use:
 
 - 1200 × 680: a full-width screen.
 - 960 × 600: a screen in a split or tile that needs the room.
+- 800 × 500: one list of rows wide enough for its labels (Actions).
 - 640 × 400: a card image (a split, tile or feature card) of one focused
   element: one table of 4–6 rows and at most 4 columns, or one answer, with
   no tabs, toolbars, pagination or second pane, so it renders at its natural
   size in a split at 982 and 1440 and only scales down on narrower wells.
-- 480 × 360: a vignette, one card holding one focused element (three figures
-  over one small chart, or a list of 3 to 5 rows on a fixed column template),
-  no tabs, toolbars or pagination, so it renders near its natural size in a
-  7-of-12 tile or a split (text at least 11px at 982px wide).
+- 480 wide: a vignette, one focused element (three figures over one small
+  chart, a list of 3 to 5 rows on a fixed column template, one panel or one
+  exchange) with no tabs, toolbars, filters, rails, pagination or second
+  pane, so it shows at 1:1 in a split and at 0.9 or more in a span-7 tile at
+  982px (text at least 11px). Its height fits its content: 320 for a short
+  stack or one exchange, 360 for figures over a chart or a 3 to 5 row list.
 - 1440 × 820: the home page's app in its chrome (`cl-screen--app`).
 
 A new size adds its width or height to both lists rather than a new
-width class with its own height.
+width class with its own height; a vignette takes the shortest height its
+content fills without a gap.

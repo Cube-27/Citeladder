@@ -272,17 +272,6 @@ export const BOTS: readonly Readonly<{
   { bot: 'PerplexityBot', operator: 'Perplexity', purpose: 'AI search', policy: 'All allowed' },
 ];
 
-export const ROBOTS_TXT = [
-  'User-agent: *',
-  'Allow: /',
-  '',
-  'User-agent: GPTBot',
-  'Disallow: /docs/',
-  '',
-  'User-agent: Google-Extended',
-  'Disallow: /docs/',
-].join('\n');
-
 /* ---------- Search ---------- */
 
 export const KEYWORDS = (
@@ -392,33 +381,12 @@ export const ACTIONS: readonly Readonly<{
 
 /* ---------- MCP ---------- */
 
-export const MCP_TOOLS: readonly Readonly<{ tool: string; access: 'Read' | 'Write' }>[] = [
-  ...[
-    'read_visibility_overview',
-    'read_visibility_trends',
-    'read_visibility_sources',
-    'read_source_url',
-    'read_perception',
-    'read_site_health',
-    'read_ai_crawlability',
-    'read_ai_referrals',
-    'read_actions',
-  ].map((tool) => ({ tool, access: 'Read' as const })),
-  { tool: 'generate_prompts', access: 'Write' },
-  { tool: 'prepare_launch_audit', access: 'Write' },
-];
-
-export const MCP_ARGS = JSON.stringify({ project: 'acme.com', period: 'week' }, null, 2);
 export const MCP_RESULT = JSON.stringify(
   {
     brand: 'Acme Analytics',
-    week: '2026-10-27/2026-11-02',
     visibility: 38.4,
     visibility_change_pts: 4.2,
     citations: 212,
-    average_position: 2.6,
-    prompts: 120,
-    answers: 412,
   },
   null,
   2,
