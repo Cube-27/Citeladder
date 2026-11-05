@@ -277,7 +277,9 @@ describe('DashboardScreen', () => {
       '/agent/actions/00000000-0000-4000-8000-0000000000d1?project=00000000-0000-4000-8000-000000000001',
     );
     expect(ranked.getByText('/pricing · 3 persisted evidence item(s)')).toBeVisible();
-    expect(ranked.getByText('7.5')).toBeVisible();
+    // The badge carries the priority; the score is not repeated beside it (D14).
+    expect(ranked.getByText('High')).toBeVisible();
+    expect(ranked.queryByText('7.5')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'No open actions' })).not.toBeInTheDocument();
   });
   it('shows an empty state instead of a movement card before a comparable run', () => {

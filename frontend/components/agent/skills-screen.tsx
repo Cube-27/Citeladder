@@ -74,7 +74,7 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
             {rows.map((skill) => (
               <Stack as="li" key={skill.id} className={cardClasses()}>
                 <Stack gap="tight">
-                  <h3 className={textRole('sectionTitle')}>{skill.label}</h3>
+                  <h3 className={textRole('itemTitle')}>{skill.label}</h3>
                   <p className={textRole('body')}>{skill.description}</p>
                 </Stack>
                 <Inline className="flex-wrap justify-between self-end">

@@ -245,7 +245,7 @@ function AffectedPageLink({
 }>) {
   return (
     <TextLink
-      text="inherit"
+      text="itemTitle"
       className="flex min-w-0 flex-col"
       href={`/site/crawls/${crawlId}/pages/${siteUrlId}`}
     >

@@ -79,12 +79,15 @@ export function actionItem(action: Opportunity): ReorderItem {
   return {
     key: action.id,
     name: action.title,
-    figure: <span className={textRole('figureSm')}>{action.priority_score.toFixed(1)}</span>,
+    // The severity badge carries the priority; the score is not repeated
+    // (decision D14). The title truncates so the badge stays on its line.
     content: (
       <Stack gap="tight">
-        <Inline className="flex-wrap">
+        <Inline>
           <TextLink
             text="itemTitle"
+            className="min-w-0 truncate"
+            title={action.title}
             href={action.action_id ? `/agent/actions/${action.action_id}` : '/agent/actions'}
           >
             {action.title}

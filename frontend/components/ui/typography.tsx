@@ -31,7 +31,7 @@ const TEXT_ROLES = {
   label: 'type-label',
   /** Timestamps, counts, help, footnotes. 12/16, 400, muted. */
   caption: 'type-caption',
-  /** A metric value (`stat`). 36/40, Geist 500, −0.01em, foreground, tabular digits. */
+  /** A metric value (`stat`). 28/36 (D15), Geist 500, −0.02em, foreground, tabular digits. */
   figure: 'type-figure',
   /** A value inside a dense row or cell. 16/24, 500, foreground, figure-face digits. */
   figureSm: 'type-figure-sm',

@@ -18,7 +18,7 @@ export const TAB_TRACK =
 /**
  * One segment: full track height, 12px padding, `radius-sm`, 14/20 medium
  * `ink-secondary`; the selected one lifts onto `surface` with the xs ring in
- * `ink`. A count sits after the label in mono 11px `ink-muted`.
+ * `ink`. A count follows the label in brackets (`ControlCount`, D16).
  */
 export function tabClasses(selected: boolean, className?: string) {
   return cn(
@@ -43,18 +43,20 @@ export function modeSegmentClasses(selected: boolean) {
   );
 }
 
-function TabCount({ count }: Readonly<{ count: number }>) {
-  return (
-    <span className="text-ink-muted text-eyebrow font-mono tracking-normal">
-      {count.toLocaleString()}
-    </span>
-  );
+/**
+ * The count a tab, segment or filter chip carries after its label: Geist at
+ * the control's own size, `ink-muted`, in brackets ("All signals (107)",
+ * decision D16), never mono. Its text leads with a space, so an accessible
+ * name reads "All signals (107)".
+ */
+export function ControlCount({ count }: Readonly<{ count: number }>) {
+  return <span className="text-ink-muted tabular-nums">{` (${count.toLocaleString()})`}</span>;
 }
 
 type TabItem<T extends string> = {
   value: T;
   label: ReactNode;
-  /** Rows the tab holds, in mono after the label. */
+  /** Rows the tab holds, in brackets after the label. */
   count?: number;
   disabled?: boolean;
 };
@@ -156,7 +158,7 @@ function TabStrip<T extends string>({
           )}
         >
           {item.label}
-          {item.count === undefined ? null : <TabCount count={item.count} />}
+          {item.count === undefined ? null : <ControlCount count={item.count} />}
         </TabsPrimitive.Trigger>
       ))}
     </TabsPrimitive.List>
@@ -323,13 +325,11 @@ export function SegmentedControl<T extends string>({
             >
               {option.label}
               {/* Each part leads with a space, so the radio's accessible name
-                  reads "CTR gaps · Partial 50". */}
+                  reads "CTR gaps · Partial (50)". */}
               {option.detail ? (
                 <span className="text-ink-muted">{` · ${option.detail}`}</span>
               ) : null}
-              {option.count === undefined ? null : (
-                <span className="text-ink-muted text-eyebrow font-mono tracking-normal">{` ${option.count.toLocaleString()}`}</span>
-              )}
+              {option.count === undefined ? null : <ControlCount count={option.count} />}
             </button>
           );
           if (!option.hint) return segment;

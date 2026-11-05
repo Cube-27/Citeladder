@@ -17,13 +17,12 @@ export type ReorderItem = Readonly<{
   /** Names the item in its move controls ("Move <name> up"). */
   name: string;
   content: ReactNode;
-  /** A figure beside the move controls (a priority score). */
-  figure?: ReactNode;
 }>;
 
 /**
  * A shared, ranked list the reader can reorder: each row is its position, its
- * content, an optional figure, and move-up/move-down controls. Dragging a row
+ * content and move-up/move-down controls. The row's content carries its rank
+ * (a severity badge); no score column repeats it (decision D14). Dragging a row
  * onto another is a progressive enhancement; the buttons are the complete
  * keyboard path. Rows are divided like a ledger and padded 12; below
  * `desktop` the position, content and controls stack.
@@ -104,7 +103,6 @@ function ReorderRow({
       </div>
       <div className="min-w-0">{item.content}</div>
       <div className="flex items-center justify-end gap-2">
-        {item.figure}
         <IconButton
           icon={ArrowUp}
           label={`Move ${item.name} up`}

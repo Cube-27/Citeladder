@@ -84,7 +84,7 @@ function DemandEvidenceContent({
               <span className={textRole('emphasis', 'shrink-0')}>Landing page</span>
               <TextLink
                 variant="external"
-                text="inherit"
+                text="caption"
                 href={details.linkablePageUrl}
                 className="min-w-0"
               >

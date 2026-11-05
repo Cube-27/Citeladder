@@ -56,11 +56,16 @@ const TEXT_CONTROL_PADDING_X = 12;
 const ICON_CONTROL_PADDING_X = 0;
 /**
  * The sidebar's project and account buttons: as tall as the PageHeader's
- * title row (page-header-height, 40) in the full column and in the 57px rail,
+ * title row (row-app, 40) in the full column and in the 57px rail,
  * so the sidebar and the page share their first line (decision D11).
  */
 const SIDEBAR_IDENT_HEIGHT_FULL = 40;
 const SIDEBAR_IDENT_HEIGHT_RAIL = 40;
+/**
+ * The sticky top bar: the switcher cell and the PageHeader are one 56px bar
+ * from the top of the window, the 40 title row with 8 above and below (D12).
+ */
+const TOP_BAR_HEIGHT = 56;
 /** The rail stacks the Dashboard | Agent track: one control wide. */
 const RAIL_MODE_TRACK_WIDTH = 32;
 /** The shell's breakpoint (`shell:`): the full sidebar from here, the rail below. */
@@ -199,6 +204,10 @@ function measure({ route, shellMinWidth }: { route: string; shellMinWidth: numbe
       element,
       element.getBoundingClientRect().height,
     );
+  // The sticky top bar (D12): the sidebar's switcher cell and the PageHeader
+  // end on one line, the rule under both, scrolled or not.
+  for (const element of all('[data-top-bar], [data-page-header]'))
+    add('top-bar.bottom', element, element.getBoundingClientRect().bottom);
   for (const element of all('[data-theme-switch]'))
     add('theme-switch.height', element, element.getBoundingClientRect().height);
   for (const element of all('aside a, nav a')) {
@@ -554,6 +563,7 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'sidebar-ident.height.full', SIDEBAR_IDENT_HEIGHT_FULL);
   expectOneValue(records, 'sidebar-ident.height.rail', SIDEBAR_IDENT_HEIGHT_RAIL);
   expectOneValue(records, 'rail-mode-track.width', RAIL_MODE_TRACK_WIDTH);
+  expectOneValue(records, 'top-bar.bottom', TOP_BAR_HEIGHT);
   expectOneValue(records, 'band.gap.header', HEADER_BAND_GAP);
   expectOneValue(records, 'band.gap.controls', CONTROL_BAND_GAP);
   expectOneValue(records, 'content.gap', CONTENT_GAP);

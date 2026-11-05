@@ -14,10 +14,12 @@ import { cn } from '@/lib/utils';
  * narrows from 24 to 16. The page bands (header, controls, content) are the
  * page template's (`components/layout/page-shell.tsx`).
  *
- * The sidebar and the page share their lines (decision D11): both start
- * `page-top-inset` from the top, the project switcher is as tall as the
- * PageHeader's title row, and the mode switch and the palette field sit
- * where the page's tabs and filter rows do.
+ * The sidebar and the page share their lines (decisions D11, D12): the
+ * project switcher's cell and the PageHeader are one sticky top bar
+ * (`page-header-band`, ruled underneath), and the mode switch and the
+ * palette field sit where the page's tabs and filter rows do. The main
+ * column is a size container so the bar's rule and fill run edge to edge
+ * whatever the page's width.
  *
  * The layout shell composes these with the real navigation and data; these
  * pieces own every number.
@@ -26,8 +28,7 @@ const FRAME =
   'bg-paper text-ink shell:grid-cols-[var(--sidebar-width)_minmax(0,1fr)] grid min-h-dvh grid-cols-[var(--sidebar-rail-width)_minmax(0,1fr)]';
 const SIDEBAR_COLUMN = 'border-line sticky top-0 h-dvh min-w-0 border-r';
 const PAGE = 'mx-auto flex w-full max-w-[var(--content-max-width)] min-w-0 flex-col';
-const MAIN_INSET =
-  'min-w-0 px-[var(--content-gutter)] pt-[var(--page-top-inset)] pb-[var(--content-gutter)]';
+const MAIN_INSET = '@container min-w-0 px-[var(--content-gutter)] pb-[var(--content-gutter)]';
 
 export function AppShellFrame({
   sidebar,
@@ -66,13 +67,14 @@ export function AppShellPlaceholder({
 }
 
 /**
- * The sidebar's column, on the page's lines: the project switcher on the
- * PageHeader's title row, in a band as tall as the header's
- * (`page-header-band`, 64); `page-section-gap` under it the controls (mode
- * switch, then the palette field `page-band-gap` below, as the page's tabs
- * and filters are), then the scrolling destinations and the account at the
- * foot. There is no logo (decision D11). In the rail the destinations do not
- * scroll, so their tooltips are never clipped.
+ * The sidebar's column, on the page's lines: the project switcher in the
+ * top bar's cell (`page-header-band`, 56, ruled underneath like the
+ * PageHeader, decision D12), level with the page title; `page-section-gap`
+ * under it the controls (mode switch, then the palette field
+ * `page-band-gap` below, as the page's tabs and filters are), then the
+ * scrolling destinations and the account at the foot. There is no logo
+ * (decision D11). In the rail the destinations do not scroll, so their
+ * tooltips are never clipped.
  */
 export function SidebarFrame({
   ident,
@@ -81,8 +83,13 @@ export function SidebarFrame({
   foot,
 }: Readonly<{ ident: ReactNode; controls: ReactNode; nav: ReactNode; foot: ReactNode }>) {
   return (
-    <div className="flex h-full flex-col gap-[var(--page-section-gap)] px-3 pt-[var(--page-top-inset)] pb-3">
-      <div className="flex h-[var(--page-header-band)] shrink-0 items-start">{ident}</div>
+    <div className="flex h-full flex-col gap-[var(--page-section-gap)] px-3 pb-3">
+      <div
+        data-top-bar=""
+        className="border-line -mx-3 flex h-[var(--page-header-band)] shrink-0 items-center border-b px-3"
+      >
+        {ident}
+      </div>
       <div className="flex flex-col gap-[var(--page-band-gap)]">{controls}</div>
       <div className="shell:overflow-y-auto -mx-3 flex min-h-0 flex-1 flex-col gap-4 px-3 py-1">
         {nav}

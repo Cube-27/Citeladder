@@ -203,6 +203,19 @@ script enforces both.
 | D10 | How rounded are corners? | Only slightly, system-wide (app, docs and website share the tokens): `radius-2xs` 2, `radius-xs` 2, `radius-sm` 4, `radius-md` 6, `radius-lg` 8, `radius-xl` 8. `radius-full` stays only for avatars, status dots, switch tracks and count pills; no hard-coded radius above 8px |
 | D11 | How dense is the app? | Compact and technical, GitHub / Claude Code density, app only. The sidebar has no logo: the project switcher is its first row, on the PageHeader's line, and the Dashboard/Agent switch sits on the page's tabs/filter line. The PageHeader title is 24/32 Cal Sans 400 in a tight band with its actions centred on the title row. The header is one 64px band (a 40px title row, then a reserved 20px meta line). Band gaps are about half (header → 16 → tabs → 8 → filters → 8 → content), card and dialog padding 16, controls 32 (on every surface), table rows 40 (`row-app`), card gaps 12. The docs and website keep their spacing |
 
+After #587 and #588 merged, the owner reviewed the app again (owner,
+5 November 2026; source: the orchestration session, screenshots 11–15). D12
+supersedes D11's 64px header band and its 16px top inset.
+
+| ID | Question | Decision |
+| --- | --- | --- |
+| D12 | What frames the top of an app page? | One sticky top bar with no blank gap above or below the title: the sidebar's project switcher cell and the PageHeader row are one 56px bar (the 40px title row, 8 above and below) ruled underneath with a 1px `line`, the switcher level with the title. Content scrolls under it |
+| D13 | Where are links underlined? | Links that stand in lists, tables, rows and cards (Site Health affected pages, page URLs, "Ask agent about this page", ranked action titles and the same pattern on every app page) show no underline at rest, only on hover and keyboard focus. Links inside a sentence keep theirs |
+| D14 | What does a ranked action row show? | Its title and severity badge, with no numeric score: the High/Medium/Low badge carries it, everywhere the ranked list renders. The badge stays on the title's line; a long title truncates |
+| D15 | How big is a metric's number? | 28px (`stat`, Geist 500, 28/36), the cards still in one row |
+| D16 | How do tabs and filter chips show a count? | In Geist sans, in brackets after the label: "All signals (107)", "CTR gaps · Partial (50)". Never mono |
+| D17 | How do the Agent's workflow cards read? | Card titles at the card-title size (`heading`, 16/24, 500) under the "Or start from a workflow" section heading, and one fill on every card: hover no longer tints a card |
+
 The repository follows the design-system artifact's version 13 for D5–D11:
 `frontend/scripts/design-system-tokens.json` is its `tokens.json` verbatim
 (`line-strong`, `shadow-edge`, `heading-lg`, `row-app`, `control-md` 32 and

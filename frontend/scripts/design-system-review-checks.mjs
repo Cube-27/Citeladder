@@ -15,7 +15,11 @@ import { lineIndex, parseSource, stringFragments } from './source-ast.mjs';
  * - D10: corners are only slightly rounded everywhere: nothing above 8px,
  *   and radius-full only for avatars, status dots, switch tracks and pills;
  * - D11: the app is compact (its density block holds the owner's values, the
- *   page title is 24/32) and its sidebar carries no logo.
+ *   page title is 24/32) and its sidebar carries no logo;
+ * - D15: a metric's number (`stat`) is 28px.
+ *
+ * D12 (the sticky top bar) is held by the geometry census, D14 by the
+ * ranked list's type (it has no figure slot).
  *
  * D8 (a score is a ring or its number, never segmented bars) retires the bar
  * component outright; check-design-system.mjs lists its name as legacy.
@@ -210,17 +214,29 @@ const DENSITY_MESSAGE = 'the app is compact (decision D11)';
 /** The page title is 24/32 (`display-sm`). */
 const PAGE_TITLE_SIZE = 'var(--text-display-sm)';
 
+/** A metric's number is 28px (decision D15), wherever the token sheet sets it last. */
+const STAT_SIZE = '28px';
+
 /** Runs on the token sheet itself (the one with `@theme`), not on a fragment of it. */
 function densityCssFindings(css, label) {
   if (label !== TOKEN_CSS || !/@theme\b/.test(css)) return [];
   const found = new Map();
   const titleSizes = [];
-  postcss.parse(css).walkRules((rule) => {
+  const statSizes = [];
+  const root = postcss.parse(css);
+  root.walkDecls('--text-stat', (decl) => statSizes.push(decl.value.trim()));
+  root.walkRules((rule) => {
     if (rule.selector === '.type-page-title')
       rule.walkDecls('font-size', (decl) => titleSizes.push(decl.value.trim()));
     if (rule.selector !== APP_DENSITY_SELECTOR || rule.parent?.type !== 'root') return;
     rule.walkDecls((decl) => found.set(decl.prop, decl.value.trim()));
   });
+  const statFindings =
+    statSizes.at(-1) === STAT_SIZE
+      ? []
+      : [
+          `${label}: a metric's number is ${STAT_SIZE} (decision D15): set --text-stat: ${STAT_SIZE}`,
+        ];
   const titleSize = titleSizes.at(-1);
   const findings = Object.entries(APP_DENSITY)
     .filter(([prop, value]) => found.get(prop) !== value)
@@ -230,7 +246,7 @@ function densityCssFindings(css, label) {
     );
   if (titleSize !== PAGE_TITLE_SIZE)
     findings.push(`${label}: ${DENSITY_MESSAGE}: .type-page-title is ${PAGE_TITLE_SIZE}`);
-  return findings;
+  return [...findings, ...statFindings];
 }
 
 /** The sidebar carries no logo; the project switcher is its first row. */

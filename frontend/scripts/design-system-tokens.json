@@ -409,12 +409,12 @@
           },
           {
             "name": "stat",
-            "fontSize": "36px",
-            "lineHeight": "40px",
+            "fontSize": "28px",
+            "lineHeight": "36px",
             "fontWeight": 500,
             "letterSpacing": "-0.02em",
             "sample": "38.4%",
-            "usage": "The number in a Stat and a KpiRow card, and the plan price in the app. Geist 500 since D7 (5 Nov 2026); the ScoreRing and DonutChart centres use the same face at 32/38."
+            "usage": "The number in a Stat and a KpiRow card, and the plan price in the app. Geist 500 since D7 (5 Nov 2026), 28/36 since D15; the ScoreRing and DonutChart centres use the same face at 32/38."
           },
           {
             "name": "caption",

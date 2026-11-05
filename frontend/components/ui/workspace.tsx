@@ -11,9 +11,8 @@ import { cn } from '@/lib/utils';
 
 /**
  * The one sticky offset for a pane that stays in view while its neighbour
- * scrolls (the list beside a long detail). It clears the compact topbar on
- * narrow screens and is 0 on desktop, where the sheet scrolls under nothing.
- * The pane scrolls inside itself once it is taller than the viewport, so a
+ * scrolls (the list beside a long detail). It sticks just under the app's
+ * sticky top bar (decision D12). The pane scrolls inside itself once it is taller than the viewport, so a
  * long list never pins its own end out of reach.
  */
 export const stickyPaneClasses =

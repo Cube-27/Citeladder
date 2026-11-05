@@ -31,7 +31,8 @@ export type PageBack = Readonly<{
  * The page template every authenticated route is written in: the system's
  * AppShell bands.
  *
- *   1. header   — the PageHeader: the route's one H1 and its actions.
+ *   1. header   — the PageHeader: the route's one H1 and its actions, the
+ *                 page's half of the sticky top bar (decision D12).
  *   2. controls — the route's tabs (settings sections, a screen's views),
  *                 then its FilterBar (search, filters, one action) for the
  *                 selected tab.
@@ -158,22 +159,20 @@ function PageShell<T extends string>({
   return (
     // header → 16 → tabs → 8 → filters → 8 → content; header → 16 → content.
     <div className="flex min-w-0 flex-col gap-[var(--page-section-gap)]">
-      <div data-page-band="identity">
-        <PageHeader
-          title={resolved}
-          lead={
-            back ? (
-              <BackButton href={back.href} label={back.label} projectId={back.projectId} />
-            ) : undefined
-          }
-          actions={
-            <>
-              {actions}
-              <AgentPanelTrigger />
-            </>
-          }
-        />
-      </div>
+      <PageHeader
+        title={resolved}
+        lead={
+          back ? (
+            <BackButton href={back.href} label={back.label} projectId={back.projectId} />
+          ) : undefined
+        }
+        actions={
+          <>
+            {actions}
+            <AgentPanelTrigger />
+          </>
+        }
+      />
       {tabBand || filterBand ? (
         <div className="flex min-w-0 flex-col gap-[var(--page-band-gap)]">
           {tabBand}

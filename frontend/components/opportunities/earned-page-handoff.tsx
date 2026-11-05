@@ -81,7 +81,7 @@ function Prompts({ prompts }: Readonly<{ prompts?: Handoff['affected_prompts'] }
       <Stack as="ul" gap="tight">
         {prompts.map((prompt) => (
           <li key={prompt.prompt_id} className={textRole('body')}>
-            <TextLink href={promptHistoryHref(prompt.prompt_id)} text="inherit">
+            <TextLink href={promptHistoryHref(prompt.prompt_id)} text="body">
               {prompt.text}
             </TextLink>
           </li>
