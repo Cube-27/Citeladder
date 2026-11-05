@@ -105,7 +105,7 @@ function DirectoryBadges() {
           href="https://launchmcp.co/?utm_source=badge&utm_medium=referral"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-ink-muted hover:text-ink text-caption font-medium"
+          className="text-footer-ink-muted hover:text-footer-ink text-caption font-medium"
         >
           Launch MCP
         </a>
@@ -116,7 +116,7 @@ function DirectoryBadges() {
 
 /**
  * The website footer (the system's SiteFooter): the brand and tagline beside
- * five link columns on the surface ground, then the ownership line and the
+ * five link columns on its grained ground, dark in both themes (D29), then the ownership line and the
  * policy row. Every column comes from `lib/marketing-content/nav.ts`, the
  * same registry as the navbar. Static: it ships no island.
  */
@@ -127,7 +127,7 @@ export function SiteFooter() {
         <div className="cl-footer-top">
           <div className="cl-footer-brand">
             <a href="/" aria-label="CiteLadder home" className="cl-footer-logo focus-ring">
-              <LogoMark />
+              <LogoMark className="text-footer-ink" />
             </a>
             <p className="cl-footer-tagline">{FOOTER_TAGLINE}</p>
             <DirectoryBadges />

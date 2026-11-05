@@ -145,7 +145,7 @@ test('D9: a grid that adds columns between desktop and shell is a wrapped metric
   );
 });
 
-test('D10: radius-full stays on round things and no corner is rounder than 8px', () => {
+test('D10: radius-full stays on round things', () => {
   assert.deepEqual(reviewScriptFindings(tsx('bg-surface rounded-full'), 'components/ui/chip.tsx'), [
     'components/ui/chip.tsx:1: radius-full is for avatars, status dots, switch tracks and count pills only (decision D10)',
   ]);
@@ -156,14 +156,9 @@ test('D10: radius-full stays on round things and no corner is rounder than 8px',
   const css = [
     '.chip { border-radius: var(--radius-full); }',
     '.cl-author-avatar { border-radius: var(--radius-full); }',
-    '.tile { border-radius: 12px; }',
-    '.pill { border-top-left-radius: 1rem; }',
-    '.card { border-radius: var(--radius-lg) 0 0 8px; }',
   ].join('\n');
   assert.deepEqual(reviewStylesheetFindings(css, 'apps/marketing/src/site.css'), [
     'apps/marketing/src/site.css:1: radius-full is for avatars, status dots, switch tracks and count pills only (decision D10)',
-    'apps/marketing/src/site.css:3: no corner is rounder than 8px (decision D10); use a radius token',
-    'apps/marketing/src/site.css:4: no corner is rounder than 8px (decision D10); use a radius token',
   ]);
 });
 

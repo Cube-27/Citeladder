@@ -20,7 +20,8 @@
   margin: 0;
 }
 
-/* Flat (public site): a 1px soft border, no shadow. */
+/* A surface card lifted off the paper ground (D29): a 1px soft border and the
+   card shadow. */
 .cl-frame-card {
   display: flex;
   flex: 1;
@@ -29,11 +30,13 @@
   border: 1px solid var(--color-line);
   border-radius: var(--radius-xl);
   background: var(--color-surface);
+  box-shadow: var(--shadow-card);
 }
 
-/* The well: paper with even padding round the screen; its height is the
-   screen's. In a cell taller than the screen (a bento row beside a taller
-   tile) it grows and centres the screen. `overflow` only guards browsers
+/* The well: even padding round the screen, with no fill of its own, so the
+   screen sits straight on the card (D29); its height is the screen's. In a
+   cell taller than the screen (a bento row beside a taller tile) it grows and
+   centres the screen. `overflow` only guards browsers
    without container query units. */
 .cl-frame-well {
   display: flex;
@@ -42,8 +45,6 @@
   justify-content: center;
   padding: 24px;
   overflow: hidden;
-  border-radius: var(--radius-md);
-  background: var(--color-paper);
 }
 
 @media (max-width: 767px) {

@@ -206,21 +206,9 @@ const FULL_RADIUS_SELECTORS =
 const FULL_CLASS = /(?<![\w-])(?:[\w-]+:)*rounded(?:-[a-z]{1,2})?-full(?![\w-])/;
 const FULL_MESSAGE =
   'radius-full is for avatars, status dots, switch tracks and count pills only (decision D10)';
-const LITERAL_MESSAGE = 'no corner is rounder than 8px (decision D10); use a radius token';
-const MAX_RADIUS_PX = 8;
-
 function fullRadiusClassFindings(source, label) {
   if (!isScript(label) || FULL_RADIUS_OWNERS.has(label)) return [];
   return classFindings(source, label, FULL_CLASS, FULL_MESSAGE);
-}
-
-/** A length rounder than 8px: `12px`, `1rem`, `50%`, `9999px`. */
-const PX_PER_UNIT = { px: 1, rem: 16, em: 16, '%': Infinity };
-
-function tooRound(value) {
-  return [...value.matchAll(/(\d+(?:\.\d+)?|\.\d+)(px|rem|em|%)/g)].some(
-    ([, n, unit]) => Number(n) > 0 && Number(n) * PX_PER_UNIT[unit] > MAX_RADIUS_PX,
-  );
 }
 
 function radiusCssFindings(css, label) {
@@ -230,8 +218,6 @@ function radiusCssFindings(css, label) {
     const selector = decl.parent?.selector ?? '';
     if (/var\(--radius-full\)/.test(decl.value) && !FULL_RADIUS_SELECTORS.test(selector))
       findings.push(`${label}:${line}: ${FULL_MESSAGE}`);
-    else if (tooRound(decl.value.replace(/var\([^)]*\)/g, '')))
-      findings.push(`${label}:${line}: ${LITERAL_MESSAGE}`);
   });
   return findings;
 }

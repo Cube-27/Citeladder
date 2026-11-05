@@ -8,8 +8,10 @@
  */
 
 /* ---------- Page root, container and section rhythm ---------- */
+/* The website sits on paper and its cards on surface with the card shadow
+   (D29): grey with white cards in light, black with lighter cards in dark. */
 .cl-site {
-  background: var(--color-surface);
+  background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-sans);
 }
@@ -858,10 +860,48 @@ a.cl-announce:hover {
   color: var(--color-ink);
 }
 
-/* ---------- Footer (surface ground, never an inverted band) ---------- */
+/* ---------- The page above the footer: a paper sheet with a curved foot ----------
+   D29: the page's last section ends on a rounded edge that the dark footer
+   shows round, so the footer reads as the ground the page sits on. */
+.cl-site-main {
+  padding-bottom: 128px;
+  border-radius: 0 0 40px 40px;
+  background: var(--color-paper);
+}
+
+@media (max-width: 1023px) {
+  .cl-site-main {
+    padding-bottom: 96px;
+    border-radius: 0 0 24px 24px;
+  }
+}
+
+/* ---------- Footer: dark in both themes, with a fine film grain (D29) ----------
+   It tucks 40px under the page's curved foot. Its own four tokens keep one
+   value in both themes; the focus ring follows them. */
 .cl-footer {
-  padding: 96px 0 40px;
-  background: var(--color-surface);
+  --color-focus: var(--color-footer-ink);
+
+  position: relative;
+  isolation: isolate;
+  margin-top: -40px;
+  padding: 136px 0 40px;
+  background: var(--color-footer);
+  color: var(--color-footer-ink-muted);
+  color-scheme: dark;
+}
+
+/* Tiled fractal noise with its colour removed, faded until it reads only up
+   close; decoration, no colour of its own. */
+.cl-footer::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 240px 240px;
+  opacity: 0.12;
+  content: '';
+  pointer-events: none;
 }
 
 .cl-footer-top {
@@ -882,13 +922,13 @@ a.cl-announce:hover {
   margin: -4px;
   padding: 4px;
   border-radius: var(--radius-sm);
-  color: var(--color-ink);
+  color: var(--color-footer-ink);
 }
 
 .cl-footer-tagline {
   max-width: 320px;
   margin: 0;
-  color: var(--color-ink-secondary);
+  color: var(--color-footer-ink-muted);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }
@@ -918,15 +958,15 @@ a.cl-announce:hover {
   width: var(--control-md);
   height: var(--control-md);
   border-radius: var(--radius-md);
-  color: var(--color-ink-muted);
+  color: var(--color-footer-ink-muted);
   transition:
     background-color var(--motion-fast) var(--ease-standard),
     color var(--motion-fast) var(--ease-standard);
 }
 
 .cl-footer-social-link:hover {
-  background: var(--color-surface-sunken);
-  color: var(--color-ink);
+  background: var(--color-footer-line);
+  color: var(--color-footer-ink);
 }
 
 .cl-footer-cols {
@@ -937,7 +977,7 @@ a.cl-announce:hover {
 
 .cl-footer-head {
   margin: 0 0 16px;
-  color: var(--color-ink);
+  color: var(--color-footer-ink);
   font-size: var(--text-label);
   font-weight: 500;
   line-height: var(--text-label--line-height);
@@ -959,21 +999,21 @@ a.cl-announce:hover {
   align-items: center;
   gap: 4px;
   border-radius: var(--radius-xs);
-  color: var(--color-ink-secondary);
+  color: var(--color-footer-ink-muted);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
   text-decoration: none;
 }
 
 .cl-footer-col a svg {
-  color: var(--color-ink-muted);
+  color: var(--color-footer-ink-muted);
 }
 
 .cl-footer-col a:hover,
 .cl-footer-legal a:hover,
 .cl-footer-cookie:hover,
 .cl-footer-copy a:hover {
-  color: var(--color-ink);
+  color: var(--color-footer-ink);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -984,12 +1024,12 @@ a.cl-announce:hover {
   gap: 12px;
   margin-top: 64px;
   padding-top: 24px;
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-footer-line);
 }
 
 .cl-footer-copy {
   margin: 0;
-  color: var(--color-ink-muted);
+  color: var(--color-footer-ink-muted);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }
@@ -1010,7 +1050,7 @@ a.cl-announce:hover {
 
 .cl-footer-legal a,
 .cl-footer-cookie {
-  color: var(--color-ink-muted);
+  color: var(--color-footer-ink-muted);
 }
 
 .cl-footer-cookie {
@@ -1033,7 +1073,7 @@ a.cl-announce:hover {
 
 @media (max-width: 767px) {
   .cl-footer {
-    padding-top: 64px;
+    padding-top: 104px;
   }
 
   .cl-footer-cols {
@@ -1266,6 +1306,7 @@ a.cl-announce:hover {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-xl);
   background: var(--color-surface);
+  box-shadow: var(--shadow-card);
   color: var(--color-ink);
   text-decoration: none;
   transition: border-color var(--motion-fast) var(--ease-standard);
@@ -1283,6 +1324,7 @@ a.cl-fcard:hover {
   padding: 0;
   border: 0;
   background: none;
+  box-shadow: none;
 }
 
 .cl-fcard-body {
@@ -1302,15 +1344,7 @@ a.cl-fcard:hover {
   padding-top: 20px;
 }
 
-.cl-fcard-index {
-  color: var(--color-ink-muted);
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  line-height: var(--text-caption--line-height);
-  font-variant-numeric: tabular-nums;
-}
-
-.cl-fcard-body :is(.cl-eyebrow, .cl-fcard-index) + .cl-fcard-title {
+.cl-fcard-body .cl-eyebrow + .cl-fcard-title {
   margin-top: 4px;
 }
 
@@ -1698,16 +1732,19 @@ a.cl-fcard:hover {
   text-underline-offset: 3px;
 }
 
-/* ---------- CtaBand: a paper well inside the container, never full-bleed ----------
-   D18/D21: the copy and actions stack centred, so the band has no empty side. */
+/* ---------- CtaBand: a surface card inside the container, never full-bleed ----------
+   D18/D21: the copy and actions stack centred, so the band has no empty side.
+   D29: it lifts off the paper ground like every other card. */
 .cl-cta {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 32px;
   padding: 64px;
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-xl);
-  background: var(--color-paper);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
   text-align: center;
 }
 
@@ -1791,7 +1828,7 @@ a.cl-fcard:hover {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-xl);
   background: var(--color-surface);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-card);
   color: var(--color-ink);
 }
 
@@ -1909,7 +1946,7 @@ a.cl-fcard:hover {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-xl);
   background: var(--color-surface);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-card);
   color: var(--color-ink);
 }
 
@@ -2032,7 +2069,7 @@ a.cl-fcard:hover {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-xl);
   background: var(--color-surface);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-card);
 }
 
 .cl-wtable table {
@@ -2271,7 +2308,7 @@ a.cl-fcard:hover {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-xl);
   background: var(--color-surface);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-card);
   color: var(--color-ink-secondary);
   text-align: center;
   text-decoration: none;
@@ -2313,7 +2350,7 @@ a.cl-logotile:hover {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-xl);
   background: var(--color-surface);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-card);
 }
 
 .cl-tool-form {
@@ -2504,6 +2541,7 @@ a.cl-logotile:hover {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-xl);
   background: var(--color-surface);
+  box-shadow: var(--shadow-card);
   container-type: inline-size;
 }
 
@@ -2686,7 +2724,7 @@ a.cl-logotile:hover {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-xl);
   background: var(--color-surface);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-card);
   color: var(--color-ink);
 }
 

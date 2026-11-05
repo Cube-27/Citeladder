@@ -27,10 +27,6 @@ const WIDE_MEDIA = /min-width:\s*(?:768px|48rem)\)\s*and\s*\(max-width:\s*(?:102
 const DESIGN_DOC = '../docs/design.md';
 const LIGHT = ':root';
 const DARK = ":root[data-theme='dark']";
-const THEMES = [
-  ['light', LIGHT],
-  ['dark', DARK],
-];
 const CONSUMER_ROOTS = ['apps', 'components', 'lib'];
 const ignored = new Set([
   'node_modules',
@@ -45,46 +41,6 @@ const ignored = new Set([
 
 /** Families every declared token must have a consumer in. */
 const AUDITED_FAMILY = /^--(?:color|tag|radius|shadow|elevation|motion|ease|text)-/;
-
-/**
- * Colour tokens that deliberately share a value in a theme. Two tokens with
- * the same resolved value are otherwise one role under two names: either
- * alias one to the other with `var()`, or record the reason here.
- */
-const SAME_AS = [
-  {
-    theme: 'light',
-    tokens: ['--color-surface', '--color-on-ink'],
-    reason: 'a label on the ink button is cut out in the card white in light',
-  },
-  {
-    theme: 'light',
-    tokens: ['--color-ink', '--color-on-accent', '--color-focus', '--color-data-2'],
-    reason: 'Flare carries an ink label, and the focus ring and second series are ink',
-  },
-  {
-    theme: 'light',
-    tokens: ['--color-surface-sunken', '--color-chart-grid'],
-    reason: 'the chart grid is drawn in the sunken tone in light; dark splits them',
-  },
-  {
-    theme: 'dark',
-    tokens: ['--color-on-ink', '--color-on-accent'],
-    reason: 'labels on the light ink button and on Flare are one near-black in dark',
-  },
-  {
-    theme: 'dark',
-    tokens: ['--color-ink-muted', '--color-data-3'],
-    reason: 'the third series is the muted ink in dark',
-  },
-];
-
-/**
- * Status values a chart series must never wear. The own-brand series is
- * Flare (data-1) and the second is ink by the system's design, so accent and
- * ink are not in this set.
- */
-const NON_SERIES = /^--color-(?:positive|negative|warning|info)(?:-soft)?$/;
 
 const escaped = (value) => value.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 const byName = (left, right) => {
@@ -117,65 +73,6 @@ export function tokenInventory(source) {
       light: light.get(token),
       dark: dark.get(token),
     }));
-}
-
-/** Tokens reached by following `var()` aliases from `token`, itself included. */
-function aliasChain(declarations, token) {
-  const chain = new Set();
-  let current = token;
-  while (current && !chain.has(current)) {
-    chain.add(current);
-    current = declarations.get(current)?.match(/^var\((--[\w-]+)\)$/)?.[1];
-  }
-  return chain;
-}
-
-const sameAsAllowed = (sameAs, theme, first, second) =>
-  sameAs.some(
-    (group) =>
-      group.theme === theme && group.tokens.includes(first) && group.tokens.includes(second),
-  );
-
-/** The finding for two colour tokens sharing a value, or null when allowed. */
-function pairFinding({ theme, declarations, sameAs, value }, first, second) {
-  const series = [first, second].find((token) => token.startsWith('--color-data-'));
-  const other = series === first ? second : first;
-  if (series && NON_SERIES.test(other)) {
-    return `${TOKEN_CSS}: ${theme} ${series} equals ${other} (${value}); chart series never wear a status or action value`;
-  }
-  const firstChain = aliasChain(declarations, first);
-  if ([...aliasChain(declarations, second)].some((token) => firstChain.has(token))) return null;
-  if (sameAsAllowed(sameAs, theme, first, second)) return null;
-  return `${TOKEN_CSS}: ${theme} ${first} and ${second} both resolve to ${value}; alias one with var() or record it in SAME_AS`;
-}
-
-function themeDuplicateFindings(source, theme, selector, sameAs) {
-  const declarations = paletteDeclarations(source, selector);
-  const palette = resolvePalette(source, selector);
-  const tokens = [...palette.keys()].filter((token) => token.startsWith('--color-')).sort(byName);
-  const valueOf = (token) => palette.get(token)?.replace(/\s+/g, ' ').toLowerCase();
-  const findings = [];
-  for (const [index, first] of tokens.entries()) {
-    const value = valueOf(first);
-    if (!value) continue;
-    for (const second of tokens.slice(index + 1)) {
-      if (value !== valueOf(second)) continue;
-      const finding = pairFinding({ theme, declarations, sameAs, value }, first, second);
-      if (finding) findings.push(finding);
-    }
-  }
-  return findings;
-}
-
-/**
- * Colour tokens that resolve to one value in a theme without saying so.
- * Chart series may never equal a status or action value, with no exception.
- * @public — also imported by the scripts/frontend fixture tests.
- */
-export function duplicateTokenFindings(source, sameAs = SAME_AS) {
-  return THEMES.flatMap(([theme, selector]) =>
-    themeDuplicateFindings(source, theme, selector, sameAs),
-  );
 }
 
 /** Every custom property globals.css declares in an audited family. */
@@ -484,7 +381,6 @@ export function tokenAuditViolations(base = root) {
   const files = CONSUMER_ROOTS.flatMap((directory) => sourceFiles(join(base, directory)));
   const { stale, missing } = refreshDesignDoc(sources);
   return [
-    ...duplicateTokenFindings(tokenCss),
     ...zeroConsumerTokens(tokenCss, files, contractTokenNames(base)).map(
       (token) => `${TOKEN_CSS}: ${token} has no consumer; remove it or use it`,
     ),

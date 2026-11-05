@@ -120,7 +120,7 @@ const sharedJsonLd = [organizationJsonLd(), websiteJsonLd(), softwareApplication
     <a href="#main" class="skip-link">Skip to main content</a>
     <SiteNav path={Astro.url.pathname} />
     {/* Clip, not hide: a wide product frame never scrolls the page sideways, and sticky asides still stick. */}
-    <div class="relative z-1 overflow-x-clip"><slot /></div>
+    <div class="cl-site-main relative z-1 overflow-x-clip"><slot /></div>
     <SiteFooter />
     <CookieBanner />
   </body>

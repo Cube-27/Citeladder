@@ -55,6 +55,7 @@ Light and dark on every surface, defaulting to the system preference.
 | D26 | Website type: the marketing H1 (`--text-site-title`, every hero and article title) is 48/52 from 768px up, the owner's 982px desktop included, and 32/38 on phones, replacing D23's 42. Running text, blog and article prose included, is `body` 16/26; a lead or subheading under a heading is `body-lg` 18/30, never the 20px `lead`. Cal Sans is never tracked on the website or docs: display headings set no `letter-spacing`; Geist Mono eyebrows keep theirs. The app's tokens are unchanged. |
 | D27 | No inverted cards or bands on the website: every tile, PageHighlight included, is the flat card (surface fill, 1px `line` edge, ink text) in both themes; only ink-filled buttons stay ink. Nav popups for multi-column menus (Platform, Resources) start at the navbar's left edge; one-column Solutions still hangs from the trigger row (owner, 5 November 2026; supersedes D22's anchor for those two). |
 | D28 | Cal Sans is for headings only on the website: the H1 and one section heading per section; card titles, figures and every other text are Geist (owner, 5 November 2026). Card, step, form and tool titles and article h3 are `heading-lg` (Geist 500 22/28); FAQ questions, plan names and the author's name keep `title-sm`'s size in Geist 500; stacked split titles, large tiles and the PageHighlight title keep `display-md`'s size in Geist 500; figures and prices are Geist 500; article quotes are Geist. Product screens set no Cal Sans: frame captions, screen figures and the drawn app's page title are Geist 500. A feature split that is its section's only heading keeps Cal Sans. `check:policy` rejects `--font-display` in a website stylesheet outside the heading selectors. |
+| D29 | The website's ground is the other way round (owner, 5 November 2026): the page sits on `paper` (grey in light, black in dark) and every card, the CtaBand included, on `surface` (white in light, lighter in dark) with its 1px `line` edge and `shadow-card`. A product frame's well has no fill, so a screen never sits on a second, darker ground inside its card, and FeatureCards carry no step numbers. The footer is dark in both themes on its own fixed tokens (`footer`, `footer-ink`, `footer-ink-muted`, `footer-line`) with a fine film grain, and the page above it ends on a curved foot (40px, 24px under 1024px), past D10's 8px. The primary button is a raised key: `shadow-press` is a top highlight, a bottom inner shade, a tight drop and a soft lift over a faint light-to-shade sheen, and drops to `shadow-edge` while pressed; it stays ink, never the accent. The docs keep the `surface` ground. Supersedes D27's flat card and the flat-website rule for shadows. |
 
 D5–D17 come from the owner's reviews of the shipped app and docs on 5 November
 2026; `frontend/scripts/design-system-review-checks.mjs` keeps them in
@@ -149,6 +150,10 @@ type rule of the same day.
 | `--color-data-3` | `#7a7a7a` | `#8c8c8c` |
 | `--color-data-other` | `#c2c2c2` | `#4a4a4a` |
 | `--color-focus` | `#111111` | `#f4f4f4` |
+| `--color-footer` | `#151515` | `#151515` |
+| `--color-footer-ink` | `#f4f4f4` | `#f4f4f4` |
+| `--color-footer-ink-muted` | `#a6a6a6` | `#a6a6a6` |
+| `--color-footer-line` | `#2a2a2a` | `#2a2a2a` |
 | `--color-info` | `#1f5fbf` | `#7fb0ff` |
 | `--color-info-soft` | `#e3edfc` | `#14243d` |
 | `--color-ink` | `#111111` | `#f4f4f4` |
@@ -325,11 +330,12 @@ and stopped-at-limit are distinct states with Stop while active. Actions list by
 deterministic priority (High, Medium, Low); neither chats nor Actions count
 evidence sources. Context is one `ListScreen` whose subjects are its tabs.
 
-**Website product images.** `ProductFrame` shows a screen in a paper well
-with even padding (24, 16 under 768px) inside a flat card (1px soft border,
-radius at most 8px, no shadow); in a FeatureCard the well sits straight in
-the card above an optional step number, the title, body and link. Screens
-come in two kinds, named by the frame's `fit`:
+**Website product images.** `ProductFrame` shows a screen in a well with even
+padding (24, 16 under 768px) and no fill of its own, inside a surface card
+(1px soft border, radius at most 8px, `shadow-card`, D29), so the screen sits
+straight on the card; in a FeatureCard it sits above the title, body and
+link, with no step number. Screens come in two kinds, named by the frame's
+`fit`:
 
 - **Vignette (`fluid`, every card image).** One `Vignette`
   (`screen-vignette.tsx`, `.cl-vig`): a white card, 1px `line` border, radius
