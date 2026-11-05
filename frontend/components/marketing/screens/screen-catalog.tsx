@@ -2,7 +2,7 @@ import type { ComponentType } from 'react';
 
 import type { PlatformScreen } from '@/lib/marketing-content/platform-pages';
 
-import { ProductFrame } from './product-frame';
+import { ProductFrame, type FrameFit } from './product-frame';
 import { ScreenActions, ScreenAgentBrief, ScreenAgentChat, ScreenCommerce } from './screens-agent';
 import {
   ScreenDemand,
@@ -27,185 +27,56 @@ import {
 
 type CatalogEntry = Readonly<{
   View: ComponentType;
-  /**
-   * The frame a hero gives the screen: 1200 a full-width frame, 960 a split
-   * beside the hero tile. The screen's own natural size is set in its root.
-   */
-  width: 1200 | 960;
+  /** `scale` for a full app screen that fills a full-width frame; `fluid` for a vignette. */
+  fit: FrameFit;
   /** What the screen shows, for screen readers. */
   label: string;
 }>;
 
+const vignette = (View: ComponentType, label: string): CatalogEntry => ({
+  View,
+  fit: 'fluid',
+  label,
+});
+
 /**
- * The product image catalogue: every screen with its width and label, so a
+ * The product image catalogue: every screen with its fit and label, so a
  * page picks a screen and never sets up a frame itself.
  */
 export const SCREEN_CATALOG: Readonly<Record<PlatformScreen, CatalogEntry>> = {
   visibility: {
     View: ScreenVisibility,
-    width: 1200,
+    fit: 'scale',
     label: 'The Visibility page for Acme Analytics',
   },
-  prompts: {
-    View: ScreenPrompts,
-    width: 1200,
-    label: 'The tracked prompts table for Acme Analytics',
-  },
-  keywords: {
-    View: ScreenKeywords,
-    width: 1200,
-    label: 'Keyword research for acme.com',
-  },
-  actions: {
-    View: ScreenActions,
-    width: 1200,
-    label: 'Actions for acme.com with the selected action open',
-  },
-  answer: {
-    View: ScreenAnswer,
-    width: 960,
-    label: 'A ChatGPT answer that names Acme Analytics first',
-  },
-  sources: {
-    View: ScreenSources,
-    width: 960,
-    label: 'Domains cited in answers about Acme Analytics',
-  },
-  'cited-url': {
-    View: ScreenCitedUrl,
-    width: 960,
-    label: 'acme.com/pricing: which engines retrieve and cite it',
-  },
-  'site-health': {
-    View: ScreenSiteHealth,
-    width: 960,
-    label: 'Site Health for acme.com: score 82, 7 failed checks',
-  },
-  'crawler-access': {
-    View: ScreenCrawlerAccess,
-    width: 960,
-    label: 'AI crawler access to acme.com from robots.txt',
-  },
-  demand: {
-    View: ScreenDemand,
-    width: 960,
-    label: 'Search Console clicks, CTR and position for acme.com',
-  },
-  referrals: {
-    View: ScreenReferrals,
-    width: 960,
-    label: 'Sessions referred to acme.com by AI assistants',
-  },
-  perception: {
-    View: ScreenPerception,
-    width: 960,
-    label: 'How AI engines describe Acme Analytics',
-  },
-  engines: {
-    View: ScreenEngines,
-    width: 960,
-    label: 'Acme Analytics visibility on each engine',
-  },
-  'agent-chat': {
-    View: ScreenAgentChat,
-    width: 960,
-    label: 'The Agent answering why Acme dropped on Gemini',
-  },
-  'agent-brief': {
-    View: ScreenAgentBrief,
-    width: 960,
-    label: 'A content brief the Agent drafted for a session replay pricing page',
-  },
-  mcp: {
-    View: ScreenMcp,
-    width: 960,
-    label: 'The CiteLadder MCP server: its tools and one call',
-  },
-  integrations: {
-    View: ScreenIntegrations,
-    width: 960,
-    label: 'Data sources and AI assistants connected to acme.com',
-  },
-  commerce: {
-    View: ScreenCommerce,
-    width: 960,
-    label: 'Which products AI answers recommended for Acme Startup',
-  },
+  prompts: vignette(ScreenPrompts, 'The tracked prompts for Acme Analytics'),
+  keywords: vignette(ScreenKeywords, 'Keyword research for acme.com'),
+  actions: vignette(ScreenActions, 'Actions for acme.com, highest priority first'),
+  answer: vignette(ScreenAnswer, 'A ChatGPT answer that names Acme Analytics first'),
+  sources: vignette(ScreenSources, 'Domains cited in answers about Acme Analytics'),
+  'cited-url': vignette(ScreenCitedUrl, 'acme.com/pricing: which engines retrieve and cite it'),
+  'site-health': vignette(ScreenSiteHealth, 'Site Health for acme.com: score 82, 7 failed checks'),
+  'crawler-access': vignette(ScreenCrawlerAccess, 'AI crawler access to acme.com from robots.txt'),
+  demand: vignette(ScreenDemand, 'Search Console clicks, CTR and position for acme.com'),
+  referrals: vignette(ScreenReferrals, 'Sessions referred to acme.com by AI assistants'),
+  perception: vignette(ScreenPerception, 'How AI engines describe Acme Analytics'),
+  engines: vignette(ScreenEngines, 'Acme Analytics visibility on each engine'),
+  'agent-chat': vignette(ScreenAgentChat, 'The Agent answering why Acme dropped on Gemini'),
+  'agent-brief': vignette(
+    ScreenAgentBrief,
+    'A content brief the Agent drafted for a session replay pricing page',
+  ),
+  mcp: vignette(ScreenMcp, 'Read-only tool calls an assistant made to the CiteLadder MCP server'),
+  integrations: vignette(ScreenIntegrations, 'Data sources connected to acme.com'),
+  commerce: vignette(ScreenCommerce, 'Which products AI answers recommended for Acme Startup'),
 };
 
-/** One catalogue screen in its ProductFrame, scaled to fit. */
+/** One catalogue screen in its ProductFrame. */
 export function CatalogFrame({ screen }: Readonly<{ screen: PlatformScreen }>) {
-  const { View, label } = SCREEN_CATALOG[screen];
+  const { View, label, fit } = SCREEN_CATALOG[screen];
   return (
-    <ProductFrame label={label}>
+    <ProductFrame label={label} fit={fit}>
       <View />
     </ProductFrame>
   );
 }
-
-type ScreenKeyNumbers = Readonly<{
-  eyebrow: string;
-  title: string;
-  stats: readonly Readonly<{ label: string; value: string; sub?: string }>[];
-}>;
-
-/**
- * The key numbers a split hero screen (width 960) leads with, for the tile beside it
- * on a platform page. Each restates figures the screen draws from the demo
- * dataset (demo-data.ts).
- */
-export const SCREEN_KEY_NUMBERS: Readonly<Partial<Record<PlatformScreen, ScreenKeyNumbers>>> = {
-  sources: {
-    eyebrow: 'Cited sources',
-    title: 'Acme Analytics this week',
-    stats: [
-      { label: 'Citations', value: '1,046' },
-      { label: 'To acme.com', value: '212' },
-      { label: 'Owned citation rate', value: '29.4%' },
-    ],
-  },
-  referrals: {
-    eyebrow: 'AI referrals',
-    title: 'acme.com, last 28 days',
-    stats: [
-      { label: 'Sessions', value: '1,846', sub: '+41%' },
-      { label: 'Share of sessions', value: '3.0%' },
-      { label: 'Key events', value: '65' },
-    ],
-  },
-  commerce: {
-    eyebrow: 'AI Shelf',
-    title: 'Acme Startup this week',
-    stats: [
-      { label: 'Product visibility', value: '41.7%' },
-      { label: 'Share of shelf', value: '24.0%' },
-      { label: 'Avg. position', value: '2.3' },
-    ],
-  },
-  'site-health': {
-    eyebrow: 'Site Health',
-    title: 'acme.com, checked today',
-    stats: [
-      { label: 'Score', value: '82' },
-      { label: 'Failed checks', value: '7' },
-      { label: 'Pages blocked', value: '14' },
-    ],
-  },
-  demand: {
-    eyebrow: 'Search Console',
-    title: 'acme.com, last 28 days',
-    stats: [
-      { label: 'Clicks', value: '3,412', sub: '+9.8%' },
-      { label: 'CTR', value: '2.9%' },
-      { label: 'Avg. position', value: '14.2' },
-    ],
-  },
-  integrations: {
-    eyebrow: 'Integrations',
-    title: 'acme.com data sources',
-    stats: [
-      { label: 'Sources connected', value: '3' },
-      { label: 'Last sync', value: '05:40 UTC' },
-    ],
-  },
-};

@@ -110,6 +110,7 @@ const AGREEMENT = [
 function EvidenceTile() {
   return (
     <PageHighlight
+      as="h2"
       title="Every number traces to a stored answer and a published rule"
       body={
         <>
@@ -145,13 +146,12 @@ export function EnterprisePage() {
           </>
         }
       >
-        <Bento
-          cells={[
-            { key: 'answer', span: 7, content: <CatalogFrame screen="answer" /> },
-            { key: 'evidence', span: 5, content: <EvidenceTile /> },
-          ]}
-        />
+        <CatalogFrame screen="answer" />
       </PageHero>
+
+      <PageSection spacing="compact" label="Evidence">
+        <EvidenceTile />
+      </PageSection>
 
       <PageSection
         id="security"
