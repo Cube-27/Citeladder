@@ -61,6 +61,8 @@ type PageSectionProps = Omit<SectionHeaderProps, 'title' | 'titleId'> &
      */
     layout?: 'stack' | 'aside';
     aside?: ReactNode;
+    /** `even` gives the aside and the body equal halves, for a form beside its explanation. */
+    split?: 'default' | 'even';
     /** `reading` holds the body to the 720 reading measure, for lists. */
     measure?: 'full' | 'reading';
     /** `compact` is the one tighter rhythm (64, 48 under 1024), for strips. */
@@ -82,6 +84,7 @@ export function PageSection({
   action,
   layout = 'stack',
   aside,
+  split = 'default',
   measure = 'full',
   spacing = 'default',
   as,
@@ -125,7 +128,9 @@ export function PageSection({
     >
       <div className="cl-container">
         {isAside ? (
-          <div className="cl-page-section-grid">
+          <div
+            className={cn('cl-page-section-grid', split === 'even' && 'cl-page-section-grid--even')}
+          >
             <div className="cl-page-section-aside">
               {head}
               {aside !== undefined && <div className="cl-page-section-aside-body">{aside}</div>}
