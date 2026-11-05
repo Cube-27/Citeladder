@@ -106,7 +106,7 @@ export function RobotsGenerator({ bots }: Readonly<{ bots: ToolBot[] }>) {
         <ToolInput label="Page URL to test generated rules" value={testUrl} onChange={setTestUrl} />
       </ToolForm>
       {testReport && testedSignature === signature && (
-        <section className="cp-tool-extra" aria-labelledby="robots-generated-test">
+        <section className="cl-tool-extra" aria-labelledby="robots-generated-test">
           <h2 id="robots-generated-test" className="website-feature-heading">
             Test of generated rules
           </h2>

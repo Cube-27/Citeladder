@@ -1,10 +1,11 @@
 import { useState, type ReactNode, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
-import { CopyButton } from '@/components/ui/copy-button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { FREE_TOOL_LIMITS } from '@/lib/config/free-tools';
+
+import { ToolPanel } from '../sections/tool-panel';
 
 export function ToolInput({
   label,
@@ -89,57 +90,58 @@ export function ToolForm({
       setResult(null);
     }
   }
+  const output = current ? (
+    <Textarea
+      className="font-mono"
+      rows={18}
+      readOnly
+      value={current}
+      aria-label="Generated output"
+    />
+  ) : undefined;
   return (
-    <div className="cp-tool">
-      <form onSubmit={submit} className="cp-tool-pane">
-        <h2 className="website-feature-heading cp-tool-head">Your input</h2>
-        {children}
-        <div className="cp-tool-actions">
-          <Button type="submit" variant="primary">
-            {action}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              sample();
-              setResult(null);
-              setError('');
-            }}
-          >
-            Load example
-          </Button>
-        </div>
-        {error && (
-          <p role="alert" className="text-negative website-body">
-            {error}
-          </p>
-        )}
-      </form>
-      <section aria-label="Tool output" className="cp-tool-pane cp-tool-result">
-        <div className="cp-tool-head">
-          <h2 className="website-feature-heading">Your result</h2>
-          <output className="website-label">{status}</output>
-        </div>
-        {preview}
-        {current && (
-          <>
-            <Textarea
-              className="font-mono"
-              rows={18}
-              readOnly
-              value={current}
-              aria-label="Generated output"
-            />
-            <div className="cp-tool-actions">
-              <CopyButton value={current}>Copy result</CopyButton>
-              <Button type="button" variant="secondary" onClick={() => download(current, filename)}>
-                Download
-              </Button>
-            </div>
-          </>
-        )}
-      </section>
-    </div>
+    <ToolPanel
+      title="Your input"
+      resultTitle="Your result"
+      status={<output>{status}</output>}
+      form={
+        <form onSubmit={submit} className="cl-tool-run">
+          {children}
+          <div className="cl-tool-run-actions">
+            <Button type="submit" variant="primary">
+              {action}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                sample();
+                setResult(null);
+                setError('');
+              }}
+            >
+              Load example
+            </Button>
+          </div>
+          {error && (
+            <p role="alert" className="text-negative">
+              {error}
+            </p>
+          )}
+        </form>
+      }
+      result={
+        preview || output ? (
+          <div className="cl-tool-run">
+            {preview}
+            {output}
+          </div>
+        ) : undefined
+      }
+      copyText={current || undefined}
+      onDownload={() => {
+        if (current) download(current, filename);
+      }}
+    />
   );
 }

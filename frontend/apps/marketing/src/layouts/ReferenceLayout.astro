@@ -1,0 +1,83 @@
+---
+/**
+ * A company reference page (the WebAiReference template): ContentArticle
+ * with a Toc, the ArticleHeader with the last-updated date, the sections in
+ * Prose (a FactList where a section has facts, its official sources under
+ * it), then an ArticlePager to the other reference. The page passes its
+ * sections in the default slot.
+ */
+import ArticleHeader from '@/components/content/ArticleHeader.astro';
+import ArticlePager from '@/components/content/ArticlePager.astro';
+import Prose from '@/components/content/Prose.astro';
+import { Breadcrumbs } from '@/components/marketing/chrome/breadcrumbs';
+import ContentArticle from '@/components/marketing/content/ContentArticle.astro';
+import { formatBlogDate } from '@/lib/marketing-content/blog-index';
+import { AI_REFERENCE_UPDATED } from '@/lib/marketing-content/ai-reference';
+import MarketingLayout from './MarketingLayout.astro';
+
+const REFERENCES = [
+  { title: 'AI Instructions', href: '/ai-instructions' },
+  { title: 'Entity Map', href: '/entity-map' },
+] as const;
+
+interface Props {
+  title: (typeof REFERENCES)[number]['title'];
+  /** The browser title. */
+  pageTitle: string;
+  description: string;
+  /** The ArticleHeader lead. */
+  lead: string;
+  sections: readonly Readonly<{ id: string; title: string }>[];
+}
+const { title, pageTitle, description, lead, sections } = Astro.props;
+const index = REFERENCES.findIndex((reference) => reference.title === title);
+const path = REFERENCES[index]?.href ?? '/';
+---
+
+<MarketingLayout title={pageTitle} description={description} canonical={path}>
+  <main id="main">
+    <ContentArticle toc={sections.map((section) => ({ id: section.id, label: section.title, level: 2 }))}>
+      <ArticleHeader
+        slot="header"
+        title={title}
+        meta={[
+          {
+            prefix: 'Last updated',
+            text: formatBlogDate(AI_REFERENCE_UPDATED),
+            dateTime: AI_REFERENCE_UPDATED,
+          },
+        ]}
+      >
+        <Breadcrumbs slot="crumbs" items={[{ label: 'Home', href: '/' }, { label: title }]} />
+        {lead}
+      </ArticleHeader>
+      <Prose as="article" label={title}>
+        <slot />
+      </Prose>
+      <ArticlePager
+        slot="end"
+        previous={index > 0 ? REFERENCES[index - 1] : undefined}
+        next={REFERENCES[index + 1]}
+        label="Company references"
+      />
+    </ContentArticle>
+  </main>
+</MarketingLayout>
+
+<style is:global>
+  /* A section's official sources: a mono label, then its links on one wrapping line. */
+  .cl-ref-sources {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 16px;
+  }
+  .cl-ref-sources-label {
+    color: var(--color-ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-eyebrow);
+    line-height: var(--text-eyebrow--line-height);
+    letter-spacing: var(--text-eyebrow--letter-spacing);
+    text-transform: uppercase;
+  }
+</style>
