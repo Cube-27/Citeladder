@@ -1,6 +1,7 @@
 import { ChevronRight, type LucideIcon } from 'lucide-react';
 import { cloneElement, useId, type ComponentProps, type ReactElement, type ReactNode } from 'react';
 
+import { AuthShowcase } from '@/components/ui/auth-showcase';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { LogoMark } from '@/components/ui/logo-mark';
@@ -10,8 +11,62 @@ import type { Turnstile } from '@/lib/turnstile/use-turnstile';
 import { cn } from '@/lib/utils';
 
 /**
- * AuthShell — the frame for sign-in, the mailbox screens, the workspace
- * chooser and setup: the logo top-left, the ThemeSwitch top-right, and one
+ * The CiteLadder logo linking home. The public home lives on the website
+ * origin; "/" on the app origin is the product root, which a signed-out
+ * visitor cannot use.
+ */
+function AuthLogo() {
+  return (
+    <a
+      href={websiteHref('/')}
+      aria-label="CiteLadder home"
+      className="focus-ring text-ink inline-flex rounded-sm p-1"
+    >
+      <LogoMark size={22} />
+    </a>
+  );
+}
+
+/**
+ * AuthSplitShell — account access (sign-in, sign-up and the mailbox screens)
+ * across the whole viewport (D24, the pre-redesign layout): the sign-in card
+ * centred in a column on `paper` with the ThemeSwitch above it and the
+ * caller's footer line under it, and from `desktop:` the black-and-white
+ * product showcase beside it. Below `desktop:` the showcase drops away and the
+ * card has the width. The document scrolls, so a tall form on a short laptop
+ * never squeezes; the showcase stays pinned beside it.
+ */
+export function AuthSplitShell({
+  footer,
+  children,
+}: Readonly<{
+  /** One line at the column's foot (the copyright and legal links). */
+  footer: ReactNode;
+  children: ReactNode;
+}>) {
+  return (
+    <div className="bg-paper text-ink desktop:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] grid min-h-dvh antialiased">
+      <div className="desktop:px-[var(--card-padding)] grid min-h-dvh grid-rows-[auto_minmax(0,1fr)_auto] px-4">
+        <div className="flex h-[var(--nav-height)] items-center justify-end">
+          <ThemeSwitch />
+        </div>
+        <main
+          id="main"
+          aria-label="Account access"
+          className="grid content-center justify-items-center pb-8"
+        >
+          <div className="w-full max-w-120">{children}</div>
+        </main>
+        <footer className="text-caption text-ink-muted py-4 text-center">{footer}</footer>
+      </div>
+      <AuthShowcase />
+    </div>
+  );
+}
+
+/**
+ * AuthShell — the frame for the workspace chooser, workspace setup and
+ * onboarding: the logo top-left, the ThemeSwitch top-right, and one
  * `container-narrow` column on the `paper` ground. The column is top-aligned
  * with `space-12` above it, so cards of different heights never move their
  * top edge between steps. No navigation, footer links or illustrations.
@@ -30,15 +85,10 @@ export function AuthShell({
   return (
     <div className="bg-paper text-ink flex min-h-dvh flex-col antialiased">
       <header className="desktop:px-[var(--card-padding)] flex h-[var(--nav-height)] shrink-0 items-center justify-between gap-4 px-4">
-        {/* The public home lives on the website origin; "/" on the app origin
-            is the product root, which a signed-out visitor cannot use. */}
-        <a
-          href={websiteHref('/')}
-          aria-label="CiteLadder home"
-          className="focus-ring text-ink -ms-1 inline-flex rounded-sm p-1"
-        >
-          <LogoMark size={22} />
-        </a>
+        {/* Optically flush with the gutter: the link's 4px focus inset hangs out. */}
+        <span className="-ms-1 inline-flex">
+          <AuthLogo />
+        </span>
         <div className="flex items-center gap-3">
           {barEnd}
           <ThemeSwitch />
@@ -65,9 +115,18 @@ function AuthHead({
   title,
   sub,
   icon,
-}: Readonly<{ id: string; title: ReactNode; sub?: ReactNode; icon?: LucideIcon }>) {
+  centred,
+}: Readonly<{
+  id: string;
+  title: ReactNode;
+  sub?: ReactNode;
+  icon?: LucideIcon;
+  centred: boolean;
+}>) {
   return (
-    <header className="flex flex-col items-start gap-2">
+    <header
+      className={cn('flex flex-col gap-2', centred ? 'items-center text-center' : 'items-start')}
+    >
       {icon ? (
         <span
           aria-hidden
@@ -84,22 +143,7 @@ function AuthHead({
   );
 }
 
-/**
- * AuthCard — one account-access step on `surface` with `shadow-card`,
- * `radius-lg` and `space-10` padding (`space-6` on phones): the head, then
- * the body (`space-6` apart), and an optional line under the card (`after`,
- * the switch between sign-in and sign-up). Used by sign-in, sign-up, the
- * mailbox screens and the workspace chooser; OnboardingStep shares it.
- */
-export function AuthCard({
-  title,
-  titleId,
-  sub,
-  icon,
-  footer,
-  after,
-  children,
-}: Readonly<{
+type AuthCardProps = Readonly<{
   title: ReactNode;
   /** The heading's id, when a flow moves focus to it; generated otherwise. */
   titleId?: string;
@@ -110,22 +154,62 @@ export function AuthCard({
   /** One line under the card. */
   after?: ReactNode;
   children?: ReactNode;
-}>) {
+}>;
+
+function AuthCardFrame({
+  title,
+  titleId,
+  sub,
+  icon,
+  footer,
+  after,
+  children,
+  signIn,
+}: AuthCardProps & Readonly<{ signIn: boolean }>) {
   const generatedId = useId();
   const headingId = titleId ?? generatedId;
   return (
     <div className="flex flex-col gap-[var(--card-padding)]">
       <section
         aria-labelledby={headingId}
-        className="bg-surface text-ink shadow-card desktop:p-10 flex flex-col gap-[var(--card-padding)] rounded-lg p-[var(--card-padding)]"
+        className={cn(
+          'bg-surface text-ink shadow-card desktop:p-10 flex flex-col gap-[var(--card-padding)] rounded-lg p-[var(--card-padding)]',
+          // Account access keeps the pre-redesign 44px controls (D24): every
+          // button and field inside reads `control-md`.
+          signIn && '[--control-md:44px]',
+        )}
       >
-        <AuthHead id={headingId} title={title} sub={sub} icon={icon} />
+        {signIn ? (
+          <div className="flex justify-center">
+            <AuthLogo />
+          </div>
+        ) : null}
+        <AuthHead id={headingId} title={title} sub={sub} icon={icon} centred={signIn} />
         {children}
         {footer}
       </section>
       {after ? <p className="text-body-sm text-ink-secondary text-center">{after}</p> : null}
     </div>
   );
+}
+
+/**
+ * AuthCard — one setup step on `surface` with `shadow-card`, `radius-lg` and
+ * `space-10` padding (`space-6` on phones): the head, then the body
+ * (`space-6` apart), and an optional line under the card (`after`). Used by
+ * the workspace chooser and the setup screens; OnboardingStep shares it.
+ */
+export function AuthCard(props: AuthCardProps) {
+  return <AuthCardFrame {...props} signIn={false} />;
+}
+
+/**
+ * AuthSignInCard — the account-access card inside AuthSplitShell (D24): the
+ * AuthCard with the logo centred at its top, a centred head and the 44px
+ * controls. Used by sign-in, sign-up and the mailbox screens.
+ */
+export function AuthSignInCard(props: AuthCardProps) {
+  return <AuthCardFrame {...props} signIn />;
 }
 
 /** The card's full-width action: the submit, or "Continue with Google". */
