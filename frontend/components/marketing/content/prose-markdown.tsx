@@ -45,9 +45,15 @@ const components: Components = {
     ),
 };
 
+/** A single line keeps its inline content without a wrapping paragraph. */
+const inlineComponents: Components = {
+  ...components,
+  p: ({ children }) => <>{children}</>,
+};
+
 /**
- * Each table is a scrollable region named by the heading above it, so a
- * keyboard can reach and scroll it and a screen reader says what it compares.
+ * Each table is a region named by the heading above it, so a screen reader
+ * says what it compares.
  */
 function markdownComponents(markdown: string): Components {
   return {
@@ -109,11 +115,7 @@ export function MarkdownFaq({
 /** One line of Markdown (a source), without a wrapping paragraph. */
 export function InlineMarkdown({ markdown }: Readonly<{ markdown: string }>) {
   return (
-    <Markdown
-      remarkPlugins={[remarkGfm]}
-      components={{ ...components, p: ({ children }) => <>{children}</> }}
-      skipHtml
-    >
+    <Markdown remarkPlugins={[remarkGfm]} components={inlineComponents} skipHtml>
       {markdown}
     </Markdown>
   );
