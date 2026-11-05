@@ -15,42 +15,42 @@ const GUIDES = [
   {
     href: '/compare/profound-alternatives',
     title: 'Profound alternatives',
-    body: 'Hosted and open-source options, compared by workflow and price.',
+    desc: 'Hosted and open-source options, compared by workflow and price.',
   },
   {
     href: '/open-source',
     title: 'Open source and self-hosted',
-    body: 'Run CiteLadder yourself under AGPL-3.0, or use the hosted version.',
+    desc: 'Run CiteLadder yourself under AGPL-3.0, or use the hosted version.',
   },
   {
     href: '/best-ai-visibility-platforms',
     title: 'Seven-platform research comparison',
-    body: 'A wider look at AI visibility platforms.',
+    desc: 'A wider look at AI visibility platforms.',
   },
   {
     href: '/llm-rank-tracker',
     title: 'LLM rank tracker',
-    body: 'How brand position inside AI answers is measured.',
+    desc: 'How brand position inside AI answers is measured.',
   },
   {
     href: '/enterprise',
     title: 'Enterprise AEO',
-    body: 'Evidence your security team can inspect, with public scoring code.',
+    desc: 'Evidence your security team can inspect, with public scoring code.',
   },
   {
     href: '/ai-citation-tracking',
     title: 'AI citation tracking',
-    body: 'How citation measurement works and how to read it.',
+    desc: 'How citation measurement works and how to read it.',
   },
   {
     href: '/ai-search-share-of-voice',
     title: 'AI share of voice',
-    body: 'What a share-of-voice percentage actually counts.',
+    desc: 'What a share-of-voice percentage actually counts.',
   },
   {
     href: '/platform/cited-sources',
     title: 'Cited Sources',
-    body: 'Inspect the domains and URLs your tracked answers cite.',
+    desc: 'Inspect the domains and URLs your tracked answers cite.',
   },
 ] as const;
 
@@ -125,7 +125,9 @@ export function CompareIndex() {
       </PageSection>
 
       <PageSection title="Related guides">
-        <RelatedCards items={GUIDES} />
+        <RelatedCards
+          items={GUIDES.map(({ href, title, desc }) => ({ href, title, body: desc }))}
+        />
       </PageSection>
 
       <PageSection label="Get started">
