@@ -46,9 +46,12 @@ function SkeletonBody(props: SkeletonProps) {
   switch (props.variant) {
     case 'row':
       return Array.from({ length: props.rows ?? 3 }, (_, index) => (
-        <span key={index} className="border-line flex items-center gap-3 p-3 [&+&]:border-t">
+        <span
+          key={index}
+          className="border-line flex h-[var(--table-row-height)] items-center gap-3 px-3 [&+&]:border-t"
+        >
           <span className={cn(BAR, 'size-4 shrink-0')} />
-          {/* One body-sm line box (20px) between 12px paddings: the 44px row. */}
+          {/* A table row tall (`table-row-height`), holding one body-sm line box. */}
           <span className="flex h-5 min-w-0 flex-1 items-center">
             <span
               className={cn(BAR, 'h-2.5')}

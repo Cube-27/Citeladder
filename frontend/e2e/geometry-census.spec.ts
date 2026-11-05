@@ -45,8 +45,8 @@ const ROUTES = [
   '/agent/context',
 ] as const;
 
-/** One control height for the product: the system's control-md. */
-const CONTROL_HEIGHT = 36;
+/** One control height for the product: control-md, 32 in the app (decision D11). */
+const CONTROL_HEIGHT = 32;
 /** The ThemeSwitch is the system's one control-sm atom. */
 const THEME_SWITCH_HEIGHT = 28;
 /** One badge height. */
@@ -55,27 +55,28 @@ const BADGE_HEIGHT = 22;
 const TEXT_CONTROL_PADDING_X = 12;
 const ICON_CONTROL_PADDING_X = 0;
 /**
- * The sidebar's project and account buttons: a 48px row (control-lg) from
- * 1280px, a control-md square in the 61px icon rail below it.
+ * The sidebar's project and account buttons: as tall as the PageHeader's
+ * title row (page-header-height, 40) in the full column and in the 57px rail,
+ * so the sidebar and the page share their first line (decision D11).
  */
-const SIDEBAR_IDENT_HEIGHT_FULL = 48;
-const SIDEBAR_IDENT_HEIGHT_RAIL = 36;
+const SIDEBAR_IDENT_HEIGHT_FULL = 40;
+const SIDEBAR_IDENT_HEIGHT_RAIL = 40;
 /** The rail stacks the Dashboard | Agent track: one control wide. */
-const RAIL_MODE_TRACK_WIDTH = 36;
+const RAIL_MODE_TRACK_WIDTH = 32;
 /** The shell's breakpoint (`shell:`): the full sidebar from here, the rail below. */
 const SHELL_MIN_WIDTH = 1280;
-/** The page template: header → 32 → controls → 16 → content; 32 with no controls. */
-const HEADER_BAND_GAP = 32;
-const CONTROL_BAND_GAP = 16;
-/** The content band's children (cards, sections) stand 16 apart, as do cards inside them. */
-const CONTENT_GAP = 16;
-const CARD_GAP = 16;
+/** The page template: header → 16 → controls → 8 → content; 16 with no controls (D11). */
+const HEADER_BAND_GAP = 16;
+const CONTROL_BAND_GAP = 8;
+/** The content band's children (cards, sections) stand 12 apart, as do cards inside them. */
+const CONTENT_GAP = 12;
+const CARD_GAP = 12;
 /**
- * One box recipe: padding 24 on the box element, radius 14 (rounded-lg), and
- * no border: a box is lifted by its shadow.
+ * One box recipe: padding 16 on the box element (D11), radius 8 (rounded-lg,
+ * D10), and no border: a box is lifted by its shadow.
  */
-const CARD_INSET = 24;
-const BOX_RADIUS = 14;
+const CARD_INSET = 16;
+const BOX_RADIUS = 8;
 const BOX_BORDER = 0;
 /**
  * Loading, read-error and first-use empty share one footprint: the block
@@ -84,10 +85,10 @@ const BOX_BORDER = 0;
  */
 const QUERY_STATE_HEIGHT = 200;
 const QUERY_STATE_PADDING = 0;
-const TABLE_ROW_HEIGHT = 44;
+const TABLE_ROW_HEIGHT = 40;
 const TABLE_CELL_PADDING_Y = 8;
-/** A DataTable's title-and-toolbar row is one control high; the card's 24 insets it. */
-const DATA_TABLE_HEADER_HEIGHT = 36;
+/** A DataTable's title-and-toolbar row is one control high; the card's 16 insets it. */
+const DATA_TABLE_HEADER_HEIGHT = 32;
 /**
  * A StatRow segment is padded 12 above and below (cancelled by its margin, so
  * a pressable segment's fill has room); a row's segments share one height.
@@ -97,9 +98,9 @@ const STAT_ROW_HEIGHT_SPREAD = 0;
 /** The Icon atom's one glyph size. */
 const ICON_SIZE = 16;
 /** A row's kind mark (an IconTile) is a control-sized square. */
-const ICON_TILE_SIZE = 36;
-/** A ControlRow and an IdentityRow hold their parts 12 apart. */
-const ROW_PART_GAP = 12;
+const ICON_TILE_SIZE = 32;
+/** A ControlRow and an IdentityRow hold their parts 8 apart (compact-gap). */
+const ROW_PART_GAP = 8;
 /** A ruled fact list pads each fact 8 above and below. */
 const FACT_ROW_PADDING_Y = 8;
 /** A field's end target (clear, reveal) is SearchField's 20px clear square. */

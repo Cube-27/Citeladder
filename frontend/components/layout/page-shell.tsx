@@ -35,12 +35,12 @@ export type PageBack = Readonly<{
  *   2. controls — the route's tabs (settings sections, a screen's views),
  *                 then its FilterBar (search, filters, one action) for the
  *                 selected tab.
- *   3. content  — the work, its cards 16 apart.
+ *   3. content  — the work, its cards 12 apart.
  *
- * The template owns every band-to-band gap: header → 32 → tabs → 16 →
- * filters → 16 → content (32 straight to the content when there are no
- * controls). A page
- * passes data, organisms and slots and adds no margins between bands.
+ * The template owns every band-to-band gap (decision D11): header → 16 →
+ * tabs → 8 → filters → 8 → content (16 straight to the content when there
+ * are no controls). The header and the controls sit on the sidebar's lines.
+ * A page passes data, organisms and slots and adds no margins between bands.
  */
 type ScreenBands<T extends string> = Readonly<{
   /** Overrides the route-derived title (rare — prefer `page-titles.ts`). */
@@ -124,8 +124,8 @@ export function DetailScreen<T extends string = string>({
       {lead}
       {aside ? (
         <AppGrid layout="main-aside">
-          <div className="flex min-w-0 flex-col gap-4">{children}</div>
-          <aside className="flex min-w-0 flex-col gap-4">{aside}</aside>
+          <div className="flex min-w-0 flex-col gap-[var(--workspace-gap)]">{children}</div>
+          <aside className="flex min-w-0 flex-col gap-[var(--workspace-gap)]">{aside}</aside>
         </AppGrid>
       ) : (
         children
@@ -156,7 +156,7 @@ function PageShell<T extends string>({
     </div>
   ) : null;
   return (
-    // header → 32 → tabs → 16 → filters → 16 → content; header → 32 → content.
+    // header → 16 → tabs → 8 → filters → 8 → content; header → 16 → content.
     <div className="flex min-w-0 flex-col gap-[var(--page-section-gap)]">
       <div data-page-band="identity">
         <PageHeader
@@ -175,7 +175,7 @@ function PageShell<T extends string>({
         />
       </div>
       {tabBand || filterBand ? (
-        <div className="flex min-w-0 flex-col gap-[var(--workspace-gap)]">
+        <div className="flex min-w-0 flex-col gap-[var(--page-band-gap)]">
           {tabBand}
           {filterBand}
           {content}
@@ -202,7 +202,7 @@ function useRouteTitle(title: string | undefined) {
 }
 
 /**
- * The content band: its cards stack 16 apart. A fill screen's content is
+ * The content band: its cards stack 12 apart. A fill screen's content is
  * exactly the viewport left below the header, so the window never scrolls:
  * the column scrolls in its own region and the dock sits under it.
  */

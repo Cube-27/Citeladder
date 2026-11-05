@@ -39,7 +39,7 @@ export function useReturnFocus(open: boolean) {
 
 /**
  * Dialog — a modal panel for one short task, centred on the scrim: `surface`,
- * `radius-lg`, `shadow-pop`, 24px padding and gaps, `container-narrow` wide.
+ * `radius-lg`, `shadow-pop`, `modal-padding` (16 in the app) padding and gaps, `container-narrow` wide.
  * The title is the section title (Geist 500 22/28), the description
  * `ink-secondary`, the footer right-aligned (Cancel first, then the action). `tone="danger"` is a
  * confirmation: an `alertdialog`, 440px, a `negative` warning icon by the

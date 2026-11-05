@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
  * list behind it. It floats 8px from the viewport edges, `container-narrow`
  * wide, with `radius-lg` and `shadow-pop` on the scrim. The header (eyebrow,
  * the section title in Geist 500 22/28, description) and the footer are fixed behind 1px
- * `line` rules; only the body scrolls, with 24px padding and 16px between
+ * `line` rules; only the body scrolls, with `modal-padding` and 16px between
  * blocks. `footerStart` holds a delete or secondary action on the left,
  * `footer` the actions on the right.
  */

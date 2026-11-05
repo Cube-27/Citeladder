@@ -145,6 +145,8 @@ for (const path of files(root)) {
     // segmented bar.
     ['Score', 'Bar'].join(''),
     ['score', '-bar'].join(''),
+    // Decision D11 (2026-11-05): the app sidebar carries no logo.
+    ['SIDEBAR', '_LOGO_CLASSES'].join(''),
   ];
   for (const legacy of legacyIdentifiers) {
     // A whole identifier: the retired text face is not the country it prefixes.

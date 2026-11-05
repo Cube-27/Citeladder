@@ -11,8 +11,13 @@ import { cn } from '@/lib/utils';
  * full `sidebar-width` column with labels; below it the sidebar is a rail one
  * control wide (decision D3) whose rows show only their icons and name
  * themselves in right-side tooltips, and the main gutter (`--content-gutter`)
- * narrows from 32 to 24. The page bands (header, controls, content) are the
+ * narrows from 24 to 16. The page bands (header, controls, content) are the
  * page template's (`components/layout/page-shell.tsx`).
+ *
+ * The sidebar and the page share their lines (decision D11): both start
+ * `page-top-inset` from the top, the project switcher is as tall as the
+ * PageHeader's title row, and the mode switch and the palette field sit
+ * where the page's tabs and filter rows do.
  *
  * The layout shell composes these with the real navigation and data; these
  * pieces own every number.
@@ -21,6 +26,8 @@ const FRAME =
   'bg-paper text-ink shell:grid-cols-[var(--sidebar-width)_minmax(0,1fr)] grid min-h-dvh grid-cols-[var(--sidebar-rail-width)_minmax(0,1fr)]';
 const SIDEBAR_COLUMN = 'border-line sticky top-0 h-dvh min-w-0 border-r';
 const PAGE = 'mx-auto flex w-full max-w-[var(--content-max-width)] min-w-0 flex-col';
+const MAIN_INSET =
+  'min-w-0 px-[var(--content-gutter)] pt-[var(--page-top-inset)] pb-[var(--content-gutter)]';
 
 export function AppShellFrame({
   sidebar,
@@ -32,7 +39,7 @@ export function AppShellFrame({
         Skip to main content
       </a>
       <aside className={SIDEBAR_COLUMN}>{sidebar}</aside>
-      <main id="main" tabIndex={-1} className="min-w-0 p-[var(--content-gutter)]">
+      <main id="main" tabIndex={-1} className={MAIN_INSET}>
         <div className={PAGE}>{children}</div>
       </main>
     </div>
@@ -51,7 +58,7 @@ export function AppShellPlaceholder({
   return (
     <div className={FRAME} aria-busy={busy || undefined}>
       <div className={SIDEBAR_COLUMN} />
-      <div className="min-w-0 p-[var(--content-gutter)]">
+      <div className={MAIN_INSET}>
         <div className={PAGE}>{children}</div>
       </div>
     </div>
@@ -59,18 +66,23 @@ export function AppShellPlaceholder({
 }
 
 /**
- * The sidebar's column: the top block (logo, project, mode), the scrolling
- * destinations and the account at the foot. In the rail the destinations do
- * not scroll, so their tooltips are never clipped.
+ * The sidebar's column, on the page's lines: the project switcher on the
+ * header row, `page-section-gap` under it the controls (mode switch, then
+ * the palette field `page-band-gap` below, as the page's tabs and filters
+ * are), then the scrolling destinations and the account at the foot. There
+ * is no logo (decision D11). In the rail the destinations do not scroll, so
+ * their tooltips are never clipped.
  */
 export function SidebarFrame({
-  top,
+  ident,
+  controls,
   nav,
   foot,
-}: Readonly<{ top: ReactNode; nav: ReactNode; foot: ReactNode }>) {
+}: Readonly<{ ident: ReactNode; controls: ReactNode; nav: ReactNode; foot: ReactNode }>) {
   return (
-    <div className="flex h-full flex-col gap-4 p-3">
-      <div className="flex flex-col gap-3">{top}</div>
+    <div className="flex h-full flex-col gap-[var(--page-section-gap)] px-3 pt-[var(--page-top-inset)] pb-3">
+      <div className="flex">{ident}</div>
+      <div className="flex flex-col gap-[var(--page-band-gap)]">{controls}</div>
       <div className="shell:overflow-y-auto -mx-3 flex min-h-0 flex-1 flex-col gap-4 px-3 py-1">
         {nav}
       </div>
@@ -79,14 +91,11 @@ export function SidebarFrame({
   );
 }
 
-/** The logo row: the full logo in the column, the mark alone in the rail. */
-export const SIDEBAR_LOGO_CLASSES =
-  'focus-ring shell:justify-start shell:px-3 text-ink flex h-[var(--control-md)] items-center justify-center rounded-md';
-
 /**
- * The project switcher's and the account's trigger: 48px with two lines (the
- * name in `ink`, the domain or workspace in `ink-muted`), ghost until hovered
- * or open. In the rail it is one control square holding only its mark.
+ * The project switcher's and the account's trigger: as tall as the
+ * PageHeader's title row (`page-header-height`) with two lines (the name in
+ * `ink`, the domain or workspace in `ink-muted`), ghost until hovered or
+ * open. In the rail it holds only its mark.
  */
 export function SidebarIdentButton({
   lead,
@@ -109,7 +118,7 @@ export function SidebarIdentButton({
       type="button"
       data-sidebar-ident=""
       className={cn(
-        'focus-ring text-ink hover:bg-surface-sunken data-[state=open]:bg-surface-sunken disabled:text-ink-muted shell:h-[var(--control-lg)] shell:justify-start shell:px-3 flex h-[var(--control-md)] w-full min-w-0 items-center justify-center gap-3 rounded-md text-left transition-colors disabled:pointer-events-none',
+        'focus-ring text-ink hover:bg-surface-sunken data-[state=open]:bg-surface-sunken disabled:text-ink-muted shell:justify-start shell:px-3 flex h-[var(--page-header-height)] w-full min-w-0 items-center justify-center gap-3 rounded-md text-left transition-colors disabled:pointer-events-none',
         className,
       )}
       {...props}

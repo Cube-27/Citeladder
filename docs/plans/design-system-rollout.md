@@ -193,6 +193,16 @@ now rejects as legacy.
 | D8 | How does a score card draw a score? | Its number in a ScoreRing on the right, as before PR 3; a table cell shows the number only. No segmented bars |
 | D9 | How do metric cards lay out at app widths? | In one row: 4 across at every app width, 982px included; never 2 × 2 and never 2 + 1 |
 
+Later the same day the owner added D10 and D11 ("the rounded edges in
+components are too much … we want a compact technical design like claude
+code/github/etc not airy feeling"; source: the orchestration session). The same
+script enforces both.
+
+| ID | Question | Decision |
+| --- | --- | --- |
+| D10 | How rounded are corners? | Only slightly, system-wide (app, docs and website share the tokens): `radius-2xs` 2, `radius-xs` 2, `radius-sm` 4, `radius-md` 6, `radius-lg` 8, `radius-xl` 8. `radius-full` stays only for avatars, status dots, switch tracks and count pills; no hard-coded radius above 8px |
+| D11 | How dense is the app? | Compact and technical, GitHub / Claude Code density, app only. The sidebar has no logo: the project switcher is its first row, on the PageHeader's line, and the Dashboard/Agent switch sits on the page's tabs/filter line. The PageHeader title is 24/32 Cal Sans 400 in a tight band with its actions centred on the title row. Band gaps are about half (header → 16 → tabs → 8 → filters → 8 → content), card and dialog padding 16, controls 32, table rows 40, card gaps 12. The docs and website keep their spacing |
+
 ## Known gaps in the system
 
 - Long prompt and action names in ScreenPrompts and ScreenActions end in "…" at

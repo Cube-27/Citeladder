@@ -193,11 +193,11 @@ export function RemovableChip({
   onRemove,
 }: Readonly<{ label: string; onRemove?: () => void }>) {
   return (
-    <li className="border-line text-ink-secondary inline-flex max-w-full items-center gap-1 rounded-full border px-3 py-0.5">
+    <li className="border-line text-ink-secondary inline-flex max-w-full items-center gap-1 rounded-sm border px-3 py-0.5">
       <span className={textRole('caption', 'truncate text-ink-secondary')}>{label}</span>
       {onRemove ? (
         <Pressable
-          className="focus-ring hover:text-ink flex w-auto rounded-full"
+          className="focus-ring hover:text-ink flex w-auto rounded-xs"
           aria-label={`Remove ${label}`}
           onClick={onRemove}
         >

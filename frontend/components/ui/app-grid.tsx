@@ -4,7 +4,8 @@ import { cn } from '@/lib/utils';
 
 /**
  * AppGrid — the app's only grids, so a page picks a layout instead of
- * setting columns or gaps. The gap is always the card gap (16) and cards in a
+ * setting columns or gaps. The gap is always the card gap (`workspace-gap`,
+ * 12 in the app since decision D11) and cards in a
  * row stretch to one height.
  *
  * A KPI row is one row from 981px (decision D9: 4 across at the owner's 982px,
@@ -56,7 +57,11 @@ export function AppGrid({
     {
       ...props,
       'data-app-grid': layout,
-      className: cn('grid min-w-0 grid-cols-1 gap-4 *:min-w-0', LAYOUT[layout], className),
+      className: cn(
+        'grid min-w-0 grid-cols-1 gap-[var(--workspace-gap)] *:min-w-0',
+        LAYOUT[layout],
+        className,
+      ),
     },
     children,
   );

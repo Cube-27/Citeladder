@@ -213,7 +213,7 @@ a:hover .cl-arrowlink .cl-arrowlink-icon {
   height: 32px;
   padding: 0 12px 0 4px;
   border: 1px solid var(--color-line);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   box-shadow: var(--shadow-xs);
   color: var(--color-ink-secondary);
@@ -236,7 +236,7 @@ a.cl-announce:hover {
   align-items: center;
   height: 22px;
   padding: 0 8px;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-xs);
   background: var(--color-surface-sunken);
   color: var(--color-ink);
 }

@@ -209,8 +209,3 @@
   font-weight: 500;
   letter-spacing: 0;
 }
-
-/* The hero CTA is the one pill: it opts in with `data-shape='pill'`. */
-:where([data-public-surface]) [data-shape='pill']:not(.app-type-scale *) {
-  border-radius: var(--radius-full);
-}

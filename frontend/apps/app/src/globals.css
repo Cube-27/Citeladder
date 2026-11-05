@@ -103,6 +103,10 @@
   --text-display-md--line-height: 34px;
   --text-display-md--font-weight: 400;
   --text-display-md--letter-spacing: -0.01em;
+  --text-display-sm: 24px;
+  --text-display-sm--line-height: 32px;
+  --text-display-sm--font-weight: 400;
+  --text-display-sm--letter-spacing: -0.01em;
   --text-title: 22px;
   --text-title--line-height: 28px;
   --text-title--font-weight: 400;
@@ -153,17 +157,18 @@
      system's steps are 1 2 3 4 5 6 8 10 12 16 24 32 (4 to 128px). */
   --spacing: 4px;
 
-  /* Radius. 2xs chart bars, swatches and rungs; xs badges, favicons and
-     checkboxes; sm tabs in a track and menu items; md buttons, inputs and
-     code; lg app cards, menus and dialogs; xl website cards, frames and the
-     navbar; full pills, avatars and switches. */
+  /* Radius, only slightly rounded and never over 8 (decision D10). 2xs chart
+     bars, swatches and rungs; xs badges, favicons and checkboxes; sm tabs in
+     a track, menu items and chips; md buttons, inputs and code; lg app cards,
+     menus and dialogs; xl website cards, frames and the navbar; full only
+     avatars, status dots, switch tracks and count pills. */
   --radius-*: initial;
   --radius-2xs: 2px;
-  --radius-xs: 6px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
   --radius-full: 9999px;
 
   /* Shadows are declared in :root below (they change with the theme) and
@@ -278,10 +283,21 @@
   --table-min-width-md: 48rem;
   --table-min-width-lg: 64rem;
   --table-min-width-xl: 76rem;
+  /* The app shell's first line (D11): the page's top inset equals the
+     sidebar's 12, and the PageHeader's title row and the sidebar's project
+     switcher share one height, so the sidebar's rows and the page's bands
+     start on the same lines. The controls band's rows sit `page-band-gap`
+     apart (tabs → filters → content). */
+  --page-top-inset: 12px;
+  --page-header-height: 40px;
+  --page-band-gap: 8px;
   /* What a screen that fills the viewport (the Agent thread) leaves for the
-     header: the main gutter above and below, the one-control header row and
-     the 32 under it. */
-  --route-chrome-height: calc(2 * var(--content-gutter) + var(--control-md) + 32px);
+     header: the top inset, the header row, the gap under it and the bottom
+     gutter. */
+  --route-chrome-height: calc(
+    var(--page-top-inset) + var(--page-header-height) + var(--page-section-gap) +
+      var(--content-gutter)
+  );
   /* Website gutters: 20 below 768px, 40 to 1279px, 64 from 1280px. */
   --site-gutter: 20px;
   --marketing-nav-offset: calc(var(--nav-height) + 8px + env(safe-area-inset-top, 0px));
@@ -348,6 +364,29 @@
   }
 }
 
+/* The app's density (decision D11): compact and technical, like GitHub or
+   Claude Code, not airy. The app's document is the one without
+   `data-public-surface`; the website and docs keep the system's spacing and
+   36px controls. One value per role still holds inside the app: controls
+   32, table rows 40, card and dialog padding 16, header → controls 16, the
+   controls band's rows 8 apart, peers 12 apart. */
+:root:not([data-public-surface]) {
+  --control-md: 32px;
+  --content-gutter: 24px;
+  --page-section-gap: 16px;
+  --workspace-gap: 12px;
+  --compact-gap: 8px;
+  --card-padding: 16px;
+  --modal-padding: 16px;
+  --table-row-height: 40px;
+}
+
+@media (max-width: 1279px) {
+  :root:not([data-public-surface]) {
+    --content-gutter: 16px;
+  }
+}
+
 @media (min-width: 768px) {
   :root {
     --site-gutter: 40px;
@@ -389,7 +428,7 @@
 
 *::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   background-color: transparent;
   background-clip: padding-box;
 }
@@ -454,10 +493,10 @@ html[data-public-surface] body {
 @layer components {
   .type-page-title {
     font-family: var(--font-display);
-    font-size: var(--text-display-md);
-    line-height: var(--text-display-md--line-height);
+    font-size: var(--text-display-sm);
+    line-height: var(--text-display-sm--line-height);
     font-weight: 400;
-    letter-spacing: var(--text-display-md--letter-spacing);
+    letter-spacing: var(--text-display-sm--letter-spacing);
     color: var(--color-ink);
   }
   /* In the app Cal Sans is the page title's alone (decision D7): every other

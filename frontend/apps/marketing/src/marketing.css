@@ -294,7 +294,7 @@
   height: 2rem;
   margin-bottom: 0.75rem;
   place-items: center;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   background: var(--color-accent-soft);
   color: var(--color-accent-ink);
   font-size: var(--text-site-label);

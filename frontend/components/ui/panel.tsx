@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
  * `li`, `section` and `dd` alike and the element must stay semantic.
  *
  * One box recipe (docs/design.md §Component recipes), shared with `Card`:
- * radius 12, a one-pixel `border` and 16 padding. The tone picks the fill and
+ * `radius-lg` (8), a one-pixel `border` and `card-padding`. The tone picks the fill and
  * the edge colour only; there is no padding, radius or edge variant.
  */
 const PANEL_TONE = {

@@ -104,3 +104,56 @@ test('D9: a grid that adds columns between desktop and shell is a wrapped metric
     [],
   );
 });
+
+test('D10: radius-full stays on round things and no corner is rounder than 8px', () => {
+  assert.deepEqual(reviewScriptFindings(tsx('bg-surface rounded-full'), 'components/ui/chip.tsx'), [
+    'components/ui/chip.tsx:1: radius-full is for avatars, status dots, switch tracks and count pills only (decision D10)',
+  ]);
+  assert.deepEqual(
+    reviewScriptFindings(tsx('size-8 rounded-full'), 'components/ui/avatar.tsx'),
+    [],
+  );
+  const css = [
+    '.chip { border-radius: var(--radius-full); }',
+    '.cl-author-avatar { border-radius: var(--radius-full); }',
+    '.tile { border-radius: 12px; }',
+    '.pill { border-top-left-radius: 1rem; }',
+    '.card { border-radius: var(--radius-lg) 0 0 8px; }',
+  ].join('\n');
+  assert.deepEqual(reviewStylesheetFindings(css, 'apps/marketing/src/site.css'), [
+    'apps/marketing/src/site.css:1: radius-full is for avatars, status dots, switch tracks and count pills only (decision D10)',
+    'apps/marketing/src/site.css:3: no corner is rounder than 8px (decision D10); use a radius token',
+    'apps/marketing/src/site.css:4: no corner is rounder than 8px (decision D10); use a radius token',
+  ]);
+});
+
+test('D11: the app density block holds the owner values and the sidebar has no logo', () => {
+  // Joined so this file holds no token block of its own (check:policy).
+  const theme = ['@', 'theme'].join('');
+  const compact = [
+    `${theme} { --radius-lg: 8px; }`,
+    '.type-page-title { font-size: var(--text-display-sm); }',
+    ':root:not([data-public-surface]) {',
+    '  --control-md: 32px; --page-section-gap: 16px; --workspace-gap: 12px;',
+    '  --card-padding: 16px; --modal-padding: 16px; --table-row-height: 40px;',
+    '}',
+  ].join('\n');
+  assert.deepEqual(reviewStylesheetFindings(compact, 'apps/app/src/globals.css'), []);
+  assert.deepEqual(
+    reviewStylesheetFindings(
+      compact
+        .replace('--table-row-height: 40px', '--table-row-height: 44px')
+        .replace('display-sm', 'display-md'),
+      'apps/app/src/globals.css',
+    ),
+    [
+      'apps/app/src/globals.css: the app is compact (decision D11): :root:not([data-public-surface]) must set --table-row-height: 40px',
+      'apps/app/src/globals.css: the app is compact (decision D11): .type-page-title is var(--text-display-sm)',
+    ],
+  );
+  const sidebar = "import { LogoMark } from '@/components/ui/logo-mark';\n";
+  assert.deepEqual(reviewScriptFindings(sidebar, 'components/layout/app-shell.tsx'), [
+    'components/layout/app-shell.tsx: the app sidebar carries no logo (decision D11)',
+  ]);
+  assert.deepEqual(reviewScriptFindings(sidebar, 'components/ui/auth-shell.tsx'), []);
+});

@@ -60,10 +60,10 @@ function MeterTrack({
       aria-valuemax={max}
       aria-valuenow={value === null ? undefined : Math.min(max, Math.max(0, value))}
       aria-valuetext={valueText}
-      className="bg-chart-grid block h-1.5 w-full overflow-hidden rounded-full"
+      className="bg-chart-grid rounded-2xs block h-1.5 w-full overflow-hidden"
     >
       {percent === null ? null : (
-        <span className={cn('block h-full rounded-full', fill)} style={{ width: `${percent}%` }} />
+        <span className={cn('block h-full', fill)} style={{ width: `${percent}%` }} />
       )}
     </div>
   );

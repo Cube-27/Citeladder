@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
  * Table — the app's data table:
  *  - the header is a sticky 36px `surface-sunken` band with `radius-sm` ends;
  *    its labels are 12/16 medium `ink-secondary`, `ink` while sorted
- *  - 44px rows divided by `line` rules, `surface-sunken` on hover and when
+ *  - `table-row-height` rows (40 in the app) divided by `line` rules, `surface-sunken` on hover and when
  *    selected; `highlight` tints the tracked brand's own row `accent-soft`
  *    (one row per table, never for emphasis); no zebra stripes, no column
  *    rules, no colour by status (that is a Badge cell)

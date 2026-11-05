@@ -301,7 +301,16 @@
             "fontWeight": 400,
             "letterSpacing": "-0.01em",
             "sample": "Visibility",
-            "usage": "The app's page title; large feature tiles; article h2."
+            "usage": "Large feature tiles; article h2."
+          },
+          {
+            "name": "display-sm",
+            "fontSize": "24px",
+            "lineHeight": "32px",
+            "fontWeight": 400,
+            "letterSpacing": "-0.01em",
+            "sample": "Visibility",
+            "usage": "The app's page title, its only Cal Sans (decisions D7, D11)."
           },
           {
             "name": "title",
@@ -506,33 +515,33 @@
       },
       {
         "name": "radius-xs",
-        "value": "6px",
+        "value": "2px",
         "usage": "Badges, favicons, checkboxes, the highlighter mark."
       },
       {
         "name": "radius-sm",
-        "value": "8px",
-        "usage": "Tabs inside a track, menu items, small icon buttons, tooltips."
+        "value": "4px",
+        "usage": "Tabs inside a track, menu items, small icon buttons, tooltips, chips."
       },
       {
         "name": "radius-md",
-        "value": "12px",
+        "value": "6px",
         "usage": "Buttons, inputs, selects, the tab track, code blocks."
       },
       {
         "name": "radius-lg",
-        "value": "14px",
+        "value": "8px",
         "usage": "App cards and panels, menus, dialogs, the inner well of a product frame."
       },
       {
         "name": "radius-xl",
-        "value": "20px",
+        "value": "8px",
         "usage": "Website cards, product frames, the floating navbar, pricing cards."
       },
       {
         "name": "radius-full",
         "value": "9999px",
-        "usage": "Citation pills, avatars, announcement pills, status dots, switches."
+        "usage": "Avatars, status dots, switch tracks and count pills only (decision D10)."
       }
     ]
   },

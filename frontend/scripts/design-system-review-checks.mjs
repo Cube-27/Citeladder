@@ -11,7 +11,11 @@ import { lineIndex, parseSource, stringFragments } from './source-ast.mjs';
  *   stays for marks too small to read without it;
  * - D6: Geist is never set above 500;
  * - D7: in the app Cal Sans is the page title's alone;
- * - D9: a row of equal figures is one row from 981px, never 2 × 2 or 2 + 1.
+ * - D9: a row of equal figures is one row from 981px, never 2 × 2 or 2 + 1;
+ * - D10: corners are only slightly rounded everywhere: nothing above 8px,
+ *   and radius-full only for avatars, status dots, switch tracks and pills;
+ * - D11: the app is compact (its density block holds the owner's values, the
+ *   page title is 24/32) and its sidebar carries no logo.
  *
  * D8 (a score is a ring or its number, never segmented bars) retires the bar
  * component outright; check-design-system.mjs lists its name as legacy.
@@ -144,13 +148,108 @@ function metricRowClassFindings(source, label) {
   });
 }
 
+// ── D10: only slightly rounded, system-wide ─────────────────────────────────
+
+/** The round things: avatars, status dots, switch tracks and count pills. */
+const FULL_RADIUS_OWNERS = new Set([
+  'components/ui/avatar.tsx',
+  'components/ui/badge.tsx',
+  'components/ui/citation.tsx',
+  'components/ui/icon.tsx',
+  'components/ui/radio-group.tsx',
+  'components/ui/step-list.tsx',
+  'components/ui/switch.tsx',
+]);
+const FULL_RADIUS_SELECTORS =
+  /(?:^|[\s,])\.(?:activity-dot|cm-switch|cl-ahead-avatar|cl-author-avatar)\b/;
+const FULL_CLASS = /(?<![\w-])(?:[\w-]+:)*rounded(?:-[a-z]{1,2})?-full(?![\w-])/;
+const FULL_MESSAGE =
+  'radius-full is for avatars, status dots, switch tracks and count pills only (decision D10)';
+const LITERAL_MESSAGE = 'no corner is rounder than 8px (decision D10); use a radius token';
+const MAX_RADIUS_PX = 8;
+
+function fullRadiusClassFindings(source, label) {
+  if (!isScript(label) || FULL_RADIUS_OWNERS.has(label)) return [];
+  return classFindings(source, label, FULL_CLASS, FULL_MESSAGE);
+}
+
+/** A length rounder than 8px: `12px`, `1rem`, `50%`, `9999px`. */
+function tooRound(value) {
+  return [...value.matchAll(/(\d*\.?\d+)(px|rem|em|%)/g)].some(([, n, unit]) => {
+    const px = unit === 'px' ? Number(n) : unit === '%' ? Infinity : Number(n) * 16;
+    return px > MAX_RADIUS_PX;
+  });
+}
+
+function radiusCssFindings(css, label) {
+  const findings = [];
+  postcss.parse(css).walkDecls(/^border(?:-[a-z]+)*-radius$/, (decl) => {
+    const line = decl.source?.start?.line ?? 0;
+    const selector = decl.parent?.selector ?? '';
+    if (/var\(--radius-full\)/.test(decl.value) && !FULL_RADIUS_SELECTORS.test(selector))
+      findings.push(`${label}:${line}: ${FULL_MESSAGE}`);
+    else if (tooRound(decl.value.replace(/var\([^)]*\)/g, '')))
+      findings.push(`${label}:${line}: ${LITERAL_MESSAGE}`);
+  });
+  return findings;
+}
+
+// ── D11: the app is compact and technical ───────────────────────────────────
+
+/** The app's density block in globals.css and the values the owner set. */
+const APP_DENSITY_SELECTOR = ':root:not([data-public-surface])';
+const APP_DENSITY = {
+  '--control-md': '32px',
+  '--page-section-gap': '16px',
+  '--workspace-gap': '12px',
+  '--card-padding': '16px',
+  '--modal-padding': '16px',
+  '--table-row-height': '40px',
+};
+const DENSITY_MESSAGE = 'the app is compact (decision D11)';
+
+/** The page title is 24/32 (`display-sm`). */
+const PAGE_TITLE_SIZE = 'var(--text-display-sm)';
+
+/** Runs on the token sheet itself (the one with `@theme`), not on a fragment of it. */
+function densityCssFindings(css, label) {
+  if (label !== TOKEN_CSS || !/@theme\b/.test(css)) return [];
+  const found = new Map();
+  let titleSize;
+  postcss.parse(css).walkRules((rule) => {
+    if (rule.selector === '.type-page-title')
+      rule.walkDecls('font-size', (decl) => (titleSize = decl.value.trim()));
+    if (rule.selector !== APP_DENSITY_SELECTOR || rule.parent?.type !== 'root') return;
+    rule.walkDecls((decl) => found.set(decl.prop, decl.value.trim()));
+  });
+  const findings = Object.entries(APP_DENSITY)
+    .filter(([prop, value]) => found.get(prop) !== value)
+    .map(
+      ([prop, value]) =>
+        `${label}: ${DENSITY_MESSAGE}: ${APP_DENSITY_SELECTOR} must set ${prop}: ${value}`,
+    );
+  if (titleSize !== PAGE_TITLE_SIZE)
+    findings.push(`${label}: ${DENSITY_MESSAGE}: .type-page-title is ${PAGE_TITLE_SIZE}`);
+  return findings;
+}
+
+/** The sidebar carries no logo; the project switcher is its first row. */
+const SIDEBAR_SOURCES = new Set(['components/layout/app-shell.tsx', 'components/ui/app-shell.tsx']);
+
+function sidebarLogoFindings(source, label) {
+  if (!SIDEBAR_SOURCES.has(label) || !/\bLogoMark\b/.test(source)) return [];
+  return [`${label}: the app sidebar carries no logo (decision D11)`];
+}
+
 /** Every stylesheet rule above, for one stylesheet or Astro `<style>` block. */
 export function reviewStylesheetFindings(css, label) {
-  if (!inScope(label)) return [];
+  const systemWide = [...radiusCssFindings(css, label), ...densityCssFindings(css, label)];
+  if (!inScope(label)) return systemWide;
   return [
     ...weightCssFindings(css, label),
     ...edgeCssFindings(css, label),
     ...displayScopeCssFindings(css, label),
+    ...systemWide,
   ];
 }
 
@@ -161,5 +260,7 @@ export function reviewScriptFindings(source, label) {
     ...edgeClassFindings(source, label),
     ...displayScopeClassFindings(source, label),
     ...metricRowClassFindings(source, label),
+    ...fullRadiusClassFindings(source, label),
+    ...sidebarLogoFindings(source, label),
   ];
 }

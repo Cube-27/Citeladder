@@ -10,7 +10,7 @@ export type Fact = Readonly<{ label: ReactNode; value: ReactNode; key?: string }
 /**
  * How a list of facts lays out — a role, never a gap:
  *
- *   `ruled`  — the system's FactList, for detail panes: 44px rows divided by
+ *   `ruled`  — the system's FactList, for detail panes: table-row-height rows divided by
  *              `line`, the labels in a fixed 160px `ink-secondary` column so
  *              every value starts at the same edge.
  *   `inline` — a record's summary facts on one wrapping line, each label
