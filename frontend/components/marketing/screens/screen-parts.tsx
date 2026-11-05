@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { TAB_TRACK, tabClasses } from '@/components/ui/tabs';
+import { ControlCount, TAB_TRACK, tabClasses } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
 import { ENGINE_KEYS, ENGINE_NAMES, type Change } from './demo-data';
@@ -70,7 +70,10 @@ export function ScreenMeta({ children }: Readonly<{ children: ReactNode }>) {
   return <span className="cl-screen-meta">{children}</span>;
 }
 
-/** The app's tab track, drawn: the first item named in `selected` lifts onto surface. */
+/**
+ * The app's tab track, drawn: the first item named in `selected` lifts onto
+ * surface, and a count follows its label in brackets (D16).
+ */
 export function ScreenTabs({
   items,
   selected,
@@ -80,9 +83,7 @@ export function ScreenTabs({
       {items.map((item) => (
         <span key={item.label} className={tabClasses(item.label === selected)}>
           {item.label}
-          {item.count === undefined ? null : (
-            <span className="cl-screen-tab-count">{item.count.toLocaleString('en-US')}</span>
-          )}
+          {item.count === undefined ? null : <ControlCount count={item.count} />}
         </span>
       ))}
     </span>

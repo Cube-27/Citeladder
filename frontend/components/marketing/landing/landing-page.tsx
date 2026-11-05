@@ -19,7 +19,8 @@ import { ProductFrame } from '../screens/product-frame';
 import { ScreenAgentBrief, ScreenAgentChat } from '../screens/screens-agent';
 import { ScreenEngines, ScreenKeywords } from '../screens/screens-search';
 import { ScreenCrawlerAccess, ScreenSiteHealth } from '../screens/screens-site';
-import { ScreenAnswer, ScreenSources, ScreenVisibility } from '../screens/screens-visibility';
+import { ScreenAnswer, ScreenSources } from '../screens/screens-visibility';
+import { ScreenAppVisibility } from '../screens/screen-app';
 
 import { FAQS, INTEGRATIONS, type IntegrationMark } from './landing-data';
 import { EngineRotor } from './landing-rotor';
@@ -70,8 +71,9 @@ function Hero({ rotor }: Readonly<{ rotor?: ReactNode }>) {
         selfServeSignupOpen() ? '7-day free trial on ChatGPT answers. Trial limits apply.' : null
       }
       frame={
-        <ProductFrame aspect="hero" inset={48} label="AI Visibility">
-          <ScreenVisibility />
+        // D25: the real app, chrome and all, as the page's first product view.
+        <ProductFrame aspect="hero" inset={32} label="The AI Visibility page in the CiteLadder app">
+          <ScreenAppVisibility />
         </ProductFrame>
       }
     />

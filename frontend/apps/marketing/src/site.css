@@ -329,9 +329,10 @@ a.cl-announce:hover {
 }
 
 /* ---------- Desktop menus (D22): one Radix menu, one shared popup ----------
-   The root stays static, so the stage hangs from the bar itself and the
-   popup spans the whole bar whichever trigger opened it. */
+   The root starts at the trigger row, so the stage hangs from the row's left
+   edge, and the popup takes the open menu's own width and height. */
 .cl-navmenu {
+  position: relative;
   display: flex;
   flex: 1;
   align-items: center;
@@ -374,26 +375,29 @@ a.cl-announce:hover {
   transition: opacity var(--motion-normal) var(--ease-menu);
 }
 
+/* 24px under the trigger row: its 16px inset in the bar plus the 8px gap. */
 .cl-navmenu-stage {
   position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
+  top: calc(100% + 24px);
   left: 0;
 }
 
 /* Flat, like the rest of the site: a line border on the surface, no shadow.
-   The clip trims a taller menu while the height animates down, and reaches
-   24px above the box so the hover bridge stays hit-testable. */
+   Radix measures the open menu; the popup animates to its width and height.
+   The clip trims the outgoing menu while the box shrinks, and reaches 24px
+   above the box so the hover bridge stays hit-testable. */
 .cl-navmenu-viewport {
   position: relative;
-  width: 100%;
+  width: calc(var(--radix-navigation-menu-viewport-width) + 2px);
   height: calc(var(--radix-navigation-menu-viewport-height) + 2px);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-xl);
   background: var(--color-surface);
   clip-path: inset(-24px 0 0 0);
-  transform-origin: top center;
-  transition: height var(--motion-menu) var(--ease-menu);
+  transform-origin: top left;
+  transition:
+    width var(--motion-menu) var(--ease-menu),
+    height var(--motion-menu) var(--ease-menu);
 }
 
 /* The hover bridge: covers the gap from the triggers down to the popup, so
@@ -415,12 +419,11 @@ a.cl-announce:hover {
   animation: cl-nav-pop-out var(--motion-menu-exit) var(--ease-menu) forwards;
 }
 
-/* Every menu fills the popup's width; the popup takes the open one's height. */
+/* Each menu keeps its own width (fixed columns), which Radix measures. */
 .cl-navmenu-content {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
 }
 
 .cl-navmenu-content[data-state='open'] {
@@ -751,8 +754,10 @@ a.cl-announce:hover {
   padding: 12px;
 }
 
-.cl-mega-groups {
+/* Fixed columns give each menu its own width for the popup to follow. */
+.cl-mega .cl-mega-groups {
   display: grid;
+  grid-template-columns: repeat(var(--cols), 280px);
   gap: 8px;
 }
 
@@ -772,11 +777,6 @@ a.cl-announce:hover {
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.cl-mega-list--spread {
-  display: grid;
-  column-gap: 8px;
 }
 
 .cl-mega-item {
@@ -810,11 +810,16 @@ a.cl-announce:hover {
   min-width: 0;
 }
 
+/* An external row's arrow stays inline after the label, centred on its line. */
 .cl-mega-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--color-ink);
   font-size: var(--text-label);
   font-weight: 500;
   line-height: var(--text-label--line-height);
+  white-space: nowrap;
 }
 
 .cl-mega-item[aria-current='page'] .cl-mega-title {
@@ -823,15 +828,15 @@ a.cl-announce:hover {
 }
 
 .cl-mega-ext {
-  margin-left: 2px;
+  flex: none;
   color: var(--color-ink-muted);
-  vertical-align: -2px;
 }
 
 .cl-mega-desc {
   color: var(--color-ink-secondary);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-caption);
+  font-weight: 400;
+  line-height: var(--text-caption--line-height);
 }
 
 .cl-mega-foot {

@@ -6,27 +6,19 @@ import { cn } from '@/lib/utils';
 
 import { NavIcon, hasNavIcon } from './nav-icons';
 
-/** Platform spreads its three groups; Solutions spreads its one list over two. */
-function columnsFor(drop: NavDrop): number {
-  if (drop.key === 'platform') return 3;
-  if (drop.key === 'solutions') return 2;
-  return drop.groups.length;
-}
-
 /**
- * One navbar menu (the system's MegaMenu): its groups side by side, or a lone
- * group spread across columns, with Platform's overview as the footer row.
- * Rows are Radix navigation links, so the arrow keys move between them and
- * choosing one closes the menu. External rows (CiteLadder's own docs) open
- * in a new tab and say so.
+ * One navbar menu (the system's MegaMenu): one fixed-width column per group,
+ * so the shared popup takes the menu's own width (Solutions one column,
+ * Platform and Resources three; D22), with Platform's overview as the footer
+ * row. Rows are Radix navigation links, so the arrow keys move between them
+ * and choosing one closes the menu. External rows (CiteLadder's own docs)
+ * open in a new tab and say so.
  */
 export function MegaMenu({ drop, path }: Readonly<{ drop: NavDrop; path: string }>) {
-  const single = drop.groups.length === 1;
-  const columns = columnsFor(drop);
   const headId = (index: number) => `desktop-nav-${drop.key}-section-${index}`;
   return (
     <div className="cl-mega">
-      <div className={cn('cl-mega-groups', single ? 'cl-cols-1' : `cl-cols-${columns}`)}>
+      <div className={cn('cl-mega-groups', `cl-cols-${drop.groups.length}`)}>
         {drop.groups.map((group, index) => (
           <div
             key={group.label ?? drop.key}
@@ -39,12 +31,7 @@ export function MegaMenu({ drop, path }: Readonly<{ drop: NavDrop; path: string 
                 {group.label}
               </p>
             )}
-            <ul
-              className={cn(
-                'cl-mega-list',
-                single && columns > 1 && `cl-mega-list--spread cl-cols-${columns}`,
-              )}
-            >
+            <ul className="cl-mega-list">
               {group.items.map((item) => {
                 const external = 'external' in item && item.external === true;
                 const icon = hasNavIcon(item.href);
