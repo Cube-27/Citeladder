@@ -37,14 +37,15 @@ test('guides and local anchors resolve, and missing pages return 404', async ({ 
   test.setTimeout(90_000);
   await page.goto('/');
   const routes = await page
-    .locator('.docs-sidebar nav a')
+    .getByRole('navigation', { name: 'Documentation', exact: true })
+    .getByRole('link')
     .evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).pathname));
   for (const route of routes) {
     const response = await page.goto(route);
     expect(response?.status(), route).toBe(200);
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
     const links = await page
-      .locator('main a, .docs-toc a')
+      .locator('main a, aside a')
       .evaluateAll((anchors) =>
         anchors
           .map((anchor) => (anchor as HTMLAnchorElement).href)
@@ -79,15 +80,18 @@ test('guides and local anchors resolve, and missing pages return 404', async ({ 
 test('mobile navigation and article contents remain usable', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.locator('.docs-mobile-nav > summary').click();
-  const guide = page.locator('.docs-mobile-nav a:not([aria-current])').first();
+  await page.getByRole('button', { name: 'Open menu' }).click();
+  const guide = page
+    .getByRole('navigation', { name: 'Documentation', exact: true })
+    .locator('a:not([aria-current])')
+    .first();
   const title = await guide.innerText();
   const guideUrl = await guide.evaluate((anchor) => (anchor as HTMLAnchorElement).href);
   await guide.click();
   await expect(page).toHaveURL(guideUrl);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(title);
-  await page.locator('.docs-mobile-toc > summary').click();
-  const section = page.locator('.docs-mobile-toc a').last();
+  await page.locator('summary', { hasText: 'On this page' }).click();
+  const section = page.getByRole('navigation', { name: 'On this page' }).getByRole('link').last();
   const sectionUrl = await section.evaluate((anchor) => (anchor as HTMLAnchorElement).href);
   await section.click();
   await expect(page).toHaveURL(sectionUrl);
@@ -123,7 +127,7 @@ test('contents omit step numbering without changing article anchors and follow t
 }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/quickstart/');
-  const contents = page.getByRole('complementary', { name: 'On this page' });
+  const contents = page.getByRole('navigation', { name: 'On this page' });
   // The quickstart's sections are numbered steps; the second is below the fold.
   const link = contents.getByRole('link').nth(1);
   const hash = (await link.getAttribute('href')) ?? '';
@@ -136,7 +140,7 @@ test('contents omit step numbering without changing article anchors and follow t
   await expect(link).toHaveAttribute('aria-current', 'location');
   const headingTop = await heading.evaluate((node) => node.getBoundingClientRect().top);
   const headerBottom = await page
-    .locator('.docs-header')
+    .getByRole('banner')
     .evaluate((node) => node.getBoundingClientRect().bottom);
   expect(headingTop).toBeGreaterThanOrEqual(headerBottom);
 });
@@ -149,11 +153,11 @@ test('docs keeps its own reading type and a field-like search trigger', async ({
       const size = (selector: string) =>
         getComputedStyle(document.querySelector(selector) as Element).fontSize;
       const search = getComputedStyle(
-        document.querySelector('.docs-search [aria-haspopup="dialog"]') as Element,
+        document.querySelector('[data-docs-search-trigger="field"]') as Element,
       );
       return {
-        body: size('.website-body'),
-        lead: size('.website-lead'),
+        body: size('main .cl-prose p'),
+        lead: size('.cl-ahead-lead'),
         searchShadow: search.boxShadow,
       };
     });

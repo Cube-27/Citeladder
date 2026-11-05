@@ -1,0 +1,283 @@
+---
+/**
+ * DocsTopBar — the docs header on one 64px sticky `surface` row with a `line`
+ * rule: the logo and "Docs", the section tabs (the selected one on
+ * `surface-sunken` in `ink`), the search field that opens DocsSearchDialog,
+ * the ThemeSwitch and the one filled control, Open app. The search field is
+ * 260px, 200px below 1280px; below 900px the tabs, field and Open app move
+ * into a menu sheet that overlays the page, and a search and a menu
+ * IconButton take their place; below 640px only the logo mark shows.
+ */
+import { Menu, X } from 'lucide-react';
+import { buttonClasses } from '@/components/ui/button';
+import { LogoMark } from '@/components/ui/logo-mark';
+import { ThemeSwitch } from '@/components/ui/theme-switch';
+import { appHref, websiteHref } from '@/lib/config/app-link';
+import { DocsSearchDialog } from './DocsSearchDialog';
+import DocsSidebar from './DocsSidebar.astro';
+
+const path = Astro.url.pathname;
+const website = websiteHref('/');
+const sections = [
+  { href: '/', label: 'Guides', selected: !/^\/(agent|mcp|changelog)(\/|$)/.test(path) },
+  { href: '/agent/', label: 'Agent', selected: path.startsWith('/agent') },
+  { href: '/mcp/', label: 'MCP', selected: path.startsWith('/mcp') },
+  { href: '/changelog/', label: 'Changelog', selected: path.startsWith('/changelog') },
+];
+---
+
+<header class="cl-docs-bar" data-docs-bar>
+  <div class="cl-docs-bar-inner">
+    <a class="cl-docs-bar-home" href="/" aria-label="CiteLadder documentation home">
+      <LogoMark size={22} className="cl-docs-bar-logo" />
+      <LogoMark size={22} wordmark={false} className="cl-docs-bar-mark" />
+      <span class="cl-docs-bar-label">Docs</span>
+    </a>
+    <nav class="cl-docs-bar-tabs" aria-label="Documentation sections">
+      <ul class="cl-docs-bar-tab-list">
+        {
+          sections.map((section) => (
+            <li>
+              <a
+                class:list={['cl-docs-bar-tab', { 'is-on': section.selected }]}
+                href={section.href}
+                aria-current={section.selected ? 'page' : undefined}
+              >
+                {section.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+    <div class="cl-docs-bar-end">
+      <a class="cl-docs-bar-site" href={website}>{new URL(website).host}</a>
+      <DocsSearchDialog client:idle />
+      <ThemeSwitch client:idle />
+      <a class={buttonClasses('primary', 'cl-docs-bar-app')} href={appHref('/')}>Open app</a>
+      <button
+        type="button"
+        class={buttonClasses('ghost', 'cl-docs-bar-menu')}
+        aria-label="Open menu"
+        aria-expanded="false"
+        aria-controls="docs-menu"
+        data-docs-menu
+      >
+        <Menu className="cl-docs-bar-menu-open size-4" aria-hidden />
+        <X className="cl-docs-bar-menu-close size-4" aria-hidden />
+      </button>
+    </div>
+  </div>
+  <div class="cl-docs-bar-sheet" id="docs-menu" hidden>
+    <nav class="cl-docs-bar-sheet-tabs" aria-label="Documentation sections">
+      <ul class="cl-docs-bar-tab-list">
+        {
+          sections.map((section) => (
+            <li>
+              <a
+                class:list={['cl-docs-bar-tab', { 'is-on': section.selected }]}
+                href={section.href}
+                aria-current={section.selected ? 'page' : undefined}
+              >
+                {section.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+    <DocsSidebar />
+    <a class={buttonClasses('primary', 'w-full')} href={appHref('/')}>Open app</a>
+  </div>
+</header>
+
+<style>
+  .cl-docs-bar {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-index-overlay);
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-line);
+  }
+  .cl-docs-bar-inner {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    max-width: var(--container-app);
+    height: var(--nav-height);
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .cl-docs-bar-home {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 12px;
+    margin-left: -4px;
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+  .cl-docs-bar-home :global(.cl-docs-bar-mark) {
+    display: none;
+  }
+  .cl-docs-bar-label {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding-left: 12px;
+    border-left: 1px solid var(--color-line);
+    color: var(--color-ink);
+    font-size: var(--text-label-lg);
+    line-height: var(--text-label-lg--line-height);
+    font-weight: 500;
+  }
+  .cl-docs-bar-tab-list {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0;
+    list-style: none;
+  }
+  .cl-docs-bar-tab,
+  .cl-docs-bar-site {
+    display: inline-flex;
+    align-items: center;
+    height: var(--control-md);
+    padding: 0 12px;
+    border-radius: var(--radius-md);
+    color: var(--color-ink-secondary);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    transition:
+      background-color var(--motion-fast) var(--ease-standard),
+      color var(--motion-fast) var(--ease-standard);
+  }
+  .cl-docs-bar-tab:hover,
+  .cl-docs-bar-tab.is-on,
+  .cl-docs-bar-site:hover {
+    background: var(--color-surface-sunken);
+    color: var(--color-ink);
+  }
+  .cl-docs-bar-end {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+  .cl-docs-bar-end :global([data-docs-search-trigger='field']) {
+    display: flex;
+    width: 260px;
+  }
+  .cl-docs-bar-end :global([data-docs-search-trigger='icon']),
+  .cl-docs-bar-end :global(.cl-docs-bar-menu) {
+    display: none;
+  }
+  .cl-docs-bar-end :global(.cl-docs-bar-menu) {
+    width: var(--control-md);
+    padding: 0;
+  }
+  .cl-docs-bar-menu :global(.cl-docs-bar-menu-close),
+  .cl-docs-bar-menu[aria-expanded='true'] :global(.cl-docs-bar-menu-open) {
+    display: none;
+  }
+  .cl-docs-bar-menu[aria-expanded='true'] :global(.cl-docs-bar-menu-close) {
+    display: block;
+  }
+  /* The phone menu overlays the page, so opening it moves nothing. */
+  .cl-docs-bar-sheet {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-height: calc(100dvh - var(--nav-height));
+    overflow-y: auto;
+    padding: 16px 20px 24px;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-line);
+    box-shadow: var(--shadow-pop);
+  }
+  .cl-docs-bar-sheet[hidden] {
+    display: none;
+  }
+  .cl-docs-bar-sheet-tabs {
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--color-line);
+  }
+  @media (max-width: 1279px) {
+    .cl-docs-bar-end :global([data-docs-search-trigger='field']) {
+      width: 200px;
+    }
+    .cl-docs-bar-site {
+      display: none;
+    }
+  }
+  @media (max-width: 899px) {
+    .cl-docs-bar-inner {
+      gap: 16px;
+      padding: 0 20px;
+    }
+    .cl-docs-bar-tabs,
+    .cl-docs-bar-end :global([data-docs-search-trigger='field']),
+    .cl-docs-bar-end :global(.cl-docs-bar-app) {
+      display: none;
+    }
+    .cl-docs-bar-end :global([data-docs-search-trigger='icon']),
+    .cl-docs-bar-end :global(.cl-docs-bar-menu) {
+      display: inline-flex;
+    }
+  }
+  @media (max-width: 639px) {
+    .cl-docs-bar-home :global(.cl-docs-bar-logo) {
+      display: none;
+    }
+    .cl-docs-bar-home :global(.cl-docs-bar-mark) {
+      display: inline-flex;
+    }
+  }
+  @media (min-width: 900px) {
+    .cl-docs-bar-sheet {
+      display: none;
+    }
+  }
+  @media print {
+    .cl-docs-bar {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  // The phone menu: the button opens and closes the sheet; Esc, a link in it
+  // or a click outside closes it and returns focus to the button.
+  const button = document.querySelector<HTMLButtonElement>('[data-docs-menu]');
+  const sheet = document.getElementById('docs-menu');
+  if (button && sheet) {
+    const setOpen = (open: boolean) => {
+      button.setAttribute('aria-expanded', String(open));
+      button.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      sheet.hidden = !open;
+    };
+    button.addEventListener('click', () => setOpen(sheet.hidden));
+    sheet.addEventListener('click', (event) => {
+      if (event.target instanceof Element && event.target.closest('a')) setOpen(false);
+    });
+    document.addEventListener('pointerdown', (event) => {
+      const target = event.target;
+      if (sheet.hidden || !(target instanceof Node)) return;
+      if (!sheet.contains(target) && !button.contains(target)) setOpen(false);
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || sheet.hidden) return;
+      setOpen(false);
+      button.focus();
+    });
+  }
+</script>

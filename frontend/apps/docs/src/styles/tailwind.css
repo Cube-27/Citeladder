@@ -1,0 +1,8 @@
+@import 'tailwindcss' source(none);
+@import '../../../app/src/globals.css';
+
+/* The docs' Tailwind build: the system's tokens and roles (globals.css) and
+   the utilities the shared components/ui atoms the docs render use. Every
+   docs component owns its CSS in its own <style> block. */
+@source './..';
+@source '../../../../components/ui';

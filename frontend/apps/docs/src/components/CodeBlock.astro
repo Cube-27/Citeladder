@@ -1,0 +1,118 @@
+---
+/**
+ * CodeBlock — a code sample: a `control-md` bar on `surface-sunken` with the
+ * language in a mono eyebrow and a fixed-width ghost Copy button that reads
+ * "Copied" for 1.6s, over mono `code` (13/22) in `ink`; comment lines and a
+ * leading `$ ` prompt in `ink-muted`. The markup comes from Markdown fences
+ * (lib/code-block.ts); this component owns its look and the Copy behaviour,
+ * and Prose renders it once per page.
+ */
+---
+
+<style is:global>
+  .cl-code {
+    margin: 0;
+    overflow: hidden;
+    background: var(--color-surface-sunken);
+    border-radius: var(--radius-md);
+  }
+  .cl-code-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: var(--control-md);
+    padding: 0 4px 0 16px;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .cl-code-lang {
+    color: var(--color-ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-eyebrow);
+    line-height: var(--text-eyebrow--line-height);
+    font-weight: 500;
+    letter-spacing: var(--text-eyebrow--letter-spacing);
+    text-transform: uppercase;
+  }
+  .cl-code-copy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 88px;
+    height: var(--control-sm);
+    margin-left: auto;
+    padding: 0 8px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-ink-secondary);
+    font-family: var(--font-sans);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
+    font-weight: 500;
+    transition:
+      background-color var(--motion-fast) var(--ease-standard),
+      color var(--motion-fast) var(--ease-standard);
+  }
+  .cl-code-copy:hover {
+    background: var(--color-surface);
+    color: var(--color-ink);
+  }
+  .cl-code-copy .cl-code-icon-check,
+  .cl-code-copy[data-copied] .cl-code-icon-copy {
+    display: none;
+  }
+  .cl-code-copy[data-copied] .cl-code-icon-check {
+    display: block;
+  }
+  .cl-code-pre {
+    margin: 0;
+    padding: 16px 20px;
+    overflow-x: auto;
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: var(--text-code);
+    line-height: var(--text-code--line-height);
+    tab-size: 2;
+  }
+  .cl-code-pre code {
+    font-family: inherit;
+  }
+  .cl-code-muted {
+    color: var(--color-ink-muted);
+  }
+  @media print {
+    .cl-code-copy {
+      display: none;
+    }
+    .cl-code-pre {
+      overflow: visible;
+      white-space: pre-wrap;
+    }
+  }
+</style>
+
+<script>
+  // One delegated listener copies the block's code and confirms for 1.6s.
+  const timers = new WeakMap<HTMLElement, number>();
+  document.addEventListener('click', (event) => {
+    if (!(event.target instanceof Element)) return;
+    const button = event.target.closest<HTMLButtonElement>('[data-code-copy]');
+    const code = button?.closest('.cl-code')?.querySelector('code')?.textContent;
+    if (!button || code == null) return;
+    void navigator.clipboard?.writeText(code).catch(() => undefined);
+    const label = button.querySelector('span');
+    button.dataset.copied = '';
+    button.setAttribute('aria-label', 'Copied');
+    if (label) label.textContent = 'Copied';
+    window.clearTimeout(timers.get(button));
+    timers.set(
+      button,
+      window.setTimeout(() => {
+        delete button.dataset.copied;
+        button.setAttribute('aria-label', 'Copy code');
+        if (label) label.textContent = 'Copy';
+      }, 1600),
+    );
+  });
+</script>

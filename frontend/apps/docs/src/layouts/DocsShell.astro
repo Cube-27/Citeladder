@@ -1,0 +1,150 @@
+---
+/**
+ * DocsShell — every docs page: DocsTopBar over DocLayout inside the
+ * `container-app` body, DocsSidebar as the rail, the page (its ArticleHeader
+ * and Prose) in the reading column, a Toc on the right and an ArticlePager
+ * and the docs footer at the end. `wide` is for reference pages: no Toc, and
+ * the generated blocks take the full column. No hero, illustrations or CTAs;
+ * Open app is the one filled control.
+ */
+import { websiteHref } from '@/lib/config/app-link';
+import { docsHref } from '@/lib/config/docs';
+import { brandFontHead } from '@/lib/fonts/brand-fonts';
+import { serializeJsonLd } from '@/lib/seo/json-ld';
+import { ArrowUpRight } from 'lucide-react';
+import ArticlePager from '../components/ArticlePager.astro';
+import DocLayout from '../components/DocLayout.astro';
+import DocsSidebar from '../components/DocsSidebar.astro';
+import DocsTopBar from '../components/DocsTopBar.astro';
+import '../styles/tailwind.css';
+
+type Link = { title: string; href: string };
+interface Props {
+  title: string;
+  description: string;
+  /** The article's h2 and h3 headings, for its Toc. */
+  toc?: readonly { id: string; label: string; level: number }[];
+  wide?: boolean;
+  previous?: Link;
+  next?: Link;
+  noindex?: boolean;
+  /** The article's last content change, declared as `article:modified_time`. */
+  updated?: string;
+  jsonLd?: Record<string, unknown>;
+}
+const {
+  title,
+  description,
+  toc = [],
+  wide = false,
+  previous,
+  next,
+  noindex = false,
+  updated,
+  jsonLd,
+} = Astro.props;
+const path = Astro.url.pathname;
+const contact = websiteHref('/contact');
+---
+
+<!doctype html>
+<html lang="en" data-public-surface>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <!-- The shared light/dark/system choice (lib/theme/theme.ts), before first paint. -->
+    <script is:inline src="/theme-preference.js"></script>
+    <title>{title} · CiteLadder Docs</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={docsHref(path)} />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <meta property="og:title" content={`${title} · CiteLadder Docs`} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content={docsHref(path)} />
+    {updated && <meta property="article:modified_time" content={updated} />}
+    {noindex && <meta name="robots" content="noindex" />}
+    {jsonLd && <script type="application/ld+json" set:html={serializeJsonLd(jsonLd)} />}
+    <Fragment set:html={brandFontHead('public')} />
+  </head>
+  <body>
+    <a href="#main" class="skip-link">Skip to content</a>
+    <div class="cl-docs-shell">
+      <DocsTopBar />
+      <div class="cl-docs-body">
+        <DocLayout toc={wide ? [] : toc}>
+          <DocsSidebar slot="rail" />
+          <slot />
+          {(previous || next) && <ArticlePager previous={previous} next={next} />}
+          <footer class="cl-docs-footer">
+            <span>© CiteLadder documentation</span>
+            <a href={contact}>Get help</a>
+            <a href={websiteHref('/privacy')}>Privacy</a>
+          </footer>
+          <a slot="toc-end" class="cl-docs-help" href={contact}>
+            Need a hand? Get in touch <ArrowUpRight className="size-3" aria-hidden />
+          </a>
+        </DocLayout>
+      </div>
+    </div>
+  </body>
+</html>
+
+<style>
+  .cl-docs-shell {
+    min-height: 100vh;
+    background: var(--color-surface);
+    color: var(--color-ink);
+  }
+  .cl-docs-body {
+    max-width: var(--container-app);
+    margin: 0 auto;
+    padding: 40px 24px 96px;
+  }
+  .cl-docs-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    max-width: var(--container-prose);
+    padding-top: 24px;
+    border-top: 1px solid var(--color-line);
+    color: var(--color-ink-muted);
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  .cl-docs-footer span {
+    margin-right: auto;
+  }
+  .cl-docs-footer a,
+  .cl-docs-help {
+    color: var(--color-ink-muted);
+    text-decoration: none;
+    transition: color var(--motion-fast) var(--ease-standard);
+  }
+  .cl-docs-footer a:hover,
+  .cl-docs-help:hover {
+    color: var(--color-ink);
+  }
+  .cl-docs-help {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  @media (max-width: 899px) {
+    .cl-docs-body {
+      padding: 32px 20px 64px;
+    }
+  }
+  @media print {
+    .cl-docs-body {
+      padding: 0;
+    }
+    .cl-docs-footer,
+    .cl-docs-shell :global(.cl-pager) {
+      display: none;
+    }
+  }
+</style>

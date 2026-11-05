@@ -52,6 +52,7 @@
   },
   "dependencies": {
     "@astrojs/cloudflare": "14.4.3",
+    "@astrojs/markdown-satteri": "0.4.6",
     "@astrojs/react": "^7.1.2",
     "@citeladder/contracts": "workspace:*",
     "@hookform/resolvers": "^6.0.2",

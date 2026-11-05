@@ -1,0 +1,83 @@
+---
+/**
+ * The frame ApiOperation and McpToolRef share, so API and MCP pages read
+ * alike: an anchored section with its head (title, mono line, description)
+ * in the prose measure, then its parameter tables, 24px apart. The head's
+ * parts are styled here; each block supplies them in the `head` slot.
+ */
+interface Props {
+  id: string;
+}
+const { id } = Astro.props;
+---
+
+<section class="cl-docs-op" id={id} aria-labelledby={`${id}-title`}>
+  <header class="cl-docs-op-head"><slot name="head" /></header>
+  <slot />
+</section>
+
+<style>
+  .cl-docs-op {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
+    scroll-margin-top: calc(var(--nav-height) + 32px);
+  }
+  .cl-docs-op-head {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: var(--container-prose);
+  }
+  .cl-docs-op :global(.cl-docs-op-title) {
+    color: var(--color-ink);
+    font-family: var(--font-display);
+    font-size: var(--text-title);
+    line-height: var(--text-title--line-height);
+    font-weight: 400;
+  }
+  .cl-docs-op :global(.cl-docs-op-line) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    min-width: 0;
+  }
+  .cl-docs-op :global(.cl-docs-op-code) {
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+  .cl-docs-op :global(.cl-docs-op-param) {
+    color: var(--color-ink-muted);
+  }
+  .cl-docs-op :global(.cl-docs-op-desc) {
+    color: var(--color-ink-secondary);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+  .cl-docs-op :global(.cl-docs-op-auth) {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    color: var(--color-ink-secondary);
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  .cl-docs-op :global(.cl-docs-op-auth svg) {
+    color: var(--color-ink-muted);
+  }
+  .cl-docs-op :global(.cl-docs-op-auth code) {
+    padding: 1px 4px;
+    border-radius: var(--radius-xs);
+    background: var(--color-surface-sunken);
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
+  }
+</style>

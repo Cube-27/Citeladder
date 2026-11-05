@@ -1,0 +1,93 @@
+---
+/**
+ * ApiOperation — one REST endpoint: the method and path (`{param}` segments
+ * muted) as its heading, the scope it needs, then its parameters and its
+ * request and response bodies as parameter tables; a body without fields of
+ * its own names its type instead. The method is a neutral mono Badge (DELETE
+ * `negative`), never coloured otherwise.
+ */
+import { LockKeyhole } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import type { ApiOperation } from '../lib/api-reference';
+import ParamTable from './ParamTable.astro';
+import ReferenceBlock from './ReferenceBlock.astro';
+import TypeLabel from './TypeLabel.astro';
+
+interface Props {
+  operation: ApiOperation;
+}
+const { operation } = Astro.props;
+const { request, response } = operation;
+const segments = operation.path.split(/(\{[^}]+\})/).filter(Boolean);
+const responseTitle = response.status ? `Response ${response.status}` : 'Response';
+---
+
+<ReferenceBlock id={operation.id}>
+  <Fragment slot="head">
+    <h3 class="cl-docs-op-line" id={`${operation.id}-title`}>
+      <Badge
+        tone={operation.method === 'DELETE' ? 'negative' : 'neutral'}
+        className={`min-w-12 justify-center font-mono text-eyebrow ${operation.method === 'DELETE' ? '' : 'text-ink'}`}
+      >
+        {operation.method}
+      </Badge>
+      <code class="cl-docs-op-code">
+        {
+          segments.map((segment) =>
+            segment.startsWith('{') ? <span class="cl-docs-op-param">{segment}</span> : segment,
+          )
+        }
+      </code>
+    </h3>
+    {
+      operation.scope && (
+        <p class="cl-docs-op-auth">
+          <LockKeyhole className="my-0.5 size-4 shrink-0" aria-hidden />
+          <span>
+            scope <code>{operation.scope}</code>
+          </span>
+        </p>
+      )
+    }
+  </Fragment>
+  {operation.parameters.map((group) => <ParamTable title={group.title} rows={group.rows} />)}
+  {
+    request &&
+      (request.rows.length > 0 ? (
+        <ParamTable title="Request body" rows={request.rows} />
+      ) : (
+        <p class="cl-docs-op-body">
+          Request body: <TypeLabel parts={request.type} />
+        </p>
+      ))
+  }
+  {
+    response.body && response.body.rows.length > 0 ? (
+      <ParamTable title={responseTitle} rows={response.body.rows} />
+    ) : (
+      <p class="cl-docs-op-body">
+        {responseTitle}: {response.body ? <TypeLabel parts={response.body.type} /> : 'no body'}
+      </p>
+    )
+  }
+</ReferenceBlock>
+
+<style>
+  .cl-docs-op-body {
+    color: var(--color-ink-secondary);
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  .cl-docs-op-body :global(code) {
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+    line-height: var(--text-data--line-height);
+  }
+  .cl-docs-op-body :global(a) {
+    color: var(--color-accent-ink);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+</style>

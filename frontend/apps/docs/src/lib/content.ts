@@ -20,7 +20,6 @@ const metadata = z.object({
 });
 
 type Metadata = z.infer<typeof metadata>;
-export type Group = Metadata['group'];
 const modules = import.meta.glob<MarkdownInstance<Metadata>>('../content/**/*.md', { eager: true });
 
 /** The article that renders the generated MCP tool catalogue after its body. */

@@ -1,0 +1,164 @@
+---
+/**
+ * Prose — the system's long-form reading wrapper in its docs variant: raw
+ * Markdown HTML at `body` (16/26) in `ink-secondary`, `container-prose` wide;
+ * h2 `title` and h3 `title-sm` in Cal Sans, h4 `heading`; 20px between
+ * blocks and 12px after a heading; links `accent-ink` with a 1px underline;
+ * inline code mono on `surface-sunken`; tables in a scroll frame with mono
+ * header rows; quotes in Cal Sans with no rule. Fenced code is a CodeBlock.
+ */
+import CodeBlock from './CodeBlock.astro';
+---
+
+<div class="cl-prose"><slot /></div>
+<CodeBlock />
+
+<style is:global>
+  .cl-prose {
+    max-width: var(--container-prose);
+    color: var(--color-ink-secondary);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    overflow-wrap: break-word;
+  }
+  .cl-prose > * {
+    margin: 0;
+  }
+  .cl-prose > * + * {
+    margin-top: 20px;
+  }
+  .cl-prose h2:not([class]),
+  .cl-prose h3:not([class]) {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--color-ink);
+    text-wrap: balance;
+    scroll-margin-top: calc(var(--nav-height) + 32px);
+  }
+  .cl-prose h2:not([class]) {
+    margin-top: 48px;
+    font-size: var(--text-title);
+    line-height: var(--text-title--line-height);
+  }
+  .cl-prose h3:not([class]) {
+    margin-top: 32px;
+    font-size: var(--text-title-sm);
+    line-height: var(--text-title-sm--line-height);
+  }
+  .cl-prose h4:not([class]) {
+    margin-top: 24px;
+    color: var(--color-ink);
+    font-size: var(--text-heading);
+    line-height: var(--text-heading--line-height);
+    font-weight: 600;
+    scroll-margin-top: calc(var(--nav-height) + 32px);
+  }
+  .cl-prose > :is(h2, h3, h4):not([class]) + * {
+    margin-top: 12px;
+  }
+  .cl-prose > :first-child {
+    margin-top: 0;
+  }
+  .cl-prose a {
+    color: var(--color-accent-ink);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    border-radius: var(--radius-xs);
+  }
+  .cl-prose a:hover {
+    text-decoration-thickness: 2px;
+  }
+  .cl-prose strong {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+  .cl-prose em {
+    font-style: italic;
+  }
+  .cl-prose :not(pre) > code {
+    padding: 2px 4px;
+    border-radius: var(--radius-xs);
+    background: var(--color-surface-sunken);
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: 0.8em;
+  }
+  .cl-prose :is(ul, ol):not([class]) {
+    padding-left: 24px;
+  }
+  .cl-prose ul:not([class]) {
+    list-style: disc;
+  }
+  .cl-prose ol:not([class]) {
+    list-style: decimal;
+  }
+  .cl-prose li:not([class]) + li {
+    margin-top: 8px;
+  }
+  .cl-prose li:not([class]) > :is(ul, ol) {
+    margin-top: 8px;
+  }
+  .cl-prose li:not([class])::marker {
+    color: var(--color-ink-muted);
+  }
+  .cl-prose ol:not([class]) > li::marker {
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+  }
+  .cl-prose blockquote:not([class]) {
+    margin-top: 40px;
+    margin-bottom: 16px;
+    padding: 0 24px;
+  }
+  .cl-prose blockquote:not([class]) p {
+    font-family: var(--font-display);
+    font-size: var(--text-title-sm);
+    line-height: var(--text-title-sm--line-height);
+    font-weight: 400;
+    color: var(--color-ink);
+  }
+  .cl-prose blockquote:not([class]) p + p {
+    margin-top: 12px;
+  }
+  .cl-prose hr:not([class]) {
+    height: 0;
+    margin: 48px 0;
+    border: 0;
+    border-top: 1px solid var(--color-line);
+  }
+  .cl-prose-table {
+    overflow-x: auto;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-lg);
+  }
+  .cl-prose table:not([class]) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  .cl-prose th:not([class]) {
+    padding: 12px 16px;
+    background: var(--color-surface-sunken);
+    color: var(--color-ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-eyebrow);
+    line-height: var(--text-eyebrow--line-height);
+    font-weight: 500;
+    letter-spacing: var(--text-eyebrow--letter-spacing);
+    text-align: left;
+    text-transform: uppercase;
+    vertical-align: bottom;
+  }
+  .cl-prose td:not([class]) {
+    padding: 12px 16px;
+    border-top: 1px solid var(--color-line);
+    color: var(--color-ink);
+    vertical-align: top;
+  }
+  .cl-prose > .cl-code {
+    margin-top: 20px;
+  }
+</style>
