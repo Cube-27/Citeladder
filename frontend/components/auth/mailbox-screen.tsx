@@ -1,8 +1,7 @@
 import { useLayoutEffect, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
-import { Mail } from 'lucide-react';
-import { AuthShell } from '@/components/ui/auth-shell';
+import { AuthRouteShell } from './auth-route-shell';
 import { AuthEmailField, AuthFormShell, AuthPasswordField, AuthRecoveryLinks } from './auth-form';
 import { authApi } from '@/lib/api/auth';
 import { authFormPolicy, passwordHint } from '@/lib/config/auth';
@@ -86,10 +85,9 @@ export default function MailboxScreen() {
     ? mutation.data.message
     : mailboxDescription(operation, incomplete);
   return (
-    <AuthShell mainLabel="Account access">
+    <AuthRouteShell>
       <AuthFormShell
         title={title}
-        icon={Mail}
         description={description}
         onSubmit={(event) => {
           event.preventDefault();
@@ -136,7 +134,7 @@ export default function MailboxScreen() {
           />
         )}
       </AuthFormShell>
-    </AuthShell>
+    </AuthRouteShell>
   );
 }
 
