@@ -61,7 +61,9 @@ export function FilterBar({ view, search, filters, status, actions }: FilterBarP
         <div className="shell:max-w-[360px] shell:flex-[1_1_240px] min-w-0 flex-1">{search}</div>
       ) : null}
       {actions ? (
-        <div className="shell:order-last ms-auto flex items-center gap-2">{actions}</div>
+        <div className="shell:order-last ms-auto flex max-w-full min-w-0 flex-wrap items-center justify-end gap-2">
+          {actions}
+        </div>
       ) : null}
       {filters ? (
         <>

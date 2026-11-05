@@ -53,14 +53,17 @@ function StepIcon({ status }: Readonly<{ status: StepStatus }>) {
     // stopping, since a still ring would read as a stuck step.
     return (
       <span className={ICON_BOX}>
-        <svg viewBox="0 0 20 20" className="animate-spinner size-5" fill="none" aria-hidden>
-          <circle cx="10" cy="10" r="8" strokeWidth="2.5" className="stroke-chart-grid" />
-          <path
-            d="M10 2a8 8 0 0 1 8 8"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            className="stroke-ink"
-          />
+        <svg viewBox="0 0 20 20" className="size-5" fill="none" aria-hidden>
+          {/* The ring turns inside the svg, so it never draws outside its box. */}
+          <g className="animate-spinner origin-center [transform-box:view-box]">
+            <circle cx="10" cy="10" r="8" strokeWidth="2.5" className="stroke-chart-grid" />
+            <path
+              d="M10 2a8 8 0 0 1 8 8"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              className="stroke-ink"
+            />
+          </g>
         </svg>
       </span>
     );

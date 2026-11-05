@@ -32,13 +32,14 @@ export type PageBack = Readonly<{
  * AppShell bands.
  *
  *   1. header   — the PageHeader: the route's one H1 and its actions.
- *   2. controls — the route's tabs (settings sections, a screen's views) or
- *                 its FilterBar (search, filters, one action), never both
- *                 kinds of band.
+ *   2. controls — the route's tabs (settings sections, a screen's views),
+ *                 then its FilterBar (search, filters, one action) for the
+ *                 selected tab.
  *   3. content  — the work, its cards 16 apart.
  *
- * The template owns every band-to-band gap: header → 32 → controls → 16 →
- * content (32 straight to the content when there are no controls). A page
+ * The template owns every band-to-band gap: header → 32 → tabs → 16 →
+ * filters → 16 → content (32 straight to the content when there are no
+ * controls). A page
  * passes data, organisms and slots and adds no margins between bands.
  */
 type ScreenBands<T extends string> = Readonly<{
@@ -144,17 +145,18 @@ function PageShell<T extends string>({
 }: ScreenBands<T> & FillLayout & Readonly<{ back?: PageBack }>) {
   const resolved = useRouteTitle(title);
   const content = <PageContent {...layout}>{children}</PageContent>;
-  const controlBand = tabs ? (
+  const tabBand = tabs ? (
     <div data-page-band="control">
       <TabRow {...tabs} />
     </div>
-  ) : controls ? (
+  ) : null;
+  const filterBand = controls ? (
     <div data-page-band="control">
       <FilterBar {...controls} />
     </div>
   ) : null;
   return (
-    // header → 32 → controls → 16 → content; header → 32 → content.
+    // header → 32 → tabs → 16 → filters → 16 → content; header → 32 → content.
     <div className="flex min-w-0 flex-col gap-[var(--page-section-gap)]">
       <div data-page-band="identity">
         <PageHeader
@@ -172,9 +174,10 @@ function PageShell<T extends string>({
           }
         />
       </div>
-      {controlBand ? (
+      {tabBand || filterBand ? (
         <div className="flex min-w-0 flex-col gap-[var(--workspace-gap)]">
-          {controlBand}
+          {tabBand}
+          {filterBand}
           {content}
         </div>
       ) : (

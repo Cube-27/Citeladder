@@ -191,14 +191,13 @@ function TurnActions({
 function PendingMessage({ text }: Readonly<{ text: string }>) {
   return (
     <UserTurn
+      text={text}
       footer={
         <output aria-live="polite" className={textRole('caption')}>
           Sending…
         </output>
       }
-    >
-      <p className={textRole('body', 'whitespace-pre-wrap')}>{text}</p>
-    </UserTurn>
+    />
   );
 }
 
@@ -224,6 +223,7 @@ function MessageBubble({
   if (message.role === 'user')
     return (
       <UserTurn
+        text={message.content}
         footer={
           message.mentions.length > 0 ? (
             <Inline as="ul" aria-label="Mentioned Actions" className="flex-wrap">
@@ -237,9 +237,7 @@ function MessageBubble({
             </Inline>
           ) : null
         }
-      >
-        <p className={textRole('body', 'whitespace-pre-wrap')}>{message.content}</p>
-      </UserTurn>
+      />
     );
   return (
     <AgentTurn

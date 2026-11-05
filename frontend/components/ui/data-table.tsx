@@ -239,19 +239,29 @@ export function DataTable({
           </DataTableBody>
         </TableTextLinesContext>
       </Table>
-      {paging.pager || footer ? (
-        // The foot: the note (source, period or row count) on the left, the
-        // Pager on the right, one control tall.
-        <div className="flex min-h-[var(--control-md)] min-w-0 flex-wrap items-center justify-between gap-4">
-          {footer ? <div className="type-caption grid min-w-0 gap-1">{footer}</div> : null}
-          {paging.pager ? (
-            <div className="ms-auto min-w-0">
-              <Pager {...paging.pager} />
-            </div>
-          ) : null}
+      <DataTableFoot footer={footer} pager={paging.pager} />
+    </section>
+  );
+}
+
+/**
+ * The foot: the note (source, period or row count) on the left, the Pager on
+ * the right, one control tall; nothing when there is neither.
+ */
+function DataTableFoot({
+  footer,
+  pager,
+}: Readonly<{ footer: ReactNode; pager: DataTablePager | undefined }>) {
+  if (!pager && !footer) return null;
+  return (
+    <div className="flex min-h-[var(--control-md)] min-w-0 flex-wrap items-center justify-between gap-4">
+      {footer ? <div className="type-caption grid min-w-0 gap-1">{footer}</div> : null}
+      {pager ? (
+        <div className="ms-auto min-w-0">
+          <Pager {...pager} />
         </div>
       ) : null}
-    </section>
+    </div>
   );
 }
 

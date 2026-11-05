@@ -77,7 +77,7 @@ export function ComposerDock({
  * AgentComposer's frame: one framed field (three lines) with its context
  * chips above it and one 36px control row under it, the tools on the left
  * and Send or Stop always at the right end. The frame is the box (`surface`,
- * radius 12, the `line-control` edge, an 8 inset); while the field has focus
+ * `radius-lg`, the `line-control` edge, an 8 inset); while the field has focus
  * the frame takes the field focus (a `focus` edge and a 3px `line` halo).
  * The field inside is a `Textarea` with the `composer` placement. Chips
  * render only when there are any.
@@ -112,9 +112,9 @@ export function ComposerFrame({
         </ul>
       ) : null}
       {field}
-      <div className="flex min-h-[var(--control-md)] items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-1">{tools}</div>
-        <div className="shrink-0">{submit}</div>
+      <div className="flex min-h-[var(--control-md)] flex-wrap items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-1">{tools}</div>
+        <div className="ms-auto shrink-0">{submit}</div>
       </div>
     </form>
   );
@@ -133,18 +133,15 @@ export function AgentThread({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 /**
- * The person's turn: a right-aligned bubble (`surface`, `shadow-xs`, radius
- * 12) at most 80% of the column, the message over its `footer` (mentions, a
- * sending state).
+ * The person's turn: a right-aligned bubble (`surface`, `shadow-xs`,
+ * `radius-lg`) at most 80% of the column, the message as written (its line
+ * breaks kept) over its `footer` (mentions, a sending state).
  */
-export function UserTurn({
-  children,
-  footer,
-}: Readonly<{ children: ReactNode; footer?: ReactNode }>) {
+export function UserTurn({ text, footer }: Readonly<{ text: string; footer?: ReactNode }>) {
   return (
     <div className="flex justify-end">
       <div className="bg-surface flex max-w-[80%] min-w-0 flex-col gap-2 rounded-lg px-4 py-3 shadow-xs">
-        {children}
+        <p className={textRole('body', 'whitespace-pre-wrap')}>{text}</p>
         {footer}
       </div>
     </div>
