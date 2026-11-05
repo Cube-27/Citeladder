@@ -103,7 +103,7 @@ function PostChecklist({ block }: Readonly<{ block: Extract<BlogBlock, { type: '
 }
 
 /**
- * A flow diagram, as a Prose ordered list: each step's title in bold, then
+ * A flow diagram, as a Prose ordered list: each step's title in `strong`, then
  * its description. The h3 is unconditional, so a diagram without a visible
  * title still sits one level under its section.
  */

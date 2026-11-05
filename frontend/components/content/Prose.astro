@@ -6,7 +6,7 @@
  *
  * - `article` (guides, blog, legal, AI reference): `body-lg` (18/30), 24px
  *   between blocks; h2 `display-md` 64px above, h3 `title` 40px above, h4
- *   `body-lg` semibold; 12px after a heading.
+ *   `body-lg` medium (500); 12px after a heading.
  * - `docs`: the denser reference rhythm, `body` (16/26), 20px between
  *   blocks; h2 `title` 48px above, h3 `title-sm` 32px above, h4 `heading`.
  *
@@ -73,7 +73,7 @@ const { variant = 'article', as: Tag = 'div', label } = Astro.props;
     margin-top: 32px;
     font-size: var(--text-body-lg);
     line-height: var(--text-body-lg--line-height);
-    font-weight: 600;
+    font-weight: 500;
   }
   .cl-prose > :is(h2, h3, h4):not([class]) + * {
     margin-top: 12px;
@@ -93,7 +93,7 @@ const { variant = 'article', as: Tag = 'div', label } = Astro.props;
   }
   .cl-prose strong {
     color: var(--color-ink);
-    font-weight: 600;
+    font-weight: 500;
   }
   .cl-prose em {
     font-style: italic;
@@ -173,6 +173,7 @@ const { variant = 'article', as: Tag = 'div', label } = Astro.props;
     overflow-x: auto;
     border: 1px solid var(--color-line);
     border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xs);
   }
   .cl-prose table:not([class]) {
     width: 100%;
@@ -215,9 +216,9 @@ const { variant = 'article', as: Tag = 'div', label } = Astro.props;
     text-transform: none;
     vertical-align: top;
   }
-  /* A row header reads as the row's bold term, not a column label. */
+  /* A row header reads as the row's term, not a column label. */
   .cl-prose tbody th:not([class]) {
-    font-weight: 600;
+    font-weight: 500;
   }
   .cl-prose sup {
     line-height: 0;
