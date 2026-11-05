@@ -1501,7 +1501,7 @@ a.cl-announce:hover {
 }
 
 .cl-related-card:hover {
-  border-color: var(--color-line-control);
+  border-color: var(--color-line-strong);
 }
 
 .cl-related-title,
@@ -1983,7 +1983,7 @@ a.cl-announce:hover {
 }
 
 a.cl-logotile:hover {
-  border-color: var(--color-line-control);
+  border-color: var(--color-line-strong);
   color: var(--color-ink);
 }
 
@@ -2418,7 +2418,7 @@ a.cl-logotile:hover {
   max-width: 100%;
   height: 65px;
   padding: 0 12px;
-  border: 1px dashed var(--color-line-control);
+  border: 1px dashed var(--color-line-strong);
   border-radius: var(--radius-sm);
   color: var(--color-ink-muted);
   font-size: var(--text-caption);

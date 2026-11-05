@@ -5,13 +5,16 @@ import { reviewScriptFindings, reviewStylesheetFindings } from './design-system-
 
 const tsx = (className) => `export const X = () => <p className="${className}">x</p>;\n`;
 
-test('D6: a heavier-than-500 weight fails in the app, docs and ui, never on the website', () => {
+test('D6: a heavier-than-500 weight fails on every surface, the website included', () => {
   assert.deepEqual(reviewScriptFindings(tsx('text-ink font-semibold'), 'components/ui/card.tsx'), [
     'components/ui/card.tsx:1: Geist is never set above 500 (decision D6); use a role or font-medium',
   ]);
   assert.equal(reviewScriptFindings(tsx('hover:font-bold'), 'apps/docs/src/x.tsx').length, 1);
   assert.deepEqual(reviewScriptFindings(tsx('text-ink font-medium'), 'components/ui/card.tsx'), []);
-  assert.deepEqual(reviewScriptFindings(tsx('font-semibold'), 'components/marketing/hero.tsx'), []);
+  assert.equal(
+    reviewScriptFindings(tsx('font-semibold'), 'components/marketing/hero.tsx').length,
+    1,
+  );
   assert.deepEqual(
     reviewStylesheetFindings(
       '.a { font-weight: 600; }\n.b { font-weight: 500; }',
@@ -30,7 +33,9 @@ test('D6: a heavier-than-500 weight fails in the app, docs and ui, never on the 
   );
   assert.deepEqual(
     reviewStylesheetFindings('.a { font-weight: 700; }', 'apps/marketing/src/site.css'),
-    [],
+    [
+      'apps/marketing/src/site.css:1: Geist is never set above 500 (decision D6); use a role or font-medium',
+    ],
   );
 });
 
@@ -38,14 +43,11 @@ test('D5: line-control edges a field or card nowhere, and stays on small marks',
   assert.deepEqual(
     reviewScriptFindings(tsx('bg-surface border-line-control border'), 'components/ui/input.tsx'),
     [
-      'components/ui/input.tsx:1: line-control is for small marks only; a field, composer or card wears the soft xs ring (decision D5)',
+      'components/ui/input.tsx:1: line-control is for marks that are not borders; an edge is line or line-strong with shadow-edge (decision D5)',
     ],
   );
   assert.deepEqual(
-    reviewScriptFindings(
-      tsx('bg-surface border-line-control border'),
-      'components/ui/checkbox.tsx',
-    ),
+    reviewScriptFindings(tsx('bg-surface border-line-control border'), 'components/ui/switch.tsx'),
     [],
   );
   assert.equal(
@@ -134,20 +136,20 @@ test('D11: the app density block holds the owner values and the sidebar has no l
     `${theme} { --radius-lg: 8px; }`,
     '.type-page-title { font-size: var(--text-display-sm); }',
     ':root:not([data-public-surface]) {',
-    '  --control-md: 32px; --page-section-gap: 16px; --workspace-gap: 12px;',
-    '  --card-padding: 16px; --modal-padding: 16px; --table-row-height: 40px;',
+    '  --page-section-gap: 16px; --workspace-gap: 12px;',
+    '  --card-padding: 16px; --modal-padding: 16px; --table-row-height: var(--row-app);',
     '}',
   ].join('\n');
   assert.deepEqual(reviewStylesheetFindings(compact, 'apps/app/src/globals.css'), []);
   assert.deepEqual(
     reviewStylesheetFindings(
       compact
-        .replace('--table-row-height: 40px', '--table-row-height: 44px')
+        .replace('--table-row-height: var(--row-app)', '--table-row-height: 44px')
         .replace('display-sm', 'display-md'),
       'apps/app/src/globals.css',
     ),
     [
-      'apps/app/src/globals.css: the app is compact (decision D11): :root:not([data-public-surface]) must set --table-row-height: 40px',
+      'apps/app/src/globals.css: the app is compact (decision D11): :root:not([data-public-surface]) must set --table-row-height: var(--row-app)',
       'apps/app/src/globals.css: the app is compact (decision D11): .type-page-title is var(--text-display-sm)',
     ],
   );

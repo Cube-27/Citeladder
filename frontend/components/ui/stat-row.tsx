@@ -6,7 +6,7 @@ import type { LucideIcon } from 'lucide-react';
 import { AppGrid, type AppGridLayout } from '@/components/ui/app-grid';
 import { cardClasses } from '@/components/ui/card';
 import { ComparisonValue, MetricValue } from '@/components/ui/metric-value';
-import { ScoreRing } from '@/components/ui/score-ring';
+import { clampScore, ScoreRing } from '@/components/ui/score-ring';
 import { availabilityLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -23,9 +23,9 @@ import { cn } from '@/lib/utils';
  * A Stat's anatomy, in order: the mono eyebrow label (with an optional leading
  * icon and a trailing marker), an optional caption naming the value's period,
  * the value in Geist 500 (`stat` 36), the change line (a `Delta`), a sub-line,
- * a comparison window's value, and one action. A 0–100 score is a
- * `ScoreRing` (its number at the centre) in the Stat's right column, beside
- * the label and foot — never a bar (decision D8).
+ * a comparison window's value, and one action. A 0–100 score is its number
+ * in `stat` with a bare 48px `ScoreRing` (auto tone) centred on its right —
+ * never a bar (decision D8).
  *
  * `value: null` is the missing state — the muted dash with `missingLabel`
  * (default "Not measured") as its accessible name. A string or number is the
@@ -39,7 +39,7 @@ import { cn } from '@/lib/utils';
 
 type StatValue =
   | { value: ReactNode; score?: undefined }
-  /** A 0–100 score: a ScoreRing with its number, named by `label`. */
+  /** A 0–100 score: its number with a bare ScoreRing, named by `label`. */
   | { score: Readonly<{ value: number; label: string }>; value?: undefined };
 
 type StatAction =
@@ -172,27 +172,6 @@ function statSelectionClasses(selected: boolean) {
   );
 }
 
-/** How many text rows a score's ring spans, so it never adds a row of its own. */
-const RING_ROWS = {
-  1: 'row-span-1',
-  2: 'row-span-2',
-  3: 'row-span-3',
-  4: 'row-span-4',
-  5: 'row-span-5',
-  6: 'row-span-6',
-} as const;
-
-function textRows(segment: StatSegment) {
-  const optional = [
-    segment.caption,
-    segment.delta,
-    segment.sub,
-    segment.comparison,
-    segment.action,
-  ];
-  return (1 + optional.filter(Boolean).length) as keyof typeof RING_ROWS;
-}
-
 function Stat({ segment, framed }: Readonly<{ segment: StatSegment; framed: boolean }>) {
   const pressable = Boolean(segment.onSelect);
   return (
@@ -206,20 +185,10 @@ function Stat({ segment, framed }: Readonly<{ segment: StatSegment; framed: bool
             // needs, so its label never touches the selected fill's edge; the
             // matching negative margin keeps the figures on the row's grid.
             '-m-3 grid min-w-0 content-start gap-1 rounded-md p-3',
-        // A score's ring takes the Stat's right column (decision D8); its
-        // label, caption and foot stack in the first.
-        segment.score && 'grid-cols-[minmax(0,1fr)_auto] gap-x-4',
         pressable && cn('relative', statSelectionClasses(segment.selected ?? false)),
       )}
     >
       <StatLabel segment={segment} />
-      {/* After the label in reading order (a dt before its dds); placed by
-          the grid, so the text rows beside it never move. */}
-      {segment.score ? (
-        <dd className={cn('col-start-2 row-start-1 self-start', RING_ROWS[textRows(segment)])}>
-          <ScoreRing value={segment.score.value} label={segment.score.label} />
-        </dd>
-      ) : null}
       <StatBody segment={segment} />
       <StatFoot segment={segment} />
       {pressable ? (
@@ -261,18 +230,31 @@ function StatLabel({ segment }: StatPart) {
 }
 
 /**
- * The caption, then the value. A score's value is its ring, so a score Stat's
- * body is the caption alone (or nothing); the text rows then fill the first
- * column beside the ring.
+ * The caption, then the value. A score's value is its number with the bare
+ * ring on its right, centred on the number; the ring carries the accessible
+ * "out of 100" name, so the drawn number is not read twice.
  */
 function StatBody({ segment }: StatPart) {
-  if (segment.score && !segment.caption) return null;
   return (
     <dd className="grid min-w-0 gap-1">
       {segment.caption ? (
         <span className="text-caption text-ink-muted">{segment.caption}</span>
       ) : null}
-      {segment.score ? null : <StatValue segment={segment} />}
+      {segment.score ? (
+        <span className="flex min-w-0 items-center justify-between gap-4">
+          <span aria-hidden className="type-figure min-w-0">
+            {clampScore(segment.score.value)}
+          </span>
+          <ScoreRing
+            value={segment.score.value}
+            label={segment.score.label}
+            tone="auto"
+            showValue={false}
+          />
+        </span>
+      ) : (
+        <StatValue segment={segment} />
+      )}
     </dd>
   );
 }

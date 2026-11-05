@@ -18,7 +18,7 @@
       "family": "Geist",
       "file": "Geist-Variable.woff2",
       "preload": ["app", "public"],
-      "weights": "400 600",
+      "weights": "400 500",
       "fallback": {
         "sizeAdjust": "102.12%",
         "ascentOverride": "98.41%",
@@ -30,7 +30,7 @@
       "family": "Geist Mono",
       "file": "GeistMono-Variable.woff2",
       "preload": ["app"],
-      "weights": "400 600",
+      "weights": "400 500",
       "fallback": {
         "sizeAdjust": "100%",
         "ascentOverride": "100.5%",

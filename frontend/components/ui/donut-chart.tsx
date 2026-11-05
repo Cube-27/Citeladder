@@ -135,7 +135,7 @@ export function DonutChart({
             aria-hidden
             className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5"
           >
-            <span className="type-figure">
+            <span className="type-figure-ring">
               {highlighted ? chartPercent(highlighted.value, sum) : format(total ?? sum)}
             </span>
             <span className="type-eyebrow max-w-24 truncate">

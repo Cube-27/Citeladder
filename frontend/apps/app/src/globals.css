@@ -46,6 +46,7 @@
   --color-surface-sunken: #ececec;
   --color-nav-glass: rgb(244 244 244 / 78%);
   --color-line: #e5e5e5;
+  --color-line-strong: #d4d4d4;
   --color-line-control: #858585;
   --color-ink: #111111;
   --color-ink-hover: #2a2a2a;
@@ -115,8 +116,9 @@
   --text-title-sm--font-weight: 400;
   --text-stat: 36px;
   --text-stat--line-height: 40px;
-  --text-stat--font-weight: 400;
-  --text-stat--letter-spacing: -0.01em;
+  /* Geist 500 since D7: an app number is never Cal Sans. */
+  --text-stat--font-weight: 500;
+  --text-stat--letter-spacing: -0.02em;
   --text-lead: 20px;
   --text-lead--line-height: 30px;
   --text-lead--font-weight: 400;
@@ -139,6 +141,11 @@
   --text-heading--line-height: 24px;
   /* Geist never sets above 500 (decision D6). */
   --text-heading--font-weight: 500;
+  /* Dialog and drawer titles and the plan name: Geist 500 22/28 (D7). */
+  --text-heading-lg: 22px;
+  --text-heading-lg--line-height: 28px;
+  --text-heading-lg--font-weight: 500;
+  --text-heading-lg--letter-spacing: -0.01em;
   --text-caption: 12px;
   --text-caption--line-height: 16px;
   --text-caption--font-weight: 400;
@@ -220,7 +227,9 @@
   /* Depth is quiet: a hairline ring plus a short, soft drop. xs on secondary
      buttons, the selected tab, pills and website cards; card on app cards and
      screens inside a frame; pop on menus, popovers, dialogs and toasts; press
-     on the primary button. Never two shadows on nested surfaces. */
+     on the primary button. Never two shadows on nested surfaces. edge is the
+     faint smudge, with no ring, under every soft field edge (decision D5). */
+  --shadow-edge: 0 1px 2px rgba(17, 17, 17, 0.05);
   --shadow-xs: 0 0 0 1px rgb(17 17 17 / 8%), 0 1px 2px rgb(17 17 17 / 6%);
   --shadow-card:
     0 0 0 1px rgb(17 17 17 / 6%), 0 1px 2px rgb(17 17 17 / 4%),
@@ -232,10 +241,13 @@
     inset 0 1px 0 rgb(255 255 255 / 16%), 0 0 0 1px var(--color-ink),
     0 1px 2px rgb(17 17 17 / 24%);
 
-  /* Controls. Every interactive row in one view uses one height. */
+  /* Controls. Every interactive row in one view uses one height: 32 (D11),
+     28 compact, 48 for website calls to action. `row-app` is the app's
+     table and fact row, its header title row and the sidebar's ident row. */
   --control-sm: 28px;
-  --control-md: 36px;
+  --control-md: 32px;
   --control-lg: 48px;
+  --row-app: 40px;
   --nav-height: 64px;
   --sidebar-width: 248px;
   /* The sidebar below 1280px: one control wide inside its 12px inset, plus
@@ -283,19 +295,22 @@
   --table-min-width-md: 48rem;
   --table-min-width-lg: 64rem;
   --table-min-width-xl: 76rem;
-  /* The app shell's first line (D11): the page's top inset equals the
-     sidebar's 12, and the PageHeader's title row and the sidebar's project
-     switcher share one height, so the sidebar's rows and the page's bands
-     start on the same lines. The controls band's rows sit `page-band-gap`
-     apart (tabs → filters → content). */
-  --page-top-inset: 12px;
-  --page-header-height: 40px;
+  /* The app shell's lines (D11): the page and the sidebar both start
+     `page-top-inset` (space-4) from the top. The PageHeader is one 64px band,
+     a `row-app` title row, space-1, then a reserved 20px meta line, and the
+     sidebar's project switcher (`row-app`) sits in a band of the same height,
+     so the mode switch below it is level with the page's tabs or filters.
+     The controls band's rows sit `page-band-gap` apart (tabs → filters →
+     content). */
+  --page-top-inset: 16px;
+  --page-header-meta-height: 20px;
+  --page-header-band: calc(var(--row-app) + 4px + var(--page-header-meta-height));
   --page-band-gap: 8px;
   /* What a screen that fills the viewport (the Agent thread) leaves for the
-     header: the top inset, the header row, the gap under it and the bottom
+     header: the top inset, the header band, the gap under it and the bottom
      gutter. */
   --route-chrome-height: calc(
-    var(--page-top-inset) + var(--page-header-height) + var(--page-section-gap) +
+    var(--page-top-inset) + var(--page-header-band) + var(--page-section-gap) +
       var(--content-gutter)
   );
   /* Website gutters: 20 below 768px, 40 to 1279px, 64 from 1280px. */
@@ -313,6 +328,7 @@
   --color-surface-sunken: #1e1e1e;
   --color-nav-glass: rgb(30 30 30 / 78%);
   --color-line: #2a2a2a;
+  --color-line-strong: #3a3a3a;
   --color-line-control: #747474;
   --color-ink: #f4f4f4;
   --color-ink-hover: #d6d6d6;
@@ -335,6 +351,7 @@
   --color-data-other: #4a4a4a;
   --color-scrim: rgb(0 0 0 / 64%);
   --color-chart-grid: #262626;
+  --shadow-edge: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-xs: 0 0 0 1px rgb(255 255 255 / 8%), 0 1px 2px rgb(0 0 0 / 50%);
   --shadow-card: 0 0 0 1px rgb(255 255 255 / 7%), 0 1px 2px rgb(0 0 0 / 60%);
   --shadow-pop: 0 0 0 1px rgb(255 255 255 / 10%), 0 16px 40px rgb(0 0 0 / 60%);
@@ -343,6 +360,9 @@
 
 /* Tailwind folds a theme shadow into its own variable at build time, which
    would freeze the light value; these read the live token instead. */
+@utility shadow-edge {
+  box-shadow: var(--shadow-edge);
+}
 @utility shadow-xs {
   box-shadow: var(--shadow-xs);
 }
@@ -366,19 +386,18 @@
 
 /* The app's density (decision D11): compact and technical, like GitHub or
    Claude Code, not airy. The app's document is the one without
-   `data-public-surface`; the website and docs keep the system's spacing and
-   36px controls. One value per role still holds inside the app: controls
-   32, table rows 40, card and dialog padding 16, header → controls 16, the
-   controls band's rows 8 apart, peers 12 apart. */
+   `data-public-surface`; the website and docs keep the system's spacing
+   (controls are 32 everywhere). One value per role still holds inside the
+   app: table and fact rows `row-app` (40), card and dialog padding 16,
+   header → controls 16, the controls band's rows 8 apart, peers 12 apart. */
 :root:not([data-public-surface]) {
-  --control-md: 32px;
   --content-gutter: 24px;
   --page-section-gap: 16px;
   --workspace-gap: 12px;
   --compact-gap: 8px;
   --card-padding: 16px;
   --modal-padding: 16px;
-  --table-row-height: 40px;
+  --table-row-height: var(--row-app);
 }
 
 @media (max-width: 1279px) {
@@ -503,10 +522,10 @@ html[data-public-surface] body {
      title and number is Geist, never above 500 (D6). */
   .type-section-title {
     font-family: var(--font-sans);
-    font-size: var(--text-title);
-    line-height: var(--text-title--line-height);
-    font-weight: 500;
-    letter-spacing: -0.01em;
+    font-size: var(--text-heading-lg);
+    line-height: var(--text-heading-lg--line-height);
+    font-weight: var(--text-heading-lg--font-weight);
+    letter-spacing: var(--text-heading-lg--letter-spacing);
     color: var(--color-ink);
   }
   .type-item-title {
@@ -562,6 +581,17 @@ html[data-public-surface] body {
     color: var(--color-ink);
   }
   /* A number inside a row: the card-title size with digits of one width. */
+  /* The ScoreRing's and the DonutChart's centre: Geist 500 32/38 (D7). */
+  .type-figure-ring {
+    font-family: var(--font-sans);
+    font-size: var(--text-display-lg);
+    line-height: var(--text-display-lg--line-height);
+    font-weight: 500;
+    letter-spacing: var(--text-display-lg--letter-spacing);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-ink);
+  }
+
   .type-figure-sm {
     font-family: var(--font-sans);
     font-size: var(--text-heading);

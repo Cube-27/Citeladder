@@ -272,7 +272,7 @@ export function AuthRowTile({ icon }: Readonly<{ icon: LucideIcon }>) {
   return (
     <span
       aria-hidden
-      className="border-line-control text-ink-secondary grid size-10 shrink-0 place-items-center rounded-sm border border-dashed"
+      className="border-line-strong text-ink-secondary grid size-10 shrink-0 place-items-center rounded-sm border border-dashed"
     >
       <Icon icon={icon} />
     </span>

@@ -46,8 +46,9 @@ const HEAVY_CLASS =
 const HEAVY_VALUE = /^(?:[6-9]00|bold|bolder)$/;
 const WEIGHT_MESSAGE = 'Geist is never set above 500 (decision D6); use a role or font-medium';
 
+/** Every surface, the website included: the faces load only 400–500. */
 function weightClassFindings(source, label) {
-  if (!inScope(label) || !isScript(label)) return [];
+  if (!isScript(label)) return [];
   return classFindings(source, label, HEAVY_CLASS, WEIGHT_MESSAGE);
 }
 
@@ -63,27 +64,24 @@ function weightCssFindings(css, label) {
 // ── D5: soft edges on fields, composers and cards ───────────────────────────
 
 /**
- * Marks under 24px that need the 3:1 edge to read at all: the checkbox,
- * radio and switch, the pending step ring, chart rules and event markers,
- * the link underline, the split-pane handle, the neutral data swatch and the
- * dashed create tile.
+ * Marks that are not borders and need the 3:1 grey to read at all: the
+ * switch's off track, the pending step ring, chart rules, crosshairs and
+ * event markers, the ink link underline and the neutral data swatch. Every
+ * edge, the checkbox and radio boxes and the dashed create tile included,
+ * is `line` or `line-strong`.
  */
 const LINE_CONTROL_OWNERS = new Set([
-  'components/ui/checkbox.tsx',
-  'components/ui/radio-group.tsx',
   'components/ui/switch.tsx',
   'components/ui/step-list.tsx',
   'components/ui/chart.tsx',
   'components/ui/trend-chart.tsx',
   'components/performance/performance-plot.tsx',
   'components/ui/text-link.tsx',
-  'components/ui/split-pane.tsx',
   'components/ui/data-tone.ts',
-  'components/ui/auth-shell.tsx',
 ]);
 const LINE_CONTROL_CLASS = /(?<![\w-])(?:[\w-]+:)*[a-z]+-line-control(?![\w-])/;
 const EDGE_MESSAGE =
-  'line-control is for small marks only; a field, composer or card wears the soft xs ring (decision D5)';
+  'line-control is for marks that are not borders; an edge is line or line-strong with shadow-edge (decision D5)';
 
 function edgeClassFindings(source, label) {
   if (!inScope(label) || !isScript(label) || LINE_CONTROL_OWNERS.has(label)) return [];
@@ -129,7 +127,7 @@ function displayScopeCssFindings(css, label) {
 
 // ── D9: a row of figures is one row ─────────────────────────────────────────
 
-const COLUMNS_AT = (prefix) => new RegExp(`(?<![\\w-])${prefix}:grid-cols-(\\d+)(?![\\w-])`);
+const COLUMNS_AT = (prefix) => new RegExp(String.raw`(?<![\w-])${prefix}:grid-cols-(\d+)(?![\w-])`);
 const DESKTOP_COLUMNS = COLUMNS_AT('desktop');
 const SHELL_COLUMNS = COLUMNS_AT('shell');
 const ROW_MESSAGE =
@@ -174,11 +172,12 @@ function fullRadiusClassFindings(source, label) {
 }
 
 /** A length rounder than 8px: `12px`, `1rem`, `50%`, `9999px`. */
+const PX_PER_UNIT = { px: 1, rem: 16, em: 16, '%': Infinity };
+
 function tooRound(value) {
-  return [...value.matchAll(/(\d*\.?\d+)(px|rem|em|%)/g)].some(([, n, unit]) => {
-    const px = unit === 'px' ? Number(n) : unit === '%' ? Infinity : Number(n) * 16;
-    return px > MAX_RADIUS_PX;
-  });
+  return [...value.matchAll(/(\d+(?:\.\d+)?|\.\d+)(px|rem|em|%)/g)].some(
+    ([, n, unit]) => Number(n) > 0 && Number(n) * PX_PER_UNIT[unit] > MAX_RADIUS_PX,
+  );
 }
 
 function radiusCssFindings(css, label) {
@@ -198,13 +197,13 @@ function radiusCssFindings(css, label) {
 
 /** The app's density block in globals.css and the values the owner set. */
 const APP_DENSITY_SELECTOR = ':root:not([data-public-surface])';
+/** Controls (32) and `row-app` (40) are system tokens the contract checks. */
 const APP_DENSITY = {
-  '--control-md': '32px',
   '--page-section-gap': '16px',
   '--workspace-gap': '12px',
   '--card-padding': '16px',
   '--modal-padding': '16px',
-  '--table-row-height': '40px',
+  '--table-row-height': 'var(--row-app)',
 };
 const DENSITY_MESSAGE = 'the app is compact (decision D11)';
 
@@ -215,13 +214,14 @@ const PAGE_TITLE_SIZE = 'var(--text-display-sm)';
 function densityCssFindings(css, label) {
   if (label !== TOKEN_CSS || !/@theme\b/.test(css)) return [];
   const found = new Map();
-  let titleSize;
+  const titleSizes = [];
   postcss.parse(css).walkRules((rule) => {
     if (rule.selector === '.type-page-title')
-      rule.walkDecls('font-size', (decl) => (titleSize = decl.value.trim()));
+      rule.walkDecls('font-size', (decl) => titleSizes.push(decl.value.trim()));
     if (rule.selector !== APP_DENSITY_SELECTOR || rule.parent?.type !== 'root') return;
     rule.walkDecls((decl) => found.set(decl.prop, decl.value.trim()));
   });
+  const titleSize = titleSizes.at(-1);
   const findings = Object.entries(APP_DENSITY)
     .filter(([prop, value]) => found.get(prop) !== value)
     .map(
@@ -243,14 +243,13 @@ function sidebarLogoFindings(source, label) {
 
 /** Every stylesheet rule above, for one stylesheet or Astro `<style>` block. */
 export function reviewStylesheetFindings(css, label) {
-  const systemWide = [...radiusCssFindings(css, label), ...densityCssFindings(css, label)];
-  if (!inScope(label)) return systemWide;
-  return [
+  const systemWide = [
     ...weightCssFindings(css, label),
-    ...edgeCssFindings(css, label),
-    ...displayScopeCssFindings(css, label),
-    ...systemWide,
+    ...radiusCssFindings(css, label),
+    ...densityCssFindings(css, label),
   ];
+  if (!inScope(label)) return systemWide;
+  return [...edgeCssFindings(css, label), ...displayScopeCssFindings(css, label), ...systemWide];
 }
 
 /** Every class-string rule above, for one script. */

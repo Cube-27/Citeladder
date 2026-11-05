@@ -187,10 +187,10 @@ now rejects as legacy.
 
 | ID | Question | Decision |
 | --- | --- | --- |
-| D5 | What edge do fields, composers and cards wear? | The soft `line` edge with the faint xs smudge a secondary Button wears (the sidebar's "Search… Ctrl K" field), never the dark `line-control` hairline. Select, Input, SearchField, Textarea, ChipInput, the Agent composer, the docs search trigger and cards all follow; `line-control` stays only for marks too small to read without it (checkbox, radio, switch, the pending step ring, chart rules, the link underline). Focus stays clearly visible |
+| D5 | What edge do fields, composers and cards wear? | A soft 1px `line` edge with the faint `shadow-edge` smudge under it (the sidebar's "Search… Ctrl K" look), stepping to `line-strong` on hover, never the dark `line-control` hairline. Select, Input, SearchField, Textarea, ChipInput, the Agent composer, the docs search trigger and checkbox and radio boxes all follow; dashed slots take `line-strong`. `line-control` stays only for marks that are not borders (the switch's off track, the link underline, the pending step ring, chart rules). Focus stays clearly visible |
 | D6 | How heavy can Geist be? | Never above 500: the `heading` token is 500, and no `font-semibold`, `font-bold`, 600 or 700 remains in the app, docs or `components/ui`; Agent Markdown `strong` is 500 |
 | D7 | Where does the app use Cal Sans? | Only in the PageHeader title. Score and stat numbers, ScoreRing and donut centres, dialog, drawer and card titles and the sign-in shell are Geist. The website and docs keep their display use |
-| D8 | How does a score card draw a score? | Its number in a ScoreRing on the right, as before PR 3; a table cell shows the number only. No segmented bars |
+| D8 | How does a score card draw a score? | Its number, with a bare 48px ScoreRing on the right, as before PR 3; a table cell shows the number only. No segmented bars: `ScoreBar` is deleted from `components/ui` with its tests and exports, and the policy rejects its name |
 | D9 | How do metric cards lay out at app widths? | In one row: 4 across at every app width, 982px included; never 2 × 2 and never 2 + 1 |
 
 Later the same day the owner added D10 and D11 ("the rounded edges in
@@ -201,7 +201,12 @@ script enforces both.
 | ID | Question | Decision |
 | --- | --- | --- |
 | D10 | How rounded are corners? | Only slightly, system-wide (app, docs and website share the tokens): `radius-2xs` 2, `radius-xs` 2, `radius-sm` 4, `radius-md` 6, `radius-lg` 8, `radius-xl` 8. `radius-full` stays only for avatars, status dots, switch tracks and count pills; no hard-coded radius above 8px |
-| D11 | How dense is the app? | Compact and technical, GitHub / Claude Code density, app only. The sidebar has no logo: the project switcher is its first row, on the PageHeader's line, and the Dashboard/Agent switch sits on the page's tabs/filter line. The PageHeader title is 24/32 Cal Sans 400 in a tight band with its actions centred on the title row. Band gaps are about half (header → 16 → tabs → 8 → filters → 8 → content), card and dialog padding 16, controls 32, table rows 40, card gaps 12. The docs and website keep their spacing |
+| D11 | How dense is the app? | Compact and technical, GitHub / Claude Code density, app only. The sidebar has no logo: the project switcher is its first row, on the PageHeader's line, and the Dashboard/Agent switch sits on the page's tabs/filter line. The PageHeader title is 24/32 Cal Sans 400 in a tight band with its actions centred on the title row. The header is one 64px band (a 40px title row, then a reserved 20px meta line). Band gaps are about half (header → 16 → tabs → 8 → filters → 8 → content), card and dialog padding 16, controls 32 (on every surface), table rows 40 (`row-app`), card gaps 12. The docs and website keep their spacing |
+
+The repository follows the design-system artifact's version 13 for D5–D11:
+`frontend/scripts/design-system-tokens.json` is its `tokens.json` verbatim
+(`line-strong`, `shadow-edge`, `heading-lg`, `row-app`, `control-md` 32 and
+`stat` at Geist 500).
 
 ## Known gaps in the system
 

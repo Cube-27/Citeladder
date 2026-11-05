@@ -146,8 +146,8 @@ test('contents omit step numbering without changing article anchors and follow t
 });
 
 // Docs reads at the system's roles at every width (body 16; lead 18 on a
-// phone, 20 above), and its search trigger wears the app's soft field edge —
-// the xs ring a secondary Button wears, never a dark hairline (decision D5).
+// phone, 20 above), and its search trigger wears the soft field edge — a 1px
+// `line` border with the `shadow-edge` smudge, never a dark hairline (D5).
 test('docs keeps its own reading type and a soft-edged search trigger', async ({ page }) => {
   const reading = async () =>
     page.evaluate(() => {
@@ -156,21 +156,23 @@ test('docs keeps its own reading type and a soft-edged search trigger', async ({
       const search = getComputedStyle(
         document.querySelector('[data-docs-search-trigger="field"]') as Element,
       );
-      // The xs ring as this page resolves it, for comparison.
+      // The edge tokens as this page resolves them, for comparison.
       const probe = document.body.appendChild(document.createElement('div'));
-      probe.style.boxShadow = 'var(--shadow-xs)';
+      probe.style.boxShadow = 'var(--shadow-edge)';
+      probe.style.color = 'var(--color-line)';
       const softEdge = getComputedStyle(probe).boxShadow;
+      const line = getComputedStyle(probe).color;
       probe.remove();
       return {
         body: size('main .cl-prose p'),
         lead: size('.cl-ahead-lead'),
         softEdge: search.boxShadow === softEdge && softEdge !== 'none',
-        hairline: search.borderTopWidth,
+        edge: `${search.borderTopWidth} ${search.borderTopColor === line}`,
       };
     });
   await page.setViewportSize({ width: 375, height: 800 });
   await page.goto('/');
-  const soft = { softEdge: true, hairline: '0px' };
+  const soft = { softEdge: true, edge: '1px true' };
   expect(await reading()).toEqual({ body: '16px', lead: '18px', ...soft });
   await page.setViewportSize({ width: 982, height: 800 });
   expect(await reading()).toEqual({ body: '16px', lead: '20px', ...soft });

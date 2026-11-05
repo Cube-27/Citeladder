@@ -137,8 +137,8 @@ export function focusRoleViolations(source, label, ownsProductUi) {
   return [];
 }
 
-/** The system's four shadows (and none) are the whole elevation vocabulary. */
-const SHADOW_ROLES = new Set(['none', 'xs', 'card', 'pop', 'press']);
+/** The system's five shadows (and none) are the whole elevation vocabulary. */
+const SHADOW_ROLES = new Set(['none', 'edge', 'xs', 'card', 'pop', 'press']);
 
 export function shadowRoleViolations(source, label, ownsProductUi) {
   if (!ownsProductUi || label === TOKEN_CSS) return [];
@@ -147,11 +147,11 @@ export function shadowRoleViolations(source, label, ownsProductUi) {
   const rawDeclaration =
     label.endsWith('.css') &&
     [...text.matchAll(/box-shadow\s*:([^;]+);/g)].some(
-      ([, value]) => !/^(?:none|var\(--shadow-(?:xs|card|pop|press)\))$/.test(value.trim()),
+      ([, value]) => !/^(?:none|var\(--shadow-(?:edge|xs|card|pop|press)\))$/.test(value.trim()),
     );
   if ([...shadows].some(([, role]) => !SHADOW_ROLES.has(role)) || rawDeclaration) {
     return [
-      `${label}: elevation must use shadow-xs, shadow-card, shadow-pop, shadow-press or none`,
+      `${label}: elevation must use shadow-edge, shadow-xs, shadow-card, shadow-pop, shadow-press or none`,
     ];
   }
   return [];

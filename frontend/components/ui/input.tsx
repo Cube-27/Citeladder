@@ -6,12 +6,13 @@ import { cn } from '@/lib/utils';
 
 /**
  * The field box every text control shares (Input, SearchField, Select's
- * trigger, ChipInput): `surface` with the soft xs ring a secondary Button
- * wears (no dark hairline), `radius-md`, 36px tall. A transparent 1px border
- * holds the place focus paints: it turns `focus` with a 3px `line` halo; an
- * invalid field turns it `negative` (globals.css `.focus-input`/`.focus-frame`).
+ * trigger, ChipInput): `surface` with a soft 1px `line` edge and the faint
+ * `shadow-edge` smudge under it, never a dark hairline (decision D5),
+ * `radius-md`, `control-md` tall. Hover steps the edge to `line-strong`;
+ * focus turns it `focus` with a 3px `line` halo, and an invalid field turns
+ * it `negative` (globals.css `.focus-input`/`.focus-frame`, which win over hover).
  */
-export const FIELD_EDGE = 'bg-surface shadow-xs border border-transparent';
+export const FIELD_EDGE = 'bg-surface shadow-edge border border-line hover:border-line-strong';
 
 export const FIELD_BOX = `${FIELD_EDGE} h-[var(--control-md)] w-full rounded-md px-3 text-body-sm text-ink transition-[border-color,box-shadow] duration-[var(--motion-fast)]`;
 

@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
  * The sizes below are the `.type-*` recipes in globals.css (size/leading in px).
  */
 const TEXT_ROLES = {
-  /** The route `h1`. 20/28, 500, −0.01em, foreground, display face. One per page. */
+  /** The route `h1`. 24/32, 400, −0.01em, foreground, display face (D7, D11). One per page. */
   pageTitle: 'type-page-title',
   /** A section, card, drawer or dialog heading. 16/24, 500, −0.011em, foreground. */
   sectionTitle: 'type-section-title',
@@ -31,7 +31,7 @@ const TEXT_ROLES = {
   label: 'type-label',
   /** Timestamps, counts, help, footnotes. 12/16, 400, muted. */
   caption: 'type-caption',
-  /** A metric value. 24/32, 500, −0.02em, foreground, figure-face digits. */
+  /** A metric value (`stat`). 36/40, Geist 500, −0.01em, foreground, tabular digits. */
   figure: 'type-figure',
   /** A value inside a dense row or cell. 16/24, 500, foreground, figure-face digits. */
   figureSm: 'type-figure-sm',

@@ -26,12 +26,13 @@ export type CheckboxProps = AccessibleCheckbox & {
 };
 
 /**
- * The 16px box: `surface` with a 1px `line-control` edge; checked and
+ * The 16px box: `surface` with the soft field edge (`line`, `shadow-edge`,
+ * `line-strong` on hover; decision D5); checked and
  * indeterminate are an `ink` fill with an `on-ink` check or dash. Shared with
  * the table's row checkbox.
  */
 const CHECK_BOX =
-  'focus-ring bg-surface border-line-control text-on-ink data-[state=checked]:bg-ink data-[state=checked]:border-ink data-[state=indeterminate]:bg-ink data-[state=indeterminate]:border-ink grid size-4 shrink-0 place-items-center rounded-xs border transition-[background-color,border-color] duration-[var(--motion-fast)] disabled:cursor-not-allowed';
+  'focus-ring bg-surface border-line shadow-edge data-[state=unchecked]:hover:border-line-strong text-on-ink data-[state=checked]:bg-ink data-[state=checked]:border-ink data-[state=indeterminate]:bg-ink data-[state=indeterminate]:border-ink grid size-4 shrink-0 place-items-center rounded-xs border transition-[background-color,border-color] duration-[var(--motion-fast)] disabled:cursor-not-allowed';
 
 function Box({
   checked,

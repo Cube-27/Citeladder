@@ -67,11 +67,12 @@ export function AppShellPlaceholder({
 
 /**
  * The sidebar's column, on the page's lines: the project switcher on the
- * header row, `page-section-gap` under it the controls (mode switch, then
- * the palette field `page-band-gap` below, as the page's tabs and filters
- * are), then the scrolling destinations and the account at the foot. There
- * is no logo (decision D11). In the rail the destinations do not scroll, so
- * their tooltips are never clipped.
+ * PageHeader's title row, in a band as tall as the header's
+ * (`page-header-band`, 64); `page-section-gap` under it the controls (mode
+ * switch, then the palette field `page-band-gap` below, as the page's tabs
+ * and filters are), then the scrolling destinations and the account at the
+ * foot. There is no logo (decision D11). In the rail the destinations do not
+ * scroll, so their tooltips are never clipped.
  */
 export function SidebarFrame({
   ident,
@@ -81,7 +82,7 @@ export function SidebarFrame({
 }: Readonly<{ ident: ReactNode; controls: ReactNode; nav: ReactNode; foot: ReactNode }>) {
   return (
     <div className="flex h-full flex-col gap-[var(--page-section-gap)] px-3 pt-[var(--page-top-inset)] pb-3">
-      <div className="flex">{ident}</div>
+      <div className="flex h-[var(--page-header-band)] shrink-0 items-start">{ident}</div>
       <div className="flex flex-col gap-[var(--page-band-gap)]">{controls}</div>
       <div className="shell:overflow-y-auto -mx-3 flex min-h-0 flex-1 flex-col gap-4 px-3 py-1">
         {nav}
@@ -93,7 +94,7 @@ export function SidebarFrame({
 
 /**
  * The project switcher's and the account's trigger: as tall as the
- * PageHeader's title row (`page-header-height`) with two lines (the name in
+ * PageHeader's title row (`row-app`, 40) with two lines (the name in
  * `ink`, the domain or workspace in `ink-muted`), ghost until hovered or
  * open. In the rail it holds only its mark.
  */
@@ -118,7 +119,7 @@ export function SidebarIdentButton({
       type="button"
       data-sidebar-ident=""
       className={cn(
-        'focus-ring text-ink hover:bg-surface-sunken data-[state=open]:bg-surface-sunken disabled:text-ink-muted shell:justify-start shell:px-3 flex h-[var(--page-header-height)] w-full min-w-0 items-center justify-center gap-3 rounded-md text-left transition-colors disabled:pointer-events-none',
+        'focus-ring text-ink hover:bg-surface-sunken data-[state=open]:bg-surface-sunken disabled:text-ink-muted shell:justify-start shell:px-3 flex h-[var(--row-app)] w-full min-w-0 items-center justify-center gap-3 rounded-md text-left transition-colors disabled:pointer-events-none',
         className,
       )}
       {...props}

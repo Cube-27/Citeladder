@@ -167,7 +167,7 @@
 .cl-screen-heading {
   color: var(--color-ink);
   font-size: var(--text-heading);
-  font-weight: 600;
+  font-weight: 500;
   line-height: var(--text-heading--line-height);
 }
 
@@ -489,7 +489,7 @@
 }
 
 .cl-screen-answer strong {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .cl-screen-answer-foot {
@@ -678,7 +678,7 @@
   margin-top: 12px;
   color: var(--color-ink);
   font-size: var(--text-heading);
-  font-weight: 600;
+  font-weight: 500;
   line-height: var(--text-heading--line-height);
 }
 
