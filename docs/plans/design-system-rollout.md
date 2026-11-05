@@ -1,7 +1,8 @@
 # Design system rollout
 
-Status: approved on 5 November 2026 with decisions D1–D4 as recommended;
-PR 1 in progress. The owner asked on
+Status: complete. Approved on 5 November 2026 with decisions D1–D4 as
+recommended. All eight PRs and the owner's review rounds (D5–D25) shipped the
+same day. The owner asked on
 4 November 2026 for a new CiteLadder design system that replaces the current
 design on every surface at once, with one consolidated reference that every
 implementer follows.
