@@ -16,10 +16,10 @@ function statColumns(count: number): 1 | 2 | 3 | 4 | 6 {
 }
 
 /**
- * PageHighlight: the page's one inverted tile. Its ground is the page's ink
- * and its ink the page's surface, remapped in CSS (site.css), so it inverts
- * in both themes without script. Stats never orphan: three hold one row
- * while the tile is 480px wide and then stack; four go 4, 2 × 2, then 1.
+ * PageHighlight: the page's lead tile, a flat bordered card on the surface
+ * like every other card (never inverted, D27). Stats never orphan: three
+ * hold one row while the tile is 480px wide and then stack; four go 4,
+ * 2 × 2, then 1.
  */
 export function PageHighlight({
   eyebrow,
@@ -41,10 +41,8 @@ export function PageHighlight({
   as?: 'h2' | 'h3';
   children?: ReactNode;
 }>) {
-  // A tile with only its copy is a statement band: the copy centres so no side sits empty (D21).
-  const statement = stats.length === 0 && steps.length === 0 && !children && !action;
   return (
-    <div className={cn('cl-page-hl', statement && 'cl-page-hl--statement')}>
+    <div className="cl-page-hl">
       <div className="cl-page-hl-inner">
         <div className="cl-page-hl-copy">
           {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}

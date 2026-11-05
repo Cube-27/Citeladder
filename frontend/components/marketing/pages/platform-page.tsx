@@ -224,7 +224,7 @@ function Features({ page }: Readonly<{ page: PlatformPage }>) {
 
 /**
  * The hero's product image. A 1200 screen fills the frame; a 960 screen sits
- * beside the page's one inverted tile: the screen's key numbers, or, for a
+ * beside the page's lead tile: the screen's key numbers, or, for a
  * screen without numbers, the page's own how-to.
  */
 function HeroMedia({ page }: Readonly<{ page: PlatformPage }>) {

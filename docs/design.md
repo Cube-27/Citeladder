@@ -53,6 +53,7 @@ Light and dark on every surface, defaulting to the system preference.
 | D16 | A tab, segment or filter chip shows its count after the label in Geist at the control's size, `ink-muted`, in brackets (`ControlCount`): "All signals (107)". Never mono. |
 | D17 | A card that is itself a control (the Agent's workflow cards) keeps the plain card's one fill; hover underlines its title instead of tinting it. Card titles in a grid of cards (workflows, skills) are `heading` (16/24, 500), under a `sectionTitle` section heading. |
 | D26 | Website type: the marketing H1 (`--text-site-title`, every hero and article title) is 48/52 from 768px up, the owner's 982px desktop included, and 32/38 on phones, replacing D23's 42. Running text, blog and article prose included, is `body` 16/26; a lead or subheading under a heading is `body-lg` 18/30, never the 20px `lead`. Cal Sans is never tracked on the website or docs: display headings set no `letter-spacing`; Geist Mono eyebrows keep theirs. The app's tokens are unchanged. |
+| D27 | No inverted cards or bands on the website: every tile, PageHighlight included, is the flat card (surface fill, 1px `line` edge, ink text) in both themes; only ink-filled buttons stay ink. Nav popups for multi-column menus (Platform, Resources) start at the navbar's left edge; one-column Solutions still hangs from the trigger row (owner, 5 November 2026; supersedes D22's anchor for those two). |
 
 D5–D17 come from the owner's reviews of the shipped app and docs on 5 November
 2026; `frontend/scripts/design-system-review-checks.mjs` keeps them in

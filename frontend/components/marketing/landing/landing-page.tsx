@@ -11,7 +11,6 @@ import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { EngineStrip, LogoTile } from '../sections/cards';
 import { Bento, FeatureCard, FeatureSplit } from '../sections/features';
 import { LandingHero } from '../sections/heroes';
-import { PageHighlight } from '../sections/page-highlight';
 import { PageSection } from '../sections/page-section';
 import { SiteArrowLink, columnsFor } from '../sections/site-parts';
 import { CtaBand, FaqList } from '../sections/steps-faq-cta';
@@ -346,13 +345,6 @@ export function LandingPage({ rotor }: Readonly<{ rotor?: ReactNode }>) {
         <EngineStrip
           engines={['chatgpt', 'gemini', 'claude', 'google']}
           names={{ chatgpt: 'OpenAI API', gemini: 'Gemini API', claude: 'Claude API' }}
-        />
-      </PageSection>
-      <PageSection label="What CiteLadder does">
-        <PageHighlight
-          as="h2"
-          title="Buyers ask AI which business to pick"
-          body="CiteLadder shows whether the answer names you and which pages it cites."
         />
       </PageSection>
       <Loop />

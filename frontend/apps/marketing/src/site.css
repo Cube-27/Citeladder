@@ -368,11 +368,17 @@ a.cl-announce:hover {
   transition: opacity var(--motion-normal) var(--ease-menu);
 }
 
-/* 24px under the trigger row: its 16px inset in the bar plus the 8px gap. */
+/* 24px under the trigger row: its 16px inset in the bar plus the 8px gap.
+   A multi-column menu shifts it back to the bar's left edge (D27, set inline);
+   it slides only when switching between open menus. */
 .cl-navmenu-stage {
   position: absolute;
   top: calc(100% + 24px);
   left: 0;
+}
+
+.cl-navmenu-stage[data-slide] {
+  transition: transform var(--motion-menu) var(--ease-menu);
 }
 
 /* Flat, like the rest of the site: a line border on the surface, no shadow.
@@ -2482,33 +2488,18 @@ a.cl-logotile:hover {
   }
 }
 
-/* ---------- PageHighlight: the page's one inverted tile ----------
-   The tile reads the page's ink as its ground and the page's surface as its
-   ink; the secondary and muted inks and the hairline are mixed from that
-   pair, so every token inside (Stat, Button, TextLink) follows in both
-   themes. The outer box captures the page's pair; the inner box remaps. */
+/* ---------- PageHighlight: the page's lead tile ----------
+   The same flat card as every other (surface fill, soft hairline, ink text)
+   in both themes; never an inverted ground (D27). */
 .cl-page-hl {
-  --cl-hl-ground: var(--color-ink);
-  --cl-hl-ink: var(--color-on-ink);
-
   height: 100%;
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-xl);
-  background: var(--cl-hl-ground);
+  background: var(--color-surface);
   container-type: inline-size;
 }
 
 .cl-page-hl-inner {
-  --color-surface: var(--cl-hl-ground);
-  --color-paper: var(--cl-hl-ground);
-  --color-surface-sunken: color-mix(in srgb, var(--cl-hl-ink) 12%, var(--cl-hl-ground));
-  --color-ink: var(--cl-hl-ink);
-  --color-ink-hover: color-mix(in srgb, var(--cl-hl-ink) 84%, var(--cl-hl-ground));
-  --color-ink-secondary: color-mix(in srgb, var(--cl-hl-ink) 72%, var(--cl-hl-ground));
-  --color-ink-muted: color-mix(in srgb, var(--cl-hl-ink) 60%, var(--cl-hl-ground));
-  --color-on-ink: var(--cl-hl-ground);
-  --color-line: color-mix(in srgb, var(--cl-hl-ink) 18%, var(--cl-hl-ground));
-  --color-focus: var(--cl-hl-ink);
-
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -2527,11 +2518,6 @@ a.cl-logotile:hover {
 
 .cl-page-hl-copy .cl-eyebrow {
   color: var(--color-ink-muted);
-}
-
-.cl-page-hl--statement .cl-page-hl-copy {
-  align-items: center;
-  text-align: center;
 }
 
 .cl-page-hl-copy .cl-eyebrow + .cl-page-hl-title {
