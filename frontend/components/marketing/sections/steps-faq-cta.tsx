@@ -87,7 +87,8 @@ export function CtaBand({
   as?: 'h2' | 'h3';
 }>) {
   return (
-    <div className="cl-cta">
+    // `data-cta-placement` names where a clicked call to action sat, for marketing analytics.
+    <div className="cl-cta" data-cta-placement="closing">
       <div className="cl-cta-copy">
         {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
         <Heading className="cl-cta-title">{title}</Heading>

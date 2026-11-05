@@ -1,17 +1,19 @@
+import { TextLink } from '@/components/ui/text-link';
 import { DEMO_CTA } from '@/lib/marketing-content/nav';
 
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
-import { Section, SectionHeader } from '../primitives/section';
-import { FaqList } from './platform';
+import { PageHero } from '../sections/heroes';
+import { PageSection } from '../sections/page-section';
+import { CtaBand, FaqList } from '../sections/steps-faq-cta';
 
 /**
  * Server-safe pricing composition.
  *
  * Plan cards, the comparison table and purchases live in the
- * `components/marketing/pricing/*` client island: every enforceable value
- * comes from `GET /billing/catalog`, which a sync server component cannot
- * read. What remains here carries no catalog value and stays server-rendered.
- * The answers restate published facts (the trial answer in
+ * `pricing-catalog.tsx` client island: every enforceable value comes from
+ * `GET /billing/catalog`, which a sync server component cannot read. What
+ * remains here carries no catalog value and stays server-rendered. The
+ * answers restate published facts (the trial answer in
  * `lib/marketing-content/faq.ts`, the BYOK disclosure and the catalog's
  * currency note); they quote no price.
  */
@@ -38,45 +40,65 @@ export const PRICING_FAQS = [
   },
 ] as const;
 
+export function PricingHero() {
+  return (
+    <PageHero
+      crumbs={[{ label: 'Home', href: '/' }, { label: 'Pricing' }]}
+      title="No markup on model calls made with your keys"
+      lead="When you use your own provider keys, model calls bill to your provider accounts at provider rates. CiteLadder charges for the workspace, the analysis and the evidence behind every recommendation."
+    />
+  );
+}
+
+/** Without a catalog no price is shown, and the page says so. */
+export function PricingUnavailable() {
+  return (
+    <PageSection
+      spacing="compact"
+      title="Plans are temporarily unavailable"
+      lead="Please try again shortly. No price is shown while the public catalog is unavailable."
+      headerLayout="split"
+    />
+  );
+}
+
 export function PricingFaq() {
   return (
-    <Section tone="paper" aria-label="Pricing questions">
-      <div className="mk-split">
-        <SectionHeader
-          title="Pricing questions"
-          lead={
-            <>
-              More answers on data, security and billing in the{' '}
-              <a href="/faq" className="text-accent-ink underline underline-offset-2">
-                full FAQ
-              </a>
-              {'.'}
-            </>
-          }
-        />
-        <FaqList faqs={PRICING_FAQS} />
-      </div>
-    </Section>
+    <PageSection
+      id="faq"
+      layout="aside"
+      title="Pricing questions"
+      lead={
+        <>
+          More answers on data, security and billing in the{' '}
+          <TextLink asChild text="inherit">
+            <a href="/faq">full FAQ</a>
+          </TextLink>
+          {'.'}
+        </>
+      }
+    >
+      <FaqList items={PRICING_FAQS.map((faq) => ({ question: faq.q, answer: faq.a }))} exclusive />
+    </PageSection>
   );
 }
 
 /** Closing band: see the product on your own category before choosing. */
 export function PricingCta() {
   return (
-    <Section className="marketing-closing-band" aria-label="Get started">
-      <div className="flex flex-col items-center gap-8 text-center" data-cta-placement="closing">
-        <SectionHeader
-          title="See it on your own category first"
-          lead="Walk through your prompts, competitors and cited sources with us, then pick the volume you need."
-          align="center"
-        />
-        <div className="flex flex-wrap justify-center gap-3">
-          <DemoButtonLink size="marketing">{DEMO_CTA}</DemoButtonLink>
-          <ButtonLink href="/enterprise" variant="soft" size="marketing">
-            Enterprise
-          </ButtonLink>
-        </div>
-      </div>
-    </Section>
+    <PageSection label="Get started">
+      <CtaBand
+        title="See it on your own category first"
+        lead="Walk through your prompts, competitors and cited sources with us, then pick the volume you need."
+        actions={
+          <>
+            <DemoButtonLink size="marketing">{DEMO_CTA}</DemoButtonLink>
+            <ButtonLink href="/enterprise" variant="soft" size="marketing">
+              Enterprise
+            </ButtonLink>
+          </>
+        }
+      />
+    </PageSection>
   );
 }

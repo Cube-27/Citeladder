@@ -340,12 +340,10 @@ describe('faq and solutions content', () => {
     }
   });
 
-  it('gives every solution segment a renderable scene', () => {
-    const scenes = new Set(['share', 'health', 'sample', 'commerce', 'citations']);
-    expect(SOLUTION_SEGMENTS.length).toBeGreaterThan(0);
-    for (const segment of SOLUTION_SEGMENTS) {
-      expect(scenes.has(segment.scene), segment.scene).toBe(true);
-    }
+  it('gives every team on Solutions its own product screen', () => {
+    const screens = SOLUTION_SEGMENTS.map((segment) => segment.screen);
+    expect(screens.length).toBeGreaterThan(0);
+    expect(new Set(screens).size).toBe(screens.length);
   });
 });
 

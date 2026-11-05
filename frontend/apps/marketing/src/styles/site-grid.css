@@ -21,13 +21,11 @@
      product view, a card gap inside the frame.
    - `.site-cards`: a grid of cards reaching out to a card gap from the frame
      lines; `.site-card`: one white card, padded `--site-card-pad`.
-   - `.site-split` (and the shared `.mk-split` and `.mk-dive`): side-by-side
-     cells with a divider down the middle of the gap from 64rem, stacked
-     below it with a frame-wide rule between them. Every split on every page
-     shares one column template, narrow copy beside the wider cell, so all
-     dividers fall on one vertical line.
-   - `.site-rows`: a stack of rows (usually splits) with a frame-wide rule
-     between rows, each row a cell height from its rules. */
+   - `.mk-split` and `.mk-dive`: side-by-side cells with a divider down the
+     middle of the gap from 64rem, stacked below it with a frame-wide rule
+     between them. Every split on every page shares one column template,
+     narrow copy beside the wider cell, so all dividers fall on one vertical
+     line. */
 
 /* Website layout roles until PR 6 replaces the site grid. */
 [data-public-surface] {
@@ -121,42 +119,20 @@
 
 /* Cards ──────────────────────────────────────────────────────────────────── */
 
-.site-frame :is(.site-cards, .mk-related, .mk-questions) {
+.site-frame .site-cards {
   gap: calc(var(--site-card-gap) * 2);
   margin-inline: calc(var(--site-card-gap) - var(--site-cell-inset));
 }
 
 /* The shared page parts that are cards take the one card: white on the
    ground, the card radius, a line ring and the chip's soft lift. */
-.site-frame
-  :is(
-    .site-card,
-    .mk-related-card,
-    .mk-questions li,
-    .ed-ledger a,
-    .cp-tool-row,
-    .cp-tool,
-    .cp-feature,
-    .cm-plan,
-    .cm-access,
-    .cm-contact-panel
-  ) {
+.site-frame :is(.site-card, .mk-related-card, .ed-ledger a, .cp-tool-row, .cp-tool, .cp-feature) {
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: 0 0 0 1px var(--color-line);
 }
 
-.site-frame
-  :is(
-    .site-card,
-    .mk-related-card,
-    .mk-questions li,
-    .ed-ledger a,
-    .cp-tool-row,
-    .cm-plan,
-    .cm-access,
-    .cm-contact-panel
-  ) {
+.site-frame :is(.site-card, .mk-related-card, .ed-ledger a, .cp-tool-row) {
   padding: var(--site-card-pad);
 }
 
@@ -171,25 +147,25 @@
   background: var(--color-surface-sunken);
 }
 
-/* Splits and rows ────────────────────────────────────────────────────────── */
+/* Splits ─────────────────────────────────────────────────────────────────── */
 
-/* Cells and rows are a cell height from every rule, so stacked cells and
-   rows sit two cell heights apart with the rule midway, and side-by-side
+/* Cells are a cell height from every rule, so stacked cells sit two cell
+   heights apart with the rule midway, and side-by-side
    cells a cell inset either side of the divider. Cell content starts at
    the top of its cell. */
-.site-frame :is(.site-split, .mk-split, .mk-dive) {
+.site-frame :is(.mk-split, .mk-dive) {
   position: relative;
   display: grid;
   gap: calc(var(--site-cell-y) * 2) calc(var(--site-cell-inset) * 2);
   align-items: stretch;
 }
 
-.site-frame :is(.site-split, .mk-split, .mk-dive) > * {
+.site-frame :is(.mk-split, .mk-dive) > * {
   align-content: start;
 }
 
 /* Stacked, the rule sits on the second row's line and spans the frame. */
-.site-frame :is(.site-split, .mk-split, .mk-dive)::after {
+.site-frame :is(.mk-split, .mk-dive)::after {
   content: '';
   position: absolute;
   grid-row: 2;
@@ -205,11 +181,11 @@
    the same line in every band; it is drawn midway through the gap and runs
    a cell height past the cells to the rules. */
 @media (min-width: 64rem) {
-  .site-frame :is(.site-split, .mk-split, .mk-dive) {
+  .site-frame :is(.mk-split, .mk-dive) {
     grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   }
 
-  .site-frame :is(.site-split, .mk-split, .mk-dive)::after {
+  .site-frame :is(.mk-split, .mk-dive)::after {
     grid-row: 1;
     grid-column: 2;
     top: calc(var(--site-cell-y) * -1);
@@ -219,22 +195,4 @@
     border-top: 0;
     border-left: 1px solid var(--color-line);
   }
-}
-
-.site-frame .site-rows {
-  gap: calc(var(--site-cell-y) * 2);
-}
-
-.site-frame .site-rows > * {
-  position: relative;
-}
-
-.site-frame .site-rows > * + *::before {
-  content: '';
-  position: absolute;
-  top: calc(var(--site-cell-y) * -1);
-  right: calc(var(--site-cell-inset) * -1);
-  left: calc(var(--site-cell-inset) * -1);
-  border-top: 1px solid var(--color-line);
-  pointer-events: none;
 }

@@ -1,7 +1,15 @@
 ---
-import { PageHero } from '@/components/marketing/primitives/page-hero';
+import { ButtonLink } from '@/components/marketing/primitives/button';
+import { RelatedCards } from '@/components/marketing/sections/cards';
+import { PageHero } from '@/components/marketing/sections/heroes';
+import { PageSection } from '@/components/marketing/sections/page-section';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 import { NOT_FOUND_LINKS } from '../not-found';
+
+// Home and Contact lead as buttons; the rest are the suggested pages.
+const suggested = NOT_FOUND_LINKS.filter((link) => link.href !== '/' && link.href !== '/contact').map(
+  (link) => ({ href: link.href, title: link.label, linkLabel: 'Open' }),
+);
 ---
 
 <MarketingLayout
@@ -11,23 +19,22 @@ import { NOT_FOUND_LINKS } from '../not-found';
 >
   <main id="main">
     <PageHero
-      centered
+      eyebrow="404"
       title="We couldn't find that page"
       lead="It may have moved, or the link may be wrong. Try one of these pages instead."
-    >
-      <nav aria-label="Suggested pages" class="mt-8">
-        <ul class="website-body flex flex-wrap justify-center gap-x-6 gap-y-3">
-          {
-            NOT_FOUND_LINKS.map((link) => (
-              <li>
-                <a class="mk-text-link" href={link.href}>
-                  {link.label}
-                </a>
-              </li>
-            ))
-          }
-        </ul>
-      </nav>
-    </PageHero>
+      actions={
+        <>
+          <ButtonLink href="/" size="marketing">
+            Home
+          </ButtonLink>
+          <ButtonLink href="/contact" variant="soft" size="marketing">
+            Contact
+          </ButtonLink>
+        </>
+      }
+    />
+    <PageSection spacing="compact" label="Suggested pages">
+      <RelatedCards items={suggested} />
+    </PageSection>
   </main>
 </MarketingLayout>

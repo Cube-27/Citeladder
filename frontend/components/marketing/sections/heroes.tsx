@@ -31,7 +31,8 @@ export function PageHero({
   children?: ReactNode;
 }>) {
   return (
-    <section className={cn('cl-phero', `cl-phero--${size}`)}>
+    // `data-cta-placement` names where a clicked call to action sat, for marketing analytics.
+    <section className={cn('cl-phero', `cl-phero--${size}`)} data-cta-placement="hero">
       <div className="cl-container">
         <div className="cl-phero-inner">
           {crumbs && <Breadcrumbs items={crumbs} />}

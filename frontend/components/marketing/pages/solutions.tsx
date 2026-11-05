@@ -1,118 +1,67 @@
-import type { ComponentType } from 'react';
-import { ArrowRight, Briefcase, Building2, Megaphone, ShoppingBag, Sparkles } from 'lucide-react';
+import { DEMO_CTA, DEMO_HREF } from '@/lib/marketing-content/nav';
+import { SOLUTION_SEGMENTS, SOLUTIONS_HERO } from '@/lib/marketing-content/solutions';
 
-import { DEMO_CTA } from '@/lib/marketing-content/nav';
-import {
-  SOLUTION_SEGMENTS,
-  SOLUTIONS_HERO,
-  type SolutionScene,
-} from '@/lib/marketing-content/solutions';
+import { ButtonLink, DemoButtonLink } from '../primitives/button';
+import { FeatureSplit } from '../sections/features';
+import { PageHero } from '../sections/heroes';
+import { PageSection } from '../sections/page-section';
+import { CtaBand } from '../sections/steps-faq-cta';
+import { CatalogFrame } from '../screens/screen-catalog';
 
-import { ButtonLink, DemoButtonLink, DemoTextLink } from '../primitives/button';
-import { PageHero } from '../primitives/page-hero';
-import { Section, SectionHeader } from '../primitives/section';
-import { ProductFrame } from '../screens/product-frame';
-import { ScreenCommerce } from '../screens/screens-agent';
-import { ScreenSiteHealth } from '../screens/screens-site';
-import { ScreenAnswer, ScreenSources, ScreenVisibility } from '../screens/screens-visibility';
-
-/**
- * `/solutions` — one page, one row per team: copy beside the product view
- * that team reads first. The section ids (`agencies`, `in-house`, `founders`,
- * `commerce`, `pr`) are targets of the nav's Solutions menu and the footer,
- * so they are part of the route's contract.
- */
-const SEGMENT_ICONS: Readonly<Record<string, ComponentType<{ className?: string }>>> = {
-  agencies: Briefcase,
-  'in-house': Building2,
-  founders: Sparkles,
-  commerce: ShoppingBag,
-  pr: Megaphone,
-};
-
-const SCENE_VIEWS: Readonly<Record<SolutionScene, { title: string; View: ComponentType }>> = {
-  share: { title: 'AI Visibility', View: ScreenVisibility },
-  health: { title: 'Site Health', View: ScreenSiteHealth },
-  sample: { title: 'Answer record', View: ScreenAnswer },
-  commerce: { title: 'AI Shelf', View: ScreenCommerce },
-  citations: { title: 'Sources', View: ScreenSources },
-};
-
-export function SolutionsHero() {
-  return (
-    <PageHero title={SOLUTIONS_HERO.title} lead={SOLUTIONS_HERO.lead} centered>
-      <nav aria-label="Solutions by team" className="ed-jump">
-        {SOLUTION_SEGMENTS.map(({ id, label }) => {
-          const Icon = SEGMENT_ICONS[id];
-          return (
-            <a key={id} href={`#${id}`} className="website-nav">
-              {Icon && <Icon aria-hidden className="size-4" />}
-              {label}
-            </a>
-          );
-        })}
-      </nav>
-    </PageHero>
-  );
-}
-
-export function SolutionSegments() {
+function SolutionsActions() {
   return (
     <>
-      {SOLUTION_SEGMENTS.map((segment) => {
-        const { title, View } = SCENE_VIEWS[segment.scene];
-        return (
-          <Section key={segment.id} id={segment.id} aria-labelledby={`${segment.id}-title`}>
-            <div className="mk-dive">
-              <div className="mk-dive-copy">
-                <h2
-                  id={`${segment.id}-title`}
-                  className="website-section-heading max-w-[26ch] text-balance"
-                >
-                  {segment.title}
-                </h2>
-                <p className="website-body max-w-[60ch]">{segment.lead}</p>
-                {segment.body && <p className="website-body max-w-[60ch]">{segment.body}</p>}
-                <div className="ed-segment-links">
-                  {segment.guide && (
-                    <a className="mk-text-link" href={segment.guide.href}>
-                      {segment.guide.label}
-                      <ArrowRight aria-hidden className="size-4" />
-                    </a>
-                  )}
-                  <DemoTextLink className="website-body">
-                    {segment.cta}
-                    <ArrowRight aria-hidden />
-                  </DemoTextLink>
-                </div>
-              </div>
-              <ProductFrame label={title}>
-                <View />
-              </ProductFrame>
-            </div>
-          </Section>
-        );
-      })}
+      <DemoButtonLink size="marketing">{DEMO_CTA}</DemoButtonLink>
+      <ButtonLink href="/pricing" variant="soft" size="marketing">
+        See pricing
+      </ButtonLink>
     </>
   );
 }
 
-export function SolutionsCta() {
+/**
+ * `/solutions`: one section per team, its copy beside the screen that team
+ * reads first, alternating sides. The section ids (`agencies`, `in-house`,
+ * `founders`, `commerce`, `pr`) are targets of the nav's Solutions menu and
+ * the footer, so they are part of the route's contract.
+ */
+export function SolutionsPage() {
   return (
-    <Section className="marketing-closing-band" aria-label="Get started">
-      <div className="flex flex-col items-center gap-8 text-center" data-cta-placement="closing">
-        <SectionHeader
+    <>
+      <PageHero
+        crumbs={[{ label: 'Home', href: '/' }, { label: 'Solutions' }]}
+        title={SOLUTIONS_HERO.title}
+        lead={SOLUTIONS_HERO.lead}
+        actions={<SolutionsActions />}
+      />
+      {SOLUTION_SEGMENTS.map((segment, index) => (
+        <PageSection
+          key={segment.id}
+          id={segment.id}
+          label={segment.label}
+          spacing={index === 0 ? 'compact' : 'default'}
+        >
+          <FeatureSplit
+            as="h2"
+            eyebrow={segment.label}
+            title={segment.title}
+            body={segment.body ? [segment.lead, segment.body] : segment.lead}
+            links={[
+              ...(segment.guide ? [segment.guide] : []),
+              { href: DEMO_HREF, label: segment.cta, demo: true },
+            ]}
+            reverse={index % 2 === 1}
+            media={<CatalogFrame screen={segment.screen} />}
+          />
+        </PageSection>
+      ))}
+      <PageSection label="Get started">
+        <CtaBand
           title="See the workflow that matches how you are measured"
           lead="Each team reads the same evidence differently. We will walk through the view your team reports on."
-          align="center"
+          actions={<SolutionsActions />}
         />
-        <div className="flex flex-wrap justify-center gap-3">
-          <DemoButtonLink size="marketing">{DEMO_CTA}</DemoButtonLink>
-          <ButtonLink href="/pricing" variant="soft" size="marketing">
-            See pricing
-          </ButtonLink>
-        </div>
-      </div>
-    </Section>
+      </PageSection>
+    </>
   );
 }

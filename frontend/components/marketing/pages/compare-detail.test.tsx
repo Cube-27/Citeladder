@@ -25,22 +25,24 @@ describe('comparison evidence and next steps', () => {
       );
     }
     expect(
-      within(screen.getByRole('list', { name: 'Questions to ask both vendors' })).getAllByRole(
-        'listitem',
-      ).length,
-    ).toBeGreaterThan(0);
-    expect(screen.getByRole('link', { name: 'CiteLadder pricing' })).toHaveAttribute(
+      within(screen.getByRole('region', { name: 'Questions to ask both vendors' })).getByText(
+        'Evidence',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /CiteLadder pricing/ })).toHaveAttribute(
       'href',
       '/pricing',
     );
-    expect(screen.getByRole('link', { name: 'Cited Sources' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /^Cited Sources/ })).toHaveAttribute(
       'href',
       '/platform/cited-sources',
     );
-    expect(screen.getByRole('link', { name: 'AI share of voice' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /AI share of voice/ })).toHaveAttribute(
       'href',
       '/ai-search-share-of-voice',
     );
-    expect(screen.getByRole('link', { name: 'Book a demo' })).toHaveAttribute('href', DEMO_HREF);
+    for (const demo of screen.getAllByRole('link', { name: 'Book a demo' })) {
+      expect(demo).toHaveAttribute('href', DEMO_HREF);
+    }
   });
 });

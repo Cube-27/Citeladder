@@ -1,7 +1,7 @@
 /** Public pricing copy. Amounts, limits and availability come from the catalog. */
 import { ownValue } from '@/lib/utils';
 
-export type PlanKey = 'tier_1' | 'tier_2' | 'tier_3' | 'enterprise';
+type PlanKey = 'tier_1' | 'tier_2' | 'tier_3' | 'enterprise';
 
 export type PlanPresentation = {
   blurb: string;

@@ -1,12 +1,12 @@
 /**
  * Audience-segment content for `/solutions`.
  *
- * One idea per team: who it is for, the proof it needs, and the product view
- * that shows it. `scene` selects which illustrative product view carries the
- * section. Views show the shape of a surface with synthetic data and never an
- * invented customer result.
+ * One idea per team: who it is for, the proof it needs, and the product
+ * screen that shows it; each team gets a different screen. Screens show the
+ * shape of a surface with the shared demo data and never an invented
+ * customer result.
  */
-export type SolutionScene = 'share' | 'health' | 'sample' | 'commerce' | 'citations';
+import type { PlatformScreen } from './platform-page-types';
 
 export type SolutionSegment = {
   id: string;
@@ -16,7 +16,7 @@ export type SolutionSegment = {
   body?: string;
   guide?: { label: string; href: string };
   cta: string;
-  scene: SolutionScene;
+  screen: PlatformScreen;
 };
 
 export const SOLUTIONS_HERO = {
@@ -33,7 +33,7 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
     body: 'Each finding can become a specific proposal, such as correcting how an answer describes a product or looking into a source that keeps getting cited.',
     guide: { label: 'Explore AI Visibility', href: '/platform/ai-visibility' },
     cta: 'Discuss an agency workflow',
-    scene: 'share',
+    screen: 'engines',
   },
   {
     id: 'in-house',
@@ -43,7 +43,7 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
     body: 'Visibility, referral traffic and commercial outcomes are reported as separate numbers, so an internal report never blends them into one.',
     guide: { label: 'Explore Search Demand', href: '/platform/search-demand' },
     cta: 'Discuss a team workflow',
-    scene: 'health',
+    screen: 'site-health',
   },
   {
     id: 'founders',
@@ -52,7 +52,7 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
     lead: 'You use this when you want to know whether ChatGPT names your company for the questions your buyers ask. The trial shows you the recorded answers and which competitors they mention. Book a demo to talk through site diagnostics and content work.',
     guide: { label: 'Explore the platform', href: '/platform' },
     cta: 'Request a first audit sample',
-    scene: 'sample',
+    screen: 'answer',
   },
   {
     id: 'commerce',
@@ -65,7 +65,7 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
       href: '/platform/product-visibility',
     },
     cta: 'Discuss an ecommerce workflow',
-    scene: 'commerce',
+    screen: 'commerce',
   },
   {
     id: 'pr',
@@ -74,6 +74,6 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
     lead: 'You use this when you need to know how engines describe your brand and where they get it from. You see each cited domain and page inside the answer that cited it. Retrieval evidence, where an engine provides it, helps you investigate. It cannot prove why the engine picked a source.',
     guide: { label: 'Explore Cited Sources', href: '/platform/cited-sources' },
     cta: 'See citation evidence',
-    scene: 'citations',
+    screen: 'sources',
   },
 ];

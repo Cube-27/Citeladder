@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { ArrowRight, Check } from 'lucide-react';
 
+import { DEMO_EXTERNAL } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
 /**
@@ -13,7 +14,14 @@ export function SiteArrowLink({
   href,
   children,
   className,
-}: Readonly<{ href?: string; children: ReactNode; className?: string }>) {
+  demo = false,
+}: Readonly<{
+  href?: string;
+  children: ReactNode;
+  className?: string;
+  /** Marks a link to the demo funnel, which marketing analytics counts as a demo click. */
+  demo?: boolean;
+}>) {
   const content = (
     <>
       <span className="cl-arrowlink-text">{children}</span>
@@ -22,7 +30,13 @@ export function SiteArrowLink({
   );
   if (!href) return <span className={cn('cl-arrowlink', className)}>{content}</span>;
   return (
-    <a href={href} className={cn('cl-arrowlink focus-ring', className)}>
+    <a
+      href={href}
+      className={cn('cl-arrowlink focus-ring', className)}
+      data-demo-cta={demo ? '' : undefined}
+      // The demo funnel may leave the site; its target and safe rel live here.
+      {...(demo && DEMO_EXTERNAL ? { target: '_blank', rel: 'noreferrer' } : {})}
+    >
       {content}
     </a>
   );
