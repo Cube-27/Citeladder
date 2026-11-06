@@ -10,12 +10,12 @@ import { sql } from 'kysely';
 import { z } from 'zod';
 import { logicalEngineSchema } from '@citeladder/contracts/providers';
 import { promptCohortSchema } from '@citeladder/contracts/project';
-import { requireCapability, type Actor } from '../auth/actor.ts';
 import { recordSecurityEvent, type McpWriteKind } from '../auth/security-events.ts';
 import { scheduleCreate } from '../audits/schedule-inputs.ts';
-import { declareAction, setActionStatus } from '../commands/actions.ts';
-import { cancelAudit, launchAudit } from '../commands/audits.ts';
-import { addCompetitor, removeCompetitor } from '../commands/competitors.ts';
+import { ACTIONS_WRITE, declareAction, setActionStatus } from '../commands/actions.ts';
+import { AUDITS_CANCEL, AUDITS_RUN, cancelAudit, launchAudit } from '../commands/audits.ts';
+import { addCompetitor, COMPETITORS_WRITE, removeCompetitor } from '../commands/competitors.ts';
+import { authorize, type Authorized, type Permission } from '../commands/permission.ts';
 import { auditRuntime } from '../audits/config.ts';
 import { estimateAudit } from '../audits/estimate.ts';
 import { marketIdList } from '../audits/inputs.ts';
@@ -25,12 +25,14 @@ import {
   createTopic,
   deleteTopic,
   previewTopics,
+  PROMPTS_RUN,
+  PROMPTS_WRITE,
   setPromptStatuses,
   startGeneration,
   updatePrompt,
   updateTopic,
 } from '../commands/prompts.ts';
-import { createSchedule } from '../commands/schedules.ts';
+import { createSchedule, SCHEDULES_WRITE } from '../commands/schedules.ts';
 import { configEnvironment, policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { plainJson } from '../db/json.ts';
@@ -102,20 +104,22 @@ const rehearse = <T>(db: Database, run: (trx: Database) => Promise<T>) =>
   operatorTransaction(db, false, run);
 
 /**
- * A single-step change: authorized for the project, run, and recorded in one
- * transaction. `run` returns the user-facing outcome.
+ * A single-step change: authorized for the project against its command's
+ * permission, run, and recorded in one transaction. `run` returns the
+ * user-facing outcome.
  */
-function direct<S extends z.ZodObject<{ project_id: typeof uuid }>>(
+function direct<S extends z.ZodObject<{ project_id: typeof uuid }>, P extends Permission>(
   kind: McpWriteKind,
+  permission: P,
   definition: Omit<Definition<S>, 'run'> & {
-    run: (trx: Database, actor: Actor, args: z.output<S>) => Promise<Evidence>;
+    run: (trx: Database, actor: Authorized<P>, args: z.output<S>) => Promise<Evidence>;
   },
 ): Definition<S> {
   return {
     ...definition,
     run: ({ db, principal }, args) =>
       db.transaction().execute(async (trx) => {
-        const actor = await writeActor(trx, principal, args.project_id);
+        const actor = authorize(await writeActor(trx, principal, args.project_id), permission);
         const outcome = await definition.run(trx, actor, args);
         await recordSecurityEvent(
           trx,
@@ -218,7 +222,7 @@ function generated(
 }
 
 const writeDefinitions = {
-  create_topic: direct('create_topic', {
+  create_topic: direct('create_topic', PROMPTS_WRITE, {
     title: 'Create a topic',
     description:
       'Add a topic, a named group of tracked prompts (for example "Pricing" or "Integrations") that visibility is broken down by. Runs at once and returns the topic id; pass it as topic_id to prepare_add_prompts to file new prompts under it. Topic names are unique in a project, ignoring case.',
@@ -243,7 +247,7 @@ const writeDefinitions = {
       };
     },
   }),
-  rename_topic: direct('rename_topic', {
+  rename_topic: direct('rename_topic', PROMPTS_WRITE, {
     title: 'Rename a topic',
     description:
       'Rename one topic, after the user agrees. Its prompts and past results stay under it, so prefer this to delete_topic and create_topic when only the name is wrong. Runs at once and returns the new name; refused if another topic in the project already has the name, or if topic_id is not in this project.',
@@ -260,7 +264,7 @@ const writeDefinitions = {
       return { summary: `Renamed the topic to "${topic.name}".` };
     },
   }),
-  update_prompt_text: direct('update_prompt_text', {
+  update_prompt_text: direct('update_prompt_text', PROMPTS_WRITE, {
     title: 'Edit a prompt',
     description:
       "Replace the wording of one tracked prompt, after the user agrees, such as to fix a typo or make it read like a buyer's question. Runs at once and returns the new wording; earlier measurements keep the old wording, so results before and after the edit may not compare. To stop measuring a prompt use prepare_archive_prompts, and to add new ones prepare_add_prompts. Refused if prompt_id is not in this project.",
@@ -279,7 +283,7 @@ const writeDefinitions = {
       return { summary: `The prompt now reads "${prompt.text}".` };
     },
   }),
-  add_competitor: direct('add_competitor', {
+  add_competitor: direct('add_competitor', COMPETITORS_WRITE, {
     title: 'Add a competitor',
     description:
       'Track one more competitor, so visibility reads rank its mentions and citations in AI answers beside your brand. Runs at once; refused if the project already tracks that name or has reached its competitor limit. get_project_business_context lists the competitors tracked now.',
@@ -299,7 +303,7 @@ const writeDefinitions = {
       return { summary: `Now tracking ${competitor.name}.`, competitor: { id: competitor.id } };
     },
   }),
-  remove_competitor: direct('remove_competitor', {
+  remove_competitor: direct('remove_competitor', COMPETITORS_WRITE, {
     title: 'Stop tracking a competitor',
     description:
       'Stop tracking one competitor by name, as get_project_business_context lists it, so visibility reads no longer rank it. Recorded answers are kept. Runs at once and cannot be undone; add_competitor tracks it again but its aliases and domains must be given again.',
@@ -314,7 +318,7 @@ const writeDefinitions = {
       return { summary: `Stopped tracking ${competitor.name}.` };
     },
   }),
-  update_action_status: direct('update_action_status', {
+  update_action_status: direct('update_action_status', ACTIONS_WRITE, {
     title: 'Update an Action status',
     description:
       'Dismiss one Action the user does not want to act on, or reopen a dismissed one. Runs at once. To record that the work was done, use prepare_declare_implemented instead.',
@@ -331,7 +335,7 @@ const writeDefinitions = {
       return { summary: `The Action is now ${args.status}.` };
     },
   }),
-  cancel_audit: direct('cancel_audit', {
+  cancel_audit: direct('cancel_audit', AUDITS_CANCEL, {
     title: 'Cancel an audit',
     description:
       'Stop a queued or running audit, after the user agrees, such as one launched by mistake or on the wrong engines. Runs at once and cannot be undone; answers recorded so far are kept, and no further prompt runs are spent on it. To launch a corrected audit use prepare_launch_audit. Refused if the audit is not in this project or has already finished.',
@@ -347,7 +351,7 @@ const writeDefinitions = {
       return { summary: 'The audit was cancelled.' };
     },
   }),
-  delete_topic: direct('delete_topic', {
+  delete_topic: direct('delete_topic', PROMPTS_WRITE, {
     title: 'Delete a topic',
     description:
       'Delete one topic by name, after the user agrees, when the grouping itself is no longer wanted. Its prompts are kept, still tracked, without a topic, and its subtopics become top-level; recorded answers are kept. Runs at once and cannot be undone. To fix only the name use rename_topic; to stop measuring the prompts use prepare_archive_prompts.',
@@ -371,7 +375,10 @@ const writeDefinitions = {
     schema: z.strictObject(project),
     annotations: hints(false, false),
     run: async (context, args) => {
-      const actor = await writeActor(context.db, context.principal, args.project_id);
+      const actor = authorize(
+        await writeActor(context.db, context.principal, args.project_id),
+        PROMPTS_RUN,
+      );
       const preview = await previewTopics(context.db, actor, args.project_id);
       const existing = await listTopics(context.db, args.project_id);
       return {
@@ -384,7 +391,7 @@ const writeDefinitions = {
       };
     },
   }),
-  confirm_topics: direct('confirm_topics', {
+  confirm_topics: direct('confirm_topics', PROMPTS_WRITE, {
     title: 'Confirm topics',
     description:
       "Save the topic plan the user agreed to after preview_topics, in one change: create the topics they kept or added (each with the offerings preview_topics listed for it, or none), rename and delete existing ones. A deleted topic's prompts stay tracked without a topic. Runs at once and returns the project's topics with their ids for generate_prompts; refused if a named topic is not in this project or two topics would share a name.",
@@ -445,7 +452,10 @@ const writeDefinitions = {
     annotations: hints(false, true),
     run: async (context, args) => {
       const { project_id: projectId, prompt_set_id: setId, run_key: runKey, ...request } = args;
-      const actor = await writeActor(context.db, context.principal, projectId);
+      const actor = authorize(
+        await writeActor(context.db, context.principal, projectId),
+        PROMPTS_RUN,
+      );
       const set = await promptSetOf(context.db, projectId, setId);
       const result = await startGeneration(
         context.db,
@@ -501,7 +511,11 @@ const writeDefinitions = {
     }),
     annotations: hints(false, false),
     run: async (context, args) => {
-      const actor = await writeActor(context.db, context.principal, args.project_id);
+      // Refuse a role that cannot add before showing what would be added.
+      const actor = authorize(
+        await writeActor(context.db, context.principal, args.project_id),
+        PROMPTS_WRITE,
+      );
       const set = await promptSetOf(context.db, args.project_id, args.prompt_set_id);
       const inputs = args.prompts.map((item) =>
         promptInput.parse({
@@ -511,8 +525,6 @@ const writeDefinitions = {
           cohort: item.cohort ?? 'core',
         }),
       );
-      // Refuse a role that cannot add before showing what would be added.
-      requireCapability(actor, 'write');
       const screened = await screenPrompts(
         context.db,
         { workspaceId: actor.workspaceId, projectId: args.project_id },
@@ -560,7 +572,10 @@ const writeDefinitions = {
     }),
     annotations: hints(true, true),
     run: async (context, args) => {
-      const actor = await writeActor(context.db, context.principal, args.project_id);
+      const actor = authorize(
+        await writeActor(context.db, context.principal, args.project_id),
+        PROMPTS_WRITE,
+      );
       const rows = await scopedPrompts(
         context.db,
         { workspaceId: actor.workspaceId, projectId: args.project_id },
@@ -626,7 +641,10 @@ const writeDefinitions = {
     }),
     annotations: hints(false, false),
     run: async (context, args) => {
-      const actor = await writeActor(context.db, context.principal, args.project_id);
+      const actor = authorize(
+        await writeActor(context.db, context.principal, args.project_id),
+        AUDITS_RUN,
+      );
       const promptIds = args.prompt_ids ?? [];
       const setId = promptIds.length
         ? null
@@ -697,7 +715,10 @@ const writeDefinitions = {
     }),
     annotations: hints(false, false),
     run: async (context, args) => {
-      const actor = await writeActor(context.db, context.principal, args.project_id);
+      const actor = authorize(
+        await writeActor(context.db, context.principal, args.project_id),
+        SCHEDULES_WRITE,
+      );
       const set = await promptSetOf(context.db, args.project_id, args.prompt_set_id);
       const schedule = scheduleCreate.parse({
         prompt_set_id: set.id,
@@ -735,7 +756,10 @@ const writeDefinitions = {
     }),
     annotations: hints(false, false),
     run: async (context, args) => {
-      const actor = await writeActor(context.db, context.principal, args.project_id);
+      const actor = authorize(
+        await writeActor(context.db, context.principal, args.project_id),
+        ACTIONS_WRITE,
+      );
       const declaration = payloads.declare_implemented.shape.declaration.parse({
         declared_implemented_at: args.declared_implemented_at ?? new Date().toISOString(),
       });

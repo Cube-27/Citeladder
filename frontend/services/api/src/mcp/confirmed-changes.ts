@@ -5,12 +5,13 @@
  */
 import { z } from 'zod';
 import type { Actor } from '../auth/actor.ts';
+import { authorize } from '../commands/permission.ts';
 import { scheduleCreate } from '../audits/schedule-inputs.ts';
 import { auditLaunchInput } from '../audits/inputs.ts';
-import { declareAction } from '../commands/actions.ts';
-import { launchAudit } from '../commands/audits.ts';
-import { createPrompts, setPromptStatuses } from '../commands/prompts.ts';
-import { createSchedule } from '../commands/schedules.ts';
+import { ACTIONS_WRITE, declareAction } from '../commands/actions.ts';
+import { AUDITS_RUN, launchAudit } from '../commands/audits.ts';
+import { createPrompts, PROMPTS_WRITE, setPromptStatuses } from '../commands/prompts.ts';
+import { createSchedule, SCHEDULES_WRITE } from '../commands/schedules.ts';
 import type { ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { promptInput } from '../prompts/prompts.ts';
@@ -46,7 +47,7 @@ const runs: Record<ConfirmedKind, Run> = {
     const payload = payloads.add_prompts.parse(change.payload);
     const created = await createPrompts(
       trx,
-      actor,
+      authorize(actor, PROMPTS_WRITE),
       change.projectId,
       payload.prompt_set_id,
       payload.prompts,
@@ -58,10 +59,11 @@ const runs: Record<ConfirmedKind, Run> = {
   },
   archive_prompts: async (trx, _config, actor, change) => {
     const payload = payloads.archive_prompts.parse(change.payload);
+    const writer = authorize(actor, PROMPTS_WRITE);
     for (const group of payload.groups)
       await /* NOSONAR -- One transaction: groups apply in order. */ setPromptStatuses(
         trx,
-        actor,
+        writer,
         change.projectId,
         group.prompt_set_id,
         {
@@ -74,7 +76,13 @@ const runs: Record<ConfirmedKind, Run> = {
   },
   launch_audit: async (trx, config, actor, change) => {
     const payload = payloads.launch_audit.parse(change.payload);
-    const audits = await launchAudit(trx, config, actor, payload.project_id, payload.request);
+    const audits = await launchAudit(
+      trx,
+      config,
+      authorize(actor, AUDITS_RUN),
+      payload.project_id,
+      payload.request,
+    );
     const launched = audits.length === 1 ? 'the audit' : `${audits.length} audits, one per market`;
     return {
       summary: `Launched ${launched}. Queued; runs start shortly.`,
@@ -83,7 +91,12 @@ const runs: Record<ConfirmedKind, Run> = {
   },
   schedule: async (trx, _config, actor, change) => {
     const payload = payloads.schedule.parse(change.payload);
-    const schedule = await createSchedule(trx, actor, payload.project_id, payload.schedule);
+    const schedule = await createSchedule(
+      trx,
+      authorize(actor, SCHEDULES_WRITE),
+      payload.project_id,
+      payload.schedule,
+    );
     return {
       summary: `Created a ${schedule.cadence} audit schedule.`,
       schedule: { id: schedule.id, next_run_at: schedule.next_run_at },
@@ -93,7 +106,7 @@ const runs: Record<ConfirmedKind, Run> = {
     const payload = payloads.declare_implemented.parse(change.payload);
     const { declaration } = await declareAction(
       trx,
-      actor,
+      authorize(actor, ACTIONS_WRITE),
       change.projectId,
       payload.action_id,
       payload.declaration,

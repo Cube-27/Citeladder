@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { beforeAll, afterAll, describe, it, expect } from 'vitest';
 import { createApp } from '../src/app.ts';
+import { memberCan } from '../src/auth/workspace.ts';
 import { policy } from '../src/config.ts';
 import { hashInvitationToken } from '../src/workspaces/invitations.ts';
 import { recordAccountTermsDecision } from '../src/workspaces/policies.ts';
@@ -156,6 +157,21 @@ describe('workspace authorization and root allocation', () => {
           .executeTakeFirstOrThrow()
       ).role,
     ).toBe('member');
+  });
+
+  it('answers a stored actor capability from the live membership of that workspace only', async () => {
+    const writer = await fixtures.user();
+    actors.push(writer);
+    await fixtures.member(workspace, writer, 'member');
+    const foreign = await fixtures.ownedWorkspace(await fixtures.user());
+    const answers = async () => [
+      await memberCan(db, workspace, writer, 'write'),
+      await memberCan(db, workspace, writer, 'manage_members'),
+      await memberCan(db, foreign, writer, 'read'),
+    ];
+    expect(await answers()).toEqual([true, false, false]);
+    await db.updateTable('users').set({ is_active: false }).where('id', '=', writer).execute();
+    expect(await answers()).toEqual([false, false, false]);
   });
 });
 
