@@ -1,13 +1,13 @@
 ---
 import { EntitySections } from '@/components/marketing/content/reference-sections';
 import { REFERENCE_ENTITIES } from '@/lib/marketing-content/ai-reference';
+import { PAGES } from '@/lib/marketing-content/pages';
 import ReferenceLayout from '../layouts/ReferenceLayout.astro';
 ---
 
 <ReferenceLayout
   title="Entity Map"
-  pageTitle="Entity Map · CiteLadder"
-  description="Explore CiteLadder's product, Cube27 company identity, people, capabilities, and AEO concepts through linked definitions and official sources."
+  page={PAGES.entityMap}
   lead="A linked reference to CiteLadder, the company behind it, its people, product capabilities, and related concepts. These definitions reflect CiteLadder's own published information; each entry links to its source."
   sections={REFERENCE_ENTITIES.map((entity) => ({ id: entity.id, title: entity.name }))}
 >

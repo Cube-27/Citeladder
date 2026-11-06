@@ -4,8 +4,7 @@ import { platformLabel } from '@/lib/marketing-content/nav';
 
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { ProductFrame } from '../screens/product-frame';
-import { ScreenEngines } from '../screens/screens-search';
-import { ScreenVisibility } from '../screens/screens-visibility';
+import { MODULE_SCREENS, SCREEN_CATALOG } from '../screens/screen-catalog';
 import { RelatedCards } from '../sections/cards';
 import { Bento, FeatureCard, FeatureSplit } from '../sections/features';
 import { PageHero } from '../sections/heroes';
@@ -28,6 +27,8 @@ export function CommercialEntryPage({
   page,
   product,
 }: Readonly<{ page: CommercialPage; product: CommercialProduct }>) {
+  const HeroScreen = SCREEN_CATALOG.visibility.View;
+  const ProductScreen = SCREEN_CATALOG[MODULE_SCREENS[product.href].screen].View;
   return (
     <>
       <PageHero
@@ -46,7 +47,7 @@ export function CommercialEntryPage({
         }
       >
         <ProductFrame label="AI Visibility" fit="scale">
-          <ScreenVisibility />
+          <HeroScreen />
         </ProductFrame>
       </PageHero>
 
@@ -75,7 +76,7 @@ export function CommercialEntryPage({
           links={[{ href: product.href, label: `Explore ${platformLabel(product.href)}` }]}
           media={
             <ProductFrame label="Answer engines">
-              <ScreenEngines />
+              <ProductScreen />
             </ProductFrame>
           }
         />

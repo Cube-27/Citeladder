@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { render, screen, within } from '@testing-library/react';
 
-import { FOOTER_LEGAL_LINKS, PARENT_COMPANY } from '@/lib/marketing-content/legal';
+import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
+import { FOOTER_LEGAL_LINKS } from '@/lib/marketing-content/legal-documents';
 import { PUBLISHED_PLATFORM } from '@/lib/marketing-content/nav';
 
 import { SiteFooter } from './site-footer';

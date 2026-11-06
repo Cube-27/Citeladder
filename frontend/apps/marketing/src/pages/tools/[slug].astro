@@ -15,6 +15,7 @@ import { MetaChecker, StructuredDataBuilder } from '@/components/marketing/tools
 import { CrawlerChecker, RobotsGenerator } from '@/components/marketing/tools/robots-tools';
 import { SitemapComparison } from '@/components/marketing/tools/sitemap-tool';
 import { SocialPreview } from '@/components/marketing/tools/social-tool';
+import { FREE_TOOL_LIMIT_LABELS } from '@/lib/config/free-tools';
 import { FREE_TOOLS, TOOL_GUIDES } from '@/lib/marketing-content/tools';
 import { faqPageJsonLd } from '@/lib/seo/json-ld';
 import catalog from '@/services/api/src/config/crawlers.json';
@@ -41,7 +42,7 @@ const bots = catalog.bots.map((bot) => ({ label: bot.label, purpose: bot.purpose
       crumbs={[{ label: 'Free tools', href: '/tools' }, { label: tool.title }]}
       title={tool.title}
       lead={tool.description}
-      meta="Your input is processed in this browser. Text and files are not uploaded or saved by this tool. Use up to 200,000 characters per text area."
+      meta={`Your input is processed in this browser. Text and files are not uploaded or saved by this tool. Use up to ${FREE_TOOL_LIMIT_LABELS.text} characters per text area.`}
     />
     <PageSection label={tool.title} spacing="compact">
       <noscript><p>Enable JavaScript to run this browser-based tool. No account is required.</p></noscript>

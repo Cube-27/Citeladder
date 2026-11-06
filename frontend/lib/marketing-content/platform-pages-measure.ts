@@ -4,6 +4,7 @@ import { TRIAL_NOTE, type PlatformPage } from './platform-page-types';
 export const MEASURE_PAGES: readonly PlatformPage[] = [
   {
     path: '/platform',
+    updated: '2026-11-06',
     title: 'AI Search Visibility Platform | CiteLadder',
     description:
       'See how ChatGPT, Gemini, Claude and Google AI Overviews answer your buyers, which pages they cite, and a ranked list of what to change on your site.',
@@ -144,6 +145,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
   },
   {
     path: '/platform/ai-visibility',
+    updated: '2026-11-06',
     title: 'AI Visibility Tracking & Brand Monitoring | CiteLadder',
     description:
       'Track brand mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude and Google AI Overviews, with every result tied to its recorded answer.',
@@ -303,6 +305,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
   },
   {
     path: '/platform/cited-sources',
+    updated: '2026-11-06',
     title: 'AI Citation Tracking Software & Source Analysis | CiteLadder',
     description:
       'See which domains and pages AI answers cite, compare owned and third-party sources, and find cited pages that list competitors but not you.',

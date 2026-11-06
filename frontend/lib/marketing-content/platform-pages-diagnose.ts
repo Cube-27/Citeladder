@@ -4,6 +4,7 @@ import { type PlatformPage } from './platform-page-types';
 export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
   {
     path: '/platform/site-health',
+    updated: '2026-11-06',
     title: 'AEO Website Audit & Technical SEO Checks | CiteLadder',
     description:
       'Crawl your site for technical SEO, answer-readiness and AI crawler access issues, with page-level evidence for every finding and a recrawl to verify fixes.',
@@ -137,6 +138,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
   },
   {
     path: '/platform/search-demand',
+    updated: '2026-11-06',
     title: 'Search Demand & GSC Opportunity Analysis | CiteLadder',
     description:
       'Find the Search Console queries ranking at positions 4 to 15, pages with weak click-through, two pages competing for one query, and queries rising or falling.',
@@ -253,6 +255,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
   },
   {
     path: '/platform/keyword-research',
+    updated: '2026-11-06',
     title: 'Keyword, Competitor & Backlink Research | CiteLadder',
     description:
       'Research keywords, competing domains, top pages and backlinks with optional DataForSEO datasets, priced and confirmed before collection.',

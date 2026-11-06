@@ -10,7 +10,9 @@ import { CONTACT_EMAIL } from '@/lib/config/contact';
 const email = PARENT_COMPANY.email;
 
 export const REFUND_POLICY: LegalDocument = {
-  slug: 'refund-policy',
+  path: '/refund-policy',
+  metaTitle: 'Refund Policy · CiteLadder',
+  updated: '2026-10-12',
   title: 'Refund Policy',
   description: 'When CiteLadder purchases are refunded, how to ask, and what a refund changes.',
   sections: [
@@ -82,7 +84,9 @@ export const REFUND_POLICY: LegalDocument = {
 };
 
 export const CANCELLATION_POLICY: LegalDocument = {
-  slug: 'cancellation-policy',
+  path: '/cancellation-policy',
+  metaTitle: 'Cancellation Policy · CiteLadder',
+  updated: '2026-10-12',
   title: 'Cancellation Policy',
   description: 'How to cancel a CiteLadder subscription and what happens to access and data.',
   sections: [
@@ -146,9 +150,12 @@ const entityLines = [
 ].filter((line): line is string => line !== null);
 
 export const CONTACT_PAGE: LegalDocument = {
-  slug: 'contact',
+  path: '/contact',
+  metaTitle: 'Contact CiteLadder',
+  updated: '2026-10-12',
   title: 'Contact',
-  description: 'How to reach CiteLadder for support, billing, privacy and complaints.',
+  description:
+    'Get in touch with CiteLadder for product questions, demos, partnerships, or help evaluating AI search visibility for your business.',
   sections: [
     {
       id: 'company',

@@ -4,7 +4,6 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { AnnouncementPill } from '../chrome/announcement-pill';
 import { Breadcrumbs } from '../chrome/breadcrumbs';
 import { EngineStrip, LogoTile, QuestionCards, RelatedCards } from './cards';
-import { CompareTable } from './compare-table';
 import { Bento, FeatureCard, FeatureSplit } from './features';
 import { LandingHero, PageHero } from './heroes';
 import { PageForm } from './page-form';
@@ -373,26 +372,6 @@ describe('pricing and comparison', () => {
         .getAllByRole('cell')
         .map((cell) => cell.textContent),
     ).toEqual(['30', '120']);
-  });
-
-  it('gives each comparison verdict a word', () => {
-    render(
-      <CompareTable
-        competitor="Profound"
-        groups={[
-          { rows: [{ feature: 'Site checks', us: 'yes', them: 'partial', note: 'Crawler rules' }] },
-        ]}
-      />,
-    );
-    const row = screen.getByRole('row', { name: /Site checks/ });
-    expect(
-      within(row)
-        .getAllByRole('cell')
-        .map((cell) => cell.textContent),
-    ).toEqual(['Yes', 'Partial', 'Crawler rules']);
-    expect(
-      screen.getByRole('table', { name: 'CiteLadder compared with Profound' }),
-    ).toBeInTheDocument();
   });
 
   it('closes a CTA band with its actions', () => {

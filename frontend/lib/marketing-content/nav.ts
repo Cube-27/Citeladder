@@ -6,7 +6,8 @@
  */
 import { docsHref } from '@/lib/config/docs';
 
-import { FOOTER_LEGAL_LINKS, PARENT_COMPANY } from './legal';
+import { PARENT_COMPANY } from './legal';
+import { FOOTER_LEGAL_LINKS } from './legal-documents';
 import { CITELADDER_GITHUB, CITELADDER_LINKEDIN, CITELADDER_X } from './social';
 
 type NavDropKey = 'platform' | 'solutions' | 'resources';

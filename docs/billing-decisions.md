@@ -570,6 +570,13 @@ feature that reaches the gateway without a declared cap fails loudly. The Agent
 keeps its own output sizing (B60). Source:
 [architecture untangle](plans/architecture-untangle.md) K3.
 
+**B68 — Owner, 2026-11-07.** The owner confirmed both engineering values: the
+$25 a day ceiling on included and uncharged platform cost (B66), and the
+per-feature output caps, 16,000 tokens for prompt generation and project
+research and 8,000 for the rest (B67). Source: owner reply in the
+architecture-untangle orchestration session ("Keep them"); architecture
+untangle OD8.
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,

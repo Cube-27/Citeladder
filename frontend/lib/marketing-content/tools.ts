@@ -1,3 +1,5 @@
+import { FREE_TOOL_LIMIT_LABELS } from '@/lib/config/free-tools';
+
 import type { FaqItem } from './faq';
 
 /** `updated` is the page's sitemap <lastmod>: revise it when the tool or its guide changes. */
@@ -146,7 +148,7 @@ export const TOOL_GUIDES: Partial<Record<FreeToolSlug, ToolGuide>> = {
       },
       {
         q: 'How large a sitemap can I compare?',
-        a: 'Up to 10,000 entries per file, within the 200,000-character limit for each text area. Files are read in this browser and are not uploaded.',
+        a: `Up to ${FREE_TOOL_LIMIT_LABELS.sitemapUrls} entries per file, within the ${FREE_TOOL_LIMIT_LABELS.text}-character limit for each text area. Files are read in this browser and are not uploaded.`,
       },
     ],
   },

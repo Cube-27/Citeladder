@@ -21,6 +21,8 @@ import {
 import { publicPricingSelectionHref } from '@/lib/billing/public-pricing-selection';
 import { CONTACT_SALES_HREF } from '@/lib/config/billing';
 import { contactSalesHref } from '@/lib/config/contact';
+import type { PublicTrial } from '@/lib/config/public-trial';
+import { countWord } from '@/lib/marketing-content/count-words';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { formatCount } from '@/lib/format';
 import {
@@ -229,21 +231,20 @@ function ByokSwitch({
   );
 }
 
-/**
- * The public trial's published limits. These restate the trial answer in
- * `lib/marketing-content/faq.ts` ("What is included in the current public
- * trial?"); change both together.
- */
-const TRIAL_LIMITS = [
-  { label: 'Length', value: '7 days' },
-  { label: 'Engine', value: 'ChatGPT only' },
-  { label: 'Projects', value: '1' },
-  { label: 'Prompts', value: '20' },
-  { label: 'Monitored URLs', value: '20' },
-  { label: 'Successful answers', value: '20, one per prompt' },
-] as const;
+/** The public trial's published limits. */
+function trialLimits(trial: PublicTrial) {
+  return [
+    { label: 'Length', value: `${trial.days} days` },
+    { label: 'Engine', value: 'ChatGPT only' },
+    { label: 'Projects', value: `${trial.projects}` },
+    { label: 'Prompts', value: `${trial.prompts}` },
+    { label: 'Monitored URLs', value: `${trial.monitoredUrls}` },
+    { label: 'Successful answers', value: `${trial.answers}, one per prompt` },
+  ];
+}
 
-const TRIAL_EXCLUSIONS = 'Includes 500 AI credits. Agent access is not included.';
+const trialExclusions = (trial: PublicTrial) =>
+  `Includes ${trial.aiCredits} AI credits. Agent access is not included.`;
 
 function TrialButton({ appOrigin, primary }: Readonly<{ appOrigin: string; primary: boolean }>) {
   return (
@@ -272,7 +273,8 @@ function TrialButton({ appOrigin, primary }: Readonly<{ appOrigin: string; prima
 function PricingTrial({
   appOrigin,
   checkoutOpen,
-}: Readonly<{ appOrigin: string; checkoutOpen: boolean }>) {
+  trial,
+}: Readonly<{ appOrigin: string; checkoutOpen: boolean; trial: PublicTrial }>) {
   const signupOpen = selfServeSignupOpen();
   if (checkoutOpen && !signupOpen) return null;
   if (!checkoutOpen && !signupOpen) {
@@ -295,16 +297,16 @@ function PricingTrial({
         <PageHighlight
           as="h2"
           title="Try it first"
-          body={`A seven-day trial on ChatGPT answers. ${TRIAL_EXCLUSIONS}`}
-          stats={TRIAL_LIMITS}
+          body={`A ${countWord(trial.days)}-day trial on ChatGPT answers. ${trialExclusions(trial)}`}
+          stats={trialLimits(trial)}
           action={<TrialButton appOrigin={appOrigin} primary={false} />}
         />
       ) : (
         <PageHighlight
           as="h2"
           title="What the trial includes"
-          body={`See how ChatGPT answers your buyers' questions before you commit. Paid checkout is not open; contact us to continue after the trial. ${TRIAL_EXCLUSIONS}`}
-          stats={TRIAL_LIMITS}
+          body={`See how ChatGPT answers your buyers' questions before you commit. Paid checkout is not open; contact us to continue after the trial. ${trialExclusions(trial)}`}
+          stats={trialLimits(trial)}
           action={<TrialButton appOrigin={appOrigin} primary />}
         />
       )}
@@ -352,11 +354,18 @@ export function PublicPricingCatalog({
   catalog,
   appOrigin,
   initialByok,
-}: Readonly<{ catalog: BillingCatalog; appOrigin: string; initialByok: boolean }>) {
+  trial,
+}: Readonly<{
+  catalog: BillingCatalog;
+  appOrigin: string;
+  initialByok: boolean;
+  /** The public trial's numbers, passed in so its config stays out of the browser bundle. */
+  trial: PublicTrial;
+}>) {
   const [byok, setByok] = useState(initialByok);
   const mode = byok ? 'byok' : 'funded';
   if (selfServeCheckoutComingSoon(catalog)) {
-    return <PricingTrial appOrigin={appOrigin} checkoutOpen={false} />;
+    return <PricingTrial appOrigin={appOrigin} checkoutOpen={false} trial={trial} />;
   }
   const origin = new URL(appOrigin);
   const extras = [
@@ -404,7 +413,7 @@ export function PublicPricingCatalog({
           </p>
         </div>
       </PageSection>
-      <PricingTrial appOrigin={appOrigin} checkoutOpen />
+      <PricingTrial appOrigin={appOrigin} checkoutOpen trial={trial} />
       <PricingComparison catalog={catalog} />
       {extras.length > 0 && (
         <PageSection

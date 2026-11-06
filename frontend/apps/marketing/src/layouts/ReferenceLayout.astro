@@ -12,29 +12,27 @@ import Prose from '@/components/content/Prose.astro';
 import { Breadcrumbs } from '@/components/marketing/chrome/breadcrumbs';
 import ContentArticle from '@/components/marketing/content/ContentArticle.astro';
 import { formatBlogDate } from '@/lib/marketing-content/blog-index';
-import { AI_REFERENCE_UPDATED } from '@/lib/marketing-content/ai-reference';
+import { PAGES, type PageRecord } from '@/lib/marketing-content/pages';
 import MarketingLayout from './MarketingLayout.astro';
 
 const REFERENCES = [
-  { title: 'AI Instructions', href: '/ai-instructions' },
-  { title: 'Entity Map', href: '/entity-map' },
+  { title: 'AI Instructions', href: PAGES.aiInstructions.path },
+  { title: 'Entity Map', href: PAGES.entityMap.path },
 ] as const;
 
 interface Props {
   title: (typeof REFERENCES)[number]['title'];
-  /** The browser title. */
-  pageTitle: string;
-  description: string;
+  /** The page's record: browser title, description, path and last-updated date. */
+  page: PageRecord;
   /** The ArticleHeader lead. */
   lead: string;
   sections: readonly Readonly<{ id: string; title: string }>[];
 }
-const { title, pageTitle, description, lead, sections } = Astro.props;
+const { title, page, lead, sections } = Astro.props;
 const index = REFERENCES.findIndex((reference) => reference.title === title);
-const path = REFERENCES[index]?.href ?? '/';
 ---
 
-<MarketingLayout title={pageTitle} description={description} canonical={path}>
+<MarketingLayout title={page.metaTitle} description={page.description} canonical={page.path}>
   <main id="main">
     <ContentArticle toc={sections.map((section) => ({ id: section.id, label: section.title, level: 2 }))}>
       <ArticleHeader
@@ -43,8 +41,8 @@ const path = REFERENCES[index]?.href ?? '/';
         meta={[
           {
             prefix: 'Last updated',
-            text: formatBlogDate(AI_REFERENCE_UPDATED),
-            dateTime: AI_REFERENCE_UPDATED,
+            text: formatBlogDate(page.updated),
+            dateTime: page.updated,
           },
         ]}
       >
