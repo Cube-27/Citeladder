@@ -232,15 +232,20 @@ transaction, so they are not prepared: the server instructions and the
 and request replays the persisted run instead of spending a second one, and the
 same key for a different request is refused.
 
-A prepare tool runs its command as a **dry run** (`rehearse` in the write
-catalogue, over the operator rollback transaction): every check, admission and
-write the command makes, rolled back. It then stores the exact
+Each prepared kind is one entry in
+[`confirmed-changes.ts`](../frontend/services/api/src/mcp/confirmed-changes.ts):
+the permission its command needs, its payload schema and one `execute`; the
+kind list, `McpWriteKind` and the `mcp.write.<kind>` events derive from that
+table. A prepare tool runs the kind's `execute` as a **dry run** (`rehearse`,
+over the operator rollback transaction): every check, admission and write the
+command makes, rolled back. It then stores the exact
 payload in `mcp_confirmations` behind a single-use 43-character base62 token
 (HMAC-stored, ten minutes, bound to the grant) and returns a preview without
 IDs plus the token. [`confirm_change`](../frontend/services/api/src/mcp/confirmations.ts)
 locks the row, refuses a used, expired or other-connection token, reauthorizes
-through `writeActor`, re-runs the same command with the stored payload inside
-the same transaction, marks the token consumed and records the security event.
+through `writeActor` and the kind's permission, runs the same `execute` with the
+stored payload inside the same transaction, marks the token consumed and records
+the security event.
 Owners join that outer transaction, so a refused or failed change commits
 nothing and leaves the token usable until expiry; a changed world (occupancy
 now full, a larger estimate) returns the command's normal error. Prompts added

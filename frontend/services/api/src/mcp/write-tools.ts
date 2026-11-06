@@ -1,8 +1,8 @@
 /**
  * MCP changes, listed and callable only by a grant holding `citeladder:write`.
- * Small edits run directly; larger ones are prepared (validated by a dry run
- * of their command) and run only through `confirm_change` after the user
- * agreed. The member's live role decides every change; the in-app Agent never
+ * Small edits run directly; larger ones are prepared (a dry run of their
+ * kind's `execute` in `confirmed-changes.ts`) and run only through
+ * `confirm_change`, by that same `execute`, after the user agreed. The member's live role decides every change; the in-app Agent never
  * sees this catalogue.
  */
 import { randomUUID } from 'node:crypto';
@@ -10,10 +10,10 @@ import { sql } from 'kysely';
 import { z } from 'zod';
 import { logicalEngineSchema } from '@citeladder/contracts/providers';
 import { promptCohortSchema } from '@citeladder/contracts/project';
-import { recordSecurityEvent, type McpWriteKind } from '../auth/security-events.ts';
+import { recordSecurityEvent } from '../auth/security-events.ts';
 import { scheduleCreate } from '../audits/schedule-inputs.ts';
-import { ACTIONS_WRITE, declareAction, setActionStatus } from '../commands/actions.ts';
-import { AUDITS_CANCEL, AUDITS_RUN, cancelAudit, launchAudit } from '../commands/audits.ts';
+import { ACTIONS_WRITE, setActionStatus } from '../commands/actions.ts';
+import { AUDITS_CANCEL, cancelAudit } from '../commands/audits.ts';
 import { addCompetitor, COMPETITORS_WRITE, removeCompetitor } from '../commands/competitors.ts';
 import { authorize, type Authorized, type Permission } from '../commands/permission.ts';
 import { auditRuntime } from '../audits/config.ts';
@@ -21,22 +21,18 @@ import { estimateAudit } from '../audits/estimate.ts';
 import { marketIdList } from '../audits/inputs.ts';
 import {
   confirmTopics,
-  createPrompts,
   createTopic,
   deleteTopic,
   previewTopics,
   PROMPTS_RUN,
   PROMPTS_WRITE,
-  setPromptStatuses,
   startGeneration,
   updatePrompt,
   updateTopic,
 } from '../commands/prompts.ts';
-import { createSchedule, SCHEDULES_WRITE } from '../commands/schedules.ts';
 import { configEnvironment, policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { plainJson } from '../db/json.ts';
-import { operatorTransaction } from '../db/operator-transaction.ts';
 import { promptOccupancy } from '../entitlements/occupancy.ts';
 import { isNonEmpty } from '../lists.ts';
 import { competitorCreate } from '../projects/competitors.ts';
@@ -44,11 +40,25 @@ import { generationInput } from '../prompts/generation-input.ts';
 import { promptInput, scopedPrompts, screenPrompts } from '../prompts/prompts.ts';
 import { listTopics, topicConfirm, topicCreate } from '../prompts/topics.ts';
 import { confirmChange, issueConfirmation } from './confirmations.ts';
-import { declarationKey, payloads, runConfirmed } from './confirmed-changes.ts';
+import { preparedChanges, type ConfirmedKind, type PreparedChange } from './confirmed-changes.ts';
 import { writeActor } from './data.ts';
 import { appLink } from './links.ts';
 import { argumentProblem, inputSchema } from './tools.ts';
 import { McpInputError, type Evidence, type McpPrincipal } from './types.ts';
+
+/** The one-step changes; each is also its tool's name. */
+type DirectKind =
+  | 'create_topic'
+  | 'rename_topic'
+  | 'update_prompt_text'
+  | 'add_competitor'
+  | 'remove_competitor'
+  | 'update_action_status'
+  | 'cancel_audit'
+  | 'delete_topic'
+  | 'confirm_topics';
+/** Each change an MCP grant can make; its security event targets the project. */
+export type McpWriteKind = DirectKind | 'generate_prompts' | ConfirmedKind;
 
 /** `origin` is the app's browser origin, for links into CiteLadder screens. */
 type Context = { db: Database; config: ServiceConfig; principal: McpPrincipal; origin: string };
@@ -97,19 +107,12 @@ const markets = marketIdList
   )
   .nullish();
 /**
- * A prepare's dry run: the real command, with every check, admission and
- * write it makes, rolled back. Owners join this transaction.
- */
-const rehearse = <T>(db: Database, run: (trx: Database) => Promise<T>) =>
-  operatorTransaction(db, false, run);
-
-/**
  * A single-step change: authorized for the project against its command's
  * permission, run, and recorded in one transaction. `run` returns the
  * user-facing outcome.
  */
 function direct<S extends z.ZodObject<{ project_id: typeof uuid }>, P extends Permission>(
-  kind: McpWriteKind,
+  kind: DirectKind,
   permission: P,
   definition: Omit<Definition<S>, 'run'> & {
     run: (trx: Database, actor: Authorized<P>, args: z.output<S>) => Promise<Evidence>;
@@ -171,6 +174,11 @@ async function promptSetOf(db: Database, projectId: string, requested: string | 
     );
   return only;
 }
+
+/** A new prepared change's identity, before its rehearsal. */
+const newChange = (projectId: string): PreparedChange => ({ id: randomUUID(), projectId });
+/** A rehearsal that reads nothing back. */
+const noInspection = () => Promise.resolve(null);
 
 /** A prepared change: what will happen, and the token the user's yes unlocks. */
 async function prepared(
@@ -514,7 +522,7 @@ const writeDefinitions = {
       // Refuse a role that cannot add before showing what would be added.
       const actor = authorize(
         await writeActor(context.db, context.principal, args.project_id),
-        PROMPTS_WRITE,
+        preparedChanges.add_prompts.permission,
       );
       const set = await promptSetOf(context.db, args.project_id, args.prompt_set_id);
       const inputs = args.prompts.map((item) =>
@@ -539,10 +547,15 @@ const writeDefinitions = {
           preview: 'None of these prompts can be added.',
           dropped,
         };
-      const slots = await rehearse(context.db, async (trx) => {
-        await createPrompts(trx, actor, args.project_id, set.id, admitted);
-        return promptOccupancy(trx, actor.workspaceId);
-      });
+      const change = newChange(args.project_id);
+      const { payload, inspected: slots } = await preparedChanges.add_prompts.rehearse(
+        context.db,
+        context.config,
+        actor,
+        change,
+        { prompt_set_id: set.id, prompts: admitted },
+        (trx) => promptOccupancy(trx, actor.workspaceId),
+      );
       const droppedItems = dropped.map((item) => `"${item.text}" (${item.reason})`).join('; ');
       const lines = [
         `Add ${admitted.length} active prompt(s) to "${set.name}": ${quoted(admitted.map((item) => item.text))}.`,
@@ -551,13 +564,7 @@ const writeDefinitions = {
       ];
       return prepared(
         context,
-        {
-          actor,
-          projectId: args.project_id,
-          kind: 'add_prompts',
-          payload: payloads.add_prompts.parse({ prompt_set_id: set.id, prompts: admitted }),
-          preview: lines.filter(Boolean).join(' '),
-        },
+        { change, actor, kind: 'add_prompts', payload, preview: lines.filter(Boolean).join(' ') },
         { dropped, prompt_slots: slots },
       );
     },
@@ -574,7 +581,7 @@ const writeDefinitions = {
     run: async (context, args) => {
       const actor = authorize(
         await writeActor(context.db, context.principal, args.project_id),
-        PROMPTS_WRITE,
+        preparedChanges.archive_prompts.permission,
       );
       const rows = await scopedPrompts(
         context.db,
@@ -590,26 +597,22 @@ const writeDefinitions = {
           prompt_ids: members.map((row) => row.id),
         }),
       );
-      await rehearse(context.db, async (trx) => {
-        for (const group of groups)
-          await /* NOSONAR -- One rehearsal transaction: groups apply in order. */ setPromptStatuses(
-            trx,
-            actor,
-            args.project_id,
-            group.prompt_set_id,
-            {
-              ...group,
-              status: 'archived',
-            },
-          );
-      });
+      const change = newChange(args.project_id);
+      const { payload } = await preparedChanges.archive_prompts.rehearse(
+        context.db,
+        context.config,
+        actor,
+        change,
+        { groups },
+        noInspection,
+      );
       const skipped = rows.length - active.length;
       const skippedNote = skipped ? ` ${skipped} already archived.` : '';
       return prepared(context, {
+        change,
         actor,
-        projectId: args.project_id,
         kind: 'archive_prompts',
-        payload: { groups },
+        payload,
         preview: `Archive ${active.length} prompt(s): ${quoted(active.map((row) => row.text))}. Future audits stop measuring them; past results stay.${skippedNote}`,
       });
     },
@@ -643,7 +646,7 @@ const writeDefinitions = {
     run: async (context, args) => {
       const actor = authorize(
         await writeActor(context.db, context.principal, args.project_id),
-        AUDITS_RUN,
+        preparedChanges.launch_audit.permission,
       );
       const promptIds = args.prompt_ids ?? [];
       const setId = promptIds.length
@@ -663,12 +666,14 @@ const writeDefinitions = {
         auditRuntime(configEnvironment(context.config)),
       );
       const ceiling = args.max_attempts ?? estimate.maximum_attempt_count;
-      const launch = payloads.launch_audit.shape.request.parse({
-        ...request,
-        max_attempts: ceiling,
-      });
-      await rehearse(context.db, (trx) =>
-        launchAudit(trx, context.config, actor, args.project_id, launch),
+      const change = newChange(args.project_id);
+      const { payload } = await preparedChanges.launch_audit.rehearse(
+        context.db,
+        context.config,
+        actor,
+        change,
+        { request: { ...request, max_attempts: ceiling } },
+        noInspection,
       );
       const launched =
         estimate.market_count === 1
@@ -677,10 +682,10 @@ const writeDefinitions = {
       return prepared(
         context,
         {
+          change,
           actor,
-          projectId: args.project_id,
           kind: 'launch_audit',
-          payload: { project_id: args.project_id, request: launch },
+          payload,
           preview: `Launch ${launched} of ${estimate.prompt_count} prompt(s) on ${args.engines.join(', ')}, ${estimate.repetition_count} repetition(s): ${estimate.execution_count} answers, spending at most ${estimate.execution_count} prompt run(s) in at most ${estimate.maximum_attempt_count} provider attempts (refused if the attempts exceed ${ceiling}).`,
         },
         { maximum_attempt_count: estimate.maximum_attempt_count, max_attempts: ceiling },
@@ -717,27 +722,37 @@ const writeDefinitions = {
     run: async (context, args) => {
       const actor = authorize(
         await writeActor(context.db, context.principal, args.project_id),
-        SCHEDULES_WRITE,
+        preparedChanges.schedule.permission,
       );
       const set = await promptSetOf(context.db, args.project_id, args.prompt_set_id);
-      const schedule = scheduleCreate.parse({
-        prompt_set_id: set.id,
-        cadence: args.cadence,
-        engines: args.engines,
-        ...(args.timezone ? { timezone: args.timezone } : {}),
-        repetitions: args.repetitions ?? null,
-        interval_minutes: args.interval_minutes ?? null,
-        next_run_at: args.next_run_at ?? null,
-        ...(args.market_ids ? { market_ids: args.market_ids } : {}),
-      });
-      await rehearse(context.db, (trx) => createSchedule(trx, actor, args.project_id, schedule));
+      const change = newChange(args.project_id);
+      const { payload } = await preparedChanges.schedule.rehearse(
+        context.db,
+        context.config,
+        actor,
+        change,
+        {
+          schedule: {
+            prompt_set_id: set.id,
+            cadence: args.cadence,
+            engines: args.engines,
+            ...(args.timezone ? { timezone: args.timezone } : {}),
+            repetitions: args.repetitions ?? null,
+            interval_minutes: args.interval_minutes ?? null,
+            next_run_at: args.next_run_at ?? null,
+            ...(args.market_ids ? { market_ids: args.market_ids } : {}),
+          },
+        },
+        noInspection,
+      );
+      const { schedule } = payload;
       const marketNote =
         schedule.market_ids.length > 1 ? ` in ${schedule.market_ids.length} markets` : '';
       return prepared(context, {
+        change,
         actor,
-        projectId: args.project_id,
         kind: 'schedule',
-        payload: { project_id: args.project_id, schedule },
+        payload,
         preview: `Create a ${schedule.cadence.replaceAll('_', ' ')} audit schedule for "${set.name}" on ${schedule.engines.join(', ')}${marketNote} (${schedule.timezone}), first run ${schedule.next_run_at ?? 'right away'}. Each recorded answer spends one prompt run.`,
       });
     },
@@ -758,18 +773,24 @@ const writeDefinitions = {
     run: async (context, args) => {
       const actor = authorize(
         await writeActor(context.db, context.principal, args.project_id),
-        ACTIONS_WRITE,
+        preparedChanges.declare_implemented.permission,
       );
-      const declaration = payloads.declare_implemented.shape.declaration.parse({
-        declared_implemented_at: args.declared_implemented_at ?? new Date().toISOString(),
-      });
-      const id = randomUUID();
+      const change = newChange(args.project_id);
       // The dry run finds the Action only in this project.
-      await rehearse(context.db, (trx) =>
-        declareAction(trx, actor, args.project_id, args.action_id, declaration, {
-          idempotencyKey: declarationKey(id),
-        }),
+      const { payload } = await preparedChanges.declare_implemented.rehearse(
+        context.db,
+        context.config,
+        actor,
+        change,
+        {
+          action_id: args.action_id,
+          declaration: {
+            declared_implemented_at: args.declared_implemented_at ?? new Date().toISOString(),
+          },
+        },
+        noInspection,
       );
+      const { declaration } = payload;
       const action = await context.db
         .selectFrom('actions')
         .select('target_label')
@@ -778,11 +799,10 @@ const writeDefinitions = {
         .where('id', '=', args.action_id)
         .executeTakeFirstOrThrow();
       return prepared(context, {
-        id,
+        change,
         actor,
-        projectId: args.project_id,
         kind: 'declare_implemented',
-        payload: { action_id: args.action_id, declaration },
+        payload,
         preview: `Declare the Action "${action.target_label || 'Action'}" implemented as of ${declaration.declared_implemented_at.slice(0, 10)}. CiteLadder then checks later evidence against it.`,
       });
     },
@@ -802,13 +822,7 @@ const writeDefinitions = {
     // A confirmed audit launch asks external AI engines.
     annotations: { ...hints(true, false), openWorldHint: true },
     run: async ({ db, config, principal }, args) => {
-      const { kind, result } = await confirmChange(
-        db,
-        config,
-        principal,
-        args.confirmation_token,
-        (trx, actor, change) => runConfirmed(trx, config, actor, change),
-      );
+      const { kind, result } = await confirmChange(db, config, principal, args.confirmation_token);
       return { state: 'changed', change: kind, ...result };
     },
   }),
