@@ -3,12 +3,12 @@ import { z } from 'zod';
 import { policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
+import { ownedWorkspaceAccount } from '../workspaces/owned.ts';
 import { provisionAccount } from '../workspaces/service.ts';
 import { issueDevelopmentAccess } from '../entitlements/bootstrap.ts';
 import { lockAccount } from '../entitlements/grants.ts';
 import { createIdentity } from './service.ts';
 import { hashPassword, passwordSchema, verifyPassword } from './password.ts';
-import { onlyOf } from '../lists.ts';
 
 export function requireLocalDevelopment(config: ServiceConfig) {
   const target = new URL(config.databaseUrl);
@@ -24,27 +24,6 @@ const developmentLoginInput = z.strictObject({
   password: passwordSchema,
   allowance: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
 });
-
-/** Exactly one owned tenant; never choose an arbitrary joined workspace. */
-export async function bootstrapWorkspace(db: Database, userId: string) {
-  const owned = await db
-    .selectFrom('workspace_members')
-    .innerJoin('workspaces', 'workspaces.id', 'workspace_members.workspace_id')
-    .select('workspaces.id')
-    .where('workspace_members.user_id', '=', userId)
-    .where('workspace_members.role', '=', 'owner')
-    .where('workspaces.is_system', '=', false)
-    .execute();
-  const only = onlyOf(owned);
-  if (!only) throw new Error('bootstrap_workspace_ambiguous');
-  const workspaceId = only.id;
-  const account = await db
-    .selectFrom('billing_accounts')
-    .select('id')
-    .where('workspace_id', '=', workspaceId)
-    .executeTakeFirstOrThrow();
-  return { workspaceId, accountId: account.id };
-}
 
 export async function provisionDevelopmentLogin(db: Database, config: ServiceConfig, raw: unknown) {
   requireLocalDevelopment(config);
@@ -75,7 +54,7 @@ export async function provisionDevelopmentLogin(db: Database, config: ServiceCon
         .executeTakeFirstOrThrow();
     }
     await provisionAccount(trx, user, { provisionAccess: false });
-    const scope = await bootstrapWorkspace(trx, user.id);
+    const scope = await ownedWorkspaceAccount(trx, user.id);
     await lockAccount(trx, scope.workspaceId, scope.accountId);
     // Recheck under the user row lock after workspace/account provisioning.
     const current = await trx

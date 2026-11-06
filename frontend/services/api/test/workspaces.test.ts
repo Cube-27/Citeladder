@@ -4,6 +4,7 @@ import { createApp } from '../src/app.ts';
 import { memberCan } from '../src/auth/workspace.ts';
 import { policy } from '../src/config.ts';
 import { hashInvitationToken } from '../src/workspaces/invitations.ts';
+import { ownedWorkspaceAccount, workspaceOwner } from '../src/workspaces/owned.ts';
 import { recordAccountTermsDecision } from '../src/workspaces/policies.ts';
 import { sql } from 'kysely';
 import { billingAccount, grant } from './prompt-fixtures.ts';
@@ -172,6 +173,20 @@ describe('workspace authorization and root allocation', () => {
     expect(await answers()).toEqual([true, false, false]);
     await db.updateTable('users').set({ is_active: false }).where('id', '=', writer).execute();
     expect(await answers()).toEqual([false, false, false]);
+  });
+
+  it('provisions only the workspace a person owns, never one they joined', async () => {
+    const joiner = await fixtures.user();
+    actors.push(joiner);
+    await fixtures.member(workspace, joiner, 'admin');
+    await expect(ownedWorkspaceAccount(db, joiner)).rejects.toThrow(
+      'bootstrap_workspace_ambiguous',
+    );
+    expect(await ownedWorkspaceAccount(db, owner)).toEqual({
+      workspaceId: workspace,
+      accountId: await billingAccount(db, workspace),
+    });
+    expect((await workspaceOwner(db, workspace)).id).toBe(owner);
   });
 });
 
