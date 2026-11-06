@@ -131,6 +131,19 @@ export const INTEGRATION_LANE = {
   recoveryCharge: 0,
 } as const satisfies LaneDescriptor<'integration_sync_runs'>;
 
+/**
+ * Audits charge the attempt when a paid result or failure settles, never on
+ * claim; parks keep the budget, and recovery (`AuditMaintenance`, parent
+ * first) charges unless the submission is uncertain or the audit ended.
+ */
+export const AUDIT_LANE = {
+  table: 'audit_tasks',
+  claimable,
+  claimStatus: 'leased',
+  claimCharge: 0,
+  recoveryCharge: 1,
+} as const satisfies LaneDescriptor<'audit_tasks'>;
+
 type LeaseOptions = {
   leaseTtlSeconds: number;
   /** Per-kind leases, for work that holds an external resource (a pulled batch) longer. */
