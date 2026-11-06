@@ -4,10 +4,9 @@ import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
 import { apiKeyCreateSchema } from '@citeladder/contracts/api-keys';
 
-import { enforceSubjectRequest } from '../src/abuse/usage.ts';
+import { budget, spendBudget } from '../src/abuse/usage.ts';
 import { createApiKey } from '../src/api-keys/keys.ts';
 import { createApp } from '../src/app.ts';
-import { policy } from '../src/config.ts';
 import { ROUTE_CONTRACTS } from '../src/openapi/routes.ts';
 import { requirePathOwnership } from '../src/public-api/ownership.ts';
 import { mutateMember } from '../src/workspaces/service.ts';
@@ -320,17 +319,8 @@ describe('public API requests', () => {
   it('answers 429 with Retry-After once the key’s minute is spent', async () => {
     const tenant = await withApiAccess(await fixtures.tenant());
     const { key, secret } = await createKey(tenant);
-    const {
-      operation,
-      limit,
-      window_seconds: windowSeconds,
-    } = policy.public_api.rate_limits.api_key;
-    await enforceSubjectRequest(db, 'api_key', key.id, {
-      operation,
-      limit,
-      windowSeconds,
-      amount: limit,
-    });
+    const perKey = budget('public_api_key');
+    await spendBudget(db, perKey, key.id, { amount: perKey.limit });
     const throttled = await api(secret, '/projects');
     expect(throttled.status).toBe(429);
     expect(Number(throttled.headers.get('retry-after'))).toBeGreaterThanOrEqual(1);

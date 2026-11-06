@@ -5,8 +5,6 @@ import { PARENT_COMPANY } from './legal';
 import { FOUNDER, PRODUCT_HEAD } from './people';
 import { CITELADDER_LINKEDIN, CITELADDER_X } from './social';
 
-export const AI_REFERENCE_UPDATED = '2026-11-04';
-
 const PRODUCT_DESCRIPTION =
   'CiteLadder is AI visibility and answer engine optimization (AEO) software. It records how AI answer engines mention and cite a brand, crawls the brand’s website and connects its search data, so teams can decide what to improve and see what changed afterwards.';
 

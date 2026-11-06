@@ -6,7 +6,7 @@ import { observeCommittedWork } from '../src/db/committed-work.ts';
 import type { Database } from '../src/db/database.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { drainLanes, runnerOwners, tickAndDrain } from '../src/workers/runner.ts';
-import { loadWorkerSettings } from '../src/config.ts';
+import { loadWorkerSettings } from '../src/config/analytics.ts';
 import { Fixtures, testConfig, testDatabase } from './support.ts';
 import { setLogSink } from '../src/logging.ts';
 

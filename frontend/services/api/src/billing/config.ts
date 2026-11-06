@@ -1,7 +1,17 @@
-import { ConfigError, policy, resolveSettingSpec } from '../config.ts';
+import api from '../config/api.json' with { type: 'json' };
+import authRuntime from '../config/auth-runtime.json' with { type: 'json' };
+import { billing } from '../config/billing.ts';
+import { ConfigError } from '../config/config-error.ts';
+import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
+
+const policy = {
+  billing,
+  development_env_names: api.development_env_names,
+  settings: { ...api.settings, ...authRuntime.settings },
+};
 
 /** Same validated identity-bootstrap admission and defaults as the shared setting owner. */
-export function catalogBootstrapSettings(env: Record<string, string | undefined> = process.env) {
+export function catalogBootstrapSettings(env: SettingSource = process.env) {
   const setting = (key: 'app_env' | 'demo_mode' | 'dev_login_email' | 'dev_login_password') =>
     resolveSettingSpec(policy.settings[key], env);
   const development = policy.development_env_names.includes(
@@ -16,7 +26,7 @@ export function catalogBootstrapSettings(env: Record<string, string | undefined>
 }
 
 /** Resolve shared policy; tests pass a deterministic environment. */
-export function billingSettings(env: Record<string, string | undefined> = process.env) {
+export function billingSettings(env: SettingSource = process.env) {
   const specs = policy.billing.settings;
   const get = <K extends keyof typeof specs>(key: K) => resolveSettingSpec(specs[key], env);
   let contactUrl: URL;
@@ -78,7 +88,7 @@ export function billingSettings(env: Record<string, string | undefined> = proces
 }
 export type BillingSettings = ReturnType<typeof billingSettings>;
 
-export function razorpaySettings(env: Record<string, string | undefined> = process.env) {
+export function razorpaySettings(env: SettingSource = process.env) {
   const specs = policy.billing.razorpay_settings;
   const get = <K extends keyof typeof specs>(key: K) => resolveSettingSpec(specs[key], env);
   const canonicalId = get('key_id') as string;

@@ -486,7 +486,7 @@ it('exposes published dataset aggregates without treating them as backlink edges
       base_url: '',
       credential_revision: randomUUID(),
       active: true,
-      last_test_status: policy.search_intelligence.connection_test_ok,
+      last_test_status: policy.providers.test_status_ok,
       created_at: new Date(),
       updated_at: new Date(),
     })

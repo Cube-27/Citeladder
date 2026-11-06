@@ -4,7 +4,8 @@ import { sql } from 'kysely';
 import { policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
-import { enforceSubjectRequest, releaseSubjectBudget, type UsageLimit } from '../abuse/usage.ts';
+import { budget, releaseBudget, spendBudget } from '../abuse/usage.ts';
+import { GLOBAL_MAIL_SUBJECT } from '../config/abuse.ts';
 import { ApiError } from '../errors.ts';
 import { hashPassword, verifyAccountPassword } from './password.ts';
 import { recordSecurityEvent } from './security-events.ts';
@@ -43,16 +44,8 @@ export async function requestChallenge(
 ) {
   const normalized = email.trim().toLowerCase();
   const admitted = await withinBudget(async () => {
-    await enforceSubjectRequest(db, 'email', normalized, {
-      operation: 'auth.mail.cooldown',
-      limit: 1,
-      windowSeconds: cfg.cooldown_seconds,
-    });
-    await enforceSubjectRequest(db, 'email', normalized, {
-      operation: 'auth.mail.daily',
-      limit: cfg.recipient_daily_limit,
-      windowSeconds: cfg.daily_window_seconds,
-    });
+    await spendBudget(db, budget('mail_cooldown'), normalized);
+    await spendBudget(db, budget('mail_recipient_daily'), normalized);
   });
   if (!admitted) return;
   const issued = await db.transaction().execute(async (trx) => {
@@ -77,11 +70,7 @@ export async function requestChallenge(
     // The shared daily mail budget is spent only by mail that will be sent, so
     // requests for unknown or ineligible addresses cannot exhaust it.
     const sendable = await withinBudget(() =>
-      enforceSubjectRequest(trx, 'client', 'global-mail', {
-        operation: 'auth.mail.global',
-        limit: cfg.global_daily_limit,
-        windowSeconds: cfg.daily_window_seconds,
-      }),
+      spendBudget(trx, budget('mail_global_daily'), GLOBAL_MAIL_SUBJECT),
     );
     if (!sendable) return null;
     const token = randomBytes(32).toString('base64url');
@@ -142,17 +131,6 @@ async function deliverChallenge(
   });
 }
 
-/** The per-address failed sign-in counter that a password reset clears. */
-export const LOGIN_FAILURE_OPERATION = 'auth.login.email_failure';
-
-export function loginFailureBudget(config: ServiceConfig): UsageLimit {
-  return {
-    operation: LOGIN_FAILURE_OPERATION,
-    limit: config.auth.limits.login_email_limit,
-    windowSeconds: config.auth.limits.login_window_seconds,
-  };
-}
-
 /**
  * Checks an account password against its address's failure budget, as sign-in
  * does: the attempt spends a unit before hashing, so concurrent guesses cannot
@@ -165,9 +143,9 @@ export async function verifyBudgetedPassword(
   user: { email: string; hashed_password: string | null },
   password: string,
 ): Promise<boolean> {
-  await enforceSubjectRequest(db, 'email', user.email, loginFailureBudget(config));
+  await spendBudget(db, budget('login_email_failure', config.settings), user.email);
   if (!(await verifyAccountPassword(password, user.hashed_password))) return false;
-  await releaseSubjectBudget(db, 'email', user.email, LOGIN_FAILURE_OPERATION);
+  await releaseBudget(db, 'login_email_failure', user.email);
   return true;
 }
 
@@ -254,7 +232,7 @@ export async function consumeChallenge(
     );
     // A completed reset proves mailbox ownership, so earlier failures stop counting.
     if (replacement) {
-      await releaseSubjectBudget(trx, 'email', current.email, LOGIN_FAILURE_OPERATION);
+      await releaseBudget(trx, 'login_email_failure', current.email);
       await revokeDelegatedAccess(trx, user.id, user.id);
     }
   });

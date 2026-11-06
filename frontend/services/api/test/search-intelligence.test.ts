@@ -71,7 +71,7 @@ async function connection(tenant: Tenant, options: { active?: boolean; tested?: 
       base_url: '',
       credential_revision: REVISION,
       active: options.active ?? true,
-      last_test_status: options.tested === false ? 'failed' : si.connection_test_ok,
+      last_test_status: options.tested === false ? 'failed' : policy.providers.test_status_ok,
       created_at: now(),
       updated_at: now(),
     })

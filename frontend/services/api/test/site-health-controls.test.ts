@@ -37,8 +37,8 @@ afterAll(async () => {
   await db.destroy();
 });
 
-async function request(tenant: Tenant, path: string, method = 'GET', body?: unknown) {
-  return app.request(`/api/v1${path}`, {
+async function request(tenant: Tenant, path: string, method = 'GET', body?: unknown, server = app) {
+  return server.request(`/api/v1${path}`, {
     method,
     headers: {
       cookie: `${config.session.cookieName}=${await sessionToken({ sub: tenant.userId, ver: 0 })}`,
@@ -524,12 +524,12 @@ describe('crawl-control HTTP contracts', () => {
     expect((await request(reader, `/site-crawls/${seed.crawlId}/recrawl`, 'POST')).status).toBe(
       403,
     );
-    vi.stubEnv('ABUSE_CRAWL_CREATE_LIMIT', '1');
-    const first = await request(seed, '/site-crawls', 'POST', { project_id: randomUUID() });
-    expect(first.status).toBe(404);
-    expect(
-      (await request(seed, '/site-crawls', 'POST', { project_id: seed.projectId })).status,
-    ).toBe(429);
+    // Settings resolve once at startup, so the lower limit is a separately started app.
+    const limited = createApp(testConfig({ ABUSE_CRAWL_CREATE_LIMIT: '1' }), db);
+    const create = (projectId: string) =>
+      request(seed, '/site-crawls', 'POST', { project_id: projectId }, limited);
+    expect((await create(randomUUID())).status).toBe(404);
+    expect((await create(seed.projectId)).status).toBe(429);
   });
 
   it('previews CSV/JSON duplicates and scope rejections without creating runtime or crawl rows', async () => {

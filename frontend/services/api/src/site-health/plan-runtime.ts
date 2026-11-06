@@ -6,7 +6,8 @@
  * and by crawl admission. Reads resolve the same projection without writing.
  */
 import { randomUUID } from 'node:crypto';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import { accountState } from '../entitlements/state.ts';
 
@@ -21,7 +22,7 @@ export function runtimeProjection(
   const allowance = !state || state.error ? 0 : (state.values.get('monitored_urls') ?? 0);
   const cfg = policy.site_health_runtime;
   const setting = (key: keyof typeof cfg.settings) =>
-    resolveSettingSpec(cfg.settings[key]) as number;
+    resolveSettingSpec(cfg.settings[key], process.env) as number;
   const full = allowance > 0;
   return {
     discovery_mode: full ? cfg.full_mode : cfg.sample_mode,

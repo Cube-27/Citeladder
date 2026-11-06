@@ -3,8 +3,9 @@ import { randomUUID } from 'node:crypto';
 import { competitorDiscoveryRequestSchema } from '@citeladder/contracts/commerce-requests';
 import { commerceTargetSchema } from '@citeladder/contracts/commerce-suite';
 import { z } from 'zod';
-import { dailyWorkspaceLimit, enforceWorkspaceRequest } from '../abuse/usage.ts';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { budget, spendBudget } from '../abuse/usage.ts';
+import { policy } from '../config.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import { meterFor } from '../billing/metering.ts';
 import { jsonObject } from '../db/json.ts';
@@ -13,6 +14,7 @@ import type { QueueTask } from '../queue/task-queue.ts';
 import { taskProject, TerminalExecutorError, type Executor } from '../queue/executor.ts';
 import { PageAcquirer, authorizeAcquisition } from '../web-evidence/acquisition.ts';
 import { fetchWebsite, type WebsiteFetcher } from '../safe-fetch.ts';
+import { failureFacts, getLogger } from '../logging.ts';
 import { commerceMissing, type CommerceScope } from './reads.ts';
 import { lockCatalog } from './catalog-store.ts';
 import {
@@ -31,6 +33,7 @@ import {
 } from './discovery-validation.ts';
 
 const p = policy.commerce.discovery;
+const logger = getLogger('commerce.discovery');
 export const discoveryInput = competitorDiscoveryRequestSchema;
 const payloadSchema = z.object({
   target: commerceTargetSchema,
@@ -88,15 +91,9 @@ export function enqueueDiscoveries(
       `${target.kind}:${target.id.toLowerCase()}`;
     const targets = new Map(input.targets.map((target) => [targetKey(target), target]));
     // Each target spends platform research-provider calls and outbound fetches.
-    await enforceWorkspaceRequest(
-      trx,
-      scope.workspaceId,
-      dailyWorkspaceLimit(
-        'commerce.competitor_discovery',
-        'commerce_discoveries_per_workspace_daily',
-        targets.size,
-      ),
-    );
+    await spendBudget(trx, budget('commerce_discovery', process.env), scope.workspaceId, {
+      amount: targets.size,
+    });
     const ids = new Map(
       await Promise.all(
         [...targets].map(async ([key, target]) => {
@@ -148,6 +145,7 @@ async function validate(
       while (next < candidates.length && verified.size < p.result_limit) {
         const item = candidates[next++]!;
         attempted.add(item.canonical!);
+        const startedAt = performance.now();
         try {
           const page =
             await /* NOSONAR -- One page per pool consumer keeps acquisition concurrency bounded. */ acquirer.fetch(
@@ -165,8 +163,12 @@ async function validate(
               },
             );
           if (verifyPage(page, kind, owned)) verified.add(item.canonical!);
-        } catch {
-          /* A rejected or unavailable page never fails its siblings. */
+        } catch (error) {
+          // A rejected or unavailable page never fails its siblings; it stays unverified.
+          logger.info('commerce_candidate_verify_failed', {
+            ...failureFacts(error),
+            elapsed_ms: Math.round(performance.now() - startedAt),
+          });
         }
       }
     }),

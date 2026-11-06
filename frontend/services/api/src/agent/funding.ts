@@ -25,12 +25,13 @@ import {
   affordableOutputTokens,
   cachedReservationCredits,
   chargeCredits,
+  costMicrousd,
   modelPrice,
   unknownUsageCredits,
   type ModelPrice,
 } from '../billing/ai-pricing.ts';
 import { conversationInputBytes } from '../models/conversation.ts';
-import { enforceWorkspaceRequest } from '../abuse/usage.ts';
+import { spendBudget } from '../abuse/usage.ts';
 import { agentSettings } from './config.ts';
 import { AgentError, agentPolicy, type Run, type Scope } from './contracts.ts';
 import type { Admission, FundingIdentity } from './store.ts';
@@ -98,11 +99,7 @@ export function agentAdmission(settings: Settings, platform: GatewaySettings): A
       throw new ApiError(429, 'Workspace active Agent limit exceeded', {
         headers: { 'retry-after': String(settings.retryAfterSeconds) },
       });
-    await enforceWorkspaceRequest(db, scope.workspaceId, {
-      operation: 'agent.runs',
-      limit: settings.dailyLimit,
-      windowSeconds: settings.dailyWindowSeconds,
-    });
+    await spendBudget(db, settings.dailyRuns, scope.workspaceId);
     return funding;
   };
 }
@@ -153,7 +150,11 @@ async function inputBound(db: Database, run: Run, bytes: number) {
 function sizedHold(
   price: ModelPrice,
   available: number,
-  bound: { maxInputTokens: number; maxOutputTokens: number; maxWebSearches: number },
+  bound: {
+    maxInputTokens: number;
+    maxOutputTokens: number;
+    maxWebSearches: number;
+  },
 ) {
   const full = cachedReservationCredits(
     price,
@@ -162,7 +163,10 @@ function sizedHold(
     bound.maxWebSearches,
   );
   if (full <= available) return { credits: full, outputTokens: bound.maxOutputTokens };
-  const outputTokens = affordableOutputTokens(price, { ...bound, credits: available });
+  const outputTokens = affordableOutputTokens(price, {
+    ...bound,
+    credits: available,
+  });
   if (outputTokens < Math.min(agentPolicy.hold_min_reply_tokens, bound.maxOutputTokens))
     throw new AgentError('funding_unavailable');
   return {
@@ -205,7 +209,12 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
           units: credits,
           at,
         });
-        return { reservationId, credits, pricingRevision: PRICING_REVISION, outputTokens };
+        return {
+          reservationId,
+          credits,
+          pricingRevision: PRICING_REVISION,
+          outputTokens,
+        };
       } catch (error) {
         if (
           error instanceof LedgerError &&
@@ -220,10 +229,13 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
       }
     },
     settle: async (db, attempt, usage) => {
-      if (attempt.funding_source !== 'platform') return { credits: 0, status: 'zero_debit' };
+      const price = modelPrice(attempt.requested_model, platform.model);
+      // Internal cost is recorded whoever funds the call: an unmetered call still costs the platform.
+      const cost = price && usage ? costMicrousd(price, usage) : null;
+      if (attempt.funding_source !== 'platform')
+        return { credits: 0, status: 'zero_debit', costMicrousd: cost };
       if (!attempt.reservation_id) throw new AgentError('funding_unavailable');
       const reserved = Number(attempt.reserved_credits);
-      const price = modelPrice(attempt.requested_model, platform.model);
       const charged = price && usage ? chargeCredits(price, usage) : null;
       // As platform metering: a call that did not complete pays only the usage it
       // reported; an answer with unreadable usage pays the fallback.
@@ -241,7 +253,11 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
         dispatch: attempt.dispatch_id,
         at: new Date(),
       });
-      return { credits, status: credits ? 'settled' : 'zero_debit' };
+      return {
+        credits,
+        status: credits ? 'settled' : 'zero_debit',
+        costMicrousd: cost,
+      };
     },
     // A failed turn is not charged (B58): each debit gets one append-only refund.
     refund: async (db, run) => {

@@ -1,6 +1,8 @@
 /** Public copy for the landing page's integration list and FAQ. */
 
 import type { EngineKey } from '@/components/ui/engine-mark';
+import { PUBLIC_TRIAL } from '@/lib/config/public-trial';
+import { countWordCapitalized, projectCount } from '@/lib/marketing-content/count-words';
 
 /**
  * An integration's logo: engine marks the site already draws inline, or a
@@ -60,7 +62,7 @@ export const FAQS = [
   },
   {
     q: 'What does the free trial include?',
-    a: 'Seven days of AI visibility tracking on ChatGPT for one project, with limits on prompts and answers. The Agent and advanced workflows are not part of the trial; book a demo to explore them.',
+    a: `${countWordCapitalized(PUBLIC_TRIAL.days)} days of AI visibility tracking on ChatGPT for ${projectCount(PUBLIC_TRIAL.projects)}, with limits on prompts and answers. The Agent and advanced workflows are not part of the trial; book a demo to explore them.`,
   },
   {
     q: 'Does CiteLadder change my website or publish content?',

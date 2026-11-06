@@ -7,7 +7,7 @@ import {
 import { sql } from 'kysely';
 import { z } from 'zod';
 
-import { agentCallLimit, enforceWorkspaceRequest } from '../abuse/usage.ts';
+import { budget, spendBudget } from '../abuse/usage.ts';
 import { policy } from '../config.ts';
 import { commerceBuyerPromptSystem } from '../config/commerce.ts';
 import type { Database } from '../db/database.ts';
@@ -15,6 +15,7 @@ import { meterFor, type Meter } from '../billing/metering.ts';
 import { record, strings } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
 import { firstOf, isNonEmpty } from '../lists.ts';
+import { failureFacts, getLogger } from '../logging.ts';
 import { createModelGateway, type ModelGateway } from '../models/gateway.ts';
 import { ModelError } from '../models/http.ts';
 import { bindingTokens } from '../prompts/binding.ts';
@@ -337,13 +338,16 @@ export async function generateBuyerPrompts(
   // unique normalized hash still guards writes that race this read.
   const tracked = await trackedHashes(db, scope);
   const gateway = meter.gateway(createGateway(gatewayFactory), 'commerce_buyer_prompts');
-  await enforceWorkspaceRequest(db, scope.workspaceId, agentCallLimit(input.targets.length));
+  await spendBudget(db, budget('agent_provider_call', process.env), scope.workspaceId, {
+    amount: input.targets.length,
+  });
   // Each target keeps what it admitted, so one weak batch or a later model
   // failure does not discard the prompts already paid for. Only a request that
   // admitted nothing at all is unavailable.
   const batches = [];
   for (const [index, context] of contexts.entries()) {
     let response;
+    const startedAt = performance.now();
     try {
       response = await gateway.structured(
         commerceBuyerPromptSystem(context.business_model),
@@ -352,8 +356,15 @@ export async function generateBuyerPrompts(
         z.object({ prompts: z.array(z.object({ text: z.string() })) }),
       );
     } catch (error) {
-      if (error instanceof ModelError) break;
-      throw error;
+      if (!(error instanceof ModelError)) throw error;
+      getLogger('commerce.buyer_prompts').warning('commerce_buyer_prompts_model_failed', {
+        target_index: index,
+        admitted_batches: batches.length,
+        ...failureFacts(error),
+        status: error.status,
+        elapsed_ms: Math.round(performance.now() - startedAt),
+      });
+      break;
     }
     const texts = admittedTexts(
       response.value.prompts.map((row) => row.text),

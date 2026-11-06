@@ -23,7 +23,7 @@ export type Host = {
   ) => Promise<unknown>;
 };
 /** One listed answer; `answer_text` once its retained record was fetched. */
-export type Answer = McpVisibilityResult & { answer_text?: string };
+type Answer = McpVisibilityResult & { answer_text?: string };
 export type AppState = {
   result: AnalyticsResult | null;
   selection: AnalyticsSelection | null;

@@ -2,6 +2,7 @@ import { createHmac, hkdfSync } from 'node:crypto';
 import { z } from 'zod';
 import { casefold } from '../casefold.ts';
 import { policy } from '../config.ts';
+import type { SettingSource } from '../config/settings.ts';
 import { connectionSecret } from './platform-secrets.ts';
 
 const credential = z.object({ login: z.string().min(1), password: z.string().min(1) });
@@ -13,7 +14,7 @@ const stripCharacters = new Set(Array.from(policy.dataforseo.strip_characters));
 export function connectionPoolIdentity(
   connection: Parameters<typeof connectionSecret>[0],
   encryptionKey: string,
-  env?: Record<string, string | undefined>,
+  env?: SettingSource,
 ) {
   return dataforseoSecretIdentity(connectionSecret(connection, encryptionKey, env), encryptionKey);
 }

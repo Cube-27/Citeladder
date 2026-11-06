@@ -10,8 +10,8 @@
  * Session and membership are one statement, and the workspace's entitlement
  * state one batch kept on the request context (`entitlements`) for the handler.
  * A route under `/projects/{project_id}` declares `authorize: 'active-project'`
- * (or `'project'` when a link or an `<img>` must open it from any workspace);
- * its handler never re-checks the project.
+ * (or, for a read with no capability, `'project'` when a link or an `<img>` must
+ * open it from any workspace); its handler never re-checks the project.
  */
 import type { ApiKeyScope } from '@citeladder/contracts/api-keys';
 import type { Context, Hono, MiddlewareHandler } from 'hono';
@@ -19,6 +19,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
 
 import { sessionUser } from '../auth/session.ts';
+import type { Permission } from '../commands/permission.ts';
 import { WorkspaceEntitlements } from '../entitlements/access.ts';
 import {
   activeProjectMembership,
@@ -28,7 +29,8 @@ import {
   type MembershipRule,
   type WorkspaceCapability,
 } from '../auth/workspace.ts';
-import { policy, resolveSettingSpec, type ServiceConfig } from '../config.ts';
+import { policy, type ServiceConfig } from '../config.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
@@ -76,7 +78,6 @@ type RouteSpec<Path extends ParamSpecs, Query extends ParamSpecs, Response exten
   alsoStatus?: ContentfulStatusCode;
   body?: z.ZodType;
   headers?: z.ZodObject;
-  capability?: WorkspaceCapability;
   /** Explicit account recovery surface with no product evidence. */
   recovery?: boolean;
   /**
@@ -107,9 +108,21 @@ type RouteSpec<Path extends ParamSpecs, Query extends ParamSpecs, Response exten
    * to it (`public-api/ownership.ts`).
    */
   publicPath?: string;
+} & PermissionDeclaration &
+  RouteBody<Path, Query, Response>;
+
+/**
+ * A route serving a command declares the command's `permission`, from which
+ * its capability gate and API key scope derive; its handler takes the checked
+ * actor with `routeActor`. Any other route declares its own capability and,
+ * when public, its scope; a route never declares both.
+ */
+type PermissionDeclaration = {
+  permission?: Permission;
+  capability?: WorkspaceCapability;
   /** The API key scope a public call needs; reads default to `read`. */
   scope?: ApiKeyScope;
-} & RouteBody<Path, Query, Response>;
+};
 
 export type ProductRoute = {
   contract: RouteContract;
@@ -168,7 +181,7 @@ function parameterObject(specs: ParamSpecs): z.ZodObject {
 const optionalString = z.string().nullable().optional();
 const ACTIVE_WORKSPACE_HEADERS = z.object({ 'x-workspace-id': optionalString });
 const SESSION_COOKIE = z.object({
-  [String(resolveSettingSpec(policy.settings.session_cookie_name))]: optionalString,
+  [String(resolveSettingSpec(policy.settings.session_cookie_name, process.env))]: optionalString,
 });
 
 /** An OpenAPI `{name}` path template as a Hono pattern. */
@@ -179,6 +192,29 @@ function honoPath(path: string): string {
 // A matched path requested with another method is 405 before any authorization runs.
 function methodNotAllowed(method: string): never {
   throw new ApiError(405, 'Method Not Allowed', { headers: { allow: method } });
+}
+
+/**
+ * The capability gate and API key scope a route declares, from its command's
+ * permission or its own. Writes default to `run`; the gate precedes parameter
+ * validation.
+ */
+function routeGate(
+  route: PermissionDeclaration & { path: string; authorize?: string },
+  method: string,
+  scoped: boolean,
+): { capability: WorkspaceCapability | undefined; scope: ApiKeyScope | undefined } {
+  const { permission } = route;
+  if (permission && (!scoped || route.capability || route.scope))
+    throw new Error(
+      `A command's route resolves a workspace and declares only its permission: ${route.path}`,
+    );
+  const capability =
+    permission?.capability ?? route.capability ?? (method === 'get' ? undefined : 'run');
+  // A link or an `<img>` reads through the path project; a gated route never does.
+  if (route.authorize === 'project' && capability !== undefined)
+    throw new Error(`A gated route resolves the active workspace (active-project): ${route.path}`);
+  return { capability, scope: permission?.scope ?? route.scope };
 }
 
 export function defineRoute<
@@ -197,8 +233,7 @@ export function defineRoute<
       ? ACTIVE_WORKSPACE_HEADERS
       : z.object({});
   const exposure = route.exposure ?? 'browser';
-  // Writes default to `run`; the capability gate precedes parameter validation.
-  const capability = route.capability ?? (method === 'get' ? undefined : 'run');
+  const { capability, scope } = routeGate(route, method, scoped);
   const responses = {
     [status]: route.response,
     ...(route.alsoStatus ? { [route.alsoStatus]: route.response } : {}),
@@ -220,12 +255,15 @@ export function defineRoute<
           headers: route.headers ? workspaceHeaders.extend(route.headers.shape) : workspaceHeaders,
           cookies: publicRoute ? z.object({}) : SESSION_COOKIE,
         };
-  const publicSide = exposure === 'browser' ? null : publicOperation(route, shared, capability);
+  const publicSide =
+    exposure === 'browser' ? null : publicOperation({ ...route, scope }, shared, capability);
   const register = (app: Hono<AppEnv>, config: ServiceConfig, db: Database) => {
     const respond = async (c: Context<AppEnv>) => {
       // The session read named the path project only if the active workspace
       // holds it; a foreign project is 404 before its parameters are judged.
       if (activeProject && c.get('workspace').projectId === null) throw notFound('Project');
+      // The gate checked this permission; the handler takes its actor with `routeActor`.
+      if (route.permission) c.set('permission', route.permission);
       const params = validateParams(route.params, {
         path: c.req.param() as Record<string, string>,
         search: new URL(c.req.url).search,
@@ -253,7 +291,6 @@ export function defineRoute<
           c.set('entitlements', entitlements);
           if (!route.recovery) await entitlements.requireAccess();
         }
-        if (byProject && capability !== undefined) c.get('workspace').require(capability);
         return respond(c);
       },
     );

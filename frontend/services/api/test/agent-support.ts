@@ -53,7 +53,10 @@ export const emptyPackage = {
 };
 /** One scripted model response: the content blocks a provider would return. */
 export type Response = ConversationBlock[];
-export const text = (value: string): ConversationBlock => ({ type: 'text', text: value });
+export const text = (value: string): ConversationBlock => ({
+  type: 'text',
+  text: value,
+});
 export const toolUse = (
   name: string,
   input: Record<string, Json> = {},
@@ -133,7 +136,7 @@ export function scripted(
 }
 export const zeroFunding: Funding = {
   reserve: () => Promise.resolve({ reservationId: null, credits: 0, pricingRevision: '' }),
-  settle: () => Promise.resolve({ credits: 0, status: 'zero_debit' }),
+  settle: () => Promise.resolve({ credits: 0, status: 'zero_debit', costMicrousd: null }),
   refund: () => Promise.resolve(),
 };
 export class AgentFixtures extends VisibilityFixtures {
@@ -175,7 +178,10 @@ export class AgentFixtures extends VisibilityFixtures {
             state: 'available',
             data: { observed: 0 },
             artifactRefs: [
-              { id: scope.projectId, record_uri: `citeladder://project/${scope.projectId}` },
+              {
+                id: scope.projectId,
+                record_uri: `citeladder://project/${scope.projectId}`,
+              },
             ],
             omissions: [],
           });

@@ -1,7 +1,7 @@
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { advisoryXactLock } from '../db/advisory-lock.ts';
-import { enforceWorkspaceRequest } from '../abuse/usage.ts';
+import { spendBudget } from '../abuse/usage.ts';
 import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
 import { accountState } from '../entitlements/state.ts';
@@ -47,17 +47,7 @@ export async function reserveAuditCapacity(
     throw new ApiError(429, 'Workspace active audit limit exceeded', {
       headers: { 'retry-after': String(runtime.retrySeconds) },
     });
-  await enforceWorkspaceRequest(
-    db,
-    workspaceId,
-    {
-      operation: 'audit.provider_tasks',
-      limit: runtime.dailyTasks,
-      windowSeconds: 86400,
-      amount: slots,
-    },
-    at,
-  );
+  await spendBudget(db, runtime.dailyTasks, workspaceId, { amount: slots, at });
 }
 
 const MANUAL_RUN_WINDOW_SECONDS =

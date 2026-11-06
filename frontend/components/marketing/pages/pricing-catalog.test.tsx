@@ -7,6 +7,8 @@ import { PublicPricingCatalog } from './pricing-catalog';
 
 afterEach(() => vi.unstubAllEnvs());
 
+const trial = { days: 7, projects: 1, prompts: 20, monitoredUrls: 20, answers: 20, aiCredits: 500 };
+
 const catalog = {
   catalog_revision: 'revision',
   country_code: null,
@@ -42,7 +44,12 @@ const catalog = {
 describe('public pricing handoff', () => {
   it('renders the catalog price and a bounded app selection without starting checkout', () => {
     render(
-      <PublicPricingCatalog catalog={catalog} appOrigin="https://app.citeladder.com" initialByok />,
+      <PublicPricingCatalog
+        catalog={catalog}
+        appOrigin="https://app.citeladder.com"
+        initialByok
+        trial={trial}
+      />,
     );
     expect(screen.getByText('$12')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Choose Starter' })).toHaveAttribute(
@@ -95,6 +102,7 @@ describe('public pricing handoff', () => {
           catalog={unavailable}
           appOrigin="https://app.citeladder.com"
           initialByok
+          trial={trial}
         />,
       );
       expect(
@@ -105,6 +113,11 @@ describe('public pricing handoff', () => {
         'href',
         enabled === 'true' ? 'https://app.citeladder.com/register' : '/contact',
       );
+      if (enabled === 'true') {
+        // The trial's limits come from the numbers passed in.
+        expect(screen.getByText('7 days')).toBeInTheDocument();
+        expect(screen.getByText(/Includes 500 AI credits\./)).toBeInTheDocument();
+      }
       expect(screen.queryByRole('link', { name: /^Choose / })).not.toBeInTheDocument();
       expect(screen.queryByText('$12')).not.toBeInTheDocument();
       for (const name of ['Plans', 'Plan comparison', 'Add-ons and top-ups']) {
@@ -127,6 +140,7 @@ describe('public pricing display region', () => {
         }}
         appOrigin="https://app.citeladder.com"
         initialByok
+        trial={trial}
       />,
     );
     expect(screen.getByText(/per month · excl\. GST/)).toBeInTheDocument();

@@ -1,13 +1,13 @@
 ---
 import { AiInstructionSections } from '@/components/marketing/content/reference-sections';
 import { AI_INSTRUCTIONS } from '@/lib/marketing-content/ai-reference';
+import { PAGES } from '@/lib/marketing-content/pages';
 import ReferenceLayout from '../layouts/ReferenceLayout.astro';
 ---
 
 <ReferenceLayout
   title="AI Instructions"
-  pageTitle="AI Instructions · CiteLadder"
-  description="Official CiteLadder facts and guidance for AI assistants: product identity, capabilities, evidence, pricing sources, and accurate attribution."
+  page={PAGES.aiInstructions}
   lead="First-party facts about CiteLadder for AI assistants, researchers, and anyone describing the product. Use the linked sources to check details and keep observations separate from claims."
   sections={AI_INSTRUCTIONS}
 >

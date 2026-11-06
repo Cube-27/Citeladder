@@ -4,6 +4,7 @@ import { sql } from 'kysely';
 import { openReservedUnits } from '../entitlements/ledger.ts';
 import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
+import type { SettingSource } from '../config/settings.ts';
 import { approvedEndpoint } from '../providers/connections.ts';
 import { providerPolicy, type Engine } from '../providers/config.ts';
 import { dataforseoSecretIdentity } from '../providers/dataforseo-identity.ts';
@@ -102,7 +103,7 @@ export async function loadExecutionContext(
   encryptionKey: string,
   options: {
     at?: Date;
-    env?: Record<string, string | undefined>;
+    env?: SettingSource;
     access?: (workspaceId: string) => Promise<unknown>;
   } = {},
 ) {

@@ -14,7 +14,9 @@ import { PARENT_COMPANY, type LegalDocument } from './legal';
 const email = PARENT_COMPANY.email;
 
 export const DATA_PROCESSING_AGREEMENT: LegalDocument = {
-  slug: 'dpa',
+  path: '/dpa',
+  metaTitle: 'Data Processing Agreement · CiteLadder',
+  updated: '2026-10-12',
   title: 'Data Processing Agreement',
   description:
     'How Cube27 processes personal data on a customer’s behalf when it provides CiteLadder.',
@@ -134,10 +136,11 @@ export const DATA_PROCESSING_AGREEMENT: LegalDocument = {
 };
 
 export const SUBPROCESSORS: LegalDocument = {
-  slug: 'subprocessors',
+  path: '/subprocessors',
+  metaTitle: 'Subprocessors · CiteLadder',
+  updated: '2026-10-12',
   title: 'Subprocessors',
   description: 'The service providers that process data for CiteLadder, and why.',
-  lastUpdated: '2026-10-12',
   sections: [
     {
       id: 'subprocessors',

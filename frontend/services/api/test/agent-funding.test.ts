@@ -38,11 +38,16 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     const accountId = await billingAccount(db, scope.workspaceId);
     billing.accounts.push(accountId);
     await grant(db, accountId, { key: 'agent', value: 1 });
-    const grantId = await grant(db, accountId, { key: 'ai_credits', value: credits });
+    const grantId = await grant(db, accountId, {
+      key: 'ai_credits',
+      value: credits,
+    });
     return { scope, accountId, grantId };
   }
   async function run(scope: Awaited<ReturnType<typeof agents.scope>>, skillId?: string) {
-    const store = agents.store({ admission: agentAdmission(settings, platform) });
+    const store = agents.store({
+      admission: agentAdmission(settings, platform),
+    });
     const run = await store.enqueue(scope, {
       key: randomUUID(),
       message: 'Answer from evidence.',
@@ -89,8 +94,14 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     'refuses the %s admission limit with a retry window',
     async (boundary) => {
       const { scope } = await tenant();
-      const limits = { ...settings, activeLimit: boundary === 'active' ? 1 : 10, dailyLimit: 1 };
-      const store = agents.store({ admission: agentAdmission(limits, platform) });
+      const limits = {
+        ...settings,
+        activeLimit: boundary === 'active' ? 1 : 10,
+        dailyRuns: { ...settings.dailyRuns, limit: 1 },
+      };
+      const store = agents.store({
+        admission: agentAdmission(limits, platform),
+      });
       await store.enqueue(scope, { key: randomUUID(), message: 'First turn' });
       await expect(
         store.enqueue(scope, { key: randomUUID(), message: 'Over limit' }),
@@ -146,7 +157,12 @@ describe('Agent funding through the production ledger and shared pricing', () =>
         .select(['outcome', 'input_tokens', 'output_tokens', 'debited_credits'])
         .where('run_id', '=', saved.id)
         .executeTakeFirstOrThrow(),
-    ).toEqual({ outcome: 'failed', input_tokens: '20', output_tokens: '10', debited_credits: '1' });
+    ).toEqual({
+      outcome: 'failed',
+      input_tokens: '20',
+      output_tokens: '10',
+      debited_credits: '1',
+    });
     expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
       reserved: 0,
       consumed: 1,
@@ -242,7 +258,11 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     const attempt = await calls.dispatch(lease, 1, await agentModels(platform)(saved), searching);
     // Two searches at $10 per 1,000 with the 130% markup add 26 credits to the token hold.
     expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)?.reserved).toBe(HOLD + 26);
-    const usage = { input_tokens: 20, output_tokens: 10, web_search_requests: 1 };
+    const usage = {
+      input_tokens: 20,
+      output_tokens: 10,
+      web_search_requests: 1,
+    };
     await calls.receipt(scope.workspaceId, attempt.id, result(reply(), { usage }));
     expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
       reserved: 0,
@@ -251,10 +271,30 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     expect(
       await db
         .selectFrom('agent_model_attempts')
-        .select(['web_search_requests', 'debited_credits'])
+        .select(['web_search_requests', 'debited_credits', 'cost_microusd'])
         .where('id', '=', attempt.id)
         .executeTakeFirst(),
-    ).toEqual({ web_search_requests: 1, debited_credits: '14' });
+    ).toEqual({
+      web_search_requests: 1,
+      debited_credits: '14',
+      cost_microusd: '10007',
+    });
+    // The internal-cost view carries the call at its cost before markup:
+    // $0.000002 input + $0.000005 output + $0.01 for the search.
+    expect(
+      await db
+        .selectFrom('internal_costs')
+        .select(['source', 'feature', 'charge', 'cost_microusd'])
+        .where('source_id', '=', attempt.id)
+        .execute(),
+    ).toEqual([
+      {
+        source: 'agent_model_call',
+        feature: 'agent',
+        charge: 'credits',
+        cost_microusd: '10007',
+      },
+    ]);
   });
   it('shrinks a call the balance covers only in part to the output it can pay for (B60)', async () => {
     const { scope, accountId, grantId } = await tenant(5);
@@ -308,8 +348,14 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     const { run: saved, lease } = await run(scope);
     const calls = new ModelCalls(db, agentFunding(settings, platform));
     const model = await agentModels(platform)(saved);
-    const opening = { role: 'user' as const, content: [text('x'.repeat(100_000))] };
-    const first = await calls.dispatch(lease, 1, model, { ...request, messages: [opening] });
+    const opening = {
+      role: 'user' as const,
+      content: [text('x'.repeat(100_000))],
+    };
+    const first = await calls.dispatch(lease, 1, model, {
+      ...request,
+      messages: [opening],
+    });
     // 100 095 bytes held as one-hour cache writes, plus the output cap.
     expect(first.reserved_credits).toBe('37');
     const reported = { input_tokens: 25_000, output_tokens: 1_000 };
@@ -341,8 +387,18 @@ describe('Agent funding through the production ledger and shared pricing', () =>
         .orderBy('ordinal')
         .execute(),
     ).toEqual([
-      { ordinal: 1, reserved_credits: '37', debited_credits: '4', input_bytes: '100095' },
-      { ordinal: 2, reserved_credits: '18', debited_credits: '18', input_bytes: '100214' },
+      {
+        ordinal: 1,
+        reserved_credits: '37',
+        debited_credits: '4',
+        input_bytes: '100095',
+      },
+      {
+        ordinal: 2,
+        reserved_credits: '18',
+        debited_credits: '18',
+        input_bytes: '100214',
+      },
     ]);
     expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
       reserved: 0,
@@ -365,7 +421,10 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     };
     const calls = new ModelCalls(db, agentFunding(settings, platform));
     await agents.runtime(scope, model, { models: calls }).execute(lease);
-    expect(await agents.run(saved.id)).toMatchObject({ status: 'succeeded', error_code: '' });
+    expect(await agents.run(saved.id)).toMatchObject({
+      status: 'succeeded',
+      error_code: '',
+    });
     const message = await db
       .selectFrom('agent_messages')
       .select('content')
@@ -415,7 +474,11 @@ describe('Agent funding through the production ledger and shared pricing', () =>
   });
   it('admits development funding only for the configured active administrator', async () => {
     const { scope } = await tenant();
-    const dev = { ...settings, devEmail: 'developer@example.test', devPasswordConfigured: true };
+    const dev = {
+      ...settings,
+      devEmail: 'developer@example.test',
+      devPasswordConfigured: true,
+    };
     await db
       .updateTable('users')
       .set({ email: dev.devEmail, role: 'admin' })
@@ -439,6 +502,8 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       )
       .where('key', '=', 'agent')
       .execute();
-    await expect(admit()).rejects.toMatchObject({ code: 'capability_unavailable' });
+    await expect(admit()).rejects.toMatchObject({
+      code: 'capability_unavailable',
+    });
   });
 });

@@ -30,8 +30,6 @@ export const LEGAL_ENTITY = {
   registrationNumber: 'CIN U72900PN2020PTC194984',
   grievanceContact: '',
   phone: '',
-  /** When these documents were last revised. Not a legal effective date. */
-  lastUpdated: '2026-10-12',
 } as const;
 
 /** "Cube27 IT Private Limited, operating CiteLadder, <address>". */
@@ -51,45 +49,31 @@ type LegalSection = {
   };
 };
 
-type LegalSlug =
-  | 'terms'
-  | 'privacy'
-  | 'refund-policy'
-  | 'cancellation-policy'
-  | 'cookies'
-  | 'ai-policy'
-  | 'dpa'
-  | 'subprocessors'
-  | 'contact';
-
+/**
+ * A policy's page record (see PageRecord) and its content. The published
+ * list, in footer order, is `LEGAL_DOCUMENTS` (legal-documents.ts).
+ */
 export type LegalDocument = {
-  slug: LegalSlug;
+  path: `/${string}`;
+  /** The browser title, such as "Terms of Service · CiteLadder". */
+  metaTitle: string;
+  /** When the document was last revised (not a legal effective date): its "Last updated" line and sitemap <lastmod>. */
+  updated: string;
   title: string;
+  /** The name in the footer and the policies rail, when it is not the title. */
+  navLabel?: string;
   description: string;
-  lastUpdated?: string;
   sections: readonly LegalSection[];
 };
-
-export type LegalLink = { label: string; href: `/${LegalSlug}` };
-
-/** Every published policy, in footer order. Each has its own marketing route. */
-export const FOOTER_LEGAL_LINKS: readonly LegalLink[] = [
-  { label: 'Terms of Service', href: '/terms' },
-  { label: 'Privacy Policy', href: '/privacy' },
-  { label: 'Refund Policy', href: '/refund-policy' },
-  { label: 'Cancellation Policy', href: '/cancellation-policy' },
-  { label: 'Cookies', href: '/cookies' },
-  { label: 'AI Policy', href: '/ai-policy' },
-  { label: 'Data Processing Agreement', href: '/dpa' },
-  { label: 'Subprocessors', href: '/subprocessors' },
-  { label: 'Contact', href: '/contact' },
-];
 
 const contact = PARENT_COMPANY.email;
 
 export const COOKIE_POLICY: LegalDocument = {
-  slug: 'cookies',
+  path: '/cookies',
+  metaTitle: 'Cookie Policy · CiteLadder',
+  updated: '2026-10-12',
   title: 'Cookie Policy',
+  navLabel: 'Cookies',
   description: 'How CiteLadder uses cookies and similar technologies on the website and platform.',
   sections: [
     {
@@ -183,11 +167,12 @@ export const COOKIE_POLICY: LegalDocument = {
 };
 
 export const AI_POLICY: LegalDocument = {
-  slug: 'ai-policy',
+  path: '/ai-policy',
+  metaTitle: 'AI Policy · CiteLadder',
+  updated: '2026-10-12',
   title: 'AI Policy',
   description:
     'How CiteLadder uses AI: answer engines generate responses, scoring is deterministic, and Customer Data is never sold or used to train third-party models.',
-  lastUpdated: '2026-10-12',
   sections: [
     {
       id: 'overview',

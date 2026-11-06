@@ -2,7 +2,8 @@
 import { randomUUID, createHash } from 'node:crypto';
 import { sql, type RawBuilder, type Selectable } from 'kysely';
 import { subjectXactLock } from '../db/advisory-lock.ts';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import type { Users } from '../generated/db-schema.ts';
 import { issueBundle, lockAccount, sourceRef, type GrantSource } from './grants.ts';
@@ -13,6 +14,7 @@ import { requirePlatformAdmin } from '../auth/operators.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { getLogger } from '../logging.ts';
 import { stripTrailing } from '../text-order.ts';
+import { workspaceOwner } from '../workspaces/owned.ts';
 
 /**
  * The mailbox an address delivers to, for trial eligibility: lowercased, any
@@ -86,7 +88,7 @@ export async function ensureWorkspaceBilling(
       .limit(1)
       .executeTakeFirst();
     const from = earlier?.valid_from ?? locked.created_at;
-    const days = resolveSettingSpec(policy.billing.settings.trial_days) as number;
+    const days = resolveSettingSpec(policy.billing.settings.trial_days, process.env) as number;
     const until = earlier?.valid_until ?? new Date(from.getTime() + days * 86400000);
     await issueBundle(db, {
       workspaceId,
@@ -242,15 +244,7 @@ export function provisionWorkspaceBilling(
   if (!input.reason.trim() || input.reason.length > 255) throw new Error('reason_required');
   return operatorTransaction(db, input.apply === true, async (trx) => {
     const actor = await requirePlatformAdmin(trx, input.actor);
-    const owner = await trx
-      .selectFrom('workspace_members')
-      .innerJoin('users', 'users.id', 'workspace_members.user_id')
-      .innerJoin('workspaces', 'workspaces.id', 'workspace_members.workspace_id')
-      .selectAll('users')
-      .where('workspace_members.workspace_id', '=', workspaceId)
-      .where('workspace_members.role', '=', 'owner')
-      .where('workspaces.is_system', '=', false)
-      .executeTakeFirstOrThrow();
+    const owner = await workspaceOwner(trx, workspaceId);
     await ensureWorkspaceBilling(trx, workspaceId, owner);
     const account = await trx
       .selectFrom('billing_accounts')

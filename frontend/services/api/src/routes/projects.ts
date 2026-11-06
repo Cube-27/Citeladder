@@ -3,8 +3,7 @@ import { commandCenterSchema } from '@citeladder/contracts/opportunities';
 import { projectMarketCreateSchema, projectMarketSchema } from '@citeladder/contracts/markets';
 import { z } from 'zod';
 
-import { policy, resolveSettingSpec } from '../config.ts';
-import { enforceWorkspaceRequest } from '../abuse/usage.ts';
+import { budget, spendBudget } from '../abuse/usage.ts';
 import { readBody } from '../http/body.ts';
 import { projectCreate, projectUpdate } from '../projects/inputs.ts';
 import {
@@ -67,7 +66,7 @@ export const projectRoutes = [
   definePatchRoute({
     family,
     path: `${root}/{project_id}`,
-    authorize: 'project',
+    authorize: 'active-project',
     capability: 'write',
     params: { path: projectPath, query: {} },
     body: projectUpdate,
@@ -83,7 +82,7 @@ export const projectRoutes = [
   defineDeleteRoute({
     family,
     path: `${root}/{project_id}`,
-    authorize: 'project',
+    authorize: 'active-project',
     capability: 'delete_projects',
     params: { path: projectPath, query: {} },
     handle: ({ c, db }, { path }) =>
@@ -95,18 +94,14 @@ export const projectRoutes = [
   definePostRoute({
     family,
     path: `${root}/{project_id}/logos/refresh`,
-    authorize: 'project',
+    authorize: 'active-project',
     capability: 'write',
     params: { path: projectPath, query: {} },
     response: projectSchema,
-    async handle({ c, db }, { path }) {
+    async handle({ c, db, config }, { path }) {
       const scope = { workspaceId: c.get('workspace').workspaceId, projectId: path.project_id };
       await readProject(db, scope);
-      await enforceWorkspaceRequest(db, scope.workspaceId, {
-        operation: 'brand_logo_refresh',
-        limit: Number(resolveSettingSpec(policy.abuse.brand_logo_refresh_limit)),
-        windowSeconds: Number(resolveSettingSpec(policy.abuse.brand_logo_refresh_window_seconds)),
-      });
+      await spendBudget(db, budget('brand_logo_refresh', config.settings), scope.workspaceId);
       return refreshLogos(db, scope);
     },
   }),
@@ -136,7 +131,7 @@ export const projectRoutes = [
   definePostRoute({
     family,
     path: `${root}/{project_id}/markets`,
-    authorize: 'project',
+    authorize: 'active-project',
     capability: 'write',
     status: 201,
     params: { path: projectPath, query: {} },
@@ -153,7 +148,7 @@ export const projectRoutes = [
   defineDeleteRoute({
     family,
     path: `${root}/{project_id}/markets/{market_id}`,
-    authorize: 'project',
+    authorize: 'active-project',
     capability: 'write',
     params: { path: marketPath, query: {} },
     handle: ({ c, db }, { path }) =>

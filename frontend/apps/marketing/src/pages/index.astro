@@ -1,16 +1,12 @@
 ---
 import { LandingPage } from '@/components/marketing/landing/landing-page';
+import { PAGES } from '@/lib/marketing-content/pages';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 
-const description =
-  "Track how ChatGPT, Gemini, Claude and Google AI Overviews mention and cite your brand, check your site and search data, and plan fixes with CiteLadder.";
+const page = PAGES.home;
 ---
 
-<MarketingLayout
-  title="AI visibility and search intelligence software | CiteLadder"
-  description={description}
-  canonical="/"
->
+<MarketingLayout title={page.metaTitle} description={page.description} canonical={page.path}>
   <main id="main">
     <LandingPage />
   </main>

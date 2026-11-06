@@ -8,7 +8,8 @@
 import { randomUUID } from 'node:crypto';
 import { ACTIVE_CRAWL_STATUSES } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import type { Candidate } from './frontier.ts';
 import type { Crawl } from './site-task.ts';

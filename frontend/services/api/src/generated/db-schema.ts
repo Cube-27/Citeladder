@@ -143,6 +143,7 @@ export interface AgentModelAttempts {
   cache_write_1h_input_tokens: Int8 | null;
   cache_write_input_tokens: Int8 | null;
   cached_input_tokens: Int8 | null;
+  cost_microusd: Int8 | null;
   created_at: Timestamp;
   deadline_at: Timestamp;
   debited_credits: Int8;
@@ -1698,6 +1699,18 @@ export interface IntegrationSyncRuns {
   window_end: Timestamp;
   window_start: Timestamp;
   workspace_id: string;
+}
+
+export interface InternalCosts {
+  charge: string | null;
+  cost_microusd: Int8 | null;
+  feature: string | null;
+  model: string | null;
+  occurred_at: Timestamp | null;
+  provider: string | null;
+  source: string | null;
+  source_id: string | null;
+  workspace_id: string | null;
 }
 
 export interface IntroductoryClaims {
@@ -3421,6 +3434,7 @@ export interface DB {
   integration_oauth_states: IntegrationOauthStates;
   integration_property_mappings: IntegrationPropertyMappings;
   integration_sync_runs: IntegrationSyncRuns;
+  internal_costs: InternalCosts;
   introductory_claims: IntroductoryClaims;
   introductory_operator_codes: IntroductoryOperatorCodes;
   mcp_authorization_codes: McpAuthorizationCodes;

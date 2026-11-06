@@ -42,6 +42,9 @@ its line on the pages.
 | `/refund-policy`, `/cancellation-policy`, `/contact` | `legal-billing.ts` |
 | `/cookies`, `/ai-policy` | `legal.ts` |
 
+`LEGAL_DOCUMENTS` (`legal-documents.ts`) lists them in footer order; each
+record's `updated` is its "Last updated" line and sitemap date.
+
 Terms acceptance is recorded per user and workspace against
 `terms_revision` (`frontend/services/api/src/config/auth-runtime.json`,
 `src/workspaces/policies.ts`). The footer has a persistent Cookie preferences

@@ -8,11 +8,13 @@ import {
   roleAllows,
   type WorkspaceCapability,
 } from '../auth/workspace.ts';
-import { enforceSubjectRequest } from '../abuse/usage.ts';
+import { budget, spendBudget } from '../abuse/usage.ts';
+import { GLOBAL_TRIAL_SUBJECT } from '../config/abuse.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import { policy } from '../config.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';
+import { OWNED_WORKSPACE_LIMIT, ownedWorkspaces } from './owned.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { Users, Workspaces } from '../generated/db-schema.ts';
 import { ensureWorkspaceBilling } from '../entitlements/bootstrap.ts';
@@ -45,20 +47,6 @@ export function workspaceView(
     created_at: workspace.created_at.toISOString(),
     updated_at: workspace.updated_at.toISOString(),
   };
-}
-
-/** A person owns at most one workspace; any other access is a membership. */
-const OWNED_WORKSPACE_LIMIT = 1;
-
-function ownedWorkspaces(db: Database, userId: string) {
-  return db
-    .selectFrom('workspaces')
-    .innerJoin('workspace_members', 'workspace_members.workspace_id', 'workspaces.id')
-    .selectAll('workspaces')
-    .where('workspace_members.user_id', '=', userId)
-    .where('workspace_members.role', '=', 'owner')
-    .where('workspaces.is_system', '=', false)
-    .execute();
 }
 
 async function insertWorkspace(
@@ -131,11 +119,7 @@ export async function createWorkspace(trx: Database, userId: string, name: strin
     .where('id', '=', userId)
     .executeTakeFirstOrThrow();
   if (user.registration_origin === 'public')
-    await enforceSubjectRequest(trx, 'client', 'global-trial', {
-      operation: 'auth.trial.global',
-      limit: policy.auth.mailbox.trial_daily_limit,
-      windowSeconds: policy.auth.mailbox.daily_window_seconds,
-    });
+    await spendBudget(trx, budget('trial_global_daily'), GLOBAL_TRIAL_SUBJECT);
   const workspace = await insertWorkspace(trx, userId, name);
   await ensureWorkspaceBilling(trx, workspace.id, user);
   return workspaceView(workspace, 'owner');

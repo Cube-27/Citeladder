@@ -1,12 +1,14 @@
 /** Optional search transports. Candidate pages are acquired by Site Health. */
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
+import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
 import { discoverySettings } from '../projects/discovery-inputs.ts';
 import { createResearchClient, ResearchBudget } from '../projects/research-evidence.ts';
 import { boundedJson } from '../providers/response.ts';
 import type { Meter } from '../billing/metering.ts';
 import { assertMetered } from '../models/meter-scope.ts';
+import { failureFacts, getLogger } from '../logging.ts';
 
 const p = policy.commerce.discovery;
 const result = z.object({
@@ -32,19 +34,32 @@ export type CompetitorSearch = (
   meter: Meter,
 ) => Promise<SearchOutcome>;
 const FEATURE = 'commerce_competitor_discovery';
+const logger = getLogger('commerce.discovery');
+
+function logSearchFailure(provider: string, error: unknown, startedAt: number) {
+  logger.warning('commerce_competitor_search_failed', {
+    provider,
+    ...failureFacts(error),
+    elapsed_ms: Math.round(performance.now() - startedAt),
+  });
+}
 
 export function competitorSearch(
-  env: Record<string, string | undefined> = process.env,
+  env: SettingSource = process.env,
   transport: typeof fetch = fetch,
 ): CompetitorSearch {
   const setting = (name: keyof typeof p.settings) => resolveSettingSpec(p.settings[name], env);
   const key = String(setting('tavily_api_key'));
   const endpoint = String(setting('tavily_endpoint'));
   const timeout = Number(setting('tavily_timeout_seconds'));
-  const research = { ...discoverySettings(env), keenable_snippet_max_chars: p.snippet_chars };
+  const research = {
+    ...discoverySettings(env),
+    keenable_snippet_max_chars: p.snippet_chars,
+  };
   return async (query, locale, meter) => {
     let failed = false;
     if (key) {
+      const startedAt = performance.now();
       try {
         const url = new URL(endpoint);
         if (
@@ -65,7 +80,10 @@ export function competitorSearch(
             const value = await transport(url, {
               method: 'POST',
               redirect: 'error',
-              headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+              headers: {
+                authorization: `Bearer ${key}`,
+                'content-type': 'application/json',
+              },
               signal,
               body: JSON.stringify({
                 query: `${query} ${locale}`.trim(),
@@ -75,10 +93,11 @@ export function competitorSearch(
                 include_raw_content: false,
               }),
             });
+            // A refused request is a failed call: recorded at no cost, not the request fee.
+            if (!value.ok) throw new Error('Search failed');
             return { value, usage: null };
           },
         );
-        if (!response.ok) throw new Error('Search failed');
         const body = z
           .object({ results: z.array(z.unknown()) })
           .parse(await boundedJson(response, p.response_max_bytes, signal));
@@ -103,7 +122,9 @@ export function competitorSearch(
               : [];
           }),
         };
-      } catch {
+      } catch (error) {
+        // Keenable is the fallback; the outcome records `provider_failed` if it is unavailable too.
+        logSearchFailure('tavily', error, startedAt);
         failed = true;
       }
     }
@@ -114,6 +135,7 @@ export function competitorSearch(
         retry: failed,
         results: [],
       };
+    const startedAt = performance.now();
     try {
       const client = createResearchClient(
         research,
@@ -136,8 +158,14 @@ export function competitorSearch(
           provider: item.provider,
         })),
       };
-    } catch {
-      return { status: 'failed', errorCode: 'provider_failed', retry: true, results: [] };
+    } catch (error) {
+      logSearchFailure('keenable', error, startedAt);
+      return {
+        status: 'failed',
+        errorCode: 'provider_failed',
+        retry: true,
+        results: [],
+      };
     }
   };
 }
