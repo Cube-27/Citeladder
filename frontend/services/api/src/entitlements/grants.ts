@@ -4,7 +4,7 @@ import type { Database } from '../db/database.ts';
 import { policy, resolveSettingSpec } from '../config.ts';
 import { advisoryXactLock } from '../db/advisory-lock.ts';
 import { accountState } from './state.ts';
-import { conflict } from '../billing/contracts.ts';
+import { conflict } from '../errors.ts';
 import { getLogger } from '../logging.ts';
 
 export async function lockAccount(db: Database, workspaceId: string, accountId: string) {

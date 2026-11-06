@@ -3,7 +3,7 @@ import type { Database } from '../db/database.ts';
 import type { ServiceConfig } from '../config.ts';
 import { lockAccount } from '../entitlements/grants.ts';
 import { workspaceAccount } from './purchases.ts';
-import { conflict } from './contracts.ts';
+import { conflict } from '../errors.ts';
 import { configured } from './razorpay.ts';
 
 /**

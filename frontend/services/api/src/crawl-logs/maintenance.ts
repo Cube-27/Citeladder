@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import ipaddr from 'ipaddr.js';
 import { crawlLogs } from '../config/crawl-logs.ts';
 import { crawlers } from '../config/crawlers.ts';
-import { fetchWebsite, type WebsiteFetcher } from '../projects/safe-fetch.ts';
+import { fetchWebsite, type WebsiteFetcher } from '../safe-fetch.ts';
 import { hash } from '../traffic/normalization.ts';
 import { record } from '../db/json.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';

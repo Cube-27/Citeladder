@@ -5,13 +5,8 @@ import { resolvedQuoteSchema } from '@citeladder/contracts/billing';
 import type { Database } from '../db/database.ts';
 import { lockAccount, issueBundle, revokeBundle, refreshRuntime } from '../entitlements/grants.ts';
 import { catalog } from './catalog.ts';
-import {
-  amount,
-  conflict,
-  taxSnapshotSchema,
-  type Pending,
-  type Subscription,
-} from './contracts.ts';
+import { conflict } from '../errors.ts';
+import { amount, taxSnapshotSchema, type Pending, type Subscription } from './contracts.ts';
 import type { Evidence, SubscriptionEvidence } from './razorpay.ts';
 import { recordPayment } from './receipts.ts';
 import { policy } from '../config.ts';

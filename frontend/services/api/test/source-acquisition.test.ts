@@ -1,7 +1,7 @@
 import { gzipSync } from 'node:zlib';
 import { expect, it, vi } from 'vitest';
 
-import { createWebsiteFetcher, decodedBody, FetchError } from '../src/projects/safe-fetch.ts';
+import { createWebsiteFetcher, decodedBody, FetchError } from '../src/safe-fetch.ts';
 import {
   acquisitionSettings,
   HostPacer,

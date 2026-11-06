@@ -1,7 +1,8 @@
 import { createHmac } from 'node:crypto';
 import { z } from 'zod';
 import { resolvedQuoteSchema } from '@citeladder/contracts/billing';
-import { amount, conflict, taxSchema, type Identity } from './contracts.ts';
+import { amount, taxSchema, type Identity } from './contracts.ts';
+import { conflict } from '../errors.ts';
 import type { BillingSettings } from './config.ts';
 import type { CredentialMode } from './credential-mode.ts';
 import type { CatalogPlan, CatalogItem } from './catalog.ts';

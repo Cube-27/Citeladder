@@ -10,12 +10,11 @@ import { isoDateText } from '../db/timestamps.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { enqueueImplementationVerification } from '../opportunities/enqueue.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
-import { addDays } from '../referrals/projection.ts';
+import { addDays, inclusiveDays } from '../calendar-days.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { payloadWindow, requireProject, taskProject, type Executor } from '../workers/executor.ts';
 import type { MetricRow } from './accumulators.ts';
 import { hash } from './normalization.ts';
-import { windowDays } from './performance.ts';
 import { record } from '../db/json.ts';
 import { TrafficProjectionBuilder, type Projection } from './projection.ts';
 import { textSpan } from '../text-order.ts';
@@ -384,7 +383,7 @@ function executor(displayOnly: boolean): Executor {
     const coverage = {
       earliest_date: extent.start,
       latest_date: extent.end,
-      covered_days: extent.start && extent.end ? windowDays(extent.start, extent.end) : 0,
+      covered_days: extent.start && extent.end ? inclusiveDays(extent.start, extent.end) : 0,
     };
     await checkCancelled('snapshot write');
     await db.transaction().execute(async (trx) => {

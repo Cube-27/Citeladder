@@ -3,7 +3,7 @@ import { getDomain } from 'tldts';
 
 import { policy } from '../config.ts';
 import { compareIdentityText } from '../analysis/comparison.ts';
-import { publicUrl } from '../projects/safe-fetch.ts';
+import { publicUrl } from '../safe-fetch.ts';
 
 // Canonical serialization defines the stored `url_hash` keyspace: unreserved
 // escapes decode, other escapes uppercase, the path re-quotes with its safe

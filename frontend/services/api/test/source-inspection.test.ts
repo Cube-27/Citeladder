@@ -4,7 +4,7 @@ import { afterAll, expect, it, vi } from 'vitest';
 import { policy } from '../src/config.ts';
 import { record } from '../src/db/json.ts';
 import { enqueueTask } from '../src/referrals/enqueue.ts';
-import { createWebsiteFetcher } from '../src/projects/safe-fetch.ts';
+import { createWebsiteFetcher } from '../src/safe-fetch.ts';
 import { authorizeAcquisition } from '../src/web-evidence/acquisition.ts';
 import { pageIdentity } from '../src/source-pages/identity.ts';
 import { claimPages, spendRedirect } from '../src/source-pages/admission.ts';

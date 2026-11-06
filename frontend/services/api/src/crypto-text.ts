@@ -21,6 +21,10 @@ function canonical(value: unknown): unknown {
     );
   return value;
 }
+/** SHA-256 of `value` as plain `JSON.stringify` output, keys in insertion order. */
+export const digest = (value: unknown): string =>
+  createHash('sha256').update(JSON.stringify(value)).digest('hex');
+
 /** SHA-256 of `value` as canonical JSON. */
 export function fingerprint(value: unknown) {
   return createHash('sha256')
