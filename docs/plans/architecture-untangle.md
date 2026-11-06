@@ -60,14 +60,14 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P03 | Runtime safety and schema hardening | FX5, DB1, DB2 | — | mig | merged | [#627](https://github.com/Cube-27/Citeladder/pull/627) | Migrations 0006, 0007 |
 | P04 | Site Health tasks I: outcome classifier, crawl status, single writers | SH1, SH2, SH3 | — | mig? | merged | [#628](https://github.com/Cube-27/Citeladder/pull/628) | No migration needed |
 | P05 | Engine surfaces I: DataForSEO client, typed frozen config, engine sets from routes | E1, E2, E3 | — | | in progress | | Builder session `untangle-p05` |
-| P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | in review | [#634](https://github.com/Cube-27/Citeladder/pull/634) | Split for size: P06-a (#634) = F1–F3; P06-b = F4 follows |
+| P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | merged | [#634](https://github.com/Cube-27/Citeladder/pull/634), [#638](https://github.com/Cube-27/Citeladder/pull/638) | Split for size: P06-a (#634) = F1–F3; P06-b (#638) = F4 |
 | P07 | App route manifest and kit cleanup | R1, R2, R3, R5, R6, R7 | — | | in review | [#640](https://github.com/Cube-27/Citeladder/pull/640) | Command palette stays in `components/ui` (design-system policy); see PR |
 | P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | merged | [#631](https://github.com/Cube-27/Citeladder/pull/631) | Migration 0010 |
 | P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | merged | [#630](https://github.com/Cube-27/Citeladder/pull/630) | |
 | P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | merged | [#632](https://github.com/Cube-27/Citeladder/pull/632) | Migration 0011 |
-| P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | todo | | |
+| P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | in progress | | Builder session `untangle-p11` |
 | P12 | Opportunities: check kinds, typed targets, evidence announcement | O2, O3, O4 | P02 | | todo | | |
-| P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | todo | | |
+| P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | in progress | | Builder session `untangle-p13` |
 | P14 | Marketing site records and config-driven numbers | MK1, MK2, MK3, MK4 | P02 | | todo | | |
 | P15 | Queue owner II: remaining lanes and coalesced enqueue | Q4, Q5, Q6, Q7, Q8 | P01, P03, P09 | | merged | [#633](https://github.com/Cube-27/Citeladder/pull/633) | No migration |
 | P16 | Site Health tasks II: one task runner, counters, pinned versions | SH4, SH5 | P04, P08, P09 | | merged | [#635](https://github.com/Cube-27/Citeladder/pull/635) | No migration |
@@ -162,7 +162,7 @@ order the PR tracker already respects.
 | F1 | Contracts own request schemas: prompts, topics, runs, actions, projects | — | `frontend/packages/contracts`, `frontend/lib/api/{prompts,topics,runs,actions,projects}.ts`, matching server `inputs.ts` | | done | 6c54919 | |
 | F2 | Contracts own remaining request schemas; delete `lib/api/types.ts` | F1 | `frontend/packages/contracts`, `frontend/lib/api/` | | done | 5bae2b9 | |
 | F3 | One Search Intelligence dataset-kind table | F2 | `routes/search-intelligence-contracts.ts`, `search-intelligence/acquisition-state.ts`, `frontend/lib/config/search-intelligence.ts`, contracts | | done | 1052e86 | |
-| F4 | Query and mutation descriptors: prompts and topics (shared scoped-key builder) | F1 | `frontend/lib/api/{prompts,topics,query-keys}.ts`, `frontend/components/{prompts,knowledge-base}` | | todo | | P06-b: built on local branch `untangle-p06b-f4` (3ab383a), PR after P06-a merges |
+| F4 | Query and mutation descriptors: prompts and topics (shared scoped-key builder) | F1 | `frontend/lib/api/{prompts,topics,query-keys}.ts`, `frontend/components/{prompts,knowledge-base}` | | done | 3ab383a | P06-b |
 | F5 | Query and mutation descriptors: runs, visibility, commerce | F4 | `frontend/lib/api/{runs,visibility,commerce}.ts`, matching components, `frontend/lib/navigation/route-prefetch.ts` | | todo | | |
 | F6 | Query and mutation descriptors: integrations and remaining domains | F5, F2 | `frontend/lib/api/*`, remaining components | | todo | | |
 | F7 | Job-state records and one polling helper; one score band | F6 | `frontend/lib/<domain>/status.ts`, job screens, `frontend/lib/config/operational.ts` | | todo | | |
