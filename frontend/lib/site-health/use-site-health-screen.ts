@@ -18,8 +18,7 @@ import {
   type ExportFormat,
   type ExportView,
 } from '@/lib/site-health/download';
-import { useActiveWorkspaceId } from '@/lib/project/project-context';
-import { resolveProjectRequestScope } from '@/lib/project/request-scope';
+import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useCrawlEvents } from '@/lib/site-health/use-crawl-events';
 import {
   crawlPollInterval,
@@ -42,12 +41,8 @@ export function monitoredPagePreviewParams(active: boolean) {
   };
 }
 
-function canLoadPagePreview(
-  scopeEnabled: boolean,
-  crawlId: string | undefined,
-  phase: SiteHealthPhase,
-): boolean {
-  return scopeEnabled && Boolean(crawlId) && (phase === 'analyzing' || phase === 'dashboard');
+function canLoadPagePreview(crawlId: string | undefined, phase: SiteHealthPhase): boolean {
+  return Boolean(crawlId) && (phase === 'analyzing' || phase === 'dashboard');
 }
 
 /**
@@ -58,7 +53,7 @@ function canLoadPagePreview(
 export function pagePreviewQuery(workspaceId: string, dashboard: SiteHealthDashboard | null) {
   const crawl = dashboard?.crawl ?? null;
   const phase: SiteHealthPhase = dashboard?.phase ?? 'resolving';
-  if (!crawl || !canLoadPagePreview(true, crawl.id, phase)) return null;
+  if (!crawl || !canLoadPagePreview(crawl.id, phase)) return null;
   return siteHealthQueries.pages(
     workspaceId,
     crawl.id,
@@ -82,23 +77,19 @@ export function pagePreviewQuery(workspaceId: string, dashboard: SiteHealthDashb
  * running their own 4s timer over the same crawl produced overlapping refetches
  * that resolved out of order, so panels rendered state from different moments.
  */
-export function useSiteHealthScreen(projectId: string | null) {
+export function useSiteHealthScreen() {
   const queryClient = useQueryClient();
-  const workspaceId = useActiveWorkspaceId();
-  const requestScope = resolveProjectRequestScope(workspaceId, projectId);
+  const { workspaceId, projectId } = useProjectScope();
+  const requestScope = { workspaceId, projectId };
   const [exportError, setExportError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
   // The shell's own workspace entitlement: it resolves the Site Health runtime
   // from the same grants, and the route loader has already asked for it.
-  const entitlementQuery = useQuery({
-    ...billingQueries.workspaceEntitlement(workspaceId ?? ''),
-    enabled: workspaceId !== null,
-  });
+  const entitlementQuery = useQuery(billingQueries.workspaceEntitlement(workspaceId));
 
   const dashboardQuery = useQuery({
     ...siteHealthQueries.dashboard(requestScope),
-    enabled: requestScope.enabled,
     // Backed off by crawl age, and stops entirely on a crawl that has gone
     // silent — an active-forever crawl must not pin the tab to a 4s poll of
     // five queries indefinitely.
@@ -134,16 +125,13 @@ export function useSiteHealthScreen(projectId: string | null) {
     lastSeenRef.current = { crawlId, version: crawlVersion };
     if (previous?.crawlId !== crawlId || previous.version === crawlVersion) return;
     void refreshCrawlViews(queryClient, crawlId);
-    if (projectId) void refreshMonitoredUrls(queryClient, projectId);
+    void refreshMonitoredUrls(queryClient, projectId);
   }, [crawlId, crawlVersion, projectId, queryClient]);
 
   // Per-project monitored rows supply analysis progress totals. Automatic URL
   // admission owns membership; this query is display-only and cannot change
   // the crawl phase.
-  const monitoredQuery = useQuery({
-    ...siteHealthQueries.monitored(requestScope),
-    enabled: requestScope.enabled,
-  });
+  const monitoredQuery = useQuery(siteHealthQueries.monitored(requestScope));
   const projectSelectedTotal = useMemo(() => {
     const rows = monitoredQuery.data?.monitored_urls;
     if (!rows) return null;
@@ -156,12 +144,8 @@ export function useSiteHealthScreen(projectId: string | null) {
   // pre-seeded pending set at once. Once terminal, it returns to the complete
   // monitored projection.
   const pagesQuery = useQuery({
-    ...siteHealthQueries.pages(
-      requestScope.workspaceId,
-      crawl?.id ?? '',
-      monitoredPagePreviewParams(active),
-    ),
-    enabled: canLoadPagePreview(requestScope.enabled, crawl?.id, phase),
+    ...siteHealthQueries.pages(workspaceId, crawl?.id ?? '', monitoredPagePreviewParams(active)),
+    enabled: canLoadPagePreview(crawl?.id, phase),
   });
 
   // The one thing still derived from the phase: what the always-mounted
@@ -192,11 +176,10 @@ export function useSiteHealthScreen(projectId: string | null) {
   } | null>(null);
   const createAttemptRef = useRef(0);
 
-  const createMutation = useMutation(siteHealthMutations.createCrawl(requestScope.workspaceId));
+  const createMutation = useMutation(siteHealthMutations.createCrawl(workspaceId));
   const cancelMutation = useMutation(siteHealthMutations.cancelCrawl(requestScope));
   const startCrawl = (input?: StartCrawlInput) => {
-    if (!requestScope.enabled) return;
-    const variables = input ?? { project_id: requestScope.projectId };
+    const variables = input ?? { project_id: projectId };
     createAttemptRef.current += 1;
     const token = createAttemptRef.current;
     setStarting({ projectId: variables.project_id, crawlId: null, token });
@@ -218,8 +201,7 @@ export function useSiteHealthScreen(projectId: string | null) {
     });
   };
   // Reruns the shown crawl's scope, so Changes always has a comparable baseline.
-  const recrawl = () =>
-    crawl && startCrawl({ project_id: requestScope.projectId, recrawl_of: crawl.id });
+  const recrawl = () => crawl && startCrawl({ project_id: projectId, recrawl_of: crawl.id });
   const cancelCrawl = () => crawl && cancelMutation.mutate(crawl.id);
 
   // A create is genuinely in flight, or its projection refresh has not yet
@@ -234,9 +216,7 @@ export function useSiteHealthScreen(projectId: string | null) {
     setExportError(null);
     setExporting(true);
     try {
-      await downloadCrawlExport(crawl.id, format, view, {
-        workspaceId: requestScope.workspaceId,
-      });
+      await downloadCrawlExport(crawl.id, format, view, { workspaceId });
     } catch {
       setExportError('Export failed. Please try again.');
     } finally {

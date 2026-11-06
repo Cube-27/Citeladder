@@ -8,7 +8,7 @@ import {
   type SearchIntelligenceRow,
 } from '@/lib/api/search-intelligence';
 import { SEARCH_COLUMNS_BY_KIND, searchScopeLabel } from '@/lib/config/search-intelligence';
-import { useProjectContext } from '@/lib/project/project-context';
+import { useProjectScope } from '@/lib/project/active-project-scope';
 
 export function SearchIntelligenceExport({
   dataset,
@@ -17,16 +17,12 @@ export function SearchIntelligenceExport({
   dataset: SearchIntelligenceDataset;
   params: Parameters<typeof searchIntelligenceApi.rows>[3];
 }>) {
-  const { activeProject } = useProjectContext();
+  const { workspaceId, projectId } = useProjectScope();
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState('');
   const controller = useRef<AbortController | null>(null);
-  useEffect(
-    () => () => controller.current?.abort(),
-    [activeProject?.id, activeProject?.workspace_id],
-  );
+  useEffect(() => () => controller.current?.abort(), [projectId, workspaceId]);
   const exportSaved = async () => {
-    if (!activeProject) return;
     controller.current = new AbortController();
     const signal = controller.current.signal;
     setExporting(true);
@@ -37,9 +33,9 @@ export function SearchIntelligenceExport({
       do {
         const saved =
           await /* NOSONAR -- Each page needs the previous page's cursor. */ searchIntelligenceApi.rows(
-            activeProject.id,
+            projectId,
             dataset.id,
-            { workspaceId: activeProject.workspace_id, signal },
+            { workspaceId, signal },
             { ...params, cursor, limit: 200 },
           );
         exported.push(...saved.rows);

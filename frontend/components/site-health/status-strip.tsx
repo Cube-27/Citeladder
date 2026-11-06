@@ -2,7 +2,9 @@
 
 import type { ReactNode } from 'react';
 
+import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
+import { MutationNotice } from '@/components/ui/mutation-notice';
 import { Dot } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
@@ -42,11 +44,14 @@ export function StatusStrip({
   pages,
   selectedTotal,
   selectedError,
+  onRerun,
 }: Readonly<{
   crawl: SiteCrawl | null;
   phase: SiteHealthPhase;
   entitlement: SiteHealthEntitlement;
   cancelPending: boolean;
+  /** Starts a new crawl from a failed one's notice; omitted when not allowed. */
+  onRerun?: () => void;
   /** A fresh crawl create is in flight — freeze current content behind a notice. */
   startPending: boolean;
   /** Bounded monitored-page window (observed "running" rows only, never totals). */
@@ -69,6 +74,7 @@ export function StatusStrip({
         pages={pages}
         selectedTotal={selectedTotal}
         selectedError={selectedError}
+        onRerun={onRerun}
       />
     </div>
   );
@@ -83,6 +89,7 @@ function StripContent({
   pages,
   selectedTotal,
   selectedError,
+  onRerun,
 }: Readonly<{
   crawl: SiteCrawl | null;
   phase: SiteHealthPhase;
@@ -92,6 +99,7 @@ function StripContent({
   pages: PageSummary[];
   selectedTotal: number | null;
   selectedError: boolean;
+  onRerun?: () => void;
 }>) {
   if (startPending) {
     return (
@@ -137,7 +145,7 @@ function StripContent({
     );
   }
 
-  if (phase === 'terminal') return <TerminalNotice crawl={crawl} />;
+  if (phase === 'terminal') return <TerminalNotice crawl={crawl} onRerun={onRerun} />;
   return <DashboardNotice crawl={crawl} />;
 }
 
@@ -151,11 +159,25 @@ function terminalMessage(
   return 'This crawl ended before it produced results. Run a new crawl to try again.';
 }
 
-function TerminalNotice({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
+function TerminalNotice({ crawl, onRerun }: Readonly<{ crawl: SiteCrawl; onRerun?: () => void }>) {
   const failure = crawl.status === 'failed' ? crawlFailureCopy(crawl) : null;
   const message = terminalMessage(crawl.status, failure);
+  // A failed crawl is recovered by running it again, offered on the notice.
+  if (failure)
+    return (
+      <MutationNotice
+        notice={{ message, retryable: false }}
+        recovery={
+          onRerun ? (
+            <Button type="button" variant="secondary" onClick={onRerun}>
+              Crawl again
+            </Button>
+          ) : undefined
+        }
+      />
+    );
   return (
-    <Callout tone={failure ? 'negative' : 'info'}>
+    <Callout tone="info">
       <RunNotice crawl={crawl} message={message} />
     </Callout>
   );

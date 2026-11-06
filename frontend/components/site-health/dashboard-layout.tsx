@@ -81,6 +81,7 @@ export function SiteHealthDashboardLayout({
               pages={pagesQuery.data?.items ?? []}
               selectedTotal={projectSelectedTotal}
               selectedError={projectSelectedError}
+              onRerun={mutationsAllowed ? () => startCrawl() : undefined}
             />
 
             <ScoreSection crawl={crawl} dashboard={dashboardQuery.data} />

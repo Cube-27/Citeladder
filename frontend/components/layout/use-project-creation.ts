@@ -3,7 +3,6 @@
 import { capabilityRemaining } from '@/lib/billing/entitlement-capability';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
-import { newProjectDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 
 /**
@@ -22,13 +21,4 @@ export function useProjectCreation() {
   const canAddProject =
     !isError && mayCreate && remainingProjectSlots !== undefined && remainingProjectSlots > 0;
   return { activeWorkspaceId, mayCreate, canAddProject, remainingProjectSlots };
-}
-
-/**
- * The new-project route for `NoProjectState`, or null when the viewer cannot
- * create one, so the action is never offered and then refused.
- */
-export function useCreateProjectHref(): string | null {
-  const { activeWorkspaceId, canAddProject } = useProjectCreation();
-  return canAddProject ? newProjectDestination(activeWorkspaceId) : null;
 }

@@ -9,6 +9,8 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ApiError } from '@/lib/api/errors';
 import { createAppQueryClient } from '@/lib/api/query-client';
+import { ActiveProjectScopeProvider } from '@/lib/project/active-project-scope';
+import { makeProject } from '@/test/fixtures/project';
 
 import { DemandProjection } from './demand-projection';
 
@@ -61,6 +63,17 @@ vi.mock('@/lib/project/project-context', () => {
     useProjectContext: context,
   };
 });
+
+/** `/demand` as the project route's gate hands it the currently selected project. */
+function DemandRoute() {
+  return (
+    <ActiveProjectScopeProvider
+      project={makeProject({ id: project.id, workspace_id: project.workspace_id })}
+    >
+      <DemandProjection />
+    </ActiveProjectScopeProvider>
+  );
+}
 
 function detector(state: DemandDetectorState, limitations: string[] = []) {
   return { state, counts_by_classification: {}, limitations };
@@ -184,7 +197,7 @@ describe('DemandProjection', () => {
     return render(
       <QueryClientProvider client={client}>
         <TooltipProvider>
-          <DemandProjection />
+          <DemandRoute />
         </TooltipProvider>
       </QueryClientProvider>,
       { wrapper: RouterTestWrapper },
@@ -486,7 +499,7 @@ describe('DemandProjection', () => {
     render(
       <QueryClientProvider client={client}>
         <TooltipProvider>
-          <DemandProjection />
+          <DemandRoute />
         </TooltipProvider>
       </QueryClientProvider>,
       { wrapper: RouterTestWrapper },
@@ -591,7 +604,7 @@ describe('DemandProjection', () => {
     rerender(
       <QueryClientProvider client={client}>
         <TooltipProvider>
-          <DemandProjection />
+          <DemandRoute />
         </TooltipProvider>
       </QueryClientProvider>,
     );

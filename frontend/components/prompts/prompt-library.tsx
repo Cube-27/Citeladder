@@ -3,7 +3,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useEffectEvent, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import { ProjectRequiredState } from '@/components/layout/project-required-state';
 import { QueryState } from '@/components/ui/query-state';
 import { ReadError } from '@/components/ui/read-error';
 import { promptsMutations } from '@/lib/api/prompts';
@@ -36,10 +35,9 @@ import { ListScreen, RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { PromptActions, promptFilterControls } from './prompt-toolbar';
 import { type TopicDialog, TopicDialogs, TopicFilter } from './topic-controls';
 import { useTopicMutations } from './use-topic-mutations';
-import { useActiveProject, useActiveWorkspaceId } from '@/lib/project/project-context';
+import { useProjectScope } from '@/lib/project/active-project-scope';
 
 import type { BuilderStep } from './prompt-builder';
-import { resolveProjectRequestScope } from '@/lib/project/request-scope';
 
 function mutationFailure(
   create: { isError: boolean; error: unknown },
@@ -80,20 +78,10 @@ export function PromptLibrary({
   generateRequest?: number;
   reviewRequest?: boolean;
 }>) {
-  const workspaceId = useActiveWorkspaceId();
-  const {
-    projectId,
-    promptSet,
-    prompts,
-    limits,
-    isLoading,
-    error,
-    ensurePromptSet,
-    retry,
-    retrying,
-  } = usePromptSet();
-  const requestScope = resolveProjectRequestScope(workspaceId, projectId);
-  const scope = { workspaceId: requestScope.workspaceId, projectId: requestScope.projectId };
+  const { workspaceId, projectId, project } = useProjectScope();
+  const scope = { workspaceId, projectId };
+  const { promptSet, prompts, limits, isLoading, error, ensurePromptSet, retry, retrying } =
+    usePromptSet();
 
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<PromptFilters>(emptyFilters);
@@ -106,19 +94,16 @@ export function PromptLibrary({
   const [builderStep, setBuilderStep] = useState<BuilderStep>('business');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [topicDialog, setTopicDialog] = useState<TopicDialog | null>(null);
-  const hasCompetitors = (useActiveProject()?.competitors.length ?? 0) > 0;
+  const hasCompetitors = project.competitors.length > 0;
 
-  const topicsQuery = useQuery({
-    ...topicsQueries.list(scope),
-    enabled: requestScope.enabled,
-  });
+  const topicsQuery = useQuery(topicsQueries.list(scope));
   const topics: Topic[] = useMemo(() => topicsQuery.data ?? [], [topicsQuery.data]);
-  const measurements = useLatestPromptMeasurements(requestScope);
+  const measurements = useLatestPromptMeasurements(scope);
 
   const review = usePromptCandidates({
-    projectId: scope.projectId,
+    projectId,
     promptSet,
-    workspaceId: scope.workspaceId,
+    workspaceId,
     onAccepted: () => {
       setStatusFilter('active');
       // Show every newly tracked prompt, whichever topic it landed in.
@@ -232,14 +217,6 @@ export function PromptLibrary({
       : createMutation.mutateAsync(formValuesToPromptInput(values));
     await mutation.then(closeForm, () => undefined);
   };
-
-  if (!requestScope.enabled) {
-    return (
-      <ListScreen>
-        <ProjectRequiredState />
-      </ListScreen>
-    );
-  }
 
   // An empty library and a library filtered to nothing read differently: one
   // needs a way to add prompts, the other needs its filter loosened.
@@ -367,8 +344,8 @@ export function PromptLibrary({
               ? mutationNoticeForError(importMutation.error, { action: 'import the prompts' })
               : undefined
           }
-          projectId={requestScope.projectId}
-          workspaceId={requestScope.workspaceId}
+          projectId={projectId}
+          workspaceId={workspaceId}
           builderOpen={builderOpen}
           setBuilderOpen={setBuilderOpen}
           builderStep={builderStep}

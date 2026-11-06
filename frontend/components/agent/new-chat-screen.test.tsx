@@ -5,6 +5,7 @@ import { Route, Routes, useParams } from 'react-router-dom';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 
 import { mswServer } from '@/test/msw-server';
+import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 
 const entitlement = vi.hoisted(() => ({ agent: true }));
@@ -35,7 +36,7 @@ function renderNewChat(search: string) {
       initialEntries: [`/agent${search}`],
       projectSelection: {
         activeProjectId: PROJECT,
-        activeProject: { id: PROJECT } as never,
+        activeProject: makeProject({ id: PROJECT }),
         status: 'ready',
       },
     },
@@ -174,7 +175,7 @@ describe('NewChatScreen', () => {
         initialEntries: ['/agent'],
         projectSelection: {
           activeProjectId: PROJECT,
-          activeProject: { id: PROJECT } as never,
+          activeProject: makeProject({ id: PROJECT }),
           status: 'ready',
         },
       },

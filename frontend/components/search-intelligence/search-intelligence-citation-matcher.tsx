@@ -21,7 +21,7 @@ import {
   searchIntelligenceMutations,
   type SearchIntelligenceDataset,
 } from '@/lib/api/search-intelligence';
-import { useProjectContext } from '@/lib/project/project-context';
+import { useProjectScope } from '@/lib/project/active-project-scope';
 import { referringLists } from './search-intelligence-format';
 
 export function SearchIntelligenceCitationMatcher({
@@ -35,7 +35,8 @@ export function SearchIntelligenceCitationMatcher({
   /** The matches are saved and the readiness is refreshed. */
   onDerived: () => void;
 }>) {
-  const { activeProject } = useProjectContext();
+  const { workspaceId, projectId } = useProjectScope();
+  const scope = { workspaceId, projectId };
   const timeZone = useDisplayTimeZone();
   const { notify } = useToast();
   const [selectedAudits, setSelectedAudits] = useState<string[]>([]);
@@ -46,13 +47,9 @@ export function SearchIntelligenceCitationMatcher({
   const referring =
     lists.find((dataset) => dataset.id === listId) ??
     lists.find((dataset) => dataset.target_origin === targetOrigin);
-  const scope = {
-    workspaceId: activeProject?.workspace_id ?? null,
-    projectId: activeProject?.id ?? '',
-  };
   const audits = useQuery({
     ...runsQueries.list(scope),
-    enabled: Boolean(activeProject && referring),
+    enabled: Boolean(referring),
   });
   const derive = useMutation(searchIntelligenceMutations.deriveCitationMatches(scope));
   const deriveMatches = () =>
