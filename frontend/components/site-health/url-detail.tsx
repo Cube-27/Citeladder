@@ -12,7 +12,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
-import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health';
+import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { PageDetail } from '@citeladder/contracts';
 import { ApiError } from '@/lib/api/errors';
 import { RERUN_MAX_PRE_ACTIVE_POLLS, RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';

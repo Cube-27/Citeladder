@@ -10,7 +10,7 @@ import { Select } from '@/components/ui/select';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { diffLines } from '@/lib/agent/diff';
-import { siteHealthQueries } from '@/lib/api/site-health';
+import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp } from '@/lib/format';
 import { crawlerPolicyLabels, robotsStatusLabels } from '@/lib/site-health/site-facts';

@@ -13,12 +13,18 @@ const getDashboard = vi.fn();
 vi.mock('@/lib/api/site-health', async () => {
   const actual =
     await vi.importActual<typeof import('@/lib/api/site-health')>('@/lib/api/site-health');
+  return { ...actual, siteHealthApi: { ...actual.siteHealthApi, createCrawl: vi.fn() } };
+});
+
+// The header reads the dashboard through the shared query factory, so the
+// factory is the seam — replacing `siteHealthApi` alone leaves the factory's
+// own captured reference in place.
+vi.mock('@/lib/api/site-health-queries', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/api/site-health-queries')>(
+    '@/lib/api/site-health-queries',
+  );
   return {
     ...actual,
-    siteHealthApi: { ...actual.siteHealthApi, createCrawl: vi.fn() },
-    // The header reads the dashboard through the shared query factory, so the
-    // factory is the seam — replacing `siteHealthApi` alone leaves the
-    // factory's own captured reference in place.
     siteHealthQueries: {
       ...actual.siteHealthQueries,
       dashboard: (scope: { workspaceId: string; projectId: string }) => ({

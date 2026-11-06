@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 
 import { API_BASE_URL } from '@/lib/config/operational';
-import { refreshCrawlViews, refreshSiteHealthDashboard } from '@/lib/api/site-health';
+import { refreshCrawlViews, refreshSiteHealthDashboard } from '@/lib/api/site-health-queries';
 import {
   SITE_HEALTH_STREAM_INVALIDATE_DEBOUNCE_MS,
   SITE_HEALTH_STREAM_RECONNECT_BASE_MS,

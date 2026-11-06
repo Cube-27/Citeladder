@@ -22,7 +22,7 @@ import { ReadError } from '@/components/ui/read-error';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { warmQuery } from '@/lib/api/query-client';
-import { siteHealthQueries } from '@/lib/api/site-health';
+import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { internalLinksQueries } from '@/lib/api/site-health-internal-links';
 import type { SiteHealthEntitlement } from '@citeladder/contracts';
 import { useProjectContext } from '@/lib/project/project-context';

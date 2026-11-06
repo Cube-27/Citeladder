@@ -7,7 +7,7 @@ import { makeProject } from '@/test/fixtures/project';
 import { makeSiteCrawl } from '@/test/fixtures/site-health';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
-import { refreshSiteHealthDashboard } from '@/lib/api/site-health';
+import { refreshSiteHealthDashboard } from '@/lib/api/site-health-queries';
 
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const PROJECT = '11111111-1111-4111-8111-111111111111';

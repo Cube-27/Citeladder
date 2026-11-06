@@ -7,7 +7,7 @@ import { mswServer } from '@/test/msw-server';
 import { COMPLETE_CLASSIFICATION_PROJECTION } from '@/test/site-health-fixtures';
 import type { SiteHealthDashboard } from '@citeladder/contracts';
 import { queryKeys } from '@/lib/api/query-keys';
-import { refreshSiteHealthDashboard } from '@/lib/api/site-health';
+import { refreshSiteHealthDashboard } from '@/lib/api/site-health-queries';
 import {
   CRAWL,
   ENTITLEMENT_PATH,

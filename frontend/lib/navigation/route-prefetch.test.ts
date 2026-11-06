@@ -20,7 +20,7 @@ import { demandApi, demandQueries } from '@/lib/api/demand';
 import { projectQueries } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import { searchIntelligenceQueries } from '@/lib/api/search-intelligence';
-import { siteHealthQueries } from '@/lib/api/site-health';
+import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { INITIAL_VISIBILITY_PARAMS } from '@/lib/api/visibility';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { pendingOverviewHandlers, recordedProjectRead } from '@/test/fixtures/overview';

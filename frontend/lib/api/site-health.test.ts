@@ -18,12 +18,12 @@ import {
   urlPreviewResponseSchema,
 } from '@citeladder/contracts/site-health';
 import { strictValidate } from '@citeladder/contracts/validation';
+import { siteHealthApi } from './site-health';
 import {
   refreshCrawlViews,
   refreshMonitoredUrls,
   refreshSiteHealthDashboard,
-  siteHealthApi,
-} from './site-health';
+} from './site-health-queries';
 import { mswServer } from '@/test/msw-server';
 import {
   SITE_HEALTH_CRAWL as crawl,

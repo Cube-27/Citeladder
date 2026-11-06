@@ -21,7 +21,7 @@ import {
 } from '@/lib/agent/vocabulary';
 import type { ActionDeclaration, MeasurementLeg } from '@/lib/api/actions';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
-import { siteHealthMutations } from '@/lib/api/site-health';
+import { siteHealthMutations } from '@/lib/api/site-health-queries';
 import { promptHistoryHref } from '@/lib/prompts/history';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 

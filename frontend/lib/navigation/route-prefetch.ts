@@ -160,7 +160,7 @@ async function prefetchSiteHealth(client: QueryClient, scope: ProjectScope) {
   const { workspaceId } = scope;
   const [{ siteHealthQueries }, { latestCrawlQueries }, screen, { shouldPollCrawl }] =
     await Promise.all([
-      import('@/lib/api/site-health'),
+      import('@/lib/api/site-health-queries'),
       import('@/lib/api/site-health-latest-crawl'),
       import('@/lib/site-health/use-site-health-screen'),
       import('@/lib/site-health/status'),
@@ -201,7 +201,7 @@ async function prefetchIssues(client: QueryClient, scope: ProjectScope) {
   const { workspaceId } = scope;
   const [{ siteHealthQueries }, { latestCrawlQueries }, { emptyIssueFilters, issueCatalogParams }] =
     await Promise.all([
-      import('@/lib/api/site-health'),
+      import('@/lib/api/site-health-queries'),
       import('@/lib/api/site-health-latest-crawl'),
       import('@/lib/site-health/issue-filters'),
     ]);

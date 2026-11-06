@@ -12,7 +12,7 @@ import { StatRow } from '@/components/ui/stat-row';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { treeBranchClasses } from '@/components/ui/workspace';
-import { siteHealthQueries } from '@/lib/api/site-health';
+import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { ChangeObservation, ChangeSummary } from '@citeladder/contracts';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import { textRole } from '@/components/ui/typography';

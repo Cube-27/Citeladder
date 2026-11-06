@@ -12,7 +12,7 @@ import { Stack } from '@/components/ui/layout';
 import { KpiRow, type StatSegment } from '@/components/ui/stat-row';
 import { textRole } from '@/components/ui/typography';
 import { commerceMutations, followCatalogAnalysis } from '@/lib/api/commerce';
-import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health';
+import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 import { pluralCount } from '@/lib/format';
 import { crawlPollInterval } from '@/lib/site-health/status';
 

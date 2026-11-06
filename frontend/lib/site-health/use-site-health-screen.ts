@@ -5,13 +5,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { billingQueries } from '@/lib/api/billing';
 import { TABLE_DEFAULT_PAGE_SIZE } from '@/lib/config/tables';
+import { type StartCrawlInput } from '@/lib/api/site-health';
 import {
   refreshCrawlViews,
   refreshMonitoredUrls,
   siteHealthMutations,
   siteHealthQueries,
-  type StartCrawlInput,
-} from '@/lib/api/site-health';
+} from '@/lib/api/site-health-queries';
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
 import {
   downloadCrawlExport,
