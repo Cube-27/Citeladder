@@ -36,7 +36,7 @@ export function storedFacts(override: Record<string, unknown> = {}): Record<stri
     contentType: 'text/html',
     statusCode: 200,
   });
-  return overlay(JSON.parse(JSON.stringify(empty)), override) as Record<string, unknown>;
+  return overlay(empty, override) as Record<string, unknown>;
 }
 export type SiteSeed = Tenant & { crawlId: string; profileId: string; root: string };
 export class SiteFixtures extends VisibilityFixtures {
