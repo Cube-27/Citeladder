@@ -16,8 +16,8 @@ import {
 } from '../src/audits/result-persistence.ts';
 import { ProviderError } from '../src/providers/errors.ts';
 import { record } from '../src/db/json.ts';
-import { analyzeExecution } from '../src/analysis/execution.ts';
-import { finalizeAudit } from '../src/analysis/finalization.ts';
+import { deriveExecution } from '../src/audits/derivation.ts';
+import { finalizeAudit } from '../src/audits/finalization.ts';
 
 const db = testDatabase(),
   fixtures = new VisibilityFixtures(db),
@@ -131,7 +131,7 @@ describe('atomic audit execution persistence', () => {
         },
       ],
     };
-    const derive = analyzeExecution;
+    const derive = deriveExecution;
     const artifactId = await persistExecutionSuccess(
       db,
       t.context.task,
@@ -341,7 +341,7 @@ describe('atomic audit execution persistence', () => {
       t.context.task,
       'worker',
       { ...result, transport_model: t.context.task.transport_model },
-      analyzeExecution,
+      deriveExecution,
     );
     expect(await finalizeAudit(db, t.workspaceId, t.auditId, async () => {})).toBeNull();
     // Other frozen repetitions failed; they remain in the requested denominator.

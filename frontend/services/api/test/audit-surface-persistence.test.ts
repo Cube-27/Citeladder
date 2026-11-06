@@ -16,7 +16,7 @@ import {
   persistOverviewObservation,
   persistSurfaceExchange,
 } from '../src/audits/surface-persistence.ts';
-import { analyzeExecution } from '../src/analysis/execution.ts';
+import { deriveExecution } from '../src/audits/derivation.ts';
 import { parseOverview } from '../src/search-surfaces/parsing.ts';
 import { record } from '../src/db/json.ts';
 const db = testDatabase(),
@@ -149,9 +149,9 @@ describe('durable surface evidence', () => {
       'provider-id',
     );
     if (typeof result === 'string') throw new Error('Expected observation');
-    await persistOverviewObservation(db, t.task, 'worker', result, analyzeExecution);
+    await persistOverviewObservation(db, t.task, 'worker', result, deriveExecution);
     expect(
-      await persistOverviewObservation(db, t.task, 'worker', result, analyzeExecution),
+      await persistOverviewObservation(db, t.task, 'worker', result, deriveExecution),
     ).toBeNull();
     const artifact = await db
       .selectFrom('raw_response_artifacts')

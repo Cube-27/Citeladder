@@ -8,8 +8,8 @@ import { auditRuntime } from '../src/audits/config.ts';
 import { createAudits } from '../src/audits/creation.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { AuditWorker } from '../src/audits/worker.ts';
-import { analyzeExecution } from '../src/analysis/execution.ts';
-import { finalizeAudit } from '../src/analysis/finalization.ts';
+import { deriveExecution } from '../src/audits/derivation.ts';
+import { finalizeAudit } from '../src/audits/finalization.ts';
 import { createConnection } from '../src/providers/connections.ts';
 import { createConnectionInput } from '../src/providers/inputs.ts';
 import { probeConnection } from '../src/providers/probes.ts';
@@ -122,7 +122,7 @@ function worker(
     settings,
     auditTestKey,
     {
-      execution: analyzeExecution,
+      execution: deriveExecution,
       finalize: (workspaceId, auditId) => finalizeAudit(db, workspaceId, auditId, async () => {}),
     },
     { owner: 'worker', taskScope: scope, send, env: {}, ...(now ? { now } : {}) },
