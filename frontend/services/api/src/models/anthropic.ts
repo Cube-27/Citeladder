@@ -28,6 +28,7 @@ import type { GatewaySettings } from './gateway.ts';
 import {
   abortCode,
   callDeadline,
+  callOutputCap,
   ModelError,
   providerErrorCode,
   type Complete,
@@ -93,7 +94,7 @@ export function anthropicCompletion(
   endpoint: URL,
 ): Complete {
   const client = anthropicClient(settings, transport, endpoint);
-  return async (system, user, signal, onText, schema) => {
+  return async (system, user, signal, onText, schema, maxOutputTokens) => {
     const started = performance.now();
     let text = '';
     let message;
@@ -102,7 +103,7 @@ export function anthropicCompletion(
       const stream = client.messages.stream(
         {
           model: settings.model,
-          max_tokens: settings.maxOutputTokens,
+          max_tokens: callOutputCap(settings.maxOutputTokens, maxOutputTokens),
           system,
           messages: [{ role: 'user', content: user }],
           ...(schema ? { output_config: { format: { type: 'json_schema', schema } } } : {}),
@@ -124,7 +125,10 @@ export function anthropicCompletion(
     // A refusal or an empty turn carries no answer to read.
     if (!content.trim()) throw new ModelError('parse');
     const latency = Math.round(performance.now() - started);
-    logger.info('default agent call ok', { latency_ms: latency, model: settings.model });
+    logger.info('default agent call ok', {
+      latency_ms: latency,
+      model: settings.model,
+    });
     const { usage } = message;
     // An omitted cache count is unknown, not zero; so is any total built from it.
     const cached = usage.cache_read_input_tokens ?? null;
@@ -242,7 +246,10 @@ function cacheDiagnosis(
     case 'system_changed':
     case 'tools_changed':
     case 'messages_changed':
-      return { reason: miss.type, missed_input_tokens: miss.cache_missed_input_tokens };
+      return {
+        reason: miss.type,
+        missed_input_tokens: miss.cache_missed_input_tokens,
+      };
     default: {
       const _exhaustive: never = miss;
       return _exhaustive;
@@ -336,7 +343,10 @@ export function anthropicConversation(
             edits: [
               {
                 type: 'compact_20260112',
-                trigger: { type: 'input_tokens', value: request.compactAtTokens },
+                trigger: {
+                  type: 'input_tokens',
+                  value: request.compactAtTokens,
+                },
               },
             ],
           },
@@ -357,7 +367,11 @@ export function anthropicConversation(
           if (event.type !== 'content_block_start') return;
           const block = event.content_block;
           if (block.type === 'server_tool_use')
-            listener.serverTool?.({ id: block.id, name: block.name, status: 'started' });
+            listener.serverTool?.({
+              id: block.id,
+              name: block.name,
+              status: 'started',
+            });
           else if (block.type === 'web_search_tool_result')
             listener.serverTool?.({
               id: block.tool_use_id,

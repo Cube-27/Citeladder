@@ -523,6 +523,53 @@ same cancellation; a replayed refund applies nothing. A subscription change
 still bumps the entitlement version only if no other writer bumped it since
 settlement read it.
 
+## Internal cost (2026-11-07)
+
+**B65 — Engineering, 2026-11-07.** One internal-cost record and one rate card
+(architecture untangle K1). Provider rates (model token prices, the Anthropic
+web search fee, Tavily and Keenable per-request fees) live in `config/costs.json`
+beside the answer-engine catalog; `config/ai-credits.json` keeps only the
+customer side (credit value, markup, per-feature charge mode). The Anthropic
+search fee has one value, the catalog's Anthropic entry, so B59's
+`web_search_microusd_per_request` is now read from there. Tavily is priced at
+its pay-as-you-go $0.008 per basic search and Keenable at $0.004 per search or
+fetch, charged as internal cost once the provider answered successfully; a
+refused (non-2xx) or failed request costs nothing. Both stay not charged to customers (B13). The
+`internal_costs` view unions platform calls, Agent model calls and answer-engine
+executions; unknown costs stay null. Uncharged calls' cost rows are no longer
+best-effort: they are written on the caller's connection (in its transaction
+when it has one) and a write failure fails the call. Unpriced gateway models
+keep the Haiku rate (architecture untangle OD6). No customer price, allowance
+or credit charge changes. Source: [architecture untangle](plans/architecture-untangle.md)
+K1, OD6.
+
+**B66 — Engineering, 2026-11-07.** A platform-wide daily spend breaker
+(architecture untangle K2). Credit-funded calls are paid by their holds, and
+audits by the funded monthly budget; included and uncharged platform calls
+(answer perception, fact verification, the Commerce shelf, the JEV judges,
+Tavily, Keenable) were bounded only by per-workspace rate limits. Once their
+internal cost since 00:00 UTC, across all workspaces, reaches
+`platform.daily_uncharged_ceiling_microusd` in `config/costs.json` (set at
+**$25 a day**), the metering owner refuses further included and uncharged calls
+with 503 `platform_spend_paused` before any network I/O, until the next UTC
+day; credit-funded calls are unaffected. Calls already in flight may carry the
+day's spend past the ceiling. The ceiling is internal cost policy, not a
+customer limit; the $25 figure is engineering's conservative pre-launch value
+for the owner to confirm. Source: [architecture untangle](plans/architecture-untangle.md) K2.
+
+**B67 — Engineering, 2026-11-07.** Each feature declares its own output cap
+for platform gateway calls (architecture untangle K3), in
+`feature_output_tokens` of `config/model-gateway.json`: prompt generation and
+project research 16,000 tokens; Commerce buyer prompts, answer perception, fact
+verification and the Commerce shelf 8,000. The cap is sent to the provider and
+sizes the call's hold (B15), never above the gateway's configured maximum
+(64,000). A charged call that used to hold about 42 credits for its output now
+holds 11 (16,000 tokens) or 6 (8,000), so a low balance no longer refuses a
+small call; what a call is charged is unchanged (its reported tokens). A
+feature that reaches the gateway without a declared cap fails loudly. The Agent
+keeps its own output sizing (B60). Source:
+[architecture untangle](plans/architecture-untangle.md) K3.
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,
