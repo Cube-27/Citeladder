@@ -13,7 +13,7 @@ import type { Context } from 'hono';
 import { policy, type ServiceConfig } from '../config.ts';
 import type { TurnstileAction } from '../config/turnstile.ts';
 import { ApiError } from '../errors.ts';
-import { getLogger } from '../logging.ts';
+import { failureFacts, getLogger } from '../logging.ts';
 import { trustedClientIdentity } from './client-identity.ts';
 
 const cfg = policy.auth.turnstile;
@@ -57,8 +57,8 @@ async function siteverify(
       }),
       signal: AbortSignal.timeout(cfg.verify_timeout_ms),
     });
-  } catch {
-    logger.warning('auth.turnstile_unreachable', { action: input.action });
+  } catch (error) {
+    logger.warning('auth.turnstile_unreachable', { action: input.action, ...failureFacts(error) });
     throw unavailable();
   }
   const parsed = response.ok

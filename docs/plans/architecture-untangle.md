@@ -76,7 +76,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P19 | Engine surfaces II: surface adapters, audit side effects out of analysis | E4, E5, X8 | P05, P15 | | merged | [#641](https://github.com/Cube-27/Citeladder/pull/641) | No migration. Found the `audit_tasks.error_code` length bug, now P24 |
 | P20 | Settings resolve once; named abuse budgets | G1, G2, G3 | P01, P15 | wide | todo | | |
 | P21 | Screen sweep: failure renderer, typed blobs, form limits, non-null project, recovery actions | F8, F9, F10, R4, Z4 | P07, P12, P13, P16 | | todo | | Split at a row boundary if over ~4,000 lines |
-| P22 | AI Traffic and integration owners; error logging | X4, X5, Z1, Z2, Z3 | P15, P16, P19 | | in progress | | Builder session `untangle-p22` |
+| P22 | AI Traffic and integration owners; error logging | X4, X5, Z1, Z2, Z3 | P15, P16, P19 | | in review | [#647](https://github.com/Cube-27/Citeladder/pull/647) | Builder session `untangle-p22` |
 | P23 | AI referral retention matches the Performance window | X9 | P08 | | merged | [#636](https://github.com/Cube-27/Citeladder/pull/636) | Owner decision OD7 |
 | P24 | Audit error codes fit their column | DB3 | P19 | mig | merged | [#648](https://github.com/Cube-27/Citeladder/pull/648) | Migration 0013. Found by P19 |
 
@@ -188,8 +188,8 @@ order the PR tracker already respects.
 | X1 | One citation and Commerce URL identity; differentiation reports insert-only | — | `source-pages/{identity,sync,inspector,differentiation}.ts`, `site-health/url-identity.ts`, `config/source-pages.ts`, `analysis/domains.ts`, `commerce/{projection-facts,projection}.ts` | mig? | done | aee742f, bdd21a8 | |
 | X2 | Leaf primitives move to the bottom | X1 | `analysis/round.ts`, casefold/canonical-JSON/calendar-day copies, `projects/safe-fetch.ts`, `billing/pdf.ts`, `billing/contracts.ts` + importers | wide | done | fcc2f84 | |
 | X3 | One page-identity module (path, landing page) | X1 | `traffic/normalization.ts`, `integrations/`, `crawl-logs/`, `referrals/` identity helpers | | done | 9ac7046 | |
-| X4 | AI Traffic composition gets its own module | Q8 | `crawl-logs/{pages,pages-data,insights,overview,citation-runs}.ts` | | todo | | |
-| X5 | Integration lifecycle and reporting timezone move to their owners | Q6, Q8 | `routes/integrations.ts`, `integrations/`, `workers/integration-worker.ts`, `crawl-logs/state.ts` | | todo | | |
+| X4 | AI Traffic composition gets its own module | Q8 | `crawl-logs/{pages,pages-data,insights,overview,citation-runs}.ts` | | done | fd533ba | |
+| X5 | Integration lifecycle and reporting timezone move to their owners | Q6, Q8 | `routes/integrations.ts`, `integrations/`, `workers/integration-worker.ts`, `crawl-logs/state.ts` | | done | fdb4b7a | |
 | X6 | Auth/workspaces placement; one "owned workspace" query | C3 | `auth/bootstrap.ts`, `auth/development-access.ts`, `workspaces/`, `entitlements/bootstrap.ts` | | done | 03c2138 | |
 | X7 | AI referral classification read from the persisted table everywhere | X3 | `referrals/landing.ts`, `traffic/projection.ts` | | done | eda2c70 | |
 | X8 | Audit side effects leave `src/analysis` | E4 | `analysis/{finalization,execution}.ts`, `audits/` | | done | 61fd008 | |
@@ -197,9 +197,9 @@ order the PR tracker already respects.
 | K1 | One internal-cost view; Tavily and Keenable priced; cost rows in the call's transaction | B2 | `billing/metering.ts`, `audits/costs.ts`, `config/{costs,ai-credits}.json`, `commerce/discovery-provider.ts`, `projects/research-evidence.ts` | mig? | done | b32d164 | Before public sign-up |
 | K2 | Platform-wide daily spend breaker | K1 | `billing/metering.ts`, config | | done | 2e85ef3 | Before public sign-up |
 | K3 | Per-feature output caps for charged calls | B2, ON1 | `config/model-gateway.json`, `billing/metering.ts`, gateway callers | | done | 41eab73 | |
-| Z1 | Lane failure and lease-loss logs in the queue owner | Q7 | `queue/`, `workers/start-runner.ts` | | todo | | |
-| Z2 | Silent-catch triage: Site Health | SH4 | `site-health/` | | todo | | |
-| Z3 | Silent-catch triage: remaining backend areas | Z1, X5, E5 | `crawl-logs`, `commerce`, `search-intelligence`, `projects`, `providers`, `integrations`, `auth`, `audits`, `web-evidence`, `source-pages` | | todo | | |
+| Z1 | Lane failure and lease-loss logs in the queue owner | Q7 | `queue/`, `workers/start-runner.ts` | | done | 489c976 | |
+| Z2 | Silent-catch triage: Site Health | SH4 | `site-health/` | | done | 80961f8 | |
+| Z3 | Silent-catch triage: remaining backend areas | Z1, X5, E5 | `crawl-logs`, `commerce`, `search-intelligence`, `projects`, `providers`, `integrations`, `auth`, `audits`, `web-evidence`, `source-pages` | | done | 31e496b | providers, integrations: no change needed |
 | Z4 | Recovery actions on job-backed screens | F8 | job-backed screens | | todo | | |
 
 

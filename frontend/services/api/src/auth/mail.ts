@@ -1,5 +1,5 @@
 import { policy, type ServiceConfig } from '../config.ts';
-import { getLogger } from '../logging.ts';
+import { failureFacts, getLogger } from '../logging.ts';
 import { inReservedDomain } from './reserved-domains.ts';
 
 const cfg = policy.auth.mailbox;
@@ -31,6 +31,9 @@ export async function sendAuthMail(
     getLogger('app.auth').debug('auth.mail_reserved_recipient');
     return false;
   }
+  const startedAt = performance.now();
+  // Class, code and status only: never provider bodies, addresses or bearer URLs.
+  let failure: Record<string, string | number | null> = {};
   try {
     const response = await (config.auth.fetch ?? fetch)(cfg.endpoint, {
       method: 'POST',
@@ -52,9 +55,13 @@ export async function sendAuthMail(
     });
     await response.body?.cancel();
     if (response.ok) return true;
-  } catch {
-    /* Never log provider bodies, addresses or bearer URLs. */
+    failure = { status: response.status };
+  } catch (error) {
+    failure = failureFacts(error);
   }
-  getLogger('app.auth').warning('auth.mail_failed');
+  getLogger('app.auth').warning('auth.mail_failed', {
+    ...failure,
+    elapsed_ms: Math.round(performance.now() - startedAt),
+  });
   return false;
 }
