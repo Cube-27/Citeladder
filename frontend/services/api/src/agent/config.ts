@@ -1,3 +1,4 @@
+import { budget } from '../abuse/usage.ts';
 import { resolveSkillsDirectory } from '../config/skill-inputs.ts';
 import { policy } from '../config.ts';
 import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
@@ -12,8 +13,7 @@ export function agentSettings(env: SettingSource = process.env) {
     devEmail: String(resolveSettingSpec(policy.settings.dev_login_email, env)).trim().toLowerCase(),
     devPasswordConfigured: Boolean(resolveSettingSpec(policy.settings.dev_login_password, env)),
     activeLimit: Number(resolveSettingSpec(policy.abuse.active_agent_runs_per_workspace, env)),
-    dailyLimit: Number(resolveSettingSpec(policy.abuse.agent_runs_per_workspace_daily, env)),
-    dailyWindowSeconds: Number(resolveSettingSpec(policy.abuse.agent_call_window_seconds, env)),
+    dailyRuns: budget('agent_runs', env),
     retryAfterSeconds: Number(resolveSettingSpec(policy.abuse.active_job_retry_after_seconds, env)),
   };
 }

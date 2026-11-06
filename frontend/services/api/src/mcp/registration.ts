@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { z } from 'zod';
-import { enforceSubjectRequest } from '../abuse/usage.ts';
-import { policy } from '../config.ts';
-import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
+import { budget, spendBudget, type Budget } from '../abuse/usage.ts';
+import { MCP_AUTHORIZE_SUBJECT, MCP_REGISTER_SUBJECT } from '../config/abuse.ts';
+import type { SettingSource } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';
 import { grantableScopes, mcpPolicy, type McpConfig } from './config.ts';
@@ -65,83 +65,37 @@ function validateRegistration(input: unknown) {
   };
 }
 
-export function admitRegistration(db: Database, client: string, env: SettingSource = process.env) {
-  const value = (name: keyof typeof policy.abuse) =>
-    Number(resolveSettingSpec(policy.abuse[name], env));
+export function admitRegistration(db: Database, client: string, settings: SettingSource) {
   return admitBudgets(db, [
-    [
-      'client',
-      client,
-      'mcp.register.burst',
-      value('mcp_register_burst_limit'),
-      value('mcp_register_burst_window_seconds'),
-    ],
-    [
-      'client',
-      client,
-      'mcp.register.client',
-      value('mcp_register_client_limit'),
-      value('mcp_register_client_window_seconds'),
-    ],
-    [
-      'global',
-      'mcp.register',
-      'mcp.register.global',
-      value('mcp_register_global_limit'),
-      value('mcp_register_global_window_seconds'),
-    ],
+    [budget('mcp_register_burst', settings), client],
+    [budget('mcp_register_client', settings), client],
+    [budget('mcp_register_global', settings), MCP_REGISTER_SUBJECT],
   ]);
 }
 
 export function admitAuthorization(db: Database, clientId: string, source: string) {
-  const window = mcpPolicy.authorization_window_seconds;
   return admitBudgets(db, [
-    ['client', clientId, 'mcp.authorize.client', mcpPolicy.authorization_client_limit, window],
-    ['client', source, 'mcp.authorize.source', mcpPolicy.authorization_source_limit, window],
-    [
-      'global',
-      'mcp.authorize',
-      'mcp.authorize.global',
-      mcpPolicy.authorization_global_limit,
-      window,
-    ],
+    [budget('mcp_authorize_client'), clientId],
+    [budget('mcp_authorize_source'), source],
+    [budget('mcp_authorize_global'), MCP_AUTHORIZE_SUBJECT],
   ]);
 }
 
 /** One budget per grant and per account; a client over its own budget spends no other. */
 export function admitToolCall(db: Database, grantId: string, userId: string) {
-  const window = mcpPolicy.tool_call_window_seconds;
   return admitBudgets(db, [
-    ['mcp_grant', grantId, 'mcp.tool_call.grant', mcpPolicy.tool_call_grant_limit, window],
-    ['user', userId, 'mcp.tool_call.user', mcpPolicy.tool_call_user_limit, window],
+    [budget('mcp_tool_call_grant'), grantId],
+    [budget('mcp_tool_call_user'), userId],
   ]);
 }
 
 /** A change also spends a narrower per-grant budget than reads, in the same window. */
 export function admitWriteCall(db: Database, grantId: string) {
-  return admitBudgets(db, [
-    [
-      'mcp_grant',
-      grantId,
-      'mcp.write_call.grant',
-      mcpPolicy.write_call_grant_limit,
-      mcpPolicy.tool_call_window_seconds,
-    ],
-  ]);
+  return admitBudgets(db, [[budget('mcp_write_call_grant'), grantId]]);
 }
 
-async function admitBudgets(
-  db: Database,
-  budgets: readonly (readonly [
-    Parameters<typeof enforceSubjectRequest>[1],
-    string,
-    string,
-    number,
-    number,
-  ])[],
-) {
-  for (const [kind, subject, operation, limit, windowSeconds] of budgets)
-    await enforceSubjectRequest(db, kind, subject, { operation, limit, windowSeconds }); // NOSONAR -- A refused budget stops before the next is charged.
+async function admitBudgets(db: Database, budgets: readonly (readonly [Budget, string])[]) {
+  for (const [limit, subject] of budgets) await spendBudget(db, limit, subject); // NOSONAR -- A refused budget stops before the next is charged.
 }
 
 export async function registerClient(db: Database, mcp: McpConfig, input: unknown) {

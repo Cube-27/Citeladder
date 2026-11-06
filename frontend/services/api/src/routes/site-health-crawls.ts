@@ -11,9 +11,8 @@ import {
   monitoredUrlsBulkSelectRequestSchema,
   monitoredUrlsReplaceRequestSchema,
 } from '@citeladder/contracts/site-health-requests';
-import { enforceWorkspaceRequest } from '../abuse/usage.ts';
+import { budget, spendBudget } from '../abuse/usage.ts';
 import { policy } from '../config.ts';
-import { resolveSettingSpec } from '../config/settings.ts';
 import { SiteHealthWorker } from '../workers/site-health-worker.ts';
 import { exclusiveDrain } from '../workers/runner.ts';
 import { siteWorkerSettings } from '../site-health/runtime.ts';
@@ -111,16 +110,10 @@ export const siteHealthCrawlRoutes = [
     response: siteCrawlSchema,
     status: 201,
     capability: 'run',
-    async handle({ c, db }) {
+    async handle({ c, db, config }) {
       const request = await readBody(c, createCrawlRequest);
       const workspaceId = c.get('workspace').workspaceId;
-      await enforceWorkspaceRequest(db, workspaceId, {
-        operation: 'site_health.crawl_create',
-        limit: Number(resolveSettingSpec(policy.abuse.crawl_create_limit, process.env)),
-        windowSeconds: Number(
-          resolveSettingSpec(policy.abuse.crawl_create_window_seconds, process.env),
-        ),
-      });
+      await spendBudget(db, budget('crawl_create', config.settings), workspaceId);
       const crawl = await db.transaction().execute((trx) => createCrawl(trx, workspaceId, request));
       return siteCrawlSchema.parse(await crawlProjection(db, crawl));
     },
@@ -132,15 +125,9 @@ export const siteHealthCrawlRoutes = [
     response: siteCrawlSchema,
     status: 201,
     capability: 'run',
-    async handle({ c, db }, { path }) {
+    async handle({ c, db, config }, { path }) {
       const workspaceId = c.get('workspace').workspaceId;
-      await enforceWorkspaceRequest(db, workspaceId, {
-        operation: 'site_health.crawl_create',
-        limit: Number(resolveSettingSpec(policy.abuse.crawl_create_limit, process.env)),
-        windowSeconds: Number(
-          resolveSettingSpec(policy.abuse.crawl_create_window_seconds, process.env),
-        ),
-      });
+      await spendBudget(db, budget('crawl_create', config.settings), workspaceId);
       const crawl = await db
         .transaction()
         .execute(async (trx) =>

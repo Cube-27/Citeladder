@@ -1,3 +1,4 @@
+import { budget } from '../abuse/usage.ts';
 import { ConfigError, policy } from '../config.ts';
 import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
 import { providerSettings } from '../providers/config.ts';
@@ -30,7 +31,7 @@ export function auditRuntime(env: SettingSource = process.env) {
     providers: providerSettings(env),
     search: searchSettings(env),
     activeLimit: Number(resolveSettingSpec(policy.abuse.active_audits_per_workspace, env)),
-    dailyTasks: Number(resolveSettingSpec(policy.abuse.audit_tasks_per_workspace_daily, env)),
+    dailyTasks: budget('audit_provider_tasks', env),
     retrySeconds: Number(resolveSettingSpec(policy.abuse.active_job_retry_after_seconds, env)),
     fundedBudgetMinor: Number(
       resolveSettingSpec(policy.billing.settings.funded_monthly_budget_minor, env),

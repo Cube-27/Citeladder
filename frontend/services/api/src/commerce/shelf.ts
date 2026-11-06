@@ -10,7 +10,7 @@ import type { DeriveExecution, ExecutionResult } from '../audits/result-persiste
 import { deriveExecution } from '../audits/derivation.ts';
 import { auditPolicy } from '../audits/config.ts';
 import { createModelGateway, gatewaySettings } from '../models/gateway.ts';
-import { agentCallLimit, enforceWorkspaceRequest } from '../abuse/usage.ts';
+import { budget, spendBudget } from '../abuse/usage.ts';
 import { meterFor, type Meter } from '../billing/metering.ts';
 import { lockCatalog } from './catalog-store.ts';
 import { ownedHosts } from './discovery-validation.ts';
@@ -75,7 +75,7 @@ function metered(
   return {
     model: resolver.model,
     resolve: async (spans) => {
-      await enforceWorkspaceRequest(db, workspaceId, agentCallLimit(1));
+      await spendBudget(db, budget('agent_provider_call', process.env), workspaceId);
       return resolver.resolve(spans, meterFor(db, workspaceId));
     },
   };
