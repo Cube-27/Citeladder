@@ -203,7 +203,7 @@ linked it, first sighting first. The frontier row holds up to
 `max_referrers_per_url` of them and still records new ones after the frontier
 is full. The admitting page is also stored as the observation's and task's
 `parent_site_url_id`. A non-root `discover` that fails for good is observed
-with its status code, unless its code is one of `corpus_exclusion_error_codes`.
+with its status code, unless its failure is `excluded` (`task-outcome.ts`).
 Without an analysis task, the page row and the crawl counters read that failed
 `discover`. A broken link therefore appears in Errors & Blocked, and in the
 HTTP 4XX/5XX counts, with the pages that link it (`linked_from`), even when no

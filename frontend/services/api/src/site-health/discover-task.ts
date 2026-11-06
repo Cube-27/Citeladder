@@ -44,13 +44,13 @@ import {
   type SiteTaskContext,
 } from './site-task.ts';
 import type { Crawl } from './task-fence.ts';
+import { taskOutcome } from './task-outcome.ts';
 import { classifyUrlAdmission, hardExcluded } from './url-admission.ts';
 import { canonicalIdentity } from './url-identity.ts';
 
 const crawlPolicy = policy.site_health.crawl;
 const acquisition = policy.site_health.page_analysis.acquisition;
 const DOCUMENT_TYPES = new Set(crawlPolicy.document_media_types);
-const EXCLUDED = new Set(policy.site_health.reads.corpus_exclusion_error_codes);
 
 type Discovery = { title: string; links: DiscoveredLink[] };
 type Outcome = AttemptOutcome & {
@@ -274,7 +274,8 @@ async function insertObservation(
  */
 async function observeFailure(trx: Database, crawl: Crawl, task: SiteTask, outcome: Outcome) {
   const root = canonicalIdentity(crawl.root_url).hash === task.url_hash;
-  if (!root && !EXCLUDED.has(outcome.errorCode)) await observeFailedUrl(trx, crawl, task, outcome);
+  if (!root && taskOutcome(outcome) !== 'excluded')
+    await observeFailedUrl(trx, crawl, task, outcome);
   await trx
     .updateTable('site_urls')
     .set({ discovery_status: 'failed' })

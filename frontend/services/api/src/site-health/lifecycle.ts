@@ -22,6 +22,7 @@ import type { SiteWorkerSettings } from './runtime.ts';
 import { recordCrawlEvent } from './site-task.ts';
 import { persistCrawlSnapshot, refreshLiveScoreSummary } from './snapshot.ts';
 import type { Crawl } from './task-fence.ts';
+import { failedAs } from './task-outcome.ts';
 import { publishFinalPageAnalyses } from './terminal-analysis.ts';
 import { persistTerminalCounters } from './terminal-counters.ts';
 import { enqueueTerminalAnalyticsRefresh } from './terminal-handoff.ts';
@@ -31,7 +32,7 @@ const TERMINAL_TASK = policy.task_queue.terminal;
 /** `paused` is never written; a crawl in it is left alone rather than terminalized. */
 const ACTIVE = ['draft', 'validating', 'queued', 'running'];
 const LIFECYCLE_KINDS = ['discover', 'site_setup', 'analyze'];
-const EXCLUSIONS = policy.site_health.reads.corpus_exclusion_error_codes;
+const EXCLUDED = failedAs('site_crawl_tasks', ['excluded']);
 const OVERDUE = policy.site_health.page_analysis.acquisition.error_codes.crawl_overdue;
 
 type Counts = {
@@ -74,9 +75,7 @@ async function taskSummary(db: Database, crawl: Crawl): Promise<Summary> {
       sql<number>`count(*) filter (where status = 'succeeded')::int`.as('succeeded'),
       sql<number>`count(*) filter (where status = 'cancelled')::int`.as('cancelled'),
       sql<number>`count(*) filter (where status = 'failed')::int`.as('failed'),
-      sql<number>`count(*) filter (where status = 'failed' and error_code = any(${EXCLUSIONS}::text[]))::int`.as(
-        'excluded',
-      ),
+      sql<number>`count(*) filter (where status = 'failed' and ${EXCLUDED})::int`.as('excluded'),
       // Discovery that met only robots/admission exclusions and 404/410s is complete.
       sql<number>`count(*) filter (where status = 'failed' and ${expectedTaskFailure})::int`.as(
         'expected',
@@ -109,7 +108,7 @@ async function failedUrlCount(db: Database, crawl: Crawl) {
     .where('status', '=', 'failed')
     .where('task_kind', 'in', ['discover', 'analyze'])
     .where('url_hash', '!=', '')
-    .where(sql<boolean>`error_code <> all(${EXCLUSIONS}::text[])`)
+    .where(sql<boolean>`not ${EXCLUDED}`)
     .executeTakeFirstOrThrow();
   return row.count;
 }

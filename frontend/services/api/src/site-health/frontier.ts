@@ -20,6 +20,7 @@ import { canonicalIdentity, hostTwinHash } from './url-identity.ts';
 import { expectedTaskFailure } from './coverage.ts';
 import { ACTIVE_CRAWL } from './site-task.ts';
 import type { Crawl } from './task-fence.ts';
+import { taskOutcome } from './task-outcome.ts';
 import {
   activateMemberships,
   enqueueSiteTasks,
@@ -31,11 +32,6 @@ import {
 } from './admission-writes.ts';
 
 const crawlPolicy = policy.site_health.crawl;
-const NOT_A_PAGE = new Set([
-  ...policy.site_health.reads.corpus_exclusion_error_codes,
-  ...policy.site_health.reads.non_page_error_codes,
-]);
-const GONE = new Set(policy.site_health.reads.corpus_exclusion_status_codes);
 type Runtime = Selectable<WorkspaceSiteHealthRuntime>;
 
 function frontierSettings(env: Record<string, string | undefined> = process.env) {
@@ -903,8 +899,9 @@ export async function releaseNonPage(
   { record }: { record: boolean },
 ) {
   if (canonicalIdentity(crawl.root_url).hash === hash) return false;
+  const outcome = taskOutcome(failure);
+  if (outcome !== 'excluded' && outcome !== 'not_page' && outcome !== 'gone') return false;
   const status = failure.statusCode ?? 0;
-  if (!NOT_A_PAGE.has(failure.errorCode) && !GONE.has(status)) return false;
   const url = record
     ? await trx
         .updateTable('site_urls')

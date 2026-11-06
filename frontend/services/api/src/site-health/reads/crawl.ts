@@ -14,6 +14,7 @@ import { notFound } from '../../errors.ts';
 import { parseUuid } from '../../http/uuid.ts';
 import { firstOf } from '../../lists.ts';
 import type { Crawl } from '../task-fence.ts';
+import { failedAs } from '../task-outcome.ts';
 
 const reads = policy.site_health.reads;
 const TERMINAL = new Set<string>(reads.terminal_crawl_statuses);
@@ -347,7 +348,7 @@ export async function rootFailure(db: Database, crawl: Crawl) {
  */
 export const ROW_TASK = sql`(t.task_kind = 'analyze'
   or (t.task_kind = 'discover' and t.status = 'failed'
-    and t.error_code <> all(${reads.corpus_exclusion_error_codes}::text[])))`;
+    and not ${failedAs('t', ['excluded'])}))`;
 /** Which `ROW_TASK` row wins: the analysis, then the latest generation. */
 export const ROW_TASK_ORDER = sql`t.task_kind = 'analyze' desc, t.generation desc`;
 
@@ -392,16 +393,14 @@ export async function crawlCounters(db: Database, crawl: Crawl): Promise<Counter
 
 /** Counters of the crawl's own tasks and analyses, scanned now. */
 export async function taskCounters(db: Database, crawl: Crawl): Promise<TaskCounters> {
-  const blocking = reads.policy_blocking_error_codes;
-  const nonErrors = reads.non_error_terminal_codes;
-  const exclusions = reads.corpus_exclusion_error_codes;
+  // A site or policy refusal is no page error: it counts as blocked.
+  const refused = failedAs('t', ['blocked', 'excluded']);
   const tasks = sql<{
     queued: number;
     running: number;
     analyzed: number;
     failed: number;
     blocked: number;
-    not_errors: number;
     robots_denied: number;
     http_4xx: number;
     http_5xx: number;
@@ -425,8 +424,7 @@ export async function taskCounters(db: Database, crawl: Crawl): Promise<TaskCoun
       count(*) filter (where status in ('leased','running'))::int as running,
       count(*) filter (where status = 'succeeded')::int as analyzed,
       count(*) filter (where status = 'failed')::int as failed,
-      count(*) filter (where status = 'failed' and error_code = any(${blocking}::text[]))::int as blocked,
-      count(*) filter (where status = 'failed' and error_code = any(${nonErrors}::text[]))::int as not_errors,
+      count(*) filter (where status = 'failed' and ${refused})::int as blocked,
       count(*) filter (where status = 'failed' and error_code = 'robots_denied')::int as robots_denied,
       count(*) filter (where status = 'failed' and error_code = 'http_4xx')::int as http_4xx,
       count(*) filter (where status = 'failed' and error_code = 'http_5xx')::int as http_5xx,
@@ -437,7 +435,7 @@ export async function taskCounters(db: Database, crawl: Crawl): Promise<TaskCoun
       count(*) filter (where status = 'running' and lease_expires_at > now())::int as running_live,
       count(*) filter (where status in ('leased','running') and lease_expires_at <= now())::int as expired,
       min(available_at) filter (where status in ('queued','retry_wait','capacity_wait') and available_at > now()) as next_available_at
-    from latest`.execute(db);
+    from latest t`.execute(db);
   const [counts, kinds, excluded] = await Promise.all([
     tasks,
     sql<{ page_kind: string; count: number }>`
@@ -453,7 +451,7 @@ export async function taskCounters(db: Database, crawl: Crawl): Promise<TaskCoun
       select count(distinct url_hash)::int as count from site_crawl_tasks
       where workspace_id = ${crawl.workspace_id} and crawl_id = ${crawl.id}
         and task_kind in ('discover','analyze') and status = 'failed'
-        and error_code = any(${exclusions}::text[]) and url_hash <> ''`.execute(db),
+        and ${failedAs('site_crawl_tasks', ['excluded'])} and url_hash <> ''`.execute(db),
   ]);
   const c = firstOf(counts.rows, 'the crawl task counters');
   const terminal = isTerminal(crawl);
@@ -473,7 +471,7 @@ export async function taskCounters(db: Database, crawl: Crawl): Promise<TaskCoun
     queued: c.queued,
     running: c.running,
     analyzed: c.analyzed,
-    errors: Math.max(c.failed - c.not_errors, 0),
+    errors: Math.max(c.failed - c.blocked, 0),
     blocked: c.blocked,
     failure_breakdown: {
       robots_denied: c.robots_denied,
