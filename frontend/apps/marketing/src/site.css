@@ -1797,8 +1797,23 @@ a.cl-fcard:hover {
   transition: background-color var(--motion-fast) var(--ease-standard);
 }
 
-a.cl-railcard:hover {
+/* Once mounted, a closed card opens on a press anywhere on it. */
+.cl-rail[data-ready] .cl-railcard:not([data-expanded]) {
+  cursor: pointer;
+}
+
+.cl-rail[data-ready] .cl-railcard:not([data-expanded]):hover {
   background: color-mix(in srgb, var(--color-ink) 5%, var(--cl-tint));
+}
+
+.cl-railcard-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cl-railcard-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 
 .cl-railcard-head {
@@ -1825,15 +1840,85 @@ a.cl-railcard:hover {
   letter-spacing: var(--text-heading-lg--letter-spacing);
 }
 
-.cl-railcard-plus {
+/* The plus turns a quarter to a close when the card is open. Before the
+   script mounts it, it holds its space hidden. */
+.cl-railcard-toggle {
   display: inline-flex;
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
+  padding: 0;
   border: 1px solid var(--color-ink);
   border-radius: 999px;
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.cl-rail:not([data-ready]) .cl-railcard-toggle {
+  visibility: hidden;
+}
+
+.cl-railcard-toggle > svg {
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+
+.cl-railcard-toggle[aria-expanded='true'] > svg {
+  transform: rotate(45deg);
+}
+
+/* What an open card adds at its lower left: the paragraph and its button. */
+.cl-railcard-more {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 0 28px 28px;
+}
+
+.cl-railcard-more[hidden] {
+  display: none;
+}
+
+.cl-railcard-body {
+  max-width: 420px;
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-body-lg);
+  line-height: var(--text-body-lg--line-height);
+}
+
+/* The open card: copy over the left column, the paragraph at its foot, the
+   image larger in the right column, cut by the card's right and lower edge. */
+.cl-railcard[data-expanded] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.cl-railcard[data-expanded] .cl-railcard-head {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+.cl-railcard[data-expanded] .cl-railcard-more {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: end;
+}
+
+.cl-railcard[data-expanded] .cl-railcard-media {
+  grid-column: 2;
+  grid-row: 2;
+  height: auto;
+  margin-top: 0;
+  padding: 0;
+}
+
+.cl-railcard[data-expanded] .cl-railcard-media .cl-frame {
+  zoom: 0.85;
 }
 
 /* The image: fixed height at the card's foot, inset from the sides, its top
@@ -1850,6 +1935,13 @@ a.cl-railcard:hover {
   padding: 0;
   border-radius: 0;
   background: none;
+}
+
+/* A miniature, as in the reference: the screen lays out at 1/0.7 of the
+   slot's width with its real type, then draws at 70%, so the card shows the
+   whole panel small rather than a close-up of its top. */
+.cl-railcard-media .cl-frame {
+  zoom: 0.7;
 }
 
 .cl-railcard-media .cl-frame-card > .cl-frame-well {
@@ -1870,16 +1962,44 @@ a.cl-railcard:hover {
     padding: 0 20px;
   }
 
+  .cl-railcard-more {
+    padding: 16px 20px 20px;
+  }
+
+  .cl-railcard-body {
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+
+  /* On a phone an open card stacks: copy, paragraph, then what fits of the image. */
+  .cl-railcard[data-expanded] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  .cl-railcard[data-expanded] .cl-railcard-more {
+    align-self: start;
+  }
+
+  .cl-railcard[data-expanded] .cl-railcard-media {
+    grid-column: 1;
+    grid-row: 3;
+    padding: 0 20px;
+  }
+
+  .cl-railcard[data-expanded] .cl-railcard-media .cl-frame {
+    zoom: 0.7;
+  }
+
   .cl-rail-btn {
     width: 44px;
     height: 44px;
   }
 }
 
+/* A flex row, so one item can widen when its card opens. */
 .cl-rail-track {
-  display: grid;
-  grid-auto-columns: min(420px, 85%);
-  grid-auto-flow: column;
+  display: flex;
   gap: 16px;
   margin: 0;
   padding: 0;
@@ -1895,7 +2015,20 @@ a.cl-railcard:hover {
 }
 
 .cl-rail-item {
+  flex: 0 0 min(420px, 85%);
   scroll-snap-align: start;
+  transition: flex-basis var(--motion-slow) var(--ease-standard);
+}
+
+/* An open card takes about two cards' width (the whole row on a phone). */
+.cl-rail-item:has(> [data-expanded]) {
+  flex-basis: min(856px, 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cl-rail-item {
+    transition: none;
+  }
 }
 
 /* ---------- Steps ---------- */

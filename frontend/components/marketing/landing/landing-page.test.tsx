@@ -60,14 +60,17 @@ describe('LandingPage', () => {
       '/platform/agents',
       '/platform/mcp',
     ]);
-    // Each card names its module above its one line, the line as the card's heading.
-    const keywords = within(rail).getByRole('link', { name: /^Keyword Research/ });
-    expect(keywords).toHaveAttribute('href', '/platform/keyword-research');
+    // Each card's heading is its one line, linking to the module's page.
+    const keywords = within(rail).getByRole('heading', {
+      name: 'Research keywords, competitors and backlinks.',
+    });
+    expect(within(keywords).getByRole('link')).toHaveAttribute(
+      'href',
+      '/platform/keyword-research',
+    );
     expect(
-      within(keywords).getByRole('heading', {
-        name: 'Research keywords, competitors and backlinks.',
-      }),
-    ).toBeInTheDocument();
+      within(rail).getByRole('button', { name: 'More about Keyword Research' }),
+    ).toHaveAttribute('aria-expanded', 'false');
   });
 
   it('links the evidence split to its modules by their published names', () => {

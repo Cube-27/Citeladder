@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { ArrowLeft, ArrowRight, Plus } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
+import { ButtonLink } from '../primitives/button';
 import { CheckList, Eyebrow, SiteArrowLink } from './site-parts';
 
 /**
@@ -107,37 +108,65 @@ export function Bento({
 }
 
 /**
- * RailCard: one card of a CardRail, the whole tint panel a link. Its label
- * and headline sit at the top beside a plus mark; its product image sits
- * below, inset from the sides and cut off by the card's foot, so every card
- * in the row is one height whatever its screen holds.
+ * RailCard: one card of a CardRail. Its label and headline (a link to the
+ * card's page, so it works without script) sit at the top beside a plus
+ * button; its product image, a miniature, sits below, inset and cut off by
+ * the card's foot, so every card is one height whatever its screen holds.
+ *
+ * The plus (or a press anywhere on the card) opens it in place
+ * (`mountCardRail`): the card widens to about two, the plus turns to a
+ * close, the `body` and a button to the page appear at its lower left and
+ * the image grows at its right. The height never changes, so nothing below
+ * the rail moves.
  */
 export function RailCard({
   href,
   label,
   title,
+  body,
   media,
 }: Readonly<{
   href: string;
   /** What the card is (a module's name), small above the headline. */
   label: string;
   title: ReactNode;
+  /** The paragraph an open card shows. */
+  body: ReactNode;
   /** A ProductFrame. */
   media: ReactNode;
 }>) {
+  const moreId = useId();
   return (
-    <a href={href} className="cl-railcard focus-ring">
+    <article className="cl-railcard" data-rail-card>
       <div className="cl-railcard-head">
         <div className="cl-railcard-copy">
           <Eyebrow>{label}</Eyebrow>
-          <h3 className="cl-railcard-title">{title}</h3>
+          <h3 className="cl-railcard-title">
+            <a href={href} className="cl-railcard-link focus-ring">
+              {title}
+            </a>
+          </h3>
         </div>
-        <span className="cl-railcard-plus" aria-hidden>
-          <Plus className="size-5" />
-        </span>
+        <button
+          type="button"
+          className="cl-railcard-toggle focus-ring"
+          aria-expanded={false}
+          aria-controls={moreId}
+          aria-label={`More about ${label}`}
+          data-label={label}
+          data-rail-toggle
+        >
+          <Plus aria-hidden className="size-5" />
+        </button>
+      </div>
+      <div id={moreId} className="cl-railcard-more" hidden>
+        <p className="cl-railcard-body">{body}</p>
+        <ButtonLink href={href} size="marketing">
+          Explore {label}
+        </ButtonLink>
       </div>
       <div className="cl-railcard-media">{media}</div>
-    </a>
+    </article>
   );
 }
 

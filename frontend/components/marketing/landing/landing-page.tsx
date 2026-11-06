@@ -4,6 +4,7 @@ import { EngineMark } from '@/components/ui/engine-mark';
 import { appHref } from '@/lib/config/app-link';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { NAV_DROPS, PLATFORM_GROUPS, platformLabel } from '@/lib/marketing-content/nav';
+import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
 
 import { AnnouncementPill } from '../chrome/announcement-pill';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
@@ -83,11 +84,15 @@ const MODULE_SCREENS: Readonly<Record<string, ReactNode>> = {
   '/platform/mcp': <ScreenMcp />,
 };
 
-/** One card per module, in navigation order: its name, its one line and its screen. */
+/**
+ * One card per module, in navigation order: its name, its one line and its
+ * screen; an open card adds the module page's own lead.
+ */
 function Modules() {
   const modules = PLATFORM_GROUPS.flatMap((group) => group.items).flatMap((item) => {
     const screen = MODULE_SCREENS[item.href];
-    return screen ? [{ ...item, screen }] : [];
+    const lead = PLATFORM_PAGES.find((page) => page.path === item.href)?.lead ?? item.desc;
+    return screen ? [{ ...item, screen, lead }] : [];
   });
   return (
     // The rail draws the header itself, so its buttons sit on the heading's row.
@@ -107,6 +112,7 @@ function Modules() {
               href={module.href}
               label={module.title}
               title={module.desc}
+              body={module.lead}
               media={<ProductFrame label={module.title}>{module.screen}</ProductFrame>}
             />
           ),
