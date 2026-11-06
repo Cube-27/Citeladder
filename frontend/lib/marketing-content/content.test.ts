@@ -337,16 +337,16 @@ describe('faq and solutions content', () => {
 });
 
 describe('legal content', () => {
-  it('publishes each policy under a distinct slug', () => {
-    const slugs = ALL_LEGAL.map((document) => document.slug);
-    expect(new Set(slugs).size).toBe(slugs.length);
+  it('publishes each policy under a distinct path', () => {
+    const paths = ALL_LEGAL.map((document) => document.path);
+    expect(new Set(paths).size).toBe(paths.length);
   });
 
   it('links every published policy from the footer', () => {
     // A policy with no route out of the footer is effectively unpublished.
-    const linked = new Set(FOOTER_LEGAL_LINKS.map((link) => link.href.replace(/^\//, '')));
+    const linked = new Set<string>(FOOTER_LEGAL_LINKS.map((link) => link.href));
     for (const document of ALL_LEGAL) {
-      expect(linked.has(document.slug), document.slug).toBe(true);
+      expect(linked.has(document.path), document.path).toBe(true);
     }
   });
 
@@ -355,27 +355,27 @@ describe('legal content', () => {
     // placeholder reaching a public policy would be a published guess.
     for (const document of ALL_LEGAL) {
       const text = stringsIn(document.sections).join(' ');
-      expect(text, document.slug).not.toMatch(
+      expect(text, document.path).not.toMatch(
         /\[[A-Z_]{3,}\]|to be completed|\bpending\b|\bTBD\b/i,
       );
       for (const path of text.match(/(?<=\s)\/[a-z][a-z-]*(?=[\s.,]|$)/g) ?? []) {
-        expect(marketingRouteExists(path), `${document.slug} → ${path}`).toBe(true);
+        expect(marketingRouteExists(path), `${document.path} → ${path}`).toBe(true);
       }
     }
   });
 
   it('gives every section an id, a title, and some content', () => {
     for (const document of ALL_LEGAL) {
-      expect(document.sections.length, document.slug).toBeGreaterThan(0);
+      expect(document.sections.length, document.path).toBeGreaterThan(0);
       for (const section of document.sections) {
-        expect(section.id.trim(), `${document.slug}/${section.title}`).not.toBe('');
-        expect(section.title.trim(), `${document.slug}/${section.id}`).not.toBe('');
+        expect(section.id.trim(), `${document.path}/${section.title}`).not.toBe('');
+        expect(section.title.trim(), `${document.path}/${section.id}`).not.toBe('');
         const hasContent =
           (section.paragraphs?.length ?? 0) > 0 ||
           (section.bullets?.length ?? 0) > 0 ||
           (section.table?.rows.length ?? 0) > 0 ||
           Boolean(section.note?.trim());
-        expect(hasContent, `${document.slug}/${section.id}`).toBe(true);
+        expect(hasContent, `${document.path}/${section.id}`).toBe(true);
       }
     }
   });
@@ -383,7 +383,7 @@ describe('legal content', () => {
   it('uses unique section ids within a document so anchors resolve', () => {
     for (const document of ALL_LEGAL) {
       const ids = document.sections.map((section) => section.id);
-      expect(new Set(ids).size, document.slug).toBe(ids.length);
+      expect(new Set(ids).size, document.path).toBe(ids.length);
     }
   });
 });
@@ -431,7 +431,7 @@ describe('legal tables', () => {
     for (const document of ALL_LEGAL) {
       for (const section of document.sections) {
         for (const row of section.table?.rows ?? []) {
-          expect(row.length, `${document.slug}/${section.id}/${row[0]}`).toBe(
+          expect(row.length, `${document.path}/${section.id}/${row[0]}`).toBe(
             section.table?.headings.length,
           );
         }

@@ -9,12 +9,12 @@ const escapeXml = (value: string) =>
     .replaceAll('"', '&quot;');
 
 export function GET() {
-  const entries = PUBLIC_ROUTES.map(({ path, changeFrequency, priority, lastModified }) => {
+  const entries = PUBLIC_ROUTES.map(({ path, changeFrequency, priority, updated }) => {
     const url = absoluteUrl(path) ?? path;
     return [
       '  <url>',
       `    <loc>${escapeXml(url)}</loc>`,
-      lastModified ? `    <lastmod>${escapeXml(lastModified)}</lastmod>` : null,
+      updated ? `    <lastmod>${escapeXml(updated)}</lastmod>` : null,
       `    <changefreq>${changeFrequency}</changefreq>`,
       `    <priority>${priority}</priority>`,
       '  </url>',

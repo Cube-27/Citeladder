@@ -4,6 +4,7 @@ import { type PlatformPage } from './platform-page-types';
 export const OUTCOME_PAGES: readonly PlatformPage[] = [
   {
     path: '/platform/ai-referral-analytics',
+    updated: '2026-11-06',
     title: 'AI Referral Analytics, AI Crawler Logs & ChatGPT Traffic | CiteLadder',
     description:
       'See the visits ChatGPT, Gemini and other AI assistants send to your site from GA4, and the AI crawlers that fetch your pages from your own server logs.',
@@ -125,6 +126,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
   },
   {
     path: '/platform/product-visibility',
+    updated: '2026-11-06',
     title: 'AI Product Visibility & Share of Shelf | CiteLadder',
     description:
       'Measure how your products and categories appear in AI buying answers, including share of shelf and first-position wins where answers rank products.',

@@ -30,8 +30,6 @@ export const LEGAL_ENTITY = {
   registrationNumber: 'CIN U72900PN2020PTC194984',
   grievanceContact: '',
   phone: '',
-  /** When these documents were last revised. Not a legal effective date. */
-  lastUpdated: '2026-10-12',
 } as const;
 
 /** "Cube27 IT Private Limited, operating CiteLadder, <address>". */
@@ -62,11 +60,15 @@ type LegalSlug =
   | 'subprocessors'
   | 'contact';
 
+/** A policy's page record (see PageRecord) and its content. */
 export type LegalDocument = {
-  slug: LegalSlug;
+  path: `/${LegalSlug}`;
+  /** The browser title, such as "Terms of Service · CiteLadder". */
+  metaTitle: string;
+  /** When the document was last revised (not a legal effective date): its "Last updated" line and sitemap <lastmod>. */
+  updated: string;
   title: string;
   description: string;
-  lastUpdated?: string;
   sections: readonly LegalSection[];
 };
 
@@ -88,7 +90,9 @@ export const FOOTER_LEGAL_LINKS: readonly LegalLink[] = [
 const contact = PARENT_COMPANY.email;
 
 export const COOKIE_POLICY: LegalDocument = {
-  slug: 'cookies',
+  path: '/cookies',
+  metaTitle: 'Cookie Policy · CiteLadder',
+  updated: '2026-10-12',
   title: 'Cookie Policy',
   description: 'How CiteLadder uses cookies and similar technologies on the website and platform.',
   sections: [
@@ -183,11 +187,12 @@ export const COOKIE_POLICY: LegalDocument = {
 };
 
 export const AI_POLICY: LegalDocument = {
-  slug: 'ai-policy',
+  path: '/ai-policy',
+  metaTitle: 'AI Policy · CiteLadder',
+  updated: '2026-10-12',
   title: 'AI Policy',
   description:
     'How CiteLadder uses AI: answer engines generate responses, scoring is deterministic, and Customer Data is never sold or used to train third-party models.',
-  lastUpdated: '2026-10-12',
   sections: [
     {
       id: 'overview',

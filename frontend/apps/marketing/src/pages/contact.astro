@@ -1,12 +1,13 @@
 ---
 import { ContactPage } from '@/components/marketing/pages/contact';
+import { CONTACT_PAGE } from '@/lib/marketing-content/legal-billing';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 ---
 
 <MarketingLayout
-  title="Contact CiteLadder"
-  description="Get in touch with CiteLadder for product questions, demos, partnerships, or help evaluating AI search visibility for your business."
-  canonical="/contact"
+  title={CONTACT_PAGE.metaTitle}
+  description={CONTACT_PAGE.description}
+  canonical={CONTACT_PAGE.path}
 >
   <ContactPage client:load />
 </MarketingLayout>

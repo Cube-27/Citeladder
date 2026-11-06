@@ -6,10 +6,11 @@ import { legalSections } from './legal-text';
  * docs/operations/legal-decisions.md; change commitments here only from there.
  */
 export const PRIVACY_POLICY: LegalDocument = {
-  slug: 'privacy',
+  path: '/privacy',
+  metaTitle: 'Privacy Policy · CiteLadder',
+  updated: '2026-10-14',
   title: 'Privacy Policy',
   description: 'What personal data CiteLadder processes, why, and the choices you have.',
-  lastUpdated: '2026-10-14',
   sections: legalSections(`
 ## who | Who we are
 ${PARENT_COMPANY.legalName} (“Cube27”, “we”, “us”) operates CiteLadder, a marketing analytics service that measures how AI assistants and search engines mention and cite a business, which sources they rely on, and which website issues affect that visibility. Our registered office is ${PARENT_COMPANY.address}. Contact us at ${PARENT_COMPANY.email}.

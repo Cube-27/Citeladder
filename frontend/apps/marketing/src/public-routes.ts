@@ -1,11 +1,6 @@
 import { POSTS } from '@/lib/marketing-content/blog';
 import { COMPETITORS } from '@/lib/marketing-content/compare';
-import {
-  AI_POLICY,
-  COOKIE_POLICY,
-  FOOTER_LEGAL_LINKS,
-  LEGAL_ENTITY,
-} from '@/lib/marketing-content/legal';
+import { AI_POLICY, COOKIE_POLICY, FOOTER_LEGAL_LINKS } from '@/lib/marketing-content/legal';
 import {
   CANCELLATION_POLICY,
   CONTACT_PAGE,
@@ -15,6 +10,8 @@ import { DATA_PROCESSING_AGREEMENT, SUBPROCESSORS } from '@/lib/marketing-conten
 import { PRIVACY_POLICY } from '@/lib/marketing-content/legal-privacy';
 import { TERMS_OF_SERVICE } from '@/lib/marketing-content/legal-terms';
 import { PUBLISHED_PLATFORM } from '@/lib/marketing-content/nav';
+import { PAGES, type PageRecord } from '@/lib/marketing-content/pages';
+import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
 import { FREE_TOOLS } from '@/lib/marketing-content/tools';
 import { RESEARCH_ARTICLES } from './research-articles';
 
@@ -27,7 +24,8 @@ export type PublicRoute = {
   kind: 'page' | 'policy';
   changeFrequency: ChangeFrequency;
   priority: number;
-  lastModified?: string;
+  /** The sitemap <lastmod>, from the page's record. */
+  updated?: string;
 };
 
 const page = (
@@ -35,26 +33,11 @@ const page = (
   title: string,
   changeFrequency: ChangeFrequency,
   priority: number,
-  lastModified?: string,
-): PublicRoute => ({ path, title, kind: 'page', changeFrequency, priority, lastModified });
+  updated?: string,
+): PublicRoute => ({ path, title, kind: 'page', changeFrequency, priority, updated });
 
-/**
- * When each page whose content carries no date of its own last changed in
- * substance (copy, data or layout; not the shared header and footer). Revise
- * the entry with the page: it is the sitemap <lastmod>, and a new value makes
- * the post-deploy IndexNow ping resubmit the URL.
- */
-const PAGE_UPDATED = {
-  home: '2026-10-16',
-  platform: '2026-10-20',
-  pricing: '2026-10-20',
-  enterprise: '2026-10-21',
-  solutions: '2026-10-16',
-  shareOfVoice: '2026-10-20',
-  faq: '2026-10-20',
-  aiReference: '2026-10-16',
-  competitors: '2026-10-20',
-} as const;
+const fromRecord = (record: PageRecord, changeFrequency: ChangeFrequency, priority: number) =>
+  page(record.path, record.title, changeFrequency, priority, record.updated);
 
 const LEGAL_UPDATED = new Map(
   [
@@ -67,7 +50,7 @@ const LEGAL_UPDATED = new Map(
     DATA_PROCESSING_AGREEMENT,
     SUBPROCESSORS,
     CONTACT_PAGE,
-  ].map((document) => [`/${document.slug}`, document.lastUpdated ?? LEGAL_ENTITY.lastUpdated]),
+  ].map((document) => [document.path, document.updated]),
 );
 
 /** An index page changes whenever a page it lists does. */
@@ -82,29 +65,25 @@ const researchUnder = (prefix: string) =>
     ({ frontmatter }) => frontmatter.reviewed_at,
   );
 const postUpdated = (post: (typeof POSTS)[number]) => post.dateModified ?? post.date;
+const platformUpdated = (path: string) =>
+  PLATFORM_PAGES.find((candidate) => candidate.path === path)?.updated;
 
 /**
  * Every indexable marketing page, once. The sitemap and llms.txt both read this
  * list, so a page published to one is published to the other.
  */
 export const PUBLIC_ROUTES: readonly PublicRoute[] = [
-  page('/', 'CiteLadder', 'weekly', 1, PAGE_UPDATED.home),
+  fromRecord(PAGES.home, 'weekly', 1),
   ...PUBLISHED_PLATFORM.map((item) =>
-    page(item.href, item.title, 'monthly', 0.8, PAGE_UPDATED.platform),
+    page(item.href, item.title, 'monthly', 0.8, platformUpdated(item.href)),
   ),
-  page('/pricing', 'Pricing', 'monthly', 0.9, PAGE_UPDATED.pricing),
-  page('/enterprise', 'Enterprise', 'monthly', 0.8, PAGE_UPDATED.enterprise),
-  page('/solutions', 'Solutions', 'monthly', 0.8, PAGE_UPDATED.solutions),
-  page(
-    '/ai-search-share-of-voice',
-    'AI search share of voice',
-    'monthly',
-    0.8,
-    PAGE_UPDATED.shareOfVoice,
-  ),
-  page('/faq', 'FAQ', 'monthly', 0.6, PAGE_UPDATED.faq),
-  page('/ai-instructions', 'AI Instructions', 'monthly', 0.5, PAGE_UPDATED.aiReference),
-  page('/entity-map', 'Entity Map', 'monthly', 0.5, PAGE_UPDATED.aiReference),
+  fromRecord(PAGES.pricing, 'monthly', 0.9),
+  fromRecord(PAGES.enterprise, 'monthly', 0.8),
+  fromRecord(PAGES.solutions, 'monthly', 0.8),
+  fromRecord(PAGES.shareOfVoice, 'monthly', 0.8),
+  fromRecord(PAGES.faq, 'monthly', 0.6),
+  fromRecord(PAGES.aiInstructions, 'monthly', 0.5),
+  fromRecord(PAGES.entityMap, 'monthly', 0.5),
   page(
     '/blog',
     'Blog',
@@ -117,11 +96,15 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
   ),
   ...POSTS.map((post) => page(`/blog/${post.slug}`, post.title, 'yearly', 0.7, postUpdated(post))),
   page(
-    '/compare',
-    'Compare AI visibility tools',
+    PAGES.compare.path,
+    PAGES.compare.title,
     'monthly',
     0.6,
-    latest([PAGE_UPDATED.competitors, ...researchUnder('/compare/')]),
+    latest([
+      PAGES.compare.updated,
+      ...COMPETITORS.map((competitor) => competitor.updated),
+      ...researchUnder('/compare/'),
+    ]),
   ),
   ...COMPETITORS.map((competitor) =>
     page(
@@ -129,7 +112,7 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
       `CiteLadder vs ${competitor.name}`,
       'monthly',
       0.5,
-      PAGE_UPDATED.competitors,
+      competitor.updated,
     ),
   ),
   page('/tools', 'Free tools', 'monthly', 0.8, latest(FREE_TOOLS.map((tool) => tool.updated))),
