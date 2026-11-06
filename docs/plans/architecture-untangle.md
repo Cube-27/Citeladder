@@ -69,7 +69,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | merged | [#639](https://github.com/Cube-27/Citeladder/pull/639) | No migration |
 | P12 | Opportunities: check kinds, typed targets, evidence announcement | O2, O3, O4 | P02 | | merged | [#643](https://github.com/Cube-27/Citeladder/pull/643) | No migration |
 | P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | merged | [#642](https://github.com/Cube-27/Citeladder/pull/642), [#644](https://github.com/Cube-27/Citeladder/pull/644) | Split for size: P13-a (#642) = F5, F6 (F6 alone is one ~5,200-line row); P13-b (#644) = F7 |
-| P14 | Marketing site records and config-driven numbers | MK1, MK2, MK3, MK4 | P02 | | in review | [#649](https://github.com/Cube-27/Citeladder/pull/649) | Builder session `untangle-p14`; marketing image now copies `billing.json` and `entitlements.json` |
+| P14 | Marketing site records and config-driven numbers | MK1, MK2, MK3, MK4 | P02 | | merged | [#649](https://github.com/Cube-27/Citeladder/pull/649) | Marketing image now copies `billing.json` and `entitlements.json` |
 | P15 | Queue owner II: remaining lanes and coalesced enqueue | Q4, Q5, Q6, Q7, Q8 | P01, P03, P09 | | merged | [#633](https://github.com/Cube-27/Citeladder/pull/633) | No migration |
 | P16 | Site Health tasks II: one task runner, counters, pinned versions | SH4, SH5 | P04, P08, P09 | | merged | [#635](https://github.com/Cube-27/Citeladder/pull/635) | No migration |
 | P17 | Permission on the command, MCP prepared changes, workspace ownership | C3, C4, X6 | P11 | | merged | [#646](https://github.com/Cube-27/Citeladder/pull/646) | No migration |
