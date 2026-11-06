@@ -71,7 +71,7 @@ export function CompareIndex() {
         lead="Start with the questions your team needs to answer and the evidence it needs to inspect. Each comparison summarizes a product's public positioning and links to its official source."
       />
 
-      <PageSection spacing="compact" label="Comparisons">
+      <PageSection spacing="compact" label="Comparisons" labelHeading>
         <Callout tone="neutral" className="mb-6">
           Published by CiteLadder. These are vendor-authored comparisons, not independent rankings.
           Product scope, plans and availability can change; use the linked official sources when

@@ -46,7 +46,7 @@ const [featured, ...rest] = newestFirst(POSTS);
     {
       featured ? (
         <>
-          <PageSection label="Featured article" spacing="compact">
+          <PageSection label="Featured article" labelHeading spacing="compact">
             <FeaturedPost post={featured} />
           </PageSection>
           {rest.length > 0 && (

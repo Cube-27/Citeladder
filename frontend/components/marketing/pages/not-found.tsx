@@ -31,7 +31,7 @@ export function NotFoundPage({ links }: Readonly<{ links: readonly Link[] }>) {
           </>
         }
       />
-      <PageSection spacing="compact" label="Suggested pages">
+      <PageSection spacing="compact" label="Suggested pages" labelHeading>
         <RelatedCards items={suggested} />
       </PageSection>
     </main>

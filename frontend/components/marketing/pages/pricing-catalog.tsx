@@ -365,7 +365,7 @@ export function PublicPricingCatalog({
   ];
   return (
     <>
-      <PageSection spacing="compact" label="Plans">
+      <PageSection spacing="compact" label="Plans" labelHeading>
         <div className="grid gap-6">
           <PagePlans
             toolbar={

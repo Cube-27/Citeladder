@@ -174,6 +174,8 @@ function FeatureCards({ features }: Readonly<{ features: readonly Feature[] }>) 
  * full-width screen heads its own section, and cards share a bento row.
  */
 function Features({ page }: Readonly<{ page: PlatformPage }>) {
+  // A card row's visually hidden h2 names the product, never a card's own title.
+  const cardsHeading = `${platformLabel(page.path) ?? 'Platform'} features`;
   // Splits alternate across the whole page, not per section.
   const splitSide = new Map(
     page.features
@@ -219,11 +221,7 @@ function Features({ page }: Readonly<{ page: PlatformPage }>) {
             );
           case 'cards':
             return (
-              <PageSection
-                key={group.features[0]?.title}
-                label={group.features[0]?.title}
-                labelHeading
-              >
+              <PageSection key={group.features[0]?.title} label={cardsHeading} labelHeading>
                 <FeatureCards features={group.features} />
               </PageSection>
             );
