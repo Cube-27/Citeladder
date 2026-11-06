@@ -123,9 +123,6 @@ export function useCatalogHeader({
   const [result, setResult] = useState('');
   const dashboard = useQuery({
     ...siteHealthQueries.dashboard({ workspaceId, projectId }),
-    // The workspace can still be resolving; this used to be gated by the
-    // caller mounting the component at all, and the hook has to gate itself.
-    enabled: Boolean(workspaceId && projectId),
     refetchInterval: (state) => {
       const crawl = state.state.data?.crawl;
       return crawl ? crawlPollInterval(crawl) : false;

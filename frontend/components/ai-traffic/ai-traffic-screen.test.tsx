@@ -684,7 +684,9 @@ describe('AI Traffic state and navigation', () => {
         return new HttpResponse('path\n/page', { headers: { 'content-type': 'text/csv' } });
       }),
     );
-    const view = renderWithProviders(<AiTrafficScreen />);
+    const view = renderWithProviders(<AiTrafficScreen />, {
+      projectSelection: { activeProject: project },
+    });
     await screen.findByText(/No matching requests were observed/);
     expect(await screen.findByText(/Absence-based insights are unavailable/)).toBeVisible();
     const user = userEvent.setup();
@@ -780,7 +782,7 @@ describe('AI Traffic state and navigation', () => {
     );
     // A shared link to a crawl-only view still lands somewhere useful, keeping its range.
     window.history.replaceState(null, '', '/ai-traffic?tab=activity&range=90d');
-    renderWithProviders(<AiTrafficScreen />);
+    renderWithProviders(<AiTrafficScreen />, { projectSelection: { activeProject: project } });
     expect(await screen.findByText(/covers last 90 days/)).toBeVisible();
     expect(screen.getByRole('tab', { name: 'Referrals' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText(/AI crawler logs are included in paid plans/)).toBeVisible();

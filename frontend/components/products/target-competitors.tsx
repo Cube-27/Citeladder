@@ -20,7 +20,7 @@ import type { CommerceQueries } from './commerce-queries';
 import { competitorHost, competitorState, discoveryMessage } from './commerce-format';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
-import { useActiveWorkspaceId } from '@/lib/project/project-context';
+import { useProjectScope } from '@/lib/project/active-project-scope';
 import { sameTarget } from '@/lib/products/use-commerce-target';
 
 type Discovery = ReturnType<typeof useCompetitorDiscovery>;
@@ -44,7 +44,7 @@ export function TargetCompetitors({
   query: CommerceQueries['competitors'];
   discovery: Discovery;
 }>) {
-  const workspaceId = useActiveWorkspaceId();
+  const { workspaceId } = useProjectScope();
   const decide = useMutation(commerceMutations.decideCompetitor({ workspaceId, projectId }));
   // The tracker follows every run in the project, so a bulk discovery across
   // three categories otherwise showed all three banners on each one, and made
@@ -58,7 +58,7 @@ export function TargetCompetitors({
         actions={
           <Button
             variant="secondary"
-            disabled={!workspaceId || discovery.discover.isPending || running}
+            disabled={discovery.discover.isPending || running}
             onClick={() => discovery.discover.mutate([target])}
           >
             {running ? 'Finding…' : 'Find competitors'}
@@ -93,7 +93,7 @@ export function TargetCompetitors({
             query={query}
             rows={rows}
             running={running}
-            pending={!workspaceId || decide.isPending}
+            pending={decide.isPending}
             onDecide={(id, decision) => decide.mutate({ id, decision })}
           />
         </Stack>

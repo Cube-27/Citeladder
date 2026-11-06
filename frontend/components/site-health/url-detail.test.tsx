@@ -3,6 +3,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-p
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { makeProject } from '@/test/fixtures/project';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders as raw } from '@/test/render';
 import type { ReactElement } from 'react';
@@ -64,6 +65,8 @@ function renderUrlDetail(
       {ui}
       <LocationDisplay />
     </>,
+    // A page detail opens under the gate's project.
+    { projectSelection: { activeProject: makeProject() } },
   );
 }
 

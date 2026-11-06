@@ -11,7 +11,7 @@ import { runsMutations, runsQueries } from '@/lib/api/runs';
 import type { Audit, LogicalEngine, PromptSet } from '@citeladder/contracts';
 import { isConfigured, isVerified } from '@/lib/providers/catalog';
 import { useEngineCatalog } from '@/lib/providers/engines';
-import { useActiveWorkspaceId } from '@/lib/project/project-context';
+import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useProjectMarkets } from '@/lib/project/use-project-markets';
 import {
   auditablePrompts,
@@ -44,12 +44,12 @@ function availableEngines(
 }
 
 /** The engines a launch can measure: the workspace's own routes, or all on a managed plan. */
-function useLaunchEngines(open: boolean, workspaceId: string | null) {
+function useLaunchEngines(open: boolean, workspaceId: string) {
   const managed = useManagedPlan();
   const catalog = useEngineCatalog();
   const connectionsQuery = useQuery({
     ...providerQueries.connections(workspaceId),
-    enabled: open && workspaceId !== null && !managed,
+    enabled: open && !managed,
   });
   const engines = useMemo(
     () =>
@@ -121,10 +121,10 @@ export function LaunchDialog({
   promptSelectionLabel?: string;
   auditScope?: 'brand' | 'commerce';
 }>) {
-  const workspaceId = useActiveWorkspaceId();
+  const { workspaceId } = useProjectScope();
   const promptSetsQuery = useQuery({
     ...promptsQueries.sets({ workspaceId, projectId }),
-    enabled: open && workspaceId !== null,
+    enabled: open,
   });
   const { configuredEngines, unverifiedEngines, enginesReady, catalog } = useLaunchEngines(
     open,
@@ -206,7 +206,7 @@ export function LaunchDialog({
   };
   // The accepted repetition range arrives with the prompt-set list; no payload is built before it.
   const limits = promptSetsQuery.data?.limits ?? null;
-  const ready = workspaceId !== null && limits !== null && canLaunch(selection);
+  const ready = limits !== null && canLaunch(selection);
   const estimateQuery = useQuery({
     ...runsQueries.estimate(
       workspaceId,

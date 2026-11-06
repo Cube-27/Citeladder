@@ -15,8 +15,7 @@ import {
   type ProjectReadinessStage,
 } from '@/lib/api/performance';
 import { pollReadiness } from '@/lib/performance/status';
-import { useActiveWorkspaceId } from '@/lib/project/project-context';
-import { resolveProjectRequestScope } from '@/lib/project/request-scope';
+import { useProjectScope } from '@/lib/project/active-project-scope';
 import { formatWindowDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -77,11 +76,10 @@ function StepMark({ state }: Readonly<{ state: 'done' | 'active' | 'pending' }>)
  * read the same cache entry, so they can never disagree about which stage a
  * project is on.
  */
-export function useProjectReadiness(projectId: string | null) {
-  const scope = resolveProjectRequestScope(useActiveWorkspaceId(), projectId);
+export function useProjectReadiness() {
+  const { workspaceId, projectId } = useProjectScope();
   return useQuery({
-    ...performanceQueries.readiness(scope),
-    enabled: scope.enabled,
+    ...performanceQueries.readiness({ workspaceId, projectId }),
     // While an import is in flight the answer changes on its own, so this
     // keeps asking rather than stranding the user on a stale stage.
     refetchInterval: (query) => pollReadiness(query.state.data?.stage),

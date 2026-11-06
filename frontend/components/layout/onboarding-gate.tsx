@@ -17,6 +17,7 @@ import {
   WORKSPACE_SETUP_PATH,
   type NoticeKind,
 } from '@/lib/project/bootstrap';
+import { ActiveProjectScopeProvider } from '@/lib/project/active-project-scope';
 import { useProjectContext } from '@/lib/project/project-context';
 import type { FailureScope } from '@/lib/project/selection';
 
@@ -42,6 +43,7 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
     errorScope,
     activeWorkspaceId,
     activeWorkspace,
+    activeProject,
     retry: retryContext,
   } = useProjectContext();
   const queryClient = useQueryClient();
@@ -99,6 +101,13 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
     );
   }
 
+  // A ready project-required route always has its project resolved; the
+  // screen receives it non-null instead of re-checking the selection.
+  if (projectRequired && activeProject) {
+    return (
+      <ActiveProjectScopeProvider project={activeProject}>{children}</ActiveProjectScopeProvider>
+    );
+  }
   return <>{children}</>;
 }
 
