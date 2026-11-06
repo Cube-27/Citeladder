@@ -91,7 +91,7 @@ async function project(db: Database, workspaceId: string, userId: string, agency
     if (present) continue;
     const prompt = await /* NOSONAR -- Prompts are created in fixture order. */ createPrompt(
       db,
-      workspaceId,
+      { workspaceId, projectId: null },
       setId,
       promptInput.parse({
         text,
