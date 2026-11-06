@@ -32,16 +32,26 @@ unknown site, out-of-scope redirect) fail at once.
 
 The [research owner](../frontend/services/api/src/projects/research.ts) reads the
 resolved homepage and a bounded set of first-party pages, and runs independent
-Keenable search and fetch research in parallel when a key is configured. One
-identity model request (20-second timeout) proposes the profile; a field citing
-only unknown evidence rejects the identity, while unsupported extra citations
-are dropped. One optional search then feeds at most three sequential competitor
-suggestion requests (20 seconds each) for up to ten provisional names and
-domains. Cleanup excludes owned, duplicate and reference sites; it does not prove
-commercial equivalence. Without an identity there is no category to search on,
-so competitor suggestion is skipped and the review warns. Every failure degrades
-to a reviewable result with warnings rather than blocking the user. Onboarding
-makes no prompt-generation request.
+Keenable search and fetch research in parallel when a key is configured. Each
+run has one budget equal to the 180-second interactive deadline. One identity
+model request proposes the profile under its own deadline (90 seconds by
+default, never more than what remains of the budget) and asks only for the
+output an identity needs; a field citing only unknown evidence rejects the
+identity, while unsupported extra citations are dropped. One optional search
+then feeds at most three sequential competitor suggestion requests, which share
+what is left of the budget, for up to ten provisional names and domains.
+Cleanup excludes owned, duplicate and reference sites; it does not prove
+commercial equivalence.
+
+An identity request that fails, times out or returns an unusable answer is never
+saved as a review without competitors: the task retries within its attempts,
+and the last attempt, or a credit or pricing refusal at once, fails the
+discovery with `brand_identity_unavailable`. Without a configured model there is
+no identity or category, so competitor suggestion is skipped and the review
+warns. Other research failures (external research, the competitor search or
+suggestions) degrade to a reviewable result with warnings. Onboarding makes no
+prompt-generation request. Failures log their class, code, phase and elapsed
+time, and a model deadline is logged as `timeout`, not a connection failure.
 
 Workspace access is checked before each network request through a short-lived
 per-worker cache (30 seconds by default), so revocation takes effect within that

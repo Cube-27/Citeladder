@@ -10,6 +10,9 @@ import { FetchError, type WebsiteFetcher } from '../src/projects/safe-fetch.ts';
 import { DiscoveryQueue } from '../src/queue/discovery-queue.ts';
 import { recoverDiscoveryLeases } from '../src/queue/recovery.ts';
 import { DiscoveryWorker } from '../src/workers/discovery-worker.ts';
+import { gatewayCalls } from '../src/models/gateway.ts';
+import { ModelError } from '../src/models/http.ts';
+import { recordingMeter } from './meter-fixtures.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
 
@@ -507,6 +510,59 @@ describe('durable onboarding', () => {
       ]),
     });
     expect(await worker.runOnce('test-worker')).toBe(false);
+  });
+  it('retries a timed-out identity and then fails with its own code, never an empty ready review', async () => {
+    const t = await tenant();
+    const row = await createDiscovery(db, t.workspaceId, input, randomUUID());
+    const complete = vi.fn(async () => {
+      throw new ModelError('timeout');
+    });
+    const gateway = {
+      model: 'test-model',
+      maxOutputTokens: 100,
+      baseUrlHost: 'model.example',
+      adapter: 'openai_compatible' as const,
+      converse: vi.fn(),
+      ...gatewayCalls(complete),
+    };
+    const worker = new DiscoveryWorker(db, {
+      fetcher,
+      gateway,
+      env: {},
+      meter: () => recordingMeter().meter,
+    });
+    const target = { workspaceId: t.workspaceId, discoveryId: row.id };
+    await worker.runOnce('identity-timeout', target);
+    const task = await db
+      .selectFrom('brand_discovery_tasks')
+      .selectAll()
+      .where('discovery_id', '=', row.id)
+      .executeTakeFirstOrThrow();
+    expect(task).toMatchObject({
+      status: 'retry_wait',
+      attempt_count: 1,
+      error_code: 'brand_identity_unavailable',
+    });
+    expect((await discoveryRow(db, t.workspaceId, row.id)).status).toBe('running');
+    await db
+      .updateTable('brand_discovery_tasks')
+      .set({ available_at: new Date(0), max_attempts: 2 })
+      .where('id', '=', task.id)
+      .execute();
+    await worker.runOnce('identity-timeout-final', target);
+    expect(await discoveryRow(db, t.workspaceId, row.id)).toMatchObject({
+      status: 'failed',
+      error_code: 'brand_identity_unavailable',
+      competitors: [],
+    });
+    expect(complete).toHaveBeenCalledTimes(2);
+    expect(
+      await db
+        .selectFrom('brand_research_snapshots')
+        .select('id')
+        .where('discovery_id', '=', row.id)
+        .execute(),
+    ).toEqual([]);
   });
   it('claimers do not share a task and expired owners cannot write terminal results', async () => {
     const t = await tenant();
