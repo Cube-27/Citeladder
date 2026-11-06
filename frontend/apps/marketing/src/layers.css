@@ -8,9 +8,8 @@
  *   noise blended soft-light so it reads as film in both themes.
  * - Washes: each hero has a tinted glow at its top that fades into the page,
  *   and a full app screen fades out at its foot into its stage.
- * - Frosted rims: a product image on a stage sits in a translucent white rim
- *   that blurs the grain under it, then on its own white card, so the picture
- *   has three planes told apart by colour alone: no edges or shadows (D44).
+ * - Figures (D45): a product image is a white card straight on its stage or
+ *   tint, lifted by `shadow-pop`. No rim or second ground sits between them.
  * - Motion (D36): nothing enters on scroll and no part ever waits unseen. The
  *   landing heroes' copy alone appears on load: the H1 sharpens and settles
  *   (it is never invisible), the rest rises in after it. Nothing lifts on
@@ -74,7 +73,7 @@
   --stage-c: var(--color-stage-mint);
 }
 
-/* ---------- A product image on its own: stage, frosted rim, card ---------- */
+/* ---------- A product image on its own: stage, then its white card ---------- */
 
 /* The frame's card becomes the stage: no edge or shadow of its own. */
 .cl-frame-card {
@@ -84,32 +83,24 @@
   box-shadow: none;
 }
 
-/* The rim: translucent white over the stage, blurring the grain beneath.
-   Told apart by its fill alone (D44): no edge. */
+/* The well has no fill of its own (D45), and lets the card's shadow out. */
 .cl-frame-card > .cl-frame-well {
-  padding: 8px;
+  overflow: visible;
   border: 0;
-  border-radius: var(--site-radius-card);
-  background: color-mix(in srgb, var(--color-surface) 42%, transparent);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
 }
 
-/* The picture's own white card on the rim: colour, not shadow (D44). */
+/* The picture's own white card, lifted off its ground by a shadow (D45). */
 .cl-frame-card > .cl-frame-well > .cl-frame-screen {
   overflow: hidden;
   border-radius: var(--site-radius-inner);
   background: var(--color-surface);
+  box-shadow: var(--shadow-pop);
 }
 
 @media (max-width: 767px) {
   .cl-frame-card {
     padding: 16px;
     border-radius: var(--site-radius-card);
-  }
-
-  .cl-frame-card > .cl-frame-well {
-    padding: 4px;
   }
 }
 
