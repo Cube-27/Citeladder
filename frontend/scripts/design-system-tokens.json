@@ -139,7 +139,7 @@
           "light": "#808080",
           "dark": "#707070"
         },
-        "usage": "The 1px resting edge of every form control (owner decision D37, 6 Nov 2026): inputs, password and adorned field frames, search fields, selects, the filter-bar trigger, date fields, textareas, chip inputs, the Agent composer, the CSV file input and checkbox and radio boxes, with shadow-edge under it. Holds 3:1 on paper, surface and surface-sunken in both themes (WCAG 1.4.11). Hover darkens it to ink-secondary; focus is a 2px focus line in a 3px line halo."
+        "usage": "The 1px resting edge of every form control (owner decision D37, 6 Nov 2026): inputs, password and adorned field frames, search fields, selects, the filter-bar trigger, date fields, textareas, chip inputs, the Agent composer, the docs search trigger, the CSV file input and checkbox and radio boxes, with shadow-edge under it. Holds 3:1 on paper, surface and surface-sunken in both themes (WCAG 1.4.11). Hover darkens it to ink-secondary; focus is a 2px focus line in a 3px line halo."
       },
       {
         "name": "ink",

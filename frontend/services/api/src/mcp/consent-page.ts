@@ -15,7 +15,7 @@ const STYLE = `
 :root{color-scheme:light;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:20px;
 --paper:rgb(255 255 255);/* panel */--ground:rgb(244 245 244);/* background */--well:rgb(239 241 240);/* well */
 --ink:rgb(47 52 49);/* foreground */--ink-2:rgb(78 85 81);/* secondary */--ink-3:rgb(97 105 100);/* muted */
---edge:rgb(225 228 226);/* border */--rule:rgb(236 238 237);/* border-subtle */
+--edge:rgb(225 228 226);/* border */--rule:rgb(236 238 237);/* border-subtle */--field:rgb(128 128 128);/* line-field */
 --accent:rgb(20 83 45);/* accent */--accent-hover:rgb(22 101 52);/* accent-hover */--accent-soft:rgb(240 253 244);/* accent-soft */
 --danger:rgb(180 35 50);/* danger-text */--danger-bg:rgb(255 240 241);/* danger-bg */
 --warning:rgb(138 70 0);/* warning-text */--warning-bg:rgb(255 245 219);/* warning-bg */}
@@ -31,7 +31,7 @@ p{margin:0}.meta{color:var(--ink-3);font-size:12px;line-height:16px}
 .tag{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:999px;background:var(--warning-bg);color:var(--warning);font-size:12px;line-height:16px;font-weight:500}
 code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--well);border-radius:4px;padding:2px 4px;word-break:break-all}
 fieldset{border:0;margin:0;padding:0;display:grid;gap:8px}legend{padding:0;margin-bottom:8px}
-.choice{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--edge);border-radius:12px}
+.choice{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--field);border-radius:12px}
 .choice:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
 .choice.off{background:var(--well);border-color:var(--rule)}
 .choice input{margin:2px 0 0;width:16px;height:16px;accent-color:var(--accent);flex:none}
