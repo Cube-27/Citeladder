@@ -4,13 +4,14 @@ import { EngineMark } from '@/components/ui/engine-mark';
 import { appHref } from '@/lib/config/app-link';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { NAV_DROPS, PLATFORM_GROUPS, platformLabel } from '@/lib/marketing-content/nav';
+import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
 
 import { AnnouncementPill } from '../chrome/announcement-pill';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { EngineStrip, LogoTile } from '../sections/cards';
-import { CardRail, FeatureCard, FeatureSplit } from '../sections/features';
+import { CardRail, FeatureCard, FeatureSplit, RailCard } from '../sections/features';
 import { LandingHero } from '../sections/heroes';
-import { PageSection } from '../sections/page-section';
+import { PageSection, SectionHeader } from '../sections/page-section';
 import { SiteArrowLink, columnsFor } from '../sections/site-parts';
 import { CtaBand, FaqList, Steps } from '../sections/steps-faq-cta';
 import { ProductFrame } from '../screens/product-frame';
@@ -23,7 +24,7 @@ import {
 } from '../screens/screens-search';
 import { ScreenMcp, ScreenSiteHealth } from '../screens/screens-site';
 import { ScreenAnswer, ScreenSources } from '../screens/screens-visibility';
-import { ScreenAppVisibility } from '../screens/screen-app';
+import { ScreenAppPage, ScreenAppVisibility, type NavLabel } from '../screens/screen-app';
 
 import { FAQS, INTEGRATIONS, type IntegrationMark } from './landing-data';
 
@@ -65,47 +66,91 @@ function Hero() {
   );
 }
 
+type ModuleScreen = Readonly<{
+  /** The feature's focused screen. */
+  screen: ReactNode;
+  /** Where the feature lives in the app: the page title and the sidebar row it lights. */
+  page: Readonly<{ title: string; active?: NavLabel; mode?: 'Agent' }>;
+}>;
+
 /**
- * Each module's one focused screen, by platform route. A published module
- * without a screen here (Integrations, which has its own section) is left out
- * of the rail.
+ * Each module's focused screen and its place in the app, by platform route.
+ * A published module without one here (Integrations, which has its own
+ * section) is left out of the rail.
  */
-const MODULE_SCREENS: Readonly<Record<string, ReactNode>> = {
-  '/platform/ai-visibility': <ScreenEngines />,
-  '/platform/cited-sources': <ScreenSources />,
-  '/platform/ai-referral-analytics': <ScreenReferrals />,
-  '/platform/product-visibility': <ScreenCommerce />,
-  '/platform/site-health': <ScreenSiteHealth />,
-  '/platform/search-demand': <ScreenDemand />,
-  '/platform/keyword-research': <ScreenKeywords />,
-  '/platform/content-briefs': <ScreenAgentBrief />,
-  '/platform/agents': <ScreenAgentChat />,
-  '/platform/mcp': <ScreenMcp />,
+const MODULE_SCREENS: Readonly<Record<string, ModuleScreen>> = {
+  '/platform/ai-visibility': {
+    screen: <ScreenEngines />,
+    page: { title: 'AI Visibility', active: 'AI Visibility' },
+  },
+  '/platform/cited-sources': {
+    screen: <ScreenSources />,
+    page: { title: 'AI Visibility', active: 'AI Visibility' },
+  },
+  '/platform/ai-referral-analytics': {
+    screen: <ScreenReferrals />,
+    page: { title: 'AI Traffic', active: 'AI Traffic' },
+  },
+  '/platform/product-visibility': {
+    screen: <ScreenCommerce />,
+    page: { title: 'Commerce Suite', active: 'Commerce Suite' },
+  },
+  '/platform/site-health': {
+    screen: <ScreenSiteHealth />,
+    page: { title: 'Website', active: 'Website' },
+  },
+  '/platform/search-demand': {
+    screen: <ScreenDemand />,
+    page: { title: 'Search Demand', active: 'Search Demand' },
+  },
+  '/platform/keyword-research': {
+    screen: <ScreenKeywords />,
+    page: { title: 'Keyword Research', active: 'Keyword Research' },
+  },
+  '/platform/content-briefs': {
+    screen: <ScreenAgentBrief />,
+    page: { title: 'Actions', active: 'Actions' },
+  },
+  '/platform/agents': { screen: <ScreenAgentChat />, page: { title: 'Agent', mode: 'Agent' } },
+  '/platform/mcp': { screen: <ScreenMcp />, page: { title: 'Agent', mode: 'Agent' } },
 };
 
-/** One card per module, in navigation order: its name, its one line and its screen. */
+/**
+ * One card per module, in navigation order: its name, its one line and its
+ * screen; an open card adds the module page's own lead and the feature's
+ * page in the app.
+ */
 function Modules() {
   const modules = PLATFORM_GROUPS.flatMap((group) => group.items).flatMap((item) => {
-    const screen = MODULE_SCREENS[item.href];
-    return screen ? [{ ...item, screen }] : [];
+    const shown = MODULE_SCREENS[item.href];
+    const lead = PLATFORM_PAGES.find((page) => page.path === item.href)?.lead ?? item.desc;
+    return shown ? [{ ...item, ...shown, lead }] : [];
   });
   return (
-    <PageSection
-      id="platform"
-      title="Measure the answer, then fix the page"
-      action={<SiteArrowLink href="/platform">See the whole platform</SiteArrowLink>}
-    >
+    // The rail draws the header itself, so its buttons sit on the heading's row.
+    <PageSection id="platform" label="Tools for AI visibility, search and your website">
       <CardRail
         label="modules"
+        head={
+          <SectionHeader
+            title="Tools for AI visibility, search and your website"
+            action={<SiteArrowLink href="/platform">See the whole platform</SiteArrowLink>}
+          />
+        }
         items={modules.map((module) => ({
           key: module.href,
           content: (
-            <FeatureCard
+            <RailCard
               href={module.href}
-              linkLabel={`Explore ${module.title}`}
-              title={module.title}
-              body={module.desc}
+              label={module.title}
+              title={module.desc}
+              body={module.lead}
               media={<ProductFrame label={module.title}>{module.screen}</ProductFrame>}
+              page={
+                <ProductFrame label={`The ${module.page.title} page in the CiteLadder app`}>
+                  <ScreenAppPage {...module.page}>{module.screen}</ScreenAppPage>
+                </ProductFrame>
+              }
             />
           ),
         }))}

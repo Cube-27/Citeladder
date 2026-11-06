@@ -2,21 +2,32 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 
 import { mountCardRail } from './card-rail';
-import { CardRail } from './features';
+import { CardRail, RailCard } from './features';
 
 function renderRail({ scrollWidth, clientWidth }: { scrollWidth: number; clientWidth: number }) {
   const { container } = render(
     <CardRail
       label="modules"
-      items={[
-        { key: 'a', content: 'First' },
-        { key: 'b', content: 'Second' },
-      ]}
+      items={['Site Health', 'Keyword Research'].map((name) => ({
+        key: name,
+        content: (
+          <RailCard
+            href={`/platform/${name.toLowerCase().replace(' ', '-')}`}
+            label={name}
+            title={`${name} in one line`}
+            body={`What ${name} does`}
+            media={null}
+            page={null}
+          />
+        ),
+      }))}
     />,
   );
   const track = screen.getByRole('list', { name: 'modules' });
   Object.defineProperty(track, 'scrollWidth', { configurable: true, value: scrollWidth });
   Object.defineProperty(track, 'clientWidth', { configurable: true, value: clientWidth });
+  // jsdom lays nothing out and has no scrolling API on elements.
+  track.scrollTo = () => {};
   const rail = container.querySelector<HTMLElement>('[data-card-rail]');
   if (!rail) throw new Error('CardRail rendered no rail');
   mountCardRail(rail);
@@ -46,5 +57,40 @@ describe('mountCardRail', () => {
 
     expect(prev).toBeEnabled();
     expect(next).toBeDisabled();
+  });
+
+  it('opens one card in place at a time and closes it again', () => {
+    // A closed card keeps its paragraph and button out of the accessibility
+    // tree (the stylesheet fades them; jsdom has none).
+    renderRail({ scrollWidth: 1200, clientWidth: 400 });
+    expect(screen.queryByRole('link', { name: 'Explore Site Health' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'More about Site Health' }));
+    expect(screen.getByRole('link', { name: 'Explore Site Health' })).toHaveAttribute(
+      'href',
+      '/platform/site-health',
+    );
+
+    // Opening the next card closes the first.
+    fireEvent.click(screen.getByRole('button', { name: 'More about Keyword Research' }));
+    expect(screen.queryByRole('link', { name: 'Explore Site Health' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Explore Keyword Research' })).toHaveAttribute(
+      'href',
+      '/platform/keyword-research',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close Keyword Research' }));
+    expect(screen.queryByRole('link', { name: 'Explore Keyword Research' })).toBeNull();
+  });
+
+  it('leaves a card closed when its headline link is pressed', () => {
+    renderRail({ scrollWidth: 1200, clientWidth: 400 });
+
+    fireEvent.click(screen.getByRole('link', { name: 'Site Health in one line' }));
+
+    expect(screen.getByRole('button', { name: 'More about Site Health' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
   });
 });

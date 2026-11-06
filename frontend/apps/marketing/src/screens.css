@@ -687,6 +687,16 @@
   margin-top: var(--page-section-gap);
 }
 
+/* A feature's page (ScreenAppPage): its screen as one card on the page, at
+   a reading width from the sidebar, as the app sets a section. */
+.cl-app-page > .cl-vig {
+  flex: none;
+  max-width: 760px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
 .cl-app-content .cl-screen-cols {
   gap: var(--workspace-gap);
 }

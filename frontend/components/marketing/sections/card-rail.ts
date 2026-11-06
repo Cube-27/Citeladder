@@ -1,7 +1,10 @@
 /**
- * Mounts a CardRail's previous and next buttons: each moves the row one card,
+ * Mounts a CardRail: its previous and next buttons move the row one card,
  * and a button is disabled when the row cannot move that way (both, when
- * every card already fits). Shows the buttons once they work.
+ * every card already fits). Each RailCard's plus, or a press on the card
+ * outside its links, opens the card in place and closes any other; the open
+ * card's close (the same button) or a second press closes it. Shows the
+ * controls once they work.
  */
 export function mountCardRail(rail: HTMLElement): void {
   const nav = rail.querySelector<HTMLElement>('[data-card-rail-nav]');
@@ -10,14 +13,14 @@ export function mountCardRail(rail: HTMLElement): void {
   const next = rail.querySelector<HTMLButtonElement>('[data-card-rail-next]');
   if (!nav || !track || !prev || !next) return;
 
+  const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const cardStep = () => {
     const first = track.firstElementChild;
     const gap = Number.parseFloat(getComputedStyle(track).columnGap) || 0;
     return first instanceof HTMLElement ? first.offsetWidth + gap : track.clientWidth;
   };
   const move = (direction: -1 | 1) => {
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    track.scrollBy({ left: direction * cardStep(), behavior: reduce ? 'auto' : 'smooth' });
+    track.scrollBy({ left: direction * cardStep(), behavior: reduceMotion() ? 'auto' : 'smooth' });
   };
   const sync = () => {
     const end = track.scrollWidth - track.clientWidth;
@@ -25,10 +28,57 @@ export function mountCardRail(rail: HTMLElement): void {
     next.disabled = track.scrollLeft >= end - 1;
   };
 
+  const cards = [...track.querySelectorAll<HTMLElement>('[data-rail-card]')];
+  const setOpen = (card: HTMLElement, open: boolean) => {
+    const toggle = card.querySelector<HTMLButtonElement>('[data-rail-toggle]');
+    const more = toggle
+      ? document.getElementById(toggle.getAttribute('aria-controls') ?? '')
+      : null;
+    if (!toggle || !more) return;
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.setAttribute('aria-label', `${open ? 'Close' : 'More about'} ${toggle.dataset.label}`);
+    // A closed card's open layers stay out of reach; the stylesheet fades
+    // them (and the miniature, which a phone's open row keeps).
+    const page = card.querySelector<HTMLElement>('.cl-railcard-page');
+    for (const layer of [more, page]) {
+      layer?.toggleAttribute('inert', !open);
+      if (open) layer?.removeAttribute('aria-hidden');
+      else layer?.setAttribute('aria-hidden', 'true');
+    }
+    card.toggleAttribute('data-expanded', open);
+  };
+  const toggleCard = (card: HTMLElement) => {
+    const open = !card.hasAttribute('data-expanded');
+    for (const other of cards) if (other !== card) setOpen(other, false);
+    setOpen(card, open);
+    if (open) {
+      // Bring the opened card's left edge to the row's start.
+      const item = card.parentElement;
+      const first = track.firstElementChild;
+      if (item instanceof HTMLElement && first instanceof HTMLElement) {
+        track.scrollTo({
+          left: item.offsetLeft - first.offsetLeft,
+          behavior: reduceMotion() ? 'auto' : 'smooth',
+        });
+      }
+    }
+    sync();
+  };
+  for (const card of cards) {
+    card.addEventListener('click', (event) => {
+      // A link inside the card still navigates; the toggle and the card's
+      // own surface open or close it.
+      if (event.target instanceof Element && event.target.closest('a')) return;
+      toggleCard(card);
+    });
+  }
+
   prev.addEventListener('click', () => move(-1));
   next.addEventListener('click', () => move(1));
   track.addEventListener('scroll', sync, { passive: true });
+  track.addEventListener('transitionend', sync);
   window.addEventListener('resize', sync);
   sync();
   nav.dataset.ready = '';
+  rail.dataset.ready = '';
 }

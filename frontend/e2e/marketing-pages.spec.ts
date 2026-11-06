@@ -149,7 +149,10 @@ test.describe('marketing routes', () => {
           await route.continue();
         });
         await page.goto(path, { waitUntil: 'commit' });
-        const frames = page.locator('main .cl-frame');
+        // A card rail's images are layers its cards open (none drawn on a
+        // phone until a row opens); the rail's own height is held by the
+        // frames after it, which this measures.
+        const frames = page.locator('main .cl-frame:not([data-card-rail-track] .cl-frame)');
         await expect(frames.first()).toBeVisible();
         await page.waitForFunction(() =>
           [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')].every(
