@@ -1,4 +1,4 @@
-# Architecture untangle
+| done | 4a96045 | || done | 1b33b90 | || done | c740105 | || done | c401d14 | || done | 4db7114 | |# Architecture untangle
 
 Status: approved for implementation (owner, 2026-11-06). This document is both the plan and the
 orchestrator's tracker. The work is 22 scoped pull requests (P01–P22). Each PR batches a set of rows
@@ -68,7 +68,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P12 | Opportunities: check kinds, typed targets, evidence announcement | O2, O3, O4 | P02 | | todo | | |
 | P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | todo | | |
 | P14 | Marketing site records and config-driven numbers | MK1, MK2, MK3, MK4 | P02 | | todo | | |
-| P15 | Queue owner II: remaining lanes and coalesced enqueue | Q4, Q5, Q6, Q7, Q8 | P01, P03, P09 | | in progress | | Builder session `untangle-p15` |
+| P15 | Queue owner II: remaining lanes and coalesced enqueue | Q4, Q5, Q6, Q7, Q8 | P01, P03, P09 | | in review | [#633](https://github.com/Cube-27/Citeladder/pull/633) | Builder session `untangle-p15` |
 | P16 | Site Health tasks II: one task runner, counters, pinned versions | SH4, SH5 | P04, P08, P09 | | todo | | |
 | P17 | Permission on the command, MCP prepared changes, workspace ownership | C3, C4, X6 | P11 | | todo | | |
 | P18 | Internal cost view, spend breaker, output caps | K1, K2, K3 | P01, P10 | mig? | todo | | Before public sign-up |
