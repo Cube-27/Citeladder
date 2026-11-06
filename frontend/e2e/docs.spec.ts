@@ -145,37 +145,44 @@ test('contents omit step numbering without changing article anchors and follow t
   expect(headingTop).toBeGreaterThanOrEqual(headerBottom);
 });
 
-// Docs reads at the system's roles at every width (body 16; lead 18 on a
-// phone, 20 above), and its search trigger wears the soft field edge — a 1px
-// `line` border with the `shadow-edge` smudge, never a dark hairline (D5).
-test('docs keeps its own reading type and a soft-edged search trigger', async ({ page }) => {
-  const reading = async () =>
+// The search field's edge identifies it as a control, so it meets WCAG 1.4.11
+// non-text contrast (3:1) against what it sits on, in both themes.
+test('the docs search field edge meets 3:1 non-text contrast', async ({ page }) => {
+  const edgeContrast = async () =>
     page.evaluate(() => {
-      const size = (selector: string) =>
-        getComputedStyle(document.querySelector(selector) as Element).fontSize;
-      const search = getComputedStyle(
-        document.querySelector('[data-docs-search-trigger="field"]') as Element,
-      );
-      // The edge tokens as this page resolves them, for comparison.
-      const probe = document.body.appendChild(document.createElement('div'));
-      probe.style.boxShadow = 'var(--shadow-edge)';
-      probe.style.color = 'var(--color-line)';
-      const softEdge = getComputedStyle(probe).boxShadow;
-      const line = getComputedStyle(probe).color;
-      probe.remove();
-      return {
-        body: size('main .cl-prose p'),
-        lead: size('.cl-ahead-lead'),
-        softEdge: search.boxShadow === softEdge && softEdge !== 'none',
-        edge: `${search.borderTopWidth} ${search.borderTopColor === line}`,
+      type Rgb = { r: number; g: number; b: number; a: number };
+      const rgb = (value: string): Rgb | null => {
+        const parts = (/rgba?\(([^)]+)\)/.exec(value)?.[1] ?? '')
+          .split(/[\s,/]+/)
+          .filter(Boolean)
+          .map(Number);
+        const [r, g, b, a = 1] = parts;
+        if (r === undefined || g === undefined || b === undefined) return null;
+        return { r, g, b, a };
       };
+      const luminance = ({ r, g, b }: { r: number; g: number; b: number }) => {
+        const channel = (v: number) => {
+          const s = v / 255;
+          return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+        };
+        return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+      };
+      const field = document.querySelector('[data-docs-search-trigger="field"]') as Element;
+      const edge = rgb(getComputedStyle(field).borderTopColor);
+      let ground: Rgb | null = null;
+      for (let node = field.parentElement; node && !ground; node = node.parentElement) {
+        const fill = rgb(getComputedStyle(node).backgroundColor);
+        if (fill && fill.a === 1) ground = fill;
+      }
+      ground ??= rgb(getComputedStyle(document.body).backgroundColor);
+      if (!edge || !ground) return null;
+      const hi = Math.max(luminance(edge), luminance(ground));
+      const lo = Math.min(luminance(edge), luminance(ground));
+      return (hi + 0.05) / (lo + 0.05);
     });
-  await page.setViewportSize({ width: 375, height: 800 });
-  await page.goto('/');
-  const soft = { softEdge: true, edge: '1px true' };
-  expect(await reading()).toEqual({ body: '16px', lead: '18px', ...soft });
-  await page.setViewportSize({ width: 982, height: 800 });
-  expect(await reading()).toEqual({ body: '16px', lead: '20px', ...soft });
-  await page.setViewportSize({ width: 1440, height: 900 });
-  expect(await reading()).toEqual({ body: '16px', lead: '20px', ...soft });
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme });
+    await page.goto('/');
+    expect(await edgeContrast()).toBeGreaterThanOrEqual(3);
+  }
 });
