@@ -80,7 +80,7 @@ function preparedKind<S extends z.ZodType, P extends Permission>(entry: {
 }
 
 /** The idempotency key a declaration confirmed through MCP records. */
-export const declarationKey = (confirmationId: string) => `mcp:${confirmationId}`;
+const declarationKey = (confirmationId: string) => `mcp:${confirmationId}`;
 
 export const preparedChanges = {
   add_prompts: preparedKind({
