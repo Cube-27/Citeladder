@@ -11,12 +11,8 @@ import { freezeCommerceContext } from '../commerce/audit-context.ts';
 import { frozenEntityMatching, projectEntityMatching } from '../analysis/entity-matching.ts';
 import { strings } from '../db/json.ts';
 import { admittedFactCheck, admittedPerceptionVersions } from '../perception/admission.ts';
-import {
-  overLimitPromptIds,
-  overLimitSelection,
-  requireCommerce,
-} from '../entitlements/occupancy.ts';
-import { WorkspaceEntitlements } from '../entitlements/access.ts';
+import { overLimitPromptIds, overLimitSelection } from '../entitlements/occupancy.ts';
+import { WorkspaceEntitlements, requireFlag } from '../entitlements/access.ts';
 import { marketLabel } from '@citeladder/contracts/markets';
 import type { Market } from '../projects/markets.ts';
 import {
@@ -389,7 +385,7 @@ export async function prepareAudit(
   if (!auditPolicy.constants.audit_triggers.includes(trigger))
     throw invalid(`Unsupported trigger: ${trigger}`);
   // Commerce measurement runs AI shelf extraction, a Commerce capability.
-  if (input.audit_scope === 'commerce') await requireCommerce(db, workspaceId);
+  if (input.audit_scope === 'commerce') await requireFlag(db, workspaceId, 'commerce');
   const stored = await db
     .selectFrom('projects')
     .selectAll()

@@ -11,7 +11,7 @@ import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
-import { accountState } from '../entitlements/state.ts';
+import { requireFlag } from '../entitlements/access.ts';
 import {
   billingAccountId,
   hold,
@@ -44,11 +44,15 @@ async function account(db: Database, workspaceId: string) {
   if (!id) throw new AgentError('funding_unavailable');
   return id;
 }
+/** The plan gate for the Agent; any refusal is the Agent's `capability_unavailable`. */
 async function capability(db: Database, workspaceId: string) {
   const id = await account(db, workspaceId);
-  const state = await accountState(db, workspaceId, id, new Date());
-  if (state.error || (state.values.get('agent') ?? 0) < 1)
-    throw new AgentError('capability_unavailable');
+  try {
+    await requireFlag(db, workspaceId, 'agent');
+  } catch (error) {
+    if (error instanceof ApiError) throw new AgentError('capability_unavailable');
+    throw error;
+  }
   return id;
 }
 async function development(db: Database, userId: string | null, settings: Settings) {

@@ -1,4 +1,3 @@
-import { sql } from 'kysely';
 import {
   billingCatalogSchema,
   billingEntitlementSchema,
@@ -17,9 +16,8 @@ import { credentialModeOf, type CredentialMode } from './credential-mode.ts';
 import { checkoutAvailable } from './razorpay.ts';
 import { cancellationHeldUntil } from './cancellation.ts';
 import { scheduledSchema } from './settlement.ts';
-import { apiKeyCount, marketCount } from '../entitlements/occupancy.ts';
+import { occupancyCounts } from '../entitlements/occupancy.ts';
 import { manualRunUsage } from '../audits/admission.ts';
-import { monitoredUrlCount } from '../site-health/reads/runtime.ts';
 
 const UNITS: Record<string, string> = {
   'counter.consumable': 'credits',
@@ -137,33 +135,6 @@ export async function publicCatalog(
 }
 
 /** What each occupancy counter has in use, counted as its admission check counts it. */
-async function occupancyCounts(
-  db: Database,
-  workspaceId: string,
-  at: Date,
-): Promise<ReadonlyMap<string, number>> {
-  const projects = await db
-    .selectFrom('projects')
-    .select(sql<string>`count(*)`.as('count'))
-    .where('workspace_id', '=', workspaceId)
-    .executeTakeFirstOrThrow();
-  const prompts = await db
-    .selectFrom('prompts')
-    .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
-    .innerJoin('projects', 'projects.id', 'prompt_sets.project_id')
-    .select(sql<string>`count(*)`.as('count'))
-    .where('projects.workspace_id', '=', workspaceId)
-    .executeTakeFirstOrThrow();
-  const { entitlements } = policy;
-  return new Map([
-    [entitlements.project_slots, Number(projects.count)],
-    [entitlements.prompt_slots, Number(prompts.count)],
-    ['monitored_urls', await monitoredUrlCount(db, workspaceId)],
-    [entitlements.api_keys, await apiKeyCount(db, workspaceId, at)],
-    [entitlements.market_slots, await marketCount(db, workspaceId)],
-  ]);
-}
-
 async function occupancyHints(
   db: Database,
   workspaceId: string,
