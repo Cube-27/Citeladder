@@ -225,7 +225,6 @@ async function selectionAnswers(
   const scoped = await scopedSelection(db, selection);
   const rows = (
     await evidenceScope(db, scoped)
-      .where('audit.audit_scope', '=', policy.visibility.brand_audit_scope)
       .select([
         'ra.id',
         'ra.audit_id',

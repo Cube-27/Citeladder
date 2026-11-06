@@ -19,6 +19,7 @@ import { drainWorkspace } from './analytics-drain.ts';
 import { seedOpportunityScenario, type OpportunitySeed } from './opportunity-fixtures.ts';
 import { sourcePage } from './action-support.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
+import { VisibilityFixtures } from './visibility-fixtures.ts';
 
 const config = testConfig();
 const db = testDatabase(config);
@@ -224,6 +225,57 @@ describe('opportunity_refresh', () => {
       .execute();
     await recomputeOpportunities(db, scope(s), { skipIfCurrent: true });
     expect(await snapshotCount(s)).toBe(before + 1);
+  });
+
+  it('keeps brand and Commerce Actions when a Commerce run follows the brand run', async () => {
+    const s = await seed();
+    const tenant = { userId: s.user_id, workspaceId: s.workspace_id, projectId: s.project_id };
+    // Completed after the seed's brand run, so it is the project's newest run of any scope.
+    const commerceRun = await new VisibilityFixtures(db).audit(tenant, {
+      scope: 'commerce',
+      completedAt: new Date(Date.now() + 60_000),
+    });
+    const productId = randomUUID();
+    await db
+      .insertInto('commerce_shelf_snapshots')
+      .values({
+        id: randomUUID(),
+        workspace_id: s.workspace_id,
+        project_id: s.project_id,
+        audit_id: commerceRun,
+        target_kind: 'product',
+        target_id: productId,
+        product_visibility: 0,
+        share_of_shelf: null,
+        average_shelf_position: null,
+        first_position_win_rate: null,
+        successful_execution_count: 2,
+        recognized_slot_count: 0,
+        ranked_execution_count: 0,
+        formula_version: 'commerce-shelf-formulas-1',
+        source_observation_ids: '[]',
+        context_snapshot: '{}',
+        created_at: new Date(),
+      })
+      .execute();
+    await recomputeOpportunities(db, scope(s));
+    const rows = await live(s);
+    const rules = rows.map((row) => [row.rule_id, row.target_key]).toSorted();
+    expect(rules).toEqual([
+      ['brand_absent_high_value_prompt', `prompt:${s.prompt0_id}`],
+      ['content_structure_incomplete', expect.any(String)],
+      ['missing_structured_data', expect.any(String)],
+      ['owned_page_not_cited', expect.any(String)],
+      ['product_not_mentioned', `product:${productId}`],
+    ]);
+    const snapshot = await db
+      .selectFrom('opportunity_snapshots')
+      .select('audit_id')
+      .where('workspace_id', '=', s.workspace_id)
+      .orderBy('created_at', 'desc')
+      .executeTakeFirstOrThrow();
+    // The brand evidence still comes from the brand run.
+    expect(snapshot.audit_id).toBe(s.audit_id);
   });
 
   it('lets exactly one of two concurrent workers claim a queued refresh', async () => {

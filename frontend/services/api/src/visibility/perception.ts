@@ -38,7 +38,6 @@ import { compareText } from '../text-order.ts';
 import { scopedSelection } from './dashboard.ts';
 import { citationsByAnalysis, evidenceScope, observedAt, type RunSelection } from './selection.ts';
 
-const visibility = policy.visibility;
 const QUOTES_CURSOR_SCOPE = 'visibility.perception.quotes';
 
 const assessmentsSchema = z
@@ -167,7 +166,6 @@ async function selectionAnswers(
   const scoped = await scopedSelection(db, selection);
   const rows = (
     await evidenceScope(db, scoped)
-      .where('audit.audit_scope', '=', visibility.brand_audit_scope)
       .select([
         'ra.id',
         'ra.audit_id',
