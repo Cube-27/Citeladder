@@ -140,27 +140,32 @@ export class IntegrationWorker {
 
   async #claim(): Promise<Run | null> {
     const scope = this.#scope;
+    let window: Pick<Run, 'window_start' | 'window_end'> | undefined;
     const [row] = await this.#queue.claim({
       owner: this.#owner,
       where:
         scope &&
         ((column) =>
           sql<boolean>`${column('workspace_id')} = ${scope.workspaceId} and ${column('id')} = ${scope.runId}`),
-      // The started event commits with the claim.
-      onClaimed: (trx, claimed) => startedEvents(trx, claimed),
+      // The started event and the run's date bounds commit with the claim, so
+      // a failed read rolls the claim (and its attempt charge) back.
+      onClaimed: async (trx, claimed) => {
+        await startedEvents(trx, claimed);
+        const [run] = claimed;
+        if (!run) return;
+        // Window bounds as the session renders them: the run is read by date.
+        window = await trx
+          .selectFrom('integration_sync_runs')
+          .select([
+            sql<string>`window_start::text`.as('window_start'),
+            sql<string>`window_end::text`.as('window_end'),
+          ])
+          .where('id', '=', run.id)
+          .where('workspace_id', '=', run.workspace_id)
+          .executeTakeFirstOrThrow();
+      },
     });
-    if (!row) return null;
-    // Window bounds as the session renders them: the run is read by date.
-    const window = await this.#db
-      .selectFrom('integration_sync_runs')
-      .select([
-        sql<string>`window_start::text`.as('window_start'),
-        sql<string>`window_end::text`.as('window_end'),
-      ])
-      .where('id', '=', row.id)
-      .where('workspace_id', '=', row.workspace_id)
-      .executeTakeFirstOrThrow();
-    return { ...row, ...window };
+    return row && window ? { ...row, ...window } : null;
   }
 
   /** Earliest claimable run or lease expiry, so an idle runner stays for a retry, history chunk or recovery due soon. */
