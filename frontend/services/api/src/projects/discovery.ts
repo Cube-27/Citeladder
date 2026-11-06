@@ -9,7 +9,8 @@ import { z } from 'zod';
 
 import { dailyWorkspaceLimit, enforceWorkspaceRequest } from '../abuse/usage.ts';
 import { activeJobRetrySeconds } from '../abuse/usage.ts';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import promptLibrary from '../config/prompt-library.json' with { type: 'json' };
 import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';
@@ -94,7 +95,7 @@ async function admitDiscovery(trx: Database, workspaceId: string) {
     .executeTakeFirstOrThrow();
   if (
     Number(active.count) >=
-    Number(resolveSettingSpec(policy.abuse.active_brand_discoveries_per_workspace))
+    Number(resolveSettingSpec(policy.abuse.active_brand_discoveries_per_workspace, process.env))
   )
     throw new ApiError(429, 'Workspace active brand discovery limit exceeded', {
       headers: { 'retry-after': String(activeJobRetrySeconds()) },

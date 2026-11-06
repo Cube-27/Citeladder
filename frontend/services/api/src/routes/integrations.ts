@@ -47,7 +47,8 @@ import {
 import { freshAccessToken } from '../integrations/tokens.ts';
 import { getLogger } from '../logging.ts';
 import { enforceWorkspaceRequest } from '../abuse/usage.ts';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import { defineDeleteRoute, defineGetRoute, definePostRoute } from './define.ts';
 
 const family = 'integrations';
@@ -384,8 +385,11 @@ export const integrationRoutes = [
       if (!row) throw notFound('Integration connection');
       await enforceWorkspaceRequest(db, `${workspaceId}:${path.connection_id}`, {
         operation: 'integrations.properties',
-        limit: resolveSettingSpec(policy.abuse.property_discovery_limit) as number,
-        windowSeconds: resolveSettingSpec(policy.abuse.property_discovery_window_seconds) as number,
+        limit: resolveSettingSpec(policy.abuse.property_discovery_limit, process.env) as number,
+        windowSeconds: resolveSettingSpec(
+          policy.abuse.property_discovery_window_seconds,
+          process.env,
+        ) as number,
       });
       // Resolve the project before provider I/O; an unknown project is a 404,
       // and any other failure keeps its own error.

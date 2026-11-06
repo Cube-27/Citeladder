@@ -5,7 +5,8 @@
  * add-on, top-up or operator override) is never purged; billing and usage
  * records survive the deletion with their source IDs.
  */
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import { workspaceAccess } from '../entitlements/access.ts';
 import { openReservedUnits, projectHoldsReservations } from '../entitlements/ledger.ts';
@@ -16,7 +17,7 @@ import { removeProject } from './service.ts';
 
 const logger = getLogger('app.projects');
 const setting = (key: 'trial_data_retention_days' | 'trial_purge_workspace_batch') =>
-  Number(resolveSettingSpec(policy.billing.settings[key]));
+  Number(resolveSettingSpec(policy.billing.settings[key], process.env));
 
 /**
  * Delete the projects and incomplete discoveries of up to a batch of

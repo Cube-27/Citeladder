@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { Selectable } from 'kysely';
+import type { SettingSource } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import type { Audits } from '../generated/db-schema.ts';
 import { record, strings } from '../db/json.ts';
@@ -36,7 +37,7 @@ export type MeterableShelfResolver = {
   resolve(spans: string[], meter: Meter): Promise<unknown>;
 };
 export function configuredShelfResolver(
-  env: Record<string, string | undefined> = process.env,
+  env: SettingSource = process.env,
   signal?: AbortSignal,
 ): MeterableShelfResolver | undefined {
   try {

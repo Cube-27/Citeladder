@@ -3,7 +3,7 @@ import { Hono, type Context } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { sessionUser } from '../auth/session.ts';
 import { trustedClientIdentity } from '../auth/client-identity.ts';
-import { configEnvironment, demoAccessExpired, policy, type ServiceConfig } from '../config.ts';
+import { demoAccessExpired, policy, type ServiceConfig } from '../config.ts';
 import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
@@ -201,7 +201,7 @@ export function registerOAuthRoutes(
   app.get('/.well-known/oauth-protected-resource/mcp', protectedMetadata);
   app.post('/mcp/register', async (c) => {
     const identity = trustedClientIdentity(c, config);
-    await admitRegistration(db, identity, configEnvironment(config));
+    await admitRegistration(db, identity, config.settings);
     return c.json(await registerClient(db, mcp, await registrationBody(c.req.raw)), 201);
   });
   app.get('/authorize', async (c) => {

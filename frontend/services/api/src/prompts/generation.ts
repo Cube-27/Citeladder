@@ -5,7 +5,8 @@ import { sql } from 'kysely';
 import type { z } from 'zod';
 
 import { agentCallLimit, dailyWorkspaceLimit, enforceWorkspaceRequest } from '../abuse/usage.ts';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
@@ -460,7 +461,7 @@ export async function generatePrompts(
           'prompt_judge_calls_per_workspace_daily',
           Math.min(
             output.drafts.length,
-            Number(resolveSettingSpec(policy.models.jev.max_calls_per_generation)),
+            Number(resolveSettingSpec(policy.models.jev.max_calls_per_generation, process.env)),
           ),
         ),
       );

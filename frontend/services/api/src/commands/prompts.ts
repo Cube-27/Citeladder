@@ -8,7 +8,8 @@
 import type { z } from 'zod';
 
 import { enforceWorkspaceRequest } from '../abuse/usage.ts';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import type { RecordScope } from '../db/workspace-scope.ts';
 import { WorkspaceEntitlements } from '../entitlements/access.ts';
@@ -104,8 +105,11 @@ export async function importPrompts(
 ) {
   await enforceWorkspaceRequest(db, actor.workspaceId, {
     operation: 'bulk_import',
-    limit: resolveSettingSpec(policy.abuse.bulk_import_limit) as number,
-    windowSeconds: resolveSettingSpec(policy.abuse.bulk_import_window_seconds) as number,
+    limit: resolveSettingSpec(policy.abuse.bulk_import_limit, process.env) as number,
+    windowSeconds: resolveSettingSpec(
+      policy.abuse.bulk_import_window_seconds,
+      process.env,
+    ) as number,
   });
   if (body.bytes > policy.prompts.import_max_bytes)
     throw new ApiError(413, 'Import body too large');

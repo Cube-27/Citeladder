@@ -4,7 +4,8 @@ import { competitorDiscoveryRequestSchema } from '@citeladder/contracts/commerce
 import { commerceTargetSchema } from '@citeladder/contracts/commerce-suite';
 import { z } from 'zod';
 import { dailyWorkspaceLimit, enforceWorkspaceRequest } from '../abuse/usage.ts';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import { meterFor } from '../billing/metering.ts';
 import { jsonObject } from '../db/json.ts';

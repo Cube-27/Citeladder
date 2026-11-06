@@ -1,7 +1,7 @@
 /** The analytics lane's worker settings (`ANALYTICS_*`). */
 import { ConfigError } from './config-error.ts';
 import { analytics } from './connected-data.ts';
-import { resolveSpec, type Env } from './settings.ts';
+import { resolveSpec, type SettingSource } from './settings.ts';
 
 export type WorkerSettings = {
   leaseReclaimBatchSize: number;
@@ -17,9 +17,9 @@ export type WorkerSettings = {
 };
 
 /** The analytics worker knobs, refusing a heartbeat slower than the lease. */
-export function loadWorkerSettings(env: Env = process.env): WorkerSettings {
+export function loadWorkerSettings(source: SettingSource = process.env): WorkerSettings {
   const specs = analytics.worker_settings;
-  const setting = (name: keyof typeof specs) => resolveSpec(name, specs[name], env) as number;
+  const setting = (name: keyof typeof specs) => resolveSpec(name, specs[name], source) as number;
   const settings: WorkerSettings = {
     leaseReclaimBatchSize: setting('lease_reclaim_batch_size'),
     drainBudgetSeconds: setting('drain_budget_seconds'),

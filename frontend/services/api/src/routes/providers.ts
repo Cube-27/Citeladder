@@ -5,7 +5,8 @@ import {
   providerConnectionSchema,
 } from '@citeladder/contracts/providers';
 import { providerConnectionStatesSchema } from '@citeladder/contracts/billing';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import { enforceWorkspaceRequest } from '../abuse/usage.ts';
 import { readBody } from '../http/body.ts';
 import {
@@ -30,7 +31,7 @@ const params = {
   query: {},
 } as const;
 const empty = { path: {}, query: {} } as const;
-const encryptionKey = () => String(resolveSettingSpec(policy.settings.encryption_key));
+const encryptionKey = () => String(resolveSettingSpec(policy.settings.encryption_key, process.env));
 export const providerRoutes = [
   defineGetRoute({
     family,
@@ -162,8 +163,10 @@ export const providerRoutes = [
       await getConnection(db, workspaceId, path.connection_id);
       await enforceWorkspaceRequest(db, workspaceId, {
         operation: 'provider.connection_test',
-        limit: Number(resolveSettingSpec(policy.abuse.provider_test_limit)),
-        windowSeconds: Number(resolveSettingSpec(policy.abuse.provider_test_window_seconds)),
+        limit: Number(resolveSettingSpec(policy.abuse.provider_test_limit, process.env)),
+        windowSeconds: Number(
+          resolveSettingSpec(policy.abuse.provider_test_window_seconds, process.env),
+        ),
       });
       return probeConnection(
         db,

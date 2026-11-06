@@ -1,9 +1,10 @@
-import { ConfigError, policy, resolveSettingSpec } from '../config.ts';
+import { ConfigError, policy } from '../config.ts';
+import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
 import { providerSettings } from '../providers/config.ts';
 import { searchSettings } from '../search-surfaces/dataforseo.ts';
 export const auditPolicy = policy.audits;
 /** Admission resolves policy once. Workers read the persisted copy for measurement behavior. */
-export function auditSettings(env: Record<string, string | undefined> = process.env) {
+export function auditSettings(env: SettingSource = process.env) {
   const settings = Object.fromEntries(
     Object.entries(auditPolicy.settings).map(([name, spec]) => [
       name,
@@ -23,7 +24,7 @@ export function auditSettings(env: Record<string, string | undefined> = process.
     throw new ConfigError('Audit prompt count must be a nonnegative integer');
   return { ...settings, audit_prompt_count: promptCount };
 }
-export function auditRuntime(env: Record<string, string | undefined> = process.env) {
+export function auditRuntime(env: SettingSource = process.env) {
   return {
     audits: auditSettings(env),
     providers: providerSettings(env),

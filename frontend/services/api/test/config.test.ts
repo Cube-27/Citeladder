@@ -3,13 +3,9 @@ import { describe, expect, it, vi } from 'vitest';
 import auditRuntime from '../src/config/audits.json' with { type: 'json' };
 import trafficRuntime from '../src/config/traffic.json' with { type: 'json' };
 
-import {
-  ConfigError,
-  demoAccessExpired,
-  loadConfig,
-  policy,
-  resolveSettingSpec,
-} from '../src/config.ts';
+import { ConfigError, demoAccessExpired, loadConfig, policy } from '../src/config.ts';
+import { loadWorkerSettings } from '../src/config/analytics.ts';
+import { resolveSettingSpec } from '../src/config/settings.ts';
 import { poolOptions } from '../src/db/database.ts';
 import { razorpaySettings } from '../src/billing/config.ts';
 import { productionEnv } from './production-config.ts';
@@ -101,6 +97,18 @@ describe('loadConfig', () => {
     const config = loadConfig({});
     expect(config.database.poolSize).toBe(policy.settings.db_pool_size.default);
     expect(config.session.cookieName).toBe(policy.settings.session_cookie_name.default);
+  });
+
+  it('validates every owner setting at startup and hands owners the startup values', () => {
+    // Settings no startup field reads still refuse a bad value before any work.
+    expect(() => loadConfig({ INTEGRATION_LEASE_TTL_SECONDS: '0' })).toThrow(ConfigError);
+    expect(() => loadConfig({ RUNNER_DB_POOL_SIZE: '5' })).toThrow(ConfigError);
+    expect(() => loadConfig({ ANALYTICS_HEARTBEAT_INTERVAL_SECONDS: '100000' })).toThrow(
+      'heartbeat_interval_seconds',
+    );
+    const config = loadConfig({ ANALYTICS_TASK_MAX_ATTEMPTS: '7', RUNNER_BUDGET_SECONDS: '90' });
+    expect(loadWorkerSettings(config.settings).taskMaxAttempts).toBe(7);
+    expect(config.execution.budgetSeconds).toBe(90);
   });
 
   it('matches environment names case-insensitively.', () => {

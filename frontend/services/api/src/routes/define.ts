@@ -29,7 +29,8 @@ import {
   type MembershipRule,
   type WorkspaceCapability,
 } from '../auth/workspace.ts';
-import { policy, resolveSettingSpec, type ServiceConfig } from '../config.ts';
+import { policy, type ServiceConfig } from '../config.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
@@ -180,7 +181,7 @@ function parameterObject(specs: ParamSpecs): z.ZodObject {
 const optionalString = z.string().nullable().optional();
 const ACTIVE_WORKSPACE_HEADERS = z.object({ 'x-workspace-id': optionalString });
 const SESSION_COOKIE = z.object({
-  [String(resolveSettingSpec(policy.settings.session_cookie_name))]: optionalString,
+  [String(resolveSettingSpec(policy.settings.session_cookie_name, process.env))]: optionalString,
 });
 
 /** An OpenAPI `{name}` path template as a Hono pattern. */

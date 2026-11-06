@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { z } from 'zod';
 import { enforceSubjectRequest } from '../abuse/usage.ts';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
+import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';
 import { grantableScopes, mcpPolicy, type McpConfig } from './config.ts';
@@ -64,11 +65,7 @@ function validateRegistration(input: unknown) {
   };
 }
 
-export function admitRegistration(
-  db: Database,
-  client: string,
-  env: Record<string, string | undefined> = process.env,
-) {
+export function admitRegistration(db: Database, client: string, env: SettingSource = process.env) {
   const value = (name: keyof typeof policy.abuse) =>
     Number(resolveSettingSpec(policy.abuse[name], env));
   return admitBudgets(db, [

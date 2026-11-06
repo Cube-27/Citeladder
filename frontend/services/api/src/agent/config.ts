@@ -1,7 +1,8 @@
 import { resolveSkillsDirectory } from '../config/skill-inputs.ts';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
+import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
 
-export function agentSettings(env: Record<string, string | undefined> = process.env) {
+export function agentSettings(env: SettingSource = process.env) {
   const specs = policy.models.gateway;
   const setting = (name: keyof typeof specs) => resolveSettingSpec(specs[name], env);
   return {

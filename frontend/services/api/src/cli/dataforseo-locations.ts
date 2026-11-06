@@ -12,7 +12,7 @@
 import { writeFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 
-import { resolveSettingSpec } from '../config.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import { providerPolicy } from '../providers/config.ts';
 import { searchPolicy } from '../search-surfaces/dataforseo.ts';
 import {
@@ -27,11 +27,11 @@ const OUTPUT = new URL('../config/dataforseo-locations.json', import.meta.url);
 const { values } = parseArgs({ options: { 'dry-run': { type: 'boolean', default: false } } });
 
 const spec = providerPolicy.platform_dataforseo;
-const login = String(resolveSettingSpec(spec.api_login)).trim();
-const password = String(resolveSettingSpec(spec.api_password));
+const login = String(resolveSettingSpec(spec.api_login, process.env)).trim();
+const password = String(resolveSettingSpec(spec.api_password, process.env));
 if (!login || !password)
   throw new Error('Set DATAFORSEO_API_LOGIN and DATAFORSEO_API_PASSWORD to fetch the lists');
-const base = String(resolveSettingSpec(providerPolicy.dataforseo.base_url));
+const base = String(resolveSettingSpec(providerPolicy.dataforseo.base_url, process.env));
 const credentials = Buffer.from(`${login}:${password}`).toString('base64');
 const authorization = `Basic ${credentials}`;
 

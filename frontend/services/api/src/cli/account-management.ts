@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { createInterface } from 'node:readline/promises';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
 import { accountDatabaseConfig } from '../config/account-management.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import {
   authenticatePlatformOperator,
@@ -69,7 +70,7 @@ async function accessSettings() {
   const allowance = Number(
     await accountPrompt(
       'Counter allowance',
-      String(resolveSettingSpec(policy.settings.dev_login_counter_allowance)),
+      String(resolveSettingSpec(policy.settings.dev_login_counter_allowance, process.env)),
     ),
   );
   const expiry = await accountPrompt(

@@ -1,4 +1,4 @@
-import { configEnvironment, type ServiceConfig } from '../config.ts';
+import type { ServiceConfig } from '../config.ts';
 import { loadWorkerSettings } from '../config/analytics.ts';
 import { interactiveExecution } from '../config/execution.ts';
 import type { Database } from '../db/database.ts';
@@ -17,7 +17,7 @@ export async function executeCompetitorDiscoveries(
   taskIds: string[],
 ) {
   await discoveries(db, scope, taskIds);
-  const env = configEnvironment(config);
+  const env = config.settings;
   const signal = AbortSignal.timeout(interactiveExecution.timeoutSeconds * 1000);
   const worker = new AnalyticsWorker(
     db,

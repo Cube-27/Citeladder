@@ -12,7 +12,8 @@ import {
   monitoredUrlsReplaceRequestSchema,
 } from '@citeladder/contracts/site-health-requests';
 import { enforceWorkspaceRequest } from '../abuse/usage.ts';
-import { configEnvironment, policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import { SiteHealthWorker } from '../workers/site-health-worker.ts';
 import { exclusiveDrain } from '../workers/runner.ts';
 import { siteWorkerSettings } from '../site-health/runtime.ts';
@@ -61,7 +62,7 @@ export const siteHealthCrawlRoutes = [
     async handle({ c, db, config }, { path }) {
       const workspaceId = c.get('workspace').workspaceId;
       await loadCrawl(db, workspaceId, path.crawl_id);
-      const env = configEnvironment(config);
+      const env = config.settings;
       const interactive = policy.site_health.interactive;
       const signal = AbortSignal.timeout(interactive.timeout_seconds * 1000);
       const settings = siteWorkerSettings(env);
@@ -115,8 +116,10 @@ export const siteHealthCrawlRoutes = [
       const workspaceId = c.get('workspace').workspaceId;
       await enforceWorkspaceRequest(db, workspaceId, {
         operation: 'site_health.crawl_create',
-        limit: Number(resolveSettingSpec(policy.abuse.crawl_create_limit)),
-        windowSeconds: Number(resolveSettingSpec(policy.abuse.crawl_create_window_seconds)),
+        limit: Number(resolveSettingSpec(policy.abuse.crawl_create_limit, process.env)),
+        windowSeconds: Number(
+          resolveSettingSpec(policy.abuse.crawl_create_window_seconds, process.env),
+        ),
       });
       const crawl = await db.transaction().execute((trx) => createCrawl(trx, workspaceId, request));
       return siteCrawlSchema.parse(await crawlProjection(db, crawl));
@@ -133,8 +136,10 @@ export const siteHealthCrawlRoutes = [
       const workspaceId = c.get('workspace').workspaceId;
       await enforceWorkspaceRequest(db, workspaceId, {
         operation: 'site_health.crawl_create',
-        limit: Number(resolveSettingSpec(policy.abuse.crawl_create_limit)),
-        windowSeconds: Number(resolveSettingSpec(policy.abuse.crawl_create_window_seconds)),
+        limit: Number(resolveSettingSpec(policy.abuse.crawl_create_limit, process.env)),
+        windowSeconds: Number(
+          resolveSettingSpec(policy.abuse.crawl_create_window_seconds, process.env),
+        ),
       });
       const crawl = await db
         .transaction()

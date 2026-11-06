@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import type { SettingSource } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
 import { AuditQueue, ownedAuditTask, parkAuditTask, type AuditTask } from '../queue/audit-queue.ts';
@@ -40,7 +41,7 @@ export class AuditWorker {
   readonly #deps: PhaseDeps;
   readonly #taskScope: { workspaceId: string; auditId: string } | undefined;
   readonly #now: () => Date;
-  readonly #env: Record<string, string | undefined>;
+  readonly #env: SettingSource;
   readonly #access: (workspaceId: string) => Promise<unknown>;
   constructor(
     db: Database,
@@ -53,7 +54,7 @@ export class AuditWorker {
       execute?: typeof executeAnswer;
       taskScope?: { workspaceId: string; auditId: string };
       now?: () => Date;
-      env?: Record<string, string | undefined>;
+      env?: SettingSource;
     } = {},
   ) {
     this.#db = db;

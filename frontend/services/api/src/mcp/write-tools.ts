@@ -30,7 +30,7 @@ import {
   updatePrompt,
   updateTopic,
 } from '../commands/prompts.ts';
-import { configEnvironment, policy, type ServiceConfig } from '../config.ts';
+import { policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { plainJson } from '../db/json.ts';
 import { promptOccupancy } from '../entitlements/occupancy.ts';
@@ -663,7 +663,7 @@ const writeDefinitions = {
         context.db,
         actor.workspaceId,
         { ...request, project_id: args.project_id },
-        auditRuntime(configEnvironment(context.config)),
+        auditRuntime(context.config.settings),
       );
       const ceiling = args.max_attempts ?? estimate.maximum_attempt_count;
       const change = newChange(args.project_id);

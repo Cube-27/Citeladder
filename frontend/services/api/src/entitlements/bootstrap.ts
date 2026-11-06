@@ -2,7 +2,8 @@
 import { randomUUID, createHash } from 'node:crypto';
 import { sql, type RawBuilder, type Selectable } from 'kysely';
 import { subjectXactLock } from '../db/advisory-lock.ts';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import type { Users } from '../generated/db-schema.ts';
 import { issueBundle, lockAccount, sourceRef, type GrantSource } from './grants.ts';
@@ -87,7 +88,7 @@ export async function ensureWorkspaceBilling(
       .limit(1)
       .executeTakeFirst();
     const from = earlier?.valid_from ?? locked.created_at;
-    const days = resolveSettingSpec(policy.billing.settings.trial_days) as number;
+    const days = resolveSettingSpec(policy.billing.settings.trial_days, process.env) as number;
     const until = earlier?.valid_until ?? new Date(from.getTime() + days * 86400000);
     await issueBundle(db, {
       workspaceId,

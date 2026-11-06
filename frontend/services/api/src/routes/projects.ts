@@ -3,7 +3,8 @@ import { commandCenterSchema } from '@citeladder/contracts/opportunities';
 import { projectMarketCreateSchema, projectMarketSchema } from '@citeladder/contracts/markets';
 import { z } from 'zod';
 
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import { enforceWorkspaceRequest } from '../abuse/usage.ts';
 import { readBody } from '../http/body.ts';
 import { projectCreate, projectUpdate } from '../projects/inputs.ts';
@@ -104,8 +105,10 @@ export const projectRoutes = [
       await readProject(db, scope);
       await enforceWorkspaceRequest(db, scope.workspaceId, {
         operation: 'brand_logo_refresh',
-        limit: Number(resolveSettingSpec(policy.abuse.brand_logo_refresh_limit)),
-        windowSeconds: Number(resolveSettingSpec(policy.abuse.brand_logo_refresh_window_seconds)),
+        limit: Number(resolveSettingSpec(policy.abuse.brand_logo_refresh_limit, process.env)),
+        windowSeconds: Number(
+          resolveSettingSpec(policy.abuse.brand_logo_refresh_window_seconds, process.env),
+        ),
       });
       return refreshLogos(db, scope);
     },

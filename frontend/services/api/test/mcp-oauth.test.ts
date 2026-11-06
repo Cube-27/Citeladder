@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 import { parse, type DefaultTreeAdapterMap } from 'parse5';
 import { afterAll, beforeEach, expect, it, onTestFinished, vi } from 'vitest';
 import { createApp } from '../src/app.ts';
-import { configEnvironment, policy } from '../src/config.ts';
+import { policy } from '../src/config.ts';
 import type { AppEnv } from '../src/context.ts';
 import { loadMcpConfig } from '../src/mcp/config.ts';
 import { authorizedWorkspaceIds, authorizeProject } from '../src/mcp/data.ts';
@@ -657,7 +657,7 @@ it('meters malformed and oversized registrations, exempts preflight, and seriali
     vi.useRealTimers();
   });
   const outcomes = await Promise.allSettled(
-    Array.from({ length: 5 }, () => admitRegistration(db, identity, configEnvironment(config))),
+    Array.from({ length: 5 }, () => admitRegistration(db, identity, config.settings)),
   );
   expect(outcomes.filter((r) => r.status === 'fulfilled')).toHaveLength(2);
   expect(

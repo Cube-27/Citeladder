@@ -2,7 +2,8 @@ import { randomInt, randomUUID } from 'node:crypto';
 import { crawlLogTick } from '../crawl-logs/maintenance.ts';
 import { setTimeout as sleep } from 'node:timers/promises';
 import pg from 'pg';
-import { configEnvironment, policy, resolveSettingSpec, type ServiceConfig } from '../config.ts';
+import { policy, type ServiceConfig } from '../config.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import { loadWorkerSettings } from '../config/analytics.ts';
 import { poolOptions, type Database } from '../db/database.ts';
 import { createAgentBindings } from '../agent/bindings.ts';
@@ -333,7 +334,7 @@ async function untilAdmissionEnds<T>(
 }
 
 export async function runnerOwners(db: Database, config: ServiceConfig) {
-  const env = configEnvironment(config);
+  const env = config.settings;
   const runtime = auditRuntime(env);
   // Provider calls hold no connection, so audits keep a pool-bounded set in
   // flight like Site Health below; per-transport capacity still caps each provider.
@@ -421,7 +422,7 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
           pruneUsageWindows(
             db,
             new Date(),
-            Number(resolveSettingSpec(policy.abuse.usage_window_cleanup_batch)),
+            Number(resolveSettingSpec(policy.abuse.usage_window_cleanup_batch, config.settings)),
             canAdmit,
           ),
       },

@@ -12,21 +12,19 @@ import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { abuse } from '../config/abuse.ts';
-import { resolveSettingSpec, resolveSpec } from '../config/settings.ts';
+import { resolveSettingSpec, resolveSpec, type SettingSource } from '../config/settings.ts';
+import { getLogger } from '../logging.ts';
 
 const policy = { abuse };
 
 /** The `Retry-After` a request refused for too many active jobs carries. */
-export function activeJobRetrySeconds(
-  env: Record<string, string | undefined> = process.env,
-): number {
+export function activeJobRetrySeconds(source: SettingSource = process.env): number {
   return resolveSpec(
     'active_job_retry_after_seconds',
     abuse.active_job_retry_after_seconds,
-    env,
+    source,
   ) as number;
 }
-import { getLogger } from '../logging.ts';
 
 type SubjectKind =
   | 'api_key'
@@ -49,8 +47,11 @@ export type UsageLimit = {
 export function agentCallLimit(amount: number): UsageLimit {
   return {
     operation: 'agent.provider_call',
-    limit: resolveSettingSpec(policy.abuse.agent_call_limit) as number,
-    windowSeconds: resolveSettingSpec(policy.abuse.agent_call_window_seconds) as number,
+    limit: resolveSettingSpec(policy.abuse.agent_call_limit, process.env) as number,
+    windowSeconds: resolveSettingSpec(
+      policy.abuse.agent_call_window_seconds,
+      process.env,
+    ) as number,
     amount,
   };
 }
@@ -65,7 +66,7 @@ export function dailyWorkspaceLimit(
 ): UsageLimit {
   return {
     operation,
-    limit: Number(resolveSettingSpec(policy.abuse[setting])),
+    limit: Number(resolveSettingSpec(policy.abuse[setting], process.env)),
     windowSeconds: 86400,
     amount,
   };
