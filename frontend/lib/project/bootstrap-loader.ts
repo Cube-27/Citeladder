@@ -32,7 +32,7 @@ import { projectQueries, projectsApi } from '@/lib/api/projects';
 import { workspacesApi } from '@/lib/api/workspaces';
 import { getAppQueryClient, warmQuery } from '@/lib/api/query-client';
 import { queryKeys } from '@/lib/api/query-keys';
-import type { Project, Workspace } from '@/lib/api/types';
+import type { Project, Workspace } from '@citeladder/contracts';
 import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import { projectDestination, workspaceDestination } from '@/lib/navigation/project-destination';
 import {

@@ -93,3 +93,9 @@ export const connectionTestResultSchema = responseObject({
   transport_model: z.string().default(''),
   tested_at: z.string(),
 });
+
+export type TransportProvider = z.infer<typeof transportProviderSchema>;
+export type LogicalEngine = z.infer<typeof logicalEngineSchema>;
+export type SurfaceKind = z.infer<typeof surfaceKindSchema>;
+export type ProviderConnection = z.infer<typeof providerConnectionSchema>;
+export type ProviderCatalog = z.infer<typeof providerCatalogSchema>;

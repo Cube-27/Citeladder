@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { Selectable } from 'kysely';
 import { z } from 'zod';
 import { noCardOfferSchema, noCardClaimSchema } from '@citeladder/contracts/billing';
+import { noCardClaimRequestSchema } from '@citeladder/contracts/billing-requests';
 import type { Database } from '../db/database.ts';
 import type { IntroductoryClaims } from '../generated/db-schema.ts';
 import { lockAccount, issueBundle, revokeBundle } from '../entitlements/grants.ts';
@@ -13,12 +14,7 @@ import { policy } from '../config.ts';
 import { uuidV5 } from '../uuid-v5.ts';
 import { firstOf } from '../lists.ts';
 
-export const claimRequest = z.strictObject({
-  campaign_id: z.uuid(),
-  terms_consent: z.boolean(),
-  data_sharing_consent: z.boolean(),
-  operator_code: z.string().min(16).max(255).nullable().default(null),
-});
+export const claimRequest = noCardClaimRequestSchema;
 
 /** RFC 9562 v5 identity persists across catalog revisions and both stacks. */
 function campaignId(key: string) {

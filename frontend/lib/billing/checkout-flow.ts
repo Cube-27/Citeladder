@@ -1,4 +1,5 @@
-import type { billingApi, CheckoutCallback } from '@/lib/api/billing';
+import type { billingApi } from '@/lib/api/billing';
+import type { CheckoutVerifyRequest } from '@citeladder/contracts/billing-requests';
 
 import { openRazorpay, RAZORPAY_SDK_NAME } from './razorpay-checkout';
 
@@ -6,7 +7,7 @@ type Checkout = Awaited<ReturnType<typeof billingApi.checkout>>;
 
 /** What the browser did with a checkout initialization. */
 export type CheckoutOutcome =
-  | { kind: 'callback'; callback: CheckoutCallback }
+  | { kind: 'callback'; callback: CheckoutVerifyRequest }
   | { kind: 'dismissed' }
   | { kind: 'unsupported' };
 

@@ -24,7 +24,7 @@ import { httpErrorStatus } from '@/lib/api/errors';
 import { warmQuery } from '@/lib/api/query-client';
 import { siteHealthQueries } from '@/lib/api/site-health';
 import { internalLinksQuery } from '@/lib/api/site-health-internal-links';
-import type { SiteHealthEntitlement } from '@/lib/api/types';
+import type { SiteHealthEntitlement } from '@citeladder/contracts';
 import { useProjectContext } from '@/lib/project/project-context';
 import { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';

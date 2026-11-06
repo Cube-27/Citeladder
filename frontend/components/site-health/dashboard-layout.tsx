@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { QueryState } from '@/components/ui/query-state';
 import { Stack } from '@/components/ui/layout';
 import type { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
-import type { SiteHealthEntitlement } from '@/lib/api/types';
+import type { SiteHealthEntitlement } from '@citeladder/contracts';
 import { ICONS } from '@/lib/icons';
 
 /**

@@ -1,4 +1,5 @@
-import type { billingApi, CheckoutCallback } from '@/lib/api/billing';
+import type { billingApi } from '@/lib/api/billing';
+import type { CheckoutVerifyRequest } from '@citeladder/contracts/billing-requests';
 import { CHECKOUT_SCRIPT_TIMEOUT_MS, RAZORPAY_CHECKOUT_SCRIPT } from '@/lib/config/billing';
 
 type Checkout = Awaited<ReturnType<typeof billingApi.checkout>>;
@@ -89,7 +90,7 @@ export async function openRazorpay(
   checkout: Checkout,
   email: string,
   onFailure: (message: string) => void = () => undefined,
-): Promise<CheckoutCallback | null> {
+): Promise<CheckoutVerifyRequest | null> {
   await loadRazorpay();
   const Constructor = window.Razorpay;
   if (!Constructor) throw new Error('Payment window is unavailable.');

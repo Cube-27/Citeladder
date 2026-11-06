@@ -431,3 +431,9 @@ export const billingInvoicesSchema = z.union([
   z.array(billingInvoiceSchema),
   billingInvoiceListSchema.transform((value) => value.invoices),
 ]);
+
+/** The authenticated workspace projection, distinct from public availability. */
+export type ProviderConnectionState = z.infer<typeof providerConnectionStateSchema>;
+export type ProviderConnectionStateEntry = z.infer<typeof providerConnectionStateEntrySchema>;
+/** The Site Health runtime the workspace entitlement resolves. */
+export type SiteHealthEntitlement = z.infer<typeof workspaceEntitlementSchema>['site_health'];

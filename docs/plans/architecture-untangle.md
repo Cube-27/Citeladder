@@ -60,7 +60,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P03 | Runtime safety and schema hardening | FX5, DB1, DB2 | — | mig | merged | [#627](https://github.com/Cube-27/Citeladder/pull/627) | Migrations 0006, 0007 |
 | P04 | Site Health tasks I: outcome classifier, crawl status, single writers | SH1, SH2, SH3 | — | mig? | merged | [#628](https://github.com/Cube-27/Citeladder/pull/628) | No migration needed |
 | P05 | Engine surfaces I: DataForSEO client, typed frozen config, engine sets from routes | E1, E2, E3 | — | | in progress | | Builder session `untangle-p05` |
-| P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | in progress | | Builder session `untangle-p06` |
+| P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | in review | [#634](https://github.com/Cube-27/Citeladder/pull/634) | Split for size: P06-a (#634) = F1–F3; P06-b = F4 follows |
 | P07 | App route manifest and kit cleanup | R1, R2, R3, R5, R6, R7 | — | | todo | | |
 | P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | merged | [#631](https://github.com/Cube-27/Citeladder/pull/631) | Migration 0010 |
 | P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | merged | [#630](https://github.com/Cube-27/Citeladder/pull/630) | |
@@ -159,10 +159,10 @@ order the PR tracker already respects.
 | O2 | One module per check kind | O1, FX2 | `opportunities/{declaration-checks,declarations,verification-evidence,declaration-view}.ts`, `config/actions.ts`, rule catalog | | todo | | |
 | O3 | Typed Action targets and producer registry | O2 | `opportunities/refresh*.ts`, `analysis/opportunities/`, `visibility/{sources,page-standing}.ts` | | todo | | |
 | O4 | One evidence announcement for refresh and verification | O3 | `opportunities/verification.ts`, `source-pages/inspector.ts`, `search-intelligence/acquisition-state.ts`, `traffic/snapshot.ts`, `site-health/terminal-handoff.ts` | | todo | | |
-| F1 | Contracts own request schemas: prompts, topics, runs, actions, projects | — | `frontend/packages/contracts`, `frontend/lib/api/{prompts,topics,runs,actions,projects}.ts`, matching server `inputs.ts` | | todo | | |
-| F2 | Contracts own remaining request schemas; delete `lib/api/types.ts` | F1 | `frontend/packages/contracts`, `frontend/lib/api/` | | todo | | |
-| F3 | One Search Intelligence dataset-kind table | F2 | `routes/search-intelligence-contracts.ts`, `search-intelligence/acquisition-state.ts`, `frontend/lib/config/search-intelligence.ts`, contracts | | todo | | |
-| F4 | Query and mutation descriptors: prompts and topics (shared scoped-key builder) | F1 | `frontend/lib/api/{prompts,topics,query-keys}.ts`, `frontend/components/{prompts,knowledge-base}` | | todo | | |
+| F1 | Contracts own request schemas: prompts, topics, runs, actions, projects | — | `frontend/packages/contracts`, `frontend/lib/api/{prompts,topics,runs,actions,projects}.ts`, matching server `inputs.ts` | | done | 6c54919 | |
+| F2 | Contracts own remaining request schemas; delete `lib/api/types.ts` | F1 | `frontend/packages/contracts`, `frontend/lib/api/` | | done | 5bae2b9 | |
+| F3 | One Search Intelligence dataset-kind table | F2 | `routes/search-intelligence-contracts.ts`, `search-intelligence/acquisition-state.ts`, `frontend/lib/config/search-intelligence.ts`, contracts | | done | 1052e86 | |
+| F4 | Query and mutation descriptors: prompts and topics (shared scoped-key builder) | F1 | `frontend/lib/api/{prompts,topics,query-keys}.ts`, `frontend/components/{prompts,knowledge-base}` | | todo | | P06-b: built on local branch `untangle-p06b-f4` (3ab383a), PR after P06-a merges |
 | F5 | Query and mutation descriptors: runs, visibility, commerce | F4 | `frontend/lib/api/{runs,visibility,commerce}.ts`, matching components, `frontend/lib/navigation/route-prefetch.ts` | | todo | | |
 | F6 | Query and mutation descriptors: integrations and remaining domains | F5, F2 | `frontend/lib/api/*`, remaining components | | todo | | |
 | F7 | Job-state records and one polling helper; one score band | F6 | `frontend/lib/<domain>/status.ts`, job screens, `frontend/lib/config/operational.ts` | | todo | | |

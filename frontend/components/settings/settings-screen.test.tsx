@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { BrowserRouter } from 'react-router-dom';
 
 import { createAppQueryClient } from '@/lib/api/query-client';
-import type { SessionUser } from '@/lib/api/types';
+import type { SessionUser } from '@citeladder/contracts';
 import { makeProject } from '@/test/fixtures/project';
 
 const { entitlementState } = vi.hoisted(() => ({

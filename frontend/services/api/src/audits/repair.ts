@@ -1,5 +1,6 @@
 import { createHash, randomUUID, randomBytes } from 'node:crypto';
-import { z } from 'zod';
+import { auditRepairRequestSchema } from '@citeladder/contracts/audit-requests';
+import type { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { ApiError, notFound } from '../errors.ts';
@@ -9,12 +10,7 @@ import { compareText } from '../text-order.ts';
 import { requireWorkspaceAccess } from '../entitlements/access.ts';
 import { reservePromptRuns } from './prompt-runs.ts';
 
-export const repairInput = z.object({
-  provider: z.string().nullish(),
-  engine: z.string().nullish(),
-  prompt_id: z.uuid().nullish(),
-  task_ids: z.array(z.uuid()).nullish(),
-});
+export const repairInput = auditRepairRequestSchema;
 const denied = (message: string) => new ApiError(409, message);
 /** A repair is an immutable BYOK child of selected failed frozen slots, never a replay of paid dispatch. */
 export function createRepairAudit(

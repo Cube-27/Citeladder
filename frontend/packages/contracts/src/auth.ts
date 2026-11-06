@@ -103,3 +103,11 @@ export const workspaceInvitationIssuedSchema = responseObject({
   invitation: workspaceInvitationSchema,
   token: z.string(),
 });
+
+export type SessionUser = z.infer<typeof sessionUserSchema>;
+export type AuthResponse = z.infer<typeof authResponseSchema>;
+export type RegistrationResponse = z.infer<typeof registrationResponseSchema>;
+/** OAuth provider ids are a request input, not a response payload. */
+export type OAuthProvider = 'google';
+export type OAuthStartResponse = z.infer<typeof oauthStartResponseSchema>;
+export type Workspace = z.infer<typeof workspaceSchema>;

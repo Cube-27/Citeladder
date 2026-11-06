@@ -13,6 +13,11 @@ import {
   planChangeSchema,
   resolvedQuoteSchema,
 } from '@citeladder/contracts/billing';
+import {
+  checkoutVerifyRequestSchema,
+  packPurchaseRequestSchema,
+  planChangeRequestSchema,
+} from '@citeladder/contracts/billing-requests';
 import { definePostRoute, defineRoute } from './define.ts';
 import { readBody } from '../http/body.ts';
 import {
@@ -23,13 +28,12 @@ import {
 } from '../billing/reads.ts';
 import {
   baseRequest,
-  packRequest,
   idempotencyKey,
   purchase,
   workspaceActivation,
   activationResponse,
 } from '../billing/purchases.ts';
-import { changeRequest, changePlan } from '../billing/plan-changes.ts';
+import { changePlan } from '../billing/plan-changes.ts';
 import { identitySchema } from '../billing/contracts.ts';
 import { conflict } from '../errors.ts';
 import { offerRead, claimOffer, endOffer, claimRequest } from '../billing/journeys.ts';
@@ -54,11 +58,7 @@ const activationParams = {
   query: {},
 } as const;
 const keyHeaders = z.object({ 'idempotency-key': z.string().nullable().optional() });
-const verifyRequest = z.strictObject({
-  fields: z
-    .record(z.string().regex(/^\w{1,64}$/u), z.string().max(512))
-    .refine((fields) => Object.keys(fields).length <= 8),
-});
+const verifyRequest = checkoutVerifyRequestSchema;
 
 export const billingRoutes = [
   defineRoute({
@@ -196,13 +196,13 @@ export const billingRoutes = [
       path: `${root}/${route}`,
       method: 'post',
       headers: keyHeaders,
-      body: packRequest,
+      body: packPurchaseRequestSchema,
       response: activationSchema,
       status: 202,
       alsoStatus: 200,
       raw: true,
       async handle({ c, db, config }) {
-        const input = await readBody(c, packRequest);
+        const input = await readBody(c, packPurchaseRequestSchema);
         const result = await purchase(
           db,
           config,
@@ -238,13 +238,13 @@ export const billingRoutes = [
     path: `${root}/subscription/change`,
     method: 'post',
     headers: keyHeaders,
-    body: changeRequest,
+    body: planChangeRequestSchema,
     response: planChangeSchema,
     status: 202,
     alsoStatus: 200,
     raw: true,
     async handle({ c, db, config }) {
-      const input = await readBody(c, changeRequest);
+      const input = await readBody(c, planChangeRequestSchema);
       const result = await changePlan(
         db,
         config,

@@ -27,8 +27,15 @@ import {
   workspaceSchema,
   workspaceAccessSchema,
 } from '@citeladder/contracts/auth';
+import type {
+  InvitationAcceptRequest,
+  InvitationCreateRequest,
+  MemberRoleUpdateRequest,
+  OwnershipTransferRequest,
+  WorkspaceCreateRequest,
+} from '@citeladder/contracts/auth-requests';
 import { strictValidate } from '@citeladder/contracts/validation';
-import type { Workspace } from './types';
+import type { Workspace } from '@citeladder/contracts';
 
 export type WorkspaceMember = z.infer<typeof workspaceMemberSchema>;
 export type WorkspaceInvitation = z.infer<typeof workspaceInvitationSchema>;
@@ -52,7 +59,11 @@ export const workspacesApi = {
       workspaceSchema,
       await apiClient.post<Workspace>(
         '/workspaces',
-        { name: input.name, terms_revision: input.termsRevision, accept_terms: true },
+        {
+          name: input.name,
+          terms_revision: input.termsRevision,
+          accept_terms: true,
+        } satisfies WorkspaceCreateRequest,
         { workspaceId: null },
       ),
       'workspaces.create',
@@ -88,7 +99,7 @@ export const workspacesApi = {
   ) => {
     const res = await apiClient.patch<WorkspaceMember>(
       `/workspaces/${workspaceId}/members/${memberId}`,
-      { role },
+      { role } satisfies MemberRoleUpdateRequest,
       { ...options, workspaceId },
     );
     return strictValidate(workspaceMemberSchema, res, 'workspaces.updateMemberRole');
@@ -105,7 +116,7 @@ export const workspacesApi = {
   transferOwnership: async (workspaceId: string, memberId: string, options?: ApiRequestOptions) => {
     const res = await apiClient.post<WorkspaceMember[]>(
       `/workspaces/${workspaceId}/ownership`,
-      { member_id: memberId },
+      { member_id: memberId } satisfies OwnershipTransferRequest,
       { ...options, workspaceId },
     );
     return strictValidate(memberListSchema, res, 'workspaces.transferOwnership');
@@ -119,7 +130,7 @@ export const workspacesApi = {
   },
   inviteMember: async (
     workspaceId: string,
-    input: { email: string; role: AssignableWorkspaceRole },
+    input: InvitationCreateRequest,
     options?: ApiRequestOptions,
   ) => {
     const res = await apiClient.post<WorkspaceInvitationIssued>(
@@ -153,7 +164,7 @@ export const workspacesApi = {
   acceptInvitation: async (token: string, options?: ApiRequestOptions) => {
     const res = await apiClient.post<Workspace>(
       '/workspaces/invitations/accept',
-      { token },
+      { token } satisfies InvitationAcceptRequest,
       options,
     );
     return strictValidate(workspaceSchema, res, 'workspaces.acceptInvitation');
