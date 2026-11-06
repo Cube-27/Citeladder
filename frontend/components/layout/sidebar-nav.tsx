@@ -4,18 +4,13 @@ import { useLocation, useSearchParams } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 
 import { SidebarNavGroup } from '@/components/ui/app-shell';
+import { navigationMode } from '@/lib/navigation/app-routes';
 import { useRouteIntent } from '@/lib/navigation/use-route-intent';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 
 import { NavLink } from './nav-link';
-import {
-  isNavItemActive,
-  NAV_GROUPS,
-  navigationMode,
-  SETUP_NAV_ITEMS,
-  type NavItem,
-} from './nav-items';
+import { isNavItemActive, NAV_GROUPS, SETUP_NAV_ITEMS, type NavItem } from './nav-items';
 
 // Agent mode reads chats and Actions; its API modules stay out of the chunk
 // the shell needs before it can paint.
@@ -34,7 +29,7 @@ export function StationLinks({ items }: Readonly<{ items: readonly NavItem[] }>)
           ...item,
           href: scopedNavigationDestination(
             item.href,
-            item.scope ?? 'project',
+            item.scope,
             activeProjectId,
             activeWorkspaceId,
           ),

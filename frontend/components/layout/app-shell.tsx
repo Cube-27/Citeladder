@@ -8,12 +8,12 @@ import { AppShellFrame, NavDrawer, SidebarFrame } from '@/components/ui/app-shel
 import { CommandPalette, CommandPaletteTrigger } from '@/components/ui/command-palette';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AgentPanelProvider } from '@/lib/agent/panel-context';
+import { resolveTitle } from '@/lib/navigation/app-routes';
 import { useProjectContext } from '@/lib/project/project-context';
 
 import { ModeSwitch } from './mode-switch';
 import { NavDrawerContext } from './nav-drawer-context';
 import { PageTitleContext } from './page-title-context';
-import { resolveTitle } from './page-titles';
 import { ProjectSwitcher } from './project-switcher';
 import { SidebarNav } from './sidebar-nav';
 import { UserMenuTrigger } from './user-menu';

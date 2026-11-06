@@ -11,10 +11,10 @@ import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { PageHeader } from '@/components/ui/page-header';
 import { QueryState } from '@/components/ui/query-state';
 import { TabRow, type TabRowProps } from '@/components/ui/tabs';
+import { resolveTitle } from '@/lib/navigation/app-routes';
 
 import { NavDrawerContext } from './nav-drawer-context';
 import { PageTitleContext } from './page-title-context';
-import { resolveTitle } from './page-titles';
 
 /**
  * A detail route's way back to the collection it was opened from, drawn as
@@ -46,7 +46,7 @@ export type PageBack = Readonly<{
  * A page passes data, organisms and slots and adds no margins between bands.
  */
 type ScreenBands<T extends string> = Readonly<{
-  /** Overrides the route-derived title (rare — prefer `page-titles.ts`). */
+  /** Overrides the route-derived title (rare — prefer the route manifest's title). */
   title?: string;
   /** Route-owned controls; their state and outcomes stay with the route owner. */
   actions?: ReactNode;

@@ -13,14 +13,17 @@ import { textRole } from '@/components/ui/typography';
 import { agentQueries, type AgentChatSummary } from '@/lib/api/agent';
 import { AGENT_CHAT_LIST_POLL_MS, AGENT_CHAT_SEARCH_DEBOUNCE_MS } from '@/lib/config/agent';
 import { ICONS } from '@/lib/icons';
+import { MODE_HOMES } from '@/lib/navigation/app-routes';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
 import { useRouteIntent } from '@/lib/navigation/use-route-intent';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 
 import { NavLink } from './nav-link';
-import { AGENT_HOME, AGENT_NAV_ITEMS } from './nav-items';
+import { AGENT_NAV_ITEMS } from './nav-items';
 import { StationLinks } from './sidebar-nav';
+
+const AGENT_HOME = MODE_HOMES.agent;
 
 /**
  * Agent mode: New chat, Actions (with the open count), Skills, Context, then
@@ -38,7 +41,12 @@ export function AgentNav() {
       <SidebarNavGroup>
         <li>
           <NavLink
-            item={{ label: 'New chat', href: scoped(AGENT_HOME), icon: ICONS.newChat }}
+            item={{
+              label: 'New chat',
+              href: scoped(AGENT_HOME),
+              icon: ICONS.newChat,
+              scope: 'project',
+            }}
             active={pathname === AGENT_HOME}
             onIntent={onIntent}
           />

@@ -24,7 +24,7 @@ import {
 
 /**
  * The app's Dashboard navigation as the sidebar shows it
- * (components/layout/nav-items.ts): the same groups, labels and icons in the
+ * (lib/navigation/app-routes.ts): the same groups, labels and icons in the
  * same order, drawn because the live rows fold to a rail below 1280px.
  */
 const NAV = [

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation } from '@tanstack/react-query';
-import { LogOut, Plug } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
@@ -19,13 +19,11 @@ import {
 import { ThemeSwitch } from '@/components/ui/theme-switch';
 import { authApi } from '@/lib/api/auth';
 import { useSession } from '@/lib/auth/session-guard';
-import { ICONS } from '@/lib/icons';
-import { workspaceDestination } from '@/lib/navigation/project-destination';
+import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 import { Avatar } from '@/components/ui/avatar';
 
-const SettingsIcon = ICONS.settings;
-const BillingIcon = ICONS.billing;
+import { USER_MENU_ITEMS } from './nav-items';
 
 type UserMenuState = {
   email: string;
@@ -46,43 +44,20 @@ function useUserMenu() {
 
 function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter }>) {
   const { email, logout } = useUserMenu();
-  const { activeWorkspaceId } = useProjectContext();
+  const { activeProjectId, activeWorkspaceId } = useProjectContext();
   const sidebar = presenter === 'sidebar';
-  const settingsHref = activeWorkspaceId
-    ? workspaceDestination('/settings', null, activeWorkspaceId)
-    : '/settings';
-  const billingHref = activeWorkspaceId
-    ? workspaceDestination('/billing', null, activeWorkspaceId)
-    : '/billing';
-  const connectHref = activeWorkspaceId
-    ? workspaceDestination(
-        '/settings',
-        new URLSearchParams({ tab: 'connections' }),
-        activeWorkspaceId,
-      )
-    : '/settings?tab=connections';
   return (
     <MenuContent align={sidebar ? 'start' : 'end'} side={sidebar ? 'top' : 'bottom'}>
       <MenuLabel>{email}</MenuLabel>
       <MenuSeparator />
-      <MenuLinkItem>
-        <Link to={settingsHref}>
-          <SettingsIcon className="size-4 shrink-0" aria-hidden />
-          <span>Settings</span>
-        </Link>
-      </MenuLinkItem>
-      <MenuLinkItem>
-        <Link to={billingHref}>
-          <BillingIcon className="size-4 shrink-0" aria-hidden />
-          <span>Billing</span>
-        </Link>
-      </MenuLinkItem>
-      <MenuLinkItem>
-        <Link to={connectHref}>
-          <Plug className="size-4 shrink-0" aria-hidden />
-          <span>Connect AI assistants</span>
-        </Link>
-      </MenuLinkItem>
+      {USER_MENU_ITEMS.map(({ label, href, icon: Icon, scope }) => (
+        <MenuLinkItem key={href}>
+          <Link to={scopedNavigationDestination(href, scope, activeProjectId, activeWorkspaceId)}>
+            <Icon className="size-4 shrink-0" aria-hidden />
+            <span>{label}</span>
+          </Link>
+        </MenuLinkItem>
+      ))}
       <MenuSeparator />
       <MenuControlRow label="Theme">
         <ThemeSwitch tooltipSide="top" />

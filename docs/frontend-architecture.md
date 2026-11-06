@@ -198,9 +198,12 @@ links use the public docs origin.
 One authenticated layout retains the session, query client, workspace/project
 context and entitlement providers across app and onboarding navigation.
 [Workspace access](workspace-access.md) owns selection precedence and identity
-transitions. Navigation, compact navigation and Command Palette share one
-destination registry (`components/layout/nav-items.ts`); UI visibility never
-replaces backend authorization. The shell has two route-derived modes, Dashboard
+transitions. One route manifest (`lib/navigation/app-routes.ts`) declares every
+app destination: its path, title, scope, mode, lazy screen, nav placements, the
+collection a project switch lands on and whether its URL carries a credential.
+The router, navigation, compact navigation, Command Palette, user menu, page
+titles, workspace-only routes and mode homes all derive from it; UI visibility
+never replaces backend authorization. The shell has two route-derived modes, Dashboard
 and Agent. Dashboard navigation follows the product loop: Overview, Analyze,
 Act (Actions with its open and in-progress count), Track, then Integrations. A
 destination is current on its path and every path below it, whatever tab the
@@ -209,8 +212,8 @@ needs it. The mode switch returns to the last route used in each mode for the
 project during the browser session; the Agent mode's navigation and its API
 modules load only in that mode.
 
-Navigation names the document `Screen · Project · CiteLadder` from
-`page-titles.ts`, moves focus to the main region when the path changes (not
+Navigation names the document `Screen · Project · CiteLadder` from the
+manifest's title, moves focus to the main region when the path changes (not
 when a tab or filter changes), restores scroll per path and closes the compact
 drawer. A project switch keeps the view parameters that mean the same thing in
 every project (tab, range, engine, status and the Site Health catalog filters)
