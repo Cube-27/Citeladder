@@ -66,7 +66,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | merged | [#630](https://github.com/Cube-27/Citeladder/pull/630) | |
 | P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | merged | [#632](https://github.com/Cube-27/Citeladder/pull/632) | Migration 0011 |
 | P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | merged | [#639](https://github.com/Cube-27/Citeladder/pull/639) | No migration |
-| P12 | Opportunities: check kinds, typed targets, evidence announcement | O2, O3, O4 | P02 | | in progress | | Builder session `untangle-p12` |
+| P12 | Opportunities: check kinds, typed targets, evidence announcement | O2, O3, O4 | P02 | | merged | [#643](https://github.com/Cube-27/Citeladder/pull/643) | No migration |
 | P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | in progress | | Builder session `untangle-p13` |
 | P14 | Marketing site records and config-driven numbers | MK1, MK2, MK3, MK4 | P02 | | todo | | |
 | P15 | Queue owner II: remaining lanes and coalesced enqueue | Q4, Q5, Q6, Q7, Q8 | P01, P03, P09 | | merged | [#633](https://github.com/Cube-27/Citeladder/pull/633) | No migration |
@@ -78,6 +78,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P21 | Screen sweep: failure renderer, typed blobs, form limits, non-null project, recovery actions | F8, F9, F10, R4, Z4 | P07, P12, P13, P16 | | todo | | Split at a row boundary if over ~4,000 lines |
 | P22 | AI Traffic and integration owners; error logging | X4, X5, Z1, Z2, Z3 | P15, P16, P19 | | todo | | |
 | P23 | AI referral retention matches the Performance window | X9 | P08 | | merged | [#636](https://github.com/Cube-27/Citeladder/pull/636) | Owner decision OD7 |
+| P24 | Audit error codes fit their column | DB3 | P19 | mig | todo | | Found by P19; small |
 
 ## Order
 
@@ -127,6 +128,7 @@ order the PR tracker already respects.
 | FX5 | Runtime safety: in-request cap, SIGTERM, frozen turn limit, failed-call usage, deploy guard | — | `routes/agent.ts`, `agent/{contracts,model-calls}.ts`, `server.ts`, `commands/audits.ts`, `audits/interactive.ts`, `.github/workflows/gcp-deploy.yml` | | done | 81c7fd9 | |
 | DB1 | Capacity-lease and queue indexes; lease purge | — | `migrations/`, `providers/capacity.ts`, audit maintenance | mig | done | 9c7848e | |
 | DB2 | Tenancy in the schema; registry-driven isolation test | DB1 | `migrations/`, `db/workspace-scope.ts`, writers of `prompt_sets`/`topics`/`competitors`/`brands`/`prompts`, `test/request-access.test.ts` | mig | done | f15ac10 | |
+| DB3 | Audit error codes fit `audit_tasks.error_code` | — | `migrations/`, audit error-code list | mig | todo | | |
 | Q1 | Enqueue and executor contract move to `queue/`; fairness test harness | — | `queue/`, `referrals/enqueue.ts`, `workers/executor.ts` + importers | wide | done | 624694c | |
 | Q2 | Analytics task-kind registry | Q1 | `workers/analytics-worker.ts`, `workers/terminal-compensation.ts`, `config/analytics.json` | | done | 5466c82 | |
 | Q3 | Lane descriptor: shared claim, cursor, heartbeat, fence; analytics and Site Health lanes | Q1, DB1 | `queue/task-queue.ts`, `queue/recovery.ts`, `queue/next-due.ts` | | done | feea935 | |
@@ -156,9 +158,9 @@ order the PR tracker already respects.
 | E4 | `llm` surface adapter; audit worker moves to `audits/` | E3, Q7 | `audits/surfaces/`, `workers/audit-worker.ts`, `audits/{result,surface}-persistence.ts` | | done | 5b91c3e | |
 | E5 | `search_ai` and `llm_scraper` adapters | E4 | `audits/surfaces/`, `search-surfaces/` | | done | 666c374 | |
 | O1 | One latest-brand-run resolver; one rate owner; queries-per-execution denominator | — | `visibility/{selection,dashboard,prompts}.ts`, `opportunities/sources.ts`, `projects/command-center.ts`, `analysis/aggregate.ts` | | done | fb22e46 | |
-| O2 | One module per check kind | O1, FX2 | `opportunities/{declaration-checks,declarations,verification-evidence,declaration-view}.ts`, `config/actions.ts`, rule catalog | | todo | | |
-| O3 | Typed Action targets and producer registry | O2 | `opportunities/refresh*.ts`, `analysis/opportunities/`, `visibility/{sources,page-standing}.ts` | | todo | | |
-| O4 | One evidence announcement for refresh and verification | O3 | `opportunities/verification.ts`, `source-pages/inspector.ts`, `search-intelligence/acquisition-state.ts`, `traffic/snapshot.ts`, `site-health/terminal-handoff.ts` | | todo | | |
+| O2 | One module per check kind | O1, FX2 | `opportunities/{declaration-checks,declarations,verification-evidence,declaration-view}.ts`, `config/actions.ts`, rule catalog | | done | 1d0a02c | |
+| O3 | Typed Action targets and producer registry | O2 | `opportunities/refresh*.ts`, `analysis/opportunities/`, `visibility/{sources,page-standing}.ts` | | done | ebb73bb | |
+| O4 | One evidence announcement for refresh and verification | O3 | `opportunities/verification.ts`, `source-pages/inspector.ts`, `search-intelligence/acquisition-state.ts`, `traffic/snapshot.ts`, `site-health/terminal-handoff.ts` | | done | e38b60c | |
 | F1 | Contracts own request schemas: prompts, topics, runs, actions, projects | — | `frontend/packages/contracts`, `frontend/lib/api/{prompts,topics,runs,actions,projects}.ts`, matching server `inputs.ts` | | done | 6c54919 | |
 | F2 | Contracts own remaining request schemas; delete `lib/api/types.ts` | F1 | `frontend/packages/contracts`, `frontend/lib/api/` | | done | 5bae2b9 | |
 | F3 | One Search Intelligence dataset-kind table | F2 | `routes/search-intelligence-contracts.ts`, `search-intelligence/acquisition-state.ts`, `frontend/lib/config/search-intelligence.ts`, contracts | | done | 1052e86 | |
@@ -317,6 +319,10 @@ fresh run. The deploy correlation is timing, not cold start. PR #386 already rai
   the project-owned children (`prompts` through its set); writers populate it. Add one isolation test driven
   by the route registry (today a fixed list of 7 reads and 7 writes, `test/request-access.test.ts:243-263`).
   The tables are empty in production, so no backfill.
+- **DB3** (found by P19 #641). `audit_tasks.error_code` is `varchar(32)`, but the audit code
+  `credential_unavailable_for_retrieval` is 36 characters, so writing that failure errors out. Forward
+  migration widening the column (or a check that every declared error code fits, whichever owns the code
+  list). Test: a task failing with the longest declared code persists that code.
 
 ### Q. One queue-lane owner
 

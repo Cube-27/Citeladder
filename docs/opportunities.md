@@ -23,6 +23,18 @@ persisted source snapshots; recomputation writes ranked Opportunities and
 immutable snapshots with rule/formula versions and exact source identities.
 An ordinary list/detail read never refreshes a source or recomputes a ranking.
 
+Each evidence family (demand, the brand run, Commerce, the crawl, keyword
+gaps) is one entry in
+[refresh families](../frontend/services/api/src/opportunities/refresh-families.ts)
+that names its source-identity fields and produces its hits; the refresh
+iterates that list. A hit names its target as a typed `TargetRef`
+([targets](../frontend/services/api/src/analysis/opportunities/targets.ts)):
+the persisted `target_*` columns and `target_key` derive there, and Action
+grouping switches on the same union, so no reader parses a key prefix. Each
+rule's evidence shape is a schema in `@citeladder/contracts/opportunity-evidence`.
+Visibility reads a cited page's earned Opportunity and Action through
+[earned page actions](../frontend/services/api/src/opportunities/earned-page-actions.ts).
+
 A refresh first resolves its source identity: the audit (the default market's
 latest dashboard-ready brand run, the one Visibility and Overview call latest),
 the latest dashboard-ready Commerce run (read for Commerce findings only, so
@@ -176,9 +188,14 @@ declaration; a same-key replay returns it, and same-key conflicting input is
 rejected. The user must reopen a dismissed Action first, and an Action with no
 current finding is refused.
 
-[Declaration checks](../frontend/services/api/src/opportunities/declaration-checks.ts)
-freeze one check per distinct expectation, each scoped to what the Action
-changed:
+Each rule in the catalog names the `check_kind` its findings freeze (null when
+nothing can measure them), and each kind is one module under
+[`opportunities/checks/`](../frontend/services/api/src/opportunities/checks/registry.ts)
+that freezes it, names its reading (leg) and sources, reads it from a source
+and names its subject. The reading an Action detail promises per member before
+declaration, the Action's `measure_with` and the legs after declaration all
+derive from it, so they cannot disagree. A declaration freezes one check per
+distinct expectation, each scoped to what the Action changed:
 
 | Finding | Check | Read by |
 |---|---|---|
@@ -218,11 +235,16 @@ listing went live shows on the cited URL's page from the next reading, and the
 outcome that matters is visibility on the prompts that cite it. Neither claims
 the listing caused a movement.
 
-Later crawl, audit, traffic or Keyword Research
-keyword-dataset completion enqueues
-[TypeScript verification](../frontend/services/api/src/opportunities/verification.ts)
-through the [TypeScript enqueue owner](../frontend/services/api/src/opportunities/enqueue.ts)
-only for a project with a declaration inside the verification window. The
+The owner that commits a later crawl, audit (after its source-page
+inspection), traffic window or Keyword Research keyword dataset calls
+[`announceEvidence`](../frontend/services/api/src/opportunities/evidence-announcement.ts)
+in that transaction. It enqueues the Opportunity refresh (unless Demand
+re-interprets first and carries it, as for traffic and for a crawl in a project
+with traffic) and
+[TypeScript verification](../frontend/services/api/src/opportunities/verification.ts),
+the latter only for a project with a declaration inside the verification
+window; both keep their idempotency keys. The same module says when each kind
+of evidence became terminal, which verification measures from. The
 window is 30 days from go-live, except a keyword-presence check, which runs 90
 days because a new page takes longer to rank than an edited one takes to
 recrawl. A task reads only declarations declared before the source was
