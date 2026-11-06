@@ -42,7 +42,7 @@ export function connectionSecret(
  * read from the environment only while the reference still names it; `null`
  * when it is unset or no longer matches. DataForSEO's is its login pair as JSON.
  */
-export function platformSecret(
+function platformSecret(
   transport: ProviderTransport,
   reference: string,
   env: Record<string, string | undefined>,

@@ -153,12 +153,12 @@
           "engine": {
             "type": "string",
             "enum": [
-              "chatgpt",
-              "claude",
-              "gemini",
-              "google_ai_overview",
               "chatgpt_search",
-              "gemini_consumer"
+              "gemini_consumer",
+              "chatgpt",
+              "gemini",
+              "claude",
+              "google_ai_overview"
             ],
             "description": "Read one engine only; omit for every engine."
           },
@@ -544,12 +544,12 @@
           "engine": {
             "type": "string",
             "enum": [
-              "chatgpt",
-              "claude",
-              "gemini",
-              "google_ai_overview",
               "chatgpt_search",
-              "gemini_consumer"
+              "gemini_consumer",
+              "chatgpt",
+              "gemini",
+              "claude",
+              "google_ai_overview"
             ],
             "description": "Read one engine only; omit for every engine."
           },
@@ -677,12 +677,12 @@
           "engine": {
             "type": "string",
             "enum": [
-              "chatgpt",
-              "claude",
-              "gemini",
-              "google_ai_overview",
               "chatgpt_search",
-              "gemini_consumer"
+              "gemini_consumer",
+              "chatgpt",
+              "gemini",
+              "claude",
+              "google_ai_overview"
             ],
             "description": "Read one engine only; omit for every engine."
           },
@@ -1184,12 +1184,12 @@
           "engine": {
             "type": "string",
             "enum": [
-              "chatgpt",
-              "claude",
-              "gemini",
-              "google_ai_overview",
               "chatgpt_search",
-              "gemini_consumer"
+              "gemini_consumer",
+              "chatgpt",
+              "gemini",
+              "claude",
+              "google_ai_overview"
             ],
             "description": "Read one engine only; omit for every engine."
           },
@@ -1235,12 +1235,12 @@
           "engine": {
             "type": "string",
             "enum": [
-              "chatgpt",
-              "claude",
-              "gemini",
-              "google_ai_overview",
               "chatgpt_search",
-              "gemini_consumer"
+              "gemini_consumer",
+              "chatgpt",
+              "gemini",
+              "claude",
+              "google_ai_overview"
             ],
             "description": "Read one engine only; omit for every engine."
           },
@@ -1276,12 +1276,12 @@
           "engine": {
             "type": "string",
             "enum": [
-              "chatgpt",
-              "claude",
-              "gemini",
-              "google_ai_overview",
               "chatgpt_search",
-              "gemini_consumer"
+              "gemini_consumer",
+              "chatgpt",
+              "gemini",
+              "claude",
+              "google_ai_overview"
             ],
             "description": "Read one engine only; omit for every engine."
           },
@@ -1348,12 +1348,12 @@
           "engine": {
             "type": "string",
             "enum": [
-              "chatgpt",
-              "claude",
-              "gemini",
-              "google_ai_overview",
               "chatgpt_search",
-              "gemini_consumer"
+              "gemini_consumer",
+              "chatgpt",
+              "gemini",
+              "claude",
+              "google_ai_overview"
             ],
             "description": "Read one engine only; omit for every engine."
           },
@@ -1421,12 +1421,12 @@
           "engine": {
             "type": "string",
             "enum": [
-              "chatgpt",
-              "claude",
-              "gemini",
-              "google_ai_overview",
               "chatgpt_search",
-              "gemini_consumer"
+              "gemini_consumer",
+              "chatgpt",
+              "gemini",
+              "claude",
+              "google_ai_overview"
             ],
             "description": "Read one engine only; omit for every engine."
           },
