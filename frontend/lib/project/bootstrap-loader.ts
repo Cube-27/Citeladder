@@ -20,20 +20,19 @@
  * and the screen's in one round; only reads that need another read's answer
  * wait for it.
  */
-import { queryOptions, type Query, type QueryClient } from '@tanstack/react-query';
+import type { Query, QueryClient } from '@tanstack/react-query';
 import { redirect } from 'react-router-dom';
 
 import { billingQueries } from '@/lib/api/billing';
-import { authApi } from '@/lib/api/auth';
+import { authQueries } from '@/lib/api/auth';
 import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-path';
 import { httpErrorStatus } from '@/lib/api/client';
-import { policiesApi } from '@/lib/api/policies';
-import { projectQueries, projectsApi } from '@/lib/api/projects';
-import { workspacesApi } from '@/lib/api/workspaces';
+import { policyQueries } from '@/lib/api/policies';
+import { projectQueries } from '@/lib/api/projects';
+import { workspaceQueries } from '@/lib/api/workspaces';
 import { getAppQueryClient, warmQuery } from '@/lib/api/query-client';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { Project, Workspace } from '@citeladder/contracts';
-import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import { projectDestination, workspaceDestination } from '@/lib/navigation/project-destination';
 import {
   prefetchProjectShell,
@@ -84,10 +83,7 @@ async function settle<T>(work: Promise<T>): Promise<T | null> {
  */
 async function requireSession(client: QueryClient): Promise<boolean> {
   try {
-    await client.ensureQueryData({
-      queryKey: queryKeys.auth.me(),
-      queryFn: ({ signal }) => authApi.me({ signal, timeoutMs: getBootstrapReadTimeoutMs() }),
-    });
+    await client.ensureQueryData(authQueries.me());
     return true;
   } catch (error) {
     if (httpErrorStatus(error) === 401)
@@ -168,7 +164,7 @@ function unansweredProjectRead(projectId: string) {
   return (query: Query) =>
     query.state.data === undefined &&
     query.queryKey.includes(projectId) &&
-    !(query.queryKey[0] === 'projects' && query.queryKey[1] === 'detail');
+    !queryKeys.projects.isDetail(query.queryKey);
 }
 
 /**
@@ -288,17 +284,7 @@ async function resolveScope(
   // A membership list needs only the session cookie and the project only its
   // id; neither depends on the other's answer. Sent together they cost one
   // round trip instead of two — and one place to stall instead of two.
-  const workspacesPending = settle<Workspace[]>(
-    client.ensureQueryData({
-      queryKey: queryKeys.workspaces.list(),
-      queryFn: ({ signal }) =>
-        projectsApi.listWorkspaces({
-          signal,
-          workspaceId: null,
-          timeoutMs: getBootstrapReadTimeoutMs(),
-        }),
-    }),
-  );
+  const workspacesPending = settle(client.ensureQueryData(workspaceQueries.list()));
   const projectPending = requestedProjectId
     ? requestedProject(client, url, { projectId: requestedProjectId, urlWorkspaceId, guess })
     : null;
@@ -338,21 +324,8 @@ function workspaceStateQueries(workspaceId: string, pathname: string) {
     projects: projectQueries.list(workspaceId),
     entitlement: billingQueries.workspaceEntitlement(workspaceId),
     access:
-      routePath(pathname) === '/invitations/accept'
-        ? null
-        : queryOptions({
-            queryKey: queryKeys.workspaces.access(workspaceId),
-            queryFn: ({ signal }) =>
-              workspacesApi.access(workspaceId, {
-                signal,
-                timeoutMs: getBootstrapReadTimeoutMs(),
-              }),
-          }),
-    policies: queryOptions({
-      queryKey: queryKeys.policies.workspace(workspaceId),
-      queryFn: ({ signal }) => policiesApi.status(workspaceId, signal),
-      staleTime: Number.POSITIVE_INFINITY,
-    }),
+      routePath(pathname) === '/invitations/accept' ? null : workspaceQueries.access(workspaceId),
+    policies: policyQueries.workspace(workspaceId),
   };
 }
 
@@ -428,7 +401,7 @@ function resolveSelection(scope: Scope, listed: Project[]) {
 }
 
 function skipChooser(client: QueryClient, url: URL) {
-  const memberships = client.getQueryData<Workspace[]>(queryKeys.workspaces.list());
+  const memberships = client.getQueryData(workspaceQueries.list().queryKey);
   const shortcut = chooserShortcut(url.pathname, memberships);
   if (shortcut) throw redirect(shortcut);
 }

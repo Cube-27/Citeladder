@@ -2,16 +2,19 @@ import { useEffect, useReducer, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation, Link } from 'react-router-dom';
 import { z } from 'zod';
-import { workspacesApi } from '@/lib/api/workspaces';
+import {
+  dropProductReads,
+  isAccessRecoveryQuery,
+  resetWorkspaceAccess,
+  workspaceQueries,
+} from '@/lib/api/workspaces';
 import { ApiError } from '@/lib/api/errors';
-import { queryKeys } from '@/lib/api/query-keys';
 import { workspaceAccessSchema as accessSchema } from '@citeladder/contracts/auth';
 import { useProjectContext } from '@/lib/project/project-context';
 import { isWorkspaceFreeRoute } from '@/lib/project/bootstrap';
 import { routePath } from '@/lib/navigation/route-path';
 import { contactSalesHref } from '@/lib/config/contact';
 import { websiteHref } from '@/lib/config/app-link';
-import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import { signOut } from '@/lib/auth/account-transition';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
@@ -37,16 +40,6 @@ function accessTitle(access: z.infer<typeof accessSchema> | undefined, deadline:
     : 'Workspace access';
 }
 
-/** Reads that serve recovery: identity, workspaces, and any query marked `accessRecovery`. */
-function recoveryQuery(query: { queryKey: readonly unknown[]; meta?: Record<string, unknown> }) {
-  const key = query.queryKey;
-  return (
-    key[0] === 'auth' ||
-    (key[0] === 'workspaces' && ['list', 'access'].includes(String(key[1]))) ||
-    query.meta?.accessRecovery === true
-  );
-}
-
 /** A trial or plan that ended can be restored by buying a plan; anything else cannot. */
 function restorable(access: z.infer<typeof accessSchema> | undefined, deadline: number | null) {
   return (
@@ -68,10 +61,10 @@ function useAccessLoss(workspaceId: string | null) {
         return;
       // The response may belong to a workspace the user just left. Re-resolve
       // the current authority rather than copying that denial to another scope.
-      void client.resetQueries({ queryKey: queryKeys.workspaces.access(workspaceId), exact: true });
+      void resetWorkspaceAccess(client, workspaceId);
     };
     const queries = client.getQueryCache().subscribe((event) => {
-      if (!recoveryQuery(event.query)) denied(event.query.state.error);
+      if (!isAccessRecoveryQuery(event.query)) denied(event.query.state.error);
     });
     const mutations = client
       .getMutationCache()
@@ -104,13 +97,8 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
     isWorkspaceFreeRoute(location.pathname, location.search) ||
     status === 'no_workspace';
   const access = useQuery({
-    queryKey: queryKeys.workspaces.access(activeWorkspaceId ?? ''),
+    ...workspaceQueries.access(activeWorkspaceId ?? ''),
     enabled: Boolean(activeWorkspaceId) && !recovery,
-    queryFn: ({ signal }) =>
-      workspacesApi.access(String(activeWorkspaceId), {
-        signal,
-        timeoutMs: getBootstrapReadTimeoutMs(),
-      }),
     // The bootstrap loader has just fetched this answer; reuse it rather than
     // asking again on mount. Expiry, product 403s and focus still recheck.
     refetchOnWindowFocus: 'always',
@@ -140,12 +128,7 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
   const checking = activeWorkspaceId ? access.isPending : workspaceLoading;
   useEffect(() => {
     if (!access.data || allowed || recovery) return;
-    void client.cancelQueries({
-      predicate: (query) => !recoveryQuery(query),
-    });
-    client.removeQueries({
-      predicate: (query) => !recoveryQuery(query),
-    });
+    dropProductReads(client);
   }, [allowed, access.data, client, recovery]);
   if (recovery || allowed) return children;
   if (checking) return <ShellFallback />;

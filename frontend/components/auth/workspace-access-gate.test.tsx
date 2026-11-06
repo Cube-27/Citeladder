@@ -14,7 +14,13 @@ vi.mock('@/lib/api/auth', () => ({
   authApi: { security },
   authQueries: { security: () => ({ queryKey: ['auth', 'security'], queryFn: () => security() }) },
 }));
-vi.mock('@/lib/api/workspaces', () => ({ workspacesApi: { access } }));
+// The transport is replaced on the module's own client object, so the gate's
+// real access read and cache clearing run against it.
+vi.mock('@/lib/api/workspaces', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api/workspaces')>();
+  Object.assign(actual.workspacesApi, { access });
+  return actual;
+});
 vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: project,
   useOptionalProjectContext: project,

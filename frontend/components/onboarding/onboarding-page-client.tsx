@@ -9,7 +9,7 @@ import { UserMenuTrigger } from '@/components/layout/user-menu';
 import { AuthActions, AuthCard, AuthShell } from '@/components/ui/auth-shell';
 import { Button } from '@/components/ui/button';
 import { QueryState } from '@/components/ui/query-state';
-import { queryKeys } from '@/lib/api/query-keys';
+import { refetchBilling } from '@/lib/api/billing';
 import { capabilityRemaining } from '@/lib/billing/entitlement-capability';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
@@ -46,7 +46,7 @@ function ProjectSetupGate() {
 
   const retry = () => {
     retryContext();
-    void queryClient.refetchQueries({ queryKey: queryKeys.billing.all });
+    void refetchBilling(queryClient);
   };
 
   const remainingProjectSlots = capabilityRemaining(entitlement, PROJECT_SLOTS_CAPABILITY);

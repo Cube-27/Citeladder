@@ -7,7 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { GateNoticeFrame } from '@/components/layout/gate-notice-frame';
 import { Button } from '@/components/ui/button';
 import { RouteLoadingScreen } from '@/components/layout/page-shell';
-import { queryKeys } from '@/lib/api/query-keys';
+import { refetchBilling } from '@/lib/api/billing';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { isWorkspaceOnlyRoute } from '@/lib/navigation/app-routes';
 import { useCanonicalProjectUrl, workspaceDestination } from '@/lib/navigation/project-destination';
@@ -55,7 +55,7 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
    */
   const retry = () => {
     retryContext();
-    void queryClient.refetchQueries({ queryKey: queryKeys.billing.all });
+    void refetchBilling(queryClient);
   };
   // Only an empty workspace needs an allowance decision before routing.
   // Existing projects can start their reads while entitlement resolves;

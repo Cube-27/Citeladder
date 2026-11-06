@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -20,9 +20,8 @@ import { roleLabel } from '@/components/settings/member-roles';
 import AccountSecurity from '@/components/settings/account-security';
 import { TabPanel, TabsRoot } from '@/components/ui/tabs';
 import { ListScreen } from '@/components/layout/page-shell';
-import { projectsApi } from '@/lib/api/projects';
+import { projectMutations } from '@/lib/api/projects';
 import { humanizeApiError } from '@/lib/api/errors';
-import { queryKeys } from '@/lib/api/query-keys';
 import { useSessionUser } from '@/lib/auth/session-guard';
 import { useEntitlement, useManagedPlan } from '@/lib/billing/entitlement-context';
 import { PROJECT_DELETION_CAPABILITY } from '@/lib/config/billing';
@@ -70,40 +69,33 @@ const SETTINGS_TAB_CODEC = stringUrlCodec(
 
 function ProjectDeletionControls() {
   const router = useNavigate();
-  const queryClient = useQueryClient();
   const { activeProject, activeWorkspaceId } = useProjectContext();
   const selectProject = useSelectProject();
   const { hasCapability } = useEntitlement();
   const mayDelete = useWorkspaceCapability('delete_projects');
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const deleteMutation = useMutation({
-    mutationFn: (projectId: string) =>
-      projectsApi.deleteProject(projectId, { workspaceId: activeWorkspaceId }),
-    onSuccess: async (_data, deletedId) => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-      const refreshedProjects = await queryClient.fetchQuery({
-        queryKey: queryKeys.projects.list(String(activeWorkspaceId)),
-        queryFn: ({ signal }) =>
-          projectsApi.listProjects({ signal, workspaceId: activeWorkspaceId }),
-      });
-      const next = refreshedProjects.find((project) => project.id !== deletedId) ?? null;
-      if (next) {
-        // Navigate, do not merely re-select: the deleted id may be the one in
-        // `?project=`, and leaving it there would resolve to a project that no
-        // longer exists and present as "that project is unavailable". Replace
-        // rather than push for the same reason — Back must not return to it.
-        selectProject(next.id, { replace: true });
-        setConfirmOpen(false);
-      } else {
-        router(
-          activeWorkspaceId
-            ? workspaceDestination('/onboarding', null, activeWorkspaceId)
-            : '/onboarding',
-          { replace: true },
-        );
-      }
-    },
-  });
+  const deleteMutation = useMutation(projectMutations.remove(activeWorkspaceId));
+  const deleteProject = (projectId: string) =>
+    deleteMutation.mutate(projectId, {
+      onSuccess: (remaining, deletedId) => {
+        const next = remaining.find((project) => project.id !== deletedId) ?? null;
+        if (next) {
+          // Navigate, do not merely re-select: the deleted id may be the one in
+          // `?project=`, and leaving it there would resolve to a project that no
+          // longer exists and present as "that project is unavailable". Replace
+          // rather than push for the same reason — Back must not return to it.
+          selectProject(next.id, { replace: true });
+          setConfirmOpen(false);
+        } else {
+          router(
+            activeWorkspaceId
+              ? workspaceDestination('/onboarding', null, activeWorkspaceId)
+              : '/onboarding',
+            { replace: true },
+          );
+        }
+      },
+    });
 
   // Both must allow it: the plan grants deletion, and the role (Owner/Admin) may use it.
   if (!hasCapability(PROJECT_DELETION_CAPABILITY) || !mayDelete) return null;
@@ -167,7 +159,7 @@ function ProjectDeletionControls() {
             </Button>
             <Button
               variant="danger"
-              onClick={() => activeProject && deleteMutation.mutate(activeProject.id)}
+              onClick={() => activeProject && deleteProject(activeProject.id)}
               disabled={deleteMutation.isPending || !activeProject}
             >
               {deleteMutation.isPending ? 'Deleting…' : 'Delete project'}
