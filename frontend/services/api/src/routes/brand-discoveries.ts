@@ -16,6 +16,7 @@ import {
   discoveryCatalog,
   discoveryRow,
   discoveryView,
+  rerunDiscovery,
 } from '../projects/discovery.ts';
 import {
   discoveryCreate,
@@ -88,6 +89,22 @@ export const brandDiscoveryRoutes = [
         ),
       );
       return discoveryView(await discoveryRow(db, workspaceId, path.discovery_id));
+    },
+  }),
+  definePostRoute({
+    family,
+    path: '/api/v1/brand-discoveries/{discovery_id}/rerun',
+    status: 202,
+    params: { path: discoveryPath, query: {} },
+    headers: idempotencyHeaders,
+    response: brandDiscoverySchema,
+    async handle({ c, db }, { path }) {
+      return rerunDiscovery(
+        db,
+        c.get('workspace').workspaceId,
+        path.discovery_id,
+        key(c.req.header('idempotency-key')),
+      );
     },
   }),
   definePostRoute({
