@@ -39,7 +39,7 @@ export const searchDatasetSelectionRequestSchema = z.object({
 });
 export type SearchDatasetSelectionRequest = z.input<typeof searchDatasetSelectionRequestSchema>;
 
-export const searchReviewActionSchema = z.enum([
+const searchReviewActionSchema = z.enum([
   'analysis',
   'refresh',
   'seed',

@@ -25,14 +25,12 @@ export const competitorRequestSchema = z.object({
 });
 /** One competitor added on its own; unknown fields are rejected. */
 export const competitorCreateRequestSchema = competitorRequestSchema.strict();
-export type CompetitorCreateRequest = z.input<typeof competitorCreateRequestSchema>;
 /** A partial edit of one tracked competitor; absent fields are kept. */
 export const competitorUpdateRequestSchema = z.strictObject({
   name: text().min(1).optional(),
   aliases: list().optional(),
   domains: list().optional(),
 });
-export type CompetitorUpdateRequest = z.input<typeof competitorUpdateRequestSchema>;
 
 /** A mention rule to save, by brand or competitor name. */
 export const entityMatchingRequestSchema = z.object({
