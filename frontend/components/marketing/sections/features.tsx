@@ -114,8 +114,8 @@ export function Bento({
  * the card's foot, so every card is one height whatever its screen holds.
  *
  * The plus (or a press anywhere on the card) opens it in place
- * (`mountCardRail`): the card widens to about two and the plus turns to a
- * close, while the header stays put; the miniature fades out as the `body`
+ * (`mountCardRail`): the card widens to the right, to 720px, and the plus
+ * turns to a close, while the header stays put; the miniature fades out as the `body`
  * with a button to the page fades in at the lower left and the feature's
  * `page` in the app, sidebar and all, at the right. Closing fades back. The
  * height never changes, so nothing below the rail moves. On a phone the rail

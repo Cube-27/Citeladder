@@ -1742,6 +1742,7 @@ a.cl-fcard:hover {
 
 /* ---------- CardRail: one sideways-scrolling row of fixed-width cards ---------- */
 .cl-rail {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: 48px;
@@ -1800,9 +1801,10 @@ a.cl-fcard:hover {
 /* A RailCard: tint panel, copy on top, its image inset below and cut by the foot. */
 .cl-railcard {
   --cl-tint: var(--tint-neutral);
+  --cl-card-h: 460px;
 
   position: relative;
-  height: 560px;
+  height: var(--cl-card-h);
   overflow: hidden;
   border-radius: var(--site-radius-card);
   background: var(--cl-tint);
@@ -1886,10 +1888,11 @@ a.cl-fcard:hover {
   transform: rotate(45deg);
 }
 
-/* Under the header, three layers cross-fade in place while the card widens:
-   the closed card's miniature out, the open card's page in the app and its
-   paragraph with the button in (and back on close). Each holds a fixed size
-   and place, so nothing reflows as it fades. */
+/* Under the header, three layers cross-fade in place while the card widens,
+   all together and over the same time as the widening (as the reference
+   does): the closed card's miniature out, the open card's page in the app
+   and its paragraph with the button in, and back on close. Each holds a
+   fixed size and place, so nothing reflows as it fades. */
 .cl-railcard-shot,
 .cl-railcard-page,
 .cl-railcard-more {
@@ -1897,8 +1900,8 @@ a.cl-fcard:hover {
   opacity: 0;
   visibility: hidden;
   transition:
-    opacity var(--motion-card-fade) var(--ease-exit),
-    visibility 0s var(--ease-exit) var(--motion-card-fade);
+    opacity var(--motion-card) var(--ease-card),
+    visibility 0s var(--ease-card) var(--motion-card);
 }
 
 .cl-railcard:not([data-expanded]) .cl-railcard-shot,
@@ -1906,25 +1909,24 @@ a.cl-fcard:hover {
   opacity: 1;
   visibility: visible;
   transition:
-    opacity var(--motion-card-fade) var(--ease-standard) var(--motion-card-delay),
+    opacity var(--motion-card) var(--ease-card),
     visibility 0s;
 }
 
-/* The miniature: inset at the card's foot, its top edge and shadow showing
-   and its lower part cut off by the card. */
+/* The miniature: whole, at the card's foot, inset by the card's own 28px
+   padding on the sides and below. */
 .cl-railcard-shot {
-  bottom: 0;
-  left: 40px;
-  width: calc(var(--cl-card-w) - 80px);
-  height: 310px;
-  overflow: hidden;
+  bottom: 28px;
+  left: 28px;
+  width: calc(var(--cl-card-w) - 56px);
 }
 
 /* The open card's image (the reference's open panel): the feature's page in
    the app, sidebar first, at 70% of its real size, in the right half under
-   the close and running off the card's right and lower edges. */
+   the close, running off the card's right edge and ending 28px above its
+   foot. */
 .cl-railcard-page {
-  top: 112px;
+  top: 100px;
   left: calc(var(--cl-open-w) / 2 + 16px);
   width: 1000px;
 }
@@ -1934,8 +1936,10 @@ a.cl-fcard:hover {
   margin-inline: 0;
 }
 
+/* Zoom scales a length too, so the drawn height is the card's less the
+   page's top and the foot's padding. */
 .cl-railcard-page .cl-screen {
-  min-height: 720px;
+  height: calc((var(--cl-card-h) - 128px) / 0.7);
   zoom: 0.7;
 }
 
@@ -1964,15 +1968,11 @@ a.cl-fcard:hover {
   line-height: var(--text-body-lg--line-height);
 }
 
-/* Both images: the bare screen, its well clearing room for the top shadow. */
+/* Both images: the bare screen with its shadow. */
 :is(.cl-railcard-shot, .cl-railcard-page) :is(.cl-frame, .cl-frame-card) {
   padding: 0;
   border-radius: 0;
   background: none;
-}
-
-:is(.cl-railcard-shot, .cl-railcard-page) .cl-frame-card > .cl-frame-well {
-  padding-top: 12px;
 }
 
 /* A miniature, as in the reference: the screen lays out at 1/0.7 of the
@@ -1988,19 +1988,26 @@ a.cl-fcard:hover {
   }
 }
 
-/* A flex row, so one item can widen when its card opens. It is the cards'
-   size container: a closed card is 420px, an open one 1000px (the whole
-   row when narrower). */
+/* A flex row, so one item can widen when its card opens. As in the
+   reference it runs to both edges of the screen: its padding puts the first
+   card (and each card the arrows bring to the start) on the page's column,
+   and the others show to either side. Its content box is that column, the
+   cards' size container: a closed card is 420px, an open one 720px (the
+   whole column when narrower). */
 .cl-rail-track {
   --cl-card-w: min(420px, 85cqw);
-  --cl-open-w: min(1000px, 100cqw);
+  --cl-open-w: min(720px, 100cqw);
+  /* The rail is the page's column (a size container), so this is a length
+     scroll-padding can use, unlike a percentage of the row. */
+  --cl-bleed: calc(50vw - 50cqw);
 
   container-type: inline-size;
   display: flex;
   gap: 16px;
-  margin: 0;
-  padding: 0;
+  margin: 0 calc(-1 * var(--cl-bleed));
+  padding: 0 var(--cl-bleed);
   overflow-x: auto;
+  scroll-padding-inline: var(--cl-bleed);
   overscroll-behavior-x: contain;
   list-style: none;
   scroll-snap-type: x mandatory;
@@ -2009,6 +2016,12 @@ a.cl-fcard:hover {
 
 .cl-rail-track::-webkit-scrollbar {
   display: none;
+}
+
+/* 100vw counts a classic scrollbar, so the full-bleed row would overhang
+   the page by half of one; its section clips that. */
+.cl-page-section:has(.cl-rail) {
+  overflow-x: clip;
 }
 
 .cl-rail-item {
@@ -2042,6 +2055,8 @@ a.cl-fcard:hover {
 
   .cl-rail-track {
     display: block;
+    margin: 0;
+    padding: 0;
     overflow: visible;
     scroll-snap-type: none;
   }
