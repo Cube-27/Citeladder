@@ -4,18 +4,11 @@
  * fields on every lane. A record carries the failure's class and code, never
  * its message: provider messages can echo request or response bodies.
  */
-import { getLogger } from '../logging.ts';
+import { failureFacts, getLogger } from '../logging.ts';
 
 const logger = getLogger('queue.lanes');
 
 type LaneTask = { id: string; workspace_id: string; attempt_count: number };
-
-/** The class and code of a failure. A failure without a string `code` has none (null). */
-export function failureFacts(error: unknown): { error_class: string; error_code: string | null } {
-  if (!(error instanceof Error)) return { error_class: typeof error, error_code: null };
-  const code = 'code' in error && typeof error.code === 'string' ? error.code : null;
-  return { error_class: error.constructor.name, error_code: code };
-}
 
 export type LaneFailure = {
   /** Where the attempt was when it failed. */

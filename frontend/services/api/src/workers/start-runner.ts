@@ -3,8 +3,7 @@ import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { DRAIN_LOCK } from '../config/execution.ts';
 import type { ServiceConfig } from '../config.ts';
-import { getLogger } from '../logging.ts';
-import { failureFacts } from '../queue/lane-log.ts';
+import { failureFacts, getLogger } from '../logging.ts';
 
 const tokenSchema = z.object({ access_token: z.string().min(1) });
 
