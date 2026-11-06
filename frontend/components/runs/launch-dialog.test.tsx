@@ -7,6 +7,7 @@ import { promptsApi } from '@/lib/api/prompts';
 import { providersApi } from '@/lib/api/providers';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
+import { makeFormLimits } from '@/test/fixtures/prompts';
 import { providerCatalogFixture } from '@/test/provider-catalog-fixture';
 import { renderWithProviders } from '@/test/render';
 
@@ -48,10 +49,15 @@ const ESTIMATE = {
   estimated_total_cost_microusd: 123_400,
 };
 
+/** The prompt-set list read: the sets plus the launch's repetition range. */
+function listed(sets: unknown[], limits = makeFormLimits()) {
+  return { prompt_sets: sets, limits };
+}
+
 function stubApis(estimate: unknown = undefined) {
-  vi.spyOn(promptsApi, 'listPromptSets').mockResolvedValue([
-    { id: PROMPT_SET_ID, name: 'Brand portfolio', prompt_count: 7 },
-  ] as never);
+  vi.spyOn(promptsApi, 'listPromptSets').mockResolvedValue(
+    listed([{ id: PROMPT_SET_ID, name: 'Brand portfolio', prompt_count: 7 }]) as never,
+  );
   vi.spyOn(providersApi, 'listConnections').mockResolvedValue([
     {
       api_key_set: true,
@@ -70,6 +76,37 @@ async function selectEngineAndLaunch() {
   fireEvent.click(await screen.findByRole('button', { name: 'ChatGPT API' }));
   fireEvent.click(screen.getByRole('button', { name: 'Launch audit' }));
 }
+
+describe('Repetitions', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('states and enforces the repetition range the prompt-set list carries', async () => {
+    const launch = stubApis();
+    vi.mocked(promptsApi.listPromptSets).mockResolvedValue(
+      listed(
+        [{ id: PROMPT_SET_ID, name: 'Brand portfolio', prompt_count: 7 }],
+        makeFormLimits({ audit_repetitions_min: 2, audit_repetitions_max: 4 }),
+      ) as never,
+    );
+    renderWithProviders(
+      <LaunchDialog open onOpenChange={() => undefined} projectId={PROJECT_ID} />,
+    );
+
+    expect(
+      await screen.findByText('How many times to run each prompt per engine (2–4).'),
+    ).toBeInTheDocument();
+    const field = screen.getByRole('spinbutton', { name: 'Repetitions' });
+    fireEvent.change(field, { target: { value: '9' } });
+    fireEvent.blur(field);
+    expect(field).toHaveValue(4);
+    await selectEngineAndLaunch();
+    await waitFor(() =>
+      expect(launch).toHaveBeenCalledWith(expect.objectContaining({ repetitions: 4 }), {
+        workspaceId: WORKSPACE_ID,
+      }),
+    );
+  });
+});
 
 describe('Consumer engine selection', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -403,7 +440,7 @@ describe('LaunchDialog prompt batching', () => {
 
   /** A set of `count` audit-eligible prompts, in creation order. */
   function setWithPrompts(count: number) {
-    return [
+    return listed([
       {
         id: PROMPT_SET_ID,
         name: 'Brand portfolio',
@@ -416,7 +453,7 @@ describe('LaunchDialog prompt batching', () => {
           created_at: `2026-01-${String(index + 1).padStart(2, '0')}T00:00:00Z`,
         })),
       },
-    ];
+    ]);
   }
 
   it('runs a chosen batch of ten as an explicit prompt id list', async () => {

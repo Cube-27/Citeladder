@@ -24,14 +24,10 @@ export function usePromptSet() {
   const scope = { workspaceId, projectId: projectId ?? '' };
   const available = Boolean(projectId && workspaceId);
 
-  const listQuery = useQuery({
-    ...promptsQueries.sets(scope),
-    enabled: available,
-    // Seed from the embedded prompt sets so the table can render immediately.
-    initialData: project?.prompt_sets?.length ? project.prompt_sets : undefined,
-  });
-
-  const sets = listQuery.data ?? [];
+  const listQuery = useQuery({ ...promptsQueries.sets(scope), enabled: available });
+  // The embedded prompt sets render the table until the list (and its form bounds) loads.
+  const embedded = project?.prompt_sets ?? [];
+  const sets = listQuery.data?.prompt_sets ?? embedded;
   const promptSet: PromptSet | null = sets[0] ?? null;
 
   const createMutation = useMutation(promptsMutations.ensureSet(scope));
@@ -46,7 +42,9 @@ export function usePromptSet() {
     projectId,
     promptSet,
     prompts: promptSet?.prompts ?? [],
-    isLoading: Boolean(projectId) && listQuery.isLoading,
+    /** Server-enforced bounds of the prompt forms; null until the list loads. */
+    limits: listQuery.data?.limits ?? null,
+    isLoading: Boolean(projectId) && listQuery.isLoading && !embedded.length,
     /** The list read's failure; null unless it failed. */
     error: listQuery.error,
     retry: () => void listQuery.refetch(),

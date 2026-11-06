@@ -22,6 +22,7 @@ import {
   parsePromptCsv,
   validRows,
   type ParsedCsv,
+  type PromptCsvLimits,
 } from '@/lib/prompts/csv';
 
 /**
@@ -54,15 +55,19 @@ export function CsvImportDialog({
   onImport,
   isImporting,
   error,
+  limits,
 }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImport: (rows: PromptImportRowRequest[]) => Promise<void> | void;
   isImporting?: boolean;
   error?: MutationNoticeData;
+  /** The import bounds the API enforces, from the prompt-set list. */
+  limits: PromptCsvLimits;
 }>) {
-  const { fileName, inputRef, parsed, reset, selectFile } =
-    useCsvImportFile<ParsedCsv>(parsePromptCsv);
+  const { fileName, inputRef, parsed, reset, selectFile } = useCsvImportFile<ParsedCsv>((raw) =>
+    parsePromptCsv(raw, limits),
+  );
 
   const importable = useMemo(() => (parsed ? validRows(parsed) : []), [parsed]);
   const importNoun = importable.length === 1 ? 'prompt' : 'prompts';

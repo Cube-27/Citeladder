@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { Prompt, Topic } from '@citeladder/contracts';
+import type { Prompt, PromptFormLimits, Topic } from '@citeladder/contracts';
 import {
   buyerStageLabels,
   buyerStageValues,
@@ -50,7 +50,10 @@ export function PromptFormDialog({
   onSubmit,
   isSaving,
   error,
+  limits,
 }: Readonly<{
+  /** The persona bound the API enforces, from the prompt-set list. */
+  limits: Pick<PromptFormLimits, 'persona_max_chars'>;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   prompt?: Prompt;
@@ -67,6 +70,11 @@ export function PromptFormDialog({
     () => (prompt ? promptToFormValues(prompt) : emptyPromptForm(defaultTopicId)),
     [prompt, defaultTopicId],
   );
+  const personaMaxChars = limits.persona_max_chars;
+  const schema = useMemo(
+    () => promptFormSchema({ persona_max_chars: personaMaxChars }),
+    [personaMaxChars],
+  );
   const {
     register,
     control,
@@ -74,7 +82,7 @@ export function PromptFormDialog({
     reset,
     formState: { errors },
   } = useForm<PromptFormValues>({
-    resolver: zodResolver(promptFormSchema),
+    resolver: zodResolver(schema),
     values: initialValues,
   });
 

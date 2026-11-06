@@ -81,8 +81,17 @@ export function PromptLibrary({
   reviewRequest?: boolean;
 }>) {
   const workspaceId = useActiveWorkspaceId();
-  const { projectId, promptSet, prompts, isLoading, error, ensurePromptSet, retry, retrying } =
-    usePromptSet();
+  const {
+    projectId,
+    promptSet,
+    prompts,
+    limits,
+    isLoading,
+    error,
+    ensurePromptSet,
+    retry,
+    retrying,
+  } = usePromptSet();
   const requestScope = resolveProjectRequestScope(workspaceId, projectId);
   const scope = { workspaceId: requestScope.workspaceId, projectId: requestScope.projectId };
 
@@ -373,6 +382,7 @@ export function PromptLibrary({
           setsLoading={isLoading}
           setsError={error !== null}
           retrySets={retry}
+          limits={limits}
         />
       </>
     </ListScreen>
