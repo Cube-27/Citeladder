@@ -13,12 +13,12 @@ export type RadioOption<T extends string> = {
 };
 
 /**
- * The 16px radio: a 1px `line-field` circle (`ink-secondary` on hover,
- * decision D37); selected is an `ink` disc with
+ * The 16px radio: a 1px `line` circle (`line-strong` on hover, decision
+ * D5); selected is an `ink` disc with
  * a `surface` centre (an inset 4px ring), so the mark never changes size.
  */
 const RADIO =
-  'focus-ring bg-surface border-line-field data-[state=unchecked]:hover:border-ink-secondary data-[state=checked]:bg-ink data-[state=checked]:border-ink data-[state=checked]:ring-surface size-4 shrink-0 rounded-full border transition-[background-color,border-color,box-shadow] ring-inset data-[state=checked]:ring-4 disabled:cursor-not-allowed';
+  'focus-ring bg-surface border-line data-[state=unchecked]:hover:border-line-strong data-[state=checked]:bg-ink data-[state=checked]:border-ink data-[state=checked]:ring-surface size-4 shrink-0 rounded-full border transition-[background-color,border-color,box-shadow] ring-inset data-[state=checked]:ring-4 disabled:cursor-not-allowed';
 
 /**
  * RadioGroup — one choice from two to five options. `list` (default) stacks
