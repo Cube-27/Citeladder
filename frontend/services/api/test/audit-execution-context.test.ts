@@ -191,7 +191,7 @@ describe('frozen audit execution identity', () => {
       attempt_count: 0,
       provider_task_id: '',
     });
-    const request = frozenSurfaceRequest(context, persisted.provider_submission_ref, runtime);
+    const request = frozenSurfaceRequest(context, persisted.provider_submission_ref);
     expect(request).toMatchObject({
       location_code: 2840,
       request_settings: { priority: 1, force_web_search: true },

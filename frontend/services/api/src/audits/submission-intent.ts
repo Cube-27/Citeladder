@@ -57,12 +57,13 @@ export function commitSubmissionIntent(
   });
 }
 /** Scraper recovery always closes before the provider's 28-day task retention expires. */
-export function surfaceRecoveryDeadline(task: AuditTask, hours: number): Date | null {
+export function surfaceRecoveryDeadline(task: AuditTask, hours: number | undefined): Date | null {
   if (
     !task.provider_task_submitted_at ||
     !['chatgpt_search', 'gemini_consumer'].includes(task.logical_engine)
   )
     return null;
-  if (!(hours > 0 && hours < 24 * 28)) throw new Error('Invalid frozen recovery deadline');
+  if (hours === undefined || !(hours > 0 && hours < 24 * 28))
+    throw new Error('Invalid frozen recovery deadline');
   return new Date(task.provider_task_submitted_at.getTime() + hours * 3600000);
 }
