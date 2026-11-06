@@ -8,14 +8,14 @@ import { randomUUID } from 'node:crypto';
 import { sql, type AliasNode, type OperationNode, type SelectQueryNode } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { policy } from '../src/config.ts';
 import { claimStatement, TaskQueue } from '../src/queue/task-queue.ts';
+import { ANALYTICS_KIND_NAMES } from '../src/workers/analytics-kinds.ts';
 import { Fixtures, testDatabase } from './support.ts';
 
 const db = testDatabase();
 const fixtures = new Fixtures(db);
 const queue = new TaskQueue(db, { leaseTtlSeconds: 120 });
-const TS_KINDS = policy.analytics.ts_owned_task_kinds;
+const TS_KINDS = ANALYTICS_KIND_NAMES;
 let workspaces: string[] = [];
 
 async function task(workspaceId: string, kind: string, priority = 0): Promise<string> {

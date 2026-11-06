@@ -1,6 +1,6 @@
 /**
- * The analytics worker: claims the kinds the analytics catalog
- * (`config/connected-data.ts`) owns and runs each through its executor.
+ * The analytics worker: claims the kinds the analytics kind registry
+ * (`workers/analytics-kinds.ts`) holds and runs each through its executor.
  *
  * Owns the analytics queue lifecycle: the claim
  * commits before any work, a row already terminal at claim time is never
@@ -11,76 +11,36 @@
  * terminal compensation run before every claim, including an empty drain.
  */
 import { randomBytes } from 'node:crypto';
-import { crawlLogRollupRefresh } from '../crawl-logs/rollup.ts';
-import { refreshTrafficInsights } from '../crawl-logs/insights.ts';
-import { crawlLogPull } from '../crawl-logs/pull.ts';
-import {
-  botIpRangeRefresh,
-  botRequestRetentionSweep,
-  crawlLogUploadAbandonSweep,
-} from '../crawl-logs/maintenance.ts';
 import { sql } from 'kysely';
-import { recoverAnalyticsLeases } from '../queue/analytics-recovery.ts';
-import { maintainLease } from '../queue/heartbeat.ts';
-import { competitorDiscovery } from '../commerce/discovery.ts';
-import { compensateTerminalTasks } from './terminal-compensation.ts';
 
+import { ConfigError } from '../config/config-error.ts';
 import { policy, type WorkerSettings } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
-import { TaskQueue, type QueueTask, type ClaimScope } from '../queue/task-queue.ts';
-import { classifyReferrals } from '../referrals/classify.ts';
-import { ingestReferrals } from '../referrals/ingest.ts';
-import { referralRetentionSweep } from '../referrals/retention.ts';
-import { refreshAiReferralsSnapshot } from '../referrals/snapshot.ts';
+import { recoverAnalyticsLeases } from '../queue/analytics-recovery.ts';
 import {
   TaskCancelledError,
   TerminalExecutorError,
   type Executor,
   type TaskSettlement,
 } from '../queue/executor.ts';
-import { projectPerformanceRange, refreshTrafficSnapshot } from '../traffic/snapshot.ts';
-import { recomputeDemand } from '../demand/snapshot.ts';
-import { refreshOpportunities } from '../opportunities/refresh.ts';
-import { verifyImplementationEvents } from '../opportunities/verification.ts';
-import { projectCatalog } from '../commerce/projection.ts';
-import { publishInternalLinks } from '../site-health/internal-link-publish.ts';
-import { acquireResearch } from '../search-intelligence/executor.ts';
-import { internalLinkJudge } from '../site-health/internal-link-judgments.ts';
-import { sourcePageInspector } from '../source-pages/inspector.ts';
-import { answerPerception } from '../perception/executor.ts';
-import { factVerification } from '../perception/fact-verification.ts';
+import { maintainLease } from '../queue/heartbeat.ts';
+import { TaskQueue, type QueueTask, type ClaimScope } from '../queue/task-queue.ts';
+import {
+  ANALYTICS_KIND_NAMES,
+  ANALYTICS_KINDS,
+  ANALYTICS_LEASE_TTL_SECONDS,
+} from './analytics-kinds.ts';
+import { compensateTerminalTasks } from './terminal-compensation.ts';
 
 const logger = getLogger('workers.analytics');
 const { statuses, terminal } = policy.task_queue;
 const ERROR_DETAIL_LIMIT = 2000;
 
-/** Kind dispatch: exactly the kinds TypeScript owns. */
-export const EXECUTORS: Readonly<Record<string, Executor>> = {
-  ai_traffic_insights_refresh: refreshTrafficInsights,
-  crawl_log_rollup_refresh: crawlLogRollupRefresh,
-  crawl_log_pull: crawlLogPull(),
-  bot_ip_range_refresh: botIpRangeRefresh(),
-  bot_request_retention_sweep: botRequestRetentionSweep,
-  crawl_log_upload_abandon_sweep: crawlLogUploadAbandonSweep,
-  commerce_competitor_discovery: competitorDiscovery(),
-  search_intelligence_acquisition: acquireResearch,
-  source_page_inspection: sourcePageInspector(),
-  internal_link_judgment: internalLinkJudge(),
-  internal_link_publish: publishInternalLinks,
-  ingest_referrals: ingestReferrals,
-  classify_referrals: classifyReferrals,
-  ai_referrals_snapshot_refresh: refreshAiReferralsSnapshot,
-  referral_retention_sweep: referralRetentionSweep,
-  traffic_snapshot_refresh: refreshTrafficSnapshot,
-  performance_range_projection: projectPerformanceRange,
-  demand_snapshot_refresh: recomputeDemand,
-  opportunity_refresh: refreshOpportunities,
-  opportunity_verification: verifyImplementationEvents,
-  commerce_catalog_projection: projectCatalog,
-  answer_perception: answerPerception(),
-  fact_verification: factVerification(),
-};
+/** Kind dispatch: each registered kind's executor. */
+export const EXECUTORS: Readonly<Record<string, Executor>> = Object.fromEntries(
+  Object.entries(ANALYTICS_KINDS).map(([kind, { run }]) => [kind, run]),
+);
 
 /** A claimed kind with no executor: a deploy bug, failed without retries. */
 class ExecutorNotWiredError extends Error {}
@@ -141,11 +101,19 @@ export class AnalyticsWorker {
       signal?: AbortSignal;
     } = {},
   ) {
+    // A heartbeat slower than a kind's lease guarantees expiry during healthy work.
+    if (
+      Object.values(ANALYTICS_LEASE_TTL_SECONDS).some(
+        (lease) => settings.heartbeatIntervalSeconds >= lease,
+      )
+    ) {
+      throw new ConfigError('heartbeat_interval_seconds must be shorter than every lease TTL');
+    }
     this.#db = db;
     this.#settings = settings;
     this.#queue = new TaskQueue(db, {
       leaseTtlSeconds: settings.leaseTtlSeconds,
-      leaseTtlSecondsByKind: settings.leaseTtlSecondsByKind,
+      leaseTtlSecondsByKind: ANALYTICS_LEASE_TTL_SECONDS,
     });
     this.#executors = options.executors ?? EXECUTORS;
     this.#scope = options.taskScope;
@@ -178,7 +146,7 @@ export class AnalyticsWorker {
   }
 
   #kinds(): readonly string[] {
-    return this.#scope ? Object.keys(this.#executors) : policy.analytics.ts_owned_task_kinds;
+    return this.#scope ? Object.keys(this.#executors) : ANALYTICS_KIND_NAMES;
   }
 
   /** Drain until a claim returns nothing (tests and one-shot runs). */

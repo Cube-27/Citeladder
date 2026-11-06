@@ -12,7 +12,7 @@ import { policy, resolveSettingSpec } from '../config.ts';
 import type { DB } from '../generated/db-schema.ts';
 import type { Database } from '../db/database.ts';
 
-export type Enqueue = {
+type Enqueue = {
   workspaceId: string;
   projectId: string | null;
   kind: string;
@@ -24,10 +24,8 @@ export type Enqueue = {
 };
 
 /** The analytics task attempt budget successors inherit unless their kind sets its own. */
-export function defaultTaskMaxAttempts(
-  env: Record<string, string | undefined> = process.env,
-): number {
-  return resolveSettingSpec(policy.analytics.worker_settings.task_max_attempts, env) as number;
+function defaultTaskMaxAttempts(): number {
+  return resolveSettingSpec(policy.analytics.worker_settings.task_max_attempts) as number;
 }
 
 /** The deterministic `analytics:<kind>:<identity parts>` idempotency key. */

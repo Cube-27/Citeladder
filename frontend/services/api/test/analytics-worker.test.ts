@@ -9,7 +9,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { loadWorkerSettings, policy } from '../src/config.ts';
 import { TaskQueue, type QueueTask } from '../src/queue/task-queue.ts';
 import { AnalyticsWorker, EXECUTORS } from '../src/workers/analytics-worker.ts';
+import { enqueueTask } from '../src/queue/enqueue.ts';
 import type { Executor } from '../src/queue/executor.ts';
+import { ANALYTICS_KIND_NAMES } from '../src/workers/analytics-kinds.ts';
 import {
   enqueue,
   REFERRER_DAILY,
@@ -558,5 +560,45 @@ describe('finalize', () => {
       lease_owner: 'sweeper-reclaimed',
       attempt_count: 0,
     });
+  });
+});
+
+describe('analytics kind registry', () => {
+  it('enqueues every registered kind into analytics_tasks with the default attempt budget', async () => {
+    for (const kind of ANALYTICS_KIND_NAMES)
+      await enqueueTask(db, { workspaceId, projectId, kind, payload: {}, keyParts: [projectId] });
+    const rows = await db
+      .selectFrom('analytics_tasks')
+      .select(['task_kind', 'max_attempts'])
+      .where('workspace_id', '=', workspaceId)
+      .orderBy('task_kind')
+      .execute();
+    expect(rows).toEqual(
+      [
+        'ai_referrals_snapshot_refresh',
+        'ai_traffic_insights_refresh',
+        'answer_perception',
+        'bot_ip_range_refresh',
+        'bot_request_retention_sweep',
+        'classify_referrals',
+        'commerce_catalog_projection',
+        'commerce_competitor_discovery',
+        'crawl_log_pull',
+        'crawl_log_rollup_refresh',
+        'crawl_log_upload_abandon_sweep',
+        'demand_snapshot_refresh',
+        'fact_verification',
+        'ingest_referrals',
+        'internal_link_judgment',
+        'internal_link_publish',
+        'opportunity_refresh',
+        'opportunity_verification',
+        'performance_range_projection',
+        'referral_retention_sweep',
+        'search_intelligence_acquisition',
+        'source_page_inspection',
+        'traffic_snapshot_refresh',
+      ].map((task_kind) => ({ task_kind, max_attempts: 3 })),
+    );
   });
 });

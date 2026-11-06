@@ -28,6 +28,20 @@ export type Executor = (
   context: ExecutorContext,
 ) => Promise<void | TaskSettlement>;
 
+/**
+ * One analytics task kind as its feature registers it: the executor, the
+ * durable compensation a failed (or sweeper-terminalized) row is owed, and a
+ * lease override for work that holds an external resource longer than the
+ * default lease covers.
+ */
+export type AnalyticsKind = {
+  run: Executor;
+  compensate?: (db: Database, task: QueueTask) => Promise<void>;
+  leaseTtlSeconds?: number;
+};
+/** A feature's analytics kinds, keyed by `task_kind`. */
+export type AnalyticsKinds = Readonly<Record<string, AnalyticsKind>>;
+
 /** The claimed row turned terminal mid-run; the worker writes nothing. */
 export class TaskCancelledError extends Error {}
 
