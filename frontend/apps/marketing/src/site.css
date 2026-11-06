@@ -1879,7 +1879,7 @@ a.cl-fcard:hover {
 }
 
 .cl-railcard-toggle > svg {
-  transition: transform var(--motion-fast) var(--ease-standard);
+  transition: transform var(--motion-card) var(--ease-card);
 }
 
 .cl-railcard-toggle[aria-expanded='true'] > svg {
@@ -1897,8 +1897,8 @@ a.cl-fcard:hover {
   opacity: 0;
   visibility: hidden;
   transition:
-    opacity var(--motion-slow) var(--ease-exit),
-    visibility 0s var(--ease-exit) var(--motion-slow);
+    opacity var(--motion-card-fade) var(--ease-exit),
+    visibility 0s var(--ease-exit) var(--motion-card-fade);
 }
 
 .cl-railcard:not([data-expanded]) .cl-railcard-shot,
@@ -1906,7 +1906,7 @@ a.cl-fcard:hover {
   opacity: 1;
   visibility: visible;
   transition:
-    opacity var(--motion-slow) var(--ease-standard) var(--motion-fast),
+    opacity var(--motion-card-fade) var(--ease-standard) var(--motion-card-delay),
     visibility 0s;
 }
 
@@ -2014,7 +2014,7 @@ a.cl-fcard:hover {
 .cl-rail-item {
   flex: 0 0 var(--cl-card-w);
   scroll-snap-align: start;
-  transition: flex-basis var(--motion-slow) var(--ease-standard);
+  transition: flex-basis var(--motion-card) var(--ease-card);
 }
 
 .cl-rail-item:has(> [data-expanded]) {
