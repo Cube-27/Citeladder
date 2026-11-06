@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
@@ -101,6 +102,51 @@ export function Bento({
           {cell.content}
         </div>
       ))}
+    </div>
+  );
+}
+
+/**
+ * CardRail: one row of fixed-width cards that scrolls sideways and snaps to
+ * each card, with previous and next buttons above it. The page mounts the
+ * buttons with `mountCardRail` (card-rail.ts); until then they hold their
+ * space hidden and the row still scrolls by touch, trackpad or keyboard.
+ */
+export function CardRail({
+  label,
+  items,
+}: Readonly<{
+  /** What the cards are, naming the list and its buttons ("modules"). */
+  label: string;
+  items: readonly Readonly<{ key: string; content: ReactNode }>[];
+}>) {
+  return (
+    <div className="cl-rail" data-card-rail>
+      <div className="cl-rail-nav" data-card-rail-nav>
+        <button
+          type="button"
+          className="cl-rail-btn focus-ring"
+          aria-label={`Previous ${label}`}
+          data-card-rail-prev
+        >
+          <ArrowLeft aria-hidden className="size-5" />
+        </button>
+        <button
+          type="button"
+          className="cl-rail-btn focus-ring"
+          aria-label={`Next ${label}`}
+          data-card-rail-next
+        >
+          <ArrowRight aria-hidden className="size-5" />
+        </button>
+      </div>
+      <ul className="cl-rail-track" aria-label={label} data-card-rail-track>
+        {items.map((item) => (
+          <li key={item.key} className="cl-rail-item">
+            {item.content}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

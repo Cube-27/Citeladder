@@ -43,17 +43,33 @@ describe('LandingPage', () => {
     expect(skips).toEqual([]);
   });
 
-  it('links each pillar module by its published name', () => {
+  it('shows one card per module in navigation order, leaving Integrations to its own section', () => {
     render(<LandingPage />);
 
-    const pillars = screen.getByRole('region', { name: 'Measure, diagnose, improve' });
-    expect(within(pillars).getByRole('link', { name: 'Keyword Research' })).toHaveAttribute(
-      'href',
+    const rail = screen.getByRole('list', { name: 'modules' });
+    const cards = within(rail).getAllByRole('link');
+    expect(cards.map((card) => card.getAttribute('href'))).toEqual([
+      '/platform/ai-visibility',
+      '/platform/cited-sources',
+      '/platform/ai-referral-analytics',
+      '/platform/product-visibility',
+      '/platform/site-health',
+      '/platform/search-demand',
       '/platform/keyword-research',
-    );
-    expect(within(pillars).getByRole('link', { name: 'MCP' })).toHaveAttribute(
-      'href',
+      '/platform/content-briefs',
+      '/platform/agents',
       '/platform/mcp',
+    ]);
+    expect(within(rail).getByRole('heading', { name: 'Keyword Research' })).toBeInTheDocument();
+  });
+
+  it('links the evidence split to its modules by their published names', () => {
+    render(<LandingPage />);
+
+    const evidence = screen.getByRole('region', { name: 'Evidence' });
+    expect(within(evidence).getByRole('link', { name: 'Cited Sources' })).toHaveAttribute(
+      'href',
+      '/platform/cited-sources',
     );
   });
 });
