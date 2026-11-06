@@ -15,7 +15,7 @@ import type { ConsumableLedger } from '../generated/db-schema.ts';
 import { policy } from '../config.ts';
 import { advisoryXactLock } from '../db/advisory-lock.ts';
 import { accountState, drawOrder } from './state.ts';
-import { digest } from '../billing/contracts.ts';
+import { digest } from '../crypto-text.ts';
 import { getLogger } from '../logging.ts';
 import { compareText } from '../text-order.ts';
 import { chunksOf, isNonEmpty } from '../lists.ts';

@@ -3,7 +3,7 @@ import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
 import { advisoryXactLock } from '../db/advisory-lock.ts';
-import { conflict } from '../billing/contracts.ts';
+import { conflict } from '../errors.ts';
 import { refreshRuntime } from '../site-health/plan-runtime.ts';
 import { getLogger } from '../logging.ts';
 

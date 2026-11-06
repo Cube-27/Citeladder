@@ -140,7 +140,7 @@ with static weights, independent of the web's brand faces (owner, 2026-11-03),
 with the digits of right-aligned amounts,
 headline figures and ranks in the figure face, and Noto Sans behind them for other scripts,
 with measured wrapping and pagination; ligatures are off so copied and
-searched text stays intact. The [renderer](../frontend/services/api/src/billing/pdf.ts)
+searched text stays intact. The [renderer](../frontend/services/api/src/documents/pdf.ts)
 draws the logo from the app's shared outline data and paints with the light
 values of the app's design tokens, read from `globals.css` (the API image
 packages a copy). Unsupported glyphs are

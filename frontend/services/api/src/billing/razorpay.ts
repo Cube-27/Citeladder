@@ -1,7 +1,8 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import { policy } from '../config.ts';
-import { amount, conflict, type Pending } from './contracts.ts';
+import { amount, type Pending } from './contracts.ts';
+import { conflict } from '../errors.ts';
 import type { BillingSettings, RazorpaySettings } from './config.ts';
 
 const reference = z

@@ -30,7 +30,8 @@ import {
   activationResponse,
 } from '../billing/purchases.ts';
 import { changeRequest, changePlan } from '../billing/plan-changes.ts';
-import { identitySchema, conflict } from '../billing/contracts.ts';
+import { identitySchema } from '../billing/contracts.ts';
+import { conflict } from '../errors.ts';
 import { offerRead, claimOffer, endOffer, claimRequest } from '../billing/journeys.ts';
 import { cancelSubscription, resumeSubscription } from '../billing/cancellation.ts';
 import { checkoutAvailable, configured, verifyCallback } from '../billing/razorpay.ts';
