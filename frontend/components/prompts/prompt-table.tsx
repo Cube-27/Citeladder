@@ -1,19 +1,17 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Archive, Check, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
 import { ProjectLink } from '@/components/layout/scoped-link';
-import { Badge } from '@/components/ui/badge';
 import { IconButton } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { Inline } from '@/components/ui/layout';
 import { Delta } from '@/components/ui/delta';
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from '@/components/ui/menu';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
-import { Tooltip } from '@/components/ui/tooltip';
+import { InlineTag } from '@/components/ui/tag';
 import { Switch } from '@/components/ui/switch';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { Prompt, PromptStatus, Topic } from '@/lib/api/types';
@@ -82,11 +80,14 @@ export function PromptTable({
   return (
     <DataTable
       label="Prompts"
-      minWidth={measured ? 'xl' : 'md'}
+      // Every column fits the page from the owner's 982px desktop up; below
+      // that the table scrolls with the prompt pinned.
+      minWidth={measured ? 'md' : 'sm'}
+      pinFirstColumn
       columns={promptColumns(measured)}
       pageSize={PAGE_SIZE}
       rowCount={pagedPrompts.length}
-      rowLines={2}
+      rowLines={3}
       state={
         prompts.length === 0
           ? {
@@ -105,10 +106,10 @@ export function PromptTable({
       {pagedPrompts.map((prompt) => (
         <TableRow key={prompt.id}>
           <TableCell>
-            {/* The question opens its history: the prompt is the object. Its
-                topic and classification are the caption under it, so the
-                question keeps the table's width (each line is cut with the
-                whole text in a tooltip). */}
+            {/* The question opens its history: the prompt is the object. It
+                wraps to two lines; its topic (a tag) and classification are
+                the caption under it (each cut with the whole text in a
+                tooltip). */}
             <TableCellLines
               title
               primary={
@@ -124,22 +125,12 @@ export function PromptTable({
           </TableCell>
           {measured ? <MeasuredCells measurement={measurements?.get(prompt.id)} /> : null}
           <TableCell>
-            <Inline as="span">
-              <Switch
-                checked={prompt.enabled}
-                label={`${prompt.enabled ? 'Disable' : 'Enable'} prompt`}
-                disabled={busyId === prompt.id}
-                onCheckedChange={() => onToggleEnabled(prompt)}
-              />
-              {/* Kept after a downgrade, but audits skip it until a slot frees. */}
-              {prompt.over_plan_limit ? (
-                <Tooltip content="Beyond your plan's prompt limit, so audits skip it. Delete other prompts or upgrade to measure it.">
-                  <Badge variant="status" value="warning">
-                    Not measured
-                  </Badge>
-                </Tooltip>
-              ) : null}
-            </Inline>
+            <Switch
+              checked={prompt.enabled}
+              label={`${prompt.enabled ? 'Disable' : 'Enable'} prompt`}
+              disabled={busyId === prompt.id}
+              onCheckedChange={() => onToggleEnabled(prompt)}
+            />
           </TableCell>
           <TableActionsCell>
             <Menu>
@@ -188,9 +179,8 @@ function promptColumns(measured: boolean): DataTableColumn[] {
   return [
     { key: 'prompt', label: 'Prompt' },
     ...(measured ? MEASURED_COLUMNS : []),
-    // A switch, and the "Not measured" badge beside it after a downgrade.
-    { key: 'enabled', label: 'Enabled', width: 'category' },
-    { key: 'actions', label: 'Actions', width: 'action', trailing: true },
+    { key: 'enabled', label: 'Enabled', width: 'control' },
+    { key: 'actions', label: 'Actions', width: 'control', trailing: true },
   ];
 }
 
@@ -202,17 +192,18 @@ const MEASURED_COLUMNS: readonly DataTableColumn[] = [
 ];
 
 /**
- * The prompt's topic, whether it names a brand, then its intent, buyer stage
- * and persona when set: one caption line. A prompt filed under a topic the
- * list cannot name (not loaded, or since deleted) says the topic is
- * unavailable, apart from a prompt filed under none.
+ * The prompt's topic as a tag, then whether it names a brand, its intent,
+ * buyer stage and persona when set: one caption line. A prompt filed under a
+ * topic the list cannot name (not loaded, or since deleted) says the topic is
+ * unavailable, apart from a prompt filed under none. A prompt kept after a
+ * downgrade but beyond the plan's limit says audits skip it.
  */
-function promptCaption(prompt: Prompt, topicNames: ReadonlyMap<string, string>): string {
+function promptCaption(prompt: Prompt, topicNames: ReadonlyMap<string, string>): ReactNode {
   const topic = prompt.topic_id
     ? (topicNames.get(prompt.topic_id) ?? 'Topic unavailable')
     : 'No topic';
-  return [
-    topic,
+  const detail = [
+    prompt.over_plan_limit ? 'Not measured: beyond the plan limit' : null,
     prompt.branded ? 'Branded' : 'Unbranded',
     prompt.intent ? intentLabels[prompt.intent] : null,
     prompt.buyer_stage ? buyerStageLabels[prompt.buyer_stage] : null,
@@ -220,6 +211,11 @@ function promptCaption(prompt: Prompt, topicNames: ReadonlyMap<string, string>):
   ]
     .filter(Boolean)
     .join(' · ');
+  return (
+    <>
+      <InlineTag>{topic}</InlineTag> {detail}
+    </>
+  );
 }
 
 /** A prompt's measured visibility, and its movement since the last run. */

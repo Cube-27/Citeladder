@@ -38,11 +38,15 @@ import { PromptLibraryDialogs } from './prompt-library-dialogs';
 import { PromptTable } from './prompt-table';
 import { useLatestPromptMeasurements } from './use-latest-prompt-measurements';
 import { ListScreen, RESERVED_CONTROLS } from '@/components/layout/page-shell';
-import { Stack } from '@/components/ui/layout';
-import { ResizableSplitPane } from '@/components/ui/split-pane';
+import { Callout } from '@/components/ui/callout';
 
 import { PromptActions, promptFilterControls } from './prompt-toolbar';
-import { TopicRail } from './topic-rail';
+import {
+  AddTopicDialog,
+  ManageTopicsDialog,
+  TOPICS_LOAD_ERROR,
+  TopicFilter,
+} from './topic-controls';
 import { useTopicMutations } from './use-topic-mutations';
 import { useActiveProject, useActiveWorkspaceId } from '@/lib/project/project-context';
 
@@ -68,20 +72,14 @@ function awaitingFirstLoad(
   return state.promptsLoading || (state.hasPrompts && !state.figuresRead);
 }
 
-/** The topic rail's widths, in px: the default, its bounds, and the room the library keeps. */
-const RAIL_DEFAULT_WIDTH = 240;
-const RAIL_MIN_WIDTH = 208;
-const RAIL_MAX_WIDTH = 400;
-const LIBRARY_MIN_WIDTH = 572;
-const RAIL_SEPARATOR_LABEL = 'Resize topics panel';
-
 /**
  * Prompt library client (F7). Owns the active prompt set (via F5 project
  * context), the topic/status/search filter state, and every CRUD, import,
  * lifecycle, and AI-generation mutation. Layout: one control row (Active /
- * Archived, search, filters) over the topics rail on the left and the prompt
- * table on the right. The desktop split is user-resizable; "Prompt Builder" opens the
- * sheet that steers generation and reviews its suggestions.
+ * Archived, search, Topic, filters) over the prompt table at the page's full
+ * width; topics are added, renamed and deleted from the Topic menu's dialogs
+ * (owner, 2026-11-06). "Prompt Builder" opens the sheet that steers
+ * generation and reviews its suggestions.
  */
 // react-doctor-disable-next-line react-doctor/no-giant-component -- this component only orchestrates queries/mutations; toolbar, topic rail, table, empty state, and dialogs are extracted.
 export function PromptLibrary({
@@ -112,6 +110,7 @@ export function PromptLibrary({
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builderStep, setBuilderStep] = useState<BuilderStep>('business');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [topicDialog, setTopicDialog] = useState<'add' | 'manage' | null>(null);
   const hasCompetitors = (useActiveProject()?.competitors.length ?? 0) > 0;
 
   const topicsQuery = useQuery({
@@ -257,6 +256,12 @@ export function PromptLibrary({
     },
   });
 
+  // A fresh Add topic starts without the last attempt's error.
+  const openAddTopic = () => {
+    topicMutations.create.reset();
+    setTopicDialog('add');
+  };
+
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const confirmDelete = (pending: PendingDelete) => {
     if (pending.kind === 'topic') return topicMutations.remove.mutate(pending.topic);
@@ -378,6 +383,15 @@ export function PromptLibrary({
         filters,
         onFiltersChange: setFilters,
         personas,
+        topic: (
+          <TopicFilter
+            topics={topics}
+            selectedTopicId={selectedTopicId}
+            onSelect={setSelectedTopicId}
+            onAdd={openAddTopic}
+            onManage={() => setTopicDialog('manage')}
+          />
+        ),
       })}
     >
       <>
@@ -395,36 +409,31 @@ export function PromptLibrary({
           onReview={() => openBuilder('review')}
         />
 
-        <ResizableSplitPane
-          listId="prompt-topic-rail"
-          separatorLabel={RAIL_SEPARATOR_LABEL}
-          defaultWidth={RAIL_DEFAULT_WIDTH}
-          minWidth={RAIL_MIN_WIDTH}
-          maxWidth={RAIL_MAX_WIDTH}
-          minDetailWidth={LIBRARY_MIN_WIDTH}
-          stickyList
-          list={
-            <TopicRail
-              topics={topics}
-              selectedTopicId={selectedTopicId}
-              onSelect={setSelectedTopicId}
-              onCreate={async (name, parentId) => {
-                await topicMutations.create.mutateAsync({ name, parentId });
-              }}
-              onDelete={(topic) => setPendingDelete({ kind: 'topic', topic })}
-              onRename={async (topic, name) => {
-                await topicMutations.rename.mutateAsync({ topic, name });
-              }}
-              isCreating={topicMutations.create.isPending}
-              loadError={topicsQuery.isError}
-              actionError={topicMutations.error}
-            />
-          }
-        >
-          <Stack gap="compact" className="min-w-0 content-start">
-            {libraryBody}
-          </Stack>
-        </ResizableSplitPane>
+        {topicsQuery.isError ? <Callout tone="negative">{TOPICS_LOAD_ERROR}</Callout> : null}
+        {libraryBody}
+
+        <AddTopicDialog
+          open={topicDialog === 'add'}
+          onOpenChange={(open) => setTopicDialog(open ? 'add' : null)}
+          topics={topics}
+          onCreate={async (name, parentId) => {
+            await topicMutations.create.mutateAsync({ name, parentId });
+          }}
+          isCreating={topicMutations.create.isPending}
+          error={topicMutations.create.isError ? topicMutations.error : null}
+        />
+        <ManageTopicsDialog
+          open={topicDialog === 'manage'}
+          onOpenChange={(open) => setTopicDialog(open ? 'manage' : null)}
+          topics={topics}
+          onRename={async (topic, name) => {
+            await topicMutations.rename.mutateAsync({ topic, name });
+          }}
+          onDelete={(topic) => setPendingDelete({ kind: 'topic', topic })}
+          onAdd={openAddTopic}
+          loadError={topicsQuery.isError}
+          actionError={topicMutations.create.isError ? null : topicMutations.error}
+        />
 
         <PromptLibraryDialogs
           pendingDelete={pendingDelete}
