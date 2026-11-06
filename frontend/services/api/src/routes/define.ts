@@ -193,6 +193,29 @@ function methodNotAllowed(method: string): never {
   throw new ApiError(405, 'Method Not Allowed', { headers: { allow: method } });
 }
 
+/**
+ * The capability gate and API key scope a route declares, from its command's
+ * permission or its own. Writes default to `run`; the gate precedes parameter
+ * validation.
+ */
+function routeGate(
+  route: PermissionDeclaration & { path: string; authorize?: string },
+  method: string,
+  scoped: boolean,
+): { capability: WorkspaceCapability | undefined; scope: ApiKeyScope | undefined } {
+  const { permission } = route;
+  if (permission && (!scoped || route.capability || route.scope))
+    throw new Error(
+      `A command's route resolves a workspace and declares only its permission: ${route.path}`,
+    );
+  const capability =
+    permission?.capability ?? route.capability ?? (method === 'get' ? undefined : 'run');
+  // A link or an `<img>` reads through the path project; a gated route never does.
+  if (route.authorize === 'project' && capability !== undefined)
+    throw new Error(`A gated route resolves the active workspace (active-project): ${route.path}`);
+  return { capability, scope: permission?.scope ?? route.scope };
+}
+
 export function defineRoute<
   const Path extends ParamSpecs,
   const Query extends ParamSpecs,
@@ -209,17 +232,7 @@ export function defineRoute<
       ? ACTIVE_WORKSPACE_HEADERS
       : z.object({});
   const exposure = route.exposure ?? 'browser';
-  // Writes default to `run`; the capability gate precedes parameter validation.
-  const capability =
-    route.permission?.capability ?? route.capability ?? (method === 'get' ? undefined : 'run');
-  const scope = route.permission?.scope ?? route.scope;
-  // A link or an `<img>` reads through the path project; a gated route never does.
-  if (byProject && capability !== undefined)
-    throw new Error(`A gated route resolves the active workspace (active-project): ${route.path}`);
-  if (route.permission && (!scoped || route.capability || route.scope))
-    throw new Error(
-      `A command's route resolves a workspace and declares only its permission: ${route.path}`,
-    );
+  const { capability, scope } = routeGate(route, method, scoped);
   const responses = {
     [status]: route.response,
     ...(route.alsoStatus ? { [route.alsoStatus]: route.response } : {}),
