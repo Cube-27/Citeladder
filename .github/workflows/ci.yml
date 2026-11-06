@@ -86,8 +86,9 @@ jobs:
         run: pnpm quality:check -- --scope frontend
       - name: Test duplication advisory
         run: pnpm report:duplicates:tests
+      # No `--with-deps`: see the E2E job's install step.
       - name: Install docs test browser
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install chromium
       - name: Documentation browser checks
         run: |
           log="$(git rev-parse --absolute-git-dir)/docs-browser.log"
@@ -275,12 +276,15 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-frontend
-      # Not cached on purpose. Measured across recent runs this whole step is
-      # 20-32s, most of it the `--with-deps` apt install, which no browser
-      # cache can skip. A cache restore would save ~10s and cost its own
-      # restore time, so it does not pay for the extra moving part.
+      # No `--with-deps`: on the ubuntu runner image it installed only nine
+      # font packages (CJK, Thai, Unifont, FreeFont, X fonts) that no page
+      # here renders, and that apt download from the Ubuntu mirror once took
+      # 9.5 of an 11-minute job. The image already has every library
+      # Chromium links; if one ever goes missing, Playwright names it at
+      # launch. `--only-shell`: the tests run headless, which uses only the
+      # headless shell, so the full Chrome build is not downloaded.
       - name: Install Playwright browser
-        run: ./node_modules/.bin/playwright install --with-deps chromium
+        run: ./node_modules/.bin/playwright install --only-shell chromium
       - name: Playwright
         env:
           E2E_FILES: ${{ needs.changes.outputs.e2e_args }}
