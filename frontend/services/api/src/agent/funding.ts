@@ -31,7 +31,7 @@ import {
   type ModelPrice,
 } from '../billing/ai-pricing.ts';
 import { conversationInputBytes } from '../models/conversation.ts';
-import { enforceWorkspaceRequest } from '../abuse/usage.ts';
+import { spendBudget } from '../abuse/usage.ts';
 import { agentSettings } from './config.ts';
 import { AgentError, agentPolicy, type Run, type Scope } from './contracts.ts';
 import type { Admission, FundingIdentity } from './store.ts';
@@ -99,11 +99,7 @@ export function agentAdmission(settings: Settings, platform: GatewaySettings): A
       throw new ApiError(429, 'Workspace active Agent limit exceeded', {
         headers: { 'retry-after': String(settings.retryAfterSeconds) },
       });
-    await enforceWorkspaceRequest(db, scope.workspaceId, {
-      operation: 'agent.runs',
-      limit: settings.dailyLimit,
-      windowSeconds: settings.dailyWindowSeconds,
-    });
+    await spendBudget(db, settings.dailyRuns, scope.workspaceId);
     return funding;
   };
 }

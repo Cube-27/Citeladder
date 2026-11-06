@@ -1,12 +1,11 @@
 import {
   ConfigError,
-  configEnvironment,
   demoAccessExpired,
   policy,
-  resolveSettingSpec,
   secretIsWeak,
   type ServiceConfig,
 } from '../config.ts';
+import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
 
 export const mcpPolicy = policy.mcp.constants;
 /**
@@ -39,13 +38,10 @@ function assertEncryptionKey(config: ServiceConfig, encryptionKey: string) {
       'ENCRYPTION_KEY must meet the production strength policy and be independent of JWT_SECRET_KEY',
     );
 }
-export function loadMcpConfig(
-  config: ServiceConfig,
-  env: Record<string, string | undefined> = configEnvironment(config),
-) {
+export function loadMcpConfig(config: ServiceConfig, source: SettingSource = config.settings) {
   const value = (name: keyof typeof policy.mcp.settings) =>
-    resolveSettingSpec(policy.mcp.settings[name], env);
-  let browserOrigin = String(resolveSettingSpec(policy.settings.frontend_url, env)).replace(
+    resolveSettingSpec(policy.mcp.settings[name], source);
+  let browserOrigin = String(resolveSettingSpec(policy.settings.frontend_url, source)).replace(
     /\/$/u,
     '',
   );
@@ -54,7 +50,7 @@ export function loadMcpConfig(
   const configured = config.auth.publicApiUrl.trim();
   let origin = configured.replace(/\/$/u, '');
   const allowedEmail = String(value('allowed_account_email')).trim().toLowerCase();
-  const encryptionKey = String(resolveSettingSpec(policy.settings.encryption_key, env));
+  const encryptionKey = String(resolveSettingSpec(policy.settings.encryption_key, source));
   if (enabled) {
     assertEncryptionKey(config, encryptionKey);
     if (!configured) throw new ConfigError('PUBLIC_API_URL must be configured for MCP');
@@ -76,7 +72,7 @@ export function loadMcpConfig(
     if (
       config.demo.enabled &&
       allowedEmail !==
-        String(resolveSettingSpec(policy.settings.dev_login_email, env)).trim().toLowerCase()
+        String(resolveSettingSpec(policy.settings.dev_login_email, source)).trim().toLowerCase()
     )
       throw new ConfigError('Demo MCP access must be restricted to the provisioned dev account');
   }

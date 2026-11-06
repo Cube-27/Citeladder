@@ -48,7 +48,7 @@ import {
 import { trustedClientIdentity } from '../auth/client-identity.ts';
 import { assertSignupDomainAllowed } from '../auth/reserved-domains.ts';
 import { requireHumanVerification, turnstileTokenSchema } from '../auth/human-verification.ts';
-import { enforceSubjectRequest, releaseSubjectBudget } from '../abuse/usage.ts';
+import { budget, releaseBudget, spendBudget } from '../abuse/usage.ts';
 import type { Context } from 'hono';
 import type { Database } from '../db/database.ts';
 import { passwordSchema } from '../auth/password.ts';
@@ -56,9 +56,7 @@ import {
   requestChallenge,
   consumeChallenge,
   changePassword,
-  loginFailureBudget,
   verifyBudgetedPassword,
-  LOGIN_FAILURE_OPERATION,
 } from '../auth/challenges.ts';
 import {
   accountTermsStatus,
@@ -102,26 +100,17 @@ async function mailboxMeter(
   subject?: string,
   verification?: Parameters<typeof requireHumanVerification>[2],
 ) {
-  const cfg = policy.auth.mailbox;
-  const budget = {
-    operation: 'auth.mailbox.request',
-    limit: cfg.request_limit,
-    windowSeconds: cfg.request_window_seconds,
-  };
-  await enforceSubjectRequest(db, 'client', trustedClientIdentity(c, config), budget);
+  await spendBudget(db, budget('mailbox_request_client'), trustedClientIdentity(c, config));
   if (verification) await requireHumanVerification(c, config, verification);
-  if (subject) await enforceSubjectRequest(db, 'email', subject, budget);
+  if (subject) await spendBudget(db, budget('mailbox_request_email'), subject);
 }
 
 async function meter(db: Database, c: Context, config: ServiceConfig, register = false) {
-  const cfg = config.auth.limits;
-  const limit = register ? cfg.register_client_limit : cfg.login_client_limit;
-  const windowSeconds = register ? cfg.register_window_seconds : cfg.login_window_seconds;
-  await enforceSubjectRequest(db, 'client', trustedClientIdentity(c, config), {
-    operation: register ? 'auth.register.client' : 'auth.login.client',
-    limit,
-    windowSeconds,
-  });
+  await spendBudget(
+    db,
+    budget(register ? 'register_client' : 'login_client', config.settings),
+    trustedClientIdentity(c, config),
+  );
 }
 
 /**
@@ -352,13 +341,13 @@ export const authRoutes = [
       // outrun the budget; success hands its unit and earlier failures back. An
       // exhausted address refuses even a correct password until its window
       // passes or a password reset proves mailbox ownership.
-      await enforceSubjectRequest(db, 'email', payload.email, loginFailureBudget(config));
+      await spendBudget(db, budget('login_email_failure', config.settings), payload.email);
       const user = await authenticateUser(db, payload.email, payload.password);
       if (!user) throw new ApiError(401, 'Invalid credentials');
       // Two independent writes, both done before the session is issued: sent
       // together they cost one database round trip instead of two.
       await Promise.all([
-        releaseSubjectBudget(db, 'email', payload.email, LOGIN_FAILURE_OPERATION),
+        releaseBudget(db, 'login_email_failure', payload.email),
         // The box ticked on the sign-in form, recorded once per revision with the account.
         recordAccountTermsDecision(db, {
           actorId: user.id,

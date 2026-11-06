@@ -1,12 +1,11 @@
 /** Service policy and validated environment overrides. */
 import ipaddr from 'ipaddr.js';
 import { ConfigError } from './config/config-error.ts';
-import { executionSettings } from './config/execution.ts';
+import { executionSettings, executionSpecs } from './config/execution.ts';
 export { ConfigError } from './config/config-error.ts';
 import { brandEvidence } from './config/brand-evidence.ts';
 import { abuse } from './config/abuse.ts';
 import { errors } from './config/errors.ts';
-import { compareText } from './text-order.ts';
 import agentRuntime from './config/agent-runtime.json' with { type: 'json' };
 import modelGateway from './config/model-gateway.json' with { type: 'json' };
 import { discovery } from './config/discovery.ts';
@@ -28,7 +27,6 @@ import { integrations, traffic, analytics, referrals, authOAuth } from './config
 import integrationCredentials from './config/integration-credentials.json' with { type: 'json' };
 import { siteHealth, siteHealthRuntime } from './config/site-health.ts';
 import { crawlers } from './config/crawlers.ts';
-import { crawlLogs } from './config/crawl-logs.ts';
 import { validateSiteHealthSettings } from './config/site-health/validation.ts';
 import { commerce, commerceShelf } from './config/commerce.ts';
 import { auditSchedules } from './config/audit-schedules.ts';
@@ -55,26 +53,21 @@ import {
   type BillingSettings,
   type RazorpaySettings,
 } from './billing/config.ts';
-import { epochMicros, parseDatetime } from './http/datetimes.ts';
 import { parseTrustedProxies, type TrustedProxies } from './auth/client-identity.ts';
-
-type SettingSpec = {
-  env: string[];
-  type: string;
-  default: unknown;
-  values?: unknown[];
-  minimum?: number;
-  exclusive_minimum?: number;
-  maximum?: number;
-  exclusive_maximum?: number;
-};
+import { loadWorkerSettings } from './config/analytics.ts';
+import {
+  resolveSpec,
+  Settings,
+  type Env,
+  type SettingSource,
+  type SettingSpec,
+} from './config/settings.ts';
 
 export const policy = {
   entitlements,
   development_env_names: api.development_env_names,
   secret_policy: authRuntime.secret_policy,
   crawlers,
-  crawl_logs: crawlLogs,
   billing,
   task_queue: queue,
   api,
@@ -96,19 +89,13 @@ export const policy = {
   search_intelligence: {
     ...searchIntelligence,
     task_kind: 'search_intelligence_acquisition',
-    connection_test_ok: providers.test_status_ok,
   },
   demand: {
     ...demand,
     query_page_dataset: traffic.DATASET_GSC_QUERY_PAGE_DAILY,
   },
   visibility: { ...visibility, ...promptLibrary.cohorts },
-  projects: {
-    ...projectReads,
-    prompt_set_name: promptLibrary.prompt_set_name,
-    min_repetitions: audits.min_repetitions,
-    max_repetitions: audits.max_repetitions,
-  },
+  projects: projectReads,
   errors,
   agent: { ...agentRuntime },
   abuse,
@@ -134,13 +121,6 @@ export const policy = {
     refresh: {
       ...opportunityDefaults.refresh,
       finding_class_defect: 'defect',
-      change_analyzer_version: siteHealth.change_intel.analyzer_version,
-      change_class_regression: siteHealth.change_intel.class_regression,
-      change_class_critical: siteHealth.change_intel.class_critical,
-      change_max_observations: siteHealth.change_intel.max_observations,
-      change_state_available: siteHealth.change_intel.state_available,
-      content_change_field: siteHealth.change_intel.change_field,
-      source_page_outcome_inspected: sourcePageVocabulary.INSPECTION_INSPECTED,
     },
   },
   models: { ...modelGateway, jev, quality },
@@ -154,24 +134,10 @@ export const policy = {
   site_health: siteHealth,
   site_health_runtime: siteHealthRuntime,
   web_fetch: siteHealth.web_fetch,
-  traffic: {
-    ...traffic,
-    url_schemes: siteHealth.web_fetch.schemes,
-    url_ports: siteHealth.web_fetch.ports,
-    ignored_query_keys: [...siteHealth.tracking_params, ...siteHealth.ignored_query_keys].sort(
-      compareText,
-    ),
-  },
+  traffic,
   agent_context: agentContext,
   agent_skills: agentSkills,
-  mcp: {
-    ...mcp,
-    terms_revision: authRuntime.terms_revision,
-    constants: {
-      ...mcp.constants,
-      api_request_body_max_bytes: api.request_body_max_bytes,
-    },
-  },
+  mcp,
   prompts: {
     ...promptLibrary.prompts,
     generation: promptGeneration,
@@ -180,109 +146,53 @@ export const policy = {
       quality_gates_reported: qualityGatesReported,
     },
   },
-  brand_identity: {
-    ...brandIdentity,
-    suggestion_pending: audits.observed_competitors.status_pending,
-    suggestion_accepted: audits.observed_competitors.status_accepted,
-  },
+  brand_identity: brandIdentity,
   brand_evidence: brandEvidence,
   brand_logos: brandLogos,
   internal_links: internalLinks,
   perception,
 };
 
-const TRUE_VALUES = new Set(['1', 'on', 't', 'true', 'y', 'yes']);
-const FALSE_VALUES = new Set(['0', 'off', 'f', 'false', 'n', 'no']);
+/** Where the service listens; platform variables, resolved like every other setting. */
+const listenSpecs = {
+  host: { env: ['HOST'], type: 'str', default: '' },
+  port: { env: ['PORT'], type: 'str', default: '' },
+} satisfies Record<string, SettingSpec>;
 
-function envValue(spec: SettingSpec, env: Record<string, string | undefined>): string | undefined {
-  // Environment aliases are case-insensitive.
-  const byLowerName = new Map(
-    Object.entries(env).map(([name, value]) => [name.toLowerCase(), value]),
+function isSettingSpec(value: object): value is SettingSpec {
+  return (
+    'env' in value &&
+    Array.isArray(value.env) &&
+    'type' in value &&
+    typeof value.type === 'string' &&
+    'default' in value
   );
-  for (const name of spec.env) {
-    const value = byLowerName.get(name.toLowerCase());
-    if (value !== undefined) return value;
-  }
-  return undefined;
 }
 
-function checkBounds(name: string, value: number, spec: SettingSpec): number {
-  if (spec.exclusive_minimum !== undefined && value <= spec.exclusive_minimum) {
-    throw new ConfigError(`${name} must be > ${spec.exclusive_minimum}`);
-  }
-  if (spec.minimum !== undefined && value < spec.minimum) {
-    throw new ConfigError(`${name} must be >= ${spec.minimum}`);
-  }
-  if (spec.maximum !== undefined && value > spec.maximum) {
-    throw new ConfigError(`${name} must be <= ${spec.maximum}`);
-  }
-  if (spec.exclusive_maximum !== undefined && value >= spec.exclusive_maximum) {
-    throw new ConfigError(`${name} must be < ${spec.exclusive_maximum}`);
-  }
-  return value;
+/** Every setting the policy declares, with the key it is declared under. */
+function settingCatalog(): [string, SettingSpec][] {
+  const catalog: [string, SettingSpec][] = [];
+  const seen = new Set<object>();
+  const visit = (name: string, value: unknown) => {
+    if (value === null || typeof value !== 'object' || seen.has(value)) return;
+    seen.add(value);
+    if (isSettingSpec(value)) catalog.push([name, value]);
+    else if (!Array.isArray(value) && !(value instanceof Set) && !(value instanceof Map))
+      for (const [key, child] of Object.entries(value)) visit(key, child);
+  };
+  visit('policy', { policy, executionSpecs, listenSpecs });
+  return catalog;
 }
+const catalog = settingCatalog();
 
-function parseInteger(name: string, raw: string, spec: SettingSpec): number {
-  if (!/^[+-]?\d+$/u.test(raw.trim())) throw new ConfigError(`${name} must be an integer`);
-  return checkBounds(name, Number(raw.trim()), spec);
-}
-
-function parseFloatSetting(name: string, raw: string, spec: SettingSpec): number {
-  const value = Number(raw.trim());
-  if (!raw.trim() || !Number.isFinite(value)) throw new ConfigError(`${name} must be a number`);
-  return checkBounds(name, value, spec);
-}
-
-function parseBoolean(name: string, raw: string): boolean {
-  const normalized = raw.trim().toLowerCase();
-  if (TRUE_VALUES.has(normalized)) return true;
-  if (FALSE_VALUES.has(normalized)) return false;
-  throw new ConfigError(`${name} must be a boolean`);
-}
-
-function parseDatetimeSetting(name: string, raw: string): Date | null {
-  if (!raw.trim()) return null;
-  // Refuse calendar-invalid or free-form timestamps.
-  const parsed = parseDatetime(raw.trim());
-  if (parsed === null) throw new ConfigError(`${name} must be a timestamp`);
-  // A naive timestamp is kept as "present but unusable"; demo access then
-  // fails closed exactly as `demo_access_expired` does for a naive value.
-  if (parsed.offsetSeconds === null) return new Date(Number.NaN);
-  return new Date(Number(epochMicros(parsed) / 1000n));
-}
-
-function parseSetting(name: string, spec: SettingSpec, raw: string): unknown {
-  switch (spec.type) {
-    case 'int':
-      return parseInteger(name, raw, spec);
-    case 'float':
-      return parseFloatSetting(name, raw, spec);
-    case 'bool':
-      return parseBoolean(name, raw);
-    case 'datetime':
-      return parseDatetimeSetting(name, raw);
-    case 'literal':
-      if (!spec.values?.includes(raw)) {
-        throw new ConfigError(`${name} must be one of ${spec.values?.join(', ')}`);
-      }
-      return raw;
-    default:
-      return raw;
-  }
-}
-
-function resolveSpec(
-  name: string,
-  spec: SettingSpec,
-  env: Record<string, string | undefined>,
-): unknown {
-  const raw = envValue(spec, env);
-  return raw === undefined ? spec.default : parseSetting(name, spec, raw);
+/** Resolve and validate every catalogued setting once from `env`. */
+function resolveSettings(env: Env): Settings {
+  return new Settings(catalog, env);
 }
 
 /** Pool, timeout and TLS settings shared by the service and terminal operators. */
-export function databaseSettings(env: Record<string, string | undefined>) {
-  const setting = (name: keyof typeof policy.settings) => resolveSetting(name, env);
+export function databaseSettings(source: SettingSource) {
+  const setting = (name: keyof typeof policy.settings) => resolveSetting(name, source);
   return {
     poolSize: setting('db_pool_size') as number,
     maxOverflow: setting('db_max_overflow') as number,
@@ -297,11 +207,13 @@ export function databaseSettings(env: Record<string, string | undefined>) {
   };
 }
 
-function resolveSetting(name: string, env: Record<string, string | undefined>): unknown {
-  return resolveSpec(name, policy.settings[name as keyof typeof policy.settings], env);
+function resolveSetting(name: keyof typeof policy.settings, source: SettingSource): unknown {
+  return resolveSpec(name, policy.settings[name], source);
 }
 
 export type ServiceConfig = {
+  /** Every owner's settings, resolved once from the startup environment. */
+  settings: Settings;
   execution: ReturnType<typeof executionSettings>;
   billing: BillingSettings;
   razorpay: RazorpaySettings;
@@ -365,8 +277,8 @@ export type ServiceConfig = {
 // The TCP port range is a protocol fact, not policy; the default is exported.
 const MAX_TCP_PORT = 65_535;
 
-function parsePort(raw: string | undefined): number {
-  if (raw === undefined || raw.trim() === '') return policy.api.service_port;
+function parsePort(raw: string): number {
+  if (raw.trim() === '') return policy.api.service_port;
   const port = Number(raw);
   if (!Number.isInteger(port) || port < 1 || port > MAX_TCP_PORT) {
     throw new ConfigError('PORT must be a TCP port number');
@@ -431,14 +343,11 @@ function productionFrontendUrl(value: string): boolean {
   }
 }
 
-function productionSecretProblems(
-  config: ServiceConfig,
-  env: Record<string, string | undefined>,
-): string[] {
+function productionSecretProblems(config: ServiceConfig): string[] {
   const secrets = {
     JWT_SECRET_KEY: config.session.secretKey,
-    ENCRYPTION_KEY: String(resolveSetting('encryption_key', env)),
-    REFERRAL_HASH_SALT: String(resolveSetting('referral_hash_salt', env)),
+    ENCRYPTION_KEY: String(resolveSetting('encryption_key', config.settings)),
+    REFERRAL_HASH_SALT: String(resolveSetting('referral_hash_salt', config.settings)),
     API_KEY_PEPPER: config.auth.apiKeyPepper,
   };
   const values = Object.values(secrets);
@@ -457,7 +366,7 @@ function productionSecretProblems(
     issues.push('database password does not meet the production strength policy');
   if (values.includes(password))
     issues.push('database password must be independent of application secrets');
-  const login = String(resolveSetting('dev_login_password', env));
+  const login = String(resolveSetting('dev_login_password', config.settings));
   const rules = policy.secret_policy.login_password;
   const length = [...login].length;
   if (
@@ -472,13 +381,9 @@ function productionSecretProblems(
   return issues;
 }
 
-export function assertDeployable(
-  config: ServiceConfig,
-  env: Record<string, string | undefined>,
-  force = false,
-): void {
+export function assertDeployable(config: ServiceConfig, force = false): void {
   if (isDevelopmentEnv(config.appEnv) && !force) return;
-  const issues = productionSecretProblems(config, env);
+  const issues = productionSecretProblems(config);
   if (config.auth.publicSignup && !config.auth.mailKey)
     issues.push('RESEND_API_KEY is required for public signup');
   issues.push(...turnstileProblems(config));
@@ -499,7 +404,7 @@ export function assertDeployable(
     config.auth.trustedProxies.some(([, prefix]) => prefix === 0)
   )
     issues.push('trusted_proxy_cidrs must contain configured networks without catch-all ranges');
-  if (resolveSettingSpec(policy.audits.dev_test_allow_platform, env))
+  if (config.settings.of(policy.audits.dev_test_allow_platform))
     issues.push(
       'dev_test_login_allow_platform_credentials must be disabled outside development/test',
     );
@@ -513,41 +418,34 @@ export function assertDeployable(
   if (issues.length) throw new ConfigError(issues.join('; '));
 }
 
-// Auxiliary owners resolve the same startup input. Keep it out of loggable
-// configuration objects because an environment can contain unrelated secrets.
-const environments = new WeakMap<ServiceConfig, Record<string, string | undefined>>();
-export function configEnvironment(config: ServiceConfig): Record<string, string | undefined> {
-  return environments.get(config) ?? {};
-}
-
-/** Resolve the service configuration from `env` (defaults to `process.env`). */
-export function loadConfig(env: Record<string, string | undefined> = process.env): ServiceConfig {
-  validateSiteHealthSettings(
+/**
+ * Resolve the service configuration from `env` (defaults to `process.env`):
+ * every catalogued setting is resolved and validated here, once, and owners
+ * read `config.settings` instead of the environment.
+ */
+export function loadConfig(env: Env = process.env): ServiceConfig {
+  const settings = resolveSettings(env);
+  const values = <K extends string>(specs: Record<K, SettingSpec>) =>
     Object.fromEntries(
-      Object.entries(siteHealth.settings).map(([name, spec]) => [
-        name,
-        resolveSettingSpec(spec, env),
-      ]),
-    ),
-  );
-  validateJevSettings(
-    Object.fromEntries(
-      Object.entries(jev).map(([name, spec]) => [name, resolveSettingSpec(spec, env)]),
-    ) as Record<keyof typeof jev, unknown>,
-  );
-  const setting = (name: keyof typeof policy.settings) => resolveSetting(name, env);
+      Object.entries<SettingSpec>(specs).map(([name, spec]) => [name, settings.of(spec)]),
+    ) as Record<K, unknown>;
+  validateSiteHealthSettings(values(siteHealth.settings));
+  validateJevSettings(values(jev));
+  loadWorkerSettings(settings);
+  const setting = (name: keyof typeof policy.settings) => resolveSetting(name, settings);
   const config: ServiceConfig = {
-    execution: executionSettings(env),
-    billing: billingSettings(env),
-    razorpay: razorpaySettings(env),
+    settings,
+    execution: executionSettings(settings),
+    billing: billingSettings(settings),
+    razorpay: razorpaySettings(settings),
     appName: setting('app_name') as string,
     appEnv: setting('app_env') as string,
     // Every interface by default, as a bridged container needs; a host-network
     // local deployment pins loopback.
-    host: env.HOST?.trim() || '0.0.0.0',
-    port: parsePort(env.PORT),
+    host: String(settings.of(listenSpecs.host)).trim() || '0.0.0.0',
+    port: parsePort(String(settings.of(listenSpecs.port))),
     databaseUrl: setting('database_url') as string,
-    database: databaseSettings(env),
+    database: databaseSettings(settings),
     requestIdHeader: setting('request_id_header') as string,
     session: {
       secretKey: setting('jwt_secret_key') as string,
@@ -565,17 +463,11 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       publicWebsiteUrl: setting('public_website_url') as string,
       apiKeyPepper: setting('api_key_pepper') as string,
       trustedProxies: parseTrustedProxies(setting('trusted_proxy_cidrs') as string),
-      oauthSettings: {
-        ...Object.fromEntries(
-          Object.entries(policy.auth.oauth.settings).map(([name, spec]) => [
-            name,
-            resolveSettingSpec(spec, env),
-          ]),
-        ),
-      } as Record<string, string | number | boolean>,
-      limits: Object.fromEntries(
-        Object.entries(policy.abuse).map(([name, spec]) => [name, resolveSettingSpec(spec, env)]),
-      ) as ServiceConfig['auth']['limits'],
+      oauthSettings: values(policy.auth.oauth.settings) as Record<
+        string,
+        string | number | boolean
+      >,
+      limits: values(policy.abuse) as ServiceConfig['auth']['limits'],
       turnstile: turnstileSettings(
         setting('turnstile_secret_key') as string,
         setting('app_env') as string,
@@ -587,8 +479,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     },
     readinessTimeoutMs: policy.api.readiness_timeout_seconds * 1000,
   };
-  assertDeployable(config, env);
-  environments.set(config, { ...env });
+  assertDeployable(config);
   return config;
 }
 
@@ -598,64 +489,4 @@ export function demoAccessExpired(config: ServiceConfig, now: Date = new Date())
   const expiresAt = config.demo.expiresAt;
   if (expiresAt === null || Number.isNaN(expiresAt.getTime())) return true;
   return now.getTime() >= expiresAt.getTime();
-}
-
-export type WorkerSettings = {
-  leaseReclaimBatchSize: number;
-  drainBudgetSeconds: number;
-  leaseTtlSeconds: number;
-  heartbeatIntervalSeconds: number;
-  taskMaxAttempts: number;
-  pollIntervalSeconds: number;
-  /** The first retry's base wait; each later attempt doubles it up to `retryMaxDelaySeconds`. */
-  retryDelaySeconds: number;
-  retryMaxDelaySeconds: number;
-  accessCheckTtlSeconds: number;
-};
-
-/** Resolve one policy setting with its environment override. */
-export function resolveSettingSpec(
-  spec: SettingSpec,
-  env: Record<string, string | undefined> = process.env,
-): unknown {
-  return resolveSpec(spec.env[0] ?? 'setting', spec, env);
-}
-
-export function activeJobRetrySeconds(
-  env: Record<string, string | undefined> = process.env,
-): number {
-  return resolveSpec(
-    'active_job_retry_after_seconds',
-    policy.abuse.active_job_retry_after_seconds,
-    env,
-  ) as number;
-}
-
-/** The analytics worker knobs (`ANALYTICS_*`), refusing a heartbeat slower than the lease. */
-export function loadWorkerSettings(
-  env: Record<string, string | undefined> = process.env,
-): WorkerSettings {
-  const specs = policy.analytics.worker_settings;
-  const setting = (name: keyof typeof specs) => resolveSpec(name, specs[name], env) as number;
-  const settings: WorkerSettings = {
-    leaseReclaimBatchSize: setting('lease_reclaim_batch_size'),
-    drainBudgetSeconds: setting('drain_budget_seconds'),
-    leaseTtlSeconds: setting('lease_ttl_seconds'),
-    heartbeatIntervalSeconds: setting('heartbeat_interval_seconds'),
-    taskMaxAttempts: setting('task_max_attempts'),
-    pollIntervalSeconds: setting('poll_interval_seconds'),
-    retryDelaySeconds: setting('retry_delay_seconds'),
-    retryMaxDelaySeconds: setting('retry_max_delay_seconds'),
-    accessCheckTtlSeconds: setting('access_check_ttl_seconds'),
-  };
-  // A heartbeat slower than the lease guarantees expiry during healthy work;
-  // the analytics worker checks the per-kind leases its registry declares.
-  if (settings.heartbeatIntervalSeconds >= settings.leaseTtlSeconds) {
-    throw new ConfigError('heartbeat_interval_seconds must be shorter than every lease TTL');
-  }
-  // A cap below the base would cut every backoff short of the configured first wait.
-  if (settings.retryMaxDelaySeconds < settings.retryDelaySeconds) {
-    throw new ConfigError('retry_max_delay_seconds must not be below retry_delay_seconds');
-  }
-  return settings;
 }

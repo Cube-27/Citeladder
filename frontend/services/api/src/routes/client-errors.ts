@@ -7,7 +7,7 @@ import { clientErrorReportSchema, withoutQueryStrings } from '@citeladder/contra
 import type { Context } from 'hono';
 import { z } from 'zod';
 
-import { enforceSubjectRequest } from '../abuse/usage.ts';
+import { budget, spendBudget } from '../abuse/usage.ts';
 import { trustedClientIdentity } from '../auth/client-identity.ts';
 import { sessionUser, type SessionUser } from '../auth/session.ts';
 import { activeWorkspaceMembership } from '../auth/workspace.ts';
@@ -63,12 +63,11 @@ export const clientErrorRoutes = [
       const raw = await c.req.text();
       if (Buffer.byteLength(raw) > clientErrors.max_body_bytes)
         throw new ApiError(413, 'Request body too large');
-      const limits = config.auth.limits;
-      await enforceSubjectRequest(db, 'client', trustedClientIdentity(c, config), {
-        operation: 'client_errors.report',
-        limit: limits.client_error_client_limit,
-        windowSeconds: limits.client_error_window_seconds,
-      });
+      await spendBudget(
+        db,
+        budget('client_error_report', config.settings),
+        trustedClientIdentity(c, config),
+      );
       const report = await readBody(c, clientErrorReportSchema);
       const fields = {
         kind: report.kind,

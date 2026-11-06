@@ -1,5 +1,5 @@
 import type { Selectable } from 'kysely';
-import { resolveSettingSpec } from '../config.ts';
+import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
 import type { ProviderConnections } from '../generated/db-schema.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';
 import { providerPolicy, type ProviderTransport } from './config.ts';
@@ -18,7 +18,7 @@ type SecretConnection = Pick<
 export function connectionSecret(
   connection: SecretConnection,
   encryptionKey: string,
-  env: Record<string, string | undefined> = process.env,
+  env: SettingSource = process.env,
 ): string {
   let secret: string | null;
   try {
@@ -45,7 +45,7 @@ export function connectionSecret(
 function platformSecret(
   transport: ProviderTransport,
   reference: string,
-  env: Record<string, string | undefined>,
+  env: SettingSource,
 ): string | null {
   if (transport === 'dataforseo') {
     const spec = providerPolicy.platform_dataforseo;

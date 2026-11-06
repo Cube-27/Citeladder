@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { afterAll, describe, expect, it } from 'vitest';
-import { loadWorkerSettings } from '../src/config.ts';
+import { loadWorkerSettings } from '../src/config/analytics.ts';
 import { WorkspaceScope } from '../src/db/workspace-scope.ts';
 import { createSecretCipher } from '../src/integrations/fernet.ts';
 import { reviewBody } from '../src/routes/search-intelligence-contracts.ts';

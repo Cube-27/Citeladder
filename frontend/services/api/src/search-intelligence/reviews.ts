@@ -7,6 +7,7 @@ import { ApiError, notFound } from '../errors.ts';
 import { costCredits } from '../billing/ai-pricing.ts';
 import { workspaceCredentialMode } from '../billing/credential-mode.ts';
 import { ProviderError } from '../providers/errors.ts';
+import type { SettingSource } from '../config/settings.ts';
 import { resolveSite } from '../projects/site-resolution.ts';
 import { fetchWebsite } from '../safe-fetch.ts';
 import {
@@ -151,7 +152,7 @@ async function frozenConnection(
   trx: Database,
   scope: Scope,
   connectionId: Review['connection_id'],
-  credentials: { encryptionKey: string; env?: Record<string, string | undefined> },
+  credentials: { encryptionKey: string; env?: SettingSource },
 ) {
   const mode = await workspaceCredentialMode(trx, scope.workspace.workspaceId);
   const { connection, source } = await reviewConnection(trx, scope.workspace, mode, connectionId);
@@ -282,7 +283,7 @@ export async function createReview(
   options: {
     now?: Date;
     resolve?: typeof resolveCompetitor;
-    env?: Record<string, string | undefined>;
+    env?: SettingSource;
   } = {},
 ) {
   const prior = await existing(db, scope, key);

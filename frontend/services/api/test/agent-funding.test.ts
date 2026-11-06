@@ -97,7 +97,7 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       const limits = {
         ...settings,
         activeLimit: boundary === 'active' ? 1 : 10,
-        dailyLimit: 1,
+        dailyRuns: { ...settings.dailyRuns, limit: 1 },
       };
       const store = agents.store({
         admission: agentAdmission(limits, platform),
