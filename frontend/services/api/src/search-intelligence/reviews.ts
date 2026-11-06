@@ -26,7 +26,8 @@ import {
 } from './requests.ts';
 import type { Scope } from './reads.ts';
 import { runView } from './views.ts';
-import { connectionIdentity, reviewConnection } from './credentials.ts';
+import { reviewConnection } from './credentials.ts';
+import { connectionPoolIdentity } from '../providers/dataforseo-identity.ts';
 
 const error = (code: string, message: string) =>
   new ApiError(422, message, { code: asApiErrorCode(code) });
@@ -153,7 +154,7 @@ async function frozenConnection(
   const mode = await workspaceCredentialMode(trx, scope.workspace.workspaceId);
   const { connection, source } = await reviewConnection(trx, scope.workspace, mode, connectionId);
   try {
-    const identity = connectionIdentity(connection, credentials.encryptionKey, credentials.env);
+    const identity = connectionPoolIdentity(connection, credentials.encryptionKey, credentials.env);
     return { connection, source, identity };
   } catch (cause) {
     if (!(cause instanceof ProviderError) || source === 'byok') throw cause;

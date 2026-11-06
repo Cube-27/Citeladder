@@ -6,11 +6,10 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { policy } from '../config.ts';
 import { approvedEndpoint } from '../providers/connections.ts';
-import { providerPolicy, type Engine, type ProviderTransport } from '../providers/config.ts';
-import { dataforseoAccountIdentity } from '../providers/dataforseo-identity.ts';
-import { platformSecret } from '../providers/platform-secrets.ts';
+import { providerPolicy, type Engine } from '../providers/config.ts';
+import { dataforseoSecretIdentity } from '../providers/dataforseo-identity.ts';
+import { connectionSecret } from '../providers/platform-secrets.ts';
 import type { CapacityRequest } from '../providers/capacity.ts';
-import { createSecretCipher } from '../integrations/fernet.ts';
 import { answerRequestSchema } from '../answer-engines/contracts.ts';
 import { ProviderError } from '../providers/errors.ts';
 import { ownedAuditTask, type AuditTask } from '../queue/audit-queue.ts';
@@ -36,16 +35,6 @@ const routeSchema = z.object({
   funding: fundingSchema.optional(),
 });
 const unavailable = () => new ProviderError(auditPolicy.constants.error_no_connection);
-
-function requiredPlatformSecret(
-  transport: ProviderTransport,
-  reference: string,
-  env: Record<string, string | undefined>,
-) {
-  const secret = platformSecret(transport, reference, env);
-  if (secret === null) throw unavailable();
-  return secret;
-}
 
 type RouteSnapshot = z.infer<typeof routeSchema>;
 function assertRouteMatchesCatalog(task: AuditTask, route: RouteSnapshot) {
@@ -146,14 +135,7 @@ export async function loadExecutionContext(
     await assertFundingHold(trx, task, audit.id, route);
     let secret: string;
     try {
-      secret =
-        route.credential_source === 'platform'
-          ? requiredPlatformSecret(
-              connection.transport_provider as ProviderTransport,
-              connection.platform_credential_ref,
-              env,
-            )
-          : createSecretCipher(encryptionKey).decrypt(connection.api_key_encrypted);
+      secret = connectionSecret(connection, encryptionKey, env);
     } catch {
       throw unavailable();
     }
@@ -170,7 +152,7 @@ export async function loadExecutionContext(
       ...(route.funding ? { accountId: route.funding.funding_account_id } : {}),
       accountPoolIdentity:
         task.transport_provider === 'dataforseo' && route.credential_source === 'byok'
-          ? dataforseoAccountIdentity(connection.api_key_encrypted, encryptionKey)
+          ? dataforseoSecretIdentity(secret, encryptionKey)
           : '',
     };
     return {
