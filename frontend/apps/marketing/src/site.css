@@ -1725,6 +1725,21 @@ a.cl-fcard:hover {
   }
 }
 
+/* On a phone a split's product image is the desktop drawing scaled down
+   whole, as the hero's app is, never re-flowed to the phone's width: it lays
+   out 600px wide and zooms to the well (never up). Zoom scales layout too,
+   so the well's height follows with no script or shift. */
+@media (max-width: 767px) {
+  .cl-split-media .cl-frame--fluid .cl-frame-screen {
+    container-type: inline-size;
+  }
+
+  .cl-split-media .cl-frame--fluid .cl-frame-screen > * {
+    width: 600px;
+    zoom: min(1, tan(atan2(100cqi, 600px)));
+  }
+}
+
 /* ---------- CardRail: one sideways-scrolling row of fixed-width cards ---------- */
 .cl-rail {
   display: flex;
