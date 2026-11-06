@@ -23,27 +23,26 @@ export type RelatedCard = Readonly<{
 }>;
 
 /**
- * RelatedCards: where to go next, as a ruled index of links rather than boxes.
- * Each row is the link: title and summary, with a round arrow that fills on
- * hover. Two columns from tablet up, one on a phone.
+ * RelatedCards: where to go next, as a full-width editorial index (D38): each
+ * row is the link, a mono number, the title, its summary in a wider column
+ * and an arrow, between hairline rules. A `linkLabel` is for screen readers.
  */
 export function RelatedCards({ items }: Readonly<{ items: readonly RelatedCard[] }>) {
   return (
-    <ul className={cn('cl-related', items.length === 1 && 'cl-related--single')}>
-      {items.map((item) => (
+    <ul className="cl-related">
+      {items.map((item, index) => (
         <li key={item.href}>
           <a href={item.href} className="cl-related-row focus-ring">
-            <span className="cl-related-copy">
+            <span className="cl-related-n" aria-hidden>
+              {String(index + 1).padStart(2, '0')}
+            </span>
+            <span className="cl-related-head">
               {item.eyebrow && <span className="type-eyebrow cl-eyebrow">{item.eyebrow}</span>}
               <h3 className="cl-related-title">{item.title}</h3>
-              {item.body && <span className="cl-related-text">{item.body}</span>}
             </span>{' '}
-            <span className="cl-related-go">
-              {item.linkLabel && <span className="cl-related-label">{item.linkLabel}</span>}
-              <span className="cl-related-arrow">
-                <ArrowRight aria-hidden className="size-4" />
-              </span>
-            </span>
+            {item.body && <span className="cl-related-text">{item.body}</span>}
+            {item.linkLabel && <span className="sr-only"> {item.linkLabel}</span>}
+            <ArrowRight aria-hidden className="cl-related-arrow size-5" />
           </a>
         </li>
       ))}

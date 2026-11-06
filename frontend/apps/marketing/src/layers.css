@@ -9,12 +9,12 @@
  * - Washes: each hero has a tinted glow at its top that fades into the page,
  *   and a full app screen fades out at its foot into its stage.
  * - Frosted rims: a product image on a stage sits in a translucent white rim
- *   that blurs the grain under it, then on its own white card with the pop
- *   shadow, so the picture has three planes.
+ *   that blurs the grain under it, then on its own white card, so the picture
+ *   has three planes told apart by colour alone: no edges or shadows (D38).
  * - Motion (D36): nothing enters on scroll and no part ever waits unseen. The
  *   landing heroes' copy alone appears on load: the H1 sharpens and settles
- *   (it is never invisible), the rest rises in after it. Linked cards lift on
- *   hover and a chart's latest point pings. All of it is CSS, only for
+ *   (it is never invisible), the rest rises in after it. Nothing lifts on
+ *   hover (D38); a chart's latest point pings. All of it is CSS, only for
  *   readers who have not asked for reduced motion; without it the page is
  *   static and fully visible.
  */
@@ -38,7 +38,6 @@
 }
 
 .cl-frame-card,
-.cl-fcard > .cl-frame .cl-frame-well,
 .cl-cta,
 .cl-page-form {
   background-color: var(--color-paper);
@@ -85,22 +84,22 @@
   box-shadow: none;
 }
 
-/* The rim: translucent white over the stage, blurring the grain beneath. */
+/* The rim: translucent white over the stage, blurring the grain beneath.
+   Told apart by its fill alone (D38): no edge. */
 .cl-frame-card > .cl-frame-well {
   padding: 8px;
-  border: 1px solid color-mix(in srgb, var(--color-surface) 70%, transparent);
+  border: 0;
   border-radius: var(--site-radius-card);
   background: color-mix(in srgb, var(--color-surface) 42%, transparent);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
 }
 
-/* The picture's own white card, lifted off the rim. */
+/* The picture's own white card on the rim: colour, not shadow (D38). */
 .cl-frame-card > .cl-frame-well > .cl-frame-screen {
   overflow: hidden;
   border-radius: var(--site-radius-inner);
   background: var(--color-surface);
-  box-shadow: var(--shadow-pop);
 }
 
 @media (max-width: 767px) {
@@ -131,7 +130,7 @@
   border-radius: var(--site-radius-inner) var(--site-radius-inner) 0 0;
 }
 
-/* ---------- A FeatureCard: its well is a small stage ---------- */
+/* ---------- A FeatureCard: its tint panel holds the white image (D38) ---------- */
 
 .cl-fcard > .cl-frame .cl-frame-well {
   padding: 24px;
@@ -140,7 +139,6 @@
 
 .cl-fcard > .cl-frame .cl-vig {
   border-color: transparent;
-  box-shadow: var(--shadow-card);
 }
 
 @media (max-width: 767px) {
@@ -209,20 +207,6 @@
   opacity: var(--stage-wash);
   content: '';
   pointer-events: none;
-}
-
-/* ---------- Hover depth: a linked card lifts ---------- */
-
-a.cl-fcard {
-  transition:
-    border-color var(--motion-fast) var(--ease-standard),
-    transform var(--motion-slow) var(--ease-standard),
-    box-shadow var(--motion-slow) var(--ease-standard);
-}
-
-a.cl-fcard:hover {
-  box-shadow: var(--shadow-pop);
-  transform: translateY(-4px);
 }
 
 /* ---------- Motion (D36) ---------- */
