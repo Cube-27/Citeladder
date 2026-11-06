@@ -1,36 +1,78 @@
 ---
 /**
- * SourcesList — the numbered sources at the end of a guide or post: a
- * `title` heading in Cal Sans, optional notes above the list (the `notes`
- * slot), then one SourceRow per source between `line` hairlines. Each row is
- * `#source-n`, the target of an InlineCitation, and takes `surface-sunken`
- * while targeted.
+ * SourcesList — the numbered sources at the end of a guide or post, as one
+ * disclosure: the `title` in Cal Sans with the count beside it, then optional
+ * notes (the `notes` slot) and one SourceRow per source between `line`
+ * hairlines. Up to six sources start open; a longer list starts closed so it
+ * never runs on under the article (D38). Each row is `#source-n`, the target
+ * of an InlineCitation: following one opens the list (the browser reveals a
+ * closed `details` for its fragment) and the row takes `surface-sunken`.
  */
+import { Plus } from 'lucide-react';
+
 interface Props {
   title?: string;
+  /** How many sources the list holds. */
+  count: number;
 }
-const { title = 'Sources' } = Astro.props;
+const { title = 'Sources', count } = Astro.props;
 ---
 
 <section class="cl-sources" aria-labelledby="article-sources">
-  <h2 id="article-sources" class="cl-sources-title">{title}</h2>
-  {Astro.slots.has('notes') && <div class="cl-sources-notes"><slot name="notes" /></div>}
-  <ol class="cl-sources-list">
-    <slot />
-  </ol>
+  <details class="cl-sources-details" open={count <= 6}>
+    <summary class="cl-sources-summary focus-ring">
+      <h2 id="article-sources" class="cl-sources-title">{title}</h2>
+      <span class="cl-sources-count">{count}</span>
+      <Plus aria-hidden className="cl-sources-icon size-5" />
+    </summary>
+    {Astro.slots.has('notes') && <div class="cl-sources-notes"><slot name="notes" /></div>}
+    <ol class="cl-sources-list">
+      <slot />
+    </ol>
+  </details>
 </section>
 
 <style is:global>
   .cl-sources {
     max-width: var(--container-prose);
+    border-top: 1px solid var(--color-line);
+  }
+  .cl-sources-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 0;
+    list-style: none;
+    cursor: pointer;
+  }
+  .cl-sources-summary::-webkit-details-marker {
+    display: none;
   }
   .cl-sources-title {
-    margin: 0 0 16px;
+    margin: 0;
     color: var(--color-ink);
     font-family: var(--font-display);
     font-size: var(--text-title);
     line-height: var(--text-title--line-height);
     font-weight: 400;
+  }
+  .cl-sources-count {
+    color: var(--color-ink-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+    line-height: var(--text-data--line-height);
+  }
+  .cl-sources-icon {
+    margin-left: auto;
+    color: var(--color-ink-secondary);
+    transition: transform var(--motion-fast) var(--ease-standard);
+  }
+  .cl-sources-summary:hover .cl-sources-icon,
+  .cl-sources-details[open] .cl-sources-icon {
+    color: var(--color-ink);
+  }
+  .cl-sources-details[open] .cl-sources-icon {
+    transform: rotate(45deg);
   }
   .cl-sources-notes {
     margin: 0 0 16px;
@@ -46,10 +88,10 @@ const { title = 'Sources' } = Astro.props;
   }
   .cl-source {
     display: grid;
-    grid-template-columns: 32px 16px minmax(0, 1fr);
+    grid-template-columns: 24px minmax(0, 1fr);
     align-items: start;
     gap: 12px;
-    padding: 16px 0;
+    padding: 12px 0;
     border-bottom: 1px solid var(--color-line);
     scroll-margin-top: calc(var(--nav-height) + 32px);
   }
@@ -60,22 +102,8 @@ const { title = 'Sources' } = Astro.props;
     color: var(--color-ink-muted);
     font-family: var(--font-mono);
     font-size: var(--text-data);
-    line-height: var(--text-data--line-height);
+    line-height: var(--text-body-sm--line-height);
     text-align: right;
-  }
-  .cl-source-fav {
-    display: inline-grid;
-    place-items: center;
-    width: 16px;
-    height: 16px;
-    margin-top: 4px;
-    border-radius: var(--radius-xs);
-    background: var(--color-surface-sunken);
-    color: var(--color-ink);
-    font-size: var(--text-eyebrow);
-    line-height: var(--text-eyebrow--line-height);
-    font-weight: 500;
-    text-transform: uppercase;
   }
   .cl-source-body {
     display: flex;

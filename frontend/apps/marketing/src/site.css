@@ -1438,6 +1438,20 @@ a.cl-announce:hover {
   --cl-tint: var(--tint-peach);
 }
 
+/* A large linked card on its own (the blog's featured post) is lilac, with
+   room round its copy. */
+a.cl-fcard--lg {
+  --cl-tint: var(--tint-lilac);
+
+  padding: 32px;
+}
+
+@media (max-width: 767px) {
+  a.cl-fcard--lg {
+    padding: 16px;
+  }
+}
+
 a.cl-fcard:hover {
   background: color-mix(in srgb, var(--color-ink) 5%, var(--cl-tint));
 }

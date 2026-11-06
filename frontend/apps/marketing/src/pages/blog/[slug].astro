@@ -128,7 +128,7 @@ const view = route.kind === 'post' ? postView(route.post) : null;
             </Prose>
             <Fragment slot="end">
               {route.post.sources.length > 0 && (
-                <SourcesList>
+                <SourcesList count={route.post.sources.length}>
                   {route.post.sources.map((source, index) => (
                     <SourceRow n={index + 1} href={source.url}>
                       <p>

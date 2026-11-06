@@ -1,13 +1,12 @@
 ---
 /**
  * SourceRow — one numbered source in a SourcesList: the mono number, the
- * domain's initial on `ink` (the Citation pill's favicon fallback), the
  * source itself (the default slot: publisher, linked title and any note) and
  * a mono line with the domain.
  */
 interface Props {
   n: number;
-  /** The source's address, for its domain line and initial. */
+  /** The source's address, for its domain line. */
   href?: string;
 }
 const { n, href } = Astro.props;
@@ -22,7 +21,6 @@ const domain = domainOf(href);
 
 <li id={`source-${n}`} class="cl-source">
   <span class="cl-source-n">{n}</span>
-  <span class="cl-source-fav" aria-hidden="true">{domain?.charAt(0)}</span>
   <div class="cl-source-body">
     <slot />
     {domain && <p class="cl-source-meta">{domain}</p>}
