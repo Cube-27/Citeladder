@@ -148,7 +148,16 @@ permanently to the measurement destination; `/blog/track-optimize-ai-citations`
 redirects to citation tracking. Slash variants redirect permanently to the
 canonical path. `public-routes.ts` is the one list of indexable pages: the
 sitemap and `llms.txt` both read it, so a page listed in one is listed in the
-other.
+other. It maps over the page records (`lib/marketing-content/pages.ts`, the
+policies in `legal-documents.ts`, platform, comparison, tool, post and guide
+records), each carrying its path, browser title, description and `updated`
+date; `updated` is the sitemap `<lastmod>` the post-deploy IndexNow ping diffs,
+so revise it with the page. Policies and root-level guides are served by one
+`[slug].astro` route from those records. Trial and free-tool numbers in copy
+come from `lib/config/public-trial.ts` and `lib/config/free-tools.ts`, and pages
+pick product images from the screen catalogue
+(`components/marketing/screens/screen-catalog.tsx`), never a `Screen*`
+component directly.
 Named competitor comparisons keep their separate product-versus-product intent.
 
 Only the four linked public JSON inputs/templates are served from

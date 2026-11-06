@@ -69,7 +69,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | merged | [#639](https://github.com/Cube-27/Citeladder/pull/639) | No migration |
 | P12 | Opportunities: check kinds, typed targets, evidence announcement | O2, O3, O4 | P02 | | merged | [#643](https://github.com/Cube-27/Citeladder/pull/643) | No migration |
 | P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | merged | [#642](https://github.com/Cube-27/Citeladder/pull/642), [#644](https://github.com/Cube-27/Citeladder/pull/644) | Split for size: P13-a (#642) = F5, F6 (F6 alone is one ~5,200-line row); P13-b (#644) = F7 |
-| P14 | Marketing site records and config-driven numbers | MK1, MK2, MK3, MK4 | P02 | | in progress | | Builder session `untangle-p14` |
+| P14 | Marketing site records and config-driven numbers | MK1, MK2, MK3, MK4 | P02 | | in review | [#649](https://github.com/Cube-27/Citeladder/pull/649) | Builder session `untangle-p14`; marketing image now copies `billing.json` and `entitlements.json` |
 | P15 | Queue owner II: remaining lanes and coalesced enqueue | Q4, Q5, Q6, Q7, Q8 | P01, P03, P09 | | merged | [#633](https://github.com/Cube-27/Citeladder/pull/633) | No migration |
 | P16 | Site Health tasks II: one task runner, counters, pinned versions | SH4, SH5 | P04, P08, P09 | | merged | [#635](https://github.com/Cube-27/Citeladder/pull/635) | No migration |
 | P17 | Permission on the command, MCP prepared changes, workspace ownership | C3, C4, X6 | P11 | | merged | [#646](https://github.com/Cube-27/Citeladder/pull/646) | No migration |
@@ -179,10 +179,10 @@ order the PR tracker already respects.
 | R5 | Organism moves remove `ui`↔`layout`↔`agent` import cycles | R3 | `frontend/components/{ui,layout,agent}` | | done | 87d6e7b | |
 | R6 | App Worker reads reserved paths from the route-ownership contract | — | `frontend/apps/app/worker.ts` | | done | 5657ada | |
 | R7 | Chart height is a role, not a pixel prop | R1 | `frontend/components/ui/trend-chart.tsx`, chart callers | | done | dc2605e | |
-| MK1 | Marketing page records carry `updated` and drive sitemap `lastmod`; delete `CompareTable` | — | `frontend/apps/marketing/src/public-routes.ts`, `frontend/lib/marketing-content/`, `frontend/components/marketing/` | | todo | | |
-| MK2 | Records drive legal and research routes | MK1 | `frontend/apps/marketing/src/pages/`, `frontend/lib/marketing-content/legal.ts` | | todo | | |
-| MK3 | Screen catalogue is the only module-to-image map | — | `frontend/components/marketing/{landing-page,commercial-page}.tsx`, `ResearchLayout.astro` | | todo | | |
-| MK4 | Trial and free-tool numbers interpolated from config | FX1, MK1, MK3 | `frontend/components/marketing/pages/{pricing-catalog,pricing,landing-page}.tsx`, tools pages | | todo | | |
+| MK1 | Marketing page records carry `updated` and drive sitemap `lastmod`; delete `CompareTable` | — | `frontend/apps/marketing/src/public-routes.ts`, `frontend/lib/marketing-content/`, `frontend/components/marketing/` | | done | 640a3ab | |
+| MK2 | Records drive legal and research routes | MK1 | `frontend/apps/marketing/src/pages/`, `frontend/lib/marketing-content/legal.ts` | | done | 04a3a2b | |
+| MK3 | Screen catalogue is the only module-to-image map | — | `frontend/components/marketing/{landing-page,commercial-page}.tsx`, `ResearchLayout.astro` | | done | c2edb2c | |
+| MK4 | Trial and free-tool numbers interpolated from config | FX1, MK1, MK3 | `frontend/components/marketing/pages/{pricing-catalog,pricing,landing-page}.tsx`, tools pages | | done | c84c7e4 | |
 | G1 | Settings engine to a leaf; cross-owner aliases, dead key and import cycle removed | — | `config.ts`, `config/settings.ts`, `billing/config.ts`, alias importers | wide | todo | | |
 | G2 | Settings resolve once from one environment | G1, Q7, ON1 | `config.ts`, `configEnvironment` callers (18), `config/execution.ts` | wide | todo | | |
 | G3 | Named abuse budgets | G1 | `abuse/usage.ts`, `config/abuse.ts`, budget call sites | | todo | | |

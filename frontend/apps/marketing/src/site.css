@@ -2768,7 +2768,7 @@ a.cl-fcard:hover {
   }
 }
 
-/* ---------- Website tables: PricingTable and CompareTable ---------- */
+/* ---------- Website tables: PricingTable ---------- */
 .cl-wtable {
   position: relative;
   overflow-x: auto;
@@ -2854,52 +2854,12 @@ a.cl-fcard:hover {
   line-height: var(--text-data--line-height);
 }
 
-.cl-ctable-feature {
-  width: 30%;
-}
-
-.cl-ctable-v {
-  width: 18%;
-}
-
-.cl-ctable-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  vertical-align: bottom;
-}
-
-.cl-wtable tbody td.cl-ctable-note {
-  color: var(--color-ink-secondary);
-}
-
-.cl-verdict {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
-}
-
-.cl-verdict--yes {
-  color: var(--color-ink);
-}
-
-.cl-verdict--partial {
-  color: var(--color-ink-secondary);
-}
-
-.cl-verdict--no {
-  color: var(--color-ink-muted);
-  font-weight: 400;
-}
-
 @media (max-width: 767px) {
   .cl-wtable table {
     min-width: 560px;
   }
 
-  .cl-ptable-label,
-  .cl-ctable-feature {
+  .cl-ptable-label {
     width: 160px;
   }
 

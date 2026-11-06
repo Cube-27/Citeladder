@@ -5,6 +5,7 @@ import { AGENT_NOTE, type PlatformPage } from './platform-page-types';
 export const IMPROVE_PAGES: readonly PlatformPage[] = [
   {
     path: '/platform/content-briefs',
+    updated: '2026-11-06',
     title: 'Evidence-Backed AI Content Optimization | CiteLadder',
     description:
       'Prepare content briefs, page edits, comparison pages, internal-link plans and outreach briefs from your CiteLadder evidence, and review every revision before it ships.',
@@ -117,6 +118,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
   },
   {
     path: '/platform/agents',
+    updated: '2026-11-06',
     title: 'AI SEO Assistant Grounded in Your Evidence | CiteLadder',
     description:
       'An AI assistant that reads your saved CiteLadder evidence and produces briefs, edits and plans you review. It never publishes on its own.',
@@ -225,6 +227,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
   },
   {
     path: '/platform/mcp',
+    updated: '2026-11-06',
     title: 'AI Visibility MCP Server for Claude, ChatGPT & More | CiteLadder',
     description:
       'Connect Claude, ChatGPT, Gemini, Grok, Cursor and other MCP clients to your CiteLadder visibility, site and search evidence, with changes only after you confirm them.',
@@ -333,6 +336,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
   },
   {
     path: '/platform/integrations',
+    updated: '2026-11-06',
     title: 'Search, Analytics, Log & AI Integrations | CiteLadder',
     description:
       'Connect Google Search Console, GA4, Bing Webmaster Tools, Cloudflare, Amazon CloudFront and Google Cloud logs, model providers, DataForSEO and MCP clients to CiteLadder.',

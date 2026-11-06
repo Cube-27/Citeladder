@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { FREE_TOOL_LIMIT_LABELS } from '@/lib/config/free-tools';
 import { ToolForm, ToolInput } from './tool-form';
 import { generateRobots, testRobots, type ToolBot } from '@/lib/free-tools/robots';
 
@@ -37,7 +38,7 @@ export function CrawlerChecker({ bots }: Readonly<{ bots: ToolBot[] }>) {
       />
       <ToolInput
         label="Robots.txt content"
-        hint="An empty file means no declared restrictions. Paste up to 200,000 characters."
+        hint={`An empty file means no declared restrictions. Paste up to ${FREE_TOOL_LIMIT_LABELS.text} characters.`}
         value={body}
         onChange={setBody}
         multiline
