@@ -10,7 +10,7 @@ export function postMeta(post: Pick<BlogPost, 'date' | 'readTime' | 'tags'>): st
     .join(' · ');
 }
 
-/** The blog index's newest post: a large linked FeatureCard, a tint panel of text alone (D38). */
+/** The blog index's newest post: a large linked FeatureCard, a tint panel of text alone (D44). */
 export function FeaturedPost({ post }: Readonly<{ post: BlogPost }>) {
   return (
     <FeatureCard

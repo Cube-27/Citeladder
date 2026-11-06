@@ -37,7 +37,7 @@
   --site-radius-card: 20px;
   --site-radius-stage: 24px;
 
-  /* D38: panels are told apart by a soft fill, never a border or a shadow.
+  /* D44: panels are told apart by a soft fill, never a border or a shadow.
      The four stage colours thinned with paper, and a near-paper neutral. */
   --tint-mint: color-mix(in srgb, var(--color-stage-mint) 55%, var(--color-paper));
   --tint-sky: color-mix(in srgb, var(--color-stage-sky) 55%, var(--color-paper));
@@ -1404,7 +1404,7 @@ a.cl-announce:hover {
 }
 
 /* ---------- FeatureCard ---------- */
-/* D38: no borders, no shadows, no lift. Two editorial forms:
+/* D44: no borders, no shadows, no lift. Two editorial forms:
    - with a product image, or linked: a soft tint panel (the tint turns per
      tile) holding the white product image and the copy;
    - static, text only: a column under a hairline rule. */
@@ -1889,7 +1889,7 @@ a.cl-fcard:hover {
 
 /* ---------- CtaBand: a stage inside the container, never full-bleed ----------
    D18/D21: the copy and actions stack centred, so the band has no empty side.
-   D38: set off by its tinted stage (layers.css), no border or shadow. */
+   D44: set off by its tinted stage (layers.css), no border or shadow. */
 .cl-cta {
   display: flex;
   flex-direction: column;
@@ -1961,7 +1961,7 @@ a.cl-fcard:hover {
   }
 }
 
-/* ---------- RelatedCards: a full-width editorial index (D38) ----------
+/* ---------- RelatedCards: a full-width editorial index (D44) ----------
    number 64 | title 5fr | summary 6fr | arrow, between hairline rules. */
 .cl-related {
   margin: 0;
@@ -2714,7 +2714,7 @@ a.cl-logotile:hover {
 }
 
 /* ---------- PageHighlight: the page's lead tile ----------
-   A soft mint panel with ink text in both themes (D38); never an inverted
+   A soft mint panel with ink text in both themes (D44); never an inverted
    ground (D27). */
 .cl-page-hl {
   height: 100%;

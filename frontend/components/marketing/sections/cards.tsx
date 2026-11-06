@@ -23,7 +23,7 @@ export type RelatedCard = Readonly<{
 }>;
 
 /**
- * RelatedCards: where to go next, as a full-width editorial index (D38): each
+ * RelatedCards: where to go next, as a full-width editorial index (D44): each
  * row is the link, a mono number, the title, its summary in a wider column
  * and an arrow, between hairline rules. A `linkLabel` is for screen readers.
  */

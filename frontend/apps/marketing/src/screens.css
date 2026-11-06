@@ -21,7 +21,7 @@
 }
 
 /* The product image's frame: a 20px radius, 8px round its well (D31). It is
-   set off by its stage fill (layers.css), never a border or shadow (D38). */
+   set off by its stage fill (layers.css), never a border or shadow (D44). */
 .cl-frame-card {
   display: flex;
   flex: 1;

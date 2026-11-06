@@ -13,7 +13,7 @@ type FeatureCardLink =
   | Readonly<{ href?: undefined; linkLabel?: undefined }>;
 
 /**
- * FeatureCard (D38: no border, shadow or lift): a soft tint panel when it
+ * FeatureCard (D44: no border, shadow or lift): a soft tint panel when it
  * links or holds a product image, otherwise a column under a hairline rule;
  * an optional product image on top, then an optional eyebrow (only where it
  * adds what the title lacks, such as a unit), a title (title, or display-md
