@@ -5,51 +5,14 @@ import { subjectXactLock } from '../db/advisory-lock.ts';
 import { policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import type { Users } from '../generated/db-schema.ts';
-import { runtimeProjection, issueBundle, lockAccount } from './grants.ts';
+import { issueBundle, lockAccount, sourceRef, type GrantSource } from './grants.ts';
+
+const PUBLIC_SIGNUP: GrantSource = { kind: 'public_signup' };
 import { operatorTransaction } from '../db/operator-transaction.ts';
 import { requirePlatformAdmin } from '../auth/operators.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { getLogger } from '../logging.ts';
 import { stripTrailing } from '../text-order.ts';
-import { resolveAccountEntitlement } from './state.ts';
-
-async function projectRuntime(
-  db: Database,
-  workspaceId: string,
-  accountId: string,
-  version: number,
-  now: Date,
-) {
-  const resolved = await resolveAccountEntitlement(db, { workspaceId, accountId }, now);
-  const runtime = runtimeProjection(
-    resolved.status === 'resolved'
-      ? { error: null, values: resolved.values }
-      : { error: resolved.error, values: new Map() },
-  );
-  const projection = {
-    ...runtime,
-    resolved_registry_revision: policy.entitlements.registry_revision,
-    resolved_entitlement_lifecycle_version: version,
-    resolved_valid_until: resolved.status === 'resolved' ? resolved.validUntil : null,
-    updated_at: now,
-  };
-  await db
-    .insertInto('workspace_site_health_runtime')
-    .values({
-      id: randomUUID(),
-      workspace_id: workspaceId,
-      created_at: now,
-      ...projection,
-    })
-    .onConflict((conflict) =>
-      conflict.column('workspace_id').doUpdateSet(projection)
-        .where(sql<boolean>`(workspace_site_health_runtime.discovery_mode, workspace_site_health_runtime.discovery_url_cap,
-      workspace_site_health_runtime.sample_url_limit, workspace_site_health_runtime.monitored_url_limit,
-      workspace_site_health_runtime.count_disclosure) IS DISTINCT FROM
-      (${runtime.discovery_mode}, ${runtime.discovery_url_cap}, ${runtime.sample_url_limit}, ${runtime.monitored_url_limit}, ${runtime.count_disclosure})`),
-    )
-    .execute();
-}
 
 /**
  * The mailbox an address delivers to, for trial eligibility: lowercased, any
@@ -101,7 +64,7 @@ export async function ensureWorkspaceBilling(
       .select('id')
       .where('billing_account_id', '=', account.id)
       .where('source_kind', '=', 'trial')
-      .where('source_ref', '=', 'system:public-signup')
+      .where('source_ref', '=', sourceRef(PUBLIC_SIGNUP))
       .executeTakeFirst();
     if (existing) return;
     // The trial starts when the person creates their workspace. One mailbox has
@@ -118,7 +81,7 @@ export async function ensureWorkspaceBilling(
       .select(['account_grants.valid_from', 'account_grants.valid_until'])
       .where(canonicalMailbox(sql.ref('users.email')), '=', mailbox)
       .where('account_grants.source_kind', '=', 'trial')
-      .where('account_grants.source_ref', '=', 'system:public-signup')
+      .where('account_grants.source_ref', '=', sourceRef(PUBLIC_SIGNUP))
       .orderBy('account_grants.valid_from')
       .limit(1)
       .executeTakeFirst();
@@ -130,7 +93,7 @@ export async function ensureWorkspaceBilling(
       accountId: account.id,
       key: trial.revision,
       sourceKind: 'trial',
-      sourceRef: 'system:public-signup',
+      source: PUBLIC_SIGNUP,
       revision: trial.revision,
       specs: Object.entries(trial.grants).map(([key, value]) => ({ key, value })),
       from,
@@ -163,36 +126,20 @@ export async function ensureWorkspaceBilling(
       throw new Error('grant_bundle_conflict');
     return;
   }
-  await db
-    .insertInto('account_grants')
-    .values(
-      grants.map(([key, value]) => ({
-        id: randomUUID(),
-        billing_account_id: account.id,
-        source_kind: cfg.source_kind,
-        source_ref: 'system:public-signup',
-        bundle_role: 'primary',
-        profile_key: 'free',
-        profile_priority: 0,
-        bundle_id: idempotencyKey,
-        key,
-        value,
-        period_start: null,
-        period_end: null,
-        valid_from: now,
-        valid_until: null,
-        catalog_revision: policy.entitlements.registry_revision,
-        idempotency_key: idempotencyKey,
-        created_at: now,
-      })),
-    )
-    .execute();
-  await db
-    .updateTable('billing_accounts')
-    .set({ entitlement_lifecycle_version: sql`entitlement_lifecycle_version + 1`, updated_at: now })
-    .where('id', '=', account.id)
-    .execute();
-  await projectRuntime(db, workspaceId, account.id, locked.entitlement_lifecycle_version + 1, now);
+  await issueBundle(db, {
+    workspaceId,
+    accountId: account.id,
+    key: idempotencyKey,
+    sourceKind: cfg.source_kind,
+    source: PUBLIC_SIGNUP,
+    revision: policy.entitlements.registry_revision,
+    specs: grants.map(([key, value]) => ({ key, value })),
+    from: now,
+    until: null,
+    primary: true,
+    profile: 'free',
+    priority: 0,
+  });
 }
 
 /** Every issuable flag, the highest level of each leveled capability and a finite counter allowance. */
@@ -260,7 +207,7 @@ export async function issueDevelopmentAccess(
     accountId: input.accountId,
     key,
     sourceKind: 'override',
-    sourceRef: `override:${input.userId}`,
+    source: { kind: 'override', actorId: input.userId },
     specs,
     revision: policy.entitlements.registry_revision,
     from: new Date(),

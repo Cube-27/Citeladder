@@ -13,7 +13,7 @@ import {
   deleteProject,
   removeProject,
 } from '../src/projects/service.ts';
-import { reserveUsage } from '../src/entitlements/ledger.ts';
+import { hold } from '../src/entitlements/ledger.ts';
 import { advisoryXactLock } from '../src/db/advisory-lock.ts';
 import { commandCenter } from '../src/projects/command-center.ts';
 import { getVisibility } from '../src/visibility/dashboard.ts';
@@ -413,12 +413,10 @@ describe('project owner', () => {
       const pending = db
         .transaction()
         .execute((trx) =>
-          reserveUsage(trx, {
-            accountId: account,
+          hold(trx, {
             capability: 'prompt_runs_per_period',
             subject: { kind: 'audit', id: taskId, workspaceId: t.workspaceId, auditId: audit },
             units: 1,
-            key: randomUUID(),
             at: new Date(),
           }),
         )

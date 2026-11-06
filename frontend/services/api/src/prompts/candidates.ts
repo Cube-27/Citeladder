@@ -19,7 +19,7 @@ import type { Database } from '../db/database.ts';
 import { jsonObject, record } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
 import type { DB } from '../generated/db-schema.ts';
-import { admitPrompts } from '../entitlements/occupancy.ts';
+import { admit } from '../entitlements/occupancy.ts';
 import { compareText } from '../text-order.ts';
 import { acquireProjectLock, acquirePromptSetLock } from './locks.ts';
 import { scopedPromptSet } from './prompt-sets.ts';
@@ -257,7 +257,7 @@ export function reviewCandidates(
     }
     let accepted: PromptView[] = [];
     if (insertable.length > 0) {
-      await admitPrompts(trx, workspaceId, insertable.length);
+      await admit(trx, workspaceId, 'prompt_slots', insertable.length);
       const planned = await acceptedRows(trx, { ...set, workspaceId }, insertable);
       const inserted = await trx
         .insertInto('prompts')

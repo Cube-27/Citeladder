@@ -3,12 +3,20 @@ import { sql } from 'kysely';
 import { z } from 'zod';
 import { resolvedQuoteSchema } from '@citeladder/contracts/billing';
 import type { Database } from '../db/database.ts';
-import { lockAccount, issueBundle, revokeBundle, refreshRuntime } from '../entitlements/grants.ts';
+import {
+  lockAccount,
+  issueBundle,
+  revokeBundle,
+  bumpLifecycle,
+  grantSource,
+  sourceRef,
+} from '../entitlements/grants.ts';
+import { refreshRuntime } from '../site-health/plan-runtime.ts';
 import { catalog } from './catalog.ts';
 import { conflict } from '../errors.ts';
 import { amount, taxSnapshotSchema, type Pending, type Subscription } from './contracts.ts';
-import type { Evidence, SubscriptionEvidence } from './razorpay.ts';
-import { recordPayment } from './receipts.ts';
+import type { Evidence, RefundEvidence, SubscriptionEvidence } from './razorpay.ts';
+import { recordPayment, recordRefund, type Payment } from './receipts.ts';
 import { policy } from '../config.ts';
 import { getLogger } from '../logging.ts';
 
@@ -229,7 +237,7 @@ async function settlePack(
     accountId: pending.billing_account_id,
     key: `activation:${pending.id}`,
     sourceKind: pending.activation_kind,
-    sourceRef: `activation:${pending.id}`,
+    source: { kind: 'activation', activationId: pending.id },
     specs: specs.map((row) => ({ key: row.key, value: row.value * pending.quantity })),
     revision: pending.catalog_revision,
     from: payment.paidAt,
@@ -348,7 +356,7 @@ async function settlePeriod(
     .selectFrom('account_grants')
     .select('id')
     .where('billing_account_id', '=', sub.billing_account_id)
-    .where('source_ref', '=', `subscription:${sub.id}`)
+    .where('source_ref', '=', sourceRef({ kind: 'subscription', subscriptionId: sub.id }))
     .where('period_start', '<', end)
     .where('period_end', '>', start)
     .where((eb) => eb.or([eb('period_start', '!=', start), eb('period_end', '!=', end)]))
@@ -369,7 +377,7 @@ async function settlePeriod(
       accountId: sub.billing_account_id,
       key: `sub:${sub.id}:${start.toISOString()}:${end.toISOString()}:base`,
       sourceKind: 'plan',
-      sourceRef: `subscription:${sub.id}`,
+      source: { kind: 'subscription', subscriptionId: sub.id },
       specs: terms.grant_specs.map(([key, value]) => ({ key, value: value * terms.quantity })),
       revision: terms.catalog_revision,
       from: start,
@@ -411,7 +419,7 @@ async function endTerminal(
     .selectFrom('account_grants')
     .select('id')
     .where('billing_account_id', '=', sub.billing_account_id)
-    .where('source_ref', '=', `subscription:${sub.id}`)
+    .where('source_ref', '=', sourceRef({ kind: 'subscription', subscriptionId: sub.id }))
     .where((eb) => eb.or([eb('period_end', 'is', null), eb('period_end', '>', now)]))
     // A grant already revoked by then (a full refund, B52) is not revoked twice.
     .where(({ not, exists, selectFrom }) =>
@@ -546,17 +554,13 @@ export async function settleSubscription(
     sub.current_period_start?.getTime() !== event.start?.getTime() ||
     sub.current_period_end?.getTime() !== end?.getTime();
   if (changed)
-    await db
-      .updateTable('billing_accounts')
-      .set({
-        entitlement_lifecycle_version: sql`entitlement_lifecycle_version + 1`,
-        updated_at: now,
-      })
-      .where('id', '=', account.id)
-      .where('workspace_id', '=', workspaceId)
-      .where('entitlement_lifecycle_version', '=', account.entitlement_lifecycle_version)
-      .execute();
-  await refreshRuntime(db, workspaceId, sub.billing_account_id, now);
+    await bumpLifecycle(db, {
+      workspaceId,
+      accountId: account.id,
+      at: now,
+      expectedVersion: account.entitlement_lifecycle_version,
+    });
+  else await refreshRuntime(db, workspaceId, sub.billing_account_id, now);
 }
 
 async function settleUpgrade(
@@ -600,7 +604,7 @@ async function settleUpgrade(
     accountId: pending.billing_account_id,
     key: `activation:${pending.id}`,
     sourceKind: 'plan',
-    sourceRef: `activation:${pending.id}`,
+    source: { kind: 'activation', activationId: pending.id },
     specs: change.terms.grant_specs.map(([key, value]) => ({ key, value })),
     revision: change.terms.catalog_revision,
     from: paidAt,
@@ -631,5 +635,99 @@ async function settleUpgrade(
       updated_at: new Date(),
     })
     .where('id', '=', sub.id)
+    .execute();
+}
+
+/**
+ * Settles a processed provider refund: records its receipt and credit note,
+ * and when this refund completes a full refund of the payment, applies B52.
+ * A replayed refund records nothing and applies nothing again.
+ */
+export async function settleRefund(
+  db: Database,
+  request: {
+    workspaceId: string;
+    accountId: string;
+    provider: string;
+    mode: string;
+    refund: RefundEvidence;
+  },
+) {
+  const { workspaceId, accountId, provider, mode, refund } = request;
+  const recorded = await recordRefund(db, workspaceId, accountId, provider, mode, refund);
+  if (recorded?.full) await endRefundedPayment(db, workspaceId, recorded.payment, refund);
+}
+
+/** Whether a period plan grant came from this subscription or an activation (an upgrade). */
+function paidByPeriod(ref: string, subscriptionId: string) {
+  const source = grantSource(ref);
+  return (
+    source?.kind === 'activation' ||
+    (source?.kind === 'subscription' && source.subscriptionId === subscriptionId)
+  );
+}
+
+/**
+ * A payment refunded in full grants nothing more. When it paid for the base
+ * subscription's current period, the subscription is cancelled now (B52): the
+ * period's plan grants, an upgrade's included, are revoked in this
+ * transaction, and the row stays current until the subscription sweep's
+ * provider cancellation is confirmed, so the provider cannot charge unseen.
+ */
+async function endRefundedPayment(
+  db: Database,
+  workspaceId: string,
+  payment: Payment,
+  refund: RefundEvidence,
+) {
+  const accountId = payment.billing_account_id;
+  const { subscription_id: subscriptionId, period_start: start, period_end: end } = payment;
+  const query = db
+    .selectFrom('account_grants')
+    .select(['id', 'source_ref'])
+    .where('billing_account_id', '=', accountId);
+  const grants =
+    subscriptionId && start && end
+      ? (
+          await query
+            .where('source_kind', '=', 'plan')
+            .where('period_start', '>=', start)
+            .where('period_end', '=', end)
+            .execute()
+        ).filter((row) => paidByPeriod(row.source_ref, subscriptionId))
+      : await query
+          .where(
+            'source_ref',
+            '=',
+            sourceRef({ kind: 'activation', activationId: payment.pending_activation_id ?? '' }),
+          )
+          .execute();
+  await revokeBundle(db, {
+    workspaceId,
+    accountId,
+    grantIds: grants.map((row) => row.id),
+    key: `refund:${payment.id}:full`,
+    reason: 'full_refund',
+    actorKind: 'provider',
+    actorId: null,
+    at: refund.createdAt,
+  });
+  if (!subscriptionId || !start || !end) return;
+  const now = new Date();
+  await db
+    .updateTable('billing_subscriptions')
+    .set({
+      status: policy.billing.contracts.subscription_cancelled,
+      // Nothing left to resume: the cancellation is decided, not held (B46).
+      cancel_at_period_end: true,
+      cancellation_sent_at: now,
+      reconciliation_next_at: now,
+      updated_at: now,
+    })
+    .where('id', '=', subscriptionId)
+    .where('billing_account_id', '=', accountId)
+    .where('is_current', '=', true)
+    .where('current_period_start', '=', start)
+    .where('current_period_end', '=', end)
     .execute();
 }

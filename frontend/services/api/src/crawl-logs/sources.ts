@@ -7,9 +7,10 @@ import { ApiError, notFound } from '../errors.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
 import { lockCrawlState, enqueueRollup, type CrawlScope } from './state.ts';
-import { enqueueTrafficInsights } from './insights-enqueue.ts';
+import { insightsRefresh } from '../config/ai-traffic.ts';
+import { enqueueCoalesced } from '../queue/enqueue.ts';
 import { markStalled } from './stall.ts';
-import { WorkspaceEntitlements } from '../entitlements/access.ts';
+import { requireFlag, type WorkspaceEntitlements } from '../entitlements/access.ts';
 import { policy } from '../config.ts';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { crawlers } from '../config/crawlers.ts';
@@ -136,18 +137,13 @@ export async function crawlLogAvailability(
   const granted = await entitlements.grants(policy.entitlements.crawl_logs);
   return granted ? 'available' : 'not_in_plan';
 }
+/** The kill switch, then the plan gate (under the capacity lock). */
 export async function requireCrawlLogs(db: Database, workspaceId: string) {
-  refuseUnavailable(await crawlLogAvailability(new WorkspaceEntitlements(db, workspaceId)));
-}
-function refuseUnavailable(availability: CrawlLogAvailability) {
-  if (availability === 'disabled')
+  if (!crawlLogs.ingestion_enabled)
     throw new ApiError(409, 'Crawl log collection is paused by CiteLadder', {
       code: asApiErrorCode(codes.crawl_logs_disabled),
     });
-  if (availability === 'not_in_plan')
-    throw new ApiError(409, "AI crawler logs are not included in this workspace's plan", {
-      code: asApiErrorCode(codes.crawl_logs_not_in_plan),
-    });
+  await requireFlag(db, workspaceId, 'crawl_logs');
 }
 export async function createSource(
   db: Database,
@@ -252,7 +248,7 @@ export async function createSource(
       })
       .execute();
     await recordSecurityEvent(trx, 'crawl_log.create', actorId, scope.workspaceId, id);
-    await enqueueTrafficInsights(trx, scope);
+    await enqueueCoalesced(trx, { ...insightsRefresh, ...scope });
     return { id, token: secret };
   });
 }
@@ -299,7 +295,7 @@ export async function mutateSource(
       id,
     );
     if (action === 'revoke') await enqueueRollup(trx, scope, new Date());
-    await enqueueTrafficInsights(trx, scope);
+    await enqueueCoalesced(trx, { ...insightsRefresh, ...scope });
     return { id, token: secret };
   });
 }
@@ -370,10 +366,12 @@ export async function authorizeToken(db: Database, id: string, authorization: st
     throw new ApiError(401, 'Invalid crawl log token');
   if (source.status !== 'active') throw new ApiError(409, 'Crawl log source revoked');
   // A lapsed plan refuses the sender; the source row says why.
-  const availability = await crawlLogAvailability(
-    new WorkspaceEntitlements(db, source.workspace_id),
-  );
-  if (availability === 'not_in_plan') await markStalled(db, source, 'not_in_plan');
-  refuseUnavailable(availability);
+  try {
+    await requireCrawlLogs(db, source.workspace_id);
+  } catch (error) {
+    if (error instanceof ApiError && error.code === codes.crawl_logs_not_in_plan)
+      await markStalled(db, source, 'not_in_plan');
+    throw error;
+  }
   return source;
 }

@@ -22,7 +22,7 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import { factTopicOrder } from '../config/perception.ts';
 import type { Database } from '../db/database.ts';
-import { WorkspaceEntitlements } from '../entitlements/access.ts';
+import { WorkspaceEntitlements, requireFlag } from '../entitlements/access.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { BrandFacts } from '../generated/db-schema.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
@@ -55,14 +55,6 @@ export const brandFactUpdate = z.object({
 /** Whether the workspace is in the fact-checking pilot (unlocked read of its grants). */
 export function factCheckingEnabled(db: Database, workspaceId: string): Promise<boolean> {
   return new WorkspaceEntitlements(db, workspaceId).grants(policy.entitlements.fact_checking);
-}
-
-/** A request passes its own entitlements, so the pilot check reuses the access read. */
-async function requireFactChecking(entitlements: WorkspaceEntitlements) {
-  if (!(await entitlements.grants(policy.entitlements.fact_checking)))
-    throw new ApiError(409, "Fact-checking is not included in this workspace's plan", {
-      code: asApiErrorCode(policy.entitlements.codes.fact_checking_not_in_plan),
-    });
 }
 
 function view(row: Selectable<BrandFacts>): BrandFact {
@@ -125,11 +117,10 @@ export async function createBrandFact(
   scope: ProjectScope,
   userId: string,
   input: z.output<typeof brandFactCreate>,
-  entitlements: WorkspaceEntitlements,
 ): Promise<BrandFact> {
-  await requireFactChecking(entitlements);
   return db.transaction().execute(async (trx) => {
     await acquireProjectLock(trx, scope.projectId);
+    await requireFlag(trx, scope.workspaceId, 'fact_checking');
     const { count } = await trx
       .selectFrom('brand_facts')
       .select((eb) => eb.fn.countAll<string>().as('count'))
@@ -170,11 +161,10 @@ export async function updateBrandFact(
   userId: string,
   factId: string,
   input: z.output<typeof brandFactUpdate>,
-  entitlements: WorkspaceEntitlements,
 ): Promise<BrandFact> {
-  await requireFactChecking(entitlements);
   return db.transaction().execute(async (trx) => {
     await acquireProjectLock(trx, scope.projectId);
+    await requireFlag(trx, scope.workspaceId, 'fact_checking');
     const current = await trx
       .selectFrom('brand_facts')
       .selectAll()

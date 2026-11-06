@@ -54,12 +54,20 @@ holds what plans grant. Every paid plan bundle grants `workspace_access`,
 `api_keys`, `commerce`, `search_intelligence`, its occupancy counters,
 `prompt_runs_per_period` and `ai_credits`; Growth and Scale add `agent` and
 `market_slots`. Audit cadence, exports and fan-out are not gated
-([B5](billing-decisions.md)). Flags are checked without the capacity lock:
+([B5](billing-decisions.md)). Work behind a flag passes one plan gate,
+`WorkspaceEntitlements.requireFlag`, which reads the grants under the capacity
+lock, so grant changes serialize with the action, and refuses with the flag's
+entry in the registry's `flag_refusals` (its code from the `codes` block):
 [crawl logs](ai-traffic.md) refuse with 409 `crawl_logs_not_in_plan`, the
 [public API](public-api.md) with 403 `api_access_not_in_plan`, and Commerce and
 Keyword Research work (Commerce writes and Commerce-scope audits; Keyword
 Research reviews, confirmations and citation matching) with 403
-`capability_not_granted`. Data already collected stays readable after a
+`capability_not_granted`; grants that cannot resolve refuse with 403
+`occupancy_unresolved`. Reads that only show whether a flag is on (crawl log
+availability, the fact-checking pilot list) stay unlocked. Occupancy counters
+(projects, prompts, API keys, markets, monitored URLs) live in one counter
+table: `admit(key, n)` admits under the capacity lock and the usage read counts
+from the same table. Data already collected stays readable after a
 downgrade. The non-public flag `fact_checking` is in no bundle; operators grant
 it per pilot workspace with `billing:admin grant`, and
 [fact-checking](visibility-prompt.md#fact-checking-pilot) refuses without it (409

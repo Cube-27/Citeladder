@@ -1,3 +1,13 @@
+/**
+ * The consumable hold module: the one owner of the append-only
+ * `consumable_ledger`. A feature holds units for a subject before dispatch,
+ * then settles the hold (debit what it spent, at most what it holds, and
+ * release the rest), releases it outright, or refunds the subject's debits.
+ * Every write takes the account's capacity lock, derives its idempotency keys
+ * from the subject or the reservation, and refuses with a typed `LedgerError`.
+ * Each feature keeps its own policy on top: how much to hold (Agent B60), what
+ * a refusal means to its caller, and when to refund (Agent B58).
+ */
 import { randomUUID } from 'node:crypto';
 import { sql, type Selectable } from 'kysely';
 import type { Database } from '../db/database.ts';
@@ -10,16 +20,76 @@ import { getLogger } from '../logging.ts';
 import { compareText } from '../text-order.ts';
 import { chunksOf, isNonEmpty } from '../lists.ts';
 
-export class LedgerError extends Error {}
+export type LedgerCode =
+  | 'account_not_found'
+  | 'capability_not_consumable'
+  | 'entitlement_unresolved'
+  | 'funded_credits_exhausted'
+  | 'idempotency_key_reused'
+  | 'ledger_balance_overflow'
+  | 'ledger_entry_kind_invalid'
+  | 'reservation_not_found'
+  | 'reservation_units_invalid'
+  | 'reservation_workspace_mixed'
+  | 'settle_units_invalid'
+  | 'subject_not_found';
+
+/** A refusal from the hold module; `message` repeats the code for logs. */
+export class LedgerError extends Error {
+  readonly code: LedgerCode;
+  constructor(code: LedgerCode) {
+    super(code);
+    this.code = code;
+  }
+}
+
+export type AgentSubject = { kind: 'agent'; id: string; workspaceId: string };
 export type Subject =
   | { kind: 'audit'; id: string; workspaceId: string; auditId: string }
-  | { kind: 'agent' | 'site_crawl' | 'platform_call'; id: string; workspaceId: string };
+  | AgentSubject
+  | { kind: 'site_crawl' | 'platform_call'; id: string; workspaceId: string };
+/** One hold request; an Agent run holds once per model dispatch. */
+export type Hold =
+  | { subject: Exclude<Subject, AgentSubject>; units: number }
+  | { subject: AgentSubject; units: number; dispatchId: string };
 type Entry = Selectable<ConsumableLedger>;
 const logger = getLogger('api.entitlements');
+
+/** The account's capacity lock: every hold, settlement and capacity admission takes it. */
+export function capacityLock(db: Database, accountId: string) {
+  return advisoryXactLock(db, policy.entitlements.capacity_lock, accountId);
+}
+
+/** The workspace's billing account, if it has one. */
+export async function billingAccountId(db: Database, workspaceId: string) {
+  const row = await db
+    .selectFrom('billing_accounts')
+    .select('id')
+    .where('workspace_id', '=', workspaceId)
+    .executeTakeFirst();
+  return row?.id;
+}
 
 /** The persisted audit ledger hashes compact JSON with sorted ASCII keys. */
 function auditFingerprint(value: Record<string, string | number>) {
   return digest(Object.fromEntries(Object.entries(value).sort(([a], [b]) => compareText(a, b))));
+}
+
+/** The hold's idempotency key, derived from its subject (formats are persisted). */
+function holdKey(hold: Hold) {
+  if ('dispatchId' in hold) return `agent:${hold.dispatchId}:hold`;
+  switch (hold.subject.kind) {
+    case 'audit':
+      return `run:${hold.subject.id}`;
+    case 'platform_call':
+      return `call:${hold.subject.id}`;
+    case 'site_crawl':
+      return `site-crawl-fetches:${hold.subject.id}`;
+    default: {
+      const _exhaustive: never = hold.subject;
+      return _exhaustive;
+    }
+  }
 }
 
 function verifySubject(db: Database, subject: Subject) {
@@ -55,9 +125,9 @@ function allocate(
   let left = units;
   const allocations: { grantId: string; units: number }[] = [];
   for (const grant of grants) {
-    const balance = balances.get(grant.id) ?? { reserved: 0, consumed: 0 };
-    const take = Math.min(left, Math.max(0, grant.value - balance.reserved - balance.consumed));
+    const take = Math.min(left, grantRemaining(grant, balances));
     if (take) {
+      const balance = balances.get(grant.id) ?? { reserved: 0, consumed: 0 };
       allocations.push({ grantId: grant.id, units: take });
       balances.set(grant.id, { ...balance, reserved: balance.reserved + take });
     }
@@ -66,20 +136,10 @@ function allocate(
   return { allocations, left };
 }
 
-type Hold = { subject: Subject; units: number; key: string };
+type KeyedHold = Hold & { key: string };
 // Rows per batched ledger statement, well under PostgreSQL's bind-parameter limit;
 // chunks run in sequence because they share the caller's transaction.
 const CHUNK = 500;
-
-/** Callers pass their transaction and commit the hold before dispatch. */
-export async function reserveUsage(
-  db: Database,
-  request: Hold & { accountId: string; capability: string; at: Date },
-): Promise<string> {
-  const { accountId, capability, at, ...hold } = request;
-  const [reservationId] = await reserveUsages(db, { accountId, capability, at, holds: [hold] });
-  return reservationId!;
-}
 
 /** Subjects missing under the lock: audit tasks in one query, the rest one by one. */
 async function missingSubject(db: Database, subjects: readonly Subject[]) {
@@ -104,35 +164,66 @@ async function missingSubject(db: Database, subjects: readonly Subject[]) {
 }
 
 /**
- * Holds every request against one account under a single capacity lock, state
- * read and balance aggregate, allocating in order as if each were reserved
- * alone. Returns one reservation id per hold; any shortfall refuses them all.
+ * Holds one request for the subject's workspace account. Callers pass their
+ * transaction and commit the hold before network I/O.
  */
-export async function reserveUsages(
+export async function hold(
   db: Database,
-  request: { accountId: string; capability: string; at: Date; holds: readonly Hold[] },
-): Promise<string[]> {
-  const { accountId, capability, at, holds } = request;
+  request: Hold & { capability: string; at: Date },
+): Promise<{ accountId: string; reservationId: string }> {
+  const { capability, at, ...one } = request;
+  const { accountId, reservationIds } = await holdAll(db, {
+    workspaceId: one.subject.workspaceId,
+    capability,
+    at,
+    holds: [one],
+  });
+  const [reservationId] = reservationIds;
+  if (!reservationId) throw new LedgerError('reservation_not_found');
+  return { accountId, reservationId };
+}
+
+/**
+ * Holds every request against one workspace account under a single capacity
+ * lock, state read and balance aggregate, allocating in order as if each were
+ * held alone. Returns one reservation id per hold; any shortfall refuses them
+ * all. A replay of a recorded hold returns its reservation.
+ */
+export async function holdAll(
+  db: Database,
+  request: { workspaceId: string; capability: string; at: Date; holds: readonly Hold[] },
+): Promise<{ accountId: string; reservationIds: string[] }> {
+  const { workspaceId, capability, at, holds } = request;
   if (holds.some(({ units }) => !Number.isSafeInteger(units) || units <= 0))
     throw new LedgerError('reservation_units_invalid');
-  if (!isNonEmpty(holds)) return [];
-  const workspaceId = holds[0].subject.workspaceId;
-  if (holds.some((hold) => hold.subject.workspaceId !== workspaceId))
+  if (holds.some((one) => one.subject.workspaceId !== workspaceId))
     throw new LedgerError('reservation_workspace_mixed');
-  if (new Set(holds.map((hold) => hold.key)).size !== holds.length)
+  const keyed = holds.map((one) => ({ ...one, key: holdKey(one) }));
+  if (new Set(keyed.map((one) => one.key)).size !== keyed.length)
     throw new LedgerError('idempotency_key_reused');
-  await advisoryXactLock(db, policy.entitlements.capacity_lock, accountId);
+  const accountId = await billingAccountId(db, workspaceId);
+  if (!accountId) throw new LedgerError('account_not_found');
+  if (!isNonEmpty(keyed)) return { accountId, reservationIds: [] };
+  await capacityLock(db, accountId);
   // After the lock, so a project deleted under it is never reserved against.
-  const subjects = holds.map((hold) => hold.subject);
-  if (await missingSubject(db, subjects)) throw new LedgerError('subject_not_found');
+  if (
+    await missingSubject(
+      db,
+      keyed.map((one) => one.subject),
+    )
+  )
+    throw new LedgerError('subject_not_found');
   const state = await accountState(db, workspaceId, accountId, at);
-  const fingerprint = (hold: Hold) => holdFingerprint(accountId, capability, hold);
-  const priors = await priorHolds(db, accountId, holds, fingerprint);
-  const fresh = holds.filter((hold) => !priors.has(hold.key));
+  const fingerprint = (one: KeyedHold) => holdFingerprint(accountId, capability, one);
+  const priors = await priorHolds(db, accountId, keyed, fingerprint);
+  const fresh = keyed.filter((one) => !priors.has(one.key));
   const ids = fresh.length
     ? await reserveFresh(db, { accountId, capability, at, state, fingerprint }, fresh)
     : new Map<string, string>();
-  return holds.map((hold) => priors.get(hold.key)?.reservation_id ?? ids.get(hold.key)!);
+  return {
+    accountId,
+    reservationIds: keyed.map((one) => priors.get(one.key)?.reservation_id ?? ids.get(one.key)!),
+  };
 }
 
 /**
@@ -153,9 +244,9 @@ async function reserveFresh(
     capability: string;
     at: Date;
     state: Awaited<ReturnType<typeof accountState>>;
-    fingerprint: (hold: Hold) => string;
+    fingerprint: (one: KeyedHold) => string;
   },
-  fresh: readonly Hold[],
+  fresh: readonly KeyedHold[],
 ) {
   const ids = new Map<string, string>();
   const order = await lockedDrawOrder(db, { accountId, capability, state });
@@ -165,40 +256,73 @@ async function reserveFresh(
     order.map((grant) => grant.id),
   );
   const rows = [];
-  for (const hold of fresh) {
-    const { allocations, left } = allocate(order, balances, hold.units);
+  for (const one of fresh) {
+    const { allocations, left } = allocate(order, balances, one.units);
     if (left) {
       logger.info('billing.consumable_credits_exhausted', {
         account_id: accountId,
         capability_key: capability,
-        requested: hold.units,
+        requested: one.units,
         shortfall: left,
       });
       throw new LedgerError('funded_credits_exhausted');
     }
     const reservationId = randomUUID();
-    ids.set(hold.key, reservationId);
-    const context = { accountId, capability, at, reservationId, fingerprint: fingerprint(hold) };
+    ids.set(one.key, reservationId);
+    const context = { accountId, capability, at, reservationId, fingerprint: fingerprint(one) };
     for (const [index, allocation] of allocations.entries())
-      rows.push(reservationRow(hold, allocation, index, context));
+      rows.push(reservationRow(one, allocation, index, context));
   }
   for (const chunk of chunksOf(rows, CHUNK))
     await db.insertInto('consumable_ledger').values(chunk).execute(); // NOSONAR -- chunks share the transaction and its lock.
   return ids;
 }
 
+/** What one grant has left after its reservations and debits: the one balance formula. */
+function grantRemaining(
+  grant: { id: string; value: number },
+  balances: ReadonlyMap<string, { reserved: number; consumed: number }>,
+) {
+  const balance = balances.get(grant.id) ?? { reserved: 0, consumed: 0 };
+  return Math.max(0, grant.value - balance.reserved - balance.consumed);
+}
+
 /**
- * Units of a consumable capability the account can hold now: what its
- * selected grants have left after reservations and debits. It takes the
- * capacity lock a reservation takes, so a hold sized from it in the same
- * transaction draws against exactly this balance.
+ * Allowance, reserved, consumed and remaining units of each grant, read from
+ * the ledger: the projection usage reads and admission share.
  */
-export async function availableUnits(
+export async function grantBalances(
+  db: Database,
+  accountId: string,
+  grants: readonly { id: string; value: number }[],
+) {
+  const balances = await ledgerBalances(
+    db,
+    accountId,
+    grants.map((grant) => grant.id),
+  );
+  return new Map(
+    grants.map((grant) => {
+      const { reserved, consumed } = balances.get(grant.id) ?? { reserved: 0, consumed: 0 };
+      return [
+        grant.id,
+        { allowance: grant.value, reserved, consumed, remaining: grantRemaining(grant, balances) },
+      ] as const;
+    }),
+  );
+}
+
+/**
+ * Units of a consumable capability the account can hold now, and how many
+ * selected grants fund it. It takes the capacity lock a hold takes, so a
+ * hold sized from it in the same transaction draws against exactly this.
+ */
+export async function remaining(
   db: Database,
   request: { accountId: string; workspaceId: string; capability: string; at: Date },
-): Promise<number> {
+): Promise<{ units: number; grants: number }> {
   const { accountId, workspaceId, capability, at } = request;
-  await advisoryXactLock(db, policy.entitlements.capacity_lock, accountId);
+  await capacityLock(db, accountId);
   const state = await accountState(db, workspaceId, accountId, at);
   const order = await lockedDrawOrder(db, { accountId, capability, state });
   const balances = await ledgerBalances(
@@ -206,14 +330,14 @@ export async function availableUnits(
     accountId,
     order.map((grant) => grant.id),
   );
-  return order.reduce((sum, grant) => {
-    const balance = balances.get(grant.id) ?? { reserved: 0, consumed: 0 };
-    return sum + Math.max(0, grant.value - balance.reserved - balance.consumed);
-  }, 0);
+  return {
+    units: order.reduce((sum, grant) => sum + grantRemaining(grant, balances), 0),
+    grants: order.length,
+  };
 }
 
 /** The request fingerprint an idempotent replay of this hold must repeat. */
-function holdFingerprint(accountId: string, capability: string, { subject, units }: Hold) {
+function holdFingerprint(accountId: string, capability: string, { subject, units }: KeyedHold) {
   return subject.kind === 'audit'
     ? auditFingerprint({
         account_id: accountId,
@@ -223,19 +347,24 @@ function holdFingerprint(accountId: string, capability: string, { subject, units
         task_id: subject.id,
         units,
       })
-    : digest({ accountId, subject, units, capability });
+    : digest({
+        accountId,
+        subject: { kind: subject.kind, id: subject.id, workspaceId: subject.workspaceId },
+        units,
+        capability,
+      });
 }
 
 /** Holds already recorded under their idempotency keys; a key reused for another request throws. */
 async function priorHolds(
   db: Database,
   accountId: string,
-  holds: readonly Hold[],
-  fingerprint: (hold: Hold) => string,
+  holds: readonly KeyedHold[],
+  fingerprint: (one: KeyedHold) => string,
 ) {
   const priors = new Map<string, Entry>();
   for (const keys of chunksOf(
-    holds.map((hold) => hold.key),
+    holds.map((one) => one.key),
     CHUNK,
   ))
     for (const row of await db // NOSONAR -- chunks share the transaction and its lock.
@@ -245,9 +374,9 @@ async function priorHolds(
       .where('idempotency_key', 'in', keys)
       .execute())
       priors.set(row.idempotency_key, row);
-  for (const hold of holds) {
-    const prior = priors.get(hold.key);
-    if (prior && prior.request_fingerprint !== fingerprint(hold))
+  for (const one of holds) {
+    const prior = priors.get(one.key);
+    if (prior && prior.request_fingerprint !== fingerprint(one))
       throw new LedgerError('idempotency_key_reused');
   }
   return priors;
@@ -285,7 +414,7 @@ async function lockedDrawOrder(
 
 /** One grant's share of a reservation as a ledger row. */
 function reservationRow(
-  { subject, key }: Hold,
+  { subject, key }: KeyedHold,
   allocation: { grantId: string; units: number },
   index: number,
   context: {
@@ -405,14 +534,42 @@ export async function ledgerBalances(db: Database, accountId: string, grantIds: 
   return balances;
 }
 
-async function reservation(db: Database, workspaceId: string, accountId: string, id: string) {
-  await advisoryXactLock(db, policy.entitlements.capacity_lock, accountId);
+/** The subject's reservations of a capability, in a stable order. */
+export async function holdsOf(db: Database, subject: Subject, capability: string) {
+  const rows = await db
+    .selectFrom('consumable_ledger')
+    .select('reservation_id')
+    .distinct()
+    .where('workspace_id', '=', subject.workspaceId)
+    .where('subject_kind', '=', subject.kind)
+    .where('subject_id', '=', subject.id)
+    .where('capability_key', '=', capability)
+    .where('entry_kind', '=', 'reservation')
+    .orderBy('reservation_id')
+    .execute();
+  return rows.map((row) => row.reservation_id);
+}
+
+/**
+ * The reservation's rows under its account's capacity lock, and what each
+ * grant's share still holds (reserved minus released).
+ */
+async function openReservation(db: Database, workspaceId: string, reservationId: string) {
+  const owner = await db
+    .selectFrom('consumable_ledger')
+    .select('billing_account_id')
+    .where('workspace_id', '=', workspaceId)
+    .where('reservation_id', '=', reservationId)
+    .where('entry_kind', '=', 'reservation')
+    .executeTakeFirst();
+  if (!owner) throw new LedgerError('reservation_not_found');
+  await capacityLock(db, owner.billing_account_id);
   const rows = await db
     .selectFrom('consumable_ledger')
     .selectAll()
     .where('workspace_id', '=', workspaceId)
-    .where('billing_account_id', '=', accountId)
-    .where('reservation_id', '=', id)
+    .where('billing_account_id', '=', owner.billing_account_id)
+    .where('reservation_id', '=', reservationId)
     .orderBy('allocation_order')
     .orderBy('id')
     .forUpdate()
@@ -423,14 +580,18 @@ async function reservation(db: Database, workspaceId: string, accountId: string,
   for (const row of rows)
     if (row.entry_kind === 'release')
       released.set(row.grant_id, (released.get(row.grant_id) ?? 0) + row.units);
-  return { rows, holds, released };
+  const open = holds.map((row) => ({
+    row,
+    units: Math.max(0, row.units - (released.get(row.grant_id) ?? 0)),
+  }));
+  return { rows, holds, open };
 }
 
 /** A derived ledger row: the parent's identity with this entry's facts. */
 function entry(
   base: Entry,
   facts: {
-    kind: string;
+    kind: 'release' | 'debit' | 'refund';
     units: number;
     key: string;
     at: Date;
@@ -452,152 +613,158 @@ function entry(
   };
 }
 
-export async function debitUsage(
-  db: Database,
-  request: {
-    workspaceId: string;
-    accountId: string;
-    reservationId: string;
-    subjectId: string;
-    attempt: number;
-    units: number;
-    key: string;
-    dispatchKey: string;
-    at: Date;
-  },
+/** Release rows freeing everything each grant's share still holds. */
+function releaseEntries(
+  open: readonly { row: Entry; units: number }[],
+  reservationId: string,
+  at: Date,
 ) {
-  const { workspaceId, accountId, reservationId, subjectId, attempt, units, key, dispatchKey, at } =
-    request;
-  if (!Number.isSafeInteger(units) || units <= 0 || !Number.isSafeInteger(attempt) || attempt <= 0)
-    throw new LedgerError('debit_units_invalid');
-  const { rows, holds, released } = await reservation(db, workspaceId, accountId, reservationId);
-  if (holds[0].subject_id !== subjectId) throw new LedgerError('reservation_subject_mismatch');
-  const fingerprint =
-    holds[0].subject_kind === 'audit'
-      ? auditFingerprint({ reservation_id: reservationId, subject_id: subjectId, attempt, units })
-      : digest({ reservationId, subjectId, attempt, dispatchKey, units });
-  const prior = rows.find(
-    (row) =>
-      row.entry_kind === 'debit' &&
-      (row.idempotency_key === `${key}:debit:${row.grant_id}` ||
-        (holds[0].subject_kind === 'audit'
-          ? row.attempt === attempt
-          : row.dispatch_key === dispatchKey)),
-  );
-  if (prior) {
-    if (prior.request_fingerprint !== fingerprint) throw new LedgerError('idempotency_key_reused');
-    return;
-  }
-  let left = units;
-  const allocations = holds.map((row) => {
-    const take = Math.min(left, Math.max(0, row.units - (released.get(row.grant_id) ?? 0)));
-    left -= take;
-    return { row, units: take };
-  });
-  if (left) throw new LedgerError('reservation_exhausted');
-  const facts = { at, fingerprint, dispatch: dispatchKey };
-  const entries = allocations
-    .filter((item) => item.units)
-    .flatMap(({ row, units: taken }) => [
-      entry(row, {
-        ...facts,
-        kind: 'release',
-        units: taken,
-        key: `${key}:release:${row.grant_id}`,
-        attempt: null,
-      }),
-      entry(row, {
-        ...facts,
-        kind: 'debit',
-        units: taken,
-        key: `${key}:debit:${row.grant_id}`,
-        attempt,
-      }),
-    ]);
-  if (entries.length) await db.insertInto('consumable_ledger').values(entries).execute();
-}
-
-export async function releaseUsage(
-  db: Database,
-  request: { workspaceId: string; accountId: string; reservationId: string; key: string; at: Date },
-) {
-  const { workspaceId, accountId, reservationId, key, at } = request;
-  const { holds, released } = await reservation(db, workspaceId, accountId, reservationId);
-  const entries = holds.flatMap((row) => {
-    const units = row.units - (released.get(row.grant_id) ?? 0);
-    if (units <= 0) return [];
-    return [
+  return open
+    .filter((share) => share.units > 0)
+    .map(({ row, units }) =>
       entry(row, {
         kind: 'release',
         units,
-        key: `${key}:${row.grant_id}`,
+        key: `${reservationId}:excess:${row.grant_id}`,
         at,
         fingerprint: digest({ reservationId, grantId: row.grant_id, units }),
         dispatch: 'release',
         attempt: null,
       }),
-    ];
-  });
-  if (entries.length) await db.insertInto('consumable_ledger').values(entries).execute();
+    );
 }
 
-/** Append a bounded refund against a particular immutable debit. */
-export async function refundUsage(
+/**
+ * Closes a hold: debits `min(spent, held)`, one debit per dispatch, and
+ * releases the rest. Settling a closed hold writes nothing; a debit recorded
+ * for this attempt or dispatch by an earlier writer must repeat its request.
+ * Returns the units debited now.
+ */
+export async function settle(
   db: Database,
   request: {
     workspaceId: string;
-    accountId: string;
-    debitId: string;
-    units: number;
-    key: string;
+    reservationId: string;
+    spent: number;
+    attempt: number;
+    dispatch: string;
     at: Date;
   },
-) {
-  if (!Number.isSafeInteger(request.units) || request.units <= 0)
-    throw new LedgerError('refund_units_invalid');
-  await advisoryXactLock(db, policy.entitlements.capacity_lock, request.accountId);
-  const debit = await db
-    .selectFrom('consumable_ledger')
-    .selectAll()
-    .where('workspace_id', '=', request.workspaceId)
-    .where('billing_account_id', '=', request.accountId)
-    .where('id', '=', request.debitId)
-    .where('entry_kind', '=', 'debit')
-    .forUpdate()
-    .executeTakeFirst();
-  if (!debit) throw new LedgerError('debit_not_found');
-  const fingerprint = digest({ debitId: debit.id, units: request.units });
-  const prior = await db
-    .selectFrom('consumable_ledger')
-    .selectAll()
-    .where('billing_account_id', '=', request.accountId)
-    .where('idempotency_key', '=', request.key)
-    .executeTakeFirst();
-  if (prior) {
-    if (prior.entry_kind !== 'refund' || prior.request_fingerprint !== fingerprint)
-      throw new LedgerError('idempotency_key_reused');
-    return;
+): Promise<number> {
+  const { workspaceId, reservationId, spent, attempt, dispatch, at } = request;
+  if (!Number.isSafeInteger(spent) || spent < 0 || !Number.isSafeInteger(attempt) || attempt <= 0)
+    throw new LedgerError('settle_units_invalid');
+  const { rows, holds, open } = await openReservation(db, workspaceId, reservationId);
+  const held = open.reduce((sum, share) => sum + share.units, 0);
+  const units = Math.min(spent, held);
+  const audit = holds[0].subject_kind === 'audit';
+  const subjectId = holds[0].subject_id;
+  const fingerprint = audit
+    ? auditFingerprint({ reservation_id: reservationId, subject_id: subjectId, attempt, units })
+    : digest({ reservationId, subjectId, attempt, dispatchKey: dispatch, units });
+  const prior = rows.find(
+    (row) =>
+      row.entry_kind === 'debit' &&
+      (audit ? row.attempt === attempt : row.dispatch_key === dispatch),
+  );
+  if (prior && units) {
+    if (prior.request_fingerprint !== fingerprint) throw new LedgerError('idempotency_key_reused');
+    return 0;
   }
-  const total = await db
-    .selectFrom('consumable_ledger')
-    .select(sql<string>`coalesce(sum(units),0)`.as('units'))
-    .where('billing_account_id', '=', request.accountId)
-    .where('refund_of_id', '=', debit.id)
-    .where('entry_kind', '=', 'refund')
-    .executeTakeFirstOrThrow();
-  if (Number(total.units) + request.units > debit.units)
-    throw new LedgerError('refund_exceeds_debit');
-  await db
-    .insertInto('consumable_ledger')
-    .values({
-      ...debit,
-      id: randomUUID(),
-      entry_kind: 'refund',
-      refund_of_id: debit.id,
-      units: request.units,
-      idempotency_key: request.key,
-      request_fingerprint: fingerprint,
-      created_at: request.at,
-    })
+  let left = units;
+  const debits = open.map(({ row, units: free }) => {
+    const take = Math.min(left, free);
+    left -= take;
+    return { row, take, rest: free - take };
+  });
+  const facts = { at, fingerprint, dispatch };
+  const entries = debits.flatMap(({ row, take }) =>
+    take
+      ? [
+          entry(row, {
+            ...facts,
+            kind: 'release',
+            units: take,
+            key: `${reservationId}:release:${row.grant_id}`,
+            attempt: null,
+          }),
+          entry(row, {
+            ...facts,
+            kind: 'debit',
+            units: take,
+            key: `${reservationId}:debit:${row.grant_id}`,
+            attempt,
+          }),
+        ]
+      : [],
+  );
+  entries.push(
+    ...releaseEntries(
+      debits.map(({ row, rest }) => ({ row, units: rest })),
+      reservationId,
+      at,
+    ),
+  );
+  if (entries.length) await db.insertInto('consumable_ledger').values(entries).execute();
+  return units;
+}
+
+/** Releases everything the hold still holds; releasing a closed hold writes nothing. */
+export async function release(
+  db: Database,
+  request: { workspaceId: string; reservationId: string; at: Date },
+) {
+  const { workspaceId, reservationId, at } = request;
+  const { open } = await openReservation(db, workspaceId, reservationId);
+  const entries = releaseEntries(open, reservationId, at);
+  if (entries.length) await db.insertInto('consumable_ledger').values(entries).execute();
+}
+
+/**
+ * Refunds everything the subject was debited and not yet refunded, one
+ * append-only refund per debit; a repeat refunds nothing.
+ */
+export async function refundSubject(db: Database, request: { subject: Subject; at: Date }) {
+  const { subject, at } = request;
+  const accountId = await billingAccountId(db, subject.workspaceId);
+  if (!accountId) throw new LedgerError('account_not_found');
+  await capacityLock(db, accountId);
+  const debits = await db
+    .selectFrom('consumable_ledger as debit')
+    .selectAll('debit')
+    .select((eb) =>
+      eb
+        .selectFrom('consumable_ledger as refund')
+        .select(sql<string>`coalesce(sum(refund.units),0)`.as('refunded'))
+        .where('refund.billing_account_id', '=', accountId)
+        .whereRef('refund.refund_of_id', '=', 'debit.id')
+        .where('refund.entry_kind', '=', 'refund')
+        .as('refunded'),
+    )
+    .where('debit.workspace_id', '=', subject.workspaceId)
+    .where('debit.billing_account_id', '=', accountId)
+    .where('debit.subject_kind', '=', subject.kind)
+    .where('debit.subject_id', '=', subject.id)
+    .where('debit.entry_kind', '=', 'debit')
+    .orderBy('debit.id')
     .execute();
+  const entries = debits.flatMap(({ refunded, ...debit }) => {
+    const units = debit.units - Number(refunded ?? 0);
+    if (units <= 0) return [];
+    return [
+      {
+        ...entry(debit, {
+          kind: 'refund',
+          units,
+          key: `${debit.id}:refund`,
+          at,
+          fingerprint: digest({ debitId: debit.id, units }),
+          dispatch: debit.dispatch_key,
+          attempt: debit.attempt,
+        }),
+        refund_of_id: debit.id,
+      },
+    ];
+  });
+  if (entries.length) await db.insertInto('consumable_ledger').values(entries).execute();
 }

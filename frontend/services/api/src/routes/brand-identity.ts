@@ -95,7 +95,7 @@ export const brandIdentityRoutes = [
     async handle({ c, db }, { path }) {
       const scope = scopeOf(c, path.project_id);
       const input = await readBody(c, brandFactCreate);
-      return createBrandFact(db, scope, c.get('user').id, input, c.get('entitlements'));
+      return createBrandFact(db, scope, c.get('user').id, input);
     },
   }),
   definePatchRoute({
@@ -108,14 +108,7 @@ export const brandIdentityRoutes = [
     async handle({ c, db }, { path }) {
       const scope = scopeOf(c, path.project_id);
       const update = await readBody(c, brandFactUpdate);
-      return updateBrandFact(
-        db,
-        scope,
-        c.get('user').id,
-        path.fact_id,
-        update,
-        c.get('entitlements'),
-      );
+      return updateBrandFact(db, scope, c.get('user').id, path.fact_id, update);
     },
   }),
   defineGetRoute({

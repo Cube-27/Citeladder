@@ -199,7 +199,7 @@ export async function lockSiteTask(
     .where('crawl.workspace_id', '=', claimed.workspace_id)
     .forNoKeyUpdate('crawl')
     .executeTakeFirst();
-  const task = await runner.queue.fence(trx, claimed, runner.owner, strength);
+  const task = await runner.queue.fence(trx, claimed, runner.owner, undefined, strength);
   return crawl && task?.crawl_id === claimed.crawl_id ? { crawl, task } : null;
 }
 
