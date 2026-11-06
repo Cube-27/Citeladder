@@ -62,7 +62,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | in progress | | Builder session `untangle-p06` |
 | P07 | App route manifest and kit cleanup | R1, R2, R3, R5, R6, R7 | — | | todo | | |
 | P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | in progress | | Builder session `untangle-p08` |
-| P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | in progress | | Builder session `untangle-p09` |
+| P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | in review | [#630](https://github.com/Cube-27/Citeladder/pull/630) | Builder session `untangle-p09` |
 | P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | in progress | | Builder session `untangle-p10` |
 | P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | todo | | |
 | P12 | Opportunities: check kinds, typed targets, evidence announcement | O2, O3, O4 | P02 | | todo | | |
@@ -125,9 +125,9 @@ order the PR tracker already respects.
 | FX5 | Runtime safety: in-request cap, SIGTERM, frozen turn limit, failed-call usage, deploy guard | — | `routes/agent.ts`, `agent/{contracts,model-calls}.ts`, `server.ts`, `commands/audits.ts`, `audits/interactive.ts`, `.github/workflows/gcp-deploy.yml` | | done | 81c7fd9 | |
 | DB1 | Capacity-lease and queue indexes; lease purge | — | `migrations/`, `providers/capacity.ts`, audit maintenance | mig | done | 9c7848e | |
 | DB2 | Tenancy in the schema; registry-driven isolation test | DB1 | `migrations/`, `db/workspace-scope.ts`, writers of `prompt_sets`/`topics`/`competitors`/`brands`/`prompts`, `test/request-access.test.ts` | mig | done | f15ac10 | |
-| Q1 | Enqueue and executor contract move to `queue/`; fairness test harness | — | `queue/`, `referrals/enqueue.ts`, `workers/executor.ts` + importers | wide | todo | | |
-| Q2 | Analytics task-kind registry | Q1 | `workers/analytics-worker.ts`, `workers/terminal-compensation.ts`, `config/analytics.json` | | todo | | |
-| Q3 | Lane descriptor: shared claim, cursor, heartbeat, fence; analytics and Site Health lanes | Q1, DB1 | `queue/task-queue.ts`, `queue/recovery.ts`, `queue/next-due.ts` | | todo | | |
+| Q1 | Enqueue and executor contract move to `queue/`; fairness test harness | — | `queue/`, `referrals/enqueue.ts`, `workers/executor.ts` + importers | wide | done | 624694c | |
+| Q2 | Analytics task-kind registry | Q1 | `workers/analytics-worker.ts`, `workers/terminal-compensation.ts`, `config/analytics.json` | | done | 5466c82 | |
+| Q3 | Lane descriptor: shared claim, cursor, heartbeat, fence; analytics and Site Health lanes | Q1, DB1 | `queue/task-queue.ts`, `queue/recovery.ts`, `queue/next-due.ts` | | done | feea935 | |
 | Q4 | Discovery lane on the descriptor | Q3, ON1 | `queue/discovery-queue.ts`, `workers/discovery-worker.ts` | | todo | | |
 | Q5 | Agent lane on the descriptor | Q3, FX5 | `agent/queue.ts`, `workers/agent-worker.ts` | | todo | | |
 | Q6 | Integrations lane on the descriptor | Q3 | `workers/integration-worker.ts` | | todo | | |
