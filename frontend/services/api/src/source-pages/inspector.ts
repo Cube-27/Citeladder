@@ -17,7 +17,7 @@ import {
 import { getLogger } from '../logging.ts';
 import { FetchError, type FetchedPage, type WebsiteFetcher } from '../projects/safe-fetch.ts';
 import { PageAcquirer, authorizeAcquisition } from '../web-evidence/acquisition.ts';
-import { citationIdentity } from '../site-health/url-identity.ts';
+import { pageIdentity } from './identity.ts';
 import { claimPages, spendRedirect, type SourceScope } from './admission.ts';
 import { assessPage } from './assessment.ts';
 import { extractSourcePage } from './extract.ts';
@@ -127,7 +127,7 @@ export function sourcePageInspector(fetcher?: WebsiteFetcher): Executor {
       } catch {
         continue;
       }
-      const identity = citationIdentity(result.url);
+      const identity = pageIdentity(result.url);
       if (!identity) continue;
       await checkCancelled('citation resolution'); // NOSONAR -- Cancellation is checked between redirects.
       await resolveCitation(db, scope, audit.id, token, result.url, task); // NOSONAR -- Resolved before the next redirect spends budget.
