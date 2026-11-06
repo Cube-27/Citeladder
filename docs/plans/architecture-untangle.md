@@ -55,7 +55,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | PR | Title | Rows (commit order) | Depends on | Flags | Status | PR link | Notes |
 |----|-------|---------------------|-----------|-------|--------|---------|-------|
 | P01 | Onboarding competitor discovery fix | ON1, ON2 | — | | in progress | | Owner bug; start here. Builder session `untangle-p01` |
-| P02 | Correctness fixes: trial credits, Share of Shelf, perception states, browser state labels, latest brand run | FX1, FX2, FX3, FX4, O1 | — | mig? | in progress | | Builder session `untangle-p02` |
+| P02 | Correctness fixes: trial credits, Share of Shelf, perception states, browser state labels, latest brand run | FX1, FX2, FX3, FX4, O1 | — | mig? | in review | [#629](https://github.com/Cube-27/Citeladder/pull/629) | Builder session `untangle-p02`; migrations 0006–0007 provisional, renumber above P03 on rebase |
 | P03 | Runtime safety and schema hardening | FX5, DB1, DB2 | — | mig | in progress | | Builder session `untangle-p03`; holds the migration slot (0006+) |
 | P04 | Site Health tasks I: outcome classifier, crawl status, single writers | SH1, SH2, SH3 | — | mig? | in progress | | Builder session `untangle-p04` |
 | P05 | Engine surfaces I: DataForSEO client, typed frozen config, engine sets from routes | E1, E2, E3 | — | | todo | | |
@@ -118,10 +118,10 @@ order the PR tracker already respects.
 |----|----|-----------|------|-------|--------|---------|-------|
 | ON1 | Discovery identity deadline; no silent empty "ready"; research logging | — | `projects/research*.ts`, `config/discovery.json`, `models/anthropic.ts`, `workers/discovery-worker.ts` | | todo | | |
 | ON2 | "Run discovery again" and onboarding failure copy | ON1 | `frontend/lib/onboarding`, `frontend/components/onboarding`, `routes/brand-discoveries.ts` | | todo | | |
-| FX1 | Trial credits 5,000 → 500 and copy | — | `config/entitlements.json`, `docs/billing-*.md`, three marketing copy files | | todo | | |
-| FX2 | Commerce Share of Shelf by candidate state; Commerce "measure with" | — | `commerce/shelf*.ts`, `config/actions.ts` | mig? | todo | | |
-| FX3 | Perception: model omissions stay distinct; model frozen per audit | — | `perception/`, `visibility/perception.ts` | mig? | todo | | |
-| FX4 | Browser: cancel refreshes Commerce; Internal Links state labels | — | `frontend/components/runs/run-detail-screen.tsx`, `frontend/components/site-health/internal-links-panel.tsx` | | todo | | |
+| FX1 | Trial credits 5,000 → 500 and copy | — | `config/entitlements.json`, `docs/billing-*.md`, three marketing copy files | | done | d63ffa9 | |
+| FX2 | Commerce Share of Shelf by candidate state; Commerce "measure with" | — | `commerce/shelf*.ts`, `config/actions.ts` | mig? | done | be87f27 | |
+| FX3 | Perception: model omissions stay distinct; model frozen per audit | — | `perception/`, `visibility/perception.ts` | mig? | done | 0bdb569 | |
+| FX4 | Browser: cancel refreshes Commerce; Internal Links state labels | — | `frontend/components/runs/run-detail-screen.tsx`, `frontend/components/site-health/internal-links-panel.tsx` | | done | fbc7dd6 | |
 | FX5 | Runtime safety: in-request cap, SIGTERM, frozen turn limit, failed-call usage, deploy guard | — | `routes/agent.ts`, `agent/{contracts,model-calls}.ts`, `server.ts`, `commands/audits.ts`, `audits/interactive.ts`, `.github/workflows/gcp-deploy.yml` | | todo | | |
 | DB1 | Capacity-lease and queue indexes; lease purge | — | `migrations/`, `providers/capacity.ts`, audit maintenance | mig | todo | | |
 | DB2 | Tenancy in the schema; registry-driven isolation test | DB1 | `migrations/`, `db/workspace-scope.ts`, writers of `prompt_sets`/`topics`/`competitors`/`brands`/`prompts`, `test/request-access.test.ts` | mig | todo | | |
@@ -153,7 +153,7 @@ order the PR tracker already respects.
 | E3 | Engine sets derived from provider routes; browser engine tables deleted | E2 | `audits/{creation,estimate,submission-intent,maintenance}.ts`, `search-surfaces/locations.ts`, `config/visibility.json`, `frontend/lib/providers/catalog.ts` | | todo | | |
 | E4 | `llm` surface adapter; audit worker moves to `audits/` | E3, Q7 | `audits/surfaces/`, `workers/audit-worker.ts`, `audits/{result,surface}-persistence.ts` | | todo | | |
 | E5 | `search_ai` and `llm_scraper` adapters | E4 | `audits/surfaces/`, `search-surfaces/` | | todo | | |
-| O1 | One latest-brand-run resolver; one rate owner; queries-per-execution denominator | — | `visibility/{selection,dashboard,prompts}.ts`, `opportunities/sources.ts`, `projects/command-center.ts`, `analysis/aggregate.ts` | | todo | | |
+| O1 | One latest-brand-run resolver; one rate owner; queries-per-execution denominator | — | `visibility/{selection,dashboard,prompts}.ts`, `opportunities/sources.ts`, `projects/command-center.ts`, `analysis/aggregate.ts` | | done | fb22e46 | |
 | O2 | One module per check kind | O1, FX2 | `opportunities/{declaration-checks,declarations,verification-evidence,declaration-view}.ts`, `config/actions.ts`, rule catalog | | todo | | |
 | O3 | Typed Action targets and producer registry | O2 | `opportunities/refresh*.ts`, `analysis/opportunities/`, `visibility/{sources,page-standing}.ts` | | todo | | |
 | O4 | One evidence announcement for refresh and verification | O3 | `opportunities/verification.ts`, `source-pages/inspector.ts`, `search-intelligence/acquisition-state.ts`, `traffic/snapshot.ts`, `site-health/terminal-handoff.ts` | | todo | | |
