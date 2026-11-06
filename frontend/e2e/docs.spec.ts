@@ -150,13 +150,14 @@ test('contents omit step numbering without changing article anchors and follow t
 test('the docs search field edge meets 3:1 non-text contrast', async ({ page }) => {
   const edgeContrast = async () =>
     page.evaluate(() => {
-      const rgb = (value: string) => {
-        const match = /rgba?\(([^)]+)\)/.exec(value);
-        if (!match) return null;
-        const [r, g, b, a = 1] = match[1]
+      type Rgb = { r: number; g: number; b: number; a: number };
+      const rgb = (value: string): Rgb | null => {
+        const parts = (/rgba?\(([^)]+)\)/.exec(value)?.[1] ?? '')
           .split(/[\s,/]+/)
           .filter(Boolean)
           .map(Number);
+        const [r, g, b, a = 1] = parts;
+        if (r === undefined || g === undefined || b === undefined) return null;
         return { r, g, b, a };
       };
       const luminance = ({ r, g, b }: { r: number; g: number; b: number }) => {
@@ -168,14 +169,15 @@ test('the docs search field edge meets 3:1 non-text contrast', async ({ page }) 
       };
       const field = document.querySelector('[data-docs-search-trigger="field"]') as Element;
       const edge = rgb(getComputedStyle(field).borderTopColor);
-      let ground = null;
+      let ground: Rgb | null = null;
       for (let node = field.parentElement; node && !ground; node = node.parentElement) {
         const fill = rgb(getComputedStyle(node).backgroundColor);
         if (fill && fill.a === 1) ground = fill;
       }
       ground ??= rgb(getComputedStyle(document.body).backgroundColor);
       if (!edge || !ground) return null;
-      const [hi, lo] = [luminance(edge), luminance(ground)].sort((x, y) => y - x);
+      const hi = Math.max(luminance(edge), luminance(ground));
+      const lo = Math.min(luminance(edge), luminance(ground));
       return (hi + 0.05) / (lo + 0.05);
     });
   for (const colorScheme of ['light', 'dark'] as const) {
