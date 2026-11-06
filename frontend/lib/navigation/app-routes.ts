@@ -105,7 +105,7 @@ export const APP_ROUTES = [
     scope: 'public',
     shell: false,
     mode: 'dashboard',
-    screen: pick(() => import('@/apps/app/src/auth-routes'), 'LoginRoute'),
+    screen: pick(() => import('@/components/auth/auth-routes'), 'LoginRoute'),
   },
   {
     path: '/register',
@@ -113,7 +113,7 @@ export const APP_ROUTES = [
     scope: 'public',
     shell: false,
     mode: 'dashboard',
-    screen: pick(() => import('@/apps/app/src/auth-routes'), 'RegisterRoute'),
+    screen: pick(() => import('@/components/auth/auth-routes'), 'RegisterRoute'),
   },
 
   // Signed in, before the shell opens.
@@ -160,7 +160,7 @@ export const APP_ROUTES = [
     scope: 'project',
     shell: true,
     mode: 'dashboard',
-    screen: pick(() => import('@/apps/app/src/product-routes-site-issues'), 'WebsiteRoute'),
+    screen: pick(() => import('@/components/site-health/site-health-screen'), 'SiteHealthScreen'),
     nav: [{ label: 'Website', icon: 'site', placements: ['dashboard:analyze', 'palette:Analyze'] }],
   },
   {
@@ -170,10 +170,7 @@ export const APP_ROUTES = [
     shell: true,
     mode: 'dashboard',
     collection: '/site',
-    screen: pick(
-      () => import('@/apps/app/src/product-routes-site-issues'),
-      'WebsitePageDetailRoute',
-    ),
+    screen: pick(() => import('@/components/site-health/url-detail'), 'PageDetailScreen'),
   },
   // One download per screen: a shared module for unrelated screens made
   // `/demand` fetch Performance and its chart code.
@@ -198,7 +195,7 @@ export const APP_ROUTES = [
     scope: 'project',
     shell: true,
     mode: 'dashboard',
-    screen: pick(() => import('@/apps/app/src/product-routes-site-issues'), 'IssuesRoute'),
+    screen: pick(() => import('@/components/site-health/issues-screen'), 'IssuesScreen'),
     nav: [
       { label: 'Issues', icon: 'issues', placements: ['dashboard:analyze', 'palette:Analyze'] },
     ],
@@ -242,10 +239,7 @@ export const APP_ROUTES = [
     scope: 'project',
     shell: true,
     mode: 'dashboard',
-    screen: pick(
-      () => import('@/components/products/products-route-content'),
-      'ProductsRouteContent',
-    ),
+    screen: pick(() => import('@/components/products/products-screen'), 'ProductsScreen'),
     nav: [
       {
         label: 'Commerce Suite',
@@ -261,7 +255,7 @@ export const APP_ROUTES = [
     shell: true,
     mode: 'agent',
     modeHome: true,
-    screen: pick(() => import('@/apps/app/src/product-routes-agent'), 'NewChatRouteElement'),
+    screen: pick(() => import('@/components/agent/new-chat-screen'), 'NewChatScreen'),
     // Agent mode draws New chat above its fixed destinations itself.
     nav: [{ label: 'New chat', icon: 'newChat', placements: ['palette:Agent'] }],
   },
@@ -272,17 +266,15 @@ export const APP_ROUTES = [
     shell: true,
     mode: 'agent',
     collection: '/agent',
-    screen: pick(() => import('@/apps/app/src/product-routes-agent'), 'ChatRouteElement'),
+    screen: pick(() => import('@/components/agent/chat-screen'), 'ChatScreen'),
   },
-  // Actions are a table and a detail, not a conversation. Their own module
-  // keeps the chat screen's markdown renderer out of the Actions download.
   {
     path: '/agent/actions',
     title: 'Actions',
     scope: 'project',
     shell: true,
     mode: 'agent',
-    screen: pick(() => import('@/apps/app/src/product-routes-actions'), 'ActionsRouteElement'),
+    screen: pick(() => import('@/components/agent/actions-screen'), 'ActionsScreen'),
     // Listed once in the palette, under Agent.
     nav: [
       {
@@ -300,7 +292,7 @@ export const APP_ROUTES = [
     shell: true,
     mode: 'agent',
     collection: '/agent/actions',
-    screen: pick(() => import('@/apps/app/src/product-routes-actions'), 'ActionDetailRouteElement'),
+    screen: pick(() => import('@/components/agent/action-detail-screen'), 'ActionDetailScreen'),
   },
   {
     path: '/agent/skills',
@@ -308,7 +300,7 @@ export const APP_ROUTES = [
     scope: 'project',
     shell: true,
     mode: 'agent',
-    screen: pick(() => import('@/apps/app/src/product-routes-agent'), 'SkillsRouteElement'),
+    screen: pick(() => import('@/components/agent/skills-screen'), 'SkillsScreen'),
     nav: [{ label: 'Skills', icon: 'skills', placements: ['agent', 'palette:Agent'] }],
   },
   {
@@ -317,7 +309,7 @@ export const APP_ROUTES = [
     scope: 'project',
     shell: true,
     mode: 'agent',
-    screen: pick(() => import('@/apps/app/src/product-routes-agent'), 'ContextRouteElement'),
+    screen: pick(() => import('@/components/agent/context-screen'), 'ContextScreen'),
     nav: [{ label: 'Context', icon: 'context', placements: ['agent', 'palette:Agent'] }],
   },
   {
@@ -344,10 +336,7 @@ export const APP_ROUTES = [
     scope: 'project',
     shell: true,
     mode: 'dashboard',
-    screen: pick(
-      () => import('@/apps/app/src/product-routes-visibility-runs'),
-      'VisibilityRouteElement',
-    ),
+    screen: pick(() => import('@/components/visibility/visibility-screen'), 'VisibilityScreen'),
     nav: [
       {
         label: 'AI Visibility',
@@ -362,7 +351,7 @@ export const APP_ROUTES = [
     scope: 'project',
     shell: true,
     mode: 'dashboard',
-    screen: pick(() => import('@/apps/app/src/product-routes-visibility-runs'), 'RunsRouteElement'),
+    screen: pick(() => import('@/components/runs/runs-screen'), 'RunsScreen'),
     nav: [{ label: 'Runs', icon: 'runs', placements: ['dashboard:track', 'palette:Track'] }],
   },
   {
@@ -372,10 +361,7 @@ export const APP_ROUTES = [
     shell: true,
     mode: 'dashboard',
     collection: '/runs',
-    screen: pick(
-      () => import('@/apps/app/src/product-routes-visibility-runs'),
-      'RunDetailRouteElement',
-    ),
+    screen: pick(() => import('@/components/runs/run-detail-screen'), 'RunDetailScreen'),
   },
   {
     path: '/ai-traffic',
@@ -383,10 +369,7 @@ export const APP_ROUTES = [
     scope: 'project',
     shell: true,
     mode: 'dashboard',
-    screen: pick(
-      () => import('@/components/ai-traffic/ai-traffic-route-content'),
-      'AiTrafficRouteContent',
-    ),
+    screen: pick(() => import('@/components/ai-traffic/ai-traffic-screen'), 'AiTrafficScreen'),
     nav: [
       { label: 'AI Traffic', icon: 'aiTraffic', placements: ['dashboard:track', 'palette:Track'] },
     ],
@@ -399,10 +382,7 @@ export const APP_ROUTES = [
     scope: 'workspace',
     shell: true,
     mode: 'dashboard',
-    screen: pick(
-      () => import('@/apps/app/src/product-routes-settings-invitations'),
-      'SettingsRouteElement',
-    ),
+    screen: pick(() => import('@/components/settings/settings-screen'), 'SettingsScreen'),
     nav: [
       { label: 'Settings', icon: 'settings', placements: ['palette:Settings', 'user-menu'] },
       {
@@ -433,10 +413,7 @@ export const APP_ROUTES = [
     scope: 'workspace',
     shell: true,
     mode: 'dashboard',
-    screen: pick(
-      () => import('@/apps/app/src/product-routes-settings-invitations'),
-      'BillingRouteElement',
-    ),
+    screen: pick(() => import('@/components/billing/billing-screen'), 'BillingScreen'),
     nav: [{ label: 'Billing', icon: 'billing', placements: ['palette:Settings', 'user-menu'] }],
   },
   {
@@ -445,7 +422,7 @@ export const APP_ROUTES = [
     scope: 'workspace',
     shell: true,
     mode: 'dashboard',
-    screen: () => import('@/apps/app/src/pricing-route'),
+    screen: () => import('@/components/billing/pricing-route'),
   },
   {
     path: '/invitations/accept',
@@ -455,8 +432,8 @@ export const APP_ROUTES = [
     mode: 'dashboard',
     credentialInUrl: true,
     screen: pick(
-      () => import('@/apps/app/src/product-routes-settings-invitations'),
-      'AcceptInvitationRouteElement',
+      () => import('@/components/settings/accept-invitation-screen'),
+      'AcceptInvitationPage',
     ),
   },
 ] as const satisfies readonly AppRouteRecord[];
