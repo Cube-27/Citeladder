@@ -6,7 +6,7 @@ Remaining work is consolidated in the backlog; historical plans are not active a
 ## Active
 
 - [Architecture untangle](architecture-untangle.md) (owner decisions recorded
-  2026-11-06): 80 dependency-ordered PRs that fix the onboarding discovery bug
+  2026-11-06): 22 dependency-ordered PRs that fix the onboarding discovery bug
   and verified defects first, then give queues, Site Health tasks, credit holds,
   prompt writes, engine surfaces, browser server state and routes one owner
   each; the plan is also the orchestrator's tracker.

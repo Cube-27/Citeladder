@@ -1,8 +1,9 @@
 # Architecture untangle
 
 Status: approved for implementation (owner, 2026-11-06). This document is both the plan and the
-orchestrator's tracker: every unit of work is one pull request with an ID, its dependencies, the area it
-touches and a status the orchestrator keeps current.
+orchestrator's tracker. The work is 22 scoped pull requests (P01–P22). Each PR batches a set of rows
+(the commit-level units, e.g. ON1, FX2), lists the PRs it depends on, and carries a status the
+implementor and orchestrator keep current.
 
 Sources, all verified against `main` at `f560b2a03` (every cited `path:line` reopened, copy counts re-run,
 git evidence checked): an eleven-scope untangle review (hidden links, needless links, surplus, special
@@ -13,19 +14,25 @@ owner's decisions below. Findings that did not survive verification are not list
 
 ## How the orchestrator uses this document
 
-1. **Ready rule.** A PR is ready when every ID in its *Depends on* column has status `merged`.
-2. **Parallel rule.** Ready PRs may run at the same time when their *Area* columns do not overlap. A PR
+1. **Unit of assignment is a PR (P01–P22).** The orchestrator assigns one PR to one implementor. The
+   implementor commits row by row in the PR's row order, marks each row `done` in the *Rows* table, sets
+   the PR's status and link in the *PR tracker* in its tracker commit, gets CI green and comments
+   `READY <sha7>`. The orchestrator merges on READY and updates the PR's status to `merged`.
+2. **Ready rule.** A PR is ready when every PR in its *Depends on* column is `merged`. Row dependencies
+   inside one PR are satisfied by commit order.
+3. **Parallel rule.** Ready PRs may run at the same time; the *Order* section lists which ones can. A PR
    marked **wide** (repo-wide import churn) runs with as few other PRs open as possible and merges first;
    open PRs rebase after it.
-3. **Migrations.** PRs marked **mig** add a forward migration. Migrations are numbered `0006` onwards in
-   merge order; only one **mig** PR is open at a time, or a later one renumbers when it rebases. Never edit
-   an applied migration and never reset a database.
-4. **Status values:** `todo` → `in progress` (branch exists) → `in review` (PR open, link filled) →
-   `merged`; `blocked` with a one-line reason in *Notes*. Update the row in the same commit or right after
-   the merge; do not add progress notes elsewhere.
-5. **Scope.** A PR implements exactly its row and the detail section below it. Anything new that turns up
-   goes into *Notes* of the row it belongs to or to `docs/plans/backlog.md`, not into the PR.
-6. **Every PR** follows `CLAUDE.md` (owner inspection first, focused tests only, Review.md self-check) and
+4. **Migrations.** PRs marked **mig** may add a forward migration, numbered `0006` onwards in merge order;
+   only one **mig** PR is open at a time, or a later one renumbers when it rebases. Never edit an applied
+   migration and never reset a database.
+5. **Size.** A PR that would pass about 4,000 changed lines splits at a row boundary into `Pnn-a` /
+   `Pnn-b`; record the split in *Notes*.
+6. **Status values:** `todo` → `in progress` → `in review` → `merged`; `blocked` with a one-line reason in
+   *Notes*. Do not add progress notes elsewhere.
+7. **Scope.** A PR implements exactly its rows and their detail sections under *Work details*. Anything new
+   goes into *Notes* or `docs/plans/backlog.md`, not into the PR.
+8. **Every PR** follows `CLAUDE.md` (owner inspection first, focused tests only, Review.md self-check) and
    updates the owner document whose contract it changes. No back-compat shims, no data backfills, version
    constants stay at 1, no new lint or style checks, no marketing copy changes beyond the ones this plan
    names.
@@ -43,9 +50,71 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | OD5 | Onboarding discovery | Fix the recurring "competitor discovery fails after a deploy, works after logging out" bug first; make error handling and logging robust last, with recovery actions instead of dead-end errors. | ON1, ON2, Z1–Z4 |
 | OD6 | Unpriced gateway model billed at the Haiku rate | Keep the documented fallback: only Anthropic and OpenAI models are used and all are priced; internal cost for any other model stays at the Haiku rate; customer pricing is separate and the public model choice is fixed. Revisit later. | none |
 
-## Tracker
+## PR tracker
 
-| ID | PR | Depends on | Area | Flags | Status | PR link | Notes |
+| PR | Title | Rows (commit order) | Depends on | Flags | Status | PR link | Notes |
+|----|-------|---------------------|-----------|-------|--------|---------|-------|
+| P01 | Onboarding competitor discovery fix | ON1, ON2 | — | | todo | | Owner bug; start here |
+| P02 | Correctness fixes: trial credits, Share of Shelf, perception states, browser state labels, latest brand run | FX1, FX2, FX3, FX4, O1 | — | mig? | todo | | |
+| P03 | Runtime safety and schema hardening | FX5, DB1, DB2 | — | mig | todo | | |
+| P04 | Site Health tasks I: outcome classifier, crawl status, single writers | SH1, SH2, SH3 | — | mig? | todo | | |
+| P05 | Engine surfaces I: DataForSEO client, typed frozen config, engine sets from routes | E1, E2, E3 | — | | todo | | |
+| P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | todo | | |
+| P07 | App route manifest and kit cleanup | R1, R2, R3, R5, R6, R7 | — | | todo | | |
+| P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | todo | | |
+| P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | todo | | |
+| P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | todo | | |
+| P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | todo | | |
+| P12 | Opportunities: check kinds, typed targets, evidence announcement | O2, O3, O4 | P02 | | todo | | |
+| P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | todo | | |
+| P14 | Marketing site records and config-driven numbers | MK1, MK2, MK3, MK4 | P02 | | todo | | |
+| P15 | Queue owner II: remaining lanes and coalesced enqueue | Q4, Q5, Q6, Q7, Q8 | P01, P03, P09 | | todo | | |
+| P16 | Site Health tasks II: one task runner, counters, pinned versions | SH4, SH5 | P04, P08, P09 | | todo | | |
+| P17 | Permission on the command, MCP prepared changes, workspace ownership | C3, C4, X6 | P11 | | todo | | |
+| P18 | Internal cost view, spend breaker, output caps | K1, K2, K3 | P01, P10 | mig? | todo | | Before public sign-up |
+| P19 | Engine surfaces II: surface adapters, audit side effects out of analysis | E4, E5, X8 | P05, P15 | | todo | | |
+| P20 | Settings resolve once; named abuse budgets | G1, G2, G3 | P01, P15 | wide | todo | | |
+| P21 | Screen sweep: failure renderer, typed blobs, form limits, non-null project, recovery actions | F8, F9, F10, R4, Z4 | P07, P12, P13, P16 | | todo | | Split at a row boundary if over ~4,000 lines |
+| P22 | AI Traffic and integration owners; error logging | X4, X5, Z1, Z2, Z3 | P15, P16, P19 | | todo | | |
+
+## Order
+
+- **Start together (no dependencies):** P01, P02, P03, P04, P05, P06, P07, P08 (wide). Suggested first:
+  P01 (the owner bug) and P02 (user-visible defects and the trial change), then P03 and P04 because the
+  most PRs wait on them.
+- **Next, as their dependencies merge:** P09 (after P03), P10 (after P04), P11 (after P03), P12 and P14
+  (after P02), P13 (after P06).
+- **Then:** P15 (after P01, P03, P09), P16 (after P04, P08, P09), P17 (after P11), P18 (after P01, P10).
+- **Then:** P19 (after P05, P15), P20 (after P01, P15), P21 (after P07, P12, P13, P16).
+- **Last:** P22 (after P15, P16, P19).
+
+What each merge unblocks:
+
+| Merged | Unblocks (once their other dependencies are merged) |
+|--------|-----------------------------------------------------|
+| P01 | P15, P18, P20 |
+| P02 | P12, P14 |
+| P03 | P09, P11, P15 |
+| P04 | P10, P16 |
+| P05 | P19 |
+| P06 | P13 |
+| P07 | P21 |
+| P08 | P16 |
+| P09 | P15, P16 |
+| P10 | P18 |
+| P11 | P17 |
+| P12 | P21 |
+| P13 | P21 |
+| P15 | P19, P20, P22 |
+| P16 | P21, P22 |
+| P19 | P22 |
+
+## Rows
+
+Commit-level units. Status: `todo` or `done` (set by the implementor in its PR). *Depends on* is the row
+order the PR tracker already respects.
+
+| ID | Row | Depends on | Area | Flags | Status | Commit | Notes |
 |----|----|-----------|------|-------|--------|---------|-------|
 | ON1 | Discovery identity deadline; no silent empty "ready"; research logging | — | `projects/research*.ts`, `config/discovery.json`, `models/anthropic.ts`, `workers/discovery-worker.ts` | | todo | | |
 | ON2 | "Run discovery again" and onboarding failure copy | ON1 | `frontend/lib/onboarding`, `frontend/components/onboarding`, `routes/brand-discoveries.ts` | | todo | | |
@@ -128,37 +197,6 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | Z3 | Silent-catch triage: remaining backend areas | Z1, X5, E5 | `crawl-logs`, `commerce`, `search-intelligence`, `projects`, `providers`, `integrations`, `auth`, `audits`, `web-evidence`, `source-pages` | | todo | | |
 | Z4 | Recovery actions on job-backed screens | F8 | job-backed screens | | todo | | |
 
-### Dependency levels
-
-Computed from the tracker; any PR in a level can start once the levels before it have merged the PRs it
-depends on. Within a level, use the *Area* column to pick non-overlapping PRs.
-
-- **Level 0 (no dependencies):** ON1, FX1, FX2, FX3, FX4, FX5, DB1, Q1 (wide), SH1, B1, C5, E1, O1, F1,
-  R1, R6, MK1, MK3, G1 (wide), X1.
-  Suggested first batch: ON1, FX1, FX2, O1 (the owner bug, the trial change and the two correctness defects
-  users see).
-- **Level 1:** ON2, DB2, Q2, Q3, SH2, B2, E2, O2, F2, F4, R2, R7, MK2, MK4, G3, X2 (wide), X3.
-- **Level 2:** Q4, Q5, Q6, Q8, SH3, SH5, B3, C1, E3, O3, F3, F5, R3, X7, K1, K3.
-- **Level 3:** Q7, SH4, B4, C2, O4, F6, R5, X4, X5, K2.
-- **Level 4:** E4, B5, C3, C4, F7, R4, G2 (wide), Z1, Z2.
-- **Level 5:** E5, X6, X8, F8.
-- **Level 6:** Z3, F9, Z4.
-- **Level 7:** F10.
-
-### Dependency chains (what comes next after a merge)
-
-- Onboarding: ON1 → ON2; ON1 also unblocks Q4, G2, K3.
-- Queue: Q1 → Q2 → Q8 → {X4, X5}; Q1 + DB1 → Q3 → {Q4, Q5, Q6} → Q7 → {E4, G2, Z1}.
-- Site Health: SH1 → SH2 → SH3 → SH4 (also needs Q3) → Z2; SH2 + X1 → SH5; SH3 → B4.
-- Holds: B1 → B2 → B3 → B4 → B5; B2 → {K1 → K2, K3}.
-- Tenancy and commands: DB1 → DB2 → C1 → C2 (also needs FX5) → {C3 → X6, C4}.
-- Surfaces: E1 → E2 → E3 → E4 (also needs Q7) → {E5, X8}.
-- Opportunities: O1 + FX2 → O2 → O3 → O4.
-- Browser state: F1 → {F2 → F3, F4 → F5 → F6 (also needs F2)} → F7 → F8 → {F9 (also needs SH5, O3) → F10, Z4}.
-- App routes: R1 → {R2 → {R3 → R5, R4 (also needs F6)}, R7}.
-- Marketing: MK1 → MK2; FX1 + MK1 + MK3 → MK4.
-- Config: G1 → {G3, G2 (also needs Q7, ON1)}.
-- Relocations: X1 → {X2, X3 → X7, SH5}.
 
 ## Work details
 
