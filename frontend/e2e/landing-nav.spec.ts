@@ -14,6 +14,17 @@ import { NAV_DROPS } from '@/lib/marketing-content/nav';
  */
 const DROP_KEYS = NAV_DROPS.map((drop) => drop.key);
 
+/**
+ * Open a page once its islands are interactive. The desktop menus hydrate
+ * with `client:load`, after the load event `goto` waits for; a key pressed
+ * before then reaches server-rendered markup with no handler. Astro removes
+ * an island's `ssr` attribute when it hydrates.
+ */
+async function open(page: Page, path: string): Promise<void> {
+  await page.goto(path);
+  await page.waitForFunction(() => !document.querySelector('astro-island[ssr]'));
+}
+
 const mainNav = (page: Page) => page.getByRole('navigation', { name: 'Main navigation' });
 const trigger = (page: Page, name: string) =>
   mainNav(page).getByRole('button', { name, exact: true });
@@ -31,7 +42,7 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
       viewport: { width: 1440, height: 900 },
     });
     const page = await context.newPage();
-    await page.goto('/platform');
+    await open(page, '/platform');
     const toggle = trigger(page, 'Platform');
     await toggle.tap();
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
@@ -43,7 +54,7 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
 
   test('Escape restores the desktop disclosure focus without reopening it', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/platform/site-health');
+    await open(page, '/platform/site-health');
     const toggle = trigger(page, 'Platform');
     await toggle.focus();
     await page.keyboard.press('Enter');
@@ -66,7 +77,7 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto('/');
+    await open(page, '/');
     await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Open menu' })).toBeHidden();
 
@@ -91,7 +102,7 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/faq');
+    await open(page, '/faq');
     const platform = trigger(page, 'Platform');
     await platform.hover();
     await expect(platform).toHaveAttribute('aria-expanded', 'true');
@@ -107,7 +118,7 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/faq');
+    await open(page, '/faq');
     const platform = trigger(page, 'Platform');
     const solutions = trigger(page, 'Solutions');
 
@@ -136,7 +147,7 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
 
   test('the arrow keys move between the top-level items', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/faq');
+    await open(page, '/faq');
     await trigger(page, 'Platform').focus();
     await page.keyboard.press('ArrowRight');
     await expect(trigger(page, 'Solutions')).toBeFocused();
@@ -146,7 +157,7 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
 
   test('Resources opens as named sections of links', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/faq');
+    await open(page, '/faq');
     await trigger(page, 'Resources').click();
     const panel = mainNav(page);
     for (const name of ['Learn', 'Product', 'Tools']) {
@@ -162,7 +173,7 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
 
   test('Escape closes a hover-opened menu without taking focus from a field', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/faq');
+    await open(page, '/faq');
     await page.evaluate(() => {
       const field = document.createElement('input');
       field.setAttribute('aria-label', 'Message');
@@ -180,7 +191,7 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
 
   test('the open mobile menu takes the page behind it out of reach', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 900 });
-    await page.goto('/faq');
+    await open(page, '/faq');
     const pageInert = () =>
       page.evaluate(() => document.querySelector('main')?.closest('[inert]') !== null);
     await page.getByRole('button', { name: 'Open menu' }).click();
@@ -199,7 +210,7 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
   test('the page body never scrolls sideways at 375px', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     for (const path of ['/', '/pricing', '/compare']) {
-      await page.goto(path);
+      await open(page, path);
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       );
