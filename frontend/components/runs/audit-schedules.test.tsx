@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { ApiError } from '@/lib/api/errors';
+import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
 import { renderWithProviders } from '@/test/render';
 
@@ -66,6 +67,21 @@ describe('AuditSchedules', () => {
       ),
     );
     await waitFor(() => expect(listSchedules).toHaveBeenCalledTimes(2));
+  });
+
+  it('cannot schedule while the engine catalogue offers no engine to choose', async () => {
+    const { queryClient } = renderWithProviders(
+      <AuditSchedules
+        projectId="11111111-1111-4111-8111-111111111111"
+        promptSets={[{ id: '22222222-2222-4222-8222-222222222222', name: 'Core prompts' } as never]}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Schedule audit' })).toBeEnabled();
+
+    queryClient.setQueryData(queryKeys.providers.catalog(), { transports: [], engines: [] });
+
+    await waitFor(() => expect(screen.queryByRole('checkbox', { name: 'ChatGPT API' })).toBeNull());
+    expect(screen.getByRole('button', { name: 'Schedule audit' })).toBeDisabled();
   });
 
   it('reports a failed schedules read without calling the list empty', async () => {

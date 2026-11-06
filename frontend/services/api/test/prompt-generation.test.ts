@@ -190,7 +190,7 @@ describe('prompt generation at the PostgreSQL boundary', () => {
     const account = await billingAccount(db, tenant.workspaceId);
     await grant(db, account, { value: 1 });
     await expect(
-      reviewCandidates(db, tenant.workspaceId, setId, {
+      reviewCandidates(db, { workspaceId: tenant.workspaceId, projectId: null }, setId, {
         accept_ids: result.candidates.map((row) => row.id),
         reject_ids: [],
       }),
