@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 import { StatusStrip } from './status-strip';
 import type { SiteCrawl } from '@citeladder/contracts';
@@ -258,5 +258,31 @@ describe('StatusStrip — lifecycle content', () => {
       );
       expect(screen.getByTestId('status-strip')).toBe(strip);
     }
+  });
+});
+
+describe('StatusStrip — failed crawl recovery', () => {
+  it('offers Run new crawl on a failed crawl and starts one when clicked', () => {
+    let reruns = 0;
+    renderStrip({
+      phase: 'terminal',
+      crawl: crawl({
+        status: 'failed',
+        score_summary: null,
+        error_message: 'The site did not respond.',
+      }),
+      onRerun: () => {
+        reruns += 1;
+      },
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent('The site did not respond.');
+    fireEvent.click(screen.getByRole('button', { name: 'Run new crawl' }));
+    expect(reruns).toBe(1);
+  });
+
+  it('offers no rerun when the viewer may not start a crawl', () => {
+    renderStrip({ phase: 'terminal', crawl: crawl({ status: 'failed', score_summary: null }) });
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Run new crawl' })).toBeNull();
   });
 });

@@ -3,9 +3,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { Circle, CircleCheck } from 'lucide-react';
 
-import { Callout } from '@/components/ui/callout';
+import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
+import { MutationNotice } from '@/components/ui/mutation-notice';
 import { panelClasses } from '@/components/ui/panel';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
@@ -92,11 +93,29 @@ function ladderStepState(index: number, reached: number): 'done' | 'active' | 'p
   return index === reached ? 'active' : 'pending';
 }
 
-export function ReadinessLadder({ data }: Readonly<{ data: ProjectReadiness | undefined }>) {
+export function ReadinessLadder({
+  data,
+  sync,
+}: Readonly<{
+  data: ProjectReadiness | undefined;
+  /** Starts a new sync, the recovery for a failed import; omitted while one runs. */
+  sync?: () => void;
+}>) {
   if (!data || data.stage === 'analysis_ready' || data.stage === 'not_connected') return null;
 
   if (data.stage === 'import_failed') {
-    return <Callout tone="negative">{EXPLANATION.import_failed}</Callout>;
+    return (
+      <MutationNotice
+        notice={{ message: EXPLANATION.import_failed, retryable: false }}
+        recovery={
+          sync ? (
+            <Button type="button" variant="secondary" onClick={sync}>
+              Sync again
+            </Button>
+          ) : undefined
+        }
+      />
+    );
   }
 
   const reached = stageIndex(data.stage);

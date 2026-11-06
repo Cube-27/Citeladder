@@ -70,11 +70,31 @@ export function TargetCompetitors({
       </CardHeader>
       <CardContent>
         <Stack>
-          {tasks.map((task) => (
-            <Callout key={task.id} tone={task.status === 'failed' ? 'negative' : 'info'}>
-              {discoveryMessage(task.status, task.target.kind, task.error_code)}
-            </Callout>
-          ))}
+          {tasks.map((task) =>
+            task.status === 'failed' ? (
+              <MutationNotice
+                key={task.id}
+                notice={{
+                  message: discoveryMessage(task.status, task.target.kind, task.error_code),
+                  retryable: false,
+                }}
+                recovery={
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={discovery.discover.isPending || running}
+                    onClick={() => discovery.discover.mutate([target])}
+                  >
+                    Find again
+                  </Button>
+                }
+              />
+            ) : (
+              <Callout key={task.id} tone="info">
+                {discoveryMessage(task.status, task.target.kind, task.error_code)}
+              </Callout>
+            ),
+          )}
           {discovery.discover.isError ? (
             <MutationNotice
               notice={mutationNoticeForError(discovery.discover.error, {

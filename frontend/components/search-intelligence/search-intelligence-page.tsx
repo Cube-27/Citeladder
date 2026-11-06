@@ -226,6 +226,7 @@ export function SearchIntelligencePage() {
           <RunNotice
             run={data.latest_run}
             onCancel={(runId) => cancelMutation.mutate(runId)}
+            onReview={() => openReview('analysis')}
             cancelling={cancelMutation.isPending}
           />
           <TabPanel value="overview" className="min-w-0">

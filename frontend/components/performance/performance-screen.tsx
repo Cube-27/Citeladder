@@ -359,7 +359,12 @@ export function PerformanceScreen() {
           title="Connect Search Console"
           description="Performance reads this project's own search data. Connect Google and use the property for this site; Analytics and Bing are optional."
         />
-        {readiness.isError ? null : <ReadinessLadder data={readiness.data} />}
+        {readiness.isError ? null : (
+          <ReadinessLadder
+            data={readiness.data}
+            sync={sync.syncing || sync.mutation.isPending ? undefined : sync.start}
+          />
+        )}
 
         <StatusLine
           testId="performance-status"
