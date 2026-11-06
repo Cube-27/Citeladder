@@ -659,12 +659,13 @@ customer credits. Policy, caps, the closed theme list and the templates live in
   task on the analytics queue, keyed by the analysis and the frozen extractor
   version, so a re-derived finalize never adds a second. No network I/O happens
   in that transaction. Admission freezes the extractor, template and metrics
-  versions into a brand audit's configuration; an audit frozen without them is
-  never classified and never reads as pending.
+  versions and the gateway model into a brand audit's configuration; an audit
+  frozen without them is never classified and never reads as pending.
 - **Executor.** Reads are committed before the model call and no transaction
   spans it. Over the per-audit or per-workspace daily cap the outcome is
   `unavailable / platform_cap`; without a configured gateway it is
-  `unavailable / model_not_configured`; a task that exhausts its attempts is
+  `unavailable / model_not_configured`; a gateway model other than the frozen
+  one is `unavailable / model_changed`; a task that exhausts its attempts is
   compensated as `unavailable / task_failed`. None of these fails the audit.
   The model receives, per business (brand first, competitors by first mention,
   bounded), every sentence naming it plus one either side; offsets are code
@@ -676,8 +677,10 @@ customer credits. Policy, caps, the closed theme list and the templates live in
 - **Validation.** Deterministic: an unknown entity is dropped; a quote must be
   found in that business's own passages after whitespace normalisation, else it
   is dropped; a theme outside the list becomes `other`; a label below
-  `min_confidence` is stored but excluded from aggregates. Drops are counted
-  by reason.
+  `min_confidence` is stored but excluded from aggregates. A business the model
+  was sent but left out keeps its row flagged `model_omitted` and reads as
+  `unavailable / model_omitted`, never as a `not_assessable` judgement. Drops
+  are counted by reason.
 - **Metrics.** Net sentiment is (positive − negative) / classified × 100, with
   `mixed` in the denominator only, always paired with "N of M mentions
   classified". Pending, unavailable (by reason), not assessable and low
@@ -685,7 +688,7 @@ customer credits. Policy, caps, the closed theme list and the templates live in
   quotes and the domains cited alongside criticism (never called a cause) are
   brand-only; the recommended rate comes from the deterministic first-mention
   assessment (English phrasing only). Trend points carry their versions; a
-  version change marks the point not comparable.
+  version or frozen-model change marks the point not comparable.
 - **Reads.** `GET /visibility/perception` (summary for a run, a run set or the
   latest run) and `/visibility/perception/quotes` (keyset-paged), the
   `perception` field of execution evidence, and the `read_perception` tool.
@@ -723,6 +726,8 @@ platform-funded like perception. The policy, topics, caps and templates are the
   in one call. Code keeps only facts that were sent; a supported or
   contradicted verdict without one becomes inconclusive; a contradiction below
   `min_contradiction_confidence` is stored as inconclusive with low confidence.
+  A claim the model left out is flagged `model_omitted` and reads as
+  `unavailable / model_omitted`, apart from claims no fact covers.
   Caps, a missing gateway and failures end as persisted outcomes
   (`fact_verifications`, `claim_verdicts`), as for perception.
 - **Metrics.** Accuracy is supported ÷ (supported + contradicted), always with
@@ -730,7 +735,7 @@ platform-funded like perception. The policy, topics, caps and templates are the
   without a call; low confidence, pending and unavailable claims are counted apart, never
   as zero. Contradicted claims carry the fact they contradict; domains cited in
   their answers are "cited alongside". Trend points change comparability with
-  the templates, metrics version or fact set.
+  the templates, frozen perception model, metrics version or fact set.
 - **Reads.** `GET /visibility/accuracy` and `/visibility/accuracy/claims`, the
   `claims` field of execution evidence and `read_fact_checks` read
   `not_enabled` outside the pilot. `pnpm facts:eval --live` is the operator-only

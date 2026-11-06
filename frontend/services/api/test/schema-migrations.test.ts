@@ -72,6 +72,10 @@ describe('a fresh database', () => {
       '0003_agent_cache_replay',
       '0004_agent_documents_web_search',
       '0005_agent_call_hold_basis',
+      '0006_capacity_and_queue_indexes',
+      '0007_workspace_tenancy_keys',
+      '0008_commerce_resolver_outcome',
+      '0009_perception_model_omitted',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -82,6 +86,10 @@ describe('a fresh database', () => {
       { version: '0003_agent_cache_replay' },
       { version: '0004_agent_documents_web_search' },
       { version: '0005_agent_call_hold_basis' },
+      { version: '0006_capacity_and_queue_indexes' },
+      { version: '0007_workspace_tenancy_keys' },
+      { version: '0008_commerce_resolver_outcome' },
+      { version: '0009_perception_model_omitted' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -116,7 +124,20 @@ describe('an existing database', () => {
       '0003_agent_cache_replay',
       '0004_agent_documents_web_search',
       '0005_agent_call_hold_basis',
+      '0006_capacity_and_queue_indexes',
+      '0007_workspace_tenancy_keys',
+      '0008_commerce_resolver_outcome',
+      '0009_perception_model_omitted',
     ]);
+    // Project-owned rows name their workspace.
+    for (const table of ['brands', 'competitors', 'prompt_sets', 'prompts', 'topics'])
+      expect(await columns(client, table)).toContain('workspace_id');
+    // Each shelf observation records its resolver outcome; omitted entities and claims are flagged.
+    expect(await columns(client, 'commerce_recommendation_observations')).toEqual(
+      expect.arrayContaining(['resolver_outcome', 'resolver_template_version']),
+    );
+    expect(await columns(client, 'entity_sentiments')).toContain('model_omitted');
+    expect(await columns(client, 'claim_verdicts')).toContain('model_omitted');
     expect(await columns(client, 'agent_runs')).not.toContain('mode');
     expect(await columns(client, 'agent_output_revisions')).not.toContain('approved_at');
     // Transcripts keep their bytes; each model call records its cache use.
@@ -137,6 +158,10 @@ describe('an existing database', () => {
       { version: '0003_agent_cache_replay' },
       { version: '0004_agent_documents_web_search' },
       { version: '0005_agent_call_hold_basis' },
+      { version: '0006_capacity_and_queue_indexes' },
+      { version: '0007_workspace_tenancy_keys' },
+      { version: '0008_commerce_resolver_outcome' },
+      { version: '0009_perception_model_omitted' },
     ]);
   }, 120000);
 });

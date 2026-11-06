@@ -7,6 +7,7 @@ import { ensureWorkspaceBilling } from '../src/entitlements/bootstrap.ts';
 import { reservePromptRuns, settlePromptRun } from '../src/audits/prompt-runs.ts';
 import { cachedWorkspaceAccess, workspaceAccess } from '../src/entitlements/access.ts';
 import { issueBundle, revokeBundle } from '../src/entitlements/grants.ts';
+import { availableUnits } from '../src/entitlements/ledger.ts';
 import type { AuditTask } from '../src/queue/audit-queue.ts';
 
 const db = testDatabase();
@@ -137,6 +138,18 @@ afterAll(async () => {
   await db.destroy();
 });
 
+it('gives a public signup 500 AI credits for its trial', async () => {
+  const trial = await publicSignup(`credits${randomUUID().slice(0, 8)}@example.test`);
+  const credits = await db.transaction().execute((trx) =>
+    availableUnits(trx, {
+      accountId: trial.accountId,
+      workspaceId: trial.workspaceId,
+      capability: 'ai_credits',
+      at: new Date(),
+    }),
+  );
+  expect(credits).toBe(500);
+});
 it('serializes the trial’s 20 prompt runs, returns failed runs and spends a success once', async () => {
   const t = await fixtures.tenant({ access: false });
   const user = await db

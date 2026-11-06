@@ -6,6 +6,7 @@
  * lock order (runtime, membership, crawl, task) so a cancelled or lost task
  * writes nothing.
  */
+import { isActiveCrawl } from '@citeladder/contracts/site-health';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
@@ -24,7 +25,6 @@ import {
 import { releaseNonPage } from './frontier.ts';
 import { isBotBlock } from './page-fetch.ts';
 import {
-  ACTIVE_CRAWL,
   cancelTask,
   finalFailure,
   httpError,
@@ -92,7 +92,7 @@ async function guardRows(
 }
 /** Live crawl, active membership, and an entitlement that still allows this row's analysis. */
 function guardAllows(crawl: Crawl, rows: GuardRows) {
-  if (!ACTIVE_CRAWL.has(crawl.status) || !rows.monitored?.active || !rows.runtime) return false;
+  if (!isActiveCrawl(crawl.status) || !rows.monitored?.active || !rows.runtime) return false;
   return (
     rows.runtime.monitored_url_limit > 0 || SAMPLE_SOURCES.has(rows.monitored.selection_source)
   );
@@ -333,7 +333,7 @@ async function prepare(
 ): Promise<Outcome | 'deferred' | null> {
   ctx.signal?.throwIfAborted();
   const scope = await loadScope(ctx.db, claimed);
-  if (!scope || !ACTIVE_CRAWL.has(scope.crawl.status)) {
+  if (!scope || !isActiveCrawl(scope.crawl.status)) {
     await cancelTask(ctx.db, claimed, ctx.owner);
     return null;
   }

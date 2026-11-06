@@ -13,8 +13,9 @@ crawler logs. This document retains GA4 referral data, projections, tasks and
 the `analytics/ai-referrals.ts` reader and its extended `read_ai_referrals` contract.
 
 Native [connected-data config](../frontend/services/api/src/config/connected-data.ts)
-owns sync settings, transports, dataset grains, traffic and referral catalogs,
-analytics task kinds and OAuth policy. [Demand config](../frontend/services/api/src/config/demand.json)
+owns sync settings, transports, dataset grains, traffic and referral catalogs
+and OAuth policy; the [analytics kind registry](../frontend/services/api/src/workers/analytics-kinds.ts)
+owns analytics task kinds. [Demand config](../frontend/services/api/src/config/demand.json)
 owns query/lexical policy and [Keyword Research config](../frontend/services/api/src/config/search-intelligence.json)
 owns acquisition and pricing. The [schema baseline](../frontend/services/api/migrations/0001_baseline.sql) holds column defaults.
 Dataset arity and
@@ -188,7 +189,7 @@ projections, Demand, Opportunity refresh and verification, source-page inspectio
 Keyword Research acquisition, internal links, catalog projection and Commerce
 competitor discovery. Its bounded lease recovery runs before each claim,
 including an empty drain. Splitting ownership requires restoring an executor
-and recovery path; changing a kind list alone cannot establish another executor.
+and recovery path; a kind exists only as a registry entry with its executor.
 Each domain owns its derived projection.
 
 [Performance](../frontend/services/api/src/traffic/performance.ts) reads persisted

@@ -8,6 +8,7 @@ import { agentSettings } from '../src/agent/config.ts';
 import { agentAdmission, agentFunding } from '../src/agent/funding.ts';
 import { agentModels } from '../src/agent/models.ts';
 import { gatewaySettings } from '../src/models/gateway.ts';
+import { ModelError } from '../src/models/http.ts';
 import { ModelCalls } from '../src/agent/model-calls.ts';
 import { AgentQueue } from '../src/agent/queue.ts';
 import { ledgerBalances } from '../src/entitlements/ledger.ts';
@@ -121,6 +122,34 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
       reserved: 0,
       consumed: 0,
+    });
+  });
+  it('records and charges the usage a failed call still reported, as platform metering does', async () => {
+    const { scope, accountId, grantId } = await tenant();
+    const { run: saved, lease } = await run(scope);
+    const model = {
+      ...(await agentModels(platform)(saved)),
+      converse: async () => {
+        throw new ModelError('parse', undefined, undefined, {
+          input_tokens: 20,
+          output_tokens: 10,
+        });
+      },
+    };
+    const calls = new ModelCalls(db, agentFunding(settings, platform));
+    await expect(calls.call(lease, 1, model, request)).rejects.toMatchObject({
+      code: 'provider_error',
+    });
+    expect(
+      await db
+        .selectFrom('agent_model_attempts')
+        .select(['outcome', 'input_tokens', 'output_tokens', 'debited_credits'])
+        .where('run_id', '=', saved.id)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ outcome: 'failed', input_tokens: '20', output_tokens: '10', debited_credits: '1' });
+    expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
+      reserved: 0,
+      consumed: 1,
     });
   });
   it('refunds a failed turn’s settled calls once, keeping each attempt’s debit on record (B58)', async () => {

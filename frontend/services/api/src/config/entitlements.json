@@ -204,7 +204,7 @@
       "prompt_slots": 20,
       "monitored_urls": 20,
       "prompt_runs_per_period": 20,
-      "ai_credits": 5000,
+      "ai_credits": 500,
       "manual_runs_per_day": 100
     }
   },

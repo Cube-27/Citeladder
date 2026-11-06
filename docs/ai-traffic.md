@@ -184,7 +184,7 @@ and activates the source; the pull task reruns it every
 changes nothing, and only a passing check lifts that stall.
 
 `crawl_log_pull` ([`pull.ts`](../frontend/services/api/src/crawl-logs/pull.ts),
-lease 300 s through `task_lease_ttl_seconds`) is queued by the tick for verified
+lease 300 s through crawl-log `pull_lease_ttl_seconds`) is queued by the tick for verified
 live pull sources every `pull_interval_seconds`, and daily while
 `verification_failed` or `not_in_plan` holds them. It commits `last_pull_at`,
 then loops at most `pull_max_iterations`: pull up to `pull_max_messages` outside
