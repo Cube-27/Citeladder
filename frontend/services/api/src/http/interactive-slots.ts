@@ -16,7 +16,7 @@ export type InteractiveSlot = {
   readonly release: () => void;
 };
 
-export class InteractiveSlots {
+class InteractiveSlots {
   private readonly capacity: Capacity;
   private readonly stopping = new AbortController();
   private readonly held = new Set<InteractiveSlot>();

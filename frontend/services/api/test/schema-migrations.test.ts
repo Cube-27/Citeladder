@@ -72,6 +72,8 @@ describe('a fresh database', () => {
       '0003_agent_cache_replay',
       '0004_agent_documents_web_search',
       '0005_agent_call_hold_basis',
+      '0006_capacity_and_queue_indexes',
+      '0007_workspace_tenancy_keys',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -82,6 +84,8 @@ describe('a fresh database', () => {
       { version: '0003_agent_cache_replay' },
       { version: '0004_agent_documents_web_search' },
       { version: '0005_agent_call_hold_basis' },
+      { version: '0006_capacity_and_queue_indexes' },
+      { version: '0007_workspace_tenancy_keys' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -116,7 +120,12 @@ describe('an existing database', () => {
       '0003_agent_cache_replay',
       '0004_agent_documents_web_search',
       '0005_agent_call_hold_basis',
+      '0006_capacity_and_queue_indexes',
+      '0007_workspace_tenancy_keys',
     ]);
+    // Project-owned rows name their workspace.
+    for (const table of ['brands', 'competitors', 'prompt_sets', 'prompts', 'topics'])
+      expect(await columns(client, table)).toContain('workspace_id');
     expect(await columns(client, 'agent_runs')).not.toContain('mode');
     expect(await columns(client, 'agent_output_revisions')).not.toContain('approved_at');
     // Transcripts keep their bytes; each model call records its cache use.
@@ -137,6 +146,8 @@ describe('an existing database', () => {
       { version: '0003_agent_cache_replay' },
       { version: '0004_agent_documents_web_search' },
       { version: '0005_agent_call_hold_basis' },
+      { version: '0006_capacity_and_queue_indexes' },
+      { version: '0007_workspace_tenancy_keys' },
     ]);
   }, 120000);
 });
