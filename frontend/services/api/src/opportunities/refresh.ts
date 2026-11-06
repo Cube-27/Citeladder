@@ -359,6 +359,7 @@ export async function recomputeOpportunities(
     const readGaps = Boolean(record(record(current?.coverage).source_identity).search_gap_revision);
     const empty =
       collected.audit === null &&
+      sources.identity.commerce_audit_id === null &&
       sources.crawl === null &&
       sources.demand === null &&
       sources.gaps === null &&

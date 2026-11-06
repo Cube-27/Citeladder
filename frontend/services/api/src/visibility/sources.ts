@@ -68,7 +68,6 @@ export type SourceQuery = {
 type RowFilters = Pick<SourceQuery, 'domain' | 'sourceClass' | 'standing'>;
 const UNFILTERED: RowFilters = { domain: null, sourceClass: null, standing: null };
 
-/** The selected runs, each with when it was observed. */
 /**
  * The selected brand runs (`selectedRuns`), each with when it was observed. A
  * commerce run measures something else, so even when named it contributes no sources.

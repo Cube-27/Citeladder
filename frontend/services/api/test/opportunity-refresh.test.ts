@@ -19,10 +19,11 @@ import { drainWorkspace } from './analytics-drain.ts';
 import { seedOpportunityScenario, type OpportunitySeed } from './opportunity-fixtures.ts';
 import { sourcePage } from './action-support.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
-import { VisibilityFixtures } from './visibility-fixtures.ts';
+import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
 const config = testConfig();
 const db = testDatabase(config);
+const visibility = new VisibilityFixtures(db);
 const app = createApp(config, db);
 const o = policy.opportunity.opportunities;
 const URL_B = 'https://acme.test/b';
@@ -109,6 +110,7 @@ afterAll(async () => {
     await db.deleteFrom('workspaces').where('id', '=', s.workspace_id).execute();
     await db.deleteFrom('users').where('id', '=', s.user_id).execute();
   }
+  await visibility.cleanup();
   await db.destroy();
 });
 
@@ -227,22 +229,17 @@ describe('opportunity_refresh', () => {
     expect(await snapshotCount(s)).toBe(before + 1);
   });
 
-  it('keeps brand and Commerce Actions when a Commerce run follows the brand run', async () => {
-    const s = await seed();
-    const tenant = { userId: s.user_id, workspaceId: s.workspace_id, projectId: s.project_id };
-    // Completed after the seed's brand run, so it is the project's newest run of any scope.
-    const commerceRun = await new VisibilityFixtures(db).audit(tenant, {
-      scope: 'commerce',
-      completedAt: new Date(Date.now() + 60_000),
-    });
+  /** A completed Commerce run whose one product was never named. */
+  async function unseenProductRun(tenant: Tenant, completedAt: Date) {
+    const auditId = await visibility.audit(tenant, { scope: 'commerce', completedAt });
     const productId = randomUUID();
     await db
       .insertInto('commerce_shelf_snapshots')
       .values({
         id: randomUUID(),
-        workspace_id: s.workspace_id,
-        project_id: s.project_id,
-        audit_id: commerceRun,
+        workspace_id: tenant.workspaceId,
+        project_id: tenant.projectId,
+        audit_id: auditId,
         target_kind: 'product',
         target_id: productId,
         product_visibility: 0,
@@ -258,6 +255,14 @@ describe('opportunity_refresh', () => {
         created_at: new Date(),
       })
       .execute();
+    return productId;
+  }
+
+  it('keeps brand and Commerce Actions when a Commerce run follows the brand run', async () => {
+    const s = await seed();
+    const tenant = { userId: s.user_id, workspaceId: s.workspace_id, projectId: s.project_id };
+    // Completed after the seed's brand run, so it is the project's newest run of any scope.
+    const productId = await unseenProductRun(tenant, new Date(Date.now() + 60_000));
     await recomputeOpportunities(db, scope(s));
     const rows = await live(s);
     const rules = rows.map((row) => [row.rule_id, row.target_key]).toSorted();
@@ -276,6 +281,25 @@ describe('opportunity_refresh', () => {
       .executeTakeFirstOrThrow();
     // The brand evidence still comes from the brand run.
     expect(snapshot.audit_id).toBe(s.audit_id);
+  });
+
+  it('refreshes a project whose only source is Commerce when a newer Commerce run lands', async () => {
+    const tenant = await visibility.tenant();
+    const scoped = { workspaceId: tenant.workspaceId, projectId: tenant.projectId };
+    await unseenProductRun(tenant, new Date(Date.now() - 60_000));
+    await recomputeOpportunities(db, scoped);
+    const second = await unseenProductRun(tenant, new Date());
+    await recomputeOpportunities(db, scoped);
+
+    const rows = await db
+      .selectFrom('opportunities')
+      .select(['rule_id', 'target_key'])
+      .where('workspace_id', '=', tenant.workspaceId)
+      .where('superseded_at', 'is', null)
+      .execute();
+    expect(rows.map((row) => [row.rule_id, row.target_key])).toEqual([
+      ['product_not_mentioned', `product:${second}`],
+    ]);
   });
 
   it('lets exactly one of two concurrent workers claim a queued refresh', async () => {
