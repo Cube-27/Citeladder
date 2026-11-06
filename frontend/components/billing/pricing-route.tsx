@@ -14,10 +14,10 @@ import { textRole } from '@/components/ui/typography';
 import {
   billingDetailsError,
   emptyBillingCustomerDetails,
+  refreshBilling,
   type BillingCatalog,
   type BillingCustomerDetails,
 } from '@/lib/api/billing';
-import { queryKeys } from '@/lib/api/query-keys';
 import { useWorkspaceCatalog } from '@/lib/billing/use-workspace-catalog';
 import {
   checkoutSelection,
@@ -380,7 +380,7 @@ export default function PricingRoute() {
         clearPendingIntent();
         setSelection(null);
       }
-      await queryClient.invalidateQueries({ queryKey: queryKeys.billing.all });
+      await refreshBilling(queryClient);
     },
   });
   const catalog = catalogQuery.data;

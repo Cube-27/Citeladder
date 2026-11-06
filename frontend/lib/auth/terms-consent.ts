@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { authApi } from '@/lib/api/auth';
+import { authQueries } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/errors';
-import { queryKeys } from '@/lib/api/query-keys';
 
 /**
  * The published Terms revision the sign-in and sign-up forms ask a visitor to
@@ -11,13 +10,7 @@ import { queryKeys } from '@/lib/api/query-keys';
  * sign-in asks again.
  */
 export function usePublishedTerms(enabled = true) {
-  const terms = useQuery({
-    queryKey: queryKeys.auth.policies(),
-    queryFn: () => authApi.policies(),
-    // The published revision changes only with a deployment.
-    staleTime: Number.POSITIVE_INFINITY,
-    enabled,
-  });
+  const terms = useQuery({ ...authQueries.policies(), enabled });
   const { refetch } = terms;
   return {
     revision: terms.data?.terms_revision,

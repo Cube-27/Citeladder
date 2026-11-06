@@ -9,8 +9,7 @@ import { Stack } from '@/components/ui/layout';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { UsageMeter } from '@/components/billing/usage-meter';
-import { billingApi, type UsageItem } from '@/lib/api/billing';
-import { queryKeys } from '@/lib/api/query-keys';
+import { billingQueries, type billingApi, type UsageItem } from '@/lib/api/billing';
 import { cardClasses } from '@/components/ui/card';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
@@ -48,11 +47,7 @@ function ordered(items: readonly UsageItem[]): UsageItem[] {
  */
 export function UsageMeters({ enabled = true }: Readonly<{ enabled?: boolean }>) {
   const workspaceId = useActiveWorkspaceId();
-  const usageQuery = useQuery({
-    queryKey: queryKeys.billing.usage(workspaceId ?? 'unresolved'),
-    queryFn: ({ signal }) => billingApi.usage({ signal, workspaceId }),
-    enabled: enabled && workspaceId !== null,
-  });
+  const usageQuery = useQuery({ ...billingQueries.usage(workspaceId), enabled });
 
   return (
     <Stack gap="compact" className={cardClasses()}>

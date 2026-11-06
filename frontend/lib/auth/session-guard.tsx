@@ -13,13 +13,11 @@ import {
   type ReactNode,
 } from 'react';
 
-import { authApi } from '@/lib/api/auth';
+import { authQueries } from '@/lib/api/auth';
 import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-path';
 import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
-import { queryKeys } from '@/lib/api/query-keys';
 import type { SessionUser } from '@citeladder/contracts';
 import { isDeparting, restartAt } from '@/lib/auth/account-transition';
-import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import { Callout } from '@/components/ui/callout';
 import { Button } from '@/components/ui/button';
 import { textRole } from '@/components/ui/typography';
@@ -82,14 +80,7 @@ export function SessionGuard({
     error,
     isFetching,
     refetch,
-  } = useQuery({
-    queryKey: queryKeys.auth.me(),
-    // The session read is the one every protected route blocks on; the bounded
-    // bootstrap timeout keeps a stalled connection on this notice-and-retry
-    // path instead of the full request timeout.
-    queryFn: ({ signal }) => authApi.me({ signal, timeoutMs: getBootstrapReadTimeoutMs() }),
-    enabled: !isRedirecting,
-  });
+  } = useQuery({ ...authQueries.me(), enabled: !isRedirecting });
 
   const clearSession = useCallback(async () => {
     // Once per document: a sign-out already leaving, or a burst of 401s, must

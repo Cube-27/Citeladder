@@ -17,9 +17,13 @@
  * deliberate exception: the acceptor is not a member of anything yet, and the
  * token is what names the workspace.
  */
+import { mutationOptions, queryOptions, type Query, type QueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
+import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import { apiClient, type ApiRequestOptions } from './client';
+import { queryKeys } from './query-keys';
+import { isAccessRecoveryKey } from './query-keys/core';
 import {
   workspaceInvitationIssuedSchema,
   workspaceInvitationSchema,
@@ -45,10 +49,19 @@ export type WorkspaceInvitationIssued = z.infer<typeof workspaceInvitationIssued
 export const ASSIGNABLE_WORKSPACE_ROLES = ['admin', 'member', 'viewer'] as const;
 export type AssignableWorkspaceRole = (typeof ASSIGNABLE_WORKSPACE_ROLES)[number];
 
+const workspaceListSchema = z.array(workspaceSchema);
 const memberListSchema = z.array(workspaceMemberSchema);
 const invitationListSchema = z.array(workspaceInvitationSchema);
 
 export const workspacesApi = {
+  /**
+   * The person's memberships. Deliberately not workspace-scoped: it is what
+   * decides which workspaces exist.
+   */
+  list: async (options?: ApiRequestOptions) => {
+    const res = await apiClient.get<Workspace[]>('/workspaces', { ...options, workspaceId: null });
+    return strictValidate(workspaceListSchema, res, 'workspaces.list');
+  },
   /**
    * Create the caller's own workspace, accepting the Terms revision they were
    * shown. A person owns at most one; this is where a self-serve trial starts.
@@ -169,4 +182,139 @@ export const workspacesApi = {
     );
     return strictValidate(workspaceSchema, res, 'workspaces.acceptInvitation');
   },
+};
+
+/**
+ * Workspace reads. The membership list and a workspace's access are bootstrap
+ * reads: they carry the bounded bootstrap timeout, so a stall reaches the
+ * gate's retry notice in seconds on either creation path (loader or screen).
+ */
+export const workspaceQueries = {
+  list: () =>
+    queryOptions({
+      queryKey: queryKeys.workspaces.list(),
+      queryFn: ({ signal }) =>
+        workspacesApi.list({ signal, timeoutMs: getBootstrapReadTimeoutMs() }),
+    }),
+  access: (workspaceId: string) =>
+    queryOptions({
+      queryKey: queryKeys.workspaces.access(workspaceId),
+      queryFn: ({ signal }) =>
+        workspacesApi.access(workspaceId, { signal, timeoutMs: getBootstrapReadTimeoutMs() }),
+    }),
+  members: (workspaceId: string) =>
+    queryOptions({
+      queryKey: queryKeys.workspaces.members(workspaceId),
+      queryFn: ({ signal }) => workspacesApi.listMembers(workspaceId, { signal, workspaceId }),
+    }),
+  invitations: (workspaceId: string) =>
+    queryOptions({
+      queryKey: queryKeys.workspaces.invitations(workspaceId),
+      queryFn: ({ signal }) => workspacesApi.listInvitations(workspaceId, { signal, workspaceId }),
+    }),
+};
+
+/** Every workspace read: memberships, access, rosters and invitations. */
+export const refreshWorkspaces = (client: QueryClient) =>
+  client.invalidateQueries({ queryKey: queryKeys.workspaces.all });
+
+/** Re-resolve one workspace's access from scratch, dropping the answer held now. */
+export const resetWorkspaceAccess = (client: QueryClient, workspaceId: string) =>
+  client.resetQueries({ queryKey: queryKeys.workspaces.access(workspaceId), exact: true });
+
+/** Reads that serve recovery: identity, workspaces, and any query marked `accessRecovery`. */
+export function isAccessRecoveryQuery(query: {
+  queryKey: readonly unknown[];
+  meta?: Record<string, unknown>;
+}) {
+  return isAccessRecoveryKey(query.queryKey) || query.meta?.accessRecovery === true;
+}
+
+/**
+ * A workspace without access keeps only what recovery needs: every other read
+ * is stopped and dropped, so nothing of the product renders from the cache.
+ */
+export function dropProductReads(client: QueryClient) {
+  const predicate = (query: Query) => !isAccessRecoveryQuery(query);
+  void client.cancelQueries({ predicate });
+  client.removeQueries({ predicate });
+}
+
+/**
+ * A roster write re-reads the workspace in the background: an issued link is
+ * shown, and a confirmation closes, as soon as the write itself lands.
+ */
+const rosterRefreshed = {
+  onSuccess: (
+    _data: unknown,
+    _vars: unknown,
+    _result: unknown,
+    { client }: { client: QueryClient },
+  ) => {
+    void refreshWorkspaces(client);
+  },
+};
+
+/** Workspace writes; each success refreshes or writes every read it changes. */
+export const workspaceMutations = {
+  /**
+   * Create the caller's own workspace; it joins the membership list at once.
+   * A refusal re-reads the Terms decision: the Terms may have changed since
+   * sign-in, and the re-read ends a session that holds none on the published
+   * revision.
+   */
+  create: () =>
+    mutationOptions({
+      mutationFn: (input: { name: string; termsRevision: string }) => workspacesApi.create(input),
+      onSuccess: (workspace, _input, _result, { client }) =>
+        client.setQueryData<Workspace[]>(queryKeys.workspaces.list(), (current) => [
+          ...(current ?? []),
+          workspace,
+        ]),
+      onError: (_error, _input, _result, { client }) =>
+        client.invalidateQueries({ queryKey: queryKeys.auth.terms() }),
+    }),
+  /** Join an invited workspace; the memberships are re-read before the caller moves on. */
+  acceptInvitation: () =>
+    mutationOptions({
+      mutationFn: (token: string) => workspacesApi.acceptInvitation(token),
+      onSuccess: (_workspace, _token, _result, { client }) => refreshWorkspaces(client),
+    }),
+  invite: (workspaceId: string) =>
+    mutationOptions({
+      mutationFn: (input: InvitationCreateRequest) =>
+        workspacesApi.inviteMember(workspaceId, input, { workspaceId }),
+      ...rosterRefreshed,
+    }),
+  resendInvitation: (workspaceId: string) =>
+    mutationOptions({
+      mutationFn: (invitationId: string) =>
+        workspacesApi.resendInvitation(workspaceId, invitationId, { workspaceId }),
+      ...rosterRefreshed,
+    }),
+  revokeInvitation: (workspaceId: string) =>
+    mutationOptions({
+      mutationFn: (invitationId: string) =>
+        workspacesApi.revokeInvitation(workspaceId, invitationId, { workspaceId }),
+      ...rosterRefreshed,
+    }),
+  changeRole: (workspaceId: string) =>
+    mutationOptions({
+      mutationFn: ({ memberId, role }: { memberId: string; role: AssignableWorkspaceRole }) =>
+        workspacesApi.updateMemberRole(workspaceId, memberId, role, { workspaceId }),
+      ...rosterRefreshed,
+    }),
+  removeMember: (workspaceId: string) =>
+    mutationOptions({
+      mutationFn: (memberId: string) =>
+        workspacesApi.removeMember(workspaceId, memberId, { workspaceId }),
+      ...rosterRefreshed,
+    }),
+  /** The roles change on both sides, so the memberships re-read too. */
+  transferOwnership: (workspaceId: string) =>
+    mutationOptions({
+      mutationFn: (memberId: string) =>
+        workspacesApi.transferOwnership(workspaceId, memberId, { workspaceId }),
+      ...rosterRefreshed,
+    }),
 };
