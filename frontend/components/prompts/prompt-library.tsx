@@ -38,15 +38,9 @@ import { PromptLibraryDialogs } from './prompt-library-dialogs';
 import { PromptTable } from './prompt-table';
 import { useLatestPromptMeasurements } from './use-latest-prompt-measurements';
 import { ListScreen, RESERVED_CONTROLS } from '@/components/layout/page-shell';
-import { Callout } from '@/components/ui/callout';
 
 import { PromptActions, promptFilterControls } from './prompt-toolbar';
-import {
-  AddTopicDialog,
-  ManageTopicsDialog,
-  TOPICS_LOAD_ERROR,
-  TopicFilter,
-} from './topic-controls';
+import { type TopicDialog, TopicDialogs, TopicFilter } from './topic-controls';
 import { useTopicMutations } from './use-topic-mutations';
 import { useActiveProject, useActiveWorkspaceId } from '@/lib/project/project-context';
 
@@ -110,7 +104,7 @@ export function PromptLibrary({
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builderStep, setBuilderStep] = useState<BuilderStep>('business');
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [topicDialog, setTopicDialog] = useState<'add' | 'manage' | null>(null);
+  const [topicDialog, setTopicDialog] = useState<TopicDialog | null>(null);
   const hasCompetitors = (useActiveProject()?.competitors.length ?? 0) > 0;
 
   const topicsQuery = useQuery({
@@ -409,31 +403,16 @@ export function PromptLibrary({
           onReview={() => openBuilder('review')}
         />
 
-        {topicsQuery.isError ? <Callout tone="negative">{TOPICS_LOAD_ERROR}</Callout> : null}
-        {libraryBody}
-
-        <AddTopicDialog
-          open={topicDialog === 'add'}
-          onOpenChange={(open) => setTopicDialog(open ? 'add' : null)}
+        <TopicDialogs
+          dialog={topicDialog}
+          onDialogChange={setTopicDialog}
           topics={topics}
-          onCreate={async (name, parentId) => {
-            await topicMutations.create.mutateAsync({ name, parentId });
-          }}
-          isCreating={topicMutations.create.isPending}
-          error={topicMutations.create.isError ? topicMutations.error : null}
-        />
-        <ManageTopicsDialog
-          open={topicDialog === 'manage'}
-          onOpenChange={(open) => setTopicDialog(open ? 'manage' : null)}
-          topics={topics}
-          onRename={async (topic, name) => {
-            await topicMutations.rename.mutateAsync({ topic, name });
-          }}
-          onDelete={(topic) => setPendingDelete({ kind: 'topic', topic })}
-          onAdd={openAddTopic}
+          mutations={topicMutations}
           loadError={topicsQuery.isError}
-          actionError={topicMutations.create.isError ? null : topicMutations.error}
+          onAdd={openAddTopic}
+          onDelete={(topic) => setPendingDelete({ kind: 'topic', topic })}
         />
+        {libraryBody}
 
         <PromptLibraryDialogs
           pendingDelete={pendingDelete}

@@ -32,14 +32,7 @@
 @custom-variant rail (@media (min-width: 900px));
 @custom-variant shell (@media (min-width: 1280px));
 @custom-variant desktop (@media (min-width: 981px));
-@custom-variant labelled {
-  @media (min-width: 1280px) {
-    @slot;
-  }
-  &:where([data-nav-drawer] *) {
-    @slot;
-  }
-}
+@custom-variant labelled (@media (min-width: 1280px), &:where([data-nav-drawer] *));
 
 @theme {
   /* Faces. Cal Sans (display) sets headings and big numbers at weight 400

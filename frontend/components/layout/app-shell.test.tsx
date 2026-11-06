@@ -10,7 +10,7 @@ import { renderWithProviders } from '@/test/render';
 import { AppShell } from './app-shell';
 import { ListScreen } from './page-shell';
 
-beforeAll(() => mswServer.listen({ onUnhandledRequest: 'bypass' }));
+beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 

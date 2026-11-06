@@ -27,6 +27,10 @@ import { ControlCount } from '@/components/ui/tabs';
 import type { Topic } from '@/lib/api/types';
 import { orderTopicsForRail } from '@/lib/prompts/topic-tree';
 
+import type { useTopicMutations } from './use-topic-mutations';
+
+type TopicMutations = ReturnType<typeof useTopicMutations>;
+
 export const TOPICS_LOAD_ERROR = "Couldn't load topics. Check your connection and try again.";
 
 /** The filter value for "All topics". */
@@ -192,6 +196,60 @@ export function AddTopicDialog({
         ) : null}
       </form>
     </Dialog>
+  );
+}
+
+export type TopicDialog = 'add' | 'manage';
+
+/**
+ * The library's topic-load notice and its two topic dialogs over one set of
+ * topic writes. A create
+ * failure shows in Add topic; rename and delete failures show in Manage topics.
+ */
+export function TopicDialogs({
+  dialog,
+  onDialogChange,
+  topics,
+  mutations,
+  loadError,
+  onAdd,
+  onDelete,
+}: Readonly<{
+  dialog: TopicDialog | null;
+  onDialogChange: (dialog: TopicDialog | null) => void;
+  topics: readonly Topic[];
+  mutations: TopicMutations;
+  loadError: boolean;
+  onAdd: () => void;
+  onDelete: (topic: Topic) => void;
+}>) {
+  const createFailed = mutations.create.isError;
+  return (
+    <>
+      {loadError ? <Callout tone="negative">{TOPICS_LOAD_ERROR}</Callout> : null}
+      <AddTopicDialog
+        open={dialog === 'add'}
+        onOpenChange={(open) => onDialogChange(open ? 'add' : null)}
+        topics={topics}
+        onCreate={async (name, parentId) => {
+          await mutations.create.mutateAsync({ name, parentId });
+        }}
+        isCreating={mutations.create.isPending}
+        error={createFailed ? mutations.error : null}
+      />
+      <ManageTopicsDialog
+        open={dialog === 'manage'}
+        onOpenChange={(open) => onDialogChange(open ? 'manage' : null)}
+        topics={topics}
+        onRename={async (topic, name) => {
+          await mutations.rename.mutateAsync({ topic, name });
+        }}
+        onDelete={onDelete}
+        onAdd={onAdd}
+        loadError={loadError}
+        actionError={createFailed ? null : mutations.error}
+      />
+    </>
   );
 }
 

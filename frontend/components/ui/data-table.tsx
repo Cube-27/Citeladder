@@ -59,10 +59,7 @@ const COLUMN_WIDTH = {
   name: 'w-56',
   /** A row's trailing link or icon control. */
   action: 'w-24',
-  /**
-   * One compact control and a one-word header (a switch under "Enabled", an
-   * actions menu under "Actions"), where a wide table needs every column.
-   */
+  /** One compact control under a one-word header ("Enabled", "Actions"). */
   control: 'w-20',
   /** A row's trailing buttons, up to two (`TableActionsCell`). */
   rowActions: 'w-64',
@@ -128,11 +125,8 @@ export type DataTableSelection = Readonly<{
  *            of a paged table is exactly `rowLines` tall: its text is cut to
  *            that many lines (the rest in a tooltip), so a page of long
  *            values is no taller than a page of short ones. Rows of two
- *            lines (`rowLines={2}`, cells on `TableCellLines`) are padded
- *            with two-line blanks; `rowLines={3}` gives each
- *            `TableCellLines` title two lines over its caption (a prompt
- *            that wraps instead of being cut at one line). Both are padded
- *            with two-line blanks. A fixed list with `pageSize` and no
+ *            lines (`rowLines={2}`, cells on `TableCellLines`; 3 for a
+ *            two-line title) are padded with blanks. A fixed list with `pageSize` and no
  *            pager (top movers) always reserves its rows.
  *   pager  — the shared `Pager`, framed as the table's footer, drawn only
  *            while the rows run past one page: a table that fits on one page
@@ -179,10 +173,7 @@ export function DataTable({
   rowCount?: number;
   /** Rows per page: the footprint reserved for rows and for every state. */
   pageSize?: number;
-  /**
-   * Lines per row: 2 when every row stacks a caption under its value, 3 when
-   * that value is a two-line title (`TableCellLines`).
-   */
+  /** Lines per row: 2 for a caption under the value, 3 for a two-line title over it. */
   rowLines?: RowLines;
   /** What to show instead of rows. */
   state?: DataTableState;
