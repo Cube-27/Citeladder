@@ -60,7 +60,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P03 | Runtime safety and schema hardening | FX5, DB1, DB2 | — | mig | merged | [#627](https://github.com/Cube-27/Citeladder/pull/627) | Migrations 0006, 0007 |
 | P04 | Site Health tasks I: outcome classifier, crawl status, single writers | SH1, SH2, SH3 | — | mig? | merged | [#628](https://github.com/Cube-27/Citeladder/pull/628) | No migration needed |
 | P05 | Engine surfaces I: DataForSEO client, typed frozen config, engine sets from routes | E1, E2, E3 | — | | in progress | | Builder session `untangle-p05` |
-| P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | in review | [#634](https://github.com/Cube-27/Citeladder/pull/634) | Split for size: P06-a (#634) = F1–F3; P06-b = F4 follows |
+| P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | in progress | [#634](https://github.com/Cube-27/Citeladder/pull/634) | Split for size: P06-a (#634) = F1–F3 merged; P06-b = F4 next, builder session `untangle-p06` |
 | P07 | App route manifest and kit cleanup | R1, R2, R3, R5, R6, R7 | — | | todo | | |
 | P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | merged | [#631](https://github.com/Cube-27/Citeladder/pull/631) | Migration 0010 |
 | P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | merged | [#630](https://github.com/Cube-27/Citeladder/pull/630) | |
