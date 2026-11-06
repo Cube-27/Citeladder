@@ -31,7 +31,7 @@ import type { useTopicMutations } from './use-topic-mutations';
 
 type TopicMutations = ReturnType<typeof useTopicMutations>;
 
-export const TOPICS_LOAD_ERROR = "Couldn't load topics. Check your connection and try again.";
+const TOPICS_LOAD_ERROR = "Couldn't load topics. Check your connection and try again.";
 
 /** The filter value for "All topics". */
 const ALL_TOPICS = '';
