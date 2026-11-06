@@ -2,12 +2,21 @@
 import { createHash } from 'node:crypto';
 import { providerPolicy } from '../../providers/config.ts';
 import { ProviderError } from '../../providers/errors.ts';
-import type { SearchEngine } from '../../search-surfaces/dataforseo.ts';
+import type { AuditTask } from '../../queue/audit-queue.ts';
+import { isScraperEngine } from '../../search-surfaces/dataforseo.ts';
 import { parseScraper } from '../../search-surfaces/parsing.ts';
 import { readFrozenSearchRequest } from '../frozen-configuration.ts';
 import { persistExecutionSuccess, persistSurfaceFailure } from '../result-persistence.ts';
-import { surfaceRecoveryDeadline } from '../submission-intent.ts';
 import { frozenRequestSettings, observedAdapter, type ObservedSurface } from './dataforseo.ts';
+
+/** Scraper recovery always closes before the provider's 28-day task retention expires. */
+function recoveryDeadline(task: AuditTask): Date | null {
+  if (!task.provider_task_submitted_at) return null;
+  const hours = readFrozenSearchRequest(task.request_snapshot).recovery_deadline_hours;
+  if (hours === undefined || !(hours > 0 && hours < 24 * 28))
+    throw new Error('Invalid frozen recovery deadline');
+  return new Date(task.provider_task_submitted_at.getTime() + hours * 3600000);
+}
 
 export const llmScraperSurface: ObservedSurface = {
   /** A submission with no task id yet reconciles under the reconciliation pool, not the answer pool. */
@@ -21,16 +30,13 @@ export const llmScraperSurface: ObservedSurface = {
     }
     return capacity;
   },
-  recoveryDeadline: (task) =>
-    surfaceRecoveryDeadline(
-      task,
-      readFrozenSearchRequest(task.request_snapshot).recovery_deadline_hours,
-    ),
+  recoveryDeadline,
   // Retrieval is bounded by the recovery deadline, never by a poll count.
   pollCeiling: false,
   requestSettings: frozenRequestSettings,
   async settle(deps, context, payload, taskId) {
-    const engine = context.task.logical_engine as Exclude<SearchEngine, 'google_ai_overview'>;
+    const engine = context.task.logical_engine;
+    if (!isScraperEngine(engine)) throw new ProviderError(providerPolicy.errors.invalid_surface);
     const result = parseScraper(payload, taskId, engine);
     if (result === 'still_pending') return 'still_pending';
     await persistExecutionSuccess(

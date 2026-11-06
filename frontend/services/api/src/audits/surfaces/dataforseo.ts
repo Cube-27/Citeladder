@@ -17,6 +17,8 @@ import {
   type SearchRequest,
 } from '../../search-surfaces/dataforseo.ts';
 import { reconcilePage } from '../../search-surfaces/reconciliation.ts';
+import { isSearchSurface } from '../../search-surfaces/locations.ts';
+import { providerPolicy } from '../../providers/config.ts';
 import {
   pauseExecutionCredential,
   pauseUnavailableAccount,
@@ -64,6 +66,12 @@ export type ObservedSurface = Pick<SurfaceAdapter, 'capacity' | 'recoveryDeadlin
   ) => Promise<unknown>;
 };
 
+/** The task's observed engine; a task routed here without one is refused before any call. */
+function observedEngine(task: AuditTask): SearchEngine {
+  if (!isSearchSurface(task.logical_engine))
+    throw new ProviderError(providerPolicy.errors.invalid_surface);
+  return task.logical_engine;
+}
 function frozenField<T>(value: T | undefined, field: string): T {
   if (value === undefined) throw new Error(`Frozen search request has no ${field}`);
   return value;
@@ -89,7 +97,7 @@ export function frozenSurfaceRequest(
     provider_submission_ref: submissionRef,
     request_settings: surface.requestSettings(frozen),
   };
-  searchPayload(context.task.logical_engine as SearchEngine, request);
+  searchPayload(observedEngine(context.task), request);
   return request;
 }
 /** Settings frozen by an LLM scraper task; refused when missing. */
@@ -139,7 +147,7 @@ async function poll(
     return;
   }
   try {
-    const payload = await client.retrieve(task.logical_engine as SearchEngine, taskId);
+    const payload = await client.retrieve(observedEngine(task), taskId);
     if ((await surface.settle(deps, context, payload, taskId)) === 'still_pending')
       await persistSurfaceExchange(
         deps.db,
@@ -174,7 +182,7 @@ async function submit(
   context: ExecutionContext,
   client: DataforseoClient,
 ) {
-  const engine = context.task.logical_engine as SearchEngine,
+  const engine = observedEngine(context.task),
     c = searchPolicy.constants;
   // The intent commits before any network I/O: a crash after it reconciles, never resubmits.
   const intent = await commitSubmissionIntent(deps.db, context, deps.owner, deps.now());
@@ -233,7 +241,7 @@ async function reconcile(
   client: DataforseoClient,
 ) {
   const task = context.task,
-    engine = task.logical_engine as SearchEngine,
+    engine = observedEngine(task),
     c = searchPolicy.constants,
     at = deps.now();
   if (surface.pollCeiling && task.provider_poll_count >= c.poll_ceiling) {
