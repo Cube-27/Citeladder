@@ -56,7 +56,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 |----|-------|---------------------|-----------|-------|--------|---------|-------|
 | P01 | Onboarding competitor discovery fix | ON1, ON2 | — | | in progress | | Owner bug; start here. Builder session `untangle-p01` |
 | P02 | Correctness fixes: trial credits, Share of Shelf, perception states, browser state labels, latest brand run | FX1, FX2, FX3, FX4, O1 | — | mig? | in progress | | Builder session `untangle-p02` |
-| P03 | Runtime safety and schema hardening | FX5, DB1, DB2 | — | mig | in progress | | Builder session `untangle-p03`; holds the migration slot (0006+) |
+| P03 | Runtime safety and schema hardening | FX5, DB1, DB2 | — | mig | in review | [#627](https://github.com/Cube-27/Citeladder/pull/627) | Builder session `untangle-p03`; holds the migration slot (0006+) |
 | P04 | Site Health tasks I: outcome classifier, crawl status, single writers | SH1, SH2, SH3 | — | mig? | in progress | | Builder session `untangle-p04` |
 | P05 | Engine surfaces I: DataForSEO client, typed frozen config, engine sets from routes | E1, E2, E3 | — | | todo | | |
 | P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | todo | | |
@@ -122,9 +122,9 @@ order the PR tracker already respects.
 | FX2 | Commerce Share of Shelf by candidate state; Commerce "measure with" | — | `commerce/shelf*.ts`, `config/actions.ts` | mig? | todo | | |
 | FX3 | Perception: model omissions stay distinct; model frozen per audit | — | `perception/`, `visibility/perception.ts` | mig? | todo | | |
 | FX4 | Browser: cancel refreshes Commerce; Internal Links state labels | — | `frontend/components/runs/run-detail-screen.tsx`, `frontend/components/site-health/internal-links-panel.tsx` | | todo | | |
-| FX5 | Runtime safety: in-request cap, SIGTERM, frozen turn limit, failed-call usage, deploy guard | — | `routes/agent.ts`, `agent/{contracts,model-calls}.ts`, `server.ts`, `commands/audits.ts`, `audits/interactive.ts`, `.github/workflows/gcp-deploy.yml` | | todo | | |
-| DB1 | Capacity-lease and queue indexes; lease purge | — | `migrations/`, `providers/capacity.ts`, audit maintenance | mig | todo | | |
-| DB2 | Tenancy in the schema; registry-driven isolation test | DB1 | `migrations/`, `db/workspace-scope.ts`, writers of `prompt_sets`/`topics`/`competitors`/`brands`/`prompts`, `test/request-access.test.ts` | mig | todo | | |
+| FX5 | Runtime safety: in-request cap, SIGTERM, frozen turn limit, failed-call usage, deploy guard | — | `routes/agent.ts`, `agent/{contracts,model-calls}.ts`, `server.ts`, `commands/audits.ts`, `audits/interactive.ts`, `.github/workflows/gcp-deploy.yml` | | done | 81c7fd9 | |
+| DB1 | Capacity-lease and queue indexes; lease purge | — | `migrations/`, `providers/capacity.ts`, audit maintenance | mig | done | 9c7848e | |
+| DB2 | Tenancy in the schema; registry-driven isolation test | DB1 | `migrations/`, `db/workspace-scope.ts`, writers of `prompt_sets`/`topics`/`competitors`/`brands`/`prompts`, `test/request-access.test.ts` | mig | done | f15ac10 | |
 | Q1 | Enqueue and executor contract move to `queue/`; fairness test harness | — | `queue/`, `referrals/enqueue.ts`, `workers/executor.ts` + importers | wide | todo | | |
 | Q2 | Analytics task-kind registry | Q1 | `workers/analytics-worker.ts`, `workers/terminal-compensation.ts`, `config/analytics.json` | | todo | | |
 | Q3 | Lane descriptor: shared claim, cursor, heartbeat, fence; analytics and Site Health lanes | Q1, DB1 | `queue/task-queue.ts`, `queue/recovery.ts`, `queue/next-due.ts` | | todo | | |
