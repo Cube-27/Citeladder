@@ -7,11 +7,9 @@ import { EngineMark } from '@/components/ui/engine-mark';
 import { Meter } from '@/components/ui/meter';
 import { Rungs } from '@/components/ui/rungs';
 import { Sparkline } from '@/components/ui/sparkline';
-import { TrendChart } from '@/components/ui/trend-chart';
 
 import {
   ANSWER_SOURCES,
-  BRANDS,
   CHECKED,
   CITED_DOMAINS,
   ENGINE_NAMES,
@@ -19,24 +17,19 @@ import {
   KPIS,
   PAGE_RETRIEVALS,
   PROMPTS,
-  TREND,
-  WEEKS,
 } from './demo-data';
 import {
   ScreenCard,
   ScreenChartCard,
   ScreenCols,
-  ScreenDelta,
   ScreenEngineMarks,
-  ScreenSite,
   ScreenStack,
   ScreenStat,
-  ScreenTable,
   ScreenTableCard,
   ScreenTabs,
-  type ScreenColumn,
 } from './screen-parts';
 import { Vignette, VignetteBar, VignetteRows, fourRows } from './screen-vignette';
+import { BrandTable, VisibilityTrend, percent } from './visibility-demo';
 
 function Cite({ index }: Readonly<{ index: number }>) {
   const source = ANSWER_SOURCES.find((entry) => entry.index === index);
@@ -76,19 +69,6 @@ export function ScreenAnswer() {
   );
 }
 
-const percent = (value: number) => `${value.toFixed(1)}%`;
-
-const BRAND_COLUMNS: readonly ScreenColumn<(typeof BRANDS)[number]>[] = [
-  { header: 'Brand', cell: (brand) => <ScreenSite label={brand.name} /> },
-  { header: 'Visibility', width: 'sm', numeric: true, cell: (brand) => percent(brand.visibility) },
-  {
-    header: 'Change',
-    width: 'sm',
-    numeric: true,
-    cell: (brand) => <ScreenDelta change={brand.change} />,
-  },
-];
-
 /**
  * The AI Visibility overview, a full app layout at 1200 × 680 scaled to fit
  * its frame: the KPI row, the trend against competitors and the brand ranking.
@@ -117,30 +97,11 @@ export function ScreenVisibility() {
           }
           footnote="412 answers to 120 prompts across 4 engines, week of 27 Oct – 2 Nov 2026"
         >
-          <TrendChart
-            label="Visibility by week, Acme Analytics against Northwind and Lumen"
-            name="Acme Analytics"
-            data={WEEKS.map((week, index) => ({ label: week, value: TREND.acme[index] ?? null }))}
-            series={[
-              { label: 'Northwind', values: TREND.northwind },
-              { label: 'Lumen', values: TREND.lumen },
-            ]}
-            height={292}
-            yMin={0}
-            yMax={50}
-            yFormat={(value) => `${value}%`}
-            format={percent}
-          />
+          <VisibilityTrend height="lg" />
         </ScreenChartCard>
         <ScreenStack>
           <ScreenTableCard title="Brands">
-            <ScreenTable
-              caption="Visibility by brand this week"
-              rows={BRANDS}
-              rowKey={(brand) => brand.name}
-              own={(brand) => brand.own === true}
-              columns={BRAND_COLUMNS}
-            />
+            <BrandTable />
           </ScreenTableCard>
           <ScreenCard title="Acme Analytics by engine">
             <div className="cl-screen-meters">

@@ -1,3 +1,9 @@
+import {
+  CREDENTIAL_LINK_PATHS,
+  isIngressPath,
+  MCP_API_HOST_PATHS,
+  MCP_CONSENT_PATH,
+} from '@citeladder/contracts/route-ownership';
 import { proxyWorkerRequest } from '../../lib/server/worker-origin-proxy';
 import { APP_CONTENT_SECURITY_POLICY } from '../../lib/config/content-security-policy';
 import { SECURITY_HEADERS as SHARED_SECURITY_HEADERS } from '../../lib/config/security-headers';
@@ -33,14 +39,14 @@ function decorate(result: Response, html = false, immutable = false): Response {
   return new Response(result.body, { status: result.status, headers });
 }
 
+// The API host's MCP and OAuth path families (`/mcp`, `/authorize`,
+// `/.well-known`, ...), which this host never serves.
+const API_HOST_ROOTS = [...new Set([...MCP_API_HOST_PATHS].map((path) => path.split('/')[1]))].map(
+  (segment) => `/${segment}`,
+);
+
 function isReserved(path: string): boolean {
-  return (
-    path === '/mcp' ||
-    path.startsWith('/mcp/') ||
-    ['/authorize', '/token', '/revoke'].includes(path) ||
-    path === '/.well-known' ||
-    path.startsWith('/.well-known/')
-  );
+  return API_HOST_ROOTS.some((root) => path === root || path.startsWith(`${root}/`));
 }
 
 function isResource(path: string): boolean {
@@ -99,10 +105,11 @@ async function dynamicRoute(
   ) {
     return response('Not found.', 404);
   }
-  if (path === '/api' || path.startsWith('/api/')) {
-    return proxied(request, env);
-  }
-  if (path === '/mcp/oauth/consent' && ['GET', 'POST'].includes(request.method)) {
+  // The browser API and MCP consent; consent is a page and its form post only.
+  if (
+    isIngressPath(path) &&
+    (path !== MCP_CONSENT_PATH || ['GET', 'POST'].includes(request.method))
+  ) {
     return proxied(request, env);
   }
   if (isReserved(path) || path === '/ready') return response('Not found.', 404);
@@ -160,7 +167,7 @@ export async function handleAppRequest(request: Request, env: WorkerEnv): Promis
   }
   const routed = await dynamicRoute(request, env, path);
   const result = routed ? decorate(routed) : await staticOrNavigation(request, env, url, path);
-  if (['/verify-email', '/reset-password', '/invitations/accept'].includes(routePath(path))) {
+  if (CREDENTIAL_LINK_PATHS.has(routePath(path))) {
     const headers = new Headers(result.headers);
     headers.set('Referrer-Policy', 'no-referrer');
     headers.set('Cache-Control', 'no-store');

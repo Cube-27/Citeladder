@@ -61,7 +61,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P04 | Site Health tasks I: outcome classifier, crawl status, single writers | SH1, SH2, SH3 | — | mig? | merged | [#628](https://github.com/Cube-27/Citeladder/pull/628) | No migration needed |
 | P05 | Engine surfaces I: DataForSEO client, typed frozen config, engine sets from routes | E1, E2, E3 | — | | merged | [#637](https://github.com/Cube-27/Citeladder/pull/637) | No migration |
 | P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | merged | [#634](https://github.com/Cube-27/Citeladder/pull/634), [#638](https://github.com/Cube-27/Citeladder/pull/638) | Split for size: P06-a (#634) = F1–F3; P06-b (#638) = F4 |
-| P07 | App route manifest and kit cleanup | R1, R2, R3, R5, R6, R7 | — | | in progress | | Builder session `untangle-p07` |
+| P07 | App route manifest and kit cleanup | R1, R2, R3, R5, R6, R7 | — | | in review | [#640](https://github.com/Cube-27/Citeladder/pull/640) | Command palette stays in `components/ui` (design-system policy); see PR |
 | P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | merged | [#631](https://github.com/Cube-27/Citeladder/pull/631) | Migration 0010 |
 | P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | merged | [#630](https://github.com/Cube-27/Citeladder/pull/630) | |
 | P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | merged | [#632](https://github.com/Cube-27/Citeladder/pull/632) | Migration 0011 |
@@ -169,13 +169,13 @@ order the PR tracker already respects.
 | F8 | One failure renderer | F7 | `frontend/components/*` error sites, `frontend/components/ui/mutation-notice.tsx` | | todo | | |
 | F9 | Typed evidence and summary blobs per domain | F8, SH5, O3 | `frontend/packages/contracts`, `frontend/lib/{site-health,demand}`, `frontend/packages/mcp-app` | | todo | | |
 | F10 | Server bounds travel on the form-opening read | F9 | `frontend/lib/config/{prompts,operational,agent}.ts`, matching server reads | | todo | | |
-| R1 | Delete kit components with no production consumer | — | `frontend/components/ui/`, `docs/frontend-architecture.md`, `docs/decisions.md` | | todo | | |
-| R2 | App route manifest drives nav, titles, scope and router | R1 | `frontend/lib/navigation/`, `frontend/components/layout/`, `frontend/apps/app/src/router.tsx`, `frontend/lib/project/bootstrap.ts` | | todo | | |
-| R3 | Router imports screens directly; pass-through route files deleted | R2 | `frontend/apps/app/src/product-routes-*.tsx`, `*-route-content.tsx`, `pricing-route.tsx` | | todo | | |
+| R1 | Delete kit components with no production consumer | — | `frontend/components/ui/`, `docs/frontend-architecture.md`, `docs/decisions.md` | | done | 79b3722 | |
+| R2 | App route manifest drives nav, titles, scope and router | R1 | `frontend/lib/navigation/`, `frontend/components/layout/`, `frontend/apps/app/src/router.tsx`, `frontend/lib/project/bootstrap.ts` | | done | d36f893 | |
+| R3 | Router imports screens directly; pass-through route files deleted | R2 | `frontend/apps/app/src/product-routes-*.tsx`, `*-route-content.tsx`, `pricing-route.tsx` | | done | 41ae02d | |
 | R4 | Gate hands project screens a non-null project scope | R2, F6 | `frontend/components/layout/onboarding-gate.tsx`, project screens | | todo | | |
-| R5 | Organism moves remove `ui`↔`layout`↔`agent` import cycles | R3 | `frontend/components/{ui,layout,agent}` | | todo | | |
-| R6 | App Worker reads reserved paths from the route-ownership contract | — | `frontend/apps/app/worker.ts` | | todo | | |
-| R7 | Chart height is a role, not a pixel prop | R1 | `frontend/components/ui/trend-chart.tsx`, chart callers | | todo | | |
+| R5 | Organism moves remove `ui`↔`layout`↔`agent` import cycles | R3 | `frontend/components/{ui,layout,agent}` | | done | 87d6e7b | |
+| R6 | App Worker reads reserved paths from the route-ownership contract | — | `frontend/apps/app/worker.ts` | | done | 5657ada | |
+| R7 | Chart height is a role, not a pixel prop | R1 | `frontend/components/ui/trend-chart.tsx`, chart callers | | done | dc2605e | |
 | MK1 | Marketing page records carry `updated` and drive sitemap `lastmod`; delete `CompareTable` | — | `frontend/apps/marketing/src/public-routes.ts`, `frontend/lib/marketing-content/`, `frontend/components/marketing/` | | todo | | |
 | MK2 | Records drive legal and research routes | MK1 | `frontend/apps/marketing/src/pages/`, `frontend/lib/marketing-content/legal.ts` | | todo | | |
 | MK3 | Screen catalogue is the only module-to-image map | — | `frontend/components/marketing/{landing-page,commercial-page}.tsx`, `ResearchLayout.astro` | | todo | | |
