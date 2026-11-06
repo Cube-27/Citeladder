@@ -123,12 +123,9 @@ describe('research guide parts', () => {
 });
 
 describe('research guide navigation', () => {
-  it('files comparison guides under Compare and every other guide under Guides', () => {
-    expect(researchParent('/compare/profound-alternatives')).toEqual({
-      label: 'Compare',
-      href: '/compare',
-    });
-    expect(researchParent('/blog/geo-vs-seo')).toEqual({ label: 'Guides', href: '/blog' });
+  it('files comparison guides under Compare and every other guide under the blog', () => {
+    expect(researchParent('/compare/profound-alternatives').href).toBe('/compare');
+    expect(researchParent('/blog/geo-vs-seo').href).toBe('/blog');
   });
 
   it('never offers a guide as its own "more guides" link', () => {

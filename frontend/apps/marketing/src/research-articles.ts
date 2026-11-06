@@ -134,11 +134,14 @@ export function researchFaqs(markdown: string): { q: string; a: string }[] {
     .filter((item) => item.q && item.a);
 }
 
-/** The breadcrumb parent: comparison guides sit under Compare, every other guide under Guides. */
+/**
+ * The breadcrumb parent: comparison guides sit under Compare, every other
+ * guide under the Blog, named as the nav and URL name it (D36).
+ */
 export function researchParent(slug: string) {
   return slug.startsWith('/compare/')
     ? { label: 'Compare', href: '/compare' }
-    : { label: 'Guides', href: '/blog' };
+    : { label: 'Blog', href: '/blog' };
 }
 
 /** The two guides shown under "More guides": curated when set, else the next two published. */

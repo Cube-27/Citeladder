@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Card } from '@/components/ui/card';
-import { ChartCard, chartPercent } from '@/components/ui/chart';
+import { chartPercent } from '@/components/ui/chart';
 import { Citation } from '@/components/ui/citation';
 import { EngineMark } from '@/components/ui/engine-mark';
 import { Meter } from '@/components/ui/meter';
@@ -24,6 +24,7 @@ import {
 } from './demo-data';
 import {
   ScreenCard,
+  ScreenChartCard,
   ScreenCols,
   ScreenDelta,
   ScreenEngineMarks,
@@ -106,7 +107,7 @@ export function ScreenVisibility() {
         </div>
       </Card>
       <ScreenCols>
-        <ChartCard
+        <ScreenChartCard
           title="Visibility over time"
           controls={
             <ScreenTabs
@@ -130,7 +131,7 @@ export function ScreenVisibility() {
             yFormat={(value) => `${value}%`}
             format={percent}
           />
-        </ChartCard>
+        </ScreenChartCard>
         <ScreenStack>
           <ScreenTableCard title="Brands">
             <ScreenTable

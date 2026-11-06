@@ -1,5 +1,5 @@
 /*
- * The website's depth layer (docs/design.md D35), over site.css and
+ * The website's depth layer (docs/design.md D35, D36), over site.css and
  * screens.css: colour and depth live in the pictures, never in the type or
  * the controls, which stay black and white.
  *
@@ -11,10 +11,12 @@
  * - Frosted rims: a product image on a stage sits in a translucent white rim
  *   that blurs the grain under it, then on its own white card with the pop
  *   shadow, so the picture has three planes.
- * - Entrances: the hero rises in on load; every later part rises in as it
- *   scrolls into view and a product image plays out (public/site-motion.js
- *   sets the attributes). Nothing here moves under reduced motion, and no
- *   part is hidden unless the script has turned the motion on.
+ * - Motion (D36): nothing enters on scroll and no part ever waits unseen. The
+ *   landing heroes' copy alone appears on load: the H1 sharpens and settles
+ *   (it is never invisible), the rest rises in after it. Linked cards lift on
+ *   hover and a chart's latest point pings. All of it is CSS, only for
+ *   readers who have not asked for reduced motion; without it the page is
+ *   static and fully visible.
  */
 
 /* ---------- The stage: tints over paper, with grain ---------- */
@@ -79,7 +81,7 @@
 .cl-frame-card {
   padding: 48px;
   border: 0;
-  border-radius: 24px;
+  border-radius: var(--site-radius-stage);
   box-shadow: none;
 }
 
@@ -87,7 +89,7 @@
 .cl-frame-card > .cl-frame-well {
   padding: 8px;
   border: 1px solid color-mix(in srgb, var(--color-surface) 70%, transparent);
-  border-radius: 18px;
+  border-radius: var(--site-radius-card);
   background: color-mix(in srgb, var(--color-surface) 42%, transparent);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
@@ -96,7 +98,7 @@
 /* The picture's own white card, lifted off the rim. */
 .cl-frame-card > .cl-frame-well > .cl-frame-screen {
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: var(--site-radius-inner);
   background: var(--color-surface);
   box-shadow: var(--shadow-pop);
 }
@@ -104,12 +106,11 @@
 @media (max-width: 767px) {
   .cl-frame-card {
     padding: 16px;
-    border-radius: 20px;
+    border-radius: var(--site-radius-card);
   }
 
   .cl-frame-card > .cl-frame-well {
     padding: 4px;
-    border-radius: 16px;
   }
 }
 
@@ -123,11 +124,11 @@
 
 .cl-frame--scale > .cl-frame-card > .cl-frame-well {
   border-bottom: 0;
-  border-radius: 18px 18px 0 0;
+  border-radius: var(--site-radius-card) var(--site-radius-card) 0 0;
 }
 
 .cl-frame--scale > .cl-frame-card > .cl-frame-well > .cl-frame-screen {
-  border-radius: 12px 12px 0 0;
+  border-radius: var(--site-radius-inner) var(--site-radius-inner) 0 0;
 }
 
 /* ---------- A FeatureCard: its well is a small stage ---------- */
@@ -152,7 +153,7 @@
 
 .cl-cta {
   border: 0;
-  border-radius: 24px;
+  border-radius: var(--site-radius-stage);
   box-shadow: none;
 }
 
@@ -163,7 +164,7 @@
   --stage-b: var(--color-stage-sky);
   --stage-c: var(--color-stage-lilac);
   border: 1px solid color-mix(in srgb, var(--color-surface) 70%, transparent);
-  border-radius: 24px;
+  border-radius: var(--site-radius-stage);
 }
 
 /* The stage's own rules are translucent, so the tint runs through them. */
@@ -173,7 +174,7 @@
 
 @media (max-width: 767px) {
   .cl-page-form {
-    border-radius: 20px;
+    border-radius: var(--site-radius-card);
   }
 }
 
@@ -226,35 +227,22 @@ a.cl-fcard:hover,
   transform: translateY(-4px);
 }
 
-/* ---------- Entrances ---------- */
+/* ---------- Motion (D36) ---------- */
 
-@keyframes cl-rise {
+@keyframes mk-rise-in {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(14px);
+    filter: blur(6px);
   }
 }
 
-@keyframes cl-rise-sm {
+/* The H1 is the page's largest paint, so it never starts invisible: it only
+   sharpens and settles, which keeps it a first-paint LCP candidate. */
+@keyframes mk-focus-in {
   from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-}
-
-@keyframes cl-grow {
-  from {
-    transform: scaleX(0);
-  }
-}
-
-@keyframes cl-wipe {
-  from {
-    clip-path: inset(-8px 100% -8px -8px);
-  }
-
-  to {
-    clip-path: inset(-8px -8px -8px -8px);
+    transform: translateY(10px);
+    filter: blur(5px);
   }
 }
 
@@ -272,108 +260,26 @@ a.cl-fcard:hover,
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  /* The hero rises in on load, part by part. */
-  [data-reveal] :is(.cl-phero-inner, .cl-lhero-copy) > *,
-  [data-reveal] :is(.cl-phero-media, .cl-lhero-frame) {
-    animation: cl-rise var(--motion-reveal) var(--ease-reveal) backwards;
+  /* A landing hero's copy arrives in reading order: the title, then the
+     lead, then the actions and note. */
+  .mk-hero-in > * {
+    animation: mk-rise-in var(--motion-reveal) var(--ease-reveal) both;
   }
 
-  [data-reveal] :is(.cl-phero-inner, .cl-lhero-copy) > :nth-child(2) {
-    animation-delay: var(--motion-reveal-step);
+  .mk-hero-in > h1 {
+    animation-name: mk-focus-in;
   }
 
-  [data-reveal] :is(.cl-phero-inner, .cl-lhero-copy) > :nth-child(3) {
-    animation-delay: calc(var(--motion-reveal-step) * 2);
+  .mk-hero-in > :nth-child(2) {
+    animation-delay: calc(var(--motion-reveal-step) * 1.5);
   }
 
-  [data-reveal] :is(.cl-phero-inner, .cl-lhero-copy) > :nth-child(4) {
+  .mk-hero-in > :nth-child(3) {
     animation-delay: calc(var(--motion-reveal-step) * 3);
   }
 
-  [data-reveal] :is(.cl-phero-inner, .cl-lhero-copy) > :nth-child(n + 5) {
+  .mk-hero-in > :nth-child(n + 4) {
     animation-delay: calc(var(--motion-reveal-step) * 4);
-  }
-
-  [data-reveal] :is(.cl-phero-media, .cl-lhero-frame) {
-    animation-delay: calc(var(--motion-reveal-step) * 4);
-  }
-
-  /* A later part waits unseen until it scrolls in, then rises after its
-     earlier siblings. */
-  [data-reveal] [data-rise]:not([data-revealed]) {
-    opacity: 0;
-  }
-
-  [data-reveal] [data-rise][data-revealed] {
-    animation: cl-rise var(--motion-reveal) var(--ease-reveal) backwards;
-    animation-delay: calc(var(--reveal-index, 0) * var(--motion-reveal-step));
-  }
-
-  /* A product image plays out: in the hero once it has risen, elsewhere once
-     it is in view. Its parts wait unseen until then. */
-  [data-reveal]
-    [data-play]:not([data-played])
-    :is(.cl-vig-row, .cl-vig-stats > div, .cl-screen-kpi) {
-    opacity: 0;
-  }
-
-  [data-reveal]
-    [data-play]:not([data-played])
-    :is(.cl-vig-area svg, .cl-vig-bar > span, .cl-vig-dot) {
-    visibility: hidden;
-  }
-
-  [data-reveal] :is(.cl-phero-media, .cl-lhero-frame),
-  [data-reveal] [data-played] {
-    --play-start: calc(var(--motion-reveal-step) * 2);
-  }
-
-  [data-reveal] :is(.cl-phero-media, .cl-lhero-frame) {
-    --play-start: calc(var(--motion-reveal-step) * 8);
-  }
-
-  [data-reveal]
-    :is(.cl-phero-media, .cl-lhero-frame, [data-played])
-    :is(.cl-vig-row, .cl-vig-stats > div, .cl-screen-kpi) {
-    animation: cl-rise-sm var(--motion-reveal) var(--ease-reveal) backwards;
-    animation-delay: var(--play-start);
-  }
-
-  [data-reveal]
-    :is(.cl-phero-media, .cl-lhero-frame, [data-played])
-    :is(.cl-vig-row, .cl-vig-stats > div, .cl-screen-kpi):nth-child(2) {
-    animation-delay: calc(var(--play-start) + var(--motion-reveal-step));
-  }
-
-  [data-reveal]
-    :is(.cl-phero-media, .cl-lhero-frame, [data-played])
-    :is(.cl-vig-row, .cl-vig-stats > div, .cl-screen-kpi):nth-child(3) {
-    animation-delay: calc(var(--play-start) + var(--motion-reveal-step) * 2);
-  }
-
-  [data-reveal]
-    :is(.cl-phero-media, .cl-lhero-frame, [data-played])
-    :is(.cl-vig-row, .cl-vig-stats > div, .cl-screen-kpi):nth-child(n + 4) {
-    animation-delay: calc(var(--play-start) + var(--motion-reveal-step) * 3);
-  }
-
-  /* Bars grow from the left and charts draw left to right, after the rows. */
-  [data-reveal] :is(.cl-phero-media, .cl-lhero-frame, [data-played]) .cl-vig-bar > span {
-    transform-origin: left center;
-    animation: cl-grow var(--motion-draw) var(--ease-reveal) backwards;
-    animation-delay: calc(var(--play-start) + var(--motion-reveal-step) * 3);
-  }
-
-  [data-reveal]
-    :is(.cl-phero-media, .cl-lhero-frame, [data-played])
-    :is(.cl-vig-area svg, .cl-screen svg.overflow-visible:not(.lucide)) {
-    animation: cl-wipe var(--motion-draw) var(--ease-reveal) backwards;
-    animation-delay: calc(var(--play-start) + var(--motion-reveal-step) * 3);
-  }
-
-  [data-reveal] :is(.cl-phero-media, .cl-lhero-frame, [data-played]) .cl-vig-dot {
-    animation: cl-rise-sm var(--motion-reveal) var(--ease-reveal) backwards;
-    animation-delay: calc(var(--play-start) + var(--motion-draw));
   }
 
   /* The latest point stays live: a ring pings out from it. */
@@ -384,13 +290,5 @@ a.cl-fcard:hover,
     background: inherit;
     animation: cl-ping var(--motion-ping) var(--ease-standard) infinite;
     content: '';
-  }
-}
-
-@media print {
-  [data-reveal] [data-rise],
-  [data-reveal] [data-play] * {
-    visibility: visible;
-    opacity: 1;
   }
 }

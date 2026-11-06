@@ -2,8 +2,6 @@ import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
-import { Eyebrow } from './site-parts';
-
 export type HighlightStat = Readonly<{ label: string; value: string; sub?: ReactNode }>;
 
 /** Stat columns: a set of stats holds one row (six included), never 4 + 2. */
@@ -22,7 +20,6 @@ function statColumns(count: number): 1 | 2 | 3 | 4 | 6 {
  * 2 × 2, then 1.
  */
 export function PageHighlight({
-  eyebrow,
   title,
   body,
   stats = [],
@@ -31,7 +28,6 @@ export function PageHighlight({
   as: Heading = 'h3',
   children,
 }: Readonly<{
-  eyebrow?: ReactNode;
   title: ReactNode;
   body?: ReactNode;
   stats?: readonly HighlightStat[];
@@ -45,7 +41,6 @@ export function PageHighlight({
     <div className="cl-page-hl">
       <div className="cl-page-hl-inner">
         <div className="cl-page-hl-copy">
-          {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
           <Heading className="cl-page-hl-title">{title}</Heading>
           {body && <p className="cl-page-hl-text">{body}</p>}
         </div>

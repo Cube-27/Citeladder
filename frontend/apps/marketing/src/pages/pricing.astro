@@ -5,6 +5,7 @@ import {
   PricingCta,
   PricingFaq,
   PricingHero,
+  PricingKeys,
   PricingUnavailable,
 } from '@/components/marketing/pages/pricing';
 import { faqPageJsonLd } from '@/lib/seo/json-ld';
@@ -38,12 +39,13 @@ if (!catalog) Astro.response.status = 503;
   jsonLd={[faqPageJsonLd(PRICING_FAQS)]}
 >
   <main id="main">
-    <PricingHero />
+    <PricingHero checkoutOpen={catalog !== null && !checkoutClosed} />
     {catalog ? (
       <PublicPricingCatalog catalog={catalog} appOrigin={env.PUBLIC_APP_ORIGIN} initialByok={initialByok} client:load />
     ) : (
       <PricingUnavailable />
     )}
+    <PricingKeys />
     <PricingFaq />
     <PricingCta />
   </main>

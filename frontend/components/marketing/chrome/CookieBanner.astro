@@ -5,10 +5,12 @@ import { CONSENT_CHOICE_ATTRIBUTE } from './cookie-banner';
 
 /**
  * The cookie consent banner (the system's CookieBanner): a surface card at
- * the bottom left with Reject and Accept at equal size. Server-rendered
+ * the bottom left, a slim bar along the bottom on a short or narrow screen,
+ * with Reject and Accept as the same outlined button (D36). Server-rendered
  * hidden; `cookie-banner.ts` reveals it only for an undecided visitor or a
- * reopened preference. A landmark section, not a dialog: it does not trap
- * focus or block the page.
+ * reopened preference. A landmark section named "Cookie consent", not a
+ * dialog: it does not trap focus or block the page, and its title line is
+ * text, not a heading of the page.
  *
  * There are no category toggles: nothing non-essential is installed beyond
  * the optional analytics tag this gates.
@@ -17,16 +19,16 @@ const choice = (decision: 'accepted' | 'rejected') => ({ [CONSENT_CHOICE_ATTRIBU
 ---
 
 <section hidden aria-label="Cookie consent" tabindex="-1" data-cookie-banner class="cl-cookie print:hidden">
-  <h2 class="cl-cookie-title">Cookie settings</h2>
+  <p class="cl-cookie-title">Cookie settings</p>
   <p class="cl-cookie-text">
     We use essential cookies to keep you signed in and secure. With your permission,
     non-essential cookies help us understand site usage. Read our{' '}
     <a href="/cookies" class="focus-ring">Cookie Policy.</a>
   </p>
-  {/* Reject first in the DOM so it is the first tab stop, and equal in weight. */}
+  {/* Reject first in the DOM so it is the first tab stop; both the same button. */}
   <div class="cl-cookie-actions">
     <button type="button" class={buttonClasses('secondary')} {...choice('rejected')}>Reject</button>
-    <button type="button" class={buttonClasses('primary')} {...choice('accepted')}>Accept</button>
+    <button type="button" class={buttonClasses('secondary')} {...choice('accepted')}>Accept</button>
   </div>
 </section>
 

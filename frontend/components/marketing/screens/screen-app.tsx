@@ -1,7 +1,6 @@
 import { ChevronDown, ChevronsUpDown, CircleHelp, Download, Rocket, Search } from 'lucide-react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
-import { ChartCard } from '@/components/ui/chart';
 import { Kbd } from '@/components/ui/kbd';
 import { KpiRow } from '@/components/ui/stat-row';
 import { TrendChart } from '@/components/ui/trend-chart';
@@ -12,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { BRANDS, KPIS, TREND, WEEKS } from './demo-data';
 import {
   ScreenButton,
+  ScreenChartCard,
   ScreenCols,
   ScreenDelta,
   ScreenSite,
@@ -170,7 +170,7 @@ export function ScreenAppVisibility() {
             }))}
           />
           <ScreenCols>
-            <ChartCard
+            <ScreenChartCard
               title="Visibility over time"
               footnote="412 answers to 120 prompts across 4 engines, week of 27 Oct – 2 Nov 2026"
             >
@@ -191,7 +191,7 @@ export function ScreenAppVisibility() {
                 yFormat={(value) => `${value}%`}
                 format={percent}
               />
-            </ChartCard>
+            </ScreenChartCard>
             <ScreenTableCard title="Brands" meta="Visibility by brand this week">
               <ScreenTable
                 caption="Visibility by brand this week"

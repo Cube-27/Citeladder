@@ -157,7 +157,6 @@ function FeatureCards({ features }: Readonly<{ features: readonly Feature[] }>) 
         span: spans[index] ?? 6,
         content: (
           <FeatureCard
-            as="h2"
             size="lg"
             wide={wide}
             title={feature.title}
@@ -175,6 +174,8 @@ function FeatureCards({ features }: Readonly<{ features: readonly Feature[] }>) 
  * full-width screen heads its own section, and cards share a bento row.
  */
 function Features({ page }: Readonly<{ page: PlatformPage }>) {
+  // A card row's visually hidden h2 names the product, never a card's own title.
+  const cardsHeading = `${platformLabel(page.path) ?? 'Platform'} features`;
   // Splits alternate across the whole page, not per section.
   const splitSide = new Map(
     page.features
@@ -220,7 +221,7 @@ function Features({ page }: Readonly<{ page: PlatformPage }>) {
             );
           case 'cards':
             return (
-              <PageSection key={group.features[0]?.title} label={group.features[0]?.title}>
+              <PageSection key={group.features[0]?.title} label={cardsHeading} labelHeading>
                 <FeatureCards features={group.features} />
               </PageSection>
             );
@@ -296,11 +297,11 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
         <EngineStrip />
       </PageSection>
 
-      <PageSection spacing="compact" label={`${label} highlights`}>
+      <PageSection spacing="compact" label={`${label} highlights`} labelHeading>
         <ul className={`cl-tiles cl-cols-${columnsFor(page.highlights.length)}`}>
           {page.highlights.map((highlight) => (
             <li key={highlight.title}>
-              <FeatureCard as="h2" title={highlight.title} body={highlight.body} />
+              <FeatureCard title={highlight.title} body={highlight.body} />
             </li>
           ))}
         </ul>

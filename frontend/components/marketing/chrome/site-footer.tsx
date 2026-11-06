@@ -105,7 +105,7 @@ function DirectoryBadges() {
           href="https://launchmcp.co/?utm_source=badge&utm_medium=referral"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-footer-ink-muted hover:text-footer-ink text-caption font-medium"
+          className="cl-footer-badge-link focus-ring"
         >
           Launch MCP
         </a>
@@ -136,8 +136,11 @@ export function SiteFooter() {
           <nav aria-label="Footer" className="cl-footer-cols">
             {FOOTER_COLUMNS.map((column) => (
               <div key={column.key} className="cl-footer-col">
-                <h2 className="cl-footer-head">{column.label}</h2>
-                <ul>
+                {/* A column title names its list; it is not a heading of the page (D36). */}
+                <p id={`footer-col-${column.key}`} className="cl-footer-head">
+                  {column.label}
+                </p>
+                <ul aria-labelledby={`footer-col-${column.key}`}>
                   {column.links.map((link) => (
                     <li key={link.href}>
                       <ColumnLink link={link} />

@@ -43,7 +43,6 @@ export function SolutionsPage() {
         >
           <FeatureSplit
             as="h2"
-            eyebrow={segment.label}
             title={segment.title}
             body={segment.body ? [segment.lead, segment.body] : segment.lead}
             links={[

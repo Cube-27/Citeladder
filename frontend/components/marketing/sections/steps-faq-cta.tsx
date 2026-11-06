@@ -3,8 +3,6 @@ import { Plus } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
-import { Eyebrow } from './site-parts';
-
 /**
  * Steps: a numbered process, side by side (two up under 1024, stacked on
  * phones) or as a vertical list with the number in its own column.
@@ -68,18 +66,16 @@ export function FaqList({
 }
 
 /**
- * CtaBand: the closing call to action, a paper well inside the container
- * (never full-bleed), the title at display-lg with the actions beside it.
+ * CtaBand: the closing call to action, a stage inside the container (never
+ * full-bleed), the title at the section size (D36) over the lead and actions.
  */
 export function CtaBand({
-  eyebrow,
   title,
   lead,
   actions,
   note,
   as: Heading = 'h2',
 }: Readonly<{
-  eyebrow?: ReactNode;
   title: ReactNode;
   lead?: ReactNode;
   actions: ReactNode;
@@ -90,7 +86,6 @@ export function CtaBand({
     // `data-cta-placement` names where a clicked call to action sat, for marketing analytics.
     <div className="cl-cta" data-cta-placement="closing">
       <div className="cl-cta-copy">
-        {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
         <Heading className="cl-cta-title">{title}</Heading>
         {lead && <p className="cl-lead cl-cta-lead">{lead}</p>}
       </div>
