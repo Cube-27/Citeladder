@@ -3,10 +3,10 @@
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { ControlRow } from '@/components/ui/control-row';
 import { Dialog } from '@/components/ui/dialog';
 import { Stack } from '@/components/ui/layout';
+import { MutationNotice } from '@/components/ui/mutation-notice';
 import { cardClasses } from '@/components/ui/card';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
@@ -16,7 +16,7 @@ import type {
   CatalogPlan,
   SelfServePlanKey,
 } from '@/lib/api/billing';
-import { humanizeApiError } from '@/lib/api/errors';
+import { billingFailureNotice } from '@/lib/billing/reason-copy';
 import {
   formatMoney,
   isSelfServeKey,
@@ -122,7 +122,9 @@ export function PlanChanges({
         <p className="type-caption">Upgrades are unavailable while checkout is closed.</p>
       ) : null}
       {controls.downgradeError ? (
-        <Callout tone="negative">{humanizeApiError(controls.downgradeError).message}</Callout>
+        <MutationNotice
+          notice={billingFailureNotice(controls.downgradeError, 'schedule the downgrade')}
+        />
       ) : null}
       <Dialog
         open={downgradeTo !== null}

@@ -8,14 +8,14 @@ import { UserMenuTrigger } from '@/components/layout/user-menu';
 import { AuthShell } from '@/components/ui/auth-shell';
 import { Button } from '@/components/ui/button';
 import { OnboardingStep } from '@/components/ui/onboarding-shell';
-import { Callout } from '@/components/ui/callout';
+import { MutationNotice } from '@/components/ui/mutation-notice';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
 import { authQueries } from '@/lib/api/auth';
 import { signOutForChangedTerms } from '@/lib/auth/account-transition';
-import { humanizeApiError } from '@/lib/api/errors';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { workspaceMutations } from '@/lib/api/workspaces';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -119,7 +119,9 @@ function NameWorkspace({ termsRevision }: Readonly<{ termsRevision: string }>) {
               )}
             </Field>
             {create.error ? (
-              <Callout tone="negative">{humanizeApiError(create.error).message}</Callout>
+              <MutationNotice
+                notice={mutationNoticeForError(create.error, { action: 'create the workspace' })}
+              />
             ) : null}
           </Stack>
         </form>

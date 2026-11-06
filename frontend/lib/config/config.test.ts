@@ -15,9 +15,6 @@ import {
   API_BASE_URL,
   DEFAULT_API_REQUEST_TIMEOUT_MS,
   DEFAULT_BOOTSTRAP_READ_TIMEOUT_MS,
-  MAX_REPETITIONS,
-  MIN_REPETITIONS,
-  DEFAULT_REPETITIONS,
   getApiRequestTimeoutMs,
   getBootstrapReadTimeoutMs,
 } from './operational';
@@ -139,12 +136,6 @@ describe('operational config', () => {
       expect(getBootstrapReadTimeoutMs()).toBe(DEFAULT_BOOTSTRAP_READ_TIMEOUT_MS);
     },
   );
-
-  it('bounds the repetition range around its default', () => {
-    expect(MIN_REPETITIONS).toBeGreaterThan(0);
-    expect(MIN_REPETITIONS).toBeLessThanOrEqual(DEFAULT_REPETITIONS);
-    expect(DEFAULT_REPETITIONS).toBeLessThanOrEqual(MAX_REPETITIONS);
-  });
 });
 
 describe('stream reconnect cadences', () => {

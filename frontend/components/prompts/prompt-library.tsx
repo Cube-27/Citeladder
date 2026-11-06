@@ -8,7 +8,7 @@ import { QueryState } from '@/components/ui/query-state';
 import { ReadError } from '@/components/ui/read-error';
 import { promptsMutations } from '@/lib/api/prompts';
 import type { PromptGenerateRequest } from '@citeladder/contracts/prompt-requests';
-import { humanizeApiError } from '@/lib/api/errors';
+import { mutationNoticeForError, type MutationNotice } from '@/lib/api/mutation-notice';
 import { topicsQueries } from '@/lib/api/topics';
 import type { Prompt, PromptStatus, Topic } from '@citeladder/contracts';
 import {
@@ -41,12 +41,14 @@ import { useActiveProject, useActiveWorkspaceId } from '@/lib/project/project-co
 import type { BuilderStep } from './prompt-builder';
 import { resolveProjectRequestScope } from '@/lib/project/request-scope';
 
-function mutationErrorMessage(
+function mutationFailure(
   create: { isError: boolean; error: unknown },
   update: { isError: boolean; error: unknown },
-): string | undefined {
-  if (create.isError) return humanizeApiError(create.error).message;
-  return update.isError ? humanizeApiError(update.error).message : undefined;
+): MutationNotice | undefined {
+  if (create.isError) return mutationNoticeForError(create.error, { action: 'add the prompt' });
+  return update.isError
+    ? mutationNoticeForError(update.error, { action: 'save the prompt' })
+    : undefined;
 }
 
 /**
@@ -79,8 +81,17 @@ export function PromptLibrary({
   reviewRequest?: boolean;
 }>) {
   const workspaceId = useActiveWorkspaceId();
-  const { projectId, promptSet, prompts, isLoading, error, ensurePromptSet, retry, retrying } =
-    usePromptSet();
+  const {
+    projectId,
+    promptSet,
+    prompts,
+    limits,
+    isLoading,
+    error,
+    ensurePromptSet,
+    retry,
+    retrying,
+  } = usePromptSet();
   const requestScope = resolveProjectRequestScope(workspaceId, projectId);
   const scope = { workspaceId: requestScope.workspaceId, projectId: requestScope.projectId };
 
@@ -341,7 +352,7 @@ export function PromptLibrary({
           setEditing={setEditing}
           submitForm={submitForm}
           isSaving={createMutation.isPending || updateMutation.isPending}
-          formError={mutationErrorMessage(createMutation, updateMutation)}
+          formError={mutationFailure(createMutation, updateMutation)}
           importOpen={importOpen}
           setImportOpen={setImportOpen}
           importPrompts={async (rows) => {
@@ -352,7 +363,9 @@ export function PromptLibrary({
           }}
           isImporting={importMutation.isPending}
           importError={
-            importMutation.isError ? humanizeApiError(importMutation.error).message : undefined
+            importMutation.isError
+              ? mutationNoticeForError(importMutation.error, { action: 'import the prompts' })
+              : undefined
           }
           projectId={requestScope.projectId}
           workspaceId={requestScope.workspaceId}
@@ -369,6 +382,7 @@ export function PromptLibrary({
           setsLoading={isLoading}
           setsError={error !== null}
           retrySets={retry}
+          limits={limits}
         />
       </>
     </ListScreen>

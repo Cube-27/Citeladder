@@ -24,3 +24,23 @@ it('sends a plan-limit refusal to billing and leaves other refusals without that
   expect(screen.getByText('That prompt already exists')).toBeInTheDocument();
   expect(screen.queryByRole('link', { name: 'See plans' })).toBeNull();
 });
+
+it('offers the owner recovery action in place of Try again when one is given', () => {
+  const { unmount } = renderWithProviders(
+    <MutationNotice
+      notice={{ message: 'Upload interrupted', retryable: true }}
+      onRetry={() => undefined}
+      recovery={<button type="button">Resume upload</button>}
+    />,
+  );
+  expect(screen.getByRole('button', { name: 'Resume upload' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+  unmount();
+  renderWithProviders(
+    <MutationNotice
+      notice={{ message: 'Upload interrupted', retryable: true }}
+      onRetry={() => undefined}
+    />,
+  );
+  expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+});

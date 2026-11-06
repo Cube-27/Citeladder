@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { ProjectRequiredState } from '@/components/layout/project-required-state';
 import { ListScreen } from '@/components/layout/page-shell';
 import { QueryState } from '@/components/ui/query-state';
+import { MutationNotice } from '@/components/ui/mutation-notice';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { SearchField } from '@/components/ui/search-field';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
@@ -99,18 +100,19 @@ function RecomputeStatus({ mutation }: Readonly<{ mutation: RecomputeMutation }>
           : 'Recompute queued. Signals refresh once the job finishes.'}
       </span>
     );
-  if (mutation.isError) {
-    const notice = mutationNoticeForError(mutation.error, {
-      action: 'queue the search demand recompute',
-    });
-    const support = [notice.code, notice.requestId].filter(Boolean).join(' · ');
-    return (
-      <span role="alert" className="type-caption text-negative" title={support || undefined}>
-        {notice.message}
-      </span>
-    );
-  }
   return null;
+}
+
+/** A failed recompute as the shared notice; the header button is its retry. */
+function RecomputeFailure({ mutation }: Readonly<{ mutation: RecomputeMutation }>) {
+  if (!mutation.isError) return null;
+  return (
+    <MutationNotice
+      notice={mutationNoticeForError(mutation.error, {
+        action: 'queue the search demand recompute',
+      })}
+    />
+  );
 }
 
 function SearchDemandView({
@@ -266,9 +268,9 @@ function SearchDemandView({
             pending={Boolean(retrying)}
           />
         ) : null}
+        <RecomputeFailure mutation={recomputeMutation} />
         {/* The summary line, then the table the top strip's filters narrow.
-            Recompute's outcome rides the summary line and the header button
-            rather than a banner above it, so the table never moves. */}
+            A queued recompute rides the summary line and the header button. */}
         <Stack>
           <Inline as="p" gap="meta">
             <span className="type-caption">

@@ -87,11 +87,17 @@ falls back to the response status text.
 ### Displaying a failure
 
 `MutationNotice` (`components/ui/mutation-notice.tsx` + `lib/api/mutation-notice.ts`) is
-the shared mutation-failure surface:
+the shared mutation-failure surface; with `ReadError` (`components/ui/read-error.tsx`) for a
+failed read, it is the only way a failure renders. A domain that words its own refusals
+(the Agent's `agentWriteFailure`, billing's `billingFailureNotice`) builds the same notice
+and swaps only the message; no screen renders a bare error Callout.
 
 - **4xx** — show the server's reason **verbatim**. It is actionable and user-caused; a
   "try again" invitation would be wrong (the same request will fail identically).
 - **5xx / network** — show retry copy plus the `request_id` for support.
+- **Recovery** — when a failure has a known fix (resume the upload, start a new chat,
+  rerun, reconnect, edit the input) the owner passes it as `recovery`; it replaces the
+  generic Try again.
 
 ## 4. Response validation policy (tolerant-on-unknown)
 

@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
+import { MutationNotice } from '@/components/ui/mutation-notice';
 import { textRole } from '@/components/ui/typography';
 import type { BillingEntitlement, CatalogPlan } from '@/lib/api/billing';
-import { billingErrorMessage } from '@/lib/billing/reason-copy';
+import { billingFailureNotice } from '@/lib/billing/reason-copy';
 
 export type BillingCancellation = {
   open: boolean;
@@ -161,9 +162,10 @@ function ResumeNotice({
         </p>
       ) : null}
       {cancellation.resumeError ? (
-        <Callout tone="negative">
-          {billingErrorMessage(cancellation.resumeError, 'The plan could not be resumed.')}
-        </Callout>
+        <MutationNotice
+          notice={billingFailureNotice(cancellation.resumeError, 'resume the plan')}
+          onRetry={cancellation.resume}
+        />
       ) : null}
     </>
   );
@@ -234,9 +236,9 @@ function CancelDialog({ cancellation }: Readonly<{ cancellation: BillingCancella
         deleted when a plan ends.
       </p>
       {cancellation.error ? (
-        <Callout tone="negative">
-          {billingErrorMessage(cancellation.error, 'The cancellation could not be scheduled.')}
-        </Callout>
+        <MutationNotice
+          notice={billingFailureNotice(cancellation.error, 'schedule the cancellation')}
+        />
       ) : null}
     </Dialog>
   );

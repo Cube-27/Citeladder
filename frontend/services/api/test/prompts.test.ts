@@ -4,6 +4,7 @@ import type {
   promptCandidateReviewResponseSchema,
   promptCandidateSchema,
   promptSchema,
+  promptSetListSchema,
   promptSetSchema,
   topicSchema,
 } from '@citeladder/contracts/project';
@@ -27,6 +28,7 @@ import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
 type Prompt = z.infer<typeof promptSchema>;
 type PromptSet = z.infer<typeof promptSetSchema>;
+type PromptSetList = z.infer<typeof promptSetListSchema>;
 type Topic = z.infer<typeof topicSchema>;
 type Candidate = z.infer<typeof promptCandidateSchema>;
 type Review = z.infer<typeof promptCandidateReviewResponseSchema>;
@@ -84,8 +86,17 @@ describe('prompt sets', () => {
     await prompt(db, created.body.id, 'acme running shoes');
     const edited = await patch<PromptSet>(`/prompt-sets/${created.body.id}`, { description: 'd' });
     expect(edited.body).toMatchObject({ name: 'B', description: 'd', prompt_count: 1 });
-    const listed = await call<PromptSet[]>(`/prompt-sets?project_id=${t.projectId}`);
-    expect(listed.body.map((set) => set.id).sort()).toEqual([t.setId, created.body.id].sort());
+    const listed = await call<PromptSetList>(`/prompt-sets?project_id=${t.projectId}`);
+    expect(listed.body.prompt_sets.map((set) => set.id).sort()).toEqual(
+      [t.setId, created.body.id].sort(),
+    );
+    // The listed form bounds are the ones the write schemas enforce.
+    const { persona_max_chars: personaMax } = listed.body.limits;
+    const id = await prompt(db, t.setId, 'acme trail shoes');
+    expect((await patch(`/prompts/${id}`, { persona: 'x'.repeat(personaMax) })).status).toBe(200);
+    expect((await patch(`/prompts/${id}`, { persona: 'x'.repeat(personaMax + 1) })).status).toBe(
+      422,
+    );
 
     const other = await fixtures.tenant();
     const foreign = await promptSet(db, other.projectId);

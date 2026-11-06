@@ -1,4 +1,5 @@
 import { ApiError } from '@/lib/api/errors';
+import { mutationNoticeForError, type MutationNotice } from '@/lib/api/mutation-notice';
 
 /**
  * Reader copy for the billing API's stable reason codes.
@@ -40,6 +41,17 @@ export function billingReasonMessage(reason: string, fallback = 'This purchase i
   const copy = reasonCopy(reason);
   if (copy) return copy;
   return REASON_CODE.test(reason) ? fallback : reason;
+}
+
+/**
+ * A failed billing write as the shared failure notice: the A4 notice for
+ * `action`, with the reader copy of a billing reason code in place of the code.
+ */
+export function billingFailureNotice(error: unknown, action: string): MutationNotice {
+  const notice = mutationNoticeForError(error, { action });
+  const coded = error instanceof ApiError && error.code ? reasonCopy(error.code) : undefined;
+  if (coded) return { ...notice, message: coded };
+  return { ...notice, message: billingReasonMessage(notice.message, notice.message) };
 }
 
 /** A caught checkout error as reader copy, translating billing reason codes. */
