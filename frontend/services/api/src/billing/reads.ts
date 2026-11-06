@@ -9,7 +9,7 @@ import type { Database } from '../db/database.ts';
 import type { ServiceConfig } from '../config.ts';
 import { policy } from '../config.ts';
 import { accountState, drawOrder, grantExpiry } from '../entitlements/state.ts';
-import { ledgerBalances } from '../entitlements/ledger.ts';
+import { grantBalances } from '../entitlements/ledger.ts';
 import { runtimeProjection } from '../entitlements/grants.ts';
 import { workspaceAccount } from './purchases.ts';
 import { catalog, capabilityValue } from './catalog.ts';
@@ -266,11 +266,7 @@ export async function usageRead(db: Database, workspaceId: string, at: Date) {
     accountState(db, workspaceId, account.id, at),
     manualRunUsage(db, account.id, { at, launchId: null }),
   ]);
-  const balances = await ledgerBalances(
-    db,
-    account.id,
-    state.selected.map((grant) => grant.id),
-  );
+  const balances = await grantBalances(db, account.id, state.selected);
   const rates = new Map([['manual_runs_per_day', manualRuns]]);
   /**
    * A consumable sums its grants' ledger balances. Occupancy and rate counters
@@ -280,9 +276,9 @@ export async function usageRead(db: Database, workspaceId: string, at: Date) {
   const aggregate = (
     key: string,
     type: string,
-    grants: readonly { allowance: number; consumed: number; reserved: number }[],
+    grants: readonly { allowance: number; consumed: number; reserved: number; remaining: number }[],
   ) => {
-    const sum = (field: 'allowance' | 'consumed' | 'reserved') =>
+    const sum = (field: 'allowance' | 'consumed' | 'reserved' | 'remaining') =>
       grants.reduce((total, grant) => total + grant[field], 0);
     const rate = rates.get(key);
     const used = type === 'counter.rate' ? rate?.used : occupancy.get(key);
@@ -296,8 +292,13 @@ export async function usageRead(db: Database, workspaceId: string, at: Date) {
     };
     if (state.error) return unknown;
     if (type === 'counter.consumable') {
-      const [allowance, consumed, reserved] = [sum('allowance'), sum('consumed'), sum('reserved')];
-      const remaining = Math.max(0, allowance - consumed - reserved);
+      // Remaining is what admission can hold: the sum of each grant's own remainder.
+      const [allowance, consumed, reserved, remaining] = [
+        sum('allowance'),
+        sum('consumed'),
+        sum('reserved'),
+        sum('remaining'),
+      ];
       return { ...unknown, limit_state: 'finite', allowance, consumed, reserved, remaining };
     }
     if (used === undefined) return unknown;
@@ -318,13 +319,14 @@ export async function usageRead(db: Database, workspaceId: string, at: Date) {
     .map(([key, definition]) => {
       const selected = state.selected.filter((grant) => grant.key === key);
       const grants = selected.map((grant) => {
-        const balance = balances.get(grant.id) ?? { consumed: 0, reserved: 0 };
+        const balance = balances.get(grant.id)!;
         return {
           grant_id: grant.id,
           source_kind: grant.source_kind,
-          allowance: grant.value,
-          ...balance,
-          remaining: Math.max(0, grant.value - balance.consumed - balance.reserved),
+          allowance: balance.allowance,
+          consumed: balance.consumed,
+          reserved: balance.reserved,
+          remaining: balance.remaining,
           effective_valid_until: grantExpiry(grant, state.end)?.toISOString() ?? null,
         };
       });
