@@ -213,16 +213,14 @@
 
 /* ---------- Hover depth: a linked card lifts ---------- */
 
-a.cl-fcard,
-.cl-related-card {
+a.cl-fcard {
   transition:
     border-color var(--motion-fast) var(--ease-standard),
     transform var(--motion-slow) var(--ease-standard),
     box-shadow var(--motion-slow) var(--ease-standard);
 }
 
-a.cl-fcard:hover,
-.cl-related-card:hover {
+a.cl-fcard:hover {
   box-shadow: var(--shadow-pop);
   transform: translateY(-4px);
 }

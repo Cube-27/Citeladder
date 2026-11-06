@@ -224,7 +224,7 @@ describe('cards and strips', () => {
     expect([1, 2, 3, 4, 5, 6, 8, 9].map(columnsFor)).toEqual([1, 2, 3, 4, 3, 3, 4, 3]);
   });
 
-  it('links each related card to its destination with a Read line', () => {
+  it('links each related row to its destination, naming it by title and any label', () => {
     render(
       <RelatedCards
         items={[
@@ -233,7 +233,7 @@ describe('cards and strips', () => {
         ]}
       />,
     );
-    expect(screen.getByRole('link', { name: 'MCP Read' })).toHaveAttribute('href', '/platform/mcp');
+    expect(screen.getByRole('link', { name: 'MCP' })).toHaveAttribute('href', '/platform/mcp');
     expect(screen.getByRole('link', { name: 'Pricing See plans' })).toHaveAttribute(
       'href',
       '/pricing',
