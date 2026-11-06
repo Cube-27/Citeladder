@@ -320,24 +320,31 @@ export class TaskQueue<T extends LaneTable = 'analytics_tasks'> {
   /**
    * The fenced lock a terminal write takes inside its transaction: the claimed
    * row, still leased to `owner` at the claimed attempt and not terminal, or
-   * undefined when the lease was lost.
+   * undefined when the lease was lost. `keyShare` holds the row through a long
+   * transaction while the heartbeat's non-key UPDATE still extends the lease;
+   * a settling write takes the default FOR UPDATE.
    */
   async fence(
     trx: Database,
     claimed: { id: string; workspace_id: string; attempt_count: number },
     owner: string,
-  ) {
-    const row = await queueDatabase(trx)
+    strength: 'update' | 'keyShare' = 'update',
+  ): Promise<TaskFor<T> | undefined> {
+    const query = queueDatabase(trx)
       .selectFrom(this.#table)
-      .select(['status', 'attempt_count', 'max_attempts'])
+      .selectAll()
       .where('id', '=', claimed.id)
       .where('workspace_id', '=', claimed.workspace_id)
       .where('attempt_count', '=', claimed.attempt_count)
       .where('lease_owner', '=', owner)
-      .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)
-      .forUpdate()
-      .executeTakeFirst();
-    return row === undefined || terminal.includes(row.status) ? undefined : row;
+      .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`);
+    const row = await (
+      strength === 'keyShare' ? query.forKeyShare() : query.forUpdate()
+    ).executeTakeFirst();
+    // SELECT * retains the concrete table's additional columns.
+    return row === undefined || terminal.includes(row.status)
+      ? undefined
+      : (row as unknown as TaskFor<T>);
   }
 
   /** Whether the row reached a terminal status (cooperative cancel). */

@@ -13,7 +13,7 @@ import type { Database } from '../db/database.ts';
 import { debitUsage, ledgerBalances, releaseUsage, reserveUsage } from '../entitlements/ledger.ts';
 import { accountState } from '../entitlements/state.ts';
 import { crawlError } from './planner-policy.ts';
-import type { Crawl } from './task-fence.ts';
+import type { Crawl } from './site-task.ts';
 
 const capability = 'site_health_page_fetches_per_period';
 

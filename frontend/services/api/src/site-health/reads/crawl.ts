@@ -18,7 +18,7 @@ import { WorkspaceScope } from '../../db/workspace-scope.ts';
 import { notFound } from '../../errors.ts';
 import { parseUuid } from '../../http/uuid.ts';
 import { firstOf } from '../../lists.ts';
-import type { Crawl } from '../task-fence.ts';
+import type { Crawl } from '../site-task.ts';
 import { failedAs } from '../task-outcome.ts';
 
 const reads = policy.site_health.reads;

@@ -8,7 +8,7 @@ import {
   enqueueOpportunityRefresh,
 } from '../opportunities/enqueue.ts';
 import { enqueueTask } from '../queue/enqueue.ts';
-import type { Crawl } from './task-fence.ts';
+import type { Crawl } from './site-task.ts';
 import { enqueueTrafficInsights } from '../crawl-logs/insights-enqueue.ts';
 
 /**
