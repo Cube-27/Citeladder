@@ -50,6 +50,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | OD5 | Onboarding discovery | Fix the recurring "competitor discovery fails after a deploy, works after logging out" bug first; make error handling and logging robust last, with recovery actions instead of dead-end errors. | ON1, ON2, Z1–Z4 |
 | OD6 | Unpriced gateway model billed at the Haiku rate | Keep the documented fallback: only Anthropic and OpenAI models are used and all are priced; internal cost for any other model stays at the Haiku rate; customer pricing is separate and the public model choice is fixed. Revisit later. | none |
 | OD7 | Referral classifications are kept 90 days but Performance reads up to 480 (raised by P08 #631) | Keep AI referral data for the same period as Performance (480 days), so Performance never counts older AI sessions as not AI. | X9 |
+| OD8 | P18's engineering values: $25/day breaker on included and uncharged cost; output caps 16k (prompt generation, research) / 8k (rest) | Keep both (2026-11-07). Recorded as billing decision B68. | K2, K3 |
 
 ## PR tracker
 
@@ -68,14 +69,14 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | merged | [#639](https://github.com/Cube-27/Citeladder/pull/639) | No migration |
 | P12 | Opportunities: check kinds, typed targets, evidence announcement | O2, O3, O4 | P02 | | merged | [#643](https://github.com/Cube-27/Citeladder/pull/643) | No migration |
 | P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | merged | [#642](https://github.com/Cube-27/Citeladder/pull/642), [#644](https://github.com/Cube-27/Citeladder/pull/644) | Split for size: P13-a (#642) = F5, F6 (F6 alone is one ~5,200-line row); P13-b (#644) = F7 |
-| P14 | Marketing site records and config-driven numbers | MK1, MK2, MK3, MK4 | P02 | | todo | | |
+| P14 | Marketing site records and config-driven numbers | MK1, MK2, MK3, MK4 | P02 | | in progress | | Builder session `untangle-p14` |
 | P15 | Queue owner II: remaining lanes and coalesced enqueue | Q4, Q5, Q6, Q7, Q8 | P01, P03, P09 | | merged | [#633](https://github.com/Cube-27/Citeladder/pull/633) | No migration |
 | P16 | Site Health tasks II: one task runner, counters, pinned versions | SH4, SH5 | P04, P08, P09 | | merged | [#635](https://github.com/Cube-27/Citeladder/pull/635) | No migration |
 | P17 | Permission on the command, MCP prepared changes, workspace ownership | C3, C4, X6 | P11 | | merged | [#646](https://github.com/Cube-27/Citeladder/pull/646) | No migration |
-| P18 | Internal cost view, spend breaker, output caps | K1, K2, K3 | P01, P10 | mig? | merged | [#645](https://github.com/Cube-27/Citeladder/pull/645) | Migration 0012. Owner to confirm: $25/day breaker ceiling; output caps 16k (prompt generation, research) / 8k (rest) |
+| P18 | Internal cost view, spend breaker, output caps | K1, K2, K3 | P01, P10 | mig? | merged | [#645](https://github.com/Cube-27/Citeladder/pull/645) | Migration 0012. Values confirmed by owner (OD8, B68) |
 | P19 | Engine surfaces II: surface adapters, audit side effects out of analysis | E4, E5, X8 | P05, P15 | | merged | [#641](https://github.com/Cube-27/Citeladder/pull/641) | No migration. Found the `audit_tasks.error_code` length bug, now P24 |
-| P20 | Settings resolve once; named abuse budgets | G1, G2, G3 | P01, P15 | wide | todo | | |
-| P21 | Screen sweep: failure renderer, typed blobs, form limits, non-null project, recovery actions | F8, F9, F10, R4, Z4 | P07, P12, P13, P16 | | todo | | Split at a row boundary if over ~4,000 lines |
+| P20 | Settings resolve once; named abuse budgets | G1, G2, G3 | P01, P15 | wide | in progress | | Builder session `untangle-p20`; merges first of the last three |
+| P21 | Screen sweep: failure renderer, typed blobs, form limits, non-null project, recovery actions | F8, F9, F10, R4, Z4 | P07, P12, P13, P16 | | in progress | | Builder session `untangle-p21`; split at a row boundary if over ~4,000 lines |
 | P22 | AI Traffic and integration owners; error logging | X4, X5, Z1, Z2, Z3 | P15, P16, P19 | | merged | [#647](https://github.com/Cube-27/Citeladder/pull/647) | No migration |
 | P23 | AI referral retention matches the Performance window | X9 | P08 | | merged | [#636](https://github.com/Cube-27/Citeladder/pull/636) | Owner decision OD7 |
 | P24 | Audit error codes fit their column | DB3 | P19 | mig | merged | [#648](https://github.com/Cube-27/Citeladder/pull/648) | Migration 0013. Found by P19 |
