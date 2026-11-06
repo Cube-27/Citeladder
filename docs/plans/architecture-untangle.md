@@ -65,7 +65,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | merged | [#631](https://github.com/Cube-27/Citeladder/pull/631) | Migration 0010 |
 | P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | merged | [#630](https://github.com/Cube-27/Citeladder/pull/630) | |
 | P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | merged | [#632](https://github.com/Cube-27/Citeladder/pull/632) | Migration 0011 |
-| P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | in review | [#639](https://github.com/Cube-27/Citeladder/pull/639) | Builder session `untangle-p11` |
+| P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | merged | [#639](https://github.com/Cube-27/Citeladder/pull/639) | No migration |
 | P12 | Opportunities: check kinds, typed targets, evidence announcement | O2, O3, O4 | P02 | | todo | | |
 | P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | in progress | | Builder session `untangle-p13` |
 | P14 | Marketing site records and config-driven numbers | MK1, MK2, MK3, MK4 | P02 | | todo | | |
