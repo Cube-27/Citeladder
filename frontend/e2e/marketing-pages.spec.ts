@@ -480,11 +480,19 @@ test.describe('marketing routes', () => {
       await page.setViewportSize({ width, height: 900 });
       for (const path of ['/', '/solutions']) {
         await page.goto(path);
-        const frames = page.locator('main .cl-frame');
+        // A card rail scrolls sideways by design: its later cards sit past the
+        // edge inside the row, so the row itself must fit instead of each frame.
+        const frames = page.locator('main .cl-frame:not([data-card-rail-track] .cl-frame)');
         await expect(frames.first()).toBeVisible();
-        const widest = await frames.evaluateAll((elements) =>
-          Math.max(...elements.map((element) => element.getBoundingClientRect().right)),
-        );
+        const widest = await page
+          .locator('main :is(.cl-frame, [data-card-rail-track])')
+          .evaluateAll((elements) =>
+            Math.max(
+              ...elements
+                .filter((element) => !element.closest('[data-card-rail-track] .cl-frame'))
+                .map((element) => element.getBoundingClientRect().right),
+            ),
+          );
         expect(widest, `${path} at ${width}px: frame edge`).toBeLessThanOrEqual(width + 1);
         const overflow = await page.evaluate(
           () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
