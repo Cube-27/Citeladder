@@ -396,7 +396,13 @@ A turn executes only inside that request, exactly once:
   with a running turn.
 - Closing the tab or reloading closes the stream and ends the turn as
   `interrupted`; the turn's own limit (`turn_timeout_seconds` in the runtime
-  configuration, below the API's request timeout) ends it as `turn_timeout`.
+  configuration, below the API's request timeout, frozen in the run's budget at
+  admission) ends it as `turn_timeout`.
+- Turns and interactive audit drives share a per-instance cap
+  (`interactiveCapacity` in `config/execution.ts`); a full instance answers 429
+  with `Retry-After` and the queued turn waits for the browser's retry. On
+  shutdown the API stops open turns, which end as `interrupted`, before it
+  closes.
 - A provider failure is retried once within the call
   (`provider_max_attempts`); if that also fails the turn ends as
   `provider_error`. Nothing requeues a turn, so a turn never replays from its
