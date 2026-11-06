@@ -70,7 +70,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | todo | | |
 | P14 | Marketing site records and config-driven numbers | MK1, MK2, MK3, MK4 | P02 | | todo | | |
 | P15 | Queue owner II: remaining lanes and coalesced enqueue | Q4, Q5, Q6, Q7, Q8 | P01, P03, P09 | | merged | [#633](https://github.com/Cube-27/Citeladder/pull/633) | No migration |
-| P16 | Site Health tasks II: one task runner, counters, pinned versions | SH4, SH5 | P04, P08, P09 | | in progress | | Builder session `untangle-p16` |
+| P16 | Site Health tasks II: one task runner, counters, pinned versions | SH4, SH5 | P04, P08, P09 | | in review | [#635](https://github.com/Cube-27/Citeladder/pull/635) | Builder session `untangle-p16` |
 | P17 | Permission on the command, MCP prepared changes, workspace ownership | C3, C4, X6 | P11 | | todo | | |
 | P18 | Internal cost view, spend breaker, output caps | K1, K2, K3 | P01, P10 | mig? | todo | | Before public sign-up |
 | P19 | Engine surfaces II: surface adapters, audit side effects out of analysis | E4, E5, X8 | P05, P15 | | todo | | |
@@ -138,8 +138,8 @@ order the PR tracker already respects.
 | SH1 | Site Health task-outcome classifier | — | `site-health/` outcome lists (nine files) | | done | 13423c9 | |
 | SH2 | Crawl-status module; dead states and legacy fallbacks deleted | SH1 | `packages/contracts/src/site-health/crawl.ts`, `site-health/`, `frontend/lib/site-health/status.ts` | mig? | done | 86f59ee | |
 | SH3 | One writer for crawl tasks, site URLs, observations, memberships | SH2 | `site-health/{admission-writes,frontier,discover-task,planner,site-setup-task,lifecycle,link-metrics}.ts` | | done | 90cc69e | |
-| SH4 | One site-task runner (lock, settle, backoff, access check) | SH3, Q3 | `site-health/{site-task,task-fence,analyze-task,discover-task,site-setup-task}.ts`, `workers/site-health-worker.ts` | | todo | | |
-| SH5 | Crawl counter chooser; shared commerce-facts schema; pinned versions on reads | SH2, X1 | `site-health/reads/`, `commerce/projection-facts.ts` | | todo | | |
+| SH4 | One site-task runner (lock, settle, backoff, access check) | SH3, Q3 | `site-health/{site-task,task-fence,analyze-task,discover-task,site-setup-task}.ts`, `workers/site-health-worker.ts` | | done | e292afb | |
+| SH5 | Crawl counter chooser; shared commerce-facts schema; pinned versions on reads | SH2, X1 | `site-health/reads/`, `commerce/projection-facts.ts` | | done | 6c7e69f | |
 | B1 | Consumable hold module; Site Health fetch budget on it | — | `entitlements/ledger.ts`, `site-health/fetch-budget.ts` | | done | 684e62b | |
 | B2 | Metering, prompt runs and Agent funding on the hold module | B1 | `billing/metering.ts`, `audits/prompt-runs.ts`, `agent/funding.ts`, `billing/reads.ts` | | done | e739dd9 | |
 | B3 | One plan gate and occupancy counter table | B2 | `entitlements/occupancy.ts`, flag refusal sites, `docs/billing-entitlements.md` | | done | bfb642c | |

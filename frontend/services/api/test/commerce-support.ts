@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Database } from '../src/db/database.ts';
 import { policy } from '../src/config.ts';
-import { SiteFixtures } from './site-health-fixtures.ts';
+import { SiteFixtures, storedFacts } from './site-health-fixtures.ts';
 import { prompt, promptSet } from './prompt-fixtures.ts';
 import { testDatabase } from './support.ts';
 
@@ -48,14 +48,14 @@ async function seed(db: Database) {
       await /* NOSONAR -- Fixture pages insert in a fixed order; `analyses` keeps it. */ fixtures.page(
         seed,
         url,
-        {
+        storedFacts({
           canonical_url: url,
           headings: { h1_texts: [product ? 'Widget' : 'Tools'] },
           structured_data: product
             ? { product: { sku: ['W1'], price: ['12.50'], price_currency: ['USD'] } }
             : {},
           links: { anchors: [{ region: 'main', url: '/collections/tools/products/widget' }] },
-        },
+        }),
       );
     await db // NOSONAR -- Needs this page's analysis id.
       .updateTable('site_page_analyses')
