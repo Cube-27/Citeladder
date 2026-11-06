@@ -50,7 +50,11 @@ describe('DesktopNav', () => {
     render(<DesktopNav path="/" />);
     const resources = screen.getByRole('button', { name: 'Resources' });
 
-    await user.click(resources);
+    // A keyboard visitor opens it from the trigger. (A click would also send
+    // a mouse hover, whose 50ms open intent can reopen the menu after Escape.)
+    resources.focus();
+    await user.keyboard('{Enter}');
+    expect(resources).toHaveAttribute('aria-expanded', 'true');
     screen.getByRole('link', { name: /FAQ/ }).focus();
     await user.keyboard('{Escape}');
 
