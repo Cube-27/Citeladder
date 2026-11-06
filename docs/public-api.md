@@ -74,10 +74,13 @@ no CORS is offered. In order, a request needs a live key (401
 `invalid_api_key`), its per-key 600/min and per-workspace 1,200/min windows
 (429 with `Retry-After`), its creator's membership, workspace access and the
 `api_access` grant (403), the operation's capability and scope (403), and then
-the path project inside the workspace and the key's allowlist (404). Prompt,
-prompt set, topic, audit, action and crawl IDs in the path must belong to that
-project ([ownership](../frontend/services/api/src/public-api/ownership.ts)),
-so a key restricted to one project never reaches another project's rows.
+the path project inside the workspace and the key's allowlist (404). Every ID
+in the path must belong to that project, so a key restricted to one project
+never reaches another project's rows: a write's command finds its record only
+in the path project, and a read first proves each prompt set, prompt, audit,
+action or crawl ID belongs to it
+([ownership](../frontend/services/api/src/public-api/ownership.ts)). A path ID
+parameter with no listed owner fails closed.
 
 A request body must be JSON sent with `Content-Type: application/json`
 (parameters such as `charset` are allowed); any other media type is 415
