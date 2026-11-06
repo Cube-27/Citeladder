@@ -435,6 +435,12 @@ describe('durable onboarding', () => {
     const started = (await response.json()) as { id: string; status: string };
     expect(started.status).toBe('queued');
     expect(started.id).not.toBe(failed.id);
+    // A replayed key returns the same run even once the source can no longer be rerun.
+    await db
+      .updateTable('brand_discoveries')
+      .set({ status: 'project_created' })
+      .where('id', '=', failed.id)
+      .execute();
     expect(((await (await rerun(failed.id, a.userId, key)).json()) as { id: string }).id).toBe(
       started.id,
     );

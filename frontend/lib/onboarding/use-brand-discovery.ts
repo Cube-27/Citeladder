@@ -62,8 +62,14 @@ export function useBrandDiscovery(
   const fingerprint = useMemo(() => JSON.stringify({ input, workspaceId }), [input, workspaceId]);
   const createdFor = useRef<string | null>(null);
   const [responseFor, setResponseFor] = useState<string | null>(null);
-  // A run started again replaces the shown discovery until another one is created.
-  const [restarted, setRestarted] = useState<BrandDiscovery | null>(null);
+  // A run started again replaces the shown discovery until another one is
+  // created, and only in the workspace that started it.
+  const [restartedIn, setRestartedIn] = useState<{
+    workspace: string | null;
+    discovery: BrandDiscovery;
+  } | null>(null);
+  // Called once the new run exists, so a failed request leaves the old review intact.
+  const onRestarted = useRef<(() => void) | null>(null);
   const restart = useMutation({
     mutationFn: ({
       id,
@@ -74,7 +80,10 @@ export function useBrandDiscovery(
       idempotencyKey: string;
       workspace: string | null;
     }) => brandDiscoveriesApi.rerun(id, idempotencyKey, { workspaceId: workspace }),
-    onSuccess: (data) => setRestarted(data),
+    onSuccess: (data, variables) => {
+      setRestartedIn({ workspace: variables.workspace, discovery: data });
+      onRestarted.current?.();
+    },
   });
   const create = useMutation({
     // The fingerprint AND the workspace travel with the request, so the
@@ -91,7 +100,7 @@ export function useBrandDiscovery(
       workspace: string | null;
     }) => brandDiscoveriesApi.create(payload, idempotencyKey, { workspaceId: workspace }),
     // A newly created discovery supersedes one that was run again.
-    onMutate: () => setRestarted(null),
+    onMutate: () => setRestartedIn(null),
     onSuccess: (_data, variables) => {
       setResponseFor(variables.fingerprint);
     },
@@ -109,6 +118,7 @@ export function useBrandDiscovery(
   }, [create, fingerprint, input, resumeId, workspaceId]);
 
   const created = responseFor === fingerprint ? create.data : undefined;
+  const restarted = restartedIn?.workspace === workspaceId ? restartedIn.discovery : undefined;
   const started = restarted ?? created;
   // A successful retry supersedes a resumed row. Until that response arrives,
   // the persisted resume id remains visible instead of blanking the timeline.
@@ -127,8 +137,9 @@ export function useBrandDiscovery(
   const active = discovery?.status === 'queued' || discovery?.status === 'running';
   const execution = useDiscoveryExecution(discoveryId, active, workspaceId);
   /** A new discovery from this one's input; a finished task is never reset. */
-  const rerun = () => {
+  const rerun = (onStarted?: () => void) => {
     if (!discoveryId || restart.isPending) return;
+    onRestarted.current = onStarted ?? null;
     restart.mutate({ id: discoveryId, idempotencyKey: operationKey(), workspace: workspaceId });
   };
   const retry = () => {

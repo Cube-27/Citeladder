@@ -352,13 +352,16 @@ export function useOnboardingFlow(transactionKey: string) {
   });
 
   // A failed or degraded discovery runs again as a new discovery from the same
-  // input; the URL follows its id, and the old review seeds nothing.
+  // input; the URL follows its id. Once the new run exists, the old review
+  // seeds nothing; a failed request leaves it as it was.
   const rerunDiscovery = () => {
-    if (discoveryState) clearReviewDraft(discoveryState.id);
-    setDomains([]);
-    setCompetitors([]);
-    setProfile(null);
-    discovery.rerun();
+    const previous = discoveryState?.id;
+    discovery.rerun(() => {
+      if (previous) clearReviewDraft(previous);
+      setDomains([]);
+      setCompetitors([]);
+      setProfile(null);
+    });
   };
 
   const toggle = useCallback(

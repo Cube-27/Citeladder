@@ -261,15 +261,8 @@ describe('OnboardingScreen', () => {
       http.get(`/api/v1/brand-discoveries/${DISCOVERY_ID}`, () => HttpResponse.json(finished)),
       http.post(`/api/v1/brand-discoveries/${DISCOVERY_ID}/rerun`, ({ request }) => {
         rerunKeys.push(request.headers.get('idempotency-key'));
-        return HttpResponse.json(
-          {
-            ...rerun,
-            status: 'queued',
-            competitors: [],
-            progress: discovery('queued', 'opening_website').progress,
-          },
-          { status: 202 },
-        );
+        const queued = { ...discovery('queued', 'opening_website'), id: RERUN_ID };
+        return HttpResponse.json({ ...queued, competitors: [] }, { status: 202 });
       }),
       http.post(`/api/v1/brand-discoveries/${RERUN_ID}/run`, () => HttpResponse.json(rerun)),
       http.get(`/api/v1/brand-discoveries/${RERUN_ID}`, () => HttpResponse.json(rerun)),
@@ -287,8 +280,7 @@ describe('OnboardingScreen', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Review' })).toBeEnabled());
     expect(screen.queryByRole('button', { name: 'Run discovery again' })).toBeNull();
     expect(screen.getByText('Globex')).toBeInTheDocument();
-    expect(rerunKeys).toHaveLength(1);
-    expect(rerunKeys[0]).toMatch(/\S/);
+    expect(rerunKeys).toEqual([expect.stringMatching(/\S/)]);
   });
 
   it('starts research once while polling persisted progress during the bounded request', async () => {

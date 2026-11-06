@@ -213,6 +213,14 @@ export function createDiscovery(
  */
 export async function rerunDiscovery(db: Database, workspaceId: string, id: string, key: string) {
   const source = await discoveryRow(db, workspaceId, id);
+  // A replayed key returns its run even after the source moved on.
+  const replay = await db
+    .selectFrom('brand_discoveries')
+    .selectAll()
+    .where('workspace_id', '=', workspaceId)
+    .where('idempotency_key', '=', key)
+    .executeTakeFirst();
+  if (replay) return discoveryView(replay);
   if (![cfg.discovery_status_ready, cfg.discovery_status_failed].includes(source.status))
     throw new ApiError(409, 'Only a finished discovery can be run again');
   return createDiscovery(db, workspaceId, discoveryCreate.parse(source.input_data), key);
