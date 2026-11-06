@@ -8,7 +8,8 @@ import {
   roleAllows,
   type WorkspaceCapability,
 } from '../auth/workspace.ts';
-import { enforceSubjectRequest } from '../abuse/usage.ts';
+import { budget, spendBudget } from '../abuse/usage.ts';
+import { GLOBAL_TRIAL_SUBJECT } from '../config/abuse.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import { policy } from '../config.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
@@ -118,11 +119,7 @@ export async function createWorkspace(trx: Database, userId: string, name: strin
     .where('id', '=', userId)
     .executeTakeFirstOrThrow();
   if (user.registration_origin === 'public')
-    await enforceSubjectRequest(trx, 'client', 'global-trial', {
-      operation: 'auth.trial.global',
-      limit: policy.auth.mailbox.trial_daily_limit,
-      windowSeconds: policy.auth.mailbox.daily_window_seconds,
-    });
+    await spendBudget(trx, budget('trial_global_daily'), GLOBAL_TRIAL_SUBJECT);
   const workspace = await insertWorkspace(trx, userId, name);
   await ensureWorkspaceBilling(trx, workspace.id, user);
   return workspaceView(workspace, 'owner');

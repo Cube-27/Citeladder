@@ -10,7 +10,7 @@ import type {
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import type { z } from 'zod';
 
-import { enforceWorkspaceRequest } from '../src/abuse/usage.ts';
+import { spendBudget, type Budget } from '../src/abuse/usage.ts';
 import { createApp } from '../src/app.ts';
 import { ApiError } from '../src/errors.ts';
 import {
@@ -329,11 +329,14 @@ describe('import', () => {
   });
 
   it('spends the workspace import budget before reading the upload', async () => {
-    const limit = { operation: `bulk_import_test_${randomUUID()}`, limit: 1, windowSeconds: 3600 };
-    await enforceWorkspaceRequest(db, t.workspaceId, limit);
-    const refused = await enforceWorkspaceRequest(db, t.workspaceId, limit).catch(
-      (error: unknown) => error,
-    );
+    const limit: Budget = {
+      subject: 'workspace',
+      operation: `bulk_import_test_${randomUUID()}`,
+      limit: 1,
+      windowSeconds: 3600,
+    };
+    await spendBudget(db, limit, t.workspaceId);
+    const refused = await spendBudget(db, limit, t.workspaceId).catch((error: unknown) => error);
     expect(refused).toBeInstanceOf(ApiError);
     expect((refused as ApiError).status).toBe(429);
     expect(Number((refused as ApiError).headers?.['retry-after'])).toBeGreaterThan(0);

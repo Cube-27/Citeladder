@@ -1,31 +1,19 @@
 import { randomUUID } from 'node:crypto';
-import { policy, type ServiceConfig } from '../config.ts';
+import type { ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { enforceSubjectRequest } from '../abuse/usage.ts';
+import { budget, spendBudget } from '../abuse/usage.ts';
 import { ApiError } from '../errors.ts';
+import { GLOBAL_MAIL_SUBJECT } from '../config/abuse.ts';
 import { sendAuthMail } from '../auth/mail.ts';
 
 /** Issuance has already committed; a failed send retains the copy-link fallback. */
 export async function deliverInvitation<
   T extends { invitation: { email: string; expires_at: string }; token: string },
 >(db: Database, config: ServiceConfig, issued: T) {
-  const cfg = policy.auth.mailbox;
   try {
-    await enforceSubjectRequest(db, 'email', issued.invitation.email, {
-      operation: 'auth.mail.cooldown',
-      limit: 1,
-      windowSeconds: cfg.cooldown_seconds,
-    });
-    await enforceSubjectRequest(db, 'email', issued.invitation.email, {
-      operation: 'auth.mail.daily',
-      limit: cfg.recipient_daily_limit,
-      windowSeconds: cfg.daily_window_seconds,
-    });
-    await enforceSubjectRequest(db, 'client', 'global-mail', {
-      operation: 'auth.mail.global',
-      limit: cfg.global_daily_limit,
-      windowSeconds: cfg.daily_window_seconds,
-    });
+    await spendBudget(db, budget('mail_cooldown'), issued.invitation.email);
+    await spendBudget(db, budget('mail_recipient_daily'), issued.invitation.email);
+    await spendBudget(db, budget('mail_global_daily'), GLOBAL_MAIL_SUBJECT);
   } catch (error) {
     if (error instanceof ApiError && error.status === 429)
       return { ...issued, delivery: 'failed' as const };

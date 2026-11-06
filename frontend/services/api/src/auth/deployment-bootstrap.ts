@@ -1,7 +1,8 @@
 /** One-shot identity/access bootstrap before catalog publication and rollout. */
 import { sql } from 'kysely';
 import { z } from 'zod';
-import { assertDeployable, loadConfig, policy, resolveSettingSpec } from '../config.ts';
+import { assertDeployable, loadConfig, policy } from '../config.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
 import { provisionAccount } from '../workspaces/service.ts';
@@ -20,7 +21,7 @@ export async function bootstrapDeployment(
   catalog = initializeCatalog,
 ) {
   const config = loadConfig(env);
-  if (config.demo.enabled) assertDeployable(config, env, true);
+  if (config.demo.enabled) assertDeployable(config, true);
   const setting = (key: keyof typeof policy.settings) =>
     resolveSettingSpec(policy.settings[key], env);
   const password = String(setting('dev_login_password'));

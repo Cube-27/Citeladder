@@ -172,7 +172,7 @@ function validateConsentSelection(
   const needTerms = unique.filter((id) => states.get(id) === 'terms');
   if (
     decision.acceptedTermsRevision !== null &&
-    decision.acceptedTermsRevision !== policy.mcp.terms_revision
+    decision.acceptedTermsRevision !== policy.auth.terms_revision
   )
     throw new ConsentSelectionError(
       'The Terms of Service changed since this page loaded. Review them again before approving.',
@@ -195,7 +195,7 @@ export async function consentWorkspaces(db: Database, userId: string): Promise<C
           .select('p.id')
           .whereRef('p.workspace_id', '=', 'w.id')
           .where('p.actor_id', '=', userId)
-          .where('p.terms_revision', '=', policy.mcp.terms_revision),
+          .where('p.terms_revision', '=', policy.auth.terms_revision),
       ).as('accepted'),
       exists(
         selectFrom('projects as pr').select('pr.id').whereRef('pr.workspace_id', '=', 'w.id'),
@@ -283,7 +283,7 @@ export function completeConsent(
           {
             workspaceId,
             actorId: userId,
-            revision: policy.mcp.terms_revision,
+            revision: policy.auth.terms_revision,
             context: 'mcp_consent',
           },
         );

@@ -1,4 +1,5 @@
 import { ConfigError } from './config-error.ts';
+import { resolveSpec, type SettingSource, type SettingSpec } from './settings.ts';
 
 export const heartbeatFailureLimit = 2;
 /** Interactive POSTs borrow existing workers without waiting for a new job. */
@@ -26,35 +27,46 @@ export const runnerLanes = {
 };
 
 const defaults = {
-  // Each successor execution costs a one-to-three-minute Cloud Run cold start.
-  budgetSeconds: 600,
-  poolSize: 4,
-  wakeTimeoutMs: 5000,
-  wakeMinIntervalMs: 5000,
   drainLockWaitMs: 15_000,
   drainLockPollMs: 250,
 };
 
-function integer(
-  env: Record<string, string | undefined>,
-  name: string,
-  fallback: number,
-  max: number,
-) {
-  const raw = env[name];
-  const value = raw === undefined ? fallback : Number(raw);
-  if (
-    (raw !== undefined && !/^\d+$/u.test(raw)) ||
-    !Number.isSafeInteger(value) ||
-    value < 1 ||
-    value > max
-  )
-    throw new ConfigError(`${name} must be an integer between 1 and ${max}`);
-  return value;
-}
+const integer = (name: string, value: number, maximum: number): SettingSpec => ({
+  env: [name],
+  type: 'int',
+  default: value,
+  minimum: 1,
+  maximum,
+});
+const text = (name: string): SettingSpec => ({ env: [name], type: 'str', default: '' });
 
-export function executionSettings(env: Record<string, string | undefined>) {
-  const runnerJob = env.CLOUD_RUN_RUNNER_JOB?.trim() || '';
+/** The runner and Cloud Run execution settings, resolved like every other setting. */
+export const executionSpecs = {
+  // Each successor execution costs a one-to-three-minute Cloud Run cold start.
+  budget_seconds: integer('RUNNER_BUDGET_SECONDS', 600, 3600),
+  pool_size: integer('RUNNER_DB_POOL_SIZE', 4, 4),
+  wake_timeout_ms: integer('RUNNER_WAKE_TIMEOUT_MS', 5000, 30000),
+  wake_min_interval_ms: integer('RUNNER_WAKE_MIN_INTERVAL_MS', 5000, 60000),
+  runner_job: text('CLOUD_RUN_RUNNER_JOB'),
+  origin_token: text('CITELADDER_ORIGIN_TOKEN'),
+  previous_origin_token: text('CITELADDER_ORIGIN_TOKEN_PREVIOUS'),
+  // Cloud Run sets these: K_SERVICE on a service, CLOUD_RUN_JOB on a job execution.
+  cloud_run_service: text('K_SERVICE'),
+  cloud_run_job: text('CLOUD_RUN_JOB'),
+};
+
+export function executionSettings(source: SettingSource) {
+  const setting = (name: keyof typeof executionSpecs) =>
+    resolveSpec(name, executionSpecs[name], source);
+  const value = (name: keyof typeof executionSpecs) => String(setting(name));
+  const env = {
+    CLOUD_RUN_RUNNER_JOB: value('runner_job'),
+    CITELADDER_ORIGIN_TOKEN: value('origin_token'),
+    CITELADDER_ORIGIN_TOKEN_PREVIOUS: value('previous_origin_token'),
+    CLOUD_RUN_JOB: value('cloud_run_job'),
+    K_SERVICE: value('cloud_run_service'),
+  };
+  const runnerJob = env.CLOUD_RUN_RUNNER_JOB.trim();
   if (
     runnerJob &&
     !/^projects\/[a-z][a-z0-9-]*\/locations\/[a-z0-9-]+\/jobs\/[a-z][a-z0-9-]*$/u.test(runnerJob)
@@ -84,15 +96,10 @@ export function executionSettings(env: Record<string, string | undefined>) {
     // How long a later execution waits for an active drain before leaving it the work.
     drainLockWaitMs: defaults.drainLockWaitMs,
     drainLockPollMs: defaults.drainLockPollMs,
-    budgetSeconds: integer(env, 'RUNNER_BUDGET_SECONDS', defaults.budgetSeconds, 3600),
-    poolSize: integer(env, 'RUNNER_DB_POOL_SIZE', defaults.poolSize, 4),
-    wakeTimeoutMs: integer(env, 'RUNNER_WAKE_TIMEOUT_MS', defaults.wakeTimeoutMs, 30000),
-    wakeMinIntervalMs: integer(
-      env,
-      'RUNNER_WAKE_MIN_INTERVAL_MS',
-      defaults.wakeMinIntervalMs,
-      60000,
-    ),
+    budgetSeconds: setting('budget_seconds') as number,
+    poolSize: setting('pool_size') as number,
+    wakeTimeoutMs: setting('wake_timeout_ms') as number,
+    wakeMinIntervalMs: setting('wake_min_interval_ms') as number,
   };
 }
 
