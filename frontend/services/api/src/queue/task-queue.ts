@@ -312,7 +312,11 @@ export class TaskQueue<T extends LaneTable = 'analytics_tasks'> {
   /** The row's lease length: its kind's override, else the lane default. */
   readonly #leaseTtlSeconds: RawBuilder<number>;
   readonly #now: () => Date;
-  /** What a claim compares `available_at` with: the pinned clock, else the database clock that recovery and retries also stamp. */
+  /**
+   * What a claim compares `available_at` with: the pinned clock, else the
+   * later of the application and database clocks, since producers stamp rows
+   * with one and recovery with the other; skew never strands a due row.
+   */
   readonly #claimClock: () => Date | RawBuilder<Date>;
 
   constructor(db: Database, lane: LaneDescriptor<T>, options: LeaseOptions) {
@@ -329,7 +333,8 @@ export class TaskQueue<T extends LaneTable = 'analytics_tasks'> {
         )} else ${options.leaseTtlSeconds}::float8 end)`
       : sql<number>`${options.leaseTtlSeconds}`;
     this.#now = options.now ?? (() => new Date());
-    this.#claimClock = options.now ?? (() => sql<Date>`clock_timestamp()`);
+    this.#claimClock =
+      options.now ?? (() => sql<Date>`greatest(${new Date()}::timestamptz, clock_timestamp())`);
   }
 
   /**

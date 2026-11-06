@@ -120,7 +120,8 @@ as a claim hook in the claim's transaction (the integration sync-started
 event) or stays with the lane: the audit parent-first lock and parks
 (`src/queue/audit-queue.ts`, which also leases due audit schedules), the Agent
 turn start and Site Health's crawl lock. An unpinned claim compares
-`available_at` with the database clock that recovery stamps. A claim ranks only the
+`available_at` with the later of the application clock (producers) and the
+database clock (recovery), so clock skew never strands a due row. A claim ranks only the
 `claim_candidate_limit` oldest due rows (`config/queue.json`), so its cost does
 not grow with the backlog. Analytics retries back off exponentially from
 `retry_delay_seconds` up to `retry_max_delay_seconds`, jittered into the upper
