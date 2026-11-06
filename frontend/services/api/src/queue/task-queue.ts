@@ -82,7 +82,7 @@ export const SITE_HEALTH_LANE = {
   recoveryCharge: 1,
 } as const satisfies LaneDescriptor<'site_crawl_tasks'>;
 
-export type LeaseOptions = {
+type LeaseOptions = {
   leaseTtlSeconds: number;
   /** Per-kind leases, for work that holds an external resource (a pulled batch) longer. */
   leaseTtlSecondsByKind?: Readonly<Record<string, number>>;
