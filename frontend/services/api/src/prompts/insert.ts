@@ -45,7 +45,7 @@ export type PromptDraft = {
   generation_evidence?: Record<string, unknown> | null;
 };
 
-export type InsertOptions = {
+type InsertOptions = {
   origin: keyof typeof P.origins;
   /** `reject` refuses the whole batch with a 409; `skip` leaves that row out. */
   onDuplicate: 'reject' | 'skip';

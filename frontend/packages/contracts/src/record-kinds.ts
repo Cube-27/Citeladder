@@ -13,7 +13,7 @@
 
 type Field = (name: string) => string;
 
-export type RecordKind = {
+type RecordKind = {
   label: string;
   screen: string;
   page?: (field: Field) => string | null;
