@@ -21,21 +21,16 @@ import {
 import SourceRow from '@/components/marketing/content/SourceRow.astro';
 import SourcesList from '@/components/marketing/content/SourcesList.astro';
 import { ProductFrame } from '@/components/marketing/screens/product-frame';
-import { ScreenSources, ScreenVisibility } from '@/components/marketing/screens/screens-visibility';
+import { SCREEN_CATALOG } from '@/components/marketing/screens/screen-catalog';
 import { RelatedCards } from '@/components/marketing/sections/cards';
 import { PageSection } from '@/components/marketing/sections/page-section';
 import { formatBlogDate } from '@/lib/marketing-content/blog-index';
 import { platformLabel } from '@/lib/marketing-content/nav';
+import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
 import { breadcrumbJsonLd, faqPageJsonLd, researchArticleJsonLd } from '@/lib/seo/json-ld';
 import type { ResearchArticle } from '../research-articles';
 import { moreGuides, researchFaqs, researchParent, researchParts } from '../research-articles';
 import MarketingLayout from './MarketingLayout.astro';
-
-/** The product modules a guide can put into practice, each with its screen. */
-const PRODUCT_SCREENS = {
-  '/platform/cited-sources': { screen: ScreenSources, label: 'Cited Sources' },
-  '/platform/ai-visibility': { screen: ScreenVisibility, label: 'AI Visibility' },
-} as const;
 
 interface Props {
   article: ResearchArticle;
@@ -65,7 +60,9 @@ const toc = [
   ...researchHeadings(parts.after),
   ...(product ? [{ id: headingId(product.heading), label: product.heading, level: 2 }] : []),
 ];
-const Screen = product ? PRODUCT_SCREENS[product.href].screen : null;
+// The module's own hero screen, from the catalogue.
+const productScreen = product && PLATFORM_PAGES.find((page) => page.path === product.href)?.screen;
+const Screen = productScreen ? SCREEN_CATALOG[productScreen].View : null;
 // Curated related guides, or the next ones in publication order, so every guide ends with a way on.
 const more = moreGuides(article);
 ---
@@ -118,7 +115,7 @@ const more = moreGuides(article);
               <h2 id={headingId(product.heading)}>{product.heading}</h2>
               <p>{product.body}</p>
               <ContentFigure>
-                <ProductFrame label={PRODUCT_SCREENS[product.href].label}>
+                <ProductFrame label={platformLabel(product.href)}>
                   <Screen />
                 </ProductFrame>
               </ContentFigure>

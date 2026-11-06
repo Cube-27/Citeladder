@@ -1,5 +1,3 @@
-import type { ReactNode } from 'react';
-
 import { EngineMark } from '@/components/ui/engine-mark';
 import { appHref } from '@/lib/config/app-link';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
@@ -15,16 +13,8 @@ import { PageSection, SectionHeader } from '../sections/page-section';
 import { SiteArrowLink, columnsFor } from '../sections/site-parts';
 import { CtaBand, FaqList, Steps } from '../sections/steps-faq-cta';
 import { ProductFrame } from '../screens/product-frame';
-import { ScreenAgentBrief, ScreenAgentChat, ScreenCommerce } from '../screens/screens-agent';
-import {
-  ScreenDemand,
-  ScreenEngines,
-  ScreenKeywords,
-  ScreenReferrals,
-} from '../screens/screens-search';
-import { ScreenMcp, ScreenSiteHealth } from '../screens/screens-site';
-import { ScreenAnswer, ScreenSources } from '../screens/screens-visibility';
-import { ScreenAppPage, ScreenAppVisibility, type NavLabel } from '../screens/screen-app';
+import { ScreenAppPage, ScreenAppVisibility } from '../screens/screen-app';
+import { SCREEN_CATALOG, moduleScreen } from '../screens/screen-catalog';
 
 import { FAQS, INTEGRATIONS, type IntegrationMark } from './landing-data';
 
@@ -66,55 +56,6 @@ function Hero() {
   );
 }
 
-type ModuleScreen = Readonly<{
-  /** The feature's focused screen. */
-  screen: ReactNode;
-  /** Where the feature lives in the app: the page title and the sidebar row it lights. */
-  page: Readonly<{ title: string; active?: NavLabel; mode?: 'Agent' }>;
-}>;
-
-/**
- * Each module's focused screen and its place in the app, by platform route.
- * A published module without one here (Integrations, which has its own
- * section) is left out of the rail.
- */
-const MODULE_SCREENS: Readonly<Record<string, ModuleScreen>> = {
-  '/platform/ai-visibility': {
-    screen: <ScreenEngines />,
-    page: { title: 'AI Visibility', active: 'AI Visibility' },
-  },
-  '/platform/cited-sources': {
-    screen: <ScreenSources />,
-    page: { title: 'AI Visibility', active: 'AI Visibility' },
-  },
-  '/platform/ai-referral-analytics': {
-    screen: <ScreenReferrals />,
-    page: { title: 'AI Traffic', active: 'AI Traffic' },
-  },
-  '/platform/product-visibility': {
-    screen: <ScreenCommerce />,
-    page: { title: 'Commerce Suite', active: 'Commerce Suite' },
-  },
-  '/platform/site-health': {
-    screen: <ScreenSiteHealth />,
-    page: { title: 'Website', active: 'Website' },
-  },
-  '/platform/search-demand': {
-    screen: <ScreenDemand />,
-    page: { title: 'Search Demand', active: 'Search Demand' },
-  },
-  '/platform/keyword-research': {
-    screen: <ScreenKeywords />,
-    page: { title: 'Keyword Research', active: 'Keyword Research' },
-  },
-  '/platform/content-briefs': {
-    screen: <ScreenAgentBrief />,
-    page: { title: 'Actions', active: 'Actions' },
-  },
-  '/platform/agents': { screen: <ScreenAgentChat />, page: { title: 'Agent', mode: 'Agent' } },
-  '/platform/mcp': { screen: <ScreenMcp />, page: { title: 'Agent', mode: 'Agent' } },
-};
-
 /**
  * One card per module, in navigation order: its name, its one line and its
  * screen; an open card adds the module page's own lead and the feature's
@@ -122,9 +63,11 @@ const MODULE_SCREENS: Readonly<Record<string, ModuleScreen>> = {
  */
 function Modules() {
   const modules = PLATFORM_GROUPS.flatMap((group) => group.items).flatMap((item) => {
-    const shown = MODULE_SCREENS[item.href];
+    const shown = moduleScreen(item.href);
+    if (!shown) return [];
+    const { View } = SCREEN_CATALOG[shown.screen];
     const lead = PLATFORM_PAGES.find((page) => page.path === item.href)?.lead ?? item.desc;
-    return shown ? [{ ...item, ...shown, lead }] : [];
+    return [{ ...item, page: shown.page, screen: <View />, lead }];
   });
   return (
     // The rail draws the header itself, so its buttons sit on the heading's row.
@@ -179,6 +122,8 @@ function HowItWorks() {
   );
 }
 
+const AnswerScreen = SCREEN_CATALOG.answer.View;
+
 /** The one product view after the rail: the saved answer behind every score. */
 function Evidence() {
   const modules = [
@@ -199,7 +144,7 @@ function Evidence() {
         links={modules.map((href) => ({ href, label: platformLabel(href) ?? href }))}
         media={
           <ProductFrame label="Answer record">
-            <ScreenAnswer />
+            <AnswerScreen />
           </ProductFrame>
         }
       />

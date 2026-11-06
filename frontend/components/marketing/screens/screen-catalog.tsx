@@ -3,6 +3,7 @@ import type { ComponentType } from 'react';
 import type { PlatformScreen } from '@/lib/marketing-content/platform-pages';
 
 import { ProductFrame, type FrameFit } from './product-frame';
+import type { NavLabel } from './screen-app';
 import { ScreenActions, ScreenAgentBrief, ScreenAgentChat, ScreenCommerce } from './screens-agent';
 import {
   ScreenDemand,
@@ -73,6 +74,60 @@ export const SCREEN_CATALOG: Readonly<Record<PlatformScreen, CatalogEntry>> = {
   integrations: vignette(ScreenIntegrations, 'Data sources connected to acme.com'),
   commerce: vignette(ScreenCommerce, 'Which products AI answers recommended for Acme Startup'),
 };
+
+/** Where a module's feature lives in the app: the page title and the sidebar row it lights. */
+type AppPlace = Readonly<{ title: string; active?: NavLabel; mode?: 'Agent' }>;
+
+/**
+ * Each module's focused screen and its place in the app, by platform route,
+ * for module cards. A published module without one (Integrations, which has
+ * its own section) is left out of the rail.
+ */
+type ModuleScreen = Readonly<{ screen: PlatformScreen; page: AppPlace }>;
+
+export const MODULE_SCREENS = {
+  '/platform/ai-visibility': {
+    screen: 'engines',
+    page: { title: 'AI Visibility', active: 'AI Visibility' },
+  },
+  '/platform/cited-sources': {
+    screen: 'sources',
+    page: { title: 'AI Visibility', active: 'AI Visibility' },
+  },
+  '/platform/ai-referral-analytics': {
+    screen: 'referrals',
+    page: { title: 'AI Traffic', active: 'AI Traffic' },
+  },
+  '/platform/product-visibility': {
+    screen: 'commerce',
+    page: { title: 'Commerce Suite', active: 'Commerce Suite' },
+  },
+  '/platform/site-health': {
+    screen: 'site-health',
+    page: { title: 'Website', active: 'Website' },
+  },
+  '/platform/search-demand': {
+    screen: 'demand',
+    page: { title: 'Search Demand', active: 'Search Demand' },
+  },
+  '/platform/keyword-research': {
+    screen: 'keywords',
+    page: { title: 'Keyword Research', active: 'Keyword Research' },
+  },
+  '/platform/content-briefs': {
+    screen: 'agent-brief',
+    page: { title: 'Actions', active: 'Actions' },
+  },
+  '/platform/agents': { screen: 'agent-chat', page: { title: 'Agent', mode: 'Agent' } },
+  '/platform/mcp': { screen: 'mcp', page: { title: 'Agent', mode: 'Agent' } },
+} as const satisfies Record<string, ModuleScreen>;
+
+const MODULE_SCREEN_BY_HREF = new Map<string, ModuleScreen>(Object.entries(MODULE_SCREENS));
+
+/** The module's card screen and app place, or nothing for a module without one. */
+export function moduleScreen(href: string): ModuleScreen | undefined {
+  return MODULE_SCREEN_BY_HREF.get(href);
+}
 
 /** One catalogue screen in its ProductFrame. */
 export function CatalogFrame({ screen }: Readonly<{ screen: PlatformScreen }>) {
