@@ -3388,7 +3388,9 @@
                     "invalid_output",
                     "model_error",
                     "task_failed",
-                    "not_assessable"
+                    "not_assessable",
+                    "model_omitted",
+                    "model_changed"
                   ]
                 },
                 "count": {
@@ -3510,7 +3512,9 @@
                   "invalid_output",
                   "model_error",
                   "task_failed",
-                  "not_assessable"
+                  "not_assessable",
+                  "model_omitted",
+                  "model_changed"
                 ]
               },
               {

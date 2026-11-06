@@ -67,6 +67,7 @@ const entityRowSchema = z.object({
   label: perceptionLabelSchema,
   confidence: z.number().nullable(),
   low_confidence: z.boolean(),
+  model_omitted: z.boolean(),
   aspects: z.unknown(),
 });
 
@@ -115,6 +116,7 @@ async function perceptionsOf(
             'label',
             'confidence',
             'low_confidence',
+            'model_omitted',
             'aspects',
           ])
           .where('workspace_id', '=', workspaceId)
@@ -206,6 +208,7 @@ async function selectionAnswers(
         extractor: row.versions.extractor_version,
         template: row.versions.template_version,
         metrics: row.versions.metrics_version,
+        model: row.versions.model,
       },
       mentions: mentionsOf(assessments, perceived.get(row.id)).map(({ mention }) => mention),
       brandRecommendation: assessments.find((row) => row.entity_kind === 'brand')?.state ?? null,

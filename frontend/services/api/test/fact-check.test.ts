@@ -77,7 +77,8 @@ async function pilotConfiguration(owner: Tenant) {
     brand_aliases: [],
     competitors: [{ name: 'Rival', domains: [], aliases: [] }],
     language_code: 'en',
-    perception: admittedPerceptionVersions('brand', factCheck),
+    // Frozen with the fake gateway's model, as admission freezes the deployment's.
+    perception: admittedPerceptionVersions({ auditScope: 'brand', factCheck, model: 'test' }),
     fact_check: factCheck,
   };
 }

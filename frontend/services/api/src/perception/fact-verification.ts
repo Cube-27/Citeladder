@@ -162,6 +162,7 @@ function persist(
           fact_revision_ids: JSON.stringify(verdict.factRevisionIds),
           confidence: verdict.confidence,
           low_confidence: verdict.lowConfidence,
+          model_omitted: verdict.modelOmitted,
         })),
       )
       .execute();

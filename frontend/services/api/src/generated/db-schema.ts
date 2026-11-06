@@ -1064,6 +1064,7 @@ export interface ClaimVerdicts {
   fact_revision_ids: Json;
   id: string;
   low_confidence: boolean;
+  model_omitted: Generated<boolean>;
   model_verdict: string | null;
   verdict: string;
   verification_id: string;
@@ -1497,6 +1498,7 @@ export interface EntitySentiments {
   id: string;
   label: string;
   low_confidence: boolean;
+  model_omitted: Generated<boolean>;
   passage_spans: Json;
   perception_id: string;
   workspace_id: string;
