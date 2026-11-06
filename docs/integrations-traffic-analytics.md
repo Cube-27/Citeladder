@@ -71,7 +71,11 @@ the TypeScript integration owner in
 encrypted and credential management is Owner/Admin-only. Product read/run
 permissions and entitlement limits are separate. A mapping binds an authorized
 connection, project and property. Retiring one project's mapping must not retire
-another's. The [TypeScript readiness reader](../frontend/services/api/src/integrations/readiness.ts)
+another's. The [grant lifecycle](../frontend/services/api/src/integrations/grants.ts)
+owns disconnect, revocation claims and reauthorization, and
+[integration events](../frontend/services/api/src/integrations/events.ts) is the
+only writer of `integration_events`. A GA4 property's reporting timezone is
+adopted through the crawl-log state owner (`adoptReportingTimezone`). The [TypeScript readiness reader](../frontend/services/api/src/integrations/readiness.ts)
 also serves the Agent's persisted tool reads.
 
 If saving a mapping succeeds but its history import cannot be queued, the API
