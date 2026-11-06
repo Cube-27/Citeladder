@@ -80,6 +80,12 @@ type RouteSpec<Path extends ParamSpecs, Query extends ParamSpecs, Response exten
   /** Explicit account recovery surface with no product evidence. */
   recovery?: boolean;
   /**
+   * The handler authenticates and spends attempt quota, then reads its body
+   * through its own bound (compressed or not), so the app's ordinary body
+   * limit must not pre-read it.
+   */
+  streamsBody?: true;
+  /**
    * `project`: resolve the workspace from the path's `project_id` alone (links,
    * `<img>`). `active-project`: the active workspace, as a flat route resolves
    * it, must hold the path's `project_id`.
@@ -111,6 +117,8 @@ export type ProductRoute = {
   publicContract?: RouteContract;
   /** The declared parameters, as `validateParams` reads them. */
   params: { path: ParamSpecs; query: ParamSpecs };
+  /** The route bounds its own body (`streamsBody`). */
+  streamsBody: boolean;
   register: (app: Hono<AppEnv>, config: ServiceConfig, db: Database) => void;
 };
 
@@ -256,6 +264,7 @@ export function defineRoute<
     contract,
     ...(browser && publicSide ? { publicContract: publicSide.contract } : {}),
     params: route.params,
+    streamsBody: route.streamsBody === true,
     register,
   };
 }
@@ -409,6 +418,34 @@ export function defineDeleteRoute<const Path extends ParamSpecs, const Query ext
 }
 
 /** Register once before handlers: a path may support several methods. */
+/**
+ * Whether a request reaches a route that bounds its own body
+ * (`streamsBody`); the app skips its ordinary body limit for exactly these.
+ */
+export function selfBoundedBodies(
+  routes: readonly ProductRoute[],
+): (method: string, path: string) => boolean {
+  const templates = routes
+    .filter((route) => route.streamsBody)
+    .flatMap(({ contract, publicContract }) =>
+      (publicContract ? [contract, publicContract] : [contract]).map((served) => ({
+        method: served.method.toUpperCase(),
+        segments: served.path.split('/'),
+      })),
+    );
+  return (method, path) => {
+    const segments = path.split('/');
+    return templates.some(
+      (template) =>
+        template.method === method &&
+        template.segments.length === segments.length &&
+        template.segments.every((part, index) =>
+          part.startsWith('{') ? segments[index] !== '' : part === segments[index],
+        ),
+    );
+  };
+}
+
 export function registerMethodGuards(app: Hono<AppEnv>, routes: readonly ProductRoute[]): void {
   const methods = new Map<string, Set<string>>();
   const contracts = routes.flatMap(({ contract, publicContract }) =>

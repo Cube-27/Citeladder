@@ -192,8 +192,10 @@ halved `tools/list` to about 25 KB.
 Results carry IDs because the model needs them for its next call. The server
 instructions tell clients never to show IDs or `citeladder://` references to
 the user and to name the page, prompt, competitor or Action instead. Links point
-to the app screen that shows the record ([links](../frontend/services/api/src/mcp/links.ts),
-mirrored by the browser's evidence links).
+to the app screen that shows the record. One
+[record-kind table](../frontend/packages/contracts/src/record-kinds.ts) owns the
+allowlisted kinds, their labels and screens; MCP links and the browser's
+evidence links both read it.
 
 `fetch` resolves an allowlisted `citeladder://` record (project, action,
 opportunity, prompt, audit, visibility result, site snapshot/crawl/page/issue/link,
