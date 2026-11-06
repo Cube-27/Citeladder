@@ -239,12 +239,10 @@
   --motion-reveal-step: 80ms;
   --motion-ping: 2400ms;
   --ease-reveal: cubic-bezier(0.22, 1, 0.36, 1);
-  /* The website's module rail: an open card widens to the right over 480ms;
-     its layers fade over 280ms, the incoming ones 200ms in. */
-  --motion-card: 480ms;
-  --motion-card-fade: 280ms;
-  --motion-card-delay: 200ms;
-  --ease-card: cubic-bezier(0.65, 0, 0.35, 1);
+  /* The website's module rail, as the reference moves it: an open card
+     widens to the right while its layers cross-fade, all over 400ms. */
+  --motion-card: 400ms;
+  --ease-card: ease-in-out;
   --default-transition-duration: var(--motion-fast);
   --default-transition-timing-function: var(--ease-standard);
   /* Loops that say "working": the Spinner turns in 800ms, a Skeleton pulses

@@ -47,81 +47,13 @@ export function mountCardRail(rail: HTMLElement): void {
     }
     card.toggleAttribute('data-expanded', open);
   };
-  // An open card grows to the right only, so the steps run one after
-  // another, never together: an open card closes, the row scrolls the
-  // chosen card to its start, and only then does the card open. A newer
-  // press cancels the steps an older one left waiting.
-  let press = 0;
-  let timer = 0;
-  const later = (ms: number, then: () => void) => {
-    window.clearTimeout(timer);
-    if (ms <= 0) then();
-    else timer = window.setTimeout(then, ms);
-  };
-  /** The rail's widening time in ms (`--motion-card`), 0 under reduced motion. */
-  const widening = () => {
-    if (reduceMotion()) return 0;
-    const value = getComputedStyle(rail).getPropertyValue('--motion-card').trim();
-    const ms = Number.parseFloat(value) * (value.endsWith('ms') ? 1 : 1000);
-    return Number.isFinite(ms) ? ms : 0;
-  };
-  /** Scrolls the row to `left` (clamped), then calls `then` once it rests. */
-  const scrollThen = (left: number, then: () => void) => {
-    const end = Math.max(0, Math.min(left, track.scrollWidth - track.clientWidth));
-    if (Math.abs(track.scrollLeft - end) <= 1) {
-      then();
-      return;
-    }
-    const smooth = !reduceMotion();
-    track.scrollTo({ left: end, behavior: smooth ? 'smooth' : 'auto' });
-    if (!smooth) {
-      then();
-      return;
-    }
-    let done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      track.removeEventListener('scrollend', finish);
-      then();
-    };
-    track.addEventListener('scrollend', finish);
-    // Browsers without `scrollend` (or a scroll that never starts) go on anyway.
-    later(800, finish);
-  };
-  const startOf = (card: HTMLElement) => {
-    const item = card.parentElement;
-    const first = track.firstElementChild;
-    return item instanceof HTMLElement && first instanceof HTMLElement
-      ? item.offsetLeft - first.offsetLeft
-      : track.scrollLeft;
-  };
+  // As in the reference, a card opens where it stands: its left edge stays
+  // put and it widens to the right (the row does not scroll), while any
+  // other open card closes in the same motion.
   const toggleCard = (card: HTMLElement) => {
-    press += 1;
-    const current = press;
-    window.clearTimeout(timer);
-    if (card.hasAttribute('data-expanded')) {
-      setOpen(card, false);
-      sync();
-      return;
-    }
-    const closing = cards.filter((other) => other !== card && other.hasAttribute('data-expanded'));
-    for (const other of closing) setOpen(other, false);
-    later(closing.length > 0 ? widening() : 0, () => {
-      if (current !== press) return;
-      scrollThen(startOf(card), () => {
-        if (current !== press) return;
-        setOpen(card, true);
-        sync();
-        // A card near the row's end cannot reach its start before it widens;
-        // once it has, bring it into view.
-        later(widening(), () => {
-          if (current === press && card.hasAttribute('data-expanded')) {
-            scrollThen(startOf(card), sync);
-          }
-        });
-      });
-    });
+    const open = !card.hasAttribute('data-expanded');
+    for (const other of cards) if (other !== card) setOpen(other, false);
+    setOpen(card, open);
     sync();
   };
   for (const card of cards) {
