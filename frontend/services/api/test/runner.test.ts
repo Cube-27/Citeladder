@@ -645,9 +645,44 @@ describe('Cloud Run wake-up', () => {
       setLogSink(restore);
     }
     expect(records).toEqual([
-      expect.objectContaining({ event: 'runner_start_failed', level: 'warning' }),
+      expect.objectContaining({
+        event: 'runner_start_failed',
+        level: 'warning',
+        error_class: 'Error',
+        error_code: null,
+        status: null,
+        timed_out: false,
+      }),
     ]);
     expect(JSON.stringify(records)).not.toContain('private bearer token');
+  });
+
+  it('logs why Google refused a runner start, without its response body', async () => {
+    const send = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json({ access_token: 'recorded-access-token' }))
+      .mockResolvedValueOnce(new Response('quota body detail', { status: 429 }));
+    const records: Record<string, unknown>[] = [];
+    const restore = setLogSink((line) => records.push(JSON.parse(line)));
+    try {
+      await runnerStarter(
+        testConfig({ CLOUD_RUN_RUNNER_JOB: job, CITELADDER_ORIGIN_TOKEN: 'a'.repeat(32) }),
+        db,
+        send,
+      )();
+    } finally {
+      setLogSink(restore);
+    }
+    expect(records).toEqual([
+      expect.objectContaining({
+        event: 'runner_start_failed',
+        error_class: 'RunnerStartError',
+        error_code: 'runner_start_rejected',
+        status: 429,
+        elapsed_ms: expect.any(Number),
+      }),
+    ]);
+    expect(JSON.stringify(records)).not.toContain('quota body detail');
   });
 
   it('skips Google requests while a runner holds the database drain lock', async () => {

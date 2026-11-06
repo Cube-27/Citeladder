@@ -4,8 +4,20 @@ import type { Database } from '../db/database.ts';
 import { DRAIN_LOCK } from '../config/execution.ts';
 import type { ServiceConfig } from '../config.ts';
 import { getLogger } from '../logging.ts';
+import { failureFacts } from '../queue/lane-log.ts';
 
 const tokenSchema = z.object({ access_token: z.string().min(1) });
+
+/** A refused Google call: its own code and the HTTP status, never the body. */
+class RunnerStartError extends Error {
+  readonly code: string;
+  readonly status: number;
+  constructor(code: string, status: number) {
+    super(code);
+    this.code = code;
+    this.status = status;
+  }
+}
 
 /** Start an execution, never wait for its work. A missed start is recovered by tick. */
 export function runnerStarter(
@@ -36,7 +48,8 @@ export function runnerStarter(
           signal,
         },
       );
-      if (!tokenResponse.ok) throw new Error('metadata_token_unavailable');
+      if (!tokenResponse.ok)
+        throw new RunnerStartError('metadata_token_unavailable', tokenResponse.status);
       const { access_token } = tokenSchema.parse(await tokenResponse.json());
       const response = await send(
         `https://run.googleapis.com/v2/${config.execution.runnerJob}:run`,
@@ -50,10 +63,15 @@ export function runnerStarter(
       );
       // Consume the small operation response before returning the API response.
       await response.body?.cancel();
-      if (!response.ok) throw new Error('runner_start_rejected');
-    } catch {
+      if (!response.ok) throw new RunnerStartError('runner_start_rejected', response.status);
+    } catch (error) {
       // Never disclose Google response bodies/tokens, or turn a committed write into an error.
-      getLogger('workers.runner').warning('runner_start_failed');
+      getLogger('workers.runner').warning('runner_start_failed', {
+        ...failureFacts(error),
+        status: error instanceof RunnerStartError ? error.status : null,
+        timed_out: signal.aborted,
+        elapsed_ms: Math.round(now() - time),
+      });
     }
   };
 }

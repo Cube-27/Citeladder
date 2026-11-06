@@ -119,7 +119,12 @@ Site Health, discovery, Agent, integrations and audits). Domain lifecycle runs
 as a claim hook in the claim's transaction (the integration sync-started
 event) or stays with the lane: the audit parent-first lock and parks
 (`src/queue/audit-queue.ts`, which also leases due audit schedules), the Agent
-turn start and Site Health's crawl lock. An unpinned claim compares
+turn start and Site Health's crawl lock. The owner also holds the lane logs
+(`src/queue/lane-log.ts`): every lane's failed attempt writes one
+`lane_task_failed` record (lane, task, attempt, phase, outcome, elapsed time,
+error class and code, never the message), and a refused heartbeat or a fence
+that finds the lease gone writes `lane_lease_lost` unless the row was cancelled
+or settled. An unpinned claim compares
 `available_at` with the later of the application clock (producers) and the
 database clock (recovery), so clock skew never strands a due row. A claim ranks only the
 `claim_candidate_limit` oldest due rows (`config/queue.json`), so its cost does

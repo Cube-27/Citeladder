@@ -5,6 +5,7 @@ import { policy } from '../config.ts';
 import { queueRecovery } from '../config/queue-recovery.ts';
 import { recoverIntegrationLeases } from '../queue/recovery.ts';
 import { leaseSignal, maintainLease } from '../queue/heartbeat.ts';
+import { logLaneFailure } from '../queue/lane-log.ts';
 import type { Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
 import type { ImportPage } from '../integrations/client.ts';
@@ -90,6 +91,8 @@ export class IntegrationWorker {
   #committedPages = 0;
   /** When this claim's first provider request started; null until one has. */
   #firstRequestAt: number | null = null;
+  /** When this claim's attempt began. */
+  #startedAt = 0;
 
   constructor(
     db: Database,
@@ -122,6 +125,7 @@ export class IntegrationWorker {
     );
     this.#committedPages = 0;
     this.#firstRequestAt = null;
+    this.#startedAt = performance.now();
     try {
       await this.#execute(run, leaseSignal(heartbeat.signal, signal));
       if (!heartbeat.signal.aborted) await this.#finish(run, null);
@@ -673,10 +677,12 @@ export class IntegrationWorker {
         at: now,
       },
     ]);
-    logger.warning('integration_sync_failed', {
-      sync_run_id: run.id,
-      error_code: failure instanceof IntegrationError ? failure.code : 'provider_api_error',
-      retry,
+    logLaneFailure(INTEGRATION_LANE.table, run, {
+      phase: run.sync_kind,
+      startedAt: this.#startedAt,
+      outcome: retry ? 'retry' : 'failed',
+      error: failure,
+      code: 'provider_api_error',
     });
     if (!retry) await enqueuePostSyncProjections(trx, run, true);
   }
