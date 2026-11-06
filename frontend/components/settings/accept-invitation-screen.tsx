@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 
+import { ListScreen } from '@/components/layout/page-shell';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
 import { Stack } from '@/components/ui/layout';
@@ -12,6 +13,15 @@ import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { workspaceMutations } from '@/lib/api/workspaces';
 import { useSelectWorkspace } from '@/lib/navigation/project-destination';
+
+/** `/invitations/accept`: the acceptance in the shell's list template. */
+export function AcceptInvitationPage() {
+  return (
+    <ListScreen>
+      <AcceptInvitationScreen />
+    </ListScreen>
+  );
+}
 
 /**
  * Accept an invitation into somebody else's workspace.

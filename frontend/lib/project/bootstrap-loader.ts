@@ -39,6 +39,7 @@ import {
   prefetchRoute,
   type ProjectScope,
 } from '@/lib/navigation/route-prefetch';
+import { isWorkspaceOnlyRoute } from '@/lib/navigation/app-routes';
 import { routePath } from '@/lib/navigation/route-path';
 import {
   readStoredActiveProjectId,
@@ -46,7 +47,6 @@ import {
 } from '@/lib/project/active-project-storage';
 import {
   isWorkspaceFreeRoute,
-  isWorkspaceOnlyRoute,
   resolveAllowance,
   resolveGate,
   chooserShortcut,

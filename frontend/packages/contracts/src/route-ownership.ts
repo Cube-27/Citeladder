@@ -70,3 +70,21 @@ export const MCP_API_HOST_PATHS: ReadonlySet<string> = new Set([
  * `/x/*` forwards everything below `/x/`; any other entry matches only itself.
  */
 export const TYPESCRIPT_INGRESS_PATHS = ['/api', '/api/*', MCP_CONSENT_PATH] as const;
+
+/** Whether a path is one of `TYPESCRIPT_INGRESS_PATHS`. */
+export function isIngressPath(path: string): boolean {
+  return TYPESCRIPT_INGRESS_PATHS.some((entry) =>
+    entry.endsWith('/*') ? path.startsWith(entry.slice(0, -1)) : path === entry,
+  );
+}
+
+/**
+ * App pages whose link carries a single-use bearer credential (an email
+ * confirmation, a password reset, a workspace invitation). The app host
+ * serves them uncached and without a referrer.
+ */
+export const CREDENTIAL_LINK_PATHS: ReadonlySet<string> = new Set([
+  '/verify-email',
+  '/reset-password',
+  '/invitations/accept',
+]);
