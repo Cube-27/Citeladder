@@ -6,7 +6,7 @@
  * configuration is never consulted.
  */
 import { readFrozenConfiguration } from '../audits/frozen-configuration.ts';
-import { policy } from '../config.ts';
+import { logicalEngines } from '../config/providers.ts';
 import { compareText } from '../text-order.ts';
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -47,8 +47,8 @@ export type ModelProvenance = {
 };
 
 // Catalog order is the sorted engine catalog; unknown engines sort after it.
-const ENGINE_ORDER = new Map(
-  policy.visibility.logical_engines.toSorted(compareText).map((engine, index) => [engine, index]),
+const ENGINE_ORDER = new Map<string, number>(
+  logicalEngines.toSorted(compareText).map((engine, index) => [engine, index]),
 );
 
 function engineRank(engine: string): number {

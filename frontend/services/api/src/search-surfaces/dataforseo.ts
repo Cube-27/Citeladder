@@ -58,6 +58,17 @@ export function searchSettings(env: Record<string, string | undefined> = process
   );
   return { timeoutSeconds, recoveryDeadlineHours, accountPauseMinutes };
 }
+/** A consumer-app surface's DataForSEO product and request settings, frozen with each task. */
+export function scraperConfiguration(engine: string) {
+  const products: Record<string, string | undefined> = searchPolicy.scraper.products;
+  const settings: Record<string, Record<string, unknown> | undefined> =
+    searchPolicy.scraper.request_settings;
+  const product = products[engine],
+    requestSettings = settings[engine];
+  if (!product || !requestSettings)
+    throw new ConfigError(`Scraper surface ${engine} has no DataForSEO product`);
+  return { provider_product: product, request_settings: requestSettings };
+}
 function providerPath(
   engine: SearchEngine,
   operation: 'task_post' | 'task_get/advanced' | 'id_list',

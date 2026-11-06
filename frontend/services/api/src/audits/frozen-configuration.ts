@@ -44,10 +44,10 @@ const configurationShape = {
 };
 const frozenConfigurationSchema = z.looseObject(configurationShape);
 
-export type FrozenMeasurement = z.infer<z.ZodObject<typeof measurementShape>>;
+type FrozenMeasurement = z.infer<z.ZodObject<typeof measurementShape>>;
 type FrozenFields = z.infer<z.ZodObject<typeof configurationShape>>;
 /** What a reader sees: every field possibly unavailable, the measurement block likewise. */
-export type FrozenConfiguration = Partial<Omit<FrozenFields, 'measurement_policy'>> & {
+type FrozenConfiguration = Partial<Omit<FrozenFields, 'measurement_policy'>> & {
   measurement_policy: Partial<FrozenMeasurement>;
 };
 

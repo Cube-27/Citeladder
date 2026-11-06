@@ -19,9 +19,9 @@ const envelopeSchema = z.looseObject({
   tasks: z.array(taskSchema).nullable().optional(),
 });
 /** An accepted envelope; everything beyond the status codes is the provider's, kept as sent. */
-export type Envelope = z.infer<typeof envelopeSchema>;
+type Envelope = z.infer<typeof envelopeSchema>;
 
-export type DataforseoTransport = {
+type DataforseoTransport = {
   settings: ProviderSettings;
   timeoutSeconds: number;
   maxResponseBytes: number;

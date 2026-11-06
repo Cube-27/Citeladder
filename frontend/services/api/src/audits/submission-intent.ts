@@ -1,5 +1,6 @@
 import type { Database } from '../db/database.ts';
 import { ProviderError } from '../providers/errors.ts';
+import { surfaceKindOf } from '../providers/config.ts';
 import { ownedAuditTask, type AuditTask } from '../queue/audit-queue.ts';
 import { searchPolicy } from '../search-surfaces/dataforseo.ts';
 import type { ExecutionContext } from './execution-context.ts';
@@ -58,10 +59,7 @@ export function commitSubmissionIntent(
 }
 /** Scraper recovery always closes before the provider's 28-day task retention expires. */
 export function surfaceRecoveryDeadline(task: AuditTask, hours: number | undefined): Date | null {
-  if (
-    !task.provider_task_submitted_at ||
-    !['chatgpt_search', 'gemini_consumer'].includes(task.logical_engine)
-  )
+  if (!task.provider_task_submitted_at || surfaceKindOf(task.logical_engine) !== 'llm_scraper')
     return null;
   if (hours === undefined || !(hours > 0 && hours < 24 * 28))
     throw new Error('Invalid frozen recovery deadline');
