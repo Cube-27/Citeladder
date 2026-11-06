@@ -19,60 +19,22 @@ import {
 } from './verification-decisions.ts';
 import { evidenceFor } from './verification-evidence.ts';
 import { SOURCE_CHECK_KINDS } from './checks/registry.ts';
-import type { SourceKind } from './checks/kind.ts';
 import type { Source } from './checks/read-context.ts';
+import { evidenceObservedAt, isEvidenceKind } from './evidence-announcement.ts';
 import { buildVerificationResult, type Declaration } from './verification-result.ts';
 import { refreshActionStatus } from './action-status.ts';
 const p = policy.opportunity.opportunities;
-const isSourceKind = (kind: string): kind is SourceKind => Object.hasOwn(SOURCE_CHECK_KINDS, kind);
+/** The announced evidence this task re-checks declarations against. */
 async function verificationSource(db: Database, task: QueueTask, project: string): Promise<Source> {
   const payload = record(task.payload);
   const kind = scalarText(payload.trigger_kind || '');
   const id = parseUuid(payload.trigger_id);
   if (!id) throw new Error('Implementation verification trigger is invalid');
-  if (!isSourceKind(kind)) throw new Error('Implementation verification trigger kind is invalid');
-  const scope = new WorkspaceScope(task.workspace_id);
-  let observed: string | null | undefined;
-  if (kind === 'site_crawl')
-    observed = (
-      await scope
-        .selectFrom(db, 'site_crawls')
-        .select(utcText(sql.ref('completed_at')).as('time'))
-        .where('project_id', '=', project)
-        .where('id', '=', id)
-        .executeTakeFirst()
-    )?.time;
-  else if (kind === 'audit')
-    observed = (
-      await scope
-        .selectFrom(db, 'audits')
-        .select(utcText(sql.ref('completed_at')).as('time'))
-        .where('project_id', '=', project)
-        .where('id', '=', id)
-        .executeTakeFirst()
-    )?.time;
-  else if (kind === 'traffic_snapshot')
-    observed = (
-      await scope
-        .selectFrom(db, 'traffic_snapshots')
-        .select(utcText(sql.ref('created_at')).as('time'))
-        .where('project_id', '=', project)
-        .where('id', '=', id)
-        .executeTakeFirst()
-    )?.time;
-  else if (kind === 'search_intelligence_dataset')
-    observed = (
-      await scope
-        .selectFrom(db, 'search_intelligence_datasets')
-        .select(utcText(sql.ref('published_at')).as('time'))
-        .where('project_id', '=', project)
-        .where('id', '=', id)
-        .where('status', '=', 'published')
-        .executeTakeFirst()
-    )?.time;
-  else throw new Error('Implementation verification trigger kind is invalid');
+  if (!isEvidenceKind(kind)) throw new Error('Implementation verification trigger kind is invalid');
+  const scope = { workspaceId: task.workspace_id, projectId: project };
+  const observed = await evidenceObservedAt(db, scope, { kind, id });
   if (!observed) throw new Error('Implementation verification source is not terminal');
-  return { kind, id, observed_at: `${observed}Z` };
+  return { kind, id, observed_at: observed };
 }
 /** Exact source timestamp used by verification idempotency. */
 function sourceRevision(text: string): string {

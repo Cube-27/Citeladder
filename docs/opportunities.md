@@ -235,11 +235,16 @@ listing went live shows on the cited URL's page from the next reading, and the
 outcome that matters is visibility on the prompts that cite it. Neither claims
 the listing caused a movement.
 
-Later crawl, audit, traffic or Keyword Research
-keyword-dataset completion enqueues
-[TypeScript verification](../frontend/services/api/src/opportunities/verification.ts)
-through the [TypeScript enqueue owner](../frontend/services/api/src/opportunities/enqueue.ts)
-only for a project with a declaration inside the verification window. The
+The owner that commits a later crawl, audit (after its source-page
+inspection), traffic window or Keyword Research keyword dataset calls
+[`announceEvidence`](../frontend/services/api/src/opportunities/evidence-announcement.ts)
+in that transaction. It enqueues the Opportunity refresh (unless Demand
+re-interprets first and carries it, as for traffic and for a crawl in a project
+with traffic) and
+[TypeScript verification](../frontend/services/api/src/opportunities/verification.ts),
+the latter only for a project with a declaration inside the verification
+window; both keep their idempotency keys. The same module says when each kind
+of evidence became terminal, which verification measures from. The
 window is 30 days from go-live, except a keyword-presence check, which runs 90
 days because a new page takes longer to rank than an edited one takes to
 recrawl. A task reads only declarations declared before the source was
