@@ -123,7 +123,7 @@ export function useChartWidth<T extends HTMLElement>(fallback = 640) {
 }
 
 /** The Other texture: `data-other` stripes on the `chart-grid` ground. */
-export function ChartHatchPattern({ id }: Readonly<{ id: string }>) {
+function ChartHatchPattern({ id }: Readonly<{ id: string }>) {
   return (
     <pattern
       id={id}
