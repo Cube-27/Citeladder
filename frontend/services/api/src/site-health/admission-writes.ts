@@ -4,10 +4,10 @@
  * those decisions in a fixed number of round trips, whatever the batch size.
  */
 import { randomUUID } from 'node:crypto';
+import { ACTIVE_CRAWL_STATUSES } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import type { Candidate } from './frontier.ts';
-import { ACTIVE_CRAWL } from './site-task.ts';
 import type { Crawl } from './task-fence.ts';
 
 /** What admission already finds for a batch, keyed by URL hash or site URL id. */
@@ -262,7 +262,7 @@ export async function enqueueSiteTasks(
       idempotency_key)
     CROSS JOIN site_crawls c
     WHERE c.id = ${crawl.id}::uuid AND c.workspace_id = ${crawl.workspace_id}::uuid
-      AND c.status = ANY(${[...ACTIVE_CRAWL]})
+      AND c.status = ANY(${[...ACTIVE_CRAWL_STATUSES]})
     ON CONFLICT (crawl_id, task_kind, url_hash, generation) DO UPDATE
       SET priority = excluded.priority,
           available_at = least(site_crawl_tasks.available_at, now())

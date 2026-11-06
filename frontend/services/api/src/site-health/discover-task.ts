@@ -8,6 +8,7 @@
  * was lost meanwhile.
  */
 import { randomUUID } from 'node:crypto';
+import { isActiveCrawl } from '@citeladder/contracts/site-health';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -32,7 +33,6 @@ import {
 import { isBotBlock } from './page-fetch.ts';
 import {
   Abandoned,
-  ACTIVE_CRAWL,
   finalFailure,
   httpError,
   loadScope,
@@ -418,7 +418,7 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
           }));
       }
       const locked = await lockRunningTask(trx, claimed, ctx.owner);
-      if (!locked || !ACTIVE_CRAWL.has(locked.crawl.status)) throw new Abandoned();
+      if (!locked || !isActiveCrawl(locked.crawl.status)) throw new Abandoned();
       if (!artifactId && finalFailure(locked.task, outcome.retryable))
         await observeFailure(trx, locked.crawl, locked.task, outcome);
       if (artifactId || admitted) {

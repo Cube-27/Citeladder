@@ -8,6 +8,7 @@
  * order) and own the transaction.
  */
 import { createHash, randomUUID } from 'node:crypto';
+import { ACTIVE_CRAWL_STATUSES } from '@citeladder/contracts/site-health';
 import { sql, type Selectable } from 'kysely';
 
 import { policy, resolveSettingSpec } from '../config.ts';
@@ -18,7 +19,6 @@ import { compareText } from '../text-order.ts';
 import { classifyUrlAdmission, type Admission, type Scope } from './url-admission.ts';
 import { canonicalIdentity, hostTwinHash } from './url-identity.ts';
 import { expectedTaskFailure } from './coverage.ts';
-import { ACTIVE_CRAWL } from './site-task.ts';
 import type { Crawl } from './task-fence.ts';
 import { taskOutcome } from './task-outcome.ts';
 import {
@@ -259,7 +259,7 @@ async function enqueueSiteTask(
       ${task.position ?? 0}, ${settings.maxAttempts}, 0, 0, now(), now(), now(), '', '', false
     FROM site_crawls c
     WHERE c.id = ${crawl.id}::uuid AND c.workspace_id = ${crawl.workspace_id}::uuid
-      AND c.status = ANY(${[...ACTIVE_CRAWL]})
+      AND c.status = ANY(${[...ACTIVE_CRAWL_STATUSES]})
     ON CONFLICT (crawl_id, task_kind, url_hash, generation) DO UPDATE
       SET priority = excluded.priority,
           available_at = least(site_crawl_tasks.available_at, now())

@@ -7,6 +7,7 @@
  * reclaimed task whose facts are published but still pending resumes at the walk.
  */
 import { randomUUID } from 'node:crypto';
+import { isActiveCrawl } from '@citeladder/contracts/site-health';
 
 import { policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -19,7 +20,6 @@ import { insertRobotsSnapshot } from './robots-snapshots.ts';
 import { admitCandidates, candidate, crawlScope, lockRuntime, type Candidate } from './frontier.ts';
 import {
   Abandoned,
-  ACTIVE_CRAWL,
   loadScope,
   lockRunningTask,
   markRunning,
@@ -317,7 +317,7 @@ function underLease(
     .execute(async (trx) => {
       ctx.signal?.throwIfAborted();
       const locked = await lockRunningTask(trx, claimed, ctx.owner);
-      if (!locked || !ACTIVE_CRAWL.has(locked.crawl.status)) throw new Abandoned();
+      if (!locked || !isActiveCrawl(locked.crawl.status)) throw new Abandoned();
       await body(trx, locked.crawl, locked.task);
       ctx.signal?.throwIfAborted();
       return true;
@@ -383,7 +383,7 @@ async function persist(
         admitted = admission.admitted;
       }
       const locked = await lockRunningTask(trx, claimed, ctx.owner);
-      if (!locked || !ACTIVE_CRAWL.has(locked.crawl.status)) throw new Abandoned();
+      if (!locked || !isActiveCrawl(locked.crawl.status)) throw new Abandoned();
       const { pending: _pending, ...sitemap } = record(facts.sitemap);
       const robots = record(facts.robots);
       const snapshot = crawl.robots_snapshot_id

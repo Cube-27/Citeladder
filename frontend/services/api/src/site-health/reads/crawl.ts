@@ -2,7 +2,12 @@
  * Workspace-scoped crawl loading and the crawl projection every Site Health
  * read shares. A foreign or missing crawl is a 404; nothing here writes.
  */
-import { crawlCountersSchema } from '@citeladder/contracts/site-health';
+import {
+  crawlCountersSchema,
+  isTerminalCrawl,
+  isUsableCrawl,
+  USABLE_CRAWL_STATUSES,
+} from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
 import type { z } from 'zod';
 
@@ -17,8 +22,6 @@ import type { Crawl } from '../task-fence.ts';
 import { failedAs } from '../task-outcome.ts';
 
 const reads = policy.site_health.reads;
-const TERMINAL = new Set<string>(reads.terminal_crawl_statuses);
-const USABLE = ['completed', 'partially_completed', 'cancelled'] as const;
 const NOT_MEASURED = 'not_measured';
 
 export type { Crawl };
@@ -32,7 +35,7 @@ export type FailureSummary = {
   target_url: string;
 };
 
-export const isTerminal = (crawl: Crawl) => TERMINAL.has(crawl.status);
+export const isTerminal = (crawl: Crawl) => isTerminalCrawl(crawl.status);
 
 /** The crawl in the workspace, or 404. */
 export async function loadCrawl(db: Database, workspaceId: string, crawlId: string) {
@@ -86,10 +89,10 @@ export async function resolveUsableCrawl(
   if (crawlId !== null) {
     const crawl = await crawls.where('id', '=', crawlId).executeTakeFirst();
     if (crawl === undefined) throw notFound('Crawl');
-    return (USABLE as readonly string[]).includes(crawl.status) ? crawl : null;
+    return isUsableCrawl(crawl.status) ? crawl : null;
   }
   const latest = await crawls
-    .where('status', 'in', USABLE)
+    .where('status', 'in', USABLE_CRAWL_STATUSES)
     .orderBy('created_at', 'desc')
     .orderBy('id', 'desc')
     .executeTakeFirst();

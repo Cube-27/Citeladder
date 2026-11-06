@@ -1,5 +1,6 @@
 /** Explicit crawl admission freezes policy and commits all initial work together. */
 import { randomUUID } from 'node:crypto';
+import { ACTIVE_CRAWL_STATUSES } from '@citeladder/contracts/site-health';
 import type { Selectable } from 'kysely';
 import { policy } from '../config.ts';
 import { measuredTargetPages } from '../opportunities/enqueue.ts';
@@ -25,7 +26,7 @@ import {
   type CreateCrawlRequest,
 } from './planner-policy.ts';
 import { inventoryCrawlIds } from './reads/crawl.ts';
-import { recordCrawlEvent, ACTIVE_CRAWL } from './site-task.ts';
+import { recordCrawlEvent } from './site-task.ts';
 import type { Crawl } from './task-fence.ts';
 import { classifyUrlAdmission, type Scope } from './url-admission.ts';
 import { canonicalIdentity } from './url-identity.ts';
@@ -337,7 +338,7 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
     .select('id')
     .where('workspace_id', '=', workspaceId)
     .where('project_id', '=', request.project_id)
-    .where('status', 'in', [...ACTIVE_CRAWL])
+    .where('status', 'in', ACTIVE_CRAWL_STATUSES)
     .executeTakeFirst();
   if (existing) crawlError('Project already has an active crawl', 'crawl_already_active', 409);
   const { root, domain } = projectWebsiteRoot(project.website_url);

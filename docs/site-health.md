@@ -97,6 +97,11 @@ finishes anything left. Reads never start work.
 - A granted access check is reused for `access_check_ttl_seconds`, never past
   the grant's own expiry; a denial is never cached.
 
+**Crawl status.** A crawl is `queued` or `running` (active), then `completed`,
+`partially_completed`, `failed` or `cancelled` (terminal). Every reader takes
+the active, terminal and usable (terminal with readable analyses: all but
+`failed`) sets from `packages/contracts/src/site-health/crawl.ts`.
+
 **Terminalization** (`lifecycle.ts`, the only path to a terminal crawl). Each
 settled lifecycle task reconciles counters and sub-states under the crawl row
 lock. While siblings remain, a successful analysis only refreshes the
@@ -190,8 +195,8 @@ runs breadth-first in `sitemap_fetch_concurrency` waves, and attempts count
 against `max_sitemap_documents`. URLs are taken in queue order, so response
 timing cannot change what fits. Admissible URLs, up to
 `max_sitemap_admitted_urls`, enter the frontier at depth 1. They are also
-recorded in `site_facts.sitemap.urls`, the authority for sitemap membership;
-older crawls fall back to `source_kind = sitemap` observations. Each admitted
+recorded in `site_facts.sitemap.urls`, the only authority for sitemap
+membership: a crawl without that list has no sitemap members. Each admitted
 URL's first declared `<lastmod>` is kept, as written, in
 `site_facts.sitemap.lastmod` (keyed by the admitted URL); a page's analysis
 reads its own as `sitemap_lastmod`. Crawl reads (dashboard, crawl and crawl

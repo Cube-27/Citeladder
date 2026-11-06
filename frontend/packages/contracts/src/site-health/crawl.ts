@@ -4,16 +4,37 @@ import { responseObject, uuid } from './core.ts';
 
 // Independent crawl lifecycle sub-states (plan §Persistence lifecycle states).
 export const crawlOverallStatusSchema = z.enum([
-  'draft',
-  'validating',
   'queued',
   'running',
-  'paused',
   'completed',
   'partially_completed',
   'failed',
   'cancelled',
 ]);
+type CrawlStatus = z.infer<typeof crawlOverallStatusSchema>;
+/** A crawl that still runs: its tasks may claim, write and settle. */
+export const ACTIVE_CRAWL_STATUSES = [
+  'queued',
+  'running',
+] as const satisfies readonly CrawlStatus[];
+/** A crawl that has ended; its counters and snapshot are persisted. */
+export const TERMINAL_CRAWL_STATUSES = [
+  'completed',
+  'partially_completed',
+  'failed',
+  'cancelled',
+] as const satisfies readonly CrawlStatus[];
+/** An ended crawl whose analyses are readable results (a cancelled one keeps what it analyzed). */
+export const USABLE_CRAWL_STATUSES = [
+  'completed',
+  'partially_completed',
+  'cancelled',
+] as const satisfies readonly CrawlStatus[];
+// Membership tests over a stored status: persisted rows hold plain text.
+export const isActiveCrawl = (status: string) => ACTIVE_CRAWL_STATUSES.some((s) => s === status);
+export const isTerminalCrawl = (status: string) =>
+  TERMINAL_CRAWL_STATUSES.some((s) => s === status);
+export const isUsableCrawl = (status: string) => USABLE_CRAWL_STATUSES.some((s) => s === status);
 export const crawlDiscoveryStatusSchema = z.enum([
   'pending',
   'running',

@@ -8,6 +8,7 @@
  * no retry can repair, because the snapshot is written once per crawl.
  */
 import { createHash, randomUUID } from 'node:crypto';
+import { ACTIVE_CRAWL_STATUSES, isActiveCrawl } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
 
 import { policy, resolveSettingSpec } from '../config.ts';
@@ -29,8 +30,6 @@ import { enqueueTerminalAnalyticsRefresh } from './terminal-handoff.ts';
 
 const logger = getLogger('app.workers.site_health.lifecycle');
 const TERMINAL_TASK = policy.task_queue.terminal;
-/** `paused` is never written; a crawl in it is left alone rather than terminalized. */
-const ACTIVE = ['draft', 'validating', 'queued', 'running'];
 const LIFECYCLE_KINDS = ['discover', 'site_setup', 'analyze'];
 const EXCLUDED = failedAs('site_crawl_tasks', ['excluded']);
 const OVERDUE = policy.site_health.page_analysis.acquisition.error_codes.crawl_overdue;
@@ -281,7 +280,7 @@ type ReconcileOptions = {
 
 /** Reconcile one crawl whose row the caller holds FOR UPDATE. */
 async function reconcileLockedCrawl(db: Database, crawl: Crawl, options: ReconcileOptions = {}) {
-  if (!ACTIVE.includes(crawl.status)) return;
+  if (!isActiveCrawl(crawl.status)) return;
   const summary = await taskSummary(db, crawl);
   await refreshCounters(db, crawl, summary);
   const { fullyFailed, discoveryPartial } = reconcileDiscovery(crawl, summary);
@@ -420,7 +419,7 @@ export async function reconcileAfterTask(
   if (!cadence.admits(task.crawl_id)) return;
   await db.transaction().execute(async (trx) => {
     const crawl = await lockCrawl(trx, task.workspace_id, task.crawl_id);
-    if (crawl && ACTIVE.includes(crawl.status)) await refreshLiveScoreSummary(trx, crawl);
+    if (crawl && isActiveCrawl(crawl.status)) await refreshLiveScoreSummary(trx, crawl);
   });
 }
 
@@ -457,7 +456,7 @@ export async function reconcileStalled(db: Database, settings: SiteWorkerSetting
   const stalled = await db
     .selectFrom('site_crawls as c')
     .select(['c.id', 'c.workspace_id'])
-    .where('c.status', 'in', ACTIVE)
+    .where('c.status', 'in', ACTIVE_CRAWL_STATUSES)
     .where('c.updated_at', '<', cutoff)
     // Retired kinds left in an old database are not work any worker will claim.
     .where(({ not, exists, selectFrom }) =>
@@ -494,7 +493,7 @@ export async function reconcileOverdue(db: Database, settings: SiteWorkerSetting
   const candidates = await db
     .selectFrom('site_crawls')
     .select(['id', 'workspace_id'])
-    .where('status', 'in', ACTIVE)
+    .where('status', 'in', ACTIVE_CRAWL_STATUSES)
     .where(sql<Date>`coalesce(started_at, created_at)`, '<', cutoff)
     .orderBy('created_at')
     .limit(settings.batch)
@@ -502,7 +501,7 @@ export async function reconcileOverdue(db: Database, settings: SiteWorkerSetting
   return eachCrawl(candidates, 'overdue crawl reconcile failed', async (candidate) => {
     const abandoned = await db.transaction().execute(async (trx) => {
       const crawl = await lockCrawl(trx, candidate.workspace_id, candidate.id);
-      if (!crawl || !ACTIVE.includes(crawl.status)) return null;
+      if (!crawl || !isActiveCrawl(crawl.status)) return null;
       if (new Date(crawl.started_at ?? crawl.created_at) >= cutoff) return null;
       const now = new Date();
       const failed = await trx
