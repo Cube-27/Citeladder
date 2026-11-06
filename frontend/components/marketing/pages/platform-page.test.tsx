@@ -27,6 +27,7 @@ it('renders the hero screen alone and the highlights, steps, questions and FAQ a
     <PlatformPageContent
       page={{
         path: '/platform/site-health',
+        updated: '2026-11-06',
         title: 'Site Health | CiteLadder',
         description: 'Crawl your site.',
         heading: 'Find site issues',

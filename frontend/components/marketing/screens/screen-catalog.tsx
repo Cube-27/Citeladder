@@ -85,42 +85,29 @@ type AppPlace = Readonly<{ title: string; active?: NavLabel; mode?: 'Agent' }>;
  */
 type ModuleScreen = Readonly<{ screen: PlatformScreen; page: AppPlace }>;
 
+/** A module shown on its own app page, whose title is the sidebar row it lights. */
+const onPage = (screen: PlatformScreen, page: NavLabel) => ({
+  screen,
+  page: { title: page, active: page },
+});
+/** A module shown in the Agent workspace. */
+const inAgent = (screen: PlatformScreen) => ({
+  screen,
+  page: { title: 'Agent', mode: 'Agent' as const },
+});
+
 export const MODULE_SCREENS = {
-  '/platform/ai-visibility': {
-    screen: 'engines',
-    page: { title: 'AI Visibility', active: 'AI Visibility' },
-  },
-  '/platform/cited-sources': {
-    screen: 'sources',
-    page: { title: 'AI Visibility', active: 'AI Visibility' },
-  },
-  '/platform/ai-referral-analytics': {
-    screen: 'referrals',
-    page: { title: 'AI Traffic', active: 'AI Traffic' },
-  },
-  '/platform/product-visibility': {
-    screen: 'commerce',
-    page: { title: 'Commerce Suite', active: 'Commerce Suite' },
-  },
-  '/platform/site-health': {
-    screen: 'site-health',
-    page: { title: 'Website', active: 'Website' },
-  },
-  '/platform/search-demand': {
-    screen: 'demand',
-    page: { title: 'Search Demand', active: 'Search Demand' },
-  },
-  '/platform/keyword-research': {
-    screen: 'keywords',
-    page: { title: 'Keyword Research', active: 'Keyword Research' },
-  },
-  '/platform/content-briefs': {
-    screen: 'agent-brief',
-    page: { title: 'Actions', active: 'Actions' },
-  },
-  '/platform/agents': { screen: 'agent-chat', page: { title: 'Agent', mode: 'Agent' } },
-  '/platform/mcp': { screen: 'mcp', page: { title: 'Agent', mode: 'Agent' } },
-} as const satisfies Record<string, ModuleScreen>;
+  '/platform/ai-visibility': onPage('engines', 'AI Visibility'),
+  '/platform/cited-sources': onPage('sources', 'AI Visibility'),
+  '/platform/ai-referral-analytics': onPage('referrals', 'AI Traffic'),
+  '/platform/product-visibility': onPage('commerce', 'Commerce Suite'),
+  '/platform/site-health': onPage('site-health', 'Website'),
+  '/platform/search-demand': onPage('demand', 'Search Demand'),
+  '/platform/keyword-research': onPage('keywords', 'Keyword Research'),
+  '/platform/content-briefs': onPage('agent-brief', 'Actions'),
+  '/platform/agents': inAgent('agent-chat'),
+  '/platform/mcp': inAgent('mcp'),
+} satisfies Record<string, ModuleScreen>;
 
 const MODULE_SCREEN_BY_HREF = new Map<string, ModuleScreen>(Object.entries(MODULE_SCREENS));
 
