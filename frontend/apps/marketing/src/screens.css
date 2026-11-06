@@ -28,7 +28,7 @@
   flex-direction: column;
   padding: 8px;
   border: 1px solid var(--color-line);
-  border-radius: 20px;
+  border-radius: var(--site-radius-card);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
 }
@@ -46,13 +46,13 @@
   overflow: hidden;
 }
 
-/* Only a FeatureCard, whose copy sits under its image, gets the grey well
-   (D31): its own 1px edge, concentric with the card (20 - 8 = 12px plus its
-   edge), and small padding round the screen, tighter top and bottom. */
+/* Only a FeatureCard, whose copy sits under its image, gets the well (D31,
+   a stage since D35): the card radius (D36), and small padding round the
+   screen, tighter top and bottom. */
 .cl-fcard .cl-frame-well {
   padding: 12px 16px;
   border: 1px solid var(--color-line);
-  border-radius: 14px;
+  border-radius: var(--site-radius-card);
   background: var(--color-paper);
 }
 
@@ -152,10 +152,10 @@
   text-align: left;
 }
 
-/* On a FeatureCard's grey well the vignette is its own white 10px card. */
+/* On a FeatureCard's well the vignette is its own white inner card (12px, D36). */
 .cl-fcard .cl-vig {
   border: 1px solid var(--color-line);
-  border-radius: 10px;
+  border-radius: var(--site-radius-inner);
   background: var(--color-surface);
 }
 
@@ -185,10 +185,13 @@
   overflow-wrap: anywhere;
 }
 
+/* Quiet lines in a product image sit on surface, paper and the tinted chips
+   of a highlighted row, so they take the secondary ink that holds 4.5:1 on
+   all of them in both themes (D36). */
 .cl-vig-meta,
 .cl-vig-secondary,
 .cl-vig-muted {
-  color: var(--color-ink-muted);
+  color: var(--color-ink-secondary);
 }
 
 .cl-vig-badge {
@@ -603,7 +606,7 @@
 .cl-app-nav-group {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .cl-app-nav-title {
@@ -704,6 +707,16 @@
   line-height: var(--text-data--line-height);
 }
 
+/* A drawn card's title: the app's CardTitle look (label-lg, 500) on a plain
+   paragraph, since a picture of the app holds no headings of the page (D36). */
+.cl-screen-card-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-label-lg);
+  font-weight: var(--text-label-lg--font-weight);
+  line-height: var(--text-label-lg--line-height);
+}
+
 .cl-screen-note {
   margin: 0;
   color: var(--color-ink-muted);
@@ -754,8 +767,10 @@
   color: var(--color-ink);
 }
 
+/* An engine that did not name the brand: muted, still 4.5:1 on its card in
+   both themes, so its hidden name never reads below text contrast (D36). */
 .cl-screen-mark.is-off {
-  color: var(--color-line-control);
+  color: var(--color-ink-muted);
 }
 
 .cl-screen-site-text {
@@ -784,7 +799,7 @@
 }
 
 .cl-screen-stat-unit {
-  margin-left: 2px;
+  margin-left: 4px;
   color: var(--color-ink-secondary);
   font-size: var(--text-label-lg);
   line-height: var(--text-label-lg--line-height);

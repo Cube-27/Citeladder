@@ -13,6 +13,7 @@ const STATUSES = ['positive', 'negative', 'warning', 'info'];
 const SOFTS = ['accent', ...STATUSES].map((role) => color(`${role}-soft`));
 const GROUNDS = ['paper', 'surface', 'surface-sunken'].map(color);
 const SERIES = ['data-1', 'data-2', 'data-3'].map(color);
+const STAGES = ['stage-sky', 'stage-mint', 'stage-lilac', 'stage-peach'].map(color);
 
 /**
  * The contrast matrix, the design system's own (docs/design.md, Colour): every
@@ -26,6 +27,10 @@ const CONTRAST_PAIRS = [
   { inks: ['ink', 'ink-secondary', 'ink-muted'].map(color), surfaces: GROUNDS, minimum: 4.5 },
   // Callout and badge bodies are ink on every tint.
   { inks: [color('ink')], surfaces: SOFTS, minimum: 4.5 },
+  // The website's stages (D35): copy on a tinted stage or hero wash, the
+  // CtaBand's note and the hero's trial line included, is ink or
+  // ink-secondary (D36), never muted.
+  { inks: [color('ink'), color('ink-secondary')], surfaces: STAGES, minimum: 4.5 },
   // A status ink on paper, surface and its own tint.
   ...STATUSES.map((status) => ({
     inks: [color(status)],

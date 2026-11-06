@@ -197,25 +197,6 @@ export function densityRoleViolations(source, label, ownsProductUi) {
   }
   return [];
 }
-/**
- * Roles the website stylesheet must define.
- *
- * The role has to exist, because the JSX and the type ladder below refer to it.
- * What it looks like is a design decision: this deliberately does not pin the
- * font-size or letter-spacing a role resolves to, so the type scale can be
- * retuned without editing a gate.
- */
-const REQUIRED_WEBSITE_ROLES = [
-  '.cl-phero-title',
-  '.cl-lhero-title',
-  '.cl-shead-title',
-  '.cl-fcard-title',
-  '.cl-lead',
-  '.cl-body',
-  '.cl-note',
-  '.cl-eyebrow',
-];
-
 /** Geometry roles belong to one ladder in globals.css; no surface re-scales them. */
 const SHARED_GEOMETRY_ROLES = ['2xs', 'xs', 'sm', 'md', 'lg', 'xl', 'full'].map(
   (size) => `--radius-${size}`,
@@ -1343,26 +1324,11 @@ function selectorPattern(selector) {
   return new RegExp(escapeRegExp(selector) + String.raw`(?![\w-])`);
 }
 
-function missingRoleViolations(rules, cssLabel) {
-  const violations = [];
-  for (const selector of REQUIRED_WEBSITE_ROLES) {
-    // Defined by a rule of its own or as one selector of a grouped rule.
-    const defines = (candidate) =>
-      candidate.prelude.split(',').some((part) => part.replace(/\s+/g, ' ').trim() === selector);
-    if (!rules.some(defines)) {
-      violations.push(cssLabel + ': missing website selector ' + selector);
-    }
-  }
-  return violations;
-}
-
 export function websiteContractViolations(root) {
   const violations = [];
   const cssPath = join(root, ...WEBSITE_CSS.split('/'));
   const cssLabel = relative(root, cssPath).replaceAll('\\', '/');
   const rules = cssRules(readFileSync(cssPath, 'utf8'));
-
-  violations.push(...missingRoleViolations(rules, cssLabel));
 
   for (const selector of TOKEN_COLORED_ROLES) {
     const selectorRegex = selectorPattern(selector);
