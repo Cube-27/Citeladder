@@ -243,7 +243,7 @@ const TRIAL_LIMITS = [
   { label: 'Successful answers', value: '20, one per prompt' },
 ] as const;
 
-const TRIAL_EXCLUSIONS = 'Agent access and AI credits are not included.';
+const TRIAL_EXCLUSIONS = 'Includes 500 AI credits. Agent access is not included.';
 
 function TrialButton({ appOrigin, primary }: Readonly<{ appOrigin: string; primary: boolean }>) {
   return (
