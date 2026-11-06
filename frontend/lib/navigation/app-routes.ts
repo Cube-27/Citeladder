@@ -105,44 +105,72 @@ function listed(label: string, icon: IconName, group: 'analyze' | 'track'): NavE
   return { label, icon, placements: [`dashboard:${group}`, palette] };
 }
 
-const mailbox: Screen = () => import('@/components/auth/mailbox-screen');
+/** Every screen's loader, named once; a route refers to its screen by name. */
+const screens = {
+  mailbox: () => import('@/components/auth/mailbox-screen'),
+  login: pick(() => import('@/components/auth/auth-routes'), 'LoginRoute'),
+  register: pick(() => import('@/components/auth/auth-routes'), 'RegisterRoute'),
+  workspaces: pick(() => import('@/components/auth/workspace-chooser'), 'WorkspaceChooser'),
+  onboarding: pick(
+    () => import('@/components/onboarding/onboarding-page-client'),
+    'OnboardingPageClient',
+  ),
+  projects: pick(() => import('@/components/projects/projects-screen'), 'ProjectsScreen'),
+  site: pick(() => import('@/components/site-health/site-health-screen'), 'SiteHealthScreen'),
+  pageDetail: pick(() => import('@/components/site-health/url-detail'), 'PageDetailScreen'),
+  demand: pick(() => import('@/components/demand/demand-projection'), 'DemandProjection'),
+  issues: pick(() => import('@/components/site-health/issues-screen'), 'IssuesScreen'),
+  keywords: pick(
+    () => import('@/components/search-intelligence/search-intelligence-page'),
+    'SearchIntelligencePage',
+  ),
+  performance: pick(
+    () => import('@/components/performance/performance-screen'),
+    'PerformanceScreen',
+  ),
+  products: pick(() => import('@/components/products/products-screen'), 'ProductsScreen'),
+  newChat: pick(() => import('@/components/agent/new-chat-screen'), 'NewChatScreen'),
+  chat: pick(() => import('@/components/agent/chat-screen'), 'ChatScreen'),
+  actions: pick(() => import('@/components/agent/actions-screen'), 'ActionsScreen'),
+  action: pick(() => import('@/components/agent/action-detail-screen'), 'ActionDetailScreen'),
+  skills: pick(() => import('@/components/agent/skills-screen'), 'SkillsScreen'),
+  context: pick(() => import('@/components/agent/context-screen'), 'ContextScreen'),
+  prompts: pick(() => import('@/components/prompts/prompts-route-content'), 'PromptsRouteContent'),
+  prompt: pick(() => import('@/components/prompts/prompt-detail-screen'), 'PromptDetailScreen'),
+  visibility: pick(() => import('@/components/visibility/visibility-screen'), 'VisibilityScreen'),
+  runs: pick(() => import('@/components/runs/runs-screen'), 'RunsScreen'),
+  run: pick(() => import('@/components/runs/run-detail-screen'), 'RunDetailScreen'),
+  aiTraffic: pick(() => import('@/components/ai-traffic/ai-traffic-screen'), 'AiTrafficScreen'),
+  settings: pick(() => import('@/components/settings/settings-screen'), 'SettingsScreen'),
+  billing: pick(() => import('@/components/billing/billing-screen'), 'BillingScreen'),
+  pricing: () => import('@/components/billing/pricing-route'),
+  invitation: pick(
+    () => import('@/components/settings/accept-invitation-screen'),
+    'AcceptInvitationPage',
+  ),
+} satisfies Record<string, Screen>;
+
 const credential = { credentialInUrl: true } as const;
 
 export const APP_ROUTES = [
   // Public: no session.
-  flow('/verify-email', 'public', mailbox, credential),
-  flow('/reset-password', 'public', mailbox, credential),
-  flow('/forgot-password', 'public', mailbox),
-  flow('/resend-verification', 'public', mailbox),
-  flow(
-    '/login',
-    'public',
-    pick(() => import('@/components/auth/auth-routes'), 'LoginRoute'),
-  ),
-  flow(
-    '/register',
-    'public',
-    pick(() => import('@/components/auth/auth-routes'), 'RegisterRoute'),
-  ),
+  flow('/verify-email', 'public', screens.mailbox, credential),
+  flow('/reset-password', 'public', screens.mailbox, credential),
+  flow('/forgot-password', 'public', screens.mailbox),
+  flow('/resend-verification', 'public', screens.mailbox),
+  flow('/login', 'public', screens.login),
+  flow('/register', 'public', screens.register),
 
   // Signed in, before the shell opens.
-  flow(
-    '/workspaces',
-    'workspace',
-    pick(() => import('@/components/auth/workspace-chooser'), 'WorkspaceChooser'),
-  ),
-  flow(
-    '/onboarding',
-    'workspace',
-    pick(() => import('@/components/onboarding/onboarding-page-client'), 'OnboardingPageClient'),
-  ),
+  flow('/workspaces', 'workspace', screens.workspaces),
+  flow('/onboarding', 'workspace', screens.onboarding),
 
   // The application shell, in the order of the product loop.
   page({
     path: '/projects',
     title: 'Overview',
     modeHome: true,
-    screen: pick(() => import('@/components/projects/projects-screen'), 'ProjectsScreen'),
+    screen: screens.projects,
     nav: [
       {
         label: 'Overview',
@@ -154,46 +182,43 @@ export const APP_ROUTES = [
   page({
     path: '/site',
     title: 'Website',
-    screen: pick(() => import('@/components/site-health/site-health-screen'), 'SiteHealthScreen'),
+    screen: screens.site,
     nav: [listed('Website', 'site', 'analyze')],
   }),
   page({
     path: '/site/crawls/:crawlId/pages/:siteUrlId',
     title: 'Page detail',
     collection: '/site',
-    screen: pick(() => import('@/components/site-health/url-detail'), 'PageDetailScreen'),
+    screen: screens.pageDetail,
   }),
   page({
     path: '/demand',
     title: 'Search Demand',
-    screen: pick(() => import('@/components/demand/demand-projection'), 'DemandProjection'),
+    screen: screens.demand,
     nav: [listed('Search Demand', 'demand', 'analyze')],
   }),
   page({
     path: '/issues',
     title: 'Issues',
-    screen: pick(() => import('@/components/site-health/issues-screen'), 'IssuesScreen'),
+    screen: screens.issues,
     nav: [listed('Issues', 'issues', 'analyze')],
   }),
   page({
     path: '/search-intelligence',
     title: 'Keyword Research',
-    screen: pick(
-      () => import('@/components/search-intelligence/search-intelligence-page'),
-      'SearchIntelligencePage',
-    ),
+    screen: screens.keywords,
     nav: [listed('Keyword Research', 'searchIntelligence', 'analyze')],
   }),
   page({
     path: '/performance',
     title: 'Performance',
-    screen: pick(() => import('@/components/performance/performance-screen'), 'PerformanceScreen'),
+    screen: screens.performance,
     nav: [listed('Performance', 'performance', 'analyze')],
   }),
   page({
     path: '/products',
     title: 'Commerce Suite',
-    screen: pick(() => import('@/components/products/products-screen'), 'ProductsScreen'),
+    screen: screens.products,
     nav: [listed('Commerce Suite', 'products', 'analyze')],
   }),
   page({
@@ -201,7 +226,7 @@ export const APP_ROUTES = [
     title: 'New chat',
     mode: 'agent',
     modeHome: true,
-    screen: pick(() => import('@/components/agent/new-chat-screen'), 'NewChatScreen'),
+    screen: screens.newChat,
     // Agent mode draws New chat above its fixed destinations itself.
     nav: [{ label: 'New chat', icon: 'newChat', placements: ['palette:Agent'] }],
   }),
@@ -210,13 +235,13 @@ export const APP_ROUTES = [
     title: 'Agent',
     mode: 'agent',
     collection: '/agent',
-    screen: pick(() => import('@/components/agent/chat-screen'), 'ChatScreen'),
+    screen: screens.chat,
   }),
   page({
     path: '/agent/actions',
     title: 'Actions',
     mode: 'agent',
-    screen: pick(() => import('@/components/agent/actions-screen'), 'ActionsScreen'),
+    screen: screens.actions,
     // Listed once in the palette, under Agent.
     nav: [
       {
@@ -232,56 +257,56 @@ export const APP_ROUTES = [
     title: 'Actions',
     mode: 'agent',
     collection: '/agent/actions',
-    screen: pick(() => import('@/components/agent/action-detail-screen'), 'ActionDetailScreen'),
+    screen: screens.action,
   }),
   page({
     path: '/agent/skills',
     title: 'Skills',
     mode: 'agent',
-    screen: pick(() => import('@/components/agent/skills-screen'), 'SkillsScreen'),
+    screen: screens.skills,
     nav: [{ label: 'Skills', icon: 'skills', placements: ['agent', 'palette:Agent'] }],
   }),
   page({
     path: '/agent/context',
     title: 'Context',
     mode: 'agent',
-    screen: pick(() => import('@/components/agent/context-screen'), 'ContextScreen'),
+    screen: screens.context,
     nav: [{ label: 'Context', icon: 'context', placements: ['agent', 'palette:Agent'] }],
   }),
   page({
     path: '/prompts',
     title: 'Prompts',
-    screen: pick(() => import('@/components/prompts/prompts-route-content'), 'PromptsRouteContent'),
+    screen: screens.prompts,
     nav: [listed('Prompts', 'prompts', 'track')],
   }),
   page({
     path: '/prompts/:promptId',
     title: 'Prompts',
     collection: '/prompts',
-    screen: pick(() => import('@/components/prompts/prompt-detail-screen'), 'PromptDetailScreen'),
+    screen: screens.prompt,
   }),
   page({
     path: '/visibility',
     title: 'AI Visibility',
-    screen: pick(() => import('@/components/visibility/visibility-screen'), 'VisibilityScreen'),
+    screen: screens.visibility,
     nav: [listed('AI Visibility', 'visibility', 'track')],
   }),
   page({
     path: '/runs',
     title: 'Runs',
-    screen: pick(() => import('@/components/runs/runs-screen'), 'RunsScreen'),
+    screen: screens.runs,
     nav: [listed('Runs', 'runs', 'track')],
   }),
   page({
     path: '/runs/:runId',
     title: 'Run detail',
     collection: '/runs',
-    screen: pick(() => import('@/components/runs/run-detail-screen'), 'RunDetailScreen'),
+    screen: screens.run,
   }),
   page({
     path: '/ai-traffic',
     title: 'AI Traffic',
-    screen: pick(() => import('@/components/ai-traffic/ai-traffic-screen'), 'AiTrafficScreen'),
+    screen: screens.aiTraffic,
     nav: [listed('AI Traffic', 'aiTraffic', 'track')],
   }),
 
@@ -290,7 +315,7 @@ export const APP_ROUTES = [
     path: '/settings',
     title: 'Settings',
     scope: 'workspace',
-    screen: pick(() => import('@/components/settings/settings-screen'), 'SettingsScreen'),
+    screen: screens.settings,
     nav: [
       { label: 'Settings', icon: 'settings', placements: ['palette:Settings', 'user-menu'] },
       {
@@ -319,23 +344,20 @@ export const APP_ROUTES = [
     path: '/billing',
     title: 'Billing',
     scope: 'workspace',
-    screen: pick(() => import('@/components/billing/billing-screen'), 'BillingScreen'),
+    screen: screens.billing,
     nav: [{ label: 'Billing', icon: 'billing', placements: ['palette:Settings', 'user-menu'] }],
   }),
   page({
     path: '/pricing',
     title: 'Pricing',
     scope: 'workspace',
-    screen: () => import('@/components/billing/pricing-route'),
+    screen: screens.pricing,
   }),
   page({
     path: '/invitations/accept',
     scope: 'workspace',
     ...credential,
-    screen: pick(
-      () => import('@/components/settings/accept-invitation-screen'),
-      'AcceptInvitationPage',
-    ),
+    screen: screens.invitation,
   }),
 ];
 
