@@ -22,7 +22,7 @@ import { getLogger } from '../logging.ts';
 import { billingAccountId, hold, settle, LedgerError } from '../entitlements/ledger.ts';
 import { runMetered } from '../models/meter-scope.ts';
 import { gatewayCalls, type ModelGateway } from '../models/gateway.ts';
-import { ModelError, type Complete } from '../models/http.ts';
+import { callOutputCap, ModelError, type Complete } from '../models/http.ts';
 import type { JevClient } from '../models/jev.ts';
 import {
   PRICING_REVISION,
@@ -376,24 +376,42 @@ async function metered<T>(
   return outcome.value;
 }
 
-/** The gateway with every call metered for `context`; the raw gateway refuses unmetered calls. */
+/**
+ * The output cap `feature` declared for gateway calls. Every feature that
+ * reaches the gateway declares one, so a call's hold is sized to the output it
+ * needs, not the gateway's configured maximum.
+ */
+function featureOutputCap(feature: MeteredFeature) {
+  const caps: Record<string, number> = policy.models.feature_output_tokens;
+  if (!Object.hasOwn(caps, feature))
+    throw new Error(`Gateway feature ${feature} must declare its output cap`);
+  return caps[feature]!;
+}
+
+/**
+ * The gateway with every call metered for `context`; the raw gateway refuses
+ * unmetered calls. Each call is sent, and held, at the feature's output cap.
+ */
 function meteredGateway(db: Database, gateway: ModelGateway, context: MeterContext) {
-  const complete: Complete = (system, user, signal, onText, schema) =>
-    metered(
+  const cap = callOutputCap(gateway.maxOutputTokens, featureOutputCap(context.feature));
+  const complete: Complete = (system, user, signal, onText, schema, maxOutputTokens) => {
+    const outputTokens = callOutputCap(cap, maxOutputTokens);
+    return metered(
       db,
       context,
       {
         provider: 'model_gateway',
         model: gateway.model,
         inputBytes: requestInputBytes(system, user, schema),
-        maxOutputTokens: gateway.maxOutputTokens,
+        maxOutputTokens: outputTokens,
       },
       async () => {
-        const result = await gateway.complete(system, user, signal, onText, schema);
+        const result = await gateway.complete(system, user, signal, onText, schema, outputTokens);
         return { value: result, usage: result.usage };
       },
     );
-  return { ...gateway, ...gatewayCalls(complete) };
+  };
+  return { ...gateway, maxOutputTokens: cap, ...gatewayCalls(complete) };
 }
 
 /** Charges the fallback for holds a crash left unsettled past the configured age. */

@@ -557,6 +557,19 @@ day's spend past the ceiling. The ceiling is internal cost policy, not a
 customer limit; the $25 figure is engineering's conservative pre-launch value
 for the owner to confirm. Source: [architecture untangle](plans/architecture-untangle.md) K2.
 
+**B67 — Engineering, 2026-11-07.** Each feature declares its own output cap
+for platform gateway calls (architecture untangle K3), in
+`feature_output_tokens` of `config/model-gateway.json`: prompt generation and
+project research 16,000 tokens; Commerce buyer prompts, answer perception, fact
+verification and the Commerce shelf 8,000. The cap is sent to the provider and
+sizes the call's hold (B15), never above the gateway's configured maximum
+(64,000). A charged call that used to hold about 42 credits for its output now
+holds 11 (16,000 tokens) or 6 (8,000), so a low balance no longer refuses a
+small call; what a call is charged is unchanged (its reported tokens). A
+feature that reaches the gateway without a declared cap fails loudly. The Agent
+keeps its own output sizing (B60). Source:
+[architecture untangle](plans/architecture-untangle.md) K3.
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,

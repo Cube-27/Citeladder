@@ -33,7 +33,7 @@ function gateway(reply: () => Response | Promise<Response>) {
         apiKey: 'fixture-key',
         baseUrl: 'https://model.test/v1',
         model: 'claude-haiku-5-5',
-        // Large enough that each hold (about 65 credits) bounds the usage below.
+        // Above every feature's own output cap, which sizes each call and its hold.
         maxOutputTokens: 100_000,
         attempts: 1,
       },
@@ -434,12 +434,38 @@ describe('platform AI metering', () => {
     });
   });
 
+  it('sends and holds each charged call at its feature’s output cap, not the gateway maximum', async () => {
+    const t = await fixtures.tenant();
+    await credited(t, 100);
+    const held: number[] = [];
+    const { gateway: raw, fetch } = gateway(async () => {
+      held.push((await spent(t.workspaceId)).held);
+      return answer('{"ok":true}', {
+        prompt_tokens: 10,
+        completion_tokens: 10,
+      })();
+    });
+    const meter = meterFor(db, t.workspaceId);
+    await meter.gateway(raw, 'prompt_generation').complete('s', 'u');
+    await meter.gateway(raw, 'commerce_buyer_prompts').complete('s', 'u');
+    const sentCaps = fetch.mock.calls.map(
+      ([, init]) => JSON.parse(String(init?.body)).max_completion_tokens,
+    );
+    // 16,000 and 8,000 output tokens at $0.50 per million, marked up 30%: 11 and 6
+    // credits, where the gateway's 100,000-token maximum would hold 65.
+    expect({ held, sentCaps }).toEqual({
+      held: [11, 6],
+      sentCaps: [16_000, 8_000],
+    });
+  });
+
   it('settles a hold a crash left open at the fixed fallback, once', async () => {
     const t = await fixtures.tenant();
     await credited(t, 100);
     const { gateway: raw } = gateway(answer('{}', {}));
     const crashed = meterFor(db, t.workspaceId)
-      .gateway({ ...raw, complete: () => new Promise(() => {}) }, 'commerce_buyer_prompts')
+      // Prompt generation's 16,000-token output cap holds 11 credits, above the fallback.
+      .gateway({ ...raw, complete: () => new Promise(() => {}) }, 'prompt_generation')
       .complete('s', 'u');
     void crashed;
     await vi.waitFor(async () => expect(await calls(t.workspaceId)).toHaveLength(1));

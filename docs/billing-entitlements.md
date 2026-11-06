@@ -230,7 +230,7 @@ analysis is included in the run. An exhausted allowance refuses the launch with
 **AI credits.** Every platform model call spends AI credits through the
 [metering owner](../frontend/services/api/src/billing/metering.ts): prompt
 generation, onboarding research and brand discovery, Commerce buyer prompts and
-the Agent. A call holds its maximum cost (every input byte plus the output cap)
+the Agent. A call holds its maximum cost (every input byte plus its feature's output cap)
 at the serving model's [token price](../frontend/services/api/src/config/costs.json)
 with the markup, in whole credits rounded up, then settles once to the reported
 tokens. Unreadable usage settles at a fixed fallback no larger than the hold; a
