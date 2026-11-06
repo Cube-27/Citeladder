@@ -12,11 +12,7 @@ import { headingId } from '@/components/marketing/content/heading-id';
 import { POSTS, type BlogBlock } from './blog';
 import { COMPETITORS } from './compare';
 import { FAQ_GROUPS } from './faq';
-import { AI_POLICY, COOKIE_POLICY, FOOTER_LEGAL_LINKS, type LegalDocument } from './legal';
-import { CANCELLATION_POLICY, CONTACT_PAGE, REFUND_POLICY } from './legal-billing';
-import { DATA_PROCESSING_AGREEMENT, SUBPROCESSORS } from './legal-dpa';
-import { PRIVACY_POLICY } from './legal-privacy';
-import { TERMS_OF_SERVICE } from './legal-terms';
+import { FOOTER_LEGAL_LINKS, LEGAL_DOCUMENTS } from './legal-documents';
 import { NAV_DROPS, NAV_LINKS, PUBLISHED_PLATFORM, type NavDropItem } from './nav';
 import { PLATFORM_PAGES } from './platform-pages';
 import { FOUNDER, PRODUCT_HEAD } from './people';
@@ -34,17 +30,7 @@ import { SOLUTION_SEGMENTS } from './solutions';
  * misnaming the licence, the hosted product or the public repository.
  */
 /** Every policy this product publishes; each binds the parent company. */
-const ALL_LEGAL: readonly LegalDocument[] = [
-  TERMS_OF_SERVICE,
-  PRIVACY_POLICY,
-  REFUND_POLICY,
-  CANCELLATION_POLICY,
-  COOKIE_POLICY,
-  AI_POLICY,
-  DATA_PROCESSING_AGREEMENT,
-  SUBPROCESSORS,
-  CONTACT_PAGE,
-];
+const ALL_LEGAL = LEGAL_DOCUMENTS;
 
 function richParagraphText(block: Extract<BlogBlock, { type: 'richParagraph' }>): string {
   return block.content
@@ -94,12 +80,24 @@ function marketingRouteExists(href: string): boolean {
   if (PUBLISHED_PLATFORM.some((item) => item.href === href)) {
     return PLATFORM_PAGES.some((page) => page.path === href);
   }
-  const pathname = href.split('#', 1)[0]!.replace(/^\//, '');
+  const path = href.split('#', 1)[0]!;
+  // Policies and guides are served by dynamic routes from their records.
+  if (ALL_LEGAL.some((document) => document.path === path)) return true;
+  if (researchSlugs().includes(path)) return true;
+  const pathname = path.replace(/^\//, '');
   const pages = resolve(import.meta.dirname, '../../apps/marketing/src/pages');
   const candidates = pathname
     ? [resolve(pages, `${pathname}.astro`), resolve(pages, pathname, 'index.astro')]
     : [resolve(pages, 'index.astro')];
   return candidates.some((candidate) => existsSync(candidate));
+}
+
+/** Every research guide's published path, from its frontmatter. */
+function researchSlugs(): string[] {
+  return readdirSync(RESEARCH_DIR).flatMap((file) => {
+    const slug = /^slug: '([^']+)'$/m.exec(readFileSync(resolve(RESEARCH_DIR, file), 'utf8'));
+    return slug?.[1] ? [slug[1]] : [];
+  });
 }
 
 function stringsIn(value: unknown): string[] {
@@ -340,14 +338,6 @@ describe('legal content', () => {
   it('publishes each policy under a distinct path', () => {
     const paths = ALL_LEGAL.map((document) => document.path);
     expect(new Set(paths).size).toBe(paths.length);
-  });
-
-  it('links every published policy from the footer', () => {
-    // A policy with no route out of the footer is effectively unpublished.
-    const linked = new Set<string>(FOOTER_LEGAL_LINKS.map((link) => link.href));
-    for (const document of ALL_LEGAL) {
-      expect(linked.has(document.path), document.path).toBe(true);
-    }
   });
 
   it('never publishes an unfilled placeholder or an unresolved internal path', () => {

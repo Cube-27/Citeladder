@@ -1,14 +1,7 @@
 import { POSTS } from '@/lib/marketing-content/blog';
 import { COMPETITORS } from '@/lib/marketing-content/compare';
-import { AI_POLICY, COOKIE_POLICY, FOOTER_LEGAL_LINKS } from '@/lib/marketing-content/legal';
-import {
-  CANCELLATION_POLICY,
-  CONTACT_PAGE,
-  REFUND_POLICY,
-} from '@/lib/marketing-content/legal-billing';
-import { DATA_PROCESSING_AGREEMENT, SUBPROCESSORS } from '@/lib/marketing-content/legal-dpa';
-import { PRIVACY_POLICY } from '@/lib/marketing-content/legal-privacy';
-import { TERMS_OF_SERVICE } from '@/lib/marketing-content/legal-terms';
+import { CONTACT_PAGE } from '@/lib/marketing-content/legal-billing';
+import { LEGAL_DOCUMENTS } from '@/lib/marketing-content/legal-documents';
 import { PUBLISHED_PLATFORM } from '@/lib/marketing-content/nav';
 import { PAGES, type PageRecord } from '@/lib/marketing-content/pages';
 import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
@@ -38,20 +31,6 @@ const page = (
 
 const fromRecord = (record: PageRecord, changeFrequency: ChangeFrequency, priority: number) =>
   page(record.path, record.title, changeFrequency, priority, record.updated);
-
-const LEGAL_UPDATED = new Map(
-  [
-    TERMS_OF_SERVICE,
-    PRIVACY_POLICY,
-    REFUND_POLICY,
-    CANCELLATION_POLICY,
-    COOKIE_POLICY,
-    AI_POLICY,
-    DATA_PROCESSING_AGREEMENT,
-    SUBPROCESSORS,
-    CONTACT_PAGE,
-  ].map((document) => [document.path, document.updated]),
-);
 
 /** An index page changes whenever a page it lists does. */
 const latest = (dates: readonly (string | undefined)[]) =>
@@ -120,8 +99,14 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
     page(`/tools/${tool.slug}`, tool.title, 'monthly', 0.7, tool.updated),
   ),
   // Contact shares the legal footer row but is a page, not a policy.
-  ...FOOTER_LEGAL_LINKS.map((link) => {
-    const route = page(link.href, link.label, 'yearly', 0.3, LEGAL_UPDATED.get(link.href));
-    return link.href === '/contact' ? route : { ...route, kind: 'policy' as const };
+  ...LEGAL_DOCUMENTS.map((document) => {
+    const route = page(
+      document.path,
+      document.navLabel ?? document.title,
+      'yearly',
+      0.3,
+      document.updated,
+    );
+    return document === CONTACT_PAGE ? route : { ...route, kind: 'policy' as const };
   }),
 ];

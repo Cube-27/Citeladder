@@ -14,6 +14,12 @@ type ResearchMetadata = {
   related_guides?: readonly string[];
   /** Social card image; guides without one use the site image. */
   image?: string;
+  /** The guide's product section: a heading, the guide's own copy and the module it leads to. */
+  product?: Readonly<{
+    heading: string;
+    href: '/platform/cited-sources' | '/platform/ai-visibility';
+    body: string;
+  }>;
 };
 
 export type ResearchArticle = { frontmatter: ResearchMetadata; markdown: string };

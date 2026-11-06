@@ -16,6 +16,10 @@ content_type: 'product-led landing page'
 reviewed_at: '2026-10-20'
 related_guides: ['/track-brand-mentions-chatgpt', '/best-ai-visibility-platforms']
 publication_status: 'editorial_review'
+product:
+  heading: 'Track brand position with the answer in view'
+  href: '/platform/ai-visibility'
+  body: 'CiteLadder AI Visibility repeats each buyer prompt across ChatGPT, Claude, Gemini and Google AI Overviews, records where your brand and competitors appear, and keeps every position tied to the stored answer and its cited sources.'
 ---
 
 ## What is an LLM rank tracker?

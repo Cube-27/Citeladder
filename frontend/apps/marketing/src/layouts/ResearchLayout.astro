@@ -2,9 +2,9 @@
 /**
  * A research guide (the WebResearchGuide template): ContentArticle with a
  * Toc, the ArticleHeader with the review date, the guide's Markdown in
- * Prose with its FAQ as a FaqList, an optional product section (a heading,
- * the page's own copy in the default slot, a ContentFigure with the module's
- * screen and a link to it), then the sources and More guides.
+ * Prose with its FAQ as a FaqList, an optional product section from the
+ * guide's frontmatter (a heading, the guide's own copy, a ContentFigure with
+ * the module's screen and a link to it), then the sources and More guides.
  */
 import ArticleHeader from '@/components/content/ArticleHeader.astro';
 import Prose from '@/components/content/Prose.astro';
@@ -39,11 +39,10 @@ const PRODUCT_SCREENS = {
 
 interface Props {
   article: ResearchArticle;
-  /** The guide's product section; its copy is the default slot. */
-  product?: Readonly<{ heading: string; href: keyof typeof PRODUCT_SCREENS }>;
 }
-const { article, product } = Astro.props;
+const { article } = Astro.props;
 const meta = article.frontmatter;
+const product = meta.product;
 const parent = researchParent(meta.slug);
 const parts = researchParts(article.markdown);
 const breadcrumb = breadcrumbJsonLd([
@@ -117,9 +116,7 @@ const more = moreGuides(article);
           product && Screen && (
             <>
               <h2 id={headingId(product.heading)}>{product.heading}</h2>
-              <p>
-                <slot />
-              </p>
+              <p>{product.body}</p>
               <ContentFigure>
                 <ProductFrame label={PRODUCT_SCREENS[product.href].label}>
                   <Screen />

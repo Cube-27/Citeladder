@@ -13,7 +13,8 @@ import Prose from '@/components/content/Prose.astro';
 import { Breadcrumbs } from '@/components/marketing/chrome/breadcrumbs';
 import { Linkify } from '@/components/marketing/primitives/linkify';
 import { PageSection } from '@/components/marketing/sections/page-section';
-import { FOOTER_LEGAL_LINKS, type LegalDocument } from '@/lib/marketing-content/legal';
+import type { LegalDocument } from '@/lib/marketing-content/legal';
+import { FOOTER_LEGAL_LINKS } from '@/lib/marketing-content/legal-documents';
 import MarketingLayout from './MarketingLayout.astro';
 
 interface Props {

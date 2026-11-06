@@ -49,43 +49,22 @@ type LegalSection = {
   };
 };
 
-type LegalSlug =
-  | 'terms'
-  | 'privacy'
-  | 'refund-policy'
-  | 'cancellation-policy'
-  | 'cookies'
-  | 'ai-policy'
-  | 'dpa'
-  | 'subprocessors'
-  | 'contact';
-
-/** A policy's page record (see PageRecord) and its content. */
+/**
+ * A policy's page record (see PageRecord) and its content. The published
+ * list, in footer order, is `LEGAL_DOCUMENTS` (legal-documents.ts).
+ */
 export type LegalDocument = {
-  path: `/${LegalSlug}`;
+  path: `/${string}`;
   /** The browser title, such as "Terms of Service · CiteLadder". */
   metaTitle: string;
   /** When the document was last revised (not a legal effective date): its "Last updated" line and sitemap <lastmod>. */
   updated: string;
   title: string;
+  /** The name in the footer and the policies rail, when it is not the title. */
+  navLabel?: string;
   description: string;
   sections: readonly LegalSection[];
 };
-
-export type LegalLink = { label: string; href: `/${LegalSlug}` };
-
-/** Every published policy, in footer order. Each has its own marketing route. */
-export const FOOTER_LEGAL_LINKS: readonly LegalLink[] = [
-  { label: 'Terms of Service', href: '/terms' },
-  { label: 'Privacy Policy', href: '/privacy' },
-  { label: 'Refund Policy', href: '/refund-policy' },
-  { label: 'Cancellation Policy', href: '/cancellation-policy' },
-  { label: 'Cookies', href: '/cookies' },
-  { label: 'AI Policy', href: '/ai-policy' },
-  { label: 'Data Processing Agreement', href: '/dpa' },
-  { label: 'Subprocessors', href: '/subprocessors' },
-  { label: 'Contact', href: '/contact' },
-];
 
 const contact = PARENT_COMPANY.email;
 
@@ -94,6 +73,7 @@ export const COOKIE_POLICY: LegalDocument = {
   metaTitle: 'Cookie Policy · CiteLadder',
   updated: '2026-10-12',
   title: 'Cookie Policy',
+  navLabel: 'Cookies',
   description: 'How CiteLadder uses cookies and similar technologies on the website and platform.',
   sections: [
     {
