@@ -76,7 +76,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P18 | Internal cost view, spend breaker, output caps | K1, K2, K3 | P01, P10 | mig? | merged | [#645](https://github.com/Cube-27/Citeladder/pull/645) | Migration 0012. Values confirmed by owner (OD8, B68) |
 | P19 | Engine surfaces II: surface adapters, audit side effects out of analysis | E4, E5, X8 | P05, P15 | | merged | [#641](https://github.com/Cube-27/Citeladder/pull/641) | No migration. Found the `audit_tasks.error_code` length bug, now P24 |
 | P20 | Settings resolve once; named abuse budgets | G1, G2, G3 | P01, P15 | wide | merged | [#650](https://github.com/Cube-27/Citeladder/pull/650) | No migration. Follow-up in PR body: deep readers without config in scope still read `process.env` |
-| P21 | Screen sweep: failure renderer, typed blobs, form limits, non-null project, recovery actions | F8, F9, F10, R4, Z4 | P07, P12, P13, P16 | | in review | [#651](https://github.com/Cube-27/Citeladder/pull/651) | Split (~4,440 lines): P21-a = F8, F9, F10 (#651); P21-b = R4, Z4 on branch `claude/p21-b-r4-z4`, opens after P21-a merges |
+| P21 | Screen sweep: failure renderer, typed blobs, form limits, non-null project, recovery actions | F8, F9, F10, R4, Z4 | P07, P12, P13, P16 | | in review | [#651](https://github.com/Cube-27/Citeladder/pull/651), [#652](https://github.com/Cube-27/Citeladder/pull/652) | Split (~4,440 lines): P21-a = F8, F9, F10 (#651, merged); P21-b = R4, Z4 (#652) |
 | P22 | AI Traffic and integration owners; error logging | X4, X5, Z1, Z2, Z3 | P15, P16, P19 | | merged | [#647](https://github.com/Cube-27/Citeladder/pull/647) | No migration |
 | P23 | AI referral retention matches the Performance window | X9 | P08 | | merged | [#636](https://github.com/Cube-27/Citeladder/pull/636) | Owner decision OD7 |
 | P24 | Audit error codes fit their column | DB3 | P19 | mig | merged | [#648](https://github.com/Cube-27/Citeladder/pull/648) | Migration 0013. Found by P19 |
@@ -175,7 +175,7 @@ order the PR tracker already respects.
 | R1 | Delete kit components with no production consumer | — | `frontend/components/ui/`, `docs/frontend-architecture.md`, `docs/decisions.md` | | done | 79b3722 | |
 | R2 | App route manifest drives nav, titles, scope and router | R1 | `frontend/lib/navigation/`, `frontend/components/layout/`, `frontend/apps/app/src/router.tsx`, `frontend/lib/project/bootstrap.ts` | | done | d36f893 | |
 | R3 | Router imports screens directly; pass-through route files deleted | R2 | `frontend/apps/app/src/product-routes-*.tsx`, `*-route-content.tsx`, `pricing-route.tsx` | | done | 41ae02d | |
-| R4 | Gate hands project screens a non-null project scope | R2, F6 | `frontend/components/layout/onboarding-gate.tsx`, project screens | | todo | | |
+| R4 | Gate hands project screens a non-null project scope | R2, F6 | `frontend/components/layout/onboarding-gate.tsx`, project screens | | done | 0e8eb51 | A few shared components stay nullable (listed in #652) |
 | R5 | Organism moves remove `ui`↔`layout`↔`agent` import cycles | R3 | `frontend/components/{ui,layout,agent}` | | done | 87d6e7b | |
 | R6 | App Worker reads reserved paths from the route-ownership contract | — | `frontend/apps/app/worker.ts` | | done | 5657ada | |
 | R7 | Chart height is a role, not a pixel prop | R1 | `frontend/components/ui/trend-chart.tsx`, chart callers | | done | dc2605e | |
@@ -201,7 +201,7 @@ order the PR tracker already respects.
 | Z1 | Lane failure and lease-loss logs in the queue owner | Q7 | `queue/`, `workers/start-runner.ts` | | done | 489c976 | |
 | Z2 | Silent-catch triage: Site Health | SH4 | `site-health/` | | done | 80961f8 | |
 | Z3 | Silent-catch triage: remaining backend areas | Z1, X5, E5 | `crawl-logs`, `commerce`, `search-intelligence`, `projects`, `providers`, `integrations`, `auth`, `audits`, `web-evidence`, `source-pages` | | done | 31e496b | providers, integrations: no change needed |
-| Z4 | Recovery actions on job-backed screens | F8 | job-backed screens | | todo | | |
+| Z4 | Recovery actions on job-backed screens | F8 | job-backed screens | | done | 2d610d0 | |
 
 
 ## Work details
