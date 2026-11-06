@@ -25,7 +25,7 @@ export function once<T>(ctx: ReadContext, key: string, read: () => Promise<T>): 
 
 export const dayOf = (iso: string) => iso.slice(0, 10);
 
-export type SiteAnalysis = {
+type SiteAnalysis = {
   id: string;
   normalized_facts: unknown;
   source_evaluation_ids: unknown;

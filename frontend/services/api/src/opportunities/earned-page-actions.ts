@@ -8,7 +8,7 @@ import { earnedTargetKey } from '../analysis/opportunities/targets.ts';
 import type { Database } from '../db/database.ts';
 import type { Scope } from './sources.ts';
 
-export type EarnedPageAction = { opportunity_id: string; action_id: string | null };
+type EarnedPageAction = { opportunity_id: string; action_id: string | null };
 
 /**
  * The page's live earned Opportunity, highest priority first should there be

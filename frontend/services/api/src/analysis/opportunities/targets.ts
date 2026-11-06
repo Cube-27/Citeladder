@@ -25,7 +25,7 @@ export type TargetRef =
   /** A search competitors rank for; `url` is the owned page that covers it, if any. */
   | { kind: 'search_gap'; terms: string; keyword: string; url: string | null };
 
-export type TargetColumns = {
+type TargetColumns = {
   target_key: string;
   target_prompt_id: string | null;
   target_url: string | null;

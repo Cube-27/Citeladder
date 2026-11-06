@@ -10,7 +10,7 @@ import { internalLinkSchema } from './site-health/internal-links.ts';
 const json = z.record(z.string(), z.unknown());
 
 /** A tracked prompt whose answers omit the brand or never cite an owned page. */
-export const promptGapEvidenceSchema = z.object({
+const promptGapEvidenceSchema = z.object({
   prompt_text: z.string(),
   prompt_intent: z.string(),
   buyer_stage: z.string(),
@@ -35,7 +35,7 @@ export const promptGapEvidenceSchema = z.object({
 });
 
 /** A prompt decline the audit confirmed across runs and engines. */
-export const promptDeclineEvidenceSchema = z.object({
+const promptDeclineEvidenceSchema = z.object({
   prompt: z.string(),
   rolling_four: z.unknown(),
   immediate_delta: z.number().nullable(),
@@ -48,7 +48,7 @@ export const promptDeclineEvidenceSchema = z.object({
 });
 
 /** A cited third-party page competitors are listed on and the brand is not. */
-export const earnedListingEvidenceSchema = z.object({
+const earnedListingEvidenceSchema = z.object({
   content_handoff: z.looseObject({
     url_hash: z.string(),
     affected_prompts: z.array(z.object({ prompt_id: z.string(), text: z.string() })),
@@ -60,7 +60,7 @@ export const earnedListingEvidenceSchema = z.object({
 });
 
 /** A Site Health defect on one owned page. */
-export const siteIssueEvidenceSchema = z.object({
+const siteIssueEvidenceSchema = z.object({
   issue_rule_id: z.string(),
   issue_severity: z.string(),
   category: z.string(),
@@ -73,7 +73,7 @@ export const siteIssueEvidenceSchema = z.object({
 });
 
 /** Suggested contextual links from one owned page, from one link run. */
-export const contextualLinksEvidenceSchema = z.object({
+const contextualLinksEvidenceSchema = z.object({
   site_url_id: z.string(),
   crawl_id: z.string(),
   internal_link_run_id: z.string(),
@@ -85,7 +85,7 @@ export const contextualLinksEvidenceSchema = z.object({
 });
 
 /** One field of an owned page that changed between two crawls. */
-export const siteChangeEvidenceSchema = z.object({
+const siteChangeEvidenceSchema = z.object({
   change_snapshot_id: z.string(),
   change_observation_id: z.string(),
   crawl_a_id: z.string().nullable(),
@@ -99,7 +99,7 @@ export const siteChangeEvidenceSchema = z.object({
 });
 
 /** A promoted Search Console signal on a page or query. */
-export const demandSignalEvidenceSchema = z.object({
+const demandSignalEvidenceSchema = z.object({
   demand_snapshot_id: z.string(),
   demand_signal_id: z.string(),
   signal_type: z.string(),
@@ -109,19 +109,19 @@ export const demandSignalEvidenceSchema = z.object({
   query_relevance: z.unknown(),
 });
 
-export const productNotMentionedEvidenceSchema = z.object({
+const productNotMentionedEvidenceSchema = z.object({
   product_id: z.string(),
   product_visibility: z.number(),
   audit_id: z.string(),
 });
 
-export const catalogFieldsEvidenceSchema = z.object({
+const catalogFieldsEvidenceSchema = z.object({
   product_id: z.string(),
   product_name: z.unknown(),
   missing_fields: z.array(z.string()),
 });
 
-export const citedAlternativesEvidenceSchema = z.object({
+const citedAlternativesEvidenceSchema = z.object({
   category_id: z.string(),
   third_party_citation_count: z.number().int(),
   product_visibility: z.number(),

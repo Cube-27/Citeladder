@@ -48,7 +48,7 @@ export type Sources = {
   demand: DemandSource | null;
   gaps: SearchGapSource | null;
 };
-export type Found = {
+type Found = {
   hits: DetectorHit[];
   /** Evidence a load cap left out, carried onto the snapshot. */
   limitations: string[];
@@ -183,7 +183,7 @@ const searchGaps: Family = {
 };
 
 /** In hit order: the refresh concatenates each family's hits as listed. */
-export const FAMILIES: readonly Family[] = [demand, visibility, commerce, site, searchGaps];
+const FAMILIES: readonly Family[] = [demand, visibility, commerce, site, searchGaps];
 
 const EMPTY_IDENTITY: SourceIdentity = {
   audit_id: null,

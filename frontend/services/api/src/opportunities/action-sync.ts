@@ -26,7 +26,7 @@ import type { Scope } from './sources.ts';
 const a = policy.opportunity.actions;
 
 /** A new row with the target its producer named. */
-export type NewMember = NewOpportunity & { target: TargetRef };
+type NewMember = NewOpportunity & { target: TargetRef };
 
 /** One new row as the grouping reads it. */
 function actionMember(row: NewMember): ActionMember {
