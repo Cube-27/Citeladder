@@ -482,8 +482,12 @@ Manual HTTP launch uses customer credentials; funded admission is reserved for
 trusted billing/trial callers. Cancelled funded runs release unused task credits
 but retain their admission quote against the monthly funded cost ceiling.
 
-The [audit worker](../frontend/services/api/src/workers/audit-worker.ts) claims PostgreSQL
-tasks with leases, commits before I/O and records immutable response artifacts,
+The [audit worker](../frontend/services/api/src/audits/worker.ts) claims PostgreSQL
+tasks with leases, heartbeats them and holds provider capacity; one
+[surface adapter](../frontend/services/api/src/audits/surfaces/adapter.ts) per route
+`surface_kind` (`llm`, `search_ai`, `llm_scraper`) owns the frozen request, dispatch
+phase, recovery deadline, capacity pool and persistence. Each phase commits before I/O
+and records immutable response artifacts,
 attempts and citation evidence. Cancellation, retries and reconciliation use
 the existing audit/task state owners; failed answers remain failures, not
 negative brand observations. An API exchange with no answer text fails its
