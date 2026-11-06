@@ -1228,6 +1228,8 @@ export interface CommerceRecommendationObservations {
   product_id: string | null;
   project_id: string;
   rank: number | null;
+  resolver_outcome: string | null;
+  resolver_template_version: string | null;
   surface_kind: string;
   target_id: string;
   target_kind: string;
