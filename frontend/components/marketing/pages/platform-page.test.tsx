@@ -63,7 +63,8 @@ it('renders the hero screen alone and the highlights, steps, questions and FAQ a
   expect(
     screen.getByRole('img', { name: 'AI crawler access to acme.com from robots.txt' }),
   ).toBeInTheDocument();
-  expect(screen.getByRole('heading', { level: 2, name: 'Page-level evidence' })).toBeVisible();
+  // A highlight is a card title (h3) under its section's h2, never a second h2.
+  expect(screen.getByRole('heading', { level: 3, name: 'Page-level evidence' })).toBeVisible();
   const steps = screen.getByRole('region', { name: 'How it works' });
   expect(
     within(steps)
@@ -95,7 +96,7 @@ it('leads the MCP page with the connect strip, then its steps, and closes it wit
     'https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=CiteLadder&connectorUrl=https%3A%2F%2Fapi.citeladder.com%2Fmcp',
   );
   // The connection steps follow the hero as the page's highlights, beside no hero tile.
-  const step = screen.getByRole('heading', { level: 2, name: '2. Sign in and approve' });
+  const step = screen.getByRole('heading', { level: 3, name: '2. Sign in and approve' });
   expect(hero).not.toContainElement(step);
   expect(within(hero).queryByRole('link', { name: 'Book a demo' })).not.toBeInTheDocument();
   expect(within(closing).getByRole('link', { name: 'Read the MCP docs' })).toHaveAttribute(

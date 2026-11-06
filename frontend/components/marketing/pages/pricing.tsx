@@ -1,4 +1,6 @@
 import { TextLink } from '@/components/ui/text-link';
+import { appHref } from '@/lib/config/app-link';
+import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { DEMO_CTA } from '@/lib/marketing-content/nav';
 
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
@@ -40,10 +42,49 @@ export const PRICING_FAQS = [
   },
 ] as const;
 
-export function PricingHero() {
+/**
+ * The pricing opening leads with the trial (D36): what it includes, that a
+ * paid plan is by contact, and both ways in. The limits restate the trial
+ * answer above. Should self-serve checkout open, the lead stops saying it is
+ * closed and points at the plans below.
+ */
+export function PricingHero({ checkoutOpen = false }: Readonly<{ checkoutOpen?: boolean }>) {
+  const trial =
+    'Seven days of AI visibility tracking on ChatGPT for one project, with 20 prompts and 20 monitored URLs.';
   return (
     <PageHero
       crumbs={[{ label: 'Home', href: '/' }, { label: 'Pricing' }]}
+      title="Start with a seven-day free trial"
+      lead={
+        checkoutOpen
+          ? `${trial} Paid plans are below, or contact us.`
+          : `${trial} Paid checkout is not open yet: contact us for a paid plan.`
+      }
+      actions={
+        <>
+          {selfServeSignupOpen() ? (
+            <ButtonLink href={appHref('/register')} size="marketing">
+              Start free trial
+            </ButtonLink>
+          ) : null}
+          <ButtonLink
+            href="/contact"
+            variant={selfServeSignupOpen() ? 'soft' : 'primary'}
+            size="marketing"
+          >
+            Contact sales
+          </ButtonLink>
+        </>
+      }
+    />
+  );
+}
+
+/** Provider keys: the no-markup point and its explanation, below the plans. */
+export function PricingKeys() {
+  return (
+    <PageSection
+      id="your-keys"
       title="No markup on model calls made with your keys"
       lead="Use your own AI provider keys and pay their rates directly, with no markup from us."
     />

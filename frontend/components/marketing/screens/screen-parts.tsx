@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button, type ButtonVariant } from '@/components/ui/button';
-import { Card, CardEyebrow, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardEyebrow, CardHeader } from '@/components/ui/card';
 import { Delta } from '@/components/ui/delta';
 import { EngineMark, type EngineKey } from '@/components/ui/engine-mark';
 import { Icon } from '@/components/ui/icon';
@@ -139,6 +139,35 @@ export function ScreenStat({
   );
 }
 
+/**
+ * A drawn card's title. The app's CardTitle is an h3, but a picture of the
+ * app holds no headings of the page around it, so the screens draw the
+ * title as a paragraph (D36).
+ */
+function ScreenCardTitle({ children }: Readonly<{ children: ReactNode }>) {
+  return <p className="cl-screen-card-title">{children}</p>;
+}
+
+/** The app's ChartCard, drawn: title and controls, the chart, then its source line. */
+export function ScreenChartCard({
+  title,
+  controls,
+  footnote,
+  children,
+}: Readonly<{ title: string; controls?: ReactNode; footnote?: string; children: ReactNode }>) {
+  return (
+    <Card>
+      <CardHeader actions={controls}>
+        <ScreenCardTitle>{title}</ScreenCardTitle>
+      </CardHeader>
+      <div className="text-ink grid min-w-0 gap-y-6">
+        <div className="min-w-0">{children}</div>
+        {footnote && <ScreenNote>{footnote}</ScreenNote>}
+      </div>
+    </Card>
+  );
+}
+
 export function ScreenCard({
   eyebrow,
   title,
@@ -158,7 +187,7 @@ export function ScreenCard({
       {title && (
         <CardHeader actions={action}>
           {eyebrow && <CardEyebrow>{eyebrow}</CardEyebrow>}
-          <CardTitle>{title}</CardTitle>
+          <ScreenCardTitle>{title}</ScreenCardTitle>
           {meta && <ScreenNote>{meta}</ScreenNote>}
         </CardHeader>
       )}
@@ -250,7 +279,7 @@ export function ScreenTableCard({
     <Card>
       <CardHeader actions={action}>
         {eyebrow && <CardEyebrow>{eyebrow}</CardEyebrow>}
-        <CardTitle>{title}</CardTitle>
+        <ScreenCardTitle>{title}</ScreenCardTitle>
         {meta && <ScreenNote>{meta}</ScreenNote>}
       </CardHeader>
       {children}

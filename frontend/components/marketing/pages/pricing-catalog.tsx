@@ -302,7 +302,7 @@ function PricingTrial({
       ) : (
         <PageHighlight
           as="h2"
-          title="Start with a seven-day trial"
+          title="What the trial includes"
           body={`See how ChatGPT answers your buyers' questions before you commit. Paid checkout is not open; contact us to continue after the trial. ${TRIAL_EXCLUSIONS}`}
           stats={TRIAL_LIMITS}
           action={<TrialButton appOrigin={appOrigin} primary />}

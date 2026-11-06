@@ -8,7 +8,7 @@ export function mountCookieBannerFixture(): () => void {
   document.body.insertAdjacentHTML(
     'beforeend',
     `<section hidden aria-label="Cookie consent" tabindex="-1" data-cookie-banner>
-      <h2>Cookie settings</h2>
+      <p>Cookie settings</p>
       <button type="button" data-consent-choice="rejected"><span>Reject</span></button>
       <button type="button" data-consent-choice="accepted"><span>Accept</span></button>
     </section>`,

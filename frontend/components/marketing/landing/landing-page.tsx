@@ -46,7 +46,7 @@ function Hero() {
         </AnnouncementPill>
       }
       title="Get your business recommended by AI"
-      lead="CiteLadder gives you the tools to grow your AI visibility, traffic and revenue."
+      lead="CiteLadder helps marketing and SEO teams grow their AI visibility, traffic and revenue."
       actions={<PrimaryActions />}
       note={
         selfServeSignupOpen() ? '7-day free trial on ChatGPT answers. Trial limits apply.' : null
@@ -115,6 +115,7 @@ function Loop() {
           content: (
             <FeatureCard
               href={tile.href}
+              linkLabel={`Explore ${platformLabel(tile.href) ?? tile.label}`}
               title={tile.title}
               body={tile.body}
               media={<ProductFrame label={tile.label}>{tile.screen}</ProductFrame>}
@@ -127,7 +128,6 @@ function Loop() {
 }
 
 type Pillar = Readonly<{
-  stage: string;
   title: string;
   body: string;
   points: readonly string[];
@@ -139,7 +139,6 @@ type Pillar = Readonly<{
 
 const PILLARS: readonly Pillar[] = [
   {
-    stage: 'Measure',
     title: 'See how often AI recommends you and who it cites',
     body: 'Each score opens the saved answer: engine, prompt, date, your position and its sources.',
     points: [
@@ -157,7 +156,6 @@ const PILLARS: readonly Pillar[] = [
     screen: <ScreenAnswer />,
   },
   {
-    stage: 'Diagnose · Keyword Research',
     title: 'Compare your keywords and backlinks with competitors',
     body: 'Find keywords competitors rank for that you miss, and sites that link to them but not to you.',
     points: [
@@ -171,7 +169,6 @@ const PILLARS: readonly Pillar[] = [
     screen: <ScreenKeywords />,
   },
   {
-    stage: 'Diagnose · Site Health and Search Demand',
     title: 'Find site issues and queries close to page one',
     body: 'Site Health lists issues per page and which AI crawlers robots.txt lets in. Search Console adds queries at an average position of 4 to 15.',
     points: [
@@ -184,7 +181,6 @@ const PILLARS: readonly Pillar[] = [
     screen: <ScreenCrawlerAccess />,
   },
   {
-    stage: 'Improve',
     title: 'Draft the fixes, then measure again',
     body: 'The Agent writes briefs, page edits and outreach plans from your saved evidence. Your own assistant can read it over MCP.',
     points: [
@@ -204,7 +200,6 @@ function Pillars() {
       {PILLARS.map((pillar, index) => (
         <FeatureSplit
           key={pillar.title}
-          eyebrow={pillar.stage}
           title={pillar.title}
           body={pillar.body}
           points={pillar.points}
@@ -281,7 +276,12 @@ function Teams() {
       <ul className={`cl-tiles cl-cols-${columnsFor(solutions.length)}`}>
         {solutions.map((item) => (
           <li key={item.href}>
-            <FeatureCard href={item.href} title={item.title} body={item.desc} />
+            <FeatureCard
+              href={item.href}
+              linkLabel={`Explore ${item.title}`}
+              title={item.title}
+              body={item.desc}
+            />
           </li>
         ))}
       </ul>

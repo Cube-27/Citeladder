@@ -18,7 +18,6 @@ export function NotFoundPage({ links }: Readonly<{ links: readonly Link[] }>) {
     <main id="main">
       <PageHero
         align="left"
-        eyebrow="404"
         title="We couldn't find that page"
         lead="It may have moved, or the link may be wrong. Try one of these pages instead."
         actions={

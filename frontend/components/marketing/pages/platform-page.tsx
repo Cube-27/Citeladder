@@ -157,7 +157,6 @@ function FeatureCards({ features }: Readonly<{ features: readonly Feature[] }>) 
         span: spans[index] ?? 6,
         content: (
           <FeatureCard
-            as="h2"
             size="lg"
             wide={wide}
             title={feature.title}
@@ -220,7 +219,11 @@ function Features({ page }: Readonly<{ page: PlatformPage }>) {
             );
           case 'cards':
             return (
-              <PageSection key={group.features[0]?.title} label={group.features[0]?.title}>
+              <PageSection
+                key={group.features[0]?.title}
+                label={group.features[0]?.title}
+                labelHeading
+              >
                 <FeatureCards features={group.features} />
               </PageSection>
             );
@@ -296,11 +299,11 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
         <EngineStrip />
       </PageSection>
 
-      <PageSection spacing="compact" label={`${label} highlights`}>
+      <PageSection spacing="compact" label={`${label} highlights`} labelHeading>
         <ul className={`cl-tiles cl-cols-${columnsFor(page.highlights.length)}`}>
           {page.highlights.map((highlight) => (
             <li key={highlight.title}>
-              <FeatureCard as="h2" title={highlight.title} body={highlight.body} />
+              <FeatureCard title={highlight.title} body={highlight.body} />
             </li>
           ))}
         </ul>

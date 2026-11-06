@@ -33,6 +33,16 @@ describe('LandingPage', () => {
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });
 
+  it('never skips a heading level: the app picture holds no headings of the page', () => {
+    render(<LandingPage />);
+
+    const levels = screen.getAllByRole('heading').map((heading) => Number(heading.tagName[1]));
+    expect(levels[0]).toBe(1);
+    expect(levels[1]).toBe(2);
+    const skips = levels.filter((level, index) => index > 0 && level - levels[index - 1]! > 1);
+    expect(skips).toEqual([]);
+  });
+
   it('links each pillar module by its published name', () => {
     render(<LandingPage />);
 

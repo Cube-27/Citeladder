@@ -88,6 +88,7 @@ export function CompareIndex() {
                 <FeatureCard
                   size="lg"
                   href={`/compare/${competitor.slug}`}
+                  linkLabel={`Compare with ${competitor.name}`}
                   title={`CiteLadder vs ${competitor.name}`}
                   body={competitor.tagline}
                 />

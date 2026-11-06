@@ -49,7 +49,7 @@ describe('chrome parts', () => {
 
 describe('section headings', () => {
   it('heads a section at the level asked for, with its lead', () => {
-    render(<SectionHeader as="h3" eyebrow="How it works" title="Three steps" lead="Start fast" />);
+    render(<SectionHeader as="h3" title="Three steps" lead="Start fast" />);
     expect(screen.getByRole('heading', { level: 3, name: 'Three steps' })).toBeInTheDocument();
     expect(screen.getByText('Start fast')).toBeInTheDocument();
   });
@@ -72,6 +72,21 @@ describe('section headings', () => {
     );
     expect(screen.queryByRole('region', { name: 'ignored' })).toBeNull();
     expect(screen.getByRole('heading', { level: 2, name: 'Questions' })).toBeInTheDocument();
+  });
+
+  it('gives a label-only section an h2 when its cards are h3, so headings never skip a level', () => {
+    render(
+      <PageSection label="AI Visibility highlights" labelHeading>
+        <FeatureCard title="Prompts sorted by buyer stage" />
+      </PageSection>,
+    );
+    const heading = screen.getByRole('heading', { level: 2, name: 'AI Visibility highlights' });
+    expect(screen.getByRole('region', { name: 'AI Visibility highlights' })).toContainElement(
+      heading,
+    );
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'Prompts sorted by buyer stage' }),
+    ).toBeInTheDocument();
   });
 
   it('opens an inner page with one H1 under its breadcrumbs', () => {
@@ -108,10 +123,17 @@ describe('section headings', () => {
 });
 
 describe('feature sections', () => {
-  it('makes a linked feature card one link named by its title and arrow line', () => {
-    render(<FeatureCard href="/platform/site-health" title="Site Health" body="Find issues" />);
+  it('makes a linked feature card one link named by its title and destination line', () => {
+    render(
+      <FeatureCard
+        href="/platform/site-health"
+        linkLabel="Explore Site Health"
+        title="Site Health"
+        body="Find issues"
+      />,
+    );
     expect(
-      screen.getByRole('link', { name: 'Site Health Find issues Learn more' }),
+      screen.getByRole('link', { name: 'Site Health Find issues Explore Site Health' }),
     ).toHaveAttribute('href', '/platform/site-health');
   });
 
