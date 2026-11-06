@@ -173,7 +173,7 @@ function scopeFilter(scope: ClaimScope): ClaimFilter {
 export function claimStatement(
   db: Database,
   lane: LaneDescriptor,
-  options: ClaimOptions & { now: Date; limit: number },
+  options: ClaimOptions & { now: Date | RawBuilder<Date>; limit: number },
 ) {
   const { now, limit, kinds } = options;
   const { table, ready } = lane;
@@ -299,6 +299,8 @@ export class TaskQueue<T extends LaneTable = 'analytics_tasks'> {
   /** The row's lease length: its kind's override, else the lane default. */
   readonly #leaseTtlSeconds: RawBuilder<number>;
   readonly #now: () => Date;
+  /** What a claim compares `available_at` with: the pinned clock, else the database clock that recovery and retries also stamp. */
+  readonly #claimClock: () => Date | RawBuilder<Date>;
 
   constructor(db: Database, lane: LaneDescriptor<T>, options: LeaseOptions) {
     if (!Number.isFinite(options.leaseTtlSeconds) || options.leaseTtlSeconds <= 0)
@@ -314,6 +316,7 @@ export class TaskQueue<T extends LaneTable = 'analytics_tasks'> {
         )} else ${options.leaseTtlSeconds}::float8 end)`
       : sql<number>`${options.leaseTtlSeconds}`;
     this.#now = options.now ?? (() => new Date());
+    this.#claimClock = options.now ?? (() => sql<Date>`clock_timestamp()`);
   }
 
   /**
@@ -347,7 +350,11 @@ export class TaskQueue<T extends LaneTable = 'analytics_tasks'> {
     const now = this.#now();
     const table = this.#table;
     return this.#db.transaction().execute(async (trx) => {
-      const locked = await claimStatement(trx, this.#lane, { ...options, now, limit }).execute();
+      const locked = await claimStatement(trx, this.#lane, {
+        ...options,
+        now: this.#claimClock(),
+        limit,
+      }).execute();
       if (locked.length === 0) return [];
       const claimed = await queueDatabase(trx)
         .updateTable(table)
