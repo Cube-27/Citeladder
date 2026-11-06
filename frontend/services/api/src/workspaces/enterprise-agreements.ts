@@ -6,7 +6,7 @@ import type { Database } from '../db/database.ts';
 import { operatorTransaction } from '../db/operator-transaction.ts';
 import { requirePlatformAdmin } from '../auth/operators.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
-import { WorkspaceContext } from '../auth/workspace.ts';
+import { memberCan } from '../auth/workspace.ts';
 import { parseUuid } from '../http/uuid.ts';
 
 const uuidSchema = z.string().trim().transform(parseUuid).pipe(z.string());
@@ -48,19 +48,9 @@ export function recordAgreementReference(
       .where('is_system', '=', false)
       .forUpdate()
       .executeTakeFirst();
-    const member = await trx
-      .selectFrom('workspace_members')
-      .innerJoin('users', 'users.id', 'workspace_members.user_id')
-      .select('workspace_members.role')
-      .where('workspace_id', '=', payload.workspace_id)
-      .where('user_id', '=', payload.signatory_id)
-      .where('users.is_active', '=', true)
-      .forUpdate()
-      .executeTakeFirst();
     if (
       !workspace ||
-      !member ||
-      !new WorkspaceContext(workspace.id, member.role).allows('manage_members')
+      !(await memberCan(trx, workspace.id, payload.signatory_id, 'manage_members', 'update'))
     )
       throw new Error('An active authorized signatory in the target workspace is required');
     const values = {

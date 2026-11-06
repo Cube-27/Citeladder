@@ -16,7 +16,7 @@ import {
 import { holdsWrite, mcpPolicy } from './config.ts';
 import { workspaceAccess } from '../entitlements/access.ts';
 import { requiresEmailVerification } from '../auth/eligibility.ts';
-import { rolesWith } from '../auth/workspace.ts';
+import { findWorkspaceMember, memberCan, rolesWith } from '../auth/workspace.ts';
 import { appLink, recordPath } from './links.ts';
 import { containsPattern } from '../db/like.ts';
 
@@ -53,18 +53,8 @@ async function liveWorkspaceIds(db: Database, principal: EvidencePrincipal): Pro
     return ids.filter((_, index) => ['active', 'trial_active'].includes(statuses[index]!.status));
   };
   if ('kind' in principal) {
-    const member = await db
-      .selectFrom('workspace_members as m')
-      .innerJoin('workspaces as w', 'w.id', 'm.workspace_id')
-      .innerJoin('users as u', 'u.id', 'm.user_id')
-      .select('m.workspace_id')
-      .where('m.user_id', '=', principal.userId)
-      .where('m.workspace_id', '=', principal.workspaceId)
-      .where('m.role', 'in', rolesWith('read'))
-      .where('w.is_system', '=', false)
-      .where('u.is_active', '=', true)
-      .executeTakeFirst();
-    return accessible(member ? [member.workspace_id] : []);
+    const readable = await memberCan(db, principal.workspaceId, principal.userId, 'read');
+    return accessible(readable ? [principal.workspaceId] : []);
   }
   const rows = await db
     .selectFrom('workspace_members as member')
@@ -135,13 +125,7 @@ export async function writeActor(
     throw new McpInputError(
       'This connection can only read. Reconnect CiteLadder and tick Allow changes to make changes.',
     );
-  const member = await db
-    .selectFrom('workspace_members')
-    .select('role')
-    .where('user_id', '=', principal.userId)
-    .where('workspace_id', '=', project.workspace_id)
-    .forShare()
-    .executeTakeFirst();
+  const member = await findWorkspaceMember(db, principal.userId, project.workspace_id, 'share');
   if (!member) throw new McpInputError('Project was not found in this account');
   return {
     kind: 'mcp',

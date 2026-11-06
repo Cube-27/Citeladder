@@ -9,7 +9,7 @@ import { ApiError } from '../errors.ts';
 import { requireFlag } from '../entitlements/access.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import { requiresEmailVerification } from '../auth/eligibility.ts';
-import { roleAllows } from '../auth/workspace.ts';
+import { memberCan } from '../auth/workspace.ts';
 import {
   assignableRoleSchema,
   lockAuthorizedWorkspace,
@@ -233,15 +233,9 @@ export function acceptInvitation(db: Database, actorId: string, token: string) {
       refusal('invitation_invalid', 400);
     // A link is only as good as its issuer's standing when it is used.
     if (!invitation.accepted_at) {
-      const issuer = await trx
-        .selectFrom('workspace_members')
-        .innerJoin('users', 'users.id', 'workspace_members.user_id')
-        .select('workspace_members.role')
-        .where('workspace_members.workspace_id', '=', workspace.id)
-        .where('workspace_members.user_id', '=', invitation.invited_by_user_id)
-        .where('users.is_active', '=', true)
-        .executeTakeFirst();
-      if (!issuer || !roleAllows(issuer.role, 'manage_members')) refusal('invitation_invalid', 400);
+      const issuer = invitation.invited_by_user_id;
+      if (issuer === null || !(await memberCan(trx, workspace.id, issuer, 'manage_members')))
+        refusal('invitation_invalid', 400);
     }
     let member = await trx
       .selectFrom('workspace_members')
