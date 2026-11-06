@@ -19,7 +19,7 @@ import type { z } from 'zod';
 
 import type { Database } from '../db/database.ts';
 import { isUniqueViolation } from '../db/errors.ts';
-import { admitMarket } from '../entitlements/occupancy.ts';
+import { admit } from '../entitlements/occupancy.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import type { ProjectScope } from './brand-profile.ts';
@@ -77,7 +77,7 @@ export function addMarket(
       throw new ApiError(409, "This is already the project's default market", {
         code: 'market_exists',
       });
-    await admitMarket(trx, scope.workspaceId);
+    await admit(trx, scope.workspaceId, 'market_slots', 1);
     try {
       await trx
         .insertInto('project_markets')

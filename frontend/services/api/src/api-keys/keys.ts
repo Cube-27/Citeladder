@@ -25,7 +25,7 @@ import { policy } from '../config.ts';
 import { base62, base62Length } from '../crypto-text.ts';
 import type { Database } from '../db/database.ts';
 import type { WorkspaceEntitlements } from '../entitlements/access.ts';
-import { admitApiKey } from '../entitlements/occupancy.ts';
+import { admit } from '../entitlements/occupancy.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { ApiKeys } from '../generated/db-schema.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
@@ -132,7 +132,7 @@ export async function createApiKey(
       .executeTakeFirst();
     if (!live?.is_active || live.session_version !== creator.sessionVersion)
       throw new ApiError(401, 'Session no longer valid');
-    await admitApiKey(trx, workspaceId, now);
+    await admit(trx, workspaceId, 'api_keys', 1, now);
     if (projectIds !== null) {
       const owned = await trx
         .selectFrom('projects')

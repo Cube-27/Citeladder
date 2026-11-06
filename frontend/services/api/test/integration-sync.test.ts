@@ -9,7 +9,7 @@ import {
 import { createApp } from '../src/app.ts';
 import { integrationSettings, integrationPolicy } from '../src/integrations/config.ts';
 import { enqueueSyncRun, enqueueHistoryBackfill } from '../src/integrations/sync.ts';
-import { enqueueTask } from '../src/referrals/enqueue.ts';
+import { enqueueTask } from '../src/queue/enqueue.ts';
 import { seedProject } from './referral-fixtures.ts';
 import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
 

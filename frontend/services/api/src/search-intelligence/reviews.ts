@@ -6,18 +6,18 @@ import { strings } from '../db/json.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { costCredits } from '../billing/ai-pricing.ts';
 import { workspaceCredentialMode } from '../billing/credential-mode.ts';
-import { ProviderError } from '../answer-engines/contracts.ts';
+import { ProviderError } from '../providers/errors.ts';
 import { resolveSite } from '../projects/site-resolution.ts';
-import { fetchWebsite } from '../projects/safe-fetch.ts';
+import { fetchWebsite } from '../safe-fetch.ts';
 import {
   preferencesBody,
   reviewBody,
   type ReviewInput,
 } from '../routes/search-intelligence-contracts.ts';
 import { competitorTarget, ownedTargets, type CanonicalTarget } from './targets.ts';
+import { canonicalJson } from '../canonical-json.ts';
 import {
   buildRequest,
-  canonicalJson,
   isBacklinkKind,
   pageEstimateMicrousd,
   quoteDataset,

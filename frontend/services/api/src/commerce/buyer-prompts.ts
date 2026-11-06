@@ -13,7 +13,7 @@ import { commerceBuyerPromptSystem } from '../config/commerce.ts';
 import type { Database } from '../db/database.ts';
 import { meterFor, type Meter } from '../billing/metering.ts';
 import { record, strings } from '../db/json.ts';
-import { admitPrompts } from '../entitlements/occupancy.ts';
+import { admit } from '../entitlements/occupancy.ts';
 import { ApiError } from '../errors.ts';
 import { firstOf } from '../lists.ts';
 import { createModelGateway, type ModelGateway } from '../models/gateway.ts';
@@ -270,9 +270,10 @@ function persist(db: Database, scope: CommerceScope, batches: Batch[]) {
     const contexts = [];
     for (const batch of batches) contexts.push(await targetContext(trx, scope, batch.target)); // NOSONAR -- One transaction: statements run in order.
     // Capacity is the only advisory lock; never acquire a project/set lock after it.
-    await admitPrompts(
+    await admit(
       trx,
       scope.workspaceId,
+      'prompt_slots',
       batches.reduce((count, batch) => count + batch.texts.length, 0),
     );
     const now = new Date();

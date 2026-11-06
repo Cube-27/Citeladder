@@ -10,11 +10,10 @@ import type { Database } from '../db/database.ts';
 import type { ServiceConfig } from '../config.ts';
 import { policy } from '../config.ts';
 import { lockAccount } from '../entitlements/grants.ts';
-import { ApiError, notFound } from '../errors.ts';
+import { ApiError, conflict, notFound } from '../errors.ts';
+import { digest } from '../crypto-text.ts';
 import {
   identitySchema,
-  conflict,
-  digest,
   type Identity,
   type Pending,
   type Account,

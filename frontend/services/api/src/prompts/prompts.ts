@@ -29,7 +29,7 @@ import { isUniqueViolation } from '../db/errors.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { DB } from '../generated/db-schema.ts';
 import { WorkspaceEntitlements } from '../entitlements/access.ts';
-import { admitPrompts, overLimitPromptIds } from '../entitlements/occupancy.ts';
+import { admit, overLimitPromptIds } from '../entitlements/occupancy.ts';
 import {
   BINDING_FAILURES,
   bindingError,
@@ -255,7 +255,7 @@ export async function createPrompts(
         if (problem?.kind === 'binding') throw bindingError(problem.failure);
       if (screened.some((item) => item.problem !== null)) throw new ApiError(409, DUPLICATE);
       const planned = screened.map(({ input, hash }) => ({ input, id: randomUUID(), hash }));
-      await admitPrompts(trx, workspaceId, inputs.length);
+      await admit(trx, workspaceId, 'prompt_slots', inputs.length);
       const filing = await brandFiling(trx, set.project_id);
       const now = new Date();
       const rows = await trx
@@ -475,7 +475,7 @@ export async function importPrompts(
       .execute();
     for (const { normalized_text_hash: hash } of existing) byHash.delete(hash);
     if (byHash.size === 0) return;
-    await admitPrompts(trx, workspaceId, byHash.size);
+    await admit(trx, workspaceId, 'prompt_slots', byHash.size);
     const topics = await resolveTopicsByName(
       trx,
       { workspaceId, projectId: set.project_id },

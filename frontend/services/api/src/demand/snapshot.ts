@@ -9,7 +9,7 @@ import {
   requireProject,
   taskProject,
   type Executor,
-} from '../workers/executor.ts';
+} from '../queue/executor.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { record, strings } from '../db/json.ts';
@@ -19,10 +19,10 @@ import { queryDetectorInputs, sourceMaterial, trafficSource } from './source.ts'
 import {
   detectSearchSignals,
   detectStrikingDistance,
-  stableHash,
   unique,
   type Evaluation,
 } from './projection.ts';
+import { canonicalHash } from '../canonical-json.ts';
 import { detectCannibalization, detectCtrGap, detectTrends } from './detectors.ts';
 import { compareText } from '../text-order.ts';
 
@@ -69,8 +69,9 @@ export const recomputeDemand: Executor = async (task, { db, maxAttempts, checkCa
       query_trends: detectTrends(inputs, scope.windowEnd),
     };
     const candidates = Object.values(evaluations).flatMap((e) => e.candidates);
-    const sourceHash = stableHash(
+    const sourceHash = canonicalHash(
       await sourceMaterial(trx, scope, traffic, inputs, query.source_hash.slice(0, 24)),
+      false,
     );
     const workspace = new WorkspaceScope(scope.workspaceId);
     const existing = await workspace

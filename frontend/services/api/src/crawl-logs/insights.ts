@@ -11,13 +11,13 @@ import {
   type CrawlReadOptions,
 } from './reads.ts';
 import { partitionAnchor } from '../integrations/partitions.ts';
-import { addDays } from '../referrals/projection.ts';
+import { addDays } from '../calendar-days.ts';
 import { pageDataset, type JoinedPage } from './pages-data.ts';
 import { ga4Mapped, insightSnapshot, pageContext, pageComparable } from './pages.ts';
 import { aiTraffic } from '../config/ai-traffic.ts';
 import { policy } from '../config.ts';
 import { strings, record, numberRecord } from '../db/json.ts';
-import { taskProject, type Executor } from '../workers/executor.ts';
+import { taskProject, type Executor } from '../queue/executor.ts';
 
 type Pattern = z.infer<typeof aiTrafficInsightsSchema>['patterns'][number];
 function verifiedErrorCounts(rows: JoinedPage[]) {

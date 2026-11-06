@@ -7,8 +7,9 @@ import { planChangeRequestSchema } from '@citeladder/contracts/billing-requests'
 import type { Database } from '../db/database.ts';
 import type { ServiceConfig } from '../config.ts';
 import { lockAccount } from '../entitlements/grants.ts';
-import { ApiError } from '../errors.ts';
-import { identitySchema, conflict, digest } from './contracts.ts';
+import { ApiError, conflict } from '../errors.ts';
+import { identitySchema } from './contracts.ts';
+import { digest } from '../crypto-text.ts';
 import { catalog } from './catalog.ts';
 import { baseIntent, quoteIntent, roundedRatio } from './quotes.ts';
 import { onCheckoutAllowList } from './checkout-access.ts';

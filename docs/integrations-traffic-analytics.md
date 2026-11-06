@@ -13,8 +13,9 @@ crawler logs. This document retains GA4 referral data, projections, tasks and
 the `analytics/ai-referrals.ts` reader and its extended `read_ai_referrals` contract.
 
 Native [connected-data config](../frontend/services/api/src/config/connected-data.ts)
-owns sync settings, transports, dataset grains, traffic and referral catalogs,
-analytics task kinds and OAuth policy. [Demand config](../frontend/services/api/src/config/demand.json)
+owns sync settings, transports, dataset grains, traffic and referral catalogs
+and OAuth policy; the [analytics kind registry](../frontend/services/api/src/workers/analytics-kinds.ts)
+owns analytics task kinds. [Demand config](../frontend/services/api/src/config/demand.json)
 owns query/lexical policy and [Keyword Research config](../frontend/services/api/src/config/search-intelligence.json)
 owns acquisition and pricing. The [schema baseline](../frontend/services/api/migrations/0001_baseline.sql) holds column defaults.
 Dataset arity and
@@ -188,7 +189,7 @@ projections, Demand, Opportunity refresh and verification, source-page inspectio
 Keyword Research acquisition, internal links, catalog projection and Commerce
 competitor discovery. Its bounded lease recovery runs before each claim,
 including an empty drain. Splitting ownership requires restoring an executor
-and recovery path; changing a kind list alone cannot establish another executor.
+and recovery path; a kind exists only as a registry entry with its executor.
 Each domain owns its derived projection.
 
 [Performance](../frontend/services/api/src/traffic/performance.ts) reads persisted
@@ -239,6 +240,12 @@ revenue in the property currency. Key events retain the customer's GA4 definitio
 The property-wide channel comparison separates AI referrals, Organic Search and
 all other sessions. Engagement rate is engaged sessions divided by sessions;
 there is no key-events/session rate. Incompatible or missing measures stay unavailable.
+
+Whether sessions are AI referrals has one answer: the
+[persisted classification](../frontend/services/api/src/referrals/persisted.ts) of the
+same property, day, source and medium. The headline, landing pages, per-source
+measures and Performance's AI sessions all read it, so they agree after a rule
+change until reclassification writes new rows. An unclassified pair is not counted.
 
 ## Keyword Research acquisition
 
