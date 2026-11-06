@@ -31,6 +31,8 @@ afterAll(async () => {
 
 it('keeps a 200-day-old AI referral counted in Performance and deletes one older than 480 days', async () => {
   const inWindow = daysAgo(200);
+  // The first day of a 480-day Performance window ending yesterday.
+  const firstDay = daysAgo(480);
   const expired = daysAgo(481);
   const seed = await seedImport(db, {
     ...t,
@@ -51,6 +53,7 @@ it('keeps a 200-day-old AI referral counted in Performance and deletes one older
     .execute();
   for (const [date, sessions] of [
     [inWindow, 7],
+    [firstDay, 2],
     [expired, 3],
   ] as const)
     await seedMetricRow(db, seed, {
@@ -83,13 +86,17 @@ it('keeps a 200-day-old AI referral counted in Performance and deletes one older
     )
     .select(['referral_events.occurred_at', 'referral_classifications.ai_source'])
     .where('referral_events.workspace_id', '=', t.workspaceId)
+    .orderBy('referral_events.occurred_at')
     .execute();
   expect(
     kept.map((row) => ({
       day: row.occurred_at.toISOString().slice(0, 10),
       ai_source: row.ai_source,
     })),
-  ).toEqual([{ day: inWindow, ai_source: 'chatgpt' }]);
+  ).toEqual([
+    { day: firstDay, ai_source: 'chatgpt' },
+    { day: inWindow, ai_source: 'chatgpt' },
+  ]);
 
   await refreshTrafficSnapshot(
     await task(db, t, 'traffic_snapshot_refresh', [inWindow, inWindow]),
