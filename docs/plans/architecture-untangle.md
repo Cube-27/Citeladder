@@ -183,9 +183,9 @@ order the PR tracker already respects.
 | MK2 | Records drive legal and research routes | MK1 | `frontend/apps/marketing/src/pages/`, `frontend/lib/marketing-content/legal.ts` | | done | 04a3a2b | |
 | MK3 | Screen catalogue is the only module-to-image map | — | `frontend/components/marketing/{landing-page,commercial-page}.tsx`, `ResearchLayout.astro` | | done | c2edb2c | |
 | MK4 | Trial and free-tool numbers interpolated from config | FX1, MK1, MK3 | `frontend/components/marketing/pages/{pricing-catalog,pricing,landing-page}.tsx`, tools pages | | done | c84c7e4 | |
-| G1 | Settings engine to a leaf; cross-owner aliases, dead key and import cycle removed | — | `config.ts`, `config/settings.ts`, `billing/config.ts`, alias importers | wide | todo | | |
-| G2 | Settings resolve once from one environment | G1, Q7, ON1 | `config.ts`, `configEnvironment` callers (18), `config/execution.ts` | wide | todo | | |
-| G3 | Named abuse budgets | G1 | `abuse/usage.ts`, `config/abuse.ts`, budget call sites | | todo | | |
+| G1 | Settings engine to a leaf; cross-owner aliases, dead key and import cycle removed | — | `config.ts`, `config/settings.ts`, `billing/config.ts`, alias importers | wide | done | 9a09b23 | |
+| G2 | Settings resolve once from one environment | G1, Q7, ON1 | `config.ts`, `configEnvironment` callers (18), `config/execution.ts` | wide | done | a1cdef0 | Deep readers with no config in reach still pass `process.env`; threading `config.settings` through billing, entitlements and prompt pipelines is a follow-up |
+| G3 | Named abuse budgets | G1 | `abuse/usage.ts`, `config/abuse.ts`, budget call sites | | done | 07df0aa | |
 | X1 | One citation and Commerce URL identity; differentiation reports insert-only | — | `source-pages/{identity,sync,inspector,differentiation}.ts`, `site-health/url-identity.ts`, `config/source-pages.ts`, `analysis/domains.ts`, `commerce/{projection-facts,projection}.ts` | mig? | done | aee742f, bdd21a8 | |
 | X2 | Leaf primitives move to the bottom | X1 | `analysis/round.ts`, casefold/canonical-JSON/calendar-day copies, `projects/safe-fetch.ts`, `billing/pdf.ts`, `billing/contracts.ts` + importers | wide | done | fcc2f84 | |
 | X3 | One page-identity module (path, landing page) | X1 | `traffic/normalization.ts`, `integrations/`, `crawl-logs/`, `referrals/` identity helpers | | done | 9ac7046 | |
