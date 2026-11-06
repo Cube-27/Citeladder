@@ -181,7 +181,7 @@ export type ShelfResolver = { model: string; resolve(spans: string[]): Promise<u
  * threw or returned malformed output), `omitted` (the call answered without
  * this span) and `resolved`.
  */
-export type ResolverOutcome = 'resolved' | 'omitted' | 'not_needed' | 'failed' | 'unavailable';
+type ResolverOutcome = 'resolved' | 'omitted' | 'not_needed' | 'failed' | 'unavailable';
 export type PreparedRecommendation = {
   span: RecommendationSpan;
   resolved: ResolvedRecommendation | null;

@@ -5,7 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { Route, Routes } from 'react-router-dom';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 
-import type { Audit } from '@/lib/api/runs';
+import type { Audit } from '@/lib/api/types';
 import { queryKeys } from '@/lib/api/query-keys';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
@@ -21,6 +21,7 @@ function audit(status: Audit['status']): Audit {
     id: RUN,
     workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     project_id: '33333333-3333-4333-8333-333333333333',
+    parent_audit_id: null,
     status,
     benchmark_mode: 'consumer_like',
     audit_scope: 'commerce',
@@ -39,7 +40,7 @@ function audit(status: Audit['status']): Audit {
     updated_at: '2026-08-01T00:01:00Z',
     started_at: '2026-08-01T00:00:01Z',
     completed_at: status === 'running' ? null : '2026-08-01T00:00:30Z',
-  } as Audit;
+  };
 }
 
 /** A Commerce read mounted beside the run, counting how often it is fetched. */
