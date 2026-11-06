@@ -37,18 +37,14 @@ export function mountCardRail(rail: HTMLElement): void {
     if (!toggle || !more) return;
     toggle.setAttribute('aria-expanded', String(open));
     toggle.setAttribute('aria-label', `${open ? 'Close' : 'More about'} ${toggle.dataset.label}`);
-    // The open layers and the miniature swap places in the accessibility
-    // tree; the stylesheet cross-fades them.
-    const shot = card.querySelector<HTMLElement>('.cl-railcard-shot');
+    // A closed card's open layers stay out of reach; the stylesheet fades
+    // them (and the miniature, which a phone's open row keeps).
     const page = card.querySelector<HTMLElement>('.cl-railcard-page');
     for (const layer of [more, page]) {
       layer?.toggleAttribute('inert', !open);
       if (open) layer?.removeAttribute('aria-hidden');
       else layer?.setAttribute('aria-hidden', 'true');
     }
-    shot?.toggleAttribute('inert', open);
-    if (open) shot?.setAttribute('aria-hidden', 'true');
-    else shot?.removeAttribute('aria-hidden');
     card.toggleAttribute('data-expanded', open);
   };
   const toggleCard = (card: HTMLElement) => {

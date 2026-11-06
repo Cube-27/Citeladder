@@ -118,7 +118,8 @@ export function Bento({
  * close, while the header stays put; the miniature fades out as the `body`
  * with a button to the page fades in at the lower left and the feature's
  * `page` in the app, sidebar and all, at the right. Closing fades back. The
- * height never changes, so nothing below the rail moves.
+ * height never changes, so nothing below the rail moves. On a phone the rail
+ * is a list of names, each opening in place.
  */
 export function RailCard({
   href,
@@ -165,7 +166,8 @@ export function RailCard({
       </div>
       {/* Three layers under the fixed header, cross-faded by `data-expanded`:
           the miniature while closed; the page and the paragraph with its
-          button while open. A layer out of view is inert and hidden. */}
+          button while open. On a phone the card is a list row that opens to
+          the miniature, paragraph and button. */}
       <div className="cl-railcard-shot">{media}</div>
       <div className="cl-railcard-page" aria-hidden inert>
         {page}
