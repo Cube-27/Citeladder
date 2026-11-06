@@ -14,6 +14,7 @@
  * Customers see only the credits; prices and the markup stay internal (B23).
  */
 import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
@@ -299,6 +300,44 @@ async function settleCall(
   });
 }
 
+/**
+ * The internal cost of every included and uncharged platform call since the
+ * start of `at`'s UTC day, across all workspaces.
+ */
+async function unchargedDailySpend(db: Database, at = new Date()) {
+  const day = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()));
+  const row = await db
+    .selectFrom('internal_costs')
+    .select(sql<string>`coalesce(sum(cost_microusd), 0)`.as('spent'))
+    .where('source', '=', 'platform_call')
+    .where('charge', '<>', 'credits')
+    .where('occurred_at', '>=', day)
+    .executeTakeFirstOrThrow();
+  return BigInt(row.spent);
+}
+
+/**
+ * The platform-wide daily breaker: credit-funded calls are paid for by their
+ * holds, but included and uncharged calls are bounded only per workspace, so
+ * once their day's cost reaches the configured ceiling they are refused before
+ * any network I/O until the next UTC day. Concurrent calls may each pass the
+ * check, so the ceiling can be exceeded by the calls already in flight.
+ */
+async function assertSpendOpen(db: Database, context: MeterContext): Promise<null> {
+  const ceiling = BigInt(policy.costs.platform.daily_uncharged_ceiling_microusd);
+  const spent = await unchargedDailySpend(db);
+  if (spent < ceiling) return null;
+  logger.warning('billing.platform_spend_breaker_open', {
+    workspace_id: context.workspaceId,
+    feature: context.feature,
+    spent_microusd: spent.toString(),
+    ceiling_microusd: ceiling.toString(),
+  });
+  throw new ApiError(503, 'Platform AI work is paused for today', {
+    code: 'platform_spend_paused',
+  });
+}
+
 /** Runs one platform provider call under its metering context. */
 async function metered<T>(
   db: Database,
@@ -310,7 +349,7 @@ async function metered<T>(
   // The hold commits before network I/O, so it never shares the caller's transaction.
   if (charged && db.isTransaction)
     throw new Error('A charged platform call must not run in a transaction');
-  const callId = charged ? await reserve(db, context, spec) : null;
+  const callId = charged ? await reserve(db, context, spec) : await assertSpendOpen(db, context);
   // A failed settlement never replaces the provider's outcome: the hold stays
   // reserved and the abandoned-call sweep settles it.
   const settleHeld = async (id: string, usage: TokenUsage | null, error: unknown) => {

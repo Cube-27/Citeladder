@@ -543,6 +543,20 @@ keep the Haiku rate (architecture untangle OD6). No customer price, allowance
 or credit charge changes. Source: [architecture untangle](plans/architecture-untangle.md)
 K1, OD6.
 
+**B66 — Engineering, 2026-11-07.** A platform-wide daily spend breaker
+(architecture untangle K2). Credit-funded calls are paid by their holds, and
+audits by the funded monthly budget; included and uncharged platform calls
+(answer perception, fact verification, the Commerce shelf, the JEV judges,
+Tavily, Keenable) were bounded only by per-workspace rate limits. Once their
+internal cost since 00:00 UTC, across all workspaces, reaches
+`platform.daily_uncharged_ceiling_microusd` in `config/costs.json` (set at
+**$25 a day**), the metering owner refuses further included and uncharged calls
+with 503 `platform_spend_paused` before any network I/O, until the next UTC
+day; credit-funded calls are unaffected. Calls already in flight may carry the
+day's spend past the ceiling. The ceiling is internal cost policy, not a
+customer limit; the $25 figure is engineering's conservative pre-launch value
+for the owner to confirm. Source: [architecture untangle](plans/architecture-untangle.md) K2.
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,

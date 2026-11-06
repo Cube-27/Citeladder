@@ -258,7 +258,11 @@ answer-engine executions (their latest `execution_cost_projections` row). A
 null cost is unknown, never zero. An uncharged call's cost row is written on
 the caller's connection, inside its transaction when it has one, and a row
 that cannot be written fails the call; an Agent call's cost is written in the
-transaction that settles its debit (B65).
+transaction that settles its debit (B65). A platform-wide daily breaker in the
+metering owner refuses included and uncharged calls with 503
+`platform_spend_paused`, before any network I/O, once their cost since 00:00
+UTC reaches `platform.daily_uncharged_ceiling_microusd`; credit-funded calls
+are not affected (B66).
 
 **Managed plans.** A workspace on a live managed plan measures every engine,
 DataForSEO surfaces included, on the platform's keys; the request never chooses

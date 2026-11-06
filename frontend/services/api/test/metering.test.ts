@@ -7,6 +7,7 @@ import { createModelGateway, gatewaySettings } from '../src/models/gateway.ts';
 import { createJevClient, jevSettings } from '../src/models/jev.ts';
 import { UnmeteredCallError } from '../src/models/meter-scope.ts';
 import { meterFor, settleAbandonedCalls } from '../src/billing/metering.ts';
+import { policy } from '../src/config.ts';
 import {
   cachedReservationCredits,
   chargeCredits,
@@ -335,6 +336,53 @@ describe('platform AI metering', () => {
       code: '23503',
       constraint: 'platform_calls_workspace_id_fkey',
     });
+  });
+
+  it('refuses included and uncharged calls once the day’s platform spend reaches the ceiling', async () => {
+    const t = await fixtures.tenant();
+    await credited(t, 100);
+    const meter = meterFor(db, t.workspaceId);
+    const search = vi.fn(async () => ({ value: 'results', usage: null }));
+    const tavily = { provider: 'tavily', model: 'tavily' } as const;
+    await meter.call('commerce_competitor_discovery', tavily, search);
+    const rates = policy.costs.platform;
+    const configured = rates.daily_uncharged_ceiling_microusd;
+    // Today's uncharged spend now includes this test's $0.008 search, so this ceiling is reached.
+    rates.daily_uncharged_ceiling_microusd = 8000;
+    try {
+      await expect(meter.call('research_evidence', tavily, search)).rejects.toMatchObject({
+        status: 503,
+        code: 'platform_spend_paused',
+      });
+      const { gateway: perception, fetch } = gateway(
+        answer('{"ok":true}', { prompt_tokens: 50, completion_tokens: 5 }),
+      );
+      await expect(
+        meter.gateway(perception, 'answer_perception').complete('s', 'u'),
+      ).rejects.toMatchObject({ code: 'platform_spend_paused' });
+      // A credit-funded call is paid by its hold and still runs.
+      const { gateway: paid } = gateway(
+        answer('{"ok":true}', {
+          prompt_tokens: 10_000,
+          completion_tokens: 2_000,
+        }),
+      );
+      await meter.gateway(paid, 'prompt_generation').complete('s', 'u');
+      expect({
+        searches: search.mock.calls.length,
+        perceptionRequests: fetch.mock.calls.length,
+        recorded: (await calls(t.workspaceId)).map((call) => [call.feature, call.status]),
+      }).toEqual({
+        searches: 1,
+        perceptionRequests: 0,
+        recorded: [
+          ['commerce_competitor_discovery', 'settled'],
+          ['prompt_generation', 'settled'],
+        ],
+      });
+    } finally {
+      rates.daily_uncharged_ceiling_microusd = configured;
+    }
   });
 
   it('returns a paid answer when its settlement fails, leaving the hold for the sweep', async () => {
