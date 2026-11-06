@@ -32,10 +32,12 @@
   --text-site-feature: var(--text-display-md);
   --text-site-feature--line-height: var(--text-display-md--line-height);
 
-  /* D36: surfaces take three radii, controls and chips the system's 2–8. */
-  --site-radius-inner: 12px;
-  --site-radius-card: 20px;
-  --site-radius-stage: 24px;
+  /* D36, D47: surfaces take three radii (each 8px under D36's 12/20/24, so
+     an inner card stays concentric in a card's 8px inset), controls and
+     chips the system's 2–8. */
+  --site-radius-inner: 4px;
+  --site-radius-card: 12px;
+  --site-radius-stage: 16px;
 
   /* D44: panels are told apart by a soft fill, never a border or a shadow.
      The four stage colours thinned with paper, and a near-paper neutral. */
