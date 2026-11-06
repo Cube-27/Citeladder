@@ -54,15 +54,15 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 
 | PR | Title | Rows (commit order) | Depends on | Flags | Status | PR link | Notes |
 |----|-------|---------------------|-----------|-------|--------|---------|-------|
-| P01 | Onboarding competitor discovery fix | ON1, ON2 | — | | in progress | | Owner bug; start here. Builder session `untangle-p01` |
-| P02 | Correctness fixes: trial credits, Share of Shelf, perception states, browser state labels, latest brand run | FX1, FX2, FX3, FX4, O1 | — | mig? | in review | [#629](https://github.com/Cube-27/Citeladder/pull/629) | Builder session `untangle-p02`; migrations 0006–0007 provisional, renumber above P03 on rebase |
-| P03 | Runtime safety and schema hardening | FX5, DB1, DB2 | — | mig | in progress | | Builder session `untangle-p03`; holds the migration slot (0006+) |
+| P01 | Onboarding competitor discovery fix | ON1, ON2 | — | | merged | [#626](https://github.com/Cube-27/Citeladder/pull/626) | Owner bug |
+| P02 | Correctness fixes: trial credits, Share of Shelf, perception states, browser state labels, latest brand run | FX1, FX2, FX3, FX4, O1 | — | mig? | in review | [#629](https://github.com/Cube-27/Citeladder/pull/629) | Builder session `untangle-p02`; migrations 0008, 0009 |
+| P03 | Runtime safety and schema hardening | FX5, DB1, DB2 | — | mig | merged | [#627](https://github.com/Cube-27/Citeladder/pull/627) | Migrations 0006, 0007 |
 | P04 | Site Health tasks I: outcome classifier, crawl status, single writers | SH1, SH2, SH3 | — | mig? | in progress | | Builder session `untangle-p04` |
 | P05 | Engine surfaces I: DataForSEO client, typed frozen config, engine sets from routes | E1, E2, E3 | — | | todo | | |
 | P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | todo | | |
 | P07 | App route manifest and kit cleanup | R1, R2, R3, R5, R6, R7 | — | | todo | | |
-| P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | todo | | |
-| P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | todo | | |
+| P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | in progress | | Builder session `untangle-p08` |
+| P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | in progress | | Builder session `untangle-p09` |
 | P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | todo | | |
 | P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | todo | | |
 | P12 | Opportunities: check kinds, typed targets, evidence announcement | O2, O3, O4 | P02 | | todo | | |
@@ -116,15 +116,15 @@ order the PR tracker already respects.
 
 | ID | Row | Depends on | Area | Flags | Status | Commit | Notes |
 |----|----|-----------|------|-------|--------|---------|-------|
-| ON1 | Discovery identity deadline; no silent empty "ready"; research logging | — | `projects/research*.ts`, `config/discovery.json`, `models/anthropic.ts`, `workers/discovery-worker.ts` | | todo | | |
-| ON2 | "Run discovery again" and onboarding failure copy | ON1 | `frontend/lib/onboarding`, `frontend/components/onboarding`, `routes/brand-discoveries.ts` | | todo | | |
+| ON1 | Discovery identity deadline; no silent empty "ready"; research logging | — | `projects/research*.ts`, `config/discovery.json`, `models/anthropic.ts`, `workers/discovery-worker.ts` | | done | 29c5770 | |
+| ON2 | "Run discovery again" and onboarding failure copy | ON1 | `frontend/lib/onboarding`, `frontend/components/onboarding`, `routes/brand-discoveries.ts` | | done | 9c27304 | |
 | FX1 | Trial credits 5,000 → 500 and copy | — | `config/entitlements.json`, `docs/billing-*.md`, three marketing copy files | | done | d63ffa9 | |
 | FX2 | Commerce Share of Shelf by candidate state; Commerce "measure with" | — | `commerce/shelf*.ts`, `config/actions.ts` | mig? | done | be87f27 | |
 | FX3 | Perception: model omissions stay distinct; model frozen per audit | — | `perception/`, `visibility/perception.ts` | mig? | done | 0bdb569 | |
 | FX4 | Browser: cancel refreshes Commerce; Internal Links state labels | — | `frontend/components/runs/run-detail-screen.tsx`, `frontend/components/site-health/internal-links-panel.tsx` | | done | fbc7dd6 | |
-| FX5 | Runtime safety: in-request cap, SIGTERM, frozen turn limit, failed-call usage, deploy guard | — | `routes/agent.ts`, `agent/{contracts,model-calls}.ts`, `server.ts`, `commands/audits.ts`, `audits/interactive.ts`, `.github/workflows/gcp-deploy.yml` | | todo | | |
-| DB1 | Capacity-lease and queue indexes; lease purge | — | `migrations/`, `providers/capacity.ts`, audit maintenance | mig | todo | | |
-| DB2 | Tenancy in the schema; registry-driven isolation test | DB1 | `migrations/`, `db/workspace-scope.ts`, writers of `prompt_sets`/`topics`/`competitors`/`brands`/`prompts`, `test/request-access.test.ts` | mig | todo | | |
+| FX5 | Runtime safety: in-request cap, SIGTERM, frozen turn limit, failed-call usage, deploy guard | — | `routes/agent.ts`, `agent/{contracts,model-calls}.ts`, `server.ts`, `commands/audits.ts`, `audits/interactive.ts`, `.github/workflows/gcp-deploy.yml` | | done | 81c7fd9 | |
+| DB1 | Capacity-lease and queue indexes; lease purge | — | `migrations/`, `providers/capacity.ts`, audit maintenance | mig | done | 9c7848e | |
+| DB2 | Tenancy in the schema; registry-driven isolation test | DB1 | `migrations/`, `db/workspace-scope.ts`, writers of `prompt_sets`/`topics`/`competitors`/`brands`/`prompts`, `test/request-access.test.ts` | mig | done | f15ac10 | |
 | Q1 | Enqueue and executor contract move to `queue/`; fairness test harness | — | `queue/`, `referrals/enqueue.ts`, `workers/executor.ts` + importers | wide | todo | | |
 | Q2 | Analytics task-kind registry | Q1 | `workers/analytics-worker.ts`, `workers/terminal-compensation.ts`, `config/analytics.json` | | todo | | |
 | Q3 | Lane descriptor: shared claim, cursor, heartbeat, fence; analytics and Site Health lanes | Q1, DB1 | `queue/task-queue.ts`, `queue/recovery.ts`, `queue/next-due.ts` | | todo | | |

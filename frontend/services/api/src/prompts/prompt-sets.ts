@@ -122,6 +122,7 @@ export async function createPromptSet(
     .insertInto('prompt_sets')
     .values({
       id: randomUUID(),
+      workspace_id: workspaceId,
       project_id: project.id,
       name: input.name,
       description: input.description,

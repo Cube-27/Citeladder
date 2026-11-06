@@ -1030,6 +1030,7 @@ export interface Brands {
   name: string;
   project_id: string;
   updated_at: Timestamp;
+  workspace_id: string;
 }
 
 export interface Citations {
@@ -1279,6 +1280,7 @@ export interface Competitors {
   name: string;
   project_id: string;
   updated_at: Timestamp;
+  workspace_id: string;
 }
 
 export interface ConsumableLedger {
@@ -1975,6 +1977,7 @@ export interface OwnedDomains {
   domain: string;
   id: string;
   project_id: string;
+  workspace_id: string;
 }
 
 export interface PendingActivations {
@@ -2170,6 +2173,7 @@ export interface Prompts {
   theme: string;
   topic_id: string | null;
   updated_at: Timestamp;
+  workspace_id: string;
 }
 
 export interface PromptSets {
@@ -2179,6 +2183,7 @@ export interface PromptSets {
   name: string;
   project_id: string;
   updated_at: Timestamp;
+  workspace_id: string;
 }
 
 export interface ProviderAttempts {
@@ -3176,6 +3181,7 @@ export interface Topics {
   parent_id: string | null;
   project_id: string;
   updated_at: Timestamp;
+  workspace_id: string;
 }
 
 export interface TrafficPageStats {
@@ -3226,6 +3232,7 @@ export interface UnintendedDomains {
   domain: string;
   id: string;
   project_id: string;
+  workspace_id: string;
 }
 
 export interface UsageWindows {

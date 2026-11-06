@@ -220,14 +220,19 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
         throw error;
       }
     },
-    settle: async (db, attempt, result) => {
+    settle: async (db, attempt, usage) => {
       if (attempt.funding_source !== 'platform') return { credits: 0, status: 'zero_debit' };
       if (!attempt.reservation_id) throw new AgentError('funding_unavailable');
       const reserved = Number(attempt.reserved_credits);
       const price = modelPrice(attempt.requested_model, platform.model);
-      const charged = price && result ? chargeCredits(price, result.usage) : null;
-      // A failed call that reports no usage is not charged; unreadable usage pays the fallback.
-      const credits = !result ? 0 : Math.min(reserved, charged ?? unknownUsageCredits(reserved));
+      const charged = price && usage ? chargeCredits(price, usage) : null;
+      // As platform metering: a call that did not complete pays only the usage it
+      // reported; an answer with unreadable usage pays the fallback.
+      const failed = attempt.outcome !== 'completed';
+      const credits =
+        failed && charged === null
+          ? 0
+          : Math.min(reserved, charged ?? unknownUsageCredits(reserved));
       const accountId = await account(db, attempt.workspace_id);
       const key = `agent:${attempt.id}:settle:${attempt.dispatch_id}`;
       const at = new Date();

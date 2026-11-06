@@ -56,7 +56,9 @@ their contracts.
 
 Every project-owned read and write verifies active workspace membership and
 filters by `workspace_id`. IDs alone are never authorization. Product data is
-not scoped by `user_id`. IDs are UUIDs.
+not scoped by `user_id`. IDs are UUIDs. A project-owned table carries
+`workspace_id`, and its key to the project (or to the owning parent) names
+both, so PostgreSQL refuses a row whose project belongs to another workspace.
 
 ## 4. Evidence is immutable and is not truth
 
