@@ -6,7 +6,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import type { WorkspaceInvitations } from '../generated/db-schema.ts';
 import { ApiError } from '../errors.ts';
-import { requireTeamMembers } from '../entitlements/occupancy.ts';
+import { requireFlag } from '../entitlements/access.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import { requiresEmailVerification } from '../auth/eligibility.ts';
 import { roleAllows } from '../auth/workspace.ts';
@@ -84,7 +84,7 @@ export async function issueInvitationInTransaction(
 ) {
   assignableRoleSchema.parse(role);
   await lockAuthorizedWorkspace(trx, workspaceId, actorId, 'manage_members');
-  await requireTeamMembers(trx, workspaceId);
+  await requireFlag(trx, workspaceId, 'team_members');
   const now = new Date();
   const normalized = email.trim().toLowerCase();
   const member = await trx
@@ -169,7 +169,7 @@ export function updateInvitation(
     if (row.accepted_at || row.revoked_at || row.expires_at <= now)
       refusal('invitation_not_pending');
     // Revoking always works; a fresh link needs a plan that admits members.
-    if (!revoke) await requireTeamMembers(trx, workspaceId);
+    if (!revoke) await requireFlag(trx, workspaceId, 'team_members');
     const { token, token_sha256 } = tokenValues();
     const values = revoke
       ? { revoked_at: now, updated_at: now }
@@ -252,7 +252,7 @@ export function acceptInvitation(db: Database, actorId: string, token: string) {
     if (!member) {
       if (invitation.accepted_at) refusal('invitation_invalid', 400);
       // A link issued under a plan cannot add a member after it has lapsed.
-      await requireTeamMembers(trx, workspace.id);
+      await requireFlag(trx, workspace.id, 'team_members');
       member = await trx
         .insertInto('workspace_members')
         .values({

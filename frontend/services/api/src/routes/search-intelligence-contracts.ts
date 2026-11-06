@@ -4,7 +4,6 @@ import {
   searchDatasetSchema,
 } from '@citeladder/contracts/search-intelligence';
 import {
-  searchCitationMatchRequestSchema,
   searchDatasetSelectionRequestSchema,
   searchPreferencesRequestSchema,
   searchReviewRequestSchema,
@@ -54,5 +53,3 @@ export const reviewBody = searchReviewRequestSchema.extend({
   datasets: z.array(datasetSelection).min(1).max(25),
 });
 export type ReviewInput = z.output<typeof reviewBody>;
-
-export const citationMatchBody = searchCitationMatchRequestSchema;

@@ -14,7 +14,7 @@ const uuid = () => z.uuid();
 
 /** A launch's markets: `null` is the project's default market. */
 const marketIds = z.array(uuid().nullable()).min(1);
-export const auditScopeSchema = z.enum(['brand', 'commerce']);
+const auditScopeSchema = z.enum(['brand', 'commerce']);
 
 /**
  * `POST /audits/estimate`: the prompts measured (a whole `prompt_set_id`, or
@@ -66,7 +66,7 @@ export const auditScheduleUpdateRequestSchema = z.object({
 });
 
 const scheduleFields = auditScheduleUpdateRequestSchema.shape;
-export const auditScheduleCreateRequestSchema = auditScheduleUpdateRequestSchema.extend({
+const auditScheduleCreateRequestSchema = auditScheduleUpdateRequestSchema.extend({
   audit_scope: scheduleFields.audit_scope.default('brand'),
   interval_minutes: scheduleFields.interval_minutes.default(null),
   timezone: scheduleFields.timezone.optional(),

@@ -38,7 +38,6 @@ export const monitoredUrlsReplaceRequestSchema = z.strictObject({
   site_url_ids: z.array(z.uuid()),
   expected_selection_version: z.int(),
 });
-export type MonitoredUrlsReplaceRequest = z.input<typeof monitoredUrlsReplaceRequestSchema>;
 
 /** A bulk monitored-URL selection from one crawl's inventory. */
 export const monitoredUrlsBulkSelectRequestSchema = z.strictObject({
@@ -48,4 +47,3 @@ export const monitoredUrlsBulkSelectRequestSchema = z.strictObject({
   query: z.string().nullable().optional(),
   expected_selection_version: z.int(),
 });
-export type MonitoredUrlsBulkSelectRequest = z.input<typeof monitoredUrlsBulkSelectRequestSchema>;

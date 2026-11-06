@@ -20,10 +20,9 @@ import {
 } from './requests.ts';
 import { INT4_MAX, normalizeResponse } from './normalization.ts';
 import type { ResearchResponse } from './live.ts';
-import type { ProviderError } from '../answer-engines/contracts.ts';
+import type { ProviderError } from '../providers/errors.ts';
 import { isDataError } from '../db/errors.ts';
 import { rolesWith } from '../auth/workspace.ts';
-import { loadWorkerSettings } from '../config.ts';
 import { scalarText } from '../text-order.ts';
 import { SEARCH_DATASET_KINDS } from '@citeladder/contracts/search-intelligence';
 import {
@@ -817,7 +816,6 @@ export class AcquisitionState {
       projectId: this.projectId,
       triggerKind: 'search_intelligence_dataset',
       triggerId: datasetId,
-      maxAttempts: loadWorkerSettings().taskMaxAttempts,
     };
     await enqueueOpportunityRefresh(trx, trigger);
     await enqueueImplementationVerification(trx, trigger);

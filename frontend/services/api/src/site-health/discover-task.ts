@@ -7,12 +7,10 @@
  * lock before the crawl and task, and writes nothing if the lease or crawl
  * was lost meanwhile.
  */
-import { isActiveCrawl } from '@citeladder/contracts/site-health';
-
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
-import type { FetchedPage } from '../projects/safe-fetch.ts';
+import type { FetchedPage } from '../safe-fetch.ts';
 import type { SiteTask } from '../queue/task-queue.ts';
 import { factSettings, type PageFacts } from './analysis/facts.ts';
 import { discoverAsync } from './analysis/off-thread.ts';
@@ -33,17 +31,17 @@ import {
 import { isBotBlock } from './page-fetch.ts';
 import {
   Abandoned,
+  commitTask,
   finalFailure,
   httpError,
   loadScope,
-  lockRunningTask,
   markRunning,
   prepareTask,
   recordCrawlEvent,
   settleTask,
+  type Crawl,
   type SiteTaskContext,
 } from './site-task.ts';
-import type { Crawl } from './task-fence.ts';
 import { taskOutcome } from './task-outcome.ts';
 import { classifyUrlAdmission, hardExcluded } from './url-admission.ts';
 import { canonicalIdentity } from './url-identity.ts';
@@ -62,7 +60,7 @@ type Outcome = AttemptOutcome & {
 };
 
 async function acquire(ctx: SiteTaskContext, crawl: Crawl, task: SiteTask): Promise<Outcome> {
-  await ctx.checkAccess?.();
+  await ctx.checkAccess();
   const scope = crawlScope(crawl);
   const fetched = await ctx.fetcher.fetch(task.requested_url, {
     signal: ctx.signal,
@@ -339,106 +337,99 @@ async function dispose(
 }
 
 async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome) {
-  ctx.signal?.throwIfAborted();
-  await ctx.db
-    .transaction()
-    .execute(async (trx) => {
-      const live = await loadScope(trx, claimed);
-      if (live?.task.lease_owner !== ctx.owner) throw new Abandoned();
-      const { crawl, task } = live;
-      let artifactId: string | null = null;
-      let admitted = 0;
-      let sampleCapped = false;
-      const { page, discovery } = outcome;
-      if (page && discovery) {
-        // First rung of the lock DAG, before any URL write or frontier admission.
-        const runtime = await lockRuntime(trx, crawl.workspace_id);
-        artifactId = await writeArtifact(trx, crawl, task, page, outcome.facts, {
-          policyVersion: ctx.fetcher.settings.policyVersion,
-          latencyMs: outcome.latencyMs ?? 0,
-          purpose: 'discover',
-        });
-        const referrerId = await writeObservation(trx, crawl, task, page, discovery, artifactId);
-        const exact = record(crawl.configuration).input_mode === 'exact_urls';
-        const admission = await admitCandidates(
-          trx,
-          crawl,
-          candidatesFor(task, discovery, { exact, referrerId }),
-          runtime,
-          { enqueueChildren: !exact, sourceArtifactId: artifactId },
-        );
-        admitted = admission.admitted;
-        sampleCapped = admission.sampleCapped;
-        await refreshFetchedUrl(trx, crawl, task, page, discovery);
-        await dispose(trx, crawl, task, page, outcome.facts);
-      } else if (finalFailure(task, outcome.retryable)) {
-        // Membership before the crawl and task, in the Site Health lock order.
-        const runtime = await lockRuntime(trx, crawl.workspace_id);
-        // The freed slot goes to the frontier's next best URL, or the crawl ends a
-        // page short. An exact URL list has no frontier to refill from.
-        const exact = record(crawl.configuration).input_mode === 'exact_urls';
-        const released = await releaseNonPage(trx, crawl, task.url_hash, outcome, {
-          record: true,
-        });
-        if (released && !exact)
-          ({ admitted, sampleCapped } = await admitCandidates(trx, crawl, [], runtime, {
-            releasing: 1,
-          }));
-      }
-      const locked = await lockRunningTask(trx, claimed, ctx.owner);
-      if (!locked || !isActiveCrawl(locked.crawl.status)) throw new Abandoned();
-      if (!artifactId && finalFailure(locked.task, outcome.retryable))
-        await observeFailure(trx, locked.crawl, locked.task, outcome);
-      if (artifactId || admitted) {
-        await trx
-          .updateTable('site_crawls')
-          .set((eb) => ({
-            admitted_url_count: eb('admitted_url_count', '+', admitted),
-            discovered_url_count: eb('discovered_url_count', '+', artifactId ? 1 : 0),
-            updated_at: new Date(),
-            ...(sampleCapped &&
-            ['running', 'sample_completed'].includes(locked.crawl.discovery_status)
-              ? { discovery_status: 'sample_completed' }
-              : {}),
-          }))
-          .where('id', '=', locked.crawl.id)
-          .where('workspace_id', '=', locked.crawl.workspace_id)
-          .execute();
-        if (artifactId)
-          await recordCrawlEvent(trx, locked.crawl, 'discovery.progress', 'discovery progress', {
-            admitted,
-            depth: task.depth,
-          });
-      }
-      await writeAttempts(
+  await commitTask(ctx, claimed, async (trx, lock) => {
+    const live = await loadScope(trx, claimed);
+    if (live?.task.lease_owner !== ctx.owner) throw new Abandoned();
+    const { crawl, task } = live;
+    let artifactId: string | null = null;
+    let admitted = 0;
+    let sampleCapped = false;
+    const { page, discovery } = outcome;
+    if (page && discovery) {
+      // First rung of the lock DAG, before any URL write or frontier admission.
+      const runtime = await lockRuntime(trx, crawl.workspace_id);
+      artifactId = await writeArtifact(trx, crawl, task, page, outcome.facts, {
+        policyVersion: ctx.fetcher.settings.policyVersion,
+        latencyMs: outcome.latencyMs ?? 0,
+        purpose: 'discover',
+      });
+      const referrerId = await writeObservation(trx, crawl, task, page, discovery, artifactId);
+      const exact = record(crawl.configuration).input_mode === 'exact_urls';
+      const admission = await admitCandidates(
         trx,
-        locked.crawl,
-        locked.task,
-        outcome,
-        artifactId,
-        ctx.fetcher.settings.policyVersion,
+        crawl,
+        candidatesFor(task, discovery, { exact, referrerId }),
+        runtime,
+        { enqueueChildren: !exact, sourceArtifactId: artifactId },
       );
-      await settleTask(
-        trx,
-        ctx,
-        locked.task,
-        artifactId
-          ? { succeeded: true, artifactId }
-          : {
-              succeeded: false,
-              retryable: outcome.retryable,
-              errorCode: outcome.errorCode,
-              errorDetail: outcome.errorDetail,
-            },
-      );
-    })
-    .catch((error: unknown) => {
-      if (!(error instanceof Abandoned)) throw error;
-    });
+      admitted = admission.admitted;
+      sampleCapped = admission.sampleCapped;
+      await refreshFetchedUrl(trx, crawl, task, page, discovery);
+      await dispose(trx, crawl, task, page, outcome.facts);
+    } else if (finalFailure(task, outcome.retryable)) {
+      // Membership before the crawl and task, in the Site Health lock order.
+      const runtime = await lockRuntime(trx, crawl.workspace_id);
+      // The freed slot goes to the frontier's next best URL, or the crawl ends a
+      // page short. An exact URL list has no frontier to refill from.
+      const exact = record(crawl.configuration).input_mode === 'exact_urls';
+      const released = await releaseNonPage(trx, crawl, task.url_hash, outcome, {
+        record: true,
+      });
+      if (released && !exact)
+        ({ admitted, sampleCapped } = await admitCandidates(trx, crawl, [], runtime, {
+          releasing: 1,
+        }));
+    }
+    const locked = await lock();
+    if (!artifactId && finalFailure(locked.task, outcome.retryable))
+      await observeFailure(trx, locked.crawl, locked.task, outcome);
+    if (artifactId || admitted) {
+      await trx
+        .updateTable('site_crawls')
+        .set((eb) => ({
+          admitted_url_count: eb('admitted_url_count', '+', admitted),
+          discovered_url_count: eb('discovered_url_count', '+', artifactId ? 1 : 0),
+          updated_at: new Date(),
+          ...(sampleCapped &&
+          ['running', 'sample_completed'].includes(locked.crawl.discovery_status)
+            ? { discovery_status: 'sample_completed' }
+            : {}),
+        }))
+        .where('id', '=', locked.crawl.id)
+        .where('workspace_id', '=', locked.crawl.workspace_id)
+        .execute();
+      if (artifactId)
+        await recordCrawlEvent(trx, locked.crawl, 'discovery.progress', 'discovery progress', {
+          admitted,
+          depth: task.depth,
+        });
+    }
+    await writeAttempts(
+      trx,
+      locked.crawl,
+      locked.task,
+      outcome,
+      artifactId,
+      ctx.fetcher.settings.policyVersion,
+    );
+    await settleTask(
+      trx,
+      ctx,
+      locked.task,
+      artifactId
+        ? { kind: 'succeeded', artifactId }
+        : {
+            kind: 'failed',
+            retryable: outcome.retryable,
+            errorCode: outcome.errorCode,
+            errorDetail: outcome.errorDetail,
+          },
+    );
+  });
 }
 
 export async function runDiscover(ctx: SiteTaskContext, claimed: SiteTask) {
   const scope = await prepareTask(ctx, claimed);
-  if (!scope || !(await markRunning(ctx.db, scope.task, ctx.owner))) return;
+  if (!scope || !(await markRunning(ctx, scope.task))) return;
   await persist(ctx, claimed, await acquire(ctx, scope.crawl, scope.task));
 }

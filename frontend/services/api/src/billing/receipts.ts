@@ -4,13 +4,14 @@ import { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
 import type { BillingPayments } from '../generated/db-schema.ts';
-import { amount, conflict, digest, taxSnapshotSchema, type Pending } from './contracts.ts';
+import { amount, taxSnapshotSchema, type Pending } from './contracts.ts';
+import { digest } from '../crypto-text.ts';
+import { conflict } from '../errors.ts';
 import { roundedRatio, type Quote } from './quotes.ts';
 import type { PaymentEvidence, RefundEvidence } from './razorpay.ts';
-import { revokeBundle, lockAccount } from '../entitlements/grants.ts';
-import { policy } from '../config.ts';
+import { lockAccount } from '../entitlements/grants.ts';
 
-type Payment = Selectable<BillingPayments>;
+export type Payment = Selectable<BillingPayments>;
 const components = ['taxable_minor', 'cgst_minor', 'sgst_minor', 'igst_minor'] as const;
 const invoiceAmounts = z.object({
   subtotal_minor: amount,
@@ -273,6 +274,11 @@ export function creditAmounts(
   };
 }
 
+/**
+ * Records a processed refund's receipt and credit note. Returns the refunded
+ * payment and whether this refund completed it, or nothing for a replay or an
+ * unprocessed refund; `settleRefund` applies the consequences.
+ */
 export async function recordRefund(
   db: Database,
   workspaceId: string,
@@ -378,67 +384,5 @@ export async function recordRefund(
     },
     'credit_note',
   );
-  if (total === payment.amount_minor) await refundedInFull(db, workspaceId, payment, refund);
-}
-
-/**
- * A payment refunded in full grants nothing more. When it paid for the base
- * subscription's current period, the subscription is cancelled now (B52): the
- * period's plan grants, an upgrade's included, are revoked in this
- * transaction, and the row stays current until the subscription sweep's
- * provider cancellation is confirmed, so the provider cannot charge unseen.
- */
-async function refundedInFull(
-  db: Database,
-  workspaceId: string,
-  payment: Payment,
-  refund: RefundEvidence,
-) {
-  const accountId = payment.billing_account_id;
-  let query = db
-    .selectFrom('account_grants')
-    .select('id')
-    .where('billing_account_id', '=', accountId);
-  query =
-    payment.subscription_id && payment.period_start && payment.period_end
-      ? query
-          .where('source_kind', '=', 'plan')
-          .where('period_start', '>=', payment.period_start)
-          .where('period_end', '=', payment.period_end)
-          .where((eb) =>
-            eb.or([
-              eb('source_ref', '=', `subscription:${payment.subscription_id}`),
-              eb('source_ref', 'like', 'activation:%'),
-            ]),
-          )
-      : query.where('source_ref', '=', `activation:${payment.pending_activation_id}`);
-  const grants = await query.execute();
-  await revokeBundle(db, {
-    workspaceId,
-    accountId,
-    grantIds: grants.map((row) => row.id),
-    key: `refund:${payment.id}:full`,
-    reason: 'full_refund',
-    actorKind: 'provider',
-    actorId: null,
-    at: refund.createdAt,
-  });
-  if (!payment.subscription_id || !payment.period_start || !payment.period_end) return;
-  const now = new Date();
-  await db
-    .updateTable('billing_subscriptions')
-    .set({
-      status: policy.billing.contracts.subscription_cancelled,
-      // Nothing left to resume: the cancellation is decided, not held (B46).
-      cancel_at_period_end: true,
-      cancellation_sent_at: now,
-      reconciliation_next_at: now,
-      updated_at: now,
-    })
-    .where('id', '=', payment.subscription_id)
-    .where('billing_account_id', '=', accountId)
-    .where('is_current', '=', true)
-    .where('current_period_start', '=', payment.period_start)
-    .where('current_period_end', '=', payment.period_end)
-    .execute();
+  return { payment, full: total === payment.amount_minor };
 }

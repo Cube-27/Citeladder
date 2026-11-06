@@ -4,6 +4,8 @@ import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { entitlementOf, grantExpiry, loadAccountState, type AccountState } from './state.ts';
 import { policy } from '../config.ts';
+import { asApiErrorCode } from '@citeladder/contracts/error-codes';
+import { lockedGrants } from './occupancy.ts';
 
 export type WorkspaceAccess = z.infer<typeof workspaceAccessSchema>['status'];
 
@@ -134,10 +136,34 @@ export class WorkspaceEntitlements {
     return entitlement.status === 'resolved' ? entitlement.values : null;
   }
 
-  /** Whether the plan currently grants flag `key`; unresolvable grants fail closed. */
+  /** Whether the plan currently grants flag `key`; unresolvable grants fail closed. Reads only. */
   async grants(key: string): Promise<boolean> {
     return ((await this.granted())?.get(key) ?? 0) >= 1;
   }
+
+  /**
+   * The plan gate for work behind flag `key`: reads the grants under the
+   * account's capacity lock, so grant changes serialize with the action, and
+   * refuses with the registry's refusal for that flag. Unresolvable grants
+   * refuse with 403 `occupancy_unresolved`.
+   */
+  async requireFlag(key: GatedFlag): Promise<void> {
+    const { values } = await lockedGrants(this.#db, this.workspaceId, this.#at);
+    if ((values.get(key) ?? 0) >= 1) return;
+    const refusal = policy.entitlements.flag_refusals[key];
+    throw new ApiError(refusal.status === 409 ? 409 : 403, refusal.message, {
+      code: asApiErrorCode(refusal.code),
+      details: { key },
+    });
+  }
+}
+
+/** A flag with a registered refusal: the work it gates can be refused. */
+export type GatedFlag = keyof typeof policy.entitlements.flag_refusals;
+
+/** `WorkspaceEntitlements.requireFlag` for code holding a transaction or a worker. */
+export function requireFlag(db: Database, workspaceId: string, key: GatedFlag): Promise<void> {
+  return new WorkspaceEntitlements(db, workspaceId).requireFlag(key);
 }
 
 /**

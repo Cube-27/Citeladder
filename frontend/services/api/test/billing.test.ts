@@ -4,10 +4,10 @@ import { sql } from 'kysely';
 import { createApp } from '../src/app.ts';
 import { purchase } from '../src/billing/purchases.ts';
 import { changePlan } from '../src/billing/plan-changes.ts';
-import { settlePending, settleSubscription } from '../src/billing/settlement.ts';
-import { recordRefund } from '../src/billing/receipts.ts';
+import { settlePending, settleRefund, settleSubscription } from '../src/billing/settlement.ts';
 import { cancelSubscription, resumeSubscription } from '../src/billing/cancellation.ts';
-import { ProviderError } from '../src/billing/razorpay.ts';
+import { ProviderError, type RefundEvidence } from '../src/billing/razorpay.ts';
+import type { Database } from '../src/db/database.ts';
 import { recoverBilling } from '../src/billing/recovery.ts';
 import { entitlementRead, usageRead, workspaceEntitlementRead } from '../src/billing/reads.ts';
 import { claimOffer, endOffer, offerRead } from '../src/billing/journeys.ts';
@@ -22,6 +22,21 @@ import {
   paidSubscription,
 } from './billing-support.ts';
 import { grant } from './prompt-fixtures.ts';
+
+/** Settles a Razorpay refund for the tenant, as provider recovery does. */
+const refundIn = (
+  trx: Database,
+  t: { workspaceId: string; accountId: string },
+  mode: string,
+  refund: RefundEvidence,
+) =>
+  settleRefund(trx, {
+    workspaceId: t.workspaceId,
+    accountId: t.accountId,
+    provider: 'razorpay',
+    mode,
+    refund,
+  });
 
 describe('billing money and access owner', () => {
   const config = billingConfig();
@@ -572,22 +587,14 @@ describe('billing money and access owner', () => {
       createdAt: new Date(),
     };
     await Promise.all(
-      [1, 2].map(() =>
-        db
-          .transaction()
-          .execute((trx) =>
-            recordRefund(trx, t.workspaceId, t.accountId, 'razorpay', 'test', refund),
-          ),
-      ),
+      [1, 2].map(() => db.transaction().execute((trx) => refundIn(trx, t, 'test', refund))),
     );
     const rest = {
       ...refund,
       id: `rfnd_${randomUUID().replaceAll('-', '')}`,
       amount: payment.amount_minor - 1,
     };
-    await db
-      .transaction()
-      .execute((trx) => recordRefund(trx, t.workspaceId, t.accountId, 'razorpay', 'test', rest));
+    await db.transaction().execute((trx) => refundIn(trx, t, 'test', rest));
     const notes = await db
       .selectFrom('billing_invoices')
       .selectAll()
@@ -610,18 +617,14 @@ describe('billing money and access owner', () => {
     ).not.toHaveLength(0);
     await expect(
       db.transaction().execute((trx) =>
-        recordRefund(trx, t.workspaceId, t.accountId, 'razorpay', 'test', {
+        refundIn(trx, t, 'test', {
           ...refund,
           id: 'rfnd_excess',
         }),
       ),
     ).rejects.toMatchObject({ status: 409 });
     await expect(
-      db
-        .transaction()
-        .execute((trx) =>
-          recordRefund(trx, t.workspaceId, t.accountId, 'razorpay', 'live', refund),
-        ),
+      db.transaction().execute((trx) => refundIn(trx, t, 'live', refund)),
     ).rejects.toMatchObject({ status: 409 });
   });
   it('cancels the subscription and ends plan access once the current period is refunded in full, never on a partial refund or a replay', async () => {
@@ -632,12 +635,8 @@ describe('billing money and access owner', () => {
       .selectAll()
       .where('billing_account_id', '=', t.accountId)
       .executeTakeFirstOrThrow();
-    const settle = (refund: Parameters<typeof recordRefund>[5]) =>
-      db
-        .transaction()
-        .execute((trx) =>
-          recordRefund(trx, t.workspaceId, t.accountId, 'razorpay', 'test', refund),
-        );
+    const settle = (refund: RefundEvidence) =>
+      db.transaction().execute((trx) => refundIn(trx, t, 'test', refund));
     const current = () =>
       db
         .selectFrom('billing_subscriptions')

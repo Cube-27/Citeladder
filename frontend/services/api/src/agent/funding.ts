@@ -11,13 +11,13 @@ import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
-import { accountState } from '../entitlements/state.ts';
+import { requireFlag } from '../entitlements/access.ts';
 import {
-  availableUnits,
-  reserveUsage,
-  debitUsage,
-  refundUsage,
-  releaseUsage,
+  billingAccountId,
+  hold,
+  refundSubject,
+  remaining,
+  settle,
   LedgerError,
 } from '../entitlements/ledger.ts';
 import {
@@ -40,19 +40,19 @@ import type { GatewaySettings } from '../models/gateway.ts';
 type Settings = ReturnType<typeof agentSettings>;
 
 async function account(db: Database, workspaceId: string) {
-  const row = await db
-    .selectFrom('billing_accounts')
-    .select('id')
-    .where('workspace_id', '=', workspaceId)
-    .executeTakeFirst();
-  if (!row) throw new AgentError('funding_unavailable');
-  return row.id;
+  const id = await billingAccountId(db, workspaceId);
+  if (!id) throw new AgentError('funding_unavailable');
+  return id;
 }
+/** The plan gate for the Agent; any refusal is the Agent's `capability_unavailable`. */
 async function capability(db: Database, workspaceId: string) {
   const id = await account(db, workspaceId);
-  const state = await accountState(db, workspaceId, id, new Date());
-  if (state.error || (state.values.get('agent') ?? 0) < 1)
-    throw new AgentError('capability_unavailable');
+  try {
+    await requireFlag(db, workspaceId, 'agent');
+  } catch (error) {
+    if (error instanceof ApiError) throw new AgentError('capability_unavailable');
+    throw error;
+  }
   return id;
 }
 async function development(db: Database, userId: string | null, settings: Settings) {
@@ -187,23 +187,22 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
       const accountId = await account(db, run.workspace_id);
       const at = new Date();
       try {
-        const available = await availableUnits(db, {
+        const available = await remaining(db, {
           accountId,
           workspaceId: run.workspace_id,
           capability: policy.entitlements.ai_credits,
           at,
         });
-        const { credits, outputTokens } = sizedHold(price, available, {
+        const { credits, outputTokens } = sizedHold(price, available.units, {
           maxInputTokens,
           maxOutputTokens: platform.maxOutputTokens,
           maxWebSearches: request.webSearches,
         });
-        const reservationId = await reserveUsage(db, {
-          accountId,
+        const { reservationId } = await hold(db, {
           capability: policy.entitlements.ai_credits,
           subject: { kind: 'agent', id: run.id, workspaceId: run.workspace_id },
+          dispatchId,
           units: credits,
-          key: `agent:${dispatchId}:hold`,
           at,
         });
         return { reservationId, credits, pricingRevision: PRICING_REVISION, outputTokens };
@@ -214,7 +213,7 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
             'funded_credits_exhausted',
             'entitlement_unresolved',
             'capability_not_consumable',
-          ].includes(error.message)
+          ].includes(error.code)
         )
           throw new AgentError('funding_unavailable');
         throw error;
@@ -233,55 +232,25 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
         failed && charged === null
           ? 0
           : Math.min(reserved, charged ?? unknownUsageCredits(reserved));
-      const accountId = await account(db, attempt.workspace_id);
-      const key = `agent:${attempt.id}:settle:${attempt.dispatch_id}`;
-      const at = new Date();
-      if (credits)
-        await debitUsage(db, {
-          workspaceId: attempt.workspace_id,
-          accountId,
-          reservationId: attempt.reservation_id,
-          subjectId: attempt.run_id,
-          attempt: attempt.run_attempt,
-          units: credits,
-          key,
-          dispatchKey: attempt.dispatch_id,
-          at,
-        });
-      await releaseUsage(db, {
+      await account(db, attempt.workspace_id);
+      await settle(db, {
         workspaceId: attempt.workspace_id,
-        accountId,
         reservationId: attempt.reservation_id,
-        key: `${key}:excess`,
-        at,
+        spent: credits,
+        attempt: attempt.run_attempt,
+        dispatch: attempt.dispatch_id,
+        at: new Date(),
       });
       return { credits, status: credits ? 'settled' : 'zero_debit' };
     },
     // A failed turn is not charged (B58): each debit gets one append-only refund.
     refund: async (db, run) => {
       if (run.funding_source !== 'platform') return;
-      const accountId = await account(db, run.workspace_id);
-      const debits = await db
-        .selectFrom('consumable_ledger')
-        .select(['id', 'units'])
-        .where('workspace_id', '=', run.workspace_id)
-        .where('billing_account_id', '=', accountId)
-        .where('agent_run_id', '=', run.id)
-        .where('entry_kind', '=', 'debit')
-        .orderBy('id')
-        .execute();
-      const at = new Date();
-      for (const debit of debits) {
-        const refund = {
-          workspaceId: run.workspace_id,
-          accountId,
-          debitId: debit.id,
-          units: debit.units,
-          key: `agent:${run.id}:refund:${debit.id}`,
-          at,
-        };
-        await refundUsage(db, refund); // NOSONAR -- refunds share the caller's ordered transaction.
-      }
+      await account(db, run.workspace_id);
+      await refundSubject(db, {
+        subject: { kind: 'agent', id: run.id, workspaceId: run.workspace_id },
+        at: new Date(),
+      });
     },
   };
 }

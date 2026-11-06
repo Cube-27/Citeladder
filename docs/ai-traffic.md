@@ -184,7 +184,7 @@ and activates the source; the pull task reruns it every
 changes nothing, and only a passing check lifts that stall.
 
 `crawl_log_pull` ([`pull.ts`](../frontend/services/api/src/crawl-logs/pull.ts),
-lease 300 s through `task_lease_ttl_seconds`) is queued by the tick for verified
+lease 300 s through crawl-log `pull_lease_ttl_seconds`) is queued by the tick for verified
 live pull sources every `pull_interval_seconds`, and daily while
 `verification_failed` or `not_in_plan` holds them. It commits `last_pull_at`,
 then loops at most `pull_max_iterations`: pull up to `pull_max_messages` outside
@@ -319,9 +319,12 @@ dates; pattern-filtered Pages read over that snapshot's window. Terminal
 crawl-log/referral refreshes, Visibility audit completion, Site Health
 terminalization and source/mapping changes enqueue a refresh in their owning
 transaction, and crawl-log maintenance enqueues one a day for each GA4-mapped
-project not yet refreshed that UTC day. Queued work is coalesced and debounced; leased/running
+project not yet refreshed that UTC day. Every producer requests it through the queue's
+`enqueueCoalesced` (`src/queue/enqueue.ts`, one advisory lock per kind and project), as the
+rollup and Traffic snapshot refreshes do. Queued work is coalesced and debounced; leased/running
 work gets a queued successor. Repeated queued triggers preserve the earliest
-refresh deadline. Pattern-filtered Pages reads of a GA4-mapped project return a retryable
+refresh deadline. The GA4 gate lives only in the executor: a project without an active GA4
+mapping settles the refresh without deriving anything. Pattern-filtered Pages reads of a GA4-mapped project return a retryable
 unavailable response while no snapshot exists, rather than an empty observed
 population. Snapshots retain formula version, configured
 thresholds and exact rollup, audit, artifact and crawl IDs. Four bounded patterns

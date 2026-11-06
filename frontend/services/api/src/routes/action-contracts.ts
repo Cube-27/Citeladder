@@ -1,8 +1,5 @@
 /** Request bodies of the Action routes; shapes and responses are the shared contracts. */
-import {
-  actionDeclarationRequestSchema,
-  actionStatusUpdateRequestSchema,
-} from '@citeladder/contracts/actions';
+import { actionStatusUpdateRequestSchema } from '@citeladder/contracts/actions';
 import { z } from 'zod';
 import { policy } from '../config.ts';
 
@@ -16,4 +13,3 @@ export const statusPatch = actionStatusUpdateRequestSchema.extend({
     )
     .pipe(actionStatusUpdateRequestSchema.shape.status),
 });
-export const declarationCreate = actionDeclarationRequestSchema;

@@ -27,7 +27,7 @@ import type { SeedQueries, Topic, TopicPreview } from '@citeladder/contracts';
 
 const topicListSchema = z.array(topicSchema);
 
-export const topicsApi = {
+const topicsApi = {
   list: async (projectId: string, options?: ApiRequestOptions) => {
     const res = await apiClient.get<Topic[]>(`/projects/${projectId}/topics`, options);
     return strictValidate(topicListSchema, res, 'topics.list');

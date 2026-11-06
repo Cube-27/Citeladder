@@ -3321,7 +3321,6 @@ export interface WorkspaceSiteHealthRuntime {
   monitored_url_limit: number;
   resolved_entitlement_lifecycle_version: number;
   resolved_registry_revision: string;
-  resolved_valid_until: Timestamp | null;
   sample_url_limit: number;
   updated_at: Timestamp;
   workspace_id: string;

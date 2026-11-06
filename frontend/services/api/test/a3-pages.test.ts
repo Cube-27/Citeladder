@@ -4,11 +4,11 @@ import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 import { testConfig, testDatabase, sessionToken } from './support.ts';
 import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
-import { seedImport } from './referral-fixtures.ts';
+import { seedClassifiedPairs, seedImport } from './referral-fixtures.ts';
 import { task, requests } from './traffic-fixtures.ts';
 import { createSource } from '../src/crawl-logs/sources.ts';
 import { crawlLogs } from '../src/config/crawl-logs.ts';
-import { aiTraffic } from '../src/config/ai-traffic.ts';
+import { aiTraffic, insightsRefresh } from '../src/config/ai-traffic.ts';
 import { ingest } from '../src/crawl-logs/ingest.ts';
 import { refreshCrawlLogs } from '../src/crawl-logs/rollup.ts';
 import { refreshAiReferralsSnapshot } from '../src/referrals/snapshot.ts';
@@ -20,8 +20,9 @@ import {
   refreshInsightWindow,
   insightsRead,
 } from '../src/crawl-logs/insights.ts';
-import { enqueueTrafficInsights } from '../src/crawl-logs/insights-enqueue.ts';
-import { canonicalPage, hash } from '../src/traffic/normalization.ts';
+import { enqueueCoalesced } from '../src/queue/enqueue.ts';
+import { hash } from '../src/crypto-text.ts';
+import { canonicalPage } from '../src/page-identity.ts';
 import { canonicalIdentity } from '../src/site-health/url-identity.ts';
 import { dispatchTool } from '../src/mcp/tools.ts';
 
@@ -134,6 +135,14 @@ beforeAll(async () => {
         created_at: now,
       })
       .execute();
+  // Landing rows take their AI source from the persisted source/medium classifications.
+  await seedClassifiedPairs(db, imported, {
+    date: day,
+    pairs: [
+      ['chatgpt.com', 'referral'],
+      ['claude.ai', 'referral'],
+    ],
+  });
   await refreshAiReferralsSnapshot(
     await task(db, seed, 'ai_referrals_snapshot_refresh', [day, day]),
     context,
@@ -661,8 +670,8 @@ describe('A3 persisted insight gates', () => {
       ),
     ).toEqual([]);
     await Promise.all([
-      db.transaction().execute((trx) => enqueueTrafficInsights(trx, scope())),
-      db.transaction().execute((trx) => enqueueTrafficInsights(trx, scope())),
+      db.transaction().execute((trx) => enqueueCoalesced(trx, { ...insightsRefresh, ...scope() })),
+      db.transaction().execute((trx) => enqueueCoalesced(trx, { ...insightsRefresh, ...scope() })),
     ]);
     const pending = await db
       .selectFrom('analytics_tasks')
@@ -673,11 +682,13 @@ describe('A3 persisted insight gates', () => {
       .execute();
     expect(pending).toHaveLength(1);
     expect(pending[0]!.available_at.getTime()).toBeGreaterThan(now.getTime());
-    await db
-      .transaction()
-      .execute((trx) =>
-        enqueueTrafficInsights(trx, scope(), new Date(pending[0]!.available_at.getTime() + 1000)),
-      );
+    await db.transaction().execute((trx) =>
+      enqueueCoalesced(trx, {
+        ...insightsRefresh,
+        ...scope(),
+        now: new Date(pending[0]!.available_at.getTime() + 1000),
+      }),
+    );
     expect(
       (
         await db
@@ -708,7 +719,9 @@ describe('A3 persisted insight gates', () => {
       .set({ status: 'running' })
       .where('id', '=', pending[0]!.id)
       .execute();
-    await db.transaction().execute((trx) => enqueueTrafficInsights(trx, scope()));
+    await db
+      .transaction()
+      .execute((trx) => enqueueCoalesced(trx, { ...insightsRefresh, ...scope() }));
     expect(
       await db
         .selectFrom('analytics_tasks')
@@ -722,13 +735,19 @@ describe('A3 persisted insight gates', () => {
   it('derives nothing for a project without GA4', async () => {
     const other = await fixtures.crawl();
     const otherScope = { workspaceId: other.workspaceId, projectId: other.projectId };
-    await db.transaction().execute((trx) => enqueueTrafficInsights(trx, otherScope));
+    // The request is queued like any other; the executor settles it without GA4.
+    const id = await enqueueCoalesced(db, { ...insightsRefresh, ...otherScope });
+    const queued = await db
+      .selectFrom('analytics_tasks')
+      .selectAll()
+      .where('id', '=', id!)
+      .executeTakeFirstOrThrow();
+    await refreshTrafficInsights(queued, context);
     expect(
       await db
-        .selectFrom('analytics_tasks')
+        .selectFrom('ai_traffic_insights')
         .select('id')
         .where('project_id', '=', other.projectId)
-        .where('task_kind', '=', 'ai_traffic_insights_refresh')
         .execute(),
     ).toHaveLength(0);
     expect(await insightsRead(db, otherScope, { range: '30d' })).toMatchObject({

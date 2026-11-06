@@ -29,8 +29,9 @@ import {
 } from '../search-intelligence/reads.ts';
 import { cancelRun, confirmRun, savePreferences } from '../search-intelligence/runs.ts';
 import { defineGetRoute, definePostRoute, definePutRoute } from './define.ts';
-import { requireSearchIntelligence } from '../entitlements/occupancy.ts';
-import { citationMatchBody, preferencesBody, reviewBody } from './search-intelligence-contracts.ts';
+import { requireFlag } from '../entitlements/access.ts';
+import { preferencesBody, reviewBody } from './search-intelligence-contracts.ts';
+import { searchCitationMatchRequestSchema } from '@citeladder/contracts/search-intelligence-requests';
 
 const family = 'search-intelligence';
 const authorize = 'project';
@@ -66,7 +67,7 @@ export const searchIntelligenceRoutes = [
       const key = c.req.header('Idempotency-Key');
       if (!key || key.length > 160)
         throw new ApiError(422, 'A bounded Idempotency-Key is required');
-      await requireSearchIntelligence(db, c.get('workspace').workspaceId);
+      await requireFlag(db, c.get('workspace').workspaceId, 'search_intelligence');
       return createReview(
         db,
         scopeOf(c, path.project_id),
@@ -109,7 +110,7 @@ export const searchIntelligenceRoutes = [
     params: { path: runPath, query: {} },
     response: searchRunSchema,
     async handle({ c, db }, { path }) {
-      await requireSearchIntelligence(db, c.get('workspace').workspaceId);
+      await requireFlag(db, c.get('workspace').workspaceId, 'search_intelligence');
       return confirmRun(db, scopeOf(c, path.project_id), path.run_id);
     },
   }),
@@ -188,11 +189,11 @@ export const searchIntelligenceRoutes = [
     capability: 'write',
     status: 201,
     params: { path: projectPath, query: {} },
-    body: citationMatchBody,
+    body: searchCitationMatchRequestSchema,
     response: searchDatasetSchema,
     async handle({ c, db }, { path }) {
-      const body = await readBody(c, citationMatchBody);
-      await requireSearchIntelligence(db, c.get('workspace').workspaceId);
+      const body = await readBody(c, searchCitationMatchRequestSchema);
+      await requireFlag(db, c.get('workspace').workspaceId, 'search_intelligence');
       return deriveCitationMatches(
         db,
         scopeOf(c, path.project_id),

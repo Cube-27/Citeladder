@@ -111,6 +111,21 @@ reclaim through `reclaimExpiredLeases` (`src/queue/recovery.ts`), which takes
 the lane's attempt charge; audit recovery locks the parent audit first and holds
 uncertain submissions, so it stays in `AuditMaintenance`. Every queue claims
 the least recently served workspace first (`queue_workspace_turns`).
+The queue-lane owner (`src/queue/task-queue.ts`) takes a lane descriptor
+(table, claimable statuses, the status a claim moves to, the attempt the claim
+charges, extra readiness, recovery charge) and holds the shared claim, turn
+cursor, heartbeat and fenced terminal lock; every lane runs on it (analytics,
+Site Health, discovery, Agent, integrations and audits). Domain lifecycle runs
+as a claim hook in the claim's transaction (the integration sync-started
+event) or stays with the lane: the audit parent-first lock and parks
+(`src/queue/audit-queue.ts`, which also leases due audit schedules), the Agent
+turn start and Site Health's crawl lock. An unpinned claim compares
+`available_at` with the later of the application clock (producers) and the
+database clock (recovery), so clock skew never strands a due row. A claim ranks only the
+`claim_candidate_limit` oldest due rows (`config/queue.json`), so its cost does
+not grow with the backlog. Analytics retries back off exponentially from
+`retry_delay_seconds` up to `retry_max_delay_seconds`, jittered into the upper
+half of each wait.
 
 `tick.ts` first runs MCP and usage-window cleanup, audit maintenance, Search
 Intelligence reconciliation, due audit schedules, integration dispatch/revocation

@@ -101,7 +101,7 @@ export const distributionWithinRun = (value: { branded_share: number; comparison
 export const DISTRIBUTION_EXCEEDS_RUN = 'Branded and comparison shares cannot exceed the whole run';
 
 /** Which persisted searches may steer wording; omitted reads every source. */
-export const promptSeedSourceSchema = z.enum(['search_console', 'search_intelligence', 'none']);
+const promptSeedSourceSchema = z.enum(['search_console', 'search_intelligence', 'none']);
 /** Prompt cohorts a run can plan, core first so it wins ties. */
 export const promptGenerationCohortSchema = z.enum(['core', 'brand_diagnostic', 'comparison']);
 

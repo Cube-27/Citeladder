@@ -31,9 +31,6 @@ export type CompetitorDiscoveryRequest = z.input<typeof competitorDiscoveryReque
 export const competitorDiscoveryExecuteRequestSchema = z.strictObject({
   task_ids: z.array(z.uuid()).min(1).max(COMMERCE_TARGETS_MAX),
 });
-export type CompetitorDiscoveryExecuteRequest = z.input<
-  typeof competitorDiscoveryExecuteRequestSchema
->;
 
 /** Approve or reject one discovered competitor. */
 export const competitorDecisionRequestSchema = z.object({

@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { catalogSchema } from '../src/billing/catalog.ts';
 import { launchCatalog } from '../src/billing/catalog-authoring.ts';
-import { digest, type Pending } from '../src/billing/contracts.ts';
+import type { Pending } from '../src/billing/contracts.ts';
+import { digest } from '../src/crypto-text.ts';
 import type { BillingProvider, Evidence, SubscriptionEvidence } from '../src/billing/razorpay.ts';
 import type { Database } from '../src/db/database.ts';
 import { billingAccount } from './prompt-fixtures.ts';
