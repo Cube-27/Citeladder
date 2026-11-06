@@ -309,7 +309,7 @@ interaction recipes live only in [`design.md`](design.md).
 | Capability | Owner |
 |---|---|
 | Button, Card, Input, Textarea, Field | `frontend/components/ui/` |
-| Menu, Dialog, Drawer, Tooltip | `frontend/components/ui/` Radix wrappers (`menu.tsx`, `dialog.tsx`, `drawer.tsx`, `tooltip.tsx`); Popover is `popover.tsx` |
+| Menu, Dialog, Drawer, Tooltip | `frontend/components/ui/` Radix wrappers (`menu.tsx`, `dialog.tsx`, `drawer.tsx`, `tooltip.tsx`) |
 | Table, Badge, Tag, Callout, EmptyState, Skeleton, ProgressBar, pagination | `frontend/components/ui/` |
 | Segmented control | `frontend/components/ui/tabs.tsx` (`SegmentedControl`) |
 | Kbd, ChipInput, ThemeSwitch, BrandMark, EngineMark, Citation, Rungs | `frontend/components/ui/` (`kbd.tsx`, `chip-input.tsx`, `theme-switch.tsx`, `brand-mark.tsx`, `engine-mark.tsx`, `citation.tsx`, `rungs.tsx`) |
@@ -340,7 +340,7 @@ interaction recipes live only in [`design.md`](design.md).
 | Menu separator and link rows | `frontend/components/ui/menu.tsx` (`MenuSeparator`, `MenuLinkItem`) |
 | Pagination (`Pager`) | `frontend/components/ui/pager.tsx` |
 | Date field and calendar | `frontend/components/ui/date-field.tsx`, `frontend/components/ui/calendar.tsx` |
-| Avatar, Disclosure, Donut chart | `avatar.tsx`, `disclosure.tsx`, `donut-chart.tsx` |
+| Avatar, Disclosure | `avatar.tsx`, `disclosure.tsx` |
 | Command palette, Market Select, CSV import | Existing shared and feature owners |
 | Resizable workspaces | Existing feature owners |
 | Color controls, OTP, sliders | No current product use |
