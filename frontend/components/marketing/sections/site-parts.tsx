@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 /**
  * The website's arrow link: 16/24 medium ink with an arrow that nudges 2px on
  * hover. With an `href` it is a link; without one it is the visual end of a
- * card that is itself the link (FeatureCard, RelatedCards), so it never nests
+ * card that is itself the link (FeatureCard), so it never nests
  * an anchor in an anchor.
  */
 export function SiteArrowLink({

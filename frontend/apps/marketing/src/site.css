@@ -171,14 +171,14 @@
 
 /* D21: a card list never leaves an empty cell. A short last row (five cards
    at three a row) sits centred under the full rows instead. */
-:is(.cl-tiles, .cl-related, .cl-qcards):is(.cl-cols-2, .cl-cols-3, .cl-cols-4) {
+:is(.cl-tiles, .cl-qcards):is(.cl-cols-2, .cl-cols-3, .cl-cols-4) {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
 }
 
 /* `height: auto` lets a card that is itself the list item stretch to its row. */
-:is(.cl-tiles, .cl-related, .cl-qcards):is(.cl-cols-2, .cl-cols-3, .cl-cols-4) > li {
+:is(.cl-tiles, .cl-qcards):is(.cl-cols-2, .cl-cols-3, .cl-cols-4) > li {
   flex: 0 0 calc((100% - (var(--cols) - 1) * var(--cl-list-gap)) / var(--cols));
   height: auto;
 }
@@ -1908,8 +1908,122 @@ a.cl-fcard:hover {
   }
 }
 
-/* ---------- RelatedCards and QuestionCards ---------- */
-.cl-related,
+/* ---------- RelatedCards: a ruled index of links, not boxes ---------- */
+.cl-related {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 48px;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--color-line-strong);
+  list-style: none;
+}
+
+.cl-related--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.cl-related > li {
+  border-bottom: 1px solid var(--color-line);
+}
+
+.cl-related-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  height: 100%;
+  padding: 24px 0;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.cl-related-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cl-related-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-heading-lg);
+  font-weight: 500;
+  line-height: var(--text-heading-lg--line-height);
+  letter-spacing: var(--text-heading-lg--letter-spacing);
+  text-wrap: balance;
+}
+
+.cl-related-text {
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  text-wrap: pretty;
+}
+
+.cl-related-go {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.cl-related-label {
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  white-space: nowrap;
+}
+
+.cl-related-arrow {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  place-items: center;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
+}
+
+.cl-related-row:hover .cl-related-arrow,
+.cl-related-row:focus-visible .cl-related-arrow {
+  border-color: var(--color-ink);
+  background: var(--color-ink);
+  color: var(--color-paper);
+  transform: translateX(4px);
+}
+
+.cl-related-row:hover .cl-related-title {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cl-related-row:hover .cl-related-arrow,
+  .cl-related-row:focus-visible .cl-related-arrow {
+    transform: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .cl-related {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cl-related-row {
+    padding: 20px 0;
+  }
+}
+
+/* ---------- QuestionCards ---------- */
 .cl-qcards {
   --cl-list-gap: 24px;
 
@@ -1920,7 +2034,6 @@ a.cl-fcard:hover {
   list-style: none;
 }
 
-.cl-related-card,
 .cl-qcard {
   display: flex;
   flex-direction: column;
@@ -1934,17 +2047,6 @@ a.cl-fcard:hover {
   color: var(--color-ink);
 }
 
-.cl-related-card {
-  align-items: flex-start;
-  text-decoration: none;
-  transition: border-color var(--motion-fast) var(--ease-standard);
-}
-
-.cl-related-card:hover {
-  border-color: var(--color-line-strong);
-}
-
-.cl-related-title,
 .cl-qcard-q {
   margin: 0;
   color: var(--color-ink);
@@ -1952,17 +2054,6 @@ a.cl-fcard:hover {
   font-weight: 500;
   line-height: var(--text-heading-lg--line-height);
   letter-spacing: var(--text-heading-lg--letter-spacing);
-}
-
-.cl-related-text {
-  color: var(--color-ink-secondary);
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
-}
-
-.cl-related-more {
-  margin-top: auto;
-  padding-top: 12px;
 }
 
 .cl-qcard-q {
@@ -1989,7 +2080,6 @@ a.cl-fcard:hover {
 }
 
 @media (max-width: 767px) {
-  .cl-related,
   .cl-qcards {
     --cl-list-gap: 16px;
   }

@@ -153,7 +153,7 @@ const view = route.kind === 'post' ? postView(route.post) : null;
             </Fragment>
           </ContentArticle>
           {view.related.length > 0 && (
-            <PageSection title="Related reading" layout="aside" spacing="compact">
+            <PageSection title="Related reading" spacing="compact">
               <RelatedCards
                 items={view.related.map((post) => ({
                   href: `/blog/${post.slug}`,

@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
+import { ArrowRight } from 'lucide-react';
 
 import { EngineMark, type EngineKey } from '@/components/ui/engine-mark';
 import { Rungs, type RungLevel } from '@/components/ui/rungs';
 import { cn } from '@/lib/utils';
 
-import { Eyebrow, SiteArrowLink, columnsFor } from './site-parts';
+import { Eyebrow, columnsFor } from './site-parts';
 
 const ENGINE_NAMES: Readonly<Record<EngineKey, string>> = {
   chatgpt: 'ChatGPT',
@@ -21,17 +22,28 @@ export type RelatedCard = Readonly<{
   linkLabel?: string;
 }>;
 
-/** RelatedCards: where to go next, one linked card each, 2 to 4 a row. */
+/**
+ * RelatedCards: where to go next, as a ruled index of links rather than boxes.
+ * Each row is the link: title and summary, with a round arrow that fills on
+ * hover. Two columns from tablet up, one on a phone.
+ */
 export function RelatedCards({ items }: Readonly<{ items: readonly RelatedCard[] }>) {
   return (
-    <ul className={cn('cl-related', `cl-cols-${columnsFor(items.length)}`)}>
+    <ul className={cn('cl-related', items.length === 1 && 'cl-related--single')}>
       {items.map((item) => (
         <li key={item.href}>
-          <a href={item.href} className="cl-related-card focus-ring">
-            {item.eyebrow && <span className="type-eyebrow cl-eyebrow">{item.eyebrow}</span>}
-            <h3 className="cl-related-title">{item.title}</h3>
-            {item.body && <span className="cl-related-text">{item.body}</span>}
-            <SiteArrowLink className="cl-related-more">{item.linkLabel ?? 'Read'}</SiteArrowLink>
+          <a href={item.href} className="cl-related-row focus-ring">
+            <span className="cl-related-copy">
+              {item.eyebrow && <span className="type-eyebrow cl-eyebrow">{item.eyebrow}</span>}
+              <h3 className="cl-related-title">{item.title}</h3>
+              {item.body && <span className="cl-related-text">{item.body}</span>}
+            </span>{' '}
+            <span className="cl-related-go">
+              {item.linkLabel && <span className="cl-related-label">{item.linkLabel}</span>}
+              <span className="cl-related-arrow">
+                <ArrowRight aria-hidden className="size-4" />
+              </span>
+            </span>
           </a>
         </li>
       ))}
