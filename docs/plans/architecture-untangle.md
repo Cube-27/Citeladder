@@ -1,4 +1,4 @@
-| done | 4a96045 | || done | 1b33b90 | || done | c740105 | || done | c401d14 | || done | 4db7114 | |# Architecture untangle
+# Architecture untangle
 
 Status: approved for implementation (owner, 2026-11-06). This document is both the plan and the
 orchestrator's tracker. The work is 22 scoped pull requests (P01–P22). Each PR batches a set of rows
@@ -128,11 +128,11 @@ order the PR tracker already respects.
 | Q1 | Enqueue and executor contract move to `queue/`; fairness test harness | — | `queue/`, `referrals/enqueue.ts`, `workers/executor.ts` + importers | wide | done | 624694c | |
 | Q2 | Analytics task-kind registry | Q1 | `workers/analytics-worker.ts`, `workers/terminal-compensation.ts`, `config/analytics.json` | | done | 5466c82 | |
 | Q3 | Lane descriptor: shared claim, cursor, heartbeat, fence; analytics and Site Health lanes | Q1, DB1 | `queue/task-queue.ts`, `queue/recovery.ts`, `queue/next-due.ts` | | done | feea935 | |
-| Q4 | Discovery lane on the descriptor | Q3, ON1 | `queue/discovery-queue.ts`, `workers/discovery-worker.ts` | | todo | | |
-| Q5 | Agent lane on the descriptor | Q3, FX5 | `agent/queue.ts`, `workers/agent-worker.ts` | | todo | | |
-| Q6 | Integrations lane on the descriptor | Q3 | `workers/integration-worker.ts` | | todo | | |
-| Q7 | Audit lane on the descriptor | Q4, Q5, Q6 | `queue/audit-queue.ts`, `workers/audit-worker.ts`, `workers/audit-scheduler.ts` | | todo | | |
-| Q8 | Coalesced-successor enqueue; AI Traffic trigger through the queue | Q2 | `crawl-logs/{state,insights-enqueue}.ts`, `integrations/projections.ts`, trigger call sites | | todo | | |
+| Q4 | Discovery lane on the descriptor | Q3, ON1 | `queue/discovery-queue.ts`, `workers/discovery-worker.ts` | | done | 4db7114 | |
+| Q5 | Agent lane on the descriptor | Q3, FX5 | `agent/queue.ts`, `workers/agent-worker.ts` | | done | c401d14 | |
+| Q6 | Integrations lane on the descriptor | Q3 | `workers/integration-worker.ts` | | done | c740105 | |
+| Q7 | Audit lane on the descriptor | Q4, Q5, Q6 | `queue/audit-queue.ts`, `workers/audit-worker.ts`, `workers/audit-scheduler.ts` | | done | 1b33b90 | |
+| Q8 | Coalesced-successor enqueue; AI Traffic trigger through the queue | Q2 | `crawl-logs/{state,insights-enqueue}.ts`, `integrations/projections.ts`, trigger call sites | | done | 4a96045 | |
 | SH1 | Site Health task-outcome classifier | — | `site-health/` outcome lists (nine files) | | done | 13423c9 | |
 | SH2 | Crawl-status module; dead states and legacy fallbacks deleted | SH1 | `packages/contracts/src/site-health/crawl.ts`, `site-health/`, `frontend/lib/site-health/status.ts` | mig? | done | 86f59ee | |
 | SH3 | One writer for crawl tasks, site URLs, observations, memberships | SH2 | `site-health/{admission-writes,frontier,discover-task,planner,site-setup-task,lifecycle,link-metrics}.ts` | | done | 90cc69e | |
