@@ -225,7 +225,6 @@ export function ScreenAppVisibility() {
                   { label: 'Northwind', values: TREND.northwind },
                   { label: 'Lumen', values: TREND.lumen },
                 ]}
-                height={240}
                 yMin={0}
                 yMax={50}
                 yFormat={(value) => `${value}%`}

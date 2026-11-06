@@ -294,6 +294,15 @@ const chartFrameClasses = {
 export type ChartHeight = keyof typeof chartFrameClasses;
 
 /**
+ * The roles in pixels, for a chart that draws its plot to a measured box. The
+ * same values as the `--chart-height-*` tokens in `apps/app/src/globals.css`.
+ */
+export const CHART_HEIGHT_PX = { sm: 160, md: 240, lg: 320 } as const satisfies Record<
+  ChartHeight,
+  number
+>;
+
+/**
  * The box a chart and every state standing in for it share: the chart's
  * height role as a floor, so loading, a read error or an empty selection
  * occupy the plot's footprint and nothing under the card moves.

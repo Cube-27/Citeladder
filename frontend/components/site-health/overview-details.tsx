@@ -226,7 +226,7 @@ function TrendCard({ data }: Readonly<{ data: SiteHealthOverview['trend'] }>) {
             data={data.series}
             label="AEO Readiness trend"
             name="AEO Readiness"
-            height={160}
+            height="sm"
             yMax={100}
           />
           {data.state === 'unavailable' ? (
