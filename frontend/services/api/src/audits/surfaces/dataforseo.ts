@@ -42,7 +42,7 @@ const REFUSAL_PAUSES = new Map([
 ]);
 
 /** What reached the provider before a failure: nothing, a free retrieval, or the paid submission. */
-export type Exchange = 'none' | 'unpaid' | 'paid';
+type Exchange = 'none' | 'unpaid' | 'paid';
 
 /** What differs between observed surfaces inside the shared phases. */
 export type ObservedSurface = Pick<SurfaceAdapter, 'capacity' | 'recoveryDeadline'> & {
@@ -77,7 +77,7 @@ function frozenField<T>(value: T | undefined, field: string): T {
   return value;
 }
 /** The provider timeout frozen for a search-surface task. */
-export const surfaceTimeoutSeconds = (task: AuditTask) =>
+const surfaceTimeoutSeconds = (task: AuditTask) =>
   frozenField(readFrozenSearchRequest(task.request_snapshot).timeout_seconds, 'timeout');
 /** The surface request exactly as frozen at admission; a missing field refuses the submission. */
 export function frozenSurfaceRequest(
