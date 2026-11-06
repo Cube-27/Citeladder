@@ -121,7 +121,7 @@ export const mcpVisibilitySourcesSchema = z.object({
 export type McpVisibilitySources = z.input<typeof mcpVisibilitySourcesSchema>;
 
 /** One answer `read_visibility_results` lists, with the id `fetch` resolves. */
-export const mcpVisibilityResultSchema = visibilityExecutionEvidenceSchema
+const mcpVisibilityResultSchema = visibilityExecutionEvidenceSchema
   .pick({ task_id: true, prompt_text: true, logical_engine: true, completed_at: true })
   .extend({ record_uri: z.string() });
 export type McpVisibilityResult = z.infer<typeof mcpVisibilityResultSchema>;
