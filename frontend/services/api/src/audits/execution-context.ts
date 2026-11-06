@@ -6,7 +6,7 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { policy } from '../config.ts';
 import { approvedEndpoint } from '../providers/connections.ts';
-import { providerPolicy, type Engine } from '../providers/config.ts';
+import { providerPolicy, surfaceKindOf, type Engine } from '../providers/config.ts';
 import { dataforseoSecretIdentity } from '../providers/dataforseo-identity.ts';
 import { connectionSecret } from '../providers/platform-secrets.ts';
 import type { CapacityRequest } from '../providers/capacity.ts';
@@ -218,8 +218,11 @@ export function frozenSurfaceRequest(
     load_async_ai_overview: searchPolicy.constants.load_async_ai_overview,
     timeout_seconds: frozenField(frozen.timeout_seconds, 'timeout_seconds'),
     provider_submission_ref: submissionRef,
-    // Google AI Overview freezes no scraper settings.
-    request_settings: frozen.request_settings ?? {},
+    // Only an LLM scraper freezes scraper settings; Google AI Overview has none.
+    request_settings:
+      surfaceKindOf(context.task.logical_engine) === 'llm_scraper'
+        ? frozenField(frozen.request_settings, 'request_settings')
+        : {},
   };
   searchPayload(context.task.logical_engine as SearchEngine, request);
   return request;

@@ -220,6 +220,22 @@ describe('frozen audit execution identity', () => {
       }),
     ).rejects.toMatchObject({ code: 'connection_changed' });
   });
+  it('refuses a scraper submission whose frozen request lost its scraper settings', async () => {
+    const t = await seed(true);
+    const { request_settings: _dropped, ...snapshot } = record(t.task.request_snapshot);
+    await db
+      .updateTable('audit_tasks')
+      .set({ request_snapshot: JSON.stringify(snapshot) })
+      .where('id', '=', t.task.id)
+      .execute();
+    const context = (await loadExecutionContext(db, t.task, 'worker', runtime, auditTestKey, {
+      at: new Date(),
+      env: {},
+    }))!;
+    expect(() => frozenSurfaceRequest(context, 'submission-ref')).toThrow(
+      'Frozen search request has no request_settings',
+    );
+  });
   it('refuses to commit a stale credential snapshot after a concurrent rotation', async () => {
     const t = await seed(true);
     const context = (await loadExecutionContext(db, t.task, 'worker', runtime, auditTestKey, {
