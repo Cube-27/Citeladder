@@ -523,6 +523,26 @@ same cancellation; a replayed refund applies nothing. A subscription change
 still bumps the entitlement version only if no other writer bumped it since
 settlement read it.
 
+## Internal cost (2026-11-07)
+
+**B65 — Engineering, 2026-11-07.** One internal-cost record and one rate card
+(architecture untangle K1). Provider rates (model token prices, the Anthropic
+web search fee, Tavily and Keenable per-request fees) live in `config/costs.json`
+beside the answer-engine catalog; `config/ai-credits.json` keeps only the
+customer side (credit value, markup, per-feature charge mode). The Anthropic
+search fee has one value, the catalog's Anthropic entry, so B59's
+`web_search_microusd_per_request` is now read from there. Tavily is priced at
+its pay-as-you-go $0.008 per basic search and Keenable at $0.004 per search or
+fetch, charged as internal cost once the provider answered; a call that failed
+before an answer costs nothing. Both stay not charged to customers (B13). The
+`internal_costs` view unions platform calls, Agent model calls and answer-engine
+executions; unknown costs stay null. Uncharged calls' cost rows are no longer
+best-effort: they are written on the caller's connection (in its transaction
+when it has one) and a write failure fails the call. Unpriced gateway models
+keep the Haiku rate (architecture untangle OD6). No customer price, allowance
+or credit charge changes. Source: [architecture untangle](plans/architecture-untangle.md)
+K1, OD6.
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,

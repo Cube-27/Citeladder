@@ -57,7 +57,10 @@ async function spent(workspaceId: string) {
     .execute();
   const total = (kind: string) =>
     rows.filter((row) => row.entry_kind === kind).reduce((sum, row) => sum + row.units, 0);
-  return { held: total('reservation') - total('release'), debited: total('debit') };
+  return {
+    held: total('reservation') - total('release'),
+    debited: total('debit'),
+  };
 }
 const calls = (workspaceId: string) =>
   db
@@ -74,7 +77,11 @@ describe('platform AI metering', () => {
     expect(chargeCredits(haiku, { input_tokens: 10_000, output_tokens: 2_000 })).toBe(3);
     expect(chargeCredits(haiku, { input_tokens: 10, output_tokens: null })).toBeNull();
     expect(
-      chargeCredits(haiku, { input_tokens: 5, cached_input_tokens: 6, output_tokens: 1 }),
+      chargeCredits(haiku, {
+        input_tokens: 5,
+        cached_input_tokens: 6,
+        output_tokens: 1,
+      }),
     ).toBeNull();
     // B53: cache reads at the cached rate, cache writes at the write rate, thinking inside output.
     // $0.01 uncached + $0.008 read + $0.0125 written + $0.05 output = $0.0805; ×1.3 → 105 credits.
@@ -135,7 +142,10 @@ describe('platform AI metering', () => {
     let heldDuringCall = -1;
     const { gateway: raw } = gateway(async () => {
       heldDuringCall = (await spent(t.workspaceId)).held;
-      return answer('{"ok":true}', { prompt_tokens: 10_000, completion_tokens: 2_000 })();
+      return answer('{"ok":true}', {
+        prompt_tokens: 10_000,
+        completion_tokens: 2_000,
+      })();
     });
     const metered = meterFor(db, t.workspaceId).gateway(raw, 'prompt_generation');
     await metered.structured('s', 'u', z.object({ ok: z.boolean() }));
@@ -230,11 +240,111 @@ describe('platform AI metering', () => {
     expect(await spent(t.workspaceId)).toEqual({ held: 0, debited: 0 });
   });
 
+  it('prices Tavily and Keenable per answered request and model calls at their tokens', async () => {
+    const t = await fixtures.tenant();
+    const meter = meterFor(db, t.workspaceId);
+    const answered = async () => ({ value: null, usage: null });
+    await meter.call(
+      'commerce_competitor_discovery',
+      { provider: 'tavily', model: 'tavily' },
+      answered,
+    );
+    await meter.call('research_evidence', { provider: 'keenable', model: 'keenable' }, answered);
+    await expect(
+      meter.call('research_evidence', { provider: 'keenable', model: 'keenable' }, async () => {
+        throw new Error('connection reset');
+      }),
+    ).rejects.toThrow('connection reset');
+    const { gateway: raw } = gateway(
+      answer('{"ok":true}', { prompt_tokens: 50, completion_tokens: 5 }),
+    );
+    await meter
+      .gateway(raw, 'answer_perception')
+      .structured('s', 'u', z.object({ ok: z.boolean() }));
+    // One internal-cost view across sources: $0.008 a Tavily search, $0.004 a
+    // Keenable request, nothing for a failed one, and 50 + 5 Haiku tokens round up to 8.
+    expect(
+      await db
+        .selectFrom('internal_costs')
+        .select(['source', 'provider', 'charge', 'cost_microusd'])
+        .where('workspace_id', '=', t.workspaceId)
+        .orderBy('occurred_at')
+        .execute(),
+    ).toEqual([
+      {
+        source: 'platform_call',
+        provider: 'tavily',
+        charge: 'not_charged',
+        cost_microusd: '8000',
+      },
+      {
+        source: 'platform_call',
+        provider: 'keenable',
+        charge: 'not_charged',
+        cost_microusd: '4000',
+      },
+      {
+        source: 'platform_call',
+        provider: 'keenable',
+        charge: 'not_charged',
+        cost_microusd: '0',
+      },
+      {
+        source: 'platform_call',
+        provider: 'model_gateway',
+        charge: 'included',
+        cost_microusd: '8',
+      },
+    ]);
+  });
+
+  it('writes an uncharged call’s cost row in the caller’s transaction', async () => {
+    const t = await fixtures.tenant();
+    const search = (trx: typeof db) =>
+      meterFor(trx, t.workspaceId).call(
+        'commerce_competitor_discovery',
+        { provider: 'tavily', model: 'tavily' },
+        async () => ({ value: 'results', usage: null }),
+      );
+    await expect(
+      db.transaction().execute(async (trx) => {
+        await search(trx);
+        throw new Error('caller work failed');
+      }),
+    ).rejects.toThrow('caller work failed');
+    const kept = await db.transaction().execute((trx) => search(trx));
+    expect({
+      kept,
+      recorded: (await calls(t.workspaceId)).map((call) => call.provider),
+    }).toEqual({
+      kept: 'results',
+      recorded: ['tavily'],
+    });
+  });
+
+  it('fails an uncharged call whose cost row cannot be written', async () => {
+    // No such workspace: the row's foreign key refuses it, and the call does not pass silently.
+    const unknownWorkspace = '00000000-0000-4000-8000-000000000000';
+    await expect(
+      meterFor(db, unknownWorkspace).call(
+        'commerce_competitor_discovery',
+        { provider: 'tavily', model: 'tavily' },
+        async () => ({ value: 'results', usage: null }),
+      ),
+    ).rejects.toMatchObject({
+      code: '23503',
+      constraint: 'platform_calls_workspace_id_fkey',
+    });
+  });
+
   it('returns a paid answer when its settlement fails, leaving the hold for the sweep', async () => {
     const t = await fixtures.tenant();
     await credited(t, 100);
     const { gateway: raw } = gateway(
-      answer('{"ok":true}', { prompt_tokens: 10_000, completion_tokens: 2_000 }),
+      answer('{"ok":true}', {
+        prompt_tokens: 10_000,
+        completion_tokens: 2_000,
+      }),
     );
     const transaction = db.transaction.bind(db);
     const spy = vi
@@ -267,7 +377,10 @@ describe('platform AI metering', () => {
         call,
       ),
     ).rejects.toThrow('Charged feature prompt_generation must bound its call size');
-    expect({ dispatched: call.mock.calls.length, recorded: await calls(t.workspaceId) }).toEqual({
+    expect({
+      dispatched: call.mock.calls.length,
+      recorded: await calls(t.workspaceId),
+    }).toEqual({
       dispatched: 0,
       recorded: [],
     });
@@ -286,6 +399,9 @@ describe('platform AI metering', () => {
     await settleAbandonedCalls(db, later);
     await settleAbandonedCalls(db, later);
     expect(await spent(t.workspaceId)).toEqual({ held: 0, debited: 10 });
-    expect((await calls(t.workspaceId))[0]).toMatchObject({ status: 'settled', credits: 10 });
+    expect((await calls(t.workspaceId))[0]).toMatchObject({
+      status: 'settled',
+      credits: 10,
+    });
   });
 });

@@ -30,6 +30,7 @@ import {
   costCredits,
   costMicrousd,
   modelPrice,
+  requestFeeMicrousd,
   requestInputBytes,
   reservationCredits,
   tokenCount,
@@ -98,7 +99,24 @@ function callRow(context: MeterContext, spec: CallSpec, at: Date) {
   };
 }
 
-/** Records an included or uncharged call after it ran; the record never fails the call. */
+/**
+ * The internal cost of an uncharged call: a per-request provider's fee once it
+ * answered (a failed request costs nothing), else its tokens at the model's
+ * rate; `null` when unknown.
+ */
+function uncharged(spec: CallSpec, usage: TokenUsage | null, error: unknown) {
+  const fee = requestFeeMicrousd(spec.provider);
+  if (fee !== null) return error ? 0 : fee;
+  const price = modelPrice(spec.model);
+  return price && usage ? costMicrousd(price, usage) : null;
+}
+
+/**
+ * Records an included or uncharged call after it ran, on the caller's
+ * connection: in the caller's transaction when it runs in one, so the cost
+ * row commits with the work, and a row that cannot be written fails the call
+ * rather than leave its spend unrecorded.
+ */
 async function record(
   db: Database,
   context: MeterContext,
@@ -106,27 +124,18 @@ async function record(
   usage: TokenUsage | null,
   error: unknown,
 ) {
-  const price = modelPrice(spec.model);
   const now = new Date();
-  try {
-    await db
-      .insertInto('platform_calls')
-      .values({
-        ...callRow(context, spec, now),
-        status: error ? 'failed' : 'settled',
-        ...tokens(usage),
-        cost_microusd: price && usage ? costMicrousd(price, usage) : null,
-        error_code: error ? errorCode(error) : '',
-        settled_at: now,
-      })
-      .execute();
-  } catch (error_) {
-    logger.warning('billing.platform_call_unrecorded', {
-      workspace_id: context.workspaceId,
-      feature: context.feature,
-      exception: error_ instanceof Error ? error_.message : String(error_),
-    });
-  }
+  await db
+    .insertInto('platform_calls')
+    .values({
+      ...callRow(context, spec, now),
+      status: error ? 'failed' : 'settled',
+      ...tokens(usage),
+      cost_microusd: uncharged(spec, usage, error),
+      error_code: error ? errorCode(error) : '',
+      settled_at: now,
+    })
+    .execute();
 }
 
 /** Records the call and holds `reserved` credits for it in `trx`. */
