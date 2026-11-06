@@ -1,7 +1,8 @@
 # Architecture untangle
 
-Status: approved for implementation (owner, 2026-11-06). This document is both the plan and the
-orchestrator's tracker. The work is 22 scoped pull requests (P01–P22). Each PR batches a set of rows
+Status: complete (2026-11-07). All PRs merged (#626–#652); approved for implementation by the owner
+on 2026-11-06. This document is both the plan and the orchestrator's tracker. The work is 22 scoped
+pull requests (P01–P22) plus P23 and P24, added during implementation. Each PR batches a set of rows
 (the commit-level units, e.g. ON1, FX2), lists the PRs it depends on, and carries a status the
 implementor and orchestrator keep current.
 
@@ -76,7 +77,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P18 | Internal cost view, spend breaker, output caps | K1, K2, K3 | P01, P10 | mig? | merged | [#645](https://github.com/Cube-27/Citeladder/pull/645) | Migration 0012. Values confirmed by owner (OD8, B68) |
 | P19 | Engine surfaces II: surface adapters, audit side effects out of analysis | E4, E5, X8 | P05, P15 | | merged | [#641](https://github.com/Cube-27/Citeladder/pull/641) | No migration. Found the `audit_tasks.error_code` length bug, now P24 |
 | P20 | Settings resolve once; named abuse budgets | G1, G2, G3 | P01, P15 | wide | merged | [#650](https://github.com/Cube-27/Citeladder/pull/650) | No migration. Follow-up in PR body: deep readers without config in scope still read `process.env` |
-| P21 | Screen sweep: failure renderer, typed blobs, form limits, non-null project, recovery actions | F8, F9, F10, R4, Z4 | P07, P12, P13, P16 | | in review | [#651](https://github.com/Cube-27/Citeladder/pull/651), [#652](https://github.com/Cube-27/Citeladder/pull/652) | Split (~4,440 lines): P21-a = F8, F9, F10 (#651, merged); P21-b = R4, Z4 (#652) |
+| P21 | Screen sweep: failure renderer, typed blobs, form limits, non-null project, recovery actions | F8, F9, F10, R4, Z4 | P07, P12, P13, P16 | | merged | [#651](https://github.com/Cube-27/Citeladder/pull/651), [#652](https://github.com/Cube-27/Citeladder/pull/652) | Split (~4,440 lines): P21-a = F8, F9, F10 (#651); P21-b = R4, Z4 (#652) |
 | P22 | AI Traffic and integration owners; error logging | X4, X5, Z1, Z2, Z3 | P15, P16, P19 | | merged | [#647](https://github.com/Cube-27/Citeladder/pull/647) | No migration |
 | P23 | AI referral retention matches the Performance window | X9 | P08 | | merged | [#636](https://github.com/Cube-27/Citeladder/pull/636) | Owner decision OD7 |
 | P24 | Audit error codes fit their column | DB3 | P19 | mig | merged | [#648](https://github.com/Cube-27/Citeladder/pull/648) | Migration 0013. Found by P19 |

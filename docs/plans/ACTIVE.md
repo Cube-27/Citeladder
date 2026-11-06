@@ -5,12 +5,6 @@ Remaining work is consolidated in the backlog; historical plans are not active a
 
 ## Active
 
-- [Architecture untangle](architecture-untangle.md) (owner decisions recorded
-  2026-11-06): 22 dependency-ordered PRs that fix the onboarding discovery bug
-  and verified defects first, then give queues, Site Health tasks, credit holds,
-  prompt writes, engine surfaces, browser server state and routes one owner
-  each; the plan is also the orchestrator's tracker.
-
 - [Billing improvement](billing-improvement.md) (feature 11, owner decisions
   recorded 2026-10-11): billing fully operational but hidden, in three PRs, so
   that enablement is a configuration-only PR.
@@ -24,6 +18,12 @@ Remaining work is consolidated in the backlog; historical plans are not active a
 - [Insight parity](insight-parity.md) (owner decisions recorded 2026-10-16 and
   2026-10-17): PR 1 (#414) and PR 2 (#419) shipped; PR 3 adds the editable
   Overview, its layout PDF and Site Health Recrawl.
+
+The [Architecture untangle](architecture-untangle.md) (owner decisions OD1–OD8,
+2026-11-06 and 2026-11-07) is complete: 24 dependency-ordered PRs (#626 to #652)
+fixed the onboarding discovery bug and verified defects, then gave queues, Site
+Health tasks, credit holds, prompt writes, engine surfaces, browser server state
+and routes one owner each.
 
 The [Design system rollout](design-system-rollout.md) (owner decisions D1–D25
 recorded 2026-11-05) is complete: the eight rollout PRs (#574 to #588) put
