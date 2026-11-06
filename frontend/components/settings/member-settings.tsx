@@ -11,7 +11,6 @@ import { Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { SearchField } from '@/components/ui/search-field';
 import { textRole } from '@/components/ui/typography';
-import { humanizeApiError } from '@/lib/api/errors';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
   refreshWorkspaces,
@@ -213,7 +212,11 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
         issuedToken={issuedToken}
         delivery={delivery}
         pending={invite.isPending}
-        error={invite.error ? humanizeApiError(invite.error).message : null}
+        error={
+          invite.error
+            ? mutationNoticeForError(invite.error, { action: 'send the invitation' })
+            : null
+        }
         onInvite={(email, role) => invite.mutateAsync({ email, role }, handOffToken())}
       />
 

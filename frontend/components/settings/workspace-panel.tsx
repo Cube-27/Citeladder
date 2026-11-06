@@ -7,11 +7,12 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
+import { MutationNotice } from '@/components/ui/mutation-notice';
 import { ConfirmDialog } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
-import { humanizeApiError } from '@/lib/api/errors';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { restartAt } from '@/lib/auth/account-transition';
 import { workspacesApi } from '@/lib/api/workspaces';
 import { WORKSPACE_CHOOSER_PATH } from '@/lib/project/bootstrap';
@@ -69,7 +70,9 @@ export function WorkspacePanel() {
           </Button>
         )}
         {leave.isError ? (
-          <Callout tone="negative">{humanizeApiError(leave.error).message}</Callout>
+          <MutationNotice
+            notice={mutationNoticeForError(leave.error, { action: 'leave the workspace' })}
+          />
         ) : null}
       </Stack>
 

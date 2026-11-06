@@ -5,6 +5,8 @@ import { useState, type FormEvent } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
+import { MutationNotice } from '@/components/ui/mutation-notice';
+import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { CopyButton } from '@/components/ui/copy-button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Dialog } from '@/components/ui/dialog';
@@ -57,7 +59,7 @@ export function InviteDialog({
   delivery?: 'accepted' | 'failed';
   pending: boolean;
   /** Why the last invitation was refused, shown where it was asked for. */
-  error: string | null;
+  error: MutationNoticeData | null;
   /** Resolves once the invitation is issued; the address stays until then. */
   onInvite: (email: string, role: AssignableWorkspaceRole) => Promise<unknown>;
 }>) {
@@ -121,7 +123,7 @@ export function InviteDialog({
               />
             )}
           </Field>
-          {error ? <Callout tone="negative">{error}</Callout> : null}
+          {error ? <MutationNotice notice={error} /> : null}
           {issuedToken ? (
             <Callout tone="info">
               <Stack gap="compact" className="justify-items-start">

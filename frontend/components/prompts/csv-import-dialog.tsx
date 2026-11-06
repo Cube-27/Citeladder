@@ -5,6 +5,8 @@ import { useMemo } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
+import { MutationNotice } from '@/components/ui/mutation-notice';
+import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { CsvImportFileInput, CsvImportPreview, useCsvImportFile } from '@/components/ui/csv-import';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Dialog } from '@/components/ui/dialog';
@@ -57,7 +59,7 @@ export function CsvImportDialog({
   onOpenChange: (open: boolean) => void;
   onImport: (rows: PromptImportRowRequest[]) => Promise<void> | void;
   isImporting?: boolean;
-  error?: string;
+  error?: MutationNoticeData;
 }>) {
   const { fileName, inputRef, parsed, reset, selectFile } =
     useCsvImportFile<ParsedCsv>(parsePromptCsv);
@@ -99,7 +101,7 @@ export function CsvImportDialog({
       }
     >
       <Stack gap="workspace">
-        {error ? <Callout tone="negative">{error}</Callout> : null}
+        {error ? <MutationNotice notice={error} /> : null}
 
         <Stack gap="compact">
           <CsvImportFileInput inputRef={inputRef} onSelect={(file) => void selectFile(file)} />

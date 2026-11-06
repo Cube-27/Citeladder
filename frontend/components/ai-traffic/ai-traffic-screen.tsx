@@ -12,7 +12,8 @@ import { ListScreen, RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
 import { TabsRoot, TabPanel, type TabRowProps } from '@/components/ui/tabs';
-import { Callout } from '@/components/ui/callout';
+import { MutationNotice } from '@/components/ui/mutation-notice';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { ProjectRequiredState } from '@/components/layout/project-required-state';
 import { readErrorProps } from '@/components/ui/read-error';
 import { AiReferralsScreen } from './referrals-screen';
@@ -170,7 +171,12 @@ function TrafficStatus({ model }: Readonly<{ model: ReturnType<typeof useTraffic
   return (
     <>
       {projectId ? null : <ProjectRequiredState />}
-      {exporting.isError ? <Callout tone="negative">{exporting.error.message}</Callout> : null}
+      {exporting.isError ? (
+        <MutationNotice
+          notice={mutationNoticeForError(exporting.error, { action: 'export AI traffic' })}
+          onRetry={() => exporting.mutate()}
+        />
+      ) : null}
     </>
   );
 }

@@ -9,6 +9,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
+import { MutationNotice } from '@/components/ui/mutation-notice';
 import { Dialog } from '@/components/ui/dialog';
 import { IntegrationSettings } from '@/components/settings/integration-settings';
 import { WorkspacePanel } from '@/components/settings/workspace-panel';
@@ -21,7 +22,7 @@ import AccountSecurity from '@/components/settings/account-security';
 import { TabPanel, TabsRoot } from '@/components/ui/tabs';
 import { ListScreen } from '@/components/layout/page-shell';
 import { projectMutations } from '@/lib/api/projects';
-import { humanizeApiError } from '@/lib/api/errors';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useSessionUser } from '@/lib/auth/session-guard';
 import { useEntitlement, useManagedPlan } from '@/lib/billing/entitlement-context';
 import { PROJECT_DELETION_CAPABILITY } from '@/lib/config/billing';
@@ -134,7 +135,11 @@ function ProjectDeletionControls() {
               generated content. This cannot be undone.
             </Callout>
             {deleteMutation.isError ? (
-              <Callout tone="negative">{humanizeApiError(deleteMutation.error).message}</Callout>
+              <MutationNotice
+                notice={mutationNoticeForError(deleteMutation.error, {
+                  action: 'delete the project',
+                })}
+              />
             ) : null}
           </>
         ) : (

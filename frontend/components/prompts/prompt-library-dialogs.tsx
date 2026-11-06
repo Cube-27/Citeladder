@@ -5,6 +5,7 @@ import type {
   PromptImportRowRequest,
 } from '@citeladder/contracts/prompt-requests';
 import type { Prompt, PromptGenerateResponse, Topic } from '@citeladder/contracts';
+import type { MutationNotice } from '@/lib/api/mutation-notice';
 import type { PromptFormValues } from '@/lib/prompts/forms';
 import type { usePromptCandidates } from '@/lib/prompts/use-prompt-candidates';
 
@@ -23,12 +24,12 @@ type PromptLibraryDialogsProps = {
   setEditing: Dispatch<SetStateAction<Prompt | undefined>>;
   submitForm: (values: PromptFormValues) => Promise<void>;
   isSaving: boolean;
-  formError?: string;
+  formError?: MutationNotice;
   importOpen: boolean;
   setImportOpen: Dispatch<SetStateAction<boolean>>;
   importPrompts: (rows: PromptImportRowRequest[]) => Promise<void>;
   isImporting: boolean;
-  importError?: string;
+  importError?: MutationNotice;
   builderOpen: boolean;
   setBuilderOpen: (open: boolean) => void;
   builderStep: BuilderStep;

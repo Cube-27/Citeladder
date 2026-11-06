@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { authApi, authQueries } from '@/lib/api/auth';
 import { authFormPolicy, passwordHint } from '@/lib/config/auth';
-import { authErrorMessage } from '@/lib/auth/forms';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { restartAt } from '@/lib/auth/account-transition';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
 import { Dialog } from '@/components/ui/dialog';
+import { MutationNotice } from '@/components/ui/mutation-notice';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { PasswordField } from '@/components/ui/password-field';
 import { FactList } from '@/components/ui/facts';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -42,12 +44,7 @@ function SignInSection({
     <SettingsSection title="Sign-in" description="How you sign in to CiteLadder.">
       {security.isPending && <p className={textRole('body')}>Loading account security…</p>}
       {security.isError && (
-        <Callout tone="negative">
-          {authErrorMessage(security.error)}{' '}
-          <Button variant="primary" className="w-fit" onClick={() => void security.refetch()}>
-            Retry
-          </Button>
-        </Callout>
+        <ReadError fallback="Account security could not be loaded." {...readErrorProps(security)} />
       )}
       <SecurityIdentity data={security.data} />
     </SettingsSection>
@@ -58,9 +55,10 @@ function SignInSection({
 function ErrorAlerts({ errors }: Readonly<{ errors: Readonly<Record<string, Error | null>> }>) {
   return Object.entries(errors).map(([name, error]) =>
     error ? (
-      <Callout key={name} tone="negative">
-        {authErrorMessage(error)}
-      </Callout>
+      <MutationNotice
+        key={name}
+        notice={mutationNoticeForError(error, { action: 'update your sign-in settings' })}
+      />
     ) : null,
   );
 }

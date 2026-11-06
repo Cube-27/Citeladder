@@ -5,7 +5,8 @@ import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
+import { MutationNotice } from '@/components/ui/mutation-notice';
+import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -58,7 +59,7 @@ export function PromptFormDialog({
   defaultTopicId: string | null;
   onSubmit: (values: PromptFormValues) => Promise<void> | void;
   isSaving?: boolean;
-  error?: string;
+  error?: MutationNoticeData;
 }>) {
   const isEdit = Boolean(prompt);
   // Stable across renders: `values` re-syncs the form whenever it changes.
@@ -109,7 +110,7 @@ export function PromptFormDialog({
     >
       <form noValidate onSubmit={submit}>
         <Stack gap="workspace">
-          {error ? <Callout tone="negative">{error}</Callout> : null}
+          {error ? <MutationNotice notice={error} /> : null}
 
           <Field label="Topic">
             {(props) => (

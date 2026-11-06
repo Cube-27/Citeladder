@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 import { ConnectStrip } from '@/components/mcp/connect-strip';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
+import { MutationNotice } from '@/components/ui/mutation-notice';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -14,7 +14,7 @@ import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { ICONS } from '@/lib/icons';
 import type { McpConnection } from '@citeladder/contracts/mcp';
-import { humanizeApiError } from '@/lib/api/errors';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { mcpConnectionMutations, mcpConnectionQueries } from '@/lib/api/mcp-connections';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 
@@ -141,7 +141,9 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
               : 'The assistant stops reading or changing CiteLadder at once. Connect it again to restore access.'}
           </p>
           {revoke.isError ? (
-            <Callout tone="negative">{humanizeApiError(revoke.error).message}</Callout>
+            <MutationNotice
+              notice={mutationNoticeForError(revoke.error, { action: 'revoke the connection' })}
+            />
           ) : null}
         </Stack>
       </Dialog>
