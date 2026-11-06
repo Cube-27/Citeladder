@@ -61,7 +61,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P05 | Engine surfaces I: DataForSEO client, typed frozen config, engine sets from routes | E1, E2, E3 | — | | todo | | |
 | P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | todo | | |
 | P07 | App route manifest and kit cleanup | R1, R2, R3, R5, R6, R7 | — | | todo | | |
-| P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | in progress | | Builder session `untangle-p08` |
+| P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | in review | [#631](https://github.com/Cube-27/Citeladder/pull/631) | Builder session `untangle-p08` |
 | P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | todo | | |
 | P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | todo | | |
 | P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | todo | | |
@@ -181,13 +181,13 @@ order the PR tracker already respects.
 | G1 | Settings engine to a leaf; cross-owner aliases, dead key and import cycle removed | — | `config.ts`, `config/settings.ts`, `billing/config.ts`, alias importers | wide | todo | | |
 | G2 | Settings resolve once from one environment | G1, Q7, ON1 | `config.ts`, `configEnvironment` callers (18), `config/execution.ts` | wide | todo | | |
 | G3 | Named abuse budgets | G1 | `abuse/usage.ts`, `config/abuse.ts`, budget call sites | | todo | | |
-| X1 | One citation and Commerce URL identity; differentiation reports insert-only | — | `source-pages/{identity,sync,inspector,differentiation}.ts`, `site-health/url-identity.ts`, `config/source-pages.ts`, `analysis/domains.ts`, `commerce/{projection-facts,projection}.ts` | mig? | todo | | |
-| X2 | Leaf primitives move to the bottom | X1 | `analysis/round.ts`, casefold/canonical-JSON/calendar-day copies, `projects/safe-fetch.ts`, `billing/pdf.ts`, `billing/contracts.ts` + importers | wide | todo | | |
-| X3 | One page-identity module (path, landing page) | X1 | `traffic/normalization.ts`, `integrations/`, `crawl-logs/`, `referrals/` identity helpers | | todo | | |
+| X1 | One citation and Commerce URL identity; differentiation reports insert-only | — | `source-pages/{identity,sync,inspector,differentiation}.ts`, `site-health/url-identity.ts`, `config/source-pages.ts`, `analysis/domains.ts`, `commerce/{projection-facts,projection}.ts` | mig? | done | aee742f, bdd21a8 | |
+| X2 | Leaf primitives move to the bottom | X1 | `analysis/round.ts`, casefold/canonical-JSON/calendar-day copies, `projects/safe-fetch.ts`, `billing/pdf.ts`, `billing/contracts.ts` + importers | wide | done | fcc2f84 | |
+| X3 | One page-identity module (path, landing page) | X1 | `traffic/normalization.ts`, `integrations/`, `crawl-logs/`, `referrals/` identity helpers | | done | 9ac7046 | |
 | X4 | AI Traffic composition gets its own module | Q8 | `crawl-logs/{pages,pages-data,insights,overview,citation-runs}.ts` | | todo | | |
 | X5 | Integration lifecycle and reporting timezone move to their owners | Q6, Q8 | `routes/integrations.ts`, `integrations/`, `workers/integration-worker.ts`, `crawl-logs/state.ts` | | todo | | |
 | X6 | Auth/workspaces placement; one "owned workspace" query | C3 | `auth/bootstrap.ts`, `auth/development-access.ts`, `workspaces/`, `entitlements/bootstrap.ts` | | todo | | |
-| X7 | AI referral classification read from the persisted table everywhere | X3 | `referrals/landing.ts`, `traffic/projection.ts` | | todo | | |
+| X7 | AI referral classification read from the persisted table everywhere | X3 | `referrals/landing.ts`, `traffic/projection.ts` | | done | eda2c70 | |
 | X8 | Audit side effects leave `src/analysis` | E4 | `analysis/{finalization,execution}.ts`, `audits/` | | todo | | |
 | K1 | One internal-cost view; Tavily and Keenable priced; cost rows in the call's transaction | B2 | `billing/metering.ts`, `audits/costs.ts`, `config/{costs,ai-credits}.json`, `commerce/discovery-provider.ts`, `projects/research-evidence.ts` | mig? | todo | | Before public sign-up |
 | K2 | Platform-wide daily spend breaker | K1 | `billing/metering.ts`, config | | todo | | Before public sign-up |
