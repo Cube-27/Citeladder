@@ -73,7 +73,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P16 | Site Health tasks II: one task runner, counters, pinned versions | SH4, SH5 | P04, P08, P09 | | merged | [#635](https://github.com/Cube-27/Citeladder/pull/635) | No migration |
 | P17 | Permission on the command, MCP prepared changes, workspace ownership | C3, C4, X6 | P11 | | todo | | |
 | P18 | Internal cost view, spend breaker, output caps | K1, K2, K3 | P01, P10 | mig? | todo | | Before public sign-up |
-| P19 | Engine surfaces II: surface adapters, audit side effects out of analysis | E4, E5, X8 | P05, P15 | | in progress | | Builder session `untangle-p19` |
+| P19 | Engine surfaces II: surface adapters, audit side effects out of analysis | E4, E5, X8 | P05, P15 | | in review | [#641](https://github.com/Cube-27/Citeladder/pull/641) | No migration. Found: `audit_tasks.error_code` is varchar(32) but `credential_unavailable_for_retrieval` is 36 chars (pre-existing; needs a migration) |
 | P20 | Settings resolve once; named abuse budgets | G1, G2, G3 | P01, P15 | wide | todo | | |
 | P21 | Screen sweep: failure renderer, typed blobs, form limits, non-null project, recovery actions | F8, F9, F10, R4, Z4 | P07, P12, P13, P16 | | todo | | Split at a row boundary if over ~4,000 lines |
 | P22 | AI Traffic and integration owners; error logging | X4, X5, Z1, Z2, Z3 | P15, P16, P19 | | todo | | |
@@ -153,8 +153,8 @@ order the PR tracker already respects.
 | E1 | One DataForSEO envelope client and secret custody | — | `search-intelligence/{live,credentials,acquisition-state}.ts`, `search-surfaces/dataforseo.ts`, `providers/`, `audits/execution-context.ts` | | done | d5ae183 | |
 | E2 | Typed frozen audit configuration | E1 | `audits/{freeze,creation,execution-context}.ts`, `analysis/{comparison,provenance}.ts`, `config/audits.json` | | done | 25dc9ce | |
 | E3 | Engine sets derived from provider routes; browser engine tables deleted | E2 | `audits/{creation,estimate,submission-intent,maintenance}.ts`, `search-surfaces/locations.ts`, `config/visibility.json`, `frontend/lib/providers/catalog.ts` | | done | ee5dfc3, 23a7ca2 | Two commits: the pre-commit hook's command line overflows on Windows at 61 files |
-| E4 | `llm` surface adapter; audit worker moves to `audits/` | E3, Q7 | `audits/surfaces/`, `workers/audit-worker.ts`, `audits/{result,surface}-persistence.ts` | | todo | | |
-| E5 | `search_ai` and `llm_scraper` adapters | E4 | `audits/surfaces/`, `search-surfaces/` | | todo | | |
+| E4 | `llm` surface adapter; audit worker moves to `audits/` | E3, Q7 | `audits/surfaces/`, `workers/audit-worker.ts`, `audits/{result,surface}-persistence.ts` | | done | 5b91c3e | |
+| E5 | `search_ai` and `llm_scraper` adapters | E4 | `audits/surfaces/`, `search-surfaces/` | | done | 666c374 | |
 | O1 | One latest-brand-run resolver; one rate owner; queries-per-execution denominator | — | `visibility/{selection,dashboard,prompts}.ts`, `opportunities/sources.ts`, `projects/command-center.ts`, `analysis/aggregate.ts` | | done | fb22e46 | |
 | O2 | One module per check kind | O1, FX2 | `opportunities/{declaration-checks,declarations,verification-evidence,declaration-view}.ts`, `config/actions.ts`, rule catalog | | todo | | |
 | O3 | Typed Action targets and producer registry | O2 | `opportunities/refresh*.ts`, `analysis/opportunities/`, `visibility/{sources,page-standing}.ts` | | todo | | |
@@ -190,7 +190,7 @@ order the PR tracker already respects.
 | X5 | Integration lifecycle and reporting timezone move to their owners | Q6, Q8 | `routes/integrations.ts`, `integrations/`, `workers/integration-worker.ts`, `crawl-logs/state.ts` | | todo | | |
 | X6 | Auth/workspaces placement; one "owned workspace" query | C3 | `auth/bootstrap.ts`, `auth/development-access.ts`, `workspaces/`, `entitlements/bootstrap.ts` | | todo | | |
 | X7 | AI referral classification read from the persisted table everywhere | X3 | `referrals/landing.ts`, `traffic/projection.ts` | | done | eda2c70 | |
-| X8 | Audit side effects leave `src/analysis` | E4 | `analysis/{finalization,execution}.ts`, `audits/` | | todo | | |
+| X8 | Audit side effects leave `src/analysis` | E4 | `analysis/{finalization,execution}.ts`, `audits/` | | done | 61fd008 | |
 | X9 | AI referral retention matches the Performance window (OD7) | X7 | `config/referrals.json`, `referrals/retention.ts` | | done | f41aa57, fe5b864 | |
 | K1 | One internal-cost view; Tavily and Keenable priced; cost rows in the call's transaction | B2 | `billing/metering.ts`, `audits/costs.ts`, `config/{costs,ai-credits}.json`, `commerce/discovery-provider.ts`, `projects/research-evidence.ts` | mig? | todo | | Before public sign-up |
 | K2 | Platform-wide daily spend breaker | K1 | `billing/metering.ts`, config | | todo | | Before public sign-up |
