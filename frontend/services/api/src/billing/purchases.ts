@@ -2,10 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 
 import { activationSchema, resolvedQuoteSchema } from '@citeladder/contracts/billing';
-import {
-  packPurchaseRequestSchema,
-  subscriptionCheckoutRequestSchema,
-} from '@citeladder/contracts/billing-requests';
+import { subscriptionCheckoutRequestSchema } from '@citeladder/contracts/billing-requests';
 import type { Database } from '../db/database.ts';
 import type { ServiceConfig } from '../config.ts';
 import { policy } from '../config.ts';
@@ -41,7 +38,6 @@ export const baseRequest = subscriptionCheckoutRequestSchema.extend({
     (value) => !value || identitySchema.shape.customer_gstin.safeParse(value.toUpperCase()).success,
   ),
 });
-export const packRequest = packPurchaseRequestSchema;
 export function idempotencyKey(raw: string | undefined) {
   const key = raw?.trim();
   if (

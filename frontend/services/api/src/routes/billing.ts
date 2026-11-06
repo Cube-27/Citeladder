@@ -24,13 +24,16 @@ import {
 } from '../billing/reads.ts';
 import {
   baseRequest,
-  packRequest,
   idempotencyKey,
   purchase,
   workspaceActivation,
   activationResponse,
 } from '../billing/purchases.ts';
-import { changeRequest, changePlan } from '../billing/plan-changes.ts';
+import { changePlan } from '../billing/plan-changes.ts';
+import {
+  packPurchaseRequestSchema,
+  planChangeRequestSchema,
+} from '@citeladder/contracts/billing-requests';
 import { identitySchema } from '../billing/contracts.ts';
 import { conflict } from '../errors.ts';
 import { offerRead, claimOffer, endOffer, claimRequest } from '../billing/journeys.ts';
@@ -193,13 +196,13 @@ export const billingRoutes = [
       path: `${root}/${route}`,
       method: 'post',
       headers: keyHeaders,
-      body: packRequest,
+      body: packPurchaseRequestSchema,
       response: activationSchema,
       status: 202,
       alsoStatus: 200,
       raw: true,
       async handle({ c, db, config }) {
-        const input = await readBody(c, packRequest);
+        const input = await readBody(c, packPurchaseRequestSchema);
         const result = await purchase(
           db,
           config,
@@ -235,13 +238,13 @@ export const billingRoutes = [
     path: `${root}/subscription/change`,
     method: 'post',
     headers: keyHeaders,
-    body: changeRequest,
+    body: planChangeRequestSchema,
     response: planChangeSchema,
     status: 202,
     alsoStatus: 200,
     raw: true,
     async handle({ c, db, config }) {
-      const input = await readBody(c, changeRequest);
+      const input = await readBody(c, planChangeRequestSchema);
       const result = await changePlan(
         db,
         config,
