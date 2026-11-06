@@ -10,7 +10,7 @@ const logger = getLogger('queue.lanes');
 
 type LaneTask = { id: string; workspace_id: string; attempt_count: number };
 
-export type LaneFailure = {
+type LaneFailure = {
   /** Where the attempt was when it failed. */
   phase: string;
   /** `performance.now()` when the attempt began. */

@@ -6,7 +6,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Database } from '../db/database.ts';
 
-export type IntegrationEventType =
+type IntegrationEventType =
   | 'integration.connected'
   | 'integration.disconnected'
   | 'integration.tested'
@@ -16,7 +16,7 @@ export type IntegrationEventType =
   | 'integration.sync_started'
   | 'integration.sync_finished';
 
-export type IntegrationEvent = {
+type IntegrationEvent = {
   workspaceId: string;
   type: IntegrationEventType;
   message: string;
