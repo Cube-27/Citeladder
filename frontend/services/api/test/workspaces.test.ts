@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { beforeAll, afterAll, describe, it, expect } from 'vitest';
 import { createApp } from '../src/app.ts';
+import { memberCan } from '../src/auth/workspace.ts';
 import { policy } from '../src/config.ts';
 import { hashInvitationToken } from '../src/workspaces/invitations.ts';
+import { ownedWorkspaceAccount, workspaceOwner } from '../src/workspaces/owned.ts';
 import { recordAccountTermsDecision } from '../src/workspaces/policies.ts';
 import { sql } from 'kysely';
 import { billingAccount, grant } from './prompt-fixtures.ts';
@@ -156,6 +158,35 @@ describe('workspace authorization and root allocation', () => {
           .executeTakeFirstOrThrow()
       ).role,
     ).toBe('member');
+  });
+
+  it('answers a stored actor capability from the live membership of that workspace only', async () => {
+    const writer = await fixtures.user();
+    actors.push(writer);
+    await fixtures.member(workspace, writer, 'member');
+    const foreign = await fixtures.ownedWorkspace(await fixtures.user());
+    const answers = async () => [
+      await memberCan(db, workspace, writer, 'write'),
+      await memberCan(db, workspace, writer, 'manage_members'),
+      await memberCan(db, foreign, writer, 'read'),
+    ];
+    expect(await answers()).toEqual([true, false, false]);
+    await db.updateTable('users').set({ is_active: false }).where('id', '=', writer).execute();
+    expect(await answers()).toEqual([false, false, false]);
+  });
+
+  it('provisions only the workspace a person owns, never one they joined', async () => {
+    const joiner = await fixtures.user();
+    actors.push(joiner);
+    await fixtures.member(workspace, joiner, 'admin');
+    await expect(ownedWorkspaceAccount(db, joiner)).rejects.toThrow(
+      'bootstrap_workspace_ambiguous',
+    );
+    expect(await ownedWorkspaceAccount(db, owner)).toEqual({
+      workspaceId: workspace,
+      accountId: await billingAccount(db, workspace),
+    });
+    expect((await workspaceOwner(db, workspace)).id).toBe(owner);
   });
 });
 

@@ -13,10 +13,10 @@ import { baselineGrantKey, fullAccessSpecs } from '../entitlements/bootstrap.ts'
 import { issueBundle, revokeBundle } from '../entitlements/grants.ts';
 import { resolveAccountEntitlement } from '../entitlements/state.ts';
 import { operatorTransaction } from '../db/operator-transaction.ts';
-import { bootstrapWorkspace } from '../auth/bootstrap.ts';
 import { policy } from '../config.ts';
 import { getLogger } from '../logging.ts';
 import { issueInvitationInTransaction } from './invitations.ts';
+import { ownedWorkspaceAccount } from './owned.ts';
 import {
   applyMemberMutation,
   assignableRoleSchema,
@@ -271,7 +271,7 @@ async function placeAccount(
   user: NonNullable<Awaited<ReturnType<typeof createIdentity>>>,
 ) {
   if (!shared) await provisionAccount(db, user);
-  const personal = shared ? undefined : await bootstrapWorkspace(db, user.id);
+  const personal = shared ? undefined : await ownedWorkspaceAccount(db, user.id);
   const target = shared ?? personal;
   if (!target) throw new Error('account_workspace_unresolved');
   if (shared) await joinSharedWorkspace(db, actorId, shared, user.id);
