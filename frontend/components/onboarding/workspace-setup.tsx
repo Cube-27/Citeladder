@@ -13,12 +13,10 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
-import { authApi } from '@/lib/api/auth';
+import { authQueries } from '@/lib/api/auth';
 import { signOutForChangedTerms } from '@/lib/auth/account-transition';
 import { humanizeApiError } from '@/lib/api/errors';
-import { queryKeys } from '@/lib/api/query-keys';
-import type { Workspace } from '@citeladder/contracts';
-import { workspacesApi } from '@/lib/api/workspaces';
+import { workspaceMutations } from '@/lib/api/workspaces';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 
@@ -33,10 +31,7 @@ const FORM_ID = 'workspace-setup-form';
  */
 export function WorkspaceSetup() {
   const queryClient = useQueryClient();
-  const terms = useQuery({
-    queryKey: queryKeys.auth.terms(),
-    queryFn: ({ signal }) => authApi.terms(signal),
-  });
+  const terms = useQuery(authQueries.terms());
   const leave = useMutation({ mutationFn: () => signOutForChangedTerms(queryClient) });
   const sessionPredatesTerms = terms.isSuccess && !terms.data.accepted_at;
   const { mutate: signOut } = leave;
@@ -66,32 +61,26 @@ export function WorkspaceSetup() {
 }
 
 function NameWorkspace({ termsRevision }: Readonly<{ termsRevision: string }>) {
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { setActiveWorkspaceId } = useProjectContext();
   const [name, setName] = useState('');
   const [nameMissing, setNameMissing] = useState(false);
-  const create = useMutation({
-    mutationFn: () => workspacesApi.create({ name: name.trim(), termsRevision }),
-    onSuccess: (workspace) => {
-      queryClient.setQueryData<Workspace[]>(queryKeys.workspaces.list(), (current) => [
-        ...(current ?? []),
-        workspace,
-      ]);
-      setActiveWorkspaceId(workspace.id);
-      navigate(workspaceDestination('/onboarding', null, workspace.id), { replace: true });
-    },
-    // The Terms may have changed since sign-in: read the decision again, which
-    // ends a session that holds none on the published revision.
-    onError: () => void queryClient.invalidateQueries({ queryKey: queryKeys.auth.terms() }),
-  });
+  const create = useMutation(workspaceMutations.create());
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const missingName = name.trim() === '';
     setNameMissing(missingName);
     if (missingName) return;
-    create.mutate();
+    create.mutate(
+      { name: name.trim(), termsRevision },
+      {
+        onSuccess: (workspace) => {
+          setActiveWorkspaceId(workspace.id);
+          navigate(workspaceDestination('/onboarding', null, workspace.id), { replace: true });
+        },
+      },
+    );
   };
 
   return (

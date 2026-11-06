@@ -21,9 +21,13 @@ vi.mock('@/lib/navigation/project-destination', () => ({
   useSelectWorkspace: () => selectWorkspace,
 }));
 
-vi.mock('@/lib/api/workspaces', () => ({
-  workspacesApi: { acceptInvitation },
-}));
+// The transport is replaced on the module's own client object, so the real
+// mutation descriptor (and the refresh it carries) runs against it.
+vi.mock('@/lib/api/workspaces', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api/workspaces')>();
+  Object.assign(actual.workspacesApi, { acceptInvitation });
+  return actual;
+});
 
 import { AcceptInvitationScreen } from './accept-invitation-screen';
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
 import { BillingSupport } from '@/components/billing/billing-policies';
@@ -16,14 +16,12 @@ import { QueryState } from '@/components/ui/query-state';
 import { ListScreen } from '@/components/layout/page-shell';
 import { Callout } from '@/components/ui/callout';
 import {
-  billingApi,
-  createIdempotencyKey,
+  billingMutations,
+  billingQueries,
   emptyBillingCustomerDetails,
   type BillingCatalog,
   type BillingEntitlement,
-  type SelfServePlanKey,
 } from '@/lib/api/billing';
-import { queryKeys } from '@/lib/api/query-keys';
 import { catalogItemName, catalogPlanByKey } from '@/lib/billing/catalog';
 import { useWorkspaceCatalog } from '@/lib/billing/use-workspace-catalog';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
@@ -44,37 +42,16 @@ type Checkout = ReturnType<typeof useSubscriptionCheckout>;
  * plan and receipts never render in another's view.
  */
 function useBillingReads(workspaceId: string | null, country: string) {
-  const reads = workspaceId !== null;
-  const entitlementQuery = useQuery({
-    queryKey: queryKeys.billing.entitlement(workspaceId ?? 'unresolved'),
-    queryFn: ({ signal }) => billingApi.entitlement({ signal, workspaceId }),
-    enabled: reads,
-    retry: false,
-  });
+  const entitlementQuery = useQuery({ ...billingQueries.entitlement(workspaceId), retry: false });
   const catalogQuery = useWorkspaceCatalog(workspaceId, country);
-  const invoiceQuery = useQuery({
-    queryKey: queryKeys.billing.invoices(workspaceId),
-    queryFn: ({ signal }) => billingApi.invoices({ signal, workspaceId }),
-    enabled: reads,
-    retry: false,
-  });
+  const invoiceQuery = useQuery({ ...billingQueries.invoices(workspaceId), retry: false });
   return { entitlementQuery, catalogQuery, invoiceQuery };
 }
 
 function useCancellation(workspaceId: string | null): BillingCancellation {
-  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const resume = useMutation({
-    mutationFn: () => billingApi.resumeSubscription({ workspaceId }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.billing.all }),
-  });
-  const mutation = useMutation({
-    mutationFn: () => billingApi.cancelSubscription({ workspaceId }),
-    onSuccess: async () => {
-      setOpen(false);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.billing.all });
-    },
-  });
+  const resume = useMutation(billingMutations.resumeSubscription(workspaceId));
+  const mutation = useMutation(billingMutations.cancelSubscription(workspaceId));
   return {
     open,
     // Each attempt starts clean: a failure belongs to the dialog that made it.
@@ -84,7 +61,7 @@ function useCancellation(workspaceId: string | null): BillingCancellation {
     },
     pending: mutation.isPending,
     error: mutation.error,
-    confirm: () => mutation.mutate(),
+    confirm: () => mutation.mutate(undefined, { onSuccess: () => setOpen(false) }),
     resume: () => resume.mutate(),
     resuming: resume.isPending,
     resumeError: resume.error,
@@ -92,12 +69,7 @@ function useCancellation(workspaceId: string | null): BillingCancellation {
 }
 
 function usePlanChangeControls(workspaceId: string | null, checkout: Checkout): PlanChangeControls {
-  const queryClient = useQueryClient();
-  const downgrade = useMutation({
-    mutationFn: (key: SelfServePlanKey) =>
-      billingApi.changePlan(key, createIdempotencyKey(), { workspaceId }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.billing.all }),
-  });
+  const downgrade = useMutation(billingMutations.downgrade(workspaceId));
   return {
     upgrade: (key) =>
       void checkout

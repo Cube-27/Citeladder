@@ -504,7 +504,11 @@ describe('bootstrapPrivateRoutes', () => {
       expect(await run(`/site?project=${PROJECT}`)).toBeNull();
 
       await waitFor(() =>
-        expect(client.getQueryData(queryKeys.siteHealth.dashboard(PROJECT))).toEqual(empty),
+        expect(
+          client.getQueryData(
+            queryKeys.siteHealth.dashboard({ workspaceId: WORKSPACE, projectId: PROJECT }),
+          ),
+        ).toEqual(empty),
       );
     });
   });
