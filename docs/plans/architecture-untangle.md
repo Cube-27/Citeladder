@@ -54,7 +54,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 
 | PR | Title | Rows (commit order) | Depends on | Flags | Status | PR link | Notes |
 |----|-------|---------------------|-----------|-------|--------|---------|-------|
-| P01 | Onboarding competitor discovery fix | ON1, ON2 | — | | in progress | | Owner bug; start here. Builder session `untangle-p01` |
+| P01 | Onboarding competitor discovery fix | ON1, ON2 | — | | in review | [#626](https://github.com/Cube-27/Citeladder/pull/626) | Owner bug; start here. Builder session `untangle-p01` |
 | P02 | Correctness fixes: trial credits, Share of Shelf, perception states, browser state labels, latest brand run | FX1, FX2, FX3, FX4, O1 | — | mig? | in progress | | Builder session `untangle-p02` |
 | P03 | Runtime safety and schema hardening | FX5, DB1, DB2 | — | mig | in progress | | Builder session `untangle-p03`; holds the migration slot (0006+) |
 | P04 | Site Health tasks I: outcome classifier, crawl status, single writers | SH1, SH2, SH3 | — | mig? | in progress | | Builder session `untangle-p04` |
@@ -116,8 +116,8 @@ order the PR tracker already respects.
 
 | ID | Row | Depends on | Area | Flags | Status | Commit | Notes |
 |----|----|-----------|------|-------|--------|---------|-------|
-| ON1 | Discovery identity deadline; no silent empty "ready"; research logging | — | `projects/research*.ts`, `config/discovery.json`, `models/anthropic.ts`, `workers/discovery-worker.ts` | | todo | | |
-| ON2 | "Run discovery again" and onboarding failure copy | ON1 | `frontend/lib/onboarding`, `frontend/components/onboarding`, `routes/brand-discoveries.ts` | | todo | | |
+| ON1 | Discovery identity deadline; no silent empty "ready"; research logging | — | `projects/research*.ts`, `config/discovery.json`, `models/anthropic.ts`, `workers/discovery-worker.ts` | | done | 29c5770 | |
+| ON2 | "Run discovery again" and onboarding failure copy | ON1 | `frontend/lib/onboarding`, `frontend/components/onboarding`, `routes/brand-discoveries.ts` | | done | 9c27304 | |
 | FX1 | Trial credits 5,000 → 500 and copy | — | `config/entitlements.json`, `docs/billing-*.md`, three marketing copy files | | todo | | |
 | FX2 | Commerce Share of Shelf by candidate state; Commerce "measure with" | — | `commerce/shelf*.ts`, `config/actions.ts` | mig? | todo | | |
 | FX3 | Perception: model omissions stay distinct; model frozen per audit | — | `perception/`, `visibility/perception.ts` | mig? | todo | | |
