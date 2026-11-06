@@ -30,7 +30,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { useProjectMarkets } from '@/lib/project/use-project-markets';
-import { ENGINE_ORDER, ENGINE_LABELS } from '@/lib/providers/catalog';
+import { useEngineCatalog } from '@/lib/providers/engines';
 import { schedulePauseReason } from '@/lib/runs/status';
 
 const CADENCE_LABELS: Record<AuditScheduleCadence, string> = {
@@ -77,6 +77,7 @@ function WorkspaceSchedules({
   promptSets: PromptSet[];
 }>) {
   const queryClient = useQueryClient();
+  const catalog = useEngineCatalog();
   const [promptSetId, setPromptSetId] = useState(promptSets[0]?.id ?? '');
   const [auditScope, setAuditScope] = useState<'brand' | 'commerce'>('brand');
   const [cadence, setCadence] = useState<AuditScheduleCadence>('weekly');
@@ -107,7 +108,12 @@ function WorkspaceSchedules({
       });
     },
   });
-  const canCreate = !createMutation.isPending && scheduleReady(promptSetId, engines, marketIds);
+  // The engine choices come from the catalogue; until it loads none are shown,
+  // so nothing may be scheduled against an engine the user cannot see.
+  const canCreate =
+    !createMutation.isPending &&
+    catalog.order.length > 0 &&
+    scheduleReady(promptSetId, engines, marketIds);
   const resumeMutation = useMutation({
     mutationFn: (scheduleId: string) =>
       runsApi.updateSchedule(projectId, scheduleId, { enabled: true }, { workspaceId }),
@@ -202,10 +208,10 @@ function WorkspaceSchedules({
               <Stack as="fieldset" gap="item" className="desktop:col-span-2">
                 <legend className={textRole('label')}>Engines</legend>
                 <Inline className="flex-wrap">
-                  {ENGINE_ORDER.map((engine) => (
+                  {catalog.order.map((engine) => (
                     <Checkbox
                       key={engine}
-                      label={ENGINE_LABELS[engine]}
+                      label={catalog.label(engine)}
                       checked={engines.includes(engine)}
                       onCheckedChange={() =>
                         setEngines((current) =>

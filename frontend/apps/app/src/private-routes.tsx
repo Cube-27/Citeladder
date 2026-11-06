@@ -10,6 +10,7 @@ import { SessionGuard } from '@/lib/auth/session-guard';
 import { PolicyAcceptanceGate } from '@/components/auth/policy-acceptance';
 import { EntitlementProvider } from '@/lib/billing/entitlement-context';
 import { ProjectProvider } from '@/lib/project/project-context';
+import { useEngineCatalog } from '@/lib/providers/engines';
 import { WorkspaceAccessGate } from '@/components/auth/workspace-access-gate';
 
 /**
@@ -27,6 +28,9 @@ import { WorkspaceAccessGate } from '@/components/auth/workspace-access-gate';
  * decides where the state lives.
  */
 export function PrivateRouteLayout() {
+  // Engine names and order come from the provider catalogue; read it alongside
+  // the workspace bootstrap so screens render with labels already cached.
+  useEngineCatalog();
   return (
     <Suspense fallback={<ShellFallback />}>
       <ProjectProvider>

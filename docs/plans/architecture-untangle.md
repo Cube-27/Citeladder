@@ -59,7 +59,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P02 | Correctness fixes: trial credits, Share of Shelf, perception states, browser state labels, latest brand run | FX1, FX2, FX3, FX4, O1 | — | mig? | merged | [#629](https://github.com/Cube-27/Citeladder/pull/629) | Migrations 0008, 0009 |
 | P03 | Runtime safety and schema hardening | FX5, DB1, DB2 | — | mig | merged | [#627](https://github.com/Cube-27/Citeladder/pull/627) | Migrations 0006, 0007 |
 | P04 | Site Health tasks I: outcome classifier, crawl status, single writers | SH1, SH2, SH3 | — | mig? | merged | [#628](https://github.com/Cube-27/Citeladder/pull/628) | No migration needed |
-| P05 | Engine surfaces I: DataForSEO client, typed frozen config, engine sets from routes | E1, E2, E3 | — | | in progress | | Builder session `untangle-p05` |
+| P05 | Engine surfaces I: DataForSEO client, typed frozen config, engine sets from routes | E1, E2, E3 | — | | in review | [#637](https://github.com/Cube-27/Citeladder/pull/637) | |
 | P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | merged | [#634](https://github.com/Cube-27/Citeladder/pull/634), [#638](https://github.com/Cube-27/Citeladder/pull/638) | Split for size: P06-a (#634) = F1–F3; P06-b (#638) = F4 |
 | P07 | App route manifest and kit cleanup | R1, R2, R3, R5, R6, R7 | — | | in progress | | Builder session `untangle-p07` |
 | P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | merged | [#631](https://github.com/Cube-27/Citeladder/pull/631) | Migration 0010 |
@@ -150,9 +150,9 @@ order the PR tracker already respects.
 | C3 | Permission declared once on the command; one membership check | C2 | `routes/define.ts`, `routes/*` with commands, `commands/`, membership query sites | | todo | | |
 | C4 | One prepared-change table for MCP dry run and confirm | C2 | `mcp/{write-tools,confirmed-changes,confirmations}.ts`, `auth/security-events.ts` | | todo | | |
 | C5 | One `citeladder://` record-kind table; route-declared streaming body | — | `mcp/{links,retrieval}.ts`, `frontend/lib/agent/evidence.ts`, `packages/contracts`, `app.ts`, `routes/crawl-logs.ts`, `routes/define.ts` | | done | 2adce71 | |
-| E1 | One DataForSEO envelope client and secret custody | — | `search-intelligence/{live,credentials,acquisition-state}.ts`, `search-surfaces/dataforseo.ts`, `providers/`, `audits/execution-context.ts` | | todo | | |
-| E2 | Typed frozen audit configuration | E1 | `audits/{freeze,creation,execution-context}.ts`, `analysis/{comparison,provenance}.ts`, `config/audits.json` | | todo | | |
-| E3 | Engine sets derived from provider routes; browser engine tables deleted | E2 | `audits/{creation,estimate,submission-intent,maintenance}.ts`, `search-surfaces/locations.ts`, `config/visibility.json`, `frontend/lib/providers/catalog.ts` | | todo | | |
+| E1 | One DataForSEO envelope client and secret custody | — | `search-intelligence/{live,credentials,acquisition-state}.ts`, `search-surfaces/dataforseo.ts`, `providers/`, `audits/execution-context.ts` | | done | d5ae183 | |
+| E2 | Typed frozen audit configuration | E1 | `audits/{freeze,creation,execution-context}.ts`, `analysis/{comparison,provenance}.ts`, `config/audits.json` | | done | 25dc9ce | |
+| E3 | Engine sets derived from provider routes; browser engine tables deleted | E2 | `audits/{creation,estimate,submission-intent,maintenance}.ts`, `search-surfaces/locations.ts`, `config/visibility.json`, `frontend/lib/providers/catalog.ts` | | done | ee5dfc3, 23a7ca2 | Two commits: the pre-commit hook's command line overflows on Windows at 61 files |
 | E4 | `llm` surface adapter; audit worker moves to `audits/` | E3, Q7 | `audits/surfaces/`, `workers/audit-worker.ts`, `audits/{result,surface}-persistence.ts` | | todo | | |
 | E5 | `search_ai` and `llm_scraper` adapters | E4 | `audits/surfaces/`, `search-surfaces/` | | todo | | |
 | O1 | One latest-brand-run resolver; one rate owner; queries-per-execution denominator | — | `visibility/{selection,dashboard,prompts}.ts`, `opportunities/sources.ts`, `projects/command-center.ts`, `analysis/aggregate.ts` | | done | fb22e46 | |
