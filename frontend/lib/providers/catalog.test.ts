@@ -72,6 +72,7 @@ describe('engine catalogue', () => {
     expect(engines.order.filter(engines.isSearchSurface)).toEqual(['google_ai_overview']);
     expect(engines.modelLabel('chatgpt', 'gpt-6.1-terra')).toBe('gpt-6.1-terra');
     expect(engines.modelLabel('chatgpt_search', 'chat_gpt-llm-scraper')).toBeNull();
+    expect(engines.modelLabel('uncatalogued', 'some-model')).toBeNull();
   });
 
   it('labels known transports and falls back for unknown ones', () => {

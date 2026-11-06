@@ -50,7 +50,9 @@ export function engineCatalog(catalog: ProviderCatalog | undefined): EngineCatal
     surfaceKind,
     isObserved,
     isSearchSurface: (key) => surfaceKind(key) === 'search_ai',
-    modelLabel: (engine, model) => (!model || isObserved(engine) ? null : model),
+    // Only a catalogued LLM route has a model the request pinned; an observed
+    // surface or an engine the catalogue does not know shows none.
+    modelLabel: (engine, model) => (model && surfaceKind(engine) === 'llm' ? model : null),
   };
 }
 

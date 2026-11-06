@@ -108,7 +108,12 @@ function WorkspaceSchedules({
       });
     },
   });
-  const canCreate = !createMutation.isPending && scheduleReady(promptSetId, engines, marketIds);
+  // The engine choices come from the catalogue; until it loads none are shown,
+  // so nothing may be scheduled against an engine the user cannot see.
+  const canCreate =
+    !createMutation.isPending &&
+    catalog.order.length > 0 &&
+    scheduleReady(promptSetId, engines, marketIds);
   const resumeMutation = useMutation({
     mutationFn: (scheduleId: string) =>
       runsApi.updateSchedule(projectId, scheduleId, { enabled: true }, { workspaceId }),
