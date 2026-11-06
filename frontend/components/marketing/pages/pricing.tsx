@@ -22,7 +22,7 @@ import { CtaBand, FaqList } from '../sections/steps-faq-cta';
 export const PRICING_FAQS = [
   {
     q: 'What does the free trial include?',
-    a: 'Seven days of AI visibility tracking on ChatGPT for one project, with 20 prompts, 20 monitored URLs and 20 successful answers, one per prompt. Agent access and AI credits are not included. Contact us to continue after the trial.',
+    a: 'Seven days of AI visibility tracking on ChatGPT for one project, with 20 prompts, 20 monitored URLs and 20 successful answers, one per prompt. It includes 500 AI credits; Agent access is not included. Contact us to continue after the trial.',
   },
   {
     q: 'Do you mark up model usage?',

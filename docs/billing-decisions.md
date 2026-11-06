@@ -113,7 +113,7 @@ that reports no usage is not charged.
 credit so their money value is unchanged: AI top-up 25,000 credits for $25
 (available on every paid plan, not the trial); Growth 12,500 and Scale 37,500
 per month. The owner set the free trial at 200 old credits ($5): 5,000 credits
-in total, no top-ups. Engineering gave Starter the same 5,000 per month, because
+in total, no top-ups (trial amended to 500 by B61). Engineering gave Starter the same 5,000 per month, because
 prompt generation is the core feature and must not require Growth.
 Configuration; change freely.
 
@@ -479,6 +479,14 @@ and B58's refund does not apply. Source: owner, 4 November 2026, after two
 production runs failed for funding with holds of 130–143 credits against
 debits of 2–9: "Credit holds must not refuse work the balance can actually
 pay for."
+
+## Trial allowance (2026-11-06)
+
+**B61 — Owner, 2026-11-06.** The public trial gets **500** AI credits for its
+whole length, no top-ups; Agent access stays excluded. Amends B16's 5,000
+trial credits; Starter, Growth and Scale allowances are unchanged. The pricing
+page and FAQ state the 500 credits. Source: owner decision OD4 in the
+[architecture untangle plan](plans/architecture-untangle.md#owner-decisions-2026-11-06).
 
 ## Owner inputs still required
 

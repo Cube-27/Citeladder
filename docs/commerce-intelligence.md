@@ -122,15 +122,22 @@ Unmatched spans that carry a product signal (a list item, a URL, a price or a
 capitalized name after the first word) go
 to the configured structured-model resolver in one call per answer, charged to
 the workspace model quota before the call. Unavailable, malformed or
-quota-refused output preserves unresolved evidence. An AI-observed competitor is
-created only from a resolved PDP URL that the answer itself contains, that is
-not merely a citation, and that is not on the business's own hosts.
+quota-refused output preserves unresolved evidence. Each observation records the
+resolver outcome (`resolved`, `omitted` by the call, `not_needed`, `failed` or
+`unavailable`), the model called and the resolver template version. An
+AI-observed competitor is created only from a resolved PDP URL that the answer
+itself contains, that is not merely a citation, and that is not on the
+business's own hosts. Its observation is classified by the candidate's state
+when the answer is recorded: approved holds a slot like a frozen competitor,
+pending is `ai_observed_competitor` (shown, outside the share) and rejected is
+excluded from the shelf.
 
 The persisted, formula-versioned snapshot per target and audit exposes:
 
 - Product Visibility: successful target executions with an owned appearance
   divided by all successful target executions.
-- Share of Shelf: owned slots divided by all recognized slots.
+- Share of Shelf: owned slots divided by owned plus approved-competitor slots;
+  pending AI-observed competitors hold no slot.
 - Average Shelf Position: mean owned rank across ordered observations.
 - First-Position Win Rate: ordered executions whose first slot is owned divided
   by ordered executions.
