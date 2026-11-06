@@ -6,7 +6,6 @@ export { ConfigError } from './config/config-error.ts';
 import { brandEvidence } from './config/brand-evidence.ts';
 import { abuse } from './config/abuse.ts';
 import { errors } from './config/errors.ts';
-import { compareText } from './text-order.ts';
 import agentRuntime from './config/agent-runtime.json' with { type: 'json' };
 import modelGateway from './config/model-gateway.json' with { type: 'json' };
 import { discovery } from './config/discovery.ts';
@@ -28,7 +27,6 @@ import { integrations, traffic, analytics, referrals, authOAuth } from './config
 import integrationCredentials from './config/integration-credentials.json' with { type: 'json' };
 import { siteHealth, siteHealthRuntime } from './config/site-health.ts';
 import { crawlers } from './config/crawlers.ts';
-import { crawlLogs } from './config/crawl-logs.ts';
 import { validateSiteHealthSettings } from './config/site-health/validation.ts';
 import { commerce, commerceShelf } from './config/commerce.ts';
 import { auditSchedules } from './config/audit-schedules.ts';
@@ -55,26 +53,15 @@ import {
   type BillingSettings,
   type RazorpaySettings,
 } from './billing/config.ts';
-import { epochMicros, parseDatetime } from './http/datetimes.ts';
 import { parseTrustedProxies, type TrustedProxies } from './auth/client-identity.ts';
-
-type SettingSpec = {
-  env: string[];
-  type: string;
-  default: unknown;
-  values?: unknown[];
-  minimum?: number;
-  exclusive_minimum?: number;
-  maximum?: number;
-  exclusive_maximum?: number;
-};
+import { resolveSettingSpec, resolveSpec } from './config/settings.ts';
+export { resolveSettingSpec } from './config/settings.ts';
 
 export const policy = {
   entitlements,
   development_env_names: api.development_env_names,
   secret_policy: authRuntime.secret_policy,
   crawlers,
-  crawl_logs: crawlLogs,
   billing,
   task_queue: queue,
   api,
@@ -96,19 +83,13 @@ export const policy = {
   search_intelligence: {
     ...searchIntelligence,
     task_kind: 'search_intelligence_acquisition',
-    connection_test_ok: providers.test_status_ok,
   },
   demand: {
     ...demand,
     query_page_dataset: traffic.DATASET_GSC_QUERY_PAGE_DAILY,
   },
   visibility: { ...visibility, ...promptLibrary.cohorts },
-  projects: {
-    ...projectReads,
-    prompt_set_name: promptLibrary.prompt_set_name,
-    min_repetitions: audits.min_repetitions,
-    max_repetitions: audits.max_repetitions,
-  },
+  projects: projectReads,
   errors,
   agent: { ...agentRuntime },
   abuse,
@@ -134,13 +115,6 @@ export const policy = {
     refresh: {
       ...opportunityDefaults.refresh,
       finding_class_defect: 'defect',
-      change_analyzer_version: siteHealth.change_intel.analyzer_version,
-      change_class_regression: siteHealth.change_intel.class_regression,
-      change_class_critical: siteHealth.change_intel.class_critical,
-      change_max_observations: siteHealth.change_intel.max_observations,
-      change_state_available: siteHealth.change_intel.state_available,
-      content_change_field: siteHealth.change_intel.change_field,
-      source_page_outcome_inspected: sourcePageVocabulary.INSPECTION_INSPECTED,
     },
   },
   models: { ...modelGateway, jev, quality },
@@ -154,24 +128,10 @@ export const policy = {
   site_health: siteHealth,
   site_health_runtime: siteHealthRuntime,
   web_fetch: siteHealth.web_fetch,
-  traffic: {
-    ...traffic,
-    url_schemes: siteHealth.web_fetch.schemes,
-    url_ports: siteHealth.web_fetch.ports,
-    ignored_query_keys: [...siteHealth.tracking_params, ...siteHealth.ignored_query_keys].sort(
-      compareText,
-    ),
-  },
+  traffic,
   agent_context: agentContext,
   agent_skills: agentSkills,
-  mcp: {
-    ...mcp,
-    terms_revision: authRuntime.terms_revision,
-    constants: {
-      ...mcp.constants,
-      api_request_body_max_bytes: api.request_body_max_bytes,
-    },
-  },
+  mcp,
   prompts: {
     ...promptLibrary.prompts,
     generation: promptGeneration,
@@ -180,105 +140,12 @@ export const policy = {
       quality_gates_reported: qualityGatesReported,
     },
   },
-  brand_identity: {
-    ...brandIdentity,
-    suggestion_pending: audits.observed_competitors.status_pending,
-    suggestion_accepted: audits.observed_competitors.status_accepted,
-  },
+  brand_identity: brandIdentity,
   brand_evidence: brandEvidence,
   brand_logos: brandLogos,
   internal_links: internalLinks,
   perception,
 };
-
-const TRUE_VALUES = new Set(['1', 'on', 't', 'true', 'y', 'yes']);
-const FALSE_VALUES = new Set(['0', 'off', 'f', 'false', 'n', 'no']);
-
-function envValue(spec: SettingSpec, env: Record<string, string | undefined>): string | undefined {
-  // Environment aliases are case-insensitive.
-  const byLowerName = new Map(
-    Object.entries(env).map(([name, value]) => [name.toLowerCase(), value]),
-  );
-  for (const name of spec.env) {
-    const value = byLowerName.get(name.toLowerCase());
-    if (value !== undefined) return value;
-  }
-  return undefined;
-}
-
-function checkBounds(name: string, value: number, spec: SettingSpec): number {
-  if (spec.exclusive_minimum !== undefined && value <= spec.exclusive_minimum) {
-    throw new ConfigError(`${name} must be > ${spec.exclusive_minimum}`);
-  }
-  if (spec.minimum !== undefined && value < spec.minimum) {
-    throw new ConfigError(`${name} must be >= ${spec.minimum}`);
-  }
-  if (spec.maximum !== undefined && value > spec.maximum) {
-    throw new ConfigError(`${name} must be <= ${spec.maximum}`);
-  }
-  if (spec.exclusive_maximum !== undefined && value >= spec.exclusive_maximum) {
-    throw new ConfigError(`${name} must be < ${spec.exclusive_maximum}`);
-  }
-  return value;
-}
-
-function parseInteger(name: string, raw: string, spec: SettingSpec): number {
-  if (!/^[+-]?\d+$/u.test(raw.trim())) throw new ConfigError(`${name} must be an integer`);
-  return checkBounds(name, Number(raw.trim()), spec);
-}
-
-function parseFloatSetting(name: string, raw: string, spec: SettingSpec): number {
-  const value = Number(raw.trim());
-  if (!raw.trim() || !Number.isFinite(value)) throw new ConfigError(`${name} must be a number`);
-  return checkBounds(name, value, spec);
-}
-
-function parseBoolean(name: string, raw: string): boolean {
-  const normalized = raw.trim().toLowerCase();
-  if (TRUE_VALUES.has(normalized)) return true;
-  if (FALSE_VALUES.has(normalized)) return false;
-  throw new ConfigError(`${name} must be a boolean`);
-}
-
-function parseDatetimeSetting(name: string, raw: string): Date | null {
-  if (!raw.trim()) return null;
-  // Refuse calendar-invalid or free-form timestamps.
-  const parsed = parseDatetime(raw.trim());
-  if (parsed === null) throw new ConfigError(`${name} must be a timestamp`);
-  // A naive timestamp is kept as "present but unusable"; demo access then
-  // fails closed exactly as `demo_access_expired` does for a naive value.
-  if (parsed.offsetSeconds === null) return new Date(Number.NaN);
-  return new Date(Number(epochMicros(parsed) / 1000n));
-}
-
-function parseSetting(name: string, spec: SettingSpec, raw: string): unknown {
-  switch (spec.type) {
-    case 'int':
-      return parseInteger(name, raw, spec);
-    case 'float':
-      return parseFloatSetting(name, raw, spec);
-    case 'bool':
-      return parseBoolean(name, raw);
-    case 'datetime':
-      return parseDatetimeSetting(name, raw);
-    case 'literal':
-      if (!spec.values?.includes(raw)) {
-        throw new ConfigError(`${name} must be one of ${spec.values?.join(', ')}`);
-      }
-      return raw;
-    default:
-      return raw;
-  }
-}
-
-function resolveSpec(
-  name: string,
-  spec: SettingSpec,
-  env: Record<string, string | undefined>,
-): unknown {
-  const raw = envValue(spec, env);
-  return raw === undefined ? spec.default : parseSetting(name, spec, raw);
-}
 
 /** Pool, timeout and TLS settings shared by the service and terminal operators. */
 export function databaseSettings(env: Record<string, string | undefined>) {
@@ -598,64 +465,4 @@ export function demoAccessExpired(config: ServiceConfig, now: Date = new Date())
   const expiresAt = config.demo.expiresAt;
   if (expiresAt === null || Number.isNaN(expiresAt.getTime())) return true;
   return now.getTime() >= expiresAt.getTime();
-}
-
-export type WorkerSettings = {
-  leaseReclaimBatchSize: number;
-  drainBudgetSeconds: number;
-  leaseTtlSeconds: number;
-  heartbeatIntervalSeconds: number;
-  taskMaxAttempts: number;
-  pollIntervalSeconds: number;
-  /** The first retry's base wait; each later attempt doubles it up to `retryMaxDelaySeconds`. */
-  retryDelaySeconds: number;
-  retryMaxDelaySeconds: number;
-  accessCheckTtlSeconds: number;
-};
-
-/** Resolve one policy setting with its environment override. */
-export function resolveSettingSpec(
-  spec: SettingSpec,
-  env: Record<string, string | undefined> = process.env,
-): unknown {
-  return resolveSpec(spec.env[0] ?? 'setting', spec, env);
-}
-
-export function activeJobRetrySeconds(
-  env: Record<string, string | undefined> = process.env,
-): number {
-  return resolveSpec(
-    'active_job_retry_after_seconds',
-    policy.abuse.active_job_retry_after_seconds,
-    env,
-  ) as number;
-}
-
-/** The analytics worker knobs (`ANALYTICS_*`), refusing a heartbeat slower than the lease. */
-export function loadWorkerSettings(
-  env: Record<string, string | undefined> = process.env,
-): WorkerSettings {
-  const specs = policy.analytics.worker_settings;
-  const setting = (name: keyof typeof specs) => resolveSpec(name, specs[name], env) as number;
-  const settings: WorkerSettings = {
-    leaseReclaimBatchSize: setting('lease_reclaim_batch_size'),
-    drainBudgetSeconds: setting('drain_budget_seconds'),
-    leaseTtlSeconds: setting('lease_ttl_seconds'),
-    heartbeatIntervalSeconds: setting('heartbeat_interval_seconds'),
-    taskMaxAttempts: setting('task_max_attempts'),
-    pollIntervalSeconds: setting('poll_interval_seconds'),
-    retryDelaySeconds: setting('retry_delay_seconds'),
-    retryMaxDelaySeconds: setting('retry_max_delay_seconds'),
-    accessCheckTtlSeconds: setting('access_check_ttl_seconds'),
-  };
-  // A heartbeat slower than the lease guarantees expiry during healthy work;
-  // the analytics worker checks the per-kind leases its registry declares.
-  if (settings.heartbeatIntervalSeconds >= settings.leaseTtlSeconds) {
-    throw new ConfigError('heartbeat_interval_seconds must be shorter than every lease TTL');
-  }
-  // A cap below the base would cut every backoff short of the configured first wait.
-  if (settings.retryMaxDelaySeconds < settings.retryDelaySeconds) {
-    throw new ConfigError('retry_max_delay_seconds must not be below retry_delay_seconds');
-  }
-  return settings;
 }

@@ -373,7 +373,7 @@ export function registerOAuthRoutes(
         csrf: consentCsrf(config, getCookie(c, config.session.cookieName) ?? '', transaction),
         workspaces: await consentWorkspaces(db, userId),
         error,
-        termsRevision: policy.mcp.terms_revision,
+        termsRevision: policy.auth.terms_revision,
         appOrigin: mcp.browserOrigin,
         offerChanges: holdsWrite(strings(row.scopes)),
       }),

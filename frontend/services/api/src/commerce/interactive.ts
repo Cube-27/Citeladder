@@ -1,4 +1,5 @@
-import { configEnvironment, loadWorkerSettings, type ServiceConfig } from '../config.ts';
+import { configEnvironment, type ServiceConfig } from '../config.ts';
+import { loadWorkerSettings } from '../config/analytics.ts';
 import { interactiveExecution } from '../config/execution.ts';
 import type { Database } from '../db/database.ts';
 import { fetchWebsite } from '../safe-fetch.ts';

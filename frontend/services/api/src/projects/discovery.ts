@@ -8,7 +8,9 @@ import type { Selectable } from 'kysely';
 import { z } from 'zod';
 
 import { dailyWorkspaceLimit, enforceWorkspaceRequest } from '../abuse/usage.ts';
-import { activeJobRetrySeconds, policy, resolveSettingSpec } from '../config.ts';
+import { activeJobRetrySeconds } from '../abuse/usage.ts';
+import { policy, resolveSettingSpec } from '../config.ts';
+import promptLibrary from '../config/prompt-library.json' with { type: 'json' };
 import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
@@ -390,7 +392,7 @@ export async function completeDiscovery(
         id: randomUUID(),
         workspace_id: workspaceId,
         project_id: projectId,
-        name: policy.projects.prompt_set_name,
+        name: promptLibrary.prompt_set_name,
         description: '',
         created_at: now,
         updated_at: now,

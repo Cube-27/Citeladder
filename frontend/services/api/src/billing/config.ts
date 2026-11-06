@@ -1,4 +1,14 @@
-import { ConfigError, policy, resolveSettingSpec } from '../config.ts';
+import api from '../config/api.json' with { type: 'json' };
+import authRuntime from '../config/auth-runtime.json' with { type: 'json' };
+import { billing } from '../config/billing.ts';
+import { ConfigError } from '../config/config-error.ts';
+import { resolveSettingSpec } from '../config/settings.ts';
+
+const policy = {
+  billing,
+  development_env_names: api.development_env_names,
+  settings: { ...api.settings, ...authRuntime.settings },
+};
 
 /** Same validated identity-bootstrap admission and defaults as the shared setting owner. */
 export function catalogBootstrapSettings(env: Record<string, string | undefined> = process.env) {

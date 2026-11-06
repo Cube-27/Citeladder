@@ -8,7 +8,8 @@ import {
 import { sql } from 'kysely';
 import { z } from 'zod';
 
-import { configEnvironment, loadWorkerSettings, policy } from '../config.ts';
+import { configEnvironment, policy } from '../config.ts';
+import { loadWorkerSettings } from '../config/analytics.ts';
 import { AnalyticsWorker } from '../workers/analytics-worker.ts';
 import { projectPerformanceRange } from '../traffic/snapshot.ts';
 import { ApiError, notFound } from '../errors.ts';

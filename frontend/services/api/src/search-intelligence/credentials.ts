@@ -12,6 +12,7 @@ import type { WorkspaceScope } from '../db/workspace-scope.ts';
 import { ApiError } from '../errors.ts';
 import type { ProviderConnections, SearchIntelligenceRuns } from '../generated/db-schema.ts';
 import { onlyOf } from '../lists.ts';
+import { providers } from '../config/providers.ts';
 import { si } from './requests.ts';
 
 type Connection = Selectable<ProviderConnections>;
@@ -26,7 +27,7 @@ export function workspaceConnections(db: Database, workspace: WorkspaceScope) {
     .where('transport_provider', '=', si.transport_provider)
     .where('credential_source', '=', 'byok')
     .where('active', '=', true)
-    .where('last_test_status', '=', si.connection_test_ok)
+    .where('last_test_status', '=', providers.test_status_ok)
     .where('api_key_encrypted', '!=', '')
     .orderBy('created_at')
     .execute();
@@ -42,7 +43,7 @@ export function platformConnection(db: Database, at = new Date()) {
     .where('c.credential_source', '=', 'platform')
     .where('c.transport_provider', '=', si.transport_provider)
     .where('c.active', '=', true)
-    .where('c.last_test_status', '=', si.connection_test_ok)
+    .where('c.last_test_status', '=', providers.test_status_ok)
     .where('c.platform_credential_ref', '!=', '')
     .where((eb) => eb.or([eb('c.paused_at', 'is', null), eb('c.pause_until', '<=', at)]))
     .orderBy('c.created_at')

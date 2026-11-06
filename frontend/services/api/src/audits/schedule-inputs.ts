@@ -50,8 +50,8 @@ const fields = {
   market_ids: marketIdList,
   repetitions: z
     .int()
-    .min(policy.projects.min_repetitions)
-    .max(policy.projects.max_repetitions)
+    .min(policy.audits.min_repetitions)
+    .max(policy.audits.max_repetitions)
     .nullable(),
 };
 

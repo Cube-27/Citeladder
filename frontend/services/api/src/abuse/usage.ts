@@ -11,7 +11,21 @@ import { sql } from 'kysely';
 
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { abuse } from '../config/abuse.ts';
+import { resolveSettingSpec, resolveSpec } from '../config/settings.ts';
+
+const policy = { abuse };
+
+/** The `Retry-After` a request refused for too many active jobs carries. */
+export function activeJobRetrySeconds(
+  env: Record<string, string | undefined> = process.env,
+): number {
+  return resolveSpec(
+    'active_job_retry_after_seconds',
+    abuse.active_job_retry_after_seconds,
+    env,
+  ) as number;
+}
 import { getLogger } from '../logging.ts';
 
 type SubjectKind =

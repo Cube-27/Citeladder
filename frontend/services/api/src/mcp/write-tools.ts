@@ -97,8 +97,8 @@ const engines = z
   .describe('The AI engines to ask; at least one.');
 const repetitions = z
   .int()
-  .min(policy.projects.min_repetitions)
-  .max(policy.projects.max_repetitions)
+  .min(policy.audits.min_repetitions)
+  .max(policy.audits.max_repetitions)
   .describe('How many times each prompt is asked per engine; omit for the project default.')
   .nullish();
 const markets = marketIdList

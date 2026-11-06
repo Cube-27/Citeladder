@@ -51,7 +51,7 @@ beforeEach(async () => {
       id: randomUUID(),
       workspace_id: tenant.workspaceId,
       actor_id: tenant.userId,
-      terms_revision: policy.mcp.terms_revision,
+      terms_revision: policy.auth.terms_revision,
       privacy_notice_revision: 'test',
       context: 'test',
       accepted_at: new Date(),
@@ -846,7 +846,7 @@ it('accepts the shown Terms on the consent page and tells ended access from unre
   expect(view.text).toContain('Ended Its trial or subscription has ended');
   expect(view.text).toContain('Pending Its access could not be confirmed right now');
   expect(view.terms).toEqual({ type: 'checkbox', name: 'accept_terms', value: 'yes' });
-  expect(view.termsRevision).toBe(policy.mcp.terms_revision);
+  expect(view.termsRevision).toBe(policy.auth.terms_revision);
 
   for (const blocked of [ended, unresolved]) {
     const refused = await approve(transaction, [blocked]);
@@ -862,7 +862,7 @@ it('accepts the shown Terms on the consent page and tells ended access from unre
   );
   const approved = await approve(transaction, [fresh], {
     accept_terms: 'yes',
-    terms_revision: policy.mcp.terms_revision,
+    terms_revision: policy.auth.terms_revision,
   });
   expect(approved.status).toBe(303);
   expect(new URL(approved.headers.get('location')!).searchParams.get('code')).toBeTruthy();
@@ -873,7 +873,7 @@ it('accepts the shown Terms on the consent page and tells ended access from unre
       .where('workspace_id', '=', fresh)
       .where('actor_id', '=', tenant.userId)
       .execute(),
-  ).toEqual([{ context: 'mcp_consent', terms_revision: policy.mcp.terms_revision }]);
+  ).toEqual([{ context: 'mcp_consent', terms_revision: policy.auth.terms_revision }]);
 });
 
 it('refuses Terms accepted from a page showing an older revision and records nothing', async () => {
@@ -886,7 +886,7 @@ it('refuses Terms accepted from a page showing an older revision and records not
   expect(stale.status).toBe(400);
   const page = consentDocument(await stale.text());
   expect(page.text).toContain('The Terms of Service changed since this page loaded.');
-  expect(page.termsRevision).toBe(policy.mcp.terms_revision);
+  expect(page.termsRevision).toBe(policy.auth.terms_revision);
   expect(
     await db
       .selectFrom('policy_acceptances')

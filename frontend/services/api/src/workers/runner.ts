@@ -2,13 +2,8 @@ import { randomInt, randomUUID } from 'node:crypto';
 import { crawlLogTick } from '../crawl-logs/maintenance.ts';
 import { setTimeout as sleep } from 'node:timers/promises';
 import pg from 'pg';
-import {
-  configEnvironment,
-  loadWorkerSettings,
-  policy,
-  resolveSettingSpec,
-  type ServiceConfig,
-} from '../config.ts';
+import { configEnvironment, policy, resolveSettingSpec, type ServiceConfig } from '../config.ts';
+import { loadWorkerSettings } from '../config/analytics.ts';
 import { poolOptions, type Database } from '../db/database.ts';
 import { createAgentBindings } from '../agent/bindings.ts';
 import { auditRuntime } from '../audits/config.ts';
