@@ -59,12 +59,12 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P02 | Correctness fixes: trial credits, Share of Shelf, perception states, browser state labels, latest brand run | FX1, FX2, FX3, FX4, O1 | — | mig? | merged | [#629](https://github.com/Cube-27/Citeladder/pull/629) | Migrations 0008, 0009 |
 | P03 | Runtime safety and schema hardening | FX5, DB1, DB2 | — | mig | merged | [#627](https://github.com/Cube-27/Citeladder/pull/627) | Migrations 0006, 0007 |
 | P04 | Site Health tasks I: outcome classifier, crawl status, single writers | SH1, SH2, SH3 | — | mig? | merged | [#628](https://github.com/Cube-27/Citeladder/pull/628) | No migration needed |
-| P05 | Engine surfaces I: DataForSEO client, typed frozen config, engine sets from routes | E1, E2, E3 | — | | todo | | |
+| P05 | Engine surfaces I: DataForSEO client, typed frozen config, engine sets from routes | E1, E2, E3 | — | | in progress | | Builder session `untangle-p05` |
 | P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | in progress | | Builder session `untangle-p06` |
 | P07 | App route manifest and kit cleanup | R1, R2, R3, R5, R6, R7 | — | | todo | | |
 | P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | merged | [#631](https://github.com/Cube-27/Citeladder/pull/631) | Migration 0010 |
 | P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | merged | [#630](https://github.com/Cube-27/Citeladder/pull/630) | |
-| P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | in review | [#632](https://github.com/Cube-27/Citeladder/pull/632) | Builder session `untangle-p10`; migration 0011 |
+| P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | merged | [#632](https://github.com/Cube-27/Citeladder/pull/632) | Migration 0011 |
 | P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | todo | | |
 | P12 | Opportunities: check kinds, typed targets, evidence announcement | O2, O3, O4 | P02 | | todo | | |
 | P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | todo | | |
