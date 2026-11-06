@@ -260,6 +260,37 @@ async function advanceTurns(
     .execute();
 }
 
+type FencedClaim = { id: string; workspace_id: string; attempt_count: number };
+
+/**
+ * The fenced lock a terminal write takes inside its transaction: the claimed
+ * row, still leased to `owner` at the claimed attempt and not terminal (and
+ * in one of `inStatus` when given), or undefined when the lease was lost.
+ */
+export async function fenceLease<T extends LaneTable>(
+  trx: Database,
+  lane: Pick<LaneDescriptor<T>, 'table'>,
+  claimed: FencedClaim,
+  owner: string,
+  inStatus?: readonly string[],
+): Promise<TaskFor<T> | undefined> {
+  const table: LaneTable = lane.table;
+  const row = await queueDatabase(trx)
+    .selectFrom(table)
+    .selectAll()
+    .where('id', '=', claimed.id)
+    .where('workspace_id', '=', claimed.workspace_id)
+    .where('attempt_count', '=', claimed.attempt_count)
+    .where('lease_owner', '=', owner)
+    .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)
+    .$if(inStatus !== undefined, (query) => query.where('status', 'in', inStatus!))
+    .forUpdate()
+    .executeTakeFirst();
+  return row === undefined || terminal.includes(row.status)
+    ? undefined
+    : (row as unknown as TaskFor<T>);
+}
+
 export class TaskQueue<T extends LaneTable = 'analytics_tasks'> {
   readonly #db: Database;
   readonly #lane: LaneDescriptor<T>;
@@ -390,31 +421,14 @@ export class TaskQueue<T extends LaneTable = 'analytics_tasks'> {
     return updated.numUpdatedRows > 0n;
   }
 
-  /**
-   * The fenced lock a terminal write takes inside its transaction: the claimed
-   * row, still leased to `owner` at the claimed attempt and not terminal (and
-   * in one of `inStatus` when given), or undefined when the lease was lost.
-   */
-  async fence(
+  /** The fenced lock a terminal write takes inside its transaction (`fenceLease`). */
+  fence(
     trx: Database,
-    claimed: { id: string; workspace_id: string; attempt_count: number },
+    claimed: FencedClaim,
     owner: string,
     inStatus?: readonly string[],
   ): Promise<TaskFor<T> | undefined> {
-    const row = await queueDatabase(trx)
-      .selectFrom(this.#table)
-      .selectAll()
-      .where('id', '=', claimed.id)
-      .where('workspace_id', '=', claimed.workspace_id)
-      .where('attempt_count', '=', claimed.attempt_count)
-      .where('lease_owner', '=', owner)
-      .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)
-      .$if(inStatus !== undefined, (query) => query.where('status', 'in', inStatus!))
-      .forUpdate()
-      .executeTakeFirst();
-    return row === undefined || terminal.includes(row.status)
-      ? undefined
-      : (row as unknown as TaskFor<T>);
+    return fenceLease(trx, this.#lane, claimed, owner, inStatus);
   }
 
   /** Whether the row reached a terminal status or is gone (cooperative cancel). */
