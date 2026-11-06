@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import {
@@ -96,6 +97,30 @@ test('a light chart series must hold 3:1 on every ground', () => {
   assert.ok(
     violations.some((violation) => violation.includes('--color-data-3 on --color-surface-sunken')),
   );
+});
+
+test('a form control edge must hold 3:1 on every ground in each theme (WCAG 1.4.11)', () => {
+  const violations = paletteViolations(
+    css({ light: { '--color-line-field': '#e5e5e5' }, dark: { '--color-line-field': '#2a2a2a' } }),
+  );
+  const fieldEdge = violations.filter((violation) => violation.includes('--color-line-field'));
+  // Each soft value fails on all three grounds, once per theme.
+  assert.equal(fieldEdge.length, 6);
+  assert.ok(
+    fieldEdge.some(
+      (violation) =>
+        violation.includes("data-theme='dark'") &&
+        violation.includes('--color-line-field on --color-surface-sunken'),
+    ),
+  );
+});
+
+test('the shipped palette, field edges included, meets every pair in both themes', () => {
+  const source = readFileSync(
+    new URL('../frontend/apps/app/src/globals.css', import.meta.url),
+    'utf8',
+  );
+  assert.deepEqual(paletteViolations(source), []);
 });
 
 test('positive and negative too close in lightness and under red-green loss fail', () => {

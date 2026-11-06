@@ -115,7 +115,7 @@
           "light": "#e5e5e5",
           "dark": "#2a2a2a"
         },
-        "usage": "Every soft edge: card and frame borders on the website, table rules, dividers, and (owner decision D5, 5 Nov 2026) the 1px edge of inputs, textareas, search fields, selects, chip inputs, checkbox and radio boxes and the Agent composer, always with shadow-edge under it. A divider inside a dialog or the search palette is line, never darker."
+        "usage": "Every soft edge that is not a form control: card and frame borders, table rules and dividers. A divider inside a dialog or the search palette is line, never darker, and line is the 3px halo around a focused field. Never the resting edge of a form control: that is line-field (D37)."
       },
       {
         "name": "line-strong",
@@ -123,7 +123,7 @@
           "light": "#d4d4d4",
           "dark": "#3a3a3a"
         },
-        "usage": "One soft step darker than line: the hover edge of fields, checkbox boxes and linked website cards, and the dashed edge of reserved slots (Turnstile, the new-workspace tile). Never a resting control edge."
+        "usage": "One soft step darker than line: the hover edge of linked website cards and the dashed edge of reserved slots (Turnstile, the new-workspace tile). Never a control edge."
       },
       {
         "name": "line-control",
@@ -131,7 +131,15 @@
           "light": "#858585",
           "dark": "#747474"
         },
-        "usage": "Marks that need 3:1 but are not borders: the chart crosshair, the Switch's off track, the ink TextLink underline, the StepList pending ring and a not-cited engine mark. Never the edge of a control, card or box (D5, 5 Nov 2026)."
+        "usage": "Marks that need 3:1 but are not borders: the chart crosshair, the Switch's off track, the ink TextLink underline, the StepList pending ring and a not-cited engine mark. Never the edge of a control (that is line-field), card or box."
+      },
+      {
+        "name": "line-field",
+        "value": {
+          "light": "#808080",
+          "dark": "#707070"
+        },
+        "usage": "The 1px resting edge of every form control (owner decision D37, 6 Nov 2026): inputs, password and adorned field frames, search fields, selects, the filter-bar trigger, date fields, textareas, chip inputs, the Agent composer, the CSV file input and checkbox and radio boxes, with shadow-edge under it. Holds 3:1 on paper, surface and surface-sunken in both themes (WCAG 1.4.11). Hover darkens it to ink-secondary; focus is a 2px focus line in a 3px line halo."
       },
       {
         "name": "ink",
@@ -364,7 +372,7 @@
             "fontWeight": 400,
             "letterSpacing": "-0.01em",
             "sample": "Every answer, every engine",
-            "usage": "Docs page titles and the website's CTA band heading. 26/32 below 768px. The website's pricing plan price sets this size in Geist 500 (D28)."
+            "usage": "Docs page titles, the website's CTA band heading and the sign-in, sign-up and other auth card titles (Cal Sans, D36). 26/32 below 768px. The website's pricing plan price sets this size in Geist 500 (D28)."
           },
           {
             "name": "display-md",
@@ -382,7 +390,7 @@
             "fontWeight": 400,
             "letterSpacing": "-0.01em",
             "sample": "Visibility",
-            "usage": "The app's PageHeader title, the only Cal Sans in the app (D7, D11), in a 40px title row with the actions centred on it."
+            "usage": "The app's PageHeader title, the only Cal Sans in the app outside the auth card titles (D7, D11, D37), in a 40px title row with the actions centred on it."
           },
           {
             "name": "title",
@@ -390,7 +398,7 @@
             "lineHeight": "28px",
             "fontWeight": 400,
             "sample": "Cited sources this week",
-            "usage": "Docs h2, reference titles and an article's Sources heading. Website card, step and form titles and article h3 are heading-lg in Geist 500 (D28). Never in the app: there Cal Sans is the PageHeader title only (D7)."
+            "usage": "Docs h2, reference titles and an article's Sources heading. Website card, step and form titles and article h3 are heading-lg in Geist 500 (D28). Never in the app: there Cal Sans is the PageHeader title and the auth card titles only (D7, D36)."
           },
           {
             "name": "title-sm",
@@ -635,7 +643,7 @@
           "light": "0 1px 2px rgba(17,17,17,0.05)",
           "dark": "0 1px 2px rgba(0,0,0,0.40)"
         },
-        "usage": "The faint smudge under a soft line edge (D5): inputs, textareas, search fields, select triggers, chip inputs, checkbox and radio boxes, the Agent composer. No ring of its own, so the 1px line border stays the only edge; shadow-xs would double it."
+        "usage": "The faint smudge under a form control's line-field edge (D5, D37): inputs, textareas, search fields, select triggers, chip inputs, checkbox and radio boxes, the Agent composer. No ring of its own, so the 1px border stays the only edge; shadow-xs would double it."
       },
       {
         "name": "shadow-xs",
