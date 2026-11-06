@@ -17,7 +17,7 @@ import { authApi } from '@/lib/api/auth';
 import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-path';
 import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
-import type { SessionUser } from '@/lib/api/types';
+import type { SessionUser } from '@citeladder/contracts';
 import { isDeparting, restartAt } from '@/lib/auth/account-transition';
 import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import { Callout } from '@/components/ui/callout';

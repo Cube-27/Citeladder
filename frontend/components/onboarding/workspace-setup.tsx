@@ -17,7 +17,7 @@ import { authApi } from '@/lib/api/auth';
 import { signOutForChangedTerms } from '@/lib/auth/account-transition';
 import { humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
-import type { Workspace } from '@/lib/api/types';
+import type { Workspace } from '@citeladder/contracts';
 import { workspacesApi } from '@/lib/api/workspaces';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';

@@ -6,6 +6,14 @@ import {
   workspaceInvitationIssuedSchema,
   policyStatusSchema,
 } from '@citeladder/contracts/auth';
+import {
+  invitationAcceptRequestSchema,
+  invitationCreateRequestSchema,
+  memberRoleUpdateRequestSchema,
+  ownershipTransferRequestSchema,
+  termsDecisionRequestSchema,
+  workspaceCreateRequestSchema,
+} from '@citeladder/contracts/auth-requests';
 import { z } from 'zod';
 import { workspaceAccess } from '../entitlements/access.ts';
 import { deliverInvitation } from '../workspaces/invitation-mail.ts';
@@ -45,15 +53,13 @@ const base = {
 const admin = { ...base, capability: 'manage_members' } as const;
 const memberPath = { workspace_id: uuid, member_id: uuid };
 const invitationPath = { workspace_id: uuid, invitation_id: uuid };
-const accept = z.object({ token: z.string().min(16).max(256) });
-const roleUpdate = z.object({ role: assignableRoleSchema });
-const transfer = z.object({ member_id: z.uuid() });
-const invite = z.object({ email: z.email().trim().max(255), role: assignableRoleSchema });
-const policyDecision = z.object({
-  terms_revision: z.string().min(1).max(64),
-  accept_terms: z.literal(true),
-});
-const workspaceCreate = policyDecision.extend({ name: z.string().trim().min(1).max(255) });
+const accept = invitationAcceptRequestSchema;
+// The assignable roles are workspace policy.
+const roleUpdate = memberRoleUpdateRequestSchema.extend({ role: assignableRoleSchema });
+const transfer = ownershipTransferRequestSchema;
+const invite = invitationCreateRequestSchema.extend({ role: assignableRoleSchema });
+const policyDecision = termsDecisionRequestSchema;
+const workspaceCreate = workspaceCreateRequestSchema;
 
 export const workspaceRoutes = [
   defineGetRoute({

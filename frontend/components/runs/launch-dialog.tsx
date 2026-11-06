@@ -9,7 +9,7 @@ import { providersApi } from '@/lib/api/providers';
 import { useManagedPlan } from '@/lib/billing/entitlement-context';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi, runsQueries } from '@/lib/api/runs';
-import type { Audit, LogicalEngine, PromptSet } from '@/lib/api/types';
+import type { Audit, LogicalEngine, PromptSet } from '@citeladder/contracts';
 import { isConfigured, isVerified } from '@/lib/providers/catalog';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';

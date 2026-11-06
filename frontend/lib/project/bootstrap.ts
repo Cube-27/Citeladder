@@ -12,7 +12,7 @@
  * redirect before anything mounts and the gate render a notice after.
  */
 import type { WorkspaceEntitlement } from '@/lib/api/billing';
-import type { Workspace } from '@/lib/api/types';
+import type { Workspace } from '@citeladder/contracts';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 import { capabilityRemaining } from '@/lib/billing/entitlement-capability';

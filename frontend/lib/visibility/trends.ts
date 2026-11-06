@@ -9,7 +9,7 @@
  * the not-measured placeholder when no ranked answer exists (invariant 9).
  */
 import type { TrendPoint, TrendSeries } from '@/components/ui/trend-chart';
-import type { VisibilityTrendPoint } from '@/lib/api/types';
+import type { VisibilityTrendPoint } from '@citeladder/contracts';
 import { formatDisplayDate, formatDisplayShortDate } from '@/lib/format';
 
 /** Trend granularity — mirrors the backend `granularity=run|week|month`. */

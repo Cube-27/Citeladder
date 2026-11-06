@@ -4,7 +4,7 @@ import { renderWithProviders as render } from '@/test/render';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
-import type { Execution, ExecutionStatus } from '@/lib/api/types';
+import type { Execution, ExecutionStatus } from '@citeladder/contracts';
 
 import { ExecutionsTable } from './executions-table';
 

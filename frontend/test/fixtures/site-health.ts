@@ -14,7 +14,7 @@
  * is a drift the type checker cannot catch.
  */
 import type { WorkspaceEntitlement } from '@/lib/api/billing';
-import type { PageSummary, SiteCrawl, SiteHealthEntitlement } from '@/lib/api/types';
+import type { PageSummary, SiteCrawl, SiteHealthEntitlement } from '@citeladder/contracts';
 
 export const SITE_HEALTH_UUID = '11111111-1111-4111-8111-111111111111';
 export const SITE_HEALTH_UUID_2 = '22222222-2222-4222-8222-222222222222';

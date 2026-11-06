@@ -9,7 +9,7 @@ import { useMemo } from 'react';
 
 import { providersApi } from '@/lib/api/providers';
 import { queryKeys } from '@/lib/api/query-keys';
-import type { LogicalEngine, ProviderCatalog, SurfaceKind } from '@/lib/api/types';
+import type { LogicalEngine, ProviderCatalog, SurfaceKind } from '@citeladder/contracts';
 
 type EngineCatalog = {
   /** Every routed engine, in display order. */

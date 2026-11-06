@@ -3,14 +3,18 @@ import {
   integrationConnectionListSchema,
   performanceSyncEnqueueResponseSchema,
   integrationPropertyListSchema,
+  integrationPropertyDiscoveryRequestSchema,
   integrationPropertyMappingListSchema,
+  integrationPropertyMappingRequestSchema,
   integrationSyncEnqueueSchema,
+  integrationSyncRequestSchema,
   integrationSyncRunSchema,
   integrationTestResultSchema,
 } from '@citeladder/contracts/integrations';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { z } from 'zod';
-import { enqueueTrafficInsights } from '../crawl-logs/insights-enqueue.ts';
+import { insightsRefresh } from '../config/ai-traffic.ts';
+import { enqueueCoalesced } from '../queue/enqueue.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { readBody, readOptionalBody } from '../http/body.ts';
@@ -48,17 +52,9 @@ const family = 'integrations';
 const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const connectionPath = { connection_id: uuid } as const;
 const syncPath = { ...connectionPath, sync_run_id: uuid } as const;
-const windowRequest = z.strictObject({
-  project_id: z.uuid().optional(),
-  window_start: z.iso.date().optional(),
-  window_end: z.iso.date().optional(),
-});
-const discoveryRequest = z.strictObject({ project_id: z.uuid().optional() });
-const mappingRequest = z.strictObject({
-  provider: z.enum(['gsc', 'ga4', 'bing']),
-  property_ref: z.string().min(1).max(512),
-  project_id: z.uuid(),
-});
+const windowRequest = integrationSyncRequestSchema;
+const discoveryRequest = integrationPropertyDiscoveryRequestSchema;
+const mappingRequest = integrationPropertyMappingRequestSchema;
 const providerPath = { provider: { scalar: { kind: 'str' }, required: true } } as const;
 const oauthCookie = integrationPolicy.transport.INTEGRATION_OAUTH_TRANSACTION_COOKIE;
 const logger = getLogger('api.integrations');
@@ -503,7 +499,7 @@ export const integrationRoutes = [
           .returning('project_id')
           .execute();
         for (const projectId of new Set(retired.map((row) => row.project_id)))
-          await enqueueTrafficInsights(trx, { workspaceId, projectId }); // NOSONAR -- One transaction runs one statement at a time.
+          await enqueueCoalesced(trx, { ...insightsRefresh, workspaceId, projectId }); // NOSONAR -- One transaction runs one statement at a time.
         await trx
           .insertInto('integration_events')
           .values({
@@ -543,7 +539,8 @@ export const integrationRoutes = [
           .where('id', '=', path.mapping_id)
           .where('workspace_id', '=', c.get('workspace').workspaceId)
           .execute();
-        await enqueueTrafficInsights(trx, {
+        await enqueueCoalesced(trx, {
+          ...insightsRefresh,
           workspaceId: c.get('workspace').workspaceId,
           projectId: mapping.project_id,
         });
@@ -613,7 +610,7 @@ export const integrationRoutes = [
           .where('status', '=', 'active')
           .forUpdate()
           .executeTakeFirst();
-        await enqueueTrafficInsights(trx, { workspaceId, projectId: project.id });
+        await enqueueCoalesced(trx, { ...insightsRefresh, workspaceId, projectId: project.id });
         if (existing)
           return {
             ...existing,

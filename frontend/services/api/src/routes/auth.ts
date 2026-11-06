@@ -9,6 +9,14 @@ import {
 } from '@citeladder/contracts/auth';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import { safeAuthReturnPath } from '@citeladder/contracts/auth-continuation';
+import {
+  mailboxChallengeRequestSchema,
+  mailboxLinkRequestSchema,
+  passwordChangeRequestSchema,
+  passwordConfirmationRequestSchema,
+  signInRequestSchema,
+  signUpRequestSchema,
+} from '@citeladder/contracts/auth-requests';
 import { sealContinuation, openContinuation, continuationCookie } from '../auth/continuation.ts';
 import { z } from 'zod';
 import { defineGetRoute, definePostRoute } from './define.ts';
@@ -59,35 +67,25 @@ import {
   requireCurrentRevision,
 } from '../workspaces/policies.ts';
 
-const credentialsSchema = z.object({
-  return_to: z.string().max(1024).optional(),
-  email: z.email().trim().max(255),
+// Signing up and signing in are both Terms decisions: the request must carry it.
+const signInSchema = signInRequestSchema.extend({ password: passwordSchema });
+// Sign-up, unlike sign-in, also carries the Turnstile token solved on the form.
+const signUpSchema = signUpRequestSchema.extend({
+  password: passwordSchema,
+  turnstile_token: turnstileTokenSchema,
+});
+const passwordConfirmationSchema = passwordConfirmationRequestSchema.extend({
   password: passwordSchema,
 });
-// Signing up and signing in are both Terms decisions: the request must carry it.
-const termsDecisionSchema = z.object({
-  terms_revision: z.string().min(1).max(64),
-  accept_terms: z.literal(true),
-});
-const signInSchema = credentialsSchema.extend(termsDecisionSchema.shape);
-// Sign-up, unlike sign-in, also carries the Turnstile token solved on the form.
-const signUpSchema = signInSchema.extend({ turnstile_token: turnstileTokenSchema });
 const base = { family: 'auth', authorize: 'public', params: { path: {}, query: {} } } as const;
 const oauthPath = { provider: { scalar: { kind: 'str' }, required: true } } as const;
 const oauth = policy.auth.oauth;
 const acknowledgment = {
   message: 'If the address is eligible, you can use the email link to continue.',
 };
-const emailSchema = z.object({
-  email: z.email().trim().max(255),
-  return_to: z.string().max(1024).optional(),
-  turnstile_token: turnstileTokenSchema,
-});
-const challengeSchema = z.object({
-  token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
-  password: passwordSchema,
-});
-const changePasswordSchema = z.object({
+const emailSchema = mailboxLinkRequestSchema.extend({ turnstile_token: turnstileTokenSchema });
+const challengeSchema = mailboxChallengeRequestSchema.extend({ password: passwordSchema });
+const changePasswordSchema = passwordChangeRequestSchema.extend({
   current_password: passwordSchema,
   password: passwordSchema,
 });
@@ -159,10 +157,10 @@ export const authRoutes = [
     authorize: 'session',
     path: '/api/v1/auth/link-google',
     response: oauthStartResponseSchema,
-    body: z.object({ password: passwordSchema }),
+    body: passwordConfirmationSchema,
     async handle({ c, db, config }) {
       await mailboxMeter(db, c, config);
-      const payload = await readBody(c, z.object({ password: passwordSchema }));
+      const payload = await readBody(c, passwordConfirmationSchema);
       const user = await db
         .selectFrom('users')
         .selectAll()

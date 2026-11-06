@@ -21,7 +21,7 @@ import type {
   ProviderConnectionState,
   ProviderConnectionStateEntry,
   TransportProvider,
-} from '@/lib/api/types';
+} from '@citeladder/contracts';
 
 /** Human display names for each transport provider. */
 export const TRANSPORT_LABELS: Record<TransportProvider, string> = {

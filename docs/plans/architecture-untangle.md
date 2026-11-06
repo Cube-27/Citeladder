@@ -60,24 +60,24 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P03 | Runtime safety and schema hardening | FX5, DB1, DB2 | — | mig | merged | [#627](https://github.com/Cube-27/Citeladder/pull/627) | Migrations 0006, 0007 |
 | P04 | Site Health tasks I: outcome classifier, crawl status, single writers | SH1, SH2, SH3 | — | mig? | merged | [#628](https://github.com/Cube-27/Citeladder/pull/628) | No migration needed |
 | P05 | Engine surfaces I: DataForSEO client, typed frozen config, engine sets from routes | E1, E2, E3 | — | | in review | [#637](https://github.com/Cube-27/Citeladder/pull/637) | |
-| P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | in progress | | Builder session `untangle-p06` |
+| P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | in progress | [#634](https://github.com/Cube-27/Citeladder/pull/634) | Split for size: P06-a (#634) = F1–F3 merged; P06-b = F4 next, builder session `untangle-p06` |
 | P07 | App route manifest and kit cleanup | R1, R2, R3, R5, R6, R7 | — | | todo | | |
 | P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | merged | [#631](https://github.com/Cube-27/Citeladder/pull/631) | Migration 0010 |
 | P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | merged | [#630](https://github.com/Cube-27/Citeladder/pull/630) | |
-| P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | in review | [#632](https://github.com/Cube-27/Citeladder/pull/632) | Builder session `untangle-p10`; migration 0011 |
+| P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | merged | [#632](https://github.com/Cube-27/Citeladder/pull/632) | Migration 0011 |
 | P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | todo | | |
 | P12 | Opportunities: check kinds, typed targets, evidence announcement | O2, O3, O4 | P02 | | todo | | |
 | P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | todo | | |
 | P14 | Marketing site records and config-driven numbers | MK1, MK2, MK3, MK4 | P02 | | todo | | |
-| P15 | Queue owner II: remaining lanes and coalesced enqueue | Q4, Q5, Q6, Q7, Q8 | P01, P03, P09 | | in progress | | Builder session `untangle-p15` |
-| P16 | Site Health tasks II: one task runner, counters, pinned versions | SH4, SH5 | P04, P08, P09 | | in progress | | Builder session `untangle-p16` |
+| P15 | Queue owner II: remaining lanes and coalesced enqueue | Q4, Q5, Q6, Q7, Q8 | P01, P03, P09 | | merged | [#633](https://github.com/Cube-27/Citeladder/pull/633) | No migration |
+| P16 | Site Health tasks II: one task runner, counters, pinned versions | SH4, SH5 | P04, P08, P09 | | merged | [#635](https://github.com/Cube-27/Citeladder/pull/635) | No migration |
 | P17 | Permission on the command, MCP prepared changes, workspace ownership | C3, C4, X6 | P11 | | todo | | |
 | P18 | Internal cost view, spend breaker, output caps | K1, K2, K3 | P01, P10 | mig? | todo | | Before public sign-up |
 | P19 | Engine surfaces II: surface adapters, audit side effects out of analysis | E4, E5, X8 | P05, P15 | | todo | | |
 | P20 | Settings resolve once; named abuse budgets | G1, G2, G3 | P01, P15 | wide | todo | | |
 | P21 | Screen sweep: failure renderer, typed blobs, form limits, non-null project, recovery actions | F8, F9, F10, R4, Z4 | P07, P12, P13, P16 | | todo | | Split at a row boundary if over ~4,000 lines |
 | P22 | AI Traffic and integration owners; error logging | X4, X5, Z1, Z2, Z3 | P15, P16, P19 | | todo | | |
-| P23 | AI referral retention matches the Performance window | X9 | P08 | | todo | | Owner decision OD7; small, dispatched after P05 |
+| P23 | AI referral retention matches the Performance window | X9 | P08 | | merged | [#636](https://github.com/Cube-27/Citeladder/pull/636) | Owner decision OD7 |
 
 ## Order
 
@@ -130,16 +130,16 @@ order the PR tracker already respects.
 | Q1 | Enqueue and executor contract move to `queue/`; fairness test harness | — | `queue/`, `referrals/enqueue.ts`, `workers/executor.ts` + importers | wide | done | 624694c | |
 | Q2 | Analytics task-kind registry | Q1 | `workers/analytics-worker.ts`, `workers/terminal-compensation.ts`, `config/analytics.json` | | done | 5466c82 | |
 | Q3 | Lane descriptor: shared claim, cursor, heartbeat, fence; analytics and Site Health lanes | Q1, DB1 | `queue/task-queue.ts`, `queue/recovery.ts`, `queue/next-due.ts` | | done | feea935 | |
-| Q4 | Discovery lane on the descriptor | Q3, ON1 | `queue/discovery-queue.ts`, `workers/discovery-worker.ts` | | todo | | |
-| Q5 | Agent lane on the descriptor | Q3, FX5 | `agent/queue.ts`, `workers/agent-worker.ts` | | todo | | |
-| Q6 | Integrations lane on the descriptor | Q3 | `workers/integration-worker.ts` | | todo | | |
-| Q7 | Audit lane on the descriptor | Q4, Q5, Q6 | `queue/audit-queue.ts`, `workers/audit-worker.ts`, `workers/audit-scheduler.ts` | | todo | | |
-| Q8 | Coalesced-successor enqueue; AI Traffic trigger through the queue | Q2 | `crawl-logs/{state,insights-enqueue}.ts`, `integrations/projections.ts`, trigger call sites | | todo | | |
+| Q4 | Discovery lane on the descriptor | Q3, ON1 | `queue/discovery-queue.ts`, `workers/discovery-worker.ts` | | done | 4db7114 | |
+| Q5 | Agent lane on the descriptor | Q3, FX5 | `agent/queue.ts`, `workers/agent-worker.ts` | | done | c401d14 | |
+| Q6 | Integrations lane on the descriptor | Q3 | `workers/integration-worker.ts` | | done | c740105 | |
+| Q7 | Audit lane on the descriptor | Q4, Q5, Q6 | `queue/audit-queue.ts`, `workers/audit-worker.ts`, `workers/audit-scheduler.ts` | | done | 1b33b90 | |
+| Q8 | Coalesced-successor enqueue; AI Traffic trigger through the queue | Q2 | `crawl-logs/{state,insights-enqueue}.ts`, `integrations/projections.ts`, trigger call sites | | done | 4a96045 | |
 | SH1 | Site Health task-outcome classifier | — | `site-health/` outcome lists (nine files) | | done | 13423c9 | |
 | SH2 | Crawl-status module; dead states and legacy fallbacks deleted | SH1 | `packages/contracts/src/site-health/crawl.ts`, `site-health/`, `frontend/lib/site-health/status.ts` | mig? | done | 86f59ee | |
 | SH3 | One writer for crawl tasks, site URLs, observations, memberships | SH2 | `site-health/{admission-writes,frontier,discover-task,planner,site-setup-task,lifecycle,link-metrics}.ts` | | done | 90cc69e | |
-| SH4 | One site-task runner (lock, settle, backoff, access check) | SH3, Q3 | `site-health/{site-task,task-fence,analyze-task,discover-task,site-setup-task}.ts`, `workers/site-health-worker.ts` | | todo | | |
-| SH5 | Crawl counter chooser; shared commerce-facts schema; pinned versions on reads | SH2, X1 | `site-health/reads/`, `commerce/projection-facts.ts` | | todo | | |
+| SH4 | One site-task runner (lock, settle, backoff, access check) | SH3, Q3 | `site-health/{site-task,task-fence,analyze-task,discover-task,site-setup-task}.ts`, `workers/site-health-worker.ts` | | done | e292afb | |
+| SH5 | Crawl counter chooser; shared commerce-facts schema; pinned versions on reads | SH2, X1 | `site-health/reads/`, `commerce/projection-facts.ts` | | done | 6c7e69f | |
 | B1 | Consumable hold module; Site Health fetch budget on it | — | `entitlements/ledger.ts`, `site-health/fetch-budget.ts` | | done | 684e62b | |
 | B2 | Metering, prompt runs and Agent funding on the hold module | B1 | `billing/metering.ts`, `audits/prompt-runs.ts`, `agent/funding.ts`, `billing/reads.ts` | | done | e739dd9 | |
 | B3 | One plan gate and occupancy counter table | B2 | `entitlements/occupancy.ts`, flag refusal sites, `docs/billing-entitlements.md` | | done | bfb642c | |
@@ -159,10 +159,10 @@ order the PR tracker already respects.
 | O2 | One module per check kind | O1, FX2 | `opportunities/{declaration-checks,declarations,verification-evidence,declaration-view}.ts`, `config/actions.ts`, rule catalog | | todo | | |
 | O3 | Typed Action targets and producer registry | O2 | `opportunities/refresh*.ts`, `analysis/opportunities/`, `visibility/{sources,page-standing}.ts` | | todo | | |
 | O4 | One evidence announcement for refresh and verification | O3 | `opportunities/verification.ts`, `source-pages/inspector.ts`, `search-intelligence/acquisition-state.ts`, `traffic/snapshot.ts`, `site-health/terminal-handoff.ts` | | todo | | |
-| F1 | Contracts own request schemas: prompts, topics, runs, actions, projects | — | `frontend/packages/contracts`, `frontend/lib/api/{prompts,topics,runs,actions,projects}.ts`, matching server `inputs.ts` | | todo | | |
-| F2 | Contracts own remaining request schemas; delete `lib/api/types.ts` | F1 | `frontend/packages/contracts`, `frontend/lib/api/` | | todo | | |
-| F3 | One Search Intelligence dataset-kind table | F2 | `routes/search-intelligence-contracts.ts`, `search-intelligence/acquisition-state.ts`, `frontend/lib/config/search-intelligence.ts`, contracts | | todo | | |
-| F4 | Query and mutation descriptors: prompts and topics (shared scoped-key builder) | F1 | `frontend/lib/api/{prompts,topics,query-keys}.ts`, `frontend/components/{prompts,knowledge-base}` | | todo | | |
+| F1 | Contracts own request schemas: prompts, topics, runs, actions, projects | — | `frontend/packages/contracts`, `frontend/lib/api/{prompts,topics,runs,actions,projects}.ts`, matching server `inputs.ts` | | done | 6c54919 | |
+| F2 | Contracts own remaining request schemas; delete `lib/api/types.ts` | F1 | `frontend/packages/contracts`, `frontend/lib/api/` | | done | 5bae2b9 | |
+| F3 | One Search Intelligence dataset-kind table | F2 | `routes/search-intelligence-contracts.ts`, `search-intelligence/acquisition-state.ts`, `frontend/lib/config/search-intelligence.ts`, contracts | | done | 1052e86 | |
+| F4 | Query and mutation descriptors: prompts and topics (shared scoped-key builder) | F1 | `frontend/lib/api/{prompts,topics,query-keys}.ts`, `frontend/components/{prompts,knowledge-base}` | | todo | | P06-b: built on local branch `untangle-p06b-f4` (3ab383a), PR after P06-a merges |
 | F5 | Query and mutation descriptors: runs, visibility, commerce | F4 | `frontend/lib/api/{runs,visibility,commerce}.ts`, matching components, `frontend/lib/navigation/route-prefetch.ts` | | todo | | |
 | F6 | Query and mutation descriptors: integrations and remaining domains | F5, F2 | `frontend/lib/api/*`, remaining components | | todo | | |
 | F7 | Job-state records and one polling helper; one score band | F6 | `frontend/lib/<domain>/status.ts`, job screens, `frontend/lib/config/operational.ts` | | todo | | |
@@ -191,7 +191,7 @@ order the PR tracker already respects.
 | X6 | Auth/workspaces placement; one "owned workspace" query | C3 | `auth/bootstrap.ts`, `auth/development-access.ts`, `workspaces/`, `entitlements/bootstrap.ts` | | todo | | |
 | X7 | AI referral classification read from the persisted table everywhere | X3 | `referrals/landing.ts`, `traffic/projection.ts` | | done | eda2c70 | |
 | X8 | Audit side effects leave `src/analysis` | E4 | `analysis/{finalization,execution}.ts`, `audits/` | | todo | | |
-| X9 | AI referral retention matches the Performance window (OD7) | X7 | `config/referrals.json`, `referrals/retention.ts` | | todo | | |
+| X9 | AI referral retention matches the Performance window (OD7) | X7 | `config/referrals.json`, `referrals/retention.ts` | | done | f41aa57, fe5b864 | |
 | K1 | One internal-cost view; Tavily and Keenable priced; cost rows in the call's transaction | B2 | `billing/metering.ts`, `audits/costs.ts`, `config/{costs,ai-credits}.json`, `commerce/discovery-provider.ts`, `projects/research-evidence.ts` | mig? | todo | | Before public sign-up |
 | K2 | Platform-wide daily spend breaker | K1 | `billing/metering.ts`, config | | todo | | Before public sign-up |
 | K3 | Per-feature output caps for charged calls | B2, ON1 | `config/model-gateway.json`, `billing/metering.ts`, gateway callers | | todo | | |

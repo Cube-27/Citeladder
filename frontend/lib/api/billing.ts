@@ -33,6 +33,13 @@ import {
   subscriptionCheckoutSchema,
   workspaceEntitlementSchema,
 } from '@citeladder/contracts/billing';
+import type {
+  CheckoutVerifyRequest,
+  NoCardClaimRequest,
+  PackPurchaseRequest,
+  PlanChangeRequest,
+  SubscriptionCheckoutRequest,
+} from '@citeladder/contracts/billing-requests';
 import { strictValidate } from '@citeladder/contracts/validation';
 
 export type BillingCatalog = z.infer<typeof billingCatalogSchema>;
@@ -103,21 +110,6 @@ export function createIdempotencyKey(): string {
   return globalThis.crypto.randomUUID();
 }
 
-export type SubscriptionCheckoutInput = {
-  catalog_key: SelfServePlanKey;
-  credential_mode: CredentialMode;
-  country_code: string;
-} & BillingCustomerDetails;
-
-/**
- * A provider's browser callback, in the NEUTRAL wrapper the API accepts.
- *
- * The field names inside are the vendor's own; the shared controller never
- * reads them, and the originating adapter allowlists exactly the ones it
- * accepts before checking any signature.
- */
-export type CheckoutCallback = { fields: Record<string, string> };
-
 export const billingApi = {
   // These endpoints are WORKSPACE-scoped on the server, so each one carries
   // its workspace explicitly. Without it the transport falls back to the
@@ -137,7 +129,7 @@ export const billingApi = {
     ),
   verifyCheckout: async (
     activationId: string,
-    callback: CheckoutCallback,
+    callback: CheckoutVerifyRequest,
     options?: ApiRequestOptions,
   ) =>
     strictValidate(
@@ -187,12 +179,7 @@ export const billingApi = {
   },
 
   claimNoCardOffer: async (
-    input: {
-      campaign_id: string;
-      operator_code?: string;
-      terms_consent: boolean;
-      data_sharing_consent: boolean;
-    },
+    input: NoCardClaimRequest,
     idempotencyKey: string,
     options?: ApiRequestOptions,
   ) => {
@@ -205,7 +192,7 @@ export const billingApi = {
 
   /** Start a base-plan checkout. */
   createSubscription: async (
-    input: SubscriptionCheckoutInput,
+    input: SubscriptionCheckoutRequest,
     idempotencyKey: string,
     options?: ApiRequestOptions,
   ) => {
@@ -216,10 +203,10 @@ export const billingApi = {
       {
         ...input,
         country_code: countryCode,
-        billing_state_code: indianBilling ? input.billing_state_code.trim() : null,
-        customer_gstin: indianBilling ? input.customer_gstin.trim() : null,
+        billing_state_code: indianBilling ? (input.billing_state_code?.trim() ?? null) : null,
+        customer_gstin: indianBilling ? (input.customer_gstin?.trim() ?? null) : null,
         export_eligibility_attested: indianBilling ? false : input.export_eligibility_attested,
-      },
+      } satisfies SubscriptionCheckoutRequest,
       { ...options, idempotencyKey },
     );
     return strictValidate(activationSchema, response, 'billing.createSubscription');
@@ -233,7 +220,7 @@ export const billingApi = {
   ) => {
     const response = await apiClient.post<unknown>(
       '/billing/addons',
-      { catalog_key: catalogKey, quantity },
+      { catalog_key: catalogKey, quantity } satisfies PackPurchaseRequest,
       { ...options, idempotencyKey },
     );
     return strictValidate(activationSchema, response, 'billing.activateAddon');
@@ -247,7 +234,7 @@ export const billingApi = {
   ) => {
     const response = await apiClient.post<unknown>(
       '/billing/topups',
-      { catalog_key: catalogKey, quantity },
+      { catalog_key: catalogKey, quantity } satisfies PackPurchaseRequest,
       { ...options, idempotencyKey },
     );
     return strictValidate(activationSchema, response, 'billing.purchaseTopup');
@@ -264,7 +251,7 @@ export const billingApi = {
   ) => {
     const response = await apiClient.post<unknown>(
       '/billing/subscription/change',
-      { catalog_key: catalogKey },
+      { catalog_key: catalogKey } satisfies PlanChangeRequest,
       { ...options, idempotencyKey },
     );
     return strictValidate(planChangeSchema, response, 'billing.changePlan');

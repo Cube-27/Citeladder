@@ -59,6 +59,12 @@ sync runs, artifacts and metric rows are kept, as raw evidence is append-only;
 a reconnect reuses the same connections. Removing one property retires only
 that project's mapping.
 
+AI referral events and their classifications are kept for exactly the
+Performance window (`TRAFFIC_MAX_WINDOW_DAYS`, today 480 days): the referral
+retention period is derived from it, not configured separately, so
+`referral_retention_sweep` never deletes a classification Performance can still
+read and an in-window AI session is never counted as not AI.
+
 [Integration routes](../frontend/services/api/src/routes/integrations.ts) use
 the TypeScript integration owner in
 [integrations](../frontend/services/api/src/integrations/). Credentials remain

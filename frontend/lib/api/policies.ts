@@ -1,5 +1,6 @@
 import { apiClient } from './client';
 import { policyStatusSchema } from '@citeladder/contracts/auth';
+import type { TermsDecisionRequest } from '@citeladder/contracts/auth-requests';
 import { strictValidate } from '@citeladder/contracts/validation';
 
 export const policiesApi = {
@@ -14,7 +15,7 @@ export const policiesApi = {
       policyStatusSchema,
       await apiClient.post<unknown>(
         `/workspaces/${workspaceId}/policies`,
-        { terms_revision: termsRevision, accept_terms: true },
+        { terms_revision: termsRevision, accept_terms: true } satisfies TermsDecisionRequest,
         { workspaceId },
       ),
       'policies.accept',

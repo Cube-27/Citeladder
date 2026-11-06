@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import type { SessionUser } from '@/lib/api/types';
+import type { SessionUser } from '@citeladder/contracts';
 import { restartAt } from '@/lib/auth/account-transition';
 import { hasPendingIntent } from '@/lib/billing/pending-pricing-intent';
 import { PRICING_RESUME_QUERY_PARAM, PRICING_RETURN_PATH } from '@/lib/config/billing';

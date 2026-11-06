@@ -11,7 +11,7 @@ import { TextLink } from '@/components/ui/text-link';
 import { Label, textRole } from '@/components/ui/typography';
 import { productTransportLabel } from '@/lib/providers/catalog';
 import { useEngineCatalog } from '@/lib/providers/engines';
-import type { ExecutionEvidence } from '@/lib/api/types';
+import type { ExecutionEvidence } from '@citeladder/contracts';
 import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status';
 
 import { ContentMarkdown } from '@/lib/markdown/markdown';

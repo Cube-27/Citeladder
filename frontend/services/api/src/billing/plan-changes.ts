@@ -22,10 +22,6 @@ import {
 import { frozenTermsSchema, scheduledSchema } from './settlement.ts';
 import { activationResponse, createPending, dispatch, workspaceAccount } from './purchases.ts';
 
-export const changeRequest = z.strictObject({
-  catalog_key: z.enum(['tier_1', 'tier_2', 'tier_3']),
-});
-
 /** Commits a downgrade for the period end; the provider switch follows the commit. */
 async function scheduleDowngrade(
   db: Database,

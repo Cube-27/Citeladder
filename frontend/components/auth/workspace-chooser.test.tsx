@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
-import type { Workspace } from '@/lib/api/types';
+import type { Workspace } from '@citeladder/contracts';
 import { workspacesApi } from '@/lib/api/workspaces';
 import { renderWithProviders } from '@/test/render';
 
