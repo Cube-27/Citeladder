@@ -55,6 +55,16 @@ Opportunities but is never compared as a site crawl.
 | `link_metrics` → `architecture` | post-terminal link metrics, then the Architecture projection |
 | `change_intel` | post-terminal change snapshot and analytics handoff |
 
+`admission-writes.ts` is the only writer of these tasks, of URL identities
+(`site_urls`), observations and system memberships. A task's idempotency key
+is `crawl:kind:url_hash:generation` and its attempt budget is `max_attempts`.
+URL admission enqueues into an active crawl only and raises a queued
+conflict's priority; planner seeds and post-terminal successors keep an
+existing row. Every sighting of a URL refreshes its identity for the crawl,
+including a planner seed's own `discover` (a seed an earlier crawl knew is
+re-decided like an admitted URL). A crawl keeps its first observation of each
+URL.
+
 The acquisition kinds fetch outside any transaction. Each then re-locks its
 task and re-checks the lease, crawl status and workspace access; `analyze` also
 re-checks membership and allowance. Evidence and the outcome commit together,
@@ -96,6 +106,11 @@ finishes anything left. Reads never start work.
   batches, one attempt each, reconciling crawls whose tasks hit the ceiling.
 - A granted access check is reused for `access_check_ttl_seconds`, never past
   the grant's own expiry; a denial is never cached.
+
+**Crawl status.** A crawl is `queued` or `running` (active), then `completed`,
+`partially_completed`, `failed` or `cancelled` (terminal). Every reader takes
+the active, terminal and usable (terminal with readable analyses: all but
+`failed`) sets from `packages/contracts/src/site-health/crawl.ts`.
 
 **Terminalization** (`lifecycle.ts`, the only path to a terminal crawl). Each
 settled lifecycle task reconciles counters and sub-states under the crawl row
@@ -190,8 +205,8 @@ runs breadth-first in `sitemap_fetch_concurrency` waves, and attempts count
 against `max_sitemap_documents`. URLs are taken in queue order, so response
 timing cannot change what fits. Admissible URLs, up to
 `max_sitemap_admitted_urls`, enter the frontier at depth 1. They are also
-recorded in `site_facts.sitemap.urls`, the authority for sitemap membership;
-older crawls fall back to `source_kind = sitemap` observations. Each admitted
+recorded in `site_facts.sitemap.urls`, the only authority for sitemap
+membership: a crawl without that list has no sitemap members. Each admitted
 URL's first declared `<lastmod>` is kept, as written, in
 `site_facts.sitemap.lastmod` (keyed by the admitted URL); a page's analysis
 reads its own as `sitemap_lastmod`. Crawl reads (dashboard, crawl and crawl
@@ -203,7 +218,7 @@ linked it, first sighting first. The frontier row holds up to
 `max_referrers_per_url` of them and still records new ones after the frontier
 is full. The admitting page is also stored as the observation's and task's
 `parent_site_url_id`. A non-root `discover` that fails for good is observed
-with its status code, unless its code is one of `corpus_exclusion_error_codes`.
+with its status code, unless its failure is `excluded` (`task-outcome.ts`).
 Without an analysis task, the page row and the crawl counters read that failed
 `discover`. A broken link therefore appears in Errors & Blocked, and in the
 HTTP 4XX/5XX counts, with the pages that link it (`linked_from`), even when no
