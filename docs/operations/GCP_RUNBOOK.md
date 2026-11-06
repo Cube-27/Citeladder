@@ -238,7 +238,7 @@ Billing → Reports grouped by SKU and remove anything unexpectedly non-zero.
   with the production secrets exported in that shell only:
 
   ```powershell
-  gcloud compute ssh citeladder-db --zone us-central1-a --tunnel-through-iap -- -N -L 15432:127.0.0.1:5432
+  gcloud compute ssh citeladder-db --zone us-central1-a --tunnel-through-iap --ssh-flag="-N" --ssh-flag="-L 15432:127.0.0.1:5432"
   ```
 
 - **Runner and tick:** a committed API write starts `citeladder-runner`. A
