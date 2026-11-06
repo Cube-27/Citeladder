@@ -15,7 +15,7 @@ import { ApiError } from '../errors.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { addDays, inclusiveDays } from '../calendar-days.ts';
 import { numberOrNull } from './accumulators.ts';
-import { hash } from './normalization.ts';
+import { hash } from '../crypto-text.ts';
 import { record } from '../db/json.ts';
 import { compareText } from '../text-order.ts';
 

@@ -14,7 +14,7 @@ import { addDays, inclusiveDays } from '../calendar-days.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { payloadWindow, requireProject, taskProject, type Executor } from '../workers/executor.ts';
 import type { MetricRow } from './accumulators.ts';
-import { hash } from './normalization.ts';
+import { hash } from '../crypto-text.ts';
 import { record } from '../db/json.ts';
 import { TrafficProjectionBuilder, type Projection } from './projection.ts';
 import { textSpan } from '../text-order.ts';

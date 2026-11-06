@@ -21,7 +21,8 @@ import {
   insightsRead,
 } from '../src/crawl-logs/insights.ts';
 import { enqueueTrafficInsights } from '../src/crawl-logs/insights-enqueue.ts';
-import { canonicalPage, hash } from '../src/traffic/normalization.ts';
+import { hash } from '../src/crypto-text.ts';
+import { canonicalPage } from '../src/page-identity.ts';
 import { canonicalIdentity } from '../src/site-health/url-identity.ts';
 import { dispatchTool } from '../src/mcp/tools.ts';
 

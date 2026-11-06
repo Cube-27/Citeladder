@@ -3,7 +3,7 @@ import ipaddr from 'ipaddr.js';
 import { crawlLogs } from '../config/crawl-logs.ts';
 import { crawlers } from '../config/crawlers.ts';
 import { fetchWebsite, type WebsiteFetcher } from '../safe-fetch.ts';
-import { hash } from '../traffic/normalization.ts';
+import { hash } from '../crypto-text.ts';
 import { record } from '../db/json.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
 import type { Database } from '../db/database.ts';

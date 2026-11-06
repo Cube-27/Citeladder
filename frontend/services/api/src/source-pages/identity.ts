@@ -1,7 +1,8 @@
 /** The one citation URL identity: `citations.url_hash` and `source_pages.url_hash` share it. */
 import { getDomain } from 'tldts';
 
-import { canonicalPage, hash } from '../traffic/normalization.ts';
+import { hash } from '../crypto-text.ts';
+import { canonicalPage } from '../page-identity.ts';
 import { isGroundingRedirect } from '../analysis/domains.ts';
 import { policy } from '../config.ts';
 

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { auditPolicy } from '../audits/config.ts';
 import { casefold } from '../casefold.ts';
-import { canonicalPage } from '../traffic/normalization.ts';
+import { canonicalPage } from '../page-identity.ts';
 import { localizedPrice } from './projection-facts.ts';
 import { onlyOf } from '../lists.ts';
 import { domainMatches } from '../analysis/domains.ts';

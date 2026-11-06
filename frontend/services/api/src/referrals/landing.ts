@@ -9,11 +9,12 @@ import {
   partitionQuality,
   type PartitionScope,
 } from '../integrations/partitions.ts';
-import { projectHosts, landingPage } from '../integrations/host-scope.ts';
+import { projectHosts } from '../integrations/host-scope.ts';
+import { landingPage } from '../page-identity.ts';
 import { classifyReferralSignals } from './classification.ts';
-import { hash } from '../traffic/normalization.ts';
+import { hash } from '../crypto-text.ts';
 import { aiTraffic } from '../config/ai-traffic.ts';
-import { pathIdentity } from '../crawl-logs/identity.ts';
+import { pathIdentity } from '../page-identity.ts';
 import { policy } from '../config.ts';
 import { compareText } from '../text-order.ts';
 import { isNonEmpty, lastOf, type NonEmpty } from '../lists.ts';

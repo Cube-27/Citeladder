@@ -3,9 +3,10 @@ import { policy } from '../config.ts';
 import { classifyReferralSignals } from '../referrals/classification.ts';
 import { addDays } from '../calendar-days.ts';
 import { Ga4Accum, GscAccum, provenance, sourceFields, type MetricRow } from './accumulators.ts';
-import { canonicalPage, hash, normalizeQuery } from './normalization.ts';
+import { hash } from '../crypto-text.ts';
+import { canonicalPage, landingPage } from '../page-identity.ts';
+import { normalizeQuery } from './normalization.ts';
 import { compareText } from '../text-order.ts';
-import { landingPage } from '../integrations/host-scope.ts';
 import { observesZero, type DayQuality } from '../integrations/partitions.ts';
 import type { NonEmpty } from '../lists.ts';
 
