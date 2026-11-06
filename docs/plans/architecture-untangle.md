@@ -78,6 +78,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P21 | Screen sweep: failure renderer, typed blobs, form limits, non-null project, recovery actions | F8, F9, F10, R4, Z4 | P07, P12, P13, P16 | | todo | | Split at a row boundary if over ~4,000 lines |
 | P22 | AI Traffic and integration owners; error logging | X4, X5, Z1, Z2, Z3 | P15, P16, P19 | | todo | | |
 | P23 | AI referral retention matches the Performance window | X9 | P08 | | merged | [#636](https://github.com/Cube-27/Citeladder/pull/636) | Owner decision OD7 |
+| P24 | Audit error codes fit their column | DB3 | P19 | mig | todo | | Found by P19; small |
 
 ## Order
 
@@ -127,6 +128,7 @@ order the PR tracker already respects.
 | FX5 | Runtime safety: in-request cap, SIGTERM, frozen turn limit, failed-call usage, deploy guard | — | `routes/agent.ts`, `agent/{contracts,model-calls}.ts`, `server.ts`, `commands/audits.ts`, `audits/interactive.ts`, `.github/workflows/gcp-deploy.yml` | | done | 81c7fd9 | |
 | DB1 | Capacity-lease and queue indexes; lease purge | — | `migrations/`, `providers/capacity.ts`, audit maintenance | mig | done | 9c7848e | |
 | DB2 | Tenancy in the schema; registry-driven isolation test | DB1 | `migrations/`, `db/workspace-scope.ts`, writers of `prompt_sets`/`topics`/`competitors`/`brands`/`prompts`, `test/request-access.test.ts` | mig | done | f15ac10 | |
+| DB3 | Audit error codes fit `audit_tasks.error_code` | — | `migrations/`, audit error-code list | mig | todo | | |
 | Q1 | Enqueue and executor contract move to `queue/`; fairness test harness | — | `queue/`, `referrals/enqueue.ts`, `workers/executor.ts` + importers | wide | done | 624694c | |
 | Q2 | Analytics task-kind registry | Q1 | `workers/analytics-worker.ts`, `workers/terminal-compensation.ts`, `config/analytics.json` | | done | 5466c82 | |
 | Q3 | Lane descriptor: shared claim, cursor, heartbeat, fence; analytics and Site Health lanes | Q1, DB1 | `queue/task-queue.ts`, `queue/recovery.ts`, `queue/next-due.ts` | | done | feea935 | |
@@ -317,6 +319,10 @@ fresh run. The deploy correlation is timing, not cold start. PR #386 already rai
   the project-owned children (`prompts` through its set); writers populate it. Add one isolation test driven
   by the route registry (today a fixed list of 7 reads and 7 writes, `test/request-access.test.ts:243-263`).
   The tables are empty in production, so no backfill.
+- **DB3** (found by P19 #641). `audit_tasks.error_code` is `varchar(32)`, but the audit code
+  `credential_unavailable_for_retrieval` is 36 characters, so writing that failure errors out. Forward
+  migration widening the column (or a check that every declared error code fits, whichever owns the code
+  list). Test: a task failing with the longest declared code persists that code.
 
 ### Q. One queue-lane owner
 
