@@ -241,6 +241,12 @@ The property-wide channel comparison separates AI referrals, Organic Search and
 all other sessions. Engagement rate is engaged sessions divided by sessions;
 there is no key-events/session rate. Incompatible or missing measures stay unavailable.
 
+Whether sessions are AI referrals has one answer: the
+[persisted classification](../frontend/services/api/src/referrals/persisted.ts) of the
+same property, day, source and medium. The headline, landing pages, per-source
+measures and Performance's AI sessions all read it, so they agree after a rule
+change until reclassification writes new rows. An unclassified pair is not counted.
+
 ## Keyword Research acquisition
 
 [Keyword Research](../frontend/services/api/src/search-intelligence/) acquires explicit, reviewed DataForSEO Labs and Backlinks Live datasets for one saved apex or www project target and saved competitor targets. The review endpoint is provider-free: it freezes canonical scope, exact request pages, endpoint/version pricing, credential revision, an opaque HMAC account identity, and the estimated cost. The estimate is a ceiling: before each request, a call whose estimate would take reported spend past it is not sent and the run ends `cost_ceiling_reached`; a provider charge above a call's estimate stops the remaining calls after it (`cost_ceiling_exceeded`). Only the separate confirmation action enqueues paid work. The plan picks the account ([credentials](../frontend/services/api/src/search-intelligence/credentials.ts)): a BYOK workspace uses its one eligible DataForSEO connection; a managed workspace uses the platform's connection, sees its estimate and charge only in AI credits, and holds the estimate at confirmation (see [billing](billing-entitlements.md#metered-execution)). Reads render immutable published datasets and never call DataForSEO. Review creation and paid acquisition share the TypeScript owner with readiness, preferences, confirmation, cancellation, dataset reads, the Agent's row handoff (resolved server-side; there is no HTTP route) and citation matching, including Agent/MCP readers. Paid dispatch intent commits before I/O, and every local check (allowed endpoint, readable credential, approved base URL) runs before that commit, so a configuration error is a failed call with no dispatch evidence, never possible spend. Unknown submission or cost state stops acquisition rather than authorizing another paid call.

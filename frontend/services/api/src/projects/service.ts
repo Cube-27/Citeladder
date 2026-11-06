@@ -13,12 +13,8 @@ import {
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObject, strings } from '../db/json.ts';
-import {
-  admitProject,
-  overLimitPromptIds,
-  requireProjectDeletion,
-} from '../entitlements/occupancy.ts';
-import { WorkspaceEntitlements } from '../entitlements/access.ts';
+import { admit, overLimitPromptIds } from '../entitlements/occupancy.ts';
+import { WorkspaceEntitlements, requireFlag } from '../entitlements/access.ts';
 import { projectHoldsReservations } from '../entitlements/ledger.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { Projects } from '../generated/db-schema.ts';
@@ -182,7 +178,7 @@ export async function insertProject(
   sources?: Record<string, unknown>,
   artifacts: Record<string, unknown> = {},
 ) {
-  await admitProject(db, workspaceId);
+  await admit(db, workspaceId, 'project_slots', 1);
   const now = new Date();
   const id = randomUUID();
   const {
@@ -457,7 +453,7 @@ export async function deleteProject(db: Database, scope: ProjectScope) {
   await db.transaction().execute(async (trx) => {
     await acquireProjectLock(trx, scope.projectId);
     await projectRow(trx, scope);
-    await requireProjectDeletion(trx, scope.workspaceId);
+    await requireFlag(trx, scope.workspaceId, 'project_deletion');
     if (await projectHoldsReservations(trx, scope.workspaceId, scope.projectId))
       throw new ApiError(409, 'Wait for running audits, crawls and Agent replies to finish', {
         code: 'project_work_running',

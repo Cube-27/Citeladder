@@ -7,7 +7,8 @@ import type { IntroductoryClaims } from '../generated/db-schema.ts';
 import { lockAccount, issueBundle, revokeBundle } from '../entitlements/grants.ts';
 import { workspaceAccount } from './purchases.ts';
 import { catalog } from './catalog.ts';
-import { conflict, digest } from './contracts.ts';
+import { digest } from '../crypto-text.ts';
+import { conflict } from '../errors.ts';
 import { policy } from '../config.ts';
 import { uuidV5 } from '../uuid-v5.ts';
 import { firstOf } from '../lists.ts';
@@ -193,7 +194,7 @@ export function claimOffer(
       accountId: account.id,
       key: `intro:${id}`,
       sourceKind: 'trial',
-      sourceRef: `intro:${id}`,
+      source: { kind: 'intro', introId: id },
       specs: plan.grants,
       revision: published.revision,
       from: now,

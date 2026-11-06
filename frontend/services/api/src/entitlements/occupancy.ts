@@ -1,41 +1,42 @@
 /**
- * Prompt-slot occupancy: persisted prompts in the account's workspace
- * against the resolved `prompt_slots` allowance.
+ * Occupancy: what a workspace holds now (projects, prompts, API keys,
+ * additional markets, monitored URLs) against its plan's allowance. One
+ * counter table counts each; `admit(key, n)` admits `n` more under the
+ * account capacity lock, in the same transaction as the insert it guards, so
+ * concurrent writers cannot exceed the grant. The capacity lock is the last
+ * lock a path takes after the project and prompt-set locks.
  *
- * Every prompt in the workspace counts, whatever its status or origin; only
- * deletion frees a slot. The check runs under the account capacity lock in
- * the same transaction as the insert it guards, so concurrent writers on
- * cannot exceed the grant. The capacity lock is the last lock a path takes
- * after the project and prompt-set locks.
+ * Prompt slots: every prompt in the workspace counts, whatever its status or
+ * origin; only deletion frees a slot.
  *
  * Fail closed: a workspace with no billing account, or an account whose
- * grants cannot resolve, is a 403 `occupancy_unresolved`, and a resolved account
- * with no `prompt_slots` grant has an allowance of zero.
+ * grants cannot resolve, is a 403 `occupancy_unresolved`, and a resolved
+ * account with no grant for a counter has an allowance of zero.
  */
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { advisoryXactLock } from '../db/advisory-lock.ts';
 import { ApiError } from '../errors.ts';
 import { getLogger } from '../logging.ts';
+import { monitoredUrlCount } from '../site-health/reads/runtime.ts';
 import type { WorkspaceEntitlements } from './access.ts';
+import { billingAccountId, capacityLock } from './ledger.ts';
 import { resolveAccountEntitlement } from './state.ts';
 
 const logger = getLogger('api.entitlements');
-const { capacity_lock: CAPACITY_LOCK, codes, prompt_slots: PROMPT_SLOTS } = policy.entitlements;
+const { codes, prompt_slots: PROMPT_SLOTS } = policy.entitlements;
 const UNRESOLVED = asApiErrorCode(codes.unresolved);
 const LIMIT_EXCEEDED = asApiErrorCode(codes.limit_exceeded);
 
+const unresolved = () =>
+  new ApiError(403, 'Billing entitlement is unavailable for this account', { code: UNRESOLVED });
+
 /** The workspace's billing account, locked for capacity checks, or a 403. */
 export async function lockWorkspaceCapacity(db: Database, workspaceId: string): Promise<string> {
-  const account = await db
-    .selectFrom('billing_accounts')
-    .select('id')
-    .where('workspace_id', '=', workspaceId)
-    .executeTakeFirst();
-  if (account === undefined) {
+  const accountId = await billingAccountId(db, workspaceId);
+  if (accountId === undefined) {
     logger.info('billing.occupancy_unresolved', {
       workspace_id: workspaceId,
       error: 'workspace_billing_account_missing',
@@ -44,153 +45,30 @@ export async function lockWorkspaceCapacity(db: Database, workspaceId: string): 
       code: UNRESOLVED,
     });
   }
-  await advisoryXactLock(db, CAPACITY_LOCK, account.id);
-  return account.id;
+  await capacityLock(db, accountId);
+  return accountId;
 }
 
-/** What the plan allows, in the words the reader uses; never a registry key. */
-function projectLimitMessage(allowance: number, current: number) {
-  if (allowance < 1) return "Your plan doesn't include projects";
-  return `Your plan includes ${allowance} ${allowance === 1 ? 'project' : 'projects'}, and this workspace has ${current}`;
-}
-
-export async function admitProject(db: Database, workspaceId: string): Promise<void> {
+/** The workspace's resolved grants, read under its account's capacity lock, or a 403. */
+export async function lockedGrants(db: Database, workspaceId: string, at = new Date()) {
   const accountId = await lockWorkspaceCapacity(db, workspaceId);
-  const resolved = await resolveAccountEntitlement(db, { accountId, workspaceId }, new Date());
-  if (resolved.status !== 'resolved')
-    throw new ApiError(403, 'Billing entitlement is unavailable for this account', {
-      code: UNRESOLVED,
-    });
-  const key = policy.entitlements.project_slots;
-  const allowance = resolved.values.get(key) ?? 0;
-  const row = await db
-    .selectFrom('projects')
-    .innerJoin('billing_accounts', 'billing_accounts.workspace_id', 'projects.workspace_id')
-    .select(sql<string>`count(*)`.as('count'))
-    .where('billing_accounts.id', '=', accountId)
-    .executeTakeFirstOrThrow();
-  const current = Number(row.count);
-  if (current + 1 > allowance)
-    throw new ApiError(403, projectLimitMessage(allowance, current), {
-      code: LIMIT_EXCEEDED,
-      details: { key, allowance, current, requested: 1 },
-    });
+  const resolved = await resolveAccountEntitlement(db, { accountId, workspaceId }, at);
+  if (resolved.status !== 'resolved') {
+    logger.info('billing.occupancy_unresolved', { account_id: accountId, errors: resolved.error });
+    throw unresolved();
+  }
+  return { accountId, values: resolved.values };
 }
 
-/**
- * Admit one more live API key: the plan must grant `api_access` (403
- * `api_access_not_in_plan`) and the workspace's unrevoked, unexpired keys must
- * stay within `api_keys` (409 `api_key_limit_reached`). Runs under the
- * capacity lock in the insert's transaction.
- */
-export async function admitApiKey(db: Database, workspaceId: string, now: Date): Promise<void> {
-  const accountId = await lockWorkspaceCapacity(db, workspaceId);
-  const resolved = await resolveAccountEntitlement(db, { accountId, workspaceId }, now);
-  if (resolved.status !== 'resolved')
-    throw new ApiError(403, 'Billing entitlement is unavailable for this account', {
-      code: UNRESOLVED,
-    });
-  if ((resolved.values.get(policy.entitlements.api_access) ?? 0) < 1)
-    throw new ApiError(403, "API access is not included in this workspace's plan", {
-      code: 'api_access_not_in_plan',
-    });
-  const allowance = resolved.values.get(policy.entitlements.api_keys) ?? 0;
-  const current = await apiKeyCount(db, workspaceId, now);
-  if (current + 1 > allowance)
-    throw new ApiError(409, `This workspace already has ${current} of ${allowance} API keys`, {
-      code: 'api_key_limit_reached',
-      details: { allowance, current },
-    });
-}
+const count = (row: { count: string }) => Number(row.count);
 
-/**
- * Admit one more additional measurement market: the workspace's extra markets
- * must stay within `market_slots` (a project's default market is free). No
- * grant means none, so a trial or Starter plan is refused with 403
- * `occupancy_limit_exceeded`. Runs under the capacity lock in the insert's
- * transaction.
- */
-export async function admitMarket(db: Database, workspaceId: string): Promise<void> {
-  const accountId = await lockWorkspaceCapacity(db, workspaceId);
-  const resolved = await resolveAccountEntitlement(db, { accountId, workspaceId }, new Date());
-  if (resolved.status !== 'resolved')
-    throw new ApiError(403, 'Billing entitlement is unavailable for this account', {
-      code: UNRESOLVED,
-    });
-  const key = policy.entitlements.market_slots;
-  const allowance = resolved.values.get(key) ?? 0;
-  const current = await marketCount(db, workspaceId);
-  if (current + 1 > allowance)
-    throw new ApiError(
-      403,
-      allowance
-        ? `This workspace already uses ${current} of ${allowance} additional markets`
-        : "Additional markets are not included in this workspace's plan",
-      { code: LIMIT_EXCEEDED, details: { key, allowance, current, requested: 1 } },
-    );
-}
-
-/** The workspace's unrevoked, unexpired API keys: what `api_keys` occupancy counts. */
-export async function apiKeyCount(db: Database, workspaceId: string, now: Date): Promise<number> {
-  const row = await db
-    .selectFrom('api_keys')
-    .select(sql<string>`count(*)`.as('count'))
-    .where('workspace_id', '=', workspaceId)
-    .where('revoked_at', 'is', null)
-    .where((eb) => eb.or([eb('expires_at', 'is', null), eb('expires_at', '>', now)]))
-    .executeTakeFirstOrThrow();
-  return Number(row.count);
-}
-
-/** The workspace's additional measurement markets: what `market_slots` occupancy counts. */
-export async function marketCount(db: Database, workspaceId: string): Promise<number> {
-  const row = await db
-    .selectFrom('project_markets')
-    .select(sql<string>`count(*)`.as('count'))
-    .where('workspace_id', '=', workspaceId)
-    .executeTakeFirstOrThrow();
-  return Number(row.count);
-}
-
-/**
- * Refuse unless the workspace's plan grants `key`, a flag that trials lack.
- * Takes the account capacity lock, so grant issuance serializes with the action.
- */
-async function requireGrantedFlag(
-  db: Database,
-  workspaceId: string,
-  key: string,
-  refusal: string,
-): Promise<void> {
-  const accountId = await lockWorkspaceCapacity(db, workspaceId);
-  const resolved = await resolveAccountEntitlement(db, { accountId, workspaceId }, new Date());
-  if (resolved.status !== 'resolved')
-    throw new ApiError(403, 'Billing entitlement is unavailable for this account', {
-      code: UNRESOLVED,
-    });
-  if ((resolved.values.get(key) ?? 0) < 1)
-    throw new ApiError(403, refusal, {
-      code: asApiErrorCode(codes.capability_not_granted),
-      details: { key },
-    });
-}
-
-export function requireProjectDeletion(db: Database, workspaceId: string): Promise<void> {
-  return requireGrantedFlag(
-    db,
-    workspaceId,
-    policy.entitlements.project_deletion,
-    'Project deletion is not granted for this workspace',
-  );
-}
-
-/** Inviting people, or joining by invitation, needs a plan: a trial is the Owner alone. */
-export function requireTeamMembers(db: Database, workspaceId: string): Promise<void> {
-  return requireGrantedFlag(
-    db,
-    workspaceId,
-    policy.entitlements.team_members,
-    'Inviting team members needs a paid plan',
+async function projectCount(db: Database, workspaceId: string) {
+  return count(
+    await db
+      .selectFrom('projects')
+      .select(sql<string>`count(*)`.as('count'))
+      .where('workspace_id', '=', workspaceId)
+      .executeTakeFirstOrThrow(),
   );
 }
 
@@ -202,13 +80,147 @@ function slotPrompts(db: Database) {
     .innerJoin('projects', 'projects.id', 'prompt_sets.project_id');
 }
 
-async function promptCount(db: Database, accountId: string): Promise<number> {
-  const row = await slotPrompts(db)
-    .innerJoin('billing_accounts', 'billing_accounts.workspace_id', 'projects.workspace_id')
-    .select(sql<string>`count(*)`.as('count'))
-    .where('billing_accounts.id', '=', accountId)
-    .executeTakeFirstOrThrow();
-  return Number(row.count);
+async function promptCount(db: Database, workspaceId: string) {
+  return count(
+    await slotPrompts(db)
+      .select(sql<string>`count(*)`.as('count'))
+      .where('projects.workspace_id', '=', workspaceId)
+      .executeTakeFirstOrThrow(),
+  );
+}
+
+/** The workspace's unrevoked, unexpired API keys. */
+async function apiKeyCount(db: Database, workspaceId: string, at: Date) {
+  return count(
+    await db
+      .selectFrom('api_keys')
+      .select(sql<string>`count(*)`.as('count'))
+      .where('workspace_id', '=', workspaceId)
+      .where('revoked_at', 'is', null)
+      .where((eb) => eb.or([eb('expires_at', 'is', null), eb('expires_at', '>', at)]))
+      .executeTakeFirstOrThrow(),
+  );
+}
+
+/** The workspace's additional measurement markets (a project's default market is free). */
+async function marketCount(db: Database, workspaceId: string) {
+  return count(
+    await db
+      .selectFrom('project_markets')
+      .select(sql<string>`count(*)`.as('count'))
+      .where('workspace_id', '=', workspaceId)
+      .executeTakeFirstOrThrow(),
+  );
+}
+
+type Use = { allowance: number; current: number; requested: number };
+type Counter = {
+  count: (db: Database, workspaceId: string, at: Date) => Promise<number>;
+  /** A flag the plan must also grant before any is admitted. */
+  requires?: { key: string; refusal: () => ApiError };
+  /** The refusal for going over; counted-only counters have none. */
+  refuse?: (use: Use) => ApiError;
+};
+
+const limit = (message: string, key: string, use: Use) =>
+  new ApiError(403, message, { code: LIMIT_EXCEEDED, details: { key, ...use } });
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/** The occupancy counters, keyed by their capability. */
+const COUNTERS = {
+  project_slots: {
+    count: projectCount,
+    refuse: (use) =>
+      limit(
+        use.allowance < 1
+          ? "Your plan doesn't include projects"
+          : `Your plan includes ${plural(use.allowance, 'project', 'projects')}, and this workspace has ${use.current}`,
+        'project_slots',
+        use,
+      ),
+  },
+  prompt_slots: {
+    count: promptCount,
+    refuse: (use) =>
+      limit(
+        `Your plan includes ${plural(use.allowance, 'prompt', 'prompts')}; ` +
+          `this workspace has ${use.current}, so ${use.requested} more would go over`,
+        'prompt_slots',
+        use,
+      ),
+  },
+  api_keys: {
+    count: apiKeyCount,
+    requires: {
+      key: 'api_access',
+      refusal: () =>
+        new ApiError(403, policy.entitlements.flag_refusals.api_access.message, {
+          code: asApiErrorCode(policy.entitlements.flag_refusals.api_access.code),
+        }),
+    },
+    refuse: ({ allowance, current }) =>
+      new ApiError(409, `This workspace already has ${current} of ${allowance} API keys`, {
+        code: 'api_key_limit_reached',
+        details: { allowance, current },
+      }),
+  },
+  market_slots: {
+    count: marketCount,
+    refuse: (use) =>
+      limit(
+        use.allowance
+          ? `This workspace already uses ${use.current} of ${use.allowance} additional markets`
+          : "Additional markets are not included in this workspace's plan",
+        'market_slots',
+        use,
+      ),
+  },
+  monitored_urls: { count: (db, workspaceId) => monitoredUrlCount(db, workspaceId) },
+} satisfies Record<string, Counter>;
+
+export type AdmittedCounter = {
+  [K in keyof typeof COUNTERS]: (typeof COUNTERS)[K] extends { refuse: unknown } ? K : never;
+}[keyof typeof COUNTERS];
+
+/**
+ * Admits `requested` more of counter `key` for the workspace, or throws its
+ * refusal. Takes the capacity lock; the caller inserts in the same transaction.
+ */
+export async function admit(
+  db: Database,
+  workspaceId: string,
+  key: AdmittedCounter,
+  requested: number,
+  at = new Date(),
+): Promise<void> {
+  const { accountId, values } = await lockedGrants(db, workspaceId, at);
+  const counter: Counter & Required<Pick<Counter, 'refuse'>> = COUNTERS[key];
+  if (counter.requires && (values.get(counter.requires.key) ?? 0) < 1)
+    throw counter.requires.refusal();
+  const use = {
+    allowance: values.get(key) ?? 0,
+    current: await counter.count(db, workspaceId, at),
+    requested,
+  };
+  if (use.current + requested <= use.allowance) return;
+  logger.info('billing.occupancy_limit_exceeded', { account_id: accountId, key, ...use });
+  throw counter.refuse(use);
+}
+
+/** Every counter's current use; unlocked, for reads. */
+export async function occupancyCounts(
+  db: Database,
+  workspaceId: string,
+  at: Date,
+): Promise<ReadonlyMap<string, number>> {
+  const counters: [string, Counter][] = Object.entries(COUNTERS);
+  return new Map(
+    await Promise.all(
+      counters.map(
+        async ([key, counter]) => [key, await counter.count(db, workspaceId, at)] as const,
+      ),
+    ),
+  );
 }
 
 /**
@@ -224,10 +236,7 @@ export async function overLimitPromptIds(
   entitlements: WorkspaceEntitlements,
 ): Promise<ReadonlySet<string>> {
   const granted = await entitlements.granted();
-  if (granted === null)
-    throw new ApiError(403, 'Billing entitlement is unavailable for this account', {
-      code: UNRESOLVED,
-    });
+  if (granted === null) throw unresolved();
   const allowance = granted.get(PROMPT_SLOTS) ?? 0;
   const rows = await slotPrompts(db)
     .select('prompts.id')
@@ -255,77 +264,6 @@ export async function promptOccupancy(
   db: Database,
   workspaceId: string,
 ): Promise<{ used: number; allowance: number }> {
-  const accountId = await lockWorkspaceCapacity(db, workspaceId);
-  const entitlement = await resolveAccountEntitlement(db, { accountId, workspaceId }, new Date());
-  // Unresolved is unavailable, not ungated: refuse as admission does.
-  if (entitlement.status !== 'resolved')
-    throw new ApiError(403, 'Billing entitlement is unavailable for this account', {
-      code: UNRESOLVED,
-    });
-  return {
-    used: await promptCount(db, accountId),
-    allowance: entitlement.values.get(PROMPT_SLOTS) ?? 0,
-  };
-}
-
-/**
- * Admit `requested` new prompts for the workspace, or throw a 403. Takes the
- * capacity lock; the caller inserts in the same transaction.
- */
-export async function admitPrompts(
-  db: Database,
-  workspaceId: string,
-  requested: number,
-): Promise<void> {
-  const accountId = await lockWorkspaceCapacity(db, workspaceId);
-  const entitlement = await resolveAccountEntitlement(db, { accountId, workspaceId }, new Date());
-  if (entitlement.status !== 'resolved') {
-    logger.info('billing.occupancy_unresolved', {
-      account_id: accountId,
-      key: PROMPT_SLOTS,
-      errors: entitlement.error,
-    });
-    throw new ApiError(403, 'Billing entitlement is unavailable for this account', {
-      code: UNRESOLVED,
-    });
-  }
-  const allowance = entitlement.values.get(PROMPT_SLOTS) ?? 0;
-  const current = await promptCount(db, accountId);
-  if (current + requested <= allowance) return;
-  logger.info('billing.occupancy_limit_exceeded', {
-    account_id: accountId,
-    key: PROMPT_SLOTS,
-    allowance,
-    current,
-    requested,
-  });
-  throw new ApiError(
-    403,
-    `Your plan includes ${allowance} ${allowance === 1 ? 'prompt' : 'prompts'}; ` +
-      `this workspace has ${current}, so ${requested} more would go over`,
-    {
-      code: LIMIT_EXCEEDED,
-      details: { key: PROMPT_SLOTS, allowance, current, requested },
-    },
-  );
-}
-
-/** Commerce actions that do new work; data already collected stays readable. */
-export function requireCommerce(db: Database, workspaceId: string): Promise<void> {
-  return requireGrantedFlag(
-    db,
-    workspaceId,
-    policy.entitlements.commerce,
-    'Commerce is not included in your plan',
-  );
-}
-
-/** Search Intelligence actions that do new work; past runs stay readable. */
-export function requireSearchIntelligence(db: Database, workspaceId: string): Promise<void> {
-  return requireGrantedFlag(
-    db,
-    workspaceId,
-    policy.entitlements.search_intelligence,
-    'Keyword Research is not included in your plan',
-  );
+  const { values } = await lockedGrants(db, workspaceId);
+  return { used: await promptCount(db, workspaceId), allowance: values.get(PROMPT_SLOTS) ?? 0 };
 }

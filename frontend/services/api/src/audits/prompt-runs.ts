@@ -6,7 +6,7 @@
  */
 import type { Database } from '../db/database.ts';
 import type { AuditTask } from '../queue/audit-queue.ts';
-import { reserveUsages, debitUsage, releaseUsage, LedgerError } from '../entitlements/ledger.ts';
+import { holdAll, holdsOf, settle, LedgerError } from '../entitlements/ledger.ts';
 import { ApiError } from '../errors.ts';
 import { policy } from '../config.ts';
 
@@ -30,29 +30,22 @@ export async function reservePromptRuns(
     at: Date;
   },
 ) {
-  const account = await db
-    .selectFrom('billing_accounts')
-    .select('id')
-    .where('workspace_id', '=', workspaceId)
-    .executeTakeFirst();
-  if (!account)
-    throw new ApiError(403, 'Billing entitlement is unavailable for this workspace', {
-      code: 'entitlement_unresolved',
-    });
   try {
-    const reservationIds = await reserveUsages(db, {
-      accountId: account.id,
+    return await holdAll(db, {
+      workspaceId,
       capability: PROMPT_RUNS,
       at,
       holds: taskIds.map((taskId) => ({
         units: 1,
         subject: { kind: 'audit', id: taskId, workspaceId, auditId },
-        key: `run:${taskId}`,
       })),
     });
-    return { accountId: account.id, reservationIds };
   } catch (error) {
-    if (error instanceof LedgerError && error.message === 'funded_credits_exhausted')
+    if (error instanceof LedgerError && error.code === 'account_not_found')
+      throw new ApiError(403, 'Billing entitlement is unavailable for this workspace', {
+        code: 'entitlement_unresolved',
+      });
+    if (error instanceof LedgerError && error.code === 'funded_credits_exhausted')
       throw new ApiError(403, 'Your plan’s prompt runs for this period are used up', {
         code: 'prompt_runs_exhausted',
       });
@@ -62,36 +55,20 @@ export async function reservePromptRuns(
 
 /** Spends the task's run when its answer was recorded; releases whatever is still held. */
 export async function settlePromptRun(db: Database, task: AuditTask, success: boolean, at: Date) {
-  const holds = await db
-    .selectFrom('consumable_ledger')
-    .select(['billing_account_id', 'reservation_id'])
-    .distinct()
-    .where('workspace_id', '=', task.workspace_id)
-    .where('audit_id', '=', task.audit_id)
-    .where('subject_kind', '=', 'audit')
-    .where('subject_id', '=', task.id)
-    .where('capability_key', '=', PROMPT_RUNS)
-    .where('entry_kind', '=', 'reservation')
-    .orderBy('billing_account_id')
-    .orderBy('reservation_id')
-    .execute();
-  for (const hold of holds) {
-    const request = {
+  const subject = {
+    kind: 'audit',
+    id: task.id,
+    workspaceId: task.workspace_id,
+    auditId: task.audit_id,
+  } as const;
+  for (const reservationId of await holdsOf(db, subject, PROMPT_RUNS))
+    // Settlements share the transaction and its capacity lock, so they run in order.
+    await settle(db, {
       workspaceId: task.workspace_id,
-      accountId: hold.billing_account_id,
-      reservationId: hold.reservation_id,
-      at,
-    };
-    const answer = {
-      ...request,
-      subjectId: task.id,
+      reservationId,
+      spent: success ? 1 : 0,
       attempt: 1,
-      units: 1,
-      key: `run:${hold.reservation_id}:answer`,
-      dispatchKey: 'answer',
-    };
-    // Ledger writes share the transaction and its capacity lock, so they run in order.
-    if (success) await debitUsage(db, answer); // NOSONAR
-    await releaseUsage(db, { ...request, key: `run:${hold.reservation_id}:release` }); // NOSONAR
-  }
+      dispatch: 'answer',
+      at,
+    }); // NOSONAR
 }

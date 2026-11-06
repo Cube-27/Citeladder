@@ -95,7 +95,7 @@ type rule of the same day. D39–D43 are the owner's answers in chat on
 | `frontend/apps/marketing/src/site.css`, `frontend/components/marketing/chrome/`, `frontend/components/marketing/sections/` | The website's components: SiteNav, SiteFooter, CookieBanner, Breadcrumbs, AnnouncementPill and the page sections, the system's `cl-*` geometry on the tokens above, and the website's type roles (the `cl-*` titles, lead, body and note) |
 | `frontend/apps/marketing/src/screens.css`, `frontend/components/marketing/screens/` | The website's product images: ProductFrame and the `Screen*` components ("Website product images" in Screen contracts): fluid card vignettes at real type size, and two full app screens scaled whole to fit their frame (never cropped), with their demo data in one typed module; the home page's first view (`ScreenAppVisibility`, D25) is the whole app at 1440 × 820, its chrome drawn at the app's density |
 | `frontend/apps/marketing/src/layers.css` | The website's depth layer (D35, D36, D45): stages, hero washes, the product image's shadow, the landing heroes' load-in and the chart ping, all in CSS with no script |
-| `frontend/services/api/src/billing/pdf-brand.ts` | The PDF palette, read from `globals.css` |
+| `frontend/services/api/src/documents/pdf-brand.ts` | The PDF palette, read from `globals.css` |
 
 ## Token contract
 

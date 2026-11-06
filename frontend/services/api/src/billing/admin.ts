@@ -238,7 +238,7 @@ export function grantMutation(
         ...scope,
         key: ctx.idempotencyKey,
         sourceKind: 'override',
-        sourceRef: `override:${actor.id}`,
+        source: { kind: 'override', actorId: actor.id },
         specs: [{ key: operation.key, value: operation.value }],
         revision: policy.entitlements.registry_revision,
         from: operation.from,

@@ -7,7 +7,7 @@ import { ensureWorkspaceBilling } from '../src/entitlements/bootstrap.ts';
 import { reservePromptRuns, settlePromptRun } from '../src/audits/prompt-runs.ts';
 import { cachedWorkspaceAccess, workspaceAccess } from '../src/entitlements/access.ts';
 import { issueBundle, revokeBundle } from '../src/entitlements/grants.ts';
-import { availableUnits } from '../src/entitlements/ledger.ts';
+import { remaining } from '../src/entitlements/ledger.ts';
 import type { AuditTask } from '../src/queue/audit-queue.ts';
 
 const db = testDatabase();
@@ -141,14 +141,14 @@ afterAll(async () => {
 it('gives a public signup 500 AI credits for its trial', async () => {
   const trial = await publicSignup(`credits${randomUUID().slice(0, 8)}@example.test`);
   const credits = await db.transaction().execute((trx) =>
-    availableUnits(trx, {
+    remaining(trx, {
       accountId: trial.accountId,
       workspaceId: trial.workspaceId,
       capability: 'ai_credits',
       at: new Date(),
     }),
   );
-  expect(credits).toBe(500);
+  expect(credits.units).toBe(500);
 });
 it('serializes the trial’s 20 prompt runs, returns failed runs and spends a success once', async () => {
   const t = await fixtures.tenant({ access: false });
@@ -242,7 +242,7 @@ it('only explicit restoration reopens an expired workspace, preserving its data'
         accountId: account.id,
         key: randomUUID(),
         sourceKind: 'override',
-        sourceRef: 'test-operator',
+        source: { kind: 'override', actorId: t.userId },
         specs: [{ key, value: 1 }],
         revision: 'test',
         from: new Date(),

@@ -38,4 +38,17 @@ function validateCapability(key: string, entry: CapabilityDefinition) {
 }
 
 for (const [key, entry] of Object.entries(vocabulary.capabilities)) validateCapability(key, entry);
+// A flag refusal names a flag capability and a code from the registry's codes block.
+const codes = new Set<string>(Object.values(vocabulary.codes));
+const flags = new Set(
+  Object.entries(vocabulary.capabilities)
+    .filter(([, entry]) => entry.type === 'flag')
+    .map(([key]) => key),
+);
+for (const [key, refusal] of Object.entries(vocabulary.flag_refusals)) {
+  if (!flags.has(key)) throw new ConfigError(`Flag refusal for a non-flag: ${key}`);
+  if (!codes.has(refusal.code)) throw new ConfigError(`Unknown flag refusal code: ${key}`);
+  if (refusal.status !== 403 && refusal.status !== 409)
+    throw new ConfigError(`Invalid flag refusal status: ${key}`);
+}
 export const entitlements = vocabulary;

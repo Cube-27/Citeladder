@@ -49,6 +49,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | OD4 | Trial credits (B16 says 5,000; website says none)? | The trial gets **500** AI credits; the copy is corrected to match. | FX1 |
 | OD5 | Onboarding discovery | Fix the recurring "competitor discovery fails after a deploy, works after logging out" bug first; make error handling and logging robust last, with recovery actions instead of dead-end errors. | ON1, ON2, Z1–Z4 |
 | OD6 | Unpriced gateway model billed at the Haiku rate | Keep the documented fallback: only Anthropic and OpenAI models are used and all are priced; internal cost for any other model stays at the Haiku rate; customer pricing is separate and the public model choice is fixed. Revisit later. | none |
+| OD7 | Referral classifications are kept 90 days but Performance reads up to 480 (raised by P08 #631) | Keep AI referral data for the same period as Performance (480 days), so Performance never counts older AI sessions as not AI. | X9 |
 
 ## PR tracker
 
@@ -58,24 +59,25 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P02 | Correctness fixes: trial credits, Share of Shelf, perception states, browser state labels, latest brand run | FX1, FX2, FX3, FX4, O1 | — | mig? | merged | [#629](https://github.com/Cube-27/Citeladder/pull/629) | Migrations 0008, 0009 |
 | P03 | Runtime safety and schema hardening | FX5, DB1, DB2 | — | mig | merged | [#627](https://github.com/Cube-27/Citeladder/pull/627) | Migrations 0006, 0007 |
 | P04 | Site Health tasks I: outcome classifier, crawl status, single writers | SH1, SH2, SH3 | — | mig? | merged | [#628](https://github.com/Cube-27/Citeladder/pull/628) | No migration needed |
-| P05 | Engine surfaces I: DataForSEO client, typed frozen config, engine sets from routes | E1, E2, E3 | — | | todo | | |
+| P05 | Engine surfaces I: DataForSEO client, typed frozen config, engine sets from routes | E1, E2, E3 | — | | in progress | | Builder session `untangle-p05` |
 | P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | in progress | | Builder session `untangle-p06` |
 | P07 | App route manifest and kit cleanup | R1, R2, R3, R5, R6, R7 | — | | todo | | |
-| P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | in progress | | Builder session `untangle-p08` |
+| P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | merged | [#631](https://github.com/Cube-27/Citeladder/pull/631) | Migration 0010 |
 | P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | merged | [#630](https://github.com/Cube-27/Citeladder/pull/630) | |
-| P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | in progress | | Builder session `untangle-p10` |
+| P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | merged | [#632](https://github.com/Cube-27/Citeladder/pull/632) | Migration 0011 |
 | P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | todo | | |
 | P12 | Opportunities: check kinds, typed targets, evidence announcement | O2, O3, O4 | P02 | | todo | | |
 | P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | todo | | |
 | P14 | Marketing site records and config-driven numbers | MK1, MK2, MK3, MK4 | P02 | | todo | | |
 | P15 | Queue owner II: remaining lanes and coalesced enqueue | Q4, Q5, Q6, Q7, Q8 | P01, P03, P09 | | in review | [#633](https://github.com/Cube-27/Citeladder/pull/633) | Builder session `untangle-p15` |
-| P16 | Site Health tasks II: one task runner, counters, pinned versions | SH4, SH5 | P04, P08, P09 | | todo | | |
+| P16 | Site Health tasks II: one task runner, counters, pinned versions | SH4, SH5 | P04, P08, P09 | | in progress | | Builder session `untangle-p16` |
 | P17 | Permission on the command, MCP prepared changes, workspace ownership | C3, C4, X6 | P11 | | todo | | |
 | P18 | Internal cost view, spend breaker, output caps | K1, K2, K3 | P01, P10 | mig? | todo | | Before public sign-up |
 | P19 | Engine surfaces II: surface adapters, audit side effects out of analysis | E4, E5, X8 | P05, P15 | | todo | | |
 | P20 | Settings resolve once; named abuse budgets | G1, G2, G3 | P01, P15 | wide | todo | | |
 | P21 | Screen sweep: failure renderer, typed blobs, form limits, non-null project, recovery actions | F8, F9, F10, R4, Z4 | P07, P12, P13, P16 | | todo | | Split at a row boundary if over ~4,000 lines |
 | P22 | AI Traffic and integration owners; error logging | X4, X5, Z1, Z2, Z3 | P15, P16, P19 | | todo | | |
+| P23 | AI referral retention matches the Performance window | X9 | P08 | | todo | | Owner decision OD7; small, dispatched after P05 |
 
 ## Order
 
@@ -99,7 +101,7 @@ What each merge unblocks:
 | P05 | P19 |
 | P06 | P13 |
 | P07 | P21 |
-| P08 | P16 |
+| P08 | P16, P23 |
 | P09 | P15, P16 |
 | P10 | P18 |
 | P11 | P17 |
@@ -138,11 +140,11 @@ order the PR tracker already respects.
 | SH3 | One writer for crawl tasks, site URLs, observations, memberships | SH2 | `site-health/{admission-writes,frontier,discover-task,planner,site-setup-task,lifecycle,link-metrics}.ts` | | done | 90cc69e | |
 | SH4 | One site-task runner (lock, settle, backoff, access check) | SH3, Q3 | `site-health/{site-task,task-fence,analyze-task,discover-task,site-setup-task}.ts`, `workers/site-health-worker.ts` | | todo | | |
 | SH5 | Crawl counter chooser; shared commerce-facts schema; pinned versions on reads | SH2, X1 | `site-health/reads/`, `commerce/projection-facts.ts` | | todo | | |
-| B1 | Consumable hold module; Site Health fetch budget on it | — | `entitlements/ledger.ts`, `site-health/fetch-budget.ts` | | todo | | |
-| B2 | Metering, prompt runs and Agent funding on the hold module | B1 | `billing/metering.ts`, `audits/prompt-runs.ts`, `agent/funding.ts`, `billing/reads.ts` | | todo | | |
-| B3 | One plan gate and occupancy counter table | B2 | `entitlements/occupancy.ts`, flag refusal sites, `docs/billing-entitlements.md` | | todo | | |
-| B4 | One grant writer; Site Health runtime projection moves to `site-health/` | B3, SH3 | `entitlements/{grants,bootstrap}.ts`, `billing/settlement.ts`, `site-health/planner.ts` | mig? | todo | | |
-| B5 | Settlement owns refund consequences; typed grant source | B4 | `billing/{settlement,receipts,recovery}.ts`, `entitlements/grants.ts` | | todo | | |
+| B1 | Consumable hold module; Site Health fetch budget on it | — | `entitlements/ledger.ts`, `site-health/fetch-budget.ts` | | done | 684e62b | |
+| B2 | Metering, prompt runs and Agent funding on the hold module | B1 | `billing/metering.ts`, `audits/prompt-runs.ts`, `agent/funding.ts`, `billing/reads.ts` | | done | e739dd9 | |
+| B3 | One plan gate and occupancy counter table | B2 | `entitlements/occupancy.ts`, flag refusal sites, `docs/billing-entitlements.md` | | done | bfb642c | |
+| B4 | One grant writer; Site Health runtime projection moves to `site-health/` | B3, SH3 | `entitlements/{grants,bootstrap}.ts`, `billing/settlement.ts`, `site-health/planner.ts` | mig | done | 48eed01 | Migration 0011 |
+| B5 | Settlement owns refund consequences; typed grant source | B4 | `billing/{settlement,receipts,recovery}.ts`, `entitlements/grants.ts` | | done | fd11289 | |
 | C1 | One prompt insert owner (incl. Commerce) | DB2 | `prompts/{prompts,candidates,locks}.ts`, `commerce/{buyer-prompts,decisions}.ts` | | todo | | |
 | C2 | Project-scoped commands; public API ownership fails closed | C1, FX5, DB2 | `commands/`, `public-api/ownership.ts`, `mcp/write-tools.ts` | | todo | | |
 | C3 | Permission declared once on the command; one membership check | C2 | `routes/define.ts`, `routes/*` with commands, `commands/`, membership query sites | | todo | | |
@@ -181,14 +183,15 @@ order the PR tracker already respects.
 | G1 | Settings engine to a leaf; cross-owner aliases, dead key and import cycle removed | — | `config.ts`, `config/settings.ts`, `billing/config.ts`, alias importers | wide | todo | | |
 | G2 | Settings resolve once from one environment | G1, Q7, ON1 | `config.ts`, `configEnvironment` callers (18), `config/execution.ts` | wide | todo | | |
 | G3 | Named abuse budgets | G1 | `abuse/usage.ts`, `config/abuse.ts`, budget call sites | | todo | | |
-| X1 | One citation and Commerce URL identity; differentiation reports insert-only | — | `source-pages/{identity,sync,inspector,differentiation}.ts`, `site-health/url-identity.ts`, `config/source-pages.ts`, `analysis/domains.ts`, `commerce/{projection-facts,projection}.ts` | mig? | todo | | |
-| X2 | Leaf primitives move to the bottom | X1 | `analysis/round.ts`, casefold/canonical-JSON/calendar-day copies, `projects/safe-fetch.ts`, `billing/pdf.ts`, `billing/contracts.ts` + importers | wide | todo | | |
-| X3 | One page-identity module (path, landing page) | X1 | `traffic/normalization.ts`, `integrations/`, `crawl-logs/`, `referrals/` identity helpers | | todo | | |
+| X1 | One citation and Commerce URL identity; differentiation reports insert-only | — | `source-pages/{identity,sync,inspector,differentiation}.ts`, `site-health/url-identity.ts`, `config/source-pages.ts`, `analysis/domains.ts`, `commerce/{projection-facts,projection}.ts` | mig? | done | aee742f, bdd21a8 | |
+| X2 | Leaf primitives move to the bottom | X1 | `analysis/round.ts`, casefold/canonical-JSON/calendar-day copies, `projects/safe-fetch.ts`, `billing/pdf.ts`, `billing/contracts.ts` + importers | wide | done | fcc2f84 | |
+| X3 | One page-identity module (path, landing page) | X1 | `traffic/normalization.ts`, `integrations/`, `crawl-logs/`, `referrals/` identity helpers | | done | 9ac7046 | |
 | X4 | AI Traffic composition gets its own module | Q8 | `crawl-logs/{pages,pages-data,insights,overview,citation-runs}.ts` | | todo | | |
 | X5 | Integration lifecycle and reporting timezone move to their owners | Q6, Q8 | `routes/integrations.ts`, `integrations/`, `workers/integration-worker.ts`, `crawl-logs/state.ts` | | todo | | |
 | X6 | Auth/workspaces placement; one "owned workspace" query | C3 | `auth/bootstrap.ts`, `auth/development-access.ts`, `workspaces/`, `entitlements/bootstrap.ts` | | todo | | |
-| X7 | AI referral classification read from the persisted table everywhere | X3 | `referrals/landing.ts`, `traffic/projection.ts` | | todo | | |
+| X7 | AI referral classification read from the persisted table everywhere | X3 | `referrals/landing.ts`, `traffic/projection.ts` | | done | eda2c70 | |
 | X8 | Audit side effects leave `src/analysis` | E4 | `analysis/{finalization,execution}.ts`, `audits/` | | todo | | |
+| X9 | AI referral retention matches the Performance window (OD7) | X7 | `config/referrals.json`, `referrals/retention.ts` | | todo | | |
 | K1 | One internal-cost view; Tavily and Keenable priced; cost rows in the call's transaction | B2 | `billing/metering.ts`, `audits/costs.ts`, `config/{costs,ai-credits}.json`, `commerce/discovery-provider.ts`, `projects/research-evidence.ts` | mig? | todo | | Before public sign-up |
 | K2 | Platform-wide daily spend breaker | K1 | `billing/metering.ts`, config | | todo | | Before public sign-up |
 | K3 | Per-feature output caps for charged calls | B2, ON1 | `config/model-gateway.json`, `billing/metering.ts`, gateway callers | | todo | | |
@@ -677,6 +680,12 @@ Protecting tests: `public-routes.test.ts`, `content.test.ts`, `screens.test.tsx`
   and the `DeriveExecution` step with its perception enqueue in `analysis/execution.ts` move into
   `audits/` beside the worker E4 moved there; `analysis/` keeps only derivation and
   `docs/backend-architecture.md` is unchanged.
+- **X9 (OD7):** `referrals.retention_days` (`config/referrals.json`, today 90) stops being an independent
+  number: it equals the Performance window (`traffic.json` `PERFORMANCE_CUSTOM_RANGE_MAX_DAYS` /
+  `TRAFFIC_MAX_WINDOW_DAYS`, 480), derived from that one value or enforced equal by config validation.
+  Update any document that states the referral retention period. Test: a referral event 200 days old
+  survives `referral_retention_sweep` and still counts as AI in Performance, and one older than the
+  window is deleted.
 
 Protecting tests: `normalization-decisions`, `audit-scoring`, `ai-traffic`, `integrations-routes`,
 `integration-dispatcher`, `integration-sync`, `bootstrap-sequence`, `workspaces`.

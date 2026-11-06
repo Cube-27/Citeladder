@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
 import { advisoryXactLock } from '../db/advisory-lock.ts';
-import { accountState } from './state.ts';
-import { conflict } from '../billing/contracts.ts';
+import { conflict } from '../errors.ts';
+import { refreshRuntime } from '../site-health/plan-runtime.ts';
 import { getLogger } from '../logging.ts';
 
 export async function lockAccount(db: Database, workspaceId: string, accountId: string) {
@@ -19,63 +19,76 @@ export async function lockAccount(db: Database, workspaceId: string, accountId: 
 }
 
 /**
- * The Site Health runtime an account state resolves to. An unresolved or
- * missing account gets the sample runtime: no monitored allowance, no count
- * disclosure.
+ * The only entitlement lifecycle bump: every grant, revocation and
+ * subscription change advances the account's version, then the Site Health
+ * runtime is refreshed from the new grants. With `expectedVersion` the bump
+ * is optimistic: it applies only if no other writer bumped since that read.
  */
-export function runtimeProjection(
-  state: { error: string | null; values: ReadonlyMap<string, number> } | null,
-) {
-  const allowance = !state || state.error ? 0 : (state.values.get('monitored_urls') ?? 0);
-  const cfg = policy.site_health_runtime;
-  const setting = (key: keyof typeof cfg.settings) =>
-    resolveSettingSpec(cfg.settings[key]) as number;
-  const full = allowance > 0;
-  return {
-    discovery_mode: full ? cfg.full_mode : cfg.sample_mode,
-    discovery_url_cap: full
-      ? Math.min(
-          setting('automatic_page_limit'),
-          Math.max(cfg.full_minimum, allowance * cfg.full_headroom),
-        )
-      : setting('sample_discovery_url_cap'),
-    sample_url_limit: full ? 0 : setting('sample_url_limit'),
-    monitored_url_limit: allowance,
-    count_disclosure: full,
-  };
-}
-
-/** Mutation-only projection, in the transaction that appends billing evidence. */
-export async function refreshRuntime(
+export async function bumpLifecycle(
   db: Database,
-  workspaceId: string,
-  accountId: string,
-  at: Date,
+  request: { workspaceId: string; accountId: string; at: Date; expectedVersion?: number },
 ) {
-  const state = await accountState(db, workspaceId, accountId, at);
-  const projection = {
-    ...runtimeProjection(state),
-    resolved_registry_revision: policy.entitlements.registry_revision,
-    resolved_entitlement_lifecycle_version: state.account.entitlement_lifecycle_version,
-    resolved_valid_until: state.error ? null : state.validUntil,
-    updated_at: at,
-  };
-  await db
-    .insertInto('workspace_site_health_runtime')
-    .values({ id: randomUUID(), workspace_id: workspaceId, created_at: at, ...projection })
-    .onConflict((c) => c.column('workspace_id').doUpdateSet(projection))
-    .execute();
-  return state;
-}
-
-async function bump(db: Database, workspaceId: string, accountId: string, at: Date) {
-  await db
+  const { workspaceId, accountId, at, expectedVersion } = request;
+  let update = db
     .updateTable('billing_accounts')
     .set({ entitlement_lifecycle_version: sql`entitlement_lifecycle_version + 1`, updated_at: at })
     .where('id', '=', accountId)
-    .where('workspace_id', '=', workspaceId)
-    .execute();
+    .where('workspace_id', '=', workspaceId);
+  if (expectedVersion !== undefined)
+    update = update.where('entitlement_lifecycle_version', '=', expectedVersion);
+  await update.execute();
   await refreshRuntime(db, workspaceId, accountId, at);
+}
+
+const bump = (db: Database, workspaceId: string, accountId: string, at: Date) =>
+  bumpLifecycle(db, { workspaceId, accountId, at });
+
+/** What a grant bundle was issued for; `source_ref` persists it as `<kind>:<id>`. */
+export type GrantSource =
+  | { kind: 'subscription'; subscriptionId: string }
+  | { kind: 'activation'; activationId: string }
+  | { kind: 'override'; actorId: string }
+  | { kind: 'intro'; introId: string }
+  | { kind: 'public_signup' };
+
+/** The persisted `source_ref` of a grant source (formats are stored; never change them). */
+export function sourceRef(source: GrantSource): string {
+  switch (source.kind) {
+    case 'subscription':
+      return `subscription:${source.subscriptionId}`;
+    case 'activation':
+      return `activation:${source.activationId}`;
+    case 'override':
+      return `override:${source.actorId}`;
+    case 'intro':
+      return `intro:${source.introId}`;
+    case 'public_signup':
+      return 'system:public-signup';
+    default: {
+      const _exhaustive: never = source;
+      return _exhaustive;
+    }
+  }
+}
+
+/** A persisted `source_ref` read back as its source; null for one no writer produces. */
+export function grantSource(ref: string): GrantSource | null {
+  if (ref === 'system:public-signup') return { kind: 'public_signup' };
+  const separator = ref.indexOf(':');
+  const [kind, id] = [ref.slice(0, separator), ref.slice(separator + 1)];
+  if (separator < 1 || !id) return null;
+  switch (kind) {
+    case 'subscription':
+      return { kind, subscriptionId: id };
+    case 'activation':
+      return { kind, activationId: id };
+    case 'override':
+      return { kind, actorId: id };
+    case 'intro':
+      return { kind, introId: id };
+    default:
+      return null;
+  }
 }
 
 export async function issueBundle(
@@ -85,7 +98,7 @@ export async function issueBundle(
     accountId: string;
     key: string;
     sourceKind: string;
-    sourceRef: string;
+    source: GrantSource;
     specs: readonly { key: string; value: number }[];
     revision: string;
     from: Date;
@@ -98,6 +111,7 @@ export async function issueBundle(
   },
 ) {
   const { accountId, workspaceId, key, specs } = input;
+  const ref = sourceRef(input.source);
   await lockAccount(db, workspaceId, accountId);
   // Existing period bundles retain their original writer's key and UUIDs.
   let priorQuery = db
@@ -105,9 +119,9 @@ export async function issueBundle(
     .selectAll()
     .where('billing_account_id', '=', accountId);
   priorQuery =
-    input.periodStart && input.periodEnd && input.sourceRef.startsWith('subscription:')
+    input.periodStart && input.periodEnd && input.source.kind === 'subscription'
       ? priorQuery
-          .where('source_ref', '=', input.sourceRef)
+          .where('source_ref', '=', ref)
           .where('period_start', '=', input.periodStart)
           .where('period_end', '=', input.periodEnd)
       : priorQuery.where('idempotency_key', '=', key);
@@ -122,7 +136,7 @@ export async function issueBundle(
               row.key === spec.key &&
               row.value === spec.value &&
               row.source_kind === input.sourceKind &&
-              row.source_ref === input.sourceRef &&
+              row.source_ref === ref &&
               row.catalog_revision === input.revision &&
               row.bundle_role === (input.primary ? 'primary' : 'supplement') &&
               row.profile_key === input.profile &&
@@ -169,7 +183,7 @@ export async function issueBundle(
         key: spec.key,
         value: spec.value,
         source_kind: input.sourceKind,
-        source_ref: input.sourceRef,
+        source_ref: ref,
         catalog_revision: input.revision,
         valid_from: input.from,
         valid_until: input.until,

@@ -12,7 +12,7 @@ import { jsonObject } from '../db/json.ts';
 import { notFound } from '../errors.ts';
 import { stripTrailing } from '../text-order.ts';
 import type { BillingInvoices } from '../generated/db-schema.ts';
-import { PdfReport } from './pdf.ts';
+import { PdfReport } from '../documents/pdf.ts';
 
 type Invoice = Selectable<BillingInvoices>;
 const minor = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);

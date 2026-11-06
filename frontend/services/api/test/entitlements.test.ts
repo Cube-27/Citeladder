@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
-import { afterAll, describe, expect, it } from 'vitest';
+import { sql } from 'kysely';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 
-import { WorkspaceEntitlements } from '../src/entitlements/access.ts';
-import { admitPrompts } from '../src/entitlements/occupancy.ts';
+import { WorkspaceEntitlements, requireFlag } from '../src/entitlements/access.ts';
+import { grantSource, sourceRef } from '../src/entitlements/grants.ts';
+import { admit, lockWorkspaceCapacity } from '../src/entitlements/occupancy.ts';
 import {
   entitlementChangeAt,
   foldEntitlement,
@@ -119,7 +121,73 @@ describe('foldEntitlement', () => {
   });
 });
 
-describe('admitPrompts', () => {
+describe('grant source', () => {
+  it('persists each source in its stored format and reads it back', () => {
+    const id = '7d3c4f6e-0000-4000-8000-000000000001';
+    expect(sourceRef({ kind: 'subscription', subscriptionId: id })).toBe(`subscription:${id}`);
+    expect(sourceRef({ kind: 'public_signup' })).toBe('system:public-signup');
+    expect(grantSource(`activation:${id}`)).toEqual({ kind: 'activation', activationId: id });
+    expect(grantSource(`override:${id}`)).toEqual({ kind: 'override', actorId: id });
+    expect(grantSource('system:public-signup')).toEqual({ kind: 'public_signup' });
+    expect(grantSource('activation:')).toBeNull();
+    expect(grantSource('fixture')).toBeNull();
+  });
+});
+
+describe('plan gate', () => {
+  const db = testDatabase();
+  const fixtures = new VisibilityFixtures(db);
+  afterAll(async () => {
+    await fixtures.cleanup();
+    await db.destroy();
+  });
+
+  it('refuses with the registry refusal for the flag', async () => {
+    const t = await fixtures.tenant({ access: false });
+    await billingAccount(db, t.workspaceId);
+    const refusal = await db
+      .transaction()
+      .execute((trx) => requireFlag(trx, t.workspaceId, 'crawl_logs'))
+      .catch((error: unknown) => error);
+    expect(refusal).toBeInstanceOf(ApiError);
+    expect(refusal).toMatchObject({
+      status: 409,
+      code: 'crawl_logs_not_in_plan',
+      message: "AI crawler logs are not included in this workspace's plan",
+    });
+  });
+
+  it('reads the flag under the capacity lock, after a grant committed while it waited', async () => {
+    const t = await fixtures.tenant({ access: false });
+    const account = await billingAccount(db, t.workspaceId);
+    let gate: Promise<unknown> | undefined;
+    await db.transaction().execute(async (issuer) => {
+      const issuerPid = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(issuer);
+      await lockWorkspaceCapacity(issuer, t.workspaceId);
+      gate = db
+        .transaction()
+        .execute((trx) => requireFlag(trx, t.workspaceId, 'commerce'))
+        .then(
+          () => 'admitted',
+          (error: unknown) => error,
+        );
+      // The gate is waiting on the capacity lock before the grant commits.
+      await vi.waitFor(
+        async () => {
+          const blocked = await sql<{ waiting: boolean }>`select exists (
+            select 1 from pg_stat_activity where ${issuerPid.rows[0]!.pid} = any(pg_blocking_pids(pid))
+          ) as waiting`.execute(db);
+          expect(blocked.rows[0]!.waiting).toBe(true);
+        },
+        { timeout: 2000, interval: 20 },
+      );
+      await grant(issuer, account, { key: 'commerce', value: 1 });
+    });
+    expect(await gate).toBe('admitted');
+  });
+});
+
+describe('prompt slot admission', () => {
   const db = testDatabase();
   const fixtures = new VisibilityFixtures(db);
   afterAll(async () => {
@@ -144,14 +212,18 @@ describe('admitPrompts', () => {
   it('fails closed without a billing account, and an account with no prompt_slots grant has none', async () => {
     const t = await tenant();
     expect(
-      await denial(() => db.transaction().execute((trx) => admitPrompts(trx, t.workspaceId, 1))),
+      await denial(() =>
+        db.transaction().execute((trx) => admit(trx, t.workspaceId, 'prompt_slots', 1)),
+      ),
     ).toMatchObject({
       status: 403,
       code: 'occupancy_unresolved',
     });
     await billingAccount(db, t.workspaceId);
     expect(
-      await denial(() => db.transaction().execute((trx) => admitPrompts(trx, t.workspaceId, 1))),
+      await denial(() =>
+        db.transaction().execute((trx) => admit(trx, t.workspaceId, 'prompt_slots', 1)),
+      ),
     ).toEqual({
       status: 403,
       code: 'occupancy_limit_exceeded',
@@ -166,10 +238,14 @@ describe('admitPrompts', () => {
     await prompt(db, t.setId, 'first acme prompt');
     await prompt(db, t.setId, 'archived acme prompt', { status: 'archived' });
     expect(
-      await denial(() => db.transaction().execute((trx) => admitPrompts(trx, t.workspaceId, 1))),
+      await denial(() =>
+        db.transaction().execute((trx) => admit(trx, t.workspaceId, 'prompt_slots', 1)),
+      ),
     ).toBeNull();
     expect(
-      await denial(() => db.transaction().execute((trx) => admitPrompts(trx, t.workspaceId, 2))),
+      await denial(() =>
+        db.transaction().execute((trx) => admit(trx, t.workspaceId, 'prompt_slots', 2)),
+      ),
     ).toEqual({
       status: 403,
       code: 'occupancy_limit_exceeded',
@@ -211,7 +287,7 @@ describe('admitPrompts', () => {
     await grant(db, account, { value: 1 });
     const insert = (text: string) =>
       db.transaction().execute(async (trx) => {
-        await admitPrompts(trx, t.workspaceId, 1);
+        await admit(trx, t.workspaceId, 'prompt_slots', 1);
         await prompt(trx, t.setId, text);
       });
     const results = await Promise.allSettled([insert('acme one'), insert('acme two')]);
