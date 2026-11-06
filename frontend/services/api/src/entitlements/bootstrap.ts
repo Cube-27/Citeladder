@@ -5,7 +5,9 @@ import { subjectXactLock } from '../db/advisory-lock.ts';
 import { policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import type { Users } from '../generated/db-schema.ts';
-import { issueBundle, lockAccount } from './grants.ts';
+import { issueBundle, lockAccount, sourceRef, type GrantSource } from './grants.ts';
+
+const PUBLIC_SIGNUP: GrantSource = { kind: 'public_signup' };
 import { operatorTransaction } from '../db/operator-transaction.ts';
 import { requirePlatformAdmin } from '../auth/operators.ts';
 import { parseUuid } from '../http/uuid.ts';
@@ -62,7 +64,7 @@ export async function ensureWorkspaceBilling(
       .select('id')
       .where('billing_account_id', '=', account.id)
       .where('source_kind', '=', 'trial')
-      .where('source_ref', '=', 'system:public-signup')
+      .where('source_ref', '=', sourceRef(PUBLIC_SIGNUP))
       .executeTakeFirst();
     if (existing) return;
     // The trial starts when the person creates their workspace. One mailbox has
@@ -79,7 +81,7 @@ export async function ensureWorkspaceBilling(
       .select(['account_grants.valid_from', 'account_grants.valid_until'])
       .where(canonicalMailbox(sql.ref('users.email')), '=', mailbox)
       .where('account_grants.source_kind', '=', 'trial')
-      .where('account_grants.source_ref', '=', 'system:public-signup')
+      .where('account_grants.source_ref', '=', sourceRef(PUBLIC_SIGNUP))
       .orderBy('account_grants.valid_from')
       .limit(1)
       .executeTakeFirst();
@@ -91,7 +93,7 @@ export async function ensureWorkspaceBilling(
       accountId: account.id,
       key: trial.revision,
       sourceKind: 'trial',
-      sourceRef: 'system:public-signup',
+      source: PUBLIC_SIGNUP,
       revision: trial.revision,
       specs: Object.entries(trial.grants).map(([key, value]) => ({ key, value })),
       from,
@@ -129,7 +131,7 @@ export async function ensureWorkspaceBilling(
     accountId: account.id,
     key: idempotencyKey,
     sourceKind: cfg.source_kind,
-    sourceRef: 'system:public-signup',
+    source: PUBLIC_SIGNUP,
     revision: policy.entitlements.registry_revision,
     specs: grants.map(([key, value]) => ({ key, value })),
     from: now,
@@ -205,7 +207,7 @@ export async function issueDevelopmentAccess(
     accountId: input.accountId,
     key,
     sourceKind: 'override',
-    sourceRef: `override:${input.userId}`,
+    source: { kind: 'override', actorId: input.userId },
     specs,
     revision: policy.entitlements.registry_revision,
     from: new Date(),

@@ -504,6 +504,17 @@ refunded, so a repeated refund returns nothing. A usage read's remaining
 balance is the sum of each grant's own remainder, the figure admission holds
 against. No money rule changes.
 
+**B63 — Engineering, 2026-11-06.** One writer for grants and refunds. Every
+grant bundle, the signup baseline included, is issued by the grant writer with
+a typed source (subscription, activation, override, intro or public signup);
+the stored `source_ref` formats are unchanged. Settlement owns a refund's
+consequences: it records the receipt and credit note, and only the refund that
+completes a payment's full refund applies B52, with the same grants revoked (a
+period's plan grants from its subscription or any activation in it) and the
+same cancellation; a replayed refund applies nothing. A subscription change
+still bumps the entitlement version only if no other writer bumped it since
+settlement read it.
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,

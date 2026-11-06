@@ -43,6 +43,54 @@ export async function bumpLifecycle(
 const bump = (db: Database, workspaceId: string, accountId: string, at: Date) =>
   bumpLifecycle(db, { workspaceId, accountId, at });
 
+/** What a grant bundle was issued for; `source_ref` persists it as `<kind>:<id>`. */
+export type GrantSource =
+  | { kind: 'subscription'; subscriptionId: string }
+  | { kind: 'activation'; activationId: string }
+  | { kind: 'override'; actorId: string }
+  | { kind: 'intro'; introId: string }
+  | { kind: 'public_signup' };
+
+/** The persisted `source_ref` of a grant source (formats are stored; never change them). */
+export function sourceRef(source: GrantSource): string {
+  switch (source.kind) {
+    case 'subscription':
+      return `subscription:${source.subscriptionId}`;
+    case 'activation':
+      return `activation:${source.activationId}`;
+    case 'override':
+      return `override:${source.actorId}`;
+    case 'intro':
+      return `intro:${source.introId}`;
+    case 'public_signup':
+      return 'system:public-signup';
+    default: {
+      const _exhaustive: never = source;
+      return _exhaustive;
+    }
+  }
+}
+
+/** A persisted `source_ref` read back as its source; null for one no writer produces. */
+export function grantSource(ref: string): GrantSource | null {
+  if (ref === 'system:public-signup') return { kind: 'public_signup' };
+  const separator = ref.indexOf(':');
+  const [kind, id] = [ref.slice(0, separator), ref.slice(separator + 1)];
+  if (separator < 1 || !id) return null;
+  switch (kind) {
+    case 'subscription':
+      return { kind, subscriptionId: id };
+    case 'activation':
+      return { kind, activationId: id };
+    case 'override':
+      return { kind, actorId: id };
+    case 'intro':
+      return { kind, introId: id };
+    default:
+      return null;
+  }
+}
+
 export async function issueBundle(
   db: Database,
   input: {
@@ -50,7 +98,7 @@ export async function issueBundle(
     accountId: string;
     key: string;
     sourceKind: string;
-    sourceRef: string;
+    source: GrantSource;
     specs: readonly { key: string; value: number }[];
     revision: string;
     from: Date;
@@ -63,6 +111,7 @@ export async function issueBundle(
   },
 ) {
   const { accountId, workspaceId, key, specs } = input;
+  const ref = sourceRef(input.source);
   await lockAccount(db, workspaceId, accountId);
   // Existing period bundles retain their original writer's key and UUIDs.
   let priorQuery = db
@@ -70,9 +119,9 @@ export async function issueBundle(
     .selectAll()
     .where('billing_account_id', '=', accountId);
   priorQuery =
-    input.periodStart && input.periodEnd && input.sourceRef.startsWith('subscription:')
+    input.periodStart && input.periodEnd && input.source.kind === 'subscription'
       ? priorQuery
-          .where('source_ref', '=', input.sourceRef)
+          .where('source_ref', '=', ref)
           .where('period_start', '=', input.periodStart)
           .where('period_end', '=', input.periodEnd)
       : priorQuery.where('idempotency_key', '=', key);
@@ -87,7 +136,7 @@ export async function issueBundle(
               row.key === spec.key &&
               row.value === spec.value &&
               row.source_kind === input.sourceKind &&
-              row.source_ref === input.sourceRef &&
+              row.source_ref === ref &&
               row.catalog_revision === input.revision &&
               row.bundle_role === (input.primary ? 'primary' : 'supplement') &&
               row.profile_key === input.profile &&
@@ -134,7 +183,7 @@ export async function issueBundle(
         key: spec.key,
         value: spec.value,
         source_kind: input.sourceKind,
-        source_ref: input.sourceRef,
+        source_ref: ref,
         catalog_revision: input.revision,
         valid_from: input.from,
         valid_until: input.until,

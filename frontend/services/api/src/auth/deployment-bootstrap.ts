@@ -98,7 +98,7 @@ export async function bootstrapDeployment(
         ...scope,
         key,
         sourceKind: 'override',
-        sourceRef: `override:${updated.id}`,
+        source: { kind: 'override', actorId: updated.id },
         specs: [{ key: 'monitored_urls', value: allowance }],
         revision: policy.entitlements.registry_revision,
         from: prior?.valid_from ?? new Date(),

@@ -4,6 +4,7 @@ import { sql } from 'kysely';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 
 import { WorkspaceEntitlements, requireFlag } from '../src/entitlements/access.ts';
+import { grantSource, sourceRef } from '../src/entitlements/grants.ts';
 import { admit, lockWorkspaceCapacity } from '../src/entitlements/occupancy.ts';
 import {
   entitlementChangeAt,
@@ -117,6 +118,19 @@ describe('foldEntitlement', () => {
       foldEntitlement([row({ value: 1 }), row({ key: 'nope', value: 1 })], [], null, at),
     ).toThrow();
     expect(() => foldEntitlement([row({ key: 'agent', value: 2 })], [], null, at)).toThrow();
+  });
+});
+
+describe('grant source', () => {
+  it('persists each source in its stored format and reads it back', () => {
+    const id = '7d3c4f6e-0000-4000-8000-000000000001';
+    expect(sourceRef({ kind: 'subscription', subscriptionId: id })).toBe(`subscription:${id}`);
+    expect(sourceRef({ kind: 'public_signup' })).toBe('system:public-signup');
+    expect(grantSource(`activation:${id}`)).toEqual({ kind: 'activation', activationId: id });
+    expect(grantSource(`override:${id}`)).toEqual({ kind: 'override', actorId: id });
+    expect(grantSource('system:public-signup')).toEqual({ kind: 'public_signup' });
+    expect(grantSource('activation:')).toBeNull();
+    expect(grantSource('fixture')).toBeNull();
   });
 });
 

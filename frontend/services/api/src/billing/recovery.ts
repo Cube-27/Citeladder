@@ -12,8 +12,13 @@ import {
 } from './razorpay.ts';
 import { cancellationSendAt } from './cancellation.ts';
 import { policy } from '../config.ts';
-import { lockOwner, periodRefunded, settlePending, settleSubscription } from './settlement.ts';
-import { recordRefund } from './receipts.ts';
+import {
+  lockOwner,
+  periodRefunded,
+  settlePending,
+  settleRefund,
+  settleSubscription,
+} from './settlement.ts';
 import { pushChange } from './plan-changes.ts';
 import { webhookSummary } from './webhooks.ts';
 import { getLogger } from '../logging.ts';
@@ -348,14 +353,13 @@ async function webhookProbe(
       if (!owned) return;
       if (refund && refund.status !== 'processed') return;
       if (refund && accountId && workspace)
-        await recordRefund(
-          trx,
-          workspace,
+        await settleRefund(trx, {
+          workspaceId: workspace,
           accountId,
-          receipt.provider,
-          receipt.provider_mode,
+          provider: receipt.provider,
+          mode: receipt.provider_mode,
           refund,
-        );
+        });
       let matched = Boolean(refund && payment);
       if (!refund && evidence)
         matched = await applyReference(trx, provider.mode, summary.reference, evidence, 'webhook');

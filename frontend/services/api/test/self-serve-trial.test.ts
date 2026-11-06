@@ -229,7 +229,7 @@ it('only explicit restoration reopens an expired workspace, preserving its data'
         accountId: account.id,
         key: randomUUID(),
         sourceKind: 'override',
-        sourceRef: 'test-operator',
+        source: { kind: 'override', actorId: t.userId },
         specs: [{ key, value: 1 }],
         revision: 'test',
         from: new Date(),
