@@ -1,14 +1,41 @@
 /**
  * AI credit pricing: tokens at the serving model's price, marked up, in whole
  * credits (B12, B14). Internal only: customers see credits, never the prices,
- * the markup or the credit's money value (B23).
+ * the markup or the credit's money value (B23). Provider rates come from the
+ * internal rate card (`config/costs.json`); the credit configuration holds only
+ * the customer side: the credit's value, the markup and what each feature spends.
  */
 import { policy } from '../config.ts';
+import { ConfigError } from '../config/config-error.ts';
 import { gatewaySettings } from '../models/gateway.ts';
 
 const pricing = policy.billing.ai_credits;
+const rates = policy.costs.platform;
 export const PRICING_REVISION = pricing.revision;
-export type ModelPrice = (typeof pricing.models)[keyof typeof pricing.models];
+export type ModelPrice = (typeof rates.models)[keyof typeof rates.models];
+
+/**
+ * The per-search fee of the provider-hosted web search, read from the answer
+ * engine rate card so one published fee has one configured value.
+ */
+function webSearchFee() {
+  const catalog = Object.entries(policy.costs.catalogs).find(
+    ([version]) => version === policy.costs.pricing_version,
+  )?.[1];
+  const fee = catalog?.find(
+    (entry) => entry.identity.transport_provider === rates.web_search_provider,
+  )?.pricing.search_fee_microusd;
+  if (typeof fee !== 'number' || !Number.isSafeInteger(fee) || fee < 0)
+    throw new ConfigError(`No web search fee is configured for ${rates.web_search_provider}`);
+  return fee;
+}
+const WEB_SEARCH_MICROUSD = webSearchFee();
+
+/** A provider priced per request, such as a search API; `null` when it is priced otherwise. */
+export function requestFeeMicrousd(provider: string): number | null {
+  const fees: Record<string, number> = rates.request_fees_microusd;
+  return Object.hasOwn(fees, provider) ? fees[provider]! : null;
+}
 export type ChargeMode = 'credits' | 'included' | 'not_charged';
 export type MeteredFeature = keyof typeof pricing.features;
 
@@ -26,7 +53,7 @@ export function modelPrice(
   model: string,
   gatewayModel = gatewaySettings().model,
 ): ModelPrice | null {
-  const models: Record<string, ModelPrice> = pricing.models;
+  const models: Record<string, ModelPrice> = rates.models;
   if (Object.hasOwn(models, model)) return models[model]!;
   return model && model === gatewayModel ? models[pricing.gateway_default_price]! : null;
 }
@@ -102,7 +129,7 @@ function microusdTimesMillion(
     BigInt(written - writtenHour) * BigInt(price.cache_write_input_microusd_per_million) +
     BigInt(writtenHour) * BigInt(price.cache_write_1h_input_microusd_per_million) +
     BigInt(output) * BigInt(price.output_microusd_per_million) +
-    BigInt(searches) * BigInt(pricing.web_search_microusd_per_request) * 1_000_000n
+    BigInt(searches) * BigInt(WEB_SEARCH_MICROUSD) * 1_000_000n
   );
 }
 
@@ -202,7 +229,12 @@ export function affordableOutputTokens(
     maxInputTokens,
     maxOutputTokens,
     maxWebSearches,
-  }: { credits: number; maxInputTokens: number; maxOutputTokens: number; maxWebSearches: number },
+  }: {
+    credits: number;
+    maxInputTokens: number;
+    maxOutputTokens: number;
+    maxWebSearches: number;
+  },
 ) {
   const hold = (output: number) =>
     cachedReservationCredits(price, maxInputTokens, output, maxWebSearches);

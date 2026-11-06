@@ -93,7 +93,11 @@ describe('Agent runtime on PostgreSQL', () => {
   it('serializes same-key races and refuses a changed full request or a second active turn', async () => {
     const scope = await fixtures.scope();
     const store = fixtures.store();
-    const request = { key: randomUUID(), message: 'Help with a plan', skillId: 'plan' };
+    const request = {
+      key: randomUUID(),
+      message: 'Help with a plan',
+      skillId: 'plan',
+    };
     const [a, b] = await Promise.all([
       store.enqueue(scope, request),
       store.enqueue(scope, request),
@@ -105,7 +109,11 @@ describe('Agent runtime on PostgreSQL', () => {
       store.enqueue(scope, { ...request, message: 'Changed request' }),
     ).rejects.toMatchObject({ code: 'agent_idempotency_conflict' });
     await expect(
-      store.enqueue(scope, { key: randomUUID(), message: 'Another turn', chatId: a.chat_id }),
+      store.enqueue(scope, {
+        key: randomUUID(),
+        message: 'Another turn',
+        chatId: a.chat_id,
+      }),
     ).rejects.toMatchObject({ code: 'agent_run_active' });
     expect(fingerprint({ b: 2, a: { z: 1, y: 2 } })).toBe(fingerprint({ a: { y: 2, z: 1 }, b: 2 }));
   });
@@ -122,15 +130,19 @@ describe('Agent runtime on PostgreSQL', () => {
         .enqueue(scope, { key: randomUUID(), message: 'Request' }),
     ).rejects.toMatchObject({ code: 'funding_unavailable' });
     await expect(
-      fixtures
-        .store()
-        .enqueue(scope, { key: randomUUID(), message: 'Request', mentionIds: [randomUUID()] }),
+      fixtures.store().enqueue(scope, {
+        key: randomUUID(),
+        message: 'Request',
+        mentionIds: [randomUUID()],
+      }),
     ).rejects.toMatchObject({ code: 'agent_context_unavailable' });
     expect(await listChats(db, scope)).toMatchObject({ items: [] });
     const run = await fixtures
       .store()
       .enqueue(other, { key: randomUUID(), message: 'Other workspace' });
-    await expect(readChat(db, scope, run.chat_id)).rejects.toMatchObject({ status: 404 });
+    await expect(readChat(db, scope, run.chat_id)).rejects.toMatchObject({
+      status: 404,
+    });
     await expect(
       fixtures
         .store()
@@ -144,9 +156,16 @@ describe('Agent runtime on PostgreSQL', () => {
     const scope = await fixtures.scope();
     const projectId = await fixtures.project(scope.workspaceId);
     const store = fixtures.store();
-    const initial = await store.enqueue(scope, { key: randomUUID(), message: 'Question' });
+    const initial = await store.enqueue(scope, {
+      key: randomUUID(),
+      message: 'Question',
+    });
     await store.cancel(scope, initial.chat_id, initial.id);
-    const request = { key: randomUUID(), message: 'Follow up', chatId: initial.chat_id };
+    const request = {
+      key: randomUUID(),
+      message: 'Follow up',
+      chatId: initial.chat_id,
+    };
     const run = await store.enqueue(scope, request);
     await expect(store.enqueue({ ...scope, projectId }, request)).rejects.toMatchObject({
       status: 404,
@@ -181,9 +200,12 @@ describe('Agent runtime on PostgreSQL', () => {
       .store()
       .enqueue(scope, { chatId: cleared.chat_id, key, message: 'Question' });
     await expect(
-      fixtures
-        .store()
-        .enqueue(scope, { chatId: cleared.chat_id, key, message: 'Question', skillId: null }),
+      fixtures.store().enqueue(scope, {
+        chatId: cleared.chat_id,
+        key,
+        message: 'Question',
+        skillId: null,
+      }),
     ).rejects.toMatchObject({ code: 'agent_idempotency_conflict' });
     await fixtures.store().cancel(scope, inherited.chat_id, inherited.id);
     // A chat holds documents of several kinds, so a skill of another kind is accepted.
@@ -201,8 +223,15 @@ describe('Agent runtime on PostgreSQL', () => {
   it('replays an earlier turn exactly as stored, thinking and compaction included, without resupplying its context', async () => {
     const scope = await fixtures.scope();
     const first = await fixtures.claimed(scope, { message: 'Prior question' });
-    const thinking = { type: 'thinking', thinking: 'Weighing the evidence', signature: 'sig-1' };
-    const compaction = { type: 'compaction', content: 'Summary of the earlier work' };
+    const thinking = {
+      type: 'thinking',
+      thinking: 'Weighing the evidence',
+      signature: 'sig-1',
+    };
+    const compaction = {
+      type: 'compaction',
+      content: 'Summary of the earlier work',
+    };
     // Keys out of sorted order: replay must keep the provider's bytes, not a normalized copy.
     const call = toolUse(
       'read_evidence',
@@ -241,7 +270,10 @@ describe('Agent runtime on PostgreSQL', () => {
       {
         role: 'user',
         content: [
-          { type: 'text', text: expect.stringContaining('Context selected for this chat') },
+          {
+            type: 'text',
+            text: expect.stringContaining('Context selected for this chat'),
+          },
           { type: 'text', text: 'Prior question' },
         ],
       },
@@ -396,7 +428,10 @@ describe('Agent runtime on PostgreSQL', () => {
       .set({
         context_manifest: {
           ...manifest,
-          package: { ...manifest.package, summary: { selection_policy_version: 'selection-1' } },
+          package: {
+            ...manifest.package,
+            summary: { selection_policy_version: 'selection-1' },
+          },
         },
       })
       .where('id', '=', run.id)
@@ -448,7 +483,9 @@ describe('Agent runtime on PostgreSQL', () => {
       {
         skill_id: 'prompt_discovery',
         kind: 'prompt_plan',
-        latest_revision: { source_refs: [`citeladder://project/${scope.projectId}`] },
+        latest_revision: {
+          source_refs: [`citeladder://project/${scope.projectId}`],
+        },
       },
     ]);
   });
@@ -488,10 +525,16 @@ describe('Agent runtime on PostgreSQL', () => {
       },
     ]);
     expect(results[1]).toEqual([
-      { error: true, content: expect.stringMatching(/^Invalid arguments: skill_id/u) },
+      {
+        error: true,
+        content: expect.stringMatching(/^Invalid arguments: skill_id/u),
+      },
     ]);
     expect(results[2]).toEqual([
-      { error: false, content: expect.stringContaining('Plan requested work.') },
+      {
+        error: false,
+        content: expect.stringContaining('Plan requested work.'),
+      },
     ]);
     expect(results[3]).toEqual([
       {
@@ -506,7 +549,10 @@ describe('Agent runtime on PostgreSQL', () => {
     ]);
     // Another kind's methodology loads too: its work would be a new document.
     expect(results[4]).toEqual([
-      { error: false, content: expect.stringContaining('Write requested content.') },
+      {
+        error: false,
+        content: expect.stringContaining('Write requested content.'),
+      },
     ]);
     const detail = await readChat(db, scope, run.chat_id);
     expect(detail.latest_run).toMatchObject({
@@ -532,7 +578,10 @@ describe('Agent runtime on PostgreSQL', () => {
     };
     await fixtures.runtime(scope, model).execute(lease);
     const detail = await readChat(db, scope, run.chat_id);
-    expect(detail.latest_run).toMatchObject({ status: 'failed', error_code: 'provider_error' });
+    expect(detail.latest_run).toMatchObject({
+      status: 'failed',
+      error_code: 'provider_error',
+    });
     expect(detail.outputs).toEqual([]);
     expect(detail.messages.at(-1)?.content).toBe(recoveryReply('provider_error'));
     expect(
@@ -561,7 +610,10 @@ describe('Agent runtime on PostgreSQL', () => {
       save('Requested document', { format_id: 'page' }),
     ]);
     expect(detail.outputs).toMatchObject([
-      { format_id: 'page', latest_revision: { number: 1, body: 'Requested document' } },
+      {
+        format_id: 'page',
+        latest_revision: { number: 1, body: 'Requested document' },
+      },
     ]);
     expect(detail.messages.at(-1)?.content).toBe(
       'Answer from supplied evidence.\n\nDocument 1 saved in Website page format.',
@@ -602,7 +654,12 @@ describe('Agent runtime on PostgreSQL', () => {
         error_code: 'invalid_arguments',
         input: { oops: 1 },
       }),
-      expect.objectContaining({ ordinal: 2, status: 'completed', error_code: '', input: {} }),
+      expect.objectContaining({
+        ordinal: 2,
+        status: 'completed',
+        error_code: '',
+        input: {},
+      }),
     ]);
     expect((await readChat(db, scope, run.chat_id)).latest_run).toMatchObject({
       status: 'succeeded',
@@ -649,9 +706,24 @@ describe('Agent runtime on PostgreSQL', () => {
     expect(events).toHaveLength(6);
     expect(events).toEqual(
       expect.arrayContaining([
-        { ordinal: 1, call_id: 'call_a', tool: 'read_evidence', status: 'completed' },
-        { ordinal: 1, call_id: 'call_b', tool: 'read_evidence', status: 'completed' },
-        { ordinal: 1, call_id: 'call_c', tool: 'read_evidence', status: 'refused' },
+        {
+          ordinal: 1,
+          call_id: 'call_a',
+          tool: 'read_evidence',
+          status: 'completed',
+        },
+        {
+          ordinal: 1,
+          call_id: 'call_b',
+          tool: 'read_evidence',
+          status: 'completed',
+        },
+        {
+          ordinal: 1,
+          call_id: 'call_c',
+          tool: 'read_evidence',
+          status: 'refused',
+        },
       ]),
     );
     // Each model call is followed by its reads, which are listed as they finished.
@@ -853,7 +925,11 @@ describe('Agent runtime on PostgreSQL', () => {
   it('reconciles a lost dispatch as unknown when recovery ends an expired turn', async () => {
     const scope = await fixtures.scope();
     const { run, lease, queue } = await fixtures.claimed(scope);
-    const settle = vi.fn(async () => ({ credits: 0, status: 'zero_debit' }));
+    const settle = vi.fn(async () => ({
+      credits: 0,
+      status: 'zero_debit',
+      costMicrousd: null,
+    }));
     const models = new ModelCalls(db, { ...zeroFunding, settle });
     const attempt = await models.dispatch(lease, 1, scripted([]), request);
     await expireAndRecover(queue, scope.workspaceId, run.id, models);
@@ -953,7 +1029,10 @@ describe('Agent runtime on PostgreSQL', () => {
       .execute(lease);
     expect(efforts).toEqual(['medium', 'low']);
     const detail = await readChat(db, scope, run.chat_id);
-    expect(detail.latest_run).toMatchObject({ status: 'failed', error_code: 'output_too_long' });
+    expect(detail.latest_run).toMatchObject({
+      status: 'failed',
+      error_code: 'output_too_long',
+    });
     expect(detail.messages.at(-1)?.content).toBe(
       'The model ran out of room to finish this step, even after a second, shorter attempt, so nothing was saved and no credits were used. Ask for one part at a time.',
     );
@@ -974,7 +1053,10 @@ describe('Agent runtime on PostgreSQL', () => {
       await fixtures.runtime(scope, model).execute(lease);
       expect(calls).toBe(1);
       const detail = await readChat(db, scope, run.chat_id);
-      expect(detail.latest_run).toMatchObject({ status: 'failed', error_code: code });
+      expect(detail.latest_run).toMatchObject({
+        status: 'failed',
+        error_code: code,
+      });
       expect(detail.messages.at(-1)?.content).toBe(recoveryReply(code));
       expect(detail.outputs).toEqual([]);
     },
@@ -1011,7 +1093,10 @@ describe('Agent runtime on PostgreSQL', () => {
     expect(JSON.stringify(sent[2]!.tools)).toBe(JSON.stringify(sent[0]!.tools));
     expect(texts(sent[2]!).at(-1)).toMatch(/last step/u);
     const detail = await readChat(db, scope, run.chat_id);
-    expect(detail.latest_run).toMatchObject({ status: 'succeeded', steps_used: 3 });
+    expect(detail.latest_run).toMatchObject({
+      status: 'succeeded',
+      steps_used: 3,
+    });
     expect(detail.messages.at(-1)?.content).toBe(
       'I reached this turn’s limit before writing an answer. Nothing was saved. Narrow the request and ask again.',
     );
@@ -1029,12 +1114,18 @@ describe('Agent runtime on PostgreSQL', () => {
       .execute(lease);
     expect((await toolAttempts(run.id)).map(({ ordinal }) => ordinal)).toEqual([1]);
     const detail = await readChat(db, scope, run.chat_id);
-    expect(detail.latest_run).toMatchObject({ status: 'succeeded', steps_used: 2, skill_id: null });
+    expect(detail.latest_run).toMatchObject({
+      status: 'succeeded',
+      steps_used: 2,
+      skill_id: null,
+    });
     expect(detail.messages.at(-1)?.content).toBe('The observed value is zero.');
   });
   it('saves a whole draft at once, then edits it in place while refusing user edits mid-turn', async () => {
     const scope = await fixtures.scope();
-    const { run, lease } = await fixtures.claimed(scope, { skillId: 'content' });
+    const { run, lease } = await fixtures.claimed(scope, {
+      skillId: 'content',
+    });
     await fixtures
       .runtime(scope, scripted([save('Intro.\n\nSizes run small.\n\nShop now.')]))
       .execute(lease);
@@ -1042,7 +1133,10 @@ describe('Agent runtime on PostgreSQL', () => {
     let detail = await readChat(db, scope, run.chat_id);
     const document = detail.outputs[0]!;
     const original = document.latest_revision;
-    expect(original).toMatchObject({ number: 1, body: 'Intro.\n\nSizes run small.\n\nShop now.' });
+    expect(original).toMatchObject({
+      number: 1,
+      body: 'Intro.\n\nSizes run small.\n\nShop now.',
+    });
     expect(detail.messages.at(-1)?.content).toBe(
       'Answer from supplied evidence.\n\nDocument 1 saved.',
     );
@@ -1061,7 +1155,12 @@ describe('Agent runtime on PostgreSQL', () => {
         scripted(
           [
             edit([{ old_string: 'Sizes run missing.', new_string: 'x' }]),
-            edit([{ old_string: 'Sizes run small.', new_string: 'Sizes run true to size.' }]),
+            edit([
+              {
+                old_string: 'Sizes run small.',
+                new_string: 'Sizes run true to size.',
+              },
+            ]),
           ],
           async (request, ordinal) => {
             if (ordinal === 1) opening.push(JSON.stringify(request.messages.at(-1)));
@@ -1104,7 +1203,9 @@ describe('Agent runtime on PostgreSQL', () => {
   });
   it('keeps several documents in one chat, each revised and edited by its number', async () => {
     const scope = await fixtures.scope();
-    const { run, lease } = await fixtures.claimed(scope, { skillId: 'content' });
+    const { run, lease } = await fixtures.claimed(scope, {
+      skillId: 'content',
+    });
     await fixtures
       .runtime(scope, scripted([save('Uniform page.', { title: 'School uniforms' })]))
       .execute(lease);
@@ -1134,12 +1235,20 @@ describe('Agent runtime on PostgreSQL', () => {
     );
     let detail = await readChat(db, scope, run.chat_id);
     expect(detail.outputs).toMatchObject([
-      { number: 1, kind: 'content', latest_revision: { title: 'School uniforms', number: 1 } },
+      {
+        number: 1,
+        kind: 'content',
+        latest_revision: { title: 'School uniforms', number: 1 },
+      },
       {
         number: 2,
         kind: 'plan',
         message_id: detail.messages.at(-1)?.id,
-        latest_revision: { title: 'Follow-up plan', body: 'Plan body.', number: 1 },
+        latest_revision: {
+          title: 'Follow-up plan',
+          body: 'Plan body.',
+          number: 1,
+        },
       },
     ]);
     expect(detail.chat.output_kind).toBe('plan');
@@ -1150,9 +1259,17 @@ describe('Agent runtime on PostgreSQL', () => {
       .runtime(
         scope,
         scripted([
-          edit([{ old_string: 'Uniform page.', new_string: 'Uniform page, revised.' }], {
-            document: 1,
-          }),
+          edit(
+            [
+              {
+                old_string: 'Uniform page.',
+                new_string: 'Uniform page, revised.',
+              },
+            ],
+            {
+              document: 1,
+            },
+          ),
           reply('Edited.'),
         ]),
       )
@@ -1173,7 +1290,11 @@ describe('Agent runtime on PostgreSQL', () => {
   it('searches the web within the turn’s budget, continues a paused search and keeps web sources apart', async () => {
     const scope = await fixtures.scope();
     const { run, lease } = await fixtures.claimed(scope);
-    await budget(run, { max_model_calls: 6, max_web_searches: 2, limit_reminder_calls: 6 });
+    await budget(run, {
+      max_model_calls: 6,
+      max_web_searches: 2,
+      limit_reminder_calls: 6,
+    });
     const call = (id: string, query: string) => ({
       type: 'server_tool_use',
       id,
@@ -1183,7 +1304,14 @@ describe('Agent runtime on PostgreSQL', () => {
     const found = (id: string, url: string) => ({
       type: 'web_search_tool_result',
       tool_use_id: id,
-      content: [{ type: 'web_search_result', url, title: `Page ${url}`, encrypted_content: 'e' }],
+      content: [
+        {
+          type: 'web_search_result',
+          url,
+          title: `Page ${url}`,
+          encrypted_content: 'e',
+        },
+      ],
     });
     const searched = (count: number) => ({
       input_tokens: 20,
@@ -1200,7 +1328,9 @@ describe('Agent runtime on PostgreSQL', () => {
             usage: searched(1),
           }),
           // A search beside a read waits for the read's result.
-          result([call('srvtoolu_2', 'uniform sizes'), ...read()], { usage: searched(0) }),
+          result([call('srvtoolu_2', 'uniform sizes'), ...read()], {
+            usage: searched(0),
+          }),
           result([found('srvtoolu_2', 'https://b.test/'), text('Prices start at $10.')], {
             usage: searched(1),
           }),
@@ -1296,7 +1426,7 @@ describe('Agent runtime on PostgreSQL', () => {
       // The second call's receipt cannot settle; recovery then settles it as unknown.
       settle: async (_db, _attempt, received) => {
         if (received && ++receipts === 2) throw new AgentError('funding_unavailable');
-        return { credits: 0, status: 'zero_debit' };
+        return { credits: 0, status: 'zero_debit', costMicrousd: null };
       },
     };
     await fixtures
@@ -1420,9 +1550,11 @@ describe('Agent runtime on PostgreSQL', () => {
         revision_id: detail.outputs[0]!.latest_revision.id,
       },
     };
-    const accepted = await fixtures
-      .store({ context: readAgentContext })
-      .enqueue(scope, { key: randomUUID(), message: 'Measure this accepted brief', refs });
+    const accepted = await fixtures.store({ context: readAgentContext }).enqueue(scope, {
+      key: randomUUID(),
+      message: 'Measure this accepted brief',
+      refs,
+    });
     await new AgentOutputs(db).edit(scope, first.run.chat_id, detail.outputs[0]!.id, {
       baseId: detail.outputs[0]!.latest_revision.id,
       title: 'Edited brief',
@@ -1441,7 +1573,10 @@ describe('Agent runtime on PostgreSQL', () => {
         db,
         scope,
         {
-          output_revision_reference: { ...refs.output_revision_reference, output_id: randomUUID() },
+          output_revision_reference: {
+            ...refs.output_revision_reference,
+            output_id: randomUUID(),
+          },
         },
         'Measure',
       ),
@@ -1543,12 +1678,16 @@ describe('Agent runtime on PostgreSQL', () => {
     const b = await fixtures.store().enqueue(scope, { key: randomUUID(), message: 'Second' });
     await db
       .updateTable('agent_chats')
-      .set({ last_activity_at: sql<Date>`'2026-01-01T00:00:00.123455Z'::timestamptz` })
+      .set({
+        last_activity_at: sql<Date>`'2026-01-01T00:00:00.123455Z'::timestamptz`,
+      })
       .where('id', '=', a.chat_id)
       .execute();
     await db
       .updateTable('agent_chats')
-      .set({ last_activity_at: sql<Date>`'2026-01-01T00:00:00.123456Z'::timestamptz` })
+      .set({
+        last_activity_at: sql<Date>`'2026-01-01T00:00:00.123456Z'::timestamptz`,
+      })
       .where('id', '=', b.chat_id)
       .execute();
     expect((await readChat(db, scope, a.chat_id)).context.instructions).toMatchObject({
@@ -1560,7 +1699,10 @@ describe('Agent runtime on PostgreSQL', () => {
     const page = await listChats(db, scope, { limit: 1 });
     expect(page.items).toHaveLength(1);
     expect(page.items[0]?.id).toBe(b.chat_id);
-    const next = await listChats(db, scope, { limit: 1, cursor: page.next_cursor! });
+    const next = await listChats(db, scope, {
+      limit: 1,
+      cursor: page.next_cursor!,
+    });
     expect(next.items[0]?.id).not.toBe(page.items[0]?.id);
     expect(next.items[0]?.id).toBe(a.chat_id);
     await fixtures.store().cancel(scope, a.chat_id, a.id);
@@ -1574,8 +1716,14 @@ describe('Agent runtime on PostgreSQL', () => {
       .enqueue(scope, { key: randomUUID(), message: 'Unrelated title' });
     await db.transaction().execute(async (trx) => {
       const chat = await getChat(trx, scope, run.chat_id, true);
-      await appendMessage(trx, chat, { role: 'user', content: 'Later topic: robots permission' });
-      await appendMessage(trx, chat, { role: 'agent', content: 'Explain robots permission' });
+      await appendMessage(trx, chat, {
+        role: 'user',
+        content: 'Later topic: robots permission',
+      });
+      await appendMessage(trx, chat, {
+        role: 'agent',
+        content: 'Explain robots permission',
+      });
     });
     const foreign = await fixtures.scope();
     await fixtures.store().enqueue(foreign, { key: randomUUID(), message: 'robots permission' });
@@ -1615,8 +1763,14 @@ describe('Agent runtime on PostgreSQL', () => {
     async (boundary) => {
       const scope = await fixtures.scope();
       const store = fixtures.store();
-      const requested = await store.enqueue(scope, { key: randomUUID(), message: 'Requested' });
-      const sibling = await store.enqueue(scope, { key: randomUUID(), message: 'Other chat' });
+      const requested = await store.enqueue(scope, {
+        key: randomUUID(),
+        message: 'Requested',
+      });
+      const sibling = await store.enqueue(scope, {
+        key: randomUUID(),
+        message: 'Other chat',
+      });
       const controller = new AbortController();
       const interrupt = vi.fn(async (signal: AbortSignal) => {
         controller.abort();
@@ -1660,7 +1814,10 @@ describe('Agent runtime on PostgreSQL', () => {
       expect((await readChat(db, scope, requested.chat_id)).messages.at(-1)?.content).toBe(
         recoveryReply('interrupted'),
       );
-      expect(await fixtures.run(sibling.id)).toMatchObject({ status: 'queued', attempt_count: 0 });
+      expect(await fixtures.run(sibling.id)).toMatchObject({
+        status: 'queued',
+        attempt_count: 0,
+      });
     },
   );
   it('recovers an abandoned cancellation’s dispatch exactly once', async () => {
@@ -1704,7 +1861,7 @@ describe('Agent runtime on PostgreSQL', () => {
         pricing_revision: 'frozen-policy',
       });
       expect(receipt).toBeNull();
-      return { credits: 50, status: 'unknown_policy' };
+      return { credits: 50, status: 'unknown_policy', costMicrousd: null };
     });
     const models = new ModelCalls(db, {
       reserve: async () => ({
@@ -1854,7 +2011,11 @@ describe('Agent runtime on PostgreSQL', () => {
     const pinned = { ...catalog, formats, workflows };
     const store = fixtures.store({ catalog: pinned });
     await expect(
-      store.enqueue(scope, { key: randomUUID(), message: 'Write', workflowId: 'missing' }),
+      store.enqueue(scope, {
+        key: randomUUID(),
+        message: 'Write',
+        workflowId: 'missing',
+      }),
     ).rejects.toMatchObject({ code: 'agent_workflow_unavailable' });
     const queue = new AgentQueue(db, 30);
     const execute = async (responses: Response[], onCall?: Parameters<typeof scripted>[1]) => {
@@ -1877,7 +2038,11 @@ describe('Agent runtime on PostgreSQL', () => {
     expect(opening.find((block) => block.startsWith('Methodology: content'))).toContain(
       'this chat uses post',
     );
-    await store.enqueue(scope, { key: randomUUID(), chatId: first.chat_id, message: 'Pricing' });
+    await store.enqueue(scope, {
+      key: randomUUID(),
+      chatId: first.chat_id,
+      message: 'Pricing',
+    });
     // The save names no format, so the pinned one applies.
     await execute([save()]);
     expect((await readChat(db, scope, first.chat_id)).outputs).toMatchObject([

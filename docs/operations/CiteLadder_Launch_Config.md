@@ -229,7 +229,7 @@ ai_credits:                    # B12, B23, B31, B35
     - commerce_buyer_prompts
     - agent
     - managed_search_intelligence # DataForSEO cost, converted like token cost (B40)
-  charge_basis: tokens_at_serving_model_price   # prices in config/ai-credits.json
+  charge_basis: tokens_at_serving_model_price   # prices in config/costs.json (platform)
   credit_value: usd_0_001_after_30_percent_markup   # B14; ceil(cost x 1.3 / 0.001)
   internal_cost_basis: provider_published_rates     # B53; plan prices and credit amounts may change
   customer_sees: credits_only                   # conversion stays internal (B23)
@@ -428,7 +428,7 @@ credit amounts are separate commercial settings (B53, B55).
 
 **Verified 2026-10-12** from each provider's official pricing page. Re-verify
 before using a figure for a pricing decision, and update the row and date here.
-Runtime charging reads `config/ai-credits.json`, `config/dataforseo.json` and
+Runtime charging reads `config/costs.json`, `config/dataforseo.json` and
 `config/search-intelligence.json`, not this table; a mismatch is a config bug
 to fix, not a reason to edit this card.
 
@@ -452,6 +452,12 @@ Thinking (reasoning) tokens are billed as output by every provider above.
 | Anthropic web search | $10 per 1,000 searches | Plus search-result tokens as input, in later turns too |
 | OpenAI web search | $10 per 1,000 calls | Plus search content tokens at model rates |
 | Google grounding with Google Search | $14 per 1,000 requests | After 5,000 free requests a month, shared across Gemini 3 and newer models |
+| Tavily search (basic depth) | $8 per 1,000 requests | Pay as you go, 1 credit per basic search; verified 2026-11-07. `request_fees_microusd.tavily` 8,000 (`costs.json`) |
+| Keenable search or fetch | $4 per 1,000 requests | Pay as you go after 100K free requests a month; a failed call costs nothing; verified 2026-11-07. `request_fees_microusd.keenable` 4,000 (`costs.json`) |
+
+The Anthropic web search fee has one configured value, the `search_fee_microusd`
+of the Anthropic entry in the answer-engine catalog (`costs.json`); the Agent's
+searches are priced from it.
 
 ### DataForSEO (USD)
 

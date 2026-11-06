@@ -67,12 +67,12 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | merged | [#632](https://github.com/Cube-27/Citeladder/pull/632) | Migration 0011 |
 | P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | merged | [#639](https://github.com/Cube-27/Citeladder/pull/639) | No migration |
 | P12 | Opportunities: check kinds, typed targets, evidence announcement | O2, O3, O4 | P02 | | merged | [#643](https://github.com/Cube-27/Citeladder/pull/643) | No migration |
-| P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | in progress | [#642](https://github.com/Cube-27/Citeladder/pull/642) | Split for size: P13-a (#642) = F5, F6 merged (F6 alone is one ~5,200-line row); P13-b = F7 next |
+| P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | merged | [#642](https://github.com/Cube-27/Citeladder/pull/642), [#644](https://github.com/Cube-27/Citeladder/pull/644) | Split for size: P13-a (#642) = F5, F6 (F6 alone is one ~5,200-line row); P13-b (#644) = F7 |
 | P14 | Marketing site records and config-driven numbers | MK1, MK2, MK3, MK4 | P02 | | todo | | |
 | P15 | Queue owner II: remaining lanes and coalesced enqueue | Q4, Q5, Q6, Q7, Q8 | P01, P03, P09 | | merged | [#633](https://github.com/Cube-27/Citeladder/pull/633) | No migration |
 | P16 | Site Health tasks II: one task runner, counters, pinned versions | SH4, SH5 | P04, P08, P09 | | merged | [#635](https://github.com/Cube-27/Citeladder/pull/635) | No migration |
 | P17 | Permission on the command, MCP prepared changes, workspace ownership | C3, C4, X6 | P11 | | in review | [#646](https://github.com/Cube-27/Citeladder/pull/646) | No migration |
-| P18 | Internal cost view, spend breaker, output caps | K1, K2, K3 | P01, P10 | mig? | in progress | | Before public sign-up; builder session `untangle-p18` |
+| P18 | Internal cost view, spend breaker, output caps | K1, K2, K3 | P01, P10 | mig? | merged | [#645](https://github.com/Cube-27/Citeladder/pull/645) | Migration 0012. Owner to confirm: $25/day breaker ceiling; output caps 16k (prompt generation, research) / 8k (rest) |
 | P19 | Engine surfaces II: surface adapters, audit side effects out of analysis | E4, E5, X8 | P05, P15 | | merged | [#641](https://github.com/Cube-27/Citeladder/pull/641) | No migration. Found the `audit_tasks.error_code` length bug, now P24 |
 | P20 | Settings resolve once; named abuse budgets | G1, G2, G3 | P01, P15 | wide | todo | | |
 | P21 | Screen sweep: failure renderer, typed blobs, form limits, non-null project, recovery actions | F8, F9, F10, R4, Z4 | P07, P12, P13, P16 | | todo | | Split at a row boundary if over ~4,000 lines |
@@ -167,7 +167,7 @@ order the PR tracker already respects.
 | F4 | Query and mutation descriptors: prompts and topics (shared scoped-key builder) | F1 | `frontend/lib/api/{prompts,topics,query-keys}.ts`, `frontend/components/{prompts,knowledge-base}` | | done | 3ab383a | P06-b |
 | F5 | Query and mutation descriptors: runs, visibility, commerce | F4 | `frontend/lib/api/{runs,visibility,commerce}.ts`, matching components, `frontend/lib/navigation/route-prefetch.ts` | | done | fd1c538 | P13-a |
 | F6 | Query and mutation descriptors: integrations and remaining domains | F5, F2 | `frontend/lib/api/*`, remaining components | | done | a6cc2f0 | P13-a |
-| F7 | Job-state records and one polling helper; one score band | F6 | `frontend/lib/<domain>/status.ts`, job screens, `frontend/lib/config/operational.ts` | | todo | | |
+| F7 | Job-state records and one polling helper; one score band | F6 | `frontend/lib/<domain>/status.ts`, job screens, `frontend/lib/config/operational.ts` | | done | 18b6074 | P13-b |
 | F8 | One failure renderer | F7 | `frontend/components/*` error sites, `frontend/components/ui/mutation-notice.tsx` | | todo | | |
 | F9 | Typed evidence and summary blobs per domain | F8, SH5, O3 | `frontend/packages/contracts`, `frontend/lib/{site-health,demand}`, `frontend/packages/mcp-app` | | todo | | |
 | F10 | Server bounds travel on the form-opening read | F9 | `frontend/lib/config/{prompts,operational,agent}.ts`, matching server reads | | todo | | |
@@ -194,9 +194,9 @@ order the PR tracker already respects.
 | X7 | AI referral classification read from the persisted table everywhere | X3 | `referrals/landing.ts`, `traffic/projection.ts` | | done | eda2c70 | |
 | X8 | Audit side effects leave `src/analysis` | E4 | `analysis/{finalization,execution}.ts`, `audits/` | | done | 61fd008 | |
 | X9 | AI referral retention matches the Performance window (OD7) | X7 | `config/referrals.json`, `referrals/retention.ts` | | done | f41aa57, fe5b864 | |
-| K1 | One internal-cost view; Tavily and Keenable priced; cost rows in the call's transaction | B2 | `billing/metering.ts`, `audits/costs.ts`, `config/{costs,ai-credits}.json`, `commerce/discovery-provider.ts`, `projects/research-evidence.ts` | mig? | todo | | Before public sign-up |
-| K2 | Platform-wide daily spend breaker | K1 | `billing/metering.ts`, config | | todo | | Before public sign-up |
-| K3 | Per-feature output caps for charged calls | B2, ON1 | `config/model-gateway.json`, `billing/metering.ts`, gateway callers | | todo | | |
+| K1 | One internal-cost view; Tavily and Keenable priced; cost rows in the call's transaction | B2 | `billing/metering.ts`, `audits/costs.ts`, `config/{costs,ai-credits}.json`, `commerce/discovery-provider.ts`, `projects/research-evidence.ts` | mig? | done | b32d164 | Before public sign-up |
+| K2 | Platform-wide daily spend breaker | K1 | `billing/metering.ts`, config | | done | 2e85ef3 | Before public sign-up |
+| K3 | Per-feature output caps for charged calls | B2, ON1 | `config/model-gateway.json`, `billing/metering.ts`, gateway callers | | done | 41eab73 | |
 | Z1 | Lane failure and lease-loss logs in the queue owner | Q7 | `queue/`, `workers/start-runner.ts` | | todo | | |
 | Z2 | Silent-catch triage: Site Health | SH4 | `site-health/` | | todo | | |
 | Z3 | Silent-catch triage: remaining backend areas | Z1, X5, E5 | `crawl-logs`, `commerce`, `search-intelligence`, `projects`, `providers`, `integrations`, `auth`, `audits`, `web-evidence`, `source-pages` | | todo | | |

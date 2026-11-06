@@ -3,6 +3,7 @@ import {
   searchDatasetSchema,
   type searchRowSchema,
   type searchRunSchema,
+  searchRunStatusSchema,
 } from '@citeladder/contracts/search-intelligence';
 import type { Selectable } from 'kysely';
 import type { z } from 'zod';
@@ -40,7 +41,8 @@ export function runView(run: Run): z.input<typeof searchRunSchema> {
   const managed = run.credential_source === 'platform';
   return {
     id: run.id,
-    status: run.status,
+    // The column is plain text; a value outside the published lifecycle is a defect, not a status.
+    status: searchRunStatusSchema.parse(run.status),
     action: run.action,
     pricing_version: run.pricing_version,
     credential_mode: managed ? 'funded' : 'byok',

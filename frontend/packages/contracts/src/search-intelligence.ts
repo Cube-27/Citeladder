@@ -91,6 +91,23 @@ export const searchDatasetTraits = (kind: string): SearchDatasetTraits | undefin
 };
 /** 'funded' on a managed plan: the platform's DataForSEO account, paid in AI credits (B40). */
 const researchCredentialModeSchema = z.enum(['byok', 'funded']);
+/**
+ * An analysis run's lifecycle: reviewed (priced, awaiting confirmation), then
+ * queued and running while its requests are sent, then one of the finished
+ * outcomes. `uncertain` means a request may have been charged without its
+ * result arriving.
+ */
+export const searchRunStatusSchema = z.enum([
+  'reviewed',
+  'queued',
+  'running',
+  'succeeded',
+  'partial',
+  'failed',
+  'uncertain',
+  'cancelled',
+]);
+export type SearchRunStatus = z.infer<typeof searchRunStatusSchema>;
 export const searchPreferencesSchema = responseObject({
   research_scope: researchScopeSchema.optional(),
   owned_target_id: z.string().nullable(),
@@ -102,7 +119,7 @@ export const searchPreferencesSchema = responseObject({
 });
 export const searchRunSchema = responseObject({
   id: z.uuid(),
-  status: z.string(),
+  status: searchRunStatusSchema,
   action: z.string(),
   pricing_version: z.string(),
   credential_mode: researchCredentialModeSchema,
