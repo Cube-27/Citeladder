@@ -53,6 +53,14 @@ suggestions) degrade to a reviewable result with warnings. Onboarding makes no
 prompt-generation request. Failures log their class, code, phase and elapsed
 time, and a model deadline is logged as `timeout`, not a connection failure.
 
+A failed discovery, or a review warning `research_degraded` or
+`competitors_not_found`, offers **Run discovery again**. It posts to
+`/brand-discoveries/{id}/rerun`, which creates a new discovery from the finished
+one's saved input under a fresh idempotency key; the new discovery spends a
+daily admission like any other, and the finished discovery and its task are
+left as they are. The onboarding URL then follows the new discovery's ID. A
+failure caused by the website address also offers **Edit website**.
+
 Workspace access is checked before each network request through a short-lived
 per-worker cache (30 seconds by default), so revocation takes effect within that
 window without four queries per fetch. Progress reports the phase, whether the
@@ -102,7 +110,7 @@ each step change, but not on a reload. It enters
 the project as soon as completion returns its ID, through the shared project
 destination owner, and shows page-level creation progress meanwhile. A
 retryable completion failure returns to the review; a failed discovery stays
-visible as an error. Leaving onboarding discards the draft; a fresh Add project
+visible as an error with **Run discovery again**. Leaving onboarding discards the draft; a fresh Add project
 URL starts at the first step, while a discovery URL resumes that draft.
 
 ## After onboarding

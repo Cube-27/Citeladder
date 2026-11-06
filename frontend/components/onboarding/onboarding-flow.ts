@@ -351,6 +351,16 @@ export function useOnboardingFlow(transactionKey: string) {
     setStep(1);
   });
 
+  // A failed or degraded discovery runs again as a new discovery from the same
+  // input; the URL follows its id, and the old review seeds nothing.
+  const rerunDiscovery = () => {
+    if (discoveryState) clearReviewDraft(discoveryState.id);
+    setDomains([]);
+    setCompetitors([]);
+    setProfile(null);
+    discovery.rerun();
+  };
+
   const toggle = useCallback(
     <T extends { selected: boolean }>(setter: React.Dispatch<React.SetStateAction<T[]>>) =>
       (index: number) =>
@@ -384,6 +394,7 @@ export function useOnboardingFlow(transactionKey: string) {
     isAdditional,
     maximumCompetitors,
     profile,
+    rerunDiscovery,
     setCompetitors,
     setDomains,
     setProfile,

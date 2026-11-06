@@ -405,6 +405,57 @@ describe('durable onboarding', () => {
     expect((await complete(queued.id, a.userId, completion)).status).toBe(409);
     expect((await discoveryRow(db, a.workspaceId, reviewed.id)).project_id).toBeNull();
   });
+  it('runs a finished discovery again as a new workspace-scoped discovery without resetting the old task', async () => {
+    const a = await tenant(),
+      b = await tenant();
+    const app = createApp(testConfig(), db, { startRunner: vi.fn(async () => {}) });
+    const rerun = async (id: string, userId: string, key = randomUUID()) =>
+      app.request(`/api/v1/brand-discoveries/${id}/rerun`, {
+        method: 'POST',
+        headers: {
+          cookie: `${testConfig().session.cookieName}=${await sessionToken({ sub: userId, ver: 0 })}`,
+          'idempotency-key': key,
+        },
+      });
+    const failed = await createDiscovery(db, a.workspaceId, input, randomUUID());
+    await db
+      .updateTable('brand_discoveries')
+      .set({ status: 'failed', error_code: 'brand_identity_unavailable' })
+      .where('id', '=', failed.id)
+      .execute();
+    await db
+      .updateTable('brand_discovery_tasks')
+      .set({ status: 'failed', attempt_count: 3, completed_at: new Date() })
+      .where('discovery_id', '=', failed.id)
+      .execute();
+    expect((await rerun(failed.id, b.userId)).status).toBe(404);
+    const key = randomUUID();
+    const response = await rerun(failed.id, a.userId, key);
+    expect(response.status).toBe(202);
+    const started = (await response.json()) as { id: string; status: string };
+    expect(started.status).toBe('queued');
+    expect(started.id).not.toBe(failed.id);
+    expect(((await (await rerun(failed.id, a.userId, key)).json()) as { id: string }).id).toBe(
+      started.id,
+    );
+    expect((await discoveryRow(db, a.workspaceId, started.id)).input_data).toMatchObject({
+      brand_name: 'Acme',
+      website_url: 'https://acme.com/',
+      primary_market: 'US',
+    });
+    expect(
+      await db
+        .selectFrom('brand_discovery_tasks')
+        .select(['discovery_id', 'status', 'attempt_count'])
+        .where('discovery_id', 'in', [failed.id, started.id])
+        .orderBy('created_at')
+        .execute(),
+    ).toEqual([
+      { discovery_id: failed.id, status: 'failed', attempt_count: 3 },
+      { discovery_id: started.id, status: 'queued', attempt_count: 0 },
+    ]);
+    expect((await rerun(started.id, a.userId)).status).toBe(409);
+  });
   it('completes once atomically without prompts or a crawl and freezes reviewed input', async () => {
     const t = await tenant();
     const row = await ready(t.workspaceId);
