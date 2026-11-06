@@ -1,4 +1,4 @@
-# Architecture untangle
+|||||| in progress || Builder session `untangle-p19` |||||| in progress || Builder session `untangle-p12` # Architecture untangle
 
 Status: approved for implementation (owner, 2026-11-06). This document is both the plan and the
 orchestrator's tracker. The work is 22 scoped pull requests (P01–P22). Each PR batches a set of rows
