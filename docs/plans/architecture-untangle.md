@@ -75,7 +75,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P17 | Permission on the command, MCP prepared changes, workspace ownership | C3, C4, X6 | P11 | | merged | [#646](https://github.com/Cube-27/Citeladder/pull/646) | No migration |
 | P18 | Internal cost view, spend breaker, output caps | K1, K2, K3 | P01, P10 | mig? | merged | [#645](https://github.com/Cube-27/Citeladder/pull/645) | Migration 0012. Values confirmed by owner (OD8, B68) |
 | P19 | Engine surfaces II: surface adapters, audit side effects out of analysis | E4, E5, X8 | P05, P15 | | merged | [#641](https://github.com/Cube-27/Citeladder/pull/641) | No migration. Found the `audit_tasks.error_code` length bug, now P24 |
-| P20 | Settings resolve once; named abuse budgets | G1, G2, G3 | P01, P15 | wide | in review | [#650](https://github.com/Cube-27/Citeladder/pull/650) | No migration. Merges first of the last three |
+| P20 | Settings resolve once; named abuse budgets | G1, G2, G3 | P01, P15 | wide | merged | [#650](https://github.com/Cube-27/Citeladder/pull/650) | No migration. Follow-up in PR body: deep readers without config in scope still read `process.env` |
 | P21 | Screen sweep: failure renderer, typed blobs, form limits, non-null project, recovery actions | F8, F9, F10, R4, Z4 | P07, P12, P13, P16 | | in progress | | Builder session `untangle-p21`; split at a row boundary if over ~4,000 lines |
 | P22 | AI Traffic and integration owners; error logging | X4, X5, Z1, Z2, Z3 | P15, P16, P19 | | merged | [#647](https://github.com/Cube-27/Citeladder/pull/647) | No migration |
 | P23 | AI referral retention matches the Performance window | X9 | P08 | | merged | [#636](https://github.com/Cube-27/Citeladder/pull/636) | Owner decision OD7 |
