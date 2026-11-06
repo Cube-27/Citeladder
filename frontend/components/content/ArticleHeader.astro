@@ -5,9 +5,8 @@
  * page's one h1 (on the website the section size, 56/60 and 28/34 below 768px, D36;
  * in the docs `display-2xl` 44/48, 36/42 from 768 to 1023px and 28/34
  * below), the lead (the default slot; on the website `body-lg` 18/30, D26;
- * in the docs `lead` 20/30, 18/30 below 768px), and a byline
- * row between two `line`
- * hairlines: the author (a 32px initials avatar on `ink`, name and role) and
+ * in the docs `lead` 20/30, 18/30 below 768px), and an unruled byline
+ * row: the author (a 32px initials avatar on `ink`, name and role) and
  * the meta in mono `ink-muted`, separated by middle dots. Prose-wide.
  */
 import { Tag } from '@/components/ui/tag';
@@ -139,10 +138,7 @@ const initials = author?.name
     justify-content: space-between;
     gap: 16px 32px;
     width: 100%;
-    margin-top: 12px;
-    padding: 20px 0;
-    border-top: 1px solid var(--color-line);
-    border-bottom: 1px solid var(--color-line);
+    margin-top: 4px;
   }
   .cl-byline {
     display: flex;

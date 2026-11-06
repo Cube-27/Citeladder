@@ -134,7 +134,7 @@ const more = moreGuides(article);
       </Prose>
       {
         parts.sources && (
-          <SourcesList slot="end" title={parts.sources.title}>
+          <SourcesList slot="end" title={parts.sources.title} count={parts.sources.items.length}>
             {parts.sources.notes.length > 0 && (
               <Fragment slot="notes">
                 {parts.sources.notes.map((note) => (

@@ -37,6 +37,14 @@
   --site-radius-card: 20px;
   --site-radius-stage: 24px;
 
+  /* D44: panels are told apart by a soft fill, never a border or a shadow.
+     The four stage colours thinned with paper, and a near-paper neutral. */
+  --tint-mint: color-mix(in srgb, var(--color-stage-mint) 55%, var(--color-paper));
+  --tint-sky: color-mix(in srgb, var(--color-stage-sky) 55%, var(--color-paper));
+  --tint-lilac: color-mix(in srgb, var(--color-stage-lilac) 55%, var(--color-paper));
+  --tint-peach: color-mix(in srgb, var(--color-stage-peach) 55%, var(--color-paper));
+  --tint-neutral: color-mix(in srgb, var(--color-ink) 4%, var(--color-paper));
+
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-sans);
@@ -1396,24 +1404,67 @@ a.cl-announce:hover {
 }
 
 /* ---------- FeatureCard ---------- */
-/* D31: a 20px card, its product image's grey well 8px in, with the copy 16px
-   in below it and tight vertically. */
+/* D44: no borders, no shadows, no lift. Two editorial forms:
+   - with a product image, or linked: a soft tint panel (the tint turns per
+     tile) holding the white product image and the copy;
+   - static, text only: a column under a hairline rule. */
 .cl-fcard {
+  --cl-tint: var(--tint-neutral);
+
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 8px;
-  border: 1px solid var(--color-line);
+  padding: 16px;
   border-radius: var(--site-radius-card);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  background: var(--cl-tint);
   color: var(--color-ink);
   text-decoration: none;
-  transition: border-color var(--motion-fast) var(--ease-standard);
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+
+:is(.cl-tiles > li, .cl-bento-cell):nth-child(4n + 1) > .cl-fcard {
+  --cl-tint: var(--tint-mint);
+}
+
+:is(.cl-tiles > li, .cl-bento-cell):nth-child(4n + 2) > .cl-fcard {
+  --cl-tint: var(--tint-sky);
+}
+
+:is(.cl-tiles > li, .cl-bento-cell):nth-child(4n + 3) > .cl-fcard {
+  --cl-tint: var(--tint-lilac);
+}
+
+:is(.cl-tiles > li, .cl-bento-cell):nth-child(4n + 4) > .cl-fcard {
+  --cl-tint: var(--tint-peach);
+}
+
+/* A large linked card on its own (the blog's featured post) is lilac, with
+   room round its copy. */
+a.cl-fcard--lg {
+  --cl-tint: var(--tint-lilac);
+
+  padding: 32px;
+}
+
+@media (max-width: 767px) {
+  a.cl-fcard--lg {
+    padding: 16px;
+  }
 }
 
 a.cl-fcard:hover {
-  border-color: var(--color-line-strong);
+  background: color-mix(in srgb, var(--color-ink) 5%, var(--cl-tint));
+}
+
+.cl-fcard:has(> .cl-frame) {
+  padding: 8px;
+}
+
+.cl-fcard:not(a):not(:has(> .cl-frame)) {
+  padding: 0;
+  border-top: 1px solid var(--color-line-strong);
+  border-radius: 0;
+  background: none;
 }
 
 .cl-fcard > .cl-frame {
@@ -1433,7 +1484,7 @@ a.cl-fcard:hover {
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
-  padding: 12px 16px;
+  padding: 8px;
 }
 
 .cl-fcard:not(:has(> .cl-frame)) > .cl-fcard-body {
@@ -1441,7 +1492,11 @@ a.cl-fcard:hover {
 }
 
 .cl-fcard > .cl-frame + .cl-fcard-body {
-  padding-top: 16px;
+  padding: 16px 16px 8px;
+}
+
+.cl-fcard:not(a):not(:has(> .cl-frame)) > .cl-fcard-body {
+  padding: 20px 0 0;
 }
 
 .cl-fcard-body .cl-eyebrow + .cl-fcard-title {
@@ -1832,19 +1887,17 @@ a.cl-fcard:hover {
   text-underline-offset: 3px;
 }
 
-/* ---------- CtaBand: a surface card inside the container, never full-bleed ----------
+/* ---------- CtaBand: a stage inside the container, never full-bleed ----------
    D18/D21: the copy and actions stack centred, so the band has no empty side.
-   D29: it lifts off the paper ground like every other card. */
+   D44: set off by its tinted stage (layers.css), no border or shadow. */
 .cl-cta {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 32px;
   padding: 64px;
-  border: 1px solid var(--color-line);
   border-radius: var(--site-radius-stage);
   background: var(--color-surface);
-  box-shadow: var(--shadow-card);
   text-align: center;
 }
 
@@ -1908,19 +1961,13 @@ a.cl-fcard:hover {
   }
 }
 
-/* ---------- RelatedCards: a ruled index of links, not boxes ---------- */
+/* ---------- RelatedCards: a full-width editorial index (D44) ----------
+   number 64 | title 5fr | summary 6fr | arrow, between hairline rules. */
 .cl-related {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 48px;
   margin: 0;
   padding: 0;
   border-top: 1px solid var(--color-line-strong);
   list-style: none;
-}
-
-.cl-related--single {
-  grid-template-columns: minmax(0, 1fr);
 }
 
 .cl-related > li {
@@ -1928,17 +1975,23 @@ a.cl-fcard:hover {
 }
 
 .cl-related-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  height: 100%;
-  padding: 24px 0;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 5fr) minmax(0, 6fr) 20px;
+  align-items: baseline;
+  column-gap: 32px;
+  padding: 28px 0;
   color: var(--color-ink);
   text-decoration: none;
 }
 
-.cl-related-copy {
+.cl-related-n {
+  color: var(--color-ink-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-data);
+  line-height: var(--text-data--line-height);
+}
+
+.cl-related-head {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1962,41 +2015,23 @@ a.cl-fcard:hover {
   text-wrap: pretty;
 }
 
-.cl-related-go {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 12px;
-}
-
-.cl-related-label {
-  color: var(--color-ink-secondary);
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
-  white-space: nowrap;
+/* The summary column starts with the title's first line. */
+.cl-related-text {
+  grid-column: 3;
 }
 
 .cl-related-arrow {
-  display: grid;
-  width: 40px;
-  height: 40px;
-  border: 1px solid var(--color-line-strong);
-  border-radius: var(--radius-full);
-  background: var(--color-surface);
-  color: var(--color-ink);
-  place-items: center;
+  grid-column: 4;
+  align-self: center;
+  color: var(--color-ink-muted);
   transition:
-    background-color var(--motion-fast) var(--ease-standard),
-    border-color var(--motion-fast) var(--ease-standard),
     color var(--motion-fast) var(--ease-standard),
     transform var(--motion-fast) var(--ease-standard);
 }
 
 .cl-related-row:hover .cl-related-arrow,
 .cl-related-row:focus-visible .cl-related-arrow {
-  border-color: var(--color-ink);
-  background: var(--color-ink);
-  color: var(--color-paper);
+  color: var(--color-ink);
   transform: translateX(4px);
 }
 
@@ -2013,13 +2048,23 @@ a.cl-fcard:hover {
   }
 }
 
-@media (max-width: 767px) {
-  .cl-related {
-    grid-template-columns: minmax(0, 1fr);
+/* Narrower: the summary drops under the title. */
+@media (max-width: 899px) {
+  .cl-related-row {
+    grid-template-columns: 40px minmax(0, 1fr) 20px;
+    row-gap: 8px;
+    column-gap: 16px;
+    padding: 24px 0;
   }
 
-  .cl-related-row {
-    padding: 20px 0;
+  .cl-related-text {
+    grid-row: 2;
+    grid-column: 2;
+  }
+
+  .cl-related-arrow {
+    grid-row: 1 / span 2;
+    grid-column: 3;
   }
 }
 
@@ -2040,11 +2085,21 @@ a.cl-fcard:hover {
   gap: 12px;
   height: 100%;
   padding: 24px;
-  border: 1px solid var(--color-line);
   border-radius: var(--site-radius-card);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  background: var(--tint-mint);
   color: var(--color-ink);
+}
+
+.cl-qcard:nth-child(4n + 2) {
+  background: var(--tint-sky);
+}
+
+.cl-qcard:nth-child(4n + 3) {
+  background: var(--tint-lilac);
+}
+
+.cl-qcard:nth-child(4n + 4) {
+  background: var(--tint-peach);
 }
 
 .cl-qcard-q {
@@ -2135,15 +2190,13 @@ a.cl-fcard:hover {
   gap: 24px;
   height: 100%;
   padding: 32px;
-  border: 1px solid var(--color-line);
   border-radius: var(--site-radius-card);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  background: var(--tint-neutral);
   color: var(--color-ink);
 }
 
 .cl-plan--featured {
-  border-color: var(--color-ink);
+  background: var(--tint-mint);
 }
 
 .cl-plan-head {
@@ -2257,10 +2310,8 @@ a.cl-fcard:hover {
 .cl-wtable {
   position: relative;
   overflow-x: auto;
-  border: 1px solid var(--color-line);
   border-radius: var(--site-radius-card);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  background: var(--tint-neutral);
 }
 
 .cl-wtable table {
@@ -2430,20 +2481,18 @@ a.cl-fcard:hover {
   gap: 12px;
   min-height: 128px;
   padding: 24px;
-  border: 1px solid var(--color-line);
   border-radius: var(--site-radius-card);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  background: var(--tint-neutral);
   color: var(--color-ink-secondary);
   text-align: center;
   text-decoration: none;
   transition:
     color var(--motion-fast) var(--ease-standard),
-    border-color var(--motion-fast) var(--ease-standard);
+    background-color var(--motion-fast) var(--ease-standard);
 }
 
 a.cl-logotile:hover {
-  border-color: var(--color-line-strong);
+  background: color-mix(in srgb, var(--color-ink) 8%, var(--color-paper));
   color: var(--color-ink);
 }
 
@@ -2477,10 +2526,8 @@ a.cl-logotile:hover {
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   gap: 8px;
   padding: 8px;
-  border: 1px solid var(--color-line);
   border-radius: var(--site-radius-card);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  background: var(--tint-neutral);
 }
 
 .cl-tool-form {
@@ -2667,14 +2714,12 @@ a.cl-logotile:hover {
 }
 
 /* ---------- PageHighlight: the page's lead tile ----------
-   The same flat card as every other (surface fill, soft hairline, ink text)
-   in both themes; never an inverted ground (D27). */
+   A soft mint panel with ink text in both themes (D44); never an inverted
+   ground (D27). */
 .cl-page-hl {
   height: 100%;
-  border: 1px solid var(--color-line);
   border-radius: var(--site-radius-card);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  background: var(--tint-mint);
   container-type: inline-size;
 }
 

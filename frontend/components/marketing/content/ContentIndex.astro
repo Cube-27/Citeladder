@@ -3,8 +3,9 @@
  * ContentIndex — the listing on the research, blog and tools index pages:
  * groups of whole-row links (a Geist 500 title, a one-line excerpt and a mono
  * meta line) between hairlines, the group's Cal Sans title, description and count in
- * a sticky 4/12 column beside its 8/12 rows. An untitled group keeps the
- * 8/12 column; below 1024px the header sits above its rows. A row's arrow
+ * a sticky 4/12 column beside its 8/12 rows. An untitled group takes the full
+ * width, its meta in a left column from 1024px; below 1024px the header sits
+ * above its rows. A row's arrow
  * turns `ink` and its title underlines on hover; nothing moves.
  */
 import { ArrowRight } from 'lucide-react';
@@ -81,8 +82,9 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     gap: 48px;
     align-items: start;
   }
-  .cl-cpage-index-group--untitled .cl-cpage-index-list {
-    grid-column: 2;
+  /* An untitled group is the page's own listing: it takes the full width. */
+  .cl-cpage-index-group--untitled {
+    grid-template-columns: minmax(0, 1fr);
   }
   .cl-cpage-index-head {
     position: sticky;
@@ -175,6 +177,26 @@ const { groups, as: Heading = 'h2' } = Astro.props;
   .cl-cpage-index-link:hover .cl-cpage-index-arrow {
     color: var(--color-ink);
   }
+  /* A full-width row with a meta line reads like a contents page: the mono
+     meta in its own left column, level with the title. */
+  @media (min-width: 1024px) {
+    .cl-cpage-index-group--untitled .cl-cpage-index-link:has(.cl-cpage-index-meta) {
+      grid-template-columns: 240px minmax(0, 1fr) 20px;
+      padding: 28px 0;
+    }
+    .cl-cpage-index-group--untitled .cl-cpage-index-link:has(.cl-cpage-index-meta) > :not(.cl-cpage-index-arrow) {
+      grid-column: 2;
+    }
+    .cl-cpage-index-group--untitled .cl-cpage-index-link > .cl-cpage-index-meta {
+      grid-row: 1 / span 3;
+      grid-column: 1;
+      margin-top: 0;
+      padding-top: 2px;
+    }
+    .cl-cpage-index-group--untitled .cl-cpage-index-link:has(.cl-cpage-index-meta) > .cl-cpage-index-arrow {
+      grid-column: 3;
+    }
+  }
   @media (max-width: 1023px) {
     .cl-cpage-index {
       gap: 64px;
@@ -182,9 +204,6 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     .cl-cpage-index-group {
       grid-template-columns: minmax(0, 1fr);
       gap: 24px;
-    }
-    .cl-cpage-index-group--untitled .cl-cpage-index-list {
-      grid-column: auto;
     }
     .cl-cpage-index-head {
       position: static;
