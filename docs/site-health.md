@@ -357,6 +357,9 @@ Outcome normalization:
 - `not_applicable` keeps only `structural_na_reasons`; any other reason becomes
   `unknown`.
 - Truncated extraction turns `missing` into `unknown`.
+- A page the analyzer cannot read leaves its page-owned checks `unknown`. The
+  one exception is a script-only shell (`client_rendering_required`): it fails
+  `aeo.server_rendered_content`, the check that detects it.
 - A throwing or unmapped check is `error`.
 
 `missing` or `partial` on a visible, non-diagnostic evaluation creates an issue,
