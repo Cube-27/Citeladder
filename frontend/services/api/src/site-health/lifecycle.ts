@@ -7,13 +7,14 @@
  * commit with the status transition: a terminal crawl without them is a state
  * no retry can repair, because the snapshot is written once per crawl.
  */
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { ACTIVE_CRAWL_STATUSES, isActiveCrawl } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
 
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
+import { enqueueCrawlTasks } from './admission-writes.ts';
 import { reconcileDuplicateAliases } from './canonical-alias.ts';
 import { expectedTaskFailure } from './coverage.ts';
 import { settleCrawlFetches } from './fetch-budget.ts';
@@ -177,42 +178,16 @@ async function enqueueSuccessors(db: Database, crawl: Crawl) {
     },
     { kind: 'link_metrics', key: `link-metrics:${crawl.id}:${linkVersion}` },
   ];
-  const idempotency = {
-    change_intel: `${crawl.id}:change_intel:${policy.site_health.change_intel.analyzer_version}`,
-    link_metrics: `${crawl.id}:link_metrics:${linkVersion}`,
-  };
-  const now = new Date();
-  await db
-    .insertInto('site_crawl_tasks')
-    .values(
-      successors.map(({ kind, key }) => ({
-        id: randomUUID(),
-        workspace_id: crawl.workspace_id,
-        crawl_id: crawl.id,
-        task_kind: kind,
-        requested_url: crawl.root_url,
-        url_hash: createHash('sha256').update(key).digest('hex'),
-        idempotency_key: idempotency[kind as keyof typeof idempotency],
-        status: 'queued',
-        max_attempts: Number(
-          resolveSettingSpec(policy.site_health.settings.max_attempts, process.env),
-        ),
-        depth: 0,
-        generation: 0,
-        priority: 0,
-        randomized_position: 0,
-        attempt_count: 0,
-        conflict_count: 0,
-        classification_expected: false,
-        error_code: '',
-        error_detail: '',
-        available_at: now,
-        created_at: now,
-        updated_at: now,
-      })),
-    )
-    .onConflict((conflict) => conflict.column('idempotency_key').doNothing())
-    .execute();
+  await enqueueCrawlTasks(
+    db,
+    crawl,
+    successors.map(({ kind, key }) => ({
+      kind,
+      url: crawl.root_url,
+      hash: createHash('sha256').update(key).digest('hex'),
+    })),
+    'once',
+  );
 }
 
 async function saveState(db: Database, crawl: Crawl) {

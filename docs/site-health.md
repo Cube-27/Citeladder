@@ -55,6 +55,16 @@ Opportunities but is never compared as a site crawl.
 | `link_metrics` → `architecture` | post-terminal link metrics, then the Architecture projection |
 | `change_intel` | post-terminal change snapshot and analytics handoff |
 
+`admission-writes.ts` is the only writer of these tasks, of URL identities
+(`site_urls`), observations and system memberships. A task's idempotency key
+is `crawl:kind:url_hash:generation` and its attempt budget is `max_attempts`.
+URL admission enqueues into an active crawl only and raises a queued
+conflict's priority; planner seeds and post-terminal successors keep an
+existing row. Every sighting of a URL refreshes its identity for the crawl,
+including a planner seed's own `discover` (a seed an earlier crawl knew is
+re-decided like an admitted URL). A crawl keeps its first observation of each
+URL.
+
 The acquisition kinds fetch outside any transaction. Each then re-locks its
 task and re-checks the lease, crawl status and workspace access; `analyze` also
 re-checks membership and allowance. Evidence and the outcome commit together,

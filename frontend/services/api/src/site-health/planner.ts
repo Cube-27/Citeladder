@@ -13,6 +13,7 @@ import type {
   SiteUrls,
   WorkspaceSiteHealthRuntime,
 } from '../generated/db-schema.ts';
+import { enqueueCrawlTasks, insertObservations } from './admission-writes.ts';
 import { addAutomaticRoot, crawlScope, lockRuntime } from './frontier.ts';
 import { budgetedPageLimit, reserveCrawlFetches, unresolvedEntitlement } from './fetch-budget.ts';
 import {
@@ -77,39 +78,24 @@ export async function enqueueCrawlTask(
     delay?: number;
   },
 ) {
-  const now = new Date();
-  const hash = canonicalIdentity(input.url).hash;
-  const generation = input.generation ?? 0;
-  const id = randomUUID();
-  const row = await db
-    .insertInto('site_crawl_tasks')
-    .values({
-      id,
-      workspace_id: crawl.workspace_id,
-      crawl_id: crawl.id,
-      site_url_id: input.siteUrlId ?? null,
-      task_kind: input.kind,
-      requested_url: input.url,
-      url_hash: hash,
-      depth: input.depth ?? 0,
-      generation,
-      randomized_position: input.position ?? 0,
-      priority: input.priority ?? 0,
-      idempotency_key: `${crawl.id}:${input.kind}:${hash}:${generation}`,
-      status: 'queued',
-      max_attempts: Number(crawlSetting('max_attempts')),
-      attempt_count: 0,
-      conflict_count: 0,
-      classification_expected: false,
-      error_code: '',
-      error_detail: '',
-      available_at: new Date(now.getTime() + (input.delay ?? 0) * 1000),
-      created_at: now,
-      updated_at: now,
-    })
-    .onConflict((conflict) => conflict.column('idempotency_key').doNothing())
-    .returning('id')
-    .executeTakeFirst();
+  const [row] = await enqueueCrawlTasks(
+    db,
+    crawl,
+    [
+      {
+        kind: input.kind,
+        url: input.url,
+        hash: canonicalIdentity(input.url).hash,
+        siteUrlId: input.siteUrlId ?? null,
+        depth: input.depth,
+        generation: input.generation,
+        position: input.position,
+        priority: input.priority,
+        delaySeconds: input.delay,
+      },
+    ],
+    'once',
+  );
   return row?.id ?? null;
 }
 
@@ -119,28 +105,24 @@ async function seedObservation(
   url: Selectable<SiteUrls>,
   rerun = false,
 ) {
-  await db
-    .insertInto('site_url_observations')
-    .values({
-      id: randomUUID(),
-      workspace_id: crawl.workspace_id,
-      project_id: crawl.project_id,
-      crawl_id: crawl.id,
-      site_url_id: url.id,
-      source_kind: rerun ? 'root' : url.latest_source_kind || 'link',
+  await insertObservations(db, crawl, [
+    {
+      siteUrlId: url.id,
+      sourceKind: rerun ? 'root' : url.latest_source_kind || 'link',
+      valueKind: '',
+      valuePriority: 0,
+      rewriteReason: '',
+      rewriteVersion: '',
       depth: rerun ? 0 : url.depth,
-      observed_url: url.normalized_url,
-      final_url: url.normalized_url,
-      content_type: rerun ? '' : url.latest_content_type || '',
+      observedUrl: url.normalized_url,
+      finalUrl: url.normalized_url,
+      artifactId: null,
+      parentSiteUrlId: null,
+      statusCode: null,
+      contentType: rerun ? '' : url.latest_content_type || '',
       title: url.latest_title || '',
-      value_kind: '',
-      value_priority: 0,
-      rewrite_reason: '',
-      rewrite_version: '',
-      created_at: new Date(),
-    })
-    .onConflict((conflict) => conflict.columns(['crawl_id', 'site_url_id']).doNothing())
-    .execute();
+    },
+  ]);
 }
 
 async function seedMonitored(db: Database, crawl: Crawl) {
