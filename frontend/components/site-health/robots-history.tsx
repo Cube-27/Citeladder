@@ -32,7 +32,7 @@ export function RobotsHistory({
     workspaceId,
     scopeId: projectId,
     scope: null,
-    query: (request) => siteHealthQueries.robotsHistory(workspaceId, projectId, request),
+    query: (request) => siteHealthQueries.robotsHistory({ workspaceId, projectId }, request),
     noun: 'observations',
     loading: 'Loading robots.txt observations…',
     error: 'robots.txt history is unavailable.',

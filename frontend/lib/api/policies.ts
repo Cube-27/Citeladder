@@ -1,4 +1,7 @@
+import { mutationOptions, queryOptions } from '@tanstack/react-query';
+
 import { apiClient } from './client';
+import { queryKeys } from './query-keys';
 import { policyStatusSchema } from '@citeladder/contracts/auth';
 import type { TermsDecisionRequest } from '@citeladder/contracts/auth-requests';
 import { strictValidate } from '@citeladder/contracts/validation';
@@ -20,4 +23,27 @@ export const policiesApi = {
       ),
       'policies.accept',
     ),
+};
+
+export const policyQueries = {
+  /**
+   * The person's Terms acceptance for one workspace. Acceptance only changes
+   * through `policyMutations.accept`, which writes this read itself.
+   */
+  workspace: (workspaceId: string) =>
+    queryOptions({
+      queryKey: queryKeys.policies.workspace(workspaceId),
+      queryFn: ({ signal }) => policiesApi.status(workspaceId, signal),
+      staleTime: Number.POSITIVE_INFINITY,
+    }),
+};
+
+export const policyMutations = {
+  /** Record acceptance of a Terms revision; the answer is the workspace's new status. */
+  accept: (workspaceId: string) =>
+    mutationOptions({
+      mutationFn: (revision: string) => policiesApi.accept(workspaceId, revision),
+      onSuccess: (status, _revision, _result, { client }) =>
+        client.setQueryData(queryKeys.policies.workspace(workspaceId), status),
+    }),
 };

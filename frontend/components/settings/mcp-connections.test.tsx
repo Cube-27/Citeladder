@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vite-plus/test';
 
+import { mcpConnectionsApi } from '@/lib/api/mcp-connections';
 import { createAppQueryClient } from '@/lib/api/query-client';
 import type { McpConnection } from '@citeladder/contracts/mcp';
 
@@ -14,7 +15,9 @@ const { list, revoke, mayManage } = vi.hoisted(() => ({
   revoke: vi.fn<(id: string, workspaceId?: string) => Promise<void>>(),
   mayManage: { value: false },
 }));
-vi.mock('@/lib/api/mcp-connections', () => ({ mcpConnectionsApi: { list, revoke } }));
+// The transport is replaced on the module's own client object, so the real
+// query and mutation descriptors run against it.
+Object.assign(mcpConnectionsApi, { list, revoke });
 vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => ({ activeWorkspaceId: WORKSPACE }),
   useWorkspaceCapability: () => mayManage.value,

@@ -31,7 +31,7 @@ export function OverviewPanel({
 }>) {
   const terminal = crawl ? !shouldPollCrawl(crawl) : false;
   const overview = useQuery({
-    ...siteHealthQueries.overview(workspaceId, projectId, crawlId),
+    ...siteHealthQueries.overview({ workspaceId, projectId }, crawlId),
     enabled: terminal,
   });
   const data = overview.data;

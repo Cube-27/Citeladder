@@ -13,10 +13,12 @@ import { SearchField } from '@/components/ui/search-field';
 import { textRole } from '@/components/ui/typography';
 import { humanizeApiError } from '@/lib/api/errors';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
-import { queryKeys } from '@/lib/api/query-keys';
 import {
-  workspacesApi,
+  refreshWorkspaces,
+  workspaceMutations,
+  workspaceQueries,
   type AssignableWorkspaceRole,
+  type WorkspaceInvitationIssued,
   type WorkspaceMember,
 } from '@/lib/api/workspaces';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
@@ -117,22 +119,12 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
     setIssuedToken(null);
   }
 
-  const membersQuery = useQuery({
-    queryKey: queryKeys.workspaces.members(workspaceId ?? 'unresolved'),
-    queryFn: ({ signal }) =>
-      workspacesApi.listMembers(String(workspaceId), { signal, workspaceId }),
-    enabled,
-  });
-  const invitationsQuery = useQuery({
-    queryKey: queryKeys.workspaces.invitations(workspaceId ?? 'unresolved'),
-    queryFn: ({ signal }) =>
-      workspacesApi.listInvitations(String(workspaceId), { signal, workspaceId }),
-    enabled,
-  });
+  // Held disabled until the workspace is known, so the placeholder never reaches the API.
+  const scopeId = workspaceId ?? 'unresolved';
+  const membersQuery = useQuery({ ...workspaceQueries.members(scopeId), enabled });
+  const invitationsQuery = useQuery({ ...workspaceQueries.invitations(scopeId), enabled });
 
-  const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.all });
-  };
+  const refresh = () => void refreshWorkspaces(queryClient);
   /**
    * Show a freshly issued token only if it still belongs where we are.
    *
@@ -151,51 +143,24 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
     // The dialog is the only place the link is shown, and a resend from the
     // pending table happens with it closed.
     setInviteOpen(true);
-    refresh();
   };
 
-  const invite = useMutation({
-    mutationFn: (input: { email: string; role: AssignableWorkspaceRole }) =>
-      workspacesApi.inviteMember(String(workspaceId), input, { workspaceId }),
-    // A link belonging to the PREVIOUS invitation must not stay on screen
-    // while a new one is in flight: copying it would share the wrong token.
-    onMutate: () => {
-      setIssuedToken(null);
-      return { origin: workspaceId };
-    },
-    onSuccess: (issued, _input, context) => keepToken(issued, String(context?.origin)),
-  });
-  const resend = useMutation({
-    mutationFn: (invitationId: string) =>
-      workspacesApi.resendInvitation(String(workspaceId), invitationId, { workspaceId }),
-    onMutate: () => {
-      setIssuedToken(null);
-      return { origin: workspaceId };
-    },
-    onSuccess: (issued, _id, context) => keepToken(issued, String(context?.origin)),
-  });
-  const revoke = useMutation({
-    mutationFn: (invitationId: string) =>
-      workspacesApi.revokeInvitation(String(workspaceId), invitationId, { workspaceId }),
-    onSuccess: refresh,
-  });
-  const changeRole = useMutation({
-    mutationFn: (input: { memberId: string; role: AssignableWorkspaceRole }) =>
-      workspacesApi.updateMemberRole(String(workspaceId), input.memberId, input.role, {
-        workspaceId,
-      }),
-    onSuccess: refresh,
-  });
-  const remove = useMutation({
-    mutationFn: (memberId: string) =>
-      workspacesApi.removeMember(String(workspaceId), memberId, { workspaceId }),
-    onSuccess: refresh,
-  });
-  const transfer = useMutation({
-    mutationFn: (memberId: string) =>
-      workspacesApi.transferOwnership(String(workspaceId), memberId, { workspaceId }),
-    onSuccess: refresh,
-  });
+  const invite = useMutation(workspaceMutations.invite(String(workspaceId)));
+  const resend = useMutation(workspaceMutations.resendInvitation(String(workspaceId)));
+  const revoke = useMutation(workspaceMutations.revokeInvitation(String(workspaceId)));
+  const changeRole = useMutation(workspaceMutations.changeRole(String(workspaceId)));
+  const remove = useMutation(workspaceMutations.removeMember(String(workspaceId)));
+  const transfer = useMutation(workspaceMutations.transferOwnership(String(workspaceId)));
+  /**
+   * A link belonging to the PREVIOUS invitation must not stay on screen while
+   * a new one is in flight: copying it would share the wrong token. The
+   * workspace the request was sent for travels with it.
+   */
+  const handOffToken = () => {
+    setIssuedToken(null);
+    const origin = String(workspaceId);
+    return { onSuccess: (issued: WorkspaceInvitationIssued) => keepToken(issued, origin) };
+  };
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -249,7 +214,7 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
         delivery={delivery}
         pending={invite.isPending}
         error={invite.error ? humanizeApiError(invite.error).message : null}
-        onInvite={(email, role) => invite.mutateAsync({ email, role })}
+        onInvite={(email, role) => invite.mutateAsync({ email, role }, handOffToken())}
       />
 
       <MemberRoster
@@ -294,7 +259,7 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
       <PendingInvitations
         read={invitationsQuery}
         busy={busy}
-        onResend={(invitationId) => resend.mutate(invitationId)}
+        onResend={(invitationId) => resend.mutate(invitationId, handOffToken())}
         onRevoke={(invitation) =>
           confirmThen(confirmations.revoke(invitation.email), () =>
             revoke.mutateAsync(invitation.id),

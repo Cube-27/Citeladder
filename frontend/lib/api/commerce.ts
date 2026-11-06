@@ -251,7 +251,7 @@ export const refreshCatalog = (
   );
 
 /** The project's competitor candidates, after a decision or a finished discovery. */
-export const refreshCompetitors = (client: QueryClient, projectId: string) =>
+const refreshCompetitors = (client: QueryClient, projectId: string) =>
   client.invalidateQueries({ queryKey: queryKeys.commerce.resource(projectId, 'competitors') });
 
 const refreshBuyerPrompts = (client: QueryClient, projectId: string) =>

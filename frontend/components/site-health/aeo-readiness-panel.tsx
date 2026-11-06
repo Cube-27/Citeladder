@@ -95,7 +95,7 @@ export function AeoReadinessPanel({
   projectId: string;
   crawlId: string;
 }>) {
-  const readiness = useQuery(siteHealthQueries.aeoReadiness(workspaceId, projectId, crawlId));
+  const readiness = useQuery(siteHealthQueries.aeoReadiness({ workspaceId, projectId }, crawlId));
   const [detailKey, setDetailKey] = useState<string | null>(null);
 
   if (readiness.isLoading) {

@@ -42,7 +42,7 @@ describe('CompetitorSuggestions', () => {
     const { queryClient } = renderWithProviders(
       <CompetitorSuggestions projectId={projectId} suggestionsQuery={suggestionsQuery} />,
     );
-    const facts = queryKeys.projects.commandCenter(projectId);
+    const facts = queryKeys.projects.commandCenter({ workspaceId: null, projectId });
     const suggestions = queryKeys.visibility.competitorSuggestions({
       workspaceId: null,
       projectId,

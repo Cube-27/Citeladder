@@ -196,7 +196,8 @@ export function ChangesPanel({
   workspaceId,
   projectId,
 }: Readonly<{ workspaceId: string; projectId: string }>) {
-  const summary = useQuery(siteHealthQueries.changesSummary(workspaceId, projectId));
+  const scope = { workspaceId, projectId };
+  const summary = useQuery(siteHealthQueries.changesSummary(scope));
   const crawlAId = summary.data?.crawl_a_id ?? undefined;
   const crawlBId = summary.data?.crawl_b_id ?? undefined;
   const pairAvailable = summary.data?.state === 'available' && Boolean(crawlAId && crawlBId);
@@ -211,8 +212,7 @@ export function ChangesPanel({
     // pair would link to the wrong crawl's page.
     scopeId: [projectId, crawlAId ?? 'unselected-a', crawlBId ?? 'unselected-b'],
     scope: null,
-    query: (request) =>
-      siteHealthQueries.changes(workspaceId, projectId, { crawlAId, crawlBId, ...request }),
+    query: (request) => siteHealthQueries.changes(scope, { crawlAId, crawlBId, ...request }),
     noun: 'changes',
     loading: 'Loading persisted website changes…',
     error: 'Could not load Website Changes.',

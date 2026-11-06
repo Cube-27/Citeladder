@@ -63,8 +63,8 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
     enabled: workspaceId !== null,
   });
   const usageQuery = useQuery({
-    ...billingQueries.usage(workspaceId ?? ''),
-    enabled: workspaceId !== null && canReadBilling,
+    ...billingQueries.usage(workspaceId),
+    enabled: canReadBilling,
   });
 
   /**

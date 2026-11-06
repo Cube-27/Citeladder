@@ -30,7 +30,7 @@ export function IssuesScreen() {
   const requestScope = resolveProjectRequestScope(activeWorkspaceId, projectId);
 
   const dashboardQuery = useQuery({
-    ...siteHealthQueries.dashboard(requestScope.workspaceId, requestScope.projectId),
+    ...siteHealthQueries.dashboard(requestScope),
     enabled: requestScope.enabled,
   });
 

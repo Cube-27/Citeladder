@@ -4,6 +4,7 @@
  */
 import { queryOptions } from '@tanstack/react-query';
 
+import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import { apiClient, type ApiRequestOptions } from './client';
 import { queryKeys } from './query-keys';
 import {
@@ -159,6 +160,29 @@ export const authApi = {
 };
 
 export const authQueries = {
+  /**
+   * The session. Every protected route blocks on it, so it carries the bounded
+   * bootstrap timeout: a stalled connection reaches the notice-and-retry path
+   * instead of waiting out the full request timeout.
+   */
+  me: () =>
+    queryOptions({
+      queryKey: queryKeys.auth.me(),
+      queryFn: ({ signal }) => authApi.me({ signal, timeoutMs: getBootstrapReadTimeoutMs() }),
+    }),
+  /** The published Terms revision; it changes only with a deployment. */
+  policies: () =>
+    queryOptions({
+      queryKey: queryKeys.auth.policies(),
+      queryFn: () => authApi.policies(),
+      staleTime: Number.POSITIVE_INFINITY,
+    }),
+  /** The signed-in person's own Terms decision on the published revision. */
+  terms: () =>
+    queryOptions({
+      queryKey: queryKeys.auth.terms(),
+      queryFn: ({ signal }) => authApi.terms(signal),
+    }),
   /** The signed-in account's sign-in methods, for Account security. */
   security: () =>
     queryOptions({

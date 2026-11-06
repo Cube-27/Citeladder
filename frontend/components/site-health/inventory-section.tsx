@@ -75,7 +75,7 @@ export function InventorySection({
  */
 function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
   // No timer here: the screen polls the crawl once and invalidates this query's
-  // FIRST page when the crawl actually moved (`invalidateCrawlViews`). Deeper
+  // FIRST page when the crawl actually moved (`refreshCrawlViews`). Deeper
   // cursor pages stay static either way, so the rows under review don't shift
   // as new URLs are discovered. No exact total: `visible_url_count` counts
   // what THIS crawl admitted, which a recrawl inheriting monitored URLs need

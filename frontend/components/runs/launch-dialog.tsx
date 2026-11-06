@@ -5,9 +5,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { promptsQueries } from '@/lib/api/prompts';
-import { providersApi } from '@/lib/api/providers';
+import { providerQueries, type providersApi } from '@/lib/api/providers';
 import { useManagedPlan } from '@/lib/billing/entitlement-context';
-import { queryKeys } from '@/lib/api/query-keys';
 import { runsMutations, runsQueries } from '@/lib/api/runs';
 import type { Audit, LogicalEngine, PromptSet } from '@citeladder/contracts';
 import { ENGINE_ORDER, isConfigured, isVerified, isConsumerEngine } from '@/lib/providers/catalog';
@@ -49,8 +48,7 @@ function availableEngines(
 function useLaunchEngines(open: boolean, workspaceId: string | null) {
   const managed = useManagedPlan();
   const connectionsQuery = useQuery({
-    queryKey: queryKeys.providers.connections(workspaceId ?? 'unresolved'),
-    queryFn: ({ signal }) => providersApi.listConnections({ signal, workspaceId }),
+    ...providerQueries.connections(workspaceId),
     enabled: open && workspaceId !== null && !managed,
   });
   const engines = useMemo(

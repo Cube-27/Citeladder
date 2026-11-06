@@ -224,7 +224,7 @@ function TopActions({
   workspaceId,
   projectId,
 }: Readonly<{ workspaceId: string; projectId: string }>) {
-  const query = useQuery(actionsQueries.list(workspaceId, projectId));
+  const query = useQuery(actionsQueries.list({ workspaceId, projectId }));
   const top = query.data?.items.slice(0, AGENT_TOP_ACTIONS) ?? [];
   if (top.length === 0) return null;
   return (

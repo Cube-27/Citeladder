@@ -39,10 +39,10 @@ const trendQuery = (project: WidgetProject) =>
 // The overview's own filters, as AI Traffic prefetches them: an unset filter is
 // absent from both the key and the request, so both read one cache entry.
 const trafficOverviewQuery = (project: WidgetProject) =>
-  aiTrafficQueries.overview(project.workspace_id, project.id, { range: TRAFFIC_RANGES[0].value });
+  aiTrafficQueries.overview(widgetScope(project), { range: TRAFFIC_RANGES[0].value });
 
 const searchPerformanceQuery = (project: WidgetProject) =>
-  performanceQueries.dashboard(project.workspace_id, project.id, INITIAL_DASHBOARD_PARAMS);
+  performanceQueries.dashboard(widgetScope(project), INITIAL_DASHBOARD_PARAMS);
 
 /** Domain movers against the latest run's comparable baseline; empty when it has none. */
 function moverParams(visibility: LatestVisibility) {

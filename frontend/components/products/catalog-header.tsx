@@ -12,7 +12,7 @@ import { Stack } from '@/components/ui/layout';
 import { KpiRow, type StatSegment } from '@/components/ui/stat-row';
 import { textRole } from '@/components/ui/typography';
 import { commerceMutations, followCatalogAnalysis } from '@/lib/api/commerce';
-import { siteHealthApi, siteHealthQueries } from '@/lib/api/site-health';
+import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health';
 import { pluralCount } from '@/lib/format';
 import { crawlPollInterval } from '@/lib/site-health/status';
 
@@ -122,7 +122,7 @@ export function useCatalogHeader({
   const client = useQueryClient();
   const [result, setResult] = useState('');
   const dashboard = useQuery({
-    ...siteHealthQueries.dashboard(workspaceId, projectId),
+    ...siteHealthQueries.dashboard({ workspaceId, projectId }),
     // The workspace can still be resolving; this used to be gated by the
     // caller mounting the component at all, and the hook has to gate itself.
     enabled: Boolean(workspaceId && projectId),
@@ -149,12 +149,10 @@ export function useCatalogHeader({
           `${data.created} created, ${data.updated} updated, ${data.unchanged} unchanged, ${data.rejected} rejected`,
         ),
     });
-  const discover = useMutation({
-    mutationFn: () => siteHealthApi.createCrawl({ project_id: projectId }, { workspaceId }),
-    onSuccess: async () => {
-      await Promise.all([dashboard.refetch(), query.refetch()]);
-    },
-  });
+  // The descriptor refreshes the Site Health dashboard; the catalog is this screen's own read.
+  const discover = useMutation(siteHealthMutations.createCrawl(workspaceId));
+  const startDiscovery = () =>
+    discover.mutate({ project_id: projectId }, { onSuccess: () => void query.refetch() });
   const crawl = dashboard.data?.crawl ?? null;
   const counts = query.data;
   return {
@@ -165,7 +163,7 @@ export function useCatalogHeader({
         onImport={importFile}
         refreshing={discover.isPending || dashboard.isPending}
         onRefresh={() =>
-          crawl ? void Promise.all([dashboard.refetch(), query.refetch()]) : discover.mutate()
+          crawl ? void Promise.all([dashboard.refetch(), query.refetch()]) : startDiscovery()
         }
       />
     ),

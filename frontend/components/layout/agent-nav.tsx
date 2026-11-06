@@ -81,7 +81,7 @@ function ChatHistory({
   const headingId = useId();
   const needle = useDebounced(search.trim());
   const chats = useInfiniteQuery({
-    ...agentQueries.chats(workspaceId, projectId, { q: needle }),
+    ...agentQueries.chats({ workspaceId, projectId }, { q: needle }),
     // Several chats can run at once; their markers clear as each turn ends.
     refetchInterval: (query) =>
       query.state.data?.pages.some((page) => page.items.some((chat) => chat.running))

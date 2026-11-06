@@ -78,7 +78,9 @@ export function ArchitecturePanel({
   projectId,
   crawlId,
 }: Readonly<{ workspaceId: string; projectId: string; crawlId?: string }>) {
-  const architecture = useQuery(siteHealthQueries.architecture(workspaceId, projectId, crawlId));
+  const architecture = useQuery(
+    siteHealthQueries.architecture({ workspaceId, projectId }, crawlId),
+  );
 
   if (architecture.isLoading) {
     return <QueryState kind="loading" label="Loading the observed architecture" />;

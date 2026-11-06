@@ -15,7 +15,7 @@ export function useProjectMarkets(
   enabled = true,
 ): readonly ProjectMarket[] {
   const query = useQuery({
-    ...projectQueries.markets(workspaceId, projectId),
+    ...projectQueries.markets({ workspaceId, projectId }),
     enabled: enabled && Boolean(projectId && workspaceId),
   });
   return query.data ?? NONE;
