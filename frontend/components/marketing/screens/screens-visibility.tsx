@@ -10,7 +10,6 @@ import { Sparkline } from '@/components/ui/sparkline';
 
 import {
   ANSWER_SOURCES,
-  BRANDS,
   CHECKED,
   CITED_DOMAINS,
   ENGINE_NAMES,
@@ -23,18 +22,14 @@ import {
   ScreenCard,
   ScreenChartCard,
   ScreenCols,
-  ScreenDelta,
   ScreenEngineMarks,
-  ScreenSite,
   ScreenStack,
   ScreenStat,
-  ScreenTable,
   ScreenTableCard,
   ScreenTabs,
-  type ScreenColumn,
 } from './screen-parts';
 import { Vignette, VignetteBar, VignetteRows, fourRows } from './screen-vignette';
-import { VisibilityTrend } from './visibility-trend';
+import { BrandTable, VisibilityTrend, percent } from './visibility-demo';
 
 function Cite({ index }: Readonly<{ index: number }>) {
   const source = ANSWER_SOURCES.find((entry) => entry.index === index);
@@ -74,19 +69,6 @@ export function ScreenAnswer() {
   );
 }
 
-const percent = (value: number) => `${value.toFixed(1)}%`;
-
-const BRAND_COLUMNS: readonly ScreenColumn<(typeof BRANDS)[number]>[] = [
-  { header: 'Brand', cell: (brand) => <ScreenSite label={brand.name} /> },
-  { header: 'Visibility', width: 'sm', numeric: true, cell: (brand) => percent(brand.visibility) },
-  {
-    header: 'Change',
-    width: 'sm',
-    numeric: true,
-    cell: (brand) => <ScreenDelta change={brand.change} />,
-  },
-];
-
 /**
  * The AI Visibility overview, a full app layout at 1200 × 680 scaled to fit
  * its frame: the KPI row, the trend against competitors and the brand ranking.
@@ -119,13 +101,7 @@ export function ScreenVisibility() {
         </ScreenChartCard>
         <ScreenStack>
           <ScreenTableCard title="Brands">
-            <ScreenTable
-              caption="Visibility by brand this week"
-              rows={BRANDS}
-              rowKey={(brand) => brand.name}
-              own={(brand) => brand.own === true}
-              columns={BRAND_COLUMNS}
-            />
+            <BrandTable />
           </ScreenTableCard>
           <ScreenCard title="Acme Analytics by engine">
             <div className="cl-screen-meters">

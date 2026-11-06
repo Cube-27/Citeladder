@@ -8,19 +8,16 @@ import { textRole } from '@/components/ui/typography';
 import { ICONS } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-import { BRANDS, KPIS } from './demo-data';
+import { KPIS } from './demo-data';
 import {
   ScreenButton,
   ScreenChartCard,
   ScreenCols,
   ScreenDelta,
-  ScreenSite,
-  ScreenTable,
   ScreenTableCard,
   ScreenTabs,
-  type ScreenColumn,
 } from './screen-parts';
-import { VisibilityTrend } from './visibility-trend';
+import { BrandTable, VisibilityTrend } from './visibility-demo';
 
 /**
  * The app's Dashboard navigation as the sidebar shows it
@@ -140,19 +137,6 @@ export function ScreenAppPage({
   );
 }
 
-const percent = (value: number) => `${value.toFixed(1)}%`;
-
-const BRAND_COLUMNS: readonly ScreenColumn<(typeof BRANDS)[number]>[] = [
-  { header: 'Brand', cell: (brand) => <ScreenSite label={brand.name} /> },
-  { header: 'Visibility', width: 'sm', numeric: true, cell: (brand) => percent(brand.visibility) },
-  {
-    header: 'Change',
-    width: 'sm',
-    numeric: true,
-    cell: (brand) => <ScreenDelta change={brand.change} />,
-  },
-];
-
 const FILTERS = ['Latest run', 'Last 90 days', 'Weekly', 'All engines'] as const;
 
 /**
@@ -217,13 +201,7 @@ export function ScreenAppVisibility() {
               <VisibilityTrend />
             </ScreenChartCard>
             <ScreenTableCard title="Brands" meta="Visibility by brand this week">
-              <ScreenTable
-                caption="Visibility by brand this week"
-                rows={BRANDS}
-                rowKey={(brand) => brand.name}
-                own={(brand) => brand.own === true}
-                columns={BRAND_COLUMNS}
-              />
+              <BrandTable />
             </ScreenTableCard>
           </ScreenCols>
         </div>
