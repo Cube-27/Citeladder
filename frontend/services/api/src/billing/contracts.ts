@@ -1,6 +1,4 @@
-import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { ApiError } from '../errors.ts';
 import type { Selectable } from 'kysely';
 import type {
   BillingAccounts,
@@ -11,11 +9,6 @@ import type {
 export type Account = Selectable<BillingAccounts>;
 export type Subscription = Selectable<BillingSubscriptions>;
 export type Pending = Selectable<PendingActivations>;
-export const digest = (value: unknown): string =>
-  createHash('sha256').update(JSON.stringify(value)).digest('hex');
-export function conflict(reason: string): never {
-  throw new ApiError(409, reason, { details: { reason } });
-}
 export const amount = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 export const identitySchema = z.object({
   name: z.string().trim().min(1).max(255),

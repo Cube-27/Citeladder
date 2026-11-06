@@ -86,7 +86,7 @@ route group (Track and Analyze, then Act, Agent and Settings).
 - **Logo:** the drawing in `packages/contracts/src/brand-logo.ts` is
   unchanged; its `accent` tone becomes Flare (`#e8501a` light, `#ff6a33` dark)
   everywhere the logo is drawn: app, website, docs, favicon, OG images and the
-  API's PDFs (`services/api/src/billing/pdf-brand.ts`).
+  API's PDFs (`services/api/src/documents/pdf-brand.ts`).
 - **Theme:** `frontend/lib/theme/theme.ts` becomes the one ThemeSwitch store
   used by the app, website and docs (decision D2).
 - **Policy:** rewrite `frontend/scripts/check-design-system.mjs` and its

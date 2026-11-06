@@ -11,7 +11,8 @@ import { dataforseoAccountIdentity } from '../providers/dataforseo-identity.ts';
 import { platformSecret } from '../providers/platform-secrets.ts';
 import type { CapacityRequest } from '../providers/capacity.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';
-import { ProviderError, answerRequestSchema } from '../answer-engines/contracts.ts';
+import { answerRequestSchema } from '../answer-engines/contracts.ts';
+import { ProviderError } from '../providers/errors.ts';
 import { ownedAuditTask, type AuditTask } from '../queue/audit-queue.ts';
 import {
   searchPolicy,
