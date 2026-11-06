@@ -67,7 +67,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | merged | [#632](https://github.com/Cube-27/Citeladder/pull/632) | Migration 0011 |
 | P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | merged | [#639](https://github.com/Cube-27/Citeladder/pull/639) | No migration |
 | P12 | Opportunities: check kinds, typed targets, evidence announcement | O2, O3, O4 | P02 | | merged | [#643](https://github.com/Cube-27/Citeladder/pull/643) | No migration |
-| P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | in review | [#642](https://github.com/Cube-27/Citeladder/pull/642), [#644](https://github.com/Cube-27/Citeladder/pull/644) | Split for size: P13-a (#642) = F5, F6 merged (F6 alone is one ~5,200-line row); P13-b (#644) = F7 |
+| P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | merged | [#642](https://github.com/Cube-27/Citeladder/pull/642), [#644](https://github.com/Cube-27/Citeladder/pull/644) | Split for size: P13-a (#642) = F5, F6 (F6 alone is one ~5,200-line row); P13-b (#644) = F7 |
 | P14 | Marketing site records and config-driven numbers | MK1, MK2, MK3, MK4 | P02 | | todo | | |
 | P15 | Queue owner II: remaining lanes and coalesced enqueue | Q4, Q5, Q6, Q7, Q8 | P01, P03, P09 | | merged | [#633](https://github.com/Cube-27/Citeladder/pull/633) | No migration |
 | P16 | Site Health tasks II: one task runner, counters, pinned versions | SH4, SH5 | P04, P08, P09 | | merged | [#635](https://github.com/Cube-27/Citeladder/pull/635) | No migration |
