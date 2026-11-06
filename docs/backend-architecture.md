@@ -45,12 +45,18 @@ integrations charge at claim and recovery does not charge a second time.
 | Native analysis/ | Bounded deterministic derivation                                      |
 | Native workers/ | Lease, I/O/analysis and atomic terminal persistence                    |
 
-A product write that the public API also exposes goes through a command in
-`src/commands/`: it takes an `Actor` (`src/auth/actor.ts`; a member, or an API
-key acting for its creator with the live role), calls `requireCapability`, then
-the owner. Browser and public routes call the same command; no route repeats
-its validation or limits ([Public API](public-api.md)). Other browser writes
-authorize in the route middleware.
+A product write that the public API or MCP also exposes goes through a command
+in `src/commands/`. The command declares its `permission` (capability and API
+key scope) once and takes only an actor checked against it (`Authorized`; a
+member, an API key acting for its creator, or an MCP grant, always with the
+live role). A route serving the command declares that permission, so its gate
+checks it once before parameters; MCP checks it once with `authorize`. Browser
+and public routes call the same command; no route repeats its validation or
+limits ([Public API](public-api.md)). Other browser writes authorize in the
+route middleware. A write under `/projects/{project_id}` resolves the project
+in the active workspace (`active-project`); only an ungated read opens through
+the path project alone. Workers, invitations and operators check a stored
+actor's live role with `memberCan`, the one membership predicate.
 
 Search the owning domain, callers, types, configuration and tests before adding
 another module. Routers do not acquire evidence during a read; connectors do not

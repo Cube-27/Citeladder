@@ -71,7 +71,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P14 | Marketing site records and config-driven numbers | MK1, MK2, MK3, MK4 | P02 | | todo | | |
 | P15 | Queue owner II: remaining lanes and coalesced enqueue | Q4, Q5, Q6, Q7, Q8 | P01, P03, P09 | | merged | [#633](https://github.com/Cube-27/Citeladder/pull/633) | No migration |
 | P16 | Site Health tasks II: one task runner, counters, pinned versions | SH4, SH5 | P04, P08, P09 | | merged | [#635](https://github.com/Cube-27/Citeladder/pull/635) | No migration |
-| P17 | Permission on the command, MCP prepared changes, workspace ownership | C3, C4, X6 | P11 | | in progress | | Builder session `untangle-p17` |
+| P17 | Permission on the command, MCP prepared changes, workspace ownership | C3, C4, X6 | P11 | | merged | [#646](https://github.com/Cube-27/Citeladder/pull/646) | No migration |
 | P18 | Internal cost view, spend breaker, output caps | K1, K2, K3 | P01, P10 | mig? | merged | [#645](https://github.com/Cube-27/Citeladder/pull/645) | Migration 0012. Owner to confirm: $25/day breaker ceiling; output caps 16k (prompt generation, research) / 8k (rest) |
 | P19 | Engine surfaces II: surface adapters, audit side effects out of analysis | E4, E5, X8 | P05, P15 | | merged | [#641](https://github.com/Cube-27/Citeladder/pull/641) | No migration. Found the `audit_tasks.error_code` length bug, now P24 |
 | P20 | Settings resolve once; named abuse budgets | G1, G2, G3 | P01, P15 | wide | todo | | |
@@ -149,8 +149,8 @@ order the PR tracker already respects.
 | B5 | Settlement owns refund consequences; typed grant source | B4 | `billing/{settlement,receipts,recovery}.ts`, `entitlements/grants.ts` | | done | fd11289 | |
 | C1 | One prompt insert owner (incl. Commerce) | DB2 | `prompts/{prompts,candidates,locks}.ts`, `commerce/{buyer-prompts,decisions}.ts` | | done | 97776b4 | |
 | C2 | Project-scoped commands; public API ownership fails closed | C1, FX5, DB2 | `commands/`, `public-api/ownership.ts`, `mcp/write-tools.ts` | | done | ba98773 | |
-| C3 | Permission declared once on the command; one membership check | C2 | `routes/define.ts`, `routes/*` with commands, `commands/`, membership query sites | | todo | | |
-| C4 | One prepared-change table for MCP dry run and confirm | C2 | `mcp/{write-tools,confirmed-changes,confirmations}.ts`, `auth/security-events.ts` | | todo | | |
+| C3 | Permission declared once on the command; one membership check | C2 | `routes/define.ts`, `routes/*` with commands, `commands/`, membership query sites | | done | 8626c1a | |
+| C4 | One prepared-change table for MCP dry run and confirm | C2 | `mcp/{write-tools,confirmed-changes,confirmations}.ts`, `auth/security-events.ts` | | done | 498942d | |
 | C5 | One `citeladder://` record-kind table; route-declared streaming body | — | `mcp/{links,retrieval}.ts`, `frontend/lib/agent/evidence.ts`, `packages/contracts`, `app.ts`, `routes/crawl-logs.ts`, `routes/define.ts` | | done | 2adce71 | |
 | E1 | One DataForSEO envelope client and secret custody | — | `search-intelligence/{live,credentials,acquisition-state}.ts`, `search-surfaces/dataforseo.ts`, `providers/`, `audits/execution-context.ts` | | done | d5ae183 | |
 | E2 | Typed frozen audit configuration | E1 | `audits/{freeze,creation,execution-context}.ts`, `analysis/{comparison,provenance}.ts`, `config/audits.json` | | done | 25dc9ce | |
@@ -190,7 +190,7 @@ order the PR tracker already respects.
 | X3 | One page-identity module (path, landing page) | X1 | `traffic/normalization.ts`, `integrations/`, `crawl-logs/`, `referrals/` identity helpers | | done | 9ac7046 | |
 | X4 | AI Traffic composition gets its own module | Q8 | `crawl-logs/{pages,pages-data,insights,overview,citation-runs}.ts` | | done | fd533ba | |
 | X5 | Integration lifecycle and reporting timezone move to their owners | Q6, Q8 | `routes/integrations.ts`, `integrations/`, `workers/integration-worker.ts`, `crawl-logs/state.ts` | | done | fdb4b7a | |
-| X6 | Auth/workspaces placement; one "owned workspace" query | C3 | `auth/bootstrap.ts`, `auth/development-access.ts`, `workspaces/`, `entitlements/bootstrap.ts` | | todo | | |
+| X6 | Auth/workspaces placement; one "owned workspace" query | C3 | `auth/bootstrap.ts`, `auth/development-access.ts`, `workspaces/`, `entitlements/bootstrap.ts` | | done | 03c2138 | |
 | X7 | AI referral classification read from the persisted table everywhere | X3 | `referrals/landing.ts`, `traffic/projection.ts` | | done | eda2c70 | |
 | X8 | Audit side effects leave `src/analysis` | E4 | `analysis/{finalization,execution}.ts`, `audits/` | | done | 61fd008 | |
 | X9 | AI referral retention matches the Performance window (OD7) | X7 | `config/referrals.json`, `referrals/retention.ts` | | done | f41aa57, fe5b864 | |

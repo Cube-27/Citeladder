@@ -7,7 +7,7 @@ import { subjectXactLock } from '../db/advisory-lock.ts';
 import { provisionAccount } from '../workspaces/service.ts';
 import { issueDevelopmentAccess } from '../entitlements/bootstrap.ts';
 import { issueBundle, lockAccount } from '../entitlements/grants.ts';
-import { bootstrapWorkspace } from './bootstrap.ts';
+import { ownedWorkspaceAccount } from '../workspaces/owned.ts';
 import { createIdentity } from './service.ts';
 import { hashPassword, passwordSchema, verifyPassword } from './password.ts';
 import { initializeCatalog } from '../billing/admin.ts';
@@ -63,7 +63,7 @@ export async function bootstrapDeployment(
     }
     // Workspace/account locks precede the identity row lock, as login/operator repair does.
     await provisionAccount(trx, user, { provisionAccess: !config.demo.enabled });
-    const scope = await bootstrapWorkspace(trx, user.id);
+    const scope = await ownedWorkspaceAccount(trx, user.id);
     await lockAccount(trx, scope.workspaceId, scope.accountId);
     const current = await trx
       .selectFrom('users')
