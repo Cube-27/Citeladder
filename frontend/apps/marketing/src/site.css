@@ -2015,7 +2015,7 @@ a.cl-fcard:hover {
 /* On a phone the rail is a list, as the reference's phone page lists its
    tools: one hairline row per module, its name after an accent plus. A
    press opens the row in place to its miniature, paragraph and button; the
-   app page is left out. Without script every row shows its headline link. */
+   app page is left out. */
 @media (max-width: 767px) {
   .cl-rail {
     gap: 24px;
@@ -2070,18 +2070,29 @@ a.cl-fcard:hover {
     text-transform: none;
   }
 
-  .cl-rail[data-ready] .cl-railcard-title,
-  .cl-rail:not([data-ready]) .cl-railcard-toggle,
+  /* The row reads the same before and after the script mounts, so nothing
+     below it moves; the section's own link still leads to every module. */
+  .cl-railcard-title,
   .cl-railcard-page {
     display: none;
+  }
+
+  .cl-rail:not([data-ready]) .cl-railcard-toggle {
+    visibility: visible;
   }
 
   .cl-railcard-toggle {
     width: 24px;
     height: 24px;
     border: none;
-    background: var(--color-accent);
-    color: var(--color-on-accent);
+    /* A lighter orange with a white plus; the dark theme's on-ink is dark,
+       on its own lighter accent below. */
+    background: color-mix(in srgb, var(--color-accent) 70%, var(--color-on-ink));
+    color: var(--color-on-ink);
+  }
+
+  :root[data-theme='dark'] .cl-railcard-toggle {
+    background: var(--color-accent-ink);
   }
 
   .cl-railcard-toggle > svg {
@@ -2204,8 +2215,10 @@ a.cl-fcard:hover {
     grid-auto-columns: auto;
     grid-auto-flow: row;
   }
+}
 
-  /* D21: three or six steps go three a row, so no step sits alone. */
+/* D21: on a tablet three or six steps go three a row, so no step sits alone. */
+@media (min-width: 768px) and (max-width: 1023px) {
   .cl-steps--horizontal:is(
     :has(> .cl-step:nth-child(3):last-child),
     :has(> .cl-step:nth-child(6):last-child)
@@ -2214,13 +2227,27 @@ a.cl-fcard:hover {
   }
 }
 
+/* On a phone every Steps is a list: one hairline row per step, its number
+   beside its title and text. */
 @media (max-width: 767px) {
   .cl-steps--horizontal {
     grid-template-columns: minmax(0, 1fr);
+    gap: 0;
   }
 
-  .cl-steps--vertical .cl-step {
+  .cl-steps .cl-step {
+    display: grid;
     grid-template-columns: 40px minmax(0, 1fr);
+    gap: 16px;
+    padding: 24px 0;
+  }
+
+  .cl-steps .cl-step:last-child {
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .cl-steps .cl-step-n {
+    padding-top: 4px;
   }
 }
 
