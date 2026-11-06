@@ -47,9 +47,14 @@ export function logLaneFailure(lane: string, task: LaneTask, failure: LaneFailur
 
 /**
  * The lease this worker held ended without its own settle: `heartbeat` when a
- * renewal was refused, `fence` when a write found the lease gone.
+ * renewal was refused, `fence` when a write found the lease gone. The attempt
+ * is null when the row's status could not be read.
  */
-export function logLeaseLost(lane: string, task: LaneTask, phase: 'heartbeat' | 'fence'): void {
+export function logLeaseLost(
+  lane: string,
+  task: Omit<LaneTask, 'attempt_count'> & { attempt_count: number | null },
+  phase: 'heartbeat' | 'fence',
+): void {
   logger.warning('lane_lease_lost', {
     lane,
     task_id: task.id,

@@ -284,13 +284,17 @@ async function reportLeaseLoss(
   claimed: { id: string; workspace_id: string },
   phase: 'heartbeat' | 'fence',
 ): Promise<void> {
+  // The lease is already gone; a failed status read must not turn that answer
+  // into an error, so the loss is logged with its attempt unknown.
   const row = await queueDatabase(db)
     .selectFrom(table)
     .select(['status', 'attempt_count'])
     .where('id', '=', claimed.id)
     .where('workspace_id', '=', claimed.workspace_id)
-    .executeTakeFirst();
-  if (row !== undefined && !terminal.includes(row.status))
+    .executeTakeFirst()
+    .catch(() => null);
+  if (row === null) logLeaseLost(table, { ...claimed, attempt_count: null }, phase);
+  else if (row !== undefined && !terminal.includes(row.status))
     logLeaseLost(table, { ...claimed, attempt_count: row.attempt_count }, phase);
 }
 

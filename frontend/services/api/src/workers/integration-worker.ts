@@ -656,13 +656,14 @@ export class IntegrationWorker {
       })
       .where('id', '=', run.id)
       .execute();
-    const reauth = failure instanceof IntegrationError && failure.code === 'grant_auth_failed';
-    if (reauth)
-      await markGrantNeedsReauth(trx, {
+    const reauth =
+      failure instanceof IntegrationError &&
+      failure.code === 'grant_auth_failed' &&
+      (await markGrantNeedsReauth(trx, {
         workspaceId: run.workspace_id,
         connectionId: run.connection_id,
         at: now,
-      });
+      }));
     await recordIntegrationEvents(trx, [
       {
         workspaceId: run.workspace_id,

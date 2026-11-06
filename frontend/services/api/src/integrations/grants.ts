@@ -195,21 +195,27 @@ export function releaseRevocationClaim(
   });
 }
 
-/** A sync's credentials were refused: the connection's grant needs reauthorization. */
+/**
+ * A sync's credentials were refused: the connection's grant needs
+ * reauthorization. Only a connected grant moves; a disconnect that committed
+ * first keeps its `pending_revocation` so the revoker still revokes it.
+ */
 export async function markGrantNeedsReauth(
   trx: Database,
   input: { workspaceId: string; connectionId: string; at: Date },
-): Promise<void> {
+): Promise<boolean> {
   const { grant_id: grantId } = await trx
     .selectFrom('integration_connections')
     .select('grant_id')
     .where('id', '=', input.connectionId)
     .where('workspace_id', '=', input.workspaceId)
     .executeTakeFirstOrThrow();
-  await trx
+  const updated = await trx
     .updateTable('integration_oauth_grants')
     .set({ status: 'needs_reauth', updated_at: input.at })
     .where('id', '=', grantId)
     .where('workspace_id', '=', input.workspaceId)
-    .execute();
+    .where('status', '=', 'connected')
+    .executeTakeFirst();
+  return updated.numUpdatedRows > 0n;
 }
