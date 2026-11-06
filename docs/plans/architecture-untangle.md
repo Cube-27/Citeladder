@@ -76,7 +76,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P18 | Internal cost view, spend breaker, output caps | K1, K2, K3 | P01, P10 | mig? | merged | [#645](https://github.com/Cube-27/Citeladder/pull/645) | Migration 0012. Values confirmed by owner (OD8, B68) |
 | P19 | Engine surfaces II: surface adapters, audit side effects out of analysis | E4, E5, X8 | P05, P15 | | merged | [#641](https://github.com/Cube-27/Citeladder/pull/641) | No migration. Found the `audit_tasks.error_code` length bug, now P24 |
 | P20 | Settings resolve once; named abuse budgets | G1, G2, G3 | P01, P15 | wide | in progress | | Builder session `untangle-p20`; merges first of the last three |
-| P21 | Screen sweep: failure renderer, typed blobs, form limits, non-null project, recovery actions | F8, F9, F10, R4, Z4 | P07, P12, P13, P16 | | in progress | | Builder session `untangle-p21`; split at a row boundary if over ~4,000 lines |
+| P21 | Screen sweep: failure renderer, typed blobs, form limits, non-null project, recovery actions | F8, F9, F10, R4, Z4 | P07, P12, P13, P16 | | in review | [#651](https://github.com/Cube-27/Citeladder/pull/651) | Split (~4,440 lines): P21-a = F8, F9, F10 (#651); P21-b = R4, Z4 on branch `claude/p21-b-r4-z4`, opens after P21-a merges |
 | P22 | AI Traffic and integration owners; error logging | X4, X5, Z1, Z2, Z3 | P15, P16, P19 | | merged | [#647](https://github.com/Cube-27/Citeladder/pull/647) | No migration |
 | P23 | AI referral retention matches the Performance window | X9 | P08 | | merged | [#636](https://github.com/Cube-27/Citeladder/pull/636) | Owner decision OD7 |
 | P24 | Audit error codes fit their column | DB3 | P19 | mig | merged | [#648](https://github.com/Cube-27/Citeladder/pull/648) | Migration 0013. Found by P19 |
@@ -169,9 +169,9 @@ order the PR tracker already respects.
 | F5 | Query and mutation descriptors: runs, visibility, commerce | F4 | `frontend/lib/api/{runs,visibility,commerce}.ts`, matching components, `frontend/lib/navigation/route-prefetch.ts` | | done | fd1c538 | P13-a |
 | F6 | Query and mutation descriptors: integrations and remaining domains | F5, F2 | `frontend/lib/api/*`, remaining components | | done | a6cc2f0 | P13-a |
 | F7 | Job-state records and one polling helper; one score band | F6 | `frontend/lib/<domain>/status.ts`, job screens, `frontend/lib/config/operational.ts` | | done | 18b6074 | P13-b |
-| F8 | One failure renderer | F7 | `frontend/components/*` error sites, `frontend/components/ui/mutation-notice.tsx` | | todo | | |
-| F9 | Typed evidence and summary blobs per domain | F8, SH5, O3 | `frontend/packages/contracts`, `frontend/lib/{site-health,demand}`, `frontend/packages/mcp-app` | | todo | | |
-| F10 | Server bounds travel on the form-opening read | F9 | `frontend/lib/config/{prompts,operational,agent}.ts`, matching server reads | | todo | | |
+| F8 | One failure renderer | F7 | `frontend/components/*` error sites, `frontend/components/ui/mutation-notice.tsx` | | done | 9d3feca | |
+| F9 | Typed evidence and summary blobs per domain | F8, SH5, O3 | `frontend/packages/contracts`, `frontend/lib/{site-health,demand}`, `frontend/packages/mcp-app` | | done | eb8c42f | Per-page Site Health rule evidence (`FACTS_BY_RULE`) still untyped |
+| F10 | Server bounds travel on the form-opening read | F9 | `frontend/lib/config/{prompts,operational,agent}.ts`, matching server reads | | done | d61da2d | |
 | R1 | Delete kit components with no production consumer | — | `frontend/components/ui/`, `docs/frontend-architecture.md`, `docs/decisions.md` | | done | 79b3722 | |
 | R2 | App route manifest drives nav, titles, scope and router | R1 | `frontend/lib/navigation/`, `frontend/components/layout/`, `frontend/apps/app/src/router.tsx`, `frontend/lib/project/bootstrap.ts` | | done | d36f893 | |
 | R3 | Router imports screens directly; pass-through route files deleted | R2 | `frontend/apps/app/src/product-routes-*.tsx`, `*-route-content.tsx`, `pricing-route.tsx` | | done | 41ae02d | |
