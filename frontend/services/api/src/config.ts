@@ -186,7 +186,7 @@ function settingCatalog(): [string, SettingSpec][] {
 const catalog = settingCatalog();
 
 /** Resolve and validate every catalogued setting once from `env`. */
-export function resolveSettings(env: Env): Settings {
+function resolveSettings(env: Env): Settings {
   return new Settings(catalog, env);
 }
 
