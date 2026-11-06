@@ -12,6 +12,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { policy } from '../src/config.ts';
+import { setLogSink } from '../src/logging.ts';
 import { hashPassword } from '../src/auth/password.ts';
 import { authenticateOperator, manageAccount } from '../src/workspaces/account-manager.ts';
 
@@ -108,6 +109,25 @@ it('previews and authorizes stop/resume, propagating parent, IDNA and global sto
     'platform administrator',
   );
   await db.updateTable('users').set({ is_active: true }).where('id', '=', admin).execute();
+});
+
+it('fails closed and logs why when the operator stop list cannot be read', async () => {
+  const unreadable = db.withPlugin({
+    transformQuery: () => sql`select domain from missing_acquisition_controls`.toOperationNode(),
+    transformResult: async (args) => args.result,
+  });
+  const records: Record<string, unknown>[] = [];
+  const restore = setLogSink((line) => records.push(JSON.parse(line) as Record<string, unknown>));
+  try {
+    await expect(
+      authorizeAcquisition(unreadable, new URL('https://other.test')),
+    ).rejects.toMatchObject({ code: 'acquisition_unavailable' });
+  } finally {
+    setLogSink(restore);
+  }
+  expect(records.filter((entry) => entry.event === 'web_acquisition_control_unreadable')).toEqual([
+    expect.objectContaining({ level: 'warning', error_class: expect.any(String) }),
+  ]);
 });
 
 it('requires active operator and signatory authority in the exact workspace', async () => {

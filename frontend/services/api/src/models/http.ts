@@ -74,14 +74,24 @@ type ModelResult = {
   usage: Record<string, number | null>;
   latency_ms: number;
 };
-/** A schema, when given, is enforced as a structured output where the destination allows it. */
+/**
+ * A schema, when given, is enforced as a structured output where the
+ * destination allows it. `maxOutputTokens` lowers the configured output cap
+ * for this call, never raises it.
+ */
 export type Complete = (
   system: string,
   user: string,
   signal?: AbortSignal,
   onText?: (content: string) => void,
   schema?: Record<string, unknown>,
+  maxOutputTokens?: number,
 ) => Promise<ModelResult>;
+
+/** A call's output cap: the configured cap, lowered by the call's own when it asks for less. */
+export function callOutputCap(configured: number, requested?: number) {
+  return requested === undefined ? configured : Math.min(configured, requested);
+}
 
 export type Transport = {
   fetch: typeof fetch;
@@ -146,7 +156,10 @@ export async function postModel(
     try {
       response = await transport.fetch(url, {
         method: 'POST',
-        headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+        headers: {
+          authorization: `Bearer ${apiKey}`,
+          'content-type': 'application/json',
+        },
         body: JSON.stringify(body),
         signal: AbortSignal.any([AbortSignal.timeout(policy.timeoutSeconds * 1000), ...external]),
       });

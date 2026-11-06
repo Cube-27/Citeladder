@@ -115,6 +115,7 @@ const API_ERROR_CODES = [
   'page_kind_filtered',
   'parse_error',
   'payload_too_large',
+  'platform_spend_paused',
   'policy_revision_changed',
   'pricing_changed',
   'project_work_running',

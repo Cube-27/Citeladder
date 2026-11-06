@@ -54,7 +54,7 @@ COPY frontend/packages ./packages
 COPY frontend/public ./public
 COPY frontend/scripts ./scripts
 COPY frontend/postcss.config.mjs frontend/tsconfig.json ./
-COPY frontend/services/api/src/config/crawlers.json ./services/api/src/config/crawlers.json
+COPY frontend/services/api/src/config/crawlers.json frontend/services/api/src/config/billing.json frontend/services/api/src/config/entitlements.json ./services/api/src/config/
 RUN pnpm build:marketing
 
 FROM node:26-bookworm-slim@sha256:bc0a2afd3b74ce12222fc8bab99271e66257f021078f5f4a5d687a77d280c1d9 AS runtime

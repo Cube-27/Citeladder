@@ -13,15 +13,14 @@ import Prose from '@/components/content/Prose.astro';
 import { Breadcrumbs } from '@/components/marketing/chrome/breadcrumbs';
 import { Linkify } from '@/components/marketing/primitives/linkify';
 import { PageSection } from '@/components/marketing/sections/page-section';
-import { FOOTER_LEGAL_LINKS, LEGAL_ENTITY, type LegalDocument } from '@/lib/marketing-content/legal';
+import type { LegalDocument } from '@/lib/marketing-content/legal';
+import { FOOTER_LEGAL_LINKS } from '@/lib/marketing-content/legal-documents';
 import MarketingLayout from './MarketingLayout.astro';
 
 interface Props {
   document: LegalDocument;
-  /** The browser title, such as "Terms of Service · CiteLadder". */
-  title: string;
 }
-const { document, title } = Astro.props;
+const { document } = Astro.props;
 
 const UPDATED_DATE_FORMATTER = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric',
@@ -29,13 +28,12 @@ const UPDATED_DATE_FORMATTER = new Intl.DateTimeFormat('en-GB', {
   year: 'numeric',
   timeZone: 'UTC',
 });
-const updated = document.lastUpdated ?? LEGAL_ENTITY.lastUpdated;
+const { updated, path } = document;
 const updatedDate = new Date(`${updated}T00:00:00Z`);
 const updatedLabel = Number.isNaN(updatedDate.getTime())
   ? updated
   : UPDATED_DATE_FORMATTER.format(updatedDate);
 
-const path = `/${document.slug}`;
 const clauses = document.sections.map((section, index) => ({
   ...section,
   number: index + 1,
@@ -43,7 +41,7 @@ const clauses = document.sections.map((section, index) => ({
 }));
 ---
 
-<MarketingLayout title={title} description={document.description} canonical={path}>
+<MarketingLayout title={document.metaTitle} description={document.description} canonical={path}>
   <PageSection label={document.title} spacing="compact">
     <DocLayout
       nav={FOOTER_LEGAL_LINKS.map((link) => ({ ...link, current: link.href === path }))}

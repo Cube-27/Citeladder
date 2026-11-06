@@ -49,7 +49,11 @@ export type Funding = {
     attempt: ModelAttempt,
     /** The provider's reported usage, a failed call's included; null when it reported none. */
     usage: Usage | null,
-  ) => Promise<{ credits: number; status: string }>;
+  ) => Promise<{
+    credits: number;
+    status: string;
+    /** The call's internal cost; null when unknown. */ costMicrousd: number | null;
+  }>;
   /** Refunds every credit the run's settled calls debited; idempotent (B58). */
   refund: (db: Database, run: Run) => Promise<void>;
 };
@@ -248,6 +252,7 @@ export class ModelCalls {
           usage_iterations: JSON.stringify(result?.iterations ?? []),
           settlement_status: settled.status,
           debited_credits: settled.credits,
+          cost_microusd: settled.costMicrousd,
         })
         .where('id', '=', attempt.id)
         .where('workspace_id', '=', workspaceId)
@@ -328,6 +333,7 @@ export class ModelCalls {
           error_code: 'worker_lost_after_dispatch',
           settlement_status: settled.status,
           debited_credits: settled.credits,
+          cost_microusd: settled.costMicrousd,
           usage_complete: false,
         })
         .where('workspace_id', '=', run.workspace_id)

@@ -14,6 +14,8 @@ export type Competitor = {
   context: string;
   metaTitle: string;
   metaDescription: string;
+  /** When the comparison last changed in substance: its sitemap <lastmod> (see PageRecord). */
+  updated: string;
   sources: readonly ComparisonSource[];
   whenBody: string;
   /** The vendor's source availability and deployment options, as its own site states them. */
@@ -67,6 +69,7 @@ export const COMPARISON_CHECKLIST = [
 export const COMPETITORS: readonly Competitor[] = [
   {
     slug: 'profound',
+    updated: '2026-11-05',
     name: 'Profound',
     tagline:
       'A broad AI marketing platform: answer-engine insights, prompt intelligence, agent analytics and marketing agents.',
@@ -93,6 +96,7 @@ export const COMPETITORS: readonly Competitor[] = [
   },
   {
     slug: 'otterly-ai',
+    updated: '2026-11-05',
     name: 'Otterly AI',
     tagline:
       'AI search monitoring and optimization: brand visibility, cited sources and website-related recommendations.',
@@ -119,6 +123,7 @@ export const COMPETITORS: readonly Competitor[] = [
   },
   {
     slug: 'scrunch-ai',
+    updated: '2026-11-05',
     name: 'Scrunch',
     tagline:
       'AI visibility monitoring, content diagnostics, bot observability and agent delivery through its Agent Experience Platform.',
@@ -145,6 +150,7 @@ export const COMPETITORS: readonly Competitor[] = [
   },
   {
     slug: 'peec-ai',
+    updated: '2026-11-05',
     name: 'Peec AI',
     tagline:
       'AI search analytics for marketing teams, with visibility reporting and reporting/export integrations.',

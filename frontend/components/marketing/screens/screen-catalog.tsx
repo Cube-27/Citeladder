@@ -3,6 +3,7 @@ import type { ComponentType } from 'react';
 import type { PlatformScreen } from '@/lib/marketing-content/platform-pages';
 
 import { ProductFrame, type FrameFit } from './product-frame';
+import type { NavLabel } from './screen-app';
 import { ScreenActions, ScreenAgentBrief, ScreenAgentChat, ScreenCommerce } from './screens-agent';
 import {
   ScreenDemand,
@@ -73,6 +74,47 @@ export const SCREEN_CATALOG: Readonly<Record<PlatformScreen, CatalogEntry>> = {
   integrations: vignette(ScreenIntegrations, 'Data sources connected to acme.com'),
   commerce: vignette(ScreenCommerce, 'Which products AI answers recommended for Acme Startup'),
 };
+
+/** Where a module's feature lives in the app: the page title and the sidebar row it lights. */
+type AppPlace = Readonly<{ title: string; active?: NavLabel; mode?: 'Agent' }>;
+
+/**
+ * Each module's focused screen and its place in the app, by platform route,
+ * for module cards. A published module without one (Integrations, which has
+ * its own section) is left out of the rail.
+ */
+type ModuleScreen = Readonly<{ screen: PlatformScreen; page: AppPlace }>;
+
+/** A module shown on its own app page, whose title is the sidebar row it lights. */
+const onPage = (screen: PlatformScreen, page: NavLabel) => ({
+  screen,
+  page: { title: page, active: page },
+});
+/** A module shown in the Agent workspace. */
+const inAgent = (screen: PlatformScreen) => ({
+  screen,
+  page: { title: 'Agent', mode: 'Agent' as const },
+});
+
+export const MODULE_SCREENS = {
+  '/platform/ai-visibility': onPage('engines', 'AI Visibility'),
+  '/platform/cited-sources': onPage('sources', 'AI Visibility'),
+  '/platform/ai-referral-analytics': onPage('referrals', 'AI Traffic'),
+  '/platform/product-visibility': onPage('commerce', 'Commerce Suite'),
+  '/platform/site-health': onPage('site-health', 'Website'),
+  '/platform/search-demand': onPage('demand', 'Search Demand'),
+  '/platform/keyword-research': onPage('keywords', 'Keyword Research'),
+  '/platform/content-briefs': onPage('agent-brief', 'Actions'),
+  '/platform/agents': inAgent('agent-chat'),
+  '/platform/mcp': inAgent('mcp'),
+} satisfies Record<string, ModuleScreen>;
+
+const MODULE_SCREEN_BY_HREF = new Map<string, ModuleScreen>(Object.entries(MODULE_SCREENS));
+
+/** The module's card screen and app place, or nothing for a module without one. */
+export function moduleScreen(href: string): ModuleScreen | undefined {
+  return MODULE_SCREEN_BY_HREF.get(href);
+}
 
 /** One catalogue screen in its ProductFrame. */
 export function CatalogFrame({ screen }: Readonly<{ screen: PlatformScreen }>) {

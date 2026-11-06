@@ -16,6 +16,10 @@ content_type: 'how-to guide'
 reviewed_at: '2026-10-20'
 related_guides: ['/llm-rank-tracker', '/blog/verify-improve-ai-search-visibility']
 publication_status: 'editorial_review'
+product:
+  heading: 'Track ChatGPT mentions without the spreadsheet'
+  href: '/platform/ai-visibility'
+  body: 'CiteLadder AI Visibility runs your buyer prompts on a schedule, stores every ChatGPT answer, and separates mentions, citations and recommendations so you can see what changed and which sources the answer relied on.'
 ---
 
 ## How do you track brand mentions in ChatGPT?

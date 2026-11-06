@@ -7,7 +7,9 @@ import { legalSections } from './legal-text';
  * than published as a guess.
  */
 export const TERMS_OF_SERVICE: LegalDocument = {
-  slug: 'terms',
+  path: '/terms',
+  metaTitle: 'Terms of Service · CiteLadder',
+  updated: '2026-10-12',
   title: 'Terms of Service',
   description: 'The agreement that governs your use of CiteLadder, operated by Cube27.',
   sections: legalSections(`

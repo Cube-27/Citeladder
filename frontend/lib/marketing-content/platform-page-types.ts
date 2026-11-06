@@ -57,6 +57,8 @@ type PlatformFeature = {
 
 export type PlatformPage = {
   path: string;
+  /** When the page last changed in substance: its sitemap <lastmod> (see PageRecord). */
+  updated: string;
   title: string;
   description: string;
   heading: string;

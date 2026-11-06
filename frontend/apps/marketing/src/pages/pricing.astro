@@ -8,6 +8,8 @@ import {
   PricingKeys,
   PricingUnavailable,
 } from '@/components/marketing/pages/pricing';
+import { PUBLIC_TRIAL } from '@/lib/config/public-trial';
+import { PAGES } from '@/lib/marketing-content/pages';
 import { faqPageJsonLd } from '@/lib/seo/json-ld';
 import { selfServeCheckoutComingSoon } from '@/lib/billing/catalog';
 import { displayCountry, publicCatalog } from '../public-catalog';
@@ -22,9 +24,10 @@ const catalog = await publicCatalog(env, displayCountry(Astro.request.headers), 
   waitUntil: (work) => Astro.locals.cfContext.waitUntil(work),
 });
 const checkoutClosed = catalog !== null && selfServeCheckoutComingSoon(catalog);
+const page = PAGES.pricing;
 const description = checkoutClosed
   ? 'CiteLadder plans, trial limits and access options for AI visibility tracking. Paid self-serve checkout is not currently open.'
-  : 'Explore CiteLadder plans, provider-key usage and early-access options. Review published limits and confirm availability before choosing a plan.';
+  : page.description;
 const initialByok = Astro.url.searchParams.get('byok') !== '0';
 Astro.response.headers.set('Cache-Control', 'no-store');
 // Without any catalog the page is a temporary outage, not content to index.
@@ -32,16 +35,16 @@ if (!catalog) Astro.response.status = 503;
 ---
 
 <MarketingLayout
-  title="AI visibility software pricing | CiteLadder"
+  title={page.metaTitle}
   description={description}
-  canonical="/pricing"
+  canonical={page.path}
   robots={catalog ? undefined : 'noindex'}
   jsonLd={[faqPageJsonLd(PRICING_FAQS)]}
 >
   <main id="main">
     <PricingHero checkoutOpen={catalog !== null && !checkoutClosed} />
     {catalog ? (
-      <PublicPricingCatalog catalog={catalog} appOrigin={env.PUBLIC_APP_ORIGIN} initialByok={initialByok} client:load />
+      <PublicPricingCatalog catalog={catalog} appOrigin={env.PUBLIC_APP_ORIGIN} initialByok={initialByok} trial={PUBLIC_TRIAL} client:load />
     ) : (
       <PricingUnavailable />
     )}

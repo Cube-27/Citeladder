@@ -36,7 +36,7 @@ facts over per-window projections. Selecting the run is a fixed ordering over
 persisted keys, so the read resolves no ambiguity.
 
 Pages and the URL panel read the same runs (one selector,
-[`citation-runs.ts`](../frontend/services/api/src/crawl-logs/citation-runs.ts))
+[`citation-runs.ts`](../frontend/services/api/src/ai-traffic/citation-runs.ts))
 and the same snapshot's `owned_citation_pages`: per cited page identity
 (`url_hash`), its canonical URL and the exact owned citation IDs, written in the
 same finalizing transaction. A page's citation leg sums those facts across the
@@ -304,6 +304,9 @@ CSV exports. Shared
 own the wire shapes. All reads render persisted data without crawling,
 refreshing or calling providers. Cursors bind workspace, project, view, filters
 and page size; exports use the same filters, sanitization and bounded paging.
+The cross-signal composition (overview, Pages, URL detail, insights and the
+citation-run selector) lives in `src/ai-traffic/`; it reads crawl-log windows
+from `src/crawl-logs/` and owns the `ai_traffic_insights_refresh` kind.
 
 `read_ai_traffic_pages`, `read_ai_traffic_url` and `read_ai_traffic_insights` share
 these reads. The URL tool canonicalizes with the existing page owner and rejects

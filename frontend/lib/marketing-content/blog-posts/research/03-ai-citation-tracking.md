@@ -18,6 +18,10 @@ reviewed_at: '2026-10-29'
 related_guides: ['/blog/how-accurate-are-ai-citations', '/blog/can-chatgpt-find-citations']
 image: '/blog/editorial/article-citations.png'
 publication_status: 'editorial_review'
+product:
+  heading: 'Put citation analysis into practice'
+  href: '/platform/cited-sources'
+  body: "CiteLadder's Cited Sources helps you inspect the domains and URLs referenced in your tracked AI answers. Move from the source pattern to the supporting response, then choose the page or publisher information worth investigating."
 ---
 
 ## What is AI citation tracking?
