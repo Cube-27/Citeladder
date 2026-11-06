@@ -1,12 +1,17 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { BrandDiscoveryCreateRequest } from '@citeladder/contracts/brand-discovery-requests';
 
-import { brandDiscoveriesApi, type BrandDiscovery } from '@/lib/api/brand-discoveries';
-import { brandDiscoveryKeys } from '@/lib/api/query-keys/brand-discovery';
+import {
+  brandDiscoveriesApi,
+  brandDiscoveryMutations,
+  brandDiscoveryQueries,
+  type BrandDiscovery,
+} from '@/lib/api/brand-discoveries';
+import { isDiscoveryActive, pollDiscovery } from '@/lib/onboarding/discovery-activity';
 
 let fallbackOperationSequence = 0;
 
@@ -21,15 +26,8 @@ function useDiscoveryExecution(
   active: boolean,
   workspaceId: string | null,
 ) {
-  const queryClient = useQueryClient();
   const startedFor = useRef<string | null>(null);
-  const run = useMutation({
-    mutationFn: ({ id, workspace }: { id: string; workspace: string | null }) =>
-      brandDiscoveriesApi.run(id, { workspaceId: workspace }),
-    onSettled: (_data, _error, { id, workspace }) => {
-      void queryClient.invalidateQueries({ queryKey: brandDiscoveryKeys.detail(workspace, id) });
-    },
-  });
+  const run = useMutation(brandDiscoveryMutations.run());
   const executionKey = discoveryId ? JSON.stringify([workspaceId, discoveryId]) : null;
   useEffect(() => {
     if (!discoveryId || !active || startedFor.current === executionKey) return;
@@ -122,17 +120,13 @@ export function useBrandDiscovery(
   // the persisted resume id remains visible instead of blanking the timeline.
   const discoveryId = started?.id ?? resumeId;
   const query = useQuery({
-    queryKey: brandDiscoveryKeys.detail(workspaceId, String(discoveryId)),
-    queryFn: ({ signal }) => brandDiscoveriesApi.get(String(discoveryId), { signal, workspaceId }),
+    ...brandDiscoveryQueries.detail(workspaceId, String(discoveryId)),
     enabled: Boolean(discoveryId),
     initialData: started,
-    refetchInterval: (result) =>
-      result.state.data?.status === 'queued' || result.state.data?.status === 'running'
-        ? 1000
-        : false,
+    refetchInterval: (result) => pollDiscovery(result.state.data?.status),
   });
   const discovery = query.data ?? started;
-  const active = discovery?.status === 'queued' || discovery?.status === 'running';
+  const active = isDiscoveryActive(discovery?.status);
   const execution = useDiscoveryExecution(discoveryId, active, workspaceId);
   /** A new discovery from this one's input; a finished task is never reset. */
   const rerun = (onStarted?: () => void) => {

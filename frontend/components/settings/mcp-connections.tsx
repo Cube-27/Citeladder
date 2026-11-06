@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import { useMutation, useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { ConnectStrip } from '@/components/mcp/connect-strip';
@@ -15,8 +15,7 @@ import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { ICONS } from '@/lib/icons';
 import type { McpConnection } from '@citeladder/contracts/mcp';
 import { humanizeApiError } from '@/lib/api/errors';
-import { mcpConnectionsApi } from '@/lib/api/mcp-connections';
-import { queryKeys } from '@/lib/api/query-keys';
+import { mcpConnectionMutations, mcpConnectionQueries } from '@/lib/api/mcp-connections';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 
 function ConnectionRow({
@@ -90,20 +89,10 @@ function connectionsState(
 }
 
 function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
-  const cache = useQueryClient();
   const adminView = workspaceId !== undefined;
   const [pending, setPending] = useState<McpConnection | null>(null);
-  const query = useQuery({
-    queryKey: queryKeys.mcpConnections.list(workspaceId),
-    queryFn: ({ signal }) => mcpConnectionsApi.list(workspaceId, signal),
-  });
-  const revoke = useMutation({
-    mutationFn: (id: string) => mcpConnectionsApi.revoke(id, workspaceId),
-    onSuccess: () => {
-      setPending(null);
-      return cache.invalidateQueries({ queryKey: queryKeys.mcpConnections.all });
-    },
-  });
+  const query = useQuery(mcpConnectionQueries.list(workspaceId));
+  const revoke = useMutation(mcpConnectionMutations.revoke(workspaceId));
   return (
     <>
       <DataTable
@@ -138,7 +127,7 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
             variant="danger"
             pending={revoke.isPending}
             onClick={() => {
-              if (pending) revoke.mutate(pending.id);
+              if (pending) revoke.mutate(pending.id, { onSuccess: () => setPending(null) });
             }}
           >
             {adminView ? 'Remove access' : 'Revoke'}

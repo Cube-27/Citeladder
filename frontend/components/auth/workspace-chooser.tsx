@@ -13,9 +13,8 @@ import { BrandMark } from '@/components/ui/brand-mark';
 import { Callout } from '@/components/ui/callout';
 import { DisplayTime } from '@/components/ui/display-time';
 import { QueryState } from '@/components/ui/query-state';
-import { queryKeys } from '@/lib/api/query-keys';
 import type { Workspace } from '@citeladder/contracts';
-import { workspacesApi } from '@/lib/api/workspaces';
+import { workspaceQueries } from '@/lib/api/workspaces';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { ownsWorkspace, soleOwnedWorkspace, WORKSPACE_SETUP_PATH } from '@/lib/project/bootstrap';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -91,10 +90,7 @@ function ChooserFrame({ children }: Readonly<{ children?: ReactNode }>) {
 
 /** Whether entering this workspace will open it, as its access says now. */
 function AccessBadge({ workspaceId }: Readonly<{ workspaceId: string }>) {
-  const { data } = useQuery({
-    queryKey: queryKeys.workspaces.access(workspaceId),
-    queryFn: ({ signal }) => workspacesApi.access(workspaceId, { signal }),
-  });
+  const { data } = useQuery(workspaceQueries.access(workspaceId));
   if (!data) return null;
   switch (data.status) {
     case 'active':

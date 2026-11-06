@@ -1,11 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { ShellFallback } from '@/components/layout/shell-fallback';
 import { QueryState } from '@/components/ui/query-state';
-import { policiesApi } from '@/lib/api/policies';
-import { queryKeys } from '@/lib/api/query-keys';
+import { policyMutations, policyQueries } from '@/lib/api/policies';
 import { signOutForChangedTerms } from '@/lib/auth/account-transition';
 import { revisionChanged, sessionLacksTerms } from '@/lib/auth/terms-consent';
 import { isWorkspaceFreeRoute } from '@/lib/project/bootstrap';
@@ -40,25 +39,23 @@ function WorkspacePolicy({
   children,
 }: Readonly<{ workspaceId: string; children: ReactNode }>) {
   const cache = useQueryClient();
-  const queryKey = queryKeys.policies.workspace(workspaceId);
-  const query = useQuery({
-    queryKey,
-    queryFn: ({ signal }) => policiesApi.status(workspaceId, signal),
-    // Acceptance only changes through this gate, which writes the cache itself.
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-  const accept = useMutation({
-    mutationFn: (revision: string) => policiesApi.accept(workspaceId, revision),
-    onSuccess: (data) => cache.setQueryData(queryKey, data),
-    // Republished between the read and the record: read the new revision,
-    // which records it (or ends the session if it predates it).
-    onError: (error) => {
-      if (revisionChanged(error)) void query.refetch();
-    },
-  });
+  const query = useQuery(policyQueries.workspace(workspaceId));
+  const accept = useMutation(policyMutations.accept(workspaceId));
+  const { refetch } = query;
+  const { mutate } = accept;
+  const record = useCallback(
+    (revision: string) =>
+      mutate(revision, {
+        // Republished between the read and the record: read the new revision,
+        // which records it (or ends the session if it predates it).
+        onError: (error) => {
+          if (revisionChanged(error)) void refetch();
+        },
+      }),
+    [mutate, refetch],
+  );
   const leave = useMutation({ mutationFn: () => signOutForChangedTerms(cache) });
 
-  const { mutate: record } = accept;
   const pendingRevision = query.data && !query.data.accepted_at ? query.data.terms_revision : null;
   const recorded = useRef<string | null>(null);
   useEffect(() => {

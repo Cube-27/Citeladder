@@ -3,9 +3,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
 import { authApi } from '@/lib/api/auth';
-import { billingApi, type SelfServePlanKey } from '@/lib/api/billing';
+import { billingApi, refreshAfterPurchase, type SelfServePlanKey } from '@/lib/api/billing';
 import type { SubscriptionCheckoutRequest } from '@citeladder/contracts/billing-requests';
-import { queryKeys } from '@/lib/api/query-keys';
 import { CHECKOUT_POLL_ATTEMPTS, CHECKOUT_POLL_INTERVAL_MS } from '@/lib/config/billing';
 import { useOptionalProjectContext } from '@/lib/project/project-context';
 import { checkoutAttempt, clearCheckoutAttempt } from './checkout-attempt';
@@ -119,10 +118,7 @@ export function useSubscriptionCheckout() {
           ? 'Payment verified. Your subscription is active.'
           : 'Payment verified. Your purchase is active.',
       );
-      await queryClient.invalidateQueries({ queryKey: queryKeys.billing.all });
-      // A new plan can restore a workspace whose trial or plan had ended.
-      if (workspaceId)
-        await queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.access(workspaceId) });
+      await refreshAfterPurchase(queryClient, workspaceId);
     } else if (state.status !== 'pending') {
       setNotice(`Checkout ${state.status}. No new access was granted.`);
     } else setNotice('Payment verification pending. You can refresh status here.');

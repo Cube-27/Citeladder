@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 
@@ -11,8 +11,7 @@ import { Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
-import { queryKeys } from '@/lib/api/query-keys';
-import { workspacesApi } from '@/lib/api/workspaces';
+import { workspaceMutations } from '@/lib/api/workspaces';
 import { useSelectWorkspace } from '@/lib/navigation/project-destination';
 
 /** `/invitations/accept`: the acceptance in the shell's list template. */
@@ -39,26 +38,20 @@ export function AcceptInvitationPage() {
 export function AcceptInvitationScreen() {
   const router = useNavigate();
   const searchParams = useSearchParams()[0];
-  const queryClient = useQueryClient();
   const selectWorkspace = useSelectWorkspace();
   const token = searchParams?.get('token') ?? '';
   // One attempt per token. A re-render must not re-post it, and the server's
   // repeated-acceptance path is inert anyway.
   const attempted = useRef<string | null>(null);
 
-  const accept = useMutation({
-    mutationFn: () => workspacesApi.acceptInvitation(token),
-    onSuccess: async (workspace) => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.all });
-      selectWorkspace(workspace.id, '/projects');
-    },
-  });
+  const accept = useMutation(workspaceMutations.acceptInvitation());
+  const { mutate } = accept;
 
   useEffect(() => {
     if (!token || attempted.current === token) return;
     attempted.current = token;
-    accept.mutate();
-  }, [accept, token]);
+    mutate(token, { onSuccess: (workspace) => selectWorkspace(workspace.id, '/projects') });
+  }, [mutate, selectWorkspace, token]);
 
   if (!token) {
     return (

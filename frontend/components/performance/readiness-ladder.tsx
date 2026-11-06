@@ -10,12 +10,13 @@ import { panelClasses } from '@/components/ui/panel';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
 import {
-  performanceApi,
+  performanceQueries,
   type ProjectReadiness,
   type ProjectReadinessStage,
 } from '@/lib/api/performance';
+import { pollReadiness } from '@/lib/performance/status';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
-import { queryKeys } from '@/lib/api/query-keys';
+import { resolveProjectRequestScope } from '@/lib/project/request-scope';
 import { formatWindowDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -55,20 +56,6 @@ const EXPLANATION: Record<Exclude<ProjectReadinessStage, 'not_connected'>, strin
   analysis_ready: 'Everything is ready.',
 };
 
-/**
- * Stages nothing will advance on its own.
- *
- * Everything else is work in flight — including `core_data_ready`, where the
- * search numbers have landed but CiteLadder's analysis is still computing.
- * Polling only the earlier rungs left the ladder stuck one step short of
- * ready until the reader reloaded the page.
- */
-const SETTLED_STAGES: ReadonlySet<ProjectReadinessStage> = new Set([
-  'analysis_ready',
-  'import_failed',
-  'not_connected',
-]);
-
 function stageIndex(stage: ProjectReadinessStage): number {
   const index = LADDER.findIndex((step) => step.stage === stage);
   // Off-ladder states (nothing connected, a failed import) have no rung, so
@@ -91,18 +78,13 @@ function StepMark({ state }: Readonly<{ state: 'done' | 'active' | 'pending' }>)
  * project is on.
  */
 export function useProjectReadiness(projectId: string | null) {
-  const workspaceId = useActiveWorkspaceId();
+  const scope = resolveProjectRequestScope(useActiveWorkspaceId(), projectId);
   return useQuery({
-    queryKey: queryKeys.performance.readiness(projectId ?? ''),
-    queryFn: ({ signal }) => performanceApi.getReadiness(projectId!, { signal, workspaceId }),
-    enabled: Boolean(projectId && workspaceId),
+    ...performanceQueries.readiness(scope),
+    enabled: scope.enabled,
     // While an import is in flight the answer changes on its own, so this
     // keeps asking rather than stranding the user on a stale stage.
-    refetchInterval: (query) => {
-      const stage = query.state.data?.stage;
-      if (stage === undefined) return false;
-      return SETTLED_STAGES.has(stage) ? false : 15_000;
-    },
+    refetchInterval: (query) => pollReadiness(query.state.data?.stage),
   });
 }
 

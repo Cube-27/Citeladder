@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import type { InternalLink, InternalLinkAnalysis } from '@citeladder/contracts/site-health';
 
@@ -20,74 +20,49 @@ import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { ACTION_STATUS_LABEL } from '@/lib/agent/vocabulary';
 import type { ActionStatus } from '@/lib/api/actions';
 import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
-import { internalLinksApi, internalLinksQuery } from '@/lib/api/site-health-internal-links';
+import { internalLinksMutations, internalLinksQueries } from '@/lib/api/site-health-internal-links';
 import type { UrlHistory } from '@/lib/navigation/url-state';
-import { RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';
 import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
 import { downloadInternalLinksCsv } from '@/lib/site-health/internal-link-csv';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatCount, formatDisplayTimestamp, readableUrl } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
-import { internalLinkStateNotice } from '@/lib/site-health/status';
+import {
+  INTERNAL_LINK_STATES,
+  internalLinkStateNotice,
+  pollInternalLinks,
+} from '@/lib/site-health/status';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { InternalLinkReview } from './internal-link-review';
 
 type Scope = Readonly<{ projectId: string; workspaceId: string }>;
 type ParamChange = (key: string, value: string, history?: UrlHistory) => void;
-const isRunning = (state: string | undefined) => state === 'queued' || state === 'running';
+const isRunning = (state: InternalLinkAnalysis['state']) => INTERNAL_LINK_STATES[state].active;
 
-// Each state reads as itself: waiting is not running, and unavailable is not a failure.
-const STATE_LABELS: Record<InternalLinkAnalysis['state'], string> = {
-  queued: 'Queued',
-  running: 'Running',
-  completed: 'Complete',
-  partial: 'Partial',
-  unavailable: 'Unavailable',
-  cancelled: 'Cancelled',
-  failed: 'Failed',
-};
-
-function useInternalLinks({ projectId, workspaceId }: Scope, update: ParamChange) {
+function useInternalLinks(scope: Scope, update: ParamChange) {
   const [params] = useSearchParams();
   const analysisId = params.get('analysis') || undefined;
-  const queryClient = useQueryClient();
-  const options = internalLinksQuery(workspaceId, projectId, analysisId);
   const query = useQuery({
-    ...options,
-    refetchInterval: (current) =>
-      isRunning(current.state.data?.analysis?.state) ? RERUN_POLL_INTERVAL_MS : false,
+    ...internalLinksQueries.analysis(scope, analysisId),
+    refetchInterval: (current) => pollInternalLinks(current.state.data?.analysis?.state),
   });
   const denied = [401, 403, 404].includes(httpErrorStatus(query.error) ?? 0);
   const data = denied ? undefined : query.data;
   const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
-  const analyze = useMutation({
-    mutationFn: () =>
-      internalLinksApi.analyze(
-        projectId,
-        { crawl_id: data!.crawl_id!, idempotency_key: requestKey },
-        { workspaceId },
-      ),
-    onSuccess: (result) => {
-      setRequestKey(crypto.randomUUID());
-      void queryClient.invalidateQueries({
-        queryKey: internalLinksQuery(workspaceId, projectId).queryKey,
-        exact: true,
-        refetchType: 'none',
-      });
-      if (!result.analysis) return;
-      // Seed the selected-analysis key so the URL change does not flash a reload.
-      queryClient.setQueryData(
-        internalLinksQuery(workspaceId, projectId, result.analysis.id).queryKey,
-        result,
-      );
-      update('analysis', result.analysis.id);
-    },
-  });
-  const cancel = useMutation({
-    mutationFn: () => internalLinksApi.cancel(projectId, data!.analysis!.id, { workspaceId }),
-    onSuccess: (result) => queryClient.setQueryData(options.queryKey, result),
-  });
-  return { data, query, analyze, cancel };
+  const analyze = useMutation(internalLinksMutations.analyze(scope));
+  const cancel = useMutation(internalLinksMutations.cancel(scope, analysisId));
+  const startAnalysis = () =>
+    analyze.mutate(
+      { crawl_id: data!.crawl_id!, idempotency_key: requestKey },
+      {
+        onSuccess: (result) => {
+          setRequestKey(crypto.randomUUID());
+          if (result.analysis) update('analysis', result.analysis.id);
+        },
+      },
+    );
+  const cancelAnalysis = () => cancel.mutate(data!.analysis!.id);
+  return { data, query, analyze, cancel, startAnalysis, cancelAnalysis };
 }
 type LinksRead = ReturnType<typeof useInternalLinks>;
 
@@ -189,7 +164,7 @@ function LinksHeader({
           onValueChange={(value) => update('analysis', value)}
           options={data.history.map((run) => ({
             value: run.id,
-            label: `${formatDisplayTimestamp(run.created_at, timeZone)} · ${STATE_LABELS[run.state]}`,
+            label: `${formatDisplayTimestamp(run.created_at, timeZone)} · ${INTERNAL_LINK_STATES[run.state].label}`,
           }))}
         />
       ) : null}
@@ -208,11 +183,7 @@ function RunControls({ read, running }: Readonly<{ read: LinksRead; running: boo
   if (!canRun) return null;
   if (running)
     return (
-      <Button
-        variant="secondary"
-        pending={read.cancel.isPending}
-        onClick={() => read.cancel.mutate()}
-      >
+      <Button variant="secondary" pending={read.cancel.isPending} onClick={read.cancelAnalysis}>
         Cancel analysis
       </Button>
     );
@@ -221,7 +192,7 @@ function RunControls({ read, running }: Readonly<{ read: LinksRead; running: boo
       variant="primary"
       disabled={!read.data?.crawl_id || read.query.isError}
       pending={read.analyze.isPending}
-      onClick={() => read.analyze.mutate()}
+      onClick={read.startAnalysis}
     >
       Analyze again
     </Button>
@@ -269,11 +240,7 @@ function StartState({ read }: Readonly<{ read: LinksRead }>) {
       description="Compare related pages from your latest crawl and suggest the contextual links each page is missing."
       action={
         canRun ? (
-          <Button
-            variant="primary"
-            pending={read.analyze.isPending}
-            onClick={() => read.analyze.mutate()}
-          >
+          <Button variant="primary" pending={read.analyze.isPending} onClick={read.startAnalysis}>
             Analyze internal links
           </Button>
         ) : undefined
