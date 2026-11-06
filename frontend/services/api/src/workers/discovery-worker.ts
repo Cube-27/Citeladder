@@ -24,7 +24,7 @@ import { meterFor, type Meter } from '../billing/metering.ts';
 import { DISCOVERY_LANE, TaskQueue, type TaskFor } from '../queue/task-queue.ts';
 
 type DiscoveryTask = TaskFor<'brand_discovery_tasks'>;
-export type DiscoveryTarget = { workspaceId: string; discoveryId: string };
+type DiscoveryTarget = { workspaceId: string; discoveryId: string };
 
 const cfg = policy.discovery.constants;
 const logger = getLogger('app.workers.brand_discovery_worker');

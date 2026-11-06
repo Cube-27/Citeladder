@@ -30,7 +30,7 @@ import { nextDueAt } from './next-due.ts';
 
 export type QueueTask = Selectable<AnalyticsTasks>;
 export type SiteTask = Selectable<SiteCrawlTasks>;
-export type LaneTable =
+type LaneTable =
   | 'agent_runs'
   | 'analytics_tasks'
   | 'audit_tasks'

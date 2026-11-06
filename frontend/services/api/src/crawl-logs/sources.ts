@@ -7,7 +7,8 @@ import { ApiError, notFound } from '../errors.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
 import { lockCrawlState, enqueueRollup, type CrawlScope } from './state.ts';
-import { enqueueTrafficInsights } from './insights-enqueue.ts';
+import { insightsRefresh } from '../config/ai-traffic.ts';
+import { enqueueCoalesced } from '../queue/enqueue.ts';
 import { markStalled } from './stall.ts';
 import { WorkspaceEntitlements } from '../entitlements/access.ts';
 import { policy } from '../config.ts';
@@ -252,7 +253,7 @@ export async function createSource(
       })
       .execute();
     await recordSecurityEvent(trx, 'crawl_log.create', actorId, scope.workspaceId, id);
-    await enqueueTrafficInsights(trx, scope);
+    await enqueueCoalesced(trx, { ...insightsRefresh, ...scope });
     return { id, token: secret };
   });
 }
@@ -299,7 +300,7 @@ export async function mutateSource(
       id,
     );
     if (action === 'revoke') await enqueueRollup(trx, scope, new Date());
-    await enqueueTrafficInsights(trx, scope);
+    await enqueueCoalesced(trx, { ...insightsRefresh, ...scope });
     return { id, token: secret };
   });
 }
