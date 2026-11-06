@@ -128,12 +128,12 @@ function Modules() {
   });
   return (
     // The rail draws the header itself, so its buttons sit on the heading's row.
-    <PageSection id="platform" label="Measure the answer, then fix the page">
+    <PageSection id="platform" label="Tools for AI visibility, search and your website">
       <CardRail
         label="modules"
         head={
           <SectionHeader
-            title="Measure the answer, then fix the page"
+            title="Tools for AI visibility, search and your website"
             action={<SiteArrowLink href="/platform">See the whole platform</SiteArrowLink>}
           />
         }
