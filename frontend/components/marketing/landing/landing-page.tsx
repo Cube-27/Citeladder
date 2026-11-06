@@ -8,9 +8,9 @@ import { NAV_DROPS, PLATFORM_GROUPS, platformLabel } from '@/lib/marketing-conte
 import { AnnouncementPill } from '../chrome/announcement-pill';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { EngineStrip, LogoTile } from '../sections/cards';
-import { CardRail, FeatureCard, FeatureSplit } from '../sections/features';
+import { CardRail, FeatureCard, FeatureSplit, RailCard } from '../sections/features';
 import { LandingHero } from '../sections/heroes';
-import { PageSection } from '../sections/page-section';
+import { PageSection, SectionHeader } from '../sections/page-section';
 import { SiteArrowLink, columnsFor } from '../sections/site-parts';
 import { CtaBand, FaqList, Steps } from '../sections/steps-faq-cta';
 import { ProductFrame } from '../screens/product-frame';
@@ -90,21 +90,23 @@ function Modules() {
     return screen ? [{ ...item, screen }] : [];
   });
   return (
-    <PageSection
-      id="platform"
-      title="Measure the answer, then fix the page"
-      action={<SiteArrowLink href="/platform">See the whole platform</SiteArrowLink>}
-    >
+    // The rail draws the header itself, so its buttons sit on the heading's row.
+    <PageSection id="platform" label="Measure the answer, then fix the page">
       <CardRail
         label="modules"
+        head={
+          <SectionHeader
+            title="Measure the answer, then fix the page"
+            action={<SiteArrowLink href="/platform">See the whole platform</SiteArrowLink>}
+          />
+        }
         items={modules.map((module) => ({
           key: module.href,
           content: (
-            <FeatureCard
+            <RailCard
               href={module.href}
-              linkLabel={`Explore ${module.title}`}
-              title={module.title}
-              body={module.desc}
+              label={module.title}
+              title={module.desc}
               media={<ProductFrame label={module.title}>{module.screen}</ProductFrame>}
             />
           ),

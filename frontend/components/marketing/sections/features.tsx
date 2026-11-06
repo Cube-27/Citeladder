@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
@@ -107,38 +107,80 @@ export function Bento({
 }
 
 /**
+ * RailCard: one card of a CardRail, the whole tint panel a link. Its label
+ * and headline sit at the top beside a plus mark; its product image sits
+ * below, inset from the sides and cut off by the card's foot, so every card
+ * in the row is one height whatever its screen holds.
+ */
+export function RailCard({
+  href,
+  label,
+  title,
+  media,
+}: Readonly<{
+  href: string;
+  /** What the card is (a module's name), small above the headline. */
+  label: string;
+  title: ReactNode;
+  /** A ProductFrame. */
+  media: ReactNode;
+}>) {
+  return (
+    <a href={href} className="cl-railcard focus-ring">
+      <div className="cl-railcard-head">
+        <div className="cl-railcard-copy">
+          <Eyebrow>{label}</Eyebrow>
+          <h3 className="cl-railcard-title">{title}</h3>
+        </div>
+        <span className="cl-railcard-plus" aria-hidden>
+          <Plus className="size-5" />
+        </span>
+      </div>
+      <div className="cl-railcard-media">{media}</div>
+    </a>
+  );
+}
+
+/**
  * CardRail: one row of fixed-width cards that scrolls sideways and snaps to
- * each card, with previous and next buttons above it. The page mounts the
- * buttons with `mountCardRail` (card-rail.ts); until then they hold their
- * space hidden and the row still scrolls by touch, trackpad or keyboard.
+ * each card, with previous and next buttons at the right of its heading
+ * row. The page mounts the buttons with `mountCardRail` (card-rail.ts);
+ * until then they hold their space hidden and the row still scrolls by
+ * touch, trackpad or keyboard.
  */
 export function CardRail({
   label,
+  head,
   items,
 }: Readonly<{
   /** What the cards are, naming the list and its buttons ("modules"). */
   label: string;
+  /** The section's header (a SectionHeader), beside the buttons. */
+  head?: ReactNode;
   items: readonly Readonly<{ key: string; content: ReactNode }>[];
 }>) {
   return (
     <div className="cl-rail" data-card-rail>
-      <div className="cl-rail-nav" data-card-rail-nav>
-        <button
-          type="button"
-          className="cl-rail-btn focus-ring"
-          aria-label={`Previous ${label}`}
-          data-card-rail-prev
-        >
-          <ArrowLeft aria-hidden className="size-5" />
-        </button>
-        <button
-          type="button"
-          className="cl-rail-btn focus-ring"
-          aria-label={`Next ${label}`}
-          data-card-rail-next
-        >
-          <ArrowRight aria-hidden className="size-5" />
-        </button>
+      <div className="cl-rail-top">
+        {head}
+        <div className="cl-rail-nav" data-card-rail-nav>
+          <button
+            type="button"
+            className="cl-rail-btn focus-ring"
+            aria-label={`Previous ${label}`}
+            data-card-rail-prev
+          >
+            <ArrowLeft aria-hidden className="size-5" />
+          </button>
+          <button
+            type="button"
+            className="cl-rail-btn focus-ring"
+            aria-label={`Next ${label}`}
+            data-card-rail-next
+          >
+            <ArrowRight aria-hidden className="size-5" />
+          </button>
+        </div>
       </div>
       <ul className="cl-rail-track" aria-label={label} data-card-rail-track>
         {items.map((item) => (
