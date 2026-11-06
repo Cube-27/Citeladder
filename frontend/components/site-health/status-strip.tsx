@@ -170,7 +170,7 @@ function TerminalNotice({ crawl, onRerun }: Readonly<{ crawl: SiteCrawl; onRerun
         recovery={
           onRerun ? (
             <Button type="button" variant="secondary" onClick={onRerun}>
-              Run new crawl
+              Crawl again
             </Button>
           ) : undefined
         }

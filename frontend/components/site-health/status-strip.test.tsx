@@ -262,7 +262,7 @@ describe('StatusStrip — lifecycle content', () => {
 });
 
 describe('StatusStrip — failed crawl recovery', () => {
-  it('offers Run new crawl on a failed crawl and starts one when clicked', () => {
+  it('offers Crawl again on a failed crawl and starts one when clicked', () => {
     let reruns = 0;
     renderStrip({
       phase: 'terminal',
@@ -276,13 +276,13 @@ describe('StatusStrip — failed crawl recovery', () => {
       },
     });
     expect(screen.getByRole('alert')).toHaveTextContent('The site did not respond.');
-    fireEvent.click(screen.getByRole('button', { name: 'Run new crawl' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Crawl again' }));
     expect(reruns).toBe(1);
   });
 
   it('offers no rerun when the viewer may not start a crawl', () => {
     renderStrip({ phase: 'terminal', crawl: crawl({ status: 'failed', score_summary: null }) });
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Run new crawl' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Crawl again' })).toBeNull();
   });
 });

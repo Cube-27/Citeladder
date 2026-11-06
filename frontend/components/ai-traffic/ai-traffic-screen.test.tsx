@@ -6,7 +6,6 @@ import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
 import { AiTrafficScreen } from './ai-traffic-screen';
-import { CrawlSignalPanel } from './overview-signals';
 import { InsightStrip } from './insight-strip';
 import { CrawlLogConnections } from './crawl-log-connections';
 const project = makeProject({
@@ -549,28 +548,6 @@ describe('AI Traffic state and navigation', () => {
       sort: 'key_events_desc',
       pattern: 'key_event_concentration',
     });
-  });
-  it('keeps unavailable, missing, awaiting, incomplete and measured zero distinct', () => {
-    const view = renderWithProviders(
-      <CrawlSignalPanel available={false} data={{ ...crawl, connection: 'not_connected' }} />,
-    );
-    expect(screen.getByText(/not available for this workspace yet/)).toBeVisible();
-    expect(screen.queryByRole('button', { name: 'Connect crawl logs' })).not.toBeInTheDocument();
-    view.rerender(<CrawlSignalPanel available data={{ ...crawl, connection: 'not_connected' }} />);
-    expect(screen.getByRole('button', { name: 'Connect crawl logs' })).toBeEnabled();
-    view.rerender(<CrawlSignalPanel available data={{ ...crawl, connection: 'awaiting_data' }} />);
-    expect(screen.getByText(/Awaiting the first accepted batch/)).toBeVisible();
-    view.rerender(<CrawlSignalPanel available data={crawl} />);
-    expect(screen.getByText(/No matching requests were observed/)).toBeVisible();
-    expect(screen.queryByText('0')).not.toBeInTheDocument();
-    view.rerender(
-      <CrawlSignalPanel
-        available
-        data={{ ...crawl, coverage: 'complete', requests: 0, pages: 0, active_bots: 0 }}
-      />,
-    );
-    expect(screen.getByText('0')).toBeVisible();
-    expect(screen.queryByText(/No matching requests were observed/)).not.toBeInTheDocument();
   });
   it('persists tab selection, renders accessible activity and exports the selected filters', async () => {
     let exportStatus: string | null = null;

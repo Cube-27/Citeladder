@@ -65,7 +65,6 @@ function renderUrlDetail(
       {ui}
       <LocationDisplay />
     </>,
-    // A page detail opens under the gate's project.
     { projectSelection: { activeProject: makeProject() } },
   );
 }
