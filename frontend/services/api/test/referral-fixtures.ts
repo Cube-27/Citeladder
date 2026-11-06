@@ -224,12 +224,15 @@ export async function seedClassifiedPairs(
     dataset: SOURCE_MEDIUM_DAILY,
     artifactId: await seedArtifact(db, run, SOURCE_MEDIUM_DAILY),
   };
-  for (const [source, medium] of options.pairs)
-    await seedMetricRow(db, seed, {
-      date: options.date,
-      values: [source, medium, options.date],
-      sessions: 1,
-    });
+  await Promise.all(
+    options.pairs.map(([source, medium]) =>
+      seedMetricRow(db, seed, {
+        date: options.date,
+        values: [source, medium, options.date],
+        sessions: 1,
+      }),
+    ),
+  );
   const context = { db, maxAttempts: 3, checkCancelled: async () => {} };
   const taskId = await enqueue(db, {
     workspaceId: run.workspaceId,

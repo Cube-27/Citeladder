@@ -76,6 +76,7 @@ describe('a fresh database', () => {
       '0007_workspace_tenancy_keys',
       '0008_commerce_resolver_outcome',
       '0009_perception_model_omitted',
+      '0010_differentiation_reports_insert_only',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -90,6 +91,7 @@ describe('a fresh database', () => {
       { version: '0007_workspace_tenancy_keys' },
       { version: '0008_commerce_resolver_outcome' },
       { version: '0009_perception_model_omitted' },
+      { version: '0010_differentiation_reports_insert_only' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -128,6 +130,7 @@ describe('an existing database', () => {
       '0007_workspace_tenancy_keys',
       '0008_commerce_resolver_outcome',
       '0009_perception_model_omitted',
+      '0010_differentiation_reports_insert_only',
     ]);
     // Project-owned rows name their workspace.
     for (const table of ['brands', 'competitors', 'prompt_sets', 'prompts', 'topics'])
@@ -138,6 +141,13 @@ describe('an existing database', () => {
     );
     expect(await columns(client, 'entity_sentiments')).toContain('model_omitted');
     expect(await columns(client, 'claim_verdicts')).toContain('model_omitted');
+    // Differentiation reports are insert-only: a task keeps every report version.
+    const reportIndexes = await client.query<{ indexname: string }>(
+      "select indexname from pg_indexes where tablename = 'content_differentiation_reports' and indexname like '%task%' order by indexname",
+    );
+    expect(reportIndexes.rows.map((row) => row.indexname)).toEqual([
+      'ix_content_diff_report_task_latest',
+    ]);
     expect(await columns(client, 'agent_runs')).not.toContain('mode');
     expect(await columns(client, 'agent_output_revisions')).not.toContain('approved_at');
     // Transcripts keep their bytes; each model call records its cache use.
@@ -162,6 +172,7 @@ describe('an existing database', () => {
       { version: '0007_workspace_tenancy_keys' },
       { version: '0008_commerce_resolver_outcome' },
       { version: '0009_perception_model_omitted' },
+      { version: '0010_differentiation_reports_insert_only' },
     ]);
   }, 120000);
 });
