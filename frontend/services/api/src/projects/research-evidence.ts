@@ -167,10 +167,12 @@ export function createResearchClient(
       { provider: 'keenable', model: 'keenable' },
       async () => {
         assertMetered('keenable');
-        return { value: await send(path, body), usage: null };
+        const value = await send(path, body);
+        // A refused request is a failed call: recorded at no cost, not the request fee.
+        if (!value.ok) throw new Error('external_research_failed');
+        return { value, usage: null };
       },
     );
-    if (!response.ok) throw new Error('external_research_failed');
     return z.record(z.string(), z.unknown()).parse(await response.json());
   }
   function send(path: string, body?: Record<string, unknown>) {

@@ -4,6 +4,7 @@ import { policy, resolveSettingSpec } from '../config.ts';
 import { getLogger } from '../logging.ts';
 import {
   callDeadline,
+  callOutputCap,
   chatCompletionsUrl,
   defaultTransport,
   ModelError,
@@ -235,7 +236,10 @@ export function gatewayCalls(complete: Complete) {
       // Callers' schemas may hold optional fields, which strict outputs refuse: the prompt carries them.
       const result = await complete(system, withSchema(user, z.toJSONSchema(schema)), signal);
       try {
-        return { value: schema.parse(JSON.parse(unfenced(result.content))), result };
+        return {
+          value: schema.parse(JSON.parse(unfenced(result.content))),
+          result,
+        };
       } catch {
         // The provider was paid for an answer the caller cannot use; its usage still settles.
         throw new ModelError('parse', undefined, undefined, result.usage);
@@ -254,9 +258,13 @@ function openAICompletion(
   // Learned per destination: an older output-cap name, and no strict structured outputs.
   let legacyCap = false;
   let promptSchema = false;
-  const retry = { ...settings, retryStatus: transientStatus, retryConnection: true };
+  const retry = {
+    ...settings,
+    retryStatus: transientStatus,
+    retryConnection: true,
+  };
   const url = chatCompletionsUrl(endpoint);
-  return async (system, user, signal, onText, schema) => {
+  return async (system, user, signal, onText, schema, maxOutputTokens) => {
     // A listener asks for a stream; the caller gives one only to transports that pass it through.
     const stream = Boolean(onText);
     const started = performance.now();
@@ -270,9 +278,15 @@ function openAICompletion(
           model: settings.model,
           messages: [
             { role: 'system', content: system },
-            { role: 'user', content: schema && !strict ? withSchema(user, schema) : user },
+            {
+              role: 'user',
+              content: schema && !strict ? withSchema(user, schema) : user,
+            },
           ],
-          [legacy ? 'max_tokens' : 'max_completion_tokens']: settings.maxOutputTokens,
+          [legacy ? 'max_tokens' : 'max_completion_tokens']: callOutputCap(
+            settings.maxOutputTokens,
+            maxOutputTokens,
+          ),
           ...(schema && strict
             ? {
                 response_format: {
@@ -312,7 +326,10 @@ function openAICompletion(
     const body = await readCompletion(response, stream ? onText : undefined);
     const usage = normalizedUsage(body.usage);
     const latency = Math.round(performance.now() - started);
-    logger.info('default agent call ok', { latency_ms: latency, model: settings.model });
+    logger.info('default agent call ok', {
+      latency_ms: latency,
+      model: settings.model,
+    });
     return {
       content: body.choices[0].message.content,
       provider_adapter: 'openai_compatible',

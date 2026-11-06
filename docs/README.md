@@ -22,7 +22,7 @@ to resolve within the authorized scope, not permission to weaken a constraint.
 | Any billing, pricing, credits or plan-gating decision | [Billing decision log](billing-decisions.md) (B-numbers) |
 | How billing, entitlements and usage accounting behave | [Billing and entitlements](billing-entitlements.md) |
 | Prices, allowances, add-ons and top-ups (the numbers) | `frontend/services/api/src/config/billing-authoring.ts`; documents never restate add-on or top-up numbers (B55) |
-| Provider token, search and DataForSEO rates (internal cost) | [Provider rate card](operations/CiteLadder_Launch_Config.md#7-provider-rate-card-internal-cost); runtime prices in `config/ai-credits.json`, `dataforseo.json`, `search-intelligence.json` |
+| Provider token, search and DataForSEO rates (internal cost) | [Provider rate card](operations/CiteLadder_Launch_Config.md#7-provider-rate-card-internal-cost); runtime prices in `config/costs.json`, `dataforseo.json`, `search-intelligence.json`; one `internal_costs` view reads every recorded cost |
 | Legal commitments, subprocessors, company details | [Legal decisions](operations/legal-decisions.md); page text in `frontend/lib/marketing-content/legal*.ts` |
 | What work is current, and what is queued | [Plan status](plans/ACTIVE.md), then the assigned plan; [backlog](plans/backlog.md) is queued, not assigned |
 | Setup, commands and validation | [Development](DEVELOPMENT.md) |

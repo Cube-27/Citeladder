@@ -14,6 +14,7 @@
  * Customers see only the credits; prices and the markup stay internal (B23).
  */
 import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
@@ -21,7 +22,7 @@ import { getLogger } from '../logging.ts';
 import { billingAccountId, hold, settle, LedgerError } from '../entitlements/ledger.ts';
 import { runMetered } from '../models/meter-scope.ts';
 import { gatewayCalls, type ModelGateway } from '../models/gateway.ts';
-import { ModelError, type Complete } from '../models/http.ts';
+import { callOutputCap, ModelError, type Complete } from '../models/http.ts';
 import type { JevClient } from '../models/jev.ts';
 import {
   PRICING_REVISION,
@@ -30,6 +31,7 @@ import {
   costCredits,
   costMicrousd,
   modelPrice,
+  requestFeeMicrousd,
   requestInputBytes,
   reservationCredits,
   tokenCount,
@@ -98,7 +100,24 @@ function callRow(context: MeterContext, spec: CallSpec, at: Date) {
   };
 }
 
-/** Records an included or uncharged call after it ran; the record never fails the call. */
+/**
+ * The internal cost of an uncharged call: a per-request provider's fee once it
+ * answered (a failed request costs nothing), else its tokens at the model's
+ * rate; `null` when unknown.
+ */
+function uncharged(spec: CallSpec, usage: TokenUsage | null, error: unknown) {
+  const fee = requestFeeMicrousd(spec.provider);
+  if (fee !== null) return error ? 0 : fee;
+  const price = modelPrice(spec.model);
+  return price && usage ? costMicrousd(price, usage) : null;
+}
+
+/**
+ * Records an included or uncharged call after it ran, on the caller's
+ * connection: in the caller's transaction when it runs in one, so the cost
+ * row commits with the work, and a row that cannot be written fails the call
+ * rather than leave its spend unrecorded.
+ */
 async function record(
   db: Database,
   context: MeterContext,
@@ -106,27 +125,18 @@ async function record(
   usage: TokenUsage | null,
   error: unknown,
 ) {
-  const price = modelPrice(spec.model);
   const now = new Date();
-  try {
-    await db
-      .insertInto('platform_calls')
-      .values({
-        ...callRow(context, spec, now),
-        status: error ? 'failed' : 'settled',
-        ...tokens(usage),
-        cost_microusd: price && usage ? costMicrousd(price, usage) : null,
-        error_code: error ? errorCode(error) : '',
-        settled_at: now,
-      })
-      .execute();
-  } catch (error_) {
-    logger.warning('billing.platform_call_unrecorded', {
-      workspace_id: context.workspaceId,
-      feature: context.feature,
-      exception: error_ instanceof Error ? error_.message : String(error_),
-    });
-  }
+  await db
+    .insertInto('platform_calls')
+    .values({
+      ...callRow(context, spec, now),
+      status: error ? 'failed' : 'settled',
+      ...tokens(usage),
+      cost_microusd: uncharged(spec, usage, error),
+      error_code: error ? errorCode(error) : '',
+      settled_at: now,
+    })
+    .execute();
 }
 
 /** Records the call and holds `reserved` credits for it in `trx`. */
@@ -290,6 +300,44 @@ async function settleCall(
   });
 }
 
+/**
+ * The internal cost of every included and uncharged platform call since the
+ * start of `at`'s UTC day, across all workspaces.
+ */
+async function unchargedDailySpend(db: Database, at = new Date()) {
+  const day = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()));
+  const row = await db
+    .selectFrom('internal_costs')
+    .select(sql<string>`coalesce(sum(cost_microusd), 0)`.as('spent'))
+    .where('source', '=', 'platform_call')
+    .where('charge', '<>', 'credits')
+    .where('occurred_at', '>=', day)
+    .executeTakeFirstOrThrow();
+  return BigInt(row.spent);
+}
+
+/**
+ * The platform-wide daily breaker: credit-funded calls are paid for by their
+ * holds, but included and uncharged calls are bounded only per workspace, so
+ * once their day's cost reaches the configured ceiling they are refused before
+ * any network I/O until the next UTC day. Concurrent calls may each pass the
+ * check, so the ceiling can be exceeded by the calls already in flight.
+ */
+async function assertSpendOpen(db: Database, context: MeterContext): Promise<null> {
+  const ceiling = BigInt(policy.costs.platform.daily_uncharged_ceiling_microusd);
+  const spent = await unchargedDailySpend(db);
+  if (spent < ceiling) return null;
+  logger.warning('billing.platform_spend_breaker_open', {
+    workspace_id: context.workspaceId,
+    feature: context.feature,
+    spent_microusd: spent.toString(),
+    ceiling_microusd: ceiling.toString(),
+  });
+  throw new ApiError(503, 'Platform AI work is paused for today', {
+    code: 'platform_spend_paused',
+  });
+}
+
 /** Runs one platform provider call under its metering context. */
 async function metered<T>(
   db: Database,
@@ -301,7 +349,7 @@ async function metered<T>(
   // The hold commits before network I/O, so it never shares the caller's transaction.
   if (charged && db.isTransaction)
     throw new Error('A charged platform call must not run in a transaction');
-  const callId = charged ? await reserve(db, context, spec) : null;
+  const callId = charged ? await reserve(db, context, spec) : await assertSpendOpen(db, context);
   // A failed settlement never replaces the provider's outcome: the hold stays
   // reserved and the abandoned-call sweep settles it.
   const settleHeld = async (id: string, usage: TokenUsage | null, error: unknown) => {
@@ -328,24 +376,42 @@ async function metered<T>(
   return outcome.value;
 }
 
-/** The gateway with every call metered for `context`; the raw gateway refuses unmetered calls. */
+/**
+ * The output cap `feature` declared for gateway calls. Every feature that
+ * reaches the gateway declares one, so a call's hold is sized to the output it
+ * needs, not the gateway's configured maximum.
+ */
+function featureOutputCap(feature: MeteredFeature) {
+  const caps: Record<string, number> = policy.models.feature_output_tokens;
+  if (!Object.hasOwn(caps, feature))
+    throw new Error(`Gateway feature ${feature} must declare its output cap`);
+  return caps[feature]!;
+}
+
+/**
+ * The gateway with every call metered for `context`; the raw gateway refuses
+ * unmetered calls. Each call is sent, and held, at the feature's output cap.
+ */
 function meteredGateway(db: Database, gateway: ModelGateway, context: MeterContext) {
-  const complete: Complete = (system, user, signal, onText, schema) =>
-    metered(
+  const cap = callOutputCap(gateway.maxOutputTokens, featureOutputCap(context.feature));
+  const complete: Complete = (system, user, signal, onText, schema, maxOutputTokens) => {
+    const outputTokens = callOutputCap(cap, maxOutputTokens);
+    return metered(
       db,
       context,
       {
         provider: 'model_gateway',
         model: gateway.model,
         inputBytes: requestInputBytes(system, user, schema),
-        maxOutputTokens: gateway.maxOutputTokens,
+        maxOutputTokens: outputTokens,
       },
       async () => {
-        const result = await gateway.complete(system, user, signal, onText, schema);
+        const result = await gateway.complete(system, user, signal, onText, schema, outputTokens);
         return { value: result, usage: result.usage };
       },
     );
-  return { ...gateway, ...gatewayCalls(complete) };
+  };
+  return { ...gateway, maxOutputTokens: cap, ...gatewayCalls(complete) };
 }
 
 /** Charges the fallback for holds a crash left unsettled past the configured age. */

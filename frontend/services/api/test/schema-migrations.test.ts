@@ -78,6 +78,7 @@ describe('a fresh database', () => {
       '0009_perception_model_omitted',
       '0010_differentiation_reports_insert_only',
       '0011_drop_runtime_valid_until',
+      '0012_internal_costs',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -94,6 +95,7 @@ describe('a fresh database', () => {
       { version: '0009_perception_model_omitted' },
       { version: '0010_differentiation_reports_insert_only' },
       { version: '0011_drop_runtime_valid_until' },
+      { version: '0012_internal_costs' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -134,6 +136,7 @@ describe('an existing database', () => {
       '0009_perception_model_omitted',
       '0010_differentiation_reports_insert_only',
       '0011_drop_runtime_valid_until',
+      '0012_internal_costs',
     ]);
     // The Site Health runtime keeps no validity copy of the grants it projects.
     expect(await columns(client, 'workspace_site_health_runtime')).not.toContain(
@@ -168,7 +171,13 @@ describe('an existing database', () => {
         // What each call's credit hold was sized from.
         'input_bytes',
         'max_output_tokens',
+        // Each call's internal cost.
+        'cost_microusd',
       ]),
+    );
+    // One internal-cost view across platform calls, Agent calls and answer engines.
+    expect(await columns(client, 'internal_costs')).toEqual(
+      expect.arrayContaining(['source', 'workspace_id', 'charge', 'cost_microusd', 'occurred_at']),
     );
     expect(await ledger(client)).toEqual([
       { version: '0001_baseline' },
@@ -182,6 +191,7 @@ describe('an existing database', () => {
       { version: '0009_perception_model_omitted' },
       { version: '0010_differentiation_reports_insert_only' },
       { version: '0011_drop_runtime_valid_until' },
+      { version: '0012_internal_costs' },
     ]);
   }, 120000);
 });
