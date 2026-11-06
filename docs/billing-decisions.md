@@ -533,8 +533,8 @@ customer side (credit value, markup, per-feature charge mode). The Anthropic
 search fee has one value, the catalog's Anthropic entry, so B59's
 `web_search_microusd_per_request` is now read from there. Tavily is priced at
 its pay-as-you-go $0.008 per basic search and Keenable at $0.004 per search or
-fetch, charged as internal cost once the provider answered; a call that failed
-before an answer costs nothing. Both stay not charged to customers (B13). The
+fetch, charged as internal cost once the provider answered successfully; a
+refused (non-2xx) or failed request costs nothing. Both stay not charged to customers (B13). The
 `internal_costs` view unions platform calls, Agent model calls and answer-engine
 executions; unknown costs stay null. Uncharged calls' cost rows are no longer
 best-effort: they are written on the caller's connection (in its transaction

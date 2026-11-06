@@ -8,6 +8,7 @@ import { createJevClient, jevSettings } from '../src/models/jev.ts';
 import { UnmeteredCallError } from '../src/models/meter-scope.ts';
 import { meterFor, settleAbandonedCalls } from '../src/billing/metering.ts';
 import { policy } from '../src/config.ts';
+import { competitorSearch } from '../src/commerce/discovery-provider.ts';
 import {
   cachedReservationCredits,
   chargeCredits,
@@ -296,6 +297,29 @@ describe('platform AI metering', () => {
         charge: 'included',
         cost_microusd: '8',
       },
+    ]);
+  });
+
+  it('records a refused Tavily request as a failed call at no cost, then the Keenable fallback at its fee', async () => {
+    const t = await fixtures.tenant();
+    const search = competitorSearch(
+      { TAVILY_API_KEY: 'test-tavily', KEENABLE_API_KEY: 'test-keenable' },
+      async (input) =>
+        String(input).includes('tavily')
+          ? new Response('', { status: 503 })
+          : Response.json({ results: [] }),
+    );
+    await search('buy tool online store', 'en-US', meterFor(db, t.workspaceId));
+    expect(
+      await db
+        .selectFrom('platform_calls')
+        .select(['provider', 'status', 'cost_microusd'])
+        .where('workspace_id', '=', t.workspaceId)
+        .orderBy('created_at')
+        .execute(),
+    ).toEqual([
+      { provider: 'tavily', status: 'failed', cost_microusd: '0' },
+      { provider: 'keenable', status: 'settled', cost_microusd: '4000' },
     ]);
   });
 

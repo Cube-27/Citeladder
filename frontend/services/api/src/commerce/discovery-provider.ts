@@ -41,7 +41,10 @@ export function competitorSearch(
   const key = String(setting('tavily_api_key'));
   const endpoint = String(setting('tavily_endpoint'));
   const timeout = Number(setting('tavily_timeout_seconds'));
-  const research = { ...discoverySettings(env), keenable_snippet_max_chars: p.snippet_chars };
+  const research = {
+    ...discoverySettings(env),
+    keenable_snippet_max_chars: p.snippet_chars,
+  };
   return async (query, locale, meter) => {
     let failed = false;
     if (key) {
@@ -65,7 +68,10 @@ export function competitorSearch(
             const value = await transport(url, {
               method: 'POST',
               redirect: 'error',
-              headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+              headers: {
+                authorization: `Bearer ${key}`,
+                'content-type': 'application/json',
+              },
               signal,
               body: JSON.stringify({
                 query: `${query} ${locale}`.trim(),
@@ -75,10 +81,11 @@ export function competitorSearch(
                 include_raw_content: false,
               }),
             });
+            // A refused request is a failed call: recorded at no cost, not the request fee.
+            if (!value.ok) throw new Error('Search failed');
             return { value, usage: null };
           },
         );
-        if (!response.ok) throw new Error('Search failed');
         const body = z
           .object({ results: z.array(z.unknown()) })
           .parse(await boundedJson(response, p.response_max_bytes, signal));
@@ -137,7 +144,12 @@ export function competitorSearch(
         })),
       };
     } catch {
-      return { status: 'failed', errorCode: 'provider_failed', retry: true, results: [] };
+      return {
+        status: 'failed',
+        errorCode: 'provider_failed',
+        retry: true,
+        results: [],
+      };
     }
   };
 }
