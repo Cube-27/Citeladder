@@ -6,11 +6,10 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { policy } from '../config.ts';
 import { approvedEndpoint } from '../providers/connections.ts';
-import { providerPolicy, type Engine, type ProviderTransport } from '../providers/config.ts';
-import { dataforseoAccountIdentity } from '../providers/dataforseo-identity.ts';
-import { platformSecret } from '../providers/platform-secrets.ts';
+import { providerPolicy, surfaceKindOf, type Engine } from '../providers/config.ts';
+import { dataforseoSecretIdentity } from '../providers/dataforseo-identity.ts';
+import { connectionSecret } from '../providers/platform-secrets.ts';
 import type { CapacityRequest } from '../providers/capacity.ts';
-import { createSecretCipher } from '../integrations/fernet.ts';
 import { answerRequestSchema } from '../answer-engines/contracts.ts';
 import { ProviderError } from '../providers/errors.ts';
 import { ownedAuditTask, type AuditTask } from '../queue/audit-queue.ts';
@@ -21,6 +20,7 @@ import {
   type SearchRequest,
 } from '../search-surfaces/dataforseo.ts';
 import { auditPolicy, type AuditRuntime } from './config.ts';
+import { readFrozenConfiguration, readFrozenSearchRequest } from './frozen-configuration.ts';
 
 const fundingSchema = z.object({ reservation_id: z.uuid(), funding_account_id: z.uuid() });
 const routeSchema = z.object({
@@ -36,16 +36,6 @@ const routeSchema = z.object({
   funding: fundingSchema.optional(),
 });
 const unavailable = () => new ProviderError(auditPolicy.constants.error_no_connection);
-
-function requiredPlatformSecret(
-  transport: ProviderTransport,
-  reference: string,
-  env: Record<string, string | undefined>,
-) {
-  const secret = platformSecret(transport, reference, env);
-  if (secret === null) throw unavailable();
-  return secret;
-}
 
 type RouteSnapshot = z.infer<typeof routeSchema>;
 function assertRouteMatchesCatalog(task: AuditTask, route: RouteSnapshot) {
@@ -146,20 +136,16 @@ export async function loadExecutionContext(
     await assertFundingHold(trx, task, audit.id, route);
     let secret: string;
     try {
-      secret =
-        route.credential_source === 'platform'
-          ? requiredPlatformSecret(
-              connection.transport_provider as ProviderTransport,
-              connection.platform_credential_ref,
-              env,
-            )
-          : createSecretCipher(encryptionKey).decrypt(connection.api_key_encrypted);
+      secret = connectionSecret(connection, encryptionKey, env);
     } catch {
       throw unavailable();
     }
     const endpoint = approvedEndpoint(route.transport_provider, route.base_url, runtime.providers);
-    const config = record(audit.configuration),
-      measurement = record(config.measurement_policy);
+    const config = readFrozenConfiguration(audit.configuration),
+      measurement = config.measurement_policy;
+    // The run cap bounds every execution; an audit without one cannot run.
+    if (config.max_run_seconds === undefined) throw new ProviderError('parse_error');
+    const maxRunSeconds = config.max_run_seconds;
     const capacity: CapacityRequest = {
       taskId: task.id,
       attempt: task.attempt_count + 1,
@@ -170,7 +156,7 @@ export async function loadExecutionContext(
       ...(route.funding ? { accountId: route.funding.funding_account_id } : {}),
       accountPoolIdentity:
         task.transport_provider === 'dataforseo' && route.credential_source === 'byok'
-          ? dataforseoAccountIdentity(connection.api_key_encrypted, encryptionKey)
+          ? dataforseoSecretIdentity(secret, encryptionKey)
           : '',
     };
     return {
@@ -184,6 +170,7 @@ export async function loadExecutionContext(
       endpoint,
       config,
       measurement,
+      maxRunSeconds,
       capacity,
     };
   });
@@ -202,32 +189,40 @@ export function directRequest(context: ExecutionContext) {
     retrieval_enabled: measurement.retrieval_enabled,
     reasoning_effort: record(context.route).reasoning_effort,
     anthropic_thinking: context.route.anthropic_thinking ?? null,
-    country_code: config.country_code ?? '',
-    anthropic_max_uses: config.anthropic_max_uses ?? 0,
-    openai_max_tool_calls: config.openai_max_tool_calls ?? 0,
+    country_code: config.country_code,
+    anthropic_max_uses: config.anthropic_max_uses,
+    openai_max_tool_calls: config.openai_max_tool_calls,
   });
   if (!parsed.success) throw new ProviderError('parse_error');
   return parsed.data;
 }
+function frozenField<T>(value: T | undefined, field: string): T {
+  if (value === undefined) throw new Error(`Frozen search request has no ${field}`);
+  return value;
+}
+/** The provider timeout frozen for a search-surface task. */
+export const surfaceTimeoutSeconds = (context: ExecutionContext) =>
+  frozenField(readFrozenSearchRequest(context.task.request_snapshot).timeout_seconds, 'timeout');
+/** The surface request exactly as frozen at admission; a missing field refuses the submission. */
 export function frozenSurfaceRequest(
   context: ExecutionContext,
   submissionRef: string,
-  runtime: AuditRuntime,
 ): SearchRequest {
-  const snapshot = record(context.task.request_snapshot);
+  const frozen = readFrozenSearchRequest(context.task.request_snapshot);
   const request: SearchRequest = {
     query: context.task.prompt_text,
-    location_code: z.number().int().positive().parse(snapshot.location_code),
-    language_code: z.string().min(1).parse(snapshot.language_code),
-    device: z.enum(['desktop', 'mobile']).parse(snapshot.device),
+    location_code: frozenField(frozen.location_code, 'location_code'),
+    language_code: frozenField(frozen.language_code, 'language_code'),
+    device: frozenField(frozen.device, 'device'),
     depth: searchPolicy.constants.default_depth,
     load_async_ai_overview: searchPolicy.constants.load_async_ai_overview,
-    timeout_seconds: z
-      .number()
-      .positive()
-      .parse(snapshot.timeout_seconds ?? runtime.search.timeoutSeconds),
+    timeout_seconds: frozenField(frozen.timeout_seconds, 'timeout_seconds'),
     provider_submission_ref: submissionRef,
-    request_settings: record(snapshot.request_settings),
+    // Only an LLM scraper freezes scraper settings; Google AI Overview has none.
+    request_settings:
+      surfaceKindOf(context.task.logical_engine) === 'llm_scraper'
+        ? frozenField(frozen.request_settings, 'request_settings')
+        : {},
   };
   searchPayload(context.task.logical_engine as SearchEngine, request);
   return request;

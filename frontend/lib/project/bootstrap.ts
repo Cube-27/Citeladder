@@ -19,35 +19,10 @@ import { capabilityRemaining } from '@/lib/billing/entitlement-capability';
 import type { SelectionStatus } from '@/lib/project/selection';
 import { routePath } from '@/lib/navigation/route-path';
 
-/**
- * Routes that manage the WORKSPACE rather than work inside a project.
- *
- * A workspace with no projects is a perfectly valid workspace: its owner may
- * still need to reach billing, members and settings, and an invitee arriving
- * at an acceptance link has not joined anything yet. Redirecting these to
- * project creation answered a question nobody asked and made an empty
- * workspace unmanageable.
- */
 /** The sign-in workspace chooser. */
 export const WORKSPACE_CHOOSER_PATH = '/workspaces';
 /** Onboarding's step that creates the person's own workspace. */
 export const WORKSPACE_SETUP_PATH = '/onboarding?setup=workspace';
-
-const WORKSPACE_ONLY_PREFIXES = [
-  WORKSPACE_CHOOSER_PATH,
-  '/onboarding',
-  '/settings',
-  '/billing',
-  '/invitations',
-  '/pricing',
-] as const;
-
-export function isWorkspaceOnlyRoute(pathname: string | null): boolean {
-  if (!pathname) return false;
-  return WORKSPACE_ONLY_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
-}
 
 /** Whether the person owns one of these workspaces (a person owns at most one). */
 export function ownsWorkspace(workspaces: readonly { role: string }[]): boolean {

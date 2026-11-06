@@ -148,7 +148,7 @@ function ScreenCardTitle({ children }: Readonly<{ children: ReactNode }>) {
   return <p className="cl-screen-card-title">{children}</p>;
 }
 
-/** The app's ChartCard, drawn: title and controls, the chart, then its source line. */
+/** An app chart card, drawn: title and controls, the chart, then its source line. */
 export function ScreenChartCard({
   title,
   controls,

@@ -9,9 +9,9 @@ import { Button } from '@/components/ui/button';
 import { RouteLoadingScreen } from '@/components/layout/page-shell';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
+import { isWorkspaceOnlyRoute } from '@/lib/navigation/app-routes';
 import { useCanonicalProjectUrl, workspaceDestination } from '@/lib/navigation/project-destination';
 import {
-  isWorkspaceOnlyRoute,
   resolveAllowance,
   resolveGate,
   WORKSPACE_SETUP_PATH,
