@@ -319,9 +319,12 @@ dates; pattern-filtered Pages read over that snapshot's window. Terminal
 crawl-log/referral refreshes, Visibility audit completion, Site Health
 terminalization and source/mapping changes enqueue a refresh in their owning
 transaction, and crawl-log maintenance enqueues one a day for each GA4-mapped
-project not yet refreshed that UTC day. Queued work is coalesced and debounced; leased/running
+project not yet refreshed that UTC day. Every producer requests it through the queue's
+`enqueueCoalesced` (`src/queue/enqueue.ts`, one advisory lock per kind and project), as the
+rollup and Traffic snapshot refreshes do. Queued work is coalesced and debounced; leased/running
 work gets a queued successor. Repeated queued triggers preserve the earliest
-refresh deadline. Pattern-filtered Pages reads of a GA4-mapped project return a retryable
+refresh deadline. The GA4 gate lives only in the executor: a project without an active GA4
+mapping settles the refresh without deriving anything. Pattern-filtered Pages reads of a GA4-mapped project return a retryable
 unavailable response while no snapshot exists, rather than an empty observed
 population. Snapshots retain formula version, configured
 thresholds and exact rollup, audit, artifact and crawl IDs. Four bounded patterns
