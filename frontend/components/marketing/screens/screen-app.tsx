@@ -4,12 +4,11 @@ import { ChevronDown, ChevronsUpDown, CircleHelp, Download, Rocket, Search } fro
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Kbd } from '@/components/ui/kbd';
 import { KpiRow } from '@/components/ui/stat-row';
-import { TrendChart } from '@/components/ui/trend-chart';
 import { textRole } from '@/components/ui/typography';
 import { ICONS } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-import { BRANDS, KPIS, TREND, WEEKS } from './demo-data';
+import { BRANDS, KPIS } from './demo-data';
 import {
   ScreenButton,
   ScreenChartCard,
@@ -21,6 +20,7 @@ import {
   ScreenTabs,
   type ScreenColumn,
 } from './screen-parts';
+import { VisibilityTrend } from './visibility-trend';
 
 /**
  * The app's Dashboard navigation as the sidebar shows it
@@ -214,22 +214,7 @@ export function ScreenAppVisibility() {
               title="Visibility over time"
               footnote="412 answers to 120 prompts across 4 engines, week of 27 Oct – 2 Nov 2026"
             >
-              <TrendChart
-                label="Visibility by week, Acme Analytics against Northwind and Lumen"
-                name="Acme Analytics"
-                data={WEEKS.map((week, index) => ({
-                  label: week,
-                  value: TREND.acme[index] ?? null,
-                }))}
-                series={[
-                  { label: 'Northwind', values: TREND.northwind },
-                  { label: 'Lumen', values: TREND.lumen },
-                ]}
-                yMin={0}
-                yMax={50}
-                yFormat={(value) => `${value}%`}
-                format={percent}
-              />
+              <VisibilityTrend />
             </ScreenChartCard>
             <ScreenTableCard title="Brands" meta="Visibility by brand this week">
               <ScreenTable

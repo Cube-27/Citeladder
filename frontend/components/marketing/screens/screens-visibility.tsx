@@ -7,7 +7,6 @@ import { EngineMark } from '@/components/ui/engine-mark';
 import { Meter } from '@/components/ui/meter';
 import { Rungs } from '@/components/ui/rungs';
 import { Sparkline } from '@/components/ui/sparkline';
-import { TrendChart } from '@/components/ui/trend-chart';
 
 import {
   ANSWER_SOURCES,
@@ -19,8 +18,6 @@ import {
   KPIS,
   PAGE_RETRIEVALS,
   PROMPTS,
-  TREND,
-  WEEKS,
 } from './demo-data';
 import {
   ScreenCard,
@@ -37,6 +34,7 @@ import {
   type ScreenColumn,
 } from './screen-parts';
 import { Vignette, VignetteBar, VignetteRows, fourRows } from './screen-vignette';
+import { VisibilityTrend } from './visibility-trend';
 
 function Cite({ index }: Readonly<{ index: number }>) {
   const source = ANSWER_SOURCES.find((entry) => entry.index === index);
@@ -117,20 +115,7 @@ export function ScreenVisibility() {
           }
           footnote="412 answers to 120 prompts across 4 engines, week of 27 Oct – 2 Nov 2026"
         >
-          <TrendChart
-            label="Visibility by week, Acme Analytics against Northwind and Lumen"
-            name="Acme Analytics"
-            data={WEEKS.map((week, index) => ({ label: week, value: TREND.acme[index] ?? null }))}
-            series={[
-              { label: 'Northwind', values: TREND.northwind },
-              { label: 'Lumen', values: TREND.lumen },
-            ]}
-            height="lg"
-            yMin={0}
-            yMax={50}
-            yFormat={(value) => `${value}%`}
-            format={percent}
-          />
+          <VisibilityTrend height="lg" />
         </ScreenChartCard>
         <ScreenStack>
           <ScreenTableCard title="Brands">

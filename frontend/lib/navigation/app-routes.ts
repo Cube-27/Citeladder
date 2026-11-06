@@ -79,71 +79,68 @@ function pick<M, K extends keyof M>(
   return () => load().then((module) => ({ default: module[name] }));
 }
 
+type RouteInput<P extends string> = Partial<Omit<AppRouteRecord, 'path' | 'screen'>> & {
+  path: P;
+  screen: Screen;
+};
+
+/** A destination; unless it says otherwise, a project page in the shell's Dashboard mode. */
+function page<const P extends string>(input: RouteInput<P>): AppRouteRecord & { path: P } {
+  return { title: null, scope: 'project', shell: true, mode: 'dashboard', ...input };
+}
+
+/** A page outside the shell: public (no session) or a signed-in flow step. */
+function flow<const P extends string>(
+  path: P,
+  scope: 'public' | 'workspace',
+  screen: Screen,
+  extra: Pick<AppRouteRecord, 'credentialInUrl'> = {},
+): AppRouteRecord & { path: P } {
+  return page({ path, scope, shell: false, screen, ...extra });
+}
+
+/** A nav entry listed in a Dashboard group and the matching palette group. */
+function listed(label: string, icon: IconName, group: 'analyze' | 'track'): NavEntry {
+  const palette = group === 'analyze' ? 'palette:Analyze' : 'palette:Track';
+  return { label, icon, placements: [`dashboard:${group}`, palette] };
+}
+
 const mailbox: Screen = () => import('@/components/auth/mailbox-screen');
+const credential = { credentialInUrl: true } as const;
 
 export const APP_ROUTES = [
   // Public: no session.
-  ...(
-    ['/verify-email', '/reset-password', '/forgot-password', '/resend-verification'] as const
-  ).map(
-    (path) =>
-      ({
-        path,
-        title: null,
-        scope: 'public',
-        shell: false,
-        mode: 'dashboard',
-        screen: mailbox,
-        ...(path === '/verify-email' || path === '/reset-password'
-          ? { credentialInUrl: true as const }
-          : {}),
-      }) satisfies AppRouteRecord,
+  flow('/verify-email', 'public', mailbox, credential),
+  flow('/reset-password', 'public', mailbox, credential),
+  flow('/forgot-password', 'public', mailbox),
+  flow('/resend-verification', 'public', mailbox),
+  flow(
+    '/login',
+    'public',
+    pick(() => import('@/components/auth/auth-routes'), 'LoginRoute'),
   ),
-  {
-    path: '/login',
-    title: null,
-    scope: 'public',
-    shell: false,
-    mode: 'dashboard',
-    screen: pick(() => import('@/components/auth/auth-routes'), 'LoginRoute'),
-  },
-  {
-    path: '/register',
-    title: null,
-    scope: 'public',
-    shell: false,
-    mode: 'dashboard',
-    screen: pick(() => import('@/components/auth/auth-routes'), 'RegisterRoute'),
-  },
+  flow(
+    '/register',
+    'public',
+    pick(() => import('@/components/auth/auth-routes'), 'RegisterRoute'),
+  ),
 
   // Signed in, before the shell opens.
-  {
-    path: '/workspaces',
-    title: null,
-    scope: 'workspace',
-    shell: false,
-    mode: 'dashboard',
-    screen: pick(() => import('@/components/auth/workspace-chooser'), 'WorkspaceChooser'),
-  },
-  {
-    path: '/onboarding',
-    title: null,
-    scope: 'workspace',
-    shell: false,
-    mode: 'dashboard',
-    screen: pick(
-      () => import('@/components/onboarding/onboarding-page-client'),
-      'OnboardingPageClient',
-    ),
-  },
+  flow(
+    '/workspaces',
+    'workspace',
+    pick(() => import('@/components/auth/workspace-chooser'), 'WorkspaceChooser'),
+  ),
+  flow(
+    '/onboarding',
+    'workspace',
+    pick(() => import('@/components/onboarding/onboarding-page-client'), 'OnboardingPageClient'),
+  ),
 
   // The application shell, in the order of the product loop.
-  {
+  page({
     path: '/projects',
     title: 'Overview',
-    scope: 'project',
-    shell: true,
-    mode: 'dashboard',
     modeHome: true,
     screen: pick(() => import('@/components/projects/projects-screen'), 'ProjectsScreen'),
     nav: [
@@ -153,126 +150,71 @@ export const APP_ROUTES = [
         placements: ['dashboard:overview', 'palette:Overview'],
       },
     ],
-  },
-  {
+  }),
+  page({
     path: '/site',
     title: 'Website',
-    scope: 'project',
-    shell: true,
-    mode: 'dashboard',
     screen: pick(() => import('@/components/site-health/site-health-screen'), 'SiteHealthScreen'),
-    nav: [{ label: 'Website', icon: 'site', placements: ['dashboard:analyze', 'palette:Analyze'] }],
-  },
-  {
+    nav: [listed('Website', 'site', 'analyze')],
+  }),
+  page({
     path: '/site/crawls/:crawlId/pages/:siteUrlId',
     title: 'Page detail',
-    scope: 'project',
-    shell: true,
-    mode: 'dashboard',
     collection: '/site',
     screen: pick(() => import('@/components/site-health/url-detail'), 'PageDetailScreen'),
-  },
-  // One download per screen: a shared module for unrelated screens made
-  // `/demand` fetch Performance and its chart code.
-  {
+  }),
+  page({
     path: '/demand',
     title: 'Search Demand',
-    scope: 'project',
-    shell: true,
-    mode: 'dashboard',
     screen: pick(() => import('@/components/demand/demand-projection'), 'DemandProjection'),
-    nav: [
-      {
-        label: 'Search Demand',
-        icon: 'demand',
-        placements: ['dashboard:analyze', 'palette:Analyze'],
-      },
-    ],
-  },
-  {
+    nav: [listed('Search Demand', 'demand', 'analyze')],
+  }),
+  page({
     path: '/issues',
     title: 'Issues',
-    scope: 'project',
-    shell: true,
-    mode: 'dashboard',
     screen: pick(() => import('@/components/site-health/issues-screen'), 'IssuesScreen'),
-    nav: [
-      { label: 'Issues', icon: 'issues', placements: ['dashboard:analyze', 'palette:Analyze'] },
-    ],
-  },
-  {
+    nav: [listed('Issues', 'issues', 'analyze')],
+  }),
+  page({
     path: '/search-intelligence',
     title: 'Keyword Research',
-    scope: 'project',
-    shell: true,
-    mode: 'dashboard',
     screen: pick(
       () => import('@/components/search-intelligence/search-intelligence-page'),
       'SearchIntelligencePage',
     ),
-    nav: [
-      {
-        label: 'Keyword Research',
-        icon: 'searchIntelligence',
-        placements: ['dashboard:analyze', 'palette:Analyze'],
-      },
-    ],
-  },
-  {
+    nav: [listed('Keyword Research', 'searchIntelligence', 'analyze')],
+  }),
+  page({
     path: '/performance',
     title: 'Performance',
-    scope: 'project',
-    shell: true,
-    mode: 'dashboard',
     screen: pick(() => import('@/components/performance/performance-screen'), 'PerformanceScreen'),
-    nav: [
-      {
-        label: 'Performance',
-        icon: 'performance',
-        placements: ['dashboard:analyze', 'palette:Analyze'],
-      },
-    ],
-  },
-  {
+    nav: [listed('Performance', 'performance', 'analyze')],
+  }),
+  page({
     path: '/products',
     title: 'Commerce Suite',
-    scope: 'project',
-    shell: true,
-    mode: 'dashboard',
     screen: pick(() => import('@/components/products/products-screen'), 'ProductsScreen'),
-    nav: [
-      {
-        label: 'Commerce Suite',
-        icon: 'products',
-        placements: ['dashboard:analyze', 'palette:Analyze'],
-      },
-    ],
-  },
-  {
+    nav: [listed('Commerce Suite', 'products', 'analyze')],
+  }),
+  page({
     path: '/agent',
     title: 'New chat',
-    scope: 'project',
-    shell: true,
     mode: 'agent',
     modeHome: true,
     screen: pick(() => import('@/components/agent/new-chat-screen'), 'NewChatScreen'),
     // Agent mode draws New chat above its fixed destinations itself.
     nav: [{ label: 'New chat', icon: 'newChat', placements: ['palette:Agent'] }],
-  },
-  {
+  }),
+  page({
     path: '/agent/chats/:chatId',
     title: 'Agent',
-    scope: 'project',
-    shell: true,
     mode: 'agent',
     collection: '/agent',
     screen: pick(() => import('@/components/agent/chat-screen'), 'ChatScreen'),
-  },
-  {
+  }),
+  page({
     path: '/agent/actions',
     title: 'Actions',
-    scope: 'project',
-    shell: true,
     mode: 'agent',
     screen: pick(() => import('@/components/agent/actions-screen'), 'ActionsScreen'),
     // Listed once in the palette, under Agent.
@@ -284,104 +226,70 @@ export const APP_ROUTES = [
         placements: ['dashboard:act', 'agent', 'palette:Agent'],
       },
     ],
-  },
-  {
+  }),
+  page({
     path: '/agent/actions/:actionId',
     title: 'Actions',
-    scope: 'project',
-    shell: true,
     mode: 'agent',
     collection: '/agent/actions',
     screen: pick(() => import('@/components/agent/action-detail-screen'), 'ActionDetailScreen'),
-  },
-  {
+  }),
+  page({
     path: '/agent/skills',
     title: 'Skills',
-    scope: 'project',
-    shell: true,
     mode: 'agent',
     screen: pick(() => import('@/components/agent/skills-screen'), 'SkillsScreen'),
     nav: [{ label: 'Skills', icon: 'skills', placements: ['agent', 'palette:Agent'] }],
-  },
-  {
+  }),
+  page({
     path: '/agent/context',
     title: 'Context',
-    scope: 'project',
-    shell: true,
     mode: 'agent',
     screen: pick(() => import('@/components/agent/context-screen'), 'ContextScreen'),
     nav: [{ label: 'Context', icon: 'context', placements: ['agent', 'palette:Agent'] }],
-  },
-  {
+  }),
+  page({
     path: '/prompts',
     title: 'Prompts',
-    scope: 'project',
-    shell: true,
-    mode: 'dashboard',
     screen: pick(() => import('@/components/prompts/prompts-route-content'), 'PromptsRouteContent'),
-    nav: [{ label: 'Prompts', icon: 'prompts', placements: ['dashboard:track', 'palette:Track'] }],
-  },
-  {
+    nav: [listed('Prompts', 'prompts', 'track')],
+  }),
+  page({
     path: '/prompts/:promptId',
     title: 'Prompts',
-    scope: 'project',
-    shell: true,
-    mode: 'dashboard',
     collection: '/prompts',
     screen: pick(() => import('@/components/prompts/prompt-detail-screen'), 'PromptDetailScreen'),
-  },
-  {
+  }),
+  page({
     path: '/visibility',
     title: 'AI Visibility',
-    scope: 'project',
-    shell: true,
-    mode: 'dashboard',
     screen: pick(() => import('@/components/visibility/visibility-screen'), 'VisibilityScreen'),
-    nav: [
-      {
-        label: 'AI Visibility',
-        icon: 'visibility',
-        placements: ['dashboard:track', 'palette:Track'],
-      },
-    ],
-  },
-  {
+    nav: [listed('AI Visibility', 'visibility', 'track')],
+  }),
+  page({
     path: '/runs',
     title: 'Runs',
-    scope: 'project',
-    shell: true,
-    mode: 'dashboard',
     screen: pick(() => import('@/components/runs/runs-screen'), 'RunsScreen'),
-    nav: [{ label: 'Runs', icon: 'runs', placements: ['dashboard:track', 'palette:Track'] }],
-  },
-  {
+    nav: [listed('Runs', 'runs', 'track')],
+  }),
+  page({
     path: '/runs/:runId',
     title: 'Run detail',
-    scope: 'project',
-    shell: true,
-    mode: 'dashboard',
     collection: '/runs',
     screen: pick(() => import('@/components/runs/run-detail-screen'), 'RunDetailScreen'),
-  },
-  {
+  }),
+  page({
     path: '/ai-traffic',
     title: 'AI Traffic',
-    scope: 'project',
-    shell: true,
-    mode: 'dashboard',
     screen: pick(() => import('@/components/ai-traffic/ai-traffic-screen'), 'AiTrafficScreen'),
-    nav: [
-      { label: 'AI Traffic', icon: 'aiTraffic', placements: ['dashboard:track', 'palette:Track'] },
-    ],
-  },
+    nav: [listed('AI Traffic', 'aiTraffic', 'track')],
+  }),
 
   // The workspace's own pages, inside the shell.
-  {
+  page({
     path: '/settings',
     title: 'Settings',
     scope: 'workspace',
-    shell: true,
-    mode: 'dashboard',
     screen: pick(() => import('@/components/settings/settings-screen'), 'SettingsScreen'),
     nav: [
       { label: 'Settings', icon: 'settings', placements: ['palette:Settings', 'user-menu'] },
@@ -406,42 +314,35 @@ export const APP_ROUTES = [
         placements: ['user-menu'],
       },
     ],
-  },
-  {
+  }),
+  page({
     path: '/billing',
     title: 'Billing',
     scope: 'workspace',
-    shell: true,
-    mode: 'dashboard',
     screen: pick(() => import('@/components/billing/billing-screen'), 'BillingScreen'),
     nav: [{ label: 'Billing', icon: 'billing', placements: ['palette:Settings', 'user-menu'] }],
-  },
-  {
+  }),
+  page({
     path: '/pricing',
     title: 'Pricing',
     scope: 'workspace',
-    shell: true,
-    mode: 'dashboard',
     screen: () => import('@/components/billing/pricing-route'),
-  },
-  {
+  }),
+  page({
     path: '/invitations/accept',
-    title: null,
     scope: 'workspace',
-    shell: true,
-    mode: 'dashboard',
-    credentialInUrl: true,
+    ...credential,
     screen: pick(
       () => import('@/components/settings/accept-invitation-screen'),
       'AcceptInvitationPage',
     ),
-  },
-] as const satisfies readonly AppRouteRecord[];
+  }),
+];
 
 export type AppRoutePath = (typeof APP_ROUTES)[number]['path'];
 
 /** A manifest record, with its path known to be one of the manifest's. */
-export type AppRoute = AppRouteRecord & { path: AppRoutePath };
+type AppRoute = AppRouteRecord & { path: AppRoutePath };
 
 const ROUTES: readonly AppRoute[] = APP_ROUTES;
 
@@ -537,14 +438,14 @@ export type NavDestination = Pick<NavEntry, 'label' | 'icon' | 'badge' | 'hidden
 
 /** Every entry listed at a placement, in manifest order (`listedLast` entries after). */
 export function navDestinations(placement: NavPlacement): readonly NavDestination[] {
-  const listed = ROUTES.flatMap((route) =>
+  const entries = ROUTES.flatMap((route) =>
     (route.nav ?? [])
       .filter((entry) => entry.placements.includes(placement))
       .map((entry) => ({ route, entry })),
   );
   return [
-    ...listed.filter(({ entry }) => !entry.listedLast),
-    ...listed.filter(({ entry }) => entry.listedLast),
+    ...entries.filter(({ entry }) => !entry.listedLast),
+    ...entries.filter(({ entry }) => entry.listedLast),
   ].map(({ route, entry: { label, icon, badge, hiddenWhenManaged, search } }) => ({
     label,
     icon,
