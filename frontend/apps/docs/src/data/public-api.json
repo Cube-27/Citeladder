@@ -1873,17 +1873,7 @@
       },
       "CrawlOverallStatus": {
         "type": "string",
-        "enum": [
-          "draft",
-          "validating",
-          "queued",
-          "running",
-          "paused",
-          "completed",
-          "partially_completed",
-          "failed",
-          "cancelled"
-        ]
+        "enum": ["queued", "running", "completed", "partially_completed", "failed", "cancelled"]
       },
       "CrawlSource": {
         "type": "object",

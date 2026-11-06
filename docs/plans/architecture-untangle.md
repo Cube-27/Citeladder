@@ -57,13 +57,13 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P01 | Onboarding competitor discovery fix | ON1, ON2 | — | | merged | [#626](https://github.com/Cube-27/Citeladder/pull/626) | Owner bug |
 | P02 | Correctness fixes: trial credits, Share of Shelf, perception states, browser state labels, latest brand run | FX1, FX2, FX3, FX4, O1 | — | mig? | in review | [#629](https://github.com/Cube-27/Citeladder/pull/629) | Builder session `untangle-p02`; migrations 0008, 0009 |
 | P03 | Runtime safety and schema hardening | FX5, DB1, DB2 | — | mig | merged | [#627](https://github.com/Cube-27/Citeladder/pull/627) | Migrations 0006, 0007 |
-| P04 | Site Health tasks I: outcome classifier, crawl status, single writers | SH1, SH2, SH3 | — | mig? | in progress | | Builder session `untangle-p04` |
+| P04 | Site Health tasks I: outcome classifier, crawl status, single writers | SH1, SH2, SH3 | — | mig? | merged | [#628](https://github.com/Cube-27/Citeladder/pull/628) | No migration needed |
 | P05 | Engine surfaces I: DataForSEO client, typed frozen config, engine sets from routes | E1, E2, E3 | — | | todo | | |
 | P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | todo | | |
 | P07 | App route manifest and kit cleanup | R1, R2, R3, R5, R6, R7 | — | | todo | | |
 | P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | in progress | | Builder session `untangle-p08` |
 | P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | in progress | | Builder session `untangle-p09` |
-| P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | todo | | |
+| P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | in progress | | Builder session `untangle-p10` |
 | P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | todo | | |
 | P12 | Opportunities: check kinds, typed targets, evidence announcement | O2, O3, O4 | P02 | | todo | | |
 | P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | todo | | |
@@ -133,9 +133,9 @@ order the PR tracker already respects.
 | Q6 | Integrations lane on the descriptor | Q3 | `workers/integration-worker.ts` | | todo | | |
 | Q7 | Audit lane on the descriptor | Q4, Q5, Q6 | `queue/audit-queue.ts`, `workers/audit-worker.ts`, `workers/audit-scheduler.ts` | | todo | | |
 | Q8 | Coalesced-successor enqueue; AI Traffic trigger through the queue | Q2 | `crawl-logs/{state,insights-enqueue}.ts`, `integrations/projections.ts`, trigger call sites | | todo | | |
-| SH1 | Site Health task-outcome classifier | — | `site-health/` outcome lists (nine files) | | todo | | |
-| SH2 | Crawl-status module; dead states and legacy fallbacks deleted | SH1 | `packages/contracts/src/site-health/crawl.ts`, `site-health/`, `frontend/lib/site-health/status.ts` | mig? | todo | | |
-| SH3 | One writer for crawl tasks, site URLs, observations, memberships | SH2 | `site-health/{admission-writes,frontier,discover-task,planner,site-setup-task,lifecycle,link-metrics}.ts` | | todo | | |
+| SH1 | Site Health task-outcome classifier | — | `site-health/` outcome lists (nine files) | | done | 13423c9 | |
+| SH2 | Crawl-status module; dead states and legacy fallbacks deleted | SH1 | `packages/contracts/src/site-health/crawl.ts`, `site-health/`, `frontend/lib/site-health/status.ts` | mig? | done | 86f59ee | |
+| SH3 | One writer for crawl tasks, site URLs, observations, memberships | SH2 | `site-health/{admission-writes,frontier,discover-task,planner,site-setup-task,lifecycle,link-metrics}.ts` | | done | 90cc69e | |
 | SH4 | One site-task runner (lock, settle, backoff, access check) | SH3, Q3 | `site-health/{site-task,task-fence,analyze-task,discover-task,site-setup-task}.ts`, `workers/site-health-worker.ts` | | todo | | |
 | SH5 | Crawl counter chooser; shared commerce-facts schema; pinned versions on reads | SH2, X1 | `site-health/reads/`, `commerce/projection-facts.ts` | | todo | | |
 | B1 | Consumable hold module; Site Health fetch budget on it | — | `entitlements/ledger.ts`, `site-health/fetch-budget.ts` | | todo | | |
