@@ -62,13 +62,13 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | in progress | | Builder session `untangle-p06` |
 | P07 | App route manifest and kit cleanup | R1, R2, R3, R5, R6, R7 | — | | todo | | |
 | P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | in progress | | Builder session `untangle-p08` |
-| P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | in review | [#630](https://github.com/Cube-27/Citeladder/pull/630) | Builder session `untangle-p09` |
+| P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | merged | [#630](https://github.com/Cube-27/Citeladder/pull/630) | |
 | P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | in progress | | Builder session `untangle-p10` |
 | P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | todo | | |
 | P12 | Opportunities: check kinds, typed targets, evidence announcement | O2, O3, O4 | P02 | | todo | | |
 | P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | todo | | |
 | P14 | Marketing site records and config-driven numbers | MK1, MK2, MK3, MK4 | P02 | | todo | | |
-| P15 | Queue owner II: remaining lanes and coalesced enqueue | Q4, Q5, Q6, Q7, Q8 | P01, P03, P09 | | todo | | |
+| P15 | Queue owner II: remaining lanes and coalesced enqueue | Q4, Q5, Q6, Q7, Q8 | P01, P03, P09 | | in progress | | Builder session `untangle-p15` |
 | P16 | Site Health tasks II: one task runner, counters, pinned versions | SH4, SH5 | P04, P08, P09 | | todo | | |
 | P17 | Permission on the command, MCP prepared changes, workspace ownership | C3, C4, X6 | P11 | | todo | | |
 | P18 | Internal cost view, spend breaker, output caps | K1, K2, K3 | P01, P10 | mig? | todo | | Before public sign-up |
