@@ -6,16 +6,12 @@
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import type { Selectable } from 'kysely';
 
-import { ProviderError } from '../providers/errors.ts';
 import type { CredentialMode } from '../billing/credential-mode.ts';
 import type { Database } from '../db/database.ts';
 import type { WorkspaceScope } from '../db/workspace-scope.ts';
 import { ApiError } from '../errors.ts';
 import type { ProviderConnections, SearchIntelligenceRuns } from '../generated/db-schema.ts';
-import { createSecretCipher } from '../integrations/fernet.ts';
 import { onlyOf } from '../lists.ts';
-import { dataforseoSecretIdentity } from '../providers/dataforseo-identity.ts';
-import { platformSecret } from '../providers/platform-secrets.ts';
 import { si } from './requests.ts';
 
 type Connection = Selectable<ProviderConnections>;
@@ -105,32 +101,4 @@ export function runConnection(db: Database, run: Run) {
         ),
     )
     .executeTakeFirst();
-}
-
-/** The connection's DataForSEO login pair as JSON; refused as an auth failure when unreadable. */
-export function connectionSecret(
-  connection: Connection,
-  encryptionKey: string,
-  env: Record<string, string | undefined> = process.env,
-) {
-  let secret: string | null;
-  try {
-    secret =
-      connection.credential_source === 'platform'
-        ? platformSecret('dataforseo', connection.platform_credential_ref, env)
-        : createSecretCipher(encryptionKey).decrypt(connection.api_key_encrypted);
-  } catch {
-    secret = null;
-  }
-  if (secret === null) throw new ProviderError('auth_failure');
-  return secret;
-}
-
-/** The quota-pool identity of the connection's DataForSEO account. */
-export function connectionIdentity(
-  connection: Connection,
-  encryptionKey: string,
-  env?: Record<string, string | undefined>,
-) {
-  return dataforseoSecretIdentity(connectionSecret(connection, encryptionKey, env), encryptionKey);
 }

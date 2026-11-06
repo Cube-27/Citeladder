@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 
 import { makeProject } from '../../test/fixtures/project';
+import { providerCatalogFixture } from '../../test/provider-catalog-fixture';
 
 /**
  * Authed-shell network fixture for e2e + visual specs.
@@ -236,6 +237,11 @@ export async function stubAuthedShell(
     route.fulfill({ json: workspacesFor(projects) }),
   );
   await page.route('**/api/v1/projects', (route) => route.fulfill({ json: projects }));
+  // The shell reads the engine catalogue before any screen: every engine's
+  // name, order and surface kind come from it.
+  await page.route('**/api/v1/provider-catalog', (route) =>
+    route.fulfill({ json: providerCatalogFixture }),
+  );
   for (const project of projects) {
     await /* NOSONAR -- Stubs register in order; Playwright gives later routes precedence. */ page.route(
       `**/api/v1/projects/${project.id}`,

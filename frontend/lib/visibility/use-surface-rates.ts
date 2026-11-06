@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
-import { isSearchSurfaceEngine } from '@/lib/providers/catalog';
+import { useEngineCatalog } from '@/lib/providers/engines';
 import type { ProjectRequestScope } from '@/lib/project/request-scope';
 
 /**
@@ -37,7 +37,8 @@ export function useSurfaceRates({
   activeRunId: string | null;
   selectedRunIds: string[] | undefined;
 }) {
-  const surfaceEngine = engine && isSearchSurfaceEngine(engine) ? engine : null;
+  const catalog = useEngineCatalog();
+  const surfaceEngine = engine && catalog.isSearchSurface(engine) ? engine : null;
   const params = {
     engine: surfaceEngine ?? '',
     audit_id: selectedRunIds ? undefined : (activeRunId ?? undefined),

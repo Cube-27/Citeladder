@@ -22,7 +22,7 @@ import {
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
-import { engineLabel } from '@/lib/visibility/dashboard';
+import { useEngineCatalog } from '@/lib/providers/engines';
 import {
   normalizeSearch,
   SEARCH_MAX_LENGTH,
@@ -309,6 +309,7 @@ function useDebouncedNeedle(needle: string): string {
  * group restarted the column widths at each prompt and left nothing aligned.
  */
 function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
+  const { label: engineLabel } = useEngineCatalog();
   const undisclosedNoun = group.undisclosed === 1 ? 'answer' : 'answers';
   const unavailableNoun = group.unavailable === 1 ? 'answer has' : 'answers have';
   const noExposedNoun = group.noExposedQueries === 1 ? 'answer' : 'answers';

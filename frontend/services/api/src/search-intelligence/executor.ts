@@ -7,7 +7,7 @@ import type { Executor } from '../queue/executor.ts';
 import { record } from '../db/json.ts';
 import { AcquisitionState, type PreparedResearch, type ResearchPlan } from './acquisition-state.ts';
 import { settleResearchCharge } from './charges.ts';
-import { connectionSecret } from './credentials.ts';
+import { connectionSecret } from '../providers/platform-secrets.ts';
 import { resolveLive, sendLive, type LiveTarget } from './live.ts';
 import { si } from './requests.ts';
 

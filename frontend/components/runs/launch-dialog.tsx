@@ -9,7 +9,8 @@ import { providerQueries, type providersApi } from '@/lib/api/providers';
 import { useManagedPlan } from '@/lib/billing/entitlement-context';
 import { runsMutations, runsQueries } from '@/lib/api/runs';
 import type { Audit, LogicalEngine, PromptSet } from '@citeladder/contracts';
-import { ENGINE_ORDER, isConfigured, isVerified, isConsumerEngine } from '@/lib/providers/catalog';
+import { isConfigured, isVerified } from '@/lib/providers/catalog';
+import { useEngineCatalog } from '@/lib/providers/engines';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { useProjectMarkets } from '@/lib/project/use-project-markets';
 import {
@@ -22,10 +23,8 @@ import {
 
 import { LaunchDialogView } from './launch-dialog-view';
 
-/** A managed plan measures every engine on the platform's keys (B32). */
-const MANAGED_ENGINES = { configuredEngines: [...ENGINE_ORDER], unverifiedEngines: [] };
-
 function availableEngines(
+  order: readonly LogicalEngine[],
   connections: Awaited<ReturnType<typeof providersApi.listConnections>> | undefined,
 ) {
   const verified = new Set<LogicalEngine>();
@@ -39,23 +38,32 @@ function availableEngines(
     }
   }
   return {
-    configuredEngines: ENGINE_ORDER.filter((engine) => verified.has(engine)),
-    unverifiedEngines: ENGINE_ORDER.filter((engine) => stored.has(engine) && !verified.has(engine)),
+    configuredEngines: order.filter((engine) => verified.has(engine)),
+    unverifiedEngines: order.filter((engine) => stored.has(engine) && !verified.has(engine)),
   };
 }
 
 /** The engines a launch can measure: the workspace's own routes, or all on a managed plan. */
 function useLaunchEngines(open: boolean, workspaceId: string | null) {
   const managed = useManagedPlan();
+  const catalog = useEngineCatalog();
   const connectionsQuery = useQuery({
     ...providerQueries.connections(workspaceId),
     enabled: open && workspaceId !== null && !managed,
   });
   const engines = useMemo(
-    () => (managed ? MANAGED_ENGINES : availableEngines(connectionsQuery.data)),
-    [managed, connectionsQuery.data],
+    () =>
+      // A managed plan measures every engine on the platform's keys (B32).
+      managed
+        ? { configuredEngines: [...catalog.order], unverifiedEngines: [] }
+        : availableEngines(catalog.order, connectionsQuery.data),
+    [managed, catalog.order, connectionsQuery.data],
   );
-  return { ...engines, enginesReady: managed || connectionsQuery.isSuccess };
+  return {
+    ...engines,
+    catalog,
+    enginesReady: catalog.order.length > 0 && (managed || connectionsQuery.isSuccess),
+  };
 }
 
 function fixedPromptSelection(
@@ -118,7 +126,7 @@ export function LaunchDialog({
     ...promptsQueries.sets({ workspaceId, projectId }),
     enabled: open && workspaceId !== null,
   });
-  const { configuredEngines, unverifiedEngines, enginesReady } = useLaunchEngines(
+  const { configuredEngines, unverifiedEngines, enginesReady, catalog } = useLaunchEngines(
     open,
     workspaceId,
   );
@@ -142,9 +150,9 @@ export function LaunchDialog({
     }
     if (!initialized.current && enginesReady) {
       initialized.current = true;
-      setEngines(configuredEngines.filter(isConsumerEngine));
+      setEngines(configuredEngines.filter(catalog.isObserved));
     }
-  }, [open, enginesReady, configuredEngines]);
+  }, [open, enginesReady, configuredEngines, catalog]);
   const [repetitions, setRepetitions] = useState(DEFAULT_REPETITIONS);
   const markets = useProjectMarkets(projectId, workspaceId, open);
   // The default market alone until the reader picks more.

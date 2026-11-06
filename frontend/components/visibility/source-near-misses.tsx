@@ -12,7 +12,7 @@ import { NumericCell, SourceName } from '@/components/visibility/source-cells';
 import type { SourceFilters } from '@/components/visibility/source-rows';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
-import { engineLabel } from '@/lib/providers/catalog';
+import { useEngineCatalog } from '@/lib/providers/engines';
 import { count, hostOf, pathOf, sinceLabel } from '@/lib/visibility/sources';
 import { selectionParams, type SourceQueries } from '@/lib/visibility/use-source-analysis';
 import type { visibilitySourceNearMissesSchema } from '@citeladder/contracts/visibility-evidence';
@@ -42,7 +42,9 @@ export function useSourceNearMisses(
   });
 }
 
-function readHint(data: NearMisses | undefined) {
+type EngineLabel = (key: string) => string;
+
+function readHint(data: NearMisses | undefined, engineLabel: EngineLabel) {
   const base =
     'Answers that read this page, counted over answers whose engine exposes what it read.';
   const unavailable = data?.unavailable_engines ?? [];
@@ -51,10 +53,19 @@ function readHint(data: NearMisses | undefined) {
     : base;
 }
 
-function nearMissColumns(data: NearMisses | undefined): DataTableColumn[] {
+function nearMissColumns(
+  data: NearMisses | undefined,
+  engineLabel: EngineLabel,
+): DataTableColumn[] {
   return [
     { key: 'page', label: 'Your page' },
-    { key: 'read', label: 'Read in', width: 'figure', numeric: true, hint: readHint(data) },
+    {
+      key: 'read',
+      label: 'Read in',
+      width: 'figure',
+      numeric: true,
+      hint: readHint(data, engineLabel),
+    },
     { key: 'cited', label: 'Cited in', width: 'figure', numeric: true },
     { key: 'missed', label: 'Not cited in', width: 'figure', numeric: true },
     { key: 'last', label: 'Last read', width: 'figure', numeric: true, desktopOnly: true },
@@ -64,6 +75,7 @@ function nearMissColumns(data: NearMisses | undefined): DataTableColumn[] {
 function nearMissState(
   query: ReturnType<typeof useSourceNearMisses>,
   noRun: boolean,
+  engineLabel: EngineLabel,
 ): DataTableState | undefined {
   if (query.isError) {
     return {
@@ -125,14 +137,15 @@ export function NearMissTable({
   onOpenUrl: (url: string) => void;
   onPageSizeChange: (value: number) => void;
 }>) {
+  const engines = useEngineCatalog();
   const items = query.data?.items ?? [];
   const shown = items.length;
   return (
     <DataTable
       label="Your pages read but not cited"
       toolbar={toolbar}
-      columns={nearMissColumns(query.data)}
-      state={nearMissState(query, noRun)}
+      columns={nearMissColumns(query.data, engines.label)}
+      state={nearMissState(query, noRun, engines.label)}
       pageSize={pageSize}
       rowCount={shown}
       busy={{ active: query.isFetching, label: 'Updating your pages read but not cited' }}
