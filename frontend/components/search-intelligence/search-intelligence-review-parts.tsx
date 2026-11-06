@@ -1,6 +1,6 @@
 import { estimateUsd, runEstimate } from './search-intelligence-format';
+import { SEARCH_DATASET_KINDS } from '@citeladder/contracts/search-intelligence';
 import {
-  FIXED_DEPTH_KINDS,
   SEARCH_DATASET_LABELS,
   SEARCH_MARKET_OPTIONS,
   searchMarketLabel,
@@ -132,7 +132,7 @@ function DatasetGroup({
               className="grid-cols-[1fr_6rem] items-center"
             >
               <Checkbox checked={checked} onCheckedChange={() => onToggle(option)} label={label} />
-              {FIXED_DEPTH_KINDS.includes(option.kind) ? null : (
+              {SEARCH_DATASET_KINDS[option.kind].fixedDepth ? null : (
                 <Input
                   aria-label={`${label}: number of results`}
                   disabled={!checked}

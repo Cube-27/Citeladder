@@ -10,7 +10,14 @@ import type {
   SearchIntelligenceDatasets,
 } from '../generated/db-schema.ts';
 import { runConnection } from './credentials.ts';
-import { datasetKind, pageEstimateMicrousd, si, usdUnits } from './requests.ts';
+import {
+  datasetKind,
+  isBacklinkKind,
+  pageEstimateMicrousd,
+  si,
+  usdUnits,
+  type DatasetKind,
+} from './requests.ts';
 import { INT4_MAX, normalizeResponse } from './normalization.ts';
 import type { ResearchResponse } from './live.ts';
 import type { ProviderError } from '../answer-engines/contracts.ts';
@@ -18,6 +25,7 @@ import { isDataError } from '../db/errors.ts';
 import { rolesWith } from '../auth/workspace.ts';
 import { loadWorkerSettings } from '../config.ts';
 import { scalarText } from '../text-order.ts';
+import { SEARCH_DATASET_KINDS } from '@citeladder/contracts/search-intelligence';
 import {
   enqueueImplementationVerification,
   enqueueOpportunityRefresh,
@@ -99,23 +107,20 @@ function costUpdate(run: Run, call: Call, at: Date) {
 function datasetCoverage(o: {
   resultAvailable: boolean;
   received: number;
-  kind: string;
+  kind: DatasetKind;
   exhausted: boolean;
   saved: number;
   requested: number;
 }) {
   if (!o.resultAvailable) return 'unknown';
   if (o.received === 0) return 'empty';
-  const whole =
-    ['footprint', 'backlink_summary', 'backlink_history'].includes(o.kind) ||
-    o.exhausted ||
-    o.saved >= o.requested;
+  const whole = SEARCH_DATASET_KINDS[o.kind].fixedDepth || o.exhausted || o.saved >= o.requested;
   return whole ? 'complete' : 'partial';
 }
 /** Whether the provider holds more rows than were saved for a list dataset. */
-function isTruncated(coverage: string, kind: string, total: number | null, saved: number) {
+function isTruncated(coverage: string, kind: DatasetKind, total: number | null, saved: number) {
   if (coverage === 'partial') return true;
-  return !['footprint', 'backlink_summary'].includes(kind) && total !== null && total > saved;
+  return !SEARCH_DATASET_KINDS[kind].summary && total !== null && total > saved;
 }
 
 /** Root run lock precedes queue/call locks, matching cancellation's lock order. */
@@ -561,10 +566,11 @@ export class AcquisitionState {
       const received = dataset.raw_rows_received + normalized.received,
         exhausted = normalized.received < Number(record(plan.request).limit ?? 1),
         finished = !later.some((item) => item.dataset_key === plan.dataset_key) || exhausted;
+      const kind = datasetKind(dataset.dataset_kind);
       const coverage = datasetCoverage({
         resultAvailable: Boolean(normalized.summary.result_available),
         received,
-        kind: dataset.dataset_kind,
+        kind,
         exhausted,
         saved: count.count,
         requested: dataset.requested_rows,
@@ -585,7 +591,7 @@ export class AcquisitionState {
             ? {
                 status: 'published',
                 coverage,
-                truncated: isTruncated(coverage, dataset.dataset_kind, total, count.count),
+                truncated: isTruncated(coverage, kind, total, count.count),
                 collection_ended_at: at,
                 published_at: at,
               }
@@ -737,10 +743,8 @@ export class AcquisitionState {
           target_hostname: String(target.hostname),
           target_origin: String(target.origin),
           comparison_origin: scalarText(comparison.origin ?? ''),
-          location_code: si.backlink_kinds.includes(kind) ? null : Number(request.location_code),
-          language_code: si.backlink_kinds.includes(kind)
-            ? ''
-            : scalarText(request.language_code ?? ''),
+          location_code: isBacklinkKind(kind) ? null : Number(request.location_code),
+          language_code: isBacklinkKind(kind) ? '' : scalarText(request.language_code ?? ''),
           requested_rows: Number(plan.requested_rows),
           provider_filters: JSON.stringify({
             ...request,

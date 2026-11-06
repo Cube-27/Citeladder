@@ -6,7 +6,7 @@
  */
 import { z } from 'zod';
 
-import { researchScopeSchema } from './search-intelligence.ts';
+import { researchScopeSchema, searchDatasetKindSchema } from './search-intelligence.ts';
 
 const locationCode = () => z.int().positive().nullable().default(null);
 const languageCode = () => z.string().max(16).default('');
@@ -25,12 +25,11 @@ export const searchPreferencesRequestSchema = z.object({
 export type SearchPreferencesRequest = z.input<typeof searchPreferencesRequestSchema>;
 
 /**
- * One dataset a review asks for. `kind` stays a plain string here; the API
- * narrows it to the dataset kinds it serves and checks which controls each
- * kind accepts.
+ * One dataset a review asks for. The API checks which controls each kind
+ * accepts against `SEARCH_DATASET_KINDS`.
  */
 export const searchDatasetSelectionRequestSchema = z.object({
-  kind: z.string(),
+  kind: searchDatasetKindSchema,
   competitor_id: z.uuid().nullable().default(null),
   depth: z.int().min(1).default(1),
   seed: z.string().max(700).default(''),
