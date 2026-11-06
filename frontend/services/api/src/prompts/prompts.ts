@@ -275,6 +275,7 @@ export async function createPrompts(
         .values(
           planned.map(({ input, id, hash }, index) => ({
             id,
+            workspace_id: workspaceId,
             prompt_set_id: set.id,
             topic_id: input.topic_id ?? null,
             text: input.text,
@@ -489,7 +490,7 @@ export async function importPrompts(
     await admitPrompts(trx, workspaceId, byHash.size);
     const topics = await resolveTopicsByName(
       trx,
-      set.project_id,
+      { workspaceId, projectId: set.project_id },
       [...byHash.values()].map((row) => row.topic),
     );
     const now = new Date();
@@ -499,6 +500,7 @@ export async function importPrompts(
       .values(
         [...byHash].map(([hash, row]) => ({
           id: randomUUID(),
+          workspace_id: workspaceId,
           prompt_set_id: set.id,
           topic_id: topics.get(row.topic.toLowerCase()) ?? null,
           text: row.text,
