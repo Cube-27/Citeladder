@@ -380,7 +380,7 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
     seed: request.seed,
     rerun: false,
   });
-  if (budget.accountId) await reserveCrawlFetches(db, crawl, budget.accountId, budget.limit, now);
+  if (budget.metered) await reserveCrawlFetches(db, crawl, budget.limit, now);
   const initial = (selected.mode === 'exact_urls' ? seeds : [root, ...seeds]).slice(
     0,
     budget.limit,
@@ -440,7 +440,7 @@ export async function createPageRerunCrawl(
     runtime,
     rerun: true,
   });
-  if (budget.accountId) await reserveCrawlFetches(db, crawl, budget.accountId, budget.limit, now);
+  if (budget.metered) await reserveCrawlFetches(db, crawl, budget.limit, now);
   await seedObservation(db, crawl, url, true);
   await enqueueCrawlTask(db, crawl, {
     kind: 'analyze',
