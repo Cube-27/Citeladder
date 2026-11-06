@@ -54,10 +54,10 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 
 | PR | Title | Rows (commit order) | Depends on | Flags | Status | PR link | Notes |
 |----|-------|---------------------|-----------|-------|--------|---------|-------|
-| P01 | Onboarding competitor discovery fix | ON1, ON2 | — | | todo | | Owner bug; start here |
-| P02 | Correctness fixes: trial credits, Share of Shelf, perception states, browser state labels, latest brand run | FX1, FX2, FX3, FX4, O1 | — | mig? | todo | | |
-| P03 | Runtime safety and schema hardening | FX5, DB1, DB2 | — | mig | todo | | |
-| P04 | Site Health tasks I: outcome classifier, crawl status, single writers | SH1, SH2, SH3 | — | mig? | todo | | |
+| P01 | Onboarding competitor discovery fix | ON1, ON2 | — | | in progress | | Owner bug; start here. Builder session `untangle-p01` |
+| P02 | Correctness fixes: trial credits, Share of Shelf, perception states, browser state labels, latest brand run | FX1, FX2, FX3, FX4, O1 | — | mig? | in progress | | Builder session `untangle-p02` |
+| P03 | Runtime safety and schema hardening | FX5, DB1, DB2 | — | mig | in progress | | Builder session `untangle-p03`; holds the migration slot (0006+) |
+| P04 | Site Health tasks I: outcome classifier, crawl status, single writers | SH1, SH2, SH3 | — | mig? | in progress | | Builder session `untangle-p04` |
 | P05 | Engine surfaces I: DataForSEO client, typed frozen config, engine sets from routes | E1, E2, E3 | — | | todo | | |
 | P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | todo | | |
 | P07 | App route manifest and kit cleanup | R1, R2, R3, R5, R6, R7 | — | | todo | | |
