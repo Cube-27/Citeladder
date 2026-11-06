@@ -8,7 +8,7 @@
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { parseUuid } from '../http/uuid.ts';
-import type { QueueTask } from '../queue/task-queue.ts';
+import type { QueueTask } from './task-queue.ts';
 
 type ExecutorContext = {
   db: Database;

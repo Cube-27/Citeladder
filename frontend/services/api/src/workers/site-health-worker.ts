@@ -21,7 +21,7 @@ import { SitePageFetcher } from '../site-health/page-fetch.ts';
 import { runChangeIntel } from '../site-health/change-snapshot.ts';
 import { siteWorkerSettings } from '../site-health/runtime.ts';
 import { lockSiteTask, type Crawl } from '../site-health/task-fence.ts';
-import { TaskCancelledError } from './executor.ts';
+import { TaskCancelledError } from '../queue/executor.ts';
 import { recoverExpiredLeases } from '../site-health/lease-recovery.ts';
 import {
   publishCancelledCrawls,

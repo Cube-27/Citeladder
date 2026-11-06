@@ -9,7 +9,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { loadWorkerSettings, policy } from '../src/config.ts';
 import { TaskQueue, type QueueTask } from '../src/queue/task-queue.ts';
 import { AnalyticsWorker, EXECUTORS } from '../src/workers/analytics-worker.ts';
-import type { Executor } from '../src/workers/executor.ts';
+import type { Executor } from '../src/queue/executor.ts';
 import {
   enqueue,
   REFERRER_DAILY,

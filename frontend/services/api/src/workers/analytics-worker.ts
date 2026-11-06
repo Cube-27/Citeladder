@@ -38,7 +38,7 @@ import {
   TerminalExecutorError,
   type Executor,
   type TaskSettlement,
-} from './executor.ts';
+} from '../queue/executor.ts';
 import { projectPerformanceRange, refreshTrafficSnapshot } from '../traffic/snapshot.ts';
 import { recomputeDemand } from '../demand/snapshot.ts';
 import { refreshOpportunities } from '../opportunities/refresh.ts';
