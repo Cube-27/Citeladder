@@ -15,3 +15,9 @@ const description =
     <LandingPage />
   </main>
 </MarketingLayout>
+
+<script>
+  import { mountCardRail } from '@/components/marketing/sections/card-rail';
+
+  document.querySelectorAll<HTMLElement>('[data-card-rail]').forEach(mountCardRail);
+</script>

@@ -3,21 +3,25 @@ import type { ReactNode } from 'react';
 import { EngineMark } from '@/components/ui/engine-mark';
 import { appHref } from '@/lib/config/app-link';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
-import { NAV_DROPS, platformLabel } from '@/lib/marketing-content/nav';
+import { NAV_DROPS, PLATFORM_GROUPS, platformLabel } from '@/lib/marketing-content/nav';
 
 import { AnnouncementPill } from '../chrome/announcement-pill';
-import { CapabilityGrid } from '../pages/platform-page';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { EngineStrip, LogoTile } from '../sections/cards';
-import { Bento, FeatureCard, FeatureSplit } from '../sections/features';
+import { CardRail, FeatureCard, FeatureSplit } from '../sections/features';
 import { LandingHero } from '../sections/heroes';
 import { PageSection } from '../sections/page-section';
 import { SiteArrowLink, columnsFor } from '../sections/site-parts';
-import { CtaBand, FaqList } from '../sections/steps-faq-cta';
+import { CtaBand, FaqList, Steps } from '../sections/steps-faq-cta';
 import { ProductFrame } from '../screens/product-frame';
-import { ScreenAgentBrief, ScreenAgentChat } from '../screens/screens-agent';
-import { ScreenEngines, ScreenKeywords } from '../screens/screens-search';
-import { ScreenCrawlerAccess, ScreenSiteHealth } from '../screens/screens-site';
+import { ScreenAgentBrief, ScreenAgentChat, ScreenCommerce } from '../screens/screens-agent';
+import {
+  ScreenDemand,
+  ScreenEngines,
+  ScreenKeywords,
+  ScreenReferrals,
+} from '../screens/screens-search';
+import { ScreenMcp, ScreenSiteHealth } from '../screens/screens-site';
 import { ScreenAnswer, ScreenSources } from '../screens/screens-visibility';
 import { ScreenAppVisibility } from '../screens/screen-app';
 
@@ -61,64 +65,47 @@ function Hero() {
   );
 }
 
-/** The four bento tiles: each links to its module and shows that module's screen. */
-const LOOP_TILES = [
-  {
-    key: 'named',
-    span: 7,
-    title: 'Track how often you are named',
-    body: 'Mention rate, position and competitors for each prompt.',
-    href: '/platform/ai-visibility',
-    label: 'AI Visibility by engine',
-    screen: <ScreenEngines />,
-  },
-  {
-    key: 'cited',
-    span: 5,
-    title: 'See which pages get cited',
-    body: 'Every cited URL, labelled owned, review, editorial, community or competitor.',
-    href: '/platform/cited-sources',
-    label: 'Sources',
-    screen: <ScreenSources />,
-  },
-  {
-    key: 'checked',
-    span: 5,
-    title: 'Check each page for problems',
-    body: 'Technical and answer-readiness checks, plus which AI crawlers you allow.',
-    href: '/platform/site-health',
-    label: 'Site Health',
-    screen: <ScreenSiteHealth />,
-  },
-  {
-    key: 'drafts',
-    span: 7,
-    title: 'Get drafts your team can review',
-    body: 'The Agent drafts briefs and page edits from your evidence. You publish them.',
-    href: '/platform/agents',
-    label: 'Agent · Content brief',
-    screen: <ScreenAgentBrief />,
-  },
-] as const;
+/**
+ * Each module's one focused screen, by platform route. A published module
+ * without a screen here (Integrations, which has its own section) is left out
+ * of the rail.
+ */
+const MODULE_SCREENS: Readonly<Record<string, ReactNode>> = {
+  '/platform/ai-visibility': <ScreenEngines />,
+  '/platform/cited-sources': <ScreenSources />,
+  '/platform/ai-referral-analytics': <ScreenReferrals />,
+  '/platform/product-visibility': <ScreenCommerce />,
+  '/platform/site-health': <ScreenSiteHealth />,
+  '/platform/search-demand': <ScreenDemand />,
+  '/platform/keyword-research': <ScreenKeywords />,
+  '/platform/content-briefs': <ScreenAgentBrief />,
+  '/platform/agents': <ScreenAgentChat />,
+  '/platform/mcp': <ScreenMcp />,
+};
 
-function Loop() {
+/** One card per module, in navigation order: its name, its one line and its screen. */
+function Modules() {
+  const modules = PLATFORM_GROUPS.flatMap((group) => group.items).flatMap((item) => {
+    const screen = MODULE_SCREENS[item.href];
+    return screen ? [{ ...item, screen }] : [];
+  });
   return (
     <PageSection
-      id="how-it-works"
+      id="platform"
       title="Measure the answer, then fix the page"
-      lead="Run your buyers' questions, fix what the answers show, then run them again."
+      action={<SiteArrowLink href="/platform">See the whole platform</SiteArrowLink>}
     >
-      <Bento
-        cells={LOOP_TILES.map((tile) => ({
-          key: tile.key,
-          span: tile.span,
+      <CardRail
+        label="modules"
+        items={modules.map((module) => ({
+          key: module.href,
           content: (
             <FeatureCard
-              href={tile.href}
-              linkLabel={`Explore ${platformLabel(tile.href) ?? tile.label}`}
-              title={tile.title}
-              body={tile.body}
-              media={<ProductFrame label={tile.label}>{tile.screen}</ProductFrame>}
+              href={module.href}
+              linkLabel={`Explore ${module.title}`}
+              title={module.title}
+              body={module.desc}
+              media={<ProductFrame label={module.title}>{module.screen}</ProductFrame>}
             />
           ),
         }))}
@@ -127,87 +114,50 @@ function Loop() {
   );
 }
 
-type Pillar = Readonly<{
-  title: string;
-  body: string;
-  points: readonly string[];
-  /** Platform routes; each link takes its module's published name. */
-  modules: readonly string[];
-  shot: string;
-  screen: ReactNode;
-}>;
+const STEPS = [
+  {
+    title: "Run your buyers' questions",
+    body: 'Mention rate, position and competitors for each prompt.',
+  },
+  {
+    title: 'Fix what the answers show',
+    body: 'The Agent drafts briefs and page edits from your evidence. You publish them.',
+  },
+  { title: 'Run them again', body: 'Re-run prompts to check the change.' },
+] as const;
 
-const PILLARS: readonly Pillar[] = [
-  {
-    title: 'See how often AI recommends you and who it cites',
-    body: 'Each score opens the saved answer: engine, prompt, date, your position and its sources.',
-    points: [
-      'Competitors on the same prompts',
-      'Mentions, citations and AI referral visits counted apart',
-      'Product answers for ecommerce teams',
-    ],
-    modules: [
-      '/platform/ai-visibility',
-      '/platform/cited-sources',
-      '/platform/ai-referral-analytics',
-      '/platform/product-visibility',
-    ],
-    shot: 'Answer record',
-    screen: <ScreenAnswer />,
-  },
-  {
-    title: 'Compare your keywords and backlinks with competitors',
-    body: 'Find keywords competitors rank for that you miss, and sites that link to them but not to you.',
-    points: [
-      'Keyword gaps and competitor rankings',
-      'Referring-domain overlap',
-      'Competitors and their top pages',
-      'Cost shown before each request',
-    ],
-    modules: ['/platform/keyword-research', '/platform/search-demand'],
-    shot: 'Keyword Research',
-    screen: <ScreenKeywords />,
-  },
-  {
-    title: 'Find site issues and queries close to page one',
-    body: 'Site Health lists issues per page and which AI crawlers robots.txt lets in. Search Console adds queries at an average position of 4 to 15.',
-    points: [
-      'AI crawler access for search, training and user fetch',
-      'CTR gaps per landing page',
-      'Coverage next to every score',
-    ],
-    modules: ['/platform/site-health', '/platform/search-demand'],
-    shot: 'Site Health · AI crawlers',
-    screen: <ScreenCrawlerAccess />,
-  },
-  {
-    title: 'Draft the fixes, then measure again',
-    body: 'The Agent writes briefs, page edits and outreach plans from your saved evidence. Your own assistant can read it over MCP.',
-    points: [
-      'Briefs for prompts that skip you',
-      'Page edits with their reasons',
-      'Re-run prompts to check the change',
-    ],
-    modules: ['/platform/content-briefs', '/platform/agents', '/platform/mcp'],
-    shot: 'Agent',
-    screen: <ScreenAgentChat />,
-  },
-];
-
-function Pillars() {
+function HowItWorks() {
   return (
-    <PageSection id="pillars" title="Measure, diagnose, improve">
-      {PILLARS.map((pillar, index) => (
-        <FeatureSplit
-          key={pillar.title}
-          title={pillar.title}
-          body={pillar.body}
-          points={pillar.points}
-          links={pillar.modules.map((href) => ({ href, label: platformLabel(href) ?? href }))}
-          reverse={index % 2 === 1}
-          media={<ProductFrame label={pillar.shot}>{pillar.screen}</ProductFrame>}
-        />
-      ))}
+    <PageSection id="how-it-works" title="Measure, diagnose, improve">
+      <Steps items={STEPS} />
+    </PageSection>
+  );
+}
+
+/** The one product view after the rail: the saved answer behind every score. */
+function Evidence() {
+  const modules = [
+    '/platform/ai-visibility',
+    '/platform/cited-sources',
+    '/platform/ai-referral-analytics',
+  ];
+  return (
+    <PageSection id="evidence" label="Evidence">
+      <FeatureSplit
+        as="h2"
+        title="See how often AI recommends you and who it cites"
+        body="Each score opens the saved answer: engine, prompt, date, your position and its sources."
+        points={[
+          'Competitors on the same prompts',
+          'Mentions, citations and AI referral visits counted apart',
+        ]}
+        links={modules.map((href) => ({ href, label: platformLabel(href) ?? href }))}
+        media={
+          <ProductFrame label="Answer record">
+            <ScreenAnswer />
+          </ProductFrame>
+        }
+      />
     </PageSection>
   );
 }
@@ -325,15 +275,9 @@ export function LandingPage() {
           names={{ chatgpt: 'OpenAI API', gemini: 'Gemini API', claude: 'Claude API' }}
         />
       </PageSection>
-      <Loop />
-      <PageSection
-        id="platform"
-        title="Everything in one project"
-        action={<SiteArrowLink href="/platform">See the whole platform</SiteArrowLink>}
-      >
-        <CapabilityGrid />
-      </PageSection>
-      <Pillars />
+      <Modules />
+      <HowItWorks />
+      <Evidence />
       <Integrations />
       <Teams />
       <Trust />

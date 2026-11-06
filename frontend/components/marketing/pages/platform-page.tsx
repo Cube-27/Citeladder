@@ -50,7 +50,7 @@ export function PlatformActions({ cta }: Readonly<{ cta: PlatformCta }>) {
 }
 
 /** Every published capability, one card per navigation group. */
-export function CapabilityGrid() {
+function CapabilityGrid() {
   return (
     <ul className={cn('cl-tiles', `cl-cols-${columnsFor(PLATFORM_GROUPS.length)}`)}>
       {PLATFORM_GROUPS.map((group) => (

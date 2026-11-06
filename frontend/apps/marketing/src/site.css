@@ -1422,19 +1422,19 @@ a.cl-announce:hover {
   transition: background-color var(--motion-fast) var(--ease-standard);
 }
 
-:is(.cl-tiles > li, .cl-bento-cell):nth-child(4n + 1) > .cl-fcard {
+:is(.cl-tiles > li, .cl-bento-cell, .cl-rail-item):nth-child(4n + 1) > .cl-fcard {
   --cl-tint: var(--tint-mint);
 }
 
-:is(.cl-tiles > li, .cl-bento-cell):nth-child(4n + 2) > .cl-fcard {
+:is(.cl-tiles > li, .cl-bento-cell, .cl-rail-item):nth-child(4n + 2) > .cl-fcard {
   --cl-tint: var(--tint-sky);
 }
 
-:is(.cl-tiles > li, .cl-bento-cell):nth-child(4n + 3) > .cl-fcard {
+:is(.cl-tiles > li, .cl-bento-cell, .cl-rail-item):nth-child(4n + 3) > .cl-fcard {
   --cl-tint: var(--tint-lilac);
 }
 
-:is(.cl-tiles > li, .cl-bento-cell):nth-child(4n + 4) > .cl-fcard {
+:is(.cl-tiles > li, .cl-bento-cell, .cl-rail-item):nth-child(4n + 4) > .cl-fcard {
   --cl-tint: var(--tint-peach);
 }
 
@@ -1714,6 +1714,70 @@ a.cl-fcard:hover {
   .cl-split + .cl-split {
     margin-top: 96px;
   }
+}
+
+/* ---------- CardRail: one sideways-scrolling row of fixed-width cards ---------- */
+.cl-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.cl-rail-nav {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* The buttons keep their space before the script mounts them, so nothing moves. */
+.cl-rail-nav:not([data-ready]) {
+  visibility: hidden;
+}
+
+.cl-rail-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--tint-neutral);
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+
+.cl-rail-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-ink) 8%, var(--tint-neutral));
+}
+
+.cl-rail-btn:disabled {
+  color: var(--color-ink-muted);
+  cursor: default;
+}
+
+.cl-rail-track {
+  display: grid;
+  grid-auto-columns: min(400px, 85%);
+  grid-auto-flow: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  list-style: none;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.cl-rail-track::-webkit-scrollbar {
+  display: none;
+}
+
+.cl-rail-item {
+  scroll-snap-align: start;
 }
 
 /* ---------- Steps ---------- */
