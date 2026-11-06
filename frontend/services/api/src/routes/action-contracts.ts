@@ -1,22 +1,19 @@
-/** Request bodies of the Action routes; responses are the shared contracts. */
+/** Request bodies of the Action routes; shapes and responses are the shared contracts. */
+import {
+  actionDeclarationRequestSchema,
+  actionStatusUpdateRequestSchema,
+} from '@citeladder/contracts/actions';
 import { z } from 'zod';
 import { policy } from '../config.ts';
 
-const datetime = z.iso.datetime({ offset: true });
-const nullableUuid = z.uuid().nullable();
-export const statusPatch = z.strictObject({
+/** The policy names which statuses a user may store. */
+export const statusPatch = actionStatusUpdateRequestSchema.extend({
   status: z
     .string()
     .refine(
       (value) => policy.opportunity.actions.ACTION_USER_STATUSES.includes(value),
       'Status must be open or dismissed',
-    ),
+    )
+    .pipe(actionStatusUpdateRequestSchema.shape.status),
 });
-export const declarationCreate = z.strictObject({
-  recommendation_ids: z.array(z.uuid()).max(100).default([]),
-  output_revision_id: nullableUuid.default(null),
-  declared_implemented_at: datetime.refine(
-    (value) => !value.startsWith('0000-'),
-    'A valid calendar year is required',
-  ),
-});
+export const declarationCreate = actionDeclarationRequestSchema;

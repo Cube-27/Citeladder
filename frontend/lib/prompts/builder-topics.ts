@@ -3,7 +3,7 @@
  * plus proposals, edited locally and written only as one confirmed plan.
  * Proposals fill gaps beside the existing topics and never replace them.
  */
-import type { TopicConfirmInput } from '@/lib/api/topics';
+import type { TopicConfirmPlan } from '@citeladder/contracts/prompt-requests';
 import type { Topic, TopicPreview } from '@/lib/api/types';
 import { orderTopicsForRail } from '@/lib/prompts/topic-tree';
 
@@ -68,8 +68,8 @@ export function addProposals(
 }
 
 /** The plan the rows describe: removed and renamed existing topics, and every new one. */
-export function topicPlan(rows: readonly TopicRow[]): TopicConfirmInput {
-  const plan: TopicConfirmInput = { create: [], rename: [], delete: [] };
+export function topicPlan(rows: readonly TopicRow[]): TopicConfirmPlan {
+  const plan: TopicConfirmPlan = { create: [], rename: [], delete: [] };
   for (const row of rows) {
     const name = row.name.trim();
     if (row.kind === 'existing') {
@@ -82,7 +82,7 @@ export function topicPlan(rows: readonly TopicRow[]): TopicConfirmInput {
   return plan;
 }
 
-export const planIsEmpty = (plan: TopicConfirmInput) =>
+export const planIsEmpty = (plan: TopicConfirmPlan) =>
   !plan.create.length && !plan.rename.length && !plan.delete.length;
 
 /** Why the rows cannot be confirmed as they stand, or null when they can. */
