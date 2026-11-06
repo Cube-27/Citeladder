@@ -23,6 +23,18 @@ persisted source snapshots; recomputation writes ranked Opportunities and
 immutable snapshots with rule/formula versions and exact source identities.
 An ordinary list/detail read never refreshes a source or recomputes a ranking.
 
+Each evidence family (demand, the brand run, Commerce, the crawl, keyword
+gaps) is one entry in
+[refresh families](../frontend/services/api/src/opportunities/refresh-families.ts)
+that names its source-identity fields and produces its hits; the refresh
+iterates that list. A hit names its target as a typed `TargetRef`
+([targets](../frontend/services/api/src/analysis/opportunities/targets.ts)):
+the persisted `target_*` columns and `target_key` derive there, and Action
+grouping switches on the same union, so no reader parses a key prefix. Each
+rule's evidence shape is a schema in `@citeladder/contracts/opportunity-evidence`.
+Visibility reads a cited page's earned Opportunity and Action through
+[earned page actions](../frontend/services/api/src/opportunities/earned-page-actions.ts).
+
 A refresh first resolves its source identity: the audit (the default market's
 latest dashboard-ready brand run, the one Visibility and Overview call latest),
 the latest dashboard-ready Commerce run (read for Commerce findings only, so
