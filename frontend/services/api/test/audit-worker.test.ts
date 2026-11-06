@@ -7,7 +7,7 @@ import { auditTenant, auditTestKey } from './audit-fixtures.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { createAudits } from '../src/audits/creation.ts';
 import { auditInput } from '../src/audits/inputs.ts';
-import { AuditWorker } from '../src/workers/audit-worker.ts';
+import { AuditWorker } from '../src/audits/worker.ts';
 import { analyzeExecution } from '../src/analysis/execution.ts';
 import { finalizeAudit } from '../src/analysis/finalization.ts';
 import { createConnection } from '../src/providers/connections.ts';
