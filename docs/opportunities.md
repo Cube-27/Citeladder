@@ -23,9 +23,11 @@ persisted source snapshots; recomputation writes ranked Opportunities and
 immutable snapshots with rule/formula versions and exact source identities.
 An ordinary list/detail read never refreshes a source or recomputes a ranking.
 
-A refresh first resolves its source identity: the audit, crawl, demand
-snapshot and revision, internal-link run and newest inspected source-page
-reading. When the latest snapshot already records that identity under the
+A refresh first resolves its source identity: the audit (the default market's
+latest dashboard-ready brand run, the one Visibility and Overview call latest),
+the latest dashboard-ready Commerce run (read for Commerce findings only, so
+neither kind of run replaces the other's Actions), crawl, demand snapshot and
+revision, internal-link run and newest inspected source-page reading. When the latest snapshot already records that identity under the
 current versions, the refresh loads no evidence. Otherwise it loads evidence
 outside the lock, then takes the project advisory lock shared by TypeScript
 prompt writes and resolves the identity again; if a source moved during the

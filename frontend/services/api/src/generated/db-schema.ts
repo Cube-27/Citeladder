@@ -1065,6 +1065,7 @@ export interface ClaimVerdicts {
   fact_revision_ids: Json;
   id: string;
   low_confidence: boolean;
+  model_omitted: Generated<boolean>;
   model_verdict: string | null;
   verdict: string;
   verification_id: string;
@@ -1229,6 +1230,8 @@ export interface CommerceRecommendationObservations {
   product_id: string | null;
   project_id: string;
   rank: number | null;
+  resolver_outcome: string | null;
+  resolver_template_version: string | null;
   surface_kind: string;
   target_id: string;
   target_kind: string;
@@ -1497,6 +1500,7 @@ export interface EntitySentiments {
   id: string;
   label: string;
   low_confidence: boolean;
+  model_omitted: Generated<boolean>;
   passage_spans: Json;
   perception_id: string;
   workspace_id: string;

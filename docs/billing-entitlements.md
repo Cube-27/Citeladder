@@ -86,7 +86,7 @@ ending after `BILLING_TRIAL_DAYS` (release value 7). Login and operator repair
 cannot add a permanent baseline to that account. Public provenance also consumes
 eligibility for the separate no-card campaign. Existing non-public grants remain.
 The trial allows one project, 20 prompts, 20 monitored URLs and ChatGPT only,
-with 20 prompt runs and 5,000 AI credits for its whole length; the Agent and
+with 20 prompt runs and 500 AI credits for its whole length (B61); the Agent and
 top-ups remain unavailable.
 
 `entitlements/access.ts` resolves `active`, `trial_active`, `trial_expired`,

@@ -113,7 +113,7 @@ that reports no usage is not charged.
 credit so their money value is unchanged: AI top-up 25,000 credits for $25
 (available on every paid plan, not the trial); Growth 12,500 and Scale 37,500
 per month. The owner set the free trial at 200 old credits ($5): 5,000 credits
-in total, no top-ups. Engineering gave Starter the same 5,000 per month, because
+in total, no top-ups (trial amended to 500 by B61). Engineering gave Starter the same 5,000 per month, because
 prompt generation is the core feature and must not require Growth.
 Configuration; change freely.
 
@@ -480,9 +480,17 @@ production runs failed for funding with holds of 130–143 credits against
 debits of 2–9: "Credit holds must not refuse work the balance can actually
 pay for."
 
+## Trial allowance (2026-11-06)
+
+**B61 — Owner, 2026-11-06.** The public trial gets **500** AI credits for its
+whole length, no top-ups; Agent access stays excluded. Amends B16's 5,000
+trial credits; Starter, Growth and Scale allowances are unchanged. The pricing
+page and FAQ state the 500 credits. Source: owner decision OD4 in the
+[architecture untangle plan](plans/architecture-untangle.md#owner-decisions-2026-11-06).
+
 ## Architecture untangle P10 (2026-11-06)
 
-**B61 — Owner, 2026-11-06.** Plan-flag checks take the account capacity lock
+**B62 — Owner, 2026-11-06.** Plan-flag checks take the account capacity lock
 (architecture untangle OD2). Engineering: every flag that gates work (Agent,
 API access, Commerce, crawl logs, fact-checking, project deletion, Keyword
 Research, team members) passes one gate that reads the grants under the lock
@@ -494,7 +502,7 @@ refuses an unresolvable account, so a customer does not see the difference.
 Reads that only show whether a flag is on stay unlocked. Source:
 [architecture untangle](plans/architecture-untangle.md) OD2.
 
-**B62 — Engineering, 2026-11-06.** One hold module owns consumable holds
+**B63 — Engineering, 2026-11-06.** One hold module owns consumable holds
 (prompt runs, AI credits, Site Health page fetches). Settling a hold debits
 what was spent, never more than the hold still holds, and releases the rest;
 every caller already bounded its charge by its hold (B13, B41, B60), so no
@@ -504,7 +512,7 @@ refunded, so a repeated refund returns nothing. A usage read's remaining
 balance is the sum of each grant's own remainder, the figure admission holds
 against. No money rule changes.
 
-**B63 — Engineering, 2026-11-06.** One writer for grants and refunds. Every
+**B64 — Engineering, 2026-11-06.** One writer for grants and refunds. Every
 grant bundle, the signup baseline included, is issued by the grant writer with
 a typed source (subscription, activation, override, intro or public signup);
 the stored `source_ref` formats are unchanged. Settlement owns a refund's

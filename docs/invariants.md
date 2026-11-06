@@ -34,8 +34,9 @@ The SQL baseline (invariant 17) defines tables; it never writes application rows
 For route families the route-ownership manifest is the single list: every
 API operation declares exactly one listed family, every listed family is
 served, and the gate fails otherwise. For
-analytics task kinds the native catalog in
-`frontend/services/api/src/config/connected-data.ts` owns execution and recovery;
+analytics task kinds the kind registry in
+`frontend/services/api/src/workers/analytics-kinds.ts` (each feature exports
+its kinds' executor, compensation and lease) owns execution and recovery;
 Product operators and Opportunity enqueue/execution are native.
 
 ## 2. Product policy is configuration
