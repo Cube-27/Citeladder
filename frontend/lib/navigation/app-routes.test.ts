@@ -1,6 +1,8 @@
+import { CREDENTIAL_LINK_PATHS } from '@citeladder/contracts/route-ownership';
 import { describe, expect, it } from 'vite-plus/test';
 
 import {
+  APP_ROUTES,
   hasPageTitle,
   isWorkspaceOnlyRoute,
   navigationMode,
@@ -38,6 +40,13 @@ describe('app route manifest', () => {
     expect(projectSwitchPathname('/agent/actions/a1')).toBe('/agent/actions');
     expect(projectSwitchPathname('/site/crawls/c1/pages/p1')).toBe('/site');
     expect(projectSwitchPathname('/performance')).toBe('/performance');
+  });
+
+  it('marks exactly the routes the app host serves as credential links', () => {
+    const marked = APP_ROUTES.filter((route) => 'credentialInUrl' in route).map(
+      (route) => route.path,
+    );
+    expect(new Set(marked)).toEqual(CREDENTIAL_LINK_PATHS);
   });
 
   it('puts every Agent path, known or not, in Agent mode', () => {
