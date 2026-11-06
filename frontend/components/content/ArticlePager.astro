@@ -1,9 +1,9 @@
 ---
 /**
  * ArticlePager — the previous and next guides at the foot of a page: two
- * half-width `surface` cards (1px `line`, `radius-xl`, `shadow-xs`), the
- * direction in `ink-muted` with a chevron and the title in `label-lg`. Next
- * keeps the right column when there is no Previous; the two stack below 768px.
+ * half-width links between 1px `line` rules (no boxes), the direction in
+ * `ink-muted` with a chevron that nudges on hover and the title in `label-lg`.
+ * Next keeps the right column when there is no Previous; the two stack below 768px.
  */
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -46,20 +46,32 @@ const { previous, next, label = 'Adjacent articles' } = Astro.props;
   .cl-pager {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 24px;
+    column-gap: 48px;
     max-width: var(--container-prose);
+    border-top: 1px solid var(--color-line);
+    border-bottom: 1px solid var(--color-line);
   }
   .cl-pager-link {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
-    padding: 20px 24px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-xs);
+    padding: 24px 0;
     text-decoration: none;
+  }
+  .cl-pager-dir :global(svg) {
+    transition: transform var(--motion-fast) var(--ease-standard);
+  }
+  .cl-pager-link:hover .cl-pager-dir :global(svg) {
+    transform: translateX(-4px);
+  }
+  .cl-pager-link--next:hover .cl-pager-dir :global(svg) {
+    transform: translateX(4px);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cl-pager-link:hover .cl-pager-dir :global(svg) {
+      transform: none;
+    }
   }
   .cl-pager-link--next {
     grid-column: 2;
@@ -87,10 +99,12 @@ const { previous, next, label = 'Adjacent articles' } = Astro.props;
   @media (max-width: 767px) {
     .cl-pager {
       grid-template-columns: minmax(0, 1fr);
-      gap: 16px;
     }
     .cl-pager-link--next {
       grid-column: auto;
+    }
+    .cl-pager-link + .cl-pager-link {
+      border-top: 1px solid var(--color-line);
     }
   }
 </style>
