@@ -49,6 +49,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | OD4 | Trial credits (B16 says 5,000; website says none)? | The trial gets **500** AI credits; the copy is corrected to match. | FX1 |
 | OD5 | Onboarding discovery | Fix the recurring "competitor discovery fails after a deploy, works after logging out" bug first; make error handling and logging robust last, with recovery actions instead of dead-end errors. | ON1, ON2, Z1–Z4 |
 | OD6 | Unpriced gateway model billed at the Haiku rate | Keep the documented fallback: only Anthropic and OpenAI models are used and all are priced; internal cost for any other model stays at the Haiku rate; customer pricing is separate and the public model choice is fixed. Revisit later. | none |
+| OD7 | Referral classifications are kept 90 days but Performance reads up to 480 (raised by P08 #631) | Keep AI referral data for the same period as Performance (480 days), so Performance never counts older AI sessions as not AI. | X9 |
 
 ## PR tracker
 
@@ -76,6 +77,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P20 | Settings resolve once; named abuse budgets | G1, G2, G3 | P01, P15 | wide | todo | | |
 | P21 | Screen sweep: failure renderer, typed blobs, form limits, non-null project, recovery actions | F8, F9, F10, R4, Z4 | P07, P12, P13, P16 | | todo | | Split at a row boundary if over ~4,000 lines |
 | P22 | AI Traffic and integration owners; error logging | X4, X5, Z1, Z2, Z3 | P15, P16, P19 | | todo | | |
+| P23 | AI referral retention matches the Performance window | X9 | P08 | | todo | | Owner decision OD7; small, dispatched after P05 |
 
 ## Order
 
@@ -99,7 +101,7 @@ What each merge unblocks:
 | P05 | P19 |
 | P06 | P13 |
 | P07 | P21 |
-| P08 | P16 |
+| P08 | P16, P23 |
 | P09 | P15, P16 |
 | P10 | P18 |
 | P11 | P17 |
@@ -189,6 +191,7 @@ order the PR tracker already respects.
 | X6 | Auth/workspaces placement; one "owned workspace" query | C3 | `auth/bootstrap.ts`, `auth/development-access.ts`, `workspaces/`, `entitlements/bootstrap.ts` | | todo | | |
 | X7 | AI referral classification read from the persisted table everywhere | X3 | `referrals/landing.ts`, `traffic/projection.ts` | | done | eda2c70 | |
 | X8 | Audit side effects leave `src/analysis` | E4 | `analysis/{finalization,execution}.ts`, `audits/` | | todo | | |
+| X9 | AI referral retention matches the Performance window (OD7) | X7 | `config/referrals.json`, `referrals/retention.ts` | | todo | | |
 | K1 | One internal-cost view; Tavily and Keenable priced; cost rows in the call's transaction | B2 | `billing/metering.ts`, `audits/costs.ts`, `config/{costs,ai-credits}.json`, `commerce/discovery-provider.ts`, `projects/research-evidence.ts` | mig? | todo | | Before public sign-up |
 | K2 | Platform-wide daily spend breaker | K1 | `billing/metering.ts`, config | | todo | | Before public sign-up |
 | K3 | Per-feature output caps for charged calls | B2, ON1 | `config/model-gateway.json`, `billing/metering.ts`, gateway callers | | todo | | |
@@ -677,6 +680,12 @@ Protecting tests: `public-routes.test.ts`, `content.test.ts`, `screens.test.tsx`
   and the `DeriveExecution` step with its perception enqueue in `analysis/execution.ts` move into
   `audits/` beside the worker E4 moved there; `analysis/` keeps only derivation and
   `docs/backend-architecture.md` is unchanged.
+- **X9 (OD7):** `referrals.retention_days` (`config/referrals.json`, today 90) stops being an independent
+  number: it equals the Performance window (`traffic.json` `PERFORMANCE_CUSTOM_RANGE_MAX_DAYS` /
+  `TRAFFIC_MAX_WINDOW_DAYS`, 480), derived from that one value or enforced equal by config validation.
+  Update any document that states the referral retention period. Test: a referral event 200 days old
+  survives `referral_retention_sweep` and still counts as AI in Performance, and one older than the
+  window is deleted.
 
 Protecting tests: `normalization-decisions`, `audit-scoring`, `ai-traffic`, `integrations-routes`,
 `integration-dispatcher`, `integration-sync`, `bootstrap-sequence`, `workspaces`.
