@@ -16,6 +16,7 @@ import { z } from 'zod';
 
 import { policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import type { RecordScope } from '../db/workspace-scope.ts';
 import { jsonObject, record } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
 import type { DB } from '../generated/db-schema.ts';
@@ -180,13 +181,14 @@ async function acceptedDrafts(
 
 export function reviewCandidates(
   db: Database,
-  workspaceId: string,
+  scope: RecordScope,
   promptSetId: string,
   input: z.infer<typeof candidateReview>,
 ): Promise<CandidateReview> {
   validateIds(input.accept_ids, input.reject_ids);
+  const { workspaceId } = scope;
   return db.transaction().execute(async (trx) => {
-    const set = await scopedPromptSet(trx, workspaceId, promptSetId);
+    const set = await scopedPromptSet(trx, workspaceId, promptSetId, scope.projectId);
     await acquireProjectLock(trx, set.project_id);
     await acquirePromptSetLock(trx, set.id);
     const now = new Date();

@@ -51,7 +51,7 @@ export function decideBuyerPrompt(
       .where('p.id', '=', id)
       .executeTakeFirst();
     if (!prompt) commerceMissing('Buyer prompt not found');
-    await updatePrompt(trx, scope.workspaceId, prompt.id, { enabled: approved });
+    await updatePrompt(trx, scope, prompt.id, { enabled: approved });
     const target = await trx
       .selectFrom('commerce_prompt_targets')
       .select('id')

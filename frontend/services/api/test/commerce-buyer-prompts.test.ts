@@ -248,7 +248,7 @@ describe('one prompt insert path shared by candidate review and Commerce', () =>
     const text = 'Which shoes grip wet rock?';
     const { setId, candidateIds } = await commerceSetWithCandidates([text]);
     const [review, commerce] = await Promise.allSettled([
-      reviewCandidates(db, scope.workspaceId, setId, { accept_ids: candidateIds, reject_ids: [] }),
+      reviewCandidates(db, scope, setId, { accept_ids: candidateIds, reject_ids: [] }),
       manualBuyerPrompt(db, scope, buyerManualInput.parse({ target, text })),
     ]);
     const outcome = [
@@ -273,7 +273,7 @@ describe('one prompt insert path shared by candidate review and Commerce', () =>
       'Which shoes drain water fast?',
     ]);
     const [review, commerce] = await Promise.allSettled([
-      reviewCandidates(db, scope.workspaceId, setId, { accept_ids: candidateIds, reject_ids: [] }),
+      reviewCandidates(db, scope, setId, { accept_ids: candidateIds, reject_ids: [] }),
       manualBuyerPrompt(
         db,
         scope,

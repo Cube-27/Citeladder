@@ -96,8 +96,9 @@ type RouteSpec<Path extends ParamSpecs, Query extends ParamSpecs, Response exten
   /**
    * The public path of a `both` route whose browser path is not below
    * `/api/v1/projects/{project_id}`: it nests the route under
-   * `/v1/projects/{project_id}`, and the key middleware proves each owned path
-   * ID belongs to that project (`public-api/ownership.ts`).
+   * `/v1/projects/{project_id}`: a write's command finds its record only in
+   * that project, and the key middleware proves a read's owned path IDs belong
+   * to it (`public-api/ownership.ts`).
    */
   publicPath?: string;
   /** The API key scope a public call needs; reads default to `read`. */

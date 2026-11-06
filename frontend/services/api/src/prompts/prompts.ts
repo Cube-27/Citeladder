@@ -21,6 +21,7 @@ import { z } from 'zod';
 
 import { policy } from '../config.ts';
 import { inTransaction, type Database } from '../db/database.ts';
+import type { RecordScope } from '../db/workspace-scope.ts';
 import { isUniqueViolation } from '../db/errors.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { DB } from '../generated/db-schema.ts';
@@ -95,19 +96,48 @@ function normalizeIntent(value: string): string {
 type Cohort = z.infer<typeof promptCohortSchema>;
 const cohortColumns = (cohort: Cohort) => ({ cohort, branded: brandedCohort(cohort) });
 
-/** A prompt in the caller's workspace with its project, or `Prompt not found`. */
-export async function scopedPrompt(db: Kysely<DB>, workspaceId: string, promptId: string) {
-  const row = await db
+/** A prompt in the caller's workspace (and named project) with its project, or `Prompt not found`. */
+export async function scopedPrompt(
+  db: Kysely<DB>,
+  workspaceId: string,
+  promptId: string,
+  projectId: string | null = null,
+) {
+  const query = db
     .selectFrom('prompts')
     .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
     .innerJoin('projects', 'projects.id', 'prompt_sets.project_id')
     .selectAll('prompts')
     .select('prompt_sets.project_id')
     .where('prompts.id', '=', promptId)
-    .where('projects.workspace_id', '=', workspaceId)
-    .executeTakeFirst();
+    .where('projects.workspace_id', '=', workspaceId);
+  const row = await (
+    projectId === null ? query : query.where('projects.id', '=', projectId)
+  ).executeTakeFirst();
   if (row === undefined) throw notFound('Prompt');
   return row;
+}
+
+/** Every one of `promptIds` in the project, or a 404 naming how many are not in it. */
+export async function scopedPrompts(
+  db: Kysely<DB>,
+  scope: { workspaceId: string; projectId: string },
+  promptIds: readonly string[],
+) {
+  const ids = [...new Set(promptIds)];
+  const rows = isNonEmpty(ids)
+    ? await db
+        .selectFrom('prompts')
+        .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
+        .select(['prompts.id', 'prompts.text', 'prompts.status', 'prompts.prompt_set_id'])
+        .where('prompts.id', 'in', ids)
+        .where('prompts.workspace_id', '=', scope.workspaceId)
+        .where('prompt_sets.project_id', '=', scope.projectId)
+        .execute()
+    : [];
+  if (rows.length !== ids.length)
+    throw new ApiError(404, `${ids.length - rows.length} prompt(s) were not found in this project`);
+  return rows;
 }
 
 /** The topic's persisted name and description, or 404 outside the project. */
@@ -143,11 +173,11 @@ export async function listPrompts(
 
 export async function createPrompt(
   db: Database,
-  workspaceId: string,
+  scope: RecordScope,
   promptSetId: string,
   input: z.infer<typeof promptInput>,
 ): Promise<PromptView> {
-  return firstOf(await createPrompts(db, workspaceId, promptSetId, [input]), 'created prompt');
+  return firstOf(await createPrompts(db, scope, promptSetId, [input]), 'created prompt');
 }
 
 /**
@@ -211,11 +241,11 @@ async function screen<T extends { text: string; topic_id?: string | null }>(
  */
 export async function screenPrompts(
   db: Database,
-  workspaceId: string,
+  scope: RecordScope,
   promptSetId: string,
   inputs: readonly z.infer<typeof promptInput>[],
 ) {
-  const set = await scopedPromptSet(db, workspaceId, promptSetId);
+  const set = await scopedPromptSet(db, scope.workspaceId, promptSetId, scope.projectId);
   const screened = await screen(db, set, inputs);
   return {
     admitted: screened.flatMap((item) => (item.problem === null ? [item.input] : [])),
@@ -236,12 +266,12 @@ export async function screenPrompts(
 
 export async function createPrompts(
   db: Database,
-  workspaceId: string,
+  scope: RecordScope,
   promptSetId: string,
   inputs: NonEmpty<z.infer<typeof promptInput>>,
 ): Promise<PromptView[]> {
   return inTransaction(db, async (trx) => {
-    const set = await scopedPromptSet(trx, workspaceId, promptSetId);
+    const set = await scopedPromptSet(trx, scope.workspaceId, promptSetId, scope.projectId);
     await acquireProjectLock(trx, set.project_id);
     await acquirePromptSetLock(trx, set.id);
     // Screened under the project lock, so the topic vocabulary cannot change before the insert.
@@ -271,14 +301,14 @@ export async function createPrompts(
 /** A request passes its own entitlements, so the over-limit view reuses the access read. */
 export async function updatePrompt(
   db: Database,
-  workspaceId: string,
+  scope: RecordScope,
   promptId: string,
   input: z.infer<typeof promptUpdate>,
-  entitlements = new WorkspaceEntitlements(db, workspaceId),
+  entitlements = new WorkspaceEntitlements(db, scope.workspaceId),
 ): Promise<PromptView> {
   try {
     return await inTransaction(db, (trx) =>
-      applyPromptUpdate(trx, workspaceId, promptId, input, entitlements),
+      applyPromptUpdate(trx, scope, promptId, input, entitlements),
     );
   } catch (error) {
     if (isUniqueViolation(error, UNIQUE_TEXT)) throw new ApiError(409, DUPLICATE);
@@ -292,12 +322,12 @@ export async function updatePrompt(
  */
 async function applyPromptUpdate(
   db: Kysely<DB>,
-  workspaceId: string,
+  scope: RecordScope,
   promptId: string,
   input: z.infer<typeof promptUpdate>,
   entitlements: WorkspaceEntitlements,
 ): Promise<PromptView> {
-  const prompt = await scopedPrompt(db, workspaceId, promptId);
+  const prompt = await scopedPrompt(db, scope.workspaceId, promptId, scope.projectId);
   await acquireProjectLock(db, prompt.project_id);
   // An explicit null detaches the prompt; an absent key leaves its topic.
   const topicGiven = 'topic_id' in input;
@@ -334,10 +364,10 @@ async function applyPromptUpdate(
 
 export async function deletePrompt(
   db: Database,
-  workspaceId: string,
+  scope: RecordScope,
   promptId: string,
 ): Promise<void> {
-  const prompt = await scopedPrompt(db, workspaceId, promptId);
+  const prompt = await scopedPrompt(db, scope.workspaceId, promptId, scope.projectId);
   await db.deleteFrom('prompts').where('id', '=', prompt.id).execute();
 }
 
@@ -354,14 +384,14 @@ function failures<T>(items: readonly T[], check: (item: T) => BindingFailure | n
 /** Archive or activate prompts of one set; all of them, or none (404). */
 export async function bulkSetStatus(
   db: Database,
-  workspaceId: string,
+  scope: RecordScope,
   promptSetId: string,
   input: z.infer<typeof promptBulkStatus>,
-  entitlements = new WorkspaceEntitlements(db, workspaceId),
+  entitlements = new WorkspaceEntitlements(db, scope.workspaceId),
 ): Promise<PromptSetView> {
   const ids = [...new Set(input.prompt_ids)];
   await inTransaction(db, async (trx) => {
-    const set = await scopedPromptSet(trx, workspaceId, promptSetId);
+    const set = await scopedPromptSet(trx, scope.workspaceId, promptSetId, scope.projectId);
     await acquireProjectLock(trx, set.project_id);
     await acquirePromptSetLock(trx, set.id);
     if (input.status === P.status_active) {
@@ -412,13 +442,14 @@ export async function bulkSetStatus(
  */
 export async function importPrompts(
   db: Database,
-  workspaceId: string,
+  scope: RecordScope,
   promptSetId: string,
   input: z.infer<typeof promptImport>,
-  entitlements = new WorkspaceEntitlements(db, workspaceId),
+  entitlements = new WorkspaceEntitlements(db, scope.workspaceId),
 ): Promise<PromptSetView> {
+  const { workspaceId } = scope;
   await db.transaction().execute(async (trx) => {
-    const set = await scopedPromptSet(trx, workspaceId, promptSetId);
+    const set = await scopedPromptSet(trx, workspaceId, promptSetId, scope.projectId);
     await acquireProjectLock(trx, set.project_id);
     await acquirePromptSetLock(trx, set.id);
     const rows = input.prompts.map((row, index) => ({ ...row, index }));
