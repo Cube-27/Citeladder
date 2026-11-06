@@ -54,12 +54,15 @@ export function failedAs(
   outcomes: readonly [Exclude<TaskOutcome, 'error'>, ...Exclude<TaskOutcome, 'error'>[]],
 ): RawBuilder<boolean> {
   const code = sql.ref(`${task}.error_code`);
+  const id = sql.ref(`${task}.id`);
+  const workspace = sql.ref(`${task}.workspace_id`);
   const terms = outcomes.map((outcome) =>
     outcome === 'gone'
       ? sql`(${code} <> all(${CODED_ERRORS}::text[]) and exists (select 1 from site_fetch_attempts a
-          where a.task_id = ${sql.ref(`${task}.id`)} and a.workspace_id = ${sql.ref(`${task}.workspace_id`)}
+          where a.task_id = ${id} and a.workspace_id = ${workspace}
             and a.status_code = any(${GONE_STATUSES}::int[])))`
       : sql`${code} = any(${CODED[outcome]}::text[])`,
   );
-  return sql<boolean>`(${sql.join(terms, sql` or `)})`;
+  const or = sql` or `;
+  return sql<boolean>`(${sql.join(terms, or)})`;
 }

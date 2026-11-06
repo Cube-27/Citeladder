@@ -31,10 +31,12 @@ export const USABLE_CRAWL_STATUSES = [
   'cancelled',
 ] as const satisfies readonly CrawlStatus[];
 // Membership tests over a stored status: persisted rows hold plain text.
-export const isActiveCrawl = (status: string) => ACTIVE_CRAWL_STATUSES.some((s) => s === status);
-export const isTerminalCrawl = (status: string) =>
-  TERMINAL_CRAWL_STATUSES.some((s) => s === status);
-export const isUsableCrawl = (status: string) => USABLE_CRAWL_STATUSES.some((s) => s === status);
+const ACTIVE: readonly string[] = ACTIVE_CRAWL_STATUSES;
+const TERMINAL: readonly string[] = TERMINAL_CRAWL_STATUSES;
+const USABLE: readonly string[] = USABLE_CRAWL_STATUSES;
+export const isActiveCrawl = (status: string) => ACTIVE.includes(status);
+export const isTerminalCrawl = (status: string) => TERMINAL.includes(status);
+export const isUsableCrawl = (status: string) => USABLE.includes(status);
 export const crawlDiscoveryStatusSchema = z.enum([
   'pending',
   'running',
