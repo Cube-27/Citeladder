@@ -61,7 +61,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P04 | Site Health tasks I: outcome classifier, crawl status, single writers | SH1, SH2, SH3 | — | mig? | merged | [#628](https://github.com/Cube-27/Citeladder/pull/628) | No migration needed |
 | P05 | Engine surfaces I: DataForSEO client, typed frozen config, engine sets from routes | E1, E2, E3 | — | | merged | [#637](https://github.com/Cube-27/Citeladder/pull/637) | No migration |
 | P06 | Browser contracts and prompt/topic descriptors | F1, F2, F3, F4 | — | | merged | [#634](https://github.com/Cube-27/Citeladder/pull/634), [#638](https://github.com/Cube-27/Citeladder/pull/638) | Split for size: P06-a (#634) = F1–F3; P06-b (#638) = F4 |
-| P07 | App route manifest and kit cleanup | R1, R2, R3, R5, R6, R7 | — | | in review | [#640](https://github.com/Cube-27/Citeladder/pull/640) | Command palette stays in `components/ui` (design-system policy); see PR |
+| P07 | App route manifest and kit cleanup | R1, R2, R3, R5, R6, R7 | — | | merged | [#640](https://github.com/Cube-27/Citeladder/pull/640) | Command palette stays in `components/ui` (design-system policy); see PR |
 | P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | merged | [#631](https://github.com/Cube-27/Citeladder/pull/631) | Migration 0010 |
 | P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | merged | [#630](https://github.com/Cube-27/Citeladder/pull/630) | |
 | P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | merged | [#632](https://github.com/Cube-27/Citeladder/pull/632) | Migration 0011 |
