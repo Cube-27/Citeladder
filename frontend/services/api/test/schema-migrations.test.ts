@@ -79,6 +79,7 @@ describe('a fresh database', () => {
       '0010_differentiation_reports_insert_only',
       '0011_drop_runtime_valid_until',
       '0012_internal_costs',
+      '0013_audit_error_code_width',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -96,6 +97,7 @@ describe('a fresh database', () => {
       { version: '0010_differentiation_reports_insert_only' },
       { version: '0011_drop_runtime_valid_until' },
       { version: '0012_internal_costs' },
+      { version: '0013_audit_error_code_width' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -137,6 +139,7 @@ describe('an existing database', () => {
       '0010_differentiation_reports_insert_only',
       '0011_drop_runtime_valid_until',
       '0012_internal_costs',
+      '0013_audit_error_code_width',
     ]);
     // The Site Health runtime keeps no validity copy of the grants it projects.
     expect(await columns(client, 'workspace_site_health_runtime')).not.toContain(
@@ -192,6 +195,7 @@ describe('an existing database', () => {
       { version: '0010_differentiation_reports_insert_only' },
       { version: '0011_drop_runtime_valid_until' },
       { version: '0012_internal_costs' },
+      { version: '0013_audit_error_code_width' },
     ]);
   }, 120000);
 });
