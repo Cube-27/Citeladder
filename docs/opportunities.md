@@ -176,9 +176,14 @@ declaration; a same-key replay returns it, and same-key conflicting input is
 rejected. The user must reopen a dismissed Action first, and an Action with no
 current finding is refused.
 
-[Declaration checks](../frontend/services/api/src/opportunities/declaration-checks.ts)
-freeze one check per distinct expectation, each scoped to what the Action
-changed:
+Each rule in the catalog names the `check_kind` its findings freeze (null when
+nothing can measure them), and each kind is one module under
+[`opportunities/checks/`](../frontend/services/api/src/opportunities/checks/registry.ts)
+that freezes it, names its reading (leg) and sources, reads it from a source
+and names its subject. The reading an Action detail promises per member before
+declaration, the Action's `measure_with` and the legs after declaration all
+derive from it, so they cannot disagree. A declaration freezes one check per
+distinct expectation, each scoped to what the Action changed:
 
 | Finding | Check | Read by |
 |---|---|---|

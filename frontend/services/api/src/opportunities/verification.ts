@@ -17,15 +17,20 @@ import {
   storedOutcomes,
   worthRecording,
 } from './verification-decisions.ts';
-import { evidenceFor, SOURCE_CHECK_KINDS, type Source } from './verification-evidence.ts';
+import { evidenceFor } from './verification-evidence.ts';
+import { SOURCE_CHECK_KINDS } from './checks/registry.ts';
+import type { SourceKind } from './checks/kind.ts';
+import type { Source } from './checks/read-context.ts';
 import { buildVerificationResult, type Declaration } from './verification-result.ts';
 import { refreshActionStatus } from './action-status.ts';
 const p = policy.opportunity.opportunities;
+const isSourceKind = (kind: string): kind is SourceKind => Object.hasOwn(SOURCE_CHECK_KINDS, kind);
 async function verificationSource(db: Database, task: QueueTask, project: string): Promise<Source> {
   const payload = record(task.payload);
   const kind = scalarText(payload.trigger_kind || '');
   const id = parseUuid(payload.trigger_id);
   if (!id) throw new Error('Implementation verification trigger is invalid');
+  if (!isSourceKind(kind)) throw new Error('Implementation verification trigger kind is invalid');
   const scope = new WorkspaceScope(task.workspace_id);
   let observed: string | null | undefined;
   if (kind === 'site_crawl')
@@ -88,7 +93,7 @@ async function declarations(
   source: Source,
   after: Declaration | undefined,
 ): Promise<Declaration[]> {
-  const kinds = SOURCE_CHECK_KINDS[source.kind] ?? [];
+  const kinds = SOURCE_CHECK_KINDS[source.kind];
   if (!kinds.length) return [];
   let query = new WorkspaceScope(task.workspace_id)
     .selectFrom(db, 'opportunity_implementation_events')

@@ -302,6 +302,7 @@ describe('keyword gaps become Actions', () => {
       target_prompt_id: null,
       target_theme: null,
       label_hint: null,
+      measured_by: null,
       title: rule_id,
       priority_score,
       source_analysis_ids: [],

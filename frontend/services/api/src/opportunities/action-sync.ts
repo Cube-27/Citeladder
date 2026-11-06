@@ -19,6 +19,7 @@ import { groupMembers, type ActionMember } from '../analysis/opportunities/actio
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import type { NewOpportunity } from './refresh-compute.ts';
+import { memberMeasurementLeg } from './checks/registry.ts';
 import type { Scope } from './sources.ts';
 
 const a = policy.opportunity.actions;
@@ -41,6 +42,7 @@ function actionMember(
     target_prompt_id: row.target_prompt_id,
     target_theme: row.target_theme,
     label_hint: typeof prompt === 'string' ? prompt : null,
+    measured_by: memberMeasurementLeg(row),
     title: row.title || row.rule_id,
     priority_score: row.priority_score || 0,
     source_analysis_ids: [...(row.source_analysis_ids ?? [])],
