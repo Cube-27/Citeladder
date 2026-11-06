@@ -174,7 +174,7 @@ describe('CatalogHeader', () => {
     }));
     function LiveScreen() {
       const query = useQuery({
-        queryKey: queryKeys.commerce.catalog(PROJECT_ID),
+        queryKey: queryKeys.commerce.catalog({ workspaceId: WORKSPACE_ID, projectId: PROJECT_ID }),
         queryFn: readCatalog,
       });
       return (

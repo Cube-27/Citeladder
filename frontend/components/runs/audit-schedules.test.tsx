@@ -8,17 +8,10 @@ import { renderWithProviders } from '@/test/render';
 
 import { AuditSchedules } from './audit-schedules';
 
-vi.mock('@/lib/api/runs', () => ({
-  runsApi: {
-    listSchedules: vi.fn(),
-    createSchedule: vi.fn(),
-    updateSchedule: vi.fn(),
-  },
-}));
-
-const createSchedule = vi.mocked(runsApi.createSchedule);
-const listSchedules = vi.mocked(runsApi.listSchedules);
-const updateSchedule = vi.mocked(runsApi.updateSchedule);
+// The schedule descriptors read through runsApi, so the transport is stubbed there.
+const createSchedule = vi.spyOn(runsApi, 'createSchedule');
+const listSchedules = vi.spyOn(runsApi, 'listSchedules');
+const updateSchedule = vi.spyOn(runsApi, 'updateSchedule');
 const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 let workspaceId = WORKSPACE_ID;
 

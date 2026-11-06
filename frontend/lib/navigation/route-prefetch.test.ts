@@ -214,9 +214,9 @@ describe('prefetchRoute', () => {
     [
       '/products',
       [
-        ['commerce', PROJECT_ID, 'buyer-prompts'],
-        ['commerce', PROJECT_ID, 'catalog'],
-        ['commerce', PROJECT_ID, 'competitors'],
+        ['commerce', PROJECT_ID, 'buyer-prompts', PROJECT.workspaceId],
+        ['commerce', PROJECT_ID, 'catalog', PROJECT.workspaceId],
+        ['commerce', PROJECT_ID, 'competitors', PROJECT.workspaceId],
       ],
     ],
   ])('warms %s under the exact keys its screen reads', async (href, keys) => {
@@ -328,7 +328,7 @@ describe('prefetchRoute', () => {
 
     prefetchRoute(client, '/projects', PROJECT);
 
-    const latest = ['visibility', 'project', PROJECT_ID, 'latest'];
+    const latest = ['visibility', PROJECT_ID, 'selection', PROJECT.workspaceId];
     await vi.waitFor(() =>
       expect(
         client.getQueryData([...latest, { cohort: 'core', selection_mode: 'latest' }]),

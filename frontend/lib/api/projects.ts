@@ -200,6 +200,12 @@ export const projectQueries = {
       queryKey: queryKeys.projects.brandFacts(projectId),
       queryFn: ({ signal }) => projectsApi.getBrandFacts(projectId, { signal, workspaceId }),
     }),
+  /** The project's measurement markets, its default first: the market pickers' list. */
+  markets: (workspaceId: string | null, projectId: string) =>
+    queryOptions({
+      queryKey: queryKeys.projects.markets(projectId),
+      queryFn: ({ signal }) => projectsApi.listMarkets(projectId, { signal, workspaceId }),
+    }),
   /** Which widgets the project's Overview shows; independent of the command center. */
   overviewLayout: (workspaceId: string, projectId: string) =>
     queryOptions({

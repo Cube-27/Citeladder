@@ -1,7 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
 
 import { readFromIntent, warmQuery } from '@/lib/api/query-client';
-import { queryKeys } from '@/lib/api/query-keys';
 import { preloadRouteChunk } from '@/lib/navigation/route-chunks';
 
 export type ProjectScope = { projectId: string; workspaceId: string };
@@ -47,25 +46,13 @@ const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
     const { searchIntelligenceQueries } = await import('@/lib/api/search-intelligence');
     warmQuery(client, searchIntelligenceQueries.readiness(workspaceId, projectId));
   },
-  '/products': async (client, { projectId, workspaceId }) => {
-    const { commerceApi } = await import('@/lib/api/commerce');
+  '/products': async (client, scope) => {
+    const { commerceQueries } = await import('@/lib/api/commerce');
     // The screen always loads the catalog (its navigation), the competitors
     // and the buyer prompts; the shelf waits for a selected target.
-    warmQuery(client, {
-      queryKey: queryKeys.commerce.catalog(projectId),
-      queryFn: ({ signal }: { signal: AbortSignal }) =>
-        commerceApi.catalog(projectId, { signal, workspaceId }),
-    });
-    warmQuery(client, {
-      queryKey: queryKeys.commerce.competitors(projectId),
-      queryFn: ({ signal }: { signal: AbortSignal }) =>
-        commerceApi.competitors(projectId, { signal, workspaceId }),
-    });
-    warmQuery(client, {
-      queryKey: queryKeys.commerce.buyerPrompts(projectId),
-      queryFn: ({ signal }: { signal: AbortSignal }) =>
-        commerceApi.buyerPrompts(projectId, { signal, workspaceId }),
-    });
+    warmQuery(client, commerceQueries.catalog(scope));
+    warmQuery(client, commerceQueries.competitors(scope));
+    warmQuery(client, commerceQueries.buyerPrompts(scope));
   },
   // New chat: its recommended Actions are the screen's one project read.
   '/agent': async (client, { projectId, workspaceId }) => {
@@ -86,7 +73,7 @@ const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
     warmQuery(client, projectQueries.brandProfile(workspaceId, projectId));
     warmQuery(client, projectQueries.brandFacts(workspaceId, projectId));
   },
-  '/prompts': async (client, { projectId, workspaceId }) => {
+  '/prompts': async (client, scope) => {
     const [{ promptsQueries }, { topicsQueries }, { visibilityQueries }] = await Promise.all([
       import('@/lib/api/prompts'),
       import('@/lib/api/topics'),
@@ -94,34 +81,33 @@ const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
     ]);
     // The library's three independent reads: its sets, its topic filter, and
     // what the latest run measured for each prompt.
-    const scope = { workspaceId, projectId };
     warmQuery(client, promptsQueries.sets(scope));
     warmQuery(client, topicsQueries.list(scope));
-    warmQuery(client, visibilityQueries.latestPrompts(workspaceId, projectId));
+    warmQuery(client, visibilityQueries.prompts(scope));
   },
-  '/visibility': async (client, { projectId, workspaceId }) => {
-    const [{ runsQueries }, { INITIAL_VISIBILITY_PARAMS }, { visibilityQueries }, { projectsApi }] =
-      await Promise.all([
-        import('@/lib/api/runs'),
-        import('@/lib/api/visibility'),
-        import('@/lib/api/visibility-queries'),
-        import('@/lib/api/projects'),
-      ]);
-    warmQuery(client, runsQueries.list(workspaceId, projectId));
+  '/visibility': async (client, scope) => {
+    const [
+      { runsQueries },
+      { INITIAL_VISIBILITY_PARAMS },
+      { visibilityQueries },
+      { projectQueries },
+    ] = await Promise.all([
+      import('@/lib/api/runs'),
+      import('@/lib/api/visibility'),
+      import('@/lib/api/visibility-queries'),
+      import('@/lib/api/projects'),
+    ]);
+    warmQuery(client, runsQueries.list(scope));
     // The market picker's list, which the screen reads beside the runs.
-    warmQuery(client, {
-      queryKey: queryKeys.projects.markets(projectId),
-      queryFn: ({ signal }: { signal: AbortSignal }) =>
-        projectsApi.listMarkets(projectId, { signal, workspaceId }),
-    });
+    warmQuery(client, projectQueries.markets(scope.workspaceId, scope.projectId));
     // The landing selection, built from the screen's own defaults. A key
     // spelled out here drifted from the one the screen reads and warmed an
     // entry nothing consumed.
-    warmQuery(client, visibilityQueries.project(workspaceId, projectId, INITIAL_VISIBILITY_PARAMS));
+    warmQuery(client, visibilityQueries.project(scope, INITIAL_VISIBILITY_PARAMS));
   },
-  '/runs': async (client, { projectId, workspaceId }) => {
+  '/runs': async (client, scope) => {
     const { runsQueries } = await import('@/lib/api/runs');
-    warmQuery(client, runsQueries.list(workspaceId, projectId));
+    warmQuery(client, runsQueries.list(scope));
   },
   '/ai-traffic': async (client, { projectId, workspaceId }) => {
     const [{ aiTrafficQueries }, { TRAFFIC_RANGES }] = await Promise.all([

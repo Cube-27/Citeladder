@@ -29,7 +29,7 @@ import { readErrorProps } from '@/components/ui/read-error';
 import { TabPanel, TabsRoot } from '@/components/ui/tabs';
 import { projectQueries } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
-import { visibilityApi } from '@/lib/api/visibility';
+import { visibilityQueries } from '@/lib/api/visibility-queries';
 import type { BrandProfile, Project } from '@citeladder/contracts';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
@@ -202,11 +202,9 @@ function ContextPanels({
   brandFacts: ReactNode;
   instructions: ReactNode;
 }>) {
-  const suggestions = useQuery({
-    queryKey: queryKeys.visibility.competitorSuggestions(project.id),
-    queryFn: ({ signal }) =>
-      visibilityApi.listCompetitorSuggestions(project.id, { signal, workspaceId }),
-  });
+  const suggestions = useQuery(
+    visibilityQueries.competitorSuggestions({ workspaceId, projectId: project.id }),
+  );
   return (
     <>
       <TabPanel value="facts">

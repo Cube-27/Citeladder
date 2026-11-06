@@ -15,8 +15,7 @@ import { useToast } from '@/components/ui/toast';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp, pluralCount } from '@/lib/format';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
-import { queryKeys } from '@/lib/api/query-keys';
-import { runsApi } from '@/lib/api/runs';
+import { runsQueries } from '@/lib/api/runs';
 import {
   searchIntelligenceApi,
   type SearchIntelligenceDataset,
@@ -46,12 +45,10 @@ export function SearchIntelligenceCitationMatcher({
     lists.find((dataset) => dataset.id === listId) ??
     lists.find((dataset) => dataset.target_origin === targetOrigin);
   const audits = useQuery({
-    queryKey: queryKeys.runs.list({ project_id: activeProject?.id }),
-    queryFn: ({ signal }) =>
-      runsApi.listAudits(
-        { project_id: activeProject!.id },
-        { signal, workspaceId: activeProject!.workspace_id },
-      ),
+    ...runsQueries.list({
+      workspaceId: activeProject?.workspace_id ?? null,
+      projectId: activeProject?.id ?? '',
+    }),
     enabled: Boolean(activeProject && referring),
   });
   const derive = useMutation({

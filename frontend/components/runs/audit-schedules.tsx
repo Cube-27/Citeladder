@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -13,8 +13,7 @@ import { QueryState } from '@/components/ui/query-state';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Select } from '@/components/ui/select';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
-import { queryKeys } from '@/lib/api/query-keys';
-import { runsApi } from '@/lib/api/runs';
+import { runsMutations, runsQueries } from '@/lib/api/runs';
 import { toggleMarket } from '@/lib/runs/launch';
 import type { ProjectMarket } from '@citeladder/contracts/markets';
 import type {
@@ -40,15 +39,6 @@ const CADENCE_LABELS: Record<AuditScheduleCadence, string> = {
   daily: 'Daily',
   weekly: 'Weekly',
 };
-
-function useAuditSchedules(projectId: string | null) {
-  const workspaceId = useActiveWorkspaceId();
-  return useQuery({
-    queryKey: queryKeys.runs.schedules(workspaceId, projectId ?? ''),
-    queryFn: ({ signal }) => runsApi.listSchedules(projectId!, { signal, workspaceId }),
-    enabled: Boolean(projectId && workspaceId),
-  });
-}
 
 /** Compact schedule ledger: schedules use the same frozen prompt set and engines as a run. */
 export function AuditSchedules({
@@ -76,47 +66,28 @@ function WorkspaceSchedules({
   projectId: string;
   promptSets: PromptSet[];
 }>) {
-  const queryClient = useQueryClient();
+  const scope = { workspaceId, projectId };
   const [promptSetId, setPromptSetId] = useState(promptSets[0]?.id ?? '');
   const [auditScope, setAuditScope] = useState<'brand' | 'commerce'>('brand');
   const [cadence, setCadence] = useState<AuditScheduleCadence>('weekly');
   const [intervalMinutes, setIntervalMinutes] = useState('60');
   const [engines, setEngines] = useState<LogicalEngine[]>(['chatgpt']);
   const [marketIds, setMarketIds] = useState<(string | null)[]>([null]);
-  const schedulesQuery = useAuditSchedules(projectId);
+  const schedulesQuery = useQuery(runsQueries.schedules(scope));
   const markets = useProjectMarkets(projectId, workspaceId);
-  const createMutation = useMutation({
-    mutationFn: () => {
-      return runsApi.createSchedule(
-        projectId,
-        {
-          prompt_set_id: promptSetId,
-          audit_scope: auditScope,
-          cadence,
-          interval_minutes: cadence === 'every_n_minutes' ? Number(intervalMinutes) : undefined,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-          engines,
-          market_ids: marketIds,
-        },
-        { workspaceId },
-      );
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.runs.schedules(workspaceId, projectId),
-      });
-    },
-  });
+  const createMutation = useMutation(runsMutations.createSchedule(scope));
+  const createSchedule = () =>
+    createMutation.mutate({
+      prompt_set_id: promptSetId,
+      audit_scope: auditScope,
+      cadence,
+      interval_minutes: cadence === 'every_n_minutes' ? Number(intervalMinutes) : undefined,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      engines,
+      market_ids: marketIds,
+    });
   const canCreate = !createMutation.isPending && scheduleReady(promptSetId, engines, marketIds);
-  const resumeMutation = useMutation({
-    mutationFn: (scheduleId: string) =>
-      runsApi.updateSchedule(projectId, scheduleId, { enabled: true }, { workspaceId }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.runs.schedules(workspaceId, projectId),
-      });
-    },
-  });
+  const resumeMutation = useMutation(runsMutations.resumeSchedule(scope));
 
   return (
     <Card>
@@ -220,11 +191,7 @@ function WorkspaceSchedules({
               </Stack>
               <MarketChecklist markets={markets} marketIds={marketIds} onToggle={setMarketIds} />
               <div className="flex items-end">
-                <Button
-                  variant="primary"
-                  onClick={() => createMutation.mutate()}
-                  disabled={!canCreate}
-                >
+                <Button variant="primary" onClick={createSchedule} disabled={!canCreate}>
                   {createMutation.isPending ? 'Scheduling…' : 'Schedule audit'}
                 </Button>
               </div>
@@ -235,7 +202,7 @@ function WorkspaceSchedules({
               notice={mutationNoticeForError(createMutation.error, {
                 action: 'schedule the audit',
               })}
-              onRetry={() => createMutation.mutate()}
+              onRetry={createSchedule}
             />
           ) : null}
           <ResumeNotice
