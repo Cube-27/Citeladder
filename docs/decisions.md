@@ -446,7 +446,7 @@ signup notices for `@example.test` test fixtures reached the owner's inbox.
 ## Product charts are plain SVG, without a chart library
 
 Every product chart draws with the design system's own chart kit in
-`components/ui/` (`TrendChart`, `DonutChart`, `BarList`, `StackedBar`,
+`components/ui/` (`TrendChart`, `StackedBar`,
 `Sparkline` and the shared `chart.tsx` pieces): plain SVG and the chart tokens.
 The app carries no chart library, Recharts included. That covers the source
 usage chart, the Performance chart and Search Intelligence history.
