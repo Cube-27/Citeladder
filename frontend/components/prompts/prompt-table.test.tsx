@@ -46,14 +46,19 @@ describe('PromptTable pagination', () => {
     renderTable([
       makePrompt(1, { branded: true, buyer_stage: 'consideration' }),
       makePrompt(2, { intent: '', buyer_stage: '' }),
+      makePrompt(3, { over_plan_limit: true }),
     ]);
 
-    const [, tagged, untagged] = screen.getAllByRole('row');
+    const [, tagged, untagged, overLimit] = screen.getAllByRole('row');
     expect(within(tagged!).getAllByRole('cell')[0]!.textContent).toBe(
-      'Prompt number 1No topic · Branded · Discovery · Consideration',
+      'Prompt number 1No topic Branded · Discovery · Consideration',
     );
     expect(within(untagged!).getAllByRole('cell')[0]!.textContent).toBe(
-      'Prompt number 2No topic · Unbranded',
+      'Prompt number 2No topic Unbranded',
+    );
+    // Kept after a downgrade, but audits skip it until a slot frees.
+    expect(within(overLimit!).getAllByRole('cell')[0]!.textContent).toBe(
+      'Prompt number 3No topic Not measured: beyond the plan limit · Unbranded · Discovery',
     );
   });
 
@@ -116,13 +121,13 @@ describe('PromptTable pagination', () => {
 
     const [, filed, unassigned, unresolved] = screen.getAllByRole('row');
     expect(within(unresolved!).getAllByRole('cell')[0]!.textContent).toBe(
-      'Prompt number 3Topic unavailable · Unbranded · Discovery',
+      'Prompt number 3Topic unavailable Unbranded · Discovery',
     );
     expect(within(filed!).getAllByRole('cell')[0]!.textContent).toBe(
-      'Prompt number 1Running shoes · Unbranded · Discovery',
+      'Prompt number 1Running shoes Unbranded · Discovery',
     );
     expect(within(unassigned!).getAllByRole('cell')[0]!.textContent).toBe(
-      'Prompt number 2No topic · Unbranded · Discovery',
+      'Prompt number 2No topic Unbranded · Discovery',
     );
   });
 

@@ -29,8 +29,8 @@ function AuthLogo() {
 
 /**
  * AuthSplitShell — account access (sign-in, sign-up and the mailbox screens)
- * across the whole viewport (D24, the pre-redesign layout): the sign-in card
- * centred in a column on `paper` with the ThemeSwitch above it and the
+ * across the whole viewport (D24, the pre-redesign layout): the sign-in form
+ * (no card) centred in a column on `paper` with the ThemeSwitch above it and the
  * caller's footer line under it, and from `desktop:` the black-and-white
  * product showcase beside it. Below `desktop:` the showcase drops away and the
  * card has the width. The document scrolls, so a tall form on a short laptop
@@ -174,10 +174,13 @@ function AuthCardFrame({
       <section
         aria-labelledby={headingId}
         className={cn(
-          'bg-surface text-ink shadow-card desktop:p-10 flex flex-col gap-[var(--card-padding)] rounded-lg p-[var(--card-padding)]',
-          // Account access keeps the pre-redesign 44px controls (D24): every
-          // button and field inside reads `control-md`.
-          signIn && '[--control-md:44px]',
+          'text-ink flex flex-col gap-[var(--card-padding)]',
+          // Account access sits straight on the left half's `paper`, with no
+          // card (owner, 2026-11-06), and keeps the pre-redesign 44px
+          // controls (D24): every button and field inside reads `control-md`.
+          signIn
+            ? '[--control-md:44px]'
+            : 'bg-surface shadow-card desktop:p-10 rounded-lg p-[var(--card-padding)]',
         )}
       >
         {signIn ? (
@@ -205,9 +208,11 @@ export function AuthCard(props: AuthCardProps) {
 }
 
 /**
- * AuthSignInCard — the account-access card inside AuthSplitShell (D24): the
- * AuthCard with the logo centred at its top, a centred head and the 44px
- * controls. Used by sign-in, sign-up and the mailbox screens.
+ * AuthSignInCard — the account-access form inside AuthSplitShell (D24): the
+ * AuthCard's head and body with the logo centred at its top, a centred head
+ * and the 44px controls, but no card: no fill, edge, radius, shadow or
+ * padding box, so the whole left half is one plain `paper` surface (owner,
+ * 2026-11-06). Used by sign-in, sign-up and the mailbox screens.
  */
 export function AuthSignInCard(props: AuthCardProps) {
   return <AuthCardFrame {...props} signIn />;

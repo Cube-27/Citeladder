@@ -71,8 +71,10 @@ selectable.
 
 Topics may have one level of subtopics (`Topic.parent_id`, same project); a
 subtopic cannot have children, and deleting a parent promotes its subtopics.
-The topic rail adds a subtopic under a chosen top-level topic and renames a
-topic in place (Enter saves, Escape cancels, a failed save keeps the typed name).
+The library's Topic filter ends with "Add topic", whose dialog adds a topic or
+a subtopic under a chosen top-level topic, and "Manage topics…", whose dialog
+lists every topic with its count and renames (Enter saves, a failed save keeps
+the typed name) or deletes it (design D40).
 
 The [business map](../frontend/services/api/src/projects/business-map.ts), edited only in
 the Prompt Builder (Agent → Context shows it read-only with a link there), and
@@ -392,9 +394,10 @@ after reopening; its quality description is associated with its checkbox. The li
 prioritizes question text, topic, measurement and enabled state; classification
 is secondary detail on the question, available on keyboard focus and to screen readers.
 
-`/prompts` opens directly on the prompt library: topics rail, Active/Archived
-tabs, and each prompt's topic, latest measured visibility and owned citation
-rate. A prompt's question opens its detail view (below). Its actions are
+`/prompts` opens directly on the prompt library: Active/Archived, search, the
+Topic filter and the Filter menu in one control strip over the full-width
+table with each prompt's topic tag, latest measured visibility and owned
+citation rate. A prompt's question opens its detail view (below). Its actions are
 Bulk upload, Prompt Builder, Add prompt and **Launch audit**, which reuses the
 shared launch dialog and its admission/funding checks and stays disabled until
 the project has an active prompt. `/prompts?generate=1` opens the Prompt

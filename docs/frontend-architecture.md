@@ -331,7 +331,7 @@ interaction recipes live only in [`design.md`](design.md).
 | Offer and connection rows; identity rows | `frontend/components/ui/control-row.tsx` (`ControlRow`); `frontend/components/ui/workspace.tsx` (`IdentityRow`) |
 | Fact lists and fixed-height ledgers | `frontend/components/ui/facts.tsx` (`FactList`, `ValueLedger`) |
 | Settings sections | `frontend/components/ui/settings-section.tsx` (`SettingsSections`, `SettingsSection`) |
-| List rows: option and tree-rail rows | `frontend/components/ui/list-row.tsx` (`OptionRow`, `RailItem`, `RailItemForm`) |
+| List rows: option and tree-list rows | `frontend/components/ui/list-row.tsx` (`OptionRow`, `TreeList`, `TreeItem`, `TreeItemForm`) |
 | Reorderable list | `frontend/components/ui/reorder-list.tsx` (`ReorderList`; it replaced the Ranked actions list's own drag-and-move mechanics) |
 | Widget editing toolbar | `frontend/components/ui/workspace.tsx` (`FloatingToolbar`) |
 | Gate pages before the shell opens | `frontend/components/layout/shell-fallback.tsx` (`GateScreen`); project setup's blocked states use `frontend/components/ui/auth-shell.tsx` (`AuthShell`, `AuthCard`) |
