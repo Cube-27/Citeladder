@@ -4,7 +4,7 @@ import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 import { testConfig, testDatabase, sessionToken } from './support.ts';
 import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
-import { seedImport } from './referral-fixtures.ts';
+import { seedClassifiedPairs, seedImport } from './referral-fixtures.ts';
 import { task, requests } from './traffic-fixtures.ts';
 import { createSource } from '../src/crawl-logs/sources.ts';
 import { crawlLogs } from '../src/config/crawl-logs.ts';
@@ -135,6 +135,14 @@ beforeAll(async () => {
         created_at: now,
       })
       .execute();
+  // Landing rows take their AI source from the persisted source/medium classifications.
+  await seedClassifiedPairs(db, imported, {
+    date: day,
+    pairs: [
+      ['chatgpt.com', 'referral'],
+      ['claude.ai', 'referral'],
+    ],
+  });
   await refreshAiReferralsSnapshot(
     await task(db, seed, 'ai_referrals_snapshot_refresh', [day, day]),
     context,

@@ -29,16 +29,17 @@ import {
 } from '../integrations/partitions.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
 import { projectHosts } from '../integrations/host-scope.ts';
+import { readReferralClassifications } from '../referrals/persisted.ts';
 
 const p = policy.traffic;
-type Target = {
+type TargetWindow = {
   start: string;
   end: string;
   grain: string;
   preset: number | null;
   verifies: boolean;
-  builder: TrafficProjectionBuilder;
 };
+type Target = TargetWindow & { builder: TrafficProjectionBuilder };
 
 /**
  * The Demand handoff revision: an order-independent digest (XOR of BLAKE2b-128
@@ -263,31 +264,15 @@ function planTargets(input: {
   anchor: string | null;
   existing: readonly string[];
   overlapping: readonly PersistedWindow[];
-  projectOrigin: string | undefined;
-  allowedHosts: ReadonlySet<string>;
 }) {
-  const targets: Target[] = [];
+  const targets: TargetWindow[] = [];
   const add = (
     start: string,
     end: string,
     grain: string,
     preset: number | null,
     verifies: boolean,
-  ) =>
-    targets.push({
-      start,
-      end,
-      grain,
-      preset,
-      verifies,
-      builder: new TrafficProjectionBuilder({
-        windowStart: start,
-        windowEnd: end,
-        granularity: grain,
-        projectOrigin: input.projectOrigin,
-        allowedHosts: input.allowedHosts,
-      }),
-    });
+  ) => targets.push({ start, end, grain, preset, verifies });
   for (const grain of p.TRAFFIC_SNAPSHOT_GRANULARITIES)
     if (!input.existing.includes(grain))
       add(
@@ -361,16 +346,32 @@ function executor(displayOnly: boolean): Executor {
           .where('window_end', '>=', sql<Date>`${windowStart}::date`)
           .execute();
     const allowedHosts = await projectHosts(db, task.workspace_id, projectId);
-    const { targets, demandWindow } = planTargets({
+    const plan = planTargets({
       displayOnly,
       windowStart,
       windowEnd,
       anchor,
       existing: existing.map((row) => row.granularity),
       overlapping,
-      projectOrigin: origin?.root_url,
-      allowedHosts,
     });
+    const { demandWindow } = plan;
+    if (!isNonEmpty(plan.targets)) return;
+    // AI referrals come from the persisted classifications the headline reads (OD3).
+    const referrals = await readReferralClassifications(db, {
+      ...partitionScope,
+      ...textSpan(plan.targets),
+    });
+    const targets = plan.targets.map((target): Target => ({
+      ...target,
+      builder: new TrafficProjectionBuilder({
+        windowStart: target.start,
+        windowEnd: target.end,
+        granularity: target.grain,
+        projectOrigin: origin?.root_url,
+        allowedHosts,
+        referrals,
+      }),
+    }));
     if (!isNonEmpty(targets)) return;
     const demand = new DemandRevision(...demandWindow);
     await scan(db, task, targets, demand, checkCancelled);
