@@ -13,7 +13,11 @@ import {
   planChangeSchema,
   resolvedQuoteSchema,
 } from '@citeladder/contracts/billing';
-import { checkoutVerifyRequestSchema } from '@citeladder/contracts/billing-requests';
+import {
+  checkoutVerifyRequestSchema,
+  packPurchaseRequestSchema,
+  planChangeRequestSchema,
+} from '@citeladder/contracts/billing-requests';
 import { definePostRoute, defineRoute } from './define.ts';
 import { readBody } from '../http/body.ts';
 import {
@@ -30,10 +34,6 @@ import {
   activationResponse,
 } from '../billing/purchases.ts';
 import { changePlan } from '../billing/plan-changes.ts';
-import {
-  packPurchaseRequestSchema,
-  planChangeRequestSchema,
-} from '@citeladder/contracts/billing-requests';
 import { identitySchema } from '../billing/contracts.ts';
 import { conflict } from '../errors.ts';
 import { offerRead, claimOffer, endOffer, claimRequest } from '../billing/journeys.ts';
