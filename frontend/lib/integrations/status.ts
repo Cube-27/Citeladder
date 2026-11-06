@@ -40,8 +40,12 @@ export function isSyncInFlight(run: SyncRunProgress): boolean {
   return SYNC_RUN_STATES[run.status].active || run.processing;
 }
 
-/** The sync-run poll cadence: while the import runs or its reports are still rebuilding. */
+/**
+ * The sync-run poll cadence: while the import runs or its reports are still
+ * rebuilding. Every caller reads a run it already enqueued, so an unread run
+ * keeps polling: a failed first read must not leave the sync without an outcome.
+ */
 export function pollSyncRun(run: SyncRunProgress | undefined): number | false {
-  if (run?.processing) return SYNC_RUN_POLL_MS;
-  return pollWhileActive(SYNC_RUN_STATES, SYNC_RUN_POLL_MS, run?.status);
+  if (!run || run.processing) return SYNC_RUN_POLL_MS;
+  return pollWhileActive(SYNC_RUN_STATES, SYNC_RUN_POLL_MS, run.status);
 }

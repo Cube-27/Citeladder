@@ -23,8 +23,15 @@ export const RANGE_TASK_STATES = {
   cancelled: { label: 'Cancelled', badge: 'cancelled', active: false },
 } as const satisfies JobStates<PerformanceRangeTaskStatus, RunStatusValue>;
 
+/**
+ * The range-task poll cadence. The caller reads a task it already enqueued, so
+ * an unread task keeps polling: a failed first read must not leave the
+ * projection pending forever.
+ */
 export const pollRangeTask = (status: PerformanceRangeTaskStatus | undefined) =>
-  pollWhileActive(RANGE_TASK_STATES, RANGE_TASK_POLL_MS, status);
+  status === undefined
+    ? RANGE_TASK_POLL_MS
+    : pollWhileActive(RANGE_TASK_STATES, RANGE_TASK_POLL_MS, status);
 
 /**
  * Which readiness stages advance on their own. Only `analysis_ready`,
