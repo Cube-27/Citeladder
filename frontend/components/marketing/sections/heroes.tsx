@@ -3,47 +3,54 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 import { Breadcrumbs, type Crumb } from '../chrome/breadcrumbs';
-import { Eyebrow } from './site-parts';
 
 /**
- * PageHero: an inner page's opening, its H1 at display-2xl (44, 42 from
- * 768 to 1023px, 30 on phones, never larger), the lead, actions, a mono meta line
- * and the page's product image below. Landing pages centre the copy (D18);
- * long-form and utility pages pass `align="left"`. `size` only changes the
- * measure of a left-aligned hero.
+ * PageHero: an inner page's opening, its H1 the site title (80, 32 on
+ * phones) or, for a reading page such as the blog, the section size (56, 28
+ * on phones; D36), then the lead, actions, a meta line and the page's product
+ * image below. Landing pages centre the copy (D18); long-form and utility
+ * pages pass `align="left"`. `size` only changes the measure of a
+ * left-aligned hero. `entrance` gives a landing page's copy the one load-in
+ * the website keeps (D36).
  */
 export function PageHero({
   crumbs,
-  eyebrow,
   title,
   lead,
   actions,
   meta,
   size = 'lg',
   align = 'center',
+  titleSize = 'hero',
+  entrance = false,
   children,
 }: Readonly<{
   crumbs?: readonly Crumb[];
-  eyebrow?: ReactNode;
   title: ReactNode;
   lead?: ReactNode;
   actions?: ReactNode;
   meta?: ReactNode;
   size?: 'lg' | '2xl';
   align?: 'left' | 'center';
+  titleSize?: 'hero' | 'section';
+  entrance?: boolean;
   /** The hero's product image, under the copy. */
   children?: ReactNode;
 }>) {
   return (
     // `data-cta-placement` names where a clicked call to action sat, for marketing analytics.
     <section
-      className={cn('cl-phero', `cl-phero--${size}`, align === 'center' && 'cl-phero--center')}
+      className={cn(
+        'cl-phero',
+        `cl-phero--${size}`,
+        align === 'center' && 'cl-phero--center',
+        titleSize === 'section' && 'cl-phero--reading',
+      )}
       data-cta-placement="hero"
     >
       <div className="cl-container">
-        <div className="cl-phero-inner">
+        <div className={cn('cl-phero-inner', entrance && 'mk-hero-in')}>
           {crumbs && <Breadcrumbs items={crumbs} />}
-          {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
           <h1 className="cl-phero-title">{title}</h1>
           {lead && <p className="cl-lead cl-phero-lead">{lead}</p>}
           {actions && <div className="cl-phero-actions">{actions}</div>}
@@ -58,6 +65,7 @@ export function PageHero({
 /**
  * LandingHero: the home page's opening, centred (D18). The announcement sits
  * over the H1, then the lead, actions and note; the frame goes below the copy.
+ * Its copy loads in (D36); the frame is static.
  */
 export function LandingHero({
   announcement,
@@ -77,7 +85,7 @@ export function LandingHero({
   return (
     <section className="cl-lhero">
       <div className="cl-container">
-        <div className="cl-lhero-copy">
+        <div className="cl-lhero-copy mk-hero-in">
           {announcement}
           <h1 className="cl-lhero-title">{title}</h1>
           {lead && <p className="cl-lead cl-lhero-lead">{lead}</p>}

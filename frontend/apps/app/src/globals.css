@@ -221,13 +221,10 @@
   --motion-menu-settle: 160ms;
   --motion-menu-step: 20ms;
   --ease-menu: cubic-bezier(0.22, 1, 0.36, 1);
-  /* The website's entrances (D35): a part rises 16px and fades in over 700ms
-     as it scrolls into view, its siblings 80ms apart; a product image's rows,
-     bars and chart then play out over 1.2s, and its latest point pings every
-     2.4s. */
+  /* The website's one entrance (D36): a landing hero's copy loads in over
+     700ms, its parts in 80ms steps; a chart's latest point pings every 2.4s. */
   --motion-reveal: 700ms;
   --motion-reveal-step: 80ms;
-  --motion-draw: 1200ms;
   --motion-ping: 2400ms;
   --ease-reveal: cubic-bezier(0.22, 1, 0.36, 1);
   --default-transition-duration: var(--motion-fast);

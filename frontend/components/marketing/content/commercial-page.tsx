@@ -32,6 +32,7 @@ export function CommercialEntryPage({
     <>
       <PageHero
         size="2xl"
+        entrance
         crumbs={[{ label: 'Home', href: '/' }, { label: page.breadcrumb }]}
         title={page.heading}
         lead={page.introduction}
