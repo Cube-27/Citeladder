@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import vocabulary from '../src/config/entitlements.json' with { type: 'json' };
-import { runtimeProjection } from '../src/entitlements/grants.ts';
+import { runtimeProjection } from '../src/site-health/plan-runtime.ts';
 
 afterEach(() => {
   vi.doUnmock('../src/config/entitlements.json');

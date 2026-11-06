@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
 import { advisoryXactLock } from '../db/advisory-lock.ts';
-import { accountState } from './state.ts';
 import { conflict } from '../billing/contracts.ts';
+import { refreshRuntime } from '../site-health/plan-runtime.ts';
 import { getLogger } from '../logging.ts';
 
 export async function lockAccount(db: Database, workspaceId: string, accountId: string) {
@@ -19,64 +19,29 @@ export async function lockAccount(db: Database, workspaceId: string, accountId: 
 }
 
 /**
- * The Site Health runtime an account state resolves to. An unresolved or
- * missing account gets the sample runtime: no monitored allowance, no count
- * disclosure.
+ * The only entitlement lifecycle bump: every grant, revocation and
+ * subscription change advances the account's version, then the Site Health
+ * runtime is refreshed from the new grants. With `expectedVersion` the bump
+ * is optimistic: it applies only if no other writer bumped since that read.
  */
-export function runtimeProjection(
-  state: { error: string | null; values: ReadonlyMap<string, number> } | null,
-) {
-  const allowance = !state || state.error ? 0 : (state.values.get('monitored_urls') ?? 0);
-  const cfg = policy.site_health_runtime;
-  const setting = (key: keyof typeof cfg.settings) =>
-    resolveSettingSpec(cfg.settings[key]) as number;
-  const full = allowance > 0;
-  return {
-    discovery_mode: full ? cfg.full_mode : cfg.sample_mode,
-    discovery_url_cap: full
-      ? Math.min(
-          setting('automatic_page_limit'),
-          Math.max(cfg.full_minimum, allowance * cfg.full_headroom),
-        )
-      : setting('sample_discovery_url_cap'),
-    sample_url_limit: full ? 0 : setting('sample_url_limit'),
-    monitored_url_limit: allowance,
-    count_disclosure: full,
-  };
-}
-
-/** Mutation-only projection, in the transaction that appends billing evidence. */
-export async function refreshRuntime(
+export async function bumpLifecycle(
   db: Database,
-  workspaceId: string,
-  accountId: string,
-  at: Date,
+  request: { workspaceId: string; accountId: string; at: Date; expectedVersion?: number },
 ) {
-  const state = await accountState(db, workspaceId, accountId, at);
-  const projection = {
-    ...runtimeProjection(state),
-    resolved_registry_revision: policy.entitlements.registry_revision,
-    resolved_entitlement_lifecycle_version: state.account.entitlement_lifecycle_version,
-    resolved_valid_until: state.error ? null : state.validUntil,
-    updated_at: at,
-  };
-  await db
-    .insertInto('workspace_site_health_runtime')
-    .values({ id: randomUUID(), workspace_id: workspaceId, created_at: at, ...projection })
-    .onConflict((c) => c.column('workspace_id').doUpdateSet(projection))
-    .execute();
-  return state;
-}
-
-async function bump(db: Database, workspaceId: string, accountId: string, at: Date) {
-  await db
+  const { workspaceId, accountId, at, expectedVersion } = request;
+  let update = db
     .updateTable('billing_accounts')
     .set({ entitlement_lifecycle_version: sql`entitlement_lifecycle_version + 1`, updated_at: at })
     .where('id', '=', accountId)
-    .where('workspace_id', '=', workspaceId)
-    .execute();
+    .where('workspace_id', '=', workspaceId);
+  if (expectedVersion !== undefined)
+    update = update.where('entitlement_lifecycle_version', '=', expectedVersion);
+  await update.execute();
   await refreshRuntime(db, workspaceId, accountId, at);
 }
+
+const bump = (db: Database, workspaceId: string, accountId: string, at: Date) =>
+  bumpLifecycle(db, { workspaceId, accountId, at });
 
 export async function issueBundle(
   db: Database,

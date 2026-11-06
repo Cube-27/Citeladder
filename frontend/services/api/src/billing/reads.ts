@@ -9,7 +9,7 @@ import type { ServiceConfig } from '../config.ts';
 import { policy } from '../config.ts';
 import { accountState, drawOrder, grantExpiry } from '../entitlements/state.ts';
 import { grantBalances } from '../entitlements/ledger.ts';
-import { runtimeProjection } from '../entitlements/grants.ts';
+import { runtimeProjection } from '../site-health/plan-runtime.ts';
 import { workspaceAccount } from './purchases.ts';
 import { catalog, capabilityValue } from './catalog.ts';
 import { credentialModeOf, type CredentialMode } from './credential-mode.ts';

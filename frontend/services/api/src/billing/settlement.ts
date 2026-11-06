@@ -3,7 +3,8 @@ import { sql } from 'kysely';
 import { z } from 'zod';
 import { resolvedQuoteSchema } from '@citeladder/contracts/billing';
 import type { Database } from '../db/database.ts';
-import { lockAccount, issueBundle, revokeBundle, refreshRuntime } from '../entitlements/grants.ts';
+import { lockAccount, issueBundle, revokeBundle, bumpLifecycle } from '../entitlements/grants.ts';
+import { refreshRuntime } from '../site-health/plan-runtime.ts';
 import { catalog } from './catalog.ts';
 import {
   amount,
@@ -551,17 +552,13 @@ export async function settleSubscription(
     sub.current_period_start?.getTime() !== event.start?.getTime() ||
     sub.current_period_end?.getTime() !== end?.getTime();
   if (changed)
-    await db
-      .updateTable('billing_accounts')
-      .set({
-        entitlement_lifecycle_version: sql`entitlement_lifecycle_version + 1`,
-        updated_at: now,
-      })
-      .where('id', '=', account.id)
-      .where('workspace_id', '=', workspaceId)
-      .where('entitlement_lifecycle_version', '=', account.entitlement_lifecycle_version)
-      .execute();
-  await refreshRuntime(db, workspaceId, sub.billing_account_id, now);
+    await bumpLifecycle(db, {
+      workspaceId,
+      accountId: account.id,
+      at: now,
+      expectedVersion: account.entitlement_lifecycle_version,
+    });
+  else await refreshRuntime(db, workspaceId, sub.billing_account_id, now);
 }
 
 async function settleUpgrade(
