@@ -64,7 +64,7 @@ Scoped to this plan. A PR that relies on a billing decision also records it in `
 | P07 | App route manifest and kit cleanup | R1, R2, R3, R5, R6, R7 | — | | todo | | |
 | P08 | Shared identities and leaf primitives | X1, X2, X3, X7 | — | wide, mig? | merged | [#631](https://github.com/Cube-27/Citeladder/pull/631) | Migration 0010 |
 | P09 | Queue owner I: moves, analytics registry, lane descriptor | Q1, Q2, Q3 | P03 | wide | merged | [#630](https://github.com/Cube-27/Citeladder/pull/630) | |
-| P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | in progress | | Builder session `untangle-p10` |
+| P10 | Credit holds, plan gate, grant writer, refunds | B1, B2, B3, B4, B5 | P04 | mig? | in review | [#632](https://github.com/Cube-27/Citeladder/pull/632) | Builder session `untangle-p10`; migration 0011 |
 | P11 | One prompt write path and project-scoped commands | C1, C2, C5 | P03 | | todo | | |
 | P12 | Opportunities: check kinds, typed targets, evidence announcement | O2, O3, O4 | P02 | | todo | | |
 | P13 | Browser descriptors II and job states | F5, F6, F7 | P06 | | todo | | |
@@ -140,11 +140,11 @@ order the PR tracker already respects.
 | SH3 | One writer for crawl tasks, site URLs, observations, memberships | SH2 | `site-health/{admission-writes,frontier,discover-task,planner,site-setup-task,lifecycle,link-metrics}.ts` | | done | 90cc69e | |
 | SH4 | One site-task runner (lock, settle, backoff, access check) | SH3, Q3 | `site-health/{site-task,task-fence,analyze-task,discover-task,site-setup-task}.ts`, `workers/site-health-worker.ts` | | todo | | |
 | SH5 | Crawl counter chooser; shared commerce-facts schema; pinned versions on reads | SH2, X1 | `site-health/reads/`, `commerce/projection-facts.ts` | | todo | | |
-| B1 | Consumable hold module; Site Health fetch budget on it | — | `entitlements/ledger.ts`, `site-health/fetch-budget.ts` | | todo | | |
-| B2 | Metering, prompt runs and Agent funding on the hold module | B1 | `billing/metering.ts`, `audits/prompt-runs.ts`, `agent/funding.ts`, `billing/reads.ts` | | todo | | |
-| B3 | One plan gate and occupancy counter table | B2 | `entitlements/occupancy.ts`, flag refusal sites, `docs/billing-entitlements.md` | | todo | | |
-| B4 | One grant writer; Site Health runtime projection moves to `site-health/` | B3, SH3 | `entitlements/{grants,bootstrap}.ts`, `billing/settlement.ts`, `site-health/planner.ts` | mig? | todo | | |
-| B5 | Settlement owns refund consequences; typed grant source | B4 | `billing/{settlement,receipts,recovery}.ts`, `entitlements/grants.ts` | | todo | | |
+| B1 | Consumable hold module; Site Health fetch budget on it | — | `entitlements/ledger.ts`, `site-health/fetch-budget.ts` | | done | 684e62b | |
+| B2 | Metering, prompt runs and Agent funding on the hold module | B1 | `billing/metering.ts`, `audits/prompt-runs.ts`, `agent/funding.ts`, `billing/reads.ts` | | done | e739dd9 | |
+| B3 | One plan gate and occupancy counter table | B2 | `entitlements/occupancy.ts`, flag refusal sites, `docs/billing-entitlements.md` | | done | bfb642c | |
+| B4 | One grant writer; Site Health runtime projection moves to `site-health/` | B3, SH3 | `entitlements/{grants,bootstrap}.ts`, `billing/settlement.ts`, `site-health/planner.ts` | mig | done | 48eed01 | Migration 0011 |
+| B5 | Settlement owns refund consequences; typed grant source | B4 | `billing/{settlement,receipts,recovery}.ts`, `entitlements/grants.ts` | | done | fd11289 | |
 | C1 | One prompt insert owner (incl. Commerce) | DB2 | `prompts/{prompts,candidates,locks}.ts`, `commerce/{buyer-prompts,decisions}.ts` | | todo | | |
 | C2 | Project-scoped commands; public API ownership fails closed | C1, FX5, DB2 | `commands/`, `public-api/ownership.ts`, `mcp/write-tools.ts` | | todo | | |
 | C3 | Permission declared once on the command; one membership check | C2 | `routes/define.ts`, `routes/*` with commands, `commands/`, membership query sites | | todo | | |

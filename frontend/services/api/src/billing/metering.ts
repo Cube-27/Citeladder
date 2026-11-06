@@ -18,7 +18,7 @@ import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
 import { getLogger } from '../logging.ts';
-import { reserveUsage, debitUsage, releaseUsage, LedgerError } from '../entitlements/ledger.ts';
+import { billingAccountId, hold, settle, LedgerError } from '../entitlements/ledger.ts';
 import { runMetered } from '../models/meter-scope.ts';
 import { gatewayCalls, type ModelGateway } from '../models/gateway.ts';
 import { ModelError, type Complete } from '../models/http.ts';
@@ -137,16 +137,12 @@ async function openHold(
   reserved: number,
   ownerSettled = false,
 ) {
-  const account = await trx
-    .selectFrom('billing_accounts')
-    .select('id')
-    .where('workspace_id', '=', context.workspaceId)
-    .executeTakeFirst();
-  if (!account) throw unresolved();
+  const accountId = await billingAccountId(trx, context.workspaceId);
+  if (!accountId) throw unresolved();
   const at = new Date();
   const row = {
     ...callRow(context, spec, at),
-    billing_account_id: account.id,
+    billing_account_id: accountId,
     reserved_credits: reserved,
     owner_settled: ownerSettled,
   };
@@ -154,25 +150,18 @@ async function openHold(
   await trx.insertInto('platform_calls').values(row).execute();
   let reservationId: string;
   try {
-    reservationId = await reserveUsage(trx, {
-      accountId: account.id,
+    ({ reservationId } = await hold(trx, {
       capability: AI_CREDITS,
-      subject: {
-        kind: 'platform_call',
-        id,
-        workspaceId: context.workspaceId,
-      },
+      subject: { kind: 'platform_call', id, workspaceId: context.workspaceId },
       units: reserved,
-      key: `call:${id}`,
       at,
-    });
+    }));
   } catch (error) {
-    if (error instanceof LedgerError && error.message === 'funded_credits_exhausted')
+    if (error instanceof LedgerError && error.code === 'funded_credits_exhausted')
       throw new ApiError(403, 'Your AI credits are used up', {
         code: 'ai_credits_exhausted',
       });
-    if (error instanceof LedgerError && error.message === 'entitlement_unresolved')
-      throw unresolved();
+    if (error instanceof LedgerError && error.code === 'entitlement_unresolved') throw unresolved();
     throw error;
   }
   await trx
@@ -225,22 +214,14 @@ async function closeHold(
   const { credits, failed } = outcome;
   if (!call.reservation_id || !call.billing_account_id) return;
   const at = new Date();
-  const request = {
+  await settle(trx, {
     workspaceId: call.workspace_id,
-    accountId: call.billing_account_id,
     reservationId: call.reservation_id,
+    spent: credits,
+    attempt: 1,
+    dispatch: 'settle',
     at,
-  };
-  if (credits > 0)
-    await debitUsage(trx, {
-      ...request,
-      subjectId: call.id,
-      attempt: 1,
-      units: credits,
-      key: `call:${call.id}:debit`,
-      dispatchKey: 'settle',
-    });
-  await releaseUsage(trx, { ...request, key: `call:${call.id}:release` });
+  });
   await trx
     .updateTable('platform_calls')
     .set({
@@ -323,7 +304,7 @@ async function metered<T>(
   const callId = charged ? await reserve(db, context, spec) : null;
   // A failed settlement never replaces the provider's outcome: the hold stays
   // reserved and the abandoned-call sweep settles it.
-  const settle = async (id: string, usage: TokenUsage | null, error: unknown) => {
+  const settleHeld = async (id: string, usage: TokenUsage | null, error: unknown) => {
     try {
       await settleCall(db, id, usage, error !== null, error);
     } catch (error_) {
@@ -335,7 +316,7 @@ async function metered<T>(
     }
   };
   const finish = (usage: TokenUsage | null, error: unknown) =>
-    callId === null ? record(db, context, spec, usage, error) : settle(callId, usage, error);
+    callId === null ? record(db, context, spec, usage, error) : settleHeld(callId, usage, error);
   let outcome: Outcome<T>;
   try {
     outcome = await runMetered(context, call);

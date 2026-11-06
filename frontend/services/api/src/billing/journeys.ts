@@ -194,7 +194,7 @@ export function claimOffer(
       accountId: account.id,
       key: `intro:${id}`,
       sourceKind: 'trial',
-      sourceRef: `intro:${id}`,
+      source: { kind: 'intro', introId: id },
       specs: plan.grants,
       revision: published.revision,
       from: now,

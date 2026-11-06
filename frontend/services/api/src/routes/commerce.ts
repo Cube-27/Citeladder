@@ -35,7 +35,7 @@ import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { readBody } from '../http/body.ts';
-import { requireCommerce } from '../entitlements/occupancy.ts';
+import { requireFlag } from '../entitlements/access.ts';
 import { defineGetRoute, definePatchRoute, definePostRoute } from './define.ts';
 
 /** Every route here reads the path project inside the active workspace. */
@@ -68,7 +68,7 @@ function scopeOf(c: Context<AppEnv>, projectId: string) {
 /** Changes and new work need Commerce in the plan; reads of collected data do not. */
 async function writeScopeOf(db: Database, c: Context<AppEnv>, projectId: string) {
   const scope = scopeOf(c, projectId);
-  await requireCommerce(db, scope.workspaceId);
+  await requireFlag(db, scope.workspaceId, 'commerce');
   return scope;
 }
 

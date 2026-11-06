@@ -7,7 +7,9 @@ import { measuredTargetPages } from '../opportunities/enqueue.ts';
 import type { Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
 import { record, strings } from '../db/json.ts';
-import { lockAccount, refreshRuntime, runtimeProjection } from '../entitlements/grants.ts';
+import { lockAccount } from '../entitlements/grants.ts';
+import { billingAccountId } from '../entitlements/ledger.ts';
+import { refreshRuntime } from './plan-runtime.ts';
 import type {
   SiteHealthProfiles,
   SiteUrls,
@@ -34,31 +36,11 @@ import { canonicalIdentity } from './url-identity.ts';
 import { hasDevelopmentWorkspace } from '../auth/development-access.ts';
 
 export async function admissionRuntime(db: Database, workspaceId: string) {
-  const now = new Date();
-  const account = await db
-    .selectFrom('billing_accounts')
-    .select('id')
-    .where('workspace_id', '=', workspaceId)
-    .executeTakeFirst();
-  if (account) {
-    // Billing takes capacity/account before runtime; match it before refreshing.
-    await lockAccount(db, workspaceId, account.id);
-    const state = await refreshRuntime(db, workspaceId, account.id, now);
-    if (state.error) throw unresolvedEntitlement();
-  } else
-    await db
-      .insertInto('workspace_site_health_runtime')
-      .values({
-        id: randomUUID(),
-        workspace_id: workspaceId,
-        ...runtimeProjection(null),
-        resolved_registry_revision: policy.entitlements.registry_revision,
-        resolved_entitlement_lifecycle_version: 0,
-        created_at: now,
-        updated_at: now,
-      })
-      .onConflict((conflict) => conflict.column('workspace_id').doNothing())
-      .execute();
+  const accountId = (await billingAccountId(db, workspaceId)) ?? null;
+  // Billing takes capacity/account before runtime; match it before refreshing.
+  if (accountId) await lockAccount(db, workspaceId, accountId);
+  const state = await refreshRuntime(db, workspaceId, accountId, new Date());
+  if (state?.error) throw unresolvedEntitlement();
   const runtime = await lockRuntime(db, workspaceId);
   if (!runtime) throw new Error('Site Health runtime missing');
   return runtime;
@@ -380,7 +362,7 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
     seed: request.seed,
     rerun: false,
   });
-  if (budget.accountId) await reserveCrawlFetches(db, crawl, budget.accountId, budget.limit, now);
+  if (budget.metered) await reserveCrawlFetches(db, crawl, budget.limit, now);
   const initial = (selected.mode === 'exact_urls' ? seeds : [root, ...seeds]).slice(
     0,
     budget.limit,
@@ -440,7 +422,7 @@ export async function createPageRerunCrawl(
     runtime,
     rerun: true,
   });
-  if (budget.accountId) await reserveCrawlFetches(db, crawl, budget.accountId, budget.limit, now);
+  if (budget.metered) await reserveCrawlFetches(db, crawl, budget.limit, now);
   await seedObservation(db, crawl, url, true);
   await enqueueCrawlTask(db, crawl, {
     kind: 'analyze',

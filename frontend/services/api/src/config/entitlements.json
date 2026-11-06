@@ -214,6 +214,49 @@
     "capability_not_granted": "capability_not_granted",
     "crawl_logs_not_in_plan": "crawl_logs_not_in_plan",
     "crawl_logs_disabled": "crawl_logs_disabled",
-    "fact_checking_not_in_plan": "fact_checking_not_in_plan"
+    "fact_checking_not_in_plan": "fact_checking_not_in_plan",
+    "api_access_not_in_plan": "api_access_not_in_plan"
+  },
+  "flag_refusals": {
+    "agent": {
+      "status": 403,
+      "code": "capability_not_granted",
+      "message": "The Agent is not included in your plan"
+    },
+    "api_access": {
+      "status": 403,
+      "code": "api_access_not_in_plan",
+      "message": "API access is not included in this workspace's plan"
+    },
+    "commerce": {
+      "status": 403,
+      "code": "capability_not_granted",
+      "message": "Commerce is not included in your plan"
+    },
+    "crawl_logs": {
+      "status": 409,
+      "code": "crawl_logs_not_in_plan",
+      "message": "AI crawler logs are not included in this workspace's plan"
+    },
+    "fact_checking": {
+      "status": 409,
+      "code": "fact_checking_not_in_plan",
+      "message": "Fact-checking is not included in this workspace's plan"
+    },
+    "project_deletion": {
+      "status": 403,
+      "code": "capability_not_granted",
+      "message": "Project deletion is not granted for this workspace"
+    },
+    "search_intelligence": {
+      "status": 403,
+      "code": "capability_not_granted",
+      "message": "Keyword Research is not included in your plan"
+    },
+    "team_members": {
+      "status": 403,
+      "code": "capability_not_granted",
+      "message": "Inviting team members needs a paid plan"
+    }
   }
 }

@@ -1,11 +1,13 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import {
-  reserveUsage,
-  debitUsage,
-  releaseUsage,
-  refundUsage,
-  ledgerBalances,
+  grantBalances,
+  hold,
+  refundSubject,
+  release,
+  remaining,
+  settle,
+  type AgentSubject,
   type Subject,
 } from '../src/entitlements/ledger.ts';
 import { issueBundle, revokeBundle } from '../src/entitlements/grants.ts';
@@ -13,7 +15,9 @@ import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { billingAccount } from './prompt-fixtures.ts';
 
-describe('shared consumable ledger', () => {
+const capability = 'site_health_page_fetches_per_period';
+
+describe('consumable hold module', () => {
   const db = testDatabase();
   const fixtures = new VisibilityFixtures(db);
   const accounts: string[] = [];
@@ -26,12 +30,11 @@ describe('shared consumable ledger', () => {
     await fixtures.cleanup();
     await db.destroy();
   });
-  async function tenant(units: number, capability = 'site_health_page_fetches_per_period') {
+  async function tenant(units: number) {
     const t = await fixtures.tenant();
     const accountId = await billingAccount(db, t.workspaceId);
     accounts.push(accountId);
     const auditId = await fixtures.audit(t);
-    const task = await fixtures.execution(t, { auditId, analysis: null });
     const at = new Date();
     const grants = await db.transaction().execute((trx) =>
       issueBundle(trx, {
@@ -39,7 +42,7 @@ describe('shared consumable ledger', () => {
         accountId,
         key: randomUUID(),
         sourceKind: 'override',
-        sourceRef: 'fixture',
+        source: { kind: 'override', actorId: t.userId },
         specs: [{ key: capability, value: units }],
         revision: 'fixture',
         from: at,
@@ -49,15 +52,19 @@ describe('shared consumable ledger', () => {
         priority: 0,
       }),
     );
-    const subject: Subject = {
+    const grant = { id: grants[0]!.id, value: units };
+    const task = async (): Promise<Extract<Subject, { kind: 'audit' }>> => ({
       kind: 'audit',
-      id: task.taskId,
+      id: (await fixtures.execution(t, { auditId, analysis: null })).taskId,
       auditId,
       workspaceId: t.workspaceId,
-    };
-    return { ...t, accountId, subject, at, grantId: grants[0]!.id };
+    });
+    const balance = async () => (await grantBalances(db, accountId, [grant])).get(grant.id);
+    return { ...t, accountId, auditId, at, grant, task, balance };
   }
-  async function agentSubject(t: Awaited<ReturnType<typeof tenant>>): Promise<Subject> {
+  const holdIn = (request: Parameters<typeof hold>[1]) =>
+    db.transaction().execute((trx) => hold(trx, request));
+  async function agentSubject(t: Awaited<ReturnType<typeof tenant>>): Promise<AgentSubject> {
     const chatId = randomUUID(),
       messageId = randomUUID(),
       runId = randomUUID();
@@ -138,172 +145,118 @@ describe('shared consumable ledger', () => {
       .execute();
     return { kind: 'agent', id: runId, workspaceId: t.workspaceId };
   }
-  it('debits distinct dispatches in one Agent run while suppressing each dispatch replay', async () => {
-    const t = await tenant(4, 'site_health_page_fetches_per_period');
-    const subject = await agentSubject(t);
-    const reservationId = await db.transaction().execute((trx) =>
-      reserveUsage(trx, {
-        accountId: t.accountId,
-        subject,
-        capability: 'site_health_page_fetches_per_period',
-        units: 4,
-        key: randomUUID(),
-        at: t.at,
-      }),
-    );
-    const first = {
-      workspaceId: t.workspaceId,
-      accountId: t.accountId,
-      reservationId,
-      subjectId: subject.id,
-      attempt: 1,
-      units: 1,
-      key: 'model-step-one',
-      dispatchKey: 'model-step-one',
-      at: t.at,
-    };
-    await db.transaction().execute((trx) => debitUsage(trx, first));
-    await db
-      .transaction()
-      .execute((trx) =>
-        debitUsage(trx, { ...first, key: 'model-step-two', dispatchKey: 'model-step-two' }),
-      );
-    await db
-      .transaction()
-      .execute((trx) => debitUsage(trx, { ...first, key: 'same-dispatch-retry' }));
-    expect((await ledgerBalances(db, t.accountId, [t.grantId])).get(t.grantId)).toEqual({
-      consumed: 2,
-      reserved: 2,
-    });
-    // A balance reads only the grants asked for, never the rest of the account's ledger.
-    expect([...(await ledgerBalances(db, t.accountId, [randomUUID()])).entries()]).toEqual([]);
-    await expect(
-      db
-        .transaction()
-        .execute((trx) => debitUsage(trx, { ...first, dispatchKey: 'changed-dispatch' })),
-    ).rejects.toThrow('idempotency_key_reused');
-  });
+
   it('serializes account capacity, preserves subject provenance, and refuses foreign parents', async () => {
     const t = await tenant(3);
-    const reserve = (key: string, units = 2) =>
-      db.transaction().execute((trx) =>
-        reserveUsage(trx, {
-          accountId: t.accountId,
-          subject: t.subject,
-          capability: 'site_health_page_fetches_per_period',
-          units,
-          key,
-          at: t.at,
-        }),
-      );
-    const results = await Promise.allSettled([reserve('reserve-alpha'), reserve('reserve-beta')]);
+    const [first, second] = [await t.task(), await t.task()];
+    const results = await Promise.allSettled(
+      [first, second].map((subject) => holdIn({ capability, subject, units: 2, at: t.at })),
+    );
     expect(results.filter((row) => row.status === 'fulfilled')).toHaveLength(1);
     expect(results.find((row) => row.status === 'rejected')).toMatchObject({
-      status: 'rejected',
-      reason: { message: 'funded_credits_exhausted' },
+      reason: { code: 'funded_credits_exhausted' },
     });
-    const hold = await db
+    const row = await db
       .selectFrom('consumable_ledger')
       .selectAll()
       .where('billing_account_id', '=', t.accountId)
       .executeTakeFirstOrThrow();
-    expect(hold).toMatchObject({
+    const holder = row.task_id === first.id ? first : second;
+    expect(row).toMatchObject({
       workspace_id: t.workspaceId,
-      task_id: t.subject.id,
-      audit_id: t.subject.kind === 'audit' ? t.subject.auditId : null,
-      grant_id: t.grantId,
+      audit_id: t.auditId,
+      grant_id: t.grant.id,
+      idempotency_key: `run:${holder.id}`,
+      units: 2,
     });
-    expect(await reserve(hold.idempotency_key)).toBe(hold.reservation_id);
-    await expect(reserve(hold.idempotency_key, 1)).rejects.toThrow('idempotency_key_reused');
+    expect(await holdIn({ capability, subject: holder, units: 2, at: t.at })).toEqual({
+      accountId: t.accountId,
+      reservationId: row.reservation_id,
+    });
+    await expect(holdIn({ capability, subject: holder, units: 1, at: t.at })).rejects.toThrow(
+      'idempotency_key_reused',
+    );
     const other = await tenant(4);
     await expect(
-      db.transaction().execute((trx) =>
-        reserveUsage(trx, {
-          accountId: other.accountId,
-          subject: { ...t.subject, workspaceId: other.workspaceId },
-          capability: 'site_health_page_fetches_per_period',
-          units: 1,
-          key: randomUUID(),
-          at: t.at,
-        }),
-      ),
+      holdIn({
+        capability,
+        subject: { ...holder, workspaceId: other.workspaceId },
+        units: 1,
+        at: t.at,
+      }),
     ).rejects.toThrow('subject_not_found');
   });
-  it('replays reservations and settled attempts recorded by an earlier audit run', async () => {
+
+  it('replays a hold recorded by the historical audit writer', async () => {
     const t = await tenant(3);
-    if (t.subject.kind !== 'audit') throw new Error('Expected audit subject');
-    const key = randomUUID();
-    const request = {
-      accountId: t.accountId,
-      subject: t.subject,
-      capability: 'site_health_page_fetches_per_period',
-      units: 3,
-      key,
-      at: t.at,
-    };
-    const reservationId = await db.transaction().execute((trx) => reserveUsage(trx, request));
+    const subject = await t.task();
+    const { reservationId } = await holdIn({ capability, subject, units: 3, at: t.at });
     // The historical writer serializes these keys in this exact order.
-    const hash = (json: string) => createHash('sha256').update(json).digest('hex');
-    const reservationFingerprint = hash(
-      `{"account_id":"${t.accountId}","audit_id":"${t.subject.auditId}","capability_key":"site_health_page_fetches_per_period","subject_kind":"audit","task_id":"${t.subject.id}","units":3}`,
-    );
+    const historical = createHash('sha256')
+      .update(
+        `{"account_id":"${t.accountId}","audit_id":"${t.auditId}","capability_key":"${capability}","subject_kind":"audit","task_id":"${subject.id}","units":3}`,
+      )
+      .digest('hex');
     await db
       .updateTable('consumable_ledger')
-      .set({ request_fingerprint: reservationFingerprint })
+      .set({ request_fingerprint: historical })
       .where('reservation_id', '=', reservationId)
       .execute();
-    expect(await db.transaction().execute((trx) => reserveUsage(trx, request))).toBe(reservationId);
-    const debit = {
-      workspaceId: t.workspaceId,
-      accountId: t.accountId,
+    expect((await holdIn({ capability, subject, units: 3, at: t.at })).reservationId).toBe(
       reservationId,
-      subjectId: t.subject.id,
-      attempt: 1,
-      units: 1,
-      key: 'historical-attempt',
-      dispatchKey: '1',
-      at: t.at,
-    };
-    await db.transaction().execute((trx) => debitUsage(trx, debit));
-    const settlementFingerprint = hash(
-      `{"attempt":1,"reservation_id":"${reservationId}","subject_id":"${t.subject.id}","units":1}`,
     );
-    await db
-      .updateTable('consumable_ledger')
-      .set({ request_fingerprint: settlementFingerprint })
-      .where('reservation_id', '=', reservationId)
-      .where('entry_kind', '=', 'debit')
-      .execute();
+  });
+
+  it('settles at most what it holds, releases the rest, and settles once', async () => {
+    const t = await tenant(10);
+    const [spent, over] = [await t.task(), await t.task()];
+    const a = await holdIn({ capability, subject: spent, units: 4, at: t.at });
+    const b = await holdIn({ capability, subject: over, units: 2, at: t.at });
+    const settleIn = (reservationId: string, units: number) =>
+      db.transaction().execute((trx) =>
+        settle(trx, {
+          workspaceId: t.workspaceId,
+          reservationId,
+          spent: units,
+          attempt: 1,
+          dispatch: 'answer',
+          at: new Date(),
+        }),
+      );
+    expect(await t.balance()).toEqual({ allowance: 10, reserved: 6, consumed: 0, remaining: 4 });
+    expect(await settleIn(a.reservationId, 1)).toBe(1);
+    expect(await settleIn(b.reservationId, 5)).toBe(2);
+    expect(await settleIn(a.reservationId, 1)).toBe(0);
     await db
       .transaction()
       .execute((trx) =>
-        debitUsage(trx, { ...debit, key: 'new-worker-replay', dispatchKey: 'attempt-1' }),
+        release(trx, { workspaceId: t.workspaceId, reservationId: b.reservationId, at: t.at }),
       );
-    expect((await ledgerBalances(db, t.accountId, [t.grantId])).get(t.grantId)).toEqual({
-      consumed: 1,
-      reserved: 2,
-    });
-    await expect(
-      db.transaction().execute((trx) => debitUsage(trx, { ...debit, units: 2 })),
-    ).rejects.toThrow('idempotency_key_reused');
+    expect(await t.balance()).toEqual({ allowance: 10, reserved: 0, consumed: 3, remaining: 7 });
+    expect(
+      await db.transaction().execute((trx) =>
+        remaining(trx, {
+          accountId: t.accountId,
+          workspaceId: t.workspaceId,
+          capability,
+          at: t.at,
+        }),
+      ),
+    ).toEqual({ units: 7, grants: 1 });
   });
-  it('consumes frozen holds after revocation, releases once, and caps immutable refunds', async () => {
+
+  it('consumes frozen holds after revocation and refunds each debit once', async () => {
     const t = await tenant(4);
-    const reservationId = await db.transaction().execute((trx) =>
-      reserveUsage(trx, {
-        accountId: t.accountId,
-        subject: t.subject,
-        capability: 'site_health_page_fetches_per_period',
-        units: 3,
-        key: randomUUID(),
-        at: t.at,
-      }),
-    );
+    const subject = await agentSubject(t);
+    const dispatches = ['dispatch-one', 'dispatch-two'];
+    const holds = [];
+    for (const dispatchId of dispatches)
+      holds.push(await holdIn({ capability, subject, dispatchId, units: 2, at: t.at }));
     await db.transaction().execute((trx) =>
       revokeBundle(trx, {
         workspaceId: t.workspaceId,
         accountId: t.accountId,
-        grantIds: [t.grantId],
+        grantIds: [t.grant.id],
         key: randomUUID(),
         reason: 'fixture',
         actorKind: 'system',
@@ -311,55 +264,31 @@ describe('shared consumable ledger', () => {
         at: t.at,
       }),
     );
-    const debit = {
-      workspaceId: t.workspaceId,
-      accountId: t.accountId,
-      reservationId,
-      subjectId: t.subject.id,
-      attempt: 1,
-      units: 2,
-      key: 'attempt-one',
-      dispatchKey: 'attempt-one',
-      at: new Date(),
-    };
-    await Promise.all([1, 2].map(() => db.transaction().execute((trx) => debitUsage(trx, debit))));
-    expect((await ledgerBalances(db, t.accountId, [t.grantId])).get(t.grantId)).toEqual({
-      consumed: 2,
-      reserved: 1,
-    });
+    for (const [index, { reservationId }] of holds.entries())
+      await db.transaction().execute((trx) =>
+        settle(trx, {
+          workspaceId: t.workspaceId,
+          reservationId,
+          spent: index + 1,
+          attempt: 1,
+          dispatch: dispatches[index]!,
+          at: new Date(),
+        }),
+      );
+    expect(await t.balance()).toMatchObject({ reserved: 0, consumed: 3 });
     await Promise.all(
       [1, 2].map(() =>
-        db.transaction().execute((trx) => releaseUsage(trx, { ...debit, key: 'terminal' })),
+        db.transaction().execute((trx) => refundSubject(trx, { subject, at: new Date() })),
       ),
     );
-    const row = await db
+    expect(await t.balance()).toMatchObject({ reserved: 0, consumed: 0 });
+    const refunds = await db
       .selectFrom('consumable_ledger')
-      .selectAll()
+      .select('units')
       .where('billing_account_id', '=', t.accountId)
-      .where('entry_kind', '=', 'debit')
-      .executeTakeFirstOrThrow();
-    const refund = {
-      workspaceId: t.workspaceId,
-      accountId: t.accountId,
-      debitId: row.id,
-      units: 1,
-      key: 'refund-one',
-      at: new Date(),
-    };
-    await Promise.all(
-      [1, 2].map(() => db.transaction().execute((trx) => refundUsage(trx, refund))),
-    );
-    expect((await ledgerBalances(db, t.accountId, [t.grantId])).get(t.grantId)).toEqual({
-      consumed: 1,
-      reserved: 0,
-    });
-    await expect(
-      db.transaction().execute((trx) => refundUsage(trx, { ...refund, key: 'excess', units: 2 })),
-    ).rejects.toThrow('refund_exceeds_debit');
-    await expect(
-      db
-        .transaction()
-        .execute((trx) => debitUsage(trx, { ...debit, key: 'attempt-two', attempt: 2, units: 1 })),
-    ).rejects.toThrow('reservation_exhausted');
+      .where('entry_kind', '=', 'refund')
+      .orderBy('units')
+      .execute();
+    expect(refunds).toEqual([{ units: 1 }, { units: 2 }]);
   });
 });

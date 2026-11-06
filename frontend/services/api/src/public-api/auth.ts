@@ -60,10 +60,7 @@ export function apiKeyAuth(
       });
     const entitlements = new WorkspaceEntitlements(db, key.workspace_id);
     await entitlements.requireAccess();
-    if (!(await entitlements.grants(policy.entitlements.api_access)))
-      throw new ApiError(403, "API access is not included in this workspace's plan", {
-        code: 'api_access_not_in_plan',
-      });
+    await entitlements.requireFlag('api_access');
     const actor: Actor = {
       kind: 'api_key',
       workspaceId: key.workspace_id,

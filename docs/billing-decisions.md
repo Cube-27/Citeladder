@@ -488,6 +488,41 @@ trial credits; Starter, Growth and Scale allowances are unchanged. The pricing
 page and FAQ state the 500 credits. Source: owner decision OD4 in the
 [architecture untangle plan](plans/architecture-untangle.md#owner-decisions-2026-11-06).
 
+## Architecture untangle P10 (2026-11-06)
+
+**B62 — Owner, 2026-11-06.** Plan-flag checks take the account capacity lock
+(architecture untangle OD2). Engineering: every flag that gates work (Agent,
+API access, Commerce, crawl logs, fact-checking, project deletion, Keyword
+Research, team members) passes one gate that reads the grants under the lock
+and refuses with the flag's registry refusal; codes and statuses are unchanged.
+Grants that cannot resolve refuse with 403 `occupancy_unresolved` at every
+gate, where the crawl log, fact-checking and public API checks used to answer
+"not in plan"; those requests pass the access gate first, which already
+refuses an unresolvable account, so a customer does not see the difference.
+Reads that only show whether a flag is on stay unlocked. Source:
+[architecture untangle](plans/architecture-untangle.md) OD2.
+
+**B63 — Engineering, 2026-11-06.** One hold module owns consumable holds
+(prompt runs, AI credits, Site Health page fetches). Settling a hold debits
+what was spent, never more than the hold still holds, and releases the rest;
+every caller already bounded its charge by its hold (B13, B41, B60), so no
+charge changes. Settling or releasing a closed hold writes nothing. A failed
+Agent turn's refund (B58) returns what each of its debits has not already had
+refunded, so a repeated refund returns nothing. A usage read's remaining
+balance is the sum of each grant's own remainder, the figure admission holds
+against. No money rule changes.
+
+**B64 — Engineering, 2026-11-06.** One writer for grants and refunds. Every
+grant bundle, the signup baseline included, is issued by the grant writer with
+a typed source (subscription, activation, override, intro or public signup);
+the stored `source_ref` formats are unchanged. Settlement owns a refund's
+consequences: it records the receipt and credit note, and only the refund that
+completes a payment's full refund applies B52, with the same grants revoked (a
+period's plan grants from its subscription or any activation in it) and the
+same cancellation; a replayed refund applies nothing. A subscription change
+still bumps the entitlement version only if no other writer bumped it since
+settlement read it.
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,
