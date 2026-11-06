@@ -2,13 +2,16 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 
 import { activationSchema, resolvedQuoteSchema } from '@citeladder/contracts/billing';
+import {
+  packPurchaseRequestSchema,
+  subscriptionCheckoutRequestSchema,
+} from '@citeladder/contracts/billing-requests';
 import type { Database } from '../db/database.ts';
 import type { ServiceConfig } from '../config.ts';
 import { policy } from '../config.ts';
 import { lockAccount } from '../entitlements/grants.ts';
 import { ApiError, notFound } from '../errors.ts';
 import {
-  amount,
   identitySchema,
   conflict,
   digest,
@@ -29,31 +32,17 @@ import {
 
 const credentialMode = z.enum(['byok', 'funded']);
 
-const nullableState = z.string().trim().nullable().default(null);
-export const baseRequest = z.strictObject({
-  catalog_key: z.enum(['tier_1', 'tier_2', 'tier_3']),
-  credential_mode: credentialMode,
-  country_code: z
-    .string()
-    .trim()
-    .toUpperCase()
-    .regex(/^[A-Z]{2}$/u),
-  billing_name: z.string().trim().min(1).max(160),
-  billing_address_line1: z.string().trim().min(1).max(240),
-  billing_city: z.string().trim().min(1).max(100),
-  billing_postal_code: z.string().trim().toUpperCase().min(1).max(24),
-  billing_state_code: nullableState.refine(
+const evidence = subscriptionCheckoutRequestSchema.shape;
+/** The state code and GSTIN must also be valid stored-identity values. */
+export const baseRequest = subscriptionCheckoutRequestSchema.extend({
+  billing_state_code: evidence.billing_state_code.refine(
     (value) => !value || identitySchema.shape.state_code.safeParse(value).success,
   ),
-  customer_gstin: nullableState.refine(
+  customer_gstin: evidence.customer_gstin.refine(
     (value) => !value || identitySchema.shape.customer_gstin.safeParse(value.toUpperCase()).success,
   ),
-  export_eligibility_attested: z.boolean().default(false),
 });
-export const packRequest = z.strictObject({
-  catalog_key: z.string().trim().min(1).max(64),
-  quantity: amount.min(1),
-});
+export const packRequest = packPurchaseRequestSchema;
 export function idempotencyKey(raw: string | undefined) {
   const key = raw?.trim();
   if (

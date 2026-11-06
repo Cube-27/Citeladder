@@ -18,7 +18,7 @@ import type {
   RankingRow,
   Visibility,
   VisibilityEngine,
-} from '@/lib/api/types';
+} from '@citeladder/contracts';
 
 /** Audit statuses that carry a dashboard-ready metric snapshot (B6). */
 const DASHBOARD_STATUSES: ReadonlySet<AuditStatus> = new Set<AuditStatus>([

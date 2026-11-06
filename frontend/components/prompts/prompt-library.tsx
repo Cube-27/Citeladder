@@ -16,7 +16,7 @@ import type {
 import { queryKeys } from '@/lib/api/query-keys';
 import { humanizeApiError } from '@/lib/api/errors';
 import { topicsApi } from '@/lib/api/topics';
-import type { Prompt, PromptSet, PromptStatus, Topic } from '@/lib/api/types';
+import type { Prompt, PromptSet, PromptStatus, Topic } from '@citeladder/contracts';
 import {
   emptyFilters,
   filterPrompts,

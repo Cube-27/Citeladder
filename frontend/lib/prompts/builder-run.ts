@@ -4,7 +4,7 @@
  * against what was asked for, with the request for "Generate more".
  */
 import type { PromptGenerateRequest } from '@citeladder/contracts/prompt-requests';
-import type { PromptCandidate, SeedQueries, Topic } from '@/lib/api/types';
+import type { PromptCandidate, SeedQueries, Topic } from '@citeladder/contracts';
 import { MAX_GENERATION_COUNT, PROMPT_BUILDER } from '@/lib/config/prompts';
 
 export type SeedChoice = SeedQueries['sources'][number]['source'] | 'none';

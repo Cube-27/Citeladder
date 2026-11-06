@@ -14,13 +14,21 @@ import {
   policyStatusSchema,
   registrationResponseSchema,
 } from '@citeladder/contracts/auth';
+import type {
+  MailboxChallengeRequest,
+  MailboxLinkRequest,
+  PasswordChangeRequest,
+  PasswordConfirmationRequest,
+  SignInRequest,
+  SignUpRequest,
+} from '@citeladder/contracts/auth-requests';
 import { strictValidate } from '@citeladder/contracts/validation';
 import type {
   AuthResponse,
   OAuthProvider,
   OAuthStartResponse,
   RegistrationResponse,
-} from './types';
+} from '@citeladder/contracts';
 
 export const authApi = {
   /** The published Terms revision the sign-in and sign-up forms ask a visitor to accept. */
@@ -42,7 +50,7 @@ export const authApi = {
   linkGoogle: async (password: string) =>
     strictValidate(
       oauthStartResponseSchema,
-      await apiClient.post('/auth/link-google', { password }),
+      await apiClient.post('/auth/link-google', { password } satisfies PasswordConfirmationRequest),
       'auth.linkGoogle',
     ),
   mailbox: async (
@@ -52,7 +60,7 @@ export const authApi = {
       | 'verify-email'
       | 'reset-password'
       | 'change-password',
-    body: Record<string, string> = {},
+    body: MailboxLinkRequest | MailboxChallengeRequest | PasswordChangeRequest,
   ) => {
     const response = await apiClient.post<RegistrationResponse>(`/auth/${operation}`, body);
     return strictValidate(registrationResponseSchema, response, `auth.${operation}`);
@@ -87,7 +95,7 @@ export const authApi = {
         accept_terms: true,
         turnstile_token: input.turnstileToken,
         return_to: input.returnTo,
-      },
+      } satisfies SignUpRequest,
       options,
     );
     return strictValidate(registrationResponseSchema, res, 'auth.register');
@@ -104,7 +112,7 @@ export const authApi = {
         password: input.password,
         terms_revision: input.termsRevision,
         accept_terms: true,
-      },
+      } satisfies SignInRequest,
       options,
     );
     return strictValidate(authResponseSchema, res, 'auth.login').user;

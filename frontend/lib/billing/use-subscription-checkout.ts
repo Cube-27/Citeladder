@@ -3,11 +3,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
 import { authApi } from '@/lib/api/auth';
-import {
-  billingApi,
-  type SelfServePlanKey,
-  type SubscriptionCheckoutInput,
-} from '@/lib/api/billing';
+import { billingApi, type SelfServePlanKey } from '@/lib/api/billing';
+import type { SubscriptionCheckoutRequest } from '@citeladder/contracts/billing-requests';
 import { queryKeys } from '@/lib/api/query-keys';
 import { CHECKOUT_POLL_ATTEMPTS, CHECKOUT_POLL_INTERVAL_MS } from '@/lib/config/billing';
 import { useOptionalProjectContext } from '@/lib/project/project-context';
@@ -29,7 +26,7 @@ const INCOMPLETE_CHECKOUT: Record<string, string | null> = {
  * prorated charge (one-time order). The browser never names an amount.
  */
 export type CheckoutPurchase =
-  | { readonly kind: 'base'; readonly input: SubscriptionCheckoutInput }
+  | { readonly kind: 'base'; readonly input: SubscriptionCheckoutRequest }
   | { readonly kind: 'addon'; readonly catalog_key: string; readonly quantity: number }
   | { readonly kind: 'topup'; readonly catalog_key: string; readonly quantity: number }
   | { readonly kind: 'upgrade'; readonly catalog_key: SelfServePlanKey };

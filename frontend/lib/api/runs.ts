@@ -27,7 +27,7 @@ import type {
 import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
 import { startInteractiveWork } from './interactive-work';
-import type { Audit, AuditSchedule, Execution, ExecutionEvidence } from './types';
+import type { Audit, AuditSchedule, Execution, ExecutionEvidence } from '@citeladder/contracts';
 
 const auditListSchema = z.array(auditSchema);
 const executionListSchema = z.array(executionSchema);

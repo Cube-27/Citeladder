@@ -37,7 +37,7 @@ import type {
   PromptGenerateResponse,
   PromptSet,
   Topic,
-} from './types';
+} from '@citeladder/contracts';
 
 const promptSetListSchema = z.array(promptSetSchema);
 const promptCandidateListSchema = z.array(promptCandidateSchema);

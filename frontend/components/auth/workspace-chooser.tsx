@@ -14,7 +14,7 @@ import { Callout } from '@/components/ui/callout';
 import { DisplayTime } from '@/components/ui/display-time';
 import { QueryState } from '@/components/ui/query-state';
 import { queryKeys } from '@/lib/api/query-keys';
-import type { Workspace } from '@/lib/api/types';
+import type { Workspace } from '@citeladder/contracts';
 import { workspacesApi } from '@/lib/api/workspaces';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { ownsWorkspace, soleOwnedWorkspace, WORKSPACE_SETUP_PATH } from '@/lib/project/bootstrap';

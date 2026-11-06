@@ -15,7 +15,7 @@ import type {
 } from '@citeladder/contracts/prompt-requests';
 import { PERSONA_MAX_CHARS } from '@/lib/config/prompts';
 import { buyerStageSchema, promptIntentSchema } from '@citeladder/contracts/project';
-import type { BuyerStage, Prompt, PromptIntent } from '@/lib/api/types';
+import type { BuyerStage, Prompt, PromptIntent } from '@citeladder/contracts';
 
 export const promptFormSchema = z.object({
   text: z.string().trim().min(1, 'Prompt text is required.'),

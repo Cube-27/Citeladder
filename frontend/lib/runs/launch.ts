@@ -7,7 +7,7 @@
  * independent of the dialog component.
  */
 import type { AuditLaunchRequest } from '@citeladder/contracts/audit-requests';
-import type { LogicalEngine, Prompt, PromptSet } from '@/lib/api/types';
+import type { LogicalEngine, Prompt, PromptSet } from '@citeladder/contracts';
 import { DEFAULT_REPETITIONS, MAX_REPETITIONS, MIN_REPETITIONS } from '@/lib/config/operational';
 
 export { DEFAULT_REPETITIONS, MAX_REPETITIONS, MIN_REPETITIONS } from '@/lib/config/operational';

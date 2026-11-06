@@ -15,7 +15,7 @@ import { TabPanel, Tabs } from '@/components/ui/tabs';
 import type { PromptGenerateRequest } from '@citeladder/contracts/prompt-requests';
 import { queryKeys } from '@/lib/api/query-keys';
 import { topicsApi } from '@/lib/api/topics';
-import type { PromptGenerateResponse, SeedQueries, Topic } from '@/lib/api/types';
+import type { PromptGenerateResponse, SeedQueries, Topic } from '@citeladder/contracts';
 import { personaChoices } from '@/lib/prompts/builder-business';
 import { defaultRunSettings, runRequest, type RunSettings } from '@/lib/prompts/builder-run';
 

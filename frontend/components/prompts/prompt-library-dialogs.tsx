@@ -4,7 +4,7 @@ import type {
   PromptGenerateRequest,
   PromptImportRowRequest,
 } from '@citeladder/contracts/prompt-requests';
-import type { Prompt, PromptGenerateResponse, Topic } from '@/lib/api/types';
+import type { Prompt, PromptGenerateResponse, Topic } from '@citeladder/contracts';
 import type { PromptFormValues } from '@/lib/prompts/forms';
 import type { usePromptCandidates } from '@/lib/prompts/use-prompt-candidates';
 

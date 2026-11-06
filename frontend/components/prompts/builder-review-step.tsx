@@ -10,7 +10,7 @@ import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import type { PromptGenerateRequest } from '@citeladder/contracts/prompt-requests';
-import type { PromptCandidate, Topic } from '@/lib/api/types';
+import type { PromptCandidate, Topic } from '@citeladder/contracts';
 import {
   moreForSegment,
   moreForTopic,

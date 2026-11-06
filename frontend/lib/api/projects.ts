@@ -31,7 +31,13 @@ import type {
 } from '@citeladder/contracts/project-requests';
 import { strictValidate } from '@citeladder/contracts/validation';
 import { projectMarketSchema, type ProjectMarketCreate } from '@citeladder/contracts/markets';
-import type { BrandProfile, BusinessMap, CommandCenter, Project, Workspace } from './types';
+import type {
+  BrandProfile,
+  BusinessMap,
+  CommandCenter,
+  Project,
+  Workspace,
+} from '@citeladder/contracts';
 
 const workspaceListSchema = z.array(workspaceSchema);
 const projectListSchema = z.array(projectSchema);

@@ -13,6 +13,7 @@ import {
   planChangeSchema,
   resolvedQuoteSchema,
 } from '@citeladder/contracts/billing';
+import { checkoutVerifyRequestSchema } from '@citeladder/contracts/billing-requests';
 import { definePostRoute, defineRoute } from './define.ts';
 import { readBody } from '../http/body.ts';
 import {
@@ -53,11 +54,7 @@ const activationParams = {
   query: {},
 } as const;
 const keyHeaders = z.object({ 'idempotency-key': z.string().nullable().optional() });
-const verifyRequest = z.strictObject({
-  fields: z
-    .record(z.string().regex(/^\w{1,64}$/u), z.string().max(512))
-    .refine((fields) => Object.keys(fields).length <= 8),
-});
+const verifyRequest = checkoutVerifyRequestSchema;
 
 export const billingRoutes = [
   defineRoute({

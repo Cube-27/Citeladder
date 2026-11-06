@@ -4,7 +4,7 @@
  * Proposals fill gaps beside the existing topics and never replace them.
  */
 import type { TopicConfirmPlan } from '@citeladder/contracts/prompt-requests';
-import type { Topic, TopicPreview } from '@/lib/api/types';
+import type { Topic, TopicPreview } from '@citeladder/contracts';
 import { orderTopicsForRail } from '@/lib/prompts/topic-tree';
 
 type Proposal = TopicPreview['topics'][number];

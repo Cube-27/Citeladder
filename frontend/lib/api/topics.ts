@@ -19,7 +19,7 @@ import type {
   TopicUpdateRequest,
 } from '@citeladder/contracts/prompt-requests';
 import { strictValidate } from '@citeladder/contracts/validation';
-import type { SeedQueries, Topic, TopicPreview } from './types';
+import type { SeedQueries, Topic, TopicPreview } from '@citeladder/contracts';
 
 const topicListSchema = z.array(topicSchema);
 

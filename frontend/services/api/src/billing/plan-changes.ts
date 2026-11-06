@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { z } from 'zod';
 import { planChangeSchema } from '@citeladder/contracts/billing';
+import { planChangeRequestSchema } from '@citeladder/contracts/billing-requests';
 import type { Database } from '../db/database.ts';
 import type { ServiceConfig } from '../config.ts';
 import { lockAccount } from '../entitlements/grants.ts';
@@ -21,9 +22,7 @@ import {
 import { frozenTermsSchema, scheduledSchema } from './settlement.ts';
 import { activationResponse, createPending, dispatch, workspaceAccount } from './purchases.ts';
 
-export const changeRequest = z.strictObject({
-  catalog_key: z.enum(['tier_1', 'tier_2', 'tier_3']),
-});
+export const changeRequest = planChangeRequestSchema;
 
 /** Commits a downgrade for the period end; the provider switch follows the commit. */
 async function scheduleDowngrade(

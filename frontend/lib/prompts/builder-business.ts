@@ -12,7 +12,7 @@ import type {
   BusinessMapOfferingEdit,
   BusinessMapUpdateRequest,
 } from '@citeladder/contracts/project-requests';
-import type { BrandProfile, BusinessMap } from '@/lib/api/types';
+import type { BrandProfile, BusinessMap } from '@citeladder/contracts';
 
 type BusinessModel = z.infer<typeof businessModelSchema>;
 type OfferingMapDraft = BusinessMapOfferingEdit;

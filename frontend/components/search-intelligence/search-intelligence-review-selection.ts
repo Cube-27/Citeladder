@@ -1,8 +1,5 @@
-import type {
-  DatasetSelection,
-  ResearchScope,
-  SearchIntelligenceReadiness,
-} from '@/lib/api/search-intelligence';
+import type { SearchDatasetSelectionRequest } from '@citeladder/contracts/search-intelligence-requests';
+import type { ResearchScope, SearchIntelligenceReadiness } from '@/lib/api/search-intelligence';
 import {
   BACKLINK_DATASET_KINDS,
   COMPARISON_DATASET_KINDS,
@@ -14,7 +11,7 @@ import {
 } from '@/lib/config/search-intelligence';
 import { matchesCompetitor } from './search-intelligence-competitors';
 
-export const selectionKey = (selection: DatasetSelection) =>
+export const selectionKey = (selection: SearchDatasetSelectionRequest) =>
   `${selection.kind}:${selection.competitor_id ?? ''}`;
 
 function depthFor(data: SearchIntelligenceReadiness, kind: string) {
@@ -42,7 +39,9 @@ export function reviewOwnedTarget(data: SearchIntelligenceReadiness) {
   );
 }
 
-export function availableSelections(data: SearchIntelligenceReadiness): DatasetSelection[] {
+export function availableSelections(
+  data: SearchIntelligenceReadiness,
+): SearchDatasetSelectionRequest[] {
   return [
     ...OWNED_DATASET_KINDS.map((kind) => ({ kind, depth: depthFor(data, kind) })),
     ...reviewCompetitors(data).flatMap((competitor_id) =>
@@ -56,7 +55,7 @@ export function availableSelections(data: SearchIntelligenceReadiness): DatasetS
 }
 
 /** Whether a saved dataset already answers this selection, so a refresh re-reads it. */
-function saved(data: SearchIntelligenceReadiness, selection: DatasetSelection) {
+function saved(data: SearchIntelligenceReadiness, selection: SearchDatasetSelectionRequest) {
   const owned = reviewOwnedTarget(data)?.origin;
   const competitor = data.competitors.find((item) => item.identity === selection.competitor_id);
   return data.datasets.some((dataset) => {
@@ -81,7 +80,7 @@ function saved(data: SearchIntelligenceReadiness, selection: DatasetSelection) {
 export function defaultSelections(
   data: SearchIntelligenceReadiness,
   action: string,
-): DatasetSelection[] {
+): SearchDatasetSelectionRequest[] {
   const available = availableSelections(data);
   if (action === 'seed')
     return available.filter(
@@ -103,9 +102,9 @@ export function defaultSelections(
 
 /** Exact-host comparisons cannot be ordered by traffic or position; the API refuses them. */
 export function comparisonOrderConflict(
-  selections: DatasetSelection[],
+  selections: SearchDatasetSelectionRequest[],
   researchScope: ResearchScope,
-  order: DatasetSelection['order'],
+  order: SearchDatasetSelectionRequest['order'],
 ) {
   return (
     researchScope === 'exact_host' &&
@@ -115,20 +114,23 @@ export function comparisonOrderConflict(
 }
 
 /** Backlink history covers the whole domain; the API refuses it for an exact host. */
-export function historyScopeConflict(selections: DatasetSelection[], researchScope: ResearchScope) {
+export function historyScopeConflict(
+  selections: SearchDatasetSelectionRequest[],
+  researchScope: ResearchScope,
+) {
   return (
     researchScope === 'exact_host' && selections.some(({ kind }) => kind === 'backlink_history')
   );
 }
 
 export function reviewInputsValid(
-  selections: DatasetSelection[],
+  selections: SearchDatasetSelectionRequest[],
   form: {
     ownedTarget: string;
     location: string;
     seed: string;
     researchScope: ResearchScope;
-    order: DatasetSelection['order'];
+    order: SearchDatasetSelectionRequest['order'];
   },
 ) {
   const marketNeeded = selections.some(({ kind }) => !BACKLINK_DATASET_KINDS.includes(kind));
@@ -144,14 +146,14 @@ export function reviewInputsValid(
 }
 
 export function prepareReviewSelections(
-  selections: DatasetSelection[],
+  selections: SearchDatasetSelectionRequest[],
   controls: {
     seed: string;
     grouping: 'as_is' | 'one_per_domain';
-    order: DatasetSelection['order'];
+    order: SearchDatasetSelectionRequest['order'];
     minVolume: string;
   },
-): DatasetSelection[] {
+): SearchDatasetSelectionRequest[] {
   return selections.map((selection) => {
     if (selection.kind === 'backlinks') return { ...selection, grouping: controls.grouping };
     if (!KEYWORD_DATASET_KINDS.includes(selection.kind)) return selection;

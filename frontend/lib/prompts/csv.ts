@@ -16,7 +16,7 @@
  */
 import type { PromptImportRowRequest } from '@citeladder/contracts/prompt-requests';
 import { buyerStageSchema, promptIntentSchema } from '@citeladder/contracts/project';
-import type { BuyerStage, PromptIntent } from '@/lib/api/types';
+import type { BuyerStage, PromptIntent } from '@citeladder/contracts';
 import { PERSONA_MAX_CHARS, PROMPT_IMPORT_MAX_ROWS } from '@/lib/config/prompts';
 
 /** The import's column contract, in the order the sample file uses. */
