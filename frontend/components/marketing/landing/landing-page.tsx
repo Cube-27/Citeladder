@@ -1,5 +1,6 @@
 import { EngineMark } from '@/components/ui/engine-mark';
 import { appHref } from '@/lib/config/app-link';
+import { PUBLIC_TRIAL } from '@/lib/config/public-trial';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { NAV_DROPS, PLATFORM_GROUPS, platformLabel } from '@/lib/marketing-content/nav';
 import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
@@ -44,7 +45,9 @@ function Hero() {
       lead="CiteLadder helps marketing and SEO teams grow their AI visibility, traffic and revenue."
       actions={<PrimaryActions />}
       note={
-        selfServeSignupOpen() ? '7-day free trial on ChatGPT answers. Trial limits apply.' : null
+        selfServeSignupOpen()
+          ? `${PUBLIC_TRIAL.days}-day free trial on ChatGPT answers. Trial limits apply.`
+          : null
       }
       frame={
         // D25: the real app, chrome and all, as the page's first product view.

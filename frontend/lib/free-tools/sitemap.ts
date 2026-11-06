@@ -1,4 +1,4 @@
-import { FREE_TOOL_LIMITS } from '@/lib/config/free-tools';
+import { FREE_TOOL_LIMITS, FREE_TOOL_LIMIT_LABELS } from '@/lib/config/free-tools';
 import { boundedText, webUrl } from './input';
 
 function hasDeclarations(text: string) {
@@ -39,7 +39,7 @@ function sitemapUrls(source: string) {
   if (entries.some((node) => node.namespaceURI !== root.namespaceURI))
     throw new Error('Every sitemap entry must use the sitemaps.org namespace.');
   if (entries.length > FREE_TOOL_LIMITS.sitemapUrls)
-    throw new Error('Compare at most 10,000 URLs per file.');
+    throw new Error(`Compare at most ${FREE_TOOL_LIMIT_LABELS.sitemapUrls} URLs per file.`);
   const urls = entries.map((entry) => {
     const locs = Array.from(entry.children).filter(
       (node) => node.localName === 'loc' && node.namespaceURI === root.namespaceURI,

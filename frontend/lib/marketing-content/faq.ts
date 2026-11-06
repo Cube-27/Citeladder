@@ -6,6 +6,9 @@
  * Keep answers short and specific,
  * and never invent numbers, customers, or certainty.
  */
+import { PUBLIC_TRIAL } from '@/lib/config/public-trial';
+
+import { countWord, projectCount } from './count-words';
 
 export type FaqItem = {
   q: string;
@@ -136,7 +139,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
     items: [
       faqItem(
         'What is included in the current public trial?',
-        'The seven-day trial includes one project, 20 prompts, 20 monitored URLs and ChatGPT-only access, with 20 successful answers and one successful answer per prompt under the current trial rules. It includes 500 AI credits; Agent access is not included. Contact us to keep going after the trial or to ask about the rest of the product.',
+        `The ${countWord(PUBLIC_TRIAL.days)}-day trial includes ${projectCount(PUBLIC_TRIAL.projects)}, ${PUBLIC_TRIAL.prompts} prompts, ${PUBLIC_TRIAL.monitoredUrls} monitored URLs and ChatGPT-only access, with ${PUBLIC_TRIAL.answers} successful answers and one successful answer per prompt under the current trial rules. It includes ${PUBLIC_TRIAL.aiCredits} AI credits; Agent access is not included. Contact us to keep going after the trial or to ask about the rest of the product.`,
         [
           { label: 'Explore AI Visibility', href: '/platform/ai-visibility' },
           { label: 'Discuss access', href: '/contact' },

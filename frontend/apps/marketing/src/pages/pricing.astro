@@ -8,6 +8,7 @@ import {
   PricingKeys,
   PricingUnavailable,
 } from '@/components/marketing/pages/pricing';
+import { PUBLIC_TRIAL } from '@/lib/config/public-trial';
 import { PAGES } from '@/lib/marketing-content/pages';
 import { faqPageJsonLd } from '@/lib/seo/json-ld';
 import { selfServeCheckoutComingSoon } from '@/lib/billing/catalog';
@@ -43,7 +44,7 @@ if (!catalog) Astro.response.status = 503;
   <main id="main">
     <PricingHero checkoutOpen={catalog !== null && !checkoutClosed} />
     {catalog ? (
-      <PublicPricingCatalog catalog={catalog} appOrigin={env.PUBLIC_APP_ORIGIN} initialByok={initialByok} client:load />
+      <PublicPricingCatalog catalog={catalog} appOrigin={env.PUBLIC_APP_ORIGIN} initialByok={initialByok} trial={PUBLIC_TRIAL} client:load />
     ) : (
       <PricingUnavailable />
     )}

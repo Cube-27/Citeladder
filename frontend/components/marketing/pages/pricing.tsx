@@ -1,5 +1,7 @@
 import { TextLink } from '@/components/ui/text-link';
 import { appHref } from '@/lib/config/app-link';
+import { PUBLIC_TRIAL } from '@/lib/config/public-trial';
+import { countWord, countWordCapitalized, projectCount } from '@/lib/marketing-content/count-words';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { DEMO_CTA } from '@/lib/marketing-content/nav';
 
@@ -19,10 +21,12 @@ import { CtaBand, FaqList } from '../sections/steps-faq-cta';
  * `lib/marketing-content/faq.ts`, the BYOK disclosure and the catalog's
  * currency note); they quote no price.
  */
+const trialProjects = projectCount(PUBLIC_TRIAL.projects);
+
 export const PRICING_FAQS = [
   {
     q: 'What does the free trial include?',
-    a: 'Seven days of AI visibility tracking on ChatGPT for one project, with 20 prompts, 20 monitored URLs and 20 successful answers, one per prompt. It includes 500 AI credits; Agent access is not included. Contact us to continue after the trial.',
+    a: `${countWordCapitalized(PUBLIC_TRIAL.days)} days of AI visibility tracking on ChatGPT for ${trialProjects}, with ${PUBLIC_TRIAL.prompts} prompts, ${PUBLIC_TRIAL.monitoredUrls} monitored URLs and ${PUBLIC_TRIAL.answers} successful answers, one per prompt. It includes ${PUBLIC_TRIAL.aiCredits} AI credits; Agent access is not included. Contact us to continue after the trial.`,
   },
   {
     q: 'Do you mark up model usage?',
@@ -49,12 +53,11 @@ export const PRICING_FAQS = [
  * closed and points at the plans below.
  */
 export function PricingHero({ checkoutOpen = false }: Readonly<{ checkoutOpen?: boolean }>) {
-  const trial =
-    'Seven days of AI visibility tracking on ChatGPT for one project, with 20 prompts and 20 monitored URLs.';
+  const trial = `${countWordCapitalized(PUBLIC_TRIAL.days)} days of AI visibility tracking on ChatGPT for ${trialProjects}, with ${PUBLIC_TRIAL.prompts} prompts and ${PUBLIC_TRIAL.monitoredUrls} monitored URLs.`;
   return (
     <PageHero
       crumbs={[{ label: 'Home', href: '/' }, { label: 'Pricing' }]}
-      title="Start with a seven-day free trial"
+      title={`Start with a ${countWord(PUBLIC_TRIAL.days)}-day free trial`}
       lead={
         checkoutOpen
           ? `${trial} Paid plans are below, or contact us.`

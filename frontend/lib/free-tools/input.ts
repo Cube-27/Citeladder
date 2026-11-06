@@ -1,4 +1,4 @@
-import { FREE_TOOL_LIMITS } from '@/lib/config/free-tools';
+import { FREE_TOOL_LIMITS, FREE_TOOL_LIMIT_LABELS } from '@/lib/config/free-tools';
 
 export function boundedText(text: string, limit: number = FREE_TOOL_LIMITS.text) {
   if (text.length > limit)
@@ -28,6 +28,8 @@ export async function readToolFile(file: File) {
   try {
     return boundedText(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
   } catch {
-    throw new Error('Use valid UTF-8 XML within the 200,000-character limit.');
+    throw new Error(
+      `Use valid UTF-8 XML within the ${FREE_TOOL_LIMIT_LABELS.text}-character limit.`,
+    );
   }
 }
