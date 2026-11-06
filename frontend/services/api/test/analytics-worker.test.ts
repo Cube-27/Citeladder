@@ -573,6 +573,14 @@ describe('retry backoff', () => {
       15_000, 30_000, 60_000, 450_000,
     ]);
   });
+  it('refuses a retry cap below the base delay', () => {
+    expect(() => loadWorkerSettings({ ANALYTICS_RETRY_MAX_DELAY_SECONDS: '10' })).toThrow(
+      'retry_max_delay_seconds must not be below retry_delay_seconds',
+    );
+    expect(
+      loadWorkerSettings({ ANALYTICS_RETRY_MAX_DELAY_SECONDS: '30' }).retryMaxDelaySeconds,
+    ).toBe(30);
+  });
 });
 
 describe('analytics kind registry', () => {

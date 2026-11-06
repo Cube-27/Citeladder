@@ -654,5 +654,9 @@ export function loadWorkerSettings(
   if (settings.heartbeatIntervalSeconds >= settings.leaseTtlSeconds) {
     throw new ConfigError('heartbeat_interval_seconds must be shorter than every lease TTL');
   }
+  // A cap below the base would cut every backoff short of the configured first wait.
+  if (settings.retryMaxDelaySeconds < settings.retryDelaySeconds) {
+    throw new ConfigError('retry_max_delay_seconds must not be below retry_delay_seconds');
+  }
   return settings;
 }
