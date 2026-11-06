@@ -608,7 +608,9 @@ export type WorkerSettings = {
   heartbeatIntervalSeconds: number;
   taskMaxAttempts: number;
   pollIntervalSeconds: number;
+  /** The first retry's base wait; each later attempt doubles it up to `retryMaxDelaySeconds`. */
   retryDelaySeconds: number;
+  retryMaxDelaySeconds: number;
   accessCheckTtlSeconds: number;
 };
 
@@ -644,6 +646,7 @@ export function loadWorkerSettings(
     taskMaxAttempts: setting('task_max_attempts'),
     pollIntervalSeconds: setting('poll_interval_seconds'),
     retryDelaySeconds: setting('retry_delay_seconds'),
+    retryMaxDelaySeconds: setting('retry_max_delay_seconds'),
     accessCheckTtlSeconds: setting('access_check_ttl_seconds'),
   };
   // A heartbeat slower than the lease guarantees expiry during healthy work;

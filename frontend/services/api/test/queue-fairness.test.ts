@@ -16,7 +16,7 @@ import { createDiscovery } from '../src/projects/discovery.ts';
 import { discoveryCreate } from '../src/projects/discovery-inputs.ts';
 import { AuditQueue, type AuditClaimScope } from '../src/queue/audit-queue.ts';
 import { DiscoveryQueue } from '../src/queue/discovery-queue.ts';
-import { TaskQueue } from '../src/queue/task-queue.ts';
+import { ANALYTICS_LANE, SITE_HEALTH_LANE, TaskQueue } from '../src/queue/task-queue.ts';
 import { IntegrationWorker } from '../src/workers/integration-worker.ts';
 import { AgentFixtures } from './agent-support.ts';
 import { auditTenant } from './audit-fixtures.ts';
@@ -74,7 +74,7 @@ async function analyticsTasks(workspaceId: string, backlog: Backlog) {
 }
 
 function analyticsLane(): Lane {
-  const queue = new TaskQueue(db, { leaseTtlSeconds: 120 });
+  const queue = new TaskQueue(db, ANALYTICS_LANE, { leaseTtlSeconds: 120 });
   return {
     async seed(backlog) {
       const { workspaceId } = await fixtures.tenant();
@@ -89,7 +89,7 @@ function analyticsLane(): Lane {
 }
 
 function siteHealthLane(): Lane {
-  const queue = new TaskQueue(db, { leaseTtlSeconds: 120 }, 'site_crawl_tasks');
+  const queue = new TaskQueue(db, SITE_HEALTH_LANE, { leaseTtlSeconds: 120 });
   return {
     async seed(backlog) {
       const crawl = await fixtures.crawl('running');

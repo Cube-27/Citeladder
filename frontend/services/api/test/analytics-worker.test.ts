@@ -8,7 +8,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 
 import { loadWorkerSettings, policy } from '../src/config.ts';
 import { TaskQueue, type QueueTask } from '../src/queue/task-queue.ts';
-import { AnalyticsWorker, EXECUTORS } from '../src/workers/analytics-worker.ts';
+import { AnalyticsWorker, EXECUTORS, retryDelayMs } from '../src/workers/analytics-worker.ts';
 import { enqueueTask } from '../src/queue/enqueue.ts';
 import type { Executor } from '../src/queue/executor.ts';
 import { ANALYTICS_KIND_NAMES } from '../src/workers/analytics-kinds.ts';
@@ -560,6 +560,18 @@ describe('finalize', () => {
       lease_owner: 'sweeper-reclaimed',
       attempt_count: 0,
     });
+  });
+});
+
+describe('retry backoff', () => {
+  const backoff = { retryDelaySeconds: 30, retryMaxDelaySeconds: 900 };
+  it('doubles the wait per failed attempt up to the cap, jittered into its upper half', () => {
+    expect([1, 2, 3, 10].map((attempt) => retryDelayMs(attempt, backoff, () => 1))).toEqual([
+      30_000, 60_000, 120_000, 900_000,
+    ]);
+    expect([1, 2, 3, 10].map((attempt) => retryDelayMs(attempt, backoff, () => 0))).toEqual([
+      15_000, 30_000, 60_000, 450_000,
+    ]);
   });
 });
 

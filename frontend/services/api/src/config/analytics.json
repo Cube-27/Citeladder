@@ -30,6 +30,12 @@
       "default": 30.0,
       "minimum": 0
     },
+    "retry_max_delay_seconds": {
+      "env": ["ANALYTICS_RETRY_MAX_DELAY_SECONDS"],
+      "type": "float",
+      "default": 900.0,
+      "minimum": 0
+    },
     "lease_reclaim_batch_size": {
       "env": ["ANALYTICS_LEASE_RECLAIM_BATCH_SIZE"],
       "type": "int",

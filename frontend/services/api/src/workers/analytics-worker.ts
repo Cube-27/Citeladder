@@ -11,7 +11,6 @@
  * terminal compensation run before every claim, including an empty drain.
  */
 import { randomBytes } from 'node:crypto';
-import { sql } from 'kysely';
 
 import { ConfigError } from '../config/config-error.ts';
 import { policy, type WorkerSettings } from '../config.ts';
@@ -25,7 +24,7 @@ import {
   type TaskSettlement,
 } from '../queue/executor.ts';
 import { maintainLease } from '../queue/heartbeat.ts';
-import { TaskQueue, type QueueTask, type ClaimScope } from '../queue/task-queue.ts';
+import { ANALYTICS_LANE, TaskQueue, type ClaimScope, type QueueTask } from '../queue/task-queue.ts';
 import {
   ANALYTICS_KIND_NAMES,
   ANALYTICS_KINDS,
@@ -34,7 +33,7 @@ import {
 import { compensateTerminalTasks } from './terminal-compensation.ts';
 
 const logger = getLogger('workers.analytics');
-const { statuses, terminal } = policy.task_queue;
+const { statuses } = policy.task_queue;
 const ERROR_DETAIL_LIMIT = 2000;
 
 /** Kind dispatch: each registered kind's executor. */
@@ -47,12 +46,27 @@ class ExecutorNotWiredError extends Error {}
 
 const detail = (error: Error) => [...String(error.message)].slice(0, ERROR_DETAIL_LIMIT).join('');
 
+/**
+ * The wait before retry `attempt` (1-based): the base delay doubled per
+ * failed attempt, capped, then jittered into its upper half so retries of a
+ * shared outage spread out instead of returning together.
+ */
+export function retryDelayMs(
+  attempt: number,
+  settings: Pick<WorkerSettings, 'retryDelaySeconds' | 'retryMaxDelaySeconds'>,
+  random: () => number = Math.random,
+): number {
+  const exponential = settings.retryDelaySeconds * 2 ** Math.max(0, attempt - 1);
+  const capped = Math.min(settings.retryMaxDelaySeconds, exponential);
+  return Math.round(capped * 1000 * (0.5 + random() / 2));
+}
+
 function taskOutcome(
   error: Error | null,
   attempt: number,
   maxAttempts: number,
   now: Date,
-  retryDelaySeconds: number,
+  settings: WorkerSettings,
 ) {
   if (error === null)
     return { status: statuses.succeeded, completed_at: now, error_code: '', error_detail: '' };
@@ -69,7 +83,7 @@ function taskOutcome(
   if (attempt < maxAttempts)
     return {
       status: statuses.retry_wait,
-      available_at: new Date(now.getTime() + retryDelaySeconds * 1000),
+      available_at: new Date(now.getTime() + retryDelayMs(attempt, settings)),
       error_code: policy.analytics.retry_error,
       error_detail: detail(error),
     };
@@ -111,7 +125,7 @@ export class AnalyticsWorker {
     }
     this.#db = db;
     this.#settings = settings;
-    this.#queue = new TaskQueue(db, {
+    this.#queue = new TaskQueue(db, ANALYTICS_LANE, {
       leaseTtlSeconds: settings.leaseTtlSeconds,
       leaseTtlSecondsByKind: ANALYTICS_LEASE_TTL_SECONDS,
     });
@@ -223,30 +237,13 @@ export class AnalyticsWorker {
   #finalize(claimed: QueueTask, result: Error | TaskSettlement | null): Promise<boolean> {
     const taskId = claimed.id;
     return this.#db.transaction().execute(async (trx) => {
-      const row = await trx
-        .selectFrom('analytics_tasks')
-        .select(['lease_owner', 'status', 'attempt_count', 'max_attempts'])
-        .where('id', '=', taskId)
-        .where('workspace_id', '=', claimed.workspace_id)
-        .where('project_id', claimed.project_id === null ? 'is' : '=', claimed.project_id)
-        .where('attempt_count', '=', claimed.attempt_count)
-        .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)
-        .forUpdate()
-        .executeTakeFirst();
-      if (row === undefined || row.lease_owner !== this.owner || terminal.includes(row.status)) {
-        return false;
-      }
+      const row = await this.#queue.fence(trx, claimed, this.owner);
+      if (row === undefined) return false;
       const now = new Date();
       const error = result === null || result instanceof Error ? result : result.error;
       if (result !== null && !(result instanceof Error)) await result.persist(trx);
       const attempt = row.attempt_count + 1;
-      const outcome = taskOutcome(
-        error,
-        attempt,
-        row.max_attempts,
-        now,
-        this.#settings.retryDelaySeconds,
-      );
+      const outcome = taskOutcome(error, attempt, row.max_attempts, now, this.#settings);
       await trx
         .updateTable('analytics_tasks')
         .set({
