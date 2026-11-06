@@ -114,10 +114,11 @@ export function Bento({
  * the card's foot, so every card is one height whatever its screen holds.
  *
  * The plus (or a press anywhere on the card) opens it in place
- * (`mountCardRail`): the card widens to about two, the plus turns to a
- * close, the `body` and a button to the page appear at its lower left and
- * the image grows at its right. The height never changes, so nothing below
- * the rail moves.
+ * (`mountCardRail`): the card widens to about two and the plus turns to a
+ * close, while the header stays put; the miniature fades out as the `body`
+ * with a button to the page fades in at the lower left and the feature's
+ * `page` in the app, sidebar and all, at the right. Closing fades back. The
+ * height never changes, so nothing below the rail moves.
  */
 export function RailCard({
   href,
@@ -125,6 +126,7 @@ export function RailCard({
   title,
   body,
   media,
+  page,
 }: Readonly<{
   href: string;
   /** What the card is (a module's name), small above the headline. */
@@ -132,8 +134,10 @@ export function RailCard({
   title: ReactNode;
   /** The paragraph an open card shows. */
   body: ReactNode;
-  /** A ProductFrame. */
+  /** The closed card's miniature: a ProductFrame of the feature's screen. */
   media: ReactNode;
+  /** The open card's image: a ProductFrame of the feature's page in the app, sidebar and all. */
+  page: ReactNode;
 }>) {
   const moreId = useId();
   return (
@@ -159,13 +163,19 @@ export function RailCard({
           <Plus aria-hidden className="size-5" />
         </button>
       </div>
-      <div id={moreId} className="cl-railcard-more" hidden>
+      {/* Three layers under the fixed header, cross-faded by `data-expanded`:
+          the miniature while closed; the page and the paragraph with its
+          button while open. A layer out of view is inert and hidden. */}
+      <div className="cl-railcard-shot">{media}</div>
+      <div className="cl-railcard-page" aria-hidden inert>
+        {page}
+      </div>
+      <div id={moreId} className="cl-railcard-more" aria-hidden inert>
         <p className="cl-railcard-body">{body}</p>
         <ButtonLink href={href} size="marketing">
           Explore {label}
         </ButtonLink>
       </div>
-      <div className="cl-railcard-media">{media}</div>
     </article>
   );
 }

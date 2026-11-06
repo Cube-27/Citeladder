@@ -1786,9 +1786,8 @@ a.cl-fcard:hover {
 .cl-railcard {
   --cl-tint: var(--tint-neutral);
 
-  display: flex;
-  flex-direction: column;
-  height: 460px;
+  position: relative;
+  height: 560px;
   overflow: hidden;
   border-radius: var(--site-radius-card);
   background: var(--cl-tint);
@@ -1824,10 +1823,13 @@ a.cl-fcard:hover {
   padding: 28px 28px 0;
 }
 
+/* The headline keeps the closed card's measure, so opening never moves or
+   rewraps it; only the close slides out with the card's right edge. */
 .cl-railcard-copy {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: calc(var(--cl-card-w) - 120px);
   min-width: 0;
 }
 
@@ -1869,17 +1871,74 @@ a.cl-fcard:hover {
   transform: rotate(45deg);
 }
 
-/* What an open card adds at its lower left: the paragraph and its button. */
+/* Under the header, three layers cross-fade in place while the card widens:
+   the closed card's miniature out, the open card's page in the app and its
+   paragraph with the button in (and back on close). Each holds a fixed size
+   and place, so nothing reflows as it fades. */
+.cl-railcard-shot,
+.cl-railcard-page,
 .cl-railcard-more {
+  position: absolute;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--motion-slow) var(--ease-exit),
+    visibility 0s var(--ease-exit) var(--motion-slow);
+}
+
+.cl-railcard:not([data-expanded]) .cl-railcard-shot,
+.cl-railcard[data-expanded] :is(.cl-railcard-page, .cl-railcard-more) {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity var(--motion-slow) var(--ease-standard) var(--motion-fast),
+    visibility 0s;
+}
+
+/* The miniature: inset at the card's foot, its top edge and shadow showing
+   and its lower part cut off by the card. */
+.cl-railcard-shot {
+  bottom: 0;
+  left: 40px;
+  width: calc(var(--cl-card-w) - 80px);
+  height: 310px;
+  overflow: hidden;
+}
+
+/* The open card's image (the reference's open panel): the feature's page in
+   the app, sidebar first, at 70% of its real size, in the right half under
+   the close and running off the card's right and lower edges. */
+.cl-railcard-page {
+  top: 112px;
+  left: calc(var(--cl-open-w) / 2 + 16px);
+  width: 1000px;
+}
+
+.cl-railcard-page .cl-frame {
+  max-width: none;
+  margin-inline: 0;
+}
+
+.cl-railcard-page .cl-screen {
+  min-height: 720px;
+  zoom: 0.7;
+}
+
+/* The open card's paragraph and button, at the foot of its left half. */
+.cl-railcard-more {
+  bottom: 28px;
+  left: 28px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 24px;
-  padding: 0 28px 28px;
+  width: min(420px, calc(var(--cl-open-w) / 2 - 56px));
 }
 
-.cl-railcard-more[hidden] {
-  display: none;
+/* The button stays under the paragraph's left edge, where the phone rule
+   for marketing buttons would centre it. */
+.cl-railcard .cl-railcard-more > a {
+  align-self: flex-start;
 }
 
 .cl-railcard-body {
@@ -1890,105 +1949,64 @@ a.cl-fcard:hover {
   line-height: var(--text-body-lg--line-height);
 }
 
-/* The open card: copy over the left column, the paragraph at its foot, the
-   image larger in the right column, cut by the card's right and lower edge. */
-.cl-railcard[data-expanded] {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
-  grid-template-rows: auto minmax(0, 1fr);
-}
-
-.cl-railcard[data-expanded] .cl-railcard-head {
-  grid-column: 1 / -1;
-  grid-row: 1;
-}
-
-.cl-railcard[data-expanded] .cl-railcard-more {
-  grid-column: 1;
-  grid-row: 2;
-  align-self: end;
-}
-
-.cl-railcard[data-expanded] .cl-railcard-media {
-  grid-column: 2;
-  grid-row: 2;
-  height: auto;
-  margin-top: 0;
-  padding: 0;
-}
-
-.cl-railcard[data-expanded] .cl-railcard-media .cl-frame {
-  zoom: 0.85;
-}
-
-/* The image: fixed height at the card's foot, inset from the sides, its top
-   edge and shadow showing and its lower part cut off by the card. */
-.cl-railcard-media {
-  height: 250px;
-  margin-top: auto;
-  padding: 0 40px;
-  overflow: hidden;
-}
-
-.cl-railcard-media .cl-frame,
-.cl-railcard-media .cl-frame-card {
+/* Both images: the bare screen, its well clearing room for the top shadow. */
+:is(.cl-railcard-shot, .cl-railcard-page) :is(.cl-frame, .cl-frame-card) {
   padding: 0;
   border-radius: 0;
   background: none;
 }
 
+:is(.cl-railcard-shot, .cl-railcard-page) .cl-frame-card > .cl-frame-well {
+  padding-top: 12px;
+}
+
 /* A miniature, as in the reference: the screen lays out at 1/0.7 of the
    slot's width with its real type, then draws at 70%, so the card shows the
    whole panel small rather than a close-up of its top. */
-.cl-railcard-media .cl-frame {
+.cl-railcard-shot .cl-frame {
   zoom: 0.7;
 }
 
-.cl-railcard-media .cl-frame-card > .cl-frame-well {
-  padding-top: 12px;
+@media (prefers-reduced-motion: reduce) {
+  .cl-rail .cl-railcard :is(.cl-railcard-shot, .cl-railcard-page, .cl-railcard-more) {
+    transition: none;
+  }
 }
 
 @media (max-width: 767px) {
   .cl-railcard {
-    height: 420px;
+    height: 460px;
   }
 
   .cl-railcard-head {
     padding: 20px 20px 0;
   }
 
-  .cl-railcard-media {
-    height: 230px;
-    padding: 0 20px;
+  .cl-railcard-copy {
+    width: calc(var(--cl-card-w) - 104px);
+  }
+
+  .cl-railcard-shot {
+    left: 20px;
+    width: calc(var(--cl-card-w) - 40px);
+    height: 250px;
+  }
+
+  /* A phone is too narrow for the app page: the open card shows the
+     paragraph and button alone under the header. */
+  .cl-railcard-page {
+    display: none;
   }
 
   .cl-railcard-more {
-    padding: 16px 20px 20px;
+    bottom: 20px;
+    left: 20px;
+    width: calc(var(--cl-open-w) - 40px);
   }
 
   .cl-railcard-body {
     font-size: var(--text-body);
     line-height: var(--text-body--line-height);
-  }
-
-  /* On a phone an open card stacks: copy, paragraph, then what fits of the image. */
-  .cl-railcard[data-expanded] {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto minmax(0, 1fr);
-  }
-
-  .cl-railcard[data-expanded] .cl-railcard-more {
-    align-self: start;
-  }
-
-  .cl-railcard[data-expanded] .cl-railcard-media {
-    grid-column: 1;
-    grid-row: 3;
-    padding: 0 20px;
-  }
-
-  .cl-railcard[data-expanded] .cl-railcard-media .cl-frame {
-    zoom: 0.7;
   }
 
   .cl-rail-btn {
@@ -1997,8 +2015,14 @@ a.cl-fcard:hover {
   }
 }
 
-/* A flex row, so one item can widen when its card opens. */
+/* A flex row, so one item can widen when its card opens. It is the cards'
+   size container: a closed card is 420px (85% of the row on a phone), an
+   open one 1000px (the whole row when narrower). */
 .cl-rail-track {
+  --cl-card-w: min(420px, 85cqw);
+  --cl-open-w: min(1000px, 100cqw);
+
+  container-type: inline-size;
   display: flex;
   gap: 16px;
   margin: 0;
@@ -2015,14 +2039,13 @@ a.cl-fcard:hover {
 }
 
 .cl-rail-item {
-  flex: 0 0 min(420px, 85%);
+  flex: 0 0 var(--cl-card-w);
   scroll-snap-align: start;
   transition: flex-basis var(--motion-slow) var(--ease-standard);
 }
 
-/* An open card takes about two cards' width (the whole row on a phone). */
 .cl-rail-item:has(> [data-expanded]) {
-  flex-basis: min(856px, 100%);
+  flex-basis: var(--cl-open-w);
 }
 
 @media (prefers-reduced-motion: reduce) {

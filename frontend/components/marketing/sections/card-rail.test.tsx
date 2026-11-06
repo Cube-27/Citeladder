@@ -17,6 +17,7 @@ function renderRail({ scrollWidth, clientWidth }: { scrollWidth: number; clientW
             title={`${name} in one line`}
             body={`What ${name} does`}
             media={null}
+            page={null}
           />
         ),
       }))}
@@ -59,11 +60,12 @@ describe('mountCardRail', () => {
   });
 
   it('opens one card in place at a time and closes it again', () => {
+    // A closed card keeps its paragraph and button out of the accessibility
+    // tree (the stylesheet fades them; jsdom has none).
     renderRail({ scrollWidth: 1200, clientWidth: 400 });
     expect(screen.queryByRole('link', { name: 'Explore Site Health' })).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'More about Site Health' }));
-    expect(screen.getByText('What Site Health does')).toBeVisible();
     expect(screen.getByRole('link', { name: 'Explore Site Health' })).toHaveAttribute(
       'href',
       '/platform/site-health',
@@ -72,7 +74,10 @@ describe('mountCardRail', () => {
     // Opening the next card closes the first.
     fireEvent.click(screen.getByRole('button', { name: 'More about Keyword Research' }));
     expect(screen.queryByRole('link', { name: 'Explore Site Health' })).toBeNull();
-    expect(screen.getByRole('link', { name: 'Explore Keyword Research' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Explore Keyword Research' })).toHaveAttribute(
+      'href',
+      '/platform/keyword-research',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'Close Keyword Research' }));
     expect(screen.queryByRole('link', { name: 'Explore Keyword Research' })).toBeNull();

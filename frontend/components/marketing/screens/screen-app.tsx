@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { ChevronDown, ChevronsUpDown, CircleHelp, Download, Rocket, Search } from 'lucide-react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
@@ -51,12 +52,15 @@ const NAV = [
   },
 ] as const;
 
-type NavLabel = (typeof NAV)[number]['items'][number][0];
+export type NavLabel = (typeof NAV)[number]['items'][number][0];
 
 /** Open Actions in the Actions row's count slot. */
 const OPEN_ACTIONS = 7;
 
-function ScreenSidebar({ active }: Readonly<{ active: NavLabel }>) {
+function ScreenSidebar({
+  active,
+  mode = 'Dashboard',
+}: Readonly<{ active?: NavLabel; mode?: 'Dashboard' | 'Agent' }>) {
   return (
     <div className="cl-app-side">
       <div className="cl-app-topbar">
@@ -71,7 +75,7 @@ function ScreenSidebar({ active }: Readonly<{ active: NavLabel }>) {
       </div>
       <div className="cl-app-side-controls">
         <span className="cl-app-mode">
-          <ScreenTabs items={[{ label: 'Dashboard' }, { label: 'Agent' }]} selected="Dashboard" />
+          <ScreenTabs items={[{ label: 'Dashboard' }, { label: 'Agent' }]} selected={mode} />
         </span>
         <span className="cl-app-palette">
           <Search className="text-ink-muted size-4" aria-hidden />
@@ -95,6 +99,42 @@ function ScreenSidebar({ active }: Readonly<{ active: NavLabel }>) {
             ))}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One feature's page inside the app's own chrome: the same sidebar with
+ * that feature's row current (or the Agent mode), the page title on the
+ * ruled bar with the run action, and the feature's screen as the page's
+ * content. The website's open module cards show it.
+ */
+export function ScreenAppPage({
+  title,
+  active,
+  mode,
+  children,
+}: Readonly<{
+  title: string;
+  active?: NavLabel;
+  mode?: 'Dashboard' | 'Agent';
+  /** The feature's screen (a vignette), set as the page body. */
+  children: ReactNode;
+}>) {
+  return (
+    <div className="cl-screen cl-screen--app">
+      <ScreenSidebar active={active} mode={mode} />
+      <div className="cl-app-main">
+        <div className="cl-app-topbar cl-app-header">
+          <p className={textRole('pageTitle')}>{title}</p>
+          <span className="cl-app-actions">
+            <ScreenButton variant="primary" icon={Rocket}>
+              Launch audit
+            </ScreenButton>
+          </span>
+        </div>
+        <div className="cl-app-content cl-app-page">{children}</div>
       </div>
     </div>
   );
