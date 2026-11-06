@@ -99,23 +99,7 @@ test('a light chart series must hold 3:1 on every ground', () => {
   );
 });
 
-test('a form control edge must hold 3:1 on every ground in each theme (WCAG 1.4.11)', () => {
-  const violations = paletteViolations(
-    css({ light: { '--color-line-field': '#e5e5e5' }, dark: { '--color-line-field': '#2a2a2a' } }),
-  );
-  const fieldEdge = violations.filter((violation) => violation.includes('--color-line-field'));
-  // Each soft value fails on all three grounds, once per theme.
-  assert.equal(fieldEdge.length, 6);
-  assert.ok(
-    fieldEdge.some(
-      (violation) =>
-        violation.includes("data-theme='dark'") &&
-        violation.includes('--color-line-field on --color-surface-sunken'),
-    ),
-  );
-});
-
-test('the shipped palette, field edges included, meets every pair in both themes', () => {
+test('the shipped palette meets every pair in both themes', () => {
   const source = readFileSync(
     new URL('../frontend/apps/app/src/globals.css', import.meta.url),
     'utf8',

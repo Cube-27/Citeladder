@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
-import type { Prompt, Topic } from '@/lib/api/types';
+import type { Prompt } from '@/lib/api/types';
 
 import { PromptTable } from './prompt-table';
 
@@ -23,7 +23,7 @@ function makePrompt(n: number, overrides: Partial<Prompt> = {}): Prompt {
   } as Prompt;
 }
 
-const TOPICS = [{ id: '22222222-2222-4222-8222-222222222222', name: 'Running shoes' }] as Topic[];
+const TOPIC_ID = '22222222-2222-4222-8222-222222222222';
 
 function renderTable(prompts: Prompt[]) {
   return render(
@@ -31,7 +31,6 @@ function renderTable(prompts: Prompt[]) {
       <TooltipProvider>
         <PromptTable
           prompts={prompts}
-          topics={TOPICS}
           onEdit={() => {}}
           onDelete={() => {}}
           onToggleEnabled={() => {}}
@@ -42,23 +41,17 @@ function renderTable(prompts: Prompt[]) {
 }
 
 describe('PromptTable pagination', () => {
-  it('captions each question with its topic, branding, intent and buyer stage', () => {
+  it('shows each question without tags, captioning only a prompt that audits skip', () => {
     renderTable([
-      makePrompt(1, { branded: true, buyer_stage: 'consideration' }),
-      makePrompt(2, { intent: '', buyer_stage: '' }),
-      makePrompt(3, { over_plan_limit: true }),
+      makePrompt(1, { branded: true, buyer_stage: 'consideration', topic_id: TOPIC_ID }),
+      makePrompt(2, { over_plan_limit: true }),
     ]);
 
-    const [, tagged, untagged, overLimit] = screen.getAllByRole('row');
-    expect(within(tagged!).getAllByRole('cell')[0]!.textContent).toBe(
-      'Prompt number 1No topic Branded · Discovery · Consideration',
-    );
-    expect(within(untagged!).getAllByRole('cell')[0]!.textContent).toBe(
-      'Prompt number 2No topic Unbranded',
-    );
+    const [, measured, overLimit] = screen.getAllByRole('row');
+    expect(within(measured!).getAllByRole('cell')[0]!.textContent).toBe('Prompt number 1');
     // Kept after a downgrade, but audits skip it until a slot frees.
     expect(within(overLimit!).getAllByRole('cell')[0]!.textContent).toBe(
-      'Prompt number 3No topic Not measured: beyond the plan limit · Unbranded · Discovery',
+      'Prompt number 2Not measured: beyond the plan limit',
     );
   });
 
@@ -80,7 +73,6 @@ describe('PromptTable pagination', () => {
         <TooltipProvider>
           <PromptTable
             prompts={[prompt]}
-            topics={TOPICS}
             onEdit={() => {}}
             onDelete={() => {}}
             onToggleEnabled={() => {}}
@@ -110,25 +102,6 @@ describe('PromptTable pagination', () => {
       .map((cell) => cell.textContent);
     expect(cells[columns.indexOf('Visibility')]).toBe('50%');
     expect(cells[columns.indexOf('Owned citations')]).toBe('25%');
-  });
-
-  it('names each row by its topic rather than its internal theme', () => {
-    renderTable([
-      makePrompt(1, { topic_id: TOPICS[0]!.id }),
-      makePrompt(2, { topic_id: null }),
-      makePrompt(3, { topic_id: '33333333-3333-4333-8333-333333333333' }),
-    ]);
-
-    const [, filed, unassigned, unresolved] = screen.getAllByRole('row');
-    expect(within(unresolved!).getAllByRole('cell')[0]!.textContent).toBe(
-      'Prompt number 3Topic unavailable Unbranded · Discovery',
-    );
-    expect(within(filed!).getAllByRole('cell')[0]!.textContent).toBe(
-      'Prompt number 1Running shoes Unbranded · Discovery',
-    );
-    expect(within(unassigned!).getAllByRole('cell')[0]!.textContent).toBe(
-      'Prompt number 2No topic Unbranded · Discovery',
-    );
   });
 
   it('pages through rows with the page indicator and ghost buttons', async () => {
@@ -180,7 +153,6 @@ describe('PromptTable pagination', () => {
         <TooltipProvider>
           <PromptTable
             prompts={prompts}
-            topics={TOPICS}
             onEdit={() => {}}
             onDelete={() => {}}
             onToggleEnabled={() => {}}
@@ -204,7 +176,6 @@ describe('PromptTable pagination', () => {
         <TooltipProvider>
           <PromptTable
             prompts={prompts.slice(0, 5)}
-            topics={TOPICS}
             onEdit={() => {}}
             onDelete={() => {}}
             onToggleEnabled={() => {}}
@@ -226,7 +197,6 @@ describe('PromptTable pagination', () => {
         <TooltipProvider>
           <PromptTable
             prompts={[makePrompt(1)]}
-            topics={TOPICS}
             onEdit={() => {}}
             onDelete={() => {}}
             onToggleEnabled={onToggleEnabled}

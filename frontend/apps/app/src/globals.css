@@ -70,10 +70,6 @@
   --color-line: #e5e5e5;
   --color-line-strong: #d4d4d4;
   --color-line-control: #858585;
-  /* The resting edge of every form control (fields, selects, textareas,
-     chip inputs, the composer, checkbox and radio boxes): 3:1 against every
-     ground a control sits on, in both themes (WCAG 1.4.11, decision D37). */
-  --color-line-field: #808080;
   --color-ink: #111111;
   --color-ink-hover: #2a2a2a;
   --color-ink-secondary: #525252;
@@ -371,7 +367,6 @@
   --color-line: #2a2a2a;
   --color-line-strong: #3a3a3a;
   --color-line-control: #747474;
-  --color-line-field: #707070;
   --color-ink: #f4f4f4;
   --color-ink-hover: #d6d6d6;
   --color-ink-secondary: #a6a6a6;
@@ -903,7 +898,7 @@ a.focus-ring:active .type-caption {
 /* Keyboard focus is a solid 2px `focus` ring (ink) with a 2px offset. A field
    instead thickens its edge to a 2px `focus` line (its border plus a 1px
    ring, `negative` when invalid) inside a 3px `line` halo, so focus reads
-   apart from the 1px `line-field` rest and the `ink-secondary` hover. */
+   apart from the 1px `line` rest and the `line-strong` hover. */
 :focus-visible,
 .focus-ring:focus-visible {
   outline: 2px solid var(--color-focus);
