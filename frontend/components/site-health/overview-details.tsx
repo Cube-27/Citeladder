@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ProjectLink } from '@/components/layout/scoped-link';
+import { ProjectLink } from '@/components/ui/project-link';
 
 import { CohortCompositionContext } from './cohort-composition-context';
 import { AppGrid } from '@/components/ui/app-grid';

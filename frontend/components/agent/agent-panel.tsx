@@ -15,7 +15,7 @@ import { useComposerCommands } from '@/components/agent/use-composer-commands';
 import { useFollowLatest } from '@/components/agent/use-follow-latest';
 import { useChatDetail, useCreateChat } from '@/components/agent/use-chat-turns';
 import { navigationMode } from '@/lib/navigation/app-routes';
-import { ProjectLink } from '@/components/layout/scoped-link';
+import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
 import { DockedThread } from '@/components/ui/chat-dock';

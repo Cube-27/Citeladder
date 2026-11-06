@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 
 import { overviewWidgetTitles, type OverviewWidgetKey } from '@citeladder/contracts/overview';
 
-import { ProjectLink } from '@/components/layout/scoped-link';
+import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { QueryState } from '@/components/ui/query-state';

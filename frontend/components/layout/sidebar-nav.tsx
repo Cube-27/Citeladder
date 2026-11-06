@@ -14,7 +14,9 @@ import { isNavItemActive, NAV_GROUPS, SETUP_NAV_ITEMS, type NavItem } from './na
 
 // Agent mode reads chats and Actions; its API modules stay out of the chunk
 // the shell needs before it can paint.
-const AgentNav = lazy(() => import('./agent-nav').then(({ AgentNav }) => ({ default: AgentNav })));
+const AgentNav = lazy(() =>
+  import('@/components/agent/agent-nav').then(({ AgentNav }) => ({ default: AgentNav })),
+);
 
 /** One group's destinations, scoped to the active project or workspace. */
 export function StationLinks({ items }: Readonly<{ items: readonly NavItem[] }>) {
