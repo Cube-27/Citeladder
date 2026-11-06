@@ -62,10 +62,7 @@ function detail() {
   return {
     ...row,
     remediation: 'Prepare a transparent expert-contribution brief.',
-    evidence: {
-      audit_id: SNAPSHOT,
-      source_pattern: { source_class: 'editorial' },
-    },
+    evidence: { audit_id: SNAPSHOT },
     source_analysis_ids: [SNAPSHOT],
     source_issue_ids: [],
     source_metric_ids: [SNAPSHOT],
