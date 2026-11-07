@@ -100,7 +100,7 @@ async function project(db: Database, workspaceId: string, userId: string, agency
         enabled: status !== 'archived',
       }),
     );
-    // Proposed/archived/imported rows are explicit fixtures; activation is never inferred.
+    // Archived/generated/imported rows are explicit fixtures; activation is never inferred.
     await db // NOSONAR -- Status applies to the prompt just created.
       .updateTable('prompts')
       .set({ status, origin })
