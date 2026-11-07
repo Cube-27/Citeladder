@@ -56,7 +56,11 @@ scheduled run.
 Disconnect acts on the grant: it moves to `pending_revocation` (the dispatcher
 revokes it at the provider) and every mapping it serves is retired. Connections,
 sync runs, artifacts and metric rows are kept, as raw evidence is append-only;
-a reconnect reuses the same connections. Removing one property retires only
+a reconnect reuses the same connections. While the dispatcher holds a live
+revocation claim, OAuth completion refuses the reconnect
+(`error=oauth_revocation_in_progress`, shown as "wait, then connect again"),
+since revoking the old tokens can end the provider's whole grant; once the
+grant is `revoked` a reconnect stores only the new tokens. Removing one property retires only
 that project's mapping.
 
 AI referral events and their classifications are kept for exactly the

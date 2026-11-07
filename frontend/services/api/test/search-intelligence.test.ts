@@ -490,6 +490,25 @@ describe('Search Intelligence run confirmation and cancellation', () => {
     expect(missing.status).toBe(404);
   });
 
+  it('fails the collecting datasets of a cancelled run and keeps its published ones', async () => {
+    const runId = await review(t, await connection(t), { status: 'running' });
+    const collecting = await dataset(t, runId, { status: 'collecting', coverage: 'unknown' });
+    const published = await dataset(t, runId);
+    const cancelled = await call<Run>(`/runs/${runId}/cancel`, { method: 'POST' });
+    expect(cancelled.body.status).toBe('cancelled');
+    const datasets = await db
+      .selectFrom('search_intelligence_datasets')
+      .select(['id', 'status'])
+      .where('run_id', '=', runId)
+      .execute();
+    expect(new Map(datasets.map((row) => [row.id, row.status]))).toEqual(
+      new Map([
+        [collecting, 'failed'],
+        [published, 'published'],
+      ]),
+    );
+  });
+
   it('lists confirmed runs newest first, pages them and hides other projects’ runs', async () => {
     const connectionId = await connection(t);
     const first = await review(t, connectionId, {

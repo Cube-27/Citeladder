@@ -63,11 +63,11 @@ document already states. The table keeps the questions as asked.
 | S02 | Credit holds that never settle | BL1, SI1, BL2 | — | | merged | [#654](https://github.com/Cube-27/Citeladder/pull/654) | Money |
 | S03 | Lease fences: per-claim audit lease, attempt-fenced heartbeats, poll reclaim | Q1, Q2, AU1 | — | | merged | [#656](https://github.com/Cube-27/Citeladder/pull/656) | Money (duplicate paid dispatch) |
 | S04 | Billing webhook, checkout and replay recovery | BL3, BL4, BL5, BL6 | — | | merged | [#655](https://github.com/Cube-27/Citeladder/pull/655) | Money |
-| S05 | Keyword Research settlement, cancel and reconnect | SI2, SI3, SI4 | S02 | | in progress | | Money; shares `search-intelligence/` with S02 |
+| S05 | Keyword Research settlement, cancel and reconnect | SI2, SI3, SI4 | S02 | | merged | [#657](https://github.com/Cube-27/Citeladder/pull/657) | Money; shares `search-intelligence/` with S02 |
 | S06 | Audit schedules, repair admission and cost records | AU2, AU3, AU4, AU5 | — | | in progress | | Stuck users, abuse bound, cost |
 | S07 | Agent turn recovery | AG2, AG3, AG4, AG5 | — | | in progress | | Stuck users |
 | S08 | Site Health crawl outcomes and inventory | SH1, SH2, SH3, SH4, SH5 | — | | in review | [#660](https://github.com/Cube-27/Citeladder/pull/660) | Data correctness |
-| S09 | Public API idempotency outcome; prompt edit under lock | PA1, WS3 | — | | todo | | Data correctness |
+| S09 | Public API idempotency outcome; prompt edit under lock | PA1, WS3 | — | | in progress | | Data correctness |
 | S10 | Refunded upgrades and payments on ended subscriptions | BL7, BL8 | S04 | | merged | [#658](https://github.com/Cube-27/Citeladder/pull/658) | Money; B70, B71 |
 | S11 | Agent turns closed after streaming a document | AG1 | S07 | | todo | | Money; B69 |
 | S12 | Status CHECK constraints; dead `site_urls.discovery_status` | DB1 | S08 | mig | todo | | Migration 0014; open last, alone |
@@ -109,9 +109,9 @@ data impact.
 | BL4 | Reopening an abandoned add-on or upgrade never answers 500 | — | `routes/billing.ts` | | done | c6ce97b | CONFIRMED, low |
 | BL5 | A plan-change replay reflects a provider refusal | — | `billing/plan-changes.ts` | | done | 80f3fcc | CONFIRMED (crash window), low |
 | BL6 | Trial purge skips accounts with a pending checkout | — | `projects/trial-purge.ts` | | done | 2d79396 | PLAUSIBLE (delayed settlement), low |
-| SI2 | Settlement waits for calls marked uncertain inside the reporting window | — | `search-intelligence/charges.ts` | | todo | | CONFIRMED (lease lost mid-call), low (unbilled answered call) |
-| SI3 | Cancel closes collecting datasets | SI2 | `search-intelligence/runs.ts` | | todo | | CONFIRMED, low |
-| SI4 | Reconnect refused while a revocation is in flight | — | `integrations/oauth.ts` | | todo | | PLAUSIBLE (Google grant-wide revocation), low-medium |
+| SI2 | Settlement waits for calls marked uncertain inside the reporting window | — | `search-intelligence/charges.ts` | | done | 5cf6a9e | CONFIRMED (lease lost mid-call), low (unbilled answered call) |
+| SI3 | Cancel closes collecting datasets | SI2 | `search-intelligence/runs.ts` | | done | 22ff9dc | CONFIRMED, low |
+| SI4 | Reconnect refused while a revocation is in flight | — | `integrations/oauth.ts` | | done | 5f32544 | PLAUSIBLE (Google grant-wide revocation), low-medium |
 | AU2 | A retryable admission refusal reschedules a schedule without counting a failure | — | `workers/audit-scheduler.ts` | | todo | | CONFIRMED, medium (monitoring silently stops) |
 | AU3 | Repair audits take the launch lock, active-launch limit and daily task budget | — | `audits/repair.ts`, `audits/admission.ts` | | todo | | CONFIRMED, low-medium |
 | AU4 | The funded budget sums the latest projection per execution | — | `audits/admission.ts` | | todo | | PLAUSIBLE (latent: one pricing catalog today), low |

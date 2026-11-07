@@ -101,6 +101,7 @@ const API_ERROR_CODES = [
   'oauth_not_configured',
   'oauth_provider_not_configured',
   'oauth_provider_unknown',
+  'oauth_revocation_in_progress',
   'oauth_signin_disabled',
   'oauth_signin_email_unverified',
   'oauth_signin_failed',
