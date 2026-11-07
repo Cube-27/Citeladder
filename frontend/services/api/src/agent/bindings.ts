@@ -26,6 +26,7 @@ export async function createAgentBindings(db: Database, env: SettingSource = pro
     context: readAgentContext,
     admission: agentAdmission(settings, platform),
     timeoutSeconds: settings.executionTimeoutSeconds,
+    settleFailed: (trx, run) => models.settleFailed(trx, run),
   });
   const runtime = new AgentRuntime(db, {
     catalog,

@@ -234,7 +234,14 @@ recovery reply from [`messages.ts`](../frontend/services/api/src/agent/messages.
 saying what happened, that nothing was saved, and what to do next. The one
 exception is a member who lost access (`access_revoked`, or any other code
 once the member can no longer write to the chat), whose turn still settles,
-refunds and ends, without a reply. Failure codes keep their meaning: `trial_expired`,
+refunds and ends, without a reply. A turn the browser closes after it staged
+a document (its `save_document` call already streamed and was accepted) does
+not fail: it saves the document with the fixed reply "The chat was closed
+before I wrote a summary." and ends succeeded, charged
+([B69](billing-decisions.md#internal-cost-2026-11-07)), unless that would
+leave its transcript ending on unanswered tool or search calls. Stop on a turn
+whose lease already lapsed (its instance died) ends it the way lane recovery
+does, `interrupted` and refunded (B69), instead of `cancelled`. Failure codes keep their meaning: `trial_expired`,
 `subscription_lapsed` and `access_unresolved` survive from entitlement checks,
 provider failures are
 `provider_error`, and validation and storage defects are `internal_error`. At admission a
@@ -527,7 +534,8 @@ settles once as bounded unknown usage. When a turn ends failed, whether in the
 runtime or by lane recovery, its settled debits are refunded once by
 append-only ledger refunds while every attempt keeps its tokens and debit
 ([B58](billing-decisions.md#agent-chat-behaviour-2026-11-04)); a cancelled turn
-stays charged. The full output cap is the gateway's
+stays charged, and so does a turn the browser closed after it staged a
+document, which saves it (B69). The full output cap is the gateway's
 `DEFAULT_AGENT_MAX_OUTPUT_TOKENS` (64 000, about 42 credits at Haiku 5.5
 prices; each web search adds 13). The configured development
 login (`DEV_LOGIN_EMAIL`, an active admin) runs as `development` funding with
@@ -573,7 +581,8 @@ scripted models and real PostgreSQL, never live providers:
   reported (B59), a later call's input hold from the previous call's reported
   tokens and never below its worst-case charge, a short balance shrinking the
   call's output cap, the minimum-reply floor and a staged document kept when a
-  later call is refused (B60).
+  later call is refused (B60) or the browser closes the turn, and Stop on a
+  lapsed turn refunded while Stop on a live one is charged (B69).
 
 Live quality and speed are measured outside CI by the operator-only eval,
 `pnpm --filter @citeladder/api agent:eval --live --label <name>`:

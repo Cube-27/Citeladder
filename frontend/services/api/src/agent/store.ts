@@ -17,7 +17,7 @@ import {
   type Json,
 } from './contracts.ts';
 import { buildManifest, type ContextReader } from './context.ts';
-import { active, terminal } from './queue.ts';
+import { active, endInterrupted, terminal } from './queue.ts';
 import { appendMessage, appendRecoveryReply, getChat } from './messages.ts';
 
 export type FundingIdentity = Pick<Run, 'funding_source' | 'requested_model'>;
@@ -105,6 +105,8 @@ export class AgentStore {
     catalog: SkillCatalog;
     registryVersion: string;
     timeoutSeconds: number;
+    /** A failed turn's settlement and refund (B58), for a Stop on a turn whose lease lapsed. */
+    settleFailed: (db: Database, run: Run) => Promise<void>;
   };
   constructor(db: Database, dependencies: AgentStore['dependencies']) {
     this.db = db;
@@ -307,6 +309,7 @@ export class AgentStore {
       const run = await trx
         .selectFrom('agent_runs')
         .selectAll()
+        .select(sql<boolean>`coalesce(lease_expires_at <= clock_timestamp(), false)`.as('lapsed'))
         .where('workspace_id', '=', scope.workspaceId)
         .where('project_id', '=', scope.projectId)
         .where('chat_id', '=', chatId)
@@ -315,6 +318,11 @@ export class AgentStore {
         .executeTakeFirst();
       if (!run) throw notFound('Run');
       if (terminal.includes(run.status)) return;
+      // A turn whose instance died ends as recovery would end it, refunded (B69).
+      if (run.lapsed) {
+        await endInterrupted(trx, run, this.dependencies.settleFailed);
+        return;
+      }
       await trx
         .updateTable('agent_runs')
         .set({
