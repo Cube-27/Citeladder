@@ -606,6 +606,16 @@ recorded, nothing is granted, and it is flagged for an operator refund (the
 B25/B30 pattern). Source: owner answer in the state-machine fixes session;
 [state-machine fixes](plans/state-machine-fixes.md) OQ3.
 
+**B72 — Owner, 2026-11-07.** Billing edge cases found after B69–B71, while
+building the state-machine fixes, change no code for now. Refunds are handled
+manually by an operator, and a cancellation simply cancels the subscription.
+Payment receipt arrives through Razorpay webhooks, but payments are not enabled
+yet, so these edge cases, and any polling or scheduled reconciliation they depend
+on, are kept for later and settled before billing is enabled. They are listed in
+the [backlog](plans/backlog.md) under the Razorpay acceptance gate. Source: owner
+answer in the state-machine fixes session ("for code nothing needs to change …
+we will handle them later before enabling billing").
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,

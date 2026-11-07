@@ -254,6 +254,23 @@ Items already waiting on it:
 
 Payments stay disabled until the Razorpay acceptance gate below is signed off.
 
+- **Billing edge cases to settle before payments are enabled (B72).** Found while
+  building the [state-machine fixes](state-machine-fixes.md) S10 and S11. The owner
+  deferred all of them: no code change until billing is enabled. Refunds are manual,
+  and a cancellation simply ends the subscription. Re-check each against Razorpay's
+  real webhook, polling and reconciliation behaviour in B8 test mode before deciding:
+  - A full refund of an upgrade bought in an earlier period (one that has already
+    ended) revokes only that upgrade's grants and does not cancel the subscription.
+  - A base checkout that the abandon sweep already marked `abandoned` ignores a
+    payment that arrives afterwards: no grant, so the payment needs a manual refund.
+  - Razorpay's evidence shape for a subscription it has just cancelled is unverified.
+    S10's handling of a payment on an ended or B52-cancelled subscription (B71) was
+    tested only against the provider fake.
+  - An Agent turn that streamed a document is saved and charged only when it ends
+    `interrupted` (B69). A turn that hits `turn_timeout`, or that the browser closes
+    while a search is pending or before the document's save call was accepted, is
+    still refunded under B58, and its document is not saved.
+
 ### Enterprise SSO and SCIM
 
 F9 of the [competitive feature tracker](../archive/competitive-feature-tracker.md#f9-enterprise-sso-and-scim-last),
@@ -323,7 +340,7 @@ may require focused fixes; these rows do not presume another implementation.
 |---|---|
 | Self-serve authentication | #280 implementation complete. Verify deployed-schema compatibility, Google callback/configuration, Resend sender and controlled-inbox delivery, verification/trial enforcement and coordinated API/product/marketing signup rollout. Preserve existing login/recovery on rollback. |
 | ChatGPT plugin | Visibility, Site Health, public workflows and sidebar/context implementation complete. Installed-client acceptance, reviewer account/cases/walkthrough, CIMD assessment, domain verification/scans, submission, approval and publication remain distinct gates. Founder-pilot gating was waived for fixture/mock-host checks. |
-| Razorpay | Commercial core, payment paths and customer surfaces implemented. Complete B8 test-mode payments/webhooks/refunds, commercial/tax inputs, live provisioning and sign-off, then controlled live purchase/refund and rollout. Payments stay disabled until sign-off; rollback closes checkout while webhooks/reconciliation continue. |
+| Razorpay | Commercial core, payment paths and customer surfaces implemented. Complete B8 test-mode payments/webhooks/refunds, the deferred billing edge cases (B72, above), commercial/tax inputs, live provisioning and sign-off, then controlled live purchase/refund and rollout. Payments stay disabled until sign-off; rollback closes checkout while webhooks/reconciliation continue. |
 | Prompt generation v2 | Implementation through #173 complete; policy published and production key configured on 28 September. Calibrate provisional thresholds from live accept/reject outcomes. |
 | Fact-checking (F8) | Pilot-gated by the `fact_checking` grant. Before granting: run `pnpm perception:eval --live` and `pnpm facts:eval --live` against the thresholds; then grant two pilot workspaces and review contradicted claims (false-contradiction rate) with the owner before any general release, plan bundle change or Action rule. |
 | Internal links | Implementation and placement refinement merged in #196/#205. Calibrate against editor-reviewed outcomes. |
