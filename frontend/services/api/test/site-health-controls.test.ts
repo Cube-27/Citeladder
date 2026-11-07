@@ -15,6 +15,7 @@ import { createCrawl } from '../src/site-health/planner.ts';
 import { controls, normalizedSeed } from '../src/site-health/planner-policy.ts';
 import { replaceMonitoredSet, rerunPage } from '../src/site-health/selection.ts';
 import { publishCancelledCrawls } from '../src/site-health/lifecycle.ts';
+import { lockSiteTask } from '../src/site-health/site-task.ts';
 import { record } from '../src/db/json.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
@@ -764,6 +765,35 @@ describe('crawl-control HTTP contracts', () => {
       (await request(seed, `/site-crawls/${seed.crawlId}/pages/${randomUUID()}/rerun`, 'POST'))
         .status,
     ).toBe(404);
+  });
+
+  it('cancels a leased older generation when a rerun queues the next, so its commit is fenced out', async () => {
+    const seed = await fixtures.crawl();
+    await allow(seed, 1, 2);
+    const page = await fixtures.page(seed, '/a', {}, { observed: true });
+    await db
+      .transaction()
+      .execute((trx) => replaceMonitoredSet(trx, seed.workspaceId, seed.projectId, [page.id], 1));
+    const rerun = () =>
+      db.transaction().execute((trx) => rerunPage(trx, seed.workspaceId, seed.projectId, page.id));
+    const first = await rerun();
+    const active = { ...seed, crawlId: first.crawl_id };
+    const worker = fixtures.worker(active);
+    const leased = await fixtures.claim(worker, active, 'analyze', first.task_id);
+    const second = await rerun();
+    expect(second).toMatchObject({ crawl_id: first.crawl_id, created_new_crawl: false });
+    const generations = await db
+      .selectFrom('site_crawl_tasks')
+      .select(['id', 'generation', 'status', 'lease_owner'])
+      .where('crawl_id', '=', first.crawl_id)
+      .orderBy('generation')
+      .execute();
+    expect(generations).toEqual([
+      { id: first.task_id, generation: 0, status: 'cancelled', lease_owner: null },
+      { id: second.task_id, generation: 1, status: 'queued', lease_owner: null },
+    ]);
+    const held = await db.transaction().execute((trx) => lockSiteTask(trx, worker, leased));
+    expect(held).toBeNull();
   });
 
   it('keeps Stop short and lets the worker publish retained analysis evidence exactly once', async () => {
