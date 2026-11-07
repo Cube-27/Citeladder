@@ -130,12 +130,18 @@ async function refreshCounters(db: Database, crawl: Crawl, summary: Summary) {
   crawl.admitted_url_count = Math.max(crawl.admitted_url_count, observed.count);
 }
 
-/** Progressive discovery state; returns whether the crawl failed outright and whether discovery fell short. */
+/**
+ * Progressive discovery state; returns whether the crawl failed outright and
+ * whether discovery fell short. A crawl fails outright when discovery found
+ * nothing and nothing was analyzed, or when it had pages to analyze and every
+ * one of them failed: a root that answered is no evidence about any page.
+ */
 function reconcileDiscovery(crawl: Crawl, summary: Summary) {
   const discoveryFailed = crawl.discovered_url_count === 0;
   // A recrawl that analyzed monitored pages after its root was blocked holds
   // useful partial evidence; it is not a failed crawl.
-  const fullyFailed = discoveryFailed && summary.analyzeSucceeded === 0;
+  const fullyFailed =
+    summary.analyzeSucceeded === 0 && (discoveryFailed || summary.analyzeApplicable > 0);
   if (!summary.discoverOpen) {
     if (crawl.discovery_status === 'running')
       crawl.discovery_status = discoveryFailed ? 'failed' : 'completed';

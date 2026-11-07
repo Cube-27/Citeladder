@@ -719,6 +719,43 @@ describe('crawl lifecycle', () => {
     });
   });
 
+  it('fails a page rerun or a site crawl whose every analysis failed', async () => {
+    const failAnalysis = async (seed: SiteSeed, path: string) => {
+      const page = await fixtures.analyzable(seed, path);
+      await db
+        .updateTable('site_crawl_tasks')
+        .set({ status: 'failed', error_code: 'task_failed' })
+        .where('id', '=', page.taskId)
+        .execute();
+    };
+    const rerun = await running({
+      configuration: JSON.stringify({ page_rerun: true }),
+      discovery_status: 'completed',
+      discovered_url_count: 1,
+    });
+    await failAnalysis(rerun, '/rerun');
+    const site = await running();
+    const root = await fixtures.task(site, 'discover');
+    await db
+      .updateTable('site_crawl_tasks')
+      .set({ status: 'succeeded' })
+      .where('id', '=', root)
+      .execute();
+    await failAnalysis(site, '/a');
+    await failAnalysis(site, '/b');
+    await reconcileCrawl(db, rerun.workspaceId, rerun.crawlId);
+    await reconcileCrawl(db, site.workspaceId, site.crawlId);
+    for (const seed of [rerun, site]) {
+      expect(await crawlRow(seed.crawlId)).toMatchObject({
+        status: 'failed',
+        analysis_status: 'failed',
+        analyzed_url_count: 0,
+      });
+      expect(await events(seed.crawlId, 'crawl.failed')).toHaveLength(1);
+      expect(await tasksOf(seed.crawlId, 'change_intel')).toHaveLength(0);
+    }
+  });
+
   it('hands analytics the crawl identity when no page was analyzed', async () => {
     const seed = await running({ analysis_status: 'pending' });
     await reconcileCrawl(db, seed.workspaceId, seed.crawlId);

@@ -45,7 +45,8 @@ controls (`advanced_controls_enabled`, or the development operator's
 workspace). A page rerun (`selection.ts`) creates a one-page crawl from a
 terminal crawl, or the next task generation of an active one. Its
 configuration carries `page_rerun`; it hands its page to verification and
-Opportunities but is never compared as a site crawl.
+Opportunities but is never compared as a site crawl, and a read that names no
+crawl (Overview, AEO readiness, Architecture) never defaults to it.
 
 | Task kind (`site_crawl_tasks`) | Does |
 |---|---|
@@ -122,8 +123,9 @@ analysis drain, one locked transaction:
 2. evaluates crawl-finalize checks;
 3. appends a final analysis per page (`supersedes_analysis_id`);
 4. persists the snapshot and score summary;
-5. sets `completed`, `partially_completed` (with `partial_reason`) or `failed`,
-   persists the terminal dashboard counters (`site_crawls.terminal_counters`,
+5. sets `completed`, `partially_completed` (with `partial_reason`) or `failed`
+   (nothing analyzed, and either discovery found nothing or every applicable
+   analysis failed), persists the terminal dashboard counters (`site_crawls.terminal_counters`,
    `terminal-counters.ts`), and settles the fetch reservation;
 6. for a crawl that did not fail, enqueues `change_intel` and `link_metrics`
    if any analysis succeeded, otherwise hands off to the analytics refresh.

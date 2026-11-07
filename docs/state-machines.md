@@ -328,14 +328,13 @@ never written.
 | analysis `pending` → `running` | reconcile | `lifecycle.ts:153-159` | crawl `FOR UPDATE`, active |
 | discovery `running` → `completed`/`failed`; `inventory_complete` | reconcile | `lifecycle.ts:131-143` | no open discover/setup; failed iff `discovered_url_count = 0` |
 | discovery `running` → `sample_completed` | discover commit | `discover-task.ts:393-396` | sample cap; fenced task + crawl lock |
-| `running` → `completed`/`partially_completed`/`failed` | `terminalize` | `lifecycle.ts:214-245` | drained; failed iff no discovery and nothing analyzed |
+| `running` → `completed`/`partially_completed`/`failed` | `terminalize` | `lifecycle.ts` `terminalize` | drained; failed iff nothing analyzed and either no discovery or applicable analyses (all failed) |
 | `running` → `failed` (`crawl_overdue`) | overdue watchdog | `lifecycle.ts:476-500` | crawl lock, active, age re-checked |
 | `queued`/`running` → `cancelled` | Stop | `site-health/controls.ts:59-108` | crawl `FOR UPDATE`, not terminal; tasks cancelled in the tx |
 
-Known invalid: a page rerun (or a full crawl) whose every analysis fails ends
-`partially_completed` with 0 pages analyzed, and every page rerun becomes the
-default crawl because `resolveUsableCrawl` (`reads/crawl.ts:78-99`) ignores
-`page_rerun` — [SH1](plans/state-machine-fixes.md#sh-site-health). Sub-states
+A crawl read without a named `crawl_id` (`resolveUsableCrawl`, `reads/crawl.ts`)
+is the newest usable crawl that is not a `page_rerun`; a named rerun still
+reads. Known invalid: sub-states
 and counters count every task generation, so a rerun page reads "1 failed" in
 the status but 0 in the counters — [SH2](plans/state-machine-fixes.md#sh-site-health).
 `inventory_complete` is true for page-limited, sampled or deselected
