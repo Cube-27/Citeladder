@@ -26,8 +26,8 @@ terminal `succeeded`, `failed`, `cancelled`. Implicit state lives in
 | Lane (`queue/task-queue.ts:87-145`) | Table | Claim → | Claim charge | Recovery (charge) | Heartbeat fences attempt | Terminal-write fence |
 |---|---|---|---|---|---|---|
 | Analytics | `analytics_tasks` | `leased` | 0 | `reclaimExpiredLeases` `queue/recovery.ts:47-91` (1) | yes `workers/analytics-worker.ts:209` | `fenceLease` owner + attempt + unexpired, `task-queue.ts:312-336` |
-| Site Health | `site_crawl_tasks` | `leased` | 0 | same (1), crawl reconcile `workers/site-health-worker.ts:183-187` | no `site-health/site-task.ts:426` | `lockSiteTask` → `fenceLease`; `owned()` (owner only) unfenced at `site-task.ts:415`, `analyze-task.ts:347` |
-| Discovery | `brand_discovery_tasks` | `running` | 0, ready iff `attempt_count < max_attempts` | `recoverDiscoveryLeases` `recovery.ts:106-151`, fails the parent (1) | no `workers/discovery-worker.ts:104` | fenced `finish` `discovery-worker.ts:209-302` |
+| Site Health | `site_crawl_tasks` | `leased` | 0 | same (1), crawl reconcile `workers/site-health-worker.ts:183-187` | yes `site-health/site-task.ts` `runSiteTask` | `lockSiteTask` → `fenceLease` (the deferred settle in `analyze-task.ts` `prepare` too); the conflict fallback in `settleThrown` takes `fenceLease` on the task row alone |
+| Discovery | `brand_discovery_tasks` | `running` | 0, ready iff `attempt_count < max_attempts` | `recoverDiscoveryLeases` `recovery.ts:106-151`, fails the parent (1) | yes `workers/discovery-worker.ts` `runOnce` | fenced `finish` `discovery-worker.ts:209-302` |
 | Agent | `agent_runs` | `leased`; `start` → `running`, attempt + 1 `agent/queue.ts:64-82` | 0 | `AgentQueue.recover` `agent/queue.ts:93-146` → `failed interrupted` + refund (0) | yes `agent/queue.ts:83-85` | `lockRun` = `fenceLease` + `cancelled_at IS NULL` `agent/queue.ts:10-20` |
 | Integrations | `integration_sync_runs` | `running` (claimable `queued`, `retry_wait` only) | 1 | `recoverIntegrationLeases` `recovery.ts:153` (0) | yes `workers/integration-worker.ts:122` | `#held` `integration-worker.ts:176-178` |
 | Audits | `audit_tasks` | `leased` | 0 | `AuditMaintenance.#reclaim` `audits/maintenance.ts:145-231` (1 unless uncertain or parent terminal) | per-claim owner `<worker>:<nonce>` `queue/audit-queue.ts` `AuditQueue.claim` (claims and uncertain reclaims charge no attempt) | `ownedAuditTask` per-claim owner + status + unexpired `audit-queue.ts` |
@@ -53,9 +53,10 @@ terminal `succeeded`, `failed`, `cancelled`. Implicit state lives in
 
 Each audit claim leases its rows to `<worker owner>:<8-hex nonce>`, so a stale
 slot whose lease expired fails `ownedAuditTask`, its heartbeat and its
-persistence once the same worker re-claims the task.
-Known invalid: Discovery and Site Health heartbeats and two Site Health settles ignore the
-attempt — [Q2](plans/state-machine-fixes.md#q-queue-leases).
+persistence once the same worker re-claims the task. Discovery and Site Health
+heartbeats and the Site Health settles (deferral and conflict fallback included)
+are fenced at the claimed attempt, which their recovery charges, so a stale slot
+never renews or settles a re-claim.
 
 ## 2. Audits
 
