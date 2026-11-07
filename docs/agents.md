@@ -400,7 +400,13 @@ A turn executes only inside that request, exactly once:
   admission) ends it as `turn_timeout`.
 - Turns and interactive audit drives share a per-instance cap
   (`interactiveCapacity` in `config/execution.ts`); a full instance answers 429
-  with `Retry-After` and the queued turn waits for the browser's retry. On
+  with `Retry-After`; the browser re-posts the run after that delay, up to
+  `AGENT_RUN_RETRY.maxAttempts` (`frontend/lib/config/agent.ts`), and a run
+  another request already claimed or ended answers done, so a re-post is safe.
+  Any other refusal ends the browser's live view and the persisted read shows
+  the run. A stream that delivers no frame, keep-alives included, for
+  `AGENT_STREAM_IDLE_MS` (twice `stream_heartbeat_seconds`) is closed, which
+  ends the turn as `interrupted`. On
   shutdown the API stops open turns, which end as `interrupted`, before it
   closes.
 - A provider failure is retried once within the call
@@ -561,6 +567,7 @@ scripted models and real PostgreSQL, never live providers:
 
 Live quality and speed are measured outside CI by the operator-only eval,
 `pnpm --filter @citeladder/api agent:eval --live --label <name>`:
+
 - It drives the chats in
   [`eval-cases.json`](../frontend/services/api/test/fixtures/agent/eval-cases.json)
   through the local Agent API as the development login, against a local

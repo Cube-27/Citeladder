@@ -260,9 +260,7 @@ The lease is `execution_timeout_seconds + lease_margin_seconds` = 660 s
 (`agent/bindings.ts:44`, `config/model-gateway.json:35-46`) although the
 heartbeat renews every 20 s.
 
-Known invalid: a 429 from `/run` leaves the run `queued` until the runner's
-next tick ends it as "page closed" —
-[AG2](plans/state-machine-fixes.md#ag-agent). A crashed instance or a lost
+Known invalid: a crashed instance or a lost
 heartbeat leaves the run `running` for up to the lease plus a tick (~21 min)
 — [AG3](plans/state-machine-fixes.md#ag-agent). `fail()` for a member who lost
 access throws and leaves the run `running` —
@@ -289,18 +287,15 @@ every later turn of the chat fails — [AG5](plans/state-machine-fixes.md#ag-age
 
 | From → to | Trigger | Location | Guard |
 |---|---|---|---|
-| absent → `connected: true` | `startLiveTurn` once per accepted run | `live-turns.ts:126-144`, `frontend/lib/api/agent.ts:77` | `turns.has(runId)` |
-| `connected` → `connected: false` | stream ends, fetch fails or any non-2xx | `live-turns.ts:141` (`finally`) | none; the response status is never read |
+| absent → `connected: true` | `startLiveTurn` once per accepted run | `live-turns.ts` `startLiveTurn`, `frontend/lib/api/agent.ts:77` | `turns.has(runId)` |
+| `connected` (429) → re-post | `/run` answers 429 | `live-turns.ts` `runStream` | waits `Retry-After`; at most `AGENT_RUN_RETRY.maxAttempts` posts |
+| `connected` → `connected: false` | stream ends, fetch fails, a non-2xx other than a retried 429, or no frame for `AGENT_STREAM_IDLE_MS` | `live-turns.ts` `startLiveTurn` (`finally`), `read` | idle timer re-armed by every frame, keep-alives included |
 | polling on | run active and not connected | `frontend/components/agent/use-chat-turns.ts:28-38` | re-read on stream close |
 
 `isRunActive` = `queued`/`leased`/`running`/`retry_wait`
 (`frontend/lib/agent/run-state.ts:176`); send is disabled while pending or
 active (`frontend/components/agent/chat-thread.tsx`), and the server answers
 409 `agent_run_active`.
-
-Known invalid: no retry after 429 (docs/agents.md says "the queued turn waits
-for the browser's retry"); a stream that goes silent shows streaming
-indefinitely — [AG2](plans/state-machine-fixes.md#ag-agent).
 
 ## 5. Site Health and crawl logs
 
