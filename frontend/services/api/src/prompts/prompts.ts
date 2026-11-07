@@ -316,6 +316,18 @@ export async function updatePrompt(
   }
 }
 
+/** The prompt row `FOR UPDATE`, read after its project lock; 404 once it is deleted. */
+async function lockedPrompt(db: Kysely<DB>, promptId: string): Promise<PromptRow> {
+  const prompt = await db
+    .selectFrom('prompts')
+    .selectAll()
+    .where('id', '=', promptId)
+    .forUpdate()
+    .executeTakeFirst();
+  if (prompt === undefined) throw notFound('Prompt');
+  return prompt;
+}
+
 /**
  * The edit, under the project lock that topic writers take, so the topic and
  * vocabulary it binds against cannot change before it commits. The prompt is
@@ -336,13 +348,7 @@ async function applyPromptUpdate(
     scope.projectId,
   );
   await acquireProjectLock(db, projectId);
-  const prompt = await db
-    .selectFrom('prompts')
-    .selectAll()
-    .where('id', '=', promptId)
-    .forUpdate()
-    .executeTakeFirst();
-  if (prompt === undefined) throw notFound('Prompt');
+  const prompt = await lockedPrompt(db, promptId);
   // An explicit null detaches the prompt; an absent key leaves its topic.
   const topicGiven = 'topic_id' in input;
   const topicId = topicGiven ? (input.topic_id ?? null) : prompt.topic_id;
