@@ -115,7 +115,8 @@ expiry (Agent: when an unclaimed turn passes its grace). Billing has no probe;
 its retries wait for tick. Analytics, discovery, integrations and Site Health
 reclaim through `reclaimExpiredLeases` (`src/queue/recovery.ts`), which takes
 the lane's attempt charge; audit recovery locks the parent audit first and holds
-uncertain submissions, so it stays in `AuditMaintenance`. Every queue claims
+uncertain submissions and returns a paid provider task to polling without an
+attempt, so it stays in `AuditMaintenance`. Every queue claims
 the least recently served workspace first (`queue_workspace_turns`).
 The queue-lane owner (`src/queue/task-queue.ts`) takes a lane descriptor
 (table, claimable statuses, the status a claim moves to, the attempt the claim

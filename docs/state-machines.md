@@ -30,7 +30,7 @@ terminal `succeeded`, `failed`, `cancelled`. Implicit state lives in
 | Discovery | `brand_discovery_tasks` | `running` | 0, ready iff `attempt_count < max_attempts` | `recoverDiscoveryLeases` `recovery.ts:106-151`, fails the parent (1) | yes `workers/discovery-worker.ts` `runOnce` | fenced `finish` `discovery-worker.ts:209-302` |
 | Agent | `agent_runs` | `leased`; `start` → `running`, attempt + 1 `agent/queue.ts:64-82` | 0 | `AgentQueue.recover` `agent/queue.ts:93-146` → `failed interrupted` + refund (0) | yes `agent/queue.ts:83-85` | `lockRun` = `fenceLease` + `cancelled_at IS NULL` `agent/queue.ts:10-20` |
 | Integrations | `integration_sync_runs` | `running` (claimable `queued`, `retry_wait` only) | 1 | `recoverIntegrationLeases` `recovery.ts:153` (0) | yes `workers/integration-worker.ts:122` | `#held` `integration-worker.ts:176-178` |
-| Audits | `audit_tasks` | `leased` | 0 | `AuditMaintenance.#reclaim` `audits/maintenance.ts:145-231` (1 unless uncertain or parent terminal) | per-claim owner `<worker>:<nonce>` `queue/audit-queue.ts` `AuditQueue.claim` (claims and uncertain reclaims charge no attempt) | `ownedAuditTask` per-claim owner + status + unexpired `audit-queue.ts` |
+| Audits | `audit_tasks` | `leased` | 0 | `AuditMaintenance.#reclaim` `audits/maintenance.ts` (1 unless a paid submission exists or the parent is terminal) | per-claim owner `<worker>:<nonce>` `queue/audit-queue.ts` `AuditQueue.claim` (claims and uncertain reclaims charge no attempt) | `ownedAuditTask` per-claim owner + status + unexpired `audit-queue.ts` |
 
 | Invariant | Enforced |
 |---|---|
@@ -100,13 +100,11 @@ planned).
 | `running` → `succeeded` | `persistExecutionSuccess` | `audits/result-persistence.ts:85-163` | `ownedAuditTask`; artifact, attempt, derivation, cost projection, prompt-run spend and status in one tx |
 | `running` → `retry_wait` / `failed` | `persistFailure` | `result-persistence.ts:292-311` | `ownedAuditTask`; retry iff retryable and `attempt < max` |
 | `running` → `awaiting_provider_result` / `submission_uncertain` | `persistSurfaceExchange` | `audits/surface-persistence.ts:126-169` | `ownedAuditTask`; paid submission charges the attempt |
-| held, expired → `submission_uncertain` / `retry_wait` / `failed` / `cancelled` | `#reclaim` | `maintenance.ts:145-231` | audit then task `FOR UPDATE SKIP LOCKED`; uncertain iff `provider_submission_ref` set, no `provider_task_id`, parent active |
+| held, expired → `awaiting_provider_result` / `submission_uncertain` / `retry_wait` / `failed` / `cancelled` | `#reclaim` | `maintenance.ts` | audit then task `FOR UPDATE SKIP LOCKED`; with the parent active, `provider_task_id` set → `awaiting_provider_result` and `provider_submission_ref` alone → `submission_uncertain`, neither charging an attempt (the recovery deadline bounds the poll) |
 | held → `succeeded`/`failed` | `repairOwnedCompletion` | `maintenance.ts:23-78` | `ownedAuditTask` + artifact/observation; unreachable today because success and failure write evidence and status in one tx |
 | non-terminal → `cancelled` | `cancelAudit` | `maintenance.ts:103-118` | status not terminal |
 
-Known invalid: a task reclaimed while polling a paid provider task is charged an
-attempt and can fail with the paid result unretrieved —
-[AU1](plans/state-machine-fixes.md#au-audits). A Google AI Overview task that
+Known invalid: a Google AI Overview task that
 fails after a paid submission records no cost projection —
 [AU5](plans/state-machine-fixes.md#au-audits). Results dropped because the task
 lost ownership mid-call record no cost (internal cost only; not planned).

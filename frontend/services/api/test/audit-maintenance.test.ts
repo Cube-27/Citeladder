@@ -189,6 +189,47 @@ describe('audit recovery against PostgreSQL', () => {
     ).toEqual([{ id: artifactId }]);
     expect(await runs(task.id)).toEqual({ reserved: 0, consumed: 1 });
   });
+  it('returns a paid task whose poll lost its lease to polling without spending an attempt', async () => {
+    const t = await seed(),
+      task = t.tasks[0]!,
+      maintenance = new AuditMaintenance(db, async () => {});
+    await db
+      .updateTable('audit_tasks')
+      .set({
+        provider_submission_ref: 'intent-tag',
+        provider_task_id: 'paid-task',
+        provider_task_submitted_at: new Date(),
+        attempt_count: 1,
+      })
+      .where('id', '=', task.id)
+      .execute();
+    for (let reclaim = 0; reclaim < 3; reclaim++) {
+      // The polling process died holding the lease.
+      await db
+        .updateTable('audit_tasks')
+        .set({
+          status: 'running',
+          lease_owner: 'dead-poller',
+          lease_expires_at: sql<Date>`clock_timestamp() - interval '1 second'`,
+        })
+        .where('id', '=', task.id)
+        .execute();
+      await maintenance.runOnce();
+    }
+    expect(
+      await db
+        .selectFrom('audit_tasks')
+        .select(['status', 'attempt_count', 'lease_owner', 'provider_task_id'])
+        .where('id', '=', task.id)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({
+      status: 'awaiting_provider_result',
+      attempt_count: 1,
+      lease_owner: null,
+      provider_task_id: 'paid-task',
+    });
+    expect(await runs(task.id)).toEqual({ reserved: 1, consumed: 0 });
+  });
   it('reclaims each expired lease once, diverts paid uncertainty without spending budget and settles scoped terminal holds', async () => {
     const t = await seed(),
       foreign = await seed();
