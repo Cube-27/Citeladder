@@ -8,6 +8,7 @@ import { docsHref } from '@/lib/config/docs';
 
 import { PARENT_COMPANY } from './legal';
 import { FOOTER_LEGAL_LINKS } from './legal-documents';
+import { STUDY_INDEXES } from './studies/indexes';
 import { CITELADDER_GITHUB, CITELADDER_LINKEDIN, CITELADDER_X } from './social';
 
 type NavDropKey = 'platform' | 'solutions' | 'resources';
@@ -189,6 +190,12 @@ export const NAV_DROPS: readonly NavDrop[] = [
             desc: 'Guides and research on AI visibility',
             href: '/blog',
           },
+          // CiteLadder's own studies; label and line come from the index's study-written copy.
+          {
+            title: STUDY_INDEXES.research.title,
+            desc: STUDY_INDEXES.research.metaTitle.replace(/ \| CiteLadder$/u, ''),
+            href: STUDY_INDEXES.research.path,
+          },
         ],
       },
       {
@@ -238,15 +245,19 @@ export const NAV_DROPS: readonly NavDrop[] = [
   },
 ];
 
-/** Data-led guides the footer links from every page; too many for the Resources menu. */
+/**
+ * Data-led pages the footer links from every page; too many for the Resources
+ * menu. CiteLadder's study sections first, by their index titles.
+ */
 const RESEARCH_LINKS = [
+  ...Object.values(STUDY_INDEXES).map((index) => ({ title: index.title, href: index.path })),
   { title: 'AI search market share 2026', href: '/blog/ai-search-market-share-2026' },
   { title: 'AI referral traffic statistics', href: '/blog/ai-referral-traffic-statistics-2026' },
   { title: 'Google AI Overviews statistics', href: '/blog/google-ai-overviews-statistics-2026' },
   { title: 'Agentic commerce statistics', href: '/blog/agentic-commerce-statistics-2026' },
   { title: 'Ads in AI answers', href: '/blog/ads-in-ai-answers' },
   { title: 'Profound alternatives', href: '/compare/profound-alternatives' },
-] as const;
+];
 
 /** Plain links that sit after the dropdown triggers. */
 export const NAV_LINKS = [
