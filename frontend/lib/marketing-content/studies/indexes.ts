@@ -112,6 +112,11 @@ export const STUDY_INDEXES = {
         description:
           'How the choice of Claude model and effort level changes the buyer questions Prompt Builder drafts, compared across four models at low, medium and high effort.',
       },
+      {
+        title: 'Claude recommendations',
+        description:
+          'Which brands Claude Sonnet 5.5 names for 400 buyer prompts across 20 categories, based on 1,200 answers per condition, and what its web searches look for and return.',
+      },
     ],
   },
 } as const satisfies Record<string, StudyIndex>;
