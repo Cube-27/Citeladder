@@ -11,9 +11,17 @@ link to rows of the [state-machine fixes plan](plans/state-machine-fixes.md).
 Paths are relative to `frontend/services/api/src/` unless they start with
 `frontend/`; `0001:<line>` is `migrations/0001_baseline.sql`. **Enforced**:
 `DB` = CHECK, unique, partial unique index or FK; `App` = code under the named
-lock; `None` = nothing holds it. Except where a row says `DB`, no status column
-has a CHECK constraint (0001–0013); [DB1](plans/state-machine-fixes.md#db-schema-hardening)
-adds them.
+lock; `None` = nothing holds it. Migration `0014_status_check_constraints`
+gives each of these columns a CHECK that holds it to its owner's vocabulary:
+every lane table's `status` (the queue statuses, plus `pending_reservation` for
+`audit_tasks`), `audits.status`, the three `site_crawls` sub-states, the
+Keyword Research run, call and dataset `status`, `pending_activations.status`,
+`billing_webhook_events.processing_state`, `billing_subscriptions.status`,
+`integration_oauth_grants.status`, `actions.status`, `prompts.status` and
+`prompt_candidates.disposition`; `platform_calls.status` and the brand fact
+statuses had theirs in 0001. `test/schema-constraints.test.ts` proves each
+accepts every value its owner declares. Other status columns hold their
+vocabulary in code only. The CHECK enforces the vocabulary, not the edges.
 
 ## 1. Shared queue lanes
 
@@ -35,7 +43,7 @@ terminal `succeeded`, `failed`, `cancelled`. Implicit state lives in
 | Invariant | Enforced |
 |---|---|
 | One row per logical task | DB: unique `idempotency_key` per lane; slots `uq_audit_task_slot`, `uq_site_crawl_task_slot`, `uq_brand_discovery_task_discovery`; enqueue `ON CONFLICT DO NOTHING` `queue/enqueue.ts:46-75` |
-| Status within the vocabulary | None (DB1) |
+| Status within the vocabulary | DB `ck_<lane table>_status` (0014) |
 | Lease columns set iff held | App; a cancelled Keyword Research task keeps `lease_owner` (`search-intelligence/runs.ts:161-168`), harmless because fences refuse terminal rows |
 | `attempt_count <= max_attempts` | App (claim `ready`, recovery `exhausted` CASE) |
 | Exclusive claim | App: ranked `FOR UPDATE SKIP LOCKED` with eligibility re-applied `task-queue.ts:187-247` |
@@ -64,7 +72,7 @@ never renews or settles a re-claim.
 
 Edges `config/audits.json:2-13`, enforced only by `transitionAudit`
 (`audits/state.ts:7-44`, 409 on any other edge) under the caller's audit
-`FOR UPDATE`. Terminal `cancelled`, `completed`, `failed`, `partially_completed`;
+`FOR UPDATE`; the vocabulary itself is DB `ck_audits_status` (0014). Terminal `cancelled`, `completed`, `failed`, `partially_completed`;
 active `analyzing`, `draft`, `queued`, `running`, `validating`
 (`audits.json:267-268`). `draft`, `validating`, `analyzing` and `reporting` are
 never committed: each is entered and left inside one transaction.
@@ -191,8 +199,8 @@ paid evidence: `activated`, its period granted until the paid end (B71).
 ### 3.4 `billing_subscriptions` (status × `is_current` × `ended_at` × `cancel_at_period_end` × `cancellation_sent_at` × `scheduled_change`)
 
 DB: one current base per account `uq_billing_subscription_one_current`
-(0001:5187); external id unique. App: `ended_at ⇒ ¬is_current`;
-`cancellation_sent_at ⇒ cancel_at_period_end`; status vocabulary.
+(0001:5187); external id unique; status vocabulary `ck_billing_subscription_status`
+(0014). App: `ended_at ⇒ ¬is_current`; `cancellation_sent_at ⇒ cancel_at_period_end`.
 
 | From → to | Trigger | Location | Guard |
 |---|---|---|---|
@@ -330,7 +338,6 @@ observed inventory (`change-snapshot.ts` `observedInventory`).
 |---|---|---|
 | `site_crawl_tasks` | lane §1; → `cancelled` by Stop `controls.ts:89-102`, deselection (`queued`/`retry_wait`) `selection.ts:213-228`, crawl not active `site-task.ts:97-114`; → `failed` by overdue `lifecycle.ts:482-498`; rerun or re-selection adds generation `max + 1` and cancels an open older generation of the page in the same tx (`enqueueNextGeneration`, `selection.ts`) | DB `uq_site_crawl_task_slot (crawl, kind, url_hash, generation)`, idempotency key |
 | `site_discovery_frontier.status` | `pending` (`frontier.ts:280-301`) → `admitted` (`admission-writes.ts:350-362`); picked `FOR UPDATE SKIP LOCKED` inside the admitting tx | DB `uq_site_discovery_frontier_url` |
-| `site_urls.discovery_status` | `running` on every sighting `admission-writes.ts:107,128` → `completed`/`failed`; never read | None; dropped by [DB1](plans/state-machine-fixes.md#db-schema-hardening) |
 | `site_page_analyses` | always `completed`; revisions by `is_current` + `supersedes_analysis_id`: provisional `analysis-rows.ts:335-384`, finalized `terminal-analysis.ts:55-111`, retired alias `canonical-alias.ts:97-106`; only the open generation's fenced commit can become current | DB `uq_site_page_analysis_current` 0001:5217 |
 | `site_health_snapshots` | once per crawl in the terminalize tx `snapshot.ts:127-172` (`ON CONFLICT DO NOTHING`); later only `addArchitectureIssues` | DB unique per crawl |
 | `site_internal_link_runs.state` | ∅ → `queued` `internal-link-runs.ts:107-200` (project lock, none live) → result `internal-link-publish.ts` (fenced), `cancelled` (`cancelLinkRun`), or `failed` when its publish task fails terminally (compensator `failLinkRun`, `internal-link-runs.ts`) | App |
@@ -425,7 +432,7 @@ A retry of a failed claim, or of a claim with no outcome older than
 
 | Machine | States and transitions | Enforced |
 |---|---|---|
-| `actions.status` ∈ `open`/`dismissed`/`implemented`; `effective_status` adds `in_progress`/`measuring`/`done` (`config/actions.ts:33-34`) | ∅ → `open` by evidence sync `opportunities/action-sync.ts:131-220` (project lock); `open` ↔ `dismissed` `actions.ts:313-357` (Action `FOR UPDATE`); `open` → `implemented` by declaration `declarations.ts:225-324` (project lock, Action `FOR UPDATE`, idempotent); `effective_status` recomputed by `refreshActionStatus` `action-status.ts:62-81` on every writer | DB one Action per group `uq_actions_project_group`, one declaration per Action; statuses App |
-| `prompts.status` ∈ `active`/`archived` | `updatePrompt` `prompts/prompts.ts` (project lock, then the prompt re-read `FOR UPDATE`, binding check), `bulkSetStatus` (project + set lock, binding check); inserts `active` | App; occupancy counts every prompt (B27) |
-| `prompt_candidates.disposition` | `pending` → `accepted`/`rejected`/`deleted` `prompts/candidates.ts:183-289` (project + set locks, pending rows `FOR UPDATE`) | DB `uq_prompt_candidate_pending_text` 0001:5209 |
+| `actions.status` ∈ `open`/`dismissed`/`implemented`; `effective_status` adds `in_progress`/`measuring`/`done` (`config/actions.ts:33-34`) | ∅ → `open` by evidence sync `opportunities/action-sync.ts:131-220` (project lock); `open` ↔ `dismissed` `actions.ts:313-357` (Action `FOR UPDATE`); `open` → `implemented` by declaration `declarations.ts:225-324` (project lock, Action `FOR UPDATE`, idempotent); `effective_status` recomputed by `refreshActionStatus` `action-status.ts:62-81` on every writer | DB one Action per group `uq_actions_project_group`, one declaration per Action, `status` within `ACTION_STATUSES` `ck_actions_status` (0014); edges App |
+| `prompts.status` ∈ `active`/`archived` | `updatePrompt` `prompts/prompts.ts` (project lock, then the prompt re-read `FOR UPDATE`, binding check), `bulkSetStatus` (project + set lock, binding check); inserts `active` | DB `ck_prompts_status` (0014); App edges; occupancy counts every prompt (B27) |
+| `prompt_candidates.disposition` | `pending` → `accepted`/`rejected`/`deleted` `prompts/candidates.ts:183-289` (project + set locks, pending rows `FOR UPDATE`) | DB `uq_prompt_candidate_pending_text` 0001:5209; `pending`/`accepted`/`rejected`/`gate_rejected` `ck_prompt_candidates_disposition` (0014) |
 | Brand facts | `draft` → `confirmed` → `retired` (terminal), `expected_revision` under project lock `projects/brand-facts.ts:114-200` | DB `ck_brand_fact_status`, `ck_brand_fact_revision_status` 0001:935, 949; revision unique |

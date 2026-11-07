@@ -3082,7 +3082,6 @@ export interface SiteUrlObservations {
 export interface SiteUrls {
   corpus_disposition: string;
   depth: number;
-  discovery_status: string;
   display_url: string;
   disposition_reason: string;
   disposition_version: string;
