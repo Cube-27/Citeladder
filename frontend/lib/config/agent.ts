@@ -12,6 +12,18 @@ export const AGENT_RUN_POLL_STEPS: readonly { untilMs: number; everyMs: number }
 export const AGENT_RUN_POLL_MAX_MS = 10_000;
 /** The chat list refreshes at this cadence while any listed chat has a turn running. */
 export const AGENT_CHAT_LIST_POLL_MS = 5_000;
+/**
+ * A turn's stream that delivers no frame, keep-alives included, for this long
+ * is closed and the persisted read takes over: twice the server's 15-second
+ * `stream_heartbeat_seconds`.
+ */
+export const AGENT_STREAM_IDLE_MS = 30_000;
+/**
+ * A busy instance refuses a turn's stream with 429 and `Retry-After`; the
+ * browser re-posts after that delay (this one when the header is missing), up
+ * to this many attempts, then leaves the queued turn to the runner.
+ */
+export const AGENT_RUN_RETRY = { defaultDelayMs: 15_000, maxAttempts: 8 } as const;
 /** Distance from the end that still counts as following the conversation. */
 export const AGENT_FOLLOW_LATEST_GAP_PX = 96;
 /**

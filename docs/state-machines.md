@@ -245,22 +245,18 @@ DB: `(provider, mode, event_id)` unique (0001:4052).
 | `queued` → `leased` | browser `POST …/runs/{id}/run` → claim | `routes/agent.ts:155-190`, `agent/queue.ts:53-63` | claimable, `attempt < max`, this run, SKIP LOCKED; interactive slot or 429 |
 | `leased` → `running` | `start` | `agent/queue.ts:64-82` | owner, `leased`, unexpired, attempt + 1 |
 | `running` → `succeeded` | `finish` → `terminalize` | `agent/runtime.ts`, `agent/queue.ts:21-42` | `lockRun` |
-| `running` → `failed` (code) | `runtime.fail`; caller stop → `interrupted`/`turn_timeout` | `agent/runtime.ts:709-734`, `agent/worker.ts:39-43` | `lockRun`; settle + refund (B58) in the same tx |
+| `running` → `failed` (code) | `runtime.fail`; caller stop → `interrupted`/`turn_timeout`; heartbeat gave up → `interrupted` | `agent/runtime.ts` `fail`, `agent/worker.ts` | `lockRun`; settle + refund (B58) in the same tx; reply only while the member may still write |
 | `queued`/`leased`/`running` → `cancelled` | Stop | `agent/store.ts:304-333` | run `FOR UPDATE`, not terminal; no lease check; charged (B58) |
 | `queued` > `unclaimed_grace_seconds` → `failed interrupted` | runner `recover` | `agent/queue.ts:93-146` | SKIP LOCKED; settle + refund |
 | held, lease expired → `failed interrupted` | runner `recover` | same | lease `<= now` |
 
-The lease is `execution_timeout_seconds + lease_margin_seconds` = 660 s
-(`agent/bindings.ts:44`, `config/model-gateway.json:35-46`) although the
-heartbeat renews every 20 s.
+The lease is `lease_seconds` = 60 s (`agent/bindings.ts`,
+`config/model-gateway.json`), three 20 s heartbeats. The lane's `nextDue`
+includes held runs' `lease_expires_at` (`workers/agent-worker.ts`), and a
+heartbeat that gives up makes `runAgentOnce` call `fail(lease, 'interrupted')`
+(`agent/worker.ts`), fenced by `lockRun`.
 
-Known invalid: a 429 from `/run` leaves the run `queued` until the runner's
-next tick ends it as "page closed" —
-[AG2](plans/state-machine-fixes.md#ag-agent). A crashed instance or a lost
-heartbeat leaves the run `running` for up to the lease plus a tick (~21 min)
-— [AG3](plans/state-machine-fixes.md#ag-agent). `fail()` for a member who lost
-access throws and leaves the run `running` —
-[AG4](plans/state-machine-fixes.md#ag-agent). Closing the tab after a document
+Known invalid: closing the tab after a document
 streamed refunds the turn — [AG1](plans/state-machine-fixes.md#ag-agent)
 (B69).
 
@@ -273,28 +269,21 @@ streamed refunds the turn — [AG1](plans/state-machine-fixes.md#ag-agent)
 | Hold per call | reserve `funding.ts:205` → settle (idempotent per dispatch key) → `refundSubject` (failed runs, B58) | App ledger |
 | `agent_tool_attempts.status` | insert-only, written once after the read `agent/runtime.ts:571-605` under `lockRun` | DB `uq_agent_tool_attempt_slot` |
 | `agent_outputs` / revisions | ≥ 1 revision; output + revision in one tx `agent/outputs.ts:54, 110-154`; edits under chat lock + `requireIdle` | DB `uq_agent_output_chat_number`, `uq_agent_output_revision_number`, number > 0 (0004) |
-| Transcript | saved at finish; replayed to the model `agent/transcript.ts:110` | App |
-
-Known invalid (unverified provider behaviour): a `pause_turn` on the last call
-saves an unmatched `server_tool_use`; if the Messages API rejects that replay,
-every later turn of the chat fails — [AG5](plans/state-machine-fixes.md#ag-agent).
+| Transcript | saved at finish without the last response's unanswered `server_tool_use` (`savedTranscript`, `agent/runtime.ts`); replayed to the model `agent/transcript.ts:110` | App |
 
 ### 4.3 Browser turn stream (`frontend/lib/agent/live-turns.ts`)
 
 | From → to | Trigger | Location | Guard |
 |---|---|---|---|
-| absent → `connected: true` | `startLiveTurn` once per accepted run | `live-turns.ts:126-144`, `frontend/lib/api/agent.ts:77` | `turns.has(runId)` |
-| `connected` → `connected: false` | stream ends, fetch fails or any non-2xx | `live-turns.ts:141` (`finally`) | none; the response status is never read |
+| absent → `connected: true` | `startLiveTurn` once per accepted run | `live-turns.ts` `startLiveTurn`, `frontend/lib/api/agent.ts:77` | `turns.has(runId)` |
+| `connected` (429) → re-post | `/run` answers 429 | `live-turns.ts` `runStream` | waits `Retry-After`; at most `AGENT_RUN_RETRY.maxAttempts` posts |
+| `connected` → `connected: false` | stream ends, fetch fails, a non-2xx other than a retried 429, or no frame for `AGENT_STREAM_IDLE_MS` | `live-turns.ts` `startLiveTurn` (`finally`), `read` | idle timer re-armed by every frame, keep-alives included |
 | polling on | run active and not connected | `frontend/components/agent/use-chat-turns.ts:28-38` | re-read on stream close |
 
 `isRunActive` = `queued`/`leased`/`running`/`retry_wait`
 (`frontend/lib/agent/run-state.ts:176`); send is disabled while pending or
 active (`frontend/components/agent/chat-thread.tsx`), and the server answers
 409 `agent_run_active`.
-
-Known invalid: no retry after 429 (docs/agents.md says "the queued turn waits
-for the browser's retry"); a stream that goes silent shows streaming
-indefinitely — [AG2](plans/state-machine-fixes.md#ag-agent).
 
 ## 5. Site Health and crawl logs
 

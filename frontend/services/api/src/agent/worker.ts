@@ -40,9 +40,11 @@ export async function runAgentOnce(
   );
   try {
     await runtime.execute(lease, leaseSignal(heartbeat.signal, options.signal), options.events);
-    // A lost lease belongs to recovery; a caller's stop is answered here while the lease holds.
-    if (options.signal?.aborted && !heartbeat.signal.aborted)
-      await runtime.fail(lease, stoppedCode(options.signal));
+    // A caller's stop is answered here. A heartbeat that gave up ends the turn
+    // as interrupted now rather than at lease expiry; the fence decides, so a
+    // lease another owner or recovery already took is left alone.
+    if (options.signal?.aborted) await runtime.fail(lease, stoppedCode(options.signal));
+    else if (heartbeat.signal.aborted) await runtime.fail(lease, 'interrupted');
   } catch (error) {
     if (!(error instanceof AgentError && error.code === 'lease')) throw error;
   } finally {
