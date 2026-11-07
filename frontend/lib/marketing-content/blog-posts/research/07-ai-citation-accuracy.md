@@ -14,8 +14,13 @@ secondary_keywords:
 search_intent: 'Assess citation reliability and verify a source before relying on it'
 content_type: 'research-backed guide'
 reviewed_at: '2026-10-06'
+author: 'Abhineet Jain'
 related_guides: ['/ai-citation-tracking', '/blog/can-chatgpt-find-citations']
 publication_status: 'editorial_review'
+product:
+  heading: 'Audit the sources AI cites about you'
+  href: '/platform/cited-sources'
+  body: 'CiteLadder shows which domains and pages AI answers cite for your topics and compares your own pages with third-party sources. You can also find cited pages that list competitors but not you.'
 ---
 
 ## How accurate are AI citations?

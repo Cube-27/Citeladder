@@ -8,9 +8,15 @@ secondary_keywords: ['OAI-SearchBot robots.txt', 'block OAI-SearchBot', 'OAI-Sea
 search_intent: 'Understand what OAI-SearchBot does and decide whether to allow or block it'
 content_type: 'AI crawler directory page'
 reviewed_at: '2026-11-07'
+published_at: '2026-11-07'
+author: 'Abhineet Jain'
 related_guides: ['/ai-crawlers/gptbot', '/research/ai-crawlers-robots-txt-2026']
 index_group: 'AI search crawlers'
 index_meta: 'Blocked by 6.1% of top sites'
+product:
+  heading: "Check your site's AI crawler access"
+  href: '/platform/site-health'
+  body: 'CiteLadder crawls your site for AI crawler access issues, such as robots.txt rules that block OAI-SearchBot, and shows page-level evidence for each finding. After you change a rule, run a recrawl to confirm the fix.'
 ---
 
 OAI-SearchBot is the crawler OpenAI uses for search features in ChatGPT. OpenAI's documentation says that sites that block it in robots.txt will not be shown in ChatGPT search answers. Training is controlled by a separate crawler, GPTBot, which has its own robots.txt setting.

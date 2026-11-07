@@ -14,9 +14,14 @@ secondary_keywords:
 search_intent: 'Informational: compare AI engine usage data and decide which engines to track'
 content_type: 'evidence-led analysis'
 reviewed_at: '2026-10-20'
+author: 'Abhineet Jain'
 related_guides:
   ['/blog/ai-referral-traffic-statistics-2026', '/blog/google-ai-overviews-statistics-2026']
 publication_status: 'editorial_review'
+product:
+  heading: 'Track how each AI engine mentions you'
+  href: '/platform/ai-visibility'
+  body: 'Once you know which engines matter to your buyers, CiteLadder tracks your brand mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude and Google AI Overviews. Every result is tied to the answer it was recorded from.'
 ---
 
 ## Which AI search engine has the biggest market share?

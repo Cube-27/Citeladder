@@ -8,9 +8,15 @@ secondary_keywords: ['sites blocking GPTBot', 'AI crawler blocking', 'robots.txt
 search_intent: 'Learn how popular websites treat AI crawlers in robots.txt'
 content_type: 'original research report'
 reviewed_at: '2026-11-07'
+published_at: '2026-11-07'
+author: 'Abhineet Jain'
 related_guides: ['/ai-crawlers/gptbot', '/ai-crawlers/claudebot']
 index_group: 'AI crawlers'
 index_meta: '6130 sites · 2026-11-07'
+product:
+  heading: 'Check your own AI crawler access'
+  href: '/platform/site-health'
+  body: 'CiteLadder Site Health crawls your site for AI crawler access issues alongside technical SEO and answer-readiness problems, with page-level evidence for each finding. After you change your robots.txt policy, run a recrawl to confirm the fix took effect.'
 ---
 
 CiteLadder read the robots.txt files of the 10,000 most popular domains on the Tranco list. For each AI and search crawler on its list, it checked whether the rules let that crawler fetch the homepage. Training crawlers are blocked far more often than search engines. Many sites that block a training crawler still allow the same company's search or user-triggered fetcher. News and media sites block the most. Software, finance and government sites block the least. All results describe what robots.txt files ask for. They do not show which crawlers actually visit a site.

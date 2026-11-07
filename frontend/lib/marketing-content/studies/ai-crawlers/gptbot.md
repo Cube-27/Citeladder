@@ -8,9 +8,15 @@ secondary_keywords: ['GPTBot robots.txt', 'block GPTBot', 'GPTBot user agent']
 search_intent: 'Understand what GPTBot does and decide whether to allow or block it'
 content_type: 'AI crawler directory page'
 reviewed_at: '2026-11-07'
+published_at: '2026-11-07'
+author: 'Abhineet Jain'
 related_guides: ['/ai-crawlers/oai-searchbot', '/research/ai-crawlers-robots-txt-2026']
 index_group: 'AI training crawlers'
 index_meta: 'Blocked by 15.5% of top sites'
+product:
+  heading: 'Check AI crawler access on your site'
+  href: '/platform/site-health'
+  body: "CiteLadder's site health crawl flags AI crawler access issues on your site, with page-level evidence for each finding, so you can confirm your rules for crawlers like GPTBot do what you intend. After you change them, run a recrawl to verify the fix."
 ---
 
 GPTBot is the web crawler OpenAI uses to collect content that may be used to train its generative AI foundation models. OpenAI's documentation says that disallowing GPTBot in robots.txt tells OpenAI not to use your site's content for that training. This page covers what GPTBot does, how the robots.txt choice works, how it relates to ChatGPT search, how to check that a request really comes from GPTBot, and how the 10,000 most popular websites handle it in their robots.txt files.

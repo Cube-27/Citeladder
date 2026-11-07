@@ -8,9 +8,15 @@ secondary_keywords: ['PerplexityBot robots.txt', 'block PerplexityBot', 'Perplex
 search_intent: 'Understand what PerplexityBot does and decide whether to allow or block it'
 content_type: 'AI crawler directory page'
 reviewed_at: '2026-11-07'
+published_at: '2026-11-07'
+author: 'Abhineet Jain'
 related_guides: ['/ai-crawlers/perplexity-user', '/research/ai-crawlers-robots-txt-2026']
 index_group: 'AI search crawlers'
 index_meta: 'Blocked by 9% of top sites'
+product:
+  heading: 'See which AI crawlers fetch your pages'
+  href: '/platform/ai-referral-analytics'
+  body: 'After setting your PerplexityBot rules, CiteLadder uses your own server logs to show which AI crawlers are fetching your pages. It also uses GA4 to show the visits that ChatGPT, Gemini and other AI assistants send to your site.'
 ---
 
 PerplexityBot is the web crawler Perplexity runs for its search product. According to Perplexity's documentation, it finds and links websites in Perplexity search results, and it is not used to crawl content for AI foundation models. This page covers how to decide whether to allow it, how to verify that a request really comes from it, and what the 10,000 most popular websites say about it in their robots.txt files.

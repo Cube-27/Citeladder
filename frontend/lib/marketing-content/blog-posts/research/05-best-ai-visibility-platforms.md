@@ -18,8 +18,13 @@ secondary_keywords:
 search_intent: 'Commercial investigation: shortlist a tool for a defined workflow'
 content_type: 'comparison'
 reviewed_at: '2026-10-06'
+author: 'Abhineet Jain'
 related_guides: ['/compare/profound-alternatives', '/llm-rank-tracker']
 publication_status: 'editorial_review'
+product:
+  heading: 'Track how AI answers mention you'
+  href: '/platform/ai-visibility'
+  body: 'Once you know what to look for in an AEO tool, CiteLadder lets you track brand mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude and Google AI Overviews. Every result is tied to the recorded answer behind it.'
 ---
 
 ## What is the best AI visibility platform?

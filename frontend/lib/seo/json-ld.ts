@@ -3,7 +3,7 @@ import type { BlogPost } from '@/lib/marketing-content/blog';
 import { blogPostFreshness, type BlogPostSummary } from '@/lib/marketing-content/blog-index';
 import type { FaqItem } from '@/lib/marketing-content/faq';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
-import { FOUNDER, PRODUCT_HEAD } from '@/lib/marketing-content/people';
+import { FOUNDER, PRODUCT_HEAD, type PublicPerson } from '@/lib/marketing-content/people';
 import { CITELADDER_LINKEDIN, CITELADDER_X } from '@/lib/marketing-content/social';
 import {
   absoluteUrl,
@@ -167,17 +167,22 @@ export function blogPostingJsonLd(post: BlogPost): JsonLdObject {
 }
 
 /**
- * A research guide as an `Article` by the CiteLadder organization. Guides name
- * no person author and no publication date, so neither is claimed: the
- * visible research review date is the only date, as `dateModified`.
+ * A research guide as an `Article`, published by the CiteLadder organization.
+ * A guide with a named person author credits that person; otherwise the
+ * organization. Only the dates a guide supplies are claimed: its publication
+ * date when set, and its visible review date as `dateModified`.
  */
-export function researchArticleJsonLd(guide: {
-  title: string;
-  slug: string;
-  meta_description: string;
-  reviewed_at?: string;
-  image?: string;
-}): JsonLdObject | null {
+export function researchArticleJsonLd(
+  guide: {
+    title: string;
+    slug: string;
+    meta_description: string;
+    reviewed_at?: string;
+    published_at?: string;
+    image?: string;
+  },
+  author?: PublicPerson,
+): JsonLdObject | null {
   const url = absoluteUrl(guide.slug);
   const home = absoluteUrl('/');
   if (!url || !home) return null;
@@ -193,8 +198,11 @@ export function researchArticleJsonLd(guide: {
     url,
     mainEntityOfPage: { '@type': 'WebPage', '@id': url },
     ...(image ? { image } : {}),
-    author: organization,
+    author: author
+      ? { '@type': 'Person', name: author.name, jobTitle: author.role, url: author.linkedin }
+      : organization,
     publisher: organization,
+    ...(guide.published_at ? { datePublished: guide.published_at } : {}),
     ...(guide.reviewed_at ? { dateModified: guide.reviewed_at } : {}),
   };
 }

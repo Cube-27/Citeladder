@@ -8,9 +8,15 @@ secondary_keywords: ['Claude-User robots.txt', 'block Claude-User', 'Claude-User
 search_intent: 'Understand what Claude-User does and decide whether to allow or block it'
 content_type: 'AI crawler directory page'
 reviewed_at: '2026-11-07'
+published_at: '2026-11-07'
+author: 'Abhineet Jain'
 related_guides: ['/ai-crawlers/claudebot', '/research/ai-crawlers-robots-txt-2026']
 index_group: 'User-triggered AI fetchers'
 index_meta: 'Blocked by 6.3% of top sites'
+product:
+  heading: 'Check which AI crawlers can reach you'
+  href: '/platform/site-health'
+  body: 'CiteLadder crawls your site for AI crawler access issues, including the rules that affect agents like Claude-User, and shows page-level evidence for each finding. After you change your robots.txt, a recrawl verifies the fix.'
 ---
 
 Claude-User is the agent Anthropic uses when a person asks Claude a question and Claude needs to read a web page. This page covers who runs it and what it is for. It also explains what blocking it changes, how to check real requests and what the 10,000 most popular websites say about it in robots.txt.

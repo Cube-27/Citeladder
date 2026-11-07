@@ -14,8 +14,13 @@ secondary_keywords:
 search_intent: 'Find credible references or understand where AI answers get source links'
 content_type: 'how-to explainer'
 reviewed_at: '2026-10-06'
+author: 'Abhineet Jain'
 related_guides: ['/blog/how-accurate-are-ai-citations', '/ai-citation-tracking']
 publication_status: 'editorial_review'
+product:
+  heading: 'See which pages AI cites about you'
+  href: '/platform/cited-sources'
+  body: 'CiteLadder shows which domains and pages AI answers cite when buyers ask about your topic, comparing your own pages with third-party sources. You can also find cited pages that list competitors but leave you out.'
 ---
 
 ## Can ChatGPT find citations?

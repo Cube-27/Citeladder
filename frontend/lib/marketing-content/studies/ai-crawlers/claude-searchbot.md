@@ -9,9 +9,15 @@ secondary_keywords:
 search_intent: 'Understand what Claude-SearchBot does and decide whether to allow or block it'
 content_type: 'AI crawler directory page'
 reviewed_at: '2026-11-07'
+published_at: '2026-11-07'
+author: 'Abhineet Jain'
 related_guides: ['/ai-crawlers/claudebot', '/research/ai-crawlers-robots-txt-2026']
 index_group: 'AI search crawlers'
 index_meta: 'Blocked by 6% of top sites'
+product:
+  heading: "Check your site's AI crawler access"
+  href: '/platform/site-health'
+  body: 'CiteLadder crawls your site for AI crawler access issues, such as robots.txt rules that block Claude-SearchBot, and shows page-level evidence for each finding. After you change your rules, run a recrawl to confirm the fix.'
 ---
 
 Claude-SearchBot is a crawler run by Anthropic. Anthropic says it crawls the web to improve the quality of search results for users. This page covers what the crawler does, what changes when you block it, how to check that a request is real, and what the most popular websites do with it in their robots.txt files.

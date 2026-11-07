@@ -14,6 +14,7 @@ secondary_keywords:
 search_intent: 'Commercial investigation: understand what an LLM rank tracker measures and choose one'
 content_type: 'product-led landing page'
 reviewed_at: '2026-10-20'
+author: 'Abhineet Jain'
 related_guides: ['/track-brand-mentions-chatgpt', '/best-ai-visibility-platforms']
 publication_status: 'editorial_review'
 product:

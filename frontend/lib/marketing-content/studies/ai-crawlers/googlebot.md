@@ -8,9 +8,15 @@ secondary_keywords: ['Googlebot robots.txt', 'block Googlebot', 'Googlebot user 
 search_intent: 'Understand what Googlebot does and decide whether to allow or block it'
 content_type: 'AI crawler directory page'
 reviewed_at: '2026-11-07'
+published_at: '2026-11-07'
+author: 'Abhineet Jain'
 related_guides: ['/ai-crawlers/google-extended', '/research/ai-crawlers-robots-txt-2026']
 index_group: 'Search engine crawlers'
 index_meta: 'Blocked by 1.5% of top sites'
+product:
+  heading: "Check your site's crawler access"
+  href: '/platform/site-health'
+  body: 'CiteLadder crawls your site for technical SEO, answer-readiness and AI crawler access issues, so you can see whether your robots.txt rules block crawlers you want to allow. Each finding comes with page-level evidence, and a recrawl confirms your fixes.'
 ---
 
 Googlebot is the crawler Google uses for Google Search. Your robots.txt rules for Googlebot decide whether your pages can be crawled for Search and for other Google products. This page covers what the crawler is for, what a block changes, how to check that a request really comes from Google, and how the 10,000 most popular websites handle Googlebot in their robots.txt files.

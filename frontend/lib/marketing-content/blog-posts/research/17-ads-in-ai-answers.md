@@ -16,8 +16,13 @@ secondary_keywords:
 search_intent: 'Informational: understand where ads appear in AI answers and what that changes for brand visibility'
 content_type: 'market-trend research'
 reviewed_at: '2026-10-20'
+author: 'Abhineet Jain'
 related_guides: ['/blog/google-ai-overviews-statistics-2026', '/best-ai-visibility-platforms']
 publication_status: 'editorial_review'
+product:
+  heading: 'Measure your organic AI mentions'
+  href: '/platform/ai-visibility'
+  body: 'CiteLadder tracks how often ChatGPT, Gemini, Claude and Google AI Overviews name your brand, with position, sentiment and competitors tied to each recorded answer. That gives you an organic visibility baseline you can keep separate from any paid placement.'
 ---
 
 ## Are there ads in AI answers?

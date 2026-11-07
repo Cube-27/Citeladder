@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
   moreGuides,
   researchArticle,
+  researchAuthor,
   researchFaqs,
   researchParent,
   researchParts,
@@ -131,6 +132,10 @@ describe('research guide navigation', () => {
       href: '/ai-crawlers',
     });
     expect(researchParent('/research/ai-crawlers-robots-txt-2026').href).toBe('/research');
+    expect(researchParent('/buyer-prompts/wise')).toEqual({
+      label: 'Buyer prompts',
+      href: '/buyer-prompts',
+    });
   });
 
   it('links study pages to the study pages they curate, and keeps guides among guides', () => {
@@ -140,7 +145,12 @@ describe('research guide navigation', () => {
     for (const slug of moreGuides(researchArticle('/open-source')!).map(
       (more) => more.frontmatter.slug,
     ))
-      expect(slug.startsWith('/ai-crawlers/') || slug.startsWith('/research/'), slug).toBe(false);
+      expect(
+        ['/ai-crawlers/', '/buyer-prompts/', '/research/'].some((prefix) =>
+          slug.startsWith(prefix),
+        ),
+        slug,
+      ).toBe(false);
   });
 
   it('never offers a guide as its own "more guides" link', () => {
@@ -150,5 +160,20 @@ describe('research guide navigation', () => {
       expect(slugs.length, path).toBe(2);
       expect(slugs, path).not.toContain(path);
     }
+  });
+});
+
+describe('research authors', () => {
+  it('credits the named public person and rejects a name outside people.ts', () => {
+    expect(researchAuthor(researchArticle('/ai-crawlers/gptbot')!)?.role).toBe('Product Head');
+    expect(() =>
+      researchAuthor({
+        frontmatter: {
+          ...researchArticle('/ai-crawlers/gptbot')!.frontmatter,
+          author: 'Nobody Known',
+        },
+        markdown: '',
+      }),
+    ).toThrow('/ai-crawlers/gptbot: unknown author "Nobody Known"');
   });
 });

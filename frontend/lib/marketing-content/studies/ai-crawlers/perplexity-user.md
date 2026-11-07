@@ -9,9 +9,15 @@ secondary_keywords:
 search_intent: 'Understand what Perplexity-User does and decide whether to allow or block it'
 content_type: 'AI crawler directory page'
 reviewed_at: '2026-11-07'
+published_at: '2026-11-07'
+author: 'Abhineet Jain'
 related_guides: ['/ai-crawlers/perplexitybot', '/research/ai-crawlers-robots-txt-2026']
 index_group: 'User-triggered AI fetchers'
 index_meta: 'Blocked by 6.6% of top sites'
+product:
+  heading: 'See when Perplexity fetches your pages'
+  href: '/platform/ai-referral-analytics'
+  body: 'CiteLadder reads your own server logs to show which AI crawlers and fetchers request your pages, and pulls the visits Perplexity and other AI assistants send you from GA4. You can see what Perplexity-User actually does on your site alongside your robots.txt rules.'
 ---
 
 Perplexity-User is the user agent Perplexity uses when one of its users asks a question and Perplexity visits a web page to answer it. Perplexity's documentation says it is not used for web crawling or for training AI foundation models. It also says this fetcher generally ignores robots.txt rules, because a user requested the fetch. This page covers what the documentation says, how to verify real requests, and how the 10,000 most popular websites treat it in their robots.txt files.

@@ -127,6 +127,32 @@ describe('researchArticleJsonLd', () => {
     });
   });
 
+  it('credits a named person author and claims the publication date a study supplies', () => {
+    process.env.PUBLIC_WEBSITE_ORIGIN = 'https://example.test';
+    const article = researchArticleJsonLd(
+      {
+        title: 'GPTBot',
+        slug: '/ai-crawlers/gptbot',
+        meta_description: 'What GPTBot does.',
+        reviewed_at: '2026-11-07',
+        published_at: '2026-11-07',
+      },
+      {
+        name: 'Ada Example',
+        role: 'Analyst',
+        linkedin: 'https://example.test/ada',
+        organization: 'Cube27',
+      },
+    );
+    expect(article?.author).toEqual({
+      '@type': 'Person',
+      name: 'Ada Example',
+      jobTitle: 'Analyst',
+      url: 'https://example.test/ada',
+    });
+    expect(article?.datePublished).toBe('2026-11-07');
+  });
+
   it("uses a guide's own image instead of the site social card when it has one", () => {
     process.env.PUBLIC_WEBSITE_ORIGIN = 'https://example.test';
     expect(

@@ -31,6 +31,28 @@ export const STUDY_INDEXES = {
       },
     ],
   },
+  buyerPrompts: {
+    path: '/buyer-prompts',
+    updated: '2026-11-07',
+    title: 'Buyer prompts',
+    metaTitle: 'Buyer prompts by brand | CiteLadder',
+    description:
+      "Buyer questions drafted by CiteLadder's Prompt Builder for each brand on four Claude models at three effort levels, shown side by side.",
+    heroTitle: 'Buyer prompts by brand',
+    lead: 'Each page shows the buyer questions Prompt Builder drafted for one brand on Haiku 5.5, Sonnet 5.5, Opus 5.5 and Fable 5.1 at low, medium and high effort. The outputs sit side by side with simple measurements, so you can judge quality yourself.',
+    groups: [
+      {
+        title: 'Business software',
+        description:
+          'Buyer questions drafted for Notion, HubSpot and Shopify, compared across four Claude models and three effort levels.',
+      },
+      {
+        title: 'Consumer brands',
+        description:
+          'Buyer questions drafted for Nike, IKEA, Airbnb, Duolingo and Wise, compared across four Claude models and three effort levels.',
+      },
+    ],
+  },
   research: {
     path: '/research',
     updated: '2026-11-07',
@@ -50,6 +72,11 @@ export const STUDY_INDEXES = {
         title: 'Website files for AI',
         description:
           'How many of the 10,000 most popular websites publish an llms.txt file, based on 6943 sites checked, where 12.4% have a valid one.',
+      },
+      {
+        title: 'Prompt Builder models',
+        description:
+          'How the choice of Claude model and effort level changes the buyer questions Prompt Builder drafts, compared across four models at low, medium and high effort.',
       },
     ],
   },

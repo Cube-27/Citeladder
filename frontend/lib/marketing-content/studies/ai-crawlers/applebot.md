@@ -8,9 +8,15 @@ secondary_keywords: ['Applebot robots.txt', 'block Applebot', 'Applebot user age
 search_intent: 'Understand what Applebot does and decide whether to allow or block it'
 content_type: 'AI crawler directory page'
 reviewed_at: '2026-11-07'
+published_at: '2026-11-07'
+author: 'Abhineet Jain'
 related_guides: ['/ai-crawlers/applebot-extended', '/research/ai-crawlers-robots-txt-2026']
 index_group: 'Search engine crawlers'
 index_meta: 'Blocked by 3.7% of top sites'
+product:
+  heading: 'Check AI crawler access on your site'
+  href: '/platform/site-health'
+  body: 'CiteLadder crawls your site for AI crawler access issues, such as robots.txt rules that block Applebot, with page-level evidence for each finding. After you change your rules, run a recrawl to confirm the fix.'
 ---
 
 Applebot is Apple's web crawler. Its data feeds search in Spotlight, Siri and Safari. It also gives AI answers in Apple products extra context, and it may help train Apple's foundation models. This page covers what each robots.txt choice changes according to Apple's documentation, how to check that a request really comes from Applebot, and how the 10,000 most popular sites handle it.

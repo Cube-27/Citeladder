@@ -8,9 +8,15 @@ secondary_keywords: ['Bingbot robots.txt', 'block Bingbot', 'Bingbot user agent'
 search_intent: 'Understand what Bingbot does and decide whether to allow or block it'
 content_type: 'AI crawler directory page'
 reviewed_at: '2026-11-07'
+published_at: '2026-11-07'
+author: 'Abhineet Jain'
 related_guides: ['/research/ai-crawlers-robots-txt-2026']
 index_group: 'Search engine crawlers'
 index_meta: 'Blocked by 2% of top sites'
+product:
+  heading: "Check your site's crawler access"
+  href: '/platform/site-health'
+  body: 'CiteLadder crawls your site for technical SEO, answer-readiness and AI crawler access issues, with page-level evidence for each finding. After you change your robots.txt rules, run a recrawl to confirm the fix.'
 ---
 
 Bingbot is Microsoft's search engine crawler. This page covers your robots.txt options, how to check that a request really comes from Bingbot, and how the 10,000 most popular websites handle it in their robots.txt files. The study figures describe robots.txt rules. They do not measure actual crawler traffic.
