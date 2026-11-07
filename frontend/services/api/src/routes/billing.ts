@@ -339,7 +339,7 @@ export const billingRoutes = [
       // Clearing the lease voids any in-flight probe's stale unpaid reading.
       const now = new Date();
       try {
-        await db
+        const reopened = await db
           .updateTable('pending_activations')
           .set({
             status: 'pending',
@@ -356,14 +356,16 @@ export const billingRoutes = [
               eb.and([eb('status', '=', 'abandoned'), eb('activation_kind', '!=', 'base')]),
             ]),
           )
-          .execute();
+          .returningAll()
+          .executeTakeFirst();
+        return activationResponse(reopened ?? pending);
       } catch (error) {
         // A newer order for the same add-on or upgrade is pending, so this one
         // cannot reopen; it stays abandoned and the webhook's late-capture path
         // settles its payment.
         if (!ONE_PENDING_ORDER.some((index) => isUniqueViolation(error, index))) throw error;
+        return activationResponse(pending);
       }
-      return activationResponse(pending);
     },
   }),
   (() => {

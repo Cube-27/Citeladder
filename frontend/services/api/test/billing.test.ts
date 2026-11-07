@@ -1057,6 +1057,7 @@ describe('billing money and access owner', () => {
       }),
     });
     expect(verified.status).toBe(202);
+    expect(((await verified.json()) as { status: string }).status).toBe('pending');
     expect((await pending(row.id)).status).toBe('pending');
     // Its probe saw no capture yet and abandoned it again; the webhook still settles it.
     await db
@@ -1148,6 +1149,7 @@ describe('billing money and access owner', () => {
       },
     );
     expect(verified.status).toBe(202);
+    expect(((await verified.json()) as { status: string }).status).toBe('abandoned');
     expect({
       abandoned: (await pending(abandoned.id)).status,
       newer: (await pending(newer.id)).status,
