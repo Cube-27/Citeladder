@@ -1430,7 +1430,7 @@ describe('billing money and access owner', () => {
         subscription: { entity: { id: t.sub.external_subscription_id, status: 'active' } },
       },
     });
-    const headers = (text: string, id = eventId) => ({
+    const headers = (text: string, id: string = eventId) => ({
       'x-razorpay-event-id': id,
       'x-razorpay-signature': createHmac('sha256', config.razorpay.webhookSecret)
         .update(text)
