@@ -319,14 +319,14 @@ never written.
 | One active crawl per project | App: project `FOR UPDATE` + no active crawl `site-health/planner.ts:292-307`; reruns lock via `selection.ts:63-80` (no partial unique) |
 | One snapshot per crawl | DB `uq_site_health_snapshot_crawl` 0001:4325 |
 | Terminal ⇒ no open lifecycle task | App: terminalize only when discover/setup/analyze drained `lifecycle.ts:257-273` |
-| `inventory_complete` ⇒ whole site inventoried | App `lifecycle.ts:136-143`; set for bounded inventories too (SH3) |
+| `inventory_complete` ⇒ whole site inventoried | App `lifecycle.ts` `reconcileInventory`: coverage `complete` only |
 
 | From → to | Trigger | Location | Guard |
 |---|---|---|---|
-| ∅ → `queued` (rerun: discovery `completed`, `inventory_complete`) | create / page rerun | `planner.ts:195-228, 395-433` | project lock, no active crawl |
+| ∅ → `queued` (rerun: discovery `completed`; never `inventory_complete`) | create / page rerun | `planner.ts:195-228, 395-433` | project lock, no active crawl |
 | `queued` → `running` | first task runs | `site-task.ts:134-148` | `status = queued` |
 | analysis `pending` → `running` | reconcile | `lifecycle.ts:153-159` | crawl `FOR UPDATE`, active |
-| discovery `running` → `completed`/`failed`; `inventory_complete` | reconcile | `lifecycle.ts:131-143` | no open discover/setup; failed iff `discovered_url_count = 0` |
+| discovery `running` → `completed`/`failed`; `inventory_complete` | reconcile | `lifecycle.ts` `reconcileDiscovery`, `reconcileInventory` | no open discover/setup; failed iff `discovered_url_count = 0` |
 | discovery `running` → `sample_completed` | discover commit | `discover-task.ts:393-396` | sample cap; fenced task + crawl lock |
 | `running` → `completed`/`partially_completed`/`failed` | `terminalize` | `lifecycle.ts` `terminalize` | drained; failed iff nothing analyzed and either no discovery or applicable analyses (all failed) |
 | `running` → `failed` (`crawl_overdue`) | overdue watchdog | `lifecycle.ts:476-500` | crawl lock, active, age re-checked |
@@ -335,9 +335,11 @@ never written.
 A crawl read without a named `crawl_id` (`resolveUsableCrawl`, `reads/crawl.ts`)
 is the newest usable crawl that is not a `page_rerun`; a named rerun still
 reads. Sub-states and counters read each page's latest task generation, as the
-terminal counters do. Known invalid: `inventory_complete` is true for page-limited, sampled or deselected
-inventories, so unanalyzed pages read as removed —
-[SH3](plans/state-machine-fixes.md#sh-site-health).
+terminal counters do. `inventory_complete` is decided when discovery settles
+and again when the crawl drains, from coverage (`coverage.ts`
+`inventoryComplete`): a page limit, pending frontier, sample, rerun or other
+bound leaves it false. A change removal also needs the page absent from B's
+observed inventory (`change-snapshot.ts` `observedInventory`).
 
 ### 5.2 Other Site Health records
 

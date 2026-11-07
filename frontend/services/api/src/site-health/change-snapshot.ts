@@ -19,8 +19,10 @@ import {
   type ChangeObservation,
   type ChangePage,
   type ExpectedChange,
+  type PresenceScope,
   type RuleState,
 } from './change-compare.ts';
+import { inventoryCrawlIds } from './reads/crawl.ts';
 import type { Crawl } from './site-task.ts';
 import { enqueueTerminalAnalyticsRefresh } from './terminal-handoff.ts';
 import { isPageRerun, pageRerunSql } from './page-rerun.ts';
@@ -341,6 +343,31 @@ async function insertObservations(
   }
 }
 
+/**
+ * The pages A analyzed that B did not, but whose URL B's inventory still
+ * observed: unanalyzed in B (deselected, failed, beyond a limit), not removed.
+ */
+async function observedInventory(
+  db: Database,
+  crawlB: Crawl,
+  pagesA: readonly ChangePage[],
+  pagesB: readonly ChangePage[],
+) {
+  const analyzedB = new Set(pagesB.map((page) => page.siteUrlId));
+  const missing = pagesA.map((page) => page.siteUrlId).filter((id) => !analyzedB.has(id));
+  if (!missing.length) return new Set<string>();
+  const rows = await db
+    .selectFrom('site_url_observations')
+    .select('site_url_id')
+    .distinct()
+    .where('workspace_id', '=', crawlB.workspace_id)
+    .where('project_id', '=', crawlB.project_id)
+    .where('crawl_id', 'in', inventoryCrawlIds(crawlB))
+    .where(sql<boolean>`site_url_id = any(${missing}::uuid[])`)
+    .execute();
+  return new Set(rows.map((row) => row.site_url_id));
+}
+
 /** Build, or return unchanged, the immutable comparison of crawl B with its predecessor. */
 async function persistChangeSnapshot(db: Database, crawlB: Crawl): Promise<string> {
   const crawlA = await previousComparableCrawl(db, crawlB);
@@ -362,10 +389,13 @@ async function persistChangeSnapshot(db: Database, crawlB: Crawl): Promise<strin
   const available = state === p.state_available;
   const capped = a.capped || b.capped;
   const completePair = Boolean(crawlA && complete(crawlA) && complete(crawlB) && !capped);
+  const presenceScope: PresenceScope = completePair
+    ? { completePair, inventoryB: await observedInventory(db, crawlB, a.pages, b.pages) }
+    : { completePair: false };
   const observations =
     crawlA && available
       ? compareCrawls(a.pages, b.pages, {
-          completePair,
+          ...presenceScope,
           expected: await expectedChanges(db, crawlA, crawlB, b.pages),
         })
       : [];

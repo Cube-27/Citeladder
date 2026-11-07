@@ -16,7 +16,7 @@ import type { Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
 import { enqueueCrawlTasks } from './admission-writes.ts';
 import { reconcileDuplicateAliases } from './canonical-alias.ts';
-import { expectedTaskFailure } from './coverage.ts';
+import { expectedTaskFailure, inventoryComplete } from './coverage.ts';
 import { settleCrawlFetches } from './fetch-budget.ts';
 import { finalizeCrawlAnalyses } from './lifecycle-finalize.ts';
 import { rootFailure } from './reads/crawl.ts';
@@ -156,12 +156,26 @@ function reconcileDiscovery(crawl: Crawl, summary: Summary) {
   // useful partial evidence; it is not a failed crawl.
   const fullyFailed =
     summary.analyzeSucceeded === 0 && (discoveryFailed || summary.analyzeApplicable > 0);
-  if (!summary.discoverOpen) {
-    if (crawl.discovery_status === 'running')
-      crawl.discovery_status = discoveryFailed ? 'failed' : 'completed';
-    crawl.inventory_complete = !discoveryFailed;
-  }
+  if (!summary.discoverOpen && crawl.discovery_status === 'running')
+    crawl.discovery_status = discoveryFailed ? 'failed' : 'completed';
   return { fullyFailed, discoveryPartial: summary.discoverFailed > 0 && !fullyFailed };
+}
+
+/**
+ * `inventory_complete` once discovery has drained: only an inventory no limit,
+ * pending frontier, sample or other bound cut short is the whole site. Its
+ * inputs settle with discovery, so it is decided when discovery settles and
+ * again when the crawl drains (a sample or rerun never runs discovery here).
+ */
+async function reconcileInventory(
+  db: Database,
+  crawl: Crawl,
+  summary: Summary,
+  discoveryWasRunning: boolean,
+) {
+  if (summary.discoverOpen) return;
+  if (!discoveryWasRunning && summary.analyzeOpen) return;
+  crawl.inventory_complete = crawl.discovered_url_count > 0 && (await inventoryComplete(db, crawl));
 }
 
 function analysisOutcome(summary: Summary, fullyFailed: boolean) {
@@ -278,7 +292,9 @@ async function reconcileLockedCrawl(db: Database, crawl: Crawl, options: Reconci
   if (!isActiveCrawl(crawl.status)) return;
   const summary = await taskSummary(db, crawl);
   await refreshCounters(db, crawl, summary);
+  const discoveryWasRunning = crawl.discovery_status === 'running';
   const { fullyFailed, discoveryPartial } = reconcileDiscovery(crawl, summary);
+  await reconcileInventory(db, crawl, summary, discoveryWasRunning);
   reconcileAnalysis(crawl, summary, fullyFailed);
   if (summary.discoverOpen || summary.analyzeOpen) {
     await saveState(db, crawl);

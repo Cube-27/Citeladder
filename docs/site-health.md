@@ -637,7 +637,12 @@ only pages both crawls analyzed. Page reruns write no snapshot and are never a
 predecessor, and Changes never shows a snapshot an older rerun wrote. With no
 match, it records a non-comparable boundary against the newest earlier crawl
 with analyses. A declared Site Health fix that the later crawl shows met is
-marked as an expected change. Snapshots are immutable, carry their source IDs, supersede the
+marked as an expected change. URL presence (a page added or removed) is
+claimed only for a complete pair: both crawls `completed` with
+`inventory_complete`, which reconcile sets only for coverage `complete` (no
+page or frontier limit, pending frontier, sample or other bound). A page A
+analyzed is removed only when B's observed inventory lacks it; one B observed
+but did not analyze (deselected, failed) is not. Snapshots are immutable, carry their source IDs, supersede the
 previous snapshot, and are reused when inputs are unchanged. Content change and
 date consistency are separate outputs. Only `complete` comparison coverage can
 promote metadata or cosmetic-refresh actions (`config/site-health/change-intel.ts`).

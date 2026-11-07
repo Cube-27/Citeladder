@@ -236,11 +236,20 @@ function presence(page: ChangePage, present: boolean): ChangeObservation {
   };
 }
 
+/**
+ * Which URL-presence claims the pair supports. Only a complete pair claims
+ * presence, and a page is removed only when it is absent from B's observed
+ * inventory (`inventoryB`, site URL ids), not merely unanalyzed in B.
+ */
+export type PresenceScope =
+  | { completePair: false }
+  | { completePair: true; inventoryB: ReadonlySet<string> };
+
 /** Compare selected evidence; URL presence is claimed only for a complete pair. */
 export function compareCrawls(
   crawlA: readonly ChangePage[],
   crawlB: readonly ChangePage[],
-  options: { completePair: boolean; expected?: ExpectedChanges },
+  options: PresenceScope & { expected?: ExpectedChanges },
 ): ChangeObservation[] {
   const expected = options.expected ?? new Map();
   const pagesA = new Map(crawlA.map((page) => [page.siteUrlId, page]));
@@ -261,7 +270,7 @@ export function compareCrawls(
   if (options.completePair) {
     for (const id of ids(pagesB, false, pagesA)) observations.push(presence(pagesB.get(id)!, true));
     for (const id of ids(pagesA, false, pagesB))
-      observations.push(presence(pagesA.get(id)!, false));
+      if (!options.inventoryB.has(id)) observations.push(presence(pagesA.get(id)!, false));
   }
   return observations;
 }

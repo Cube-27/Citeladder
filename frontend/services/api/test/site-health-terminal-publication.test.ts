@@ -781,6 +781,26 @@ describe('crawl lifecycle', () => {
     });
   });
 
+  it('marks the inventory complete only when no page limit cut discovery short', async () => {
+    const discovered = async (changes: Partial<Insertable<SiteCrawls>>) => {
+      const seed = await running({ discovery_status: 'running', ...changes });
+      const root = await fixtures.task(seed, 'discover');
+      await db
+        .updateTable('site_crawl_tasks')
+        .set({ status: 'succeeded' })
+        .where('id', '=', root)
+        .execute();
+      await fixtures.page(seed, '/', {}, { observed: true });
+      await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
+      return crawlRow(seed.crawlId);
+    };
+    expect(await discovered({})).toMatchObject({ status: 'completed', inventory_complete: true });
+    expect(await discovered({ discovery_requested_count: 1 })).toMatchObject({
+      status: 'completed',
+      inventory_complete: false,
+    });
+  });
+
   it('hands analytics the crawl identity when no page was analyzed', async () => {
     const seed = await running({ analysis_status: 'pending' });
     await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
