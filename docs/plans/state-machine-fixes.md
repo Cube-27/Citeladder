@@ -69,7 +69,7 @@ document already states. The table keeps the questions as asked.
 | S08 | Site Health crawl outcomes and inventory | SH1, SH2, SH3, SH4, SH5 | — | | merged | [#660](https://github.com/Cube-27/Citeladder/pull/660) | Data correctness |
 | S09 | Public API idempotency outcome; prompt edit under lock | PA1, WS3 | — | | merged | [#662](https://github.com/Cube-27/Citeladder/pull/662) | Data correctness |
 | S10 | Refunded upgrades and payments on ended subscriptions | BL7, BL8 | S04 | | merged | [#658](https://github.com/Cube-27/Citeladder/pull/658) | Money; B70, B71 |
-| S11 | Agent turns closed after streaming a document | AG1 | S07 | | in progress | | Money; B69 |
+| S11 | Agent turns closed after streaming a document | AG1 | S07 | | in review | [#663](https://github.com/Cube-27/Citeladder/pull/663) | Money; B69 |
 | S12 | Status CHECK constraints; dead `site_urls.discovery_status` | DB1 | S08 | mig | todo | | Migration 0014; open last, alone |
 
 ## Order
@@ -129,7 +129,7 @@ data impact.
 | WS3 | Prompt edit reads the prompt under the project lock | — | `prompts/prompts.ts` | | done | 10d4af5 | CONFIRMED, low |
 | BL7 | Full refund of an upgrade payment (B70) | — | `billing/settlement.ts`, `billing/plan-changes.ts` | | done | de4e9ed | CONFIRMED, medium; B70 |
 | BL8 | Payments landing on a terminal or B52-cancelled subscription (B71) | BL7 | `billing/settlement.ts`, `billing/recovery.ts` | | done | 1a98363 | PLAUSIBLE, medium; B71 |
-| AG1 | Turn closed after streaming a document; Stop on a dead turn (B69) | — | `agent/{worker,runtime,store}.ts` | | todo | | CONFIRMED, medium; B69 |
+| AG1 | Turn closed after streaming a document; Stop on a dead turn (B69) | — | `agent/{worker,runtime,store}.ts` | | done | 6cf4347 | CONFIRMED, medium; B69 |
 | DB1 | CHECK constraints on status columns; drop `site_urls.discovery_status` | — | `migrations/0014_*.sql`, `site-health/{admission-writes,discover-task,analysis-rows}.ts` | mig | todo | | Hardening; site-health F6 CONFIRMED (written, never read) |
 
 ## Work details

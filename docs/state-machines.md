@@ -245,20 +245,18 @@ DB: `(provider, mode, event_id)` unique (0001:4052).
 | `queued` → `leased` | browser `POST …/runs/{id}/run` → claim | `routes/agent.ts:155-190`, `agent/queue.ts:53-63` | claimable, `attempt < max`, this run, SKIP LOCKED; interactive slot or 429 |
 | `leased` → `running` | `start` | `agent/queue.ts:64-82` | owner, `leased`, unexpired, attempt + 1 |
 | `running` → `succeeded` | `finish` → `terminalize` | `agent/runtime.ts`, `agent/queue.ts:21-42` | `lockRun` |
+| `running` → `succeeded` | browser closed (caller stop `interrupted`) after a document was staged → `saveDocuments` saves it with a fixed reply | `agent/runtime.ts` `stopped`, `agent/worker.ts` | `lockRun`; transcript ends on a user message with no search waiting; charged (B69) |
 | `running` → `failed` (code) | `runtime.fail`; caller stop → `interrupted`/`turn_timeout`; heartbeat gave up → `interrupted` | `agent/runtime.ts` `fail`, `agent/worker.ts` | `lockRun`; settle + refund (B58) in the same tx; reply only while the member may still write |
-| `queued`/`leased`/`running` → `cancelled` | Stop | `agent/store.ts:304-333` | run `FOR UPDATE`, not terminal; no lease check; charged (B58) |
+| `queued`/`leased`/`running` → `cancelled` | Stop | `agent/store.ts` `cancel` | run `FOR UPDATE`, not terminal, lease not lapsed; charged (B58) |
+| `leased`/`running`, lease lapsed → `failed interrupted` | Stop | `agent/store.ts` `cancel` → `endInterrupted` `agent/queue.ts` | run `FOR UPDATE`, `lease_expires_at <= now`; settle + refund (B69) |
 | `queued` > `unclaimed_grace_seconds` → `failed interrupted` | runner `recover` | `agent/queue.ts:93-146` | SKIP LOCKED; settle + refund |
-| held, lease expired → `failed interrupted` | runner `recover` | same | lease `<= now` |
+| held, lease expired → `failed interrupted` | runner `recover` → `endInterrupted` | same | lease `<= now` |
 
 The lease is `lease_seconds` = 60 s (`agent/bindings.ts`,
 `config/model-gateway.json`), three 20 s heartbeats. The lane's `nextDue`
 includes held runs' `lease_expires_at` (`workers/agent-worker.ts`), and a
 heartbeat that gives up makes `runAgentOnce` call `fail(lease, 'interrupted')`
 (`agent/worker.ts`), fenced by `lockRun`.
-
-Known invalid: closing the tab after a document
-streamed refunds the turn — [AG1](plans/state-machine-fixes.md#ag-agent)
-(B69).
 
 ### 4.2 Model attempts, tool attempts, outputs
 
