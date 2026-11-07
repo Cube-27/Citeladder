@@ -108,13 +108,21 @@ async function revokeGrant(
 /**
  * Revoke every live grant of `userId` inside the caller's password-reset or
  * password-change transaction, so a client connected with the old
- * credentials loses access along with the old sessions.
+ * credentials loses access along with the old sessions. Unexchanged
+ * authorization codes end too: a code minted with the old credentials would
+ * otherwise mint a fresh grant after the reset.
  */
 export async function revokeGrantsAfterCredentialReset(
   trx: Database,
   userId: string,
   actorId: string,
 ) {
+  await trx
+    .updateTable('mcp_authorization_codes')
+    .set({ consumed_at: new Date() })
+    .where('user_id', '=', userId)
+    .where('consumed_at', 'is', null)
+    .execute();
   const revoked = await trx
     .updateTable('mcp_oauth_grants')
     .set({ revoked_at: new Date(), updated_at: new Date() })
@@ -140,20 +148,31 @@ export type ConsentWorkspace = Readonly<{
   canChange: boolean;
   state: 'ready' | 'terms' | 'inactive' | 'unresolved';
 }>;
+/** The signed-in session approving a consent: its user and session version. */
+export type ConsentSession = Readonly<{ userId: string; sessionVersion: number }>;
 
+/**
+ * The consenting session must still be current. The user row is held
+ * `FOR SHARE` until the code commits, so a credential reset or sign-out
+ * everywhere either commits first (and this refuses) or waits and then
+ * consumes the new code.
+ */
 async function assertUserMayConsent(
-  db: Database,
-  userId: string,
+  trx: Database,
+  session: ConsentSession,
   config: ServiceConfig,
   mcp: McpConfig,
 ) {
-  const user = await db
+  const user = await trx
     .selectFrom('users')
-    .select(['email', 'is_active', 'registration_origin', 'email_verified_at'])
-    .where('id', '=', userId)
+    .select(['email', 'is_active', 'registration_origin', 'email_verified_at', 'session_version'])
+    .where('id', '=', session.userId)
+    .forShare()
     .executeTakeFirst();
+  if (user?.session_version !== session.sessionVersion)
+    throw new OAuthError('access_denied', 'Your session changed; sign in again to approve');
   if (
-    !user?.is_active ||
+    !user.is_active ||
     requiresEmailVerification(user) ||
     !accountAllowed(config, mcp, user.email)
   )
@@ -248,7 +267,7 @@ export function completeConsent(
   config: ServiceConfig,
   mcp: McpConfig,
   transaction: string,
-  userId: string,
+  session: ConsentSession,
   decision: {
     selected: string[];
     /** The Terms revision the page showed when its box was ticked; null when unticked. */
@@ -273,7 +292,8 @@ export function completeConsent(
     destination.searchParams.set('iss', mcp.origin);
     if (decision === null) destination.searchParams.set('error', 'access_denied');
     else {
-      await assertUserMayConsent(trx, userId, config, mcp);
+      await assertUserMayConsent(trx, session, config, mcp);
+      const { userId } = session;
       const unique = [...new Set(decision.selected)].sort(compareText);
       const shareable = await consentWorkspaces(trx, userId);
       const needTerms = validateConsentSelection(unique, shareable, decision);
