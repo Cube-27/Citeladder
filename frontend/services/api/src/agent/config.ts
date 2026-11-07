@@ -9,6 +9,8 @@ export function agentSettings(env: SettingSource = process.env) {
   return {
     skillsDirectory: resolveSkillsDirectory(String(setting('skills_directory'))),
     executionTimeoutSeconds: Number(setting('execution_timeout_seconds')),
+    /** A running turn's lease: a small multiple of the 20-second heartbeat, so a dead turn ends within about a minute. */
+    leaseSeconds: Number(setting('lease_seconds')),
     leaseMarginSeconds: Number(setting('lease_margin_seconds')),
     devEmail: String(resolveSettingSpec(policy.settings.dev_login_email, env)).trim().toLowerCase(),
     devPasswordConfigured: Boolean(resolveSettingSpec(policy.settings.dev_login_password, env)),
