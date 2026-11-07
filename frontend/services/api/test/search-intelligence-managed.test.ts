@@ -285,6 +285,59 @@ describe('managed Search Intelligence', () => {
     expect(await confirmRun(db, t.scope, next.id)).toMatchObject({ status: 'queued' });
   });
 
+  it('bills a late receipt of a call marked uncertain while its reporting window is open', async () => {
+    /** A dispatched call that a recovering pass then marks uncertain, as after a lost lease. */
+    async function uncertainCall() {
+      const t = await workspace('managed');
+      const confirmed = await confirmRun(db, t.scope, t.review.id);
+      const task = await db
+        .updateTable('analytics_tasks')
+        .set({
+          status: 'running',
+          lease_owner: 'research-test',
+          lease_expires_at: new Date(Date.now() + 120000),
+        })
+        .where('id', '=', (await runRow(confirmed.id)).analytics_task_id!)
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      const state = new AcquisitionState(db, task, confirmed.id);
+      const plans = await state.start();
+      const prepared = await state.prepare(plans![0]!, 0);
+      if (prepared.action !== 'dispatch')
+        throw new Error(`Expected a dispatch, got ${prepared.action}`);
+      expect(await state.dispatch(prepared)).toBe(true);
+      expect(await state.prepare(plans![0]!, 0)).toEqual({ action: 'stop' });
+      return { t, runId: confirmed.id, state, callId: prepared.call.id };
+    }
+
+    const late = await uncertainCall();
+    const key = { workspaceId: late.t.workspaceId, runId: late.runId };
+    expect(await runRow(late.runId)).toMatchObject({ status: 'uncertain' });
+    expect(await settleResearchCharge(db, key)).toBeNull();
+    await late.state.saveResponse(late.callId, {
+      body: { items: [] },
+      hash: 'receipt-hash',
+      taskId: 'late-receipt',
+      cost: '0.0061',
+    });
+    // $0.0061 × 1.3 = 7.93 credits, rounded up.
+    expect(await settleResearchCharge(db, key)).toMatchObject({ charged_credits: 8 });
+    expect(await platformCall((await runRow(late.runId)).platform_call_id)).toMatchObject({
+      status: 'settled',
+      credits: 8,
+    });
+
+    const lost = await uncertainCall();
+    const afterWindow = new Date(Date.now() + 181_000);
+    expect(
+      await settleResearchCharge(
+        db,
+        { workspaceId: lost.t.workspaceId, runId: lost.runId },
+        afterWindow,
+      ),
+    ).toMatchObject({ charged_credits: 0 });
+  });
+
   it('refuses to delete a project while its managed analysis holds credits', async () => {
     const t = await workspace('managed');
     await grant(db, await billingAccount(db, t.workspaceId), {

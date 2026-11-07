@@ -383,7 +383,7 @@ Run: `reviewed` → `queued` → `running` ⇄ `queued` (parked) → `succeeded`
 |---|---|
 | One active run per project | DB `uq_si_runs_project_active` (queued, running) 0001:5215; App project lock `search-intelligence/runs.ts:60-81` |
 | Ended run ⇒ no `collecting` dataset | App (`closeCollecting` `acquisition-state.ts:926`); not on cancel (SI3) |
-| Hold settles only when the run ended and no call can still report | App `charges.ts:20-73` |
+| Hold settles only when the run ended and no call can still report (a `dispatched` call, or one recovery marked `uncertain` `provider_result_missing`, within twice the provider timeout) | App `charges.ts` |
 | A dispatched call is never re-sent | App: `dispatched` without response → `uncertain` |
 
 | From → to | Trigger | Location | Guard |
@@ -404,9 +404,7 @@ Run: `reviewed` → `queued` → `running` ⇄ `queued` (parked) → `succeeded`
 Dispatch attempts are insert-only, one `outcome` per ordinal (DB
 `uq_si_dispatch_phase` 0001:4282).
 
-Known invalid: a receipt saved into a call already marked `uncertain` after settlement is
-never billed — [SI2](plans/state-machine-fixes.md#si-search-intelligence-and-integrations).
-Cancel leaves datasets `collecting` — [SI3](plans/state-machine-fixes.md#si-search-intelligence-and-integrations).
+Known invalid: cancel leaves datasets `collecting` — [SI3](plans/state-machine-fixes.md#si-search-intelligence-and-integrations).
 
 ### 6.2 Integrations
 
