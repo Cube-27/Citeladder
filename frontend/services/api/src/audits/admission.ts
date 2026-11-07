@@ -137,17 +137,26 @@ export async function admitAudit(
   if (!funded) return null;
   const month = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), 1));
   const end = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth() + 1, 1));
-  const spent = await db
+  // Repricing appends a projection per pricing version: each execution counts its latest once.
+  const latest = db
     .selectFrom('execution_cost_projections as p')
     .innerJoin('audits as a', 'a.id', 'p.audit_id')
     .select(
-      sql<string>`coalesce(sum(coalesce(p.provider_reported_cost_microusd, p.projected_total_cost_microusd)), 0)`.as(
-        'amount',
+      sql<string>`coalesce(p.provider_reported_cost_microusd, p.projected_total_cost_microusd)`.as(
+        'cost',
       ),
     )
     .where('a.funding_account_id', '=', account.id)
     .where('a.funded_budget_period_start', '>=', month)
     .where('a.funded_budget_period_start', '<', end)
+    .distinctOn('p.raw_response_artifact_id')
+    .orderBy('p.raw_response_artifact_id')
+    .orderBy('p.created_at', 'desc')
+    .orderBy('p.id', 'desc')
+    .as('latest');
+  const spent = await db
+    .selectFrom(latest)
+    .select(sql<string>`coalesce(sum(latest.cost), 0)`.as('amount'))
     .executeTakeFirstOrThrow();
   const ceiling =
     (BigInt(runtime.fundedBudgetMinor) * BigInt(policy.costs.microusd_per_usd)) / 100n;

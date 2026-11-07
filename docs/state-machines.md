@@ -131,12 +131,11 @@ Hold per task (`consumable_ledger`, subject `audit` task): reserve at creation
 (`maintenance.ts:119`), reclaim to terminal (`maintenance.ts:219`) and the owing
 sweep (`maintenance.ts:265-319`). `settlePromptRun` (`audits/prompt-runs.ts:57-74`)
 settles only open units. The funded monthly budget is not a hold: `admitAudit`
-sums `execution_cost_projections` under the account capacity lock
-(`audits/admission.ts:124-158`), a soft ceiling (B20).
+sums the latest `execution_cost_projections` row per execution
+(`raw_response_artifact_id`) under the account capacity lock
+(`audits/admission.ts`), a soft ceiling (B20).
 
-Known invalid (latent): the budget sums every projection row, so a second
-pricing version appended by repricing counts an execution twice; only one
-pricing catalog exists today — [AU4](plans/state-machine-fixes.md#au-audits).
+Known invalid: none.
 
 ## 3. Billing and credits
 
