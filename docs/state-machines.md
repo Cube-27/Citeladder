@@ -75,12 +75,13 @@ never committed: each is entered and left inside one transaction.
 | One scheduled audit per occurrence and market | DB `uq_audit_schedule_slot` 0001:4579 |
 | One repair child per parent and task set | DB `uq_audit_parent_repair_key` |
 | Terminal ⇒ no open task | App: cancel terminalizes tasks in its tx; finalize returns while any task is open `audits/finalization.ts:65` |
-| ≤ `active_audits_per_workspace` active launches | App `reserveAuditCapacity` `audits/admission.ts:35-50` under `audit-enqueue:{ws}`; repair audits skip it (AU3) |
+| ≤ `active_audits_per_workspace` active launches | App `reserveAuditCapacity` `audits/admission.ts` under `audit-enqueue:{ws}`, for launches and repairs |
+| A source task in at most one active repair child | App `createRepairAudit` under `audit-enqueue:{ws}`: 409 on overlap |
 
 | From → to | Trigger | Location | Guard |
 |---|---|---|---|
 | ∅ → `draft` → `validating` → `queued` | `createMarketAudit` | `audits/creation.ts:74-215` | `audit-enqueue` lock; capacity, abuse budget, `admitAudit`, `reservePromptRuns`; a scheduled occurrence returns its prior row |
-| ∅ → … → `queued` (repair) | `createRepairAudit` | `audits/repair.ts:16-230` | parent `FOR UPDATE` and terminal; BYOK failed tasks only; `reservePromptRuns` only |
+| ∅ → … → `queued` (repair) | `createRepairAudit` | `audits/repair.ts` | `audit-enqueue` lock, then parent `FOR UPDATE` and terminal; BYOK failed tasks only; no overlap with an active repair child; capacity and abuse budget (no manual-run allowance); `reservePromptRuns` |
 | `queued` → `running` | first task `markRunning` | `queue/audit-queue.ts:156-195` | `ownedAuditTask`; audit `queued`/`running` |
 | `running` → `failed` | `finalizeAudit` | `audits/finalization.ts:77-92` | no open task, no completed task |
 | `running` → `analyzing` → `reporting` → `completed`/`partially_completed` | `finalizeAudit` | `finalization.ts:94-133` | audit `FOR UPDATE`, not terminal, no open task; partial iff `metric.total_failed > 0` |

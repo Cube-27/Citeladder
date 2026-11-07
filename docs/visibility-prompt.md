@@ -473,6 +473,13 @@ capacity limits, due times, cancellation and queue recovery. The request has
 config-bounded admission and execution budgets; remaining tasks and future
 provider polls continue through the runner.
 
+A failure rerun (`POST /audits/{audit_id}/rerun-failures`) creates a repair
+child under the same workspace enqueue lock as a launch and passes the same
+abuse controls: the active-launch limit (429 with `Retry-After`) and the daily
+task budget. It does not count as a manual run. Repeating the same task set
+returns the existing child; a selection overlapping a repair child that is
+still active answers 409.
+
 Admission freezes prompt text/cohorts, roster, model/retrieval identity, request
 configuration and relevant versions. benchmark_mode is prompt framing, not a
 provider policy. Funding/occupancy is checked by

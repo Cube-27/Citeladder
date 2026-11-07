@@ -3,13 +3,13 @@ import { PROMPT_RUNS, reservePromptRuns } from './prompt-runs.ts';
 import { requireWorkspaceAccess } from '../entitlements/access.ts';
 import { policy } from '../config.ts';
 import { inTransaction, type Database } from '../db/database.ts';
-import { subjectXactLock } from '../db/advisory-lock.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { scraperConfiguration, searchPolicy } from '../search-surfaces/dataforseo.ts';
 import { surfaceKindOf, type Engine } from '../providers/config.ts';
 import { auditSlots, prepareAudit } from './freeze.ts';
 import {
   admitAudit,
+  lockAuditEnqueue,
   platformRoute,
   reserveAuditCapacity,
   type FrozenAudit,
@@ -82,7 +82,7 @@ async function createMarketAudit(
 ) {
   const access = await requireWorkspaceAccess(trx, workspaceId);
   const trigger = (launch.trigger ?? 'manual').trim().toLowerCase();
-  await subjectXactLock(trx, `audit-enqueue:${workspaceId}`);
+  await lockAuditEnqueue(trx, workspaceId);
   if (launch.scheduleId) {
     if (!launch.scheduledFor || trigger !== 'scheduled')
       throw new ApiError(400, 'Scheduled launch requires its occurrence');

@@ -1,6 +1,6 @@
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
-import { advisoryXactLock } from '../db/advisory-lock.ts';
+import { advisoryXactLock, subjectXactLock } from '../db/advisory-lock.ts';
 import { spendBudget } from '../abuse/usage.ts';
 import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
@@ -25,6 +25,11 @@ const unavailableCredential = () =>
   new ApiError(403, 'No executable credential available for this task', {
     code: 'execution_credentials_unavailable',
   });
+
+/** The workspace enqueue lock every audit launch and repair takes before admission. */
+export function lockAuditEnqueue(db: Database, workspaceId: string) {
+  return subjectXactLock(db, `audit-enqueue:${workspaceId}`);
+}
 
 /** Called under the workspace enqueue lock, before taking the account capacity lock. */
 export async function reserveAuditCapacity(

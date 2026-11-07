@@ -158,13 +158,14 @@ export const auditRoutes = [
     body: repairInput,
     response: auditSchema,
     raw: true,
-    async handle({ c, db }, { path }) {
+    async handle({ c, db, config }, { path }) {
       const workspace = c.get('workspace').workspaceId,
         result = await createRepairAudit(
           db,
           workspace,
           path.audit_id,
           await readBody(c, repairInput),
+          auditRuntime(config.settings),
         );
       return c.json(await readAudit(db, workspace, result.auditId), result.created ? 201 : 200);
     },
