@@ -57,9 +57,9 @@ are the reviewer's, not decisions.
 
 | PR | Title | Rows (commit order) | Depends on | Flags | Status | PR link | Notes |
 |----|-------|---------------------|-----------|-------|--------|---------|-------|
-| S01 | Credential resets end unexchanged MCP codes; invitation issuer lock | WS1, WS2 | — | | in review | [#653](https://github.com/Cube-27/Citeladder/pull/653) | Security |
+| S01 | Credential resets end unexchanged MCP codes; invitation issuer lock | WS1, WS2 | — | | merged | [#653](https://github.com/Cube-27/Citeladder/pull/653) | Security |
 | S02 | Credit holds that never settle | BL1, SI1, BL2 | — | | in progress | | Money |
-| S03 | Lease fences: per-claim audit lease, attempt-fenced heartbeats, poll reclaim | Q1, Q2, AU1 | — | | in review | [#656](https://github.com/Cube-27/Citeladder/pull/656) | Money (duplicate paid dispatch) |
+| S03 | Lease fences: per-claim audit lease, attempt-fenced heartbeats, poll reclaim | Q1, Q2, AU1 | — | | merged | [#656](https://github.com/Cube-27/Citeladder/pull/656) | Money (duplicate paid dispatch) |
 | S04 | Billing webhook, checkout and replay recovery | BL3, BL4, BL5, BL6 | — | | in progress | | Money |
 | S05 | Keyword Research settlement, cancel and reconnect | SI2, SI3, SI4 | S02 | | todo | | Money; shares `search-intelligence/` with S02 |
 | S06 | Audit schedules, repair admission and cost records | AU2, AU3, AU4, AU5 | — | | todo | | Stuck users, abuse bound, cost |
