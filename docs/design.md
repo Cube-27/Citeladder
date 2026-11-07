@@ -74,6 +74,7 @@ Light and dark on every surface, defaulting to the system preference.
 | D45 | A product image is the one website surface with a shadow (owner, 6 November 2026: the image "had one more unnecessary background" and "can have shadows since they sit on a background"). The frosted rim is gone: the frame's well has no fill, blur or padding of its own, so the white screen card sits straight on its stage (a standalone frame) or its tint (a FeatureCard), lifted by `shadow-pop` (its faint ring and soft drops; the dark theme's own pair). Every other D44 rule stands. Supersedes D35's and D44's frosted rim and D44's no-shadow rule for product images. |
 | D46 | Form controls go back to the soft edge (owner, 6 November 2026: the dark border "should be dark grey smudged like before"). Fields, the docs search trigger, the CSV file input, checkbox and radio boxes and the MCP consent page's choices wear D5's 1px `line` edge with the `shadow-edge` smudge (radio: no smudge), `line-strong` on hover; the `line-field` token and its 3:1 contrast check are deleted. D37's 2px `focus` edge in the 3px `line` halo stays, as do its Cal Sans auth titles. Menu rows never shrink below 32px when a long menu scrolls. A table row takes `surface-sunken` on hover only when pressing it does something (it has an `onClick`). Supersedes D37's `line-field` resting edge and `ink-secondary` hover, and D38's field edges. |
 | D47 | Website surfaces are less rounded (owner, 6 November 2026: "reduce it so its not so rounded for entire marketing components reduce by like 8px"). Each surface radius drops 8px: 4 for an inner card or vignette, a popup, the navbar and the cookie card; 12 for a card; 16 for a stage (`--site-radius-inner`, `-card`, `-stage` in `site.css`). An inner card stays concentric in a card's 8px inset. Controls and chips keep 2–8, pills keep the full radius, and the drawn app screens keep the app's radii. Supersedes D36's surface radii (12 · 20 · 24). |
+| D48 | The app sets text at 12, 14 and 16 only (owner, 7 November 2026: "should be 14px baseline and 16px heading … 14, 16 and 12 should cover most sizes in the app"). Body, item titles, row values (`figure-sm`), Agent prose and controls are 14; section, card, dialog and drawer titles are 16 (`heading`); captions, badges, deltas and code are 12. The PageHeader title and a metric's figure are the only 24s (`display-sm`). A `KpiRow` is one card holding its Stats as a strip, and a score Stat is a 64px `ScoreRing` with its number inside, beside the label and action, so the strip is the ring's height. The website's tokens and sizes are unchanged. Supersedes the figure, ring and dialog-title sizes of D7, D8's bare and 96px rings, and D15's 28. |
 
 D5–D17 come from the owner's reviews of the shipped app and docs on 5 November
 2026. D18–D25 are the website review rounds in the
@@ -188,17 +189,16 @@ Product roles are the `.type-*` classes in `globals.css`, reached through
 | `.type-badge` | product | `12px / 16px` | — |
 | `.type-body` | product | `14px / 20px` | — |
 | `.type-caption` | product | `12px / 16px` | — |
-| `.type-code` | product | `13px / 22px` | — |
+| `.type-code` | product | `12px / 20px` | — |
 | `.type-control` | product | `14px / 20px` | — |
-| `.type-delta` | product | `13px / 20px` | — |
+| `.type-delta` | product | `12px / 16px` | — |
 | `.type-eyebrow` | product | `12px / 16px` | — |
-| `.type-figure` | product | `28px / 36px` | — |
-| `.type-figure-ring` | product | `32px / 38px` | — |
-| `.type-figure-sm` | product | `16px / 24px` | — |
-| `.type-item-title` | product | `16px / 24px` | — |
+| `.type-figure` | product | `24px / 32px` | — |
+| `.type-figure-sm` | product | `14px / 20px` | — |
+| `.type-item-title` | product | `14px / 20px` | — |
 | `.type-label` | product | `14px / 20px` | — |
 | `.type-page-title` | product | `24px / 32px` | — |
-| `.type-section-title` | product | `22px / 28px` | — |
+| `.type-section-title` | product | `16px / 24px` | — |
 | `.cl-body` | public | `16px / 26px` | — |
 | `.cl-fcard-title` | public | `22px / 28px` | — |
 | `.cl-lead` | public | `18px / 30px` | — |

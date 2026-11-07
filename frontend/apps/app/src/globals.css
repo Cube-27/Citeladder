@@ -587,19 +587,20 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   }
   /* In the app Cal Sans is the page title's and the auth card title's alone
      (decisions D7, D37): every other title and number is Geist, never above
-     500 (D6). */
+     500 (D6). The app's sizes are 12, 14 and 16; only the page title and a
+     metric's figure are 24 (D48). */
   .type-section-title {
     font-family: var(--font-sans);
-    font-size: var(--text-heading-lg);
-    line-height: var(--text-heading-lg--line-height);
-    font-weight: var(--text-heading-lg--font-weight);
-    letter-spacing: var(--text-heading-lg--letter-spacing);
+    font-size: var(--text-heading);
+    line-height: var(--text-heading--line-height);
+    font-weight: 500;
+    letter-spacing: 0;
     color: var(--color-ink);
   }
   .type-item-title {
     font-family: var(--font-sans);
-    font-size: var(--text-heading);
-    line-height: var(--text-heading--line-height);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
     font-weight: 500;
     letter-spacing: 0;
     color: var(--color-ink);
@@ -637,51 +638,40 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     letter-spacing: 0;
     color: var(--color-ink-muted);
   }
-  /* The number in a Stat, a ScoreRing or a donut's centre: Geist 500 with
-     digits of one width. */
+  /* The number in a Stat or a ScoreRing's centre: Geist 500 at the page
+     title's 24/32 (D48), digits of one width. */
   .type-figure {
     font-family: var(--font-sans);
-    font-size: var(--text-stat);
-    line-height: var(--text-stat--line-height);
+    font-size: var(--text-display-sm);
+    line-height: var(--text-display-sm--line-height);
     font-weight: 500;
-    letter-spacing: var(--text-stat--letter-spacing);
+    letter-spacing: var(--text-display-sm--letter-spacing);
     font-variant-numeric: tabular-nums;
     color: var(--color-ink);
   }
-  /* A number inside a row: the card-title size with digits of one width. */
-  /* The ScoreRing's and the DonutChart's centre: Geist 500 32/38 (D7). */
-  .type-figure-ring {
-    font-family: var(--font-sans);
-    font-size: var(--text-display-lg);
-    line-height: var(--text-display-lg--line-height);
-    font-weight: 500;
-    letter-spacing: var(--text-display-lg--letter-spacing);
-    font-variant-numeric: tabular-nums;
-    color: var(--color-ink);
-  }
-
+  /* A number inside a row: the body size with digits of one width. */
   .type-figure-sm {
     font-family: var(--font-sans);
-    font-size: var(--text-heading);
-    line-height: var(--text-heading--line-height);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
     font-weight: 500;
     letter-spacing: 0;
     font-variant-numeric: tabular-nums;
     color: var(--color-ink);
   }
-  /* A change indicator: the mono data role; the caller's tone is the ink. */
+  /* A change indicator: mono at the caption size; the caller's tone is the ink. */
   .type-delta {
     font-family: var(--font-mono);
-    font-size: var(--text-data);
-    line-height: var(--text-data--line-height);
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
     font-weight: 400;
     letter-spacing: 0;
   }
-  /* A block of code or a copyable command: the mono code role. */
+  /* A block of code or a copyable command: mono at the caption size. */
   .type-code {
     font-family: var(--font-mono);
-    font-size: var(--text-code);
-    line-height: var(--text-code--line-height);
+    font-size: var(--text-caption);
+    line-height: var(--text-body-sm--line-height);
     font-weight: 400;
     letter-spacing: 0;
   }
@@ -699,8 +689,8 @@ html[data-public-surface]:not([data-marketing-surface]) body {
      Generated headings start at h2 (see markdown.tsx). */
   .prose-content {
     font-family: var(--font-sans);
-    font-size: var(--text-body);
-    line-height: var(--text-body--line-height);
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
     font-weight: 400;
     color: var(--color-ink-secondary);
   }
@@ -713,11 +703,8 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     margin: 1.5rem 0 0.75rem;
   }
   .prose-content > :where(h2, h3, h4, h5, h6):first-child { margin-top: 0; }
-  .prose-content h2 {
-    font-size: var(--text-title);
-    line-height: var(--text-title--line-height);
-  }
-  .prose-content h3 { font-size: var(--text-heading); line-height: var(--text-heading--line-height); }
+  .prose-content h2 { font-size: var(--text-heading); line-height: var(--text-heading--line-height); }
+  .prose-content h3 { font-size: var(--text-label); line-height: var(--text-label--line-height); }
   .prose-content :where(h4, h5, h6) { font-size: var(--text-label); line-height: var(--text-label--line-height); }
   .prose-content :where(p, ul, ol, pre, table, blockquote) { margin: 0 0 1rem; }
   .prose-content :where(ul, ol) { margin-left: 1.5rem; }
@@ -739,8 +726,8 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   }
   .prose-content code {
     font-family: var(--font-mono);
-    font-size: var(--text-data);
-    line-height: var(--text-data--line-height);
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
     padding: 0.125rem 0.25rem;
     border-radius: var(--radius-xs);
     background: var(--color-surface-sunken);
@@ -752,8 +739,8 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     border-radius: var(--radius-md);
     background: var(--color-surface-sunken);
     font-family: var(--font-mono);
-    font-size: var(--text-code);
-    line-height: var(--text-code--line-height);
+    font-size: var(--text-caption);
+    line-height: var(--text-body-sm--line-height);
   }
   .prose-content pre code { padding: 0; background: transparent; font-size: inherit; line-height: inherit; }
   .prose-content .prose-table-frame {

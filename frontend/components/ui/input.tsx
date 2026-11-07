@@ -87,7 +87,7 @@ export function Input({
       )}
     >
       {startContent ? (
-        <span className="text-ink-muted text-data flex shrink-0 items-center font-mono whitespace-nowrap">
+        <span className="text-ink-muted text-caption flex shrink-0 items-center font-mono whitespace-nowrap">
           {startContent}
         </span>
       ) : null}
@@ -100,7 +100,7 @@ export function Input({
         {...props}
       />
       {endContent ? (
-        <span className="text-ink-muted text-data flex shrink-0 items-center font-mono whitespace-nowrap">
+        <span className="text-ink-muted text-caption flex shrink-0 items-center font-mono whitespace-nowrap">
           {endContent}
         </span>
       ) : null}
