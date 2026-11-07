@@ -105,10 +105,13 @@ planned).
 | held → `succeeded`/`failed` | `repairOwnedCompletion` | `maintenance.ts:23-78` | `ownedAuditTask` + artifact/observation; unreachable today because success and failure write evidence and status in one tx |
 | non-terminal → `cancelled` | `cancelAudit` | `maintenance.ts:103-118` | status not terminal |
 
-Known invalid: a Google AI Overview task that
-fails after a paid submission records no cost projection —
-[AU5](plans/state-machine-fixes.md#au-audits). Results dropped because the task
-lost ownership mid-call record no cost (internal cost only; not planned).
+A surface failure writes a failure artifact and its cost projection in the
+failure transaction: always on the LLM scraper path, and on the Google AI
+Overview path (beside its observation) once a paid submission reported its
+charge.
+
+Known invalid: none persisted. Results dropped because the task lost ownership
+mid-call record no cost (internal cost only; not planned).
 
 ### 2.3 `audit_schedules` (implicit: `enabled`, `next_run_at`, lease, `failure_count`)
 

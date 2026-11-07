@@ -567,7 +567,10 @@ Paid provider tasks retain their committed submission/account identity across
 restarts. Uncertain scraper submissions use exact-tag, product-checked, bounded
 paginated reconciliation. The config-owned recovery deadline runs from committed intent. Recovery never resubmits a
 paid task; unrecovered tasks fail without negative brand observations. Known
-submission charges remain recorded even when retrieval fails.
+submission charges remain recorded even when retrieval fails: the failed task
+keeps a failure artifact carrying the reported charge and its cost projection,
+on the scraper and Google AI Overview surfaces alike, so the funded budget and
+internal costs count the paid request.
 
 Scraper citations use root and nested sources, canonicalized and deduplicated.
 Ad items (`chat_gpt_ad`) are skipped by the source walker and the answer-text

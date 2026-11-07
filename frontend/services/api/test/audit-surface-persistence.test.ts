@@ -196,6 +196,73 @@ describe('durable surface evidence', () => {
       .executeTakeFirstOrThrow();
     expect(projection).toMatchObject({ provider_reported_cost_microusd: '1800', attempt_count: 3 });
   });
+  it('records the reported submission charge of a paid overview that ends failed', async () => {
+    const t = await seed();
+    await persistSurfaceExchange(db, t.task, t.owner, {
+      taskId: 'provider-id',
+      chargeMicrousd: 1800,
+      paid: true,
+      delaySeconds: 0,
+    });
+    await db
+      .updateTable('audit_tasks')
+      .set({
+        status: 'running',
+        lease_owner: 'worker',
+        lease_expires_at: new Date(Date.now() + 120000),
+      })
+      .where('id', '=', t.task.id)
+      .execute();
+    const polled = await db
+      .selectFrom('audit_tasks')
+      .selectAll()
+      .where('id', '=', t.task.id)
+      .executeTakeFirstOrThrow();
+    const result = parseOverview(
+      {
+        status_code: 20000,
+        tasks: [
+          { id: 'provider-id', status_code: 20000, result: [{ items: { unexpected: true } }] },
+        ],
+      },
+      'provider-id',
+    );
+    if (typeof result === 'string') throw new Error('Expected failure');
+    await persistOverviewFailure(db, polled, 'worker', result, runtime, { exchange: 'unpaid' });
+    const task = await db
+      .selectFrom('audit_tasks')
+      .select(['status', 'result_artifact_id'])
+      .where('id', '=', t.task.id)
+      .executeTakeFirstOrThrow();
+    expect(task.status).toBe('failed');
+    const projections = await db
+      .selectFrom('execution_cost_projections')
+      .select(['id', 'raw_response_artifact_id', 'provider_reported_cost_microusd'])
+      .where('task_id', '=', t.task.id)
+      .execute();
+    expect(projections).toEqual([
+      {
+        id: projections[0]!.id,
+        raw_response_artifact_id: task.result_artifact_id,
+        provider_reported_cost_microusd: '1800',
+      },
+    ]);
+    expect(
+      await db
+        .selectFrom('internal_costs')
+        .select(['source', 'cost_microusd'])
+        .where('source_id', '=', projections[0]!.id)
+        .execute(),
+    ).toEqual([{ source: 'answer_engine', cost_microusd: '1800' }]);
+    // The overview keeps its own observation beside the failure artifact.
+    expect(
+      await db
+        .selectFrom('aio_observations')
+        .select('outcome')
+        .where('task_id', '=', t.task.id)
+        .execute(),
+    ).toEqual([{ outcome: 'parser_error' }]);
+  });
   it('records a parser failure as unavailable, retaining paid submission evidence without a successful raw artifact', async () => {
     const t = await seed();
     const result = parseOverview(
