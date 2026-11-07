@@ -14,8 +14,13 @@ import { auditEvent, transitionAudit } from './state.ts';
 
 const batchSize = auditPolicy.constants.audit_lease_sweep_batch_size;
 type Parent = { workspaceId: string; auditId: string };
-function expiredLeaseStatus(uncertain: boolean, failed: boolean, auditStatus: string) {
-  if (uncertain) return 'submission_uncertain';
+/** Where a reclaimed lease goes; `pending` names a paid submission that still needs no new attempt. */
+function expiredLeaseStatus(
+  pending: 'submission_uncertain' | 'awaiting_provider_result' | null,
+  failed: boolean,
+  auditStatus: string,
+) {
+  if (pending) return pending;
   if (!failed) return 'retry_wait';
   return auditStatus === 'cancelled' ? 'cancelled' : 'failed';
 }
@@ -185,15 +190,18 @@ export class AuditMaintenance {
           const parentTerminal = auditPolicy.constants.audit_terminal_statuses.includes(
             audit.status,
           );
-          const uncertain = Boolean(
-            task.provider_submission_ref && !task.provider_task_id && !parentTerminal,
-          );
-          const attempts = task.attempt_count + (uncertain || parentTerminal ? 0 : 1);
-          const failed = !uncertain && (parentTerminal || attempts >= task.max_attempts);
+          // A paid submission is never charged again: an unconfirmed one is reconciled, and
+          // one with a provider task id goes back to polling, bounded by the recovery deadline.
+          let pending: 'submission_uncertain' | 'awaiting_provider_result' | null = null;
+          if (!parentTerminal && task.provider_task_id) pending = 'awaiting_provider_result';
+          else if (!parentTerminal && task.provider_submission_ref)
+            pending = 'submission_uncertain';
+          const attempts = task.attempt_count + (pending || parentTerminal ? 0 : 1);
+          const failed = !pending && (parentTerminal || attempts >= task.max_attempts);
           await trx
             .updateTable('audit_tasks')
             .set({
-              status: expiredLeaseStatus(uncertain, failed, audit.status),
+              status: expiredLeaseStatus(pending, failed, audit.status),
               attempt_count: attempts,
               available_at: at,
               lease_owner: null,

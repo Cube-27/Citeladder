@@ -84,7 +84,7 @@ describe('frozen audit execution identity', () => {
     const context = await loadExecutionContext(
       db,
       t.task,
-      'worker',
+      t.task.lease_owner,
       {
         ...runtime,
         audits: { ...runtime.audits, audit_timeout_seconds: 1, audit_max_output_tokens: 5 },
@@ -138,10 +138,17 @@ describe('frozen audit execution identity', () => {
       runtime,
     );
     const [task] = await queue.claim('worker', 1, { workspaceId: t.workspaceId, auditId: id });
-    const context = await loadExecutionContext(db, task!, 'worker', runtime, auditTestKey, {
-      at: new Date(),
-      env: {},
-    });
+    const context = await loadExecutionContext(
+      db,
+      task!,
+      task!.lease_owner,
+      runtime,
+      auditTestKey,
+      {
+        at: new Date(),
+        env: {},
+      },
+    );
     expect(directRequest(context!)).toMatchObject({
       logical_engine: 'claude',
       reasoning_effort: 'low',
@@ -162,7 +169,7 @@ describe('frozen audit execution identity', () => {
       .where('id', '=', t.task.id)
       .execute();
     await expect(
-      loadExecutionContext(db, t.task, 'worker', runtime, auditTestKey, {
+      loadExecutionContext(db, t.task, t.task.lease_owner, runtime, auditTestKey, {
         at: new Date(),
         env: {},
       }),
@@ -170,12 +177,19 @@ describe('frozen audit execution identity', () => {
   });
   it('commits exactly one submission intent and binds polling to that credential revision', async () => {
     const t = await seed(true);
-    const context = (await loadExecutionContext(db, t.task, 'worker', runtime, auditTestKey, {
-      at: new Date(),
-      env: {},
-    }))!;
+    const context = (await loadExecutionContext(
+      db,
+      t.task,
+      t.task.lease_owner,
+      runtime,
+      auditTestKey,
+      {
+        at: new Date(),
+        env: {},
+      },
+    ))!;
     const intents = await Promise.all(
-      [1, 2].map(() => commitSubmissionIntent(db, context, 'worker')),
+      [1, 2].map(() => commitSubmissionIntent(db, context, t.task.lease_owner)),
     );
     expect(intents.map((intent) => intent?.fresh).sort()).toEqual([false, true]);
     const persisted = await db
@@ -217,7 +231,7 @@ describe('frozen audit execution identity', () => {
       async () => ({ status: 200, body: { status_code: 20000, tasks: [] } }),
     );
     await expect(
-      loadExecutionContext(db, t.task, 'worker', runtime, auditTestKey, {
+      loadExecutionContext(db, t.task, t.task.lease_owner, runtime, auditTestKey, {
         at: new Date(),
         env: {},
       }),
@@ -231,20 +245,34 @@ describe('frozen audit execution identity', () => {
       .set({ request_snapshot: JSON.stringify(snapshot) })
       .where('id', '=', t.task.id)
       .execute();
-    const context = (await loadExecutionContext(db, t.task, 'worker', runtime, auditTestKey, {
-      at: new Date(),
-      env: {},
-    }))!;
+    const context = (await loadExecutionContext(
+      db,
+      t.task,
+      t.task.lease_owner,
+      runtime,
+      auditTestKey,
+      {
+        at: new Date(),
+        env: {},
+      },
+    ))!;
     expect(() => frozenSurfaceRequest(llmScraperSurface, context, 'submission-ref')).toThrow(
       'Frozen search request has no request_settings',
     );
   });
   it('refuses to commit a stale credential snapshot after a concurrent rotation', async () => {
     const t = await seed(true);
-    const context = (await loadExecutionContext(db, t.task, 'worker', runtime, auditTestKey, {
-      at: new Date(),
-      env: {},
-    }))!;
+    const context = (await loadExecutionContext(
+      db,
+      t.task,
+      t.task.lease_owner,
+      runtime,
+      auditTestKey,
+      {
+        at: new Date(),
+        env: {},
+      },
+    ))!;
     await updateConnection(
       db,
       t.workspaceId,
@@ -254,7 +282,7 @@ describe('frozen audit execution identity', () => {
       auditTestKey,
       runtime.providers,
     );
-    await expect(commitSubmissionIntent(db, context, 'worker')).rejects.toMatchObject({
+    await expect(commitSubmissionIntent(db, context, t.task.lease_owner)).rejects.toMatchObject({
       code: 'connection_changed',
     });
     const task = await db

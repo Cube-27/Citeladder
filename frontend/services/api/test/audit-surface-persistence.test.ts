@@ -70,19 +70,20 @@ async function seed() {
     runtime,
   );
   const [task] = await queue.claim('worker', 1, { workspaceId: t.workspaceId, auditId });
-  await queue.markRunning(task!, 'worker');
+  const owner = task!.lease_owner;
+  await queue.markRunning(task!, owner);
   tasks.push(task!.id);
-  const context = await loadExecutionContext(db, task!, 'worker', runtime, auditTestKey, {
+  const context = await loadExecutionContext(db, task!, owner, runtime, auditTestKey, {
     at: new Date(),
     env: {},
   });
-  const intent = await commitSubmissionIntent(db, context!, 'worker');
-  return { ...t, task: intent!.task };
+  const intent = await commitSubmissionIntent(db, context!, owner);
+  return { ...t, task: intent!.task, owner };
 }
 describe('durable surface evidence', () => {
   it('preserves the submission charge through a pending park and an atomic terminal observation', async () => {
     const t = await seed();
-    await persistSurfaceExchange(db, t.task, 'worker', {
+    await persistSurfaceExchange(db, t.task, t.owner, {
       taskId: 'provider-id',
       chargeMicrousd: 1800,
       paid: true,
@@ -207,7 +208,7 @@ describe('durable surface evidence', () => {
       'provider-id',
     );
     if (typeof result === 'string') throw new Error('Expected failure');
-    await persistOverviewFailure(db, t.task, 'worker', result, runtime, { exchange: 'unpaid' });
+    await persistOverviewFailure(db, t.task, t.owner, result, runtime, { exchange: 'unpaid' });
     expect(
       await db
         .selectFrom('aio_observations')

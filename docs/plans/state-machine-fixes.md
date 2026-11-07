@@ -59,7 +59,7 @@ are the reviewer's, not decisions.
 |----|-------|---------------------|-----------|-------|--------|---------|-------|
 | S01 | Credential resets end unexchanged MCP codes; invitation issuer lock | WS1, WS2 | — | | merged | [#653](https://github.com/Cube-27/Citeladder/pull/653) | Security |
 | S02 | Credit holds that never settle | BL1, SI1, BL2 | — | | in review | [#654](https://github.com/Cube-27/Citeladder/pull/654) | Money |
-| S03 | Lease fences: per-claim audit lease, attempt-fenced heartbeats, poll reclaim | Q1, Q2, AU1 | — | | in progress | | Money (duplicate paid dispatch) |
+| S03 | Lease fences: per-claim audit lease, attempt-fenced heartbeats, poll reclaim | Q1, Q2, AU1 | — | | merged | [#656](https://github.com/Cube-27/Citeladder/pull/656) | Money (duplicate paid dispatch) |
 | S04 | Billing webhook, checkout and replay recovery | BL3, BL4, BL5, BL6 | — | | in progress | | Money |
 | S05 | Keyword Research settlement, cancel and reconnect | SI2, SI3, SI4 | S02 | | todo | | Money; shares `search-intelligence/` with S02 |
 | S06 | Audit schedules, repair admission and cost records | AU2, AU3, AU4, AU5 | — | | todo | | Stuck users, abuse bound, cost |
@@ -100,9 +100,9 @@ data impact.
 | BL1 | Project deletion waits for an open Keyword Research hold | — | `entitlements/ledger.ts`, `projects/service.ts` | | done | 46b1faa | CONFIRMED, medium (customer credits held forever) |
 | SI1 | A connection or member change at dispatch ends the run, not the task only | — | `search-intelligence/{acquisition-state,executor}.ts` | | done | e9274e2 | CONFIRMED (narrow window), medium-low |
 | BL2 | A failed charged call's settlement is retried before the sweep can charge the fallback | — | `billing/metering.ts` | | done | dc0803e | PLAUSIBLE (settle tx error), low |
-| Q1 | Audit lane: one lease owner per claim, so a stale slot never matches a re-claim | — | `audits/worker.ts`, `queue/audit-queue.ts` | | todo | | Guard gap CONFIRMED, trigger PLAUSIBLE (heartbeat stalled past the lease); medium (duplicate paid call). Merges queue F2 and audits B7 |
-| Q2 | Discovery and Site Health heartbeats carry the claimed attempt; two unfenced Site Health settles take the fence | Q1 | `workers/discovery-worker.ts`, `site-health/{site-task,analyze-task}.ts` | | todo | | PLAUSIBLE, low |
-| AU1 | An expired lease while polling a paid provider task charges no attempt | — | `audits/maintenance.ts` | | todo | | CONFIRMED (needs repeated process deaths), low |
+| Q1 | Audit lane: one lease owner per claim, so a stale slot never matches a re-claim | — | `audits/worker.ts`, `queue/audit-queue.ts` | | done | 8fa5226 | Guard gap CONFIRMED, trigger PLAUSIBLE (heartbeat stalled past the lease); medium (duplicate paid call). Merges queue F2 and audits B7 |
+| Q2 | Discovery and Site Health heartbeats carry the claimed attempt; two unfenced Site Health settles take the fence | Q1 | `workers/discovery-worker.ts`, `site-health/{site-task,analyze-task}.ts` | | done | 44b0be1 | PLAUSIBLE, low |
+| AU1 | An expired lease while polling a paid provider task charges no attempt | — | `audits/maintenance.ts` | | done | 3926f40 | CONFIRMED (needs repeated process deaths), low |
 | BL3 | Exhausted webhook rows with an expired lease are quarantined; a digest conflict never rewrites a completed row | — | `billing/{recovery,webhooks}.ts` | | todo | | CONFIRMED (crash on final attempt), medium-low; digest part PLAUSIBLE |
 | BL4 | Reopening an abandoned add-on or upgrade never answers 500 | — | `routes/billing.ts` | | todo | | CONFIRMED, low |
 | BL5 | A plan-change replay reflects a provider refusal | — | `billing/plan-changes.ts` | | todo | | CONFIRMED (crash window), low |
