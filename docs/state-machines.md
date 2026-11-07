@@ -446,10 +446,6 @@ A retry of a failed claim, or of a claim with no outcome older than
 | Machine | States and transitions | Enforced |
 |---|---|---|
 | `actions.status` ∈ `open`/`dismissed`/`implemented`; `effective_status` adds `in_progress`/`measuring`/`done` (`config/actions.ts:33-34`) | ∅ → `open` by evidence sync `opportunities/action-sync.ts:131-220` (project lock); `open` ↔ `dismissed` `actions.ts:313-357` (Action `FOR UPDATE`); `open` → `implemented` by declaration `declarations.ts:225-324` (project lock, Action `FOR UPDATE`, idempotent); `effective_status` recomputed by `refreshActionStatus` `action-status.ts:62-81` on every writer | DB one Action per group `uq_actions_project_group`, one declaration per Action; statuses App |
-| `prompts.status` ∈ `active`/`archived` | `updatePrompt` `prompts/prompts.ts:323-363`, `bulkSetStatus` `:378-422` (project + set lock, binding check); inserts `active` | App; occupancy counts every prompt (B27) |
+| `prompts.status` ∈ `active`/`archived` | `updatePrompt` `prompts/prompts.ts` (project lock, then the prompt re-read `FOR UPDATE`, binding check), `bulkSetStatus` (project + set lock, binding check); inserts `active` | App; occupancy counts every prompt (B27) |
 | `prompt_candidates.disposition` | `pending` → `accepted`/`rejected`/`deleted` `prompts/candidates.ts:183-289` (project + set locks, pending rows `FOR UPDATE`) | DB `uq_prompt_candidate_pending_text` 0001:5209 |
 | Brand facts | `draft` → `confirmed` → `retired` (terminal), `expected_revision` under project lock `projects/brand-facts.ts:114-200` | DB `ck_brand_fact_status`, `ck_brand_fact_revision_status` 0001:935, 949; revision unique |
-
-Known invalid: a prompt edit reads the prompt before the project lock, so an
-activation can bind against a stale topic or text and leave an active prompt
-unbound to its current topic — [WS3](plans/state-machine-fixes.md#ws-workspace-auth-and-prompts).
