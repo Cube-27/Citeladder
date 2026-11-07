@@ -75,12 +75,13 @@ never committed: each is entered and left inside one transaction.
 | One scheduled audit per occurrence and market | DB `uq_audit_schedule_slot` 0001:4579 |
 | One repair child per parent and task set | DB `uq_audit_parent_repair_key` |
 | Terminal ⇒ no open task | App: cancel terminalizes tasks in its tx; finalize returns while any task is open `audits/finalization.ts:65` |
-| ≤ `active_audits_per_workspace` active launches | App `reserveAuditCapacity` `audits/admission.ts:35-50` under `audit-enqueue:{ws}`; repair audits skip it (AU3) |
+| ≤ `active_audits_per_workspace` active launches | App `reserveAuditCapacity` `audits/admission.ts` under `audit-enqueue:{ws}`, for launches and repairs |
+| A source task in at most one active repair child | App `createRepairAudit` under `audit-enqueue:{ws}`: 409 on overlap |
 
 | From → to | Trigger | Location | Guard |
 |---|---|---|---|
 | ∅ → `draft` → `validating` → `queued` | `createMarketAudit` | `audits/creation.ts:74-215` | `audit-enqueue` lock; capacity, abuse budget, `admitAudit`, `reservePromptRuns`; a scheduled occurrence returns its prior row |
-| ∅ → … → `queued` (repair) | `createRepairAudit` | `audits/repair.ts:16-230` | parent `FOR UPDATE` and terminal; BYOK failed tasks only; `reservePromptRuns` only |
+| ∅ → … → `queued` (repair) | `createRepairAudit` | `audits/repair.ts` | `audit-enqueue` lock, then parent `FOR UPDATE` and terminal; BYOK failed tasks only; no overlap with an active repair child; capacity and abuse budget (no manual-run allowance); `reservePromptRuns` |
 | `queued` → `running` | first task `markRunning` | `queue/audit-queue.ts:156-195` | `ownedAuditTask`; audit `queued`/`running` |
 | `running` → `failed` | `finalizeAudit` | `audits/finalization.ts:77-92` | no open task, no completed task |
 | `running` → `analyzing` → `reporting` → `completed`/`partially_completed` | `finalizeAudit` | `finalization.ts:94-133` | audit `FOR UPDATE`, not terminal, no open task; partial iff `metric.total_failed > 0` |
@@ -104,10 +105,13 @@ planned).
 | held → `succeeded`/`failed` | `repairOwnedCompletion` | `maintenance.ts:23-78` | `ownedAuditTask` + artifact/observation; unreachable today because success and failure write evidence and status in one tx |
 | non-terminal → `cancelled` | `cancelAudit` | `maintenance.ts:103-118` | status not terminal |
 
-Known invalid: a Google AI Overview task that
-fails after a paid submission records no cost projection —
-[AU5](plans/state-machine-fixes.md#au-audits). Results dropped because the task
-lost ownership mid-call record no cost (internal cost only; not planned).
+A surface failure writes a failure artifact and its cost projection in the
+failure transaction: always on the LLM scraper path, and on the Google AI
+Overview path (beside its observation) once a paid submission reported its
+charge.
+
+Known invalid: none persisted. Results dropped because the task lost ownership
+mid-call record no cost (internal cost only; not planned).
 
 ### 2.3 `audit_schedules` (implicit: `enabled`, `next_run_at`, lease, `failure_count`)
 
@@ -116,12 +120,11 @@ lost ownership mid-call record no cost (internal cost only; not planned).
 | due → leased | `claimDueSchedules` | `queue/audit-queue.ts:35-79` | `enabled`, `next_run_at <= at`, lease null or expired, SKIP LOCKED, committed |
 | leased → released | `planClaim` stale | `workers/audit-scheduler.ts:64-74` | lease owner, unexpired; disabled or occurrence moved |
 | leased → advanced | `planClaim` success | `audit-scheduler.ts:75-109` | savepoint; `next_run_at = nextRunAfter`, `enabled = next ≠ null`, `failure_count = 0` |
-| leased → backoff / disabled | `planClaim` error | `audit-scheduler.ts:110-129` | any error: `failure_count + 1`, `enabled = failures < max (5)`, retry in 300 s |
+| leased → deferred | `planClaim` retryable refusal | `audit-scheduler.ts` | `ApiError.isRetryable()` (active-launch limit, daily task budget): ownerless lease until `Retry-After`; `next_run_at` (the cadence anchor), `failure_count`, `enabled`, `last_error` untouched |
+| leased → backoff / disabled | `planClaim` other error | `audit-scheduler.ts` | `failure_count + 1`, `enabled = failures < max (5)`, retry in 300 s |
 | disabled → enabled | Resume / `updateSchedule` | `audits/schedules.ts:98-136` | schedule row lock |
 
-Known invalid: a retryable 429 (active-launch limit, daily budget) counts as a
-failure, so five transient refusals disable the schedule —
-[AU2](plans/state-machine-fixes.md#au-audits).
+Known invalid: none.
 
 ### 2.4 Prompt-run holds and the funded budget
 
@@ -131,12 +134,11 @@ Hold per task (`consumable_ledger`, subject `audit` task): reserve at creation
 (`maintenance.ts:119`), reclaim to terminal (`maintenance.ts:219`) and the owing
 sweep (`maintenance.ts:265-319`). `settlePromptRun` (`audits/prompt-runs.ts:57-74`)
 settles only open units. The funded monthly budget is not a hold: `admitAudit`
-sums `execution_cost_projections` under the account capacity lock
-(`audits/admission.ts:124-158`), a soft ceiling (B20).
+sums the latest `execution_cost_projections` row per execution
+(`raw_response_artifact_id`) under the account capacity lock
+(`audits/admission.ts`), a soft ceiling (B20).
 
-Known invalid (latent): the budget sums every projection row, so a second
-pricing version appended by repricing counts an execution twice; only one
-pricing catalog exists today — [AU4](plans/state-machine-fixes.md#au-audits).
+Known invalid: none.
 
 ## 3. Billing and credits
 

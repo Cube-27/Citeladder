@@ -64,7 +64,7 @@ document already states. The table keeps the questions as asked.
 | S03 | Lease fences: per-claim audit lease, attempt-fenced heartbeats, poll reclaim | Q1, Q2, AU1 | — | | merged | [#656](https://github.com/Cube-27/Citeladder/pull/656) | Money (duplicate paid dispatch) |
 | S04 | Billing webhook, checkout and replay recovery | BL3, BL4, BL5, BL6 | — | | merged | [#655](https://github.com/Cube-27/Citeladder/pull/655) | Money |
 | S05 | Keyword Research settlement, cancel and reconnect | SI2, SI3, SI4 | S02 | | merged | [#657](https://github.com/Cube-27/Citeladder/pull/657) | Money; shares `search-intelligence/` with S02 |
-| S06 | Audit schedules, repair admission and cost records | AU2, AU3, AU4, AU5 | — | | in progress | | Stuck users, abuse bound, cost |
+| S06 | Audit schedules, repair admission and cost records | AU2, AU3, AU4, AU5 | — | | in review | [#661](https://github.com/Cube-27/Citeladder/pull/661) | Stuck users, abuse bound, cost |
 | S07 | Agent turn recovery | AG2, AG3, AG4, AG5 | — | | merged | [#659](https://github.com/Cube-27/Citeladder/pull/659) | Stuck users. Not in scope: the Agent lane's `nextDue` still ignores a cancelled run's dispatched attempts awaiting settlement (pre-existing; found by bot review) |
 | S08 | Site Health crawl outcomes and inventory | SH1, SH2, SH3, SH4, SH5 | — | | merged | [#660](https://github.com/Cube-27/Citeladder/pull/660) | Data correctness |
 | S09 | Public API idempotency outcome; prompt edit under lock | PA1, WS3 | — | | merged | [#662](https://github.com/Cube-27/Citeladder/pull/662) | Data correctness |
@@ -112,10 +112,10 @@ data impact.
 | SI2 | Settlement waits for calls marked uncertain inside the reporting window | — | `search-intelligence/charges.ts` | | done | 5cf6a9e | CONFIRMED (lease lost mid-call), low (unbilled answered call) |
 | SI3 | Cancel closes collecting datasets | SI2 | `search-intelligence/runs.ts` | | done | 22ff9dc | CONFIRMED, low |
 | SI4 | Reconnect refused while a revocation is in flight | — | `integrations/oauth.ts` | | done | 5f32544 | PLAUSIBLE (Google grant-wide revocation), low-medium |
-| AU2 | A retryable admission refusal reschedules a schedule without counting a failure | — | `workers/audit-scheduler.ts` | | todo | | CONFIRMED, medium (monitoring silently stops) |
-| AU3 | Repair audits take the launch lock, active-launch limit and daily task budget | — | `audits/repair.ts`, `audits/admission.ts` | | todo | | CONFIRMED, low-medium |
-| AU4 | The funded budget sums the latest projection per execution | — | `audits/admission.ts` | | todo | | PLAUSIBLE (latent: one pricing catalog today), low |
-| AU5 | A Google AI Overview failure after a paid submission records its cost | — | `audits/{surface-persistence,result-persistence}.ts` | | todo | | CONFIRMED, low (internal cost, funded budget) |
+| AU2 | A retryable admission refusal reschedules a schedule without counting a failure | — | `workers/audit-scheduler.ts` | | done | 3931915 | CONFIRMED, medium (monitoring silently stops) |
+| AU3 | Repair audits take the launch lock, active-launch limit and daily task budget | — | `audits/repair.ts`, `audits/admission.ts` | | done | b58da6f | CONFIRMED, low-medium |
+| AU4 | The funded budget sums the latest projection per execution | — | `audits/admission.ts` | | done | 18bcacb | PLAUSIBLE (latent: one pricing catalog today), low |
+| AU5 | A Google AI Overview failure after a paid submission records its cost | — | `audits/{surface-persistence,result-persistence}.ts` | | done | 4b439b3 | CONFIRMED, low (internal cost, funded budget) |
 | AG2 | The browser retries `/run` after 429 and ends a stream that went silent | — | `frontend/lib/agent/live-turns.ts` | | done | 95f1397 | CONFIRMED, medium; idle part PLAUSIBLE |
 | AG3 | A dead turn ends within a minute | AG2 | `agent/{bindings,worker}.ts`, `workers/agent-worker.ts`, `config/model-gateway.json` | | done | 069e94c | CONFIRMED, low-medium |
 | AG4 | A turn whose member lost access still settles and ends | — | `agent/runtime.ts` | | done | 45d0c27 | CONFIRMED, low |

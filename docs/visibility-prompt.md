@@ -473,6 +473,13 @@ capacity limits, due times, cancellation and queue recovery. The request has
 config-bounded admission and execution budgets; remaining tasks and future
 provider polls continue through the runner.
 
+A failure rerun (`POST /audits/{audit_id}/rerun-failures`) creates a repair
+child under the same workspace enqueue lock as a launch and passes the same
+abuse controls: the active-launch limit (429 with `Retry-After`) and the daily
+task budget. It does not count as a manual run. Repeating the same task set
+returns the existing child; a selection overlapping a repair child that is
+still active answers 409.
+
 Admission freezes prompt text/cohorts, roster, model/retrieval identity, request
 configuration and relevant versions. benchmark_mode is prompt framing, not a
 provider policy. Funding/occupancy is checked by
@@ -518,7 +525,9 @@ repair run in the periodic `audit-maintenance` lane, not in the worker.
 Attempts per task default to the `max_attempts` setting.
 
 A schedule disabled by repeated failures stores the real admission error (for
-example an ended trial or exhausted budget); the schedules list shows it as
+example an ended trial or exhausted budget); a retryable refusal (the
+active-launch limit or the daily task budget) holds the same occurrence until
+its `Retry-After`, keeping the cadence anchored, and never counts as a failure. The schedules list shows it as
 the pause reason and offers Resume, which re-enables the schedule and resets
 its failure count. Schedule patches validate cadence and interval against the current locked row;
 omitted values retain the persisted scope and configuration. Nullable scheduling
@@ -558,7 +567,10 @@ Paid provider tasks retain their committed submission/account identity across
 restarts. Uncertain scraper submissions use exact-tag, product-checked, bounded
 paginated reconciliation. The config-owned recovery deadline runs from committed intent. Recovery never resubmits a
 paid task; unrecovered tasks fail without negative brand observations. Known
-submission charges remain recorded even when retrieval fails.
+submission charges remain recorded even when retrieval fails: the failed task
+keeps a failure artifact carrying the reported charge and its cost projection,
+on the scraper and Google AI Overview surfaces alike, so the funded budget and
+internal costs count the paid request.
 
 Scraper citations use root and nested sources, canonicalized and deduplicated.
 Ad items (`chat_gpt_ad`) are skipped by the source walker and the answer-text

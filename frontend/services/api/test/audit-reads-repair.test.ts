@@ -153,7 +153,7 @@ describe('persisted audit reads and immutable repair', () => {
       .execute();
     const request = repairInput.parse({ task_ids: [t.tasks[0]!.id] });
     await expect(
-      createRepairAudit(db, foreign.workspaceId, t.auditId, request),
+      createRepairAudit(db, foreign.workspaceId, t.auditId, request, runtime),
     ).rejects.toMatchObject({ status: 404 });
     await expect(
       createRepairAudit(
@@ -161,11 +161,12 @@ describe('persisted audit reads and immutable repair', () => {
         t.workspaceId,
         t.auditId,
         repairInput.parse({ task_ids: [foreign.tasks[0]!.id] }),
+        runtime,
       ),
     ).rejects.toMatchObject({ status: 409 });
     const repaired = await Promise.all([
-      createRepairAudit(db, t.workspaceId, t.auditId, request),
-      createRepairAudit(db, t.workspaceId, t.auditId, request),
+      createRepairAudit(db, t.workspaceId, t.auditId, request, runtime),
+      createRepairAudit(db, t.workspaceId, t.auditId, request, runtime),
     ]);
     expect(new Set(repaired.map((result) => result.auditId)).size).toBe(1);
     expect(repaired.filter((result) => result.created)).toHaveLength(1);
@@ -205,14 +206,60 @@ describe('persisted audit reads and immutable repair', () => {
         t.workspaceId,
         t.auditId,
         repairInput.parse({ task_ids: [t.tasks[1]!.id] }),
+        runtime,
       ),
     ).rejects.toMatchObject({ status: 409 });
-    const defaultRepair = await createRepairAudit(
+    // The default selection (every failed BYOK task) overlaps the live child's task.
+    await expect(
+      createRepairAudit(db, t.workspaceId, t.auditId, repairInput.parse({}), runtime),
+    ).rejects.toMatchObject({
+      status: 409,
+      message: 'A running repair already covers a selected task',
+    });
+    const disjoint = await createRepairAudit(
       db,
       t.workspaceId,
       t.auditId,
-      repairInput.parse({}),
+      repairInput.parse({ task_ids: [t.tasks[2]!.id] }),
+      runtime,
     );
-    expect((await readAudit(db, t.workspaceId, defaultRepair.auditId)).requested_count).toBe(2);
+    expect(disjoint.created).toBe(true);
+    expect(
+      await db
+        .selectFrom('audit_tasks')
+        .select('source_task_id')
+        .where('audit_id', '=', disjoint.auditId)
+        .execute(),
+    ).toEqual([{ source_task_id: t.tasks[2]!.id }]);
+  });
+  it('refuses a repair at the active-launch limit, queuing nothing', async () => {
+    const t = await seed();
+    await db
+      .updateTable('audits')
+      .set({ status: 'failed', completed_at: new Date() })
+      .where('id', '=', t.auditId)
+      .execute();
+    await db
+      .updateTable('audit_tasks')
+      .set({ status: 'failed', error_code: 'timeout' })
+      .where('audit_id', '=', t.auditId)
+      .execute();
+    // One other launch is active, which is the whole allowance.
+    await createAudits(
+      db,
+      t.workspaceId,
+      auditInput.parse({ project_id: t.projectId, prompt_set_id: t.setId, engines: ['chatgpt'] }),
+      {},
+      runtime,
+    );
+    await expect(
+      createRepairAudit(db, t.workspaceId, t.auditId, repairInput.parse({}), {
+        ...runtime,
+        activeLimit: 1,
+      }),
+    ).rejects.toMatchObject({ status: 429 });
+    expect(
+      await db.selectFrom('audits').select('id').where('parent_audit_id', '=', t.auditId).execute(),
+    ).toEqual([]);
   });
 });

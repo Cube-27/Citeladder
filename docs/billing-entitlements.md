@@ -280,7 +280,8 @@ are not affected (B66).
 **Managed plans.** A workspace on a live managed plan measures every engine,
 DataForSEO surfaces included, on the platform's keys; the request never chooses
 the mode. Its monthly platform budget admits a launch while the month's recorded
-spend is below the ceiling (`BILLING_FUNDED_MONTHLY_BUDGET_MINOR`).
+spend is below the ceiling (`BILLING_FUNDED_MONTHLY_BUDGET_MINOR`); recorded
+spend counts each execution's latest cost projection once, as `internal_costs` does.
 Keyword Research on a managed plan researches on the platform's DataForSEO
 account and spends AI credits: the review prices the estimate in credits (the
 DataForSEO cost converted exactly as token cost is), confirmation holds it in the

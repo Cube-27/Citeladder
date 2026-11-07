@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { afterAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { setLogSink } from '../src/logging.ts';
 import { createAudits } from '../src/audits/creation.ts';
 import { auditRuntime } from '../src/audits/config.ts';
@@ -14,8 +14,11 @@ import providers from '../src/config/providers.json' with { type: 'json' };
 const db = testDatabase();
 const fixtures = new VisibilityFixtures(db);
 const runtime = auditRuntime({});
-afterAll(async () => {
+// Per test: a managed tenant's system workspace is unique (`uq_workspaces_single_system`).
+afterEach(async () => {
   await fixtures.cleanup();
+});
+afterAll(async () => {
   await db.destroy();
 });
 function input(t: Awaited<ReturnType<typeof auditTenant>>) {
@@ -28,6 +31,70 @@ function input(t: Awaited<ReturnType<typeof auditTenant>>) {
 }
 async function queued(workspaceId: string) {
   return db.selectFrom('audits').selectAll().where('workspace_id', '=', workspaceId).execute();
+}
+/** A managed (platform-key) workspace whose only route is a system platform connection. */
+async function managedTenant() {
+  const t = await auditTenant(db, fixtures),
+    platform = await auditTenant(db, fixtures);
+  await db
+    .updateTable('provider_connections')
+    .set({ active: false })
+    .where('id', '=', t.connectionId)
+    .execute();
+  await db
+    .updateTable('workspaces')
+    .set({ is_system: true })
+    .where('id', '=', platform.workspaceId)
+    .execute();
+  await db
+    .updateTable('provider_connections')
+    .set({
+      credential_source: 'platform',
+      api_key_encrypted: '',
+      platform_credential_ref: 'test-platform',
+    })
+    .where('id', '=', platform.connectionId)
+    .execute();
+  // The plan, not the request, makes the workspace managed (B32).
+  return { t, accountId: await managedPlan(db, t.workspaceId) };
+}
+/** One funded execution this month, with a cost projection per pricing version, oldest first. */
+async function recordSpend(
+  t: Awaited<ReturnType<typeof auditTenant>>,
+  accountId: string,
+  costs: number[],
+) {
+  const spentAudit = await fixtures.audit(t);
+  const { taskId } = await fixtures.execution(t, { auditId: spentAudit });
+  const artifact = await db
+    .selectFrom('raw_response_artifacts')
+    .select('id')
+    .where('task_id', '=', taskId)
+    .executeTakeFirstOrThrow();
+  const now = new Date();
+  await db
+    .updateTable('audits')
+    .set({
+      funding_account_id: accountId,
+      funded_budget_period_start: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)),
+    })
+    .where('id', '=', spentAudit)
+    .execute();
+  for (const [version, cost] of costs.entries())
+    await db
+      .insertInto('execution_cost_projections')
+      .values({
+        id: randomUUID(),
+        audit_id: spentAudit,
+        task_id: taskId,
+        raw_response_artifact_id: artifact.id,
+        pricing_version: `fixture-${version}`,
+        formula_version: 'fixture',
+        projection_status: 'complete',
+        projected_total_cost_microusd: cost,
+        created_at: new Date(now.getTime() + version * 1000),
+      })
+      .execute();
 }
 describe('atomic audit admission', () => {
   it('rejects unshipped catalog engines before persisting an audit', async () => {
@@ -74,29 +141,7 @@ describe('atomic audit admission', () => {
     expect(() => auditRuntime({ AUDIT_RETRY_BASE_DELAY_SECONDS: '46' })).toThrow('retry');
   });
   it('measures a managed workspace on platform keys and refuses it once recorded spend reaches the budget', async () => {
-    const t = await auditTenant(db, fixtures),
-      platform = await auditTenant(db, fixtures);
-    await db
-      .updateTable('provider_connections')
-      .set({ active: false })
-      .where('id', '=', t.connectionId)
-      .execute();
-    await db
-      .updateTable('workspaces')
-      .set({ is_system: true })
-      .where('id', '=', platform.workspaceId)
-      .execute();
-    await db
-      .updateTable('provider_connections')
-      .set({
-        credential_source: 'platform',
-        api_key_encrypted: '',
-        platform_credential_ref: 'test-platform',
-      })
-      .where('id', '=', platform.connectionId)
-      .execute();
-    // The plan, not the request, makes the workspace managed (B32).
-    const accountId = await managedPlan(db, t.workspaceId);
+    const { t, accountId } = await managedTenant();
     const logs: string[] = [],
       prior = setLogSink((line) => logs.push(line));
     try {
@@ -127,38 +172,7 @@ describe('atomic audit admission', () => {
       // One prompt run per answer, whatever the retry budget.
       expect(holds.reduce((sum, hold) => sum + hold.units, 0)).toBe(tasks.length);
       // This month's recorded platform spend reaches the one-cent budget (B20).
-      const spentAudit = await fixtures.audit(t);
-      const { taskId } = await fixtures.execution(t, { auditId: spentAudit });
-      const artifact = await db
-        .selectFrom('raw_response_artifacts')
-        .select('id')
-        .where('task_id', '=', taskId)
-        .executeTakeFirstOrThrow();
-      const now = new Date();
-      await db
-        .updateTable('audits')
-        .set({
-          funding_account_id: accountId,
-          funded_budget_period_start: new Date(
-            Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
-          ),
-        })
-        .where('id', '=', spentAudit)
-        .execute();
-      await db
-        .insertInto('execution_cost_projections')
-        .values({
-          id: randomUUID(),
-          audit_id: spentAudit,
-          task_id: taskId,
-          raw_response_artifact_id: artifact.id,
-          pricing_version: 'fixture',
-          formula_version: 'fixture',
-          projection_status: 'complete',
-          projected_total_cost_microusd: 10_000,
-          created_at: now,
-        })
-        .execute();
+      await recordSpend(t, accountId, [10_000]);
       const before = (await queued(t.workspaceId)).length;
       await expect(
         createAudits(db, t.workspaceId, request, {}, fundedRuntime),
@@ -174,6 +188,26 @@ describe('atomic audit admission', () => {
       ).toBe(true);
     } finally {
       setLogSink(prior);
+      await db.deleteFrom('consumable_ledger').where('workspace_id', '=', t.workspaceId).execute();
+    }
+  });
+  it('counts only the latest projection of a repriced execution toward the funded month', async () => {
+    const { t, accountId } = await managedTenant();
+    // One execution priced twice: 15,000 then 12,000 micro-USD against a two-cent budget.
+    await recordSpend(t, accountId, [15_000, 12_000]);
+    try {
+      const fundedRuntime = {
+        ...runtime,
+        fundedBudgetMinor: 2,
+        audits: { ...runtime.audits, audit_prompt_count: 10 },
+      };
+      expect(await createAudits(db, t.workspaceId, input(t), {}, fundedRuntime)).toHaveLength(1);
+      // A second execution at 9,000 brings the latest-per-execution total to the ceiling.
+      await recordSpend(t, accountId, [9_000]);
+      await expect(
+        createAudits(db, t.workspaceId, input(t), {}, fundedRuntime),
+      ).rejects.toMatchObject({ code: 'funded_budget_exhausted' });
+    } finally {
       await db.deleteFrom('consumable_ledger').where('workspace_id', '=', t.workspaceId).execute();
     }
   });
