@@ -70,7 +70,7 @@ document already states. The table keeps the questions as asked.
 | S09 | Public API idempotency outcome; prompt edit under lock | PA1, WS3 | — | | merged | [#662](https://github.com/Cube-27/Citeladder/pull/662) | Data correctness |
 | S10 | Refunded upgrades and payments on ended subscriptions | BL7, BL8 | S04 | | merged | [#658](https://github.com/Cube-27/Citeladder/pull/658) | Money; B70, B71 |
 | S11 | Agent turns closed after streaming a document | AG1 | S07 | | merged | [#663](https://github.com/Cube-27/Citeladder/pull/663) | Money; B69 |
-| S12 | Status CHECK constraints; dead `site_urls.discovery_status` | DB1 | S08 | mig | in progress | | Migration 0014; open last, alone |
+| S12 | Status CHECK constraints; dead `site_urls.discovery_status` | DB1 | S08 | mig | in review | [#664](https://github.com/Cube-27/Citeladder/pull/664) | Migration 0014; open last, alone |
 
 ## Order
 
