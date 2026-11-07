@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { afterAll, describe, expect, it } from 'vitest';
+import { sql, type Transaction } from 'kysely';
+import { afterAll, describe, expect, it, vi } from 'vitest';
+import type { DB } from '../src/generated/db-schema.ts';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
 import { WorkspaceScope } from '../src/db/workspace-scope.ts';
 import { openReservedUnits } from '../src/entitlements/ledger.ts';
@@ -307,6 +309,68 @@ describe('managed Search Intelligence', () => {
       .where('workspace_id', '=', t.workspaceId)
       .executeTakeFirstOrThrow();
     expect(Number(reserved.units)).toBe(0);
+  });
+
+  it('refuses a deletion that waited behind a confirmation holding the project', async () => {
+    const t = await workspace('managed');
+    await grant(db, await billingAccount(db, t.workspaceId), {
+      key: 'project_deletion',
+      value: 1,
+    });
+    const project = { workspaceId: t.workspaceId, projectId: t.projectId };
+    // Pause the confirmation once it holds the project row, as its own first
+    // statement does, before it takes the credit hold.
+    const locked = Promise.withResolvers<number>();
+    const proceed = Promise.withResolvers<void>();
+    const transaction = db.transaction.bind(db);
+    const spy = vi.spyOn(db, 'transaction').mockImplementationOnce(() => {
+      const builder = transaction();
+      const execute = builder.execute.bind(builder);
+      builder.execute = <T>(work: (trx: Transaction<DB>) => Promise<T>) =>
+        execute(async (trx) => {
+          await trx
+            .selectFrom('projects')
+            .select('id')
+            .where('id', '=', t.projectId)
+            .forUpdate()
+            .execute();
+          const backend = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(trx);
+          locked.resolve(backend.rows[0]!.pid);
+          await proceed.promise;
+          return work(trx);
+        });
+      return builder;
+    });
+    try {
+      const confirmation = confirmRun(db, t.scope, t.review.id);
+      const confirming = await locked.promise;
+      const deletion = deleteProject(db, project).catch((error: unknown) => error);
+      await vi.waitFor(
+        async () => {
+          const blocked = await sql<{ waiting: boolean }>`select exists (
+            select 1 from pg_stat_activity where ${confirming} = any(pg_blocking_pids(pid))
+          ) as waiting`.execute(db);
+          expect(blocked.rows[0]!.waiting).toBe(true);
+        },
+        { timeout: 2000, interval: 20 },
+      );
+      proceed.resolve();
+      expect(await confirmation).toMatchObject({ status: 'queued' });
+      expect(await deletion).toMatchObject({ status: 409, code: 'project_work_running' });
+    } finally {
+      proceed.resolve();
+      spy.mockRestore();
+    }
+
+    // The project and its run survive, so the hold still settles.
+    expect(await cancelRun(db, t.scope, t.review.id)).toMatchObject({
+      status: 'cancelled',
+      charged_credits: 0,
+    });
+    expect(await platformCall((await runRow(t.review.id)).platform_call_id)).toMatchObject({
+      status: 'settled',
+      credits: 0,
+    });
   });
 
   it('keeps a BYOK analysis on the workspace key, priced in dollars and never charged credits', async () => {

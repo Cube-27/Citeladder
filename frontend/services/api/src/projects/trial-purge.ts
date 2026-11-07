@@ -13,7 +13,7 @@ import { openReservedUnits, projectHoldsReservations } from '../entitlements/led
 import { lockWorkspaceCapacity } from '../entitlements/occupancy.ts';
 import { getLogger } from '../logging.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
-import { removeProject } from './service.ts';
+import { lockProjectRow, removeProject } from './service.ts';
 
 const logger = getLogger('app.projects');
 const setting = (key: 'trial_data_retention_days' | 'trial_purge_workspace_batch') =>
@@ -98,6 +98,7 @@ export async function purgeExpiredTrialProjects(
         .transaction()
         .execute(async (trx) => {
           await acquireProjectLock(trx, projectId);
+          if (!(await lockProjectRow(trx, scope))) return false;
           if (!(await stillPurgeable(trx, workspaceId, now, cutoff))) return false;
           if (await projectHoldsReservations(trx, workspaceId, projectId)) return false;
           await removeProject(trx, scope);
