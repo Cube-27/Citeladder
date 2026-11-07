@@ -19,6 +19,7 @@ import { ApiError, notFound } from '../errors.ts';
 import { enqueueTask, taskKey } from '../queue/enqueue.ts';
 import type { Preferences } from '../routes/search-intelligence-contracts.ts';
 import type { Scope } from './reads.ts';
+import { closeCollecting } from './acquisition-state.ts';
 import { settleResearchCharge } from './charges.ts';
 import { runConnection } from './credentials.ts';
 import { runView } from './views.ts';
@@ -167,6 +168,12 @@ export async function cancelRun(db: Database, scope: Scope, runId: string) {
         .where('status', 'not in', TERMINAL_TASK_STATUSES)
         .execute();
     }
+    // The worker stops on a cancelled run, so nothing else would end its datasets.
+    await closeCollecting(
+      trx,
+      { workspaceId: run.workspace_id, projectId: run.project_id, runId },
+      now,
+    );
     return runView(cancelled);
   });
   // Only a managed analysis holds credits; one with a request in flight keeps

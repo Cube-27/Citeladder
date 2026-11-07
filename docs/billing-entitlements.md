@@ -285,7 +285,10 @@ Keyword Research on a managed plan researches on the platform's DataForSEO
 account and spends AI credits: the review prices the estimate in credits (the
 DataForSEO cost converted exactly as token cost is), confirmation holds it in the
 same transaction, and the ended analysis is charged the cost of the requests
-sent, never above the hold ([charges](../frontend/services/api/src/search-intelligence/charges.ts)).
+that succeeded, never above the hold ([charges](../frontend/services/api/src/search-intelligence/charges.ts)).
+Settlement waits twice the provider timeout for a request still awaiting its
+answer, including one recovery marked uncertain after a lost lease, so a late
+receipt is billed (B41).
 A BYOK workspace researches on its own key and is not charged.
 [Site Health fetch budget](../frontend/services/api/src/site-health/fetch-budget.ts)
 reserves a crawl's page budget at creation and settles analyzed pages on every
