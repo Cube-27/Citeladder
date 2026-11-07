@@ -65,11 +65,11 @@ document already states. The table keeps the questions as asked.
 | S04 | Billing webhook, checkout and replay recovery | BL3, BL4, BL5, BL6 | — | | merged | [#655](https://github.com/Cube-27/Citeladder/pull/655) | Money |
 | S05 | Keyword Research settlement, cancel and reconnect | SI2, SI3, SI4 | S02 | | merged | [#657](https://github.com/Cube-27/Citeladder/pull/657) | Money; shares `search-intelligence/` with S02 |
 | S06 | Audit schedules, repair admission and cost records | AU2, AU3, AU4, AU5 | — | | in progress | | Stuck users, abuse bound, cost |
-| S07 | Agent turn recovery | AG2, AG3, AG4, AG5 | — | | in review | [#659](https://github.com/Cube-27/Citeladder/pull/659) | Stuck users. Not in scope: the Agent lane's `nextDue` still ignores a cancelled run's dispatched attempts awaiting settlement (pre-existing; found by bot review) |
+| S07 | Agent turn recovery | AG2, AG3, AG4, AG5 | — | | merged | [#659](https://github.com/Cube-27/Citeladder/pull/659) | Stuck users. Not in scope: the Agent lane's `nextDue` still ignores a cancelled run's dispatched attempts awaiting settlement (pre-existing; found by bot review) |
 | S08 | Site Health crawl outcomes and inventory | SH1, SH2, SH3, SH4, SH5 | — | | in progress | | Data correctness |
 | S09 | Public API idempotency outcome; prompt edit under lock | PA1, WS3 | — | | in progress | | Data correctness |
 | S10 | Refunded upgrades and payments on ended subscriptions | BL7, BL8 | S04 | | merged | [#658](https://github.com/Cube-27/Citeladder/pull/658) | Money; B70, B71 |
-| S11 | Agent turns closed after streaming a document | AG1 | S07 | | todo | | Money; B69 |
+| S11 | Agent turns closed after streaming a document | AG1 | S07 | | in progress | | Money; B69 |
 | S12 | Status CHECK constraints; dead `site_urls.discovery_status` | DB1 | S08 | mig | todo | | Migration 0014; open last, alone |
 
 ## Order
