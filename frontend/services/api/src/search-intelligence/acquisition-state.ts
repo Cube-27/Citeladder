@@ -923,15 +923,24 @@ export class AcquisitionState {
       .execute();
     await this.closeCollecting(trx, at);
   }
-  /** A terminal run cannot leave a dataset waiting for another paid dispatch. */
   closeCollecting(db: Database, at: Date) {
-    return db
-      .updateTable('search_intelligence_datasets')
-      .set({ status: 'failed', coverage: 'unknown', collection_ended_at: at })
-      .where('workspace_id', '=', this.task.workspace_id)
-      .where('project_id', '=', this.task.project_id)
-      .where('run_id', '=', this.runId)
-      .where('status', '=', 'collecting')
-      .execute();
+    const { workspace_id: workspaceId, project_id: projectId } = this.task;
+    return closeCollecting(db, { workspaceId, projectId, runId: this.runId }, at);
   }
+}
+
+/** A terminal run cannot leave a dataset waiting for another paid dispatch. */
+export function closeCollecting(
+  db: Database,
+  run: { workspaceId: string; projectId: string | null; runId: string },
+  at: Date,
+) {
+  return db
+    .updateTable('search_intelligence_datasets')
+    .set({ status: 'failed', coverage: 'unknown', collection_ended_at: at })
+    .where('workspace_id', '=', run.workspaceId)
+    .where('project_id', '=', run.projectId)
+    .where('run_id', '=', run.runId)
+    .where('status', '=', 'collecting')
+    .execute();
 }

@@ -35,18 +35,23 @@ export function settleResearchCharge(
     const sent = await trx
       .selectFrom('search_intelligence_calls')
       .select(['status', 'dispatched_at', 'sanitized_response', 'estimated_cost_usd'])
-      .select('provider_reported_cost_usd')
+      .select(['provider_reported_cost_usd', 'error_code'])
       .where('workspace_id', '=', run.workspaceId)
       .where('run_id', '=', run.runId)
       .where('dispatched_at', 'is not', null)
       .$narrowType<{ dispatched_at: NotNull }>()
       .execute();
-    // A request may still report its cost until its timeout has passed twice over.
+    // A request may still report its cost until its timeout has passed twice over,
+    // including one recovery marked uncertain while its sender may still be waiting
+    // (B41 bills that late receipt). A sender that saw its own connection fail waits for nothing.
     const settledBy = at.getTime() - 2 * si.provider_timeout_seconds * 1000;
+    const awaited = (call: (typeof sent)[number]) =>
+      call.status === 'dispatched' ||
+      (call.status === 'uncertain' && call.error_code === 'provider_result_missing');
     if (
       sent.some(
         (call) =>
-          call.status === 'dispatched' &&
+          awaited(call) &&
           call.sanitized_response === null &&
           call.dispatched_at.getTime() > settledBy,
       )

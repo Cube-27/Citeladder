@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { sql } from 'kysely';
 import { createApp } from '../src/app.ts';
 import { purchase } from '../src/billing/purchases.ts';
-import { changePlan } from '../src/billing/plan-changes.ts';
+import { changePlan, pushChange } from '../src/billing/plan-changes.ts';
 import { settlePending, settleRefund, settleSubscription } from '../src/billing/settlement.ts';
 import { cancelSubscription, resumeSubscription } from '../src/billing/cancellation.ts';
 import { ProviderError, type RefundEvidence } from '../src/billing/razorpay.ts';
@@ -296,7 +296,8 @@ describe('billing money and access owner', () => {
     // The terminal row no longer blocks a new base purchase.
     expect((await buy(t.workspaceId)).status).toBe('pending');
   });
-  it('activates a lapsing checkout the customer paid just before its cancellation was refused', async () => {
+  // A base checkout past its abandon window, due for the sweep's final probe.
+  async function lapsingCheckout() {
     const t = await fixtures.tenant({ access: false });
     const row = await pending((await buy(t.workspaceId)).activation_id);
     await db
@@ -307,6 +308,10 @@ describe('billing money and access owner', () => {
       })
       .where('id', '=', row.id)
       .execute();
+    return { t, row };
+  }
+  it('activates a lapsing checkout the customer paid just before its cancellation was refused', async () => {
+    const { row } = await lapsingCheckout();
     const reads = [
       paidSubscription(row, { status: 'created', payment: null }),
       paidSubscription(row),
@@ -322,6 +327,45 @@ describe('billing money and access owner', () => {
       }),
     );
     expect((await pending(row.id)).status).toBe('activated');
+  });
+  it('grants a checkout paid as the abandon sweep cancels it until its paid end, and leaves it pending no longer', async () => {
+    const { t, row } = await lapsingCheckout();
+    // Unpaid when read; once cancelled the provider shows the payment that landed meanwhile.
+    const paidThenCancelled = paidSubscription(row, { status: 'cancelled', version: 2 });
+    const reads = [paidSubscription(row, { status: 'created', payment: null })];
+    const cancel = vi.fn(async (reference: string) => ({
+      ...paidThenCancelled.subscription,
+      id: reference,
+    }));
+    await recoverBilling(
+      db,
+      { ...config, billing: { ...config.billing, batchSize: 1000 } },
+      fakeProvider({
+        evidence: async (reference) => {
+          if (reference !== row.external_reference) throw new ProviderError(true);
+          return reads.shift() ?? paidThenCancelled;
+        },
+        cancel,
+      }),
+    );
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect((await pending(row.id)).status).toBe('activated');
+    expect(
+      await db
+        .selectFrom('billing_subscriptions')
+        .select(['status', 'is_current', 'current_period_end'])
+        .where('billing_account_id', '=', t.accountId)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({
+      status: 'cancel_scheduled',
+      is_current: true,
+      current_period_end: paidThenCancelled.subscription.end,
+    });
+    expect((await workspaceAccess(db, t.workspaceId)).status).toBe('active');
+    const afterPaidEnd = new Date(paidThenCancelled.subscription.end!.getTime() + 60_000);
+    expect((await workspaceAccess(db, t.workspaceId, afterPaidEnd)).status).toBe(
+      'subscription_lapsed',
+    );
   });
   it('settles concurrent evidence once and refuses an active subscription without a captured invoice', async () => {
     const t = await fixtures.tenant({ access: false });
@@ -718,6 +762,85 @@ describe('billing money and access owner', () => {
     expect(await revocations()).toBe(revoked);
     expect((await buy(t.workspaceId)).activation_id).toMatch(/^[0-9a-f-]{36}$/u);
   });
+  it('keeps a refund-cancelled subscription cancelled when a renewal is charged before the provider ends it, granting nothing', async () => {
+    const t = await activated();
+    const ref = t.sub.external_subscription_id;
+    const paid = t.evidence.subscription.payment!;
+    await db.transaction().execute((trx) =>
+      refundIn(trx, t, 'test', {
+        id: `rfnd_${randomUUID().replaceAll('-', '')}`,
+        paymentId: paid.id,
+        amount: paid.amount,
+        status: 'processed',
+        createdAt: new Date(),
+      }),
+    );
+    // The provider renewed before it saw the cancellation.
+    const start = t.evidence.subscription.end!;
+    const end = new Date(start.getTime() + 30 * 86_400_000);
+    const renewal = {
+      ...t.evidence.subscription,
+      start,
+      end,
+      version: 2,
+      payment: {
+        ...paid,
+        id: `pay_${randomUUID().replaceAll('-', '')}`,
+        invoiceId: `inv_${randomUUID().replaceAll('-', '')}`,
+        paidAt: start,
+        periodStart: start,
+        periodEnd: end,
+      },
+    };
+    await db
+      .transaction()
+      .execute((trx) => settleSubscription(trx, t.sub, renewal, t.row, t.workspaceId));
+    const current = () =>
+      db
+        .selectFrom('billing_subscriptions')
+        .select(['status', 'is_current'])
+        .where('id', '=', t.sub.id)
+        .executeTakeFirstOrThrow();
+    expect(await current()).toEqual({ status: 'cancelled', is_current: true });
+    const receipts = await db
+      .selectFrom('billing_payments')
+      .select('external_payment_id')
+      .where('billing_account_id', '=', t.accountId)
+      .where('receipt_kind', '=', 'payment')
+      .execute();
+    expect(new Set(receipts.map((row) => row.external_payment_id))).toEqual(
+      new Set([paid.id, renewal.payment.id]),
+    );
+    const renewedGrants = () =>
+      db
+        .selectFrom('account_grants')
+        .select('id')
+        .where('billing_account_id', '=', t.accountId)
+        .where('period_start', '=', start)
+        .execute();
+    expect(await renewedGrants()).toEqual([]);
+    expect((await workspaceAccess(db, t.workspaceId)).status).toBe('subscription_lapsed');
+    // The sweep still cancels at once, and the charged renewal keeps nothing running.
+    let state = { ...renewal, payment: null, version: 3 };
+    const cancel = vi.fn(async (_reference: string, _atEnd: boolean) => {
+      state = { ...state, status: 'cancelled', version: 4 };
+      return state;
+    });
+    await recoverBilling(
+      db,
+      { ...config, billing: { ...config.billing, batchSize: 1000 } },
+      fakeProvider({
+        evidence: async (reference) => {
+          if (reference !== ref) throw new ProviderError(true);
+          return { kind: 'base', subscription: state };
+        },
+        cancel,
+      }),
+    );
+    expect(cancel.mock.calls).toEqual([[ref, false]]);
+    expect(await current()).toEqual({ status: 'cancelled', is_current: false });
+    expect(await renewedGrants()).toEqual([]);
+  });
   it('allocates unique GST-length invoice and receipt numbers across the Indian April boundary', async () => {
     const times = ['2026-03-31T18:29:59Z', '2026-03-31T18:30:00Z', '2026-03-31T18:30:01Z'];
     const rows = await Promise.all(
@@ -849,6 +972,84 @@ describe('billing money and access owner', () => {
       .where('id', '=', t.sub.id)
       .executeTakeFirstOrThrow();
     expect(sub.scheduled_change).toBeNull();
+  });
+  it('cancels the subscription at once when its upgrade payment is refunded in full, so the upgrade never renews', async () => {
+    await fixtures.catalog();
+    const { t, row, payment } = await upgrade();
+    await db.transaction().execute((trx) => settlePending(trx, row.id, 'test', payment, 'webhook'));
+    const change = vi.fn(async (_reference: string, _price: string) => {});
+    expect(await pushChange(db, t.sub.id, fakeProvider({ change }))).toBe('scheduled');
+    expect(change).toHaveBeenCalledTimes(1);
+    const current = () =>
+      db
+        .selectFrom('billing_subscriptions')
+        .select(['status', 'is_current', 'cancel_at_period_end', 'scheduled_change'])
+        .where('id', '=', t.sub.id)
+        .executeTakeFirstOrThrow();
+    const unrevoked = async () =>
+      (
+        await db
+          .selectFrom('account_grants')
+          .select('source_ref')
+          .where('billing_account_id', '=', t.accountId)
+          .where('source_kind', '=', 'plan')
+          .where(({ not, exists, selectFrom }) =>
+            not(
+              exists(
+                selectFrom('grant_revocations')
+                  .select('grant_revocations.id')
+                  .whereRef('grant_revocations.grant_id', '=', 'account_grants.id'),
+              ),
+            ),
+          )
+          .execute()
+      ).map((grant) => grant.source_ref);
+    expect(new Set(await unrevoked())).toEqual(
+      new Set([`subscription:${t.sub.id}`, `activation:${row.id}`]),
+    );
+    await db.transaction().execute((trx) =>
+      refundIn(trx, t, 'test', {
+        id: `rfnd_${randomUUID().replaceAll('-', '')}`,
+        paymentId: payment.payment.id,
+        amount: payment.payment.amount,
+        status: 'processed',
+        createdAt: new Date(),
+      }),
+    );
+    // Cancelled at once, the base period's and the upgrade's grants revoked,
+    // and the scheduled upgrade gone with the subscription (B70).
+    expect(await current()).toEqual({
+      status: 'cancelled',
+      is_current: true,
+      cancel_at_period_end: true,
+      scheduled_change: null,
+    });
+    expect(await unrevoked()).toEqual([]);
+    expect((await workspaceAccess(db, t.workspaceId)).status).toBe('subscription_lapsed');
+    // The provider still reports the paid base period: the sweep cancels now
+    // and the unrefunded base payment does not keep the period running.
+    const ref = t.sub.external_subscription_id;
+    let state = { ...t.evidence.subscription, payment: null, version: 2 };
+    const cancel = vi.fn(async (_reference: string, _atEnd: boolean) => {
+      state = { ...state, status: 'cancelled', version: 3 };
+      return state;
+    });
+    const provider = fakeProvider({
+      evidence: async (reference) => {
+        if (reference !== ref) throw new ProviderError(true);
+        return { kind: 'base', subscription: state };
+      },
+      cancel,
+    });
+    await recoverBilling(
+      db,
+      { ...config, billing: { ...config.billing, batchSize: 1000 } },
+      provider,
+    );
+    expect(cancel.mock.calls).toEqual([[ref, false]]);
+    expect(await current()).toMatchObject({ status: 'cancelled', is_current: false });
+    expect((await workspaceAccess(db, t.workspaceId)).status).toBe('subscription_lapsed');
+    expect((await buy(t.workspaceId)).status).toBe('pending');
   });
   it('issues fixed-expiry one-time grants and rejects a mismatched captured amount atomically', async () => {
     await fixtures.catalog();
