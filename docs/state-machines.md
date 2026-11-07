@@ -431,14 +431,15 @@ Dispatch attempts are insert-only, one `outcome` per ordinal (DB
 
 ### 7.2 Public API idempotency (`api_idempotency`)
 
-claim (`status_code` null = in progress) → completed (`status_code` set), or
-deleted (released on a 4xx refusal; purged after `retention_hours`, 24)
-`public-api/idempotency.ts:30-142`. DB unique `(api_key_id, idempotency_key)`
-0001:3439.
-
-Known invalid: a 5xx, a thrown non-API error or a crash before the completion
-update leaves the claim "in progress", answered 409 `retryable: true` for 24 h —
-[PA1](plans/state-machine-fixes.md#pa-public-api).
+claim (`status_code` null = in progress) → completed (`status_code` 2xx, the
+stored response replays) or failed (`status_code` 500: a 5xx response or a
+thrown non-API error; the write may have committed), or deleted (released on a
+4xx refusal; purged after `retention_hours`, 24) `public-api/idempotency.ts`.
+A retry of a failed claim, or of a claim with no outcome older than
+`in_progress_max_seconds` (300; a crash before the outcome update), answers 409
+`idempotency_outcome_unknown`, `retryable: false`; a fresh claim answers 409
+`idempotency_conflict`, `retryable: true`. DB unique
+`(api_key_id, idempotency_key)` 0001:3439.
 
 ### 7.3 Actions, prompts and brand facts
 

@@ -73,6 +73,7 @@ const API_ERROR_CODES = [
   'human_verification_failed',
   'human_verification_unavailable',
   'idempotency_conflict',
+  'idempotency_outcome_unknown',
   'implementation_idempotency_conflict',
   'implementation_target_conflict',
   'internal_error',

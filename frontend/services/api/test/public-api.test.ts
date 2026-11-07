@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { Hono, type Context } from 'hono';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
 import { apiKeyCreateSchema } from '@citeladder/contracts/api-keys';
@@ -7,7 +8,12 @@ import { apiKeyCreateSchema } from '@citeladder/contracts/api-keys';
 import { budget, spendBudget } from '../src/abuse/usage.ts';
 import { createApiKey } from '../src/api-keys/keys.ts';
 import { createApp } from '../src/app.ts';
+import { WorkspaceContext } from '../src/auth/workspace.ts';
+import { policy } from '../src/config.ts';
+import type { AppEnv } from '../src/context.ts';
+import { onError } from '../src/errors.ts';
 import { ROUTE_CONTRACTS } from '../src/openapi/routes.ts';
+import { withIdempotency } from '../src/public-api/idempotency.ts';
 import { requirePathOwnership } from '../src/public-api/ownership.ts';
 import { mutateMember } from '../src/workspaces/service.ts';
 import { auditTenant } from './audit-fixtures.ts';
@@ -87,6 +93,23 @@ function api(
     },
     ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
   });
+}
+
+/** A public write behind `withIdempotency`, authenticated as the given key. */
+function idempotentApp(
+  workspaceId: string,
+  apiKeyId: string,
+  handler: (c: Context<AppEnv>) => Promise<Response>,
+) {
+  const idempotent = new Hono<AppEnv>();
+  idempotent.onError(onError);
+  idempotent.use(async (c, next) => {
+    c.set('workspace', new WorkspaceContext(workspaceId, 'owner'));
+    c.set('apiKey', { id: apiKeyId, projectIds: null });
+    await next();
+  });
+  idempotent.post('/write', (c) => withIdempotency(db, c, () => handler(c)));
+  return idempotent;
 }
 
 async function errorCode(response: Response): Promise<string> {
@@ -314,6 +337,84 @@ describe('public API requests', () => {
       .where('project_id', '=', tenant.projectId)
       .execute();
     expect(topics.map((topic) => topic.name)).toEqual(['Trail shoes']);
+  });
+
+  it('answers a retry of a failed write "outcome unknown", not "in progress"', async () => {
+    const tenant = await withApiAccess(await fixtures.tenant());
+    const { key } = await createKey(tenant, { scopes: ['prompts:write'] });
+    const writes: string[] = [];
+    const idempotent = idempotentApp(tenant.workspaceId, key.id, async (c) => {
+      const kind = c.req.query('kind') ?? '';
+      writes.push(kind);
+      if (kind === 'throw') throw new Error('write crashed after commit');
+      return c.json({ ok: false }, 503);
+    });
+    const send = (kind: string, idempotencyKey: string) =>
+      idempotent.request(`/write?kind=${kind}`, {
+        method: 'POST',
+        headers: { 'idempotency-key': idempotencyKey, 'content-type': 'application/json' },
+        body: '{}',
+      });
+
+    expect((await send('throw', 'crash-1')).status).toBe(500);
+    expect((await send('unavailable', 'fail-1')).status).toBe(503);
+    for (const [kind, idempotencyKey] of [
+      ['throw', 'crash-1'],
+      ['unavailable', 'fail-1'],
+    ] as const) {
+      const retry = await send(kind, idempotencyKey);
+      expect(retry.status).toBe(409);
+      expect(await retry.json()).toMatchObject({
+        error: { code: 'idempotency_outcome_unknown', retryable: false },
+      });
+    }
+    expect(writes).toEqual(['throw', 'unavailable']);
+  });
+
+  it('answers "in progress" while a claim is fresh and "outcome unknown" once it is stale', async () => {
+    const tenant = await withApiAccess(await fixtures.tenant());
+    const { key } = await createKey(tenant, { scopes: ['prompts:write'] });
+    let finish = () => {};
+    const running = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    let started = () => {};
+    const claimed = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const idempotent = idempotentApp(tenant.workspaceId, key.id, async (c) => {
+      started();
+      await running;
+      return c.json({ ok: true }, 201);
+    });
+    const send = () =>
+      idempotent.request('/write', {
+        method: 'POST',
+        headers: { 'idempotency-key': 'slow-1', 'content-type': 'application/json' },
+        body: '{}',
+      });
+
+    const first = send();
+    await claimed;
+    const inProgress = await send();
+    expect(inProgress.status).toBe(409);
+    expect(await inProgress.json()).toMatchObject({
+      error: { code: 'idempotency_conflict', retryable: true },
+    });
+
+    const stale = policy.public_api.idempotency.in_progress_max_seconds + 1;
+    await db
+      .updateTable('api_idempotency')
+      .set({ created_at: new Date(Date.now() - stale * 1000) })
+      .where('api_key_id', '=', key.id)
+      .execute();
+    const abandoned = await send();
+    expect(abandoned.status).toBe(409);
+    expect(await abandoned.json()).toMatchObject({
+      error: { code: 'idempotency_outcome_unknown', retryable: false },
+    });
+    finish();
+    expect((await first).status).toBe(201);
   });
 
   it('answers 429 with Retry-After once the key’s minute is spent', async () => {

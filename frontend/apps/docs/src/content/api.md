@@ -55,7 +55,7 @@ Pass `limit` (up to 100) and the previous `next_cursor` as `cursor` to read the 
 
 ## Idempotency
 
-Every `POST` that changes something needs an `Idempotency-Key` header, including creates, credit-spending runs and cancellations, such as a UUID you generate per operation. If a network error leaves you unsure whether a request succeeded, send it again with the same key and body: you receive the original response, marked `Idempotent-Replayed: true`, and nothing happens twice. Reusing a key with a different body returns `409 idempotency_conflict`. Keys are remembered for 24 hours.
+Every `POST` that changes something needs an `Idempotency-Key` header, including creates, credit-spending runs and cancellations, such as a UUID you generate per operation. If a network error leaves you unsure whether a request succeeded, send it again with the same key and body: you receive the original response, marked `Idempotent-Replayed: true`, and nothing happens twice. Reusing a key with a different body returns `409 idempotency_conflict`. If the original request failed with a server error, it may still have taken effect, so a retry with its key returns `409 idempotency_outcome_unknown` instead of running it again: check the resource, then send a new key if it is still needed. Keys are remembered for 24 hours.
 
 ## Launch an audit safely
 
@@ -93,7 +93,7 @@ Every error has the same shape:
 }
 ```
 
-Branch on `code`. Common codes: `invalid_api_key` (401: missing, revoked or expired key), `api_access_not_in_plan` (403), `workspace_role_forbidden` (403: the key's scope or its creator's role does not allow the operation), `not_found` (404), `validation_error` (422), `idempotency_conflict` and `estimate_exceeds_limit` (409) and `rate_limited` (429). Quote `request_id` when you contact support.
+Branch on `code`. Common codes: `invalid_api_key` (401: missing, revoked or expired key), `api_access_not_in_plan` (403), `workspace_role_forbidden` (403: the key's scope or its creator's role does not allow the operation), `not_found` (404), `validation_error` (422), `idempotency_conflict`, `idempotency_outcome_unknown` and `estimate_exceeds_limit` (409) and `rate_limited` (429). Quote `request_id` when you contact support.
 
 ## Values that are not numbers
 
