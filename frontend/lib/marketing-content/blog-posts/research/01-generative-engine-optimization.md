@@ -9,8 +9,13 @@ secondary_keywords:
 search_intent: 'Informational: understand GEO and decide what to do first'
 content_type: 'pillar'
 reviewed_at: '2026-10-06'
+author: 'Abhineet Jain'
 related_guides: ['/blog/geo-vs-seo', '/blog/how-to-improve-ai-visibility']
 publication_status: 'editorial_review'
+product:
+  heading: 'Find out what AI tells your buyers'
+  href: '/platform'
+  body: "CiteLadder shows how ChatGPT, Gemini, Claude and Google AI Overviews answer your buyers' questions and which pages they cite. It also gives you a ranked list of what to change on your site, so your GEO work starts from evidence."
 ---
 
 ## What is generative engine optimization?

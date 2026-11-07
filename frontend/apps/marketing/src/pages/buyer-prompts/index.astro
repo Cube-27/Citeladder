@@ -1,0 +1,33 @@
+---
+/**
+ * Buyer questions by brand: the hero, then each brand's comparison page in its
+ * group as a ContentIndex.
+ */
+import ContentIndex from '@/components/marketing/content/ContentIndex.astro';
+import { PageHero } from '@/components/marketing/sections/heroes';
+import { PageSection } from '@/components/marketing/sections/page-section';
+import { STUDY_INDEXES } from '@/lib/marketing-content/studies/indexes';
+import { breadcrumbJsonLd } from '@/lib/seo/json-ld';
+import MarketingLayout from '../../layouts/MarketingLayout.astro';
+import { studyGroups } from '../../study-index';
+
+const index = STUDY_INDEXES.buyerPrompts;
+const breadcrumb = breadcrumbJsonLd([
+  { name: 'Home', path: '/' },
+  { name: index.title, path: index.path },
+]);
+---
+
+<MarketingLayout
+  title={index.metaTitle}
+  description={index.description}
+  canonical={index.path}
+  jsonLd={breadcrumb ? [breadcrumb] : []}
+>
+  <main id="main">
+    <PageHero align="left" title={index.heroTitle} lead={index.lead} />
+    <PageSection label={index.title}>
+      <ContentIndex groups={studyGroups(index, '/buyer-prompts/')} />
+    </PageSection>
+  </main>
+</MarketingLayout>

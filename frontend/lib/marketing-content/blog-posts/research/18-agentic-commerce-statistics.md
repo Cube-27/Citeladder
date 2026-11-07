@@ -17,8 +17,13 @@ secondary_keywords:
 search_intent: 'Informational: understand what verified data shows about AI shopping before investing in it'
 content_type: 'market-trend research'
 reviewed_at: '2026-10-20'
+author: 'Abhineet Jain'
 related_guides: ['/blog/ads-in-ai-answers', '/best-ai-visibility-platforms']
 publication_status: 'editorial_review'
+product:
+  heading: "Measure your products' AI shelf share"
+  href: '/platform/product-visibility'
+  body: 'CiteLadder shows how your products and categories appear in AI buying answers, including share of shelf and first-position wins where answers rank products. Use it to track the discovery side of agentic commerce for your own catalog.'
 ---
 
 ## What does the data say about agentic commerce in 2026?

@@ -1,4 +1,5 @@
 import { parseFrontmatter } from 'astro/markdown';
+import { FOUNDER, PRODUCT_HEAD, type PublicPerson } from '@/lib/marketing-content/people';
 
 type ResearchMetadata = {
   title: string;
@@ -10,6 +11,10 @@ type ResearchMetadata = {
   search_intent: string;
   content_type: string;
   reviewed_at: string;
+  /** First publication date, when the page states one. */
+  published_at?: string;
+  /** The person credited as author, by name; must be one of the public people in people.ts. */
+  author?: string;
   /** Curated "More guides" slugs; guides without them fall back to publication order. */
   related_guides?: readonly string[];
   /** Study pages: the group their section index lists them under, and that row's meta line. */
@@ -20,7 +25,8 @@ type ResearchMetadata = {
   /** The guide's product section: a heading, the guide's own copy and the module it leads to. */
   product?: Readonly<{
     heading: string;
-    href: '/platform/cited-sources' | '/platform/ai-visibility';
+    /** A /platform page with its own screen. */
+    href: string;
     body: string;
   }>;
 };
@@ -146,6 +152,7 @@ export function researchFaqs(markdown: string): { q: string; a: string }[] {
 /** Study pages sit under their section's index; the first matching prefix wins. */
 const STUDY_PARENTS = [
   { prefix: '/ai-crawlers/', label: 'AI crawlers', href: '/ai-crawlers' },
+  { prefix: '/buyer-prompts/', label: 'Buyer prompts', href: '/buyer-prompts' },
   { prefix: '/research/', label: 'Research', href: '/research' },
 ] as const;
 
@@ -207,6 +214,17 @@ export const STUDY_PAGES = parseArticles(
     import: 'default',
   }),
 );
+
+const PEOPLE: readonly PublicPerson[] = [PRODUCT_HEAD, FOUNDER];
+
+/** The page's credited author, or none; an author name outside people.ts is a content error. */
+export function researchAuthor(article: ResearchArticle): PublicPerson | undefined {
+  const name = article.frontmatter.author;
+  if (!name) return undefined;
+  const person = PEOPLE.find((candidate) => candidate.name === name);
+  if (!person) throw new Error(`${article.frontmatter.slug}: unknown author "${name}"`);
+  return person;
+}
 
 /** Study pages under a section prefix, such as `/ai-crawlers/`. */
 export const studyPagesUnder = (prefix: string) =>

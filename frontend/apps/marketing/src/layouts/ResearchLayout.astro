@@ -4,10 +4,12 @@
  * Toc, the ArticleHeader with the review date, the guide's Markdown in
  * Prose with its FAQ as a FaqList, an optional product section from the
  * guide's frontmatter (a heading, the guide's own copy, a ContentFigure with
- * the module's screen and a link to it), then the sources and More guides.
+ * the module's screen and a link to it), then the sources, the author card
+ * when the guide credits a person, and More guides.
  */
 import ArticleHeader from '@/components/content/ArticleHeader.astro';
 import Prose from '@/components/content/Prose.astro';
+import AuthorCard from '@/components/marketing/content/AuthorCard.astro';
 import { Breadcrumbs } from '@/components/marketing/chrome/breadcrumbs';
 import ContentArticle from '@/components/marketing/content/ContentArticle.astro';
 import ContentFigure from '@/components/marketing/content/ContentFigure.astro';
@@ -29,7 +31,13 @@ import { platformLabel } from '@/lib/marketing-content/nav';
 import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
 import { breadcrumbJsonLd, faqPageJsonLd, researchArticleJsonLd } from '@/lib/seo/json-ld';
 import type { ResearchArticle } from '../research-articles';
-import { moreGuides, researchFaqs, researchParent, researchParts } from '../research-articles';
+import {
+  moreGuides,
+  researchAuthor,
+  researchFaqs,
+  researchParent,
+  researchParts,
+} from '../research-articles';
 import MarketingLayout from './MarketingLayout.astro';
 
 interface Props {
@@ -47,10 +55,10 @@ const breadcrumb = breadcrumbJsonLd([
 ]);
 // The visible FAQ section, mirrored as FAQPage data so the questions are machine-readable.
 const faqs = researchFaqs(article.markdown);
-// No person author or publication date is supplied, so the Article claims
-// neither: the organization authors it and the visible review date is its only date.
+// The credited person, when the guide names one; otherwise the organization authors it.
+const author = researchAuthor(article);
 const jsonLd = [
-  researchArticleJsonLd(meta),
+  researchArticleJsonLd(meta, author),
   breadcrumb,
   faqs.length > 0 ? faqPageJsonLd(faqs) : null,
 ].filter((data) => data !== null);
@@ -63,6 +71,7 @@ const toc = [
 // The module's own hero screen, from the catalogue.
 const productScreen = product && PLATFORM_PAGES.find((page) => page.path === product.href)?.screen;
 const Screen = productScreen ? SCREEN_CATALOG[productScreen].View : null;
+if (product && !Screen) throw new Error(`${meta.slug}: product href ${product.href} has no platform screen`);
 // Curated related guides, or the next ones in publication order, so every guide ends with a way on.
 const more = moreGuides(article);
 ---
@@ -80,6 +89,7 @@ const more = moreGuides(article);
       <ArticleHeader
         slot="header"
         title={meta.title}
+        author={author ? { name: author.name, role: author.role } : undefined}
         meta={[
           {
             prefix: 'Research reviewed',
@@ -146,6 +156,16 @@ const more = moreGuides(article);
               </SourceRow>
             ))}
           </SourcesList>
+        )
+      }
+      {
+        author && (
+          <AuthorCard
+            slot="end"
+            name={author.name}
+            role={author.role}
+            links={[{ label: 'LinkedIn', href: author.linkedin }]}
+          />
         )
       }
     </ContentArticle>

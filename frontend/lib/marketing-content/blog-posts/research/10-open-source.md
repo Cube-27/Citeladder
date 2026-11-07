@@ -14,8 +14,13 @@ secondary_keywords:
 search_intent: 'Find and evaluate an open-source or self-hosted tool that tracks brand visibility in AI answers'
 content_type: 'product-led educational pillar'
 reviewed_at: '2026-10-20'
+author: 'Abhineet Jain'
 related_guides: ['/compare/profound-alternatives', '/best-ai-visibility-platforms']
 publication_status: 'editorial_review'
+product:
+  heading: 'Track your brand on hosted CiteLadder'
+  href: '/platform/ai-visibility'
+  body: 'If you would rather not run servers, the hosted CiteLadder tracks brand mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude and Google AI Overviews. It uses the same measurement approach as the open-source code, and every result is tied to its recorded answer.'
 ---
 
 ## Is there an open-source AI visibility tool you can self-host?

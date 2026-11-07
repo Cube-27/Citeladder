@@ -8,8 +8,13 @@ secondary_keywords: ['is SEO replaced by AI', 'is SEO dead', 'future of SEO', 'A
 search_intent: 'Understand disruption, traffic risk and changes to SEO work'
 content_type: 'evidence-led analysis'
 reviewed_at: '2026-10-06'
+author: 'Abhineet Jain'
 related_guides: ['/blog/ai-referral-traffic-statistics-2026', '/blog/geo-vs-seo']
 publication_status: 'editorial_review'
+product:
+  heading: 'Check how AI answers your buyers'
+  href: '/platform'
+  body: 'If AI now sits between your customers and your pages, CiteLadder shows how ChatGPT, Gemini, Claude and Google AI Overviews answer your buyers and which pages they cite. It also gives you a ranked list of what to change on your site.'
 ---
 
 ## Is SEO being replaced by AI?

@@ -9,9 +9,15 @@ secondary_keywords:
 search_intent: 'Understand what Google-Extended does and decide whether to allow or block it'
 content_type: 'AI crawler directory page'
 reviewed_at: '2026-11-07'
+published_at: '2026-11-07'
+author: 'Abhineet Jain'
 related_guides: ['/ai-crawlers/googlebot', '/research/ai-crawlers-robots-txt-2026']
 index_group: 'AI training crawlers'
 index_meta: 'Blocked by 13.5% of top sites'
+product:
+  heading: "Check your site's AI crawler access"
+  href: '/platform/site-health'
+  body: "CiteLadder's site health crawl flags AI crawler access issues, such as robots.txt rules affecting tokens like Google-Extended, with page-level evidence for each finding. After you change your rules, run a recrawl to confirm the fix."
 ---
 
 Google-Extended is a robots.txt token run by Google. It controls whether content that Google crawls from your site may be used to train Gemini models and to ground answers in Gemini Apps. Google's documentation says it has no effect on whether your site appears in Google Search. In our study of the 10,000 most popular websites, 13.5% of sites with a known policy block it in robots.txt.

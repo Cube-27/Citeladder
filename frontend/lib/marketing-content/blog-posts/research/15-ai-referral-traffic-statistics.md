@@ -14,8 +14,13 @@ secondary_keywords:
 search_intent: 'Informational: validate the size and value of AI referral traffic before investing'
 content_type: 'research'
 reviewed_at: '2026-10-20'
+author: 'Abhineet Jain'
 related_guides: ['/blog/agentic-commerce-statistics-2026', '/blog/ai-search-market-share-2026']
 publication_status: 'editorial_review'
+product:
+  heading: 'Measure AI referral traffic on your site'
+  href: '/platform/ai-referral-analytics'
+  body: 'CiteLadder shows the visits ChatGPT, Gemini and other AI assistants send to your site from GA4, and the AI crawlers that fetch your pages from your own server logs. You can check your own share against these public datasets.'
 ---
 
 ## How much traffic does AI send to websites?

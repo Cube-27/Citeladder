@@ -15,6 +15,7 @@ secondary_keywords:
 search_intent: 'Understand, implement and choose tools for brand and website citation monitoring'
 content_type: 'product-led educational pillar'
 reviewed_at: '2026-10-29'
+author: 'Abhineet Jain'
 related_guides: ['/blog/how-accurate-are-ai-citations', '/blog/can-chatgpt-find-citations']
 image: '/blog/editorial/article-citations.png'
 publication_status: 'editorial_review'

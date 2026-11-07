@@ -14,8 +14,13 @@ secondary_keywords:
 search_intent: 'Commercial investigation: shortlist a replacement or comparison for Profound after its plan change'
 content_type: 'comparison'
 reviewed_at: '2026-10-20'
+author: 'Abhineet Jain'
 related_guides: ['/best-ai-visibility-platforms', '/open-source']
 publication_status: 'editorial_review'
+product:
+  heading: 'Track how often AI recommends you'
+  href: '/platform/ai-visibility'
+  body: 'CiteLadder tracks brand mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude and Google AI Overviews. Every result is tied to its recorded answer, so you can check the evidence behind each number while you compare Profound alternatives.'
 ---
 
 ## What are the best alternatives to Profound?

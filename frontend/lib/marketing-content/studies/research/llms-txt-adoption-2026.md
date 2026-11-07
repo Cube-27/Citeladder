@@ -8,9 +8,15 @@ secondary_keywords: ['llms.txt', 'how many sites use llms.txt', 'llms.txt exampl
 search_intent: 'Learn how many popular websites publish llms.txt and what the files contain'
 content_type: 'original research report'
 reviewed_at: '2026-11-07'
+published_at: '2026-11-07'
+author: 'Abhineet Jain'
 related_guides: ['/research/ai-crawlers-robots-txt-2026', '/ai-crawlers/gptbot']
 index_group: 'Website files for AI'
 index_meta: '6,943 sites · 2026-11-07'
+product:
+  heading: 'Check which AI crawlers fetch your pages'
+  href: '/platform/ai-referral-analytics'
+  body: 'This study could not show whether AI systems read llms.txt, but your own server logs can show which AI crawlers request your pages. CiteLadder brings in those logs alongside the GA4 visits that ChatGPT, Gemini and other assistants send you, so you can judge what AI actually does with your site.'
 ---
 
 On 2026-11-07, CiteLadder requested /llms.txt from the top 10,000 sites on the Tranco list. 6943 sites answered. Of those, 863 (12.4%) served a valid Markdown file. Adoption was higher in the top 1k and highest among software and SaaS sites. The study checked whether a file exists and what it looks like. It did not measure whether any AI system reads these files.

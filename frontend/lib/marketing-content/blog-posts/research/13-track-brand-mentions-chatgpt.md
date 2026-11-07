@@ -14,6 +14,7 @@ secondary_keywords:
 search_intent: 'Informational how-to: set up brand mention tracking in ChatGPT'
 content_type: 'how-to guide'
 reviewed_at: '2026-10-20'
+author: 'Abhineet Jain'
 related_guides: ['/llm-rank-tracker', '/blog/verify-improve-ai-search-visibility']
 publication_status: 'editorial_review'
 product:

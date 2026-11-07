@@ -15,8 +15,13 @@ secondary_keywords:
 search_intent: 'Informational: find reliable, dated figures on AI Overview prevalence, clicks and citations'
 content_type: 'research roundup'
 reviewed_at: '2026-10-20'
+author: 'Abhineet Jain'
 related_guides: ['/blog/ads-in-ai-answers', '/blog/ai-search-market-share-2026']
 publication_status: 'editorial_review'
+product:
+  heading: 'Track AI Overviews for your own queries'
+  href: '/platform/ai-visibility'
+  body: "Published prevalence figures describe someone else's keyword set, so the useful number is how often your buyers' queries show your brand. CiteLadder tracks your mentions, position, sentiment and competitors in Google AI Overviews, ChatGPT, Gemini and Claude, and ties each result to its recorded answer."
 ---
 
 ## What share of Google searches show an AI Overview?

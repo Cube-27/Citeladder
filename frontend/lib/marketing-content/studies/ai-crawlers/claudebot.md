@@ -8,9 +8,15 @@ secondary_keywords: ['ClaudeBot robots.txt', 'block ClaudeBot', 'ClaudeBot user 
 search_intent: 'Understand what ClaudeBot does and decide whether to allow or block it'
 content_type: 'AI crawler directory page'
 reviewed_at: '2026-11-07'
+published_at: '2026-11-07'
+author: 'Abhineet Jain'
 related_guides: ['/ai-crawlers/claude-searchbot', '/research/ai-crawlers-robots-txt-2026']
 index_group: 'AI training crawlers'
 index_meta: 'Blocked by 15% of top sites'
+product:
+  heading: 'See which AI crawlers fetch your pages'
+  href: '/platform/ai-referral-analytics'
+  body: 'CiteLadder reads your own server logs to show which AI crawlers, such as ClaudeBot, actually fetch your pages. It also shows the visits that ChatGPT, Gemini and other AI assistants send to your site from GA4.'
 ---
 
 ClaudeBot is Anthropic's web crawler for AI model training. Anthropic says that blocking it in robots.txt signals that a site's future content should be left out of its training datasets. Anthropic runs separate bots for search and for requests made by users, and each one has its own rule. In the robots.txt files of the 10,000 most popular websites, 15% of sites with a known policy block ClaudeBot.

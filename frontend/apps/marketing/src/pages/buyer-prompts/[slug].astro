@@ -1,0 +1,16 @@
+---
+/** One brand's buyer-question comparison page: a study page in the research guide template. */
+import type { GetStaticPaths } from 'astro';
+import ResearchLayout from '../../layouts/ResearchLayout.astro';
+import { studyPagesUnder } from '../../research-articles';
+
+export const getStaticPaths = (() =>
+  studyPagesUnder('/buyer-prompts/').map((article) => ({
+    params: { slug: article.frontmatter.slug.slice('/buyer-prompts/'.length) },
+    props: { article },
+  }))) satisfies GetStaticPaths;
+
+const { article } = Astro.props;
+---
+
+<ResearchLayout article={article} />

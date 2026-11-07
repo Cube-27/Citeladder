@@ -9,9 +9,14 @@ secondary_keywords:
 search_intent: 'Practical measurement: check current presence and interpret the result'
 content_type: 'measurement guide'
 reviewed_at: '2026-10-06'
+author: 'Abhineet Jain'
 related_guides: ['/ai-citation-tracking', '/track-brand-mentions-chatgpt']
 image: '/blog/editorial/article-verify.png'
 publication_status: 'editorial_review'
+product:
+  heading: 'Track your brand across AI answers'
+  href: '/platform/ai-visibility'
+  body: 'CiteLadder runs your buyer questions across ChatGPT, Gemini, Claude and Google AI Overviews and records mentions, position, sentiment and competitors for each engine. Every result links back to the saved answer, so anyone can repeat and check your visibility over time.'
 ---
 
 ## How can I check my AI visibility?

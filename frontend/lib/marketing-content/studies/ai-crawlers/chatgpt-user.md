@@ -8,9 +8,15 @@ secondary_keywords: ['ChatGPT-User robots.txt', 'block ChatGPT-User', 'ChatGPT-U
 search_intent: 'Understand what ChatGPT-User does and decide whether to allow or block it'
 content_type: 'AI crawler directory page'
 reviewed_at: '2026-11-07'
+published_at: '2026-11-07'
+author: 'Abhineet Jain'
 related_guides: ['/ai-crawlers/gptbot', '/research/ai-crawlers-robots-txt-2026']
 index_group: 'User-triggered AI fetchers'
 index_meta: 'Blocked by 7.7% of top sites'
+product:
+  heading: 'See when ChatGPT fetches your pages'
+  href: '/platform/ai-referral-analytics'
+  body: 'CiteLadder reads your own server logs to show which AI crawlers, such as ChatGPT-User, fetch your pages. It also uses GA4 to show the visits ChatGPT and other AI assistants send to your site.'
 ---
 
 ChatGPT-User is the user agent OpenAI uses when ChatGPT or a Custom GPT visits a web page because a user asked for something. It does not crawl the web on its own. This page covers what it does, what a robots.txt rule for it changes, how to verify real requests, and how the 10,000 most popular websites handle it.

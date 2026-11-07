@@ -9,8 +9,13 @@ secondary_keywords:
 search_intent: 'Action: diagnose weak visibility and choose useful improvements'
 content_type: 'how-to'
 reviewed_at: '2026-10-06'
+author: 'Abhineet Jain'
 related_guides: ['/blog/verify-improve-ai-search-visibility', '/generative-engine-optimization']
 publication_status: 'editorial_review'
+product:
+  heading: 'Diagnose your own AI visibility gaps'
+  href: '/platform'
+  body: "CiteLadder shows how ChatGPT, Gemini, Claude and Google AI Overviews answer your buyers' questions and which pages they cite. You also get a ranked list of what to change on your site, so you can start with the failure you actually observe."
 ---
 
 ## How do you improve AI visibility?

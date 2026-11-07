@@ -9,9 +9,15 @@ secondary_keywords:
 search_intent: 'Understand what Applebot-Extended does and decide whether to allow or block it'
 content_type: 'AI crawler directory page'
 reviewed_at: '2026-11-07'
+published_at: '2026-11-07'
+author: 'Abhineet Jain'
 related_guides: ['/ai-crawlers/applebot', '/research/ai-crawlers-robots-txt-2026']
 index_group: 'AI training crawlers'
 index_meta: 'Blocked by 13.1% of top sites'
+product:
+  heading: "Check your site's AI crawler access"
+  href: '/platform/site-health'
+  body: 'CiteLadder crawls your site for AI crawler access issues alongside technical SEO and answer-readiness problems, with page-level evidence for each finding. After you change your robots.txt rules for tokens like Applebot-Extended, run a recrawl to verify the fix.'
 ---
 
 Applebot-Extended is a robots.txt token run by Apple. It does not crawl pages. It sets whether content that Applebot has already crawled can be used to train Apple's foundation models. CiteLadder checked the robots.txt files of the 10,000 most popular websites. Among sites with a known policy, 13.1% block Applebot-Extended.
