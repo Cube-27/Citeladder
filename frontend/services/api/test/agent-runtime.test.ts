@@ -1085,6 +1085,36 @@ describe('Agent runtime on PostgreSQL', () => {
     expect((await fixtures.run(second.run.id)).error_code).toBe('access_revoked');
     expect(calls).toBe(0);
   });
+  it('settles, refunds and ends an interrupted turn whose member was removed, with no reply', async () => {
+    const scope = await fixtures.scope();
+    const refunded: string[] = [];
+    const models = new ModelCalls(db, {
+      ...zeroFunding,
+      refund: async (_trx, run) => {
+        refunded.push(run.id);
+      },
+    });
+    const { run, lease } = await fixtures.claimed(scope);
+    await db
+      .deleteFrom('workspace_members')
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('user_id', '=', scope.userId)
+      .execute();
+    await fixtures.runtime(scope, scripted([]), { models }).fail(lease, 'interrupted');
+    expect(await fixtures.run(run.id)).toMatchObject({
+      status: 'failed',
+      error_code: 'interrupted',
+      lease_owner: null,
+    });
+    expect(refunded).toEqual([run.id]);
+    const messages = await db
+      .selectFrom('agent_messages')
+      .select('role')
+      .where('chat_id', '=', run.chat_id)
+      .orderBy('sequence')
+      .execute();
+    expect(messages.map((message) => message.role)).toEqual(['user']);
+  });
   it('asks a cut-off call once more at low effort, then saves its document', async () => {
     const scope = await fixtures.scope();
     const { run, lease } = await fixtures.claimed(scope, { skillId: 'plan' });

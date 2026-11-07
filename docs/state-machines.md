@@ -251,7 +251,7 @@ DB: `(provider, mode, event_id)` unique (0001:4052).
 | `queued` → `leased` | browser `POST …/runs/{id}/run` → claim | `routes/agent.ts:155-190`, `agent/queue.ts:53-63` | claimable, `attempt < max`, this run, SKIP LOCKED; interactive slot or 429 |
 | `leased` → `running` | `start` | `agent/queue.ts:64-82` | owner, `leased`, unexpired, attempt + 1 |
 | `running` → `succeeded` | `finish` → `terminalize` | `agent/runtime.ts`, `agent/queue.ts:21-42` | `lockRun` |
-| `running` → `failed` (code) | `runtime.fail`; caller stop → `interrupted`/`turn_timeout`; heartbeat gave up → `interrupted` | `agent/runtime.ts:709-734`, `agent/worker.ts:39-43` | `lockRun`; settle + refund (B58) in the same tx |
+| `running` → `failed` (code) | `runtime.fail`; caller stop → `interrupted`/`turn_timeout`; heartbeat gave up → `interrupted` | `agent/runtime.ts` `fail`, `agent/worker.ts` | `lockRun`; settle + refund (B58) in the same tx; reply only while the member may still write |
 | `queued`/`leased`/`running` → `cancelled` | Stop | `agent/store.ts:304-333` | run `FOR UPDATE`, not terminal; no lease check; charged (B58) |
 | `queued` > `unclaimed_grace_seconds` → `failed interrupted` | runner `recover` | `agent/queue.ts:93-146` | SKIP LOCKED; settle + refund |
 | held, lease expired → `failed interrupted` | runner `recover` | same | lease `<= now` |
@@ -262,9 +262,7 @@ includes held runs' `lease_expires_at` (`workers/agent-worker.ts`), and a
 heartbeat that gives up makes `runAgentOnce` call `fail(lease, 'interrupted')`
 (`agent/worker.ts`), fenced by `lockRun`.
 
-Known invalid: `fail()` for a member who lost
-access throws and leaves the run `running` —
-[AG4](plans/state-machine-fixes.md#ag-agent). Closing the tab after a document
+Known invalid: closing the tab after a document
 streamed refunds the turn — [AG1](plans/state-machine-fixes.md#ag-agent)
 (B69).
 

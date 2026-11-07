@@ -229,8 +229,9 @@ closed or its process stopped (`interrupted`), a turn past its time limit
 code-specific
 recovery reply from [`messages.ts`](../frontend/services/api/src/agent/messages.ts)
 saying what happened, that nothing was saved, and what to do next. The one
-exception is a member who lost access (`access_revoked`), whose turn ends
-without a reply. Failure codes keep their meaning: `trial_expired`,
+exception is a member who lost access (`access_revoked`, or any other code
+once the member can no longer write to the chat), whose turn still settles,
+refunds and ends, without a reply. Failure codes keep their meaning: `trial_expired`,
 `subscription_lapsed` and `access_unresolved` survive from entitlement checks,
 provider failures are
 `provider_error`, and validation and storage defects are `internal_error`. At admission a
