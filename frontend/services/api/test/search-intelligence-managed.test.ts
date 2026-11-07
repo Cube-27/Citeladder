@@ -153,6 +153,27 @@ const platformCall = (id: string | null) =>
     .select(['status', 'reserved_credits', 'credits', 'cost_microusd'])
     .where('id', '=', id ?? randomUUID())
     .executeTakeFirst();
+/** A confirmed managed analysis held by this test, with its first request prepared for dispatch. */
+async function preparedDispatch() {
+  const t = await workspace('managed');
+  const confirmed = await confirmRun(db, t.scope, t.review.id);
+  const task = await db
+    .updateTable('analytics_tasks')
+    .set({
+      status: 'running',
+      lease_owner: 'research-test',
+      lease_expires_at: new Date(Date.now() + 120000),
+    })
+    .where('id', '=', (await runRow(confirmed.id)).analytics_task_id!)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+  const state = new AcquisitionState(db, task, confirmed.id);
+  const plan = (await state.start())![0]!;
+  const prepared = await state.prepare(plan, 0);
+  if (prepared.action !== 'dispatch')
+    throw new Error(`Expected a dispatch, got ${prepared.action}`);
+  return { t, runId: confirmed.id, state, plan, prepared };
+}
 
 describe('managed Search Intelligence', () => {
   it('researches on the platform account and charges the DataForSEO cost in AI credits', async () => {
@@ -236,23 +257,7 @@ describe('managed Search Intelligence', () => {
   });
 
   it('ends the run and settles its hold when the member loses access just before a dispatch', async () => {
-    const t = await workspace('managed');
-    const confirmed = await confirmRun(db, t.scope, t.review.id);
-    const task = await db
-      .updateTable('analytics_tasks')
-      .set({
-        status: 'running',
-        lease_owner: 'research-test',
-        lease_expires_at: new Date(Date.now() + 120000),
-      })
-      .where('id', '=', (await runRow(confirmed.id)).analytics_task_id!)
-      .returningAll()
-      .executeTakeFirstOrThrow();
-    const state = new AcquisitionState(db, task, confirmed.id);
-    const plans = await state.start();
-    const prepared = await state.prepare(plans![0]!, 0);
-    if (prepared.action !== 'dispatch')
-      throw new Error(`Expected a dispatch, got ${prepared.action}`);
+    const { t, runId, state, prepared } = await preparedDispatch();
     const member = db
       .updateTable('workspace_members')
       .where('workspace_id', '=', t.workspaceId)
@@ -260,8 +265,8 @@ describe('managed Search Intelligence', () => {
     await member.set({ role: 'viewer' }).execute();
 
     expect(await state.dispatch(prepared)).toBe(false);
-    await settleResearchCharge(db, { workspaceId: t.workspaceId, runId: confirmed.id });
-    const ended = await runRow(confirmed.id);
+    await settleResearchCharge(db, { workspaceId: t.workspaceId, runId });
+    const ended = await runRow(runId);
     expect(ended).toMatchObject({
       status: 'failed',
       error_code: 'connection_changed',
@@ -288,26 +293,10 @@ describe('managed Search Intelligence', () => {
   it('bills a late receipt of a call marked uncertain while its reporting window is open', async () => {
     /** A dispatched call that a recovering pass then marks uncertain, as after a lost lease. */
     async function uncertainCall() {
-      const t = await workspace('managed');
-      const confirmed = await confirmRun(db, t.scope, t.review.id);
-      const task = await db
-        .updateTable('analytics_tasks')
-        .set({
-          status: 'running',
-          lease_owner: 'research-test',
-          lease_expires_at: new Date(Date.now() + 120000),
-        })
-        .where('id', '=', (await runRow(confirmed.id)).analytics_task_id!)
-        .returningAll()
-        .executeTakeFirstOrThrow();
-      const state = new AcquisitionState(db, task, confirmed.id);
-      const plans = await state.start();
-      const prepared = await state.prepare(plans![0]!, 0);
-      if (prepared.action !== 'dispatch')
-        throw new Error(`Expected a dispatch, got ${prepared.action}`);
+      const { t, runId, state, plan, prepared } = await preparedDispatch();
       expect(await state.dispatch(prepared)).toBe(true);
-      expect(await state.prepare(plans![0]!, 0)).toEqual({ action: 'stop' });
-      return { t, runId: confirmed.id, state, callId: prepared.call.id };
+      expect(await state.prepare(plan, 0)).toEqual({ action: 'stop' });
+      return { t, runId, state, callId: prepared.call.id };
     }
 
     const late = await uncertainCall();

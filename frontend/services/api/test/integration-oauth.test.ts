@@ -39,6 +39,30 @@ function configureOAuth() {
   return fetch;
 }
 
+/** A workspace whose owner completed Google consent once, with a consent to repeat. */
+async function connectedGsc() {
+  configureOAuth();
+  const userId = await fixtures.user();
+  const workspaceId = await fixtures.ownedWorkspace(userId);
+  const consent = async () => {
+    const start = await startOAuth(db, { userId, workspaceId, provider: 'gsc' });
+    await completeOAuth(db, {
+      provider: 'gsc',
+      code: 'recorded-code',
+      nonce: start.nonce,
+      state: new URL(start.url).searchParams.get('state')!,
+    });
+  };
+  await consent();
+  const gsc = await db
+    .selectFrom('integration_connections')
+    .select(['id', 'grant_id'])
+    .where('workspace_id', '=', workspaceId)
+    .where('provider', '=', 'gsc')
+    .executeTakeFirstOrThrow();
+  return { workspaceId, consent, gsc };
+}
+
 describe('integration OAuth state and persistence', () => {
   it.each(['member', 'viewer', 'removed'])(
     'rejects %s authority before code exchange',
@@ -218,25 +242,7 @@ describe('integration OAuth state and persistence', () => {
   });
 
   it('refuses a reconnect while a revocation is claimed and keeps only new tokens after it', async () => {
-    configureOAuth();
-    const userId = await fixtures.user();
-    const workspaceId = await fixtures.ownedWorkspace(userId);
-    const consent = async () => {
-      const start = await startOAuth(db, { userId, workspaceId, provider: 'gsc' });
-      await completeOAuth(db, {
-        provider: 'gsc',
-        code: 'recorded-code',
-        nonce: start.nonce,
-        state: new URL(start.url).searchParams.get('state')!,
-      });
-    };
-    await consent();
-    const gsc = await db
-      .selectFrom('integration_connections')
-      .select(['id', 'grant_id'])
-      .where('workspace_id', '=', workspaceId)
-      .where('provider', '=', 'gsc')
-      .executeTakeFirstOrThrow();
+    const { workspaceId, consent, gsc } = await connectedGsc();
     await disconnectConnection(db, { workspaceId, connectionId: gsc.id });
     const claim = { workspaceId, grantId: gsc.grant_id, claimId: crypto.randomUUID() };
     const claimed = await claimRevocation(db, claim);
@@ -266,26 +272,8 @@ describe('integration OAuth state and persistence', () => {
   });
 
   it('queues a catch-up sync for mapped properties when a grant is reconnected', async () => {
-    configureOAuth();
-    const userId = await fixtures.user();
-    const workspaceId = await fixtures.ownedWorkspace(userId);
+    const { workspaceId, consent, gsc } = await connectedGsc();
     const projectId = await seedProject(db, workspaceId);
-    const consent = async () => {
-      const start = await startOAuth(db, { userId, workspaceId, provider: 'gsc' });
-      await completeOAuth(db, {
-        provider: 'gsc',
-        code: 'recorded-code',
-        nonce: start.nonce,
-        state: new URL(start.url).searchParams.get('state')!,
-      });
-    };
-    await consent();
-    const gsc = await db
-      .selectFrom('integration_connections')
-      .select(['id', 'grant_id'])
-      .where('workspace_id', '=', workspaceId)
-      .where('provider', '=', 'gsc')
-      .executeTakeFirstOrThrow();
     await db
       .insertInto('integration_property_mappings')
       .values({

@@ -932,7 +932,7 @@ export class AcquisitionState {
 /** A terminal run cannot leave a dataset waiting for another paid dispatch. */
 export function closeCollecting(
   db: Database,
-  run: { workspaceId: string; projectId: string; runId: string },
+  run: { workspaceId: string; projectId: string | null; runId: string },
   at: Date,
 ) {
   return db
