@@ -13,7 +13,7 @@ import { POSTS, type BlogBlock } from './blog';
 import { COMPETITORS } from './compare';
 import { FAQ_GROUPS } from './faq';
 import { FOOTER_LEGAL_LINKS, LEGAL_DOCUMENTS } from './legal-documents';
-import { NAV_DROPS, NAV_LINKS, PUBLISHED_PLATFORM, type NavDropItem } from './nav';
+import { FOOTER_COLUMNS, NAV_DROPS, NAV_LINKS, PUBLISHED_PLATFORM, type NavDropItem } from './nav';
 import { PLATFORM_PAGES } from './platform-pages';
 import { FOUNDER, PRODUCT_HEAD } from './people';
 import { PLAN_PRESENTATION, capabilityLabel } from './pricing';
@@ -137,6 +137,23 @@ describe('marketing navigation', () => {
         }
       }
     }
+  });
+
+  it('links every study section from the footer and the research index from Resources', () => {
+    const footerResearch = FOOTER_COLUMNS.find((column) => column.key === 'research')!.links.map(
+      (link) => link.href,
+    );
+    expect(footerResearch.slice(0, 4)).toEqual([
+      '/ai-crawlers',
+      '/buyer-prompts',
+      '/claude-recommendations',
+      '/research',
+    ]);
+    const resources = NAV_DROPS.find((drop) => drop.key === 'resources')!;
+    const research = resources.groups
+      .flatMap((group) => group.items)
+      .find((item) => item.href === '/research');
+    expect(research?.desc).toBe('Research on AI Crawlers and AI Answers');
   });
 });
 

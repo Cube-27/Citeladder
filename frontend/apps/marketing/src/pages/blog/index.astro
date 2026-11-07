@@ -2,7 +2,8 @@
 /**
  * The blog index (the WebBlogIndex template): the hero, the newest post as a
  * featured card, the other posts and the research guides as ContentIndex
- * listings, the start paths and the closing band. Static: nothing hydrates.
+ * listings, CiteLadder's studies (reports and study sections), the start paths
+ * and the closing band. Static: nothing hydrates.
  */
 import { ContentCta } from '@/components/marketing/content/content-cta';
 import ContentIndex from '@/components/marketing/content/ContentIndex.astro';
@@ -14,7 +15,13 @@ import { BLOG_EMPTY_STATE, BLOG_START_PATHS, POSTS } from '@/lib/marketing-conte
 import { formatBlogDate, newestFirst, toBlogPostSummary } from '@/lib/marketing-content/blog-index';
 import { blogIndexJsonLd } from '@/lib/seo/json-ld';
 import MarketingLayout from '../../layouts/MarketingLayout.astro';
+import { STUDY_INDEXES } from '@/lib/marketing-content/studies/indexes';
 import { RESEARCH_ARTICLES } from '../../research-articles';
+import { studyGroups } from '../../study-index';
+
+// CiteLadder's own studies: the reports by research group, then the study sections, in their index copy.
+const research = STUDY_INDEXES.research;
+const STUDY_SECTIONS = Object.values(STUDY_INDEXES).filter((index) => index.path !== research.path);
 
 const description =
   'Learn how to measure AI visibility, investigate citations and audit website readiness. Practical guides with clear definitions, examples and limitations.';
@@ -108,6 +115,24 @@ const [featured, ...rest] = newestFirst(POSTS);
         </PageSection>
       )
     }
+
+    <PageSection label={research.heroTitle}>
+      <ContentIndex
+        groups={[
+          ...studyGroups(research, `${research.path}/`),
+          {
+            id: 'study-sections',
+            title: research.title,
+            description: research.lead,
+            items: STUDY_SECTIONS.map((index) => ({
+              title: index.title,
+              href: index.path,
+              body: index.description,
+            })),
+          },
+        ]}
+      />
+    </PageSection>
 
     <ContentCta
       title="Put the method into practice"
