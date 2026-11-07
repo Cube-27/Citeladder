@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 import { beforeAll, afterAll, describe, it, expect } from 'vitest';
 import { createApp } from '../src/app.ts';
 import { memberCan } from '../src/auth/workspace.ts';
@@ -452,6 +453,46 @@ describe('invitations follow their issuer authority', () => {
     await db.updateTable('users').set({ is_active: false }).where('id', '=', other).execute();
     expect(await fromDisabled()).toBe(400);
     expect(await ownersLink()).toBe(200);
+  });
+
+  it('waits for an operator disabling the issuer and then refuses the link', async () => {
+    const spaceOwner = await fixtures.user();
+    actors.push(spaceOwner);
+    const space = await fixtures.ownedWorkspace(spaceOwner);
+    const guest = await fixtures.user();
+    actors.push(guest);
+    const issued = await request(
+      `/${space}/invitations`,
+      'POST',
+      { email: `${guest}@example.test`, role: 'member' },
+      await userCookie(spaceOwner),
+    );
+    expect(issued.status).toBe(201);
+    const { token } = (await issued.json()) as { token: string };
+    const guestCookie = await userCookie(guest);
+    let accepted: Promise<Response> | undefined;
+    // The operator's disable holds the issuer's row while the guest accepts.
+    await db.transaction().execute(async (trx) => {
+      await trx.selectFrom('users').select('id').where('id', '=', spaceOwner).forUpdate().execute();
+      accepted = request('/invitations/accept', 'POST', { token }, guestCookie);
+      await delay(200);
+      await trx
+        .updateTable('users')
+        .set({ is_active: false })
+        .where('id', '=', spaceOwner)
+        .execute();
+    });
+    expect((await accepted!).status).toBe(400);
+    expect(
+      await db
+        .selectFrom('workspace_members')
+        .select('role')
+        .where('workspace_id', '=', space)
+        .where('user_id', '=', guest)
+        .execute(),
+    ).toEqual([]);
+    await db.updateTable('users').set({ is_active: true }).where('id', '=', spaceOwner).execute();
+    expect((await request('/invitations/accept', 'POST', { token }, guestCookie)).status).toBe(200);
   });
 });
 
