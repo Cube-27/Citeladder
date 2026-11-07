@@ -150,11 +150,7 @@ reservation → debit + release, or release, or refund. Subjects: `audit` task,
 |---|---|
 | Idempotent entries | DB unique idempotency key per account (0001:4115); debit uniques 0001:5193-5195 |
 | Settle once, never above the hold | App `entitlements/ledger.ts` settle/release under row locks + capacity lock (B63) |
-| A deleted project leaves no open hold | App `projectHoldsReservations` `entitlements/ledger.ts:465-505`, covers `audit`, `agent`, `site_crawl` only |
-
-Known invalid: deleting a project during a managed Keyword Research run leaves
-its `platform_call` hold reserved forever (and blocks that workspace's trial
-purge) — [BL1](plans/state-machine-fixes.md#bl-billing-and-credits).
+| A deleted project leaves no open hold | App `projectHoldsReservations` `entitlements/ledger.ts`: `audit`, `agent`, `site_crawl` and the project's Keyword Research `platform_call` holds refuse deletion (409 `project_work_running`) |
 
 ### 3.2 `platform_calls.status` ∈ {`reserved`, `settled`, `failed`}
 

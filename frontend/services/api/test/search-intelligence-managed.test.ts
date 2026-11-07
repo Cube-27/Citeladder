@@ -3,6 +3,8 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { afterAll, describe, expect, it } from 'vitest';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
 import { WorkspaceScope } from '../src/db/workspace-scope.ts';
+import { openReservedUnits } from '../src/entitlements/ledger.ts';
+import { deleteProject } from '../src/projects/service.ts';
 import { createSecretCipher } from '../src/integrations/fernet.ts';
 import { reviewBody } from '../src/routes/search-intelligence-contracts.ts';
 import { acquisitionExecutor } from '../src/search-intelligence/executor.ts';
@@ -227,6 +229,32 @@ describe('managed Search Intelligence', () => {
       status: 'settled',
       credits: 0,
     });
+  });
+
+  it('refuses to delete a project while its managed analysis holds credits', async () => {
+    const t = await workspace('managed');
+    await grant(db, await billingAccount(db, t.workspaceId), {
+      key: 'project_deletion',
+      value: 1,
+    });
+    const project = { workspaceId: t.workspaceId, projectId: t.projectId };
+    await confirmRun(db, t.scope, t.review.id);
+    await expect(deleteProject(db, project)).rejects.toMatchObject({
+      status: 409,
+      code: 'project_work_running',
+    });
+
+    await cancelRun(db, t.scope, t.review.id);
+    await deleteProject(db, project);
+    expect(
+      await db.selectFrom('projects').select('id').where('id', '=', t.projectId).execute(),
+    ).toEqual([]);
+    const reserved = await db
+      .selectFrom('consumable_ledger')
+      .select(openReservedUnits.as('units'))
+      .where('workspace_id', '=', t.workspaceId)
+      .executeTakeFirstOrThrow();
+    expect(Number(reserved.units)).toBe(0);
   });
 
   it('keeps a BYOK analysis on the workspace key, priced in dollars and never charged credits', async () => {

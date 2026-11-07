@@ -455,9 +455,13 @@ export async function deleteProject(db: Database, scope: ProjectScope) {
     await projectRow(trx, scope);
     await requireFlag(trx, scope.workspaceId, 'project_deletion');
     if (await projectHoldsReservations(trx, scope.workspaceId, scope.projectId))
-      throw new ApiError(409, 'Wait for running audits, crawls and Agent replies to finish', {
-        code: 'project_work_running',
-      });
+      throw new ApiError(
+        409,
+        'Wait for running audits, crawls, Agent replies and Keyword Research analyses to finish',
+        {
+          code: 'project_work_running',
+        },
+      );
     await removeProject(trx, scope);
   });
 }
