@@ -129,7 +129,7 @@ data impact.
 | WS3 | Prompt edit reads the prompt under the project lock | — | `prompts/prompts.ts` | | todo | | CONFIRMED, low |
 | BL7 | Full refund of an upgrade payment (B70) | — | `billing/settlement.ts`, `billing/plan-changes.ts` | | done | de4e9ed | CONFIRMED, medium; B70 |
 | BL8 | Payments landing on a terminal or B52-cancelled subscription (B71) | BL7 | `billing/settlement.ts`, `billing/recovery.ts` | | done | 1a98363 | PLAUSIBLE, medium; B71 |
-| AG1 | Turn closed after streaming a document; Stop on a dead turn (B69) | — | `agent/{worker,runtime,store}.ts` | | todo | | CONFIRMED, medium; B69 |
+| AG1 | Turn closed after streaming a document; Stop on a dead turn (B69) | — | `agent/{worker,runtime,store}.ts` | | done | 6cf4347 | CONFIRMED, medium; B69 |
 | DB1 | CHECK constraints on status columns; drop `site_urls.discovery_status` | — | `migrations/0014_*.sql`, `site-health/{admission-writes,discover-task,analysis-rows}.ts` | mig | todo | | Hardening; site-health F6 CONFIRMED (written, never read) |
 
 ## Work details
