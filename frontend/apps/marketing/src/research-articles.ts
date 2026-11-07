@@ -12,6 +12,9 @@ type ResearchMetadata = {
   reviewed_at: string;
   /** Curated "More guides" slugs; guides without them fall back to publication order. */
   related_guides?: readonly string[];
+  /** Study pages: the group their section index lists them under, and that row's meta line. */
+  index_group?: string;
+  index_meta?: string;
   /** Social card image; guides without one use the site image. */
   image?: string;
   /** The guide's product section: a heading, the guide's own copy and the module it leads to. */
@@ -140,14 +143,21 @@ export function researchFaqs(markdown: string): { q: string; a: string }[] {
     .filter((item) => item.q && item.a);
 }
 
+/** Study pages sit under their section's index; the first matching prefix wins. */
+const STUDY_PARENTS = [
+  { prefix: '/ai-crawlers/', label: 'AI crawlers', href: '/ai-crawlers' },
+  { prefix: '/research/', label: 'Research', href: '/research' },
+] as const;
+
 /**
- * The breadcrumb parent: comparison guides sit under Compare, every other
- * guide under the Blog, named as the nav and URL name it (D36).
+ * The breadcrumb parent: comparison guides sit under Compare, study pages
+ * under their section, every other guide under the Blog, named as the nav
+ * and URL name it (D36).
  */
 export function researchParent(slug: string) {
-  return slug.startsWith('/compare/')
-    ? { label: 'Compare', href: '/compare' }
-    : { label: 'Blog', href: '/blog' };
+  if (slug.startsWith('/compare/')) return { label: 'Compare', href: '/compare' };
+  const study = STUDY_PARENTS.find(({ prefix }) => slug.startsWith(prefix));
+  return study ? { label: study.label, href: study.href } : { label: 'Blog', href: '/blog' };
 }
 
 /** The two guides shown under "More guides": curated when set, else the next two published. */
@@ -159,28 +169,53 @@ export function moreGuides(article: ResearchArticle): ResearchArticle[] {
       (guide): guide is ResearchArticle => guide !== undefined && guide.frontmatter.slug !== slug,
     );
   if (curated.length > 0) return curated.slice(0, 2);
-  const position = RESEARCH_ARTICLES.indexOf(article);
+  // The fallback stays in the article's own collection: guides lead to guides, study pages to study pages.
+  const collection = STUDY_PAGES.includes(article) ? STUDY_PAGES : RESEARCH_ARTICLES;
+  const position = collection.indexOf(article);
   return [1, 2]
-    .map((step) => RESEARCH_ARTICLES[(position + step) % RESEARCH_ARTICLES.length]!)
+    .map((step) => collection[(position + step) % collection.length]!)
     .filter((guide) => guide.frontmatter.slug !== slug);
 }
 
+const parseArticles = (modules: Record<string, string>): readonly ResearchArticle[] =>
+  Object.entries(modules)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([, markdown]) => {
+      const parsed = parseFrontmatter(markdown);
+      return { frontmatter: parsed.frontmatter as ResearchMetadata, markdown: parsed.content };
+    });
+
 // The existing Markdown renderer serves crawlable HTML. Frontmatter is the
 // single metadata owner for routes, the resource listing and the sitemap.
-const modules = import.meta.glob<string>(
-  '../../../lib/marketing-content/blog-posts/research/*.md',
-  { eager: true, query: '?raw', import: 'default' },
+export const RESEARCH_ARTICLES = parseArticles(
+  import.meta.glob<string>('../../../lib/marketing-content/blog-posts/research/*.md', {
+    eager: true,
+    query: '?raw',
+    import: 'default',
+  }),
 );
 
-export const RESEARCH_ARTICLES: readonly ResearchArticle[] = Object.entries(modules)
-  .sort(([left], [right]) => left.localeCompare(right))
-  .map(([, markdown]) => {
-    const parsed = parseFrontmatter(markdown);
-    return { frontmatter: parsed.frontmatter as ResearchMetadata, markdown: parsed.content };
-  });
+/**
+ * Pages of CiteLadder's own studies (the AI crawler directory, study reports),
+ * written from each study's measured data. Same template as the guides, but
+ * listed in their own sections rather than the blog.
+ */
+export const STUDY_PAGES = parseArticles(
+  import.meta.glob<string>('../../../lib/marketing-content/studies/**/*.md', {
+    eager: true,
+    query: '?raw',
+    import: 'default',
+  }),
+);
+
+/** Study pages under a section prefix, such as `/ai-crawlers/`. */
+export const studyPagesUnder = (prefix: string) =>
+  STUDY_PAGES.filter(({ frontmatter }) => frontmatter.slug.startsWith(prefix));
 
 export function researchArticle(path: string) {
-  return RESEARCH_ARTICLES.find((article) => article.frontmatter.slug === path);
+  return [...RESEARCH_ARTICLES, ...STUDY_PAGES].find(
+    (article) => article.frontmatter.slug === path,
+  );
 }
 
 // Keep established inbound URLs while consolidating the same reader intent.
