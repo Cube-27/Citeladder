@@ -109,9 +109,9 @@ data impact.
 | BL4 | Reopening an abandoned add-on or upgrade never answers 500 | — | `routes/billing.ts` | | done | c6ce97b | CONFIRMED, low |
 | BL5 | A plan-change replay reflects a provider refusal | — | `billing/plan-changes.ts` | | done | 80f3fcc | CONFIRMED (crash window), low |
 | BL6 | Trial purge skips accounts with a pending checkout | — | `projects/trial-purge.ts` | | done | 2d79396 | PLAUSIBLE (delayed settlement), low |
-| SI2 | Settlement waits for calls marked uncertain inside the reporting window | — | `search-intelligence/charges.ts` | | todo | | CONFIRMED (lease lost mid-call), low (unbilled answered call) |
-| SI3 | Cancel closes collecting datasets | SI2 | `search-intelligence/runs.ts` | | todo | | CONFIRMED, low |
-| SI4 | Reconnect refused while a revocation is in flight | — | `integrations/oauth.ts` | | todo | | PLAUSIBLE (Google grant-wide revocation), low-medium |
+| SI2 | Settlement waits for calls marked uncertain inside the reporting window | — | `search-intelligence/charges.ts` | | done | 5cf6a9e | CONFIRMED (lease lost mid-call), low (unbilled answered call) |
+| SI3 | Cancel closes collecting datasets | SI2 | `search-intelligence/runs.ts` | | done | 22ff9dc | CONFIRMED, low |
+| SI4 | Reconnect refused while a revocation is in flight | — | `integrations/oauth.ts` | | done | 5f32544 | PLAUSIBLE (Google grant-wide revocation), low-medium |
 | AU2 | A retryable admission refusal reschedules a schedule without counting a failure | — | `workers/audit-scheduler.ts` | | todo | | CONFIRMED, medium (monitoring silently stops) |
 | AU3 | Repair audits take the launch lock, active-launch limit and daily task budget | — | `audits/repair.ts`, `audits/admission.ts` | | todo | | CONFIRMED, low-medium |
 | AU4 | The funded budget sums the latest projection per execution | — | `audits/admission.ts` | | todo | | PLAUSIBLE (latent: one pricing catalog today), low |
