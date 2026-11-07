@@ -247,20 +247,18 @@ DB: `(provider, mode, event_id)` unique (0001:4052).
 | `queued` → `leased` | browser `POST …/runs/{id}/run` → claim | `routes/agent.ts:155-190`, `agent/queue.ts:53-63` | claimable, `attempt < max`, this run, SKIP LOCKED; interactive slot or 429 |
 | `leased` → `running` | `start` | `agent/queue.ts:64-82` | owner, `leased`, unexpired, attempt + 1 |
 | `running` → `succeeded` | `finish` → `terminalize` | `agent/runtime.ts`, `agent/queue.ts:21-42` | `lockRun` |
+| `running` → `succeeded` | browser closed (caller stop `interrupted`) after a document was staged → `saveDocuments` saves it with a fixed reply | `agent/runtime.ts` `stopped`, `agent/worker.ts` | `lockRun`; transcript ends on a user message with no search waiting; charged (B69) |
 | `running` → `failed` (code) | `runtime.fail`; caller stop → `interrupted`/`turn_timeout`; heartbeat gave up → `interrupted` | `agent/runtime.ts` `fail`, `agent/worker.ts` | `lockRun`; settle + refund (B58) in the same tx; reply only while the member may still write |
-| `queued`/`leased`/`running` → `cancelled` | Stop | `agent/store.ts:304-333` | run `FOR UPDATE`, not terminal; no lease check; charged (B58) |
+| `queued`/`leased`/`running` → `cancelled` | Stop | `agent/store.ts` `cancel` | run `FOR UPDATE`, not terminal, lease not lapsed; charged (B58) |
+| `leased`/`running`, lease lapsed → `failed interrupted` | Stop | `agent/store.ts` `cancel` → `endInterrupted` `agent/queue.ts` | run `FOR UPDATE`, `lease_expires_at <= now`; settle + refund (B69) |
 | `queued` > `unclaimed_grace_seconds` → `failed interrupted` | runner `recover` | `agent/queue.ts:93-146` | SKIP LOCKED; settle + refund |
-| held, lease expired → `failed interrupted` | runner `recover` | same | lease `<= now` |
+| held, lease expired → `failed interrupted` | runner `recover` → `endInterrupted` | same | lease `<= now` |
 
 The lease is `lease_seconds` = 60 s (`agent/bindings.ts`,
 `config/model-gateway.json`), three 20 s heartbeats. The lane's `nextDue`
 includes held runs' `lease_expires_at` (`workers/agent-worker.ts`), and a
 heartbeat that gives up makes `runAgentOnce` call `fail(lease, 'interrupted')`
 (`agent/worker.ts`), fenced by `lockRun`.
-
-Known invalid: closing the tab after a document
-streamed refunds the turn — [AG1](plans/state-machine-fixes.md#ag-agent)
-(B69).
 
 ### 4.2 Model attempts, tool attempts, outputs
 
@@ -304,48 +302,39 @@ never written.
 | One active crawl per project | App: project `FOR UPDATE` + no active crawl `site-health/planner.ts:292-307`; reruns lock via `selection.ts:63-80` (no partial unique) |
 | One snapshot per crawl | DB `uq_site_health_snapshot_crawl` 0001:4325 |
 | Terminal ⇒ no open lifecycle task | App: terminalize only when discover/setup/analyze drained `lifecycle.ts:257-273` |
-| `inventory_complete` ⇒ whole site inventoried | App `lifecycle.ts:136-143`; set for bounded inventories too (SH3) |
+| `inventory_complete` ⇒ whole site inventoried | App `lifecycle.ts` `reconcileInventory`: coverage `complete` only |
 
 | From → to | Trigger | Location | Guard |
 |---|---|---|---|
-| ∅ → `queued` (rerun: discovery `completed`, `inventory_complete`) | create / page rerun | `planner.ts:195-228, 395-433` | project lock, no active crawl |
+| ∅ → `queued` (rerun: discovery `completed`; never `inventory_complete`) | create / page rerun | `planner.ts:195-228, 395-433` | project lock, no active crawl |
 | `queued` → `running` | first task runs | `site-task.ts:134-148` | `status = queued` |
 | analysis `pending` → `running` | reconcile | `lifecycle.ts:153-159` | crawl `FOR UPDATE`, active |
-| discovery `running` → `completed`/`failed`; `inventory_complete` | reconcile | `lifecycle.ts:131-143` | no open discover/setup; failed iff `discovered_url_count = 0` |
+| discovery `running` → `completed`/`failed`; `inventory_complete` | reconcile | `lifecycle.ts` `reconcileDiscovery`, `reconcileInventory` | no open discover/setup; failed iff `discovered_url_count = 0` |
 | discovery `running` → `sample_completed` | discover commit | `discover-task.ts:393-396` | sample cap; fenced task + crawl lock |
-| `running` → `completed`/`partially_completed`/`failed` | `terminalize` | `lifecycle.ts:214-245` | drained; failed iff no discovery and nothing analyzed |
+| `running` → `completed`/`partially_completed`/`failed` | `terminalize` | `lifecycle.ts` `terminalize` | drained; failed iff nothing analyzed and either no discovery or applicable analyses (all failed) |
 | `running` → `failed` (`crawl_overdue`) | overdue watchdog | `lifecycle.ts:476-500` | crawl lock, active, age re-checked |
 | `queued`/`running` → `cancelled` | Stop | `site-health/controls.ts:59-108` | crawl `FOR UPDATE`, not terminal; tasks cancelled in the tx |
 
-Known invalid: a page rerun (or a full crawl) whose every analysis fails ends
-`partially_completed` with 0 pages analyzed, and every page rerun becomes the
-default crawl because `resolveUsableCrawl` (`reads/crawl.ts:78-99`) ignores
-`page_rerun` — [SH1](plans/state-machine-fixes.md#sh-site-health). Sub-states
-and counters count every task generation, so a rerun page reads "1 failed" in
-the status but 0 in the counters — [SH2](plans/state-machine-fixes.md#sh-site-health).
-`inventory_complete` is true for page-limited, sampled or deselected
-inventories, so unanalyzed pages read as removed —
-[SH3](plans/state-machine-fixes.md#sh-site-health).
+A crawl read without a named `crawl_id` (`resolveUsableCrawl`, `reads/crawl.ts`)
+is the newest usable crawl that is not a `page_rerun`; a named rerun still
+reads. Sub-states and counters read each page's latest task generation, as the
+terminal counters do. `inventory_complete` is decided when discovery settles
+and again when the crawl drains, from coverage (`coverage.ts`
+`inventoryComplete`): a page limit, pending frontier, sample, rerun or other
+bound leaves it false. A change removal also needs the page absent from B's
+observed inventory (`change-snapshot.ts` `observedInventory`).
 
 ### 5.2 Other Site Health records
 
 | Machine | States and transitions | Enforced |
 |---|---|---|
-| `site_crawl_tasks` | lane §1; → `cancelled` by Stop `controls.ts:89-102`, deselection (`queued`/`retry_wait`) `selection.ts:213-228`, crawl not active `site-task.ts:97-114`; → `failed` by overdue `lifecycle.ts:482-498`; rerun adds generation `max + 1` `selection.ts:380-394` | DB `uq_site_crawl_task_slot (crawl, kind, url_hash, generation)`, idempotency key |
+| `site_crawl_tasks` | lane §1; → `cancelled` by Stop `controls.ts:89-102`, deselection (`queued`/`retry_wait`) `selection.ts:213-228`, crawl not active `site-task.ts:97-114`; → `failed` by overdue `lifecycle.ts:482-498`; rerun or re-selection adds generation `max + 1` and cancels an open older generation of the page in the same tx (`enqueueNextGeneration`, `selection.ts`) | DB `uq_site_crawl_task_slot (crawl, kind, url_hash, generation)`, idempotency key |
 | `site_discovery_frontier.status` | `pending` (`frontier.ts:280-301`) → `admitted` (`admission-writes.ts:350-362`); picked `FOR UPDATE SKIP LOCKED` inside the admitting tx | DB `uq_site_discovery_frontier_url` |
 | `site_urls.discovery_status` | `running` on every sighting `admission-writes.ts:107,128` → `completed`/`failed`; never read | None; dropped by [DB1](plans/state-machine-fixes.md#db-schema-hardening) |
-| `site_page_analyses` | always `completed`; revisions by `is_current` + `supersedes_analysis_id`: provisional `analysis-rows.ts:335-384`, finalized `terminal-analysis.ts:55-111`, retired alias `canonical-alias.ts:97-106`; the last commit becomes current unconditionally | DB `uq_site_page_analysis_current` 0001:5217 |
+| `site_page_analyses` | always `completed`; revisions by `is_current` + `supersedes_analysis_id`: provisional `analysis-rows.ts:335-384`, finalized `terminal-analysis.ts:55-111`, retired alias `canonical-alias.ts:97-106`; only the open generation's fenced commit can become current | DB `uq_site_page_analysis_current` 0001:5217 |
 | `site_health_snapshots` | once per crawl in the terminalize tx `snapshot.ts:127-172` (`ON CONFLICT DO NOTHING`); later only `addArchitectureIssues` | DB unique per crawl |
-| `site_internal_link_runs.state` | ∅ → `queued` `internal-link-runs.ts:107-200` (project lock, none live) → result `internal-link-publish.ts` (fenced) or `cancelled` `internal-link-runs.ts:202-211` | App |
-| `site_change_snapshots.state` | immutable insert `available`/`non_comparable`/`unavailable` `change-snapshot.ts:345-425`; `supersedes_id` = newest by `created_at`, read unlocked | App |
-
-Known invalid: an overlapping older analyze generation can commit last and
-become current — [SH2](plans/state-machine-fixes.md#sh-site-health). A
-`change_intel` that runs late or concurrently can supersede the wrong snapshot
-(timing) — [SH4](plans/state-machine-fixes.md#sh-site-health). An internal-link
-run whose publish task fails terminally stays live until cancelled (no
-compensator, `site-health/analytics-kinds.ts:6-9`) —
-[SH5](plans/state-machine-fixes.md#sh-site-health).
+| `site_internal_link_runs.state` | ∅ → `queued` `internal-link-runs.ts:107-200` (project lock, none live) → result `internal-link-publish.ts` (fenced), `cancelled` (`cancelLinkRun`), or `failed` when its publish task fails terminally (compensator `failLinkRun`, `internal-link-runs.ts`) | App |
+| `site_change_snapshots.state` | immutable insert `available`/`non_comparable`/`unavailable` `change-snapshot.ts:345-425`; `supersedes_id` = the newest snapshot of a crawl no newer than B (crawl order), read under the project's snapshot advisory lock; the current snapshot is the newest crawl's (`reads/projections.ts`) | App |
 
 ### 5.3 Crawl logs (`src/crawl-logs/`)
 
@@ -422,24 +411,21 @@ Dispatch attempts are insert-only, one `outcome` per ordinal (DB
 
 ### 7.2 Public API idempotency (`api_idempotency`)
 
-claim (`status_code` null = in progress) → completed (`status_code` set), or
-deleted (released on a 4xx refusal; purged after `retention_hours`, 24)
-`public-api/idempotency.ts:30-142`. DB unique `(api_key_id, idempotency_key)`
-0001:3439.
-
-Known invalid: a 5xx, a thrown non-API error or a crash before the completion
-update leaves the claim "in progress", answered 409 `retryable: true` for 24 h —
-[PA1](plans/state-machine-fixes.md#pa-public-api).
+claim (`status_code` null = in progress) → completed (`status_code` 2xx, the
+stored response replays) or failed (`status_code` 500: a 5xx response or a
+thrown non-API error; the write may have committed), or deleted (released on a
+4xx refusal; purged after `retention_hours`, 24) `public-api/idempotency.ts`.
+A retry of a failed claim, or of a claim with no outcome older than
+`in_progress_max_seconds` (300; a crash before the outcome update), answers 409
+`idempotency_outcome_unknown`, `retryable: false`; a fresh claim answers 409
+`idempotency_conflict`, `retryable: true`. DB unique
+`(api_key_id, idempotency_key)` 0001:3439.
 
 ### 7.3 Actions, prompts and brand facts
 
 | Machine | States and transitions | Enforced |
 |---|---|---|
 | `actions.status` ∈ `open`/`dismissed`/`implemented`; `effective_status` adds `in_progress`/`measuring`/`done` (`config/actions.ts:33-34`) | ∅ → `open` by evidence sync `opportunities/action-sync.ts:131-220` (project lock); `open` ↔ `dismissed` `actions.ts:313-357` (Action `FOR UPDATE`); `open` → `implemented` by declaration `declarations.ts:225-324` (project lock, Action `FOR UPDATE`, idempotent); `effective_status` recomputed by `refreshActionStatus` `action-status.ts:62-81` on every writer | DB one Action per group `uq_actions_project_group`, one declaration per Action; statuses App |
-| `prompts.status` ∈ `active`/`archived` | `updatePrompt` `prompts/prompts.ts:323-363`, `bulkSetStatus` `:378-422` (project + set lock, binding check); inserts `active` | App; occupancy counts every prompt (B27) |
+| `prompts.status` ∈ `active`/`archived` | `updatePrompt` `prompts/prompts.ts` (project lock, then the prompt re-read `FOR UPDATE`, binding check), `bulkSetStatus` (project + set lock, binding check); inserts `active` | App; occupancy counts every prompt (B27) |
 | `prompt_candidates.disposition` | `pending` → `accepted`/`rejected`/`deleted` `prompts/candidates.ts:183-289` (project + set locks, pending rows `FOR UPDATE`) | DB `uq_prompt_candidate_pending_text` 0001:5209 |
 | Brand facts | `draft` → `confirmed` → `retired` (terminal), `expected_revision` under project lock `projects/brand-facts.ts:114-200` | DB `ck_brand_fact_status`, `ck_brand_fact_revision_status` 0001:935, 949; revision unique |
-
-Known invalid: a prompt edit reads the prompt before the project lock, so an
-activation can bind against a stale topic or text and leave an active prompt
-unbound to its current topic — [WS3](plans/state-machine-fixes.md#ws-workspace-auth-and-prompts).

@@ -1,7 +1,18 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { testDatabase } from './support.ts';
-import { AgentFixtures, reply, request, result, save, text } from './agent-support.ts';
+import {
+  AgentFixtures,
+  read,
+  reply,
+  request,
+  result,
+  save,
+  text,
+  type Response,
+} from './agent-support.ts';
+import { recoveryReply } from '../src/agent/messages.ts';
+import { runAgentOnce } from '../src/agent/worker.ts';
 import { BillingFixtures } from './billing-support.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { agentSettings } from '../src/agent/config.ts';
@@ -445,6 +456,116 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       reserved: 0,
       consumed: 8,
     });
+  });
+  /**
+   * One turn the browser closes while its second call is in flight: the first
+   * call returns `first`, charged one credit for its reported tokens.
+   */
+  async function closedAfter(first: Response, skillId?: string) {
+    const { scope, accountId, grantId } = await tenant();
+    const store = agents.store({ admission: agentAdmission(settings, platform) });
+    const queued = await store.enqueue(scope, {
+      key: randomUUID(),
+      message: 'Write the plan.',
+      ...(skillId ? { skillId } : {}),
+    });
+    const browser = new AbortController();
+    const responses = [result(first)];
+    const model = {
+      ...(await agentModels(platform)(queued)),
+      converse: async (_request: unknown, signal?: AbortSignal) => {
+        const next = responses.shift();
+        if (next) return next;
+        browser.abort();
+        signal?.throwIfAborted();
+        throw new Error('The browser closed first');
+      },
+    };
+    const calls = new ModelCalls(db, agentFunding(settings, platform));
+    await runAgentOnce(
+      new AgentQueue(db, 30),
+      agents.runtime(scope, model, { models: calls }),
+      'closing-browser',
+      [scope.workspaceId],
+      { runId: queued.id, signal: browser.signal },
+    );
+    const replies = await db
+      .selectFrom('agent_messages')
+      .select('content')
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('reply_to_message_id', '=', queued.user_message_id)
+      .execute();
+    const revisions = await db
+      .selectFrom('agent_output_revisions')
+      .select('body')
+      .where('run_id', '=', queued.id)
+      .execute();
+    return {
+      run: await agents.run(queued.id),
+      replies: replies.map(({ content }) => content),
+      revisions: revisions.map(({ body }) => body),
+      balance: (await ledgerBalances(db, accountId, [grantId])).get(grantId),
+    };
+  }
+  it('saves a document already streamed when the browser closes the turn, and charges for it (B69)', async () => {
+    const kept = await closedAfter(save('The streamed plan.'), 'plan');
+    expect(kept.run).toMatchObject({ status: 'succeeded', error_code: '' });
+    expect(kept.replies).toEqual([
+      'The chat was closed before I wrote a summary.\n\nDocument 1 saved.',
+    ]);
+    expect(kept.revisions).toEqual(['The streamed plan.']);
+    expect(kept.balance).toEqual({ reserved: 0, consumed: 1 });
+    // A turn closed before it staged anything delivered nothing and is refunded (B58).
+    const refunded = await closedAfter(read());
+    expect(refunded.run).toMatchObject({ status: 'failed', error_code: 'interrupted' });
+    expect(refunded.replies).toEqual([recoveryReply('interrupted')]);
+    expect(refunded.revisions).toEqual([]);
+    expect(refunded.balance).toEqual({ reserved: 0, consumed: 0 });
+  });
+  it('refunds a Stop on a turn whose lease already lapsed, and charges a Stop on a live one (B69)', async () => {
+    const stop = async (lapsed: boolean) => {
+      const { scope, accountId, grantId } = await tenant();
+      const { run: saved, lease } = await run(scope);
+      const calls = new ModelCalls(db, agentFunding(settings, platform));
+      const model = {
+        ...(await agentModels(platform)(saved)),
+        converse: async () => result(reply()),
+      };
+      await calls.call(lease, 1, model, request);
+      if (lapsed)
+        await db
+          .updateTable('agent_runs')
+          .set({ lease_expires_at: new Date(Date.now() - 1000) })
+          .where('id', '=', saved.id)
+          .execute();
+      await agents
+        .store({ settleFailed: (trx, row) => calls.settleFailed(trx, row) })
+        .cancel(scope, saved.chat_id, saved.id);
+      const replies = await db
+        .selectFrom('agent_messages')
+        .select('content')
+        .where('workspace_id', '=', scope.workspaceId)
+        .where('reply_to_message_id', '=', saved.user_message_id)
+        .execute();
+      return {
+        run: await agents.run(saved.id),
+        replies: replies.map(({ content }) => content),
+        balance: (await ledgerBalances(db, accountId, [grantId])).get(grantId),
+      };
+    };
+    const dead = await stop(true);
+    expect(dead.run).toMatchObject({
+      status: 'failed',
+      error_code: 'interrupted',
+      lease_owner: null,
+      cancelled_at: null,
+    });
+    expect(dead.replies).toEqual([recoveryReply('interrupted')]);
+    expect(dead.balance).toEqual({ reserved: 0, consumed: 0 });
+    const live = await stop(false);
+    expect(live.run).toMatchObject({ status: 'cancelled', error_code: 'cancelled' });
+    expect(live.replies).toEqual([recoveryReply('cancelled')]);
+    expect(live.balance).toEqual({ reserved: 0, consumed: 1 });
   });
   it('serializes concurrent dispatch holds against the same finite credit balance', async () => {
     const { scope, accountId, grantId } = await tenant(HOLD);

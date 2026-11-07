@@ -8,12 +8,14 @@ import type {
   promptSetSchema,
   topicSchema,
 } from '@citeladder/contracts/project';
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { sql } from 'kysely';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { z } from 'zod';
 
 import { spendBudget, type Budget } from '../src/abuse/usage.ts';
 import { createApp } from '../src/app.ts';
 import { ApiError } from '../src/errors.ts';
+import { acquireProjectLock } from '../src/prompts/locks.ts';
 import {
   billingAccount,
   candidate,
@@ -234,6 +236,41 @@ describe('prompt edits', () => {
     expect(activated.body.status).toBe('active');
     const stray = await prompt(db, t.setId, 'cheapest flights to lisbon', { status: 'archived' });
     expect((await patch(`/prompts/${stray}`, { status: 'active' })).status).toBe(422);
+  });
+
+  it('binds an activation against a topic change that committed while it waited for the project lock', async () => {
+    const trail = await topic(db, t.projectId, 'Trail gear', 'hydration packs');
+    const archived = await prompt(db, t.setId, 'lightest hydration packs', {
+      status: 'archived',
+      topicId: trail,
+    });
+    // The topic writer deletes the prompt's topic, detaching it and taking
+    // "hydration packs" out of the project vocabulary.
+    const activation = await db.transaction().execute(async (deletion) => {
+      const { rows } = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(deletion);
+      const blocker = rows[0]!.pid;
+      await acquireProjectLock(deletion, t.projectId);
+      await deletion.deleteFrom('topics').where('id', '=', trail).execute();
+      const pending = patch<ErrorBody>(`/prompts/${archived}`, { status: 'active' });
+      await vi.waitFor(
+        async () => {
+          const blocked = await sql<{ waiting: boolean }>`select exists (
+            select 1 from pg_stat_activity where ${blocker} = any(pg_blocking_pids(pid))
+          ) as waiting`.execute(db);
+          expect(blocked.rows[0]!.waiting).toBe(true);
+        },
+        { timeout: 5000, interval: 20 },
+      );
+      return { pending };
+    });
+    const refused = await activation.pending;
+    expect([refused.status, refused.body.error.code]).toEqual([422, 'prompt_off_topic']);
+    const stored = await db
+      .selectFrom('prompts')
+      .select(['status', 'topic_id'])
+      .where('id', '=', archived)
+      .executeTakeFirstOrThrow();
+    expect(stored).toEqual({ status: 'archived', topic_id: null });
   });
 
   it('requires topical binding when an active prompt is moved to another topic', async () => {
