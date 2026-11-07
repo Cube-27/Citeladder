@@ -67,7 +67,7 @@ document already states. The table keeps the questions as asked.
 | S06 | Audit schedules, repair admission and cost records | AU2, AU3, AU4, AU5 | — | | in progress | | Stuck users, abuse bound, cost |
 | S07 | Agent turn recovery | AG2, AG3, AG4, AG5 | — | | merged | [#659](https://github.com/Cube-27/Citeladder/pull/659) | Stuck users. Not in scope: the Agent lane's `nextDue` still ignores a cancelled run's dispatched attempts awaiting settlement (pre-existing; found by bot review) |
 | S08 | Site Health crawl outcomes and inventory | SH1, SH2, SH3, SH4, SH5 | — | | merged | [#660](https://github.com/Cube-27/Citeladder/pull/660) | Data correctness |
-| S09 | Public API idempotency outcome; prompt edit under lock | PA1, WS3 | — | | in progress | | Data correctness |
+| S09 | Public API idempotency outcome; prompt edit under lock | PA1, WS3 | — | | merged | [#662](https://github.com/Cube-27/Citeladder/pull/662) | Data correctness |
 | S10 | Refunded upgrades and payments on ended subscriptions | BL7, BL8 | S04 | | merged | [#658](https://github.com/Cube-27/Citeladder/pull/658) | Money; B70, B71 |
 | S11 | Agent turns closed after streaming a document | AG1 | S07 | | in review | [#663](https://github.com/Cube-27/Citeladder/pull/663) | Money; B69 |
 | S12 | Status CHECK constraints; dead `site_urls.discovery_status` | DB1 | S08 | mig | todo | | Migration 0014; open last, alone |
@@ -125,8 +125,8 @@ data impact.
 | SH3 | `inventory_complete` only for an unbounded inventory; removal needs absence from the inventory | SH1 | `site-health/{lifecycle,change-compare,change-snapshot}.ts` | | done | e90c64b | CONFIRMED, medium (false "page removed" regressions) |
 | SH4 | Change-snapshot predecessor by crawl order under a project lock | SH3 | `site-health/change-snapshot.ts` | | done | 6ee3c84 | PLAUSIBLE (timing), low |
 | SH5 | A terminally failed internal-link publish ends its run | — | `site-health/{analytics-kinds,internal-link-runs}.ts` | | done | a9bf5be | PLAUSIBLE, low |
-| PA1 | A public API write that failed or crashed answers "outcome unknown", not "in progress" for 24 h | — | `public-api/idempotency.ts`, `config/public-api.json` | | todo | | CONFIRMED, low |
-| WS3 | Prompt edit reads the prompt under the project lock | — | `prompts/prompts.ts` | | todo | | CONFIRMED, low |
+| PA1 | A public API write that failed or crashed answers "outcome unknown", not "in progress" for 24 h | — | `public-api/idempotency.ts`, `config/public-api.json` | | done | 7a09c7a | CONFIRMED, low |
+| WS3 | Prompt edit reads the prompt under the project lock | — | `prompts/prompts.ts` | | done | 10d4af5 | CONFIRMED, low |
 | BL7 | Full refund of an upgrade payment (B70) | — | `billing/settlement.ts`, `billing/plan-changes.ts` | | done | de4e9ed | CONFIRMED, medium; B70 |
 | BL8 | Payments landing on a terminal or B52-cancelled subscription (B71) | BL7 | `billing/settlement.ts`, `billing/recovery.ts` | | done | 1a98363 | PLAUSIBLE, medium; B71 |
 | AG1 | Turn closed after streaming a document; Stop on a dead turn (B69) | — | `agent/{worker,runtime,store}.ts` | | done | 6cf4347 | CONFIRMED, medium; B69 |
