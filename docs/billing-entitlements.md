@@ -125,11 +125,14 @@ Normalized refunds cannot exceed payment value. Redirects grant nothing.
 captured payment and one credit note per processed refund, each series
 consecutive per financial year. A full refund revokes the purchase's remaining
 grants; consumed units are not clawed back. A full refund of the payment for
-the base subscription's current period also cancels that subscription at once
-(B52): the period's plan grants, an upgrade's included, are revoked when the
-refund settles, and the row reads `cancelled` but stays current, like a halted
-one, until the subscription sweep's immediate provider cancellation is
-confirmed. A partial refund changes nothing. Refunds arrive as provider refund
+the base subscription's current period, or of an upgrade bought in that period
+(B70), also cancels that subscription at once (B52): the period's plan grants,
+an upgrade's included, are revoked when the refund settles, a scheduled plan
+change ends with the subscription, and the row reads `cancelled` but stays
+current, like a halted one, until the subscription sweep's immediate provider
+cancellation is confirmed; the base period's unrefunded payment does not keep
+it running. A partial refund changes nothing (refunds are issued manually by an
+operator; there is no partial-refund product case, B70). Refunds arrive as provider refund
 events and settle against the original payment receipt.
 
 Receipt list/download reads and PDF rendering are TypeScript-owned in

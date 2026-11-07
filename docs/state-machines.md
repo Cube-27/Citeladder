@@ -198,7 +198,7 @@ DB: one current base per account `uq_billing_subscription_one_current`
 | ∅ → `pending` (current) | first paid base evidence | `settlement.ts:126-197` | no current row; granted status and payment |
 | * → evidence status | webhook or sweep | `settlement.ts:513-556` | `event.version >= provider_state_version`; not ended |
 | terminal evidence → `cancel_scheduled` until paid end / ended | `periodOutcome` → `endTerminal` | `settlement.ts:398-447, 459-479` | an unrefunded paid period covers now |
-| current period refunded in full → `cancelled` (still current) | `endRefundedPayment` (B52) | `settlement.ts:681-740` | `is_current`, period equals the payment's |
+| current period refunded in full → `cancelled` (still current), `scheduled_change` → null | `endRefundedPayment` (B52; an upgrade bought in the period, B70) | `settlement.ts` `paidPeriod`, `endRefundedPayment` | `is_current`, period equals the payment's (an upgrade's: paid inside the current period) |
 | `cancel_at_period_end` false → true | customer cancel; evidence; B52 | `billing/cancellation.ts:69-78`; `settlement.ts:541-542, 722` | sub `FOR UPDATE`, period end in future |
 | true → false | resume | `cancellation.ts:94-98` | not yet sent, before the lead time |
 | `cancellation_sent_at` null → now | sweep; evidence; refund | `recovery.ts:541-548`; `settlement.ts:487, 723` | `cancel_at_period_end` |
@@ -206,9 +206,7 @@ DB: one current base per account `uq_billing_subscription_one_current`
 | `requested` → `scheduled` / `provider_rejected` | `pushChange` | `plan-changes.ts:326-365` | state `requested`, same source |
 | `scheduled_change` → null | renewal at the new price, or a refused change lapses | `settlement.ts:449-458, 545-546` | price ref match |
 
-Known invalid: a fully refunded upgrade leaves its `scheduled_change` live, so
-the next cycle bills the upgraded price —
-[BL7](plans/state-machine-fixes.md#bl-billing-and-credits) (B70). A
+Known invalid: a
 B52-cancelled subscription returns to `active` if a renewal is charged before
 the sweep cancels it (timing) — [BL8](plans/state-machine-fixes.md#bl-billing-and-credits) (B71).
 

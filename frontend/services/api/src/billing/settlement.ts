@@ -53,7 +53,10 @@ const refundedInFull = sql<boolean>`coalesce((
   where r.parent_payment_id = billing_payments.id and r.receipt_kind = 'refund'
 ), 0) >= billing_payments.amount_minor`;
 
-/** Whether this subscription period's payment was refunded in full (B52). */
+/**
+ * Whether a payment for this subscription period was refunded in full: the
+ * period's own payment (B52) or an upgrade bought in the period (B70).
+ */
 export async function periodRefunded(
   db: Database,
   sub: Pick<Subscription, 'id' | 'billing_account_id'>,
@@ -64,11 +67,32 @@ export async function periodRefunded(
   const row = await db
     .selectFrom('billing_payments')
     .select('id')
-    .where('subscription_id', '=', sub.id)
     .where('billing_account_id', '=', sub.billing_account_id)
     .where('receipt_kind', '=', 'payment')
-    .where('period_start', '=', start)
-    .where('period_end', '=', end)
+    .where((eb) =>
+      eb.or([
+        eb.and([
+          eb('subscription_id', '=', sub.id),
+          eb('period_start', '=', start),
+          eb('period_end', '=', end),
+        ]),
+        eb.and([
+          eb('subscription_id', 'is', null),
+          eb(
+            'pending_activation_id',
+            'in',
+            eb
+              .selectFrom('pending_activations')
+              .select('id')
+              .where('billing_account_id', '=', sub.billing_account_id)
+              .where('activation_kind', '=', 'upgrade')
+              .where(sql<string>`change_terms->>'subscription_id'`, '=', sub.id),
+          ),
+          eb('paid_at', '>=', start),
+          eb('paid_at', '<', end),
+        ]),
+      ]),
+    )
     .where(refundedInFull)
     .executeTakeFirst();
   return Boolean(row);
@@ -392,8 +416,8 @@ async function settlePeriod(
 
 /**
  * A terminal provider state keeps a verified paid period (its end is returned)
- * unless that payment was refunded in full; otherwise the subscription's
- * remaining grants are revoked now.
+ * unless a payment for it was refunded in full (B52, B70); otherwise the
+ * subscription's remaining grants are revoked now.
  */
 async function endTerminal(
   db: Database,
@@ -404,17 +428,17 @@ async function endTerminal(
 ) {
   const paid = await db
     .selectFrom('billing_payments')
-    .select('period_end')
+    .select(['period_start', 'period_end'])
     .where('subscription_id', '=', sub.id)
     .where('billing_account_id', '=', sub.billing_account_id)
     .where('receipt_kind', '=', 'payment')
     .where('status', '=', 'paid')
     .where('period_start', '<=', now)
     .where('period_end', '>', now)
-    .where(sql<boolean>`not (${refundedInFull})`)
     .orderBy('period_end', 'desc')
     .executeTakeFirst();
-  if (paid?.period_end) return paid.period_end;
+  if (paid?.period_end && !(await periodRefunded(db, sub, paid.period_start, paid.period_end)))
+    return paid.period_end;
   const grants = await db
     .selectFrom('account_grants')
     .select('id')
@@ -668,10 +692,45 @@ function paidByPeriod(ref: string, subscriptionId: string) {
 }
 
 /**
+ * The base subscription period a payment paid for: a period payment's own, or
+ * for an upgrade the current period of the subscription it upgraded, when it
+ * was bought in that period (B70). Null for anything else.
+ */
+async function paidPeriod(db: Database, payment: Payment) {
+  const { subscription_id: subscriptionId, period_start: start, period_end: end } = payment;
+  if (subscriptionId && start && end) return { subscriptionId, start, end };
+  if (!payment.pending_activation_id || !payment.paid_at) return null;
+  const upgrade = await db
+    .selectFrom('pending_activations')
+    .select('change_terms')
+    .where('id', '=', payment.pending_activation_id)
+    .where('billing_account_id', '=', payment.billing_account_id)
+    .where('activation_kind', '=', 'upgrade')
+    .executeTakeFirst();
+  if (!upgrade) return null;
+  const { subscription_id: upgraded } = z
+    .object({ subscription_id: z.uuid() })
+    .parse(upgrade.change_terms);
+  const sub = await db
+    .selectFrom('billing_subscriptions')
+    .select(['current_period_start', 'current_period_end'])
+    .where('id', '=', upgraded)
+    .where('billing_account_id', '=', payment.billing_account_id)
+    .where('is_current', '=', true)
+    .where('current_period_start', '<=', payment.paid_at)
+    .where('current_period_end', '>', payment.paid_at)
+    .executeTakeFirst();
+  return sub?.current_period_start && sub.current_period_end
+    ? { subscriptionId: upgraded, start: sub.current_period_start, end: sub.current_period_end }
+    : null;
+}
+
+/**
  * A payment refunded in full grants nothing more. When it paid for the base
- * subscription's current period, the subscription is cancelled now (B52): the
- * period's plan grants, an upgrade's included, are revoked in this
- * transaction, and the row stays current until the subscription sweep's
+ * subscription's current period, its own payment (B52) or an upgrade bought in
+ * it (B70), the subscription is cancelled now: the period's plan grants, an
+ * upgrade's included, are revoked in this transaction, a scheduled plan change
+ * ends with it, and the row stays current until the subscription sweep's
  * provider cancellation is confirmed, so the provider cannot charge unseen.
  */
 async function endRefundedPayment(
@@ -681,27 +740,26 @@ async function endRefundedPayment(
   refund: RefundEvidence,
 ) {
   const accountId = payment.billing_account_id;
-  const { subscription_id: subscriptionId, period_start: start, period_end: end } = payment;
+  const period = await paidPeriod(db, payment);
   const query = db
     .selectFrom('account_grants')
     .select(['id', 'source_ref'])
     .where('billing_account_id', '=', accountId);
-  const grants =
-    subscriptionId && start && end
-      ? (
-          await query
-            .where('source_kind', '=', 'plan')
-            .where('period_start', '>=', start)
-            .where('period_end', '=', end)
-            .execute()
-        ).filter((row) => paidByPeriod(row.source_ref, subscriptionId))
-      : await query
-          .where(
-            'source_ref',
-            '=',
-            sourceRef({ kind: 'activation', activationId: payment.pending_activation_id ?? '' }),
-          )
-          .execute();
+  const grants = period
+    ? (
+        await query
+          .where('source_kind', '=', 'plan')
+          .where('period_start', '>=', period.start)
+          .where('period_end', '=', period.end)
+          .execute()
+      ).filter((row) => paidByPeriod(row.source_ref, period.subscriptionId))
+    : await query
+        .where(
+          'source_ref',
+          '=',
+          sourceRef({ kind: 'activation', activationId: payment.pending_activation_id ?? '' }),
+        )
+        .execute();
   await revokeBundle(db, {
     workspaceId,
     accountId,
@@ -712,7 +770,7 @@ async function endRefundedPayment(
     actorId: null,
     at: refund.createdAt,
   });
-  if (!subscriptionId || !start || !end) return;
+  if (!period) return;
   const now = new Date();
   await db
     .updateTable('billing_subscriptions')
@@ -722,12 +780,14 @@ async function endRefundedPayment(
       cancel_at_period_end: true,
       cancellation_sent_at: now,
       reconciliation_next_at: now,
+      // The subscription never renews, so no scheduled plan change survives it (B70).
+      scheduled_change: null,
       updated_at: now,
     })
-    .where('id', '=', subscriptionId)
+    .where('id', '=', period.subscriptionId)
     .where('billing_account_id', '=', accountId)
     .where('is_current', '=', true)
-    .where('current_period_start', '=', start)
-    .where('current_period_end', '=', end)
+    .where('current_period_start', '=', period.start)
+    .where('current_period_end', '=', period.end)
     .execute();
 }
