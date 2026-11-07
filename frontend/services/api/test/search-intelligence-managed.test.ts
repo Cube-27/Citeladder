@@ -7,6 +7,8 @@ import { openReservedUnits } from '../src/entitlements/ledger.ts';
 import { deleteProject } from '../src/projects/service.ts';
 import { createSecretCipher } from '../src/integrations/fernet.ts';
 import { reviewBody } from '../src/routes/search-intelligence-contracts.ts';
+import { AcquisitionState } from '../src/search-intelligence/acquisition-state.ts';
+import { settleResearchCharge } from '../src/search-intelligence/charges.ts';
 import { acquisitionExecutor } from '../src/search-intelligence/executor.ts';
 import { createReview } from '../src/search-intelligence/reviews.ts';
 import { cancelRun, confirmRun } from '../src/search-intelligence/runs.ts';
@@ -229,6 +231,56 @@ describe('managed Search Intelligence', () => {
       status: 'settled',
       credits: 0,
     });
+  });
+
+  it('ends the run and settles its hold when the member loses access just before a dispatch', async () => {
+    const t = await workspace('managed');
+    const confirmed = await confirmRun(db, t.scope, t.review.id);
+    const task = await db
+      .updateTable('analytics_tasks')
+      .set({
+        status: 'running',
+        lease_owner: 'research-test',
+        lease_expires_at: new Date(Date.now() + 120000),
+      })
+      .where('id', '=', (await runRow(confirmed.id)).analytics_task_id!)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    const state = new AcquisitionState(db, task, confirmed.id);
+    const plans = await state.start();
+    const prepared = await state.prepare(plans![0]!, 0);
+    if (prepared.action !== 'dispatch')
+      throw new Error(`Expected a dispatch, got ${prepared.action}`);
+    const member = db
+      .updateTable('workspace_members')
+      .where('workspace_id', '=', t.workspaceId)
+      .where('user_id', '=', t.userId);
+    await member.set({ role: 'viewer' }).execute();
+
+    expect(await state.dispatch(prepared)).toBe(false);
+    await settleResearchCharge(db, { workspaceId: t.workspaceId, runId: confirmed.id });
+    const ended = await runRow(confirmed.id);
+    expect(ended).toMatchObject({
+      status: 'failed',
+      error_code: 'connection_changed',
+      charged_credits: 0,
+    });
+    expect(await platformCall(ended.platform_call_id)).toMatchObject({
+      status: 'settled',
+      credits: 0,
+    });
+
+    await member.set({ role: 'owner' }).execute();
+    const next = await createReview(
+      db,
+      t.scope,
+      t.userId,
+      `review-${randomUUID()}`,
+      reviewBody.parse({ datasets: [{ kind: 'ranking_keywords', depth: 2 }] }),
+      key,
+      { env },
+    );
+    expect(await confirmRun(db, t.scope, next.id)).toMatchObject({ status: 'queued' });
   });
 
   it('refuses to delete a project while its managed analysis holds credits', async () => {

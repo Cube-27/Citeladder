@@ -403,7 +403,7 @@ Run: `reviewed` → `queued` → `running` ⇄ `queued` (parked) → `succeeded`
 | `reviewed` → `queued` (hold + task) / `succeeded` (empty plan) | `confirmRun` | `runs.ts:122-147` | project `FOR UPDATE`, unconfirmed, unexpired, price, connection, no other active run |
 | `reviewed`/`queued`/`running` → `cancelled` | `cancelRun` | `runs.ts:149-180` | run `FOR UPDATE`, not finished; task cancelled; hold settled when nothing in flight |
 | `queued`/`running` → `running` | `start` | `acquisition-state.ts:201-232` | run `FOR UPDATE`, not terminal, `owned()` |
-| → `failed` (`pricing_changed`/`connection_changed`) | `start`, `prepare` | `acquisition-state.ts:205-223, 238-241` | connection or member check fails |
+| → `failed` (`pricing_changed`/`connection_changed`) | `start`, `prepare`, `dispatch` | `acquisition-state.ts` (`failChangedConnection`) | connection or member check fails |
 | `running` → `uncertain` | `prepare` finds a dispatched call with no response | `acquisition-state.ts:299-329` | — |
 | `running` → `queued` (park) | `park` | `acquisition-state.ts:469-491` | `running`, `owned()` |
 | `running` → `failed`/`partial`/`uncertain` | `fail` / `stopRun` / ceiling | `acquisition-state.ts:615-668, 292-297` | `running`, `owned()` |
@@ -416,10 +416,7 @@ Run: `reviewed` → `queued` → `running` ⇄ `queued` (parked) → `succeeded`
 Dispatch attempts are insert-only, one `outcome` per ordinal (DB
 `uq_si_dispatch_phase` 0001:4282).
 
-Known invalid: a connection or member change between `prepare` and `dispatch`
-returns without a run transition, the task succeeds and the run stays
-`running` with its hold — [SI1](plans/state-machine-fixes.md#si-search-intelligence-and-integrations).
-A receipt saved into a call already marked `uncertain` after settlement is
+Known invalid: a receipt saved into a call already marked `uncertain` after settlement is
 never billed — [SI2](plans/state-machine-fixes.md#si-search-intelligence-and-integrations).
 Cancel leaves datasets `collecting` — [SI3](plans/state-machine-fixes.md#si-search-intelligence-and-integrations).
 
