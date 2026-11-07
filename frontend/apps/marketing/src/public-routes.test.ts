@@ -25,6 +25,9 @@ describe('public route listings', () => {
     expect(locations).toContain('https://example.com/ai-crawlers/gptbot');
     expect(locations).toContain('https://example.com/research/ai-crawlers-robots-txt-2026');
     expect(locations).toContain('https://example.com/buyer-prompts/wise');
+    expect(locations).toContain(
+      'https://example.com/claude-recommendations/crm-for-small-businesses',
+    );
     for (const link of links) expect(link.title, link.url).not.toBe(link.url);
   });
 
@@ -41,6 +44,7 @@ describe('public route listings', () => {
       '/tools',
       '/ai-crawlers',
       '/buyer-prompts',
+      '/claude-recommendations',
       '/research',
     ]) {
       const children = entries.filter(({ path }) => path.startsWith(`${index}/`));

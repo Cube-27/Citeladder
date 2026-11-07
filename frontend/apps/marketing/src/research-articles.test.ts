@@ -146,8 +146,8 @@ describe('research guide navigation', () => {
       (more) => more.frontmatter.slug,
     ))
       expect(
-        ['/ai-crawlers/', '/buyer-prompts/', '/research/'].some((prefix) =>
-          slug.startsWith(prefix),
+        ['/ai-crawlers/', '/buyer-prompts/', '/claude-recommendations/', '/research/'].some(
+          (prefix) => slug.startsWith(prefix),
         ),
         slug,
       ).toBe(false);
