@@ -166,7 +166,13 @@ unpaid checkout is abandoned after the reconciliation window instead of holding
 the one-pending slot; for a base-plan intent the provider subscription is
 cancelled first, and a failed cancellation keeps the intent pending for retry.
 A refused cancellation is followed by a fresh read, so a subscription the
-customer paid meanwhile activates instead of being abandoned.
+customer paid meanwhile activates instead of being abandoned; one the provider
+already reports ended but paid is granted the paid period's bundle until the
+paid end and leaves `pending` (B71). A paid period whose evidence is terminal
+likewise keeps its bundle until its paid end. A renewal the provider charges
+after a full refund cancelled the subscription (B52, B70) leaves it cancelled:
+the receipt is recorded, nothing is granted, and it is logged
+(`billing.renewal_paid_after_cancellation`) for an operator refund (B71).
 Orders cannot be cancelled at the provider, so a capture after abandonment still
 settles (and a signed callback reopens the order for one probe, voiding any
 in-flight probe's lease); an add-on or top-up paid outside the live base

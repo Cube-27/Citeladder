@@ -183,9 +183,8 @@ App: `activated ⇒ activated_at`; `failed`/`abandoned ⇒ failure_code`.
 | `pending` → `abandoned` | unpaid past `abandonSeconds` (base cancelled at provider first) | `recovery.ts:184-235` | lease, `pending` |
 | `abandoned` (not base) → `pending` | signed checkout callback | `routes/billing.ts` (verify route) | `pending`, or `abandoned` and kind ≠ base; with a newer pending order of the same key the one-pending unique refuses it, the row stays `abandoned` and the callback answers its view (the webhook's late-capture path settles a payment) |
 
-Known invalid: a base checkout
-paid as the abandon sweep cancels it depends on Razorpay's evidence for a
-just-cancelled subscription — [BL8](plans/state-machine-fixes.md#bl-billing-and-credits) (B71).
+A base checkout paid as the abandon sweep cancels it settles from the terminal,
+paid evidence: `activated`, its period granted until the paid end (B71).
 
 ### 3.4 `billing_subscriptions` (status × `is_current` × `ended_at` × `cancel_at_period_end` × `cancellation_sent_at` × `scheduled_change`)
 
@@ -195,9 +194,10 @@ DB: one current base per account `uq_billing_subscription_one_current`
 
 | From → to | Trigger | Location | Guard |
 |---|---|---|---|
-| ∅ → `pending` (current) | first paid base evidence | `settlement.ts:126-197` | no current row; granted status and payment |
+| ∅ → `pending` (current) | first paid base evidence | `settlement.ts` `settleBase` | no current row; granted or terminal status (B71) and payment |
 | * → evidence status | webhook or sweep | `settlement.ts:513-556` | `event.version >= provider_state_version`; not ended |
-| terminal evidence → `cancel_scheduled` until paid end / ended | `periodOutcome` → `endTerminal` | `settlement.ts:398-447, 459-479` | an unrefunded paid period covers now |
+| terminal evidence → `cancel_scheduled` until paid end / ended | `periodOutcome` → `endTerminal` | `settlement.ts` `endTerminal`, `periodOutcome` | an unrefunded paid period covers now and no full refund cancelled the row |
+| `cancelled` (still current) stays `cancelled` on later non-terminal evidence; a renewal charged meanwhile records its receipt, grants nothing and logs `billing.renewal_paid_after_cancellation` (B71) | `settlePeriod`, `periodOutcome` | `settlement.ts` `refundCancelled` | `is_current`, status `cancelled` |
 | current period refunded in full → `cancelled` (still current), `scheduled_change` → null | `endRefundedPayment` (B52; an upgrade bought in the period, B70) | `settlement.ts` `paidPeriod`, `endRefundedPayment` | `is_current`, period equals the payment's (an upgrade's: paid inside the current period) |
 | `cancel_at_period_end` false → true | customer cancel; evidence; B52 | `billing/cancellation.ts:69-78`; `settlement.ts:541-542, 722` | sub `FOR UPDATE`, period end in future |
 | true → false | resume | `cancellation.ts:94-98` | not yet sent, before the lead time |
@@ -205,10 +205,6 @@ DB: one current base per account `uq_billing_subscription_one_current`
 | `scheduled_change` null → `requested` | upgrade settles; downgrade scheduled | `settlement.ts:618-638`; `plan-changes.ts:54-84` | no change in flight, not cancelling |
 | `requested` → `scheduled` / `provider_rejected` | `pushChange` | `plan-changes.ts:326-365` | state `requested`, same source |
 | `scheduled_change` → null | renewal at the new price, or a refused change lapses | `settlement.ts:449-458, 545-546` | price ref match |
-
-Known invalid: a
-B52-cancelled subscription returns to `active` if a renewal is charged before
-the sweep cancels it (timing) — [BL8](plans/state-machine-fixes.md#bl-billing-and-credits) (B71).
 
 ### 3.5 `billing_webhook_events.processing_state` ∈ {`pending`, `completed`, `quarantined`} + lease + `attempt_count`
 

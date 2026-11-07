@@ -163,7 +163,10 @@ async function settleBase(
     evidence.subscription.priceRef !== pending.external_price_id
   )
     conflict('price_ref_mismatch');
-  if (!grantedStates.has(evidence.subscription.status) || !evidence.subscription.payment)
+  // A checkout paid as the abandon sweep cancels it is still the customer's
+  // paid period: it settles and runs to the paid end (B71).
+  const { status } = evidence.subscription;
+  if (!evidence.subscription.payment || !(grantedStates.has(status) || terminalStates.has(status)))
     return false;
   const plan = frozen.payload.plans.find((row) => row.key === pending.catalog_key);
   if (!plan?.grants.length) conflict('grant_bundle_missing');
@@ -347,7 +350,17 @@ export async function settlePending(
     .execute();
 }
 
-/** Records one paid period's receipt and, while access is granted, its plan bundle. */
+/** Whether a full refund cancelled this subscription, pending the provider's confirmation (B52). */
+export function refundCancelled(sub: Pick<Subscription, 'is_current' | 'status'>) {
+  return sub.is_current && sub.status === CANCELLED;
+}
+
+/**
+ * Records one paid period's receipt and its plan bundle. A period paid while
+ * the provider already reports the subscription ended still runs to its paid
+ * end (B71); one charged after a full refund cancelled the subscription grants
+ * nothing and is flagged for an operator refund (B71).
+ */
 async function settlePeriod(
   db: Database,
   sub: Subscription,
@@ -395,7 +408,15 @@ async function settlePeriod(
     sub.id,
     await planName(db, terms.catalog_revision, terms.catalog_key),
   );
-  if (grantedStates.has(event.status))
+  if (refundCancelled(sub)) {
+    if (!(await periodRefunded(db, sub, start, end)))
+      logger.warning('billing.renewal_paid_after_cancellation', {
+        subscription_id: sub.id,
+        period_start: start.toISOString(),
+      });
+    return;
+  }
+  if (grantedStates.has(event.status) || terminalStates.has(event.status))
     await issueBundle(db, {
       workspaceId,
       accountId: sub.billing_account_id,
@@ -437,7 +458,12 @@ async function endTerminal(
     .where('period_end', '>', now)
     .orderBy('period_end', 'desc')
     .executeTakeFirst();
-  if (paid?.period_end && !(await periodRefunded(db, sub, paid.period_start, paid.period_end)))
+  // A refund-cancelled subscription keeps no later period it was charged for (B71).
+  if (
+    paid?.period_end &&
+    !refundCancelled(sub) &&
+    !(await periodRefunded(db, sub, paid.period_start, paid.period_end))
+  )
     return paid.period_end;
   const grants = await db
     .selectFrom('account_grants')
@@ -494,8 +520,10 @@ async function periodOutcome(
   const status = event.cancelAtEnd && event.status === 'active' ? 'cancel_scheduled' : event.status;
   const settled = { status, end: event.end, endedAt: sub.ended_at, current: sub.is_current };
   if (!terminalStates.has(status))
-    // A fully refunded current period stays cancelled until the provider confirms (B52).
-    return sub.is_current && (await periodRefunded(db, sub, event.start, event.end))
+    // A fully refunded current period stays cancelled until the provider
+    // confirms (B52), even if a renewal was charged meanwhile (B71).
+    return refundCancelled(sub) ||
+      (sub.is_current && (await periodRefunded(db, sub, event.start, event.end)))
       ? { ...settled, status: CANCELLED }
       : settled;
   const paidEnd = await endTerminal(db, sub, event.version, workspaceId, now);
