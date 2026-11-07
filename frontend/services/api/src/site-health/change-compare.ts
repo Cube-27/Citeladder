@@ -269,8 +269,8 @@ export function compareCrawls(
   }
   if (options.completePair) {
     for (const id of ids(pagesB, false, pagesA)) observations.push(presence(pagesB.get(id)!, true));
-    for (const id of ids(pagesA, false, pagesB))
-      if (!options.inventoryB.has(id)) observations.push(presence(pagesA.get(id)!, false));
+    const removed = ids(pagesA, false, pagesB).filter((id) => !options.inventoryB.has(id));
+    for (const id of removed) observations.push(presence(pagesA.get(id)!, false));
   }
   return observations;
 }
