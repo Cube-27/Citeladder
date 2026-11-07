@@ -123,8 +123,10 @@ charges, extra readiness, recovery charge) and holds the shared claim, turn
 cursor, heartbeat and fenced terminal lock; every lane runs on it (analytics,
 Site Health, discovery, Agent, integrations and audits). Domain lifecycle runs
 as a claim hook in the claim's transaction (the integration sync-started
-event) or stays with the lane: the audit parent-first lock and parks
-(`src/queue/audit-queue.ts`, which also leases due audit schedules), the Agent
+event) or stays with the lane: the audit parent-first lock, parks and the per-claim
+lease owner (`src/queue/audit-queue.ts`: each claim leases to
+`<worker owner>:<nonce>`, because audit claims and uncertain reclaims charge no
+attempt to fence on; it also leases due audit schedules), the Agent
 turn start and Site Health's crawl lock. The owner also holds the lane logs
 (`src/queue/lane-log.ts`): every lane's failed attempt writes one
 `lane_task_failed` record (lane, task, attempt, phase, outcome, elapsed time,

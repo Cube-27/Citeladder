@@ -30,7 +30,7 @@ terminal `succeeded`, `failed`, `cancelled`. Implicit state lives in
 | Discovery | `brand_discovery_tasks` | `running` | 0, ready iff `attempt_count < max_attempts` | `recoverDiscoveryLeases` `recovery.ts:106-151`, fails the parent (1) | no `workers/discovery-worker.ts:104` | fenced `finish` `discovery-worker.ts:209-302` |
 | Agent | `agent_runs` | `leased`; `start` → `running`, attempt + 1 `agent/queue.ts:64-82` | 0 | `AgentQueue.recover` `agent/queue.ts:93-146` → `failed interrupted` + refund (0) | yes `agent/queue.ts:83-85` | `lockRun` = `fenceLease` + `cancelled_at IS NULL` `agent/queue.ts:10-20` |
 | Integrations | `integration_sync_runs` | `running` (claimable `queued`, `retry_wait` only) | 1 | `recoverIntegrationLeases` `recovery.ts:153` (0) | yes `workers/integration-worker.ts:122` | `#held` `integration-worker.ts:176-178` |
-| Audits | `audit_tasks` | `leased` | 0 | `AuditMaintenance.#reclaim` `audits/maintenance.ts:145-231` (1 unless uncertain or parent terminal) | no `queue/audit-queue.ts:196-198` | `ownedAuditTask` owner + status + unexpired, **no attempt** `audit-queue.ts:82-104` |
+| Audits | `audit_tasks` | `leased` | 0 | `AuditMaintenance.#reclaim` `audits/maintenance.ts:145-231` (1 unless uncertain or parent terminal) | per-claim owner `<worker>:<nonce>` `queue/audit-queue.ts` `AuditQueue.claim` (claims and uncertain reclaims charge no attempt) | `ownedAuditTask` per-claim owner + status + unexpired `audit-queue.ts` |
 
 | Invariant | Enforced |
 |---|---|
@@ -39,7 +39,7 @@ terminal `succeeded`, `failed`, `cancelled`. Implicit state lives in
 | Lease columns set iff held | App; a cancelled Keyword Research task keeps `lease_owner` (`search-intelligence/runs.ts:161-168`), harmless because fences refuse terminal rows |
 | `attempt_count <= max_attempts` | App (claim `ready`, recovery `exhausted` CASE) |
 | Exclusive claim | App: ranked `FOR UPDATE SKIP LOCKED` with eligibility re-applied `task-queue.ts:187-247` |
-| Only the current holder writes | App: lane fence above; audit lane cannot tell two claims by one worker apart |
+| Only the current holder writes | App: lane fence above; the audit lane tells two claims by one worker apart by the per-claim lease owner |
 
 | From → to | Trigger | Location | Guard |
 |---|---|---|---|
@@ -51,10 +51,10 @@ terminal `succeeded`, `failed`, `cancelled`. Implicit state lives in
 | held, expired → `retry_wait` / `failed` | `reclaimExpiredLeases` | `recovery.ts:47-91` | expired, SKIP LOCKED; `failed` when `attempt + charge >= max` |
 | `failed` → `failed` + `payload.terminal_compensated_at` | `compensateTerminalTasks` | `workers/terminal-compensation.ts:26-67` | `status = failed`, not compensated; abandoned after `terminal_compensation_max_failures` |
 
-Known invalid: a stale audit slot whose lease expired passes `ownedAuditTask`
-after the same worker re-claims the task (duplicate paid dispatch; trigger needs
-a heartbeat stalled past the lease) — [Q1](plans/state-machine-fixes.md#q-queue-leases).
-Discovery and Site Health heartbeats and two Site Health settles ignore the
+Each audit claim leases its rows to `<worker owner>:<8-hex nonce>`, so a stale
+slot whose lease expired fails `ownedAuditTask`, its heartbeat and its
+persistence once the same worker re-claims the task.
+Known invalid: Discovery and Site Health heartbeats and two Site Health settles ignore the
 attempt — [Q2](plans/state-machine-fixes.md#q-queue-leases).
 
 ## 2. Audits

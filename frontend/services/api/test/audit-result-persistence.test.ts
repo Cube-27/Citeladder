@@ -50,8 +50,9 @@ async function seed(funded = false) {
     runtime,
   );
   const [claimed] = await queue.claim('worker', 1, { workspaceId: t.workspaceId, auditId });
-  const running = await queue.markRunning(claimed!, 'worker');
-  const context = await loadExecutionContext(db, running!.task, 'worker', runtime, auditTestKey, {
+  const owner = claimed!.lease_owner;
+  const running = await queue.markRunning(claimed!, owner);
+  const context = await loadExecutionContext(db, running!.task, owner, runtime, auditTestKey, {
     at: new Date(),
     env: {},
   });
@@ -79,7 +80,7 @@ async function seed(funded = false) {
       .where('id', '=', context!.task.id)
       .execute();
   }
-  return { ...t, auditId, context: context!, accountId };
+  return { ...t, auditId, context: context!, accountId, owner };
 }
 const result: ExecutionResult = {
   logical_engine: 'chatgpt',
@@ -132,17 +133,9 @@ describe('atomic audit execution persistence', () => {
       ],
     };
     const derive = deriveExecution;
-    const artifactId = await persistExecutionSuccess(
-      db,
-      t.context.task,
-      'worker',
-      response,
-      derive,
-    );
+    const artifactId = await persistExecutionSuccess(db, t.context.task, t.owner, response, derive);
     expect(artifactId).toBeTruthy();
-    expect(
-      await persistExecutionSuccess(db, t.context.task, 'worker', response, derive),
-    ).toBeNull();
+    expect(await persistExecutionSuccess(db, t.context.task, t.owner, response, derive)).toBeNull();
     const artifact = await db
       .selectFrom('raw_response_artifacts')
       .selectAll()
@@ -225,7 +218,7 @@ describe('atomic audit execution persistence', () => {
     const t = await seed(true),
       response = { ...result, transport_model: t.context.task.transport_model };
     await expect(
-      persistExecutionSuccess(db, t.context.task, 'worker', response, async () => {
+      persistExecutionSuccess(db, t.context.task, t.owner, response, async () => {
         throw new Error('analysis failed');
       }),
     ).rejects.toThrow('analysis failed');
@@ -246,7 +239,7 @@ describe('atomic audit execution persistence', () => {
       .where('id', '=', t.context.task.id)
       .execute();
     expect(
-      await persistExecutionSuccess(db, t.context.task, 'worker', response, async () => {}),
+      await persistExecutionSuccess(db, t.context.task, t.owner, response, async () => {}),
     ).toBeNull();
     expect(
       await db
@@ -261,7 +254,7 @@ describe('atomic audit execution persistence', () => {
     const failure = await persistAnswerFailure(
       db,
       t.context.task,
-      'worker',
+      t.owner,
       new ProviderError('timeout', true),
       runtime,
       { called: true },
@@ -316,7 +309,7 @@ describe('atomic audit execution persistence', () => {
       await persistAnswerFailure(
         db,
         t.context.task,
-        'worker',
+        t.owner,
         new ProviderError('provider_connection_missing'),
         runtime,
         { called: false },
@@ -339,7 +332,7 @@ describe('atomic audit execution persistence', () => {
     await persistExecutionSuccess(
       db,
       t.context.task,
-      'worker',
+      t.owner,
       { ...result, transport_model: t.context.task.transport_model },
       deriveExecution,
     );

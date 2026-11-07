@@ -10,7 +10,7 @@ import { AuditMaintenance, cancelAudit, repairOwnedCompletion } from '../src/aud
 import { auditProjections } from '../src/audits/projections.ts';
 import { deriveExecution } from '../src/audits/derivation.ts';
 import { persistExecutionSuccess, type ExecutionResult } from '../src/audits/result-persistence.ts';
-import type { AuditTask } from '../src/queue/audit-queue.ts';
+import { AuditQueue, type AuditTask } from '../src/queue/audit-queue.ts';
 
 const db = testDatabase(),
   fixtures = new VisibilityFixtures(db),
@@ -139,6 +139,55 @@ describe('audit recovery against PostgreSQL', () => {
       status: 'retry_wait',
       attempt_count: 1,
     });
+  });
+  it('fences the stale claim out once the same worker re-claims a reclaimed task, so only the live claim records its answer', async () => {
+    const t = await seed(),
+      task = t.tasks[0]!,
+      scope = { workspaceId: t.workspaceId, auditId: t.auditId },
+      queue = new AuditQueue(db, 120);
+    await db
+      .updateTable('audit_tasks')
+      .set({ available_at: new Date(Date.now() + 3_600_000) })
+      .where('audit_id', '=', t.auditId)
+      .where('id', '!=', task.id)
+      .execute();
+    const [stale] = await queue.claim('worker', 1, scope);
+    // The stale slot's heartbeat stalled past the lease; maintenance reclaims it.
+    await db
+      .updateTable('audit_tasks')
+      .set({ lease_expires_at: sql<Date>`clock_timestamp() - interval '1 second'` })
+      .where('id', '=', task.id)
+      .execute();
+    await new AuditMaintenance(db, async () => {}).runOnce();
+    const [live] = await queue.claim('worker', 1, scope);
+    expect([stale!.id, live!.id]).toEqual([task.id, task.id]);
+    expect(await queue.heartbeat(stale!, stale!.lease_owner)).toBe(false);
+    expect(await queue.markRunning(stale!, stale!.lease_owner)).toBeNull();
+    const running = (await queue.markRunning(live!, live!.lease_owner))!.task;
+    expect(
+      await persistExecutionSuccess(
+        db,
+        running,
+        stale!.lease_owner,
+        answer(running),
+        deriveExecution,
+      ),
+    ).toBeNull();
+    const artifactId = await persistExecutionSuccess(
+      db,
+      running,
+      live!.lease_owner,
+      answer(running),
+      deriveExecution,
+    );
+    expect(
+      await db
+        .selectFrom('raw_response_artifacts')
+        .select('id')
+        .where('task_id', '=', task.id)
+        .execute(),
+    ).toEqual([{ id: artifactId }]);
+    expect(await runs(task.id)).toEqual({ reserved: 0, consumed: 1 });
   });
   it('reclaims each expired lease once, diverts paid uncertainty without spending budget and settles scoped terminal holds', async () => {
     const t = await seed(),
