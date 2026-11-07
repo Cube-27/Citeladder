@@ -186,11 +186,9 @@ App: `activated ⇒ activated_at`; `failed`/`abandoned ⇒ failure_code`.
 | `pending` → `failed` | definite create error; base terminal and unpaid | `purchases.ts:186-197`; `billing/settlement.ts:290-301` | row `FOR UPDATE`, `pending` |
 | `pending` → `activated` | evidence with payment | `settlement.ts:302-323` | `pending`, or `abandoned` order with payment (late capture) |
 | `pending` → `abandoned` | unpaid past `abandonSeconds` (base cancelled at provider first) | `recovery.ts:184-235` | lease, `pending` |
-| `abandoned` (not base) → `pending` | signed checkout callback | `routes/billing.ts:326-352` | `pending`, or `abandoned` and kind ≠ base |
+| `abandoned` (not base) → `pending` | signed checkout callback | `routes/billing.ts` (verify route) | `pending`, or `abandoned` and kind ≠ base; with a newer pending order of the same key the one-pending unique refuses it, the row stays `abandoned` and the callback answers its view (the webhook's late-capture path settles a payment) |
 
-Known invalid: reopening an abandoned add-on or upgrade while a newer one is
-pending violates the one-pending unique and answers 500 —
-[BL4](plans/state-machine-fixes.md#bl-billing-and-credits). A base checkout
+Known invalid: a base checkout
 paid as the abandon sweep cancels it depends on Razorpay's evidence for a
 just-cancelled subscription — [BL8](plans/state-machine-fixes.md#bl-billing-and-credits) (blocked, OQ3).
 

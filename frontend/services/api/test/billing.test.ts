@@ -1105,6 +1105,54 @@ describe('billing money and access owner', () => {
       .execute();
     expect(granted.map((grant) => grant.key)).toEqual(item.modes.byok!.grants.map((g) => g.key));
   });
+  it('answers the callback for an abandoned add-on while a newer order for it is pending, leaving both as they are', async () => {
+    const t = await activated();
+    const item = (await fixtures.catalog()).payload.addons[0]!;
+    const order = async () => {
+      const response = await purchase(
+        db,
+        config,
+        t.workspaceId,
+        { kind: 'addon', key: item.key, quantity: 1, mode: 'byok' },
+        randomUUID(),
+        fakeProvider(),
+      );
+      return pending(response.activation_id);
+    };
+    const abandoned = await order();
+    await db
+      .updateTable('pending_activations')
+      .set({ status: 'abandoned', failed_at: new Date(), failure_code: 'activation_expired' })
+      .where('id', '=', abandoned.id)
+      .execute();
+    const newer = await order();
+    const paymentId = `pay_${randomUUID().replaceAll('-', '')}`;
+    const verified = await createApp(config, db).request(
+      `/api/v1/billing/activations/${abandoned.id}/verify`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: `${config.session.cookieName}=${await sessionToken({ sub: t.userId, ver: 0 })}`,
+          'x-workspace-id': t.workspaceId,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          fields: {
+            razorpay_payment_id: paymentId,
+            razorpay_order_id: abandoned.external_reference!,
+            razorpay_signature: createHmac('sha256', config.razorpay.keySecret)
+              .update(`${abandoned.external_reference}|${paymentId}`)
+              .digest('hex'),
+          },
+        }),
+      },
+    );
+    expect(verified.status).toBe(202);
+    expect({
+      abandoned: (await pending(abandoned.id)).status,
+      newer: (await pending(newer.id)).status,
+    }).toEqual({ abandoned: 'abandoned', newer: 'pending' });
+  });
   it('cancels a halted subscription at the provider, keeping it current until then, and leaves a resumed one renewing', async () => {
     const t = await activated();
     const ref = t.sub.external_subscription_id;
