@@ -296,7 +296,8 @@ describe('billing money and access owner', () => {
     // The terminal row no longer blocks a new base purchase.
     expect((await buy(t.workspaceId)).status).toBe('pending');
   });
-  it('activates a lapsing checkout the customer paid just before its cancellation was refused', async () => {
+  // A base checkout past its abandon window, due for the sweep's final probe.
+  async function lapsingCheckout() {
     const t = await fixtures.tenant({ access: false });
     const row = await pending((await buy(t.workspaceId)).activation_id);
     await db
@@ -307,6 +308,10 @@ describe('billing money and access owner', () => {
       })
       .where('id', '=', row.id)
       .execute();
+    return { t, row };
+  }
+  it('activates a lapsing checkout the customer paid just before its cancellation was refused', async () => {
+    const { row } = await lapsingCheckout();
     const reads = [
       paidSubscription(row, { status: 'created', payment: null }),
       paidSubscription(row),
@@ -324,16 +329,7 @@ describe('billing money and access owner', () => {
     expect((await pending(row.id)).status).toBe('activated');
   });
   it('grants a checkout paid as the abandon sweep cancels it until its paid end, and leaves it pending no longer', async () => {
-    const t = await fixtures.tenant({ access: false });
-    const row = await pending((await buy(t.workspaceId)).activation_id);
-    await db
-      .updateTable('pending_activations')
-      .set({
-        created_at: new Date(Date.now() - (config.billing.abandonSeconds + 60) * 1000),
-        reconciliation_next_at: new Date(),
-      })
-      .where('id', '=', row.id)
-      .execute();
+    const { t, row } = await lapsingCheckout();
     // Unpaid when read; once cancelled the provider shows the payment that landed meanwhile.
     const paidThenCancelled = paidSubscription(row, { status: 'cancelled', version: 2 });
     const reads = [paidSubscription(row, { status: 'created', payment: null })];
