@@ -9,6 +9,7 @@ import { TERMINAL_CRAWL_STATUSES } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
 import { canonicalHash } from '../canonical-json.ts';
 import { policy } from '../config.ts';
+import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { compareText, scalarText } from '../text-order.ts';
@@ -368,8 +369,41 @@ async function observedInventory(
   return new Set(rows.map((row) => row.site_url_id));
 }
 
+/**
+ * The snapshot crawl B's supersedes: the project's newest snapshot of a crawl
+ * no newer than B, by crawl order, so a delayed `change_intel` of an older
+ * crawl never supersedes a later crawl's snapshot. The caller holds the
+ * project's snapshot lock, so two writers never pick the same predecessor
+ * from a stale read.
+ */
+function predecessorSnapshot(db: Database, crawlB: Crawl) {
+  return db
+    .selectFrom('site_change_snapshots as s')
+    .innerJoin('site_crawls as c', (join) =>
+      join.onRef('c.id', '=', 's.crawl_b_id').onRef('c.workspace_id', '=', 's.workspace_id'),
+    )
+    .select('s.id')
+    .where('s.workspace_id', '=', crawlB.workspace_id)
+    .where('s.project_id', '=', crawlB.project_id)
+    .where(({ eb, or, and }) =>
+      or([
+        eb('c.created_at', '<', crawlB.created_at),
+        and([eb('c.created_at', '=', crawlB.created_at), eb('c.id', '<=', crawlB.id)]),
+      ]),
+    )
+    .orderBy('c.created_at', 'desc')
+    .orderBy('c.id', 'desc')
+    .orderBy('s.created_at', 'desc')
+    .orderBy('s.id', 'desc')
+    .limit(1)
+    .executeTakeFirst();
+}
+
 /** Build, or return unchanged, the immutable comparison of crawl B with its predecessor. */
 async function persistChangeSnapshot(db: Database, crawlB: Crawl): Promise<string> {
+  // One snapshot writer per project at a time: the predecessor read and the
+  // insert are one step.
+  await subjectXactLock(db, `site-change-snapshots:${crawlB.project_id}`);
   const crawlA = await previousComparableCrawl(db, crawlB);
   const b = await pages(db, crawlB);
   const a = crawlA ? await pages(db, crawlA) : { pages: [], capped: false };
@@ -399,15 +433,7 @@ async function persistChangeSnapshot(db: Database, crawlB: Crawl): Promise<strin
           expected: await expectedChanges(db, crawlA, crawlB, b.pages),
         })
       : [];
-  const previous = await db
-    .selectFrom('site_change_snapshots')
-    .select('id')
-    .where('workspace_id', '=', crawlB.workspace_id)
-    .where('project_id', '=', crawlB.project_id)
-    .orderBy('created_at', 'desc')
-    .orderBy('id', 'desc')
-    .limit(1)
-    .executeTakeFirst();
+  const previous = await predecessorSnapshot(db, crawlB);
   const counts: Record<string, number> = {};
   for (const item of observations) counts[item.change_class] = (counts[item.change_class] ?? 0) + 1;
   const sharedPages = new Set(a.pages.map((page) => page.siteUrlId));

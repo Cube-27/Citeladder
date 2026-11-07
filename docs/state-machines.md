@@ -351,10 +351,9 @@ observed inventory (`change-snapshot.ts` `observedInventory`).
 | `site_page_analyses` | always `completed`; revisions by `is_current` + `supersedes_analysis_id`: provisional `analysis-rows.ts:335-384`, finalized `terminal-analysis.ts:55-111`, retired alias `canonical-alias.ts:97-106`; only the open generation's fenced commit can become current | DB `uq_site_page_analysis_current` 0001:5217 |
 | `site_health_snapshots` | once per crawl in the terminalize tx `snapshot.ts:127-172` (`ON CONFLICT DO NOTHING`); later only `addArchitectureIssues` | DB unique per crawl |
 | `site_internal_link_runs.state` | ∅ → `queued` `internal-link-runs.ts:107-200` (project lock, none live) → result `internal-link-publish.ts` (fenced) or `cancelled` `internal-link-runs.ts:202-211` | App |
-| `site_change_snapshots.state` | immutable insert `available`/`non_comparable`/`unavailable` `change-snapshot.ts:345-425`; `supersedes_id` = newest by `created_at`, read unlocked | App |
+| `site_change_snapshots.state` | immutable insert `available`/`non_comparable`/`unavailable` `change-snapshot.ts:345-425`; `supersedes_id` = the newest snapshot of a crawl no newer than B (crawl order), read under the project's snapshot advisory lock; the current snapshot is the newest crawl's (`reads/projections.ts`) | App |
 
-Known invalid: a `change_intel` that runs late or concurrently can supersede the wrong snapshot
-(timing) — [SH4](plans/state-machine-fixes.md#sh-site-health). An internal-link
+Known invalid: an internal-link
 run whose publish task fails terminally stays live until cancelled (no
 compensator, `site-health/analytics-kinds.ts:6-9`) —
 [SH5](plans/state-machine-fixes.md#sh-site-health).

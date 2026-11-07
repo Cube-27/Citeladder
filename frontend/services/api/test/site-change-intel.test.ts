@@ -8,6 +8,7 @@ import {
   type RuleState,
 } from '../src/site-health/change-compare.ts';
 import { contentRecord, declaredCheckField } from '../src/site-health/change-snapshot.ts';
+import { changesSummary } from '../src/site-health/reads/projections.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 import { testDatabase } from './support.ts';
@@ -401,6 +402,28 @@ describe('change_intel task', () => {
       .execute();
     expect(snapshot!.complete_pair).toBe(true);
     expect(presence).toEqual([{ site_url_id: retired.id, after_value: false }]);
+  });
+
+  it('an older crawl’s late comparison never supersedes or replaces the newer crawl’s', async () => {
+    const { a, b, urls } = await pair();
+    await run(b);
+    await run(a);
+    const [newer] = await snapshots(b);
+    const [late] = await snapshots(a);
+    expect([newer!.supersedes_id, late!.supersedes_id]).toEqual([null, null]);
+    const current = await changesSummary(db, b.workspaceId, b.projectId, { a: null, b: null });
+    expect([current.snapshot_id, current.crawl_b_id]).toEqual([newer!.id, b.crawlId]);
+    // A revision of the newer crawl's comparison chains onto its own snapshot.
+    await db
+      .updateTable('site_page_analyses')
+      .set({ is_current: false })
+      .where('crawl_id', '=', b.crawlId)
+      .where('site_url_id', '=', urls[0]!)
+      .execute();
+    await fixtures.page(b, '/', { ...facts, title: 'Home' }, { siteUrlId: urls[0] });
+    await run(b);
+    const revised = (await snapshots(b)).find((row) => row.id !== newer!.id);
+    expect(revised!.supersedes_id).toBe(newer!.id);
   });
 
   it('a page cap keeps the snapshot partial and says so', async () => {

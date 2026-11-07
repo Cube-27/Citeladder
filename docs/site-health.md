@@ -643,7 +643,9 @@ claimed only for a complete pair: both crawls `completed` with
 page or frontier limit, pending frontier, sample or other bound). A page A
 analyzed is removed only when B's observed inventory lacks it; one B observed
 but did not analyze (deselected, failed) is not. Snapshots are immutable, carry their source IDs, supersede the
-previous snapshot, and are reused when inputs are unchanged. Content change and
+newest snapshot of a crawl no newer than theirs (chosen under a project lock),
+and are reused when inputs are unchanged. Changes shows the newest crawl's
+snapshot, so an older crawl's late comparison never replaces it. Content change and
 date consistency are separate outputs. Only `complete` comparison coverage can
 promote metadata or cosmetic-refresh actions (`config/site-health/change-intel.ts`).
 
