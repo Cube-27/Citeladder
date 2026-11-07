@@ -382,14 +382,14 @@ Run: `reviewed` → `queued` → `running` ⇄ `queued` (parked) → `succeeded`
 | Invariant | Enforced |
 |---|---|
 | One active run per project | DB `uq_si_runs_project_active` (queued, running) 0001:5215; App project lock `search-intelligence/runs.ts:60-81` |
-| Ended run ⇒ no `collecting` dataset | App (`closeCollecting` `acquisition-state.ts:926`); not on cancel (SI3) |
+| Ended run ⇒ no `collecting` dataset | App (`closeCollecting` `acquisition-state.ts`, also in `cancelRun`) |
 | Hold settles only when the run ended and no call can still report (a `dispatched` call, or one recovery marked `uncertain` `provider_result_missing`, within twice the provider timeout) | App `charges.ts` |
 | A dispatched call is never re-sent | App: `dispatched` without response → `uncertain` |
 
 | From → to | Trigger | Location | Guard |
 |---|---|---|---|
 | `reviewed` → `queued` (hold + task) / `succeeded` (empty plan) | `confirmRun` | `runs.ts:122-147` | project `FOR UPDATE`, unconfirmed, unexpired, price, connection, no other active run |
-| `reviewed`/`queued`/`running` → `cancelled` | `cancelRun` | `runs.ts:149-180` | run `FOR UPDATE`, not finished; task cancelled; hold settled when nothing in flight |
+| `reviewed`/`queued`/`running` → `cancelled` | `cancelRun` | `runs.ts:149-180` | run `FOR UPDATE`, not finished; task cancelled; collecting datasets `failed`; hold settled when nothing in flight |
 | `queued`/`running` → `running` | `start` | `acquisition-state.ts:201-232` | run `FOR UPDATE`, not terminal, `owned()` |
 | → `failed` (`pricing_changed`/`connection_changed`) | `start`, `prepare`, `dispatch` | `acquisition-state.ts` (`failChangedConnection`) | connection or member check fails |
 | `running` → `uncertain` | `prepare` finds a dispatched call with no response | `acquisition-state.ts:299-329` | — |
@@ -399,12 +399,10 @@ Run: `reviewed` → `queued` → `running` ⇄ `queued` (parked) → `succeeded`
 | `queued`/`running` → terminal | `reconcileResearch` | `search-intelligence/maintenance.ts:8-98` | task `failed`/`cancelled` |
 | call `intent` → `dispatched` | `dispatch` | `acquisition-state.ts:377-419` | run `running`, `owned()`, connection; call `intent` |
 | call `dispatched` → `succeeded`/`failed`/`uncertain`/`intent` (rate-limit retry) | publish / fail / prepare | `acquisition-state.ts:493-668` | `uncertain` still accepts a late receipt `:421-467` |
-| dataset `collecting` → `published`/`failed` | publish / fail / `closeCollecting` | `acquisition-state.ts:586-594, 926` | — |
+| dataset `collecting` → `published`/`failed` | publish / fail / `closeCollecting` (terminal run or `cancelRun`) | `acquisition-state.ts`, `runs.ts` | — |
 
 Dispatch attempts are insert-only, one `outcome` per ordinal (DB
 `uq_si_dispatch_phase` 0001:4282).
-
-Known invalid: cancel leaves datasets `collecting` — [SI3](plans/state-machine-fixes.md#si-search-intelligence-and-integrations).
 
 ### 6.2 Integrations
 
