@@ -116,10 +116,10 @@ data impact.
 | AU3 | Repair audits take the launch lock, active-launch limit and daily task budget | — | `audits/repair.ts`, `audits/admission.ts` | | todo | | CONFIRMED, low-medium |
 | AU4 | The funded budget sums the latest projection per execution | — | `audits/admission.ts` | | todo | | PLAUSIBLE (latent: one pricing catalog today), low |
 | AU5 | A Google AI Overview failure after a paid submission records its cost | — | `audits/{surface-persistence,result-persistence}.ts` | | todo | | CONFIRMED, low (internal cost, funded budget) |
-| AG2 | The browser retries `/run` after 429 and ends a stream that went silent | — | `frontend/lib/agent/live-turns.ts` | | todo | | CONFIRMED, medium; idle part PLAUSIBLE |
-| AG3 | A dead turn ends within a minute | AG2 | `agent/{bindings,worker}.ts`, `workers/agent-worker.ts`, `config/model-gateway.json` | | todo | | CONFIRMED, low-medium |
-| AG4 | A turn whose member lost access still settles and ends | — | `agent/runtime.ts` | | todo | | CONFIRMED, low |
-| AG5 | A paused last call never saves an unmatched `server_tool_use` | — | `agent/runtime.ts` | | todo | | PLAUSIBLE (Messages API replay rule unverified), medium if real |
+| AG2 | The browser retries `/run` after 429 and ends a stream that went silent | — | `frontend/lib/agent/live-turns.ts` | | done | 95f1397 | CONFIRMED, medium; idle part PLAUSIBLE |
+| AG3 | A dead turn ends within a minute | AG2 | `agent/{bindings,worker}.ts`, `workers/agent-worker.ts`, `config/model-gateway.json` | | done | 069e94c | CONFIRMED, low-medium |
+| AG4 | A turn whose member lost access still settles and ends | — | `agent/runtime.ts` | | done | 45d0c27 | CONFIRMED, low |
+| AG5 | A paused last call never saves an unmatched `server_tool_use` | — | `agent/runtime.ts` | | done | 8b86e77 | PLAUSIBLE (Messages API replay rule unverified), medium if real |
 | SH1 | A crawl that analyzed nothing ends failed; page reruns are never the default crawl | — | `site-health/lifecycle.ts`, `site-health/reads/crawl.ts` | | todo | | CONFIRMED, medium |
 | SH2 | Crawl outcome and counters read the latest generation per page; a rerun supersedes an open older generation | SH1 | `site-health/{lifecycle,selection}.ts` | | todo | | CONFIRMED, medium-low |
 | SH3 | `inventory_complete` only for an unbounded inventory; removal needs absence from the inventory | SH1 | `site-health/{lifecycle,change-compare,change-snapshot}.ts` | | todo | | CONFIRMED, medium (false "page removed" regressions) |
