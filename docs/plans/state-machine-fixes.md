@@ -1,7 +1,7 @@
 # State-machine fixes
 
-Status: S01–S04 merged. S05–S12 approved for implementation by the owner on 2026-11-07, with OQ1–OQ3
-answered the same day (B69–B71). This document is both the plan and the orchestrator's tracker. The work is 12 scoped pull
+Status: complete. All 12 PRs (S01–S12) merged on 2026-11-07, with OQ1–OQ3 answered as B69–B71; the
+billing edge cases found while building are deferred until payments are enabled (B72). This document is both the plan and the orchestrator's tracker. The work is 12 scoped pull
 requests (S01–S12). Each PR batches a set of rows (the commit-level units, e.g. WS1, BL3), lists the
 PRs it depends on, and carries a status the implementor and orchestrator keep current.
 
