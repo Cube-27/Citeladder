@@ -1057,6 +1057,7 @@ describe('billing money and access owner', () => {
       }),
     });
     expect(verified.status).toBe(202);
+    expect(((await verified.json()) as { status: string }).status).toBe('pending');
     expect((await pending(row.id)).status).toBe('pending');
     // Its probe saw no capture yet and abandoned it again; the webhook still settles it.
     await db
@@ -1104,6 +1105,55 @@ describe('billing money and access owner', () => {
       .where('source_ref', '=', `activation:${row.id}`)
       .execute();
     expect(granted.map((grant) => grant.key)).toEqual(item.modes.byok!.grants.map((g) => g.key));
+  });
+  it('answers the callback for an abandoned add-on while a newer order for it is pending, leaving both as they are', async () => {
+    const t = await activated();
+    const item = (await fixtures.catalog()).payload.addons[0]!;
+    const order = async () => {
+      const response = await purchase(
+        db,
+        config,
+        t.workspaceId,
+        { kind: 'addon', key: item.key, quantity: 1, mode: 'byok' },
+        randomUUID(),
+        fakeProvider(),
+      );
+      return pending(response.activation_id);
+    };
+    const abandoned = await order();
+    await db
+      .updateTable('pending_activations')
+      .set({ status: 'abandoned', failed_at: new Date(), failure_code: 'activation_expired' })
+      .where('id', '=', abandoned.id)
+      .execute();
+    const newer = await order();
+    const paymentId = `pay_${randomUUID().replaceAll('-', '')}`;
+    const verified = await createApp(config, db).request(
+      `/api/v1/billing/activations/${abandoned.id}/verify`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: `${config.session.cookieName}=${await sessionToken({ sub: t.userId, ver: 0 })}`,
+          'x-workspace-id': t.workspaceId,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          fields: {
+            razorpay_payment_id: paymentId,
+            razorpay_order_id: abandoned.external_reference!,
+            razorpay_signature: createHmac('sha256', config.razorpay.keySecret)
+              .update(`${abandoned.external_reference}|${paymentId}`)
+              .digest('hex'),
+          },
+        }),
+      },
+    );
+    expect(verified.status).toBe(202);
+    expect(((await verified.json()) as { status: string }).status).toBe('abandoned');
+    expect({
+      abandoned: (await pending(abandoned.id)).status,
+      newer: (await pending(newer.id)).status,
+    }).toEqual({ abandoned: 'abandoned', newer: 'pending' });
   });
   it('cancels a halted subscription at the provider, keeping it current until then, and leaves a resumed one renewing', async () => {
     const t = await activated();
@@ -1236,6 +1286,43 @@ describe('billing money and access owner', () => {
       status: 'already_scheduled',
     });
   });
+  it('re-sends a refused downgrade when its replay record outlived the refusal', async () => {
+    const t = await activated();
+    await fixtures.catalog((payload) => {
+      const plan = payload.plans.find((row) => row.key === 'tier_2')!;
+      plan.byok_price!.amount_minor = 100;
+      plan.regional_prices.byok.international!.amount_minor = 100;
+    });
+    const key = randomUUID();
+    const record = () =>
+      db
+        .selectFrom('idempotency_records')
+        .selectAll()
+        .where('billing_account_id', '=', t.accountId)
+        .where('idempotency_key', '=', key)
+        .executeTakeFirstOrThrow();
+    const committed: Awaited<ReturnType<typeof record>>[] = [];
+    const reject = vi.fn(async () => {
+      committed.push(await record());
+      throw new ProviderError(false, 'provider_rejected');
+    });
+    await expect(
+      changePlan(db, config, t.workspaceId, 'tier_2', key, fakeProvider({ change: reject })),
+    ).rejects.toMatchObject({ status: 502 });
+    // The process died after recording the refusal, before deleting the replay record.
+    const [row] = committed;
+    await db
+      .insertInto('idempotency_records')
+      .values({ ...row!, response_body: JSON.stringify(row!.response_body) })
+      .execute();
+    const change = vi.fn(async (_subscription: string, _priceRef: string) => {});
+    expect(
+      await changePlan(db, config, t.workspaceId, 'tier_2', key, fakeProvider({ change })),
+    ).toMatchObject({ direction: 'downgrade', status: 'scheduled' });
+    expect(change.mock.calls.map(([subscription]) => subscription)).toEqual([
+      t.sub.external_subscription_id,
+    ]);
+  });
   it('drops a downgrade the provider refused once the next period starts', async () => {
     const t = await activated();
     await fixtures.catalog((payload) => {
@@ -1335,7 +1422,7 @@ describe('billing money and access owner', () => {
       (await entitlementRead(db, config, t.workspaceId, new Date())).subscription,
     ).toMatchObject({ cancel_at_period_end: true, resumable_until: null });
   });
-  it('authenticates bounded webhook bytes, persists before settlement, and quarantines conflicting replay', async () => {
+  it('authenticates bounded webhook bytes, persists before settlement, and quarantines conflicting replay of an unapplied event only', async () => {
     const t = await activated();
     const app = createApp(config, db);
     const eventId = randomUUID();
@@ -1345,8 +1432,8 @@ describe('billing money and access owner', () => {
         subscription: { entity: { id: t.sub.external_subscription_id, status: 'active' } },
       },
     });
-    const headers = (text: string) => ({
-      'x-razorpay-event-id': eventId,
+    const headers = (text: string, id: string = eventId) => ({
+      'x-razorpay-event-id': id,
       'x-razorpay-signature': createHmac('sha256', config.razorpay.webhookSecret)
         .update(text)
         .digest('hex'),
@@ -1387,24 +1474,30 @@ describe('billing money and access owner', () => {
       ).processing_state,
     ).toBe('completed');
     const conflicting = body.replace('active', 'cancelled');
-    expect(
+    const deliver = async (text: string, id: string) =>
       (
         await app.request('/api/v1/billing/webhooks/razorpay', {
           method: 'POST',
-          body: conflicting,
-          headers: headers(conflicting),
+          body: text,
+          headers: headers(text, id),
         })
-      ).status,
-    ).toBe(400);
-    expect(
+      ).status;
+    const state = async (id: string) =>
       (
         await db
           .selectFrom('billing_webhook_events')
-          .selectAll()
-          .where('id', '=', receipt.id)
+          .select('processing_state')
+          .where('external_event_id', '=', id)
           .executeTakeFirstOrThrow()
-      ).processing_state,
-    ).toBe('quarantined');
+      ).processing_state;
+    // An applied event keeps its outcome; the conflicting replay is still refused.
+    expect(await deliver(conflicting, eventId)).toBe(400);
+    expect(await state(eventId)).toBe('completed');
+    // An event not yet applied is quarantined for review instead.
+    const unapplied = randomUUID();
+    expect(await deliver(body, unapplied)).toBe(204);
+    expect(await deliver(conflicting, unapplied)).toBe(400);
+    expect(await state(unapplied)).toBe('quarantined');
     const tiny = createApp({ ...config, billing: { ...config.billing, webhookBytes: 8 } }, db);
     expect(
       (
@@ -1492,6 +1585,63 @@ describe('billing money and access owner', () => {
         .where('document_kind', '=', 'credit_note')
         .execute(),
     ).toHaveLength(1);
+  });
+  it('quarantines a webhook whose final attempt died once that attempt lease expires', async () => {
+    const app = createApp(config, db);
+    const deliver = async () => {
+      const eventId = randomUUID();
+      const body = JSON.stringify({
+        event: 'refund.processed',
+        payload: {
+          refund: { entity: { id: `rfnd_${eventId.replaceAll('-', '')}`, status: 'processed' } },
+        },
+      });
+      const response = await app.request('/api/v1/billing/webhooks/razorpay', {
+        method: 'POST',
+        body,
+        headers: {
+          'x-razorpay-event-id': eventId,
+          'x-razorpay-signature': createHmac('sha256', config.razorpay.webhookSecret)
+            .update(body)
+            .digest('hex'),
+        },
+      });
+      expect(response.status).toBe(204);
+      return eventId;
+    };
+    // Both rows were claimed for their final attempt and the process died before any outcome.
+    const died = async (eventId: string, leaseExpiresAt: Date) =>
+      db
+        .updateTable('billing_webhook_events')
+        .set({
+          attempt_count: config.billing.webhookAttempts,
+          lease_token: randomUUID(),
+          lease_expires_at: leaseExpiresAt,
+          next_attempt_at: new Date(Date.now() - 1000),
+        })
+        .where('external_event_id', '=', eventId)
+        .execute();
+    const expired = await deliver();
+    const leased = await deliver();
+    await died(expired, new Date(Date.now() - 1000));
+    await died(leased, new Date(Date.now() + 60_000));
+    const refund = vi.fn(async () => {
+      throw new Error('An exhausted row is never attempted again');
+    });
+    await recoverBilling(db, config, fakeProvider({ refund }));
+    const rows = await db
+      .selectFrom('billing_webhook_events')
+      .select(['external_event_id', 'processing_state', 'error_code'])
+      .where('external_event_id', 'in', [expired, leased])
+      .execute();
+    expect(Object.fromEntries(rows.map((row) => [row.external_event_id, row]))).toEqual({
+      [expired]: {
+        external_event_id: expired,
+        processing_state: 'quarantined',
+        error_code: 'attempts_exhausted',
+      },
+      [leased]: { external_event_id: leased, processing_state: 'pending', error_code: '' },
+    });
   });
   it('isolates billing reads and activation IDs, and never repairs a missing account', async () => {
     const t = await activated();

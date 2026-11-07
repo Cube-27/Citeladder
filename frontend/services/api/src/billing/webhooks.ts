@@ -143,6 +143,8 @@ export async function receiveWebhook(
         .updateTable('billing_webhook_events')
         .set({ processing_state: 'quarantined', error_code: 'event_id_digest_conflict' })
         .where('id', '=', prior.id)
+        // A completed (applied or ignored) event keeps its state; only unapplied rows quarantine.
+        .where('processing_state', '=', 'pending')
         .execute();
       throw new ApiError(400, 'event_id_digest_conflict');
     }

@@ -42,8 +42,14 @@ import { checkoutAvailable, configured, verifyCallback } from '../billing/razorp
 import { onCheckoutAllowList } from '../billing/checkout-access.ts';
 import { workspaceCredentialMode } from '../billing/credential-mode.ts';
 import { receiveWebhook } from '../billing/webhooks.ts';
+import { isUniqueViolation } from '../db/errors.ts';
 
 const family = 'billing';
+/** At most one pending order per add-on key and one pending upgrade per account. */
+const ONE_PENDING_ORDER = [
+  'uq_pending_activation_one_pending_addon',
+  'uq_pending_activation_one_pending_upgrade',
+] as const;
 const root = '/api/v1/billing';
 const params = { path: {}, query: {} } as const;
 const privateRoute = { family, capability: 'manage_billing', params } as const;
@@ -332,25 +338,34 @@ export const billingRoutes = [
       // Re-checked in the update: the sweep may abandon a base intent meanwhile.
       // Clearing the lease voids any in-flight probe's stale unpaid reading.
       const now = new Date();
-      await db
-        .updateTable('pending_activations')
-        .set({
-          status: 'pending',
-          reconciliation_next_at: now,
-          reconciliation_lease_token: null,
-          reconciliation_lease_expires_at: null,
-          updated_at: now,
-        })
-        .where('id', '=', pending.id)
-        .where('billing_account_id', '=', pending.billing_account_id)
-        .where((eb) =>
-          eb.or([
-            eb('status', '=', 'pending'),
-            eb.and([eb('status', '=', 'abandoned'), eb('activation_kind', '!=', 'base')]),
-          ]),
-        )
-        .execute();
-      return activationResponse(pending);
+      try {
+        const reopened = await db
+          .updateTable('pending_activations')
+          .set({
+            status: 'pending',
+            reconciliation_next_at: now,
+            reconciliation_lease_token: null,
+            reconciliation_lease_expires_at: null,
+            updated_at: now,
+          })
+          .where('id', '=', pending.id)
+          .where('billing_account_id', '=', pending.billing_account_id)
+          .where((eb) =>
+            eb.or([
+              eb('status', '=', 'pending'),
+              eb.and([eb('status', '=', 'abandoned'), eb('activation_kind', '!=', 'base')]),
+            ]),
+          )
+          .returningAll()
+          .executeTakeFirst();
+        return activationResponse(reopened ?? pending);
+      } catch (error) {
+        // A newer order for the same add-on or upgrade is pending, so this one
+        // cannot reopen; it stays abandoned and the webhook's late-capture path
+        // settles its payment.
+        if (!ONE_PENDING_ORDER.some((index) => isUniqueViolation(error, index))) throw error;
+        return activationResponse(pending);
+      }
     },
   }),
   (() => {

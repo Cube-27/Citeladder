@@ -93,7 +93,8 @@ top-ups remain unavailable.
 `subscription_lapsed` and `access_unresolved` without writes. A workspace
 whose paid plan access took effect and has since ended reads
 `subscription_lapsed`, never `trial_expired`, so trial purge never selects a
-former customer. Expiry is checked at dispatch and subsequent
+former customer, and it skips a workspace whose checkout is still pending
+settlement. Expiry is checked at dispatch and subsequent
 network boundaries; already-dispatched evidence may settle. Capacity supplements
 and credit top-ups do not reopen expired access. An explicit operator
 `workspace_access=1` override can restore it through the existing
@@ -115,7 +116,10 @@ provider.
 [recovery](../frontend/services/api/src/billing/recovery.ts) converge on
 [settlement](../frontend/services/api/src/billing/settlement.ts). Authenticated
 payment/subscription evidence, period identity and stable grant keys make
-settlement idempotent. Duplicate event IDs with conflicting digests quarantine.
+settlement idempotent. A duplicate event ID with a conflicting digest is refused
+and quarantines the event if it is still unapplied; an applied event keeps its
+outcome. An event whose final attempt died with its process is quarantined
+(`attempts_exhausted`) once that attempt's lease expires.
 Normalized refunds cannot exceed payment value. Redirects grant nothing.
 [Receipts](../frontend/services/api/src/billing/receipts.ts) issue one receipt per
 captured payment and one credit note per processed refund, each series

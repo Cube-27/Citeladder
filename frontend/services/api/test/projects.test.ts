@@ -493,7 +493,10 @@ describe('project owner', () => {
 
   it('purges trial-only projects and incomplete discoveries 30 days after the trial ends, and nothing else', async () => {
     const day = 86_400_000;
-    async function trialWorkspace(endedDaysAgo: number, { paid = false, project = true } = {}) {
+    async function trialWorkspace(
+      endedDaysAgo: number,
+      { paid = false, project = true, checkout = false } = {},
+    ) {
       const t = await tenant();
       await db
         .updateTable('billing_accounts')
@@ -538,35 +541,65 @@ describe('project owner', () => {
         })
         .execute();
       if (paid) await grant(db, t.accountId, { key: 'project_slots', value: 1 });
+      // A returning customer paid for a plan whose settlement has not landed yet.
+      if (checkout)
+        await db
+          .insertInto('pending_activations')
+          .values({
+            id: randomUUID(),
+            billing_account_id: t.accountId,
+            activation_kind: 'base',
+            catalog_key: 'tier_1',
+            catalog_revision: 'test',
+            country_code: 'US',
+            credential_mode: 'byok',
+            region: 'international',
+            quantity: 1,
+            provider: 'razorpay',
+            provider_mode: 'test',
+            external_reference: `sub_${randomUUID().replaceAll('-', '')}`,
+            idempotency_key: randomUUID(),
+            request_fingerprint: 'test',
+            status: 'pending',
+            expires_at: new Date(Date.now() + day),
+            created_at: new Date(),
+            updated_at: new Date(),
+          })
+          .execute();
       return { projectId: created?.id ?? null, discoveryId: discovery.id };
     }
     const expired = await trialWorkspace(31);
     const discoveryOnly = await trialWorkspace(31, { project: false });
     const recent = await trialWorkspace(10);
     const upgraded = await trialWorkspace(31, { paid: true });
+    const paying = await trialWorkspace(31, { checkout: true });
     await purgeExpiredTrialProjects(db, new Date());
     const left = await db
       .selectFrom('projects')
       .select('id')
-      .where('id', 'in', [expired.projectId!, recent.projectId!, upgraded.projectId!])
+      .where('id', 'in', [
+        expired.projectId!,
+        recent.projectId!,
+        upgraded.projectId!,
+        paying.projectId!,
+      ])
       .execute();
-    expect(left.map((row) => row.id).sort()).toEqual([recent.projectId, upgraded.projectId].sort());
-    const seeded = [expired, discoveryOnly, recent, upgraded].map((w) => w.discoveryId);
+    const kept = [recent, upgraded, paying];
+    expect(left.map((row) => row.id).sort()).toEqual(kept.map((w) => w.projectId).sort());
+    const seeded = [expired, discoveryOnly, ...kept].map((w) => w.discoveryId);
     const discoveries = await db
       .selectFrom('brand_discoveries')
       .select('id')
       .where('id', 'in', seeded)
       .execute();
-    expect(discoveries.map((row) => row.id).sort()).toEqual(
-      [recent.discoveryId, upgraded.discoveryId].sort(),
-    );
+    expect(discoveries.map((row) => row.id).sort()).toEqual(kept.map((w) => w.discoveryId).sort());
     const tasks = await db
       .selectFrom('brand_discovery_tasks')
       .select('discovery_id')
       .where('discovery_id', 'in', seeded)
       .execute();
     expect(tasks.map((row) => row.discovery_id).sort()).toEqual(
-      [recent.discoveryId, upgraded.discoveryId].sort(),
+      kept.map((w) => w.discoveryId).sort(),
     );
   });
 

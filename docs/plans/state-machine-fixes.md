@@ -60,7 +60,7 @@ are the reviewer's, not decisions.
 | S01 | Credential resets end unexchanged MCP codes; invitation issuer lock | WS1, WS2 | — | | merged | [#653](https://github.com/Cube-27/Citeladder/pull/653) | Security |
 | S02 | Credit holds that never settle | BL1, SI1, BL2 | — | | in progress | | Money |
 | S03 | Lease fences: per-claim audit lease, attempt-fenced heartbeats, poll reclaim | Q1, Q2, AU1 | — | | merged | [#656](https://github.com/Cube-27/Citeladder/pull/656) | Money (duplicate paid dispatch) |
-| S04 | Billing webhook, checkout and replay recovery | BL3, BL4, BL5, BL6 | — | | in progress | | Money |
+| S04 | Billing webhook, checkout and replay recovery | BL3, BL4, BL5, BL6 | — | | in review | [#655](https://github.com/Cube-27/Citeladder/pull/655) | Money |
 | S05 | Keyword Research settlement, cancel and reconnect | SI2, SI3, SI4 | S02 | | todo | | Money; shares `search-intelligence/` with S02 |
 | S06 | Audit schedules, repair admission and cost records | AU2, AU3, AU4, AU5 | — | | todo | | Stuck users, abuse bound, cost |
 | S07 | Agent turn recovery | AG2, AG3, AG4, AG5 | — | | todo | | Stuck users |
@@ -103,10 +103,10 @@ data impact.
 | Q1 | Audit lane: one lease owner per claim, so a stale slot never matches a re-claim | — | `audits/worker.ts`, `queue/audit-queue.ts` | | done | 8fa5226 | Guard gap CONFIRMED, trigger PLAUSIBLE (heartbeat stalled past the lease); medium (duplicate paid call). Merges queue F2 and audits B7 |
 | Q2 | Discovery and Site Health heartbeats carry the claimed attempt; two unfenced Site Health settles take the fence | Q1 | `workers/discovery-worker.ts`, `site-health/{site-task,analyze-task}.ts` | | done | 44b0be1 | PLAUSIBLE, low |
 | AU1 | An expired lease while polling a paid provider task charges no attempt | — | `audits/maintenance.ts` | | done | 3926f40 | CONFIRMED (needs repeated process deaths), low |
-| BL3 | Exhausted webhook rows with an expired lease are quarantined; a digest conflict never rewrites a completed row | — | `billing/{recovery,webhooks}.ts` | | todo | | CONFIRMED (crash on final attempt), medium-low; digest part PLAUSIBLE |
-| BL4 | Reopening an abandoned add-on or upgrade never answers 500 | — | `routes/billing.ts` | | todo | | CONFIRMED, low |
-| BL5 | A plan-change replay reflects a provider refusal | — | `billing/plan-changes.ts` | | todo | | CONFIRMED (crash window), low |
-| BL6 | Trial purge skips accounts with a pending checkout | — | `projects/trial-purge.ts` | | todo | | PLAUSIBLE (delayed settlement), low |
+| BL3 | Exhausted webhook rows with an expired lease are quarantined; a digest conflict never rewrites a completed row | — | `billing/{recovery,webhooks}.ts` | | done | 63ef994 | CONFIRMED (crash on final attempt), medium-low; digest part PLAUSIBLE |
+| BL4 | Reopening an abandoned add-on or upgrade never answers 500 | — | `routes/billing.ts` | | done | c6ce97b | CONFIRMED, low |
+| BL5 | A plan-change replay reflects a provider refusal | — | `billing/plan-changes.ts` | | done | 80f3fcc | CONFIRMED (crash window), low |
+| BL6 | Trial purge skips accounts with a pending checkout | — | `projects/trial-purge.ts` | | done | 2d79396 | PLAUSIBLE (delayed settlement), low |
 | SI2 | Settlement waits for calls marked uncertain inside the reporting window | — | `search-intelligence/charges.ts` | | todo | | CONFIRMED (lease lost mid-call), low (unbilled answered call) |
 | SI3 | Cancel closes collecting datasets | SI2 | `search-intelligence/runs.ts` | | todo | | CONFIRMED, low |
 | SI4 | Reconnect refused while a revocation is in flight | — | `integrations/oauth.ts` | | todo | | PLAUSIBLE (Google grant-wide revocation), low-medium |
