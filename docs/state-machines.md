@@ -237,11 +237,7 @@ DB: `(provider, mode, event_id)` unique (0001:4052).
 | `billing_catalog_revisions.publication_state` | `draft` (mutable) → `published`, previous → `retired` (final) `billing/admin.ts:107-173` | DB one published 0001:5181; App subject lock |
 | `billing_payments` | insert-only; refund child rows | DB 0001:5183-5185 |
 | `idempotency_records` (plan changes) | ∅ → `completed` only `plan-changes.ts` `scheduleDowngrade`; deleted on `provider_rejected` after the push, or by a same-key replay that finds the current subscription's change from that key `provider_rejected` (`refusedFromKey`); `expires_at` never read | App |
-| Access (derived) | `trial_active` / `trial_expired` / `active` / `subscription_lapsed` / `access_unresolved` from grant validity `entitlements/access.ts:38-91`; trial once per mailbox under advisory lock `entitlements/bootstrap.ts:62-113`; purge `projects/trial-purge.ts:26-128` | App |
-
-Known invalid: trial purge can
-remove a returning customer's projects between payment and settlement
-(needs delayed settlement) — [BL6](plans/state-machine-fixes.md#bl-billing-and-credits).
+| Access (derived) | `trial_active` / `trial_expired` / `active` / `subscription_lapsed` / `access_unresolved` from grant validity `entitlements/access.ts:38-91`; trial once per mailbox under advisory lock `entitlements/bootstrap.ts:62-113`; purge `projects/trial-purge.ts` skips a workspace with a `pending` checkout (`stillPurgeable`, under the capacity lock) | App |
 
 ## 4. Agent
 

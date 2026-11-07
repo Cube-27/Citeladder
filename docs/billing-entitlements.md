@@ -93,7 +93,8 @@ top-ups remain unavailable.
 `subscription_lapsed` and `access_unresolved` without writes. A workspace
 whose paid plan access took effect and has since ended reads
 `subscription_lapsed`, never `trial_expired`, so trial purge never selects a
-former customer. Expiry is checked at dispatch and subsequent
+former customer, and it skips a workspace whose checkout is still pending
+settlement. Expiry is checked at dispatch and subsequent
 network boundaries; already-dispatched evidence may settle. Capacity supplements
 and credit top-ups do not reopen expired access. An explicit operator
 `workspace_access=1` override can restore it through the existing
