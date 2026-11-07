@@ -58,6 +58,8 @@ to resolve within the authorized scope, not permission to weaken a constraint.
   shared layering, contracts, state and extension patterns.
 - [Design](design.md): visual and interaction rules.
 - [Invariants](invariants.md): durable correctness and safety constraints.
+- [State machines](state-machines.md): every persisted lifecycle's states,
+  where each invariant is enforced, and its transitions and known invalid states.
 - [API errors](api-error-contract.md): cross-stack error contract.
 - [Development](DEVELOPMENT.md): setup, isolation and validation commands.
 - [Review](../Review.md): review checklist for an author's own diff.
