@@ -115,7 +115,10 @@ provider.
 [recovery](../frontend/services/api/src/billing/recovery.ts) converge on
 [settlement](../frontend/services/api/src/billing/settlement.ts). Authenticated
 payment/subscription evidence, period identity and stable grant keys make
-settlement idempotent. Duplicate event IDs with conflicting digests quarantine.
+settlement idempotent. A duplicate event ID with a conflicting digest is refused
+and quarantines the event if it is still unapplied; an applied event keeps its
+outcome. An event whose final attempt died with its process is quarantined
+(`attempts_exhausted`) once that attempt's lease expires.
 Normalized refunds cannot exceed payment value. Redirects grant nothing.
 [Receipts](../frontend/services/api/src/billing/receipts.ts) issue one receipt per
 captured payment and one credit note per processed refund, each series

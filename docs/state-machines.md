@@ -226,14 +226,11 @@ DB: `(provider, mode, event_id)` unique (0001:4052).
 | From → to | Trigger | Location | Guard |
 |---|---|---|---|
 | ∅ → `pending` | receipt | `billing/webhooks.ts:110-132` | `ON CONFLICT DO NOTHING` |
-| any → `quarantined` | same id, different digest | `webhooks.ts:133-148` | none (a `completed` row flips too) |
+| `pending` → `quarantined` | same id, different digest (answers 400; a `completed` row keeps its state) | `webhooks.ts:133-150` | `processing_state = pending` |
 | `pending` → leased, attempt + 1 | claim | `recovery.ts:270-302` | `attempt_count < webhook_max_attempts`, lease expired, SKIP LOCKED |
 | leased → `completed` | applied | `recovery.ts:340-378` | lease token unexpired |
 | leased → `pending` / `quarantined` | error; unmatched (exhausted) | `recovery.ts:379-411` | lease token |
-
-Known invalid: a row whose final attempt dies with its process stays `pending`
-with `attempt_count = max`, never claimed or quarantined; a refund applied only
-by its webhook is lost — [BL3](plans/state-machine-fixes.md#bl-billing-and-credits).
+| `pending` at `webhook_max_attempts` → `quarantined` (`attempts_exhausted`) | final attempt died with its process | `quarantineExhaustedWebhooks`, each recovery pass | lease expired |
 
 ### 3.6 Other billing records
 
