@@ -209,7 +209,10 @@ search pending beside client tool calls) is offered one more use so the
 continuation stays valid. The definition therefore changes only after a turn
 has searched, which costs one cache miss on the next call. `pause_turn` is
 continued by sending the conversation back unchanged. Search blocks, including
-their encrypted content, are stored and replayed byte-identically.
+their encrypted content, are stored and replayed byte-identically, except that
+a search the turn's last response left waiting (a `pause_turn` or a pending
+search on the last call) is dropped from the saved transcript, so every replayed
+tool use has its result.
 
 Searched pages are untrusted observations, never sources: a reply's and a
 revision's `web_sources` (`{url, title}`, deduplicated, carried forward like
@@ -229,8 +232,9 @@ closed or its process stopped (`interrupted`), a turn past its time limit
 code-specific
 recovery reply from [`messages.ts`](../frontend/services/api/src/agent/messages.ts)
 saying what happened, that nothing was saved, and what to do next. The one
-exception is a member who lost access (`access_revoked`), whose turn ends
-without a reply. Failure codes keep their meaning: `trial_expired`,
+exception is a member who lost access (`access_revoked`, or any other code
+once the member can no longer write to the chat), whose turn still settles,
+refunds and ends, without a reply. Failure codes keep their meaning: `trial_expired`,
 `subscription_lapsed` and `access_unresolved` survive from entitlement checks,
 provider failures are
 `provider_error`, and validation and storage defects are `internal_error`. At admission a
@@ -400,7 +404,13 @@ A turn executes only inside that request, exactly once:
   admission) ends it as `turn_timeout`.
 - Turns and interactive audit drives share a per-instance cap
   (`interactiveCapacity` in `config/execution.ts`); a full instance answers 429
-  with `Retry-After` and the queued turn waits for the browser's retry. On
+  with `Retry-After`; the browser re-posts the run after that delay, up to
+  `AGENT_RUN_RETRY.maxAttempts` (`frontend/lib/config/agent.ts`), and a run
+  another request already claimed or ended answers done, so a re-post is safe.
+  Any other refusal ends the browser's live view and the persisted read shows
+  the run. A stream that delivers no frame, keep-alives included, for
+  `AGENT_STREAM_IDLE_MS` (twice `stream_heartbeat_seconds`) is closed, which
+  ends the turn as `interrupted`. On
   shutdown the API stops open turns, which end as `interrupted`, before it
   closes.
 - A provider failure is retried once within the call
@@ -476,11 +486,17 @@ lives in the generation configuration.
 ## Worker and funding
 
 The browser's run request claims its run from the shared PostgreSQL queue with a
-lease and a heartbeat. Creating a chat does not start the runner job. The
+lease of `lease_seconds` (60 s in the model gateway configuration, three
+20-second heartbeats) that the heartbeat renews. Creating a chat does not start
+the runner job. The
 runner's [agent lane](../frontend/services/api/src/workers/agent-worker.ts) never
 executes a turn: it ends as `interrupted` a turn whose lease expired or that no
 stream claimed within `unclaimed_grace_seconds`, and settles cancelled turns'
-outstanding model attempts. Before each model call the turn
+outstanding model attempts. Its next-due time includes held turns' lease
+expiry, so a draining runner ends a turn whose instance died within about a
+minute. A turn whose own heartbeat gives up ends as `interrupted` in its
+request at once, unless recovery or another owner already took the lease.
+Before each model call the turn
 rechecks lease ownership, cancellation, the member's run permission, the
 capability and the admitted platform model,
 then [commits the dispatch](../frontend/services/api/src/agent/model-calls.ts)
@@ -561,6 +577,7 @@ scripted models and real PostgreSQL, never live providers:
 
 Live quality and speed are measured outside CI by the operator-only eval,
 `pnpm --filter @citeladder/api agent:eval --live --label <name>`:
+
 - It drives the chats in
   [`eval-cases.json`](../frontend/services/api/test/fixtures/agent/eval-cases.json)
   through the local Agent API as the development login, against a local

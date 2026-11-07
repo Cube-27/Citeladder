@@ -7,6 +7,7 @@ import { ModelError } from '../models/http.ts';
 import {
   hasPendingServerTool,
   webSearchBlocks,
+  withoutPendingServerTools,
   type ServerToolEvent,
   type ConversationBlock,
   type ConversationMessage,
@@ -118,6 +119,27 @@ function withSummary(summary: PromptSummary) {
   return {
     context_manifest: sql<Json>`context_manifest || jsonb_build_object('prompt_summary', ${JSON.stringify(summary)}::jsonb)`,
   };
+}
+/** Whether the member may still write to the chat; a refusal answers false, a database error still throws. */
+async function stillAuthorized(db: Database, scope: Parameters<typeof authorize>[1]) {
+  try {
+    await authorize(db, scope);
+    return true;
+  } catch (error) {
+    if (error instanceof ApiError || error instanceof AgentError) return false;
+    throw error;
+  }
+}
+/**
+ * The transcript as saved: no later call continues the turn's last response,
+ * so a provider-hosted call it left waiting (a paused or read-beside search on
+ * the last call) is dropped, and every later replay pairs each tool use.
+ */
+function savedTranscript(messages: readonly ConversationMessage[]): ConversationMessage[] {
+  const last = messages.findLastIndex((message) => message.role === 'assistant');
+  return messages.map((message, index) =>
+    index === last ? { ...message, content: withoutPendingServerTools(message.content) } : message,
+  );
 }
 function savedNotice(number: number, formatLabel: string | null) {
   const format = formatLabel ? ` in ${formatLabel} format` : '';
@@ -685,7 +707,7 @@ export class AgentRuntime {
         model: model.model,
         skillId: skill?.id ?? null,
         contextHash: state.contextHash,
-        messages: state.messages,
+        messages: savedTranscript(state.messages),
       });
       await trx
         .updateTable('agent_runs')
@@ -704,19 +726,23 @@ export class AgentRuntime {
   }
   /**
    * Ends the turn with its code-specific reply. A failed turn saves nothing,
-   * so its model calls are settled and then refunded (B58).
+   * so its model calls are settled and then refunded (B58). A member who lost
+   * access gets no summary or reply, but the turn still settles and ends.
    */
   async fail(lease: Lease, code: string, summary?: PromptSummary) {
     try {
       await this.db.transaction().execute(async (trx) => {
         const run = await lockRun(trx, lease);
         await this.deps.models.settleFailed(trx, run);
-        if (run.user_id && code !== 'access_revoked') {
-          await authorize(trx, {
+        if (
+          run.user_id &&
+          code !== 'access_revoked' &&
+          (await stillAuthorized(trx, {
             workspaceId: run.workspace_id,
             projectId: run.project_id,
             userId: run.user_id,
-          });
+          }))
+        ) {
           if (summary)
             await trx
               .updateTable('agent_runs')
