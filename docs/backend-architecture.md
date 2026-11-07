@@ -115,7 +115,8 @@ expiry (Agent: when an unclaimed turn passes its grace). Billing has no probe;
 its retries wait for tick. Analytics, discovery, integrations and Site Health
 reclaim through `reclaimExpiredLeases` (`src/queue/recovery.ts`), which takes
 the lane's attempt charge; audit recovery locks the parent audit first and holds
-uncertain submissions, so it stays in `AuditMaintenance`. Every queue claims
+uncertain submissions and returns a paid provider task to polling without an
+attempt, so it stays in `AuditMaintenance`. Every queue claims
 the least recently served workspace first (`queue_workspace_turns`).
 The queue-lane owner (`src/queue/task-queue.ts`) takes a lane descriptor
 (table, claimable statuses, the status a claim moves to, the attempt the claim
@@ -123,8 +124,10 @@ charges, extra readiness, recovery charge) and holds the shared claim, turn
 cursor, heartbeat and fenced terminal lock; every lane runs on it (analytics,
 Site Health, discovery, Agent, integrations and audits). Domain lifecycle runs
 as a claim hook in the claim's transaction (the integration sync-started
-event) or stays with the lane: the audit parent-first lock and parks
-(`src/queue/audit-queue.ts`, which also leases due audit schedules), the Agent
+event) or stays with the lane: the audit parent-first lock, parks and the per-claim
+lease owner (`src/queue/audit-queue.ts`: each claim leases to
+`<worker owner>:<nonce>`, because audit claims and uncertain reclaims charge no
+attempt to fence on; it also leases due audit schedules), the Agent
 turn start and Site Health's crawl lock. The owner also holds the lane logs
 (`src/queue/lane-log.ts`): every lane's failed attempt writes one
 `lane_task_failed` record (lane, task, attempt, phase, outcome, elapsed time,

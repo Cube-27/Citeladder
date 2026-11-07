@@ -231,10 +231,14 @@ export function acceptInvitation(db: Database, actorId: string, token: string) {
       user.email.trim().toLowerCase() !== invitation.email_normalized
     )
       refusal('invitation_invalid', 400);
-    // A link is only as good as its issuer's standing when it is used.
+    // A link is only as good as its issuer's standing when it is used. The
+    // issuer's account row is held so an operator disable (which locks only that
+    // row) either commits first and refuses this accept, or waits for it.
     if (!invitation.accepted_at) {
       const issuer = invitation.invited_by_user_id;
-      if (issuer === null || !(await memberCan(trx, workspace.id, issuer, 'manage_members')))
+      if (issuer === null) refusal('invitation_invalid', 400);
+      await trx.selectFrom('users').select('id').where('id', '=', issuer).forShare().execute();
+      if (!(await memberCan(trx, workspace.id, issuer, 'manage_members')))
         refusal('invitation_invalid', 400);
     }
     let member = await trx

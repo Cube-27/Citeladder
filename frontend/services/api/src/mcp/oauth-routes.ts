@@ -425,7 +425,7 @@ export function registerOAuthRoutes(
           config,
           mcp,
           transaction,
-          c.get('user').id,
+          { userId: c.get('user').id, sessionVersion: c.get('user').sessionVersion },
           decision === 'deny'
             ? null
             : {

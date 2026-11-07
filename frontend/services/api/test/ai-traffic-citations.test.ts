@@ -110,8 +110,9 @@ async function finalizedRun(t: AuditTenant, urls: string[]) {
   );
   const claim = () => queue.claim('worker', 1, { workspaceId: t.workspaceId, auditId });
   for (let claimed = await claim(); claimed[0]; claimed = await claim()) {
-    const running = await queue.markRunning(claimed[0], 'worker');
-    const context = await loadExecutionContext(db, running!.task, 'worker', runtime, auditTestKey, {
+    const owner = claimed[0].lease_owner;
+    const running = await queue.markRunning(claimed[0], owner);
+    const context = await loadExecutionContext(db, running!.task, owner, runtime, auditTestKey, {
       at: new Date(),
       env: {},
     });
@@ -119,7 +120,7 @@ async function finalizedRun(t: AuditTenant, urls: string[]) {
     await persistExecutionSuccess(
       db,
       context!.task,
-      'worker',
+      owner,
       {
         ...result,
         transport_model: context!.task.transport_model,

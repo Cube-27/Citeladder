@@ -26,11 +26,11 @@ terminal `succeeded`, `failed`, `cancelled`. Implicit state lives in
 | Lane (`queue/task-queue.ts:87-145`) | Table | Claim → | Claim charge | Recovery (charge) | Heartbeat fences attempt | Terminal-write fence |
 |---|---|---|---|---|---|---|
 | Analytics | `analytics_tasks` | `leased` | 0 | `reclaimExpiredLeases` `queue/recovery.ts:47-91` (1) | yes `workers/analytics-worker.ts:209` | `fenceLease` owner + attempt + unexpired, `task-queue.ts:312-336` |
-| Site Health | `site_crawl_tasks` | `leased` | 0 | same (1), crawl reconcile `workers/site-health-worker.ts:183-187` | no `site-health/site-task.ts:426` | `lockSiteTask` → `fenceLease`; `owned()` (owner only) unfenced at `site-task.ts:415`, `analyze-task.ts:347` |
-| Discovery | `brand_discovery_tasks` | `running` | 0, ready iff `attempt_count < max_attempts` | `recoverDiscoveryLeases` `recovery.ts:106-151`, fails the parent (1) | no `workers/discovery-worker.ts:104` | fenced `finish` `discovery-worker.ts:209-302` |
+| Site Health | `site_crawl_tasks` | `leased` | 0 | same (1), crawl reconcile `workers/site-health-worker.ts:183-187` | yes `site-health/site-task.ts` `runSiteTask` | `lockSiteTask` → `fenceLease` (the deferred settle in `analyze-task.ts` `prepare` too); the conflict fallback in `settleThrown` takes `fenceLease` on the task row alone |
+| Discovery | `brand_discovery_tasks` | `running` | 0, ready iff `attempt_count < max_attempts` | `recoverDiscoveryLeases` `recovery.ts:106-151`, fails the parent (1) | yes `workers/discovery-worker.ts` `runOnce` | fenced `finish` `discovery-worker.ts:209-302` |
 | Agent | `agent_runs` | `leased`; `start` → `running`, attempt + 1 `agent/queue.ts:64-82` | 0 | `AgentQueue.recover` `agent/queue.ts:93-146` → `failed interrupted` + refund (0) | yes `agent/queue.ts:83-85` | `lockRun` = `fenceLease` + `cancelled_at IS NULL` `agent/queue.ts:10-20` |
 | Integrations | `integration_sync_runs` | `running` (claimable `queued`, `retry_wait` only) | 1 | `recoverIntegrationLeases` `recovery.ts:153` (0) | yes `workers/integration-worker.ts:122` | `#held` `integration-worker.ts:176-178` |
-| Audits | `audit_tasks` | `leased` | 0 | `AuditMaintenance.#reclaim` `audits/maintenance.ts:145-231` (1 unless uncertain or parent terminal) | no `queue/audit-queue.ts:196-198` | `ownedAuditTask` owner + status + unexpired, **no attempt** `audit-queue.ts:82-104` |
+| Audits | `audit_tasks` | `leased` | 0 | `AuditMaintenance.#reclaim` `audits/maintenance.ts` (1 unless a paid submission exists or the parent is terminal) | per-claim owner `<worker>:<nonce>` `queue/audit-queue.ts` `AuditQueue.claim` (claims and uncertain reclaims charge no attempt) | `ownedAuditTask` per-claim owner + status + unexpired `audit-queue.ts` |
 
 | Invariant | Enforced |
 |---|---|
@@ -39,7 +39,7 @@ terminal `succeeded`, `failed`, `cancelled`. Implicit state lives in
 | Lease columns set iff held | App; a cancelled Keyword Research task keeps `lease_owner` (`search-intelligence/runs.ts:161-168`), harmless because fences refuse terminal rows |
 | `attempt_count <= max_attempts` | App (claim `ready`, recovery `exhausted` CASE) |
 | Exclusive claim | App: ranked `FOR UPDATE SKIP LOCKED` with eligibility re-applied `task-queue.ts:187-247` |
-| Only the current holder writes | App: lane fence above; audit lane cannot tell two claims by one worker apart |
+| Only the current holder writes | App: lane fence above; the audit lane tells two claims by one worker apart by the per-claim lease owner |
 
 | From → to | Trigger | Location | Guard |
 |---|---|---|---|
@@ -51,11 +51,12 @@ terminal `succeeded`, `failed`, `cancelled`. Implicit state lives in
 | held, expired → `retry_wait` / `failed` | `reclaimExpiredLeases` | `recovery.ts:47-91` | expired, SKIP LOCKED; `failed` when `attempt + charge >= max` |
 | `failed` → `failed` + `payload.terminal_compensated_at` | `compensateTerminalTasks` | `workers/terminal-compensation.ts:26-67` | `status = failed`, not compensated; abandoned after `terminal_compensation_max_failures` |
 
-Known invalid: a stale audit slot whose lease expired passes `ownedAuditTask`
-after the same worker re-claims the task (duplicate paid dispatch; trigger needs
-a heartbeat stalled past the lease) — [Q1](plans/state-machine-fixes.md#q-queue-leases).
-Discovery and Site Health heartbeats and two Site Health settles ignore the
-attempt — [Q2](plans/state-machine-fixes.md#q-queue-leases).
+Each audit claim leases its rows to `<worker owner>:<8-hex nonce>`, so a stale
+slot whose lease expired fails `ownedAuditTask`, its heartbeat and its
+persistence once the same worker re-claims the task. Discovery and Site Health
+heartbeats and the Site Health settles (deferral and conflict fallback included)
+are fenced at the claimed attempt, which their recovery charges, so a stale slot
+never renews or settles a re-claim.
 
 ## 2. Audits
 
@@ -99,13 +100,11 @@ planned).
 | `running` → `succeeded` | `persistExecutionSuccess` | `audits/result-persistence.ts:85-163` | `ownedAuditTask`; artifact, attempt, derivation, cost projection, prompt-run spend and status in one tx |
 | `running` → `retry_wait` / `failed` | `persistFailure` | `result-persistence.ts:292-311` | `ownedAuditTask`; retry iff retryable and `attempt < max` |
 | `running` → `awaiting_provider_result` / `submission_uncertain` | `persistSurfaceExchange` | `audits/surface-persistence.ts:126-169` | `ownedAuditTask`; paid submission charges the attempt |
-| held, expired → `submission_uncertain` / `retry_wait` / `failed` / `cancelled` | `#reclaim` | `maintenance.ts:145-231` | audit then task `FOR UPDATE SKIP LOCKED`; uncertain iff `provider_submission_ref` set, no `provider_task_id`, parent active |
+| held, expired → `awaiting_provider_result` / `submission_uncertain` / `retry_wait` / `failed` / `cancelled` | `#reclaim` | `maintenance.ts` | audit then task `FOR UPDATE SKIP LOCKED`; with the parent active, `provider_task_id` set → `awaiting_provider_result` and `provider_submission_ref` alone → `submission_uncertain`, neither charging an attempt (the recovery deadline bounds the poll) |
 | held → `succeeded`/`failed` | `repairOwnedCompletion` | `maintenance.ts:23-78` | `ownedAuditTask` + artifact/observation; unreachable today because success and failure write evidence and status in one tx |
 | non-terminal → `cancelled` | `cancelAudit` | `maintenance.ts:103-118` | status not terminal |
 
-Known invalid: a task reclaimed while polling a paid provider task is charged an
-attempt and can fail with the paid result unretrieved —
-[AU1](plans/state-machine-fixes.md#au-audits). A Google AI Overview task that
+Known invalid: a Google AI Overview task that
 fails after a paid submission records no cost projection —
 [AU5](plans/state-machine-fixes.md#au-audits). Results dropped because the task
 lost ownership mid-call record no cost (internal cost only; not planned).
@@ -444,19 +443,12 @@ tokens the dispatcher revokes — [SI4](plans/state-machine-fixes.md#si-search-i
 
 | Machine | States and transitions | Enforced |
 |---|---|---|
-| `workspace_invitations` (implicit `accepted_at`, `revoked_at`, `expires_at`) | none/expired → pending (issue `workspaces/invitations.ts:78-148`); pending → pending new token / revoked (`:151-191`); pending → revoked in bulk when the issuer leaves (`workspaces/service.ts:218-228`); pending → accepted + member (`:194-277`, workspace then invitation `FOR UPDATE`, issuer must hold `manage_members`) | DB one live row per email `uq_workspace_invitation_pending_email` 0001:5221; token unique; role never owner `ck_workspace_invitation_role` 0001:3322 |
+| `workspace_invitations` (implicit `accepted_at`, `revoked_at`, `expires_at`) | none/expired → pending (issue `workspaces/invitations.ts:78-148`); pending → pending new token / revoked (`:151-191`); pending → revoked in bulk when the issuer leaves (`workspaces/service.ts:218-228`); pending → accepted + member (`acceptInvitation`, workspace then invitation `FOR UPDATE`, issuer's `users` row `FOR SHARE`, issuer must be active and hold `manage_members`) | DB one live row per email `uq_workspace_invitation_pending_email` 0001:5221; token unique; role never owner `ck_workspace_invitation_role` 0001:3322 |
 | `workspace_members.role` | create → owner `service.ts:109-126`; non-owner X → Y, removal, leave `:231-283`; owner ↔ admin transfer `:285-326` | DB `ck_workspace_member_role` 0001:3332, `uq_workspace_member_owner` 0001:5177, `uq_workspace_member_owned_user` 0001:5179; never ownerless: App |
 | `auth_challenges` (verification, reset) | request → live `auth/challenges.ts:38-106` (upsert nulls `consumed_at`); live → consumed `:152-245` (user + challenge `FOR UPDATE`, bumps `session_version`, reset revokes MCP grants and API keys), password change `:251-297`, Google claim `auth/oauth.ts:285-306` | DB one per (user, purpose) |
 | Sessions | JWT `ver` = `users.session_version` on every request `auth/session.ts:144`; bumped by reset, password change, sign-out, operator reset/disable | App |
 | `api_keys` | live → revoked (`revoked_at IS NULL`) `api-keys/keys.ts:192-215`; expired by time; every use re-reads key, membership and creator `:248-277` | App |
-| MCP OAuth | request → consumed `mcp/oauth.ts:261-268, 319-323`; code minted `:297-315` → consumed + grant `:340-417` (replayed code revokes the grant); refresh rotation; grant → revoked `:95-128` | App single-use `consumed_at IS NULL FOR UPDATE` |
-
-Known invalid: an unexchanged authorization code survives password reset,
-password change and sign-out-everywhere (only grants are revoked,
-`mcp/oauth.ts:113-128`) and its exchange checks no credential change —
-[WS1](plans/state-machine-fixes.md#ws-workspace-auth-and-prompts). An accept
-racing an operator disabling the issuer reads the issuer unlocked (timing) —
-[WS2](plans/state-machine-fixes.md#ws-workspace-auth-and-prompts).
+| MCP OAuth | request → consumed (`completeConsent`, `mcp/oauth.ts`); code minted under the user row `FOR SHARE` with the consenting session's `session_version` → consumed + grant (`authorizationCodeGrant`; replayed code revokes the grant); refresh rotation; grant → revoked; credential reset, password change and sign-out-everywhere-with-disconnect revoke grants and consume unexchanged codes (`revokeGrantsAfterCredentialReset`) | App single-use `consumed_at IS NULL FOR UPDATE` |
 
 ### 7.2 Public API idempotency (`api_idempotency`)
 

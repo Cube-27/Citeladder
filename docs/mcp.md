@@ -125,6 +125,11 @@ use encrypted custody.
   consequence; that token presented later means it leaked, so the grant is
   revoked and an `mcp.token_reuse` security event recorded. A replayed
   authorization code revokes the grant it minted (RFC 6749 §4.1.2).
+- A password reset, password change or sign-out-everywhere-and-disconnect
+  revokes the account's grants and ends its unexchanged codes in the same
+  transaction ([workspace access](workspace-access.md)). Consent holds the
+  account row and refuses a session whose version has changed, so a code minted
+  while a reset commits is either refused or ended with the rest.
 - Refresh slides 30 days but never past 180 days from consent; a connection
   then consents again.
 - Each grant records when it was last used, at five-minute resolution.
