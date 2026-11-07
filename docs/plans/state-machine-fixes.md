@@ -63,13 +63,13 @@ document already states. The table keeps the questions as asked.
 | S02 | Credit holds that never settle | BL1, SI1, BL2 | — | | merged | [#654](https://github.com/Cube-27/Citeladder/pull/654) | Money |
 | S03 | Lease fences: per-claim audit lease, attempt-fenced heartbeats, poll reclaim | Q1, Q2, AU1 | — | | merged | [#656](https://github.com/Cube-27/Citeladder/pull/656) | Money (duplicate paid dispatch) |
 | S04 | Billing webhook, checkout and replay recovery | BL3, BL4, BL5, BL6 | — | | merged | [#655](https://github.com/Cube-27/Citeladder/pull/655) | Money |
-| S05 | Keyword Research settlement, cancel and reconnect | SI2, SI3, SI4 | S02 | | in progress | | Money; shares `search-intelligence/` with S02 |
+| S05 | Keyword Research settlement, cancel and reconnect | SI2, SI3, SI4 | S02 | | merged | [#657](https://github.com/Cube-27/Citeladder/pull/657) | Money; shares `search-intelligence/` with S02 |
 | S06 | Audit schedules, repair admission and cost records | AU2, AU3, AU4, AU5 | — | | in progress | | Stuck users, abuse bound, cost |
-| S07 | Agent turn recovery | AG2, AG3, AG4, AG5 | — | | in progress | | Stuck users |
+| S07 | Agent turn recovery | AG2, AG3, AG4, AG5 | — | | merged | [#659](https://github.com/Cube-27/Citeladder/pull/659) | Stuck users. Not in scope: the Agent lane's `nextDue` still ignores a cancelled run's dispatched attempts awaiting settlement (pre-existing; found by bot review) |
 | S08 | Site Health crawl outcomes and inventory | SH1, SH2, SH3, SH4, SH5 | — | | in progress | | Data correctness |
-| S09 | Public API idempotency outcome; prompt edit under lock | PA1, WS3 | — | | todo | | Data correctness |
+| S09 | Public API idempotency outcome; prompt edit under lock | PA1, WS3 | — | | in progress | | Data correctness |
 | S10 | Refunded upgrades and payments on ended subscriptions | BL7, BL8 | S04 | | merged | [#658](https://github.com/Cube-27/Citeladder/pull/658) | Money; B70, B71 |
-| S11 | Agent turns closed after streaming a document | AG1 | S07 | | todo | | Money; B69 |
+| S11 | Agent turns closed after streaming a document | AG1 | S07 | | in progress | | Money; B69 |
 | S12 | Status CHECK constraints; dead `site_urls.discovery_status` | DB1 | S08 | mig | todo | | Migration 0014; open last, alone |
 
 ## Order
@@ -109,17 +109,17 @@ data impact.
 | BL4 | Reopening an abandoned add-on or upgrade never answers 500 | — | `routes/billing.ts` | | done | c6ce97b | CONFIRMED, low |
 | BL5 | A plan-change replay reflects a provider refusal | — | `billing/plan-changes.ts` | | done | 80f3fcc | CONFIRMED (crash window), low |
 | BL6 | Trial purge skips accounts with a pending checkout | — | `projects/trial-purge.ts` | | done | 2d79396 | PLAUSIBLE (delayed settlement), low |
-| SI2 | Settlement waits for calls marked uncertain inside the reporting window | — | `search-intelligence/charges.ts` | | todo | | CONFIRMED (lease lost mid-call), low (unbilled answered call) |
-| SI3 | Cancel closes collecting datasets | SI2 | `search-intelligence/runs.ts` | | todo | | CONFIRMED, low |
-| SI4 | Reconnect refused while a revocation is in flight | — | `integrations/oauth.ts` | | todo | | PLAUSIBLE (Google grant-wide revocation), low-medium |
+| SI2 | Settlement waits for calls marked uncertain inside the reporting window | — | `search-intelligence/charges.ts` | | done | 5cf6a9e | CONFIRMED (lease lost mid-call), low (unbilled answered call) |
+| SI3 | Cancel closes collecting datasets | SI2 | `search-intelligence/runs.ts` | | done | 22ff9dc | CONFIRMED, low |
+| SI4 | Reconnect refused while a revocation is in flight | — | `integrations/oauth.ts` | | done | 5f32544 | PLAUSIBLE (Google grant-wide revocation), low-medium |
 | AU2 | A retryable admission refusal reschedules a schedule without counting a failure | — | `workers/audit-scheduler.ts` | | todo | | CONFIRMED, medium (monitoring silently stops) |
 | AU3 | Repair audits take the launch lock, active-launch limit and daily task budget | — | `audits/repair.ts`, `audits/admission.ts` | | todo | | CONFIRMED, low-medium |
 | AU4 | The funded budget sums the latest projection per execution | — | `audits/admission.ts` | | todo | | PLAUSIBLE (latent: one pricing catalog today), low |
 | AU5 | A Google AI Overview failure after a paid submission records its cost | — | `audits/{surface-persistence,result-persistence}.ts` | | todo | | CONFIRMED, low (internal cost, funded budget) |
-| AG2 | The browser retries `/run` after 429 and ends a stream that went silent | — | `frontend/lib/agent/live-turns.ts` | | todo | | CONFIRMED, medium; idle part PLAUSIBLE |
-| AG3 | A dead turn ends within a minute | AG2 | `agent/{bindings,worker}.ts`, `workers/agent-worker.ts`, `config/model-gateway.json` | | todo | | CONFIRMED, low-medium |
-| AG4 | A turn whose member lost access still settles and ends | — | `agent/runtime.ts` | | todo | | CONFIRMED, low |
-| AG5 | A paused last call never saves an unmatched `server_tool_use` | — | `agent/runtime.ts` | | todo | | PLAUSIBLE (Messages API replay rule unverified), medium if real |
+| AG2 | The browser retries `/run` after 429 and ends a stream that went silent | — | `frontend/lib/agent/live-turns.ts` | | done | 95f1397 | CONFIRMED, medium; idle part PLAUSIBLE |
+| AG3 | A dead turn ends within a minute | AG2 | `agent/{bindings,worker}.ts`, `workers/agent-worker.ts`, `config/model-gateway.json` | | done | 069e94c | CONFIRMED, low-medium |
+| AG4 | A turn whose member lost access still settles and ends | — | `agent/runtime.ts` | | done | 45d0c27 | CONFIRMED, low |
+| AG5 | A paused last call never saves an unmatched `server_tool_use` | — | `agent/runtime.ts` | | done | 8b86e77 | PLAUSIBLE (Messages API replay rule unverified), medium if real |
 | SH1 | A crawl that analyzed nothing ends failed; page reruns are never the default crawl | — | `site-health/lifecycle.ts`, `site-health/reads/crawl.ts` | | todo | | CONFIRMED, medium |
 | SH2 | Crawl outcome and counters read the latest generation per page; a rerun supersedes an open older generation | SH1 | `site-health/{lifecycle,selection}.ts` | | todo | | CONFIRMED, medium-low |
 | SH3 | `inventory_complete` only for an unbounded inventory; removal needs absence from the inventory | SH1 | `site-health/{lifecycle,change-compare,change-snapshot}.ts` | | todo | | CONFIRMED, medium (false "page removed" regressions) |
