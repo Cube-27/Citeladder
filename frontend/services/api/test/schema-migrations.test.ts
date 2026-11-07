@@ -80,6 +80,7 @@ describe('a fresh database', () => {
       '0011_drop_runtime_valid_until',
       '0012_internal_costs',
       '0013_audit_error_code_width',
+      '0014_status_check_constraints',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -98,6 +99,7 @@ describe('a fresh database', () => {
       { version: '0011_drop_runtime_valid_until' },
       { version: '0012_internal_costs' },
       { version: '0013_audit_error_code_width' },
+      { version: '0014_status_check_constraints' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -140,7 +142,11 @@ describe('an existing database', () => {
       '0011_drop_runtime_valid_until',
       '0012_internal_costs',
       '0013_audit_error_code_width',
+      '0014_status_check_constraints',
     ]);
+    // A URL identity keeps no per-sighting discovery status.
+    expect(await columns(client, 'site_urls')).not.toContain('discovery_status');
+    expect(await columns(client, 'site_urls')).toContain('latest_title');
     // The Site Health runtime keeps no validity copy of the grants it projects.
     expect(await columns(client, 'workspace_site_health_runtime')).not.toContain(
       'resolved_valid_until',
@@ -196,6 +202,7 @@ describe('an existing database', () => {
       { version: '0011_drop_runtime_valid_until' },
       { version: '0012_internal_costs' },
       { version: '0013_audit_error_code_width' },
+      { version: '0014_status_check_constraints' },
     ]);
   }, 120000);
 });

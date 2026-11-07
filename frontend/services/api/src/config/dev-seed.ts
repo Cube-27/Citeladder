@@ -15,9 +15,9 @@ export const devSeed = {
     ['where can I buy a waterproof backpack online', 'purchase', 'active', 'manual'],
     ['best place to buy carry-on travel backpacks', 'purchase', 'active', 'manual'],
     ['does Wanderlust Gear offer free returns', 'service', 'active', 'manual'],
-    ['how do I file a warranty claim for a torn backpack', 'service', 'proposed', 'generated'],
+    ['how do I file a warranty claim for a torn backpack', 'service', 'archived', 'generated'],
     ['best outdoor gear shops near Denver Colorado', 'local', 'active', 'manual'],
-    ['hiking backpack stores in Seattle Washington', 'local', 'proposed', 'generated'],
+    ['hiking backpack stores in Seattle Washington', 'local', 'archived', 'generated'],
     ['old prompt about discontinued backpack line', 'discovery', 'archived', 'manual'],
   ],
   agencyPrompts: [
