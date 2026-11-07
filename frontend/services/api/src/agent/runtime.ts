@@ -7,6 +7,7 @@ import { ModelError } from '../models/http.ts';
 import {
   hasPendingServerTool,
   webSearchBlocks,
+  withoutPendingServerTools,
   type ServerToolEvent,
   type ConversationBlock,
   type ConversationMessage,
@@ -128,6 +129,17 @@ async function stillAuthorized(db: Database, scope: Parameters<typeof authorize>
     if (error instanceof ApiError || error instanceof AgentError) return false;
     throw error;
   }
+}
+/**
+ * The transcript as saved: no later call continues the turn's last response,
+ * so a provider-hosted call it left waiting (a paused or read-beside search on
+ * the last call) is dropped, and every later replay pairs each tool use.
+ */
+function savedTranscript(messages: readonly ConversationMessage[]): ConversationMessage[] {
+  const last = messages.findLastIndex((message) => message.role === 'assistant');
+  return messages.map((message, index) =>
+    index === last ? { ...message, content: withoutPendingServerTools(message.content) } : message,
+  );
 }
 function savedNotice(number: number, formatLabel: string | null) {
   const format = formatLabel ? ` in ${formatLabel} format` : '';
@@ -695,7 +707,7 @@ export class AgentRuntime {
         model: model.model,
         skillId: skill?.id ?? null,
         contextHash: state.contextHash,
-        messages: state.messages,
+        messages: savedTranscript(state.messages),
       });
       await trx
         .updateTable('agent_runs')

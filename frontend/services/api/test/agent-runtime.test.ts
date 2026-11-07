@@ -1506,6 +1506,56 @@ describe('Agent runtime on PostgreSQL', () => {
       JSON.stringify(found('srvtoolu_2', 'https://b.test/')),
     );
   });
+  it('saves no search a paused last call left waiting, so the next turn replays paired tool uses', async () => {
+    const scope = await fixtures.scope();
+    const first = await fixtures.claimed(scope);
+    await budget(first.run, { max_model_calls: 2 });
+    const call = (id: string) => ({
+      type: 'server_tool_use',
+      id,
+      name: 'web_search',
+      input: { query: 'uniform prices' },
+    });
+    const found = (id: string) => ({
+      type: 'web_search_tool_result',
+      tool_use_id: id,
+      content: [
+        { type: 'web_search_result', url: 'https://a.test/', title: 'A', encrypted_content: 'e' },
+      ],
+    });
+    const usage = { input_tokens: 20, output_tokens: 10, web_search_requests: 1 };
+    await fixtures
+      .runtime(scope, {
+        ...scripted([
+          result([call('srvtoolu_1'), found('srvtoolu_1')], { stop: 'pause_turn', usage }),
+          // The last call pauses with a search it can never continue.
+          result([text('Prices start at $10.'), call('srvtoolu_2')], { stop: 'pause_turn', usage }),
+        ]),
+        adapter: 'anthropic',
+      })
+      .execute(first.lease);
+    expect((await fixtures.run(first.run.id)).status).toBe('succeeded');
+    const second = await fixtures.claimed(scope, { chatId: first.run.chat_id });
+    const sent: ModelRequest[] = [];
+    await fixtures
+      .runtime(scope, {
+        ...scripted([reply('Done.')], async (request) => {
+          sent.push(request);
+        }),
+        adapter: 'anthropic',
+      })
+      .execute(second.lease);
+    const blocks = sent[0]!.messages.flatMap((message) => message.content);
+    expect(
+      blocks.filter((block) => block.type === 'server_tool_use').map((block) => block.id),
+    ).toEqual(['srvtoolu_1']);
+    expect(
+      blocks
+        .filter((block) => block.type === 'web_search_tool_result')
+        .map((block) => block.tool_use_id),
+    ).toEqual(['srvtoolu_1']);
+    expect(blocks).toContainEqual({ type: 'text', text: 'Prices start at $10.' });
+  });
   it('offers each call at most its per-call searches and none once the turn’s are spent', async () => {
     const scope = await fixtures.scope();
     const { run, lease } = await fixtures.claimed(scope);

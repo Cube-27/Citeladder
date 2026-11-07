@@ -209,7 +209,10 @@ search pending beside client tool calls) is offered one more use so the
 continuation stays valid. The definition therefore changes only after a turn
 has searched, which costs one cache miss on the next call. `pause_turn` is
 continued by sending the conversation back unchanged. Search blocks, including
-their encrypted content, are stored and replayed byte-identically.
+their encrypted content, are stored and replayed byte-identically, except that
+a search the turn's last response left waiting (a `pause_turn` or a pending
+search on the last call) is dropped from the saved transcript, so every replayed
+tool use has its result.
 
 Searched pages are untrusted observations, never sources: a reply's and a
 revision's `web_sources` (`{url, title}`, deduplicated, carried forward like

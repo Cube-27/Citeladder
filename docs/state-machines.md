@@ -275,11 +275,7 @@ streamed refunds the turn — [AG1](plans/state-machine-fixes.md#ag-agent)
 | Hold per call | reserve `funding.ts:205` → settle (idempotent per dispatch key) → `refundSubject` (failed runs, B58) | App ledger |
 | `agent_tool_attempts.status` | insert-only, written once after the read `agent/runtime.ts:571-605` under `lockRun` | DB `uq_agent_tool_attempt_slot` |
 | `agent_outputs` / revisions | ≥ 1 revision; output + revision in one tx `agent/outputs.ts:54, 110-154`; edits under chat lock + `requireIdle` | DB `uq_agent_output_chat_number`, `uq_agent_output_revision_number`, number > 0 (0004) |
-| Transcript | saved at finish; replayed to the model `agent/transcript.ts:110` | App |
-
-Known invalid (unverified provider behaviour): a `pause_turn` on the last call
-saves an unmatched `server_tool_use`; if the Messages API rejects that replay,
-every later turn of the chat fails — [AG5](plans/state-machine-fixes.md#ag-agent).
+| Transcript | saved at finish without the last response's unanswered `server_tool_use` (`savedTranscript`, `agent/runtime.ts`); replayed to the model `agent/transcript.ts:110` | App |
 
 ### 4.3 Browser turn stream (`frontend/lib/agent/live-turns.ts`)
 
