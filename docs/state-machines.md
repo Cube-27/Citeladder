@@ -181,11 +181,9 @@ App: `activated ⇒ activated_at`; `failed`/`abandoned ⇒ failure_code`.
 | `pending` → `failed` | definite create error; base terminal and unpaid | `purchases.ts:186-197`; `billing/settlement.ts:290-301` | row `FOR UPDATE`, `pending` |
 | `pending` → `activated` | evidence with payment | `settlement.ts:302-323` | `pending`, or `abandoned` order with payment (late capture) |
 | `pending` → `abandoned` | unpaid past `abandonSeconds` (base cancelled at provider first) | `recovery.ts:184-235` | lease, `pending` |
-| `abandoned` (not base) → `pending` | signed checkout callback | `routes/billing.ts:326-352` | `pending`, or `abandoned` and kind ≠ base |
+| `abandoned` (not base) → `pending` | signed checkout callback | `routes/billing.ts` (verify route) | `pending`, or `abandoned` and kind ≠ base; with a newer pending order of the same key the one-pending unique refuses it, the row stays `abandoned` and the callback answers its view (the webhook's late-capture path settles a payment) |
 
-Known invalid: reopening an abandoned add-on or upgrade while a newer one is
-pending violates the one-pending unique and answers 500 —
-[BL4](plans/state-machine-fixes.md#bl-billing-and-credits). A base checkout
+Known invalid: a base checkout
 paid as the abandon sweep cancels it depends on Razorpay's evidence for a
 just-cancelled subscription — [BL8](plans/state-machine-fixes.md#bl-billing-and-credits) (blocked, OQ3).
 
@@ -221,14 +219,11 @@ DB: `(provider, mode, event_id)` unique (0001:4052).
 | From → to | Trigger | Location | Guard |
 |---|---|---|---|
 | ∅ → `pending` | receipt | `billing/webhooks.ts:110-132` | `ON CONFLICT DO NOTHING` |
-| any → `quarantined` | same id, different digest | `webhooks.ts:133-148` | none (a `completed` row flips too) |
+| `pending` → `quarantined` | same id, different digest (answers 400; a `completed` row keeps its state) | `webhooks.ts:133-150` | `processing_state = pending` |
 | `pending` → leased, attempt + 1 | claim | `recovery.ts:270-302` | `attempt_count < webhook_max_attempts`, lease expired, SKIP LOCKED |
 | leased → `completed` | applied | `recovery.ts:340-378` | lease token unexpired |
 | leased → `pending` / `quarantined` | error; unmatched (exhausted) | `recovery.ts:379-411` | lease token |
-
-Known invalid: a row whose final attempt dies with its process stays `pending`
-with `attempt_count = max`, never claimed or quarantined; a refund applied only
-by its webhook is lost — [BL3](plans/state-machine-fixes.md#bl-billing-and-credits).
+| `pending` at `webhook_max_attempts` → `quarantined` (`attempts_exhausted`) | final attempt died with its process | `quarantineExhaustedWebhooks`, each recovery pass | lease expired |
 
 ### 3.6 Other billing records
 
@@ -236,14 +231,8 @@ by its webhook is lost — [BL3](plans/state-machine-fixes.md#bl-billing-and-cre
 |---|---|---|
 | `billing_catalog_revisions.publication_state` | `draft` (mutable) → `published`, previous → `retired` (final) `billing/admin.ts:107-173` | DB one published 0001:5181; App subject lock |
 | `billing_payments` | insert-only; refund child rows | DB 0001:5183-5185 |
-| `idempotency_records` (plan changes) | ∅ → `completed` only `plan-changes.ts:54-69`; deleted on `provider_rejected` `:307-320`; `expires_at` never read | App |
-| Access (derived) | `trial_active` / `trial_expired` / `active` / `subscription_lapsed` / `access_unresolved` from grant validity `entitlements/access.ts:38-91`; trial once per mailbox under advisory lock `entitlements/bootstrap.ts:62-113`; purge `projects/trial-purge.ts:26-128` | App |
-
-Known invalid: a replay of a downgrade whose provider push was refused can
-answer `requested` after a crash between the refusal and the record delete —
-[BL5](plans/state-machine-fixes.md#bl-billing-and-credits). Trial purge can
-remove a returning customer's projects between payment and settlement
-(needs delayed settlement) — [BL6](plans/state-machine-fixes.md#bl-billing-and-credits).
+| `idempotency_records` (plan changes) | ∅ → `completed` only `plan-changes.ts` `scheduleDowngrade`; deleted on `provider_rejected` after the push, or by a same-key replay that finds the current subscription's change from that key `provider_rejected` (`refusedFromKey`); `expires_at` never read | App |
+| Access (derived) | `trial_active` / `trial_expired` / `active` / `subscription_lapsed` / `access_unresolved` from grant validity `entitlements/access.ts:38-91`; trial once per mailbox under advisory lock `entitlements/bootstrap.ts:62-113`; purge `projects/trial-purge.ts` skips a workspace with a `pending` checkout (`stillPurgeable`, under the capacity lock) | App |
 
 ## 4. Agent
 

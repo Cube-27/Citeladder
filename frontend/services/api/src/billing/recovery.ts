@@ -548,6 +548,32 @@ async function markCancellationSent(db: Database, id: string) {
   return marked.numUpdatedRows > 0n;
 }
 
+/**
+ * A process that died during a row's final attempt leaves it pending at the maximum, which the
+ * probe never claims again; once that attempt's lease has expired it is quarantined.
+ */
+async function quarantineExhaustedWebhooks(
+  db: Database,
+  config: ServiceConfig,
+  mode: BillingProvider['mode'],
+) {
+  const now = new Date();
+  await db
+    .updateTable('billing_webhook_events')
+    .set({
+      processing_state: 'quarantined',
+      error_code: 'attempts_exhausted',
+      lease_token: null,
+      lease_expires_at: null,
+    })
+    .where('provider', '=', 'razorpay')
+    .where('provider_mode', '=', mode)
+    .where('processing_state', '=', 'pending')
+    .where('attempt_count', '>=', config.billing.webhookAttempts)
+    .where((eb) => eb.or([eb('lease_expires_at', 'is', null), eb('lease_expires_at', '<=', now)]))
+    .execute();
+}
+
 /** Three bounded sweeps, with persisted leases and no transaction across I/O. */
 export async function recoverBilling(
   db: Database,
@@ -559,6 +585,7 @@ export async function recoverBilling(
     return { pending: 0, webhooks: 0, subscriptions: 0 };
   const provider = supplied ?? new RazorpayProvider(config.billing, config.razorpay);
   const counts = { pending: 0, webhooks: 0, subscriptions: 0 };
+  await quarantineExhaustedWebhooks(db, config, provider.mode);
   for (const [kind, probe] of [
     ['pending', pendingProbe],
     ['webhooks', webhookProbe],

@@ -81,6 +81,17 @@ export async function purgeExpiredTrialProjects(
         ),
       ),
     )
+    // A checkout still awaiting settlement may be the customer's paid plan.
+    .where(({ exists, not, selectFrom }) =>
+      not(
+        exists(
+          selectFrom('pending_activations')
+            .select('pending_activations.id')
+            .whereRef('pending_activations.billing_account_id', '=', 'account.id')
+            .where('pending_activations.status', '=', 'pending'),
+        ),
+      ),
+    )
     .orderBy('account.workspace_id')
     .limit(setting('trial_purge_workspace_batch'))
     .execute();
@@ -119,13 +130,22 @@ export async function purgeExpiredTrialProjects(
 /**
  * Lock the workspace's capacity and recheck its access. The capacity lock
  * serializes with grant issuance and reservations, so an upgrade or new work
- * committed before it is seen here.
+ * committed before it is seen here. A checkout still pending settlement keeps
+ * the workspace: its payment may already have been captured.
  */
 async function stillPurgeable(trx: Database, workspaceId: string, now: Date, cutoff: Date) {
   await lockWorkspaceCapacity(trx, workspaceId);
   const access = await workspaceAccess(trx, workspaceId, now);
   if (access.status !== 'trial_expired' || !access.expires_at) return false;
-  return Date.parse(access.expires_at) <= cutoff.getTime();
+  if (Date.parse(access.expires_at) > cutoff.getTime()) return false;
+  const checkout = await trx
+    .selectFrom('pending_activations')
+    .innerJoin('billing_accounts', 'billing_accounts.id', 'pending_activations.billing_account_id')
+    .select('pending_activations.id')
+    .where('billing_accounts.workspace_id', '=', workspaceId)
+    .where('pending_activations.status', '=', 'pending')
+    .executeTakeFirst();
+  return !checkout;
 }
 
 /**

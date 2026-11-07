@@ -85,6 +85,19 @@ async function scheduleDowngrade(
   return response;
 }
 
+/** Whether the current subscription's scheduled change from this key was refused by the provider. */
+async function refusedFromKey(db: Database, accountId: string, key: string) {
+  const sub = await db
+    .selectFrom('billing_subscriptions')
+    .select('scheduled_change')
+    .where('billing_account_id', '=', accountId)
+    .where('is_current', '=', true)
+    .executeTakeFirst();
+  if (!sub?.scheduled_change) return false;
+  const scheduled = scheduledSchema.parse(sub.scheduled_change);
+  return scheduled.source === key && scheduled.state === 'provider_rejected';
+}
+
 async function replayedPlanChange(db: Database, accountId: string, key: string, targetKey: string) {
   const prior = await db
     .selectFrom('pending_activations')
@@ -121,6 +134,12 @@ async function replayedPlanChange(db: Database, accountId: string, key: string, 
       replay.request_fingerprint !== digest({ targetKey })
     )
       conflict('idempotency_key_reused');
+    if (await refusedFromKey(db, accountId, key)) {
+      // The process died between the refusal and the record's delete; finish that
+      // delete so this retry re-requests the change, as a post-refusal retry does.
+      await db.deleteFrom('idempotency_records').where('id', '=', replay.id).execute();
+      return null;
+    }
     return {
       pending: null,
       response: planChangeSchema.parse(replay.response_body),
