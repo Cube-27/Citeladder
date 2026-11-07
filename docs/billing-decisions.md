@@ -577,6 +577,32 @@ research and 8,000 for the rest (B67). Source: owner reply in the
 architecture-untangle orchestration session ("Keep them"); architecture
 untangle OD8.
 
+**B69 — Owner, 2026-11-07.** Agent turns that end without the browser.
+(a) When the browser closes a turn after a document has streamed to it, the
+document is saved and the turn ends succeeded with a fixed reply and is
+charged, as with B60's funding refusal after a document; B58's refund applies
+only when nothing was saved or streamed. (b) Stop on a turn whose lease has
+already expired settles the way recovery does, with B58's refund, instead of
+ending charged. Source: owner answer in the state-machine fixes session;
+[state-machine fixes](plans/state-machine-fixes.md) OQ1.
+
+**B70 — Owner, 2026-11-07.** Any refund cancels the subscription; refunds are
+issued manually by an operator. A full refund of an upgrade payment is treated
+like a full refund of the current period's payment (B52): the subscription is
+cancelled at once and the period's grants, the upgrade's included, are
+revoked, so no scheduled upgrade survives to bill the next cycle. Source: owner
+answer in the state-machine fixes session ("if a customer asked for a refund
+the subscription is cancelled … any cancellation request ends the
+subscription"); [state-machine fixes](plans/state-machine-fixes.md) OQ2.
+
+**B71 — Owner, 2026-11-07.** Money collected for a period the subscription no
+longer grants. (i) A base checkout paid while the abandon sweep cancels it is
+granted the paid period's bundle until the paid end. (ii) A renewal charged
+after a B52 cancellation leaves the subscription cancelled: the receipt is
+recorded, nothing is granted, and it is flagged for an operator refund (the
+B25/B30 pattern). Source: owner answer in the state-machine fixes session;
+[state-machine fixes](plans/state-machine-fixes.md) OQ3.
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,

@@ -185,7 +185,7 @@ App: `activated ⇒ activated_at`; `failed`/`abandoned ⇒ failure_code`.
 
 Known invalid: a base checkout
 paid as the abandon sweep cancels it depends on Razorpay's evidence for a
-just-cancelled subscription — [BL8](plans/state-machine-fixes.md#bl-billing-and-credits) (blocked, OQ3).
+just-cancelled subscription — [BL8](plans/state-machine-fixes.md#bl-billing-and-credits) (B71).
 
 ### 3.4 `billing_subscriptions` (status × `is_current` × `ended_at` × `cancel_at_period_end` × `cancellation_sent_at` × `scheduled_change`)
 
@@ -208,9 +208,9 @@ DB: one current base per account `uq_billing_subscription_one_current`
 
 Known invalid: a fully refunded upgrade leaves its `scheduled_change` live, so
 the next cycle bills the upgraded price —
-[BL7](plans/state-machine-fixes.md#bl-billing-and-credits) (blocked, OQ2). A
+[BL7](plans/state-machine-fixes.md#bl-billing-and-credits) (B70). A
 B52-cancelled subscription returns to `active` if a renewal is charged before
-the sweep cancels it (timing) — [BL8](plans/state-machine-fixes.md#bl-billing-and-credits) (blocked, OQ3).
+the sweep cancels it (timing) — [BL8](plans/state-machine-fixes.md#bl-billing-and-credits) (B71).
 
 ### 3.5 `billing_webhook_events.processing_state` ∈ {`pending`, `completed`, `quarantined`} + lease + `attempt_count`
 
@@ -268,7 +268,7 @@ heartbeat leaves the run `running` for up to the lease plus a tick (~21 min)
 access throws and leaves the run `running` —
 [AG4](plans/state-machine-fixes.md#ag-agent). Closing the tab after a document
 streamed refunds the turn — [AG1](plans/state-machine-fixes.md#ag-agent)
-(blocked, OQ1).
+(B69).
 
 ### 4.2 Model attempts, tool attempts, outputs
 

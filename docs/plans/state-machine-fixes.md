@@ -1,8 +1,8 @@
 # State-machine fixes
 
 Status: S01–S04 approved for implementation by the owner on 2026-11-07 (the high-priority PRs that
-need no owner decision). S05–S12 stay pending until the owner has verified them; S10 and S11 also wait
-on owner answers (OQ2, OQ3, OQ1). This document is both the plan and the orchestrator's tracker. The work is 12 scoped pull
+need no owner decision). S05–S12 stay pending until the owner has verified them; OQ1–OQ3 were answered
+on 2026-11-07 (B69–B71), so S10 and S11 now wait only on verification and their dependencies. This document is both the plan and the orchestrator's tracker. The work is 12 scoped pull
 requests (S01–S12). Each PR batches a set of rows (the commit-level units, e.g. WS1, BL3), lists the
 PRs it depends on, and carries a status the implementor and orchestrator keep current.
 
@@ -43,9 +43,12 @@ with `frontend/`, `docs/` or `migrations/`.
 
 ## Owner decisions
 
-None recorded yet. The rows below that change billing or product policy wait on these questions; every
-other row restores a contract an existing decision or owner document already states. Recommendations
-are the reviewer's, not decisions.
+All three questions were answered by the owner on 2026-11-07 and recorded in
+[billing decisions](../billing-decisions.md): OQ1 → **B69** (the recommendation for both parts), OQ2 →
+**B70** (any refund cancels the subscription; a full refund of an upgrade payment applies B52 and
+cancels at once, which ends the scheduled upgrade with it; refunds are issued manually by an operator),
+OQ3 → **B71** (the recommendation). Every other row restores a contract an existing decision or owner
+document already states. The table keeps the questions as asked.
 
 | # | Question | Options | Recommendation | Blocks |
 |---|----------|---------|----------------|--------|
@@ -66,8 +69,8 @@ are the reviewer's, not decisions.
 | S07 | Agent turn recovery | AG2, AG3, AG4, AG5 | — | | todo | | Stuck users |
 | S08 | Site Health crawl outcomes and inventory | SH1, SH2, SH3, SH4, SH5 | — | | todo | | Data correctness |
 | S09 | Public API idempotency outcome; prompt edit under lock | PA1, WS3 | — | | todo | | Data correctness |
-| S10 | Refunded upgrades and payments on ended subscriptions | BL7, BL8 | S04 | | blocked | | OQ2, OQ3 |
-| S11 | Agent turns closed after streaming a document | AG1 | S07 | | blocked | | OQ1 |
+| S10 | Refunded upgrades and payments on ended subscriptions | BL7, BL8 | S04 | | todo | | Money; B70, B71 |
+| S11 | Agent turns closed after streaming a document | AG1 | S07 | | todo | | Money; B69 |
 | S12 | Status CHECK constraints; dead `site_urls.discovery_status` | DB1 | S08 | mig | todo | | Migration 0014; open last, alone |
 
 ## Order
@@ -75,7 +78,7 @@ are the reviewer's, not decisions.
 - **Start together (no dependencies):** S01, S02, S03, S04, S06, S07, S08, S09. Suggested first: S01
   (security), then S02, S03 and S04 (money), then S06 and S07 (stuck users), then S08 and S09.
 - **Next, as their dependencies merge:** S05 (after S02).
-- **When the owner answers:** S10 (after S04, OQ2 and OQ3), S11 (after S07 and OQ1).
+- **After their dependencies (owner answers recorded as B69–B71):** S10 (after S04), S11 (after S07).
 - **Last:** S12 (after S08; the only **mig** PR, so it opens when no other PR is open).
 
 What each merge unblocks:
@@ -125,9 +128,9 @@ data impact.
 | SH5 | A terminally failed internal-link publish ends its run | — | `site-health/{analytics-kinds,internal-link-runs}.ts` | | todo | | PLAUSIBLE, low |
 | PA1 | A public API write that failed or crashed answers "outcome unknown", not "in progress" for 24 h | — | `public-api/idempotency.ts`, `config/public-api.json` | | todo | | CONFIRMED, low |
 | WS3 | Prompt edit reads the prompt under the project lock | — | `prompts/prompts.ts` | | todo | | CONFIRMED, low |
-| BL7 | Full refund of an upgrade payment (OQ2) | — | `billing/settlement.ts`, `billing/plan-changes.ts` | | blocked | | CONFIRMED, medium; OQ2 |
-| BL8 | Payments landing on a terminal or B52-cancelled subscription (OQ3) | BL7 | `billing/settlement.ts`, `billing/recovery.ts` | | blocked | | PLAUSIBLE, medium; OQ3 |
-| AG1 | Turn closed after streaming a document; Stop on a dead turn (OQ1) | — | `agent/{worker,runtime,store}.ts` | | blocked | | CONFIRMED, medium; OQ1 |
+| BL7 | Full refund of an upgrade payment (B70) | — | `billing/settlement.ts`, `billing/plan-changes.ts` | | todo | | CONFIRMED, medium; B70 |
+| BL8 | Payments landing on a terminal or B52-cancelled subscription (B71) | BL7 | `billing/settlement.ts`, `billing/recovery.ts` | | todo | | PLAUSIBLE, medium; B71 |
+| AG1 | Turn closed after streaming a document; Stop on a dead turn (B69) | — | `agent/{worker,runtime,store}.ts` | | todo | | CONFIRMED, medium; B69 |
 | DB1 | CHECK constraints on status columns; drop `site_urls.discovery_status` | — | `migrations/0014_*.sql`, `site-health/{admission-writes,discover-task,analysis-rows}.ts` | mig | todo | | Hardening; site-health F6 CONFIRMED (written, never read) |
 
 ## Work details
@@ -284,17 +287,20 @@ do and assert the observed rows, responses and balances against literal expected
   - Change. The narrowing query and `stillPurgeable` skip accounts with a `pending` activation.
   - Tests. `projects.test.ts` (PostgreSQL): an expired trial past retention with a pending base checkout
     keeps its projects.
-- **BL7 — refunded upgrade (blocked, OQ2).**
+- **BL7 — refunded upgrade (B70).**
   - Diagnosis. `settleUpgrade` sets `scheduled_change` `requested` (`settlement.ts:618-638`) and
     `pushChange` schedules it at Razorpay. A full refund of that payment reaches `endRefundedPayment`
     with `subscription_id` null (`settlement.ts:698-715`): it revokes the `activation:` grants and
     returns. Nothing clears the scheduled change; at cycle end `effectiveTerms` sees the new price
     (`:449-458`) and the subscription renews on the upgraded terms.
-  - Change. Per OQ2 (recommended: clear the scheduled change and push the current price back when it
-    was already scheduled). Record the answer as a B-entry.
-  - Tests. `billing.test.ts` (PostgreSQL): upgrade, push, full refund → the next renewal settles at the
-    original price and terms.
-- **BL8 — payments on an ended subscription (blocked, OQ3).**
+  - Change. Per B70: a full refund of an upgrade payment applies B52 like the current period's
+    payment — the subscription reads `cancelled`, stays current until the sweep's immediate provider
+    cancellation is confirmed, and the period's grants (the upgrade's included) are revoked. The
+    scheduled change ends with the subscription.
+  - Tests. `billing.test.ts` (PostgreSQL): upgrade, push, full refund of the upgrade payment → the
+    subscription is cancelled at once, the sweep cancels it at the provider, the period's grants are
+    revoked and no renewal settles.
+- **BL8 — payments on an ended subscription (B71).**
   - Diagnosis. (i) The abandon sweep cancels a base subscription at Razorpay (`recovery.ts:184-193`); if
     the customer paid meanwhile and the re-read shows a terminal status with a matching paid invoice,
     `settleBase` returns false for a non-granted status (`settlement.ts:142-143`) and the row stays
@@ -302,7 +308,10 @@ do and assert the observed rows, responses and balances against literal expected
     when the first evidence is terminal, `:374`). (ii) After a B52 cancellation a renewal charged before
     the sweep's cancel moves the row back to `active` (`settlement.ts:459-479`). Razorpay's evidence for a
     just-cancelled subscription is unverified.
-  - Change. Per OQ3; record the answer as a B-entry.
+  - Change. Per B71: (i) a paid base checkout found terminal is granted the paid period's bundle until
+    the paid end, and the purchase row leaves `pending`; (ii) a renewal charged after a B52
+    cancellation leaves the row cancelled, records the receipt, grants nothing and flags it for an
+    operator refund.
   - Tests. `billing.test.ts` (PostgreSQL) with the provider fake returning each evidence shape.
 
 ### AG. Agent
@@ -352,15 +361,18 @@ do and assert the observed rows, responses and balances against literal expected
   - Change. Before saving, drop a trailing unmatched `server_tool_use` from the last assistant message.
   - Tests. `agent-runtime.test.ts` with a fake transport returning `pause_turn` on the last call: the
     saved transcript has no unmatched `server_tool_use` and the next turn's request pairs every tool use.
-- **AG1 — closed tab after a streamed document (blocked, OQ1).**
+- **AG1 — closed tab after a streamed document (B69).**
   - Diagnosis. `save_document` streams the full body as `document_delta` (`agent/stream.ts`); the
     document is staged until `finish`. A closed tab aborts the request signal (`routes/agent.ts`),
     `runAgentOnce` calls `fail(lease, 'interrupted')` (`agent/worker.ts:41-43`) and `settleFailed`
     refunds every debit (B58), the document call included. Stop on a run whose instance died is
     `cancelled` and charged (`agent/store.ts:304-333`) while recovery refunds.
-  - Change. Per OQ1; record the answer as a B-entry.
+  - Change. Per B69: (a) an interrupted turn that staged a streamed document saves it and ends
+    succeeded with a fixed reply, charged; (b) Stop on a run whose lease has already expired settles as
+    recovery does (`failed interrupted`, B58 refund).
   - Tests. `agent-runtime.test.ts` (PostgreSQL): a turn that staged a document and is then interrupted
-    ends as OQ1 decides, with the ledger balance asserted.
+    ends succeeded with the document saved and its debits kept; Stop on a run with an expired lease ends
+    refunded; ledger balance asserted in both.
 
 ### SH. Site Health
 
