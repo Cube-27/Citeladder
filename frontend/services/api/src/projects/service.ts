@@ -452,19 +452,41 @@ export async function updateProject(db: Database, scope: ProjectScope, input: Pr
 export async function deleteProject(db: Database, scope: ProjectScope) {
   await db.transaction().execute(async (trx) => {
     await acquireProjectLock(trx, scope.projectId);
-    await projectRow(trx, scope);
+    if (!(await lockProjectRow(trx, scope))) throw notFound('Project');
     await requireFlag(trx, scope.workspaceId, 'project_deletion');
     if (await projectHoldsReservations(trx, scope.workspaceId, scope.projectId))
-      throw new ApiError(409, 'Wait for running audits, crawls and Agent replies to finish', {
-        code: 'project_work_running',
-      });
+      throw new ApiError(
+        409,
+        'Wait for running audits, crawls, Agent replies and Keyword Research analyses to finish',
+        {
+          code: 'project_work_running',
+        },
+      );
     await removeProject(trx, scope);
   });
 }
 
 /**
- * The deletion itself, for a caller holding the project lock and its authority
- * that has checked no metered work still holds reserved units.
+ * Locks the project row before a deletion checks for open holds; false when
+ * the project is gone. Work that holds credits under this row lock (Keyword
+ * Research confirmation, Site Health crawls, Agent outputs) then either commits
+ * first, so the check sees its hold, or waits and finds the project deleted.
+ * The project advisory lock alone does not serialize with them.
+ */
+export async function lockProjectRow(trx: Database, scope: ProjectScope) {
+  const row = await trx
+    .selectFrom('projects')
+    .select('id')
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('id', '=', scope.projectId)
+    .forUpdate()
+    .executeTakeFirst();
+  return row !== undefined;
+}
+
+/**
+ * The deletion itself, for a caller holding the project lock and row lock and
+ * its authority, that has checked no metered work still holds reserved units.
  */
 export async function removeProject(trx: Database, scope: ProjectScope) {
   await trx

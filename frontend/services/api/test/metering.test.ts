@@ -409,7 +409,32 @@ describe('platform AI metering', () => {
     }
   });
 
-  it('returns a paid answer when its settlement fails, leaving the hold for the sweep', async () => {
+  it('settles a failed call at no charge when its first settlement transaction errors', async () => {
+    const t = await fixtures.tenant();
+    await credited(t, 100);
+    const failing = gateway(() => new Response('unavailable', { status: 503 }));
+    const transaction = db.transaction.bind(db);
+    const spy = vi
+      .spyOn(db, 'transaction')
+      .mockImplementationOnce(transaction)
+      .mockImplementationOnce(() => {
+        throw new Error('could not serialize access');
+      });
+    try {
+      await expect(
+        meterFor(db, t.workspaceId).gateway(failing.gateway, 'project_research').complete('s', 'u'),
+      ).rejects.toThrow();
+    } finally {
+      spy.mockRestore();
+    }
+    // Settled now, so the abandoned-call sweep never charges it the fallback.
+    expect(await spent(t.workspaceId)).toEqual({ held: 0, debited: 0 });
+    expect((await calls(t.workspaceId)).map((call) => [call.status, call.credits])).toEqual([
+      ['failed', 0],
+    ]);
+  });
+
+  it('returns a paid answer when its settlement fails twice, leaving the hold for the sweep', async () => {
     const t = await fixtures.tenant();
     await credited(t, 100);
     const { gateway: raw } = gateway(
@@ -419,12 +444,14 @@ describe('platform AI metering', () => {
       }),
     );
     const transaction = db.transaction.bind(db);
+    const refused = () => {
+      throw new Error('could not serialize access');
+    };
     const spy = vi
       .spyOn(db, 'transaction')
       .mockImplementationOnce(transaction)
-      .mockImplementationOnce(() => {
-        throw new Error('could not serialize access');
-      });
+      .mockImplementationOnce(refused)
+      .mockImplementationOnce(refused);
     try {
       const result = await meterFor(db, t.workspaceId)
         .gateway(raw, 'prompt_generation')

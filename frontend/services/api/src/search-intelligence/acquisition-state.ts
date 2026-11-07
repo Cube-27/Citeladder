@@ -380,12 +380,13 @@ export class AcquisitionState {
   ) {
     return this.db.transaction().execute(async (trx) => {
       const run = await this.run(trx).forUpdate().executeTakeFirst();
-      if (
-        run?.status !== 'running' ||
-        !(await this.owned(trx)) ||
-        !(await this.connection(trx, run))
-      )
+      if (run?.status !== 'running' || !(await this.owned(trx))) return false;
+      // A connection or member change since `prepare` ends the run, as there:
+      // returning without a transition would leave it running with its hold.
+      if (!(await this.connection(trx, run))) {
+        await this.failChangedConnection(trx, run, at);
         return false;
+      }
       const call = await this.calls(trx)
         .where('id', '=', prepared.call.id)
         .where('status', '=', 'intent')

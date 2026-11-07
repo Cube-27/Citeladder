@@ -149,11 +149,7 @@ reservation → debit + release, or release, or refund. Subjects: `audit` task,
 |---|---|
 | Idempotent entries | DB unique idempotency key per account (0001:4115); debit uniques 0001:5193-5195 |
 | Settle once, never above the hold | App `entitlements/ledger.ts` settle/release under row locks + capacity lock (B63) |
-| A deleted project leaves no open hold | App `projectHoldsReservations` `entitlements/ledger.ts:465-505`, covers `audit`, `agent`, `site_crawl` only |
-
-Known invalid: deleting a project during a managed Keyword Research run leaves
-its `platform_call` hold reserved forever (and blocks that workspace's trial
-purge) — [BL1](plans/state-machine-fixes.md#bl-billing-and-credits).
+| A deleted project leaves no open hold | App `projectHoldsReservations` `entitlements/ledger.ts`: `audit`, `agent`, `site_crawl` and the project's Keyword Research `platform_call` holds refuse deletion (409 `project_work_running`); deletion and trial purge check under the project row lock (`lockProjectRow`, `projects/service.ts`), so they serialize with hold writers that lock the row (Keyword Research confirmation, Site Health, Agent outputs) |
 
 ### 3.2 `platform_calls.status` ∈ {`reserved`, `settled`, `failed`}
 
@@ -165,12 +161,12 @@ DB: `ck_platform_calls_status`, `ck_platform_calls_settled` (reserved ⇔
 |---|---|---|---|
 | ∅ → `reserved` (credits) | `openHold` via `reserve`, committed before I/O | `billing/metering.ts:142-200` | hold refused → 403 `ai_credits_exhausted` |
 | ∅ → `settled`/`failed` (included, not charged) | `record` after the call | `metering.ts:119-140` | daily breaker before I/O |
-| `reserved` → `settled`/`failed` | `settleCall` | `metering.ts:260-281` | `lockHeld` (`status = reserved FOR UPDATE`) |
+| `reserved` → `settled`/`failed` | `settleCall` (a failed settle transaction is retried once) | `metering.ts` `settleHeld` | `lockHeld` (`status = reserved FOR UPDATE`) |
 | `reserved` (`owner_settled`) → `settled` | `settleProviderCredits` ← `settleResearchCharge` | `metering.ts:234-258`, `search-intelligence/charges.ts:20-73` | `lockHeld`; run ended, no call still reporting |
 | `reserved` (> 900 s, not owner-settled) → `settled` | `settleAbandonedCalls` | `metering.ts:417-431` | charges the unknown-usage fallback |
 
-Known invalid: a failed call whose settle transaction errors is later charged
-the fallback by the sweep — [BL2](plans/state-machine-fixes.md#bl-billing-and-credits).
+Residual: a failed call whose settle transaction errors twice is still charged
+the fallback by the sweep.
 
 ### 3.3 `pending_activations.status` ∈ {`pending`, `activated`, `failed`, `abandoned`}
 
@@ -395,7 +391,7 @@ Run: `reviewed` → `queued` → `running` ⇄ `queued` (parked) → `succeeded`
 | `reviewed` → `queued` (hold + task) / `succeeded` (empty plan) | `confirmRun` | `runs.ts:122-147` | project `FOR UPDATE`, unconfirmed, unexpired, price, connection, no other active run |
 | `reviewed`/`queued`/`running` → `cancelled` | `cancelRun` | `runs.ts:149-180` | run `FOR UPDATE`, not finished; task cancelled; hold settled when nothing in flight |
 | `queued`/`running` → `running` | `start` | `acquisition-state.ts:201-232` | run `FOR UPDATE`, not terminal, `owned()` |
-| → `failed` (`pricing_changed`/`connection_changed`) | `start`, `prepare` | `acquisition-state.ts:205-223, 238-241` | connection or member check fails |
+| → `failed` (`pricing_changed`/`connection_changed`) | `start`, `prepare`, `dispatch` | `acquisition-state.ts` (`failChangedConnection`) | connection or member check fails |
 | `running` → `uncertain` | `prepare` finds a dispatched call with no response | `acquisition-state.ts:299-329` | — |
 | `running` → `queued` (park) | `park` | `acquisition-state.ts:469-491` | `running`, `owned()` |
 | `running` → `failed`/`partial`/`uncertain` | `fail` / `stopRun` / ceiling | `acquisition-state.ts:615-668, 292-297` | `running`, `owned()` |
@@ -408,10 +404,7 @@ Run: `reviewed` → `queued` → `running` ⇄ `queued` (parked) → `succeeded`
 Dispatch attempts are insert-only, one `outcome` per ordinal (DB
 `uq_si_dispatch_phase` 0001:4282).
 
-Known invalid: a connection or member change between `prepare` and `dispatch`
-returns without a run transition, the task succeeds and the run stays
-`running` with its hold — [SI1](plans/state-machine-fixes.md#si-search-intelligence-and-integrations).
-A receipt saved into a call already marked `uncertain` after settlement is
+Known invalid: a receipt saved into a call already marked `uncertain` after settlement is
 never billed — [SI2](plans/state-machine-fixes.md#si-search-intelligence-and-integrations).
 Cancel leaves datasets `collecting` — [SI3](plans/state-machine-fixes.md#si-search-intelligence-and-integrations).
 

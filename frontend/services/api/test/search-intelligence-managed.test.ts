@@ -1,10 +1,16 @@
 import { randomUUID } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { afterAll, describe, expect, it } from 'vitest';
+import { sql, type Transaction } from 'kysely';
+import { afterAll, describe, expect, it, vi } from 'vitest';
+import type { DB } from '../src/generated/db-schema.ts';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
 import { WorkspaceScope } from '../src/db/workspace-scope.ts';
+import { openReservedUnits } from '../src/entitlements/ledger.ts';
+import { deleteProject } from '../src/projects/service.ts';
 import { createSecretCipher } from '../src/integrations/fernet.ts';
 import { reviewBody } from '../src/routes/search-intelligence-contracts.ts';
+import { AcquisitionState } from '../src/search-intelligence/acquisition-state.ts';
+import { settleResearchCharge } from '../src/search-intelligence/charges.ts';
 import { acquisitionExecutor } from '../src/search-intelligence/executor.ts';
 import { createReview } from '../src/search-intelligence/reviews.ts';
 import { cancelRun, confirmRun } from '../src/search-intelligence/runs.ts';
@@ -223,6 +229,144 @@ describe('managed Search Intelligence', () => {
     await confirmRun(db, t.scope, t.review.id);
     const cancelled = await cancelRun(db, t.scope, t.review.id);
     expect(cancelled).toMatchObject({ status: 'cancelled', charged_credits: 0 });
+    expect(await platformCall((await runRow(t.review.id)).platform_call_id)).toMatchObject({
+      status: 'settled',
+      credits: 0,
+    });
+  });
+
+  it('ends the run and settles its hold when the member loses access just before a dispatch', async () => {
+    const t = await workspace('managed');
+    const confirmed = await confirmRun(db, t.scope, t.review.id);
+    const task = await db
+      .updateTable('analytics_tasks')
+      .set({
+        status: 'running',
+        lease_owner: 'research-test',
+        lease_expires_at: new Date(Date.now() + 120000),
+      })
+      .where('id', '=', (await runRow(confirmed.id)).analytics_task_id!)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    const state = new AcquisitionState(db, task, confirmed.id);
+    const plans = await state.start();
+    const prepared = await state.prepare(plans![0]!, 0);
+    if (prepared.action !== 'dispatch')
+      throw new Error(`Expected a dispatch, got ${prepared.action}`);
+    const member = db
+      .updateTable('workspace_members')
+      .where('workspace_id', '=', t.workspaceId)
+      .where('user_id', '=', t.userId);
+    await member.set({ role: 'viewer' }).execute();
+
+    expect(await state.dispatch(prepared)).toBe(false);
+    await settleResearchCharge(db, { workspaceId: t.workspaceId, runId: confirmed.id });
+    const ended = await runRow(confirmed.id);
+    expect(ended).toMatchObject({
+      status: 'failed',
+      error_code: 'connection_changed',
+      charged_credits: 0,
+    });
+    expect(await platformCall(ended.platform_call_id)).toMatchObject({
+      status: 'settled',
+      credits: 0,
+    });
+
+    await member.set({ role: 'owner' }).execute();
+    const next = await createReview(
+      db,
+      t.scope,
+      t.userId,
+      `review-${randomUUID()}`,
+      reviewBody.parse({ datasets: [{ kind: 'ranking_keywords', depth: 2 }] }),
+      key,
+      { env },
+    );
+    expect(await confirmRun(db, t.scope, next.id)).toMatchObject({ status: 'queued' });
+  });
+
+  it('refuses to delete a project while its managed analysis holds credits', async () => {
+    const t = await workspace('managed');
+    await grant(db, await billingAccount(db, t.workspaceId), {
+      key: 'project_deletion',
+      value: 1,
+    });
+    const project = { workspaceId: t.workspaceId, projectId: t.projectId };
+    await confirmRun(db, t.scope, t.review.id);
+    await expect(deleteProject(db, project)).rejects.toMatchObject({
+      status: 409,
+      code: 'project_work_running',
+    });
+
+    await cancelRun(db, t.scope, t.review.id);
+    await deleteProject(db, project);
+    expect(
+      await db.selectFrom('projects').select('id').where('id', '=', t.projectId).execute(),
+    ).toEqual([]);
+    const reserved = await db
+      .selectFrom('consumable_ledger')
+      .select(openReservedUnits.as('units'))
+      .where('workspace_id', '=', t.workspaceId)
+      .executeTakeFirstOrThrow();
+    expect(Number(reserved.units)).toBe(0);
+  });
+
+  it('refuses a deletion that waited behind a confirmation holding the project', async () => {
+    const t = await workspace('managed');
+    await grant(db, await billingAccount(db, t.workspaceId), {
+      key: 'project_deletion',
+      value: 1,
+    });
+    const project = { workspaceId: t.workspaceId, projectId: t.projectId };
+    // Pause the confirmation once it holds the project row, as its own first
+    // statement does, before it takes the credit hold.
+    const locked = Promise.withResolvers<number>();
+    const proceed = Promise.withResolvers<void>();
+    const transaction = db.transaction.bind(db);
+    const spy = vi.spyOn(db, 'transaction').mockImplementationOnce(() => {
+      const builder = transaction();
+      const execute = builder.execute.bind(builder);
+      builder.execute = <T>(work: (trx: Transaction<DB>) => Promise<T>) =>
+        execute(async (trx) => {
+          await trx
+            .selectFrom('projects')
+            .select('id')
+            .where('id', '=', t.projectId)
+            .forUpdate()
+            .execute();
+          const backend = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(trx);
+          locked.resolve(backend.rows[0]!.pid);
+          await proceed.promise;
+          return work(trx);
+        });
+      return builder;
+    });
+    try {
+      const confirmation = confirmRun(db, t.scope, t.review.id);
+      const confirming = await locked.promise;
+      const deletion = deleteProject(db, project).catch((error: unknown) => error);
+      await vi.waitFor(
+        async () => {
+          const blocked = await sql<{ waiting: boolean }>`select exists (
+            select 1 from pg_stat_activity where ${confirming} = any(pg_blocking_pids(pid))
+          ) as waiting`.execute(db);
+          expect(blocked.rows[0]!.waiting).toBe(true);
+        },
+        { timeout: 2000, interval: 20 },
+      );
+      proceed.resolve();
+      expect(await confirmation).toMatchObject({ status: 'queued' });
+      expect(await deletion).toMatchObject({ status: 409, code: 'project_work_running' });
+    } finally {
+      proceed.resolve();
+      spy.mockRestore();
+    }
+
+    // The project and its run survive, so the hold still settles.
+    expect(await cancelRun(db, t.scope, t.review.id)).toMatchObject({
+      status: 'cancelled',
+      charged_credits: 0,
+    });
     expect(await platformCall((await runRow(t.review.id)).platform_call_id)).toMatchObject({
       status: 'settled',
       credits: 0,

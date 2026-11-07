@@ -462,9 +462,10 @@ function subjectColumns(subject: Subject) {
 export const openReservedUnits = sql<number>`sum(case when entry_kind = 'reservation' then units when entry_kind = 'release' then -units else 0 end)`;
 
 /**
- * Whether an audit, crawl or Agent run of the project still holds reserved
- * units. Deleting the project then would leave a hold nothing can release, so
- * the units would stay reserved for good.
+ * Whether an audit, crawl, Agent run or Keyword Research run of the project
+ * still holds reserved units. Deleting the project then would leave a hold
+ * nothing can release (a Keyword Research run's provider-call hold settles
+ * only through its run), so the units would stay reserved for good.
  */
 export async function projectHoldsReservations(
   db: Database,
@@ -484,6 +485,17 @@ export async function projectHoldsReservations(
         'in',
         db.selectFrom(table).select('id').where('project_id', '=', projectId),
       );
+  const researchCalls = db
+    .selectFrom('consumable_ledger')
+    .select('reservation_id')
+    .where('subject_kind', '=', 'platform_call')
+    .where('subject_id', 'in', (eb) =>
+      eb
+        .selectFrom('search_intelligence_runs')
+        .select('platform_call_id')
+        .where('project_id', '=', projectId)
+        .where('platform_call_id', 'is not', null),
+    );
   const open = await db
     .selectFrom('consumable_ledger')
     .select('reservation_id')
@@ -494,6 +506,7 @@ export async function projectHoldsReservations(
           subject('audit', 'audits')
             .union(subject('agent', 'agent_runs'))
             .union(subject('site_crawl', 'site_crawls'))
+            .union(researchCalls)
             .as('held'),
         )
         .select('held.reservation_id'),

@@ -290,8 +290,9 @@ Admin) and the plan's `project_deletion` entitlement, which trials do not carry.
 It removes the project and everything it owns, including its brand discoveries. Billing and usage records stay
 and keep the exact IDs of the deleted audits, crawls and Agent runs; those
 provenance columns carry no foreign key, so deletion never rewrites them. Deletion
-is refused (`project_work_running`) while an audit, crawl or Agent run still
-holds reserved units, because nothing could release that hold afterwards.
+is refused (`project_work_running`) while an audit, crawl, Agent run or Keyword
+Research analysis still holds reserved units, because nothing could release that
+hold afterwards.
 
 A trial-only workspace (no plan, add-on, top-up or operator grant) loses access
 when its trial ends. The runner deletes its projects, and any brand discovery
