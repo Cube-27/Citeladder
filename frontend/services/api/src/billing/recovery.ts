@@ -15,6 +15,7 @@ import { policy } from '../config.ts';
 import {
   lockOwner,
   periodRefunded,
+  refundCancelled,
   settlePending,
   settleRefund,
   settleSubscription,
@@ -476,11 +477,13 @@ async function subscriptionProbe(
     // Halted (retries exhausted) ends now, so it can never charge again unseen.
     const halted = state?.status === policy.billing.contracts.subscription_unpaid;
     // A fully refunded current period ends now: its cancellation was committed
-    // with the refund and is sent here, retried until the provider ends it (B52).
+    // with the refund and is sent here, retried until the provider ends it (B52),
+    // also after a renewal the provider charged meanwhile moved the period (B71).
     const refunded =
       state !== null &&
       !policy.billing.contracts.terminal_subscription_statuses.includes(state.status) &&
-      (await periodRefunded(db, sub, sub.current_period_start, sub.current_period_end));
+      (refundCancelled(sub) ||
+        (await periodRefunded(db, sub, sub.current_period_start, sub.current_period_end)));
     // A held cancellation goes to the provider at the lead before renewal and
     // is retried while the provider still shows the subscription renewing (B46).
     const due =
