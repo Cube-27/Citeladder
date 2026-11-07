@@ -69,7 +69,7 @@ document already states. The table keeps the questions as asked.
 | S08 | Site Health crawl outcomes and inventory | SH1, SH2, SH3, SH4, SH5 | — | | merged | [#660](https://github.com/Cube-27/Citeladder/pull/660) | Data correctness |
 | S09 | Public API idempotency outcome; prompt edit under lock | PA1, WS3 | — | | in progress | | Data correctness |
 | S10 | Refunded upgrades and payments on ended subscriptions | BL7, BL8 | S04 | | merged | [#658](https://github.com/Cube-27/Citeladder/pull/658) | Money; B70, B71 |
-| S11 | Agent turns closed after streaming a document | AG1 | S07 | | in progress | | Money; B69 |
+| S11 | Agent turns closed after streaming a document | AG1 | S07 | | in review | [#663](https://github.com/Cube-27/Citeladder/pull/663) | Money; B69 |
 | S12 | Status CHECK constraints; dead `site_urls.discovery_status` | DB1 | S08 | mig | todo | | Migration 0014; open last, alone |
 
 ## Order
