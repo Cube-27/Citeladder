@@ -94,7 +94,7 @@ Next were **thedigitalprojectmanager.com** and **saner.ai** at 40% each, **toolf
 - **Comparison pages feed the answers.** The sites returned most often were roundups and comparison pages. Appearing accurately on pages like those on atlasworkspace.ai, zapier.com and techradar.com puts your brand in front of Claude when it searches.
 - **Use-case pages count.** Claude searched for specific needs such as developer snippets and offline markdown. Clear pages for each use case give it something to find.
 - **Check dated content.** Claude added a year to almost half its queries, mostly 2025. Roundups with a current year in the title may match those searches.
-- **Measure repeatedly.** Run agreement ranged from 51.2% to 63.8%. One check is not enough to know where you stand. CiteLadder runs each prompt several times for this reason.
+- **Measure repeatedly.** Run agreement ranged from 51.2% to 63.8%. One check is not enough to know where you stand.
 
 ## Brand shares in each condition
 
