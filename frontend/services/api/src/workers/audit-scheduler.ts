@@ -113,9 +113,15 @@ export class AuditScheduler {
         if (error instanceof ApiError && error.isRetryable()) {
           // A transient refusal (active-launch limit, daily task budget) is not the
           // owner's to fix: try the same occurrence again without counting a failure.
+          // `next_run_at` stays the occurrence (it anchors the cadence); an ownerless
+          // lease until `Retry-After` keeps claims away until then.
           await trx
             .updateTable('audit_schedules')
-            .set({ ...release, next_run_at: this.retryAt(error, at) })
+            .set({
+              lease_owner: null,
+              lease_expires_at: sql<Date>`clock_timestamp() + ${this.retrySeconds(error)} * interval '1 second'`,
+              updated_at: at,
+            })
             .where('id', '=', schedule.id)
             .where('workspace_id', '=', claim.workspaceId)
             .execute();
@@ -142,12 +148,10 @@ export class AuditScheduler {
       }
     });
   }
-  /** When a retryable refusal asks to be tried again: its `Retry-After`, else the failure delay. */
-  private retryAt(error: ApiError, at: Date) {
+  /** How long a retryable refusal asks to wait: its `Retry-After`, else the failure delay. */
+  private retrySeconds(error: ApiError) {
     const seconds = Number(error.headers?.['retry-after']);
-    const delay =
-      Number.isFinite(seconds) && seconds > 0 ? seconds : this.settings.failure_retry_seconds;
-    return new Date(at.getTime() + delay * 1000);
+    return Number.isFinite(seconds) && seconds > 0 ? seconds : this.settings.failure_retry_seconds;
   }
   async runOnce(at = this.now(), canAdmit?: () => boolean) {
     if (canAdmit) return this.planUntilBudget(at, canAdmit);

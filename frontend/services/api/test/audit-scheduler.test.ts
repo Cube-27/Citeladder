@@ -228,11 +228,18 @@ describe('durable audit occurrence planning', () => {
         next_run_at: start.toISOString(),
       }),
     );
-    let at = start;
+    const busyScheduler = new AuditScheduler(db, busy, settings, { now: () => start });
+    const elapseRetryAfter = () =>
+      db
+        .updateTable('audit_schedules')
+        .set({ lease_expires_at: new Date(0) })
+        .where('id', '=', schedule.id)
+        .execute();
     for (let pass = 0; pass < 5; pass++) {
-      const scheduler = new AuditScheduler(db, busy, settings, { now: () => at });
-      expect(await scheduler.runOnce(at)).toBe(0);
-      at = new Date(at.getTime() + 30_000);
+      expect(await busyScheduler.runOnce(start)).toBe(0);
+      // Held until its Retry-After: an immediate pass claims nothing.
+      expect(await busyScheduler.claimDue(start)).toEqual([]);
+      await elapseRetryAfter();
     }
     expect(
       await db
@@ -245,8 +252,28 @@ describe('durable audit occurrence planning', () => {
       enabled: true,
       last_error: '',
       lease_owner: null,
-      next_run_at: at,
+      next_run_at: start,
     });
+    // Once capacity frees, the same occurrence runs and the cadence keeps its anchor.
+    const later = new Date(start.getTime() + 150_000);
+    const scheduler = new AuditScheduler(db, runtime, settings, { now: () => later });
+    expect(await scheduler.runOnce(later)).toBe(1);
+    expect(
+      await db
+        .selectFrom('audits')
+        .select('scheduled_for')
+        .where('schedule_id', '=', schedule.id)
+        .execute(),
+    ).toEqual([{ scheduled_for: start }]);
+    expect(
+      (
+        await db
+          .selectFrom('audit_schedules')
+          .select('next_run_at')
+          .where('id', '=', schedule.id)
+          .executeTakeFirstOrThrow()
+      ).next_run_at,
+    ).toEqual(new Date(start.getTime() + 3_600_000));
   });
   it('counts a refusal the owner must act on, such as spent prompt runs', async () => {
     const t = await auditTenant(db, fixtures),

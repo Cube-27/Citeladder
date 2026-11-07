@@ -526,8 +526,8 @@ Attempts per task default to the `max_attempts` setting.
 
 A schedule disabled by repeated failures stores the real admission error (for
 example an ended trial or exhausted budget); a retryable refusal (the
-active-launch limit or the daily task budget) only moves the occurrence to its
-`Retry-After` and never counts as a failure. The schedules list shows it as
+active-launch limit or the daily task budget) holds the same occurrence until
+its `Retry-After`, keeping the cadence anchored, and never counts as a failure. The schedules list shows it as
 the pause reason and offers Resume, which re-enables the schedule and resets
 its failure count. Schedule patches validate cadence and interval against the current locked row;
 omitted values retain the persisted scope and configuration. Nullable scheduling
