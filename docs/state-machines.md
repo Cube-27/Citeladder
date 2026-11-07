@@ -162,12 +162,12 @@ DB: `ck_platform_calls_status`, `ck_platform_calls_settled` (reserved ⇔
 |---|---|---|---|
 | ∅ → `reserved` (credits) | `openHold` via `reserve`, committed before I/O | `billing/metering.ts:142-200` | hold refused → 403 `ai_credits_exhausted` |
 | ∅ → `settled`/`failed` (included, not charged) | `record` after the call | `metering.ts:119-140` | daily breaker before I/O |
-| `reserved` → `settled`/`failed` | `settleCall` | `metering.ts:260-281` | `lockHeld` (`status = reserved FOR UPDATE`) |
+| `reserved` → `settled`/`failed` | `settleCall` (a failed settle transaction is retried once) | `metering.ts` `settleHeld` | `lockHeld` (`status = reserved FOR UPDATE`) |
 | `reserved` (`owner_settled`) → `settled` | `settleProviderCredits` ← `settleResearchCharge` | `metering.ts:234-258`, `search-intelligence/charges.ts:20-73` | `lockHeld`; run ended, no call still reporting |
 | `reserved` (> 900 s, not owner-settled) → `settled` | `settleAbandonedCalls` | `metering.ts:417-431` | charges the unknown-usage fallback |
 
-Known invalid: a failed call whose settle transaction errors is later charged
-the fallback by the sweep — [BL2](plans/state-machine-fixes.md#bl-billing-and-credits).
+Residual: a failed call whose settle transaction errors twice is still charged
+the fallback by the sweep.
 
 ### 3.3 `pending_activations.status` ∈ {`pending`, `activated`, `failed`, `abandoned`}
 

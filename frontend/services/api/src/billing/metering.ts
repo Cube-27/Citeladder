@@ -350,11 +350,15 @@ async function metered<T>(
   if (charged && db.isTransaction)
     throw new Error('A charged platform call must not run in a transaction');
   const callId = charged ? await reserve(db, context, spec) : await assertSpendOpen(db, context);
-  // A failed settlement never replaces the provider's outcome: the hold stays
-  // reserved and the abandoned-call sweep settles it.
+  // A failed settlement is retried once (settling is idempotent), because the
+  // abandoned-call sweep knows no outcome and charges the fallback even for a
+  // call that failed. A second failure never replaces the provider's outcome:
+  // the hold stays reserved for the sweep.
   const settleHeld = async (id: string, usage: TokenUsage | null, error: unknown) => {
     try {
-      await settleCall(db, id, usage, error !== null, error);
+      await settleCall(db, id, usage, error !== null, error).catch(() =>
+        settleCall(db, id, usage, error !== null, error),
+      );
     } catch (error_) {
       logger.exception('billing.platform_call_unsettled', error_, {
         workspace_id: context.workspaceId,
