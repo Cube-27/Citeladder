@@ -153,6 +153,11 @@ export function researchFaqs(markdown: string): { q: string; a: string }[] {
 const STUDY_PARENTS = [
   { prefix: '/ai-crawlers/', label: 'AI crawlers', href: '/ai-crawlers' },
   { prefix: '/buyer-prompts/', label: 'Buyer prompts', href: '/buyer-prompts' },
+  {
+    prefix: '/claude-recommendations/',
+    label: 'Claude recommendations',
+    href: '/claude-recommendations',
+  },
   { prefix: '/research/', label: 'Research', href: '/research' },
 ] as const;
 

@@ -53,6 +53,40 @@ export const STUDY_INDEXES = {
       },
     ],
   },
+  claudeRecommendations: {
+    path: '/claude-recommendations',
+    updated: '2026-11-07',
+    title: 'Claude recommendations',
+    metaTitle: 'Which brands Claude recommends, by category | CiteLadder',
+    description:
+      'Which brands Claude Sonnet 5.5 named for 400 buyer prompts across 20 categories, and which sites its web searches returned.',
+    heroTitle: 'Which brands Claude recommends in 20 categories',
+    lead: "Each page shows which brands Claude Sonnet 5.5 named for 20 buyer prompts in one category, asked three times from memory, with web search available, and told to search. It also lists the sites Claude's searches returned.",
+    groups: [
+      {
+        title: 'B2B software',
+        description:
+          'Which brands Claude names for business software, from CRM, email marketing and SEO tools to accounting, cloud hosting and AI writing tools.',
+      },
+      {
+        title: 'Consumer software and apps',
+        description:
+          'Which brands Claude names for VPN apps, language learning apps, note-taking apps and video editing software.',
+      },
+      {
+        title: 'Online services',
+        description: 'Which brands Claude names for web hosting and cloud storage services.',
+      },
+      {
+        title: 'Consumer products',
+        description: 'Which brands Claude names for wireless earbuds and robot vacuums.',
+      },
+      {
+        title: 'Professional services',
+        description: 'Which brands Claude names for freelance marketplaces.',
+      },
+    ],
+  },
   research: {
     path: '/research',
     updated: '2026-11-07',

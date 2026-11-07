@@ -1,0 +1,16 @@
+---
+/** One category's page: the brands Claude recommends: a study page in the research guide template. */
+import type { GetStaticPaths } from 'astro';
+import ResearchLayout from '../../layouts/ResearchLayout.astro';
+import { studyPagesUnder } from '../../research-articles';
+
+export const getStaticPaths = (() =>
+  studyPagesUnder('/claude-recommendations/').map((article) => ({
+    params: { slug: article.frontmatter.slug.slice('/claude-recommendations/'.length) },
+    props: { article },
+  }))) satisfies GetStaticPaths;
+
+const { article } = Astro.props;
+---
+
+<ResearchLayout article={article} />
