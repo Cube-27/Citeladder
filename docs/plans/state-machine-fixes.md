@@ -65,7 +65,7 @@ document already states. The table keeps the questions as asked.
 | S04 | Billing webhook, checkout and replay recovery | BL3, BL4, BL5, BL6 | — | | merged | [#655](https://github.com/Cube-27/Citeladder/pull/655) | Money |
 | S05 | Keyword Research settlement, cancel and reconnect | SI2, SI3, SI4 | S02 | | in progress | | Money; shares `search-intelligence/` with S02 |
 | S06 | Audit schedules, repair admission and cost records | AU2, AU3, AU4, AU5 | — | | todo | | Stuck users, abuse bound, cost |
-| S07 | Agent turn recovery | AG2, AG3, AG4, AG5 | — | | in progress | | Stuck users |
+| S07 | Agent turn recovery | AG2, AG3, AG4, AG5 | — | | in review | [#659](https://github.com/Cube-27/Citeladder/pull/659) | Stuck users |
 | S08 | Site Health crawl outcomes and inventory | SH1, SH2, SH3, SH4, SH5 | — | | in progress | | Data correctness |
 | S09 | Public API idempotency outcome; prompt edit under lock | PA1, WS3 | — | | todo | | Data correctness |
 | S10 | Refunded upgrades and payments on ended subscriptions | BL7, BL8 | S04 | | in progress | | Money; B70, B71 |
