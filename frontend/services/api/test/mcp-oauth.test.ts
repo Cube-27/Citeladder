@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 import { Hono } from 'hono';
 import { parse, type DefaultTreeAdapterMap } from 'parse5';
 import { afterAll, beforeEach, expect, it, onTestFinished, vi } from 'vitest';
@@ -10,6 +11,9 @@ import { authorizedWorkspaceIds, authorizeProject } from '../src/mcp/data.ts';
 import { authenticateMcp, consentCsrf, tokenHash } from '../src/mcp/oauth.ts';
 import { admitRegistration, admitToolCall, registerClient } from '../src/mcp/registration.ts';
 import { pruneUsageWindows } from '../src/abuse/usage.ts';
+import { changePassword, consumeChallenge } from '../src/auth/challenges.ts';
+import { hashPassword } from '../src/auth/password.ts';
+import { logoutUser } from '../src/auth/service.ts';
 import { ApiError } from '../src/errors.ts';
 import { registerMcpRoutes } from '../src/mcp/server.ts';
 import { cleanupMcpProtocol } from '../src/mcp/maintenance.ts';
@@ -417,6 +421,107 @@ it('binds CSRF, explicit selection, PKCE and redirect before a code can be consu
   expect(row.access_token_hash).toBe(tokenHash(config, success.access_token));
   // The second presentation of the code was a replay: what it minted is revoked.
   expect(row.revoked_at).not.toBeNull();
+});
+
+/** Approve a fresh authorization and return its client and unexchanged code. */
+async function mintedCode() {
+  const c = await client();
+  const approved = await consent(await pending(c.client_id));
+  expect(approved.status).toBe(303);
+  return {
+    clientId: c.client_id,
+    code: new URL(approved.headers.get('location')!).searchParams.get('code')!,
+  };
+}
+const credentialEnds = {
+  'a password reset': async (userId: string) => {
+    const link = randomUUID();
+    await db
+      .insertInto('auth_challenges')
+      .values({
+        id: randomUUID(),
+        user_id: userId,
+        email: `${userId}@example.test`,
+        purpose: 'password_reset',
+        token_digest: createHash('sha256').update(link).digest('hex'),
+        created_at: new Date(),
+        consumed_at: null,
+        expires_at: new Date(Date.now() + 600_000),
+      })
+      .execute();
+    await consumeChallenge(db, link, 'recovered-password-1', 'password_reset');
+  },
+  'a password change': async (userId: string) => {
+    await db
+      .updateTable('users')
+      .set({ hashed_password: await hashPassword('original-password-1') })
+      .where('id', '=', userId)
+      .execute();
+    await changePassword(db, config, {
+      userId,
+      sessionVersion: 0,
+      currentPassword: 'original-password-1',
+      password: 'changed-password-1',
+    });
+  },
+  'sign-out everywhere with disconnect': (userId: string) =>
+    logoutUser(db, userId, { disconnect: true }),
+};
+it.each(Object.entries(credentialEnds))(
+  'ends a code minted before %s so it can never mint a grant',
+  async (_event, end) => {
+    const { clientId, code } = await mintedCode();
+    await end(tenant.userId);
+    const exchanged = await token(clientId, {
+      grant_type: 'authorization_code',
+      code,
+      code_verifier: verifier,
+      redirect_uri: callback,
+    });
+    expect(exchanged.status).toBe(400);
+    expect(await exchanged.json()).toMatchObject({ error: 'invalid_grant' });
+    expect(
+      await db
+        .selectFrom('mcp_oauth_grants')
+        .select('id')
+        .where('client_id', '=', clientId)
+        .execute(),
+    ).toEqual([]);
+  },
+);
+
+it('mints no code when the session ends while the approval waits for the account', async () => {
+  const c = await client();
+  const transaction = await pending(c.client_id);
+  let approval: Promise<Response> | undefined;
+  await db.transaction().execute(async (trx) => {
+    // A credential reset holds the account row; the approval passed its session check already.
+    await trx
+      .selectFrom('users')
+      .select('id')
+      .where('id', '=', tenant.userId)
+      .forUpdate()
+      .execute();
+    approval = consent(transaction);
+    await delay(200);
+    await trx
+      .updateTable('users')
+      .set({ session_version: 1 })
+      .where('id', '=', tenant.userId)
+      .execute();
+  });
+  const refused = await approval!;
+  expect(refused.status).toBe(403);
+  expect(consentDocument(await refused.text()).text).toContain(
+    'Your session changed; sign in again to approve',
+  );
+  expect(
+    await db
+      .selectFrom('mcp_authorization_codes')
+      .select('id')
+      .where('client_id', '=', c.client_id)
+      .execute(),
+  ).toEqual([]);
 });
 
 it('renders untrusted client metadata inert on the consent page', async () => {
