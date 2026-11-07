@@ -95,8 +95,11 @@ The first request claims the key before it runs; a repeat with the same method,
 path and body replays the stored response with `Idempotent-Replayed: true`; a
 different body, or a repeat while the first is running, is 409
 `idempotency_conflict`. A refused attempt (a 4xx) releases its claim; a server
-failure keeps it, since its write may have committed, so a retry gets a
-retryable 409 rather than a second write. Records are kept
+failure (a 5xx or an unhandled error) keeps it, since its write may have
+committed, and records the outcome as unknown, so a retry gets a non-retryable
+409 `idempotency_outcome_unknown` rather than a second write. A claim still
+running after `idempotency.in_progress_max_seconds` (300; the process died
+before recording an outcome) answers the same. Records are kept
 24 hours and purged by the runner. Errors use the
 [error contract](api-error-contract.md). Lists that can grow page with
 `cursor` and `limit` (at most 100) and return `{items, next_cursor}`.
