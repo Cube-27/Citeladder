@@ -1284,6 +1284,43 @@ describe('billing money and access owner', () => {
       status: 'already_scheduled',
     });
   });
+  it('re-sends a refused downgrade when its replay record outlived the refusal', async () => {
+    const t = await activated();
+    await fixtures.catalog((payload) => {
+      const plan = payload.plans.find((row) => row.key === 'tier_2')!;
+      plan.byok_price!.amount_minor = 100;
+      plan.regional_prices.byok.international!.amount_minor = 100;
+    });
+    const key = randomUUID();
+    const record = () =>
+      db
+        .selectFrom('idempotency_records')
+        .selectAll()
+        .where('billing_account_id', '=', t.accountId)
+        .where('idempotency_key', '=', key)
+        .executeTakeFirstOrThrow();
+    const committed: Awaited<ReturnType<typeof record>>[] = [];
+    const reject = vi.fn(async () => {
+      committed.push(await record());
+      throw new ProviderError(false, 'provider_rejected');
+    });
+    await expect(
+      changePlan(db, config, t.workspaceId, 'tier_2', key, fakeProvider({ change: reject })),
+    ).rejects.toMatchObject({ status: 502 });
+    // The process died after recording the refusal, before deleting the replay record.
+    const [row] = committed;
+    await db
+      .insertInto('idempotency_records')
+      .values({ ...row!, response_body: JSON.stringify(row!.response_body) })
+      .execute();
+    const change = vi.fn(async (_subscription: string, _priceRef: string) => {});
+    expect(
+      await changePlan(db, config, t.workspaceId, 'tier_2', key, fakeProvider({ change })),
+    ).toMatchObject({ direction: 'downgrade', status: 'scheduled' });
+    expect(change.mock.calls.map(([subscription]) => subscription)).toEqual([
+      t.sub.external_subscription_id,
+    ]);
+  });
   it('drops a downgrade the provider refused once the next period starts', async () => {
     const t = await activated();
     await fixtures.catalog((payload) => {
