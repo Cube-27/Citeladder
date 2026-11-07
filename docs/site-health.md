@@ -43,9 +43,11 @@ profile, and allows one active crawl per project. In order, it:
 Input modes other than `auto`, seeds and page-kind filters are advanced
 controls (`advanced_controls_enabled`, or the development operator's
 workspace). A page rerun (`selection.ts`) creates a one-page crawl from a
-terminal crawl, or the next task generation of an active one. Its
+terminal crawl, or the next task generation of an active one (cancelling the
+page's older generation if it is still open, and counted by its latest). Its
 configuration carries `page_rerun`; it hands its page to verification and
-Opportunities but is never compared as a site crawl.
+Opportunities but is never compared as a site crawl, and a read that names no
+crawl (Overview, AEO readiness, Architecture) never defaults to it.
 
 | Task kind (`site_crawl_tasks`) | Does |
 |---|---|
@@ -122,8 +124,9 @@ analysis drain, one locked transaction:
 2. evaluates crawl-finalize checks;
 3. appends a final analysis per page (`supersedes_analysis_id`);
 4. persists the snapshot and score summary;
-5. sets `completed`, `partially_completed` (with `partial_reason`) or `failed`,
-   persists the terminal dashboard counters (`site_crawls.terminal_counters`,
+5. sets `completed`, `partially_completed` (with `partial_reason`) or `failed`
+   (nothing analyzed, and either discovery found nothing or every applicable
+   analysis failed), persists the terminal dashboard counters (`site_crawls.terminal_counters`,
    `terminal-counters.ts`), and settles the fetch reservation;
 6. for a crawl that did not fail, enqueues `change_intel` and `link_metrics`
    if any analysis succeeded, otherwise hands off to the analytics refresh.
@@ -616,7 +619,7 @@ JEV judges pairs through the analytics queue. Limits are in
 | Retrieval | TF-IDF over destination title, H1 and path. In larger crawls, very common terms carry no weight, and a placement must share destination vocabulary. An anchor needs `min_anchor_content_words` non-stop words unless it is the destination's whole one-word name. |
 | Suppression | An existing main-content link suppresses a pair; a navigation-only link does not. A source with truncated anchor capture gets no suggestions. Product pages whose titles differ by at most `variant_max_word_difference` words never suggest each other. |
 | Judgment | One JEV request per source: per target, a Noul usefulness question and a placement Choice (including `none`). Publication re-validates the anchor against frozen evidence, never falls back, keeps the higher-ranked suggestion when anchors overlap, and keeps at most `max_links_per_target` suggestions per destination. A source's Action ranks by how far its strongest link clears `accept_threshold`. |
-| Execution | Dispatch events commit before sending. At the deadline, dispatched pairs close as uncertain and are never resent. A missing permission or provider yields unavailable judgments. Cancel stops dispatch; the project's slot stays busy until the judgment task ends. |
+| Execution | Dispatch events commit before sending. At the deadline, dispatched pairs close as uncertain and are never resent. A missing permission or provider yields unavailable judgments. Cancel stops dispatch; the project's slot stays busy until the judgment task ends. A publication task that fails terminally ends its run `failed` (its compensator), freeing the slot; the task row keeps the error code. |
 | Verification | After the user marks a link implemented, a later complete, compatible crawl confirms a main-content link to the exact destination, with no model call and no CMS publishing. |
 
 ## Change intelligence
@@ -634,8 +637,15 @@ only pages both crawls analyzed. Page reruns write no snapshot and are never a
 predecessor, and Changes never shows a snapshot an older rerun wrote. With no
 match, it records a non-comparable boundary against the newest earlier crawl
 with analyses. A declared Site Health fix that the later crawl shows met is
-marked as an expected change. Snapshots are immutable, carry their source IDs, supersede the
-previous snapshot, and are reused when inputs are unchanged. Content change and
+marked as an expected change. URL presence (a page added or removed) is
+claimed only for a complete pair: both crawls `completed` with
+`inventory_complete`, which reconcile sets only for coverage `complete` (no
+page or frontier limit, pending frontier, sample or other bound). A page A
+analyzed is removed only when B's observed inventory lacks it; one B observed
+but did not analyze (deselected, failed) is not. Snapshots are immutable, carry their source IDs, supersede the
+newest snapshot of a crawl no newer than theirs (chosen under a project lock),
+and are reused when inputs are unchanged. Changes shows the newest crawl's
+snapshot, so an older crawl's late comparison never replaces it. Content change and
 date consistency are separate outputs. Only `complete` comparison coverage can
 promote metadata or cosmetic-refresh actions (`config/site-health/change-intel.ts`).
 
