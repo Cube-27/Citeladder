@@ -44,7 +44,7 @@ it('re-posts the run after a 429 once Retry-After passes and shows the streamed 
   const { result } = renderHook(() => useLiveTurn(run));
 
   await vi.advanceTimersByTimeAsync(999);
-  expect(posts.length).toBe(1);
+  expect(posts).toHaveLength(1);
   await vi.advanceTimersByTimeAsync(1);
   await vi.waitFor(() => expect(result.current?.reply).toEqual({ ordinal: 1, text: 'Hello' }));
   expect(posts.map((at) => at - start)).toEqual([0, 1000]);
@@ -79,7 +79,7 @@ it('ends the live turn on a refusal other than 429 without re-posting', async ()
 
   await vi.waitFor(() => expect(result.current?.connected).toBe(false));
   await vi.advanceTimersByTimeAsync(60_000);
-  expect(fetchMock.mock.calls.length).toBe(1);
+  expect(fetchMock.mock.calls).toHaveLength(1);
 });
 
 const fold = (events: TurnEvent[]) => events.reduce(applyTurnEvent, liveTurn(0));
