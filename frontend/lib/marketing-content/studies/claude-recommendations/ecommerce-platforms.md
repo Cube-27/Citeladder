@@ -84,7 +84,7 @@ From memory, Claude already has a stable shortlist for ecommerce platforms. Sear
 - **Be present where searches land.** Comparison and review sites made up most of the top result hosts. Being covered accurately on those pages matters.
 - **Publish pages that match the queries.** Claude searched for "best" lists, year-tagged guides, pricing and head-to-head comparisons. Clear, current pricing and comparison pages give it something to find.
 - **Own a use case.** Brands like Gumroad, Sellfy and Payhip surfaced around digital products. Specific prompts open room that general prompts do not.
-- **Measure repeatedly.** Run agreement sat near two thirds, so a single check can mislead. CiteLadder runs each prompt several times for this reason.
+- **Measure repeatedly.** Run agreement sat near two thirds, so a single check can mislead.
 
 ## Brand shares in each condition
 
