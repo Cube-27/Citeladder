@@ -46,6 +46,11 @@ export const STUDY_INDEXES = {
         description:
           'How the 10,000 most popular websites treat AI crawlers in robots.txt, based on 6130 sites with a readable policy, where 15.5% block GPTBot.',
       },
+      {
+        title: 'Website files for AI',
+        description:
+          'How many of the 10,000 most popular websites publish an llms.txt file, based on 6943 sites checked, where 12.4% have a valid one.',
+      },
     ],
   },
 } as const satisfies Record<string, StudyIndex>;
