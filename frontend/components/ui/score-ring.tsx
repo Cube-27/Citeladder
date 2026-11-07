@@ -20,7 +20,7 @@ function scoreFill(tone: ScoreTone, value: number): ScoreFill {
   return tone === 'ink' ? 'ink' : BAND_FILL[scoreBand(value)];
 }
 
-export const clampScore = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
+const clampScore = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
 
 const RING_STROKE = {
   ink: 'stroke-ink',
