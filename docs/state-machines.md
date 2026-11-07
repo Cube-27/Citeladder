@@ -334,10 +334,8 @@ never written.
 
 A crawl read without a named `crawl_id` (`resolveUsableCrawl`, `reads/crawl.ts`)
 is the newest usable crawl that is not a `page_rerun`; a named rerun still
-reads. Known invalid: sub-states
-and counters count every task generation, so a rerun page reads "1 failed" in
-the status but 0 in the counters — [SH2](plans/state-machine-fixes.md#sh-site-health).
-`inventory_complete` is true for page-limited, sampled or deselected
+reads. Sub-states and counters read each page's latest task generation, as the
+terminal counters do. Known invalid: `inventory_complete` is true for page-limited, sampled or deselected
 inventories, so unanalyzed pages read as removed —
 [SH3](plans/state-machine-fixes.md#sh-site-health).
 
@@ -345,17 +343,15 @@ inventories, so unanalyzed pages read as removed —
 
 | Machine | States and transitions | Enforced |
 |---|---|---|
-| `site_crawl_tasks` | lane §1; → `cancelled` by Stop `controls.ts:89-102`, deselection (`queued`/`retry_wait`) `selection.ts:213-228`, crawl not active `site-task.ts:97-114`; → `failed` by overdue `lifecycle.ts:482-498`; rerun adds generation `max + 1` `selection.ts:380-394` | DB `uq_site_crawl_task_slot (crawl, kind, url_hash, generation)`, idempotency key |
+| `site_crawl_tasks` | lane §1; → `cancelled` by Stop `controls.ts:89-102`, deselection (`queued`/`retry_wait`) `selection.ts:213-228`, crawl not active `site-task.ts:97-114`; → `failed` by overdue `lifecycle.ts:482-498`; rerun or re-selection adds generation `max + 1` and cancels an open older generation of the page in the same tx (`enqueueNextGeneration`, `selection.ts`) | DB `uq_site_crawl_task_slot (crawl, kind, url_hash, generation)`, idempotency key |
 | `site_discovery_frontier.status` | `pending` (`frontier.ts:280-301`) → `admitted` (`admission-writes.ts:350-362`); picked `FOR UPDATE SKIP LOCKED` inside the admitting tx | DB `uq_site_discovery_frontier_url` |
 | `site_urls.discovery_status` | `running` on every sighting `admission-writes.ts:107,128` → `completed`/`failed`; never read | None; dropped by [DB1](plans/state-machine-fixes.md#db-schema-hardening) |
-| `site_page_analyses` | always `completed`; revisions by `is_current` + `supersedes_analysis_id`: provisional `analysis-rows.ts:335-384`, finalized `terminal-analysis.ts:55-111`, retired alias `canonical-alias.ts:97-106`; the last commit becomes current unconditionally | DB `uq_site_page_analysis_current` 0001:5217 |
+| `site_page_analyses` | always `completed`; revisions by `is_current` + `supersedes_analysis_id`: provisional `analysis-rows.ts:335-384`, finalized `terminal-analysis.ts:55-111`, retired alias `canonical-alias.ts:97-106`; only the open generation's fenced commit can become current | DB `uq_site_page_analysis_current` 0001:5217 |
 | `site_health_snapshots` | once per crawl in the terminalize tx `snapshot.ts:127-172` (`ON CONFLICT DO NOTHING`); later only `addArchitectureIssues` | DB unique per crawl |
 | `site_internal_link_runs.state` | ∅ → `queued` `internal-link-runs.ts:107-200` (project lock, none live) → result `internal-link-publish.ts` (fenced) or `cancelled` `internal-link-runs.ts:202-211` | App |
 | `site_change_snapshots.state` | immutable insert `available`/`non_comparable`/`unavailable` `change-snapshot.ts:345-425`; `supersedes_id` = newest by `created_at`, read unlocked | App |
 
-Known invalid: an overlapping older analyze generation can commit last and
-become current — [SH2](plans/state-machine-fixes.md#sh-site-health). A
-`change_intel` that runs late or concurrently can supersede the wrong snapshot
+Known invalid: a `change_intel` that runs late or concurrently can supersede the wrong snapshot
 (timing) — [SH4](plans/state-machine-fixes.md#sh-site-health). An internal-link
 run whose publish task fails terminally stays live until cancelled (no
 compensator, `site-health/analytics-kinds.ts:6-9`) —

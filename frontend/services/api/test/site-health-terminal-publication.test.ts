@@ -756,6 +756,31 @@ describe('crawl lifecycle', () => {
     }
   });
 
+  it('counts a rerun page once, by its latest generation', async () => {
+    const seed = await running();
+    const page = await monitoredPage(seed, '/');
+    const earlier = await fixtures.task(seed, 'analyze');
+    const latest = await db
+      .updateTable('site_crawl_tasks')
+      .set({ generation: 1 })
+      .where('id', '=', page.taskId)
+      .returning(['url_hash', 'site_url_id'])
+      .executeTakeFirstOrThrow();
+    await db
+      .updateTable('site_crawl_tasks')
+      .set({ ...latest, status: 'failed', error_code: 'task_failed' })
+      .where('id', '=', earlier)
+      .execute();
+    await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
+    expect(await crawlRow(seed.crawlId)).toMatchObject({
+      status: 'completed',
+      analysis_status: 'completed',
+      partial_reason: '',
+      analyzed_url_count: 1,
+      failed_url_count: 0,
+    });
+  });
+
   it('hands analytics the crawl identity when no page was analyzed', async () => {
     const seed = await running({ analysis_status: 'pending' });
     await reconcileCrawl(db, seed.workspaceId, seed.crawlId);

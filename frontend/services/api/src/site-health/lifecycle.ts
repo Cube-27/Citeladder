@@ -34,6 +34,18 @@ const TERMINAL_TASK = policy.task_queue.terminal;
 const LIFECYCLE_KINDS = ['discover', 'site_setup', 'analyze'];
 const EXCLUDED = failedAs('site_crawl_tasks', ['excluded']);
 const OVERDUE = policy.site_health.page_analysis.acquisition.error_codes.crawl_overdue;
+/**
+ * The row is its page's latest generation of its kind: a rerun's generation
+ * supersedes the earlier ones, so a page is counted once, by its newest
+ * outcome (the `ROW_TASK_ORDER` rule the crawl counters read).
+ */
+const LATEST_GENERATION = sql<boolean>`not exists (
+  select 1 from site_crawl_tasks newer
+  where newer.workspace_id = site_crawl_tasks.workspace_id
+    and newer.crawl_id = site_crawl_tasks.crawl_id
+    and newer.task_kind = site_crawl_tasks.task_kind
+    and newer.url_hash = site_crawl_tasks.url_hash
+    and newer.generation > site_crawl_tasks.generation)`;
 
 type Counts = {
   total: number;
@@ -84,6 +96,7 @@ async function taskSummary(db: Database, crawl: Crawl): Promise<Summary> {
     .where('workspace_id', '=', crawl.workspace_id)
     .where('crawl_id', '=', crawl.id)
     .where('task_kind', 'in', LIFECYCLE_KINDS)
+    .where(LATEST_GENERATION)
     .groupBy('task_kind')
     .execute();
   const kind = (name: string): Counts => rows.find((row) => row.task_kind === name) ?? NONE;
@@ -109,6 +122,7 @@ async function failedUrlCount(db: Database, crawl: Crawl) {
     .where('task_kind', 'in', ['discover', 'analyze'])
     .where('url_hash', '!=', '')
     .where(sql<boolean>`not ${EXCLUDED}`)
+    .where(LATEST_GENERATION)
     .executeTakeFirstOrThrow();
   return row.count;
 }
