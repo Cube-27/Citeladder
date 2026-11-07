@@ -110,6 +110,18 @@ export class AuditScheduler {
       } catch (error) {
         await sql`rollback to savepoint schedule_planning`.execute(trx);
         await sql`release savepoint schedule_planning`.execute(trx);
+        if (error instanceof ApiError && error.isRetryable()) {
+          // A transient refusal (active-launch limit, daily task budget) is not the
+          // owner's to fix: try the same occurrence again without counting a failure.
+          await trx
+            .updateTable('audit_schedules')
+            .set({ ...release, next_run_at: this.retryAt(error, at) })
+            .where('id', '=', schedule.id)
+            .where('workspace_id', '=', claim.workspaceId)
+            .execute();
+          logger.info('scheduled_audit_planning_deferred', { schedule_id: schedule.id });
+          return false;
+        }
         const failures = schedule.failure_count + 1;
         await trx
           .updateTable('audit_schedules')
@@ -129,6 +141,13 @@ export class AuditScheduler {
         return false;
       }
     });
+  }
+  /** When a retryable refusal asks to be tried again: its `Retry-After`, else the failure delay. */
+  private retryAt(error: ApiError, at: Date) {
+    const seconds = Number(error.headers?.['retry-after']);
+    const delay =
+      Number.isFinite(seconds) && seconds > 0 ? seconds : this.settings.failure_retry_seconds;
+    return new Date(at.getTime() + delay * 1000);
   }
   async runOnce(at = this.now(), canAdmit?: () => boolean) {
     if (canAdmit) return this.planUntilBudget(at, canAdmit);

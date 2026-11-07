@@ -116,12 +116,11 @@ lost ownership mid-call record no cost (internal cost only; not planned).
 | due → leased | `claimDueSchedules` | `queue/audit-queue.ts:35-79` | `enabled`, `next_run_at <= at`, lease null or expired, SKIP LOCKED, committed |
 | leased → released | `planClaim` stale | `workers/audit-scheduler.ts:64-74` | lease owner, unexpired; disabled or occurrence moved |
 | leased → advanced | `planClaim` success | `audit-scheduler.ts:75-109` | savepoint; `next_run_at = nextRunAfter`, `enabled = next ≠ null`, `failure_count = 0` |
-| leased → backoff / disabled | `planClaim` error | `audit-scheduler.ts:110-129` | any error: `failure_count + 1`, `enabled = failures < max (5)`, retry in 300 s |
+| leased → deferred | `planClaim` retryable refusal | `audit-scheduler.ts` | `ApiError.isRetryable()` (active-launch limit, daily task budget): `next_run_at = at + Retry-After`; `failure_count`, `enabled`, `last_error` untouched |
+| leased → backoff / disabled | `planClaim` other error | `audit-scheduler.ts` | `failure_count + 1`, `enabled = failures < max (5)`, retry in 300 s |
 | disabled → enabled | Resume / `updateSchedule` | `audits/schedules.ts:98-136` | schedule row lock |
 
-Known invalid: a retryable 429 (active-launch limit, daily budget) counts as a
-failure, so five transient refusals disable the schedule —
-[AU2](plans/state-machine-fixes.md#au-audits).
+Known invalid: none.
 
 ### 2.4 Prompt-run holds and the funded budget
 

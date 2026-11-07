@@ -12,6 +12,7 @@ import { createSchedule, updateSchedule } from '../src/audits/schedules.ts';
 import { scheduleCreate } from '../src/audits/schedule-inputs.ts';
 import { categoryByName, newProduct, addMembership } from '../src/commerce/catalog-store.ts';
 import { record } from '../src/db/json.ts';
+import { billingAccount, grant } from './prompt-fixtures.ts';
 
 const db = testDatabase(),
   fixtures = new VisibilityFixtures(db),
@@ -203,6 +204,77 @@ describe('durable audit occurrence planning', () => {
       .where('id', '=', expired!.id)
       .execute();
     expect(await scheduler.planClaim(expired!, at)).toBe(false);
+  });
+  it('defers an occurrence refused by the active-launch limit without counting a failure', async () => {
+    const t = await auditTenant(db, fixtures),
+      start = new Date(),
+      scope = { workspaceId: t.workspaceId, projectId: t.projectId };
+    const busy = { ...runtime, activeLimit: 1, retrySeconds: 30 };
+    await createAudits(
+      db,
+      t.workspaceId,
+      auditInput.parse({ project_id: t.projectId, prompt_set_id: t.setId, engines: ['chatgpt'] }),
+      {},
+      runtime,
+      start,
+    );
+    const schedule = await createSchedule(
+      db,
+      scope,
+      scheduleCreate.parse({
+        prompt_set_id: t.setId,
+        cadence: 'hourly',
+        engines: ['chatgpt'],
+        next_run_at: start.toISOString(),
+      }),
+    );
+    let at = start;
+    for (let pass = 0; pass < 5; pass++) {
+      const scheduler = new AuditScheduler(db, busy, settings, { now: () => at });
+      expect(await scheduler.runOnce(at)).toBe(0);
+      at = new Date(at.getTime() + 30_000);
+    }
+    expect(
+      await db
+        .selectFrom('audit_schedules')
+        .select(['failure_count', 'enabled', 'last_error', 'lease_owner', 'next_run_at'])
+        .where('id', '=', schedule.id)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({
+      failure_count: 0,
+      enabled: true,
+      last_error: '',
+      lease_owner: null,
+      next_run_at: at,
+    });
+  });
+  it('counts a refusal the owner must act on, such as spent prompt runs', async () => {
+    const t = await auditTenant(db, fixtures),
+      at = new Date(),
+      scope = { workspaceId: t.workspaceId, projectId: t.projectId };
+    await grant(db, await billingAccount(db, t.workspaceId), {
+      key: 'prompt_runs_per_period',
+      value: 2,
+    });
+    const schedule = await createSchedule(
+      db,
+      scope,
+      scheduleCreate.parse({
+        prompt_set_id: t.setId,
+        cadence: 'hourly',
+        engines: ['chatgpt'],
+        next_run_at: at.toISOString(),
+      }),
+    );
+    const scheduler = new AuditScheduler(db, runtime, settings, { now: () => at });
+    expect(await scheduler.runOnce(at)).toBe(0);
+    expect(
+      await db
+        .selectFrom('audit_schedules')
+        .select(['failure_count', 'last_error'])
+        .where('id', '=', schedule.id)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ failure_count: 1, last_error: 'prompt_runs_exhausted' });
   });
   it('rolls back failed admission before recording bounded retry and disablement', async () => {
     const t = await auditTenant(db, fixtures),
