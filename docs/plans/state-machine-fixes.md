@@ -63,7 +63,7 @@ document already states. The table keeps the questions as asked.
 | S02 | Credit holds that never settle | BL1, SI1, BL2 | — | | merged | [#654](https://github.com/Cube-27/Citeladder/pull/654) | Money |
 | S03 | Lease fences: per-claim audit lease, attempt-fenced heartbeats, poll reclaim | Q1, Q2, AU1 | — | | merged | [#656](https://github.com/Cube-27/Citeladder/pull/656) | Money (duplicate paid dispatch) |
 | S04 | Billing webhook, checkout and replay recovery | BL3, BL4, BL5, BL6 | — | | merged | [#655](https://github.com/Cube-27/Citeladder/pull/655) | Money |
-| S05 | Keyword Research settlement, cancel and reconnect | SI2, SI3, SI4 | S02 | | in review | [#657](https://github.com/Cube-27/Citeladder/pull/657) | Money; shares `search-intelligence/` with S02 |
+| S05 | Keyword Research settlement, cancel and reconnect | SI2, SI3, SI4 | S02 | | merged | [#657](https://github.com/Cube-27/Citeladder/pull/657) | Money; shares `search-intelligence/` with S02 |
 | S06 | Audit schedules, repair admission and cost records | AU2, AU3, AU4, AU5 | — | | in progress | | Stuck users, abuse bound, cost |
 | S07 | Agent turn recovery | AG2, AG3, AG4, AG5 | — | | in progress | | Stuck users |
 | S08 | Site Health crawl outcomes and inventory | SH1, SH2, SH3, SH4, SH5 | — | | in progress | | Data correctness |
