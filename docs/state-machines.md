@@ -408,13 +408,9 @@ Dispatch attempts are insert-only, one `outcome` per ordinal (DB
 
 | Machine | States and transitions | Enforced |
 |---|---|---|
-| `integration_oauth_grants.status` | ∅ → `connected` `integrations/oauth.ts:228-248`; **any** → `connected` on reconnect `oauth.ts:207-226` (keeps the old refresh token when the provider returns none); `connected`/`needs_reauth` → `pending_revocation` `grants.ts:19-86`; → `revoked` `grants.ts:137-172` (claim + revision + `pending_revocation`); `connected` → `needs_reauth` `grants.ts:203-221` | App; token rotation fenced by claim id, `token_revision`, `connected` `tokens.ts:53-140`; OAuth state single use `oauth.ts:171-182` |
+| `integration_oauth_grants.status` | ∅ → `connected` `integrations/oauth.ts:228-248`; **any** → `connected` on reconnect `oauth.ts` (keeps the old refresh token when the provider returns none), except `pending_revocation` with a live revocation claim, which refuses `oauth_revocation_in_progress`; `connected`/`needs_reauth` → `pending_revocation` `grants.ts:19-86`; → `revoked` `grants.ts:137-172` (claim + revision + `pending_revocation`); `connected` → `needs_reauth` `grants.ts:203-221` | App; token rotation fenced by claim id, `token_revision`, `connected` `tokens.ts:53-140`; OAuth state single use `oauth.ts:171-182` |
 | `integration_sync_runs` | lane §1; deadline release → `queued`; every write behind `#held`; target re-checked per page and at finish `integration-worker.ts:516-575` | DB `ix_integration_sync_runs_active_window` (partial unique) 0001:4785 |
 | `integration_property_mappings` | one active owner per property | DB 0001:4777 |
-
-Known invalid (depends on Google revoking the client's whole grant): a
-reconnect during an in-flight revocation yields a `connected` grant whose
-tokens the dispatcher revokes — [SI4](plans/state-machine-fixes.md#si-search-intelligence-and-integrations).
 
 ### 6.3 Discovery, Commerce, providers, source pages
 
