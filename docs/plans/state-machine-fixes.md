@@ -57,7 +57,7 @@ are the reviewer's, not decisions.
 
 | PR | Title | Rows (commit order) | Depends on | Flags | Status | PR link | Notes |
 |----|-------|---------------------|-----------|-------|--------|---------|-------|
-| S01 | Credential resets end unexchanged MCP codes; invitation issuer lock | WS1, WS2 | — | | in progress | | Security |
+| S01 | Credential resets end unexchanged MCP codes; invitation issuer lock | WS1, WS2 | — | | merged | [#653](https://github.com/Cube-27/Citeladder/pull/653) | Security |
 | S02 | Credit holds that never settle | BL1, SI1, BL2 | — | | in review | [#654](https://github.com/Cube-27/Citeladder/pull/654) | Money |
 | S03 | Lease fences: per-claim audit lease, attempt-fenced heartbeats, poll reclaim | Q1, Q2, AU1 | — | | in progress | | Money (duplicate paid dispatch) |
 | S04 | Billing webhook, checkout and replay recovery | BL3, BL4, BL5, BL6 | — | | in progress | | Money |
@@ -95,8 +95,8 @@ data impact.
 
 | ID | Row | Depends on | Area | Flags | Status | Commit | Notes |
 |----|----|-----------|------|-------|--------|---------|-------|
-| WS1 | Credential reset, password change and sign-out-everywhere end unexchanged MCP codes; consent rechecks the session under the user lock | — | `mcp/oauth.ts`, `mcp/oauth-routes.ts`, `auth/challenges.ts` | | todo | | CONFIRMED, high (security) |
-| WS2 | Invitation accept reads its issuer under `FOR SHARE` | — | `workspaces/invitations.ts`, `auth/workspace.ts` | | todo | | PLAUSIBLE (race with operator disable), low |
+| WS1 | Credential reset, password change and sign-out-everywhere end unexchanged MCP codes; consent rechecks the session under the user lock | — | `mcp/oauth.ts`, `mcp/oauth-routes.ts`, `auth/challenges.ts` | | done | 0fa36a3 | CONFIRMED, high (security) |
+| WS2 | Invitation accept reads its issuer under `FOR SHARE` | — | `workspaces/invitations.ts`, `auth/workspace.ts` | | done | b121728 | PLAUSIBLE (race with operator disable), low |
 | BL1 | Project deletion waits for an open Keyword Research hold | — | `entitlements/ledger.ts`, `projects/service.ts` | | done | 46b1faa | CONFIRMED, medium (customer credits held forever) |
 | SI1 | A connection or member change at dispatch ends the run, not the task only | — | `search-intelligence/{acquisition-state,executor}.ts` | | done | e9274e2 | CONFIRMED (narrow window), medium-low |
 | BL2 | A failed charged call's settlement is retried before the sweep can charge the fallback | — | `billing/metering.ts` | | done | dc0803e | PLAUSIBLE (settle tx error), low |

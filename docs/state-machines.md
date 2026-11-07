@@ -448,19 +448,12 @@ tokens the dispatcher revokes — [SI4](plans/state-machine-fixes.md#si-search-i
 
 | Machine | States and transitions | Enforced |
 |---|---|---|
-| `workspace_invitations` (implicit `accepted_at`, `revoked_at`, `expires_at`) | none/expired → pending (issue `workspaces/invitations.ts:78-148`); pending → pending new token / revoked (`:151-191`); pending → revoked in bulk when the issuer leaves (`workspaces/service.ts:218-228`); pending → accepted + member (`:194-277`, workspace then invitation `FOR UPDATE`, issuer must hold `manage_members`) | DB one live row per email `uq_workspace_invitation_pending_email` 0001:5221; token unique; role never owner `ck_workspace_invitation_role` 0001:3322 |
+| `workspace_invitations` (implicit `accepted_at`, `revoked_at`, `expires_at`) | none/expired → pending (issue `workspaces/invitations.ts:78-148`); pending → pending new token / revoked (`:151-191`); pending → revoked in bulk when the issuer leaves (`workspaces/service.ts:218-228`); pending → accepted + member (`acceptInvitation`, workspace then invitation `FOR UPDATE`, issuer's `users` row `FOR SHARE`, issuer must be active and hold `manage_members`) | DB one live row per email `uq_workspace_invitation_pending_email` 0001:5221; token unique; role never owner `ck_workspace_invitation_role` 0001:3322 |
 | `workspace_members.role` | create → owner `service.ts:109-126`; non-owner X → Y, removal, leave `:231-283`; owner ↔ admin transfer `:285-326` | DB `ck_workspace_member_role` 0001:3332, `uq_workspace_member_owner` 0001:5177, `uq_workspace_member_owned_user` 0001:5179; never ownerless: App |
 | `auth_challenges` (verification, reset) | request → live `auth/challenges.ts:38-106` (upsert nulls `consumed_at`); live → consumed `:152-245` (user + challenge `FOR UPDATE`, bumps `session_version`, reset revokes MCP grants and API keys), password change `:251-297`, Google claim `auth/oauth.ts:285-306` | DB one per (user, purpose) |
 | Sessions | JWT `ver` = `users.session_version` on every request `auth/session.ts:144`; bumped by reset, password change, sign-out, operator reset/disable | App |
 | `api_keys` | live → revoked (`revoked_at IS NULL`) `api-keys/keys.ts:192-215`; expired by time; every use re-reads key, membership and creator `:248-277` | App |
-| MCP OAuth | request → consumed `mcp/oauth.ts:261-268, 319-323`; code minted `:297-315` → consumed + grant `:340-417` (replayed code revokes the grant); refresh rotation; grant → revoked `:95-128` | App single-use `consumed_at IS NULL FOR UPDATE` |
-
-Known invalid: an unexchanged authorization code survives password reset,
-password change and sign-out-everywhere (only grants are revoked,
-`mcp/oauth.ts:113-128`) and its exchange checks no credential change —
-[WS1](plans/state-machine-fixes.md#ws-workspace-auth-and-prompts). An accept
-racing an operator disabling the issuer reads the issuer unlocked (timing) —
-[WS2](plans/state-machine-fixes.md#ws-workspace-auth-and-prompts).
+| MCP OAuth | request → consumed (`completeConsent`, `mcp/oauth.ts`); code minted under the user row `FOR SHARE` with the consenting session's `session_version` → consumed + grant (`authorizationCodeGrant`; replayed code revokes the grant); refresh rotation; grant → revoked; credential reset, password change and sign-out-everywhere-with-disconnect revoke grants and consume unexchanged codes (`revokeGrantsAfterCredentialReset`) | App single-use `consumed_at IS NULL FOR UPDATE` |
 
 ### 7.2 Public API idempotency (`api_idempotency`)
 
