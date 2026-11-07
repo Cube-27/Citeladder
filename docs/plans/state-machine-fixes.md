@@ -1,8 +1,7 @@
 # State-machine fixes
 
-Status: S01–S04 approved for implementation by the owner on 2026-11-07 (the high-priority PRs that
-need no owner decision). S05–S12 stay pending until the owner has verified them; OQ1–OQ3 were answered
-on 2026-11-07 (B69–B71), so S10 and S11 now wait only on verification and their dependencies. This document is both the plan and the orchestrator's tracker. The work is 12 scoped pull
+Status: S01–S04 merged. S05–S12 approved for implementation by the owner on 2026-11-07, with OQ1–OQ3
+answered the same day (B69–B71). This document is both the plan and the orchestrator's tracker. The work is 12 scoped pull
 requests (S01–S12). Each PR batches a set of rows (the commit-level units, e.g. WS1, BL3), lists the
 PRs it depends on, and carries a status the implementor and orchestrator keep current.
 

@@ -586,14 +586,17 @@ already expired settles the way recovery does, with B58's refund, instead of
 ending charged. Source: owner answer in the state-machine fixes session;
 [state-machine fixes](plans/state-machine-fixes.md) OQ1.
 
-**B70 — Owner, 2026-11-07.** Any refund cancels the subscription; refunds are
-issued manually by an operator. A full refund of an upgrade payment is treated
-like a full refund of the current period's payment (B52): the subscription is
-cancelled at once and the period's grants, the upgrade's included, are
-revoked, so no scheduled upgrade survives to bill the next cycle. Source: owner
-answer in the state-machine fixes session ("if a customer asked for a refund
-the subscription is cancelled … any cancellation request ends the
-subscription"); [state-machine fixes](plans/state-machine-fixes.md) OQ2.
+**B70 — Owner, 2026-11-07.** A refund cancels the subscription, and a
+cancellation is just a cancellation; refunds are issued manually by an
+operator. There is no partial-refund concept, so B52's partial-refund clause
+describes no product case. A refund of an upgrade payment is treated like a
+refund of the current period's payment (B52): the subscription is cancelled at
+once and the period's grants, the upgrade's included, are revoked, so no
+scheduled upgrade survives to bill the next cycle. Source: owner answers in the
+state-machine fixes session ("if a customer asked for a refund the subscription
+is cancelled … any cancellation request ends the subscription"; "there is no
+concept of partial refund for now"); [state-machine
+fixes](plans/state-machine-fixes.md) OQ2.
 
 **B71 — Owner, 2026-11-07.** Money collected for a period the subscription no
 longer grants. (i) A base checkout paid while the abandon sweep cancels it is
