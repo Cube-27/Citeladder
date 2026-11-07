@@ -126,6 +126,21 @@ describe('research guide navigation', () => {
   it('files comparison guides under Compare and every other guide under the blog', () => {
     expect(researchParent('/compare/profound-alternatives').href).toBe('/compare');
     expect(researchParent('/blog/geo-vs-seo').href).toBe('/blog');
+    expect(researchParent('/ai-crawlers/gptbot')).toEqual({
+      label: 'AI crawlers',
+      href: '/ai-crawlers',
+    });
+    expect(researchParent('/research/ai-crawlers-robots-txt-2026').href).toBe('/research');
+  });
+
+  it('links study pages to the study pages they curate, and keeps guides among guides', () => {
+    const crawler = researchArticle('/ai-crawlers/claude-user')!;
+    const studyMore = moreGuides(crawler).map((more) => more.frontmatter.slug);
+    expect(studyMore).toEqual(['/ai-crawlers/claudebot', '/research/ai-crawlers-robots-txt-2026']);
+    for (const slug of moreGuides(researchArticle('/open-source')!).map(
+      (more) => more.frontmatter.slug,
+    ))
+      expect(slug.startsWith('/ai-crawlers/') || slug.startsWith('/research/'), slug).toBe(false);
   });
 
   it('never offers a guide as its own "more guides" link', () => {

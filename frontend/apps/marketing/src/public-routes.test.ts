@@ -22,6 +22,8 @@ describe('public route listings', () => {
     expect(siteLinks.map((link) => link.url).sort()).toEqual([...locations].sort());
     expect(locations).toContain('https://example.com/tools/robots-txt-generator');
     expect(locations).toContain('https://example.com/generative-engine-optimization');
+    expect(locations).toContain('https://example.com/ai-crawlers/gptbot');
+    expect(locations).toContain('https://example.com/research/ai-crawlers-robots-txt-2026');
     for (const link of links) expect(link.title, link.url).not.toBe(link.url);
   });
 
@@ -32,7 +34,7 @@ describe('public route listings', () => {
 
     for (const { path, lastmod } of entries) expect(lastmod, path).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     const dated = new Map(entries.map(({ path, lastmod }) => [path, lastmod!]));
-    for (const index of ['/blog', '/compare', '/tools']) {
+    for (const index of ['/blog', '/compare', '/tools', '/ai-crawlers', '/research']) {
       const children = entries.filter(({ path }) => path.startsWith(`${index}/`));
       expect(children.length, index).toBeGreaterThan(0);
       for (const child of children)

@@ -6,7 +6,8 @@ import { PUBLISHED_PLATFORM } from '@/lib/marketing-content/nav';
 import { PAGES, type PageRecord } from '@/lib/marketing-content/pages';
 import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
 import { FREE_TOOLS } from '@/lib/marketing-content/tools';
-import { RESEARCH_ARTICLES } from './research-articles';
+import { STUDY_INDEXES } from '@/lib/marketing-content/studies/indexes';
+import { RESEARCH_ARTICLES, STUDY_PAGES, studyPagesUnder } from './research-articles';
 
 type ChangeFrequency = 'monthly' | 'weekly' | 'yearly';
 
@@ -93,6 +94,21 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
       0.5,
       competitor.updated,
     ),
+  ),
+  ...Object.values(STUDY_INDEXES).map((index) =>
+    page(
+      index.path,
+      index.title,
+      'monthly',
+      0.7,
+      latest([
+        index.updated,
+        ...studyPagesUnder(`${index.path}/`).map(({ frontmatter }) => frontmatter.reviewed_at),
+      ]),
+    ),
+  ),
+  ...STUDY_PAGES.map(({ frontmatter }) =>
+    page(frontmatter.slug, frontmatter.title, 'monthly', 0.6, frontmatter.reviewed_at),
   ),
   page('/tools', 'Free tools', 'monthly', 0.8, latest(FREE_TOOLS.map((tool) => tool.updated))),
   ...FREE_TOOLS.map((tool) =>
