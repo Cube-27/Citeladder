@@ -72,7 +72,7 @@ function ProgressCaption({
         {label}
       </span>
       {shown ? (
-        <span className="text-ink-secondary text-data font-mono whitespace-nowrap">{shown}</span>
+        <span className="text-ink-secondary text-caption font-mono whitespace-nowrap">{shown}</span>
       ) : null}
     </div>
   );
