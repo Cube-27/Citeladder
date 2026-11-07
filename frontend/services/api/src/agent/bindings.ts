@@ -41,7 +41,7 @@ export async function createAgentBindings(db: Database, env: SettingSource = pro
     models,
     settings,
     outputs: new AgentOutputs(db),
-    queue: new AgentQueue(db, settings.executionTimeoutSeconds + settings.leaseMarginSeconds),
+    queue: new AgentQueue(db, settings.leaseSeconds),
   };
 }
 const bindings = new WeakMap<Database, ReturnType<typeof createAgentBindings>>();

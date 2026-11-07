@@ -37,6 +37,8 @@ import { readAgentContext } from '../src/agent/context-adapter.ts';
 import { runAgentOnce } from '../src/agent/worker.ts';
 import { loadSkillCatalog } from '../src/agent/skills.ts';
 import { agentSettings } from '../src/agent/config.ts';
+import { createAgentBindings } from '../src/agent/bindings.ts';
+import { AgentWorker } from '../src/workers/agent-worker.ts';
 
 /** The tool results a request returned to the model, in call order. */
 function toolResults(sent: ModelRequest) {
@@ -807,6 +809,91 @@ describe('Agent runtime on PostgreSQL', () => {
       status: 'failed',
       error_code: 'interrupted',
     });
+  });
+  it('ends a turn whose heartbeat gives up as interrupted at once, refunding its calls', async () => {
+    const scope = await fixtures.scope();
+    const queued = await fixtures
+      .store()
+      .enqueue(scope, { key: randomUUID(), message: 'Question' });
+    const queue = new AgentQueue(db, 60);
+    const refunded: string[] = [];
+    const models = new ModelCalls(db, {
+      ...zeroFunding,
+      refund: async (_trx, run) => {
+        refunded.push(run.id);
+      },
+    });
+    let calling!: () => void;
+    const called = new Promise<void>((resolve) => {
+      calling = resolve;
+    });
+    const model = {
+      ...scripted([]),
+      converse: (_request: ModelRequest, signal?: AbortSignal) =>
+        new Promise<never>((_resolve, reject) => {
+          calling();
+          signal?.addEventListener('abort', () => reject(signal.reason), { once: true });
+        }),
+    };
+    // The database stays reachable for the turn; only its lease renewals fail.
+    const heartbeat = vi.spyOn(queue, 'heartbeat').mockRejectedValue(new Error('renewal failed'));
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    try {
+      const turn = runAgentOnce(queue, fixtures.runtime(scope, model, { models }), 'stalled', [
+        scope.workspaceId,
+      ]);
+      await called;
+      await vi.advanceTimersByTimeAsync(agentPolicy.heartbeat_seconds * 1000 * 2);
+      expect(await turn).toBe(true);
+    } finally {
+      vi.useRealTimers();
+      heartbeat.mockRestore();
+    }
+    expect(await fixtures.run(queued.id)).toMatchObject({
+      status: 'failed',
+      error_code: 'interrupted',
+      lease_owner: null,
+    });
+    expect(refunded).toEqual([queued.id]);
+    expect((await readChat(db, scope, queued.chat_id)).messages.at(-1)?.content).toBe(
+      recoveryReply('interrupted'),
+    );
+  });
+  it('lets the lane end a turn whose process died once its minute-long lease lapses', async () => {
+    const scope = await fixtures.scope();
+    const bindings = await createAgentBindings(db, {});
+    const refunded: string[] = [];
+    bindings.models = new ModelCalls(db, {
+      ...zeroFunding,
+      refund: async (_trx, run) => {
+        refunded.push(run.id);
+      },
+    });
+    const worker = new AgentWorker(db, bindings, scope.workspaceId);
+    const queued = await fixtures
+      .store()
+      .enqueue(scope, { key: randomUUID(), message: 'Question' });
+    const before = Date.now();
+    const claimed = await bindings.queue.claim('crashed', [scope.workspaceId]);
+    await bindings.queue.start(claimed!, 'crashed');
+    // The instance stops here: no heartbeat, no terminal write.
+    const { lease_expires_at } = await fixtures.run(queued.id);
+    const due = await worker.nextDue();
+    expect(due?.getTime()).toBe(new Date(lease_expires_at!).getTime());
+    expect(due!.getTime() - before).toBeLessThanOrEqual(61_000);
+    expect(await worker.runOnce()).toBe(0);
+    await db
+      .updateTable('agent_runs')
+      .set({ lease_expires_at: new Date(Date.now() - 1000) })
+      .where('id', '=', queued.id)
+      .execute();
+    expect(await worker.runOnce()).toBe(1);
+    expect(await fixtures.run(queued.id)).toMatchObject({
+      status: 'failed',
+      error_code: 'interrupted',
+    });
+    expect(refunded).toEqual([queued.id]);
+    expect(await worker.nextDue()).toBeNull();
   });
   it('contains start failure without dispatching the runtime', async () => {
     const scope = await fixtures.scope();

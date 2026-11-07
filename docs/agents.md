@@ -482,11 +482,17 @@ lives in the generation configuration.
 ## Worker and funding
 
 The browser's run request claims its run from the shared PostgreSQL queue with a
-lease and a heartbeat. Creating a chat does not start the runner job. The
+lease of `lease_seconds` (60 s in the model gateway configuration, three
+20-second heartbeats) that the heartbeat renews. Creating a chat does not start
+the runner job. The
 runner's [agent lane](../frontend/services/api/src/workers/agent-worker.ts) never
 executes a turn: it ends as `interrupted` a turn whose lease expired or that no
 stream claimed within `unclaimed_grace_seconds`, and settles cancelled turns'
-outstanding model attempts. Before each model call the turn
+outstanding model attempts. Its next-due time includes held turns' lease
+expiry, so a draining runner ends a turn whose instance died within about a
+minute. A turn whose own heartbeat gives up ends as `interrupted` in its
+request at once, unless recovery or another owner already took the lease.
+Before each model call the turn
 rechecks lease ownership, cancellation, the member's run permission, the
 capability and the admitted platform model,
 then [commits the dispatch](../frontend/services/api/src/agent/model-calls.ts)
