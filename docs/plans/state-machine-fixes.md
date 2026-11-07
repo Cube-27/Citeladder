@@ -1,7 +1,8 @@
 # State-machine fixes
 
-Status: proposed (2026-11-07); not yet approved for implementation. Three PRs wait on owner answers
-(OQ1–OQ3). This document is both the plan and the orchestrator's tracker. The work is 12 scoped pull
+Status: S01–S04 approved for implementation by the owner on 2026-11-07 (the high-priority PRs that
+need no owner decision). S05–S12 stay pending until the owner has verified them; S10 and S11 also wait
+on owner answers (OQ2, OQ3, OQ1). This document is both the plan and the orchestrator's tracker. The work is 12 scoped pull
 requests (S01–S12). Each PR batches a set of rows (the commit-level units, e.g. WS1, BL3), lists the
 PRs it depends on, and carries a status the implementor and orchestrator keep current.
 
@@ -56,10 +57,10 @@ are the reviewer's, not decisions.
 
 | PR | Title | Rows (commit order) | Depends on | Flags | Status | PR link | Notes |
 |----|-------|---------------------|-----------|-------|--------|---------|-------|
-| S01 | Credential resets end unexchanged MCP codes; invitation issuer lock | WS1, WS2 | — | | todo | | Security |
-| S02 | Credit holds that never settle | BL1, SI1, BL2 | — | | todo | | Money |
-| S03 | Lease fences: per-claim audit lease, attempt-fenced heartbeats, poll reclaim | Q1, Q2, AU1 | — | | todo | | Money (duplicate paid dispatch) |
-| S04 | Billing webhook, checkout and replay recovery | BL3, BL4, BL5, BL6 | — | | todo | | Money |
+| S01 | Credential resets end unexchanged MCP codes; invitation issuer lock | WS1, WS2 | — | | in progress | | Security |
+| S02 | Credit holds that never settle | BL1, SI1, BL2 | — | | in progress | | Money |
+| S03 | Lease fences: per-claim audit lease, attempt-fenced heartbeats, poll reclaim | Q1, Q2, AU1 | — | | in progress | | Money (duplicate paid dispatch) |
+| S04 | Billing webhook, checkout and replay recovery | BL3, BL4, BL5, BL6 | — | | in progress | | Money |
 | S05 | Keyword Research settlement, cancel and reconnect | SI2, SI3, SI4 | S02 | | todo | | Money; shares `search-intelligence/` with S02 |
 | S06 | Audit schedules, repair admission and cost records | AU2, AU3, AU4, AU5 | — | | todo | | Stuck users, abuse bound, cost |
 | S07 | Agent turn recovery | AG2, AG3, AG4, AG5 | — | | todo | | Stuck users |
