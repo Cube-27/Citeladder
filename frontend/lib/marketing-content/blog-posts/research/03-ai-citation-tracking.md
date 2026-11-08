@@ -1,20 +1,26 @@
 ---
 title: 'AI Citation Tracking: How to Track and Analyse Citations in ChatGPT, Gemini and Claude'
 slug: '/ai-citation-tracking'
-meta_title: 'AI Citation Tracking & Tracker Guide: ChatGPT, Gemini, Claude'
-meta_description: 'How AI citation tracking works, what a citation tracker should measure, and what 249 real citations from ChatGPT and Claude show about competitor sources.'
+meta_title: 'AI Citation Tracking & Monitoring for ChatGPT'
+meta_description: 'How to track, measure and monitor AI citations in ChatGPT, Gemini, Claude and AI Overviews, with a tracker checklist and data from 249 real citations.'
 primary_keyword: 'AI citation tracking'
 secondary_keywords:
   [
     'AI citation tracker',
     'AI citation analysis',
-    'ChatGPT citation tracking',
     'track AI citations',
+    'ChatGPT citation tracking',
     'AI citation monitoring',
+    'ChatGPT citation tracker',
+    'ChatGPT citation monitoring',
+    'how to measure AI citations',
+    'AI Overview citation tracking',
+    'AI citations vs brand mentions',
+    'citation rate',
   ]
 search_intent: 'Understand, implement and choose tools for brand and website citation monitoring'
 content_type: 'product-led educational pillar'
-reviewed_at: '2026-10-29'
+reviewed_at: '2026-11-08'
 author: 'Abhineet Jain'
 related_guides: ['/blog/how-accurate-are-ai-citations', '/blog/can-chatgpt-find-citations']
 image: '/blog/editorial/article-citations.png'
@@ -29,22 +35,15 @@ product:
 
 **AI citation tracking is recording which web pages an AI assistant links to as sources when it answers a defined set of questions.** For each answer you save the cited URL, domain, engine, question and time, then compare which sources recur, which belong to you or a competitor, and which disappear. An AI citation tracker automates that collection across engines and repeats it on a schedule.
 
-This guide covers websites and brands cited in AI answers. It is not about counting how many academic papers cite a researcher. If you need help finding scholarly references, start with [Can ChatGPT find citations?](/blog/can-chatgpt-find-citations).
-
-An AI citation is a visible or structured reference connecting an answer to an external source: an inline link, a numbered source marker, a sources panel or citation metadata returned by an API. The important part is the relationship: **which answer or claim was associated with which source?** A domain list without the answer behind it cannot tell you why the page appeared.
+Here, a citation means a website or brand cited in an AI answer, not an academic paper citing a researcher. If you need help finding scholarly references, start with [Can ChatGPT find citations?](/blog/can-chatgpt-find-citations).
 
 ## Citations vs mentions vs recommendations
 
-Imagine an answer that says, "ExampleStock is an option for retailers with several warehouses," and links to an independent review. That single answer contains:
+Imagine an answer that says, "ExampleStock is an option for retailers with several warehouses," and links to an independent review. That one answer holds a mention of ExampleStock, a recommendation if the surrounding answer suggests it for the use case, and a citation to the review publisher. It holds no citation to ExampleStock's own website.
 
-- A **mention** of ExampleStock.
-- A **recommendation**, if the surrounding answer suggests it for the use case.
-- A **citation** to the review publisher.
-- **No citation** to ExampleStock's own website.
+The reverse also happens: an answer can link to a company's documentation without naming the company in its prose. In a [Semrush study with Growth Memo](https://www.semrush.com/blog/the-ghost-citations-study/) (vendor data, 3,981 domain appearances, 115 prompts, four engines, 9 June 2026), 61.7% of appearances were a link without the brand name, 25.1% a name without a link, and 13.2% both.[\[2\]](#source-2) For a step-by-step method focused on mentions, see [how to track brand mentions in ChatGPT](/track-brand-mentions-chatgpt).
 
-The reverse also happens: an answer can link to a company's documentation without naming the company in its prose. Neither case should be forced into one generic "visibility" count, because they lead to different work. For a step-by-step method focused on mentions, see [how to track brand mentions in ChatGPT](/track-brand-mentions-chatgpt).
-
-Not every URL attached to an answer is a citation either. Keep these evidence types apart:[\[1\]](#source-1)[\[2\]](#source-2)[\[3\]](#source-3)
+Keep these evidence types apart:
 
 | Evidence type                 | What to store                                        | What it does not prove                               |
 | ----------------------------- | ---------------------------------------------------- | ---------------------------------------------------- |
@@ -55,26 +54,25 @@ Not every URL attached to an answer is a citation either. Keep these evidence ty
 | Publisher-reported appearance | Surface, reporting period and measurement definition | That a particular manually tested prompt produced it |
 | Human referral                | Landing page and attribution context                 | That every cited appearance generated a visit        |
 
-The gap between "retrieved" and "cited" is large in practice, as the data below shows.
+### Sources consulted vs sources cited
+
+A retrieved source is a page the engine consulted; a cited source is one the answer shows the reader. OpenAI's API lists every consulted URL in a `sources` field, often more than it cites ([OpenAI](https://developers.openai.com/api/docs/guides/tools-web-search)).[\[3\]](#source-3)
 
 ## How each AI engine shows citations
 
-Engines present sources differently, so a tracker has to capture each one in its own terms rather than force them into one shape.
+- **ChatGPT (with search):** OpenAI's web search tool adds inline citations by default. Through the API, each `url_citation` annotation holds the URL, title and the start and end position of the answer text it supports ([OpenAI](https://developers.openai.com/api/docs/guides/tools-web-search)).[\[3\]](#source-3)
+- **Gemini:** the Gemini app can show sources, inline or under a response ([Gemini Apps Help](https://support.google.com/gemini/answer/14143489?hl=en)).[\[4\]](#source-4) Through the API, Gemini returns inline `url_citation` annotations tying a span of text to a source URL ([Gemini API](https://aistudio.google.com/docs/google-search)).[\[5\]](#source-5)
+- **Claude (with web search):** citations are always on, each with the source URL, page title and a cited text snippet (up to 150 characters) ([Anthropic](https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool)).[\[6\]](#source-6)
+- **Google AI Overviews:** a feature of Google's search results that links to the pages it draws on ([Search Console Help](https://support.google.com/webmasters/answer/16984139?hl=en)).[\[7\]](#source-7)
 
-- **ChatGPT (with search):** shows inline source links and a sources list. Through the API, OpenAI returns URL citation annotations that tie a link to a span of answer text.[\[2\]](#source-2)
-- **Gemini:** the Gemini app can show sources and offers a "double-check" feature that adds verification links after the answer.[\[1\]](#source-1) Those post-answer links are not the same evidence as sources used to write the answer. The Gemini API returns grounding metadata linking text segments to sources.[\[3\]](#source-3)
-- **Claude (with web search):** returns cited passages with their source URLs when web search is used.[\[4\]](#source-4)
-- **Google AI Overviews:** show link cards beside or below the overview. They are a search results feature rather than a chat answer, so results vary with location, device and query wording.
-
-Two practical consequences. First, API evidence is not guaranteed to match the consumer app a person sees, so label which surface every observation came from. Second, the same question on two engines is two separate measurements, not one measurement with noise: in our data the engines barely cited the same pages at all.
+An API response may differ from the consumer app a person uses, so label the surface of every observation. And the same question asked on two engines gives two separate measurements: ChatGPT and Claude shared only 6 of 86 cited domains in our data (CiteLadder workspace data).[\[1\]](#source-1)
 
 ## What an AI citation tracker should measure
-
-Define each unit before you calculate it. These metrics answer different questions and are not interchangeable.
 
 | Metric                      | Definition                                                           | What it tells you                                 |
 | --------------------------- | -------------------------------------------------------------------- | ------------------------------------------------- |
 | Answer citation rate        | Share of valid answers citing the target domain or URL at least once | How often you are a source at all                 |
+| Source citation rate        | Citations of a source ÷ answers in which that source was retrieved   | How often a page the engine read gets credited    |
 | Citation occurrences        | Citation instances under a documented counting rule                  | Volume, including repeats within an answer        |
 | Citation share              | Target citations ÷ all citations in a stated comparison universe     | Your position against everyone else being cited   |
 | Competitor citation share   | Citations to named competitors' own sites ÷ all citations            | How much of the evidence competitors supply       |
@@ -83,13 +81,13 @@ Define each unit before you calculate it. These metrics answer different questio
 | URL vs domain concentration | How many distinct URLs and domains carry most citations              | Whether a few pages or a long tail dominate       |
 | Change over time            | New, lost and changed citations between comparable runs              | Movement worth investigating, not proof of cause  |
 
-State the denominator. A share measured among three chosen competitors cannot be described as a share of all AI citations. For a worked denominator example, see [How to check AI visibility](/blog/verify-improve-ai-search-visibility).
+[CiteLadder's documentation](https://docs.citeladder.com/sources/) defines citation rate per source, dividing by the answers in which the page was retrieved.[\[8\]](#source-8)
 
-Track both domains and individual URLs. Domain analysis shows which publishers recur; URL analysis shows which specific pages matter. A frequently cited publisher might owe all its citations to one tutorial or definition page, which changes what you would do about it.
+State the denominator: a share measured among three chosen competitors is not a share of all AI citations.
 
 ## What 249 real citations show: one tracked brand, two engines
 
-To ground this guide, we looked at an anonymised CiteLadder workspace: one business tracked on 20 non-branded buyer questions, each asked once to ChatGPT and once to Claude, both with web search, on 29 October 2026. That produced 40 answers and 249 citations. It is a single brand on a single day, so read it as an illustration of what a tracker surfaces, not as a benchmark of either engine.
+We looked at an anonymised CiteLadder workspace: one business tracked on 20 non-branded buyer questions, each asked once to ChatGPT and once to Claude, both with web search, on 29 October 2026. That produced 40 answers and 249 citations. It is a single brand on a single day, so read it as an illustration of what a tracker surfaces, not as a benchmark of either engine (CiteLadder workspace data).[\[1\]](#source-1)
 
 | Measure                                   | ChatGPT   | Claude    |
 | ----------------------------------------- | --------- | --------- |
@@ -103,31 +101,27 @@ To ground this guide, we looked at an anonymised CiteLadder workspace: one busin
 | …of which also cited the brand's site     | 7         | 0         |
 | Retrieved sources that were never cited   | about 84% | about 43% |
 
-Five patterns stand out.
+Note: these are CiteLadder's own workspace figures. "Citations per answer" divides by all 20 answers per engine, including the two Claude answers with no citations.
 
-**1. The two engines cited almost entirely different sources.** Of 86 domains cited overall, only 6 appeared in both engines' answers. At URL level the overlap was 3 pages. Tracking one engine and assuming the other behaves the same would have missed most of the source landscape.
+**1. The two engines cited almost entirely different sources.** Of 86 domains cited overall, only 6 appeared in both engines' answers. At URL level the overlap was 3 pages.
 
-**2. Competitors supplied a third or more of the evidence.** Named competitors' own websites accounted for 42% of ChatGPT's citations and 34% of Claude's. In this category, competitors' pages were the evidence the engines leaned on to answer neutral buyer questions.
+**2. Competitors supplied a third or more of the evidence.** Named competitors' own websites accounted for 42% of ChatGPT's citations and 34% of Claude's.
 
-**3. Being mentioned is not being cited.** Claude named the brand in 6 of 20 answers but never once linked to its site; those answers relied on other sources to describe it. ChatGPT cited the brand's site in 7 of the 8 answers that named it. The same brand, on the same questions, had a citation problem on one engine and not the other.
+**3. Being mentioned is not being cited.** Claude named the brand in 6 of 20 answers but never once linked to its site. ChatGPT cited the brand's site in 7 of the 8 answers that named it. On the same questions, the same brand had a citation problem on Claude and not on ChatGPT.
 
 **4. When the brand's own site was cited, it was cited early.** Its 9 ChatGPT citations sat, on average, around third in the answer's source order. Position is worth tracking alongside frequency: a primary source and a footnote are different outcomes.
 
-**5. A few domains carried a large share of citations, then a long tail.** The top five domains received 43% of all citations, while 52 of the 86 domains were cited exactly once. The concentrated head is where outreach or content comparison pays off; single citations are mostly noise until they recur.
-
-The retrieved-versus-cited gap matters too. ChatGPT looked at far more pages than it cited, so "the engine read your page" and "the engine cited your page" are separate questions, and only the second is visible to a reader.
+**5. A few domains carried a large share of citations, then a long tail.** The top five domains received 43% of all citations, while 52 of the 86 domains were cited exactly once. Outreach or content comparison belongs on the concentrated head; single citations are mostly noise until they recur.
 
 ## How to track AI citations manually
 
-You can run a small version of this by hand. It is a good way to learn what the evidence looks like before buying a tool.
-
 ### 1. Start with a stable question set
 
-Choose questions that matter for a particular product, audience and market. Record whether each is informational, commercial, comparative or branded. Prefer short buyer-style questions a real customer would ask, and include questions where a reader needs evidence to make a decision, not only "best software" lists.
+Choose questions that matter for a particular product, audience and market. Record whether each is informational, commercial, comparative or branded.
 
 ### 2. Save the original answer before opening links
 
-Keep the full answer and its visible source presentation. Record the engine, mode, time and exact question. If you later ask the assistant to add citations, save that as a separate observation; it changed the task. Avoid capturing private account details in screenshots, and use supported access methods for any automation.
+Keep the full answer and its visible source presentation. Record the engine, mode, time and exact question.
 
 ### 3. Capture raw URLs and a normalised URL
 
@@ -135,57 +129,56 @@ Keep the original citation URL unchanged. In a separate field, record the resolv
 
 ### 4. Classify source ownership
 
-Assign each domain to a maintained category: owned by you, owned by a named competitor, independent editorial or community source, marketplace or directory, or unknown. Do not infer ownership only from a familiar name in the hostname; check acquisitions, hosted subdomains and partner-operated sites.
+Assign each domain to a maintained category: owned by you, owned by a named competitor, independent editorial or community source, marketplace or directory, or unknown.
 
 ### 5. Verify the sources that affect a decision
 
-Check whether the URL opens, whether it is the intended page, and whether the relevant passage supports the associated claim. A working link is only an availability check. Mark a source "unverifiable" when access fails; a paywall or bot block does not prove that the citation is fabricated.
+Check whether the URL opens, whether it is the intended page, and whether the relevant passage supports the associated claim. Mark a source "unverifiable" when access fails; a paywall or bot block does not prove that the citation is fabricated.
 
 ## Why manual tracking breaks down
 
-The method above is sound but does not scale.
-
-- **Answers vary between runs.** The same question can return different sources minutes apart. One observation per question is a sample, not a measurement; you need repeated runs before calling a citation gained or lost.
-- **Engines and conditions multiply the work.** Twenty questions across four surfaces is 80 answers per run. At the citation density above, that is several hundred URLs to record, normalise and classify every time.
+- **Answers vary between runs.** Over 17 weekly snapshots to April 2026 in the [SISTRIX study](https://www.sistrix.com/blog/ai-citation-drift-how-stable-are-sources-in-ai-search-results/), 56% of domains cited in Google AI Mode were new each week, 74% in ChatGPT Search, while 53% of AI Overview prompts kept identical sources.[\[9\]](#source-9) A single observation per question cannot show that a citation was gained or lost; you need repeated runs for that.
 - **Location, language and session state change answers.** Logged-in history, country and device all influence results, so you have to hold them constant and record them.
-- **Ownership mapping decays.** Competitors launch subdomains, publishers are acquired and pages redirect. A spreadsheet's domain list goes stale quickly.
 
-Once you track more than a handful of questions on more than one engine, the bottleneck becomes consistent collection, and that is the job of an AI citation tracker.
+Once you track more than a handful of questions on more than one engine, the bottleneck is collecting answers consistently, which is the job of an AI citation tracker.
+
+### What first-party analytics can and cannot show
+
+- **Google Search Console:** the [generative AI performance report](https://support.google.com/webmasters/answer/16984139?hl=en), open to all sites since 31 August 2026, shows impressions in AI Overviews and AI Mode by page, country, device and date, but not the prompt or answer.[\[7\]](#source-7)
+- **Google Analytics 4:** the default [AI Assistant channel](https://support.google.com/analytics/answer/9756891?hl=en) groups visits referred by recognised assistants such as ChatGPT, Gemini and Copilot. It excludes AI Overviews and AI Mode.[\[10\]](#source-10)
+
+CiteLadder's [AI referral analytics](/platform/ai-referral-analytics) shows the AI visits your analytics can identify.[\[11\]](#source-11)
 
 ## How to choose an AI citation tracker
 
-Ask for an export before judging a dashboard. A tracker is only as useful as the evidence it lets you inspect. Check:
+Ask for an export before you judge a dashboard, since a tracker is only as useful as the evidence it lets you inspect. Check:
 
-1. **Engine coverage:** which engines and surfaces, and whether each one is API-based or a consumer-app capture.
+1. **Engine coverage and collection method:** which engines and surfaces, and whether each one is API-based or a consumer-app capture.
 2. **Raw answer retention:** can you open the exact answer behind every number?
 3. **Citation vs retrieval vs mention:** does it keep these separate, or blend them into one score?
 4. **URL handling:** does it keep the raw URL alongside the normalised and canonical one?
 5. **Ownership and competitors:** can you define competitors and correct ownership when it is wrong?
-6. **Repetition and variance:** how many runs per question, and does it show stability rather than a single snapshot?
+6. **Repetition and variance:** how many runs per question?
 7. **Location and language controls:** can you fix the market you care about?
-8. **Unknowns preserved:** does it show errors, missing metadata and unknown ownership, or quietly fill gaps with assumptions?
+8. **Unknowns preserved:** does it show errors, missing metadata and unknown ownership?
 9. **Export and API access:** can you take the records elsewhere?
-10. **Pricing model:** is cost driven by prompts, engines, runs or seats, and what does your real workload cost?
+10. **Pricing model:** is cost driven by prompts, engines, runs or seats?
 
-Several AI visibility platforms include citation reporting, including OtterlyAI, Peec AI, Ahrefs Brand Radar, Semrush AI Visibility, Scrunch, Profound and CiteLadder. They differ most on points 2, 3 and 10. We compare them, with pricing caveats, in [the best AI visibility platforms](/best-ai-visibility-platforms).
+We compare platforms, with pricing caveats, in [our AI visibility platforms comparison](/best-ai-visibility-platforms).
 
 ## AI citation analysis: from data to diagnosis
 
-Collecting citations is half the job. Analysis turns them into a decision.
+### Find citation gaps
 
-**Find citation gaps.** Run the same unbranded questions for every brand and list the questions where a competitor's site is cited and yours is not. Then read the cited competitor page: is it a comparison, a pricing page, documentation, a definition? That tells you what kind of evidence the engine wanted.
+Run the same unbranded questions for every brand and list those where a competitor's site is cited and yours is not. Then read the cited page: a comparison, pricing page, documentation or definition tells you what evidence the engine wanted.
 
-**Profile the source mix.** Group citations by type: your own pages, competitors' pages, independent reviews and editorial, community and forum content, directories and marketplaces. A category dominated by competitor pages calls for different work than one dominated by review sites.
+### Interpret change carefully
 
-**Separate mention gaps from citation gaps.** If an engine names you but cites others, as Claude did in the data above, inspect which pages it relied on to describe you, and whether your own pages state those facts clearly.
-
-**Read before you label.** A competitor citation is not automatically a win for them; a source might be cited to explain a limitation or why an option does not fit.
-
-**Interpret change carefully.** Keep a change log of new, lost and changed citations, then check the obvious explanations first: did the question set or engine configuration change, did a URL redirect or break, did the source content change, or did the answer simply vary? Treat a single disappearance as an observation and act on repeated, comparable ones. Avoid claiming that a content edit caused a change without a suitable study design.
+Keep a change log of new, lost and changed citations, then check the obvious explanations first: did the question set or engine configuration change, did a URL redirect or break, did the source content change, or did the answer simply vary? Some decay is normal: in [Profound's study of 883,000 pages](https://www.tryprofound.com/blog/the-half-life-of-an-ai-citation-is-11-days) on seven engines (vendor data, 12 months to September 2026, published 30 September 2026), the median page's citation share halved within 11 days after peaking.[\[12\]](#source-12) Avoid claiming that a content edit caused a change without a suitable study design.
 
 ## Turn citation analysis into action
 
-Use each pattern to choose a bounded next step:
+The [action playbook for winning AI citations](/blog/action-playbook-winning-ai-citations) covers pages that cite competitors and not you.
 
 | Pattern                                | Sensible next action                                                      |
 | -------------------------------------- | ------------------------------------------------------------------------- |
@@ -197,53 +190,62 @@ Use each pattern to choose a bounded next step:
 | Broken owned URL is cited              | Repair the destination or redirect it to the closest equivalent           |
 | Cited on one engine, absent on another | Compare the two engines' sources for the same question before acting      |
 
-Decide whether each task belongs to content, web engineering, product documentation or communications before starting work.
-
 ## Track AI citations with CiteLadder
 
-CiteLadder runs your buyer questions on a schedule across ChatGPT, Gemini, Claude and Google AI Overviews and keeps every answer with its sources.[\[5\]](#source-5)
+CiteLadder sends one set of buyer questions to ChatGPT, Gemini, Claude and Google AI Overviews and stores each answer with the sources it cited ([AI Visibility](/platform/ai-visibility)).[\[13\]](#source-13) Which engines run for you depends on your plan and project setup, and every result shows the engine and collection method behind it ([FAQ](/faq)).[\[14\]](#source-14) The [free trial](/pricing) covers ChatGPT only: one project, 20 prompts, seven days.[\[15\]](#source-15)
 
-1. **Set up questions and competitors.** Generate buyer-style questions for your market and name the competitors to compare against.
-2. **Collect answers.** Each run stores the raw answer, its citations and, where the engine exposes them, the sources it retrieved.
-3. **Inspect citations.** Cited Sources groups cited domains and URLs by ownership, so you can see competitor share, mention-without-citation and new or lost sources, then open the exact answer behind any number.
-4. **Act.** Move from a source pattern to the page or publisher worth investigating.
-
-[See the broader GEO workflow](/generative-engine-optimization) or [compare AI visibility tools](/best-ai-visibility-platforms).
+1. **Collect answers.** Because the same prompts run on a schedule, you can monitor sources over time and compare a run with an earlier baseline to see which sources were gained, lost or cited more or less often ([AI Visibility](/platform/ai-visibility), [API reference](https://docs.citeladder.com/api/reference/)).[\[13\]](#source-13)[\[16\]](#source-16)
+2. **Inspect citations.** [Cited Sources](/platform/cited-sources) has domain and URL views, classifies each source and reports mentions and citations separately.[\[17\]](#source-17) The API's prompt metrics split each prompt's answers into mentioned and cited, mentioned only, cited only, or neither, so mention-without-citation can be counted per prompt ([API reference](https://docs.citeladder.com/api/reference/)).[\[16\]](#source-16)
+3. **Act.** When a list, comparison, directory or review page names competitors but not you, CiteLadder opens an Action with the quoted passage, and the Agent can draft an outreach brief; CiteLadder never sends it for you ([Cited Sources](/platform/cited-sources)).[\[17\]](#source-17)
 
 ## Frequently asked questions
 
-### Can I track every citation my site receives in AI answers?
-
-No. A question panel shows the observations you collected, and publisher reports cover their own surfaces and rules. Neither is a complete census across all users and engines.
-
 ### How often should I check AI citations?
 
-Weekly is a sensible default for most teams, with several answers per question per run so you can tell real change from normal variation. Check more often only around a launch or a major content change.
+Weekly is a sensible default for most teams, with several answers per question per run so you can tell real change from normal variation, and each rate reported with its answer count.
 
 ### Do AI citations drive traffic?
 
-Some do, but far fewer people click a source than read the answer. Measure AI referral visits separately in your analytics rather than assuming every citation produces a visit.
+Some do, but far fewer people click a source than read the answer: in [Pew Research Center's March 2025 data on 900 US adults' browsing](https://www.pewresearch.org/short-reads/2025/07/22/google-users-are-less-likely-to-click-on-links-when-an-ai-summary-appears-in-the-results/), people who saw a Google AI summary followed one of its links on just 1% of those visits. Measure AI referral visits separately, for example in GA4's [AI Assistant channel](https://support.google.com/analytics/answer/9756891?hl=en).
 
 ### Is there a free AI citation tracker?
 
-You can track citations for free by hand using the method in this guide. Most automated trackers are paid because each run calls AI engines that charge per request; many offer trials.
+You can track citations for free by hand using the method in this guide. CiteLadder's [free trial](/pricing) automates collection for seven days on ChatGPT only, with 20 prompts.
 
 ### Can I track Google AI Overview citations?
 
-Yes. AI Overviews show source links, but results depend heavily on location, device and query wording, so fix those conditions and record them with every observation.
+Yes. AI Overviews show source links, and Search Console's [generative AI performance report](https://support.google.com/webmasters/answer/16984139?hl=en) counts your impressions in them. Fix location and search conditions, and record them with every observation.
+
+### What is a good citation rate?
+
+There is no universal benchmark, so compare your answer-level rate with your own baseline and with competitors on the same questions, using the same definition.
+
+### Why isn't my site cited in AI answers?
+
+Often the engine cannot read the page, or the page does not answer the question directly. Make sure robots.txt lets in search crawlers and that content loads without JavaScript ([Peec AI](https://docs.peec.ai/understanding-sources)).
 
 ### Is an AI citation a backlink?
 
 It is a source link in an AI experience. Do not assume it has the same persistence, discovery behaviour or ranking significance as an editorial link on an indexed web page.
 
-### Does a citation mean the AI recommends my company?
-
-No. Inspect the surrounding answer. Source use, brand mention and recommendation are separate labels.
-
 ## Sources
 
-1. <span id="source-1"></span> Google, [Gemini sources and double-check links](https://support.google.com/gemini/answer/14143489?hl=en).
-2. <span id="source-2"></span> OpenAI, [Web search API guide](https://developers.openai.com/api/docs/guides/tools-web-search).
-3. <span id="source-3"></span> Google, [Gemini grounding with Google Search](https://ai.google.dev/gemini-api/docs/google-search).
-4. <span id="source-4"></span> Anthropic, [Web search tool](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/web-search-tool).
-5. <span id="source-5"></span> [CiteLadder product information](/), reviewed 29 October 2026; citation data from one anonymised CiteLadder workspace, collected 29 October 2026.
+1. <span id="source-1"></span> CiteLadder (vendor), citation data from one anonymised CiteLadder workspace: 20 non-branded buyer questions, each asked once to ChatGPT and once to Claude with web search, 40 answers, 249 citations, collected 29 October 2026. Internal data, not published separately. [https://citeladder.com/ai-citation-tracking](/ai-citation-tracking)
+2. <span id="source-2"></span> Semrush with Kevin Indig (Growth Memo), [Why 62% of AI citations don't lead to brand mentions](https://www.semrush.com/blog/the-ghost-citations-study/), 9 June 2026. Vendor data.
+3. <span id="source-3"></span> OpenAI, [Web search](https://developers.openai.com/api/docs/guides/tools-web-search) (OpenAI API docs), accessed 8 November 2026.
+4. <span id="source-4"></span> Google, Gemini Apps Help, [View related sources from Gemini Apps](https://support.google.com/gemini/answer/14143489?hl=en), accessed 8 November 2026.
+5. <span id="source-5"></span> Google AI Studio, [Grounding with Google Search](https://aistudio.google.com/docs/google-search) (Gemini API docs), accessed 8 November 2026.
+6. <span id="source-6"></span> Anthropic, [Web search tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool) (Claude platform docs), accessed 8 November 2026.
+7. <span id="source-7"></span> Google Search Console Help, [Generative AI performance report (Search)](https://support.google.com/webmasters/answer/16984139?hl=en), accessed 8 November 2026.
+8. <span id="source-8"></span> CiteLadder Docs, [Sources and citations](https://docs.citeladder.com/sources/), updated 10 October 2026.
+9. <span id="source-9"></span> SISTRIX (Johannes Beus), [AI Citation drift: How stable are sources in AI search results?](https://www.sistrix.com/blog/ai-citation-drift-how-stable-are-sources-in-ai-search-results/), 1 May 2026. Vendor study.
+10. <span id="source-10"></span> Google Analytics Help, [Default channel group](https://support.google.com/analytics/answer/9756891?hl=en), accessed 8 November 2026.
+11. <span id="source-11"></span> CiteLadder, [AI Referral Analytics](/platform/ai-referral-analytics) product page, accessed 8 November 2026.
+12. <span id="source-12"></span> Profound, [The half-life of an AI citation is 11 days](https://www.tryprofound.com/blog/the-half-life-of-an-ai-citation-is-11-days), 30 September 2026. Vendor study.
+13. <span id="source-13"></span> CiteLadder, [AI Visibility](/platform/ai-visibility) product page, accessed 8 November 2026.
+14. <span id="source-14"></span> CiteLadder, [FAQ](/faq), accessed 8 November 2026.
+15. <span id="source-15"></span> CiteLadder, [Pricing page](/pricing), accessed 8 November 2026.
+16. <span id="source-16"></span> CiteLadder Docs, [API reference](https://docs.citeladder.com/api/reference/), accessed 8 November 2026.
+17. <span id="source-17"></span> CiteLadder, [Cited Sources](/platform/cited-sources) product page, accessed 8 November 2026.
+18. <span id="source-18"></span> Pew Research Center (Athena Chapekis and Anna Lieb), [Google users are less likely to click on links when an AI summary appears in the results](https://www.pewresearch.org/short-reads/2025/07/22/google-users-are-less-likely-to-click-on-links-when-an-ai-summary-appears-in-the-results/), 22 July 2025. Data from March 2025.
+19. <span id="source-19"></span> Peec AI Docs, [Understanding sources](https://docs.peec.ai/understanding-sources), accessed 8 November 2026.
