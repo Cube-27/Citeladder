@@ -141,10 +141,13 @@ not grow with the backlog. Analytics retries back off exponentially from
 `retry_delay_seconds` up to `retry_max_delay_seconds`, jittered into the upper
 half of each wait.
 
-`tick.ts` first runs MCP and usage-window cleanup, audit maintenance, Search
-Intelligence reconciliation, due audit schedules, integration dispatch/revocation
-and crawl-log maintenance once, logging each phase's duration, then uses the
-remaining budget for that same drain.
+The periodic owners are MCP and usage-window cleanup, audit maintenance, Search
+Intelligence reconciliation, due audit schedules, integration dispatch/revocation,
+crawl-log maintenance and billing recovery; each runs once and logs its
+duration. Locally `tick.ts` runs them, then uses the remaining budget for that
+same drain. On Cloud Run, Cloud Scheduler calls the API's `/internal/tick`
+(`workers/scheduled-tick.ts`, admitted by Google ID token), which runs them
+under a short budget and starts the runner job only when a lane has work due.
 Periodic owners recheck admission before each occurrence, revocation or recovery
 unit. The scheduler claims one occurrence at a time under a runner budget, so
 stopping never strands a preclaimed batch; admitted units finish settlement.

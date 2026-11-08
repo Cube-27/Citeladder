@@ -74,7 +74,10 @@ locals {
 
   runner_job = "projects/${var.project_id}/locations/${var.region}/jobs/${local.name}-runner"
 
-  # Non-secret configuration shared by the API, runner, tick and migration.
+  # The scheduled tick's ID-token audience; any fixed string the API also knows.
+  tick_audience = "${local.name}-api/internal/tick"
+
+  # Non-secret configuration shared by the API, runner and migration.
   shared_env = merge(
     {
       APP_ENV                     = "production"

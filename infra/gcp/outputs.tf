@@ -20,8 +20,8 @@ output "migrate_job" {
   value = google_cloud_run_v2_job.migrate.name
 }
 
-output "tick_job" {
-  value = google_cloud_run_v2_job.execution["tick"].name
+output "tick_scheduler" {
+  value = google_cloud_scheduler_job.tick.name
 }
 
 output "db_address" {

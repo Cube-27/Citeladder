@@ -50,7 +50,11 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       dynamic "env" {
-        for_each = merge(local.shared_env, { CLOUD_RUN_RUNNER_JOB = local.runner_job })
+        for_each = merge(local.shared_env, {
+          CLOUD_RUN_RUNNER_JOB    = local.runner_job
+          SCHEDULER_TICK_INVOKER  = google_service_account.scheduler.email
+          SCHEDULER_TICK_AUDIENCE = local.tick_audience
+        })
         content {
           name  = env.key
           value = env.value
@@ -87,7 +91,6 @@ resource "google_cloud_run_v2_service" "api" {
 resource "google_cloud_run_v2_job" "execution" {
   for_each = {
     runner = { args = ["src/runner.ts"], memory = "1Gi" }
-    tick   = { args = ["src/tick.ts"], memory = "1Gi" }
     # Operator billing commands against the private database, run with
     # `gcloud run jobs execute citeladder-billing --args=...` (runbook).
     billing = { args = ["src/cli/billing-admin.ts", "--help"], memory = "512Mi" }
@@ -222,21 +225,22 @@ resource "google_cloud_run_v2_job" "migrate" {
   ]
 }
 
-# One periodic tick: lease recovery, due schedules, sync dispatch, then drain.
+# One periodic tick, served by the API: lease recovery, due schedules and sync
+# dispatch run in the request; due work starts the runner job. A job per tick
+# paid a container cold start every time and outran the Cloud Run free tier.
 resource "google_cloud_scheduler_job" "tick" {
   name             = "${local.name}-tick"
   region           = var.region
   schedule         = var.tick_schedule
   time_zone        = "Etc/UTC"
-  attempt_deadline = "30s"
+  attempt_deadline = "60s"
 
   http_target {
     http_method = "POST"
-    uri         = "https://run.googleapis.com/v2/${google_cloud_run_v2_job.execution["tick"].id}:run"
-    oauth_token {
+    uri         = "${google_cloud_run_v2_service.api.uri}/internal/tick"
+    oidc_token {
       service_account_email = google_service_account.scheduler.email
+      audience              = local.tick_audience
     }
   }
-
-  depends_on = [google_cloud_run_v2_job_iam_member.scheduler_starts_tick]
 }

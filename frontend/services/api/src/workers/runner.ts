@@ -362,6 +362,13 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
   // Owners that fetch public websites take turns, as interactive crawls and
   // competitor discovery do under the drain lock, to keep publisher pacing.
   const crawler = 'web-fetch';
+  // Billing has no due-time probe, so it also runs periodically: the scheduled
+  // tick starts a drain only when another lane reports work due.
+  const billing = async (canAdmit: () => boolean) =>
+    Object.values(await recoverBilling(db, config, undefined, canAdmit)).reduce(
+      (sum, count) => sum + count,
+      0,
+    ) + (canAdmit() ? await settleAbandonedCalls(db) : 0);
   return {
     lanes: [
       {
@@ -398,14 +405,7 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
           site.drain(Math.min(site.settings.concurrency, config.execution.poolSize), canAdmit),
         nextDue: () => site.nextDue(),
       },
-      {
-        name: 'billing',
-        run: async (canAdmit) =>
-          Object.values(await recoverBilling(db, config, undefined, canAdmit)).reduce(
-            (sum, count) => sum + count,
-            0,
-          ) + (canAdmit() ? await settleAbandonedCalls(db) : 0),
-      },
+      { name: 'billing', run: billing },
     ] satisfies RunnerLane[],
     periodic: [
       {
@@ -444,21 +444,21 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
       { name: 'audit-scheduler', run: (canAdmit) => scheduler.runOnce(scheduler.now(), canAdmit) },
       { name: 'integration-dispatcher', run: (canAdmit) => dispatcher.runOnce(canAdmit) },
       { name: 'crawl-log-maintenance', run: (canAdmit) => crawlLogTick(db, new Date(), canAdmit) },
+      { name: 'billing-recovery', run: billing },
     ] satisfies RunnerLane[],
   };
 }
 
-/** Periodic work runs once, followed by the same drain with the remaining budget. */
-export async function tickAndDrain(
-  owners: { lanes: RunnerLane[]; periodic: RunnerLane[] },
-  options: DrainOptions,
-  exclusive: Exclusive = (drain) => drain(),
-) {
+/** Each periodic owner runs once under one shared budget; returns the failures. */
+export async function runPeriodic(
+  periodic: readonly RunnerLane[],
+  options: Pick<DrainOptions, 'signal' | 'deadline' | 'now'>,
+): Promise<unknown[]> {
   const failures: unknown[] = [];
   const logger = getLogger('workers.runner');
   const now = options.now ?? (() => performance.now());
   const canAdmit = () => !options.signal.aborted && now() < options.deadline;
-  for (const phase of owners.periodic) {
+  for (const phase of periodic) {
     if (options.signal.aborted || now() >= options.deadline) break;
     const started = performance.now();
     try {
@@ -472,6 +472,16 @@ export async function tickAndDrain(
       logger.exception('tick_phase_failed', error, { phase: phase.name });
     }
   }
+  return failures;
+}
+
+/** Periodic work runs once, followed by the same drain with the remaining budget. */
+export async function tickAndDrain(
+  owners: { lanes: RunnerLane[]; periodic: RunnerLane[] },
+  options: DrainOptions,
+  exclusive: Exclusive = (drain) => drain(),
+) {
+  const failures = await runPeriodic(owners.periodic, options);
   let tasks = 0;
   let failedLanes: ReadonlySet<string> = new Set();
   try {

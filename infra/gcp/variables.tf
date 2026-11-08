@@ -168,6 +168,6 @@ variable "runner_budget_seconds" {
 
 variable "tick_schedule" {
   type        = string
-  default     = "*/10 * * * *"
-  description = "Cron schedule (UTC) for the periodic tick; API writes wake the runner directly."
+  default     = "*/20 * * * *"
+  description = "Cron schedule (UTC) for the API's periodic tick; API writes wake the runner directly."
 }

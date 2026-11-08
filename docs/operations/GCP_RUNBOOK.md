@@ -35,7 +35,7 @@ Browser ─► Cloudflare Workers (marketing citeladder.com, app app.citeladder.
               ▼
          Cloud Run us-central1: citeladder-api (min 0, max 2)
               │ commits work, then starts ─► job citeladder-runner (drain, exit)
-              │ Cloud Scheduler every 10 min ─► job citeladder-tick
+              │ Cloud Scheduler every 20 min ─► API POST /internal/tick (OIDC)
               │ deploy only ─► job citeladder-migrate (SQL baseline + dev bootstrap, API image)
               │ operator only ─► job citeladder-billing (billing CLIs, API image)
               ▼ Direct VPC egress (private IP 10.28.0.10)
@@ -218,7 +218,7 @@ Billing → Reports grouped by SKU and remove anything unexpectedly non-zero.
 ## 3. Daily operation
 
 - **Logs:** Cloud Run → `citeladder-api`, and Jobs → `citeladder-runner`,
-  `citeladder-tick`, `citeladder-migrate` and `citeladder-billing` → Logs. The database container
+  `citeladder-migrate` and `citeladder-billing` → Logs. The database container
   logs reach Cloud Logging under the `citeladder-db` instance.
 - **Database shell** (break-glass, IAP):
 
@@ -243,13 +243,17 @@ Billing → Reports grouped by SKU and remove anything unexpectedly non-zero.
 
 - **Runner and tick:** a committed API write starts `citeladder-runner`. A
   burst starts several executions, and all but one exit after a short wait for
-  the single drain lock. The scheduler starts `citeladder-tick` every
-  10 minutes; it runs maintenance, due schedules and dispatch, then drains.
-  Cloud Run takes one to three minutes to start an execution. To process work
-  immediately:
-  `gcloud run jobs execute citeladder-tick --region us-central1 --wait`.
+  the single drain lock. Every 20 minutes the `citeladder-tick` scheduler calls
+  the API's `/internal/tick`, which runs maintenance, due schedules and dispatch
+  inside the request (`SCHEDULER_TICK_BUDGET_SECONDS`, 20 s) and starts the
+  runner only when a lane has work due. A job per tick paid a cold start each
+  time and outran the Cloud Run free tier. Cloud Run takes one to three
+  minutes to start an execution. To process work immediately:
+  `gcloud scheduler jobs run citeladder-tick --location us-central1`, or
+  `gcloud run jobs execute citeladder-runner --region us-central1` to drain.
   A failed lane or tick phase logs `runner_lane_failed` or `tick_phase_failed`
-  with its exception, and `runner_completed` names the failed lanes.
+  with its exception; `runner_completed` names the failed lanes and
+  `scheduled_tick_completed` reports each tick.
 - **Stuck work:** in the database shell, list pending and leased work per queue:
 
   ```sql
