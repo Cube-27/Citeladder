@@ -3,14 +3,12 @@
  *
  * Starting a job costs a container cold start each time; the periodic owners
  * themselves take well under a second. The request runs them under a short
- * budget, then starts the runner job only when a lane has work due, exactly
- * as a committed API write would.
+ * budget, then starts the runner job only when a lane has work due.
  */
 import type { Hono } from 'hono';
 import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
 import type { ServiceConfig } from '../config.ts';
 import type { AppEnv } from '../context.ts';
-import { observeCommittedWork } from '../db/committed-work.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { getLogger } from '../logging.ts';
@@ -69,18 +67,15 @@ export function registerScheduledTick(
     const { lanes, periodic } = await owners;
     const signal = c.req.raw.signal;
     const deadline = performance.now() + tick.budgetSeconds * 1000;
-    let failures: unknown[] = [];
-    let runnerStarted = false;
-    // Periodic owners that commit work wake the runner like any API write.
-    await observeCommittedWork(async () => {
-      failures = await runPeriodic(periodic, { signal, deadline });
-      runnerStarted = await startSuccessor({
-        lanes,
-        budgetMs: config.execution.budgetSeconds * 1000,
-        signal,
-        start: options.startRunner,
-      });
-    }, options.startRunner);
+    // Unobserved: a maintenance write alone never starts a job. Every lane but
+    // billing reports when its work is due, and billing runs periodically here.
+    const failures = await runPeriodic(periodic, { signal, deadline });
+    const runnerStarted = await startSuccessor({
+      lanes,
+      budgetMs: config.execution.budgetSeconds * 1000,
+      signal,
+      start: options.startRunner,
+    });
     getLogger('workers.runner').info('scheduled_tick_completed', {
       failed_phases: failures.length,
       runner_started: runnerStarted,

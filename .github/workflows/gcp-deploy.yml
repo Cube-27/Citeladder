@@ -402,7 +402,8 @@ jobs:
             [ "$attempt" != "$before" ] && break
           done
           tick_status="$(gcloud scheduler jobs describe "$TICK_SCHEDULER" "${scheduler[@]}" --format='value(status.code)')"
-          if [[ "$attempt" == "$before" || -n "$tick_status" ]]; then
+          # A successful attempt reports no status, or code 0 (OK).
+          if [[ "$attempt" == "$before" || ( -n "$tick_status" && "$tick_status" != 0 ) ]]; then
             echo "::error::Scheduled tick failed: last attempt ${attempt:-none}, status ${tick_status:-none}"
             exit 1
           fi
