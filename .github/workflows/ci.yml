@@ -86,9 +86,10 @@ jobs:
         run: pnpm quality:check -- --scope frontend
       - name: Test duplication advisory
         run: pnpm report:duplicates:tests
-      # No `--with-deps`: see the E2E job's install step.
+      # No `--with-deps` and `--only-shell`: see the E2E job's install step.
+      # The docs checks also run headless, so full Chrome (191 MB) is unused.
       - name: Install docs test browser
-        run: pnpm exec playwright install chromium
+        run: pnpm exec playwright install --only-shell chromium
       - name: Documentation browser checks
         run: |
           log="$(git rev-parse --absolute-git-dir)/docs-browser.log"

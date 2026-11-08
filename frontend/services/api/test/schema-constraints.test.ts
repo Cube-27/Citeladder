@@ -694,3 +694,56 @@ describe('status vocabularies', () => {
     },
   );
 });
+
+describe('project deletion', () => {
+  /**
+   * Parents that gain rows per answer, task, fetched page, rule evaluation,
+   * URL or metric row. Deleting a project removes them row by row, and
+   * PostgreSQL enforces each reference to them with one lookup per removed
+   * row; an unindexed reference scans its whole table, every tenant's rows
+   * included, for each one (migration 0015).
+   */
+  const highVolumeParents: (keyof DB)[] = [
+    'raw_response_artifacts',
+    'audit_tasks',
+    'audit_prompt_snapshots',
+    'audit_engine_snapshots',
+    'site_fetch_artifacts',
+    'site_page_analyses',
+    'site_rule_evaluations',
+    'site_crawl_tasks',
+    'site_urls',
+    'integration_metric_rows',
+    'opportunities',
+  ];
+
+  it('indexes every reference to a parent it removes row by row', async () => {
+    // A reference is served when an index leads with exactly its columns, or
+    // with one of its non-tenant columns (the tenant keys alone match a project).
+    const unindexed = await sql<{ reference: string }>`
+      with refs as (
+        select c.conname, c.conrelid, c.conrelid::regclass::text as child,
+          array(select a.attname::text from unnest(c.conkey) k(attnum)
+                join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k.attnum) as cols
+        from pg_constraint c
+        where c.contype = 'f'
+          and c.confrelid::regclass::text = any(${highVolumeParents}::text[])
+      ), index_columns as (
+        select i.indrelid,
+          array(select a.attname::text from unnest(i.indkey) with ordinality k(attnum, ord)
+                join pg_attribute a on a.attrelid = i.indrelid and a.attnum = k.attnum
+                order by k.ord) as cols
+        from pg_index i
+      )
+      select r.child || '.' || array_to_string(r.cols, ',') || ' (' || r.conname || ')' as reference
+      from refs r
+      where not exists (
+        select 1 from index_columns l
+        where l.indrelid = r.conrelid
+          and ((l.cols[1:cardinality(r.cols)] @> r.cols and l.cols[1:cardinality(r.cols)] <@ r.cols)
+            or (l.cols[1] = any(r.cols) and l.cols[1] not in ('workspace_id', 'project_id')))
+      )
+      order by reference`.execute(db);
+    expect(unindexed.rows.map((row) => row.reference)).toEqual([]);
+  });
+});

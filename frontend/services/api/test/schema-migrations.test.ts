@@ -81,6 +81,7 @@ describe('a fresh database', () => {
       '0012_internal_costs',
       '0013_audit_error_code_width',
       '0014_status_check_constraints',
+      '0015_cascade_reference_indexes',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -100,6 +101,7 @@ describe('a fresh database', () => {
       { version: '0012_internal_costs' },
       { version: '0013_audit_error_code_width' },
       { version: '0014_status_check_constraints' },
+      { version: '0015_cascade_reference_indexes' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -143,6 +145,7 @@ describe('an existing database', () => {
       '0012_internal_costs',
       '0013_audit_error_code_width',
       '0014_status_check_constraints',
+      '0015_cascade_reference_indexes',
     ]);
     // A URL identity keeps no per-sighting discovery status.
     expect(await columns(client, 'site_urls')).not.toContain('discovery_status');
@@ -203,6 +206,7 @@ describe('an existing database', () => {
       { version: '0012_internal_costs' },
       { version: '0013_audit_error_code_width' },
       { version: '0014_status_check_constraints' },
+      { version: '0015_cascade_reference_indexes' },
     ]);
   }, 120000);
 });
