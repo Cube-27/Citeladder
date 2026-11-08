@@ -10,7 +10,7 @@ This document is the hosting design and security contract. Accepted
 Marketing Worker (citeladder.com)   ─┐
 Product Worker (app.citeladder.com) ─┴─ origin token ─► Cloud Run API (us-central1, min 0 / max 2)
 Docs Worker (static, no origin)                            │ starts runner after committed work
-                                         Cloud Scheduler ──► tick job (every 10 min)
+                         Cloud Scheduler (OIDC) ──► API /internal/tick (every 20 min)
                                                            ▼ Direct VPC egress (API and jobs)
                                                  e2-micro PostgreSQL 16 VM (no public IP)
 ```
@@ -36,7 +36,10 @@ Docs Worker (static, no origin)                            │ starts runner aft
   `/health`, `/ready` and MCP too. The admitted host drives MCP origin checks.
   The admitted `X-CiteLadder-Client-IP` (Cloudflare's `CF-Connecting-IP`)
   drives per-visitor rate limits. Workers strip any client-supplied copies of
-  these headers. The startup probe is TCP.
+  these headers. The startup probe is TCP. The single exception is
+  `POST /internal/tick`: it skips the origin token and admits only a
+  Google-signed ID token for the scheduler account with the configured
+  audience, and it is served only when both are configured.
 - **Database.** The VM has no external address. PostgreSQL accepts
   `hostssl` SCRAM connections for `citeladder` only from the private subnet,
   plus loopback for break-glass shells. The firewall admits 5432 from the
@@ -47,7 +50,8 @@ Docs Worker (static, no origin)                            │ starts runner aft
   Federation pinned to `Cube-27/Citeladder`, `refs/heads/main` and the
   `gcp-demo` environment. No service-account keys exist. The runtime
   account reads only its runtime secrets and may start only the runner job.
-  The scheduler account may start only the tick job. The database account
+  The scheduler account holds no grant; its ID token admits only the API's
+  tick route. The database account
   reads only the database password and pulls from the image repository.
 - **Secrets.** Terraform declares Secret Manager containers only. The deploy
   workflow writes values through stdin; generated secrets never leave GCP.
@@ -59,7 +63,8 @@ Docs Worker (static, no origin)                            │ starts runner aft
   deletes others after seven days.
 - **Scale-to-zero.** Nothing except PostgreSQL runs continuously, and nothing
   except PostgreSQL runs on the VM. The API starts a runner execution only
-  after committed queue or billing work. Leases make duplicate executions
+  after committed queue or billing work, or when the scheduled tick finds a
+  lane with work due; the tick itself never starts a job. Leases make duplicate executions
   harmless, and a single drain lock bounds database connections.
 - **No self-mutation.** Automation never deletes the project, never stops the
   database on a timer, and never publishes the Workers. The Workers deploy
@@ -74,14 +79,15 @@ Docs Worker (static, no origin)                            │ starts runner aft
   images, secrets, migration, Terraform and smoke.
 - `frontend/services/api/src/http/origin-token.ts`: origin admission, public
   host and client address.
-- `frontend/services/api/src/workers/runner.ts`, `start-runner.ts`: runner,
-  tick and wake-up.
+- `frontend/services/api/src/workers/runner.ts`, `start-runner.ts`,
+  `scheduled-tick.ts`: runner, periodic owners, wake-up and the scheduled tick.
 
 ## Acceptance
 
 - The deploy smoke expects authenticated `/ready`, the OAuth provider catalog
   and MCP metadata to return `200`. An anonymous or foreign-host request must
-  return `403`. One tick execution must succeed.
+  return `403`, and so must an unauthenticated `POST /internal/tick`. A forced
+  run of the tick scheduler must succeed.
 - Owner acceptance after the Worker deploys: sign-in, project creation, a
   Site Health crawl reaching a terminal state through runner executions, and a
   Search Console connection.

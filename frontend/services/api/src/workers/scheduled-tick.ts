@@ -1,0 +1,92 @@
+/**
+ * Cloud Scheduler's periodic tick, served by the API instead of a job.
+ *
+ * Starting a job costs a container cold start each time; the periodic owners
+ * themselves take well under a second. The request runs them under a short
+ * budget, then starts the runner job only when a lane has work due, exactly
+ * as a committed API write would.
+ */
+import type { Hono } from 'hono';
+import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
+import type { ServiceConfig } from '../config.ts';
+import type { AppEnv } from '../context.ts';
+import { observeCommittedWork } from '../db/committed-work.ts';
+import type { Database } from '../db/database.ts';
+import { ApiError } from '../errors.ts';
+import { getLogger } from '../logging.ts';
+import { startSuccessor } from './execution-process.ts';
+import { runnerOwners, runPeriodic } from './runner.ts';
+
+export const SCHEDULED_TICK_PATH = '/internal/tick';
+
+const GOOGLE_ISSUERS = ['https://accounts.google.com', 'accounts.google.com'];
+const googleKeys = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
+
+type SchedulerIdentity = { invoker: string; audience: string };
+
+/** Whether the bearer token is a Google-signed ID token for the scheduler's identity. */
+async function fromScheduler(
+  authorization: string | undefined,
+  expected: SchedulerIdentity,
+  keys: JWTVerifyGetKey,
+): Promise<boolean> {
+  const token = /^Bearer (\S+)$/u.exec(authorization ?? '')?.[1];
+  if (!token) return false;
+  try {
+    const { payload } = await jwtVerify(token, keys, {
+      issuer: GOOGLE_ISSUERS,
+      audience: expected.audience,
+      algorithms: ['RS256'],
+    });
+    return payload.email === expected.invoker && payload.email_verified === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Registers the tick only when a scheduler identity is configured. It must be
+ * registered before the origin-token middleware: Cloud Scheduler cannot sign
+ * like the Workers, so the Google ID token is this route's admission.
+ */
+export function registerScheduledTick(
+  app: Hono<AppEnv>,
+  config: ServiceConfig,
+  db: Database,
+  options: { startRunner: () => Promise<void>; keys?: JWTVerifyGetKey },
+): void {
+  const tick = config.execution.scheduledTick;
+  if (!tick) return;
+  const keys = options.keys ?? googleKeys;
+  let owners: ReturnType<typeof runnerOwners> | undefined;
+  app.post(SCHEDULED_TICK_PATH, async (c) => {
+    if (!(await fromScheduler(c.req.header('authorization'), tick, keys)))
+      throw new ApiError(403, 'Forbidden');
+    owners ??= runnerOwners(db, config).catch((error: unknown) => {
+      owners = undefined;
+      throw error;
+    });
+    const { lanes, periodic } = await owners;
+    const signal = c.req.raw.signal;
+    const deadline = performance.now() + tick.budgetSeconds * 1000;
+    let failures: unknown[] = [];
+    let runnerStarted = false;
+    // Periodic owners that commit work wake the runner like any API write.
+    await observeCommittedWork(async () => {
+      failures = await runPeriodic(periodic, { signal, deadline });
+      runnerStarted = await startSuccessor({
+        lanes,
+        budgetMs: config.execution.budgetSeconds * 1000,
+        signal,
+        start: options.startRunner,
+      });
+    }, options.startRunner);
+    getLogger('workers.runner').info('scheduled_tick_completed', {
+      failed_phases: failures.length,
+      runner_started: runnerStarted,
+    });
+    return failures.length
+      ? c.json({ status: 'failed' }, 500)
+      : c.json({ status: 'ok', runner_started: runnerStarted });
+  });
+}

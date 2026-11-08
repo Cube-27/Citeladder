@@ -48,7 +48,7 @@ jobs:
       PUBLIC_SIGNUP_ENABLED: ${{ vars.PUBLIC_SIGNUP_ENABLED || 'false' }}
       DEFAULT_AGENT_BASE_URL: ${{ vars.DEFAULT_AGENT_BASE_URL }}
       DEFAULT_AGENT_MODEL: ${{ vars.DEFAULT_AGENT_MODEL }}
-      TICK_SCHEDULE: ${{ vars.TICK_SCHEDULE || '*/10 * * * *' }}
+      TICK_SCHEDULE: ${{ vars.TICK_SCHEDULE || '*/20 * * * *' }}
       # Billing stays closed and allow-listed unless these say otherwise (B2, B42).
       BILLING_CHECKOUT_ENABLED: ${{ vars.BILLING_CHECKOUT_ENABLED || 'false' }}
       BILLING_CHECKOUT_AUDIENCE: ${{ vars.BILLING_CHECKOUT_AUDIENCE || 'allow_list' }}
@@ -349,12 +349,12 @@ jobs:
           set -euo pipefail
           terraform apply -input=false -auto-approve
           echo "api_url=$(terraform output -raw api_url)" >> "$GITHUB_OUTPUT"
-          echo "tick_job=$(terraform output -raw tick_job)" >> "$GITHUB_OUTPUT"
+          echo "tick_scheduler=$(terraform output -raw tick_scheduler)" >> "$GITHUB_OUTPUT"
       - name: Smoke the API origin and tick
         shell: bash
         env:
           API_URL: ${{ steps.terraform.outputs.api_url }}
-          TICK_JOB: ${{ steps.terraform.outputs.tick_job }}
+          TICK_SCHEDULER: ${{ steps.terraform.outputs.tick_scheduler }}
           ORIGIN_TOKEN: ${{ secrets.CITELADDER_ORIGIN_TOKEN }}
         run: |
           set -euo pipefail
@@ -387,17 +387,30 @@ jobs:
           mcp="$(admitted "api.$DOMAIN_NAME" /.well-known/oauth-authorization-server)"
           anonymous="$(code "$API_URL/health")"
           foreign="$(signed attacker.example /health)"
-          if [[ "$ready" != 200 || "$providers" != 200 || "$mcp" != 200 || "$anonymous" != 403 || "$foreign" != 403 ]]; then
-            echo "::error::Origin smoke failed: ready=$ready providers=$providers mcp=$mcp anonymous=$anonymous foreign=$foreign"
+          unscheduled="$(code --request POST "$API_URL/internal/tick")"
+          if [[ "$ready" != 200 || "$providers" != 200 || "$mcp" != 200 || "$anonymous" != 403 || "$foreign" != 403 || "$unscheduled" != 403 ]]; then
+            echo "::error::Origin smoke failed: ready=$ready providers=$providers mcp=$mcp anonymous=$anonymous foreign=$foreign unscheduled=$unscheduled"
             exit 1
           fi
-          # Tick runs every periodic owner and then drains; it must finish cleanly.
-          gcloud run jobs execute "$TICK_JOB" --project "$PROJECT_ID" --region "$REGION" --wait
+          # The scheduled tick runs every periodic owner in the API; it must finish cleanly.
+          scheduler=(--project "$PROJECT_ID" --location "$REGION")
+          before="$(gcloud scheduler jobs describe "$TICK_SCHEDULER" "${scheduler[@]}" --format='value(lastAttemptTime)')"
+          gcloud scheduler jobs run "$TICK_SCHEDULER" "${scheduler[@]}"
+          for _ in $(seq 30); do
+            sleep 5
+            attempt="$(gcloud scheduler jobs describe "$TICK_SCHEDULER" "${scheduler[@]}" --format='value(lastAttemptTime)')"
+            [ "$attempt" != "$before" ] && break
+          done
+          tick_status="$(gcloud scheduler jobs describe "$TICK_SCHEDULER" "${scheduler[@]}" --format='value(status.code)')"
+          if [[ "$attempt" == "$before" || -n "$tick_status" ]]; then
+            echo "::error::Scheduled tick failed: last attempt ${attempt:-none}, status ${tick_status:-none}"
+            exit 1
+          fi
           {
             echo '### GCP deployment'
             echo "- Source commit: \`$GITHUB_SHA\`"
             cat /tmp/release-images.md
             echo "- API origin \`$API_URL\`: ready $ready, providers $providers, MCP metadata $mcp; anonymous $anonymous, foreign host $foreign"
-            echo '- Tick execution: succeeded'
+            echo "- Scheduled tick: succeeded; unscheduled call $unscheduled"
             echo '- The Workers ORIGIN_UPSTREAM must equal the API origin above.'
           } >> "$GITHUB_STEP_SUMMARY"

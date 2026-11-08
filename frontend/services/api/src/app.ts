@@ -23,6 +23,8 @@ import { registerMethodGuards, selfBoundedBodies } from './routes/define.ts';
 import { registerMcpRoutes } from './mcp/server.ts';
 import { observeCommittedWork } from './db/committed-work.ts';
 import { runnerStarter } from './workers/start-runner.ts';
+import { registerScheduledTick } from './workers/scheduled-tick.ts';
+import type { JWTVerifyGetKey } from 'jose';
 import { originToken } from './http/origin-token.ts';
 import { ROUTE_CONTRACTS } from './openapi/routes.ts';
 import { publicApiDocument } from './public-api/openapi.ts';
@@ -57,7 +59,7 @@ async function databaseReachable(db: Database, timeoutMs: number): Promise<boole
 export function createApp(
   config: ServiceConfig,
   db: Database,
-  options: { startRunner?: () => Promise<void> } = {},
+  options: { startRunner?: () => Promise<void>; schedulerKeys?: JWTVerifyGetKey } = {},
 ): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
   app.use(requestId(config.requestIdHeader));
@@ -72,8 +74,10 @@ export function createApp(
   );
   app.use(apiNoStore());
   app.use(conditionalReads());
-  app.use(originToken(config));
   const startRunner = options.startRunner ?? runnerStarter(config, db);
+  // Before the origin token: its admission is Cloud Scheduler's Google ID token.
+  registerScheduledTick(app, config, db, { startRunner, keys: options.schedulerKeys });
+  app.use(originToken(config));
   app.use((_c, next) => observeCommittedWork(next, startRunner));
   const ordinaryBodyLimit = bodyLimit({
     maxSize: policy.api.request_body_max_bytes,

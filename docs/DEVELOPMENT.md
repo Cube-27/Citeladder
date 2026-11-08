@@ -274,9 +274,10 @@ From `frontend/`, `pnpm --filter @citeladder/api runner` runs all native worker
 lanes and billing recovery until idle or the shared admission budget expires.
 `pnpm --filter @citeladder/api tick` runs the periodic owners once, then drains
 with the remaining budget. Both commands perform real durable/provider work;
-run them only against an authorized target. They use the API image with commands
-`node src/runner.ts` and `node src/tick.ts` from its service working directory.
-No HTTP server or perpetual polling loop runs in a job. SIGTERM/SIGINT stops
+run them only against an authorized target. The Cloud Run runner job uses the
+API image with `node src/runner.ts`; `tick.ts` is the local and Compose loop,
+since on Cloud Run the API serves the tick (below). No HTTP server or perpetual
+polling loop runs in a job. SIGTERM/SIGINT stops
 new admission and lets claimed work finish before destroying the pool.
 
 | Environment variable               | Scope                                   | Default / requirement                                                                                                  |
@@ -288,6 +289,9 @@ new admission and lets claimed work finish before destroying the pool.
 | `RUNNER_DB_POOL_SIZE`              | Runner/tick and API with configured job | 4; 1–4 pooled connections, independent of the API's `DB_POOL_SIZE`/`DB_MAX_OVERFLOW`; a draining execution also holds one lock session |
 | `RUNNER_WAKE_TIMEOUT_MS`           | API                                     | 5000; 1–30000 milliseconds for metadata plus job-start requests                                                        |
 | `RUNNER_WAKE_MIN_INTERVAL_MS`      | API                                     | 5000; 1–60000 milliseconds between job-start attempts per instance                                                     |
+| `SCHEDULER_TICK_INVOKER`           | Cloud Run API                           | Unset serves no `/internal/tick`; otherwise the Cloud Scheduler account whose Google ID token admits the tick           |
+| `SCHEDULER_TICK_AUDIENCE`          | Cloud Run API                           | Required with `SCHEDULER_TICK_INVOKER`; the ID token's audience                                                        |
+| `SCHEDULER_TICK_BUDGET_SECONDS`    | Cloud Run API                           | 20; 1–120 seconds of periodic work admitted inside one scheduled request                                               |
 
 The API's service account needs permission to execute that runner job
 (`roles/run.invoker` on the job); no new static Google key is needed. Metadata
@@ -298,8 +302,10 @@ configured; the runner does not enable checkout or provision providers.
 
 Terraform (`infra/gcp/run.tf`) sets these on Cloud Run. `K_SERVICE` is
 supplied by Cloud Run and makes a missing origin secret a startup error. The
-runner and tick are separate jobs over the same image, and Cloud Scheduler
-starts the tick job. Each job's timeout allows in-flight work to finish beyond
+runner is a job over the same image. Cloud Scheduler calls the API's
+`/internal/tick` with an ID token; the API runs the periodic owners under
+`SCHEDULER_TICK_BUDGET_SECONDS` and starts the runner only when a lane has
+work due. The job's timeout allows in-flight work to finish beyond
 the admission budget; a forced termination leaves leased work for recovery.
 The API skips wake-up while the PostgreSQL drain lock is held and coalesces
 launch attempts within the configured per-instance interval. Tick recovers

@@ -59,18 +59,12 @@ resource "google_secret_manager_secret_iam_member" "runtime" {
   member    = "serviceAccount:${google_service_account.runtime.email}"
 }
 
-# The API starts a runner execution after committed work, and a runner or tick
-# starts its successor when work is still due (run.jobs.run only).
+# The API starts a runner execution after committed work or a scheduled tick
+# that finds work due, and a runner starts its successor (run.jobs.run only).
+# The scheduler needs no grant: the API checks its Google ID token itself.
 resource "google_cloud_run_v2_job_iam_member" "api_starts_runner" {
   name     = google_cloud_run_v2_job.execution["runner"].name
   location = var.region
   role     = "roles/run.invoker"
   member   = "serviceAccount:${google_service_account.runtime.email}"
-}
-
-resource "google_cloud_run_v2_job_iam_member" "scheduler_starts_tick" {
-  name     = google_cloud_run_v2_job.execution["tick"].name
-  location = var.region
-  role     = "roles/run.invoker"
-  member   = "serviceAccount:${google_service_account.scheduler.email}"
 }

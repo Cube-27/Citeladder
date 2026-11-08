@@ -78,8 +78,9 @@ durable-memory promotion retain their explicit user-decision boundaries.
 
 TypeScript owns every application route, protocol endpoint and executing worker.
 `frontend/services/api` runs Node, Hono and Kysely against PostgreSQL.
-Background work runs in bounded runner and tick executions of the same image;
-each lane and the tick's queue recovery own their lease recovery.
+Background work runs in bounded runner executions of the same image, and a
+scheduled tick in the API runs the periodic owners and wakes the runner when
+work is due; each lane and the tick's queue recovery own their lease recovery.
 Every route family, task kind and table has one writing owner. Every native
 OpenAPI operation declares one family from the manifest in
 `frontend/packages/contracts/src/route-ownership.ts`.

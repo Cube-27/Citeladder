@@ -48,6 +48,11 @@ export const executionSpecs = {
   wake_timeout_ms: integer('RUNNER_WAKE_TIMEOUT_MS', 5000, 30000),
   wake_min_interval_ms: integer('RUNNER_WAKE_MIN_INTERVAL_MS', 5000, 60000),
   runner_job: text('CLOUD_RUN_RUNNER_JOB'),
+  // Cloud Scheduler's OIDC identity and audience for the API's periodic tick.
+  scheduler_invoker: text('SCHEDULER_TICK_INVOKER'),
+  scheduler_audience: text('SCHEDULER_TICK_AUDIENCE'),
+  // Periodic work admitted inside the scheduled request; a drain gets its own job.
+  scheduler_budget_seconds: integer('SCHEDULER_TICK_BUDGET_SECONDS', 20, 120),
   origin_token: text('CITELADDER_ORIGIN_TOKEN'),
   previous_origin_token: text('CITELADDER_ORIGIN_TOKEN_PREVIOUS'),
   // Cloud Run sets these: K_SERVICE on a service, CLOUD_RUN_JOB on a job execution.
@@ -88,8 +93,16 @@ export function executionSettings(source: SettingSource) {
   const protectOrigin = !env.CLOUD_RUN_JOB && Boolean(env.K_SERVICE || runnerJob);
   if (protectOrigin && !originToken)
     throw new ConfigError('Cloud Run API requires CITELADDER_ORIGIN_TOKEN');
+  const invoker = String(setting('scheduler_invoker')).trim();
+  const audience = String(setting('scheduler_audience')).trim();
+  if (Boolean(invoker) !== Boolean(audience))
+    throw new ConfigError('Set SCHEDULER_TICK_INVOKER and SCHEDULER_TICK_AUDIENCE together');
   return {
     runnerJob,
+    /** Null serves no scheduled tick route; local loops run `src/tick.ts` instead. */
+    scheduledTick: invoker
+      ? { invoker, audience, budgetSeconds: setting('scheduler_budget_seconds') as number }
+      : null,
     protectOrigin,
     originToken,
     previousOriginToken,
