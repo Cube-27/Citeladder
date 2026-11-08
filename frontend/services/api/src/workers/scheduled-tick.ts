@@ -17,7 +17,7 @@ import { getLogger } from '../logging.ts';
 import { startSuccessor } from './execution-process.ts';
 import { runnerOwners, runPeriodic } from './runner.ts';
 
-export const SCHEDULED_TICK_PATH = '/internal/tick';
+const SCHEDULED_TICK_PATH = '/internal/tick';
 
 const GOOGLE_ISSUERS = ['https://accounts.google.com', 'accounts.google.com'];
 const googleKeys = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
