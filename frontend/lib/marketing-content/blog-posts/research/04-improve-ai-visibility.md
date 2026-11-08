@@ -84,13 +84,13 @@ Review each AI surface's crawler separately. Search crawlers, training crawlers 
 
 Crawler details come from each operator's own documentation (fetched 8 Nov 2026).[\[4\]](#source-4)[\[5\]](#source-5)
 
-| Crawler           | Operator   | Documented purpose                                                                | What the documentation says about opting out                                                                      |
-| ----------------- | ---------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `OAI-SearchBot`   | OpenAI     | Surfaces websites in ChatGPT's search features                                    | Opted-out sites are not shown in ChatGPT search answers, though they can still appear as navigational links       |
-| `GPTBot`          | OpenAI     | Crawls content that may be used to train OpenAI's foundation models               | Disallowing it signals the content should not be used for training. OpenAI says each setting is independent       |
-| `ChatGPT-User`    | OpenAI     | Used for certain user actions; may visit a page when a user asks ChatGPT          | Controlled via `robots.txt` (`User-agent: ChatGPT-User`), though `robots.txt` rules may not apply to user actions |
+| Crawler           | Operator   | Documented purpose                                                                 | What the documentation says about opting out                                                                      |
+| ----------------- | ---------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `OAI-SearchBot`   | OpenAI     | Surfaces websites in ChatGPT's search features                                     | Opted-out sites are not shown in ChatGPT search answers, though they can still appear as navigational links       |
+| `GPTBot`          | OpenAI     | Crawls content that may be used to train OpenAI's foundation models                | Disallowing it signals the content should not be used for training. OpenAI says each setting is independent       |
+| `ChatGPT-User`    | OpenAI     | Used for certain user actions; may visit a page when a user asks ChatGPT           | Controlled via `robots.txt` (`User-agent: ChatGPT-User`), though `robots.txt` rules may not apply to user actions |
 | `PerplexityBot`   | Perplexity | Surfaces and links sites in Perplexity search results; not used for model training | Controlled via `robots.txt` (`User-agent: PerplexityBot`)                                                         |
-| `Perplexity-User` | Perplexity | Fetches a page when a user requests it                                            | Perplexity says it generally ignores `robots.txt` rules because a user requested the fetch                        |
+| `Perplexity-User` | Perplexity | Fetches a page when a user requests it                                             | Perplexity says it generally ignores `robots.txt` rules because a user requested the fetch                        |
 
 A site can allow a search crawler while disallowing a training crawler, so "block AI" is really several separate decisions. OpenAI and Perplexity both note that search settings can take up to 24 hours to take effect after a `robots.txt` change, so wait before judging a fix.
 

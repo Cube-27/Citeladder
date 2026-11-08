@@ -40,15 +40,15 @@ These editorial shortlists rest on documented capabilities; they are not test sc
 
 Confirmed entry prices in this review run from a free trial to $99 per month, but the units differ: prompts, engines, domains and users are priced in different ways. Each row gives the entry plan, the engines it includes and its prompt cap, with the date of its last check. Prices are in USD.
 
-| Platform              | Shortlist when you need                                        | Entry price (checked)                                                   | Engines at entry                                                                                      | Prompt cap                                           | Buying caveat                                                           |
-| --------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------- |
-| OtterlyAI             | A small daily monitoring pilot with explicit prompt limits     | Lite $29/mo (reviewed 6 Oct 2026)                                       | ChatGPT, Google AI Overviews, Perplexity, Microsoft Copilot; Gemini, AI Mode and Claude are add-ons   | 15                                                   | Additional engines cost extra                                           |
-| Peec AI               | Prompt, brand and source analysis for marketing teams          | Starter $95/mo monthly; $80/mo on annual billing (checked 8 Nov 2026)   | Any 3 models you choose from its self-serve list                                                      | 50                                                   | Extra models are add-ons; confirm the model list and Perplexity access  |
-| Ahrefs Brand Radar    | Broad category discovery plus custom prompt tracking           | Not confirmed; checkout showed localised currency (reviewed 6 Oct 2026) | Confirm for your configuration                                                                        | Confirm for your configuration                       | Index data and custom checks are different products and units           |
-| Semrush AI Visibility | AI reporting alongside an existing SEO workflow                | Base $99/mo per domain, billed annually (checked 8 Nov 2026)            | ChatGPT, Google AI, Gemini, Perplexity                                                                | 25 custom prompts                                    | Check domain, user and prompt allowances separately                     |
-| Scrunch               | Visibility combined with page audits and agent-traffic work    | Confirm on vendor pricing page (reviewed 6 Oct 2026)                    | Confirm for your configuration                                                                        | Confirm for your configuration                       | Confirm which delivery and AXP functions are in your package            |
-| Profound              | Enterprise answer-engine analysis and marketing operations     | Free 7-day trial; Enterprise custom (checked 8 Nov 2026)                | Trial: ChatGPT, Gemini, Google AI Overviews; Enterprise: up to 9                                      | Trial: 50 prompts daily for 7 days; Enterprise tailored | Current main pricing page shows Enterprise plus trial only           |
-| CiteLadder            | Inspectable answer and source records plus site/search context | Early-access onboarding as of 6 Oct 2026; provider usage billed separately | ChatGPT, Gemini, Claude, Google AI Overviews, per CiteLadder's product page                        | Not covered in this review                           | Early-access terms and separate provider usage need confirmation        |
+| Platform              | Shortlist when you need                                        | Entry price (checked)                                                      | Engines at entry                                                                                    | Prompt cap                                              | Buying caveat                                                          |
+| --------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------- |
+| OtterlyAI             | A small daily monitoring pilot with explicit prompt limits     | Lite $29/mo (reviewed 6 Oct 2026)                                          | ChatGPT, Google AI Overviews, Perplexity, Microsoft Copilot; Gemini, AI Mode and Claude are add-ons | 15                                                      | Additional engines cost extra                                          |
+| Peec AI               | Prompt, brand and source analysis for marketing teams          | Starter $95/mo monthly; $80/mo on annual billing (checked 8 Nov 2026)      | Any 3 models you choose from its self-serve list                                                    | 50                                                      | Extra models are add-ons; confirm the model list and Perplexity access |
+| Ahrefs Brand Radar    | Broad category discovery plus custom prompt tracking           | Not confirmed; checkout showed localised currency (reviewed 6 Oct 2026)    | Confirm for your configuration                                                                      | Confirm for your configuration                          | Index data and custom checks are different products and units          |
+| Semrush AI Visibility | AI reporting alongside an existing SEO workflow                | Base $99/mo per domain, billed annually (checked 8 Nov 2026)               | ChatGPT, Google AI, Gemini, Perplexity                                                              | 25 custom prompts                                       | Check domain, user and prompt allowances separately                    |
+| Scrunch               | Visibility combined with page audits and agent-traffic work    | Confirm on vendor pricing page (reviewed 6 Oct 2026)                       | Confirm for your configuration                                                                      | Confirm for your configuration                          | Confirm which delivery and AXP functions are in your package           |
+| Profound              | Enterprise answer-engine analysis and marketing operations     | Free 7-day trial; Enterprise custom (checked 8 Nov 2026)                   | Trial: ChatGPT, Gemini, Google AI Overviews; Enterprise: up to 9                                    | Trial: 50 prompts daily for 7 days; Enterprise tailored | Current main pricing page shows Enterprise plus trial only             |
+| CiteLadder            | Inspectable answer and source records plus site/search context | Early-access onboarding as of 6 Oct 2026; provider usage billed separately | ChatGPT, Gemini, Claude, Google AI Overviews, per CiteLadder's product page                         | Not covered in this review                              | Early-access terms and separate provider usage need confirmation       |
 
 ## How did we compare these AEO platforms?
 
@@ -60,11 +60,11 @@ We recorded each product's collection model, visible plan limits, source-analysi
 
 We also looked at how four comparison pages that ranked for these queries on 8 November 2026 are built, to decide what this page should show.
 
-| Page feature                           | Pages with it (of 4) |
-| -------------------------------------- | -------------------: |
-| Comparison table that includes prices  |                    4 |
-| FAQ schema markup                      |                    2 |
-| Affiliate or commission disclosure     |                    2 |
+| Page feature                          | Pages with it (of 4) |
+| ------------------------------------- | -------------------: |
+| Comparison table that includes prices |                    4 |
+| FAQ schema markup                     |                    2 |
+| Affiliate or commission disclosure    |                    2 |
 
 Method: we counted tables, headings and FAQ markup in the saved HTML of each page on 8 November 2026. The sample is four pages, so treat the result as directional, not as a market statistic. It is why this page leads with a price and engine table and discloses CiteLadder's own position.
 
@@ -134,10 +134,10 @@ For example, OtterlyAI's 15-prompt, four-engine, daily configuration implies **1
 
 Calculation: prompts × selected engines × scheduled days. These are theoretical scheduling counts, not verified successful answers, equal-quality samples or a claim that one package is better. Retries, country variants, engine availability and collection methods can change the practical workload.
 
-| Plan            | Prompts | Engines | Days | Scheduled observations | Price basis                         |
-| --------------- | ------: | ------: | ---: | ---------------------: | ----------------------------------- |
-| OtterlyAI Lite  |      15 |       4 |   30 |                  1,800 | $29/mo, reviewed 6 Oct 2026         |
-| Peec AI Starter |      50 |       3 |   30 |                  4,500 | $95/mo monthly, checked 8 Nov 2026  |
+| Plan            | Prompts | Engines | Days | Scheduled observations | Price basis                        |
+| --------------- | ------: | ------: | ---: | ---------------------: | ---------------------------------- |
+| OtterlyAI Lite  |      15 |       4 |   30 |                  1,800 | $29/mo, reviewed 6 Oct 2026        |
+| Peec AI Starter |      50 |       3 |   30 |                  4,500 | $95/mo monthly, checked 8 Nov 2026 |
 
 Method: prompt and engine counts are taken from each vendor's pricing page and multiplied by 30 daily runs. Peec's page states the 4,500 figure itself. Date of calculation: 8 November 2026 (Peec) and 6 October 2026 (OtterlyAI). We did not include Semrush because its prompt-tracking engines differ from its database engines, so the same formula would not be comparable.
 
@@ -174,14 +174,14 @@ A good pilot might reveal which comparison questions exclude your brand, which d
 
 Match the tool to the goal, then confirm the caveat in the table above.
 
-| Your goal                                                                | Shortlist                                    | Why                                                                              |
-| ------------------------------------------------------------------------ | -------------------------------------------- | -------------------------------------------------------------------------------- |
-| Run a small, low-cost monitoring pilot                                   | [OtterlyAI](/compare/otterly-ai)             | Lowest paid entry price confirmed in this review, with explicit prompt limits    |
-| Analyse brand and sources for a marketing team                           | [Peec AI](/compare/peec-ai)                  | Prompt-led brand and source views, with a published Starter price                |
-| Add AI reporting to an existing SEO workflow                             | Semrush AI Visibility or Ahrefs Brand Radar  | Sits inside tools your team may already use                                      |
-| Work on technical agent experience                                       | [Scrunch](/compare/scrunch-ai)               | Combines page audits with agent-traffic monitoring                               |
-| Run enterprise analysis and marketing operations                         | [Profound](/compare/profound)                | Tailored Enterprise offer with up to nine engines                                |
-| Keep inspectable answers beside site and search evidence, or self-host   | CiteLadder                                   | Retained answers, cited URLs and an [open source](/open-source) build            |
+| Your goal                                                              | Shortlist                                   | Why                                                                           |
+| ---------------------------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------- |
+| Run a small, low-cost monitoring pilot                                 | [OtterlyAI](/compare/otterly-ai)            | Lowest paid entry price confirmed in this review, with explicit prompt limits |
+| Analyse brand and sources for a marketing team                         | [Peec AI](/compare/peec-ai)                 | Prompt-led brand and source views, with a published Starter price             |
+| Add AI reporting to an existing SEO workflow                           | Semrush AI Visibility or Ahrefs Brand Radar | Sits inside tools your team may already use                                   |
+| Work on technical agent experience                                     | [Scrunch](/compare/scrunch-ai)              | Combines page audits with agent-traffic monitoring                            |
+| Run enterprise analysis and marketing operations                       | [Profound](/compare/profound)               | Tailored Enterprise offer with up to nine engines                             |
+| Keep inspectable answers beside site and search evidence, or self-host | CiteLadder                                  | Retained answers, cited URLs and an [open source](/open-source) build         |
 
 If you want to evaluate CiteLadder, [review current access options](/pricing) and prepare your question set and required engines. Apply the same evidence test to CiteLadder that you apply to every other provider.
 
