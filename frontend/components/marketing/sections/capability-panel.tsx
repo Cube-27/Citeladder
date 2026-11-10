@@ -1,18 +1,18 @@
-import { ArrowRight, Sparkle, type LucideIcon } from 'lucide-react';
 import { useId, type CSSProperties } from 'react';
 
-export type Capability = Readonly<{ href: string; text: string; icon: LucideIcon }>;
+export type Capability = Readonly<{ href: string; text: string }>;
 
-/** A row's place in the list, which sets when the highlight reaches it. */
+/** A row's place in the list, which sets when the lifted bar reaches it. */
 const rowOrder = (index: number): CSSProperties & Record<'--capl-i', number> => ({
   '--capl-i': index,
 });
 
 /**
  * CapabilityPanel: what the product does, as the answer to one question
- * (D52). Each row is a short statement linking to its module page. From 768px
- * a highlight steps down the rows, in CSS only and only for a list of ten
- * (`data-rows`); pointing at or focusing a row stops it. Phones do not show
+ * (D52, D53). Each row is a short centred statement linking to its module
+ * page, straight on the hero with no card. From 768px a lifted bar steps down
+ * the rows, in CSS only and only for a list of ten (`data-rows`); pointing at
+ * or focusing a row stops it and lifts that row instead. Phones do not show
  * the panel.
  */
 export function CapabilityPanel({
@@ -23,16 +23,13 @@ export function CapabilityPanel({
   return (
     <div className="cl-capl">
       <p id={questionId} className="cl-capl-ask">
-        <Sparkle aria-hidden />
         <span>{question}</span>
       </p>
       <ul className="cl-capl-list" aria-labelledby={questionId} data-rows={items.length}>
-        {items.map(({ href, text, icon: Icon }, index) => (
+        {items.map(({ href, text }, index) => (
           <li key={href} style={rowOrder(index)}>
             <a href={href} className="cl-capl-row focus-ring">
-              <Icon className="cl-capl-ico" aria-hidden />
               <span className="cl-capl-text">{text}</span>
-              <ArrowRight className="cl-capl-go" aria-hidden />
             </a>
           </li>
         ))}
