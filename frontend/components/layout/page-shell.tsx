@@ -108,6 +108,7 @@ export function DetailScreen<T extends string = string>({
   back,
   lead,
   aside,
+  titleLines,
   children,
   ...bands
 }: ScreenBands<T> &
@@ -120,9 +121,11 @@ export function DetailScreen<T extends string = string>({
     lead?: ReactNode;
     /** Supporting context beside the main content. */
     aside?: ReactNode;
+    /** Lines the record's title may take before it is cut (PageHeader `titleLines`). */
+    titleLines?: 1 | 2;
   }>) {
   return (
-    <PageShell {...bands} back={back}>
+    <PageShell {...bands} back={back} titleLines={titleLines}>
       {lead}
       {aside ? (
         <AppGrid layout="main-aside">
@@ -143,8 +146,9 @@ function PageShell<T extends string>({
   tabs,
   controls,
   children,
+  titleLines,
   ...layout
-}: ScreenBands<T> & FillLayout & Readonly<{ back?: PageBack }>) {
+}: ScreenBands<T> & FillLayout & Readonly<{ back?: PageBack; titleLines?: 1 | 2 }>) {
   const resolved = useRouteTitle(title);
   const shell = useContext(ShellContext);
   const navDrawer = shell?.navDrawer;
@@ -164,6 +168,7 @@ function PageShell<T extends string>({
     <div className="flex min-w-0 flex-col gap-[var(--page-section-gap)]">
       <PageHeader
         title={resolved}
+        titleLines={titleLines}
         lead={
           <>
             {/* Below 900px the header leads with the navigation menu. */}

@@ -1,5 +1,8 @@
-import type { ReactNode } from 'react';
+'use client';
 
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+
+import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -20,19 +23,26 @@ const BAR_LAYER =
  * page leads the title with its way back.
  *
  * Only where the actions cannot fit beside the title (a phone) do they take
- * a second row. The title stays one line: a long name truncates, the full
- * name in its tooltip.
+ * a second row. The title stays one line (two with `titleLines={2}`, for a
+ * detail page named by a long record): a longer name is cut, and only then
+ * does the title take keyboard focus and show the full name in the shared
+ * tooltip on hover and focus.
  */
 export function PageHeader({
   title,
   lead,
   actions,
+  titleLines = 1,
 }: Readonly<{
   title: string;
   /** Before the title: a detail page's back button. */
   lead?: ReactNode;
   actions?: ReactNode;
+  /** Lines the title may take before it is cut: 2 for a long detail title. */
+  titleLines?: 1 | 2;
 }>) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  const cut = useIsCut(heading, title);
   return (
     <header
       data-page-header=""
@@ -44,9 +54,23 @@ export function PageHeader({
     >
       <div className="flex min-h-[var(--row-app)] min-w-[min(100%,12rem)] flex-1 items-center gap-3">
         {lead}
-        <h1 className={textRole('pageTitle', 'min-w-0 truncate')} title={title}>
-          {title}
-        </h1>
+        <Tooltip content={title} side="bottom" describe={false} shouldOpen={isTextCut}>
+          <h1
+            ref={heading}
+            // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Only a cut title takes focus, so a keyboard reader can open the tooltip holding the full name.
+            tabIndex={cut ? 0 : undefined}
+            className={textRole(
+              'pageTitle',
+              cn(
+                'min-w-0 break-words',
+                titleLines === 1 ? 'truncate' : 'line-clamp-2',
+                cut && 'focus-ring',
+              ),
+            )}
+          >
+            {title}
+          </h1>
+        </Tooltip>
       </div>
       {actions ? (
         <div className="ms-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
@@ -55,4 +79,22 @@ export function PageHeader({
       ) : null}
     </header>
   );
+}
+
+/**
+ * Whether the element is cutting its text, kept current as it resizes, so a
+ * cut title (and only a cut one) can take focus to reveal its tooltip.
+ */
+function useIsCut(ref: RefObject<HTMLElement | null>, text: string) {
+  const [cut, setCut] = useState(false);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const update = () => setCut(isTextCut(node));
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [ref, text]);
+  return cut;
 }

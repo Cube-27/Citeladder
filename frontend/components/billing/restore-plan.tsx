@@ -6,6 +6,7 @@ import { CheckoutStatus } from '@/components/billing/checkout-status';
 import { ChoosePlan, subscribeWith } from '@/components/billing/choose-plan';
 import { PurchaseReview } from '@/components/billing/purchase-review';
 import { Callout } from '@/components/ui/callout';
+import { cardClasses } from '@/components/ui/card';
 import { Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
 import { emptyBillingCustomerDetails } from '@/lib/api/billing';
@@ -42,16 +43,18 @@ export function RestorePlan({ workspaceId }: Readonly<{ workspaceId: string }>) 
         itemName={(key) => catalogItemName(catalog, key)}
         renewsOn={null}
       />
-      <ChoosePlan
-        catalog={catalog}
-        canManage={canManage}
-        pending={checkout.preparing}
-        country={country}
-        setCountry={setCountry}
-        details={details}
-        setDetails={setDetails}
-        subscribe={subscribeWith(checkout, country)}
-      />
+      <div className={cardClasses()}>
+        <ChoosePlan
+          catalog={catalog}
+          canManage={canManage}
+          pending={checkout.preparing}
+          country={country}
+          setCountry={setCountry}
+          details={details}
+          setDetails={setDetails}
+          subscribe={subscribeWith(checkout, country)}
+        />
+      </div>
     </Stack>
   );
 }

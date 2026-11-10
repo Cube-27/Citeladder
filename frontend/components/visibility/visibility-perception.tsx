@@ -6,17 +6,20 @@ import type {
   PerceptionResponse,
 } from '@citeladder/contracts/visibility-perception';
 import { MessageSquareQuote } from 'lucide-react';
+import type { ComponentProps } from 'react';
 
+import { AppGrid } from '@/components/ui/app-grid';
 import { Badge } from '@/components/ui/badge';
 import { BusyBar } from '@/components/ui/progress-bar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
 import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatRow } from '@/components/ui/stat-row';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
+import { TAG_FACE } from '@/components/ui/tag';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { MissingValue } from '@/components/ui/unavailable-value';
@@ -78,8 +81,12 @@ export function PerceptionView({ data }: Readonly<{ data: PerceptionResponse }>)
       <Headline data={data} />
       <EntityTable entities={data.entities} />
       <ThemeTable themes={data.themes} />
-      <NegativeQuotes quotes={data.negative_quotes} />
-      <DriverTable drivers={data.drivers} />
+      {/* The criticism and the sources cited beside it are one question; the
+          two-column table sits beside the quotes where the width allows. */}
+      <AppGrid layout="halves">
+        <NegativeQuotes quotes={data.negative_quotes} />
+        <DriverTable drivers={data.drivers} />
+      </AppGrid>
     </Stack>
   );
 }
@@ -136,14 +143,14 @@ function Headline({ data }: Readonly<{ data: PerceptionResponse }>) {
                 label: 'Positive',
                 value: formatShare(score?.positive_share ?? null),
                 missingLabel: 'Unavailable',
-                sub: `${score?.positive ?? 0} of ${score?.classified ?? 0} classified mentions`,
+                sub: classifiedOf(score?.positive, score?.classified),
               },
               {
                 key: 'negative',
                 label: 'Negative',
                 value: formatShare(score?.negative_share ?? null),
                 missingLabel: 'Unavailable',
-                sub: `${score?.negative ?? 0} of ${score?.classified ?? 0} classified mentions`,
+                sub: classifiedOf(score?.negative, score?.classified),
               },
               {
                 key: 'recommended',
@@ -165,6 +172,15 @@ function Headline({ data }: Readonly<{ data: PerceptionResponse }>) {
   );
 }
 
+/**
+ * "3 of 4 classified mentions", or the unavailable mark when the brand has no
+ * score: an unknown count is never printed as a zero.
+ */
+function classifiedOf(count: number | undefined, classified: number | undefined) {
+  if (count === undefined || classified === undefined) return <MissingValue />;
+  return `${count} of ${classified} classified mentions`;
+}
+
 function EntityTable({ entities }: Readonly<{ entities: PerceptionResponse['entities'] }>) {
   return (
     <DataTable
@@ -173,13 +189,12 @@ function EntityTable({ entities }: Readonly<{ entities: PerceptionResponse['enti
       footer="Classified mentions of each business in the selected answers."
     >
       {entities.map((entity) => (
-        <TableRow key={entity.name}>
+        // Your own row is highlighted, as in the Trends brand table.
+        <TableRow key={entity.name} highlight={entity.is_brand}>
           <TableCell>
             <Inline as="span">
               <ClampText>{entity.name}</ClampText>
-              {entity.is_brand ? (
-                <span className={textRole('caption', 'text-ink-muted shrink-0')}>You</span>
-              ) : null}
+              {entity.is_brand ? <span className={textRole('label', TAG_FACE)}>You</span> : null}
             </Inline>
           </TableCell>
           <TableCell numeric>
@@ -209,8 +224,9 @@ const THEME_COLUMNS: readonly DataTableColumn[] = [
   { key: 'quote', label: 'Top quote' },
 ];
 
-function noneHere(heading: string): DataTableState {
-  return { kind: 'empty', headingLevel: 3, icon: MessageSquareQuote, heading };
+/** A table with nothing to list says so in one line, not a block state. */
+function noneHere(message: string): ComponentProps<typeof DataTable>['state'] {
+  return { kind: 'empty', inline: true, message };
 }
 
 function ThemeTable({ themes }: Readonly<{ themes: PerceptionResponse['themes'] }>) {

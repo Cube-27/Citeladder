@@ -96,7 +96,7 @@ function currentPlanOf(catalog: BillingCatalog | null, entitlement: BillingEntit
   return catalogPlanByKey(catalog, subscription.catalog_key) ?? null;
 }
 
-/** The dedicated billing section: plan, changes, extras, usage and documents. */
+/** The dedicated billing section: three cards, Plan, Usage and Invoices. */
 export function BillingScreen() {
   const { isLoading: entitlementLoading } = useEntitlement();
   const workspaceId = useActiveWorkspaceId();
@@ -142,13 +142,28 @@ export function BillingScreen() {
           Only a workspace Owner or Admin can change this workspace’s plan or buy add-ons.
         </Callout>
       )}
+      {/* Three cards (owner, 2026-11-10): the plan with everything that
+          changes it, then usage, then invoices. A prepared purchase is
+          reviewed right under the plan card that started it. */}
       <CurrentPlan
         entitlement={entitlement}
         currentPlan={currentPlanOf(catalog, entitlement)}
         planName={(key) => (catalog ? catalogItemName(catalog, key) : key)}
         canManage={canManage}
         cancellation={cancellation}
-      />
+      >
+        <PlanSection
+          catalog={catalog}
+          catalogLoading={catalogQuery.isLoading}
+          catalogError={catalogQuery.isError}
+          entitlement={entitlement}
+          canManage={canManage}
+          checkout={checkout}
+          planChanges={planChanges}
+          onBuyExtra={buyExtra}
+          newSubscription={{ country, setCountry, details, setDetails, subscribe }}
+        />
+      </CurrentPlan>
       {catalog ? (
         <PurchaseReview
           checkout={checkout}
@@ -158,17 +173,6 @@ export function BillingScreen() {
         />
       ) : null}
       <UsageMeters />
-      <PlanSection
-        catalog={catalog}
-        catalogLoading={catalogQuery.isLoading}
-        catalogError={catalogQuery.isError}
-        entitlement={entitlement}
-        canManage={canManage}
-        checkout={checkout}
-        planChanges={planChanges}
-        onBuyExtra={buyExtra}
-        newSubscription={{ country, setCountry, details, setDetails, subscribe }}
-      />
       <InvoiceHistory
         invoices={invoiceQuery.data ?? []}
         loading={invoiceQuery.isLoading}

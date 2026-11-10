@@ -7,7 +7,6 @@ import { ControlRow } from '@/components/ui/control-row';
 import { Dialog } from '@/components/ui/dialog';
 import { Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
-import { cardClasses } from '@/components/ui/card';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type {
@@ -74,12 +73,8 @@ export function PlanChanges({
       subscription.scheduled_change.state !== 'provider_rejected');
   if (options.length === 0) return null;
   return (
-    <Stack
-      as="section"
-      gap="compact"
-      className={cardClasses()}
-      aria-labelledby="plan-changes-title"
-    >
+    // A section of the Plan card, so no card of its own.
+    <Stack as="section" gap="compact" aria-labelledby="plan-changes-title">
       <EditorialSectionHeader
         headingId="plan-changes-title"
         title="Change plan"

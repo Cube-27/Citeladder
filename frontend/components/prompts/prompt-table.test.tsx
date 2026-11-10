@@ -101,7 +101,7 @@ describe('PromptTable pagination', () => {
       .getAllByRole('cell')
       .map((cell) => cell.textContent);
     expect(cells[columns.indexOf('Visibility')]).toBe('50%');
-    expect(cells[columns.indexOf('Owned citations')]).toBe('25%');
+    expect(cells[columns.indexOf('Owned citation rate')]).toBe('25%');
   });
 
   it('pages through rows with the page indicator and ghost buttons', async () => {

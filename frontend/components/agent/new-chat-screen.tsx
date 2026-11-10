@@ -5,7 +5,7 @@ import { X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { ActionStatusBadge } from '@/components/agent/action-status-badge';
+import { ActionPriorityBadge, ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { BriefingCard } from '@/components/agent/briefing-card';
 import { Composer } from '@/components/agent/composer';
 import { SkillPicker } from '@/components/agent/skill-picker';
@@ -22,10 +22,14 @@ import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { cardClasses } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
+import {
+  EditorialSectionHeader,
+  ledgerClasses,
+  ledgerItemClasses,
+} from '@/components/ui/workspace';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
 import {
   agentHandoffHref,
@@ -33,7 +37,7 @@ import {
   parseAgentHandoff,
   withoutContext,
 } from '@/lib/agent/handoff';
-import { approachLabel, priorityBand, targetKindLabel } from '@/lib/agent/vocabulary';
+import { approachLabel, targetKindLabel } from '@/lib/agent/vocabulary';
 import { actionsQueries, type Action } from '@/lib/api/actions';
 import type { AgentWorkflow } from '@/lib/api/agent';
 import { AGENT_TOP_ACTIONS } from '@/lib/config/agent';
@@ -114,59 +118,84 @@ function NewChat({
         ) : null}
         {access.canSend ? null : <Callout tone="info">{access.message}</Callout>}
         {failure ? <MutationNotice notice={failure} /> : null}
-        <Composer
-          id="new-chat-message"
-          label="Message the agent"
-          value={message}
-          onChange={setMessage}
-          onSubmit={() => start(message, pinnedId)}
-          pending={create.pending}
-          disabled={!access.canSend}
-          placeholder="Ask a question or describe the work you need. / picks a skill, @ mentions an Action."
-          chips={contextChips(context)}
-          commands={commands}
-          onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
-          tools={
-            pinnedId ? (
-              <PinnedWorkflow label={pinned?.label} onRemove={() => setPinnedId(undefined)} />
-            ) : (
-              <SkillPicker
-                {...commands.skillPicker}
-                value={skillId}
-                onChange={setSkillId}
-                hasAction={Boolean(actionId)}
-                disabled={!access.canSend}
-              />
-            )
-          }
-        />
-        {picked ? (
-          <WorkflowStart
-            workflow={picked}
-            onStart={(text) => start(text, picked.id)}
-            onBack={() => setPicked(null)}
+        <Stack gap="tight">
+          <Composer
+            id="new-chat-message"
+            label="Message the agent"
+            value={message}
+            onChange={setMessage}
+            onSubmit={() => start(message, pinnedId)}
             pending={create.pending}
             disabled={!access.canSend}
+            placeholder="Ask a question or describe the work"
+            chips={contextChips(context)}
+            commands={commands}
+            onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
+            tools={
+              pinnedId ? (
+                <PinnedWorkflow label={pinned?.label} onRemove={() => setPinnedId(undefined)} />
+              ) : (
+                <SkillPicker
+                  {...commands.skillPicker}
+                  value={skillId}
+                  onChange={setSkillId}
+                  hasAction={Boolean(actionId)}
+                  disabled={!access.canSend}
+                />
+              )
+            }
           />
-        ) : (
-          <WorkflowGallery onPick={setPicked} disabled={!access.canSend || create.pending} />
-        )}
+          {/* Instructions live in a caption, not the placeholder, so they stay
+              readable once the user starts typing. */}
+          <p className={textRole('caption')}>Type / to pick a skill or @ to mention an Action.</p>
+        </Stack>
+        {handoff.actionId ? null : <TopActions workspaceId={workspaceId} projectId={projectId} />}
+        <Workflows
+          picked={picked}
+          onPick={setPicked}
+          onStart={start}
+          pending={create.pending}
+          disabled={!access.canSend}
+        />
         {handoff.actionId ? null : (
-          <Disclosure title="Work on an Action">
-            <Stack gap="section">
-              <BriefingCard
-                workspaceId={workspaceId}
-                projectId={projectId}
-                onStart={create.start}
-                pending={create.pending}
-                disabled={!access.canSend}
-              />
-              <TopActions workspaceId={workspaceId} projectId={projectId} />
-            </Stack>
+          <Disclosure title="Get a briefing on what to work on">
+            <BriefingCard
+              workspaceId={workspaceId}
+              projectId={projectId}
+              onStart={create.start}
+              pending={create.pending}
+              disabled={!access.canSend}
+            />
           </Disclosure>
         )}
       </Stack>
     </ListScreen>
+  );
+}
+
+/** The workflow gallery, or the picked workflow's form in its place. */
+function Workflows({
+  picked,
+  onPick,
+  onStart,
+  pending,
+  disabled,
+}: Readonly<{
+  picked: AgentWorkflow | null;
+  onPick: (workflow: AgentWorkflow | null) => void;
+  onStart: (text: string, workflowId: string) => void;
+  pending: boolean;
+  disabled: boolean;
+}>) {
+  if (!picked) return <WorkflowGallery onPick={onPick} disabled={disabled || pending} />;
+  return (
+    <WorkflowStart
+      workflow={picked}
+      onStart={(text) => onStart(text, picked.id)}
+      onBack={() => onPick(null)}
+      pending={pending}
+      disabled={disabled}
+    />
   );
 }
 
@@ -216,13 +245,19 @@ function AttachedAction({
   );
 }
 
+/**
+ * The project's top open Actions, open above the workflows as the first
+ * starting points (owner, 2026-11-10). While they load, placeholder rows hold
+ * the list's height so the workflows below never jump.
+ */
 function TopActions({
   workspaceId,
   projectId,
 }: Readonly<{ workspaceId: string; projectId: string }>) {
   const query = useQuery(actionsQueries.list({ workspaceId, projectId }));
   const top = query.data?.items.slice(0, AGENT_TOP_ACTIONS) ?? [];
-  if (top.length === 0) return null;
+  // An error, or a project with no open Actions, leaves nothing to start from.
+  if (query.isError || (query.isSuccess && top.length === 0)) return null;
   return (
     <Stack as="section" aria-labelledby="top-actions">
       <EditorialSectionHeader
@@ -234,36 +269,45 @@ function TopActions({
           </Button>
         }
       />
-      <Stack as="ul">
-        {top.map((action) => (
-          <TopActionRow key={action.id} action={action} />
-        ))}
-      </Stack>
+      <div className={cardClasses()}>
+        {query.isPending ? (
+          <Skeleton variant="row" rows={AGENT_TOP_ACTIONS} label="Loading Actions" />
+        ) : (
+          <ul className={ledgerClasses()}>
+            {top.map((action) => (
+              <TopActionRow key={action.id} action={action} />
+            ))}
+          </ul>
+        )}
+      </div>
     </Stack>
   );
 }
 
+/**
+ * One recommended Action. Its title starts a chat on it; the approach and
+ * priority band say what the work is.
+ */
 function TopActionRow({ action }: Readonly<{ action: Action }>) {
+  const target = readableUrl(action.target_label);
   return (
-    <Inline as="li" gap="compact" className={cn(cardClasses(), 'flex-wrap')}>
+    <Inline as="li" gap="compact" className={ledgerItemClasses()}>
       <Stack gap="tight" className="min-w-0 flex-1">
-        <TextLink href={`/agent/actions/${action.id}`} text="itemTitle" className="truncate">
-          {readableUrl(action.target_label)}
+        <TextLink
+          href={agentHandoffHref({ actionId: action.id })}
+          text="itemTitle"
+          className="truncate"
+          aria-label={`Work on ${target}`}
+        >
+          {target}
         </TextLink>
         <span className={textRole('caption')}>
-          {[
-            approachLabel(action.approach),
-            action.priority_score === null
-              ? null
-              : `${priorityBand(action.priority_score)} priority`,
-          ]
+          {[targetKindLabel(action.target_kind), approachLabel(action.approach)]
             .filter(Boolean)
             .join(' · ')}
         </span>
       </Stack>
-      <Button asChild variant="secondary">
-        <ProjectLink href={agentHandoffHref({ actionId: action.id })}>Work on this</ProjectLink>
-      </Button>
+      <ActionPriorityBadge score={action.priority_score} />
     </Inline>
   );
 }

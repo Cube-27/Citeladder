@@ -319,7 +319,15 @@ describe('DashboardScreen', () => {
   });
   it('notes a missing comparable run in one line of the movement card', async () => {
     const user = userEvent.setup();
-    queryResult.data = { ...commandCenter, movements: [] };
+    queryResult.data = {
+      ...commandCenter,
+      measurement: {
+        ...commandCenter.measurement,
+        comparable_audit_id: null,
+        comparison_status: 'no_baseline',
+      },
+      movements: [],
+    };
     renderDashboard(
       <TooltipProvider>
         <DashboardScreen />
@@ -335,6 +343,18 @@ describe('DashboardScreen', () => {
     expect(screen.queryByRole('dialog', { name: 'Launch audit' })).not.toBeInTheDocument();
     await user.click(movement.getByRole('button', { name: 'Launch audit' }));
     expect(screen.getByRole('dialog', { name: 'Launch audit' })).toBeInTheDocument();
+  });
+  it('says a comparable run produced no change, without offering another run', () => {
+    queryResult.data = { ...commandCenter, movements: [] };
+    renderDashboard(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
+    const movement = within(screen.getByRole('region', { name: 'Movement' }));
+    expect(movement.getByText('No movement to show')).toBeVisible();
+    expect(movement.queryByText('No comparable measurement yet')).not.toBeInTheDocument();
+    expect(movement.queryByRole('button', { name: 'Launch audit' })).not.toBeInTheDocument();
   });
   it("gives the next Action its reason and the Action's evidence", () => {
     queryResult.data = {

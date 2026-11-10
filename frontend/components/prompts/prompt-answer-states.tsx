@@ -7,7 +7,7 @@ import { Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
 import { StatRow } from '@/components/ui/stat-row';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { ClampText, TableCell, TableRow } from '@/components/ui/table';
+import { ClampText, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { agentHandoffHref } from '@/lib/agent/handoff';
@@ -152,7 +152,14 @@ function EngineTable({ outcomes }: Readonly<{ outcomes: readonly Outcome[] }>) {
     <DataTable title="Engine coverage" columns={ENGINE_COLUMNS}>
       {outcomes.map((outcome) => (
         <TableRow key={`${outcome.logical_engine}:${outcome.transport_model}`}>
-          <TableCell>{engines.label(outcome.logical_engine)}</TableCell>
+          {/* A row is one engine AND model, so the model is named under the
+              engine: two models of one engine no longer read as a repeat. */}
+          <TableCell>
+            <TableCellLines
+              primary={engines.label(outcome.logical_engine)}
+              secondary={engines.modelLabel(outcome.logical_engine, outcome.transport_model)}
+            />
+          </TableCell>
           <TableCell numeric>{outcome.counts.responses}</TableCell>
           {ANSWER_STATES.map((state) => (
             <TableCell key={state.key} numeric>

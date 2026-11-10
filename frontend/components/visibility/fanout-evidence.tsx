@@ -57,7 +57,8 @@ const PAGE_SIZE = 10;
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'search', label: 'Search' },
-  { key: 'model', label: 'Model', width: 'name' },
+  // The page's filter calls these surfaces; the column uses the same word.
+  { key: 'surface', label: 'Surface', width: 'name' },
   { key: 'occurrences', label: 'Occurrences', width: 'figure', numeric: true },
 ];
 
@@ -78,6 +79,25 @@ const groupCodec = stringUrlCodec(
   GROUP_OPTIONS.map((option) => option.value),
   'none',
 );
+
+/**
+ * How the searches are grouped, for the page's control strip. It reads and
+ * writes the same `group` URL state the table reads, so the strip and the
+ * table never disagree.
+ */
+export function FanoutGroupFilter() {
+  const [grouping, setGrouping] = useUrlState('group', groupCodec);
+  return (
+    <FilterChoice
+      label="Group searches by"
+      value={grouping}
+      defaultValue="none"
+      options={GROUP_OPTIONS}
+      onChange={setGrouping}
+      fit
+    />
+  );
+}
 
 /**
  * The searches an engine ran before answering, as ONE table.
@@ -129,7 +149,6 @@ export function FanoutEvidence({
   }>) {
   const {
     grouping,
-    setGrouping,
     search,
     setSearch,
     needle,
@@ -176,18 +195,12 @@ export function FanoutEvidence({
         ),
         status:
           needle && matched != null ? <SearchScopeNote search={needle} matched={matched} /> : null,
+        // Grouping is a page control (`FanoutGroupFilter`, in the strip);
+        // the table keeps its search and its counts.
         actions: (
-          <>
-            <span aria-busy={!summaryMatchesInput}>
-              <FanoutCounts summary={summary} fallback={totals} selectionWide={selectionWide} />
-            </span>
-            <FilterChoice
-              label="Group searches by"
-              value={grouping}
-              options={GROUP_OPTIONS}
-              onChange={setGrouping}
-            />
-          </>
+          <span aria-busy={!summaryMatchesInput}>
+            <FanoutCounts summary={summary} fallback={totals} selectionWide={selectionWide} />
+          </span>
         ),
       }}
       columns={COLUMNS}
@@ -217,7 +230,7 @@ export function FanoutEvidence({
  * reading it inline buried the four states the component actually renders.
  */
 function useSearchTable(query: EvidenceTabProps['query'], runId: string | null) {
-  const [grouping, setGrouping] = useUrlState('group', groupCodec);
+  const [grouping] = useUrlState('group', groupCodec);
   const [search, setSearch] = useUrlState('q', optionalStringUrlCodec, { history: 'replace' });
   // Trimmed and capped ONCE: the table filter, the server scope, the match
   // count and the empty state all read this, so none of them can be asking
@@ -269,7 +282,6 @@ function useSearchTable(query: EvidenceTabProps['query'], runId: string | null) 
       }));
   return {
     grouping,
-    setGrouping,
     search,
     setSearch,
     needle,
@@ -323,7 +335,7 @@ function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
     <>
       {group.label ? (
         <TableRow>
-          <TableCell colSpan={3} className="bg-surface-2">
+          <TableCell colSpan={3} className="bg-surface-sunken">
             <ClampText className={textRole('itemTitle')}>{group.label}</ClampText>
           </TableCell>
         </TableRow>

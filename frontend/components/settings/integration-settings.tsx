@@ -75,8 +75,8 @@ function CallbackNotice({
     if (family === 'google') {
       return (
         <Callout tone="positive">
-          <strong>Google connected.</strong> Search Console and Analytics 4 are now linked on one
-          shared OAuth grant. Select a property for each below to start importing — nothing syncs
+          <strong>Google connected.</strong> Search Console and Analytics 4 are now linked through
+          one Google connection. Select a property for each below to start importing — nothing syncs
           until a property is chosen.
         </Callout>
       );

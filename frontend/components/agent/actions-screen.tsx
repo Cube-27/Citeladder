@@ -3,6 +3,8 @@
 import { ActionPriorityBadge, ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { ListScreen } from '@/components/layout/page-shell';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
+import { DisplayTime } from '@/components/ui/display-time';
+import { Inline } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { TextLink } from '@/components/ui/text-link';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
@@ -11,6 +13,7 @@ import {
   ACTION_STATUS_LABEL,
   ACTION_TARGET_KINDS,
   approachLabel,
+  familyLabel,
   targetKindLabel,
 } from '@/lib/agent/vocabulary';
 import { actionsQueries, type actionsApi, type Action, type ActionStatus } from '@/lib/api/actions';
@@ -123,17 +126,27 @@ function ActionsList({
     // two-line blanks and the pager stays where a full page puts it.
     <DataTable label="Actions" columns={COLUMNS} rowLines={2} {...table}>
       {page?.items.map((action) => (
-        <ActionRow key={action.id} action={action} />
+        // A single-status filter makes every row the same status; the queue
+        // mixes Open with In progress, so only the rows that are not Open
+        // name theirs.
+        <ActionRow
+          key={action.id}
+          action={action}
+          showStatus={status === undefined && action.status !== 'open'}
+        />
       ))}
     </DataTable>
   );
 }
 
+// No status column: under the default queue nearly every row is Open, so a
+// row names its status beside the target only when it differs (owner,
+// 2026-11-10).
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'target', label: 'Target' },
-  { key: 'status', label: 'Status', width: 'status' },
   { key: 'priority', label: 'Priority', width: 'status' },
   { key: 'approach', label: 'Approach', width: 'name' },
+  { key: 'updated', label: 'Updated', width: 'date', numeric: true },
 ];
 
 /** What a page with no Actions says: nothing matches, or nothing exists yet. */
@@ -157,33 +170,48 @@ function emptyActions(page: Awaited<ReturnType<typeof actionsApi.list>>): DataTa
       };
 }
 
-function ActionRow({ action }: Readonly<{ action: Action }>) {
+/**
+ * The row's one-line work summary: what kind of target, how many findings
+ * the Action groups and the areas they come from. The list read carries no
+ * written summary, so it is built from those fields.
+ */
+function workSummary(action: Action): string {
+  const findings = `${formatCount(action.member_count)} ${action.member_count === 1 ? 'finding' : 'findings'}`;
+  const families = action.families.map(familyLabel).filter(Boolean).join(', ');
+  return [
+    targetKindLabel(action.target_kind),
+    families ? `${findings} in ${families}` : findings,
+    action.origin === 'agent' ? 'From agent work' : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function ActionRow({ action, showStatus }: Readonly<{ action: Action; showStatus: boolean }>) {
   return (
     <TableRow>
       <TableCell>
         <div className="grid min-w-0">
-          <ClampText lines={1} tooltip={readableUrl(action.target_label)}>
-            <TextLink href={`/agent/actions/${action.id}`} text="itemTitle">
-              {readableUrl(action.target_label)}
-            </TextLink>
-          </ClampText>
+          <Inline>
+            <ClampText lines={1} tooltip={readableUrl(action.target_label)}>
+              <TextLink href={`/agent/actions/${action.id}`} text="itemTitle">
+                {readableUrl(action.target_label)}
+              </TextLink>
+            </ClampText>
+            {showStatus ? <ActionStatusBadge status={action.status} /> : null}
+          </Inline>
           <ClampText lines={1} className={textRole('caption')}>
-            {[
-              targetKindLabel(action.target_kind),
-              action.origin === 'agent' ? 'From agent work' : null,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
+            {workSummary(action)}
           </ClampText>
         </div>
-      </TableCell>
-      <TableCell>
-        <ActionStatusBadge status={action.status} />
       </TableCell>
       <TableCell className="whitespace-nowrap">
         <ActionPriorityBadge score={action.priority_score} />
       </TableCell>
       <TableCell>{approachLabel(action.approach) ?? ''}</TableCell>
+      <TableCell numeric>
+        <DisplayTime value={action.updated_at} dateOnly />
+      </TableCell>
     </TableRow>
   );
 }

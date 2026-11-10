@@ -34,6 +34,14 @@ const action = {
   updated_at: NOW,
 };
 
+const inProgress = {
+  ...action,
+  id: '33333333-3333-4333-8333-333333333333',
+  target_label: 'acme.test/blog',
+  target_url: 'https://acme.test/blog',
+  status: 'in_progress',
+};
+
 const selection = {
   activeProjectId: PROJECT,
   activeProject: makeProject({ id: PROJECT }),
@@ -53,7 +61,7 @@ describe('Actions', () => {
         // Every read is recorded: the status counts ride the table's own
         // first page, so the default view is one request, not two.
         searches.push(`${params.get('status') ?? 'queue'}:${params.get('limit')}`);
-        const items = params.get('status') === 'dismissed' ? [] : [action];
+        const items = params.get('status') === 'dismissed' ? [] : [action, inProgress];
         return HttpResponse.json({
           items,
           next_cursor: null,
@@ -75,6 +83,17 @@ describe('Actions', () => {
     // Priority is an order, never the error red (owner, 2026-11-06).
     expect(priority).toHaveAttribute('data-badge-tone', 'accent');
     expect(screen.queryByText('82.5')).not.toBeInTheDocument();
+    // The row says what the work is and when it last changed; an Open row in
+    // the queue names no status.
+    const cells = within(row.closest('tr')!);
+    expect(cells.getByText('Page · 1 finding in Site Health, Search Console')).toBeVisible();
+    expect(cells.getByText('Sep 25, 2026')).toBeVisible();
+    expect(cells.queryByText('Open')).not.toBeInTheDocument();
+    expect(cells.getByText('Improve the existing page')).toBeVisible();
+    expect(screen.queryByRole('columnheader', { name: 'Status' })).not.toBeInTheDocument();
+    // The queue mixes statuses, so a row that is not Open names its own.
+    const started = screen.getByRole('link', { name: 'acme.test/blog' });
+    expect(within(started.closest('tr')!).getByText('In progress')).toBeVisible();
 
     // The counts sit in the menu beside each status; the trigger names the
     // status alone, so loading or dropping the counts never resizes it.
@@ -135,15 +154,19 @@ describe('Actions', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'https://acme.test/pricing' }),
     ).toBeVisible();
-    // The target opens in a new tab, and its accessible name says so.
-    expect(
-      screen.getByRole('link', { name: 'https://acme.test/pricing (opens in a new tab)' }),
-    ).toBeVisible();
+    // The title names the URL; the lead opens it in a new tab without
+    // repeating it, and carries the status and approach.
     const summary = screen.getByRole('region', { name: 'Summary' });
+    expect(
+      within(summary).getByRole('link', { name: 'Open the page (opens in a new tab)' }),
+    ).toHaveAttribute('href', 'https://acme.test/pricing');
+    expect(within(summary).queryByText('https://acme.test/pricing')).not.toBeInTheDocument();
+    expect(within(summary).getByText('Open')).toBeVisible();
+    expect(within(summary).getByText('Improve the existing page')).toBeVisible();
     expect(within(summary).getByText('High')).toBeVisible();
     expect(within(summary).getByText('Site Health, Search Console')).toBeVisible();
     expect(screen.getByText('The next crawl of this page')).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Work on this' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Work on this with the agent' })).toHaveAttribute(
       'href',
       `/agent?action_id=${ACTION}&project=${PROJECT}`,
     );

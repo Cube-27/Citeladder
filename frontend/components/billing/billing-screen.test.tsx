@@ -588,6 +588,12 @@ describe('BillingScreen', () => {
 
     expect(await screen.findByText(/Invoice INV-1001/)).toBeInTheDocument();
     expect(screen.getByText(/Receipt RCT-1001/)).toBeInTheDocument();
+    // The GST shows once, in its own column: only the components the invoice
+    // carries, with no repeated caption line.
+    const row = screen.getByText(/Invoice INV-1001/).closest('tr')!;
+    expect(within(row).getByText(/^CGST .*810 · SGST .*810$/)).toBeVisible();
+    expect(within(row).queryByText(/IGST/)).not.toBeInTheDocument();
+    expect(within(row).getByText('Sep 8, 2026')).toBeVisible();
     await userEvent.click(screen.getByRole('button', { name: 'Download receipt' }));
     await waitFor(() => expect(createObjectURL).toHaveBeenCalled());
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:test');
@@ -626,7 +632,12 @@ describe('BillingScreen', () => {
     );
 
     renderWithProviders(<BillingScreen />);
-    await userEvent.click(await screen.findByRole('button', { name: 'Upgrade to Growth' }));
+    const upgrade = await screen.findByRole('button', { name: 'Upgrade to Growth' });
+    // Changing the plan is part of the Plan card, not a card of its own.
+    const plan = screen.getByRole('region', { name: 'Current plan' });
+    expect(within(plan).getByRole('heading', { name: 'Change plan' })).toBeVisible();
+    expect(within(plan).getByRole('button', { name: 'Upgrade to Growth' })).toBe(upgrade);
+    await userEvent.click(upgrade);
 
     const review = await screen.findByRole('region', { name: 'Review your upgrade' });
     expect(changes).toEqual([{ catalog_key: 'tier_2' }]);

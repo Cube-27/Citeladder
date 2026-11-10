@@ -69,6 +69,37 @@ describe('promptFilterControls', () => {
   });
 });
 
+describe('promptFilterControls single choices', () => {
+  it('offers Enabled and Branded as one choice each, checking only the chosen option', async () => {
+    const user = userEvent.setup();
+    function Harness() {
+      const [filters, setFilters] = useState(emptyFilters);
+      return (
+        <FilterBar
+          {...promptFilterControls({
+            status: { value: 'active', counts: { active: 1, archived: 0 }, onChange: () => {} },
+            search: '',
+            onSearchChange: () => undefined,
+            filters,
+            onFiltersChange: setFilters,
+          })}
+        />
+      );
+    }
+
+    render(<Harness />);
+    await user.click(screen.getByRole('button', { name: /^Filter/u }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Branded only' }));
+    expect(screen.getByRole('menuitemradio', { name: 'Branded only' })).toBeChecked();
+    expect(screen.getByRole('menuitemradio', { name: 'Unbranded only' })).not.toBeChecked();
+    expect(
+      screen
+        .getAllByRole('menuitemradio', { name: 'All' })
+        .map((item) => item.getAttribute('aria-checked')),
+    ).toEqual(['true', 'false']);
+  });
+});
+
 describe('PromptActions', () => {
   it('offers Launch audit only once the project has an active prompt', () => {
     const projectId = '44444444-4444-4444-8444-444444444444';

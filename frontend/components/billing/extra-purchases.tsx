@@ -7,7 +7,6 @@ import { ControlRow } from '@/components/ui/control-row';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
-import { cardClasses } from '@/components/ui/card';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type {
@@ -134,7 +133,8 @@ export function ExtraPurchases({
   const { addons, topups } = extrasForPlan(catalog, planKey);
   if (addons.length === 0 && topups.length === 0) return null;
   return (
-    <Stack as="section" gap="compact" className={cardClasses()} aria-labelledby="extras-title">
+    // A section of the Plan card, so no card of its own.
+    <Stack as="section" gap="compact" aria-labelledby="extras-title">
       <EditorialSectionHeader
         headingId="extras-title"
         title="Add-ons and top-ups"

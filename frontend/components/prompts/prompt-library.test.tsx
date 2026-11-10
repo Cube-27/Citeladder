@@ -99,7 +99,7 @@ describe('PromptLibrary first load', () => {
     ).toEqual([
       'Prompt',
       'Visibility',
-      'Owned citations',
+      'Owned citation rate',
       'Avg. mention position',
       'Change',
       'Enabled',

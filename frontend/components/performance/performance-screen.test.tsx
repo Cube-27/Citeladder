@@ -280,6 +280,8 @@ describe('PerformanceScreen evidence states', () => {
     expect(await screen.findByTestId('performance-status')).toHaveTextContent(
       'Imported history Aug 1, 2026 – Aug 28, 2026 · 28 days',
     );
+    // The freshness note reads in the same date style, not as an ISO key.
+    expect(screen.getByText('Data through Aug 28, 2026')).toBeVisible();
     expect(screen.queryAllByRole('alert')).toHaveLength(0);
     unmount();
 
@@ -571,13 +573,13 @@ describe('PerformanceScreen table interactions', () => {
     renderPerformance();
     const table = await screen.findByRole('table', { name: 'Top queries' });
     expect(await within(table).findByText('query 1')).toBeVisible();
-    await user.click(within(table).getByRole('button', { name: 'impressions' }));
+    await user.click(within(table).getByRole('button', { name: 'Impressions' }));
     await user.click(await screen.findByRole('button', { name: 'Next page' }));
     expect(await within(table).findByText('query 11')).toBeVisible();
     const sortedBy = asked.at(-1)!.split(' ')[0];
 
     // Hiding the sorted metric falls back to the default order.
-    await user.click(screen.getByRole('button', { name: 'Plot total impressions' }));
+    await user.click(screen.getByRole('button', { name: 'Plot impressions' }));
 
     // The first page of the default order (already cached from the landing view).
     expect(await within(table).findByText('query 1')).toBeVisible();

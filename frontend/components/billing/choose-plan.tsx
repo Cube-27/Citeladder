@@ -8,7 +8,6 @@ import { PlanRow } from '@/components/billing/plan-row';
 import { Callout } from '@/components/ui/callout';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Stack } from '@/components/ui/layout';
-import { cardClasses } from '@/components/ui/card';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type {
@@ -64,7 +63,7 @@ const MODE_NOTE: Record<CredentialMode, string> = {
 /**
  * A new subscription: the plans the workspace may buy, in either mode. While
  * self-serve checkout is closed the app says so instead of listing prices, as
- * the public pricing page does.
+ * the public pricing page does. Unframed: the caller puts it in its card.
  */
 export function ChoosePlan({
   catalog,
@@ -86,12 +85,7 @@ export function ChoosePlan({
     !catalog.plans.some((plan) => plan.funded_checkout_available)
   )
     return (
-      <Stack
-        as="section"
-        gap="workspace"
-        className={cardClasses()}
-        aria-labelledby="choose-plan-title"
-      >
+      <Stack as="section" gap="workspace" aria-labelledby="choose-plan-title">
         <EditorialSectionHeader
           headingId="choose-plan-title"
           title="Choose a plan"
@@ -111,12 +105,7 @@ export function ChoosePlan({
       </Stack>
     );
   return (
-    <Stack
-      as="section"
-      gap="workspace"
-      className={cardClasses()}
-      aria-labelledby="choose-plan-title"
-    >
+    <Stack as="section" gap="workspace" aria-labelledby="choose-plan-title">
       <EditorialSectionHeader
         headingId="choose-plan-title"
         title="Choose a plan"

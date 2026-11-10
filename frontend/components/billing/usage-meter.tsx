@@ -6,6 +6,7 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Meter, type MeterTone } from '@/components/ui/meter';
 import { InlineFigure, textRole } from '@/components/ui/typography';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 
 /**
  * One usage counter.
@@ -44,8 +45,16 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
       <Stack gap="tight">
         <Inline gap="compact" className="justify-between">
           <span className={textRole('label')}>{label}</span>
+          {/* Unlimited says nothing about consumption: an unread count is
+              the missing mark, never a zero. */}
           <span className={textRole('label')}>
-            <InlineFigure>{item.consumed ?? 0}</InlineFigure> {unit}
+            {item.consumed === null ? (
+              <UnavailableValue state="not_measured" />
+            ) : (
+              <>
+                <InlineFigure>{item.consumed}</InlineFigure> {unit}
+              </>
+            )}
           </span>
         </Inline>
         <Inline gap="compact" className="justify-between">

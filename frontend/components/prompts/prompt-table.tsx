@@ -176,7 +176,7 @@ function promptColumns(measured: boolean): DataTableColumn[] {
 
 const MEASURED_COLUMNS: readonly DataTableColumn[] = [
   { key: 'visibility', label: 'Visibility', width: 'figure', numeric: true },
-  { key: 'owned', label: 'Owned citations', width: 'metric', numeric: true },
+  { key: 'owned', label: 'Owned citation rate', width: 'metric', numeric: true },
   { key: 'position', label: 'Avg. mention position', width: 'metric', numeric: true },
   { key: 'change', label: 'Change', width: 'figure', numeric: true },
 ];

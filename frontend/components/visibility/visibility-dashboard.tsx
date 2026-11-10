@@ -4,7 +4,11 @@ import type { ReactNode } from 'react';
 
 import { ActiveRunBanner } from '@/components/visibility/active-run-banner';
 import { VisibilityEmptyState } from '@/components/visibility/empty-state';
-import { FanoutEvidence } from '@/components/visibility/fanout-evidence';
+import { FanoutEvidence, FanoutGroupFilter } from '@/components/visibility/fanout-evidence';
+import {
+  SourceControlsProvider,
+  SourceControlsTarget,
+} from '@/components/visibility/source-controls-slot';
 import {
   VisibilitySources,
   useSourceDimensionSwitch,
@@ -37,7 +41,13 @@ export function VisibilityDashboard() {
     queries.auditsQuery.isError,
     queries.hasRuns,
   );
-  return <VisibilityWorkspace filters={filters} queries={queries} state={state} />;
+  // The Sources filters live in the control strip but stay owned by the
+  // Sources panel; the provider spans both.
+  return (
+    <SourceControlsProvider>
+      <VisibilityWorkspace filters={filters} queries={queries} state={state} />
+    </SourceControlsProvider>
+  );
 }
 
 function dashboardState(
@@ -137,6 +147,10 @@ function VisibilityWorkspace({
                 market={filters.market}
                 onChangeMarket={filters.setMarket}
               />
+              {/* The Sources table's own filters come last, so they never
+                  move the filters every tab shares. */}
+              {filters.activeTab === 'sources' && !state ? <SourceControlsTarget /> : null}
+              {filters.activeTab === 'query-fanout' && !state ? <FanoutGroupFilter /> : null}
             </>
           ),
         }}

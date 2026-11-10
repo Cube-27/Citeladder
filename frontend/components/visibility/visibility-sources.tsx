@@ -9,9 +9,11 @@ import { Stack } from '@/components/ui/layout';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { SourceDomainDetail } from '@/components/visibility/source-domain-detail';
 import {
-  DomainFilter,
-  StandingFilter,
-  TypeFilter,
+  SourceControls,
+  useHasSourceControlsStrip,
+} from '@/components/visibility/source-controls-slot';
+import {
+  SourceTableFilters,
   type PageStandingFilter,
 } from '@/components/visibility/source-filters';
 import { TopMoversCard, useSourceMovers } from '@/components/visibility/source-movers';
@@ -249,7 +251,9 @@ export function SourcesPanel({
     clearKeys: ['source_cursor', 'source_offset', 'source_as_of'],
   });
   const domainOptions = useSourceDomains(filters, queries);
-  const activeDomain = domain ?? pickedDomain;
+  // The publisher filter is a URL-table filter: the Domains view neither
+  // offers it nor reads a pick left over from the URLs view.
+  const activeDomain = domain ?? (dimension === 'url' ? pickedDomain : null);
   const scope = { dimension, domain: activeDomain, cursor, asOf, sourceType, gapOnly, pageSize };
   const { sourceQuery } = useSourceAnalysis(filters, queries, scope);
   const seriesQuery = useSourceSeries(filters, queries, {
@@ -294,6 +298,19 @@ export function SourcesPanel({
         : { column, direction: 'desc' },
     );
 
+  // The filters draw in the page's control strip; the table's toolbar keeps
+  // search and export. On a domain's own page the publisher is fixed.
+  const tableFilters = (
+    <SourceTableFilters
+      dimension={dimension}
+      type={{ dimension, value: sourceType, options: types, onChange: setSourceType }}
+      standing={{ value: standingFilter, onChange: setStanding }}
+      domain={
+        domain ? null : { value: pickedDomain, options: domainOptions, onChange: setPickedDomain }
+      }
+    />
+  );
+  const inStrip = useHasSourceControlsStrip();
   // One toolbar for both bodies, so switching to near misses moves nothing.
   const toolbar = sourceTableToolbar({
     dimension,
@@ -301,26 +318,12 @@ export function SourcesPanel({
     onSearch: setSearch,
     rows,
     domain: activeDomain,
-    domainControl: domain ? null : (
-      <DomainFilter value={pickedDomain} options={domainOptions} onChange={setPickedDomain} />
-    ),
-    typeControl: (
-      <>
-        <TypeFilter
-          dimension={dimension}
-          value={sourceType}
-          options={types}
-          onChange={setSourceType}
-        />
-        {dimension === 'url' ? (
-          <StandingFilter value={standingFilter} onChange={setStanding} />
-        ) : null}
-      </>
-    ),
+    filters: inStrip ? undefined : tableFilters,
   });
 
   return (
     <Stack gap="workspace">
+      {inStrip ? <SourceControls>{tableFilters}</SourceControls> : null}
       {nearMiss ? (
         <NearMissTable
           query={nearMissQuery}
@@ -355,7 +358,7 @@ export function SourcesPanel({
               data,
               domain: activeDomain,
               dimension,
-              offset: Math.max(0, Number.parseInt(offset ?? '0', 10) || 0),
+              offset: pageOffset(offset),
               pageSize,
               busy: sourceQuery.isFetching,
               onPageSizeChange,
@@ -374,6 +377,11 @@ export function SourcesPanel({
       )}
     </Stack>
   );
+}
+
+/** The page's first row from the address: zero when absent or not a count. */
+function pageOffset(raw: string | null): number {
+  return Math.max(0, Number.parseInt(raw ?? '0', 10) || 0);
 }
 
 /** Only pages have a standing, so the standing filter applies to the URL table. */

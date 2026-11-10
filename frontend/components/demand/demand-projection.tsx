@@ -200,14 +200,11 @@ function SearchDemandView({
   );
   if (filteredSignals.length > 0) {
     signalsFeed = (
-      <Stack gap="compact">
-        <DemandSignalTable
-          rows={filteredSignals}
-          filterKey={`${activeTab}\u0000${searchQuery.trim().toLowerCase()}`}
-          onInspect={handleInspect}
-        />
-        <SignalLegend signals={filteredSignals.map(({ signal }) => signal)} />
-      </Stack>
+      <DemandSignalTable
+        rows={filteredSignals}
+        filterKey={`${activeTab}\u0000${searchQuery.trim().toLowerCase()}`}
+        onInspect={handleInspect}
+      />
     );
   } else if (snapshot.signals.length === 0) {
     signalsFeed = (
@@ -242,7 +239,7 @@ function SearchDemandView({
           <SearchField
             value={searchQuery}
             onValueChange={setSearchQuery}
-            placeholder="Filter signals…"
+            placeholder="Filter queries or pages…"
             aria-label="Filter queries or pages"
           />
         ),
@@ -279,6 +276,7 @@ function SearchDemandView({
               {windowLabel}
             </Inline>
             <DemandLatentDemand snapshot={snapshot} />
+            <SignalLegend signals={snapshot.signals} />
             <DemandDataCaveats snapshot={snapshot} />
             <RecomputeStatus mutation={recomputeMutation} />
           </Inline>

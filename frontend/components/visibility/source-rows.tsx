@@ -93,10 +93,10 @@ function domainColumns(
   engineLabel: (key: string) => string,
 ): DataTableColumn[] {
   return [
-    // Every figure takes the `metric` role: a sortable header with its hint
-    // needs that width to show its label whole, and the table scrolls in its
-    // frame behind the pinned source rather than cutting headers to "Cited…"
-    // (2026-11-03 app review).
+    // Every figure takes the `figure` role and the source is the one flexible
+    // column; the hint sits on the header button, so a figure's width holds
+    // its label. Below the `lg` width the table scrolls behind the pinned
+    // source rather than squeezing it.
     { key: 'source', label: 'Source', sort: sortProps(sort, onSort, 'key') },
     {
       key: 'type',
@@ -107,7 +107,9 @@ function domainColumns(
     {
       key: 'cited',
       label: 'Cited in',
-      width: 'metric',
+      // A share here, a count in the URL table: the unit is on the header.
+      sublabel: '% of answers',
+      width: 'figure',
       numeric: true,
       sort: sortProps(sort, onSort, 'response_rate'),
       hint: 'Answers that cited at least one page from this domain, as a share of all answers in the selection.',
@@ -115,7 +117,8 @@ function domainColumns(
     {
       key: 'retrieved',
       label: 'Retrieved',
-      width: 'metric',
+      sublabel: '% of answers',
+      width: 'figure',
       numeric: true,
       sort: sortProps(sort, onSort, 'retrieved'),
       hint: retrievedHint(
@@ -127,7 +130,7 @@ function domainColumns(
     {
       key: 'pages',
       label: 'Pages cited',
-      width: 'metric',
+      width: 'figure',
       numeric: true,
       desktopOnly: true,
       sort: sortProps(sort, onSort, 'retrieval_rate'),
@@ -136,7 +139,7 @@ function domainColumns(
     {
       key: 'citations',
       label: 'Citations',
-      width: 'metric',
+      width: 'figure',
       numeric: true,
       sort: sortProps(sort, onSort, 'annotations'),
       hint: 'Every inline citation belonging to this domain.',
@@ -144,7 +147,7 @@ function domainColumns(
     {
       key: 'share',
       label: 'Citation share',
-      width: 'metric',
+      width: 'figure',
       numeric: true,
       desktopOnly: true,
       sort: sortProps(sort, onSort, 'citation_share'),
@@ -153,7 +156,7 @@ function domainColumns(
     {
       key: 'rate',
       label: 'Citation rate',
-      width: 'metric',
+      width: 'figure',
       numeric: true,
       desktopOnly: true,
       sort: sortProps(sort, onSort, 'citation_rate'),
@@ -192,7 +195,7 @@ export function DomainTable({
     <DataTable
       label="Cited domains"
       columns={domainColumns(sort, onSort, retrieval, engines.label)}
-      minWidth="xl"
+      minWidth="lg"
       pinFirstColumn
       rowCount={rows.length}
       {...frame}
@@ -296,8 +299,11 @@ function urlColumns(
   retrieval: SourcesData['retrieval'] | undefined,
   engineLabel: (key: string) => string,
 ): DataTableColumn[] {
+  // The URL is the one flexible column; every other column holds a role's
+  // width. Nine columns cannot fit beside a readable URL at the owner's 982px,
+  // so the table keeps a minimum width and scrolls behind the pinned URL.
   return [
-    { key: 'url', label: 'URL', width: 'lead', sort: sortProps(sort, onSort, 'key') },
+    { key: 'url', label: 'URL', sort: sortProps(sort, onSort, 'key') },
     {
       key: 'type',
       label: 'URL type',
@@ -314,6 +320,8 @@ function urlColumns(
     {
       key: 'cited',
       label: 'Cited in',
+      sublabel: 'Answers',
+      width: 'figure',
       numeric: true,
       sort: sortProps(sort, onSort, 'responses'),
       hint: 'Answers that cited this URL.',
@@ -321,6 +329,8 @@ function urlColumns(
     {
       key: 'retrieved',
       label: 'Retrieved',
+      sublabel: 'Answers',
+      width: 'figure',
       numeric: true,
       sort: sortProps(sort, onSort, 'retrieved'),
       hint: retrievedHint(
@@ -332,6 +342,7 @@ function urlColumns(
     {
       key: 'rate',
       label: 'Citation rate',
+      width: 'figure',
       numeric: true,
       sort: sortProps(sort, onSort, 'citation_rate'),
       hint: 'Citations of this URL per answer that cited it.',
@@ -339,6 +350,7 @@ function urlColumns(
     {
       key: 'mentions',
       label: 'Mentions',
+      width: 'figure',
       numeric: true,
       desktopOnly: true,
       sort: sortProps(sort, onSort, 'mentions'),
@@ -347,12 +359,14 @@ function urlColumns(
     {
       key: 'mentioned',
       label: 'Mentioned',
+      width: 'status',
       desktopOnly: true,
       hint: 'The brands named in the answers that cited this URL. Co-occurrence in the answer, not presence on the page.',
     },
     {
       key: 'seen',
       label: 'Last seen',
+      width: 'figure',
       numeric: true,
       desktopOnly: true,
       sort: sortProps(sort, onSort, 'last_cited_at'),
@@ -389,6 +403,8 @@ export function UrlTable({
     <DataTable
       label="Cited URLs"
       columns={urlColumns(sort, onSort, retrieval, engines.label)}
+      minWidth="xl"
+      pinFirstColumn
       rowCount={rows.length}
       {...frame}
     >

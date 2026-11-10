@@ -1,5 +1,6 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
+import { EmptyHeadingLevelContext } from '@/components/ui/empty-state';
 import { cn } from '@/lib/utils';
 
 /**
@@ -38,7 +39,8 @@ export function Card({
 }: Readonly<ComponentPropsWithoutRef<'section'> & { tone?: CardTone }>) {
   return (
     <section {...props} className={cn(cardClasses(tone), className)}>
-      {children}
+      {/* Under the card's h3 title, a block empty state's heading is an h3. */}
+      <EmptyHeadingLevelContext value={3}>{children}</EmptyHeadingLevelContext>
     </section>
   );
 }
