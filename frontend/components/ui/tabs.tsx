@@ -1,6 +1,6 @@
 'use client';
 
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, PointerEvent, ReactNode, SyntheticEvent } from 'react';
 import { createContext, useContext, useRef } from 'react';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 
@@ -16,6 +16,20 @@ import { cn } from '@/lib/utils';
  */
 export const TAB_TRACK =
   'scroll-shade-x bg-surface-sunken inline-flex h-[var(--control-md)] max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+
+/**
+ * A pressed segment never draws the keyboard focus ring: browsers decide
+ * `:focus-visible` by heuristic and sometimes ring a tab that was clicked.
+ * The press marks the segment (`data-pointer-focus`, which the focus-ring
+ * rule in globals.css leaves unringed); a key or losing focus clears it, so
+ * arrow-key and Tab focus keep the ring.
+ */
+const markPointerFocus = (event: PointerEvent<HTMLElement>) => {
+  event.currentTarget.dataset.pointerFocus = '';
+};
+const clearPointerFocus = (event: SyntheticEvent<HTMLElement>) => {
+  delete event.currentTarget.dataset.pointerFocus;
+};
 
 /**
  * One segment: full track height, 12px padding, `radius-sm`, 14/20 medium
@@ -149,6 +163,9 @@ function TabStrip<T extends string>({
           key={item.value}
           value={item.value}
           disabled={item.disabled}
+          onPointerDown={markPointerFocus}
+          onKeyDown={clearPointerFocus}
+          onBlur={clearPointerFocus}
           onMouseEnter={() => onIntent?.(item.value)}
           onFocus={(event) => {
             onIntent?.(item.value);
@@ -314,10 +331,13 @@ export function SegmentedControl<T extends string>({
               disabled={disabled}
               tabIndex={index === tabStop ? 0 : -1}
               onClick={() => onChange(option.value)}
+              onPointerDown={markPointerFocus}
+              onBlur={clearPointerFocus}
               onFocus={(event) =>
                 event.currentTarget.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
               }
               onKeyDown={(event) => {
+                clearPointerFocus(event);
                 const delta = ARROW_DELTA[event.key];
                 if (delta === undefined) return;
                 event.preventDefault();

@@ -91,9 +91,9 @@ describe('PagesTable', () => {
     const row = screen.getByText('Homepage').closest('tr');
     expect(row).not.toBeNull();
     expect(within(row!).getByRole('cell', { name: 'Excluded' })).toBeInTheDocument();
-    // The score stays, with its state on a caption line under it.
-    const score = within(row!).getByRole('cell', { name: /^46\s?Limited evidence$/ });
-    expect(score).toBeInTheDocument();
+    // A measured score is the number alone: no evidence caption under it.
+    expect(within(row!).getByRole('cell', { name: '46' })).toBeInTheDocument();
+    expect(within(row!).queryByText('Limited evidence')).not.toBeInTheDocument();
     expect(within(row!).queryByText(/confidence/i)).not.toBeInTheDocument();
   });
 

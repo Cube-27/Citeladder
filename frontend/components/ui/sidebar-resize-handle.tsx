@@ -16,8 +16,9 @@ function currentBounds() {
  * rail and the drawer keep their widths). A WAI-ARIA window splitter: drag it,
  * or focus it and use ← / → (16px, Shift 48px); Home and a double-click
  * restore the default, which is also the minimum; End takes the maximum
- * (480px, never more than 40% of the window). Invisible at rest: a hairline
- * shows on hover and takes the focus colour while focused or dragging. The
+ * (480px, never more than 40% of the window). At rest the sidebar's own rule
+ * shows; the handle's hairline strengthens it on hover and takes the focus
+ * colour while focused or dragging. The
  * shared interaction stops text selection mid-drag.
  */
 export function SidebarResizeHandle({ sidebarId }: Readonly<{ sidebarId: string }>) {

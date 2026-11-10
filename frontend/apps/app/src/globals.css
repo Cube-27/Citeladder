@@ -899,6 +899,12 @@ a.focus-ring:active .type-caption {
   outline-offset: 2px;
 }
 
+/* A tab or segment that took focus from a press (`data-pointer-focus`, set by
+   components/ui/tabs.tsx) draws no ring; keyboard focus still does. */
+.focus-ring[data-pointer-focus]:focus-visible {
+  outline: none;
+}
+
 /* A whole-row control inside a bordered list that clips its corners: the
    same ring, drawn 2px inside the row. */
 .focus-ring-inset:focus-visible {

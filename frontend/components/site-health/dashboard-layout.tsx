@@ -1,4 +1,5 @@
 import { InventorySection } from '@/components/site-health/inventory-section';
+import { ScoreSection } from '@/components/site-health/score-section';
 import { PageKindScores } from '@/components/site-health/page-kind-scores';
 import { SiteFactsPanel } from '@/components/site-health/site-facts-panel';
 import { StatusStrip } from '@/components/site-health/status-strip';
@@ -19,8 +20,8 @@ import { ICONS } from '@/lib/icons';
  * already on. (The per-URL crawl detail view and the issues screen remain the
  * only other screens in the flow.)
  *
- * Reading order is answer-first: one status line (where the crawl stands, its
- * headline scores and page counts), the URL inventory, then page-kind
+ * Reading order is answer-first: the status line (where the crawl stands and
+ * its page counts), the headline score cards, the URL inventory, then page-kind
  * diagnostics. The inventory's view switch and page-kind filter sit directly
  * above its table.
  */
@@ -71,20 +72,23 @@ export function SiteHealthDashboardLayout({
         </div>
       ) : (
         <>
-          {/* Where the crawl stands, its headline scores and page counts:
-              one line (the Overview tab keeps the score cards). */}
-          <StatusStrip
-            crawl={crawl}
-            phase={phase}
-            scoreSummary={dashboardQuery.data?.score_summary ?? crawl.score_summary ?? null}
-            entitlement={entitlement}
-            cancelPending={cancelMutation.isPending}
-            startPending={startPending}
-            pages={pagesQuery.data?.items ?? []}
-            selectedTotal={projectSelectedTotal}
-            selectedError={projectSelectedError}
-            onRerun={mutationsAllowed ? () => startCrawl() : undefined}
-          />
+          {/* Where the crawl stands, then the headline score cards (owner,
+              2026-11-10: as before the one-line status strip). */}
+          <Stack>
+            <StatusStrip
+              crawl={crawl}
+              phase={phase}
+              entitlement={entitlement}
+              cancelPending={cancelMutation.isPending}
+              startPending={startPending}
+              pages={pagesQuery.data?.items ?? []}
+              selectedTotal={projectSelectedTotal}
+              selectedError={projectSelectedError}
+              onRerun={mutationsAllowed ? () => startCrawl() : undefined}
+            />
+
+            <ScoreSection crawl={crawl} dashboard={dashboardQuery.data} />
+          </Stack>
 
           <InventorySection mode={inventoryMode} crawl={crawl} active={active} />
 

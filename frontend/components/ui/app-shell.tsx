@@ -44,9 +44,10 @@ import { cn } from '@/lib/utils';
  */
 const FRAME =
   'bg-paper text-ink shell:grid-cols-[var(--sidebar-width)_minmax(0,1fr)] rail:grid-cols-[var(--sidebar-rail-width)_minmax(0,1fr)] grid min-h-dvh grid-cols-[minmax(0,1fr)]';
-// No rule between the sidebar and the page: the resize handle's line shows
-// only on hover, focus and drag.
-const SIDEBAR_COLUMN = 'rail:block z-sticky sticky top-0 hidden h-dvh min-w-0';
+// A `line` rule always separates the sidebar from the page, in both themes
+// (owner, 2026-11-10); the resize handle's line strengthens it on hover,
+// focus and drag.
+const SIDEBAR_COLUMN = 'border-line rail:block z-sticky sticky top-0 hidden h-dvh min-w-0 border-r';
 const PAGE = 'mx-auto flex w-full max-w-[var(--content-max-width)] min-w-0 flex-col';
 const MAIN_INSET = '@container min-w-0 px-[var(--content-gutter)] pb-[var(--content-gutter)]';
 
