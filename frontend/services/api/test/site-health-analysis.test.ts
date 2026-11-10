@@ -298,6 +298,47 @@ describe('page checklist', () => {
     expect(createsIssue(meta)).toBe(true);
   });
 
+  it.each([
+    [
+      'an explicit and a wrapping label',
+      `<label for='email'>Email</label><input id='email'><label>Name <input name='name'></label>`,
+      'satisfied',
+      0,
+    ],
+    [
+      'an empty for beside an input with no id',
+      `<label for=''>Email</label><input name='email'>`,
+      'missing',
+      1,
+    ],
+    [
+      'a wrapping label whose for names another control',
+      `<label for='other'>Email <input id='email'></label><input id='other'>`,
+      'missing',
+      1,
+    ],
+    [
+      'a wrapping label around two controls',
+      `<label>Dates <input name='from'> <input name='to'></label>`,
+      'missing',
+      1,
+    ],
+    [
+      'a for whose id repeats',
+      `<label for='email'>Email</label><input id='email'><input id='email'>`,
+      'missing',
+      1,
+    ],
+  ])(
+    'names form controls only through the label HTML associates: %s',
+    (_case, form, outcome, missing) => {
+      const row = evaluations(
+        `<html lang='en'><head><title>Signup</title></head><body><main><h1>Signup</h1><form>${form}</form></main></body></html>`,
+      ).get('web.accessibility_form_names')!;
+      expect([row.outcome, row.evidence.missing_accessible_name]).toEqual([outcome, missing]);
+    },
+  );
+
   it('never penalizes a purpose that only the URL suggests', () => {
     const rows = evaluations(
       '<html><head><title>Widget story</title></head><body><main><h1>Widget story</h1><p>How we designed the widget over three years of testing with customers.</p></main></body></html>',

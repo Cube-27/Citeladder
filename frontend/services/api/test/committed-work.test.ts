@@ -143,12 +143,15 @@ describe('committed API work at PostgreSQL', () => {
 
   it('does not mistake COMMIT in an aborted transaction for durable work', async () => {
     const wake = vi.fn(async () => {});
-    await observeCommittedWork(async () => {
-      await db.transaction().execute(async (trx) => {
-        await enqueue(trx);
-        await sql`select 1 / 0`.execute(trx).catch(() => {});
-      });
-    }, wake);
+    // PostgreSQL turns the COMMIT into ROLLBACK; the caller is told, and nothing wakes.
+    await expect(
+      observeCommittedWork(async () => {
+        await db.transaction().execute(async (trx) => {
+          await enqueue(trx);
+          await sql`select 1 / 0`.execute(trx).catch(() => {});
+        });
+      }, wake),
+    ).rejects.toThrow('Transaction was rolled back instead of committed');
     expect(wake).not.toHaveBeenCalled();
   });
 

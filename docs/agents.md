@@ -190,7 +190,10 @@ only this turn's reads are its sources.
 The model never writes record references for the user. Before saving, the
 runtime removes `citeladder://` references and UUIDs from the reply and the
 document's title and body, fenced blocks included: no deliverable carries a
-machine-readable submission, so Copy and Export never carry an ID. The UI
+machine-readable submission, so Copy and Export never carry a CiteLadder ID.
+A UUID the person wrote, in a message of the chat or typed into a document,
+is theirs (a form id in pasted HTML) and stays, so code they supplied is never
+corrupted. The UI
 groups sources in plain
 words (for example "Search Console query · 3") with links to the screen that
 shows them.

@@ -54,6 +54,8 @@ export type DocumentState = {
   documents: SavedDocument[];
   /** This turn's staged documents by number; committed only with the reply. */
   staged: Map<number, StagedDocument>;
+  /** UUIDs the person wrote (`writtenIds`): a staged document keeps them. */
+  personIds: ReadonlySet<string>;
 };
 export type BuiltinOutcome = { ok: boolean; text: string; document?: number };
 
@@ -293,8 +295,8 @@ export function saveDocument(
       payload: {
         ...fields,
         format_id: format,
-        title: scrubRecordRefs(fields.title),
-        body: scrubRecordRefs(fields.body),
+        title: scrubRecordRefs(fields.title, state.personIds),
+        body: scrubRecordRefs(fields.body, state.personIds),
       },
     },
     bounds,
@@ -365,8 +367,8 @@ export function editDocument(
         target_kind: base.target_kind,
         target: base.target,
         format_id: base.formatId,
-        title: scrubRecordRefs(parsed.data.title ?? base.title),
-        body: scrubRecordRefs(result.text),
+        title: scrubRecordRefs(parsed.data.title ?? base.title, state.personIds),
+        body: scrubRecordRefs(result.text, state.personIds),
       },
     },
     bounds,

@@ -80,14 +80,17 @@ export function useSseEventStream({
 
     const controller = new AbortController();
     let cancelled = false;
-    let invalidateTimer: ReturnType<typeof setTimeout> | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let lastEventId: string | null = null;
+    // Written by the async reader and reconnect loop, so held in one effect-local object.
+    const stream: {
+      invalidateTimer: ReturnType<typeof setTimeout> | null;
+      reconnectTimer: ReturnType<typeof setTimeout> | null;
+      lastEventId: string | null;
+    } = { invalidateTimer: null, reconnectTimer: null, lastEventId: null };
 
     const scheduleInvalidate = () => {
-      if (invalidateTimer !== null) return;
-      invalidateTimer = setTimeout(() => {
-        invalidateTimer = null;
+      if (stream.invalidateTimer !== null) return;
+      stream.invalidateTimer = setTimeout(() => {
+        stream.invalidateTimer = null;
         onInvalidate();
       }, invalidateDebounceMs);
     };
@@ -95,7 +98,7 @@ export function useSseEventStream({
     const connect = async (): Promise<number | null> => {
       const response = await fetch(url, {
         method: 'GET',
-        headers: streamHeaders(workspaceId, lastEventId),
+        headers: streamHeaders(workspaceId, stream.lastEventId),
         credentials: 'include',
         cache: 'no-store',
         signal: controller.signal,
@@ -105,7 +108,7 @@ export function useSseEventStream({
         response.body,
         () => cancelled,
         (frame) => {
-          if (frame.id) lastEventId = frame.id;
+          if (frame.id) stream.lastEventId = frame.id;
           if (onFrame(frame)) scheduleInvalidate();
         },
       );
@@ -125,14 +128,14 @@ export function useSseEventStream({
       const delay = hitDurationCap
         ? reconnectBaseMs
         : Math.min(reconnectBaseMs * 2 ** attempt, reconnectMaxMs);
-      reconnectTimer = setTimeout(() => void run(hitDurationCap ? 0 : attempt + 1), delay);
+      stream.reconnectTimer = setTimeout(() => void run(hitDurationCap ? 0 : attempt + 1), delay);
     };
 
     void run();
     return () => {
       cancelled = true;
-      if (invalidateTimer !== null) clearTimeout(invalidateTimer);
-      if (reconnectTimer !== null) clearTimeout(reconnectTimer);
+      if (stream.invalidateTimer !== null) clearTimeout(stream.invalidateTimer);
+      if (stream.reconnectTimer !== null) clearTimeout(stream.reconnectTimer);
       controller.abort();
     };
   }, [

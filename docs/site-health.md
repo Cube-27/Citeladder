@@ -266,7 +266,10 @@ Attempts and artifacts are append-only. `site_fetch_artifacts.normalized_facts`
 is the bounded evidence store, and no raw HTML is kept. Facts distinguish an
 available extraction from parse failure, unsupported media, client rendering
 and truncation. Declared canonicals are observations, never URL identity.
-Hidden nodes enter accessible names only through `aria-labelledby`.
+Hidden nodes enter accessible names only through `aria-labelledby`. Labels
+follow HTML's labeled control: a label with `for` names only the first element
+with that id (an empty `for` names nothing), and a label without `for` names only
+its first labelable descendant.
 
 ### Crawler permissions and robots history
 
