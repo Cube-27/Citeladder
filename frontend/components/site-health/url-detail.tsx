@@ -26,8 +26,8 @@ import { formatAudited } from '@/lib/site-health/status';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 
-import { UrlDetailView } from './url-detail-view';
-import { ListScreen } from '@/components/layout/page-shell';
+import { PAGE_DETAIL_BACK, UrlDetailView } from './url-detail-view';
+import { DetailScreen } from '@/components/layout/page-shell';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 
 const HISTORY_LIMIT = 25;
@@ -96,13 +96,13 @@ export function UrlDetail({
 
   if (detailQuery.isLoading)
     return (
-      <ListScreen>
+      <DetailScreen back={PAGE_DETAIL_BACK}>
         <QueryState kind="loading" label="Loading page detail…" />
-      </ListScreen>
+      </DetailScreen>
     );
   if (detailQuery.isError || !detailQuery.data) {
     return (
-      <ListScreen>
+      <DetailScreen back={PAGE_DETAIL_BACK}>
         <QueryState
           kind="error"
           error={detailQuery.error}
@@ -110,7 +110,7 @@ export function UrlDetail({
           onRetry={() => void detailQuery.refetch()}
           pending={detailQuery.isFetching}
         />
-      </ListScreen>
+      </DetailScreen>
     );
   }
 

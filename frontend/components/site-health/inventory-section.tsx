@@ -5,8 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import { FileText } from 'lucide-react';
 
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import type { FilterBarProps } from '@/components/ui/filter-bar';
-import { Stack } from '@/components/ui/layout';
+import { Inline, Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
@@ -177,29 +176,23 @@ function usePagesInventoryState() {
 }
 
 /**
- * The page browser's controls for the page's control band (`PageShell`
- * `controls`): the Monitored / All Discovered / Errors & Blocked switch as
- * the band's view, then the page-kind filter. Both are server-backed and live
- * in the address, so the band and the table below read one value. Until the
- * crawl's pages are scored the switch is disabled (discovery lists every URL
- * it admitted), but it keeps its place so nothing moves when scoring starts.
+ * The page browser's own controls, directly above its table (owner,
+ * 2026-11-10): the Monitored / All Discovered / Errors & Blocked switch at
+ * the start and the page-kind filter at the end. Both are server-backed and
+ * live in the address.
  */
-export function usePagesInventoryControls({
+function PagesViewBar({
   active,
-  enabled,
 }: Readonly<{
   /** True while the crawl is non-terminal: Monitored then reads "Audited so far". */
   active: boolean;
-  /** False while the inventory is not yet the scored page browser. */
-  enabled: boolean;
-}>): FilterBarProps {
+}>) {
   const { view, setView, pageKind, setPageKind } = usePagesInventoryState();
-  return {
-    view: (
+  return (
+    <Inline className="flex-wrap justify-between">
       <SegmentedControl
         value={view}
         onChange={(next) => setView(next)}
-        disabled={!enabled}
         // The label names what the view shows, never which view is selected:
         // the monitored view lists audited pages for the whole active run.
         options={VIEWS.map((item) => ({
@@ -208,16 +201,16 @@ export function usePagesInventoryControls({
         }))}
         ariaLabel="Page inventory views"
       />
-    ),
-    filters: <PageKindSelect value={pageKind} onChange={(next) => setPageKind(next)} />,
-  };
+      <PageKindSelect value={pageKind} onChange={(next) => setPageKind(next)} />
+    </Inline>
+  );
 }
 
 /**
  * The page browser (design mockup 713): three server-backed views, each its
  * own query restarting from its first page — filtering is server-side, never
  * a filter over the current client page. The view switch and page-kind filter
- * are drawn in the page's control band (`usePagesInventoryControls`).
+ * sit directly above the table (`PagesViewBar`).
  *
  * Used for the WHOLE audit lifecycle: while analysis runs the first page of
  * the active view polls, so each row's status badge advances queued → running
@@ -252,7 +245,7 @@ function ScoredInventoryState({
   requestedSort: string | null;
 }>) {
   // The view and the shared page-kind filter (v2 P1) live in the address,
-  // drawn in the page's control band: server-backed values that compose with
+  // drawn above the table: server-backed values that compose with
   // each other — never a client filter over the page window.
   const { view, pageKind } = usePagesInventoryState();
   // Shared server-side ordering. Like the filter, it is part of the cursor
@@ -311,6 +304,7 @@ function ScoredInventoryState({
 
   return (
     <Stack>
+      <PagesViewBar active={active} />
       <RootErrorsBlock errors={rootErrors} />
       <PagesTable
         pages={page?.items ?? []}

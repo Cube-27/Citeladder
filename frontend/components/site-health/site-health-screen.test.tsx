@@ -60,6 +60,11 @@ describe('SiteHealthScreen — Website tab deep links', () => {
       'true',
     );
     expect(await screen.findByText('Architecture is not available yet.')).toBeVisible();
+    // The pages export belongs to Pages: another tab's header carries none.
+    expect(screen.getByRole('button', { name: 'Run new crawl' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: 'Pages' }));
+    expect(await screen.findByRole('button', { name: 'Export' })).toBeInTheDocument();
   });
 
   it('opens on Pages for a finished crawl, from the loading frame onward', async () => {
@@ -131,7 +136,7 @@ describe('SiteHealthScreen — Pages tab reads', () => {
     expect(reads).toEqual(['true|status|10']);
   });
 
-  it('draws the page views and page-kind filter in the control band, only on Pages', async () => {
+  it('draws the page views and page-kind filter from the address, only on Pages', async () => {
     const user = userEvent.setup();
     setSearch('tab=pages&pages_view=errors&page_kind=faq');
     mockRoutes();

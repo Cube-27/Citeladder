@@ -78,7 +78,7 @@ export function FilterBar({ view, search, filters, status, actions }: FilterBarP
           <span aria-hidden className="shell:hidden order-2 h-0 basis-full" />
           {/* A trigger sized to its options (`data-fit`) keeps that width on
               the shared row rather than taking an equal share of it. */}
-          <div className="shell:order-none shell:[&>*]:flex-none shell:[&>*]:basis-auto contents [&>*]:order-3 [&>*]:min-w-0 [&>*:not([data-fit])]:flex-1 [&>*:not([data-fit])]:basis-0">
+          <div className="shell:order-none shell:[&>*:not([data-fit])]:flex-none shell:[&>*:not([data-fit])]:basis-auto contents [&>*]:order-3 [&>*]:min-w-0 [&>*:not([data-fit])]:flex-1 [&>*:not([data-fit])]:basis-0">
             {filters}
           </div>
         </>

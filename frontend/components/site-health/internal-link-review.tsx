@@ -87,18 +87,19 @@ export function InternalLinkReview({
                 : 'Verify the source text before using this historical suggestion.'}
             </p>
           </Stack>
+          {/* One primary: the ready-to-paste link. Its parts are secondary. */}
           <Inline className="flex-wrap">
-            <CopyButton variant="primary" value={link.anchor}>
-              Copy anchor
-            </CopyButton>
-            <CopyButton variant="primary" value={link.target.url}>
-              Copy URL
-            </CopyButton>
             <CopyButton
               variant="primary"
               value={`<a href="${escapeHtml(link.target.url)}">${escapeHtml(link.anchor)}</a>`}
             >
               Copy HTML
+            </CopyButton>
+            <CopyButton variant="secondary" value={link.anchor}>
+              Copy anchor
+            </CopyButton>
+            <CopyButton variant="secondary" value={link.target.url}>
+              Copy URL
             </CopyButton>
             <Button asChild variant="secondary">
               <ProjectLink href={`/site/crawls/${crawlId}/pages/${link.source.site_url_id}`}>

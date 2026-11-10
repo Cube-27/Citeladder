@@ -73,7 +73,7 @@ describe('PagesTable', () => {
     expect(within(done).queryByText('Completed')).not.toBeInTheDocument();
   });
 
-  it('shows a non-null limited-evidence score without an internal confidence subtitle', () => {
+  it('keeps a limited-evidence score from reading as fully measured', () => {
     renderPages(
       <PagesTable
         crawlId={CRAWL}
@@ -91,9 +91,10 @@ describe('PagesTable', () => {
     const row = screen.getByText('Homepage').closest('tr');
     expect(row).not.toBeNull();
     expect(within(row!).getByRole('cell', { name: 'Excluded' })).toBeInTheDocument();
-    expect(within(row!).getByText('46')).toBeInTheDocument();
+    // The score stays, with its state on a caption line under it.
+    const score = within(row!).getByRole('cell', { name: /^46\s?Limited evidence$/ });
+    expect(score).toBeInTheDocument();
     expect(within(row!).queryByText(/confidence/i)).not.toBeInTheDocument();
-    expect(within(row!).queryByText(/100% measured/i)).not.toBeInTheDocument();
   });
 
   it('renders the not-measured state for an unclassified page (null page_kind)', () => {

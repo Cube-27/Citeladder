@@ -8,7 +8,7 @@ import { ChartFrame } from '@/components/ui/chart';
 import { QueryState } from '@/components/ui/query-state';
 import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
-import { StackedBar, type StackedSegment } from '@/components/ui/stacked-bar';
+import { DonutChart, type DonutSlice } from '@/components/ui/donut-chart';
 import { TrendChart, type TrendSeries } from '@/components/ui/trend-chart';
 import { seriesCeiling, toChartSeries, type typeSlices } from '@/lib/visibility/sources';
 import type { useSourceSeries } from '@/lib/visibility/use-source-analysis';
@@ -137,7 +137,7 @@ const OTHER_TYPES = new Set(['other_third_party', 'unresolved']);
  * largest types, and the rest (with the types that already read "Other")
  * merged into one Other part, so a long taxonomy never becomes nine slivers.
  */
-function typeSegments(slices: readonly TypeSlice[]): StackedSegment[] {
+function typeSegments(slices: readonly TypeSlice[]): DonutSlice[] {
   const own = slices.filter((slice) => slice.key === 'brand_owned');
   const ranked = slices
     .filter((slice) => slice.key !== 'brand_owned' && !OTHER_TYPES.has(slice.key))
@@ -147,10 +147,10 @@ function typeSegments(slices: readonly TypeSlice[]): StackedSegment[] {
   const room = others.length ? 3 : 4;
   const kept = named.length > room ? named.slice(0, 3) : named;
   const folded = [...named.slice(kept.length), ...others];
-  const parts: StackedSegment[] = kept.map((slice) => ({ label: slice.label, value: slice.value }));
+  const parts: DonutSlice[] = kept.map((slice) => ({ name: slice.label, value: slice.value }));
   if (!folded.length) return parts;
   const value = folded.reduce((sum, slice) => sum + slice.value, 0);
-  return [...parts, { label: 'Other', value, other: true }];
+  return [...parts, { name: 'Other', value, other: true }];
 }
 
 type ReadState = Pick<
@@ -175,7 +175,7 @@ export function TypesCard({
         <CardTitle>Source types</CardTitle>
       </CardHeader>
       <CardContent>
-        {/* The bar and its legend in the default chart height role. */}
+        {/* The donut and its legend in the default chart height role. */}
         <ChartFrame height="md">
           <TypesMix slices={slices} total={total} query={query} />
         </ChartFrame>
@@ -217,7 +217,15 @@ function TypesMix({
   // The whole is the DECLARED total, never the parts' own sum: citations whose
   // page was never classified are counted in it and belong to no type, so
   // they stay an unfilled remainder instead of stretching the types to 100%.
-  return <StackedBar segments={typeSegments(slices)} total={total} label="Source types" />;
+  return (
+    <DonutChart
+      slices={typeSegments(slices)}
+      total={total}
+      totalLabel="Citations"
+      remainderLabel="Unclassified"
+      label="Source types"
+    />
+  );
 }
 
 /** A bucket boundary as an axis tick — the date, never the time. */

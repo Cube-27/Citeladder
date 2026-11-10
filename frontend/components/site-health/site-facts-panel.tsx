@@ -38,7 +38,7 @@ export function SiteFactsPanel({
     current
       ? {
           siteFacts: { crawlId: current.id },
-          prompt: 'Explain the selected crawl’s persisted AI crawlability and robots policy.',
+          prompt: 'Explain the selected crawl’s AI crawlability and robots policy.',
         }
       : null,
   );
@@ -62,7 +62,7 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
               projectId={crawl.project_id}
               href={agentHandoffHref({
                 siteFacts: { crawlId: crawl.id },
-                prompt: `Explain the persisted AI crawlability and robots policy for crawl ${crawl.id}. Use read_ai_crawlability and distinguish robots permission from observed retrieval.`,
+                prompt: `Explain the AI crawlability and robots policy for crawl ${crawl.id}. Use read_ai_crawlability and distinguish robots permission from observed retrieval.`,
               })}
             >
               Ask agent

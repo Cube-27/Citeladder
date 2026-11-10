@@ -438,7 +438,9 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
   });
   await page.goto(fixtureProjectPath('/visibility'));
 
-  await expect(page.getByText('Over time', { exact: true })).toBeVisible();
+  // Trends always leads with the ranking table; the Over time chart joins it
+  // only once two periods exist.
+  await expect(page.getByText('Brand and competitors', { exact: true })).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
   // Sources — the cited domains, with the URLs half one switch away.

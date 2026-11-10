@@ -21,8 +21,8 @@ import { ICONS } from '@/lib/icons';
  *
  * Reading order is answer-first: one status line (where the crawl stands, its
  * headline scores and page counts), the URL inventory, then page-kind
- * diagnostics. The inventory's view switch and page-kind filter sit in the
- * page's control band (`usePagesInventoryControls`).
+ * diagnostics. The inventory's view switch and page-kind filter sit directly
+ * above its table.
  */
 export function SiteHealthDashboardLayout({
   screen,

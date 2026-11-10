@@ -6,22 +6,11 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/
 import { makePageSummary, makeSiteCrawl, SITE_HEALTH_UUID_2 } from '@/test/fixtures/site-health';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
-import { FilterBar } from '@/components/ui/filter-bar';
-import { InventorySection, usePagesInventoryControls } from './inventory-section';
+import { InventorySection } from './inventory-section';
 
-/** The control band the screen draws above the inventory. */
-function PagesControls({ enabled, active }: Readonly<{ enabled: boolean; active: boolean }>) {
-  return <FilterBar {...usePagesInventoryControls({ enabled, active })} />;
-}
-
-/** The Pages tab as the screen composes it: the control band, then the inventory. */
+/** The Pages tab's browser: the view switch and filter above its table. */
 function PagesBrowser() {
-  return (
-    <>
-      <PagesControls enabled active={false} />
-      <InventorySection mode="scored" crawl={makeSiteCrawl()} active={false} />
-    </>
-  );
+  return <InventorySection mode="scored" crawl={makeSiteCrawl()} active={false} />;
 }
 
 const PAGES = `/api/v1/site-crawls/${SITE_HEALTH_UUID_2}/pages`;
@@ -93,7 +82,7 @@ describe('InventorySection', () => {
     );
   });
 
-  it('asks the server for the page kind picked in the control band', async () => {
+  it('asks the server for the page kind picked above the table', async () => {
     const requested: Array<string | null> = [];
     mswServer.use(
       http.get(PAGES, ({ request }) => {
@@ -117,18 +106,6 @@ describe('InventorySection', () => {
     expect(await screen.findByText('FAQ page')).toBeInTheDocument();
     expect(requested.at(-1)).toBe('faq');
     expect(window.location.search).toBe('?page_kind=faq');
-  });
-
-  it('keeps the view switch in place but disabled until the pages are scored', () => {
-    renderWithProviders(<PagesControls enabled={false} active />);
-    const views = screen
-      .getAllByRole('radio')
-      .map((radio) => [radio.textContent, radio.hasAttribute('disabled')]);
-    expect(views).toEqual([
-      ['Audited so far', true],
-      ['All Discovered', true],
-      ['Errors & Blocked', true],
-    ]);
   });
 
   it('draws the discovered pages’ first load inside their table', async () => {
