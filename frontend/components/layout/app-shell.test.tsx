@@ -39,7 +39,12 @@ function sidebarWidth() {
 }
 
 describe('AppShell resizable sidebar', () => {
-  afterEach(() => window.localStorage.clear());
+  const windowWidth = window.innerWidth;
+  afterEach(() => {
+    window.localStorage.clear();
+    window.innerWidth = windowWidth;
+    vi.restoreAllMocks();
+  });
 
   it('opens at the width this browser stored, from the first frame', () => {
     window.localStorage.setItem(SIDEBAR_WIDTH_KEY, '320');
@@ -71,7 +76,6 @@ describe('AppShell resizable sidebar', () => {
   it('resizes from the keyboard within its bounds and resets on Home and double-click', async () => {
     const user = userEvent.setup();
     // 40% of a 1000px window is 400, below the 480 ceiling.
-    const innerWidth = window.innerWidth;
     window.innerWidth = 1000;
     renderShell();
     const handle = screen.getByRole('separator', { name: 'Resize sidebar' });
@@ -96,12 +100,11 @@ describe('AppShell resizable sidebar', () => {
     await user.dblClick(handle);
     expect(handle).toHaveAttribute('aria-valuenow', '248');
     expect(sidebarWidth()).toBe('');
-    window.innerWidth = innerWidth;
   });
 
   it('shows the whole account email in a tooltip when the sidebar cuts it', async () => {
     // The full, labelled sidebar (from 1280px), where the email shows as text.
-    const matchMedia = vi.spyOn(window, 'matchMedia').mockImplementation(
+    vi.spyOn(window, 'matchMedia').mockImplementation(
       (query) =>
         ({
           matches: true,
@@ -119,11 +122,9 @@ describe('AppShell resizable sidebar', () => {
     act(() => account.blur());
 
     // jsdom lays nothing out; report every line as wider than the sidebar.
-    const scrollWidth = vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(1000);
+    vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(1000);
     act(() => account.focus());
     expect(await screen.findByRole('tooltip')).toHaveTextContent('test.user@example.test');
-    scrollWidth.mockRestore();
-    matchMedia.mockRestore();
   });
 });
 

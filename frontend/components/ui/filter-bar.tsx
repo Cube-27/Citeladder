@@ -172,14 +172,19 @@ export function FilterTrigger({
         // The sizers draw their text as generated content: it adds no
         // readable text and no accessible name.
         <span className="grid min-w-0">
-          {[...new Set(sizeTo)].map((size) => (
-            <span
-              key={size}
-              aria-hidden
-              data-size={hideLabel ? size : `${label}: ${size}`}
-              className="invisible col-start-1 row-start-1 whitespace-nowrap after:content-[attr(data-size)]"
-            />
-          ))}
+          {/* Only the longest labels can set the width; a long option list
+              (every tracked prompt) must not become one node per option. */}
+          {[...new Set(sizeTo)]
+            .sort((a, b) => b.length - a.length)
+            .slice(0, 6)
+            .map((size) => (
+              <span
+                key={size}
+                aria-hidden
+                data-size={hideLabel ? size : `${label}: ${size}`}
+                className="invisible col-start-1 row-start-1 whitespace-nowrap after:content-[attr(data-size)]"
+              />
+            ))}
           <span className="col-start-1 row-start-1 flex min-w-0">
             <FilterTriggerText label={label} value={value} hideLabel={hideLabel} />
           </span>

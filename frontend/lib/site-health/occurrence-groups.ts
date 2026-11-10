@@ -31,8 +31,9 @@ export type OccurrenceEntry =
       key: string;
       ruleId: string;
       facts: readonly string[];
+      /** One occurrence per page: the last one loaded for that page. */
       occurrences: NonEmpty<IssueOccurrence>;
-      /** Distinct pages in the group; an occurrence is per page, but count pages, not rows. */
+      /** Distinct pages in the group. */
       pageCount: number;
     }>;
 
@@ -79,10 +80,13 @@ export function groupOccurrences(occurrences: readonly IssueOccurrence[]): Occur
     if ('occurrence' in slot) return [{ kind: 'page', occurrence: slot.occurrence }];
     const bucket = buckets.get(slot.key);
     if (!bucket) return [];
-    const [first, ...rest] = bucket.members;
+    // One row per page: a page that repeats the evidence is still one page.
+    const [first, ...rest] = [
+      ...new Map(bucket.members.map((member) => [member.site_url_id, member])).values(),
+    ];
     if (!first) return [];
-    const pageCount = distinctPages(bucket.members);
-    if (pageCount < 2) return bucket.members.map((occurrence) => ({ kind: 'page', occurrence }));
+    if (rest.length === 0)
+      return bucket.members.map((occurrence) => ({ kind: 'page', occurrence }));
     return [
       {
         kind: 'shared',
@@ -90,7 +94,7 @@ export function groupOccurrences(occurrences: readonly IssueOccurrence[]): Occur
         ruleId: first.rule_id,
         facts: bucket.facts,
         occurrences: [first, ...rest],
-        pageCount,
+        pageCount: rest.length + 1,
       },
     ];
   });

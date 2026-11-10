@@ -1,7 +1,6 @@
 'use client';
 
 import type { UseQueryResult } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
 import { FilterChoice } from '@/components/ui/filter-bar';
 import { Meter } from '@/components/ui/meter';
 import { Callout } from '@/components/ui/callout';
@@ -250,73 +249,8 @@ function MeasurementHistory({
   brandName: string | null;
 }>) {
   const timeZone = useDisplayTimeZone();
-  const points = query.data ?? [];
   const metricLabel =
     VISIBILITY_METRICS.find((item) => item.value === metric)?.label ?? 'Visibility';
-  // Focusing the tracked brand is the brand's OWN series, not a ranking lookup:
-  // the rankings carry competitors and the brand alike, but the brand's line is
-  // the one the projection publishes directly.
-  const focusedIsBrand = focused !== null && focused === brandName;
-  const base =
-    focused === null || focusedIsBrand
-      ? toChartPoints(points, metric, timeZone)
-      : toNamedChartPoints(points, metric, focused, timeZone);
-  const chartPoints = base.map((point) => ({
-    ...point,
-    // The plotted values are already whole percent, so `formatRate` — which
-    // scales a 0–1 rate — turned 38% into "3800%" in every hover label.
-    label: `${formatPointDate(point.completedAt, timeZone)} · ${formatWholePercent(point.value)}`,
-    // The full date is the hover; the axis tick gets the short form the
-    // series was built with, so the ticks stay readable at three across.
-    axisLabel: point.label,
-  }));
-  // One selected brand means one line: the comparison roster is what the reader
-  // asked to step out of.
-  const competitors = focused === null ? toCompetitorSeries(points, metric) : [];
-  const primaryLabel = focused ?? 'You';
-  const onlyPoint = points.length === 1 ? points[0] : undefined;
-
-  let body: ReactNode;
-  if (query.isError) {
-    body = (
-      <ReadError
-        error={query.error}
-        fallback="Could not load history."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
-      />
-    );
-  } else if (query.isPending) {
-    body = <QueryState kind="loading" label="Loading measurement history…" />;
-  } else if (!points.length) {
-    body = <QueryState kind="empty" inline message="No measurements in this period yet." />;
-  } else if (onlyPoint) {
-    // One measurement has no line to draw: an empty plot with a few stacked
-    // dots. Compare the brands in it instead, in the same card.
-    body = (
-      <RunComparison
-        point={onlyPoint}
-        metric={metric}
-        metricLabel={metricLabel}
-        focused={focused}
-        timeZone={timeZone}
-      />
-    );
-  } else {
-    body = (
-      <Stack gap="compact" aria-busy={query.isFetching}>
-        <TrendChart
-          label={`${metricLabel} over time`}
-          name={primaryLabel}
-          data={chartPoints}
-          series={competitors}
-          yMax={100}
-          yFormat={(value) => `${Math.round(value)}%`}
-          directLabels
-        />
-      </Stack>
-    );
-  }
   return (
     <Card>
       <CardHeader
@@ -341,8 +275,107 @@ function MeasurementHistory({
       >
         <CardTitle>Over time</CardTitle>
       </CardHeader>
-      <CardContent>{body}</CardContent>
+      <CardContent>
+        <MeasurementHistoryBody
+          query={query}
+          metric={metric}
+          metricLabel={metricLabel}
+          focused={focused}
+          brandName={brandName}
+          timeZone={timeZone}
+        />
+      </CardContent>
     </Card>
+  );
+}
+
+type HistoryChartProps = Readonly<{
+  points: readonly VisibilityTrendPoint[];
+  metric: (typeof VISIBILITY_METRICS)[number]['value'];
+  metricLabel: string;
+  focused: string | null;
+  brandName: string | null;
+  timeZone: string;
+  busy: boolean;
+}>;
+
+/** The history card's content: the read's state, the one-run comparison or the line chart. */
+function MeasurementHistoryBody({
+  query,
+  ...chart
+}: Omit<HistoryChartProps, 'points' | 'busy'> &
+  Readonly<{ query: UseQueryResult<VisibilityTrendPoint[], unknown> }>) {
+  const points = query.data ?? [];
+  const onlyPoint = points.length === 1 ? points[0] : undefined;
+  if (query.isError)
+    return (
+      <ReadError
+        error={query.error}
+        fallback="Could not load history."
+        onRetry={() => void query.refetch()}
+        pending={query.isFetching}
+      />
+    );
+  if (query.isPending) return <QueryState kind="loading" label="Loading measurement history…" />;
+  if (!points.length)
+    return <QueryState kind="empty" inline message="No measurements in this period yet." />;
+  // One measurement has no line to draw: an empty plot with a few stacked
+  // dots. Compare the brands in it instead, in the same card.
+  if (onlyPoint)
+    return (
+      <RunComparison
+        point={onlyPoint}
+        metric={chart.metric}
+        metricLabel={chart.metricLabel}
+        focused={chart.focused}
+        timeZone={chart.timeZone}
+      />
+    );
+  return <HistoryLineChart points={points} busy={query.isFetching} {...chart} />;
+}
+
+function HistoryLineChart({
+  points,
+  metric,
+  metricLabel,
+  focused,
+  brandName,
+  timeZone,
+  busy,
+}: HistoryChartProps) {
+  // Focusing the tracked brand is the brand's OWN series, not a ranking lookup:
+  // the rankings carry competitors and the brand alike, but the brand's line is
+  // the one the projection publishes directly.
+  const focusedIsBrand = focused !== null && focused === brandName;
+  const base =
+    focused === null || focusedIsBrand
+      ? toChartPoints(points, metric, timeZone)
+      : toNamedChartPoints(points, metric, focused, timeZone);
+  const chartPoints = base.map((point) => ({
+    ...point,
+    // The plotted values are already whole percent, so `formatRate` — which
+    // scales a 0–1 rate — turned 38% into "3800%" in every hover label.
+    label: `${formatPointDate(point.completedAt, timeZone)} · ${formatWholePercent(point.value)}`,
+    // The full date is the hover; the axis tick gets the short form the
+    // series was built with, so the ticks stay readable at three across.
+    axisLabel: point.label,
+  }));
+  // One selected brand means one line: the comparison roster is what the reader
+  // asked to step out of.
+  const competitors = focused === null ? toCompetitorSeries(points, metric) : [];
+  const primaryLabel = focused ?? 'You';
+  return (
+    <Stack gap="compact" aria-busy={busy}>
+      <TrendChart
+        label={`${metricLabel} over time`}
+        name={primaryLabel}
+        data={chartPoints}
+        series={competitors}
+        yMax={100}
+        yFormat={(value) => `${Math.round(value)}%`}
+        directLabels
+      />
+    </Stack>
   );
 }
 
@@ -370,8 +403,9 @@ function RunComparison({
   return (
     <Stack gap="compact">
       <Stack as="ul" gap="compact" aria-label={`${metricLabel} by brand`}>
-        {rows.map((row) => (
-          <li key={row.name}>
+        {rows.map((row, index) => (
+          // Two tracked brands may share a name; the ranked position is unique.
+          <li key={`${index}:${row.name}`}>
             <Meter
               label={row.isBrand ? `${row.name} · You` : row.name}
               value={row.value}

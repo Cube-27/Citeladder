@@ -2,9 +2,9 @@
 
 import { ProjectLink } from '@/components/ui/project-link';
 
-import { Badge } from '@/components/ui/badge';
-import { EvidenceLine, IssueEvidence } from '@/components/site-health/issue-evidence';
+import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
+import { AffectedPageLink, SharedOccurrences } from '@/components/site-health/shared-occurrences';
 import { ReadError } from '@/components/ui/read-error';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -28,15 +28,8 @@ import {
   type SiteLevelEvidence,
 } from '@/lib/site-health/site-level-evidence';
 import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
-import {
-  groupOccurrences,
-  loadedPageCount,
-  sharedEvidenceLead,
-  sharedPagesLabel,
-  type OccurrenceEntry,
-} from '@/lib/site-health/occurrence-groups';
+import { groupOccurrences, loadedPageCount } from '@/lib/site-health/occurrence-groups';
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
-import { pageDisplayTitle } from '@/lib/site-health/status';
 
 /**
  * The right half of the Issues catalog: one issue in full, and the pages it
@@ -163,15 +156,6 @@ function askAgentPrompt(issue: SiteIssue, page?: string): string {
     : `Analyze the Site Health issue "${issueTitle(issue)}"${scope}, prioritize the work and propose a bounded implementation plan from the supplied sample; say how many pages it covers versus the total.`;
 }
 
-/**
- * Evidence shared by several pages is usually one template element, so the
- * question is the one fix that clears it everywhere. The count is the same
- * honest label the reader sees, never more than the loaded rows prove.
- */
-function sharedAskAgentPrompt(issue: SiteIssue, evidence: string, scope: string): string {
-  return `Analyze the Site Health issue "${issueTitle(issue)}" where the same evidence, ${evidence}, was found on several pages (${scope.toLowerCase()}). Check whether it comes from one shared template or component and propose the one fix that clears it on every page.`;
-}
-
 const OCCURRENCE_PLACEHOLDERS = ['first', 'second', 'third'] as const;
 
 function OccurrenceList({
@@ -240,12 +224,12 @@ function OccurrenceList({
             issue={issue}
             entry={entry}
             crawlId={crawlId}
-            label={sharedPagesLabel({
+            scope={{
               pageCount: entry.pageCount,
               loadedPageCount: loaded,
               totalPageCount: detail.affected_url_count,
               complete,
-            })}
+            }}
           />
         ),
       )}
@@ -281,94 +265,6 @@ function PageOccurrence({
         Ask agent about this page
       </TextLink>
     </Stack>
-  );
-}
-
-/**
- * Evidence several pages share, said once: the element, how many pages carry
- * it, one question for all of them, then the pages themselves. The handoff
- * names the issue group without a page, since the question is the fix that
- * clears every page at once.
- */
-function SharedOccurrences({
-  issue,
-  entry,
-  crawlId,
-  label,
-}: Readonly<{
-  issue: SiteIssue;
-  entry: Extract<OccurrenceEntry, { kind: 'shared' }>;
-  crawlId: string;
-  label: string;
-}>) {
-  return (
-    <Stack as="li" gap="item" className={ledgerItemClasses()}>
-      <Stack gap="tight">
-        <EvidenceLine
-          lead={sharedEvidenceLead(entry.ruleId)}
-          facts={entry.facts}
-          text="itemTitle"
-        />
-        <span className="type-caption tabular-nums">{label}</span>
-        <TextLink
-          text="caption"
-          className="w-fit"
-          href={agentHandoffHref({
-            issueGroup: { crawlId, groupId: issue.group_id },
-            prompt: sharedAskAgentPrompt(issue, entry.facts.join(', '), label),
-            skillId: 'technical_health',
-          })}
-        >
-          Ask agent about these pages
-        </TextLink>
-      </Stack>
-      <Stack as="ul" gap="item">
-        {entry.occurrences.map((occurrence) => (
-          <li key={occurrence.occurrence_id} className="min-w-0">
-            <AffectedPageLink
-              crawlId={crawlId}
-              siteUrlId={occurrence.site_url_id}
-              title={occurrence.title}
-              url={occurrence.display_url}
-              pageKind={occurrence.page_kind}
-            />
-          </li>
-        ))}
-      </Stack>
-    </Stack>
-  );
-}
-
-/** One affected page: its title and kind, linking to its detail, over its URL. */
-function AffectedPageLink({
-  crawlId,
-  siteUrlId,
-  title,
-  url,
-  pageKind,
-}: Readonly<{
-  crawlId: string;
-  siteUrlId: string;
-  title: string | null;
-  url: string;
-  pageKind: string | null;
-}>) {
-  return (
-    <TextLink
-      text="itemTitle"
-      className="flex min-w-0 flex-col"
-      href={`/site/crawls/${crawlId}/pages/${siteUrlId}`}
-    >
-      <Inline as="span" className="flex-wrap">
-        <span className={textRole('itemTitle', '[overflow-wrap:anywhere]')}>
-          {pageDisplayTitle(title, url)}
-        </span>
-        {pageKind ? <Badge>{pageKindLabel(pageKind)}</Badge> : null}
-      </Inline>
-      <span className="type-caption [overflow-wrap:anywhere] tabular-nums" title={url}>
-        {url}
-      </span>
-    </TextLink>
   );
 }
 

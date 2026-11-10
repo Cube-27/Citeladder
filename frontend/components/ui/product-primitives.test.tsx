@@ -318,7 +318,7 @@ describe('FilterBar and FilterTrigger', () => {
     );
     const trigger = screen.getByRole('button', { name: 'Surface: ChatGPT' });
     // The longest option is reserved as generated content, never readable text.
-    expect(trigger).toHaveTextContent(/^Surface: ChatGPT$/);
+    expect(trigger.textContent).toBe('Surface: ChatGPT');
     expect(trigger.querySelector('[data-size="Google AI Overviews"]')).not.toBeNull();
   });
 });

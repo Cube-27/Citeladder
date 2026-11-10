@@ -1,16 +1,18 @@
 'use client';
 
-import { AlertTriangle, Pencil, RotateCcw } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { Pencil, RotateCcw } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { EvidenceChips } from '@/components/agent/evidence-chips';
+import { LiveActivity } from '@/components/agent/live-activity';
+import { MessageTime } from '@/components/agent/message-time';
 import { skillLabel, useSkillCatalog } from '@/components/agent/skill-picker';
-import { LiveReply } from '@/components/agent/live-reply';
+import { threadItems } from '@/components/agent/thread-items';
+import { TurnFailure } from '@/components/agent/turn-failure';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { WebSources } from '@/components/agent/web-sources';
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
-import { Callout, type CalloutTone } from '@/components/ui/callout';
 import { cardClasses } from '@/components/ui/card';
 import { AgentThread, AgentTurn, UserTurn } from '@/components/ui/chat-dock';
 import { CopyButton } from '@/components/ui/copy-button';
@@ -18,19 +20,14 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
-import { Spinner } from '@/components/ui/spinner';
 import { TextLink } from '@/components/ui/text-link';
-import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import { treeBranchClasses } from '@/components/ui/workspace';
 import { documentAnchor, latestOutput, outputPlacements } from '@/lib/agent/documents';
 import { agentHandoffHref } from '@/lib/agent/handoff';
-import { runErrorCopy, runStepLabel, toolCallLabel } from '@/lib/agent/vocabulary';
+import { runStepLabel, toolCallLabel } from '@/lib/agent/vocabulary';
 import { runOutcome } from '@/lib/agent/run-state';
-import { useLiveTurn, type LiveTurn } from '@/lib/agent/live-turns';
-import type { AgentChatDetail, AgentMessage, AgentOutput, AgentRun } from '@/lib/api/agent';
-import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayTimestamp } from '@/lib/format';
+import type { AgentChatDetail, AgentMessage, AgentOutput } from '@/lib/api/agent';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
 import { cn } from '@/lib/utils';
 
@@ -213,21 +210,6 @@ function PendingMessage({ text }: Readonly<{ text: string }>) {
   );
 }
 
-/**
- * The running turn's live events. Subscribed here, not in the conversation, so
- * each streamed delta re-renders only this activity, never the earlier messages.
- */
-function LiveActivity({ detail }: Readonly<{ detail: AgentChatDetail }>) {
-  const outcome = runOutcome(detail.latest_run);
-  const live = useLiveTurn(outcome.kind === 'running' ? outcome.run.id : null);
-  return (
-    <>
-      <LiveReply live={live} />
-      <RunState detail={detail} live={live} />
-    </>
-  );
-}
-
 function MessageBubble({
   message,
   skill,
@@ -276,179 +258,6 @@ function MessageBubble({
         </Disclosure>
       ) : null}
     </AgentTurn>
-  );
-}
-/**
- * A message's time, short: the time of day for today, else the date and time.
- * The full timestamp with its zone shows on hover and is what assistive
- * technology reads.
- */
-function MessageTime({ value }: Readonly<{ value: string }>) {
-  const timeZone = useDisplayTimeZone();
-  const [now] = useState(() => Date.now());
-  const full = formatDisplayTimestamp(value, timeZone);
-  return (
-    <Tooltip content={full} describe={false}>
-      <time dateTime={value}>
-        <span aria-hidden>{shortTimestamp({ value, timeZone, now })}</span>
-        <span className="sr-only">{full}</span>
-      </time>
-    </Tooltip>
-  );
-}
-
-function shortTimestamp({
-  value,
-  timeZone,
-  now,
-}: Readonly<{ value: string; timeZone: string; now: number }>): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  try {
-    const day = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone });
-    const year = new Intl.DateTimeFormat('en-US', { year: 'numeric', timeZone });
-    const today = day.format(date) === day.format(now);
-    const thisYear = year.format(date) === year.format(now);
-    return new Intl.DateTimeFormat('en-US', {
-      ...(today ? {} : { month: 'short', day: 'numeric' }),
-      ...(thisYear ? {} : { year: 'numeric' }),
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone,
-    }).format(date);
-  } catch {
-    return formatDisplayTimestamp(value, timeZone);
-  }
-}
-
-/** How the latest run ended, when it ended without an answer. */
-type EndedOutcome = 'failed' | 'stopped_at_limit' | 'cancelled';
-/** `unknown`: an earlier turn, whose run's outcome the chat read does not carry. */
-type FailureOutcome = EndedOutcome | 'unknown';
-
-type ThreadItem =
-  | { kind: 'message'; message: AgentMessage }
-  | {
-      kind: 'failure';
-      /** The request the attempts answered, shown once; null for a reply with no request before it. */
-      request: AgentMessage | null;
-      /** Consecutive identical attempts' replies, oldest first. */
-      failures: [AgentMessage, ...AgentMessage[]];
-      outcome: FailureOutcome;
-    };
-
-/**
- * A reply the run wrote because it ended without an answer. Every reply the
- * model wrote records at least its model call in `steps`; the reply a failed,
- * stopped or cancelled run leaves records nothing — no steps, evidence, web
- * pages or document — so it is told apart by structure, never by its words.
- */
-function isUnansweredReply(message: AgentMessage, placed: ReadonlySet<string>): boolean {
-  return (
-    message.role === 'agent' &&
-    message.steps.length === 0 &&
-    message.evidence_refs.length === 0 &&
-    message.web_sources.length === 0 &&
-    !placed.has(message.id)
-  );
-}
-
-function sameRequest(left: AgentMessage, right: AgentMessage): boolean {
-  return (
-    left.content === right.content &&
-    left.skill_id === right.skill_id &&
-    left.mentions.map((mention) => mention.id).join() ===
-      right.mentions.map((mention) => mention.id).join()
-  );
-}
-
-function endedOutcome(run: AgentChatDetail['latest_run']): EndedOutcome | null {
-  const kind = runOutcome(run).kind;
-  return kind === 'failed' || kind === 'stopped_at_limit' || kind === 'cancelled' ? kind : null;
-}
-
-/**
- * The thread in order, each unanswered turn as its request and a failure
- * rather than a reply. Consecutive turns that repeat the same request and end
- * the same way collapse into one, counting the attempts. Only the latest run's
- * outcome is known, so only the last turn's failure says how it ended.
- */
-function threadItems(detail: AgentChatDetail, placed: ReadonlySet<string>): ThreadItem[] {
-  const items: ThreadItem[] = [];
-  const last = detail.messages.at(-1);
-  const latest = endedOutcome(detail.latest_run);
-  for (const message of detail.messages) {
-    if (!isUnansweredReply(message, placed)) {
-      items.push({ kind: 'message', message });
-      continue;
-    }
-    const outcome = message === last && latest ? latest : 'unknown';
-    const before = items.at(-1);
-    const request =
-      before?.kind === 'message' && before.message.role === 'user' ? before.message : null;
-    if (request) items.pop();
-    const previous = items.at(-1);
-    if (
-      request &&
-      previous?.kind === 'failure' &&
-      previous.request &&
-      sameRequest(previous.request, request) &&
-      previous.failures.at(-1)?.content === message.content
-    ) {
-      previous.failures.push(message);
-      previous.outcome = outcome;
-      continue;
-    }
-    items.push({ kind: 'failure', request, failures: [message], outcome });
-  }
-  return items;
-}
-
-const FAILURE_VERB: Record<FailureOutcome, string> = {
-  failed: 'Failed',
-  stopped_at_limit: 'Hit the step limit',
-  cancelled: 'Stopped',
-  unknown: 'Did not finish',
-};
-const FAILURE_TONE: Record<FailureOutcome, CalloutTone> = {
-  failed: 'negative',
-  stopped_at_limit: 'warning',
-  cancelled: 'warning',
-  unknown: 'neutral',
-};
-
-/**
- * An unanswered turn, in place of a reply: how it ended, how many attempts
- * ended so and when the last did, then the run's own explanation. Only the
- * latest turn's outcome is known, so only it is an alert (announced once, when
- * it appears or another attempt joins it); an earlier one is a quiet note.
- */
-function TurnFailure({
-  failures,
-  outcome,
-}: Readonly<{ failures: [AgentMessage, ...AgentMessage[]]; outcome: FailureOutcome }>) {
-  const latest = failures.at(-1) ?? failures[0];
-  const count = failures.length;
-  const time = <MessageTime value={latest.created_at} />;
-  const verb = FAILURE_VERB[outcome];
-  return (
-    <Callout
-      tone={FAILURE_TONE[outcome]}
-      icon={outcome === 'unknown' ? AlertTriangle : undefined}
-      title={
-        count > 1 ? (
-          <>
-            {verb} {count} times, last at {time}
-          </>
-        ) : (
-          <>
-            {verb} at {time}
-          </>
-        )
-      }
-    >
-      {latest.content}
-    </Callout>
   );
 }
 
@@ -585,101 +394,4 @@ function stepLabel(step: MessageStep): string {
   if (step.kind === 'tool')
     return runStepLabel({ tool: step.tool ?? 'read_data', status: step.status ?? 'unknown' });
   return step.ordinal ? `Model call ${step.ordinal}` : 'Worked on the reply';
-}
-
-function RunState({
-  detail,
-  live,
-}: Readonly<{ detail: AgentChatDetail; live: LiveTurn | undefined }>) {
-  const outcome = runOutcome(detail.latest_run);
-  const answered = detail.messages.at(-1)?.role === 'agent';
-  switch (outcome.kind) {
-    case 'running':
-      return <RunningState run={outcome.run} queued={outcome.queued} live={live} />;
-    // Every ended turn now answers with its own reply; older ones may not have.
-    case 'stopped_at_limit':
-      return answered ? null : <Callout tone="warning">{runErrorCopy('stopped_at_limit')}</Callout>;
-    case 'failed':
-      return answered ? null : <Callout tone="negative">{runErrorCopy(outcome.code)}</Callout>;
-    default:
-      return null;
-  }
-}
-function RunningState({
-  run,
-  queued,
-  live,
-}: Readonly<{ run: AgentRun; queued: boolean; live: LiveTurn | undefined }>) {
-  const label =
-    queued && !live?.step
-      ? 'Waiting to start…'
-      : (liveStepLabel(live) ?? activeStepLabel(run.progress, run.attempt_count));
-  // The current model call's tool calls run at the same time.
-  const current = live?.tools.filter((tool) => tool.ordinal === live.step) ?? [];
-  return (
-    <Stack gap="compact">
-      <Inline as="span" gap="compact" className={textRole('caption')}>
-        <Spinner className="text-ink-muted" />
-        {/* Only the step is announced; the seconds tick outside the live region. */}
-        <span className="flex-1">
-          <output aria-live="polite">{label}</output>
-          <Elapsed since={live?.startedAt ?? Date.parse(run.created_at)} />
-        </span>
-      </Inline>
-      {current.length > 1 ? (
-        <Stack as="ul" gap="tight" aria-label="Current reads" className={treeBranchClasses()}>
-          {current.map((tool) => (
-            <li key={tool.call_id} className={textRole('caption')}>
-              {toolCallLabel(tool)}
-            </li>
-          ))}
-        </Stack>
-      ) : null}
-      {run.progress.length > 0 ? <RunActivity progress={run.progress} /> : null}
-    </Stack>
-  );
-}
-/** What the newest model call is doing: its running reads, else deciding. */
-function liveStepLabel(live: LiveTurn | undefined) {
-  if (!live?.step) return null;
-  const running = live.tools.filter(
-    (tool) => tool.ordinal === live.step && tool.status === 'started',
-  );
-  if (running.length > 1) return `Running ${running.length} reads at once…`;
-  if (running[0]) return toolCallLabel(running[0]);
-  return runStepLabel({ status: 'working', tool: null });
-}
-function Elapsed({ since }: Readonly<{ since: number }>) {
-  const now = useNow(1000);
-  const seconds = Math.max(0, Math.round((now - since) / 1000));
-  return seconds >= 3 ? <span className="text-ink-muted"> · {seconds}s</span> : null;
-}
-function useNow(intervalMs: number) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), intervalMs);
-    return () => clearInterval(timer);
-  }, [intervalMs]);
-  return now;
-}
-function activeStepLabel(progress: AgentRun['progress'], attemptCount: number | undefined) {
-  const currentAttempt = attemptCount ?? progress.at(-1)?.run_attempt;
-  const current = [...progress].reverse().find((step) => step.run_attempt === currentAttempt);
-  return current ? runStepLabel(current) : 'The agent is working…';
-}
-function RunActivity({ progress }: Readonly<{ progress: AgentRun['progress'] }>) {
-  return (
-    <Disclosure title="View activity">
-      <Stack as="ol" gap="tight" aria-label="Agent progress" className={treeBranchClasses()}>
-        {progress.map((step) => (
-          <li
-            key={`${step.run_attempt}:${step.ordinal}:${step.call_id ?? 'model'}`}
-            className={textRole('caption')}
-          >
-            {runStepLabel(step)}
-          </li>
-        ))}
-      </Stack>
-    </Disclosure>
-  );
 }

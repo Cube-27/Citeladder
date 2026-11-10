@@ -8,12 +8,12 @@ import type { CommandCenter, Project } from '@citeladder/contracts';
 import {
   CompanyFacts,
   Movement,
-  NextAction,
   ProgressProofCard,
   ProjectStateCard,
   RankedActionsCard,
   Track,
 } from './dashboard-sections';
+import { NextAction } from './next-action-card';
 import { MissingPrompts } from './missing-prompts';
 import {
   AiTrafficWidget,

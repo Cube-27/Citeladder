@@ -6,14 +6,7 @@ import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { Badge } from '@/components/ui/badge';
 import { TagGroup } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardEyebrow,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Delta } from '@/components/ui/delta';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
@@ -25,8 +18,7 @@ import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { MetricValue } from '@/components/ui/metric-value';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
-import { availabilityLabel, pluralCount, readableUrl } from '@/lib/format';
-import { severityLabel, severityPriority } from '@/lib/site-health/issues';
+import { availabilityLabel, pluralCount } from '@/lib/format';
 import type { CommandCenter, Project } from '@citeladder/contracts';
 import { DisplayTime } from '@/components/ui/display-time';
 
@@ -45,25 +37,28 @@ import { ClampText } from '@/components/ui/table';
  * with its engines. The sidebar's project switcher already names the project,
  * so the line does not repeat the name or the logo.
  */
+/** The site as a link target: an http(s) URL, or null when it is anything else. */
+function websiteHref(website: string): string | null {
+  const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(website) ? website : `https://${website}`;
+  if (!URL.canParse(candidate)) return null;
+  const url = new URL(candidate);
+  return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
+}
+
 export function ProjectMeta({ data }: Readonly<{ data: CommandCenter }>) {
   const website = data.project.website_url;
   const measurement = data.measurement;
   if (!website && !measurement) return null;
+  const href = website ? websiteHref(website) : null;
+  const shown = website?.replace(/^https?:\/\//i, '').replace(/\/$/, '');
   return (
     <Inline as="p" gap="meta" className={textRole('caption')}>
-      {website ? (
-        <TextLink
-          variant="external"
-          text="caption"
-          tone="muted"
-          href={/^https?:\/\//i.test(website) ? website : `https://${website}`}
-          className="min-w-0"
-        >
-          <span className="truncate">
-            {website.replace(/^https?:\/\//i, '').replace(/\/$/, '')}
-          </span>
+      {href ? (
+        <TextLink variant="external" text="caption" tone="muted" href={href} className="min-w-0">
+          <span className="truncate">{shown}</span>
         </TextLink>
       ) : null}
+      {website && !href ? <span className="truncate">{shown}</span> : null}
       {measurement ? (
         <span>
           Tracked <DisplayTime value={measurement.completed_at} /> ·{' '}
@@ -253,135 +248,6 @@ export function ProjectStateCard({ data }: Readonly<{ data: CommandCenter }>) {
           ]}
         />
       </CardContent>
-    </Card>
-  );
-}
-
-const RECOMMENDED = 'Action recommended';
-
-/**
- * Every step the server can name; steps that are not a call to act say what
- * they are. The button names where it goes, never a bare "Continue".
- */
-const NEXT_ACTION_COPY: Record<
-  CommandCenter['next_action']['kind'],
-  { status: string; link: string; reason: string }
-> = {
-  opportunity: {
-    status: RECOMMENDED,
-    link: 'Open the Action',
-    reason: 'The first open Action in the shared ranked order.',
-  },
-  connect: {
-    status: RECOMMENDED,
-    link: 'Open Integrations',
-    reason: 'Search Console or GA4 data sharpens which Actions matter most.',
-  },
-  crawl: {
-    status: RECOMMENDED,
-    link: 'Open Site Health',
-    reason: 'A site crawl finds the page issues that sharpen later Actions.',
-  },
-  configure_prompts: {
-    status: RECOMMENDED,
-    link: 'Choose prompts',
-    reason: 'Nothing can be measured until the project tracks the questions buyers ask.',
-  },
-  audit: {
-    status: RECOMMENDED,
-    link: 'Open Runs',
-    reason: 'A run measures how answer engines name and cite you for every tracked prompt.',
-  },
-  audit_running: {
-    status: 'In progress',
-    link: 'View progress',
-    reason: 'Results appear here as soon as the run finishes.',
-  },
-  monitor: {
-    status: 'Up to date',
-    link: 'View trends',
-    reason: 'Every open Action is handled; the next run shows whether visibility moves.',
-  },
-};
-
-/**
- * The persisted facts behind the step, from what the Overview already reads:
- * the Action's target and evidence, the prompts a run would measure, or the
- * limitation the loop recorded. Null when there is nothing to add.
- */
-function nextActionEvidence(data: CommandCenter): ReactNode {
-  const step = data.next_action;
-  switch (step.kind) {
-    case 'opportunity': {
-      const action = data.actions.find((item) => item.id === step.opportunity_id);
-      if (!action) return null;
-      return (
-        <Inline>
-          <Badge variant="priority" value={severityPriority(action.severity)}>
-            {severityLabel(action.severity)}
-          </Badge>
-          <span className={textRole('caption', 'min-w-0 truncate')}>
-            {action.target_label ? readableUrl(action.target_label) : 'Project-wide'} ·{' '}
-            {pluralCount(action.evidence_summary.count, 'persisted evidence item')}
-          </span>
-        </Inline>
-      );
-    }
-    case 'audit':
-    case 'audit_running':
-      return (
-        <p className={textRole('caption')}>
-          {pluralCount(data.active_prompt_count, 'active prompt')} to measure
-        </p>
-      );
-    case 'crawl':
-      return captionOrNull(data.loop.analyzed.limitations[0]);
-    case 'connect':
-      return captionOrNull(data.loop.connected.limitations[0]);
-    case 'monitor':
-      return data.measurement ? (
-        <p className={textRole('caption')}>
-          Last run <DisplayTime value={data.measurement.completed_at} />
-        </p>
-      ) : null;
-    case 'configure_prompts':
-      return null;
-    default: {
-      const _exhaustive: never = step.kind;
-      return _exhaustive;
-    }
-  }
-}
-
-function captionOrNull(text: string | undefined) {
-  return text ? <p className={textRole('caption')}>{text}</p> : null;
-}
-
-export function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
-  const copy = NEXT_ACTION_COPY[data.next_action.kind];
-  // An opportunity whose Action is not created yet links to the Actions list.
-  const link =
-    data.next_action.kind === 'opportunity' && data.next_action.href === '/agent/actions'
-      ? 'Open Actions'
-      : copy.link;
-  return (
-    <Card aria-labelledby="next-action" className="text-ink h-full">
-      <CardHeader actions={<span className={textRole('label')}>{copy.status}</span>}>
-        <CardEyebrow>Next action</CardEyebrow>
-        <CardTitle id="next-action">{data.next_action.title}</CardTitle>
-      </CardHeader>
-      <Stack as={CardContent} gap="compact">
-        <p className={textRole('body')}>{copy.reason}</p>
-        {nextActionEvidence(data)}
-        <div>
-          <Button asChild variant="primary">
-            <ProjectLink href={data.next_action.href}>
-              {link}
-              <Icon icon={ArrowRight} />
-            </ProjectLink>
-          </Button>
-        </div>
-      </Stack>
     </Card>
   );
 }

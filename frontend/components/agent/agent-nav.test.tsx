@@ -1,6 +1,15 @@
 import { act, screen, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vite-plus/test';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  expect,
+  it,
+  onTestFinished,
+  vi,
+} from 'vite-plus/test';
 
 import { DISPLAY_TIME_ZONE_COOKIE } from '@/lib/display-timezone';
 import { NOW, PROJECT, skills } from '@/test/agent-chat-fixture';
@@ -76,7 +85,10 @@ it('tells chats with one title apart by their second line', async () => {
 
 it('shows a cut chat title in full on keyboard focus', async () => {
   // jsdom lays nothing out; report every line as wider than the sidebar.
-  const scrollWidth = vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(1000);
+  vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(1000);
+  onTestFinished(() => {
+    vi.restoreAllMocks();
+  });
   serveChats([
     chat(
       '33333333-3333-4333-8333-333333333331',
@@ -91,7 +103,6 @@ it('shows a cut chat title in full on keyboard focus', async () => {
   expect(await screen.findByRole('tooltip')).toHaveTextContent(
     'Analyze the Site Health issues on pricingSep 25, 10:00 AM',
   );
-  scrollWidth.mockRestore();
 });
 
 it('marks every chat whose turn is still running', async () => {

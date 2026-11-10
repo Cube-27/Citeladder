@@ -198,7 +198,11 @@ export function toRunComparison(
       isBrand: row.is_brand,
       value: row.is_brand ? metricValue(point, metric) : rankingMetricValue(row, metric),
     }))
-    .sort((a, b) => (b.value ?? -1) - (a.value ?? -1) || a.name.localeCompare(b.name));
+    .sort((a, b) => {
+      if (a.value === null || b.value === null)
+        return Number(a.value === null) - Number(b.value === null) || a.name.localeCompare(b.name);
+      return b.value - a.value || a.name.localeCompare(b.name);
+    });
 }
 
 /**

@@ -21,9 +21,9 @@ const STORAGE_KEY = 'citeladder:app:sidebar-width';
 
 /** The `--sidebar-width` token: the default, and the narrowest the sidebar goes. */
 export const SIDEBAR_DEFAULT_WIDTH = 248;
-export const SIDEBAR_MIN_WIDTH = SIDEBAR_DEFAULT_WIDTH;
+const SIDEBAR_MIN_WIDTH = SIDEBAR_DEFAULT_WIDTH;
 /** Past this the page, not the sidebar, is the one being starved. */
-export const SIDEBAR_MAX_WIDTH = 480;
+const SIDEBAR_MAX_WIDTH = 480;
 /** The sidebar never takes more than this share of the window. */
 const SIDEBAR_MAX_VIEWPORT_SHARE = 0.4;
 

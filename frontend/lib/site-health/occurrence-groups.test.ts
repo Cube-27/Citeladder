@@ -39,4 +39,41 @@ describe('groupOccurrences', () => {
     ]);
     expect(entries.map((entry) => entry.kind)).toEqual(['page', 'page']);
   });
+
+  const TEMPLATE_LINK = {
+    failing_targets: [{ url: 'https://acme.com/old', final_url: 'https://acme.com/new' }],
+  };
+
+  it('keeps evidence repeated on one page as that page, not a group', () => {
+    const entries = groupOccurrences([onPage(1, TEMPLATE_LINK), onPage(1, TEMPLATE_LINK)]);
+    expect(entries.map((entry) => entry.kind)).toEqual(['page', 'page']);
+  });
+
+  it('lists each page once in a group and puts the group where its first page was', () => {
+    const entries = groupOccurrences([
+      onPage(1, {
+        failing_targets: [{ url: 'https://acme.com/p1', final_url: 'https://acme.com/page-1' }],
+      }),
+      onPage(2, TEMPLATE_LINK),
+      onPage(3, {
+        failing_targets: [{ url: 'https://acme.com/p3', final_url: 'https://acme.com/page-3' }],
+      }),
+      onPage(4, TEMPLATE_LINK),
+      onPage(2, TEMPLATE_LINK),
+    ]);
+    expect(entries.map((entry) => entry.kind)).toEqual(['page', 'shared', 'page']);
+    const shared = entries[1];
+    expect(shared?.kind === 'shared' && shared.pageCount).toBe(2);
+    expect(shared?.kind === 'shared' && shared.occurrences.map((item) => item.display_url)).toEqual(
+      ['https://acme.com/page-2', 'https://acme.com/page-4'],
+    );
+  });
+
+  it('leaves an occurrence with no evidence line as its own page', () => {
+    const entries = groupOccurrences([
+      onPage(1, { failing_targets: [] }),
+      onPage(2, { failing_targets: [] }),
+    ]);
+    expect(entries.map((entry) => entry.kind)).toEqual(['page', 'page']);
+  });
 });
