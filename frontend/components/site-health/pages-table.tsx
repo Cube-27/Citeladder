@@ -7,13 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Inline } from '@/components/ui/layout';
-import {
-  ClampText,
-  mutedWhenMissing,
-  TableCell,
-  TableCellLines,
-  TableRow,
-} from '@/components/ui/table';
+import { ClampText, mutedWhenMissing, TableCell, TableRow } from '@/components/ui/table';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { TextLink } from '@/components/ui/text-link';
 import type { PagesSort } from '@/lib/api/site-health';
@@ -221,14 +215,11 @@ function Measured({ value }: Readonly<{ value: string }>) {
 }
 
 /**
- * A score keeps its measurement state: a score over limited evidence carries
- * that on a caption line, so it never reads as a fully measured one.
+ * A measured score is the number alone (owner, 2026-11-10: no evidence
+ * caption under it); only a score with no value names its state.
  */
 function MeasurementValue({ score, state }: Readonly<{ score: number | null; state: string }>) {
   if (score === null) return measurementStateValue(state);
-  if (state === 'limited_evidence') {
-    return <TableCellLines primary={formatScore(score)} secondary="Limited evidence" />;
-  }
   return formatScore(score);
 }
 

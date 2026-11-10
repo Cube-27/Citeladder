@@ -70,7 +70,6 @@ function renderStrip(props: Partial<Parameters<typeof StatusStrip>[0]> = {}) {
     <StatusStrip
       crawl={crawl()}
       phase="analyzing"
-      scoreSummary={null}
       entitlement={entitlement}
       cancelPending={false}
       startPending={false}
@@ -249,7 +248,6 @@ describe('StatusStrip — lifecycle content', () => {
         <StatusStrip
           crawl={c}
           phase={phase}
-          scoreSummary={null}
           entitlement={entitlement}
           cancelPending={false}
           startPending={false}
@@ -260,84 +258,6 @@ describe('StatusStrip — lifecycle content', () => {
       );
       expect(screen.getByTestId('status-strip')).toBe(strip);
     }
-  });
-});
-
-/** The crawl's score summary with the given scores and states. */
-function summary(
-  overrides: Partial<NonNullable<SiteCrawl['score_summary']>>,
-): SiteCrawl['score_summary'] {
-  const base = crawl().score_summary;
-  if (!base) throw new Error('the crawl fixture carries a score summary');
-  return { ...base, ...overrides };
-}
-
-/** The value a label names in the strip's description list. */
-function valueOf(label: string): string | null | undefined {
-  return screen.getByText(label).nextElementSibling?.textContent;
-}
-
-describe('StatusStrip — one line with the headline scores', () => {
-  it('reads state, the three scores and both page counts on one line', () => {
-    renderStrip({
-      phase: 'dashboard',
-      crawl: crawl({
-        status: 'completed',
-        analysis_status: 'completed',
-        visible_url_count: 200,
-        analyzed_count: 180,
-        counters: { ...crawl().counters, analyzed: 180 },
-      }),
-      scoreSummary: summary({
-        web_fundamentals_score: 73,
-        web_fundamentals_state: 'measured',
-        aeo_readiness_score: 61,
-        aeo_measurement_coverage: 0.7,
-        aeo_measurement_state: 'measured',
-      }),
-    });
-
-    expect(screen.getByText('Latest crawl results')).toBeInTheDocument();
-    expect(['Web Fundamentals', 'AEO Readiness', 'AEO Checklist Completion'].map(valueOf)).toEqual([
-      '73',
-      '61',
-      '70%',
-    ]);
-    expect(['Pages discovered', 'Pages analyzed'].map(valueOf)).toEqual(['200', '180']);
-    // No score rings: the Overview tab keeps those.
-    expect(screen.queryByRole('img', { name: /out of 100/ })).not.toBeInTheDocument();
-  });
-
-  it('names each unavailable score state instead of a zero', () => {
-    renderStrip({
-      phase: 'dashboard',
-      crawl: crawl({ status: 'completed', analysis_status: 'completed' }),
-      scoreSummary: summary({
-        web_fundamentals_score: null,
-        web_fundamentals_coverage: 0.5,
-        web_fundamentals_state: 'limited_evidence',
-        aeo_readiness_score: null,
-        aeo_measurement_coverage: null,
-        aeo_measurement_state: 'excluded',
-      }),
-    });
-
-    expect(['Web Fundamentals', 'AEO Readiness', 'AEO Checklist Completion'].map(valueOf)).toEqual([
-      'Limited evidence',
-      'Excluded',
-      'Excluded',
-    ]);
-  });
-
-  it('shows every score as not measured before the audit has any', () => {
-    renderStrip({ scoreSummary: null });
-
-    // The muted dash, with "Not measured" as its accessible name.
-    expect(['Web Fundamentals', 'AEO Readiness', 'AEO Checklist Completion'].map(valueOf)).toEqual([
-      '–Not measured',
-      '–Not measured',
-      '–Not measured',
-    ]);
   });
 });
 

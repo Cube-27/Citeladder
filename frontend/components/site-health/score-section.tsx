@@ -1,67 +1,45 @@
-import type { ReactNode } from 'react';
-
-import { Inline } from '@/components/ui/layout';
-import { InlineFigure, textRole } from '@/components/ui/typography';
+import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
-import type { SiteHealthDashboard } from '@citeladder/contracts';
-import { formatScore } from '@/lib/format';
+import { ICONS } from '@/lib/icons';
+import { AuditScores } from './overview-metrics';
 
-/** The crawl's headline scores, as the status line reads them. */
-export type ScoreSummary = SiteHealthDashboard['score_summary'];
-
-/**
- * The three headline scores as label + number entries of the status line's
- * description list (no rings: the Overview tab keeps the score cards). A score
- * with no value says which state it is in — limited evidence, excluded or not
- * measured — and never shows a fabricated zero.
- */
-export function ScoreFigures({ summary }: Readonly<{ summary: ScoreSummary }>) {
-  const coverage = summary?.aeo_measurement_coverage ?? null;
+export function ScoreSection({
+  crawl,
+  dashboard,
+}: Readonly<{ crawl: SiteCrawl | null; dashboard: SiteHealthDashboard | undefined }>) {
+  const summary = dashboard?.score_summary ?? crawl?.score_summary ?? null;
+  const coverage = summary?.aeo_measurement_coverage;
   return (
-    <>
-      <ScoreFigure
-        label="Web Fundamentals"
-        value={summary?.web_fundamentals_score ?? null}
-        state={summary?.web_fundamentals_state}
-      />
-      <ScoreFigure
-        label="AEO Readiness"
-        value={summary?.aeo_readiness_score ?? null}
-        state={summary?.aeo_measurement_state}
-      />
-      <ScoreFigure
-        label="AEO Checklist Completion"
-        value={coverage === null ? null : coverage * 100}
-        unit="percent"
-        state={summary?.aeo_measurement_state}
-      />
-    </>
+    <AuditScores
+      testId="score-section"
+      metrics={[
+        {
+          title: 'Web Fundamentals',
+          value: summary?.web_fundamentals_score ?? null,
+          unavailable: unavailable(summary?.web_fundamentals_state),
+          icon: ICONS.siteHealth,
+          href: '/issues?dimension=technical',
+        },
+        {
+          title: 'AEO Readiness',
+          value: summary?.aeo_readiness_score ?? null,
+          unavailable: unavailable(summary?.aeo_measurement_state),
+          icon: ICONS.visibility,
+          href: '/issues?dimension=aeo',
+        },
+        {
+          title: 'AEO Checklist Completion',
+          value: coverage == null ? null : coverage * 100,
+          valueUnit: 'percent',
+          unavailable: unavailable(summary?.aeo_measurement_state),
+          icon: ICONS.reports,
+          href: '/site?tab=aeo-readiness',
+        },
+      ]}
+    />
   );
 }
-
-function ScoreFigure({
-  label,
-  value,
-  unit = 'score',
-  state,
-}: Readonly<{ label: string; value: number | null; unit?: 'score' | 'percent'; state?: string }>) {
-  return (
-    <Inline className="type-body">
-      <dt className="type-label">{label}</dt>
-      <dd>
-        {value === null ? (
-          unavailable(state)
-        ) : (
-          <InlineFigure className={textRole('emphasis')}>
-            {unit === 'percent' ? `${formatScore(value)}%` : formatScore(value)}
-          </InlineFigure>
-        )}
-      </dd>
-    </Inline>
-  );
-}
-
-function unavailable(state?: string): ReactNode {
+function unavailable(state?: string) {
   if (state === 'limited_evidence') return <span className="type-caption">Limited evidence</span>;
   if (state === 'excluded') return <span className="type-caption">Excluded</span>;
   return <UnavailableValue state="not_measured" />;

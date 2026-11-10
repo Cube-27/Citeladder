@@ -44,9 +44,10 @@ import { cn } from '@/lib/utils';
  */
 const FRAME =
   'bg-paper text-ink shell:grid-cols-[var(--sidebar-width)_minmax(0,1fr)] rail:grid-cols-[var(--sidebar-rail-width)_minmax(0,1fr)] grid min-h-dvh grid-cols-[minmax(0,1fr)]';
-// No rule between the sidebar and the page: the resize handle's line shows
-// only on hover, focus and drag.
-const SIDEBAR_COLUMN = 'rail:block z-sticky sticky top-0 hidden h-dvh min-w-0';
+// A `line` rule always separates the sidebar from the page, in both themes
+// (owner, 2026-11-10); the resize handle's line strengthens it on hover,
+// focus and drag.
+const SIDEBAR_COLUMN = 'border-line rail:block z-sticky sticky top-0 hidden h-dvh min-w-0 border-r';
 const PAGE = 'mx-auto flex w-full max-w-[var(--content-max-width)] min-w-0 flex-col';
 const MAIN_INSET = '@container min-w-0 px-[var(--content-gutter)] pb-[var(--content-gutter)]';
 
@@ -217,7 +218,8 @@ export function SidebarNavGroup({
 
 /**
  * A destination row's face, for the link that carries it: one control tall,
- * the label in `ink-secondary`. The current row takes a light tint and a 2px
+ * the label in `ink-secondary` at weight 400; the current row's label is 500
+ * (owner, 2026-11-10). The current row takes a light tint and a 2px
  * Flare bar on its leading edge, and its icon turns Flare, the app's one
  * selected-nav marker; the bar is painted over the row, so selecting a row
  * moves nothing. In the rail the row is one control square. A label that
@@ -228,9 +230,9 @@ export function sidebarNavRowClasses(active: boolean, plain = false) {
   return cn(
     'focus-ring group type-control labelled:justify-start labelled:px-3 relative flex min-h-[var(--control-md)] shrink-0 items-center justify-center gap-2 rounded-md transition-colors',
     active
-      ? 'bg-surface-sunken text-ink before:bg-accent before:absolute before:inset-y-1.5 before:start-0 before:w-0.5 before:rounded-full'
-      : 'text-ink-secondary hover:bg-surface-sunken hover:text-ink',
-    plain && 'labelled:flex hidden font-normal',
+      ? 'bg-surface-sunken text-ink font-medium before:bg-accent before:absolute before:inset-y-1.5 before:start-0 before:w-0.5 before:rounded-full'
+      : 'text-ink-secondary hover:bg-surface-sunken hover:text-ink font-normal',
+    plain && 'labelled:flex hidden',
   );
 }
 

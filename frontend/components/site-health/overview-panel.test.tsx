@@ -214,15 +214,13 @@ describe('OverviewPanel', () => {
     expect(
       screen.queryByRole('heading', { name: 'Classification completeness' }),
     ).not.toBeInTheDocument();
-    // Completion shares are not quality scores: a plain figure over its
-    // counts, never a ring (owner, 10 Nov 2026).
-    expect(stat('AEO checklist completion')).toHaveTextContent(
-      'AEO checklist completion50%2 of 4 analyzed pages scoredOpen AEO Readiness',
-    );
-    expect(stat('Crawl coverage')).toHaveTextContent(
-      'Crawl coverage40%4 of 10 selected pages analyzedOpen Pages',
-    );
-    expect(screen.getAllByRole('img', { name: /out of 100$/ })).toHaveLength(2);
+    // The two completion shares are rings too, each with its link.
+    expect(
+      screen.getByRole('img', { name: 'AEO Checklist Completion: 50 out of 100' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: 'Crawl Coverage score: 40 out of 100' }),
+    ).toBeInTheDocument();
     // A score is a ring, never a segmented bar (decision D8).
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Loading Overview details')).not.toBeInTheDocument();
@@ -259,10 +257,9 @@ describe('OverviewPanel', () => {
     );
 
     // 20 analyzed of 100 found is 20% coverage, not 100% of the 20 selected.
-    await screen.findByRole('table', { name: 'Top issues' });
-    expect(stat('Crawl coverage')).toHaveTextContent(
-      'Crawl coverage20%20 of 100 found pages analyzed',
-    );
+    expect(
+      await screen.findByRole('img', { name: 'Crawl Coverage score: 20 out of 100' }),
+    ).toBeInTheDocument();
   });
 
   it('keeps an unknown crawl that found nothing from reading as a percentage', async () => {
@@ -295,11 +292,11 @@ describe('OverviewPanel', () => {
     );
 
     await screen.findByRole('table', { name: 'Top issues' });
-    expect(stat('Crawl coverage')).toHaveTextContent('Not measured');
-    expect(stat('Crawl coverage')).not.toHaveTextContent('%');
+    expect(stat('Crawl Coverage')).toHaveTextContent('Not measured');
+    expect(screen.queryByRole('img', { name: /Crawl Coverage score/ })).not.toBeInTheDocument();
   });
 
-  it('names each score link by where it goes', () => {
+  it('links each score to where it is acted on', () => {
     renderWithProviders(
       <OverviewPanel
         projectId={PROJECT}
@@ -310,10 +307,10 @@ describe('OverviewPanel', () => {
     );
     const links = within(screen.getByTestId('overview-metrics')).getAllByRole('link');
     expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
-      ['Open Web Fundamentals issues', '/issues?dimension=technical'],
-      ['Open AEO Readiness issues', '/issues?dimension=aeo'],
-      ['Open AEO Readiness', '/site?tab=aeo-readiness'],
-      ['Open Pages', '/site?tab=pages'],
+      ['View details', '/issues?dimension=technical'],
+      ['View details', '/issues?dimension=aeo'],
+      ['View details', '/site?tab=aeo-readiness'],
+      ['View details', '/site?tab=pages'],
     ]);
   });
 

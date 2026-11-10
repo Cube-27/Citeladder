@@ -1,6 +1,6 @@
 'use client';
 
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, PointerEvent, ReactNode, SyntheticEvent } from 'react';
 import { createContext, useContext, useRef } from 'react';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 
@@ -18,14 +18,30 @@ export const TAB_TRACK =
   'scroll-shade-x bg-surface-sunken inline-flex h-[var(--control-md)] max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
 /**
- * One segment: full track height, 12px padding, `radius-sm`, 14/20 medium
+ * A pressed segment never draws the keyboard focus ring: browsers decide
+ * `:focus-visible` by heuristic and sometimes ring a tab that was clicked.
+ * The press marks the segment (`data-pointer-focus`, which the focus-ring
+ * rule in globals.css leaves unringed); a key or losing focus clears it, so
+ * arrow-key and Tab focus keep the ring.
+ */
+const markPointerFocus = (event: PointerEvent<HTMLElement>) => {
+  event.currentTarget.dataset.pointerFocus = '';
+};
+const clearPointerFocus = (event: SyntheticEvent<HTMLElement>) => {
+  delete event.currentTarget.dataset.pointerFocus;
+};
+
+/**
+ * One segment: full track height, 12px padding, `radius-sm`, 14/20 regular
  * `ink-secondary`; the selected one lifts onto `surface` with the xs ring in
- * `ink`. A count follows the label in brackets (`ControlCount`, D16).
+ * `ink` at weight 500 (owner, 2026-11-10; buttons stay 500 throughout). A count follows the label in brackets (`ControlCount`, D16).
  */
 export function tabClasses(selected: boolean, className?: string) {
   return cn(
     'focus-ring inline-flex h-full shrink-0 items-center justify-center gap-1.5 rounded-sm px-3 text-label whitespace-nowrap transition-[background-color,color] duration-[var(--motion-fast)] focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-45',
-    selected ? 'bg-surface text-ink shadow-xs' : 'text-ink-secondary not-disabled:hover:text-ink',
+    selected
+      ? 'bg-surface text-ink font-medium shadow-xs'
+      : 'text-ink-secondary not-disabled:hover:text-ink font-normal',
     className,
   );
 }
@@ -149,6 +165,9 @@ function TabStrip<T extends string>({
           key={item.value}
           value={item.value}
           disabled={item.disabled}
+          onPointerDown={markPointerFocus}
+          onKeyDown={clearPointerFocus}
+          onBlur={clearPointerFocus}
           onMouseEnter={() => onIntent?.(item.value)}
           onFocus={(event) => {
             onIntent?.(item.value);
@@ -314,10 +333,13 @@ export function SegmentedControl<T extends string>({
               disabled={disabled}
               tabIndex={index === tabStop ? 0 : -1}
               onClick={() => onChange(option.value)}
+              onPointerDown={markPointerFocus}
+              onBlur={clearPointerFocus}
               onFocus={(event) =>
                 event.currentTarget.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
               }
               onKeyDown={(event) => {
+                clearPointerFocus(event);
                 const delta = ARROW_DELTA[event.key];
                 if (delta === undefined) return;
                 event.preventDefault();

@@ -26,7 +26,7 @@ export function UrlScoreSummary({ detail }: Readonly<{ detail: PageDetail }>) {
           title: 'AEO checklist completion',
           value:
             detail.aeo_measurement_coverage === null ? null : detail.aeo_measurement_coverage * 100,
-          valueUnit: 'percent',
+          valueUnit: 'plain-percent',
           icon: ICONS.reports,
           unavailable: scoreUnavailableState(
             detail.aeo_measurement_state,
