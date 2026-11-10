@@ -24,7 +24,7 @@ immutable snapshots with rule/formula versions and exact source identities.
 An ordinary list/detail read never refreshes a source or recomputes a ranking.
 
 Each evidence family (demand, the brand run, Commerce, the crawl, keyword
-gaps) is one entry in
+gaps, content gaps) is one entry in
 [refresh families](../frontend/services/api/src/opportunities/refresh-families.ts)
 that names its source-identity fields and produces its hits; the refresh
 iterates that list. A hit names its target as a typed `TargetRef`
@@ -49,13 +49,38 @@ is appended only when its clustering, owned-match or aggregate key differs from
 the latest succeeded run (a failed run never blocks a retry), reusing the earlier clustering or match while its key is unchanged. A
 `succeeded` run enqueues an `opportunity_refresh` with trigger `content_angles`;
 a `failed` run (model error, rejected output or a refused call) enqueues
-nothing. No refresh family reads the runs yet.
+nothing.
+
+The `content_gaps` family ([content-gap hits](../frontend/services/api/src/opportunities/content-gap-hits.ts),
+pure [detector](../frontend/services/api/src/analysis/opportunities/content-gaps.ts))
+reads the latest `succeeded` run; its ID is the family's source identity
+(`content_angle_run_id`). A `failed` run is never read, so the gaps of the run
+before it stay. A run whose window ends more than `max_source_age_days` (45)
+before the refresh is no longer a source: its gaps clear and the snapshot
+records "Content-gap evidence is out of date". With no succeeded run the
+snapshot records "Content gaps not computed yet", which is distinct from a
+succeeded run with no gaps. An angle cited at least `min_citations` times across
+at least `min_domains` domains (both in the
+[content optimization config](../frontend/services/api/src/config/content-optimization.ts))
+is `content_gap_improve_page` on its matched owned content page unless that page
+is already cited for the angle's prompts, and `content_gap_new_page` on a
+planned page when nothing matched. Priority grows with prompts, citations and
+the competitor share of cited domains (`CONTENT_GAP` in the opportunity
+config); the model never scores. Findings key on the angle's lineage, not its
+label: a new-page gap targets the lineage's `planned_page_key`, which the
+refresh that first surfaces it stores once (`plannedPageKey` of the label then)
+and never rewrites, so a relabelled angle keeps its Action and an Agent-planned
+page with the same slug converges on it. When a content page later matches a
+lineage that had a planned-page Action, that Action keeps its identity and
+declaration with its evidence cleared, and the page's finding names it as
+`continues_action_id`.
 
 A refresh first resolves its source identity: the audit (the default market's
 latest dashboard-ready brand run, the one Visibility and Overview call latest),
 the latest dashboard-ready Commerce run (read for Commerce findings only, so
 neither kind of run replaces the other's Actions), crawl, demand snapshot and
-revision, internal-link run and newest inspected source-page reading. When the latest snapshot already records that identity under the
+revision, internal-link run, newest inspected source-page reading, keyword-gap
+datasets and content-angle run. When the latest snapshot already records that identity under the
 current versions, the refresh loads no evidence. Otherwise it loads evidence
 outside the lock, then takes the project advisory lock shared by TypeScript
 prompt writes and resolves the identity again; if a source moved during the
@@ -154,7 +179,8 @@ it any more, the row keeps its identity with its evidence cleared. The Agent
 attaches a targeted chat to the existing Action, or creates one only for a page
 or planned-page target. `/api/v1/projects/{project_id}/actions` and
 `/api/v1/actions/{action_id}` are workspace-authorized persisted reads; the list
-filters by status and target kind and returns project-wide status counts, and
+filters by status, target kind and `surface` and returns status counts for the
+project (or for one surface when filtered), and
 the detail names the chats linked to the Action, carries each live finding with
 its remediation, the reading that would measure each finding once declared
 (`member_measurement`), and the earliest go-live time a declaration accepts
@@ -182,6 +208,19 @@ Actions on every refresh, inserts new groups in batches, and clears an Action
 whose evidence vanished once, leaving already-cleared rows untouched. Each promoted
 Search Demand signal's read carries the Action its live Opportunity joined, for
 the Search Demand "Act on this" band.
+
+Each Action has a persisted `surface`, the screen it belongs to (content
+optimization CO10): `content` for an owned page whose current analysis in the
+snapshot's crawl has a content page kind (`content_page_kinds`) and for a
+planned page with a `content_gap_new_page` member; `actions` for everything
+else, including a planned page raised only by a keyword gap or planned by the
+Agent, which has no page kind. Action sync derives it with the members and
+restamps it on every refresh, so a page whose kind changes moves with the next
+refresh; the Agent's insert derives it the same way from the latest snapshot's
+crawl. A content page's Site Health findings and content gaps share its one
+Action. The list's `surface` filter (`actions` or `content`; anything else is
+400) and its status counts read the column (indexed with the project and
+effective status); no rule is re-tagged.
 
 ## Explicit implementation declaration
 

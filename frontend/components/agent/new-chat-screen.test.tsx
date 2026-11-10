@@ -83,6 +83,7 @@ function actionItem(id: string, label: string) {
     approach: 'improve_page',
     skill_id: 'gsc_optimize',
     member_count: 1,
+    surface: 'actions',
     evidence_cleared_at: null,
     created_at: '2026-09-25T10:00:00Z',
     updated_at: '2026-09-25T10:00:00Z',

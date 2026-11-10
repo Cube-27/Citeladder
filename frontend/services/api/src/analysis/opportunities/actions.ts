@@ -82,11 +82,32 @@ export function targetFor(member: ActionMember) {
         ? target(planned, p.TARGET_PLANNED_PAGE, member)
         : target(key, p.TARGET_QUERY, member);
     }
+    case 'planned_page':
+      // The stored key is the group key, so a renamed label keeps its Action.
+      return target(ref.key, p.TARGET_PLANNED_PAGE, member);
     default: {
       const unknownTarget: never = ref;
       throw new Error(`Unknown Opportunity target: ${JSON.stringify(unknownTarget)}`);
     }
   }
+}
+/**
+ * The screen an Action belongs to (CO10). An owned page is `content` when its
+ * current analysis in the snapshot's crawl has a content page kind
+ * (`contentPages` holds those pages' group keys). A planned page has no page
+ * kind, so it is `content` only while a `content_gap_new_page` finding is one
+ * of its members. Everything else is `actions`.
+ */
+export function actionSurface(
+  action: { kind: string; group_key: string },
+  ruleIds: readonly string[],
+  contentPages: ReadonlySet<string>,
+): string {
+  const content =
+    (action.kind === p.TARGET_PAGE && contentPages.has(action.group_key)) ||
+    (action.kind === p.TARGET_PLANNED_PAGE &&
+      ruleIds.includes(policy.opportunity.opportunities.CONTENT_GAP.RULE_NEW_PAGE));
+  return content ? p.SURFACE_CONTENT : p.SURFACE_ACTIONS;
 }
 export function selectApproach(ids: string[], kind: string) {
   return (

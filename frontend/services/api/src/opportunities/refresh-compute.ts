@@ -205,7 +205,8 @@ type CurrentSnapshot = {
 
 /**
  * Every persisted input a refresh reads, by identity: the audit, crawl, demand
- * revision, internal-link run, source-page revision and keyword-gap datasets.
+ * revision, internal-link run, source-page revision, keyword-gap datasets and
+ * content-angle run.
  * Two refreshes over equal identities compute the same set.
  */
 export type SourceIdentity = {
@@ -218,6 +219,8 @@ export type SourceIdentity = {
   internal_link_run_id: string | null;
   source_pages_revision: string | null;
   search_gap_revision: string | null;
+  /** The content-angle run content gaps are read from; null when none is current. */
+  content_angle_run_id: string | null;
 };
 
 /** Equal identities; a stored one missing a field (an older snapshot) never matches. */

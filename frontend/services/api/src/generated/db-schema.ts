@@ -73,6 +73,7 @@ export interface Actions {
   project_id: string;
   skill_id: string;
   status: string;
+  surface: Generated<string>;
   target_kind: string;
   target_label: string;
   target_prompt_id: string | null;

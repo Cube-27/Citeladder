@@ -461,7 +461,7 @@ export const definitions = {
   read_actions: projectTool({
     title: 'Read Actions',
     description:
-      'List the work CiteLadder recommends to improve visibility, highest priority first. Without a status filter it lists open and in-progress Actions; each item has its id, target (page, prompt or source), status, priority score, approach and link, and status_counts counts every status. Items come in pages; pass next_cursor for more. Pass action_id for one Action in full: its diagnosis, each finding with its remediation, the measured outcome and any declaration. Use update_action_status to dismiss or reopen one, and prepare_declare_implemented when its work is done.',
+      'List the work CiteLadder recommends to improve visibility, highest priority first. Without a status filter it lists open and in-progress Actions; each item has its id, target (page, prompt or source), surface, status, priority score, approach and link, and status_counts counts every status (of one surface when filtered). Items come in pages; pass next_cursor for more. Pass action_id for one Action in full: its diagnosis, each finding with its remediation, the measured outcome and any declaration. Use update_action_status to dismiss or reopen one, and prepare_declare_implemented when its work is done.',
     schema: z.strictObject({
       ...project,
       action_id: optional(
@@ -471,6 +471,13 @@ export const definitions = {
         z
           .enum(policy.opportunity.actions.ACTION_STATUSES)
           .describe('Keep only Actions with this status.'),
+      ),
+      surface: optional(
+        z
+          .enum(policy.opportunity.actions.ACTION_SURFACES)
+          .describe(
+            'Keep only Actions of one screen: content (content pages and pages to create for content gaps) or actions (everything else). Without it both are listed.',
+          ),
       ),
       ...page,
     }),

@@ -1,6 +1,7 @@
 /**
  * The Opportunity families a refresh reads. Each names the source identity
- * its hits depend on and produces its hits from persisted evidence; the
+ * its hits depend on and produces its hits from persisted evidence (and may
+ * store what its surfaced hits fix, inside the refresh transaction); the
  * refresh resolves the shared sources once and iterates this list, so a new
  * family is one entry here, never another branch in the refresh.
  */
@@ -18,9 +19,15 @@ import {
 import { policy } from '../config.ts';
 import { sourcePageVocabulary } from '../config/source-pages.ts';
 import type { Database } from '../db/database.ts';
+import {
+  contentGapHits,
+  contentGapSource,
+  fixPlannedPageKeys,
+  type ContentGapSource,
+} from './content-gap-hits.ts';
 import { earnedPageHits } from './earned-page-hits.ts';
 import { internalLinkHits, internalLinkRunId } from './internal-link-hits.ts';
-import { stampSourceMix, type SourceIdentity } from './refresh-compute.ts';
+import { stampSourceMix, type Scored, type SourceIdentity } from './refresh-compute.ts';
 import {
   confirmedDeclineHits,
   loadSiteEvidence,
@@ -48,6 +55,7 @@ export type Sources = {
   crawl: CrawlSource | null;
   demand: DemandSource | null;
   gaps: SearchGapSource | null;
+  contentGaps: ContentGapSource;
 };
 type Found = {
   hits: DetectorHit[];
@@ -60,6 +68,11 @@ type Family = {
   /** The source identity fields this family's hits are read from. */
   identity(db: Database, scope: Scope, sources: Sources): Promise<Partial<SourceIdentity>>;
   hits(db: Database, scope: Scope, sources: Sources, identity: SourceIdentity): Promise<Found>;
+  /**
+   * What the family stores about the hits that surfaced, inside the refresh
+   * transaction and project lock; most families store nothing.
+   */
+  persist?(trx: Database, scope: Scope, scored: readonly Scored[]): Promise<void>;
 };
 
 /**
@@ -73,6 +86,7 @@ export async function resolveSources(db: Database, scope: Scope, at: Date): Prom
     crawl: await resolveCrawl(db, scope),
     demand: await currentDemandSnapshot(db, scope),
     gaps: await searchGapSource(db, scope, at),
+    contentGaps: await contentGapSource(db, scope, at),
   };
 }
 
@@ -183,8 +197,20 @@ const searchGaps: Family = {
     searchGapHits(db, scope, gaps, snapshot, crawl),
 };
 
+/**
+ * Content angles: the latest succeeded run, while its newest audit is recent
+ * enough. A new-page gap fixes its lineage's planned-page key once.
+ */
+const contentGaps: Family = {
+  identity: async (_db, _scope, { contentGaps: source }) => ({
+    content_angle_run_id: source.run?.id ?? null,
+  }),
+  hits: (db, scope, { contentGaps: source }) => contentGapHits(db, scope, source),
+  persist: fixPlannedPageKeys,
+};
+
 /** In hit order: the refresh concatenates each family's hits as listed. */
-const FAMILIES: readonly Family[] = [demand, visibility, commerce, site, searchGaps];
+const FAMILIES: readonly Family[] = [demand, visibility, commerce, site, searchGaps, contentGaps];
 
 const EMPTY_IDENTITY: SourceIdentity = {
   audit_id: null,
@@ -195,6 +221,7 @@ const EMPTY_IDENTITY: SourceIdentity = {
   internal_link_run_id: null,
   source_pages_revision: null,
   search_gap_revision: null,
+  content_angle_run_id: null,
 };
 
 /** Every family's identity fields, read in order on the caller's connection. */
@@ -206,6 +233,11 @@ export async function sourceIdentity(
   const identity = { ...EMPTY_IDENTITY };
   for (const family of FAMILIES) Object.assign(identity, await family.identity(db, scope, sources)); // NOSONAR -- The connection may be a transaction.
   return identity;
+}
+
+/** Each family's own writes about the surfaced hits, in the refresh transaction. */
+export async function persistFamilies(trx: Database, scope: Scope, scored: readonly Scored[]) {
+  for (const family of FAMILIES) await family.persist?.(trx, scope, scored); // NOSONAR -- One transaction: families write in order.
 }
 
 /**

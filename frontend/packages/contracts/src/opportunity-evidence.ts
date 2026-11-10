@@ -128,6 +128,60 @@ const citedAlternativesEvidenceSchema = z.object({
   audit_id: z.string(),
 });
 
+/** The most cited pages a content-gap finding lists. */
+export const CONTENT_GAP_EVIDENCE_MEMBERS = 20;
+
+/** What both content-gap rules store: one angle of one succeeded content-angle run. */
+const contentGapEvidenceSchema = z.object({
+  run_id: z.string(),
+  /** The angle's stable identity across reclustering; the label is not. */
+  lineage_id: z.string(),
+  angle_label: z.string(),
+  /** Null for prompts without a topic. */
+  topic_id: z.string().nullable(),
+  prompt_ids: z.array(z.string()),
+  engines: z.array(z.string()),
+  citation_count: z.number().int(),
+  domain_count: z.number().int(),
+  competitor_count: z.number().int(),
+  /** Every cited page of the angle; `members` lists the most cited ones first. */
+  member_count: z.number().int(),
+  members: z
+    .array(
+      z.object({
+        url: z.string(),
+        title: z.string(),
+        domain: z.string(),
+        classification: z.string(),
+        matched_competitor: z.string().nullable(),
+        citation_count: z.number().int(),
+      }),
+    )
+    .max(CONTENT_GAP_EVIDENCE_MEMBERS),
+  /** The run's audit window. */
+  window: z.object({ start: z.string(), end: z.string() }),
+  methodology_version: z.string(),
+  formula_version: z.string(),
+  /** The run's recorded limitations (topicless prompts, empty titles, ...). */
+  limitations: z.array(json),
+});
+
+/** An angle matched to an owned content page that is not cited for its prompts. */
+const contentGapImprovePageEvidenceSchema = contentGapEvidenceSchema.extend({
+  site_url_id: z.string(),
+  url: z.string(),
+  match_method: z.literal('model_pick'),
+  /** The planned-page Action of the same lineage this page now continues. */
+  continues_action_id: z.string().optional(),
+});
+export type ContentGapImprovePageEvidence = z.infer<typeof contentGapImprovePageEvidenceSchema>;
+
+/** An angle no content page covers: a page to plan, keyed by its lineage's fixed key. */
+const contentGapNewPageEvidenceSchema = contentGapEvidenceSchema.extend({
+  planned_page_key: z.string(),
+});
+export type ContentGapNewPageEvidence = z.infer<typeof contentGapNewPageEvidenceSchema>;
+
 const promptGap = promptGapEvidenceSchema;
 const siteIssue = siteIssueEvidenceSchema;
 const siteChange = siteChangeEvidenceSchema;
@@ -160,6 +214,8 @@ export const opportunityEvidenceSchemas = {
   high_traffic_low_visibility: demand,
   low_share_of_voice_theme: json,
   search_keyword_gap: keywordGapEvidenceSchema,
+  content_gap_improve_page: contentGapImprovePageEvidenceSchema,
+  content_gap_new_page: contentGapNewPageEvidenceSchema,
   product_not_mentioned: productNotMentionedEvidenceSchema,
   catalog_fields_missing: catalogFieldsEvidenceSchema,
   cited_alternatives_without_uploaded_presence: citedAlternativesEvidenceSchema,

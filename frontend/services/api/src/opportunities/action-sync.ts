@@ -9,13 +9,20 @@
  * lock, so the locked read below sees them and the refresh adopts the row on
  * that key. Identity and origin never change here. An Action no member
  * targets any more keeps its row with its evidence cleared, written once.
+ * Every row's `surface` is derived again from its members and the snapshot's
+ * crawl, so a page whose kind changed moves screens with this refresh.
  */
 import { randomUUID } from 'node:crypto';
 
 import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
-import { groupMembers, type ActionMember } from '../analysis/opportunities/actions.ts';
+import {
+  actionSurface,
+  groupMembers,
+  pageGroupKey,
+  type ActionMember,
+} from '../analysis/opportunities/actions.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import type { NewOpportunity } from './refresh-compute.ts';
@@ -49,6 +56,32 @@ function actionMember(row: NewMember): ActionMember {
 type Group = ReturnType<typeof groupMembers>[number];
 
 /**
+ * The page group keys of the crawl's content pages: owned pages whose current
+ * completed analysis has a content page kind (CO15). Empty without a crawl.
+ */
+export async function contentPageKeys(
+  db: Database,
+  scope: Scope,
+  crawlId: string | null,
+): Promise<ReadonlySet<string>> {
+  if (crawlId === null) return new Set();
+  const rows = await db
+    .selectFrom('site_page_analyses as analysis')
+    .innerJoin('site_urls as url', 'url.id', 'analysis.site_url_id')
+    .select('url.normalized_url')
+    .where('analysis.workspace_id', '=', scope.workspaceId)
+    .where('analysis.project_id', '=', scope.projectId)
+    .where('url.workspace_id', '=', scope.workspaceId)
+    .where('url.project_id', '=', scope.projectId)
+    .where('analysis.crawl_id', '=', crawlId)
+    .where('analysis.is_current', '=', true)
+    .where('analysis.status', '=', 'completed')
+    .where('analysis.page_kind', 'in', policy.content_optimization.content_page_kinds)
+    .execute();
+  return new Set(rows.map((row) => pageGroupKey(row.normalized_url)));
+}
+
+/**
  * The columns one group writes onto its Action with their PostgreSQL types, in
  * the batched update's VALUES order.
  */
@@ -64,13 +97,19 @@ const GROUP_COLUMN_TYPES = [
   ['member_opportunity_ids', 'jsonb'],
   ['opportunity_snapshot_id', 'uuid'],
   ['evidence_cleared_at', 'timestamptz'],
+  ['surface', 'text'],
 ] as const;
 type GroupColumn = (typeof GROUP_COLUMN_TYPES)[number][0];
 const GROUP_COLUMNS = GROUP_COLUMN_TYPES.map(([column]) => column);
 
 /** The persisted fields one group writes onto its Action. */
-function groupFields(group: Group, snapshotId: string) {
+function groupFields(group: Group, snapshotId: string, contentPages: ReadonlySet<string>) {
   return {
+    surface: actionSurface(
+      group.target,
+      group.members.map((member) => member.rule_id),
+      contentPages,
+    ),
     target_label: group.target.label,
     target_url: group.target.url,
     target_prompt_id: group.target.prompt_id,
@@ -133,8 +172,10 @@ export async function syncActions(
   scope: Scope,
   rows: NewMember[],
   snapshotId: string,
+  crawlId: string | null,
 ): Promise<Map<string, string>> {
   const groups = groupMembers(rows.map(actionMember));
+  const contentPages = await contentPageKeys(trx, scope, crawlId);
   const existing = new Map(
     (
       await trx
@@ -142,6 +183,8 @@ export async function syncActions(
         .select([
           'id',
           'group_key',
+          'target_kind',
+          'surface',
           sql<number>`jsonb_array_length(member_opportunity_ids)`.as('members'),
         ])
         .where('workspace_id', '=', scope.workspaceId)
@@ -158,7 +201,7 @@ export async function syncActions(
     const id = existing.get(group.target.group_key)?.id;
     if (!id) created.push(group);
     else {
-      updates.push({ id, fields: groupFields(group, snapshotId) });
+      updates.push({ id, fields: groupFields(group, snapshotId, contentPages) });
       for (const member of group.members) actionFor.set(member.opportunity_id, id);
     }
   }
@@ -177,7 +220,7 @@ export async function syncActions(
           origin: a.ACTION_ORIGIN_EVIDENCE,
           status: a.ACTION_STATUS_OPEN,
           effective_status: a.ACTION_STATUS_OPEN,
-          ...groupFields(group, snapshotId),
+          ...groupFields(group, snapshotId, contentPages),
           created_by_user_id: null,
           created_at: now,
           updated_at: now,
@@ -218,5 +261,33 @@ export async function syncActions(
       )
       .execute();
   }
+  await restampMemberless(trx, scope, [...existing.values()], seen, contentPages);
   return actionFor;
+}
+
+/**
+ * Move an Action no group restamped (cleared now or earlier, or an Agent row
+ * with no evidence yet) when its derived surface changed, for example when its
+ * page's kind changed in the new crawl. Only a change writes.
+ */
+async function restampMemberless(
+  trx: Database,
+  scope: Scope,
+  existing: { id: string; group_key: string; target_kind: string; surface: string }[],
+  seen: ReadonlySet<string>,
+  contentPages: ReadonlySet<string>,
+) {
+  const moved = existing.flatMap((action) => {
+    if (seen.has(action.group_key)) return [];
+    const surface = actionSurface(
+      { kind: action.target_kind, group_key: action.group_key },
+      [],
+      contentPages,
+    );
+    return surface === action.surface ? [] : [sql`(${action.id}::uuid, ${surface}::text)`];
+  });
+  if (!moved.length) return;
+  await sql`update actions set surface = v.surface
+    from (values ${sql.join(moved)}) as v(id, surface)
+    where actions.id = v.id and actions.workspace_id = ${scope.workspaceId}::uuid`.execute(trx);
 }

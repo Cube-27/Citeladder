@@ -23,6 +23,11 @@ export const actions = {
     'planned_page',
   ],
   AGENT_TARGET_KINDS: ['page', 'planned_page'],
+  // The screen an Action belongs to (CO10): content pages and content-gap
+  // planned pages are `content`, everything else `actions`.
+  SURFACE_ACTIONS: 'actions',
+  SURFACE_CONTENT: 'content',
+  ACTION_SURFACES: ['actions', 'content'],
   PLANNED_PAGE_TOPIC_MAX_CHARS: 120,
   ACTION_ORIGIN_EVIDENCE: 'evidence',
   ACTION_ORIGIN_AGENT: 'agent',
@@ -42,8 +47,11 @@ export const actions = {
     'link_graph',
     'site_changes',
     'commerce',
+    'content_optimization',
   ],
   RULE_EVIDENCE_FAMILY: {
+    content_gap_improve_page: 'content_optimization',
+    content_gap_new_page: 'content_optimization',
     brand_absent_high_value_prompt: 'ai_visibility',
     owned_page_not_cited: 'ai_visibility',
     confirmed_prompt_decline: 'ai_visibility',
@@ -126,6 +134,26 @@ export const actions = {
         'Do not present provider ranking estimates as measured traffic.',
       ],
       target_kinds: ['planned_page'],
+    },
+    {
+      approach: 'create_new',
+      rule_ids: ['content_gap_new_page'],
+      skill_id: 'content_create',
+      donts: [
+        'Do not claim the page will be cited.',
+        'Do not invent statistics, quotes or sources.',
+      ],
+      target_kinds: ['planned_page'],
+    },
+    {
+      approach: 'improve_existing',
+      rule_ids: ['content_gap_improve_page'],
+      skill_id: 'content_create',
+      donts: [
+        'Do not claim the page will be cited.',
+        'Do not invent statistics, quotes or sources.',
+      ],
+      target_kinds: ['page'],
     },
     {
       approach: 'improve_links',

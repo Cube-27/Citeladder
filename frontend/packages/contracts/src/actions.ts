@@ -22,10 +22,16 @@ export const actionStatusSchema = z.enum([
   'dismissed',
 ]);
 
+// The screen an Action belongs to, derived at every refresh: `content` for a
+// content page or a content-gap planned page, `actions` for everything else.
+export const actionSurfaceSchema = z.enum(['actions', 'content']);
+export type ActionSurface = z.infer<typeof actionSurfaceSchema>;
+
 // One unit of work per target, projected from persisted Action rows.
 export const actionItemSchema = responseObject({
   id: uuid(),
   project_id: uuid(),
+  surface: actionSurfaceSchema,
   target_kind: z.string(),
   target_label: z.string(),
   target_url: z.string().nullable(),
