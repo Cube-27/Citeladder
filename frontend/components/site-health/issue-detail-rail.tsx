@@ -187,7 +187,7 @@ function OccurrenceList({
   // them the pages it affects.
   if (query.isPending || !detail) {
     return (
-      <ul aria-busy="true" className={ledgerClasses('open')}>
+      <ul aria-busy="true" className={ledgerClasses()}>
         {OCCURRENCE_PLACEHOLDERS.map((placeholder) => (
           <Stack as="li" gap="item" key={placeholder} className={ledgerItemClasses()}>
             <Skeleton />
@@ -209,7 +209,7 @@ function OccurrenceList({
   const complete = firstPage && !detail.next_cursor;
   const loaded = loadedPageCount(detail.occurrences);
   return (
-    <ul className={ledgerClasses('open')}>
+    <ul className={ledgerClasses()}>
       {groupOccurrences(detail.occurrences).map((entry) =>
         entry.kind === 'page' ? (
           <PageOccurrence
@@ -274,7 +274,7 @@ function SiteLevelList({
 }: Readonly<{ evidence: SiteLevelEvidence; crawlId: string }>) {
   if (evidence.kind === 'page_kinds') {
     return (
-      <ul className={ledgerClasses('open')}>
+      <ul className={ledgerClasses()}>
         {evidence.pageKinds.map((row) => (
           <Inline
             as="li"
@@ -308,7 +308,7 @@ function SiteLevelList({
   return (
     <Stack gap="item">
       {evidence.sections.length > 0 ? (
-        <ul className={ledgerClasses('open')}>
+        <ul className={ledgerClasses()}>
           {evidence.sections.map((section) => (
             <Inline
               as="li"
@@ -323,7 +323,7 @@ function SiteLevelList({
           ))}
         </ul>
       ) : null}
-      <ul className={ledgerClasses('open')}>
+      <ul className={ledgerClasses()}>
         {evidence.pages.map((page) => (
           <Stack as="li" gap="tight" key={page.siteUrlId} className={ledgerItemClasses()}>
             <AffectedPageLink
@@ -374,7 +374,7 @@ function LinkTargetList({
       />
     );
   return (
-    <ul className={ledgerClasses('open')}>
+    <ul className={ledgerClasses()}>
       {evidence.targets.map((target) => {
         const origin = originOf(target.url);
         const hidden = target.pageCount - target.pages.length;

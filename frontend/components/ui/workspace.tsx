@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { panelClasses } from '@/components/ui/panel';
+import { FLOAT_FACE } from '@/components/ui/card';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -23,17 +23,12 @@ export const stickyPaneClasses =
  * The ledger: a vertical list of peers separated by rules rather than boxed
  * individually. Six different wrappers existed for this one idea — borderless,
  * hung off a rule, and boxed at two different radii — so the same list of
- * evidence rows looked like a different component on each screen.
- *
- *   `open`  — the list sits on whatever surface already contains it; rows are
- *             divided, the list itself is never outlined.
- *   `boxed` — a standalone object: the one box recipe (`panelClasses`: radius
- *             12, the hairline edge, padding 16), its rows divided inside it.
+ * evidence rows looked like a different component on each screen. The list
+ * sits on whatever container already holds it and is never outlined: a
+ * container never holds a second bordered box (D51).
  */
-export type LedgerShell = 'open' | 'boxed';
-
-export function ledgerClasses(shell: LedgerShell = 'open', className?: string) {
-  return cn('divide-line grid divide-y', shell === 'boxed' && panelClasses(), className);
+export function ledgerClasses(className?: string) {
+  return cn('divide-line grid divide-y', className);
 }
 
 /**
@@ -184,12 +179,12 @@ export function EditorialSectionHeader({
  * The editing controls that float over a widget's top-end corner while its
  * layout is being edited: a cluster of `IconButton`s lifted off the widget
  * like a menu (the menu surface and shadow), hugging the controls with a 4px
- * inset and 4 between them. Each control names the widget it acts on. The
+ * inset and 4 between them (the floating face, D51). Each control names the widget it acts on. The
  * widget it sits on must be `relative`.
  */
 export function FloatingToolbar({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="bg-surface shadow-pop absolute end-3 top-3 z-10 flex gap-1 rounded-lg p-1">
+    <div className={cn(FLOAT_FACE, 'absolute end-3 top-3 z-10 flex gap-1 rounded-lg p-1')}>
       {children}
     </div>
   );

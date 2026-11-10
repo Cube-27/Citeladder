@@ -19,7 +19,7 @@
           "light": "#f4f4f4",
           "dark": "#0a0a0a"
         },
-        "usage": "The page ground of the app and the website (white cards sit on it in light, lighter cards in dark)."
+        "usage": "The ground (D51): the page of the app and the website, the app's sidebar and top bar (white cards sit on it in light, lighter cards in dark). Never an inset."
       },
       {
         "name": "surface",
@@ -27,7 +27,7 @@
           "light": "#ffffff",
           "dark": "#151515"
         },
-        "usage": "The docs page ground; cards, panels, tables, inputs, menus and the selected tab everywhere."
+        "usage": "The container (D51): the docs page ground; cards, panels, tables, dialogs, drawers, menus, popovers, toasts, inputs and the selected tab everywhere."
       },
       {
         "name": "surface-sunken",
@@ -35,7 +35,31 @@
           "light": "#ececec",
           "dark": "#1e1e1e"
         },
-        "usage": "Wells: the tab track, code blocks, table header rows, hover on secondary and ghost buttons, the muted card, skeletons."
+        "usage": "The inset (D51), only inside a container: wells, code blocks, table header rows, an inline note or empty state, skeletons. On the ground an inset becomes a bordered container (`.surface-inset`)."
+      },
+      {
+        "name": "state-hover",
+        "value": {
+          "light": "rgba(17,17,17,0.06)",
+          "dark": "rgba(244,244,244,0.06)"
+        },
+        "usage": "Hover (D51): an ink overlay (`overlay-hover`) over any fill, on rows, menu items, nav items and buttons."
+      },
+      {
+        "name": "state-pressed",
+        "value": {
+          "light": "rgba(17,17,17,0.08)",
+          "dark": "rgba(244,244,244,0.08)"
+        },
+        "usage": "Pressed and open (D51): an ink overlay (`overlay-pressed`) on a trigger whose menu is open, a toggled button and a segmented track."
+      },
+      {
+        "name": "state-selected",
+        "value": {
+          "light": "rgba(17,17,17,0.1)",
+          "dark": "rgba(244,244,244,0.1)"
+        },
+        "usage": "Selected (D51): an ink overlay (`overlay-selected`) on the selected row, list item or current nav item (with its 2px accent bar); never shared with hover."
       },
       {
         "name": "footer",
@@ -115,7 +139,7 @@
           "light": "#e5e5e5",
           "dark": "#2a2a2a"
         },
-        "usage": "Every soft edge: card and frame borders, table rules, dividers and the resting edge of every form control (inputs, selects, textareas, chip inputs, the Agent composer, the docs search trigger, the CSV file input, checkbox and radio boxes; D5, D46), with shadow-edge under a field. A divider inside a dialog or the search palette is line, never darker, and line is the 3px halo around a focused field."
+        "usage": "Every soft edge on `surface` (D51): the 1px border of every container (card, panel, table frame, dialog, drawer, menu, toast), the chrome rules, table rules, dividers, the edge of a chip, tag, citation, kbd, secondary button and selected tab, and the resting edge of every form control (inputs, selects, textareas, chip inputs, the Agent composer, the docs search trigger, the CSV file input, checkbox and radio boxes; D5, D46), with shadow-edge under a field. A divider inside a dialog or the search palette is line, never darker, and line is the 3px halo around a focused field."
       },
       {
         "name": "line-strong",
@@ -123,7 +147,7 @@
           "light": "#d4d4d4",
           "dark": "#3a3a3a"
         },
-        "usage": "One soft step darker than line: a form control's hover edge (D46) and the dashed edge of reserved slots (Turnstile, the new-workspace tile)."
+        "usage": "One soft step darker than line: a divider or edge drawn on `surface-sunken`, where line would vanish (D51), a form control's hover edge (D46) and the dashed edge of reserved slots (Turnstile, the new-workspace tile)."
       },
       {
         "name": "line-control",
@@ -627,7 +651,7 @@
     ]
   },
   "shadow": {
-    "note": "Depth is quiet: a hairline ring plus a short, soft drop. Website cards use a 1px line border with shadow-xs; app cards use shadow-card; fields and checkbox boxes use a 1px line border with shadow-edge.",
+    "note": "Depth is quiet. In the app (D51) nothing at rest has a shadow and every edge is a 1px line border: floating surfaces add shadow-float, fields and checkbox boxes shadow-edge, the primary button shadow-press. The website and docs draw their borderless edges with the ring inside shadow-xs and shadow-pop (D44, D45).",
     "tokens": [
       {
         "name": "shadow-edge",
@@ -643,15 +667,15 @@
           "light": "0 0 0 1px rgba(17,17,17,0.08), 0 1px 2px rgba(17,17,17,0.06)",
           "dark": "0 0 0 1px rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.5)"
         },
-        "usage": "Secondary buttons, the selected tab, citation pills, website cards (with their line border)."
+        "usage": "Website and docs chips and pills whose ring is their edge, and the Switch thumb. Not an app edge (D51)."
       },
       {
-        "name": "shadow-card",
+        "name": "shadow-float",
         "value": {
-          "light": "0 0 0 1px rgba(17,17,17,0.06), 0 1px 2px rgba(17,17,17,0.04), 0 6px 16px -4px rgba(17,17,17,0.06)",
-          "dark": "0 0 0 1px rgba(255,255,255,0.07), 0 1px 2px rgba(0,0,0,0.6)"
+          "light": "0 2px 6px rgba(17,17,17,0.06), 0 16px 40px -8px rgba(17,17,17,0.14)",
+          "dark": "0 16px 40px rgba(0,0,0,0.6)"
         },
-        "usage": "App cards and panels on paper; screens inside a product frame."
+        "usage": "The app's floating surfaces (D51): menus, popovers, select lists, dialogs, drawers, toasts, the command palette, chart tips and the floating toolbar, under their 1px line border. Drops only, no ring."
       },
       {
         "name": "shadow-pop",
@@ -659,7 +683,7 @@
           "light": "0 0 0 1px rgba(17,17,17,0.08), 0 2px 6px rgba(17,17,17,0.06), 0 16px 40px -8px rgba(17,17,17,0.14)",
           "dark": "0 0 0 1px rgba(255,255,255,0.10), 0 16px 40px rgba(0,0,0,0.6)"
         },
-        "usage": "Menus, popovers, dialogs, toasts, the mega menu, a floating card inside a product frame."
+        "usage": "The website and docs floating surfaces whose ring is their edge: the mega menu, popovers, the docs search dialog, a product image (D45). The app uses shadow-float with a line border (D51)."
       },
       {
         "name": "shadow-press",

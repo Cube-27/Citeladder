@@ -53,6 +53,12 @@
   --color-paper: #f4f4f4;
   --color-surface: #ffffff;
   --color-surface-sunken: #ececec;
+  /* States (D51): an ink overlay over whatever fill is beneath, so hover,
+     pressed and selected read the same on paper, surface and sunken and
+     never share one fill. Applied with the `overlay-*` utilities below. */
+  --color-state-hover: rgb(17 17 17 / 6%);
+  --color-state-pressed: rgb(17 17 17 / 8%);
+  --color-state-selected: rgb(17 17 17 / 10%);
   /* The website footer is dark in both themes (D29), so its four roles keep
      one value and are not rebound in dark. */
   --color-footer: #151515;
@@ -261,16 +267,15 @@
 :root {
   color-scheme: light;
 
-  /* Depth is quiet: a hairline ring plus a short, soft drop. xs on secondary
-     buttons, the selected tab, pills and website cards; card on app cards and
-     screens inside a frame; pop on menus, popovers, dialogs and toasts; press
-     on the primary button. Never two shadows on nested surfaces. edge is the
-     faint smudge, with no ring, under every soft field edge (decision D5). */
+  /* Depth is quiet. In the app (D51) nothing at rest has a shadow and an edge
+     is always a 1px `line` border: float is the drop under a floating
+     surface (menus, popovers, dialogs, drawers, toasts) and edge the faint
+     smudge under a control's soft edge (D5, D46); press is the primary
+     button. The website and docs draw their borderless edges with the ring
+     inside xs and pop (D44, D45). Never two shadows on nested surfaces. */
   --shadow-edge: 0 1px 2px rgba(17, 17, 17, 0.05);
   --shadow-xs: 0 0 0 1px rgb(17 17 17 / 8%), 0 1px 2px rgb(17 17 17 / 6%);
-  --shadow-card:
-    0 0 0 1px rgb(17 17 17 / 6%), 0 1px 2px rgb(17 17 17 / 4%),
-    0 6px 16px -4px rgb(17 17 17 / 6%);
+  --shadow-float: 0 2px 6px rgb(17 17 17 / 6%), 0 16px 40px -8px rgb(17 17 17 / 14%);
   --shadow-pop:
     0 0 0 1px rgb(17 17 17 / 8%), 0 2px 6px rgb(17 17 17 / 6%),
     0 16px 40px -8px rgb(17 17 17 / 14%);
@@ -293,7 +298,7 @@
      the stored width (lib/sidebar-width.ts). */
   --sidebar-width: 248px;
   /* The sidebar below 1280px: one control wide inside its 12px inset (56px,
-     decision D3). No rule divides the sidebar from the page. */
+     decision D3). One `line` rule divides the sidebar from the page (D12). */
   --sidebar-rail-width: calc(var(--control-md) + 24px);
 
   /* Component geometry the components read. Each derives from a system token. */
@@ -367,6 +372,9 @@
   --color-paper: #0a0a0a;
   --color-surface: #151515;
   --color-surface-sunken: #1e1e1e;
+  --color-state-hover: rgb(244 244 244 / 6%);
+  --color-state-pressed: rgb(244 244 244 / 8%);
+  --color-state-selected: rgb(244 244 244 / 10%);
   --color-nav-glass: rgb(30 30 30 / 78%);
   --color-stage-sky: #13223d;
   --color-stage-mint: #0f2a26;
@@ -397,7 +405,7 @@
   --color-chart-grid: #262626;
   --shadow-edge: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-xs: 0 0 0 1px rgb(255 255 255 / 8%), 0 1px 2px rgb(0 0 0 / 50%);
-  --shadow-card: 0 0 0 1px rgb(255 255 255 / 7%), 0 1px 2px rgb(0 0 0 / 60%);
+  --shadow-float: 0 16px 40px rgb(0 0 0 / 60%);
   --shadow-pop: 0 0 0 1px rgb(255 255 255 / 10%), 0 16px 40px rgb(0 0 0 / 60%);
   --shadow-press:
     inset 0 1px 0 rgb(255 255 255 / 60%), inset 0 -2px 0 rgb(0 0 0 / 20%),
@@ -412,14 +420,28 @@
 @utility shadow-xs {
   box-shadow: var(--shadow-xs);
 }
-@utility shadow-card {
-  box-shadow: var(--shadow-card);
+@utility shadow-float {
+  box-shadow: var(--shadow-float);
 }
 @utility shadow-pop {
   box-shadow: var(--shadow-pop);
 }
 @utility shadow-press {
   box-shadow: var(--shadow-press);
+}
+
+/* State layers (D51): the state's ink overlay painted as a background image,
+   so it tints an opaque control (a surface button) and a transparent row
+   alike without replacing their fill. A selected element takes no hover
+   overlay, so the two never compete. */
+@utility overlay-hover {
+  background-image: linear-gradient(var(--color-state-hover), var(--color-state-hover));
+}
+@utility overlay-pressed {
+  background-image: linear-gradient(var(--color-state-pressed), var(--color-state-pressed));
+}
+@utility overlay-selected {
+  background-image: linear-gradient(var(--color-state-selected), var(--color-state-selected));
 }
 
 /* Below the shell breakpoint the sidebar is the rail and the main gutter
@@ -791,7 +813,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: 400;
     color: var(--color-ink-muted);
     background: var(--color-surface-sunken);
-    border-bottom: 1px solid var(--color-line);
+    border-bottom: 1px solid var(--color-line-strong);
   }
   .prose-content td {
     padding: 0.75rem 1rem;
@@ -945,14 +967,36 @@ a.focus-ring:active .type-caption {
     0 0 0 4px var(--color-line);
 }
 
-/* A bare table's boundary: the `line` ring. A table inside a card or dialog
-   shares that container's edge instead. */
+/* Containers (D51). A container is a card, a panel or a dialog or drawer:
+   `surface` with one 1px `line` border. What sits inside one never draws a
+   second edge (a table drops its frame) and an inset inside one is the
+   sunken fill. On the ground there is no inset (sunken on paper is 1.07:1),
+   so an inset placed there (`.surface-inset`: a neutral callout, an inline
+   empty state) becomes a bordered container instead. */
 .table-frame {
-  box-shadow: 0 0 0 1px var(--color-line);
+  border: 1px solid var(--color-line);
 }
 
-:where(.surface-card, [role='dialog']) .table-frame {
-  box-shadow: none;
+:where(.surface-card, .surface-panel, [role='dialog']) .table-frame {
+  border: 0;
+}
+
+.surface-inset {
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+}
+
+:where(.surface-card, .surface-panel, [role='dialog']) .surface-inset {
+  border-color: transparent;
+  background: var(--color-surface-sunken);
+}
+
+/* A card composed inside a dialog or drawer (settings sections in the
+   account-security dialog, a framed table in an evidence drawer) steps down
+   to the inset too, so an overlay never shows a box drawn inside a box. */
+:where(.surface-card, .surface-panel, [role='dialog']) .surface-card {
+  border-color: transparent;
+  background: var(--color-surface-sunken);
 }
 
 /* Sideways overflow cues. Each overlays or paints behind the region, so it
@@ -981,8 +1025,11 @@ a.focus-ring:active .type-caption {
      a soft ink shade at each edge with segments beyond it. The covers in the
      track's own fill scroll with the segments (`local`) and hide each shade
      while its end is in view; the shades stay on the edges (`scroll`). */
+  /* The track is a pressed-state tint of the fill beneath it, mixed opaque so
+     the covers can hide the shades: over paper on the ground, over surface
+     inside a container (D51). */
   .scroll-shade-x {
-    --scroll-shade-ground: var(--color-surface-sunken);
+    --scroll-shade-ground: color-mix(in srgb, var(--color-ink) 8%, var(--color-paper));
     --scroll-shade-ink: color-mix(in srgb, var(--color-ink) 16%, transparent);
     background:
       linear-gradient(to right, var(--scroll-shade-ground) 40%, transparent) left / 24px 100%
@@ -994,6 +1041,9 @@ a.focus-ring:active .type-caption {
       linear-gradient(to left, var(--scroll-shade-ink), transparent) right / 12px 100% no-repeat
         scroll,
       var(--scroll-shade-ground);
+  }
+  :where(.surface-card, .surface-panel, [role='dialog']) .scroll-shade-x {
+    --scroll-shade-ground: color-mix(in srgb, var(--color-ink) 8%, var(--color-surface));
   }
 }
 

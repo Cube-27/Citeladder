@@ -142,12 +142,7 @@ function InlineProviderSetup({
 }: Readonly<{ connecting: LogicalEngine | 'any'; onClose: () => void }>) {
   const engine = connecting === 'any' ? null : connecting;
   return (
-    <Stack
-      as="section"
-      gap="item"
-      aria-label="Connect a provider"
-      className={panelClasses({ tone: 'well' })}
-    >
+    <Stack as="section" gap="item" aria-label="Connect a provider" className={panelClasses()}>
       <Inline className="justify-between">
         <p className={textRole('label')}>Connect a provider</p>
         <IconButton icon={X} label="Close provider setup" onClick={onClose} />
@@ -372,7 +367,7 @@ export function LaunchDialogView({
           )}
         </Field>
         {estimate ? (
-          <Stack gap="tight" className={panelClasses({ tone: 'well' }, 'type-caption')}>
+          <Stack gap="tight" className={panelClasses('type-caption')}>
             <span className={textRole('emphasis', 'text-ink')}>
               {estimate.execution_count} {estimate.execution_count === 1 ? 'response' : 'responses'}{' '}
               planned

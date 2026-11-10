@@ -218,7 +218,7 @@ function RowFields({ row }: Readonly<{ row: SearchIntelligenceRow }>) {
     (SEARCH_COLUMNS_BY_KIND[row.row_kind] ?? []).map((column) => [column.field, column.label]),
   );
   return (
-    <dl className={ledgerClasses('open', 'type-body')}>
+    <dl className={ledgerClasses('type-body')}>
       {evidenceFields(row, labels, timeZone).map((field) => (
         <Stack key={field.key} gap="tight" className={ledgerItemClasses()}>
           <dt className="text-ink-muted">{field.label}</dt>

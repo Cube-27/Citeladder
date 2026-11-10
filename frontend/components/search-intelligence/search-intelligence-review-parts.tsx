@@ -119,7 +119,7 @@ function DatasetGroup({
   onDepth: (option: SearchDatasetSelectionRequest, text: string) => void;
 }>) {
   return (
-    <fieldset className={panelClasses({ tone: 'panel' })}>
+    <fieldset className={panelClasses()}>
       <legend className={textRole('label')}>{legend}</legend>
       <Stack gap="compact">
         {options.map((option) => {
@@ -356,7 +356,7 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
       {review.call_plan.length ? (
         <Stack as="section" gap="compact">
           <h3 className={textRole('sectionTitle')}>Requests</h3>
-          <ul className={ledgerClasses('boxed', 'type-body')}>
+          <ul className={ledgerClasses('type-body')}>
             {review.call_plan.map((call) => {
               const target = hostOf(call.target),
                 comparison = hostOf(call.comparison);

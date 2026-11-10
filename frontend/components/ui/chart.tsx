@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
+import { FLOAT_FACE } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 /**
@@ -245,8 +246,9 @@ export function ChartLegend({
 }
 
 /**
- * The hover card every chart shares: `surface` lifted by `shadow-pop`, a mono
- * caption naming the point, then one row per series.
+ * The hover card every chart shares: the floating face (`surface`, 1px `line`
+ * border, `shadow-float`) at the floating radius, a mono caption naming the
+ * point, then one row per series.
  */
 export function ChartTip({
   title,
@@ -257,7 +259,10 @@ export function ChartTip({
   return (
     <div
       aria-hidden
-      className="bg-surface shadow-pop pointer-events-none absolute z-20 flex w-54 flex-col gap-1 rounded-md p-3"
+      className={cn(
+        FLOAT_FACE,
+        'pointer-events-none absolute z-20 flex w-54 flex-col gap-1 rounded-lg p-3',
+      )}
       style={{ left, top }}
     >
       <p className="text-caption text-ink-muted mb-1 font-mono">{title}</p>

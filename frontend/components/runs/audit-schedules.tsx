@@ -109,7 +109,7 @@ function WorkspaceSchedules({
             />
           ) : null}
           {schedulesQuery.data?.length ? (
-            <ul className={ledgerClasses('boxed')}>
+            <ul className={ledgerClasses()}>
               {schedulesQuery.data.map((schedule) => (
                 <ScheduleRow
                   key={schedule.id}

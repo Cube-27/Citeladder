@@ -23,12 +23,7 @@ type GcpPull = z.infer<typeof crawlSourceListSchema>['gcp_pull'];
 function CodeText({ value, label }: Readonly<{ value: string; label: string }>) {
   return (
     <Stack>
-      <pre
-        className={panelClasses(
-          { tone: 'well' },
-          'type-code overflow-x-auto break-all whitespace-pre-wrap',
-        )}
-      >
+      <pre className={panelClasses('type-code overflow-x-auto break-all whitespace-pre-wrap')}>
         {value}
       </pre>
       <CopyButton value={value} className="w-fit">

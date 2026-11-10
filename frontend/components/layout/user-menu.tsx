@@ -108,7 +108,7 @@ export function UserMenuTrigger({ presenter }: Readonly<{ presenter: UserMenuPre
       ) : (
         <MenuTrigger
           aria-label={label}
-          className="focus-ring hover:bg-surface-sunken data-[state=open]:bg-surface-sunken flex size-[var(--control-md)] shrink-0 items-center justify-center rounded-md transition-colors"
+          className="focus-ring not-data-[state=open]:hover:overlay-hover data-[state=open]:overlay-pressed flex size-[var(--control-md)] shrink-0 items-center justify-center rounded-md transition-colors"
         >
           <Avatar name={email} />
         </MenuTrigger>

@@ -108,7 +108,7 @@ export function SearchIntelligenceCitationMatcher({
           options={lists.map((dataset) => ({ value: dataset.id, label: dataset.target_hostname }))}
         />
       ) : null}
-      <div className={ledgerClasses('open', 'max-h-64 overflow-y-auto')}>
+      <div className={ledgerClasses('max-h-64 overflow-y-auto')}>
         {answered.map((audit) => (
           <Inline
             as="label"

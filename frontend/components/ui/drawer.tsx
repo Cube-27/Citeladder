@@ -5,13 +5,15 @@ import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { IconButton } from '@/components/ui/button';
+import { FLOAT_FACE } from '@/components/ui/card';
 import { useReturnFocus } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
 /**
  * Drawer — a sheet for editing or inspecting one item without leaving the
  * list behind it. It floats 8px from the viewport edges, `container-narrow`
- * wide, with `radius-lg` and `shadow-pop` on the scrim. The header (eyebrow,
+ * wide, with `radius-lg` and the floating face (1px `line` border,
+ * `shadow-float`) on the scrim. The header (eyebrow,
  * the section title in Geist 500 22/28, description) and the footer are fixed behind 1px
  * `line` rules; only the body scrolls, with `modal-padding` and 16px between
  * blocks. `footerStart` holds a delete or secondary action on the left,
@@ -89,7 +91,8 @@ export function Drawer({
           }}
           data-side={side}
           className={cn(
-            'drawer-panel bg-surface text-ink shadow-pop z-modal fixed inset-y-2 flex w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-lg',
+            FLOAT_FACE,
+            'drawer-panel z-modal fixed inset-y-2 flex w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-lg',
             side === 'left' ? 'left-2 max-w-68' : 'right-2',
             side === 'right' && (width === 'wide' ? 'max-w-220' : 'max-w-narrow'),
           )}
@@ -113,7 +116,7 @@ export function Drawer({
             {children}
           </Body>
           {footer || footerStart ? (
-            <footer className="border-line bg-surface flex items-center justify-between gap-2 border-t px-[var(--card-padding)] py-4">
+            <footer className="border-line flex items-center justify-between gap-2 border-t px-[var(--card-padding)] py-4">
               <div className="flex items-center gap-2">{footerStart}</div>
               <div className="flex items-center gap-2">{footer}</div>
             </footer>

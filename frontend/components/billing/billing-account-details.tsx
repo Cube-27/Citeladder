@@ -14,7 +14,7 @@ export function BillingCountryInput({
     <Field
       label="Billing country"
       hint="Two-letter ISO code. The server resolves currency, tax and the exact amount from it."
-      className={panelClasses({ tone: 'tonal' })}
+      className={panelClasses()}
     >
       {(field) => (
         <Input

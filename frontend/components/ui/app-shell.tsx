@@ -171,7 +171,7 @@ export function SidebarIdentButton({
       type="button"
       data-sidebar-ident=""
       className={cn(
-        'focus-ring text-ink hover:bg-surface-sunken data-[state=open]:bg-surface-sunken disabled:text-ink-muted labelled:justify-start labelled:px-3 flex h-[var(--row-app)] w-full min-w-0 items-center justify-center gap-3 rounded-md text-left transition-colors disabled:pointer-events-none',
+        'focus-ring text-ink not-data-[state=open]:hover:overlay-hover data-[state=open]:overlay-pressed disabled:text-ink-muted labelled:justify-start labelled:px-3 flex h-[var(--row-app)] w-full min-w-0 items-center justify-center gap-3 rounded-md text-left transition-colors disabled:pointer-events-none',
         className,
       )}
       {...props}
@@ -217,10 +217,10 @@ export function SidebarNavGroup({
 /**
  * A destination row's face, for the link that carries it: one control tall,
  * the label in `ink-secondary` at weight 400; the current row's label is 500
- * (owner, 2026-11-10). The current row takes a light tint and a 2px
- * Flare bar on its leading edge, and its icon turns Flare, the app's one
- * selected-nav marker; the bar is painted over the row, so selecting a row
- * moves nothing. In the rail the row is one control square. A label that
+ * (owner, 2026-11-10). Hover is the hover overlay; the current row takes the
+ * selected overlay (D51) and a 2px Flare bar on its leading edge, and its
+ * icon turns Flare, the app's one selected-nav marker; the bar is painted
+ * over the row, so selecting a row moves nothing. In the rail the row is one control square. A label that
  * cannot fit (larger text spacing, WCAG 1.4.12) wraps and the row grows, so
  * no label is cut.
  */
@@ -228,8 +228,8 @@ export function sidebarNavRowClasses(active: boolean, plain = false) {
   return cn(
     'focus-ring group type-control labelled:justify-start labelled:px-3 relative flex min-h-[var(--control-md)] shrink-0 items-center justify-center gap-2 rounded-md transition-colors',
     active
-      ? 'bg-surface-sunken text-ink font-medium before:bg-accent before:absolute before:inset-y-1.5 before:start-0 before:w-0.5 before:rounded-full'
-      : 'text-ink-secondary hover:bg-surface-sunken hover:text-ink font-normal',
+      ? 'overlay-selected text-ink font-medium before:bg-accent before:absolute before:inset-y-1.5 before:start-0 before:w-0.5 before:rounded-full'
+      : 'text-ink-secondary hover:overlay-hover hover:text-ink font-normal',
     plain && 'labelled:flex hidden',
   );
 }

@@ -4,20 +4,23 @@ import * as MenuPrimitive from '@radix-ui/react-dropdown-menu';
 import { Check } from 'lucide-react';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
+import { FLOAT_FACE } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 /**
- * The floating panel menus and listboxes share: `surface`, `radius-lg`,
- * `shadow-pop`, a 4px inset, entering in 200ms ease-out. The transparent
- * border becomes the visible edge in forced colours, where shadows drop.
+ * The floating panel menus and listboxes share: the floating face (`surface`,
+ * a 1px `line` border, `shadow-float`; D51), `radius-lg`, a 4px inset,
+ * entering in 200ms ease-out.
  */
-export const MENU_PANEL =
-  'menu-panel bg-surface text-ink shadow-pop z-modal focus-ring overflow-hidden rounded-lg border border-transparent p-1';
+export const MENU_PANEL = cn(
+  FLOAT_FACE,
+  'menu-panel z-modal focus-ring overflow-hidden rounded-lg p-1',
+);
 
 /**
  * One 32px row, which never shrinks when a long menu scrolls: `radius-sm`, 8px padding, 14/20 `ink`, a 16px lead column for
- * an icon or a check so labels align. Hover and keyboard highlight take
- * `surface-sunken`; keyboard focus adds the shared 2px ring, which the
+ * an icon or a check so labels align. Hover and keyboard highlight take the
+ * hover overlay (D51); keyboard focus adds the shared 2px ring, which the
  * panel's 4px inset holds. `danger` is `negative` text with a `negative-soft`
  * highlight.
  */
@@ -27,11 +30,12 @@ export function menuItemClasses({
 }: Readonly<{ danger?: boolean; className?: string }> = {}) {
   return cn(
     'focus-ring relative flex h-8 w-full shrink-0 cursor-pointer items-center gap-2 rounded-sm px-2 text-left text-body-sm transition-colors select-none',
-    'data-[highlighted]:bg-surface-sunken hover:bg-surface-sunken',
-    'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-45 data-[disabled]:hover:bg-transparent',
+    'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-45',
     danger
-      ? 'text-negative data-[highlighted]:bg-negative-soft hover:bg-negative-soft [&_svg]:text-negative'
-      : 'text-ink',
+      ? 'text-negative data-[highlighted]:bg-negative-soft hover:bg-negative-soft data-[disabled]:hover:bg-transparent [&_svg]:text-negative'
+      : // A selected option (a listbox's value) keeps the selected overlay
+        // and takes no hover, so the two states never look alike.
+        'text-ink aria-selected:overlay-selected not-aria-selected:data-[highlighted]:overlay-hover not-aria-selected:not-data-[disabled]:hover:overlay-hover',
     className,
   );
 }

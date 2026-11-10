@@ -46,7 +46,7 @@ export function EvidenceClaims({ claims }: Readonly<{ claims: readonly Execution
             as="li"
             gap="tight"
             key={`${claim.start}:${claim.end}:${claim.topic}`}
-            className={panelClasses({ tone: 'well' }, 'min-w-0')}
+            className={panelClasses('min-w-0')}
           >
             <Inline as="span" className="flex-wrap">
               <span className={textRole('emphasis')}>“{claim.quote}”</span>

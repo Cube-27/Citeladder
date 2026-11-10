@@ -25,6 +25,12 @@ const STAGES = ['stage-sky', 'stage-mint', 'stage-lilac', 'stage-peach'].map(col
 const CONTRAST_PAIRS = [
   // The three inks on the three grounds.
   { inks: ['ink', 'ink-secondary', 'ink-muted'].map(color), surfaces: GROUNDS, minimum: 4.5 },
+  // A hovered, pressed or selected row keeps its text readable (D51).
+  {
+    inks: ['ink', 'ink-secondary'].map(color),
+    surfaces: ['state-hover', 'state-pressed', 'state-selected'].map(color),
+    minimum: 4.5,
+  },
   // Callout and badge bodies are ink on every tint.
   { inks: [color('ink')], surfaces: SOFTS, minimum: 4.5 },
   // The website's stages (D35): copy on a tinted stage or hero wash, the

@@ -24,7 +24,7 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
         The start URL could not be fetched — the crawl never reached any page. Each row is one
         network call the crawler made.
       </p>
-      <ul className={ledgerClasses('open')}>
+      <ul className={ledgerClasses()}>
         {errors.map((error) => {
           const signature = JSON.stringify([
             error.method,

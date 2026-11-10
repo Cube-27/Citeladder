@@ -144,7 +144,7 @@ function DemandEvidenceContent({
               <Icon icon={Split} className="text-ink-muted" />
               Competing pages ({details.pages.length})
             </Inline>
-            <div className={ledgerClasses('boxed')}>
+            <div className={ledgerClasses()}>
               {details.pages.map((page) => (
                 <Stack key={page.url} gap="tight" className={ledgerItemClasses('type-caption')}>
                   <div className={textRole('emphasis', 'text-ink break-all')}>{page.url}</div>
@@ -163,7 +163,7 @@ function DemandEvidenceContent({
         {details.cohortMedianCtr !== null && (
           <Stack as="section">
             <h3 className={textRole('label')}>Position benchmark</h3>
-            <Stack className={panelClasses({}, 'type-caption')}>
+            <Stack className={panelClasses('type-caption')}>
               <div className="flex justify-between">
                 <span className="text-ink-muted">Position band</span>
                 {details.positionBand !== null ? (
@@ -200,7 +200,7 @@ function DemandEvidenceContent({
             <Icon icon={ShieldCheck} className="text-ink-muted" />
             Provenance
           </Inline>
-          <Stack as="dl" className={panelClasses({ tone: 'well' }, 'type-caption')}>
+          <Stack as="dl" className={panelClasses('type-caption')}>
             <ProvenanceRow label="Search Console rows">
               <ProvenanceCount value={details.metricRowCount} />
             </ProvenanceRow>

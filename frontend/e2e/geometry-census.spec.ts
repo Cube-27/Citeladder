@@ -76,11 +76,11 @@ const CONTENT_GAP = 12;
 const CARD_GAP = 12;
 /**
  * One box recipe: padding 16 on the box element (D11), radius 8 (rounded-lg,
- * D10), and no border: a box is lifted by its shadow.
+ * D10), and a 1px border: every box's edge is a border, never a shadow (D51).
  */
 const CARD_INSET = 16;
 const BOX_RADIUS = 8;
-const BOX_BORDER = 0;
+const BOX_BORDER = 1;
 /**
  * Loading, read-error and first-use empty share one footprint: the block
  * EmptyState's. The state draws no box of its own (its Skeleton, Callout or

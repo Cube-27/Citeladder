@@ -76,7 +76,7 @@ function SuggestionRows({
         />
       ) : null}
       {suggestionsQuery.data?.length ? (
-        <ul className={ledgerClasses('open')}>
+        <ul className={ledgerClasses()}>
           {suggestionsQuery.data.map((candidate) => (
             <Inline
               as="li"

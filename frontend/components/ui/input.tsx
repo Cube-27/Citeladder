@@ -129,7 +129,7 @@ export function FieldEndButton({
     <button
       type="button"
       data-field-end-target=""
-      className="focus-ring text-ink-muted enabled:hover:bg-surface-sunken enabled:hover:text-ink grid size-6 shrink-0 place-items-center rounded-xs transition-colors focus-visible:outline-offset-1"
+      className="focus-ring text-ink-muted enabled:hover:overlay-hover enabled:hover:text-ink grid size-6 shrink-0 place-items-center rounded-xs transition-colors focus-visible:outline-offset-1"
       disabled={disabled}
       onClick={onClick}
       aria-label={label}

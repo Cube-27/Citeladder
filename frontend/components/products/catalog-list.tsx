@@ -178,7 +178,7 @@ function CatalogTree({
   return (
     <Stack as="fieldset" className="min-w-0">
       <legend className="sr-only">Catalog targets</legend>
-      <Inline gap="compact" className={panelClasses({ tone: 'tonal' }, 'justify-between')}>
+      <Inline gap="compact" className={panelClasses('justify-between')}>
         <Checkbox
           label="Select all shown"
           checked={checkboxState(shownSelectionCount, shownKeys.length)}

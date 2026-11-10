@@ -129,7 +129,7 @@ function BusinessMapBody({
           key={map.offering}
           aria-label={map.offering}
           gap="compact"
-          className={panelClasses({ tone: 'tonal' })}
+          className={panelClasses()}
         >
           <h4 className={textRole('itemTitle')}>{map.offering}</h4>
           <FactList

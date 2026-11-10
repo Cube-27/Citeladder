@@ -59,7 +59,7 @@ export function EmptyState({
     return (
       <div
         data-empty-state="inline"
-        className="bg-surface-sunken flex min-w-0 items-center gap-3 rounded-md px-4 py-3"
+        className="surface-inset flex min-w-0 items-center gap-3 rounded-md border px-4 py-3"
       >
         {Icon ? (
           <span className="text-ink-secondary inline-flex h-5 shrink-0 items-center self-start">
@@ -88,7 +88,7 @@ export function EmptyState({
       {Icon ? (
         <span
           aria-hidden
-          className="bg-surface text-ink-secondary mb-4 grid size-10 place-items-center rounded-md shadow-xs"
+          className="bg-surface border-line text-ink-secondary mb-4 grid size-10 place-items-center rounded-md border"
         >
           <Icon className="size-5" />
         </span>

@@ -44,12 +44,12 @@ export function Citation({
     </>
   );
   const classes = cn(
-    'text-ink shadow-xs inline-flex h-[var(--control-sm)] max-w-full items-center gap-1 rounded-sm ps-1 pe-3 align-middle text-body-sm no-underline',
+    'text-ink border-line border inline-flex h-[var(--control-sm)] max-w-full items-center gap-1 rounded-sm ps-1 pe-3 align-middle text-body-sm no-underline',
     own ? 'bg-accent-soft' : 'bg-surface',
     index === undefined && 'ps-2',
   );
   return href ? (
-    <ExternalHttpLink href={href} className={cn(classes, 'focus-ring hover:bg-surface-sunken')}>
+    <ExternalHttpLink href={href} className={cn(classes, 'focus-ring hover:overlay-hover')}>
       {content}
     </ExternalHttpLink>
   ) : (

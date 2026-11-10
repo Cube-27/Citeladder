@@ -139,7 +139,7 @@ export function AgentThread({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 /**
- * The person's turn: a right-aligned bubble (`surface`, `shadow-xs`,
+ * The person's turn: a right-aligned bubble (`surface`, a 1px `line` border,
  * `radius-lg`) at most 80% of the column and never wider than the prose
  * measure (720), the message as written (its line breaks kept) over its
  * `footer` (mentions, a sending state).
@@ -147,7 +147,7 @@ export function AgentThread({ children }: Readonly<{ children: ReactNode }>) {
 export function UserTurn({ text, footer }: Readonly<{ text: string; footer?: ReactNode }>) {
   return (
     <div className="flex justify-end">
-      <div className="bg-surface flex max-w-[min(80%,var(--container-prose))] min-w-0 flex-col gap-2 rounded-lg px-4 py-3 shadow-xs">
+      <div className="bg-surface border-line flex max-w-[min(80%,var(--container-prose))] min-w-0 flex-col gap-2 rounded-lg border px-4 py-3">
         <p className={textRole('body', 'whitespace-pre-wrap')}>{text}</p>
         {footer}
       </div>

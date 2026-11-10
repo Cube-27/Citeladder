@@ -131,11 +131,12 @@ export function TableRow({
       {...props}
       className={cn(
         'h-[var(--table-row-height)] transition-colors duration-[var(--motion-fast)]',
-        pressable && 'hover:bg-surface-sunken',
-        // A selected row takes `surface-sunken`; the tracked brand's own row
-        // takes `accent-soft`, and hover never changes it.
-        'aria-selected:bg-surface-sunken',
-        highlight && 'bg-accent-soft hover:bg-accent-soft',
+        // Hover and selected are two states (D51): a selected row takes the
+        // selected overlay and no hover; the tracked brand's own row takes
+        // `accent-soft`, and hover never changes it.
+        pressable && !highlight && 'not-aria-selected:hover:overlay-hover',
+        'aria-selected:overlay-selected',
+        highlight && 'bg-accent-soft',
         className,
       )}
     >

@@ -229,7 +229,7 @@ function ConnectedCard({
         <GrantHeader family={family} grant={grant} />
         <Stack as={CardContent} gap="compact">
           <GrantAlert family={family} status={grant.status} />
-          <ul className={ledgerClasses('open')}>
+          <ul className={ledgerClasses()}>
             {grant.connections.map((connection) => (
               <ConnectionRow key={connection.id} connection={connection} grant={grant} />
             ))}

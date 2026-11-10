@@ -43,7 +43,7 @@ export function BillingQuoteSummary({
     }
   }
   return (
-    <Stack as="output" gap="compact" className={panelClasses({ tone: 'tonal' }, 'type-body')}>
+    <Stack as="output" gap="compact" className={panelClasses('type-body')}>
       <span className="text-ink-muted">
         Quote · {TREATMENT_LABEL[quote.tax_treatment]} · valid until{' '}
         <DisplayTime value={quote.expires_at} />
