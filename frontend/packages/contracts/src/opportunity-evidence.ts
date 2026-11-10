@@ -186,6 +186,40 @@ const contentGapNewPageEvidenceSchema = contentGapEvidenceSchema.extend({
 });
 export type ContentGapNewPageEvidence = z.infer<typeof contentGapNewPageEvidenceSchema>;
 
+/** The two content-gap rules (content optimization section 2). */
+export const contentGapRuleSchema = z.enum(['content_gap_improve_page', 'content_gap_new_page']);
+
+/** Either content-gap rule's evidence. */
+export const contentGapFindingEvidenceSchema = z.union([
+  contentGapImprovePageEvidenceSchema,
+  contentGapNewPageEvidenceSchema,
+]);
+export type ContentGapEvidence = z.infer<typeof contentGapFindingEvidenceSchema>;
+
+/** A content-gap finding's rule with its evidence. */
+export type ContentGapFinding =
+  | { rule_id: 'content_gap_improve_page'; evidence: ContentGapImprovePageEvidence }
+  | { rule_id: 'content_gap_new_page'; evidence: ContentGapNewPageEvidence };
+
+/**
+ * A finding's rule and stored evidence as a content-gap finding, or null when
+ * the rule is not a content-gap rule or the evidence is not in its shape.
+ */
+export function parseContentGapEvidence(rule: string, evidence: unknown): ContentGapFinding | null {
+  switch (rule) {
+    case 'content_gap_improve_page': {
+      const parsed = contentGapImprovePageEvidenceSchema.safeParse(evidence);
+      return parsed.success ? { rule_id: rule, evidence: parsed.data } : null;
+    }
+    case 'content_gap_new_page': {
+      const parsed = contentGapNewPageEvidenceSchema.safeParse(evidence);
+      return parsed.success ? { rule_id: rule, evidence: parsed.data } : null;
+    }
+    default:
+      return null;
+  }
+}
+
 const promptGap = promptGapEvidenceSchema;
 const siteIssue = siteIssueEvidenceSchema;
 const siteChange = siteChangeEvidenceSchema;

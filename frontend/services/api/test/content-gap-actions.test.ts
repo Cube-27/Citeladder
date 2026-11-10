@@ -11,7 +11,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { actionSurface } from '../src/analysis/opportunities/actions.ts';
 import { record } from '../src/db/json.ts';
-import { attachOrCreateAction, listActions } from '../src/opportunities/actions.ts';
+import { attachOrCreateAction, getAction, listActions } from '../src/opportunities/actions.ts';
 import { declareAction } from '../src/opportunities/declarations.ts';
 import { recomputeOpportunities } from '../src/opportunities/refresh.ts';
 import { angleRun, type AngleSeed } from './opportunity-fixtures.ts';
@@ -126,7 +126,7 @@ async function plannedKeys(p: Project, lineages: string[]) {
 }
 
 describe('content gaps', () => {
-  it('raises improve-page and new-page gaps onto the Content surface and fixes the planned key', async () => {
+  it('raises improve-page and new-page gaps onto the Content surface', async () => {
     const p = await project();
     const { runId, lineages } = await run(p, {
       angles: [
@@ -164,8 +164,53 @@ describe('content gaps', () => {
       ['page', PAGE_URL, 'content'],
       ['planned_page', 'Setup guide', 'content'],
     ]);
-    // Only the lineage that raised a new-page gap has its key, written at the refresh.
-    expect(await plannedKeys(p, lineages)).toEqual([null, 'planned:setup-guide', null, null]);
+  });
+
+  it('returns each gap with its evidence, and the Agent handoff, on the Action read', async () => {
+    const p = await project();
+    await run(p, { angles: [improve(p), create()] });
+    await recomputeOpportunities(db, scopeOf(p));
+    const [pageAction, plannedAction] = await actions(p);
+    const page = await getAction(db, p.workspaceId, pageAction!.id);
+    const planned = await getAction(db, p.workspaceId, plannedAction!.id);
+    const newPage = await db
+      .selectFrom('opportunities')
+      .select('id')
+      .where('workspace_id', '=', p.workspaceId)
+      .where('rule_id', '=', 'content_gap_new_page')
+      .where('superseded_at', 'is', null)
+      .executeTakeFirstOrThrow();
+
+    expect(planned.diagnosis.handoff).toEqual({
+      context: 'opportunity',
+      workflow_id: 'article',
+      opportunity_id: newPage.id,
+    });
+    expect(page.diagnosis.handoff).toEqual({ context: 'page_url', workflow_id: 'refresh_page' });
+    expect(
+      [page, planned].map((action) =>
+        action.members.map((member) => [
+          member.rule_id,
+          member.content_gap_evidence?.angle_label,
+          member.content_gap_evidence?.members.map((cited) => cited.url),
+        ]),
+      ),
+    ).toEqual([
+      [
+        [
+          'content_gap_improve_page',
+          'Pricing comparison',
+          ['https://globex.com/pricing', 'https://review.example/crm-pricing'],
+        ],
+      ],
+      [
+        [
+          'content_gap_new_page',
+          'Setup guide',
+          ['https://globex.com/setup', 'https://news.example/crm-setup'],
+        ],
+      ],
+    ]);
   });
 
   it('moves a page Action to Actions when the next crawl no longer reads it as content', async () => {

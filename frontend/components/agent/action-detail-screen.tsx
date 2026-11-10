@@ -9,11 +9,7 @@ import {
   MarkImplementedButton,
   ContextualLinkDeclarationRoute,
 } from '@/components/agent/action-declaration';
-import {
-  ContentGapWhy,
-  contentGapHandoff,
-  contentGapMembers,
-} from '@/components/agent/content-gap-evidence';
+import { ContentGapWhy, contentGapMembers } from '@/components/agent/content-gap-evidence';
 import { DeclarationStatus } from '@/components/agent/declaration-status';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { ActionPriorityBadge, ActionStatusBadge } from '@/components/agent/action-status-badge';
@@ -144,7 +140,7 @@ function ActionDetailView({
           onRetry={() => update.variables && update.mutate(update.variables)}
         />
       ) : null}
-      {gaps.length > 0 ? <ContentGapWhy members={gaps} workspaceId={workspaceId} /> : null}
+      {gaps.length > 0 ? <ContentGapWhy members={gaps} /> : null}
       <Diagnosis action={action} onOpenEvidence={setEvidenceId} />
       <Implementation action={action} workspaceId={workspaceId} />
       <LinkedChats action={action} workspaceId={workspaceId} />
@@ -172,11 +168,7 @@ function ActionControls({
 }: Readonly<{ action: ActionDetail; update: StatusUpdate }>) {
   const mayWrite = useWorkspaceCapability('write');
   const dismissed = action.status === 'dismissed';
-  // A content gap hands off with its workflow; any other Action with itself alone.
-  const handoff = contentGapHandoff(action) ?? {
-    label: 'Work on this with the agent',
-    href: agentHandoffHref({ actionId: action.id }),
-  };
+  const handoff = actionHandoff(action);
   return (
     <>
       {mayWrite ? (
@@ -195,6 +187,40 @@ function ActionControls({
       </Button>
     </>
   );
+}
+
+/**
+ * The Agent handoff the diagnosis names: its workflow with the finding's
+ * Opportunity (a page to write) or with the page URL (a page to work on); an
+ * Action whose diagnosis names none hands off with itself alone.
+ */
+function actionHandoff(action: ActionDetail): Readonly<{ label: string; href: string }> {
+  const handoff = action.diagnosis.handoff;
+  switch (handoff?.context) {
+    case 'opportunity':
+      return {
+        label: 'Write this page',
+        href: agentHandoffHref({
+          actionId: action.id,
+          opportunityId: handoff.opportunity_id,
+          workflowId: handoff.workflow_id,
+        }),
+      };
+    case 'page_url':
+      return {
+        label: 'Work on this',
+        href: agentHandoffHref({
+          actionId: action.id,
+          targetUrl: action.target_url,
+          workflowId: handoff.workflow_id,
+        }),
+      };
+    default:
+      return {
+        label: 'Work on this with the agent',
+        href: agentHandoffHref({ actionId: action.id }),
+      };
+  }
 }
 
 /**

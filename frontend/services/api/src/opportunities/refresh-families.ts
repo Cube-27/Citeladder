@@ -1,9 +1,9 @@
 /**
  * The Opportunity families a refresh reads. Each names the source identity
- * its hits depend on and produces its hits from persisted evidence (and may
- * store what its surfaced hits fix, inside the refresh transaction); the
- * refresh resolves the shared sources once and iterates this list, so a new
- * family is one entry here, never another branch in the refresh.
+ * its hits depend on, produces its hits from persisted evidence, and says
+ * whether its source was present and which of its identity fields age out;
+ * the refresh resolves the shared sources once and iterates this list, so a
+ * new family is one entry here, never another branch in the refresh.
  */
 import { sql } from 'kysely';
 import {
@@ -19,15 +19,10 @@ import {
 import { policy } from '../config.ts';
 import { sourcePageVocabulary } from '../config/source-pages.ts';
 import type { Database } from '../db/database.ts';
-import {
-  contentGapHits,
-  contentGapSource,
-  fixPlannedPageKeys,
-  type ContentGapSource,
-} from './content-gap-hits.ts';
+import { contentGapHits, contentGapSource, type ContentGapSource } from './content-gap-hits.ts';
 import { earnedPageHits } from './earned-page-hits.ts';
 import { internalLinkHits, internalLinkRunId } from './internal-link-hits.ts';
-import { stampSourceMix, type Scored, type SourceIdentity } from './refresh-compute.ts';
+import { stampSourceMix, type SourceIdentity } from './refresh-compute.ts';
 import {
   confirmedDeclineHits,
   loadSiteEvidence,
@@ -68,11 +63,13 @@ type Family = {
   /** The source identity fields this family's hits are read from. */
   identity(db: Database, scope: Scope, sources: Sources): Promise<Partial<SourceIdentity>>;
   hits(db: Database, scope: Scope, sources: Sources, identity: SourceIdentity): Promise<Found>;
+  /** Whether this refresh had a usable source for the family. */
+  present(sources: Sources, found: Found): boolean;
   /**
-   * What the family stores about the hits that surfaced, inside the refresh
-   * transaction and project lock; most families store nothing.
+   * Identity fields of a source that ages out by design: a snapshot that read
+   * one is superseded once it is gone, even with no other source present.
    */
-  persist?(trx: Database, scope: Scope, scored: readonly Scored[]): Promise<void>;
+  agesOut?: readonly (keyof SourceIdentity)[];
 };
 
 /**
@@ -120,6 +117,7 @@ const demand: Family = {
     hits: await demandHits(db, scope, sources.demand),
     limitations: [],
   }),
+  present: (sources) => sources.demand !== null,
 };
 
 /** The brand run: prompt gaps, cited pages to get listed on, and confirmed declines. */
@@ -156,6 +154,8 @@ const visibility: Family = {
     hits.push(...(await confirmedDeclineHits(db, scope.workspaceId, audit.id)));
     return { hits, limitations, sourceMix };
   },
+  // Only a brand run with its metric snapshot is usable.
+  present: (_sources, found) => found.sourceMix !== undefined,
 };
 
 /** Commerce reads its own latest run, so brand and Commerce Actions never replace each other. */
@@ -165,6 +165,7 @@ const commerce: Family = {
     commerceAuditId === null
       ? none()
       : { hits: await commerceHits(db, scope, commerceAuditId), limitations: [] },
+  present: (sources) => sources.commerceAuditId !== null,
 };
 
 /** The crawl: Site Health findings, contextual links and page changes. */
@@ -189,24 +190,26 @@ const site: Family = {
         : [],
     };
   },
+  present: (sources) => sources.crawl !== null,
 };
 
+/** Keyword gaps: the reviewed datasets, while recent enough. */
 const searchGaps: Family = {
   identity: async (_db, _scope, { gaps }) => ({ search_gap_revision: gaps?.revision ?? null }),
   hits: (db, scope, { gaps, demand: snapshot, crawl }) =>
     searchGapHits(db, scope, gaps, snapshot, crawl),
+  present: (sources) => sources.gaps !== null,
+  agesOut: ['search_gap_revision'],
 };
 
-/**
- * Content angles: the latest succeeded run, while its newest audit is recent
- * enough. A new-page gap fixes its lineage's planned-page key once.
- */
+/** Content angles: the latest succeeded run, while its newest audit is recent enough. */
 const contentGaps: Family = {
   identity: async (_db, _scope, { contentGaps: source }) => ({
     content_angle_run_id: source.run?.id ?? null,
   }),
   hits: (db, scope, { contentGaps: source }) => contentGapHits(db, scope, source),
-  persist: fixPlannedPageKeys,
+  present: (sources) => sources.contentGaps.run !== null,
+  agesOut: ['content_angle_run_id'],
 };
 
 /** In hit order: the refresh concatenates each family's hits as listed. */
@@ -235,14 +238,14 @@ export async function sourceIdentity(
   return identity;
 }
 
-/** Each family's own writes about the surfaced hits, in the refresh transaction. */
-export async function persistFamilies(trx: Database, scope: Scope, scored: readonly Scored[]) {
-  for (const family of FAMILIES) await family.persist?.(trx, scope, scored); // NOSONAR -- One transaction: families write in order.
+/** Whether the snapshot whose source identity is `read` read a source that ages out. */
+export function readAgingSource(read: Record<string, unknown>): boolean {
+  return FAMILIES.some((family) => family.agesOut?.some((field) => Boolean(read[field])));
 }
 
 /**
- * Every family's hits and limitations, the brand run's citation mix, and the
- * brand run itself when it was usable.
+ * Every family's hits and limitations, the brand run's citation mix, the
+ * brand run itself when it was usable, and whether any family had a source.
  */
 export async function collectFamilies(
   db: Database,
@@ -253,16 +256,19 @@ export async function collectFamilies(
   const hits: DetectorHit[] = [];
   const limitations: string[] = [];
   let sourceMix: Record<string, unknown> | null = null;
+  let present = false;
   for (const family of FAMILIES) {
     const found = await family.hits(db, scope, sources, identity); // NOSONAR -- One family at a time bounds the pool.
     hits.push(...found.hits);
     limitations.push(...found.limitations);
     if (found.sourceMix) sourceMix = found.sourceMix;
+    present ||= family.present(sources, found);
   }
   return {
     hits,
     limitations,
     sourceMix: sourceMix ?? emptySourceProjection(),
     audit: sourceMix === null ? null : sources.audit,
+    present,
   };
 }

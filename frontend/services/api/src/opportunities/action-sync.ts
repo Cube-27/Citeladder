@@ -23,6 +23,7 @@ import {
   pageGroupKey,
   type ActionMember,
 } from '../analysis/opportunities/actions.ts';
+import { contentPageAnalyses } from '../content-gaps/load.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import type { NewOpportunity } from './refresh-compute.ts';
@@ -65,19 +66,7 @@ export async function contentPageKeys(
   crawlId: string | null,
 ): Promise<ReadonlySet<string>> {
   if (crawlId === null) return new Set();
-  const rows = await db
-    .selectFrom('site_page_analyses as analysis')
-    .innerJoin('site_urls as url', 'url.id', 'analysis.site_url_id')
-    .select('url.normalized_url')
-    .where('analysis.workspace_id', '=', scope.workspaceId)
-    .where('analysis.project_id', '=', scope.projectId)
-    .where('url.workspace_id', '=', scope.workspaceId)
-    .where('url.project_id', '=', scope.projectId)
-    .where('analysis.crawl_id', '=', crawlId)
-    .where('analysis.is_current', '=', true)
-    .where('analysis.status', '=', 'completed')
-    .where('analysis.page_kind', 'in', policy.content_optimization.content_page_kinds)
-    .execute();
+  const rows = await contentPageAnalyses(db, scope, crawlId).select('url.normalized_url').execute();
   return new Set(rows.map((row) => pageGroupKey(row.normalized_url)));
 }
 
@@ -165,17 +154,17 @@ async function updateActionBatch(
 
 /**
  * Upsert the project's Actions for `rows` and return each row's Action id.
- * The caller inserts the rows with that id, after this runs.
+ * The caller inserts the rows with that id, after this runs. `contentPages`
+ * are the snapshot crawl's content-page group keys (`contentPageKeys`).
  */
 export async function syncActions(
   trx: Database,
   scope: Scope,
   rows: NewMember[],
   snapshotId: string,
-  crawlId: string | null,
+  contentPages: ReadonlySet<string>,
 ): Promise<Map<string, string>> {
   const groups = groupMembers(rows.map(actionMember));
-  const contentPages = await contentPageKeys(trx, scope, crawlId);
   const existing = new Map(
     (
       await trx

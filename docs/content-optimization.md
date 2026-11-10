@@ -66,18 +66,22 @@ refresh records it, and until then the snapshot's gaps and state stay as they
 were written.
 
 An Action opens at `/agent/content/:actionId` (the shared Action page; the
-back link follows the screen it was opened under, from the first render). For
-content-gap findings, **Why this
-matters** renders their stored evidence only: the angle, the cited pages with
+back link follows the screen it was opened under, from the first render). The
+Action read returns each content-gap finding's stored evidence
+(`content_gap_evidence`), and **Why this matters** renders it only, with no
+further read: the angle, the cited pages with
 title, site and classification, the counts and the run's window, and a link
 to the planned-page Action a page continues. The angle's prompts are stored
 with their text as of the refresh (`prompts: {id, text}`); a prompt no longer
 in the library when the refresh ran is stored with `text: null` and shown as
 such. The page reads no prompt library. Site Health findings on
 the page render as on any Action. The handoff into the Agent
-([handoffs](agents.md#workspace-and-handoffs)) is **Write this page** (the
+([handoffs](agents.md#workspace-and-handoffs)) is the one the Action's
+diagnosis names (`diagnosis.handoff`, from the approach branch of its first
+finding that has one in `APPROACH_TREE`): **Write this page** (the
 Opportunity and the `article` workflow) for a page to create and **Work on
-this** (the page URL and the `refresh_page` workflow) for an existing page.
+this** (the page URL and the `refresh_page` workflow) for an existing page;
+an Action whose diagnosis names none hands off with itself alone.
 Every API read that links to an Action returns the Action's persisted surface
 with its id (`surface` or `action_surface`), and every link, including MCP
 `read_actions` links, record fetches, chat mentions and the dashboard, points

@@ -1,17 +1,19 @@
 /**
- * What the Action list reads about content gaps (content optimization
- * section 2): each Action's live content-gap findings, summarized from their
- * persisted evidence, and whether the latest refresh had content-gap evidence
- * at all. Reads only persisted rows, scoped to the workspace and project.
+ * What Action reads say about content gaps (content optimization section 2):
+ * each Action's live content-gap findings, summarized from their persisted
+ * evidence for the list and in full for the Action page, and whether the
+ * latest refresh had content-gap evidence at all. Reads only persisted rows,
+ * scoped to the workspace and project.
  */
 import {
-  actionContentGapSchema,
-  contentGapRuleSchema,
   contentGapSourceStateSchema,
   type ActionContentGap,
   type ContentGapSourceState,
 } from '@citeladder/contracts/actions';
-import { opportunityEvidenceSchemas } from '@citeladder/contracts/opportunity-evidence';
+import {
+  contentGapRuleSchema,
+  parseContentGapEvidence,
+} from '@citeladder/contracts/opportunity-evidence';
 
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
@@ -22,21 +24,23 @@ type ListedAction = { id: string; member_ids: readonly string[] };
 
 /** One finding's summary, or null when its evidence is not a content-gap angle. */
 function summary(row: { id: string; rule_id: string; evidence: unknown }): ActionContentGap | null {
-  const rule = contentGapRuleSchema.safeParse(row.rule_id);
-  if (!rule.success) return null;
-  const evidence = opportunityEvidenceSchemas[rule.data].safeParse(row.evidence);
-  if (!evidence.success) return null;
-  const { angle_label, prompts, citation_count, domain_count, competitor_count } = evidence.data;
-  return actionContentGapSchema.parse({
+  const finding = parseContentGapEvidence(row.rule_id, row.evidence);
+  if (finding === null) return null;
+  const { angle_label, prompts, citation_count, domain_count, competitor_count } = finding.evidence;
+  return {
     opportunity_id: row.id,
-    rule_id: rule.data,
+    rule_id: finding.rule_id,
     angle_label,
     prompt_count: prompts.length,
     citation_count,
     domain_count,
     competitor_count,
-  });
+  };
 }
+
+/** A finding's stored content-gap evidence, for the Action page; null for any other finding. */
+export const contentGapEvidence = (row: { rule_id: string; evidence: unknown }) =>
+  parseContentGapEvidence(row.rule_id, row.evidence)?.evidence ?? null;
 
 const byCitations = (a: ActionContentGap, b: ActionContentGap) =>
   b.citation_count - a.citation_count || compareText(a.angle_label, b.angle_label);

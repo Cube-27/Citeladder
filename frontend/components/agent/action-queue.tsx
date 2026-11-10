@@ -1,7 +1,12 @@
 'use client';
 
+import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import type { DataTableState } from '@/components/ui/data-table';
+import { Inline } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
+import { ClampText, TableCell } from '@/components/ui/table';
+import { TextLink } from '@/components/ui/text-link';
+import { textRole } from '@/components/ui/typography';
 import { ACTION_STATUS_LABEL, familyLabel, targetKindLabel } from '@/lib/agent/vocabulary';
 import { queueCount, useActionStatusCounts } from '@/lib/agent/use-action-status-counts';
 import {
@@ -10,16 +15,18 @@ import {
   type ActionsPage,
   type ActionStatus,
 } from '@/lib/api/actions';
-import { formatCount } from '@/lib/format';
+import { formatCount, pluralCount, readableUrl } from '@/lib/format';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import type { ActionSurface } from '@citeladder/contracts/action-surface';
 import { actionStatusSchema } from '@citeladder/contracts/actions';
+import { actionPath } from '@citeladder/contracts/record-kinds';
 
 /**
  * The parts the Actions and Content optimization lists share: the status
- * filter in the URL, its per-status counts, and the cursor-paged read of one
- * surface's Actions. Each screen adds its own columns and empty states.
+ * filter in the URL, its per-status counts, the cursor-paged read of one
+ * surface's Actions and the target cell. Each screen adds its own columns and
+ * empty states.
  */
 
 const QUEUE = 'queue';
@@ -87,8 +94,8 @@ export function ActionStatusSelect({
  * the Action groups and the areas they come from. The list read carries no
  * written summary, so it is built from those fields.
  */
-export function workSummary(action: Action): string {
-  const findings = `${formatCount(action.member_count)} ${action.member_count === 1 ? 'finding' : 'findings'}`;
+function workSummary(action: Action): string {
+  const findings = pluralCount(action.member_count, 'finding');
   const families = action.families.map(familyLabel).filter(Boolean).join(', ');
   return [
     targetKindLabel(action.target_kind),
@@ -97,6 +104,42 @@ export function workSummary(action: Action): string {
   ]
     .filter(Boolean)
     .join(' · ');
+}
+
+/**
+ * A row's target cell on either list: the target linked to its Action, its
+ * status beside it only in the work queue and only when it is not Open (the
+ * queue is nearly all Open), and the work summary under it.
+ */
+export function ActionTargetCell({
+  action,
+  status,
+}: Readonly<{
+  action: Action;
+  /** The list's status filter; undefined for the work queue. */
+  status: ActionStatus | undefined;
+}>) {
+  // A page to create is named by its topic, so the label is not always a URL.
+  const label = readableUrl(action.target_label);
+  return (
+    <TableCell>
+      <div className="grid min-w-0">
+        <Inline>
+          <ClampText lines={1} tooltip={label}>
+            <TextLink href={actionPath(action)} text="itemTitle">
+              {label}
+            </TextLink>
+          </ClampText>
+          {status === undefined && action.status !== 'open' ? (
+            <ActionStatusBadge status={action.status} />
+          ) : null}
+        </Inline>
+        <ClampText lines={1} className={textRole('caption')}>
+          {workSummary(action)}
+        </ClampText>
+      </div>
+    </TableCell>
+  );
 }
 
 /**

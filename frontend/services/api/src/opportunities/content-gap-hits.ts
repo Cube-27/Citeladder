@@ -6,31 +6,25 @@
  * source, so its gaps clear with a limitation. Reads only persisted rows,
  * scoped to the workspace and project; nothing here calls a model.
  *
- * A new-page gap targets its lineage's planned-page key. A lineage that has
- * none yet takes `plannedPageKey(label)` of its current label, and the refresh
- * stores it once inside its transaction (`fixPlannedPageKeys`), so a later
- * label never moves the Action.
+ * A new-page gap targets its lineage's planned-page key, fixed when the
+ * lineage was created, so a later label never moves the Action.
  */
 import type { ContentGapSourceState } from '@citeladder/contracts/actions';
-import { sql } from 'kysely';
 
-import { plannedPageKey } from '../analysis/opportunities/actions.ts';
 import {
   detectContentGaps,
   type ContentGapAngle,
   type ContentGapRun,
 } from '../analysis/opportunities/content-gaps.ts';
 import type { DetectorHit } from '../analysis/opportunities/evidence.ts';
+import { latestSucceededRun } from '../content-gaps/load.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { groupBy } from '../lists.ts';
-import { compareText } from '../text-order.ts';
-import type { Scored } from './refresh-compute.ts';
 import type { Scope } from './sources.ts';
 
 const p = policy.content_optimization;
-const g = policy.opportunity.opportunities.CONTENT_GAP;
 
 const CONTENT_GAPS_NOT_COMPUTED = 'Content gaps not computed yet.';
 const CONTENT_GAPS_OUT_OF_DATE = `Content-gap evidence is out of date: its newest audit is more than ${p.max_source_age_days} days old.`;
@@ -50,23 +44,7 @@ export async function contentGapSource(
   scope: Scope,
   at: Date,
 ): Promise<ContentGapSource> {
-  const run = await db
-    .selectFrom('content_angle_runs')
-    .select([
-      'id',
-      'window_start',
-      'window_end',
-      'methodology_version',
-      'formula_version',
-      'limitations',
-    ])
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .where('outcome', '=', 'succeeded')
-    .orderBy('created_at', 'desc')
-    .orderBy('id', 'desc')
-    .limit(1)
-    .executeTakeFirst();
+  const run = await latestSucceededRun(db, scope);
   if (!run) return { state: 'not_computed', run: null, limitation: CONTENT_GAPS_NOT_COMPUTED };
   if (run.window_end.getTime() < at.getTime() - p.max_source_age_days * 86_400_000)
     return { state: 'out_of_date', run: null, limitation: CONTENT_GAPS_OUT_OF_DATE };
@@ -214,10 +192,9 @@ export async function contentGapHits(
         lineage_id: row.lineage_id,
         label: row.label,
         topic_id: row.topic_id,
-        prompts: [...row.prompt_ids]
-          .sort(compareText)
-          .map((id) => ({ id, text: texts.get(id) ?? null })),
-        engines: [...row.engines].sort(compareText),
+        // Stored in text order by the run (`aggregateAngle`).
+        prompts: row.prompt_ids.map((id) => ({ id, text: texts.get(id) ?? null })),
+        engines: row.engines,
         citation_count: row.citation_count,
         domain_count: row.domain_count,
         competitor_count: row.competitor_count,
@@ -237,10 +214,7 @@ export async function contentGapHits(
       },
     ];
   });
-  const hits = detectContentGaps(source.run, angles, {
-    min_citations: p.min_citations,
-    min_domains: p.min_domains,
-  });
+  const hits = detectContentGaps(source.run, angles);
   return {
     hits,
     limitations: untracked
@@ -260,28 +234,5 @@ function angleMatch(row: AngleRow): ContentGapAngle['match'] | null {
       owned_cited: row.owned_cited === true,
     };
   }
-  return { kind: 'none', planned_page_key: row.planned_page_key ?? plannedPageKey(row.label) };
-}
-
-/**
- * Store, once, the planned-page key of every lineage whose new-page gap this
- * refresh surfaced. Runs inside the refresh transaction; a key already stored
- * is never rewritten.
- */
-export async function fixPlannedPageKeys(trx: Database, scope: Scope, scored: readonly Scored[]) {
-  const keys = new Map<string, string>();
-  for (const [hit] of scored) {
-    if (hit.rule_id !== g.RULE_NEW_PAGE) continue;
-    const evidence = record(hit.evidence);
-    if (typeof evidence.lineage_id === 'string' && typeof evidence.planned_page_key === 'string')
-      keys.set(evidence.lineage_id, evidence.planned_page_key);
-  }
-  if (!keys.size) return;
-  const values = [...keys].map(([lineage, key]) => sql`(${lineage}::uuid, ${key}::text)`);
-  await sql`update content_angle_lineages set planned_page_key = v.key
-    from (values ${sql.join(values)}) as v(id, key)
-    where content_angle_lineages.id = v.id
-      and content_angle_lineages.workspace_id = ${scope.workspaceId}::uuid
-      and content_angle_lineages.project_id = ${scope.projectId}::uuid
-      and content_angle_lineages.planned_page_key is null`.execute(trx);
+  return { kind: 'none', planned_page_key: row.planned_page_key };
 }

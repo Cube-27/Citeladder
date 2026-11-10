@@ -28,21 +28,29 @@ function audits(db: Database, scope: Scope) {
     .where('project_id', '=', scope.projectId);
 }
 
-function crawls(db: Database, scope: Scope) {
+/** The project's latest terminal crawl with usable evidence, as a one-row query. */
+function latestEvidenceCrawl(db: Database, scope: Scope) {
   return new WorkspaceScope(scope.workspaceId)
     .selectFrom(db, 'site_crawls')
-    .select([
-      'id',
-      'project_id',
-      'status',
-      'score_summary',
-      'analyzed_url_count',
-      'failed_url_count',
-      'analyzer_version',
-      'extractor_version',
-      ...timestamps,
-    ])
-    .where('project_id', '=', scope.projectId);
+    .where('project_id', '=', scope.projectId)
+    .where('status', 'in', EVIDENCE_CRAWL_STATUSES)
+    .orderBy(sql`completed_at desc nulls last`)
+    .orderBy('created_at', 'desc')
+    .limit(1);
+}
+
+function crawls(db: Database, scope: Scope) {
+  return latestEvidenceCrawl(db, scope).select([
+    'id',
+    'project_id',
+    'status',
+    'score_summary',
+    'analyzed_url_count',
+    'failed_url_count',
+    'analyzer_version',
+    'extractor_version',
+    ...timestamps,
+  ]);
 }
 
 export type AuditSource = NonNullable<Awaited<ReturnType<typeof resolveAudit>>>;
@@ -80,13 +88,25 @@ export async function resolveCommerceAuditId(db: Database, scope: Scope): Promis
 
 /** The latest terminal crawl with usable evidence, or null. */
 export async function resolveCrawl(db: Database, scope: Scope) {
-  const latest = await crawls(db, scope)
-    .where('status', 'in', EVIDENCE_CRAWL_STATUSES)
-    .orderBy(sql`completed_at desc nulls last`)
+  return (await crawls(db, scope).executeTakeFirst()) ?? null;
+}
+
+/** `resolveCrawl`'s id alone, for callers that only compare which crawl is latest. */
+export async function resolveCrawlId(db: Database, scope: Scope): Promise<string | null> {
+  return (await latestEvidenceCrawl(db, scope).select('id').executeTakeFirst())?.id ?? null;
+}
+
+/** The crawl the latest Opportunity snapshot read, or null without one. */
+export async function latestSnapshotCrawlId(db: Database, scope: Scope): Promise<string | null> {
+  const snapshot = await new WorkspaceScope(scope.workspaceId)
+    .selectFrom(db, 'opportunity_snapshots')
+    .select('site_crawl_id')
+    .where('project_id', '=', scope.projectId)
     .orderBy('created_at', 'desc')
+    .orderBy('id', 'desc')
     .limit(1)
     .executeTakeFirst();
-  return latest ?? null;
+  return snapshot?.site_crawl_id ?? null;
 }
 
 /** The project's most recent snapshot, or null when none was ever computed. */

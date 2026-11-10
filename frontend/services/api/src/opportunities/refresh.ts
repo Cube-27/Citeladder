@@ -5,7 +5,8 @@
  * A missing source is not an error. With a prior snapshot and no resolvable
  * audit, crawl or demand snapshot, the prior snapshot is returned unchanged,
  * so an in-flight crawl never empties the live set; zero hits WITH a source
- * still supersedes, and so does a snapshot whose keyword or content gaps have aged out. A refresh whose source identity the latest snapshot
+ * still supersedes, and so does a snapshot whose aging sources (keyword or
+ * content gaps) have aged out. A refresh whose source identity the latest snapshot
  * already describes loads no evidence. Evidence loads outside the project
  * lock; under it the identity is resolved again, and a refresh whose sources
  * moved meanwhile writes nothing and fails for a retry over the newer state.
@@ -21,7 +22,7 @@ import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { notFound } from '../errors.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { taskProject, type Executor } from '../queue/executor.ts';
-import { syncActions } from './action-sync.ts';
+import { contentPageKeys, syncActions } from './action-sync.ts';
 import {
   buildSnapshot,
   newOpportunity,
@@ -35,7 +36,7 @@ import {
 } from './refresh-compute.ts';
 import {
   collectFamilies,
-  persistFamilies,
+  readAgingSource,
   resolveSources,
   sourceIdentity,
   type Sources,
@@ -88,9 +89,18 @@ async function insertOpportunities(
 async function writeRefresh(
   trx: Database,
   scope: Scope,
-  collected: Collected,
-  sources: Resolved,
-  scored: Scored[],
+  {
+    collected,
+    sources,
+    scored,
+    contentPages,
+  }: {
+    collected: Collected;
+    sources: Resolved;
+    scored: Scored[];
+    /** The group keys of the crawl's content pages, for each Action's surface. */
+    contentPages: ReadonlySet<string>;
+  },
 ) {
   const crawl = sources.crawl;
   const workspace = new WorkspaceScope(scope.workspaceId);
@@ -159,9 +169,8 @@ async function writeRefresh(
     scope,
     rows.map((row, index) => ({ ...row, target: scored[index]![0].target })),
     snapshot.id,
-    crawl?.id ?? null,
+    contentPages,
   );
-  await persistFamilies(trx, scope, scored);
   await insertOpportunities(trx, scope, rows, actions, now);
   const links = live.flatMap((row) => {
     const successor = successors.get(JSON.stringify([row.rule_id, row.target_key]));
@@ -202,6 +211,8 @@ export async function recomputeOpportunities(
     return projectSnapshot(prior!);
   const collected = await collectFamilies(db, scope, sources, sources.identity);
   const scored = scoreHits(collected.hits);
+  // The identity re-check under the lock pins the crawl these were read from.
+  const contentPages = await contentPageKeys(db, scope, sources.crawl?.id ?? null);
   return db.transaction().execute(async (trx) => {
     await acquireProjectLock(trx, scope.projectId);
     const current = await latestSnapshot(trx, scope);
@@ -210,23 +221,14 @@ export async function recomputeOpportunities(
     // supersede what that source says; the retry reads the newer state.
     if (!sameIdentity(latest.identity, sources.identity))
       throw new Error('Opportunity sources changed during the refresh; retry');
-    // Gap datasets age out by design, so a snapshot that read them is superseded
-    // when they do; an in-flight crawl alone never empties the live set.
-    // Content-gap runs age out the same way.
-    const readIdentity = record(record(current?.coverage).source_identity);
-    const readGaps = Boolean(readIdentity.search_gap_revision || readIdentity.content_angle_run_id);
+    // Some sources age out by design, so a snapshot that read one is superseded
+    // when it does; an in-flight crawl alone never empties the live set.
     const empty =
-      collected.audit === null &&
-      sources.commerceAuditId === null &&
-      sources.crawl === null &&
-      sources.demand === null &&
-      sources.gaps === null &&
-      sources.contentGaps.run === null &&
-      !readGaps;
+      !collected.present && !readAgingSource(record(record(current?.coverage).source_identity));
     if (current !== null && empty) return projectSnapshot(current);
     if (options.skipIfCurrent && snapshotIsCurrent(current, sources.identity))
       return projectSnapshot(current!);
-    return writeRefresh(trx, scope, collected, sources, scored);
+    return writeRefresh(trx, scope, { collected, sources, scored, contentPages });
   });
 }
 

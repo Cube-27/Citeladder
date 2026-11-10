@@ -1,5 +1,12 @@
 /** Actions catalog: deterministic decisions over persisted evidence. */
+import { actionSurfaceSchema, type ActionSurface } from '@citeladder/contracts/action-surface';
+
 import { opportunities } from './opportunity.ts';
+
+/** The surface of a planned page with a member of each evidence family; `actions` otherwise. */
+const PLANNED_PAGE_FAMILY_SURFACE: Readonly<Partial<Record<string, ActionSurface>>> = {
+  content_optimization: actionSurfaceSchema.enum.content,
+};
 
 export const actions = {
   ACTION_STATUS_OPEN: 'open',
@@ -23,11 +30,14 @@ export const actions = {
     'planned_page',
   ],
   AGENT_TARGET_KINDS: ['page', 'planned_page'],
-  // The screen an Action belongs to (CO10): content pages and content-gap
-  // planned pages are `content`, everything else `actions`.
-  SURFACE_ACTIONS: 'actions',
-  SURFACE_CONTENT: 'content',
-  ACTION_SURFACES: ['actions', 'content'],
+  // The screen an Action belongs to (CO10), in the contract's vocabulary: an
+  // owned page is `content` when its page kind is a content kind; a planned
+  // page takes the surface its members' evidence family names here; everything
+  // else is `actions`.
+  SURFACE_ACTIONS: actionSurfaceSchema.enum.actions,
+  SURFACE_CONTENT: actionSurfaceSchema.enum.content,
+  ACTION_SURFACES: actionSurfaceSchema.options,
+  PLANNED_PAGE_FAMILY_SURFACE,
   PLANNED_PAGE_TOPIC_MAX_CHARS: 120,
   ACTION_ORIGIN_EVIDENCE: 'evidence',
   ACTION_ORIGIN_AGENT: 'agent',
@@ -144,6 +154,9 @@ export const actions = {
         'Do not invent statistics, quotes or sources.',
       ],
       target_kinds: ['planned_page'],
+      // The Agent workflow (`workflows.json` id) a finding of this branch hands
+      // off with, and what it carries: the finding's Opportunity, or the page URL.
+      handoff: { workflow_id: 'article', context: 'opportunity' },
     },
     {
       approach: 'improve_existing',
@@ -154,6 +167,7 @@ export const actions = {
         'Do not invent statistics, quotes or sources.',
       ],
       target_kinds: ['page'],
+      handoff: { workflow_id: 'refresh_page', context: 'page_url' },
     },
     {
       approach: 'improve_links',

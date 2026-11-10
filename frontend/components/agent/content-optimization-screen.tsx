@@ -2,25 +2,21 @@
 
 import {
   ActionStatusSelect,
+  ActionTargetCell,
   useActionStatusFilter,
   useActionTable,
-  workSummary,
 } from '@/components/agent/action-queue';
-import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { ListScreen } from '@/components/layout/page-shell';
 import { Callout, type CalloutTone } from '@/components/ui/callout';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
-import { Inline } from '@/components/ui/layout';
-import { TextLink } from '@/components/ui/text-link';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { MissingValue } from '@/components/ui/unavailable-value';
 import type { ActionListItem, ActionsPage, ActionStatus } from '@/lib/api/actions';
-import { formatCount, readableUrl } from '@/lib/format';
+import { formatCount, pluralCount } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import type { ContentGapSourceState } from '@citeladder/contracts/actions';
-import { actionPath } from '@citeladder/contracts/record-kinds';
 
 /**
  * Content optimization: the Actions on content pages and on pages to create
@@ -77,11 +73,7 @@ function ContentList({
       {/* Rows stack the page over its work summary, as on Actions. */}
       <DataTable label="Content optimization" columns={COLUMNS} rowLines={2} {...table}>
         {page?.items.map((action) => (
-          <ContentRow
-            key={action.id}
-            action={action}
-            showStatus={status === undefined && action.status !== 'open'}
-          />
+          <ContentRow key={action.id} action={action} status={status} />
         ))}
       </DataTable>
     </>
@@ -163,67 +155,46 @@ const NOT_A_GAP = 'No content gap on this page';
 
 function ContentRow({
   action,
-  showStatus,
-}: Readonly<{ action: ActionListItem; showStatus: boolean }>) {
+  status,
+}: Readonly<{ action: ActionListItem; status: ActionStatus | undefined }>) {
   // The most cited angle leads, and the counts are its own; the others are named by count.
   const [gap, ...more] = action.content_gaps ?? [];
   // A page to create is named by its topic, as on Actions; its summary says it is planned.
-  const page = readableUrl(action.target_label);
+  const target = <ActionTargetCell action={action} status={status} />;
+  if (!gap) {
+    const missing = <MissingValue state="not_applicable" reason={NOT_A_GAP} />;
+    return (
+      <TableRow>
+        {target}
+        <TableCell>{missing}</TableCell>
+        <TableCell numeric>{missing}</TableCell>
+        <TableCell numeric>{missing}</TableCell>
+      </TableRow>
+    );
+  }
   return (
     <TableRow>
+      {target}
       <TableCell>
         <div className="grid min-w-0">
-          <Inline>
-            <ClampText lines={1} tooltip={page}>
-              <TextLink href={actionPath(action)} text="itemTitle">
-                {page}
-              </TextLink>
-            </ClampText>
-            {showStatus ? <ActionStatusBadge status={action.status} /> : null}
-          </Inline>
-          <ClampText lines={1} className={textRole('caption')}>
-            {workSummary(action)}
+          <ClampText lines={1} tooltip={gap.angle_label}>
+            {gap.angle_label}
           </ClampText>
+          {more.length > 0 ? (
+            <span className={textRole('caption')}>
+              Lead angle · {pluralCount(more.length, 'more angle')}
+            </span>
+          ) : null}
         </div>
       </TableCell>
-      <TableCell>
-        {gap ? (
-          <div className="grid min-w-0">
-            <ClampText lines={1} tooltip={gap.angle_label}>
-              {gap.angle_label}
-            </ClampText>
-            {more.length > 0 ? (
-              <span className={textRole('caption')}>
-                Lead angle · {formatCount(more.length)} more{' '}
-                {more.length === 1 ? 'angle' : 'angles'}
-              </span>
-            ) : null}
-          </div>
-        ) : (
-          <MissingValue state="not_applicable" reason={NOT_A_GAP} />
-        )}
-      </TableCell>
+      <TableCell numeric>{formatCount(gap.prompt_count)}</TableCell>
       <TableCell numeric>
-        {gap ? (
-          formatCount(gap.prompt_count)
-        ) : (
-          <MissingValue state="not_applicable" reason={NOT_A_GAP} />
-        )}
-      </TableCell>
-      <TableCell numeric>
-        {gap ? (
-          <div className="grid">
-            <span>
-              {formatCount(gap.domain_count)} {gap.domain_count === 1 ? 'site' : 'sites'}
-            </span>
-            <span className={textRole('caption')}>
-              {formatCount(gap.competitor_count)}{' '}
-              {gap.competitor_count === 1 ? 'competitor' : 'competitors'}
-            </span>
-          </div>
-        ) : (
-          <MissingValue state="not_applicable" reason={NOT_A_GAP} />
-        )}
+        <div className="grid">
+          <span>{pluralCount(gap.domain_count, 'site')}</span>
+          <span className={textRole('caption')}>
+            {pluralCount(gap.competitor_count, 'competitor')}
+          </span>
+        </div>
       </TableCell>
     </TableRow>
   );

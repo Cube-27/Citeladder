@@ -3,6 +3,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import type { Insertable, RawBuilder } from 'kysely';
+import { plannedPageKey } from '../src/analysis/opportunities/actions.ts';
 import type { Database } from '../src/db/database.ts';
 import type { Actions, Opportunities, OpportunitySnapshots } from '../src/generated/db-schema.ts';
 import { extractPageFacts, factSettings } from '../src/site-health/analysis/facts.ts';
@@ -390,7 +391,8 @@ export async function angleRun(
           id: lineageId,
           ...tenancy,
           topic_id: null,
-          planned_page_key: null,
+          // As the refresh creates a lineage: keyed by its first label.
+          planned_page_key: plannedPageKey(angle.label),
           first_run_id: runId,
           created_at: now,
         })

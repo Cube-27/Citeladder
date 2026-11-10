@@ -23,11 +23,15 @@ import {
 import { parseUuid } from '../http/uuid.ts';
 import { refreshActionStatus, validateStatus } from './action-status.ts';
 import { OPPORTUNITY_COLUMNS, projectItem } from './projection.ts';
-import { latestSnapshot, type Scope } from './sources.ts';
+import { latestSnapshotCrawlId, type Scope } from './sources.ts';
 import { declarationView } from './declaration-view.ts';
 import { memberMeasurementLeg } from './checks/registry.ts';
 import { contentPageKeys } from './action-sync.ts';
-import { actionContentGaps, contentGapSourceState } from './content-gap-reads.ts';
+import {
+  actionContentGaps,
+  contentGapEvidence,
+  contentGapSourceState,
+} from './content-gap-reads.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { normalizeDomain } from '../analysis/domains.ts';
 import {
@@ -92,7 +96,7 @@ export async function attachOrCreateAction(
     { kind, group_key: identity.key },
     [],
     kind === a.TARGET_PAGE
-      ? await contentPageKeys(db, scope, (await latestSnapshot(db, scope))?.site_crawl_id ?? null)
+      ? await contentPageKeys(db, scope, await latestSnapshotCrawlId(db, scope))
       : new Set(),
   );
   const now = new Date();
@@ -201,7 +205,7 @@ export async function listActions(
   if (filters.status !== null) validateStatus(filters.status);
   if (filters.target_kind !== null && !a.ACTION_TARGET_KINDS.includes(filters.target_kind))
     throw new ApiError(422, `Unknown target kind: ${filters.target_kind}`);
-  if (filters.surface !== null && !a.ACTION_SURFACES.includes(filters.surface))
+  if (filters.surface !== null && !actionSurfaceSchema.safeParse(filters.surface).success)
     throw new ApiError(400, `Unknown surface: ${filters.surface}`);
   const priority = sql<number>`coalesce(actions.priority_score, -1)`;
   const fingerprint = {
@@ -351,7 +355,11 @@ export async function getAction(db: Database, workspaceId: string, actionId: str
   return {
     ...actionItem(action),
     diagnosis: actionDetailSchema.shape.diagnosis.parse(action.diagnosis),
-    members: members.map((row) => ({ ...projectItem(row), remediation: row.remediation || '' })),
+    members: members.map((row) => ({
+      ...projectItem(row),
+      remediation: row.remediation || '',
+      content_gap_evidence: contentGapEvidence(row),
+    })),
     // The earliest go-live a declaration accepts; new evidence measures it from there.
     declarable_since: new Date(
       Date.now() - policy.opportunity.opportunities.VERIFICATION_WINDOW_DAYS * 86_400_000,

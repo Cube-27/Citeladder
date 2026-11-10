@@ -253,10 +253,13 @@ describe('Content optimization', () => {
   );
 });
 
-/** An Action detail with one content-gap member and its stored evidence. */
+/**
+ * An Action detail with one content-gap member carrying its stored evidence,
+ * and the handoff its diagnosis names for that rule.
+ */
 function serveDetail(
   action: typeof pageAction | typeof plannedAction,
-  rule: string,
+  rule: 'content_gap_improve_page' | 'content_gap_new_page',
   evidence: Record<string, unknown>,
 ) {
   const member = action.content_gaps[0]!.opportunity_id;
@@ -288,47 +291,24 @@ function serveDetail(
     http.get(`/api/v1/actions/${action.id}`, () =>
       HttpResponse.json({
         ...item,
-        diagnosis: {},
-        members: [{ ...opportunity, remediation: 'Cover the angle.' }],
+        diagnosis: {
+          handoff:
+            rule === 'content_gap_new_page'
+              ? { context: 'opportunity', workflow_id: 'article', opportunity_id: member }
+              : { context: 'page_url', workflow_id: 'refresh_page' },
+        },
+        members: [
+          { ...opportunity, remediation: 'Cover the angle.', content_gap_evidence: evidence },
+        ],
         member_measurement: {},
         declarable_since: '2026-01-01T00:00:00Z',
         declaration: null,
       }),
     ),
-    http.get(`/api/v1/opportunities/${member}`, () =>
-      HttpResponse.json({
-        ...opportunity,
-        remediation: 'Cover the angle.',
-        evidence,
-        source_analysis_ids: [],
-        source_issue_ids: [],
-        source_metric_ids: [],
-        source_traffic_ids: [],
-        analyzer_version: '1',
-        rule_version: '1',
-        formula_version: '1',
-        content_handoff: {
-          opportunity_id: member,
-          pathway: 'owned',
-          source_class: null,
-          canonical_domain: null,
-          suggested_role: 'Content',
-          suggested_skill_id: 'content_create',
-          target_url: action.target_url,
-          target_theme: null,
-          representative_citations: [],
-          affected_themes: [],
-          observed_competitors: [],
-          coverage: {},
-          limitations: [],
-          truncated: false,
-          source_analysis_ids: [],
-          snapshot_versions: {},
-        },
-        superseded_by_id: null,
-        superseded_at: null,
-      }),
-    ),
+    http.get('/api/v1/opportunities/:id', ({ params }) => {
+      libraryReads.push(`opportunity ${String(params.id)}`);
+      return HttpResponse.json({ detail: 'Not found' }, { status: 404 });
+    }),
     http.get(`/api/v1/projects/${PROJECT}/agent/chats`, () =>
       HttpResponse.json({ items: [], next_cursor: null }),
     ),
@@ -339,7 +319,7 @@ function serveDetail(
   );
 }
 
-/** Reads of the prompt library; the evidence never needs one. */
+/** Reads of the prompt library or a finding's Opportunity; the Action read carries the evidence. */
 const libraryReads: string[] = [];
 afterEach(() => {
   libraryReads.length = 0;
@@ -428,7 +408,7 @@ describe('A content-gap Action', () => {
     expect(within(why).getByText('review.example · 4 citations')).toBeVisible();
     expect(within(why).getByText('Third-party')).toBeVisible();
     expect(within(why).getByText('The 2 most cited of 25 pages.')).toBeVisible();
-    // Both stored prompts are listed, as many as the count, with no library read.
+    // Both stored prompts are listed, as many as the count, with no library or Opportunity read.
     const prompts = within(within(why).getByRole('region', { name: 'Prompts' }));
     expect(prompts.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
       'Which CRM is cheapest?',

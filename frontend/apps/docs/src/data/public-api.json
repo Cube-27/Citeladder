@@ -25,7 +25,8 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
           "rule_id": {
-            "$ref": "#/components/schemas/ContentGapRule"
+            "type": "string",
+            "enum": ["content_gap_improve_page", "content_gap_new_page"]
           },
           "angle_label": {
             "type": "string"
@@ -349,6 +350,16 @@
                 "items": {
                   "type": "string"
                 }
+              },
+              "handoff": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ActionHandoff"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "additionalProperties": false
@@ -478,6 +489,325 @@
                 },
                 "remediation": {
                   "type": "string"
+                },
+                "content_gap_evidence": {
+                  "anyOf": [
+                    {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "run_id": {
+                              "type": "string"
+                            },
+                            "lineage_id": {
+                              "type": "string"
+                            },
+                            "angle_label": {
+                              "type": "string"
+                            },
+                            "topic_id": {
+                              "type": ["string", "null"]
+                            },
+                            "prompts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "text": {
+                                    "type": ["string", "null"]
+                                  }
+                                },
+                                "required": ["id", "text"],
+                                "additionalProperties": false
+                              }
+                            },
+                            "engines": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "citation_count": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "domain_count": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "competitor_count": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "member_count": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "members": {
+                              "maxItems": 20,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "url": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "domain": {
+                                    "type": "string"
+                                  },
+                                  "classification": {
+                                    "type": "string"
+                                  },
+                                  "matched_competitor": {
+                                    "type": ["string", "null"]
+                                  },
+                                  "citation_count": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "url",
+                                  "title",
+                                  "domain",
+                                  "classification",
+                                  "matched_competitor",
+                                  "citation_count"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "window": {
+                              "type": "object",
+                              "properties": {
+                                "start": {
+                                  "type": "string"
+                                },
+                                "end": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["start", "end"],
+                              "additionalProperties": false
+                            },
+                            "methodology_version": {
+                              "type": "string"
+                            },
+                            "formula_version": {
+                              "type": "string"
+                            },
+                            "limitations": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {}
+                              }
+                            },
+                            "site_url_id": {
+                              "type": "string"
+                            },
+                            "url": {
+                              "type": "string"
+                            },
+                            "match_method": {
+                              "type": "string",
+                              "const": "model_pick"
+                            },
+                            "continues_action_id": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "run_id",
+                            "lineage_id",
+                            "angle_label",
+                            "topic_id",
+                            "prompts",
+                            "engines",
+                            "citation_count",
+                            "domain_count",
+                            "competitor_count",
+                            "member_count",
+                            "members",
+                            "window",
+                            "methodology_version",
+                            "formula_version",
+                            "limitations",
+                            "site_url_id",
+                            "url",
+                            "match_method"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "run_id": {
+                              "type": "string"
+                            },
+                            "lineage_id": {
+                              "type": "string"
+                            },
+                            "angle_label": {
+                              "type": "string"
+                            },
+                            "topic_id": {
+                              "type": ["string", "null"]
+                            },
+                            "prompts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "text": {
+                                    "type": ["string", "null"]
+                                  }
+                                },
+                                "required": ["id", "text"],
+                                "additionalProperties": false
+                              }
+                            },
+                            "engines": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "citation_count": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "domain_count": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "competitor_count": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "member_count": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "members": {
+                              "maxItems": 20,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "url": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "domain": {
+                                    "type": "string"
+                                  },
+                                  "classification": {
+                                    "type": "string"
+                                  },
+                                  "matched_competitor": {
+                                    "type": ["string", "null"]
+                                  },
+                                  "citation_count": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "url",
+                                  "title",
+                                  "domain",
+                                  "classification",
+                                  "matched_competitor",
+                                  "citation_count"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "window": {
+                              "type": "object",
+                              "properties": {
+                                "start": {
+                                  "type": "string"
+                                },
+                                "end": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["start", "end"],
+                              "additionalProperties": false
+                            },
+                            "methodology_version": {
+                              "type": "string"
+                            },
+                            "formula_version": {
+                              "type": "string"
+                            },
+                            "limitations": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {}
+                              }
+                            },
+                            "planned_page_key": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "run_id",
+                            "lineage_id",
+                            "angle_label",
+                            "topic_id",
+                            "prompts",
+                            "engines",
+                            "citation_count",
+                            "domain_count",
+                            "competitor_count",
+                            "member_count",
+                            "members",
+                            "window",
+                            "methodology_version",
+                            "formula_version",
+                            "limitations",
+                            "planned_page_key"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 }
               },
               "required": [
@@ -502,7 +832,8 @@
                 "evidence_summary",
                 "created_at",
                 "updated_at",
-                "remediation"
+                "remediation",
+                "content_gap_evidence"
               ],
               "additionalProperties": false
             }
@@ -543,6 +874,43 @@
           "declaration"
         ],
         "additionalProperties": false
+      },
+      "ActionHandoff": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "context": {
+                "type": "string",
+                "const": "opportunity"
+              },
+              "workflow_id": {
+                "type": "string"
+              },
+              "opportunity_id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              }
+            },
+            "required": ["context", "workflow_id", "opportunity_id"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "context": {
+                "type": "string",
+                "const": "page_url"
+              },
+              "workflow_id": {
+                "type": "string"
+              }
+            },
+            "required": ["context", "workflow_id"],
+            "additionalProperties": false
+          }
+        ]
       },
       "ActionItem": {
         "type": "object",
@@ -1891,10 +2259,6 @@
         },
         "required": ["id", "name", "aliases", "domains"],
         "additionalProperties": false
-      },
-      "ContentGapRule": {
-        "type": "string",
-        "enum": ["content_gap_improve_page", "content_gap_new_page"]
       },
       "ContentGapSourceState": {
         "type": "string",

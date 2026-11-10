@@ -7,6 +7,7 @@ import {
   opportunitySchema,
   verificationEventSchema,
 } from './opportunities.ts';
+import { contentGapFindingEvidenceSchema, contentGapRuleSchema } from './opportunity-evidence.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
@@ -52,6 +53,19 @@ const diagnosisMemberSchema = responseObject({
   priority_score: z.number(),
 });
 
+// How the Action hands off into the Agent: a workflow (`workflows.json` id)
+// with the finding's Opportunity, or with the Action's page URL. Null (or
+// absent) hands off with the Action alone.
+export const actionHandoffSchema = z.discriminatedUnion('context', [
+  responseObject({
+    context: z.literal('opportunity'),
+    workflow_id: z.string(),
+    opportunity_id: uuid(),
+  }),
+  responseObject({ context: z.literal('page_url'), workflow_id: z.string() }),
+]);
+export type ActionHandoff = z.infer<typeof actionHandoffSchema>;
+
 // The deterministic diagnosis persisted at recompute. An agent-origin Action
 // with no evidence yet carries an empty object, so every field is optional.
 const actionDiagnosisSchema = responseObject({
@@ -60,6 +74,7 @@ const actionDiagnosisSchema = responseObject({
   skill_id: z.string().optional(),
   donts: z.array(z.string()).optional(),
   measure_with: z.array(z.string()).optional(),
+  handoff: actionHandoffSchema.nullable().optional(),
 });
 
 // What one loop leg of a declared Action is waiting for (plan §9).
@@ -124,13 +139,16 @@ export const actionDetailSchema = actionItemSchema.extend({
   // The earliest implementation time a declaration accepts.
   declarable_since: z.string(),
   diagnosis: actionDiagnosisSchema,
-  // Each live finding with what to do about it.
-  members: z.array(opportunitySchema.extend({ remediation: z.string() })),
+  // Each live finding with what to do about it; a content-gap finding also
+  // carries its stored evidence (null for every other rule).
+  members: z.array(
+    opportunitySchema.extend({
+      remediation: z.string(),
+      content_gap_evidence: contentGapFindingEvidenceSchema.nullable(),
+    }),
+  ),
   declaration: actionDeclarationSchema.nullable(),
 });
-
-/** The two content-gap rules (content optimization section 2). */
-export const contentGapRuleSchema = z.enum(['content_gap_improve_page', 'content_gap_new_page']);
 
 // One live content-gap finding of an Action, as its evidence states it: the
 // angle and its counts. Counts only, never a score (CO14).

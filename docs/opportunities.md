@@ -46,10 +46,14 @@ with included platform calls under the daily spend breaker (B73). Counts,
 prompts, engines and owned coverage are computed in code. Insert-only
 `content_angle_runs` keep the source audit IDs, crawl, model and versions; a run
 is appended only when its clustering, owned-match or aggregate key differs from
-the latest succeeded run (a failed run never blocks a retry), reusing the earlier clustering or match while its key is unchanged. A
-`succeeded` run enqueues an `opportunity_refresh` with trigger `content_angles`;
-a `failed` run (model error, rejected output or a refused call) enqueues
-nothing.
+the latest succeeded run (a failed run never blocks a retry), reusing the earlier clustering or match while its key is unchanged. The
+window's citations are Visibility's evidence statement (`evidenceScope`: the
+default market's dashboard-ready brand runs, successful answers, both brand
+cohorts), so a citation counts here exactly when Visibility counts it. A
+`succeeded` run requests an `opportunity_refresh` with trigger `content_angles`
+that joins a refresh still queued for the project (such as its audit's or
+crawl's own) instead of queueing a second; a `failed` run (model error,
+rejected output or a refused call) enqueues nothing.
 
 The `content_gaps` family ([content-gap hits](../frontend/services/api/src/opportunities/content-gap-hits.ts),
 pure [detector](../frontend/services/api/src/analysis/opportunities/content-gaps.ts))
@@ -72,8 +76,8 @@ planned page when nothing matched. Priority grows with prompts, citations and
 the competitor share of cited domains (`CONTENT_GAP` in the opportunity
 config); the model never scores. Findings key on the angle's lineage, not its
 label: a new-page gap targets the lineage's `planned_page_key`, which the
-refresh that first surfaces it stores once (`plannedPageKey` of the label then)
-and never rewrites, so a relabelled angle keeps its Action and an Agent-planned
+content-angle run that creates the lineage stores (`plannedPageKey` of its
+first label) and nothing rewrites, so a relabelled angle keeps its Action and an Agent-planned
 page with the same slug converges on it. When a content page later matches a
 lineage that had a planned-page Action, that Action keeps its identity and
 declaration with its evidence cleared, and the page's finding names it as

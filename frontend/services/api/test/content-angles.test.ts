@@ -13,6 +13,7 @@ import { enqueueContentAngles } from '../src/content-gaps/enqueue.ts';
 import { ApiError } from '../src/errors.ts';
 import { createModelGateway, gatewayCalls, gatewaySettings } from '../src/models/gateway.ts';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
+import { enqueueOpportunityRefresh } from '../src/opportunities/enqueue.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { prompt, promptSet, topic } from './prompt-fixtures.ts';
 import { SiteFixtures, storedFacts, type SiteSeed } from './site-health-fixtures.ts';
@@ -348,6 +349,21 @@ describe('a succeeded run', () => {
     ]);
   });
 
+  it('joins the Opportunity refresh its audit already queued instead of queueing a second', async () => {
+    const seed = await scenario();
+    await enqueueOpportunityRefresh(db, {
+      ...seed,
+      triggerKind: 'audit',
+      triggerId: seed.auditId,
+    });
+    await refresh(seed, scripted(byKeyword).gateway);
+
+    expect(await runs(seed)).toMatchObject([{ outcome: 'succeeded' }]);
+    expect((await refreshTasks(seed)).map((task) => task.payload)).toEqual([
+      { trigger_kind: 'audit', trigger_id: seed.auditId },
+    ]);
+  });
+
   it('reads only its own workspace when two workspaces hold identical data', async () => {
     const [a, b] = [await scenario(), await scenario()];
     await refresh(a, scripted(byKeyword).gateway);
@@ -504,12 +520,6 @@ describe('lineages', () => {
     await refresh(seed, scripted(byKeyword).gateway);
     const [first] = await runs(seed);
     const [pricing, setup] = await angles(first!.id);
-    // The new-page gap (phase 1 PR 2) fixes the key once.
-    await db
-      .updateTable('content_angle_lineages')
-      .set({ planned_page_key: 'pricing-comparison' })
-      .where('id', '=', pricing!.lineage_id)
-      .execute();
     // A new pricing page joins (3 shared of 4: 0.75); setup pages regroup.
     const pricingAudit = await fixtures.audit(seed);
     await answer(seed, pricingAudit, { id: seed.prompts[0]!, index: 0 }, [
@@ -530,12 +540,21 @@ describe('lineages', () => {
     // Setup kept 1 of its 2 pages among 4: 0.25, below the minimum.
     expect(onboarding!.label).toBe('Onboarding');
     expect(onboarding!.lineage_id).not.toBe(setup!.lineage_id);
-    const lineage = await db
+    // Each lineage is keyed by the label it was created with, never by a later one.
+    const lineages = await db
       .selectFrom('content_angle_lineages')
-      .select(['planned_page_key', 'first_run_id'])
-      .where('id', '=', pricing!.lineage_id)
-      .executeTakeFirstOrThrow();
-    expect(lineage).toEqual({ planned_page_key: 'pricing-comparison', first_run_id: first!.id });
+      .select(['id', 'planned_page_key', 'first_run_id'])
+      .where('id', 'in', [pricing!.lineage_id, onboarding!.lineage_id])
+      .execute();
+    expect(
+      [pricing!.lineage_id, onboarding!.lineage_id].map((id) => {
+        const { planned_page_key, first_run_id } = lineages.find((row) => row.id === id)!;
+        return [planned_page_key, first_run_id];
+      }),
+    ).toEqual([
+      ['planned:pricing-comparison', first!.id],
+      ['planned:onboarding', second.id],
+    ]);
   });
 });
 
