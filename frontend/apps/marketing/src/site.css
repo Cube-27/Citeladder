@@ -2141,11 +2141,11 @@ a.cl-fcard:hover {
     transition: none;
   }
 
-  /* The miniature on the card's tint, its foot cut off. */
+  /* The whole miniature on the card's tint, inset equally on every side; the
+     tint grows with the screen, so a tall one never spills past it. */
   .cl-rail .cl-railcard[data-expanded] .cl-railcard-shot {
     display: block;
-    height: 220px;
-    padding: 0 16px;
+    padding: 16px;
     border-radius: var(--site-radius-card);
     background: var(--cl-tint);
   }
