@@ -29,6 +29,7 @@ const output = (kind: string): AgentOutput => ({
     author: 'agent',
     title: 'Prompt plan',
     body: '## Topics\n\nKeep "Golf nets"; add "Golf simulator enclosures".',
+    fields: null,
     source_refs: [],
     web_sources: [],
     created_at: '2026-11-01T00:00:00Z',

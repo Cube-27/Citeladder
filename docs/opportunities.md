@@ -176,7 +176,11 @@ message is the approach branch's first template whose facts the members' stored
 evidence holds (the Action's label, the strongest finding's title, a content
 gap's angle, the competitors read on an earned page), so it never states a
 fact the evidence lacks; list and detail reads return it as `handoff`, and an
-Action with no current evidence reads a message about its label.
+Action with no current evidence reads a message about its label. A
+`content_gap_improve_page` branch hands off the page URL with the
+`optimize_page` workflow, whose chat fetches that page into a page document
+before its first turn
+([content optimization](content-optimization.md#what-ships-phase-2-page-documents)).
 
 `actions` has two TypeScript writers. The refresh derives
 evidence Actions and restamps every row's members; the Agent only inserts

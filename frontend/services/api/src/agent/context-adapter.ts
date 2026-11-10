@@ -13,7 +13,8 @@ import { comparableUrl, selectContentFragments } from '../site-health/reads/cont
 import { issueDetail } from '../site-health/reads/issues.ts';
 import { crawlability } from '../mcp/evidence-site.ts';
 import { McpInputError } from '../mcp/types.ts';
-import { stripLeading, stripTrailing } from '../text-order.ts';
+import { fetchedPageContext } from '../page-documents/reads.ts';
+import { requestedPageUrl } from './page-url.ts';
 import { revisionRefs } from './outputs.ts';
 import type { ContextReader } from './context.ts';
 import { AgentError } from './contracts.ts';
@@ -28,33 +29,6 @@ function owned(candidate: unknown, website: string) {
   } catch {
     return '';
   }
-}
-const hostOf = (value: string) => {
-  try {
-    return new URL(value).hostname.toLowerCase().replace(/^www\./u, '');
-  } catch {
-    return '';
-  }
-};
-const QUOTES = '<>"\'`()[]';
-/**
- * The first address in the person's message on the project's own site, with
- * or without a scheme or `www.`: the page the request is about. Each word is
- * read apart; an email (`name@site.com`) or another site's URL is never a target.
- */
-function requestedPageUrl(request: string, website: string) {
-  const site = hostOf(website);
-  if (!site) return '';
-  for (const word of request.split(/\s+/u)) {
-    const bare = stripTrailing(stripLeading(word, QUOTES), `${QUOTES}.,;:!?`);
-    // A query or fragment never names another page, and crawled URLs carry none.
-    const cut = bare.search(/[?#]/u);
-    const url = cut < 0 ? bare : bare.slice(0, cut);
-    if (!url.includes('.') || url.includes('@')) continue;
-    const absolute = /^https?:\/\//iu.test(url) ? url : `https://${url}`;
-    if (hostOf(absolute) === site) return absolute;
-  }
-  return '';
 }
 type OriginDb = Parameters<ContextReader>[0];
 type OriginScope = Parameters<ContextReader>[1];
@@ -173,9 +147,15 @@ async function resolveOrigins(
       evidence_state: 'upstream deliverable; source references require re-fetching',
     };
   }
+  const fetchedPage = refs.page_snapshot_reference
+    ? await fetchedPageContext(db, scope, refs.page_snapshot_reference.snapshot_id)
+    : null;
+  if (refs.page_snapshot_reference && !fetchedPage)
+    throw new AgentError('agent_context_unavailable');
   const targetUrl =
     target?.normalized_url ||
     refs.target_url?.trim() ||
+    fetchedPage?.requested_url ||
     site?.normalized_url ||
     (groupRef?.site_url_id ? issueGroup?.occurrences[0]?.display_url : '') ||
     owned(opportunity?.target_url, project.website_url) ||
@@ -193,6 +173,7 @@ async function resolveOrigins(
     issueGroup,
     siteFacts,
     upstream,
+    fetchedPage,
   };
 }
 
@@ -210,6 +191,7 @@ export const readAgentContext: ContextReader = async (db, scope, raw, request) =
       issueGroup,
       siteFacts,
       upstream,
+      fetchedPage,
     } = await resolveOrigins(db, scope, refs, request);
     const query = [request, opportunity?.target_theme, demand?.signal.topic_cluster]
       .filter(Boolean)
@@ -266,6 +248,7 @@ export const readAgentContext: ContextReader = async (db, scope, raw, request) =
         search_intelligence: search,
         issue_group: issueGroup,
         site_facts: siteFacts,
+        fetched_page: fetchedPage,
       }).filter(([, value]) => value != null),
     );
     return {
@@ -302,6 +285,7 @@ export const readAgentContext: ContextReader = async (db, scope, raw, request) =
           issue_group_reference: refs.issue_group_reference ?? null,
           site_facts_reference: refs.site_facts_reference ?? null,
           output_revision_reference: refs.output_revision_reference ?? null,
+          page_snapshot_reference: refs.page_snapshot_reference ?? null,
         }),
       ),
     };

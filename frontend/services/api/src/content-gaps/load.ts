@@ -134,9 +134,10 @@ export async function resolveAnchor(db: Database, scope: Scope): Promise<Anchor 
 
 /**
  * The crawl's current, completed analyses of content pages (CO15), joined to
- * their site URL: the one statement the owned match reads content pages from.
+ * their site URL: the one statement the owned match and a page chat's target
+ * check read content pages from.
  */
-function contentPageAnalyses(db: Database, scope: Scope, crawlId: string) {
+export function contentPageAnalyses(db: Database, scope: Scope, crawlId: string) {
   return db
     .selectFrom('site_page_analyses as analysis')
     .innerJoin('site_urls as url', 'url.id', 'analysis.site_url_id')

@@ -13,7 +13,7 @@ import { AgentThread } from '@/components/ui/chat-dock';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { latestOutput } from '@/lib/agent/documents';
 import { agentHandoffHref } from '@/lib/agent/handoff';
-import { isRunActive } from '@/lib/agent/run-state';
+import { isPageReading, isRunActive } from '@/lib/agent/run-state';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
 import type { AgentChatDetail, AgentOutput } from '@/lib/api/agent';
 
@@ -26,11 +26,12 @@ import type { AgentChatDetail, AgentOutput } from '@/lib/api/agent';
 export function useChatThread(workspaceId: string, detail: AgentChatDetail) {
   const chatId = detail.chat.id;
   const access = useAgentAccess();
-  const runActive = isRunActive(detail.latest_run);
+  // A page chat reading its page has no turn yet, and nothing can be sent until it does.
+  const runActive = isRunActive(detail.latest_run) || isPageReading(detail.page_fetch);
   const turn = useFollowUp(workspaceId, detail);
   const cancel = useCancelRun(workspaceId);
   // Capture the run: a closure does not keep the narrowing of `detail.latest_run`.
-  const activeRun = runActive ? detail.latest_run : null;
+  const activeRun = isRunActive(detail.latest_run) ? detail.latest_run : null;
   const stop = activeRun ? () => cancel.mutate({ chatId, runId: activeRun.id }) : undefined;
   return { access, runActive, turn, stop, stopping: cancel.isPending };
 }

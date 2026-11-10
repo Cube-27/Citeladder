@@ -681,6 +681,7 @@ describe('status vocabularies', () => {
     ['actions', 'status', actionStatusSchema.options],
     ['content_angle_runs', 'outcome', ['succeeded', 'failed']],
     ['content_angle_owned_matches', 'method', ['model_pick', 'none']],
+    ['page_snapshots', 'outcome', policy.content_optimization.page_fetch.outcomes],
     ['prompts', 'status', promptStatusSchema.options],
     [
       'prompt_candidates',

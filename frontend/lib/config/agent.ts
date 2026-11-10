@@ -10,6 +10,8 @@ export const AGENT_RUN_POLL_STEPS: readonly { untilMs: number; everyMs: number }
   { untilMs: 120_000, everyMs: 5_000 },
 ];
 export const AGENT_RUN_POLL_MAX_MS = 10_000;
+/** A page chat is polled at this cadence while its page is being read. */
+export const AGENT_PAGE_FETCH_POLL_MS = 2_000;
 /** The chat list refreshes at this cadence while any listed chat has a turn running. */
 export const AGENT_CHAT_LIST_POLL_MS = 5_000;
 /**

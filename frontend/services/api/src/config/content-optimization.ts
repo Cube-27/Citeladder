@@ -1,7 +1,10 @@
 /**
  * Content optimization policy: the content-angle refresh's window, bounds and
- * versions (docs/plans/content-optimization.md sections 1-2, CO3, CO4, CO15).
+ * versions (docs/plans/content-optimization.md sections 1-2, CO3, CO4, CO15),
+ * and the page fetch that starts a page document (phase 2, PR 1).
  */
+import agentRuntime from './agent-runtime.json' with { type: 'json' };
+
 export const contentOptimization = {
   /** The clustering and matching prompts; a change recomputes every derived part. */
   methodology_version: 'content-angles-1',
@@ -48,4 +51,55 @@ export const contentOptimization = {
   },
   /** Calls per model step while the output fails to parse. */
   model_max_attempts: 2,
+  /**
+   * The one-page fetch an `optimize_page` chat starts with (CO12). It goes
+   * through Site Health's fetcher, so robots, hard exclusions, the operator
+   * stop list and per-host pacing all apply; these bound only this fetch.
+   */
+  page_fetch: {
+    /** The HTML converter's version, recorded on every snapshot. */
+    extractor_version: 'page-document-1',
+    /** Every snapshot ends in exactly one of these. */
+    outcomes: ['fetched', 'blocked_robots', 'http_error', 'unsupported', 'failed'],
+    /** Site Health acquisition codes that are a robots or access-control refusal. */
+    blocked_robots_codes: ['robots_denied', 'robots_unavailable', 'access_blocked'],
+    /** Site Health acquisition codes for a response the editor cannot use; any other failure is `failed`. */
+    unsupported_codes: ['unsupported_content_type', 'response_too_large'],
+    timeout_seconds: 20,
+    /** The response bytes read on the wire and after decoding. */
+    max_wire_bytes: 5_000_000,
+    max_decoded_bytes: 10_000_000,
+    /** The raw body kept on the snapshot; a longer body is cut and marked truncated. */
+    snapshot_body_max_bytes: 2_000_000,
+    /**
+     * Fetch outcomes are recorded on the first attempt; a further attempt only
+     * covers a failure to record them. A task that still fails leaves a
+     * `failed` snapshot and a chat notice through its compensation.
+     */
+    max_attempts: 2,
+    /**
+     * Site Health rules that are judged from one page's HTML but read the
+     * crawl's sitemap, so the fetch cannot re-judge them; they keep the crawl's
+     * finding (content rules engine, L0).
+     */
+    site_context_rule_ids: [
+      'technical.sitemap_canonical',
+      'technical.sitemap_noindex',
+      'technical.sitemap_redirect',
+      'technical.sitemap_lastmod',
+    ],
+    /** The Site Health rule scope the fetch re-evaluates; site, cluster and graph rules need the crawl. */
+    page_local_scope: 'page',
+  },
+  /**
+   * A page document's caps equal the Agent's document caps, so `edit_document`
+   * can always save a fetched page. A page whose Markdown is longer is
+   * `unsupported` rather than cut.
+   */
+  page_document: {
+    title_max_chars: agentRuntime.output_title_max_chars,
+    body_max_chars: agentRuntime.output_body_max_chars,
+    /** The JSON-LD blocks kept in the SEO fields; blocks past it are left out whole. */
+    json_ld_max_chars: 20_000,
+  },
 } as const;

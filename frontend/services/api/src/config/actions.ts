@@ -196,7 +196,8 @@ export const actions = {
         'Do not invent statistics, quotes or sources.',
       ],
       target_kinds: ['page'],
-      handoff: { workflow_id: 'refresh_page', context: 'page_url' },
+      // The page is fetched into a page document before the first turn (phase 2, E3).
+      handoff: { workflow_id: 'optimize_page', context: 'page_url' },
     },
     {
       approach: 'improve_links',

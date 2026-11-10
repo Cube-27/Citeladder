@@ -112,3 +112,7 @@ export async function loadSkillCatalog(root: string): Promise<PackagedCatalog> {
 export function usesFormats(skill: Pick<Skill, 'outputKind'>) {
   return (p.format_kinds as readonly string[]).includes(skill.outputKind);
 }
+/** Kinds whose document is a fetched page: it starts from a page fetch, never from `save_document`. */
+export function fetchesPage(skill: Pick<Skill, 'outputKind'>) {
+  return (p.fetched_kinds as readonly string[]).includes(skill.outputKind);
+}

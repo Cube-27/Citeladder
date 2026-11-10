@@ -62,15 +62,57 @@ page render as on any Action. The handoff into the Agent
 persisted in its diagnosis. Its first finding whose approach branch in
 `APPROACH_TREE` names a workflow drives both the workflow and the prefilled
 message, which names that finding's angle (the Opportunity and the `article`
-workflow for a page to create, the page URL and the `refresh_page` workflow for
-an existing page), so a planned page that is also a search gap still opens on
-its content gap;
+workflow for a page to create, the page URL and the `optimize_page` workflow
+for an existing page), so a planned page that is also a search gap still opens
+on its content gap;
 an Action whose findings name none hands off with itself and its message.
+
+## What ships (phase 2: page documents)
+
+**Starting a page chat.** A chat started with the `optimize_page` workflow
+(skill `content_optimize`, output kind `page`) names one page: the request's
+`target_url`, else its Action's target, else a URL in its message. The page
+must be one of the latest crawl's content pages (`content_page_kinds`, CO15;
+the `www.` twin counts) or the page the chat's own Action targets; any other
+URL is refused with 422 before anything is committed, since optimizing any URL
+is a later add-on. Admission (role, capability, funding route) runs then, and
+the request commits the chat, its first message and one `page_fetch` analytics
+task keyed by chat and URL, with no Agent run. A retried request returns the
+same chat, and its run once the fetch queued one.
+
+**The fetch.** The `page_fetch` task
+([page documents module](../frontend/services/api/src/page-documents/)) fetches
+the page once through Site Health's `SitePageFetcher` (robots gate, hard
+exclusions, the operator stop list, host pacing; a redirect off the page's
+site is refused) with the `page_fetch` limits in the
+[content optimization config](../frontend/services/api/src/config/content-optimization.ts).
+It reads the main-content region Site Health's page analysis reads, as
+Markdown (`rehype-parse`, `rehype-remark`, `remark-gfm`, `remark-stringify`),
+with links made absolute, and keeps the title, meta description and JSON-LD
+apart as the page's SEO fields. Site Health's page-scope rules run on the
+fetched page (site-context rules such as sitemap and redirects stay with the
+crawl), and the snapshot stores them. Every fetch appends one insert-only,
+workspace-scoped `page_snapshots` row with its outcome: `fetched`,
+`blocked_robots` (robots or access refusal), `http_error` (a non-2xx answer),
+`unsupported` (not HTML, too large, no main content, or longer than one
+document) or `failed`.
+
+In the task's terminal transaction a fetched page becomes the chat's page
+document (revision 1 authored `fetch`, its `fields` the SEO block, the output
+pointing at the snapshot) and queues the chat's one first turn with the
+funding admission chose; its context names the snapshot, so every turn reads
+the page's check results. Any other outcome posts a notice in the chat and
+queues no turn, so nothing is charged (B73). A task that fails outright is
+compensated the same way, as `failed`. The chat read's `page_fetch` is
+`reading` while the task is live and then the outcome; the chat screen shows
+"Reading your page…", keeps the composer closed, and opens the queued turn's
+stream once the page is read. The `content_optimize` skill changes the page
+only with `edit_document`; `save_document` is refused for a page document.
+Edits and restores keep the page's SEO fields.
 
 ## Not yet
 
-- The page editor, Optimize content and its suggestions (CO7, CO12).
-- Fetch on Optimize: the one-page fetch that becomes the editor's base.
+- The page workspace and Optimize content's suggestions (CO7, CO12).
 - Analyze a page (CO6), and optimizing any URL.
 - The [content rules engine](plans/content-rules-engine.md) and its rule
   findings (CO13).

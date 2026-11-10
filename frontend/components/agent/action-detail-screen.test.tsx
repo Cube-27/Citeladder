@@ -279,13 +279,13 @@ const pageGap: Action = {
   skill_id: 'content_create',
   handoff: {
     context: 'page_url',
-    workflow_id: 'refresh_page',
+    workflow_id: 'optimize_page',
     message: 'Improve https://acme.test/crm-pricing so AI answers cite it for Pricing comparison.',
   },
 };
 
 describe('A content-gap Action', () => {
-  it('explains the gap from its evidence and hands the page to the refresh workflow', async () => {
+  it('explains the gap from its evidence and hands the page to the page workflow', async () => {
     const libraryReads: string[] = [];
     serve(pageGap, {
       members: [
@@ -350,7 +350,7 @@ describe('A content-gap Action', () => {
       path: '/agent',
       action_id: ACTION,
       target_url: 'https://acme.test/crm-pricing',
-      workflow: 'refresh_page',
+      workflow: 'optimize_page',
       project: PROJECT,
     });
   });

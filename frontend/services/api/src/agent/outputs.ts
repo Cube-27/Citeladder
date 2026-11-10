@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Selectable } from 'kysely';
+import { sql, type Selectable } from 'kysely';
 import { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import type { AgentOutputRevisions, AgentOutputs as OutputTable } from '../generated/db-schema.ts';
@@ -149,19 +149,35 @@ export async function saveAgentOutput(
     author_user_id: null,
     title: payload.title,
     body: payload.body,
+    // A body edit keeps a page's SEO fields; the model edits only the body.
+    fields: pageFields(current?.revision.fields ?? null),
     source_refs: [...new Set(input.refs)],
     web_sources: input.webSources,
   });
 }
+
+/** A page revision's SEO block, as fetched or last edited. */
+const pageFieldsSchema = z.strictObject({
+  title: z.string(),
+  meta_description: z.string(),
+  json_ld: z.string(),
+});
+export type PageFields = z.infer<typeof pageFieldsSchema>;
+/** The stored SEO block of a revision: a page's fields, or null for every other document. */
+function pageFields(value: unknown): PageFields | null {
+  return value === null ? null : pageFieldsSchema.parse(value);
+}
+
+type RevisionContent = Pick<
+  Revision,
+  'author' | 'author_user_id' | 'run_id' | 'message_id' | 'title' | 'body' | 'source_refs'
+> & { web_sources: unknown; fields: PageFields | null };
 function appendRevision(
   db: Database,
   chat: Chat,
   output: Output,
   parent: Revision | null,
-  content: Pick<
-    Revision,
-    'author' | 'author_user_id' | 'run_id' | 'message_id' | 'title' | 'body' | 'source_refs'
-  > & { web_sources: unknown },
+  content: RevisionContent,
 ) {
   return db
     .insertInto('agent_output_revisions')
@@ -173,12 +189,73 @@ function appendRevision(
       number: (parent?.number ?? 0) + 1,
       parent_revision_id: parent?.id ?? null,
       ...content,
+      fields: content.fields === null ? null : JSON.stringify(content.fields),
       source_refs: JSON.stringify(revisionRefs(content.source_refs)),
       web_sources: JSON.stringify(revisionWebSources(content.web_sources)),
       created_at: new Date(),
     })
     .returningAll()
     .executeTakeFirstOrThrow();
+}
+
+/**
+ * A fetched page becomes the chat's next document: revision 1 is authored
+ * `fetch`, its body the page's main content as Markdown and its fields the
+ * page's SEO block. It carries the chat's Action like any document of the chat.
+ */
+export async function createFetchedDocument(
+  db: Database,
+  chat: Chat,
+  input: {
+    kind: string;
+    skillId: string;
+    snapshotId: string;
+    title: string;
+    body: string;
+    fields: PageFields;
+  },
+) {
+  const now = new Date();
+  const last = await db
+    .selectFrom('agent_outputs')
+    .select(sql<number>`coalesce(max(number), 0)`.as('number'))
+    .where('workspace_id', '=', chat.workspace_id)
+    .where('chat_id', '=', chat.id)
+    .executeTakeFirstOrThrow();
+  const output = await db
+    .insertInto('agent_outputs')
+    .values({
+      id: randomUUID(),
+      workspace_id: chat.workspace_id,
+      project_id: chat.project_id,
+      chat_id: chat.id,
+      number: last.number + 1,
+      action_id: chat.action_id,
+      kind: input.kind,
+      skill_id: input.skillId,
+      format_id: null,
+      target_kind: null,
+      target_label: null,
+      snapshot_id: input.snapshotId,
+      created_at: now,
+      updated_at: now,
+    })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+  // An open Action now reads as in progress, as it does for any document.
+  if (output.action_id) await refreshActionStatus(db, chat.workspace_id, output.action_id);
+  const revision = await appendRevision(db, chat, output, null, {
+    author: 'fetch',
+    author_user_id: null,
+    run_id: null,
+    message_id: null,
+    title: input.title,
+    body: input.body,
+    fields: pageFieldsSchema.parse(input.fields),
+    source_refs: [],
+    web_sources: [],
+  });
+  return { output, revision };
 }
 
 export class AgentOutputs {
@@ -218,6 +295,7 @@ export class AgentOutputs {
         run_id: null,
         message_id: null,
         ...payload,
+        fields: pageFields(current.revision.fields),
         source_refs: current.revision.source_refs,
         web_sources: current.revision.web_sources,
       });
@@ -243,6 +321,7 @@ export class AgentOutputs {
         message_id: null,
         title: source.title,
         body: source.body,
+        fields: pageFields(source.fields),
         source_refs: source.source_refs,
         web_sources: source.web_sources,
       });

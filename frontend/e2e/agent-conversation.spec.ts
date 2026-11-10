@@ -45,6 +45,7 @@ function chatDetail(): AgentChatDetail {
       },
     },
     outputs: [],
+    page_fetch: null,
     messages: Array.from({ length: 24 }, (_, index) => ({
       id: `77777777-7777-4777-8777-${String(index + 1).padStart(12, '0')}`,
       sequence: index + 1,

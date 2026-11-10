@@ -108,8 +108,7 @@ function RevisionRow({
       <Inline className="flex-wrap">
         <span className={textRole('itemTitle')}>Revision {revision.number}</span>
         <span className={textRole('caption')}>
-          {revision.author === 'user' ? 'Your edit' : 'Agent'} ·{' '}
-          <DisplayTime value={revision.created_at} />
+          {revisionAuthorLabel(revision.author)} · <DisplayTime value={revision.created_at} />
         </span>
         {latest ? <span className={textRole('caption')}>Current</span> : null}
         <span className="flex-1" />
@@ -140,6 +139,22 @@ function RevisionRow({
       {open === 'compare' && current ? <RevisionDiff before={revision} after={current} /> : null}
     </>
   );
+}
+
+/** Who wrote a revision: a page document's first revision is the page as fetched. */
+function revisionAuthorLabel(author: AgentRevision['author']) {
+  switch (author) {
+    case 'user':
+      return 'Your edit';
+    case 'fetch':
+      return 'Fetched page';
+    case 'agent':
+      return 'Agent';
+    default: {
+      const _exhaustive: never = author;
+      return _exhaustive;
+    }
+  }
 }
 
 /** What changed from this revision to the current one, line by line. */

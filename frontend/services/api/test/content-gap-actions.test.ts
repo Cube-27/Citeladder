@@ -185,7 +185,7 @@ describe('content gaps', () => {
     });
     expect(page.handoff).toEqual({
       context: 'page_url',
-      workflow_id: 'refresh_page',
+      workflow_id: 'optimize_page',
       message: `Improve ${PAGE_URL} so AI answers cite it for Pricing comparison.`,
     });
     expect(

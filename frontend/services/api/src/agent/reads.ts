@@ -19,6 +19,7 @@ import { chatDocuments, latestDocument, revisionRefs, revisionWebSources } from 
 import { active } from './queue.ts';
 import { workspaceChat } from './messages.ts';
 import { manifestSchema } from './context.ts';
+import { pageFetchView } from '../page-documents/reads.ts';
 
 const iso = (date: Date | null) => date?.toISOString() ?? null;
 function summary(chat: Chat, outputKind: string | null, label: string | null, running: boolean) {
@@ -235,6 +236,7 @@ export async function readChat(
       }),
     ),
     latest_run: run ? runView(run, await progress(db, run)) : null,
+    page_fetch: await pageFetchView(db, chat),
     outputs: documents.map(({ output, revision }) =>
       agentOutputSchema.parse({
         ...output,

@@ -238,6 +238,34 @@ describe('Agent built-in tools', () => {
     );
   });
 
+  it('changes a fetched page document only by edits, never a whole save', () => {
+    const page = {
+      id: 'page_optimize',
+      description: 'Improve a fetched page.',
+      version: 1,
+      outputKind: 'page',
+      body: 'Edit the page.',
+    };
+    const pages: SkillCatalog = { ...catalog, skills: new Map([[page.id, page]]) };
+    const fetched = saved({ kind: 'page', skillId: page.id, formatId: null, body: 'Old intro.' });
+    const turn = state({ skill: page, documents: [fetched] });
+    expect(
+      saveDocument(pages, turn, { document: 1, title: 'New', body: 'Whole page' }, bounds),
+    ).toEqual({
+      ok: false,
+      text: 'A page document is the live page CiteLadder fetched; it is never written whole. Change it with edit_document.',
+    });
+    expect(
+      editDocument(
+        pages,
+        turn,
+        { edits: [{ old_string: 'Old intro.', new_string: 'New intro.' }] },
+        bounds,
+      ),
+    ).toMatchObject({ ok: true, document: 1 });
+    expect(turn.staged.get(1)?.payload.body).toBe('New intro.');
+  });
+
   it('offers reads and built-ins sorted by name, streaming only the whole document', () => {
     const registry = new ToolRegistry('v', [
       {

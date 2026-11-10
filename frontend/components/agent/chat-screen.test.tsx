@@ -37,6 +37,7 @@ import {
   REV2,
   RUN,
   detail,
+  pageChatPhases,
   revision,
   skills,
 } from '@/test/agent-chat-fixture';
@@ -418,6 +419,34 @@ describe('ChatScreen', () => {
     expect(
       screen.queryByRole('article', { name: 'Agent reply in progress' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('waits while the page is read, then runs the turn the fetch queued', async () => {
+    const { reading, fetched, answered } = pageChatPhases('Here is what to change.');
+    let phase: 'reading' | 'fetched' | 'answered' = 'reading';
+    const streamed: string[] = [];
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () =>
+        HttpResponse.json({ reading, fetched, answered }[phase]),
+      ),
+      http.post(`/api/v1/agent/chats/${CHAT}/runs/:runId/run`, ({ params }) => {
+        streamed.push(String(params.runId));
+        phase = 'answered';
+        const done = `data: ${JSON.stringify({ type: 'done', run: answered.latest_run })}\n\n`;
+        return new HttpResponse(done, { headers: { 'content-type': 'text/event-stream' } });
+      }),
+    );
+    const user = userEvent.setup();
+    renderChat();
+
+    expect(await screen.findByText('Reading your page…')).toBeVisible();
+    await user.type(screen.getByLabelText('Reply to the agent'), 'Also the title');
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+    phase = 'fetched';
+    expect(await screen.findByText('Here is what to change.', {}, { timeout: 5000 })).toBeVisible();
+    expect(streamed).toEqual([fetched.latest_run.id]);
+    expect(screen.queryByText('Reading your page…')).not.toBeInTheDocument();
   });
 
   it('regenerates the last reply by sending its request again as a new turn', async () => {

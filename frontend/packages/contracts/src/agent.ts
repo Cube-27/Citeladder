@@ -93,13 +93,23 @@ export const agentTurnEventSchema = z.discriminatedUnion('type', [
 /** A web page a search returned: an untrusted observation, apart from CiteLadder records. */
 export const agentWebSourceSchema = responseObject({ url: z.string(), title: z.string() });
 
+/** A page document's SEO block, as fetched (revision 1) or as last edited. */
+export const agentPageFieldsSchema = responseObject({
+  title: z.string(),
+  meta_description: z.string(),
+  json_ld: z.string(),
+});
+
+// `fetch` authors revision 1 of a page document: the live page as fetched.
 export const agentRevisionSchema = responseObject({
   id: uuid(),
   number: z.number().int(),
   parent_revision_id: uuid().nullable(),
-  author: z.enum(['agent', 'user']),
+  author: z.enum(['agent', 'user', 'fetch']),
   title: z.string(),
   body: z.string(),
+  // A page revision's SEO fields; null for every other kind of document.
+  fields: agentPageFieldsSchema.nullable().default(null),
   source_refs: z.array(z.string()),
   web_sources: z.array(agentWebSourceSchema),
   created_at: z.string(),
@@ -179,6 +189,29 @@ const agentContextDisclosureSchema = responseObject({
   limitations: z.array(z.json()).default([]),
   prompt: z.record(z.string(), z.json()).default({}),
 });
+/** How one fetch of a live page ended; only `fetched` gives the chat a page document. */
+export const pageFetchOutcomeSchema = z.enum([
+  'fetched',
+  'blocked_robots',
+  'http_error',
+  'unsupported',
+  'failed',
+]);
+
+/**
+ * The page fetch a page chat starts with. `reading` until it ends; then its
+ * outcome and when the page was fetched (null when the fetch never ran, for
+ * example after an internal failure).
+ */
+export const agentPageFetchSchema = z.discriminatedUnion('status', [
+  responseObject({ status: z.literal('reading') }),
+  responseObject({
+    status: z.literal('done'),
+    outcome: pageFetchOutcomeSchema,
+    fetched_at: z.string().nullable(),
+  }),
+]);
+
 export const agentChatDetailSchema = responseObject({
   chat: agentChatSummarySchema,
   pinned_skill_id: z.string().nullable(),
@@ -187,11 +220,24 @@ export const agentChatDetailSchema = responseObject({
   latest_run: agentRunSchema.nullable(),
   // The chat's documents in number order.
   outputs: z.array(agentOutputSchema),
+  // A page chat's fetch; null for every other chat.
+  page_fetch: agentPageFetchSchema.nullable().default(null),
 });
 
+/** An accepted follow-up: its chat and the queued turn. */
 export const agentTurnAcceptedSchema = responseObject({
   chat_id: uuid(),
   run: agentRunSchema,
+});
+
+/**
+ * An accepted new chat. A page chat (`optimize_page`) starts with a page fetch
+ * instead of a turn, so its `run` is null until the fetch queues one; the
+ * chat read shows that turn as `latest_run`.
+ */
+export const agentChatCreatedSchema = responseObject({
+  chat_id: uuid(),
+  run: agentRunSchema.nullable(),
 });
 
 export const agentRevisionsPageSchema = responseObject({
@@ -277,6 +323,8 @@ export const agentContextRefsSchema = z.strictObject({
   site_facts_reference: z.strictObject({ crawl_id: uuid() }).nullish(),
   output_revision_reference: z.strictObject({ output_id: uuid(), revision_id: uuid() }).nullish(),
   search_intelligence_reference: agentSearchReferenceSchema.nullish(),
+  // The live page a page chat fetched; the fetch sets it before the first turn.
+  page_snapshot_reference: z.strictObject({ snapshot_id: uuid() }).nullish(),
 });
 /**
  * Typed evidence a new chat starts from. The server resolves and authorizes
