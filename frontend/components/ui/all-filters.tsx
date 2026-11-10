@@ -143,6 +143,10 @@ export function AllFilters({
       <MenuTrigger asChild>
         <Button
           variant="secondary"
+          // Its own width in a FilterBar too: stretched across a narrow row,
+          // its menu opened at the far edge and every submenu flipped back
+          // over it, where a quick move to an option closed the submenu.
+          data-fit=""
           data-active={active > 0 || undefined}
           // The name is the visible text, its count included: "All filters (2)".
           aria-label={active > 0 ? `${label} (${active})` : label}
