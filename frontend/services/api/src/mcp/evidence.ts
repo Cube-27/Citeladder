@@ -79,6 +79,7 @@ export async function actionsRead(
     state: 'available',
     items,
     status_counts: page.status_counts,
+    surface_open_counts: page.surface_open_counts,
     content_gap_source: page.content_gap_source,
     pagination: pagination(items, page.next_cursor),
     artifact_refs: items.map((item) => reference('action', item.id)),

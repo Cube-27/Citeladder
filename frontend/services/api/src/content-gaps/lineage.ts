@@ -4,6 +4,7 @@
  * whose member URLs it overlaps most, when that Jaccard overlap reaches the
  * minimum. Pure.
  */
+import { jaccard } from '../lists.ts';
 import { compareText } from '../text-order.ts';
 
 export type PreviousAngle = {
@@ -12,14 +13,6 @@ export type PreviousAngle = {
   memberUrls: readonly string[];
 };
 export type NewAngle = { key: string; topicId: string | null; memberUrls: readonly string[] };
-
-function jaccard(a: readonly string[], b: readonly string[]): number {
-  const left = new Set(a);
-  const right = new Set(b);
-  const shared = [...left].filter((url) => right.has(url)).length;
-  const union = new Set([...left, ...right]).size;
-  return union ? shared / union : 0;
-}
 
 /**
  * Each new angle's inherited lineage ID, or null for a new lineage. Per topic,
@@ -37,7 +30,7 @@ export function assignLineages(
       .map((previous) => ({
         key: angle.key,
         lineageId: previous.lineageId,
-        overlap: jaccard(angle.memberUrls, previous.memberUrls),
+        overlap: jaccard(new Set(angle.memberUrls), new Set(previous.memberUrls)),
       }))
       .filter((pair) => pair.overlap > 0 && pair.overlap >= minOverlap),
   );

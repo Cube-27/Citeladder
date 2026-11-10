@@ -4,6 +4,7 @@
  * Every value is read from the row a refresh froze; nothing is re-scored or
  * re-derived at read time.
  */
+import { actionSurfaceSchema } from '@citeladder/contracts/action-surface';
 import {
   opportunityDetailSchema,
   opportunitySeveritySchema,
@@ -39,11 +40,25 @@ export type OpportunityRow = {
   rule_version: string;
   formula_version: string;
   action_id: string | null;
+  action_surface: string | null;
   superseded_by_id: string | null;
   created_text: string;
   updated_text: string;
   superseded_text: string | null;
 };
+
+/**
+ * The persisted surface of the Action an `opportunities` row (unaliased) is
+ * grouped into, so a link to that Action opens under its screen; null when
+ * it has none.
+ */
+export const OPPORTUNITY_ACTION_SURFACE = sql<string | null>`(select actions.surface from actions
+    where actions.id = opportunities.action_id
+      and actions.workspace_id = opportunities.workspace_id)`.as('action_surface');
+
+/** A read Action surface, validated; null stays null. */
+export const actionSurfaceOrNull = (value: string | null) =>
+  value === null ? null : actionSurfaceSchema.parse(value);
 
 /** The `opportunities` columns every projection reads. */
 export const OPPORTUNITY_COLUMNS = [
@@ -68,6 +83,7 @@ export const OPPORTUNITY_COLUMNS = [
   'opportunities.rule_version',
   'opportunities.formula_version',
   'opportunities.action_id',
+  OPPORTUNITY_ACTION_SURFACE,
   'opportunities.superseded_by_id',
   utcTextOf(sql.ref('opportunities.created_at')).as('created_text'),
   utcTextOf(sql.ref('opportunities.updated_at')).as('updated_text'),
@@ -146,6 +162,7 @@ export function projectItem(row: OpportunityRow, rank: Rank = DEFAULT_RANK) {
     target_theme: row.target_theme,
     target_label: targetLabel(row),
     action_id: row.action_id,
+    action_surface: actionSurfaceOrNull(row.action_surface),
     ...rank,
     priority_factors: priorityFactors(row),
     evidence_summary: evidenceSummary(row),

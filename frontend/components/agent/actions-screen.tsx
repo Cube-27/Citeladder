@@ -2,23 +2,18 @@
 
 import {
   ActionStatusSelect,
+  ActionTargetCell,
   useActionStatusFilter,
   useActionTable,
-  workSummary,
 } from '@/components/agent/action-queue';
-import { ActionPriorityBadge, ActionStatusBadge } from '@/components/agent/action-status-badge';
+import { ActionPriorityBadge } from '@/components/agent/action-status-badge';
 import { ListScreen } from '@/components/layout/page-shell';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { DisplayTime } from '@/components/ui/display-time';
-import { Inline } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
-import { TextLink } from '@/components/ui/text-link';
-import { ClampText, TableCell, TableRow } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
+import { TableCell, TableRow } from '@/components/ui/table';
 import { ACTION_TARGET_KINDS, approachLabel, targetKindLabel } from '@/lib/agent/vocabulary';
 import type { Action, ActionsPage, ActionStatus } from '@/lib/api/actions';
-import { actionPath } from '@citeladder/contracts/record-kinds';
-import { readableUrl } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -97,14 +92,7 @@ function ActionsList({
     // two-line blanks and the pager stays where a full page puts it.
     <DataTable label="Actions" columns={COLUMNS} rowLines={2} {...table}>
       {page?.items.map((action) => (
-        // A single-status filter makes every row the same status; the queue
-        // mixes Open with In progress, so only the rows that are not Open
-        // name theirs.
-        <ActionRow
-          key={action.id}
-          action={action}
-          showStatus={status === undefined && action.status !== 'open'}
-        />
+        <ActionRow key={action.id} action={action} status={status} />
       ))}
     </DataTable>
   );
@@ -141,24 +129,13 @@ function emptyActions(page: ActionsPage): DataTableState {
       };
 }
 
-function ActionRow({ action, showStatus }: Readonly<{ action: Action; showStatus: boolean }>) {
+function ActionRow({
+  action,
+  status,
+}: Readonly<{ action: Action; status: ActionStatus | undefined }>) {
   return (
     <TableRow>
-      <TableCell>
-        <div className="grid min-w-0">
-          <Inline>
-            <ClampText lines={1} tooltip={readableUrl(action.target_label)}>
-              <TextLink href={actionPath(action)} text="itemTitle">
-                {readableUrl(action.target_label)}
-              </TextLink>
-            </ClampText>
-            {showStatus ? <ActionStatusBadge status={action.status} /> : null}
-          </Inline>
-          <ClampText lines={1} className={textRole('caption')}>
-            {workSummary(action)}
-          </ClampText>
-        </div>
-      </TableCell>
+      <ActionTargetCell action={action} status={status} />
       <TableCell className="whitespace-nowrap">
         <ActionPriorityBadge score={action.priority_score} />
       </TableCell>

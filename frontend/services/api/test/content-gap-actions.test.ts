@@ -5,14 +5,17 @@
  * continuity and workspace isolation. Angle runs are seeded directly; nothing
  * calls a model.
  */
+import { randomUUID } from 'node:crypto';
+
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { actionSurface } from '../src/analysis/opportunities/actions.ts';
 import { record } from '../src/db/json.ts';
-import { attachOrCreateAction, listActions } from '../src/opportunities/actions.ts';
+import { attachOrCreateAction, getAction, listActions } from '../src/opportunities/actions.ts';
 import { declareAction } from '../src/opportunities/declarations.ts';
 import { recomputeOpportunities } from '../src/opportunities/refresh.ts';
 import { angleRun, type AngleSeed } from './opportunity-fixtures.ts';
+import { prompt, promptSet } from './prompt-fixtures.ts';
 import { SiteFixtures, storedFacts, type SiteSeed } from './site-health-fixtures.ts';
 import { testDatabase } from './support.ts';
 
@@ -123,7 +126,7 @@ async function plannedKeys(p: Project, lineages: string[]) {
 }
 
 describe('content gaps', () => {
-  it('raises improve-page and new-page gaps onto the Content surface and fixes the planned key', async () => {
+  it('raises improve-page and new-page gaps onto the Content surface', async () => {
     const p = await project();
     const { runId, lineages } = await run(p, {
       angles: [
@@ -161,8 +164,53 @@ describe('content gaps', () => {
       ['page', PAGE_URL, 'content'],
       ['planned_page', 'Setup guide', 'content'],
     ]);
-    // Only the lineage that raised a new-page gap has its key, written at the refresh.
-    expect(await plannedKeys(p, lineages)).toEqual([null, 'planned:setup-guide', null, null]);
+  });
+
+  it('returns each gap with its evidence, and the Agent handoff, on the Action read', async () => {
+    const p = await project();
+    await run(p, { angles: [improve(p), create()] });
+    await recomputeOpportunities(db, scopeOf(p));
+    const [pageAction, plannedAction] = await actions(p);
+    const page = await getAction(db, p.workspaceId, pageAction!.id);
+    const planned = await getAction(db, p.workspaceId, plannedAction!.id);
+    const newPage = await db
+      .selectFrom('opportunities')
+      .select('id')
+      .where('workspace_id', '=', p.workspaceId)
+      .where('rule_id', '=', 'content_gap_new_page')
+      .where('superseded_at', 'is', null)
+      .executeTakeFirstOrThrow();
+
+    expect(planned.diagnosis.handoff).toEqual({
+      context: 'opportunity',
+      workflow_id: 'article',
+      opportunity_id: newPage.id,
+    });
+    expect(page.diagnosis.handoff).toEqual({ context: 'page_url', workflow_id: 'refresh_page' });
+    expect(
+      [page, planned].map((action) =>
+        action.members.map((member) => [
+          member.rule_id,
+          member.content_gap_evidence?.angle_label,
+          member.content_gap_evidence?.members.map((cited) => cited.url),
+        ]),
+      ),
+    ).toEqual([
+      [
+        [
+          'content_gap_improve_page',
+          'Pricing comparison',
+          ['https://globex.com/pricing', 'https://review.example/crm-pricing'],
+        ],
+      ],
+      [
+        [
+          'content_gap_new_page',
+          'Setup guide',
+          ['https://globex.com/setup', 'https://news.example/crm-setup'],
+        ],
+      ],
+    ]);
   });
 
   it('moves a page Action to Actions when the next crawl no longer reads it as content', async () => {
@@ -252,18 +300,45 @@ describe('content gaps', () => {
     );
     expect(await source()).toBe('out_of_date');
 
-    // A snapshot written under an earlier max_source_age_days still reads out of date.
+    // The snapshot's recorded state decides, never its human-readable limitation text.
     await db
       .updateTable('opportunity_snapshots')
-      .set({
-        limitations: JSON.stringify([
-          'Content-gap evidence is out of date: its newest audit is more than 30 days old.',
-        ]),
-      })
+      .set({ limitations: JSON.stringify([]) })
       .where('workspace_id', '=', p.workspaceId)
       .where('project_id', '=', p.projectId)
       .execute();
     expect(await source()).toBe('out_of_date');
+  });
+
+  it('stores each angle prompt with its text, and records a deleted prompt without one', async () => {
+    const p = await project();
+    const kept = await prompt(
+      db,
+      await promptSet(db, p.projectId),
+      'best crm pricing for startups',
+    );
+    // An id the library no longer has (or never had in this project).
+    const gone = randomUUID();
+    await run(p, { angles: [improve(p, { promptIds: [kept, gone] })] });
+    await recomputeOpportunities(db, scopeOf(p));
+
+    const [found] = await gaps(p);
+    // In the run's stored order.
+    expect(record(found!.evidence).prompts).toEqual([
+      { id: kept, text: 'best crm pricing for startups' },
+      { id: gone, text: null },
+    ]);
+    // The list's prompt count is the same stored list.
+    const listed = await listActions(db, scopeOf(p), {
+      status: null,
+      target_kind: null,
+      surface: 'content',
+      limit: 10,
+      cursor: null,
+    });
+    expect(listed.items.map((item) => item.content_gaps?.map((gap) => gap.prompt_count))).toEqual([
+      [2],
+    ]);
   });
 
   it('keeps the Action and planned key of a relabelled angle', async () => {
@@ -381,7 +456,10 @@ describe('content gaps', () => {
     expect(
       content.items
         .map((item) =>
-          item.content_gaps.map(({ opportunity_id: _id, ...gap }) => [item.target_kind, gap]),
+          (item.content_gaps ?? []).map(({ opportunity_id: _id, ...gap }) => [
+            item.target_kind,
+            gap,
+          ]),
         )
         .flat()
         .sort(),
@@ -410,11 +488,28 @@ describe('content gaps', () => {
       ],
     ]);
     expect(content.content_gap_source).toBe('current');
+    // Other lists never load content-gap evidence: the field is null, not empty.
     expect(rest.items.map((item) => [item.target_label, item.surface, item.content_gaps])).toEqual([
-      ['Pricing calculator', 'actions', []],
+      ['Pricing calculator', 'actions', null],
     ]);
     expect(rest.content_gap_source).toBeNull();
     expect([...content.items, ...rest.items].every((item) => ownIds.has(item.id))).toBe(true);
     expect([content.status_counts.open, rest.status_counts.open]).toEqual([2, 1]);
+    // Every list, filtered or not, counts each surface's open work for the badges.
+    const dismissed = await listActions(db, scopeOf(own), {
+      status: 'dismissed',
+      target_kind: null,
+      surface: null,
+      limit: 10,
+      cursor: null,
+    });
+    expect([dismissed.items, dismissed.surface_open_counts]).toEqual([
+      [],
+      { actions: 1, content: 2 },
+    ]);
+    expect([content.surface_open_counts, rest.surface_open_counts]).toEqual([
+      { actions: 1, content: 2 },
+      { actions: 1, content: 2 },
+    ]);
   });
 });

@@ -134,6 +134,7 @@ function baseHandlers(actions: ReturnType<typeof actionItem>[] = []) {
         items: actions,
         next_cursor: null,
         status_counts: {},
+        surface_open_counts: { actions: 0, content: 0 },
         content_gap_source: null,
       }),
     ),
@@ -388,6 +389,7 @@ describe('NewChatScreen', () => {
           items: queue.slice(0, Number(limit)),
           next_cursor: null,
           status_counts: {},
+          surface_open_counts: { actions: 0, content: 0 },
           content_gap_source: null,
         });
       }),

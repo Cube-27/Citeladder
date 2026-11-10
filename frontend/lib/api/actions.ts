@@ -19,10 +19,10 @@ import {
   actionListItemSchema,
   actionStatusSchema,
   actionsPageSchema,
-  type ActionSurface,
   type ActionDeclarationRequest,
   type ActionUserStatus,
 } from '@citeladder/contracts/actions';
+import type { ActionSurface } from '@citeladder/contracts/action-surface';
 import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
 import { AGENT_MENTION_POOL_SIZE } from '@/lib/config/agent';
@@ -87,9 +87,10 @@ export const actionsApi = {
 
 /**
  * One page of Actions. Without a limit it is a table's first page at its
- * default size, so a screen's navigation badge and its table share one
- * request (Actions with `surface: 'actions'`, Content optimization with
- * `surface: 'content'`), and the Agent's top Actions share the unfiltered one.
+ * default size, so a screen's status filter and its table share one request
+ * (Actions with `surface: 'actions'`, Content optimization with
+ * `surface: 'content'`), and the navigation badges and the Agent's top
+ * Actions share the unfiltered one.
  */
 function actionListQuery(scope: ProjectScope, params?: ActionsParams) {
   const request = { ...params, limit: params?.limit ?? TABLE_DEFAULT_PAGE_SIZE };

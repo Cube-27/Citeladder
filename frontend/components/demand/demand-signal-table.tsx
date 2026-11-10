@@ -25,6 +25,7 @@ import {
   type RankedSignal,
 } from '@/lib/demand/signals';
 import { formatCount } from '@/lib/format';
+import { actionPath } from '@citeladder/contracts/record-kinds';
 
 /**
  * The row itself is the Inspect target, so the query keeps the width a
@@ -227,7 +228,7 @@ function SignalActions({
         {signal.action_id ? (
           <MenuLinkItem>
             <ProjectLink
-              href={`/agent/actions/${signal.action_id}`}
+              href={actionPath({ id: signal.action_id, surface: signal.action_surface })}
               aria-label={`Open the Action for ${target}`}
             >
               <Icon icon={ChevronRight} />

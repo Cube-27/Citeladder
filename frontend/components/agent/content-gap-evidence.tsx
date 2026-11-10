@@ -1,99 +1,42 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DisplayTime } from '@/components/ui/display-time';
 import { FactList } from '@/components/ui/facts';
 import { Inline, Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
-import { agentHandoffHref } from '@/lib/agent/handoff';
 import type { ActionDetail } from '@/lib/api/actions';
-import { CONTENT_GAP_WORKFLOWS } from '@/lib/config/agent';
-import { opportunitiesQueries } from '@/lib/api/opportunities';
-import { promptsQueries } from '@/lib/api/prompts';
-import { formatCount, readableUrl } from '@/lib/format';
+import { formatCount, pluralCount, readableUrl } from '@/lib/format';
+import { promptHistoryHref } from '@/lib/prompts/history';
 import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status';
-import { contentGapRuleSchema } from '@citeladder/contracts/actions';
 import { citationClassificationSchema } from '@citeladder/contracts/audits';
-import {
-  opportunityEvidenceSchemas,
-  type ContentGapImprovePageEvidence,
-  type ContentGapNewPageEvidence,
-} from '@citeladder/contracts/opportunity-evidence';
+import type { ContentGapEvidence } from '@citeladder/contracts/opportunity-evidence';
 import { actionPath } from '@citeladder/contracts/record-kinds';
 
-type Member = ActionDetail['members'][number];
-type GapEvidence = ContentGapImprovePageEvidence | ContentGapNewPageEvidence;
+/** A finding with the content-gap evidence the Action read returned for it. */
+type GapMember = Readonly<{ id: string; evidence: ContentGapEvidence }>;
 
-const plural = (count: number, one: string, many: string) =>
-  `${formatCount(count)} ${count === 1 ? one : many}`;
+/** A prompt the library no longer held when the refresh recorded the angle. */
+const DELETED_PROMPT = 'A prompt no longer in your library';
 
-/** The Action's content-gap findings, in member order. */
-export function contentGapMembers(action: ActionDetail): Member[] {
-  return action.members.filter((member) => contentGapRuleSchema.safeParse(member.rule_id).success);
-}
-
-/**
- * The Agent handoff of an Action with a content gap: a page to create is
- * written from its Opportunity with the article workflow; an existing page
- * is refreshed from its URL. Null for an Action with no content gap.
- */
-export function contentGapHandoff(
-  action: ActionDetail,
-): Readonly<{ label: string; href: string }> | null {
-  const [gap] = contentGapMembers(action);
-  if (!gap) return null;
-  if (gap.rule_id === 'content_gap_new_page')
-    return {
-      label: 'Write this page',
-      href: agentHandoffHref({
-        actionId: action.id,
-        opportunityId: gap.id,
-        workflowId: CONTENT_GAP_WORKFLOWS.content_gap_new_page,
-      }),
-    };
-  return {
-    label: 'Work on this',
-    href: agentHandoffHref({
-      actionId: action.id,
-      targetUrl: action.target_url,
-      workflowId: CONTENT_GAP_WORKFLOWS.content_gap_improve_page,
-    }),
-  };
-}
-
-/** The evidence a content-gap finding stored, or null when it is not in that shape. */
-function gapEvidence(rule: string, evidence: unknown): GapEvidence | null {
-  const parsed = contentGapRuleSchema.safeParse(rule);
-  if (!parsed.success) return null;
-  const result = opportunityEvidenceSchemas[parsed.data].safeParse(evidence);
-  return result.success ? result.data : null;
+/** The Action's content-gap findings with their evidence, in member order. */
+export function contentGapMembers(action: ActionDetail): GapMember[] {
+  return action.members.flatMap((member) =>
+    member.content_gap_evidence ? [{ id: member.id, evidence: member.content_gap_evidence }] : [],
+  );
 }
 
 /**
  * Why the content-gap findings of an Action matter, from their persisted
- * evidence only: each angle, the competitor and publisher pages cited for it
- * with their domain and classification, the prompts, the counts and the
- * window. Counts, never a score (CO14).
+ * evidence only, as the Action read returned it: each angle, the competitor
+ * and publisher pages cited for it with their domain and classification, the
+ * prompts as their text read at the refresh, the counts and the window.
+ * Counts, never a score (CO14).
  */
-export function ContentGapWhy({
-  members,
-  workspaceId,
-  projectId,
-}: Readonly<{ members: readonly Member[]; workspaceId: string; projectId: string }>) {
-  // The prompt texts behind each angle's prompt ids; the library is one read.
-  const prompts = useQuery(promptsQueries.sets({ workspaceId, projectId }));
-  const promptText = new Map(
-    (prompts.data?.prompt_sets ?? []).flatMap((set) =>
-      set.prompts.map((prompt) => [prompt.id, prompt.text] as const),
-    ),
-  );
+export function ContentGapWhy({ members }: Readonly<{ members: readonly GapMember[] }>) {
   return (
     <Card aria-labelledby="action-why">
       <CardHeader>
@@ -103,7 +46,7 @@ export function ContentGapWhy({
         <ul className={ledgerClasses()}>
           {members.map((member) => (
             <li key={member.id} className={ledgerItemClasses()}>
-              <GapFinding member={member} workspaceId={workspaceId} promptText={promptText} />
+              <GapAngle evidence={member.evidence} />
             </li>
           ))}
         </ul>
@@ -112,32 +55,8 @@ export function ContentGapWhy({
   );
 }
 
-/** One finding's evidence, read from the Opportunity it is stored on. */
-function GapFinding({
-  member,
-  workspaceId,
-  promptText,
-}: Readonly<{ member: Member; workspaceId: string; promptText: ReadonlyMap<string, string> }>) {
-  const detail = useQuery(opportunitiesQueries.detail(workspaceId, member.id));
-  if (detail.isError)
-    return <ReadError {...readErrorProps(detail)} fallback="This evidence could not be loaded." />;
-  if (!detail.data) return <QueryState kind="loading" label="Loading the evidence" />;
-  const evidence = gapEvidence(member.rule_id, detail.data.evidence);
-  return evidence ? (
-    <GapAngle evidence={evidence} promptText={promptText} />
-  ) : (
-    <QueryState kind="empty" inline message="This finding has no angle evidence." />
-  );
-}
-
-function GapAngle({
-  evidence,
-  promptText,
-}: Readonly<{ evidence: GapEvidence; promptText: ReadonlyMap<string, string> }>) {
-  const prompts = evidence.prompt_ids.flatMap((id) => {
-    const text = promptText.get(id);
-    return text ? [{ id, text }] : [];
-  });
+function GapAngle({ evidence }: Readonly<{ evidence: ContentGapEvidence }>) {
+  const { prompts } = evidence;
   const continues = 'continues_action_id' in evidence ? evidence.continues_action_id : undefined;
   return (
     <Stack>
@@ -149,7 +68,7 @@ function GapAngle({
           { label: 'Citations', value: formatCount(evidence.citation_count) },
           { label: 'Sites', value: formatCount(evidence.domain_count) },
           { label: 'Competitors', value: formatCount(evidence.competitor_count) },
-          { label: 'Prompts', value: formatCount(evidence.prompt_ids.length) },
+          { label: 'Prompts', value: formatCount(prompts.length) },
           {
             label: 'Window',
             value: (
@@ -171,7 +90,7 @@ function GapAngle({
         {evidence.member_count > evidence.members.length ? (
           <span className={textRole('caption')}>
             The {formatCount(evidence.members.length)} most cited of{' '}
-            {plural(evidence.member_count, 'page', 'pages')}.
+            {pluralCount(evidence.member_count, 'page')}.
           </span>
         ) : null}
       </Stack>
@@ -181,9 +100,14 @@ function GapAngle({
           <Stack as="ul" gap="tight">
             {prompts.map((prompt) => (
               <li key={prompt.id}>
-                <TextLink href={`/prompts/${prompt.id}`} text="body">
-                  {prompt.text}
-                </TextLink>
+                {prompt.text === null ? (
+                  // Recorded at the refresh without text: the library no longer had it.
+                  <span className={textRole('body', 'text-ink-secondary')}>{DELETED_PROMPT}</span>
+                ) : (
+                  <TextLink href={promptHistoryHref(prompt.id)} text="body">
+                    {prompt.text}
+                  </TextLink>
+                )}
               </li>
             ))}
           </Stack>
@@ -203,7 +127,7 @@ function GapAngle({
 }
 
 /** One cited page: its title, then its site, classification and citations. */
-function CitedPage({ page }: Readonly<{ page: GapEvidence['members'][number] }>) {
+function CitedPage({ page }: Readonly<{ page: ContentGapEvidence['members'][number] }>) {
   const classification = citationClassificationSchema.safeParse(page.classification);
   const site = page.matched_competitor
     ? `${page.matched_competitor} (${page.domain})`
@@ -220,7 +144,7 @@ function CitedPage({ page }: Readonly<{ page: GapEvidence['members'][number] }>)
           </Badge>
         ) : null}
         <span className={textRole('caption')}>
-          {site} · {plural(page.citation_count, 'citation', 'citations')}
+          {site} · {pluralCount(page.citation_count, 'citation')}
         </span>
       </Inline>
     </Stack>

@@ -8,7 +8,10 @@ const mocks = vi.hoisted(() => ({
   // needs the cache lookup that guard performs. Nothing has failed here.
   find: vi.fn((_filters: { queryKey: readonly unknown[] }) => undefined),
   // The Actions list read behind the open count.
-  actionsList: { status_counts: { open: 3, in_progress: 2, completed: 9 } },
+  actionsList: {
+    status_counts: { open: 3, in_progress: 2, completed: 9 },
+    surface_open_counts: { actions: 5, content: 1 },
+  },
 }));
 
 vi.mock('@tanstack/react-query', () => ({

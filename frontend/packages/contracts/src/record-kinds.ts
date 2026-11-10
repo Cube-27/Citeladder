@@ -31,8 +31,16 @@ export const ACTION_SURFACE_SCREENS = {
   content: '/agent/content',
 } as const;
 
-/** One Action's page under its surface's screen; an unknown surface is Actions. */
-export function actionPath(action: Readonly<{ id: string; surface: string }>): string {
+/** What a link to an Action needs: its id and its persisted surface. */
+export type ActionRef = Readonly<{ id: string; surface: string | null }>;
+
+/**
+ * One Action's page under its surface's screen. Every link to an Action is
+ * built here from the persisted surface its read carries; only a reference
+ * that holds the id alone (an evidence chip) has no surface, and opens under
+ * Actions.
+ */
+export function actionPath(action: ActionRef): string {
   const screen =
     action.surface === 'content' ? ACTION_SURFACE_SCREENS.content : ACTION_SURFACE_SCREENS.actions;
   return `${screen}/${action.id}`;
@@ -43,12 +51,15 @@ export const RECORD_KINDS = {
   prompt: { label: 'Prompt', screen: '/prompts' },
   opportunity: {
     label: 'Recommendation',
-    screen: '/agent/actions',
-    page: (field) => (field('action_id') ? `/agent/actions/${field('action_id')}` : null),
+    screen: ACTION_SURFACE_SCREENS.actions,
+    page: (field) =>
+      field('action_id')
+        ? actionPath({ id: field('action_id'), surface: field('action_surface') })
+        : null,
   },
   action: {
     label: 'Action',
-    screen: '/agent/actions',
+    screen: ACTION_SURFACE_SCREENS.actions,
     // The browser holds the id alone and opens it under Actions; MCP passes the surface.
     page: (field) =>
       field('id') ? actionPath({ id: field('id'), surface: field('surface') }) : null,

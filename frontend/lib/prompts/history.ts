@@ -1,3 +1,4 @@
+import type { ActionSurface } from '@citeladder/contracts/action-surface';
 import type { AnswerStates } from '@citeladder/contracts/visibility';
 
 import type { TrendEvent, TrendPoint } from '@/components/ui/trend-chart';
@@ -93,7 +94,8 @@ export function competitorGaps(outcomes: readonly Outcome[]): CompetitorGap[] {
 export type MissingPrompt = {
   promptId: string;
   text: string;
-  actionId: string | null;
+  /** The prompt's Action and the screen it opens under, when the refresh opened one. */
+  action: { id: string; surface: ActionSurface | null } | null;
   engines: string[];
   competitors: string[];
 };
@@ -119,7 +121,9 @@ export function missingPrompts(items: readonly PromptMetricItem[]): MissingPromp
           row: {
             promptId: item.prompt_id,
             text: item.prompt_text,
-            actionId: item.action_id ?? null,
+            action: item.action_id
+              ? { id: item.action_id, surface: item.action_surface ?? null }
+              : null,
             engines: [...new Set(gapped.map((outcome) => outcome.logical_engine))].sort(
               (left, right) => left.localeCompare(right),
             ),

@@ -32,6 +32,7 @@ function page(key: string, overrides: Partial<SourceItem>): SourceItem {
     opportunity_id: null,
     standing: null,
     action_id: null,
+    action_surface: null,
     title: null,
     page_format: null,
     page_format_method: null,

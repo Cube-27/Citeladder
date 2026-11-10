@@ -43,34 +43,49 @@ page's Site Health findings and content gaps share it. Issues is unchanged
 
 **Screen.** Content optimization (`/agent/content`) sits directly below
 Actions in the Act group and Agent mode (CO1), with a count of its open and
-in-progress Actions. It reads `GET /api/v1/projects/{project_id}/actions?surface=content`;
-Actions reads `surface=actions`, so the two never list the same Action. It
-shares Actions' status filter, URL state, priority order and cursor paging
+in-progress Actions. Both sidebar counts come from `surface_open_counts` on the
+one unfiltered Actions read the shell already makes. It reads
+`GET /api/v1/projects/{project_id}/actions?surface=content`;
+Actions reads `surface=actions`, so the two never list the same Action. Only
+the content list carries each row's `content_gaps`; other lists return `null`.
+It shares Actions' status filter, URL state, priority order and cursor paging
 ([action queue](../frontend/components/agent/action-queue.tsx)). Each row
-shows the page (or "New page"), its most cited angle, the angle's prompt
-count, and the sites and competitors cited for it, from the finding's
-evidence; a content page with no content gap shows not applicable. There are no
-scores or grades (CO14). An empty list says which of four cases it is: no work
-for the chosen status, content gaps not computed yet, content-gap evidence
-out of date, or a current run with no gaps (`content_gap_source`). That state
-follows the latest Opportunity snapshot, like the gaps listed: a run that ages
-past `max_source_age_days` reads as out of date once the next refresh records
-it, and until then the snapshot's gaps and state stay as they were written.
+shows the page (a planned page by its topic, marked "Planned page"), its most
+cited angle, and that lead angle's prompt count and the sites and competitors
+cited for it, from the finding's evidence; a row with more angles says how
+many more. A content page with no content gap says so. There are no
+scores or grades (CO14). The content-gap evidence state
+(`content_gap_source`) is read from `coverage.content_gap_state`, which the
+Opportunity refresh records as `current`, `out_of_date` or `not_computed`
+(no snapshot reads as not computed). When it is not current, a notice above
+the rows says so; an empty list says which case it is, the evidence state
+first, then no work for the chosen status, then a current run with no gaps.
+That state follows the latest Opportunity snapshot, like the gaps listed: a
+run that ages past `max_source_age_days` reads as out of date once the next
+refresh records it, and until then the snapshot's gaps and state stay as they
+were written.
 
 An Action opens at `/agent/content/:actionId` (the shared Action page; the
-back link follows the Action's surface). For content-gap findings, **Why this
-matters** renders their stored evidence: the angle, the cited pages with
+back link follows the screen it was opened under, from the first render). The
+Action read returns each content-gap finding's stored evidence
+(`content_gap_evidence`), and **Why this matters** renders it only, with no
+further read: the angle, the cited pages with
 title, site and classification, the counts and the run's window, and a link
-to the planned-page Action a page continues. The prompts are stored as IDs, and
-their text is read from the current prompt library, so an edited prompt shows
-its current text and a deleted one is not listed. Site Health findings on
+to the planned-page Action a page continues. The angle's prompts are stored
+with their text as of the refresh (`prompts: {id, text}`); a prompt no longer
+in the library when the refresh ran is stored with `text: null` and shown as
+such. The page reads no prompt library. Site Health findings on
 the page render as on any Action. The handoff into the Agent
-([handoffs](agents.md#workspace-and-handoffs)) is **Write this page** (the
+([handoffs](agents.md#workspace-and-handoffs)) is the one the Action's
+diagnosis names (`diagnosis.handoff`, from the approach branch of its first
+finding that has one in `APPROACH_TREE`): **Write this page** (the
 Opportunity and the `article` workflow) for a page to create and **Work on
-this** (the page URL and the `refresh_page` workflow) for an existing page.
-Every link built from an Action with its surface, including MCP `read_actions`
-links and record fetches, points at that surface's screen; a link that holds
-only an Action id opens the same page under `/agent/actions`.
+this** (the page URL and the `refresh_page` workflow) for an existing page;
+an Action whose diagnosis names none hands off with itself alone.
+Every API read that links to an Action returns the Action's persisted surface
+with its id (`surface` or `action_surface`), and every link, including MCP
+`read_actions` links, record fetches, chat mentions and the dashboard, points
+at that surface's screen. An unknown surface opens under `/agent/actions`.
 
 ## Not yet
 

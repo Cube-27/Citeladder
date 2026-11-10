@@ -46,10 +46,14 @@ with included platform calls under the daily spend breaker (B73). Counts,
 prompts, engines and owned coverage are computed in code. Insert-only
 `content_angle_runs` keep the source audit IDs, crawl, model and versions; a run
 is appended only when its clustering, owned-match or aggregate key differs from
-the latest succeeded run (a failed run never blocks a retry), reusing the earlier clustering or match while its key is unchanged. A
-`succeeded` run enqueues an `opportunity_refresh` with trigger `content_angles`;
-a `failed` run (model error, rejected output or a refused call) enqueues
-nothing.
+the latest succeeded run (a failed run never blocks a retry), reusing the earlier clustering or match while its key is unchanged. The
+window's citations are Visibility's evidence statement (`evidenceScope`: the
+default market's dashboard-ready brand runs, successful answers, both brand
+cohorts), so a citation counts here exactly when Visibility counts it. A
+`succeeded` run requests an `opportunity_refresh` with trigger `content_angles`
+that joins a refresh still queued for the project (such as its audit's or
+crawl's own) instead of queueing a second; a `failed` run (model error,
+rejected output or a refused call) enqueues nothing.
 
 The `content_gaps` family ([content-gap hits](../frontend/services/api/src/opportunities/content-gap-hits.ts),
 pure [detector](../frontend/services/api/src/analysis/opportunities/content-gaps.ts))
@@ -59,7 +63,11 @@ before it stay. A run whose window ends more than `max_source_age_days` (45)
 before the refresh is no longer a source: its gaps clear and the snapshot
 records "Content-gap evidence is out of date". With no succeeded run the
 snapshot records "Content gaps not computed yet", which is distinct from a
-succeeded run with no gaps. An angle cited at least `min_citations` times across
+succeeded run with no gaps. The snapshot's coverage records the same state as
+`content_gap_state` (`current`, `out_of_date` or `not_computed`), which reads
+use; the limitation text is for display only. Each finding's evidence stores
+the angle's prompts with their text at refresh (`prompts: {id, text}`, `text`
+null for a prompt no longer in the project's prompt sets). An angle cited at least `min_citations` times across
 at least `min_domains` domains (both in the
 [content optimization config](../frontend/services/api/src/config/content-optimization.ts))
 is `content_gap_improve_page` on its matched owned content page unless that page
@@ -68,8 +76,8 @@ planned page when nothing matched. Priority grows with prompts, citations and
 the competitor share of cited domains (`CONTENT_GAP` in the opportunity
 config); the model never scores. Findings key on the angle's lineage, not its
 label: a new-page gap targets the lineage's `planned_page_key`, which the
-refresh that first surfaces it stores once (`plannedPageKey` of the label then)
-and never rewrites, so a relabelled angle keeps its Action and an Agent-planned
+content-angle run that creates the lineage stores (`plannedPageKey` of its
+first label) and nothing rewrites, so a relabelled angle keeps its Action and an Agent-planned
 page with the same slug converges on it. When a content page later matches a
 lineage that had a planned-page Action, that Action keeps its identity and
 declaration with its evidence cleared, and the page's finding names it as
@@ -220,13 +228,17 @@ refresh; the Agent's insert derives it the same way from the latest snapshot's
 crawl. A content page's Site Health findings and content gaps share its one
 Action. The list's `surface` filter (`actions` or `content`; anything else is
 400) and its status counts read the column (indexed with the project and
-effective status); no rule is re-tagged. Each list row carries `content_gaps`,
-its live content-gap findings summarized from their evidence (angle label and
-prompt, citation, domain and competitor counts, most cited first; empty for
-any other Action). A `surface=content` page also carries
-`content_gap_source` from the latest snapshot: `current` when it read a
-content-angle run, `out_of_date` when it recorded that limitation, else
-`not_computed`; it is null for the other lists. The screens are in
+effective status); no rule is re-tagged. On a `surface=content` list each row
+carries `content_gaps`, its live content-gap findings summarized from their
+evidence (angle label and prompt, citation, domain and competitor counts, most
+cited first; empty for an Action with none); other lists return `null` and
+compute nothing. A `surface=content` page also carries `content_gap_source`,
+the latest snapshot's `coverage.content_gap_state` (no snapshot reads as
+`not_computed`); it is null for the other lists. Every list carries
+`surface_open_counts`, the open and in-progress Actions on each surface, which
+the sidebar counts read. Reads that link to an Action (Opportunities, demand,
+search, internal links, AI Shelf, prompts, sources, chats) return its persisted
+surface beside its id. The screens are in
 [Content optimization](content-optimization.md).
 
 ## Explicit implementation declaration

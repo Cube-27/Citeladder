@@ -1,11 +1,13 @@
 import { z } from 'zod';
 
+import { actionSurfaceSchema, type ActionSurface } from './action-surface.ts';
 import {
   expectedCheckSchema,
   implementationStateSchema,
   opportunitySchema,
   verificationEventSchema,
 } from './opportunities.ts';
+import { contentGapFindingEvidenceSchema, contentGapRuleSchema } from './opportunity-evidence.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
@@ -21,11 +23,6 @@ export const actionStatusSchema = z.enum([
   'done',
   'dismissed',
 ]);
-
-// The screen an Action belongs to, derived at every refresh: `content` for a
-// content page or a content-gap planned page, `actions` for everything else.
-export const actionSurfaceSchema = z.enum(['actions', 'content']);
-export type ActionSurface = z.infer<typeof actionSurfaceSchema>;
 
 // One unit of work per target, projected from persisted Action rows.
 export const actionItemSchema = responseObject({
@@ -56,6 +53,19 @@ const diagnosisMemberSchema = responseObject({
   priority_score: z.number(),
 });
 
+// How the Action hands off into the Agent: a workflow (`workflows.json` id)
+// with the finding's Opportunity, or with the Action's page URL. Null (or
+// absent) hands off with the Action alone.
+export const actionHandoffSchema = z.discriminatedUnion('context', [
+  responseObject({
+    context: z.literal('opportunity'),
+    workflow_id: z.string(),
+    opportunity_id: uuid(),
+  }),
+  responseObject({ context: z.literal('page_url'), workflow_id: z.string() }),
+]);
+export type ActionHandoff = z.infer<typeof actionHandoffSchema>;
+
 // The deterministic diagnosis persisted at recompute. An agent-origin Action
 // with no evidence yet carries an empty object, so every field is optional.
 const actionDiagnosisSchema = responseObject({
@@ -64,6 +74,7 @@ const actionDiagnosisSchema = responseObject({
   skill_id: z.string().optional(),
   donts: z.array(z.string()).optional(),
   measure_with: z.array(z.string()).optional(),
+  handoff: actionHandoffSchema.nullable().optional(),
 });
 
 // What one loop leg of a declared Action is waiting for (plan §9).
@@ -128,13 +139,16 @@ export const actionDetailSchema = actionItemSchema.extend({
   // The earliest implementation time a declaration accepts.
   declarable_since: z.string(),
   diagnosis: actionDiagnosisSchema,
-  // Each live finding with what to do about it.
-  members: z.array(opportunitySchema.extend({ remediation: z.string() })),
+  // Each live finding with what to do about it; a content-gap finding also
+  // carries its stored evidence (null for every other rule).
+  members: z.array(
+    opportunitySchema.extend({
+      remediation: z.string(),
+      content_gap_evidence: contentGapFindingEvidenceSchema.nullable(),
+    }),
+  ),
   declaration: actionDeclarationSchema.nullable(),
 });
-
-/** The two content-gap rules (content optimization section 2). */
-export const contentGapRuleSchema = z.enum(['content_gap_improve_page', 'content_gap_new_page']);
 
 // One live content-gap finding of an Action, as its evidence states it: the
 // angle and its counts. Counts only, never a score (CO14).
@@ -150,10 +164,18 @@ export const actionContentGapSchema = responseObject({
 export type ActionContentGap = z.infer<typeof actionContentGapSchema>;
 
 // A list row: the Action plus its content-gap findings, most cited first
-// (empty for an Action without one).
+// (empty for an Action without one). Read on the `surface=content` list
+// only; null on every other list.
 export const actionListItemSchema = actionItemSchema.extend({
-  content_gaps: z.array(actionContentGapSchema),
+  content_gaps: z.array(actionContentGapSchema).nullable(),
 });
+
+// Open and in-progress Actions of each surface, project-wide, whatever the
+// list's filters: what the navigation badges show.
+export const surfaceOpenCountsSchema = responseObject({
+  actions: z.number().int(),
+  content: z.number().int(),
+}) satisfies z.ZodType<Record<ActionSurface, number>>;
 
 // The content-gap evidence the latest Opportunity refresh read: a current
 // content-angle run, one too old to use, or none computed yet. Each is a
@@ -165,6 +187,7 @@ export const actionsPageSchema = responseObject({
   items: z.array(actionListItemSchema),
   next_cursor: z.string().nullable(),
   status_counts: z.record(z.string(), z.number().int()),
+  surface_open_counts: surfaceOpenCountsSchema,
   // Set for `surface=content` only; null for the other lists.
   content_gap_source: contentGapSourceStateSchema.nullable(),
 });

@@ -161,9 +161,9 @@ Its ID is the family's source identity.
     overlaps most, when that overlap (Jaccard) is at least
     `lineage_min_overlap` (config). Otherwise it starts a new lineage.
   - Opportunities key on the lineage, not the run.
-  - A lineage's planned-page key is fixed the first time it raises
-    `content_gap_new_page`: `plannedPageKey(label)` with the label as it was
-    then. A later label never changes it, and an Agent-planned page with the
+  - A lineage's planned-page key is fixed when the lineage is created:
+    `plannedPageKey(label)` with the label as it was then. A later label never
+    changes it, and an Agent-planned page with the
     same topic slug still converges on that Action (today's behaviour).
 - **Planned to owned.** When a content page later matches a lineage that had a
   planned-page Action, the finding becomes `content_gap_improve_page` on that

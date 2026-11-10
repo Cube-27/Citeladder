@@ -17,6 +17,8 @@ import { compareText } from '../../text-order.ts';
 import type { DetectorHit } from './evidence.ts';
 
 const g = policy.opportunity.opportunities.CONTENT_GAP;
+/** The gap thresholds (`min_citations`, `min_domains`). */
+const t = policy.content_optimization;
 
 /** The run a refresh reads gaps from. */
 export type ContentGapRun = {
@@ -41,7 +43,7 @@ type AngleMatch =
   | { kind: 'page'; site_url_id: string; url: string; owned_cited: boolean }
   | {
       kind: 'none';
-      /** The lineage's stored key, or the one this refresh fixes; null when the label has no slug. */
+      /** The lineage's key, fixed when it was created; null when its label had no slug. */
       planned_page_key: string | null;
     };
 
@@ -50,7 +52,8 @@ export type ContentGapAngle = {
   lineage_id: string;
   label: string;
   topic_id: string | null;
-  prompt_ids: string[];
+  /** Each prompt with its library text at this refresh; null when the library no longer has it. */
+  prompts: { id: string; text: string | null }[];
   engines: string[];
   citation_count: number;
   domain_count: number;
@@ -60,8 +63,6 @@ export type ContentGapAngle = {
   /** The planned-page Action of this lineage an improve-page gap continues, if any. */
   continues_action_id: string | null;
 };
-
-export type ContentGapThresholds = { min_citations: number; min_domains: number };
 
 const valueFactor = (prompts: number) =>
   Math.min(g.VALUE_FACTOR_CAP, 1 + Math.max(prompts - 1, 0) * g.VALUE_PER_EXTRA_PROMPT);
@@ -84,14 +85,14 @@ function sharedEvidence(run: ContentGapRun, angle: ContentGapAngle) {
     lineage_id: angle.lineage_id,
     angle_label: angle.label,
     topic_id: angle.topic_id,
-    prompt_ids: [...angle.prompt_ids],
-    engines: [...angle.engines],
+    prompts: angle.prompts,
+    engines: angle.engines,
     citation_count: angle.citation_count,
     domain_count: angle.domain_count,
     competitor_count: angle.competitor_count,
     member_count: members.length,
     members: members.slice(0, CONTENT_GAP_EVIDENCE_MEMBERS),
-    window: { ...run.window },
+    window: run.window,
     methodology_version: run.methodology_version,
     formula_version: run.formula_version,
     limitations: run.limitations,
@@ -104,7 +105,7 @@ function gapHit(run: ContentGapRun, angle: ContentGapAngle): DetectorHit | null 
     source_issue_ids: [],
     // The run and the angle are the persisted readings the finding rests on.
     source_metric_ids: [run.id, angle.id].sort(compareText),
-    value_factor: valueFactor(angle.prompt_ids.length),
+    value_factor: valueFactor(angle.prompts.length),
     gap_factor: gapFactor(angle),
   };
   const { match } = angle;
@@ -148,14 +149,9 @@ function gapHit(run: ContentGapRun, angle: ContentGapAngle): DetectorHit | null 
 export function detectContentGaps(
   run: ContentGapRun,
   angles: readonly ContentGapAngle[],
-  thresholds: ContentGapThresholds,
 ): DetectorHit[] {
   return angles.flatMap((angle) => {
-    if (
-      angle.citation_count < thresholds.min_citations ||
-      angle.domain_count < thresholds.min_domains
-    )
-      return [];
+    if (angle.citation_count < t.min_citations || angle.domain_count < t.min_domains) return [];
     const hit = gapHit(run, angle);
     return hit ? [hit] : [];
   });

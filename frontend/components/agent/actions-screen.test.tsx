@@ -70,6 +70,7 @@ describe('Actions', () => {
           items,
           next_cursor: null,
           status_counts: { open: 1, in_progress: 2, dismissed: 0 },
+          surface_open_counts: { actions: 3, content: 0 },
           content_gap_source: null,
         });
       }),

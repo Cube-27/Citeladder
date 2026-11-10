@@ -1,11 +1,12 @@
 /** Persisted Action reads, target attachment and explicit workflow decisions. */
 import { randomUUID } from 'node:crypto';
+import { actionSurfaceSchema } from '@citeladder/contracts/action-surface';
 import {
   actionDetailSchema,
   actionItemSchema,
   actionStatusSchema,
-  actionSurfaceSchema,
   measurementLegSchema,
+  surfaceOpenCountsSchema,
 } from '@citeladder/contracts/actions';
 import { sql, type Selectable, type SqlBool } from 'kysely';
 
@@ -22,11 +23,15 @@ import {
 import { parseUuid } from '../http/uuid.ts';
 import { refreshActionStatus, validateStatus } from './action-status.ts';
 import { OPPORTUNITY_COLUMNS, projectItem } from './projection.ts';
-import { latestSnapshot, type Scope } from './sources.ts';
+import { latestSnapshotCrawlId, type Scope } from './sources.ts';
 import { declarationView } from './declaration-view.ts';
 import { memberMeasurementLeg } from './checks/registry.ts';
 import { contentPageKeys } from './action-sync.ts';
-import { actionContentGaps, contentGapSourceState } from './content-gap-reads.ts';
+import {
+  actionContentGaps,
+  contentGapEvidence,
+  contentGapSourceState,
+} from './content-gap-reads.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { normalizeDomain } from '../analysis/domains.ts';
 import {
@@ -91,7 +96,7 @@ export async function attachOrCreateAction(
     { kind, group_key: identity.key },
     [],
     kind === a.TARGET_PAGE
-      ? await contentPageKeys(db, scope, (await latestSnapshot(db, scope))?.site_crawl_id ?? null)
+      ? await contentPageKeys(db, scope, await latestSnapshotCrawlId(db, scope))
       : new Set(),
   );
   const now = new Date();
@@ -200,7 +205,7 @@ export async function listActions(
   if (filters.status !== null) validateStatus(filters.status);
   if (filters.target_kind !== null && !a.ACTION_TARGET_KINDS.includes(filters.target_kind))
     throw new ApiError(422, `Unknown target kind: ${filters.target_kind}`);
-  if (filters.surface !== null && !a.ACTION_SURFACES.includes(filters.surface))
+  if (filters.surface !== null && !actionSurfaceSchema.safeParse(filters.surface).success)
     throw new ApiError(400, `Unknown surface: ${filters.surface}`);
   const priority = sql<number>`coalesce(actions.priority_score, -1)`;
   const fingerprint = {
@@ -210,9 +215,9 @@ export async function listActions(
     surface: filters.surface,
   };
   const onSurface = filters.surface;
-  const surfaced = () =>
-    onSurface === null ? listed(db, scope) : listed(db, scope).where('surface', '=', onSurface);
-  let query = surfaced()
+  let query = (
+    onSurface === null ? listed(db, scope) : listed(db, scope).where('surface', '=', onSurface)
+  )
     .selectAll()
     .where('effective_status', 'in', filters.status ? [filters.status] : a.ACTION_ACTIVE_STATUSES);
   if (filters.target_kind) query = query.where('target_kind', '=', filters.target_kind);
@@ -228,31 +233,50 @@ export async function listActions(
       .orderBy('id')
       .limit(filters.limit + 1)
       .execute(),
-    surfaced()
-      .select(['effective_status as status', sql<number>`count(*)::int`.as('count')])
-      .groupBy('effective_status')
+    // Every surface's counts in one read: the list's own status counts and the
+    // open work of each surface, which the navigation badges read.
+    listed(db, scope)
+      .select(['surface', 'effective_status as status', sql<number>`count(*)::int`.as('count')])
+      .groupBy(['surface', 'effective_status'])
       .execute(),
     // Only the content list tells "not computed yet" and "out of date" from "no gaps".
     onSurface === 'content' ? contentGapSourceState(db, scope) : null,
   ]);
   const page = rows.slice(0, filters.limit);
   const last = page.at(-1);
-  const gaps = await actionContentGaps(
-    db,
-    scope,
-    page.map((row) => ({ id: row.id, member_ids: stringList(row.member_opportunity_ids) })),
+  // Only the content list shows angles, so only it loads their evidence.
+  const gaps =
+    onSurface === 'content'
+      ? await actionContentGaps(
+          db,
+          scope,
+          page.map((row) => ({ id: row.id, member_ids: stringList(row.member_opportunity_ids) })),
+        )
+      : null;
+  const statusCounts: Record<string, number> = Object.fromEntries(
+    a.ACTION_STATUSES.map((status) => [status, 0]),
   );
+  const surfaceOpenCounts: Record<string, number> = Object.fromEntries(
+    a.ACTION_SURFACES.map((surface) => [surface, 0]),
+  );
+  for (const row of counts) {
+    if (onSurface === null || row.surface === onSurface)
+      statusCounts[row.status] = (statusCounts[row.status] ?? 0) + row.count;
+    if (a.ACTION_ACTIVE_STATUSES.includes(row.status))
+      surfaceOpenCounts[row.surface] = (surfaceOpenCounts[row.surface] ?? 0) + row.count;
+  }
   return {
     content_gap_source: contentGapSource,
-    items: page.map((row) => ({ ...actionItem(row), content_gaps: gaps.get(row.id) ?? [] })),
+    items: page.map((row) => ({
+      ...actionItem(row),
+      content_gaps: gaps === null ? null : (gaps.get(row.id) ?? []),
+    })),
     next_cursor:
       rows.length > filters.limit && last
         ? encodeKeysetCursor('actions', fingerprint, [String(last.priority_score ?? -1), last.id])
         : null,
-    status_counts: {
-      ...Object.fromEntries(a.ACTION_STATUSES.map((status) => [status, 0])),
-      ...Object.fromEntries(counts.map((row) => [row.status, row.count])),
-    },
+    status_counts: statusCounts,
+    surface_open_counts: surfaceOpenCountsSchema.parse(surfaceOpenCounts),
   };
 }
 
@@ -331,7 +355,11 @@ export async function getAction(db: Database, workspaceId: string, actionId: str
   return {
     ...actionItem(action),
     diagnosis: actionDetailSchema.shape.diagnosis.parse(action.diagnosis),
-    members: members.map((row) => ({ ...projectItem(row), remediation: row.remediation || '' })),
+    members: members.map((row) => ({
+      ...projectItem(row),
+      remediation: row.remediation || '',
+      content_gap_evidence: contentGapEvidence(row),
+    })),
     // The earliest go-live a declaration accepts; new evidence measures it from there.
     declarable_since: new Date(
       Date.now() - policy.opportunity.opportunities.VERIFICATION_WINDOW_DAYS * 86_400_000,

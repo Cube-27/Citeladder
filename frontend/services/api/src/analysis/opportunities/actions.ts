@@ -1,3 +1,6 @@
+import type { ActionSurface } from '@citeladder/contracts/action-surface';
+import type { ActionHandoff } from '@citeladder/contracts/actions';
+
 import { policy } from '../../config.ts';
 import { roundScaled } from '../../numbers.ts';
 import { normalizedUrlForCompare } from '../url-compare.ts';
@@ -92,22 +95,50 @@ export function targetFor(member: ActionMember) {
   }
 }
 /**
- * The screen an Action belongs to (CO10). An owned page is `content` when its
- * current analysis in the snapshot's crawl has a content page kind
- * (`contentPages` holds those pages' group keys). A planned page has no page
- * kind, so it is `content` only while a `content_gap_new_page` finding is one
- * of its members. Everything else is `actions`.
+ * The screen an Action belongs to (CO10), the one derivation every write uses.
+ * An owned page is `content` when its current analysis in the snapshot's crawl
+ * has a content page kind (`contentPages` holds those pages' group keys). A
+ * planned page has no page kind, so it takes the surface its members'
+ * evidence families name (`PLANNED_PAGE_FAMILY_SURFACE`). Everything else,
+ * and a planned page no member places, is `actions`.
  */
 export function actionSurface(
   action: { kind: string; group_key: string },
   ruleIds: readonly string[],
   contentPages: ReadonlySet<string>,
-): string {
-  const content =
-    (action.kind === p.TARGET_PAGE && contentPages.has(action.group_key)) ||
-    (action.kind === p.TARGET_PLANNED_PAGE &&
-      ruleIds.includes(policy.opportunity.opportunities.CONTENT_GAP.RULE_NEW_PAGE));
-  return content ? p.SURFACE_CONTENT : p.SURFACE_ACTIONS;
+): ActionSurface {
+  if (action.kind === p.TARGET_PAGE)
+    return contentPages.has(action.group_key) ? p.SURFACE_CONTENT : p.SURFACE_ACTIONS;
+  if (action.kind === p.TARGET_PLANNED_PAGE) {
+    const families: Partial<Record<string, string>> = p.RULE_EVIDENCE_FAMILY;
+    for (const rule of ruleIds) {
+      const family = families[rule];
+      const surface = family === undefined ? undefined : p.PLANNED_PAGE_FAMILY_SURFACE[family];
+      if (surface !== undefined) return surface;
+    }
+  }
+  return p.SURFACE_ACTIONS;
+}
+
+/**
+ * The Agent handoff of the first member, in priority order, whose rule's
+ * approach branch names one; null hands off with the Action alone.
+ */
+function handoffFor(members: readonly ActionMember[]): ActionHandoff | null {
+  for (const member of members) {
+    const handoff = p.APPROACH_TREE.find(
+      (branch) => branch.handoff && branch.rule_ids.includes(member.rule_id),
+    )?.handoff;
+    if (handoff?.context === 'opportunity')
+      return {
+        context: 'opportunity',
+        workflow_id: handoff.workflow_id,
+        opportunity_id: member.opportunity_id,
+      };
+    if (handoff?.context === 'page_url')
+      return { context: 'page_url', workflow_id: handoff.workflow_id };
+  }
+  return null;
 }
 export function selectApproach(ids: string[], kind: string) {
   return (
@@ -160,6 +191,7 @@ function group(t: ReturnType<typeof targetFor>, members: NonEmpty<ActionMember>)
       skill_id: branch.skill_id,
       donts: [...branch.donts],
       measure_with: legs,
+      handoff: handoffFor(ordered),
       versions: {
         grouping: p.ACTION_GROUPING_VERSION,
         diagnosis: p.ACTION_DIAGNOSIS_VERSION,

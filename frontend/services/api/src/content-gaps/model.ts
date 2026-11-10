@@ -21,18 +21,19 @@ export const matchResponseSchema = z.object({
 });
 export type MatchResponse = z.infer<typeof matchResponseSchema>;
 
-const CLUSTER_SYSTEM = [
-  'You group web pages that AI answer engines cited for one topic into content angles:',
-  'the kinds of content a site publishes, such as "pricing comparison" or "setup guide".',
-  'You only group and name the pages you are given.',
-  'Rules:',
-  '- Use only the page IDs given. Never invent a page.',
-  '- Put each page in at most one angle. Leave out a page that fits no angle.',
-  '- Every angle has at least one page.',
-  '- Write each label in the requested language, in at most 80 characters.',
-  '- A label names the content, never a brand, a claim, a count or a fact.',
-  'Answer with JSON only: {"angles": [{"label": string, "member_ids": [string]}]}.',
-].join('\n');
+const clusterSystem = (maxLabelChars: number) =>
+  [
+    'You group web pages that AI answer engines cited for one topic into content angles:',
+    'the kinds of content a site publishes, such as "pricing comparison" or "setup guide".',
+    'You only group and name the pages you are given.',
+    'Rules:',
+    '- Use only the page IDs given. Never invent a page.',
+    '- Put each page in at most one angle. Leave out a page that fits no angle.',
+    '- Every angle has at least one page.',
+    `- Write each label in the requested language, in at most ${maxLabelChars} characters.`,
+    '- A label names the content, never a brand, a claim, a count or a fact.',
+    'Answer with JSON only: {"angles": [{"label": string, "member_ids": [string]}]}.',
+  ].join('\n');
 
 const MATCH_SYSTEM = [
   "For each content angle, pick the one page of the user's own site that already covers it,",
@@ -58,8 +59,12 @@ const prompt = (system: string, payload: unknown): Prompt => {
 };
 
 /** The clustering request for one topic's URLs, in their given order. */
-export function clusterPrompt(input: { language: string; urls: readonly CitedUrl[] }): Prompt {
-  return prompt(CLUSTER_SYSTEM, {
+export function clusterPrompt(input: {
+  language: string;
+  maxLabelChars: number;
+  urls: readonly CitedUrl[];
+}): Prompt {
+  return prompt(clusterSystem(input.maxLabelChars), {
     language: input.language,
     pages: input.urls.map((url, index) => ({
       id: memberId(index),
@@ -72,23 +77,27 @@ export function clusterPrompt(input: { language: string; urls: readonly CitedUrl
 const MAX_TITLES = 10;
 const MAX_HEADINGS = 10;
 
-/** The owned-match request for one topic's angles and their prefiltered candidates. */
+/**
+ * The owned-match request for one topic's angles and their prefiltered
+ * candidates; `pageIds` is the ID the model sees for each offered page, by
+ * site URL ID.
+ */
 export function matchPrompt(input: {
   language: string;
   angles: readonly { label: string; titles: readonly string[]; candidates: readonly string[] }[];
   pages: readonly CandidatePage[];
+  pageIds: ReadonlyMap<string, string>;
 }): Prompt {
-  const ids = new Map(input.pages.map((page, index) => [page.siteUrlId, pageId(index)]));
   return prompt(MATCH_SYSTEM, {
     language: input.language,
     angles: input.angles.map((angle, index) => ({
       id: angleId(index),
       label: angle.label,
       cited_titles: angle.titles.slice(0, MAX_TITLES),
-      candidate_ids: angle.candidates.map((siteUrlId) => ids.get(siteUrlId)),
+      candidate_ids: angle.candidates.map((siteUrlId) => input.pageIds.get(siteUrlId)),
     })),
-    pages: input.pages.map((page, index) => ({
-      id: pageId(index),
+    pages: input.pages.map((page) => ({
+      id: input.pageIds.get(page.siteUrlId),
       title: page.title,
       headings: page.headings.slice(0, MAX_HEADINGS),
       excerpt: page.excerpt,

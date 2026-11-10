@@ -18,6 +18,7 @@ import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate } from '@/lib/format';
 import { formatWholePercent } from '@/lib/visibility/dashboard';
 import type { PromptHistory } from '@citeladder/contracts';
+import { actionPath } from '@citeladder/contracts/record-kinds';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { optionalStringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -146,7 +147,9 @@ function Implementations({ history }: Readonly<{ history: PromptHistory }>) {
         <TableRow key={`${item.action_id}:${item.implemented_at}`}>
           <TableCell>
             <ClampText lines={1} tooltip={item.title}>
-              <TextLink href={`/agent/actions/${item.action_id}`}>{item.title}</TextLink>
+              <TextLink href={actionPath({ id: item.action_id, surface: item.action_surface })}>
+                {item.title}
+              </TextLink>
             </ClampText>
           </TableCell>
           <TableCell numeric>{formatDisplayDate(item.implemented_at, timeZone)}</TableCell>

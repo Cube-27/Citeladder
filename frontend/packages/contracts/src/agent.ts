@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { actionSurfaceSchema } from './action-surface.ts';
+
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
 
@@ -144,9 +146,17 @@ export const agentMessageSchema = responseObject({
   evidence_refs: z.array(z.string()),
   web_sources: z.array(agentWebSourceSchema).default([]),
   steps: z.array(agentStepSchema),
-  // Actions a user message @-mentioned, as resolved when it was sent.
+  // Actions a user message @-mentioned, as resolved when it was sent, each
+  // with its current surface for its link (null once the Action is gone).
   mentions: z
-    .array(responseObject({ kind: z.string(), id: uuid(), label: z.string() }))
+    .array(
+      responseObject({
+        kind: z.string(),
+        id: uuid(),
+        label: z.string(),
+        surface: actionSurfaceSchema.nullable(),
+      }),
+    )
     .default([]),
   created_at: z.string(),
 });
@@ -155,6 +165,8 @@ export const agentChatSummarySchema = responseObject({
   id: uuid(),
   project_id: uuid(),
   action_id: uuid().nullable(),
+  // That Action's surface, for its link; null when the chat has no Action.
+  action_surface: actionSurfaceSchema.nullable(),
   target_label: z.string().nullable(),
   title: z.string(),
   turn_count: z.number().int(),

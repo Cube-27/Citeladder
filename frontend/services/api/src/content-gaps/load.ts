@@ -2,23 +2,30 @@
  * The persisted inputs of one content-angle refresh (content optimization
  * section 1): the window's audits, the competitor and editorial pages their
  * answers cited, the owned pages they cited, and the latest crawl's content
- * pages. Reads only; every query is scoped to the workspace and project.
+ * pages. The window's answers are Visibility's evidence statement
+ * (`evidenceScope`), so a citation counts here exactly when Visibility counts
+ * it. Reads only; every query is scoped to the workspace and project.
  */
 import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { record } from '../db/json.ts';
-import { utcTextOf } from '../db/timestamps.ts';
+import { storedInstant, utcTextOf } from '../db/timestamps.ts';
 import { hash } from '../crypto-text.ts';
 import { chunked, groupBy } from '../lists.ts';
-import { resolveAudit, resolveCrawl, type Scope } from '../opportunities/sources.ts';
+import { resolveCrawlId, type Scope } from '../opportunities/sources.ts';
 import { canonicalPage } from '../page-identity.ts';
-import { ownedFacts } from '../source-pages/differentiation.ts';
-import { compareText, scalarText } from '../text-order.ts';
+import { outlineHeadings } from '../source-pages/differentiation.ts';
+import { compareText } from '../text-order.ts';
+import {
+  evidenceScope,
+  latestBrandRunId,
+  observedAt,
+  selectedRuns,
+  type RunSelection,
+} from '../visibility/selection.ts';
 
 const p = policy.content_optimization;
-const visibility = policy.visibility;
 
 /** One citation of a URL, with the prompt and engine of the answer that made it. */
 type CitationRef = { id: string; promptId: string | null; engine: string };
@@ -72,14 +79,43 @@ export type AngleInputs = {
   crawlId: string | null;
   external: CitedUrl[];
   owned: OwnedCitation[];
-  contentPages: CandidatePage[];
   limitations: Limitation[];
 };
 
+/**
+ * The latest succeeded run, or undefined. A failed run never counts, so a
+ * refused or failed computation is retried by the next trigger over the same
+ * inputs, and the Opportunity refresh keeps reading the run before it.
+ */
+export function latestSucceededRun(db: Database, scope: Scope) {
+  return db
+    .selectFrom('content_angle_runs')
+    .select([
+      'id',
+      'cluster_key',
+      'match_key',
+      'aggregate_key',
+      'window_start',
+      'window_end',
+      'methodology_version',
+      'formula_version',
+      'limitations',
+    ])
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('outcome', '=', 'succeeded')
+    .orderBy('created_at', 'desc')
+    .orderBy('id', 'desc')
+    .limit(1)
+    .executeTakeFirst();
+}
+
+export type SucceededRun = NonNullable<Awaited<ReturnType<typeof latestSucceededRun>>>;
+
 /** The anchor audit and its window, or null when the project has no dashboard-ready audit. */
 export async function resolveAnchor(db: Database, scope: Scope): Promise<Anchor | null> {
-  const audit = await resolveAudit(db, scope);
-  if (audit === null) return null;
+  const auditId = await latestBrandRunId(db, { ...scope, marketId: null });
+  if (auditId === null) return null;
   const observed = sql`coalesce(completed_at, created_at)`;
   const row = await db
     .selectFrom('audits')
@@ -91,9 +127,28 @@ export async function resolveAnchor(db: Database, scope: Scope): Promise<Anchor 
     ])
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
-    .where('id', '=', audit.id)
+    .where('id', '=', auditId)
     .executeTakeFirstOrThrow();
-  return { auditId: audit.id, windowStart: row.start_text, windowEnd: row.end_text };
+  return { auditId, windowStart: row.start_text, windowEnd: row.end_text };
+}
+
+/**
+ * The crawl's current, completed analyses of content pages (CO15), joined to
+ * their site URL: the one statement both the owned match and the Action
+ * surface read content pages from.
+ */
+export function contentPageAnalyses(db: Database, scope: Scope, crawlId: string) {
+  return db
+    .selectFrom('site_page_analyses as analysis')
+    .innerJoin('site_urls as url', 'url.id', 'analysis.site_url_id')
+    .where('analysis.workspace_id', '=', scope.workspaceId)
+    .where('analysis.project_id', '=', scope.projectId)
+    .where('url.workspace_id', '=', scope.workspaceId)
+    .where('url.project_id', '=', scope.projectId)
+    .where('analysis.crawl_id', '=', crawlId)
+    .where('analysis.is_current', '=', true)
+    .where('analysis.status', '=', 'completed')
+    .where('analysis.page_kind', 'in', p.content_page_kinds);
 }
 
 /** The path slug a page with no title is named by. */
@@ -128,37 +183,35 @@ const isGapSource = (row: { classification: string; source_class: string | null 
   (row.source_class !== null &&
     (p.gap_sources.source_classes as readonly string[]).includes(row.source_class));
 
+/**
+ * Visibility's selection of the default market's runs, every engine and both
+ * brand cohorts; `auditIds` names the window's runs once they are known.
+ */
+const windowSelection = (scope: Scope, auditIds: string[] | null): RunSelection => ({
+  ...scope,
+  marketId: null,
+  auditId: null,
+  auditIds,
+  logicalEngine: null,
+  cohort: policy.visibility.all_cohort,
+  fromAt: null,
+  toAt: null,
+});
+
 async function windowAuditIds(db: Database, scope: Scope, anchor: Anchor) {
-  const rows = await db
-    .selectFrom('audits')
-    .select('id')
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .where('audit_scope', '=', visibility.brand_audit_scope)
-    .where('market_id', 'is', null)
-    .where('status', 'in', visibility.dashboard_audit_statuses)
-    .where(
-      sql`coalesce(completed_at, created_at)`,
-      '>=',
-      sql`${anchor.windowStart + 'Z'}::timestamptz`,
-    )
-    .where(
-      sql`coalesce(completed_at, created_at)`,
-      '<=',
-      sql`${anchor.windowEnd + 'Z'}::timestamptz`,
-    )
-    .orderBy('id')
+  const rows = await selectedRuns(db, windowSelection(scope, null))
+    .select('audit.id')
+    .where(observedAt, '>=', storedInstant(anchor.windowStart))
+    .where(observedAt, '<=', storedInstant(anchor.windowEnd))
+    .orderBy('audit.id')
     .execute();
   return rows.map((row) => row.id);
 }
 
 function citationRows(db: Database, scope: Scope, auditIds: string[]) {
   return chunked(auditIds, (chunk) =>
-    db
-      .selectFrom('citations as c')
-      .innerJoin('response_analyses as ra', 'ra.id', 'c.analysis_id')
-      .innerJoin('audit_tasks as task', 'task.id', 'ra.task_id')
-      .innerJoin('audit_prompt_snapshots as snapshot', 'snapshot.id', 'task.prompt_snapshot_id')
+    evidenceScope(db, windowSelection(scope, chunk))
+      .innerJoin('citations as c', 'c.analysis_id', 'ra.id')
       .leftJoin('prompts as prompt', (join) =>
         join
           .onRef('prompt.id', '=', 'snapshot.prompt_id')
@@ -182,11 +235,6 @@ function citationRows(db: Database, scope: Scope, auditIds: string[]) {
         'prompt.topic_id',
       ])
       .where('c.workspace_id', '=', scope.workspaceId)
-      .where('ra.workspace_id', '=', scope.workspaceId)
-      .where('task.workspace_id', '=', scope.workspaceId)
-      .where('task.project_id', '=', scope.projectId)
-      .where('task.status', '=', visibility.succeeded_task_status)
-      .where('c.audit_id', 'in', chunk)
       .orderBy('c.id')
       .execute(),
   );
@@ -229,49 +277,49 @@ function ownedUrls(rows: CitationRow[]): OwnedCitation[] {
   }));
 }
 
-async function contentPages(db: Database, scope: Scope, crawlId: string): Promise<CandidatePage[]> {
-  const rows = await db
-    .selectFrom('site_page_analyses as analysis')
-    .innerJoin('site_urls as url', 'url.id', 'analysis.site_url_id')
+/** A scalar normalized fact as text (`scalarText` in SQL): '' when absent or not a scalar. */
+const factText = (key: string) =>
+  sql<string>`coalesce(case when jsonb_typeof(artifact.normalized_facts -> ${key}::text)
+    in ('string', 'number', 'boolean') then artifact.normalized_facts ->> ${key}::text end, '')`;
+
+/** The crawl's content pages the owned match reads: title, headings and an excerpt only. */
+export async function contentPages(
+  db: Database,
+  scope: Scope,
+  crawlId: string,
+): Promise<CandidatePage[]> {
+  const rows = await contentPageAnalyses(db, scope, crawlId)
     .innerJoin('site_fetch_artifacts as artifact', 'artifact.id', 'analysis.artifact_id')
     .select([
       'url.id',
-      'url.host',
       'url.normalized_url',
       'url.latest_title',
-      'artifact.normalized_facts',
+      factText('title').as('title'),
+      sql<unknown>`artifact.normalized_facts -> 'primary_heading_outline'`.as('outline'),
+      sql<string>`left(${factText('primary_content_text')}, ${p.content_excerpt_chars}::integer)`.as(
+        'excerpt',
+      ),
     ])
-    .where('analysis.workspace_id', '=', scope.workspaceId)
-    .where('analysis.project_id', '=', scope.projectId)
-    .where('url.workspace_id', '=', scope.workspaceId)
-    .where('url.project_id', '=', scope.projectId)
     .where('artifact.workspace_id', '=', scope.workspaceId)
-    .where('analysis.crawl_id', '=', crawlId)
-    .where('analysis.is_current', '=', true)
-    .where('analysis.status', '=', 'completed')
-    .where('analysis.page_kind', 'in', p.content_page_kinds)
     .orderBy('url.id')
     .limit(p.max_content_pages)
     .execute();
-  return rows.map((row) => {
-    const facts = record(row.normalized_facts);
-    return {
-      siteUrlId: row.id,
-      canonicalUrl: canonicalPage(row.normalized_url) ?? row.normalized_url,
-      title: scalarText(facts.title) || row.latest_title,
-      headings: ownedFacts(row.id, row.normalized_facts, row.host).headings,
-      excerpt: scalarText(facts.primary_content_text).slice(0, p.content_excerpt_chars),
-    };
-  });
+  return rows.map((row) => ({
+    siteUrlId: row.id,
+    canonicalUrl: canonicalPage(row.normalized_url) ?? row.normalized_url,
+    title: row.title || row.latest_title,
+    headings: outlineHeadings(row.outline),
+    excerpt: row.excerpt,
+  }));
 }
 
-/** Everything one refresh reads, anchored at `anchor`. */
+/** Everything one refresh reads, anchored at `anchor`, except the content pages. */
 export async function loadAngleInputs(
   db: Database,
   scope: Scope,
   anchor: Anchor,
 ): Promise<AngleInputs> {
-  const [ids, project, crawl] = await Promise.all([
+  const [ids, project, crawlId] = await Promise.all([
     windowAuditIds(db, scope, anchor),
     db
       .selectFrom('projects')
@@ -279,7 +327,7 @@ export async function loadAngleInputs(
       .where('workspace_id', '=', scope.workspaceId)
       .where('id', '=', scope.projectId)
       .executeTakeFirstOrThrow(),
-    resolveCrawl(db, scope),
+    resolveCrawlId(db, scope),
   ]);
   const rows = await citationRows(db, scope, ids);
   const external = externalUrls(
@@ -294,14 +342,13 @@ export async function loadAngleInputs(
   const untitled = external.filter((url) => url.titleFromSlug).length;
   if (untitled) limitations.push({ code: 'empty_titles', count: untitled, total: external.length });
   if (!external.length) limitations.push({ code: 'no_gap_citations' });
-  if (crawl === null) limitations.push({ code: 'no_content_crawl' });
+  if (crawlId === null) limitations.push({ code: 'no_content_crawl' });
   return {
     audits: { anchor, ids },
     market: { country: project.country_code, language: project.language_code },
-    crawlId: crawl?.id ?? null,
+    crawlId,
     external,
     owned: ownedUrls(rows.filter((row) => row.is_owned)),
-    contentPages: crawl ? await contentPages(db, scope, crawl.id) : [],
     limitations,
   };
 }

@@ -30,6 +30,7 @@ const row = {
   target_theme: 'analytics',
   target_label: 'example.org/tools',
   action_id: ACTION,
+  action_surface: 'actions',
   system_rank: 1,
   display_rank: 1,
   order_source: 'system',
@@ -193,6 +194,7 @@ test('declaring an Action implemented shows comparable verification', async ({ p
         items: [action],
         next_cursor: null,
         status_counts: { open: 1 },
+        surface_open_counts: { actions: 1, content: 0 },
         content_gap_source: null,
       },
     }),
@@ -203,7 +205,13 @@ test('declaring an Action implemented shows comparable verification', async ({ p
         ...action,
         status: declarationBody ? 'done' : 'open',
         diagnosis: { approach: 'earned_placement', families: { sources: 'observed' } },
-        members: [{ ...row, remediation: 'Prepare a transparent expert-contribution brief.' }],
+        members: [
+          {
+            ...row,
+            remediation: 'Prepare a transparent expert-contribution brief.',
+            content_gap_evidence: null,
+          },
+        ],
         member_measurement: { [OPPORTUNITY]: 'next_visibility_run' },
         declarable_since: new Date(Date.now() - 30 * 86_400_000).toISOString(),
         declaration: declarationBody ? declaration : null,
@@ -243,6 +251,7 @@ test('Action filters restore through URL history and reload', async ({ page }) =
         items: status === 'dismissed' ? [] : [action],
         next_cursor: null,
         status_counts: { open: 1, dismissed: 0 },
+        surface_open_counts: { actions: 1, content: 0 },
         content_gap_source: null,
       },
     });

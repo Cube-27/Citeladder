@@ -1,42 +1,46 @@
 /**
- * What the Action list reads about content gaps (content optimization
- * section 2): each Action's live content-gap findings, summarized from their
- * persisted evidence, and whether the latest refresh had content-gap evidence
- * at all. Reads only persisted rows, scoped to the workspace and project.
+ * What Action reads say about content gaps (content optimization section 2):
+ * each Action's live content-gap findings, summarized from their persisted
+ * evidence for the list and in full for the Action page, and whether the
+ * latest refresh had content-gap evidence at all. Reads only persisted rows,
+ * scoped to the workspace and project.
  */
 import {
-  actionContentGapSchema,
-  contentGapRuleSchema,
+  contentGapSourceStateSchema,
   type ActionContentGap,
   type ContentGapSourceState,
 } from '@citeladder/contracts/actions';
-import { opportunityEvidenceSchemas } from '@citeladder/contracts/opportunity-evidence';
+import {
+  contentGapRuleSchema,
+  parseContentGapEvidence,
+} from '@citeladder/contracts/opportunity-evidence';
 
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { compareText } from '../text-order.ts';
-import { CONTENT_GAPS_OUT_OF_DATE_PREFIX } from './content-gap-hits.ts';
 import { latestSnapshot, type Scope } from './sources.ts';
 
 type ListedAction = { id: string; member_ids: readonly string[] };
 
 /** One finding's summary, or null when its evidence is not a content-gap angle. */
 function summary(row: { id: string; rule_id: string; evidence: unknown }): ActionContentGap | null {
-  const rule = contentGapRuleSchema.safeParse(row.rule_id);
-  if (!rule.success) return null;
-  const evidence = opportunityEvidenceSchemas[rule.data].safeParse(row.evidence);
-  if (!evidence.success) return null;
-  const { angle_label, prompt_ids, citation_count, domain_count, competitor_count } = evidence.data;
-  return actionContentGapSchema.parse({
+  const finding = parseContentGapEvidence(row.rule_id, row.evidence);
+  if (finding === null) return null;
+  const { angle_label, prompts, citation_count, domain_count, competitor_count } = finding.evidence;
+  return {
     opportunity_id: row.id,
-    rule_id: rule.data,
+    rule_id: finding.rule_id,
     angle_label,
-    prompt_count: prompt_ids.length,
+    prompt_count: prompts.length,
     citation_count,
     domain_count,
     competitor_count,
-  });
+  };
 }
+
+/** A finding's stored content-gap evidence, for the Action page; null for any other finding. */
+export const contentGapEvidence = (row: { rule_id: string; evidence: unknown }) =>
+  parseContentGapEvidence(row.rule_id, row.evidence)?.evidence ?? null;
 
 const byCitations = (a: ActionContentGap, b: ActionContentGap) =>
   b.citation_count - a.citation_count || compareText(a.angle_label, b.angle_label);
@@ -74,8 +78,8 @@ export async function actionContentGaps(
 }
 
 /**
- * The content-gap evidence the latest Opportunity snapshot read: the run it
- * recorded as its source, else the out-of-date limitation, else none yet.
+ * The content-gap evidence the latest Opportunity snapshot read, as its
+ * coverage recorded it; no snapshot (or none that recorded it) is not computed.
  */
 export async function contentGapSourceState(
   db: Database,
@@ -83,11 +87,6 @@ export async function contentGapSourceState(
 ): Promise<ContentGapSourceState> {
   const snapshot = await latestSnapshot(db, scope);
   if (!snapshot) return 'not_computed';
-  const identity = record(record(snapshot.coverage).source_identity);
-  if (typeof identity.content_angle_run_id === 'string') return 'current';
-  const limitations: unknown[] = Array.isArray(snapshot.limitations) ? snapshot.limitations : [];
-  const outOfDate = limitations.some(
-    (text) => typeof text === 'string' && text.startsWith(CONTENT_GAPS_OUT_OF_DATE_PREFIX),
-  );
-  return outOfDate ? 'out_of_date' : 'not_computed';
+  const state = contentGapSourceStateSchema.safeParse(record(snapshot.coverage).content_gap_state);
+  return state.success ? state.data : 'not_computed';
 }

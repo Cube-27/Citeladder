@@ -227,6 +227,7 @@ function sourceItem(
     opportunity_id: null,
     standing: null,
     action_id: null,
+    action_surface: null,
     title: null,
     page_format: null,
     page_format_method: null,
@@ -432,6 +433,7 @@ async function attachPageLinks(
       row.opportunity_id = listing?.opportunity_id ?? null;
       row.standing = standing;
       row.action_id = listing?.action_id ?? null;
+      row.action_surface = listing?.action_surface ?? null;
       row.title = typeof title === 'string' && title ? title : null;
       row.page_format = page.page_format;
       row.page_format_method = page.page_format_method;

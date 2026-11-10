@@ -3,6 +3,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import type { Insertable, RawBuilder } from 'kysely';
+import { plannedPageKey } from '../src/analysis/opportunities/actions.ts';
 import type { Database } from '../src/db/database.ts';
 import type { Actions, Opportunities, OpportunitySnapshots } from '../src/generated/db-schema.ts';
 import { extractPageFacts, factSettings } from '../src/site-health/analysis/facts.ts';
@@ -327,6 +328,8 @@ export type AngleSeed = {
   /** The matched owned page; none when absent. */
   siteUrlId?: string;
   ownedCited?: boolean;
+  /** The angle's prompts; one id no prompt has when absent. */
+  promptIds?: string[];
   /** One cited page per entry; each domain cited `citations` times. */
   members: { url: string; title: string; competitor?: boolean; citations?: number }[];
 };
@@ -388,7 +391,8 @@ export async function angleRun(
           id: lineageId,
           ...tenancy,
           topic_id: null,
-          planned_page_key: null,
+          // As the refresh creates a lineage: keyed by its first label.
+          planned_page_key: plannedPageKey(angle.label),
           first_run_id: runId,
           created_at: now,
         })
@@ -407,7 +411,7 @@ export async function angleRun(
         citation_count: counts.reduce((sum, count) => sum + count, 0),
         domain_count: new Set(angle.members.map((member) => new URL(member.url).hostname)).size,
         competitor_count: angle.members.filter((member) => member.competitor).length,
-        prompt_ids: [randomUUID()],
+        prompt_ids: angle.promptIds ?? [randomUUID()],
         engines: ['chatgpt'],
         created_at: now,
       })

@@ -1,3 +1,4 @@
+import { actionPath } from '@citeladder/contracts/record-kinds';
 import type { InternalLink } from '@citeladder/contracts/site-health';
 import { useState } from 'react';
 
@@ -108,7 +109,11 @@ export function InternalLinkReview({
             </Button>
             {link.action_id ? (
               <Button asChild variant="secondary">
-                <ProjectLink href={`/agent/actions/${link.action_id}`}>Open Action</ProjectLink>
+                <ProjectLink
+                  href={actionPath({ id: link.action_id, surface: link.action_surface })}
+                >
+                  Open Action
+                </ProjectLink>
               </Button>
             ) : null}
           </Inline>

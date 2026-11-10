@@ -10,6 +10,7 @@ import { prompt, promptSet, topic } from './prompt-fixtures.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
+import { opportunityRow } from './opportunity-fixtures.ts';
 import { attachOrCreateAction, updateActionStatus } from '../src/opportunities/actions.ts';
 import { getVisibility } from '../src/visibility/dashboard.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
@@ -689,6 +690,25 @@ it('links a content-surface Action to Content optimization and any other to Acti
   ).toEqual([`/agent/content/${content.id}`, `/agent/actions/${other.id}`]);
   const fetched = await fetchRecord(db, principal, `citeladder://action/${content.id}`, origin);
   expect(pathOf(fetched.url)).toBe(`/agent/content/${content.id}`);
+  // A recommendation links to the Action that holds it, under that Action's surface.
+  const finding = opportunityRow(
+    { workspace_id: tenant.workspaceId, project_id: tenant.projectId },
+    {
+      rule_id: 'content_gap_new_page',
+      opportunity_type: 'topic',
+      severity: 'medium',
+      target_key: 'planned:setup-guide-for-content',
+      action_id: content.id,
+    },
+  );
+  await db.insertInto('opportunities').values(finding).execute();
+  const recommendation = await fetchRecord(
+    db,
+    principal,
+    `citeladder://opportunity/${finding.id}`,
+    origin,
+  );
+  expect(pathOf(recommendation.url)).toBe(`/agent/content/${content.id}`);
 });
 
 it('serves answer perception with the same numbers as the Perception read, and its quotes', async () => {
