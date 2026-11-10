@@ -158,8 +158,7 @@ const screens = {
 } satisfies Record<string, Screen>;
 
 /**
- * One Action surface's list, with its open count in the Act group, Agent mode
- * and (once) the Agent palette, and the shared Action page beneath it.
+ * One Action surface's list, its open count in each placement, and the Action page beneath.
  */
 function actionSurface<const P extends string>(
   path: P,
@@ -167,7 +166,6 @@ function actionSurface<const P extends string>(
   screen: Screen,
   icon: IconName,
   badge: NavBadge,
-  // A sidebar row is one line beside its count, so a long title gets a short label.
   navLabel: string = title,
 ) {
   const placements: NavPlacement[] = ['dashboard:act', 'agent', 'palette:Agent'];
@@ -272,7 +270,7 @@ export const APP_ROUTES = [
     screen: screens.chat,
   }),
   ...actionSurface('/agent/actions', 'Actions', screens.actions, 'opportunities', 'open-actions'),
-  // Directly below Actions (CO1); the two never list the same Action.
+  // Below Actions (CO1), never the same Action; a short label keeps its row one line.
   ...actionSurface(
     '/agent/content',
     'Content optimization',
