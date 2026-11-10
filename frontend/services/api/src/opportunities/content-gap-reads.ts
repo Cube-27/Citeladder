@@ -15,7 +15,7 @@ import { opportunityEvidenceSchemas } from '@citeladder/contracts/opportunity-ev
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { compareText } from '../text-order.ts';
-import { CONTENT_GAPS_OUT_OF_DATE } from './content-gap-hits.ts';
+import { CONTENT_GAPS_OUT_OF_DATE_PREFIX } from './content-gap-hits.ts';
 import { latestSnapshot, type Scope } from './sources.ts';
 
 type ListedAction = { id: string; member_ids: readonly string[] };
@@ -85,6 +85,9 @@ export async function contentGapSourceState(
   if (!snapshot) return 'not_computed';
   const identity = record(record(snapshot.coverage).source_identity);
   if (typeof identity.content_angle_run_id === 'string') return 'current';
-  const limitations = Array.isArray(snapshot.limitations) ? snapshot.limitations : [];
-  return limitations.includes(CONTENT_GAPS_OUT_OF_DATE) ? 'out_of_date' : 'not_computed';
+  const limitations: unknown[] = Array.isArray(snapshot.limitations) ? snapshot.limitations : [];
+  const outOfDate = limitations.some(
+    (text) => typeof text === 'string' && text.startsWith(CONTENT_GAPS_OUT_OF_DATE_PREFIX),
+  );
+  return outOfDate ? 'out_of_date' : 'not_computed';
 }

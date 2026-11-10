@@ -251,6 +251,19 @@ describe('content gaps', () => {
       'Content-gap evidence is out of date: its newest audit is more than 45 days old.',
     );
     expect(await source()).toBe('out_of_date');
+
+    // A snapshot written under an earlier max_source_age_days still reads out of date.
+    await db
+      .updateTable('opportunity_snapshots')
+      .set({
+        limitations: JSON.stringify([
+          'Content-gap evidence is out of date: its newest audit is more than 30 days old.',
+        ]),
+      })
+      .where('workspace_id', '=', p.workspaceId)
+      .where('project_id', '=', p.projectId)
+      .execute();
+    expect(await source()).toBe('out_of_date');
   });
 
   it('keeps the Action and planned key of a relabelled angle', async () => {
