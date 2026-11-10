@@ -616,6 +616,25 @@ the [backlog](plans/backlog.md) under the Razorpay acceptance gate. Source: owne
 answer in the state-machine fixes session ("for code nothing needs to change …
 we will handle them later before enabling billing").
 
+## Content optimization (2026-11-10)
+
+**B73 — Owner, 2026-11-10.** Content optimization's model work is split
+between included and credit-funded:
+
+- **Included.** Content-angle clustering and owned-page matching, run after
+  audits and crawls, are included and not charged to customers. They are
+  uncharged platform calls: recorded in `internal_costs` and bounded by the
+  B66 daily spend breaker. A call the breaker refuses fails the run, and the
+  last successful run's gaps stay in place.
+- **AI credits.** Generating page suggestions ("Optimize content") is an
+  Agent turn funded by AI credits like any chat (B53, B58–B60).
+- **Later add-on.** Optimizing a URL outside the crawl's content pages is a
+  later paid add-on, not priced yet.
+
+Source: owner answer in the content optimization architecture session
+("Clustering free, suggestions use AI credits"); [content
+optimization](plans/content-optimization.md) CO8.
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,

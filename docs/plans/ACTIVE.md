@@ -48,6 +48,12 @@ enterprise SSO and SCIM (F9) and the AI Traffic control band that wraps at
 
 ## Queued
 
+- [Content optimization phase 1](content-optimization-phase-1.md) (owner
+  decisions CO1–CO18 recorded 2026-11-10 in the
+  [content optimization architecture](content-optimization.md), billing B73;
+  rules in the [content rules engine](content-rules-engine.md)): content
+  angles from cited titles, the content-gap Actions and the Content
+  optimization list screen, in three PRs. Planned, not started.
 - [Backlog](backlog.md): remaining engineering, deferred proposals, decisions,
   calibration and release acceptance. Select and scope an item before implementation;
   queue placement does not establish priority or approval.
