@@ -36,6 +36,11 @@ export type FundingIdentity = Pick<Run, 'funding_source' | 'requested_model'>;
 /** Admission owns capability, funding selection and abuse capacity, in this transaction.
  * Required injection deliberately has no unmetered/platform fallback. */
 export type Admission = (db: Database, scope: Scope) => Promise<FundingIdentity>;
+/**
+ * Creates or reuses the Action a new page chat works on, in the chat's own
+ * transaction, so a refused admission leaves no Action behind. Returns its id.
+ */
+type AttachChatAction = (trx: Database) => Promise<string>;
 const messageSchema = z.string().trim().min(1).max(agentPolicy.message_max_chars);
 export type TurnInput = {
   chatId?: string;
@@ -174,11 +179,18 @@ export class AgentStore {
    * A new chat. A page workflow (`optimize_page`) commits the chat and its
    * page fetch, and no turn: the fetch queues the turn once the page is read,
    * so a failed fetch is never charged (B73). Any other request commits its
-   * first turn.
+   * first turn. `attach` (page chats only) names the chat's Action from inside
+   * that transaction (Analyze a page).
    */
-  async create(scope: Scope, raw: TurnInput): Promise<{ chatId: string; run: Run | null }> {
+  async create(
+    scope: Scope,
+    raw: TurnInput,
+    attach?: AttachChatAction,
+  ): Promise<{ chatId: string; run: Run | null }> {
     const chosen = this.workflowFor(raw.workflowId);
-    if (this.startsWithFetch(chosen) && chosen) return this.startPageChat(scope, raw, chosen);
+    if (this.startsWithFetch(chosen) && chosen)
+      return this.startPageChat(scope, raw, chosen, attach);
+    if (attach) throw new AgentError('agent_workflow_unavailable');
     const run = await this.enqueue(scope, raw);
     return { chatId: run.chat_id, run };
   }
@@ -371,14 +383,21 @@ export class AgentStore {
    * so a refused workspace fetches nothing; the chosen funding is frozen into
    * the fetch for the turn it queues.
    */
-  private startPageChat(scope: Scope, raw: TurnInput, chosen: Workflow) {
-    const { input, hash } = this.admitted(scope, raw, chosen);
+  private startPageChat(
+    scope: Scope,
+    raw: TurnInput,
+    chosen: Workflow,
+    attach: AttachChatAction | undefined,
+  ) {
+    const admitted = this.admitted(scope, raw, chosen);
+    const { hash } = admitted;
     return this.db.transaction().execute(async (trx) => {
       await this.lockWorkspace(trx, scope);
-      const replay = await replayedRun(trx, scope, input.key, hash);
+      const replay = await replayedRun(trx, scope, admitted.input.key, hash);
       if (replay) return { chatId: replay.chat_id, run: replay };
-      const replayed = await this.replayedPageChat(trx, scope, input.key, hash);
+      const replayed = await this.replayedPageChat(trx, scope, admitted.input.key, hash);
       if (replayed) return replayed;
+      const input = attach ? { ...admitted.input, actionId: await attach(trx) } : admitted.input;
       const page = await resolvePageTarget(trx, scope, {
         url: await this.requestedPage(trx, scope, input),
         actionId: input.actionId ?? null,

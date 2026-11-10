@@ -110,10 +110,35 @@ stream once the page is read. The `content_optimize` skill changes the page
 only with `edit_document`; `save_document` is refused for a page document.
 Edits and restores keep the page's SEO fields.
 
+**Analyze a page (CO6).** The Actions header's **Analyze a page** opens a
+dialog: one of the latest crawl's content pages (searched on the server by
+address or title, at most `analyze_page.page_list_max` listed at once), a
+topic that has active prompts, and that topic's prompts, all selected at
+first. `POST /projects/{id}/actions/analyze` with `{site_url_id, topic_id,
+prompt_ids}` refuses with 422 a project with no crawl, a page that is not one
+of the latest crawl's content pages, a topic of another project or with no
+active prompts, and any prompt outside that topic. It then starts the same
+`optimize_page` page chat as above (same admission, funding and fetch; nothing
+is charged until the page is read), and in that chat's transaction creates or
+reuses the page's Action through the Agent's target attachment
+(`attachOrCreateAction`), so a refused start leaves no Action. A repeat for
+the same page reuses its Action and starts a new chat, because each chat
+reads the live page afresh and may name other prompts; a retried request
+(same Idempotency-Key and body) returns the chat it started. The response is
+the Action id, the chat id and the run (null while the page is read), and the
+browser opens the chat.
+
+The chosen topic and prompts are recorded on the chat, not the Action: the
+chat's context carries `prompt_reference {topic_id, prompt_ids}`, and every
+turn's context reads it into a `target_prompts` section (the topic's name, the
+chosen prompts it still holds, and how many no longer resolve). An Action has
+one `target_prompt_id` and a diagnosis owned by its evidence, so neither holds
+a per-analysis prompt list.
+
 ## Not yet
 
 - The page workspace and Optimize content's suggestions (CO7, CO12).
-- Analyze a page (CO6), and optimizing any URL.
+- Optimizing any URL (a paid add-on).
 - The [content rules engine](plans/content-rules-engine.md) and its rule
   findings (CO13).
 - The `owned_url_cited` declaration check: both content-gap rules have no

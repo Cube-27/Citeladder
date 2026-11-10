@@ -189,7 +189,12 @@ The refresh adopts an Agent row on the same key instead of opening a second one.
 The [TypeScript Action routes](../frontend/services/api/src/routes/actions.ts)
 own workflow updates and declarations. The
 [Agent target adapter](../frontend/services/api/src/agent/target-adapter.ts) uses
-the same Action owner. MCP and command-center reads use the shared, persisted
+the same Action owner, and so does **Analyze a page** on the Actions screen
+(`POST /projects/{id}/actions/analyze`): it inserts or reuses the `agent`-origin
+Action for one of the latest crawl's content pages inside the transaction that
+starts its `optimize_page` chat, so a repeat for the page reuses the Action
+([content optimization](content-optimization.md#what-ships-phase-2-page-documents)).
+MCP and command-center reads use the shared, persisted
 [effective status](../frontend/services/api/src/opportunities/action-status.ts).
 
 An Action's identity and origin never change. When no live Opportunity targets

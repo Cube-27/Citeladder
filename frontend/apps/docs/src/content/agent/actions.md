@@ -3,7 +3,7 @@ title: 'Actions and measurement'
 description: 'Choose one target, review its supporting findings, and follow the work through to later evidence.'
 group: 'Improve with Agent'
 order: 210
-updated: '2026-11-10'
+updated: '2026-11-11'
 ---
 
 An Action groups work around a target: an owned page, planned page, earned-source page, product, category, search query or visibility prompt. Multiple findings can support the same Action.
@@ -28,6 +28,10 @@ Every page that the Sources URL table shows as a **Gap** becomes a "Get mentione
 Read the diagnosis, contributing evidence, recommended approach and what to avoid. The priority comes from CiteLadder's deterministic rules. An Agent explanation does not replace that ranking or create new measured facts.
 
 Choose **Work on this** when the Action is suitable for your team. Linked chats remain visible on the Action.
+
+## Analyze one of your pages
+
+Choose **Analyze a page** above the list to work on a content page that no finding has raised yet. Pick one of the articles, guides or other content pages from your latest crawl, a topic, and the topic's prompts the page should answer; only topics with prompts are listed, and all their prompts start selected. **Generate action** creates the page's Action, or reuses it if the page already has one, and opens a new chat that reads the live page first. Nothing is charged until the page has been read.
 
 ## Understand status
 

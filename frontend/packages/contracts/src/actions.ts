@@ -6,6 +6,7 @@ import {
   opportunitySchema,
   verificationEventSchema,
 } from './opportunities.ts';
+import { agentRunSchema } from './agent.ts';
 import { contentGapFindingEvidenceSchema } from './opportunity-evidence.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
@@ -194,3 +195,48 @@ export const actionDeclarationRequestSchema = z.strictObject({
     .refine((value) => !value.startsWith('0000-'), 'A valid calendar year is required'),
 });
 export type ActionDeclarationRequest = z.input<typeof actionDeclarationRequestSchema>;
+
+/**
+ * The content pages Analyze a page offers: the latest crawl's pages of a
+ * content kind (CO15) matching the search, at most the server's cap.
+ * `crawl_id` is null when the project has no usable crawl yet.
+ */
+export const analyzablePagesSchema = responseObject({
+  crawl_id: uuid().nullable(),
+  items: z.array(
+    responseObject({
+      site_url_id: uuid(),
+      url: z.string(),
+      // The crawl's title for the page; '' when it had none.
+      title: z.string(),
+      page_kind: z.string(),
+    }),
+  ),
+  // More pages match than are listed: narrow the search.
+  truncated: z.boolean(),
+});
+
+/**
+ * Analyze a page (CO6): one of the latest crawl's content pages, a topic with
+ * prompts, and the prompts of that topic to optimize the page for.
+ */
+export const actionAnalyzeRequestSchema = z.strictObject({
+  site_url_id: uuid(),
+  topic_id: uuid(),
+  prompt_ids: z
+    .array(uuid())
+    .min(1)
+    .max(100)
+    .refine((ids) => new Set(ids).size === ids.length, 'Choose each prompt once'),
+});
+export type ActionAnalyzeRequest = z.input<typeof actionAnalyzeRequestSchema>;
+
+/**
+ * The page's Action (created or reused) and the `optimize_page` chat started
+ * on it. `run` is null while the page is being read, as for any page chat.
+ */
+export const actionAnalyzeResultSchema = responseObject({
+  action_id: uuid(),
+  chat_id: uuid(),
+  run: agentRunSchema.nullable(),
+});

@@ -66,7 +66,8 @@ async function chatScope(db: Database, c: Context<AppEnv>, id: string): Promise<
 function workspaceOf(c: Context<AppEnv>) {
   return { workspaceId: c.get('workspace').workspaceId };
 }
-async function mapped<T>(action: () => Promise<T>) {
+/** An Agent store call with its refusals as HTTP errors; Analyze a page shares it. */
+export async function mapped<T>(action: () => Promise<T>) {
   try {
     return await action();
   } catch (error) {

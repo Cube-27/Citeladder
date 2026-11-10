@@ -325,6 +325,10 @@ export const agentContextRefsSchema = z.strictObject({
   search_intelligence_reference: agentSearchReferenceSchema.nullish(),
   // The live page a page chat fetched; the fetch sets it before the first turn.
   page_snapshot_reference: z.strictObject({ snapshot_id: uuid() }).nullish(),
+  // The topic and tracked prompts a page is optimized for (Analyze a page, CO6).
+  prompt_reference: z
+    .strictObject({ topic_id: uuid(), prompt_ids: z.array(uuid()).min(1).max(100) })
+    .nullish(),
 });
 /**
  * Typed evidence a new chat starts from. The server resolves and authorizes

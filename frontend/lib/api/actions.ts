@@ -13,12 +13,15 @@ import { apiClient, type ApiRequestOptions } from './client';
 import { queryKeys } from './query-keys';
 import type { ProjectScope } from './query-keys/scope';
 import {
+  actionAnalyzeResultSchema,
   actionDeclarationSchema,
   actionDetailSchema,
   actionGroupSchema,
   actionItemSchema,
   actionStatusSchema,
   actionsPageSchema,
+  analyzablePagesSchema,
+  type ActionAnalyzeRequest,
   type ActionDeclarationRequest,
   type ActionGroup,
   type ActionPriorityBand,
@@ -36,6 +39,7 @@ export type ActionStatus = z.infer<typeof actionStatusSchema>;
 export type { ActionGroup, ActionPriorityBand };
 export type ActionDeclaration = z.infer<typeof actionDeclarationSchema>;
 export type MeasurementLeg = ActionDeclaration['legs'][number];
+export type AnalyzablePage = z.infer<typeof analyzablePagesSchema>['items'][number];
 
 export type ActionsParams = {
   cursor?: string;
@@ -87,6 +91,32 @@ export const actionsApi = {
       }),
       'actions.declare',
     ),
+  analyzablePages: async (projectId: string, search: string, options?: ApiRequestOptions) =>
+    strictValidate(
+      analyzablePagesSchema,
+      await apiClient.get(
+        withQuery(
+          `/projects/${projectId}/actions/analyze/pages`,
+          definedQuery({ q: search.trim() || undefined }),
+        ),
+        options,
+      ),
+      'actions.analyzablePages',
+    ),
+  analyze: async (
+    projectId: string,
+    input: ActionAnalyzeRequest,
+    idempotencyKey: string,
+    options?: ApiRequestOptions,
+  ) =>
+    strictValidate(
+      actionAnalyzeResultSchema,
+      await apiClient.post(`/projects/${projectId}/actions/analyze`, input, {
+        ...options,
+        idempotencyKey,
+      }),
+      'actions.analyze',
+    ),
 };
 
 /**
@@ -134,6 +164,16 @@ export const actionsQueries = {
       queryKey: queryKeys.actions.detail(workspaceId, actionId),
       queryFn: ({ signal }) => actionsApi.get(actionId, { signal, workspaceId }),
     }),
+  /** Analyze a page's picker: the latest crawl's content pages matching `search`. */
+  analyzablePages: (scope: ProjectScope, search: string) =>
+    queryOptions({
+      queryKey: queryKeys.actions.analyzePages(scope, search.trim()),
+      queryFn: ({ signal }) =>
+        actionsApi.analyzablePages(scope.projectId, search, {
+          signal,
+          workspaceId: scope.workspaceId,
+        }),
+    }),
 };
 
 /** Every Action read: a status change or a declaration moves the queue, its counts and the detail. */
@@ -178,6 +218,22 @@ export const actionsMutations = {
           vars.input.recommendation_ids
             ? refreshInternalLinkReview(client, vars.projectId)
             : undefined,
+        ]),
+    }),
+  /**
+   * Analyze a page: the page's Action (new or reused) and a new page chat on
+   * it. The Actions list and the Agent's chat list both gain a row.
+   */
+  analyze: (scope: ProjectScope) =>
+    mutationOptions({
+      mutationFn: (vars: { input: ActionAnalyzeRequest; idempotencyKey: string }) =>
+        actionsApi.analyze(scope.projectId, vars.input, vars.idempotencyKey, {
+          workspaceId: scope.workspaceId,
+        }),
+      onSuccess: (_started, _vars, _result, { client }) =>
+        void Promise.all([
+          refreshActions(client),
+          client.invalidateQueries({ queryKey: queryKeys.agent.chatLists(scope.projectId) }),
         ]),
     }),
 };
