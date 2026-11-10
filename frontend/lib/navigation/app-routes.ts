@@ -167,9 +167,11 @@ function actionSurface<const P extends string>(
   screen: Screen,
   icon: IconName,
   badge: NavBadge,
+  // A sidebar row is one line beside its count, so a long title gets a short label.
+  navLabel: string = title,
 ) {
   const placements: NavPlacement[] = ['dashboard:act', 'agent', 'palette:Agent'];
-  const nav = [{ label: title, icon, badge, placements }];
+  const nav = [{ label: navLabel, icon, badge, placements }];
   return [
     page({ path, title, mode: 'agent', screen, nav }),
     page({
@@ -277,6 +279,7 @@ export const APP_ROUTES = [
     screens.contentOptimization,
     'content',
     'open-content',
+    'Content',
   ),
   page({
     path: '/agent/skills',

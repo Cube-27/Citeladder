@@ -102,7 +102,7 @@ describe('Navigation row', () => {
           />
           <NavLink
             item={{
-              label: 'Content optimization',
+              label: 'Content',
               href: '/agent/content',
               icon: FileText,
               badge: 'open-content',
@@ -122,9 +122,7 @@ describe('Navigation row', () => {
       );
 
       expect(await screen.findByRole('link', { name: 'Actions, 7 open' })).toBeVisible();
-      expect(
-        await screen.findByRole('link', { name: 'Content optimization, 2 open' }),
-      ).toBeVisible();
+      expect(await screen.findByRole('link', { name: 'Content, 2 open' })).toBeVisible();
     } finally {
       mswServer.resetHandlers();
       mswServer.close();
