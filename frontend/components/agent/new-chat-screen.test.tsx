@@ -84,6 +84,7 @@ function actionItem(id: string, label: string) {
     skill_id: 'gsc_optimize',
     member_count: 1,
     surface: 'actions',
+    content_gaps: [],
     evidence_cleared_at: null,
     created_at: '2026-09-25T10:00:00Z',
     updated_at: '2026-09-25T10:00:00Z',
@@ -129,7 +130,12 @@ function baseHandlers(actions: ReturnType<typeof actionItem>[] = []) {
       HttpResponse.json({ skills: [GROWTH_SKILL], limits: { mentions_max: 5 } }),
     ),
     http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
-      HttpResponse.json({ items: actions, next_cursor: null, status_counts: {} }),
+      HttpResponse.json({
+        items: actions,
+        next_cursor: null,
+        status_counts: {},
+        content_gap_source: null,
+      }),
     ),
   ];
 }
@@ -382,6 +388,7 @@ describe('NewChatScreen', () => {
           items: queue.slice(0, Number(limit)),
           next_cursor: null,
           status_counts: {},
+          content_gap_source: null,
         });
       }),
       ...baseHandlers(),

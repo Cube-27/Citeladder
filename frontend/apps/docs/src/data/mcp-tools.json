@@ -93,7 +93,7 @@
     {
       "name": "read_actions",
       "title": "Read Actions",
-      "description": "List the work CiteLadder recommends to improve visibility, highest priority first. Without a status filter it lists open and in-progress Actions; each item has its id, target (page, prompt or source), surface, status, priority score, approach and link, and status_counts counts every status (of one surface when filtered). Items come in pages; pass next_cursor for more. Pass action_id for one Action in full: its diagnosis, each finding with its remediation, the measured outcome and any declaration. Use update_action_status to dismiss or reopen one, and prepare_declare_implemented when its work is done.",
+      "description": "List the work CiteLadder recommends to improve visibility, highest priority first. Without a status filter it lists open and in-progress Actions; each item has its id, target (page, prompt or source), surface, status, priority score, approach, content_gaps (each content-gap angle with its prompt, citation, domain and competitor counts) and link, and status_counts counts every status (of one surface when filtered). With surface content, content_gap_source says whether the content gaps are current, out_of_date or not_computed yet; an empty list is \"no gaps\" only when current. Items come in pages; pass next_cursor for more. Pass action_id for one Action in full: its diagnosis, each finding with its remediation, the measured outcome and any declaration. Use update_action_status to dismiss or reopen one, and prepare_declare_implemented when its work is done.",
       "input_schema": {
         "type": "object",
         "properties": {

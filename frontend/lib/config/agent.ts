@@ -41,5 +41,13 @@ export const AGENT_CHAT_SEARCH_DEBOUNCE_MS = 250;
  * opens. The table's first page is too few to find an Action by name.
  */
 export const AGENT_MENTION_POOL_SIZE = 50;
+/**
+ * The workflow each content-gap handoff pins (`workflows.json` ids): a page to
+ * create is written as an article or guide; an existing page is refreshed.
+ */
+export const CONTENT_GAP_WORKFLOWS = {
+  content_gap_new_page: 'article',
+  content_gap_improve_page: 'refresh_page',
+} as const;
 /** Top open Actions a briefing mentions (within the server's `mentions_max`). */
 export const AGENT_BRIEFING_ACTIONS = 5;

@@ -220,7 +220,14 @@ refresh; the Agent's insert derives it the same way from the latest snapshot's
 crawl. A content page's Site Health findings and content gaps share its one
 Action. The list's `surface` filter (`actions` or `content`; anything else is
 400) and its status counts read the column (indexed with the project and
-effective status); no rule is re-tagged.
+effective status); no rule is re-tagged. Each list row carries `content_gaps`,
+its live content-gap findings summarized from their evidence (angle label and
+prompt, citation, domain and competitor counts, most cited first; empty for
+any other Action). A `surface=content` page also carries
+`content_gap_source` from the latest snapshot: `current` when it read a
+content-angle run, `out_of_date` when it recorded that limitation, else
+`not_computed`; it is null for the other lists. The screens are in
+[Content optimization](content-optimization.md).
 
 ## Explicit implementation declaration
 

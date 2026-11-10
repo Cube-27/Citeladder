@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
+import type { ActionSurface } from '@citeladder/contracts/actions';
 import { actionsQueries } from '@/lib/api/actions';
 import { useProjectContext } from '@/lib/project/project-context';
 
@@ -11,14 +12,17 @@ export function queueCount(counts: StatusCounts): number {
 }
 
 /**
- * Project-wide Action counts by status, from the unfiltered first page that
- * the navigation badge, the Actions filter and the Actions table's default
- * view share. Undefined until loaded.
+ * One screen's project-wide Action counts by status, from the unfiltered
+ * first page of that surface that its navigation badge, its status filter and
+ * its table's default view share. Undefined until loaded.
  */
-export function useActionStatusCounts(): StatusCounts | undefined {
+export function useActionStatusCounts(surface: ActionSurface): StatusCounts | undefined {
   const { activeProjectId, activeWorkspaceId } = useProjectContext();
   return useQuery({
-    ...actionsQueries.list({ workspaceId: activeWorkspaceId, projectId: activeProjectId ?? '' }),
+    ...actionsQueries.list(
+      { workspaceId: activeWorkspaceId, projectId: activeProjectId ?? '' },
+      { surface },
+    ),
     enabled: Boolean(activeWorkspaceId && activeProjectId),
   }).data?.status_counts;
 }

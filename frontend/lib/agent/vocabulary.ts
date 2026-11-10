@@ -68,6 +68,7 @@ const FAMILY_LABEL: Record<string, string> = {
   link_graph: 'Link graph',
   site_changes: 'Site changes',
   commerce: 'Commerce',
+  content_optimization: 'Content optimization',
 };
 
 export function familyLabel(family: string): string | null {

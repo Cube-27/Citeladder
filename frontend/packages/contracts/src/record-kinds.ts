@@ -21,6 +21,23 @@ type RecordKind = {
 
 const own = (path: string) => (field: Field) => (field('id') ? `${path}/${field('id')}` : null);
 
+/**
+ * Each Action surface's screen. An Action opens under its own surface's
+ * screen: a content page or content-gap planned page under Content
+ * optimization, everything else under Actions.
+ */
+export const ACTION_SURFACE_SCREENS = {
+  actions: '/agent/actions',
+  content: '/agent/content',
+} as const;
+
+/** One Action's page under its surface's screen; an unknown surface is Actions. */
+export function actionPath(action: Readonly<{ id: string; surface: string }>): string {
+  const screen =
+    action.surface === 'content' ? ACTION_SURFACE_SCREENS.content : ACTION_SURFACE_SCREENS.actions;
+  return `${screen}/${action.id}`;
+}
+
 export const RECORD_KINDS = {
   project: { label: 'Project', screen: '/visibility' },
   prompt: { label: 'Prompt', screen: '/prompts' },
@@ -29,7 +46,13 @@ export const RECORD_KINDS = {
     screen: '/agent/actions',
     page: (field) => (field('action_id') ? `/agent/actions/${field('action_id')}` : null),
   },
-  action: { label: 'Action', screen: '/agent/actions', page: own('/agent/actions') },
+  action: {
+    label: 'Action',
+    screen: '/agent/actions',
+    // The browser holds the id alone and opens it under Actions; MCP passes the surface.
+    page: (field) =>
+      field('id') ? actionPath({ id: field('id'), surface: field('surface') }) : null,
+  },
   audit: { label: 'Visibility run', screen: '/runs', page: own('/runs') },
   visibility_result: {
     label: 'Visibility answer',

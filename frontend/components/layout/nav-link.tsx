@@ -10,6 +10,8 @@ import {
 } from '@/components/ui/app-shell';
 import { LazyIsland } from '@/components/ui/lazy-island';
 
+import type { NavBadge } from '@/lib/navigation/app-routes';
+
 import type { NavItem } from './nav-items';
 
 /**
@@ -22,6 +24,12 @@ import type { NavItem } from './nav-items';
 const OpenActionCount = lazy(() =>
   import('./open-action-count').then(({ OpenActionCount }) => ({ default: OpenActionCount })),
 );
+
+/** The Action surface each count badge reads: one screen's open work each. */
+const BADGE_SURFACE = {
+  'open-actions': 'actions',
+  'open-content': 'content',
+} as const satisfies Record<NavBadge, string>;
 
 /** One shell destination row, shared by Dashboard and Agent navigation. */
 export function NavLink({
@@ -51,11 +59,11 @@ export function NavLink({
           label={item.label}
           active={active}
           count={
-            item.badge === 'open-actions' ? (
+            item.badge ? (
               // Chrome: a count that cannot load or render is reported and
               // leaves the row as it was; it never takes the shell down.
               <LazyIsland failed={null} label="open-action-count" defects="contain">
-                <OpenActionCount />
+                <OpenActionCount surface={BADGE_SURFACE[item.badge]} />
               </LazyIsland>
             ) : null
           }

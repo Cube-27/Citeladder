@@ -16,6 +16,52 @@
   ],
   "components": {
     "schemas": {
+      "ActionContentGap": {
+        "type": "object",
+        "properties": {
+          "opportunity_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "rule_id": {
+            "$ref": "#/components/schemas/ContentGapRule"
+          },
+          "angle_label": {
+            "type": "string"
+          },
+          "prompt_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "citation_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "domain_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "competitor_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "opportunity_id",
+          "rule_id",
+          "angle_label",
+          "prompt_count",
+          "citation_count",
+          "domain_count",
+          "competitor_count"
+        ],
+        "additionalProperties": false
+      },
       "ActionDeclaration": {
         "type": "object",
         "properties": {
@@ -582,13 +628,115 @@
         ],
         "additionalProperties": false
       },
+      "ActionListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "surface": {
+            "$ref": "#/components/schemas/ActionSurface"
+          },
+          "target_kind": {
+            "type": "string"
+          },
+          "target_label": {
+            "type": "string"
+          },
+          "target_url": {
+            "type": ["string", "null"]
+          },
+          "target_prompt_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "origin": {
+            "type": "string",
+            "enum": ["evidence", "agent"]
+          },
+          "status": {
+            "$ref": "#/components/schemas/ActionStatus"
+          },
+          "priority_score": {
+            "type": ["number", "null"]
+          },
+          "families": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "approach": {
+            "type": "string"
+          },
+          "skill_id": {
+            "type": "string"
+          },
+          "member_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "evidence_cleared_at": {
+            "type": ["string", "null"]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "content_gaps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActionContentGap"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "surface",
+          "target_kind",
+          "target_label",
+          "target_url",
+          "target_prompt_id",
+          "origin",
+          "status",
+          "priority_score",
+          "families",
+          "approach",
+          "skill_id",
+          "member_count",
+          "evidence_cleared_at",
+          "created_at",
+          "updated_at",
+          "content_gaps"
+        ],
+        "additionalProperties": false
+      },
       "ActionsPage": {
         "type": "object",
         "properties": {
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ActionItem"
+              "$ref": "#/components/schemas/ActionListItem"
             }
           },
           "next_cursor": {
@@ -604,9 +752,19 @@
               "minimum": -9007199254740991,
               "maximum": 9007199254740991
             }
+          },
+          "content_gap_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContentGapSourceState"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
-        "required": ["items", "next_cursor", "status_counts"],
+        "required": ["items", "next_cursor", "status_counts", "content_gap_source"],
         "additionalProperties": false
       },
       "ActionStatus": {
@@ -1706,6 +1864,14 @@
         },
         "required": ["id", "name", "aliases", "domains"],
         "additionalProperties": false
+      },
+      "ContentGapRule": {
+        "type": "string",
+        "enum": ["content_gap_improve_page", "content_gap_new_page"]
+      },
+      "ContentGapSourceState": {
+        "type": "string",
+        "enum": ["current", "out_of_date", "not_computed"]
       },
       "CrawlAnalysisStatus": {
         "type": "string",

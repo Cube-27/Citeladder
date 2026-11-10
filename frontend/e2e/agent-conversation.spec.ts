@@ -93,7 +93,7 @@ for (const width of [1280, 390]) {
       ['**/api/v1/agent/skills', { skills: SKILLS, limits: { mentions_max: 5 } }],
       [
         `**/api/v1/projects/${FIXTURE_PROJECT.id}/actions*`,
-        { items: [], next_cursor: null, status_counts: {} },
+        { items: [], next_cursor: null, status_counts: {}, content_gap_source: null },
       ],
       [`**/api/v1/projects/${FIXTURE_PROJECT.id}/agent/chats?*`, { items: [], next_cursor: null }],
     ]);
@@ -162,7 +162,7 @@ for (const width of [1280, 390]) {
         ['**/api/v1/agent/skills', { skills: SKILLS, limits: { mentions_max: 5 } }],
         [
           `**/api/v1/projects/${FIXTURE_PROJECT.id}/actions*`,
-          { items: [], next_cursor: null, status_counts: {} },
+          { items: [], next_cursor: null, status_counts: {}, content_gap_source: null },
         ],
         [
           `**/api/v1/projects/${FIXTURE_PROJECT.id}/agent/chats?*`,

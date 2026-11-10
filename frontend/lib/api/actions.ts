@@ -16,8 +16,10 @@ import {
   actionDeclarationSchema,
   actionDetailSchema,
   actionItemSchema,
+  actionListItemSchema,
   actionStatusSchema,
   actionsPageSchema,
+  type ActionSurface,
   type ActionDeclarationRequest,
   type ActionUserStatus,
 } from '@citeladder/contracts/actions';
@@ -27,6 +29,8 @@ import { AGENT_MENTION_POOL_SIZE } from '@/lib/config/agent';
 import { TABLE_DEFAULT_PAGE_SIZE } from '@/lib/config/tables';
 
 export type Action = z.infer<typeof actionItemSchema>;
+export type ActionListItem = z.infer<typeof actionListItemSchema>;
+export type ActionsPage = z.infer<typeof actionsPageSchema>;
 export type ActionDetail = z.infer<typeof actionDetailSchema>;
 export type ActionStatus = z.infer<typeof actionStatusSchema>;
 export type ActionDeclaration = z.infer<typeof actionDeclarationSchema>;
@@ -38,6 +42,8 @@ export type ActionsParams = {
   /** Omitted: the work queue (open and in progress). */
   status?: ActionStatus;
   target_kind?: string;
+  /** One screen's Actions; omitted, both (the Agent's own lists and mentions). */
+  surface?: ActionSurface;
 };
 
 export const actionsApi = {
@@ -80,10 +86,10 @@ export const actionsApi = {
 };
 
 /**
- * One page of Actions. Without a limit it is the Actions table's first page
- * at its default size, so the navigation badge, the Agent's top Actions and
- * the table share one request instead of asking for two page sizes of the
- * same queue.
+ * One page of Actions. Without a limit it is a table's first page at its
+ * default size, so a screen's navigation badge and its table share one
+ * request (Actions with `surface: 'actions'`, Content optimization with
+ * `surface: 'content'`), and the Agent's top Actions share the unfiltered one.
  */
 function actionListQuery(scope: ProjectScope, params?: ActionsParams) {
   const request = { ...params, limit: params?.limit ?? TABLE_DEFAULT_PAGE_SIZE };
@@ -91,6 +97,7 @@ function actionListQuery(scope: ProjectScope, params?: ActionsParams) {
     queryKey: queryKeys.actions.list(scope, {
       status: request.status ?? null,
       targetKind: request.target_kind ?? null,
+      surface: request.surface ?? null,
       cursor: request.cursor ?? null,
       limit: request.limit,
     }),
