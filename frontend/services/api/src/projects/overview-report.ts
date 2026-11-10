@@ -204,7 +204,7 @@ const commandCenterSections: Partial<Record<OverviewWidgetKey, Section>> = {
 function guide({ view, report, prompts }: ReportContext, brand: string) {
   report.heading('How to read this report');
   report.text(
-    `Visibility is the share of AI answers to your tracked prompts that name ${brand}. Share of voice is ${brand}'s share of all brand mentions in those answers, competitors included, and brand rank orders the tracked brands by it. The owned citation rate is the share of answers that cite a page on your website.`,
+    `Visibility is the share of AI answers to your tracked prompts that name ${brand}. Share of voice is ${brand}'s share of the mentions of the brands you track in those answers, competitors included, and brand rank orders the tracked brands by it. The owned citation rate is the share of answers that cite a page on your website.`,
   );
   const measurement = view.measurement;
   if (!measurement) {

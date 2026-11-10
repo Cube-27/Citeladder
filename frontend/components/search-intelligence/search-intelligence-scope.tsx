@@ -114,7 +114,8 @@ function SavedCaption({
           Saved <DisplayTime value={latest.published_at} />
         </>
       ) : (
-        'No saved analysis'
+        // A saved result without a publish time is still a saved result.
+        (latest && 'Save time unavailable') || 'No saved analysis'
       )}
     </span>
   );

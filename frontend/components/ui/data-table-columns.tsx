@@ -104,7 +104,8 @@ export function useFlexibleColumnCheck({
     if (!import.meta.env?.DEV) return;
     if (columns.some((column) => FLEXIBLE_WIDTHS.has(column.width ?? 'flex'))) return;
     const name = title ?? label ?? columns.map((column) => column.label).join(', ');
-    const signature = `${name}|${columns.map((column) => `${column.key}:${column.width}`).join(',')}`;
+    const widths = columns.map((column) => `${column.key}:${column.width}`).join(',');
+    const signature = `${name}|${widths}`;
     if (warnedColumnSets.has(signature)) return;
     warnedColumnSets.add(signature);
     console.warn(

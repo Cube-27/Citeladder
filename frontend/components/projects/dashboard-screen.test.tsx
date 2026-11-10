@@ -352,7 +352,7 @@ describe('DashboardScreen', () => {
       </TooltipProvider>,
     );
     const movement = within(screen.getByRole('region', { name: 'Movement' }));
-    expect(movement.getByText('No change to show')).toBeVisible();
+    expect(movement.getByText('No movement to show')).toBeVisible();
     expect(movement.queryByText('No comparable measurement yet')).not.toBeInTheDocument();
     expect(movement.queryByRole('button', { name: 'Launch audit' })).not.toBeInTheDocument();
   });

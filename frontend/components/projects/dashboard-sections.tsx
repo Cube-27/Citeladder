@@ -334,7 +334,7 @@ function NoMovement({ comparable }: Readonly<{ comparable: boolean }>) {
       <EmptyState
         variant="inline"
         icon={TrendingUp}
-        title="No change to show"
+        title="No movement to show"
         description="The comparable run gave no engine movement to compare against this one."
       />
     );
