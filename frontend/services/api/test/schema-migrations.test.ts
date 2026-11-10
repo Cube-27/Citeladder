@@ -86,6 +86,7 @@ describe('a fresh database', () => {
       '0017_action_surface',
       '0018_drop_action_surface',
       '0019_page_documents',
+      '0020_page_suggestions',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -110,6 +111,7 @@ describe('a fresh database', () => {
       { version: '0017_action_surface' },
       { version: '0018_drop_action_surface' },
       { version: '0019_page_documents' },
+      { version: '0020_page_suggestions' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -158,6 +160,7 @@ describe('an existing database', () => {
       '0017_action_surface',
       '0018_drop_action_surface',
       '0019_page_documents',
+      '0020_page_suggestions',
     ]);
     // A URL identity keeps no per-sighting discovery status.
     expect(await columns(client, 'site_urls')).not.toContain('discovery_status');
@@ -206,6 +209,10 @@ describe('an existing database', () => {
     // A page document keeps the snapshot it started from and its SEO fields.
     expect(await columns(client, 'agent_outputs')).toContain('snapshot_id');
     expect(await columns(client, 'agent_output_revisions')).toContain('fields');
+    // A page document's suggestions are insert-only; their status changes are events.
+    expect(await columns(client, 'agent_output_suggestion_events')).toEqual(
+      expect.arrayContaining(['suggestion_id', 'sequence', 'status', 'revision_id', 'reason']),
+    );
     // One Actions list: an Action names no screen of its own.
     expect(await columns(client, 'actions')).not.toContain('surface');
     // One internal-cost view across platform calls, Agent calls and answer engines.
@@ -232,6 +239,7 @@ describe('an existing database', () => {
       { version: '0017_action_surface' },
       { version: '0018_drop_action_surface' },
       { version: '0019_page_documents' },
+      { version: '0020_page_suggestions' },
     ]);
   }, 120000);
 });

@@ -220,6 +220,45 @@ export interface AgentOutputs {
   workspace_id: string;
 }
 
+export interface AgentOutputSuggestionEvents {
+  actor: string;
+  actor_user_id: string | null;
+  created_at: Timestamp;
+  id: string;
+  position_end: number | null;
+  position_start: number | null;
+  project_id: string;
+  reason: string | null;
+  revision_id: string | null;
+  run_id: string | null;
+  sequence: number;
+  status: string;
+  suggestion_id: string;
+  workspace_id: string;
+}
+
+export interface AgentOutputSuggestions {
+  anchor: Json;
+  anchor_kind: string;
+  category: string;
+  created_at: Timestamp;
+  depends_on: Json;
+  id: string;
+  message_id: string | null;
+  needs_input: string | null;
+  output_id: string;
+  project_id: string;
+  rationale: string;
+  replacement: string | null;
+  revision_id: string;
+  rule_id: string;
+  rule_version: string | null;
+  run_id: string | null;
+  snapshot_id: string | null;
+  source: string;
+  workspace_id: string;
+}
+
 export interface AgentRuns {
   attempt_count: number;
   available_at: Timestamp;
@@ -3455,6 +3494,8 @@ export interface DB {
   agent_messages: AgentMessages;
   agent_model_attempts: AgentModelAttempts;
   agent_output_revisions: AgentOutputRevisions;
+  agent_output_suggestion_events: AgentOutputSuggestionEvents;
+  agent_output_suggestions: AgentOutputSuggestions;
   agent_outputs: AgentOutputs;
   agent_run_transcripts: AgentRunTranscripts;
   agent_runs: AgentRuns;

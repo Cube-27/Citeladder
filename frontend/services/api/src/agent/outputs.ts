@@ -5,6 +5,7 @@ import type { Database } from '../db/database.ts';
 import type { AgentOutputRevisions, AgentOutputs as OutputTable } from '../generated/db-schema.ts';
 import type { WebSource } from '../models/conversation.ts';
 import { refreshActionStatus } from '../opportunities/action-status.ts';
+import { recheckOpen } from '../page-documents/suggestions.ts';
 import { authorize } from './access.ts';
 import {
   agentPolicy,
@@ -66,7 +67,7 @@ export function latestDocument(documents: readonly ChatDocument[]) {
 }
 
 /** One chat document by id, with its latest revision; `null` when the chat has no such document. */
-async function chatDocument(db: Database, chat: Chat, outputId: string) {
+export async function chatDocument(db: Database, chat: Chat, outputId: string) {
   const documents = await chatDocuments(db, chat);
   return documents.find((document) => document.output.id === outputId) ?? null;
 }
@@ -142,7 +143,7 @@ export async function saveAgentOutput(
     .returning('action_id')
     .executeTakeFirstOrThrow();
   if (actionId) await refreshActionStatus(db, chat.workspace_id, actionId);
-  return appendRevision(db, chat, output, current?.revision ?? null, {
+  const revision = await appendRevision(db, chat, output, current?.revision ?? null, {
     author: 'agent',
     run_id: input.runId,
     message_id: input.messageId,
@@ -154,7 +155,12 @@ export async function saveAgentOutput(
     source_refs: [...new Set(input.refs)],
     web_sources: input.webSources,
   });
+  // The Agent's edit stales the open suggestions it changed, as a person's does.
+  await recheckOpen(db, ownerOf(chat), output.id, { actor: 'agent', runId: input.runId });
+  return revision;
 }
+
+const ownerOf = (chat: Chat) => ({ workspaceId: chat.workspace_id, projectId: chat.project_id });
 
 /** A page revision's SEO block, as fetched or last edited. */
 const pageFieldsSchema = z.strictObject({
@@ -258,24 +264,54 @@ export async function createFetchedDocument(
   return { output, revision };
 }
 
+/**
+ * A person's change to a chat: authorized, with the chat locked and no turn
+ * or page fetch running, in one transaction that marks the chat active.
+ */
+export function changeIdleChat<T>(
+  database: Database,
+  scope: Scope,
+  chatId: string,
+  action: (db: Database, chat: Chat) => Promise<T>,
+) {
+  return database.transaction().execute(async (trx) => {
+    await authorize(trx, scope);
+    const chat = await getChat(trx, scope, chatId, true);
+    await requireIdle(trx, chat);
+    const result = await action(trx, chat);
+    await touchChat(trx, scope.workspaceId, chat.id);
+    return result;
+  });
+}
+
+/**
+ * A person's new revision of a document from its latest one: the title,
+ * body and SEO fields as given, the sources kept. The caller rechecks the
+ * document's open suggestions once its own events are recorded.
+ */
+export async function appendUserRevision(
+  db: Database,
+  scope: Scope,
+  chat: Chat,
+  current: ChatDocument,
+  content: { title: string; body: string; fields: PageFields | null },
+) {
+  await touchOutput(db, scope, current.output.id);
+  return appendRevision(db, chat, current.output, current.revision, {
+    author: 'user',
+    author_user_id: scope.userId,
+    run_id: null,
+    message_id: null,
+    ...content,
+    source_refs: current.revision.source_refs,
+    web_sources: current.revision.web_sources,
+  });
+}
+
 export class AgentOutputs {
   readonly db: Database;
   constructor(db: Database) {
     this.db = db;
-  }
-  private mutate<T>(
-    scope: Scope,
-    chatId: string,
-    action: (db: Database, chat: Chat) => Promise<T>,
-  ) {
-    return this.db.transaction().execute(async (trx) => {
-      await authorize(trx, scope);
-      const chat = await getChat(trx, scope, chatId, true);
-      await requireIdle(trx, chat);
-      const result = await action(trx, chat);
-      await touchChat(trx, scope.workspaceId, chat.id);
-      return result;
-    });
   }
   /** A person's edit of one document, against the revision they edited. */
   edit(
@@ -284,25 +320,20 @@ export class AgentOutputs {
     outputId: string,
     edit: { baseId: string; title: string; body: string },
   ) {
-    return this.mutate(scope, chatId, async (db, chat) => {
+    return changeIdleChat(this.db, scope, chatId, async (db, chat) => {
       const current = await chatDocument(db, chat, outputId);
       if (current?.revision.id !== edit.baseId || !current) throw new AgentError('output_conflict');
       const payload = outputPayloadSchema.parse({ title: edit.title, body: edit.body });
-      await touchOutput(db, scope, current.output.id);
-      return appendRevision(db, chat, current.output, current.revision, {
-        author: 'user',
-        author_user_id: scope.userId,
-        run_id: null,
-        message_id: null,
+      const revision = await appendUserRevision(db, scope, chat, current, {
         ...payload,
         fields: pageFields(current.revision.fields),
-        source_refs: current.revision.source_refs,
-        web_sources: current.revision.web_sources,
       });
+      await recheckOpen(db, scope, current.output.id, { actor: 'user', userId: scope.userId });
+      return revision;
     });
   }
   restore(scope: Scope, chatId: string, outputId: string, revisionId: string) {
-    return this.mutate(scope, chatId, async (db, chat) => {
+    return changeIdleChat(this.db, scope, chatId, async (db, chat) => {
       const current = await chatDocument(db, chat, outputId);
       if (!current) throw new AgentError('output_conflict');
       const source = await db
@@ -314,7 +345,7 @@ export class AgentOutputs {
         .executeTakeFirst();
       if (!source) throw new AgentError('output_conflict');
       await touchOutput(db, scope, current.output.id);
-      return appendRevision(db, chat, current.output, current.revision, {
+      const revision = await appendRevision(db, chat, current.output, current.revision, {
         author: 'user',
         author_user_id: scope.userId,
         run_id: null,
@@ -325,6 +356,8 @@ export class AgentOutputs {
         source_refs: source.source_refs,
         web_sources: source.web_sources,
       });
+      await recheckOpen(db, scope, current.output.id, { actor: 'user', userId: scope.userId });
+      return revision;
     });
   }
   saveInstructions(scope: Scope, text: string) {

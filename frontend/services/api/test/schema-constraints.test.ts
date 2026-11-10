@@ -8,6 +8,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { actionStatusSchema } from '@citeladder/contracts/actions';
+import { agentSuggestionSchema } from '@citeladder/contracts/agent';
 import { auditStatusSchema } from '@citeladder/contracts/audits';
 import { promptStatusSchema } from '@citeladder/contracts/project';
 import { searchRunStatusSchema } from '@citeladder/contracts/search-intelligence';
@@ -682,6 +683,14 @@ describe('status vocabularies', () => {
     ['content_angle_runs', 'outcome', ['succeeded', 'failed']],
     ['content_angle_owned_matches', 'method', ['model_pick', 'none']],
     ['page_snapshots', 'outcome', policy.content_optimization.page_fetch.outcomes],
+    ['agent_output_suggestions', 'anchor_kind', ['span', 'field', 'page']],
+    ['agent_output_suggestions', 'source', agentSuggestionSchema.shape.source.options],
+    [
+      'agent_output_suggestion_events',
+      'status',
+      ['open', 'applied', 'dismissed', 'reverted', 'stale'],
+    ],
+    ['agent_output_suggestion_events', 'actor', ['agent', 'user', 'system']],
     ['prompts', 'status', promptStatusSchema.options],
     [
       'prompt_candidates',
@@ -718,6 +727,7 @@ describe('project deletion', () => {
     'site_urls',
     'integration_metric_rows',
     'opportunities',
+    'agent_output_suggestions',
   ];
 
   it('indexes every reference to a parent it removes row by row', async () => {

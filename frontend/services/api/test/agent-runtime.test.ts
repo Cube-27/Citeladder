@@ -418,6 +418,7 @@ describe('Agent runtime on PostgreSQL', () => {
       'load_skill',
       'read_evidence',
       'save_document',
+      'suggest_edits',
     ]);
   });
 

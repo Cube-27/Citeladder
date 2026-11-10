@@ -244,6 +244,136 @@ export const agentRevisionsPageSchema = responseObject({
   items: z.array(agentRevisionSchema),
 });
 
+/** An SEO field of a page document. */
+export const agentPageFieldSchema = agentPageFieldsSchema.keyof();
+/** A half-open range of the Markdown body in UTF-16 code units, as JavaScript and CodeMirror count. */
+const agentBodySpanSchema = responseObject({
+  start: z.number().int().nonnegative(),
+  end: z.number().int().nonnegative(),
+});
+
+/**
+ * Where a suggestion points in the revision it was made against (content rules
+ * engine, "Findings and anchoring"): a span of the body with its exact text and
+ * about 32 characters of context each side, an SEO field with the value it had,
+ * or the page as a whole.
+ */
+export const agentSuggestionAnchorSchema = z.discriminatedUnion('kind', [
+  responseObject({
+    kind: z.literal('span'),
+    position: agentBodySpanSchema,
+    quote: responseObject({ exact: z.string(), prefix: z.string(), suffix: z.string() }),
+  }),
+  responseObject({ kind: z.literal('field'), field: agentPageFieldSchema, expected: z.string() }),
+  responseObject({ kind: z.literal('page') }),
+]);
+
+/**
+ * What a suggestion's judgement read; a change to any of it makes the
+ * suggestion stale. A `section` is the body between the headings around the
+ * span, in the suggestion's own revision.
+ */
+export const agentSuggestionDependencySchema = z.discriminatedUnion('kind', [
+  responseObject({ kind: z.literal('span') }),
+  responseObject({
+    kind: z.literal('section'),
+    start: z.number().int().nonnegative(),
+    end: z.number().int().nonnegative(),
+  }),
+  responseObject({ kind: z.literal('body') }),
+  responseObject({ kind: z.literal('field'), field: agentPageFieldSchema }),
+]);
+
+/** Why a suggestion went stale: its text, its field or a dependency changed, or a newer suggestion replaced it. */
+export const agentSuggestionStaleReasonSchema = z.enum([
+  'span_changed',
+  'field_changed',
+  'dependency_changed',
+  'replaced',
+]);
+
+/** One status change; `reverted` returns a suggestion to open. */
+const agentSuggestionEventSchema = responseObject({
+  status: z.enum(['open', 'applied', 'dismissed', 'reverted', 'stale']),
+  actor: z.enum(['agent', 'user', 'system']),
+  revision_id: uuid().nullable(),
+  reason: agentSuggestionStaleReasonSchema.nullable(),
+  created_at: z.string(),
+});
+
+/**
+ * One suggestion on a page document. `ready` carries replacement text,
+ * `needs_input` asks the person for a fact and `advice` has neither.
+ * `position` is where its text is in the latest revision: an open span's
+ * quote, or an applied span's replacement; null for a field, the page, or text
+ * that is no longer there. `choose_one` marks an open ready suggestion that
+ * overlaps another open one, which Apply all leaves for the person.
+ */
+export const agentSuggestionSchema = responseObject({
+  id: uuid(),
+  output_id: uuid(),
+  revision_id: uuid(),
+  source: z.enum(['model', 'site_health']),
+  category: z.string(),
+  rule_id: z.string(),
+  rationale: z.string(),
+  anchor: agentSuggestionAnchorSchema,
+  depends_on: z.array(agentSuggestionDependencySchema),
+  replacement: z.string().nullable(),
+  needs_input: z.string().nullable(),
+  status: z.enum(['open', 'applied', 'dismissed', 'stale']),
+  readiness: z.enum(['ready', 'needs_input', 'advice']),
+  position: agentBodySpanSchema.nullable(),
+  choose_one: z.boolean(),
+  events: z.array(agentSuggestionEventSchema),
+  created_at: z.string(),
+});
+
+/**
+ * A page document's open, applied and dismissed suggestions against its latest
+ * revision, in position order, with counts per status and open ones per
+ * category. Stale suggestions are counted, not listed.
+ */
+export const agentSuggestionsPageSchema = responseObject({
+  revision_id: uuid(),
+  items: z.array(agentSuggestionSchema),
+  counts: responseObject({
+    open: z.number().int(),
+    applied: z.number().int(),
+    dismissed: z.number().int(),
+    stale: z.number().int(),
+    needs_input: z.number().int(),
+    by_category: z.array(responseObject({ category: z.string(), open: z.number().int() })),
+  }),
+});
+
+/**
+ * Apply, Dismiss or Revert on one suggestion. A check that failed marks it
+ * `stale` with its reason instead; `revision` is the revision the change
+ * appended, if it appended one.
+ */
+export const agentSuggestionResultSchema = responseObject({
+  outcome: z.enum(['applied', 'dismissed', 'reverted', 'stale']),
+  reason: agentSuggestionStaleReasonSchema.nullable(),
+  suggestion: agentSuggestionSchema,
+  revision: agentRevisionSchema.nullable(),
+});
+
+/**
+ * Apply all: the ready suggestions applied in one revision, those left for the
+ * person to choose between, the open ones that need input (always skipped)
+ * and the ones that went stale on the way.
+ */
+export const agentSuggestionsAppliedSchema = responseObject({
+  applied: z.number().int(),
+  left_to_choose: z.number().int(),
+  needs_input: z.number().int(),
+  stale: z.number().int(),
+  revision: agentRevisionSchema.nullable(),
+});
+
+export const agentSuggestionsDismissedSchema = responseObject({ dismissed: z.number().int() });
+
 export const agentSkillSchema = responseObject({
   id: z.string(),
   label: z.string(),
@@ -368,6 +498,8 @@ export function agentRequestSchemas(bounds: {
       body: z.string().max(bounds.output_body_max_chars).trim().min(1),
     }),
     instructions: z.strictObject({ text: z.string().max(bounds.instructions_max_chars) }),
+    // Every suggestion change names the latest revision the person saw.
+    suggestion: z.strictObject({ base_revision_id: uuid() }),
   };
 }
 type AgentRequestSchemas = ReturnType<typeof agentRequestSchemas>;

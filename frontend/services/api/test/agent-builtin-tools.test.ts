@@ -4,6 +4,7 @@ import {
   editDocument,
   loadSkill,
   saveDocument,
+  suggestEdits,
   type DocumentState,
   type SavedDocument,
 } from '../src/agent/builtin-tools.ts';
@@ -41,6 +42,8 @@ function state(overrides: Partial<DocumentState> = {}): DocumentState {
     documents: [],
     staged: new Map(),
     personIds: new Set(),
+    pages: new Map(),
+    suggestions: [],
     ...overrides,
   };
 }
@@ -266,6 +269,176 @@ describe('Agent built-in tools', () => {
     expect(turn.staged.get(1)?.payload.body).toBe('New intro.');
   });
 
+  describe('suggest_edits', () => {
+    const open = '5b2f0d7e-1c3a-4e8b-9f60-2a7d4c1e8b93';
+    const pageState = (): DocumentState['pages'] =>
+      new Map([
+        [
+          1,
+          {
+            fields: { title: 'Kids shoes', meta_description: '', json_ld: '' },
+            digest: null,
+            known: [
+              {
+                id: open,
+                open: true,
+                source: 'site_health',
+                ruleId: 'technical.meta_description_present',
+                anchor: { kind: 'field', field: 'meta_description', expected: '' },
+                position: null,
+                replacement: null,
+              },
+            ],
+          },
+        ],
+      ]);
+    const pageTurn = (body = '🎉 Intro.\n\nSizes run small.\n\nShop now.') =>
+      state({
+        documents: [saved({ kind: 'page', skillId: 'content_optimize', formatId: null, body })],
+        pages: pageState(),
+      });
+    const suggestion = (overrides: Record<string, unknown> = {}) => ({
+      old_string: 'Sizes run small.',
+      new_string: 'Sizes run half a size small.',
+      category: 'clarity',
+      rule_id: 'clarity.precise_terms',
+      rationale: 'Say how small.',
+      ...overrides,
+    });
+
+    it('stages a span at UTF-16 offsets, a field and a question, all with the reply', () => {
+      const turn = pageTurn();
+      const outcome = suggestEdits(
+        catalog,
+        turn,
+        {
+          suggestions: [
+            suggestion({ depends_on: ['section'] }),
+            {
+              field: 'meta_description',
+              new_string: 'School shoes for kids, sized by age.',
+              category: 'search_guidelines',
+              rule_id: 'technical.meta_description_present',
+              rationale: 'The page has no meta description.',
+            },
+            {
+              old_string: 'Shop now.',
+              needs_input: 'How many sizes do you stock?',
+              category: 'proof',
+              rule_id: 'proof.specific_facts',
+              rationale: 'A count is more convincing.',
+            },
+          ],
+        },
+        bounds,
+      );
+      expect(outcome).toMatchObject({ ok: true, document: 1 });
+      expect(
+        turn.suggestions.map(({ target, replacement, needsInput, dependsOn, replaces }) => ({
+          target,
+          replacement,
+          needsInput,
+          dependsOn,
+          replaces,
+        })),
+      ).toEqual([
+        {
+          // The emoji before it is two UTF-16 code units.
+          target: { kind: 'span', at: { start: 11, end: 27 }, exact: 'Sizes run small.' },
+          replacement: 'Sizes run half a size small.',
+          needsInput: null,
+          dependsOn: ['section'],
+          replaces: [],
+        },
+        {
+          target: { kind: 'field', field: 'meta_description' },
+          replacement: 'School shoes for kids, sized by age.',
+          needsInput: null,
+          dependsOn: [],
+          // Writing the text for the Site Health finding replaces its advice.
+          replaces: [open],
+        },
+        {
+          target: { kind: 'span', at: { start: 29, end: 38 }, exact: 'Shop now.' },
+          replacement: null,
+          needsInput: 'How many sizes do you stock?',
+          dependsOn: [],
+          replaces: [],
+        },
+      ]);
+    });
+
+    it('refuses the whole call with how to fix the first broken suggestion', () => {
+      const turn = pageTurn('Sizes run small. Sizes run small.');
+      const refusal = (items: Record<string, unknown>[]) =>
+        suggestEdits(catalog, turn, { suggestions: items }, bounds).text;
+      expect(refusal([suggestion()])).toBe(
+        'old_string appears more than once. Include more surrounding text so it matches exactly once. No suggestions were staged.',
+      );
+      const fresh = pageTurn();
+      const refused = (items: Record<string, unknown>[]) =>
+        suggestEdits(catalog, fresh, { suggestions: items }, bounds).text;
+      expect(refused([suggestion(), suggestion({ old_string: 'Missing.' })])).toBe(
+        'Suggestion 2: old_string is not in the current page. Copy it exactly, including whitespace and Markdown. No suggestions were staged.',
+      );
+      expect(refused([suggestion({ needs_input: 'Which sizes?' })])).toBe(
+        'A suggestion that needs input has no new_string: ask in needs_input and leave new_string out. No suggestions were staged.',
+      );
+      expect(refused([suggestion({ replaces: ['0b9c1f2e-3d4a-4b5c-8d6e-7f8091a2b3c4'] })])).toBe(
+        'replaces names 0b9c1f2e-3d4a-4b5c-8d6e-7f8091a2b3c4, which is not an open suggestion on this page. Use an id from its suggestion list. No suggestions were staged.',
+      );
+      expect(
+        refused([suggestion({ old_string: null, field: 'title', depends_on: ['section'] })]),
+      ).toBe(
+        'depends_on section needs old_string; for a field or the whole page use body. No suggestions were staged.',
+      );
+      expect(fresh.suggestions).toEqual([]);
+      // Only a page document takes suggestions.
+      expect(
+        suggestEdits(
+          catalog,
+          state({ documents: [saved()] }),
+          { suggestions: [suggestion()] },
+          bounds,
+        ).text,
+      ).toBe(
+        'Suggestions are for a page document, and this chat has none. Change other documents with edit_document.',
+      );
+    });
+
+    it('moves staged suggestions through a later edit and drops the one it changed', () => {
+      const turn = pageTurn('Intro.\n\nSizes run small.\n\nShop now.');
+      suggestEdits(
+        catalog,
+        turn,
+        {
+          suggestions: [
+            suggestion(),
+            suggestion({ old_string: 'Shop now.', new_string: 'Shop the range.' }),
+          ],
+        },
+        bounds,
+      );
+      const edited = editDocument(
+        catalog,
+        turn,
+        {
+          edits: [
+            { old_string: 'Intro.', new_string: 'A longer intro.' },
+            { old_string: 'Shop now.', new_string: 'Buy.' },
+          ],
+        },
+        bounds,
+      );
+      expect(edited.text).toContain(
+        'The edit changed the text of one suggestion staged earlier in this turn, so it was dropped; suggest it again if it still applies.',
+      );
+      expect(turn.suggestions.map((item) => item.target)).toEqual([
+        { kind: 'span', at: { start: 17, end: 33 }, exact: 'Sizes run small.' },
+      ]);
+    });
+  });
+
   it('offers reads and built-ins sorted by name, streaming only the whole document', () => {
     const registry = new ToolRegistry('v', [
       {
@@ -288,6 +461,7 @@ describe('Agent built-in tools', () => {
       ['load_skill', false],
       ['read_zeta', false],
       ['save_document', true],
+      ['suggest_edits', false],
     ]);
     // The provider checks the same input schema the tool parses, without null branches.
     expect(tools[3]!.input_schema).toEqual({

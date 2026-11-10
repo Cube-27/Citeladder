@@ -273,6 +273,11 @@ const BUILTIN_TOOL_LABEL: Record<string, Record<'started' | 'completed' | 'refus
     completed: 'Edited the document',
     refused: 'Document not edited',
   },
+  suggest_edits: {
+    started: 'Suggesting changes…',
+    completed: 'Suggested changes',
+    refused: 'Changes not suggested',
+  },
   // Provider-hosted; its results are outside pages, not CiteLadder data.
   web_search: {
     started: 'Searching the web…',
