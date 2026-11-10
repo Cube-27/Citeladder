@@ -65,7 +65,9 @@ export function PageHero({
 /**
  * LandingHero: the home page's opening, centred (D18). The announcement sits
  * over the H1, then the lead, actions and note; the frame goes below the copy.
- * Its copy loads in (D36); the frame is static.
+ * Its copy loads in (D36); the frame is static. With an `aside` (D52) the
+ * hero splits from 1280px: the copy left-aligned, the aside to its right; on
+ * narrower screens the aside sits under the centred copy.
  */
 export function LandingHero({
   announcement,
@@ -73,6 +75,7 @@ export function LandingHero({
   lead,
   actions,
   note,
+  aside,
   frame,
 }: Readonly<{
   announcement?: ReactNode;
@@ -80,10 +83,11 @@ export function LandingHero({
   lead?: ReactNode;
   actions?: ReactNode;
   note?: ReactNode;
+  aside?: ReactNode;
   frame?: ReactNode;
 }>) {
   return (
-    <section className="cl-lhero">
+    <section className={cn('cl-lhero', aside && 'cl-lhero--split')}>
       <div className="cl-container">
         <div className="cl-lhero-copy mk-hero-in">
           {announcement}
@@ -92,6 +96,7 @@ export function LandingHero({
           {actions && <div className="cl-lhero-actions">{actions}</div>}
           {note && <p className="cl-lhero-note">{note}</p>}
         </div>
+        {aside && <div className="cl-lhero-aside">{aside}</div>}
         {frame && <div className="cl-lhero-frame">{frame}</div>}
       </div>
     </section>

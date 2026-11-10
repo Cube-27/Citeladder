@@ -232,7 +232,255 @@
   }
 }
 
+/* The capability panel's tour (D52): the highlight reaches a row at the start
+   of that row's tenth of the cycle, rests on it and leaves as the next
+   begins. Ten rows, so each keyframe step is 10%. */
+@keyframes cl-capl-row {
+  0%,
+  12%,
+  100% {
+    color: var(--color-ink-secondary);
+  }
+
+  2%,
+  10% {
+    color: var(--color-ink);
+  }
+}
+
+@keyframes cl-capl-ico {
+  0%,
+  12%,
+  100% {
+    color: var(--color-ink-secondary);
+  }
+
+  2%,
+  10% {
+    color: var(--color-accent);
+  }
+}
+
+@keyframes cl-capl-go {
+  0%,
+  12%,
+  100% {
+    opacity: 0;
+  }
+
+  2%,
+  10% {
+    opacity: 1;
+  }
+}
+
+/* One column: the highlight slides down a row at a time and fades at the foot. */
+@keyframes cl-capl-glide {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+
+  2% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  10% {
+    transform: translateY(0);
+  }
+
+  12%,
+  20% {
+    transform: translateY(var(--capl-row));
+  }
+
+  22%,
+  30% {
+    transform: translateY(calc(var(--capl-row) * 2));
+  }
+
+  32%,
+  40% {
+    transform: translateY(calc(var(--capl-row) * 3));
+  }
+
+  42%,
+  50% {
+    transform: translateY(calc(var(--capl-row) * 4));
+  }
+
+  52%,
+  60% {
+    transform: translateY(calc(var(--capl-row) * 5));
+  }
+
+  62%,
+  70% {
+    transform: translateY(calc(var(--capl-row) * 6));
+  }
+
+  72%,
+  80% {
+    transform: translateY(calc(var(--capl-row) * 7));
+  }
+
+  82%,
+  90% {
+    transform: translateY(calc(var(--capl-row) * 8));
+  }
+
+  92% {
+    transform: translateY(calc(var(--capl-row) * 9));
+  }
+
+  98% {
+    opacity: 1;
+    transform: translateY(calc(var(--capl-row) * 9));
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(calc(var(--capl-row) * 9));
+  }
+}
+
+/* Two columns of five: the same, fading across to the second column. */
+@keyframes cl-capl-glide-cols {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+
+  2% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+
+  10% {
+    transform: translate(0, 0);
+  }
+
+  12%,
+  20% {
+    transform: translate(0, var(--capl-row));
+  }
+
+  22%,
+  30% {
+    transform: translate(0, calc(var(--capl-row) * 2));
+  }
+
+  32%,
+  40% {
+    transform: translate(0, calc(var(--capl-row) * 3));
+  }
+
+  42% {
+    transform: translate(0, calc(var(--capl-row) * 4));
+  }
+
+  50% {
+    opacity: 1;
+    transform: translate(0, calc(var(--capl-row) * 4));
+  }
+
+  51% {
+    opacity: 0;
+    transform: translate(0, calc(var(--capl-row) * 4));
+  }
+
+  51.01% {
+    opacity: 0;
+    transform: translate(calc(100% + 8px), 0);
+  }
+
+  52% {
+    opacity: 1;
+    transform: translate(calc(100% + 8px), 0);
+  }
+
+  60% {
+    transform: translate(calc(100% + 8px), 0);
+  }
+
+  62%,
+  70% {
+    transform: translate(calc(100% + 8px), var(--capl-row));
+  }
+
+  72%,
+  80% {
+    transform: translate(calc(100% + 8px), calc(var(--capl-row) * 2));
+  }
+
+  82%,
+  90% {
+    transform: translate(calc(100% + 8px), calc(var(--capl-row) * 3));
+  }
+
+  92% {
+    transform: translate(calc(100% + 8px), calc(var(--capl-row) * 4));
+  }
+
+  98% {
+    opacity: 1;
+    transform: translate(calc(100% + 8px), calc(var(--capl-row) * 4));
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(100% + 8px), calc(var(--capl-row) * 4));
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
+  /* A split hero's aside follows the copy in, and its rows stream in. */
+  .cl-lhero-aside {
+    animation: mk-rise-in var(--motion-reveal) var(--ease-reveal) both;
+    animation-delay: calc(var(--motion-reveal-step) * 4);
+  }
+
+  .cl-capl-list > li:not(.cl-capl-glide) {
+    animation: mk-rise-in var(--motion-reveal) var(--ease-reveal) both;
+    animation-delay: calc(var(--motion-reveal-step) * (8 + var(--capl-i)));
+  }
+
+  /* The tour runs on a list of ten until a row is pointed at or focused. */
+  .cl-capl-list[data-rows='10']:not(:hover, :focus-within) {
+    --capl-tour: calc(var(--motion-tour-step) * 10) var(--ease-reveal) infinite;
+  }
+
+  .cl-capl-list[data-rows='10']:not(:hover, :focus-within) > li {
+    --capl-at: calc(var(--motion-tour-start) + var(--motion-tour-step) * var(--capl-i));
+  }
+
+  .cl-capl-list[data-rows='10']:not(:hover, :focus-within) .cl-capl-row {
+    animation: cl-capl-row var(--capl-tour);
+    animation-delay: var(--capl-at);
+  }
+
+  .cl-capl-list[data-rows='10']:not(:hover, :focus-within) .cl-capl-ico {
+    animation: cl-capl-ico var(--capl-tour);
+    animation-delay: var(--capl-at);
+  }
+
+  .cl-capl-list[data-rows='10']:not(:hover, :focus-within) .cl-capl-go {
+    animation: cl-capl-go var(--capl-tour);
+    animation-delay: var(--capl-at);
+  }
+
+  .cl-capl-list[data-rows='10']:not(:hover, :focus-within) .cl-capl-glide {
+    animation: cl-capl-glide-cols var(--capl-tour);
+    animation-delay: var(--motion-tour-start);
+  }
+
+  @media (min-width: 1280px) {
+    .cl-capl-list[data-rows='10']:not(:hover, :focus-within) .cl-capl-glide {
+      animation-name: cl-capl-glide;
+    }
+  }
+
   /* A landing hero's copy arrives in reading order: the title, then the
      lead, then the actions and note. */
   .mk-hero-in > * {

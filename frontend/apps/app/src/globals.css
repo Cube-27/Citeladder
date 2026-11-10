@@ -250,6 +250,10 @@
      widens to the right while its layers cross-fade, all over 400ms. */
   --motion-card: 400ms;
   --ease-card: ease-in-out;
+  /* The landing hero's capability panel (D52): its highlight rests 2.4s on
+     each of ten rows, starting 2s after load. */
+  --motion-tour-step: 2400ms;
+  --motion-tour-start: 2000ms;
   --default-transition-duration: var(--motion-fast);
   --default-transition-timing-function: var(--ease-standard);
   /* Loops that say "working": the Spinner turns in 800ms, a Skeleton pulses
