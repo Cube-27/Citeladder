@@ -27,7 +27,13 @@ import { memberMeasurementLeg } from './checks/registry.ts';
 import { contentGapEvidence } from './content-gap-reads.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { normalizeDomain } from '../analysis/domains.ts';
-import { pageGroupKey, plannedPageKey, selectApproach } from '../analysis/opportunities/actions.ts';
+import {
+  pageGroupKey,
+  plannedPageKey,
+  readHandoff,
+  selectApproach,
+} from '../analysis/opportunities/actions.ts';
+import { record } from '../db/json.ts';
 
 const a = policy.opportunity.actions;
 export class ActionTargetError extends Error {}
@@ -138,6 +144,7 @@ function actionItem(row: ActionRow) {
     approach: row.approach,
     skill_id: row.skill_id,
     member_count: jsonList(row.member_opportunity_ids).length,
+    handoff: readHandoff(record(row.diagnosis).handoff, row.target_label),
     evidence_cleared_at: row.evidence_cleared_at?.toISOString() ?? null,
     created_at: row.created_at.toISOString(),
     updated_at: row.updated_at.toISOString(),

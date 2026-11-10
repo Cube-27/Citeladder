@@ -83,6 +83,7 @@ describe('ChatScreen implementation declaration', () => {
       approach: 'fix_technical',
       skill_id: 'technical_health',
       member_count: 1,
+      handoff: { context: 'action', message: 'Work on https://acme.test/pricing.' },
       evidence_cleared_at: null,
       created_at: NOW,
       updated_at: NOW,

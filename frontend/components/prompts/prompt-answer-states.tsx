@@ -1,5 +1,6 @@
 'use client';
 
+import { ActionAgentButton } from '@/components/agent/action-agent-button';
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +11,6 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
-import { agentHandoffHref } from '@/lib/agent/handoff';
 import type { PromptMetricItem } from '@citeladder/contracts';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate, pluralCount } from '@/lib/format';
@@ -56,9 +56,9 @@ function ActionHandoff({ actionId }: Readonly<{ actionId: string }>) {
       <Button asChild variant="secondary">
         <ProjectLink href={`/agent/actions/${actionId}`}>Open the Action</ProjectLink>
       </Button>
-      <Button asChild variant="primary">
-        <ProjectLink href={agentHandoffHref({ actionId })}>Work on this</ProjectLink>
-      </Button>
+      <ActionAgentButton actionId={actionId} variant="primary">
+        Work on this
+      </ActionAgentButton>
     </>
   );
 }

@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/workspace';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
 import {
-  agentHandoffHref,
+  actionHandoffHref,
   contextChips,
   parseAgentHandoff,
   withoutContext,
@@ -285,8 +285,8 @@ function TopActions({
 }
 
 /**
- * One recommended Action. Its title starts a chat on it; the approach and
- * priority band say what the work is.
+ * One recommended Action. Its title starts a chat on it with the Action's
+ * message already written; the approach and priority band say what the work is.
  */
 function TopActionRow({ action }: Readonly<{ action: Action }>) {
   const target = readableUrl(action.target_label);
@@ -294,7 +294,7 @@ function TopActionRow({ action }: Readonly<{ action: Action }>) {
     <Inline as="li" gap="compact" className={ledgerItemClasses()}>
       <Stack gap="tight" className="min-w-0 flex-1">
         <TextLink
-          href={agentHandoffHref({ actionId: action.id })}
+          href={actionHandoffHref(action)}
           text="itemTitle"
           className="truncate"
           aria-label={`Work on ${target}`}

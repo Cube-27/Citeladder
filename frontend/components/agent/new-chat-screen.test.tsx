@@ -83,6 +83,7 @@ function actionItem(id: string, label: string) {
     approach: 'improve_page',
     skill_id: 'gsc_optimize',
     member_count: 1,
+    handoff: { context: 'action', message: `Work on ${label}.` },
     evidence_cleared_at: null,
     created_at: '2026-09-25T10:00:00Z',
     updated_at: '2026-09-25T10:00:00Z',
@@ -458,13 +459,56 @@ describe('NewChatScreen', () => {
     expect(await within(recommended).findAllByRole('listitem')).toHaveLength(3);
     expect(within(recommended).queryByText('Careers')).not.toBeInTheDocument();
     const start = within(recommended).getByRole('link', { name: 'Work on Pricing page' });
-    expect(start).toHaveAttribute('href', `/agent?action_id=${PRICING}&project=${PROJECT}`);
+    expect(start).toHaveAttribute(
+      'href',
+      `/agent?action_id=${PRICING}&prompt=Work+on+Pricing+page.&project=${PROJECT}`,
+    );
     expect(within(recommended).queryByText('Work on this')).not.toBeInTheDocument();
     // The Actions come before the workflows.
     const workflows = await screen.findByRole('region', { name: 'Or start from a workflow' });
     expect(recommended.compareDocumentPosition(workflows)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     // The command hint is a caption that stays once typing starts.
     expect(screen.getByText('Type / to pick a skill or @ to mention an Action.')).toBeVisible();
+  });
+
+  it('opens a recommended Action with its message written, to edit or send as it is', async () => {
+    const bodies = captureChats([actionItem(PRICING, 'Pricing page')]);
+    mswServer.use(
+      http.get(`/api/v1/actions/${PRICING}`, () =>
+        HttpResponse.json({
+          ...actionItem(PRICING, 'Pricing page'),
+          diagnosis: {},
+          members: [],
+          member_measurement: {},
+          declarable_since: '2026-01-01T00:00:00Z',
+          declaration: null,
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderNewChat('');
+
+    const recommended = await screen.findByRole('region', { name: 'Recommended Actions' });
+    await user.click(
+      await within(recommended).findByRole('link', { name: 'Work on Pricing page' }),
+    );
+
+    const message = await screen.findByLabelText('Message the agent');
+    expect(message).toHaveValue('Work on Pricing page.');
+    expect(await screen.findByRole('region', { name: 'Working on' })).toHaveTextContent(
+      'Pricing page',
+    );
+    await user.type(message, ' Start with the title.');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
+    expect(bodies).toEqual([
+      {
+        message: 'Work on Pricing page. Start with the title.',
+        action_id: PRICING,
+        context: {},
+      },
+    ]);
   });
 
   it('briefs on the top open Actions with the growth plan skill', async () => {

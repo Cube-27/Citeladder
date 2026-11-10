@@ -58,12 +58,12 @@ stored with their text as of the refresh (`prompts: {id, text}`); a prompt no
 longer in the library when the refresh ran is stored with `text: null` and
 shown as such. The page reads no prompt library. Site Health findings on the
 page render as on any Action. The handoff into the Agent
-([handoffs](agents.md#workspace-and-handoffs)) is the one the Action's
-diagnosis names (`diagnosis.handoff`, from the approach branch of its first
-finding that has one in `APPROACH_TREE`): **Write this page** (the
-Opportunity and the `article` workflow) for a page to create and **Work on
-this** (the page URL and the `refresh_page` workflow) for an existing page;
-an Action whose diagnosis names none hands off with itself alone.
+([handoffs](agents.md#workspace-and-handoffs)) is the Action's `handoff`,
+persisted in its diagnosis: the prefilled message names the angle, and the
+workflow comes from the approach branch of its first finding that has one in
+`APPROACH_TREE` (the Opportunity and the `article` workflow for a page to
+create, the page URL and the `refresh_page` workflow for an existing page);
+an Action whose findings name none hands off with itself and its message.
 
 ## Not yet
 

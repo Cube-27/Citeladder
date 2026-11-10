@@ -480,16 +480,21 @@ mention up to five of the project's Actions. New chat's **Work on an Action**
 offers **Brief me**, a `growth_plan` chat mentioning the top open Actions.
 
 Evidence screens hand work to New chat through the
-[handoff codec](../frontend/lib/agent/handoff.ts): **Work on this** attaches an
-Action; **Ask agent** carries typed references only (an Opportunity, a Demand
-signal, a page or URL, up to 100 Keyword Research rows of one dataset, an
-issue group, a Site Facts crawl, or an exact output revision) plus an optional
-question, skill or workflow. The browser never embeds evidence content, and the
-context builder authorizes every reference at admission. A content-gap Action
-hands off with a pinned workflow: a page to create opens **Write this page**
-with its Opportunity and the `article` workflow, and an existing content page
-opens **Work on this** with its URL and the `refresh_page` workflow; both
-attach the Action. The Dashboard
+[handoff codec](../frontend/lib/agent/handoff.ts). Every Action entry point
+(**Work with the agent** on its page, New chat's Recommended Actions, a cited
+URL's **Draft the request**, a prompt's **Work on this**) attaches the Action
+and writes its `handoff.message` into the composer, editable, so Send works
+without typing (AS3). The server fills that message from the Action's own
+evidence with its approach branch's template (`messages` in
+[`APPROACH_TREE`](../frontend/services/api/src/config/actions.ts)) and falls
+back to the Action's label. **Ask agent** carries typed references only (an
+Opportunity, a Demand signal, a page or URL, up to 100 Keyword Research rows of
+one dataset, an issue group, a Site Facts crawl, or an exact output revision)
+plus an optional question, skill or workflow. The browser never embeds evidence
+content beyond that message, and the context builder authorizes every
+reference at admission. A content-gap Action's handoff also pins a workflow: a
+page to create carries its Opportunity and the `article` workflow, and an
+existing content page its URL and the `refresh_page` workflow. The Dashboard
 [agent panel](../frontend/components/agent/agent-panel.tsx) is seeded from rows
 the screen already holds through the
 [panel context](../frontend/lib/agent/panel-context.tsx) and continues in

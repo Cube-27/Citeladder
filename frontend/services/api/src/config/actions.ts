@@ -77,11 +77,22 @@ export const actions = {
     catalog_fields_missing: 'commerce',
   },
   ACTION_PRIORITY_ROUNDING_DECIMALS: 1,
+  // Each branch's `messages` prefill the Agent chat an Action opens (AS3): the
+  // first template whose placeholders the Action's own evidence fills is used,
+  // so a missing fact drops to a plainer sentence rather than being invented.
+  // `{target}` is the Action's label; `{issue}` the title of the branch's
+  // strongest finding; `{angle}` a content gap's angle; `{competitors}` the
+  // competitors read on an earned page. The last template of every branch
+  // names `{target}` alone, so one always fills.
   APPROACH_TREE: [
     {
       approach: 'earned_placement',
       rule_ids: ['earned_page_acquire_listing'],
       skill_id: 'earned_authority',
+      messages: [
+        'Draft a request to be listed on {target}, alongside {competitors}.',
+        'Draft a request to be listed on {target}.',
+      ],
       donts: [
         'Do not change an owned page to fix a third-party listing.',
         'Do not send outreach from CiteLadder; drafts only.',
@@ -98,6 +109,7 @@ export const actions = {
         'site_change_potential_regression',
       ],
       skill_id: 'technical_health',
+      messages: ['Fix "{issue}" on {target}.', 'Fix the technical issues on {target}.'],
       donts: [
         'Do not rewrite the page copy to work around a technical defect.',
         'Do not add markup that states facts the visible page does not.',
@@ -108,6 +120,7 @@ export const actions = {
       approach: 'consolidate',
       rule_ids: ['query_cannibalization'],
       skill_id: 'gsc_optimize',
+      messages: ['Merge or differentiate the pages that compete for {target}.'],
       donts: ['Do not create another URL for this demand.'],
       target_kinds: [],
     },
@@ -115,6 +128,7 @@ export const actions = {
       approach: 'create_new',
       rule_ids: ['brand_absent_high_value_prompt'],
       skill_id: 'content_create',
+      messages: ['Write a page that answers the prompt "{target}".'],
       donts: [
         'Do not create a new URL if an existing page already answers this question; improve that page instead.',
       ],
@@ -124,6 +138,7 @@ export const actions = {
       approach: 'create_new',
       rule_ids: ['search_keyword_gap'],
       skill_id: 'content_create',
+      messages: ['Write a page for the search "{target}".'],
       donts: [
         'Do not create a new URL if an existing page already answers this search; improve that page instead.',
         'Do not present provider ranking estimates as measured traffic.',
@@ -134,6 +149,10 @@ export const actions = {
       approach: 'create_new',
       rule_ids: ['content_gap_new_page'],
       skill_id: 'content_create',
+      messages: [
+        'Write a page about {angle} for the prompts in this Action.',
+        'Write a page about {target} for the prompts in this Action.',
+      ],
       donts: [
         'Do not claim the page will be cited.',
         'Do not invent statistics, quotes or sources.',
@@ -147,6 +166,10 @@ export const actions = {
       approach: 'improve_existing',
       rule_ids: ['content_gap_improve_page'],
       skill_id: 'content_create',
+      messages: [
+        'Improve {target} so AI answers cite it for {angle}.',
+        'Improve {target} so AI answers cite it for the prompts in this Action.',
+      ],
       donts: [
         'Do not claim the page will be cited.',
         'Do not invent statistics, quotes or sources.',
@@ -158,6 +181,10 @@ export const actions = {
       approach: 'improve_links',
       rule_ids: ['site_contextual_links', 'site_link_near_orphan', 'site_link_weak_authority'],
       skill_id: 'internal_links',
+      messages: [
+        'Fix "{issue}" on {target} with internal links.',
+        'Improve the internal links of {target}.',
+      ],
       donts: ['Do not add links from unrelated pages to hit a link count.'],
       target_kinds: [],
     },
@@ -171,6 +198,10 @@ export const actions = {
         'striking_distance_query',
       ],
       skill_id: 'gsc_optimize',
+      messages: [
+        'Improve {target} for its search demand: "{issue}".',
+        'Improve {target} for its search demand.',
+      ],
       donts: ['Do not create another URL: an indexable page already maps to this demand.'],
       target_kinds: [],
     },
@@ -179,6 +210,7 @@ export const actions = {
     approach: 'improve_existing',
     rule_ids: [],
     skill_id: 'content_create',
+    messages: ['Work on {target}: "{issue}".', 'Work on {target}.'],
     donts: ['Do not create another URL for a target that already has a page.'],
     target_kinds: [],
   },
@@ -203,3 +235,18 @@ const unmappedRules = Object.keys(opportunities.OPPORTUNITY_RULES_BY_ID).filter(
 );
 if (unmappedRules.length)
   throw new Error(`Rules without an evidence family: ${unmappedRules.join(', ')}`);
+
+// Every handoff template names known facts, and every branch ends on one that
+// needs only the Action's label, so a message always fills.
+const HANDOFF_FACTS = new Set(['target', 'issue', 'angle', 'competitors']);
+for (const branch of [...actions.APPROACH_TREE, actions.DEFAULT_APPROACH]) {
+  const named = branch.messages.map((template) =>
+    [...template.matchAll(/\{(\w+)\}/g)].map((match) => match[1]),
+  );
+  const unknown = named.flat().filter((name) => !HANDOFF_FACTS.has(name ?? ''));
+  const last = named.at(-1) ?? [];
+  if (unknown.length || !last.every((name) => name === 'target'))
+    throw new Error(
+      `Handoff messages of ${branch.approach} name an unknown fact or do not end on {target} alone`,
+    );
+}

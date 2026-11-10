@@ -177,12 +177,17 @@ describe('content gaps', () => {
       .where('superseded_at', 'is', null)
       .executeTakeFirstOrThrow();
 
-    expect(planned.diagnosis.handoff).toEqual({
+    expect(planned.handoff).toEqual({
       context: 'opportunity',
       workflow_id: 'article',
       opportunity_id: newPage.id,
+      message: 'Write a page about Setup guide for the prompts in this Action.',
     });
-    expect(page.diagnosis.handoff).toEqual({ context: 'page_url', workflow_id: 'refresh_page' });
+    expect(page.handoff).toEqual({
+      context: 'page_url',
+      workflow_id: 'refresh_page',
+      message: `Improve ${PAGE_URL} so AI answers cite it for Pricing comparison.`,
+    });
     expect(
       [page, planned].map((action) =>
         action.members.map((member) => [
