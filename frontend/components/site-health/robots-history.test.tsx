@@ -53,7 +53,7 @@ it('keeps the observations and the pager on screen while the next page loads', a
       await olderHeld;
       return HttpResponse.json({
         items: [item(OLD, '2026-10-01T00:00:00Z')],
-        snapshots: [snapshot(OLD, 'User-agent: *')],
+        snapshots: [snapshot(OLD, 'User-agent: *\nDisallow: /')],
         next_cursor: null,
       });
     }),
@@ -61,16 +61,18 @@ it('keeps the observations and the pager on screen while the next page loads', a
   const user = userEvent.setup();
   renderWithProviders(<RobotsHistory workspaceId={WORKSPACE} projectId={PROJECT} />);
   const table = await screen.findByRole('table', { name: 'robots.txt observation sequence' });
-  expect(await within(table).findByRole('cell', { name: NEW })).toBeVisible();
+  expect(await within(table).findByRole('cell', { name: '13 characters' })).toBeVisible();
+  // A snapshot is named by what it holds, never by its stored ID.
+  expect(table).not.toHaveTextContent(NEW);
 
   await user.click(screen.getByRole('button', { name: 'Next page' }));
   await waitFor(() => expect(asked).toEqual(['first:5', 'older:5']));
-  expect(within(table).getByRole('cell', { name: NEW })).toBeVisible();
+  expect(within(table).getByRole('cell', { name: '13 characters' })).toBeVisible();
   expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
 
   releaseOlder();
-  expect(await within(table).findByRole('cell', { name: OLD })).toBeVisible();
-  expect(within(table).queryByRole('cell', { name: NEW })).not.toBeInTheDocument();
+  expect(await within(table).findByRole('cell', { name: '25 characters' })).toBeVisible();
+  expect(within(table).queryByRole('cell', { name: '13 characters' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Previous page' })).toBeEnabled();
 });
 
@@ -103,4 +105,23 @@ it('diffs two observations line by line across line-ending styles', async () => 
     '+Added:Allow: /',
     ' # end',
   ]);
+
+  // The same observation on both sides has nothing to compare.
+  await user.click(screen.getByRole('combobox', { name: 'Before robots.txt observation' }));
+  await user.click((await screen.findAllByRole('option'))[1]!);
+  expect(screen.queryByRole('list', { name: 'robots.txt line diff' })).not.toBeInTheDocument();
+});
+
+it('counts a one-character body in the singular', async () => {
+  mswServer.use(
+    http.get(`/api/v1/projects/${PROJECT}/site-health/robots-history`, () =>
+      HttpResponse.json({
+        items: [item(NEW, '2026-10-02T00:00:00Z')],
+        snapshots: [snapshot(NEW, '#')],
+        next_cursor: null,
+      }),
+    ),
+  );
+  renderWithProviders(<RobotsHistory workspaceId={WORKSPACE} projectId={PROJECT} />);
+  expect(await screen.findByRole('cell', { name: '1 character' })).toBeVisible();
 });

@@ -60,6 +60,11 @@ describe('SiteHealthScreen — Website tab deep links', () => {
       'true',
     );
     expect(await screen.findByText('Architecture is not available yet.')).toBeVisible();
+    // The pages export belongs to Pages: another tab's header carries none.
+    expect(screen.getByRole('button', { name: 'Run new crawl' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: 'Pages' }));
+    expect(await screen.findByRole('button', { name: 'Export' })).toBeInTheDocument();
   });
 
   it('opens on Pages for a finished crawl, from the loading frame onward', async () => {

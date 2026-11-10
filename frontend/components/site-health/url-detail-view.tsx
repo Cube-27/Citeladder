@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { ListScreen } from '@/components/layout/page-shell';
+import { DetailScreen, type PageBack } from '@/components/layout/page-shell';
 import { Inline, Stack } from '@/components/ui/layout';
 import { InternalLinksCard } from '@/components/site-health/internal-links-card';
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
@@ -27,6 +27,9 @@ import {
   statusLabel,
 } from '@/lib/site-health/status';
 import { TrafficUrlButton } from '@/components/ai-traffic/url-panel';
+
+/** A page detail's way back: the Pages tab of Website, where its rows live. */
+export const PAGE_DETAIL_BACK: PageBack = { href: '/site?tab=pages', label: 'Back to Pages' };
 
 /** Queued is neither "running" nor "ready to ask again": it is its own state. */
 function rerunLabel(pending: boolean, queued: boolean): string {
@@ -58,8 +61,10 @@ export function UrlDetailView({
   children?: ReactNode;
 }>) {
   return (
-    <ListScreen
+    <DetailScreen
       title={pageDisplayTitle(detail.title, detail.display_url)}
+      back={PAGE_DETAIL_BACK}
+      lead={<PageMetaLine detail={detail} />}
       actions={
         <>
           {history}
@@ -70,15 +75,12 @@ export function UrlDetailView({
         </>
       }
     >
-      <Stack gap="workspace">
-        <PageMetaLine detail={detail} />
-        {children}
-        <LinkedFrom detail={detail} />
-        <PageIssues issues={detail.issues} audited={detail.analysis_status === 'completed'} />
-        <UrlScoreSummary detail={detail} />
-        <TechnicalDetails detail={detail} />
-      </Stack>
-    </ListScreen>
+      {children}
+      <LinkedFrom detail={detail} />
+      <PageIssues issues={detail.issues} audited={detail.analysis_status === 'completed'} />
+      <UrlScoreSummary detail={detail} />
+      <TechnicalDetails detail={detail} />
+    </DetailScreen>
   );
 }
 
@@ -112,7 +114,7 @@ function LinkedFrom({ detail }: Readonly<{ detail: PageDetail }>) {
   return (
     <Card className="min-w-0">
       <CardHeader>
-        <CardTitle>Linked From</CardTitle>
+        <CardTitle>Linked from</CardTitle>
         <CardDescription>Pages this crawl found linking to this URL</CardDescription>
       </CardHeader>
       <CardContent>
@@ -249,20 +251,21 @@ function measured(value: string | null): ReactNode {
 function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
   const facts = [
     { label: 'TTFB', value: formatMeasuredMs(delivery.ttfb_ms) },
-    { label: 'Response Size', value: formatBytes(delivery.decoded_bytes ?? delivery.html_bytes) },
+    { label: 'Response size', value: formatBytes(delivery.decoded_bytes ?? delivery.html_bytes) },
     {
-      label: 'HTTP Status',
+      label: 'HTTP status',
       value: delivery.status_code === null ? null : `${delivery.status_code}`,
     },
-    { label: 'Compression', value: delivery.compression ?? 'none' },
-    { label: 'HTTP Version', value: delivery.http_version ?? null },
+    // Null is "not known", never "no compression".
+    { label: 'Compression', value: delivery.compression ?? null },
+    { label: 'HTTP version', value: delivery.http_version ?? null },
     { label: 'Cache-Control', value: delivery.cache_control ?? null },
     {
-      label: 'Blocking Resources',
+      label: 'Blocking resources',
       value:
         delivery.blocking_resource_count === null ? null : `${delivery.blocking_resource_count}`,
     },
-    { label: 'Wire Size', value: formatBytes(delivery.wire_bytes) },
+    { label: 'Wire size', value: formatBytes(delivery.wire_bytes) },
   ];
   return (
     <FactList

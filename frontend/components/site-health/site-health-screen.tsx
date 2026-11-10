@@ -20,6 +20,10 @@ import { AeoReadinessPanel } from '@/components/site-health/aeo-readiness-panel'
 import { ArchitecturePanel } from '@/components/site-health/architecture-panel';
 import { ChangesPanel } from '@/components/site-health/changes-panel';
 import { InternalLinksPanel } from '@/components/site-health/internal-links-panel';
+import {
+  useInternalLinksBands,
+  type LinksRead,
+} from '@/components/site-health/internal-links-panel-bands';
 import { OverviewPanel } from '@/components/site-health/overview-panel';
 import { QueryState } from '@/components/ui/query-state';
 import { ReadError } from '@/components/ui/read-error';
@@ -36,7 +40,16 @@ import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 export function SiteHealthScreen() {
   const { workspaceId, projectId } = useProjectScope();
   const screen = useSiteHealthScreen();
-  return <SiteHealthContent projectId={projectId} workspaceId={workspaceId} screen={screen} />;
+  // Keyed by project, so one project's analyze or cancel outcome and its
+  // idempotency key never carry to the next.
+  return (
+    <SiteHealthContent
+      key={projectId}
+      projectId={projectId}
+      workspaceId={workspaceId}
+      screen={screen}
+    />
+  );
 }
 
 function SiteHealthContent({
@@ -69,11 +82,24 @@ function SiteHealthContent({
     active,
     enabled: screen.inventoryMode === 'scored',
   });
-  let controls: FilterBarProps | undefined;
-  if (tab === 'pages' && blocking?.kind === 'loading') controls = RESERVED_CONTROLS;
-  else if (tab === 'pages' && !blocking && crawl) controls = pagesControls;
   const mutationsAllowed = !entitlementQuery.isError;
+  // Internal links' search, filters and header actions act on the analysis its panel draws.
+  const links = useInternalLinksBands({
+    scope: { projectId, workspaceId },
+    enabled: tab === 'internal-links' && !blocking,
+    canAnalyze: mutationsAllowed,
+  });
+  const linksActions = tab === 'internal-links' ? links.actions : null;
+  const controls = tabControls({
+    tab,
+    blocking,
+    pages: crawl ? pagesControls : undefined,
+    links: links.controls,
+  });
   const refreshFailures = !blocking ? <SiteHealthRefreshFailures screen={screen} /> : null;
+  // Each tab's header carries its own export: pages on Pages, links on Internal
+  // links. The links export reads the saved analysis, so it stays when the
+  // crawl controls are withheld.
   const headerActions =
     crawl && mutationsAllowed ? (
       <CrawlActions
@@ -81,12 +107,15 @@ function SiteHealthContent({
         exporting={exporting}
         cancelPending={cancelMutation.isPending}
         startPending={startPending}
-        onExport={() => runExport('csv', 'pages')}
+        onExport={tab === 'pages' ? () => runExport('csv', 'pages') : undefined}
+        tabActions={linksActions}
         onCancel={cancelCrawl}
         onStart={startCrawl}
         onRecrawl={recrawl}
       />
-    ) : undefined;
+    ) : (
+      (linksActions ?? undefined)
+    );
   const prefetchTab = useSiteHealthTabPrefetch(workspaceId, projectId, crawl?.id, !active);
   if (blocking?.kind === 'state') {
     return (
@@ -121,12 +150,34 @@ function SiteHealthContent({
               screen={screen}
               entitlement={entitlementQuery.data!.site_health}
               mutationsAllowed={mutationsAllowed}
+              linksRead={links.read}
             />
           </Stack>
         )}
       </ListScreen>
     </TabsRoot>
   );
+}
+
+/**
+ * The selected tab's control band. Pages and Internal links hold the band
+ * through the first load, so their work starts on the same line once it lands.
+ */
+function tabControls({
+  tab,
+  blocking,
+  pages,
+  links,
+}: Readonly<{
+  tab: AnalysisTab;
+  blocking: BlockingState | null;
+  pages: FilterBarProps | undefined;
+  links: FilterBarProps | undefined;
+}>): FilterBarProps | undefined {
+  if (tab !== 'pages' && tab !== 'internal-links') return undefined;
+  if (blocking?.kind === 'loading') return RESERVED_CONTROLS;
+  if (blocking) return undefined;
+  return tab === 'pages' ? pages : links;
 }
 
 /** What stands in for the analysis: the one first-load wait, or a state that replaces the page. */
@@ -279,6 +330,7 @@ function AnalysisPanel({
   screen,
   entitlement,
   mutationsAllowed,
+  linksRead,
 }: Readonly<{
   tab: string;
   crawlId: string | undefined;
@@ -287,6 +339,7 @@ function AnalysisPanel({
   screen: ReturnType<typeof useSiteHealthScreen>;
   entitlement: SiteHealthEntitlement;
   mutationsAllowed: boolean;
+  linksRead: LinksRead;
 }>) {
   if (tab === 'pages')
     return (
@@ -320,7 +373,7 @@ function AnalysisPanel({
   if (tab === 'aeo-readiness' && crawlId)
     return <AeoReadinessPanel projectId={projectId} workspaceId={workspaceId} crawlId={crawlId} />;
   if (tab === 'internal-links')
-    return <InternalLinksPanel key={projectId} projectId={projectId} workspaceId={workspaceId} />;
+    return <InternalLinksPanel key={projectId} read={linksRead} workspaceId={workspaceId} />;
   if (tab === 'changes')
     return <ChangesPanel key={projectId} projectId={projectId} workspaceId={workspaceId} />;
   return <Callout tone="info">Run a crawl before opening Website analysis.</Callout>;
@@ -389,6 +442,7 @@ function CrawlActions({
   cancelPending,
   startPending,
   onExport,
+  tabActions,
   onCancel,
   onStart,
   onRecrawl,
@@ -397,16 +451,25 @@ function CrawlActions({
   exporting: boolean;
   cancelPending: boolean;
   startPending: boolean;
-  onExport: () => void;
+  /** The pages export, on the Pages tab only. */
+  onExport: (() => void) | undefined;
+  /**
+   * A tab's own export and primary action (Internal links' Export and
+   * Analyze again). Run new crawl then steps down to secondary, so the
+   * header keeps one primary button.
+   */
+  tabActions: ReactNode;
   onCancel: () => void;
   onStart: () => void;
   onRecrawl: () => void;
 }>) {
   return (
     <Inline>
-      <Button variant="secondary" onClick={onExport} disabled={exporting}>
-        {exporting ? 'Exporting…' : 'Export'}
-      </Button>
+      {onExport ? (
+        <Button variant="secondary" onClick={onExport} disabled={exporting}>
+          {exporting ? 'Exporting…' : 'Export'}
+        </Button>
+      ) : null}
       {/* Always present, so starting a crawl never reflows the header. */}
       <Tooltip content="Rerun this crawl's scope and settings, so Changes compares like with like.">
         <Button variant="secondary" onClick={onRecrawl} disabled={active || startPending}>
@@ -418,10 +481,15 @@ function CrawlActions({
           {cancelPending ? 'Stopping…' : 'Stop crawl'}
         </Button>
       ) : (
-        <Button variant="primary" onClick={() => onStart()} disabled={startPending}>
+        <Button
+          variant={tabActions ? 'secondary' : 'primary'}
+          onClick={() => onStart()}
+          disabled={startPending}
+        >
           {startPending ? 'Starting…' : 'Run new crawl'}
         </Button>
       )}
+      {tabActions}
     </Inline>
   );
 }

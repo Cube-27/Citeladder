@@ -1,20 +1,16 @@
 'use client';
 
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useId, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, Link2, ListTree } from 'lucide-react';
 
 import { HierarchyCard } from '@/components/site-health/architecture-hierarchy';
-import {
-  ORPHAN_SCOPE_NOTE,
-  OrphanPageDrawer,
-  orphanSegment,
-} from '@/components/site-health/architecture-orphans';
+import { OrphanPageDrawer, orphanSegment } from '@/components/site-health/architecture-orphans';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { AppGrid } from '@/components/ui/app-grid';
 import { Badge } from '@/components/ui/badge';
 import { Callout } from '@/components/ui/callout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -62,15 +58,6 @@ const DEPTH_LABELS = {
 
 function formatPercentage(value: number | null): string {
   return value === null ? PLACEHOLDER : `${Math.round(value * 100)}%`;
-}
-
-function median(values: number[]): number | null {
-  if (values.length === 0) return null;
-  const ordered = [...values].sort((left, right) => left - right);
-  const middle = Math.floor(ordered.length / 2);
-  return ordered.length % 2 === 0
-    ? (ordered[middle - 1]! + ordered[middle]!) / 2
-    : ordered[middle]!;
 }
 
 export function ArchitecturePanel({
@@ -125,118 +112,78 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
     () => [...data.page_kinds].sort((left, right) => right.page_count - left.page_count),
     [data.page_kinds],
   );
-  const depths = data.nodes.flatMap((node) =>
-    node.depth_from_home === null ? [] : [node.depth_from_home],
-  );
-  const duplicatePages = pageKinds.reduce(
-    (total, pageKind) => total + pageKind.duplicate_metadata_count,
-    0,
-  );
 
   return (
     <Stack gap="workspace" className="min-w-0" data-testid="site-architecture">
       <ArchitectureEvidence data={data} />
-      <Card>
-        <CardHeader
-          actions={
-            <Badge
-              variant="status"
-              value={data.coverage_state === 'complete' ? 'success' : 'warning'}
-            >
-              {COVERAGE_LABELS[data.coverage_state]}
-            </Badge>
-          }
-        >
-          <CardTitle>Page kinds</CardTitle>
-          <CardDescription>
-            URLs grouped by their persisted structural purpose for this crawl.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Stack>
-            <ArchitectureMetrics
-              pageKinds={pageKinds.length}
-              pages={data.page_count}
-              medianDepth={median(depths)}
-              duplicatePages={duplicatePages}
-              orphanCount={data.internal_linking.orphan_page_count}
-            />
-            <CoverageReasons reasons={data.coverage_reasons} />
-            {pageKinds.length === 0 ? (
-              <QueryState kind="empty" inline message="No page kinds were measured." />
-            ) : null}
-          </Stack>
-        </CardContent>
-      </Card>
-      {pageKinds.length === 0 ? null : (
-        <PageKindTable pageKinds={pageKinds} grouped={grouped} crawlId={data.crawl_id} />
-      )}
+      <PageKindTable
+        pageKinds={pageKinds}
+        grouped={grouped}
+        crawlId={data.crawl_id}
+        coverage={data.coverage_state}
+        reasons={data.coverage_reasons}
+      />
       <HierarchyCard nodes={data.nodes} crawlId={data.crawl_id} />
     </Stack>
   );
 }
 
-function CoverageReasons({ reasons }: Readonly<{ reasons: readonly string[] }>) {
+/** What the table groups, then why coverage fell short when the crawl said why. */
+function pageKindDescription(reasons: readonly string[]): string {
+  const lead = 'Pages grouped by what each one is for, in this crawl.';
   const named = reasons.filter((reason) => reason in COVERAGE_REASON_LABELS);
-  if (named.length === 0) return null;
-  return (
-    <p className="type-caption">
-      Why: {named.map((reason) => COVERAGE_REASON_LABELS[reason]).join('; ')}.
-    </p>
-  );
+  if (named.length === 0) return lead;
+  const why = named.map((reason) => COVERAGE_REASON_LABELS[reason]).join('; ');
+  return `${lead} Why coverage is limited: ${why}.`;
 }
 
-function ArchitectureMetrics({
-  pageKinds,
-  pages,
-  medianDepth,
-  duplicatePages,
-  orphanCount,
-}: Readonly<{
-  pageKinds: number;
-  pages: number;
-  medianDepth: number | null;
-  duplicatePages: number;
-  orphanCount: number | null;
-}>) {
-  const items: readonly (readonly [string, string, string?])[] = [
-    ['Page kinds', String(pageKinds)],
-    ['Pages', String(pages)],
-    ['Median depth', medianDepth === null ? PLACEHOLDER : String(medianDepth)],
-    ['Duplicate metadata', String(duplicatePages)],
-    [
-      'Orphaned pages',
-      orphanCount === null ? PLACEHOLDER : String(orphanCount),
-      orphanCount === null ? undefined : ORPHAN_SCOPE_NOTE,
-    ],
-  ];
-  return (
-    <StatRow
-      segments={items.map(([label, value, supporting]) => ({
-        key: label,
-        label,
-        value: value === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : value,
-        sub: supporting,
-      }))}
-    />
-  );
-}
-
+/**
+ * One row per page kind, its pages behind a disclosure. The table is the
+ * summary: a stat row over it used to repeat its own totals.
+ */
 function PageKindTable({
   pageKinds,
   grouped,
   crawlId,
+  coverage,
+  reasons,
 }: Readonly<{
   pageKinds: ArchitecturePageKind[];
   grouped: Map<string, ArchitectureNode[]>;
   crawlId: string | null;
+  coverage: CoverageState;
+  reasons: readonly string[];
 }>) {
   const [openKind, setOpenKind] = useState<string | null>(null);
+  const pagesId = useId();
   return (
-    <DataTable label="Page kinds" columns={PAGE_KIND_COLUMNS} minWidth="md">
+    <DataTable
+      title="Page kinds"
+      description={pageKindDescription(reasons)}
+      toolbar={{
+        actions: (
+          <Badge variant="status" value={coverage === 'complete' ? 'success' : 'warning'}>
+            {COVERAGE_LABELS[coverage]}
+          </Badge>
+        ),
+      }}
+      columns={PAGE_KIND_COLUMNS}
+      minWidth="md"
+      state={
+        pageKinds.length === 0
+          ? {
+              kind: 'empty',
+              icon: ListTree,
+              headingLevel: 3,
+              heading: 'No page kinds were measured',
+            }
+          : undefined
+      }
+    >
       {pageKinds.map((pageKind) => {
         const open = openKind === pageKind.page_kind;
         const pages = grouped.get(pageKind.page_kind) ?? [];
+        const listId = `${pagesId}-${pageKind.page_kind}`;
         return (
           <Fragment key={pageKind.page_kind}>
             <TableRow>
@@ -244,6 +191,7 @@ function PageKindTable({
                 <Pressable
                   type="button"
                   aria-expanded={open}
+                  aria-controls={listId}
                   onClick={() => setOpenKind(open ? null : pageKind.page_kind)}
                   className="w-auto"
                 >
@@ -265,7 +213,7 @@ function PageKindTable({
                 {pageKind.orphan_count ?? <UnavailableValue state="not_measured" />}
               </TableCell>
             </TableRow>
-            {open ? <PageKindPages pages={pages} crawlId={crawlId} /> : null}
+            {open ? <PageKindPages id={listId} pages={pages} crawlId={crawlId} /> : null}
           </Fragment>
         );
       })}
@@ -283,18 +231,15 @@ const PAGE_KIND_COLUMNS: readonly DataTableColumn[] = [
 ];
 
 function PageKindPages({
+  id,
   pages,
   crawlId,
-}: Readonly<{ pages: ArchitectureNode[]; crawlId: string | null }>) {
+}: Readonly<{ id: string; pages: ArchitectureNode[]; crawlId: string | null }>) {
   return (
-    <TableRow className="bg-surface-sunken hover:bg-surface-sunken">
+    <TableRow id={id} className="bg-surface-sunken hover:bg-surface-sunken">
       <TableCell colSpan={6}>
         {pages.length === 0 ? (
-          <QueryState
-            kind="empty"
-            inline
-            message="No projected URLs are available for this kind."
-          />
+          <QueryState kind="empty" inline message="No pages of this kind to list." />
         ) : (
           <Stack
             as="ul"

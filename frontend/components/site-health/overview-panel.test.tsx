@@ -25,6 +25,12 @@ beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
+/** One figure of the Overview's score row: its label, value, sub-line and link. */
+function stat(label: string) {
+  const term = within(screen.getByTestId('overview-metrics')).getByText(label);
+  return term.closest('[data-stat-segment]');
+}
+
 /** A terminal overview snapshot; each test overrides only what it is about. */
 const terminalOverview = (overrides: Record<string, unknown> = {}) => ({
   project_id: PROJECT,
@@ -203,17 +209,20 @@ describe('OverviewPanel', () => {
       screen.getByRole('img', { name: 'Web Fundamentals score: 81 out of 100' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('img', { name: 'AEO Checklist Completion: 50 out of 100' }),
-    ).toBeInTheDocument();
-    expect(
       screen.getByRole('img', { name: 'AEO Readiness score: 62 out of 100' }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'Classification completeness' }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('img', { name: 'Crawl Coverage score: 40 out of 100' }),
-    ).toBeInTheDocument();
+    // Completion shares are not quality scores: a plain figure over its
+    // counts, never a ring (owner, 10 Nov 2026).
+    expect(stat('AEO checklist completion')).toHaveTextContent(
+      'AEO checklist completion50%2 of 4 analyzed pages scoredOpen AEO Readiness',
+    );
+    expect(stat('Crawl coverage')).toHaveTextContent(
+      'Crawl coverage40%4 of 10 selected pages analyzedOpen Pages',
+    );
+    expect(screen.getAllByRole('img', { name: /out of 100$/ })).toHaveLength(2);
     // A score is a ring, never a segmented bar (decision D8).
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Loading Overview details')).not.toBeInTheDocument();
@@ -250,9 +259,10 @@ describe('OverviewPanel', () => {
     );
 
     // 20 analyzed of 100 found is 20% coverage, not 100% of the 20 selected.
-    expect(
-      await screen.findByRole('img', { name: 'Crawl Coverage score: 20 out of 100' }),
-    ).toBeInTheDocument();
+    await screen.findByRole('table', { name: 'Top issues' });
+    expect(stat('Crawl coverage')).toHaveTextContent(
+      'Crawl coverage20%20 of 100 found pages analyzed',
+    );
   });
 
   it('keeps an unknown crawl that found nothing from reading as a percentage', async () => {
@@ -284,8 +294,27 @@ describe('OverviewPanel', () => {
       />,
     );
 
-    expect(await screen.findByRole('img', { name: /Web Fundamentals score/ })).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: /Crawl Coverage score/ })).not.toBeInTheDocument();
+    await screen.findByRole('table', { name: 'Top issues' });
+    expect(stat('Crawl coverage')).toHaveTextContent('Not measured');
+    expect(stat('Crawl coverage')).not.toHaveTextContent('%');
+  });
+
+  it('names each score link by where it goes', () => {
+    renderWithProviders(
+      <OverviewPanel
+        projectId={PROJECT}
+        crawlId={CRAWL}
+        crawl={{ status: 'running', analyzed_count: 0, visible_url_count: 0 } as never}
+        dashboard={undefined}
+      />,
+    );
+    const links = within(screen.getByTestId('overview-metrics')).getAllByRole('link');
+    expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
+      ['Open Web Fundamentals issues', '/issues?dimension=technical'],
+      ['Open AEO Readiness issues', '/issues?dimension=aeo'],
+      ['Open AEO Readiness', '/site?tab=aeo-readiness'],
+      ['Open Pages', '/site?tab=pages'],
+    ]);
   });
 
   it('explains a changed scored cohort once, beside the score changes', async () => {
@@ -337,7 +366,7 @@ describe('OverviewPanel', () => {
     ).toBeInTheDocument();
   });
 
-  it('opens persisted HTTP Web Fundamentals evidence without browser-only checks', async () => {
+  it('opens HTTP Web Fundamentals evidence without browser-only checks', async () => {
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
         HttpResponse.json(terminalOverview()),
@@ -354,6 +383,12 @@ describe('OverviewPanel', () => {
     );
 
     await screen.findByRole('table', { name: 'Top issues' });
+    // One list, one area a row, each with its state.
+    const areas = within(screen.getByRole('list', { name: 'Web Fundamentals areas' }));
+    expect(areas.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'accessibilityMeasured',
+      'mobileLimited Evidence',
+    ]);
     await user.click(screen.getByRole('button', { name: 'View evidence' }));
     expect(screen.getByRole('dialog')).toHaveTextContent('Images missing alt attributes');
     expect(screen.getByRole('dialog')).not.toHaveTextContent('mobile_layout');
@@ -393,7 +428,7 @@ describe('OverviewPanel', () => {
     ]);
   });
 
-  const ALERT = 'Could not load the persisted Site Health Overview.';
+  const ALERT = 'Could not load the Website overview.';
 
   function renderTerminal() {
     renderWithProviders(

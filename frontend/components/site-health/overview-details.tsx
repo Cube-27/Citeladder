@@ -20,7 +20,6 @@ import type { SiteHealthOverview } from '@citeladder/contracts';
 import { issueTitle } from '@/lib/site-health/issues';
 import { formatScore, PLACEHOLDER, statusLabel } from '@/lib/site-health/status';
 import { textRole } from '@/components/ui/typography';
-import { panelClasses } from '@/components/ui/panel';
 import { Inline, Stack } from '@/components/ui/layout';
 import {
   EditorialSectionHeader,
@@ -67,7 +66,7 @@ function DimensionLedger({
       toolbar={{
         actions: (
           <Button asChild variant="secondary">
-            <ProjectLink href="/site?tab=aeo-readiness">View details</ProjectLink>
+            <ProjectLink href="/site?tab=aeo-readiness">Open AEO Readiness</ProjectLink>
           </Button>
         ),
       }}
@@ -118,7 +117,7 @@ function DimensionLedger({
 
 const PILLAR_COLUMNS: readonly DataTableColumn[] = [
   { key: 'pillar', label: 'Pillar' },
-  { key: 'score', label: 'Score', width: 'status', numeric: true },
+  { key: 'score', label: 'Score', width: 'figure', numeric: true },
   { key: 'coverage', label: 'Coverage', width: 'figure', numeric: true },
 ];
 
@@ -145,7 +144,7 @@ function TopIssues({ issues }: Readonly<{ issues: SiteHealthOverview['top_issues
       columns={TOP_ISSUE_COLUMNS}
       state={
         issues.length === 0
-          ? { kind: 'empty', icon: ICONS.issues, headingLevel: 3, heading: 'No persisted issues' }
+          ? { kind: 'empty', icon: ICONS.issues, headingLevel: 3, heading: 'No issues found' }
           : undefined
       }
     >
@@ -186,24 +185,22 @@ function WebFundamentalsCard({
     <Card>
       <CardHeader>
         <CardTitle>Web Fundamentals</CardTitle>
-        <CardDescription>Persisted HTTP evidence across four areas.</CardDescription>
+        <CardDescription>What each page’s HTML and response headers show.</CardDescription>
       </CardHeader>
       <CardContent>
         <Stack gap="workspace">
-          <AppGrid layout="halves">
+          {/* One list, one area a row: a 2 × 2 grid of badges left uneven
+              cells in a row of equal-height cards. */}
+          <ul aria-label="Web Fundamentals areas" className={ledgerClasses()}>
             {data.areas.map((area) => (
-              <Stack
-                gap="tight"
-                key={area.key}
-                className={panelClasses({ tone: 'well' }, 'justify-items-start')}
-              >
+              <Inline as="li" key={area.key} className={ledgerItemClasses('justify-between')}>
                 <span className={textRole('label', 'capitalize')}>{area.key}</span>
                 <Badge variant="status" value={measurementTone(area.state)}>
                   {statusLabel(area.state)}
                 </Badge>
-              </Stack>
+              </Inline>
             ))}
-          </AppGrid>
+          </ul>
           <Button variant="secondary" onClick={onOpen} className="justify-self-start">
             View evidence
           </Button>
@@ -218,7 +215,7 @@ function TrendCard({ data }: Readonly<{ data: SiteHealthOverview['trend'] }>) {
     <Card>
       <CardHeader>
         <CardTitle>AEO Readiness trend</CardTitle>
-        <CardDescription>Comparable terminal crawl snapshots only.</CardDescription>
+        <CardDescription>Only finished crawls measured the same way are compared.</CardDescription>
       </CardHeader>
       <CardContent>
         <Stack gap="item">
@@ -246,7 +243,7 @@ const CHANGE_METRIC_LABELS: Record<string, string> = {
   web_fundamentals_score: 'Web Fundamentals',
   web_fundamentals_coverage: 'Web Fundamentals coverage',
   aeo_readiness_score: 'AEO Readiness',
-  aeo_measurement_coverage: 'AEO coverage',
+  aeo_measurement_coverage: 'AEO checklist completion',
 };
 
 function ChangeSummaryCard({ data }: Readonly<{ data: SiteHealthOverview['change_summary'] }>) {
@@ -330,7 +327,7 @@ function WebFundamentalsDrawer({
       open={open}
       onOpenChange={onOpenChange}
       title="Web Fundamentals"
-      description="Static evidence from the acquired HTML and response headers."
+      description="What each page’s HTML and response headers show, area by area."
     >
       <div className={ledgerClasses()}>
         {data.areas.map((area) => (
@@ -351,7 +348,7 @@ function WebFundamentalsDrawer({
             />
             <Stack>
               {area.top_findings.length === 0 ? (
-                <QueryState kind="empty" inline message="No missing HTTP-evidence checks." />
+                <QueryState kind="empty" inline message="No missing checks in this area." />
               ) : (
                 area.top_findings.map((finding) => (
                   <Stack gap="tight" key={finding.rule_id}>

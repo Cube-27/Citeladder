@@ -11,13 +11,10 @@ import { useLocation } from 'react-router-dom';
 import type { PageDetail } from '@citeladder/contracts';
 
 import { UrlDetail } from './url-detail';
+import { CRAWL, ISSUE_H, ISSUE_L, URL_ID, pageDetail as detail } from './url-detail.test-support';
 
-const CRAWL = '44444444-4444-4444-8444-444444444444';
 const NEW_CRAWL = '55555555-5555-4555-8555-555555555555';
 const TASK_ID = '66666666-6666-4666-8666-666666666666';
-const URL_ID = 'cccccccc-1111-4111-8111-111111111111';
-const ISSUE_H = 'aaaaaaaa-1111-4111-8111-111111111111';
-const ISSUE_L = 'bbbbbbbb-1111-4111-8111-111111111111';
 
 /** A resolved issue as the page's issue history lists it. */
 function resolvedIssue(id: string, title: string) {
@@ -67,164 +64,6 @@ function renderUrlDetail(
     </>,
     { projectSelection: { activeProject: makeProject() } },
   );
-}
-
-function detail(overrides: Partial<PageDetail> = {}): PageDetail {
-  return {
-    site_url_id: URL_ID,
-    crawl_id: CRAWL,
-    normalized_url: 'https://acme.com/',
-    display_url: 'https://acme.com/',
-    title: 'Best&Less Online',
-    analysis_status: 'completed',
-    error_code: '',
-    linked_from: [],
-    field_cwv_available: false,
-    web_fundamentals_score: 46,
-    web_fundamentals_coverage: 1,
-    web_fundamentals_state: 'measured',
-    aeo_readiness_score: 64,
-    aeo_measurement_coverage: 0.8,
-    aeo_measurement_state: 'measured',
-    aeo_measurement_reason: '',
-    main_content_indexable: true,
-    issue_count: 2,
-    last_audited: '2026-07-16T00:00:00Z',
-    page_kind: 'product',
-    // A product page that also carries an FAQ: exactly the hybrid a single
-    // exclusive page_kind could not express.
-    page_traits: ['has_faq', 'has_variants'],
-    // Persisted classifier evidence (v2 P1) — a schema-conflict scenario:
-    // the path pattern chose Product while the markup declares Article.
-    page_kind_evidence: {
-      classifier_version: 'sh-classifier-1',
-      classified_by: 'path_pattern',
-      schema_suggested_type: 'article',
-      confidence: 'medium',
-      tier: 'route',
-      signals: [
-        {
-          signal: 'path_pattern',
-          page_kind: 'product',
-          tier: 'route',
-          detail: '^/(products?|p|shop)(/|$)',
-        },
-        {
-          signal: 'structured_data',
-          page_kind: 'article',
-          tier: 'semantic',
-          detail: 'Article',
-        },
-      ],
-    },
-    facts: {
-      title: 'Best&Less Online',
-      meta_description: null,
-      canonical_url: null,
-      robots_directives: [],
-      h1_count: 1,
-      heading_count: 4,
-      image_count: 3,
-      image_missing_alt_count: 0,
-      word_count: 500,
-      internal_link_count: 10,
-      external_link_count: 2,
-      structured_data_types: [],
-    },
-    delivery: {
-      field_cwv_available: false,
-      status_code: 200,
-      ttfb_ms: 840,
-      wire_bytes: 40000,
-      decoded_bytes: 145408,
-      html_bytes: 145408,
-      http_version: 'HTTP/2',
-      compression: 'gzip',
-      cache_control: 'no-cache',
-      blocking_resource_count: 0,
-    },
-    internal_links: {
-      inbound_count: 12,
-      outbound_count: 30,
-      main_content_inbound_count: 4,
-      main_content_outbound_count: 9,
-      nofollow_inbound_count: 1,
-      depth_from_home: 2,
-      source_page_count: 7,
-      authority_share: 0.1275,
-      authority_rank: 3,
-      authority_scope: 'observed_crawl',
-      observed_crawl_incomplete: false,
-      anchor_diagnostics: [],
-      top_inbound: [
-        {
-          site_url_id: 'dddddddd-1111-4111-8111-111111111111',
-          url: 'https://acme.com/collections/bags',
-          anchor_count: 3,
-          main_content: true,
-          nofollow: false,
-          rel: [],
-        },
-      ],
-      top_outbound: [],
-      formula_version: 'sh-link-metrics-1',
-    },
-    issues: [
-      {
-        occurrence_id: ISSUE_L,
-        evaluation_id: 'eeeeeeee-1111-4111-8111-111111111111',
-        crawl_id: CRAWL,
-        rule_id: 'aeo.faq',
-        site_url_id: URL_ID,
-        normalized_url: 'https://acme.com/',
-        display_url: 'https://acme.com/',
-        title: 'Best&Less Online',
-        page_kind: 'article',
-        dimension: 'aeo',
-        category: 'schema',
-        severity: 'low',
-        finding_class: 'defect',
-        issue_title: 'FAQ schema not present',
-        description: 'FAQ structured data is not present.',
-        remediation: '',
-        reason_code: 'expected_schema_absent',
-        evidence: { expected_types: ['FAQPage'], found_types: [] },
-        analyzer_version: 'a1',
-        rule_version: 'r1',
-        created_at: '2026-07-16T00:00:00Z',
-      },
-      {
-        occurrence_id: ISSUE_H,
-        evaluation_id: 'eeeeeeee-2222-4111-8111-111111111111',
-        crawl_id: CRAWL,
-        rule_id: 'aeo.website_schema',
-        site_url_id: URL_ID,
-        normalized_url: 'https://acme.com/',
-        display_url: 'https://acme.com/',
-        title: 'Best&Less Online',
-        page_kind: 'homepage',
-        dimension: 'aeo',
-        category: 'schema',
-        severity: 'high',
-        finding_class: 'defect',
-        issue_title: 'WebSite schema is missing',
-        description: 'WebSite structured data is not present.',
-        remediation: '',
-        reason_code: 'expected_schema_absent',
-        evidence: { expected_types: ['WebSite'], found_types: ['Organization'] },
-        analyzer_version: 'a1',
-        rule_version: 'r1',
-        created_at: '2026-07-16T00:00:00Z',
-      },
-    ],
-    evaluations: [],
-    artifact_id: null,
-    extractor_version: 'e1',
-    analyzer_version: 'a1',
-    rule_version: 'r1',
-    scoring_version: 's1',
-    ...overrides,
-  };
 }
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
@@ -362,6 +201,28 @@ describe('UrlDetail', () => {
     expect(screen.queryByText('Observed evidence')).not.toBeInTheDocument();
   });
 
+  it('opens as a page detail with a way back to Pages before its title', async () => {
+    mswServer.use(...handlers(detail()));
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+
+    const title = await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
+    const back = screen.getByRole('link', { name: 'Back to Pages' });
+    expect(back.getAttribute('href')).toMatch(/^\/site\?tab=pages/);
+    expect(back.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('says an unknown compression is not measured rather than "none"', async () => {
+    const known = detail().delivery;
+    mswServer.use(...handlers(detail({ delivery: { ...known, compression: null } })));
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+
+    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
+    const compression = screen.getByText('Compression').closest('div');
+    expect(compression).toHaveTextContent('Not measured');
+    expect(compression).not.toHaveTextContent('none');
+    expect(screen.getByText('Response size').closest('div')).toHaveTextContent('142 KB');
+  });
+
   it('renders a persisted unresolved-purpose state simply as not measured', async () => {
     mswServer.use(
       ...handlers(
@@ -422,7 +283,7 @@ describe('UrlDetail', () => {
       );
       renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
       await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-      const unsupported = screen.queryAllByText(/Unsupported purpose checklist/);
+      const unsupported = screen.queryAllByText('No AEO checklist for this page kind');
       expect(unsupported).toHaveLength(reason === 'unsupported_purpose_checklist' ? 2 : 0);
     },
   );
@@ -445,8 +306,11 @@ describe('UrlDetail', () => {
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     const rings = ['Web Fundamentals score: 46', 'AEO Readiness score: 64'];
-    for (const ring of [...rings, 'AEO Checklist Completion: 75'])
+    for (const ring of rings)
       expect(screen.getByRole('img', { name: `${ring} out of 100` })).toBeInTheDocument();
+    // Completion is a share of the checklist, not a quality score: a plain figure, no ring.
+    expect(screen.getByText('75%')).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /AEO checklist completion/ })).toBeNull();
   });
 
   it('preserves the AEO state when measurement coverage is unavailable', async () => {
