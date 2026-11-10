@@ -31,7 +31,7 @@ const NAV_ICONS: Readonly<Record<string, LucideIcon>> = {
   '/platform/site-health': CircleCheck,
   '/platform/search-demand': Search,
   '/platform/keyword-research': KeyRound,
-  '/platform/content-briefs': FileText,
+  '/platform/content-optimization': FileText,
   '/platform/agents': Sparkles,
   '/platform/mcp': CodeXml,
   '/platform/integrations': Layers,

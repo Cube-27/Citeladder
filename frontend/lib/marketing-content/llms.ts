@@ -37,7 +37,7 @@ export function llmsTxt({ pages }: { pages: readonly LlmsPage[] }) {
     '- AI visibility software for observed mentions, citations, and share under comparable audit conditions, with answer sentiment, themes and recommended rate, and ChatGPT Search ads recorded apart from citations.',
     '- AI Traffic: GA4 referrals from recognized AI assistants and, on paid plans, AI crawler requests from the site’s own logs.',
     '- Site Health: crawl, page-kind classification, deterministic checks, issues, recrawl verification.',
-    '- Content Briefs: Agent-supported briefs, proposed page edits and internal-link plans for human review.',
+    '- Content Optimization: content angles grouped from the titles of competitor and publisher pages cited in AI answers; an angle with no cited owned page becomes an Action to improve a matching owned content page or write a new one, with the cited pages as evidence and an Agent draft for human review. No content scores or grades.',
     '- Search Demand: Google Search Console and GA4 beside owned-page evidence.',
     '- Agent: chats and reviewable outputs over the same read tools as the MCP server. It keeps no second knowledge store and never publishes autonomously.',
     '',

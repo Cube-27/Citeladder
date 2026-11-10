@@ -29,6 +29,7 @@ export type PlatformScreen =
   | 'demand'
   | 'keywords'
   | 'actions'
+  | 'content-optimization'
   | 'agent-chat'
   | 'agent-brief'
   | 'mcp'

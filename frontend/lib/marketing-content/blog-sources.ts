@@ -94,6 +94,13 @@ export const BLOG_SOURCES = {
     publisher: 'Google Search Central',
     url: 'https://developers.google.com/search/docs/fundamentals/creating-helpful-content',
   },
+  googleAiSearchSuccess: {
+    id: 'google-ai-search-success',
+    title: 'Top ways to ensure your content performs well in Google’s AI experiences on Search',
+    publisher: 'Google Search Central Blog',
+    url: 'https://developers.google.com/search/blog/2025/05/succeeding-in-ai-search',
+    publishedDate: '2025-05-21',
+  },
   googleRecrawl: {
     id: 'google-recrawl',
     title: 'Ask Google to recrawl your URLs',

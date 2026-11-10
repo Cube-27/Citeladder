@@ -4,7 +4,7 @@ import { TRIAL_NOTE, type PlatformPage } from './platform-page-types';
 export const MEASURE_PAGES: readonly PlatformPage[] = [
   {
     path: '/platform',
-    updated: '2026-11-06',
+    updated: '2026-11-10',
     title: 'AI Search Visibility Platform | CiteLadder',
     description:
       'See how ChatGPT, Gemini, Claude and Google AI Overviews answer your buyers, which pages they cite, and a ranked list of what to change on your site.',
@@ -24,7 +24,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Improve',
-        body: 'You use this when you know what is wrong and need the work done. It gives you one ranked Action per page, briefs and edits drafted by the Agent, and MCP access for confirmed changes from Claude or ChatGPT.',
+        body: 'You use this when you know what is wrong and need the work done. It gives you one ranked Action per page, the content angles competitor and publisher pages are cited for and your site lacks, briefs and edits drafted by the Agent, and MCP access for confirmed changes from Claude or ChatGPT.',
       },
     ],
     features: [
@@ -137,7 +137,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
       '/platform/site-health',
       '/platform/search-demand',
       '/platform/keyword-research',
-      '/platform/content-briefs',
+      '/platform/content-optimization',
       '/platform/agents',
       '/platform/mcp',
       '/platform/integrations',
@@ -421,7 +421,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
       '/ai-citation-tracking',
       '/platform/site-health',
       '/platform/ai-referral-analytics',
-      '/platform/content-briefs',
+      '/platform/content-optimization',
       '/platform/product-visibility',
       '/blog/action-playbook-winning-ai-citations',
       '/blog/how-accurate-are-ai-citations',

@@ -3,7 +3,7 @@ title: 'Welcome to CiteLadder'
 description: 'Understand where your brand appears, find the evidence behind it, and turn what you learn into better work.'
 group: 'Start here'
 order: 10
-updated: '2026-10-09'
+updated: '2026-11-10'
 ---
 
 CiteLadder brings AI search visibility, website health and connected search data into one project. Use it to answer three questions: **Where are we showing up? What should we improve? Did the change appear in later measurements?**
@@ -12,14 +12,15 @@ These guides take you from your first project to an evidence-backed improvement.
 
 ## Find your starting point
 
-| What you want to do                               | Where to go                                   |
-| ------------------------------------------------- | --------------------------------------------- |
-| Set up a brand and collect a first baseline       | [Your first project](/quickstart/)            |
-| See how AI answers describe or cite your brand    | [AI Visibility](/visibility/)                 |
-| Find technical and content issues on your website | [Site Health](/site-health/)                  |
-| Understand demand and traffic from search         | [Performance and integrations](/performance/) |
-| Turn a finding into a plan, page edit or draft    | [Meet the Agent](/agent/)                     |
-| Use saved CiteLadder data in another AI assistant | [Connect with MCP](/mcp/)                     |
+| What you want to do                               | Where to go                                    |
+| ------------------------------------------------- | ---------------------------------------------- |
+| Set up a brand and collect a first baseline       | [Your first project](/quickstart/)             |
+| See how AI answers describe or cite your brand    | [AI Visibility](/visibility/)                  |
+| Find technical and content issues on your website | [Site Health](/site-health/)                   |
+| Understand demand and traffic from search         | [Performance and integrations](/performance/)  |
+| Find content angles AI answers cite others for    | [Content optimization](/content-optimization/) |
+| Turn a finding into a plan, page edit or draft    | [Meet the Agent](/agent/)                      |
+| Use saved CiteLadder data in another AI assistant | [Connect with MCP](/mcp/)                      |
 
 ## How the pieces fit together
 

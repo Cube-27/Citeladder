@@ -56,7 +56,7 @@ describe('LandingPage', () => {
       '/platform/site-health',
       '/platform/search-demand',
       '/platform/keyword-research',
-      '/platform/content-briefs',
+      '/platform/content-optimization',
       '/platform/agents',
       '/platform/mcp',
     ]);

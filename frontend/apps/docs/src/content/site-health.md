@@ -3,7 +3,7 @@ title: 'Site Health'
 description: 'Inspect website issues, understand Web and AEO scores, and choose changes with supporting page evidence.'
 group: 'Measure and understand'
 order: 130
-updated: '2026-10-10'
+updated: '2026-11-10'
 ---
 
 A Site Health crawl captures pages from your website and analyzes their technical and content properties. Begin with **Run new crawl**, then review the crawl's scope, progress and coverage. **Recrawl** reruns the shown crawl with the same scope and settings, so Changes compares like with like.
@@ -62,6 +62,8 @@ conversation about the evidence.
 ## Work through an issue
 
 Use **Ask agent** on supported evidence screens, or **Work on this** on the related Action. Ask for a small, reviewable correction tied to the affected page.
+
+On a content page, such as an article or guide, the related Action is listed in [Content optimization](/content-optimization/) with any content gaps on that page. The issue still appears in **Issues**.
 
 For example: "Explain the confirmed issue on this page, distinguish it from unresolved checks, and prepare a fix brief for our developer."
 

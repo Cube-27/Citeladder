@@ -8,7 +8,7 @@ import { textRole } from '@/components/ui/typography';
 import { ICONS } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-import { KPIS } from './demo-data';
+import { CONTENT_WORK, KPIS } from './demo-data';
 import {
   ScreenButton,
   ScreenChartCard,
@@ -37,7 +37,13 @@ const NAV = [
       ['Commerce Suite', ICONS.products],
     ],
   },
-  { title: 'Act', items: [['Actions', ICONS.opportunities]] },
+  {
+    title: 'Act',
+    items: [
+      ['Actions', ICONS.opportunities],
+      ['Content', ICONS.content],
+    ],
+  },
   {
     title: 'Track',
     items: [
@@ -51,8 +57,11 @@ const NAV = [
 
 export type NavLabel = (typeof NAV)[number]['items'][number][0];
 
-/** Open Actions in the Actions row's count slot. */
-const OPEN_ACTIONS = 7;
+/** Open work in the count slots of the Actions and Content rows. */
+const OPEN_COUNTS: Partial<Record<NavLabel, number>> = {
+  Actions: 7,
+  Content: CONTENT_WORK.length,
+};
 
 function ScreenSidebar({
   active,
@@ -91,7 +100,9 @@ function ScreenSidebar({
               >
                 <Icon className="cl-app-nav-icon size-4" aria-hidden />
                 <span className="cl-app-nav-label">{label}</span>
-                {label === 'Actions' && <span className="cl-app-nav-count">{OPEN_ACTIONS}</span>}
+                {OPEN_COUNTS[label] !== undefined && (
+                  <span className="cl-app-nav-count">{OPEN_COUNTS[label]}</span>
+                )}
               </span>
             ))}
           </div>

@@ -4,7 +4,13 @@ import type { PlatformScreen } from '@/lib/marketing-content/platform-pages';
 
 import { ProductFrame, type FrameFit } from './product-frame';
 import type { NavLabel } from './screen-app';
-import { ScreenActions, ScreenAgentBrief, ScreenAgentChat, ScreenCommerce } from './screens-agent';
+import {
+  ScreenActions,
+  ScreenAgentBrief,
+  ScreenAgentChat,
+  ScreenCommerce,
+  ScreenContentOptimization,
+} from './screens-agent';
 import {
   ScreenDemand,
   ScreenEngines,
@@ -53,6 +59,10 @@ export const SCREEN_CATALOG: Readonly<Record<PlatformScreen, CatalogEntry>> = {
   prompts: vignette(ScreenPrompts, 'The tracked prompts for Acme Analytics'),
   keywords: vignette(ScreenKeywords, 'Keyword research for acme.com'),
   actions: vignette(ScreenActions, 'Actions for acme.com, highest priority first'),
+  'content-optimization': vignette(
+    ScreenContentOptimization,
+    'Content optimization for acme.com: content pages to improve and pages to write, each with its lead angle',
+  ),
   answer: vignette(ScreenAnswer, 'A ChatGPT answer that names Acme Analytics first'),
   sources: vignette(ScreenSources, 'Domains cited in answers about Acme Analytics'),
   'cited-url': vignette(ScreenCitedUrl, 'acme.com/pricing: which engines retrieve and cite it'),
@@ -104,7 +114,11 @@ export const MODULE_SCREENS = {
   '/platform/site-health': onPage('site-health', 'Website'),
   '/platform/search-demand': onPage('demand', 'Search Demand'),
   '/platform/keyword-research': onPage('keywords', 'Keyword Research'),
-  '/platform/content-briefs': onPage('agent-brief', 'Actions'),
+  // The app titles the page "Content optimization"; its sidebar row reads "Content".
+  '/platform/content-optimization': {
+    screen: 'content-optimization',
+    page: { title: 'Content optimization', active: 'Content' },
+  },
   '/platform/agents': inAgent('agent-chat'),
   '/platform/mcp': inAgent('mcp'),
 } satisfies Record<string, ModuleScreen>;

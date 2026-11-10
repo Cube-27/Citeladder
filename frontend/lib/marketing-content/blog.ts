@@ -1,6 +1,7 @@
 import { POST_AUDIT } from './blog-posts/audit';
 import { POST_BUYER_PROMPTS } from './blog-posts/buyer-prompts';
 import { POST_CONNECT } from './blog-posts/connect';
+import { POST_CONTENT_OPTIMIZATION } from './blog-posts/content-optimization';
 import { POST_INTERNAL_LINKS } from './blog-posts/internal-links';
 import { POST_PLAYBOOK } from './blog-posts/playbook';
 
@@ -101,6 +102,7 @@ export const POSTS: readonly BlogPost[] = [
   POST_PLAYBOOK,
   POST_BUYER_PROMPTS,
   POST_INTERNAL_LINKS,
+  POST_CONTENT_OPTIMIZATION,
 ] as const;
 
 export const BLOG_EMPTY_STATE = {

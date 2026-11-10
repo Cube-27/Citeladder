@@ -128,7 +128,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     ],
     closing: 'Hand your developers a fix list with the evidence attached',
     related: [
-      '/platform/content-briefs',
+      '/platform/content-optimization',
       '/platform/search-demand',
       '/platform/agents',
       '/platform/ai-visibility',
@@ -249,7 +249,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     related: [
       '/platform/keyword-research',
       '/platform/site-health',
-      '/platform/content-briefs',
+      '/platform/content-optimization',
       '/platform/integrations',
     ],
   },
@@ -350,7 +350,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     related: [
       '/platform/search-demand',
       '/platform/cited-sources',
-      '/platform/content-briefs',
+      '/platform/content-optimization',
       '/platform/integrations',
     ],
   },

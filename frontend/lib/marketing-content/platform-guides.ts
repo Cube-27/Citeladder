@@ -48,6 +48,10 @@ export const PLATFORM_GUIDES: Readonly<Record<string, { title: string; desc: str
     title: 'AI citation action playbook',
     desc: 'What to do with a page that cites your competitors and not you.',
   },
+  '/blog/how-to-optimize-content-for-ai-search': {
+    title: 'How to optimize content for AI search',
+    desc: 'Find the pages AI engines cite for your buyers, then improve or create yours.',
+  },
   '/blog/how-accurate-are-ai-citations': {
     title: 'How accurate are AI citations?',
     desc: 'What accuracy studies measure and how to verify a citation.',

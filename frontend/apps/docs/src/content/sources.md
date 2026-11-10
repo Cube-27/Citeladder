@@ -3,7 +3,7 @@ title: 'Sources and citations'
 description: 'Investigate the domains and pages behind AI answers without confusing citation with endorsement.'
 group: 'Measure and understand'
 order: 120
-updated: '2026-10-10'
+updated: '2026-11-10'
 ---
 
 Sources helps you move from "our visibility changed" to the pages used in the measured answers. It has **Domains** and **URLs** views with search, sorting and export.
@@ -16,6 +16,8 @@ Sources helps you move from "our visibility changed" to the pages used in the me
 4. Open an original answer to see the citation in context.
 
 A frequently used domain can be worth investigating. Frequency alone does not tell you whether a particular page mentions your brand or whether you can influence it.
+
+CiteLadder also groups the titles of cited competitor and publisher pages into content angles. [Content optimization](/content-optimization/) lists the angles your own pages are not cited for.
 
 ## Retrieval and citation are different
 
