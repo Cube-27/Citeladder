@@ -32,14 +32,16 @@ const clearPointerFocus = (event: SyntheticEvent<HTMLElement>) => {
 };
 
 /**
- * One segment: full track height, 12px padding, `radius-sm`, 14/20 medium
+ * One segment: full track height, 12px padding, `radius-sm`, 14/20 regular
  * `ink-secondary`; the selected one lifts onto `surface` with the xs ring in
- * `ink`. A count follows the label in brackets (`ControlCount`, D16).
+ * `ink` at weight 500 (owner, 2026-11-10; buttons stay 500 throughout). A count follows the label in brackets (`ControlCount`, D16).
  */
 export function tabClasses(selected: boolean, className?: string) {
   return cn(
     'focus-ring inline-flex h-full shrink-0 items-center justify-center gap-1.5 rounded-sm px-3 text-label whitespace-nowrap transition-[background-color,color] duration-[var(--motion-fast)] focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-45',
-    selected ? 'bg-surface text-ink shadow-xs' : 'text-ink-secondary not-disabled:hover:text-ink',
+    selected
+      ? 'bg-surface text-ink font-medium shadow-xs'
+      : 'text-ink-secondary not-disabled:hover:text-ink font-normal',
     className,
   );
 }
