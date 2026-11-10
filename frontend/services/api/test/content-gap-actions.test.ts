@@ -46,6 +46,7 @@ async function project(): Promise<Project> {
   await db
     .updateTable('site_page_analyses')
     .set({ page_kind: 'comparison' })
+    .where('workspace_id', '=', seed.workspaceId)
     .where('id', '=', page.analysisId)
     .execute();
   const created = { ...seed, pageId: page.id };
@@ -178,6 +179,7 @@ describe('content gaps', () => {
     await db
       .updateTable('site_page_analyses')
       .set({ page_kind: 'pricing' })
+      .where('workspace_id', '=', p.workspaceId)
       .where('id', '=', page.analysisId)
       .execute();
     await recomputeOpportunities(db, scopeOf(p), { skipIfCurrent: true });

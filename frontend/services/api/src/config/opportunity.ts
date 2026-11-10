@@ -336,7 +336,7 @@ export const opportunities = {
       enabled: true,
       opportunity_type: 'topic',
       remediation:
-        'Answers to your tracked prompts cite competitor and editorial pages on this angle, and none of your content pages covers it. Plan a page that answers the angle directly.',
+        'Answers to your tracked prompts cite competitor and editorial pages on this angle, and no matching page was found among your crawled content pages that were reviewed for it. Plan a page that answers the angle directly, or improve an existing page if one already covers it.',
       rule_id: 'content_gap_new_page',
       check_kind: null,
       severity: 'medium',
