@@ -323,11 +323,11 @@ describe('content gaps', () => {
     await recomputeOpportunities(db, scopeOf(p));
 
     const [found] = await gaps(p);
-    const stored = [
+    // In the run's stored order.
+    expect(record(found!.evidence).prompts).toEqual([
       { id: kept, text: 'best crm pricing for startups' },
       { id: gone, text: null },
-    ].sort((a, b) => (a.id < b.id ? -1 : 1));
-    expect(record(found!.evidence).prompts).toEqual(stored);
+    ]);
     // The list's prompt count is the same stored list.
     const listed = await listActions(db, scopeOf(p), {
       status: null,

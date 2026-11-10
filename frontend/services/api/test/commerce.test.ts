@@ -654,7 +654,7 @@ describe('decisions and persisted reads', () => {
     ]);
     expect(measured.unresolved_count).toBe(1);
     expect(measured.actions).toEqual([
-      { id: action.id, title: 'Add the missing price', status: 'open' },
+      { id: action.id, title: 'Add the missing price', status: 'open', surface: 'actions' },
     ]);
 
     // A later audit in which no answer succeeded is unavailable, not zero.

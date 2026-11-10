@@ -205,7 +205,13 @@ test('declaring an Action implemented shows comparable verification', async ({ p
         ...action,
         status: declarationBody ? 'done' : 'open',
         diagnosis: { approach: 'earned_placement', families: { sources: 'observed' } },
-        members: [{ ...row, remediation: 'Prepare a transparent expert-contribution brief.' }],
+        members: [
+          {
+            ...row,
+            remediation: 'Prepare a transparent expert-contribution brief.',
+            content_gap_evidence: null,
+          },
+        ],
         member_measurement: { [OPPORTUNITY]: 'next_visibility_run' },
         declarable_since: new Date(Date.now() - 30 * 86_400_000).toISOString(),
         declaration: declarationBody ? declaration : null,
