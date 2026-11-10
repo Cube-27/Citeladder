@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
-import { actionSurfaceSchema } from '@citeladder/contracts/action-surface';
 import {
   internalLinkAnalysisSchema,
   internalLinkAnalysisStateSchema,
@@ -39,7 +38,7 @@ async function attachActions(db: Database, scope: LinkScope, analysis: InternalL
   if (!analysis.recommendations.length) return;
   const actions = await db
     .selectFrom('actions')
-    .select(['id', 'target_url', 'surface', 'effective_status as status'])
+    .select(['id', 'target_url', 'effective_status as status'])
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
     .where('target_url', 'in', [
@@ -50,7 +49,6 @@ async function attachActions(db: Database, scope: LinkScope, analysis: InternalL
   for (const link of analysis.recommendations) {
     const action = actions.find((item) => item.target_url === link.source.url);
     link.action_id = action?.id ?? null;
-    link.action_surface = action ? actionSurfaceSchema.parse(action.surface) : null;
     link.action_status = action?.status ?? null;
   }
 }

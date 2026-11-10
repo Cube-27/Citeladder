@@ -6,7 +6,6 @@
  * persisted answers and tasks, never a rescore. A pooled period keeps counts
  * and rates and drops every single-run score.
  */
-import { actionSurfaceSchema } from '@citeladder/contracts/action-surface';
 import type {
   AnswerStates,
   measurementCountsSchema,
@@ -86,7 +85,7 @@ async function attachActions(
   const actions = promptIds.length
     ? await db
         .selectFrom('actions')
-        .select(['id', 'surface', 'target_prompt_id'])
+        .select(['id', 'target_prompt_id'])
         .where('workspace_id', '=', scope.workspaceId)
         .where('project_id', '=', scope.projectId)
         .where('target_prompt_id', 'in', promptIds)
@@ -94,12 +93,9 @@ async function attachActions(
         .where('evidence_cleared_at', 'is', null)
         .execute()
     : [];
-  const byPrompt = new Map(actions.map((row) => [row.target_prompt_id, row]));
-  for (const item of items) {
-    const action = item.prompt_id ? byPrompt.get(item.prompt_id) : undefined;
-    item.action_id = action?.id ?? null;
-    item.action_surface = action ? actionSurfaceSchema.parse(action.surface) : null;
-  }
+  const byPrompt = new Map(actions.map((row) => [row.target_prompt_id, row.id]));
+  for (const item of items)
+    item.action_id = (item.prompt_id && byPrompt.get(item.prompt_id)) || null;
 }
 
 function latestRunId(db: Database, scope: RunScope): Promise<string | null> {
@@ -185,7 +181,6 @@ async function scoreRows(
       counts: emptyCounts(),
       answer_states: null,
       action_id: null,
-      action_surface: null,
       outcomes: [],
     },
   }));

@@ -38,7 +38,6 @@ function page(overrides: Partial<Page> = {}): Page {
     ],
     standing: 'gap',
     action_id: ACTION,
-    action_surface: 'actions',
     ...overrides,
   };
 }

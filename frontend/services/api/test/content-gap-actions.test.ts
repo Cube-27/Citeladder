@@ -1,15 +1,14 @@
 /**
- * The `content_gaps` refresh family and the Action surface against real
- * PostgreSQL: which angles become gaps, where their Actions land, retention
- * across failed, empty and old runs, lineage identity, planned-to-owned
- * continuity and workspace isolation. Angle runs are seeded directly; nothing
- * calls a model.
+ * The `content_gaps` refresh family against real PostgreSQL: which angles
+ * become gaps, the Actions they land on (ordinary Actions on the one list),
+ * retention across failed, empty and old runs, lineage identity,
+ * planned-to-owned continuity and workspace isolation. Angle runs are seeded
+ * directly; nothing calls a model.
  */
 import { randomUUID } from 'node:crypto';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { actionSurface } from '../src/analysis/opportunities/actions.ts';
 import { record } from '../src/db/json.ts';
 import { attachOrCreateAction, getAction, listActions } from '../src/opportunities/actions.ts';
 import { declareAction } from '../src/opportunities/declarations.ts';
@@ -104,7 +103,6 @@ async function actions(p: Project) {
       'id',
       'target_kind',
       'target_label',
-      'surface',
       'origin',
       'evidence_cleared_at',
       'member_opportunity_ids',
@@ -126,7 +124,7 @@ async function plannedKeys(p: Project, lineages: string[]) {
 }
 
 describe('content gaps', () => {
-  it('raises improve-page and new-page gaps onto the Content surface', async () => {
+  it('raises improve-page and new-page gaps as Actions on their page and planned page', async () => {
     const p = await project();
     const { runId, lineages } = await run(p, {
       angles: [
@@ -158,11 +156,9 @@ describe('content gaps', () => {
         expect.objectContaining({ url: 'https://news.example/crm-setup', citation_count: 2 }),
       ],
     });
-    expect(
-      (await actions(p)).map((row) => [row.target_kind, row.target_label, row.surface]),
-    ).toEqual([
-      ['page', PAGE_URL, 'content'],
-      ['planned_page', 'Setup guide', 'content'],
+    expect((await actions(p)).map((row) => [row.target_kind, row.target_label])).toEqual([
+      ['page', PAGE_URL],
+      ['planned_page', 'Setup guide'],
     ]);
   });
 
@@ -213,29 +209,6 @@ describe('content gaps', () => {
     ]);
   });
 
-  it('moves a page Action to Actions when the next crawl no longer reads it as content', async () => {
-    const p = await project();
-    await run(p, { angles: [improve(p)] });
-    await recomputeOpportunities(db, scopeOf(p));
-    const [before] = await actions(p);
-    expect(before?.surface).toBe('content');
-
-    const crawlId = await fixtures.sibling(p);
-    const page = await fixtures.page({ ...p, crawlId }, '/crm-pricing', storedFacts(), {
-      siteUrlId: p.pageId,
-    });
-    await db
-      .updateTable('site_page_analyses')
-      .set({ page_kind: 'pricing' })
-      .where('workspace_id', '=', p.workspaceId)
-      .where('id', '=', page.analysisId)
-      .execute();
-    await recomputeOpportunities(db, scopeOf(p), { skipIfCurrent: true });
-    expect((await actions(p)).map((row) => [row.id, row.surface])).toEqual([
-      [before!.id, 'actions'],
-    ]);
-  });
-
   it('keeps gaps after a failed run and clears them on a succeeded run with none', async () => {
     const p = await project();
     await run(p, { angles: [improve(p)] });
@@ -248,7 +221,7 @@ describe('content gaps', () => {
     expect((await gaps(p)).map((row) => row.action_id)).toEqual([action!.id]);
 
     await run(p, { angles: [] });
-    await recomputeOpportunities(db, scopeOf(p), { skipIfCurrent: true });
+    const empty = await recomputeOpportunities(db, scopeOf(p), { skipIfCurrent: true });
     expect(await gaps(p)).toEqual([]);
     const [cleared] = await actions(p);
     expect([cleared?.id, cleared?.member_opportunity_ids]).toEqual([action!.id, []]);
@@ -256,36 +229,22 @@ describe('content gaps', () => {
     const listed = await listActions(db, scopeOf(p), {
       status: null,
       target_kind: null,
-      surface: 'content',
       limit: 10,
       cursor: null,
     });
     expect(listed.items).toEqual([]);
-    // A current run with no gaps: a real "no gaps", not "not computed yet".
-    expect(listed.content_gap_source).toBe('current');
+    // A current run with no gaps: a real "no gaps", with no content-gap limitation.
+    expect(empty.limitations.filter((text) => text.startsWith('Content'))).toEqual([]);
   });
 
   it('says when gaps were never computed, and clears gaps whose run is out of date', async () => {
     const p = await project();
-    const source = async () =>
-      (
-        await listActions(db, scopeOf(p), {
-          status: null,
-          target_kind: null,
-          surface: 'content',
-          limit: 10,
-          cursor: null,
-        })
-      ).content_gap_source;
-    expect(await source()).toBe('not_computed');
     const never = await recomputeOpportunities(db, scopeOf(p));
     expect(never.limitations).toContain('Content gaps not computed yet.');
-    expect(await source()).toBe('not_computed');
 
     const { runId } = await run(p, { angles: [improve(p)] });
     await recomputeOpportunities(db, scopeOf(p));
     expect(await gaps(p)).toHaveLength(1);
-    expect(await source()).toBe('current');
 
     // Time passes: the run's newest audit is now 46 days old.
     await db
@@ -298,16 +257,6 @@ describe('content gaps', () => {
     expect(stale.limitations).toContain(
       'Content-gap evidence is out of date: its newest audit is more than 45 days old.',
     );
-    expect(await source()).toBe('out_of_date');
-
-    // The snapshot's recorded state decides, never its human-readable limitation text.
-    await db
-      .updateTable('opportunity_snapshots')
-      .set({ limitations: JSON.stringify([]) })
-      .where('workspace_id', '=', p.workspaceId)
-      .where('project_id', '=', p.projectId)
-      .execute();
-    expect(await source()).toBe('out_of_date');
   });
 
   it('stores each angle prompt with its text, and records a deleted prompt without one', async () => {
@@ -327,17 +276,6 @@ describe('content gaps', () => {
     expect(record(found!.evidence).prompts).toEqual([
       { id: kept, text: 'best crm pricing for startups' },
       { id: gone, text: null },
-    ]);
-    // The list's prompt count is the same stored list.
-    const listed = await listActions(db, scopeOf(p), {
-      status: null,
-      target_kind: null,
-      surface: 'content',
-      limit: 10,
-      cursor: null,
-    });
-    expect(listed.items.map((item) => item.content_gaps?.map((gap) => gap.prompt_count))).toEqual([
-      [2],
     ]);
   });
 
@@ -360,7 +298,7 @@ describe('content gaps', () => {
     expect(await plannedKeys(p, lineages)).toEqual(['planned:setup-guide']);
   });
 
-  it('converges an Agent planned page with the gap that names it, and leaves others on Actions', async () => {
+  it('converges an Agent planned page with the gap that names it', async () => {
     const p = await project();
     const attach = (kind: string, target: string) =>
       db
@@ -368,27 +306,14 @@ describe('content gaps', () => {
         .execute((trx) => attachOrCreateAction(trx, scopeOf(p), kind, target, p.userId));
     const agent = await attach('planned_page', 'Setup guide');
     const other = await attach('planned_page', 'Pricing calculator');
-    expect([agent.surface, other.surface]).toEqual(['actions', 'actions']);
 
     await run(p, { angles: [create()] });
     await recomputeOpportunities(db, scopeOf(p));
-    expect(
-      (await actions(p)).map((row) => [row.id, row.origin, row.target_kind, row.surface]),
-    ).toEqual([
-      [other.id, 'agent', 'planned_page', 'actions'],
-      [agent.id, 'agent', 'planned_page', 'content'],
+    expect((await actions(p)).map((row) => [row.id, row.origin, row.target_kind])).toEqual([
+      [other.id, 'agent', 'planned_page'],
+      [agent.id, 'agent', 'planned_page'],
     ]);
-    // The Agent's page Action on a content page reads as content from the snapshot's crawl.
-    expect((await attach('page', PAGE_URL)).surface).toBe('content');
-  });
-
-  it('keeps a planned page raised by any other rule, or by nobody, on Actions', () => {
-    const planned = { kind: 'planned_page', group_key: 'planned:trail-socks' };
-    expect(actionSurface(planned, ['search_keyword_gap'], new Set())).toBe('actions');
-    expect(actionSurface(planned, [], new Set())).toBe('actions');
-    expect(actionSurface(planned, ['search_keyword_gap', 'content_gap_new_page'], new Set())).toBe(
-      'content',
-    );
+    expect((await gaps(p)).map((row) => row.action_id)).toEqual([agent.id]);
   });
 
   it('continues a declared planned page on the content page that later covers it', async () => {
@@ -425,7 +350,7 @@ describe('content gaps', () => {
     expect(declarations).toEqual([{ action_id: planned!.id }]);
   });
 
-  it('filters and counts by surface within one workspace', async () => {
+  it('lists content-gap Actions with every other Action, within one workspace', async () => {
     const own = await project();
     const foreign = await project();
     for (const p of [own, foreign]) {
@@ -437,79 +362,19 @@ describe('content gaps', () => {
         );
       await recomputeOpportunities(db, scopeOf(p));
     }
-    const list = (surface: string) =>
-      listActions(db, scopeOf(own), {
-        status: null,
-        target_kind: null,
-        surface,
-        limit: 10,
-        cursor: null,
-      });
-    const content = await list('content');
-    const rest = await list('actions');
-    const ownIds = new Set((await actions(own)).map((row) => row.id));
-    expect(content.items.map((item) => [item.target_kind, item.surface]).sort()).toEqual([
-      ['page', 'content'],
-      ['planned_page', 'content'],
-    ]);
-    // Each row carries its angle and counts from the finding's evidence.
-    expect(
-      content.items
-        .map((item) =>
-          (item.content_gaps ?? []).map(({ opportunity_id: _id, ...gap }) => [
-            item.target_kind,
-            gap,
-          ]),
-        )
-        .flat()
-        .sort(),
-    ).toEqual([
-      [
-        'page',
-        {
-          rule_id: 'content_gap_improve_page',
-          angle_label: 'Pricing comparison',
-          prompt_count: 1,
-          citation_count: 4,
-          domain_count: 2,
-          competitor_count: 1,
-        },
-      ],
-      [
-        'planned_page',
-        {
-          rule_id: 'content_gap_new_page',
-          angle_label: 'Setup guide',
-          prompt_count: 1,
-          citation_count: 4,
-          domain_count: 2,
-          competitor_count: 1,
-        },
-      ],
-    ]);
-    expect(content.content_gap_source).toBe('current');
-    // Other lists never load content-gap evidence: the field is null, not empty.
-    expect(rest.items.map((item) => [item.target_label, item.surface, item.content_gaps])).toEqual([
-      ['Pricing calculator', 'actions', null],
-    ]);
-    expect(rest.content_gap_source).toBeNull();
-    expect([...content.items, ...rest.items].every((item) => ownIds.has(item.id))).toBe(true);
-    expect([content.status_counts.open, rest.status_counts.open]).toEqual([2, 1]);
-    // Every list, filtered or not, counts each surface's open work for the badges.
-    const dismissed = await listActions(db, scopeOf(own), {
-      status: 'dismissed',
+    const listed = await listActions(db, scopeOf(own), {
+      status: null,
       target_kind: null,
-      surface: null,
       limit: 10,
       cursor: null,
     });
-    expect([dismissed.items, dismissed.surface_open_counts]).toEqual([
-      [],
-      { actions: 1, content: 2 },
+    const ownIds = new Set((await actions(own)).map((row) => row.id));
+    expect(listed.items.map((item) => [item.target_kind, item.target_label]).sort()).toEqual([
+      ['page', PAGE_URL],
+      ['planned_page', 'Pricing calculator'],
+      ['planned_page', 'Setup guide'],
     ]);
-    expect([content.surface_open_counts, rest.surface_open_counts]).toEqual([
-      { actions: 1, content: 2 },
-      { actions: 1, content: 2 },
-    ]);
+    expect(listed.items.every((item) => ownIds.has(item.id))).toBe(true);
+    expect(listed.status_counts.open).toBe(3);
   });
 });

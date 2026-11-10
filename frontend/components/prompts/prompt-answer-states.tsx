@@ -12,8 +12,6 @@ import { TextLink } from '@/components/ui/text-link';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import type { PromptMetricItem } from '@citeladder/contracts';
-import type { ActionSurface } from '@citeladder/contracts/action-surface';
-import { actionPath } from '@citeladder/contracts/record-kinds';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate, pluralCount } from '@/lib/format';
 import { ANSWER_STATES, competitorGaps, type CompetitorGap } from '@/lib/prompts/history';
@@ -26,15 +24,13 @@ import { useEngineCatalog } from '@/lib/providers/engines';
  */
 export function PromptAnswerStates({ latest }: Readonly<{ latest: PromptMetricItem | null }>) {
   const timeZone = useDisplayTimeZone();
-  const action = latest?.action_id
-    ? { id: latest.action_id, surface: latest.action_surface ?? null }
-    : null;
+  const actionId = latest?.action_id ?? null;
   const outcomes = latest?.outcomes ?? [];
   const gaps = competitorGaps(outcomes);
   return (
     <>
       <Card>
-        <CardHeader actions={action ? <ActionHandoff action={action} /> : null}>
+        <CardHeader actions={actionId ? <ActionHandoff actionId={actionId} /> : null}>
           <CardTitle>Mentions and citations</CardTitle>
           <CardDescription>
             {latest
@@ -54,16 +50,14 @@ export function PromptAnswerStates({ latest }: Readonly<{ latest: PromptMetricIt
   );
 }
 
-function ActionHandoff({
-  action,
-}: Readonly<{ action: { id: string; surface: ActionSurface | null } }>) {
+function ActionHandoff({ actionId }: Readonly<{ actionId: string }>) {
   return (
     <>
       <Button asChild variant="secondary">
-        <ProjectLink href={actionPath(action)}>Open the Action</ProjectLink>
+        <ProjectLink href={`/agent/actions/${actionId}`}>Open the Action</ProjectLink>
       </Button>
       <Button asChild variant="primary">
-        <ProjectLink href={agentHandoffHref({ actionId: action.id })}>Work on this</ProjectLink>
+        <ProjectLink href={agentHandoffHref({ actionId })}>Work on this</ProjectLink>
       </Button>
     </>
   );

@@ -8,7 +8,6 @@
  * never zero. Implementation markers are when a user said the work went live;
  * nothing here claims the work moved a rate.
  */
-import { actionSurfaceSchema } from '@citeladder/contracts/action-surface';
 import { actionStatusSchema } from '@citeladder/contracts/actions';
 import type {
   promptHistoryImplementationSchema,
@@ -203,7 +202,6 @@ async function implementationMarkers(
     .select([
       'ie.id',
       'ie.action_id',
-      'actions.surface',
       'actions.target_label',
       'actions.effective_status as status',
       utcTextOf(sql.ref('ie.declared_implemented_at')).as('implemented_at'),
@@ -221,7 +219,6 @@ async function implementationMarkers(
   return rows.reverse().map((row) => ({
     implementation_event_id: row.id,
     action_id: row.action_id,
-    action_surface: actionSurfaceSchema.parse(row.surface),
     title: row.target_label,
     status: actionStatusSchema.parse(row.status),
     implemented_at: wireUtc(row.implemented_at),

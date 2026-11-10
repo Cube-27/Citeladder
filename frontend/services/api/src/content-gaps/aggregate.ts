@@ -25,7 +25,7 @@ export function aggregateAngle(
   owned: readonly OwnedCitation[],
 ): AngleAggregate {
   const citations = angle.members.flatMap((member) => member.citations);
-  const promptIds = sorted(citations.flatMap((citation) => citation.promptId ?? []));
+  const promptIds = sorted(citations.map((citation) => citation.promptId));
   const prompts = new Set(promptIds);
   const ownedCitationIds =
     matchedUrl === null
@@ -34,7 +34,7 @@ export function aggregateAngle(
           owned
             .filter((url) => url.canonicalUrl === matchedUrl)
             .flatMap((url) => url.citations)
-            .filter((citation) => citation.promptId !== null && prompts.has(citation.promptId))
+            .filter((citation) => prompts.has(citation.promptId))
             .map((citation) => citation.id),
         );
   return {

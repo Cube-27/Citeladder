@@ -43,9 +43,7 @@ describe('TargetShelfEvidence', () => {
             },
           ],
           unresolved_count: 3,
-          actions: [
-            { id: ACTION_ID, surface: 'actions', title: 'Add the missing price', status: 'open' },
-          ],
+          actions: [{ id: ACTION_ID, title: 'Add the missing price', status: 'open' }],
         }}
       />,
     );

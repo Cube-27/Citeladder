@@ -135,7 +135,6 @@ const snapshot = {
       priority_inputs: {},
       created_at: '2026-07-08T00:00:00Z',
       action_id: '66666666-6666-4666-8666-666666666666',
-      action_surface: 'actions' as const,
     },
     {
       id: '44444444-4444-4444-8444-444444444444',
@@ -165,7 +164,6 @@ const snapshot = {
       priority_inputs: {},
       created_at: '2026-07-08T00:00:00Z',
       action_id: null,
-      action_surface: null,
     },
   ],
 };
@@ -381,7 +379,6 @@ describe('DemandProjection', () => {
       id: `33333333-3333-4333-8333-${String(index).padStart(12, '0')}`,
       evidence: { target_kind: 'query', target: `query ${index + 1}` },
       action_id: null,
-      action_surface: null,
     }));
     vi.mocked(demandApi.getLatest).mockResolvedValue({
       ...snapshot,

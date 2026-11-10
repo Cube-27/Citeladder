@@ -10,7 +10,6 @@ import { parseDate } from '../http/datetimes.ts';
 import { record, strings } from '../db/json.ts';
 import { normalizeQuery } from './classification.ts';
 import { querySnapshots, type DemandScope } from './query-evidence.ts';
-import { actionSurfaceOrNull, OPPORTUNITY_ACTION_SURFACE } from '../opportunities/projection.ts';
 import {
   queryEvidenceState,
   resolutionCandidates,
@@ -72,7 +71,7 @@ export async function latestDemand(db: Database, workspaceId: string, projectId:
   const actions = signals.length
     ? await scope
         .selectFrom(db, 'opportunities')
-        .select(['target_key', 'action_id', OPPORTUNITY_ACTION_SURFACE])
+        .select(['target_key', 'action_id'])
         .where('project_id', '=', projectId)
         .where(
           'target_key',
@@ -83,7 +82,7 @@ export async function latestDemand(db: Database, workspaceId: string, projectId:
         .where('action_id', 'is not', null)
         .execute()
     : [];
-  const byIdentity = new Map(actions.map((r) => [r.target_key, r]));
+  const byIdentity = new Map(actions.map((r) => [r.target_key, r.action_id]));
   return {
     id: snapshot.id,
     project_id: projectId,
@@ -99,26 +98,22 @@ export async function latestDemand(db: Database, workspaceId: string, projectId:
     formula_version: snapshot.formula_version,
     analyzer_version: snapshot.analyzer_version,
     created_at: wireUtc(snapshot.at!),
-    signals: signals.map((r) => {
-      const action = byIdentity.get(`demand:${r.identity_hash}`);
-      return {
-        id: r.id,
-        snapshot_id: r.snapshot_id,
-        signal_type: r.signal_type,
-        state: r.state,
-        topic_cluster: r.topic_cluster,
-        page_url: r.page_url,
-        evidence: record(r.evidence),
-        metrics: record(r.metrics),
-        coverage: record(r.coverage),
-        limitations: strings(r.limitations),
-        priority_score: r.priority_score,
-        priority_inputs: record(r.priority_inputs),
-        created_at: wireUtc(r.at!),
-        action_id: action?.action_id ?? null,
-        action_surface: actionSurfaceOrNull(action?.action_surface ?? null),
-      };
-    }),
+    signals: signals.map((r) => ({
+      id: r.id,
+      snapshot_id: r.snapshot_id,
+      signal_type: r.signal_type,
+      state: r.state,
+      topic_cluster: r.topic_cluster,
+      page_url: r.page_url,
+      evidence: record(r.evidence),
+      metrics: record(r.metrics),
+      coverage: record(r.coverage),
+      limitations: strings(r.limitations),
+      priority_score: r.priority_score,
+      priority_inputs: record(r.priority_inputs),
+      created_at: wireUtc(r.at!),
+      action_id: byIdentity.get(`demand:${r.identity_hash}`) ?? null,
+    })),
   };
 }
 

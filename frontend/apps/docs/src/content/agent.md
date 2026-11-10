@@ -8,7 +8,7 @@ updated: '2026-11-10'
 
 The Agent is CiteLadder's in-app assistant. It can investigate saved project evidence, apply a skill and help you refine a plan, diagnosis, page edit or content draft.
 
-Switch from **Dashboard** to **Agent** to open its workspace. You will find **New chat**, **Actions**, **Content**, **Skills**, **Context** and your saved chat history. **Content** opens [Content optimization](/content-optimization/), the work on your content pages and on pages to create.
+Switch from **Dashboard** to **Agent** to open its workspace. You will find **New chat**, **Actions**, **Skills**, **Context** and your saved chat history. **Actions** includes [content optimization](/content-optimization/) work: content pages to improve and pages to create.
 
 ## Start with the work you need done
 

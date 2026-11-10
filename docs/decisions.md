@@ -574,7 +574,7 @@ Cited Sources (`/platform/cited-sources`), Product Visibility
 (`/platform/product-visibility`), Search Demand
 (`/platform/search-demand`, the app's own name for it), Keyword Research (`/platform/keyword-research`)
 and Content Optimization (`/platform/content-optimization`, the app's
-Content optimization screen). The website has been live for
+content-gap work, listed in Actions since AS1). The website has been live for
 months, so a renamed or moved public URL keeps a permanent (301) redirect from
 its old path, served by the marketing Worker before Astro
 (`frontend/apps/marketing/src/edge.ts`). This replaces the no-redirect rule for
@@ -595,3 +595,28 @@ The page describes only what ships
 10 November 2026: "content-briefs will become content optimization (with
 redirect) and update the website page with relevant material based on current
 implementation (ignore phase 2 which is not implemented yet)".
+
+## One Actions feature; content gaps from content pages only
+
+There is one Actions feature. The decisions below supersede content
+optimization CO1 (a separate Content optimization sidebar entry) and CO10
+(routing Actions to screens by page kind) in the
+[content optimization architecture](plans/content-optimization.md). The
+[Actions simplification](plans/actions-simplification.md) plan holds the work.
+
+| ID | Decision |
+|---|---|
+| AS1 | One Actions list. No per-surface screens; `actions.surface` and the Content screen are removed. Content-gap findings are ordinary Actions. |
+| AS2 | The list is grouped. Group headings show open counts; each group shows its top items by priority with "Show all N". |
+| AS3 | "Work with the agent" opens a new Agent chat with the Action attached and a prefilled, editable message; the user never has to type to start. |
+| AS4 | Every page in the URLs Gap filter is already actionable ("Draft a request to be listed") and is listed on the Actions page (one definition of "gap"). |
+| AS5 | Content gaps use only competitors' and editors' content pages as evidence (articles, guides, comparisons, listicles, reviews, case studies), never their product, category, collection or home pages, and only answers to tracked prompts. |
+| AS6 | The Actions list keeps today's table and adds an **All filters** button (one menu, a submenu per filter). |
+| AS7 | The Action detail page is one centered column, not a grid of boxes, with Dismiss, Mark implemented and Work with the agent in a bar floating at the bottom. |
+| AS8 | AI visibility tabs drop their second row of filter selects: every filter moves into one shared **All filters** menu at the far right of the tabs row (a submenu per filter, search for long lists, a count of filters changed from their defaults, URL state), which the Actions list reuses. Sources' Domains/URLs switch moves to the start of the table toolbar; on Trends, Brand and competitors and Over time split the row evenly, and a faint dashed connector joins runs across a comparability break. |
+
+Source: owner, 10 November 2026, in the owner chat that set the Actions
+simplification plan: keep one Actions feature, remove the Content screen and
+fold content work back into Actions (AS1), with the list, chat, filter,
+detail-page and AI visibility layout directions above (AS2–AS4, AS6–AS8), and
+content gaps drawn only from content pages and tracked prompts (AS5).

@@ -23,7 +23,6 @@ function chatDetail(): AgentChatDetail {
       id: CHAT,
       project_id: FIXTURE_PROJECT.id,
       action_id: null,
-      action_surface: null,
       target_label: null,
       title: 'Discuss buyer needs',
       turn_count: 12,
@@ -94,13 +93,7 @@ for (const width of [1280, 390]) {
       ['**/api/v1/agent/skills', { skills: SKILLS, limits: { mentions_max: 5 } }],
       [
         `**/api/v1/projects/${FIXTURE_PROJECT.id}/actions*`,
-        {
-          items: [],
-          next_cursor: null,
-          status_counts: {},
-          surface_open_counts: { actions: 0, content: 0 },
-          content_gap_source: null,
-        },
+        { items: [], next_cursor: null, status_counts: {} },
       ],
       [`**/api/v1/projects/${FIXTURE_PROJECT.id}/agent/chats?*`, { items: [], next_cursor: null }],
     ]);
@@ -169,13 +162,7 @@ for (const width of [1280, 390]) {
         ['**/api/v1/agent/skills', { skills: SKILLS, limits: { mentions_max: 5 } }],
         [
           `**/api/v1/projects/${FIXTURE_PROJECT.id}/actions*`,
-          {
-            items: [],
-            next_cursor: null,
-            status_counts: {},
-            surface_open_counts: { actions: 0, content: 0 },
-            content_gap_source: null,
-          },
+          { items: [], next_cursor: null, status_counts: {} },
         ],
         [
           `**/api/v1/projects/${FIXTURE_PROJECT.id}/agent/chats?*`,

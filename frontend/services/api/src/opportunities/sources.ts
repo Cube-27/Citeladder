@@ -96,19 +96,6 @@ export async function resolveCrawlId(db: Database, scope: Scope): Promise<string
   return (await latestEvidenceCrawl(db, scope).select('id').executeTakeFirst())?.id ?? null;
 }
 
-/** The crawl the latest Opportunity snapshot read, or null without one. */
-export async function latestSnapshotCrawlId(db: Database, scope: Scope): Promise<string | null> {
-  const snapshot = await new WorkspaceScope(scope.workspaceId)
-    .selectFrom(db, 'opportunity_snapshots')
-    .select('site_crawl_id')
-    .where('project_id', '=', scope.projectId)
-    .orderBy('created_at', 'desc')
-    .orderBy('id', 'desc')
-    .limit(1)
-    .executeTakeFirst();
-  return snapshot?.site_crawl_id ?? null;
-}
-
 /** The project's most recent snapshot, or null when none was ever computed. */
 export async function latestSnapshot(db: Database, scope: Scope) {
   const snapshot = await new WorkspaceScope(scope.workspaceId)

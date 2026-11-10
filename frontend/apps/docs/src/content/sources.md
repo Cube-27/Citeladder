@@ -17,7 +17,7 @@ Sources helps you move from "our visibility changed" to the pages used in the me
 
 A frequently used domain can be worth investigating. Frequency alone does not tell you whether a particular page mentions your brand or whether you can influence it.
 
-CiteLadder also groups the titles of cited competitor and publisher pages into content angles. [Content optimization](/content-optimization/) lists the angles your own pages are not cited for.
+CiteLadder also groups cited competitor and publisher content pages into content angles. Each angle your own pages are not cited for becomes an Action; see [Content optimization](/content-optimization/).
 
 ## Retrieval and citation are different
 

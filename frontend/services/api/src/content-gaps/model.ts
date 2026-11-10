@@ -3,8 +3,9 @@
  * section 1), per topic: clustering cited titles into angles, then picking
  * the owned content page that covers each angle, or none. The model only
  * groups, names and picks among the IDs it is given; it never produces a URL,
- * a count or a fact. The system texts are fixed here and versioned by
- * `methodology_version`; a change to them bumps that version.
+ * a count or a fact. The system texts are fixed here. `methodology_version`
+ * stays at 1 until customers exist, so a change to them applies from the next
+ * run whose clustering inputs change; each call records its input hash.
  */
 import { z } from 'zod';
 
@@ -25,9 +26,11 @@ const clusterSystem = (maxLabelChars: number) =>
   [
     'You group web pages that AI answer engines cited for one topic into content angles:',
     'the kinds of content a site publishes, such as "pricing comparison" or "setup guide".',
-    'You only group and name the pages you are given.',
+    'You only group and name the pages you are given; each has a title, a domain and a URL path.',
     'Rules:',
     '- Use only the page IDs given. Never invent a page.',
+    '- Group only content pages: articles, guides, how-tos, comparisons, listicles, reviews and case studies.',
+    '- Leave out product pages, product category, collection or range listings, store or brand home pages, and search or tag pages.',
     '- Put each page in at most one angle. Leave out a page that fits no angle.',
     '- Every angle has at least one page.',
     `- Write each label in the requested language, in at most ${maxLabelChars} characters.`,
@@ -70,8 +73,18 @@ export function clusterPrompt(input: {
       id: memberId(index),
       title: url.title,
       domain: url.domain,
+      path: urlPath(url.canonicalUrl),
     })),
   });
+}
+
+/** A URL's path without its query or fragment, so the model can tell what kind of page it is. */
+function urlPath(url: string): string {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return '';
+  }
 }
 
 const MAX_TITLES = 10;

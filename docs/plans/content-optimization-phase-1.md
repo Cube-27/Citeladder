@@ -4,6 +4,12 @@ Status: **complete, 2026-11-10** (assigned by the owner 2026-11-10). What
 shipped is owned by [Content optimization](../content-optimization.md); the
 threshold calibration is in the [backlog](backlog.md).
 
+**Superseded in part (2026-11-10):** `actions.surface` (PR 2) and the Content
+optimization screen with its sidebar entry and badge (PR 3) are removed by the
+[Actions simplification](actions-simplification.md) (AS1, migration
+`0018_drop_action_surface`); content gaps are ordinary Actions on the one
+Actions list. The sections below that describe them are history only.
+
 What and why are in [content optimization](content-optimization.md)
 (decisions CO1–CO18, sections 1–2) and [B73](../billing-decisions.md#content-optimization-2026-11-10).
 This plan covers only *how*: the files, the order and the tests.

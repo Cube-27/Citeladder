@@ -85,7 +85,6 @@ const HIDDEN_FIELDS = new Set([
   'artifact_id',
   'analyzer_version',
   'action_id',
-  'action_surface',
 ]);
 const DATE_TIME = /^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2})?)?/u;
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/u;

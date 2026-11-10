@@ -9,8 +9,6 @@
  * A new-page gap targets its lineage's planned-page key, fixed when the
  * lineage was created, so a later label never moves the Action.
  */
-import type { ContentGapSourceState } from '@citeladder/contracts/actions';
-
 import {
   detectContentGaps,
   type ContentGapAngle,
@@ -29,14 +27,10 @@ const p = policy.content_optimization;
 const CONTENT_GAPS_NOT_COMPUTED = 'Content gaps not computed yet.';
 const CONTENT_GAPS_OUT_OF_DATE = `Content-gap evidence is out of date: its newest audit is more than ${p.max_source_age_days} days old.`;
 
-/**
- * The run a refresh reads content gaps from, or none with the reason. `state`
- * is what the snapshot records for the Content optimization list; the
- * limitation is human-readable text only.
- */
+/** The run a refresh reads content gaps from, or none with the reason as a limitation. */
 export type ContentGapSource =
-  | { state: 'current'; run: ContentGapRun; limitation: null }
-  | { state: Exclude<ContentGapSourceState, 'current'>; run: null; limitation: string };
+  | { run: ContentGapRun; limitation: null }
+  | { run: null; limitation: string };
 
 /** The latest succeeded run, when its window ends within `max_source_age_days` of `at`. */
 export async function contentGapSource(
@@ -45,11 +39,10 @@ export async function contentGapSource(
   at: Date,
 ): Promise<ContentGapSource> {
   const run = await latestSucceededRun(db, scope);
-  if (!run) return { state: 'not_computed', run: null, limitation: CONTENT_GAPS_NOT_COMPUTED };
+  if (!run) return { run: null, limitation: CONTENT_GAPS_NOT_COMPUTED };
   if (run.window_end.getTime() < at.getTime() - p.max_source_age_days * 86_400_000)
-    return { state: 'out_of_date', run: null, limitation: CONTENT_GAPS_OUT_OF_DATE };
+    return { run: null, limitation: CONTENT_GAPS_OUT_OF_DATE };
   return {
-    state: 'current',
     run: {
       id: run.id,
       window: { start: run.window_start.toISOString(), end: run.window_end.toISOString() },

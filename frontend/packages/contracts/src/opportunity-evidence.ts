@@ -186,9 +186,6 @@ const contentGapNewPageEvidenceSchema = contentGapEvidenceSchema.extend({
 });
 export type ContentGapNewPageEvidence = z.infer<typeof contentGapNewPageEvidenceSchema>;
 
-/** The two content-gap rules (content optimization section 2). */
-export const contentGapRuleSchema = z.enum(['content_gap_improve_page', 'content_gap_new_page']);
-
 /** Either content-gap rule's evidence. */
 export const contentGapFindingEvidenceSchema = z.union([
   contentGapImprovePageEvidenceSchema,

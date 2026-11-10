@@ -51,7 +51,6 @@ const DETAIL = {
     id: CHAT,
     project_id: PROJECT,
     action_id: null,
-    action_surface: null,
     target_label: null,
     title: 'Missing meta description',
     turn_count: 1,
@@ -134,13 +133,7 @@ beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 beforeEach(() =>
   mswServer.use(
     http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
-      HttpResponse.json({
-        items: [],
-        next_cursor: null,
-        status_counts: {},
-        surface_open_counts: { actions: 0, content: 0 },
-        content_gap_source: null,
-      }),
+      HttpResponse.json({ items: [], next_cursor: null, status_counts: {} }),
     ),
   ),
 );

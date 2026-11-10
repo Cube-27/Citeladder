@@ -30,7 +30,6 @@ import { runOutcome } from '@/lib/agent/run-state';
 import type { AgentChatDetail, AgentMessage, AgentOutput } from '@/lib/api/agent';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
 import { cn } from '@/lib/utils';
-import { actionPath } from '@citeladder/contracts/record-kinds';
 
 /**
  * Messages and the chat's documents in conversational order (each document
@@ -224,7 +223,7 @@ function MessageBubble({
             <Inline as="ul" aria-label="Mentioned Actions" className="flex-wrap">
               {message.mentions.map((mention) => (
                 <li key={mention.id}>
-                  <TextLink href={actionPath(mention)} text="caption">
+                  <TextLink href={`/agent/actions/${mention.id}`} text="caption">
                     @{mention.label}
                   </TextLink>
                 </li>

@@ -17,7 +17,7 @@ Measure the result with the existing declaration and verification loop.
 
 | # | Decision |
 |---|---|
-| CO1 | Content optimization is its own sidebar entry directly below Actions. Actions and Content optimization never show the same work. |
+| CO1 | ~~Content optimization is its own sidebar entry directly below Actions. Actions and Content optimization never show the same work.~~ Superseded by AS1 ([Actions simplification](actions-simplification.md)): one Actions list; content gaps are ordinary Actions. |
 | CO2 | Storage stays in the one Opportunity/Action store. Declaration, verification and Agent attachment are reused. |
 | CO3 | MVP evidence is the **titles** of URLs already cited in answers from **competitor sites and editorial/publisher sites** (not UGC, social, directories or marketplaces), grouped to find content the user lacks. Reading those pages is phase 2. |
 | CO4 | Titles are grouped by the citing prompt's topic, then a model clusters them into content angles; the clustering is persisted with its version and reused while its inputs are unchanged (see [section 1](#1-content-angles-new-derived-stage-no-fetching) for what each derived part is keyed on). Window: dashboard-ready audits of the last **30 days**. |
@@ -26,7 +26,7 @@ Measure the result with the existing declaration and verification loop.
 | CO7 | Per-suggestion editing: page on the left, suggestions on the right, Accept / Dismiss / Apply all; suggestions that need a fact go to the Agent with the user's input. |
 | CO8 | Clustering is free (internal cost of the audit); generating suggestions is an Agent turn that draws AI credits. Recorded as [B73](../billing-decisions.md#content-optimization-2026-11-10). |
 | CO9 | The rules for auditing content are designed in a separate document, inspired by Grammarly. |
-| CO10 | **Route by page kind, not by rule.** Content pages (the kinds in CO15) belong wholly to Content optimization: every Action on them, including technical Site Health findings, is fixed in the editor, where the Agent suggests technical fixes too (JSON-LD, ARIA labels, meta). All other pages stay in Actions. Existing rules are not re-tagged. |
+| CO10 | ~~**Route by page kind, not by rule.** Content pages (the kinds in CO15) belong wholly to Content optimization: every Action on them, including technical Site Health findings, is fixed in the editor, where the Agent suggests technical fixes too (JSON-LD, ARIA labels, meta). All other pages stay in Actions. Existing rules are not re-tagged.~~ Superseded by AS1 ([Actions simplification](actions-simplification.md)): no Action is routed to a screen by page kind; `actions.surface` is removed. |
 | CO11 | **Issues is unchanged.** Site Health issues, including those on content pages, stay in Issues exactly as today. The new rule-based content suggestions never appear in Issues; they exist only in the editor. |
 | CO12 | **Fetch on Optimize.** Opening the editor queues a one-page fetch of the live page; its main content becomes the editor's base Markdown. The crawl's flat text is not used as the base. |
 | CO13 | MVP rules: imported Site Health findings plus one model pass over the rule catalog. Deterministic linters (Harper, retext) come next. |
@@ -177,7 +177,8 @@ Its ID is the family's source identity.
   match and its method, window, run ID and versions.
 - Priority: citation volume, prompt count and competitor share, with thresholds
   in `config/opportunity.ts` (`CONTENT_GAP`). The model does not score.
-- **Screen split by page kind (CO10).** The Actions list gains a `surface`
+- **Screen split by page kind (CO10; superseded by AS1, the surface and the
+  Content screen are removed).** The Actions list gains a `surface`
   filter derived from the target: an owned page whose current Site Health page
   kind is a content kind, or a planned page with a `content_gap_new_page`
   member, is `content`; everything else is `actions`. A planned page has no

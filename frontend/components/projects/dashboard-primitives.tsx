@@ -8,7 +8,6 @@ import type { ReorderItem } from '@/components/ui/reorder-list';
 import { TextLink } from '@/components/ui/text-link';
 import { MissingValue } from '@/components/ui/unavailable-value';
 import type { CommandCenter, Opportunity } from '@citeladder/contracts';
-import { ACTION_SURFACE_SCREENS, actionPath } from '@citeladder/contracts/record-kinds';
 import { readableUrl } from '@/lib/format';
 import { formatPosition, formatWholePercent } from '@/lib/visibility/dashboard';
 import { severityLabel, severityPriority } from '@/lib/site-health/issues';
@@ -93,11 +92,7 @@ export function actionItem(action: Opportunity): ReorderItem {
             text="itemTitle"
             className="min-w-0 truncate"
             title={action.title}
-            href={
-              action.action_id
-                ? actionPath({ id: action.action_id, surface: action.action_surface })
-                : ACTION_SURFACE_SCREENS.actions
-            }
+            href={action.action_id ? `/agent/actions/${action.action_id}` : '/agent/actions'}
           >
             {action.title}
           </TextLink>

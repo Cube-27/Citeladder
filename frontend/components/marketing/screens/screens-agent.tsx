@@ -42,14 +42,14 @@ export function ScreenActions() {
 }
 
 /**
- * Content optimization: content pages to improve and pages to write, each
+ * Content gaps in Actions: content pages to improve and pages to write, each
  * with its lead angle, the angle's prompts and the sites and competitors
  * cited for it. Counts from evidence, never a score.
  */
 export function ScreenContentOptimization() {
   return (
     <Vignette
-      title="Content optimization"
+      title="Content gaps in Actions"
       meta="acme.com · content pages and planned pages"
       badge={<Badge>{`${CONTENT_WORK.length} open`}</Badge>}
     >

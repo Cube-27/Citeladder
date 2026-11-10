@@ -15,7 +15,6 @@ export * from './analytics.ts';
 export * from './performance.ts';
 export * from './ai-traffic.ts';
 export * from './commerce-suite.ts';
-export * from './action-surface.ts';
 export * from './opportunities.ts';
 export * from './actions.ts';
 export * from './agent.ts';

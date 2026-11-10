@@ -1,8 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query';
 
-import type { ActionSurface } from '@citeladder/contracts/action-surface';
-import { ACTION_SURFACE_SCREENS } from '@citeladder/contracts/record-kinds';
-
 import { readFromIntent, warmQuery } from '@/lib/api/query-client';
 import { findAppRoute, type AppRoutePath } from '@/lib/navigation/app-routes';
 import { preloadRouteChunk } from '@/lib/navigation/route-chunks';
@@ -60,8 +57,10 @@ const ROUTE_PREFETCHERS: Readonly<Partial<Record<AppRoutePath, RoutePrefetcher>>
     const { actionsQueries } = await import('@/lib/api/actions');
     warmQuery(client, actionsQueries.list(scope));
   },
-  [ACTION_SURFACE_SCREENS.actions]: prefetchActionSurface('actions'),
-  [ACTION_SURFACE_SCREENS.content]: prefetchActionSurface('content'),
+  '/agent/actions': async (client, scope) => {
+    const { actionsQueries } = await import('@/lib/api/actions');
+    warmQuery(client, actionsQueries.list(scope));
+  },
   '/agent/skills': async (client, { workspaceId }) => {
     const { agentQueries } = await import('@/lib/api/agent');
     warmQuery(client, agentQueries.skills(workspaceId));
@@ -121,14 +120,6 @@ const ROUTE_PREFETCHERS: Readonly<Partial<Record<AppRoutePath, RoutePrefetcher>>
     warmQuery(client, aiTrafficQueries.insights(scope, range));
   },
 };
-
-/** One Action surface's list: the first page of that surface's Actions. */
-function prefetchActionSurface(surface: ActionSurface): RoutePrefetcher {
-  return async (client, scope) => {
-    const { actionsQueries } = await import('@/lib/api/actions');
-    warmQuery(client, actionsQueries.list(scope, { surface }));
-  };
-}
 
 /**
  * Warm the Overview's two independent reads side by side — the command center
@@ -232,10 +223,9 @@ async function prefetchIssues(client: QueryClient, scope: ProjectScope) {
 }
 
 /**
- * Warm the read the application shell makes for a project on every screen:
- * the Actions and Content optimization badges beside the navigation both read
- * the unfiltered first page of the project's Actions, which counts each
- * surface's open work. Their component loads lazily, so on a cold load the
+ * Warm the reads the application shell makes for a project on every screen:
+ * the Actions badge beside the navigation reads the unfiltered first page of
+ * the project's Actions. Its component loads lazily, so on a cold load the
  * read otherwise started a round trip after the page's own.
  */
 export function prefetchProjectShell(client: QueryClient, scope: ProjectScope): Promise<void> {

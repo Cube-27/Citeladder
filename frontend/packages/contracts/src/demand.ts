@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-import { actionSurfaceSchema } from './action-surface.ts';
-
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 
 export const demandSignalSchema = responseObject({
@@ -20,8 +18,6 @@ export const demandSignalSchema = responseObject({
   created_at: z.string(),
   // The Action this signal was promoted into; null when it was not.
   action_id: z.uuid().nullable(),
-  // That Action's surface, for its link; null exactly when `action_id` is.
-  action_surface: actionSurfaceSchema.nullable(),
 });
 
 /** The detectors one demand snapshot runs; every snapshot reports each of them. */

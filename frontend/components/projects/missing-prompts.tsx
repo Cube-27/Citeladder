@@ -14,7 +14,6 @@ import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { missingPrompts, promptHistoryHref, type MissingPrompt } from '@/lib/prompts/history';
 import { useEngineCatalog } from '@/lib/providers/engines';
-import { actionPath } from '@citeladder/contracts/record-kinds';
 
 import { useLatestPromptMetrics } from '@/components/prompts/use-latest-prompt-measurements';
 
@@ -88,9 +87,9 @@ function MissingRow({ row }: Readonly<{ row: MissingPrompt }>) {
           {row.engines.map(engines.label).join(', ')} named {row.competitors.join(', ')}
         </span>
       </Stack>
-      {row.action ? (
+      {row.actionId ? (
         <Button asChild variant="secondary">
-          <ProjectLink href={actionPath(row.action)}>Open the Action</ProjectLink>
+          <ProjectLink href={`/agent/actions/${row.actionId}`}>Open the Action</ProjectLink>
         </Button>
       ) : (
         <span className="type-caption">No Action yet</span>

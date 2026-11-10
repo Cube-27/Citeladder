@@ -209,7 +209,9 @@ async function pageSection(
   const presences = reading
     ? ((await readingPresences(db, scope, [reading.id])).get(reading.id) ?? [])
     : [];
-  const listing = (await earnedPageActions(db, scope, [page.url_hash])).get(page.url_hash);
+  const actionId = (await earnedPageActions(db, scope, [page.url_hash])).get(
+    page.url_hash,
+  )?.action_id;
   return {
     state: page.inspection_state,
     reason: page.inspection_reason,
@@ -220,8 +222,7 @@ async function pageSection(
     source_class: page.source_class,
     entities: reading ? pageEntities(reading, presences) : [],
     standing: pageStanding(page, reading, presences),
-    action_id: listing?.action_id ?? null,
-    action_surface: listing?.action_surface ?? null,
+    action_id: actionId ?? null,
   };
 }
 

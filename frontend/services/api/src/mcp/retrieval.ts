@@ -438,19 +438,17 @@ async function attachActionStatus(
   row: Evidence,
   { project, projectId }: RecordScope,
 ) {
-  const action = row.action_id
+  const status = row.action_id
     ? await db
         .selectFrom('actions')
-        .select(['effective_status as status', 'surface'])
+        .select('effective_status as status')
         .where('id', '=', text(row.action_id))
         .where('workspace_id', '=', project.workspace_id)
         .where('project_id', '=', projectId)
         .executeTakeFirst()
     : undefined;
   // No Action row is an unknown status, never an open one.
-  row.status = action?.status ?? null;
-  // Its surface, so the record's link opens the Action under its screen.
-  row.action_surface = action?.surface ?? null;
+  row.status = status?.status ?? null;
   row.provenance = {
     analyzer_version: row.analyzer_version,
     rule_version: row.rule_version,

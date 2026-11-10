@@ -10,7 +10,6 @@ import { prompt, promptSet, topic } from './prompt-fixtures.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
-import { opportunityRow } from './opportunity-fixtures.ts';
 import { attachOrCreateAction, updateActionStatus } from '../src/opportunities/actions.ts';
 import { getVisibility } from '../src/visibility/dashboard.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
@@ -649,66 +648,12 @@ it('lists only active Actions as the current work and reads a dismissed one only
   expect((await read('read_actions', { status: 'dismissed' })).items as { id: string }[]).toEqual([
     expect.objectContaining({ id: dismissed.id }),
   ]);
-  // An Agent planned page has no content-gap member, so it is on the Actions surface.
-  expect(
-    ((await read('read_actions', { surface: 'actions' })).items as { id: string }[]).map(
-      (item) => item.id,
-    ),
-  ).toEqual([kept.id]);
-  const content = await read('read_actions', { surface: 'content' });
-  expect([content.items, content.status_counts]).toMatchObject([[], { open: 0, dismissed: 0 }]);
   const one = await read('read_actions', { action_id: dismissed.id });
-  expect(one.action).toMatchObject({ id: dismissed.id, status: 'dismissed', surface: 'actions' });
+  expect(one.action).toMatchObject({ id: dismissed.id, status: 'dismissed' });
   const searched = await dispatchTool(db, principal, 'search', { query: 'guide' }, origin);
   expect((searched.results as { id: string }[]).map((r) => r.id)).toEqual([
     `citeladder://action/${kept.id}`,
   ]);
-});
-
-it('links a content-surface Action to Content optimization and any other to Actions', async () => {
-  const scope = { workspaceId: tenant.workspaceId, projectId: tenant.projectId };
-  const attach = (topic: string) =>
-    db
-      .transaction()
-      .execute((trx) => attachOrCreateAction(trx, scope, 'planned_page', topic, tenant.userId));
-  const content = await attach('Setup guide for content');
-  const other = await attach('Pricing calculator page');
-  // The surface a refresh derives for a content-gap planned page.
-  await db
-    .updateTable('actions')
-    .set({ surface: 'content' })
-    .where('workspace_id', '=', tenant.workspaceId)
-    .where('id', '=', content.id)
-    .execute();
-  const pathOf = (link: unknown) => new URL(String(link)).pathname;
-
-  const one = await read('read_actions', { action_id: content.id });
-  expect(pathOf((one.action as { link: string }).link)).toBe(`/agent/content/${content.id}`);
-  const listed = (await read('read_actions')).items as { id: string; link: string }[];
-  expect(
-    [content.id, other.id].map((id) => pathOf(listed.find((item) => item.id === id)?.link)),
-  ).toEqual([`/agent/content/${content.id}`, `/agent/actions/${other.id}`]);
-  const fetched = await fetchRecord(db, principal, `citeladder://action/${content.id}`, origin);
-  expect(pathOf(fetched.url)).toBe(`/agent/content/${content.id}`);
-  // A recommendation links to the Action that holds it, under that Action's surface.
-  const finding = opportunityRow(
-    { workspace_id: tenant.workspaceId, project_id: tenant.projectId },
-    {
-      rule_id: 'content_gap_new_page',
-      opportunity_type: 'topic',
-      severity: 'medium',
-      target_key: 'planned:setup-guide-for-content',
-      action_id: content.id,
-    },
-  );
-  await db.insertInto('opportunities').values(finding).execute();
-  const recommendation = await fetchRecord(
-    db,
-    principal,
-    `citeladder://opportunity/${finding.id}`,
-    origin,
-  );
-  expect(pathOf(recommendation.url)).toBe(`/agent/content/${content.id}`);
 });
 
 it('serves answer perception with the same numbers as the Perception read, and its quotes', async () => {

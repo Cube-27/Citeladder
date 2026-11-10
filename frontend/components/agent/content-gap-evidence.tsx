@@ -14,7 +14,6 @@ import { promptHistoryHref } from '@/lib/prompts/history';
 import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status';
 import { citationClassificationSchema } from '@citeladder/contracts/audits';
 import type { ContentGapEvidence } from '@citeladder/contracts/opportunity-evidence';
-import { actionPath } from '@citeladder/contracts/record-kinds';
 
 /** A finding with the content-gap evidence the Action read returned for it. */
 type GapMember = Readonly<{ id: string; evidence: ContentGapEvidence }>;
@@ -114,11 +113,7 @@ function GapAngle({ evidence }: Readonly<{ evidence: ContentGapEvidence }>) {
         </Stack>
       ) : null}
       {continues ? (
-        <TextLink
-          href={actionPath({ id: continues, surface: 'content' })}
-          text="body"
-          className="justify-self-start"
-        >
+        <TextLink href={`/agent/actions/${continues}`} text="body" className="justify-self-start">
           Continues the planned page for this angle
         </TextLink>
       ) : null}

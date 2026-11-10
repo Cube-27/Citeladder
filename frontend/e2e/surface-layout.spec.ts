@@ -200,13 +200,7 @@ test('choosing a filter option never resizes the filter or moves its neighbour',
   await stubAuthedShell(page, [
     [
       `**/api/v1/projects/${FIXTURE_PROJECT.id}/actions?*`,
-      {
-        items: [],
-        next_cursor: null,
-        status_counts: { open: 1, in_progress: 2 },
-        surface_open_counts: { actions: 3, content: 0 },
-        content_gap_source: null,
-      },
+      { items: [], next_cursor: null, status_counts: { open: 1, in_progress: 2 } },
     ],
   ]);
   await page.goto(fixtureProjectPath('/agent/actions'));

@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { actionSurfaceSchema } from './action-surface.ts';
 import { actionStatusSchema } from './actions.ts';
 import { auditStatusSchema, modelProvenanceSchema } from './audits.ts';
 import { projectMarketSchema } from './markets.ts';
@@ -171,8 +170,6 @@ export const promptMetricItemSchema = responseObject({
   answer_states: answerStatesSchema.nullable().optional(),
   // The Action that targets this prompt, when the refresh opened one.
   action_id: uuid().nullable().optional(),
-  // That Action's surface, for its link; set exactly when `action_id` is.
-  action_surface: actionSurfaceSchema.nullable().optional(),
   outcomes: z
     .array(
       responseObject({
@@ -217,8 +214,6 @@ export const promptHistoryPointSchema = responseObject({
 export const promptHistoryImplementationSchema = responseObject({
   implementation_event_id: uuid(),
   action_id: uuid(),
-  // The screen the Action's link opens under.
-  action_surface: actionSurfaceSchema,
   title: z.string(),
   status: actionStatusSchema,
   implemented_at: z.string(),

@@ -41,8 +41,8 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         media: { kind: 'card' },
       },
       {
-        title: 'One list of content work',
-        body: 'Content optimization sits below Actions in the app and lists your content pages and the pages to write, in the same priority order. Each row names the page, its lead angle, the prompts the angle covers, and the sites and competitors cited for it. You get counts from the evidence, with no content scores or grades.',
+        title: 'Content work in Actions',
+        body: 'Pages to improve and pages to write appear in Actions, in the same priority order as the rest of your work. Each Action names the page, or a planned page to write, and lists its angle, the prompts the angle covers, and the sites and competitors cited for it. You get counts from the evidence, with no content scores or grades.',
         points: [
           'Articles, guides, how-tos, listicles, comparison, alternative and case study pages',
           'A planned page, named by its angle, when no content page matches',
@@ -78,8 +78,8 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         body: 'Track your buyer prompts. After each run, CiteLadder groups the pages AI answers cite into content angles.',
       },
       {
-        title: 'Open Content optimization',
-        body: 'See your content pages and planned pages, each with its lead angle and the sites cited for it.',
+        title: 'Open Actions',
+        body: 'See the content pages to improve and the planned pages to write among your Actions, each with its angle and the sites cited for it.',
       },
       {
         title: 'Hand it to the Agent',
@@ -107,7 +107,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Does it score or grade my content?',
-        a: 'No. Each row shows counts from the evidence: the prompts an angle covers and the sites and competitors cited for it.',
+        a: 'No. Each Action shows counts from the evidence: the prompts an angle covers and the sites and competitors cited for it.',
       },
       {
         q: 'Does it publish automatically?',

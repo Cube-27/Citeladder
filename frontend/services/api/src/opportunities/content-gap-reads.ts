@@ -1,92 +1,9 @@
 /**
- * What Action reads say about content gaps (content optimization section 2):
- * each Action's live content-gap findings, summarized from their persisted
- * evidence for the list and in full for the Action page, and whether the
- * latest refresh had content-gap evidence at all. Reads only persisted rows,
- * scoped to the workspace and project.
+ * What the Action page says about content gaps (content optimization section
+ * 2): each live content-gap finding's persisted evidence, in full.
  */
-import {
-  contentGapSourceStateSchema,
-  type ActionContentGap,
-  type ContentGapSourceState,
-} from '@citeladder/contracts/actions';
-import {
-  contentGapRuleSchema,
-  parseContentGapEvidence,
-} from '@citeladder/contracts/opportunity-evidence';
-
-import type { Database } from '../db/database.ts';
-import { record } from '../db/json.ts';
-import { compareText } from '../text-order.ts';
-import { latestSnapshot, type Scope } from './sources.ts';
-
-type ListedAction = { id: string; member_ids: readonly string[] };
-
-/** One finding's summary, or null when its evidence is not a content-gap angle. */
-function summary(row: { id: string; rule_id: string; evidence: unknown }): ActionContentGap | null {
-  const finding = parseContentGapEvidence(row.rule_id, row.evidence);
-  if (finding === null) return null;
-  const { angle_label, prompts, citation_count, domain_count, competitor_count } = finding.evidence;
-  return {
-    opportunity_id: row.id,
-    rule_id: finding.rule_id,
-    angle_label,
-    prompt_count: prompts.length,
-    citation_count,
-    domain_count,
-    competitor_count,
-  };
-}
+import { parseContentGapEvidence } from '@citeladder/contracts/opportunity-evidence';
 
 /** A finding's stored content-gap evidence, for the Action page; null for any other finding. */
 export const contentGapEvidence = (row: { rule_id: string; evidence: unknown }) =>
   parseContentGapEvidence(row.rule_id, row.evidence)?.evidence ?? null;
-
-const byCitations = (a: ActionContentGap, b: ActionContentGap) =>
-  b.citation_count - a.citation_count || compareText(a.angle_label, b.angle_label);
-
-/** Each Action's live content-gap findings, most cited first, by Action id. */
-export async function actionContentGaps(
-  db: Database,
-  scope: Scope,
-  actions: readonly ListedAction[],
-): Promise<Map<string, ActionContentGap[]>> {
-  const ids = [...new Set(actions.flatMap((action) => action.member_ids))];
-  const rows = ids.length
-    ? await db
-        .selectFrom('opportunities')
-        .select(['id', 'rule_id', 'evidence'])
-        .where('workspace_id', '=', scope.workspaceId)
-        .where('project_id', '=', scope.projectId)
-        .where('id', 'in', ids)
-        .where('rule_id', 'in', contentGapRuleSchema.options)
-        .where('superseded_at', 'is', null)
-        .execute()
-    : [];
-  const found = new Map(
-    rows.flatMap((row) => {
-      const gap = summary(row);
-      return gap ? [[row.id, gap] as const] : [];
-    }),
-  );
-  return new Map(
-    actions.map((action) => [
-      action.id,
-      action.member_ids.flatMap((id) => found.get(id) ?? []).sort(byCitations),
-    ]),
-  );
-}
-
-/**
- * The content-gap evidence the latest Opportunity snapshot read, as its
- * coverage recorded it; no snapshot (or none that recorded it) is not computed.
- */
-export async function contentGapSourceState(
-  db: Database,
-  scope: Scope,
-): Promise<ContentGapSourceState> {
-  const snapshot = await latestSnapshot(db, scope);
-  if (!snapshot) return 'not_computed';
-  const state = contentGapSourceStateSchema.safeParse(record(snapshot.coverage).content_gap_state);
-  return state.success ? state.data : 'not_computed';
-}

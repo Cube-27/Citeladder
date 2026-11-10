@@ -28,7 +28,7 @@ import {
 const p = policy.content_optimization;
 
 /** One citation of a URL, with the prompt and engine of the answer that made it. */
-type CitationRef = { id: string; promptId: string | null; engine: string };
+type CitationRef = { id: string; promptId: string; engine: string };
 
 /** One cited competitor or editorial URL under one prompt topic (null: topicless prompts). */
 export type CitedUrl = {
@@ -134,10 +134,9 @@ export async function resolveAnchor(db: Database, scope: Scope): Promise<Anchor 
 
 /**
  * The crawl's current, completed analyses of content pages (CO15), joined to
- * their site URL: the one statement both the owned match and the Action
- * surface read content pages from.
+ * their site URL: the one statement the owned match reads content pages from.
  */
-export function contentPageAnalyses(db: Database, scope: Scope, crawlId: string) {
+function contentPageAnalyses(db: Database, scope: Scope, crawlId: string) {
   return db
     .selectFrom('site_page_analyses as analysis')
     .innerJoin('site_urls as url', 'url.id', 'analysis.site_url_id')
@@ -208,11 +207,16 @@ async function windowAuditIds(db: Database, scope: Scope, anchor: Anchor) {
   return rows.map((row) => row.id);
 }
 
+/**
+ * The window's citations from answers to tracked prompts only (AS5): an answer
+ * whose snapshot names no prompt, or whose prompt the library no longer has,
+ * is not read, so every angle has at least one prompt.
+ */
 function citationRows(db: Database, scope: Scope, auditIds: string[]) {
   return chunked(auditIds, (chunk) =>
     evidenceScope(db, windowSelection(scope, chunk))
       .innerJoin('citations as c', 'c.analysis_id', 'ra.id')
-      .leftJoin('prompts as prompt', (join) =>
+      .innerJoin('prompts as prompt', (join) =>
         join
           .onRef('prompt.id', '=', 'snapshot.prompt_id')
           .on('prompt.workspace_id', '=', scope.workspaceId),
@@ -230,8 +234,7 @@ function citationRows(db: Database, scope: Scope, auditIds: string[]) {
         'c.is_owned',
         'c.is_unintended',
         'ra.logical_engine as engine',
-        'snapshot.id as snapshot_id',
-        'snapshot.prompt_id',
+        'prompt.id as prompt_id',
         'prompt.topic_id',
       ])
       .where('c.workspace_id', '=', scope.workspaceId)
@@ -334,8 +337,7 @@ export async function loadAngleInputs(
     rows.filter((row) => !row.is_owned && !row.is_unintended && isGapSource(row)),
   );
   const limitations: Limitation[] = [];
-  // A cited answer's prompt; a snapshot of a since-deleted prompt counts once, topicless.
-  const prompts = new Map(rows.map((row) => [row.prompt_id ?? row.snapshot_id, row.topic_id]));
+  const prompts = new Map(rows.map((row) => [row.prompt_id, row.topic_id]));
   const topicless = [...prompts.values()].filter((topic) => topic === null).length;
   if (topicless)
     limitations.push({ code: 'topicless_prompts', count: topicless, total: prompts.size });

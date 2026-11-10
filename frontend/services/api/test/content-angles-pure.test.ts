@@ -1,9 +1,13 @@
-/** Content-angle lineage, aggregation and output validation: pure functions, no database. */
+/**
+ * Content-angle lineage, the clustering request, aggregation and output
+ * validation: pure functions, no database.
+ */
 import { describe, expect, it } from 'vitest';
 
 import { aggregateAngle } from '../src/content-gaps/aggregate.ts';
 import { assignLineages } from '../src/content-gaps/lineage.ts';
 import type { CitedUrl } from '../src/content-gaps/load.ts';
+import { clusterPrompt } from '../src/content-gaps/model.ts';
 import { validateAngles, validateMatches } from '../src/content-gaps/validate.ts';
 
 const url = (canonicalUrl: string, values: Partial<CitedUrl> = {}): CitedUrl => ({
@@ -73,6 +77,29 @@ describe('assignLineages', () => {
   });
 });
 
+describe('clusterPrompt', () => {
+  it('sends each page with its URL path and asks for content pages only', () => {
+    const request = clusterPrompt({
+      language: 'en',
+      maxLabelChars: 60,
+      urls: [
+        url('https://globex.com/blog/crm-setup-guide?utm_source=x', { title: 'CRM setup guide' }),
+        url('https://shop.example/collections/crm', { title: 'CRM software' }),
+      ],
+    });
+    expect(JSON.parse(request.user)).toEqual({
+      language: 'en',
+      pages: [
+        { id: 'u1', title: 'CRM setup guide', domain: 'globex.com', path: '/blog/crm-setup-guide' },
+        { id: 'u2', title: 'CRM software', domain: 'shop.example', path: '/collections/crm' },
+      ],
+    });
+    expect(request.system).toContain(
+      '- Leave out product pages, product category, collection or range listings, store or brand home pages, and search or tag pages.',
+    );
+  });
+});
+
 describe('aggregateAngle', () => {
   const members = [
     url('https://globex.com/pricing', {
@@ -90,7 +117,7 @@ describe('aggregateAngle', () => {
       citations: [{ id: 'c3', promptId: 'p1', engine: 'chatgpt' }],
     }),
     url('https://news.example/best-crm', {
-      citations: [{ id: 'c4', promptId: null, engine: 'perplexity' }],
+      citations: [{ id: 'c4', promptId: 'p3', engine: 'perplexity' }],
     }),
   ];
   const owned = [
@@ -108,7 +135,7 @@ describe('aggregateAngle', () => {
       citationCount: 4,
       domainCount: 2,
       competitorCount: 1,
-      promptIds: ['p1', 'p2'],
+      promptIds: ['p1', 'p2', 'p3'],
       engines: ['chatgpt', 'gemini', 'perplexity'],
       ownedCited: false,
       ownedCitationIds: [],

@@ -1,6 +1,5 @@
 /** Compose the overview from existing persisted owners; this read acquires nothing. */
 import { commandCenterSchema } from '@citeladder/contracts/opportunities';
-import { ACTION_SURFACE_SCREENS, actionPath } from '@citeladder/contracts/record-kinds';
 import { sql, type Selectable } from 'kysely';
 import type { z } from 'zod';
 
@@ -192,9 +191,7 @@ function nextAction({
     return {
       kind: 'opportunity',
       title: action.title,
-      href: action.action_id
-        ? actionPath({ id: action.action_id, surface: action.action_surface })
-        : ACTION_SURFACE_SCREENS.actions,
+      href: action.action_id ? `/agent/actions/${action.action_id}` : '/agent/actions',
       opportunity_id: action.id,
     };
   if (!crawled) return step('crawl', 'Run the first site crawl', '/site');

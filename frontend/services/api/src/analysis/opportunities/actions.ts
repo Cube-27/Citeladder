@@ -1,4 +1,3 @@
-import type { ActionSurface } from '@citeladder/contracts/action-surface';
 import type { ActionHandoff } from '@citeladder/contracts/actions';
 
 import { policy } from '../../config.ts';
@@ -94,32 +93,6 @@ export function targetFor(member: ActionMember) {
     }
   }
 }
-/**
- * The screen an Action belongs to (CO10), the one derivation every write uses.
- * An owned page is `content` when its current analysis in the snapshot's crawl
- * has a content page kind (`contentPages` holds those pages' group keys). A
- * planned page has no page kind, so it takes the surface its members'
- * evidence families name (`PLANNED_PAGE_FAMILY_SURFACE`). Everything else,
- * and a planned page no member places, is `actions`.
- */
-export function actionSurface(
-  action: { kind: string; group_key: string },
-  ruleIds: readonly string[],
-  contentPages: ReadonlySet<string>,
-): ActionSurface {
-  if (action.kind === p.TARGET_PAGE)
-    return contentPages.has(action.group_key) ? p.SURFACE_CONTENT : p.SURFACE_ACTIONS;
-  if (action.kind === p.TARGET_PLANNED_PAGE) {
-    const families: Partial<Record<string, string>> = p.RULE_EVIDENCE_FAMILY;
-    for (const rule of ruleIds) {
-      const family = families[rule];
-      const surface = family === undefined ? undefined : p.PLANNED_PAGE_FAMILY_SURFACE[family];
-      if (surface !== undefined) return surface;
-    }
-  }
-  return p.SURFACE_ACTIONS;
-}
-
 /**
  * The Agent handoff of the first member, in priority order, whose rule's
  * approach branch names one; null hands off with the Action alone.
