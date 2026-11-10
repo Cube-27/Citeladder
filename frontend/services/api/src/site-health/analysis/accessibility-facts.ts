@@ -56,10 +56,21 @@ function hasNativeName(control: HtmlElement) {
   return type === 'image' && Boolean(attribute(control, 'alt').trim());
 }
 
+const LABELABLE = new Set(['button', 'input', 'meter', 'output', 'progress', 'select', 'textarea']);
+const labelable = (node: HtmlElement) =>
+  LABELABLE.has(node.tagName) && !(node.tagName === 'input' && inputType(node) === 'hidden');
+
+/**
+ * HTML's labeled control: a label with `for` names only the element with that
+ * id, never the one it wraps, and an empty `for` names nothing; a label
+ * without `for` names its first labelable descendant.
+ */
 function hasAssociatedLabel(control: HtmlElement, explicitIds: Set<string>) {
-  if (explicitIds.has(attribute(control, 'id').trim())) return true;
+  const id = attribute(control, 'id').trim();
+  if (id && explicitIds.has(id)) return true;
   const label = [...ancestors(control)].find((item) => item.tagName === 'label');
-  return label ? Boolean(accessibleText(label)) : false;
+  if (!label || hasAttribute(label, 'for')) return false;
+  return [...elements(label)].find(labelable) === control && Boolean(accessibleText(label));
 }
 
 function hasName(control: HtmlElement, explicitIds: Set<string>, labelled: Map<string, boolean>) {

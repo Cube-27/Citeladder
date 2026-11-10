@@ -13,6 +13,12 @@ is required to select work; establish a current owner/code inventory when scopin
 
 ## Remaining engineering
 
+### Agent verified completion
+
+Queued in the [priority backlog](priority_backlog.md): the remaining Agent
+trust fixes, then issue-group Actions, element-level evidence, developer
+handoff and journey coverage, pending the owner's Phase B plan.
+
 ### Site Health recrawl and scheduled crawls (top priority)
 
 The owner set these two as the top Site Health priorities on 17 October 2026

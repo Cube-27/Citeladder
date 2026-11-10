@@ -594,6 +594,27 @@ describe('Agent runtime on PostgreSQL', () => {
         .execute(),
     ).toEqual([]);
   });
+  it('keeps the ids in HTML the person pasted while scrubbing CiteLadder ids', async () => {
+    const scope = await fixtures.scope();
+    const formId = 'F3A1C2D4-5B6E-4F70-8A9B-0C1D2E3F4A5B';
+    const internal = '0b6c4f1e-2d3a-4b5c-8d7e-9f0a1b2c3d4e';
+    const { run, lease } = await fixtures.claimed(scope, {
+      skillId: 'plan',
+      message: `Fix this form: <label>Email</label><input id="${formId}">`,
+    });
+    const patch = `<label for="${formId}">Email</label><input id="${formId}">`;
+    await fixtures
+      .runtime(
+        scope,
+        scripted([save(`${patch}\n\nSee finding ${internal}.`), reply(`Done (${internal}).`)]),
+      )
+      .execute(lease);
+    const detail = await readChat(db, scope, run.chat_id);
+    expect(detail.outputs).toMatchObject([
+      { number: 1, latest_revision: { body: `${patch}\n\nSee finding.` } },
+    ]);
+    expect(detail.messages.at(-1)?.content).toBe('Done.\n\nDocument 1 saved.');
+  });
   /** One turn of `skillId` under a catalog with a single page format. */
   async function runWithPageFormat(skillId: string, responses: Response[]) {
     const scope = await fixtures.scope();

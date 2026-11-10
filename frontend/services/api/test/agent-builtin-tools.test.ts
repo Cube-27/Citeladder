@@ -40,6 +40,7 @@ function state(overrides: Partial<DocumentState> = {}): DocumentState {
     formatId: null,
     documents: [],
     staged: new Map(),
+    personIds: new Set(),
     ...overrides,
   };
 }
@@ -88,6 +89,30 @@ describe('Agent built-in tools', () => {
     });
     // A second new document in the same turn takes the next number.
     expect(saveDocument(catalog, turn, { ...draft, title: 'FAQ' }, bounds).document).toBe(3);
+  });
+
+  it('keeps the person’s own UUIDs in a staged document and scrubs every other one', () => {
+    const own = '6f1d2c3b-4a5e-4f60-9b7c-8d9e0f1a2b3c';
+    const internal = '1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d';
+    const turn = state({
+      skill: content(),
+      documents: [saved({ body: `Form <input id="${own}">` })],
+      personIds: new Set([own]),
+    });
+    editDocument(
+      catalog,
+      turn,
+      { edits: [{ old_string: 'Form', new_string: `Form (${internal})` }] },
+      bounds,
+    );
+    expect(turn.staged.get(1)?.payload.body).toBe(`Form <input id="${own}">`);
+    saveDocument(
+      catalog,
+      turn,
+      { title: 'T', body: `<label for="${own}">`, format_id: 'faq' },
+      bounds,
+    );
+    expect(turn.staged.get(2)?.payload.body).toBe(`<label for="${own}">`);
   });
 
   it('replaces a document of the loaded kind, once per step, and refuses another kind', () => {
