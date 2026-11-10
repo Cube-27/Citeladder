@@ -313,18 +313,24 @@ widget, so neither entering edit mode nor saving moves anything.
 **AI Visibility.** Exactly three tabs: Trends (default), Sources, Query
 fanouts. A backend token reaches a reader only through
 `lib/visibility/vocabulary.ts`; an unmapped token renders as nothing. Run
-bookkeeping stays out of the default view. One filter row, every control a
-question a customer would ask, each trigger as wide as its longest option; the
-period and grouping show only for "All runs in period" and sit last, so
-nothing before them moves. Trends shows Visibility, Share of voice and
+bookkeeping stays out of the default view. No filter row: every filter, each a
+question a customer would ask, is in one All filters menu (`AllFilters`) at the
+far right of the tabs row, listing each filter with its value and opening its
+options in a submenu (a search box on long lists); the button counts the
+filters off their defaults. Each tab lists only its own: the period and
+grouping only for "All runs in period", last, and the Sources and Query
+fanouts filters after the shared ones. Trends shows Visibility, Share of voice and
 Owned citation rate (the same names and whole percents as Overview, whose
 Rank is the table's Rank, unlike "Average position in answers"), one
 metric-selectable history chart and one competitor table; a change column
 with nothing comparable is omitted. With one measurement in the period the
 chart card ranks the brands as bars instead of plotting a single point; from
-two, each line is named at its end. Prompt results
-belong to the prompt row; Sources splits Domains and URLs on a segmented
-control; Query fanouts is one table under a Group by control.
+two, each line is named at its end, beside the competitor table in an even
+split; a break between incomparable runs keeps the solid line apart and is
+bridged by a faint dashed segment. Prompt results belong to the prompt row;
+Sources splits Domains and URLs on a segmented control leading the table's
+toolbar, before its search; Query fanouts is one table grouped from All
+filters.
 
 **Site Health.** The crawl control and URL inventory lead; Run new crawl before
 and after a run, Stop crawl while one is active. Issues and Advisories are

@@ -494,10 +494,14 @@ test('mobile viewport keeps the visibility tabs and one active panel usable', as
   // Inactive panels are NOT stacked — still exactly one panel in the DOM.
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
-  // Shared filters remain usable: the surface dropdown still opens + selects.
-  await page.getByRole('button', { name: 'Filter by surface' }).click();
+  // Shared filters remain usable: All filters opens the surface submenu and selects.
+  await page.getByRole('button', { name: 'All filters' }).click();
+  await page.getByRole('menuitem', { name: 'Surface: All surfaces' }).click();
   await page.getByRole('menuitemradio', { name: 'Gemini API', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Filter by surface' })).toContainText('Gemini API');
+  await expect(page).toHaveURL(/[?&]engine=gemini/);
+  await expect(page.getByRole('button', { name: 'All filters (1)' })).toBeVisible();
+  await page.getByRole('button', { name: 'All filters (1)' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Surface: Gemini API' })).toBeVisible();
 });
 
 for (const width of [1280, 375]) {

@@ -138,6 +138,30 @@ export function linePoints(
   });
 }
 
+/**
+ * The segments across each break (`breaks`) between two measured points: the
+ * point before the break and the point at it. They are drawn faint and
+ * dashed, so a series split by a method change still reads as one line while
+ * the solid line never crosses the break. A missing value is not bridged.
+ */
+export function breakConnectors(
+  values: readonly (number | null)[],
+  breaks: readonly boolean[],
+  scale: TrendScale,
+): [[number, number], [number, number]][] {
+  return values.flatMap((value, index) => {
+    const before = values[index - 1];
+    if (!breaks[index] || index === 0 || value === null || before === null || before === undefined)
+      return [];
+    return [
+      [
+        [scale.x(index - 1), scale.y(before)],
+        [scale.x(index), scale.y(value)],
+      ],
+    ];
+  });
+}
+
 /** Points with no neighbour in their run: a line of one draws nothing, so these get a dot. */
 export function isolatedPoints(points: readonly ([number, number] | null)[]): [number, number][] {
   return points.flatMap((point, index) =>

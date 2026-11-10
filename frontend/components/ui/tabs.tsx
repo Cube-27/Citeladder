@@ -138,12 +138,21 @@ export function TabsRoot<T extends string>({
 
 /** What a route passes to its screen template's `tabs`. */
 export type TabRowProps<T extends string = string> = Readonly<
-  Pick<TabStripProps<T>, 'items' | 'ariaLabel' | 'onIntent'>
+  Pick<TabStripProps<T>, 'items' | 'ariaLabel' | 'onIntent'> & {
+    /**
+     * The route's filters as one `AllFilters` button, at the row's far right,
+     * so the tabs and the filters share one band.
+     */
+    controls?: ReactNode;
+  }
 >;
 
-/** TabRow — the route's navigation band: tabs and nothing else, inside a `TabsRoot`. */
-export function TabRow<T extends string>({ items, ariaLabel, onIntent }: TabRowProps<T>) {
-  return <TabStrip items={items} ariaLabel={ariaLabel} onIntent={onIntent} />;
+/**
+ * TabRow — the route's navigation band, inside a `TabsRoot`: the tabs, and at
+ * the far right the route's All filters button when it has one.
+ */
+export function TabRow<T extends string>({ items, ariaLabel, onIntent, controls }: TabRowProps<T>) {
+  return <TabStrip items={items} ariaLabel={ariaLabel} onIntent={onIntent} controls={controls} />;
 }
 
 /**
@@ -162,7 +171,14 @@ function TabStrip<T extends string>({
   const list = (
     <TabsPrimitive.List
       aria-label={ariaLabel}
-      className={cn(TAB_TRACK, fill && 'flex w-full', className)}
+      // Beside controls the track gives way and scrolls, so the controls keep
+      // their place at the row's end on a narrow screen.
+      className={cn(
+        TAB_TRACK,
+        fill && 'flex w-full',
+        controls != null && 'min-w-0 shrink',
+        className,
+      )}
     >
       {items.map((item) => (
         <TabsPrimitive.Trigger

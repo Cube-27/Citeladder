@@ -116,9 +116,10 @@ export function VisibilityTrends({
       {surfaceEngine ? <SurfaceRatesPanel query={surfaceRatesQuery} /> : null}
       {/* The trend sits beside the table once there is one to draw (owner,
           2026-11-10): a single period has no line, so the table takes the
-          row. A failed history read keeps its card, so it can be retried. */}
+          row. A failed history read keeps its card, so it can be retried.
+          The two split the row evenly, so the chart has room for its line. */}
       {hasTrend(query) ? (
-        <AppGrid layout="main-aside">
+        <AppGrid layout="halves">
           {rankingTable}
           <MeasurementHistory
             query={query}

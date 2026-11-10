@@ -37,9 +37,10 @@ const URL_HEADERS = [
 ] as const;
 
 /**
- * Search and export, above whichever table is showing. The domain, type and
- * standing filters draw in the page's control strip; `filters` carries them
- * here only for a panel rendered without that strip.
+ * The Domains | URLs switch (`view`, the inventory only), search and export,
+ * above whichever table is showing. The domain, type and standing filters are
+ * listed in the page's All filters menu; `filters` carries them here only for
+ * a panel rendered without that menu.
  *
  * Export writes the rows AS SHOWN — after the filter, the search and the sort.
  * Widening it to the unfiltered set would hand back a different answer from the
@@ -48,6 +49,7 @@ const URL_HEADERS = [
  */
 export function sourceTableToolbar({
   dimension,
+  view,
   search,
   onSearch,
   rows,
@@ -55,6 +57,7 @@ export function sourceTableToolbar({
   filters,
 }: Readonly<{
   dimension: 'domain' | 'url';
+  view?: ReactNode;
   search: string;
   onSearch: (value: string) => void;
   rows: readonly SourceItem[];
@@ -101,6 +104,7 @@ export function sourceTableToolbar({
   };
 
   return {
+    view,
     search: (
       <SearchField
         value={search}
