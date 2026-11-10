@@ -12,7 +12,18 @@ This gives your team one place to understand the diagnosis, start Agent work and
 
 ## Choose what to work on
 
-Open **Agent → Actions**. Use status and target filters to narrow the list, then inspect an Action's detail. The list includes [content gaps](/content-optimization/): content pages to improve and pages to create.
+Open **Agent → Actions**. The list groups your open work:
+
+| Group                      | What it holds                                                                                           |
+| -------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Fix how AI reads your site | Technical fixes and internal links                                                                      |
+| Improve your own pages     | Pages to improve, pages to create (including [content gaps](/content-optimization/)) and pages to merge |
+| Get mentioned elsewhere    | Cited pages that list your competitors but not you                                                      |
+| Improve your products      | Products and categories                                                                                 |
+
+Each group shows how many Actions it holds and its top five by priority. Choose a group's heading to fold it, or **Show all** to list every Action in that group. Choose **All filters** to narrow the list by status, group, action type, priority, target type or source; the filters stay in the page address, so you can share the view. Choose a row to open the Action's detail.
+
+Every page that the Sources URL table shows as a **Gap** becomes a "Get mentioned elsewhere" Action after its next refresh, whatever kind of page it is.
 
 Read the diagnosis, contributing evidence, recommended approach and what to avoid. The priority comes from CiteLadder's deterministic rules. An Agent explanation does not replace that ranking or create new measured facts.
 

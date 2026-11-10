@@ -102,20 +102,17 @@ never erases what was learned, and a page nobody read carries no verdicts.
 ## The earned Action
 
 The target is `earned-page:{url_hash}` and the rule is
-`earned_page_acquire_listing` (high). It fires only when all of these hold:
+`earned_page_acquire_listing` (high). It fires for every page the URL table
+shows as a Gap (AS4) among the pages the audit's answers cited: one rule,
+`isListingGap` ([listing gap](../frontend/services/api/src/analysis/listing-gap.ts)),
+decides both. On the page's latest successful reading:
 
-- the page has a successful reading with sufficient coverage, judged against
-  the current roster;
-- answers to tracked prompts cite it, and it recurs (at least two answers or
-  sightings);
 - it is not the business's or a competitor's own page;
-- its format takes another entry: listicle, comparison, alternative,
-  directory, profile or review;
-- at least one tracked competitor is present on it and the brand is
-  `not_detected`.
+- at least one competitor is present on it and the brand is `not_detected`.
 
-Priority multiplies recurrence across the audit's answers by the number of
-competitors verified on the page. Competitors merely named in an answer that
+Its format, how often it is cited and how much of it was read do not gate the
+Action; they only rank it. Priority multiplies recurrence across the audit's
+answers by the number of competitors verified on the page. Competitors merely named in an answer that
 cited the page travel in the brief as descriptive context and never score.
 
 The brief reaches the Agent through `evidence.content_handoff`: the page and
@@ -142,7 +139,8 @@ The Sources URL table shows each page's format with its basis (a tooltip and
 hidden text), the page's standing in a word (below) and a link to its Action
 when one exists. Standing comes from the latest successful reading, computed by
 one server owner (`visibility/page-standing.ts`) for the URL table and the URL's
-page alike. The table's gap filter (`standing=gap` on the Sources read, shared
+page alike; its Gap is the earned Action's own rule, so every Gap page becomes
+an Action at the next refresh. The table's gap filter (`standing=gap` on the Sources read, shared
 by the public API) pages through exactly the pages whose standing is
 "competitors listed, you are not"; totals and the type ring follow it, the
 usage series does not. Publisher (domain) rows have no standing, so the filter
@@ -174,5 +172,4 @@ than skipped silently.
 [Configuration](../frontend/services/api/src/config/source-pages.ts) owns the
 inspection limits, vocabularies, versions and budget window;
 [earned actions](../frontend/services/api/src/config/earned-actions.ts) owns
-the rule, the includable formats and the qualification and priority
-thresholds.
+the rule, the excluded page classes and the priority factors.

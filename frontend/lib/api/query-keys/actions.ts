@@ -13,6 +13,10 @@ export const actionKeys = {
     filters: {
       status: string | null;
       targetKind: string | null;
+      group: string | null;
+      approach: string | null;
+      priority: string | null;
+      family: string | null;
       cursor: string | null;
       limit: number;
     },

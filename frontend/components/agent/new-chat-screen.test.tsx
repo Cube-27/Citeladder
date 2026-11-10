@@ -5,6 +5,7 @@ import { Route, Routes, useParams } from 'react-router-dom';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 
 import { mswServer } from '@/test/msw-server';
+import { actionsPage } from '@/test/fixtures/actions';
 import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 
@@ -79,8 +80,10 @@ function actionItem(id: string, label: string) {
     origin: 'evidence',
     status: 'open',
     priority_score: 1,
+    priority_band: 'low',
     families: [],
     approach: 'improve_page',
+    group: 'own_pages',
     skill_id: 'gsc_optimize',
     member_count: 1,
     handoff: { context: 'action', message: `Work on ${label}.` },
@@ -128,9 +131,7 @@ function baseHandlers(actions: ReturnType<typeof actionItem>[] = []) {
     http.get('/api/v1/agent/skills', () =>
       HttpResponse.json({ skills: [GROWTH_SKILL], limits: { mentions_max: 5 } }),
     ),
-    http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
-      HttpResponse.json({ items: actions, next_cursor: null, status_counts: {} }),
-    ),
+    http.get(`/api/v1/projects/${PROJECT}/actions`, () => HttpResponse.json(actionsPage(actions))),
   ];
 }
 
@@ -378,11 +379,7 @@ describe('NewChatScreen', () => {
       http.get(`/api/v1/projects/${PROJECT}/actions`, ({ request }) => {
         const limit = new URL(request.url).searchParams.get('limit') ?? 'none';
         limits.push(limit);
-        return HttpResponse.json({
-          items: queue.slice(0, Number(limit)),
-          next_cursor: null,
-          status_counts: {},
-        });
+        return HttpResponse.json(actionsPage(queue.slice(0, Number(limit))));
       }),
       ...baseHandlers(),
     );

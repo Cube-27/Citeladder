@@ -207,6 +207,16 @@
           "priority_score": {
             "type": ["number", "null"]
           },
+          "priority_band": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActionPriorityBand"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "families": {
             "type": "array",
             "items": {
@@ -215,6 +225,9 @@
           },
           "approach": {
             "type": "string"
+          },
+          "group": {
+            "$ref": "#/components/schemas/ActionGroup"
           },
           "skill_id": {
             "type": "string"
@@ -791,8 +804,10 @@
           "origin",
           "status",
           "priority_score",
+          "priority_band",
           "families",
           "approach",
+          "group",
           "skill_id",
           "member_count",
           "handoff",
@@ -806,6 +821,10 @@
           "declaration"
         ],
         "additionalProperties": false
+      },
+      "ActionGroup": {
+        "type": "string",
+        "enum": ["fix_site", "own_pages", "earned", "products"]
       },
       "ActionHandoff": {
         "oneOf": [
@@ -908,6 +927,16 @@
           "priority_score": {
             "type": ["number", "null"]
           },
+          "priority_band": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActionPriorityBand"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "families": {
             "type": "array",
             "items": {
@@ -916,6 +945,9 @@
           },
           "approach": {
             "type": "string"
+          },
+          "group": {
+            "$ref": "#/components/schemas/ActionGroup"
           },
           "skill_id": {
             "type": "string"
@@ -948,8 +980,10 @@
           "origin",
           "status",
           "priority_score",
+          "priority_band",
           "families",
           "approach",
+          "group",
           "skill_id",
           "member_count",
           "handoff",
@@ -958,6 +992,10 @@
           "updated_at"
         ],
         "additionalProperties": false
+      },
+      "ActionPriorityBand": {
+        "type": "string",
+        "enum": ["high", "medium", "low"]
       },
       "ActionsPage": {
         "type": "object",
@@ -981,9 +1019,21 @@
               "minimum": -9007199254740991,
               "maximum": 9007199254740991
             }
+          },
+          "group_counts": {
+            "type": "object",
+            "propertyNames": {
+              "$ref": "#/components/schemas/ActionGroup"
+            },
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "required": ["fix_site", "own_pages", "earned", "products"]
           }
         },
-        "required": ["items", "next_cursor", "status_counts"],
+        "required": ["items", "next_cursor", "status_counts", "group_counts"],
         "additionalProperties": false
       },
       "ActionStatus": {
@@ -10984,6 +11034,38 @@
           },
           {
             "name": "target_kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "group",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "approach",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "family",
             "in": "query",
             "required": false,
             "schema": {

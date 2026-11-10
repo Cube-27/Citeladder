@@ -15,21 +15,25 @@ import type { ProjectScope } from './query-keys/scope';
 import {
   actionDeclarationSchema,
   actionDetailSchema,
+  actionGroupSchema,
   actionItemSchema,
   actionStatusSchema,
   actionsPageSchema,
   type ActionDeclarationRequest,
+  type ActionGroup,
+  type ActionPriorityBand,
   type ActionUserStatus,
 } from '@citeladder/contracts/actions';
 import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
-import { AGENT_MENTION_POOL_SIZE } from '@/lib/config/agent';
+import { ACTIONS_GROUP_PREVIEW_ROWS, AGENT_MENTION_POOL_SIZE } from '@/lib/config/agent';
 import { TABLE_DEFAULT_PAGE_SIZE } from '@/lib/config/tables';
 
 export type Action = z.infer<typeof actionItemSchema>;
 export type ActionsPage = z.infer<typeof actionsPageSchema>;
 export type ActionDetail = z.infer<typeof actionDetailSchema>;
 export type ActionStatus = z.infer<typeof actionStatusSchema>;
+export type { ActionGroup, ActionPriorityBand };
 export type ActionDeclaration = z.infer<typeof actionDeclarationSchema>;
 export type MeasurementLeg = ActionDeclaration['legs'][number];
 
@@ -39,6 +43,11 @@ export type ActionsParams = {
   /** Omitted: the work queue (open and in progress). */
   status?: ActionStatus;
   target_kind?: string;
+  group?: ActionGroup;
+  approach?: string;
+  priority?: ActionPriorityBand;
+  /** An evidence family: the Action's Source. */
+  family?: string;
 };
 
 export const actionsApi = {
@@ -92,6 +101,10 @@ function actionListQuery(scope: ProjectScope, params?: ActionsParams) {
     queryKey: queryKeys.actions.list(scope, {
       status: request.status ?? null,
       targetKind: request.target_kind ?? null,
+      group: request.group ?? null,
+      approach: request.approach ?? null,
+      priority: request.priority ?? null,
+      family: request.family ?? null,
       cursor: request.cursor ?? null,
       limit: request.limit,
     }),
@@ -103,6 +116,14 @@ function actionListQuery(scope: ProjectScope, params?: ActionsParams) {
 /** Action reads: the work queue, the composer's mention pool and one Action. */
 export const actionsQueries = {
   list: actionListQuery,
+  /**
+   * The grouped Actions list: each group's top Actions under the filters,
+   * one read per group in the list's order. Each carries every group's count.
+   */
+  groupPreviews: (scope: ProjectScope, params: Omit<ActionsParams, 'group' | 'limit' | 'cursor'>) =>
+    actionGroupSchema.options.map((group) =>
+      actionListQuery(scope, { ...params, group, limit: ACTIONS_GROUP_PREVIEW_ROWS }),
+    ),
   /**
    * The Actions the Agent composer's `@` menu can mention: a wider page than
    * the table's, so an Action past the first ten can still be found by name.

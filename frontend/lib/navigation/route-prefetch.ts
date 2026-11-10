@@ -57,9 +57,10 @@ const ROUTE_PREFETCHERS: Readonly<Partial<Record<AppRoutePath, RoutePrefetcher>>
     const { actionsQueries } = await import('@/lib/api/actions');
     warmQuery(client, actionsQueries.list(scope));
   },
+  // The grouped list's reads, one per group.
   '/agent/actions': async (client, scope) => {
     const { actionsQueries } = await import('@/lib/api/actions');
-    warmQuery(client, actionsQueries.list(scope));
+    for (const read of actionsQueries.groupPreviews(scope, {})) warmQuery(client, read);
   },
   '/agent/skills': async (client, { workspaceId }) => {
     const { agentQueries } = await import('@/lib/api/agent');

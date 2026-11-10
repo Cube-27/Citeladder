@@ -1,86 +1,179 @@
 'use client';
 
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
+import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import type { DataTableState } from '@/components/ui/data-table';
 import { Inline } from '@/components/ui/layout';
-import { Select } from '@/components/ui/select';
 import { ClampText, TableCell } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { ACTION_STATUS_LABEL, familyLabel, targetKindLabel } from '@/lib/agent/vocabulary';
-import { queueCount, useActionStatusCounts } from '@/lib/agent/use-action-status-counts';
+import {
+  ACTION_APPROACHES,
+  ACTION_FAMILIES,
+  ACTION_GROUP_LABEL,
+  ACTION_STATUS_LABEL,
+  ACTION_TARGET_KINDS,
+  PRIORITY_BAND_LABEL,
+  approachLabel,
+  familyLabel,
+  targetKindLabel,
+} from '@/lib/agent/vocabulary';
 import {
   actionsQueries,
   type Action,
+  type ActionGroup,
   type ActionsPage,
+  type ActionsParams,
   type ActionStatus,
 } from '@/lib/api/actions';
-import { formatCount, pluralCount, readableUrl } from '@/lib/format';
-import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
+import { pluralCount, readableUrl } from '@/lib/format';
+import { stringUrlCodec, useUrlState, type UrlCodec } from '@/lib/navigation/url-state';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
-import { actionStatusSchema } from '@citeladder/contracts/actions';
+import {
+  actionGroupSchema,
+  actionPriorityBandSchema,
+  actionStatusSchema,
+} from '@citeladder/contracts/actions';
 
 /**
- * The Actions list's parts: the status filter in the URL, its per-status
- * counts, the cursor-paged read of the project's Actions and the target cell.
+ * The Actions list's parts: its filters in the URL (one All filters menu,
+ * AS6), the cursor-paged read of the project's Actions and the target cell.
  */
 
 const QUEUE = 'queue';
+const ALL = 'all';
 type StatusFilter = typeof QUEUE | ActionStatus;
 const STATUS_FILTERS: readonly StatusFilter[] = [QUEUE, ...actionStatusSchema.options];
+
+/** The list's read, less its group: the grouped view asks once per group. */
+export type ActionListQuery = Omit<ActionsParams, 'cursor' | 'limit' | 'group'>;
+
+type Choice<T extends string> = Readonly<{ value: T; label: string }>;
+
+/** One `all`-or-a-value filter: its URL codec and its All filters entry. */
+function allOr<T extends string>(values: readonly T[]): UrlCodec<T | typeof ALL> {
+  return stringUrlCodec<T | typeof ALL>([ALL, ...values], ALL);
+}
+
+const GROUP_CODEC = allOr(actionGroupSchema.options);
+const APPROACH_CODEC = allOr(ACTION_APPROACHES);
+const PRIORITY_CODEC = allOr(actionPriorityBandSchema.options);
+const TARGET_CODEC = allOr(ACTION_TARGET_KINDS);
+const SOURCE_CODEC = allOr(ACTION_FAMILIES);
 const STATUS_CODEC = stringUrlCodec<StatusFilter>(STATUS_FILTERS, QUEUE);
 
-type StatusCounts = Partial<Record<string, number>>;
-
-function statusCount(value: StatusFilter, counts: StatusCounts) {
-  return value === QUEUE ? queueCount(counts) : (counts[value] ?? 0);
-}
-
-/**
- * Status choices, each with its project-wide count in the menu. The labels
- * themselves never change, so the filter keeps its width when the counts load
- * or drop away.
- */
-function statusOptions(counts: StatusCounts | undefined) {
-  return STATUS_FILTERS.map((value) => ({
-    value,
-    label: value === QUEUE ? 'Open and in progress' : ACTION_STATUS_LABEL[value],
-    detail: counts ? formatCount(statusCount(value, counts)) : undefined,
-  }));
-}
-
-/**
- * The shareable status filter of the Actions list. `status` is undefined
- * for the work queue (open and in progress).
- */
-export function useActionStatusFilter() {
-  const [filter, setFilter] = useUrlState('status', STATUS_CODEC);
-  return { filter, setFilter, status: filter === QUEUE ? undefined : filter };
-}
-
-/**
- * The Status select of the Actions list, with the project's counts in its
- * menu. The counts cover every target type, so a list narrowed by another
- * filter passes `showCounts={false}`.
- */
-export function ActionStatusSelect({
+function allFilter<T extends string>({
+  id,
+  label,
+  allLabel,
   value,
-  onValueChange,
-  showCounts = true,
+  options,
+  onChange,
 }: Readonly<{
-  value: StatusFilter;
-  onValueChange: (value: StatusFilter) => void;
-  showCounts?: boolean;
-}>) {
-  const counts = useActionStatusCounts();
-  return (
-    <Select
-      ariaLabel="Status"
-      value={value}
-      options={statusOptions(showCounts ? counts : undefined)}
-      onValueChange={onValueChange}
-    />
-  );
+  id: string;
+  label: string;
+  allLabel: string;
+  value: T | typeof ALL;
+  options: readonly Choice<T>[];
+  onChange: (value: T | typeof ALL) => void;
+}>): FilterDefinition {
+  return choiceFilter<T | typeof ALL>({
+    id,
+    label,
+    value,
+    defaultValue: ALL,
+    groups: [{ options: [{ value: ALL, label: allLabel }, ...options] }],
+    onChange,
+  });
+}
+
+const labelled = <T extends string>(values: readonly T[], label: (value: T) => string | null) =>
+  values.map((value) => ({ value, label: label(value) ?? value }));
+
+/**
+ * The Actions list's filters, every one URL state: Status (the work queue by
+ * default), Group, Action type, Priority, Target type and Source. `query` is
+ * the read they select, less the group; `group` is the one group the list is
+ * narrowed to, if any, and `showGroup` narrows it (Show all N).
+ */
+export function useActionFilters() {
+  const [status, setStatus] = useUrlState('status', STATUS_CODEC, { history: 'replace' });
+  const [group, setGroup] = useUrlState('group', GROUP_CODEC, { history: 'replace' });
+  const [approach, setApproach] = useUrlState('approach', APPROACH_CODEC, { history: 'replace' });
+  const [priority, setPriority] = useUrlState('priority', PRIORITY_CODEC, { history: 'replace' });
+  const [target, setTarget] = useUrlState('target', TARGET_CODEC, { history: 'replace' });
+  const [source, setSource] = useUrlState('source', SOURCE_CODEC, { history: 'replace' });
+  const definitions: FilterDefinition[] = [
+    choiceFilter<StatusFilter>({
+      id: 'status',
+      label: 'Status',
+      value: status,
+      defaultValue: QUEUE,
+      groups: [
+        {
+          options: STATUS_FILTERS.map((value) => ({
+            value,
+            label: value === QUEUE ? 'Open and in progress' : ACTION_STATUS_LABEL[value],
+          })),
+        },
+      ],
+      onChange: setStatus,
+    }),
+    allFilter({
+      id: 'group',
+      label: 'Group',
+      allLabel: 'All groups',
+      value: group,
+      options: labelled(actionGroupSchema.options, (value) => ACTION_GROUP_LABEL[value]),
+      onChange: setGroup,
+    }),
+    allFilter({
+      id: 'approach',
+      label: 'Action type',
+      allLabel: 'All action types',
+      value: approach,
+      options: labelled(ACTION_APPROACHES, approachLabel),
+      onChange: setApproach,
+    }),
+    allFilter({
+      id: 'priority',
+      label: 'Priority',
+      allLabel: 'All priorities',
+      value: priority,
+      options: labelled(actionPriorityBandSchema.options, (value) => PRIORITY_BAND_LABEL[value]),
+      onChange: setPriority,
+    }),
+    allFilter({
+      id: 'target',
+      label: 'Target type',
+      allLabel: 'All targets',
+      value: target,
+      options: labelled(ACTION_TARGET_KINDS, targetKindLabel),
+      onChange: setTarget,
+    }),
+    allFilter({
+      id: 'source',
+      label: 'Source',
+      allLabel: 'All sources',
+      value: source,
+      options: labelled(ACTION_FAMILIES, familyLabel),
+      onChange: setSource,
+    }),
+  ];
+  const query: ActionListQuery = {
+    status: status === QUEUE ? undefined : status,
+    approach: approach === ALL ? undefined : approach,
+    priority: priority === ALL ? undefined : priority,
+    target_kind: target === ALL ? undefined : target,
+    family: source === ALL ? undefined : source,
+  };
+  return {
+    definitions,
+    query,
+    group: group === ALL ? undefined : group,
+    // A step into one group, so Back returns to every group.
+    showGroup: (next: ActionGroup) => setGroup(next, 'push'),
+  };
 }
 
 /**
@@ -144,15 +237,15 @@ export function ActionTargetCell({
 export function useActionTable({
   workspaceId,
   projectId,
-  status,
-  targetKind,
+  query,
+  group,
   noun,
   empty,
 }: Readonly<{
   workspaceId: string;
   projectId: string;
-  status: ActionStatus | undefined;
-  targetKind?: string;
+  query: ActionListQuery;
+  group?: ActionGroup;
   /** What the rows are, plural ("Actions"). */
   noun: string;
   empty: (page: ActionsPage) => DataTableState;
@@ -160,12 +253,9 @@ export function useActionTable({
   return useCursorTableQuery({
     workspaceId,
     scopeId: projectId,
-    scope: [status, targetKind],
+    scope: [query, group],
     query: (request) =>
-      actionsQueries.list(
-        { workspaceId, projectId },
-        { status, target_kind: targetKind, ...request },
-      ),
+      actionsQueries.list({ workspaceId, projectId }, { ...query, group, ...request }),
     noun,
     loading: `Loading ${noun}…`,
     error: `${noun} could not be loaded.`,

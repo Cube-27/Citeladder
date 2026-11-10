@@ -2,9 +2,14 @@
 import { randomUUID } from 'node:crypto';
 import {
   actionDetailSchema,
+  actionGroupSchema,
   actionItemSchema,
+  actionPriorityBandSchema,
+  actionsPageSchema,
   actionStatusSchema,
   measurementLegSchema,
+  type ActionGroup,
+  type ActionPriorityBand,
 } from '@citeladder/contracts/actions';
 import { sql, type Selectable, type SqlBool } from 'kysely';
 
@@ -28,8 +33,10 @@ import { contentGapEvidence } from './content-gap-reads.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { normalizeDomain } from '../analysis/domains.ts';
 import {
+  actionGroup,
   pageGroupKey,
   plannedPageKey,
+  priorityBand,
   readHandoff,
   selectApproach,
 } from '../analysis/opportunities/actions.ts';
@@ -140,8 +147,10 @@ function actionItem(row: ActionRow) {
     origin: actionItemSchema.shape.origin.parse(row.origin),
     status: actionStatusSchema.parse(row.effective_status),
     priority_score: row.priority_score,
+    priority_band: priorityBand(row.priority_score),
     families: stringList(row.families),
     approach: row.approach,
+    group: actionGroup(row),
     skill_id: row.skill_id,
     member_count: jsonList(row.member_opportunity_ids).length,
     handoff: readHandoff(record(row.diagnosis).handoff, row.target_label),
@@ -175,58 +184,132 @@ function cursorPosition(cursor: string, filters: Record<string, unknown>) {
   }
 }
 
-export async function listActions(
-  db: Database,
-  scope: Scope,
-  filters: {
-    status: string | null;
-    target_kind: string | null;
-    limit: number;
-    cursor: string | null;
-  },
-) {
+/** `actionGroup` as SQL over the stored target kind and approach: the same rules in the same order. */
+const groupSql = sql<ActionGroup>`(case ${sql.join(
+  a.ACTION_GROUPS.map((rule) => {
+    const tests = [
+      rule.target_kinds ? sql`actions.target_kind in (${sql.join(rule.target_kinds)})` : null,
+      rule.approaches ? sql`actions.approach in (${sql.join(rule.approaches)})` : null,
+    ].filter((test) => test !== null);
+    return sql`when ${sql.join(tests, sql` and `)} then ${rule.group}`;
+  }),
+  sql` `,
+)} else ${a.ACTION_GROUP_DEFAULT} end)`;
+
+/** Every approach a diagnosis can store: the tree's and the default's. */
+const KNOWN_APPROACHES = [
+  ...new Set([...a.APPROACH_TREE.map((branch) => branch.approach), a.DEFAULT_APPROACH.approach]),
+];
+
+/** The list's filters; null (or absent) leaves a filter off. */
+type ActionListFilters = {
+  status: string | null;
+  target_kind: string | null;
+  group?: string | null;
+  approach?: string | null;
+  priority?: string | null;
+  family?: string | null;
+  limit: number;
+  cursor: string | null;
+};
+
+/** `value` checked against `allowed`; an unknown value is a 422, never an empty list. */
+function known<T extends string>(
+  name: string,
+  value: string | null | undefined,
+  allowed: readonly T[],
+): T | null {
+  if (value === null || value === undefined) return null;
+  const match = allowed.find((option) => option === value);
+  if (match === undefined) throw new ApiError(422, `Unknown ${name}: ${value}`);
+  return match;
+}
+
+function parseFilters(filters: ActionListFilters) {
   if (filters.status !== null) validateStatus(filters.status);
-  if (filters.target_kind !== null && !a.ACTION_TARGET_KINDS.includes(filters.target_kind))
-    throw new ApiError(422, `Unknown target kind: ${filters.target_kind}`);
-  const priority = sql<number>`coalesce(actions.priority_score, -1)`;
-  const fingerprint = {
-    project_id: scope.projectId,
+  return {
     status: filters.status,
-    target_kind: filters.target_kind,
+    target_kind: known('target kind', filters.target_kind, a.ACTION_TARGET_KINDS),
+    group: known('group', filters.group, actionGroupSchema.options),
+    approach: known('approach', filters.approach, KNOWN_APPROACHES),
+    priority: known('priority', filters.priority, actionPriorityBandSchema.options),
+    family: known('source', filters.family, a.EVIDENCE_FAMILIES),
   };
-  let query = listed(db, scope)
-    .selectAll()
-    .where('effective_status', 'in', filters.status ? [filters.status] : a.ACTION_ACTIVE_STATUSES);
-  if (filters.target_kind) query = query.where('target_kind', '=', filters.target_kind);
-  if (filters.cursor) {
-    const { score, id } = cursorPosition(filters.cursor, fingerprint);
+}
+
+/** A priority band as a score range; an unscored Action is in none. */
+function bandRange(band: ActionPriorityBand): { from: number | null; below: number | null } {
+  const floors = a.ACTION_PRIORITY_BANDS;
+  if (band === 'high') return { from: floors.high, below: null };
+  if (band === 'medium') return { from: floors.medium, below: floors.high };
+  return { from: null, below: floors.medium };
+}
+
+export async function listActions(db: Database, scope: Scope, raw: ActionListFilters) {
+  const filters = parseFilters(raw);
+  const priority = sql<number>`coalesce(actions.priority_score, -1)`;
+  const fingerprint = { project_id: scope.projectId, ...filters };
+  // Every filter but the group: the group counts read under it too.
+  let filtered = listed(db, scope).where(
+    'effective_status',
+    'in',
+    filters.status ? [filters.status] : a.ACTION_ACTIVE_STATUSES,
+  );
+  if (filters.target_kind) filtered = filtered.where('target_kind', '=', filters.target_kind);
+  if (filters.approach) filtered = filtered.where('approach', '=', filters.approach);
+  if (filters.family)
+    filtered = filtered.where(
+      sql<SqlBool>`actions.families @> ${JSON.stringify([filters.family])}::jsonb`,
+    );
+  if (filters.priority) {
+    const { from, below } = bandRange(filters.priority);
+    if (from !== null) filtered = filtered.where('priority_score', '>=', from);
+    if (below !== null) filtered = filtered.where('priority_score', '<', below);
+  }
+  let query = filtered.selectAll();
+  if (filters.group) query = query.where(groupSql, '=', filters.group);
+  if (raw.cursor) {
+    const { score, id } = cursorPosition(raw.cursor, fingerprint);
     query = query.where((eb) =>
       eb.or([eb(priority, '<', score), eb.and([eb(priority, '=', score), eb('id', '>', id)])]),
     );
   }
-  const [rows, counts] = await Promise.all([
+  const [rows, counts, groups] = await Promise.all([
     query
       .orderBy(priority, 'desc')
       .orderBy('id')
-      .limit(filters.limit + 1)
+      .limit(raw.limit + 1)
       .execute(),
     listed(db, scope)
       .select(['effective_status as status', sql<number>`count(*)::int`.as('count')])
       .groupBy('effective_status')
       .execute(),
+    filtered
+      .select([groupSql.as('group'), sql<number>`count(*)::int`.as('count')])
+      // By position: the CASE binds its values afresh in each clause.
+      .groupBy(sql`1`)
+      .execute(),
   ]);
-  const page = rows.slice(0, filters.limit);
+  const page = rows.slice(0, raw.limit);
   const last = page.at(-1);
   return {
     items: page.map(actionItem),
     next_cursor:
-      rows.length > filters.limit && last
+      rows.length > raw.limit && last
         ? encodeKeysetCursor('actions', fingerprint, [String(last.priority_score ?? -1), last.id])
         : null,
     status_counts: {
       ...Object.fromEntries(a.ACTION_STATUSES.map((status) => [status, 0])),
       ...Object.fromEntries(counts.map((row) => [row.status, row.count])),
     },
+    group_counts: actionsPageSchema.shape.group_counts.parse(
+      Object.fromEntries(
+        actionGroupSchema.options.map((id) => [
+          id,
+          groups.find((row) => row.group === id)?.count ?? 0,
+        ]),
+      ),
+    ),
   };
 }
 

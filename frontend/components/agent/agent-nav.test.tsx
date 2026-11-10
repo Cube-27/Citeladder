@@ -13,6 +13,7 @@ import {
 
 import { DISPLAY_TIME_ZONE_COOKIE } from '@/lib/display-timezone';
 import { NOW, PROJECT, skills } from '@/test/agent-chat-fixture';
+import { actionsPage } from '@/test/fixtures/actions';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
@@ -46,9 +47,7 @@ function chat(
 function serveChats(items: ReturnType<typeof chat>[]) {
   mswServer.use(
     http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
-    http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
-      HttpResponse.json({ items: [], next_cursor: null, status_counts: {} }),
-    ),
+    http.get(`/api/v1/projects/${PROJECT}/actions`, () => HttpResponse.json(actionsPage())),
     http.get(`/api/v1/projects/${PROJECT}/agent/chats`, () =>
       HttpResponse.json({ items, next_cursor: null }),
     ),

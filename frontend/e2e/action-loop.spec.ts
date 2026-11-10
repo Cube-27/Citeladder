@@ -103,8 +103,10 @@ const action = {
   origin: 'evidence',
   status: 'open',
   priority_score: 140,
+  priority_band: 'high',
   families: ['sources'],
   approach: 'earned_placement',
+  group: 'earned',
   skill_id: 'earned_authority',
   member_count: 1,
   handoff: {
@@ -190,7 +192,14 @@ test('declaring an Action implemented shows comparable verification', async ({ p
     route.fulfill({ json: { skills: [], limits: { mentions_max: 5 } } }),
   );
   await page.route(`**/api/v1/projects/${PROJECT}/actions*`, (route) =>
-    route.fulfill({ json: { items: [action], next_cursor: null, status_counts: { open: 1 } } }),
+    route.fulfill({
+      json: {
+        items: [action],
+        next_cursor: null,
+        status_counts: { open: 1 },
+        group_counts: { fix_site: 0, own_pages: 0, earned: 1, products: 0 },
+      },
+    }),
   );
   await page.route(`**/api/v1/actions/${ACTION}`, (route) =>
     route.fulfill({
@@ -238,12 +247,15 @@ test('declaring an Action implemented shows comparable verification', async ({ p
 test('Action filters restore through URL history and reload', async ({ page }) => {
   await stubAuthedShell(page, [], [project]);
   await page.route(`**/api/v1/projects/${PROJECT}/actions*`, (route) => {
-    const status = new URL(route.request().url()).searchParams.get('status');
+    const params = new URL(route.request().url()).searchParams;
+    const dismissed = params.get('status') === 'dismissed';
+    const group = params.get('group');
     return route.fulfill({
       json: {
-        items: status === 'dismissed' ? [] : [action],
+        items: dismissed || (group && group !== 'earned') ? [] : [action],
         next_cursor: null,
         status_counts: { open: 1, dismissed: 0 },
+        group_counts: { fix_site: 0, own_pages: 0, earned: dismissed ? 0 : 1, products: 0 },
       },
     });
   });
@@ -259,8 +271,14 @@ test('Action filters restore through URL history and reload', async ({ page }) =
   await page.reload();
   await expect(page.getByText('No Actions match these filters')).toBeVisible();
 
-  await page.getByRole('combobox', { name: 'Status' }).click();
-  await page.getByRole('option', { name: 'Open and in progress' }).click();
+  await page.getByRole('button', { name: 'All filters (1)' }).click();
+  await page.getByRole('menuitem', { name: /^Status/ }).click();
+  await page.getByRole('menuitemradio', { name: 'Open and in progress' }).click();
+  await expect(page.getByRole('button', { name: 'Get mentioned elsewhere, 1' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'example.org/tools' })).toBeVisible();
   await expect.poll(() => new URL(page.url()).searchParams.has('status')).toBe(false);
+
+  // A row opens its Action.
+  await page.getByRole('cell', { name: 'Earn a placement' }).click();
+  await expect(page).toHaveURL(new RegExp(`/agent/actions/${ACTION}`));
 });
