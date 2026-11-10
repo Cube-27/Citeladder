@@ -1,10 +1,11 @@
 # Content optimization
 
-Owner of the content-gap evidence, the `content_gaps` Opportunity family, the
-Action `surface` and the Content optimization screen. The owner decisions
-(CO1–CO18) and the later phases are in the
-[architecture](plans/content-optimization.md); credits are
-[B73](billing-decisions.md#content-optimization-2026-11-10). Generic
+Owner of the content-gap evidence and the `content_gaps` Opportunity family.
+The owner decisions (CO1–CO18) and the later phases are in the
+[architecture](plans/content-optimization.md); CO1 and CO10 (a separate
+Content screen and per-page-kind routing) are superseded by the
+[Actions simplification](plans/actions-simplification.md) (AS1, AS5). Credits
+are [B73](billing-decisions.md#content-optimization-2026-11-10). Generic
 Opportunity, Action, declaration and verification behaviour is owned by
 [Opportunities](opportunities.md).
 
@@ -15,12 +16,19 @@ after a crawl, an idempotent `content_angle_refresh` task
 ([content gaps module](../frontend/services/api/src/content-gaps/)) groups the
 titles of competitor and publisher pages cited for the project's prompts in
 the default market's dashboard-ready runs of the last `window_days`, by prompt
-topic. A model only groups and names them, and picks at most one owned content
-page per angle from a lexical shortlist; counts, prompts, engines and whether
-the owned page is already cited are computed in code. Runs, lineages, angles,
-members and owned matches are insert-only and workspace-scoped; a run is
-appended only when its inputs or versions changed. Its trigger and retention
-are in [Opportunities](opportunities.md#evidence-to-action) and its outcome in
+topic. Only citations from answers to tracked prompts are read: an answer
+whose snapshot names no prompt, or whose prompt is no longer in the library,
+is left out, so every angle has at least one prompt (AS5). A model only groups
+and names the pages, from each page's title, domain and URL path, and is told
+to group only content pages (articles, guides, how-tos, comparisons,
+listicles, reviews, case studies) and to leave out product pages, category or
+collection listings, store or brand home pages and search or tag pages (AS5).
+It also picks at most one owned content page per angle from a lexical
+shortlist; counts, prompts, engines and whether the owned page is already
+cited are computed in code. Runs, lineages, angles, members and owned matches
+are insert-only and workspace-scoped; a run is appended only when its inputs
+or versions changed. Its trigger and retention are in
+[Opportunities](opportunities.md#evidence-to-action) and its outcome in
 [state machines](state-machines.md).
 
 **Family: `content_gaps`.** The latest succeeded run raises
@@ -35,57 +43,27 @@ on the angle's lineage, so relabelling keeps the Action. Retention, the "not
 computed yet" and "out of date" limitations, and planned-to-owned continuity
 are in [Opportunities](opportunities.md).
 
-**Surface.** Every Action has a persisted `surface`: `content` for an owned
-page whose page kind is a content kind (CO15) and for a planned page with a
-new-page gap, `actions` otherwise (CO10). One page is one Action, so a content
-page's Site Health findings and content gaps share it. Issues is unchanged
-(CO11): Site Health issues on content pages still appear there.
+**Actions.** Content-gap findings are ordinary Actions on the one Actions list
+(AS1), in the family `content_optimization`. One page is one Action, so a
+content page's Site Health findings and content gaps share it. Issues is
+unchanged (CO11): Site Health issues on content pages still appear there.
+There are no scores or grades (CO14).
 
-**Screen.** Content optimization (`/agent/content`) sits directly below
-Actions in the Act group and Agent mode (CO1), with a count of its open and
-in-progress Actions. Both sidebar counts come from `surface_open_counts` on the
-one unfiltered Actions read the shell already makes. It reads
-`GET /api/v1/projects/{project_id}/actions?surface=content`;
-Actions reads `surface=actions`, so the two never list the same Action. Only
-the content list carries each row's `content_gaps`; other lists return `null`.
-It shares Actions' status filter, URL state, priority order and cursor paging
-([action queue](../frontend/components/agent/action-queue.tsx)). Each row
-shows the page (a planned page by its topic, marked "Planned page"), its most
-cited angle, and that lead angle's prompt count and the sites and competitors
-cited for it, from the finding's evidence; a row with more angles says how
-many more. A content page with no content gap says so. There are no
-scores or grades (CO14). The content-gap evidence state
-(`content_gap_source`) is read from `coverage.content_gap_state`, which the
-Opportunity refresh records as `current`, `out_of_date` or `not_computed`
-(no snapshot reads as not computed). When it is not current, a notice above
-the rows says so; an empty list says which case it is, the evidence state
-first, then no work for the chosen status, then a current run with no gaps.
-That state follows the latest Opportunity snapshot, like the gaps listed: a
-run that ages past `max_source_age_days` reads as out of date once the next
-refresh records it, and until then the snapshot's gaps and state stay as they
-were written.
-
-An Action opens at `/agent/content/:actionId` (the shared Action page; the
-back link follows the screen it was opened under, from the first render). The
-Action read returns each content-gap finding's stored evidence
-(`content_gap_evidence`), and **Why this matters** renders it only, with no
-further read: the angle, the cited pages with
-title, site and classification, the counts and the run's window, and a link
-to the planned-page Action a page continues. The angle's prompts are stored
-with their text as of the refresh (`prompts: {id, text}`); a prompt no longer
-in the library when the refresh ran is stored with `text: null` and shown as
-such. The page reads no prompt library. Site Health findings on
-the page render as on any Action. The handoff into the Agent
+An Action opens at `/agent/actions/:actionId`. The Action read returns each
+content-gap finding's stored evidence (`content_gap_evidence`), and **Why this
+matters** renders it only, with no further read: the angle, the cited pages
+with title, site and classification, the counts and the run's window, and a
+link to the planned-page Action a page continues. The angle's prompts are
+stored with their text as of the refresh (`prompts: {id, text}`); a prompt no
+longer in the library when the refresh ran is stored with `text: null` and
+shown as such. The page reads no prompt library. Site Health findings on the
+page render as on any Action. The handoff into the Agent
 ([handoffs](agents.md#workspace-and-handoffs)) is the one the Action's
 diagnosis names (`diagnosis.handoff`, from the approach branch of its first
 finding that has one in `APPROACH_TREE`): **Write this page** (the
 Opportunity and the `article` workflow) for a page to create and **Work on
 this** (the page URL and the `refresh_page` workflow) for an existing page;
 an Action whose diagnosis names none hands off with itself alone.
-Every API read that links to an Action returns the Action's persisted surface
-with its id (`surface` or `action_surface`), and every link, including MCP
-`read_actions` links, record fetches, chat mentions and the dashboard, points
-at that surface's screen. An unknown surface opens under `/agent/actions`.
 
 ## Not yet
 

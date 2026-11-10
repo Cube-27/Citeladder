@@ -1,13 +1,12 @@
 import { z } from 'zod';
 
-import { actionSurfaceSchema, type ActionSurface } from './action-surface.ts';
 import {
   expectedCheckSchema,
   implementationStateSchema,
   opportunitySchema,
   verificationEventSchema,
 } from './opportunities.ts';
-import { contentGapFindingEvidenceSchema, contentGapRuleSchema } from './opportunity-evidence.ts';
+import { contentGapFindingEvidenceSchema } from './opportunity-evidence.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
@@ -28,7 +27,6 @@ export const actionStatusSchema = z.enum([
 export const actionItemSchema = responseObject({
   id: uuid(),
   project_id: uuid(),
-  surface: actionSurfaceSchema,
   target_kind: z.string(),
   target_label: z.string(),
   target_url: z.string().nullable(),
@@ -150,46 +148,10 @@ export const actionDetailSchema = actionItemSchema.extend({
   declaration: actionDeclarationSchema.nullable(),
 });
 
-// One live content-gap finding of an Action, as its evidence states it: the
-// angle and its counts. Counts only, never a score (CO14).
-export const actionContentGapSchema = responseObject({
-  opportunity_id: uuid(),
-  rule_id: contentGapRuleSchema,
-  angle_label: z.string(),
-  prompt_count: z.number().int(),
-  citation_count: z.number().int(),
-  domain_count: z.number().int(),
-  competitor_count: z.number().int(),
-});
-export type ActionContentGap = z.infer<typeof actionContentGapSchema>;
-
-// A list row: the Action plus its content-gap findings, most cited first
-// (empty for an Action without one). Read on the `surface=content` list
-// only; null on every other list.
-export const actionListItemSchema = actionItemSchema.extend({
-  content_gaps: z.array(actionContentGapSchema).nullable(),
-});
-
-// Open and in-progress Actions of each surface, project-wide, whatever the
-// list's filters: what the navigation badges show.
-export const surfaceOpenCountsSchema = responseObject({
-  actions: z.number().int(),
-  content: z.number().int(),
-}) satisfies z.ZodType<Record<ActionSurface, number>>;
-
-// The content-gap evidence the latest Opportunity refresh read: a current
-// content-angle run, one too old to use, or none computed yet. Each is a
-// distinct empty Content optimization list, never "no gaps".
-export const contentGapSourceStateSchema = z.enum(['current', 'out_of_date', 'not_computed']);
-export type ContentGapSourceState = z.infer<typeof contentGapSourceStateSchema>;
-
 export const actionsPageSchema = responseObject({
-  items: z.array(actionListItemSchema),
+  items: z.array(actionItemSchema),
   next_cursor: z.string().nullable(),
   status_counts: z.record(z.string(), z.number().int()),
-  surface_open_counts: surfaceOpenCountsSchema,
-  // Set for `surface=content` only; null for the other lists.
-  content_gap_source: contentGapSourceStateSchema.nullable(),
 });
 
 /** The statuses a user may store; the rest are derived or declared. */

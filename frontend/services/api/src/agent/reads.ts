@@ -21,21 +21,11 @@ import { workspaceChat } from './messages.ts';
 import { manifestSchema } from './context.ts';
 
 const iso = (date: Date | null) => date?.toISOString() ?? null;
-/** A user message's mentions as stored when it was sent. */
-const storedMentionsSchema = z.array(
-  z.object({ kind: z.string(), id: z.uuid(), label: z.string() }),
-);
-const storedMentions = (value: unknown) => storedMentionsSchema.parse(value ?? []);
-
-/** The chat's Action as its row reads now: its label, and its surface for its link. */
-type ChatAction = { target_label: string | null; surface: string | null };
-
-function summary(chat: Chat, outputKind: string | null, action: ChatAction, running: boolean) {
+function summary(chat: Chat, outputKind: string | null, label: string | null, running: boolean) {
   return agentChatSummarySchema.parse({
     ...chat,
     running,
-    target_label: action.target_label,
-    action_surface: action.surface,
+    target_label: label,
     output_kind: outputKind,
     last_activity_at: iso(chat.last_activity_at),
     created_at: iso(chat.created_at),
@@ -198,29 +188,20 @@ export async function readChat(
   const manifest = parsedManifest?.success ? parsedManifest.data : null;
   let limitations = manifest?.package.summary.omissions ?? [];
   if (run && !manifest) limitations = [{ reason: 'context_manifest_unavailable' }];
-  // The chat's own Action and every mentioned one: their labels and current surfaces.
-  const mentioned = messages.flatMap((message) =>
-    storedMentions(message.mentions).map((mention) => mention.id),
-  );
-  const actionIds = [...new Set([...(chat.action_id ? [chat.action_id] : []), ...mentioned])];
-  const actions = new Map(
-    (actionIds.length
-      ? await db
-          .selectFrom('actions')
-          .select(['id', 'target_label', 'surface'])
-          .where('workspace_id', '=', scope.workspaceId)
-          .where('project_id', '=', scope.projectId)
-          .where('id', 'in', actionIds)
-          .execute()
-      : []
-    ).map((row) => [row.id, row]),
-  );
-  const action = chat.action_id ? actions.get(chat.action_id) : undefined;
+  const action = chat.action_id
+    ? await db
+        .selectFrom('actions')
+        .select('target_label')
+        .where('workspace_id', '=', scope.workspaceId)
+        .where('project_id', '=', scope.projectId)
+        .where('id', '=', chat.action_id)
+        .executeTakeFirst()
+    : undefined;
   return agentChatDetailSchema.parse({
     chat: summary(
       chat,
       latestDocument(documents)?.output.kind ?? null,
-      { target_label: action?.target_label ?? null, surface: action?.surface ?? null },
+      action?.target_label ?? null,
       run ? active.includes(run.status) : false,
     ),
     pinned_skill_id: chat.pinned_skill_id,
@@ -248,10 +229,6 @@ export async function readChat(
     messages: messages.map((message) =>
       agentMessageSchema.parse({
         ...message,
-        mentions: storedMentions(message.mentions).map((mention) => ({
-          ...mention,
-          surface: actions.get(mention.id)?.surface ?? null,
-        })),
         created_at: iso(message.created_at),
         evidence_refs: revisionRefs(message.evidence_refs),
         web_sources: revisionWebSources(message.web_sources),
@@ -316,7 +293,7 @@ export async function listChats(
         .onRef('action.project_id', '=', 'chat.project_id'),
     )
     .selectAll('chat')
-    .select(['action.target_label', 'action.surface as action_surface'])
+    .select('action.target_label')
     // The kind of the document the chat most recently changed.
     .select((eb) =>
       eb
@@ -388,14 +365,7 @@ export async function listChats(
   const page = rows.slice(0, limit);
   const last = page.at(-1);
   return agentChatsPageSchema.parse({
-    items: page.map((row) =>
-      summary(
-        row,
-        row.output_kind,
-        { target_label: row.target_label, surface: row.action_surface },
-        Boolean(row.running),
-      ),
-    ),
+    items: page.map((row) => summary(row, row.output_kind, row.target_label, Boolean(row.running))),
     next_cursor:
       rows.length > limit && last
         ? Buffer.from(JSON.stringify({ at: last.cursor_at, id: last.id })).toString('base64url')

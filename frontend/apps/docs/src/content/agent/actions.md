@@ -12,7 +12,7 @@ This gives your team one place to understand the diagnosis, start Agent work and
 
 ## Choose what to work on
 
-Open **Agent → Actions**. Use status and target filters to narrow the list, then inspect an Action's detail. Work on your content pages, and on pages to create for a content gap, is listed in [Content optimization](/content-optimization/).
+Open **Agent → Actions**. Use status and target filters to narrow the list, then inspect an Action's detail. The list includes [content gaps](/content-optimization/): content pages to improve and pages to create.
 
 Read the diagnosis, contributing evidence, recommended approach and what to avoid. The priority comes from CiteLadder's deterministic rules. An Agent explanation does not replace that ranking or create new measured facts.
 

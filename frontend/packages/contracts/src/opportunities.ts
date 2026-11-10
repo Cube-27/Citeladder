@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { actionSurfaceSchema } from './action-surface.ts';
 import { cursorPageSchema } from './site-health.ts';
 import { pageEntitySchema } from './source-pages.ts';
 
@@ -115,8 +114,6 @@ export const opportunitySchema = responseObject({
   target_label: z.string().nullable(),
   // The Action this row was grouped into; it owns the workflow status.
   action_id: uuid().nullable(),
-  // That Action's surface, for its link; null exactly when `action_id` is.
-  action_surface: actionSurfaceSchema.nullable(),
   system_rank: z.number().int(),
   display_rank: z.number().int(),
   order_source: z.enum(['system', 'manual']),

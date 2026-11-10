@@ -21,7 +21,6 @@ import { QueryState } from '@/components/ui/query-state';
 import type { AgentChatDetail } from '@/lib/api/agent';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
-import { actionPath } from '@citeladder/contracts/record-kinds';
 
 /** One chat: a single thread with its documents inline and the composer pinned below. */
 export function ChatScreen() {
@@ -116,11 +115,7 @@ function ChatHeaderActions({ detail }: Readonly<{ detail: AgentChatDetail }>) {
   if (!detail.chat.action_id) return null;
   return (
     <Button asChild variant="ghost">
-      <ProjectLink
-        href={actionPath({ id: detail.chat.action_id, surface: detail.chat.action_surface })}
-      >
-        Open Action
-      </ProjectLink>
+      <ProjectLink href={`/agent/actions/${detail.chat.action_id}`}>Open Action</ProjectLink>
     </Button>
   );
 }

@@ -16,53 +16,6 @@
   ],
   "components": {
     "schemas": {
-      "ActionContentGap": {
-        "type": "object",
-        "properties": {
-          "opportunity_id": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "rule_id": {
-            "type": "string",
-            "enum": ["content_gap_improve_page", "content_gap_new_page"]
-          },
-          "angle_label": {
-            "type": "string"
-          },
-          "prompt_count": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
-          },
-          "citation_count": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
-          },
-          "domain_count": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
-          },
-          "competitor_count": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
-          }
-        },
-        "required": [
-          "opportunity_id",
-          "rule_id",
-          "angle_label",
-          "prompt_count",
-          "citation_count",
-          "domain_count",
-          "competitor_count"
-        ],
-        "additionalProperties": false
-      },
       "ActionDeclaration": {
         "type": "object",
         "properties": {
@@ -222,9 +175,6 @@
             "type": "string",
             "format": "uuid",
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "surface": {
-            "$ref": "#/components/schemas/ActionSurface"
           },
           "target_kind": {
             "type": "string"
@@ -424,16 +374,6 @@
                       "type": "string",
                       "format": "uuid",
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "action_surface": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/ActionSurface"
                     },
                     {
                       "type": "null"
@@ -824,7 +764,6 @@
                 "target_theme",
                 "target_label",
                 "action_id",
-                "action_surface",
                 "system_rank",
                 "display_rank",
                 "order_source",
@@ -852,7 +791,6 @@
         "required": [
           "id",
           "project_id",
-          "surface",
           "target_kind",
           "target_label",
           "target_url",
@@ -925,9 +863,6 @@
             "format": "uuid",
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
-          "surface": {
-            "$ref": "#/components/schemas/ActionSurface"
-          },
           "target_kind": {
             "type": "string"
           },
@@ -989,7 +924,6 @@
         "required": [
           "id",
           "project_id",
-          "surface",
           "target_kind",
           "target_label",
           "target_url",
@@ -1007,122 +941,13 @@
         ],
         "additionalProperties": false
       },
-      "ActionListItem": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "project_id": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "surface": {
-            "$ref": "#/components/schemas/ActionSurface"
-          },
-          "target_kind": {
-            "type": "string"
-          },
-          "target_label": {
-            "type": "string"
-          },
-          "target_url": {
-            "type": ["string", "null"]
-          },
-          "target_prompt_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "origin": {
-            "type": "string",
-            "enum": ["evidence", "agent"]
-          },
-          "status": {
-            "$ref": "#/components/schemas/ActionStatus"
-          },
-          "priority_score": {
-            "type": ["number", "null"]
-          },
-          "families": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "approach": {
-            "type": "string"
-          },
-          "skill_id": {
-            "type": "string"
-          },
-          "member_count": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
-          },
-          "evidence_cleared_at": {
-            "type": ["string", "null"]
-          },
-          "created_at": {
-            "type": "string"
-          },
-          "updated_at": {
-            "type": "string"
-          },
-          "content_gaps": {
-            "anyOf": [
-              {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/ActionContentGap"
-                }
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "project_id",
-          "surface",
-          "target_kind",
-          "target_label",
-          "target_url",
-          "target_prompt_id",
-          "origin",
-          "status",
-          "priority_score",
-          "families",
-          "approach",
-          "skill_id",
-          "member_count",
-          "evidence_cleared_at",
-          "created_at",
-          "updated_at",
-          "content_gaps"
-        ],
-        "additionalProperties": false
-      },
       "ActionsPage": {
         "type": "object",
         "properties": {
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ActionListItem"
+              "$ref": "#/components/schemas/ActionItem"
             }
           },
           "next_cursor": {
@@ -1138,37 +963,14 @@
               "minimum": -9007199254740991,
               "maximum": 9007199254740991
             }
-          },
-          "surface_open_counts": {
-            "$ref": "#/components/schemas/SurfaceOpenCounts"
-          },
-          "content_gap_source": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ContentGapSourceState"
-              },
-              {
-                "type": "null"
-              }
-            ]
           }
         },
-        "required": [
-          "items",
-          "next_cursor",
-          "status_counts",
-          "surface_open_counts",
-          "content_gap_source"
-        ],
+        "required": ["items", "next_cursor", "status_counts"],
         "additionalProperties": false
       },
       "ActionStatus": {
         "type": "string",
         "enum": ["open", "in_progress", "implemented", "measuring", "done", "dismissed"]
-      },
-      "ActionSurface": {
-        "type": "string",
-        "enum": ["actions", "content"]
       },
       "AdOwnership": {
         "type": "string",
@@ -2259,10 +2061,6 @@
         },
         "required": ["id", "name", "aliases", "domains"],
         "additionalProperties": false
-      },
-      "ContentGapSourceState": {
-        "type": "string",
-        "enum": ["current", "out_of_date", "not_computed"]
       },
       "CrawlAnalysisStatus": {
         "type": "string",
@@ -5084,9 +4882,6 @@
             "format": "uuid",
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
-          "action_surface": {
-            "$ref": "#/components/schemas/ActionSurface"
-          },
           "title": {
             "type": "string"
           },
@@ -5097,14 +4892,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "implementation_event_id",
-          "action_id",
-          "action_surface",
-          "title",
-          "status",
-          "implemented_at"
-        ],
+        "required": ["implementation_event_id", "action_id", "title", "status", "implemented_at"],
         "additionalProperties": false
       },
       "PromptHistoryPoint": {
@@ -5354,16 +5142,6 @@
                 "type": "string",
                 "format": "uuid",
                 "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "action_surface": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ActionSurface"
               },
               {
                 "type": "null"
@@ -5934,16 +5712,6 @@
                 "type": "string",
                 "format": "uuid",
                 "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "action_surface": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ActionSurface"
               },
               {
                 "type": "null"
@@ -6789,23 +6557,6 @@
       "SnapshotGranularity": {
         "type": "string",
         "enum": ["day", "week", "month"]
-      },
-      "SurfaceOpenCounts": {
-        "type": "object",
-        "properties": {
-          "actions": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
-          },
-          "content": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
-          }
-        },
-        "required": ["actions", "content"],
-        "additionalProperties": false
       },
       "Topic": {
         "type": "object",
@@ -8245,16 +7996,6 @@
                     }
                   ]
                 },
-                "action_surface": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/ActionSurface"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
                 "title": {
                   "type": ["string", "null"]
                 },
@@ -8323,7 +8064,6 @@
                 "opportunity_id",
                 "standing",
                 "action_id",
-                "action_surface",
                 "title",
                 "page_format",
                 "page_format_method",
@@ -11226,14 +10966,6 @@
           },
           {
             "name": "target_kind",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": ["string", "null"]
-            }
-          },
-          {
-            "name": "surface",
             "in": "query",
             "required": false,
             "schema": {

@@ -349,6 +349,41 @@ describe('a succeeded run', () => {
     ]);
   });
 
+  it('reads no citation from an answer without a tracked prompt', async () => {
+    const seed = await scenario();
+    // The run's fourth prompt snapshot names no prompt in the library.
+    await fixtures.execution(seed, {
+      auditId: seed.auditId,
+      promptIndex: 3,
+      repetition: (repetition += 1),
+      analysis: {
+        citations: [
+          {
+            url: 'https://news.example/crm-pricing-guide',
+            title: 'CRM pricing guide',
+            isOwned: false,
+            sourceClass: 'editorial_third_party',
+          },
+        ],
+      },
+    });
+    const model = scripted(byKeyword);
+    await refresh(seed, model.gateway);
+
+    const [run] = await runs(seed);
+    expect(run?.limitations).toEqual([
+      { code: 'topicless_prompts', count: 1, total: 3 },
+      { code: 'too_few_citations', topics: 1 },
+    ]);
+    expect(model.calls[0]!.payload.pages.map((page) => page.title)).toEqual([
+      'Globex pricing plans',
+      'Globex setup guide',
+      'Initech pricing',
+      'How to setup a CRM',
+      'CRM pricing compared',
+    ]);
+  });
+
   it('joins the Opportunity refresh its audit already queued instead of queueing a second', async () => {
     const seed = await scenario();
     await enqueueOpportunityRefresh(db, {

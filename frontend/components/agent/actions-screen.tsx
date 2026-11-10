@@ -27,9 +27,8 @@ const TARGET_OPTIONS = [
 ];
 
 /**
- * The Actions surface ordered by deterministic priority: every Action that
- * is not content work, which Content optimization lists instead. The filters
- * are shareable URL state.
+ * Every Action of the project ordered by deterministic priority, content-gap
+ * work included. The filters are shareable URL state.
  */
 export function ActionsScreen() {
   const { workspaceId, projectId } = useProjectScope();
@@ -41,7 +40,6 @@ export function ActionsScreen() {
         filters: (
           <>
             <ActionStatusSelect
-              surface="actions"
               value={filter}
               onValueChange={(value) => setFilter(value, 'replace')}
               // The counts cover every target type.
@@ -81,7 +79,6 @@ function ActionsList({
   const { page, table } = useActionTable({
     workspaceId,
     projectId,
-    surface: 'actions',
     status,
     targetKind,
     noun: 'Actions',

@@ -5,6 +5,12 @@ Remaining work is consolidated in the backlog; historical plans are not active a
 
 ## Active
 
+- [Actions simplification](actions-simplification.md) (owner decisions AS1–AS8
+  recorded 2026-11-10, superseding content optimization CO1 and CO10): one
+  Actions list with content gaps as ordinary Actions and content-page-only gap
+  evidence (PR 1), the AI visibility layout and shared All filters menu
+  (PR V), the grouped list with URL gaps (PR 2), then the centered detail page
+  and a prefilled chat (PR 3).
 - [Billing improvement](billing-improvement.md) (feature 11, owner decisions
   recorded 2026-10-11): billing fully operational but hidden, in three PRs, so
   that enablement is a configuration-only PR.

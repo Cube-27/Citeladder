@@ -472,14 +472,12 @@ replays a failed submission with its original idempotency key.
 
 ## Workspace and handoffs
 
-Agent mode holds New chat, Actions, Content optimization, Skills, Context and
-the chat history under `/agent`. Actions (`/agent/actions`) and
-[Content optimization](content-optimization.md) (`/agent/content`) each list
-one Action `surface` and never the same Action; an Action's page opens under
-its surface's screen. The composer takes `/` to pick a skill and `@` to mention
-up to five of the project's Actions (either surface). New chat's **Work on an
-Action** offers **Brief me**, a `growth_plan` chat mentioning the top open
-Actions.
+Agent mode holds New chat, Actions, Skills, Context and the chat history under
+`/agent`. Actions (`/agent/actions`) is the one list of the project's work,
+[content gaps](content-optimization.md) included (AS1); an Action's page is
+`/agent/actions/{id}`. The composer takes `/` to pick a skill and `@` to
+mention up to five of the project's Actions. New chat's **Work on an Action**
+offers **Brief me**, a `growth_plan` chat mentioning the top open Actions.
 
 Evidence screens hand work to New chat through the
 [handoff codec](../frontend/lib/agent/handoff.ts): **Work on this** attaches an

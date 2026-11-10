@@ -8,7 +8,6 @@ import { strings } from '../db/json.ts';
 import { isoDateText, utcText } from '../db/timestamps.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { readProjectReadiness } from '../integrations/readiness.ts';
-import { actionPath } from '@citeladder/contracts/record-kinds';
 import { getAction, listActions } from '../opportunities/actions.ts';
 import { listDifferentiationReports } from '../source-pages/differentiation-reads.ts';
 import { catalog, shelf } from '../commerce/reads.ts';
@@ -52,7 +51,7 @@ export async function demandSnapshot({ db, scope }: ProjectRead): Promise<Eviden
 /** Active Actions in the owner's priority order, or one Action with its outcome. */
 export async function actionsRead(
   { db, scope, origin }: ProjectRead,
-  args: Page & { action_id?: string | null; status?: string | null; surface?: string | null },
+  args: Page & { action_id?: string | null; status?: string | null },
 ): Promise<Evidence> {
   if (args.action_id) {
     const action = await getAction(db, scope.workspaceId, args.action_id);
@@ -60,27 +59,24 @@ export async function actionsRead(
       throw new McpInputError('Action was not found in this project');
     return {
       state: 'available',
-      action: { ...action, link: appLink(origin, actionPath(action), scope.projectId) },
+      action: { ...action, link: appLink(origin, `/agent/actions/${action.id}`, scope.projectId) },
       artifact_refs: [reference('action', action.id)],
     };
   }
   const page = await listActions(db, scope, {
     status: args.status ?? null,
     target_kind: null,
-    surface: args.surface ?? null,
     cursor: args.cursor ?? null,
     limit: args.limit ?? policy.opportunity.actions.ACTION_LIST_DEFAULT_LIMIT,
   });
   const items = page.items.map((item) => ({
     ...item,
-    link: appLink(origin, actionPath(item), scope.projectId),
+    link: appLink(origin, `/agent/actions/${item.id}`, scope.projectId),
   }));
   return {
     state: 'available',
     items,
     status_counts: page.status_counts,
-    surface_open_counts: page.surface_open_counts,
-    content_gap_source: page.content_gap_source,
     pagination: pagination(items, page.next_cursor),
     artifact_refs: items.map((item) => reference('action', item.id)),
   };

@@ -49,7 +49,10 @@ is appended only when its clustering, owned-match or aggregate key differs from
 the latest succeeded run (a failed run never blocks a retry), reusing the earlier clustering or match while its key is unchanged. The
 window's citations are Visibility's evidence statement (`evidenceScope`: the
 default market's dashboard-ready brand runs, successful answers, both brand
-cohorts), so a citation counts here exactly when Visibility counts it. A
+cohorts), limited to answers to tracked prompts: an answer whose snapshot
+names no prompt still in the library is not read (AS5). The clustering sees
+each page's title, domain and URL path and groups only content pages, never
+product, category, collection, home, search or tag pages. A
 `succeeded` run requests an `opportunity_refresh` with trigger `content_angles`
 that joins a refresh still queued for the project (such as its audit's or
 crawl's own) instead of queueing a second; a `failed` run (model error,
@@ -63,9 +66,7 @@ before it stay. A run whose window ends more than `max_source_age_days` (45)
 before the refresh is no longer a source: its gaps clear and the snapshot
 records "Content-gap evidence is out of date". With no succeeded run the
 snapshot records "Content gaps not computed yet", which is distinct from a
-succeeded run with no gaps. The snapshot's coverage records the same state as
-`content_gap_state` (`current`, `out_of_date` or `not_computed`), which reads
-use; the limitation text is for display only. Each finding's evidence stores
+succeeded run with no gaps. Each finding's evidence stores
 the angle's prompts with their text at refresh (`prompts: {id, text}`, `text`
 null for a prompt no longer in the project's prompt sets). An angle cited at least `min_citations` times across
 at least `min_domains` domains (both in the
@@ -187,8 +188,8 @@ it any more, the row keeps its identity with its evidence cleared. The Agent
 attaches a targeted chat to the existing Action, or creates one only for a page
 or planned-page target. `/api/v1/projects/{project_id}/actions` and
 `/api/v1/actions/{action_id}` are workspace-authorized persisted reads; the list
-filters by status, target kind and `surface` and returns status counts for the
-project (or for one surface when filtered), and
+filters by status and target kind and returns status counts for the
+project, and
 the detail names the chats linked to the Action, carries each live finding with
 its remediation, the reading that would measure each finding once declared
 (`member_measurement`), and the earliest go-live time a declaration accepts
@@ -217,28 +218,10 @@ whose evidence vanished once, leaving already-cleared rows untouched. Each promo
 Search Demand signal's read carries the Action its live Opportunity joined, for
 the Search Demand "Act on this" band.
 
-Each Action has a persisted `surface`, the screen it belongs to (content
-optimization CO10): `content` for an owned page whose current analysis in the
-snapshot's crawl has a content page kind (`content_page_kinds`) and for a
-planned page with a `content_gap_new_page` member; `actions` for everything
-else, including a planned page raised only by a keyword gap or planned by the
-Agent, which has no page kind. Action sync derives it with the members and
-restamps it on every refresh, so a page whose kind changes moves with the next
-refresh; the Agent's insert derives it the same way from the latest snapshot's
-crawl. A content page's Site Health findings and content gaps share its one
-Action. The list's `surface` filter (`actions` or `content`; anything else is
-400) and its status counts read the column (indexed with the project and
-effective status); no rule is re-tagged. On a `surface=content` list each row
-carries `content_gaps`, its live content-gap findings summarized from their
-evidence (angle label and prompt, citation, domain and competitor counts, most
-cited first; empty for an Action with none); other lists return `null` and
-compute nothing. A `surface=content` page also carries `content_gap_source`,
-the latest snapshot's `coverage.content_gap_state` (no snapshot reads as
-`not_computed`); it is null for the other lists. Every list carries
-`surface_open_counts`, the open and in-progress Actions on each surface, which
-the sidebar counts read. Reads that link to an Action (Opportunities, demand,
-search, internal links, AI Shelf, prompts, sources, chats) return its persisted
-surface beside its id. The screens are in
+There is one Actions list (AS1, [Actions simplification](plans/actions-simplification.md)):
+content-gap findings are ordinary Actions on it, and a content page's Site
+Health findings and content gaps share its one Action. Every link to an
+Action is `/agent/actions/{id}`. The evidence behind content gaps is in
 [Content optimization](content-optimization.md).
 
 ## Explicit implementation declaration

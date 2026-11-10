@@ -10,7 +10,6 @@ import { OnPageEntities } from '@/components/ui/on-page-entities';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BrandOnPage } from '@/components/visibility/brand-on-page';
 import type { visibilitySourceUrlSchema } from '@citeladder/contracts/visibility-evidence';
-import { actionPath, type ActionRef } from '@citeladder/contracts/record-kinds';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import {
   brandVerdict,
@@ -47,12 +46,7 @@ export function SourceUrlPageCard({
       </CardHeader>
       <CardContent>
         <Stack gap="workspace">
-          {standing === 'gap' ? (
-            <GetListed
-              url={url}
-              action={page?.action_id ? { id: page.action_id, surface: page.action_surface } : null}
-            />
-          ) : null}
+          {standing === 'gap' ? <GetListed url={url} actionId={page?.action_id ?? null} /> : null}
           <OnPageEntities
             heading={standing === 'gap' ? 'Listed here' : 'Competitors on this page'}
             entities={onPageCompetitors(page?.entities)}
@@ -72,18 +66,16 @@ export function SourceUrlPageCard({
  * measurement; before one exists (the page is not yet cited often enough),
  * the Agent can still draft the request from the page itself.
  */
-function GetListed({ url, action }: Readonly<{ url: string; action: ActionRef | null }>) {
+function GetListed({ url, actionId }: Readonly<{ url: string; actionId: string | null }>) {
   return (
     <Inline className="flex-wrap">
-      {action ? (
+      {actionId ? (
         <>
           <Button variant="primary" asChild>
-            <ProjectLink href={actionPath(action)}>Open the Action</ProjectLink>
+            <ProjectLink href={`/agent/actions/${actionId}`}>Open the Action</ProjectLink>
           </Button>
           <Button variant="secondary" asChild>
-            <ProjectLink href={agentHandoffHref({ actionId: action.id })}>
-              Draft the request
-            </ProjectLink>
+            <ProjectLink href={agentHandoffHref({ actionId })}>Draft the request</ProjectLink>
           </Button>
         </>
       ) : (

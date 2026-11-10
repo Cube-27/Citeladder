@@ -32,7 +32,6 @@ function chat(
     id,
     project_id: PROJECT,
     action_id: null,
-    action_surface: null,
     target_label: null,
     title,
     turn_count: 1,
@@ -48,13 +47,7 @@ function serveChats(items: ReturnType<typeof chat>[]) {
   mswServer.use(
     http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
     http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
-      HttpResponse.json({
-        items: [],
-        next_cursor: null,
-        status_counts: {},
-        surface_open_counts: { actions: 0, content: 0 },
-        content_gap_source: null,
-      }),
+      HttpResponse.json({ items: [], next_cursor: null, status_counts: {} }),
     ),
     http.get(`/api/v1/projects/${PROJECT}/agent/chats`, () =>
       HttpResponse.json({ items, next_cursor: null }),

@@ -33,7 +33,6 @@ import {
   searchIntelligenceColumns,
   searchIntelligenceMinWidth,
 } from './search-intelligence-rows-table';
-import { actionPath } from '@citeladder/contracts/record-kinds';
 
 /**
  * One saved dataset's rows. The table's own toolbar keeps only the search,
@@ -189,14 +188,7 @@ function EvidenceDrawer({
         <Inline className="flex-wrap">
           {selected.action_id ? (
             <Button variant="primary" asChild className="w-fit">
-              <ProjectLink
-                href={actionPath({
-                  id: selected.action_id,
-                  surface: selected.action_surface ?? null,
-                })}
-              >
-                Open Action
-              </ProjectLink>
+              <ProjectLink href={`/agent/actions/${selected.action_id}`}>Open Action</ProjectLink>
             </Button>
           ) : null}
           <Button variant="secondary" asChild className="w-fit">

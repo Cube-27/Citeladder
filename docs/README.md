@@ -39,7 +39,7 @@ to resolve within the authorized scope, not permission to weaken a constraint.
 | Integrations, search, traffic, referrals and demand | [Connected data](integrations-traffic-analytics.md) |
 | Crawl Logs, crawler requests, coverage and the AI Traffic screen | [AI Traffic](ai-traffic.md) |
 | Ranked actions, Actions, implementation and verification | [Opportunities](opportunities.md) |
-| Content gaps from cited titles and the Content optimization screen | [Content optimization](content-optimization.md) |
+| Content gaps from cited titles, raised as Actions | [Content optimization](content-optimization.md) |
 | Inspection of externally cited pages and earned actions | [Earned sources](earned-sources.md) |
 | Commercial accounts, access and usage accounting | [Billing and entitlements](billing-entitlements.md) |
 | Catalog, competitors, buyer prompts and AI Shelf | [Commerce](commerce-intelligence.md) |

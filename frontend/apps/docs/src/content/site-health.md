@@ -63,7 +63,7 @@ conversation about the evidence.
 
 Use **Ask agent** on supported evidence screens, or **Work on this** on the related Action. Ask for a small, reviewable correction tied to the affected page.
 
-On a content page, such as an article or guide, the related Action is listed in [Content optimization](/content-optimization/) with any content gaps on that page. The issue still appears in **Issues**.
+On a content page, such as an article or guide, the related Action also holds any [content gaps](/content-optimization/) on that page. The issue still appears in **Issues**.
 
 For example: "Explain the confirmed issue on this page, distinguish it from unresolved checks, and prepare a fix brief for our developer."
 

@@ -17,7 +17,6 @@ export const demandSnapshot = demandSnapshotSchema.extend({
       demandSignalSchema.extend({
         created_at: datetime,
         action_id: z.uuid().nullable().default(null),
-        action_surface: demandSignalSchema.shape.action_surface.default(null),
       }),
     )
     .optional(),

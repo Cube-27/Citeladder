@@ -847,16 +847,12 @@ describe('GET /visibility/prompts/{prompt_id}/history', () => {
       {
         implementation_event_id: earnedDeclaration.id,
         action_id: earned.id,
-        action_surface: 'actions',
         title: 'reviews.example/crm',
         status: 'implemented',
         implemented_at: '2026-03-05T12:00:00Z',
       },
     ]);
-    expect([record(body.latest).action_id, record(body.latest).action_surface]).toEqual([
-      promptAction.id,
-      'actions',
-    ]);
+    expect(record(body.latest).action_id).toBe(promptAction.id);
 
     // An Action whose evidence was cleared is no longer offered as the hand-off.
     await db

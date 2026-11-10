@@ -2,7 +2,7 @@
 
 import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
-import { useMatch, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
 import {
   isDeclarable,
@@ -44,34 +44,20 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { readableUrl } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
-import type { ActionSurface } from '@citeladder/contracts/action-surface';
-import { ACTION_SURFACE_SCREENS } from '@citeladder/contracts/record-kinds';
+const BACK = { href: '/agent/actions', label: 'Back to Actions' } as const;
 
-/** Each surface's list, which an Action's page returns to. */
-const BACK = {
-  actions: { href: ACTION_SURFACE_SCREENS.actions, label: 'Back to Actions' },
-  content: { href: ACTION_SURFACE_SCREENS.content, label: 'Back to Content optimization' },
-} as const satisfies Record<ActionSurface, { href: string; label: string }>;
-
-/**
- * One Action: diagnosis, member evidence, its declaration and linked chats.
- * Both Actions and Content optimization open it, and the page belongs to the
- * collection it was opened under: the back link follows that route while
- * loading and once loaded alike, so it never changes under the reader.
- */
+/** One Action: diagnosis, member evidence, its declaration and linked chats. */
 export function ActionDetailScreen() {
   const { actionId = '' } = useParams();
   const { workspaceId, projectId } = useProjectScope();
-  const opened = useMatch(`${ACTION_SURFACE_SCREENS.content}/:actionId`) ? 'content' : 'actions';
   const query = useQuery({
     ...actionsQueries.detail(workspaceId, actionId),
     enabled: Boolean(actionId),
   });
-  const back = BACK[opened];
 
   if (query.isError)
     return (
-      <DetailScreen back={back}>
+      <DetailScreen back={BACK}>
         <QueryState
           kind="error"
           {...readErrorProps(query)}
@@ -81,38 +67,26 @@ export function ActionDetailScreen() {
     );
   if (!query.data)
     return (
-      <DetailScreen back={back}>
+      <DetailScreen back={BACK}>
         <QueryState kind="loading" />
       </DetailScreen>
     );
   if (query.data.project_id !== projectId)
     return (
-      <DetailScreen back={back}>
+      <DetailScreen back={BACK}>
         <Callout tone="negative">
           This Action belongs to another project. Choose an Action from the current project.
         </Callout>
       </DetailScreen>
     );
   // Keyed so a mutation's state (and its Retry) never outlives its Action.
-  return (
-    <ActionDetailView
-      key={query.data.id}
-      action={query.data}
-      workspaceId={workspaceId}
-      back={back}
-    />
-  );
+  return <ActionDetailView key={query.data.id} action={query.data} workspaceId={workspaceId} />;
 }
 
 function ActionDetailView({
   action,
   workspaceId,
-  back,
-}: Readonly<{
-  action: ActionDetail;
-  workspaceId: string;
-  back: (typeof BACK)[ActionSurface];
-}>) {
+}: Readonly<{ action: ActionDetail; workspaceId: string }>) {
   const [evidenceId, setEvidenceId] = useState<string | null>(null);
   // Owned here, not by the controls, so a failure notice renders in the body
   // and the one-row header never has to hold it.
@@ -121,7 +95,7 @@ function ActionDetailView({
   return (
     <DetailScreen
       title={readableUrl(action.target_label)}
-      back={{ ...back, projectId: action.project_id }}
+      back={{ ...BACK, projectId: action.project_id }}
       actions={<ActionControls action={action} update={update} />}
       lead={<ActionFacts action={action} />}
       aside={

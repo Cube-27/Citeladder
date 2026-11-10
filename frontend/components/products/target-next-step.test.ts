@@ -18,7 +18,6 @@ const measured = {
 };
 const action = {
   id: '11111111-1111-4111-8111-111111111111',
-  surface: 'actions' as const,
   title: 'Add the missing price',
   status: 'open' as const,
 };

@@ -114,11 +114,8 @@ export const MODULE_SCREENS = {
   '/platform/site-health': onPage('site-health', 'Website'),
   '/platform/search-demand': onPage('demand', 'Search Demand'),
   '/platform/keyword-research': onPage('keywords', 'Keyword Research'),
-  // The app titles the page "Content optimization"; its sidebar row reads "Content".
-  '/platform/content-optimization': {
-    screen: 'content-optimization',
-    page: { title: 'Content optimization', active: 'Content' },
-  },
+  // Content-gap work is listed in Actions (AS1).
+  '/platform/content-optimization': onPage('content-optimization', 'Actions'),
   '/platform/agents': inAgent('agent-chat'),
   '/platform/mcp': inAgent('mcp'),
 } satisfies Record<string, ModuleScreen>;

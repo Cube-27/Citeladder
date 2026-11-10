@@ -22,7 +22,7 @@ import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { notFound } from '../errors.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { taskProject, type Executor } from '../queue/executor.ts';
-import { contentPageKeys, syncActions } from './action-sync.ts';
+import { syncActions } from './action-sync.ts';
 import {
   buildSnapshot,
   newOpportunity,
@@ -93,13 +93,10 @@ async function writeRefresh(
     collected,
     sources,
     scored,
-    contentPages,
   }: {
     collected: Collected;
     sources: Resolved;
     scored: Scored[];
-    /** The group keys of the crawl's content pages, for each Action's surface. */
-    contentPages: ReadonlySet<string>;
   },
 ) {
   const crawl = sources.crawl;
@@ -152,8 +149,6 @@ async function writeRefresh(
       coverage: JSON.stringify({
         ...record(snapshot.coverage),
         source_identity: sources.identity,
-        // What the Content optimization list says about its source.
-        content_gap_state: sources.contentGaps.state,
       }),
       limitations: JSON.stringify([...snapshot.limitations, ...collected.limitations]),
       source_mix: JSON.stringify(snapshot.source_mix),
@@ -169,7 +164,6 @@ async function writeRefresh(
     scope,
     rows.map((row, index) => ({ ...row, target: scored[index]![0].target })),
     snapshot.id,
-    contentPages,
   );
   await insertOpportunities(trx, scope, rows, actions, now);
   const links = live.flatMap((row) => {
@@ -211,8 +205,6 @@ export async function recomputeOpportunities(
     return projectSnapshot(prior!);
   const collected = await collectFamilies(db, scope, sources, sources.identity);
   const scored = scoreHits(collected.hits);
-  // The identity re-check under the lock pins the crawl these were read from.
-  const contentPages = await contentPageKeys(db, scope, sources.crawl?.id ?? null);
   return db.transaction().execute(async (trx) => {
     await acquireProjectLock(trx, scope.projectId);
     const current = await latestSnapshot(trx, scope);
@@ -228,7 +220,7 @@ export async function recomputeOpportunities(
     if (current !== null && empty) return projectSnapshot(current);
     if (options.skipIfCurrent && snapshotIsCurrent(current, sources.identity))
       return projectSnapshot(current!);
-    return writeRefresh(trx, scope, { collected, sources, scored, contentPages });
+    return writeRefresh(trx, scope, { collected, sources, scored });
   });
 }
 

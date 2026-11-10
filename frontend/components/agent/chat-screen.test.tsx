@@ -60,13 +60,7 @@ beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 beforeEach(() =>
   mswServer.use(
     http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
-      HttpResponse.json({
-        items: [],
-        next_cursor: null,
-        status_counts: {},
-        surface_open_counts: { actions: 0, content: 0 },
-        content_gap_source: null,
-      }),
+      HttpResponse.json({ items: [], next_cursor: null, status_counts: {} }),
     ),
   ),
 );
@@ -255,10 +249,7 @@ describe('ChatScreen', () => {
       ...base,
       messages: base.messages.map((message) =>
         message.role === 'user'
-          ? {
-              ...message,
-              mentions: [{ kind: 'action', id: ACTION, label: 'Pricing page', surface: 'content' }],
-            }
+          ? { ...message, mentions: [{ kind: 'action', id: ACTION, label: 'Pricing page' }] }
           : message,
       ),
     };
@@ -266,22 +257,15 @@ describe('ChatScreen', () => {
       http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
       http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(withMention)),
       http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
-        HttpResponse.json({
-          items: [],
-          next_cursor: null,
-          status_counts: {},
-          surface_open_counts: { actions: 0, content: 0 },
-          content_gap_source: null,
-        }),
+        HttpResponse.json({ items: [], next_cursor: null, status_counts: {} }),
       ),
     );
     renderChat();
 
-    // A content Action opens under Content optimization, where it lives.
     const mentioned = within(await screen.findByRole('list', { name: 'Mentioned Actions' }));
     expect(mentioned.getByRole('link', { name: '@Pricing page' })).toHaveAttribute(
       'href',
-      expect.stringContaining(`/agent/content/${ACTION}`),
+      expect.stringContaining(`/agent/actions/${ACTION}`),
     );
   });
 
@@ -571,8 +555,6 @@ describe('ChatScreen', () => {
               approach: 'fix_technical',
               skill_id: 'technical_health',
               member_count: 1,
-              surface: 'actions',
-              content_gaps: [],
               evidence_cleared_at: null,
               created_at: NOW,
               updated_at: NOW,
@@ -580,8 +562,6 @@ describe('ChatScreen', () => {
           ],
           next_cursor: null,
           status_counts: {},
-          surface_open_counts: { actions: 0, content: 0 },
-          content_gap_source: null,
         }),
       ),
       http.post(`/api/v1/agent/chats/${CHAT}/messages`, async ({ request }) => {
@@ -600,7 +580,7 @@ describe('ChatScreen', () => {
               id: `77777777-7777-4777-8777-${String(keys.length + 3).padStart(12, '0')}`,
               sequence: current.messages.length + 1,
               content: '@Pricing page Shorten it.',
-              mentions: [{ kind: 'action', id: ACTION, label: 'Pricing page', surface: 'actions' }],
+              mentions: [{ kind: 'action', id: ACTION, label: 'Pricing page' }],
             },
           ],
         };

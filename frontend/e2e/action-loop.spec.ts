@@ -30,7 +30,6 @@ const row = {
   target_theme: 'analytics',
   target_label: 'example.org/tools',
   action_id: ACTION,
-  action_surface: 'actions',
   system_rank: 1,
   display_rank: 1,
   order_source: 'system',
@@ -108,8 +107,6 @@ const action = {
   approach: 'earned_placement',
   skill_id: 'earned_authority',
   member_count: 1,
-  surface: 'actions',
-  content_gaps: [],
   evidence_cleared_at: null,
   created_at: '2026-08-28T00:00:00Z',
   updated_at: '2026-08-28T00:00:00Z',
@@ -189,15 +186,7 @@ test('declaring an Action implemented shows comparable verification', async ({ p
     route.fulfill({ json: { skills: [], limits: { mentions_max: 5 } } }),
   );
   await page.route(`**/api/v1/projects/${PROJECT}/actions*`, (route) =>
-    route.fulfill({
-      json: {
-        items: [action],
-        next_cursor: null,
-        status_counts: { open: 1 },
-        surface_open_counts: { actions: 1, content: 0 },
-        content_gap_source: null,
-      },
-    }),
+    route.fulfill({ json: { items: [action], next_cursor: null, status_counts: { open: 1 } } }),
   );
   await page.route(`**/api/v1/actions/${ACTION}`, (route) =>
     route.fulfill({
@@ -251,8 +240,6 @@ test('Action filters restore through URL history and reload', async ({ page }) =
         items: status === 'dismissed' ? [] : [action],
         next_cursor: null,
         status_counts: { open: 1, dismissed: 0 },
-        surface_open_counts: { actions: 1, content: 0 },
-        content_gap_source: null,
       },
     });
   });

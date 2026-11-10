@@ -1,12 +1,10 @@
 /** Persisted Action reads, target attachment and explicit workflow decisions. */
 import { randomUUID } from 'node:crypto';
-import { actionSurfaceSchema } from '@citeladder/contracts/action-surface';
 import {
   actionDetailSchema,
   actionItemSchema,
   actionStatusSchema,
   measurementLegSchema,
-  surfaceOpenCountsSchema,
 } from '@citeladder/contracts/actions';
 import { sql, type Selectable, type SqlBool } from 'kysely';
 
@@ -23,23 +21,13 @@ import {
 import { parseUuid } from '../http/uuid.ts';
 import { refreshActionStatus, validateStatus } from './action-status.ts';
 import { OPPORTUNITY_COLUMNS, projectItem } from './projection.ts';
-import { latestSnapshotCrawlId, type Scope } from './sources.ts';
+import type { Scope } from './sources.ts';
 import { declarationView } from './declaration-view.ts';
 import { memberMeasurementLeg } from './checks/registry.ts';
-import { contentPageKeys } from './action-sync.ts';
-import {
-  actionContentGaps,
-  contentGapEvidence,
-  contentGapSourceState,
-} from './content-gap-reads.ts';
+import { contentGapEvidence } from './content-gap-reads.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { normalizeDomain } from '../analysis/domains.ts';
-import {
-  actionSurface,
-  pageGroupKey,
-  plannedPageKey,
-  selectApproach,
-} from '../analysis/opportunities/actions.ts';
+import { pageGroupKey, plannedPageKey, selectApproach } from '../analysis/opportunities/actions.ts';
 
 const a = policy.opportunity.actions;
 export class ActionTargetError extends Error {}
@@ -91,14 +79,6 @@ export async function attachOrCreateAction(
   const target = rawTarget.trim();
   await acquireProjectLock(db, scope.projectId);
   const identity = await targetIdentity(db, scope, kind, target);
-  // The refresh's derivation over the latest snapshot's crawl; a new row has no members.
-  const surface = actionSurface(
-    { kind, group_key: identity.key },
-    [],
-    kind === a.TARGET_PAGE
-      ? await contentPageKeys(db, scope, await latestSnapshotCrawlId(db, scope))
-      : new Set(),
-  );
   const now = new Date();
   await db
     .insertInto('actions')
@@ -127,7 +107,6 @@ export async function attachOrCreateAction(
       priority_score: null,
       opportunity_snapshot_id: null,
       evidence_cleared_at: null,
-      surface,
     })
     .onConflict((oc) => oc.constraint('uq_actions_project_group').doNothing())
     .execute();
@@ -148,7 +127,6 @@ function actionItem(row: ActionRow) {
   return {
     id: row.id,
     project_id: row.project_id,
-    surface: actionSurfaceSchema.parse(row.surface),
     target_kind: row.target_kind,
     target_label: row.target_label,
     target_url: row.target_url,
@@ -196,8 +174,6 @@ export async function listActions(
   filters: {
     status: string | null;
     target_kind: string | null;
-    /** One screen's Actions; null lists both, and the counts cover both. */
-    surface: string | null;
     limit: number;
     cursor: string | null;
   },
@@ -205,19 +181,13 @@ export async function listActions(
   if (filters.status !== null) validateStatus(filters.status);
   if (filters.target_kind !== null && !a.ACTION_TARGET_KINDS.includes(filters.target_kind))
     throw new ApiError(422, `Unknown target kind: ${filters.target_kind}`);
-  if (filters.surface !== null && !actionSurfaceSchema.safeParse(filters.surface).success)
-    throw new ApiError(400, `Unknown surface: ${filters.surface}`);
   const priority = sql<number>`coalesce(actions.priority_score, -1)`;
   const fingerprint = {
     project_id: scope.projectId,
     status: filters.status,
     target_kind: filters.target_kind,
-    surface: filters.surface,
   };
-  const onSurface = filters.surface;
-  let query = (
-    onSurface === null ? listed(db, scope) : listed(db, scope).where('surface', '=', onSurface)
-  )
+  let query = listed(db, scope)
     .selectAll()
     .where('effective_status', 'in', filters.status ? [filters.status] : a.ACTION_ACTIVE_STATUSES);
   if (filters.target_kind) query = query.where('target_kind', '=', filters.target_kind);
@@ -227,56 +197,29 @@ export async function listActions(
       eb.or([eb(priority, '<', score), eb.and([eb(priority, '=', score), eb('id', '>', id)])]),
     );
   }
-  const [rows, counts, contentGapSource] = await Promise.all([
+  const [rows, counts] = await Promise.all([
     query
       .orderBy(priority, 'desc')
       .orderBy('id')
       .limit(filters.limit + 1)
       .execute(),
-    // Every surface's counts in one read: the list's own status counts and the
-    // open work of each surface, which the navigation badges read.
     listed(db, scope)
-      .select(['surface', 'effective_status as status', sql<number>`count(*)::int`.as('count')])
-      .groupBy(['surface', 'effective_status'])
+      .select(['effective_status as status', sql<number>`count(*)::int`.as('count')])
+      .groupBy('effective_status')
       .execute(),
-    // Only the content list tells "not computed yet" and "out of date" from "no gaps".
-    onSurface === 'content' ? contentGapSourceState(db, scope) : null,
   ]);
   const page = rows.slice(0, filters.limit);
   const last = page.at(-1);
-  // Only the content list shows angles, so only it loads their evidence.
-  const gaps =
-    onSurface === 'content'
-      ? await actionContentGaps(
-          db,
-          scope,
-          page.map((row) => ({ id: row.id, member_ids: stringList(row.member_opportunity_ids) })),
-        )
-      : null;
-  const statusCounts: Record<string, number> = Object.fromEntries(
-    a.ACTION_STATUSES.map((status) => [status, 0]),
-  );
-  const surfaceOpenCounts: Record<string, number> = Object.fromEntries(
-    a.ACTION_SURFACES.map((surface) => [surface, 0]),
-  );
-  for (const row of counts) {
-    if (onSurface === null || row.surface === onSurface)
-      statusCounts[row.status] = (statusCounts[row.status] ?? 0) + row.count;
-    if (a.ACTION_ACTIVE_STATUSES.includes(row.status))
-      surfaceOpenCounts[row.surface] = (surfaceOpenCounts[row.surface] ?? 0) + row.count;
-  }
   return {
-    content_gap_source: contentGapSource,
-    items: page.map((row) => ({
-      ...actionItem(row),
-      content_gaps: gaps === null ? null : (gaps.get(row.id) ?? []),
-    })),
+    items: page.map(actionItem),
     next_cursor:
       rows.length > filters.limit && last
         ? encodeKeysetCursor('actions', fingerprint, [String(last.priority_score ?? -1), last.id])
         : null,
-    status_counts: statusCounts,
-    surface_open_counts: surfaceOpenCountsSchema.parse(surfaceOpenCounts),
+    status_counts: {
+      ...Object.fromEntries(a.ACTION_STATUSES.map((status) => [status, 0])),
+      ...Object.fromEntries(counts.map((row) => [row.status, row.count])),
+    },
   };
 }
 

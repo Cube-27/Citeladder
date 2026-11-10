@@ -18,15 +18,11 @@ import {
 import { formatCount, pluralCount, readableUrl } from '@/lib/format';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
-import type { ActionSurface } from '@citeladder/contracts/action-surface';
 import { actionStatusSchema } from '@citeladder/contracts/actions';
-import { actionPath } from '@citeladder/contracts/record-kinds';
 
 /**
- * The parts the Actions and Content optimization lists share: the status
- * filter in the URL, its per-status counts, the cursor-paged read of one
- * surface's Actions and the target cell. Each screen adds its own columns and
- * empty states.
+ * The Actions list's parts: the status filter in the URL, its per-status
+ * counts, the cursor-paged read of the project's Actions and the target cell.
  */
 
 const QUEUE = 'queue';
@@ -41,7 +37,7 @@ function statusCount(value: StatusFilter, counts: StatusCounts) {
 }
 
 /**
- * Status choices, each with its surface-wide count in the menu. The labels
+ * Status choices, each with its project-wide count in the menu. The labels
  * themselves never change, so the filter keeps its width when the counts load
  * or drop away.
  */
@@ -54,7 +50,7 @@ function statusOptions(counts: StatusCounts | undefined) {
 }
 
 /**
- * The shareable status filter of one surface's list. `status` is undefined
+ * The shareable status filter of the Actions list. `status` is undefined
  * for the work queue (open and in progress).
  */
 export function useActionStatusFilter() {
@@ -63,22 +59,20 @@ export function useActionStatusFilter() {
 }
 
 /**
- * The Status select of one surface's list, with that surface's counts in its
+ * The Status select of the Actions list, with the project's counts in its
  * menu. The counts cover every target type, so a list narrowed by another
  * filter passes `showCounts={false}`.
  */
 export function ActionStatusSelect({
-  surface,
   value,
   onValueChange,
   showCounts = true,
 }: Readonly<{
-  surface: ActionSurface;
   value: StatusFilter;
   onValueChange: (value: StatusFilter) => void;
   showCounts?: boolean;
 }>) {
-  const counts = useActionStatusCounts(surface);
+  const counts = useActionStatusCounts();
   return (
     <Select
       ariaLabel="Status"
@@ -107,7 +101,7 @@ function workSummary(action: Action): string {
 }
 
 /**
- * A row's target cell on either list: the target linked to its Action, its
+ * A row's target cell: the target linked to its Action, its
  * status beside it only in the work queue and only when it is not Open (the
  * queue is nearly all Open), and the work summary under it.
  */
@@ -126,7 +120,7 @@ export function ActionTargetCell({
       <div className="grid min-w-0">
         <Inline>
           <ClampText lines={1} tooltip={label}>
-            <TextLink href={actionPath(action)} text="itemTitle">
+            <TextLink href={`/agent/actions/${action.id}`} text="itemTitle">
               {label}
             </TextLink>
           </ClampText>
@@ -143,14 +137,13 @@ export function ActionTargetCell({
 }
 
 /**
- * One surface's Actions as a cursor-paged table read, ordered by
+ * The project's Actions as a cursor-paged table read, ordered by
  * deterministic priority. The cursor stack is local and resets whenever a
  * filter changes.
  */
 export function useActionTable({
   workspaceId,
   projectId,
-  surface,
   status,
   targetKind,
   noun,
@@ -158,7 +151,6 @@ export function useActionTable({
 }: Readonly<{
   workspaceId: string;
   projectId: string;
-  surface: ActionSurface;
   status: ActionStatus | undefined;
   targetKind?: string;
   /** What the rows are, plural ("Actions"). */
@@ -168,11 +160,11 @@ export function useActionTable({
   return useCursorTableQuery({
     workspaceId,
     scopeId: projectId,
-    scope: [surface, status, targetKind],
+    scope: [status, targetKind],
     query: (request) =>
       actionsQueries.list(
         { workspaceId, projectId },
-        { surface, status, target_kind: targetKind, ...request },
+        { status, target_kind: targetKind, ...request },
       ),
     noun,
     loading: `Loading ${noun}…`,

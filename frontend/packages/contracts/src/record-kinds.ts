@@ -21,49 +21,15 @@ type RecordKind = {
 
 const own = (path: string) => (field: Field) => (field('id') ? `${path}/${field('id')}` : null);
 
-/**
- * Each Action surface's screen. An Action opens under its own surface's
- * screen: a content page or content-gap planned page under Content
- * optimization, everything else under Actions.
- */
-export const ACTION_SURFACE_SCREENS = {
-  actions: '/agent/actions',
-  content: '/agent/content',
-} as const;
-
-/** What a link to an Action needs: its id and its persisted surface. */
-export type ActionRef = Readonly<{ id: string; surface: string | null }>;
-
-/**
- * One Action's page under its surface's screen. Every link to an Action is
- * built here from the persisted surface its read carries; only a reference
- * that holds the id alone (an evidence chip) has no surface, and opens under
- * Actions.
- */
-export function actionPath(action: ActionRef): string {
-  const screen =
-    action.surface === 'content' ? ACTION_SURFACE_SCREENS.content : ACTION_SURFACE_SCREENS.actions;
-  return `${screen}/${action.id}`;
-}
-
 export const RECORD_KINDS = {
   project: { label: 'Project', screen: '/visibility' },
   prompt: { label: 'Prompt', screen: '/prompts' },
   opportunity: {
     label: 'Recommendation',
-    screen: ACTION_SURFACE_SCREENS.actions,
-    page: (field) =>
-      field('action_id')
-        ? actionPath({ id: field('action_id'), surface: field('action_surface') })
-        : null,
+    screen: '/agent/actions',
+    page: (field) => (field('action_id') ? `/agent/actions/${field('action_id')}` : null),
   },
-  action: {
-    label: 'Action',
-    screen: ACTION_SURFACE_SCREENS.actions,
-    // The browser holds the id alone and opens it under Actions; MCP passes the surface.
-    page: (field) =>
-      field('id') ? actionPath({ id: field('id'), surface: field('surface') }) : null,
-  },
+  action: { label: 'Action', screen: '/agent/actions', page: own('/agent/actions') },
   audit: { label: 'Visibility run', screen: '/runs', page: own('/runs') },
   visibility_result: {
     label: 'Visibility answer',

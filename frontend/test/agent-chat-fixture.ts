@@ -36,7 +36,6 @@ export function detail(latest: ReturnType<typeof revision>, run: DetailRun = DEF
       id: CHAT,
       project_id: PROJECT,
       action_id: null,
-      action_surface: null,
       target_label: null,
       title: 'Improve pricing snippet',
       turn_count: 1,

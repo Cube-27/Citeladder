@@ -51,11 +51,11 @@ export function NavLink({
           label={item.label}
           active={active}
           count={
-            item.badge ? (
+            item.badge === 'open-actions' ? (
               // Chrome: a count that cannot load or render is reported and
               // leaves the row as it was; it never takes the shell down.
               <LazyIsland failed={null} label="open-action-count" defects="contain">
-                <OpenActionCount surface={item.badge} />
+                <OpenActionCount />
               </LazyIsland>
             ) : null
           }
