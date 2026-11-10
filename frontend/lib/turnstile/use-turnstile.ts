@@ -90,14 +90,15 @@ export function useTurnstile(action: string) {
         setFailed(true);
         return;
       }
-      let mounted = true;
+      // Aborted when the element unmounts, so a late script load renders nothing.
+      const unmounted = new AbortController();
       const settle = (value: string) => {
         token.current = value;
         setSolved(Boolean(value));
       };
       loadTurnstile()
         .then((api) => {
-          if (!mounted) return;
+          if (unmounted.signal.aborted) return;
           // A widget error shows inside the widget, which retries by itself.
           const id = api.render(element, {
             sitekey,
@@ -113,10 +114,10 @@ export function useTurnstile(action: string) {
         })
         // Without the widget the server refuses the request; the form says so.
         .catch(() => {
-          if (mounted) setFailed(true);
+          if (!unmounted.signal.aborted) setFailed(true);
         });
       return () => {
-        mounted = false;
+        unmounted.abort();
         widget.current?.api.remove(widget.current.id);
         widget.current = null;
         token.current = '';

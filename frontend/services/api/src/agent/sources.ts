@@ -10,7 +10,7 @@ import type { WebSource } from '../models/conversation.ts';
 const LINKED_REF = /\[([^[\]\n]+)\]\(\s*citeladder:\/\/[^)]*\)/giu;
 // Trailing sentence punctuation belongs to the prose, not the reference.
 const BARE_REF = /\(?citeladder:\/\/[^\s<>()[\]"']*[^\s<>()[\]"'.,;:!?]\)?/giu;
-const UUID_TEXT = String.raw`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`;
+const UUID_TEXT = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const UUID = new RegExp(String.raw`(\(?)\b(${UUID_TEXT})\b(\)?)`, 'giu');
 const WRITTEN_UUID = new RegExp(String.raw`\b${UUID_TEXT}\b`, 'giu');
 // Most replies cite nothing; they skip the per-line work.
@@ -23,7 +23,7 @@ const ANY_REF = /citeladder:\/\/|[0-9a-f]{8}-[0-9a-f]{4}-/iu;
  */
 export function writtenIds(...texts: readonly string[]): ReadonlySet<string> {
   return new Set(
-    texts.flatMap((text) => text.match(WRITTEN_UUID) ?? []).map((id) => id.toLowerCase()),
+    texts.flatMap((text) => [...text.matchAll(WRITTEN_UUID)].map(([id]) => id.toLowerCase())),
   );
 }
 

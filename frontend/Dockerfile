@@ -1,6 +1,6 @@
 # Node 26 bookworm-slim. The tag keeps Dependabot's digest updates on this
 # image family; a bare digest let it pick the full `node` image.
-FROM node:26-bookworm-slim@sha256:bc0a2afd3b74ce12222fc8bab99271e66257f021078f5f4a5d687a77d280c1d9 AS dependencies
+FROM node:26-bookworm-slim@sha256:add5c17c14752c54d2f3d519ec46a3815684d41c33f198bcb09fb998f7dcbf68 AS dependencies
 
 ENV PNPM_HOME=/pnpm
 ENV PATH="${PNPM_HOME}:${PATH}"
@@ -8,7 +8,7 @@ WORKDIR /app
 
 # Node 26 no longer bundles corepack, so pnpm is installed from npm.
 # Keep this version in lockstep with the packageManager field in frontend/package.json.
-RUN npm install --global --ignore-scripts pnpm@12.16.1
+RUN npm install --global --ignore-scripts pnpm@12.18.0
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 COPY frontend/packages/contracts/package.json ./packages/contracts/
 COPY frontend/services/api/package.json ./services/api/
@@ -20,7 +20,7 @@ FROM dependencies AS wrangler
 COPY frontend/scripts/copy-wrangler-runtime.mjs ./scripts/
 RUN node scripts/copy-wrangler-runtime.mjs /wrangler
 
-FROM node:26-bookworm-slim@sha256:bc0a2afd3b74ce12222fc8bab99271e66257f021078f5f4a5d687a77d280c1d9 AS builder
+FROM node:26-bookworm-slim@sha256:add5c17c14752c54d2f3d519ec46a3815684d41c33f198bcb09fb998f7dcbf68 AS builder
 
 ARG BUILD_REVISION=unknown
 ARG NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS
@@ -43,7 +43,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
-RUN npm install --global --ignore-scripts pnpm@12.16.1
+RUN npm install --global --ignore-scripts pnpm@12.18.0
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 COPY frontend/apps/marketing ./apps/marketing
@@ -57,7 +57,7 @@ COPY frontend/postcss.config.mjs frontend/tsconfig.json ./
 COPY frontend/services/api/src/config/crawlers.json frontend/services/api/src/config/billing.json frontend/services/api/src/config/entitlements.json ./services/api/src/config/
 RUN pnpm build:marketing
 
-FROM node:26-bookworm-slim@sha256:bc0a2afd3b74ce12222fc8bab99271e66257f021078f5f4a5d687a77d280c1d9 AS runtime
+FROM node:26-bookworm-slim@sha256:add5c17c14752c54d2f3d519ec46a3815684d41c33f198bcb09fb998f7dcbf68 AS runtime
 
 ARG BUILD_REVISION=unknown
 LABEL org.opencontainers.image.title="citeladder-marketing" \
