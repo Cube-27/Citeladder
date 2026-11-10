@@ -25,6 +25,7 @@ import {
   trendScale,
   type TrendScale,
 } from '@/components/ui/trend-geometry';
+import { LineEndLabels } from '@/components/ui/trend-line-labels';
 import { availabilityLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -87,6 +88,7 @@ export function TrendChart({
   format = yFormat,
   legend = true,
   eventsLabel,
+  directLabels = false,
 }: Readonly<{
   /** The first line, one entry per point; its labels and timestamps place every line. */
   data: readonly TrendPoint[];
@@ -108,6 +110,11 @@ export function TrendChart({
   legend?: boolean;
   /** The legend's name for the event markers, e.g. "Marked implemented". */
   eventsLabel?: string;
+  /**
+   * Name each line at its latest point, so lines whose inks sit close (the
+   * comparison greys) are told apart by name rather than by shade alone.
+   */
+  directLabels?: boolean;
 }>) {
   const [plotRef, width] = useChartWidth<HTMLDivElement>();
   const [active, setActive] = useState<number | null>(null);
@@ -192,6 +199,7 @@ export function TrendChart({
           height={height}
           active={active}
           yFormat={yFormat}
+          directLabels={directLabels && lines.length > 1}
         />
         {active === null ? null : (
           <ChartTip
@@ -238,6 +246,7 @@ function TrendPlot({
   height,
   active,
   yFormat,
+  directLabels,
 }: Readonly<{
   data: readonly TrendPoint[];
   lines: readonly Line[];
@@ -247,6 +256,7 @@ function TrendPlot({
   height: number;
   active: number | null;
   yFormat: (value: number) => string;
+  directLabels: boolean;
 }>) {
   const breaks = data.map((point) => point.breakBefore === true);
   const plotted = lines.map((line) => ({ line, points: linePoints(line.values, breaks, scale) }));
@@ -327,6 +337,7 @@ function TrendPlot({
       {active === null && latest !== null && latest !== undefined ? (
         <TrendDot x={scale.x(data.length - 1)} y={scale.y(latest)} tone={1} />
       ) : null}
+      {directLabels ? <LineEndLabels lines={lines} scale={scale} bottom={bottom} /> : null}
       {active === null
         ? null
         : lines.map((line) => {

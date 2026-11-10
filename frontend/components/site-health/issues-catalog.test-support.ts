@@ -1,9 +1,34 @@
+import { createElement, type ReactElement } from 'react';
 import type { IssueOccurrence, SiteIssue } from '@citeladder/contracts';
+
+import { renderWithProviders } from '@/test/render';
+import { IssuesCatalog as ScopedIssuesCatalog } from './issues-catalog';
 
 /** Shared fixtures for the Issues catalog tests. */
 export const CRAWL = '44444444-4444-4444-8444-444444444444';
 export const ISSUE_A = 'aaaaaaaa-1111-4111-8111-111111111111';
 export const URL_A = 'cccccccc-1111-4111-8111-111111111111';
+
+const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+export function IssuesCatalog(props: Readonly<{ crawlId: string }>) {
+  return createElement(ScopedIssuesCatalog, { workspaceId: WORKSPACE, ...props });
+}
+
+/**
+ * The catalog's filters live in the address bar through
+ * `lib/navigation/url-state.ts`. No router is registered in these tests, so it
+ * takes its `window.history` fallback — which is why the URL contract is
+ * asserted against `window.location` and browser history is driven with the
+ * real `history.back()`/`forward()`.
+ */
+export function renderIssues(
+  ui: ReactElement,
+  initialLocation = window.location.pathname + window.location.search,
+) {
+  window.history.replaceState(null, '', initialLocation);
+  return renderWithProviders(ui);
+}
 
 export function issue(overrides: Partial<SiteIssue> = {}): SiteIssue {
   return {

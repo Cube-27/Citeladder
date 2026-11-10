@@ -287,10 +287,13 @@
   --control-lg: 48px;
   --row-app: 40px;
   --nav-height: 64px;
+  /* The labelled sidebar's default and narrowest width; the reader may drag
+     it wider (to 480px), and the shell then sets this variable inline from
+     the stored width (lib/sidebar-width.ts). */
   --sidebar-width: 248px;
-  /* The sidebar below 1280px: one control wide inside its 12px inset, plus
-     its 1px edge (61px, decision D3). */
-  --sidebar-rail-width: calc(var(--control-md) + 24px + 1px);
+  /* The sidebar below 1280px: one control wide inside its 12px inset (56px,
+     decision D3). No rule divides the sidebar from the page. */
+  --sidebar-rail-width: calc(var(--control-md) + 24px);
 
   /* Component geometry the components read. Each derives from a system token. */
   /* What sticks under the app's top bar starts below it (D12). */

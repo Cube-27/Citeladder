@@ -71,8 +71,7 @@ export type IssueFilterClass =
   | (typeof SEVERITY_CLASSES)[number]
   | (typeof DIMENSION_CLASSES)[number];
 
-const FILTER_CLASS_LABELS: Readonly<Record<IssueFilterClass, string>> = {
-  all: 'All',
+const FILTER_CLASS_LABELS: Readonly<Record<Exclude<IssueFilterClass, 'all'>, string>> = {
   high: 'High',
   medium: 'Medium',
   low: 'Low',
@@ -88,15 +87,26 @@ function isDimensionClass(value: string): value is (typeof DIMENSION_CLASSES)[nu
   return (DIMENSION_CLASSES as readonly string[]).includes(value);
 }
 
-/** The segments on offer. Advisories carry no severity, so they list dimensions only. */
+/**
+ * The segments on offer. Advisories carry no severity, so they list dimensions
+ * only. The unfiltered choice names what it leaves unfiltered: a bare "All"
+ * on the closed trigger did not say all OF WHAT.
+ */
 export function issueFilterClasses(
   findingClass: FindingClass,
 ): ReadonlyArray<{ key: IssueFilterClass; label: string }> {
-  const keys: readonly IssueFilterClass[] =
-    findingClass === 'defect'
-      ? ['all', ...SEVERITY_CLASSES, ...DIMENSION_CLASSES]
-      : ['all', ...DIMENSION_CLASSES];
-  return keys.map((key) => ({ key, label: FILTER_CLASS_LABELS[key] }));
+  if (findingClass === 'defect')
+    return [
+      { key: 'all', label: 'All severities' },
+      ...[...SEVERITY_CLASSES, ...DIMENSION_CLASSES].map((key) => ({
+        key,
+        label: FILTER_CLASS_LABELS[key],
+      })),
+    ];
+  return [
+    { key: 'all', label: 'All categories' },
+    ...DIMENSION_CLASSES.map((key) => ({ key, label: FILTER_CLASS_LABELS[key] })),
+  ];
 }
 
 /** Which segment the current filters read as. */

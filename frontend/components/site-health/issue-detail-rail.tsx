@@ -2,9 +2,9 @@
 
 import { ProjectLink } from '@/components/ui/project-link';
 
-import { Badge } from '@/components/ui/badge';
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
+import { AffectedPageLink, SharedOccurrences } from '@/components/site-health/shared-occurrences';
 import { ReadError } from '@/components/ui/read-error';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -13,14 +13,13 @@ import { QueryState } from '@/components/ui/query-state';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ListDetailPane } from '@/components/ui/list-detail';
 import { Pager } from '@/components/ui/pager';
-import { panelClasses } from '@/components/ui/panel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { useAgentPanelSeed } from '@/lib/agent/panel-context';
-import type { SiteIssue, SiteIssueDetail } from '@citeladder/contracts';
+import type { IssueOccurrence, SiteIssue, SiteIssueDetail } from '@citeladder/contracts';
 import { originOf, sitePath } from '@/lib/site-health/evidence-values';
 import {
   linkOutcomeLabel,
@@ -29,8 +28,8 @@ import {
   type SiteLevelEvidence,
 } from '@/lib/site-health/site-level-evidence';
 import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
+import { groupOccurrences, loadedPageCount } from '@/lib/site-health/occurrence-groups';
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
-import { pageDisplayTitle } from '@/lib/site-health/status';
 
 /**
  * The right half of the Issues catalog: one issue in full, and the pages it
@@ -66,23 +65,28 @@ export function IssueDetailRail({
           <Stack gap="item" className="min-w-0">
             <h2 className={textRole('sectionTitle')}>{issueTitle(issue)}</h2>
             <IssueMetadata issue={issue} />
-            <Inline gap="meta" className="type-body">
-              <span className="text-ink-secondary whitespace-nowrap tabular-nums">
-                {issue.affected_url_count} {issue.affected_url_count === 1 ? 'page' : 'pages'}{' '}
-                affected
-              </span>
+            {/* One line in one role: the count and the page types it spans.
+                It was a body-size count beside a caption-size list, with a
+                dot between every type and none between the two halves. */}
+            <p className="type-caption tabular-nums">
+              {issue.affected_url_count} {issue.affected_url_count === 1 ? 'page' : 'pages'}{' '}
+              affected
               {issue.page_kinds.length > 0 ? (
-                <Inline as="span" gap="tight" className="type-caption flex-wrap">
-                  <span>Affects</span>
-                  {issue.page_kinds.map((kind, index) => (
-                    <span key={kind} className="contents">
-                      {index > 0 ? <span aria-hidden>·</span> : null}
-                      <span>{pageKindLabel(kind)}</span>
-                    </span>
-                  ))}
-                </Inline>
+                <>
+                  <span aria-hidden> · </span>
+                  Page types: {issue.page_kinds.map(pageKindLabel).join(', ')}
+                </>
               ) : null}
-            </Inline>
+            </p>
+            {/* The rule's description is phrased as the PASSING state ("Page
+                is not blocked from indexing…"); printed under a failing title
+                it read as a contradiction. The fix is what the reader came
+                for, so it is part of the header, not a card under it. */}
+            {issue.remediation ? (
+              <p className="type-body whitespace-pre-line">
+                <span className={textRole('label')}>How to fix:</span> {issue.remediation}
+              </p>
+            ) : null}
           </Stack>
           <IssueActions issue={issue} crawlId={crawlId} />
         </>
@@ -104,18 +108,15 @@ export function IssueDetailRail({
         ) : null
       }
     >
-      {/* The rule's description is phrased as the PASSING state ("Page is not
-          blocked from indexing…"); printed under a failing title it read as a
-          contradiction. The fix is what the reader came for. */}
-      {issue.remediation ? (
-        <Stack gap="tight" className={panelClasses({ tone: 'tonal' })}>
-          <span className={textRole('label')}>How to fix</span>
-          <p className="type-body whitespace-pre-line">{issue.remediation}</p>
-        </Stack>
-      ) : null}
       <Stack as="section">
         <h3 className={textRole('sectionTitle')}>Affected pages</h3>
-        <OccurrenceList issue={issue} detail={detail} crawlId={crawlId} query={detailQuery} />
+        <OccurrenceList
+          issue={issue}
+          detail={detail}
+          crawlId={crawlId}
+          query={detailQuery}
+          firstPage={!canPrevious}
+        />
       </Stack>
     </ListDetailPane>
   );
@@ -162,11 +163,14 @@ function OccurrenceList({
   detail,
   crawlId,
   query,
+  firstPage,
 }: Readonly<{
   issue: SiteIssue;
   detail: SiteIssueDetail | undefined;
   crawlId: string;
   query: UseQueryResult<SiteIssueDetail>;
+  /** No earlier page of occurrences was paged past. */
+  firstPage: boolean;
 }>) {
   if (query.isError)
     return (
@@ -200,65 +204,67 @@ function OccurrenceList({
   const first = detail.occurrences[0];
   const siteLevel = first ? siteLevelEvidence(issue.rule_id, first.evidence) : null;
   if (siteLevel) return <SiteLevelList evidence={siteLevel} crawlId={crawlId} />;
+  // Grouping sees only the loaded page of occurrences. The loaded rows are
+  // the whole list only when nothing was paged past and nothing follows.
+  const complete = firstPage && !detail.next_cursor;
+  const loaded = loadedPageCount(detail.occurrences);
   return (
     <ul className={ledgerClasses('open')}>
-      {detail.occurrences.map((occurrence) => (
-        <Stack as="li" gap="tight" key={occurrence.occurrence_id} className={ledgerItemClasses()}>
-          <AffectedPageLink
+      {groupOccurrences(detail.occurrences).map((entry) =>
+        entry.kind === 'page' ? (
+          <PageOccurrence
+            key={entry.occurrence.occurrence_id}
+            issue={issue}
+            occurrence={entry.occurrence}
             crawlId={crawlId}
-            siteUrlId={occurrence.site_url_id}
-            title={occurrence.title}
-            url={occurrence.display_url}
-            pageKind={occurrence.page_kind}
           />
-          <IssueEvidence occurrence={occurrence} />
-          <TextLink
-            text="caption"
-            className="w-fit"
-            href={agentHandoffHref({
-              issueGroup: { crawlId, groupId: issue.group_id, siteUrlId: occurrence.site_url_id },
-              prompt: askAgentPrompt(issue, occurrence.display_url),
-              skillId: 'technical_health',
-            })}
-          >
-            Ask agent about this page
-          </TextLink>
-        </Stack>
-      ))}
+        ) : (
+          <SharedOccurrences
+            key={entry.key}
+            issue={issue}
+            entry={entry}
+            crawlId={crawlId}
+            scope={{
+              pageCount: entry.pageCount,
+              loadedPageCount: loaded,
+              totalPageCount: detail.affected_url_count,
+              complete,
+            }}
+          />
+        ),
+      )}
     </ul>
   );
 }
 
-/** One affected page: its title and kind, linking to its detail, over its URL. */
-function AffectedPageLink({
+/** Evidence found on one page only: the page, what it lacks, and a question about it. */
+function PageOccurrence({
+  issue,
+  occurrence,
   crawlId,
-  siteUrlId,
-  title,
-  url,
-  pageKind,
-}: Readonly<{
-  crawlId: string;
-  siteUrlId: string;
-  title: string | null;
-  url: string;
-  pageKind: string | null;
-}>) {
+}: Readonly<{ issue: SiteIssue; occurrence: IssueOccurrence; crawlId: string }>) {
   return (
-    <TextLink
-      text="itemTitle"
-      className="flex min-w-0 flex-col"
-      href={`/site/crawls/${crawlId}/pages/${siteUrlId}`}
-    >
-      <Inline as="span" className="flex-wrap">
-        <span className={textRole('itemTitle', '[overflow-wrap:anywhere]')}>
-          {pageDisplayTitle(title, url)}
-        </span>
-        {pageKind ? <Badge>{pageKindLabel(pageKind)}</Badge> : null}
-      </Inline>
-      <span className="type-caption [overflow-wrap:anywhere] tabular-nums" title={url}>
-        {url}
-      </span>
-    </TextLink>
+    <Stack as="li" gap="tight" className={ledgerItemClasses()}>
+      <AffectedPageLink
+        crawlId={crawlId}
+        siteUrlId={occurrence.site_url_id}
+        title={occurrence.title}
+        url={occurrence.display_url}
+        pageKind={occurrence.page_kind}
+      />
+      <IssueEvidence occurrence={occurrence} />
+      <TextLink
+        text="caption"
+        className="w-fit"
+        href={agentHandoffHref({
+          issueGroup: { crawlId, groupId: issue.group_id, siteUrlId: occurrence.site_url_id },
+          prompt: askAgentPrompt(issue, occurrence.display_url),
+          skillId: 'technical_health',
+        })}
+      >
+        Ask agent about this page
+      </TextLink>
+    </Stack>
   );
 }
 

@@ -44,8 +44,9 @@ export type FilterBarProps = Readonly<{
  * FilterBar — the control strip at the top of every list and report page:
  * search first, then the filters, then the action at the end, every control
  * 36px and 8 apart. Filter triggers keep one width (224px) whatever their
- * value says, so choosing a filter never moves the strip; the search grows to
- * 360px.
+ * value says, so choosing a filter never moves the strip; a trigger given
+ * `sizeTo` instead keeps the width of its longest option, at every viewport.
+ * The search grows to 360px.
  *
  * Below 1280px it takes two rows: search and the action, then the filters
  * sharing the second row in equal widths. On a phone the search keeps at
@@ -75,7 +76,9 @@ export function FilterBar({ view, search, filters, status, actions }: FilterBarP
         <>
           {/* Below 1280px the filters start their own row. */}
           <span aria-hidden className="shell:hidden order-2 h-0 basis-full" />
-          <div className="shell:order-none shell:[&>*]:flex-none shell:[&>*]:basis-auto contents [&>*]:order-3 [&>*]:min-w-0 [&>*]:flex-1 [&>*]:basis-0">
+          {/* A trigger sized to its options (`data-fit`) keeps that width on
+              the shared row rather than taking an equal share of it. */}
+          <div className="shell:order-none shell:[&>*]:flex-none shell:[&>*]:basis-auto contents [&>*]:order-3 [&>*]:min-w-0 [&>*:not([data-fit])]:flex-1 [&>*:not([data-fit])]:basis-0">
             {filters}
           </div>
         </>
@@ -118,6 +121,9 @@ export function FilterField({ children }: Readonly<{ children: ReactNode }>) {
  *     "N active".
  *   - `active` marks a filter moved off its default (`data-active`); the
  *     value or count says how.
+ *   - `sizeTo` lists every value the trigger can show. The trigger then takes
+ *     the width of the longest of them instead of the one filter width, so it
+ *     fits its content and still never resizes when the choice changes.
  *
  * Use it as `<MenuTrigger asChild><FilterTrigger …/></MenuTrigger>`; it
  * forwards the ref and the trigger's props to the button.
@@ -128,6 +134,7 @@ export function FilterTrigger({
   hideLabel = false,
   count,
   active = false,
+  sizeTo,
   className,
   ref,
   ...props
@@ -138,23 +145,53 @@ export function FilterTrigger({
     hideLabel?: boolean;
     count?: number;
     active?: boolean;
+    /** Every value the trigger can show; it takes the longest one's width. */
+    sizeTo?: readonly string[];
     ref?: Ref<HTMLButtonElement>;
   }
 >) {
   const showCount = typeof count === 'number' && count > 0;
+  const fit = sizeTo !== undefined && sizeTo.length > 0;
   return (
     <button
       ref={ref}
       type="button"
       data-active={active || showCount || undefined}
+      data-fit={fit || undefined}
       className={cn(
         FIELD_BOX,
-        'focus-input shell:w-[var(--filter-width)] flex min-w-0 shrink-0 items-center gap-2 text-left disabled:cursor-not-allowed disabled:opacity-45',
+        'focus-input flex min-w-0 shrink-0 items-center gap-2 text-left disabled:cursor-not-allowed disabled:opacity-45',
+        fit ? 'w-auto max-w-full' : 'shell:w-[var(--filter-width)]',
         className,
       )}
       {...props}
     >
-      <FilterTriggerText label={label} value={value} hideLabel={hideLabel} />
+      {fit ? (
+        // Every option is laid in the same cell, unseen, so the cell is as
+        // wide as the longest and the visible value never resizes the trigger.
+        // The sizers draw their text as generated content: it adds no
+        // readable text and no accessible name.
+        <span className="grid min-w-0">
+          {/* Only the longest labels can set the width; a long option list
+              (every tracked prompt) must not become one node per option. */}
+          {[...new Set(sizeTo)]
+            .sort((a, b) => b.length - a.length)
+            .slice(0, 6)
+            .map((size) => (
+              <span
+                key={size}
+                aria-hidden
+                data-size={hideLabel ? size : `${label}: ${size}`}
+                className="invisible col-start-1 row-start-1 whitespace-nowrap after:content-[attr(data-size)]"
+              />
+            ))}
+          <span className="col-start-1 row-start-1 flex min-w-0">
+            <FilterTriggerText label={label} value={value} hideLabel={hideLabel} />
+          </span>
+        </span>
+      ) : (
+        <FilterTriggerText label={label} value={value} hideLabel={hideLabel} />
+      )}
       {showCount ? (
         <>
           <span aria-hidden>
@@ -194,6 +231,7 @@ export function FilterChoice<T extends string>({
   defaultValue,
   options,
   onChange,
+  fit = false,
 }: Readonly<{
   /** The trigger's accessible name prefix, e.g. "Select date range". */
   label: string;
@@ -204,6 +242,8 @@ export function FilterChoice<T extends string>({
   defaultValue?: T;
   options: readonly { value: T; label: string }[];
   onChange: (value: T) => void;
+  /** Size the trigger to its longest option instead of the one filter width. */
+  fit?: boolean;
 }>) {
   return (
     <Menu>
@@ -213,6 +253,7 @@ export function FilterChoice<T extends string>({
           hideLabel
           value={options.find((option) => option.value === value)?.label ?? label}
           active={defaultValue !== undefined && value !== defaultValue}
+          sizeTo={fit ? options.map((option) => option.label) : undefined}
         />
       </MenuTrigger>
       <MenuContent>

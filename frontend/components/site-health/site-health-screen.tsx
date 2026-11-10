@@ -8,9 +8,14 @@ import { Callout } from '@/components/ui/callout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { TabsRoot } from '@/components/ui/tabs';
 import { Tooltip } from '@/components/ui/tooltip';
-import { ListScreen } from '@/components/layout/page-shell';
+import { ListScreen, RESERVED_CONTROLS } from '@/components/layout/page-shell';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Inline, Stack } from '@/components/ui/layout';
 import { SiteHealthDashboardLayout } from '@/components/site-health/dashboard-layout';
+import {
+  PAGES_INVENTORY_URL_KEYS,
+  usePagesInventoryControls,
+} from '@/components/site-health/inventory-section';
 import { AeoReadinessPanel } from '@/components/site-health/aeo-readiness-panel';
 import { ArchitecturePanel } from '@/components/site-health/architecture-panel';
 import { ChangesPanel } from '@/components/site-health/changes-panel';
@@ -56,9 +61,17 @@ function SiteHealthContent({
     exporting,
   } = screen;
   const [tab, selectTab] = useUrlState('tab', TAB_CODEC, {
-    clearKeys: ['cursor', 'sort'],
+    clearKeys: ['cursor', 'sort', ...PAGES_INVENTORY_URL_KEYS],
   });
   const blocking = projectBlockingState(screen);
+  // The Pages tab's view switch and page-kind filter: the page's control band.
+  const pagesControls = usePagesInventoryControls({
+    active,
+    enabled: screen.inventoryMode === 'scored',
+  });
+  let controls: FilterBarProps | undefined;
+  if (tab === 'pages' && blocking?.kind === 'loading') controls = RESERVED_CONTROLS;
+  else if (tab === 'pages' && !blocking && crawl) controls = pagesControls;
   const mutationsAllowed = !entitlementQuery.isError;
   const refreshFailures = !blocking ? <SiteHealthRefreshFailures screen={screen} /> : null;
   const headerActions =
@@ -92,6 +105,7 @@ function SiteHealthContent({
       <ListScreen
         actions={headerActions}
         tabs={{ items: ANALYSIS_TABS, ariaLabel: 'Website analysis', onIntent: prefetchTab }}
+        controls={controls}
       >
         {blocking ? (
           <QueryState kind="loading" label={blocking.label} />

@@ -1,4 +1,4 @@
-import { fireEvent, render as renderUi, screen, within } from '@testing-library/react';
+import { act, fireEvent, render as renderUi, screen, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -38,11 +38,28 @@ describe('RankingRowsTable', () => {
     expect(within(rows[0]!).getByText('Leader')).toBeVisible();
     expect(within(rows[1]!).getByText('Acme')).toBeVisible();
   });
-  it('identifies the brand and shows actual citation measurements', () => {
+  it('identifies the brand and names its columns as the KPI row does', () => {
     render(<RankingRowsTable rows={[row({ is_brand: true })]} />);
     expect(screen.getByText('You')).toBeVisible();
-    expect(screen.getByRole('columnheader', { name: 'Citations' })).toBeVisible();
-    expect(screen.queryByRole('columnheader', { name: 'Sentiment' })).toBeNull();
+    // The same names as the headline tiles, never "S.O.V." or "Citations".
+    expect(screen.getByRole('columnheader', { name: /^Share of voice/ })).toBeVisible();
+    expect(screen.getByRole('columnheader', { name: /^Owned citation rate/ })).toBeVisible();
+    expect(screen.queryByRole('columnheader', { name: 'S.O.V.' })).toBeNull();
+    expect(screen.queryByRole('columnheader', { name: 'Citations' })).toBeNull();
+    const cells = within(screen.getByText('Acme').closest('tr')!).getAllByRole('cell');
+    expect(cells.map((cell) => cell.textContent).slice(-2)).toEqual(['40%', '25%']);
+  });
+  it('shows a cut brand name in full when its button takes keyboard focus', async () => {
+    render(<RankingRowsTable rows={[row({ name: 'Kmart Australia' })]} onSelect={vi.fn()} />);
+    const name = screen.getByText('Kmart Australia');
+    // jsdom lays nothing out, so the ellipsis is stated: the name overflows its box.
+    Object.defineProperty(name, 'scrollWidth', { configurable: true, value: 120 });
+    Object.defineProperty(name, 'clientWidth', { configurable: true, value: 40 });
+    // The column hints come first in tab order, so focus moves to the name directly.
+    const button = screen.getByRole('button', { name: 'Plot Kmart Australia on its own' });
+    act(() => button.focus());
+    expect(button).toHaveFocus();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Kmart Australia');
   });
   it('distinguishes measured zero, unavailable rates, and incomparable changes', () => {
     render(

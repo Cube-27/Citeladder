@@ -9,6 +9,7 @@ import { useCancelRun, useFollowUp, type FollowUp } from '@/components/agent/use
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
+import { AgentThread } from '@/components/ui/chat-dock';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { latestOutput } from '@/lib/agent/documents';
 import { agentHandoffHref } from '@/lib/agent/handoff';
@@ -57,8 +58,13 @@ export function ChatConversation({
         pendingMessage={turn.pendingMessage}
         canSend={access.canSend && !turn.pending && !runActive}
       />
-      {access.canSend ? null : <Callout tone="info">{access.message}</Callout>}
-      <FollowUpFailure turn={turn} actionId={detail.chat.action_id} canSend={access.canSend} />
+      {/* Notices keep the thread's reading column instead of the page's full width. */}
+      {!access.canSend || turn.failure ? (
+        <AgentThread>
+          {access.canSend ? null : <Callout tone="info">{access.message}</Callout>}
+          <FollowUpFailure turn={turn} actionId={detail.chat.action_id} canSend={access.canSend} />
+        </AgentThread>
+      ) : null}
     </>
   );
 }

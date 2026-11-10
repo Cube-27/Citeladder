@@ -254,7 +254,8 @@ These hold whatever a component looks like:
   option; a pending button keeps its label's box.
 - **The app has one component breakpoint**, `desktop:` (981px), and two shell
   breakpoints, `rail:` (900px) and `shell:` (1280px). Below 1280px the sidebar
-  is the 57px icon rail, and below 900px the navigation drawer behind the page
+  is the 56px icon rail (from 1280px the labelled column is 248px, and the
+  reader may drag its inner edge out to 480px, kept per browser), and below 900px the navigation drawer behind the page
   header's menu button (D41); `labelled:` styles the sidebar wherever its
   labels show. Below 1280px `AppGrid` halves and main-aside stack, the KPI layouts (quarters,
   fifths, pair, thirds) stay one row from `desktop:` and the `FilterBar` puts
@@ -294,7 +295,9 @@ distinguishes first use, no results, loading and error.
 
 ### Screen contracts
 
-**Overview.** Useful before any audit. Project identity and warnings lead; the
+**Overview.** Useful before any audit. One line with the site link and the
+last tracked run and its engines, then warnings, lead (the sidebar's switcher
+names the project); the
 widgets follow the project's saved layout (Project State with Track context;
 Movement; one Next action; where you're missing; ranked actions and report
 proof; Company facts) in a two-column grid, in the same DOM order at every
@@ -305,9 +308,15 @@ widget, so neither entering edit mode nor saving moves anything.
 fanouts. A backend token reaches a reader only through
 `lib/visibility/vocabulary.ts`; an unmapped token renders as nothing. Run
 bookkeeping stays out of the default view. One filter row, every control a
-question a customer would ask. Trends shows Visibility, Share of voice and
-Owned citation rate, one metric-selectable history chart and one competitor
-table; a change column with nothing comparable is omitted. Prompt results
+question a customer would ask, each trigger as wide as its longest option; the
+period and grouping show only for "All runs in period" and sit last, so
+nothing before them moves. Trends shows Visibility, Share of voice and
+Owned citation rate (the same names and whole percents as Overview, whose
+Rank is the table's Rank, unlike "Average position in answers"), one
+metric-selectable history chart and one competitor table; a change column
+with nothing comparable is omitted. With one measurement in the period the
+chart card ranks the brands as bars instead of plotting a single point; from
+two, each line is named at its end. Prompt results
 belong to the prompt row; Sources splits Domains and URLs on a segmented
 control; Query fanouts is one table under a Group by control.
 

@@ -1,23 +1,24 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { FileText } from 'lucide-react';
 
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
+import { SegmentedControl } from '@/components/ui/tabs';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { PageKindSelect } from '@/components/site-health/page-kind-select';
 import { PagesTable } from '@/components/site-health/pages-table';
 import { RootErrorsBlock } from '@/components/site-health/root-errors-block';
-import { warmQuery } from '@/lib/api/query-client';
 import { type PagesParams, type PagesSort } from '@/lib/api/site-health';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { SiteCrawl } from '@citeladder/contracts';
-import { Tabs } from '@/components/ui/tabs';
+import { stringUrlCodec, useUrlState, type UrlCodec } from '@/lib/navigation/url-state';
+import { PAGE_KINDS } from '@/lib/site-health/page-kinds';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import {
   CRAWL_STATES,
@@ -135,22 +136,91 @@ const DISCOVERED_COLUMNS: readonly DataTableColumn[] = [
   { key: 'source', label: 'Source', width: 'name' },
 ];
 
-/** The three server-backed page tabs (design mockup 713). */
-type TabKey = 'monitored' | 'all' | 'errors';
+/** The three server-backed page views (design mockup 713). */
+type ViewKey = 'monitored' | 'all' | 'errors';
 
-const TABS: ReadonlyArray<{ key: TabKey; label: string; params: PagesParams }> = [
-  { key: 'monitored', label: 'Monitored', params: { monitored: true } },
-  { key: 'all', label: 'All Discovered', params: {} },
-  { key: 'errors', label: 'Errors & Blocked', params: { status: 'error_or_blocked' } },
+const VIEWS: ReadonlyArray<{ key: ViewKey; label: string }> = [
+  { key: 'monitored', label: 'Monitored' },
+  { key: 'all', label: 'All Discovered' },
+  { key: 'errors', label: 'Errors & Blocked' },
 ];
 
+/** What each view asks the pages endpoint for. */
+const VIEW_PARAMS: Readonly<Record<ViewKey, PagesParams>> = {
+  monitored: { monitored: true },
+  all: {},
+  errors: { status: 'error_or_blocked' },
+};
+
+const VIEW_CODEC = stringUrlCodec<ViewKey>(
+  VIEWS.map((view) => view.key),
+  'monitored',
+);
+
+/** An unknown page kind in the address reads as no filter (all page kinds). */
+const PAGE_KIND_CODEC: UrlCodec<string> = {
+  parse: (raw) => PAGE_KINDS.find((pageKind) => pageKind === raw) ?? '',
+  serialize: (value) => value || null,
+};
+
 /**
- * The page browser (design mockup 713): three server-backed tabs, each its
+ * The address keys the page browser's view and page-kind filter live in. The
+ * screen clears them when the reader leaves the Pages tab, so each visit
+ * opens on Monitored and all page kinds.
+ */
+export const PAGES_INVENTORY_URL_KEYS = ['pages_view', 'page_kind'] as const;
+
+function usePagesInventoryState() {
+  const [view, setView] = useUrlState(PAGES_INVENTORY_URL_KEYS[0], VIEW_CODEC);
+  const [pageKind, setPageKind] = useUrlState(PAGES_INVENTORY_URL_KEYS[1], PAGE_KIND_CODEC);
+  return { view, setView, pageKind, setPageKind };
+}
+
+/**
+ * The page browser's controls for the page's control band (`PageShell`
+ * `controls`): the Monitored / All Discovered / Errors & Blocked switch as
+ * the band's view, then the page-kind filter. Both are server-backed and live
+ * in the address, so the band and the table below read one value. Until the
+ * crawl's pages are scored the switch is disabled (discovery lists every URL
+ * it admitted), but it keeps its place so nothing moves when scoring starts.
+ */
+export function usePagesInventoryControls({
+  active,
+  enabled,
+}: Readonly<{
+  /** True while the crawl is non-terminal: Monitored then reads "Audited so far". */
+  active: boolean;
+  /** False while the inventory is not yet the scored page browser. */
+  enabled: boolean;
+}>): FilterBarProps {
+  const { view, setView, pageKind, setPageKind } = usePagesInventoryState();
+  return {
+    view: (
+      <SegmentedControl
+        value={view}
+        onChange={(next) => setView(next)}
+        disabled={!enabled}
+        // The label names what the view shows, never which view is selected:
+        // the monitored view lists audited pages for the whole active run.
+        options={VIEWS.map((item) => ({
+          value: item.key,
+          label: active && item.key === 'monitored' ? 'Audited so far' : item.label,
+        }))}
+        ariaLabel="Page inventory views"
+      />
+    ),
+    filters: <PageKindSelect value={pageKind} onChange={(next) => setPageKind(next)} />,
+  };
+}
+
+/**
+ * The page browser (design mockup 713): three server-backed views, each its
  * own query restarting from its first page — filtering is server-side, never
- * a filter over the current client page.
+ * a filter over the current client page. The view switch and page-kind filter
+ * are drawn in the page's control band (`usePagesInventoryControls`).
  *
  * Used for the WHOLE audit lifecycle: while analysis runs the first page of
- * the active tab polls, so each row's status badge advances queued → running
+ * the active view polls, so each row's status badge advances queued → running
  * → completed and its scores fill in — the SAME rows, in place, until the run
  * settles. Finishing changes nothing structurally.
  */
@@ -181,44 +251,44 @@ function ScoredInventoryState({
   active: boolean;
   requestedSort: string | null;
 }>) {
-  const queryClient = useQueryClient();
-  const [tab, setTab] = useState<TabKey>('monitored');
-  // Shared page-kind filter (v2 P1): one server-backed value that composes
-  // with whichever tab is active — never a client filter over the page window.
-  const [pageKind, setPageKind] = useState('');
+  // The view and the shared page-kind filter (v2 P1) live in the address,
+  // drawn in the page's control band: server-backed values that compose with
+  // each other — never a client filter over the page window.
+  const { view, pageKind } = usePagesInventoryState();
   // Shared server-side ordering. Like the filter, it is part of the cursor
   // fingerprint, so changing it restarts paging.
   const [sort, setSort] = useState<PagesSort>(() => initialPagesSort(requestedSort));
 
-  const activeTab = TABS.find((t) => t.key === tab)!;
   // A recrawl pre-seeds every monitored URL as pending. Showing that full
   // pending window immediately makes the table appear frozen and then burst
   // all at once. The first active view instead asks the persisted projection
-  // for completed rows, so audited pages arrive progressively. The other tabs
+  // for completed rows, so audited pages arrive progressively. The other views
   // remain available, and the terminal Monitored view returns to the complete
   // monitored set.
-  const activeTabParams: PagesParams =
-    active && tab === 'monitored' ? { ...activeTab.params, status: 'completed' } : activeTab.params;
+  const activeViewParams: PagesParams =
+    active && view === 'monitored'
+      ? { ...VIEW_PARAMS.monitored, status: 'completed' }
+      : VIEW_PARAMS[view];
 
   // No timer here either: the screen's single crawl subscription invalidates
-  // the FIRST page of every tab when the crawl moved, so rows advance
+  // the FIRST page of every view when the crawl moved, so rows advance
   // queued → running → completed in place. Deeper cursor pages stay static so
   // rows under review don't shift as more pages finish scoring.
   //
-  // The tab, its filter (which changes from `status=completed` to the full
+  // The view, its filter (which changes from `status=completed` to the full
   // projection when the crawl terminalizes), the page kind and the sort are
   // the cursor's fingerprint: any change restarts from the first page during
   // the render that makes it, before a server-refused cursor can go out. A
-  // tab switch, page turn or filter change keeps the rows and the pager on
+  // view switch, page turn or filter change keeps the rows and the pager on
   // screen until the next page lands. No exact total: these are FILTERED
   // views and no persisted count describes a filtered set.
   const { page, table } = useCursorTableQuery({
     workspaceId: crawl.workspace_id,
     scopeId: crawl.id,
-    scope: [tab, activeTabParams, pageKind, sort],
+    scope: [view, activeViewParams, pageKind, sort],
     query: (request) =>
       siteHealthQueries.pages(crawl.workspace_id, crawl.id, {
-        ...activeTabParams,
+        ...activeViewParams,
         page_kind: pageKind || undefined,
         sort,
         ...request,
@@ -233,42 +303,14 @@ function ScoredInventoryState({
       headingLevel: 3,
     }),
   });
-  const prefetchTab = (nextTab: (typeof TABS)[number]) => {
-    warmQuery(
-      queryClient,
-      siteHealthQueries.pages(crawl.workspace_id, crawl.id, {
-        ...nextTab.params,
-        page_kind: pageKind || undefined,
-        sort,
-        limit: table.pageSize,
-      }),
-    );
-  };
-
   // B3 (SH-4): the root fetch's failed calls ride the pages response. They
-  // render ONLY on the Errors & Blocked tab, above the table, as a distinct
+  // render ONLY on the Errors & Blocked view, above the table, as a distinct
   // non-clickable block — the `error_or_blocked` filter keeps its real-page
   // semantics (a root failure never created a page row).
-  const rootErrors = tab === 'errors' ? (page?.root_errors ?? []) : [];
+  const rootErrors = view === 'errors' ? (page?.root_errors ?? []) : [];
 
   return (
     <Stack>
-      <Tabs
-        value={tab}
-        onValueChange={setTab}
-        onIntent={(value) => {
-          const item = TABS.find((candidate) => candidate.key === value);
-          if (item) prefetchTab(item);
-        }}
-        // The label names what the tab shows, never which tab is selected: the
-        // monitored tab lists audited pages for the whole active run.
-        items={TABS.map((item) => ({
-          value: item.key,
-          label: active && item.key === 'monitored' ? 'Audited so far' : item.label,
-        }))}
-        ariaLabel="Page inventory views"
-        controls={<PageKindSelect value={pageKind} onChange={setPageKind} />}
-      />
       <RootErrorsBlock errors={rootErrors} />
       <PagesTable
         pages={page?.items ?? []}
@@ -284,13 +326,7 @@ function ScoredInventoryState({
   );
 }
 
+/** The orders the table offers a header for: URL, else the default (status). */
 function initialPagesSort(value: string | null): PagesSort {
-  const supported: readonly PagesSort[] = [
-    'status',
-    'url',
-    'inbound',
-    'main_content_inbound',
-    'depth',
-  ];
-  return supported.includes(value as PagesSort) ? (value as PagesSort) : DEFAULT_PAGES_SORT;
+  return value === 'url' ? 'url' : DEFAULT_PAGES_SORT;
 }

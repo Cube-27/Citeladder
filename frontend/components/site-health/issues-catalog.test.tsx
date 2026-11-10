@@ -1,36 +1,22 @@
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vite-plus/test';
 import { act, screen, waitFor, within } from '@testing-library/react';
-import type { ReactElement } from 'react';
 import userEvent from '@testing-library/user-event';
 
 import { mswServer } from '@/test/msw-server';
-import { renderWithProviders } from '@/test/render';
 import { parseAgentHandoff } from '@/lib/agent/handoff';
-import { IssuesCatalog as ScopedIssuesCatalog } from './issues-catalog';
 import {
   CRAWL,
   ISSUE_A,
+  IssuesCatalog,
   URL_A,
   issue,
   issueDetail,
   occurrence,
+  renderIssues,
   summary,
 } from './issues-catalog.test-support';
 
-const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-
-function IssuesCatalog(props: Readonly<{ crawlId: string }>) {
-  return <ScopedIssuesCatalog workspaceId={WORKSPACE} {...props} />;
-}
-
-/**
- * The catalog's filters live in the address bar through
- * `lib/navigation/url-state.ts`. No router is registered in this file, so it
- * takes its `window.history` fallback — which is why the URL contract is
- * asserted against `window.location` and browser history is driven with the
- * real `history.back()`/`forward()`.
- */
 /** The severity-or-category menu's trigger, which names the current choice. */
 function classFilter(choice?: string) {
   return screen.getByRole('button', {
@@ -45,14 +31,6 @@ async function chooseClass(user: ReturnType<typeof userEvent.setup>, choice: str
 
 function currentUrl(): string {
   return window.location.pathname + window.location.search;
-}
-
-function renderIssues(
-  ui: ReactElement,
-  initialLocation = window.location.pathname + window.location.search,
-) {
-  window.history.replaceState(null, '', initialLocation);
-  return renderWithProviders(ui);
 }
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
@@ -330,7 +308,7 @@ describe('IssuesCatalog', () => {
     expect(screen.queryByRole('button', { name: /^Showing:/ })).not.toBeInTheDocument();
 
     window.history.back();
-    await waitFor(() => expect(classFilter('All (47)')).toBeInTheDocument());
+    await waitFor(() => expect(classFilter('All severities (47)')).toBeInTheDocument());
     expect(currentUrl()).not.toContain('severity=medium');
 
     window.history.forward();
@@ -403,9 +381,10 @@ describe('IssuesCatalog', () => {
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
     expect(await screen.findAllByText('WebSite schema is missing')).not.toHaveLength(0);
-    // Filter counts (tiles removed): All (47), Medium (23), AEO (17). The
-    // counts come from the API-owned summary, not a client re-count.
-    await userEvent.setup().click(classFilter('All (47)'));
+    // Filter counts (tiles removed): All severities (47), Medium (23), AEO
+    // (17). The counts come from the API-owned summary, not a client
+    // re-count. The closed trigger names what "All" ranges over.
+    await userEvent.setup().click(classFilter('All severities (47)'));
     expect(await screen.findByRole('menuitemradio', { name: 'Medium (23)' })).toBeInTheDocument();
     expect(screen.getByRole('menuitemradio', { name: 'AEO (17)' })).toBeInTheDocument();
     await userEvent.setup().keyboard('{Escape}');
@@ -416,7 +395,14 @@ describe('IssuesCatalog', () => {
     ).toBeInTheDocument();
     expect(screen.queryByText('Observed evidence')).not.toBeInTheDocument();
     expect(screen.queryByText('Reason: expected_schema_absent')).not.toBeInTheDocument();
-    expect(screen.getByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
+    // How to fix is one labelled line in the rail's header, not a card of its own.
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === 'P' &&
+          element.textContent === 'How to fix: Add a JSON-LD WebSite schema.',
+      ),
+    ).toBeInTheDocument();
     // The rule description states the PASSING expectation; under a failing
     // title it read as a contradiction, so neither the row nor the rail prints it.
     expect(
@@ -612,8 +598,11 @@ describe('IssuesCatalog', () => {
           element.textContent === '2 advisories · 94 occurrences · 50 pages',
       ),
     ).toBeInTheDocument();
-    await user.click(classFilter());
-    expect(await screen.findByRole('menuitemradio', { name: /^All/ })).toBeInTheDocument();
+    // Advisories have no severity, so their unfiltered choice ranges over categories.
+    await user.click(classFilter('All categories (2)'));
+    expect(
+      await screen.findByRole('menuitemradio', { name: 'All categories (2)' }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('menuitemradio', { name: /High/ })).not.toBeInTheDocument();
     expect(seen).toContain('advisory');
   });
@@ -664,7 +653,7 @@ describe('IssuesCatalog', () => {
     await user.click(screen.getByRole('button', { name: /WebSite schema is missing/ }));
     await waitFor(() => expect(currentUrl()).toContain(`issue=${ISSUE_A}`));
 
-    expect(await screen.findByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
+    expect(await screen.findByText('How to fix:')).toBeInTheDocument();
     const link = await screen.findByRole('link', { name: /Homepage/ });
     expect(link).toHaveAttribute('href', `/site/crawls/${CRAWL}/pages/${URL_A}`);
     // The affected page's v2 P1 type badge renders inside the row (scoped —
@@ -775,11 +764,14 @@ describe('IssuesCatalog', () => {
 
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
-    // Scoped to the badge row: the page-kind filter <select> also lists every
-    // type label as an <option>.
-    const affects = (await screen.findByText('Affects')).parentElement!;
-    expect(within(affects).getByText('Product')).toBeInTheDocument();
-    expect(within(affects).getByText('Category')).toBeInTheDocument();
+    // One line: the count, then the types it spans.
+    expect(
+      await screen.findByText(
+        (_, element) =>
+          element?.tagName === 'P' &&
+          element.textContent === '32 pages affected · Page types: Product, Category',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('omits the page-type row for an issue with no classified pages', async () => {
@@ -791,7 +783,10 @@ describe('IssuesCatalog', () => {
 
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
-    expect(await screen.findAllByText('WebSite schema is missing')).not.toHaveLength(0);
-    expect(screen.queryByText('Affects')).not.toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        (_, element) => element?.tagName === 'P' && element.textContent === '32 pages affected',
+      ),
+    ).toBeInTheDocument();
   });
 });

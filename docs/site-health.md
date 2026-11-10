@@ -703,6 +703,11 @@ The Website screen (`site-health-screen.tsx`) always opens on its Pages tab,
 the loading frame included, and never changes tab by itself: not while the
 crawl resolves, starts, runs or finishes. A tab the reader picks, or a
 `?tab=` link, stays selected ([decision](decisions.md#site-health-always-opens-on-pages)).
+Only the Overview tab draws the score cards; the Pages tab leads with one status
+line (crawl state, the three headline scores as numbers, pages discovered and
+analyzed). Its Monitored / All Discovered / Errors & Blocked switch and page-kind
+filter sit in the page's control band and live in the address (`pages_view`,
+`page_kind`), cleared when the reader changes tab.
 
 A URL's issue history lists only resolved issues: rules recorded on the page in
 the selected crawl's superseded analyses or the project's earlier crawls that its

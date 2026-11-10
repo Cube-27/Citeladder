@@ -81,7 +81,7 @@ const DETAIL = {
       skill_id: null,
       skill_source: null,
       evidence_refs: [],
-      steps: [],
+      steps: [{ kind: 'model', ordinal: 1 }],
       created_at: NOW,
     },
   ],

@@ -1,19 +1,29 @@
-import { useId, type ComponentPropsWithoutRef, type ReactNode, type Ref } from 'react';
+import {
+  useId,
+  useState,
+  type ComponentPropsWithoutRef,
+  type CSSProperties,
+  type ReactNode,
+  type Ref,
+} from 'react';
 import { ChevronsUpDown, Menu, type LucideIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { IconButton } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
+import { SidebarResizeHandle } from '@/components/ui/sidebar-resize-handle';
 import { Spinner } from '@/components/ui/spinner';
-import { Tooltip } from '@/components/ui/tooltip';
+import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
+import { useSidebarWidth } from '@/lib/sidebar-width';
 import { cn } from '@/lib/utils';
 
 /**
  * The signed-in frame (the system's AppShell and AppSidebar parts).
  *
  * From the `shell:` variant (1280px) the sidebar is the full `sidebar-width`
- * column with labels; from `rail:` (900px) to `shell:` it is a rail one
+ * column with labels, which the reader can widen by dragging its inner edge
+ * (stored per browser, `lib/sidebar-width.ts`); from `rail:` (900px) to `shell:` it is a rail one
  * control wide (decision D3) whose rows show only their icons and name
  * themselves in right-side tooltips, and the main gutter (`--content-gutter`)
  * narrows from 24 to 16. Below `rail:` there is no sidebar column: the page
@@ -34,20 +44,37 @@ import { cn } from '@/lib/utils';
  */
 const FRAME =
   'bg-paper text-ink shell:grid-cols-[var(--sidebar-width)_minmax(0,1fr)] rail:grid-cols-[var(--sidebar-rail-width)_minmax(0,1fr)] grid min-h-dvh grid-cols-[minmax(0,1fr)]';
-const SIDEBAR_COLUMN = 'border-line rail:block sticky top-0 hidden h-dvh min-w-0 border-r';
+// No rule between the sidebar and the page: the resize handle's line shows
+// only on hover, focus and drag.
+const SIDEBAR_COLUMN = 'rail:block z-sticky sticky top-0 hidden h-dvh min-w-0';
 const PAGE = 'mx-auto flex w-full max-w-[var(--content-max-width)] min-w-0 flex-col';
 const MAIN_INSET = '@container min-w-0 px-[var(--content-gutter)] pb-[var(--content-gutter)]';
+
+/**
+ * The reader's sidebar width as the one `--sidebar-width` the grid reads; at
+ * the default the frame sets nothing and the token stands. The app renders on
+ * the client, so the first frame already has the stored width (no jump).
+ */
+function useSidebarWidthStyle(): CSSProperties | undefined {
+  const width = useSidebarWidth();
+  return width === null ? undefined : ({ '--sidebar-width': `${width}px` } as CSSProperties);
+}
 
 export function AppShellFrame({
   sidebar,
   children,
 }: Readonly<{ sidebar: ReactNode; children: ReactNode }>) {
+  const sidebarId = useId();
+  const widthStyle = useSidebarWidthStyle();
   return (
-    <div data-app-surface="" className={FRAME}>
+    <div data-app-surface="" className={FRAME} style={widthStyle}>
       <a href="#main" className="skip-link">
         Skip to main content
       </a>
-      <aside className={SIDEBAR_COLUMN}>{sidebar}</aside>
+      <aside id={sidebarId} className={SIDEBAR_COLUMN}>
+        {sidebar}
+        <SidebarResizeHandle sidebarId={sidebarId} />
+      </aside>
       <main id="main" tabIndex={-1} className={MAIN_INSET}>
         <div className={PAGE}>{children}</div>
       </main>
@@ -64,8 +91,9 @@ export function AppShellPlaceholder({
   busy,
   children,
 }: Readonly<{ busy: boolean; children: ReactNode }>) {
+  const widthStyle = useSidebarWidthStyle();
   return (
-    <div className={FRAME} aria-busy={busy || undefined}>
+    <div className={FRAME} style={widthStyle} aria-busy={busy || undefined}>
       <div className={SIDEBAR_COLUMN} />
       <div className={MAIN_INSET}>
         <div className={PAGE}>{children}</div>
@@ -81,9 +109,13 @@ export function AppShellPlaceholder({
  * under it the controls (mode switch, then the palette field
  * `page-band-gap` below, as the page's tabs and filters are), then the
  * scrolling destinations and the account at the foot. There is no logo
- * (decision D11). In the rail the destinations do not scroll, so their
+ * (decision D11). Below the controls the column is GitHub-dense: 8 to the
+ * destinations, 4 between groups and to the account, so every Dashboard
+ * destination fits a 700px-tall window unscrolled; a shorter window scrolls
+ * the destinations. In the rail the destinations do not scroll, so their
  * tooltips are never clipped. In the navigation drawer the ident row leaves
- * room for the drawer's close button.
+ * room for the drawer's close button. The column is as wide as the reader
+ * made it (`--sidebar-width`), and every row follows that width.
  */
 export function SidebarFrame({
   ident,
@@ -92,18 +124,21 @@ export function SidebarFrame({
   foot,
 }: Readonly<{ ident: ReactNode; controls: ReactNode; nav: ReactNode; foot: ReactNode }>) {
   return (
-    <div className="flex h-full flex-col gap-[var(--page-section-gap)] px-3 pb-3">
+    <div className="flex h-full flex-col px-3 pb-2">
       <div
         data-top-bar=""
         className="border-line -mx-3 flex h-[var(--page-header-band)] shrink-0 items-center border-b px-3 in-data-[nav-drawer]:pe-12"
       >
         {ident}
       </div>
-      <div className="flex flex-col gap-[var(--page-band-gap)]">{controls}</div>
-      <div className="labelled:overflow-y-auto -mx-3 flex min-h-0 flex-1 flex-col gap-4 px-3 py-1">
+      <div className="mt-[var(--page-section-gap)] flex flex-col gap-[var(--page-band-gap)]">
+        {controls}
+      </div>
+      {/* The 4px inset keeps the first and last rows' focus rings inside the scroller. */}
+      <div className="labelled:overflow-y-auto -mx-3 mt-2 flex min-h-0 flex-1 flex-col gap-1 px-3 py-1">
         {nav}
       </div>
-      <div className="flex">{foot}</div>
+      <div className="mt-1 flex">{foot}</div>
     </div>
   );
 }
@@ -142,8 +177,14 @@ export function SidebarIdentButton({
     >
       {lead}
       <span className="labelled:flex hidden min-w-0 flex-1 flex-col">
-        <span className="type-control text-ink truncate">{title}</span>
-        {meta ? <span className="type-caption truncate">{meta}</span> : null}
+        <span data-sidebar-text="title" className="type-control text-ink truncate">
+          {title}
+        </span>
+        {meta ? (
+          <span data-sidebar-text="meta" className="type-caption truncate">
+            {meta}
+          </span>
+        ) : null}
       </span>
       <ChevronsUpDown
         className="text-ink-muted labelled:block hidden size-4 shrink-0"
@@ -153,36 +194,41 @@ export function SidebarIdentButton({
   );
 }
 
-/** A titled group of destinations; the title hides in the rail. */
+/**
+ * A titled group of destinations; the title hides in the rail. Rows touch
+ * (each is a full control tall, so its label keeps its own air) and the
+ * title is one caption line straight over them, so the groups stay dense.
+ */
 export function SidebarNavGroup({
   title,
   children,
 }: Readonly<{ title?: string | null; children: ReactNode }>) {
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex flex-col">
       {title ? (
-        <p className="type-caption labelled:flex hidden min-h-7 items-center px-3 font-medium">
+        <p className="type-caption labelled:flex hidden min-h-4 items-end px-3 font-medium">
           {title}
         </p>
       ) : null}
-      <ul className="flex flex-col gap-0.5">{children}</ul>
+      <ul className="flex flex-col">{children}</ul>
     </div>
   );
 }
 
 /**
- * A destination row's face, for the link that carries it: 36px, the label
- * in `ink-secondary`; the current row takes the selected-tab face (`surface`,
- * `shadow-xs`, `ink`) and its icon turns Flare, the app's one selected-nav
- * marker. In the rail the row is one control square. The row is at least
- * one control tall: a label that cannot fit (larger text spacing, WCAG
- * 1.4.12) wraps and the row grows, so no label is cut.
+ * A destination row's face, for the link that carries it: one control tall,
+ * the label in `ink-secondary`. The current row takes a light tint and a 2px
+ * Flare bar on its leading edge, and its icon turns Flare, the app's one
+ * selected-nav marker; the bar is painted over the row, so selecting a row
+ * moves nothing. In the rail the row is one control square. A label that
+ * cannot fit (larger text spacing, WCAG 1.4.12) wraps and the row grows, so
+ * no label is cut.
  */
 export function sidebarNavRowClasses(active: boolean, plain = false) {
   return cn(
-    'focus-ring group type-control labelled:justify-start labelled:px-3 flex min-h-[var(--control-md)] shrink-0 items-center justify-center gap-2 rounded-md transition-colors',
+    'focus-ring group type-control labelled:justify-start labelled:px-3 relative flex min-h-[var(--control-md)] shrink-0 items-center justify-center gap-2 rounded-md transition-colors',
     active
-      ? 'bg-surface text-ink shadow-xs'
+      ? 'bg-surface-sunken text-ink before:bg-accent before:absolute before:inset-y-1.5 before:start-0 before:w-0.5 before:rounded-full'
       : 'text-ink-secondary hover:bg-surface-sunken hover:text-ink',
     plain && 'labelled:flex hidden font-normal',
   );
@@ -313,7 +359,11 @@ export function SidebarRecordRows({ children }: Readonly<{ children: ReactNode }
   return <ul className="flex flex-col gap-0.5">{children}</ul>;
 }
 
-/** One record row: its title over a caption line, current when it is the page. */
+/**
+ * One record row: its title over a caption line, current when it is the page.
+ * When the sidebar cuts either line, hovering or focusing the row shows both
+ * in full.
+ */
 export function SidebarRecordRow({
   href,
   active,
@@ -322,17 +372,21 @@ export function SidebarRecordRow({
 }: Readonly<{ href: string; active: boolean; title: string; meta: ReactNode }>) {
   return (
     <li>
-      <Link
-        to={href}
-        aria-current={active ? 'page' : undefined}
-        className={cn(
-          sidebarNavRowClasses(active, true),
-          'h-auto flex-col items-stretch gap-0.5 py-2',
-        )}
-      >
-        <span className="truncate">{title}</span>
-        {meta}
-      </Link>
+      <SidebarTextTooltip>
+        <Link
+          to={href}
+          aria-current={active ? 'page' : undefined}
+          className={cn(
+            sidebarNavRowClasses(active, true),
+            'h-auto flex-col items-stretch gap-0.5 py-2',
+          )}
+        >
+          <span data-sidebar-text="title" className="truncate">
+            {title}
+          </span>
+          {meta}
+        </Link>
+      </SidebarTextTooltip>
     </li>
   );
 }
@@ -349,7 +403,66 @@ export function SidebarRecordMeta({
         Working…
       </span>
     );
-  return children ? <span className={textRole('caption', 'truncate')}>{children}</span> : null;
+  return children ? (
+    <span data-sidebar-text="meta" className={textRole('caption', 'truncate')}>
+      {children}
+    </span>
+  ) : null;
+}
+
+/** A row's line (`data-sidebar-text="title"` or `"meta"`) and its full text. */
+type SidebarTextLine = { line: string; text: string };
+
+/** The full text of a row's `data-sidebar-text` lines, one per line. */
+function SidebarTextLines({ lines }: Readonly<{ lines: readonly SidebarTextLine[] }>) {
+  return (
+    <span className="flex min-w-0 flex-col">
+      {lines.map(({ line, text }) => (
+        <span key={line} className="break-words">
+          {text}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/**
+ * The full text of a sidebar row whose lines the sidebar cut (a long chat
+ * title, a project's domain, an email), on hover and keyboard focus — the
+ * `ClampText` approach: the row's `data-sidebar-text` lines are measured only
+ * as the tooltip is about to open, and it opens only when one of them is cut.
+ * `inRail` also opens it in the rail, where the row shows no text at all.
+ * The row's accessible name already holds the text, so it is not repeated as
+ * a description.
+ */
+export function SidebarTextTooltip({
+  inRail = false,
+  children,
+}: Readonly<{ inRail?: boolean; children: ReactNode }>) {
+  const [lines, setLines] = useState<readonly SidebarTextLine[]>([]);
+  const openWhenCut = (trigger: HTMLElement) => {
+    const parts = [...trigger.querySelectorAll('[data-sidebar-text]')];
+    if (!(inRail && isRail(trigger)) && !parts.some(isTextCut)) return false;
+    const next = parts
+      .map((part) => ({
+        line: part.getAttribute('data-sidebar-text') ?? '',
+        text: part.textContent?.trim() ?? '',
+      }))
+      .filter(({ text }) => text !== '');
+    if (next.length === 0) return false;
+    setLines(next);
+    return true;
+  };
+  return (
+    <Tooltip
+      content={<SidebarTextLines lines={lines} />}
+      side="right"
+      describe={false}
+      shouldOpen={openWhenCut}
+    >
+      {children}
+    </Tooltip>
+  );
 }
 
 /** Names a row in the rail; above it the row's own label does, so it never opens. */

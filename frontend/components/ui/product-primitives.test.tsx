@@ -307,6 +307,20 @@ describe('FilterBar and FilterTrigger', () => {
     expect(screen.getByRole('button', { name: 'Surface: ChatGPT' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Filter\W+2 active$/ })).toBeInTheDocument();
   });
+  it('sizes a trigger to its options without adding them to its text', () => {
+    render(
+      <FilterTrigger
+        label="Surface"
+        value="ChatGPT"
+        hideLabel
+        sizeTo={['All surfaces', 'ChatGPT', 'Google AI Overviews']}
+      />,
+    );
+    const trigger = screen.getByRole('button', { name: 'Surface: ChatGPT' });
+    // The longest option is reserved as generated content, never readable text.
+    expect(trigger.textContent).toBe('Surface: ChatGPT');
+    expect(trigger.querySelector('[data-size="Google AI Overviews"]')).not.toBeNull();
+  });
 });
 
 describe('Pager', () => {
