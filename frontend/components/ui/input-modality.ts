@@ -16,7 +16,7 @@
  * A shortcut (Ctrl, Alt or Meta held, as when switching tabs) is not keyboard
  * navigation and changes nothing.
  */
-export type InputModality = 'keyboard' | 'pointer';
+type InputModality = 'keyboard' | 'pointer';
 
 let modality: InputModality | null = null;
 /** True from the window losing focus until the reader's next key or press. */
@@ -44,8 +44,8 @@ function onWindowBlur() {
   away = true;
 }
 
-/** Starts tracking (idempotent); every module that reads the modality calls it. */
-export function trackInputModality() {
+/** Starts tracking once, when this module first loads. */
+function trackInputModality() {
   if (installed || typeof window === 'undefined') return;
   installed = true;
   // Capture, so a handler that stops propagation cannot hide an input.
