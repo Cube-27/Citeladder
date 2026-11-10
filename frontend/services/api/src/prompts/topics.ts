@@ -406,3 +406,36 @@ export async function resolveTopicsByName(
   }
   return resolved;
 }
+
+/**
+ * One topic of the project with its active prompts in text order, or null
+ * when the project has no such topic. Both reads name the workspace and the
+ * project, so a foreign id reads as absent.
+ */
+export async function topicWithPrompts(
+  db: Database,
+  { workspaceId, projectId }: { workspaceId: string; projectId: string },
+  topicId: string,
+) {
+  const topic = await db
+    .selectFrom('topics')
+    .select(['id', 'name'])
+    .where('workspace_id', '=', workspaceId)
+    .where('project_id', '=', projectId)
+    .where('id', '=', topicId)
+    .executeTakeFirst();
+  if (!topic) return null;
+  const prompts = await db
+    .selectFrom('prompts')
+    .innerJoin('prompt_sets as set', 'set.id', 'prompts.prompt_set_id')
+    .select(['prompts.id', 'prompts.text'])
+    .where('prompts.workspace_id', '=', workspaceId)
+    .where('set.workspace_id', '=', workspaceId)
+    .where('set.project_id', '=', projectId)
+    .where('prompts.topic_id', '=', topic.id)
+    .where('prompts.status', '=', P.status_active)
+    .orderBy('prompts.text')
+    .orderBy('prompts.id')
+    .execute();
+  return { ...topic, prompts };
+}

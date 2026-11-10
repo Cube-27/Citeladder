@@ -12,6 +12,7 @@ import {
   type ActionListQuery,
 } from '@/components/agent/action-queue';
 import { ActionPriorityBadge } from '@/components/agent/action-status-badge';
+import { AnalyzePageButton } from '@/components/agent/analyze-page-dialog';
 import { ListScreen } from '@/components/layout/page-shell';
 import { AllFilters } from '@/components/ui/all-filters';
 import { Button } from '@/components/ui/button';
@@ -39,14 +40,17 @@ import { actionGroupSchema } from '@citeladder/contracts/actions';
  * pages, mentions elsewhere and your products. Each group shows its top
  * Actions by priority and "Show all N", which narrows the list to that group
  * and pages it. Every filter sits in one All filters menu (AS6) and is URL
- * state.
+ * state. Analyze a page in the header turns a content page into an Action (CO6).
  */
 export function ActionsScreen() {
   const { workspaceId, projectId } = useProjectScope();
   const filters = useActionFilters();
   const scope = { workspaceId, projectId };
   return (
-    <ListScreen controls={{ filters: <AllFilters filters={filters.definitions} /> }}>
+    <ListScreen
+      actions={<AnalyzePageButton />}
+      controls={{ filters: <AllFilters filters={filters.definitions} /> }}
+    >
       {filters.group ? (
         <GroupList {...scope} query={filters.query} group={filters.group} />
       ) : (

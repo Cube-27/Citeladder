@@ -92,6 +92,19 @@ export const contentOptimization = {
     page_local_scope: 'page',
   },
   /**
+   * Analyze a page on the Actions screen (CO6, phase 2 PR 4): the workflow its
+   * chat starts, the chat's first message, and how many matching content
+   * pages the picker lists at once (it searches for the rest).
+   */
+  analyze_page: {
+    workflow_id: 'optimize_page',
+    /** `{topic}` is the chosen topic's name; the prompts reach the Agent as context. */
+    message: 'Improve this page so AI answers cite it for prompts about {topic}.',
+    page_list_max: 50,
+    /** Characters of the picker's search: a page address or title fragment. */
+    search_max_chars: 200,
+  },
+  /**
    * A page document's caps equal the Agent's document caps, so `edit_document`
    * can always save a fetched page. A page whose Markdown is longer is
    * `unsupported` rather than cut.

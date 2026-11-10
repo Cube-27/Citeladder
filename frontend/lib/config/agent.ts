@@ -37,6 +37,8 @@ export const ACTIONS_GROUP_PREVIEW_ROWS = 5;
 export const AGENT_TOP_ACTIONS = 3;
 /** Debounce for the sidebar chat search. */
 export const AGENT_CHAT_SEARCH_DEBOUNCE_MS = 250;
+/** Debounce for Analyze a page's page search, which the server answers. */
+export const ANALYZE_PAGE_SEARCH_DEBOUNCE_MS = 250;
 /**
  * Actions the composer's `@` menu matches against, loaded when the menu first
  * opens. The table's first page is too few to find an Action by name.
