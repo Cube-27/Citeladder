@@ -24,7 +24,8 @@ function boundedText(value: string) {
 function ChangeValue({ value, depth = 0 }: Readonly<{ value: unknown; depth?: number }>) {
   if (value === null || value === undefined || value === '') return <>Not present</>;
   if (Array.isArray(value)) {
-    if (!value.length) return <>Not present</>;
+    // An observed empty list is not an absent value.
+    if (!value.length) return <>0 items</>;
     if (depth >= CHANGE_EVIDENCE_DEPTH_LIMIT)
       return (
         <>

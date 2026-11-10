@@ -1,6 +1,6 @@
-import { screen, within } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import type { UseQueryResult } from '@tanstack/react-query';
-import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
+import { describe, expect, it, vi } from 'vite-plus/test';
 
 import { ApiError } from '@/lib/api/errors';
 import type { SurfaceRates, Visibility, VisibilityTrendPoint } from '@citeladder/contracts';
@@ -80,8 +80,6 @@ function renderTrends(visibilityQuery: UseQueryResult<Visibility | null>, query 
 }
 
 describe('Visibility trends', () => {
-  afterEach(() => window.history.replaceState(null, '', '/'));
-
   it('says nothing is measured for a selection with no measured run', () => {
     renderTrends({ data: null, isError: false } as UseQueryResult<Visibility | null>);
     expect(screen.getByText('No measured run for this selection yet.')).toBeVisible();
@@ -112,52 +110,14 @@ describe('Visibility trends', () => {
     expect(screen.queryByText('No measured run for this selection yet.')).toBeNull();
   });
 
-  it('ranks the brands of a single run instead of plotting a one-point line', () => {
+  it('shows no Over time card for a single period, only the table', () => {
     renderTrends(
       { data: selected, isError: false } as UseQueryResult<Visibility | null>,
       loaded([point('2026-11-03T00:00:00Z', 0.31)]),
     );
-    const bars = within(screen.getByRole('list', { name: 'Visibility by brand' }));
-    // Highest first, your brand marked, an unmeasured brand last and never zero.
-    expect(bars.getAllByRole('meter').map((meter) => meter.getAttribute('aria-valuetext'))).toEqual(
-      ['60%', '31%', 'Not measured'],
-    );
-    expect(bars.getByText('Acme · You')).toBeVisible();
-    expect(screen.getByText(/^One run in this period .*after a second run\.$/u)).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Brand and competitors' })).toBeVisible();
+    expect(screen.queryByText('Over time')).toBeNull();
     expect(screen.queryByRole('group', { name: /over time/u })).toBeNull();
-  });
-
-  it('says a single pooled period holds several runs and needs a second period', () => {
-    renderTrends(
-      { data: selected, isError: false } as UseQueryResult<Visibility | null>,
-      loaded([{ ...point('2026-11-03T00:00:00Z', 0.31), run_count: 3 }]),
-    );
-    expect(
-      screen.getByText(/^One period with 3 runs .*A trend line appears with a second period\.$/u),
-    ).toBeVisible();
-    expect(screen.queryByText(/after a second run/u)).toBeNull();
-  });
-
-  it('keeps a focused brand the single point did not measure as a not-measured row', () => {
-    const only = { ...point('2026-11-03T00:00:00Z', 0.31), rankings: [rankings[0]] };
-    // The focused brand is read from the live address.
-    window.history.replaceState(null, '', '/visibility?brand=Kmart+Australia');
-    render(
-      <VisibilityTrends
-        query={loaded([only as VisibilityTrendPoint])}
-        visibilityQuery={{ data: selected, isError: false } as UseQueryResult<Visibility | null>}
-        engineFilter="all"
-        surfaceRatesQuery={{ data: undefined } as unknown as UseQueryResult<SurfaceRates>}
-        surfaceEngine={null}
-        hasRuns
-        isFiltered={false}
-      />,
-    );
-    const bars = within(screen.getByRole('list', { name: 'Visibility by brand' }));
-    expect(bars.getAllByRole('meter').map((meter) => meter.getAttribute('aria-valuetext'))).toEqual(
-      ['Not measured'],
-    );
-    expect(bars.getByText('Kmart Australia')).toBeVisible();
   });
 
   it('keeps the line chart, each line named at its end, from the second run on', () => {
@@ -173,7 +133,8 @@ describe('Visibility trends', () => {
       />,
     );
     expect(screen.getByRole('group', { name: /^Visibility over time/u })).toBeVisible();
-    expect(screen.queryByRole('list', { name: 'Visibility by brand' })).toBeNull();
+    expect(screen.getByText('Over time')).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Brand and competitors' })).toBeVisible();
     expect(
       [...container.querySelectorAll('[data-line-labels] text')].map((label) => label.textContent),
     ).toEqual(expect.arrayContaining(['You', 'Kmart Australia']));

@@ -2,10 +2,10 @@
 
 import type { UseQueryResult } from '@tanstack/react-query';
 import { FilterChoice } from '@/components/ui/filter-bar';
-import { Meter } from '@/components/ui/meter';
 import { Callout } from '@/components/ui/callout';
 import { Button } from '@/components/ui/button';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { AppGrid } from '@/components/ui/app-grid';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Delta } from '@/components/ui/delta';
 import { Stack } from '@/components/ui/layout';
@@ -32,7 +32,6 @@ import {
   toChartPoints,
   toCompetitorSeries,
   toNamedChartPoints,
-  toRunComparison,
 } from '@/lib/visibility/trends';
 import { observationLabel } from '@/lib/visibility/vocabulary';
 import { coverageSummary } from '@/lib/visibility/coverage';
@@ -102,6 +101,9 @@ export function VisibilityTrends({
   // unrecognized name falls back to the full roster.
   const focusedBrand =
     focused !== null && selected.rankings.some((row) => row.name === focused) ? focused : null;
+  const rankingTable = (
+    <RankingRowsTable rows={selected.rankings} onSelect={setFocused} selectedName={focusedBrand} />
+  );
   return (
     <Stack gap="workspace" aria-busy={visibilityQuery.isFetching}>
       <PooledSelectionNote selected={selected} />
@@ -112,21 +114,24 @@ export function VisibilityTrends({
           an unfiltered cross-surface view would invite reading them as the
           whole product's numbers. */}
       {surfaceEngine ? <SurfaceRatesPanel query={surfaceRatesQuery} /> : null}
-      {/* Each takes the full row: beside the chart the table's spelled-out
-          metric columns left the Brand column a few letters wide. */}
-      <MeasurementHistory
-        query={query}
-        metric={metric}
-        setMetric={setMetric}
-        focused={focusedBrand}
-        onClearFocus={() => setFocused(null)}
-        brandName={selected.rankings.find((row) => row.is_brand)?.name ?? null}
-      />
-      <RankingRowsTable
-        rows={selected.rankings}
-        onSelect={setFocused}
-        selectedName={focusedBrand}
-      />
+      {/* The trend sits beside the table once there is one to draw (owner,
+          2026-11-10): a single period has no line, so the table takes the
+          row. A failed history read keeps its card, so it can be retried. */}
+      {hasTrend(query) ? (
+        <AppGrid layout="main-aside">
+          {rankingTable}
+          <MeasurementHistory
+            query={query}
+            metric={metric}
+            setMetric={setMetric}
+            focused={focusedBrand}
+            onClearFocus={() => setFocused(null)}
+            brandName={selected.rankings.find((row) => row.is_brand)?.name ?? null}
+          />
+        </AppGrid>
+      ) : (
+        rankingTable
+      )}
       <EngineComparison
         visibility={selected}
         filter={engineFilter}
@@ -136,6 +141,11 @@ export function VisibilityTrends({
       />
     </Stack>
   );
+}
+
+/** Whether the history has a line to draw (two periods or more), or a failure to report. */
+function hasTrend(query: UseQueryResult<VisibilityTrendPoint[], unknown>): boolean {
+  return query.isError || (query.data?.length ?? 0) > 1;
 }
 
 /**
@@ -299,14 +309,12 @@ type HistoryChartProps = Readonly<{
   busy: boolean;
 }>;
 
-/** The history card's content: the read's state, the one-run comparison or the line chart. */
+/** The history card's content: the failed read, or the line chart. */
 function MeasurementHistoryBody({
   query,
   ...chart
 }: Omit<HistoryChartProps, 'points' | 'busy'> &
   Readonly<{ query: UseQueryResult<VisibilityTrendPoint[], unknown> }>) {
-  const points = query.data ?? [];
-  const onlyPoint = points.length === 1 ? points[0] : undefined;
   if (query.isError)
     return (
       <ReadError
@@ -316,23 +324,7 @@ function MeasurementHistoryBody({
         pending={query.isFetching}
       />
     );
-  if (query.isPending) return <QueryState kind="loading" label="Loading measurement history…" />;
-  if (!points.length)
-    return <QueryState kind="empty" inline message="No measurements in this period yet." />;
-  // One measurement has no line to draw: an empty plot with a few stacked
-  // dots. Compare the brands in it instead, in the same card.
-  if (onlyPoint)
-    return (
-      <RunComparison
-        point={onlyPoint}
-        metric={chart.metric}
-        metricLabel={chart.metricLabel}
-        focused={chart.focused}
-        brandName={chart.brandName}
-        timeZone={chart.timeZone}
-      />
-    );
-  return <HistoryLineChart points={points} busy={query.isFetching} {...chart} />;
+  return <HistoryLineChart points={query.data ?? []} busy={query.isFetching} {...chart} />;
 }
 
 function HistoryLineChart({
@@ -378,66 +370,4 @@ function HistoryLineChart({
       />
     </Stack>
   );
-}
-
-/**
- * The only measurement in the period, ranked: one bar per tracked brand on the
- * 0–100 scale, your brand in the accent and named "You". A focused brand is
- * shown alone, as the line chart would plot it alone; a focused brand the
- * point did not measure stays on screen as a not-measured row rather than
- * leaving the list empty.
- */
-function RunComparison({
-  point,
-  metric,
-  metricLabel,
-  focused,
-  brandName,
-  timeZone,
-}: Readonly<{
-  point: VisibilityTrendPoint;
-  metric: (typeof VISIBILITY_METRICS)[number]['value'];
-  metricLabel: string;
-  focused: string | null;
-  brandName: string | null;
-  timeZone: string;
-}>) {
-  const measuredRows = toRunComparison(point, metric).filter(
-    (row) => focused === null || row.name === focused,
-  );
-  const rows =
-    focused !== null && measuredRows.length === 0
-      ? [{ name: focused, isBrand: focused === brandName, value: null }]
-      : measuredRows;
-  return (
-    <Stack gap="compact">
-      <Stack as="ul" gap="compact" aria-label={`${metricLabel} by brand`}>
-        {rows.map((row, index) => (
-          // Two tracked brands may share a name; the ranked position is unique.
-          <li key={`${index}:${row.name}`}>
-            <Meter
-              label={row.isBrand ? `${row.name} · You` : row.name}
-              value={row.value}
-              valueLabel={formatWholePercent(row.value)}
-              tone={row.isBrand ? 'accent' : 'ink'}
-            />
-          </li>
-        ))}
-      </Stack>
-      <p className={textRole('caption')}>{singlePointCaption(point, timeZone)}</p>
-    </Stack>
-  );
-}
-
-/**
- * A pooled point (a day, week or month) can hold several runs, so "after a
- * second run" would be wrong for it: the line needs a second period. A point
- * without `run_count` is one run.
- */
-function singlePointCaption(point: VisibilityTrendPoint, timeZone: string): string {
-  const date = formatPointDate(point.completed_at, timeZone);
-  const runs = point.run_count ?? 1;
-  if (runs > 1)
-    return `One period with ${runs} runs (${date}). A trend line appears with a second period.`;
-  return `One run in this period (${date}). A trend line appears after a second run.`;
 }

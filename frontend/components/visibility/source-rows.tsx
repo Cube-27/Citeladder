@@ -95,8 +95,9 @@ function domainColumns(
   return [
     // Every figure takes the `figure` role and the source is the one flexible
     // column; the hint sits on the header button, so a figure's width holds
-    // its label. Below the `lg` width the table scrolls behind the pinned
-    // source rather than squeezing it.
+    // its label. Below the `xl` width the table scrolls behind the pinned
+    // source rather than squeezing it: at `lg` the source kept too little
+    // room for a domain on one line.
     { key: 'source', label: 'Source', sort: sortProps(sort, onSort, 'key') },
     {
       key: 'type',
@@ -195,7 +196,7 @@ export function DomainTable({
     <DataTable
       label="Cited domains"
       columns={domainColumns(sort, onSort, retrieval, engines.label)}
-      minWidth="lg"
+      minWidth="xl"
       pinFirstColumn
       rowCount={rows.length}
       {...frame}

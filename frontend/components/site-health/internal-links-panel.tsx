@@ -281,11 +281,7 @@ function LinksTable({
           </TableCell>
           <TableCell>{link.anchor}</TableCell>
           <TableCell className="whitespace-nowrap">
-            {link.action_status && link.action_status in ACTION_STATUS_LABEL ? (
-              <ActionStatusBadge status={link.action_status as ActionStatus} />
-            ) : (
-              <NoAction />
-            )}
+            <LinkActionStatus status={link.action_status} />
           </TableCell>
           <TableCell>
             <Button
@@ -300,6 +296,13 @@ function LinksTable({
       ))}
     </DataTable>
   );
+}
+
+/** The link's Action status; a status this build does not know is not "no Action". */
+function LinkActionStatus({ status }: Readonly<{ status: string | null }>) {
+  if (status === null) return <NoAction />;
+  if (status in ACTION_STATUS_LABEL) return <ActionStatusBadge status={status as ActionStatus} />;
+  return <>Unknown status</>;
 }
 
 /**

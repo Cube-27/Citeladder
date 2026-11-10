@@ -129,10 +129,11 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
 }
 
 /** What the table groups, then why coverage fell short when the crawl said why. */
-function pageKindDescription(reasons: readonly string[]): string {
+function pageKindDescription(coverage: CoverageState, reasons: readonly string[]): string {
   const lead = 'Pages grouped by what each one is for, in this crawl.';
   const named = reasons.filter((reason) => reason in COVERAGE_REASON_LABELS);
-  if (named.length === 0) return lead;
+  // A complete crawl carries a completion reason, not a limit.
+  if (coverage === 'complete' || named.length === 0) return lead;
   const why = named.map((reason) => COVERAGE_REASON_LABELS[reason]).join('; ');
   return `${lead} Why coverage is limited: ${why}.`;
 }
@@ -159,7 +160,7 @@ function PageKindTable({
   return (
     <DataTable
       title="Page kinds"
-      description={pageKindDescription(reasons)}
+      description={pageKindDescription(coverage, reasons)}
       toolbar={{
         actions: (
           <Badge variant="status" value={coverage === 'complete' ? 'success' : 'warning'}>

@@ -136,7 +136,7 @@ describe('SiteHealthScreen — Pages tab reads', () => {
     expect(reads).toEqual(['true|status|10']);
   });
 
-  it('draws the page views and page-kind filter in the control band, only on Pages', async () => {
+  it('draws the page views and page-kind filter from the address, only on Pages', async () => {
     const user = userEvent.setup();
     setSearch('tab=pages&pages_view=errors&page_kind=faq');
     mockRoutes();

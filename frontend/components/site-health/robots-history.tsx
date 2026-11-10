@@ -52,8 +52,9 @@ export function RobotsHistory({
   });
   // A new page offers different observations, so the comparison starts over.
   const pageKey = cursor.cursor ?? 'first';
-  const [stored, setSelection] = useState<Selection>({ page: pageKey, before: '', after: '' });
-  const selected = stored.page === pageKey ? stored : { page: pageKey, before: '', after: '' };
+  const [selection, setSelection] = useState<Selection>({ page: pageKey, before: '', after: '' });
+  const selected =
+    selection.page === pageKey ? selection : { page: pageKey, before: '', after: '' };
   const snapshots = new Map(page?.snapshots.map((snapshot) => [snapshot.id, snapshot]));
   const versions = (page?.items ?? []).flatMap((item) => {
     const snapshot = item.robots.robots_snapshot_id

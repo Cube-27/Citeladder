@@ -12,10 +12,7 @@ import { ListScreen, RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Inline, Stack } from '@/components/ui/layout';
 import { SiteHealthDashboardLayout } from '@/components/site-health/dashboard-layout';
-import {
-  PAGES_INVENTORY_URL_KEYS,
-  usePagesInventoryControls,
-} from '@/components/site-health/inventory-section';
+import { PAGES_INVENTORY_URL_KEYS } from '@/components/site-health/inventory-section';
 import { AeoReadinessPanel } from '@/components/site-health/aeo-readiness-panel';
 import { ArchitecturePanel } from '@/components/site-health/architecture-panel';
 import { ChangesPanel } from '@/components/site-health/changes-panel';
@@ -77,11 +74,6 @@ function SiteHealthContent({
     clearKeys: ['cursor', 'sort', ...PAGES_INVENTORY_URL_KEYS],
   });
   const blocking = projectBlockingState(screen);
-  // The Pages tab's view switch and page-kind filter: the page's control band.
-  const pagesControls = usePagesInventoryControls({
-    active,
-    enabled: screen.inventoryMode === 'scored',
-  });
   const mutationsAllowed = !entitlementQuery.isError;
   // Internal links' search, filters and header actions act on the analysis its panel draws.
   const links = useInternalLinksBands({
@@ -90,12 +82,7 @@ function SiteHealthContent({
     canAnalyze: mutationsAllowed,
   });
   const linksActions = tab === 'internal-links' ? links.actions : null;
-  const controls = tabControls({
-    tab,
-    blocking,
-    pages: crawl ? pagesControls : undefined,
-    links: links.controls,
-  });
+  const controls = tabControls({ tab, blocking, links: links.controls });
   const refreshFailures = !blocking ? <SiteHealthRefreshFailures screen={screen} /> : null;
   // Each tab's header carries its own export: pages on Pages, links on Internal
   // links. The links export reads the saved analysis, so it stays when the
@@ -160,24 +147,23 @@ function SiteHealthContent({
 }
 
 /**
- * The selected tab's control band. Pages and Internal links hold the band
- * through the first load, so their work starts on the same line once it lands.
+ * The selected tab's control band: Internal links alone has one (Pages keeps
+ * its view switch and filter above its table). It holds the band through the
+ * first load, so its work starts on the same line once it lands.
  */
 function tabControls({
   tab,
   blocking,
-  pages,
   links,
 }: Readonly<{
   tab: AnalysisTab;
   blocking: BlockingState | null;
-  pages: FilterBarProps | undefined;
   links: FilterBarProps | undefined;
 }>): FilterBarProps | undefined {
-  if (tab !== 'pages' && tab !== 'internal-links') return undefined;
+  if (tab !== 'internal-links') return undefined;
   if (blocking?.kind === 'loading') return RESERVED_CONTROLS;
   if (blocking) return undefined;
-  return tab === 'pages' ? pages : links;
+  return links;
 }
 
 /** What stands in for the analysis: the one first-load wait, or a state that replaces the page. */
