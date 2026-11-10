@@ -3,10 +3,18 @@ title: 'Changelog'
 description: 'Product changes and what they mean for your workflow.'
 group: 'Updates'
 order: 400
-updated: '2026-11-03'
+updated: '2026-11-10'
 ---
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
+
+## November 10, 2026: Content optimization
+
+A new **Content** screen, Content optimization, sits directly below **Actions** with its own count. After each visibility run and crawl, CiteLadder groups the titles of competitor and publisher pages that answers cite for your prompts into content angles by topic, and matches each angle to at most one of your crawled content pages. An angle cited often enough across enough sites becomes work: on your matching page when that page is not cited for it, or on a planned page when no page matches. Each row shows the lead angle, its prompts and the sites and competitors cited for it, and an Action's **Why this matters** lists the cited pages and prompts behind it. **Write this page** and **Work on this** open the Agent with the matching workflow. Content pages and their Site Health findings now appear here and no longer in Actions; their issues still show in **Issues**. Finding the angles uses no credits.
+
+**For your team:** run a visibility audit and a Site Health crawl, then open **Content** to see the angles competitors and publishers are cited for and you are not.
+
+[Content optimization](/content-optimization/)
 
 ## November 3, 2026: A faster app and quicker sign-in
 

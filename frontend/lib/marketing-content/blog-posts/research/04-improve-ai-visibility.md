@@ -149,7 +149,7 @@ If a sample is small or selected for convenience, say so. Readers can still use 
 
 ## Step 6: How do you consolidate overlapping and outdated pages?
 
-Decide which page is the primary resource for each question, and merge or retire duplicates only after checking their existing performance. For a bounded brief, proposed page edit or internal-link plan, explore [Content Briefs](/platform/content-briefs). These Agent workflows prepare work for review and are not included in the current public trial.
+Decide which page is the primary resource for each question, and merge or retire duplicates only after checking their existing performance. To see the content angles AI answers cite competitor and publisher pages for and your site lacks, use [Content Optimization](/platform/content-optimization). For a bounded brief, proposed page edit or internal-link plan, ask the [AI Agent](/platform/agents). These Agent workflows prepare work for review and are not included in the current public trial.
 
 When several pages answer the same question with conflicting details, check traffic, backlinks, user needs and redirect targets before consolidating.
 

@@ -1,8 +1,9 @@
 import { Badge } from '@/components/ui/badge';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Citation } from '@/components/ui/citation';
+import { pluralCount } from '@/lib/format';
 
-import { ACTION_STATUS_TONE, ACTIONS, SHELF, type ActionStatus } from './demo-data';
+import { ACTION_STATUS_TONE, ACTIONS, CONTENT_WORK, SHELF, type ActionStatus } from './demo-data';
 import { Vignette, VignetteRows, fourRows } from './screen-vignette';
 
 const quoted = (kind: string) => kind === 'Prompt' || kind === 'Search query';
@@ -34,6 +35,36 @@ export function ScreenActions() {
           secondary: `${row.kind} · ${row.approach}`,
           extra: <span className="cl-vig-muted">{row.priority}</span>,
           value: <StatusBadge status={row.status} />,
+        }))}
+      />
+    </Vignette>
+  );
+}
+
+/**
+ * Content optimization: content pages to improve and pages to write, each
+ * with its lead angle, the angle's prompts and the sites and competitors
+ * cited for it. Counts from evidence, never a score.
+ */
+export function ScreenContentOptimization() {
+  return (
+    <Vignette
+      title="Content optimization"
+      meta="acme.com · content pages and planned pages"
+      badge={<Badge>{`${CONTENT_WORK.length} open`}</Badge>}
+    >
+      <VignetteRows
+        label="Content work, highest priority first"
+        rows={fourRows(CONTENT_WORK, (row) => ({
+          key: row.page,
+          label: row.page,
+          secondary: row.planned ? 'Planned page' : `Page · ${row.angle}`,
+          extra: (
+            <span className="cl-vig-muted">
+              {`${pluralCount(row.sites, 'site')} · ${pluralCount(row.competitors, 'competitor')}`}
+            </span>
+          ),
+          value: pluralCount(row.prompts, 'prompt'),
         }))}
       />
     </Vignette>

@@ -3,7 +3,7 @@ title: 'Actions and measurement'
 description: 'Choose one target, review its supporting findings, and follow the work through to later evidence.'
 group: 'Improve with Agent'
 order: 210
-updated: '2026-11-04'
+updated: '2026-11-10'
 ---
 
 An Action groups work around a target: an owned page, planned page, earned-source page, product, category, search query or visibility prompt. Multiple findings can support the same Action.
@@ -12,7 +12,7 @@ This gives your team one place to understand the diagnosis, start Agent work and
 
 ## Choose what to work on
 
-Open **Agent → Actions**. Use status and target filters to narrow the list, then inspect an Action's detail.
+Open **Agent → Actions**. Use status and target filters to narrow the list, then inspect an Action's detail. Work on your content pages, and on pages to create for a content gap, is listed in [Content optimization](/content-optimization/).
 
 Read the diagnosis, contributing evidence, recommended approach and what to avoid. The priority comes from CiteLadder's deterministic rules. An Agent explanation does not replace that ranking or create new measured facts.
 

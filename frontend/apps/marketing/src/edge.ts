@@ -12,13 +12,18 @@ function movedOffSite(path: string): string | undefined {
   return undefined;
 }
 
-/** Platform pages renamed from "… Intelligence" (owner, 2026-11-04); inbound links keep working. */
+/**
+ * Renamed platform pages, each straight to its current path (no chains):
+ * "… Intelligence" (owner, 2026-11-04) and Content Briefs (owner, 2026-11-10).
+ * Inbound links keep working.
+ */
 const RENAMED_PLATFORM_PAGES: Readonly<Record<string, string>> = {
   '/platform/citation-intelligence': '/platform/cited-sources',
   '/platform/commerce-intelligence': '/platform/product-visibility',
   '/platform/demand-intelligence': '/platform/search-demand',
   '/platform/search-intelligence': '/platform/keyword-research',
-  '/platform/content-intelligence': '/platform/content-briefs',
+  '/platform/content-intelligence': '/platform/content-optimization',
+  '/platform/content-briefs': '/platform/content-optimization',
 };
 
 /**

@@ -70,8 +70,8 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       ),
       faqItem(
         'Can CiteLadder create content?',
-        'Content Briefs uses the Agent to prepare briefs, proposed page edits and internal-link plans. Check the facts and their sources before you put anything live. Nothing is published automatically, and the public trial does not include the Agent.',
-        [{ label: 'Content Briefs', href: '/platform/content-briefs' }],
+        'Content Optimization lists the content angles competitor and publisher pages are cited for in AI answers and your site lacks, each as a page to improve or a new page to write. The Agent drafts the page from that evidence, and also prepares briefs, proposed page edits and internal-link plans. Check the facts and their sources before you put anything live. Nothing is published automatically, and the public trial does not include the Agent.',
+        [{ label: 'Content Optimization', href: '/platform/content-optimization' }],
       ),
       faqItem(
         'Which analytics sources can I connect?',

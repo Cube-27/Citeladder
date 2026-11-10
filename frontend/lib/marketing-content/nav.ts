@@ -90,9 +90,9 @@ export const PLATFORM_GROUPS: readonly {
     label: 'Improve & connect',
     items: [
       {
-        title: 'Content Briefs',
-        desc: 'Prepare briefs, page edits and internal-link plans.',
-        href: '/platform/content-briefs',
+        title: 'Content Optimization',
+        desc: 'Find the content AI answers cite that your site lacks.',
+        href: '/platform/content-optimization',
       },
       {
         title: 'AI Agent',

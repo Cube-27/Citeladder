@@ -31,8 +31,9 @@ administration, identity bootstrap and seed tools. Native owners
 use the durable rows and follow the lock order below; see
 [Billing and entitlements](billing-entitlements.md) for the owner boundaries.
 
-Site Health, Content Briefs, Search Demand and the Agent are the
-durable product capabilities; the Agent's skills deliver content creation, and
+Site Health, [Content optimization](content-optimization.md), Search Demand
+and the Agent are the durable product capabilities; the Agent's skills deliver
+content creation, and
 AI Visibility is Track. Commerce reuses the same
 evidence and measurement owners rather than owning another crawler or runner.
 

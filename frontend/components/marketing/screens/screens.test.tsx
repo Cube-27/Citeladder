@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vite-plus/test';
 
 import { ProductFrame } from './product-frame';
 import { fourRows } from './screen-vignette';
-import { ScreenActions } from './screens-agent';
+import { ScreenActions, ScreenContentOptimization } from './screens-agent';
 import { ScreenDemand, ScreenReferrals } from './screens-search';
 import { ScreenSiteHealth } from './screens-site';
 import { ScreenAnswer, ScreenSources } from './screens-visibility';
@@ -89,6 +89,18 @@ describe('screens', () => {
       'acme.com/pricingPage · Improve the existing pageMediumIn progress',
       '“Cheapest analytics with session replay”Prompt · Create a new pageMediumOpen',
     ]);
+  });
+
+  it("lists owned and planned content pages with their lead angle's counts", () => {
+    render(<ScreenContentOptimization />);
+
+    expect(rowsOf('Content work, highest priority first')).toEqual([
+      'acme.com/blog/session-replay-guidePage · Session replay setup guides5 sites · 2 competitors6 prompts',
+      'Product analytics pricing comparedPlanned page4 sites · 3 competitors5 prompts',
+      'acme.com/blog/funnel-analysisPage · Funnel analysis templates3 sites · 1 competitor4 prompts',
+      'Mobile analytics SDK comparisonPlanned page3 sites · 1 competitor3 prompts',
+    ]);
+    expect(screen.getByText('5 open')).toBeVisible();
   });
 
   it('takes the first four items of a list as rows and refuses a list shorter than four', () => {

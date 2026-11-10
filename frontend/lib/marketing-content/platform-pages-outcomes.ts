@@ -223,7 +223,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
     related: [
       '/platform/ai-visibility',
       '/platform/cited-sources',
-      '/platform/content-briefs',
+      '/platform/content-optimization',
       '/solutions#commerce',
       '/blog/agentic-commerce-statistics-2026',
     ],

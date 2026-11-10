@@ -62,7 +62,7 @@ export const AI_INSTRUCTIONS: readonly ReferenceSection[] = [
     bullets: [
       'AI Visibility tracks brand mentions, cited sources, and competitor presence in observed AI answers, with access to the underlying responses.',
       'Site Health crawls owned pages, identifies their structural purpose, and records checks, issues, and later recrawl evidence.',
-      'Content Briefs uses Agent workflows to prepare briefs, proposed page edits and internal-link plans for review. Agent access is not included in the public trial.',
+      'Content Optimization groups the titles of competitor and publisher pages cited in AI answers into content angles, and lists each angle the brand’s site has no cited page for as an Action: improve a matching owned content page or write a new one. The Agent drafts that work for review. Agent access is not included in the public trial.',
       'Search Demand connects Google Search Console and Google Analytics 4 evidence to owned pages and search opportunities.',
       'The Agent helps explain evidence, plan work, and produce reviewable deliverables. It uses the same project evidence and read tools as the MCP server.',
       'The MCP server lets authorized assistants read project evidence through scoped tools and, when the user allows changes, make changes the user confirms.',
@@ -143,7 +143,7 @@ export const REFERENCE_ENTITIES: readonly ReferenceEntity[] = [
     description: PRODUCT_DESCRIPTION,
     relations: [
       { label: 'Operated by', target: entity(PARENT_COMPANY.legalName, 'cube27') },
-      ...['AI Visibility', 'Site Health', 'Content Briefs', 'Search Demand', 'Agent'].map(
+      ...['AI Visibility', 'Site Health', 'Content Optimization', 'Search Demand', 'Agent'].map(
         (name) => ({
           label: 'Includes',
           target: entity(name, name.toLowerCase().replaceAll(' ', '-')),
@@ -197,10 +197,10 @@ export const REFERENCE_ENTITIES: readonly ReferenceEntity[] = [
       guide: 'site-health',
     },
     {
-      name: 'Content Briefs',
+      name: 'Content Optimization',
       description:
-        'Evidence-grounded briefs, drafts, and schema for human review, supported by the Agent and its content skills.',
-      guide: 'agent',
+        'Content angles grouped from the competitor and publisher pages cited in tracked AI answers, and an Action for each angle the brand’s site has no cited page for, with the cited pages as evidence. The Agent drafts the page for human review.',
+      guide: 'content-optimization',
       relation: { label: 'Supported by', target: entity('Agent', 'agent') },
     },
     {

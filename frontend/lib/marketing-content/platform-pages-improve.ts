@@ -4,49 +4,60 @@ import { AGENT_NOTE, type PlatformPage } from './platform-page-types';
 /** Action and connection capabilities: content, the Agent, MCP and integrations. */
 export const IMPROVE_PAGES: readonly PlatformPage[] = [
   {
-    path: '/platform/content-briefs',
-    updated: '2026-11-06',
-    title: 'Evidence-Backed AI Content Optimization | CiteLadder',
+    path: '/platform/content-optimization',
+    updated: '2026-11-10',
+    title: 'AI Content Optimization Grounded in Citations | CiteLadder',
     description:
-      'Prepare content briefs, page edits, comparison pages, internal-link plans and outreach briefs from your CiteLadder evidence, and review every revision before it ships.',
-    heading: 'Content work that starts from the evidence',
-    lead: 'Turn what you learn into page updates and new content, ready for your team to review.',
+      'AI content optimization from your tracked answers: see the content angles competitors and publishers get cited for, then improve a page or write one with the Agent.',
+    heading: 'Find the content AI answers cite and your site lacks',
+    lead: 'See the topics AI answers cite your competitors and publishers for, and get a page to improve or a page to write for each one.',
     cta: 'demo',
-    screen: 'actions',
+    screen: 'content-optimization',
     note: AGENT_NOTE,
     highlights: [
       {
-        title: 'Briefs and new pages',
-        body: 'Full drafts for the audience and evidence you choose, including comparison pages and FAQs.',
+        title: 'Content angles',
+        body: 'You use this after your visibility runs, and it gives you the competitor and publisher pages AI answers cite for your prompts, grouped by topic into content angles.',
       },
       {
-        title: 'Edits to existing pages',
-        body: 'A proposed edit for one target page at a time, which your team reviews before it ships.',
+        title: 'A page to improve or a page to write',
+        body: 'When one of your content pages matches an angle but is not cited, you get an Action to improve it. When none matches, you get a planned page to write.',
       },
       {
-        title: 'Links and earned media',
-        body: 'Internal-link plans and outreach briefs for the third-party pages that cite your competitors.',
+        title: 'The evidence on every Action',
+        body: 'Each Action lists the cited pages behind its angle, with their title, site, classification and citation counts, and the dates they come from.',
       },
     ],
     features: [
       {
-        title: 'Start from a gap you can see',
-        body: 'Every piece of content work starts from evidence already in your project: an Action, a Site Health issue, a Search Console signal, a cited page that leaves you out, or a prompt you lose. The Agent reads that evidence first and writes the draft to close that gap.',
+        title: 'See what AI answers cite on other sites',
+        body: 'After a visibility run, CiteLadder reads the titles of the competitor and publisher pages AI answers cite for your prompts and groups them by prompt topic into content angles, such as a pricing comparison or a setup guide. A model only groups and names the titles. The counts, prompts, engines and whether your own page is cited come from your stored answers.',
         points: [
-          'Pick up any Action or finding as the starting point',
-          'Business context and competitors carried into every draft',
-          'The context used is listed with each output',
+          'Pages from competitor sites and from editorial and publisher sites',
+          'Forums, social sites, directories and marketplaces left out',
+          'Grouped by the topics of your tracked prompts',
+          'Refreshed after each new visibility run or crawl',
         ],
         media: { kind: 'card' },
       },
       {
-        title: 'Drafts for your site and the places engines cite',
-        body: 'AI answers draw on your site and on the places people discuss your category. The Agent drafts new pages and edits for your site, and social posts, forum answers and outreach briefs for the channels engines cite.',
+        title: 'One list of content work',
+        body: 'Content optimization sits below Actions in the app and lists your content pages and the pages to write, in the same priority order. Each row names the page, its lead angle, the prompts the angle covers, and the sites and competitors cited for it. You get counts from the evidence, with no content scores or grades.',
         points: [
-          'Briefs, new pages, comparison pages and FAQ pages',
-          'Page edits and internal-link plans',
-          'LinkedIn and X posts, video scripts and forum answers',
-          'Outreach briefs for earned sources',
+          'Articles, guides, how-tos, listicles, comparison, alternative and case study pages',
+          'A planned page, named by its angle, when no content page matches',
+          'Site Health findings on a content page share its Action',
+          'Why this matters shows the cited pages for each angle',
+        ],
+        media: { kind: 'card' },
+      },
+      {
+        title: 'Hand the page to the Agent',
+        body: 'Open an Action and choose Write this page for a planned page, or Work on this for one of your pages. The chat is attached to the Action, so the Agent starts from its evidence and your confirmed business context and writes the whole draft.',
+        points: [
+          'Write this page drafts a new article or guide',
+          'Work on this refreshes the existing page',
+          'The context used is listed with each draft',
         ],
         media: { kind: 'split', screen: 'agent-brief' },
       },
@@ -63,40 +74,44 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     ],
     steps: [
       {
-        title: 'Pick a starting point',
-        body: 'Choose an Action, finding or question, or start a new chat with a content skill.',
+        title: 'Run visibility audits',
+        body: 'Track your buyer prompts. After each run, CiteLadder groups the pages AI answers cite into content angles.',
       },
       {
-        title: 'Get the full draft',
-        body: 'The Agent writes the whole piece from the evidence it read, and lists the context it used.',
+        title: 'Open Content optimization',
+        body: 'See your content pages and planned pages, each with its lead angle and the sites cited for it.',
       },
       {
-        title: 'Review the draft',
-        body: 'Edit sections, ask for changes the Agent makes in place, and compare revisions.',
+        title: 'Hand it to the Agent',
+        body: 'Choose Write this page or Work on this, then review and revise the draft.',
       },
       {
-        title: 'Ship and measure',
-        body: 'Publish through your own process, mark the work implemented, and watch later evidence.',
+        title: 'Ship and check',
+        body: 'Publish through your own process, mark the work implemented, and see in later runs whether AI answers cite your page.',
       },
     ],
     questions: [
-      'What should our comparison page against a named competitor say?',
-      'Which page should we update to answer a prompt we keep losing?',
-      'Which internal links would help a page that answers engines skip?',
-      'What should we pitch to a publisher that lists our competitors?',
+      'Which topics do AI answers cite our competitors for when we have no page on them?',
+      'Which of our guides covers a topic but never gets cited?',
+      'Which publisher pages do AI answers cite for our pricing comparison prompts?',
+      'Which new page should we write next, and which pages is it up against?',
     ],
     faqs: [
       {
-        q: 'Is this a separate application?',
-        a: "No. Content workflows run in CiteLadder's Agent, connected to your project evidence and Actions.",
+        q: 'What does content optimization do in CiteLadder?',
+        a: 'It groups the competitor and publisher pages AI answers cite for your prompts into content angles, checks whether one of your content pages covers each angle and is cited, and lists the gaps as pages to improve or pages to write. The Agent then drafts the work for your team to review.',
       },
       {
-        q: 'What can it produce?',
-        a: 'Content briefs, new pages, comparison pages, FAQ pages, edits to existing pages, internal-link plans, outreach briefs, social posts, video scripts and forum answers.',
+        q: 'Where does the evidence come from?',
+        a: 'From your own visibility runs: the titles of the competitor and publisher pages cited for your tracked prompts. Your content pages come from your latest Site Health crawl.',
+      },
+      {
+        q: 'Does it score or grade my content?',
+        a: 'No. Each row shows counts from the evidence: the prompts an angle covers and the sites and competitors cited for it.',
       },
       {
         q: 'Does it publish automatically?',
-        a: 'No. Drafting, saving, publishing and measuring are separate decisions your team makes.',
+        a: 'No. Drafting, publishing and marking the work implemented are separate decisions your team makes.',
       },
       {
         q: 'Will it invent facts about my company?',
@@ -104,16 +119,17 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Is it in the free trial?',
-        a: 'No. Content workflows run in the Agent, which is not part of the free trial. Book a demo to try it with your own project.',
+        a: 'The Agent, which writes the drafts, is not part of the free trial. Book a demo to try content optimization with your own project.',
       },
     ],
-    closing: 'Turn a gap you can see into a draft your team can ship',
+    closing: 'Find your next page in the pages AI answers cite',
     related: [
+      '/blog/how-to-optimize-content-for-ai-search',
       '/platform/agents',
-      '/platform/site-health',
-      '/platform/search-demand',
-      '/platform/keyword-research',
       '/platform/cited-sources',
+      '/platform/site-health',
+      '/platform/ai-visibility',
+      '/platform/search-demand',
     ],
   },
   {
@@ -223,7 +239,12 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
     ],
     closing: 'Ask about your project and get a draft you can review',
-    related: ['/platform/content-briefs', '/platform/site-health', '/platform/mcp', '/platform'],
+    related: [
+      '/platform/content-optimization',
+      '/platform/site-health',
+      '/platform/mcp',
+      '/platform',
+    ],
   },
   {
     path: '/platform/mcp',

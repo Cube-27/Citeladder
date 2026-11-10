@@ -397,6 +397,38 @@ export const ACTIONS: readonly Readonly<{
   approach,
 }));
 
+/* ---------- Content optimization ---------- */
+
+/**
+ * Content Actions in priority order: an owned content page that matched an
+ * angle but is not cited for its prompts, or a planned page (named by its
+ * angle) when no content page matched. Counts are the lead angle's: its
+ * prompts, and the sites and competitors cited for it. Never a score.
+ */
+export const CONTENT_WORK: readonly Readonly<{
+  page: string;
+  planned: boolean;
+  angle: string;
+  prompts: number;
+  sites: number;
+  competitors: number;
+}>[] = (
+  [
+    ['acme.com/blog/session-replay-guide', false, 'Session replay setup guides', 6, 5, 2],
+    ['Product analytics pricing compared', true, 'Product analytics pricing compared', 5, 4, 3],
+    ['acme.com/blog/funnel-analysis', false, 'Funnel analysis templates', 4, 3, 1],
+    ['Mobile analytics SDK comparison', true, 'Mobile analytics SDK comparison', 3, 3, 1],
+    ['acme.com/guides/retention-cohorts', false, 'Retention cohort analysis', 2, 2, 1],
+  ] as const
+).map(([page, planned, angle, prompts, sites, competitors]) => ({
+  page,
+  planned,
+  angle,
+  prompts,
+  sites,
+  competitors,
+}));
+
 /* ---------- MCP and integrations ---------- */
 
 /** Read-only tool calls an assistant made this week, each with what it returned. */
