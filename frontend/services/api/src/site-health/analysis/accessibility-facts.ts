@@ -61,26 +61,25 @@ const labelable = (node: HtmlElement) =>
   LABELABLE.has(node.tagName) && !(node.tagName === 'input' && inputType(node) === 'hidden');
 
 /**
- * HTML's labeled control: a label with `for` names only the element with that
- * id, never the one it wraps, and an empty `for` names nothing; a label
- * without `for` names its first labelable descendant.
+ * HTML's labeled control: a label with `for` names only the first element with
+ * that id (`explicit`), never the one it wraps, and an empty `for` names
+ * nothing; a label without `for` names its first labelable descendant.
  */
-function hasAssociatedLabel(control: HtmlElement, explicitIds: Set<string>) {
-  const id = attribute(control, 'id').trim();
-  if (id && explicitIds.has(id)) return true;
+function hasAssociatedLabel(control: HtmlElement, explicit: Set<HtmlElement>) {
+  if (explicit.has(control)) return true;
   const label = [...ancestors(control)].find((item) => item.tagName === 'label');
   if (!label || hasAttribute(label, 'for')) return false;
   return [...elements(label)].find(labelable) === control && Boolean(accessibleText(label));
 }
 
-function hasName(control: HtmlElement, explicitIds: Set<string>, labelled: Map<string, boolean>) {
+function hasName(control: HtmlElement, explicit: Set<HtmlElement>, labelled: Map<string, boolean>) {
   return (
     Boolean(attribute(control, 'aria-label').trim()) ||
     attribute(control, 'aria-labelledby')
       .split(/\s+/u)
       .some((reference) => labelled.get(reference) === true) ||
     hasNativeName(control) ||
-    hasAssociatedLabel(control, explicitIds) ||
+    hasAssociatedLabel(control, explicit) ||
     Boolean(attribute(control, 'title').trim())
   );
 }
@@ -99,12 +98,18 @@ function controlFacts(root: HtmlNode) {
   const referenced = new Set(
     controls.flatMap((control) => attribute(control, 'aria-labelledby').split(/\s+/u)),
   );
-  const explicitIds = new Set(
-    all
-      .filter(
-        (node) => node.tagName === 'label' && hasAttribute(node, 'for') && accessibleText(node),
-      )
-      .map((node) => attribute(node, 'for').trim()),
+  // Ids should be unique; when one repeats, a label names only its first element.
+  const firstWithId = new Map<string, HtmlElement>();
+  for (const node of all) {
+    const id = attribute(node, 'id').trim();
+    if (id && !firstWithId.has(id)) firstWithId.set(id, node);
+  }
+  const explicit = new Set(
+    all.flatMap((node) => {
+      if (node.tagName !== 'label' || !accessibleText(node)) return [];
+      const target = firstWithId.get(attribute(node, 'for').trim());
+      return target && hasAttribute(node, 'for') ? [target] : [];
+    }),
   );
   const labelled = new Map<string, boolean>();
   for (const node of all) {
@@ -112,7 +117,7 @@ function controlFacts(root: HtmlNode) {
     if (id && referenced.has(id)) labelled.set(id, Boolean(accessibleText(node, true)));
   }
   const missing = controls.flatMap((control, index) =>
-    hasName(control, explicitIds, labelled)
+    hasName(control, explicit, labelled)
       ? []
       : [
           {

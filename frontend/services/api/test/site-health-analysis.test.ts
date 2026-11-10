@@ -323,6 +323,12 @@ describe('page checklist', () => {
       'missing',
       1,
     ],
+    [
+      'a for whose id repeats',
+      `<label for='email'>Email</label><input id='email'><input id='email'>`,
+      'missing',
+      1,
+    ],
   ])(
     'names form controls only through the label HTML associates: %s',
     (_case, form, outcome, missing) => {
