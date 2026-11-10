@@ -35,7 +35,7 @@ export function useChatThread(workspaceId: string, detail: AgentChatDetail) {
   const stop = activeRun ? () => cancel.mutate({ chatId, runId: activeRun.id }) : undefined;
   return { access, runActive, turn, stop, stopping: cancel.isPending };
 }
-type ChatThread = ReturnType<typeof useChatThread>;
+export type ChatThread = ReturnType<typeof useChatThread>;
 
 export function ChatConversation({
   thread,
@@ -44,7 +44,8 @@ export function ChatConversation({
 }: Readonly<{
   thread: ChatThread;
   detail: AgentChatDetail;
-  renderOutput: (output: AgentOutput) => ReactNode;
+  /** How one document is shown in the thread; omitted (the page workspace), documents are not. */
+  renderOutput?: (output: AgentOutput) => ReactNode;
 }>) {
   const { turn, access, runActive } = thread;
   return (

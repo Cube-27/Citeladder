@@ -298,6 +298,42 @@ export function toolCallLabel({ tool, status }: { tool: string; status: string }
   return runStepLabel({ tool, status });
 }
 
+/** The page workspace's suggestion categories (the content rules engine's). */
+const SUGGESTION_CATEGORY_LABEL: Record<string, string> = {
+  correctness: 'Correctness',
+  clarity: 'Clarity',
+  ai_answers: 'AI answers',
+  proof: 'Proof',
+  search_guidelines: 'Search guidelines',
+  natural_voice: 'Natural voice',
+  coverage: 'Coverage',
+};
+
+export function suggestionCategoryLabel(category: string): string {
+  return SUGGESTION_CATEGORY_LABEL[category] ?? 'Suggestion';
+}
+
+/** Why a suggestion no longer fits the page, as Apply reports it. */
+const SUGGESTION_STALE_COPY: Record<string, string> = {
+  span_changed: 'The text it would change was edited since it was suggested.',
+  field_changed: 'That SEO field was edited since it was suggested.',
+  dependency_changed: 'The section it read was edited since it was suggested.',
+  replaced: 'A newer suggestion replaced it.',
+};
+
+export function suggestionStaleCopy(reason: string | null): string {
+  const why = reason ? SUGGESTION_STALE_COPY[reason] : undefined;
+  return `This suggestion no longer fits the page. ${why ?? 'The page changed since it was suggested.'}`;
+}
+
+/** A suggestion change the server refused without saying why (`agent_suggestion_conflict`). */
+export const SUGGESTION_CONFLICT_COPY =
+  'This suggestion can’t be changed now. Reload the page and try again.';
+
+/** A suggestion change or save made against a page that has since changed (`agent_output_conflict`). */
+export const PAGE_CHANGED_COPY =
+  'The page changed since you opened it. The latest version is shown now; check it and try again.';
+
 export function runErrorCopy(code: string): string {
   return RUN_ERROR_COPY[code] ?? 'The agent could not finish this request. Try again.';
 }

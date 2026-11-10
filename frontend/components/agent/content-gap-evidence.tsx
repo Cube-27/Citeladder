@@ -16,7 +16,7 @@ import { citationClassificationSchema } from '@citeladder/contracts/audits';
 import type { ContentGapEvidence } from '@citeladder/contracts/opportunity-evidence';
 
 /** A finding with the content-gap evidence the Action read returned for it. */
-type GapMember = Readonly<{ id: string; evidence: ContentGapEvidence }>;
+export type GapMember = Readonly<{ id: string; evidence: ContentGapEvidence }>;
 
 /** A prompt the library no longer held when the refresh recorded the angle. */
 const DELETED_PROMPT = 'A prompt no longer in your library';
@@ -55,11 +55,23 @@ export function ContentGapWhy({ members }: Readonly<{ members: readonly GapMembe
 }
 
 function GapAngle({ evidence }: Readonly<{ evidence: ContentGapEvidence }>) {
-  const { prompts } = evidence;
-  const continues = 'continues_action_id' in evidence ? evidence.continues_action_id : undefined;
   return (
     <Stack>
       <p className={textRole('itemTitle')}>{evidence.angle_label}</p>
+      <GapEvidence evidence={evidence} />
+    </Stack>
+  );
+}
+
+/**
+ * One angle's evidence under its label: the counts and window, the cited
+ * pages and the prompts. The page workspace shows it under a coverage gap.
+ */
+export function GapEvidence({ evidence }: Readonly<{ evidence: ContentGapEvidence }>) {
+  const { prompts } = evidence;
+  const continues = 'continues_action_id' in evidence ? evidence.continues_action_id : undefined;
+  return (
+    <>
       <FactList
         layout="inline"
         label="Counts"
@@ -117,7 +129,7 @@ function GapAngle({ evidence }: Readonly<{ evidence: ContentGapEvidence }>) {
           Continues the planned page for this angle
         </TextLink>
       ) : null}
-    </Stack>
+    </>
   );
 }
 

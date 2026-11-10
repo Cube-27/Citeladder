@@ -3,10 +3,18 @@ title: 'Changelog'
 description: 'Product changes and what they mean for your workflow.'
 group: 'Updates'
 order: 400
-updated: '2026-11-10'
+updated: '2026-11-11'
 ---
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
+
+## November 11, 2026: Work on a page with the agent
+
+A chat about one of your content pages now opens as a workspace: the page beside the agent's suggestions, its outline and its SEO fields and checks, with the chat underneath. Apply, dismiss or revert each suggestion, or apply every ready one at once; highlighted text shows where each one lands. Suggestions that need a fact from you, and any text you select, can be quoted into the chat without sending anything. You can also edit the page yourself, export it as Markdown, HTML or plain text, and mark it implemented from the same screen. **Work with the agent** on an Action for one of your content pages opens this workspace.
+
+**For your team:** open an Action on one of your articles or guides and choose **Work with the agent**, or use **Analyze a page** in **Actions**.
+
+[Work on the page](/agent/actions/#work-on-the-page)
 
 ## November 10, 2026: Content optimization
 

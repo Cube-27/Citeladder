@@ -497,6 +497,13 @@ document's Sources tab lists its CiteLadder records and web sources
 separately, and History compares that document's revisions. **Retry send**
 replays a failed submission with its original idempotency key.
 
+A chat with a `page` document (an `optimize_page` chat once its page is read)
+opens as the [page workspace](content-optimization.md#the-page-workspace-co7)
+instead: the page in an editor beside Suggestions, Outline and SEO, with the
+same thread and composer docked under them. Ask AI and Add to context only
+write a quoted reference into the composer; nothing is sent until the person
+sends it. The workspace loads as its own chunk, only for a page chat.
+
 ## Workspace and handoffs
 
 Agent mode holds New chat, Actions, Skills, Context and the chat history under
@@ -528,7 +535,10 @@ plus an optional question, skill or workflow. The browser never embeds evidence
 content beyond that message, and the context builder authorizes every
 reference at admission. A content-gap Action's handoff also pins a workflow: a
 page to create carries its Opportunity and the `article` workflow, and an
-existing content page its URL and the `optimize_page` workflow. The Dashboard
+existing content page its URL and the `optimize_page` workflow. Any page
+Action whose target is one of the latest crawl's content pages (the Action
+read's `editable_page`, computed at read time) opens with its URL and
+`optimize_page` too, so its chat becomes the page workspace. The Dashboard
 [agent panel](../frontend/components/agent/agent-panel.tsx) is seeded from rows
 the screen already holds through the
 [panel context](../frontend/lib/agent/panel-context.tsx) and continues in

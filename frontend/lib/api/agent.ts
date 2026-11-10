@@ -34,6 +34,11 @@ import {
   agentRunSchema,
   agentSkillCatalogSchema,
   agentSkillSchema,
+  agentSuggestionResultSchema,
+  agentSuggestionSchema,
+  agentSuggestionsAppliedSchema,
+  agentSuggestionsDismissedSchema,
+  agentSuggestionsPageSchema,
   agentTurnAcceptedSchema,
   agentWorkflowSchema,
   type AgentChatCreateRequest,
@@ -56,6 +61,19 @@ export type AgentChatDetail = z.infer<typeof agentChatDetailSchema>;
 export type AgentSkill = z.infer<typeof agentSkillSchema>;
 export type AgentWorkflow = z.infer<typeof agentWorkflowSchema>;
 export type AgentCatalog = z.infer<typeof agentSkillCatalogSchema>;
+export type AgentSuggestion = z.infer<typeof agentSuggestionSchema>;
+export type AgentSuggestionsPage = z.infer<typeof agentSuggestionsPageSchema>;
+/** A page chat's finished fetch, with its page-local checks. */
+export type AgentPageFetchDone = Extract<
+  NonNullable<AgentChatDetail['page_fetch']>,
+  { status: 'done' }
+>;
+/** A change to one suggestion of a page document. */
+export type SuggestionChange = 'apply' | 'dismiss' | 'revert';
+/** One suggestion of one page document, addressed for a change. */
+type SuggestionRef = { chatId: string; outputId: string; suggestionId: string };
+const outputPath = (document: { chatId: string; outputId: string }) =>
+  `/agent/chats/${document.chatId}/outputs/${document.outputId}`;
 
 const withKey = (idempotencyKey: string, options?: ApiRequestOptions): ApiRequestOptions => ({
   ...options,
@@ -174,6 +192,59 @@ const agentApi = {
       ),
       'agent.restoreRevision',
     ),
+  suggestions: async (
+    document: { chatId: string; outputId: string },
+    options?: ApiRequestOptions,
+  ) =>
+    strictValidate(
+      agentSuggestionsPageSchema,
+      await apiClient.get(`${outputPath(document)}/suggestions`, options),
+      'agent.suggestions',
+    ),
+  /** Apply, Dismiss or Revert, against the revision the person saw. */
+  changeSuggestion: async (
+    target: SuggestionRef,
+    change: SuggestionChange,
+    baseRevisionId: string,
+    options?: ApiRequestOptions,
+  ) =>
+    strictValidate(
+      agentSuggestionResultSchema,
+      await apiClient.post(
+        `${outputPath(target)}/suggestions/${target.suggestionId}/${change}`,
+        { base_revision_id: baseRevisionId },
+        options,
+      ),
+      'agent.changeSuggestion',
+    ),
+  applyAllSuggestions: async (
+    document: { chatId: string; outputId: string },
+    baseRevisionId: string,
+    options?: ApiRequestOptions,
+  ) =>
+    strictValidate(
+      agentSuggestionsAppliedSchema,
+      await apiClient.post(
+        `${outputPath(document)}/suggestions/apply-all`,
+        { base_revision_id: baseRevisionId },
+        options,
+      ),
+      'agent.applyAllSuggestions',
+    ),
+  dismissAllSuggestions: async (
+    document: { chatId: string; outputId: string },
+    baseRevisionId: string,
+    options?: ApiRequestOptions,
+  ) =>
+    strictValidate(
+      agentSuggestionsDismissedSchema,
+      await apiClient.post(
+        `${outputPath(document)}/suggestions/dismiss-all`,
+        { base_revision_id: baseRevisionId },
+        options,
+      ),
+      'agent.dismissAllSuggestions',
+    ),
   instructions: async (projectId: string, options?: ApiRequestOptions) =>
     strictValidate(
       agentInstructionsSchema,
@@ -231,6 +302,21 @@ export const agentQueries = {
       queryKey: queryKeys.agent.revisions(workspaceId, chatId, outputId, latestRevisionId),
       queryFn: ({ signal }) => agentApi.revisions(chatId, outputId, { signal, workspaceId }),
     }),
+  /** A page document's suggestions, read again after each revision or turn. */
+  suggestions: (
+    workspaceId: string | null,
+    document: { chatId: string; outputId: string },
+    marker: { revisionId: string; messageId: string | null },
+  ) =>
+    queryOptions({
+      queryKey: queryKeys.agent.suggestions(
+        workspaceId,
+        document.chatId,
+        document.outputId,
+        marker,
+      ),
+      queryFn: ({ signal }) => agentApi.suggestions(document, { signal, workspaceId }),
+    }),
   instructions: (scope: ProjectScope) =>
     queryOptions({
       queryKey: queryKeys.agent.instructions(scope),
@@ -248,6 +334,17 @@ const refreshAgentOutput = (client: QueryClient, chatId: string) =>
   Promise.all([
     refreshAgentChat(client, chatId),
     client.invalidateQueries({ queryKey: queryKeys.agent.chatRevisions(chatId) }),
+  ]);
+
+/**
+ * A page document after a suggestion change, or after one was refused because
+ * the page or a suggestion moved on: the chat (its latest revision) and the
+ * suggestions both read again.
+ */
+const refreshPageDocument = (client: QueryClient, chatId: string) =>
+  Promise.all([
+    refreshAgentOutput(client, chatId),
+    client.invalidateQueries({ queryKey: queryKeys.agent.chatSuggestions(chatId) }),
   ]);
 
 /** Every chat list of the project: a new chat or turn reorders and relabels them. */
@@ -331,6 +428,28 @@ export const agentMutations = {
       mutationFn: (vars: { chatId: string; outputId: string; revisionId: string }) =>
         agentApi.restoreRevision(vars, vars.revisionId, { workspaceId }),
       onSuccess: (_revision, vars, _result, { client }) => refreshAgentOutput(client, vars.chatId),
+    }),
+  /** Apply, Dismiss or Revert one suggestion; any answer reads the page again. */
+  changeSuggestion: (workspaceId: string | null) =>
+    mutationOptions({
+      mutationFn: (vars: SuggestionRef & { change: SuggestionChange; baseRevisionId: string }) =>
+        agentApi.changeSuggestion(vars, vars.change, vars.baseRevisionId, { workspaceId }),
+      onSettled: (_result, _error, vars, _context, { client }) =>
+        refreshPageDocument(client, vars.chatId),
+    }),
+  applyAllSuggestions: (workspaceId: string | null) =>
+    mutationOptions({
+      mutationFn: (vars: { chatId: string; outputId: string; baseRevisionId: string }) =>
+        agentApi.applyAllSuggestions(vars, vars.baseRevisionId, { workspaceId }),
+      onSettled: (_result, _error, vars, _context, { client }) =>
+        refreshPageDocument(client, vars.chatId),
+    }),
+  dismissAllSuggestions: (workspaceId: string | null) =>
+    mutationOptions({
+      mutationFn: (vars: { chatId: string; outputId: string; baseRevisionId: string }) =>
+        agentApi.dismissAllSuggestions(vars, vars.baseRevisionId, { workspaceId }),
+      onSettled: (_result, _error, vars, _context, { client }) =>
+        refreshPageDocument(client, vars.chatId),
     }),
   /** The saved instructions become the cached read: no refetch of what was just written. */
   saveInstructions: (scope: ProjectScope) =>

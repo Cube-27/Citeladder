@@ -355,6 +355,20 @@ describe('A content-gap Action', () => {
     });
   });
 
+  it('opens an Action on one of the site’s content pages in the page workspace', async () => {
+    serve(action, { editable_page: true });
+    renderDetail();
+
+    // Without `editable_page` this Action opens a plain Action chat (the floating bar test above).
+    expect(chatOf(await screen.findByRole('link', { name: 'Work with the agent' }))).toEqual({
+      path: '/agent',
+      action_id: ACTION,
+      target_url: 'https://acme.test/pricing',
+      workflow: 'optimize_page',
+      project: PROJECT,
+    });
+  });
+
   it('hands a planned page to the article workflow with its finding', async () => {
     const planned: Action = {
       ...action,

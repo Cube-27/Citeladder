@@ -83,16 +83,33 @@ export function agentHandoffHref(input: HandoffInput): string {
   return query ? `/agent?${query}` : '/agent';
 }
 
+/** The workflow that fetches a page into a page document and opens its workspace. */
+const PAGE_WORKFLOW = 'optimize_page';
+
 /**
  * New chat on an Action (AS3): the Action attached, and the workflow its
- * diagnosis names with the finding's Opportunity or the Action's page. The
- * message stays out of the URL (it names evidence history and logs must not
- * keep); New chat reads it from the attached Action.
+ * diagnosis names with the finding's Opportunity or the Action's page. An
+ * Action on one of the latest crawl's content pages (`editable_page`, as the
+ * Action detail reads it) opens that page in the page workspace instead
+ * (phase 2, E3). The message stays out of the URL (it names evidence history
+ * and logs must not keep); New chat reads it from the attached Action, so it
+ * is the same either way.
  */
 export function actionHandoffHref(
-  action: Readonly<{ id: string; target_url: string | null; handoff: ActionHandoff }>,
+  action: Readonly<{
+    id: string;
+    target_url: string | null;
+    handoff: ActionHandoff;
+    editable_page?: boolean;
+  }>,
 ): string {
   const { handoff } = action;
+  if (action.editable_page && action.target_url)
+    return agentHandoffHref({
+      actionId: action.id,
+      targetUrl: action.target_url,
+      workflowId: PAGE_WORKFLOW,
+    });
   switch (handoff.context) {
     case 'opportunity':
       return agentHandoffHref({
