@@ -33,6 +33,22 @@ Choose **Work on this** when the Action is suitable for your team. Linked chats 
 
 Choose **Analyze a page** above the list to work on a content page that no finding has raised yet. Pick one of the articles, guides or other content pages from your latest crawl, a topic, and the topic's prompts the page should answer; only topics with prompts are listed, and all their prompts start selected. **Generate action** creates the page's Action, or reuses it if the page already has one, and opens a new chat that reads the live page first. Nothing is charged until the page has been read.
 
+**Work with the agent** on an Action for one of your content pages opens the same kind of chat.
+
+## Work on the page
+
+Once the page is read, the chat opens as a workspace: the page on the left, and **Suggestions**, **Outline** and **SEO** on the right with the chat under them. On a narrow screen each of these is a tab.
+
+- **Suggestions** lists the agent's proposed changes, grouped by the passage they belong to. Text highlighted in blue has a change ready: choose **Apply** to make it, or **Dismiss**. Text highlighted in amber needs a fact from you: **Add to context** puts the question in the chat for you to answer. **Apply all** makes every ready change that doesn't overlap another; overlapping ones are marked **Choose one** for you. Applied and dismissed suggestions stay listed, and **Revert** puts one back.
+- Choose highlighted text to open its suggestion, or a suggestion to find its text on the page.
+- Select text and choose **Ask AI** to quote it in the chat. Nothing is sent until you send it.
+- You can edit the page directly; **Save changes** keeps your edit as a new revision.
+- **Outline** lists the page's headings; choose one to go to it.
+- **SEO** shows the page's title tag, meta description and structured data, and the checks Site Health ran when the page was read. Editing the page does not rerun those checks.
+- **Export** copies the page as Markdown, HTML or plain text, or downloads it as a `.md` or `.html` file.
+
+When the page is live, choose **Mark implemented** in the workspace to declare the revision on screen.
+
 ## Understand status
 
 | Status      | Meaning                                                            |

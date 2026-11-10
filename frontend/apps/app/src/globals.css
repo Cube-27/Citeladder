@@ -868,6 +868,86 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   }
 }
 
+/* The page workspace's editor (CodeMirror with live preview, E2): the page
+   reads as an article in the prose ladder; headings, bold, italics and links
+   render styled while their Markdown marks hide off the cursor's line. A
+   suggestion's text is underlined in the info tint when it is ready to apply
+   and the warning tint when it needs a fact. Unlayered and scoped under
+   `.page-editor .cm-editor`, because CodeMirror injects its base theme
+   (monospace, its own padding, a dotted focus outline) as unlayered rules at
+   run time. Its text field keeps the shared ring, drawn inside the pane so
+   the scroller never clips it. */
+.page-editor {
+  min-height: 100%;
+}
+.page-editor .cm-editor {
+  min-height: 100%;
+  background: transparent;
+  color: var(--color-ink);
+}
+.page-editor .cm-editor.cm-focused {
+  outline: none;
+}
+.page-editor .cm-editor .cm-scroller {
+  font-family: var(--font-sans);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+}
+.page-editor .cm-editor .cm-content {
+  padding: var(--card-padding) 0;
+  caret-color: var(--color-ink);
+}
+.page-editor .cm-editor .cm-content:focus-visible {
+  outline-offset: -2px;
+}
+.page-editor .cm-editor .cm-line {
+  padding: 0 var(--card-padding);
+}
+.page-editor .cm-editor .page-editor-h1 {
+  font-size: var(--text-display-sm);
+  line-height: var(--text-display-sm--line-height);
+}
+.page-editor .cm-editor .page-editor-h2 {
+  font-size: var(--text-title);
+  line-height: var(--text-title--line-height);
+}
+.page-editor .cm-editor .page-editor-h3 {
+  font-size: var(--text-heading);
+  line-height: var(--text-heading--line-height);
+}
+.page-editor .cm-editor :is(.page-editor-h1, .page-editor-h2, .page-editor-h3) {
+  padding-top: 0.5rem;
+}
+.page-editor
+  .cm-editor
+  :is(.page-editor-h1, .page-editor-h2, .page-editor-h3, .page-editor-h4, .page-editor-h5, .page-editor-h6),
+.page-editor .cm-editor .page-editor-strong {
+  font-weight: 500;
+}
+.page-editor .cm-editor .page-editor-em {
+  font-style: italic;
+}
+.page-editor .cm-editor .page-editor-link {
+  color: var(--color-accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.page-editor .cm-editor .page-editor-suggestion {
+  background: var(--color-info-soft);
+  color: var(--color-ink);
+  border-bottom: 2px solid var(--color-info);
+  cursor: pointer;
+}
+.page-editor .cm-editor .page-editor-suggestion-needs_input {
+  background: var(--color-warning-soft);
+  border-bottom-color: var(--color-warning);
+}
+/* The card of the highlight the reader pressed: its edge in the focus ink,
+   over the panel's own border utility. */
+.suggestion-card[aria-current='true'] {
+  border-color: var(--color-focus);
+}
+
 @layer base {
   /* Headings are Inter at the heading weight unless a display role sets Cal
      Sans: Cal Sans is opt-in, so it never lands under 18px by default. */

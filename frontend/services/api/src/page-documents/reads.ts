@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { agentPageFetchSchema } from '@citeladder/contracts/agent';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import { ruleTitle } from '../site-health/reads/rules.ts';
 import { chatPageFetch } from './keys.ts';
 
 const outcomeSchema = z.enum(policy.content_optimization.page_fetch.outcomes);
@@ -21,11 +22,30 @@ const checkSchema = z.object({
   display_applicability: z.boolean(),
 });
 
+/**
+ * The checks the SEO tab shows (E5): those Site Health displays, failing ones
+ * first, each in catalog order, with the rule's title.
+ */
+function shownChecks(evaluations: unknown) {
+  const checks = z
+    .array(checkSchema)
+    .parse(evaluations ?? [])
+    .filter((check) => check.display_applicability)
+    .map((check) => ({
+      rule_id: check.rule_id,
+      label: ruleTitle(check.rule_id),
+      severity: check.severity,
+      outcome: check.outcome,
+      failing: FAILING.has(check.outcome),
+    }));
+  return [...checks.filter((check) => check.failing), ...checks.filter((check) => !check.failing)];
+}
+
 /** The chat's latest snapshot, newest first. */
 function latestSnapshot(db: Database, workspaceId: string, chatId: string) {
   return db
     .selectFrom('page_snapshots')
-    .select(['id', 'outcome', 'fetched_at'])
+    .select(['id', 'outcome', 'fetched_at', 'evaluations'])
     .where('workspace_id', '=', workspaceId)
     .where('chat_id', '=', chatId)
     .orderBy('fetched_at', 'desc')
@@ -50,11 +70,12 @@ export async function pageFetchView(
       status: 'done',
       outcome: outcomeSchema.parse(snapshot.outcome),
       fetched_at: snapshot.fetched_at.toISOString(),
+      checks: shownChecks(snapshot.evaluations),
     };
   const task = await chatPageFetch(db, chat.workspace_id, chat.id);
   if (!task) return null;
   if (policy.task_queue.active.includes(task.status)) return { status: 'reading' };
-  return { status: 'done', outcome: 'failed', fetched_at: null };
+  return { status: 'done', outcome: 'failed', fetched_at: null, checks: [] };
 }
 
 /**

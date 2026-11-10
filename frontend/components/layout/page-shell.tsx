@@ -76,8 +76,14 @@ type FillLayout =
       scrollLabel?: string;
     }>;
 
-/** ListScreen — a collection, dashboard or workspace route. */
-export function ListScreen<T extends string = string>(props: ScreenBands<T> & FillLayout) {
+/**
+ * ListScreen — a collection, dashboard or workspace route. A workspace opened
+ * from a record (the Agent's page workspace, from its Action) leads its title
+ * with `back`, as a detail page does.
+ */
+export function ListScreen<T extends string = string>(
+  props: ScreenBands<T> & FillLayout & Readonly<{ back?: PageBack }>,
+) {
   return <PageShell {...props} />;
 }
 
