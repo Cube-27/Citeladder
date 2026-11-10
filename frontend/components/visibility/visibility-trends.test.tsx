@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
@@ -17,10 +17,58 @@ const failed = (error: Error) =>
     refetch: vi.fn(),
   }) as unknown as UseQueryResult<Visibility | null>;
 
-function renderTrends(visibilityQuery: UseQueryResult<Visibility | null>) {
+const ranking = (name: string, mention: number | null, isBrand = false) => ({
+  name,
+  is_brand: isBrand,
+  logo_url: null,
+  website_url: null,
+  mention_rate: mention,
+  citation_rate: 0.1,
+  share_of_voice: 0.2,
+  mention_count: 3,
+  avg_position: isBrand ? 2 : null,
+});
+
+const rankings = [
+  ranking('Acme', 0.31, true),
+  ranking('Kmart Australia', 0.6),
+  ranking('Target Australia', null),
+];
+
+const selected = {
+  audit_id: '00000000-0000-4000-8000-000000000001',
+  visibility_rate: 0.31,
+  owned_citation_rate: 0.13,
+  avg_position: 2,
+  rankings,
+  per_engine: [],
+  model_provenance: [],
+} as unknown as Visibility;
+
+function point(completedAt: string, brandRate: number): VisibilityTrendPoint {
+  return {
+    audit_id: null,
+    completed_at: completedAt,
+    brand_mention_rate: brandRate,
+    owned_citation_rate: 0.13,
+    sov: { mention: 0.2 },
+    rankings,
+    analyzer_versions: ['1'],
+    scoring_rule_versions: ['1'],
+    spans_version_boundary: false,
+    comparison_key: 'k',
+  } as unknown as VisibilityTrendPoint;
+}
+
+const loaded = (points: VisibilityTrendPoint[]) =>
+  ({ data: points, isError: false, isPending: false }) as unknown as UseQueryResult<
+    VisibilityTrendPoint[]
+  >;
+
+function renderTrends(visibilityQuery: UseQueryResult<Visibility | null>, query = loaded([])) {
   render(
     <VisibilityTrends
-      query={{ data: [], isError: false } as unknown as UseQueryResult<VisibilityTrendPoint[]>}
+      query={query}
       visibilityQuery={visibilityQuery}
       engineFilter="all"
       surfaceRatesQuery={{ data: undefined } as unknown as UseQueryResult<SurfaceRates>}
@@ -60,5 +108,46 @@ describe('Visibility trends', () => {
     );
     expect(screen.getByRole('button', { name: /retry/i })).toBeVisible();
     expect(screen.queryByText('No measured run for this selection yet.')).toBeNull();
+  });
+
+  it('ranks the brands of a single run instead of plotting a one-point line', () => {
+    renderTrends(
+      { data: selected, isError: false } as UseQueryResult<Visibility | null>,
+      loaded([point('2026-11-03T00:00:00Z', 0.31)]),
+    );
+    const bars = within(screen.getByRole('list', { name: 'Visibility by brand' }));
+    // Highest first, your brand marked, an unmeasured brand last and never zero.
+    expect(bars.getAllByRole('meter').map((meter) => meter.getAttribute('aria-valuetext'))).toEqual(
+      ['60%', '31%', 'Not measured'],
+    );
+    expect(bars.getByText('Acme · You')).toBeVisible();
+    expect(screen.getByText(/A trend line appears after a second run\./u)).toBeVisible();
+    expect(screen.queryByRole('group', { name: /over time/u })).toBeNull();
+  });
+
+  it('keeps the line chart, each line named at its end, from the second run on', () => {
+    const { container } = render(
+      <VisibilityTrends
+        query={loaded([point('2026-11-01T00:00:00Z', 0.25), point('2026-11-03T00:00:00Z', 0.31)])}
+        visibilityQuery={{ data: selected, isError: false } as UseQueryResult<Visibility | null>}
+        engineFilter="all"
+        surfaceRatesQuery={{ data: undefined } as unknown as UseQueryResult<SurfaceRates>}
+        surfaceEngine={null}
+        hasRuns
+        isFiltered={false}
+      />,
+    );
+    expect(screen.getByRole('group', { name: /^Visibility over time/u })).toBeVisible();
+    expect(screen.queryByRole('list', { name: 'Visibility by brand' })).toBeNull();
+    expect(
+      [...container.querySelectorAll('[data-line-labels] text')].map((label) => label.textContent),
+    ).toEqual(expect.arrayContaining(['You', 'Kmart Australia']));
+  });
+
+  it('names the headline mean position apart from the table Rank', () => {
+    renderTrends({ data: selected, isError: false } as UseQueryResult<Visibility | null>);
+    expect(screen.getByText('Average position in answers')).toBeVisible();
+    expect(screen.queryByText('Average position')).toBeNull();
+    expect(screen.getByRole('columnheader', { name: 'Rank' })).toBeVisible();
   });
 });

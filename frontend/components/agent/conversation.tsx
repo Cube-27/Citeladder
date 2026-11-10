@@ -1,6 +1,6 @@
 'use client';
 
-import { Pencil, RotateCcw } from 'lucide-react';
+import { AlertTriangle, Pencil, RotateCcw } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { EvidenceChips } from '@/components/agent/evidence-chips';
@@ -10,17 +10,17 @@ import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { WebSources } from '@/components/agent/web-sources';
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
+import { Callout, type CalloutTone } from '@/components/ui/callout';
 import { cardClasses } from '@/components/ui/card';
 import { AgentThread, AgentTurn, UserTurn } from '@/components/ui/chat-dock';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Disclosure } from '@/components/ui/disclosure';
-import { DisplayTime } from '@/components/ui/display-time';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { Spinner } from '@/components/ui/spinner';
 import { TextLink } from '@/components/ui/text-link';
+import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import { treeBranchClasses } from '@/components/ui/workspace';
 import { documentAnchor, latestOutput, outputPlacements } from '@/lib/agent/documents';
@@ -29,6 +29,8 @@ import { runErrorCopy, runStepLabel, toolCallLabel } from '@/lib/agent/vocabular
 import { runOutcome } from '@/lib/agent/run-state';
 import { useLiveTurn, type LiveTurn } from '@/lib/agent/live-turns';
 import type { AgentChatDetail, AgentMessage, AgentOutput, AgentRun } from '@/lib/api/agent';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { formatDisplayTimestamp } from '@/lib/format';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
 import { cn } from '@/lib/utils';
 
@@ -80,12 +82,22 @@ export function Conversation({
       <ContextUsed context={detail.context} />
       {renderOutput ? <DocumentList outputs={detail.outputs} /> : null}
       <Stack as="ol" gap="workspace" aria-label="Messages">
-        {detail.messages.map((message) => (
-          <Stack as="li" gap="workspace" key={message.id}>
-            <MessageBubble message={message} skill={skillLabel(skills, message.skill_id)} />
-            {documents(byMessage.get(message.id))}
-          </Stack>
-        ))}
+        {threadItems(detail, new Set(byMessage.keys())).map((item) =>
+          item.kind === 'message' ? (
+            <Stack as="li" gap="workspace" key={item.message.id}>
+              <MessageBubble
+                message={item.message}
+                skill={skillLabel(skills, item.message.skill_id)}
+              />
+              {documents(byMessage.get(item.message.id))}
+            </Stack>
+          ) : (
+            <Stack as="li" gap="workspace" key={item.request?.id ?? item.failures[0].id}>
+              {item.request ? <MessageBubble message={item.request} skill={null} /> : null}
+              <TurnFailure failures={item.failures} outcome={item.outcome} />
+            </Stack>
+          ),
+        )}
       </Stack>
       {documents(unplaced)}
       {pendingMessage ? <PendingMessage text={pendingMessage} /> : null}
@@ -241,7 +253,7 @@ function MessageBubble({
     );
   return (
     <AgentTurn
-      time={<DisplayTime value={message.created_at} />}
+      time={<MessageTime value={message.created_at} />}
       meta={skill ? `Skill: ${skill}` : undefined}
     >
       <ContentMarkdown markdown={message.content} density="compact" />
@@ -266,6 +278,180 @@ function MessageBubble({
     </AgentTurn>
   );
 }
+/**
+ * A message's time, short: the time of day for today, else the date and time.
+ * The full timestamp with its zone shows on hover and is what assistive
+ * technology reads.
+ */
+function MessageTime({ value }: Readonly<{ value: string }>) {
+  const timeZone = useDisplayTimeZone();
+  const [now] = useState(() => Date.now());
+  const full = formatDisplayTimestamp(value, timeZone);
+  return (
+    <Tooltip content={full} describe={false}>
+      <time dateTime={value}>
+        <span aria-hidden>{shortTimestamp({ value, timeZone, now })}</span>
+        <span className="sr-only">{full}</span>
+      </time>
+    </Tooltip>
+  );
+}
+
+function shortTimestamp({
+  value,
+  timeZone,
+  now,
+}: Readonly<{ value: string; timeZone: string; now: number }>): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  try {
+    const day = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone });
+    const year = new Intl.DateTimeFormat('en-US', { year: 'numeric', timeZone });
+    const today = day.format(date) === day.format(now);
+    const thisYear = year.format(date) === year.format(now);
+    return new Intl.DateTimeFormat('en-US', {
+      ...(today ? {} : { month: 'short', day: 'numeric' }),
+      ...(thisYear ? {} : { year: 'numeric' }),
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone,
+    }).format(date);
+  } catch {
+    return formatDisplayTimestamp(value, timeZone);
+  }
+}
+
+/** How the latest run ended, when it ended without an answer. */
+type EndedOutcome = 'failed' | 'stopped_at_limit' | 'cancelled';
+/** `unknown`: an earlier turn, whose run's outcome the chat read does not carry. */
+type FailureOutcome = EndedOutcome | 'unknown';
+
+type ThreadItem =
+  | { kind: 'message'; message: AgentMessage }
+  | {
+      kind: 'failure';
+      /** The request the attempts answered, shown once; null for a reply with no request before it. */
+      request: AgentMessage | null;
+      /** Consecutive identical attempts' replies, oldest first. */
+      failures: [AgentMessage, ...AgentMessage[]];
+      outcome: FailureOutcome;
+    };
+
+/**
+ * A reply the run wrote because it ended without an answer. Every reply the
+ * model wrote records at least its model call in `steps`; the reply a failed,
+ * stopped or cancelled run leaves records nothing — no steps, evidence, web
+ * pages or document — so it is told apart by structure, never by its words.
+ */
+function isUnansweredReply(message: AgentMessage, placed: ReadonlySet<string>): boolean {
+  return (
+    message.role === 'agent' &&
+    message.steps.length === 0 &&
+    message.evidence_refs.length === 0 &&
+    message.web_sources.length === 0 &&
+    !placed.has(message.id)
+  );
+}
+
+function sameRequest(left: AgentMessage, right: AgentMessage): boolean {
+  return (
+    left.content === right.content &&
+    left.skill_id === right.skill_id &&
+    left.mentions.map((mention) => mention.id).join() ===
+      right.mentions.map((mention) => mention.id).join()
+  );
+}
+
+function endedOutcome(run: AgentChatDetail['latest_run']): EndedOutcome | null {
+  const kind = runOutcome(run).kind;
+  return kind === 'failed' || kind === 'stopped_at_limit' || kind === 'cancelled' ? kind : null;
+}
+
+/**
+ * The thread in order, each unanswered turn as its request and a failure
+ * rather than a reply. Consecutive turns that repeat the same request and end
+ * the same way collapse into one, counting the attempts. Only the latest run's
+ * outcome is known, so only the last turn's failure says how it ended.
+ */
+function threadItems(detail: AgentChatDetail, placed: ReadonlySet<string>): ThreadItem[] {
+  const items: ThreadItem[] = [];
+  const last = detail.messages.at(-1);
+  const latest = endedOutcome(detail.latest_run);
+  for (const message of detail.messages) {
+    if (!isUnansweredReply(message, placed)) {
+      items.push({ kind: 'message', message });
+      continue;
+    }
+    const outcome = message === last && latest ? latest : 'unknown';
+    const before = items.at(-1);
+    const request =
+      before?.kind === 'message' && before.message.role === 'user' ? before.message : null;
+    if (request) items.pop();
+    const previous = items.at(-1);
+    if (
+      request &&
+      previous?.kind === 'failure' &&
+      previous.request &&
+      sameRequest(previous.request, request) &&
+      previous.failures.at(-1)?.content === message.content
+    ) {
+      previous.failures.push(message);
+      previous.outcome = outcome;
+      continue;
+    }
+    items.push({ kind: 'failure', request, failures: [message], outcome });
+  }
+  return items;
+}
+
+const FAILURE_VERB: Record<FailureOutcome, string> = {
+  failed: 'Failed',
+  stopped_at_limit: 'Hit the step limit',
+  cancelled: 'Stopped',
+  unknown: 'Did not finish',
+};
+const FAILURE_TONE: Record<FailureOutcome, CalloutTone> = {
+  failed: 'negative',
+  stopped_at_limit: 'warning',
+  cancelled: 'warning',
+  unknown: 'neutral',
+};
+
+/**
+ * An unanswered turn, in place of a reply: how it ended, how many attempts
+ * ended so and when the last did, then the run's own explanation. Only the
+ * latest turn's outcome is known, so only it is an alert (announced once, when
+ * it appears or another attempt joins it); an earlier one is a quiet note.
+ */
+function TurnFailure({
+  failures,
+  outcome,
+}: Readonly<{ failures: [AgentMessage, ...AgentMessage[]]; outcome: FailureOutcome }>) {
+  const latest = failures.at(-1) ?? failures[0];
+  const count = failures.length;
+  const time = <MessageTime value={latest.created_at} />;
+  const verb = FAILURE_VERB[outcome];
+  return (
+    <Callout
+      tone={FAILURE_TONE[outcome]}
+      icon={outcome === 'unknown' ? AlertTriangle : undefined}
+      title={
+        count > 1 ? (
+          <>
+            {verb} {count} times, last at {time}
+          </>
+        ) : (
+          <>
+            {verb} at {time}
+          </>
+        )
+      }
+    >
+      {latest.content}
+    </Callout>
+  );
+}
+
 function ContextUsed({ context }: Readonly<{ context: AgentChatDetail['context'] }>) {
   const prompt = context.prompt ?? {};
   const included = promptItems(prompt, 'included_sections');
@@ -434,10 +620,11 @@ function RunningState({
     <Stack gap="compact">
       <Inline as="span" gap="compact" className={textRole('caption')}>
         <Spinner className="text-ink-muted" />
-        <output aria-live="polite" className="flex-1">
-          {label}
+        {/* Only the step is announced; the seconds tick outside the live region. */}
+        <span className="flex-1">
+          <output aria-live="polite">{label}</output>
           <Elapsed since={live?.startedAt ?? Date.parse(run.created_at)} />
-        </output>
+        </span>
       </Inline>
       {current.length > 1 ? (
         <Stack as="ul" gap="tight" aria-label="Current reads" className={treeBranchClasses()}>

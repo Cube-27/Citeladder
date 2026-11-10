@@ -3,7 +3,7 @@
 import { Building2, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-import { SidebarIdentButton, SidebarRowTooltip } from '@/components/ui/app-shell';
+import { SidebarIdentButton, SidebarTextTooltip } from '@/components/ui/app-shell';
 import {
   Menu,
   MenuContent,
@@ -60,7 +60,7 @@ export function ProjectSwitcher() {
 
   return (
     <Menu>
-      <SidebarRowTooltip label={label}>
+      <SidebarTextTooltip inRail>
         <MenuTrigger asChild disabled={isLoading}>
           <SidebarIdentButton
             aria-label={label}
@@ -75,7 +75,7 @@ export function ProjectSwitcher() {
             }
           />
         </MenuTrigger>
-      </SidebarRowTooltip>
+      </SidebarTextTooltip>
       <MenuContent align="start">
         {workspaces.length > 1 ? (
           <>

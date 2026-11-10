@@ -143,7 +143,7 @@ export function VisibilityTrendWidget({ project }: Readonly<{ project: Project }
           points.length ? (
             <TrendChart
               data={toChartPoints(points, 'brand_mention_rate')}
-              label="Brand mention rate by run"
+              label="Visibility by run"
               height="sm"
               yMax={100}
               yFormat={(value) => `${Math.round(value)}%`}

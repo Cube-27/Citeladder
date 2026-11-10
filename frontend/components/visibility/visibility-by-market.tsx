@@ -17,9 +17,16 @@ import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'market', label: 'Market' },
-  { key: 'mention', label: 'Mention rate', width: 'figure', numeric: true },
+  // The metric names the KPI row uses: `mention_rate` here is the Visibility rate.
+  { key: 'mention', label: 'Visibility', width: 'figure', numeric: true },
   { key: 'mention-change', label: 'Change', width: 'figure', numeric: true },
-  { key: 'voice', label: 'S.O.V.', hint: SHARE_OF_VOICE_HINT, width: 'figure', numeric: true },
+  {
+    key: 'voice',
+    label: 'Share of voice',
+    hint: SHARE_OF_VOICE_HINT,
+    width: 'metric',
+    numeric: true,
+  },
   { key: 'voice-change', label: 'Change', width: 'figure', numeric: true },
   { key: 'net', label: 'Net sentiment', width: 'figure', numeric: true },
 ];

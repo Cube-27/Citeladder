@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vite-plus/test';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { mswServer } from '@/test/msw-server';
@@ -129,6 +129,30 @@ describe('SiteHealthScreen — Pages tab reads', () => {
 
     expect(await screen.findByText('No pages in this view')).toBeVisible();
     expect(reads).toEqual(['true|status|10']);
+  });
+
+  it('draws the page views and page-kind filter in the control band, only on Pages', async () => {
+    const user = userEvent.setup();
+    setSearch('tab=pages&pages_view=errors&page_kind=faq');
+    mockRoutes();
+
+    renderScreen();
+
+    const views = await screen.findByRole('radiogroup', { name: 'Page inventory views' });
+    expect(within(views).getByRole('radio', { name: 'Errors & Blocked' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: /^Filter by page kind: FAQ/ })).toBeVisible();
+
+    await user.click(screen.getByRole('tab', { name: 'Overview' }));
+    const params = new URLSearchParams(window.location.search);
+    expect([params.get('tab'), params.get('pages_view'), params.get('page_kind')]).toEqual([
+      'overview',
+      null,
+      null,
+    ]);
+    expect(screen.queryByRole('radiogroup', { name: 'Page inventory views' })).toBeNull();
   });
 });
 
@@ -417,7 +441,7 @@ describe('SiteHealthScreen — before the first crawl', () => {
     renderScreen();
 
     expect(await screen.findByText('Run your first site crawl')).toBeVisible();
-    expect(screen.queryByTestId('score-section')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('status-strip')).not.toBeInTheDocument();
     const runButtons = screen.getAllByRole('button', { name: 'Run new crawl' });
     expect(runButtons).toHaveLength(1);
     expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();

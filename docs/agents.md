@@ -251,6 +251,15 @@ provider failures are
 changed platform model is HTTP 409 `agent_model_unavailable`, distinct from
 402 `agent_funding_unavailable` (no AI credits to hold).
 
+A recovery reply records no steps, evidence, web pages or document, while every
+reply the model wrote records at least its model call; the thread relies on
+that structure (never the reply's words) to show a recovery reply as a failure
+callout instead of an answer, with no reply actions. The chat read carries only
+the latest run, so only the last turn's callout names how it ended (failed,
+stopped at the limit, cancelled); an earlier one is a neutral note. Consecutive
+turns repeating the same request with the same recovery reply collapse into one
+callout that counts the attempts.
+
 ## Read tools
 
 The [tool adapters](../frontend/services/api/src/agent/tool-adapters.ts) bind the

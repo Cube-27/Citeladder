@@ -107,7 +107,8 @@ export function CommandPaletteTrigger({
       )}
     >
       <Search className="text-ink-muted size-4 shrink-0" aria-hidden />
-      <span className="min-w-0 truncate">Search or jump to…</span>
+      {/* The visible word stays short beside the shortcut; the name says it all. */}
+      <span className="min-w-0 truncate">Search</span>
       <Kbd className="desktop:inline-flex ms-auto hidden">{isMac ? '⌘K' : 'Ctrl K'}</Kbd>
     </Button>
   );

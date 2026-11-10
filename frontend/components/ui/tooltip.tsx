@@ -23,6 +23,11 @@ import {
  */
 const Provided = createContext(false);
 
+/** True when a clamped or truncated element is not showing all of its text. */
+export function isTextCut(node: Element): boolean {
+  return node.scrollHeight > node.clientHeight + 1 || node.scrollWidth > node.clientWidth + 1;
+}
+
 export function TooltipProvider(props: Readonly<ComponentProps<typeof TooltipPrimitive.Provider>>) {
   return (
     <Provided.Provider value={true}>

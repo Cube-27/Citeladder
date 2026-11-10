@@ -37,9 +37,40 @@ describe('PagesTable', () => {
     renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
     const row = screen.getByRole('row', { name: /Homepage/ });
     expect(within(row).getByRole('cell', { name: '46' })).toBeInTheDocument();
-    expect(within(row).getByRole('link', { name: /^View / })).toBeInTheDocument();
     fireEvent.keyDown(row, { key: 'Enter' });
     expect(screen.getByTestId('location')).toHaveTextContent(`/site/crawls/${CRAWL}/pages/${UUID}`);
+  });
+
+  it('shows seven columns, the page title as the link to its detail', () => {
+    renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
+    expect(screen.getAllByRole('columnheader').map((head) => head.textContent)).toEqual([
+      '#',
+      'Page',
+      'Type',
+      'Issues',
+      'Web Fundamentals',
+      'AEO Readiness',
+      'Last Audit',
+    ]);
+    const link = screen.getByRole('link', { name: /^View Homepage — / });
+    expect(link).toHaveTextContent('Homepage');
+    expect(link).toHaveAttribute('href', `/site/crawls/${CRAWL}/pages/${UUID}`);
+  });
+
+  it('shows the status badge beside the title only while analysis is not completed', () => {
+    renderPages(
+      <PagesTable
+        crawlId={CRAWL}
+        pages={[
+          page({ title: 'Fine page' }),
+          page({ site_url_id: SOURCE_CRAWL, title: 'Queued page', analysis_status: 'pending' }),
+        ]}
+      />,
+    );
+    const done = screen.getByRole('row', { name: /Fine page/ });
+    const queued = screen.getByRole('row', { name: /Queued page/ });
+    expect(within(queued).getByText('Pending')).toBeInTheDocument();
+    expect(within(done).queryByText('Completed')).not.toBeInTheDocument();
   });
 
   it('shows a non-null limited-evidence score without an internal confidence subtitle', () => {
@@ -57,9 +88,9 @@ describe('PagesTable', () => {
         ]}
       />,
     );
-    expect(screen.getAllByText('Excluded')).toHaveLength(2);
     const row = screen.getByText('Homepage').closest('tr');
     expect(row).not.toBeNull();
+    expect(within(row!).getByRole('cell', { name: 'Excluded' })).toBeInTheDocument();
     expect(within(row!).getByText('46')).toBeInTheDocument();
     expect(within(row!).queryByText(/confidence/i)).not.toBeInTheDocument();
     expect(within(row!).queryByText(/100% measured/i)).not.toBeInTheDocument();
@@ -164,70 +195,34 @@ describe('PagesTable', () => {
         crawlId={CRAWL}
       />,
     );
-    expect(screen.getByText('View').closest('a')).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /^View Homepage — / })).toHaveAttribute(
       'href',
       `/site/crawls/${SOURCE_CRAWL}/pages/${UUID}`,
     );
   });
 
-  it('renders the persisted link and indexability metrics', () => {
-    renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
-    expect(screen.getByText('12')).toBeInTheDocument();
-    expect(screen.getByText('Indexable')).toBeInTheDocument();
-  });
-
-  it('shows an unmeasured link metric as Not measured, never a zero', () => {
-    renderPages(
-      <PagesTable
-        pages={[page({ inbound_count: null, main_content_indexable: null })]}
-        crawlId={CRAWL}
-      />,
-    );
-    expect(screen.getAllByText('Not measured').length).toBeGreaterThanOrEqual(2);
-  });
-
-  it('asks the server to reorder, and marks the active column', async () => {
+  it('asks the server to order by URL from the Page header, and back to the default', () => {
     const onSortChange = vi.fn();
     const { rerender } = renderPages(
-      <PagesTable pages={[page()]} crawlId={CRAWL} sort="url" onSortChange={onSortChange} />,
-    );
-    fireEvent.click(screen.getByRole('button', { name: /^Inbound/ }));
-    expect(onSortChange).toHaveBeenCalledWith('inbound');
-
-    rerender(
-      <PagesTable pages={[page()]} crawlId={CRAWL} sort="inbound" onSortChange={onSortChange} />,
-    );
-    expect(screen.getByRole('columnheader', { name: /^Inbound/ })).toHaveAttribute(
-      'aria-sort',
-      'descending',
-    );
-  });
-
-  it('clicking the active sort returns to the default URL order', () => {
-    const onSortChange = vi.fn();
-    renderPages(
-      <PagesTable pages={[page()]} crawlId={CRAWL} sort="inbound" onSortChange={onSortChange} />,
-    );
-    fireEvent.click(screen.getByRole('button', { name: /^Inbound/ }));
-    expect(onSortChange).toHaveBeenCalledWith('status');
-  });
-
-  it('offers server-backed URL and status sorting', () => {
-    const onSortChange = vi.fn();
-    renderPages(
       <PagesTable pages={[page()]} crawlId={CRAWL} sort="status" onSortChange={onSortChange} />,
     );
-    expect(screen.getByRole('columnheader', { name: /^Status/ })).toHaveAttribute(
+    fireEvent.click(screen.getByRole('button', { name: /^Page/ }));
+    expect(onSortChange).toHaveBeenLastCalledWith('url');
+
+    rerender(
+      <PagesTable pages={[page()]} crawlId={CRAWL} sort="url" onSortChange={onSortChange} />,
+    );
+    expect(screen.getByRole('columnheader', { name: /^Page/ })).toHaveAttribute(
       'aria-sort',
       'ascending',
     );
-    fireEvent.click(screen.getByRole('button', { name: /^Page URL/ }));
-    expect(onSortChange).toHaveBeenCalledWith('url');
+    fireEvent.click(screen.getByRole('button', { name: /^Page/ }));
+    expect(onSortChange).toHaveBeenLastCalledWith('status');
   });
 
-  it('renders plain link headers where the table cannot reorder', () => {
+  it('renders a plain Page header where the table cannot reorder', () => {
     renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
-    expect(screen.queryByRole('button', { name: /^Inbound/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Inbound' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Page/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Page' })).toBeInTheDocument();
   });
 });

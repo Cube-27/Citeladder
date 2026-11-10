@@ -20,6 +20,8 @@ import { Button } from '@/components/ui/button';
 import { SearchField } from '@/components/ui/search-field';
 import { agentQueries, type AgentChatSummary } from '@/lib/api/agent';
 import { AGENT_CHAT_LIST_POLL_MS, AGENT_CHAT_SEARCH_DEBOUNCE_MS } from '@/lib/config/agent';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { formatDisplayShortDateTime } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
 import { MODE_HOMES } from '@/lib/navigation/app-routes';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
@@ -173,12 +175,22 @@ function ChatRows({
   );
 }
 
+/**
+ * Every chat's second line ends with its last activity, so chats that share a
+ * title (three "Analyze the Site Health issues") still read apart; what the
+ * chat targets and produced lead it when the chat has them.
+ */
 function ChatMeta({ chat }: Readonly<{ chat: AgentChatSummary }>) {
   const { kindLabel } = useAgentCatalog();
+  const timeZone = useDisplayTimeZone();
   const marker = chat.output_kind ? kindLabel(chat.output_kind) : null;
+  const lead = [chat.target_label, marker].filter(Boolean).join(' · ');
   return (
     <SidebarRecordMeta working={chat.running}>
-      {[chat.target_label, marker].filter(Boolean).join(' · ')}
+      {lead ? `${lead} · ` : null}
+      <time dateTime={chat.last_activity_at}>
+        {formatDisplayShortDateTime(chat.last_activity_at, timeZone)}
+      </time>
     </SidebarRecordMeta>
   );
 }

@@ -2,8 +2,8 @@
 
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { AppGrid } from '@/components/ui/app-grid';
 import { FilterChoice } from '@/components/ui/filter-bar';
+import { Meter } from '@/components/ui/meter';
 import { Callout } from '@/components/ui/callout';
 import { Button } from '@/components/ui/button';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
@@ -33,12 +33,16 @@ import {
   toChartPoints,
   toCompetitorSeries,
   toNamedChartPoints,
+  toRunComparison,
 } from '@/lib/visibility/trends';
 import { observationLabel } from '@/lib/visibility/vocabulary';
 import { coverageSummary } from '@/lib/visibility/coverage';
 import { formatDisplayDate } from '@/lib/format';
 import { VISIBILITY_METRICS } from '@/lib/config/visibility';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
+
+/** The headline mean place in answers, named apart from the table's Rank. */
+const AVERAGE_POSITION = 'Average position in answers';
 
 const metricCodec = stringUrlCodec(
   VISIBILITY_METRICS.map((item) => item.value),
@@ -109,21 +113,21 @@ export function VisibilityTrends({
           an unfiltered cross-surface view would invite reading them as the
           whole product's numbers. */}
       {surfaceEngine ? <SurfaceRatesPanel query={surfaceRatesQuery} /> : null}
-      <AppGrid layout="halves">
-        <MeasurementHistory
-          query={query}
-          metric={metric}
-          setMetric={setMetric}
-          focused={focusedBrand}
-          onClearFocus={() => setFocused(null)}
-          brandName={selected.rankings.find((row) => row.is_brand)?.name ?? null}
-        />
-        <RankingRowsTable
-          rows={selected.rankings}
-          onSelect={setFocused}
-          selectedName={focusedBrand}
-        />
-      </AppGrid>
+      {/* Each takes the full row: beside the chart the table's spelled-out
+          metric columns left the Brand column a few letters wide. */}
+      <MeasurementHistory
+        query={query}
+        metric={metric}
+        setMetric={setMetric}
+        focused={focusedBrand}
+        onClearFocus={() => setFocused(null)}
+        brandName={selected.rankings.find((row) => row.is_brand)?.name ?? null}
+      />
+      <RankingRowsTable
+        rows={selected.rankings}
+        onSelect={setFocused}
+        selectedName={focusedBrand}
+      />
       <EngineComparison
         visibility={selected}
         filter={engineFilter}
@@ -215,10 +219,12 @@ function HeadlineMetrics({ selected }: Readonly<{ selected: Visibility }>) {
   if (position != null) {
     segments.push({
       key: 'avg_position',
-      label: 'Average position',
+      // Not "Rank": the table's Rank (and the Overview's) orders the tracked
+      // brands by visibility; this is the mean place an answer names you in.
+      label: AVERAGE_POSITION,
       marker: (
-        <InfoHint label="Average position">
-          {`Where your brand tends to appear among the brands you TRACK — you and your configured competitors. A brand an answer names that you do not track is not counted, so this is not a rank within the whole answer. Counted only over the answers that named you, and averaged to ${formatPositionExact(position)}.`}
+        <InfoHint label={AVERAGE_POSITION}>
+          {`Where your brand tends to appear among the brands you TRACK — you and your configured competitors — within the answers that name you, averaged to ${formatPositionExact(position)}. A brand an answer names that you do not track is not counted. This is a different measure from Rank, which orders the tracked brands by visibility, so the two can differ.`}
         </InfoHint>
       ),
       value: formatPosition(position),
@@ -268,6 +274,7 @@ function MeasurementHistory({
   // asked to step out of.
   const competitors = focused === null ? toCompetitorSeries(points, metric) : [];
   const primaryLabel = focused ?? 'You';
+  const onlyPoint = points.length === 1 ? points[0] : undefined;
 
   let body: ReactNode;
   if (query.isError) {
@@ -283,6 +290,18 @@ function MeasurementHistory({
     body = <QueryState kind="loading" label="Loading measurement history…" />;
   } else if (!points.length) {
     body = <QueryState kind="empty" inline message="No measurements in this period yet." />;
+  } else if (onlyPoint) {
+    // One measurement has no line to draw: an empty plot with a few stacked
+    // dots. Compare the brands in it instead, in the same card.
+    body = (
+      <RunComparison
+        point={onlyPoint}
+        metric={metric}
+        metricLabel={metricLabel}
+        focused={focused}
+        timeZone={timeZone}
+      />
+    );
   } else {
     body = (
       <Stack gap="compact" aria-busy={query.isFetching}>
@@ -293,6 +312,7 @@ function MeasurementHistory({
           series={competitors}
           yMax={100}
           yFormat={(value) => `${Math.round(value)}%`}
+          directLabels
         />
       </Stack>
     );
@@ -323,5 +343,48 @@ function MeasurementHistory({
       </CardHeader>
       <CardContent>{body}</CardContent>
     </Card>
+  );
+}
+
+/**
+ * The only measurement in the period, ranked: one bar per tracked brand on the
+ * 0–100 scale, your brand in the accent and named "You". A focused brand is
+ * shown alone, as the line chart would plot it alone.
+ */
+function RunComparison({
+  point,
+  metric,
+  metricLabel,
+  focused,
+  timeZone,
+}: Readonly<{
+  point: VisibilityTrendPoint;
+  metric: (typeof VISIBILITY_METRICS)[number]['value'];
+  metricLabel: string;
+  focused: string | null;
+  timeZone: string;
+}>) {
+  const rows = toRunComparison(point, metric).filter(
+    (row) => focused === null || row.name === focused,
+  );
+  return (
+    <Stack gap="compact">
+      <Stack as="ul" gap="compact" aria-label={`${metricLabel} by brand`}>
+        {rows.map((row) => (
+          <li key={row.name}>
+            <Meter
+              label={row.isBrand ? `${row.name} · You` : row.name}
+              value={row.value}
+              valueLabel={formatWholePercent(row.value)}
+              tone={row.isBrand ? 'accent' : 'ink'}
+            />
+          </li>
+        ))}
+      </Stack>
+      <p className={textRole('caption')}>
+        One measurement in this period ({formatPointDate(point.completed_at, timeZone)}). A trend
+        line appears after a second run.
+      </p>
+    </Stack>
   );
 }

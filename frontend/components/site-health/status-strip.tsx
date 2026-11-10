@@ -14,6 +14,7 @@ import type { PageSummary, SiteCrawl, SiteHealthEntitlement } from '@citeladder/
 import { formatCount } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
 import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
+import { ScoreFigures, type ScoreSummary } from '@/components/site-health/score-section';
 import { crawlFailureCopy, dashboardRunNotice } from '@/lib/site-health/run-notice';
 import {
   canShowDiscoveredTotal,
@@ -25,19 +26,22 @@ import {
 } from '@/lib/site-health/status';
 
 /**
- * Always-mounted status row of the canonical Site Health screen.
+ * Always-mounted status line of the Site Health Pages tab.
  *
- * ONE compact row (badge + narration + inline counters) that narrates the
- * whole lifecycle in place below the score cards — discovery counts while
- * discovering, audit progress while analyzing, and the run-outcome notice
- * (`dashboardRunNotice`) for a run that did not complete cleanly. The row
- * changes CONTENT, never the screen: no phase mounts or unmounts the region,
- * and progress is never a separate panel that pushes the results around.
- * Free redaction rules apply — sample crawls never imply a hidden total.
+ * ONE compact line (badge + narration, the three headline scores as label +
+ * number, then the inline counters) that narrates the whole lifecycle in
+ * place — discovery counts while discovering, audit progress while analyzing,
+ * and the run-outcome notice (`dashboardRunNotice`) for a run that did not
+ * complete cleanly. The Overview tab keeps the score cards; this line is what
+ * every other view of the crawl leads with. The row changes CONTENT, never
+ * the screen: no phase mounts or unmounts the region, and progress is never a
+ * separate panel that pushes the results around. Free redaction rules apply —
+ * sample crawls never imply a hidden total.
  */
 export function StatusStrip({
   crawl,
   phase,
+  scoreSummary,
   entitlement,
   cancelPending,
   startPending,
@@ -48,6 +52,8 @@ export function StatusStrip({
 }: Readonly<{
   crawl: SiteCrawl | null;
   phase: SiteHealthPhase;
+  /** The headline scores: the dashboard's summary, else the crawl's own. */
+  scoreSummary: ScoreSummary;
   entitlement: SiteHealthEntitlement;
   cancelPending: boolean;
   /** Starts a new crawl from a failed one's notice; omitted when not allowed. */
@@ -68,6 +74,7 @@ export function StatusStrip({
       <StripContent
         crawl={crawl}
         phase={phase}
+        scoreSummary={scoreSummary}
         entitlement={entitlement}
         cancelPending={cancelPending}
         startPending={startPending}
@@ -83,6 +90,7 @@ export function StatusStrip({
 function StripContent({
   crawl,
   phase,
+  scoreSummary,
   entitlement,
   cancelPending,
   startPending,
@@ -93,6 +101,7 @@ function StripContent({
 }: Readonly<{
   crawl: SiteCrawl | null;
   phase: SiteHealthPhase;
+  scoreSummary: ScoreSummary;
   entitlement: SiteHealthEntitlement;
   cancelPending: boolean;
   startPending: boolean;
@@ -130,13 +139,21 @@ function StripContent({
   }
 
   if (phase === 'discovering') {
-    return <DiscoveryStrip crawl={crawl} entitlement={entitlement} cancelPending={cancelPending} />;
+    return (
+      <DiscoveryStrip
+        crawl={crawl}
+        scoreSummary={scoreSummary}
+        entitlement={entitlement}
+        cancelPending={cancelPending}
+      />
+    );
   }
 
   if (phase === 'analyzing') {
     return (
       <AnalysisStrip
         crawl={crawl}
+        scoreSummary={scoreSummary}
         cancelPending={cancelPending}
         pages={pages}
         selectedTotal={selectedTotal}
@@ -146,7 +163,7 @@ function StripContent({
   }
 
   if (phase === 'terminal') return <TerminalNotice crawl={crawl} onRerun={onRerun} />;
-  return <DashboardNotice crawl={crawl} />;
+  return <DashboardNotice crawl={crawl} scoreSummary={scoreSummary} />;
 }
 
 /** Why a terminal crawl has no score: its own reason wherever there is one. */
@@ -183,13 +200,17 @@ function TerminalNotice({ crawl, onRerun }: Readonly<{ crawl: SiteCrawl; onRerun
   );
 }
 
-function DashboardNotice({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
+function DashboardNotice({
+  crawl,
+  scoreSummary,
+}: Readonly<{ crawl: SiteCrawl; scoreSummary: ScoreSummary }>) {
   const notice = dashboardRunNotice(crawl);
   const analyzed = crawl.counters.analyzed || crawl.analyzed_count;
   return (
     <ProgressRow
       crawl={crawl}
       narration={notice?.message ?? 'Latest crawl results'}
+      scoreSummary={scoreSummary}
       counts={[
         { label: 'Pages discovered', value: crawl.visible_url_count },
         { label: 'Pages analyzed', value: analyzed },
@@ -215,12 +236,14 @@ function RunNotice({ crawl, message }: Readonly<{ crawl: SiteCrawl; message: str
 function ProgressRow({
   crawl,
   narration,
+  scoreSummary,
   counts,
   active,
   children,
 }: Readonly<{
   crawl: SiteCrawl;
   narration: string;
+  scoreSummary: ScoreSummary;
   counts: ReadonlyArray<{ label: string; value: number | null; className?: string }>;
   /** Show the live pulse — work is ongoing but not reflected in the counters. */
   active?: boolean;
@@ -228,7 +251,9 @@ function ProgressRow({
 }>) {
   return (
     <Stack>
-      <Inline gap="meta" className="justify-between">
+      {/* One line, read left to right: where the crawl stands, its scores,
+          then its page counts — wrapping as a whole on narrow screens. */}
+      <Inline gap="meta">
         <Inline gap="compact">
           <CrawlStatusBadge crawl={crawl} />
           <Inline as="span" className="type-body">
@@ -241,6 +266,7 @@ function ProgressRow({
           </Inline>
         </Inline>
         <Inline as="dl" gap="meta">
+          <ScoreFigures summary={scoreSummary} />
           {counts.map((count) => (
             <Inline key={count.label} className="type-body">
               <dt className="type-label">{count.label}</dt>
@@ -264,10 +290,12 @@ function ProgressRow({
 
 function DiscoveryStrip({
   crawl,
+  scoreSummary,
   entitlement,
   cancelPending,
 }: Readonly<{
   crawl: SiteCrawl;
+  scoreSummary: ScoreSummary;
   entitlement: SiteHealthEntitlement;
   cancelPending: boolean;
 }>) {
@@ -297,7 +325,13 @@ function DiscoveryStrip({
   }
 
   return (
-    <ProgressRow crawl={crawl} narration={narration} counts={counts} active={!cancelPending}>
+    <ProgressRow
+      crawl={crawl}
+      narration={narration}
+      scoreSummary={scoreSummary}
+      counts={counts}
+      active={!cancelPending}
+    >
       {sampleMode ? (
         <p className="type-body">
           We&apos;ll automatically analyze a {entitlement.sample_url_limit}-page sample of your
@@ -310,12 +344,14 @@ function DiscoveryStrip({
 
 function AnalysisStrip({
   crawl,
+  scoreSummary,
   cancelPending,
   pages,
   selectedTotal,
   selectedError,
 }: Readonly<{
   crawl: SiteCrawl;
+  scoreSummary: ScoreSummary;
   cancelPending: boolean;
   pages: PageSummary[];
   selectedTotal: number | null;
@@ -330,6 +366,7 @@ function AnalysisStrip({
     <ProgressRow
       crawl={crawl}
       narration={narration}
+      scoreSummary={scoreSummary}
       // Background re-discovery can leave the counters still; the pulse is
       // what distinguishes "working" from "stuck".
       active={!cancelPending && crawl.counters.activity.state !== 'stalled'}

@@ -330,7 +330,7 @@ describe('IssuesCatalog', () => {
     expect(screen.queryByRole('button', { name: /^Showing:/ })).not.toBeInTheDocument();
 
     window.history.back();
-    await waitFor(() => expect(classFilter('All (47)')).toBeInTheDocument());
+    await waitFor(() => expect(classFilter('All severities (47)')).toBeInTheDocument());
     expect(currentUrl()).not.toContain('severity=medium');
 
     window.history.forward();
@@ -403,9 +403,10 @@ describe('IssuesCatalog', () => {
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
     expect(await screen.findAllByText('WebSite schema is missing')).not.toHaveLength(0);
-    // Filter counts (tiles removed): All (47), Medium (23), AEO (17). The
-    // counts come from the API-owned summary, not a client re-count.
-    await userEvent.setup().click(classFilter('All (47)'));
+    // Filter counts (tiles removed): All severities (47), Medium (23), AEO
+    // (17). The counts come from the API-owned summary, not a client
+    // re-count. The closed trigger names what "All" ranges over.
+    await userEvent.setup().click(classFilter('All severities (47)'));
     expect(await screen.findByRole('menuitemradio', { name: 'Medium (23)' })).toBeInTheDocument();
     expect(screen.getByRole('menuitemradio', { name: 'AEO (17)' })).toBeInTheDocument();
     await userEvent.setup().keyboard('{Escape}');
@@ -416,7 +417,14 @@ describe('IssuesCatalog', () => {
     ).toBeInTheDocument();
     expect(screen.queryByText('Observed evidence')).not.toBeInTheDocument();
     expect(screen.queryByText('Reason: expected_schema_absent')).not.toBeInTheDocument();
-    expect(screen.getByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
+    // How to fix is one labelled line in the rail's header, not a card of its own.
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === 'P' &&
+          element.textContent === 'How to fix: Add a JSON-LD WebSite schema.',
+      ),
+    ).toBeInTheDocument();
     // The rule description states the PASSING expectation; under a failing
     // title it read as a contradiction, so neither the row nor the rail prints it.
     expect(
@@ -612,8 +620,11 @@ describe('IssuesCatalog', () => {
           element.textContent === '2 advisories · 94 occurrences · 50 pages',
       ),
     ).toBeInTheDocument();
-    await user.click(classFilter());
-    expect(await screen.findByRole('menuitemradio', { name: /^All/ })).toBeInTheDocument();
+    // Advisories have no severity, so their unfiltered choice ranges over categories.
+    await user.click(classFilter('All categories (2)'));
+    expect(
+      await screen.findByRole('menuitemradio', { name: 'All categories (2)' }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('menuitemradio', { name: /High/ })).not.toBeInTheDocument();
     expect(seen).toContain('advisory');
   });
@@ -664,7 +675,7 @@ describe('IssuesCatalog', () => {
     await user.click(screen.getByRole('button', { name: /WebSite schema is missing/ }));
     await waitFor(() => expect(currentUrl()).toContain(`issue=${ISSUE_A}`));
 
-    expect(await screen.findByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
+    expect(await screen.findByText('How to fix:')).toBeInTheDocument();
     const link = await screen.findByRole('link', { name: /Homepage/ });
     expect(link).toHaveAttribute('href', `/site/crawls/${CRAWL}/pages/${URL_A}`);
     // The affected page's v2 P1 type badge renders inside the row (scoped —
@@ -679,6 +690,102 @@ describe('IssuesCatalog', () => {
     expect(handoff.prompt).toContain('https://acme.com/');
     // The technical methodology is chosen up front, not left to the model.
     expect(handoff.skillId).toBe('technical_health');
+  });
+
+  describe('pages that share one piece of evidence', () => {
+    const FORM_RULE = 'web.accessibility_form_names';
+    const formOccurrence = (index: number, control: Record<string, string>) =>
+      occurrence({
+        rule_id: FORM_RULE,
+        occurrence_id: `dddddddd-${String(index).padStart(4, '0')}-4111-8111-111111111111`,
+        site_url_id: `cccccccc-${String(index).padStart(4, '0')}-4111-8111-111111111111`,
+        normalized_url: `https://acme.com/page-${index}`,
+        display_url: `https://acme.com/page-${index}`,
+        title: `Page ${index}`,
+        evidence: { missing_control_descriptors: [{ ordinal: index, ...control }] },
+      });
+    const email = { tag: 'INPUT', name: 'email' };
+
+    function serveFormIssue(detail: Record<string, unknown>) {
+      mswServer.use(
+        http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
+          HttpResponse.json({
+            items: [
+              issue({
+                rule_id: FORM_RULE,
+                title: 'Form controls missing accessible names',
+                affected_url_count: 3,
+              }),
+            ],
+            next_cursor: null,
+            summary,
+          }),
+        ),
+        http.get(`/api/v1/site-crawls/${CRAWL}/issues/${ISSUE_A}`, () =>
+          HttpResponse.json(issueDetail({ rule_id: FORM_RULE, ...detail })),
+        ),
+      );
+    }
+
+    it('says shared evidence once, with one question for every page that carries it', async () => {
+      serveFormIssue({
+        affected_url_count: 3,
+        occurrences: [
+          formOccurrence(1, email),
+          formOccurrence(2, { tag: 'SELECT', id: 'country' }),
+          formOccurrence(3, email),
+        ],
+      });
+
+      renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+
+      // The two pages differ only in the control's ordinal, which is not
+      // shown, so they are one fix.
+      expect(await screen.findAllByText('input[name="email"]')).toHaveLength(1);
+      expect(screen.getByText('On 2 pages')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Page 1/ })).toHaveAttribute(
+        'href',
+        `/site/crawls/${CRAWL}/pages/cccccccc-0001-4111-8111-111111111111`,
+      );
+      expect(screen.getByRole('link', { name: /Page 3/ })).toBeInTheDocument();
+      // The group's question names the issue, not one page of it.
+      const shared = screen.getByRole('link', { name: 'Ask agent about these pages' });
+      const handoff = parseAgentHandoff(
+        new URL(shared.getAttribute('href')!, 'http://x').searchParams,
+      );
+      expect(handoff.context).toEqual({
+        issue_group_reference: { crawl_id: CRAWL, group_id: ISSUE_A },
+      });
+      expect(handoff.prompt).toContain('input[name="email"]');
+      // Evidence on one page only keeps that page's own row and question.
+      expect(screen.getByText('select[id="country"]')).toBeInTheDocument();
+      expect(screen.getAllByRole('link', { name: 'Ask agent about this page' })).toHaveLength(1);
+    });
+
+    it('claims only the loaded pages while more pages of occurrences follow', async () => {
+      serveFormIssue({
+        affected_url_count: 179,
+        occurrences: [formOccurrence(1, email), formOccurrence(2, email)],
+        next_cursor: 'cursor-page-2',
+      });
+
+      renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+
+      expect(await screen.findByText('On all 2 pages shown, of 179 affected')).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: 'Next page' })[0]).not.toBeDisabled();
+    });
+
+    it('says when the whole list shares it', async () => {
+      serveFormIssue({
+        affected_url_count: 2,
+        occurrences: [formOccurrence(1, email), formOccurrence(2, email)],
+      });
+
+      renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+
+      expect(await screen.findByText('On all 2 affected pages')).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Ask agent about this page' })).toBeNull();
+    });
   });
 
   it('pages occurrences with a cursor-aware Next/Previous control', async () => {
@@ -775,11 +882,14 @@ describe('IssuesCatalog', () => {
 
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
-    // Scoped to the badge row: the page-kind filter <select> also lists every
-    // type label as an <option>.
-    const affects = (await screen.findByText('Affects')).parentElement!;
-    expect(within(affects).getByText('Product')).toBeInTheDocument();
-    expect(within(affects).getByText('Category')).toBeInTheDocument();
+    // One line: the count, then the types it spans.
+    expect(
+      await screen.findByText(
+        (_, element) =>
+          element?.tagName === 'P' &&
+          element.textContent === '32 pages affected · Page types: Product, Category',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('omits the page-type row for an issue with no classified pages', async () => {
@@ -791,7 +901,10 @@ describe('IssuesCatalog', () => {
 
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
-    expect(await screen.findAllByText('WebSite schema is missing')).not.toHaveLength(0);
-    expect(screen.queryByText('Affects')).not.toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        (_, element) => element?.tagName === 'P' && element.textContent === '32 pages affected',
+      ),
+    ).toBeInTheDocument();
   });
 });

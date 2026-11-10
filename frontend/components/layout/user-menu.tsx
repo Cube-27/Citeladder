@@ -5,7 +5,7 @@ import { LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
-import { SidebarIdentButton, SidebarRowTooltip } from '@/components/ui/app-shell';
+import { SidebarIdentButton, SidebarTextTooltip } from '@/components/ui/app-shell';
 import {
   Menu,
   MenuContent,
@@ -95,7 +95,7 @@ export function UserMenuTrigger({ presenter }: Readonly<{ presenter: UserMenuPre
   return (
     <Menu open={open} onOpenChange={(next) => setOpen(presenter, next)}>
       {presenter === 'sidebar' ? (
-        <SidebarRowTooltip label={email}>
+        <SidebarTextTooltip inRail>
           <MenuTrigger asChild>
             <SidebarIdentButton
               aria-label={label}
@@ -104,7 +104,7 @@ export function UserMenuTrigger({ presenter }: Readonly<{ presenter: UserMenuPre
               lead={<Avatar name={email} />}
             />
           </MenuTrigger>
-        </SidebarRowTooltip>
+        </SidebarTextTooltip>
       ) : (
         <MenuTrigger
           aria-label={label}

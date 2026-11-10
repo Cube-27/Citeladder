@@ -87,6 +87,7 @@ export function TrendChart({
   format = yFormat,
   legend = true,
   eventsLabel,
+  directLabels = false,
 }: Readonly<{
   /** The first line, one entry per point; its labels and timestamps place every line. */
   data: readonly TrendPoint[];
@@ -108,6 +109,11 @@ export function TrendChart({
   legend?: boolean;
   /** The legend's name for the event markers, e.g. "Marked implemented". */
   eventsLabel?: string;
+  /**
+   * Name each line at its latest point, so lines whose inks sit close (the
+   * comparison greys) are told apart by name rather than by shade alone.
+   */
+  directLabels?: boolean;
 }>) {
   const [plotRef, width] = useChartWidth<HTMLDivElement>();
   const [active, setActive] = useState<number | null>(null);
@@ -192,6 +198,7 @@ export function TrendChart({
           height={height}
           active={active}
           yFormat={yFormat}
+          directLabels={directLabels && lines.length > 1}
         />
         {active === null ? null : (
           <ChartTip
@@ -238,6 +245,7 @@ function TrendPlot({
   height,
   active,
   yFormat,
+  directLabels,
 }: Readonly<{
   data: readonly TrendPoint[];
   lines: readonly Line[];
@@ -247,6 +255,7 @@ function TrendPlot({
   height: number;
   active: number | null;
   yFormat: (value: number) => string;
+  directLabels: boolean;
 }>) {
   const breaks = data.map((point) => point.breakBefore === true);
   const plotted = lines.map((line) => ({ line, points: linePoints(line.values, breaks, scale) }));
@@ -327,6 +336,7 @@ function TrendPlot({
       {active === null && latest !== null && latest !== undefined ? (
         <TrendDot x={scale.x(data.length - 1)} y={scale.y(latest)} tone={1} />
       ) : null}
+      {directLabels ? <LineEndLabels lines={lines} scale={scale} bottom={bottom} /> : null}
       {active === null
         ? null
         : lines.map((line) => {
@@ -336,6 +346,54 @@ function TrendPlot({
             );
           })}
     </svg>
+  );
+}
+
+/** The vertical room one end label needs, so two labels never overprint. */
+const END_LABEL_GAP = 14;
+
+/**
+ * Each line's name just above and before its latest measured point, pushed
+ * apart where two lines end close together and kept inside the plot. The
+ * labels are drawn over a surface halo so they stay legible across a line.
+ */
+function LineEndLabels({
+  lines,
+  scale,
+  bottom,
+}: Readonly<{ lines: readonly Line[]; scale: TrendScale; bottom: number }>) {
+  const ends = lines
+    .flatMap((line) => {
+      for (let index = line.values.length - 1; index >= 0; index -= 1) {
+        const value = line.values[index];
+        if (value !== null && value !== undefined)
+          return [{ line, x: scale.x(index), y: scale.y(value) - 10 }];
+      }
+      return [];
+    })
+    .sort((a, b) => a.y - b.y);
+  // Each label sits at its line's end, or just below the label above it.
+  const placed = ends.reduce<typeof ends>((above, end) => {
+    const floor = (above.at(-1)?.y ?? scale.padTop + 6 - END_LABEL_GAP) + END_LABEL_GAP;
+    return [...above, { ...end, y: Math.min(bottom - 4, Math.max(end.y, floor)) }];
+  }, []);
+  return (
+    <g data-line-labels="">
+      {placed.map(({ line, x, y }) => (
+        <text
+          key={line.name}
+          x={x - 6}
+          y={y}
+          textAnchor="end"
+          dominantBaseline="middle"
+          paintOrder="stroke"
+          strokeWidth={3}
+          className="fill-ink-secondary stroke-surface text-caption"
+        >
+          {line.name}
+        </text>
+      ))}
+    </g>
   );
 }
 

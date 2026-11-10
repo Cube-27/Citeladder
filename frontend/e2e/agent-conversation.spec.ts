@@ -56,7 +56,8 @@ function chatDetail(): AgentChatDetail {
       skill_source: 'chat',
       evidence_refs: [],
       web_sources: [],
-      steps: [],
+      // A written reply records its model call; only an unanswered turn's reply has none.
+      steps: index % 2 ? [{ kind: 'model', ordinal: 1 }] : [],
       mentions: [],
       created_at: NOW,
     })),
@@ -183,6 +184,7 @@ for (const width of [1280, 390]) {
           id: '77777777-7777-4777-8777-999999999997',
           sequence: 27,
           content: 'Stopped. Nothing from this turn was saved.',
+          steps: [],
         });
         return route.fulfill({ json: current.latest_run });
       });

@@ -15,7 +15,7 @@ import { warmOverviewWidgets } from '@/lib/overview/widget-queries';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
-import { DashboardActions, DashboardHeader } from './dashboard-sections';
+import { DashboardActions, ProjectMeta } from './dashboard-sections';
 import { OverviewGrid } from './overview-grid';
 import { OverviewLayoutMenu } from './overview-layout-menu';
 import { OverviewWidgetView } from './overview-widget';
@@ -127,7 +127,7 @@ function DashboardData({
       }
     >
       <Stack gap="workspace">
-        <DashboardHeader data={data} activeProject={activeProject} />
+        <ProjectMeta data={data} />
         {data.active_prompt_count === 0 ? <PromptSetupCard /> : null}
         {actions.downloadError ? (
           <Callout tone="negative">The report could not be downloaded. Try again.</Callout>

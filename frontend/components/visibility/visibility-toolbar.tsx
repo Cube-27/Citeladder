@@ -91,12 +91,15 @@ type ToolbarProps = Readonly<{
  */
 export function VisibilityToolbar(props: ToolbarProps) {
   const evidence = isEvidenceTab(props.activeTab);
+  // A period and a grouping only mean something while the page pools every
+  // run in a period; beside "Latest run" or one named run they read as a
+  // contradiction. They come last, so showing or hiding them never moves a
+  // control to their left. Every trigger is as wide as its longest option.
+  const pooled = props.selectionMode === 'range';
   return (
     <div className="contents" data-testid="visibility-toolbar">
       <MarketFilter {...props} />
       <MeasurementFilter {...props} />
-      <RangeFilter {...props} />
-      {props.activeTab === 'trends' ? <GranularityFilter {...props} /> : null}
       <CohortFilter {...props} />
       <EngineFilterControl {...props} />
       {evidence ? <PromptFilter {...props} /> : null}
@@ -109,8 +112,11 @@ export function VisibilityToolbar(props: ToolbarProps) {
           value={props.outcome ?? 'all'}
           options={ANSWER_OUTCOMES}
           onChange={(value) => props.onChangeOutcome?.(value === 'all' ? null : value)}
+          fit
         />
       ) : null}
+      {pooled ? <RangeFilter {...props} /> : null}
+      {pooled && props.activeTab === 'trends' ? <GranularityFilter {...props} /> : null}
     </div>
   );
 }
@@ -135,6 +141,7 @@ export function MarketFilter({
         label: option.label,
       }))}
       onChange={(value) => onChangeMarket(value === DEFAULT_MARKET ? null : value)}
+      fit
     />
   );
 }
@@ -153,6 +160,7 @@ function CohortFilter({ cohort, onChangeCohort }: ToolbarProps) {
       defaultValue="core"
       options={COHORT_OPTIONS}
       onChange={onChangeCohort}
+      fit
     />
   );
 }
@@ -185,6 +193,12 @@ function MeasurementFilter({
           hideLabel
           value={current}
           active={pooled || Boolean(selectedRunId)}
+          sizeTo={[
+            'Latest run',
+            'All runs in period',
+            missingRunLabel,
+            ...runs.map((run) => run.label),
+          ]}
         />
       </MenuTrigger>
       <MenuContent>
@@ -239,6 +253,7 @@ function EngineFilterControl({ engine, onChangeEngine }: ToolbarProps) {
           hideLabel
           value={engine === 'all' ? 'All surfaces' : engineLabel(engine)}
           active={engine !== 'all'}
+          sizeTo={['All surfaces', ...catalog.order.map((key) => engineLabel(key))]}
         />
       </MenuTrigger>
       <MenuContent>
@@ -280,6 +295,7 @@ function RangeFilter({ range, onChangeRange }: ToolbarProps) {
       defaultValue="90d"
       options={RANGE_OPTIONS}
       onChange={onChangeRange}
+      fit
     />
   );
 }
@@ -293,6 +309,7 @@ function GranularityFilter({ granularity, onChangeGranularity }: ToolbarProps) {
       defaultValue="run"
       options={GRANULARITY_OPTIONS}
       onChange={onChangeGranularity}
+      fit
     />
   );
 }
@@ -307,6 +324,7 @@ function PromptFilter({ promptOptions, promptId, onChangePrompt }: ToolbarProps)
           hideLabel
           value={prompt?.label ?? 'Every prompt'}
           active={promptId !== null}
+          sizeTo={['Every prompt', ...promptOptions.map((option) => option.label)]}
           className="max-w-64"
         />
       </MenuTrigger>

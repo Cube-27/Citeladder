@@ -177,6 +177,30 @@ export function toNamedChartPoints(
   });
 }
 
+/** One tracked brand's value in a single run, as whole percent. */
+export type RunComparisonRow = Readonly<{ name: string; isBrand: boolean; value: number | null }>;
+
+/**
+ * Every tracked brand's value for `metric` in ONE point, highest first.
+ *
+ * With a single run there is no line to draw, only a comparison. The tracked
+ * brand reads the point's own headline value (the series its line would
+ * plot); competitors read their ranking row. An unmeasured brand stays null
+ * and sorts last, never as zero.
+ */
+export function toRunComparison(
+  point: VisibilityTrendPoint,
+  metric: TrendMetric,
+): RunComparisonRow[] {
+  return point.rankings
+    .map((row) => ({
+      name: row.name,
+      isBrand: row.is_brand,
+      value: row.is_brand ? metricValue(point, metric) : rankingMetricValue(row, metric),
+    }))
+    .sort((a, b) => (b.value ?? -1) - (a.value ?? -1) || a.name.localeCompare(b.name));
+}
+
 /**
  * One comparison line per tracked competitor, aligned to the same points.
  *
