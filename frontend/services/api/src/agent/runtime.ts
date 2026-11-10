@@ -22,11 +22,16 @@ import {
   loadSkill,
   methodology,
   saveDocument,
+  suggestEdits,
   EDIT_DOCUMENT,
   LOAD_SKILL,
   SAVE_DOCUMENT,
+  SUGGEST_EDITS,
   type DocumentState,
 } from './builtin-tools.ts';
+import { pageStates, saveSuggestions } from './suggest-edits.ts';
+import { fetchesPage } from './skills.ts';
+import { agentPageFieldsSchema } from '@citeladder/contracts/agent';
 import {
   agentPolicy,
   AgentError,
@@ -78,7 +83,7 @@ function failureCode(error: unknown) {
   return 'internal_error';
 }
 type StepRecord = {
-  kind: 'model' | 'skill' | 'document' | 'tool' | 'search';
+  kind: 'model' | 'skill' | 'document' | 'suggestion' | 'tool' | 'search';
   ordinal?: number;
   skill_id?: string;
   tool?: string;
@@ -118,6 +123,20 @@ export type RuntimeDependencies = {
   attachTarget: AttachTarget;
 };
 type Turn = Awaited<ReturnType<AgentRuntime['load']>>;
+/** The chat's page documents, which take suggestions, with their SEO fields. */
+function pageDocuments(documents: Awaited<ReturnType<typeof chatDocuments>>) {
+  return documents.flatMap(({ output, revision }) =>
+    fetchesPage({ outputKind: output.kind }) && revision.fields !== null
+      ? [
+          {
+            number: output.number,
+            outputId: output.id,
+            fields: agentPageFieldsSchema.parse(revision.fields),
+          },
+        ]
+      : [],
+  );
+}
 /** The workflow's pinned format, else the latest document's. */
 function currentFormat(turn: Turn) {
   return turn.manifest.workflow?.format_id ?? turn.latest?.output.format_id ?? null;
@@ -152,6 +171,17 @@ function savedTranscript(messages: readonly ConversationMessage[]): Conversation
 function savedNotice(number: number, formatLabel: string | null) {
   const format = formatLabel ? ` in ${formatLabel} format` : '';
   return `${documentLabel(number)} saved${format}.`;
+}
+/** One notice per page document the turn suggested changes to. */
+function suggestedNotices(suggestions: TurnState['suggestions']) {
+  const counts = new Map<number, number>();
+  for (const { document } of suggestions) counts.set(document, (counts.get(document) ?? 0) + 1);
+  return [...counts]
+    .toSorted(([left], [right]) => left - right)
+    .map(
+      ([number, count]) =>
+        `${count === 1 ? 'One suggestion' : `${count} suggestions`} added to ${documentLabel(number)}.`,
+    );
 }
 /**
  * The web searches the next call may run, and is held for: what is left of the
@@ -191,7 +221,8 @@ const unfunded = (error: unknown) => error instanceof RefusedDispatch;
  * keeps every later replay well formed (B60, B69).
  */
 function closable(state: TurnState) {
-  return state.staged.size > 0 && !state.waiting && state.messages.at(-1)?.role === 'user';
+  const staged = state.staged.size > 0 || state.suggestions.length > 0;
+  return staged && !state.waiting && state.messages.at(-1)?.role === 'user';
 }
 /** What the turn had built when it stopped. */
 type Progress = {
@@ -321,6 +352,7 @@ export class AgentRuntime {
           ...documents.flatMap(({ revision }) => [revision.title, revision.body]),
         ),
         manifest,
+        pages: await pageStates(trx, scope.workspaceId, pageDocuments(documents)),
         // Fixed for the turn: computed once, not on every call.
         context: suppliedManifest(manifest, budget.context_package_max_chars),
         transcripts: await chatTranscripts(trx, scope, chat.id),
@@ -388,6 +420,7 @@ export class AgentRuntime {
         kind: output.kind,
         formatId: output.format_id,
         revision,
+        suggestions: turn.pages.get(output.number)?.digest ?? null,
       })),
       pinned: state.skill
         ? {
@@ -536,6 +569,8 @@ export class AgentRuntime {
       })),
       staged: new Map(),
       personIds: turn.personIds,
+      pages: turn.pages,
+      suggestions: [],
       read: [],
       web: new Map(),
       queries: new Map(),
@@ -631,6 +666,11 @@ export class AgentRuntime {
       const outcome = loadSkill(catalog, state, call.input, turn.budget);
       if (outcome.ok && state.skill && before?.id !== state.skill.id)
         state.steps.push({ kind: 'skill', skill_id: state.skill.id });
+      return outcome;
+    }
+    if (call.name === SUGGEST_EDITS) {
+      const outcome = suggestEdits(catalog, state, call.input, turn.budget);
+      if (outcome.ok) state.steps.push({ kind: 'suggestion' });
       return outcome;
     }
     // A document is saved whole once per response, so a later save never silently wins.
@@ -740,13 +780,14 @@ export class AgentRuntime {
       await authorize(trx, turn.scope);
       const chat = await getChat(trx, turn.scope, run.chat_id, true);
       const sources = uniqueSources(contextCitations(turn.manifest), read);
-      const completion = staged
-        .map(([number, { payload }]) => {
+      const completion = [
+        ...staged.map(([number, { payload }]) => {
           const format = payload.format_id;
           const label = format ? (this.deps.catalog.formats?.get(format)?.label ?? format) : null;
           return savedNotice(number, label);
-        })
-        .join(' ');
+        }),
+        ...suggestedNotices(state.suggestions),
+      ].join(' ');
       const reply = scrubRecordRefs(text, state.personIds).trim();
       let content = completion;
       if (reply) {
@@ -756,7 +797,7 @@ export class AgentRuntime {
           '\n[reply truncated at its size bound]',
         );
         content = [answer, completion].filter(Boolean).join('\n\n');
-      } else if (!staged.length) content = noReply(reads.length);
+      } else if (!completion) content = noReply(reads.length);
       const message = await appendMessage(trx, chat, {
         role: 'agent',
         replyTo: run.user_message_id,
@@ -789,6 +830,12 @@ export class AgentRuntime {
           this.deps.attachTarget,
         );
       }
+      // Suggestions anchor to each page's latest revision, so they follow the documents.
+      await saveSuggestions(trx, chat, state.suggestions, {
+        runId: run.id,
+        messageId: message.id,
+        outputs: new Map(turn.documents.map(({ output }) => [output.number, output.id])),
+      });
       await saveTranscript(trx, {
         scope: turn.scope,
         runId: run.id,

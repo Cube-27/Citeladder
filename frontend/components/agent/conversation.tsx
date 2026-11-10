@@ -389,6 +389,8 @@ function stepLabel(step: MessageStep): string {
   if (step.kind === 'skill') return toolCallLabel({ tool: 'load_skill', status: 'completed' });
   if (step.kind === 'document')
     return toolCallLabel({ tool: 'save_document', status: 'completed' });
+  if (step.kind === 'suggestion')
+    return toolCallLabel({ tool: 'suggest_edits', status: 'completed' });
   if (step.kind === 'search')
     return step.query ? `Searched the web: ${step.query}` : 'Searched the web';
   if (step.kind === 'tool')

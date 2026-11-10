@@ -1,7 +1,8 @@
 /**
  * Content optimization policy: the content-angle refresh's window, bounds and
  * versions (docs/plans/content-optimization.md sections 1-2, CO3, CO4, CO15),
- * and the page fetch that starts a page document (phase 2, PR 1).
+ * the page fetch that starts a page document (phase 2, PR 1) and the
+ * suggestions made on it (phase 2, PR 2).
  */
 import agentRuntime from './agent-runtime.json' with { type: 'json' };
 
@@ -114,5 +115,49 @@ export const contentOptimization = {
     body_max_chars: agentRuntime.output_body_max_chars,
     /** The JSON-LD blocks kept in the SEO fields; blocks past it are left out whole. */
     json_ld_max_chars: 20_000,
+  },
+  /**
+   * Suggestions on a page document (phase 2, PR 2): what `suggest_edits`
+   * accepts, how a span is quoted, and which page-local Site Health findings
+   * become suggestions. Categories are the rules engine's user-facing ones.
+   */
+  suggestions: {
+    categories: [
+      'correctness',
+      'clarity',
+      'ai_answers',
+      'proof',
+      'search_guidelines',
+      'natural_voice',
+      'coverage',
+    ],
+    /** Characters of context kept on each side of a span's exact quote (W3C TextQuoteSelector). */
+    quote_context_chars: 32,
+    /** Suggestions one `suggest_edits` call may stage, and one turn in all. */
+    max_per_call: 20,
+    max_per_turn: 60,
+    rule_id_max_chars: 64,
+    rationale_max_chars: 600,
+    needs_input_max_chars: 300,
+    /** A body replacement's length; a longer rewrite asks the person instead. */
+    replacement_max_chars: 4000,
+    /** Each SEO field's replacement length. */
+    field_max_chars: { title: 255, meta_description: 1000, json_ld: 20_000 },
+    /** Suggestions listed to the model at the start of a turn; the rest are counted. */
+    turn_list_max: 80,
+    /** Characters of a quote or replacement in that list. */
+    turn_list_quote_chars: 120,
+    /** Line pairs the revision diff compares before treating the middle as one change. */
+    diff_max_cells: 4_000_000,
+    /**
+     * Page-local Site Health rules whose failure a field fixes: each becomes a
+     * `site_health` suggestion on that field when the page is fetched. Every
+     * other finding stays in the SEO tab only (CO11).
+     */
+    site_health_field_rules: {
+      'technical.title_present': 'title',
+      'technical.meta_description_present': 'meta_description',
+    },
+    site_health_category: 'search_guidelines',
   },
 } as const;

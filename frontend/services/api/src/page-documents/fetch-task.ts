@@ -25,6 +25,7 @@ import { hardExcluded } from '../site-health/url-admission.ts';
 import { pageLocalChecks, type PageCheck } from './checks.ts';
 import { pageFetchPayloadSchema, type PageFetchPayload } from './keys.ts';
 import { readPageDocument, type PageReading } from './markdown.ts';
+import { insertSuggestion, type PageField, type RevisionText } from './suggestions.ts';
 
 const p = policy.content_optimization.page_fetch;
 const BLOCKED: ReadonlySet<string> = new Set(p.blocked_robots_codes);
@@ -222,7 +223,7 @@ async function recordFetch(db: Database, store: AgentStore, task: QueueTask, res
   const workflow = store.dependencies.catalog.workflows?.byId.get(payload.workflow_id);
   const skill = workflow ? store.dependencies.catalog.skills.get(workflow.skill_id) : undefined;
   if (!skill) throw new TypeError(`Page workflow ${payload.workflow_id} has no skill`);
-  await createFetchedDocument(db, chat, {
+  const document = await createFetchedDocument(db, chat, {
     kind: skill.outputKind,
     skillId: skill.id,
     snapshotId,
@@ -230,7 +231,66 @@ async function recordFetch(db: Database, store: AgentStore, task: QueueTask, res
     body: result.document.body,
     fields: result.document.fields,
   });
+  await siteHealthSuggestions(db, chat, {
+    outputId: document.output.id,
+    revision: { ...document.revision, fields: result.document.fields },
+    snapshotId,
+    checks: result.checks,
+  });
   await store.queueFetchedTurn(db, fetch, snapshotId);
+}
+
+const SUGGESTED = policy.content_optimization.suggestions;
+const FIELD_RULES: Readonly<Record<string, PageField>> = SUGGESTED.site_health_field_rules;
+const FAILING: ReadonlySet<string> = new Set(policy.site_health.reads.failing_outcomes);
+const RULES = new Map(policy.site_health.rule_catalog.map((rule) => [rule.rule_id, rule]));
+
+/**
+ * The fetch's page-local Site Health findings that a field fixes (a missing
+ * title or meta description) become `site_health` suggestions on revision 1,
+ * in the same transaction as the checks that found them, so the first turn
+ * already sees them and can write their text. They are advice until then:
+ * Site Health judges, it does not write copy. Every other finding stays in the
+ * SEO tab only (CO11).
+ */
+async function siteHealthSuggestions(
+  db: Database,
+  chat: Chat,
+  document: {
+    outputId: string;
+    revision: RevisionText;
+    snapshotId: string;
+    checks: readonly PageCheck[];
+  },
+) {
+  for (const check of document.checks) {
+    const field = FIELD_RULES[check.rule_id];
+    if (!field || !check.display_applicability || !FAILING.has(check.outcome)) continue;
+    const rule = RULES.get(check.rule_id);
+    await insertSuggestion(
+      db,
+      {
+        workspaceId: chat.workspace_id,
+        projectId: chat.project_id,
+        outputId: document.outputId,
+        revision: document.revision,
+        by: { actor: 'system' },
+      },
+      {
+        id: randomUUID(),
+        anchor: { kind: 'field', field },
+        dependsOn: [],
+        replacement: null,
+        needsInput: null,
+        category: SUGGESTED.site_health_category,
+        ruleId: check.rule_id,
+        rationale: rule ? `${rule.display_label}. ${rule.remediation}` : check.rule_id,
+        source: 'site_health',
+        snapshotId: document.snapshotId,
+        ruleVersion: check.rule_version,
+      },
+    );
+  }
 }
 
 type Dependencies = {

@@ -12,6 +12,7 @@ const API_ERROR_CODES = [
   'agent_not_configured',
   'agent_output_conflict',
   'agent_run_active',
+  'agent_suggestion_conflict',
   'agent_turn_limit',
   'ai_credits_exhausted',
   'ai_pricing_unavailable',

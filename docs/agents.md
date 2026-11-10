@@ -118,7 +118,10 @@ calls none. Its final text is the reply.
   and revision), each document's current text (unless the model saved it whole
   with `save_document` in a replayed turn or that text was already supplied,
   so a user's edit or the result of `edit_document` is always supplied
-  exactly), a pinned methodology (unless already loaded) and the request.
+  exactly), each page document's suggestions with their ids and statuses
+  (always, since the person changes them between turns; at most
+  `suggestions.turn_list_max`), a pinned methodology (unless already loaded)
+  and the request.
 - **Memory.** Each run's exchange, including thinking and compaction blocks, is
   saved in `agent_run_transcripts` with the reply in one transaction. A
   transcript is a run record for replay, not a knowledge store: no read returns
@@ -133,7 +136,7 @@ calls none. Its final text is the reply.
   compacted again.
   Chat completions return no compaction, so the oldest whole turns are dropped at
   turn start beyond `replay_max_chars`.
-- **Tools.** The model has the [read tools](#read-tools) and three built-ins
+- **Tools.** The model has the [read tools](#read-tools) and four built-ins
   ([`builtin-tools.ts`](../frontend/services/api/src/agent/builtin-tools.ts)).
   `load_skill` returns a methodology and its saving rules; a turn may switch
   methodology at any time. `save_document` stages a whole deliverable after a
@@ -144,9 +147,16 @@ calls none. Its final text is the reply.
   turn's staged version, else its latest revision), named by `document` when
   the chat has more than one: each must match exactly once, all apply or none,
   and it writes nothing outside the chat's own documents. Each result starts
-  with the document's label ("Document 2: …"). Every staged document is
+  with the document's label ("Document 2: …"). `suggest_edits` stages
+  suggestions on a page document, all or none: each names `old_string`
+  (matching once), an SEO `field`, or neither for the whole page, with
+  `new_string` or a `needs_input` question, and is resolved to a stored anchor
+  when staged; a later `edit_document` in the same turn moves staged
+  suggestions and drops the ones it changed. Every staged document is
   committed as a new revision only with the reply, with the same sources and
-  Action attachment. Questions need no methodology. The skill is
+  Action attachment, and staged suggestions after it, against that revision. A
+  turn that staged only suggestions can still end on them (B60, B69).
+  Questions need no methodology. The skill is
   taken, in order, from the user's pick or workflow, the chat's pin, the
   attached Action's diagnosis, and otherwise the model's `load_skill`; a pinned
   methodology is supplied in the opening message. Fixed handoffs such as Site
@@ -358,9 +368,11 @@ A workflow whose skill writes a fetched kind (`fetched_kinds` in the
 [skill config](../frontend/services/api/src/config/agent-skills.ts): `page`)
 starts with a page fetch rather than a turn. `optimize_page` runs
 `content_optimize` on a `page` document: the live page, fetched as Markdown
-with its SEO `fields`, revision 1 authored `fetch`. Such a document is changed
-only with `edit_document`; `save_document` refuses it, and edits and restores
-carry its fields forward.
+with its SEO `fields`, revision 1 authored `fetch`. The model proposes changes
+to it with `suggest_edits` and changes it directly with `edit_document` only
+when the person asks; `save_document` refuses it, and edits and restores carry
+its fields forward. Its suggestions, and how the person applies them, are in
+[content optimization](content-optimization.md#suggestions).
 
 New chat shows the workflows as a grouped gallery; picking one opens a short
 form whose required inputs must be filled, and the composed message names each
