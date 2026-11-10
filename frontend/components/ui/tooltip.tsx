@@ -11,11 +11,15 @@ import {
   useState,
 } from 'react';
 
+import { focusFromKeyboard } from '@/components/ui/input-modality';
+
 /**
  * Tooltip — a short `ink` label that names an icon button or explains a
  * number: `on-ink` 12/16 medium, `radius-sm`, 4/8px padding, 8px from its
  * anchor, no arrow and no shadow. It shows after 300ms on hover and at once on
  * keyboard focus; a shortcut prints as mono `on-ink` text, never a Kbd cap.
+ * Only keyboard focus opens it: the focus a browser restores when the reader
+ * returns to the tab, or one a script moves after a press, does not.
  *
  * Every open goes through Radix's pointer and focus handling, which closes any
  * other open tooltip first, so only one is ever open. A tooltip outside any
@@ -80,6 +84,10 @@ export function Tooltip({
       <TooltipPrimitive.Trigger
         asChild
         ref={setTrigger}
+        // A handled focus skips Radix's own, which opens on any focus.
+        onFocus={(event) => {
+          if (!focusFromKeyboard()) event.preventDefault();
+        }}
         {...(describe ? {} : { 'aria-describedby': undefined })}
       >
         {children}

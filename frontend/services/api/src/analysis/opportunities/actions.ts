@@ -34,17 +34,44 @@ export type HandoffFacts = Readonly<{ competitors: readonly string[]; angle: str
 export const NO_HANDOFF_FACTS: HandoffFacts = { competitors: [], angle: null };
 type MessageFacts = Readonly<Partial<Record<string, string>>>;
 const NAMES = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' });
+/** Percent-encoding layers a crawled URL can carry (`%2527` is `'` encoded twice). */
+const MAX_URL_DECODE_PASSES = 3;
+
+/**
+ * A URL label as a reader reads it, for the message only: its escapes decoded
+ * layer by layer, so `Women%2527s-Clothing` reads `Women's-Clothing` (the
+ * stored URL keeps every byte). Any other label, or a layer with a malformed
+ * escape, is kept as it is.
+ */
+function readableTarget(label: string): string {
+  if (!/^https?:\/\//iu.test(label)) return label;
+  let current = label;
+  for (let pass = 0; pass < MAX_URL_DECODE_PASSES; pass += 1) {
+    let next: string;
+    try {
+      next = decodeURIComponent(current);
+    } catch {
+      return current;
+    }
+    if (next === current) return current;
+    current = next;
+  }
+  return current;
+}
+
 /**
  * The first template every placeholder of which `facts` fills (`config/actions.ts`
- * `messages`), filled. A branch's last template names `{target}` alone.
+ * `messages`), filled. A branch's last template names `{target}` alone. A
+ * template's full stop after a value that already ends a sentence (`.`, `?`
+ * or `!`) is dropped, so a label never ends in two.
  */
 function handoffMessage(templates: readonly string[], facts: MessageFacts): string {
   for (const template of templates) {
     let complete = true;
-    const message = template.replaceAll(/\{(\w+)\}/g, (_, name: string) => {
+    const message = template.replaceAll(/\{(\w+)\}(\.?)/g, (_, name: string, stop: string) => {
       const value = facts[name];
       if (!value) complete = false;
-      return value ?? '';
+      return (value ?? '') + (value && /[.?!]$/u.test(value) ? '' : stop);
     });
     if (complete) return message;
   }
@@ -128,7 +155,7 @@ type ApproachBranch = ReturnType<typeof selectApproach>;
 /** A branch's templates filled from one member's facts and the Action's label. */
 function messageFor(branch: Pick<ApproachBranch, 'messages'>, member: ActionMember, label: string) {
   return handoffMessage(branch.messages, {
-    target: label,
+    target: readableTarget(label),
     issue: member.title,
     angle: member.facts.angle ?? undefined,
     competitors: member.facts.competitors.length
@@ -182,7 +209,7 @@ export function readHandoff(persisted: unknown, label: string): ActionHandoff {
     ? parsed.data
     : {
         context: 'action',
-        message: handoffMessage(p.DEFAULT_APPROACH.messages, { target: label }),
+        message: handoffMessage(p.DEFAULT_APPROACH.messages, { target: readableTarget(label) }),
       };
 }
 type GroupedAction = Readonly<{ approach: string; target_kind: string }>;

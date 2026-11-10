@@ -129,8 +129,9 @@ Owner, 2026-11-10 (AS8):
 
 ### PR 3: centered detail page and a prefilled chat
 
-- Detail page (AS7): one centered column (the reading width), top to bottom:
-  - breadcrumb (Actions › title) and title;
+- Detail page (AS7): one centered column (the thread width), top to bottom:
+  - breadcrumb (Actions › the full target) and a one-line title (a URL target
+    by its host and last path segment);
   - overview (what happened, from the diagnosis), with Copy as prompt;
   - a Details card: Status, Priority, Action type, Target, Source;
   - Why this matters (evidence, including content-gap evidence);

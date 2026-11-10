@@ -35,8 +35,9 @@
 @custom-variant labelled (@media (min-width: 1280px), &:where([data-nav-drawer] *));
 
 @theme {
-  /* Faces. Cal Sans (display) sets headings and big numbers at weight 400
-     only; Geist (sans) everything people read and click; Geist Mono (mono)
+  /* Faces. Cal Sans (display) sets the website's and docs' headings at
+     weight 400 only, never anything in the app (D54); Instrument Sans (sans) everything
+     people read and click; Geist Mono (mono)
      eyebrows, deltas, dates, citation numbers and code. The hosted faces are
      named only in lib/config/brand-fonts.json, which writes `--font-face-*`. */
   --font-*: initial;
@@ -111,10 +112,9 @@
 
   /* Type. Each role owns size, leading, weight and tracking; on the website
      and docs the display roles (display-*, title, title-sm, stat) pair with
-     `font-display`. In the app only the page title and the auth card titles
-     are Cal Sans (D7, D37): its other
-     titles and figures set these sizes in Geist 500. The mono roles (eyebrow,
-     data, code) pair with `font-mono`, the rest are Geist, never above 500. */
+     `font-display`. The app sets no Cal Sans (D54): its page title, auth
+     card titles and other titles and figures set these sizes in Instrument Sans 500. The mono roles (eyebrow,
+     data, code) pair with `font-mono`, the rest are Instrument Sans, never above 500. */
   --text-*: initial;
   --text-display-2xl: 44px;
   --text-display-2xl--line-height: 48px;
@@ -134,7 +134,7 @@
   --text-display-md--letter-spacing: -0.01em;
   --text-display-sm: 24px;
   --text-display-sm--line-height: 32px;
-  --text-display-sm--font-weight: 400;
+  --text-display-sm--font-weight: 500;
   --text-display-sm--letter-spacing: -0.01em;
   --text-title: 22px;
   --text-title--line-height: 28px;
@@ -144,7 +144,7 @@
   --text-title-sm--font-weight: 400;
   --text-stat: 28px;
   --text-stat--line-height: 36px;
-  /* Geist 500 since D7: an app number is never Cal Sans; 28 since D15. */
+  /* Instrument Sans 500 since D7: an app number is never Cal Sans; 28 since D15. */
   --text-stat--font-weight: 500;
   --text-stat--letter-spacing: -0.02em;
   --text-lead: 20px;
@@ -167,9 +167,9 @@
   --text-label-lg--font-weight: 500;
   --text-heading: 16px;
   --text-heading--line-height: 24px;
-  /* Geist never sets above 500 (decision D6). */
+  /* Instrument Sans never sets above 500 (decision D6). */
   --text-heading--font-weight: 500;
-  /* Dialog and drawer titles and the plan name: Geist 500 22/28 (D7). */
+  /* Dialog and drawer titles and the plan name: Instrument Sans 500 22/28 (D7). */
   --text-heading-lg: 22px;
   --text-heading-lg--line-height: 28px;
   --text-heading-lg--font-weight: 500;
@@ -616,16 +616,15 @@ html[data-public-surface]:not([data-marketing-surface]) body {
    counts). Every role below is one of the three. */
 @layer components {
   .type-page-title {
-    font-family: var(--font-display);
+    font-family: var(--font-sans);
     font-size: var(--text-display-sm);
     line-height: var(--text-display-sm--line-height);
-    font-weight: 400;
+    font-weight: var(--text-display-sm--font-weight);
     letter-spacing: var(--text-display-sm--letter-spacing);
     color: var(--color-ink);
   }
-  /* In the app Cal Sans is the page title's and the auth card title's alone
-     (decisions D7, D37): every other title and number is Geist, never above
-     500 (D6). The app's sizes are 12, 14 and 16; only the page title and a
+  /* The app sets two families, Instrument Sans and Geist Mono (D54): every title and
+     number, the page title included, is Instrument Sans, never above 500 (D6). The app's sizes are 12, 14 and 16; only the page title and a
      metric's figure are 24 (D48). */
   .type-section-title {
     font-family: var(--font-sans);
@@ -687,7 +686,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     letter-spacing: 0;
     color: var(--color-ink-muted);
   }
-  /* The number in a Stat or a ScoreRing's centre: Geist 500 at the page
+  /* The number in a Stat or a ScoreRing's centre: Instrument Sans 500 at the page
      title's 24/32 (D48), digits of one width. */
   .type-figure {
     font-family: var(--font-sans);
@@ -870,7 +869,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
 }
 
 @layer base {
-  /* Headings are Geist at the heading weight unless a display role sets Cal
+  /* Headings are Instrument Sans at the heading weight unless a display role sets Cal
      Sans: Cal Sans is opt-in, so it never lands under 18px by default. */
   h1,
   h2,
@@ -951,9 +950,15 @@ a.focus-ring:active .type-caption {
   outline-offset: 2px;
 }
 
-/* A tab or segment that took focus from a press (`data-pointer-focus`, set by
-   components/ui/tabs.tsx) draws no ring; keyboard focus still does. */
-.focus-ring[data-pointer-focus]:focus-visible {
+/* After a press (`data-input-modality="pointer"`, kept by
+   components/ui/input-modality.ts) nothing but a text field draws the ring:
+   browsers ring a clicked tab by heuristic, a menu row a script focused as
+   the pointer moved, and the element whose focus they restore when the
+   reader returns to the tab. The next key brings the ring back. A row whose
+   submenu is open never rings: focus is in the submenu, or the pointer
+   opened it. */
+[data-input-modality='pointer'] :focus-visible:not(input, textarea, select, [contenteditable]),
+[role='menuitem'][data-state='open']:focus-visible {
   outline: none;
 }
 

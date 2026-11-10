@@ -141,7 +141,7 @@ describe('An Action page', () => {
     renderDetail();
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'https://acme.test/pricing' }),
+      await screen.findByRole('heading', { level: 1, name: 'acme.test/pricing' }),
     ).toBeVisible();
     const trail = screen.getByRole('navigation', { name: 'Breadcrumb' });
     expect(within(trail).getByRole('link', { name: 'Actions' })).toHaveAttribute(
@@ -185,6 +185,23 @@ describe('An Action page', () => {
     expect(await navigator.clipboard.readText()).toBe(
       `${MESSAGE}\n\nWhat to do:\n1. Add schema.org structured data.`,
     );
+  });
+
+  it('names a long page short in the header and shows its full address in the breadcrumb', async () => {
+    const stored =
+      'https://www.bestandless.com.au/Categories/Women/Women%2527s-Clothing/Women%2527s-Dresses/WR3458_PAISLEY';
+    serve({ ...action, target_label: stored, target_url: stored });
+    renderDetail();
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'bestandless.com.au/…/WR3458_PAISLEY' }),
+    ).toBeVisible();
+    const trail = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(
+      within(trail).getByText(
+        "https://www.bestandless.com.au/Categories/Women/Women's-Clothing/Women's-Dresses/WR3458_PAISLEY",
+      ),
+    ).toHaveAttribute('aria-current', 'page');
   });
 
   it('floats Dismiss, Mark implemented and Work with the agent at the foot of the page', async () => {

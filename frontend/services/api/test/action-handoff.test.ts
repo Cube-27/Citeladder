@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 import {
   groupMembers,
   NO_HANDOFF_FACTS,
+  readHandoff,
   type ActionMember,
   type HandoffFacts,
 } from '../src/analysis/opportunities/actions.ts';
@@ -158,6 +159,32 @@ describe('Action handoff message', () => {
       opportunity_id: gap.opportunity_id,
       message: 'Write a page about Setup guides for small teams for the prompts in this Action.',
     });
+  });
+
+  it('writes a crawled URL that carries two encoding layers as a reader reads it', () => {
+    const crawled = page('/Categories/Women/Women%2527s-Clothing/Womens-Maxi-Dress');
+    expect(
+      handoffOf(member('missing_structured_data', 'Missing structured data', crawled)).message,
+    ).toBe(
+      'Fix "Missing structured data" on https://acme.test/Categories/Women/Women\'s-Clothing/Womens-Maxi-Dress.',
+    );
+    // An Action read without a persisted handoff opens about its label the same way.
+    expect(
+      readHandoff(null, 'https://www.bestandless.com.au/Categories/Women/Women%2527s-Clothing'),
+    ).toEqual({
+      context: 'action',
+      message: "Work on https://www.bestandless.com.au/Categories/Women/Women's-Clothing.",
+    });
+  });
+
+  it('never ends a message in two full stops when the label ends a sentence', () => {
+    expect(
+      readHandoff(null, 'Compare affordable kids underwear for back-to-school shopping.').message,
+    ).toBe('Work on Compare affordable kids underwear for back-to-school shopping.');
+    expect(readHandoff(null, 'Which CRM is cheapest?').message).toBe(
+      'Work on Which CRM is cheapest?',
+    );
+    expect(readHandoff(null, '100% cotton tees').message).toBe('Work on 100% cotton tees.');
   });
 
   it('falls back to the Action label when a content gap has no angle', () => {

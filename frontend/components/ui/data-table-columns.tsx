@@ -27,6 +27,14 @@ const COLUMN_WIDTH = {
   /** A count, a rate or a short figure. */
   figure: 'w-28',
   /**
+   * A short figure in a table that shares its row with another card, so its
+   * name column keeps room: a one-word header ("Rank", "Change"), or a short
+   * one that wraps to two lines ("Share of voice").
+   */
+  short: 'w-20',
+  /** As `short`, for a header of three words that wraps to two lines ("Owned citation rate"). */
+  shortMetric: 'w-24',
+  /**
    * A figure whose header names its unit ("AI referral sessions", "Longest
    * receipt gap"): the figure role is too narrow for the label.
    */

@@ -107,9 +107,9 @@ export function AuthShell({
 }
 
 /**
- * The card's head: an optional 40px icon tile, the title in Cal Sans 32/38
- * like the website's headings (decision D37; the auth pages are the app's
- * only Cal Sans besides the PageHeader title) and a 16/26 line under it. The title is the page's one `h1`; it takes focus by
+ * The card's head: an optional 40px icon tile, the title 32/38 in the sans
+ * face at 500 (the app sets no Cal Sans, decision D54) and a 16/26 line
+ * under it. The title is the page's one `h1`; it takes focus by
  * script (`tabIndex -1`) when a flow moves to a new step.
  */
 function AuthHead({
@@ -137,7 +137,11 @@ function AuthHead({
           <Icon icon={icon} />
         </span>
       ) : null}
-      <h1 id={id} tabIndex={-1} className="text-display-lg text-ink font-display text-balance">
+      <h1
+        id={id}
+        tabIndex={-1}
+        className="text-display-lg text-ink font-sans font-medium text-balance"
+      >
         {title}
       </h1>
       {sub ? <p className="text-body text-ink-secondary">{sub}</p> : null}

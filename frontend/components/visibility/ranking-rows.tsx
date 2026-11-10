@@ -296,26 +296,28 @@ function rankingColumns({
   anyPosition,
   anyChange,
 }: Readonly<{ anyPosition: boolean; anyChange: boolean }>): DataTableColumn[] {
+  // The table shares its row with the history chart, so its figures take the
+  // short widths and the Brand column keeps the rest for each logo and name.
   return [
     { key: 'brand', label: 'Brand' },
-    { key: 'visibility', label: 'Visibility', width: 'figure', numeric: true },
+    { key: 'visibility', label: 'Visibility', width: 'short', numeric: true },
     // "Rank", not "Position": the headline "Average position in answers" is
     // the mean order an answer names you in, a different measure that can
     // read #1 while this column reads #3.
     ...(anyPosition
-      ? [{ key: 'rank', label: 'Rank', width: 'figure', numeric: true } as const]
+      ? [{ key: 'rank', label: 'Rank', width: 'short', numeric: true } as const]
       : []),
     ...(anyChange
-      ? [{ key: 'change', label: 'Change', width: 'figure', numeric: true } as const]
+      ? [{ key: 'change', label: 'Change', width: 'short', numeric: true } as const]
       : []),
     // Spelled out, with the KPI row's names: "S.O.V." and "Citations" read as
     // different measures from the Share of voice and Owned citation rate
-    // tiles above. A header that names its measure takes the `metric` width.
+    // tiles above. The headers wrap to two lines rather than abbreviate.
     {
       key: 'sov',
       label: 'Share of voice',
       hint: SHARE_OF_VOICE_HINT,
-      width: 'metric',
+      width: 'short',
       numeric: true,
       desktopOnly: true,
     },
@@ -323,7 +325,7 @@ function rankingColumns({
       key: 'citations',
       label: OWNED_CITATION_RATE,
       hint: 'For your brand, the share of answers that link to a page you own; for a competitor, the share that link to its domains.',
-      width: 'metric',
+      width: 'shortMetric',
       numeric: true,
       desktopOnly: true,
     },

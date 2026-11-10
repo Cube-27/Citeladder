@@ -17,6 +17,7 @@ import { QueryState } from './query-state';
 import { StatRow } from './stat-row';
 import { Table, TableCell, TableHeader, TableRow } from './table';
 import { SortableTableHead } from './table-heads';
+import { focusByKeyboard } from '@/test/keyboard-focus';
 import { renderWithProviders } from '@/test/render';
 
 import { ArrowLink, TextLink } from './text-link';
@@ -177,7 +178,7 @@ describe('DataTable', () => {
       </TooltipProvider>,
     );
     const head = screen.getByRole('columnheader', { name: 'Type' });
-    fireEvent.focus(within(head).getByRole('button', { name: 'Type' }));
+    focusByKeyboard(within(head).getByRole('button', { name: 'Type' }));
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
       'How the publisher is classified.',
     );

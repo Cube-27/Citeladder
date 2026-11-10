@@ -23,23 +23,20 @@ const BAR_LAYER =
  * page leads the title with its way back.
  *
  * Only where the actions cannot fit beside the title (a phone) do they take
- * a second row. The title stays one line (two with `titleLines={2}`, for a
- * detail page named by a long record): a longer name is cut, and only then
- * does the title take keyboard focus and show the full name in the shared
- * tooltip on hover and focus.
+ * a second row. The title is always one line (owner: a header never takes
+ * two rows): a longer name is cut with an ellipsis, and only then does the
+ * title take keyboard focus and show the full name in the shared tooltip on
+ * hover and focus. Its accessible name is always the full name.
  */
 export function PageHeader({
   title,
   lead,
   actions,
-  titleLines = 1,
 }: Readonly<{
   title: string;
   /** Before the title: a detail page's back button. */
   lead?: ReactNode;
   actions?: ReactNode;
-  /** Lines the title may take before it is cut: 2 for a long detail title. */
-  titleLines?: 1 | 2;
 }>) {
   const heading = useRef<HTMLHeadingElement>(null);
   const cut = useIsCut(heading, title);
@@ -59,14 +56,7 @@ export function PageHeader({
             ref={heading}
             // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Only a cut title takes focus, so a keyboard reader can open the tooltip holding the full name.
             tabIndex={cut ? 0 : undefined}
-            className={textRole(
-              'pageTitle',
-              cn(
-                'min-w-0 break-words',
-                titleLines === 1 ? 'truncate' : 'line-clamp-2',
-                cut && 'focus-ring',
-              ),
-            )}
+            className={textRole('pageTitle', cn('min-w-0 truncate', cut && 'focus-ring'))}
           >
             {title}
           </h1>

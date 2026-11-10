@@ -177,7 +177,8 @@ function VisibilityAllFilters({
     'query-fanout': [fanoutGroup],
   };
   const tabFilters = state ? [] : (own[filters.activeTab] ?? []);
-  return <AllFilters filters={[...shared, ...tabFilters]} />;
+  // At the tabs row's far right, so the menu opens back from the button's end.
+  return <AllFilters filters={[...shared, ...tabFilters]} align="end" />;
 }
 
 function DashboardPanel({

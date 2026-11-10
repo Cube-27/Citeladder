@@ -167,7 +167,12 @@ function sameProject(key: unknown, workspaceId: string, projectId: string): bool
   return Array.isArray(key) && key.includes(workspaceId) && key.includes(projectId);
 }
 
-/** A group's header row: its name and how many Actions it holds; it folds the group's rows. */
+/**
+ * A group's header row: its name and how many Actions it holds; it folds the
+ * group's rows. It has no fill, so it never reads as part of the column
+ * header's `surface-sunken` band above it: the row rule over it and its name
+ * in ink at the button's medium weight set it apart from the rows it heads.
+ */
 function GroupHeaderRow({
   group,
   total,
@@ -175,7 +180,7 @@ function GroupHeaderRow({
   onToggle,
 }: Readonly<{ group: ActionGroup; total: number; open: boolean; onToggle: () => void }>) {
   return (
-    <TableRow data-action-group={group} className="bg-surface-sunken">
+    <TableRow data-action-group={group}>
       <TableCell colSpan={COLUMNS.length}>
         <Button
           variant="ghost"

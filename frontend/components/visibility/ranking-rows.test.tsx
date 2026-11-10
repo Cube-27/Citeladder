@@ -1,7 +1,8 @@
-import { act, fireEvent, render as renderUi, screen, within } from '@testing-library/react';
+import { fireEvent, render as renderUi, screen, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { focusByKeyboard } from '@/test/keyboard-focus';
 import type { RankingRow } from '@citeladder/contracts';
 import { RankingRowsTable } from './ranking-rows';
 
@@ -57,7 +58,7 @@ describe('RankingRowsTable', () => {
     Object.defineProperty(name, 'clientWidth', { configurable: true, value: 40 });
     // The column hints come first in tab order, so focus moves to the name directly.
     const button = screen.getByRole('button', { name: 'Plot Kmart Australia on its own' });
-    act(() => button.focus());
+    focusByKeyboard(button);
     expect(button).toHaveFocus();
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Kmart Australia');
   });

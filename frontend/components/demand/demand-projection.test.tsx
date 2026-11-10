@@ -1,5 +1,5 @@
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { DemandDetectorState } from '@citeladder/contracts';
 import type { ReactNode } from 'react';
@@ -11,6 +11,7 @@ import { ApiError } from '@/lib/api/errors';
 import { createAppQueryClient } from '@/lib/api/query-client';
 import { ActiveProjectScopeProvider } from '@/lib/project/active-project-scope';
 import { makeProject } from '@/test/fixtures/project';
+import { focusByKeyboard } from '@/test/keyboard-focus';
 
 import { DemandProjection } from './demand-projection';
 
@@ -278,7 +279,7 @@ describe('DemandProjection', () => {
       hint.compareDocumentPosition(signalTable()) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     fireEvent.click(screen.getByRole('radio', { name: /^Striking distance/i }));
-    act(() => screen.getByRole('button', { name: 'Signal types' }).focus());
+    focusByKeyboard(screen.getByRole('button', { name: 'Signal types' }));
     // Both of the snapshot's types, though the filter now shows only one.
     expect((await screen.findByRole('tooltip')).textContent).toMatch(
       /Striking distance: .*Low CTR: Earns many impressions but few clicks/,

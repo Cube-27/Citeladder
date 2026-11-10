@@ -23,8 +23,10 @@ export function HintedTableHead({
   numeric,
   desktopOnly,
 }: Readonly<{ label: string; hint: string } & HeadOptions>) {
+  // Like a plain header, a label longer than its column wraps under itself
+  // instead of painting over the next header.
   return (
-    <TableHead numeric={numeric} desktopOnly={desktopOnly}>
+    <TableHead numeric={numeric} desktopOnly={desktopOnly} className="whitespace-normal">
       <Tooltip content={hint}>
         <button type="button" className="focus-ring cursor-default rounded-xs">
           {label}

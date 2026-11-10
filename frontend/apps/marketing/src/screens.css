@@ -124,7 +124,7 @@
 }
 
 /* ---------- Vignettes: every card image ----------
-   One white card at the width of its well: the title (`heading`, Geist 500
+   One white card at the width of its well: the title (`heading`, Instrument Sans 500
    16/24) over a meta line (`body-sm`, muted) with an optional badge at the
    right, then one body of the same height in every vignette, so tiles in a
    bento row match: four rows of 56, three figures over a small chart, or a
@@ -509,7 +509,7 @@
 }
 
 /* On the website Cal Sans is the hero's H1 alone (D28), so the drawn app's
-   page title is Geist 500 at its own size. */
+   page title is Instrument Sans 500 at its own size. */
 .cl-screen--app .type-page-title {
   font-family: var(--font-sans);
   font-weight: 500;

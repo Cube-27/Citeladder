@@ -105,13 +105,6 @@ describe('authenticated interaction primitives', () => {
     await user.keyboard('{ArrowRight}');
     expect(screen.getByRole('tab', { name: 'Two' })).toHaveAttribute('data-state', 'active');
     expect(screen.getByRole('tabpanel')).toHaveTextContent('Second panel');
-
-    // A pressed tab is marked so it draws no focus ring; a key brings it back.
-    const one = screen.getByRole('tab', { name: 'One' });
-    await user.click(one);
-    expect(one).toHaveAttribute('data-pointer-focus');
-    await user.keyboard('{ArrowRight}{ArrowLeft}');
-    expect(one).not.toHaveAttribute('data-pointer-focus');
   });
 
   it('exposes checkbox and radio state', async () => {
