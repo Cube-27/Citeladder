@@ -1,11 +1,11 @@
 {
   "repository": "Cube-27/cube27-fonts",
-  "revision": "8760c6313a683d427a923a434689f529ee006411",
+  "revision": "55dd958223801ab12a0977fa8bc712353bf809e9",
   "faces": {
     "display": {
       "family": "Cal Sans",
       "file": "CalSans.woff2",
-      "preload": ["app", "public"],
+      "preload": ["public"],
       "weights": "400",
       "fallback": {
         "sizeAdjust": "100.19%",
@@ -15,14 +15,14 @@
       }
     },
     "sans": {
-      "family": "Geist",
-      "file": "Geist-Variable.woff2",
+      "family": "Instrument Sans",
+      "file": "InstrumentSans-Variable.woff2",
       "preload": ["app", "public"],
-      "weights": "400 500",
+      "weights": "400 600",
       "fallback": {
-        "sizeAdjust": "102.12%",
-        "ascentOverride": "98.41%",
-        "descentOverride": "28.89%",
+        "sizeAdjust": "98.27%",
+        "ascentOverride": "98.71%",
+        "descentOverride": "25.44%",
         "lineGapOverride": "0%"
       }
     },
@@ -30,7 +30,7 @@
       "family": "Geist Mono",
       "file": "GeistMono-Variable.woff2",
       "preload": ["app"],
-      "weights": "400 500",
+      "weights": "400 600",
       "fallback": {
         "sizeAdjust": "100%",
         "ascentOverride": "100.5%",

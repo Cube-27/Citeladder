@@ -17,8 +17,10 @@ import { cn } from '@/lib/utils';
  *   `thirds`      — three equal: one row from 981px, never 2 + 1.
  *   `main-aside`  — 2fr + 1fr (a chart beside a ranked list or facts);
  *                   stacks below 1280px.
- *   `halves`      — two peers (usage and invoices, a ranking beside its
- *                   history chart); stack below 1280px.
+ *   `halves`      — two peers (usage and invoices); stack below 1280px.
+ *   `table-chart` — 3fr + 2fr: a table of several figure columns beside
+ *                   its history chart, so every row keeps its name and the
+ *                   chart keeps room for its lines; stacks below 1280px.
  *   `list-detail` — a selectable list beside the selected item's evidence,
  *                   from 981px; the columns align to the top.
  *
@@ -31,6 +33,7 @@ const LAYOUT = {
   thirds: 'desktop:grid-cols-3',
   'main-aside': 'shell:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]',
   halves: 'shell:grid-cols-2',
+  'table-chart': 'shell:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]',
   'list-detail': 'desktop:grid-cols-[var(--pane-list-detail)] items-start',
 } as const;
 

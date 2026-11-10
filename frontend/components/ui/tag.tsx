@@ -6,7 +6,7 @@ import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /**
- * The tag face: 24px, the Geist label style (12px medium, normal tracking and
+ * The tag face: 24px, the Instrument Sans label style (12px medium, normal tracking and
  * figures, set here so a tag inside a figure never inherits the figure's
  * tight tracking) in `ink` on `surface` with a 1px `line` border, `radius-xs`. It is
  * never wider than its container.

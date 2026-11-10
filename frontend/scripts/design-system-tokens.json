@@ -354,8 +354,8 @@
   "type": {
     "fonts": [],
     "families": {
-      "display": "\"Cal Sans\", \"Geist\", system-ui, sans-serif",
-      "sans": "\"Geist\", system-ui, -apple-system, \"Segoe UI\", sans-serif",
+      "display": "\"Cal Sans\", \"Instrument Sans\", system-ui, sans-serif",
+      "sans": "\"Instrument Sans\", system-ui, -apple-system, \"Segoe UI\", sans-serif",
       "mono": "\"Geist Mono\", ui-monospace, \"SF Mono\", Menlo, monospace"
     },
     "groups": [
@@ -388,7 +388,7 @@
             "fontWeight": 400,
             "letterSpacing": "-0.01em",
             "sample": "Every answer, every engine",
-            "usage": "Docs page titles, the website's CTA band heading and the sign-in, sign-up and other auth card titles (Cal Sans, D36). 26/32 below 768px. The website's pricing plan price sets this size in Geist 500 (D28)."
+            "usage": "Docs page titles, the website's CTA band heading and the app's sign-in, sign-up and other auth card titles (there in Instrument Sans 500, D54; Cal Sans elsewhere, D36). 26/32 below 768px. The website's pricing plan price sets this size in Instrument Sans 500 (D28)."
           },
           {
             "name": "display-md",
@@ -397,16 +397,16 @@
             "fontWeight": 400,
             "letterSpacing": "-0.01em",
             "sample": "Every engine, one report",
-            "usage": "Article h2 and the heading of a section that is one feature split. On the website large feature tiles, stacked split titles and the PageHighlight title set this size in Geist 500 (D28)."
+            "usage": "Article h2 and the heading of a section that is one feature split. On the website large feature tiles, stacked split titles and the PageHighlight title set this size in Instrument Sans 500 (D28)."
           },
           {
             "name": "display-sm",
             "fontSize": "24px",
             "lineHeight": "32px",
-            "fontWeight": 400,
+            "fontWeight": 500,
             "letterSpacing": "-0.01em",
             "sample": "Visibility",
-            "usage": "The app's PageHeader title, the only Cal Sans in the app outside the auth card titles (D7, D11, D37), in a 40px title row with the actions centred on it."
+            "usage": "The app's PageHeader title, Instrument Sans 500 like every app title (D11, D54), in a 40px title row with the actions centred on it."
           },
           {
             "name": "title",
@@ -414,7 +414,7 @@
             "lineHeight": "28px",
             "fontWeight": 400,
             "sample": "Cited sources this week",
-            "usage": "Docs h2, reference titles and an article's Sources heading. Website card, step and form titles and article h3 are heading-lg in Geist 500 (D28). Never in the app: there Cal Sans is the PageHeader title and the auth card titles only (D7, D36)."
+            "usage": "Docs h2, reference titles and an article's Sources heading. Website card, step and form titles and article h3 are heading-lg in Instrument Sans 500 (D28). Never in the app, which sets no Cal Sans (D54)."
           },
           {
             "name": "title-sm",
@@ -422,7 +422,7 @@
             "lineHeight": "24px",
             "fontWeight": 400,
             "sample": "Round robin",
-            "usage": "Captions under product frames and the docs h3. On the website FAQ questions, pricing plan names and the author's name set this size in Geist 500 (D28). Footer column heads are not this (they use label)."
+            "usage": "Captions under product frames and the docs h3. On the website FAQ questions, pricing plan names and the author's name set this size in Instrument Sans 500 (D28). Footer column heads are not this (they use label)."
           }
         ]
       },
@@ -484,7 +484,7 @@
             "lineHeight": "24px",
             "fontWeight": 500,
             "sample": "Visibility by engine",
-            "usage": "App card titles, settings section titles and table group headings. Geist never goes above 500 (D6)."
+            "usage": "App card titles, settings section titles and table group headings. Instrument Sans never goes above 500 (D6)."
           },
           {
             "name": "heading-lg",
@@ -493,7 +493,7 @@
             "fontWeight": 500,
             "letterSpacing": "-0.01em",
             "sample": "Remove Northwind from tracking",
-            "usage": "Dialog and drawer titles and the billing plan name: the app's larger heading, in Geist because Cal Sans in the app is the PageHeader title only (D7). On the website, card, step, form and tool titles and article h3 (D28)."
+            "usage": "Dialog and drawer titles and the billing plan name: the app's larger heading, in Instrument Sans like every app title (D54). On the website, card, step, form and tool titles and article h3 (D28)."
           },
           {
             "name": "stat",
@@ -502,7 +502,7 @@
             "fontWeight": 500,
             "letterSpacing": "-0.02em",
             "sample": "38.4%",
-            "usage": "The number in a Stat and a KpiRow card, and the plan price in the app, and the website PageHighlight's figures (D28). Geist 500 since D7 (5 Nov 2026), 28/36 since D15; the ScoreRing and DonutChart centres use the same face at 32/38."
+            "usage": "The number in a Stat and a KpiRow card, and the plan price in the app, and the website PageHighlight's figures (D28). Instrument Sans 500 since D7 (5 Nov 2026), 28/36 since D15; the ScoreRing and DonutChart centres use the same face at 32/38."
           },
           {
             "name": "caption",

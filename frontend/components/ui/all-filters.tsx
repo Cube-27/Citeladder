@@ -118,8 +118,11 @@ function activeFilterCount(filters: readonly FilterDefinition[]): number {
 }
 
 /**
- * AllFilters — every filter of a page behind one button at the far right of
- * its tabs row. The button counts the filters moved off their defaults
+ * AllFilters — every filter of a page behind one button: at the far right of
+ * its tabs row, or leading a control row. The menu opens toward the content
+ * from the button's edge on that side (`align`): `start` (the default) for a
+ * button leading its row, so the menu and its submenus open to the right and
+ * never over the sidebar; `end` for one at the row's far right. The button counts the filters moved off their defaults
  * ("All filters (2)", D16); its menu lists each filter with its current value,
  * and each opens a submenu of its options with a check on the selected one.
  * Long lists get a search box. Radix's menu keyboard model throughout: arrows
@@ -134,7 +137,13 @@ function activeFilterCount(filters: readonly FilterDefinition[]): number {
 export function AllFilters({
   filters,
   label = 'All filters',
-}: Readonly<{ filters: readonly FilterDefinition[]; label?: string }>) {
+  align = 'start',
+}: Readonly<{
+  filters: readonly FilterDefinition[];
+  label?: string;
+  /** The button's edge the menu lines up with: `end` for a button at its row's far right. */
+  align?: 'start' | 'end';
+}>) {
   const narrow = useNarrowViewport();
   if (filters.length === 0) return null;
   const active = activeFilterCount(filters);
@@ -158,7 +167,7 @@ export function AllFilters({
           </span>
         </Button>
       </MenuTrigger>
-      <MenuContent align="end">
+      <MenuContent align={align}>
         {narrow ? (
           <DrillInFilters filters={filters} />
         ) : (

@@ -2,10 +2,10 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ComponentProps } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { ActionPriorityBadge, ActionStatusBadge } from '@/components/agent/action-status-badge';
+import { ActionPriorityBadge } from '@/components/agent/action-status-badge';
 import { BriefingCard } from '@/components/agent/briefing-card';
 import { Composer } from '@/components/agent/composer';
 import { SkillPicker } from '@/components/agent/skill-picker';
@@ -41,14 +41,17 @@ import { approachLabel, targetKindLabel } from '@/lib/agent/vocabulary';
 import { actionsQueries, type Action } from '@/lib/api/actions';
 import type { AgentWorkflow } from '@/lib/api/agent';
 import { AGENT_TOP_ACTIONS } from '@/lib/config/agent';
-import { readableUrl } from '@/lib/format';
+import { readableUrl, shortUrlTitle } from '@/lib/format';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 
 /**
  * New chat: ask a question, start a defined workflow, or pick up an Action.
  * An evidence-screen handoff arrives as typed references in the URL and is
- * shown as removable context before the first message is sent.
+ * shown as removable context before the first message is sent. A chat opened
+ * on an Action is about that Action alone: it is one removable line in the
+ * composer above its written message, and the other starting points
+ * (recommended Actions, workflows, the briefing) wait until it is removed.
  */
 export function NewChatScreen() {
   const { workspaceId, projectId } = useProjectScope();
@@ -89,15 +92,12 @@ function NewChat({
   );
   const failure = create.failure;
   const commands = useComposerCommands({ workspaceId, projectId });
-  // Shares AttachedAction's cache entry. An Action that failed to load is
-  // dropped, as that notice promises, rather than failing the whole chat.
-  const attached = useQuery({
-    ...actionsQueries.detail(workspaceId, handoff.actionId ?? ''),
-    enabled: Boolean(handoff.actionId),
-  });
-
-  const actionId = attached.isError ? undefined : handoff.actionId;
-  const message = typed ?? attached.data?.handoff.message ?? '';
+  const { actionId, message, attachment, unavailable } = useAttachedAction(
+    workspaceId,
+    handoff.actionId,
+    typed,
+    setMessage,
+  );
   // A workflow is sent by id; the server validates it and pins its skill.
   const start = (text: string, workflowId: string | undefined) =>
     create.start({
@@ -117,8 +117,10 @@ function NewChat({
     >
       <Stack gap="section" className="my-auto">
         <h2 className={textRole('sectionTitle', 'text-center')}>What can I help with?</h2>
-        {handoff.actionId ? (
-          <AttachedAction workspaceId={workspaceId} actionId={handoff.actionId} />
+        {unavailable ? (
+          <Callout tone="negative">
+            This Action is unavailable. The chat will start without it.
+          </Callout>
         ) : null}
         {access.canSend ? null : <Callout tone="info">{access.message}</Callout>}
         {failure ? <MutationNotice notice={failure} /> : null}
@@ -132,6 +134,7 @@ function NewChat({
             pending={create.pending}
             disabled={!access.canSend}
             placeholder="Ask a question or describe the work"
+            attachment={attachment}
             chips={contextChips(context)}
             commands={commands}
             onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
@@ -150,30 +153,104 @@ function NewChat({
             }
           />
           {/* Instructions live in a caption, not the placeholder, so they stay
-              readable once the user starts typing. */}
-          <p className={textRole('caption')}>Type / to pick a skill or @ to mention an Action.</p>
+              readable once the user starts typing. A chat about one Action
+              starts from its message instead. */}
+          {actionId ? null : (
+            <p className={textRole('caption')}>Type / to pick a skill or @ to mention an Action.</p>
+          )}
         </Stack>
-        {handoff.actionId ? null : <TopActions workspaceId={workspaceId} projectId={projectId} />}
-        <Workflows
-          picked={picked}
-          onPick={setPicked}
-          onStart={start}
-          pending={create.pending}
-          disabled={!access.canSend}
-        />
-        {handoff.actionId ? null : (
-          <Disclosure title="Get a briefing on what to work on">
-            <BriefingCard
-              workspaceId={workspaceId}
-              projectId={projectId}
-              onStart={create.start}
-              pending={create.pending}
-              disabled={!access.canSend}
-            />
-          </Disclosure>
+        {/* With an Action attached the screen is about that one Action: the
+            other starting points return once it is removed. */}
+        {actionId ? null : (
+          <StartingPoints
+            workspaceId={workspaceId}
+            projectId={projectId}
+            picked={picked}
+            onPick={setPicked}
+            onStart={start}
+            onBriefing={create.start}
+            pending={create.pending}
+            disabled={!access.canSend}
+          />
         )}
       </Stack>
     </ListScreen>
+  );
+}
+
+/**
+ * The Action the chat is about, until the reader removes it, and the message
+ * the composer shows: what was typed, else the Action's own message. An Action
+ * that failed to load is dropped, as its notice promises, rather than failing
+ * the whole chat.
+ */
+function useAttachedAction(
+  workspaceId: string,
+  handoffActionId: string | undefined,
+  typed: string | undefined,
+  setMessage: (message: string) => void,
+) {
+  const [attachedId, setAttachedId] = useState(handoffActionId);
+  const attached = useQuery({
+    ...actionsQueries.detail(workspaceId, handoffActionId ?? ''),
+    enabled: Boolean(handoffActionId),
+  });
+  const actionId = attached.isError ? undefined : attachedId;
+  const message = typed ?? (attachedId ? attached.data?.handoff.message : undefined) ?? '';
+  const attachment =
+    actionId && attached.data
+      ? {
+          label: attachmentLabel(attached.data),
+          // The message stays as written; only the Action leaves.
+          onRemove: () => {
+            setMessage(message);
+            setAttachedId(undefined);
+          },
+        }
+      : undefined;
+  return { actionId, message, attachment, unavailable: attached.isError };
+}
+
+/** Where a chat with no Action starts: recommended Actions, workflows, a briefing. */
+function StartingPoints({
+  workspaceId,
+  projectId,
+  picked,
+  onPick,
+  onStart,
+  onBriefing,
+  pending,
+  disabled,
+}: Readonly<{
+  workspaceId: string;
+  projectId: string;
+  picked: AgentWorkflow | null;
+  onPick: (workflow: AgentWorkflow | null) => void;
+  onStart: (text: string, workflowId: string) => void;
+  onBriefing: ComponentProps<typeof BriefingCard>['onStart'];
+  pending: boolean;
+  disabled: boolean;
+}>) {
+  return (
+    <>
+      <TopActions workspaceId={workspaceId} projectId={projectId} />
+      <Workflows
+        picked={picked}
+        onPick={onPick}
+        onStart={onStart}
+        pending={pending}
+        disabled={disabled}
+      />
+      <Disclosure title="Get a briefing on what to work on">
+        <BriefingCard
+          workspaceId={workspaceId}
+          projectId={projectId}
+          onStart={onBriefing}
+          pending={pending}
+          disabled={disabled}
+        />
+      </Disclosure>
+    </>
   );
 }
 
@@ -220,33 +297,14 @@ function PinnedWorkflow({
   );
 }
 
-function AttachedAction({
-  workspaceId,
-  actionId,
-}: Readonly<{ workspaceId: string; actionId: string }>) {
-  const query = useQuery(actionsQueries.detail(workspaceId, actionId));
-  if (query.isError)
-    return (
-      <Callout tone="negative">This Action is unavailable. The chat will start without it.</Callout>
-    );
-  if (!query.data) return null;
-  const action = query.data;
-  return (
-    <Stack as="section" gap="tight" aria-label="Working on" className={cardClasses()}>
-      <span className={textRole('label')}>Working on</span>
-      <Inline className="flex-wrap">
-        <TextLink href={`/agent/actions/${action.id}`} text="itemTitle">
-          {readableUrl(action.target_label)}
-        </TextLink>
-        <ActionStatusBadge status={action.status} />
-      </Inline>
-      <span className={textRole('caption')}>
-        {[targetKindLabel(action.target_kind), approachLabel(action.approach)]
-          .filter(Boolean)
-          .join(' · ')}
-      </span>
-    </Stack>
-  );
+/**
+ * The attached Action as one line in the composer: "Action:", its short
+ * title, then its type (the approach, else the kind of target).
+ */
+function attachmentLabel(action: Action): string {
+  const type = approachLabel(action.approach) ?? targetKindLabel(action.target_kind);
+  const title = `Action: ${shortUrlTitle(action.target_label)}`;
+  return type ? `${title} · ${type}` : title;
 }
 
 /**

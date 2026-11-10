@@ -45,7 +45,7 @@ import {
 import { actionsMutations, actionsQueries, type ActionDetail } from '@/lib/api/actions';
 import { agentQueries } from '@/lib/api/agent';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
-import { readableUrl } from '@/lib/format';
+import { readableUrl, shortUrlTitle } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
@@ -53,8 +53,9 @@ const ACTIONS = '/agent/actions';
 const BACK: PageBack = { href: ACTIONS, label: 'Back to Actions' };
 
 /**
- * One Action (AS7): a single centered column at the reading width, read top
- * to bottom (overview, details, why, what to do, how it is measured, the
+ * One Action (AS7): a single centered column at the thread width, named in
+ * the one-line header by a short title (a URL's host and last segment), read
+ * top to bottom (overview, details, why, what to do, how it is measured, the
  * findings and the chats), with its three actions in a bar floating at the
  * bottom: Dismiss, Mark implemented, and Work with the agent.
  */
@@ -104,15 +105,13 @@ function ActionDetailView({
   // Owned here, not by the bar, so a failure notice renders in the column.
   const update = useMutation(actionsMutations.updateStatus(workspaceId));
   const gaps = contentGapMembers(action);
-  const title = readableUrl(action.target_label);
   return (
     <DetailScreen
       column
-      title={title}
-      titleLines={2}
+      title={shortUrlTitle(action.target_label)}
       back={{ ...BACK, projectId: action.project_id }}
     >
-      <Breadcrumb title={title} />
+      <Breadcrumb label={readableUrl(action.target_label)} />
       {update.isError ? (
         <MutationNotice
           notice={mutationNoticeForError(update.error, { action: 'update this Action' })}
@@ -159,8 +158,11 @@ function ActionDetailView({
   );
 }
 
-/** Where the Action sits: Actions, then this Action. */
-function Breadcrumb({ title }: Readonly<{ title: string }>) {
+/**
+ * Where the Action sits: Actions, then this Action by its full target (the
+ * header names it short), wrapping rather than cut so all of it shows.
+ */
+function Breadcrumb({ label }: Readonly<{ label: string }>) {
   return (
     <nav aria-label="Breadcrumb">
       <Inline as="ol" gap="tight" className="flex-wrap">
@@ -171,8 +173,8 @@ function Breadcrumb({ title }: Readonly<{ title: string }>) {
           <Icon icon={ChevronRight} className="text-ink-muted" />
         </Inline>
         <li className="min-w-0">
-          <span aria-current="page" className={textRole('caption', 'block truncate')}>
-            {title}
+          <span aria-current="page" className={textRole('caption', 'block break-all')}>
+            {label}
           </span>
         </li>
       </Inline>

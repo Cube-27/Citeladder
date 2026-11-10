@@ -1,4 +1,4 @@
-import { act, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import {
   afterAll,
@@ -14,6 +14,7 @@ import {
 import { DISPLAY_TIME_ZONE_COOKIE } from '@/lib/display-timezone';
 import { NOW, PROJECT, skills } from '@/test/agent-chat-fixture';
 import { actionsPage } from '@/test/fixtures/actions';
+import { focusByKeyboard } from '@/test/keyboard-focus';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
@@ -98,7 +99,7 @@ it('shows a cut chat title in full on keyboard focus', async () => {
   renderWithProviders(<AgentNav />, { projectSelection: { activeProjectId: PROJECT } });
 
   const row = await screen.findByRole('link', { name: /Analyze the Site Health issues/ });
-  act(() => row.focus());
+  focusByKeyboard(row);
   expect(await screen.findByRole('tooltip')).toHaveTextContent(
     'Analyze the Site Health issues on pricingSep 25, 10:00 AM',
   );

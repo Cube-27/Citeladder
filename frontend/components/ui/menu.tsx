@@ -21,7 +21,8 @@ export const MENU_PANEL = cn(
  * One 32px row, which never shrinks when a long menu scrolls: `radius-sm`, 8px padding, 14/20 `ink`, a 16px lead column for
  * an icon or a check so labels align. Hover and keyboard highlight take the
  * hover overlay (D51); keyboard focus adds the shared 2px ring, which the
- * panel's 4px inset holds. `danger` is `negative` text with a `negative-soft`
+ * panel's 4px inset holds. A row a script focused as the pointer moved draws
+ * no ring once the reader has pressed (`input-modality.ts`). `danger` is `negative` text with a `negative-soft`
  * highlight.
  */
 export function menuItemClasses({
@@ -55,7 +56,9 @@ export const MenuSub = MenuPrimitive.Sub;
 /**
  * The row that opens a submenu: the label, then its current value in the
  * secondary ink and a chevron at the row's end. Right arrow, Enter and Space
- * open it; Left arrow and Escape come back.
+ * open it; Left arrow and Escape come back. While its submenu is open the row
+ * keeps the highlighted rows' hover overlay and draws no focus ring (focus is
+ * in the submenu, or the pointer opened it; globals.css).
  */
 export function MenuSubTrigger({
   value,
@@ -72,7 +75,7 @@ export function MenuSubTrigger({
 >) {
   return (
     <MenuPrimitive.SubTrigger
-      className={menuItemClasses({ className: cn('data-[state=open]:overlay-pressed', className) })}
+      className={menuItemClasses({ className: cn('data-[state=open]:overlay-hover', className) })}
       // Named as it reads, "Surface: All surfaces": a name built from the two
       // spans differs by browser (Chromium spaces them as "Surface : …").
       aria-label={value ? `${children}: ${value}` : undefined}

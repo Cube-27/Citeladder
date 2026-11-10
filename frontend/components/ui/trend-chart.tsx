@@ -449,6 +449,6 @@ function placedEvents(
   return events.flatMap((event) => {
     const offset = event.timestamp - first;
     if (!Number.isFinite(offset) || offset < 0 || offset > span) return [];
-    return [{ event, x: scale.padLeft + (offset / span) * scale.plotWidth }];
+    return [{ event, x: scale.xAt(offset / span) }];
   });
 }

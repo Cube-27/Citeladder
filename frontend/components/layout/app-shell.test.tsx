@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-p
 
 import { EntitlementProvider } from '@/lib/billing/entitlement-context';
 import { mswServer } from '@/test/msw-server';
+import { focusByKeyboard } from '@/test/keyboard-focus';
 import { renderWithProviders } from '@/test/render';
 
 import { AppShell } from './app-shell';
@@ -117,13 +118,13 @@ describe('AppShell resizable sidebar', () => {
     const account = screen.getByRole('button', { name: 'Account menu for test.user@example.test' });
 
     // Uncut, the row's own text says it all.
-    act(() => account.focus());
+    focusByKeyboard(account);
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
     act(() => account.blur());
 
     // jsdom lays nothing out; report every line as wider than the sidebar.
     vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(1000);
-    act(() => account.focus());
+    focusByKeyboard(account);
     expect(await screen.findByRole('tooltip')).toHaveTextContent('test.user@example.test');
   });
 });

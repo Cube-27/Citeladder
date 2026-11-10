@@ -138,11 +138,11 @@ describe('Visibility trends', () => {
     expect(
       [...container.querySelectorAll('[data-line-labels] text')].map((label) => label.textContent),
     ).toEqual(expect.arrayContaining(['You', 'Kmart Australia']));
-    // The table and the chart split one row evenly, so the chart has room for its line.
+    // The table and the chart share one row, the table the wider of the two.
     const row = screen
       .getByRole('region', { name: 'Brand and competitors' })
       .closest('[data-app-grid]');
-    expect(row?.getAttribute('data-app-grid')).toBe('halves');
+    expect(row?.getAttribute('data-app-grid')).toBe('table-chart');
     expect(row?.contains(screen.getByRole('group', { name: /^Visibility over time/u }))).toBe(true);
   });
 

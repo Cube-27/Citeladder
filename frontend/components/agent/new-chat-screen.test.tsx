@@ -471,6 +471,7 @@ describe('NewChatScreen', () => {
       http.get(`/api/v1/actions/${PRICING}`, () =>
         HttpResponse.json({
           ...actionItem(PRICING, 'Pricing page'),
+          approach: 'create_new',
           diagnosis: {},
           members: [],
           member_measurement: {},
@@ -486,10 +487,35 @@ describe('NewChatScreen', () => {
     serveAction();
     renderNewChat(`?action_id=${PRICING}&prompt=Plan%20this`);
 
-    expect(await screen.findByRole('region', { name: 'Working on' })).toHaveTextContent(
-      'Pricing page',
-    );
+    const context = within(await screen.findByRole('list', { name: 'Context for this request' }));
+    expect(await context.findByText('Action: Pricing page · Create a new page')).toBeVisible();
     expect(screen.getByLabelText('Message the agent')).toHaveValue('Plan this');
+  });
+
+  it('is about the attached Action alone until the reader removes it', async () => {
+    const bodies = captureChats([actionItem(PRICING, 'Pricing page')]);
+    mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json(WORKFLOW_CATALOG)));
+    serveAction();
+    const user = userEvent.setup();
+    renderNewChat(`?action_id=${PRICING}`);
+
+    // One line in the composer, above the written message; no other starting points.
+    await screen.findByDisplayValue('Work on Pricing page.');
+    expect(screen.getByText('Action: Pricing page · Create a new page')).toBeVisible();
+    expect(screen.queryByRole('region', { name: 'Or start from a workflow' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Recommended Actions' })).toBeNull();
+    expect(screen.queryByText('Type / to pick a skill or @ to mention an Action.')).toBeNull();
+
+    await user.click(
+      screen.getByRole('button', { name: 'Remove Action: Pricing page · Create a new page' }),
+    );
+    // The message stays as written; the workflows come back.
+    expect(screen.getByLabelText('Message the agent')).toHaveValue('Work on Pricing page.');
+    expect(await screen.findByRole('region', { name: 'Or start from a workflow' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
+    expect(bodies).toEqual([{ message: 'Work on Pricing page.', context: {} }]);
   });
 
   it('opens a recommended Action with its message written, to edit or send as it is', async () => {
@@ -506,9 +532,7 @@ describe('NewChatScreen', () => {
     // Written from the Action once it is read.
     const message = await screen.findByDisplayValue('Work on Pricing page.');
     expect(message).toHaveAccessibleName('Message the agent');
-    expect(await screen.findByRole('region', { name: 'Working on' })).toHaveTextContent(
-      'Pricing page',
-    );
+    expect(screen.getByText('Action: Pricing page · Create a new page')).toBeVisible();
     await user.type(message, ' Start with the title.');
     await user.click(screen.getByRole('button', { name: 'Send' }));
 

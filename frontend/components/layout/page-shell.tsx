@@ -107,15 +107,14 @@ export function RouteLoadingScreen({ label }: Readonly<{ label?: string }>) {
  * DetailScreen — one record: the back button before the title, optional tabs
  * or controls, then the content: one stack, the main column beside its
  * `aside` (AppGrid `main-aside`), or, with `column`, one centered column at
- * the reading width (`max-w-prose`) whose sections stand apart like the
- * page's bands (an Action).
+ * the thread width (`max-w-thread`, the Agent's) whose sections stand apart
+ * like the page's bands (an Action).
  */
 export function DetailScreen<T extends string = string>({
   back,
   lead,
   aside,
   column = false,
-  titleLines,
   children,
   ...bands
 }: ScreenBands<T> &
@@ -128,13 +127,11 @@ export function DetailScreen<T extends string = string>({
     lead?: ReactNode;
     /** Supporting context beside the main content. */
     aside?: ReactNode;
-    /** One centered reading column instead of the full width. */
+    /** One centered column instead of the full width. */
     column?: boolean;
-    /** Lines the record's title may take before it is cut (PageHeader `titleLines`). */
-    titleLines?: 1 | 2;
   }>) {
   return (
-    <PageShell {...bands} back={back} titleLines={titleLines}>
+    <PageShell {...bands} back={back}>
       {lead}
       <DetailContent column={column} aside={aside}>
         {children}
@@ -150,7 +147,7 @@ function DetailContent({
 }: Readonly<{ column: boolean; aside: ReactNode; children: ReactNode }>) {
   if (column)
     return (
-      <div className="mx-auto flex w-full max-w-prose min-w-0 flex-col gap-[var(--page-section-gap)]">
+      <div className="max-w-thread mx-auto flex w-full min-w-0 flex-col gap-[var(--page-section-gap)]">
         {children}
       </div>
     );
@@ -170,9 +167,8 @@ function PageShell<T extends string>({
   tabs,
   controls,
   children,
-  titleLines,
   ...layout
-}: ScreenBands<T> & FillLayout & Readonly<{ back?: PageBack; titleLines?: 1 | 2 }>) {
+}: ScreenBands<T> & FillLayout & Readonly<{ back?: PageBack }>) {
   const resolved = useRouteTitle(title);
   const shell = useContext(ShellContext);
   const navDrawer = shell?.navDrawer;
@@ -192,7 +188,6 @@ function PageShell<T extends string>({
     <div className="flex min-w-0 flex-col gap-[var(--page-section-gap)]">
       <PageHeader
         title={resolved}
-        titleLines={titleLines}
         lead={
           <>
             {/* Below 900px the header leads with the navigation menu. */}
