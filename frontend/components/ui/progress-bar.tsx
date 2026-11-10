@@ -68,7 +68,7 @@ function ProgressCaption({
   if (!label && !shown) return null;
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <span id={labelId} className="text-label text-ink">
+      <span id={labelId} className="text-body-sm text-ink">
         {label}
       </span>
       {shown ? (

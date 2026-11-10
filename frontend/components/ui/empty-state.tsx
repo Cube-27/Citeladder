@@ -67,7 +67,7 @@ export function EmptyState({
           </span>
         ) : null}
         <div className="min-w-0 flex-1">
-          <p className="text-label text-ink">{title}</p>
+          <p className="text-body-sm text-ink">{title}</p>
           {description ? <p className="text-body-sm text-ink-secondary">{description}</p> : null}
         </div>
         {primary || secondary ? (

@@ -338,7 +338,7 @@ export function AuthRow({
     <>
       {lead}
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-label-lg text-ink truncate">{name}</span>
+        <span className="text-label-lg text-ink truncate font-normal">{name}</span>
         {meta ? <span className="text-body-sm text-ink-muted truncate">{meta}</span> : null}
       </span>
       {trailing}

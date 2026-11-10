@@ -109,7 +109,7 @@ export function CsvImportPreview({
     <div className="grid gap-2">
       <div className="type-body flex items-center gap-3">
         <span>
-          Parsed <strong className="text-ink">{rowCount}</strong> row
+          Parsed <span className="text-ink">{rowCount}</span> row
           {rowCount === 1 ? '' : 's'}
           {fileName ? ` from ${fileName}` : ''}.
         </span>

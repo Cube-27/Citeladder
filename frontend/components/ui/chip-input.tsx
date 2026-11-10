@@ -114,7 +114,7 @@ export function ChipInput({
     // A named group: its chips are a list of the same name, and the add field
     // is "Add to …", so each part says what it belongs to.
     <fieldset className="flex min-w-0 flex-col gap-2">
-      <legend className="text-label text-ink mb-2">{label}</legend>
+      <legend className="text-body-sm text-ink mb-2">{label}</legend>
       {/* The add field grows to fill the rest of its line, so a press on the
           box's empty space lands in it. */}
       <div

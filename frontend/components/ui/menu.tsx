@@ -207,7 +207,7 @@ export function MenuControlRow({
 /** A small group label: 12/16 medium `ink-muted`. */
 export function MenuLabel({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <MenuPrimitive.Label className="text-ink-muted text-caption px-2 pt-2 pb-1 font-medium">
+    <MenuPrimitive.Label className="text-ink-muted text-caption px-2 pt-2 pb-1">
       {children}
     </MenuPrimitive.Label>
   );

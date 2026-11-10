@@ -378,7 +378,7 @@ export function CommandPalette({
                     aria-labelledby={headingId}
                     className="[&+&]:mt-2"
                   >
-                    <p id={headingId} className="text-ink-muted text-caption px-2 py-1 font-medium">
+                    <p id={headingId} className="text-ink-muted text-caption px-2 py-1">
                       {section.group}
                     </p>
                     {section.rows.map(({ command, index }) => {

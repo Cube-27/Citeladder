@@ -32,7 +32,7 @@ import { cn } from '@/lib/utils';
  * page its boundary is the `table-frame` hairline ring (an outer shadow, so it
  * never changes the box); inside a Card the ring drops.
  */
-const tableHeadClasses = 'text-caption text-ink-secondary font-medium whitespace-nowrap';
+const tableHeadClasses = 'text-caption text-ink-secondary whitespace-nowrap';
 const TABLE_MIN_WIDTH = {
   sm: 'min-w-[var(--table-min-width-sm)]',
   md: 'min-w-[var(--table-min-width-md)]',
