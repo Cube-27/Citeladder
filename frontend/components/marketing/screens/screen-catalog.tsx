@@ -61,7 +61,7 @@ export const SCREEN_CATALOG: Readonly<Record<PlatformScreen, CatalogEntry>> = {
   actions: vignette(ScreenActions, 'Actions for acme.com, highest priority first'),
   'content-optimization': vignette(
     ScreenContentOptimization,
-    'Content optimization for acme.com: content pages to improve and pages to write, each with its lead angle',
+    'Content-gap Actions for acme.com: content pages to improve and pages to write, each with its lead angle',
   ),
   answer: vignette(ScreenAnswer, 'A ChatGPT answer that names Acme Analytics first'),
   sources: vignette(ScreenSources, 'Domains cited in answers about Acme Analytics'),

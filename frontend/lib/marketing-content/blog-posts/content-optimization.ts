@@ -296,7 +296,7 @@ export const POST_CONTENT_OPTIMIZATION: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Both kinds of Action appear on the Content optimization screen, directly below Actions. Each row shows the page, or a planned page named by its topic, its most cited angle, the number of prompts behind that angle, and how many sites and competitors are cited for it. There are no content scores or grades; every figure is a count you can check.',
+      text: 'Both kinds of Action appear in Actions, alongside the rest of your work. Each one names the page to improve, or a planned page named by its topic. There are no content scores or grades; every figure is a count you can check.',
     },
     {
       type: 'paragraph',
@@ -304,7 +304,7 @@ export const POST_CONTENT_OPTIMIZATION: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'The screen lists Actions in priority order, which weighs citation volume, prompt count and the share of cited sites that are competitors. Start at the top, and skip an angle your product does not serve: an angle shows what engines cite, and you decide whether it fits your offer.',
+      text: 'Actions are listed in priority order, which for content gaps weighs citation volume, prompt count and the share of cited sites that are competitors. Start at the top, and skip an angle your product does not serve: an angle shows what engines cite, and you decide whether it fits your offer.',
     },
     { type: 'heading', text: 'Step 5: draft the page with the Agent and review it' },
     {
@@ -406,7 +406,7 @@ export const POST_CONTENT_OPTIMIZATION: BlogPost = {
     {
       type: 'richParagraph',
       content: [
-        'See the screen and its evidence on ',
+        'See the Actions and their evidence on ',
         { type: 'link', text: 'Content optimization', href: '/platform/content-optimization' },
         ', read the ',
         {
@@ -414,7 +414,7 @@ export const POST_CONTENT_OPTIMIZATION: BlogPost = {
           text: 'Content optimization documentation',
           href: 'https://docs.citeladder.com/content-optimization/',
         },
-        ' for each state the screen can show, and use the ',
+        ' for how content gaps are found and kept current, and use the ',
         {
           type: 'link',
           text: 'AI citation playbook',
