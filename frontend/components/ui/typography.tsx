@@ -18,8 +18,7 @@ import { cn } from '@/lib/utils';
  *   item titles, names, values, table cells, prose.
  * - secondary: 400 in the app's one grey. What supports it: descriptions,
  *   labels, column heads, captions, meta, counts, inactive tabs and nav.
- * In the app `ink-secondary` and `ink-muted` are the same grey, so there are
- * two inks. The sizes below are the `.type-*` recipes in globals.css
+ * `ink-muted` is an alias of `ink-secondary` (D50), so there are two inks. The sizes below are the `.type-*` recipes in globals.css
  * (size/leading in px).
  */
 const TEXT_ROLES = {
