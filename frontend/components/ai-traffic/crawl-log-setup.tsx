@@ -78,7 +78,7 @@ export function CrawlLogSetup({
           };
         })}
       />
-      <Stack className={panelClasses({ tone: 'well' })}>
+      <Stack className={panelClasses()}>
         {steps ? <p className="type-body text-ink-secondary">{steps}</p> : null}
         {firehose ? <FirehoseSteps interval={model.bufferInterval} /> : null}
         {gcp ? <GcpSteps /> : null}

@@ -28,9 +28,10 @@ import { cn } from '@/lib/utils';
 export function listRowClasses({ selected = false }: Readonly<{ selected?: boolean }> = {}) {
   return cn(
     'relative rounded-md transition-[background-color,color] duration-[var(--motion-fast)] ease-[var(--ease-standard)]',
+    // Three states, three overlays (D51): selected never looks hovered.
     selected
-      ? 'bg-surface-sunken text-ink active:bg-surface-sunken'
-      : 'text-ink-secondary hover:bg-surface-sunken hover:text-ink active:bg-surface-sunken',
+      ? 'overlay-selected text-ink'
+      : 'text-ink-secondary hover:overlay-hover hover:text-ink active:overlay-pressed',
   );
 }
 

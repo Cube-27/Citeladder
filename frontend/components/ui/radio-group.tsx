@@ -23,9 +23,9 @@ const RADIO =
 /**
  * RadioGroup — one choice from two to five options. `list` (default) stacks
  * the options with `space-3` between; `cards` lays them out as selectable
- * cards (`surface`, `shadow-xs`, `radius-md`, 16px padding) for choices that
- * need a sentence each, the selected card drawn with a 1px `ink` ring as a
- * shadow so it never resizes. Arrow keys move and select (Radix).
+ * cards (`surface`, a 1px `line` border, `radius-md`, 16px padding) for
+ * choices that need a sentence each, the selected card's border turning `ink`
+ * so it never resizes. Arrow keys move and select (Radix).
  */
 export function RadioGroup<T extends string>({
   value,
@@ -109,9 +109,10 @@ function RadioCard<T extends string>({
   return (
     <label
       className={cn(
-        'bg-surface text-ink flex cursor-pointer items-start gap-3 rounded-md p-4 transition-[background-color,box-shadow]',
-        selected ? 'ring-ink ring-1' : 'shadow-xs hover:bg-surface-sunken',
-        option.disabled && 'cursor-not-allowed opacity-45 hover:bg-surface',
+        'bg-surface text-ink flex cursor-pointer items-start gap-3 rounded-md border p-4 transition-[background-color,border-color]',
+        selected ? 'border-ink' : 'border-line',
+        !selected && !option.disabled && 'hover:overlay-hover',
+        option.disabled && 'cursor-not-allowed opacity-45',
       )}
     >
       <RadioGroupPrimitive.Item

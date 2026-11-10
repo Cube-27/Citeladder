@@ -115,7 +115,7 @@ export function ValueLedger({
     (_, offset) => `slot-${items.length + offset}`,
   );
   return (
-    <ol className={ledgerClasses('open')}>
+    <ol className={ledgerClasses()}>
       {items.map((item) => (
         <li
           key={item.key}

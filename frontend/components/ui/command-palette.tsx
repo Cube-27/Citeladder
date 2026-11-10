@@ -15,6 +15,7 @@ import {
 
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
+import { FLOAT_FACE } from '@/components/ui/card';
 import { Kbd } from '@/components/ui/kbd';
 import { useProjectContext } from '@/lib/project/project-context';
 import { useManagedPlan } from '@/lib/billing/entitlement-context';
@@ -325,7 +326,10 @@ export function CommandPalette({
             event.preventDefault();
             restoreFocus();
           }}
-          className="dialog-panel bg-surface text-ink shadow-pop z-modal fixed top-16 left-1/2 flex max-h-[calc(100dvh-8rem)] w-[calc(100vw-3rem)] max-w-160 -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-lg border border-transparent"
+          className={cn(
+            FLOAT_FACE,
+            'dialog-panel z-modal fixed top-16 left-1/2 flex max-h-[calc(100dvh-8rem)] w-[calc(100vw-3rem)] max-w-160 -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-lg',
+          )}
         >
           <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
           {/* The search row is the dialog's header: the open dialog is the
@@ -400,7 +404,7 @@ export function CommandPalette({
                           onClick={() => runCommand(command)}
                           className={cn(
                             'text-ink flex h-[var(--control-md)] w-full items-center gap-3 rounded-sm px-2 text-left text-body-sm',
-                            isActive && 'bg-surface-sunken',
+                            isActive && 'overlay-hover',
                           )}
                         >
                           {Icon ? (

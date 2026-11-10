@@ -87,7 +87,7 @@ function CredentialForm({ id, state }: Readonly<{ id: string; state: ConnectionS
   const saveVerb = configured ? 'Update' : 'Save';
   const saveLabel = saveMutation.isPending ? 'Saving & testing…' : `${saveVerb} ${noun}`;
   return (
-    <Stack gap="compact" id={id} className={panelClasses({ tone: 'tonal' })}>
+    <Stack gap="compact" id={id} className={panelClasses()}>
       <ProviderConnectionFields state={state} />
       <Inline className="flex-wrap justify-end">
         <Button

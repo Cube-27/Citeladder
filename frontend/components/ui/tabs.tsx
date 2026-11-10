@@ -8,14 +8,15 @@ import { cn } from '@/lib/utils';
 
 /**
  * The segmented track every in-page switch shares (Tabs, SegmentedControl,
- * the sidebar's mode switch): `surface-sunken`, `radius-md`, 36px with a 3px
- * inset and 2px between segments. It keeps its width when the selection
- * changes. Its scrollbar is hidden, so when the segments overflow it a soft
- * shade marks each edge with more of them (`scroll-shade-x`); nothing shows
- * while they fit.
+ * the sidebar's mode switch): the pressed tint of whatever fill it sits on
+ * (D51; `scroll-shade-x` paints it, since sunken would not show on the page
+ * ground), `radius-md`, 32px with a 2px inset and 2px between segments. It
+ * keeps its width when the selection changes. Its scrollbar is hidden, so when
+ * the segments overflow it a soft shade marks each edge with more of them;
+ * nothing shows while they fit.
  */
 export const TAB_TRACK =
-  'scroll-shade-x bg-surface-sunken inline-flex h-[var(--control-md)] max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+  'scroll-shade-x inline-flex h-[var(--control-md)] max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
 /**
  * A pressed segment never draws the keyboard focus ring: browsers decide
@@ -33,15 +34,18 @@ const clearPointerFocus = (event: SyntheticEvent<HTMLElement>) => {
 
 /**
  * One segment: full track height, 12px padding, `radius-sm`, 14/20 regular
- * `ink-secondary`; the selected one lifts onto `surface` with the xs ring in
- * `ink` at weight 500 (owner, 2026-11-10; buttons stay 500 throughout). A count follows the label in brackets (`ControlCount`, D16).
+ * `ink-secondary`; the selected one lifts onto `surface` with a 1px `line`
+ * border (D51: an edge is a border, never a shadow ring) in `ink` at weight
+ * 500 (owner, 2026-11-10; buttons stay 500 throughout). Every segment keeps a
+ * 1px border, transparent until selected, so selecting one moves nothing. A
+ * count follows the label in brackets (`ControlCount`, D16).
  */
 export function tabClasses(selected: boolean, className?: string) {
   return cn(
-    'focus-ring inline-flex h-full shrink-0 items-center justify-center gap-1.5 rounded-sm px-3 text-label whitespace-nowrap transition-[background-color,color] duration-[var(--motion-fast)] focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-45',
+    'focus-ring inline-flex h-full shrink-0 items-center justify-center gap-1.5 rounded-sm border px-3 text-label whitespace-nowrap transition-[background-color,color] duration-[var(--motion-fast)] focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-45',
     selected
-      ? 'bg-surface text-ink font-medium shadow-xs'
-      : 'text-ink-secondary not-disabled:hover:text-ink font-normal',
+      ? 'bg-surface border-line text-ink font-medium'
+      : 'text-ink-secondary not-disabled:hover:text-ink border-transparent font-normal',
     className,
   );
 }
@@ -52,7 +56,7 @@ export function tabClasses(selected: boolean, className?: string) {
  * icon segments one control wide.
  */
 export const MODE_TRACK =
-  'bg-surface-sunken shell:h-[var(--control-md)] shell:w-full shell:flex-row shell:items-center flex w-[var(--control-md)] flex-col gap-0.5 rounded-md p-0.5';
+  'overlay-pressed shell:h-[var(--control-md)] shell:w-full shell:flex-row shell:items-center flex w-[var(--control-md)] flex-col gap-0.5 rounded-md p-0.5';
 
 export function modeSegmentClasses(selected: boolean) {
   return tabClasses(

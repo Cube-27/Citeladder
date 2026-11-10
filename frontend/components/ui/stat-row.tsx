@@ -144,13 +144,13 @@ export function KpiRow(props: StatGroupProps) {
 }
 
 /**
- * A pressable Stat's state: selected takes the shared selected fill and the
- * foreground ink; unselected takes the neutral hover.
+ * A pressable Stat's state: selected takes the selected overlay and the
+ * foreground ink; unselected takes the hover overlay (D51).
  */
 function statSelectionClasses(selected: boolean) {
   return cn(
     'transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]',
-    selected ? 'bg-surface-sunken' : 'hover:bg-surface-sunken',
+    selected ? 'overlay-selected' : 'hover:overlay-hover',
   );
 }
 

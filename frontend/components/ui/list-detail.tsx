@@ -38,7 +38,8 @@ export function ListDetailCard({
 
 /**
  * One row of the list: a pressed toggle for the item it selects, at least
- * 56px, `radius-sm`, `surface-sunken` when hovered or selected.
+ * 56px, `radius-sm`, the hover overlay when hovered and the selected overlay
+ * when selected (D51), so the two never look alike.
  */
 export function ListDetailRow({
   selected,
@@ -51,8 +52,8 @@ export function ListDetailRow({
       onClick={onSelect}
       aria-pressed={selected}
       className={cn(
-        'focus-ring hover:bg-surface-sunken grid min-h-14 w-full gap-1 rounded-sm px-3 py-2 text-left transition-colors focus-visible:-outline-offset-2',
-        selected && 'bg-surface-sunken',
+        'focus-ring grid min-h-14 w-full gap-1 rounded-sm px-3 py-2 text-left transition-colors focus-visible:-outline-offset-2',
+        selected ? 'overlay-selected' : 'hover:overlay-hover',
       )}
     >
       {children}

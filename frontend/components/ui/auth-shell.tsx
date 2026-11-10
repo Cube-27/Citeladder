@@ -3,6 +3,7 @@ import { cloneElement, useId, type ComponentProps, type ReactElement, type React
 
 import { AuthShowcase } from '@/components/ui/auth-showcase';
 import { Button, type ButtonProps } from '@/components/ui/button';
+import { CARD_FACE } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { LogoMark } from '@/components/ui/logo-mark';
 import { ThemeSwitch } from '@/components/ui/theme-switch';
@@ -180,7 +181,7 @@ function AuthCardFrame({
           // controls (D24): every button and field inside reads `control-md`.
           signIn
             ? '[--control-md:44px]'
-            : 'bg-surface shadow-card desktop:p-10 rounded-lg p-[var(--card-padding)]',
+            : cn(CARD_FACE, 'surface-card desktop:p-10 p-[var(--card-padding)]'),
         )}
       >
         {signIn ? (
@@ -198,7 +199,7 @@ function AuthCardFrame({
 }
 
 /**
- * AuthCard — one setup step on `surface` with `shadow-card`, `radius-lg` and
+ * AuthCard — one setup step on the Card's face (`surface`, 1px `line`), `radius-lg` and
  * `space-10` padding (`space-6` on phones): the head, then the body
  * (`space-6` apart), and an optional line under the card (`after`). Used by
  * the workspace chooser and the setup screens; OnboardingStep shares it.
@@ -298,20 +299,21 @@ export function AuthLinkRow({ children }: Readonly<{ children: ReactNode }>) {
   return <p className="text-body-sm flex flex-wrap justify-between gap-x-4 gap-y-1">{children}</p>;
 }
 
-/** A bordered list of whole-row choices (the workspace chooser's rows). */
+/**
+ * A list of whole-row choices (the workspace chooser's rows), divided by rules
+ * and never boxed: it sits inside the AuthCard, and a container never holds a
+ * second bordered box (D51).
+ */
 export function AuthRowList({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
   return (
-    <ul
-      aria-label={label}
-      className="border-line divide-line divide-y overflow-hidden rounded-md border"
-    >
+    <ul aria-label={label} className="divide-line divide-y overflow-hidden rounded-md">
       {children}
     </ul>
   );
 }
 
 const AUTH_ROW =
-  'focus-ring-inset text-ink hover:bg-surface-sunken flex h-18 w-full cursor-pointer items-center gap-3 px-4 text-left no-underline transition-colors duration-[var(--motion-fast)] motion-reduce:transition-none';
+  'focus-ring-inset text-ink hover:overlay-hover flex h-18 w-full cursor-pointer items-center gap-3 px-4 text-left no-underline transition-colors duration-[var(--motion-fast)] motion-reduce:transition-none';
 
 type RowLink = ReactElement<{ className?: string; children?: ReactNode }>;
 

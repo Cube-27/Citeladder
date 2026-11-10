@@ -19,12 +19,21 @@ const STAGES = ['stage-sky', 'stage-mint', 'stage-lilac', 'stage-peach'].map(col
  * The contrast matrix, the design system's own (docs/design.md, Colour): every
  * text pair a token's usage names holds 4.5:1 in both themes; marks, control
  * borders and the focus ring hold 3:1. Each row pairs every ink with every
- * surface. A translucent surface is composited on `surface`, and a
- * translucent ink on the surface beneath it.
+ * surface. A translucent surface is composited on each ground a row names in
+ * `over` (`surface` when it names none), and a translucent ink on the surface
+ * beneath it.
  */
 const CONTRAST_PAIRS = [
   // The three inks on the three grounds.
   { inks: ['ink', 'ink-secondary', 'ink-muted'].map(color), surfaces: GROUNDS, minimum: 4.5 },
+  // A hovered, pressed or selected row keeps its text readable (D51). The
+  // states are overlays, so each is checked over every ground it can tint.
+  {
+    inks: ['ink', 'ink-secondary'].map(color),
+    surfaces: ['state-hover', 'state-pressed', 'state-selected'].map(color),
+    over: GROUNDS,
+    minimum: 4.5,
+  },
   // Callout and badge bodies are ink on every tint.
   { inks: [color('ink')], surfaces: SOFTS, minimum: 4.5 },
   // The website's stages (D35): copy on a tinted stage or hero wash, the
@@ -187,20 +196,24 @@ function inkViolation(palette, { scope, cssLabel, minimum }, inkToken, surfaceTo
 }
 
 function contrastViolations(palette, scope, cssLabel) {
-  const base = palette.get(color('surface'));
   const violations = [];
-  for (const { inks, surfaces, minimum } of CONTRAST_PAIRS) {
-    for (const surfaceToken of surfaces) {
-      const surface = opaque(palette, surfaceToken, base);
-      for (const inkToken of inks) {
-        const violation = inkViolation(
-          palette,
-          { scope, cssLabel, minimum },
-          inkToken,
-          surfaceToken,
-          surface,
-        );
-        if (violation) violations.push(violation);
+  for (const { inks, surfaces, over = [color('surface')], minimum } of CONTRAST_PAIRS) {
+    for (const groundToken of over) {
+      const ground = palette.get(groundToken);
+      for (const surfaceToken of surfaces) {
+        const surface = opaque(palette, surfaceToken, ground);
+        // A row with several grounds names the one a failure sits on.
+        const label = over.length > 1 ? `${surfaceToken} over ${groundToken}` : surfaceToken;
+        for (const inkToken of inks) {
+          const violation = inkViolation(
+            palette,
+            { scope, cssLabel, minimum },
+            inkToken,
+            label,
+            surface,
+          );
+          if (violation) violations.push(violation);
+        }
       }
     }
   }

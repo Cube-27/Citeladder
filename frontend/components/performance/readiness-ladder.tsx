@@ -123,7 +123,7 @@ export function ReadinessLadder({
     <Stack
       as="section"
       gap="compact"
-      className={panelClasses({ tone: 'panel' })}
+      className={panelClasses()}
       aria-label="Data readiness"
       data-testid="readiness-ladder"
     >

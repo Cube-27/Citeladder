@@ -87,7 +87,7 @@ function OpportunityDetailBody({ detail }: Readonly<{ detail: OpportunityDetail 
       {detail.remediation ? (
         <Stack as="section">
           <Label>Recommended improvements</Label>
-          <div className={panelClasses({ tone: 'well' })}>
+          <div className={panelClasses()}>
             <p className="type-body whitespace-pre-line">{detail.remediation}</p>
           </div>
         </Stack>

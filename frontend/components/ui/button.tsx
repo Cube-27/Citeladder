@@ -13,11 +13,17 @@ import { cn } from '@/lib/utils';
 
 /**
  * The system's four buttons (Button README): `primary` is the one ink action a
- * view is for, `secondary` (surface with the xs ring) everything else, `ghost`
+ * view is for, `secondary` (surface with a control's soft edge: a 1px `line`
+ * border and the `shadow-edge` smudge, like a field) everything else, `ghost`
  * toolbars, nav and rows, `danger` destructive confirmations. Buttons are
- * black, white or clear; never coloured.
+ * black, white or clear; never coloured. Hover, pressed and open are the
+ * state overlays (D51), so a toggled or open button never looks hovered.
  */
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+
+/** Hover, unless the button is toggled on or its menu is open. */
+const HOVER_OVERLAY =
+  'not-aria-pressed:not-data-[state=open]:not-disabled:hover:overlay-hover aria-pressed:overlay-pressed data-[state=open]:overlay-pressed';
 
 const BUTTON_BASE =
   'focus-ring relative inline-flex h-[var(--control-md)] shrink-0 items-center justify-center gap-2 rounded-md px-3 text-body-sm font-medium whitespace-nowrap no-underline transition-[background-color,color,box-shadow,transform] duration-[var(--motion-fast)] ease-[var(--ease-standard)] disabled:cursor-not-allowed disabled:opacity-45 aria-disabled:cursor-not-allowed aria-disabled:opacity-45';
@@ -25,12 +31,16 @@ const BUTTON_BASE =
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   primary:
     'button-key bg-ink text-on-ink shadow-press not-disabled:hover:bg-ink-hover not-disabled:active:translate-y-px not-disabled:active:shadow-edge aria-disabled:hover:bg-ink',
-  secondary:
-    'bg-surface text-ink shadow-xs not-disabled:hover:bg-surface-sunken not-disabled:active:translate-y-px aria-pressed:bg-surface-sunken data-[state=open]:bg-surface-sunken',
-  ghost:
-    'bg-transparent text-ink-secondary not-disabled:hover:bg-surface-sunken not-disabled:hover:text-ink aria-pressed:bg-surface-sunken aria-pressed:text-ink data-[state=open]:bg-surface-sunken data-[state=open]:text-ink',
+  secondary: cn(
+    'bg-surface text-ink border-line shadow-edge border not-disabled:active:translate-y-px',
+    HOVER_OVERLAY,
+  ),
+  ghost: cn(
+    'bg-transparent text-ink-secondary not-disabled:hover:text-ink aria-pressed:text-ink data-[state=open]:text-ink',
+    HOVER_OVERLAY,
+  ),
   danger:
-    'bg-surface text-negative shadow-xs not-disabled:hover:bg-negative-soft not-disabled:active:translate-y-px',
+    'bg-surface text-negative border-line shadow-edge border not-disabled:hover:bg-negative-soft not-disabled:active:translate-y-px',
 };
 
 /** The button face for an element that is not a `Button` (a link styled as one). */

@@ -44,7 +44,7 @@ function Outcome({
   passed,
 }: Readonly<{ label: string; detail: string; passed: boolean }>) {
   return (
-    <Inline className={panelClasses({ tone: 'well' }, 'items-start')}>
+    <Inline className={panelClasses('items-start')}>
       <Icon
         icon={passed ? CheckCircle2 : XCircle}
         className={passed ? 'text-positive' : 'text-ink-muted'}
@@ -204,7 +204,7 @@ function EvidenceAnswer({
   return (
     <Stack as="section" gap="item">
       <Label>{isSearchSurface ? 'AI Overview' : 'Engine response'}</Label>
-      <div className={panelClasses({ tone: 'well' }, 'min-w-0 overflow-hidden')}>
+      <div className={panelClasses('min-w-0 overflow-hidden')}>
         <EvidenceAnswerBody
           text={trimmed}
           measuredAbsence={measuredAbsence}
@@ -341,7 +341,7 @@ function EvidenceCitationsList({
           heading="No citations were captured from this response"
         />
       ) : (
-        <ol className={ledgerClasses('boxed')}>
+        <ol className={ledgerClasses()}>
           {citations.map((citation) => (
             <CitationItem key={`${citation.ordinal}-${citation.url}`} citation={citation} />
           ))}

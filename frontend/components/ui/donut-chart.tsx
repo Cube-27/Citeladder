@@ -168,7 +168,7 @@ export function DonutChart({
                 onBlur={() => setActive(null)}
                 className={cn(
                   'focus-ring text-body-sm grid h-[var(--control-md)] w-full grid-cols-[8px_minmax(0,1fr)_48px_36px] items-center gap-x-2 rounded-sm px-2 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] motion-reduce:transition-none',
-                  active === index && 'bg-surface-sunken',
+                  active === index && 'overlay-hover',
                 )}
               >
                 <ChartSwatch tone={chartTone(slice, index)} />

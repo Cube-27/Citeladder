@@ -1,19 +1,18 @@
 # CiteLadder Design System
 
-> The repo's owner of the visual system: where the system lives, which files
-> carry it, and the token contract the policy check enforces. The system
-> itself is the artifact below; this file does not restate it.
+> Agents' reference for the visual system: where it lives, which files carry
+> it, the owner's decisions so far and the token contract the policy check
+> enforces. It is a record, not an authority: the owner's newer decisions
+> replace older ones here, and the code is the shipped system.
 
-The CiteLadder Design System artifact is the reference for every surface — the
-website, docs, sign-in, onboarding and the app:
-<https://claude.ai/artifact/G73m4PDH6bowXxNpPFMcLU> (private to the owner;
-read it with the Artifact tool, `action: "read"`, `path` for one file). It
-holds the brand book (`project/README.md`), every token in both themes
-(`project/tokens.json`), and each component's CSS, React, contract and states
-(`project/components/`). Where the repo and the artifact disagree, the
-artifact is right; where a page needs something the artifact lacks, add it to
-the system first (one component, both themes), then use it. The rollout onto
-the system is [plans/design-system-rollout.md](plans/design-system-rollout.md).
+The system covers every surface — the website, docs, sign-in, onboarding and
+the app. It lives in the code: the tokens in `globals.css` (held to
+`design-system-tokens.json`) and the components in `components/ui/`,
+`components/layout/` and the website's `site.css`. Where a page needs
+something the system lacks, add it to the system first (one component, both
+themes), then use it, and record the owner's decision below. The owner's
+design-system artifact (<https://claude.ai/artifact/G73m4PDH6bowXxNpPFMcLU>,
+private) is a historical reference only and may be older than the code.
 
 Visual work never changes factual copy, data, feature claims, scripted preview
 content, transactions or confirmation gates without approval. Tests verify
@@ -55,7 +54,7 @@ Light and dark on every surface, defaulting to the system preference.
 | D26 | Website type (sizes superseded by D30, D34 and D36: article titles now take the section size, and D36 fixes the website's eight sizes): the marketing H1 (`--text-site-title`, every hero and article title) is 48/52 from 768px up, the owner's 982px desktop included, and 32/38 on phones, replacing D23's 42. Running text, blog and article prose included, is `body` 16/26; a lead or subheading under a heading is `body-lg` 18/30, never the 20px `lead`. Cal Sans is never tracked on the website or docs: display headings set no `letter-spacing`; Geist Mono eyebrows keep theirs. The app's tokens are unchanged. |
 | D27 | No inverted cards or bands on the website: every tile, PageHighlight included, is the flat card (surface fill, 1px `line` edge, ink text) in both themes; only ink-filled buttons stay ink. Nav popups for multi-column menus (Platform, Resources) start at the navbar's left edge; one-column Solutions still hangs from the trigger row (owner, 5 November 2026; supersedes D22's anchor for those two). |
 | D28 | Cal Sans is for headings only on the website: the H1 and one section heading per section; card titles, figures and every other text are Geist (owner, 5 November 2026). Card, step, form and tool titles and article h3 are `heading-lg` (Geist 500 22/28); FAQ questions, plan names and the author's name keep `title-sm`'s size in Geist 500; stacked split titles, large tiles and the PageHighlight title keep `display-md`'s size in Geist 500; figures and prices are Geist 500; article quotes are Geist. Product screens set no Cal Sans: frame captions, screen figures and the drawn app's page title are Geist 500. A feature split that is its section's only heading keeps Cal Sans. `check:policy` rejects `--font-display` in a website stylesheet outside the heading selectors. |
-| D29 | The website's ground is the other way round (owner, 5 November 2026): the page sits on `paper` (grey in light, black in dark) and every card, the CtaBand included, on `surface` (white in light, lighter in dark) with its 1px `line` edge and `shadow-card`. A product frame's well has no fill, so a screen never sits on a second, darker ground inside its card, and FeatureCards carry no step numbers. The footer is dark in both themes on its own fixed tokens (`footer`, `footer-ink`, `footer-ink-muted`, `footer-line`) with a fine film grain, and the page above it ends on a curved foot (40px, 24px under 1024px), past D10's 8px. The primary button is a raised key: `shadow-press` is a top highlight, a bottom inner shade, a tight drop and a soft lift over a faint light-to-shade sheen, and drops to `shadow-edge` while pressed; it stays ink, never the accent. The docs keep the `surface` ground. Supersedes D27's flat card and the flat-website rule for shadows. |
+| D29 | The website's ground is the other way round (owner, 5 November 2026): the page sits on `paper` (grey in light, black in dark) and every card, the CtaBand included, on `surface` (white in light, lighter in dark) with its 1px `line` edge and a card shadow (superseded by D44; the `shadow-card` token is deleted in D51). A product frame's well has no fill, so a screen never sits on a second, darker ground inside its card, and FeatureCards carry no step numbers. The footer is dark in both themes on its own fixed tokens (`footer`, `footer-ink`, `footer-ink-muted`, `footer-line`) with a fine film grain, and the page above it ends on a curved foot (40px, 24px under 1024px), past D10's 8px. The primary button is a raised key: `shadow-press` is a top highlight, a bottom inner shade, a tight drop and a soft lift over a faint light-to-shade sheen, and drops to `shadow-edge` while pressed; it stays ink, never the accent. The docs keep the `surface` ground. Supersedes D27's flat card and the flat-website rule for shadows. |
 | D30 | The website H1 (`--text-site-title`) is 60/64 from 768px up, past D26's 48, and a section heading (`--text-site-section`) is 44/50; phones keep 32/38 and 28/34, and the H1 remains the ceiling no website or docs type exceeds (owner, 5 November 2026). The homepage hero reads "Get your business recommended by AI" over the one-sentence lead "CiteLadder helps marketing and SEO teams grow their AI visibility, traffic and revenue." (owner, 6 November 2026; it replaced "CiteLadder gives you the tools to grow your AI visibility, traffic and revenue."), so the lead's engine rotor is retired. |
 | D31 | Website cards follow the owner's Cal.com reference (owner, 5 November 2026): a FeatureCard or product frame is a 20px `surface` card with a small 8px inset. Only a card with supporting text (a FeatureCard) gets the grey well: `paper` with its own 1px `line` edge, a 20px radius (14px until D36) and compact padding (12/16, 8/12 on phones), the vignette inside it a white 12px card (10px until D36) with 16px padding, and the copy below 16px under the well, 12px from the card's foot, title and text 4px apart. A frame with no supporting text is one card: no well fill or edge, and the screen sits straight on it. D29's fill-less well therefore holds only for text-less frames; the app keeps its ≤8px radii. |
 | D32 | The ThemeSwitch is one ghost IconButton on every surface (owner, 5 November 2026): a visitor starts on the device's theme (`system`, never shown as an option), and a click stores the opposite of the theme on screen, its icon (moon or sun) the theme it turns on. Replaces the three-segment light, dark and system switch and its 28px `control-sm` height. |
@@ -77,6 +76,7 @@ Light and dark on every surface, defaulting to the system preference.
 | D48 | The app sets text at 12, 14 and 16 only (owner, 7 November 2026: "should be 14px baseline and 16px heading … 14, 16 and 12 should cover most sizes in the app"). Body, item titles, row values (`figure-sm`), Agent prose and controls are 14; section, card, dialog and drawer titles are 16 (`heading`); captions, badges, deltas and code are 12. The PageHeader title and a metric's figure are the only 24s (`display-sm`). A `KpiRow` is one card holding its Stats as a strip, and a score Stat is a 64px `ScoreRing` with its number inside, beside the label and action, so the strip is the ring's height. The website's tokens and sizes are unchanged. Supersedes the figure, ring and dialog-title sizes of D7, D8's bare and 96px rings, and D15's 28. |
 | D49 | The app has three text styles and two inks (owner, 10 November 2026: "default should be 400 with 500 used sparingly for headings, titles, active state, buttons"; roles defined after IBM Carbon's productive set, where only headings are semibold and labels and helper text are regular). **Heading** is 500 in `ink`: the page title, section, card, dialog, drawer and toast titles, a `type-item-title` set on an `h2`–`h6`, a metric's figure, buttons and the selected tab, segment, nav item or running step. **Primary** is 400 in `ink`: row and item titles, names, values, table cells, row figures (`figure-sm`), chart and legend values, form field labels, `emphasis` and rendered Markdown. **Secondary** is 400 in the one grey: descriptions (`body`), value labels (`label`), column heads, stat labels and eyebrows, captions, counts, menu and sidebar group labels, inactive tabs and nav, hints and placeholders. Badges and tags are 400 in their tone's ink. In the app's document `ink-muted` is rebound to `ink-secondary` (`#525252` light, `#a6a6a6` dark), so no app screen can print a third grey; the website keeps its lighter `ink-muted` step. The roles carry the weights (`globals.css`, `typography.tsx`) and feature code sets none, so retuning a style is one CSS edit. Supersedes D6's 500 item-title, label, control, badge and eyebrow roles and Markdown `th`. |
 | D50 | The website, docs and product images follow D49's three text styles (owner, 10 November 2026: "conduct this same exercise for marketing website as well … to improve consistency"). `ink-muted` is an alias of `ink-secondary` in both themes on every surface, replacing D49's app-only rebind, so notes, meta, eyebrows, breadcrumbs and mono numbers print the same grey as leads and card descriptions; the dark footer keeps its own `footer-ink` / `footer-ink-muted` pair. On the website, reading copy (leads, card descriptions, FAQ answers, article prose) is the secondary style, since it supports a heading, and the rail card body joins it. Names, values, links in lists and table cells are 400: navbar links (current and hover in `ink`, no weight change, so the bar never moves between pages), mobile sheet rows, mega-menu item titles, engine and logo-tile names, the footer's MCP link, the plan's "includes" line, the tool's Result label, the BYOK switch label, author links, source links, the byline name, row heads and citation markers. Column heads (`.cl-wtable thead`, Markdown `th`) are 400 grey; plan names in a table head keep 500. The drawn app in product images matches the app: row labels and values 400, sidebar group labels 400 and only the current sidebar row 500. Headings, card titles, plan and FAQ question titles, price and stat figures, buttons and arrow links stay 500, and Cal Sans stays 400. |
+| D51 | The app's surfaces and borders follow one system, defined after IBM Carbon's layering and Material 3's surface and outline roles (owner, 10 November 2026: "check established design systems like google or IBM carbon for … semantic surface color and components borders and define the system for citeladder app"). **Three fills, never deeper:** `paper` is the ground (the page, sidebar and top bar); `surface` is the container (a card, panel, table frame and every floating surface); `surface-sunken` is the inset and exists only inside a container, because on the ground it is 1.07:1 and invisible. A box that can land on either (a Panel, a neutral Callout, an inline empty state) is contextual (`.surface-inset`, Carbon's contextual layer): a bordered `surface` container on the ground, the sunken inset inside a card, panel, dialog or drawer; a card composed inside a dialog or drawer steps down to the inset the same way, and a table drops its frame in any container. Panel has no tones and a ledger no `boxed` shell. **States are ink overlays** (`state-hover` 6%, `state-pressed` 8%, `state-selected` 10%, applied with the `overlay-*` utilities over whatever fill is beneath), so hover, pressed or open, and selected are three different looks on every fill; a selected row, option or nav item takes no hover, and the current nav item keeps its 2px Flare bar. Segmented tracks are the pressed tint of their ground. **Edges are a 1px border, never a ring inside a shadow:** `line` for every container edge, divider and chip, tag, kbd, citation, avatar, selected tab and chat bubble; `line-strong` for a rule drawn on the sunken fill; `line-control` (3:1) stays for marks with nothing inside them (D5). Secondary and danger buttons wear a field's soft edge (`line` + `shadow-edge`, D46); a selected radio card's border turns `ink`. **Nothing at rest has a shadow:** Card (and AuthCard) is `surface` + `line`, and `shadow-card` is deleted. Floating surfaces (menus, select lists, popovers, dialogs, drawers, toasts, the command palette, chart tips, the floating toolbar) share one face (`FLOAT_FACE`: `surface`, `line` border, the ring-free `shadow-float`). The website and docs keep `shadow-xs` and `shadow-pop` with their rings as their borderless edges (D44, D45). Supersedes D5's ring edges on secondary buttons and the selected tab, and D29's `shadow-card` for app cards. |
 
 D5–D17 come from the owner's reviews of the shipped app and docs on 5 November
 2026. D18–D25 are the website review rounds in the
@@ -89,7 +89,7 @@ type rule of the same day. D39–D43 are the owner's answers in chat on
 | Owner | Responsibility |
 | --- | --- |
 | `frontend/apps/app/src/globals.css` | Every token (the single `@theme`, `:root` and `:root[data-theme='dark']`), the marketing site's responsive `--text-site-*` display sizes, the type roles (`.type-*`), focus, motion and the shared component geometry derived from the tokens |
-| `frontend/scripts/design-system-tokens.json` | The artifact's `tokens.json`, verbatim: the contract `globals.css` is checked against |
+| `frontend/scripts/design-system-tokens.json` | The token contract `globals.css` is checked against: every token's value in both themes and its usage |
 | `frontend/lib/config/brand-fonts.json` | The three faces by role (`display`, `sans`, `mono`), their files and revision in the font repo; `pnpm fonts:pull` writes the metric-matched fallbacks |
 | `frontend/lib/fonts/brand-fonts.ts` | The `@font-face` rules and fallbacks each runtime (the app's Vite build, `PublicFonts.astro`) loads |
 | `frontend/lib/theme/theme.ts`, `frontend/public/theme-preference.js` | The theme preference and the pre-paint bootstrap every surface runs |
@@ -103,7 +103,7 @@ type rule of the same day. D39–D43 are the owner's answers in chat on
 ## Token contract
 
 `pnpm check:policy` (`frontend/scripts/check-design-system.mjs`) holds
-`globals.css` to the artifact:
+`globals.css` to the token contract:
 
 - **Values.** Every system colour in both themes, every type style (size,
   line height, weight, tracking), radius, control height, layout size,
@@ -120,7 +120,7 @@ type rule of the same day. D39–D43 are the owner's answers in chat on
   loss.
 - **Usage.** Raw colours, `@theme` and font files live only where they are
   owned; radius is the `rounded-*` scale with no arbitrary value; shadows are
-  `shadow-xs|card|pop|press`; spacing stays on the 4px grid; type sizes,
+  `shadow-edge|xs|float|pop|press`; spacing stays on the 4px grid; type sizes,
   leading, tracking and faces outside `components/ui/` come from a type role;
   no text ink becomes a background. Debt older than a rule is ratcheted in
   `frontend/scripts/design-system-baseline.json` and only falls.
@@ -173,6 +173,9 @@ type rule of the same day. D39–D43 are the owner's answers in chat on
 | `--color-stage-mint` | `#cdeedf` | `#0f2a26` |
 | `--color-stage-peach` | `#fcdac6` | `#2f1b22` |
 | `--color-stage-sky` | `#d2e2f8` | `#13223d` |
+| `--color-state-hover` | `rgb(17 17 17 / 6%)` | `rgb(244 244 244 / 6%)` |
+| `--color-state-pressed` | `rgb(17 17 17 / 8%)` | `rgb(244 244 244 / 8%)` |
+| `--color-state-selected` | `rgb(17 17 17 / 10%)` | `rgb(244 244 244 / 10%)` |
 | `--color-surface` | `#ffffff` | `#151515` |
 | `--color-surface-sunken` | `#ececec` | `#1e1e1e` |
 | `--color-warning` | `#8a5000` | `#f5b84a` |
@@ -341,8 +344,8 @@ deterministic priority (High, Medium, Low); neither chats nor Actions count
 evidence sources. Context is one `ListScreen` whose subjects are its tabs.
 
 **Website product images.** `ProductFrame` shows a screen in a well with even
-padding (24, 16 under 768px) and no fill of its own, inside a surface card
-(1px soft border, radius at most 8px, `shadow-card`, D29), so the screen sits
+padding (24, 16 under 768px) and no fill of its own, on its stage or tint
+and lifted by `shadow-pop` (D44, D45), so the screen sits
 straight on the card; in a FeatureCard it sits above the title, body and
 link, with no step number. Screens come in two kinds, named by the frame's
 `fit`:

@@ -112,7 +112,7 @@ function AddFact({
     <Stack
       as="form"
       gap="compact"
-      className={panelClasses({ tone: 'tonal' })}
+      className={panelClasses()}
       onSubmit={(event) => {
         event.preventDefault();
         if (!draft.statement.trim()) return;
@@ -177,7 +177,7 @@ function FactRow({
 }>) {
   const [editing, setEditing] = useState<string | null>(null);
   return (
-    <Stack as="li" gap="compact" className={panelClasses({ tone: 'tonal' }, 'min-w-0')}>
+    <Stack as="li" gap="compact" className={panelClasses('min-w-0')}>
       <Inline as="span" className="flex-wrap">
         <Badge>{TOPIC_LABELS[fact.topic]}</Badge>
         {fact.status === 'confirmed' ? (

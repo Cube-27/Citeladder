@@ -164,7 +164,7 @@ export function SearchableSelect({
                 className: cn(
                   'grid h-auto min-h-8 gap-x-3 py-1.5',
                   optionGridClass(Boolean(renderLeading), Boolean(renderOptionEnd)),
-                  (index === activeIndex || option.value === value) && 'bg-surface-sunken',
+                  index === activeIndex && 'not-aria-selected:overlay-hover',
                 ),
               })}
               onMouseDown={(event) => {

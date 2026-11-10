@@ -21,7 +21,7 @@ export function CohortCompositionContext({
   ].filter((clause) => clause !== null);
 
   return (
-    <Stack gap="item" className={panelClasses({ tone: 'tonal' }, 'type-caption')}>
+    <Stack gap="item" className={panelClasses('type-caption')}>
       <p className={textRole('emphasis', 'text-ink')}>Scored cohort composition changed.</p>
       <p className="text-ink-secondary">{clauses.join(' ')}</p>
       <Stack as="dl" gap="item">
