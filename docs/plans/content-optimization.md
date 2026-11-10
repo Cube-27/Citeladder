@@ -333,9 +333,11 @@ while building, with no product effect:
    Angle refresh task and tables, the `content_gaps` family, the persisted
    Action surface, and the Content optimization screen as a list (no editor
    yet). The billing decision is B73.
-2. **Editor.** Fetch on Optimize, Analyze a page, the `content_optimize` skill,
-   the `suggest_edits` built-in, the `page_suggestions` kind, the CodeMirror
-   editor with Accept / Dismiss / Apply all, needs-input via chat, export.
+2. **Editor** ([phase 2 plan](content-optimization-phase-2.md)). The page
+   workspace inside the Agent window (E1), fetch on open, Analyze a page, the
+   `content_optimize` skill, the `suggest_edits` built-in, the `page` kind, the
+   CodeMirror editor with Apply / Dismiss / Revert / Apply all, needs-input via
+   chat, export.
 3. **Measurement.** The `owned_url_cited` check kind and Mark implemented from
    the editor.
 4. **Next.** The rules engine's deterministic linters (L1–L3), reading cited
