@@ -7,21 +7,30 @@ import { lexicalTokens } from '../analysis/lexical.ts';
 import { compareText } from '../text-order.ts';
 import type { CandidatePage } from './load.ts';
 
+/** A content page with its title, headings and excerpt tokenized once per run. */
+export type TokenizedPage = { page: CandidatePage; tokens: ReadonlySet<string> };
+
+/** Tokenizes each page once, so every angle of a run reuses the same token sets. */
+export const tokenizePages = (pages: readonly CandidatePage[]): TokenizedPage[] =>
+  pages.map((page) => ({
+    page,
+    tokens: lexicalTokens(`${page.title} ${page.headings.join(' ')} ${page.excerpt}`),
+  }));
+
 /** The share of `terms` the page's title, headings and excerpt contain. */
-function coverage(terms: ReadonlySet<string>, page: CandidatePage): number {
+function coverage(terms: ReadonlySet<string>, tokens: ReadonlySet<string>): number {
   if (!terms.size) return 0;
-  const available = lexicalTokens(`${page.title} ${page.headings.join(' ')} ${page.excerpt}`);
-  return [...terms].filter((term) => available.has(term)).length / terms.size;
+  return [...terms].filter((term) => tokens.has(term)).length / terms.size;
 }
 
 /** At most `k` pages with any coverage, best first, ties by site URL ID. */
 export function ownedCandidates(
   angleTerms: ReadonlySet<string>,
-  contentPages: readonly CandidatePage[],
+  contentPages: readonly TokenizedPage[],
   k: number,
 ): CandidatePage[] {
   return contentPages
-    .map((page) => ({ page, score: coverage(angleTerms, page) }))
+    .map(({ page, tokens }) => ({ page, score: coverage(angleTerms, tokens) }))
     .filter((choice) => choice.score > 0)
     .sort((a, b) => b.score - a.score || compareText(a.page.siteUrlId, b.page.siteUrlId))
     .slice(0, k)

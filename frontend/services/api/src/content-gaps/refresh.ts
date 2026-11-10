@@ -3,12 +3,13 @@
  *
  * Reads commit before any model call and no transaction spans one. The run is
  * keyed on three input keys; when the latest succeeded run has the same keys
- * nothing is written (a failed run never blocks a retry). Otherwise the clustering of an earlier succeeded run is reused while
- * its key is unchanged (and its owned match while that key is too), and the
- * rest is computed. The run, its lineages, angles, members and owned matches
- * persist in the worker's fenced terminal transaction under a per-project
- * lock that re-checks the keys, so concurrent tasks over the same inputs write
- * one run. A succeeded run announces itself to the Opportunity refresh; a model
+ * nothing is written (a failed run never blocks a retry). Otherwise the
+ * clustering of an earlier succeeded run is reused while its key is unchanged
+ * (and its owned match while that key is too), and the rest is computed. The
+ * run, its lineages, angles, members and owned matches persist in the worker's
+ * fenced terminal transaction under a per-project lock that re-checks the
+ * inputs and keys, so concurrent tasks over the same inputs write one run and
+ * a task whose audit or crawl was superseded meanwhile writes none. A succeeded run announces itself to the Opportunity refresh; a model
  * failure, a rejected output or a refused call persists a `failed` run and
  * enqueues nothing.
  */
@@ -27,7 +28,7 @@ import { parseUuid } from '../http/uuid.ts';
 import { groupBy } from '../lists.ts';
 import type { ModelGateway } from '../models/gateway.ts';
 import { enqueueOpportunityRefresh } from '../opportunities/enqueue.ts';
-import type { Scope } from '../opportunities/sources.ts';
+import { resolveCrawl, type Scope } from '../opportunities/sources.ts';
 import { callStructured, configuredGateway, type ModelCall } from '../perception/model-call.ts';
 import { payloadString, taskProject, type Executor } from '../queue/executor.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
@@ -51,7 +52,7 @@ import {
   memberId,
   pageId,
 } from './model.ts';
-import { ownedCandidates } from './prefilter.ts';
+import { ownedCandidates, tokenizePages } from './prefilter.ts';
 import { validateAngles, validateMatches, type Validated } from './validate.ts';
 
 const p = policy.content_optimization;
@@ -327,7 +328,7 @@ async function match(
   checkCancelled: (boundary: string) => Promise<void>,
   calls: StepCall[],
 ): Promise<Validated<Matched[]>> {
-  const pages = prepared.inputs.contentPages;
+  const pages = tokenizePages(prepared.inputs.contentPages);
   const matched: Matched[] = [];
   for (const [topicId, topicAngles] of groupBy(angles, (angle) => angle.topicId)) {
     const candidates = topicAngles.map((angle) =>
@@ -427,6 +428,18 @@ const usageOf = (calls: readonly StepCall[]) =>
       )
     : null;
 
+/** Whether the anchor audit or the latest crawl differs from the ones `prepared` read. */
+async function inputsMoved(trx: Database, prepared: Prepared) {
+  const [anchor, crawl] = await Promise.all([
+    resolveAnchor(trx, prepared.scope),
+    resolveCrawl(trx, prepared.scope),
+  ]);
+  return (
+    anchor?.auditId !== prepared.inputs.audits.anchor.auditId ||
+    (crawl?.id ?? null) !== prepared.inputs.crawlId
+  );
+}
+
 /** Persist one run under the per-project lock; nothing when the latest succeeded run has its keys. */
 function persist(
   prepared: Prepared,
@@ -437,6 +450,9 @@ function persist(
   return async (trx: Database) => {
     const { scope, inputs, keys } = prepared;
     await subjectXactLock(trx, ['content-angles', scope.workspaceId, scope.projectId].join(':'));
+    // A newer audit or crawl landed while this task computed: writing would put
+    // stale inputs over a newer run. Its own trigger enqueues the recompute.
+    if (await inputsMoved(trx, prepared)) return;
     if (sameKeys(await latestSucceededKeys(trx, scope), keys)) return;
     // Lineage is decided under the lock, against the latest succeeded run before this one.
     const previous = outcome.outcome === 'succeeded' ? await latestSucceeded(trx, scope) : null;

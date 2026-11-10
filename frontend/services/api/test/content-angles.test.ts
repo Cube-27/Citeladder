@@ -135,6 +135,7 @@ type Payload = {
   angles?: { id: string; label: string; candidate_ids: string[] }[];
 };
 type Responder = (payload: Payload) => unknown;
+type AsyncResponder = (payload: Payload) => Promise<unknown>;
 
 /** Clusters titles by the first keyword they share with a label; picks a page sharing it. */
 const labels = ['Pricing comparison', 'Setup guide'];
@@ -161,7 +162,7 @@ const byKeyword: Responder = (payload) => {
 };
 
 /** A gateway whose every call is answered by `respond`; `calls` records each request. */
-function scripted(respond: Responder | (() => never)) {
+function scripted(respond: Responder | AsyncResponder | (() => never)) {
   const calls: { step: 'cluster' | 'match'; payload: Payload }[] = [];
   const base = createModelGateway(
     {
@@ -181,7 +182,7 @@ function scripted(respond: Responder | (() => never)) {
       const payload = JSON.parse(user.split('\n\nReturn only JSON')[0]!) as Payload;
       calls.push({ step: payload.angles ? 'match' : 'cluster', payload });
       return {
-        content: JSON.stringify(respond(payload)),
+        content: JSON.stringify(await respond(payload)),
         provider_adapter: 'openai_compatible',
         endpoint_host: 'model.test',
         requested_model: 'test',
@@ -564,5 +565,22 @@ describe('idempotent tasks', () => {
       .execute();
     expect(statuses.map((row) => row.status)).toEqual(['succeeded', 'succeeded']);
     expect(await refreshTasks(seed)).toHaveLength(1);
+  });
+
+  it('writes no run when a newer crawl lands while the model is called', async () => {
+    const seed = await scenario();
+    let newer = false;
+    await refresh(
+      seed,
+      scripted(async (payload) => {
+        if (!newer) {
+          newer = true;
+          await fixtures.sibling(seed, { completed_at: new Date(Date.now() + 60_000) });
+        }
+        return byKeyword(payload);
+      }).gateway,
+    );
+    expect(await runs(seed)).toEqual([]);
+    expect(await refreshTasks(seed)).toEqual([]);
   });
 });

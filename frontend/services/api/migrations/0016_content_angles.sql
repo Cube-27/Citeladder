@@ -160,7 +160,8 @@ CREATE TABLE public.content_angle_owned_matches (
     CONSTRAINT content_angle_owned_matches_site_url_id_fkey FOREIGN KEY (site_url_id)
         REFERENCES public.site_urls(id) ON DELETE SET NULL
 );
-CREATE INDEX ix_content_angle_owned_matches_angle_id
+-- At most one owned match per angle.
+CREATE UNIQUE INDEX uq_content_angle_owned_matches_angle_id
     ON public.content_angle_owned_matches USING btree (angle_id);
 CREATE INDEX ix_content_angle_owned_matches_site_url_id
     ON public.content_angle_owned_matches USING btree (site_url_id)
