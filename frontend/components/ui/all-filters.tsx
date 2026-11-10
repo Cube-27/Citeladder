@@ -1,13 +1,22 @@
 'use client';
 
-import { Fragment, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { SlidersHorizontal } from 'lucide-react';
+import {
+  Fragment,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
+import { ChevronLeft, SlidersHorizontal } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import {
   Menu,
   MenuContent,
+  MenuItem,
   MenuLabel,
   MenuRadioGroup,
   MenuRadioItem,
@@ -116,6 +125,9 @@ function activeFilterCount(filters: readonly FilterDefinition[]): number {
  * Long lists get a search box. Radix's menu keyboard model throughout: arrows
  * move, Right or Enter opens a filter, Left comes back, Escape closes.
  *
+ * On a phone a submenu has no room beside the menu, so there a filter opens
+ * its options in the menu itself, under a Back row.
+ *
  * The filters' state stays with their owners (URL state on every current
  * page); this only draws them.
  */
@@ -123,6 +135,7 @@ export function AllFilters({
   filters,
   label = 'All filters',
 }: Readonly<{ filters: readonly FilterDefinition[]; label?: string }>) {
+  const narrow = useNarrowViewport();
   if (filters.length === 0) return null;
   const active = activeFilterCount(filters);
   return (
@@ -142,36 +155,109 @@ export function AllFilters({
         </Button>
       </MenuTrigger>
       <MenuContent align="end">
-        {filters.map((filter) => (
-          <MenuSub key={filter.id}>
-            <MenuSubTrigger value={filter.valueLabel}>{filter.label}</MenuSubTrigger>
-            {filter.kind === 'custom' ? (
-              <MenuSubContent>{filter.content}</MenuSubContent>
-            ) : (
-              <ChoiceSubmenu filter={filter} />
-            )}
-          </MenuSub>
-        ))}
+        {narrow ? (
+          <DrillInFilters filters={filters} />
+        ) : (
+          filters.map((filter) => (
+            <MenuSub key={filter.id}>
+              <MenuSubTrigger value={filter.valueLabel}>{filter.label}</MenuSubTrigger>
+              {filter.kind === 'custom' ? (
+                <MenuSubContent>{filter.content}</MenuSubContent>
+              ) : (
+                <ChoiceSubmenu filter={filter} />
+              )}
+            </MenuSub>
+          ))
+        )}
       </MenuContent>
     </Menu>
   );
 }
 
+/** Below this width a submenu cannot stand beside the menu (two 224px panels). */
+const NARROW_QUERY = '(max-width: 639px)';
+
+function subscribeNarrow(onChange: () => void) {
+  const media = globalThis.matchMedia?.(NARROW_QUERY);
+  media?.addEventListener('change', onChange);
+  return () => media?.removeEventListener('change', onChange);
+}
+
+function useNarrowViewport(): boolean {
+  return useSyncExternalStore(
+    subscribeNarrow,
+    () => globalThis.matchMedia?.(NARROW_QUERY).matches ?? false,
+    () => false,
+  );
+}
+
+/**
+ * The phone form: the menu lists the filters; choosing one shows its options
+ * in the same panel under a Back row, and Back returns to the list. The menu
+ * unmounts on close, so it always reopens on the list.
+ */
+function DrillInFilters({ filters }: Readonly<{ filters: readonly FilterDefinition[] }>) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [returnTo, setReturnTo] = useState<string | null>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const open = filters.find((filter) => filter.id === openId);
+  // Focus follows the step: the options (or their search box) going in, the
+  // filter's own row coming back.
+  useEffect(() => {
+    const root = panel.current;
+    if (!root) return;
+    const target = open
+      ? root.querySelector<HTMLElement>('input, [role="menuitemradio"]')
+      : root.querySelector<HTMLElement>(`[data-filter-id="${returnTo ?? ''}"]`);
+    target?.focus();
+  }, [open, returnTo]);
+  if (!open) {
+    return (
+      <div ref={panel} className="contents">
+        {filters.map((filter) => (
+          <MenuItem
+            key={filter.id}
+            data-filter-id={filter.id}
+            aria-label={`${filter.label}: ${filter.valueLabel}`}
+            value={filter.valueLabel}
+            onSelect={(event) => {
+              event.preventDefault();
+              setOpenId(filter.id);
+            }}
+          >
+            {filter.label}
+          </MenuItem>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div ref={panel} className="contents">
+      <MenuItem
+        icon={<ChevronLeft />}
+        onSelect={(event) => {
+          event.preventDefault();
+          setReturnTo(open.id);
+          setOpenId(null);
+        }}
+      >
+        All filters
+      </MenuItem>
+      <MenuSeparator />
+      {open.kind === 'custom' ? open.content : <ChoiceOptions filter={open} />}
+    </div>
+  );
+}
+
 type ChoiceFilter = Extract<FilterDefinition, { kind: 'choice' }>;
 
-function ChoiceSubmenu({ filter }: Readonly<{ filter: ChoiceFilter }>) {
-  const [query, setQuery] = useState('');
+function isSearchable(filter: ChoiceFilter): boolean {
   const total = filter.groups.reduce((sum, group) => sum + group.options.length, 0);
-  const searchable = filter.searchable ?? total > SEARCH_FROM;
-  const needle = query.trim().toLowerCase();
-  const groups = needle
-    ? filter.groups
-        .map((group) => ({
-          ...group,
-          options: group.options.filter((option) => option.label.toLowerCase().includes(needle)),
-        }))
-        .filter((group) => group.options.length > 0)
-    : filter.groups;
+  return filter.searchable ?? total > SEARCH_FROM;
+}
+
+function ChoiceSubmenu({ filter }: Readonly<{ filter: ChoiceFilter }>) {
+  const searchable = isSearchable(filter);
   return (
     <MenuSubContent
       // Opened from the keyboard, the panel takes focus; with a search box the
@@ -191,7 +277,26 @@ function ChoiceSubmenu({ filter }: Readonly<{ filter: ChoiceFilter }>) {
         event.currentTarget.querySelector('input')?.focus();
       }}
     >
-      {searchable ? (
+      <ChoiceOptions filter={filter} />
+    </MenuSubContent>
+  );
+}
+
+/** A choice filter's options: a search box on a long list, then the options by group. */
+function ChoiceOptions({ filter }: Readonly<{ filter: ChoiceFilter }>) {
+  const [query, setQuery] = useState('');
+  const needle = query.trim().toLowerCase();
+  const groups = needle
+    ? filter.groups
+        .map((group) => ({
+          ...group,
+          options: group.options.filter((option) => option.label.toLowerCase().includes(needle)),
+        }))
+        .filter((group) => group.options.length > 0)
+    : filter.groups;
+  return (
+    <>
+      {isSearchable(filter) ? (
         <div className="bg-surface sticky top-0 z-10 pb-1">
           <SearchField
             value={query}
@@ -224,7 +329,7 @@ function ChoiceSubmenu({ filter }: Readonly<{ filter: ChoiceFilter }>) {
       {groups.length === 0 ? (
         <p className="text-body-sm text-ink-muted px-2 py-2">No matches</p>
       ) : null}
-    </MenuSubContent>
+    </>
   );
 }
 

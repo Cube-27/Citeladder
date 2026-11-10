@@ -43,25 +43,24 @@ function renderMenu({
   );
 }
 
-async function menuEntries() {
+/** Opens All filters and checks its entries, in order, by their accessible names. */
+async function expectMenu(expected: readonly string[]) {
   await userEvent.setup().click(screen.getByRole('button', { name: /^All filters/ }));
-  return screen.getAllByRole('menuitem').map((item) => item.textContent);
+  const items = screen.getAllByRole('menuitem');
+  expect(items).toHaveLength(expected.length);
+  items.forEach((item, index) => expect(item).toHaveAccessibleName(expected[index]));
 }
 
 describe('useVisibilityFilterMenu', () => {
   it('offers a period and a grouping only while every run in a period is pooled', async () => {
     const { unmount } = renderMenu({ selectionMode: 'run' });
     // Beside "Latest run", "Last 90 days" and "Per run" contradicted the selection.
-    expect(await menuEntries()).toEqual([
-      'Measurement: Latest run',
-      'Prompts: Unbranded',
-      'Surface: All surfaces',
-    ]);
+    await expectMenu(['Measurement: Latest run', 'Prompts: Unbranded', 'Surface: All surfaces']);
     unmount();
 
     renderMenu({ selectionMode: 'range' });
     // They come last, so the filters before them keep their places.
-    expect(await menuEntries()).toEqual([
+    await expectMenu([
       'Measurement: All runs in period',
       'Prompts: Unbranded',
       'Surface: All surfaces',
@@ -79,7 +78,7 @@ describe('useVisibilityFilterMenu', () => {
       onChangeOutcome: vi.fn(),
     });
     expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeVisible();
-    expect(await menuEntries()).toEqual([
+    await expectMenu([
       'Measurement: Latest run',
       'Prompts: Unbranded',
       'Surface: All surfaces',

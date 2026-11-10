@@ -63,7 +63,9 @@ export function MenuSubTrigger({
   children,
   ...props
 }: Readonly<
-  ComponentPropsWithoutRef<typeof MenuPrimitive.SubTrigger> & {
+  Omit<ComponentPropsWithoutRef<typeof MenuPrimitive.SubTrigger>, 'children'> & {
+    /** The row's label. */
+    children: string;
     /** The current choice, printed after the label. */
     value?: string;
   }
@@ -71,17 +73,14 @@ export function MenuSubTrigger({
   return (
     <MenuPrimitive.SubTrigger
       className={menuItemClasses({ className: cn('data-[state=open]:overlay-pressed', className) })}
+      // Named as it reads, "Surface: All surfaces": a name built from the two
+      // spans differs by browser (Chromium spaces them as "Surface : …").
+      aria-label={value ? `${children}: ${value}` : undefined}
       {...props}
     >
-      <span className="shrink-0">
-        {children}
-        {value ? <span className="sr-only">:</span> : null}
-      </span>
+      <span className="shrink-0">{children}</span>
       {value ? (
-        <>
-          {/* Flex drops the space from the layout; the name keeps it. */}{' '}
-          <span className="text-ink-muted ms-auto min-w-0 truncate ps-4 text-end">{value}</span>
-        </>
+        <span className="text-ink-muted ms-auto min-w-0 truncate ps-4 text-end">{value}</span>
       ) : null}
       <ChevronRight
         className={cn('text-ink-muted size-4 shrink-0', !value && 'ms-auto')}
@@ -168,6 +167,7 @@ function Lead({ children }: Readonly<{ children?: ReactNode }>) {
 export function MenuItem({
   icon,
   shortcut,
+  value,
   selected = false,
   danger = false,
   className,
@@ -179,6 +179,8 @@ export function MenuItem({
     icon?: ReactNode;
     /** A shortcut, mono 12px `ink-muted`, at the row's end. */
     shortcut?: string;
+    /** A setting's current value, in the secondary ink at the row's end. */
+    value?: string;
     /** The current choice of a switcher: an `accent` check at the row's end. */
     selected?: boolean;
     danger?: boolean;
@@ -187,7 +189,10 @@ export function MenuItem({
   return (
     <MenuPrimitive.Item className={menuItemClasses({ danger, className })} {...props}>
       {icon ? <Lead>{icon}</Lead> : null}
-      <span className="min-w-0 flex-1 truncate">{children}</span>
+      <span className={cn('min-w-0 truncate', value ? 'shrink-0' : 'flex-1')}>{children}</span>
+      {value ? (
+        <span className="text-ink-muted ms-auto min-w-0 truncate ps-4 text-end">{value}</span>
+      ) : null}
       {shortcut ? (
         <span className="text-ink-muted text-caption ms-4 font-mono">{shortcut}</span>
       ) : null}

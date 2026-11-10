@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { describe, expect, it } from 'vite-plus/test';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { AllFilters, choiceFilter } from './all-filters';
 
@@ -51,14 +51,18 @@ function Page() {
 }
 
 describe('AllFilters', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('lists each filter with its value, checks the selected option and counts what is set', async () => {
     const user = userEvent.setup();
     render(<Page />);
     await user.click(screen.getByRole('button', { name: 'All filters' }));
-    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
-      'Surface: All surfaces',
-      'Prompt: Every prompt',
-    ]);
+    const [surface, prompt, ...rest] = screen.getAllByRole('menuitem');
+    expect(surface).toHaveAccessibleName('Surface: All surfaces');
+    expect(prompt).toHaveAccessibleName('Prompt: Every prompt');
+    expect(rest).toHaveLength(0);
 
     await user.click(screen.getByRole('menuitem', { name: 'Surface: All surfaces' }));
     expect(screen.getByRole('menuitemradio', { name: 'All surfaces' })).toBeChecked();
@@ -92,6 +96,30 @@ describe('AllFilters', () => {
     await user.keyboard('{Enter}');
 
     expect(screen.getByTestId('selection')).toHaveTextContent('all p11');
+  });
+
+  it('on a phone opens a filter in the menu itself, with a way back to the list', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(max-width: 639px)',
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    const user = userEvent.setup();
+    render(<Page />);
+    await user.click(screen.getByRole('button', { name: 'All filters' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Surface: All surfaces' }));
+    expect(screen.getAllByRole('menu')).toHaveLength(1);
+    expect(screen.getAllByRole('menuitemradio').map((item) => item.textContent)).toEqual([
+      'All surfaces',
+      'ChatGPT',
+      'Gemini',
+    ]);
+
+    await user.click(screen.getByRole('menuitem', { name: 'All filters' }));
+    expect(screen.getByRole('menuitem', { name: 'Prompt: Every prompt' })).toBeVisible();
+    await user.click(screen.getByRole('menuitem', { name: 'Surface: All surfaces' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'ChatGPT' }));
+    expect(screen.getByTestId('selection')).toHaveTextContent('chatgpt every');
   });
 
   it('draws nothing for a page with no filters', () => {

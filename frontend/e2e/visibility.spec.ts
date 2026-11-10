@@ -497,7 +497,10 @@ test('mobile viewport keeps the visibility tabs and one active panel usable', as
   // Shared filters remain usable: All filters opens the surface submenu and selects.
   await page.getByRole('button', { name: 'All filters' }).click();
   await page.getByRole('menuitem', { name: 'Surface: All surfaces' }).click();
-  await page.getByRole('menuitemradio', { name: 'Gemini API', exact: true }).click();
+  // On a phone the options open in the menu itself, never off the screen.
+  const gemini = page.getByRole('menuitemradio', { name: 'Gemini API', exact: true });
+  await expect(gemini).toBeInViewport({ ratio: 1 });
+  await gemini.click();
   await expect(page).toHaveURL(/[?&]engine=gemini/);
   await expect(page.getByRole('button', { name: 'All filters (1)' })).toBeVisible();
   await page.getByRole('button', { name: 'All filters (1)' }).click();
