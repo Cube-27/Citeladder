@@ -23,6 +23,22 @@ export const actionStatusSchema = z.enum([
   'dismissed',
 ]);
 
+// How the Action hands off into the Agent (AS3): the message a new chat opens
+// with, filled from the Action's own evidence, and a workflow (`workflows.json`
+// id) with the finding's Opportunity or with the Action's page URL. `action`
+// hands off with the Action alone.
+export const actionHandoffSchema = z.discriminatedUnion('context', [
+  responseObject({ context: z.literal('action'), message: z.string() }),
+  responseObject({
+    context: z.literal('opportunity'),
+    workflow_id: z.string(),
+    opportunity_id: uuid(),
+    message: z.string(),
+  }),
+  responseObject({ context: z.literal('page_url'), workflow_id: z.string(), message: z.string() }),
+]);
+export type ActionHandoff = z.infer<typeof actionHandoffSchema>;
+
 // One unit of work per target, projected from persisted Action rows.
 export const actionItemSchema = responseObject({
   id: uuid(),
@@ -38,6 +54,7 @@ export const actionItemSchema = responseObject({
   approach: z.string(),
   skill_id: z.string(),
   member_count: z.number().int(),
+  handoff: actionHandoffSchema,
   evidence_cleared_at: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
@@ -51,28 +68,15 @@ const diagnosisMemberSchema = responseObject({
   priority_score: z.number(),
 });
 
-// How the Action hands off into the Agent: a workflow (`workflows.json` id)
-// with the finding's Opportunity, or with the Action's page URL. Null (or
-// absent) hands off with the Action alone.
-export const actionHandoffSchema = z.discriminatedUnion('context', [
-  responseObject({
-    context: z.literal('opportunity'),
-    workflow_id: z.string(),
-    opportunity_id: uuid(),
-  }),
-  responseObject({ context: z.literal('page_url'), workflow_id: z.string() }),
-]);
-export type ActionHandoff = z.infer<typeof actionHandoffSchema>;
-
 // The deterministic diagnosis persisted at recompute. An agent-origin Action
 // with no evidence yet carries an empty object, so every field is optional.
+// Its handoff is read as the Action's `handoff`.
 const actionDiagnosisSchema = responseObject({
   what_happened: z.array(diagnosisMemberSchema).optional(),
   approach: z.string().optional(),
   skill_id: z.string().optional(),
   donts: z.array(z.string()).optional(),
   measure_with: z.array(z.string()).optional(),
-  handoff: actionHandoffSchema.nullable().optional(),
 });
 
 // What one loop leg of a declared Action is waiting for (plan §9).

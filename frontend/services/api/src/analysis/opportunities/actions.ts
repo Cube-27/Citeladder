@@ -1,4 +1,4 @@
-import type { ActionHandoff } from '@citeladder/contracts/actions';
+import { actionHandoffSchema, type ActionHandoff } from '@citeladder/contracts/actions';
 
 import { policy } from '../../config.ts';
 import { roundScaled } from '../../numbers.ts';
@@ -20,7 +20,30 @@ export type ActionMember = {
   source_analysis_ids: string[];
   source_issue_ids: string[];
   source_metric_ids: string[];
+  /** What the member's evidence states that a handoff message names. */
+  facts: HandoffFacts;
 };
+/** The competitors read on an earned page, and a content gap's angle; empty when the rule has none. */
+export type HandoffFacts = Readonly<{ competitors: readonly string[]; angle: string | null }>;
+export const NO_HANDOFF_FACTS: HandoffFacts = { competitors: [], angle: null };
+type MessageFacts = Readonly<Partial<Record<string, string>>>;
+const NAMES = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' });
+/**
+ * The first template every placeholder of which `facts` fills (`config/actions.ts`
+ * `messages`), filled. A branch's last template names `{target}` alone.
+ */
+function handoffMessage(templates: readonly string[], facts: MessageFacts): string {
+  for (const template of templates) {
+    let complete = true;
+    const message = template.replaceAll(/\{(\w+)\}/g, (_, name: string) => {
+      const value = facts[name];
+      if (!value) complete = false;
+      return value ?? '';
+    });
+    if (complete) return message;
+  }
+  return facts.target ?? '';
+}
 export const pageGroupKey = (url: string) => `page:${normalizedUrlForCompare(url)}`;
 /** One planned page per topic, whether the Agent or evidence names it first; null without one. */
 export function plannedPageKey(topic: string): string | null {
@@ -93,25 +116,68 @@ export function targetFor(member: ActionMember) {
     }
   }
 }
+
+type ApproachBranch = ReturnType<typeof selectApproach>;
+
+/** A branch's templates filled from one member's facts and the Action's label. */
+function messageFor(branch: Pick<ApproachBranch, 'messages'>, member: ActionMember, label: string) {
+  return handoffMessage(branch.messages, {
+    target: label,
+    issue: member.title,
+    angle: member.facts.angle ?? undefined,
+    competitors: member.facts.competitors.length
+      ? NAMES.format(member.facts.competitors)
+      : undefined,
+  });
+}
+
 /**
- * The Agent handoff of the first member, in priority order, whose rule's
- * approach branch names one; null hands off with the Action alone.
+ * The Agent handoff. The first member, in priority order, whose rule's
+ * approach branch names a workflow is the one selection: that branch's
+ * message, filled from that member, opens the chat on its workflow. Without
+ * one, the chat starts on the Action alone with the Action's own branch's
+ * message, filled from that branch's strongest member (the strongest member
+ * for the default branch).
  */
-function handoffFor(members: readonly ActionMember[]): ActionHandoff | null {
+function handoffFor(
+  approach: ApproachBranch,
+  members: NonEmpty<ActionMember>,
+  label: string,
+): ActionHandoff {
   for (const member of members) {
-    const handoff = p.APPROACH_TREE.find(
-      (branch) => branch.handoff && branch.rule_ids.includes(member.rule_id),
-    )?.handoff;
-    if (handoff?.context === 'opportunity')
+    const branch = p.APPROACH_TREE.find(
+      (candidate) => candidate.handoff && candidate.rule_ids.includes(member.rule_id),
+    );
+    const handoff = branch?.handoff;
+    if (!branch || !handoff) continue;
+    const message = messageFor(branch, member, label);
+    if (handoff.context === 'opportunity')
       return {
         context: 'opportunity',
         workflow_id: handoff.workflow_id,
         opportunity_id: member.opportunity_id,
+        message,
       };
-    if (handoff?.context === 'page_url')
-      return { context: 'page_url', workflow_id: handoff.workflow_id };
+    return { context: 'page_url', workflow_id: handoff.workflow_id, message };
   }
-  return null;
+  const rules: readonly string[] = approach.rule_ids;
+  const member = members.find((m) => rules.includes(m.rule_id)) ?? members[0];
+  return { context: 'action', message: messageFor(approach, member, label) };
+}
+
+/**
+ * The handoff an Action's read returns: the one its diagnosis persisted, or,
+ * for an Action with no current evidence (an Agent row, a cleared Action),
+ * the default branch's message about its label.
+ */
+export function readHandoff(persisted: unknown, label: string): ActionHandoff {
+  const parsed = actionHandoffSchema.safeParse(persisted);
+  return parsed.success
+    ? parsed.data
+    : {
+        context: 'action',
+        message: handoffMessage(p.DEFAULT_APPROACH.messages, { target: label }),
+      };
 }
 export function selectApproach(ids: string[], kind: string) {
   return (
@@ -164,7 +230,7 @@ function group(t: ReturnType<typeof targetFor>, members: NonEmpty<ActionMember>)
       skill_id: branch.skill_id,
       donts: [...branch.donts],
       measure_with: legs,
-      handoff: handoffFor(ordered),
+      handoff: handoffFor(branch, ordered, t.label),
       versions: {
         grouping: p.ACTION_GROUPING_VERSION,
         diagnosis: p.ACTION_DIAGNOSIS_VERSION,

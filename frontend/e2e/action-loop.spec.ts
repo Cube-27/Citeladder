@@ -107,6 +107,10 @@ const action = {
   approach: 'earned_placement',
   skill_id: 'earned_authority',
   member_count: 1,
+  handoff: {
+    context: 'action',
+    message: 'Draft a request to be listed on https://example.org/tools, alongside Rival.',
+  },
   evidence_cleared_at: null,
   created_at: '2026-08-28T00:00:00Z',
   updated_at: '2026-08-28T00:00:00Z',

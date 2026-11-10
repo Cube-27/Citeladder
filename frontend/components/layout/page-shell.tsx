@@ -105,13 +105,16 @@ export function RouteLoadingScreen({ label }: Readonly<{ label?: string }>) {
 
 /**
  * DetailScreen — one record: the back button before the title, optional tabs
- * or controls, then the content, either one stack or the main column beside
- * its `aside` (AppGrid `main-aside`).
+ * or controls, then the content: one stack, the main column beside its
+ * `aside` (AppGrid `main-aside`), or, with `column`, one centered column at
+ * the reading width (`max-w-prose`) whose sections stand apart like the
+ * page's bands (an Action).
  */
 export function DetailScreen<T extends string = string>({
   back,
   lead,
   aside,
+  column = false,
   titleLines,
   children,
   ...bands
@@ -125,21 +128,38 @@ export function DetailScreen<T extends string = string>({
     lead?: ReactNode;
     /** Supporting context beside the main content. */
     aside?: ReactNode;
+    /** One centered reading column instead of the full width. */
+    column?: boolean;
     /** Lines the record's title may take before it is cut (PageHeader `titleLines`). */
     titleLines?: 1 | 2;
   }>) {
   return (
     <PageShell {...bands} back={back} titleLines={titleLines}>
       {lead}
-      {aside ? (
-        <AppGrid layout="main-aside">
-          <div className="flex min-w-0 flex-col gap-[var(--workspace-gap)]">{children}</div>
-          <aside className="flex min-w-0 flex-col gap-[var(--workspace-gap)]">{aside}</aside>
-        </AppGrid>
-      ) : (
-        children
-      )}
+      <DetailContent column={column} aside={aside}>
+        {children}
+      </DetailContent>
     </PageShell>
+  );
+}
+
+function DetailContent({
+  column,
+  aside,
+  children,
+}: Readonly<{ column: boolean; aside: ReactNode; children: ReactNode }>) {
+  if (column)
+    return (
+      <div className="mx-auto flex w-full max-w-prose min-w-0 flex-col gap-[var(--page-section-gap)]">
+        {children}
+      </div>
+    );
+  if (!aside) return children;
+  return (
+    <AppGrid layout="main-aside">
+      <div className="flex min-w-0 flex-col gap-[var(--workspace-gap)]">{children}</div>
+      <aside className="flex min-w-0 flex-col gap-[var(--workspace-gap)]">{aside}</aside>
+    </AppGrid>
   );
 }
 

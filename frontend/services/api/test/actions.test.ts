@@ -102,6 +102,35 @@ describe('Action routes', () => {
     expect(detail.members.map((member) => member.id)).toEqual([s.members[pageRule]]);
   });
 
+  it('returns the persisted handoff message on the list and the detail, or one about the label', async () => {
+    const s = await seed();
+    const list = `/api/v1/projects/${s.project_id}/actions`;
+    // Action sync persists the handoff in the diagnosis; the routes only read it.
+    await db
+      .updateTable('actions')
+      .set({
+        diagnosis: JSON.stringify({
+          handoff: { context: 'page_url', workflow_id: 'refresh_page', message: 'Fix page a.' },
+        }),
+      })
+      .where('id', '=', actionId(s))
+      .execute();
+    const items = (await pageBody(await request(s, list))).items;
+    expect(
+      Object.fromEntries(items.map((item) => [item.target_label, item.handoff.message])),
+    ).toEqual({
+      'https://acme.test/a': 'Fix page a.',
+      // No persisted diagnosis: the chat opens about the Action's label.
+      'https://acme.test/b': 'Work on https://acme.test/b.',
+      'best crm for small teams': 'Work on best crm for small teams.',
+    });
+    expect((await detailBody(await request(s, actionPath(s)))).handoff).toEqual({
+      context: 'page_url',
+      workflow_id: 'refresh_page',
+      message: 'Fix page a.',
+    });
+  });
+
   it('reads the status its writers persisted, not one re-derived from raw input rows', async () => {
     const s = await seed();
     const list = `/api/v1/projects/${s.project_id}/actions`;

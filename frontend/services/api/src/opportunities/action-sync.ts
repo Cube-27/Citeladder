@@ -12,12 +12,17 @@
  */
 import { randomUUID } from 'node:crypto';
 
+import { parseContentGapEvidence } from '@citeladder/contracts/opportunity-evidence';
 import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
-import { groupMembers, type ActionMember } from '../analysis/opportunities/actions.ts';
+import {
+  groupMembers,
+  type ActionMember,
+  type HandoffFacts,
+} from '../analysis/opportunities/actions.ts';
 import type { Database } from '../db/database.ts';
-import { record } from '../db/json.ts';
+import { record, strings } from '../db/json.ts';
 import type { NewOpportunity } from './refresh-compute.ts';
 import type { TargetRef } from '../analysis/opportunities/targets.ts';
 import { memberMeasurementLeg } from './checks/registry.ts';
@@ -29,7 +34,7 @@ const a = policy.opportunity.actions;
 type NewMember = NewOpportunity & { target: TargetRef };
 
 /** One new row as the grouping reads it. */
-function actionMember(row: NewMember): ActionMember {
+export function actionMember(row: NewMember): ActionMember {
   const evidence = record(row.evidence);
   const prompt = evidence.prompt_text || evidence.prompt;
   return {
@@ -43,6 +48,18 @@ function actionMember(row: NewMember): ActionMember {
     source_analysis_ids: [...(row.source_analysis_ids ?? [])],
     source_issue_ids: [...(row.source_issue_ids ?? [])],
     source_metric_ids: [...(row.source_metric_ids ?? [])],
+    facts: handoffFacts(row.rule_id, evidence),
+  };
+}
+
+/**
+ * What a member's stored evidence states for its handoff message: the
+ * competitors read on an earned page, and a content gap's angle.
+ */
+function handoffFacts(rule: string, evidence: Record<string, unknown>): HandoffFacts {
+  return {
+    competitors: strings(record(evidence.content_handoff).observed_competitors).filter(Boolean),
+    angle: parseContentGapEvidence(rule, evidence)?.evidence.angle_label ?? null,
   };
 }
 

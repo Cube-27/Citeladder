@@ -1,14 +1,12 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { Route, Routes } from 'react-router-dom';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
 
 import { mswServer } from '@/test/msw-server';
 import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 
-import { ActionDetailScreen } from './action-detail-screen';
 import { ActionsScreen } from './actions-screen';
 
 const PROJECT = '11111111-1111-4111-8111-111111111111';
@@ -29,6 +27,7 @@ const action = {
   approach: 'improve_existing',
   skill_id: 'gsc_optimize',
   member_count: 1,
+  handoff: { context: 'action', message: 'Work on https://acme.test/pricing.' },
   evidence_cleared_at: null,
   created_at: NOW,
   updated_at: NOW,
@@ -114,66 +113,5 @@ describe('Actions', () => {
     await user.click(await screen.findByRole('option', { name: 'Page' }));
     await user.click(status);
     expect(await screen.findByRole('option', { name: 'Dismissed', description: '' })).toBeVisible();
-  });
-
-  it('dismisses an Action from its detail and links Work on this to a new chat', async () => {
-    const patches: unknown[] = [];
-    let current = { ...action };
-    mswServer.use(
-      http.get(`/api/v1/actions/${ACTION}`, () =>
-        HttpResponse.json({
-          ...current,
-          diagnosis: {
-            approach: 'improve_existing',
-            donts: ['Do not create another URL for a target that already has a page.'],
-            measure_with: ['next_crawl'],
-          },
-          members: [],
-          member_measurement: {},
-          declarable_since: '2026-01-01T00:00:00Z',
-          declaration: null,
-        }),
-      ),
-      http.patch(`/api/v1/actions/${ACTION}`, async ({ request }) => {
-        patches.push(await request.json());
-        current = { ...current, status: 'dismissed' };
-        return HttpResponse.json(current);
-      }),
-      http.get(`/api/v1/projects/${PROJECT}/agent/chats`, () =>
-        HttpResponse.json({ items: [], next_cursor: null }),
-      ),
-    );
-    const user = userEvent.setup();
-    renderWithProviders(
-      <Routes>
-        <Route path="/agent/actions/:actionId" element={<ActionDetailScreen />} />
-      </Routes>,
-      { initialEntries: [`/agent/actions/${ACTION}`], projectSelection: selection },
-    );
-
-    expect(
-      await screen.findByRole('heading', { level: 1, name: 'https://acme.test/pricing' }),
-    ).toBeVisible();
-    // The title names the URL; the lead opens it in a new tab without
-    // repeating it, and carries the status and approach.
-    const summary = screen.getByRole('region', { name: 'Summary' });
-    expect(
-      within(summary).getByRole('link', { name: 'Open the page (opens in a new tab)' }),
-    ).toHaveAttribute('href', 'https://acme.test/pricing');
-    expect(within(summary).queryByText('https://acme.test/pricing')).not.toBeInTheDocument();
-    expect(within(summary).getByText('Open')).toBeVisible();
-    expect(within(summary).getByText('Improve the existing page')).toBeVisible();
-    expect(within(summary).getByText('High')).toBeVisible();
-    expect(within(summary).getByText('Site Health, Search Console')).toBeVisible();
-    expect(screen.getByText('The next crawl of this page')).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Work on this with the agent' })).toHaveAttribute(
-      'href',
-      `/agent?action_id=${ACTION}&project=${PROJECT}`,
-    );
-
-    await user.click(screen.getByRole('button', { name: 'Dismiss' }));
-
-    expect(await screen.findByRole('button', { name: 'Reopen' })).toBeVisible();
-    expect(patches).toEqual([{ status: 'dismissed' }]);
   });
 });

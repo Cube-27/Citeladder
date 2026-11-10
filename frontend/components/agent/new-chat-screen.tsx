@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/workspace';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
 import {
-  agentHandoffHref,
+  actionHandoffHref,
   contextChips,
   parseAgentHandoff,
   withoutContext,
@@ -70,7 +70,10 @@ function NewChat({
   searchParams,
 }: Readonly<{ workspaceId: string; projectId: string; searchParams: URLSearchParams }>) {
   const handoff = useMemo(() => parseAgentHandoff(searchParams), [searchParams]);
-  const [message, setMessage] = useState(handoff.prompt ?? '');
+  // Undefined until typed: the composer shows the URL's prompt or, for an
+  // Action handoff, the Action's own message once it loads. The message is
+  // read, never carried in the URL, so history and logs keep only ids.
+  const [typed, setMessage] = useState(handoff.prompt);
   const [context, setContext] = useState(handoff.context);
   const [skillId, setSkillId] = useState<string | null | undefined>(handoff.skillId ?? undefined);
   // A next step arrives with its workflow pinned; a gallery pick opens its form.
@@ -94,6 +97,7 @@ function NewChat({
   });
 
   const actionId = attached.isError ? undefined : handoff.actionId;
+  const message = typed ?? attached.data?.handoff.message ?? '';
   // A workflow is sent by id; the server validates it and pins its skill.
   const start = (text: string, workflowId: string | undefined) =>
     create.start({
@@ -285,8 +289,8 @@ function TopActions({
 }
 
 /**
- * One recommended Action. Its title starts a chat on it; the approach and
- * priority band say what the work is.
+ * One recommended Action. Its title starts a chat on it with the Action's
+ * message already written; the approach and priority band say what the work is.
  */
 function TopActionRow({ action }: Readonly<{ action: Action }>) {
   const target = readableUrl(action.target_label);
@@ -294,7 +298,7 @@ function TopActionRow({ action }: Readonly<{ action: Action }>) {
     <Inline as="li" gap="compact" className={ledgerItemClasses()}>
       <Stack gap="tight" className="min-w-0 flex-1">
         <TextLink
-          href={agentHandoffHref({ actionId: action.id })}
+          href={actionHandoffHref(action)}
           text="itemTitle"
           className="truncate"
           aria-label={`Work on ${target}`}

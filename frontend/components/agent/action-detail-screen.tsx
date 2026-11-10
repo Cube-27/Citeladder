@@ -1,6 +1,7 @@
 'use client';
 
 import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
+import { ChevronRight } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 
@@ -13,13 +14,16 @@ import { ContentGapWhy, contentGapMembers } from '@/components/agent/content-gap
 import { DeclarationStatus } from '@/components/agent/declaration-status';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { ActionPriorityBadge, ActionStatusBadge } from '@/components/agent/action-status-badge';
-import { DetailScreen } from '@/components/layout/page-shell';
+import { DetailScreen, type PageBack } from '@/components/layout/page-shell';
 import { ProjectLink } from '@/components/ui/project-link';
 import { EvidenceDrawer } from '@/components/opportunities/evidence-drawer';
 import { Callout } from '@/components/ui/callout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FloatingBar } from '@/components/ui/floating-bar';
 import { Button } from '@/components/ui/button';
+import { CopyButton } from '@/components/ui/copy-button';
 import { FactList, type Fact } from '@/components/ui/facts';
+import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { QueryState } from '@/components/ui/query-state';
@@ -31,7 +35,7 @@ import {
   ledgerClasses,
   ledgerItemClasses,
 } from '@/components/ui/workspace';
-import { agentHandoffHref } from '@/lib/agent/handoff';
+import { actionHandoffHref } from '@/lib/agent/handoff';
 import {
   approachLabel,
   familyLabel,
@@ -44,9 +48,16 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { readableUrl } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
-const BACK = { href: '/agent/actions', label: 'Back to Actions' } as const;
 
-/** One Action: diagnosis, member evidence, its declaration and linked chats. */
+const ACTIONS = '/agent/actions';
+const BACK: PageBack = { href: ACTIONS, label: 'Back to Actions' };
+
+/**
+ * One Action (AS7): a single centered column at the reading width, read top
+ * to bottom (overview, details, why, what to do, how it is measured, the
+ * findings and the chats), with its three actions in a bar floating at the
+ * bottom: Dismiss, Mark implemented, and Work with the agent.
+ */
 export function ActionDetailScreen() {
   const { actionId = '' } = useParams();
   const { workspaceId, projectId } = useProjectScope();
@@ -88,36 +99,54 @@ function ActionDetailView({
   workspaceId,
 }: Readonly<{ action: ActionDetail; workspaceId: string }>) {
   const [evidenceId, setEvidenceId] = useState<string | null>(null);
-  // Owned here, not by the controls, so a failure notice renders in the body
-  // and the one-row header never has to hold it.
-  const update = useStatusUpdate(workspaceId);
+  // Set once this page declares the Action, so its new status takes focus.
+  const [declared, setDeclared] = useState(false);
+  // Owned here, not by the bar, so a failure notice renders in the column.
+  const update = useMutation(actionsMutations.updateStatus(workspaceId));
   const gaps = contentGapMembers(action);
+  const title = readableUrl(action.target_label);
   return (
     <DetailScreen
-      title={readableUrl(action.target_label)}
+      column
+      title={title}
+      titleLines={2}
       back={{ ...BACK, projectId: action.project_id }}
-      actions={<ActionControls action={action} update={update} />}
-      lead={<ActionFacts action={action} />}
-      aside={
-        <>
-          <TextList title="Avoid" items={action.diagnosis.donts ?? []} />
-          <TextList
-            title="Measure with"
-            items={(action.diagnosis.measure_with ?? []).map(measurementLegLabel).filter(isText)}
-          />
-        </>
-      }
     >
+      <Breadcrumb title={title} />
       {update.isError ? (
         <MutationNotice
           notice={mutationNoticeForError(update.error, { action: 'update this Action' })}
           onRetry={() => update.variables && update.mutate(update.variables)}
         />
       ) : null}
+      <Overview action={action} />
+      <Details action={action} />
+      {action.declaration ? (
+        <Section title="Implementation" id="action-implementation">
+          <DeclarationStatus
+            declaration={action.declaration}
+            workspaceId={workspaceId}
+            focusOnMount={declared}
+          />
+        </Section>
+      ) : null}
       {gaps.length > 0 ? <ContentGapWhy members={gaps} /> : null}
-      <Diagnosis action={action} onOpenEvidence={setEvidenceId} />
-      <Implementation action={action} workspaceId={workspaceId} />
+      <WhatToDo action={action} />
+      <TextList
+        title="Measure with"
+        id="action-measure"
+        items={(action.diagnosis.measure_with ?? []).map(measurementLegLabel).filter(isText)}
+      />
+      <TextList title="Avoid" id="action-avoid" items={action.diagnosis.donts ?? []} />
+      <Findings action={action} onOpenEvidence={setEvidenceId} />
       <LinkedChats action={action} workspaceId={workspaceId} />
+      <ActionBar
+        action={action}
+        workspaceId={workspaceId}
+        dismissing={update.isPending}
+        onStatus={(status) => update.mutate({ actionId: action.id, status })}
+        onDeclared={() => setDeclared(true)}
+      />
       <EvidenceDrawer
         opportunityId={evidenceId}
         projectId={action.project_id}
@@ -130,121 +159,167 @@ function ActionDetailView({
   );
 }
 
-function useStatusUpdate(workspaceId: string) {
-  return useMutation(actionsMutations.updateStatus(workspaceId));
-}
-
-type StatusUpdate = ReturnType<typeof useStatusUpdate>;
-
-function ActionControls({
-  action,
-  update,
-}: Readonly<{ action: ActionDetail; update: StatusUpdate }>) {
-  const mayWrite = useWorkspaceCapability('write');
-  const dismissed = action.status === 'dismissed';
-  const handoff = actionHandoff(action);
+/** Where the Action sits: Actions, then this Action. */
+function Breadcrumb({ title }: Readonly<{ title: string }>) {
   return (
-    <>
-      {mayWrite ? (
-        <Button
-          variant="secondary"
-          disabled={update.isPending}
-          onClick={() =>
-            update.mutate({ actionId: action.id, status: dismissed ? 'open' : 'dismissed' })
-          }
-        >
-          {dismissed ? 'Reopen' : 'Dismiss'}
-        </Button>
-      ) : null}
-      <Button asChild variant="primary">
-        <ProjectLink href={handoff.href}>{handoff.label}</ProjectLink>
-      </Button>
-    </>
+    <nav aria-label="Breadcrumb">
+      <Inline as="ol" gap="tight" className="flex-wrap">
+        <Inline as="li" gap="tight">
+          <TextLink href={ACTIONS} text="caption">
+            Actions
+          </TextLink>
+          <Icon icon={ChevronRight} className="text-ink-muted" />
+        </Inline>
+        <li className="min-w-0">
+          <span aria-current="page" className={textRole('caption', 'block truncate')}>
+            {title}
+          </span>
+        </li>
+      </Inline>
+    </nav>
   );
 }
 
-/**
- * The Agent handoff the diagnosis names: its workflow with the finding's
- * Opportunity (a page to write) or with the page URL (a page to work on); an
- * Action whose diagnosis names none hands off with itself alone.
- */
-function actionHandoff(action: ActionDetail): Readonly<{ label: string; href: string }> {
-  const handoff = action.diagnosis.handoff;
-  switch (handoff?.context) {
-    case 'opportunity':
-      return {
-        label: 'Write this page',
-        href: agentHandoffHref({
-          actionId: action.id,
-          opportunityId: handoff.opportunity_id,
-          workflowId: handoff.workflow_id,
-        }),
-      };
-    case 'page_url':
-      return {
-        label: 'Work on this',
-        href: agentHandoffHref({
-          actionId: action.id,
-          targetUrl: action.target_url,
-          workflowId: handoff.workflow_id,
-        }),
-      };
-    default:
-      return {
-        label: 'Work on this with the agent',
-        href: agentHandoffHref({ actionId: action.id }),
-      };
-  }
-}
-
-/**
- * The lead under the title. The title already names the target, so the lead
- * never repeats its URL: it carries the status and the approach, and the
- * target opens from a short link.
- */
-function ActionFacts({ action }: Readonly<{ action: ActionDetail }>) {
-  const approach = approachLabel(action.approach);
-  const facts: Fact[] = [
-    { label: 'Status', value: <ActionStatusBadge status={action.status} /> },
-    { label: 'Priority', value: <ActionPriorityBadge score={action.priority_score} /> },
-  ];
-  if (approach) facts.push({ label: 'Approach', value: approach });
-  facts.push({ label: 'Target', value: targetKindLabel(action.target_kind) ?? 'Target' });
-  const sources = action.families.map(familyLabel).filter(isText);
-  if (sources.length) facts.push({ label: 'Source', value: sources.join(', ') });
+/** A headed section of the column; its heading names it for assistive technology. */
+function Section({
+  title,
+  id,
+  actions,
+  children,
+}: Readonly<{ title: string; id: string; actions?: ReactNode; children: ReactNode }>) {
   return (
-    <Stack as="section" aria-label="Summary">
-      <FactList layout="inline" facts={facts} />
-      {action.target_url ? (
-        <TextLink
-          variant="external"
-          href={action.target_url}
-          text="body"
-          className="justify-self-start"
-        >
-          Open the page
-        </TextLink>
-      ) : null}
-      {action.evidence_cleared_at ? (
-        <Callout tone="info">No current evidence targets this Action. Its chats are kept.</Callout>
-      ) : null}
+    <Stack as="section" aria-labelledby={id}>
+      <EditorialSectionHeader title={title} headingId={id} actions={actions} />
+      {children}
     </Stack>
   );
 }
 
-function Diagnosis({
+/** Each distinct instruction of the Action's findings, in priority order. */
+function steps(action: ActionDetail): string[] {
+  return [...new Set(action.members.map((member) => member.remediation).filter(isText))];
+}
+
+/**
+ * What Copy as prompt puts on the clipboard: the message the Agent chat opens
+ * with, then the Action's steps, for a reader working in another assistant.
+ */
+function actionPrompt(action: ActionDetail): string {
+  const todo = steps(action);
+  if (todo.length === 0) return action.handoff.message;
+  const lines = todo.map((step, index) => `${index + 1}. ${step}`);
+  return [action.handoff.message, '', 'What to do:', ...lines].join('\n');
+}
+
+/** What happened: the findings the diagnosis names, and the work it asks for. */
+function Overview({ action }: Readonly<{ action: ActionDetail }>) {
+  const happened = [...new Set(action.members.map((member) => member.title))];
+  return (
+    <Section
+      title="Overview"
+      id="action-overview"
+      actions={<CopyButton value={actionPrompt(action)}>Copy as prompt</CopyButton>}
+    >
+      <p className={textRole('body')}>{action.handoff.message}</p>
+      {happened.length > 0 ? (
+        <Stack as="ul" gap="tight" className="list-inside list-disc">
+          {happened.map((item) => (
+            <li key={item} className={textRole('body')}>
+              {item}
+            </li>
+          ))}
+        </Stack>
+      ) : (
+        <QueryState kind="empty" inline message="No current finding targets this Action." />
+      )}
+      {action.evidence_cleared_at ? (
+        <Callout tone="info">No current evidence targets this Action. Its chats are kept.</Callout>
+      ) : null}
+    </Section>
+  );
+}
+
+/** The Action's facts, one ruled row each. */
+function Details({ action }: Readonly<{ action: ActionDetail }>) {
+  const approach = approachLabel(action.diagnosis.approach ?? action.approach);
+  const sources = action.families.map(familyLabel).filter(isText);
+  const target = targetKindLabel(action.target_kind) ?? 'Target';
+  const facts: Fact[] = [
+    { label: 'Status', value: <ActionStatusBadge status={action.status} /> },
+    { label: 'Priority', value: <ActionPriorityBadge score={action.priority_score} /> },
+  ];
+  if (approach) facts.push({ label: 'Action type', value: approach });
+  facts.push({
+    label: 'Target',
+    value: action.target_url ? (
+      <Inline gap="compact" className="flex-wrap">
+        <span>{target}</span>
+        <TextLink variant="external" href={action.target_url} text="body">
+          Open the page
+        </TextLink>
+      </Inline>
+    ) : (
+      target
+    ),
+  });
+  if (sources.length) facts.push({ label: 'Source', value: sources.join(', ') });
+  return (
+    <Card aria-labelledby="action-details">
+      <CardHeader>
+        <CardTitle id="action-details">Details</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <FactList layout="ruled" facts={facts} />
+      </CardContent>
+    </Card>
+  );
+}
+
+function WhatToDo({ action }: Readonly<{ action: ActionDetail }>) {
+  const todo = steps(action);
+  if (todo.length === 0) return null;
+  return (
+    <Section title="What to do" id="action-todo">
+      <Stack as="ol" gap="tight" className="list-inside list-decimal">
+        {todo.map((step) => (
+          <li key={step} className={textRole('body')}>
+            {step}
+          </li>
+        ))}
+      </Stack>
+    </Section>
+  );
+}
+
+function TextList({
+  title,
+  id,
+  items,
+}: Readonly<{ title: string; id: string; items: readonly string[] }>) {
+  if (items.length === 0) return null;
+  return (
+    <Section title={title} id={id}>
+      <Stack as="ul" gap="tight" className="list-inside list-disc">
+        {items.map((item) => (
+          <li key={item} className={textRole('body')}>
+            {item}
+          </li>
+        ))}
+      </Stack>
+    </Section>
+  );
+}
+
+/** The live findings the Action groups, each with its evidence. */
+function Findings({
   action,
   onOpenEvidence,
 }: Readonly<{ action: ActionDetail; onOpenEvidence: (id: string) => void }>) {
+  if (action.members.length === 0) return null;
   return (
-    <Card aria-labelledby="action-diagnosis">
-      <CardHeader>
-        <CardTitle id="action-diagnosis">Diagnosis</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {action.members.length === 0 ? (
-          <QueryState kind="empty" inline message="No current finding targets this Action." />
-        ) : (
+    <Section title="Findings" id="action-findings">
+      <Card>
+        <CardContent>
           <ul className={ledgerClasses()}>
             {action.members.map((member) => (
               <Inline
@@ -253,101 +328,76 @@ function Diagnosis({
                 gap="compact"
                 className={ledgerItemClasses('flex-wrap items-start')}
               >
-                <Stack as="span" gap="tight" className="min-w-0 flex-1">
-                  <span className={textRole('itemTitle')}>{member.title}</span>
-                  <span className={textRole('caption')}>{member.remediation}</span>
-                </Stack>
+                <span className={textRole('itemTitle', 'min-w-0 flex-1')}>{member.title}</span>
                 <Button variant="ghost" onClick={() => onOpenEvidence(member.id)}>
                   View evidence
                 </Button>
               </Inline>
             ))}
           </ul>
-        )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </Section>
   );
 }
 
 const isText = (value: string | null): value is string => Boolean(value);
 
 /**
- * The declaration loop (plan §9): what was declared and what each leg awaits,
- * or the way to declare work done outside CiteLadder. An Agent output is
- * declared from its chat, which names the exact revision shipped.
+ * The page's three actions, floating at the bottom of the column while it
+ * scrolls and resting after its last section: Dismiss (Reopen once
+ * dismissed), Mark implemented while the Action can be declared, and Work
+ * with the agent, the page's primary action. A declared Action keeps only
+ * the Agent. An Agent output is declared from its chat, which names the
+ * exact revision shipped; here Mark implemented declares work done outside
+ * CiteLadder.
  */
-function Implementation({
+function ActionBar({
   action,
   workspaceId,
-}: Readonly<{ action: ActionDetail; workspaceId: string }>) {
+  dismissing,
+  onStatus,
+  onDeclared,
+}: Readonly<{
+  action: ActionDetail;
+  workspaceId: string;
+  dismissing: boolean;
+  onStatus: (status: 'open' | 'dismissed') => void;
+  onDeclared: () => void;
+}>) {
   const mayWrite = useWorkspaceCapability('write');
-  const [declared, setDeclared] = useState(false);
-  const approach = approachLabel(action.diagnosis.approach ?? action.approach);
-  const canDeclare = isDeclarable(action) && mayWrite;
-  if (!action.declaration && !canDeclare && !approach) return null;
-  let declarationBody: ReactNode = null;
-  if (action.declaration) {
-    declarationBody = (
-      <DeclarationStatus
-        declaration={action.declaration}
+  const dismissed = action.status === 'dismissed';
+  const undeclared = mayWrite && !action.declaration;
+  const linkRoute = action.members.some((member) => member.rule_id === 'site_contextual_links');
+  let declare: ReactNode = null;
+  if (undeclared && isDeclarable(action))
+    declare = linkRoute ? (
+      <ContextualLinkDeclarationRoute />
+    ) : (
+      <MarkImplementedButton
         workspaceId={workspaceId}
-        focusOnMount={declared}
+        action={action}
+        revision={null}
+        variant="secondary"
+        onDeclared={onDeclared}
       />
     );
-  } else if (canDeclare) {
-    declarationBody = (
-      <Stack>
-        <p className={textRole('body')}>
-          When this work is live, declare it so CiteLadder can measure it. To declare an Agent
-          output, use Mark implemented in its chat.
-        </p>
-        <div>
-          {action.members.some((member) => member.rule_id === 'site_contextual_links') ? (
-            <ContextualLinkDeclarationRoute />
-          ) : (
-            <MarkImplementedButton
-              workspaceId={workspaceId}
-              action={action}
-              revision={null}
-              onDeclared={() => setDeclared(true)}
-            />
-          )}
-        </div>
-      </Stack>
-    );
-  }
   return (
-    <Card aria-labelledby="action-implementation">
-      <CardHeader>
-        <CardTitle id="action-implementation">Implementation</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Stack>
-          {approach ? <p className={textRole('itemTitle')}>{approach}</p> : null}
-          {declarationBody}
-        </Stack>
-      </CardContent>
-    </Card>
-  );
-}
-
-function TextList({ title, items }: Readonly<{ title: string; items: string[] }>) {
-  if (items.length === 0) return null;
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Stack as="ul" gap="tight" className="list-inside list-disc">
-          {items.map((item) => (
-            <li key={item} className={textRole('body')}>
-              {item}
-            </li>
-          ))}
-        </Stack>
-      </CardContent>
-    </Card>
+    <FloatingBar label="Work on this Action">
+      {undeclared ? (
+        <Button
+          variant="secondary"
+          disabled={dismissing}
+          onClick={() => onStatus(dismissed ? 'open' : 'dismissed')}
+        >
+          {dismissed ? 'Reopen' : 'Dismiss'}
+        </Button>
+      ) : null}
+      {declare}
+      <Button asChild variant="primary">
+        <ProjectLink href={actionHandoffHref(action)}>Work with the agent</ProjectLink>
+      </Button>
+    </FloatingBar>
   );
 }
 
@@ -361,8 +411,7 @@ function LinkedChats({
   );
   const rows = chats.data?.pages.flatMap((page) => page.items) ?? [];
   return (
-    <Stack as="section" aria-labelledby="action-chats">
-      <EditorialSectionHeader title="Chats" headingId="action-chats" />
+    <Section title="Chats" id="action-chats">
       {chats.isError ? (
         <ReadError {...readErrorProps(chats)} fallback="Linked chats could not be loaded." />
       ) : null}
@@ -403,6 +452,6 @@ function LinkedChats({
           Show more chats
         </Button>
       ) : null}
-    </Stack>
+    </Section>
   );
 }

@@ -169,9 +169,14 @@ inside the same transaction and project lock as the snapshot it describes, so
 members, priority and diagnosis always match that snapshot. Grouping, priority
 (the strongest member's score; agreement between sources earns no bonus,
 because most findings on a page come from the one crawl) and the deterministic
-diagnosis (approach and recommended skill) are pure functions of the members under
-[Action policy](../frontend/services/api/src/config/actions.ts), stamped with their
-versions. A model does not score or diagnose an Action.
+diagnosis (approach, recommended skill and Agent handoff) are pure functions of the
+members under [Action policy](../frontend/services/api/src/config/actions.ts), stamped
+with their versions. A model does not score or diagnose an Action. The handoff's
+message is the approach branch's first template whose facts the members' stored
+evidence holds (the Action's label, the strongest finding's title, a content
+gap's angle, the competitors read on an earned page), so it never states a
+fact the evidence lacks; list and detail reads return it as `handoff`, and an
+Action with no current evidence reads a message about its label.
 
 `actions` has two TypeScript writers. The refresh derives
 evidence Actions and restamps every row's members; the Agent only inserts

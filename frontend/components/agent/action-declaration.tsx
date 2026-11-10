@@ -6,7 +6,7 @@ import { useState } from 'react';
 
 import { DeclarationStatus } from '@/components/agent/declaration-status';
 import { ProjectLink } from '@/components/ui/project-link';
-import { Button } from '@/components/ui/button';
+import { Button, type ButtonVariant } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { DateField } from '@/components/ui/date-field';
 import { Dialog } from '@/components/ui/dialog';
@@ -46,12 +46,15 @@ export function MarkImplementedButton({
   recommendationIds,
   selectionDescription,
   onDeclared,
+  variant = 'primary',
 }: Readonly<{
   workspaceId: string;
   action: Declarable;
   /** The output revision shipped; null declares work done outside CiteLadder. */
   revision: { id: string; number: number } | null;
   disabled?: boolean;
+  /** Secondary where another action is the view's primary (the Action page). */
+  variant?: Extract<ButtonVariant, 'primary' | 'secondary'>;
   recommendationIds?: string[];
   selectionDescription?: string;
   onDeclared?: () => void;
@@ -86,7 +89,7 @@ export function MarkImplementedButton({
   return (
     <>
       <Button
-        variant="primary"
+        variant={variant}
         disabled={disabled}
         onClick={() => {
           declare.reset();

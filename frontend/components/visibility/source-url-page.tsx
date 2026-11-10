@@ -63,8 +63,9 @@ export function SourceUrlPageCard({
 
 /**
  * The two ways to act on the gap. An open Action carries the brief and the
- * measurement; before one exists (the page is not yet cited often enough),
- * the Agent can still draft the request from the page itself.
+ * measurement, and its chat opens with the Action's own request written;
+ * before one exists (the page is not yet cited often enough), the Agent can
+ * still draft the request from the page itself.
  */
 function GetListed({ url, actionId }: Readonly<{ url: string; actionId: string | null }>) {
   return (

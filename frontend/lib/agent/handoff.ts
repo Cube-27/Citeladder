@@ -1,12 +1,14 @@
 /**
  * Evidence-screen handoffs into the Agent.
  *
- * **Work on this** opens New chat attached to an Action. **Ask agent** opens
+ * **Work with the agent** opens New chat attached to an Action, which writes
+ * the Action's message once it reads it. **Ask agent** opens
  * New chat with typed evidence references and an optional prefilled question.
  * The URL carries identifiers only: the server resolves and authorizes each
  * one when the chat is created, so a tampered or stale id fails there, never
  * here. Parsing drops anything malformed rather than guessing.
  */
+import type { ActionHandoff } from '@citeladder/contracts/actions';
 import type { AgentContextRefs } from '@citeladder/contracts/agent';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -79,6 +81,38 @@ export function agentHandoffHref(input: HandoffInput): string {
   set(PARAM.workflow, input.workflowId);
   const query = params.toString();
   return query ? `/agent?${query}` : '/agent';
+}
+
+/**
+ * New chat on an Action (AS3): the Action attached, and the workflow its
+ * diagnosis names with the finding's Opportunity or the Action's page. The
+ * message stays out of the URL (it names evidence history and logs must not
+ * keep); New chat reads it from the attached Action.
+ */
+export function actionHandoffHref(
+  action: Readonly<{ id: string; target_url: string | null; handoff: ActionHandoff }>,
+): string {
+  const { handoff } = action;
+  switch (handoff.context) {
+    case 'opportunity':
+      return agentHandoffHref({
+        actionId: action.id,
+        opportunityId: handoff.opportunity_id,
+        workflowId: handoff.workflow_id,
+      });
+    case 'page_url':
+      return agentHandoffHref({
+        actionId: action.id,
+        targetUrl: action.target_url,
+        workflowId: handoff.workflow_id,
+      });
+    case 'action':
+      return agentHandoffHref({ actionId: action.id });
+    default: {
+      const unknownHandoff: never = handoff;
+      throw new Error(`Unknown Action handoff: ${JSON.stringify(unknownHandoff)}`);
+    }
+  }
 }
 
 /**
