@@ -1,6 +1,6 @@
 # Content optimization phase 2: the page editor
 
-Status: proposed, 2026-11-10. It follows [Actions simplification](actions-simplification.md)
+Status: reviewed with the owner, 2026-11-10 (E1 to E5 decided). It follows [Actions simplification](actions-simplification.md)
 (shipped in #700, #699, #701 and #703) and replaces phase 2 of
 [content optimization](content-optimization.md#phases). The architecture in
 section 3 of that document still holds, except where this plan changes it to
@@ -33,15 +33,10 @@ and MCP tools for the editor.
 | ID | Decision |
 |---|---|
 | E1 | The editor lives inside the Agent window (owner, in chat, 2026-11-10: "Option 1"). When a chat works on a page, `/agent/chats/:id` becomes a workspace: the page on the left, and on the right Suggestions / Outline / SEO with the chat docked below. There is no separate editor route and no slide-out panel. Chats without a page keep today's single column. |
-
-### Proposed (need the owner's confirmation)
-
-| ID | Proposal | Why |
-|---|---|---|
-| E2 | The page is Markdown edited in CodeMirror 6 with live-preview styling: headings, bold and links render as text, and their Markdown marks show only on the cursor's line. | Server offsets equal editor offsets, so suggestions anchor exactly with no conversion layer (content-optimization §3). A true rich-text editor (ProseMirror) is deferred. |
-| E3 | The workspace opens for an Action whose target is an owned page of a content kind (CO15), or a page picked in Analyze a page. Other Actions keep today's chat. | Matches CO15 without routing Actions to separate screens (AS1). |
-| E4 | Revert on an applied or dismissed suggestion returns it to To review. Reverting an applied one restores the original text while that span is unchanged; otherwise the revert is refused and explains why. | Peec offers Revert. Without it, Apply is one-way except through revision history. |
-| E5 | The SEO tab shows Site Health's page-local checks from the editor's fetch, labelled with the fetch time. Editing the page doesn't rerun them. | Matches CO12 and the rules engine's L0. |
+| E2 | The page is Markdown edited in CodeMirror 6 with live-preview styling: headings, bold and links render as text, and their Markdown marks show only on the cursor's line. Server offsets equal editor offsets, so suggestions anchor exactly with no conversion layer (content-optimization §3). A true rich-text editor (ProseMirror) is deferred. (Owner, in chat, 2026-11-10: "Accept all", E2 to E5.) |
+| E3 | The workspace opens for an Action whose target is an owned page of a content kind (CO15), or a page picked in Analyze a page. Other Actions keep today's chat. |
+| E4 | Revert on an applied or dismissed suggestion returns it to To review. Reverting an applied one restores the original text while that span is unchanged; otherwise the revert is refused and explains why. |
+| E5 | The SEO tab shows Site Health's page-local checks from the editor's fetch, labelled with the fetch time. Editing the page doesn't rerun them. |
 
 ## How it works
 
