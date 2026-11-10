@@ -32,7 +32,8 @@ const p = policy.content_optimization;
 const g = policy.opportunity.opportunities.CONTENT_GAP;
 
 const CONTENT_GAPS_NOT_COMPUTED = 'Content gaps not computed yet.';
-const CONTENT_GAPS_OUT_OF_DATE = `Content-gap evidence is out of date: its newest audit is more than ${p.max_source_age_days} days old.`;
+/** The snapshot limitation the Content optimization list reads as "out of date". */
+export const CONTENT_GAPS_OUT_OF_DATE = `Content-gap evidence is out of date: its newest audit is more than ${p.max_source_age_days} days old.`;
 
 /** The run a refresh reads content gaps from, or none with the reason. */
 export type ContentGapSource =

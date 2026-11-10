@@ -32,6 +32,9 @@ type NavPlacement =
   | `palette:${PaletteGroup}`
   | 'user-menu';
 
+/** A live count beside a nav label: one Action surface's open and in-progress work. */
+export type NavBadge = 'open-actions' | 'open-content';
+
 /** One way into a destination. A route may have several (a settings tab). */
 type NavEntry = {
   label: string;
@@ -39,7 +42,7 @@ type NavEntry = {
   /** Query the entry adds to the route's path, e.g. `tab=integrations`. */
   search?: string;
   /** A live count shown beside the label. */
-  badge?: 'open-actions';
+  badge?: NavBadge;
   /** A managed plan has no provider settings (B32). */
   hiddenWhenManaged?: true;
   /** Listed after the placement's other entries rather than in manifest order. */
@@ -132,6 +135,10 @@ const screens = {
   newChat: pick(() => import('@/components/agent/new-chat-screen'), 'NewChatScreen'),
   chat: pick(() => import('@/components/agent/chat-screen'), 'ChatScreen'),
   actions: pick(() => import('@/components/agent/actions-screen'), 'ActionsScreen'),
+  contentOptimization: pick(
+    () => import('@/components/agent/content-optimization-screen'),
+    'ContentOptimizationScreen',
+  ),
   action: pick(() => import('@/components/agent/action-detail-screen'), 'ActionDetailScreen'),
   skills: pick(() => import('@/components/agent/skills-screen'), 'SkillsScreen'),
   context: pick(() => import('@/components/agent/context-screen'), 'ContextScreen'),
@@ -149,6 +156,31 @@ const screens = {
     'AcceptInvitationPage',
   ),
 } satisfies Record<string, Screen>;
+
+/**
+ * One Action surface's list, with its open count in the Act group, Agent mode
+ * and (once) the Agent palette, and the shared Action page beneath it.
+ */
+function actionSurface<const P extends string>(
+  path: P,
+  title: string,
+  screen: Screen,
+  icon: IconName,
+  badge: NavBadge,
+) {
+  const placements: NavPlacement[] = ['dashboard:act', 'agent', 'palette:Agent'];
+  const nav = [{ label: title, icon, badge, placements }];
+  return [
+    page({ path, title, mode: 'agent', screen, nav }),
+    page({
+      path: `${path}/:actionId` as const,
+      title,
+      mode: 'agent',
+      collection: path,
+      screen: screens.action,
+    }),
+  ] as const;
+}
 
 const credential = { credentialInUrl: true } as const;
 
@@ -237,28 +269,15 @@ export const APP_ROUTES = [
     collection: '/agent',
     screen: screens.chat,
   }),
-  page({
-    path: '/agent/actions',
-    title: 'Actions',
-    mode: 'agent',
-    screen: screens.actions,
-    // Listed once in the palette, under Agent.
-    nav: [
-      {
-        label: 'Actions',
-        icon: 'opportunities',
-        badge: 'open-actions',
-        placements: ['dashboard:act', 'agent', 'palette:Agent'],
-      },
-    ],
-  }),
-  page({
-    path: '/agent/actions/:actionId',
-    title: 'Actions',
-    mode: 'agent',
-    collection: '/agent/actions',
-    screen: screens.action,
-  }),
+  ...actionSurface('/agent/actions', 'Actions', screens.actions, 'opportunities', 'open-actions'),
+  // Directly below Actions (CO1); the two never list the same Action.
+  ...actionSurface(
+    '/agent/content',
+    'Content optimization',
+    screens.contentOptimization,
+    'content',
+    'open-content',
+  ),
   page({
     path: '/agent/skills',
     title: 'Skills',

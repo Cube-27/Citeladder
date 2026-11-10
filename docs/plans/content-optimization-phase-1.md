@@ -1,6 +1,8 @@
 # Content optimization phase 1: implementation plan
 
-Status: **in progress, 2026-11-10** (assigned by the owner 2026-11-10).
+Status: **complete, 2026-11-10** (assigned by the owner 2026-11-10). What
+shipped is owned by [Content optimization](../content-optimization.md); the
+threshold calibration is in the [backlog](backlog.md).
 
 What and why are in [content optimization](content-optimization.md)
 (decisions CO1–CO18, sections 1–2) and [B73](../billing-decisions.md#content-optimization-2026-11-10).

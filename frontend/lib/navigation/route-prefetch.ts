@@ -59,7 +59,11 @@ const ROUTE_PREFETCHERS: Readonly<Partial<Record<AppRoutePath, RoutePrefetcher>>
   },
   '/agent/actions': async (client, scope) => {
     const { actionsQueries } = await import('@/lib/api/actions');
-    warmQuery(client, actionsQueries.list(scope));
+    warmQuery(client, actionsQueries.list(scope, { surface: 'actions' }));
+  },
+  '/agent/content': async (client, scope) => {
+    const { actionsQueries } = await import('@/lib/api/actions');
+    warmQuery(client, actionsQueries.list(scope, { surface: 'content' }));
   },
   '/agent/skills': async (client, { workspaceId }) => {
     const { agentQueries } = await import('@/lib/api/agent');
@@ -224,13 +228,16 @@ async function prefetchIssues(client: QueryClient, scope: ProjectScope) {
 
 /**
  * Warm the reads the application shell makes for a project on every screen:
- * the Actions badge beside the navigation reads the unfiltered first page of
- * the project's Actions. Its component loads lazily, so on a cold load the
- * read otherwise started a round trip after the page's own.
+ * the Actions and Content optimization badges beside the navigation each read
+ * the first page of their screen's Actions. Their component loads lazily, so
+ * on a cold load the reads otherwise started a round trip after the page's own.
  */
 export function prefetchProjectShell(client: QueryClient, scope: ProjectScope): Promise<void> {
   return import('@/lib/api/actions')
-    .then(({ actionsQueries }) => warmQuery(client, actionsQueries.list(scope)))
+    .then(({ actionsQueries }) => {
+      warmQuery(client, actionsQueries.list(scope, { surface: 'actions' }));
+      warmQuery(client, actionsQueries.list(scope, { surface: 'content' }));
+    })
     .catch(() => {});
 }
 

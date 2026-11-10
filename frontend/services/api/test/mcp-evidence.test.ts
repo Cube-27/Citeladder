@@ -664,6 +664,33 @@ it('lists only active Actions as the current work and reads a dismissed one only
   ]);
 });
 
+it('links a content-surface Action to Content optimization and any other to Actions', async () => {
+  const scope = { workspaceId: tenant.workspaceId, projectId: tenant.projectId };
+  const attach = (topic: string) =>
+    db
+      .transaction()
+      .execute((trx) => attachOrCreateAction(trx, scope, 'planned_page', topic, tenant.userId));
+  const content = await attach('Setup guide for content');
+  const other = await attach('Pricing calculator page');
+  // The surface a refresh derives for a content-gap planned page.
+  await db
+    .updateTable('actions')
+    .set({ surface: 'content' })
+    .where('workspace_id', '=', tenant.workspaceId)
+    .where('id', '=', content.id)
+    .execute();
+  const pathOf = (link: unknown) => new URL(String(link)).pathname;
+
+  const one = await read('read_actions', { action_id: content.id });
+  expect(pathOf((one.action as { link: string }).link)).toBe(`/agent/content/${content.id}`);
+  const listed = (await read('read_actions')).items as { id: string; link: string }[];
+  expect(
+    [content.id, other.id].map((id) => pathOf(listed.find((item) => item.id === id)?.link)),
+  ).toEqual([`/agent/content/${content.id}`, `/agent/actions/${other.id}`]);
+  const fetched = await fetchRecord(db, principal, `citeladder://action/${content.id}`, origin);
+  expect(pathOf(fetched.url)).toBe(`/agent/content/${content.id}`);
+});
+
 it('serves answer perception with the same numbers as the Perception read, and its quotes', async () => {
   expect(await read('read_perception')).toMatchObject({
     state: 'unavailable',

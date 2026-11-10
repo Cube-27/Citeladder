@@ -8,6 +8,7 @@ import { strings } from '../db/json.ts';
 import { isoDateText, utcText } from '../db/timestamps.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { readProjectReadiness } from '../integrations/readiness.ts';
+import { actionPath } from '@citeladder/contracts/record-kinds';
 import { getAction, listActions } from '../opportunities/actions.ts';
 import { listDifferentiationReports } from '../source-pages/differentiation-reads.ts';
 import { catalog, shelf } from '../commerce/reads.ts';
@@ -59,7 +60,7 @@ export async function actionsRead(
       throw new McpInputError('Action was not found in this project');
     return {
       state: 'available',
-      action: { ...action, link: appLink(origin, `/agent/actions/${action.id}`, scope.projectId) },
+      action: { ...action, link: appLink(origin, actionPath(action), scope.projectId) },
       artifact_refs: [reference('action', action.id)],
     };
   }
@@ -72,12 +73,13 @@ export async function actionsRead(
   });
   const items = page.items.map((item) => ({
     ...item,
-    link: appLink(origin, `/agent/actions/${item.id}`, scope.projectId),
+    link: appLink(origin, actionPath(item), scope.projectId),
   }));
   return {
     state: 'available',
     items,
     status_counts: page.status_counts,
+    content_gap_source: page.content_gap_source,
     pagination: pagination(items, page.next_cursor),
     artifact_refs: items.map((item) => reference('action', item.id)),
   };

@@ -213,16 +213,31 @@ describe('content gaps', () => {
       cursor: null,
     });
     expect(listed.items).toEqual([]);
+    // A current run with no gaps: a real "no gaps", not "not computed yet".
+    expect(listed.content_gap_source).toBe('current');
   });
 
   it('says when gaps were never computed, and clears gaps whose run is out of date', async () => {
     const p = await project();
+    const source = async () =>
+      (
+        await listActions(db, scopeOf(p), {
+          status: null,
+          target_kind: null,
+          surface: 'content',
+          limit: 10,
+          cursor: null,
+        })
+      ).content_gap_source;
+    expect(await source()).toBe('not_computed');
     const never = await recomputeOpportunities(db, scopeOf(p));
     expect(never.limitations).toContain('Content gaps not computed yet.');
+    expect(await source()).toBe('not_computed');
 
     const { runId } = await run(p, { angles: [improve(p)] });
     await recomputeOpportunities(db, scopeOf(p));
     expect(await gaps(p)).toHaveLength(1);
+    expect(await source()).toBe('current');
 
     // Time passes: the run's newest audit is now 46 days old.
     await db
@@ -235,6 +250,7 @@ describe('content gaps', () => {
     expect(stale.limitations).toContain(
       'Content-gap evidence is out of date: its newest audit is more than 45 days old.',
     );
+    expect(await source()).toBe('out_of_date');
   });
 
   it('keeps the Action and planned key of a relabelled angle', async () => {
@@ -348,9 +364,43 @@ describe('content gaps', () => {
       ['page', 'content'],
       ['planned_page', 'content'],
     ]);
-    expect(rest.items.map((item) => [item.target_label, item.surface])).toEqual([
-      ['Pricing calculator', 'actions'],
+    // Each row carries its angle and counts from the finding's evidence.
+    expect(
+      content.items
+        .map((item) =>
+          item.content_gaps.map(({ opportunity_id: _id, ...gap }) => [item.target_kind, gap]),
+        )
+        .flat()
+        .sort(),
+    ).toEqual([
+      [
+        'page',
+        {
+          rule_id: 'content_gap_improve_page',
+          angle_label: 'Pricing comparison',
+          prompt_count: 1,
+          citation_count: 4,
+          domain_count: 2,
+          competitor_count: 1,
+        },
+      ],
+      [
+        'planned_page',
+        {
+          rule_id: 'content_gap_new_page',
+          angle_label: 'Setup guide',
+          prompt_count: 1,
+          citation_count: 4,
+          domain_count: 2,
+          competitor_count: 1,
+        },
+      ],
     ]);
+    expect(content.content_gap_source).toBe('current');
+    expect(rest.items.map((item) => [item.target_label, item.surface, item.content_gaps])).toEqual([
+      ['Pricing calculator', 'actions', []],
+    ]);
+    expect(rest.content_gap_source).toBeNull();
     expect([...content.items, ...rest.items].every((item) => ownIds.has(item.id))).toBe(true);
     expect([content.status_counts.open, rest.status_counts.open]).toEqual([2, 1]);
   });

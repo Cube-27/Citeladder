@@ -13,6 +13,8 @@ export const actionKeys = {
     filters: {
       status: string | null;
       targetKind: string | null;
+      /** One screen's Actions; null reads both (the Agent's own lists). */
+      surface: string | null;
       cursor: string | null;
       limit: number;
     },

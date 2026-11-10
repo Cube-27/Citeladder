@@ -34,9 +34,10 @@ const action = {
   created_at: NOW,
   updated_at: NOW,
 };
+const listed = { ...action, content_gaps: [] };
 
 const inProgress = {
-  ...action,
+  ...listed,
   id: '33333333-3333-4333-8333-333333333333',
   target_label: 'acme.test/blog',
   target_url: 'https://acme.test/blog',
@@ -61,12 +62,15 @@ describe('Actions', () => {
         const params = new URL(request.url).searchParams;
         // Every read is recorded: the status counts ride the table's own
         // first page, so the default view is one request, not two.
-        searches.push(`${params.get('status') ?? 'queue'}:${params.get('limit')}`);
-        const items = params.get('status') === 'dismissed' ? [] : [action, inProgress];
+        searches.push(
+          `${params.get('surface')}:${params.get('status') ?? 'queue'}:${params.get('limit')}`,
+        );
+        const items = params.get('status') === 'dismissed' ? [] : [listed, inProgress];
         return HttpResponse.json({
           items,
           next_cursor: null,
           status_counts: { open: 1, in_progress: 2, dismissed: 0 },
+          content_gap_source: null,
         });
       }),
     );
@@ -107,7 +111,8 @@ describe('Actions', () => {
     await user.click(screen.getByRole('option', { name: 'Dismissed', description: '0' }));
 
     expect(await screen.findByText('No Actions match these filters')).toBeVisible();
-    expect(searches).toEqual(['queue:10', 'dismissed:10']);
+    // Actions reads only its own surface; content work is Content optimization's.
+    expect(searches).toEqual(['actions:queue:10', 'actions:dismissed:10']);
     expect(status.textContent).toBe('Dismissed');
 
     // Counts cover every target type, so a target filter drops them.

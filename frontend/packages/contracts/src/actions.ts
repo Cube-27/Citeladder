@@ -133,10 +133,40 @@ export const actionDetailSchema = actionItemSchema.extend({
   declaration: actionDeclarationSchema.nullable(),
 });
 
+/** The two content-gap rules (content optimization section 2). */
+export const contentGapRuleSchema = z.enum(['content_gap_improve_page', 'content_gap_new_page']);
+
+// One live content-gap finding of an Action, as its evidence states it: the
+// angle and its counts. Counts only, never a score (CO14).
+export const actionContentGapSchema = responseObject({
+  opportunity_id: uuid(),
+  rule_id: contentGapRuleSchema,
+  angle_label: z.string(),
+  prompt_count: z.number().int(),
+  citation_count: z.number().int(),
+  domain_count: z.number().int(),
+  competitor_count: z.number().int(),
+});
+export type ActionContentGap = z.infer<typeof actionContentGapSchema>;
+
+// A list row: the Action plus its content-gap findings, most cited first
+// (empty for an Action without one).
+export const actionListItemSchema = actionItemSchema.extend({
+  content_gaps: z.array(actionContentGapSchema),
+});
+
+// The content-gap evidence the latest Opportunity refresh read: a current
+// content-angle run, one too old to use, or none computed yet. Each is a
+// distinct empty Content optimization list, never "no gaps".
+export const contentGapSourceStateSchema = z.enum(['current', 'out_of_date', 'not_computed']);
+export type ContentGapSourceState = z.infer<typeof contentGapSourceStateSchema>;
+
 export const actionsPageSchema = responseObject({
-  items: z.array(actionItemSchema),
+  items: z.array(actionListItemSchema),
   next_cursor: z.string().nullable(),
   status_counts: z.record(z.string(), z.number().int()),
+  // Set for `surface=content` only; null for the other lists.
+  content_gap_source: contentGapSourceStateSchema.nullable(),
 });
 
 /** The statuses a user may store; the rest are derived or declared. */

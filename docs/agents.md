@@ -472,10 +472,14 @@ replays a failed submission with its original idempotency key.
 
 ## Workspace and handoffs
 
-Agent mode holds New chat, Actions, Skills, Context and the chat history under
-`/agent`. The composer takes `/` to pick a skill and `@` to mention up to five
-of the project's Actions. New chat's **Work on an Action** offers **Brief me**,
-a `growth_plan` chat mentioning the top open Actions.
+Agent mode holds New chat, Actions, Content optimization, Skills, Context and
+the chat history under `/agent`. Actions (`/agent/actions`) and
+[Content optimization](content-optimization.md) (`/agent/content`) each list
+one Action `surface` and never the same Action; an Action's page opens under
+its surface's screen. The composer takes `/` to pick a skill and `@` to mention
+up to five of the project's Actions (either surface). New chat's **Work on an
+Action** offers **Brief me**, a `growth_plan` chat mentioning the top open
+Actions.
 
 Evidence screens hand work to New chat through the
 [handoff codec](../frontend/lib/agent/handoff.ts): **Work on this** attaches an
@@ -483,7 +487,11 @@ Action; **Ask agent** carries typed references only (an Opportunity, a Demand
 signal, a page or URL, up to 100 Keyword Research rows of one dataset, an
 issue group, a Site Facts crawl, or an exact output revision) plus an optional
 question, skill or workflow. The browser never embeds evidence content, and the
-context builder authorizes every reference at admission. The Dashboard
+context builder authorizes every reference at admission. A content-gap Action
+hands off with a pinned workflow: a page to create opens **Write this page**
+with its Opportunity and the `article` workflow, and an existing content page
+opens **Work on this** with its URL and the `refresh_page` workflow; both
+attach the Action. The Dashboard
 [agent panel](../frontend/components/agent/agent-panel.tsx) is seeded from rows
 the screen already holds through the
 [panel context](../frontend/lib/agent/panel-context.tsx) and continues in

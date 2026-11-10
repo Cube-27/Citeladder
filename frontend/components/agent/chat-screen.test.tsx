@@ -60,7 +60,12 @@ beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 beforeEach(() =>
   mswServer.use(
     http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
-      HttpResponse.json({ items: [], next_cursor: null, status_counts: {} }),
+      HttpResponse.json({
+        items: [],
+        next_cursor: null,
+        status_counts: {},
+        content_gap_source: null,
+      }),
     ),
   ),
 );
@@ -257,7 +262,12 @@ describe('ChatScreen', () => {
       http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
       http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(withMention)),
       http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
-        HttpResponse.json({ items: [], next_cursor: null, status_counts: {} }),
+        HttpResponse.json({
+          items: [],
+          next_cursor: null,
+          status_counts: {},
+          content_gap_source: null,
+        }),
       ),
     );
     renderChat();
@@ -556,6 +566,7 @@ describe('ChatScreen', () => {
               skill_id: 'technical_health',
               member_count: 1,
               surface: 'actions',
+              content_gaps: [],
               evidence_cleared_at: null,
               created_at: NOW,
               updated_at: NOW,
@@ -563,6 +574,7 @@ describe('ChatScreen', () => {
           ],
           next_cursor: null,
           status_counts: {},
+          content_gap_source: null,
         }),
       ),
       http.post(`/api/v1/agent/chats/${CHAT}/messages`, async ({ request }) => {

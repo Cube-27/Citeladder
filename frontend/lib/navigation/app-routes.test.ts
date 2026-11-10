@@ -38,6 +38,7 @@ describe('app route manifest', () => {
     expect(projectSwitchPathname('/runs/r1')).toBe('/runs');
     expect(projectSwitchPathname('/agent/chats/c1')).toBe('/agent');
     expect(projectSwitchPathname('/agent/actions/a1')).toBe('/agent/actions');
+    expect(projectSwitchPathname('/agent/content/a1')).toBe('/agent/content');
     expect(projectSwitchPathname('/site/crawls/c1/pages/p1')).toBe('/site');
     expect(projectSwitchPathname('/performance')).toBe('/performance');
   });

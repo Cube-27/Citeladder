@@ -44,6 +44,7 @@ import { AGENT_TOP_ACTIONS } from '@/lib/config/agent';
 import { readableUrl } from '@/lib/format';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { actionPath } from '@citeladder/contracts/record-kinds';
 
 /**
  * New chat: ask a question, start a defined workflow, or pick up an Action.
@@ -231,7 +232,7 @@ function AttachedAction({
     <Stack as="section" gap="tight" aria-label="Working on" className={cardClasses()}>
       <span className={textRole('label')}>Working on</span>
       <Inline className="flex-wrap">
-        <TextLink href={`/agent/actions/${action.id}`} text="itemTitle">
+        <TextLink href={actionPath(action)} text="itemTitle">
           {readableUrl(action.target_label)}
         </TextLink>
         <ActionStatusBadge status={action.status} />

@@ -47,7 +47,12 @@ function serveChats(items: ReturnType<typeof chat>[]) {
   mswServer.use(
     http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
     http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
-      HttpResponse.json({ items: [], next_cursor: null, status_counts: {} }),
+      HttpResponse.json({
+        items: [],
+        next_cursor: null,
+        status_counts: {},
+        content_gap_source: null,
+      }),
     ),
     http.get(`/api/v1/projects/${PROJECT}/agent/chats`, () =>
       HttpResponse.json({ items, next_cursor: null }),

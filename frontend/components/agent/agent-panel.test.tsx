@@ -133,7 +133,12 @@ beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 beforeEach(() =>
   mswServer.use(
     http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
-      HttpResponse.json({ items: [], next_cursor: null, status_counts: {} }),
+      HttpResponse.json({
+        items: [],
+        next_cursor: null,
+        status_counts: {},
+        content_gap_source: null,
+      }),
     ),
   ),
 );

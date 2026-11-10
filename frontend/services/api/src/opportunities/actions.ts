@@ -26,6 +26,7 @@ import { latestSnapshot, type Scope } from './sources.ts';
 import { declarationView } from './declaration-view.ts';
 import { memberMeasurementLeg } from './checks/registry.ts';
 import { contentPageKeys } from './action-sync.ts';
+import { actionContentGaps, contentGapSourceState } from './content-gap-reads.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { normalizeDomain } from '../analysis/domains.ts';
 import {
@@ -221,7 +222,7 @@ export async function listActions(
       eb.or([eb(priority, '<', score), eb.and([eb(priority, '=', score), eb('id', '>', id)])]),
     );
   }
-  const [rows, counts] = await Promise.all([
+  const [rows, counts, contentGapSource] = await Promise.all([
     query
       .orderBy(priority, 'desc')
       .orderBy('id')
@@ -231,11 +232,19 @@ export async function listActions(
       .select(['effective_status as status', sql<number>`count(*)::int`.as('count')])
       .groupBy('effective_status')
       .execute(),
+    // Only the content list tells "not computed yet" and "out of date" from "no gaps".
+    onSurface === 'content' ? contentGapSourceState(db, scope) : null,
   ]);
   const page = rows.slice(0, filters.limit);
   const last = page.at(-1);
+  const gaps = await actionContentGaps(
+    db,
+    scope,
+    page.map((row) => ({ id: row.id, member_ids: stringList(row.member_opportunity_ids) })),
+  );
   return {
-    items: page.map(actionItem),
+    content_gap_source: contentGapSource,
+    items: page.map((row) => ({ ...actionItem(row), content_gaps: gaps.get(row.id) ?? [] })),
     next_cursor:
       rows.length > filters.limit && last
         ? encodeKeysetCursor('actions', fingerprint, [String(last.priority_score ?? -1), last.id])

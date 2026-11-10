@@ -2,13 +2,18 @@
 
 import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
-import { useParams } from 'react-router-dom';
+import { useMatch, useParams } from 'react-router-dom';
 
 import {
   isDeclarable,
   MarkImplementedButton,
   ContextualLinkDeclarationRoute,
 } from '@/components/agent/action-declaration';
+import {
+  ContentGapWhy,
+  contentGapHandoff,
+  contentGapMembers,
+} from '@/components/agent/content-gap-evidence';
 import { DeclarationStatus } from '@/components/agent/declaration-status';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { ActionPriorityBadge, ActionStatusBadge } from '@/components/agent/action-status-badge';
@@ -43,21 +48,33 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { readableUrl } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
+import type { ActionSurface } from '@citeladder/contracts/actions';
+import { ACTION_SURFACE_SCREENS } from '@citeladder/contracts/record-kinds';
 
-const BACK = { href: '/agent/actions', label: 'Back to Actions' } as const;
+/** Each surface's list, which an Action's page returns to. */
+const BACK = {
+  actions: { href: ACTION_SURFACE_SCREENS.actions, label: 'Back to Actions' },
+  content: { href: ACTION_SURFACE_SCREENS.content, label: 'Back to Content optimization' },
+} as const satisfies Record<ActionSurface, { href: string; label: string }>;
 
-/** One Action: diagnosis, member evidence, its declaration and linked chats. */
+/**
+ * One Action: diagnosis, member evidence, its declaration and linked chats.
+ * Both Actions and Content optimization open it; until the Action has loaded
+ * and named its surface, the back link follows the path it was opened under.
+ */
 export function ActionDetailScreen() {
   const { actionId = '' } = useParams();
   const { workspaceId, projectId } = useProjectScope();
+  const opened = useMatch(`${ACTION_SURFACE_SCREENS.content}/:actionId`) ? 'content' : 'actions';
   const query = useQuery({
     ...actionsQueries.detail(workspaceId, actionId),
     enabled: Boolean(actionId),
   });
+  const back = BACK[query.data?.surface ?? opened];
 
   if (query.isError)
     return (
-      <DetailScreen back={BACK}>
+      <DetailScreen back={back}>
         <QueryState
           kind="error"
           {...readErrorProps(query)}
@@ -67,34 +84,47 @@ export function ActionDetailScreen() {
     );
   if (!query.data)
     return (
-      <DetailScreen back={BACK}>
+      <DetailScreen back={back}>
         <QueryState kind="loading" />
       </DetailScreen>
     );
   if (query.data.project_id !== projectId)
     return (
-      <DetailScreen back={BACK}>
+      <DetailScreen back={back}>
         <Callout tone="negative">
           This Action belongs to another project. Choose an Action from the current project.
         </Callout>
       </DetailScreen>
     );
   // Keyed so a mutation's state (and its Retry) never outlives its Action.
-  return <ActionDetailView key={query.data.id} action={query.data} workspaceId={workspaceId} />;
+  return (
+    <ActionDetailView
+      key={query.data.id}
+      action={query.data}
+      workspaceId={workspaceId}
+      back={back}
+    />
+  );
 }
 
 function ActionDetailView({
   action,
   workspaceId,
-}: Readonly<{ action: ActionDetail; workspaceId: string }>) {
+  back,
+}: Readonly<{
+  action: ActionDetail;
+  workspaceId: string;
+  back: (typeof BACK)[ActionSurface];
+}>) {
   const [evidenceId, setEvidenceId] = useState<string | null>(null);
   // Owned here, not by the controls, so a failure notice renders in the body
   // and the one-row header never has to hold it.
   const update = useStatusUpdate(workspaceId);
+  const gaps = contentGapMembers(action);
   return (
     <DetailScreen
       title={readableUrl(action.target_label)}
-      back={{ ...BACK, projectId: action.project_id }}
+      back={{ ...back, projectId: action.project_id }}
       actions={<ActionControls action={action} update={update} />}
       lead={<ActionFacts action={action} />}
       aside={
@@ -112,6 +142,9 @@ function ActionDetailView({
           notice={mutationNoticeForError(update.error, { action: 'update this Action' })}
           onRetry={() => update.variables && update.mutate(update.variables)}
         />
+      ) : null}
+      {gaps.length > 0 ? (
+        <ContentGapWhy members={gaps} workspaceId={workspaceId} projectId={action.project_id} />
       ) : null}
       <Diagnosis action={action} onOpenEvidence={setEvidenceId} />
       <Implementation action={action} workspaceId={workspaceId} />
@@ -140,6 +173,11 @@ function ActionControls({
 }: Readonly<{ action: ActionDetail; update: StatusUpdate }>) {
   const mayWrite = useWorkspaceCapability('write');
   const dismissed = action.status === 'dismissed';
+  // A content gap hands off with its workflow; any other Action with itself alone.
+  const handoff = contentGapHandoff(action) ?? {
+    label: 'Work on this with the agent',
+    href: agentHandoffHref({ actionId: action.id }),
+  };
   return (
     <>
       {mayWrite ? (
@@ -154,9 +192,7 @@ function ActionControls({
         </Button>
       ) : null}
       <Button asChild variant="primary">
-        <ProjectLink href={agentHandoffHref({ actionId: action.id })}>
-          Work on this with the agent
-        </ProjectLink>
+        <ProjectLink href={handoff.href}>{handoff.label}</ProjectLink>
       </Button>
     </>
   );

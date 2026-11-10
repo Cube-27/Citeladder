@@ -1,5 +1,11 @@
 'use client';
 
+import {
+  ActionStatusSelect,
+  useActionStatusFilter,
+  useActionTable,
+  workSummary,
+} from '@/components/agent/action-queue';
 import { ActionPriorityBadge, ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { ListScreen } from '@/components/layout/page-shell';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
@@ -9,72 +15,42 @@ import { Select } from '@/components/ui/select';
 import { TextLink } from '@/components/ui/text-link';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
-import {
-  ACTION_STATUS_LABEL,
-  ACTION_TARGET_KINDS,
-  approachLabel,
-  familyLabel,
-  targetKindLabel,
-} from '@/lib/agent/vocabulary';
-import { actionsQueries, type actionsApi, type Action, type ActionStatus } from '@/lib/api/actions';
-import { actionStatusSchema } from '@citeladder/contracts/actions';
-import { queueCount, useActionStatusCounts } from '@/lib/agent/use-action-status-counts';
-import { formatCount, readableUrl } from '@/lib/format';
+import { ACTION_TARGET_KINDS, approachLabel, targetKindLabel } from '@/lib/agent/vocabulary';
+import type { Action, ActionsPage, ActionStatus } from '@/lib/api/actions';
+import { actionPath } from '@citeladder/contracts/record-kinds';
+import { readableUrl } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
-import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 
-const QUEUE = 'queue';
-type StatusFilter = typeof QUEUE | ActionStatus;
-const STATUS_FILTERS: readonly StatusFilter[] = [QUEUE, ...actionStatusSchema.options];
-const STATUS_CODEC = stringUrlCodec<StatusFilter>(STATUS_FILTERS, QUEUE);
 const ALL_TARGETS = 'all';
 const TARGET_CODEC = stringUrlCodec<string>([ALL_TARGETS, ...ACTION_TARGET_KINDS], ALL_TARGETS);
 
-type StatusCounts = Partial<Record<string, number>>;
-
-function statusCount(value: StatusFilter, counts: StatusCounts) {
-  return value === QUEUE ? queueCount(counts) : (counts[value] ?? 0);
-}
-
-/**
- * Status choices, each with its project-wide count in the menu. The counts
- * cover every target type, so they are shown only while the target filter is
- * unset. The labels themselves never change, so the filter keeps its width
- * when the counts load or drop away.
- */
-function statusOptions(counts: StatusCounts | undefined) {
-  return STATUS_FILTERS.map((value) => ({
-    value,
-    label: value === QUEUE ? 'Open and in progress' : ACTION_STATUS_LABEL[value],
-    detail: counts ? formatCount(statusCount(value, counts)) : undefined,
-  }));
-}
 const TARGET_OPTIONS = [
   { value: ALL_TARGETS, label: 'All targets' },
   ...ACTION_TARGET_KINDS.map((kind) => ({ value: kind, label: targetKindLabel(kind) ?? kind })),
 ];
 
 /**
- * Actions ordered by deterministic priority. The filters are shareable URL
- * state; the cursor stack is local and resets whenever a filter changes.
+ * The Actions surface ordered by deterministic priority: every Action that
+ * is not content work, which Content optimization lists instead. The filters
+ * are shareable URL state.
  */
 export function ActionsScreen() {
   const { workspaceId, projectId } = useProjectScope();
-  const [status, setStatus] = useUrlState('status', STATUS_CODEC);
+  const { filter, setFilter, status } = useActionStatusFilter();
   const [target, setTarget] = useUrlState('target', TARGET_CODEC);
-  const counts = useActionStatusCounts();
   return (
     <ListScreen
       controls={{
         filters: (
           <>
-            <Select
-              ariaLabel="Status"
-              value={status}
-              options={statusOptions(target === ALL_TARGETS ? counts : undefined)}
-              onValueChange={(value) => setStatus(value, 'replace')}
+            <ActionStatusSelect
+              surface="actions"
+              value={filter}
+              onValueChange={(value) => setFilter(value, 'replace')}
+              // The counts cover every target type.
+              showCounts={target === ALL_TARGETS}
             />
             <Select
               ariaLabel="Target type"
@@ -89,7 +65,7 @@ export function ActionsScreen() {
       <ActionsList
         workspaceId={workspaceId}
         projectId={projectId}
-        status={status === QUEUE ? undefined : status}
+        status={status}
         targetKind={target === ALL_TARGETS ? undefined : target}
       />
     </ListScreen>
@@ -107,18 +83,13 @@ function ActionsList({
   status?: ActionStatus;
   targetKind?: string;
 }>) {
-  const { page, table } = useCursorTableQuery({
+  const { page, table } = useActionTable({
     workspaceId,
-    scopeId: projectId,
-    scope: [status, targetKind],
-    query: (request) =>
-      actionsQueries.list(
-        { workspaceId, projectId },
-        { status, target_kind: targetKind, ...request },
-      ),
+    projectId,
+    surface: 'actions',
+    status,
+    targetKind,
     noun: 'Actions',
-    loading: 'Loading Actions…',
-    error: 'Actions could not be loaded.',
     empty: emptyActions,
   });
   return (
@@ -150,7 +121,7 @@ const COLUMNS: readonly DataTableColumn[] = [
 ];
 
 /** What a page with no Actions says: nothing matches, or nothing exists yet. */
-function emptyActions(page: Awaited<ReturnType<typeof actionsApi.list>>): DataTableState {
+function emptyActions(page: ActionsPage): DataTableState {
   const anyActions = Object.values(page.status_counts).some((count) => count > 0);
   return anyActions
     ? {
@@ -170,23 +141,6 @@ function emptyActions(page: Awaited<ReturnType<typeof actionsApi.list>>): DataTa
       };
 }
 
-/**
- * The row's one-line work summary: what kind of target, how many findings
- * the Action groups and the areas they come from. The list read carries no
- * written summary, so it is built from those fields.
- */
-function workSummary(action: Action): string {
-  const findings = `${formatCount(action.member_count)} ${action.member_count === 1 ? 'finding' : 'findings'}`;
-  const families = action.families.map(familyLabel).filter(Boolean).join(', ');
-  return [
-    targetKindLabel(action.target_kind),
-    families ? `${findings} in ${families}` : findings,
-    action.origin === 'agent' ? 'From agent work' : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-}
-
 function ActionRow({ action, showStatus }: Readonly<{ action: Action; showStatus: boolean }>) {
   return (
     <TableRow>
@@ -194,7 +148,7 @@ function ActionRow({ action, showStatus }: Readonly<{ action: Action; showStatus
         <div className="grid min-w-0">
           <Inline>
             <ClampText lines={1} tooltip={readableUrl(action.target_label)}>
-              <TextLink href={`/agent/actions/${action.id}`} text="itemTitle">
+              <TextLink href={actionPath(action)} text="itemTitle">
                 {readableUrl(action.target_label)}
               </TextLink>
             </ClampText>
