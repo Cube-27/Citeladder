@@ -8,12 +8,13 @@ import type { DataTableState } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { SourceDomainDetail } from '@/components/visibility/source-domain-detail';
+import { AllFilters } from '@/components/ui/all-filters';
 import {
-  SourceControls,
-  useHasSourceControlsStrip,
-} from '@/components/visibility/source-controls-slot';
+  useHasSourceFiltersMenu,
+  usePublishSourceFilters,
+} from '@/components/visibility/source-filter-registry';
 import {
-  SourceTableFilters,
+  sourceTableFilters,
   type PageStandingFilter,
 } from '@/components/visibility/source-filters';
 import { TopMoversCard, useSourceMovers } from '@/components/visibility/source-movers';
@@ -123,25 +124,10 @@ function useSourceDimension() {
 }
 
 /**
- * The Domains / URLs switch for the page's control band. Only the inventory
- * has the two halves; a domain's or URL's own page shows nothing here.
+ * The Domains / URLs inventory: the table, then the usage chart and type
+ * ring. Only the inventory has the two halves, so only it carries the switch,
+ * at the start of the table's toolbar before the search.
  */
-export function useSourceDimensionSwitch(): ReactNode {
-  const [dimension, setDimension] = useSourceDimension();
-  const [domain] = useUrlState('source_domain', optionalStringUrlCodec);
-  const [url] = useUrlState('source_url', optionalStringUrlCodec);
-  if (domain || url) return null;
-  return (
-    <SegmentedControl
-      value={dimension}
-      onChange={setDimension}
-      options={DIMENSIONS.map((entry) => ({ value: entry.value, label: entry.label }))}
-      ariaLabel="Source dimension"
-    />
-  );
-}
-
-/** The Domains / URLs inventory: the table, then the usage chart and type ring. */
 function SourcesInventory({
   filters,
   queries,
@@ -153,7 +139,7 @@ function SourcesInventory({
   onOpenUrl: (url: string) => void;
   onOpenDomain: (domain: string) => void;
 }>) {
-  const [dimension] = useSourceDimension();
+  const [dimension, setDimension] = useSourceDimension();
   return (
     // Deliberately NOT keyed on `dimension`. Remounting threw away the React
     // Query observer along with the panel, so `retainPreviousDataForScope` had
@@ -165,6 +151,14 @@ function SourcesInventory({
       queries={queries}
       onOpenUrl={onOpenUrl}
       onOpenDomain={onOpenDomain}
+      view={
+        <SegmentedControl
+          value={dimension}
+          onChange={setDimension}
+          options={DIMENSIONS}
+          ariaLabel="Source dimension"
+        />
+      }
     />
   );
 }
@@ -209,6 +203,7 @@ export function SourcesPanel({
   domain = null,
   onOpenUrl,
   onOpenDomain,
+  view,
 }: Readonly<{
   dimension: 'domain' | 'url';
   filters: SourceFilters;
@@ -218,6 +213,8 @@ export function SourcesPanel({
   onOpenUrl: (url: string) => void;
   /** Required whenever the domain dimension can be shown. */
   onOpenDomain?: (domain: string) => void;
+  /** The Domains | URLs switch, leading the table's toolbar (the inventory only). */
+  view?: ReactNode;
 }>) {
   const [offset] = useUrlState('source_offset', optionalStringUrlCodec);
   const [cursor] = useUrlState('source_cursor', optionalStringUrlCodec);
@@ -298,32 +295,32 @@ export function SourcesPanel({
         : { column, direction: 'desc' },
     );
 
-  // The filters draw in the page's control strip; the table's toolbar keeps
-  // search and export. On a domain's own page the publisher is fixed.
-  const tableFilters = (
-    <SourceTableFilters
-      dimension={dimension}
-      type={{ dimension, value: sourceType, options: types, onChange: setSourceType }}
-      standing={{ value: standingFilter, onChange: setStanding }}
-      domain={
-        domain ? null : { value: pickedDomain, options: domainOptions, onChange: setPickedDomain }
-      }
-    />
-  );
-  const inStrip = useHasSourceControlsStrip();
+  // The filters are listed in the page's All filters menu; the table's toolbar
+  // keeps the switch, search and export. On a domain's own page the publisher
+  // is fixed.
+  const tableFilters = sourceTableFilters({
+    dimension,
+    type: { value: sourceType, options: types, onChange: setSourceType },
+    standing: { value: standingFilter, onChange: setStanding },
+    domain: domain
+      ? null
+      : { value: pickedDomain, options: domainOptions, onChange: setPickedDomain },
+  });
+  const inMenu = useHasSourceFiltersMenu();
+  usePublishSourceFilters(tableFilters);
   // One toolbar for both bodies, so switching to near misses moves nothing.
   const toolbar = sourceTableToolbar({
     dimension,
+    view,
     search,
     onSearch: setSearch,
     rows,
     domain: activeDomain,
-    filters: inStrip ? undefined : tableFilters,
+    filters: inMenu ? undefined : <AllFilters filters={tableFilters} />,
   });
 
   return (
     <Stack gap="workspace">
-      {inStrip ? <SourceControls>{tableFilters}</SourceControls> : null}
       {nearMiss ? (
         <NearMissTable
           query={nearMissQuery}

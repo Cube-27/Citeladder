@@ -17,7 +17,8 @@ import { cn } from '@/lib/utils';
  *   `thirds`      — three equal: one row from 981px, never 2 + 1.
  *   `main-aside`  — 2fr + 1fr (a chart beside a ranked list or facts);
  *                   stacks below 1280px.
- *   `halves`      — two peers (usage and invoices); stack below 1280px.
+ *   `halves`      — two peers (usage and invoices, a ranking beside its
+ *                   history chart); stack below 1280px.
  *   `list-detail` — a selectable list beside the selected item's evidence,
  *                   from 981px; the columns align to the top.
  *

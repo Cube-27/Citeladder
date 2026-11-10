@@ -1,14 +1,27 @@
-import { screen, within } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
+import { AllFilters } from '@/components/ui/all-filters';
+import type { VisibilityTab } from '@/lib/visibility/dashboard';
 import { renderWithProviders as render } from '@/test/render';
 
-import { VisibilityActions, VisibilityToolbar } from './visibility-toolbar';
+import { VisibilityActions, useVisibilityFilterMenu } from './visibility-toolbar';
 
-function renderToolbar(selectionMode: 'run' | 'range') {
+type MenuProps = Parameters<typeof useVisibilityFilterMenu>[0];
+
+function Menu(props: MenuProps) {
+  return <AllFilters filters={useVisibilityFilterMenu(props)} />;
+}
+
+function renderMenu({
+  activeTab = 'trends',
+  selectionMode,
+  ...overrides
+}: Partial<MenuProps> & { activeTab?: VisibilityTab; selectionMode: 'run' | 'range' }) {
   return render(
-    <VisibilityToolbar
-      activeTab="trends"
+    <Menu
+      activeTab={activeTab}
       selectionMode={selectionMode}
       onChangeSelectionMode={vi.fn()}
       runs={[]}
@@ -25,45 +38,73 @@ function renderToolbar(selectionMode: 'run' | 'range') {
       onChangeGranularity={vi.fn()}
       cohort="core"
       onChangeCohort={vi.fn()}
+      {...overrides}
     />,
   );
 }
 
-const triggerNames = () =>
-  within(screen.getByTestId('visibility-toolbar'))
-    .getAllByRole('button')
-    .map((button) => button.textContent);
+/** Opens All filters and checks its entries, in order, by their accessible names. */
+async function expectMenu(expected: readonly string[]) {
+  await userEvent.setup().click(screen.getByRole('button', { name: /^All filters/ }));
+  const items = screen.getAllByRole('menuitem');
+  expect(items).toHaveLength(expected.length);
+  items.forEach((item, index) => expect(item).toHaveAccessibleName(expected[index]));
+}
 
-describe('VisibilityToolbar', () => {
-  it('offers a period and a grouping only while every run in a period is pooled', () => {
-    const { unmount } = renderToolbar('run');
+describe('useVisibilityFilterMenu', () => {
+  it('offers a period and a grouping only while every run in a period is pooled', async () => {
+    const { unmount } = renderMenu({ selectionMode: 'run' });
     // Beside "Latest run", "Last 90 days" and "Per run" contradicted the selection.
-    expect(triggerNames()).toEqual([
-      'Select measurement: Latest run',
-      'Prompts: Unbranded',
-      'Filter by surface: All surfaces',
-    ]);
+    await expectMenu(['Measurement: Latest run', 'Prompts: Unbranded', 'Surface: All surfaces']);
     unmount();
 
-    renderToolbar('range');
+    renderMenu({ selectionMode: 'range' });
     // They come last, so the filters before them keep their places.
-    expect(triggerNames()).toEqual([
-      'Select measurement: All runs in period',
+    await expectMenu([
+      'Measurement: All runs in period',
       'Prompts: Unbranded',
-      'Filter by surface: All surfaces',
-      'Select date range: Last 90 days',
+      'Surface: All surfaces',
+      'Period: Last 90 days',
       'Group by: Per run',
     ]);
   });
 
-  it('prints the filter name beside values that do not say which filter they are', () => {
-    renderToolbar('range');
-    expect(screen.getByRole('button', { name: 'Prompts: Unbranded' })).toHaveTextContent(
+  it('lists the prompt and answer outcome only where answers are shown', async () => {
+    renderMenu({
+      activeTab: 'query-fanout',
+      selectionMode: 'run',
+      promptOptions: [{ id: 'p1', label: 'Best CRM?' }],
+      promptId: 'p1',
+      onChangeOutcome: vi.fn(),
+    });
+    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeVisible();
+    await expectMenu([
+      'Measurement: Latest run',
       'Prompts: Unbranded',
-    );
-    expect(screen.getByRole('button', { name: 'Group by: Per run' })).toHaveTextContent(
-      'Group by: Per run',
-    );
+      'Surface: All surfaces',
+      'Prompt: Best CRM?',
+      'Answer outcome: All answers',
+    ]);
+  });
+
+  it('pools the period from the measurement filter, and picks a run by id', async () => {
+    const user = userEvent.setup();
+    const onChangeSelectionMode = vi.fn();
+    const onSelectMeasurement = vi.fn();
+    renderMenu({
+      selectionMode: 'run',
+      runs: [{ id: 'run-2', status: 'completed', label: '2 Nov 2026', completedAt: null }],
+      onChangeSelectionMode,
+      onSelectMeasurement,
+    });
+    const pick = async (keys: string) => {
+      await user.click(screen.getByRole('button', { name: 'All filters' }));
+      await user.keyboard(`{ArrowDown}{ArrowRight}${keys}{Enter}`);
+    };
+    await pick('{ArrowDown}');
+    expect(onChangeSelectionMode.mock.calls).toEqual([['range']]);
+    await pick('{ArrowDown}{ArrowDown}');
+    expect(onSelectMeasurement.mock.calls).toEqual([['run-2']]);
   });
 });
 

@@ -49,7 +49,11 @@ type ScreenBands<T extends string> = Readonly<{
   title?: string;
   /** Route-owned controls; their state and outcomes stay with the route owner. */
   actions?: ReactNode;
-  /** The route's tabs, drawn as the `TabRow`; the route owns the `TabsRoot`. */
+  /**
+   * The route's tabs, drawn as the `TabRow`; the route owns the `TabsRoot`.
+   * A route that keeps every filter in `AllFilters` passes it as the row's
+   * `controls` and has no `controls` band below.
+   */
   tabs?: TabRowProps<T>;
   /** Search, filters, status and export for the whole route, drawn as the `FilterBar`. */
   controls?: FilterBarProps;

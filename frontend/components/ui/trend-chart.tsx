@@ -19,6 +19,7 @@ import {
   type ChartTone,
 } from '@/components/ui/chart';
 import {
+  breakConnectors,
   isolatedPoints,
   labelledIndexes,
   linePoints,
@@ -26,6 +27,7 @@ import {
   type TrendScale,
 } from '@/components/ui/trend-geometry';
 import { LineEndLabels } from '@/components/ui/trend-line-labels';
+import { TrendTable } from '@/components/ui/trend-table';
 import { availabilityLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -73,7 +75,9 @@ const defaultFormat = (value: number) => `${Math.round(value * 100) / 100}`;
  *
  * Width follows the container (the viewBox is measured pixels, so text stays
  * 12px); the height is a chart height role (`md`, 240, by default). A
- * missing value is a gap.
+ * missing value is a gap. A point not comparable with the one before it
+ * (`breakBefore`) breaks the solid line; a faint dashed segment bridges the
+ * break, so two runs either side of a method change still read as a line.
  */
 export function TrendChart({
   data,
@@ -259,7 +263,11 @@ function TrendPlot({
   directLabels: boolean;
 }>) {
   const breaks = data.map((point) => point.breakBefore === true);
-  const plotted = lines.map((line) => ({ line, points: linePoints(line.values, breaks, scale) }));
+  const plotted = lines.map((line) => ({
+    line,
+    points: linePoints(line.values, breaks, scale),
+    connectors: breakConnectors(line.values, breaks, scale),
+  }));
   const bottom = scale.padTop + scale.plotHeight;
   const latest = lines[0]?.values.at(-1);
   return (
@@ -318,7 +326,7 @@ function TrendPlot({
           className="stroke-line-control"
         />
       )}
-      {[...plotted].reverse().map(({ line, points }) => (
+      {[...plotted].reverse().map(({ line, points, connectors }) => (
         <g key={line.name} data-trend-line={line.tone}>
           <path
             d={chartPath(points)}
@@ -329,6 +337,21 @@ function TrendPlot({
             strokeLinejoin="round"
             className={CHART_STROKE[line.tone]}
           />
+          {/* Across a break the line goes on faint and dashed: the series
+              reads as one line, and the solid stroke never joins points
+              measured under different conditions. */}
+          {connectors.map(([from, to]) => (
+            <path
+              key={`${from[0]}-${to[0]}`}
+              data-trend-connector=""
+              d={chartPath([from, to])}
+              fill="none"
+              strokeWidth={1.5}
+              strokeDasharray="3 4"
+              strokeLinecap="round"
+              className={cn(CHART_STROKE[line.tone], 'opacity-40')}
+            />
+          ))}
           {isolatedPoints(points).map(([x, y]) => (
             <circle key={`${x}-${y}`} cx={x} cy={y} r={2.5} className={CHART_FILL[line.tone]} />
           ))}
@@ -428,60 +451,4 @@ function placedEvents(
     if (!Number.isFinite(offset) || offset < 0 || offset > span) return [];
     return [{ event, x: scale.padLeft + (offset / span) * scale.plotWidth }];
   });
-}
-
-/** Every value, and every drawn marker, for a reader who cannot see the plot. */
-function TrendTable({
-  label,
-  data,
-  lines,
-  events,
-  shown,
-}: Readonly<{
-  label: string;
-  data: readonly TrendPoint[];
-  lines: readonly Line[];
-  events: readonly TrendEvent[];
-  shown: (value: number | null | undefined) => string;
-}>) {
-  const notes = [
-    ...data.flatMap((point) =>
-      point.versionChange ? [`Method changed at ${point.label}: ${point.versionChange.note}`] : [],
-    ),
-    ...events.map((event) => event.label),
-  ];
-  return (
-    <div className="sr-only">
-      <table>
-        <caption>{label}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Series</th>
-            {data.map((point, index) => (
-              <th key={`${point.label}-${index}`} scope="col">
-                {point.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {lines.map((line) => (
-            <tr key={line.name}>
-              <th scope="row">{line.name}</th>
-              {data.map((point, index) => (
-                <td key={`${point.label}-${index}`}>{shown(line.values[index])}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {notes.length ? (
-        <ul aria-label={`${label}: marked`}>
-          {notes.map((note) => (
-            <li key={note}>{note}</li>
-          ))}
-        </ul>
-      ) : null}
-    </div>
-  );
 }

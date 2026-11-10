@@ -1,7 +1,7 @@
 'use client';
 
 import * as MenuPrimitive from '@radix-ui/react-dropdown-menu';
-import { Check } from 'lucide-react';
+import { Check, ChevronRight } from 'lucide-react';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { FLOAT_FACE } from '@/components/ui/card';
@@ -44,11 +44,75 @@ export function menuItemClasses({
  * Menu — a dropdown of actions opened from a button (row actions, the account
  * menu, column options): Radix's keyboard model (arrows, Home, End, typeahead;
  * Escape and a press outside close it; checkbox and radio items keep it open).
- * Put the destructive item last, after a separator. No submenus.
+ * Put the destructive item last, after a separator. A submenu (`MenuSub`)
+ * holds one choice's options, as in All filters; never nest a second level.
  */
 export const Menu = MenuPrimitive.Root;
 export const MenuTrigger = MenuPrimitive.Trigger;
 export const MenuRadioGroup = MenuPrimitive.RadioGroup;
+export const MenuSub = MenuPrimitive.Sub;
+
+/**
+ * The row that opens a submenu: the label, then its current value in the
+ * secondary ink and a chevron at the row's end. Right arrow, Enter and Space
+ * open it; Left arrow and Escape come back.
+ */
+export function MenuSubTrigger({
+  value,
+  className,
+  children,
+  ...props
+}: Readonly<
+  Omit<ComponentPropsWithoutRef<typeof MenuPrimitive.SubTrigger>, 'children'> & {
+    /** The row's label. */
+    children: string;
+    /** The current choice, printed after the label. */
+    value?: string;
+  }
+>) {
+  return (
+    <MenuPrimitive.SubTrigger
+      className={menuItemClasses({ className: cn('data-[state=open]:overlay-pressed', className) })}
+      // Named as it reads, "Surface: All surfaces": a name built from the two
+      // spans differs by browser (Chromium spaces them as "Surface : …").
+      aria-label={value ? `${children}: ${value}` : undefined}
+      {...props}
+    >
+      <span className="shrink-0">{children}</span>
+      {value ? (
+        <span className="text-ink-muted ms-auto min-w-0 truncate ps-4 text-end">{value}</span>
+      ) : null}
+      <ChevronRight
+        className={cn('text-ink-muted size-4 shrink-0', !value && 'ms-auto')}
+        aria-hidden
+      />
+    </MenuPrimitive.SubTrigger>
+  );
+}
+
+/** A submenu's panel: the menu face, beside its row. */
+export function MenuSubContent({
+  sideOffset = 4,
+  collisionPadding = 8,
+  children,
+  ...props
+}: Readonly<Omit<ComponentPropsWithoutRef<typeof MenuPrimitive.SubContent>, 'className'>>) {
+  return (
+    <MenuPrimitive.Portal>
+      <MenuPrimitive.SubContent
+        sideOffset={sideOffset}
+        collisionPadding={collisionPadding}
+        className={cn(
+          MENU_PANEL,
+          'flex max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] max-w-[min(28rem,calc(100vw-16px))] min-w-56 flex-col overflow-auto',
+        )}
+        {...props}
+      >
+        {children}
+      </MenuPrimitive.SubContent>
+    </MenuPrimitive.Portal>
+  );
+}
 
 /**
  * Menu width is a role, never a number: unset a menu is at least 224px and
@@ -103,6 +167,7 @@ function Lead({ children }: Readonly<{ children?: ReactNode }>) {
 export function MenuItem({
   icon,
   shortcut,
+  value,
   selected = false,
   danger = false,
   className,
@@ -114,6 +179,8 @@ export function MenuItem({
     icon?: ReactNode;
     /** A shortcut, mono 12px `ink-muted`, at the row's end. */
     shortcut?: string;
+    /** A setting's current value, in the secondary ink at the row's end. */
+    value?: string;
     /** The current choice of a switcher: an `accent` check at the row's end. */
     selected?: boolean;
     danger?: boolean;
@@ -122,7 +189,10 @@ export function MenuItem({
   return (
     <MenuPrimitive.Item className={menuItemClasses({ danger, className })} {...props}>
       {icon ? <Lead>{icon}</Lead> : null}
-      <span className="min-w-0 flex-1 truncate">{children}</span>
+      <span className={cn('min-w-0 truncate', value ? 'shrink-0' : 'flex-1')}>{children}</span>
+      {value ? (
+        <span className="text-ink-muted ms-auto min-w-0 truncate ps-4 text-end">{value}</span>
+      ) : null}
       {shortcut ? (
         <span className="text-ink-muted text-caption ms-4 font-mono">{shortcut}</span>
       ) : null}

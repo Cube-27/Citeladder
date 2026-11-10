@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { FilterChoice } from '@/components/ui/filter-bar';
+import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
@@ -70,9 +70,9 @@ const GROUP_NOUNS: Record<(typeof GROUP_OPTIONS)[number]['value'], string> = {
 };
 
 const GROUP_OPTIONS = [
-  { value: 'none', label: 'Group by: None' },
-  { value: 'prompt', label: 'Group by: Prompt' },
-  { value: 'topic', label: 'Group by: Topic' },
+  { value: 'none', label: 'None' },
+  { value: 'prompt', label: 'Prompt' },
+  { value: 'topic', label: 'Topic' },
 ] as const;
 
 const groupCodec = stringUrlCodec(
@@ -81,22 +81,20 @@ const groupCodec = stringUrlCodec(
 );
 
 /**
- * How the searches are grouped, for the page's control strip. It reads and
- * writes the same `group` URL state the table reads, so the strip and the
+ * How the searches are grouped, for the page's All filters menu. It reads and
+ * writes the same `group` URL state the table reads, so the menu and the
  * table never disagree.
  */
-export function FanoutGroupFilter() {
+export function useFanoutGroupFilter(): FilterDefinition {
   const [grouping, setGrouping] = useUrlState('group', groupCodec);
-  return (
-    <FilterChoice
-      label="Group searches by"
-      value={grouping}
-      defaultValue="none"
-      options={GROUP_OPTIONS}
-      onChange={setGrouping}
-      fit
-    />
-  );
+  return choiceFilter({
+    id: 'fanout-group',
+    label: 'Group by',
+    value: grouping,
+    defaultValue: 'none',
+    groups: [{ options: GROUP_OPTIONS }],
+    onChange: setGrouping,
+  });
 }
 
 /**
@@ -195,7 +193,7 @@ export function FanoutEvidence({
         ),
         status:
           needle && matched != null ? <SearchScopeNote search={needle} matched={matched} /> : null,
-        // Grouping is a page control (`FanoutGroupFilter`, in the strip);
+        // Grouping is a page filter (`useFanoutGroupFilter`, in All filters);
         // the table keeps its search and its counts.
         actions: (
           <span aria-busy={!summaryMatchesInput}>
