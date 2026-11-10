@@ -13,6 +13,8 @@ import {
   MenuContent,
   MenuItem,
   MenuLabel,
+  MenuRadioGroup,
+  MenuRadioItem,
   MenuSeparator,
   MenuTrigger,
 } from '@/components/ui/menu';
@@ -54,6 +56,36 @@ const BRANDED_FILTER_LABEL: Record<'all' | 'enabled' | 'disabled', string> = {
   enabled: 'Branded only',
   disabled: 'Unbranded only',
 };
+
+const SINGLE_CHOICES = ['all', 'enabled', 'disabled'] as const;
+
+/** One of three, in the filter menu; the menu stays open, like its checkboxes. */
+function SingleChoice({
+  value,
+  labels,
+  onChange,
+}: Readonly<{
+  value: EnabledFilter;
+  labels: Record<EnabledFilter, string>;
+  onChange: (value: EnabledFilter) => void;
+}>) {
+  return (
+    <MenuRadioGroup value={value}>
+      {SINGLE_CHOICES.map((choice) => (
+        <MenuRadioItem
+          key={choice}
+          value={choice}
+          onSelect={(event) => {
+            event.preventDefault();
+            onChange(choice);
+          }}
+        >
+          {labels[choice]}
+        </MenuRadioItem>
+      ))}
+    </MenuRadioGroup>
+  );
+}
 
 export function promptFilterControls({
   status,
@@ -181,33 +213,21 @@ export function promptFilterControls({
                 <MenuSeparator />
               </>
             ) : null}
+            {/* Enabled and Branded are one choice each: radio groups, not
+                checkboxes that only pretend to exclude each other. */}
             <MenuLabel>Enabled</MenuLabel>
-            {(['all', 'enabled', 'disabled'] as const).map((value) => (
-              <MenuCheckboxItem
-                key={value}
-                checked={filters.enabled === value}
-                onSelect={(event) => {
-                  event.preventDefault();
-                  setEnabled(value);
-                }}
-              >
-                {ENABLED_FILTER_LABEL[value]}
-              </MenuCheckboxItem>
-            ))}
+            <SingleChoice
+              value={filters.enabled}
+              labels={ENABLED_FILTER_LABEL}
+              onChange={setEnabled}
+            />
             <MenuSeparator />
             <MenuLabel>Branded</MenuLabel>
-            {(['all', 'enabled', 'disabled'] as const).map((value) => (
-              <MenuCheckboxItem
-                key={value}
-                checked={filters.branded === value}
-                onSelect={(event) => {
-                  event.preventDefault();
-                  setBranded(value);
-                }}
-              >
-                {BRANDED_FILTER_LABEL[value]}
-              </MenuCheckboxItem>
-            ))}
+            <SingleChoice
+              value={filters.branded}
+              labels={BRANDED_FILTER_LABEL}
+              onChange={setBranded}
+            />
           </MenuContent>
         </Menu>
       </>

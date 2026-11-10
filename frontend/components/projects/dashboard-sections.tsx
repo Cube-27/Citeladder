@@ -308,7 +308,8 @@ export function Track({ data }: Readonly<{ data: CommandCenter }>) {
  * the card holds one compact note rather than a tall empty block beside its
  * sibling. The note's action opens the Launch audit dialog, where the person
  * confirms the run and its credits (owner, 2026-11-06); nothing starts from
- * here.
+ * here. A comparable run that produced no movement rows is a different
+ * answer: there is nothing to launch, only no change to show.
  */
 export function Movement({ data }: Readonly<{ data: CommandCenter }>) {
   return (
@@ -320,16 +321,31 @@ export function Movement({ data }: Readonly<{ data: CommandCenter }>) {
         {data.movements.length ? (
           <MovementChart movements={data.movements} />
         ) : (
-          <EmptyState
-            variant="inline"
-            icon={TrendingUp}
-            title="No comparable measurement yet"
-            description="Needs a second run with the same prompts and engines."
-            primary={<LaunchAuditButton variant="secondary" />}
-          />
+          <NoMovement comparable={Boolean(data.measurement?.comparable_audit_id)} />
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function NoMovement({ comparable }: Readonly<{ comparable: boolean }>) {
+  if (comparable)
+    return (
+      <EmptyState
+        variant="inline"
+        icon={TrendingUp}
+        title="No change to show"
+        description="The comparable run gave no engine movement to compare against this one."
+      />
+    );
+  return (
+    <EmptyState
+      variant="inline"
+      icon={TrendingUp}
+      title="No comparable measurement yet"
+      description="Needs a second run with the same prompts and engines."
+      primary={<LaunchAuditButton variant="secondary" />}
+    />
   );
 }
 

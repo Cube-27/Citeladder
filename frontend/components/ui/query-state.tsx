@@ -1,10 +1,10 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useContext, useEffect, useState, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 import { LOADING_INDICATOR_DELAY_MS } from '@/lib/config/operational';
 import { cn } from '@/lib/utils';
 
-import { EmptyState } from './empty-state';
+import { EmptyHeadingLevelContext, EmptyState } from './empty-state';
 import { ReadError } from './read-error';
 import { Skeleton } from './skeleton';
 
@@ -18,8 +18,11 @@ import { Skeleton } from './skeleton';
  *   `error`   — a negative Callout: what happened, Retry for exactly that
  *               read, and the support reference.
  *   `empty`   — the block EmptyState: nothing exists yet, and the one thing
- *               to do. `inline` is the EmptyState row inside a section that
- *               otherwise has content.
+ *               to do. Its heading is an h2 on a page and an h3 inside a
+ *               Card or DataTable, unless `headingLevel` says otherwise.
+ *               `inline` is the EmptyState row inside a section that
+ *               otherwise has content; `inline` with `compact` is one line
+ *               with no box, for a small card that has nothing to list.
  *
  * Callers choose the state, never the geometry.
  */
@@ -32,7 +35,10 @@ type BlockEmpty = Readonly<{
   description?: string;
   /** One primary control; a second only when both are equal choices. */
   action?: ReactNode;
-  /** A route boundary that owns the page heading uses 1. */
+  /**
+   * A route boundary that owns the page heading uses 1. Defaults to the
+   * container's level: 3 inside a Card or DataTable, else 2.
+   */
   headingLevel?: 1 | 2 | 3;
 }>;
 
@@ -44,6 +50,8 @@ type InlineEmpty = Readonly<{
   icon?: LucideIcon;
   /** One control (a `TextLink` or a `Button`). */
   action?: ReactNode;
+  /** One line with no box (EmptyState `compact`); a DataTable always draws it so. */
+  compact?: boolean;
 }>;
 
 export type QueryStateProps =
@@ -67,7 +75,12 @@ export type QueryStateProps =
 export function QueryState(props: QueryStateProps) {
   if (props.kind === 'empty' && props.inline) {
     return (
-      <EmptyState variant="inline" icon={props.icon} title={props.message} primary={props.action} />
+      <EmptyState
+        variant={props.compact ? 'compact' : 'inline'}
+        icon={props.icon}
+        title={props.message}
+        primary={props.action}
+      />
     );
   }
   return (
@@ -84,6 +97,7 @@ export function QueryState(props: QueryStateProps) {
 }
 
 function BlockBody(props: Exclude<QueryStateProps, InlineEmpty>) {
+  const containerLevel = useContext(EmptyHeadingLevelContext);
   switch (props.kind) {
     case 'loading':
       return <DelayedSkeleton label={props.label ?? 'Loading…'} />;
@@ -103,7 +117,7 @@ function BlockBody(props: Exclude<QueryStateProps, InlineEmpty>) {
           title={props.heading}
           description={props.description}
           primary={props.action}
-          headingLevel={props.headingLevel ?? 2}
+          headingLevel={props.headingLevel ?? containerLevel}
         />
       );
     default: {

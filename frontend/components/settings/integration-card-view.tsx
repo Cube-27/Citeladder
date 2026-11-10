@@ -24,6 +24,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Inline, Stack } from '@/components/ui/layout';
+import { ClampText } from '@/components/ui/table';
 import { ledgerClasses, MetaFooter } from '@/components/ui/workspace';
 import {
   integrationsApi,
@@ -48,10 +49,10 @@ const GRANT_STATUS_BADGE: Record<GrantStatus, GrantBadge> = {
 
 const GRANT_STATUS_LABEL: Record<GrantStatus, string> = {
   connected: 'Connected',
-  needs_reauth: 'Needs reauth',
-  pending_revocation: 'Pending revocation',
+  needs_reauth: 'Reconnect needed',
+  pending_revocation: 'Disconnecting',
   error: 'Error',
-  revoked: 'Revoked',
+  revoked: 'Disconnected',
 };
 
 function GrantAlert({ family, status }: Readonly<{ family: GrantFamily; status: GrantStatus }>) {
@@ -60,16 +61,16 @@ function GrantAlert({ family, status }: Readonly<{ family: GrantFamily; status: 
   if (status === 'needs_reauth') {
     return (
       <Callout tone="warning">
-        {title} requires renewed consent for this grant. Reconnect to resume syncing — previously
-        imported data is unaffected.
+        {title} needs you to sign in again. Reconnect to resume syncing — previously imported data
+        is unaffected.
       </Callout>
     );
   }
   if (status === 'error') {
     return (
       <Callout tone="negative">
-        The last connection test failed — {title}&nbsp;rejected this grant&rsquo;s refresh.
-        Reconnect to resume syncing.
+        The last connection test failed — {title}&nbsp;rejected CiteLadder&rsquo;s access. Reconnect
+        to resume syncing.
       </Callout>
     );
   }
@@ -112,9 +113,12 @@ function GrantHeader({
         )
       }
     >
-      <CardEyebrow>OAuth grant</CardEyebrow>
+      <CardEyebrow>Connection</CardEyebrow>
       <CardTitle>{meta.title}</CardTitle>
-      <CardDescription className="truncate">{meta.blurb}</CardDescription>
+      {/* Cut at one line, with the whole description in a tooltip when cut. */}
+      <CardDescription>
+        <ClampText lines={1}>{meta.blurb}</ClampText>
+      </CardDescription>
     </CardHeader>
   );
 }
@@ -235,7 +239,9 @@ function ConnectedCard({
       <CardContent>
         <MetaFooter
           trailing={
-            <span className="text-right">Reconnecting renews consent for the whole grant.</span>
+            <span className="text-right">
+              Reconnecting renews access for every property in this connection.
+            </span>
           }
         >
           <Inline className="flex-wrap">

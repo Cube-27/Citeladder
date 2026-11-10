@@ -328,6 +328,7 @@ function MeasurementHistoryBody({
         metric={chart.metric}
         metricLabel={chart.metricLabel}
         focused={chart.focused}
+        brandName={chart.brandName}
         timeZone={chart.timeZone}
       />
     );
@@ -382,24 +383,32 @@ function HistoryLineChart({
 /**
  * The only measurement in the period, ranked: one bar per tracked brand on the
  * 0–100 scale, your brand in the accent and named "You". A focused brand is
- * shown alone, as the line chart would plot it alone.
+ * shown alone, as the line chart would plot it alone; a focused brand the
+ * point did not measure stays on screen as a not-measured row rather than
+ * leaving the list empty.
  */
 function RunComparison({
   point,
   metric,
   metricLabel,
   focused,
+  brandName,
   timeZone,
 }: Readonly<{
   point: VisibilityTrendPoint;
   metric: (typeof VISIBILITY_METRICS)[number]['value'];
   metricLabel: string;
   focused: string | null;
+  brandName: string | null;
   timeZone: string;
 }>) {
-  const rows = toRunComparison(point, metric).filter(
+  const measuredRows = toRunComparison(point, metric).filter(
     (row) => focused === null || row.name === focused,
   );
+  const rows =
+    focused !== null && measuredRows.length === 0
+      ? [{ name: focused, isBrand: focused === brandName, value: null }]
+      : measuredRows;
   return (
     <Stack gap="compact">
       <Stack as="ul" gap="compact" aria-label={`${metricLabel} by brand`}>
@@ -415,10 +424,20 @@ function RunComparison({
           </li>
         ))}
       </Stack>
-      <p className={textRole('caption')}>
-        One measurement in this period ({formatPointDate(point.completed_at, timeZone)}). A trend
-        line appears after a second run.
-      </p>
+      <p className={textRole('caption')}>{singlePointCaption(point, timeZone)}</p>
     </Stack>
   );
+}
+
+/**
+ * A pooled point (a day, week or month) can hold several runs, so "after a
+ * second run" would be wrong for it: the line needs a second period. A point
+ * without `run_count` is one run.
+ */
+function singlePointCaption(point: VisibilityTrendPoint, timeZone: string): string {
+  const date = formatPointDate(point.completed_at, timeZone);
+  const runs = point.run_count ?? 1;
+  if (runs > 1)
+    return `One period with ${runs} runs (${date}). A trend line appears with a second period.`;
+  return `One run in this period (${date}). A trend line appears after a second run.`;
 }

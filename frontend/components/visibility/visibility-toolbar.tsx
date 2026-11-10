@@ -1,11 +1,10 @@
 'use client';
 
-import { CircleHelp, Download } from 'lucide-react';
+import { CircleHelp } from 'lucide-react';
 
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
-import { Button, IconButton } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/button';
 import { FilterChoice, FilterTrigger } from '@/components/ui/filter-bar';
-import { Icon } from '@/components/ui/icon';
 import {
   Menu,
   MenuContent,
@@ -18,6 +17,7 @@ import {
 import { Tooltip } from '@/components/ui/tooltip';
 import type { LogicalEngine } from '@citeladder/contracts';
 import type { ProjectMarket } from '@citeladder/contracts/markets';
+import { docsHref } from '@/lib/config/docs';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import {
   isEvidenceTab,
@@ -35,7 +35,8 @@ import {
 } from '@/lib/visibility/trends';
 
 type EngineFilter = LogicalEngine | 'all';
-const METRICS_HELP_URL = '/faq';
+/** The public Visibility guide; the app has no help route of its own. */
+const METRICS_HELP_URL = docsHref('/visibility/');
 
 /**
  * Trigger copy for the prompt cohort: whether the questions name a brand.
@@ -121,6 +122,53 @@ export function VisibilityToolbar(props: ToolbarProps) {
   );
 }
 
+/**
+ * A single-choice filter whose visible value does not say which filter it is
+ * ("Unbranded", "Weekly", a market's name): the trigger prints its label
+ * before the value. It stays sized to its longest option, so a choice never
+ * moves the controls beside it.
+ */
+function LabelledChoice<T extends string>({
+  label,
+  value,
+  defaultValue,
+  options,
+  onChange,
+}: Readonly<{
+  label: string;
+  value: T;
+  defaultValue: T;
+  options: readonly { value: T; label: string }[];
+  onChange: (value: T) => void;
+}>) {
+  return (
+    <Menu>
+      <MenuTrigger asChild>
+        <FilterTrigger
+          label={label}
+          value={options.find((option) => option.value === value)?.label ?? label}
+          active={value !== defaultValue}
+          sizeTo={options.map((option) => option.label)}
+        />
+      </MenuTrigger>
+      <MenuContent>
+        <MenuLabel>{label}</MenuLabel>
+        <MenuRadioGroup value={value}>
+          {options.map((option) => (
+            <MenuRadioItem
+              key={option.value}
+              value={option.value}
+              onSelect={() => onChange(option.value)}
+            >
+              {option.label}
+            </MenuRadioItem>
+          ))}
+        </MenuRadioGroup>
+      </MenuContent>
+    </Menu>
+  );
+}
+
 const DEFAULT_MARKET = 'default';
 
 /** Which market the page reads; offered only once a project measures more than one. */
@@ -131,9 +179,8 @@ export function MarketFilter({
 }: Pick<ToolbarProps, 'markets' | 'market' | 'onChangeMarket'>) {
   if (markets.length < 2 || !onChangeMarket) return null;
   return (
-    <FilterChoice
-      label="Select market"
-      menuLabel="Market"
+    <LabelledChoice
+      label="Market"
       value={market ?? DEFAULT_MARKET}
       defaultValue={DEFAULT_MARKET}
       options={markets.map((option) => ({
@@ -141,7 +188,6 @@ export function MarketFilter({
         label: option.label,
       }))}
       onChange={(value) => onChangeMarket(value === DEFAULT_MARKET ? null : value)}
-      fit
     />
   );
 }
@@ -153,14 +199,12 @@ const COHORT_OPTIONS = PROMPT_COHORTS.map((value) => ({
 
 function CohortFilter({ cohort, onChangeCohort }: ToolbarProps) {
   return (
-    <FilterChoice
-      label="Filter by branding"
-      menuLabel="Prompts"
+    <LabelledChoice
+      label="Prompts"
       value={cohort}
       defaultValue="core"
       options={COHORT_OPTIONS}
       onChange={onChangeCohort}
-      fit
     />
   );
 }
@@ -302,14 +346,12 @@ function RangeFilter({ range, onChangeRange }: ToolbarProps) {
 
 function GranularityFilter({ granularity, onChangeGranularity }: ToolbarProps) {
   return (
-    <FilterChoice
-      label="Select granularity"
-      menuLabel="Group history by"
+    <LabelledChoice
+      label="Group by"
       value={granularity}
       defaultValue="run"
       options={GRANULARITY_OPTIONS}
       onChange={onChangeGranularity}
-      fit
     />
   );
 }
@@ -362,14 +404,6 @@ export function VisibilityActions() {
           tooltip={false}
           href={METRICS_HELP_URL}
         />
-      </Tooltip>
-      <Tooltip content="Export is available from a run (coming with reports)">
-        <span>
-          <Button variant="secondary" disabled aria-disabled="true">
-            <Icon icon={Download} />
-            Export
-          </Button>
-        </span>
       </Tooltip>
     </>
   );

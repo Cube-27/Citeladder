@@ -15,7 +15,7 @@ const DOMAIN_HEADERS = [
   'Domain',
   'Domain type',
   'Cited in',
-  'Retrieved in',
+  'Retrieved',
   'Pages cited',
   'Citations',
   'Citation share',
@@ -28,7 +28,7 @@ const URL_HEADERS = [
   'URL type',
   'On the page',
   'Cited in',
-  'Retrieved in',
+  'Retrieved',
   'Citation rate',
   'Citations',
   'Mentions',
@@ -37,7 +37,9 @@ const URL_HEADERS = [
 ] as const;
 
 /**
- * Search, the type filter and export, above whichever table is showing.
+ * Search and export, above whichever table is showing. The domain, type and
+ * standing filters draw in the page's control strip; `filters` carries them
+ * here only for a panel rendered without that strip.
  *
  * Export writes the rows AS SHOWN — after the filter, the search and the sort.
  * Widening it to the unfiltered set would hand back a different answer from the
@@ -50,17 +52,14 @@ export function sourceTableToolbar({
   onSearch,
   rows,
   domain,
-  typeControl,
-  domainControl,
+  filters,
 }: Readonly<{
   dimension: 'domain' | 'url';
   search: string;
   onSearch: (value: string) => void;
   rows: readonly SourceItem[];
   domain: string | null;
-  typeControl: ReactNode;
-  /** Narrows the URL table to one publisher, above the URL column. */
-  domainControl?: ReactNode;
+  filters?: ReactNode;
 }>): FilterBarProps {
   const onExport = () => {
     const stamp = new Date().toISOString().slice(0, 10);
@@ -111,12 +110,7 @@ export function sourceTableToolbar({
         aria-label={dimension === 'url' ? 'Search URLs' : 'Search domains'}
       />
     ),
-    filters: (
-      <>
-        {domainControl}
-        {typeControl}
-      </>
-    ),
+    filters,
     actions: (
       <Button variant="secondary" onClick={onExport} disabled={rows.length === 0}>
         <Icon icon={Download} />

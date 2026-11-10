@@ -8,6 +8,7 @@ import {
   GranularitySelect,
   PerformanceActions,
   PerformanceToolbar,
+  PerformanceWindowCaption,
   performanceNotices,
 } from './performance-chrome';
 import { Ga4SummaryRow, MetricCards } from './metric-cards';
@@ -336,7 +337,6 @@ export function PerformanceScreen() {
         filters: (
           <PerformanceToolbar
             selection={selection}
-            selectedLabel={selectedLabel}
             onOpenRange={() => {
               setDialogTab('filter');
               setDialogOpen(true);
@@ -350,6 +350,7 @@ export function PerformanceScreen() {
             onReset={resetFilters}
           />
         ),
+        status: <PerformanceWindowCaption label={selectedLabel} />,
       }}
     >
       <Stack gap="workspace">

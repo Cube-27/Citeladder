@@ -10,10 +10,12 @@ import { cn } from '@/lib/utils';
  * The segmented track every in-page switch shares (Tabs, SegmentedControl,
  * the sidebar's mode switch): `surface-sunken`, `radius-md`, 36px with a 3px
  * inset and 2px between segments. It keeps its width when the selection
- * changes.
+ * changes. Its scrollbar is hidden, so when the segments overflow it a soft
+ * shade marks each edge with more of them (`scroll-shade-x`); nothing shows
+ * while they fit.
  */
 export const TAB_TRACK =
-  'bg-surface-sunken inline-flex h-[var(--control-md)] max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+  'scroll-shade-x bg-surface-sunken inline-flex h-[var(--control-md)] max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
 /**
  * One segment: full track height, 12px padding, `radius-sm`, 14/20 medium

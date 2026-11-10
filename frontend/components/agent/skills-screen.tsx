@@ -55,8 +55,17 @@ export function SkillsScreen() {
   );
 }
 
+/**
+ * What a skill produces, by the catalog's own name for it ("LinkedIn post",
+ * "FAQ"), never lowercased. An output kind the catalog does not name shows
+ * no badge rather than a placeholder.
+ */
+function OutputBadge({ label }: Readonly<{ label: string | undefined }>) {
+  return label ? <Badge>{`Output: ${label}`}</Badge> : <span />;
+}
+
 function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
-  const { kindLabel } = useAgentCatalog();
+  const { outputKind } = useAgentCatalog();
   const groups = new Map<string, AgentSkill[]>();
   for (const skill of skills) {
     const label = skillGroupLabel(skill.group);
@@ -78,7 +87,7 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
                   <p className={textRole('body')}>{skill.description}</p>
                 </Stack>
                 <Inline className="flex-wrap justify-between self-end">
-                  <Badge>Produces {kindLabel(skill.output_kind).toLowerCase()}</Badge>
+                  <OutputBadge label={outputKind(skill.output_kind)?.label} />
                   <Button asChild variant="ghost">
                     <ProjectLink
                       href={agentHandoffHref({ skillId: skill.id })}

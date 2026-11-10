@@ -207,7 +207,7 @@ function AdvertiserTable({
           <TableCell numeric>{advertiser.appearances}</TableCell>
           <TableCell numeric>{advertiser.prompts}</TableCell>
           <TableCell numeric>{formatPercent(advertiser.share)}</TableCell>
-          <TableCell numeric>
+          <TableCell>
             {formatDisplayShortDate(advertiser.first_seen_at, timeZone)} –{' '}
             {formatDisplayShortDate(advertiser.last_seen_at, timeZone)}
           </TableCell>
@@ -222,14 +222,20 @@ const ADVERTISER_COLUMNS: readonly DataTableColumn[] = [
   { key: 'appearances', label: 'Appearances', width: 'figure', numeric: true },
   { key: 'prompts', label: 'Prompts', width: 'figure', numeric: true },
   { key: 'share', label: 'Share', width: 'figure', numeric: true },
-  { key: 'seen', label: 'Seen', width: 'date', numeric: true },
+  // A date range is text, aligned like every other date column.
+  { key: 'seen', label: 'Seen', width: 'date' },
 ];
 
 const PROMPT_COLUMNS: readonly DataTableColumn[] = [
   { key: 'prompt', label: 'Prompt' },
   { key: 'ads', label: 'Ads seen', width: 'figure', numeric: true },
   { key: 'top', label: 'Top advertiser', width: 'status' },
-  { key: 'beside', label: 'You mentioned beside a competitor ad', width: 'name' },
+  {
+    key: 'beside',
+    label: 'Mentioned you',
+    width: 'category',
+    hint: 'Of the answers that showed a competitor ad, how many also mentioned you organically.',
+  },
 ];
 
 function noAds(heading: string): DataTableState {

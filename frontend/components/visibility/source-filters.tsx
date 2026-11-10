@@ -3,7 +3,7 @@
 import { FilterChoice } from '@/components/ui/filter-bar';
 
 /** Narrows every table on the tab to one publisher. */
-export function DomainFilter({
+function DomainFilter({
   value,
   options,
   onChange,
@@ -35,7 +35,7 @@ export type PageStandingFilter = 'gap' | 'near_miss' | null;
  * competitor and not you; a page nobody has read is never a gap -- or to your
  * own pages an engine read and still did not cite.
  */
-export function StandingFilter({
+function StandingFilter({
   value,
   onChange,
 }: Readonly<{ value: PageStandingFilter; onChange: (value: PageStandingFilter) => void }>) {
@@ -53,8 +53,36 @@ export function StandingFilter({
   );
 }
 
+/**
+ * The Sources table's filters, in the order they keep: type first, then the
+ * two that only mean something for pages (standing, and the publisher, which
+ * the Domains view and a domain's own page do not offer). Hiding the
+ * URL-only pair never moves the type filter.
+ */
+export function SourceTableFilters({
+  dimension,
+  type,
+  standing,
+  domain,
+}: Readonly<{
+  dimension: 'domain' | 'url';
+  type: Parameters<typeof TypeFilter>[0];
+  standing: Parameters<typeof StandingFilter>[0];
+  /** Absent where the publisher is fixed or meaningless. */
+  domain: Parameters<typeof DomainFilter>[0] | null;
+}>) {
+  const urls = dimension === 'url';
+  return (
+    <>
+      <TypeFilter {...type} />
+      {urls ? <StandingFilter {...standing} /> : null}
+      {urls && domain ? <DomainFilter {...domain} /> : null}
+    </>
+  );
+}
+
 /** Narrows the table to one domain type, or one URL type. */
-export function TypeFilter({
+function TypeFilter({
   dimension,
   value,
   options,

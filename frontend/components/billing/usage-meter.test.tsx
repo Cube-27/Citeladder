@@ -85,10 +85,13 @@ describe('UsageMeter', () => {
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   });
 
-  it('treats a null consumption on an unlimited row as zero, not blank', () => {
+  it('marks an unread consumption on an unlimited row as unavailable, never zero', () => {
     render(<UsageMeter item={item({ limit_state: 'unlimited', consumed: null })} />);
 
-    expect(screen.getByText(line('0 prompts'))).toBeVisible();
+    expect(screen.getByText('Unlimited')).toBeVisible();
+    expect(screen.getByText('–')).toBeVisible();
+    expect(screen.getByText('Not measured')).toBeInTheDocument();
+    expect(screen.queryByText(/0 prompts/)).not.toBeInTheDocument();
   });
 
   it('renders a finite row as an accessible meter', () => {

@@ -16,7 +16,7 @@ import { DetailScreen } from '@/components/layout/page-shell';
 import { ProjectLink } from '@/components/ui/project-link';
 import { EvidenceDrawer } from '@/components/opportunities/evidence-drawer';
 import { Callout } from '@/components/ui/callout';
-import { Card, CardContent, CardHeader, CardTitle, cardClasses } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FactList, type Fact } from '@/components/ui/facts';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -154,34 +154,42 @@ function ActionControls({
         </Button>
       ) : null}
       <Button asChild variant="primary">
-        <ProjectLink href={agentHandoffHref({ actionId: action.id })}>Work on this</ProjectLink>
+        <ProjectLink href={agentHandoffHref({ actionId: action.id })}>
+          Work on this with the agent
+        </ProjectLink>
       </Button>
     </>
   );
 }
 
+/**
+ * The lead under the title. The title already names the target, so the lead
+ * never repeats its URL: it carries the status and the approach, and the
+ * target opens from a short link.
+ */
 function ActionFacts({ action }: Readonly<{ action: ActionDetail }>) {
+  const approach = approachLabel(action.approach);
   const facts: Fact[] = [
     { label: 'Status', value: <ActionStatusBadge status={action.status} /> },
     { label: 'Priority', value: <ActionPriorityBadge score={action.priority_score} /> },
-    { label: 'Target', value: targetKindLabel(action.target_kind) ?? 'Target' },
   ];
+  if (approach) facts.push({ label: 'Approach', value: approach });
+  facts.push({ label: 'Target', value: targetKindLabel(action.target_kind) ?? 'Target' });
   const sources = action.families.map(familyLabel).filter(isText);
   if (sources.length) facts.push({ label: 'Source', value: sources.join(', ') });
   return (
     <Stack as="section" aria-label="Summary">
+      <FactList layout="inline" facts={facts} />
       {action.target_url ? (
         <TextLink
           variant="external"
           href={action.target_url}
           text="body"
-          className="justify-self-start break-all"
+          className="justify-self-start"
         >
-          {action.target_url}
+          Open the page
         </TextLink>
       ) : null}
-
-      <FactList layout="inline" facts={facts} />
       {action.evidence_cleared_at ? (
         <Callout tone="info">No current evidence targets this Action. Its chats are kept.</Callout>
       ) : null}
@@ -327,22 +335,28 @@ function LinkedChats({
         <QueryState kind="empty" inline message="No chats have worked on this Action yet." />
       ) : null}
       {rows.length > 0 ? (
-        <Stack as="ul" gap="compact">
-          {rows.map((chat) => (
-            <Stack as="li" gap="tight" key={chat.id} className={cardClasses()}>
-              <TextLink
-                href={`/agent/chats/${chat.id}`}
-                text="itemTitle"
-                className="justify-self-start"
-              >
-                {chat.title}
-              </TextLink>
-              {chat.output_kind ? (
-                <span className={textRole('caption')}>{kindLabel(chat.output_kind)}</span>
-              ) : null}
-            </Stack>
-          ))}
-        </Stack>
+        // One list in one card: a card per chat stacked boxes for a single row
+        // of text each.
+        <Card>
+          <CardContent>
+            <ul className={ledgerClasses()}>
+              {rows.map((chat) => (
+                <Stack as="li" gap="tight" key={chat.id} className={ledgerItemClasses()}>
+                  <TextLink
+                    href={`/agent/chats/${chat.id}`}
+                    text="itemTitle"
+                    className="justify-self-start"
+                  >
+                    {chat.title}
+                  </TextLink>
+                  {chat.output_kind ? (
+                    <span className={textRole('caption')}>{kindLabel(chat.output_kind)}</span>
+                  ) : null}
+                </Stack>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       ) : null}
       {chats.hasNextPage ? (
         <Button

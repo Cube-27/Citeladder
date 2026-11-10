@@ -1,5 +1,7 @@
 'use client';
 
+import type { ReactNode } from 'react';
+
 import { SubscriptionDetail } from '@/components/billing/billing-account-details';
 import { Badge } from '@/components/ui/badge';
 import { BillingPlan } from '@/components/ui/billing-plan';
@@ -88,12 +90,15 @@ export function CurrentPlan({
   planName,
   canManage,
   cancellation,
+  children,
 }: Readonly<{
   entitlement: BillingEntitlement | null;
   currentPlan: CatalogPlan | null;
   planName: (key: string) => string;
   canManage: boolean;
   cancellation: BillingCancellation;
+  /** What the workspace can do next with its plan (change, extras, a new plan), in this card. */
+  children?: ReactNode;
 }>) {
   const subscription = entitlement?.subscription ?? null;
   return (
@@ -118,6 +123,7 @@ export function CurrentPlan({
       <PlanNotices entitlement={entitlement} planName={planName} />
       <ResumeNotice subscription={subscription} cancellation={cancellation} />
       <CancelDialog cancellation={cancellation} />
+      {children}
     </BillingPlan>
   );
 }

@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Settings2, Unplug } from 'lucide-react';
 
 import { ListScreen, RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { SearchIntelligenceCitationMatcher } from '@/components/search-intelligence/search-intelligence-citation-matcher';
 import { SearchIntelligenceCollection } from './search-intelligence-collection';
+import { useSearchCollection, type SearchCollection } from './search-intelligence-collection-state';
 import { SearchIntelligenceReviewDrawer } from '@/components/search-intelligence/search-intelligence-review-drawer';
 import { SearchIntelligenceOverview } from '@/components/search-intelligence/search-intelligence-overview';
 import { referringLists } from './search-intelligence-format';
@@ -24,6 +25,7 @@ import {
   searchIntelligenceMutations,
   searchIntelligenceQueries,
   type SearchIntelligenceDataset,
+  type SearchIntelligenceReadiness,
   type SearchIntelligenceRun,
 } from '@/lib/api/search-intelligence';
 import type { SearchReviewAction } from '@citeladder/contracts/search-intelligence-requests';
@@ -121,6 +123,13 @@ export function SearchIntelligencePage() {
     setComparison(dataset);
     setTab('competitors');
   };
+  const collection = useSearchCollection({
+    tab: tab === 'overview' ? null : tab,
+    datasets,
+    competitors: readiness.data?.competitors ?? [],
+    selected: comparison,
+    onSelect: setComparison,
+  });
   // The first load draws the tab row and the control band the loaded page
   // has, so the work starts on the same line before and after.
   if (readiness.isPending)
@@ -131,15 +140,18 @@ export function SearchIntelligencePage() {
         </ListScreen>
       </TabsRoot>
     );
+  // A failed read keeps the tab row, so the page does not lose its place.
   if (readiness.isError)
     return (
-      <ListScreen>
-        <QueryState
-          kind="error"
-          {...readErrorProps(readiness)}
-          fallback="Keyword Research could not be loaded."
-        />
-      </ListScreen>
+      <TabsRoot value={tab} onValueChange={setTab}>
+        <ListScreen tabs={SEARCH_INTELLIGENCE_TABS}>
+          <QueryState
+            kind="error"
+            {...readErrorProps(readiness)}
+            fallback="Keyword Research could not be loaded."
+          />
+        </ListScreen>
+      </TabsRoot>
     );
   const data = readiness.data;
   const tabs = SEARCH_INTELLIGENCE_TABS;
@@ -196,13 +208,18 @@ export function SearchIntelligencePage() {
             onCost={() => setCostOpen(true)}
           />
         }
-        controls={scopeControls({
+        controls={pageControls({
           data,
           tab,
-          latest: datasets.find((item) =>
-            tab === 'backlinks' ? item.location_code === null : item.location_code !== null,
-          ),
-          marketControl: (
+          datasets,
+          collection,
+          onSeed: () => openReview('seed'),
+          onMatch: (origin) => {
+            setCitationOrigin(origin);
+            setCitationOpen(true);
+          },
+          onExpand: () => openReview('increase_depth'),
+          savedView: (
             <SavedViewControls
               scopes={scopes}
               scope={activeScope}
@@ -240,26 +257,14 @@ export function SearchIntelligencePage() {
           </TabPanel>
           {TABS.filter((item) => item.value !== 'overview').map(({ value }) => (
             <TabPanel key={value} value={value} className="min-w-0">
-              <SearchIntelligenceCollection
-                tab={value}
-                datasets={datasets}
-                competitors={data.competitors}
-                selected={value === 'competitors' ? comparison : null}
-                onSelect={setComparison}
-                onExpand={() => openReview('increase_depth')}
-                renderAction={(targetOrigin) => (
-                  <CollectionAction
-                    tab={value}
-                    datasets={datasets}
-                    targetOrigin={targetOrigin}
-                    onSeed={() => openReview('seed')}
-                    onMatch={() => {
-                      setCitationOrigin(targetOrigin);
-                      setCitationOpen(true);
-                    }}
-                  />
-                )}
-              />
+              {collection?.tab === value ? (
+                <SearchIntelligenceCollection
+                  collection={collection}
+                  datasets={datasets}
+                  competitors={data.competitors}
+                  onSelect={setComparison}
+                />
+              ) : null}
             </TabPanel>
           ))}
           <Drawer
@@ -320,11 +325,11 @@ function PageActions({
       </Button>
       {hasDatasets ? (
         <>
-          <Button variant="secondary" onClick={() => onReview('analysis')}>
-            New analysis
-          </Button>
-          <Button variant="primary" onClick={() => onReview('refresh')}>
+          <Button variant="secondary" onClick={() => onReview('refresh')}>
             Refresh
+          </Button>
+          <Button variant="primary" onClick={() => onReview('analysis')}>
+            New analysis
           </Button>
         </>
       ) : (
@@ -336,39 +341,84 @@ function PageActions({
   );
 }
 
-/** The tab's own next step beside its view switcher. */
-function CollectionAction({
+/**
+ * The page's one control strip for the open tab. The caption names the saved
+ * result on screen, else the newest one the tab can show.
+ */
+function pageControls({
+  data,
   tab,
   datasets,
-  targetOrigin,
+  collection,
+  savedView,
+  ...actions
+}: Readonly<{
+  data: SearchIntelligenceReadiness;
+  tab: Tab;
+  datasets: SearchIntelligenceDataset[];
+  collection: SearchCollection | null;
+  savedView: ReactNode;
+  onSeed: () => void;
+  onMatch: (targetOrigin: string | undefined) => void;
+  onExpand: () => void;
+}>) {
+  const newest = datasets.find((item) =>
+    tab === 'backlinks' ? item.location_code === null : item.location_code !== null,
+  );
+  return scopeControls({
+    data,
+    tab,
+    latest: collection?.dataset ?? newest,
+    savedView,
+    collection: collection ?? undefined,
+    action: collection ? (
+      <CollectionAction collection={collection} datasets={datasets} {...actions} />
+    ) : undefined,
+  });
+}
+
+/**
+ * The tab's own next step, at the end of the control strip: its research
+ * action, then a deeper review of the saved result on screen.
+ */
+function CollectionAction({
+  collection,
+  datasets,
   onSeed,
   onMatch,
+  onExpand,
 }: Readonly<{
-  tab: string;
+  collection: SearchCollection;
   datasets: SearchIntelligenceDataset[];
-  /** The website the tab is showing. */
-  targetOrigin: string | undefined;
   onSeed: () => void;
-  onMatch: () => void;
+  onMatch: (targetOrigin: string | undefined) => void;
+  onExpand: () => void;
 }>) {
-  if (tab === 'keywords')
-    return (
-      <Button variant="secondary" onClick={onSeed}>
-        Research a keyword
-      </Button>
-    );
   // Only the website on screen: matching another website's list would save
   // matches for a site the reader is not looking at.
-  if (
-    tab === 'backlinks' &&
-    referringLists(datasets).some((dataset) => dataset.target_origin === targetOrigin)
-  )
-    return (
-      <Button variant="secondary" onClick={onMatch}>
-        Match with Visibility citations
-      </Button>
-    );
-  return null;
+  const matchable =
+    collection.tab === 'backlinks' &&
+    referringLists(datasets).some((dataset) => dataset.target_origin === collection.target);
+  const expandable = !collection.listingCompetitors && Boolean(collection.dataset);
+  return (
+    <>
+      {collection.tab === 'keywords' ? (
+        <Button variant="secondary" onClick={onSeed}>
+          Research a keyword
+        </Button>
+      ) : null}
+      {matchable ? (
+        <Button variant="secondary" onClick={() => onMatch(collection.target)}>
+          Match with Visibility citations
+        </Button>
+      ) : null}
+      {expandable ? (
+        <Button variant="ghost" onClick={onExpand}>
+          Review depth
+        </Button>
+      ) : null}
+    </>
+  );
 }
 
 /** Why saved results cannot be refreshed: a missing connection, or managed research being down. */

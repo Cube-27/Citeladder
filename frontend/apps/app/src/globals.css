@@ -925,6 +925,48 @@ a.focus-ring:active .type-caption {
   box-shadow: none;
 }
 
+/* Sideways overflow cues. Each overlays or paints behind the region, so it
+   never moves anything, and each is absent while nothing overflows. */
+@layer components {
+  /* A wide table's frame (`ScrollEdgeFades`): a 24px fade to the ground at
+     each edge that hides more columns, over the rows and the header band. */
+  .scroll-edge-fade {
+    position: absolute;
+    inset-block: 0;
+    z-index: 30;
+    width: 24px;
+    pointer-events: none;
+    --scroll-edge-ground: var(--color-surface);
+  }
+  .scroll-edge-fade[data-scroll-edge='start'] {
+    inset-inline-start: 0;
+    background: linear-gradient(to right, var(--scroll-edge-ground), transparent);
+  }
+  .scroll-edge-fade[data-scroll-edge='end'] {
+    inset-inline-end: 0;
+    background: linear-gradient(to left, var(--scroll-edge-ground), transparent);
+  }
+
+  /* A segmented track that scrolls with its scrollbar hidden (`TAB_TRACK`):
+     a soft ink shade at each edge with segments beyond it. The covers in the
+     track's own fill scroll with the segments (`local`) and hide each shade
+     while its end is in view; the shades stay on the edges (`scroll`). */
+  .scroll-shade-x {
+    --scroll-shade-ground: var(--color-surface-sunken);
+    --scroll-shade-ink: color-mix(in srgb, var(--color-ink) 16%, transparent);
+    background:
+      linear-gradient(to right, var(--scroll-shade-ground) 40%, transparent) left / 24px 100%
+        no-repeat local,
+      linear-gradient(to left, var(--scroll-shade-ground) 40%, transparent) right / 24px 100%
+        no-repeat local,
+      linear-gradient(to right, var(--scroll-shade-ink), transparent) left / 12px 100% no-repeat
+        scroll,
+      linear-gradient(to left, var(--scroll-shade-ink), transparent) right / 12px 100% no-repeat
+        scroll,
+      var(--scroll-shade-ground);
+  }
+}
+
 /* Inside a card a query state shares the card's surface and its padding
    (the container already insets it), but keeps its reserved height. */
 :where(.surface-card, .surface-panel, [role='dialog'], .table-frame) .query-state {

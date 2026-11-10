@@ -6,8 +6,9 @@ import {
   type AccuracyCoverage,
   type AccuracyResponse,
 } from '@citeladder/contracts/fact-checking';
-import { Globe, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
+import { AppGrid } from '@/components/ui/app-grid';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
@@ -27,6 +28,7 @@ import {
   accuracyStateCopy,
   TOPIC_LABELS,
   VERDICT_LABELS,
+  VERDICT_TONE,
 } from '@/lib/visibility/accuracy';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { formatShare } from '@/lib/visibility/perception';
@@ -85,10 +87,15 @@ export function AccuracyView({ data }: Readonly<{ data: AccuracyResponse }>) {
   return (
     <Stack gap="workspace">
       <Headline data={data} />
-      <ContradictedClaims claims={data.contradicted} />
+      {/* The contradictions and the sources cited beside them are one
+          question; the two-column table sits beside the claims where the
+          width allows. */}
+      <AppGrid layout="halves">
+        <ContradictedClaims claims={data.contradicted} />
+        <CitedTable cited={data.cited_alongside} />
+      </AppGrid>
       <BreakdownTable title="By topic" column="Topic" rows={data.topics} label={topicLabel} />
       <BreakdownTable title="By engine" column="Engine" rows={data.engines} label={engineLabel} />
-      <CitedTable cited={data.cited_alongside} />
     </Stack>
   );
 }
@@ -157,11 +164,19 @@ function Headline({ data }: Readonly<{ data: AccuracyResponse }>) {
                 value: String(coverage.contradicted),
                 sub: 'A confirmed fact states something incompatible.',
               },
+              // Two different findings: no confirmed fact on the point, and a
+              // fact that could not settle the claim. Never one summed figure.
               {
                 key: 'not_covered',
-                label: 'Not covered',
-                value: String(coverage.not_covered + coverage.inconclusive),
-                sub: `${coverage.not_covered} with no fact on the point, ${coverage.inconclusive} inconclusive.`,
+                label: VERDICT_LABELS.not_covered,
+                value: String(coverage.not_covered),
+                sub: 'No confirmed fact on the point.',
+              },
+              {
+                key: 'inconclusive',
+                label: VERDICT_LABELS.inconclusive,
+                value: String(coverage.inconclusive),
+                sub: 'A confirmed fact could not settle the claim.',
               },
             ]}
           />
@@ -204,7 +219,12 @@ function ContradictedClaims({ claims }: Readonly<{ claims: AccuracyClaim[] }>) {
                   </span>
                 ))}
                 <Inline as="span" className={textRole('caption', 'text-ink-muted flex-wrap')}>
-                  <Badge variant="sentiment" value="negative">
+                  {/* The badge takes the claim's own verdict tone; a claim
+                      without a verdict yet is neutral, not negative. */}
+                  <Badge
+                    variant="sentiment"
+                    value={claim.verdict ? VERDICT_TONE[claim.verdict] : 'neutral'}
+                  >
                     {TOPIC_LABELS[claim.topic]}
                   </Badge>
                   {engineLabel(claim.logical_engine)} · {claim.prompt}
@@ -266,12 +286,7 @@ function CitedTable({ cited }: Readonly<{ cited: AccuracyResponse['cited_alongsi
       state={
         cited.length
           ? undefined
-          : {
-              kind: 'empty',
-              headingLevel: 3,
-              icon: Globe,
-              heading: 'No sources cited alongside contradictions',
-            }
+          : { kind: 'empty', inline: true, message: 'No sources cited alongside contradictions.' }
       }
     >
       {cited.map((row) => (

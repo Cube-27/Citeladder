@@ -155,7 +155,7 @@ it('charts the prompt over time with declared work marked, and hands off to its 
   );
   renderScreen();
 
-  const marked = await screen.findByRole('list', { name: 'Mention rate over time: marked' });
+  const marked = await screen.findByRole('list', { name: 'Visibility over time: marked' });
   expect(marked.textContent).toMatch(/^Marked implemented .+: reviews\.example\/crm$/);
   expect(screen.getByText('Marked implemented')).toBeVisible();
   expect(getPromptHistory).toHaveBeenCalledWith(

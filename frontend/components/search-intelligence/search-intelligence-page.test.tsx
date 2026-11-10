@@ -161,6 +161,14 @@ it('offers citation matching only for the website whose list is on screen', asyn
   expect(await screen.findByRole('combobox', { name: 'Saved target' })).toHaveTextContent(
     'www.example.com',
   );
+  // The website and market read as one caption in the strip, not a filter.
+  expect(
+    screen.getByText(
+      (_, node) =>
+        node?.parentElement?.tagName === 'OUTPUT' &&
+        node.textContent === 'www.example.com · All referring countries · No saved analysis',
+    ),
+  ).toBeInTheDocument();
   expect(
     screen.queryByRole('button', { name: 'Match with Visibility citations' }),
   ).not.toBeInTheDocument();
@@ -169,6 +177,20 @@ it('offers citation matching only for the website whose list is on screen', asyn
   expect(
     await screen.findByRole('button', { name: 'Match with Visibility citations' }),
   ).toBeInTheDocument();
+});
+
+it('keeps the tab row when Keyword Research cannot be read', async () => {
+  mswServer.use(
+    http.get(root, () =>
+      // A 4xx is not retried, so the failure shows without waiting out a backoff.
+      HttpResponse.json({ error: { code: 'invalid', message: 'Read failed' } }, { status: 422 }),
+    ),
+  );
+  renderWithProviders(<SearchIntelligencePage />, {
+    projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
+  });
+  expect(await screen.findByText('Read failed')).toBeInTheDocument();
+  expect(screen.getByRole('tab', { name: 'Keywords' })).toBeInTheDocument();
 });
 
 it('cancels an analysis in progress', async () => {

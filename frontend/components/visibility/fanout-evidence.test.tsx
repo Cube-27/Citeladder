@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { act, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { useMemo } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
@@ -9,7 +10,7 @@ import { visibilityApi } from '@/lib/api/visibility';
 import { ActiveProjectScopeProvider } from '@/lib/project/active-project-scope';
 import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
-import { FanoutEvidence } from './fanout-evidence';
+import { FanoutEvidence, FanoutGroupFilter } from './fanout-evidence';
 
 const A = '11111111-1111-4111-8111-111111111111';
 const B = '22222222-2222-4222-8222-222222222222';
@@ -103,5 +104,23 @@ describe('Fanout evidence scope', () => {
         '1 distinct searches and 1 total occurrences in the searches shown below',
       ),
     ).toBeInTheDocument();
+  });
+});
+
+describe('Fanout grouping', () => {
+  it('groups the table by prompt from the control-strip filter, naming each surface', async () => {
+    vi.spyOn(visibilityApi, 'getFanoutSummary').mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderWithProviders(
+      <>
+        <FanoutGroupFilter />
+        <Panel projectId={A} />
+      </>,
+    );
+    expect(screen.getByRole('columnheader', { name: 'Surface' })).toBeVisible();
+    expect(screen.queryByText('Best CRM?')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Group searches by: Group by: None' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Group by: Prompt' }));
+    expect(await screen.findByText('Best CRM?')).toBeVisible();
   });
 });

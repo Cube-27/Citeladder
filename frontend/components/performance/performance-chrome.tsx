@@ -11,6 +11,7 @@ import { FilterField } from '@/components/ui/filter-bar';
 import { SegmentedAction, SegmentedControl } from '@/components/ui/tabs';
 import { Select } from '@/components/ui/select';
 import type { PerformanceGranularity } from '@/lib/api/performance';
+import { formatWindowDate } from '@/lib/format';
 import {
   DIALOG_RANGE_OPTIONS,
   GRANULARITY_OPTIONS,
@@ -53,10 +54,18 @@ function quickRangeValue(selection: RangeSelection, comparing: boolean): QuickRa
   return selection.range as QuickRange;
 }
 
-/** The dashboard's control bar: resolved range, imported coverage, and sync. */
+/**
+ * The resolved window, as the control band's caption: it describes what the
+ * range controls selected, so it reads as a note beside them, not as one more
+ * filter.
+ */
+export function PerformanceWindowCaption({ label }: Readonly<{ label: string }>) {
+  return <span data-testid="performance-window">{label}</span>;
+}
+
+/** The dashboard's range controls: the quick windows, More, and Reset. */
 export function PerformanceToolbar({
   selection,
-  selectedLabel,
   onOpenRange,
   onOpenCompare,
   onSelectRange,
@@ -64,7 +73,6 @@ export function PerformanceToolbar({
   onReset,
 }: Readonly<{
   selection: RangeSelection;
-  selectedLabel: string;
   onOpenRange: () => void;
   onOpenCompare: () => void;
   onSelectRange: (next: RangeSelection) => void;
@@ -78,8 +86,8 @@ export function PerformanceToolbar({
   return (
     // `contents`: the control band owns the row's height and its rule.
     <div className="contents">
-      {/* Day, Week and Month are the three choices; More opens the dialog that
-          holds 3 months, 6 months, Last synced, Custom and Compare.
+      {/* The last day, 7 days and 28 days are the three choices; More opens
+          the dialog that holds 90 and 180 days, Last synced, Custom and Compare.
 
           This was a hand-built <fieldset> of aria-pressed toggles wrapped around
           Pressable, which is the ROW affordance — it forced w-full and text-left
@@ -104,10 +112,6 @@ export function PerformanceToolbar({
           </SegmentedAction>
         }
       />
-
-      <span className="type-body" data-testid="performance-window">
-        {selectedLabel}
-      </span>
       {/* Reset belongs to the comparison: it is what returns "Compare" to
           "More". With no comparison active there is nothing it would undo. */}
       {comparing ? (
@@ -137,7 +141,7 @@ export function PerformanceActions({
   return (
     <>
       <span className="type-caption">
-        {latestDate ? `Data through ${latestDate}` : 'No imported history'}
+        {latestDate ? `Data through ${formatWindowDate(latestDate)}` : 'No imported history'}
       </span>
       <Button
         variant="secondary"

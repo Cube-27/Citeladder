@@ -409,6 +409,36 @@ describe('QueryState', () => {
     expect(screen.getByText('Run a crawl to find issues.')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Run crawl' })).toBeVisible();
   });
+
+  it('heads an empty state inside a card one rung under the page, unless told otherwise', () => {
+    render(
+      <>
+        <Card>
+          <QueryState kind="empty" icon={Inbox} heading="No mentions yet" />
+        </Card>
+        <Card>
+          <QueryState kind="empty" icon={Inbox} heading="No sources yet" headingLevel={2} />
+        </Card>
+      </>,
+    );
+    expect(screen.getByRole('heading', { name: 'No mentions yet' }).tagName).toBe('H3');
+    expect(screen.getByRole('heading', { name: 'No sources yet' }).tagName).toBe('H2');
+  });
+
+  it('says a compact absence in one line with its action and no heading', () => {
+    render(
+      <QueryState
+        kind="empty"
+        inline
+        compact
+        message="No competitors tracked."
+        action={<Button>Add competitor</Button>}
+      />,
+    );
+    expect(screen.getByText('No competitors tracked.')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Add competitor' })).toBeVisible();
+    expect(screen.queryByRole('heading')).toBeNull();
+  });
 });
 
 describe('ChartSwatch', () => {

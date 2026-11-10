@@ -1,10 +1,11 @@
 'use client';
 
-import type { ComponentPropsWithoutRef, ReactNode, Ref } from 'react';
+import type { ComponentPropsWithRef, ComponentPropsWithoutRef, ReactNode, Ref } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 import { Slot } from '@radix-ui/react-slot';
 import { Icon } from '@/components/ui/icon';
+import { ProjectLink } from '@/components/ui/project-link';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip } from '@/components/ui/tooltip';
 
@@ -128,9 +129,38 @@ type IconButtonProps = Omit<ButtonProps, 'variant' | 'children' | 'asChild' | 'a
   tooltipSide?: 'top' | 'right' | 'bottom' | 'left';
   /** `false` only where the same words are visible beside it (a dialog's close). */
   tooltip?: boolean;
-  /** An external or help link that looks like the icon control. */
+  /**
+   * A link that looks like the icon control: an app path (`/runs`) goes
+   * through `ProjectLink`, scoped to the active project like any app link;
+   * an http(s) URL stays an external link with no referrer.
+   */
   href?: string;
 };
+
+/** The anchor an icon link renders: the project's router link for an app path. */
+function IconLinkTarget({
+  href,
+  label,
+  children,
+  ...props
+}: Readonly<
+  Omit<ComponentPropsWithRef<'a'>, 'href' | 'aria-label'> & { href: string; label: string }
+>) {
+  // `//host/path` is protocol-relative: another site, not an app path.
+  if (href.startsWith('/') && !href.startsWith('//')) {
+    return (
+      <ProjectLink {...props} href={href} aria-label={label}>
+        {children}
+      </ProjectLink>
+    );
+  }
+  const external = /^(https?:)?\/\//i.test(href);
+  return (
+    <a {...props} href={href} aria-label={label} rel={external ? 'noreferrer' : undefined}>
+      {children}
+    </a>
+  );
+}
 
 /**
  * IconButton — the square icon-only control: 36px, no padding, the 16px
@@ -151,9 +181,9 @@ export function IconButton({
   const classes = cn('w-[var(--control-md)] gap-0 px-0', className);
   const control = href ? (
     <Button {...props} variant={variant} className={classes} asChild>
-      <a href={href} aria-label={label}>
+      <IconLinkTarget href={href} label={label}>
         <Icon icon={icon} />
-      </a>
+      </IconLinkTarget>
     </Button>
   ) : (
     <Button {...props} variant={variant} className={classes} aria-label={label}>

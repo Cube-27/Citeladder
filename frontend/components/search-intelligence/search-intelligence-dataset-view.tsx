@@ -25,35 +25,41 @@ import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import { MissingValue } from '@/components/ui/unavailable-value';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { evidenceFields, searchNumber } from './search-intelligence-format';
-import { searchDatasetTraits } from '@citeladder/contracts/search-intelligence';
-import { SEARCH_COLUMNS_BY_KIND, searchScopeLabel } from '@/lib/config/search-intelligence';
-import { FilterField } from '@/components/ui/filter-bar';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
+import { SEARCH_COLUMNS_BY_KIND } from '@/lib/config/search-intelligence';
 import { SearchIntelligenceExport } from './search-intelligence-export';
+import type { KeywordFilterValues } from './search-intelligence-collection-state';
 import {
   SearchIntelligenceRows,
   searchIntelligenceColumns,
+  searchIntelligenceMinWidth,
 } from './search-intelligence-rows-table';
 
+/**
+ * One saved dataset's rows. The table's own toolbar keeps only the search,
+ * Export and Ask agent; the keyword filters (minimum volume, intent) ride the
+ * page's control strip with the other pickers and arrive here as values.
+ */
 export function SearchIntelligenceDatasetView({
   dataset,
   title = 'Ranking keywords',
-  onExpand,
-}: Readonly<{ dataset: SearchIntelligenceDataset; title?: string; onExpand?: () => void }>) {
+  keywordFilters,
+}: Readonly<{
+  dataset: SearchIntelligenceDataset;
+  title?: string;
+  keywordFilters?: KeywordFilterValues;
+}>) {
   const { workspaceId, projectId } = useProjectScope();
   const [selected, setSelected] = useState<SearchIntelligenceRow | null>(null);
   const [filter, setFilter] = useState('');
-  const [minVolume, setMinVolume] = useState('');
-  const [intent, setIntent] = useState('');
   const [order, setOrder] = useState<{ sort: string; direction: 'asc' | 'desc' }>({
     sort: 'id',
     direction: 'asc',
   });
+  const minVolume = keywordFilters?.minVolume ?? '';
   const filters = {
     ...order,
     search: filter,
-    intent,
+    intent: keywordFilters?.intent ?? '',
     min_volume: minVolume === '' ? undefined : Number(minVolume),
   };
   const hasRows = dataset.unique_rows_saved > 0;
@@ -85,7 +91,6 @@ export function SearchIntelligenceDatasetView({
   });
   const rows = page?.items ?? [];
   useRowsPanelSeed(dataset.id, selected, page?.items, title);
-  const keywordDataset = Boolean(searchDatasetTraits(dataset.dataset_kind)?.keyword);
   if (!hasRows) return <EmptyDataset dataset={dataset} title={title} />;
   return (
     <>
@@ -100,16 +105,8 @@ export function SearchIntelligenceDatasetView({
               placeholder="Filter saved results"
             />
           ),
-          filters: (
-            <KeywordFilters
-              enabled={keywordDataset}
-              minVolume={minVolume}
-              setMinVolume={setMinVolume}
-              intent={intent}
-              setIntent={setIntent}
-            />
-          ),
-          status: query.isFetching ? 'Updating saved rows…' : `${rows.length} rows shown`,
+          // The pager states the row count; the live note only reports a read.
+          status: query.isFetching ? 'Updating saved rows…' : null,
           actions: (
             <>
               <SearchIntelligenceExport dataset={dataset} params={filters} />
@@ -120,7 +117,6 @@ export function SearchIntelligenceDatasetView({
                   </ProjectLink>
                 </Button>
               ) : null}
-              <DepthReviewAction onExpand={onExpand} />
             </>
           ),
         }}
@@ -133,9 +129,9 @@ export function SearchIntelligenceDatasetView({
               direction: order.sort === sort && order.direction === 'asc' ? 'desc' : 'asc',
             }),
         })}
-        minWidth={dataset.dataset_kind === 'ranking_keywords' ? 'xl' : 'lg'}
+        minWidth={searchIntelligenceMinWidth(dataset.dataset_kind)}
         {...table}
-        footer={<DatasetSummary dataset={dataset} />}
+        footer={datasetSummary(dataset)}
       >
         <SearchIntelligenceRows kind={dataset.dataset_kind} rows={rows} onSelect={setSelected} />
       </DataTable>
@@ -283,79 +279,31 @@ function emptyDatasetHeading({
   return 'Provider evidence for this saved scope is incomplete, and no rows were saved.';
 }
 
-function KeywordFilters({
-  enabled,
-  minVolume,
-  setMinVolume,
-  intent,
-  setIntent,
-}: Readonly<{
-  enabled: boolean;
-  minVolume: string;
-  setMinVolume: (value: string) => void;
-  intent: string;
-  setIntent: (value: string) => void;
-}>) {
-  if (!enabled) return null;
-  return (
-    <>
-      <FilterField>
-        <Input
-          aria-label="Minimum search volume"
-          placeholder="Min. search volume"
-          type="number"
-          min={0}
-          value={minVolume}
-          step={1}
-          onChange={(event) => {
-            const value = event.target.value;
-            if (value === '' || (Number.isInteger(Number(value)) && Number(value) >= 0))
-              setMinVolume(value);
-          }}
-        />
-      </FilterField>
-      <Select
-        ariaLabel="Saved keyword intent"
-        value={intent || 'any'}
-        onValueChange={(value) => setIntent(value === 'any' ? '' : value)}
-        options={['any', 'informational', 'commercial', 'navigational', 'transactional'].map(
-          (value) => ({ value, label: value === 'any' ? 'Any intent' : value }),
-        )}
-      />
-    </>
-  );
-}
-
 function filteredSavedCount(dataset: SearchIntelligenceDataset) {
   return typeof dataset.filtered_saved_count === 'number'
     ? dataset.filtered_saved_count
     : dataset.unique_rows_saved;
 }
 
-function DepthReviewAction({ onExpand }: Readonly<{ onExpand?: () => void }>) {
-  return onExpand ? (
-    <Button variant="ghost" onClick={onExpand}>
-      Review depth
-    </Button>
-  ) : null;
-}
-
-/** What the saved dataset covers, under its table. */
-function DatasetSummary({ dataset }: Readonly<{ dataset: SearchIntelligenceDataset }>) {
+/**
+ * What the saved dataset covers, under its table, or null when there is
+ * nothing to add. The pager already counts the rows and the page's caption
+ * names the website, so this says only what neither does: how many results
+ * the provider had, and whether the save was cut short.
+ */
+function datasetSummary(dataset: SearchIntelligenceDataset) {
+  const coverage = [
+    dataset.provider_total === null
+      ? null
+      : `${searchNumber(dataset.provider_total)} available from the provider`,
+    dataset.truncated ? 'Truncated' : null,
+  ].filter((part) => part !== null);
+  const actions = dataset.dataset_kind === 'missing_keywords';
+  if (!coverage.length && !actions) return null;
   return (
     <>
-      <p className={textRole('caption')}>
-        {searchNumber(dataset.unique_rows_saved)} saved rows
-        {dataset.provider_total !== null
-          ? ` of ${searchNumber(dataset.provider_total)} available`
-          : ''}
-        {' · '}
-        {dataset.target_hostname}
-        {' · '}
-        {searchScopeLabel(dataset.research_scope)}
-        {dataset.truncated ? ' · truncated' : ''}
-      </p>
-      {dataset.dataset_kind === 'missing_keywords' ? (
+      {coverage.length ? <p className={textRole('caption')}>{coverage.join(' · ')}</p> : null}
+      {actions ? (
         <p className={textRole('caption')}>
           Gaps with real search volume where a competitor ranks in the top 10 become{' '}
           <TextLink href="/agent/actions">Actions</TextLink>. Open a row to see its Action.

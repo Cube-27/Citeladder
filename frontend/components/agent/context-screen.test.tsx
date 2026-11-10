@@ -168,6 +168,69 @@ describe('Context layout', () => {
     expect(await screen.findByText('The fact-checking pilot is unavailable.')).toBeVisible();
   });
 
+  it('shows the fixed tabs while the pilot gate is read and adds Brand facts at the end', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    renderContext({
+      handlers: [
+        http.get('/api/v1/projects/:id/brand-facts', async () => {
+          await gate;
+          return HttpResponse.json({ enabled: true, facts: [] });
+        }),
+      ],
+    });
+    const tabs = await screen.findByRole('tablist', { name: 'Context sections' });
+    const labels = () =>
+      within(tabs)
+        .getAllByRole('tab')
+        .map((tab) => tab.textContent);
+    expect(labels()).toEqual([
+      'Company',
+      'Audience & Offerings',
+      'Business map',
+      'Competitors',
+      'Agent instructions',
+    ]);
+    // The fixed tabs are usable before the gate answers.
+    expect(await screen.findByLabelText('Description')).toBeVisible();
+    release();
+    expect(await within(tabs).findByRole('tab', { name: 'Brand facts' })).toBeVisible();
+    expect(labels()).toEqual([
+      'Company',
+      'Audience & Offerings',
+      'Business map',
+      'Competitors',
+      'Agent instructions',
+      'Brand facts',
+    ]);
+  });
+
+  it('holds a link to Brand facts on its loading state until the pilot gate answers', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    renderContext({
+      tab: 'brand-facts',
+      handlers: [
+        http.get('/api/v1/projects/:id/brand-facts', async () => {
+          await gate;
+          return HttpResponse.json({ enabled: true, facts: [] });
+        }),
+      ],
+    });
+    expect(await screen.findByRole('status', { name: 'Loading brand facts…' })).toBeVisible();
+    // The link is not answered with the Company tab while the gate is read.
+    expect(screen.queryByLabelText('Description')).not.toBeInTheDocument();
+    release();
+    expect(await screen.findByRole('tab', { name: 'Brand facts' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+
   it('keeps pilot Brand facts on their own tab', async () => {
     const user = userEvent.setup({ delay: null });
     renderContext({

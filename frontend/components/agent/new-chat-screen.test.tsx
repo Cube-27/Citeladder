@@ -441,6 +441,32 @@ describe('NewChatScreen', () => {
     expect(bodies).toEqual([{ message: 'Use /grow', context: {} }]);
   });
 
+  it('offers the top Actions open above the workflows, each title starting a chat on it', async () => {
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(WORKFLOW_CATALOG)),
+      ...baseHandlers([
+        actionItem(PRICING, 'Pricing page'),
+        actionItem(BLOG, 'Blog hub'),
+        actionItem('77777777-7777-4777-8777-777777777773', 'Docs'),
+        actionItem('77777777-7777-4777-8777-777777777774', 'Careers'),
+      ]),
+    );
+    renderNewChat('');
+
+    const recommended = await screen.findByRole('region', { name: 'Recommended Actions' });
+    // Capped at three, and nothing to expand first.
+    expect(await within(recommended).findAllByRole('listitem')).toHaveLength(3);
+    expect(within(recommended).queryByText('Careers')).not.toBeInTheDocument();
+    const start = within(recommended).getByRole('link', { name: 'Work on Pricing page' });
+    expect(start).toHaveAttribute('href', `/agent?action_id=${PRICING}&project=${PROJECT}`);
+    expect(within(recommended).queryByText('Work on this')).not.toBeInTheDocument();
+    // The Actions come before the workflows.
+    const workflows = await screen.findByRole('region', { name: 'Or start from a workflow' });
+    expect(recommended.compareDocumentPosition(workflows)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    // The command hint is a caption that stays once typing starts.
+    expect(screen.getByText('Type / to pick a skill or @ to mention an Action.')).toBeVisible();
+  });
+
   it('briefs on the top open Actions with the growth plan skill', async () => {
     const bodies = captureChats([
       actionItem(PRICING, 'Pricing page'),
@@ -449,7 +475,7 @@ describe('NewChatScreen', () => {
     const user = userEvent.setup();
     renderNewChat('');
 
-    await user.click(await screen.findByText('Work on an Action'));
+    await user.click(await screen.findByText('Get a briefing on what to work on'));
     const briefing = await screen.findByRole('region', { name: 'What should I work on?' });
     expect(await within(briefing).findByText(/top 2 open Actions/)).toBeVisible();
     await user.click(within(briefing).getByRole('button', { name: 'Brief me' }));

@@ -216,8 +216,13 @@ describe('IntegrationSettings — grant cards', () => {
 
     const msCard = screen.getByTestId('grant-card-microsoft');
     expect(within(msCard).getByText('Bing Webmaster Tools')).toBeInTheDocument();
-    // Needs reauth → warning alert + Sync now disabled (grant not connected).
-    expect(within(msCard).getByText(/requires renewed consent/i)).toBeInTheDocument();
+    // Needs reauth → plain-worded status and alert + Sync now disabled (grant not connected).
+    expect(within(msCard).getByTestId('grant-status-microsoft')).toHaveTextContent(
+      'Reconnect needed',
+    );
+    expect(within(msCard).getByText(/needs you to sign in again/)).toBeInTheDocument();
+    expect(within(msCard).getByText('Connection')).toBeInTheDocument();
+    expect(within(msCard).queryByText('OAuth grant')).not.toBeInTheDocument();
     expect(
       within(msCard).getByRole('button', { name: 'Sync Bing Webmaster Tools now' }),
     ).toBeDisabled();
@@ -430,7 +435,8 @@ describe('IntegrationSettings — OAuth callback notice (C2)', () => {
     // A success notice is a polite status; only failures are alerts.
     const notice = await screen.findByRole('status');
     expect(notice).toHaveTextContent('Google connected.');
-    expect(notice.textContent).toMatch(/shared OAuth grant/i);
+    expect(notice.textContent).toMatch(/linked through one Google connection/);
+    expect(notice.textContent).not.toMatch(/OAuth|grant/);
     await waitFor(() =>
       expect(replaceState).toHaveBeenCalledWith(null, '', '/settings?tab=integrations'),
     );

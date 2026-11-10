@@ -133,7 +133,7 @@ const visibilityTrend: Section = async ({ db, scope, report }) => {
     columns: [
       { header: 'Run completed', width: 2 },
       { header: 'Visibility', width: 1, align: 'right' },
-      { header: 'Citation share', width: 1, align: 'right' },
+      { header: 'Owned citation rate', width: 1, align: 'right' },
     ],
     rows: runs
       .slice(-ROWS)

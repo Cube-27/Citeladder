@@ -90,7 +90,7 @@ export function PromptDetailScreen() {
   );
 }
 
-/** Mention and owned-citation rates per run, with declared work marked. */
+/** Visibility and owned citation rate per run, with declared work marked. */
 function HistoryCard({ history }: Readonly<{ history: PromptHistory }>) {
   const timeZone = useDisplayTimeZone();
   const data = mentionRatePoints(history.points, timeZone);
@@ -106,8 +106,8 @@ function HistoryCard({ history }: Readonly<{ history: PromptHistory }>) {
       <CardContent>
         {data.length ? (
           <TrendChart
-            label="Mention rate over time"
-            name="Mention rate"
+            label="Visibility over time"
+            name="Visibility"
             data={data}
             series={[{ label: 'Owned citation rate', values: ownedCitationValues(history.points) }]}
             events={implementationEvents(history.implementations, timeZone)}
@@ -149,7 +149,7 @@ function Implementations({ history }: Readonly<{ history: PromptHistory }>) {
               <TextLink href={`/agent/actions/${item.action_id}`}>{item.title}</TextLink>
             </ClampText>
           </TableCell>
-          <TableCell>{formatDisplayDate(item.implemented_at, timeZone)}</TableCell>
+          <TableCell numeric>{formatDisplayDate(item.implemented_at, timeZone)}</TableCell>
           <TableCell>
             <ActionStatusBadge status={item.status} />
           </TableCell>
@@ -161,6 +161,6 @@ function Implementations({ history }: Readonly<{ history: PromptHistory }>) {
 
 const IMPLEMENTATION_COLUMNS: readonly DataTableColumn[] = [
   { key: 'action', label: 'Action' },
-  { key: 'live', label: 'Live from', width: 'date' },
+  { key: 'live', label: 'Live from', width: 'date', numeric: true },
   { key: 'status', label: 'Status', width: 'status' },
 ];
