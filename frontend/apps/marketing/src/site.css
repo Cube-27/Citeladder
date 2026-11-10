@@ -611,7 +611,7 @@ a.cl-announce:hover {
   color: var(--color-ink-secondary);
   font-family: var(--font-sans);
   font-size: var(--text-label-lg);
-  font-weight: 500;
+  font-weight: 400;
   line-height: var(--text-label-lg--line-height);
   text-decoration: none;
   white-space: nowrap;
@@ -724,7 +724,7 @@ a.cl-announce:hover {
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: var(--text-label-lg);
-  font-weight: 500;
+  font-weight: 400;
   line-height: var(--text-label-lg--line-height);
   text-decoration: none;
   cursor: pointer;
@@ -765,7 +765,6 @@ a.cl-announce:hover {
   margin-bottom: 8px;
   background: var(--color-paper);
   color: var(--color-ink);
-  font-weight: 500;
 }
 
 .cl-sheet-foot {
@@ -879,7 +878,7 @@ a.cl-announce:hover {
   gap: 4px;
   color: var(--color-ink);
   font-size: var(--text-heading);
-  font-weight: 500;
+  font-weight: 400;
   line-height: var(--text-heading--line-height);
   white-space: nowrap;
 }
@@ -1010,7 +1009,7 @@ a.cl-announce:hover {
   border-radius: var(--radius-xs);
   color: var(--color-footer-ink-muted);
   font-size: var(--text-caption);
-  font-weight: 500;
+  font-weight: 400;
   line-height: var(--text-caption--line-height);
   text-decoration: none;
 }
@@ -1965,7 +1964,7 @@ a.cl-fcard:hover {
 .cl-railcard-body {
   max-width: 420px;
   margin: 0;
-  color: var(--color-ink);
+  color: var(--color-ink-secondary);
   font-size: var(--text-body-lg);
   line-height: var(--text-body-lg--line-height);
 }
@@ -2633,7 +2632,7 @@ a.cl-fcard:hover {
   gap: 8px;
   color: var(--color-ink-secondary);
   font-size: var(--text-label-lg);
-  font-weight: 500;
+  font-weight: 400;
   line-height: var(--text-label-lg--line-height);
   white-space: nowrap;
 }
@@ -2743,7 +2742,7 @@ a.cl-fcard:hover {
   margin: 0;
   color: var(--color-ink);
   font-size: var(--text-label);
-  font-weight: 500;
+  font-weight: 400;
   line-height: var(--text-label--line-height);
 }
 
@@ -2795,8 +2794,8 @@ a.cl-fcard:hover {
 .cl-wtable thead th {
   padding-top: 24px;
   border-bottom: 1px solid var(--color-line);
-  color: var(--color-ink);
-  font-weight: 500;
+  color: var(--color-ink-secondary);
+  font-weight: 400;
   vertical-align: bottom;
 }
 
@@ -2931,7 +2930,7 @@ a.cl-logotile:hover {
 .cl-logotile-name {
   color: inherit;
   font-size: var(--text-label-lg);
-  font-weight: 500;
+  font-weight: 400;
   line-height: var(--text-label-lg--line-height);
 }
 
@@ -3003,9 +3002,9 @@ a.cl-logotile:hover {
 
 .cl-tool-rtitle {
   margin: 0;
-  color: var(--color-ink);
+  color: var(--color-ink-secondary);
   font-size: var(--text-label);
-  font-weight: 500;
+  font-weight: 400;
   line-height: var(--text-label--line-height);
 }
 

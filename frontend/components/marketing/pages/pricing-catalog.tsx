@@ -220,7 +220,7 @@ function ByokSwitch({
         className="mt-0.5"
       />
       <span className="grid gap-1">
-        <span aria-hidden className="text-body text-ink font-medium">
+        <span aria-hidden className="text-body text-ink">
           {BYOK_SWITCH_LABEL}
         </span>
         <span id={hint} className="text-body-sm text-ink-muted">

@@ -160,10 +160,10 @@
       {
         "name": "ink-muted",
         "value": {
-          "light": "#6b6b6b",
-          "dark": "#8c8c8c"
+          "light": "{ink-secondary}",
+          "dark": "{ink-secondary}"
         },
-        "usage": "Metadata, eyebrows, placeholders, timestamps, footer legal text. On paper, surface and surface-sunken."
+        "usage": "Metadata, eyebrows, placeholders, timestamps, footer legal text. The secondary ink under another name: every surface has one grey (D50)."
       },
       {
         "name": "on-ink",

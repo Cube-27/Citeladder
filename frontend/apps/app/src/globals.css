@@ -73,7 +73,8 @@
   --color-ink: #111111;
   --color-ink-hover: #2a2a2a;
   --color-ink-secondary: #525252;
-  --color-ink-muted: #6b6b6b;
+  /* One grey on every surface (D49, D50): muted is the secondary ink. */
+  --color-ink-muted: var(--color-ink-secondary);
   --color-on-ink: #ffffff;
   --color-accent: #e8501a;
   --color-accent-ink: #b53a0c;
@@ -377,7 +378,6 @@
   --color-ink: #f4f4f4;
   --color-ink-hover: #d6d6d6;
   --color-ink-secondary: #a6a6a6;
-  --color-ink-muted: #8c8c8c;
   --color-on-ink: #111111;
   --color-accent: #ff6a33;
   --color-accent-ink: #ff9466;
@@ -444,10 +444,6 @@
   --card-padding: 16px;
   --modal-padding: 16px;
   --table-row-height: var(--row-app);
-  /* Two text inks in the app (D49): `ink` and one grey. The website keeps a
-     lighter third step for its own pages; in the app `ink-muted` is the same
-     grey as `ink-secondary`, so no screen can print a third tone. */
-  --color-ink-muted: var(--color-ink-secondary);
 }
 
 @media (max-width: 1279px) {
