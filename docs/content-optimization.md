@@ -52,13 +52,18 @@ count, and the sites and competitors cited for it, from the finding's
 evidence; a content page with no content gap shows not applicable. There are no
 scores or grades (CO14). An empty list says which of four cases it is: no work
 for the chosen status, content gaps not computed yet, content-gap evidence
-out of date, or a current run with no gaps (`content_gap_source`).
+out of date, or a current run with no gaps (`content_gap_source`). That state
+follows the latest Opportunity snapshot, like the gaps listed: a run that ages
+past `max_source_age_days` reads as out of date once the next refresh records
+it, and until then the snapshot's gaps and state stay as they were written.
 
 An Action opens at `/agent/content/:actionId` (the shared Action page; the
 back link follows the Action's surface). For content-gap findings, **Why this
-matters** renders their stored evidence only: the angle, the cited pages with
-title, site and classification, the prompts, the counts and the run's window,
-and a link to the planned-page Action a page continues. Site Health findings on
+matters** renders their stored evidence: the angle, the cited pages with
+title, site and classification, the counts and the run's window, and a link
+to the planned-page Action a page continues. The prompts are stored as IDs, and
+their text is read from the current prompt library, so an edited prompt shows
+its current text and a deleted one is not listed. Site Health findings on
 the page render as on any Action. The handoff into the Agent
 ([handoffs](agents.md#workspace-and-handoffs)) is **Write this page** (the
 Opportunity and the `article` workflow) for a page to create and **Work on
