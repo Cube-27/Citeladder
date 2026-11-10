@@ -13,6 +13,7 @@
     "answer_perception": "included",
     "fact_verification": "included",
     "commerce_shelf": "included",
+    "content_angles": "included",
     "prompt_quality_judge": "not_charged",
     "internal_link_judge": "not_charged",
     "commerce_competitor_discovery": "not_charged",

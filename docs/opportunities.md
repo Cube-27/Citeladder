@@ -35,6 +35,22 @@ rule's evidence shape is a schema in `@citeladder/contracts/opportunity-evidence
 Visibility reads a cited page's earned Opportunity and Action through
 [earned page actions](../frontend/services/api/src/opportunities/earned-page-actions.ts).
 
+Content angles are an evidence source computed before the refresh. A finished
+audit (beside its source-page inspection) and a terminal crawl each enqueue a
+`content_angle_refresh` task ([content gaps](../frontend/services/api/src/content-gaps/refresh.ts)).
+It groups the titles of competitor and editorial pages cited for the default
+market's prompts over the 30 days before the newest dashboard-ready audit into
+angles per prompt topic, and matches each angle to at most one owned content
+page of the latest crawl (lexical prefilter, then the model picks one or none),
+with included platform calls under the daily spend breaker (B73). Counts,
+prompts, engines and owned coverage are computed in code. Insert-only
+`content_angle_runs` keep the source audit IDs, crawl, model and versions; a run
+is appended only when its clustering, owned-match or aggregate key differs from
+the latest succeeded run (a failed run never blocks a retry), reusing the earlier clustering or match while its key is unchanged. A
+`succeeded` run enqueues an `opportunity_refresh` with trigger `content_angles`;
+a `failed` run (model error, rejected output or a refused call) enqueues
+nothing. No refresh family reads the runs yet.
+
 A refresh first resolves its source identity: the audit (the default market's
 latest dashboard-ready brand run, the one Visibility and Overview call latest),
 the latest dashboard-ready Commerce run (read for Commerce findings only, so

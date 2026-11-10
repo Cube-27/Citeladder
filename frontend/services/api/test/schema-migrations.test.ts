@@ -82,6 +82,7 @@ describe('a fresh database', () => {
       '0013_audit_error_code_width',
       '0014_status_check_constraints',
       '0015_cascade_reference_indexes',
+      '0016_content_angles',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -102,6 +103,7 @@ describe('a fresh database', () => {
       { version: '0013_audit_error_code_width' },
       { version: '0014_status_check_constraints' },
       { version: '0015_cascade_reference_indexes' },
+      { version: '0016_content_angles' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -146,6 +148,7 @@ describe('an existing database', () => {
       '0013_audit_error_code_width',
       '0014_status_check_constraints',
       '0015_cascade_reference_indexes',
+      '0016_content_angles',
     ]);
     // A URL identity keeps no per-sighting discovery status.
     expect(await columns(client, 'site_urls')).not.toContain('discovery_status');
@@ -187,6 +190,10 @@ describe('an existing database', () => {
         'cost_microusd',
       ]),
     );
+    // A content-angle run keeps the three input keys it is recomputed on.
+    expect(await columns(client, 'content_angle_runs')).toEqual(
+      expect.arrayContaining(['cluster_key', 'match_key', 'aggregate_key', 'outcome']),
+    );
     // One internal-cost view across platform calls, Agent calls and answer engines.
     expect(await columns(client, 'internal_costs')).toEqual(
       expect.arrayContaining(['source', 'workspace_id', 'charge', 'cost_microusd', 'occurred_at']),
@@ -207,6 +214,7 @@ describe('an existing database', () => {
       { version: '0013_audit_error_code_width' },
       { version: '0014_status_check_constraints' },
       { version: '0015_cascade_reference_indexes' },
+      { version: '0016_content_angles' },
     ]);
   }, 120000);
 });

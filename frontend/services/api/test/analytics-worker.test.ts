@@ -652,6 +652,7 @@ describe('analytics kind registry', () => {
         'classify_referrals',
         'commerce_catalog_projection',
         'commerce_competitor_discovery',
+        'content_angle_refresh',
         'crawl_log_pull',
         'crawl_log_rollup_refresh',
         'crawl_log_upload_abandon_sweep',

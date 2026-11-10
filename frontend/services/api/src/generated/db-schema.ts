@@ -1309,6 +1309,87 @@ export interface ConsumableLedger {
   workspace_id: string;
 }
 
+export interface ContentAngleLineages {
+  created_at: Timestamp;
+  first_run_id: string;
+  id: string;
+  planned_page_key: string | null;
+  project_id: string;
+  topic_id: string | null;
+  workspace_id: string;
+}
+
+export interface ContentAngleMembers {
+  angle_id: string;
+  canonical_url: string;
+  citation_count: number;
+  citation_ids: string[];
+  classification: string;
+  created_at: Timestamp;
+  domain: string;
+  id: string;
+  matched_competitor: string | null;
+  project_id: string;
+  source_class: string | null;
+  title: string;
+  url_hash: string;
+  workspace_id: string;
+}
+
+export interface ContentAngleOwnedMatches {
+  angle_id: string;
+  created_at: Timestamp;
+  id: string;
+  method: string;
+  owned_citation_ids: string[];
+  owned_cited: boolean;
+  project_id: string;
+  site_url_id: string | null;
+  workspace_id: string;
+}
+
+export interface ContentAngleRuns {
+  aggregate_key: string;
+  audit_ids: string[];
+  cluster_key: string;
+  crawl_id: string | null;
+  created_at: Timestamp;
+  formula_version: string;
+  id: string;
+  limitations: Json;
+  market_country: string;
+  market_language: string;
+  match_key: string;
+  methodology_version: string;
+  model: string | null;
+  model_provider: string | null;
+  outcome: string;
+  outcome_reason: string | null;
+  project_id: string;
+  trigger_id: string;
+  trigger_kind: string;
+  usage: Json | null;
+  window_end: Timestamp;
+  window_start: Timestamp;
+  workspace_id: string;
+}
+
+export interface ContentAngles {
+  citation_count: number;
+  competitor_count: number;
+  created_at: Timestamp;
+  domain_count: number;
+  engines: string[];
+  id: string;
+  label: string;
+  lineage_id: string;
+  project_id: string;
+  prompt_ids: string[];
+  run_id: string;
+  topic_id: string | null;
+  workspace_id: string;
+}
+
 export interface ContentDifferentiationCandidates {
   audit_id: string;
   audit_task_id: string;
@@ -3410,6 +3491,11 @@ export interface DB {
   competitor_mentions: CompetitorMentions;
   competitors: Competitors;
   consumable_ledger: ConsumableLedger;
+  content_angle_lineages: ContentAngleLineages;
+  content_angle_members: ContentAngleMembers;
+  content_angle_owned_matches: ContentAngleOwnedMatches;
+  content_angle_runs: ContentAngleRuns;
+  content_angles: ContentAngles;
   content_differentiation_candidates: ContentDifferentiationCandidates;
   content_differentiation_reports: ContentDifferentiationReports;
   crawl_log_batches: CrawlLogBatches;
