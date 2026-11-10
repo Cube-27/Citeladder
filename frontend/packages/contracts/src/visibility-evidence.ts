@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { actionSurfaceSchema } from './action-surface.ts';
 import { citationSchema } from './audits.ts';
 import { pageEntitySchema } from './source-pages.ts';
 
@@ -158,6 +159,8 @@ export const visibilitySourcesSchema = responseObject({
       // a record of the page) and the Action to get listed on it, if any.
       standing: pageStandingSchema.nullable(),
       action_id: uuid().nullable(),
+      // That Action's surface, for its link; null exactly when `action_id` is.
+      action_surface: actionSurfaceSchema.nullable(),
       // Page facts, for the URL table. `page_format_method` says how the kind
       // was established, so a format read off the address alone is never
       // presented as one read off the page.
@@ -306,6 +309,8 @@ export const visibilitySourceUrlSchema = responseObject({
     standing: pageStandingSchema,
     // The open Action to get listed here, when competitors are on the page and you are not.
     action_id: uuid().nullable(),
+    // That Action's surface, for its link; null exactly when `action_id` is.
+    action_surface: actionSurfaceSchema.nullable(),
   }).nullable(),
 });
 

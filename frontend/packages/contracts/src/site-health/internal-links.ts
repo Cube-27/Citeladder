@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { actionSurfaceSchema } from '../action-surface.ts';
+
 const sourcePassageSchema = z.object({
   text: z.string(),
   /** UTF-16 offsets in the artifact's primary_content_text. */
@@ -51,6 +53,9 @@ export const internalLinkSchema = z.object({
   /** P(yes) that the source should link to the destination. */
   usefulness: z.number().min(0).max(1),
   action_id: z.uuid().nullable(),
+  // That Action's surface, for its link; null exactly when `action_id` is.
+  // Like the id, the read attaches it; a saved result holds neither.
+  action_surface: actionSurfaceSchema.nullable().default(null),
   action_status: z.string().nullable(),
 });
 

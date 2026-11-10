@@ -50,7 +50,8 @@ export type ContentGapAngle = {
   lineage_id: string;
   label: string;
   topic_id: string | null;
-  prompt_ids: string[];
+  /** Each prompt with its library text at this refresh; null when the library no longer has it. */
+  prompts: { id: string; text: string | null }[];
   engines: string[];
   citation_count: number;
   domain_count: number;
@@ -84,7 +85,7 @@ function sharedEvidence(run: ContentGapRun, angle: ContentGapAngle) {
     lineage_id: angle.lineage_id,
     angle_label: angle.label,
     topic_id: angle.topic_id,
-    prompt_ids: [...angle.prompt_ids],
+    prompts: angle.prompts.map((prompt) => ({ ...prompt })),
     engines: [...angle.engines],
     citation_count: angle.citation_count,
     domain_count: angle.domain_count,
@@ -104,7 +105,7 @@ function gapHit(run: ContentGapRun, angle: ContentGapAngle): DetectorHit | null 
     source_issue_ids: [],
     // The run and the angle are the persisted readings the finding rests on.
     source_metric_ids: [run.id, angle.id].sort(compareText),
-    value_factor: valueFactor(angle.prompt_ids.length),
+    value_factor: valueFactor(angle.prompts.length),
     gap_factor: gapFactor(angle),
   };
   const { match } = angle;

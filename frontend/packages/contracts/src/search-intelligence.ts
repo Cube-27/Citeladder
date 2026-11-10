@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { actionSurfaceSchema } from './action-surface.ts';
+
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 
 export const searchTargetSchema = responseObject({
@@ -199,6 +201,8 @@ export const searchRowSchema = responseObject({
   auxiliary: z.record(z.string(), z.unknown()),
   // The Action a missing-keyword row became, when it passed the keyword-gap gates.
   action_id: z.uuid().nullable().optional(),
+  // That Action's surface, for its link; set exactly when `action_id` is.
+  action_surface: actionSurfaceSchema.nullable().optional(),
 }).catchall(z.unknown());
 export const searchDatasetPageSchema = responseObject({
   dataset: searchDatasetSchema,

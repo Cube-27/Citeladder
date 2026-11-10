@@ -13,7 +13,8 @@ import {
 import { formatCount } from '@/lib/format';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
-import { actionStatusSchema, type ActionSurface } from '@citeladder/contracts/actions';
+import type { ActionSurface } from '@citeladder/contracts/action-surface';
+import { actionStatusSchema } from '@citeladder/contracts/actions';
 
 /**
  * The parts the Actions and Content optimization lists share: the status

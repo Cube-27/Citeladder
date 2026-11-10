@@ -32,6 +32,7 @@ const item = {
   target_theme: 'crm',
   target_label: 'best crm for small teams',
   action_id: '66666666-6666-4666-8666-666666666666',
+  action_surface: 'actions' as const,
   system_rank: 1,
   display_rank: 1,
   order_source: 'system' as const,

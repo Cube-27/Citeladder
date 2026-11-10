@@ -460,6 +460,7 @@ describe('Action routes', () => {
       rule_version: '',
       formula_version: '',
       action_id: null,
+      action_surface: null,
       superseded_by_id: null,
       created_text: '',
       updated_text: '',

@@ -367,7 +367,7 @@ async function targetActions(
   const rows = await db
     .selectFrom('opportunities as o')
     .innerJoin('actions as a', 'a.id', 'o.action_id')
-    .select(['a.id', 'a.effective_status as status', 'o.title'])
+    .select(['a.id', 'a.surface', 'a.effective_status as status', 'o.title'])
     .where('o.workspace_id', '=', scope.workspaceId)
     .where('o.project_id', '=', scope.projectId)
     .where('a.workspace_id', '=', scope.workspaceId)

@@ -11,6 +11,7 @@
  * stores it once inside its transaction (`fixPlannedPageKeys`), so a later
  * label never moves the Action.
  */
+import type { ContentGapSourceState } from '@citeladder/contracts/actions';
 import { sql } from 'kysely';
 
 import { plannedPageKey } from '../analysis/opportunities/actions.ts';
@@ -32,18 +33,16 @@ const p = policy.content_optimization;
 const g = policy.opportunity.opportunities.CONTENT_GAP;
 
 const CONTENT_GAPS_NOT_COMPUTED = 'Content gaps not computed yet.';
-/**
- * The fixed start of the out-of-date limitation. The Content optimization list
- * matches on it, so a snapshot written under an earlier `max_source_age_days`
- * still reads as out of date.
- */
-export const CONTENT_GAPS_OUT_OF_DATE_PREFIX = 'Content-gap evidence is out of date:';
-const CONTENT_GAPS_OUT_OF_DATE = `${CONTENT_GAPS_OUT_OF_DATE_PREFIX} its newest audit is more than ${p.max_source_age_days} days old.`;
+const CONTENT_GAPS_OUT_OF_DATE = `Content-gap evidence is out of date: its newest audit is more than ${p.max_source_age_days} days old.`;
 
-/** The run a refresh reads content gaps from, or none with the reason. */
+/**
+ * The run a refresh reads content gaps from, or none with the reason. `state`
+ * is what the snapshot records for the Content optimization list; the
+ * limitation is human-readable text only.
+ */
 export type ContentGapSource =
-  | { run: ContentGapRun; limitation: null }
-  | { run: null; limitation: string };
+  | { state: 'current'; run: ContentGapRun; limitation: null }
+  | { state: Exclude<ContentGapSourceState, 'current'>; run: null; limitation: string };
 
 /** The latest succeeded run, when its window ends within `max_source_age_days` of `at`. */
 export async function contentGapSource(
@@ -68,10 +67,11 @@ export async function contentGapSource(
     .orderBy('id', 'desc')
     .limit(1)
     .executeTakeFirst();
-  if (!run) return { run: null, limitation: CONTENT_GAPS_NOT_COMPUTED };
+  if (!run) return { state: 'not_computed', run: null, limitation: CONTENT_GAPS_NOT_COMPUTED };
   if (run.window_end.getTime() < at.getTime() - p.max_source_age_days * 86_400_000)
-    return { run: null, limitation: CONTENT_GAPS_OUT_OF_DATE };
+    return { state: 'out_of_date', run: null, limitation: CONTENT_GAPS_OUT_OF_DATE };
   return {
+    state: 'current',
     run: {
       id: run.id,
       window: { start: run.window_start.toISOString(), end: run.window_end.toISOString() },
@@ -145,6 +145,25 @@ async function angleMembers(db: Database, scope: Scope, angleIds: string[]) {
   return groupBy(rows, (row) => row.angle_id);
 }
 
+/**
+ * The text of each prompt as the project's library holds it now, by id. A
+ * prompt the library no longer has is absent, and its angle records it with
+ * no text.
+ */
+async function promptTexts(db: Database, scope: Scope, ids: string[]) {
+  if (!ids.length) return new Map<string, string>();
+  const rows = await db
+    .selectFrom('prompts')
+    .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
+    .select(['prompts.id', 'prompts.text'])
+    .where('prompts.workspace_id', '=', scope.workspaceId)
+    .where('prompt_sets.workspace_id', '=', scope.workspaceId)
+    .where('prompt_sets.project_id', '=', scope.projectId)
+    .where('prompts.id', 'in', ids)
+    .execute();
+  return new Map(rows.map((row) => [row.id, row.text]));
+}
+
 /** The Actions on these planned-page keys, by key. */
 async function plannedActions(db: Database, scope: Scope, keys: string[]) {
   if (!keys.length) return new Map<string, string>();
@@ -173,6 +192,7 @@ export async function contentGapHits(
     scope,
     rows.map((row) => row.id),
   );
+  const texts = await promptTexts(db, scope, [...new Set(rows.flatMap((row) => row.prompt_ids))]);
   // A page that later matches a lineage continues the planned page its new-page gap opened.
   const continued = await plannedActions(db, scope, [
     ...new Set(
@@ -194,7 +214,9 @@ export async function contentGapHits(
         lineage_id: row.lineage_id,
         label: row.label,
         topic_id: row.topic_id,
-        prompt_ids: [...row.prompt_ids].sort(compareText),
+        prompts: [...row.prompt_ids]
+          .sort(compareText)
+          .map((id) => ({ id, text: texts.get(id) ?? null })),
         engines: [...row.engines].sort(compareText),
         citation_count: row.citation_count,
         domain_count: row.domain_count,

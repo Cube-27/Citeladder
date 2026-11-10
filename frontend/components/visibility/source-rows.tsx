@@ -2,6 +2,8 @@
 
 import type { ComponentProps, ReactNode } from 'react';
 
+import { actionPath, type ActionRef } from '@citeladder/contracts/record-kinds';
+
 import { Badge } from '@/components/ui/badge';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Inline } from '@/components/ui/layout';
@@ -274,8 +276,8 @@ function standingTone(standing: SourceItem['standing']) {
  */
 function PageStandingCell({
   standing,
-  actionId,
-}: Readonly<{ standing: SourceItem['standing']; actionId: string | null }>) {
+  action,
+}: Readonly<{ standing: SourceItem['standing']; action: ActionRef | null }>) {
   const label = standingLabel(standing);
   const tone = standingTone(standing);
   return (
@@ -289,7 +291,7 @@ function PageStandingCell({
           {label}
         </ClampText>
       )}
-      {actionId ? <TextLink href={`/agent/actions/${actionId}`}>Action</TextLink> : null}
+      {action ? <TextLink href={actionPath(action)}>Action</TextLink> : null}
     </Inline>
   );
 }
@@ -424,7 +426,10 @@ export function UrlTable({
             <TypeChip token={row.page_format} dimension="url" method={row.page_format_method} />
           </TableCell>
           <TableCell desktopOnly>
-            <PageStandingCell standing={row.standing} actionId={row.action_id} />
+            <PageStandingCell
+              standing={row.standing}
+              action={row.action_id ? { id: row.action_id, surface: row.action_surface } : null}
+            />
           </TableCell>
           <NumericCell value={count(row.responses)} />
           <RetrievedCell value={row.retrieved === null ? null : count(row.retrieved)} />

@@ -1,6 +1,7 @@
 'use client';
 
 import type { Shelf } from '@citeladder/contracts/commerce-suite';
+import { actionPath } from '@citeladder/contracts/record-kinds';
 
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { ProjectLink } from '@/components/ui/project-link';
@@ -53,7 +54,7 @@ export function TargetShelfEvidence({ shelf }: Readonly<{ shelf: Shelf }>) {
                   className={ledgerItemClasses('flex-wrap')}
                 >
                   <ProjectLink
-                    href={`/agent/actions/${action.id}`}
+                    href={actionPath(action)}
                     className={textRole('emphasis', 'text-link min-w-0 flex-1')}
                   >
                     {action.title}

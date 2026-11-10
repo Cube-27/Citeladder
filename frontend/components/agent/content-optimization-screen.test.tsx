@@ -1,11 +1,10 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes } from 'react-router-dom';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
 
 import { mswServer } from '@/test/msw-server';
 import { makeProject } from '@/test/fixtures/project';
-import { makePrompt, makeSet, makeSetList } from '@/test/fixtures/prompts';
 import { renderWithProviders } from '@/test/render';
 
 import { ActionDetailScreen } from './action-detail-screen';
@@ -64,7 +63,8 @@ const plannedAction = {
   ...base,
   id: PLANNED_ACTION,
   target_kind: 'planned_page',
-  target_label: 'Setup guide',
+  // A topic worded apart from its angle's label, so each is found once.
+  target_label: 'CRM onboarding checklist',
   target_url: null,
   approach: 'create_new',
   content_gaps: [
@@ -89,11 +89,27 @@ function serveList(page: {
   mswServer.use(
     http.get(`/api/v1/projects/${PROJECT}/actions`, ({ request }) => {
       searches.push(new URL(request.url).searchParams.get('surface') ?? 'none');
-      return HttpResponse.json({ next_cursor: null, ...page });
+      return HttpResponse.json({
+        next_cursor: null,
+        surface_open_counts: { actions: 0, content: page.items.length },
+        ...page,
+      });
     }),
   );
   return searches;
 }
+
+/** A content page whose work is Site Health findings only: no content gap. */
+const healthOnly = {
+  ...base,
+  id: '12121212-1212-4212-8212-121212121212',
+  target_kind: 'page',
+  target_label: 'https://acme.test/guide',
+  target_url: 'https://acme.test/guide',
+  approach: 'fix_technical',
+  families: ['site_health'],
+  content_gaps: [],
+};
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => mswServer.resetHandlers());
@@ -120,16 +136,68 @@ describe('Content optimization', () => {
     expect(pageRow.getByText('2 competitors')).toBeVisible();
     expect(pageRow.getByText('Page · 1 finding in Content optimization')).toBeVisible();
 
-    const planned = screen.getByRole('link', { name: 'New page' });
+    // A page to create is named by its own topic and summarized as planned.
+    const planned = screen.getByRole('link', { name: 'CRM onboarding checklist' });
     expect(planned).toHaveAttribute('href', `/agent/content/${PLANNED_ACTION}?project=${PROJECT}`);
     const plannedRow = within(planned.closest('tr')!);
+    expect(plannedRow.getByText('Planned page · 1 finding in Content optimization')).toBeVisible();
     expect(plannedRow.getByText('Setup guide')).toBeVisible();
     expect(plannedRow.getByText('1 competitor')).toBeVisible();
+    // Current evidence: no notice above the rows.
+    expect(screen.queryByText('Content gaps not computed yet')).toBeNull();
     // No score or priority anywhere on the list (CO14).
     expect(screen.queryByText('40')).not.toBeInTheDocument();
     expect(screen.queryByText('High')).not.toBeInTheDocument();
     // The table and the status counts share one request, for the content surface only.
     expect(searches).toEqual(['content']);
+  });
+
+  it("marks a row's counts as its lead angle's when it has more than one, and a gapless page as not applicable", async () => {
+    serveList({
+      items: [
+        {
+          ...pageAction,
+          content_gaps: [
+            ...pageAction.content_gaps,
+            { ...pageAction.content_gaps[0]!, angle_label: 'Pricing tiers', prompt_count: 7 },
+          ],
+        },
+        healthOnly,
+      ],
+      status_counts: { open: 2 },
+      content_gap_source: 'current',
+    });
+    renderWithProviders(<ContentOptimizationScreen />, {
+      initialEntries: ['/agent/content'],
+      projectSelection: selection,
+    });
+
+    const page = await screen.findByRole('link', { name: 'https://acme.test/crm-pricing' });
+    const row = within(page.closest('tr')!);
+    expect(row.getByText('Lead angle · 1 more angle')).toBeVisible();
+    expect(row.getByText('3')).toBeVisible();
+    expect(row.queryByText('7')).toBeNull();
+    const gapless = within(
+      screen.getByRole('link', { name: 'https://acme.test/guide' }).closest('tr')!,
+    );
+    const marks = gapless.getAllByRole('button', { name: 'Not applicable' });
+    expect(marks).toHaveLength(3);
+    act(() => marks[0]!.focus());
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('No content gap on this page');
+  });
+
+  it.each([
+    ['not_computed', 'Content gaps not computed yet'],
+    ['out_of_date', 'Content gap evidence is out of date'],
+  ])('says above the rows when content gaps are %s', async (source, heading) => {
+    serveList({ items: [healthOnly], status_counts: { open: 1 }, content_gap_source: source });
+    renderWithProviders(<ContentOptimizationScreen />, {
+      initialEntries: ['/agent/content'],
+      projectSelection: selection,
+    });
+
+    expect(await screen.findByRole('link', { name: 'https://acme.test/guide' })).toBeVisible();
+    expect(screen.getByText(heading)).toBeVisible();
   });
 
   it.each([
@@ -143,7 +211,20 @@ describe('Content optimization', () => {
       'out_of_date',
       {},
       'Content gap evidence is out of date',
-      'The newest visibility run behind it is too old to use. Run a visibility audit to refresh it.',
+      'The newest visibility run behind it is too old to use, so no content gaps are listed. Run a visibility audit to refresh it.',
+    ],
+    // No status would show a gap, so the source state comes before the filter.
+    [
+      'out_of_date',
+      { dismissed: 1 },
+      'Content gap evidence is out of date',
+      'The newest visibility run behind it is too old to use, so no content gaps are listed. Run a visibility audit to refresh it.',
+    ],
+    [
+      'not_computed',
+      { dismissed: 1 },
+      'Content gaps not computed yet',
+      'They are found from the competitor and publisher pages AI answers cite, after a visibility run completes.',
     ],
     [
       'current',
@@ -193,6 +274,7 @@ function serveDetail(
     target_theme: null,
     target_label: action.target_label,
     action_id: action.id,
+    action_surface: action.surface,
     system_rank: 1,
     display_rank: 1,
     order_source: 'system',
@@ -250,19 +332,28 @@ function serveDetail(
     http.get(`/api/v1/projects/${PROJECT}/agent/chats`, () =>
       HttpResponse.json({ items: [], next_cursor: null }),
     ),
-    http.get('/api/v1/prompt-sets', () =>
-      HttpResponse.json(
-        makeSetList([makeSet([makePrompt({ id: PROMPT, text: 'Which CRM is cheapest?' })])]),
-      ),
-    ),
+    http.get('/api/v1/prompt-sets', () => {
+      libraryReads.push('prompt-sets');
+      return HttpResponse.json({ prompt_sets: [] });
+    }),
   );
 }
+
+/** Reads of the prompt library; the evidence never needs one. */
+const libraryReads: string[] = [];
+afterEach(() => {
+  libraryReads.length = 0;
+});
 
 const angleEvidence = {
   run_id: '77777777-7777-4777-8777-777777777777',
   lineage_id: '88888888-8888-4888-8888-888888888888',
   topic_id: null,
-  prompt_ids: [PROMPT],
+  // As recorded at the refresh: one prompt with its text, one the library no longer had.
+  prompts: [
+    { id: PROMPT, text: 'Which CRM is cheapest?' },
+    { id: '67676767-6767-4767-8767-676767676767', text: null },
+  ],
   engines: ['chatgpt'],
   citation_count: 9,
   domain_count: 4,
@@ -319,7 +410,7 @@ describe('A content-gap Action', () => {
       '9',
       '4',
       '2',
-      '1',
+      '2',
       'Oct 1, 2026 to Oct 31, 2026',
     ]);
     expect(counts.getAllByRole('term').map((label) => label.textContent)).toEqual([
@@ -337,9 +428,17 @@ describe('A content-gap Action', () => {
     expect(within(why).getByText('review.example · 4 citations')).toBeVisible();
     expect(within(why).getByText('Third-party')).toBeVisible();
     expect(within(why).getByText('The 2 most cited of 25 pages.')).toBeVisible();
-    expect(
-      await within(why).findByRole('link', { name: 'Which CRM is cheapest?' }),
-    ).toHaveAttribute('href', `/prompts/${PROMPT}?project=${PROJECT}`);
+    // Both stored prompts are listed, as many as the count, with no library read.
+    const prompts = within(within(why).getByRole('region', { name: 'Prompts' }));
+    expect(prompts.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Which CRM is cheapest?',
+      'A prompt no longer in your library',
+    ]);
+    expect(prompts.getByRole('link', { name: 'Which CRM is cheapest?' })).toHaveAttribute(
+      'href',
+      `/prompts/${PROMPT}?project=${PROJECT}`,
+    );
+    expect(libraryReads).toEqual([]);
 
     const handoff = new URL(
       screen.getByRole('link', { name: 'Work on this' }).getAttribute('href')!,
@@ -375,5 +474,26 @@ describe('A content-gap Action', () => {
       project: PROJECT,
     });
     expect(screen.queryByRole('link', { name: 'Work on this with the agent' })).toBeNull();
+  });
+
+  it('keeps the back link of the list it was opened from, loading and loaded', async () => {
+    // Moved to Actions by a later crawl, but opened from Content optimization.
+    serveDetail({ ...pageAction, surface: 'actions' }, 'content_gap_improve_page', {
+      ...angleEvidence,
+      angle_label: 'Pricing comparison',
+      site_url_id: '99999999-9999-4999-8999-999999999999',
+      url: 'https://acme.test/crm-pricing',
+      match_method: 'model_pick',
+    });
+    renderDetail(PAGE_ACTION);
+
+    const back = { name: 'Back to Content optimization' };
+    expect(screen.getByRole('link', back)).toHaveAttribute(
+      'href',
+      `/agent/content?project=${PROJECT}`,
+    );
+    expect(await screen.findByRole('region', { name: 'Why this matters' })).toBeVisible();
+    expect(screen.getByRole('link', back)).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Back to Actions' })).toBeNull();
   });
 });

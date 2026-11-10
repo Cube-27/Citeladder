@@ -30,6 +30,7 @@ const row = {
   target_theme: 'analytics',
   target_label: 'example.org/tools',
   action_id: ACTION,
+  action_surface: 'actions',
   system_rank: 1,
   display_rank: 1,
   order_source: 'system',
@@ -193,6 +194,7 @@ test('declaring an Action implemented shows comparable verification', async ({ p
         items: [action],
         next_cursor: null,
         status_counts: { open: 1 },
+        surface_open_counts: { actions: 1, content: 0 },
         content_gap_source: null,
       },
     }),
@@ -243,6 +245,7 @@ test('Action filters restore through URL history and reload', async ({ page }) =
         items: status === 'dismissed' ? [] : [action],
         next_cursor: null,
         status_counts: { open: 1, dismissed: 0 },
+        surface_open_counts: { actions: 1, content: 0 },
         content_gap_source: null,
       },
     });

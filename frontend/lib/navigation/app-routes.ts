@@ -9,6 +9,8 @@
  */
 import type { ComponentType } from 'react';
 
+import type { ActionSurface } from '@citeladder/contracts/action-surface';
+import { ACTION_SURFACE_SCREENS } from '@citeladder/contracts/record-kinds';
 import type { IconName } from '@/lib/icons';
 import type { NavigationMode } from '@/lib/navigation/mode-memory';
 
@@ -32,17 +34,14 @@ type NavPlacement =
   | `palette:${PaletteGroup}`
   | 'user-menu';
 
-/** A live count beside a nav label: one Action surface's open and in-progress work. */
-export type NavBadge = 'open-actions' | 'open-content';
-
 /** One way into a destination. A route may have several (a settings tab). */
 type NavEntry = {
   label: string;
   icon: IconName;
   /** Query the entry adds to the route's path, e.g. `tab=integrations`. */
   search?: string;
-  /** A live count shown beside the label. */
-  badge?: NavBadge;
+  /** A live count beside the label: this Action surface's open and in-progress work. */
+  badge?: ActionSurface;
   /** A managed plan has no provider settings (B32). */
   hiddenWhenManaged?: true;
   /** Listed after the placement's other entries rather than in manifest order. */
@@ -158,18 +157,19 @@ const screens = {
 } satisfies Record<string, Screen>;
 
 /**
- * One Action surface's list, its open count in each placement, and the Action page beneath.
+ * One Action surface's list at its screen, its open count in each placement,
+ * and the Action page beneath.
  */
-function actionSurface<const P extends string>(
-  path: P,
+function actionSurface<const S extends ActionSurface>(
+  surface: S,
   title: string,
   screen: Screen,
   icon: IconName,
-  badge: NavBadge,
   navLabel: string = title,
 ) {
+  const path = ACTION_SURFACE_SCREENS[surface];
   const placements: NavPlacement[] = ['dashboard:act', 'agent', 'palette:Agent'];
-  const nav = [{ label: navLabel, icon, badge, placements }];
+  const nav = [{ label: navLabel, icon, badge: surface, placements }];
   return [
     page({ path, title, mode: 'agent', screen, nav }),
     page({
@@ -269,14 +269,13 @@ export const APP_ROUTES = [
     collection: '/agent',
     screen: screens.chat,
   }),
-  ...actionSurface('/agent/actions', 'Actions', screens.actions, 'opportunities', 'open-actions'),
+  ...actionSurface('actions', 'Actions', screens.actions, 'opportunities'),
   // Below Actions (CO1), never the same Action; a short label keeps its row one line.
   ...actionSurface(
-    '/agent/content',
+    'content',
     'Content optimization',
     screens.contentOptimization,
     'content',
-    'open-content',
     'Content',
   ),
   page({

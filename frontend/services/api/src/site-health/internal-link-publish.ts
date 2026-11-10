@@ -109,6 +109,7 @@ function resolveCandidate(
     placement,
     usefulness: judgment.data.noul,
     action_id: null,
+    action_surface: null,
     action_status: null,
   };
 }

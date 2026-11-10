@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { actionSurfaceSchema, type ActionSurface } from './action-surface.ts';
 import {
   expectedCheckSchema,
   implementationStateSchema,
@@ -21,11 +22,6 @@ export const actionStatusSchema = z.enum([
   'done',
   'dismissed',
 ]);
-
-// The screen an Action belongs to, derived at every refresh: `content` for a
-// content page or a content-gap planned page, `actions` for everything else.
-export const actionSurfaceSchema = z.enum(['actions', 'content']);
-export type ActionSurface = z.infer<typeof actionSurfaceSchema>;
 
 // One unit of work per target, projected from persisted Action rows.
 export const actionItemSchema = responseObject({
@@ -150,10 +146,18 @@ export const actionContentGapSchema = responseObject({
 export type ActionContentGap = z.infer<typeof actionContentGapSchema>;
 
 // A list row: the Action plus its content-gap findings, most cited first
-// (empty for an Action without one).
+// (empty for an Action without one). Read on the `surface=content` list
+// only; null on every other list.
 export const actionListItemSchema = actionItemSchema.extend({
-  content_gaps: z.array(actionContentGapSchema),
+  content_gaps: z.array(actionContentGapSchema).nullable(),
 });
+
+// Open and in-progress Actions of each surface, project-wide, whatever the
+// list's filters: what the navigation badges show.
+export const surfaceOpenCountsSchema = responseObject({
+  actions: z.number().int(),
+  content: z.number().int(),
+}) satisfies z.ZodType<Record<ActionSurface, number>>;
 
 // The content-gap evidence the latest Opportunity refresh read: a current
 // content-angle run, one too old to use, or none computed yet. Each is a
@@ -165,6 +169,7 @@ export const actionsPageSchema = responseObject({
   items: z.array(actionListItemSchema),
   next_cursor: z.string().nullable(),
   status_counts: z.record(z.string(), z.number().int()),
+  surface_open_counts: surfaceOpenCountsSchema,
   // Set for `surface=content` only; null for the other lists.
   content_gap_source: contentGapSourceStateSchema.nullable(),
 });

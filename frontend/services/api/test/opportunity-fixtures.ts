@@ -327,6 +327,8 @@ export type AngleSeed = {
   /** The matched owned page; none when absent. */
   siteUrlId?: string;
   ownedCited?: boolean;
+  /** The angle's prompts; one id no prompt has when absent. */
+  promptIds?: string[];
   /** One cited page per entry; each domain cited `citations` times. */
   members: { url: string; title: string; competitor?: boolean; citations?: number }[];
 };
@@ -407,7 +409,7 @@ export async function angleRun(
         citation_count: counts.reduce((sum, count) => sum + count, 0),
         domain_count: new Set(angle.members.map((member) => new URL(member.url).hostname)).size,
         competitor_count: angle.members.filter((member) => member.competitor).length,
-        prompt_ids: [randomUUID()],
+        prompt_ids: angle.promptIds ?? [randomUUID()],
         engines: ['chatgpt'],
         created_at: now,
       })

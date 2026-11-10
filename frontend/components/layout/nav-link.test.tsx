@@ -52,7 +52,7 @@ describe('Navigation row', () => {
               label: 'Actions',
               href: '/agent/actions',
               icon: ListChecks,
-              badge: 'open-actions',
+              badge: 'actions',
               scope: 'project',
             }}
             active={false}
@@ -73,16 +73,18 @@ describe('Navigation row', () => {
     });
   });
 
-  it("counts each screen's own open work beside Actions and Content optimization", async () => {
+  it("counts each screen's own open work beside Actions and Content optimization from one read", async () => {
     mswServer.listen({ onUnhandledFrame: 'error' });
+    const surfaces: (string | null)[] = [];
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/actions`, ({ request }) => {
-        const content = new URL(request.url).searchParams.get('surface') === 'content';
+        surfaces.push(new URL(request.url).searchParams.get('surface'));
         return HttpResponse.json({
           items: [],
           next_cursor: null,
-          status_counts: content ? { open: 2, in_progress: 0 } : { open: 4, in_progress: 3 },
-          content_gap_source: content ? 'current' : null,
+          status_counts: { open: 6, in_progress: 3 },
+          surface_open_counts: { actions: 7, content: 2 },
+          content_gap_source: null,
         });
       }),
     );
@@ -94,7 +96,7 @@ describe('Navigation row', () => {
               label: 'Actions',
               href: '/agent/actions',
               icon: ListChecks,
-              badge: 'open-actions',
+              badge: 'actions',
               scope: 'project',
             }}
             active={false}
@@ -105,7 +107,7 @@ describe('Navigation row', () => {
               label: 'Content',
               href: '/agent/content',
               icon: FileText,
-              badge: 'open-content',
+              badge: 'content',
               scope: 'project',
             }}
             active={false}
@@ -123,6 +125,8 @@ describe('Navigation row', () => {
 
       expect(await screen.findByRole('link', { name: 'Actions, 7 open' })).toBeVisible();
       expect(await screen.findByRole('link', { name: 'Content, 2 open' })).toBeVisible();
+      // Both badges share the shell's one unfiltered read.
+      expect(surfaces).toEqual([null]);
     } finally {
       mswServer.resetHandlers();
       mswServer.close();

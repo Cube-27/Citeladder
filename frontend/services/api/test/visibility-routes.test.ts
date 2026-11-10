@@ -612,6 +612,7 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
       ],
       standing: 'gap',
       action_id: action.id,
+      action_surface: 'actions',
     });
 
     // The URL table carries the same standing and Action, and its gap filter

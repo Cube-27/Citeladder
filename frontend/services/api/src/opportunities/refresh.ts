@@ -142,6 +142,8 @@ async function writeRefresh(
       coverage: JSON.stringify({
         ...record(snapshot.coverage),
         source_identity: sources.identity,
+        // What the Content optimization list says about its source.
+        content_gap_state: sources.contentGaps.state,
       }),
       limitations: JSON.stringify([...snapshot.limitations, ...collected.limitations]),
       source_mix: JSON.stringify(snapshot.source_mix),

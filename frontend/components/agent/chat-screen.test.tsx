@@ -64,6 +64,7 @@ beforeEach(() =>
         items: [],
         next_cursor: null,
         status_counts: {},
+        surface_open_counts: { actions: 0, content: 0 },
         content_gap_source: null,
       }),
     ),
@@ -254,7 +255,10 @@ describe('ChatScreen', () => {
       ...base,
       messages: base.messages.map((message) =>
         message.role === 'user'
-          ? { ...message, mentions: [{ kind: 'action', id: ACTION, label: 'Pricing page' }] }
+          ? {
+              ...message,
+              mentions: [{ kind: 'action', id: ACTION, label: 'Pricing page', surface: 'content' }],
+            }
           : message,
       ),
     };
@@ -266,16 +270,18 @@ describe('ChatScreen', () => {
           items: [],
           next_cursor: null,
           status_counts: {},
+          surface_open_counts: { actions: 0, content: 0 },
           content_gap_source: null,
         }),
       ),
     );
     renderChat();
 
+    // A content Action opens under Content optimization, where it lives.
     const mentioned = within(await screen.findByRole('list', { name: 'Mentioned Actions' }));
     expect(mentioned.getByRole('link', { name: '@Pricing page' })).toHaveAttribute(
       'href',
-      expect.stringContaining(`/agent/actions/${ACTION}`),
+      expect.stringContaining(`/agent/content/${ACTION}`),
     );
   });
 
@@ -574,6 +580,7 @@ describe('ChatScreen', () => {
           ],
           next_cursor: null,
           status_counts: {},
+          surface_open_counts: { actions: 0, content: 0 },
           content_gap_source: null,
         }),
       ),
@@ -593,7 +600,7 @@ describe('ChatScreen', () => {
               id: `77777777-7777-4777-8777-${String(keys.length + 3).padStart(12, '0')}`,
               sequence: current.messages.length + 1,
               content: '@Pricing page Shorten it.',
-              mentions: [{ kind: 'action', id: ACTION, label: 'Pricing page' }],
+              mentions: [{ kind: 'action', id: ACTION, label: 'Pricing page', surface: 'actions' }],
             },
           ],
         };

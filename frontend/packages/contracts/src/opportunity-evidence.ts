@@ -139,7 +139,11 @@ const contentGapEvidenceSchema = z.object({
   angle_label: z.string(),
   /** Null for prompts without a topic. */
   topic_id: z.string().nullable(),
-  prompt_ids: z.array(z.string()),
+  /**
+   * The angle's prompts with their text as the prompt library held it at the
+   * refresh; `text` is null for a prompt the library no longer had then.
+   */
+  prompts: z.array(z.object({ id: z.string(), text: z.string().nullable() })),
   engines: z.array(z.string()),
   citation_count: z.number().int(),
   domain_count: z.number().int(),

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { actionSurfaceSchema } from './action-surface.ts';
 import { actionStatusSchema } from './actions.ts';
 
 const uuid = z.uuid();
@@ -117,6 +118,8 @@ export const shelfHolderSchema = z.strictObject({
 });
 const shelfActionSchema = z.strictObject({
   id: uuid,
+  /** The screen its link opens under. */
+  surface: actionSurfaceSchema,
   title: z.string(),
   status: actionStatusSchema,
 });

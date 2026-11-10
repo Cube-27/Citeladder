@@ -8,7 +8,7 @@ import { testDatabase } from './support.ts';
 import { agentTools, smallerLimit } from '../src/agent/tool-adapters.ts';
 import { attachAgentTarget } from '../src/agent/target-adapter.ts';
 import { attachOrCreateAction } from '../src/opportunities/actions.ts';
-import { readChat } from '../src/agent/reads.ts';
+import { listChats, readChat } from '../src/agent/reads.ts';
 import { loadSkillCatalog } from '../src/agent/skills.ts';
 import { agentSettings } from '../src/agent/config.ts';
 import { AgentQueue } from '../src/agent/queue.ts';
@@ -336,6 +336,36 @@ describe('Agent bindings to the evidence and Action owners', () => {
     expect(opened[0]).toContain('Refined accepted guide');
     expect(next.outputs.map((output) => output.kind)).toEqual(['plan']);
     expect(next.chat.id).not.toBe(first.chat_id);
+  });
+  it('links a chat Action and each mentioned Action under its current surface', async () => {
+    const scope = await fixtures.scope();
+    const attach = (topic: string) =>
+      db
+        .transaction()
+        .execute((trx) => attachOrCreateAction(trx, scope, 'planned_page', topic, scope.userId));
+    const content = await attach('Setup guide');
+    const other = await attach('Pricing calculator');
+    // The surface a refresh derives for a content-gap planned page.
+    await db
+      .updateTable('actions')
+      .set({ surface: 'content' })
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('id', '=', content.id)
+      .execute();
+    const run = await fixtures.store({ context: readAgentContext }).enqueue(scope, {
+      key: randomUUID(),
+      actionId: content.id,
+      mentionIds: [content.id, other.id],
+      message: 'Compare these',
+    });
+    const chat = await readChat(db, scope, run.chat_id);
+    expect(chat.chat.action_surface).toBe('content');
+    expect(chat.messages[0]?.mentions.map((mention) => [mention.id, mention.surface])).toEqual([
+      [content.id, 'content'],
+      [other.id, 'actions'],
+    ]);
+    const listed = await listChats(db, scope, { actionId: content.id });
+    expect(listed.items.map((item) => item.action_surface)).toEqual(['content']);
   });
   it('attaches concurrent same-target outputs once and preserves invalid-target work', async () => {
     const scope = await fixtures.scope();

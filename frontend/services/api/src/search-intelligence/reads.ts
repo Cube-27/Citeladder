@@ -3,6 +3,7 @@
  * evidence handed to content work. Reads render what acquisition published;
  * none of them resolves a website or calls DataForSEO.
  */
+import type { ActionSurface } from '@citeladder/contracts/action-surface';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import type { searchReadinessSchema } from '@citeladder/contracts/search-intelligence';
 import { sql, type NotNull, type RawBuilder, type SqlBool } from 'kysely';
@@ -25,6 +26,7 @@ import { competitorTarget, ownedTargets, searchMarket } from './targets.ts';
 import { datasetView, rowView, runView } from './views.ts';
 import { isNonEmpty, lastOf, onlyOf } from '../lists.ts';
 import { workspaceCredentialMode } from '../billing/credential-mode.ts';
+import { actionSurfaceOrNull, OPPORTUNITY_ACTION_SURFACE } from '../opportunities/projection.ts';
 import { platformConnection, workspaceConnections } from './credentials.ts';
 
 const si = policy.search_intelligence;
@@ -298,7 +300,14 @@ export async function datasetPage(
     dataset.dataset_kind === 'missing_keywords' ? await gapActions(db, scope) : new Map();
   return {
     dataset: { ...datasetView(dataset), filtered_saved_count: Number(counted.count) },
-    rows: page.map((row) => ({ ...rowView(row), action_id: actions.get(row.id) ?? null })),
+    rows: page.map((row) => {
+      const action = actions.get(row.id);
+      return {
+        ...rowView(row),
+        action_id: action?.id ?? null,
+        action_surface: action?.surface ?? null,
+      };
+    }),
     next_cursor:
       rows.length > request.limit && isNonEmpty(page)
         ? encodeKeysetCursor(cursorScope, filters, [lastOf(page).id])
@@ -310,16 +319,18 @@ export async function datasetPage(
 async function gapActions(db: Database, scope: Scope) {
   const live = await scope.workspace
     .selectFrom(db, 'opportunities')
-    .select(['action_id', 'source_metric_ids'])
+    .select(['action_id', 'source_metric_ids', OPPORTUNITY_ACTION_SURFACE])
     .where('project_id', '=', scope.projectId)
     .where('rule_id', '=', policy.opportunity.opportunities.SEARCH_GAP.RULE_ID)
     .where('superseded_at', 'is', null)
     .where('action_id', 'is not', null)
     .$narrowType<{ action_id: NotNull }>()
     .execute();
-  const byRow = new Map<string, string>();
-  for (const finding of live)
-    for (const id of strings(finding.source_metric_ids)) byRow.set(id, finding.action_id);
+  const byRow = new Map<string, { id: string; surface: ActionSurface | null }>();
+  for (const finding of live) {
+    const action = { id: finding.action_id, surface: actionSurfaceOrNull(finding.action_surface) };
+    for (const id of strings(finding.source_metric_ids)) byRow.set(id, action);
+  }
   return byRow;
 }
 

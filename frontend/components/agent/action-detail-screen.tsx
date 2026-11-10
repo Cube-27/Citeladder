@@ -48,7 +48,7 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { readableUrl } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
-import type { ActionSurface } from '@citeladder/contracts/actions';
+import type { ActionSurface } from '@citeladder/contracts/action-surface';
 import { ACTION_SURFACE_SCREENS } from '@citeladder/contracts/record-kinds';
 
 /** Each surface's list, which an Action's page returns to. */
@@ -59,8 +59,9 @@ const BACK = {
 
 /**
  * One Action: diagnosis, member evidence, its declaration and linked chats.
- * Both Actions and Content optimization open it; until the Action has loaded
- * and named its surface, the back link follows the path it was opened under.
+ * Both Actions and Content optimization open it, and the page belongs to the
+ * collection it was opened under: the back link follows that route while
+ * loading and once loaded alike, so it never changes under the reader.
  */
 export function ActionDetailScreen() {
   const { actionId = '' } = useParams();
@@ -70,7 +71,7 @@ export function ActionDetailScreen() {
     ...actionsQueries.detail(workspaceId, actionId),
     enabled: Boolean(actionId),
   });
-  const back = BACK[query.data?.surface ?? opened];
+  const back = BACK[opened];
 
   if (query.isError)
     return (
@@ -143,9 +144,7 @@ function ActionDetailView({
           onRetry={() => update.variables && update.mutate(update.variables)}
         />
       ) : null}
-      {gaps.length > 0 ? (
-        <ContentGapWhy members={gaps} workspaceId={workspaceId} projectId={action.project_id} />
-      ) : null}
+      {gaps.length > 0 ? <ContentGapWhy members={gaps} workspaceId={workspaceId} /> : null}
       <Diagnosis action={action} onOpenEvidence={setEvidenceId} />
       <Implementation action={action} workspaceId={workspaceId} />
       <LinkedChats action={action} workspaceId={workspaceId} />

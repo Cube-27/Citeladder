@@ -3,12 +3,19 @@
  * Visibility reads to offer "get listed" on a page. Opportunities owns how an
  * earned page is keyed, so no reader rebuilds the target key.
  */
+import type { ActionSurface } from '@citeladder/contracts/action-surface';
 import { sql } from 'kysely';
 import { earnedTargetKey } from '../analysis/opportunities/targets.ts';
 import type { Database } from '../db/database.ts';
+import { actionSurfaceOrNull } from './projection.ts';
 import type { Scope } from './sources.ts';
 
-type EarnedPageAction = { opportunity_id: string; action_id: string | null };
+type EarnedPageAction = {
+  opportunity_id: string;
+  action_id: string | null;
+  /** The Action's surface, for its link; null exactly when `action_id` is. */
+  action_surface: ActionSurface | null;
+};
 
 /**
  * The page's live earned Opportunity, highest priority first should there be
@@ -35,6 +42,7 @@ export async function earnedPageActions(
       'opportunity.target_key',
       'opportunity.id as opportunity_id',
       'action.id as action_id',
+      'action.surface as action_surface',
     ])
     .where('opportunity.workspace_id', '=', scope.workspaceId)
     .where('opportunity.project_id', '=', scope.projectId)
@@ -46,7 +54,12 @@ export async function earnedPageActions(
     .execute();
   for (const row of rows) {
     const hash = targets.get(row.target_key);
-    if (hash) found.set(hash, { opportunity_id: row.opportunity_id, action_id: row.action_id });
+    if (hash)
+      found.set(hash, {
+        opportunity_id: row.opportunity_id,
+        action_id: row.action_id,
+        action_surface: actionSurfaceOrNull(row.action_surface),
+      });
   }
   return found;
 }
