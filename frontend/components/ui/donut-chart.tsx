@@ -42,7 +42,7 @@ function donutArcs(slices: readonly DonutSlice[], total: number) {
 
 /**
  * DonutChart — share of a whole as a 152px donut: the total in the `figure`
- * role (Instrument Sans 500) at the centre and a legend of shares and counts beside it. Colour by
+ * role (Inter 500) at the centre and a legend of shares and counts beside it. Colour by
  * order (your brand first in `data-1`, then `data-2`, `data-3`), Other
  * hatched; at most four slices. Hovering a slice or its legend row thickens
  * its arc and puts its share in the centre. The figure is one image whose

@@ -10,9 +10,9 @@
  * - `docs`: the denser reference rhythm, `body` (16/26), 20px between
  *   blocks; h2 `title` 48px above, h3 `title-sm` 32px above, h4 `heading`.
  *
- * Both: only the h2 is Cal Sans (D28); h3 and h4 are Instrument Sans 500. Links
+ * Both: only the h2 is Cal Sans (D28); h3 and h4 are Inter 500. Links
  * `accent-ink` with a 1px underline; inline code mono on `surface-sunken`;
- * tables in a scroll frame with mono header rows; quotes in Instrument Sans at `title`
+ * tables in a scroll frame with mono header rows; quotes in Inter at `title`
  * with a mono attribution and no rule; `hr` a `line` hairline;
  * InlineCitation markers (`sup.cl-icite`). Fenced code is a CodeBlock, which
  * this component renders once per page.
@@ -55,7 +55,7 @@ const { variant = 'article', as: Tag = 'div', label } = Astro.props;
     text-wrap: balance;
     scroll-margin-top: calc(var(--nav-height) + 32px);
   }
-  /* D28: the h2 is the section's one Cal Sans heading; h3 and h4 are Instrument Sans 500. */
+  /* D28: the h2 is the section's one Cal Sans heading; h3 and h4 are Inter 500. */
   .cl-prose h2:not([class]) {
     margin-top: 56px;
     font-family: var(--font-display);

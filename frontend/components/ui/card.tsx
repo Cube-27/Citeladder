@@ -91,7 +91,7 @@ export function CardEyebrow({
   );
 }
 
-/** CardTitle — 16/24 Instrument Sans 500 in `ink`. */
+/** CardTitle — 16/24 Inter 500 in `ink`. */
 export function CardTitle({
   children,
   className,

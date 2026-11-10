@@ -1367,7 +1367,7 @@ a.cl-announce:hover {
   padding-top: 8px;
 }
 
-/* A sentence under the actions: Instrument Sans, never mono (D36), in the secondary ink
+/* A sentence under the actions: Inter, never mono (D36), in the secondary ink
    that holds 4.5:1 on the hero's tinted wash. */
 .cl-phero-meta,
 .cl-lhero-note {
@@ -1683,7 +1683,7 @@ a.cl-fcard:hover {
   margin-top: 4px;
 }
 
-/* D28: Cal Sans is the section's heading alone, so a card title is Instrument Sans 500. */
+/* D28: Cal Sans is the section's heading alone, so a card title is Inter 500. */
 .cl-fcard-title {
   margin: 0;
   color: var(--color-ink);
@@ -1840,7 +1840,7 @@ a.cl-fcard:hover {
   gap: 20px;
 }
 
-/* D28: a split's title is Instrument Sans 500 under a section header or beside other
+/* D28: a split's title is Inter 500 under a section header or beside other
    splits, so a section never sets Cal Sans twice. */
 .cl-split-title {
   margin: 0;
@@ -2360,7 +2360,7 @@ a.cl-fcard:hover {
   line-height: var(--text-data--line-height);
 }
 
-/* A step's note is a sentence, so it is Instrument Sans (D36). */
+/* A step's note is a sentence, so it is Inter (D36). */
 .cl-step-meta {
   margin: 4px 0 0;
   color: var(--color-ink-muted);
@@ -2572,7 +2572,7 @@ a.cl-fcard:hover {
   gap: 12px;
 }
 
-/* A sentence on the band's tinted stage: Instrument Sans, in the ink that holds 4.5:1 there. */
+/* A sentence on the band's tinted stage: Inter, in the ink that holds 4.5:1 there. */
 .cl-cta-note {
   margin: 0;
   color: var(--color-ink-secondary);
@@ -3104,7 +3104,7 @@ a.cl-logotile:hover {
   line-height: var(--text-label-lg--line-height);
 }
 
-/* A description is a sentence, so it is Instrument Sans (D36). */
+/* A description is a sentence, so it is Inter (D36). */
 .cl-logotile-caption {
   color: var(--color-ink-secondary);
   font-size: var(--text-body-sm);
