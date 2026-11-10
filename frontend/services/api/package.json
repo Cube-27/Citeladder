@@ -66,8 +66,13 @@
     "parse5": "^8.1.0",
     "pdfkit": "^0.20.2",
     "pg": "^8.23.1",
+    "rehype-parse": "^9.0.1",
+    "rehype-remark": "^10.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-stringify": "^11.0.0",
     "robots-parser": "^3.0.1",
     "tldts": "^7.4.19",
+    "unified": "^11.0.5",
     "zod": "^4.6.7"
   },
   "devDependencies": {

@@ -17,7 +17,7 @@ import {
   type Skill,
   type SkillCatalog,
 } from './contracts.ts';
-import { usesFormats } from './skills.ts';
+import { fetchesPage, usesFormats } from './skills.ts';
 import { scrubRecordRefs } from './sources.ts';
 import { toolDefinitions, type ToolRegistry } from './tools.ts';
 
@@ -159,7 +159,9 @@ export function methodology(
     ? `; this chat uses ${state.formatId} unless asked for another`
     : '';
   const rules = [
-    `Save the deliverable with save_document: a title of at most ${bounds.output_title_max_chars} characters and a Markdown body of at most ${bounds.output_body_max_chars} characters. Change an existing document with edit_document.`,
+    fetchesPage(skill)
+      ? `Change the page document with edit_document; it stays within ${bounds.output_body_max_chars} characters and is never saved whole.`
+      : `Save the deliverable with save_document: a title of at most ${bounds.output_title_max_chars} characters and a Markdown body of at most ${bounds.output_body_max_chars} characters. Change an existing document with edit_document.`,
     usesFormats(skill)
       ? `Name its format in format_id, from the content formats in your instructions${current}.`
       : '',
@@ -262,6 +264,11 @@ export function saveDocument(
     return {
       ok: false,
       text: 'Load the methodology with load_skill first, then save the document.',
+    };
+  if (fetchesPage(skill))
+    return {
+      ok: false,
+      text: 'A page document is the live page CiteLadder fetched; it is never written whole. Change it with edit_document.',
     };
   const parsed = schemas(catalog, bounds).save.safeParse(input);
   if (!parsed.success) return { ok: false, text: argumentProblem(parsed.error) };

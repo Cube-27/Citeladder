@@ -22,6 +22,7 @@ import { apiClient, type ApiRequestOptions } from './client';
 import { queryKeys } from './query-keys';
 import type { ProjectScope } from './query-keys/scope';
 import {
+  agentChatCreatedSchema,
   agentChatDetailSchema,
   agentChatSummarySchema,
   agentChatsPageSchema,
@@ -98,12 +99,29 @@ const agentApi = {
       ),
       'agent.listChats',
     ),
+  /**
+   * A new chat. A page chat answers with no turn: the server queues it once
+   * the page is read, and the chat screen opens its stream then.
+   */
   createChat: async (
     projectId: string,
     input: AgentChatCreateRequest,
     idempotencyKey: string,
     options?: ApiRequestOptions,
-  ) => admitTurn(`/projects/${projectId}/agent/chats`, input, idempotencyKey, options),
+  ) => {
+    const accepted = strictValidate(
+      agentChatCreatedSchema,
+      await apiClient.post(
+        `/projects/${projectId}/agent/chats`,
+        input,
+        withKey(idempotencyKey, options),
+      ),
+      'agent.createChat',
+    );
+    if (accepted.run)
+      startLiveTurn(accepted.chat_id, accepted.run.id, options?.workspaceId ?? null);
+    return accepted;
+  },
   getChat: async (chatId: string, options?: ApiRequestOptions) =>
     strictValidate(
       agentChatDetailSchema,

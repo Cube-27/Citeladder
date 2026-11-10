@@ -85,6 +85,7 @@ describe('a fresh database', () => {
       '0016_content_angles',
       '0017_action_surface',
       '0018_drop_action_surface',
+      '0019_page_documents',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -108,6 +109,7 @@ describe('a fresh database', () => {
       { version: '0016_content_angles' },
       { version: '0017_action_surface' },
       { version: '0018_drop_action_surface' },
+      { version: '0019_page_documents' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -155,6 +157,7 @@ describe('an existing database', () => {
       '0016_content_angles',
       '0017_action_surface',
       '0018_drop_action_surface',
+      '0019_page_documents',
     ]);
     // A URL identity keeps no per-sighting discovery status.
     expect(await columns(client, 'site_urls')).not.toContain('discovery_status');
@@ -200,6 +203,9 @@ describe('an existing database', () => {
     expect(await columns(client, 'content_angle_runs')).toEqual(
       expect.arrayContaining(['cluster_key', 'match_key', 'aggregate_key', 'outcome']),
     );
+    // A page document keeps the snapshot it started from and its SEO fields.
+    expect(await columns(client, 'agent_outputs')).toContain('snapshot_id');
+    expect(await columns(client, 'agent_output_revisions')).toContain('fields');
     // One Actions list: an Action names no screen of its own.
     expect(await columns(client, 'actions')).not.toContain('surface');
     // One internal-cost view across platform calls, Agent calls and answer engines.
@@ -225,6 +231,7 @@ describe('an existing database', () => {
       { version: '0016_content_angles' },
       { version: '0017_action_surface' },
       { version: '0018_drop_action_surface' },
+      { version: '0019_page_documents' },
     ]);
   }, 120000);
 });

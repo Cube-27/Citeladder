@@ -16,9 +16,21 @@ import {
   type SkillCatalog,
   type Json,
 } from './contracts.ts';
-import { buildManifest, type ContextReader } from './context.ts';
+import {
+  enqueuePageFetch,
+  pageFetchActive,
+  pageFetchByRequest,
+  pageFetchPayloadSchema,
+  pageTurnKey,
+  type PageFetchPayload,
+} from '../page-documents/keys.ts';
+import { resolvePageTarget } from '../page-documents/target.ts';
+import { buildManifest, type ContextReader, type Manifest } from './context.ts';
 import { active, endInterrupted, terminal } from './queue.ts';
 import { appendMessage, appendRecoveryReply, getChat } from './messages.ts';
+import { requestedPageUrl } from './page-url.ts';
+import { fetchesPage } from './skills.ts';
+import type { WorkflowCatalog } from './workflows.ts';
 
 export type FundingIdentity = Pick<Run, 'funding_source' | 'requested_model'>;
 /** Admission owns capability, funding selection and abuse capacity, in this transaction.
@@ -37,7 +49,7 @@ export type TurnInput = {
   mentionIds?: string[];
 };
 
-export async function requireIdle(db: Database, chat: Chat) {
+async function requireNoActiveRun(db: Database, chat: Chat) {
   const run = await db
     .selectFrom('agent_runs')
     .select('id')
@@ -46,6 +58,12 @@ export async function requireIdle(db: Database, chat: Chat) {
     .where('status', 'in', active)
     .executeTakeFirst();
   if (run) throw new AgentError('agent_run_active');
+}
+/** No turn is queued or running, and no page is being read for the chat's first turn. */
+export async function requireIdle(db: Database, chat: Chat) {
+  await requireNoActiveRun(db, chat);
+  if (await pageFetchActive(db, chat.workspace_id, chat.id))
+    throw new AgentError('agent_run_active');
 }
 
 function requestIdentity(scope: Scope, input: TurnInput) {
@@ -83,6 +101,15 @@ async function replayedRun(db: Database, scope: Scope, key: string, hash: string
   if (replay.request_fingerprint !== hash) throw new AgentError('agent_idempotency_conflict');
   return replay;
 }
+type Workflow = NonNullable<ReturnType<WorkflowCatalog['byId']['get']>>;
+/** The Actions a message @-mentioned, as resolved when it was sent. */
+function mentionsOf(manifest: Manifest) {
+  return manifest.mentions.map((action) => ({
+    kind: 'action',
+    id: action.id,
+    label: action.target_label,
+  }));
+}
 function userSkillSource(skillId: string | null | undefined) {
   if (skillId) return 'user';
   return skillId === null ? 'automatic' : null;
@@ -112,12 +139,20 @@ export class AgentStore {
     this.db = db;
     this.dependencies = dependencies;
   }
-  enqueue(scope: Scope, raw: TurnInput): Promise<Run> {
-    const chosen = raw.workflowId
-      ? this.dependencies.catalog.workflows?.byId.get(raw.workflowId)
-      : undefined;
-    if (raw.workflowId && !chosen)
-      return Promise.reject(new AgentError('agent_workflow_unavailable'));
+  /** The workflow a request names; a missing one is refused. */
+  private workflowFor(workflowId: string | undefined) {
+    if (!workflowId) return undefined;
+    const chosen = this.dependencies.catalog.workflows?.byId.get(workflowId);
+    if (!chosen) throw new AgentError('agent_workflow_unavailable');
+    return chosen;
+  }
+  /** Whether the workflow's skill writes a fetched page, so its chat starts with a page fetch. */
+  private startsWithFetch(workflow: Workflow | undefined) {
+    const skill = workflow ? this.dependencies.catalog.skills.get(workflow.skill_id) : undefined;
+    return skill !== undefined && fetchesPage(skill);
+  }
+  /** The request as admitted: a bounded message and key, its workflow's skill, its fingerprint. */
+  private admitted(scope: Scope, raw: TurnInput, chosen: Workflow | undefined) {
     const input = {
       ...raw,
       message: messageSchema.parse(raw.message),
@@ -126,12 +161,40 @@ export class AgentStore {
     };
     z.string().trim().min(1).max(agentPolicy.idempotency_key_max_chars).parse(input.key);
     // Canonical JSON binds nested refs as well as the visible message.
-    const hash = fingerprint(requestIdentity(scope, input));
+    return { input, hash: fingerprint(requestIdentity(scope, input)) };
+  }
+  /** One workspace's admissions run one at a time: identical races share the winner. */
+  private async lockWorkspace(trx: Database, scope: Scope) {
+    await authorize(trx, scope);
+    // Serialize workspace keys before chat locks.
     const lockKey = 'agent-enqueue:' + scope.workspaceId;
+    await sql`select pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`.execute(trx);
+  }
+  /**
+   * A new chat. A page workflow (`optimize_page`) commits the chat and its
+   * page fetch, and no turn: the fetch queues the turn once the page is read,
+   * so a failed fetch is never charged (B73). Any other request commits its
+   * first turn.
+   */
+  async create(scope: Scope, raw: TurnInput): Promise<{ chatId: string; run: Run | null }> {
+    const chosen = this.workflowFor(raw.workflowId);
+    if (this.startsWithFetch(chosen) && chosen) return this.startPageChat(scope, raw, chosen);
+    const run = await this.enqueue(scope, raw);
+    return { chatId: run.chat_id, run };
+  }
+  enqueue(scope: Scope, raw: TurnInput): Promise<Run> {
+    let chosen: Workflow | undefined;
+    try {
+      chosen = this.workflowFor(raw.workflowId);
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    // A page workflow's chat starts with its page fetch, never with a turn.
+    if (this.startsWithFetch(chosen))
+      return Promise.reject(new AgentError('agent_workflow_unavailable'));
+    const { input, hash } = this.admitted(scope, raw, chosen);
     return this.db.transaction().execute(async (trx) => {
-      await authorize(trx, scope);
-      // Serialize workspace keys before chat locks: identical races share the winner.
-      await sql`select pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`.execute(trx);
+      await this.lockWorkspace(trx, scope);
       const replay = await replayedRun(trx, scope, input.key, hash);
       if (replay) return replay;
       const chat = input.chatId
@@ -170,72 +233,264 @@ export class AgentStore {
         userId: scope.userId,
         skillId: input.skillId,
         skillSource: userSkillSource(input.skillId),
-        mentions: manifest.mentions.map((action) => ({
-          kind: 'action',
-          id: action.id,
-          label: action.target_label,
-        })),
+        mentions: mentionsOf(manifest),
       });
-      const now = new Date();
-      const run = await trx
-        .insertInto('agent_runs')
-        .values({
-          id: randomUUID(),
-          workspace_id: scope.workspaceId,
-          project_id: scope.projectId,
-          chat_id: chat.id,
-          user_message_id: message.id,
-          user_id: scope.userId,
-          idempotency_key: input.key,
-          request_fingerprint: hash,
-          requested_skill_id: skill.id,
-          requested_skill_source: skill.source,
-          context_manifest: {
-            ...manifest,
-            ...(workflow
-              ? { workflow: { id: workflow.id, format_id: workflow.format_id ?? null } }
-              : {}),
-          },
-          budget: admittedBudget(this.dependencies.timeoutSeconds),
-          runtime_version: agentPolicy.runtime_version,
-          protocol_version: agentPolicy.protocol_version,
-          registry_version: this.dependencies.registryVersion,
-          skill_catalog_version: this.dependencies.catalog.version,
-          ...funding,
-          max_attempts: agentPolicy.run_max_attempts,
-          status: 'queued',
-          priority: 0,
-          randomized_position: 0,
-          attempt_count: 0,
-          available_at: sql<Date>`clock_timestamp()`,
-          lease_owner: null,
-          lease_expires_at: null,
-          heartbeat_at: null,
-          error_code: '',
-          error_detail: '',
-          created_at: now,
-          updated_at: now,
-          completed_at: null,
-          skill_id: null,
-          skill_source: null,
-          skill_version: null,
-          steps_used: 0,
-          cancelled_at: null,
-        })
-        .returningAll()
-        .executeTakeFirstOrThrow();
-      await trx
-        .updateTable('agent_chats')
-        .set({
-          turn_count: chat.turn_count + 1,
-          pinned_skill_id: input.skillId === undefined ? chat.pinned_skill_id : input.skillId,
-          last_activity_at: now,
-          updated_at: now,
-        })
-        .where('id', '=', chat.id)
+      return this.queueTurn(trx, scope, {
+        chat,
+        messageId: message.id,
+        key: input.key,
+        hash,
+        funding,
+        skill,
+        workflow,
+        manifest,
+        pinnedSkillId: input.skillId === undefined ? chat.pinned_skill_id : input.skillId,
+      });
+    });
+  }
+  /** Inserts one queued turn and counts it against the chat. */
+  private async queueTurn(
+    trx: Database,
+    scope: Scope,
+    turn: {
+      chat: Chat;
+      messageId: string;
+      key: string;
+      hash: string;
+      funding: FundingIdentity;
+      skill: Awaited<ReturnType<AgentStore['turnSkill']>>;
+      workflow: Workflow | undefined;
+      manifest: Manifest;
+      pinnedSkillId: string | null;
+    },
+  ) {
+    const { chat, skill, workflow, manifest } = turn;
+    const now = new Date();
+    const run = await trx
+      .insertInto('agent_runs')
+      .values({
+        id: randomUUID(),
+        workspace_id: scope.workspaceId,
+        project_id: scope.projectId,
+        chat_id: chat.id,
+        user_message_id: turn.messageId,
+        user_id: scope.userId,
+        idempotency_key: turn.key,
+        request_fingerprint: turn.hash,
+        requested_skill_id: skill.id,
+        requested_skill_source: skill.source,
+        context_manifest: {
+          ...manifest,
+          ...(workflow
+            ? { workflow: { id: workflow.id, format_id: workflow.format_id ?? null } }
+            : {}),
+        },
+        budget: admittedBudget(this.dependencies.timeoutSeconds),
+        runtime_version: agentPolicy.runtime_version,
+        protocol_version: agentPolicy.protocol_version,
+        registry_version: this.dependencies.registryVersion,
+        skill_catalog_version: this.dependencies.catalog.version,
+        funding_source: turn.funding.funding_source,
+        requested_model: turn.funding.requested_model,
+        max_attempts: agentPolicy.run_max_attempts,
+        status: 'queued',
+        priority: 0,
+        randomized_position: 0,
+        attempt_count: 0,
+        available_at: sql<Date>`clock_timestamp()`,
+        lease_owner: null,
+        lease_expires_at: null,
+        heartbeat_at: null,
+        error_code: '',
+        error_detail: '',
+        created_at: now,
+        updated_at: now,
+        completed_at: null,
+        skill_id: null,
+        skill_source: null,
+        skill_version: null,
+        steps_used: 0,
+        cancelled_at: null,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    await trx
+      .updateTable('agent_chats')
+      .set({
+        turn_count: chat.turn_count + 1,
+        pinned_skill_id: turn.pinnedSkillId,
+        last_activity_at: now,
+        updated_at: now,
+      })
+      .where('id', '=', chat.id)
+      .where('workspace_id', '=', scope.workspaceId)
+      .execute();
+    return run;
+  }
+  /** The page a page chat fetches: the request's page, else its Action's, else one its message names. */
+  private async requestedPage(trx: Database, scope: Scope, input: TurnInput) {
+    const named = input.refs?.target_url;
+    if (typeof named === 'string' && named.trim()) return named;
+    if (input.actionId) {
+      const action = await trx
+        .selectFrom('actions')
+        .select('target_url')
         .where('workspace_id', '=', scope.workspaceId)
-        .execute();
-      return run;
+        .where('project_id', '=', scope.projectId)
+        .where('id', '=', input.actionId)
+        .executeTakeFirst();
+      if (action?.target_url) return action.target_url;
+    }
+    const project = await trx
+      .selectFrom('projects')
+      .select('website_url')
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('id', '=', scope.projectId)
+      .executeTakeFirstOrThrow();
+    return requestedPageUrl(input.message, project.website_url);
+  }
+  /** A retried page-chat request: the chat it created, and its turn once the fetch queued one. */
+  private async replayedPageChat(trx: Database, scope: Scope, key: string, hash: string) {
+    const task = await pageFetchByRequest(trx, scope.workspaceId, key);
+    if (!task) return undefined;
+    if (task.project_id !== scope.projectId) throw notFound('Run');
+    const payload = pageFetchPayloadSchema.parse(task.payload);
+    if (payload.user_id !== scope.userId || payload.request_fingerprint !== hash)
+      throw new AgentError('agent_idempotency_conflict');
+    const run = await trx
+      .selectFrom('agent_runs')
+      .selectAll()
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('idempotency_key', '=', pageTurnKey(task.id))
+      .executeTakeFirst();
+    return { chatId: payload.chat_id, run: run ?? null };
+  }
+  /**
+   * A page chat: the page must be one of the latest crawl's content pages or
+   * the Action's own target. Admission (plan, funding, abuse budget) runs now,
+   * so a refused workspace fetches nothing; the chosen funding is frozen into
+   * the fetch for the turn it queues.
+   */
+  private startPageChat(scope: Scope, raw: TurnInput, chosen: Workflow) {
+    const { input, hash } = this.admitted(scope, raw, chosen);
+    return this.db.transaction().execute(async (trx) => {
+      await this.lockWorkspace(trx, scope);
+      const replay = await replayedRun(trx, scope, input.key, hash);
+      if (replay) return { chatId: replay.chat_id, run: replay };
+      const replayed = await this.replayedPageChat(trx, scope, input.key, hash);
+      if (replayed) return replayed;
+      const page = await resolvePageTarget(trx, scope, {
+        url: await this.requestedPage(trx, scope, input),
+        actionId: input.actionId ?? null,
+      });
+      const funding = await this.dependencies.admission(trx, scope);
+      const refs = { ...input.refs, target_url: page.url };
+      // Every reference resolves now, so a page is never fetched for a chat whose context cannot load.
+      const manifest = await buildManifest(
+        trx,
+        scope,
+        {
+          refs,
+          request: input.message,
+          actionId: input.actionId ?? null,
+          mentionIds: input.mentionIds ?? [],
+        },
+        this.dependencies.context,
+      );
+      const chat = await this.createChat(trx, scope, { ...input, refs });
+      const message = await appendMessage(trx, chat, {
+        role: 'user',
+        content: input.message,
+        userId: scope.userId,
+        skillId: chosen.skill_id,
+        skillSource: userSkillSource(chosen.skill_id),
+        mentions: mentionsOf(manifest),
+      });
+      await enqueuePageFetch(trx, scope, {
+        chat_id: chat.id,
+        url: page.url,
+        site_url_id: page.siteUrlId,
+        action_id: chat.action_id,
+        user_message_id: message.id,
+        user_id: scope.userId,
+        request_key: input.key,
+        request_fingerprint: hash,
+        funding_source: z.enum(['platform', 'development']).parse(funding.funding_source),
+        requested_model: funding.requested_model,
+        workflow_id: chosen.id,
+        mention_ids: input.mentionIds ?? [],
+      });
+      return { chatId: chat.id, run: null };
+    });
+  }
+  /**
+   * The first turn of a page chat, queued by its page fetch once the page is
+   * read, in the fetch's terminal transaction. It answers the chat's first
+   * message with the funding admission chose, and its context names the
+   * snapshot, so every later turn reads the fetched page's checks too.
+   */
+  async queueFetchedTurn(
+    trx: Database,
+    fetch: { taskId: string; workspaceId: string; projectId: string; payload: PageFetchPayload },
+    snapshotId: string,
+  ) {
+    const { payload } = fetch;
+    const scope = {
+      workspaceId: fetch.workspaceId,
+      projectId: fetch.projectId,
+      userId: payload.user_id,
+    };
+    await this.lockWorkspace(trx, scope);
+    const workflow = this.workflowFor(payload.workflow_id);
+    const chat = await getChat(trx, scope, payload.chat_id, true);
+    if (chat.archived_at) throw notFound('Chat');
+    // The fetch itself is still running, so only a turn makes the chat busy here.
+    await requireNoActiveRun(trx, chat);
+    const message = await trx
+      .selectFrom('agent_messages')
+      .select(['id', 'content'])
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('chat_id', '=', chat.id)
+      .where('id', '=', payload.user_message_id)
+      .executeTakeFirstOrThrow();
+    const refs = {
+      ...z
+        .record(z.string(), z.json())
+        .parse(jsonObject(chat.context_refs, 'agent_chats.context_refs')),
+      page_snapshot_reference: { snapshot_id: snapshotId },
+    };
+    await trx
+      .updateTable('agent_chats')
+      .set({ context_refs: refs })
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('id', '=', chat.id)
+      .execute();
+    const manifest = await buildManifest(
+      trx,
+      scope,
+      {
+        refs,
+        request: message.content,
+        actionId: chat.action_id,
+        mentionIds: payload.mention_ids,
+      },
+      this.dependencies.context,
+    );
+    return this.queueTurn(trx, scope, {
+      chat,
+      messageId: message.id,
+      key: pageTurnKey(fetch.taskId),
+      hash: payload.request_fingerprint,
+      funding: { funding_source: payload.funding_source, requested_model: payload.requested_model },
+      skill: await this.turnSkill(
+        trx,
+        chat,
+        workflow?.skill_id ?? null,
+        manifest.action?.skill_id ?? null,
+      ),
+      workflow,
+      manifest,
+      pinnedSkillId: chat.pinned_skill_id,
     });
   }
   archive(scope: Scope, chatId: string) {

@@ -663,6 +663,7 @@ describe('analytics kind registry', () => {
         'internal_link_publish',
         'opportunity_refresh',
         'opportunity_verification',
+        'page_fetch',
         'performance_range_projection',
         'referral_retention_sweep',
         'search_intelligence_acquisition',

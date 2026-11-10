@@ -119,7 +119,7 @@ describe('Action handoff message', () => {
       ),
     ).toEqual({
       context: 'page_url',
-      workflow_id: 'refresh_page',
+      workflow_id: 'optimize_page',
       message:
         'Improve https://acme.test/crm-pricing so AI answers cite it for Pricing comparison.',
     });

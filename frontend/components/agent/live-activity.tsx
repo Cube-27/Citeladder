@@ -10,7 +10,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
 import { treeBranchClasses } from '@/components/ui/workspace';
 import { runErrorCopy, runStepLabel, toolCallLabel } from '@/lib/agent/vocabulary';
-import { runOutcome } from '@/lib/agent/run-state';
+import { isPageReading, runOutcome } from '@/lib/agent/run-state';
 import { useLiveTurn, type LiveTurn } from '@/lib/agent/live-turns';
 import type { AgentChatDetail, AgentRun } from '@/lib/api/agent';
 
@@ -35,6 +35,7 @@ function RunState({
 }: Readonly<{ detail: AgentChatDetail; live: LiveTurn | undefined }>) {
   const outcome = runOutcome(detail.latest_run);
   const answered = detail.messages.at(-1)?.role === 'agent';
+  if (isPageReading(detail.page_fetch)) return <ReadingPage />;
   switch (outcome.kind) {
     case 'running':
       return <RunningState run={outcome.run} queued={outcome.queued} live={live} />;
@@ -46,6 +47,15 @@ function RunState({
     default:
       return null;
   }
+}
+/** A page chat's fetch: the first turn starts once the page is read. */
+function ReadingPage() {
+  return (
+    <Inline as="span" gap="compact" className={textRole('caption')}>
+      <Spinner className="text-ink-muted" />
+      <output aria-live="polite">Reading your page…</output>
+    </Inline>
+  );
 }
 function RunningState({
   run,

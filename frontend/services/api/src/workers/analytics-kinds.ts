@@ -9,6 +9,7 @@ import { contentGapKinds } from '../content-gaps/analytics-kinds.ts';
 import { crawlLogKinds } from '../crawl-logs/analytics-kinds.ts';
 import { demandKinds } from '../demand/analytics-kinds.ts';
 import { opportunityKinds } from '../opportunities/analytics-kinds.ts';
+import { pageDocumentKinds } from '../page-documents/analytics-kinds.ts';
 import { perceptionKinds } from '../perception/analytics-kinds.ts';
 import type { AnalyticsKind, AnalyticsKinds } from '../queue/executor.ts';
 import { referralKinds } from '../referrals/analytics-kinds.ts';
@@ -25,6 +26,7 @@ export const ANALYTICS_KINDS: AnalyticsKinds = Object.freeze({
   ...searchIntelligenceKinds,
   ...sourcePageKinds,
   ...contentGapKinds,
+  ...pageDocumentKinds,
   ...internalLinkKinds,
   ...referralKinds,
   ...trafficKinds,

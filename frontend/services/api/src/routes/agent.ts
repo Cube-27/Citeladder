@@ -8,6 +8,7 @@ import {
   agentRequestSchemas,
   agentChatDetailSchema,
   agentChatsPageSchema,
+  agentChatCreatedSchema,
   agentTurnAcceptedSchema,
   agentRunSchema,
   agentRevisionsPageSchema,
@@ -82,6 +83,10 @@ async function mapped<T>(action: () => Promise<T>) {
       throw new ApiError(403, 'Agent run permission is unavailable');
     if (error.code === 'agent_context_unavailable') throw notFound('Agent context');
     if (error.code === 'agent_workflow_unavailable') throw notFound('Agent workflow');
+    if (error.code === 'agent_page_unavailable')
+      throw new ApiError(422, 'Choose one of the content pages in your latest crawl', {
+        code: asApiErrorCode('validation_error'),
+      });
     throw new ApiError(409, 'Agent request conflicts with the current state', {
       code: asApiErrorCode(conflictCode(error.code)),
     });
@@ -283,13 +288,14 @@ export const agentRoutes = [
     params: { path: projectPath, query: {} },
     headers,
     body: body.create,
-    response: agentTurnAcceptedSchema,
+    response: agentChatCreatedSchema,
     status: 202,
     async handle({ db, c }, { path }) {
       const input = await readBody(c, body.create),
         { store } = await agentBindings(db);
-      const run = await mapped(() =>
-        store.enqueue(scope(c, path.project_id), {
+      // A page workflow answers with its chat and no turn until the page is read.
+      const created = await mapped(() =>
+        store.create(scope(c, path.project_id), {
           message: input.message,
           skillId: input.skill_id,
           workflowId: input.workflow_id ?? undefined,
@@ -305,7 +311,7 @@ export const agentRoutes = [
           key: key(c),
         }),
       );
-      return { chat_id: run.chat_id, run: runView(run) };
+      return { chat_id: created.chatId, run: created.run ? runView(created.run) : null };
     },
   }),
   defineGetRoute({

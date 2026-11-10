@@ -36,7 +36,14 @@ permissive default.
 
 Every chat is pinned to one project and is the saved unit of work. Sending a
 message appends it and queues exactly one `agent_runs` row;
-messages are append-only and a chat has at most one active run. Reads return
+messages are append-only and a chat has at most one active run. A page chat
+(the `optimize_page` workflow) is the exception at creation: it commits its
+first message and a `page_fetch` task instead of a run, refuses messages while
+the fetch is live, and the fetch queues the first turn only once the page is
+read, so a failed fetch is never charged; see
+[content optimization](content-optimization.md#what-ships-phase-2-page-documents).
+The create response's `run` is then null and the chat read's `page_fetch`
+reports the fetch. Reads return
 persisted state and never execute a turn. The chat list pages by keyset cursor,
 can be narrowed to one Action's chats and searches titles and message content
 within the project.
@@ -347,6 +354,14 @@ the explicit choice and its format is frozen in the run manifest, so the
 methodology and format guidance are present from the first step. A follow-up
 inherits the workflow while it still runs that skill.
 
+A workflow whose skill writes a fetched kind (`fetched_kinds` in the
+[skill config](../frontend/services/api/src/config/agent-skills.ts): `page`)
+starts with a page fetch rather than a turn. `optimize_page` runs
+`content_optimize` on a `page` document: the live page, fetched as Markdown
+with its SEO `fields`, revision 1 authored `fetch`. Such a document is changed
+only with `edit_document`; `save_document` refuses it, and edits and restores
+carry its fields forward.
+
 New chat shows the workflows as a grouped gallery; picking one opens a short
 form whose required inputs must be filled, and the composed message names each
 input. After a fresh deliverable, refinements prefill the composer for review,
@@ -501,7 +516,7 @@ plus an optional question, skill or workflow. The browser never embeds evidence
 content beyond that message, and the context builder authorizes every
 reference at admission. A content-gap Action's handoff also pins a workflow: a
 page to create carries its Opportunity and the `article` workflow, and an
-existing content page its URL and the `refresh_page` workflow. The Dashboard
+existing content page its URL and the `optimize_page` workflow. The Dashboard
 [agent panel](../frontend/components/agent/agent-panel.tsx) is seeded from rows
 the screen already holds through the
 [panel context](../frontend/lib/agent/panel-context.tsx) and continues in

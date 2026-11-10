@@ -189,6 +189,7 @@ export interface AgentOutputRevisions {
   author_user_id: string | null;
   body: string;
   created_at: Timestamp;
+  fields: Json | null;
   id: string;
   message_id: string | null;
   number: number;
@@ -212,6 +213,7 @@ export interface AgentOutputs {
   number: number;
   project_id: string;
   skill_id: string;
+  snapshot_id: string | null;
   target_kind: string | null;
   target_label: string | null;
   updated_at: Timestamp;
@@ -2074,6 +2076,30 @@ export interface OwnedDomains {
   workspace_id: string;
 }
 
+export interface PageSnapshots {
+  action_id: string | null;
+  body: Buffer | null;
+  body_truncated: boolean;
+  charset: string | null;
+  chat_id: string | null;
+  content_type: string | null;
+  created_at: Timestamp;
+  evaluations: Json | null;
+  extractor_version: string;
+  fetched_at: Timestamp;
+  final_url: string | null;
+  http_status: number | null;
+  id: string;
+  outcome: string;
+  outcome_reason: string | null;
+  page_kind: string | null;
+  project_id: string;
+  requested_url: string;
+  rules_version: string | null;
+  site_url_id: string | null;
+  workspace_id: string;
+}
+
 export interface PendingActivations {
   activated_at: Timestamp | null;
   activation_kind: string;
@@ -3537,6 +3563,7 @@ export interface DB {
   opportunity_verification_events: OpportunityVerificationEvents;
   overview_layouts: OverviewLayouts;
   owned_domains: OwnedDomains;
+  page_snapshots: PageSnapshots;
   pending_activations: PendingActivations;
   performance_dimension_stats: PerformanceDimensionStats;
   platform_calls: PlatformCalls;
