@@ -1409,6 +1409,167 @@ a.cl-announce:hover {
   }
 }
 
+/* D52: a landing hero with an aside. Under the centred copy from 768px, in
+   two columns; beside the left-aligned copy from 1280px; not on phones. */
+.cl-lhero-aside {
+  max-width: 680px;
+  margin: 40px auto 0;
+}
+
+@media (max-width: 767px) {
+  .cl-lhero-aside {
+    display: none;
+  }
+}
+
+@media (min-width: 1280px) {
+  .cl-lhero--split > .cl-container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(340px, 28vw, 432px);
+    align-items: center;
+    column-gap: 48px;
+  }
+
+  .cl-lhero--split .cl-lhero-copy {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .cl-lhero--split .cl-lhero-actions {
+    justify-content: flex-start;
+  }
+
+  .cl-lhero--split .cl-lhero-aside {
+    max-width: none;
+    margin: 0;
+  }
+
+  .cl-lhero--split .cl-lhero-frame {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ---------- CapabilityPanel (D52) ---------- */
+/* A question and the short statements that answer it, one linked row each,
+   on a product image's white card (D45). */
+.cl-capl {
+  --capl-row: 36px;
+
+  padding: 8px;
+  border-radius: var(--site-radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-pop);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+  text-align: left;
+}
+
+.cl-capl-ask {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  margin: 0 0 4px;
+  padding: 0 12px;
+  border-radius: var(--radius-lg);
+  background: var(--color-state-hover);
+  color: var(--color-ink);
+  font-weight: 500;
+}
+
+.cl-capl-ask > svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--color-accent);
+}
+
+.cl-capl-list {
+  position: relative;
+  display: grid;
+  grid-template-rows: repeat(5, var(--capl-row));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: var(--capl-row);
+  grid-auto-flow: column;
+  column-gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-capl-row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--capl-row);
+  padding: 0 12px;
+  border-radius: var(--radius-lg);
+  color: var(--color-ink-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+
+.cl-capl-ico,
+.cl-capl-go {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.cl-capl-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cl-capl-go {
+  opacity: 0;
+}
+
+.cl-capl-row:is(:hover, :focus-visible) {
+  background: var(--color-state-pressed);
+  color: var(--color-ink);
+}
+
+.cl-capl-row:is(:hover, :focus-visible) .cl-capl-ico {
+  color: var(--color-accent);
+}
+
+.cl-capl-row:is(:hover, :focus-visible) .cl-capl-go {
+  opacity: 1;
+}
+
+/* The moving highlight: drawn only while the tour runs (layers.css). */
+.cl-capl-glide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(50% - 4px);
+  height: var(--capl-row);
+  border-radius: var(--radius-lg);
+  background: var(--color-state-pressed);
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (min-width: 1280px) {
+  .cl-capl-list {
+    grid-template-rows: none;
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-flow: row;
+  }
+
+  .cl-capl-glide {
+    width: 100%;
+  }
+}
+
 /* ---------- FeatureCard ---------- */
 /* D44: no borders, no shadows, no lift. Two editorial forms:
    - with a product image, or linked: a soft tint panel (the tint turns per

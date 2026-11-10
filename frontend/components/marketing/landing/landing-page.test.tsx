@@ -27,6 +27,25 @@ describe('LandingPage', () => {
     expect(announcement).toHaveAttribute('href', '/platform/mcp');
   });
 
+  it('answers what CiteLadder can do with one linked statement per module', () => {
+    render(<LandingPage />);
+
+    const panel = screen.getByRole('list', { name: 'What can CiteLadder do?' });
+    const rows = within(panel).getAllByRole('link');
+    expect(rows.map((row) => [row.textContent, row.getAttribute('href')])).toEqual([
+      ['Track citations and mentions', '/platform/ai-visibility'],
+      ['See the sources AI cites', '/platform/cited-sources'],
+      ['Measure AI referral traffic', '/platform/ai-referral-analytics'],
+      ['Track product rankings in AI', '/platform/product-visibility'],
+      ['Audit site health', '/platform/site-health'],
+      ['Find search demand gaps', '/platform/search-demand'],
+      ['Keyword research', '/platform/keyword-research'],
+      ['Optimize content', '/platform/content-optimization'],
+      ['Plan work with the AI Agent', '/platform/agents'],
+      ['Connect to Claude and ChatGPT', '/platform/mcp'],
+    ]);
+  });
+
   it('shows the app page as a picture without a second page heading', () => {
     render(<LandingPage />);
 

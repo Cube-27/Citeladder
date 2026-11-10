@@ -1,3 +1,17 @@
+import {
+  Activity,
+  Eye,
+  FileText,
+  Link2,
+  Plug,
+  Search,
+  ShoppingBag,
+  Sparkles,
+  TextSearch,
+  TrendingUp,
+  type LucideIcon,
+} from 'lucide-react';
+
 import { EngineMark } from '@/components/ui/engine-mark';
 import { appHref } from '@/lib/config/app-link';
 import { PUBLIC_TRIAL } from '@/lib/config/public-trial';
@@ -15,7 +29,8 @@ import { SiteArrowLink, columnsFor } from '../sections/site-parts';
 import { CtaBand, FaqList, Steps } from '../sections/steps-faq-cta';
 import { ProductFrame } from '../screens/product-frame';
 import { ScreenAppPage, ScreenAppVisibility } from '../screens/screen-app';
-import { SCREEN_CATALOG, moduleScreen } from '../screens/screen-catalog';
+import { MODULE_SCREENS, SCREEN_CATALOG, moduleScreen } from '../screens/screen-catalog';
+import { CapabilityPanel } from '../sections/capability-panel';
 
 import { FAQS, INTEGRATIONS, type IntegrationMark } from './landing-data';
 
@@ -33,9 +48,36 @@ function PrimaryActions() {
   );
 }
 
+/**
+ * What each module does, as the hero panel's short statement (D52). Keyed by
+ * the module rail's routes, so a module cannot ship without one.
+ */
+const CAPABILITIES: Readonly<
+  Record<keyof typeof MODULE_SCREENS, Readonly<{ text: string; icon: LucideIcon }>>
+> = {
+  '/platform/ai-visibility': { text: 'Track citations and mentions', icon: Eye },
+  '/platform/cited-sources': { text: 'See the sources AI cites', icon: Link2 },
+  '/platform/ai-referral-analytics': { text: 'Measure AI referral traffic', icon: TrendingUp },
+  '/platform/product-visibility': { text: 'Track product rankings in AI', icon: ShoppingBag },
+  '/platform/site-health': { text: 'Audit site health', icon: Activity },
+  '/platform/search-demand': { text: 'Find search demand gaps', icon: Search },
+  '/platform/keyword-research': { text: 'Keyword research', icon: TextSearch },
+  '/platform/content-optimization': { text: 'Optimize content', icon: FileText },
+  '/platform/agents': { text: 'Plan work with the AI Agent', icon: Sparkles },
+  '/platform/mcp': { text: 'Connect to Claude and ChatGPT', icon: Plug },
+};
+
+const isModuleRoute = (href: string): href is keyof typeof MODULE_SCREENS => href in MODULE_SCREENS;
+
+/** The panel's rows, in the module rail's order. */
+const CAPABILITY_ROWS = PLATFORM_GROUPS.flatMap((group) => group.items).flatMap((item) =>
+  isModuleRoute(item.href) ? [{ href: item.href, ...CAPABILITIES[item.href] }] : [],
+);
+
 function Hero() {
   return (
     <LandingHero
+      aside={<CapabilityPanel question="What can CiteLadder do?" items={CAPABILITY_ROWS} />}
       announcement={
         <AnnouncementPill href="/platform/mcp" tag="New">
           Connect CiteLadder to Claude, ChatGPT and more
