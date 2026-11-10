@@ -5,7 +5,7 @@
  * A missing source is not an error. With a prior snapshot and no resolvable
  * audit, crawl or demand snapshot, the prior snapshot is returned unchanged,
  * so an in-flight crawl never empties the live set; zero hits WITH a source
- * still supersedes, and so does a snapshot whose keyword gaps have aged out. A refresh whose source identity the latest snapshot
+ * still supersedes, and so does a snapshot whose keyword or content gaps have aged out. A refresh whose source identity the latest snapshot
  * already describes loads no evidence. Evidence loads outside the project
  * lock; under it the identity is resolved again, and a refresh whose sources
  * moved meanwhile writes nothing and fails for a retry over the newer state.
@@ -35,6 +35,7 @@ import {
 } from './refresh-compute.ts';
 import {
   collectFamilies,
+  persistFamilies,
   resolveSources,
   sourceIdentity,
   type Sources,
@@ -156,7 +157,9 @@ async function writeRefresh(
     scope,
     rows.map((row, index) => ({ ...row, target: scored[index]![0].target })),
     snapshot.id,
+    crawl?.id ?? null,
   );
+  await persistFamilies(trx, scope, scored);
   await insertOpportunities(trx, scope, rows, actions, now);
   const links = live.flatMap((row) => {
     const successor = successors.get(JSON.stringify([row.rule_id, row.target_key]));
@@ -207,13 +210,16 @@ export async function recomputeOpportunities(
       throw new Error('Opportunity sources changed during the refresh; retry');
     // Gap datasets age out by design, so a snapshot that read them is superseded
     // when they do; an in-flight crawl alone never empties the live set.
-    const readGaps = Boolean(record(record(current?.coverage).source_identity).search_gap_revision);
+    // Content-gap runs age out the same way.
+    const readIdentity = record(record(current?.coverage).source_identity);
+    const readGaps = Boolean(readIdentity.search_gap_revision || readIdentity.content_angle_run_id);
     const empty =
       collected.audit === null &&
       sources.commerceAuditId === null &&
       sources.crawl === null &&
       sources.demand === null &&
       sources.gaps === null &&
+      sources.contentGaps.run === null &&
       !readGaps;
     if (current !== null && empty) return projectSnapshot(current);
     if (options.skipIfCurrent && snapshotIsCurrent(current, sources.identity))

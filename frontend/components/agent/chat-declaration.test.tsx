@@ -83,6 +83,7 @@ describe('ChatScreen implementation declaration', () => {
       approach: 'fix_technical',
       skill_id: 'technical_health',
       member_count: 1,
+      surface: 'actions',
       evidence_cleared_at: null,
       created_at: NOW,
       updated_at: NOW,

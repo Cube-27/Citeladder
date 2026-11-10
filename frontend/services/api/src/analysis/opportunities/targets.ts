@@ -23,7 +23,12 @@ export type TargetRef =
   /** A third-party page answers cite, keyed by its url hash. */
   | { kind: 'earned_page'; url_hash: string; url: string; theme: string | null }
   /** A search competitors rank for; `url` is the owned page that covers it, if any. */
-  | { kind: 'search_gap'; terms: string; keyword: string; url: string | null };
+  | { kind: 'search_gap'; terms: string; keyword: string; url: string | null }
+  /**
+   * A page to create, by a planned-page key its producer stored once
+   * (`plannedPageKey`), so no reader re-slugs a label that may have changed.
+   */
+  | { kind: 'planned_page'; key: string; label: string };
 
 type TargetColumns = {
   target_key: string;
@@ -86,6 +91,8 @@ export function targetColumns(target: TargetRef): TargetColumns {
         target_url: target.url,
         target_theme: target.keyword,
       });
+    case 'planned_page':
+      return columns(target.key, { target_theme: target.label });
     default: {
       const unknownTarget: never = target;
       throw new Error(`Unknown Opportunity target: ${JSON.stringify(unknownTarget)}`);

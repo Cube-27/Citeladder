@@ -29,6 +29,7 @@ const action = {
   approach: 'improve_existing',
   skill_id: 'gsc_optimize',
   member_count: 1,
+  surface: 'actions',
   evidence_cleared_at: null,
   created_at: NOW,
   updated_at: NOW,

@@ -318,6 +318,30 @@ export const opportunities = {
       severity: 'medium',
       title: 'Competitors rank for a search you do not',
     },
+    // Content gaps from persisted content angles (content optimization section 2).
+    // No check isolates the work until phase 3 adds `owned_url_cited`.
+    content_gap_improve_page: {
+      action_path: 'owned',
+      enabled: true,
+      opportunity_type: 'topic',
+      remediation:
+        'Answers to your tracked prompts cite competitor and editorial pages on this angle, and your matching page is not cited for those prompts. Improve the page so it covers the angle as directly as the cited pages do.',
+      rule_id: 'content_gap_improve_page',
+      check_kind: null,
+      severity: 'medium',
+      title: 'Cited content angle your page does not win',
+    },
+    content_gap_new_page: {
+      action_path: 'owned',
+      enabled: true,
+      opportunity_type: 'topic',
+      remediation:
+        'Answers to your tracked prompts cite competitor and editorial pages on this angle, and none of your content pages covers it. Plan a page that answers the angle directly.',
+      rule_id: 'content_gap_new_page',
+      check_kind: null,
+      severity: 'medium',
+      title: 'Cited content angle you have no page for',
+    },
     low_share_of_voice_theme: {
       action_path: 'owned',
       enabled: false,
@@ -440,6 +464,19 @@ export const opportunities = {
     MIN_VALUE_FACTOR: 0.25,
     GAP_FACTOR_BASE: 2,
     GAP_FACTOR_PER_EXTRA_COMPETITOR: 0.5,
+    GAP_FACTOR_CAP: 3,
+  },
+  // Content-gap priority (content optimization section 2). The raising
+  // thresholds are `min_citations` and `min_domains` in content optimization
+  // policy; these only rank what they let through. The model never scores.
+  CONTENT_GAP: {
+    RULE_IMPROVE_PAGE: 'content_gap_improve_page',
+    RULE_NEW_PAGE: 'content_gap_new_page',
+    // Each prompt beyond the first adds this much value, up to the cap.
+    VALUE_PER_EXTRA_PROMPT: 0.1,
+    VALUE_FACTOR_CAP: 2,
+    // 1 + log10(citations) + this × the share of cited domains that are competitors, capped.
+    COMPETITOR_SHARE_WEIGHT: 1,
     GAP_FACTOR_CAP: 3,
   },
   GAP_COMPETITOR_WEIGHT: 1,

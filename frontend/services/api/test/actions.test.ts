@@ -102,6 +102,30 @@ describe('Action routes', () => {
     expect(detail.members.map((member) => member.id)).toEqual([s.members[pageRule]]);
   });
 
+  it('lists and counts one surface at a time and rejects an unknown surface', async () => {
+    const s = await seed();
+    const list = `/api/v1/projects/${s.project_id}/actions`;
+    // Action sync persists the surface; the route only reads it.
+    await db
+      .updateTable('actions')
+      .set({ surface: 'content' })
+      .where('id', '=', actionId(s))
+      .execute();
+    const content = await pageBody(await request(s, `${list}?surface=content`));
+    expect(content.items.map((item) => [item.id, item.surface])).toEqual([
+      [actionId(s), 'content'],
+    ]);
+    expect(content.status_counts.open).toBe(1);
+    const rest = await pageBody(await request(s, `${list}?surface=actions`));
+    expect(rest.items.map((item) => item.id).sort()).toEqual(
+      [actionId(s, otherRule), actionId(s, promptRule)].sort(),
+    );
+    expect(rest.status_counts.open).toBe(2);
+    expect((await pageBody(await request(s, list))).status_counts.open).toBe(3);
+    expect((await request(s, `${list}?surface=issues`)).status).toBe(400);
+    expect((await detailBody(await request(s, actionPath(s)))).surface).toBe('content');
+  });
+
   it('reads the status its writers persisted, not one re-derived from raw input rows', async () => {
     const s = await seed();
     const list = `/api/v1/projects/${s.project_id}/actions`;

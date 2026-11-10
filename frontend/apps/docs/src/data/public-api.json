@@ -176,6 +176,9 @@
             "format": "uuid",
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
+          "surface": {
+            "$ref": "#/components/schemas/ActionSurface"
+          },
           "target_kind": {
             "type": "string"
           },
@@ -461,6 +464,7 @@
         "required": [
           "id",
           "project_id",
+          "surface",
           "target_kind",
           "target_label",
           "target_url",
@@ -495,6 +499,9 @@
             "type": "string",
             "format": "uuid",
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "surface": {
+            "$ref": "#/components/schemas/ActionSurface"
           },
           "target_kind": {
             "type": "string"
@@ -557,6 +564,7 @@
         "required": [
           "id",
           "project_id",
+          "surface",
           "target_kind",
           "target_label",
           "target_url",
@@ -604,6 +612,10 @@
       "ActionStatus": {
         "type": "string",
         "enum": ["open", "in_progress", "implemented", "measuring", "done", "dismissed"]
+      },
+      "ActionSurface": {
+        "type": "string",
+        "enum": ["actions", "content"]
       },
       "AdOwnership": {
         "type": "string",
@@ -10599,6 +10611,14 @@
           },
           {
             "name": "target_kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "surface",
             "in": "query",
             "required": false,
             "schema": {

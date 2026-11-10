@@ -17,7 +17,7 @@ import { record } from '../src/db/json.ts';
 import { recomputeOpportunities, refreshOpportunities } from '../src/opportunities/refresh.ts';
 import { enqueueOpportunityRefresh } from '../src/opportunities/enqueue.ts';
 import { drainWorkspace } from './analytics-drain.ts';
-import { seedOpportunityScenario, type OpportunitySeed } from './opportunity-fixtures.ts';
+import { angleRun, seedOpportunityScenario, type OpportunitySeed } from './opportunity-fixtures.ts';
 import { sourcePage } from './action-support.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
@@ -226,6 +226,21 @@ describe('opportunity_refresh', () => {
         created_at: new Date(),
       })
       .execute();
+    await recomputeOpportunities(db, scope(s), { skipIfCurrent: true });
+    expect(await snapshotCount(s)).toBe(before + 1);
+  });
+
+  it('refreshes once a content-angle run succeeds, and not for a failed one', async () => {
+    const s = await seed();
+    await recomputeOpportunities(db, scope(s), { skipIfCurrent: true });
+    const before = await snapshotCount(s);
+    await angleRun(db, scope(s), { outcome: 'failed' });
+    await recomputeOpportunities(db, scope(s), { skipIfCurrent: true });
+    expect(await snapshotCount(s)).toBe(before);
+    const { runId } = await angleRun(db, scope(s));
+    const refreshed = await recomputeOpportunities(db, scope(s), { skipIfCurrent: true });
+    expect(await snapshotCount(s)).toBe(before + 1);
+    expect(record(refreshed.coverage.source_identity).content_angle_run_id).toBe(runId);
     await recomputeOpportunities(db, scope(s), { skipIfCurrent: true });
     expect(await snapshotCount(s)).toBe(before + 1);
   });

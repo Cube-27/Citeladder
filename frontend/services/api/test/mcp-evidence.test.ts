@@ -648,8 +648,16 @@ it('lists only active Actions as the current work and reads a dismissed one only
   expect((await read('read_actions', { status: 'dismissed' })).items as { id: string }[]).toEqual([
     expect.objectContaining({ id: dismissed.id }),
   ]);
+  // An Agent planned page has no content-gap member, so it is on the Actions surface.
+  expect(
+    ((await read('read_actions', { surface: 'actions' })).items as { id: string }[]).map(
+      (item) => item.id,
+    ),
+  ).toEqual([kept.id]);
+  const content = await read('read_actions', { surface: 'content' });
+  expect([content.items, content.status_counts]).toMatchObject([[], { open: 0, dismissed: 0 }]);
   const one = await read('read_actions', { action_id: dismissed.id });
-  expect(one.action).toMatchObject({ id: dismissed.id, status: 'dismissed' });
+  expect(one.action).toMatchObject({ id: dismissed.id, status: 'dismissed', surface: 'actions' });
   const searched = await dispatchTool(db, principal, 'search', { query: 'guide' }, origin);
   expect((searched.results as { id: string }[]).map((r) => r.id)).toEqual([
     `citeladder://action/${kept.id}`,

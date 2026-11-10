@@ -38,6 +38,7 @@ export const actionRoutes = [
         cursor: { scalar: { kind: 'str' } },
         status_filter: { scalar: { kind: 'str' }, alias: 'status' },
         target_kind: { scalar: { kind: 'str' } },
+        surface: { scalar: { kind: 'str' } },
       },
     },
     response: actionsPageSchema,
