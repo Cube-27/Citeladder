@@ -6,7 +6,7 @@
  * Three roles, the design system's families: `display` (Cal Sans, weight 400
  * only, the website's and docs' alone: the app sets none, so it never
  * preloads it, and a declared face nothing uses is never fetched), `sans`
- * (Instrument Sans) and `mono` (Geist Mono). Changing a face is an edit to
+ * (Inter) and `mono` (Geist Mono). Changing a face is an edit to
  * that JSON (`family` and `file`) followed by `pnpm fonts:pull`, which copies
  * the files from the private font repository and recomputes the weight range
  * and fallback metrics stored beside them. Nothing else names a face.

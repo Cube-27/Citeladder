@@ -25,9 +25,9 @@ Monochrome with one accent. Ink (`#111111`, `#f4f4f4` in dark) carries every
 primary action, heading and figure; Flare (`#e8501a`, `#ff6a33` in dark) is a
 mark only: the logo's bars, the own-brand chart series, a 2px rung, a dot, a
 link's ink as `accent-ink`. Cal Sans sets display type at its one weight, 400:
-on the website the H1 and one heading per section (D28), in the docs its
-headings, and in the app the page title. Geist sets everything else; Geist Mono sets data
-and code. Fields, composers and cards wear a soft edge, never a dark hairline.
+on the website the H1 and one heading per section (D28) and in the docs its
+headings; the app sets none (D54). Inter sets everything else (D55); Geist Mono
+sets data and code. Fields, composers and cards wear a soft edge, never a dark hairline.
 Light and dark on every surface, defaulting to the system preference.
 
 ## Decisions
@@ -80,6 +80,7 @@ Light and dark on every surface, defaulting to the system preference.
 | D52 | The homepage hero says what the product does (owner, 10 November 2026: a first-time visitor should "understand what all features exist from the homepage itself", as "short statements" such as "Optimize content", "Track citations and mentions", "Keyword research"; floating labels around the centred copy looked "crowded", so "split the text and use right panel"; no numbers column, and "nothing to change in mobile"). From 1280px the landing hero splits: the copy is left-aligned and a CapabilityPanel sits to its right, with the product image under both. The panel is a white card with `shadow-pop`, like a product image (D45): the question "What can CiteLadder do?" and one short statement per module of the rail, in the rail's order, each row an icon and a link to the module's page. From 768 to 1279px the hero stays centred and the panel sits under the copy in two columns of five; phones do not show it. Motion, in CSS only and only without reduced motion: the panel and its rows load in after the copy, then a highlight rests 2.4s on each row in turn (ink text, accent icon, an arrow) and stops while a row is pointed at or focused. Amends D18's centred landing copy from 1280px and D36's "only the landing heroes' copy loads in". |
 | D53 | The CapabilityPanel has no card and no icons (owner, 10 November 2026, from an HTML mockup the owner approved: "instead of a boring lifted box … build list whose left and right sides will be faded and the active option will lift up so that it appears part of page but only the active option lifts up"; "remove all icons and center align options with the heading slightly bigger and maybe in a different background or effect"; the bar "width is too big … make it like this with edges faded \_\_/‾‾\\\_\_"). The rows sit straight on the hero, centred, over a faint ink band and 1px hairlines between rows that fade out over each column's outer quarters. The question is 18px (`text-title-sm`) and centred, with a soft accent glow behind it, an accent hairline under it that fades at both ends and, with motion, a light that sweeps across its text every 6s. The active row alone lifts: a bar narrower than the row (88% of its column) in `surface` with a `line` edge, its ends fading into the band over their outer quarters, sits 3px above the row's line over a soft oval shadow that fades the same way, and the row's text inks and rises 3px with it. The tour moves that bar, which dips toward the page while it travels (97% and a faint shadow) and lifts as it lands; pointing at or focusing a row stops the tour and lifts that row instead. Supersedes D52's white card with `shadow-pop`, its row icons and arrow and its pressed-tint highlight; amends D35 (the heading's sweep is colour in type) and D44 (this bar's edge and the one lift on hover) for this panel only. |
 | D54 | Two families in the app, and Instrument Sans is the sans face everywhere (owner, 10 November 2026: the app uses "only two font families", the body font and mono; replace Geist with Instrument Sans "everywhere", app and marketing). The sans face (`lib/config/brand-fonts.json` `sans`) is Instrument Sans on the app, website and docs; Geist Mono stays the mono face. The app sets no Cal Sans: the PageHeader title (`type-page-title`, `display-sm` 24/32 at 500) and the auth card titles (`display-lg` at 500) are Instrument Sans, and the app no longer preloads Cal Sans. The website and docs keep Cal Sans for their display headings (D28). Supersedes D7's and D37's Cal Sans in the app; where an earlier decision names Geist as the sans face, read Instrument Sans. |
+| D55 | Inter is the sans face everywhere (owner, 10 November 2026: "Switch to Inter", chosen from the font repository's text faces for its x-height, tabular figures and optical-size axis). `brand-fonts.json` `sans` is `InterVariable.woff2`, with `pnpm fonts:pull`'s fallback metrics for it; D54's two families in the app, Cal Sans on the website and docs only, and Geist Mono stand. Wherever an earlier decision names Geist or Instrument Sans as the sans face, read Inter. Supersedes D54's Instrument Sans. |
 
 D5–D17 come from the owner's reviews of the shipped app and docs on 5 November
 2026. D18–D25 are the website review rounds in the
@@ -114,7 +115,7 @@ type rule of the same day. D39–D43 are the owner's answers in chat on
   style or radius the system does not have fails; the only extra colours are
   the third-party `--color-brand-*` marks. `--spacing` is 4px, so `p-N` is the
   system's space-N.
-- **Faces.** `brand-fonts.json` names Cal Sans, Geist and Geist Mono for the
+- **Faces.** `brand-fonts.json` names Cal Sans, Inter and Geist Mono for the
   display, sans and mono roles.
 - **Contrast.** Every ink on every ground holds 4.5:1 in both themes, each
   status on its own soft, the labels on ink and on Flare; marks, control
@@ -363,11 +364,11 @@ link, with no step number. Screens come in two kinds, named by the frame's
 - **Vignette (`fluid`, every card image).** One `Vignette`
   (`screen-vignette.tsx`, `.cl-vig`): a white card, 1px `line` border, radius
   8, padding 20, laid out at the width of its well, never scaled, its height
-  from its content. Header: title (Instrument Sans 500, 16/24), an optional meta line
+  from its content. Header: title (Inter 500, 16/24), an optional meta line
   (14/20, muted) and an optional badge at the right. Body: exactly four rows
   (a 20px mark or icon, label 14/20 500, a muted secondary line 14/20, an
   optional middle column, a value 14 tabular), or three figures (label 12,
-  value `stat` 28/36 Instrument Sans 500, change) over one small chart, or a short
+  value `stat` 28/36 Inter 500, change) over one small chart, or a short
   panel of the same height. Every vignette uses this one type scale, no Cal
   Sans and nothing over 28px, so tiles in a bento row match; in a taller row
   the vignette fills its well and its rows share the extra height. Key text

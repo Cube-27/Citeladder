@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
  *
  * A Stat's anatomy, in order: the mono eyebrow label (with an optional leading
  * icon and a trailing marker), an optional caption naming the value's period,
- * the value in Instrument Sans 500 24/32 (the page title's size, decision D48), the change
+ * the value in Inter 500 24/32 (the page title's size, decision D48), the change
  * line (a `Delta`), a sub-line, a comparison window's value, and one action. A
  * 0–100 score is a 64px `ScoreRing` (auto tone) with the number inside, on the
  * right beside the label and action, so the Stat is the ring's height — never
