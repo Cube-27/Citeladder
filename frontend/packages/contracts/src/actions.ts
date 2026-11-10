@@ -164,6 +164,9 @@ export const actionDetailSchema = actionItemSchema.extend({
     }),
   ),
   declaration: actionDeclarationSchema.nullable(),
+  // The target is one of the latest crawl's content pages (CO15), so Work with
+  // the agent opens it as a page document (phase 2, E3). Read-time only.
+  editable_page: z.boolean().default(false),
 });
 
 export const actionsPageSchema = responseObject({

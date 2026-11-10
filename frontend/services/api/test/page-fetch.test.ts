@@ -188,6 +188,35 @@ describe('the page fetch task', () => {
     ]);
   });
 
+  it('shows the page-local checks of the fetch on the chat read, failing ones first', async () => {
+    const noMeta = ARTICLE.replace(/<meta name="description"[^>]*>/, '');
+    const { chat } = await fetchedChat({ '/crm-pricing': { body: noMeta } });
+    if (chat.page_fetch?.status !== 'done') throw new Error('Expected a finished fetch');
+    const { checks } = chat.page_fetch;
+    const shown = (ruleId: string) => checks.find((check) => check.rule_id === ruleId);
+    expect({
+      meta: shown('technical.meta_description_present'),
+      title: shown('technical.title_present'),
+      first: checks[0]?.failing,
+    }).toEqual({
+      meta: {
+        rule_id: 'technical.meta_description_present',
+        label: 'Missing meta description',
+        severity: 'medium',
+        outcome: 'missing',
+        failing: true,
+      },
+      title: {
+        rule_id: 'technical.title_present',
+        label: 'Missing page title',
+        severity: 'high',
+        outcome: 'satisfied',
+        failing: false,
+      },
+      first: true,
+    });
+  });
+
   it('keeps the fetched SEO fields through a person’s edit of the page body', async () => {
     const { seed, created, chat } = await fetchedChat({ '/crm-pricing': { body: ARTICLE } });
     const [document] = chat.outputs;

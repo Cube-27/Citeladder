@@ -34,6 +34,19 @@ async function crawlContentPage(db: Database, scope: Scope, hashes: string[]) {
   return row ? { url: row.normalized_url, siteUrlId: row.id } : null;
 }
 
+/**
+ * Whether a URL (or its `www.` twin) is one of the latest crawl's content
+ * pages (CO15): the pages whose Actions open the page workspace (E3).
+ */
+export async function isContentPage(db: Database, scope: Scope, url: string): Promise<boolean> {
+  const requested = identity(url.trim());
+  if (!requested) return false;
+  const twin = hostTwinHash(requested.url);
+  return (
+    (await crawlContentPage(db, scope, twin ? [requested.hash, twin] : [requested.hash])) !== null
+  );
+}
+
 /** The Action's own page target, when it is this URL. */
 async function actionPage(
   db: Database,

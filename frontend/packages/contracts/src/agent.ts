@@ -199,9 +199,22 @@ export const pageFetchOutcomeSchema = z.enum([
 ]);
 
 /**
+ * One of Site Health's page-local checks as it judged the fetched page (E5):
+ * its rule and title, severity and outcome, and whether that outcome fails.
+ * Editing the page does not rerun it.
+ */
+export const agentPageCheckSchema = responseObject({
+  rule_id: z.string(),
+  label: z.string(),
+  severity: z.string(),
+  outcome: z.string(),
+  failing: z.boolean(),
+});
+
+/**
  * The page fetch a page chat starts with. `reading` until it ends; then its
- * outcome and when the page was fetched (null when the fetch never ran, for
- * example after an internal failure).
+ * outcome, when the page was fetched (null when the fetch never ran, for
+ * example after an internal failure) and the page-local checks shown for it.
  */
 export const agentPageFetchSchema = z.discriminatedUnion('status', [
   responseObject({ status: z.literal('reading') }),
@@ -209,6 +222,7 @@ export const agentPageFetchSchema = z.discriminatedUnion('status', [
     status: z.literal('done'),
     outcome: pageFetchOutcomeSchema,
     fetched_at: z.string().nullable(),
+    checks: z.array(agentPageCheckSchema).default([]),
   }),
 ]);
 

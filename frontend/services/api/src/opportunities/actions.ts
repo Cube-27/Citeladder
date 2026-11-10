@@ -41,6 +41,7 @@ import {
   selectApproach,
 } from '../analysis/opportunities/actions.ts';
 import { record } from '../db/json.ts';
+import { isContentPage } from '../page-documents/target.ts';
 
 const a = policy.opportunity.actions;
 export class ActionTargetError extends Error {}
@@ -387,6 +388,11 @@ export async function getAction(db: Database, workspaceId: string, actionId: str
   const members = inMemberOrder(stringList(action.member_opportunity_ids), rows);
   return {
     ...actionItem(action),
+    // A page Action on one of the latest crawl's content pages opens the page workspace (E3).
+    editable_page:
+      action.target_kind === a.TARGET_PAGE && action.target_url !== null
+        ? await isContentPage(db, { workspaceId, projectId: action.project_id }, action.target_url)
+        : false,
     diagnosis: actionDetailSchema.shape.diagnosis.parse(action.diagnosis),
     members: members.map((row) => ({
       ...projectItem(row),

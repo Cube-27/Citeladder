@@ -10,7 +10,11 @@ import { randomUUID } from 'node:crypto';
 
 import { afterAll, describe, expect, it, vi } from 'vitest';
 
-import { actionAnalyzeResultSchema, analyzablePagesSchema } from '@citeladder/contracts/actions';
+import {
+  actionAnalyzeResultSchema,
+  actionDetailSchema,
+  analyzablePagesSchema,
+} from '@citeladder/contracts/actions';
 import { agentChatDetailSchema } from '@citeladder/contracts/agent';
 import { createApp } from '../src/app.ts';
 import * as bindingsOwner from '../src/agent/bindings.ts';
@@ -268,6 +272,26 @@ describe('Analyze a page', () => {
         },
       },
     });
+  });
+
+  it('reads the analyzed page Action as an editable page while its page is a content page', async () => {
+    const { seed, headers, analyze, article, crm, prompts } = await setup();
+    const started = actionAnalyzeResultSchema.parse(
+      await (await analyze({ site_url_id: article, topic_id: crm, prompt_ids: prompts })).json(),
+    );
+    const editable = async () =>
+      actionDetailSchema.parse(
+        await (await app.request(`/api/v1/actions/${started.action_id}`, { headers })).json(),
+      ).editable_page;
+    expect(await editable()).toBe(true);
+    // The latest crawl now reads the page as a product page: a content kind no longer.
+    await db
+      .updateTable('site_page_analyses')
+      .set({ page_kind: 'product' })
+      .where('workspace_id', '=', seed.workspaceId)
+      .where('site_url_id', '=', article)
+      .execute();
+    expect(await editable()).toBe(false);
   });
 
   it("never reads or attaches another workspace's page, topic or prompts", async () => {
