@@ -1,17 +1,3 @@
-import {
-  Activity,
-  Eye,
-  FileText,
-  Link2,
-  Plug,
-  Search,
-  ShoppingBag,
-  Sparkles,
-  TextSearch,
-  TrendingUp,
-  type LucideIcon,
-} from 'lucide-react';
-
 import { EngineMark } from '@/components/ui/engine-mark';
 import { appHref } from '@/lib/config/app-link';
 import { PUBLIC_TRIAL } from '@/lib/config/public-trial';
@@ -49,29 +35,27 @@ function PrimaryActions() {
 }
 
 /**
- * What each module does, as the hero panel's short statement (D52). Keyed by
+ * What each module does, as the hero panel's short statement (D52, D53). Keyed by
  * the module rail's routes, so a module cannot ship without one.
  */
-const CAPABILITIES: Readonly<
-  Record<keyof typeof MODULE_SCREENS, Readonly<{ text: string; icon: LucideIcon }>>
-> = {
-  '/platform/ai-visibility': { text: 'Track citations and mentions', icon: Eye },
-  '/platform/cited-sources': { text: 'See the sources AI cites', icon: Link2 },
-  '/platform/ai-referral-analytics': { text: 'Measure AI referral traffic', icon: TrendingUp },
-  '/platform/product-visibility': { text: 'Track product rankings in AI', icon: ShoppingBag },
-  '/platform/site-health': { text: 'Audit site health', icon: Activity },
-  '/platform/search-demand': { text: 'Find search demand gaps', icon: Search },
-  '/platform/keyword-research': { text: 'Keyword research', icon: TextSearch },
-  '/platform/content-optimization': { text: 'Optimize content', icon: FileText },
-  '/platform/agents': { text: 'Plan work with the AI Agent', icon: Sparkles },
-  '/platform/mcp': { text: 'Connect to Claude and ChatGPT', icon: Plug },
+const CAPABILITIES: Readonly<Record<keyof typeof MODULE_SCREENS, string>> = {
+  '/platform/ai-visibility': 'Track citations and mentions',
+  '/platform/cited-sources': 'See the sources AI cites',
+  '/platform/ai-referral-analytics': 'Measure AI referral traffic',
+  '/platform/product-visibility': 'Track product rankings in AI',
+  '/platform/site-health': 'Audit site health',
+  '/platform/search-demand': 'Find search demand gaps',
+  '/platform/keyword-research': 'Keyword research',
+  '/platform/content-optimization': 'Optimize content',
+  '/platform/agents': 'Plan work with the AI Agent',
+  '/platform/mcp': 'Connect to Claude and ChatGPT',
 };
 
 const isModuleRoute = (href: string): href is keyof typeof MODULE_SCREENS => href in MODULE_SCREENS;
 
 /** The panel's rows, in the module rail's order. */
 const CAPABILITY_ROWS = PLATFORM_GROUPS.flatMap((group) => group.items).flatMap((item) =>
-  isModuleRoute(item.href) ? [{ href: item.href, ...CAPABILITIES[item.href] }] : [],
+  isModuleRoute(item.href) ? [{ href: item.href, text: CAPABILITIES[item.href] }] : [],
 );
 
 function Hero() {
