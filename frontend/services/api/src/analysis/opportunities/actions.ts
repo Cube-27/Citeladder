@@ -1,6 +1,12 @@
-import { actionHandoffSchema, type ActionHandoff } from '@citeladder/contracts/actions';
+import {
+  actionHandoffSchema,
+  type ActionGroup,
+  type ActionHandoff,
+  type ActionPriorityBand,
+} from '@citeladder/contracts/actions';
 
 import { policy } from '../../config.ts';
+import type { ActionGroupRule } from '../../config/actions.ts';
 import { roundScaled } from '../../numbers.ts';
 import { normalizedUrlForCompare } from '../url-compare.ts';
 import { compareText } from '../../text-order.ts';
@@ -179,6 +185,28 @@ export function readHandoff(persisted: unknown, label: string): ActionHandoff {
         message: handoffMessage(p.DEFAULT_APPROACH.messages, { target: label }),
       };
 }
+type GroupedAction = Readonly<{ approach: string; target_kind: string }>;
+
+function groupAdmits(rule: ActionGroupRule, action: GroupedAction): boolean {
+  return (
+    (!rule.target_kinds || rule.target_kinds.includes(action.target_kind)) &&
+    (!rule.approaches || rule.approaches.includes(action.approach))
+  );
+}
+
+/** The Actions list group an Action belongs to: the first rule that admits it, else the default. */
+export function actionGroup(action: GroupedAction): ActionGroup {
+  const rule = p.ACTION_GROUPS.find((candidate) => groupAdmits(candidate, action));
+  return rule?.group ?? p.ACTION_GROUP_DEFAULT;
+}
+
+/** The band a priority score falls in; an unscored Action has none. */
+export function priorityBand(score: number | null): ActionPriorityBand | null {
+  if (score === null) return null;
+  if (score >= p.ACTION_PRIORITY_BANDS.high) return 'high';
+  return score >= p.ACTION_PRIORITY_BANDS.medium ? 'medium' : 'low';
+}
+
 export function selectApproach(ids: string[], kind: string) {
   return (
     p.APPROACH_TREE.find(

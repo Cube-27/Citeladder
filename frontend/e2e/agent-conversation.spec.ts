@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import type { AgentChatDetail } from '../lib/api/agent';
 import { detail, revision, REV1 } from '../test/agent-chat-fixture';
+import { actionsPage } from '../test/fixtures/actions';
 import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
 
 const CHAT = '22222222-2222-4222-8222-222222222222';
@@ -91,10 +92,7 @@ for (const width of [1280, 390]) {
     let reading = false;
     await stubAuthedShell(page, [
       ['**/api/v1/agent/skills', { skills: SKILLS, limits: { mentions_max: 5 } }],
-      [
-        `**/api/v1/projects/${FIXTURE_PROJECT.id}/actions*`,
-        { items: [], next_cursor: null, status_counts: {} },
-      ],
+      [`**/api/v1/projects/${FIXTURE_PROJECT.id}/actions*`, actionsPage()],
       [`**/api/v1/projects/${FIXTURE_PROJECT.id}/agent/chats?*`, { items: [], next_cursor: null }],
     ]);
     await page.route(`**/api/v1/agent/chats/${CHAT}`, async (route) => {
@@ -160,10 +158,7 @@ for (const width of [1280, 390]) {
       let reads = 0;
       await stubAuthedShell(page, [
         ['**/api/v1/agent/skills', { skills: SKILLS, limits: { mentions_max: 5 } }],
-        [
-          `**/api/v1/projects/${FIXTURE_PROJECT.id}/actions*`,
-          { items: [], next_cursor: null, status_counts: {} },
-        ],
+        [`**/api/v1/projects/${FIXTURE_PROJECT.id}/actions*`, actionsPage()],
         [
           `**/api/v1/projects/${FIXTURE_PROJECT.id}/agent/chats?*`,
           { items: [], next_cursor: null },

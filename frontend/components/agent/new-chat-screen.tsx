@@ -311,7 +311,7 @@ function TopActionRow({ action }: Readonly<{ action: Action }>) {
             .join(' · ')}
         </span>
       </Stack>
-      <ActionPriorityBadge score={action.priority_score} />
+      <ActionPriorityBadge band={action.priority_band} />
     </Inline>
   );
 }

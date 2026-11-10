@@ -83,10 +83,8 @@ export type SourcePageEvidence = {
   snapshot_id: string | null;
   read_at: string | null;
   extracted_chars: number;
-  sufficient_coverage: boolean;
   title: string;
   entities: PageEntityEvidence[];
-  roster_current: boolean;
   recurrence_count: number;
   answer_count: number;
   /** Tracked prompts whose answers in this audit cited the page. */

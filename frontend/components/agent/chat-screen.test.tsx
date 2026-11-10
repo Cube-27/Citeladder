@@ -14,6 +14,7 @@ import {
 } from 'vite-plus/test';
 
 import { mswServer } from '@/test/msw-server';
+import { actionsPage } from '@/test/fixtures/actions';
 import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 import { expectThreadFollowsLatest } from '@/test/chat-follow';
@@ -59,9 +60,7 @@ function renderChat() {
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 beforeEach(() =>
   mswServer.use(
-    http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
-      HttpResponse.json({ items: [], next_cursor: null, status_counts: {} }),
-    ),
+    http.get(`/api/v1/projects/${PROJECT}/actions`, () => HttpResponse.json(actionsPage())),
   ),
 );
 afterEach(() => {
@@ -256,9 +255,7 @@ describe('ChatScreen', () => {
     mswServer.use(
       http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
       http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(withMention)),
-      http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
-        HttpResponse.json({ items: [], next_cursor: null, status_counts: {} }),
-      ),
+      http.get(`/api/v1/projects/${PROJECT}/actions`, () => HttpResponse.json(actionsPage())),
     );
     renderChat();
 
@@ -539,8 +536,8 @@ describe('ChatScreen', () => {
       http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
       http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(current)),
       http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
-        HttpResponse.json({
-          items: [
+        HttpResponse.json(
+          actionsPage([
             {
               id: ACTION,
               project_id: PROJECT,
@@ -551,8 +548,10 @@ describe('ChatScreen', () => {
               origin: 'evidence',
               status: 'open',
               priority_score: 1,
+              priority_band: 'low',
               families: [],
               approach: 'fix_technical',
+              group: 'fix_site',
               skill_id: 'technical_health',
               member_count: 1,
               handoff: { context: 'action', message: 'Work on Pricing page.' },
@@ -560,10 +559,8 @@ describe('ChatScreen', () => {
               created_at: NOW,
               updated_at: NOW,
             },
-          ],
-          next_cursor: null,
-          status_counts: {},
-        }),
+          ]),
+        ),
       ),
       http.post(`/api/v1/agent/chats/${CHAT}/messages`, async ({ request }) => {
         keys.push(request.headers.get('Idempotency-Key'));

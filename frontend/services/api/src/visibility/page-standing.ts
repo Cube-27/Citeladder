@@ -11,6 +11,7 @@ import { sql } from 'kysely';
 import type { z } from 'zod';
 
 import { policy } from '../config.ts';
+import { isListingGap } from '../analysis/listing-gap.ts';
 import type { Reading, ReadingPresence } from '../source-pages/reading.ts';
 import type { RunSelection } from './selection.ts';
 
@@ -39,16 +40,14 @@ export function pageStanding(
   }
   const brand = presences.find((row) => row.entity_kind === s.ENTITY_KIND_BRAND);
   if (brand?.presence === s.PRESENCE_PRESENT) return 'listed';
-  const competitorListed = presences.some(
-    (row) => row.entity_kind !== s.ENTITY_KIND_BRAND && row.presence === s.PRESENCE_PRESENT,
-  );
-  return competitorListed && brand?.presence === s.PRESENCE_NOT_DETECTED ? 'gap' : 'read';
+  return isListingGap(page, presences) ? 'gap' : 'read';
 }
 
 /**
  * The url hashes of this project's `gap` pages, as an uncorrelated SQL
- * subquery: the same rule as `pageStanding`, so the filter pages through
- * exactly the rows that show the gap standing. Evaluated once per read, not
+ * subquery: `isListingGap` over each page's latest successful reading, so the
+ * filter pages through exactly the rows that show the gap standing (and that
+ * the earned-page detector makes Actions of). Evaluated once per read, not
  * once per citation.
  */
 export function gapPageHashes(selection: RunSelection) {

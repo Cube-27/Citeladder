@@ -27,11 +27,10 @@ export const AGENT_RUN_RETRY = { defaultDelayMs: 15_000, maxAttempts: 8 } as con
 /** Distance from the end that still counts as following the conversation. */
 export const AGENT_FOLLOW_LATEST_GAP_PX = 96;
 /**
- * Floors of an Action's priority bands. A crawl or catalog finding scores its
- * severity × 10 (critical 40, high 30, medium 20, low 10), so these keep its
- * band equal to its severity; a prompt gap's value and gap factors lift it.
+ * The grouped Actions list shows this many of each group's Actions, by
+ * priority, before its "Show all" row (AS2).
  */
-export const ACTION_PRIORITY_BANDS = { high: 30, medium: 20 } as const;
+export const ACTIONS_GROUP_PREVIEW_ROWS = 5;
 /** New chat shows this many top Actions under "Work on this". */
 export const AGENT_TOP_ACTIONS = 3;
 /** Debounce for the sidebar chat search. */

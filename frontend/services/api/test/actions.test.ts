@@ -15,6 +15,7 @@ import { declarationChecks } from '../src/opportunities/declaration-checks.ts';
 import { CHECKS, memberMeasurementLeg } from '../src/opportunities/checks/registry.ts';
 import type { OpportunityRow } from '../src/opportunities/projection.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
+import { actionRow } from './opportunity-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 
 const config = testConfig();
@@ -129,6 +130,71 @@ describe('Action routes', () => {
       workflow_id: 'refresh_page',
       message: 'Fix page a.',
     });
+  });
+
+  it('groups Actions by target and approach, filters by group, priority, approach and source, and counts groups per workspace', async () => {
+    const s = await seed();
+    const foreign = await seed();
+    const approach = async (id: string, value: string) =>
+      db.updateTable('actions').set({ approach: value }).where('id', '=', id).execute();
+    await approach(actionId(s, pageRule), 'fix_technical');
+    await approach(actionId(s, otherRule), 'improve_existing');
+    await approach(actionId(s, promptRule), 'create_new');
+    const product = actionRow(
+      { workspace_id: s.workspace_id, project_id: s.project_id },
+      {
+        group_key: 'product:widget',
+        target_kind: 'product',
+        target_label: 'Widget',
+        approach: 'improve_existing',
+        priority_score: 25,
+        families: JSON.stringify(['commerce']),
+      },
+    );
+    await db.insertInto('actions').values(product).execute();
+    const list = `/api/v1/projects/${s.project_id}/actions`;
+    const read = async (query: string) => pageBody(await request(s, `${list}${query}`));
+    const rows = (page: { items: { id: string; group: string; priority_band: string | null }[] }) =>
+      page.items.map((item) => [item.id, item.group, item.priority_band]);
+
+    const all = await read('');
+    expect(rows(all)).toEqual([
+      [actionId(s, promptRule), 'own_pages', 'high'],
+      [product.id, 'products', 'medium'],
+      [actionId(s, pageRule), 'fix_site', 'medium'],
+      [actionId(s, otherRule), 'own_pages', 'low'],
+    ]);
+    expect(all.group_counts).toEqual({ fix_site: 1, own_pages: 2, earned: 0, products: 1 });
+
+    // A group narrows the rows, not the group counts beside them.
+    const own = await read('?group=own_pages&limit=1');
+    expect(rows(own)).toEqual([[actionId(s, promptRule), 'own_pages', 'high']]);
+    expect(own.group_counts).toEqual(all.group_counts);
+    const next = await read(`?group=own_pages&limit=1&cursor=${own.next_cursor}`);
+    expect(rows(next)).toEqual([[actionId(s, otherRule), 'own_pages', 'low']]);
+    expect(next.next_cursor).toBeNull();
+    expect((await request(s, `${list}?group=fix_site&cursor=${own.next_cursor}`)).status).toBe(400);
+
+    // Every other filter narrows the group counts too.
+    const medium = await read('?priority=medium');
+    expect(rows(medium).map(([id]) => id)).toEqual([product.id, actionId(s, pageRule)]);
+    expect(medium.group_counts).toEqual({ fix_site: 1, own_pages: 0, earned: 0, products: 1 });
+    expect(rows(await read('?approach=fix_technical')).map(([id]) => id)).toEqual([
+      actionId(s, pageRule),
+    ]);
+    expect(rows(await read('?family=commerce')).map(([id]) => id)).toEqual([product.id]);
+    for (const query of ['group=mine', 'priority=urgent', 'approach=rewrite', 'family=email'])
+      expect((await request(s, `${list}?${query}`)).status).toBe(422);
+
+    // Another workspace neither reads these rows nor counts them.
+    expect((await request(foreign, `${list}?group=products`)).status).toBe(404);
+    const theirs = await pageBody(
+      await request(foreign, `/api/v1/projects/${foreign.project_id}/actions?group=products`),
+    );
+    expect([theirs.items, theirs.group_counts]).toEqual([
+      [],
+      { fix_site: 0, own_pages: 3, earned: 0, products: 0 },
+    ]);
   });
 
   it('reads the status its writers persisted, not one re-derived from raw input rows', async () => {

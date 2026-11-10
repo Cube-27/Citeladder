@@ -5,22 +5,28 @@
  * structurally required), never as the raw backend identifier.
  */
 import type { PriorityValue } from '@/components/ui/badge';
-import type { ActionStatus } from '@/lib/api/actions';
-import { ACTION_PRIORITY_BANDS } from '@/lib/config/agent';
+import type { ActionGroup, ActionPriorityBand, ActionStatus } from '@/lib/api/actions';
 
-export type PriorityBand = 'High' | 'Medium' | 'Low';
-
-/** An Action's priority score as the band a reader compares by; the score itself only ranks. */
-export function priorityBand(score: number): PriorityBand {
-  if (score >= ACTION_PRIORITY_BANDS.high) return 'High';
-  return score >= ACTION_PRIORITY_BANDS.medium ? 'Medium' : 'Low';
-}
+/** The band the server put an Action's priority score in; the score itself only ranks. */
+export const PRIORITY_BAND_LABEL: Record<ActionPriorityBand, string> = {
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+};
 
 /** A band as the priority badge's value (its tint and bar glyph). */
-export const PRIORITY_BAND_VALUE: Record<PriorityBand, PriorityValue> = {
-  High: 'high',
-  Medium: 'medium',
-  Low: 'low',
+export const PRIORITY_BAND_VALUE: Record<ActionPriorityBand, PriorityValue> = {
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+};
+
+/** The Actions list's groups, in the order the list shows them (AS2). */
+export const ACTION_GROUP_LABEL: Record<ActionGroup, string> = {
+  fix_site: 'Fix how AI reads your site',
+  own_pages: 'Improve your own pages',
+  earned: 'Get mentioned elsewhere',
+  products: 'Improve your products',
 };
 
 export const ACTION_STATUS_LABEL: Record<ActionStatus, string> = {
@@ -71,6 +77,9 @@ const FAMILY_LABEL: Record<string, string> = {
   content_optimization: 'Content optimization',
 };
 
+/** Every Action Source (evidence family) a reader can filter by. */
+export const ACTION_FAMILIES = Object.keys(FAMILY_LABEL);
+
 export function familyLabel(family: string): string | null {
   return FAMILY_LABEL[family] ?? null;
 }
@@ -83,6 +92,9 @@ const APPROACH_LABEL: Record<string, string> = {
   earned_placement: 'Earn a placement',
   improve_links: 'Improve internal links',
 };
+
+/** Every Action type (approach) a reader can filter by. */
+export const ACTION_APPROACHES = Object.keys(APPROACH_LABEL);
 
 export function approachLabel(approach: string | null | undefined): string | null {
   return approach ? (APPROACH_LABEL[approach] ?? null) : null;

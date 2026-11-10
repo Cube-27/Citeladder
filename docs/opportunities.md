@@ -358,10 +358,29 @@ the causality notice is shown: a met check shows the change is live and
 measured; it does not prove this Action caused any movement, and other changes
 can overlap.
 
-The Actions list keeps its `status` and `target` filters in shareable URL state
-and pages with a cursor. Each status choice shows its project-wide count while
-no target filter is set; the counts cover every target type, so a target
-filter hides them. Overview's ranked actions link to the owning Action at
+The Actions list is grouped (AS2). Each Action's `group` is derived at read
+time from its stored target kind and approach by `ACTION_GROUPS` in the
+[Actions config](../frontend/services/api/src/config/actions.ts); no column
+holds it, and each Action lands in exactly one:
+
+| Group | Admits |
+|---|---|
+| `products` (Improve your products) | product and category targets, any approach |
+| `earned` (Get mentioned elsewhere) | `earned_placement` |
+| `fix_site` (Fix how AI reads your site) | `fix_technical`, `improve_links` |
+| `own_pages` (Improve your own pages) | everything else: `create_new`, `improve_existing`, `consolidate`, and an undiagnosed Agent-origin Action |
+
+`GET /projects/{id}/actions` filters by `status`, `target_kind`, `group`,
+`approach`, `priority` (the band: high from 30, medium from 20, low below; an
+unscored Action has none) and `family` (Source); an unknown value is a 422.
+Each item carries `group` and `priority_band`. `status_counts` stay
+project-wide and unfiltered (the sidebar badge); `group_counts` count every
+group under every filter but the group. The screen shows each group under a
+collapsible header row with its count, its top five Actions by priority and
+"Show all N", which sets the group filter and pages that group with a cursor.
+Every filter (Status, Group, Action type, Priority, Target type, Source) is
+shareable URL state in one All filters menu (AS6), and a row opens its Action.
+Overview's ranked actions link to the owning Action at
 `/agent/actions/{action_id}`, or to the Actions list when an Opportunity has no
 Action yet; an Opportunity's member evidence opens in a drawer on that detail.
 

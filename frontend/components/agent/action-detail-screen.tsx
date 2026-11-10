@@ -246,7 +246,7 @@ function Details({ action }: Readonly<{ action: ActionDetail }>) {
   const target = targetKindLabel(action.target_kind) ?? 'Target';
   const facts: Fact[] = [
     { label: 'Status', value: <ActionStatusBadge status={action.status} /> },
-    { label: 'Priority', value: <ActionPriorityBadge score={action.priority_score} /> },
+    { label: 'Priority', value: <ActionPriorityBadge band={action.priority_band} /> },
   ];
   if (approach) facts.push({ label: 'Action type', value: approach });
   facts.push({

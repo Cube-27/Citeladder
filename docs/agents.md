@@ -474,8 +474,11 @@ replays a failed submission with its original idempotency key.
 
 Agent mode holds New chat, Actions, Skills, Context and the chat history under
 `/agent`. Actions (`/agent/actions`) is the one list of the project's work,
-[content gaps](content-optimization.md) included (AS1); an Action's page is
-`/agent/actions/{id}`. The composer takes `/` to pick a skill and `@` to
+[content gaps](content-optimization.md) included (AS1), its rows grouped
+under collapsible headers (fix the site, own pages, mentions elsewhere,
+products; AS2) with every filter in one All filters menu (AS6; the groups and
+filters are in [Opportunities](opportunities.md)); a row opens the Action's
+page, `/agent/actions/{id}`. The composer takes `/` to pick a skill and `@` to
 mention up to five of the project's Actions. New chat's **Work on an Action**
 offers **Brief me**, a `growth_plan` chat mentioning the top open Actions.
 

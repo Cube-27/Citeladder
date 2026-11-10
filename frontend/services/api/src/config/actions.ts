@@ -1,5 +1,26 @@
 /** Actions catalog: deterministic decisions over persisted evidence. */
+import type { ActionGroup } from '@citeladder/contracts/actions';
 import { opportunities } from './opportunity.ts';
+
+/** One group rule: it admits an Action whose target kind and approach are both listed; an absent list admits every value. */
+export type ActionGroupRule = Readonly<{
+  group: ActionGroup;
+  target_kinds?: readonly string[];
+  approaches?: readonly string[];
+}>;
+
+/**
+ * The Actions list's groups (AS2), derived at read time from the stored
+ * target kind and approach; no column holds them. An Action belongs to the
+ * FIRST rule that admits it, else to `ACTION_GROUP_DEFAULT`, so each Action
+ * lands in exactly one group.
+ */
+const ACTION_GROUPS: readonly ActionGroupRule[] = [
+  { group: 'products', target_kinds: ['product', 'category'] },
+  { group: 'earned', approaches: ['earned_placement'] },
+  { group: 'fix_site', approaches: ['fix_technical', 'improve_links'] },
+];
+const ACTION_GROUP_DEFAULT: ActionGroup = 'own_pages';
 
 export const actions = {
   ACTION_STATUS_OPEN: 'open',
@@ -215,6 +236,20 @@ export const actions = {
     target_kinds: [],
   },
   AGENT_ORIGIN_DEFAULT_SKILL: 'content_create',
+  ACTION_GROUPS,
+  /**
+   * Every Action no group rule admits: creating, improving or merging your
+   * own pages (pages, planned pages, queries, prompts), and an Agent-origin
+   * Action whose approach is not diagnosed yet.
+   */
+  ACTION_GROUP_DEFAULT,
+  /**
+   * Floors of an Action's priority bands. A crawl or catalog finding scores its
+   * severity × 10 (critical 40, high 30, medium 20, low 10), so these keep its
+   * band equal to its severity; a prompt gap's value and gap factors lift it.
+   * An unscored Action has no band.
+   */
+  ACTION_PRIORITY_BANDS: { high: 30, medium: 20 },
   // Each check kind names its reading (`opportunities/checks/`).
   LEG_VISIBILITY_RUN: 'next_visibility_run' as const,
   LEG_SEARCH_CONSOLE_WINDOW: 'next_search_console_window' as const,

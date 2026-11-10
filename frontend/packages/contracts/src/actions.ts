@@ -39,6 +39,16 @@ export const actionHandoffSchema = z.discriminatedUnion('context', [
 ]);
 export type ActionHandoff = z.infer<typeof actionHandoffSchema>;
 
+// The Actions list's groups, derived at read time from the target kind and
+// approach (services/api config `ACTION_GROUPS`): fix how AI reads your site,
+// improve your own pages, get mentioned elsewhere, improve your products.
+export const actionGroupSchema = z.enum(['fix_site', 'own_pages', 'earned', 'products']);
+export type ActionGroup = z.infer<typeof actionGroupSchema>;
+
+// The band a priority score falls in; the score itself only ranks.
+export const actionPriorityBandSchema = z.enum(['high', 'medium', 'low']);
+export type ActionPriorityBand = z.infer<typeof actionPriorityBandSchema>;
+
 // One unit of work per target, projected from persisted Action rows.
 export const actionItemSchema = responseObject({
   id: uuid(),
@@ -50,8 +60,11 @@ export const actionItemSchema = responseObject({
   origin: z.enum(['evidence', 'agent']),
   status: actionStatusSchema,
   priority_score: z.number().nullable(),
+  // Null while the Action has no score.
+  priority_band: actionPriorityBandSchema.nullable(),
   families: z.array(z.string()),
   approach: z.string(),
+  group: actionGroupSchema,
   skill_id: z.string(),
   member_count: z.number().int(),
   handoff: actionHandoffSchema,
@@ -155,7 +168,10 @@ export const actionDetailSchema = actionItemSchema.extend({
 export const actionsPageSchema = responseObject({
   items: z.array(actionItemSchema),
   next_cursor: z.string().nullable(),
+  // Project-wide, unfiltered.
   status_counts: z.record(z.string(), z.number().int()),
+  // Under every filter but the group: what each group holds now.
+  group_counts: z.record(actionGroupSchema, z.number().int()),
 });
 
 /** The statuses a user may store; the rest are derived or declared. */
