@@ -179,9 +179,12 @@ Its ID is the family's source identity.
   in `config/opportunity.ts` (`CONTENT_GAP`). The model does not score.
 - **Screen split by page kind (CO10).** The Actions list gains a `surface`
   filter derived from the target: an owned page whose current Site Health page
-  kind is a content kind, or a planned page, is `content`; everything else is
-  `actions`. One page is one Action, so a content page's Site Health findings
-  and its content gaps share one Action, one editor and one declaration. No
+  kind is a content kind, or a planned page with a `content_gap_new_page`
+  member, is `content`; everything else is `actions`. A planned page has no
+  page kind, so one raised only by another rule (a keyword gap) or planned by
+  the Agent stays on Actions until a content gap converges on it. One page is
+  one Action, so a content page's Site Health findings and its content gaps
+  share one Action, one editor and one declaration. No
   rule is re-tagged. The surface is persisted on the Action at action sync (it
   is read in list filters and counts), and a page whose kind changes moves with
   its next refresh.

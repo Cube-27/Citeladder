@@ -679,6 +679,8 @@ describe('status vocabularies', () => {
       ['connected', 'needs_reauth', 'pending_revocation', 'revoked', 'error'],
     ],
     ['actions', 'status', actionStatusSchema.options],
+    ['content_angle_runs', 'outcome', ['succeeded', 'failed']],
+    ['content_angle_owned_matches', 'method', ['model_pick', 'none']],
     ['prompts', 'status', promptStatusSchema.options],
     [
       'prompt_candidates',

@@ -5,6 +5,7 @@
  */
 import { aiTrafficKinds } from '../ai-traffic/analytics-kinds.ts';
 import { commerceKinds } from '../commerce/analytics-kinds.ts';
+import { contentGapKinds } from '../content-gaps/analytics-kinds.ts';
 import { crawlLogKinds } from '../crawl-logs/analytics-kinds.ts';
 import { demandKinds } from '../demand/analytics-kinds.ts';
 import { opportunityKinds } from '../opportunities/analytics-kinds.ts';
@@ -23,6 +24,7 @@ export const ANALYTICS_KINDS: AnalyticsKinds = Object.freeze({
   ...commerceKinds,
   ...searchIntelligenceKinds,
   ...sourcePageKinds,
+  ...contentGapKinds,
   ...internalLinkKinds,
   ...referralKinds,
   ...trafficKinds,

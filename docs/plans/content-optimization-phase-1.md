@@ -1,7 +1,6 @@
 # Content optimization phase 1: implementation plan
 
-Status: **planned, 2026-11-10**. Not started; not authorized for execution
-until the owner assigns it.
+Status: **in progress, 2026-11-10** (assigned by the owner 2026-11-10).
 
 What and why are in [content optimization](content-optimization.md)
 (decisions CO1–CO18, sections 1–2) and [B73](../billing-decisions.md#content-optimization-2026-11-10).
@@ -197,9 +196,12 @@ continues). Export both from the package index.
 ### 2.4 Surface
 
 - **`services/api/src/opportunities/action-sync.ts`**: compute
-  `surface(target, crawl)` while syncing. A `planned_page` gets `content`. A
-  `site_page` gets `content` when its current analysis in the snapshot's crawl
-  has a `page_kind` in `content_page_kinds`. Everything else gets `actions`.
+  `surface(target, members, crawl)` while syncing. A `planned_page` gets
+  `content` only when one of its members is `content_gap_new_page`; a planned
+  page raised only by the keyword-gap rule or planned by the Agent has no page
+  kind and stays `actions`. A `site_page` gets `content` when its current
+  analysis in the snapshot's crawl has a `page_kind` in `content_page_kinds`.
+  Everything else gets `actions`.
   Write it with the members in the same statement, and restamp it on every
   refresh (a kind change moves the Action).
 - **`services/api/src/opportunities/actions.ts`**:
@@ -229,7 +231,9 @@ continues). Export both from the package index.
   6. No run: no hits, with the limitation "content gaps not computed yet".
   7. A relabelled lineage keeps the same Action ID.
   8. An Agent planned page created via `attachOrCreateAction` with the same
-     slug converges on one Action.
+     slug converges on one Action, which moves to `content` once the gap
+     member joins it. An Agent planned page and a keyword-gap planned page
+     with no content-gap member stay on `actions`.
   9. Planned to owned: the planned Action keeps its ID and declaration, its
      evidence clears, and the owned hit names `continues_action_id`.
   10. Workspace isolation of the `surface` filter and counts.

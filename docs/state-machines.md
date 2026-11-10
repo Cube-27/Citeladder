@@ -402,6 +402,7 @@ Dispatch attempts are insert-only, one `outcome` per ordinal (DB
 | `commerce_products.lifecycle_state` | only `active` written | — |
 | `provider_connections.last_test_status` | `''` → `ok`/`failed` only while `credential_revision` and `base_url` are unchanged; key rotation resets | App `probes.ts` |
 | `source_pages.inspection_state` | `not_inspected`/`stale`/`failed`/`blocked` → `queued` (claim lease) → outcome; `inspected` → `stale` | App fence `claim_expires_at = lease`, unexpired `source-pages/persistence.ts:42-77` |
+| `content_angle_runs.outcome` | insert-only, terminal at insert: ∅ → `succeeded` \| `failed`; appended only when one of its three input keys differs from the latest `succeeded` run (a `failed` run never blocks a retry); a task that exhausts its attempts appends `failed` (`task_failed`). Lineages, angles, members and owned matches insert with a `succeeded` run; a lineage's `planned_page_key` is set once and never rewritten | DB `ck_content_angle_runs_outcome` 0016; App per-project advisory lock re-checks the keys inside the worker's fenced terminal transaction `content-gaps/refresh.ts` |
 
 ## 7. Workspace, auth, public API, Actions and prompts
 

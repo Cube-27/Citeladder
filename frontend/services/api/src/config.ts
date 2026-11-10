@@ -38,6 +38,7 @@ import { sourcePatterns } from './config/source-patterns.ts';
 import { sourcePages, sourcePageVocabulary, urlIdentity } from './config/source-pages.ts';
 import { jev, quality, qualityGatesReported, validateJevSettings } from './config/jev.ts';
 import { contentDifferentiation } from './config/content-differentiation.ts';
+import { contentOptimization } from './config/content-optimization.ts';
 import { agentContext } from './config/agent-context.ts';
 import { projectReads } from './config/projects.ts';
 import { agentSkills } from './config/agent-skills.ts';
@@ -131,6 +132,7 @@ export const policy = {
     ...contentDifferentiation,
     stop_words: demand.stop_words,
   },
+  content_optimization: contentOptimization,
   site_health: siteHealth,
   site_health_runtime: siteHealthRuntime,
   web_fetch: siteHealth.web_fetch,
