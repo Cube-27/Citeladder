@@ -102,8 +102,16 @@ test.describe('marketing routes', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await page.getByRole('link', { name: 'Test your rules' }).click();
     await expect(page).toHaveURL(/\/tools\/ai-crawler-checker$/);
-    await page.waitForFunction(() => !document.querySelector('astro-island[ssr]'));
-    await page.getByRole('button', { name: 'Load example' }).click();
+    // Astro drops an island's `ssr` attribute when React starts hydrating,
+    // not when it finishes, so a click can still reach markup with no
+    // handler. Press until the example lands in the form: then it is live.
+    await expect(async () => {
+      await page.getByRole('button', { name: 'Load example' }).click();
+      await expect(page.getByRole('textbox', { name: 'Page URL to test' })).toHaveValue(
+        'https://example.com/private/public-guide',
+        { timeout: 1000 },
+      );
+    }).toPass();
     await page.getByRole('button', { name: 'Test crawler rules' }).click();
     await expect(page.getByRole('textbox', { name: 'Generated output' })).toHaveValue(
       /Blocked by supplied rules/,
