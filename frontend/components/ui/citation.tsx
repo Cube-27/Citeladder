@@ -31,7 +31,7 @@ export function Citation({
       {index === undefined ? null : (
         <span
           className={cn(
-            'inline-grid h-5 min-w-5 place-items-center rounded-full px-1 font-mono text-eyebrow tracking-normal',
+            'inline-grid h-5 min-w-5 place-items-center rounded-full px-1 font-mono text-eyebrow font-normal tracking-normal',
             own ? 'bg-surface text-accent-ink' : 'bg-surface-sunken text-ink-secondary',
           )}
         >
@@ -39,7 +39,7 @@ export function Citation({
         </span>
       )}
       <BrandMark name={host} logoUrl={favicon} websiteUrl={`https://${host}`} placement="inline" />
-      <span className="font-medium whitespace-nowrap">{host}</span>
+      <span className="whitespace-nowrap">{host}</span>
       {title ? <span className="text-ink-muted min-w-0 truncate">{title}</span> : null}
     </>
   );

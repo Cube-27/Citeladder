@@ -83,7 +83,7 @@ export function IssueDetailRail({
                 it read as a contradiction. The fix is what the reader came
                 for, so it is part of the header, not a card under it. */}
             {issue.remediation ? (
-              <p className="type-body whitespace-pre-line">
+              <p className="type-body text-ink whitespace-pre-line">
                 <span className={textRole('label')}>How to fix:</span> {issue.remediation}
               </p>
             ) : null}

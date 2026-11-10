@@ -88,10 +88,10 @@ export function Tooltip({
         <TooltipPrimitive.Content
           side={side}
           sideOffset={8}
-          className="tooltip-panel bg-ink text-on-ink z-modal text-caption inline-flex max-w-72 items-center gap-2 rounded-sm px-2 py-1 font-medium"
+          className="tooltip-panel bg-ink text-on-ink z-modal text-caption inline-flex max-w-72 items-center gap-2 rounded-sm px-2 py-1"
         >
           {content}
-          {shortcut ? <span className="text-eyebrow font-mono font-medium">{shortcut}</span> : null}
+          {shortcut ? <span className="text-eyebrow font-mono font-normal">{shortcut}</span> : null}
         </TooltipPrimitive.Content>
       </TooltipPrimitive.Portal>
     </TooltipPrimitive.Root>

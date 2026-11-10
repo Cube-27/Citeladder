@@ -220,7 +220,7 @@ export function ChartLegend({
           <ChartSwatch tone={entry.tone} line={line} />
           <span className="text-ink-secondary">{entry.name}</span>
           {entry.value === undefined ? null : (
-            <span className="text-ink font-medium tabular-nums">{entry.value}</span>
+            <span className="text-ink tabular-nums">{entry.value}</span>
           )}
         </li>
       ))}
@@ -275,7 +275,7 @@ export function ChartTipRow({
     <div className="text-body-sm flex items-center gap-2">
       <ChartSwatch tone={tone} line />
       <span className="text-ink-secondary min-w-0 flex-1 truncate">{name}</span>
-      <span className="text-ink font-medium tabular-nums">{value}</span>
+      <span className="text-ink tabular-nums">{value}</span>
     </div>
   );
 }

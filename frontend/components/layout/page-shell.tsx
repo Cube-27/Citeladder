@@ -247,10 +247,12 @@ function FillContent({
 }>) {
   return (
     <div className="flex h-[calc(100dvh-var(--route-chrome-height))] min-h-0 flex-col gap-[var(--workspace-gap)]">
+      {/* The scrollbar's track is reserved on both edges, so content centred
+          in the region shares its centre with the dock below it. */}
       <section
         ref={scrollRef}
         aria-label={scrollLabel}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+        className="min-h-0 flex-1 [scrollbar-gutter:stable_both-edges] overflow-y-auto overscroll-contain"
       >
         <div
           data-page-content=""

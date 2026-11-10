@@ -444,6 +444,10 @@
   --card-padding: 16px;
   --modal-padding: 16px;
   --table-row-height: var(--row-app);
+  /* Two text inks in the app (D49): `ink` and one grey. The website keeps a
+     lighter third step for its own pages; in the app `ink-muted` is the same
+     grey as `ink-secondary`, so no screen can print a third tone. */
+  --color-ink-muted: var(--color-ink-secondary);
 }
 
 @media (max-width: 1279px) {
@@ -578,7 +582,14 @@ html[data-public-surface]:not([data-marketing-surface]) body {
    page title display-md, section title, card title heading, default text
    body-sm, controls label, footnotes caption, numbers stat. They sit in the
    components layer so a status utility still overrides the ink where the
-   value's meaning is its colour. */
+   value's meaning is its colour.
+
+   Three text styles, never more (D49): heading (500, ink) for page, section,
+   card, dialog and drawer titles, buttons, the selected tab or nav item and
+   a metric's figure; primary (400, ink) for what is read first in a row or
+   sentence (titles, names, values, cells, prose); secondary (400, the app's
+   one grey) for what supports it (descriptions, labels, column heads, meta,
+   counts). Every role below is one of the three. */
 @layer components {
   .type-page-title {
     font-family: var(--font-display);
@@ -604,9 +615,15 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-family: var(--font-sans);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
-    font-weight: 500;
+    font-weight: 400;
     letter-spacing: 0;
     color: var(--color-ink);
+  }
+  /* The same size set as a heading (a table's, a settings section's, a card
+     in a grid) is a heading, so it takes the heading weight; in a row, a
+     cell or a list it stays 400. */
+  :is(h1, h2, h3, h4, h5, h6).type-item-title {
+    font-weight: 500;
   }
   .type-body {
     font-family: var(--font-sans);
@@ -616,20 +633,25 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     letter-spacing: 0;
     color: var(--color-ink-secondary);
   }
-  /* Buttons, navigation, tabs, links: the ink belongs to the control's state. */
+  /* Navigation, tabs, links and list rows: the ink belongs to the control's
+     state, and only a selected item steps up to 500 (its primitive sets it).
+     A button is 500 at rest (button.tsx); so is the file input's button. */
   .type-control,
   .type-control-file::file-selector-button {
     font-family: var(--font-sans);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
-    font-weight: 500;
+    font-weight: 400;
     letter-spacing: 0;
+  }
+  .type-control-file::file-selector-button {
+    font-weight: 500;
   }
   .type-label {
     font-family: var(--font-sans);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
-    font-weight: 500;
+    font-weight: 400;
     letter-spacing: 0;
     color: var(--color-ink-secondary);
   }
@@ -657,7 +679,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-family: var(--font-sans);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
-    font-weight: 500;
+    font-weight: 400;
     letter-spacing: 0;
     font-variant-numeric: tabular-nums;
     color: var(--color-ink);
@@ -678,24 +700,25 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: 400;
     letter-spacing: 0;
   }
-  /* Badges, chips, counts and key hints: caption size at label weight; the
-     badge's tone supplies the ink. */
+  /* Badges, chips, counts and key hints: the caption size; the badge's tone
+     supplies the ink. */
   .type-badge {
     font-family: var(--font-sans);
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);
-    font-weight: 500;
+    font-weight: 400;
     letter-spacing: 0;
   }
-  /* Rendered Markdown (Agent output, evidence answers): body text, headings
-     in the title and heading roles, code on `surface-sunken` in Geist Mono.
-     Generated headings start at h2 (see markdown.tsx). */
+  /* Rendered Markdown (Agent output, evidence answers): reading text in the
+     primary ink, headings in the title and heading roles, code on
+     `surface-sunken` in Geist Mono. Generated headings start at h2 (see
+     markdown.tsx). */
   .prose-content {
     font-family: var(--font-sans);
     font-size: var(--text-body-sm);
     line-height: var(--text-body-sm--line-height);
     font-weight: 400;
-    color: var(--color-ink-secondary);
+    color: var(--color-ink);
   }
   .prose-content > :last-child { margin-bottom: 0; }
   .prose-content :where(h2, h3, h4, h5, h6) {
@@ -769,7 +792,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     text-align: left;
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
-    font-weight: 500;
+    font-weight: 400;
     color: var(--color-ink-muted);
     background: var(--color-surface-sunken);
     border-bottom: 1px solid var(--color-line);
@@ -794,9 +817,10 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   .prose-compact pre { padding: 0.75rem; }
   .prose-compact :is(th, td) { padding: 0.5rem 0.75rem; }
 
-  /* Modifier: a value or name inside text that owns its size. */
+  /* Modifier: a value or name inside text that owns its size. The primary
+     ink sets it apart from the grey around it; the weight stays 400. */
   .type-emphasis {
-    font-weight: 500;
+    font-weight: 400;
     color: var(--color-ink);
   }
 
@@ -805,7 +829,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-family: var(--font-mono);
     font-size: var(--text-eyebrow);
     line-height: var(--text-eyebrow--line-height);
-    font-weight: 500;
+    font-weight: 400;
     letter-spacing: var(--text-eyebrow--letter-spacing);
     text-transform: uppercase;
     color: var(--color-ink-muted);
@@ -843,9 +867,13 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   }
 
   strong,
-  b,
-  th {
+  b {
     font-weight: 500;
+  }
+
+  /* A column or row head names its cells: 400, never the browser's bold. */
+  th {
+    font-weight: 400;
   }
 
   /* Lucide icons draw at one stroke, 1.75, at every size. */

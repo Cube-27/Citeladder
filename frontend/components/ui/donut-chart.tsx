@@ -148,7 +148,7 @@ export function DonutChart({
             aria-hidden
             className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5"
           >
-            <span className="type-figure-ring">
+            <span className="type-figure">
               {highlighted ? chartPercent(highlighted.value, whole) : format(total ?? sum)}
             </span>
             <span className="type-eyebrow max-w-24 truncate">
@@ -173,7 +173,7 @@ export function DonutChart({
               >
                 <ChartSwatch tone={chartTone(slice, index)} />
                 <span className="text-ink truncate">{slice.name}</span>
-                <span className="text-ink text-right font-medium tabular-nums">
+                <span className="text-ink text-right tabular-nums">
                   {chartPercent(slice.value, whole)}
                 </span>
                 <span className="text-ink-muted text-right tabular-nums">
@@ -186,7 +186,7 @@ export function DonutChart({
             <li className="text-body-sm grid h-[var(--control-md)] w-full grid-cols-[8px_minmax(0,1fr)_48px_36px] items-center gap-x-2 px-2">
               <span aria-hidden className="bg-chart-grid rounded-2xs inline-block size-2" />
               <span className="text-ink truncate">{remainderLabel}</span>
-              <span className="text-ink text-right font-medium tabular-nums">
+              <span className="text-ink text-right tabular-nums">
                 {chartPercent(remainder, whole)}
               </span>
               <span className="text-ink-muted text-right tabular-nums">{format(remainder)}</span>

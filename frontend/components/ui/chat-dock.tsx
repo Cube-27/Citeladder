@@ -126,12 +126,13 @@ export function ComposerFrame({
 }
 
 /**
- * AgentThread — the conversation's column: the thread measure (1040), centred
- * in the page or panel, its turns 24 apart.
+ * AgentThread — the conversation's column: the composer's measure (1040),
+ * centred in the page or panel, inset 16 on each side so the turns sit inside
+ * the composer's edges, level with its text; its turns 16 apart.
  */
 export function AgentThread({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="max-w-thread mx-auto flex w-full min-w-0 flex-col gap-[var(--card-padding)]">
+    <div className="max-w-thread mx-auto flex w-full min-w-0 flex-col gap-[var(--card-padding)] px-4">
       {children}
     </div>
   );

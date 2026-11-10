@@ -207,9 +207,7 @@ export function SidebarNavGroup({
   return (
     <div className="flex flex-col">
       {title ? (
-        <p className="type-caption labelled:flex hidden min-h-4 items-end px-3 font-medium">
-          {title}
-        </p>
+        <p className="type-caption labelled:flex hidden min-h-4 items-end px-3">{title}</p>
       ) : null}
       <ul className="flex flex-col">{children}</ul>
     </div>

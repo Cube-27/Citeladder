@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 
 const CAP =
-  'bg-surface text-ink-secondary shadow-xs inline-flex h-5 min-w-5 items-center justify-center rounded-xs px-1 font-mono text-eyebrow font-medium tracking-normal whitespace-nowrap normal-case';
+  'bg-surface text-ink-secondary shadow-xs inline-flex h-5 min-w-5 items-center justify-center rounded-xs px-1 font-mono text-eyebrow font-normal tracking-normal whitespace-nowrap normal-case';
 
 /**
  * Kbd — a keyboard key cap in Geist Mono: `surface` with the xs ring, 20px
