@@ -1,8 +1,6 @@
 import { screen, within } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vite-plus/test';
 
-import { mswServer } from '@/test/msw-server';
 import { renderWithProviders as render } from '@/test/render';
 
 import { SourceUrlPageCard } from './source-url-page';
@@ -10,13 +8,6 @@ import { SourceUrlPageCard } from './source-url-page';
 type Page = NonNullable<Parameters<typeof SourceUrlPageCard>[0]['page']>;
 
 const ACTION = '44444444-4444-4444-8444-444444444444';
-const PROJECT = '11111111-1111-4111-8111-111111111111';
-const REQUEST =
-  'Draft a request to be listed on https://review.example/best-crm, alongside Globex.';
-
-beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
-afterEach(() => mswServer.resetHandlers());
-afterAll(() => mswServer.close());
 
 function page(overrides: Partial<Page> = {}): Page {
   return {
@@ -54,35 +45,7 @@ function page(overrides: Partial<Page> = {}): Page {
 const URL = 'https://review.example/best-crm';
 
 describe('what a cited page means for you', () => {
-  it('names the competitors listed where you are not, with their lines, and opens the Action', async () => {
-    mswServer.use(
-      http.get(`/api/v1/actions/${ACTION}`, () =>
-        HttpResponse.json({
-          id: ACTION,
-          project_id: PROJECT,
-          target_kind: 'earned_page',
-          target_label: URL,
-          target_url: URL,
-          target_prompt_id: null,
-          origin: 'evidence',
-          status: 'open',
-          priority_score: 40,
-          families: ['sources'],
-          approach: 'earned_placement',
-          skill_id: 'earned_authority',
-          member_count: 1,
-          handoff: { context: 'action', message: REQUEST },
-          evidence_cleared_at: null,
-          created_at: '2026-10-01T00:00:00Z',
-          updated_at: '2026-10-01T00:00:00Z',
-          diagnosis: {},
-          members: [],
-          member_measurement: {},
-          declarable_since: '2026-09-01T00:00:00Z',
-          declaration: null,
-        }),
-      ),
-    );
+  it('names the competitors listed where you are not, with their lines, and opens the Action', () => {
     render(<SourceUrlPageCard url={URL} page={page()} loading={false} />);
 
     expect(screen.getByText('Competitors are listed on this page and you are not.')).toBeVisible();
@@ -98,12 +61,14 @@ describe('what a cited page means for you', () => {
     expect(
       screen.getByText('Searched 4,200 characters of readable text; no form of the name matched.'),
     ).toBeVisible();
-    // The request opens New chat on the Action with its own message written.
-    const draft = await screen.findByRole('link', { name: 'Draft the request' });
+    // The request opens New chat on the Action, which writes its message; the
+    // link carries the id alone.
+    const draft = screen.getByRole('link', { name: 'Draft the request' });
     const chat = new globalThis.URL(draft.getAttribute('href')!, 'https://app.test');
-    expect(chat.pathname).toBe('/agent');
-    expect(chat.searchParams.get('action_id')).toBe(ACTION);
-    expect(chat.searchParams.get('prompt')).toBe(REQUEST);
+    expect({ path: chat.pathname, ...Object.fromEntries(chat.searchParams) }).toEqual({
+      path: '/agent',
+      action_id: ACTION,
+    });
   });
 
   it('says a page was never read instead of reporting anyone absent', () => {

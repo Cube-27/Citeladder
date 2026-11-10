@@ -70,7 +70,10 @@ function NewChat({
   searchParams,
 }: Readonly<{ workspaceId: string; projectId: string; searchParams: URLSearchParams }>) {
   const handoff = useMemo(() => parseAgentHandoff(searchParams), [searchParams]);
-  const [message, setMessage] = useState(handoff.prompt ?? '');
+  // Undefined until typed: the composer shows the URL's prompt or, for an
+  // Action handoff, the Action's own message once it loads. The message is
+  // read, never carried in the URL, so history and logs keep only ids.
+  const [typed, setMessage] = useState(handoff.prompt);
   const [context, setContext] = useState(handoff.context);
   const [skillId, setSkillId] = useState<string | null | undefined>(handoff.skillId ?? undefined);
   // A next step arrives with its workflow pinned; a gallery pick opens its form.
@@ -94,6 +97,7 @@ function NewChat({
   });
 
   const actionId = attached.isError ? undefined : handoff.actionId;
+  const message = typed ?? attached.data?.handoff.message ?? '';
   // A workflow is sent by id; the server validates it and pins its skill.
   const start = (text: string, workflowId: string | undefined) =>
     create.start({

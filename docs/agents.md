@@ -483,11 +483,15 @@ Evidence screens hand work to New chat through the
 [handoff codec](../frontend/lib/agent/handoff.ts). Every Action entry point
 (**Work with the agent** on its page, New chat's Recommended Actions, a cited
 URL's **Draft the request**, a prompt's **Work on this**) attaches the Action
-and writes its `handoff.message` into the composer, editable, so Send works
-without typing (AS3). The server fills that message from the Action's own
-evidence with its approach branch's template (`messages` in
-[`APPROACH_TREE`](../frontend/services/api/src/config/actions.ts)) and falls
-back to the Action's label. **Ask agent** carries typed references only (an
+by id; New chat reads it and writes its `handoff.message` into the composer,
+editable, so Send works without typing (AS3). The message never travels in the
+URL, so browser history and request logs keep ids, not evidence; an explicit
+`prompt` parameter from another entry point still wins. The server fills that
+message from the evidence of the finding the handoff attaches, with that
+finding's approach branch template (`messages` in
+[`APPROACH_TREE`](../frontend/services/api/src/config/actions.ts)), or from the
+Action's own branch when no finding names a workflow, and falls back to the
+Action's label. **Ask agent** carries typed references only (an
 Opportunity, a Demand signal, a page or URL, up to 100 Keyword Research rows of
 one dataset, an issue group, a Site Facts crawl, or an exact output revision)
 plus an optional question, skill or workflow. The browser never embeds evidence

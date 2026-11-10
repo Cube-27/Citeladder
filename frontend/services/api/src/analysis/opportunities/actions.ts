@@ -119,14 +119,8 @@ export function targetFor(member: ActionMember) {
 
 type ApproachBranch = ReturnType<typeof selectApproach>;
 
-/**
- * The message the Action's Agent chat opens with: its branch's templates,
- * filled from the branch's strongest member (the strongest member for the
- * default branch) and the Action's label.
- */
-function messageFor(branch: ApproachBranch, members: NonEmpty<ActionMember>, label: string) {
-  const rules: readonly string[] = branch.rule_ids;
-  const member = members.find((m) => rules.includes(m.rule_id)) ?? members[0];
+/** A branch's templates filled from one member's facts and the Action's label. */
+function messageFor(branch: Pick<ApproachBranch, 'messages'>, member: ActionMember, label: string) {
   return handoffMessage(branch.messages, {
     target: label,
     issue: member.title,
@@ -138,26 +132,37 @@ function messageFor(branch: ApproachBranch, members: NonEmpty<ActionMember>, lab
 }
 
 /**
- * The Agent handoff: the message, with the workflow of the first member, in
- * priority order, whose rule's approach branch names one; without one the
- * chat starts with the Action alone.
+ * The Agent handoff. The first member, in priority order, whose rule's
+ * approach branch names a workflow is the one selection: that branch's
+ * message, filled from that member, opens the chat on its workflow. Without
+ * one, the chat starts on the Action alone with the Action's own branch's
+ * message, filled from that branch's strongest member (the strongest member
+ * for the default branch).
  */
-function handoffFor(members: NonEmpty<ActionMember>, message: string): ActionHandoff {
+function handoffFor(
+  approach: ApproachBranch,
+  members: NonEmpty<ActionMember>,
+  label: string,
+): ActionHandoff {
   for (const member of members) {
-    const handoff = p.APPROACH_TREE.find(
-      (branch) => branch.handoff && branch.rule_ids.includes(member.rule_id),
-    )?.handoff;
-    if (handoff?.context === 'opportunity')
+    const branch = p.APPROACH_TREE.find(
+      (candidate) => candidate.handoff && candidate.rule_ids.includes(member.rule_id),
+    );
+    const handoff = branch?.handoff;
+    if (!branch || !handoff) continue;
+    const message = messageFor(branch, member, label);
+    if (handoff.context === 'opportunity')
       return {
         context: 'opportunity',
         workflow_id: handoff.workflow_id,
         opportunity_id: member.opportunity_id,
         message,
       };
-    if (handoff?.context === 'page_url')
-      return { context: 'page_url', workflow_id: handoff.workflow_id, message };
+    return { context: 'page_url', workflow_id: handoff.workflow_id, message };
   }
-  return { context: 'action', message };
+  const rules: readonly string[] = approach.rule_ids;
+  const member = members.find((m) => rules.includes(m.rule_id)) ?? members[0];
+  return { context: 'action', message: messageFor(approach, member, label) };
 }
 
 /**
@@ -225,7 +230,7 @@ function group(t: ReturnType<typeof targetFor>, members: NonEmpty<ActionMember>)
       skill_id: branch.skill_id,
       donts: [...branch.donts],
       measure_with: legs,
-      handoff: handoffFor(ordered, messageFor(branch, ordered, t.label)),
+      handoff: handoffFor(branch, ordered, t.label),
       versions: {
         grouping: p.ACTION_GROUPING_VERSION,
         diagnosis: p.ACTION_DIAGNOSIS_VERSION,

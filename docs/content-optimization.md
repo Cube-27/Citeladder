@@ -59,10 +59,12 @@ longer in the library when the refresh ran is stored with `text: null` and
 shown as such. The page reads no prompt library. Site Health findings on the
 page render as on any Action. The handoff into the Agent
 ([handoffs](agents.md#workspace-and-handoffs)) is the Action's `handoff`,
-persisted in its diagnosis: the prefilled message names the angle, and the
-workflow comes from the approach branch of its first finding that has one in
-`APPROACH_TREE` (the Opportunity and the `article` workflow for a page to
-create, the page URL and the `refresh_page` workflow for an existing page);
+persisted in its diagnosis. Its first finding whose approach branch in
+`APPROACH_TREE` names a workflow drives both the workflow and the prefilled
+message, which names that finding's angle (the Opportunity and the `article`
+workflow for a page to create, the page URL and the `refresh_page` workflow for
+an existing page), so a planned page that is also a search gap still opens on
+its content gap;
 an Action whose findings name none hands off with itself and its message.
 
 ## Not yet

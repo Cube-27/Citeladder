@@ -2,7 +2,6 @@
 
 import type { z } from 'zod';
 
-import { ActionAgentButton } from '@/components/agent/action-agent-button';
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -76,9 +75,9 @@ function GetListed({ url, actionId }: Readonly<{ url: string; actionId: string |
           <Button variant="primary" asChild>
             <ProjectLink href={`/agent/actions/${actionId}`}>Open the Action</ProjectLink>
           </Button>
-          <ActionAgentButton actionId={actionId} variant="secondary">
-            Draft the request
-          </ActionAgentButton>
+          <Button variant="secondary" asChild>
+            <ProjectLink href={agentHandoffHref({ actionId })}>Draft the request</ProjectLink>
+          </Button>
         </>
       ) : (
         <Button variant="secondary" asChild>

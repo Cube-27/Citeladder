@@ -198,7 +198,6 @@ describe('An Action page', () => {
     expect(chatOf(bar.getByRole('link', { name: 'Work with the agent' }))).toEqual({
       path: '/agent',
       action_id: ACTION,
-      prompt: MESSAGE,
       project: PROJECT,
     });
 
@@ -333,7 +332,6 @@ describe('A content-gap Action', () => {
       action_id: ACTION,
       target_url: 'https://acme.test/crm-pricing',
       workflow: 'refresh_page',
-      prompt: 'Improve https://acme.test/crm-pricing so AI answers cite it for Pricing comparison.',
       project: PROJECT,
     });
   });
@@ -360,7 +358,6 @@ describe('A content-gap Action', () => {
       action_id: ACTION,
       opportunity_id: FINDING,
       workflow: 'article',
-      prompt: 'Write a page about Setup guide for the prompts in this Action.',
       project: PROJECT,
     });
   });

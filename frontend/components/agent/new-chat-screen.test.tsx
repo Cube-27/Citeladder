@@ -459,10 +459,8 @@ describe('NewChatScreen', () => {
     expect(await within(recommended).findAllByRole('listitem')).toHaveLength(3);
     expect(within(recommended).queryByText('Careers')).not.toBeInTheDocument();
     const start = within(recommended).getByRole('link', { name: 'Work on Pricing page' });
-    expect(start).toHaveAttribute(
-      'href',
-      `/agent?action_id=${PRICING}&prompt=Work+on+Pricing+page.&project=${PROJECT}`,
-    );
+    // Ids only: the Action's message is read on New chat, never put in the URL.
+    expect(start).toHaveAttribute('href', `/agent?action_id=${PRICING}&project=${PROJECT}`);
     expect(within(recommended).queryByText('Work on this')).not.toBeInTheDocument();
     // The Actions come before the workflows.
     const workflows = await screen.findByRole('region', { name: 'Or start from a workflow' });
@@ -471,8 +469,7 @@ describe('NewChatScreen', () => {
     expect(screen.getByText('Type / to pick a skill or @ to mention an Action.')).toBeVisible();
   });
 
-  it('opens a recommended Action with its message written, to edit or send as it is', async () => {
-    const bodies = captureChats([actionItem(PRICING, 'Pricing page')]);
+  function serveAction() {
     mswServer.use(
       http.get(`/api/v1/actions/${PRICING}`, () =>
         HttpResponse.json({
@@ -485,6 +482,22 @@ describe('NewChatScreen', () => {
         }),
       ),
     );
+  }
+
+  it('keeps an explicit prompt over the attached Action message', async () => {
+    captureChats([actionItem(PRICING, 'Pricing page')]);
+    serveAction();
+    renderNewChat(`?action_id=${PRICING}&prompt=Plan%20this`);
+
+    expect(await screen.findByRole('region', { name: 'Working on' })).toHaveTextContent(
+      'Pricing page',
+    );
+    expect(screen.getByLabelText('Message the agent')).toHaveValue('Plan this');
+  });
+
+  it('opens a recommended Action with its message written, to edit or send as it is', async () => {
+    const bodies = captureChats([actionItem(PRICING, 'Pricing page')]);
+    serveAction();
     const user = userEvent.setup();
     renderNewChat('');
 
@@ -493,8 +506,9 @@ describe('NewChatScreen', () => {
       await within(recommended).findByRole('link', { name: 'Work on Pricing page' }),
     );
 
-    const message = await screen.findByLabelText('Message the agent');
-    expect(message).toHaveValue('Work on Pricing page.');
+    // Written from the Action once it is read.
+    const message = await screen.findByDisplayValue('Work on Pricing page.');
+    expect(message).toHaveAccessibleName('Message the agent');
     expect(await screen.findByRole('region', { name: 'Working on' })).toHaveTextContent(
       'Pricing page',
     );

@@ -136,6 +136,30 @@ describe('Action handoff message', () => {
     });
   });
 
+  it('writes the message for the finding the handoff attaches when a planned page has a search gap too', () => {
+    const search = {
+      ...member('search_keyword_gap', 'Competitors rank for a search you do not', {
+        kind: 'search_gap',
+        terms: 'guide setup',
+        keyword: 'Setup guide',
+        url: null,
+      }),
+      priority_score: 30,
+    };
+    const gap = member(
+      'content_gap_new_page',
+      'Content gap',
+      { kind: 'planned_page', key: 'planned:setup-guide', label: 'Setup guide' },
+      { facts: { competitors: [], angle: 'Setup guides for small teams' } },
+    );
+    expect(handoffOf(search, gap)).toEqual({
+      context: 'opportunity',
+      workflow_id: 'article',
+      opportunity_id: gap.opportunity_id,
+      message: 'Write a page about Setup guides for small teams for the prompts in this Action.',
+    });
+  });
+
   it('falls back to the Action label when a content gap has no angle', () => {
     expect(
       handoffOf(member('content_gap_improve_page', 'Content gap', page('/crm-pricing'))).message,

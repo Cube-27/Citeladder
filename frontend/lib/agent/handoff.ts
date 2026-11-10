@@ -1,8 +1,8 @@
 /**
  * Evidence-screen handoffs into the Agent.
  *
- * **Work with the agent** opens New chat attached to an Action, its message
- * already written. **Ask agent** opens
+ * **Work with the agent** opens New chat attached to an Action, which writes
+ * the Action's message once it reads it. **Ask agent** opens
  * New chat with typed evidence references and an optional prefilled question.
  * The URL carries identifiers only: the server resolves and authorizes each
  * one when the chat is created, so a tampered or stale id fails there, never
@@ -84,9 +84,10 @@ export function agentHandoffHref(input: HandoffInput): string {
 }
 
 /**
- * New chat on an Action (AS3): the Action attached, its prefilled message in
- * the composer, and the workflow its diagnosis names with the finding's
- * Opportunity or the Action's page. Every Action → Agent entry point uses it.
+ * New chat on an Action (AS3): the Action attached, and the workflow its
+ * diagnosis names with the finding's Opportunity or the Action's page. The
+ * message stays out of the URL (it names evidence history and logs must not
+ * keep); New chat reads it from the attached Action.
  */
 export function actionHandoffHref(
   action: Readonly<{ id: string; target_url: string | null; handoff: ActionHandoff }>,
@@ -98,17 +99,15 @@ export function actionHandoffHref(
         actionId: action.id,
         opportunityId: handoff.opportunity_id,
         workflowId: handoff.workflow_id,
-        prompt: handoff.message,
       });
     case 'page_url':
       return agentHandoffHref({
         actionId: action.id,
         targetUrl: action.target_url,
         workflowId: handoff.workflow_id,
-        prompt: handoff.message,
       });
     case 'action':
-      return agentHandoffHref({ actionId: action.id, prompt: handoff.message });
+      return agentHandoffHref({ actionId: action.id });
     default: {
       const unknownHandoff: never = handoff;
       throw new Error(`Unknown Action handoff: ${JSON.stringify(unknownHandoff)}`);
