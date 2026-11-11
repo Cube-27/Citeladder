@@ -70,7 +70,7 @@ export type DocumentState = {
   personIds: ReadonlySet<string>;
   /** Each page document's SEO fields and stored suggestions, by number. */
   pages: ReadonlyMap<number, PageState>;
-  /** The content rules this turn's context offers (its `content_rules` section). */
+  /** The rules this turn's `content_rules` section offers, Site Health findings on the page included. */
   rules: ReadonlySet<string>;
   /** This turn's staged suggestions; committed only with the reply. */
   suggestions: StagedSuggestion[];

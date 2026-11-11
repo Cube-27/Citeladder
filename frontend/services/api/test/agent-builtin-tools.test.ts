@@ -10,6 +10,7 @@ import {
 } from '../src/agent/builtin-tools.ts';
 import type { SkillCatalog } from '../src/agent/contracts.ts';
 import { ToolRegistry } from '../src/agent/tools.ts';
+import { offeredRuleIds } from '../src/page-documents/content-rules.ts';
 import { z } from 'zod';
 import { catalog as baseCatalog } from './agent-support.ts';
 
@@ -414,9 +415,9 @@ describe('Agent built-in tools', () => {
       expect(refused({ rule_id: 'clarity.made_up' })).toBe(
         'rule_id clarity.made_up is not a content rule offered for this page. Use one from the content_rules section: ai_answers.precise_terms, proof.specific_statistics. No suggestions were staged.',
       );
-      // Site Health raises its own rules; the model only writes text for an open finding.
+      // Site Health raises its own rules; the model only writes the fix for one failing on the page.
       expect(refused({ rule_id: 'aeo.answer_first' })).toBe(
-        'aeo.answer_first is a Site Health rule with no open finding on this page; Site Health raises it, not you. No suggestions were staged.',
+        'aeo.answer_first is a Site Health rule that is not failing on this page; Site Health raises it, not you. Write fixes only for the site_health_findings in content_rules. No suggestions were staged.',
       );
       expect(
         refused(
@@ -447,6 +448,43 @@ describe('Agent built-in tools', () => {
       expect(bare.suggestions.map((item) => [item.ruleId, item.replaces])).toEqual([
         ['technical.meta_description_present', [open]],
       ]);
+    });
+
+    it('takes the fix for a Site Health rule only while the fetched page fails it', () => {
+      const fetchedPage = (outcome: string) => ({
+        outcome: 'fetched',
+        page_kind: 'article',
+        failing_checks:
+          outcome === 'fail'
+            ? [{ rule_id: 'aeo.answer_first', outcome, reason_code: 'answer_not_first' }]
+            : [],
+      });
+      const answerFirst = (outcome: string) => {
+        const turn = state({
+          ...pageTurn(),
+          rules: offeredRuleIds({ sections: { fetched_page: fetchedPage(outcome) }, action: null }),
+        });
+        const result = suggestEdits(
+          catalog,
+          turn,
+          {
+            suggestions: [
+              suggestion({
+                old_string: 'Sizes run small.',
+                new_string: 'Sizes run half a size small, so order one up.',
+                rule_id: 'aeo.answer_first',
+              }),
+            ],
+          },
+          bounds,
+        );
+        return { text: result.text, staged: turn.suggestions.map((item) => item.ruleId) };
+      };
+      expect(answerFirst('fail').staged).toEqual(['aeo.answer_first']);
+      expect(answerFirst('pass')).toEqual({
+        text: 'aeo.answer_first is a Site Health rule that is not failing on this page; Site Health raises it, not you. Write fixes only for the site_health_findings in content_rules. No suggestions were staged.',
+        staged: [],
+      });
     });
 
     it('moves staged suggestions through a later edit and drops the one it changed', () => {

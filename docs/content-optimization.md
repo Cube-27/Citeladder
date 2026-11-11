@@ -148,8 +148,10 @@ that revision and the span there. Both are workspace-scoped.
   for coverage. Rules that need cited pages' text, other site pages, link
   checks or fact retrieval are never offered yet. Each page turn's context gets
   a `content_rules` section (first, so trimming drops it last) with the
-  offered rules, how each strength is phrased, the Site Health rules it never
-  raises, and the rules not checked for missing evidence, which the model
+  offered rules, how each strength is phrased, the catalog's Site Health rules
+  failing on the fetched page (its page-local checks, with what Site Health
+  found) whose fix the model may write, the Site Health rules it never raises
+  itself, and the rules not checked for missing evidence, which the model
   never guesses at.
 - **From the fetch.** The fetch's page-local Site Health findings that a field
   fixes (`site_health_field_rules`: a missing title or meta description)
@@ -159,9 +161,12 @@ that revision and the span there. Both are workspace-scoped.
   the first turn the list to work from, and needs no run; every other finding
   stays in the SEO tab only (CO11). When the model writes the text for one (the
   same rule on the same field), the new suggestion replaces it.
-- **From the Agent.** `suggest_edits` accepts a `rule_id` the turn offered,
-  or the rule of a Site Health suggestion open on the page (writing its text);
-  any other rule is refused with the offered ids, so the model corrects it. The
+- **From the Agent.** `suggest_edits` accepts a `rule_id` the turn offered;
+  the rule of a Site Health check failing on the fetched page (such as
+  answer-first), whose fix is a `model` suggestion under that rule and carries
+  its source and strength; or the rule of a Site Health suggestion open on the
+  page (writing its text). A Site Health rule that passes or was not checked,
+  and any other rule, is refused with the reason, so the model corrects it. The
   rule sets the category. It resolves `old_string` (which must match
   exactly once) to a span, or a field to its current value, stages the
   suggestions, and commits them with the reply against the page's latest

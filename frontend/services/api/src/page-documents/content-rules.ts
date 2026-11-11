@@ -10,6 +10,7 @@ import { z } from 'zod';
 import type { Json } from '../agent/contracts.ts';
 import type { Manifest } from '../agent/context.ts';
 import { policy } from '../config.ts';
+import { ruleTitle } from '../site-health/reads/rules.ts';
 import type { ContentRule } from '../config/content-rules.ts';
 
 const c = policy.content_rules;
@@ -36,6 +37,10 @@ export function isSiteHealthRule(ruleId: string) {
 const fetchedSchema = z.object({
   outcome: z.literal('fetched'),
   page_kind: z.string().nullish(),
+  /** The page-local Site Health checks that failed on the fetched page (`fetchedPageContext`). */
+  failing_checks: z
+    .array(z.object({ rule_id: z.string(), outcome: z.string(), reason_code: z.string() }).loose())
+    .default([]),
 });
 const promptsSchema = z.object({ prompts: z.array(z.string()).min(1) });
 const diagnosisSchema = z.object({
@@ -48,11 +53,16 @@ export type TurnContext = {
   action: Manifest['action'];
 };
 
-/** The evidence present for a turn, and the page's Site Health kind when the fetch knows it. */
+type FailingCheck = z.infer<typeof fetchedSchema>['failing_checks'][number];
+
+/**
+ * The evidence present for a turn, the page's Site Health kind when the fetch
+ * knows it, and the catalog's Site Health rules failing on the fetched page.
+ */
 function turnEvidence(turn: TurnContext) {
   const fetched = fetchedSchema.safeParse(turn.sections.fetched_page);
   const present = new Set<Evidence>();
-  if (!fetched.success) return { present, pageKind: null };
+  if (!fetched.success) return { present, pageKind: null, findings: [] };
   present.add('fetched_page');
   const pageKind = fetched.data.page_kind ?? null;
   if (pageKind) present.add('page_kind');
@@ -61,16 +71,19 @@ function turnEvidence(turn: TurnContext) {
     .data?.what_happened.some((item) => GAP_RULES.has(item.rule_id));
   if (gap || promptsSchema.safeParse(turn.sections.target_prompts).success)
     present.add('page_prompts');
-  return { present, pageKind };
+  const findings = fetched.data.failing_checks.filter((check) => isSiteHealthRule(check.rule_id));
+  return { present, pageKind, findings };
 }
 
 /**
- * A turn's model rules: those whose evidence is all present and whose page
- * types include the page (`offered`), and those left out for missing evidence
- * (`notChecked`, never guessed). Null for a turn without a fetched page.
+ * A turn's rules: the model rules whose evidence is all present and whose
+ * page types include the page (`offered`), those left out for missing
+ * evidence (`notChecked`, never guessed), and the Site Health rules failing on
+ * the fetched page, whose fix the model may write (`findings`). Null for a
+ * turn without a fetched page.
  */
 function turnRules(turn: TurnContext) {
-  const { present, pageKind } = turnEvidence(turn);
+  const { present, pageKind, findings } = turnEvidence(turn);
   if (!present.has('fetched_page')) return null;
   const offered: ModelRule[] = [];
   const notChecked: { rule_id: string; missing: Evidence[] }[] = [];
@@ -80,12 +93,26 @@ function turnRules(turn: TurnContext) {
     else if (rule.page_types === 'any' || (pageKind && rule.page_types.includes(pageKind)))
       offered.push(rule);
   }
-  return { offered, notChecked };
+  return { offered, notChecked, findings };
 }
 
-/** The ids of the model rules a turn offers; empty for a turn without a fetched page. */
+/**
+ * The rule ids a turn's suggestions may name: the model rules it offers and
+ * the Site Health rules failing on the fetched page. Empty for a turn without
+ * a fetched page.
+ */
 export function offeredRuleIds(turn: TurnContext): ReadonlySet<string> {
-  return new Set(turnRules(turn)?.offered.map((rule) => rule.id) ?? []);
+  const rules = turnRules(turn);
+  if (!rules) return new Set();
+  return new Set([
+    ...rules.offered.map((rule) => rule.id),
+    ...rules.findings.map((check) => check.rule_id),
+  ]);
+}
+
+/** A Site Health finding the model may write the fix for: the rule, its title and what was found. */
+function findingLine(check: FailingCheck) {
+  return `${check.rule_id}: ${ruleTitle(check.rule_id)} (${check.outcome}, ${check.reason_code})`;
 }
 
 /**
@@ -118,6 +145,9 @@ function contentRulesSection(turn: TurnContext): Record<string, Json> | null {
     rules: rules.offered.map(ruleLine),
     phrasing: { ...c.phrasing },
     limits: c.limits,
+    // Failing on this page: the model may write their fix, under the same rule_id.
+    site_health_findings: rules.findings.map(findingLine),
+    // Never raised by the model; only a finding above takes its fix.
     site_health_rules: SITE_HEALTH_IDS,
     not_checked: rules.notChecked.map(
       ({ rule_id, missing }) => `${rule_id} (needs ${missing.join(', ')})`,

@@ -96,6 +96,31 @@ describe('content rule eligibility', () => {
     expect(turn?.notChecked).toContain('ai_answers.balanced_comparison (needs page_kind)');
   });
 
+  it('lists the Site Health rules failing on the fetched page as findings the model may fix', () => {
+    const page = {
+      ...fetched('article'),
+      failing_checks: [
+        { rule_id: 'aeo.answer_first', outcome: 'fail', reason_code: 'answer_not_first' },
+        // Not a catalog rule: nothing the page's copy fixes.
+        { rule_id: 'technical.https', outcome: 'fail', reason_code: 'http_only' },
+      ],
+    };
+    const section = withContentRules(pkg({ fetched_page: page }), null).sections.content_rules;
+    expect(section).toMatchObject({
+      site_health_findings: [
+        'aeo.answer_first: No answer-first content structure (fail, answer_not_first)',
+      ],
+    });
+    expect(
+      withContentRules(pkg({ fetched_page: fetched('article') }), null).sections.content_rules,
+    ).toMatchObject({ site_health_findings: [] });
+    // Its fix is stored with the Site Health rule's own source and strength.
+    expect(ruleGuidance('aeo.answer_first')).toMatchObject({
+      category: 'ai_answers',
+      guidance: { strength: 'recommendation', source_key: 'ms_ai_answers' },
+    });
+  });
+
   it('adds no section to a turn without a fetched page', () => {
     const sections = {
       brand: { name: 'Acme' },

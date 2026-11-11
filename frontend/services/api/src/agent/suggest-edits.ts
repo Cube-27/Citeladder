@@ -191,9 +191,10 @@ function textProblem(texts: Texts) {
 
 /**
  * Why the rule cannot be applied this turn, or null: a suggestion applies a
- * content rule the turn's context offers, or writes the text for a Site Health
- * finding open on the page (the same rule). The model pass never raises a Site
- * Health rule itself.
+ * content rule the turn's context offers, writes the fix for a Site Health
+ * rule failing on the fetched page (also offered), or writes the text for a
+ * Site Health suggestion open on the page (the same rule). The model pass never
+ * raises a Site Health rule that is passing or absent.
  */
 function ruleProblem(page: Page, ruleId: string) {
   if (page.rules.has(ruleId)) return null;
@@ -202,7 +203,7 @@ function ruleProblem(page: Page, ruleId: string) {
   );
   if (finding) return null;
   if (isSiteHealthRule(ruleId))
-    return `${ruleId} is a Site Health rule with no open finding on this page; Site Health raises it, not you.`;
+    return `${ruleId} is a Site Health rule that is not failing on this page; Site Health raises it, not you. Write fixes only for the site_health_findings in content_rules.`;
   const offered = [...page.rules];
   return offered.length
     ? `rule_id ${ruleId} is not a content rule offered for this page. Use one from the content_rules section: ${offered.join(', ')}.`
