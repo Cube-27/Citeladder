@@ -5,6 +5,7 @@
  */
 import { mutationOptions, queryOptions, type QueryClient } from '@tanstack/react-query';
 import type { PageDetail } from '@citeladder/contracts';
+import type { CrawlScheduleUpdateRequest } from '@citeladder/contracts/site-health-requests';
 import { queryKeys } from './query-keys';
 import type { ProjectScope } from './query-keys/scope';
 import { retainPreviousDataForScope } from './query-client';
@@ -105,6 +106,12 @@ export const siteHealthQueries = {
       queryKey: queryKeys.siteHealth.monitored(scope),
       queryFn: ({ signal }) =>
         siteHealthApi.getMonitoredUrls(scope.projectId, scoped(scope, signal)),
+    }),
+  crawlSchedule: (scope: ProjectScope) =>
+    queryOptions({
+      queryKey: queryKeys.siteHealth.crawlSchedule(scope),
+      queryFn: ({ signal }) =>
+        siteHealthApi.getCrawlSchedule(scope.projectId, scoped(scope, signal)),
     }),
   crawl: (workspaceId: string | null, crawlId: string) =>
     queryOptions({
@@ -291,6 +298,14 @@ export const siteHealthMutations = {
    * refreshes at once instead of pairing the terminal crawl row with an
    * active phase in the cache.
    */
+  /** The answer is the saved schedule, so it replaces the cached read. */
+  updateCrawlSchedule: (scope: ProjectScope) =>
+    mutationOptions({
+      mutationFn: (input: CrawlScheduleUpdateRequest) =>
+        siteHealthApi.updateCrawlSchedule(scope.projectId, input, scoped(scope)),
+      onSuccess: (schedule, _input, _result, { client }) =>
+        client.setQueryData(queryKeys.siteHealth.crawlSchedule(scope), schedule),
+    }),
   cancelCrawl: (scope: ProjectScope) =>
     mutationOptions({
       mutationFn: (crawlId: string) => siteHealthApi.cancelCrawl(crawlId, scoped(scope)),

@@ -11,7 +11,7 @@ import {
 } from '@/test/site-health-fixtures';
 import { makeSiteCrawl, makeWorkspaceEntitlement } from '@/test/fixtures/site-health';
 import { ProjectProvider } from '@/lib/project/project-context';
-import type { SiteHealthDashboard } from '@citeladder/contracts';
+import type { CrawlSchedule, SiteHealthDashboard } from '@citeladder/contracts';
 import { SiteHealthScreen } from './site-health-screen';
 
 function setSearch(value: string) {
@@ -26,6 +26,17 @@ const project = makeProject({ id: PROJECT, workspace_id: WORKSPACE });
 
 const entitlement = makeWorkspaceEntitlement({ workspace_id: WORKSPACE });
 const ENTITLEMENT_PATH = `/api/v1/workspaces/${WORKSPACE}/entitlements`;
+
+/** A project that has not turned on scheduled crawls. */
+const crawlSchedule: CrawlSchedule = {
+  project_id: PROJECT,
+  enabled: false,
+  cadence: 'weekly',
+  next_run_at: null,
+  last_run_at: null,
+  last_outcome: null,
+  last_crawl_id: null,
+};
 
 /** A crawl that discovered its three pages but failed the analysis pass. */
 function crawl(overrides: Record<string, unknown> = {}) {
@@ -169,6 +180,7 @@ function mockRoutes(
         root_errors: [],
       }),
     ),
+    http.get(`/api/v1/projects/${PROJECT}/crawl-schedule`, () => HttpResponse.json(crawlSchedule)),
     http.get(`/api/v1/projects/${PROJECT}/monitored-urls`, () =>
       HttpResponse.json({
         project_id: PROJECT,

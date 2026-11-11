@@ -1,6 +1,7 @@
 /** Atomic crawl-control family: all writes commit before workers can claim. */
 import { z } from 'zod';
 import {
+  crawlScheduleSchema,
   monitoredUrlsResponseSchema,
   rerunPageResponseSchema,
   siteCrawlSchema,
@@ -8,6 +9,7 @@ import {
   urlPreviewResponseSchema,
 } from '@citeladder/contracts/site-health';
 import {
+  crawlScheduleUpdateRequestSchema,
   monitoredUrlsBulkSelectRequestSchema,
   monitoredUrlsReplaceRequestSchema,
 } from '@citeladder/contracts/site-health-requests';
@@ -25,6 +27,7 @@ import { InvalidCursorError } from '../http/keyset-cursor.ts';
 import { cancelCrawl, listCrawls } from '../site-health/controls.ts';
 import { createCrawl } from '../site-health/planner.ts';
 import { recrawlRequest } from '../site-health/recrawl.ts';
+import { readSchedule, updateSchedule } from '../site-health/schedules.ts';
 import {
   createCrawlRequest,
   previewCrawlUrls,
@@ -46,6 +49,7 @@ const projectFamily = { family, authorize: 'active-project' } as const;
 const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const projectPath = { project_id: uuid };
 const projectRoot = '/api/v1/projects/{project_id}/monitored-urls';
+const scheduleRoot = '/api/v1/projects/{project_id}/crawl-schedule';
 const replaceBody = monitoredUrlsReplaceRequestSchema.extend({
   site_url_ids: z.array(z.uuid()).max(policy.site_health.crawl.monitored_url_selection_max),
 });
@@ -221,6 +225,29 @@ export const siteHealthCrawlRoutes = [
           ),
         );
       return monitoredSet(db, workspaceId, path.project_id);
+    },
+  }),
+  defineGetRoute({
+    ...projectFamily,
+    path: scheduleRoot,
+    params: { path: projectPath, query: {} },
+    response: crawlScheduleSchema,
+    handle: ({ c, db }, { path }) =>
+      readSchedule(db, c.get('workspace').workspaceId, path.project_id),
+  }),
+  definePutRoute({
+    ...projectFamily,
+    path: scheduleRoot,
+    params: { path: projectPath, query: {} },
+    body: crawlScheduleUpdateRequestSchema,
+    response: crawlScheduleSchema,
+    capability: 'write',
+    async handle({ c, db }, { path }) {
+      const workspaceId = c.get('workspace').workspaceId;
+      const input = await readBody(c, crawlScheduleUpdateRequestSchema);
+      return db
+        .transaction()
+        .execute((trx) => updateSchedule(trx, workspaceId, path.project_id, input));
     },
   }),
   definePostRoute({

@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
@@ -16,6 +16,7 @@ import { PAGES_INVENTORY_URL_KEYS } from '@/components/site-health/inventory-sec
 import { AeoReadinessPanel } from '@/components/site-health/aeo-readiness-panel';
 import { ArchitecturePanel } from '@/components/site-health/architecture-panel';
 import { ChangesPanel } from '@/components/site-health/changes-panel';
+import { CrawlScheduleControl } from '@/components/site-health/crawl-schedule-control';
 import { InternalLinksPanel } from '@/components/site-health/internal-links-panel';
 import {
   useInternalLinksBands,
@@ -27,7 +28,7 @@ import { ReadError } from '@/components/ui/read-error';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { warmQuery } from '@/lib/api/query-client';
-import { siteHealthQueries } from '@/lib/api/site-health-queries';
+import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 import { internalLinksQueries } from '@/lib/api/site-health-internal-links';
 import type { SiteHealthEntitlement } from '@citeladder/contracts';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -75,6 +76,15 @@ function SiteHealthContent({
   });
   const blocking = projectBlockingState(screen);
   const mutationsAllowed = !entitlementQuery.isError;
+  const scheduleScope = { workspaceId, projectId };
+  const scheduleQuery = useQuery({
+    ...siteHealthQueries.crawlSchedule(scheduleScope),
+    enabled: Boolean(crawl) && mutationsAllowed,
+  });
+  const scheduleMutation = useMutation(siteHealthMutations.updateCrawlSchedule(scheduleScope));
+  const saveSchedule = () => {
+    if (scheduleMutation.variables) scheduleMutation.mutate(scheduleMutation.variables);
+  };
   // Internal links' search, filters and header actions act on the analysis its panel draws.
   const links = useInternalLinksBands({
     scope: { projectId, workspaceId },
@@ -96,6 +106,13 @@ function SiteHealthContent({
         startPending={startPending}
         onExport={tab === 'pages' ? () => runExport('csv', 'pages') : undefined}
         tabActions={linksActions}
+        schedule={
+          <CrawlScheduleControl
+            schedule={scheduleQuery.data}
+            pending={scheduleMutation.isPending}
+            onChange={(input) => scheduleMutation.mutate(input)}
+          />
+        }
         onCancel={cancelCrawl}
         onStart={startCrawl}
         onRecrawl={recrawl}
@@ -128,6 +145,14 @@ function SiteHealthContent({
         ) : (
           <Stack gap="section" className="min-w-0">
             <SiteHealthNotices screen={screen} mutationsAllowed={mutationsAllowed} />
+            {scheduleMutation.isError ? (
+              <MutationNotice
+                notice={mutationNoticeForError(scheduleMutation.error, {
+                  action: 'save the crawl schedule',
+                })}
+                onRetry={saveSchedule}
+              />
+            ) : null}
             {refreshFailures}
             <AnalysisPanel
               tab={tab}
@@ -429,6 +454,7 @@ function CrawlActions({
   startPending,
   onExport,
   tabActions,
+  schedule,
   onCancel,
   onStart,
   onRecrawl,
@@ -445,6 +471,8 @@ function CrawlActions({
    * header keeps one primary button.
    */
   tabActions: ReactNode;
+  /** The crawl schedule, beside Run new crawl. */
+  schedule: ReactNode;
   onCancel: () => void;
   onStart: () => void;
   onRecrawl: () => void;
@@ -456,6 +484,7 @@ function CrawlActions({
           {exporting ? 'Exporting…' : 'Export'}
         </Button>
       ) : null}
+      {schedule}
       {/* Always present, so starting a crawl never reflows the header. */}
       <Tooltip content="Rerun this crawl's scope and settings, so Changes compares like with like.">
         <Button variant="secondary" onClick={onRecrawl} disabled={active || startPending}>

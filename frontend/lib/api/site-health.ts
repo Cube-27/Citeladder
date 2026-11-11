@@ -21,6 +21,7 @@ import {
   architectureSchema,
   changeSummarySchema,
   changesPageSchema,
+  crawlScheduleSchema,
   inventoryPageSchema,
   issueHistoryPageSchema,
   monitoredUrlsResponseSchema,
@@ -37,6 +38,7 @@ import {
   robotsHistoryPageSchema,
 } from '@citeladder/contracts/site-health';
 import type {
+  CrawlScheduleUpdateRequest,
   SiteCrawlCreateRequest,
   UrlPreviewRequest,
 } from '@citeladder/contracts/site-health-requests';
@@ -46,6 +48,7 @@ import type {
   AeoReadiness,
   ChangeSummary,
   ChangesPage,
+  CrawlSchedule,
   InventoryPage,
   IssueHistoryPage,
   MonitoredUrlsResponse,
@@ -166,6 +169,25 @@ export const siteHealthApi = {
       options,
     );
     return strictValidate(monitoredUrlsResponseSchema, res, 'siteHealth.getMonitoredUrls');
+  },
+  getCrawlSchedule: async (projectId: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.get<CrawlSchedule>(
+      `/projects/${projectId}/crawl-schedule`,
+      options,
+    );
+    return strictValidate(crawlScheduleSchema, res, 'siteHealth.getCrawlSchedule');
+  },
+  updateCrawlSchedule: async (
+    projectId: string,
+    input: CrawlScheduleUpdateRequest,
+    options?: ApiRequestOptions,
+  ) => {
+    const res = await apiClient.put<CrawlSchedule>(
+      `/projects/${projectId}/crawl-schedule`,
+      input,
+      options,
+    );
+    return strictValidate(crawlScheduleSchema, res, 'siteHealth.updateCrawlSchedule');
   },
   getPages: async (crawlId: string, params?: PagesParams, options?: ApiRequestOptions) => {
     const path = withQuery(`/site-crawls/${crawlId}/pages`, definedQuery(params));

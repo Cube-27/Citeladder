@@ -92,6 +92,7 @@ describe('a fresh database', () => {
       '0023_commerce_match_passes',
       '0024_declaration_ordering',
       '0025_issue_reference_snippets',
+      '0026_crawl_schedules',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -122,6 +123,7 @@ describe('a fresh database', () => {
       { version: '0023_commerce_match_passes' },
       { version: '0024_declaration_ordering' },
       { version: '0025_issue_reference_snippets' },
+      { version: '0026_crawl_schedules' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -176,6 +178,7 @@ describe('an existing database', () => {
       '0023_commerce_match_passes',
       '0024_declaration_ordering',
       '0025_issue_reference_snippets',
+      '0026_crawl_schedules',
     ]);
     // A URL identity keeps no per-sighting discovery status.
     expect(await columns(client, 'site_urls')).not.toContain('discovery_status');
@@ -240,6 +243,10 @@ describe('an existing database', () => {
     );
     // An issue catalog keeps one reference snippet per issue family.
     expect(await columns(client, 'site_issue_catalogs')).toContain('reference_snippets');
+    // A project's crawl schedule is claimed under a lease.
+    expect(await columns(client, 'crawl_schedules')).toEqual(
+      expect.arrayContaining(['cadence', 'next_run_at', 'lease_owner', 'failure_count']),
+    );
     // One internal-cost view across platform calls, Agent calls and answer engines.
     expect(await columns(client, 'internal_costs')).toEqual(
       expect.arrayContaining(['source', 'workspace_id', 'charge', 'cost_microusd', 'occurred_at']),
@@ -270,6 +277,7 @@ describe('an existing database', () => {
       { version: '0023_commerce_match_passes' },
       { version: '0024_declaration_ordering' },
       { version: '0025_issue_reference_snippets' },
+      { version: '0026_crawl_schedules' },
     ]);
   }, 120000);
 });
