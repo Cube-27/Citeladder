@@ -154,6 +154,7 @@ function actionItem(row: ActionRow) {
     group: actionGroup(row),
     skill_id: row.skill_id,
     member_count: jsonList(row.member_opportunity_ids).length,
+    declarable_member_count: declarableIds(row).length,
     handoff: readHandoff(record(row.diagnosis).handoff, row.target_label),
     evidence_cleared_at: row.evidence_cleared_at?.toISOString() ?? null,
     created_at: row.created_at.toISOString(),
@@ -353,6 +354,35 @@ export async function actionMembers(db: Database, action: ActionRow) {
     .where('superseded_at', 'is', null)
     .execute();
   return inMemberOrder(ids, rows);
+}
+
+/**
+ * The finding ids a declaration freezes: the current members, or the last
+ * non-empty set when a recrawl resolved them all.
+ */
+function declarableIds(action: ActionRow): string[] {
+  const current = stringList(action.member_opportunity_ids);
+  return current.length ? current : stringList(action.last_member_opportunity_ids);
+}
+
+/**
+ * The members a declaration freezes: the live current members or, once a
+ * refresh cleared them all, the last set it superseded (`resolved`). Foreign
+ * or missing rows are never read.
+ */
+export async function declarableMembers(db: Database, action: ActionRow) {
+  if (stringList(action.member_opportunity_ids).length)
+    return { members: await actionMembers(db, action), resolved: false };
+  const ids = stringList(action.last_member_opportunity_ids);
+  if (!ids.length) return { members: [], resolved: false };
+  const rows = await db
+    .selectFrom('opportunities')
+    .select(OPPORTUNITY_COLUMNS)
+    .where('workspace_id', '=', action.workspace_id)
+    .where('project_id', '=', action.project_id)
+    .where('id', 'in', ids)
+    .execute();
+  return { members: inMemberOrder(ids, rows), resolved: true };
 }
 
 /** `actionMembers` keyed by the Action id, so it runs beside the Action read. */

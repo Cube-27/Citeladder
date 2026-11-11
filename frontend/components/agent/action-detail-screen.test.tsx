@@ -43,6 +43,7 @@ const action: Action = {
   group: 'fix_site',
   skill_id: 'technical_health',
   member_count: 1,
+  declarable_member_count: 1,
   handoff: { context: 'action', message: MESSAGE },
   evidence_cleared_at: null,
   created_at: NOW,
@@ -246,6 +247,7 @@ const angleEvidence = {
   domain_count: 4,
   competitor_count: 2,
   member_count: 25,
+  declarable_member_count: 25,
   members: [
     {
       url: 'https://globex.com/pricing',

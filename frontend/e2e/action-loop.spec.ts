@@ -109,6 +109,7 @@ const action = {
   group: 'earned',
   skill_id: 'earned_authority',
   member_count: 1,
+  declarable_member_count: 1,
   handoff: {
     context: 'action',
     message: 'Draft a request to be listed on https://example.org/tools, alongside Rival.',
@@ -124,6 +125,7 @@ const declaration = {
   output_revision_id: null,
   member_opportunity_ids: [OPPORTUNITY],
   opportunity_snapshot_id: SNAPSHOT,
+  resolved_before_snapshot_id: null,
   target_site_url_ids: [],
   target_external_url: 'https://example.org/tools',
   declared_implemented_at: '2026-08-28T00:03:00Z',

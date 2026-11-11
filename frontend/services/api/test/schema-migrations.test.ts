@@ -90,6 +90,7 @@ describe('a fresh database', () => {
       '0021_commerce_carousel',
       '0022_suggestion_rule_guidance',
       '0023_commerce_match_passes',
+      '0024_declaration_ordering',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -118,6 +119,7 @@ describe('a fresh database', () => {
       { version: '0021_commerce_carousel' },
       { version: '0022_suggestion_rule_guidance' },
       { version: '0023_commerce_match_passes' },
+      { version: '0024_declaration_ordering' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -170,6 +172,7 @@ describe('an existing database', () => {
       '0021_commerce_carousel',
       '0022_suggestion_rule_guidance',
       '0023_commerce_match_passes',
+      '0024_declaration_ordering',
     ]);
     // A URL identity keeps no per-sighting discovery status.
     expect(await columns(client, 'site_urls')).not.toContain('discovery_status');
@@ -226,6 +229,12 @@ describe('an existing database', () => {
     expect(await columns(client, 'agent_output_suggestions')).toContain('rule_guidance');
     // One Actions list: an Action names no screen of its own.
     expect(await columns(client, 'actions')).not.toContain('surface');
+    // An Action keeps its last member set; a declaration may have no baseline
+    // snapshot and names the refresh that resolved its findings before go-live.
+    expect(await columns(client, 'actions')).toContain('last_member_opportunity_ids');
+    expect(await columns(client, 'opportunity_implementation_events')).toContain(
+      'resolved_before_snapshot_id',
+    );
     // One internal-cost view across platform calls, Agent calls and answer engines.
     expect(await columns(client, 'internal_costs')).toEqual(
       expect.arrayContaining(['source', 'workspace_id', 'charge', 'cost_microusd', 'occurred_at']),
@@ -254,6 +263,7 @@ describe('an existing database', () => {
       { version: '0021_commerce_carousel' },
       { version: '0022_suggestion_rule_guidance' },
       { version: '0023_commerce_match_passes' },
+      { version: '0024_declaration_ordering' },
     ]);
   }, 120000);
 });

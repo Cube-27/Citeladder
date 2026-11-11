@@ -39,6 +39,7 @@ const action = {
   group: 'own_pages',
   skill_id: 'content_refresh',
   member_count: 0,
+  declarable_member_count: 0,
   handoff: { context: 'action', message: MESSAGE },
   evidence_cleared_at: null,
   created_at: NOW,

@@ -228,7 +228,8 @@ Recompute stamps each Opportunity's `action_id`; the Opportunity list and MCP
 `status` filter resolve through that Action, and the command center counts an
 Action resolved at its first verified observation. Action sync restamps live
 Actions on every refresh, inserts new groups in batches, and clears an Action
-whose evidence vanished once, leaving already-cleared rows untouched. Each promoted
+whose evidence vanished once, leaving already-cleared rows untouched and its
+last non-empty member set in place. Each promoted
 Search Demand signal's read carries the Action its live Opportunity joined, for
 the Search Demand "Act on this" band.
 
@@ -256,8 +257,23 @@ and the expected checks. Caller-supplied checks or targets are rejected,
 because a declaration that chose its own expectation could declare itself
 verified. The Action row is locked and one Action carries at most one
 declaration; a same-key replay returns it, and same-key conflicting input is
-rejected. The user must reopen a dismissed Action first, and an Action with no
-current finding is refused.
+rejected. The user must reopen a dismissed Action first.
+
+The baseline is the newest Opportunity snapshot at or before the go-live
+time, never one a later refresh wrote; when none existed the declaration
+records its baseline as unavailable (no snapshot, so no baseline audit), and
+prompt checks keep no baseline reading. Action sync keeps each Action's last
+non-empty member set (`last_member_opportunity_ids`) when a refresh clears its
+members, so an Action whose findings a recrawl resolved can still be declared:
+the declaration freezes that last set, and the list and detail return it as
+`declarable_member_count`. An Action that never had a finding is refused. When
+the refresh that cleared the members was committed after go-live, the
+declaration freezes its checks as usual and the first reading after go-live
+decides them. When it was committed at or before go-live, the declaration
+names that snapshot as `resolved_before_snapshot_id`, freezes no check and
+queues no reading: the outcome predates the deployment and is never credited
+to it. Unavailable baseline, resolved before go-live and nothing to measure
+stay distinct on the declaration.
 
 Each rule in the catalog names the `check_kind` its findings freeze (null when
 nothing can measure them), and each kind is one module under
@@ -425,7 +441,8 @@ exercise per-source folding, scoped traffic and prompt checks, the window,
 unavailable-state behavior, workspace isolation, the enqueue gate and the
 producer, worker and persisted-reader boundary;
 [Action PostgreSQL tests](../frontend/services/api/test/actions.test.ts) cover
-declaration admission, go-live bounds, unmeasurable findings, earned
+declaration admission, go-live bounds, the baseline at go-live, findings
+resolved before and after go-live, unmeasurable findings, earned
 declarations measured on their prompts, concurrent replay, workspace
 isolation and frozen checks;
 [owned-URL PostgreSQL tests](../frontend/services/api/test/owned-url-cited.test.ts)

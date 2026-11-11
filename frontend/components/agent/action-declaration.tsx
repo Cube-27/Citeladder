@@ -227,11 +227,15 @@ function MeasurementPreview({ action }: Readonly<{ action: Declarable }>) {
 }
 
 /**
- * Whether an Action can be declared now: still open, with a current finding.
- * Without one there is nothing to declare, and the server refuses.
+ * Whether an Action can be declared now: still open, with a finding to
+ * declare. A recrawl that resolved every finding leaves the last set, which
+ * the server freezes; with none there is nothing to declare, and it refuses.
  */
-export function isDeclarable(action: { status: string; member_count: number }): boolean {
-  return (action.status === 'open' || action.status === 'in_progress') && action.member_count > 0;
+export function isDeclarable(action: { status: string; declarable_member_count: number }): boolean {
+  return (
+    (action.status === 'open' || action.status === 'in_progress') &&
+    action.declarable_member_count > 0
+  );
 }
 
 function newAttempt() {
