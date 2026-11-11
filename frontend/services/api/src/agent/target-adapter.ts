@@ -2,6 +2,7 @@ import type { Selectable } from 'kysely';
 import type { Database } from '../db/database.ts';
 import type { AgentOutputs } from '../generated/db-schema.ts';
 import { refreshActionStatus } from '../opportunities/action-status.ts';
+import { acquireProjectLock } from '../prompts/locks.ts';
 import {
   agentTargetKey,
   attachOrCreateAction,
@@ -114,6 +115,9 @@ export async function chooseOutputTarget(
     await setOutputAction(db, chat, output.id, proposal.action);
     return;
   }
+  // A declaration takes the project lock before it checks the revision's Action,
+  // so holding it here keeps one from anchoring this document while it moves.
+  await acquireProjectLock(db, chat.project_id);
   if (await anchorsDeclaration(db, chat, output.id, proposal.action.id))
     throw new AgentError('output_conflict');
   let target;

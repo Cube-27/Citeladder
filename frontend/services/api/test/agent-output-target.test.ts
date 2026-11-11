@@ -59,7 +59,12 @@ describe('a document naming another page than its Action, on PostgreSQL', () => 
     const chat = await readChat(db, scope, first.run.chat_id);
     return { scope, chatId: first.run.chat_id, chat };
   }
-  const choose = (chatId: string, outputId: string, decision: string, headers: HeadersInit) =>
+  const choose = (
+    chatId: string,
+    outputId: string,
+    decision: string,
+    headers: Record<string, string>,
+  ) =>
     app.request(`/api/v1/agent/chats/${chatId}/outputs/${outputId}/target`, {
       method: 'POST',
       headers,
