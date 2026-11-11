@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { MessageSquareOff } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 
 import { DetailScreen } from '@/components/layout/page-shell';
@@ -208,6 +209,7 @@ function HolderDetail({
           <Card>
             <QueryState
               kind="empty"
+              icon={MessageSquareOff}
               heading={`No answer named it in the last ${data.window_days} days`}
               description="Its competing products, merchants, sources, fan-out queries and answers appear here once an answer in this window names it."
             />

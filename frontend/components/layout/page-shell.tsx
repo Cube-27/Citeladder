@@ -55,7 +55,7 @@ type ScreenBands<T extends string> = Readonly<{
   /**
    * The selected tab's control row, drawn as the `FilterBar`: view, search,
    * All filters, then the count and the action at its end (D57). A row of
-   * filters alone (a detail page's scope) sits in the header's actions instead.
+   * filters alone (a detail page's scope) follows the header's title instead.
    */
   controls?: FilterBarProps;
   children?: ReactNode;
@@ -180,8 +180,8 @@ function PageShell<T extends string>({
   const shell = useContext(ShellContext);
   const navDrawer = shell?.navDrawer;
   const content = <PageContent {...layout}>{children}</PageContent>;
-  // A control row holding only filters is one button: it joins the header's
-  // actions rather than taking a band of its own.
+  // A control row holding only filters is one button: it follows the title
+  // rather than taking a band of its own, its menus opening toward the content.
   const headerFilters = !tabs && controls && filtersOnly(controls) ? controls.filters : undefined;
   const tabBand = tabs ? (
     <div data-page-band="control">
@@ -199,6 +199,7 @@ function PageShell<T extends string>({
     <div className="flex min-w-0 flex-col gap-[var(--page-section-gap)]">
       <PageHeader
         title={resolved}
+        filters={headerFilters ? <FilterControls filters={headerFilters} /> : undefined}
         lead={
           <>
             {/* Below 900px the header leads with the navigation menu. */}
@@ -212,7 +213,6 @@ function PageShell<T extends string>({
         }
         actions={
           <>
-            {headerFilters ? <FilterControls filters={headerFilters} align="end" /> : null}
             {actions}
             {shell?.agentTrigger}
           </>

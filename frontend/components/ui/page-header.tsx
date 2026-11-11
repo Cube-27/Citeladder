@@ -31,11 +31,17 @@ const BAR_LAYER =
 export function PageHeader({
   title,
   lead,
+  filters,
   actions,
 }: Readonly<{
   title: string;
   /** Before the title: a detail page's back button. */
   lead?: ReactNode;
+  /**
+   * After the title: a page's filters when they are its only controls (D58),
+   * on the title's side so their menus open toward the content.
+   */
+  filters?: ReactNode;
   actions?: ReactNode;
 }>) {
   const heading = useRef<HTMLHeadingElement>(null);
@@ -61,6 +67,7 @@ export function PageHeader({
             {title}
           </h1>
         </Tooltip>
+        {filters ? <div className="flex shrink-0 items-center">{filters}</div> : null}
       </div>
       {actions ? (
         <div className="ms-auto flex min-w-0 flex-wrap items-center justify-end gap-2">

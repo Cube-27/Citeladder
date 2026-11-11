@@ -114,9 +114,9 @@ describe('Fanout grouping', () => {
     renderWithProviders(<Panel projectId={A} />);
     expect(screen.getByRole('columnheader', { name: 'Surface' })).toBeVisible();
     expect(screen.queryByText('Best CRM?')).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'All filters' }));
-    await user.keyboard('{ArrowDown}{ArrowRight}{ArrowDown}{Enter}');
+    await user.click(screen.getByRole('button', { name: 'Group by: None' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Prompt' }));
     expect(await screen.findByText('Best CRM?')).toBeVisible();
-    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Group by: Prompt' })).toBeVisible();
   });
 });

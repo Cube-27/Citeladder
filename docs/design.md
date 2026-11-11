@@ -203,7 +203,7 @@ first, left to right and top to bottom.
    then at the row's end the count or a live note, then one action (Export,
    Columns). Two or more filters share All filters; a lone filter is its own
    trigger ("Page kind: All page kinds"). A row of filters alone, with no
-   view, search, count or action, sits in the header's actions instead (D58).
+   view, search, count or action, follows the header's title instead (D58).
 4. **Content.**
 
 A control sits in the row of the thing it acts on: the page's control row when

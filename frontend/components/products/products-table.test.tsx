@@ -109,6 +109,7 @@ function Harness({
       onSort={onSort}
       checked={checked}
       onCheck={onCheck}
+      pageSize={10}
       pager={{ canPrev: false, canNext: false, onPrev: vi.fn(), onNext: vi.fn() }}
     />
   );
