@@ -3,7 +3,12 @@
 import type { ComponentPropsWithoutRef, ReactNode, Ref } from 'react';
 import { ChevronDown } from 'lucide-react';
 
-import { AllFilters, type FilterDefinition } from '@/components/ui/all-filters';
+import {
+  AllFilters,
+  ChoiceOptions,
+  focusFieldOnEntry,
+  type FilterDefinition,
+} from '@/components/ui/all-filters';
 import { FIELD_BOX } from '@/components/ui/input';
 import {
   Menu,
@@ -30,9 +35,10 @@ export type FilterBarProps = Readonly<{
   /** A `SearchField`, after the view. */
   search?: ReactNode;
   /**
-   * Every filter of the list, drawn as the one All filters menu after the
-   * search: period, market, engine, kind, status and typed values alike. A
-   * row never draws a filter as a control of its own.
+   * Every filter of the list, after the search: period, market, engine, kind,
+   * status and typed values alike. Two or more share the one All filters
+   * menu; a lone filter is its own trigger ("Page kind: All page kinds"),
+   * since a menu holding one entry is a click with nothing to choose.
    */
   filters?: readonly FilterDefinition[];
   /**
@@ -66,7 +72,7 @@ export function FilterBar({ view, search, filters, status, actions }: FilterBarP
           {search}
         </div>
       ) : null}
-      {filters && filters.length > 0 ? <AllFilters filters={filters} /> : null}
+      {filters ? <FilterControls filters={filters} /> : null}
       {status === undefined ? null : (
         <output className="type-caption ms-auto flex min-w-0 items-center gap-2 empty:hidden">
           {status}
@@ -79,6 +85,40 @@ export function FilterBar({ view, search, filters, status, actions }: FilterBarP
         </div>
       ) : null}
     </fieldset>
+  );
+}
+
+/**
+ * FilterControls — a list's filters as its control row draws them: a lone
+ * filter as its own trigger that opens its options, two or more behind All
+ * filters. `align` is the edge the menu lines up with (`end` at a row's far
+ * right).
+ */
+export function FilterControls({
+  filters,
+  align = 'start',
+}: Readonly<{ filters: readonly FilterDefinition[]; align?: 'start' | 'end' }>) {
+  const [only, ...rest] = filters;
+  if (!only) return null;
+  if (rest.length > 0) return <AllFilters filters={filters} align={align} />;
+  return (
+    <Menu>
+      <MenuTrigger asChild>
+        <FilterTrigger
+          label={only.label}
+          value={only.valueLabel}
+          active={!only.isDefault}
+          sizeTo={
+            only.kind === 'choice'
+              ? only.groups.flatMap((group) => group.options.map((option) => option.label))
+              : [only.valueLabel]
+          }
+        />
+      </MenuTrigger>
+      <MenuContent align={align} onFocus={focusFieldOnEntry}>
+        {only.kind === 'choice' ? <ChoiceOptions filter={only} /> : only.content}
+      </MenuContent>
+    </Menu>
   );
 }
 

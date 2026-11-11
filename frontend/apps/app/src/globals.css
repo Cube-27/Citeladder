@@ -136,6 +136,11 @@
   --text-display-sm--line-height: 32px;
   --text-display-sm--font-weight: 500;
   --text-display-sm--letter-spacing: -0.01em;
+  /* The app's PageHeader title: 4px under display-sm (D58). */
+  --text-page-title: 20px;
+  --text-page-title--line-height: 28px;
+  --text-page-title--font-weight: 500;
+  --text-page-title--letter-spacing: -0.01em;
   --text-title: 22px;
   --text-title--line-height: 28px;
   --text-title--font-weight: 400;
@@ -418,6 +423,21 @@
     0 1px 2px rgb(0 0 0 / 60%), 0 8px 24px -6px rgb(0 0 0 / 60%);
 }
 
+/* The app's dark (owner, 2026-11-11, D58): softer greys in the manner of a
+   code editor's dark theme rather than near-black, and the primary ink 10%
+   lower in contrast; the secondary ink and the hues are unchanged. The
+   website and docs keep the system's dark above. */
+:root[data-theme='dark']:not([data-public-surface]) {
+  --color-paper: #161616;
+  --color-surface: #1e1e1e;
+  --color-surface-sunken: #262626;
+  --color-nav-glass: rgb(32 32 32 / 78%);
+  --color-line: #2e2e2e;
+  --color-line-strong: #3e3e3e;
+  --color-chart-grid: #2b2b2b;
+  --color-ink: #e8e8e8;
+}
+
 /* Tailwind folds a theme shadow into its own variable at build time, which
    would freeze the light value; these read the live token instead. */
 @utility shadow-edge {
@@ -465,6 +485,8 @@
    app: table and fact rows `row-app` (40), card and dialog padding 16,
    header → controls 16, the controls band's rows 8 apart, peers 12 apart. */
 :root:not([data-public-surface]) {
+  /* The app's primary ink, 10% lower in contrast than the system's (D58). */
+  --color-ink: #1c1c1c;
   --content-gutter: 24px;
   --page-section-gap: 16px;
   --workspace-gap: 12px;
@@ -617,15 +639,15 @@ html[data-public-surface]:not([data-marketing-surface]) body {
 @layer components {
   .type-page-title {
     font-family: var(--font-sans);
-    font-size: var(--text-display-sm);
-    line-height: var(--text-display-sm--line-height);
-    font-weight: var(--text-display-sm--font-weight);
-    letter-spacing: var(--text-display-sm--letter-spacing);
+    font-size: var(--text-page-title);
+    line-height: var(--text-page-title--line-height);
+    font-weight: var(--text-page-title--font-weight);
+    letter-spacing: var(--text-page-title--letter-spacing);
     color: var(--color-ink);
   }
   /* The app sets two families, the sans and mono faces (D54): every title and
-     number, the page title included, is the sans face, never above 500 (D6). The app's sizes are 12, 14 and 16; only the page title and a
-     metric's figure are 24 (D48). */
+     number, the page title included, is the sans face, never above 500 (D6). The app's sizes are 12, 14 and 16; only the page title
+     (20, D58) and a metric's figure (24, D48) are larger. */
   .type-section-title {
     font-family: var(--font-sans);
     font-size: var(--text-heading);
@@ -686,8 +708,8 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     letter-spacing: 0;
     color: var(--color-ink-muted);
   }
-  /* The number in a Stat or a ScoreRing's centre: the sans face at 500 at the page
-     title's 24/32 (D48), digits of one width. */
+  /* The number in a Stat or a ScoreRing's centre: the sans face at 500 at
+     24/32 (D48), digits of one width. */
   .type-figure {
     font-family: var(--font-sans);
     font-size: var(--text-display-sm);

@@ -5,7 +5,8 @@ import { useParams } from 'react-router-dom';
 
 import { DetailScreen } from '@/components/layout/page-shell';
 import { AppGrid } from '@/components/ui/app-grid';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
+import { InfoHint } from '@/components/ui/info-hint';
 import { Inline, Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
 import { readErrorProps } from '@/components/ui/read-error';
@@ -185,23 +186,33 @@ function HolderDetail({
       </DetailScreen>
     );
   const data = detail.data;
+  const named = data.answer_total > 0;
   return (
-    <DetailScreen
-      title={data.product.name}
-      back={back}
-      controls={controls}
-      lead={<ProductHeader detail={data} scope={projectScope} />}
-    >
+    <DetailScreen title={data.product.name} back={back} controls={controls}>
       <Stack gap="workspace" aria-busy={detail.isFetching}>
-        <ProductKpis detail={data} />
-        <AppGrid layout="pair">
-          <CompetingProducts detail={data} scope={filters} />
-          <Merchants detail={data} />
-          <Sources detail={data} />
-          <FanOutQueries detail={data} />
-        </AppGrid>
-        <PromptMetrics detail={data} />
-        <Answers detail={data} />
+        <ProductKpis detail={data} scope={projectScope} />
+        {named ? (
+          <AppGrid layout="pair">
+            <CompetingProducts detail={data} scope={filters} />
+            <Merchants detail={data} />
+            <Sources detail={data} />
+            <FanOutQueries detail={data} />
+          </AppGrid>
+        ) : null}
+        {named || data.prompts.length > 0 ? <PromptMetrics detail={data} /> : null}
+        {named ? (
+          <Answers detail={data} />
+        ) : (
+          // Every section below reads the answers that named it: with none,
+          // one sentence says so instead of six empty cards.
+          <Card>
+            <QueryState
+              kind="empty"
+              heading={`No answer named it in the last ${data.window_days} days`}
+              description="Its competing products, merchants, sources, fan-out queries and answers appear here once an answer in this window names it."
+            />
+          </Card>
+        )}
         {/* An archived product takes no new competitors or shopping prompts until restored. */}
         {data.product.kind === 'owned' && data.product.catalog?.lifecycle_state !== 'archived' ? (
           <ProductSetup detail={data} projectId={projectId} queries={queries} />
@@ -222,55 +233,54 @@ function ProductHeader({
 }: Readonly<{ detail: CommerceProductDetail; scope: ProjectScope }>) {
   const { product } = detail;
   return (
-    <Card>
-      <CardContent>
-        <Stack gap="compact">
-          <Inline gap="compact" className="items-start">
-            {product.image_url ? <ProductImage src={product.image_url} /> : null}
-            <Stack gap="tight" className="min-w-0 flex-1">
-              <span className={textRole('label')}>{holderCaption(product)}</span>
-              {product.description ? (
-                <p className={textRole('body')}>{product.description}</p>
-              ) : null}
-              {product.url ? (
-                <TextLink variant="external" href={product.url} text="caption">
-                  {product.url}
-                </TextLink>
-              ) : null}
-            </Stack>
-          </Inline>
-          {product.catalog ? (
-            <ProductCatalogControls scope={scope} product={product} catalog={product.catalog} />
-          ) : null}
-          {product.kind === 'ai_observed_competitor' ? (
-            <AddToTracking scope={scope} candidateId={product.holder_id} name={product.name} />
-          ) : null}
-        </Stack>
-      </CardContent>
-    </Card>
+    <Inline gap="compact" className="items-start">
+      {product.image_url ? <ProductImage src={product.image_url} /> : null}
+      <Stack gap="tight" className="min-w-0 flex-1">
+        <span className="type-caption">
+          {holderCaption(product)} · From{' '}
+          <InlineFigure>{formatCount(detail.executions)}</InlineFigure>
+          {detail.executions === 1 ? ' answer' : ' answers'} in the last {detail.window_days} days
+        </span>
+        {product.description ? (
+          <p className={textRole('body', 'line-clamp-2')}>{product.description}</p>
+        ) : null}
+        {product.url ? (
+          <TextLink variant="external" href={product.url} text="caption" className="truncate">
+            {product.url}
+          </TextLink>
+        ) : null}
+      </Stack>
+      {product.catalog ? (
+        <ProductCatalogControls scope={scope} product={product} catalog={product.catalog} />
+      ) : null}
+      {product.kind === 'ai_observed_competitor' ? (
+        <AddToTracking scope={scope} candidateId={product.holder_id} name={product.name} />
+      ) : null}
+    </Inline>
   );
 }
 
-function ProductKpis({ detail }: Readonly<{ detail: CommerceProductDetail }>) {
+/** The product and its figures in one card: who holds it above, its KPIs in one row below. */
+function ProductKpis({
+  detail,
+  scope,
+}: Readonly<{ detail: CommerceProductDetail; scope: ProjectScope }>) {
   return (
-    <Stack gap="tight">
-      <KpiRow
-        label="Product metrics"
-        segments={KPIS.map((key) => {
-          const column = PRODUCT_COLUMNS.find((row) => row.key === key);
-          return {
-            key,
-            label: column?.label ?? key,
-            value: <MetricValue cell={productCell(detail.product, key)} />,
-            sub: column?.hint,
-          };
-        })}
-      />
-      <p className="type-caption">
-        From <InlineFigure>{formatCount(detail.executions)}</InlineFigure>
-        {detail.executions === 1 ? ' answer' : ' answers'} in the last {detail.window_days} days.
-      </p>
-    </Stack>
+    <KpiRow
+      label="Product metrics"
+      lead={<ProductHeader detail={detail} scope={scope} />}
+      segments={KPIS.map((key) => {
+        const column = PRODUCT_COLUMNS.find((row) => row.key === key);
+        const label = column?.label ?? key;
+        return {
+          key,
+          label,
+          value: <MetricValue cell={productCell(detail.product, key)} />,
+          // The definition is a hint on the label, not a paragraph under every figure.
+          marker: column ? <InfoHint label={`About ${label}`}>{column.hint}</InfoHint> : undefined,
+        };
+      })}
+    />
   );
 }
 

@@ -86,6 +86,11 @@ colors:
 - **Ink** carries every primary action, heading and figure. **Ink secondary**
   is the one grey for supporting text; `ink-muted` is its alias, so there is
   never a third grey.
+- **The app rebinds a few values** (D58): its ink is 10% lower in contrast
+  (`#1c1c1c`, dark `#e8e8e8`), and its dark fills and edges are a code
+  editor's softer greys (paper `#161616`, surface `#1e1e1e`, sunken `#262626`,
+  line `#2e2e2e`, line-strong `#3e3e3e`, chart-grid `#2b2b2b`). The website and
+  docs keep the values above.
 - **Accent** (Flare) is a mark, never a fill for actions: the logo's bars, the
   own-brand chart series, the current nav item's 2px bar, a dot, a link's ink
   (`accent-ink`). The primary button is ink, not accent.
@@ -121,7 +126,7 @@ typography:
   type-figure-sm: { fontSize: 14px, lineHeight: 20px }
   type-item-title: { fontSize: 14px, lineHeight: 20px }
   type-label: { fontSize: 14px, lineHeight: 20px }
-  type-page-title: { fontSize: 24px, lineHeight: 32px }
+  type-page-title: { fontSize: 20px, lineHeight: 28px }
   type-section-title: { fontSize: 16px, lineHeight: 24px }
   cl-body: { fontSize: 16px, lineHeight: 26px }
   cl-fcard-title: { fontSize: 22px, lineHeight: 28px }
@@ -146,7 +151,8 @@ typography:
     heads, captions, counts, hints, inactive tabs and nav.
 - **Nothing is heavier than 500.**
 - **App sizes:** 14 body and controls, 16 section and card titles, 12
-  captions, badges and code, 24 only for the page title and a metric's figure.
+  captions, badges and code, 20 for the page title (D58) and 24 only for a
+  metric's figure.
 - **Website sizes:** 12 · 14 · 16 · 18 · 22 · 28 · 56 · 80, and normally no
   more than three on a page. Nothing below 12px; prose holds to 65ch.
 
@@ -195,8 +201,9 @@ first, left to right and top to bottom.
 2. **Tabs:** tabs only; nothing sits at the row's far end.
 3. **Control row:** the view (one segmented control), search, **All filters**,
    then at the row's end the count or a live note, then one action (Export,
-   Columns). Every filter is an entry in All filters, never a control of its
-   own.
+   Columns). Two or more filters share All filters; a lone filter is its own
+   trigger ("Page kind: All page kinds"). A row of filters alone, with no
+   view, search, count or action, sits in the header's actions instead (D58).
 4. **Content.**
 
 A control sits in the row of the thing it acts on: the page's control row when
@@ -260,7 +267,8 @@ its own spacing, size or radius on them.
 - **Tabs, segments and chips** show a count after the label in brackets, in
   the secondary style: "All signals (107)". Never mono.
 - **All filters:** one menu listing each filter with its value; options open in
-  a submenu. The button counts the filters changed from their defaults.
+  a submenu. The button counts the filters changed from their defaults. It
+  appears only for two or more filters.
 - **Tables** sort from their column headers. A row tints on hover only when
   pressing it does something. In its own card a table runs full-bleed.
 - **Selectable lists** run full-bleed with no gap between rows; the selected

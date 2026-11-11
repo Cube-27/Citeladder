@@ -27,6 +27,7 @@ import {
   type ProductColumnKey,
 } from '@/lib/products/product-columns';
 import { productSearch, useProductFilters } from '@/lib/products/product-filters';
+import { isTablePageSize, TABLE_DEFAULT_PAGE_SIZE, type TablePageSize } from '@/lib/config/tables';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 
@@ -97,6 +98,18 @@ function useCursorStack(search: string) {
   };
 }
 
+/** The rows on screen ("11–20 of 110 products"), once the page has loaded. */
+function pageRange({
+  page,
+  pageSize,
+  shown,
+  total,
+}: Readonly<{ page: number; pageSize: number; shown: number; total: number | undefined }>) {
+  if (total === undefined || shown === 0) return undefined;
+  const from = (page - 1) * pageSize + 1;
+  return { from, to: from + shown - 1, total, noun: 'products' };
+}
+
 /**
  * Commerce's Products table (commerce improvement PR 3): every product holder
  * with its metrics over the chosen window, the catalog's categories beside it,
@@ -116,7 +129,9 @@ function ProductsContent({
   const scope = { workspaceId, projectId };
   const productFilters = useProductFilters();
   const { filters } = productFilters;
-  const search = productSearch(filters);
+  const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
+  // A new page size is a new search, so it starts again from the first page.
+  const search = productSearch(filters, pageSize);
   const cursors = useCursorStack(search);
   const page = useQuery(commerceQueries.products(scope, search, cursors.cursor));
   const catalog = useQuery(commerceQueries.catalog(scope));
@@ -223,7 +238,20 @@ function ProductsContent({
               onSort={productFilters.setSort}
               checked={checked}
               onCheck={check}
+              pageSize={pageSize}
               pager={{
+                pageSize: {
+                  value: pageSize,
+                  onChange: (size) => {
+                    if (isTablePageSize(size)) setPageSize(size);
+                  },
+                },
+                range: pageRange({
+                  page: cursors.page,
+                  pageSize,
+                  shown: rows.length,
+                  total: page.data?.total,
+                }),
                 canPrev: cursors.page > 1,
                 canNext: Boolean(page.data?.next_cursor),
                 onPrev: cursors.prev,

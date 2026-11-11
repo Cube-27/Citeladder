@@ -176,7 +176,9 @@ describe('Workspace panel', () => {
     renderPanel();
     expect(screen.queryByRole('button', { name: 'Leave workspace' })).toBeNull();
     expect(
-      screen.getByText('To leave this workspace, make another member its owner first.'),
+      screen.getByText(
+        'Full access, including billing, members and ownership transfer. To leave, first make another member the owner.',
+      ),
     ).toBeVisible();
   });
 });

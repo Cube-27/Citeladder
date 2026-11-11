@@ -16,8 +16,8 @@ const BAR_LAYER =
 
 /**
  * PageHeader — the top of every app page and its half of the app's sticky
- * top bar (decision D12): the page name in `display-sm` (24/32, decision
- * D11) and the page's actions on the right (secondary first, then the one
+ * top bar (decision D12): the page name in `type-page-title` (20/28,
+ * decision D58) and the page's actions on the right (secondary first, then the one
  * primary), on one `row-app` row with space-2 above and below and a 1px
  * `line` rule under it, level with the sidebar's project switcher. A detail
  * page leads the title with its way back.

@@ -158,19 +158,19 @@ describe('ProductsTable', () => {
     expect(cells('Zoom Glide')).toEqual([
       '0.0%',
       '0',
-      'Unavailable',
-      'Unavailable',
-      'Unavailable',
+      '–Not measured',
+      '–Not measured',
+      '–Not measured',
       'None',
       'None',
     ]);
     // No answer in scope: visibility is unavailable; a missing catalog price is unknown.
     expect(cells('Acme Trail Climber')).toEqual([
-      'Unavailable',
+      '–Not measured',
       '0',
-      'Unavailable',
-      'Unavailable',
-      'Unavailable',
+      '–Not measured',
+      '–Not measured',
+      '–Not measured',
       'Unknown',
       'None',
     ]);

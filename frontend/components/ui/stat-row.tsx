@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
  *
  * A Stat's anatomy, in order: the mono eyebrow label (with an optional leading
  * icon and a trailing marker), an optional caption naming the value's period,
- * the value at 500, 24/32 (the page title's size, decision D48), the change
+ * the value at 500, 24/32 (decision D48), the change
  * line (a `Delta`), a sub-line, a comparison window's value, and one action. A
  * 0–100 score is a 64px `ScoreRing` (auto tone) with the number inside, on the
  * right beside the label and action, so the Stat is the ring's height — never
@@ -82,6 +82,7 @@ const DESKTOP_COLUMNS = {
   3: 'desktop:grid-cols-3',
   4: 'desktop:grid-cols-4',
   5: 'desktop:grid-cols-5',
+  6: 'desktop:grid-cols-6',
 } as const;
 
 type Columns = keyof typeof DESKTOP_COLUMNS;
@@ -130,14 +131,21 @@ export function StatRow(props: StatGroupProps) {
 /**
  * KpiRow — the row of numbers that opens a report page: one Card holding the
  * Stats as a single strip (decision D48), one row from the desktop breakpoint
- * for up to five (D9: never 2 × 2 or 2 + 1), stacked below. A page's headline
+ * for up to six (D9: never 2 × 2 or 2 + 1), stacked below. A page's headline
  * figures are a KpiRow; a group of figures inside a card that also holds
- * other content is a `StatRow`.
+ * other content is a `StatRow`. A record's page passes its summary as `lead`:
+ * it opens the same card above a hairline, so the record and its figures are
+ * one box, not two.
  */
-export function KpiRow(props: StatGroupProps) {
-  const columns = Math.max(1, Math.min(5, props.segments.length)) as Columns;
+export function KpiRow({ lead, ...props }: StatGroupProps & Readonly<{ lead?: ReactNode }>) {
+  const columns = Math.max(1, Math.min(6, props.segments.length)) as Columns;
   return (
     <div className={cardClasses()}>
+      {lead ? (
+        <div className="border-line -mx-[var(--card-padding)] mb-[var(--card-padding)] border-b px-[var(--card-padding)] pb-[var(--card-padding)]">
+          {lead}
+        </div>
+      ) : null}
       <StatGrid {...props} columns={columns} kpi />
     </div>
   );

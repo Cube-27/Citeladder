@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
  * (size/leading in px).
  */
 const TEXT_ROLES = {
-  /** The route `h1`. 24/32, −0.01em, ink, display face at its one weight (D7, D11). One per page. */
+  /** The route `h1`. 20/28 (D58), −0.01em, ink, display face at its one weight (D7, D11). One per page. */
   pageTitle: 'type-page-title',
   /** A section, card, drawer or dialog heading. 16/24, heading (500, ink). */
   sectionTitle: 'type-section-title',
@@ -36,7 +36,7 @@ const TEXT_ROLES = {
   label: 'type-label',
   /** Timestamps, counts, help, footnotes. 12/16, secondary (400, grey). */
   caption: 'type-caption',
-  /** A metric value. 24/32, the page title's size (D48), heading (500, ink), tabular digits. */
+  /** A metric value. 24/32 (D48), heading (500, ink), tabular digits. */
   figure: 'type-figure',
   /** A value inside a dense row or cell. 14/20, primary (400, ink), tabular digits. */
   figureSm: 'type-figure-sm',
