@@ -107,29 +107,33 @@ export async function mapped<T>(action: () => Promise<T>) {
     return await action();
   } catch (error) {
     if (!(error instanceof AgentError)) throw error;
-    if (error.code === 'funding_unavailable')
-      throw new ApiError(402, 'Agent funding is unavailable', {
-        code: asApiErrorCode('agent_funding_unavailable'),
-      });
-    if (error.code === 'model_changed')
-      throw new ApiError(409, 'The Agent model changed', {
-        code: asApiErrorCode('agent_model_unavailable'),
-      });
-    if (error.code === 'access_revoked' || error.code === 'capability_unavailable')
-      throw new ApiError(403, 'Agent run permission is unavailable');
-    if (error.code === 'agent_context_unavailable') throw notFound('Agent context');
-    if (error.code === 'agent_workflow_unavailable') throw notFound('Agent workflow');
-    if (error.code === 'agent_page_unavailable')
-      throw new ApiError(422, 'Choose one of the content pages in your latest crawl', {
-        code: asApiErrorCode('validation_error'),
-      });
-    const suggestion = SUGGESTION_CONFLICTS[error.code];
-    if (suggestion)
-      throw new ApiError(409, suggestion, { code: asApiErrorCode('agent_suggestion_conflict') });
-    throw new ApiError(409, 'Agent request conflicts with the current state', {
-      code: asApiErrorCode(conflictCode(error.code)),
-    });
+    throw agentHttpError(error.code);
   }
+}
+/** The HTTP error an Agent refusal answers with. */
+function agentHttpError(code: string) {
+  if (code === 'funding_unavailable')
+    return new ApiError(402, 'Agent funding is unavailable', {
+      code: asApiErrorCode('agent_funding_unavailable'),
+    });
+  if (code === 'model_changed')
+    return new ApiError(409, 'The Agent model changed', {
+      code: asApiErrorCode('agent_model_unavailable'),
+    });
+  if (code === 'access_revoked' || code === 'capability_unavailable')
+    return new ApiError(403, 'Agent run permission is unavailable');
+  if (code === 'agent_context_unavailable') return notFound('Agent context');
+  if (code === 'agent_workflow_unavailable') return notFound('Agent workflow');
+  if (code === 'agent_page_unavailable')
+    return new ApiError(422, 'Choose one of the content pages in your latest crawl', {
+      code: asApiErrorCode('validation_error'),
+    });
+  const suggestion = SUGGESTION_CONFLICTS[code];
+  if (suggestion)
+    return new ApiError(409, suggestion, { code: asApiErrorCode('agent_suggestion_conflict') });
+  return new ApiError(409, 'Agent request conflicts with the current state', {
+    code: asApiErrorCode(conflictCode(code)),
+  });
 }
 /** Why a suggestion change was refused, in words the person can act on. */
 const SUGGESTION_CONFLICTS: Readonly<Record<string, string>> = {

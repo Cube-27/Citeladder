@@ -109,25 +109,34 @@ function featureLayout(media: Feature['media']): Feature['media']['kind'] {
   return media.kind;
 }
 
+/** Adds a split to the run of splits it follows, or starts one. */
+function pushSplit(groups: FeatureGroup[], item: ScreenedFeature) {
+  const last = groups.at(-1);
+  if (last?.kind === 'splits') last.items.push(item);
+  else groups.push({ kind: 'splits', items: [item] });
+}
+
+/** Adds a card to the row of cards it follows, or starts one. */
+function pushCard(groups: FeatureGroup[], feature: Feature) {
+  const last = groups.at(-1);
+  if (last?.kind === 'cards') last.features.push(feature);
+  else groups.push({ kind: 'cards', features: [feature] });
+}
+
 function groupFeatures(features: readonly Feature[]): FeatureGroup[] {
   const groups: FeatureGroup[] = [];
   for (const feature of features) {
-    const last = groups.at(-1);
     const { media } = feature;
     switch (media.kind) {
       case 'full':
-        if (featureLayout(media) === 'split') {
-          if (last?.kind === 'splits') last.items.push({ feature, screen: media.screen });
-          else groups.push({ kind: 'splits', items: [{ feature, screen: media.screen }] });
-        } else groups.push({ kind: 'full', item: { feature, screen: media.screen } });
+        if (featureLayout(media) === 'split') pushSplit(groups, { feature, screen: media.screen });
+        else groups.push({ kind: 'full', item: { feature, screen: media.screen } });
         break;
       case 'split':
-        if (last?.kind === 'splits') last.items.push({ feature, screen: media.screen });
-        else groups.push({ kind: 'splits', items: [{ feature, screen: media.screen }] });
+        pushSplit(groups, { feature, screen: media.screen });
         break;
       case 'card':
-        if (last?.kind === 'cards') last.features.push(feature);
-        else groups.push({ kind: 'cards', features: [feature] });
+        pushCard(groups, feature);
         break;
       default: {
         const exhaustive: never = media;

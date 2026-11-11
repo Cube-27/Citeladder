@@ -9,7 +9,7 @@ import { TextLink } from '@/components/ui/text-link';
 import { MissingValue } from '@/components/ui/unavailable-value';
 import type { CommandCenter, Opportunity } from '@citeladder/contracts';
 import { readableUrl } from '@/lib/format';
-import { formatPosition, formatWholePercent } from '@/lib/visibility/dashboard';
+import { formatWholePercent } from '@/lib/visibility/dashboard';
 import { severityLabel, severityPriority } from '@/lib/site-health/issues';
 import { textRole } from '@/components/ui/typography';
 
@@ -26,7 +26,7 @@ export const VS_PREVIOUS_RUN = {
  * prints as AI Visibility prints it (`formatPosition`, "#3").
  */
 export const percentFigure = formatWholePercent;
-export const rankFigure = formatPosition;
+export { formatPosition as rankFigure } from '@/lib/visibility/dashboard';
 
 /**
  * Each engine's brand mention rate in the previous and the current comparable

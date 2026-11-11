@@ -51,7 +51,7 @@ export function mountCardRail(rail: HTMLElement): void {
   // put and it widens to the right (the row does not scroll), while any
   // other open card closes in the same motion.
   const toggleCard = (card: HTMLElement) => {
-    const open = !card.hasAttribute('data-expanded');
+    const open = card.dataset.expanded === undefined;
     for (const other of cards) if (other !== card) setOpen(other, false);
     setOpen(card, open);
     sync();

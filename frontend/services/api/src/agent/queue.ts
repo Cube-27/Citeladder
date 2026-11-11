@@ -15,7 +15,7 @@ export async function lockRun(db: Database, lease: Lease): Promise<Run> {
     lease.owner,
     [statuses.running],
   );
-  if (!run || run.cancelled_at !== null) throw new AgentError('lease');
+  if (run?.cancelled_at !== null) throw new AgentError('lease');
   return run;
 }
 export async function terminalize(

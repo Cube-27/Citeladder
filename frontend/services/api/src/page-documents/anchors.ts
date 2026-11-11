@@ -19,7 +19,10 @@ type Change = { from: number; to: number; inserted: number };
 
 /** The body's lines, each with its newline, so offsets add up to the body's length. */
 function lines(body: string) {
-  return body.match(/(?:[^\n]*\n)|(?:[^\n]+$)/gu) ?? [];
+  const parts = body.split('\n');
+  const last = parts.pop() ?? '';
+  const withNewlines = parts.map((line) => `${line}\n`);
+  return last ? [...withNewlines, last] : withNewlines;
 }
 
 /** Offsets where each line starts, plus the body's length. */

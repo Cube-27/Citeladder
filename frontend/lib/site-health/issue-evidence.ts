@@ -165,11 +165,11 @@ function pageLinks(
     if (group) group.variants += 1;
     else groups.set(fact, { fact, variants: 0 });
   }
-  return [...groups.values()].map(({ fact, variants }) =>
-    variants > 0
-      ? `${fact} (+${String(variants)} ${variants === 1 ? 'variant' : 'variants'})`
-      : fact,
-  );
+  return [...groups.values()].map(({ fact, variants }) => {
+    if (variants === 0) return fact;
+    const noun = variants === 1 ? 'variant' : 'variants';
+    return `${fact} (+${String(variants)} ${noun})`;
+  });
 }
 
 /** Where a redirecting link on this page lands; a link back to this page says so. */

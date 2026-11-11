@@ -146,12 +146,18 @@ function wroteWhole(messages: ConversationMessage[]) {
     for (const block of content) {
       if (block.type === 'tool_use' && typeof block.id === 'string')
         names.set(block.id, String(block.name));
-      const name = block.type === 'tool_result' ? names.get(String(block.tool_use_id)) : undefined;
-      if ((name !== SAVE_DOCUMENT && name !== EDIT_DOCUMENT) || block.is_error === true) continue;
-      const number = DOCUMENT_RESULT.exec(typeof block.content === 'string' ? block.content : '');
-      if (number) last.set(Number(number[1]), name);
+      const written = acceptedDocumentCall(block, names);
+      if (written) last.set(written.number, written.name);
     }
   return new Set([...last].flatMap(([number, name]) => (name === SAVE_DOCUMENT ? [number] : [])));
+}
+/** The document an accepted save or edit result names, with the call's tool, or null. */
+function acceptedDocumentCall(block: ConversationBlock, names: ReadonlyMap<string, string>) {
+  if (block.type !== 'tool_result' || block.is_error === true) return null;
+  const name = names.get(String(block.tool_use_id));
+  if (name !== SAVE_DOCUMENT && name !== EDIT_DOCUMENT) return null;
+  const number = DOCUMENT_RESULT.exec(typeof block.content === 'string' ? block.content : '');
+  return number ? { number: Number(number[1]), name } : null;
 }
 const SUPPLIED_TEXT = /^Document (\d+), revision (\d+), current text\b/u;
 /** The document revisions replayed turns were given whole, as `number:revision`. */
