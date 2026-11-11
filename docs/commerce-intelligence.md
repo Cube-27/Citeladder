@@ -118,6 +118,8 @@ same scoped slots and bounded by `products.detail` in `config/commerce.ts`:
   (null when no card carried one; the catalog has no image field yet);
 - competing products: holders with a slot in the same executions, by shared
   executions, with how often each ranked above this one and its mean rank;
+  only holders the table lists, so a competitor rejected after the answers
+  drops out and every row opens a page;
 - merchants, the citations of the executions it appeared in (by URL) and their
   fan-out queries (from each answer's settled analysis), each by executions;
 - per prompt (it appeared for, or targets it): executions, appearances,

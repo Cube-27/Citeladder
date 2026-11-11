@@ -57,9 +57,10 @@ describe('useRunEvents', () => {
     const run = queryKeys.runs.detail(WORKSPACE, AUDIT);
     const executions = queryKeys.runs.executions(WORKSPACE, AUDIT);
     const visibility = queryKeys.visibility.selection(scope);
-    const shelf = queryKeys.commerce.shelf(scope, null);
+    const product = queryKeys.commerce.productDetail(scope, PROJECT, 'window=30');
     const otherRun = queryKeys.runs.detail(WORKSPACE, PROJECT);
-    for (const key of [run, executions, visibility, shelf, otherRun]) client.setQueryData(key, {});
+    for (const key of [run, executions, visibility, product, otherRun])
+      client.setQueryData(key, {});
 
     const { unmount } = renderHook(() => useRunEvents(AUDIT, PROJECT, true), {
       wrapper: wrapper(client),
@@ -70,7 +71,7 @@ describe('useRunEvents', () => {
     const stale = (key: readonly unknown[]) => client.getQueryState(key)?.isInvalidated;
     // The finished run's own reads and every audit-derived read are stale;
     // another run's row is untouched.
-    expect([run, executions, visibility, shelf].map(stale)).toEqual([true, true, true, true]);
+    expect([run, executions, visibility, product].map(stale)).toEqual([true, true, true, true]);
     expect(stale(otherRun)).toBe(false);
     unmount();
   });

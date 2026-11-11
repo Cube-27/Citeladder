@@ -72,13 +72,27 @@ async function answer(t: Tenant, text: string, evidence = NO_EVIDENCE): Promise<
     transport_model: task.transport_model,
     answer_text: text,
     search_used: evidence.queries.length > 0,
-    search_events: evidence.queries.map((query, sequence) => ({ sequence, query })),
+    search_events: evidence.queries.map((query, sequence) => ({
+      sequence,
+      query,
+      call_id: `call-${sequence}`,
+      call_sequence: 0,
+      query_sequence: sequence,
+    })),
     finish_reason: 'stop',
     raw_finish_reason: 'stop',
     latency_ms: 1,
     provider_metadata: {},
     retrieved_sources: null,
-    citations: evidence.citations,
+    citations: evidence.citations.map(({ url, title }, ordinal) => ({
+      ordinal,
+      url,
+      title,
+      domain: new URL(url).hostname,
+      start_index: null,
+      end_index: null,
+      cited_text: '',
+    })),
     normalized_usage: {
       uncached_input_tokens: null,
       cached_input_tokens: null,
@@ -492,5 +506,21 @@ describe('Product detail read', () => {
     const theirs = await detail(foreign, await holderId(foreign, 'Acme Road Runner'));
     expect(theirs.body.answer_total).toBe(1);
     expect(theirs.body.sources).toEqual([]);
+  });
+
+  // Last in the file: it rejects the approved competitor the reads above count.
+  it('drops a competitor rejected after its answers from the competing products', async () => {
+    const road = await holderId(t, 'Acme Road Runner');
+    const rival = await holderId(t, 'Rival Pacer');
+    await db
+      .updateTable('commerce_competitor_candidates')
+      .set({ state: 'rejected' })
+      .where('id', '=', rival)
+      .execute();
+    const { body } = await detail(t, road);
+    expect(body.competing.map((row) => [row.name, row.kind])).toEqual([
+      ['Acme Trail Climber', 'owned'],
+    ]);
+    expect((await detail(t, rival)).status).toBe(404);
   });
 });

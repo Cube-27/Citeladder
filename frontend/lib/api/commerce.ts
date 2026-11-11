@@ -163,15 +163,14 @@ export const commerceApi = {
     holderId: string,
     search: string,
     options?: ApiRequestOptions,
-  ) =>
-    strictValidate(
+  ) => {
+    const resource = path(projectId, 'products/' + encodeURIComponent(holderId));
+    return strictValidate(
       commerceProductDetailSchema,
-      await apiClient.get(
-        `${path(projectId, `products/${encodeURIComponent(holderId)}`)}?${search}`,
-        options,
-      ),
+      await apiClient.get(`${resource}?${search}`, options),
       'commerce.productDetail',
-    ),
+    );
+  },
 };
 
 const scoped = (scope: ProjectScope, signal?: AbortSignal) => ({

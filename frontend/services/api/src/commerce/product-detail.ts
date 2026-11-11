@@ -119,8 +119,11 @@ async function sections(
         ) o
         LEFT JOIN commerce_products p
           ON p.id = o.holder_id AND p.workspace_id = ${ws} AND p.project_id = ${project}
+          AND p.lifecycle_state = 'active'
         LEFT JOIN commerce_competitor_candidates cc
           ON cc.id = o.holder_id AND cc.workspace_id = ${ws} AND cc.project_id = ${project}
+          AND (cc.state = 'approved' OR (cc.state = 'pending' AND cc.source_kind = 'ai_observed'))
+        -- Only holders the Products table lists, so each links to a page.
         WHERE p.id IS NOT NULL OR cc.id IS NOT NULL
         ORDER BY o.shared DESC, name, o.holder_id
         LIMIT ${list}
