@@ -521,6 +521,11 @@ export class VisibilityFixtures extends Fixtures {
       visibilityScore?: number;
       analyzerVersion?: string;
       scoringRuleVersion?: string;
+      /**
+       * False for a history run only a later run's walk reads: its own
+       * baselines are never compared, so finalizing it is wasted setup.
+       */
+      finalize?: boolean;
     },
   ): Promise<string> {
     const id = randomUUID();
@@ -546,7 +551,8 @@ export class VisibilityFixtures extends Fixtures {
       })
       .execute();
     // Finalization persists the run's comparable baselines once its snapshot exists.
-    await persistComparisonBaselines(this.database, { workspaceId: tenant.workspaceId, auditId });
+    if (input.finalize !== false)
+      await persistComparisonBaselines(this.database, { workspaceId: tenant.workspaceId, auditId });
     return id;
   }
 

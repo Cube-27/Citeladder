@@ -95,7 +95,12 @@ async function measuredRun(
   tenant: Tenant,
   completedAt: string,
   metrics: Record<string, unknown>,
-  options: { visibilityScore?: number; analyzerVersion?: string; configuration?: Json } = {},
+  options: {
+    visibilityScore?: number;
+    analyzerVersion?: string;
+    configuration?: Json;
+    finalize?: boolean;
+  } = {},
 ): Promise<string> {
   const auditId = await fixtures.audit(tenant, {
     completedAt: new Date(completedAt),
@@ -105,6 +110,7 @@ async function measuredRun(
     metrics: { ...metrics, per_engine: { chatgpt: metrics } } as Json,
     visibilityScore: options.visibilityScore,
     analyzerVersion: options.analyzerVersion,
+    finalize: options.finalize,
   });
   return auditId;
 }
@@ -117,27 +123,24 @@ afterAll(async () => {
 it('measures the baseline walk over 100 runs with alternating frozen routes (B21)', async () => {
   const tenant = await fixtures.tenant();
   const metrics = aggregate({ completed: 2, brand: 1 });
-  const ids: string[] = [];
-  let currentConfiguration: Json = {};
-  for (let index = 0; index < 100; index++) {
-    currentConfiguration = {
-      ...frozen(),
-      engine_routes: {
-        chatgpt: {
-          transport_provider: 'test',
-          transport_model: index % 2 ? 'model-b' : 'model-a',
-        },
+  const configuration = (index: number): Json => ({
+    ...frozen(),
+    engine_routes: {
+      chatgpt: {
+        transport_provider: 'test',
+        transport_model: index % 2 ? 'model-b' : 'model-a',
       },
-    };
-    ids.push(
-      await measuredRun(
-        tenant,
-        new Date(Date.UTC(2026, 0, 1) + index * 86400000).toISOString(),
-        metrics,
-        { configuration: currentConfiguration },
-      ),
-    );
-  }
+    },
+  });
+  const run = (index: number, finalize: boolean) =>
+    measuredRun(tenant, new Date(Date.UTC(2026, 0, 1) + index * 86400000).toISOString(), metrics, {
+      configuration: configuration(index),
+      finalize,
+    });
+  // Only the newest run is compared, so only it is finalized, over the 99 runs before it.
+  const ids = await Promise.all(Array.from({ length: 99 }, (_, index) => run(index, false)));
+  ids.push(await run(99, true));
+  const currentConfiguration = configuration(99);
   let cellQueries = 0;
   const counted = db.withPlugin({
     transformQuery({ node }) {
