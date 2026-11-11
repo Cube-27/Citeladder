@@ -353,15 +353,22 @@ function ChoiceOptions({ filter }: Readonly<{ filter: ChoiceFilter }>) {
 }
 
 /**
- * Keys typed in the search box edit the query: they stop before the menu,
- * which would otherwise jump by letter or close the submenu on Left. Down
- * moves to the first option; Escape (clear, then close) and Tab pass through.
+ * A typed field inside a filter menu (a custom filter's value, a choice list's
+ * search box): its keys edit the text, so they stop before the menu, which
+ * would otherwise jump to an item by letter or close the submenu on Left.
+ * Escape and Tab pass through, and so does Left from an empty field, which
+ * returns to the list. Returns whether the key stayed with the field.
  */
-function searchKeys(event: KeyboardEvent<HTMLInputElement>) {
-  if (event.key === 'Escape' || event.key === 'Tab') return;
-  if (event.key === 'ArrowLeft' && event.currentTarget.value === '') return;
+export function menuFieldKeys(event: KeyboardEvent<HTMLInputElement>): boolean {
+  if (event.key === 'Escape' || event.key === 'Tab') return false;
+  if (event.key === 'ArrowLeft' && event.currentTarget.value === '') return false;
   event.stopPropagation();
-  if (event.key !== 'ArrowDown') return;
+  return true;
+}
+
+/** The search box's keys stay with it; Down moves to the first option. */
+function searchKeys(event: KeyboardEvent<HTMLInputElement>) {
+  if (!menuFieldKeys(event) || event.key !== 'ArrowDown') return;
   event.preventDefault();
   const menu = event.currentTarget.closest('[role="menu"]');
   const first = menu?.querySelector<HTMLElement>('[role="menuitemradio"]');

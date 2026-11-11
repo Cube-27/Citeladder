@@ -93,7 +93,7 @@ export function readOpportunityOrder(db: Database, scope: Scope) {
     .where('project_id', '=', scope.projectId)
     .executeTakeFirst();
 }
-export type OpportunityOrder = Awaited<ReturnType<typeof readOpportunityOrder>>;
+type OpportunityOrder = Awaited<ReturnType<typeof readOpportunityOrder>>;
 
 /**
  * Live-row catalog page, ordered by priority then UUID; the caller has
