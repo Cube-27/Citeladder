@@ -3,8 +3,8 @@
  * A research guide (the WebResearchGuide template): ContentArticle with a
  * Toc, the ArticleHeader with the review date, the guide's Markdown in
  * Prose with its FAQ as a FaqList, an optional product section from the
- * guide's frontmatter (a heading, the guide's own copy, a ContentFigure with
- * the module's screen and a link to it), then the sources, the author card
+ * guide's frontmatter (a heading, the guide's own copy and a link to the
+ * module), then the sources, the author card
  * when the guide credits a person, and More guides.
  */
 import ArticleHeader from '@/components/content/ArticleHeader.astro';
@@ -13,7 +13,6 @@ import '@/components/marketing/content/reading.css';
 import AuthorCard from '@/components/marketing/content/AuthorCard.astro';
 import { Breadcrumbs } from '@/components/marketing/chrome/breadcrumbs';
 import ContentArticle from '@/components/marketing/content/ContentArticle.astro';
-import ContentFigure from '@/components/marketing/content/ContentFigure.astro';
 import { headingId } from '@/components/marketing/content/heading-id';
 import {
   InlineMarkdown,
@@ -23,13 +22,10 @@ import {
 } from '@/components/marketing/content/prose-markdown';
 import SourceRow from '@/components/marketing/content/SourceRow.astro';
 import SourcesList from '@/components/marketing/content/SourcesList.astro';
-import { ProductFrame } from '@/components/marketing/screens/product-frame';
-import { SCREEN_CATALOG } from '@/components/marketing/screens/screen-catalog';
 import { RelatedCards } from '@/components/marketing/sections/cards';
 import { PageSection } from '@/components/marketing/sections/page-section';
 import { formatBlogDate } from '@/lib/marketing-content/blog-index';
 import { platformLabel } from '@/lib/marketing-content/nav';
-import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
 import { breadcrumbJsonLd, faqPageJsonLd, researchArticleJsonLd } from '@/lib/seo/json-ld';
 import type { ResearchArticle } from '../research-articles';
 import {
@@ -69,10 +65,6 @@ const toc = [
   ...researchHeadings(parts.after),
   ...(product ? [{ id: headingId(product.heading), label: product.heading, level: 2 }] : []),
 ];
-// The module's own hero screen, from the catalogue.
-const productScreen = product && PLATFORM_PAGES.find((page) => page.path === product.href)?.screen;
-const Screen = productScreen ? SCREEN_CATALOG[productScreen].View : null;
-if (product && !Screen) throw new Error(`${meta.slug}: product href ${product.href} has no platform screen`);
 // Curated related guides, or the next ones in publication order, so every guide ends with a way on.
 const more = moreGuides(article);
 ---
@@ -121,15 +113,10 @@ const more = moreGuides(article);
         }
         {parts.after && <ProseMarkdown markdown={parts.after} />}
         {
-          product && Screen && (
+          product && (
             <>
               <h2 id={headingId(product.heading)}>{product.heading}</h2>
               <p>{product.body}</p>
-              <ContentFigure>
-                <ProductFrame label={platformLabel(product.href)}>
-                  <Screen />
-                </ProductFrame>
-              </ContentFigure>
               <p>
                 <a href={product.href}>Explore {platformLabel(product.href)}</a>
               </p>
