@@ -75,14 +75,24 @@ export async function siteSnapshot(
   } satisfies McpSiteSnapshot & Evidence;
 }
 
-/** The selected crawl, or the latest; an explicit crawl from elsewhere is refused. */
+/**
+ * The selected crawl, or the newest finished one (by completion), so a crawl
+ * still running mid-turn never answers a read; an explicit crawl from elsewhere
+ * is refused.
+ */
 async function selectCrawl({ db, scope }: ProjectRead, crawlId: string | null | undefined) {
   let query = new WorkspaceScope(scope.workspaceId)
     .selectFrom(db, 'site_crawls')
     .selectAll()
     .where('project_id', '=', scope.projectId);
-  if (crawlId) query = query.where('id', '=', crawlId);
-  const crawl = await query.orderBy('created_at', 'desc').orderBy('id', 'desc').executeTakeFirst();
+  query = crawlId
+    ? query.where('id', '=', crawlId)
+    : query.where('status', 'in', ['completed', 'partially_completed']);
+  const crawl = await query
+    .orderBy('completed_at', 'desc')
+    .orderBy('created_at', 'desc')
+    .orderBy('id', 'desc')
+    .executeTakeFirst();
   if (crawlId && !crawl) throw new McpInputError('Crawl was not found in this project');
   return crawl;
 }
