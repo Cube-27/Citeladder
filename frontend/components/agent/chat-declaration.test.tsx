@@ -132,7 +132,11 @@ describe('ChatScreen implementation declaration', () => {
       within(pane).queryByRole('button', { name: 'Mark implemented' }),
     ).not.toBeInTheDocument();
     expect(posted).toEqual([
-      { output_revision_id: REV1, declared_implemented_at: expect.any(String) },
+      {
+        output_revision_id: REV1,
+        declared_implemented_at: expect.any(String),
+        deployment_reference: null,
+      },
     ]);
   });
 

@@ -13,6 +13,7 @@ import {
 import { AffectedPages } from '@/components/agent/action-affected-pages';
 import { ContentGapWhy, contentGapMembers } from '@/components/agent/content-gap-evidence';
 import { DeclarationStatus } from '@/components/agent/declaration-status';
+import { ActionEvidence, DeveloperTicketButton } from '@/components/agent/developer-ticket';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { ActionPriorityBadge, ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { DetailScreen, type PageBack } from '@/components/layout/page-shell';
@@ -56,8 +57,9 @@ const BACK: PageBack = { href: ACTIONS, label: 'Back to Actions' };
 /**
  * One Action (AS7): a single centered column at the thread width, named in
  * the one-line header by a short title (a URL's host and last segment), read
- * top to bottom (overview, details, why, what to do, how it is measured, the
- * findings and the chats), with its three actions in a bar floating at the
+ * top to bottom (overview with Prepare developer ticket, details, dated
+ * evidence, why, what to do, how it is measured, the findings and the chats),
+ * with its three actions in a bar floating at the
  * bottom: Dismiss, Mark implemented, and Work with the agent.
  */
 export function ActionDetailScreen() {
@@ -122,6 +124,7 @@ function ActionDetailView({
       <Overview action={action} />
       <Details action={action} />
       <AffectedPages action={action} />
+      <ActionEvidence action={action} />
       {action.declaration ? (
         <Section title="Implementation" id="action-implementation">
           <DeclarationStatus
@@ -222,7 +225,12 @@ function Overview({ action }: Readonly<{ action: ActionDetail }>) {
     <Section
       title="Overview"
       id="action-overview"
-      actions={<CopyButton value={actionPrompt(action)}>Copy as prompt</CopyButton>}
+      actions={
+        <Inline gap="compact" className="flex-wrap">
+          <DeveloperTicketButton action={action} />
+          <CopyButton value={actionPrompt(action)}>Copy as prompt</CopyButton>
+        </Inline>
+      }
     >
       <p className={textRole('body')}>{action.handoff.message}</p>
       {happened.length > 0 ? (

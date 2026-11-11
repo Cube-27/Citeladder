@@ -11,6 +11,7 @@ import { Icon } from '@/components/ui/icon';
 import { DateField } from '@/components/ui/date-field';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { ReadError } from '@/components/ui/read-error';
@@ -76,6 +77,7 @@ export function MarkImplementedButton({
         input: {
           output_revision_id: revision?.id ?? null,
           declared_implemented_at: declaredInstant(attempt.day, attempt.openedAt),
+          deployment_reference: attempt.reference.trim() || null,
           ...(recommendationIds ? { recommendation_ids: recommendationIds } : {}),
         },
       },
@@ -145,6 +147,27 @@ export function MarkImplementedButton({
                   setAttempt((current) => ({
                     ...current,
                     day,
+                    idempotencyKey: newIdempotencyKey(),
+                  }));
+                }}
+              />
+            )}
+          </Field>
+          <Field
+            label="What shipped it?"
+            hint="Optional: the release, pull request or commit. The deployment is recorded under your account."
+          >
+            {(field) => (
+              <Input
+                {...field}
+                value={attempt.reference}
+                maxLength={DEPLOYMENT_REFERENCE_MAX}
+                onChange={(event) => {
+                  const reference = event.target.value;
+                  declare.reset();
+                  setAttempt((current) => ({
+                    ...current,
+                    reference,
                     idempotencyKey: newIdempotencyKey(),
                   }));
                 }}
@@ -238,9 +261,12 @@ export function isDeclarable(action: { status: string; declarable_member_count: 
   );
 }
 
+/** The declaration request's bound on what shipped it. */
+const DEPLOYMENT_REFERENCE_MAX = 500;
+
 function newAttempt() {
   const openedAt = new Date();
-  return { idempotencyKey: newIdempotencyKey(), openedAt, day: localDay(openedAt) };
+  return { idempotencyKey: newIdempotencyKey(), openedAt, day: localDay(openedAt), reference: '' };
 }
 
 /**

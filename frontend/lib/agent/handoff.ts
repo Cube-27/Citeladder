@@ -11,6 +11,11 @@
 import type { ActionHandoff } from '@citeladder/contracts/actions';
 import type { AgentContextRefs } from '@citeladder/contracts/agent';
 
+import type { DatedEvidence } from '@/lib/agent/evidence';
+import { checkKindLabel, checkStateLabel, measurementLegLabel } from '@/lib/agent/vocabulary';
+import type { ActionDetail } from '@/lib/api/actions';
+import { DEVELOPER_TICKET_PAGES_MAX } from '@/lib/config/agent';
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const PARAM = {
@@ -287,4 +292,119 @@ export function withoutContext(
     delete next.target_site_url_id;
   }
   return next;
+}
+
+type Declaration = NonNullable<ActionDetail['declaration']>;
+
+/** What a developer ticket reads from an Action's detail. */
+type TicketAction = Pick<ActionDetail, 'target_label' | 'target_url' | 'member_measurement'> & {
+  handoff: Pick<ActionDetail['handoff'], 'message'>;
+  members: readonly Pick<ActionDetail['members'][number], 'id' | 'title' | 'remediation'>[];
+  diagnosis: Pick<ActionDetail['diagnosis'], 'donts'>;
+  cohort: Pick<
+    NonNullable<ActionDetail['cohort']>,
+    'rule_label' | 'page_count' | 'pages' | 'crawl_completed_at'
+  > | null;
+  declaration:
+    | (Pick<Declaration, 'declared_implemented_at' | 'deployed_by' | 'deployment_reference'> & {
+        checks: readonly Pick<Declaration['checks'][number], 'kind' | 'state' | 'reason'>[];
+      })
+    | null;
+};
+
+/** One Markdown list line: stored text never breaks the list. */
+const line = (text: string) => `- ${text.replaceAll(/\s+/g, ' ').trim()}`;
+const unique = (values: readonly string[]) => [...new Set(values.filter(Boolean))];
+
+function affectedPages(action: TicketAction, formatDate: (iso: string) => string): string[] {
+  const { cohort } = action;
+  if (!cohort) return [line(action.target_url ?? action.target_label)];
+  const read = cohort.crawl_completed_at
+    ? `crawl completed ${formatDate(cohort.crawl_completed_at)}`
+    : 'crawl completion not recorded';
+  const shown = cohort.pages.slice(0, DEVELOPER_TICKET_PAGES_MAX);
+  const more = cohort.page_count - shown.length;
+  return [
+    `${cohort.rule_label} on ${cohort.page_count} ${cohort.page_count === 1 ? 'page' : 'pages'} (${read}):`,
+    '',
+    ...shown.map((page) => line(page.url)),
+    ...(more > 0 ? [line(`and ${more} more, listed on the Action in CiteLadder`)] : []),
+  ];
+}
+
+function verification(action: TicketAction, formatDate: (iso: string) => string): string[] {
+  const { declaration } = action;
+  if (declaration) {
+    const by = declaration.deployed_by ?? 'a former workspace member';
+    const reference = declaration.deployment_reference
+      ? ` (${declaration.deployment_reference})`
+      : '';
+    return [
+      `Deployed on ${formatDate(declaration.declared_implemented_at)}, recorded by ${by}${reference}.`,
+      '',
+      ...(declaration.checks.length
+        ? declaration.checks.map((check) =>
+            line(`${checkKindLabel(check.kind)}: ${checkStateLabel(check)}`),
+          )
+        : [line('No automatic check applies; CiteLadder records the work but cannot verify it.')]),
+    ];
+  }
+  return [
+    ...action.members.map((member) => {
+      const leg = action.member_measurement[member.id];
+      const by = leg ? measurementLegLabel(leg) : null;
+      return line(
+        `${member.title}: ${by ? `checked by ${by.toLowerCase()}` : 'not measured automatically'}`,
+      );
+    }),
+    '',
+    'When it ships, record the deployment on the Action in CiteLadder: Mark implemented with the day it went live and the release, pull request or commit. Readings before that day are not counted.',
+  ];
+}
+
+/**
+ * "Prepare developer ticket": the Action as Markdown a developer can paste
+ * into an issue tracker. The issue, the affected page or issue family, the
+ * dated evidence, the minimal patch and how CiteLadder will verify it, all
+ * from the Action's persisted read. `formatDate` renders a stored timestamp
+ * in the reader's display time zone.
+ */
+export function developerTicket(
+  action: TicketAction,
+  evidence: readonly DatedEvidence[],
+  formatDate: (iso: string) => string,
+): string {
+  const findings = unique(action.members.map((member) => member.title));
+  const steps = unique(action.members.map((member) => member.remediation));
+  const donts = action.diagnosis.donts ?? [];
+  const sections: string[][] = [
+    [`# ${action.target_label.replaceAll(/\s+/g, ' ').trim()}`, '', action.handoff.message],
+    [
+      '## Issue',
+      '',
+      ...(findings.length ? findings.map(line) : [line('No current finding targets this Action.')]),
+    ],
+    ['## Affected pages', '', ...affectedPages(action, formatDate)],
+    [
+      '## Evidence',
+      '',
+      ...(evidence.length
+        ? evidence.map((item) =>
+            line(
+              `${item.label}: ${item.basis}, ${item.at ? formatDate(item.at) : 'date not recorded'}`,
+            ),
+          )
+        : [line('No evidence is recorded for this Action.')]),
+    ],
+    [
+      '## Minimal patch',
+      '',
+      ...(steps.length
+        ? steps.map((step, index) => `${index + 1}. ${step.replaceAll(/\s+/g, ' ').trim()}`)
+        : [line('No step is recorded; see the issue above.')]),
+      ...(donts.length ? ['', 'Avoid:', '', ...donts.map(line)] : []),
+    ],
+    ['## How it will be verified', '', ...verification(action, formatDate)],
+  ];
+  return `${sections.map((section) => section.join('\n')).join('\n\n')}\n`;
 }

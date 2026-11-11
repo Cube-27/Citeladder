@@ -2091,6 +2091,7 @@ export interface OpportunityImplementationEvents {
   actor_user_id: string;
   created_at: Timestamp;
   declared_implemented_at: Timestamp;
+  deployment_reference: string | null;
   expected_checks: Json;
   id: string;
   idempotency_key: string;

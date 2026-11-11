@@ -163,7 +163,12 @@ export const actionDeclarationSchema = responseObject({
   // Populated instead of the owned ids for an earned Action: the publisher
   // page the listing was requested on. Never both.
   target_external_url: z.string().nullable(),
+  // The recorded deployment step: when the fix shipped (the go-live above),
+  // the workspace member who recorded it (null once they left the workspace)
+  // and what shipped it, as they typed it (null when none was given).
   declared_implemented_at: z.string(),
+  deployed_by: z.string().nullable().default(null),
+  deployment_reference: z.string().nullable().default(null),
   expected_checks: z.array(expectedCheckSchema),
   state: implementationStateSchema,
   limitations: z.array(z.string()),
@@ -220,9 +225,11 @@ export const actionStatusUpdateRequestSchema = z.strictObject({ status: actionUs
 export type ActionStatusUpdateRequest = z.input<typeof actionStatusUpdateRequestSchema>;
 
 /**
- * An implementation declaration. Targets and expected checks are server-owned;
- * the user names the recommendations done, the revision shipped (null for
- * work done outside CiteLadder) and when it went live.
+ * An implementation declaration, the Action's recorded deployment step. Targets
+ * and expected checks are server-owned; the user names the recommendations
+ * done, the revision shipped (null for work done outside CiteLadder), when it
+ * went live and, optionally, what shipped it. Who recorded it is the
+ * authenticated user, never a request field.
  */
 export const actionDeclarationRequestSchema = z.strictObject({
   recommendation_ids: z.array(uuid()).max(100).default([]),
@@ -230,6 +237,15 @@ export const actionDeclarationRequestSchema = z.strictObject({
   declared_implemented_at: z.iso
     .datetime({ offset: true })
     .refine((value) => !value.startsWith('0000-'), 'A valid calendar year is required'),
+  // What shipped it: a release, pull request or commit. One line, at most 500
+  // characters once trimmed; blank records none.
+  deployment_reference: z
+    .string()
+    .trim()
+    .max(500)
+    .regex(/^[^\r\n]*$/, 'Use one line')
+    .nullable()
+    .default(null),
 });
 export type ActionDeclarationRequest = z.input<typeof actionDeclarationRequestSchema>;
 

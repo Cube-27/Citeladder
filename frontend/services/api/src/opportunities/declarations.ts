@@ -32,6 +32,8 @@ export type DeclarationInput = {
   recommendation_ids?: string[];
   output_revision_id: string | null;
   declared_implemented_at: string;
+  /** What shipped it (a release, pull request or commit); null when none was given. */
+  deployment_reference?: string | null;
 };
 
 async function replay(
@@ -55,6 +57,7 @@ async function replay(
     (row.project_id !== action.project_id ||
       row.action_id !== action.id ||
       row.output_revision_id !== input.output_revision_id ||
+      row.deployment_reference !== (input.deployment_reference ?? null) ||
       // Unreadable stored checks are unknown, never an empty selection.
       !Array.isArray(row.expected_checks) ||
       JSON.stringify(
@@ -275,6 +278,7 @@ export function declareAction(
         actionId,
         input.output_revision_id,
         declaredAt,
+        input.deployment_reference ?? null,
         (input.recommendation_ids ?? []).toSorted((left, right) => left.localeCompare(right)),
       ]),
     )
@@ -357,6 +361,7 @@ export function declareAction(
         target_site_url_ids: JSON.stringify(resolved.target_site_url_ids),
         expected_checks: JSON.stringify(checks.map(({ check }) => check)),
         declared_implemented_at: sql<Date>`${declaredAt}::timestamptz`,
+        deployment_reference: input.deployment_reference ?? null,
         created_at: new Date(),
         idempotency_key: key,
         request_fingerprint: fingerprint,

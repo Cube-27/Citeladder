@@ -527,6 +527,23 @@ page, `/agent/actions/{id}`. The composer takes `/` to pick a skill and `@` to
 mention up to five of the project's Actions. New chat's **Work on an Action**
 offers **Brief me**, a `growth_plan` chat mentioning the top open Actions.
 
+An Action's page also hands work to a developer outside CiteLadder (BL4).
+**Prepare developer ticket** (in the
+[handoff codec](../frontend/lib/agent/handoff.ts)) writes the Action as
+copyable Markdown from its persisted read: the issue, the affected page or the
+issue family (its page count, crawl date and the first 50 cohort pages), the
+dated evidence, the minimal patch (the findings' remediation and what to
+avoid) and how it will be verified (each finding's measuring reading, or a
+declared Action's deployment and check states). Nothing is sent anywhere. The
+page's **Evidence** chips
+([evidence](../frontend/lib/agent/evidence.ts)) list each record behind the
+Action with its date and whether it was observed (a crawl, visibility run or
+Search Console window, from the family's crawl and each declared check's
+reading) or inferred (a finding a rule derived). Dates are the read's persisted
+timestamps; with none stored the chip says so, and a read never resolves a
+record to find one. A chat reply's and a revision's cited-record chips still
+carry references only.
+
 Evidence screens hand work to New chat through the
 [handoff codec](../frontend/lib/agent/handoff.ts). Every Action entry point
 (**Work with the agent** on its page, New chat's Recommended Actions, a cited
