@@ -240,7 +240,12 @@ normalized exact duplicates, the shared length bound, at most `text_max_words`
 (16) words (`too_many_words`), one need per prompt (`two_needs`: a core or
 diagnostic draft containing a `disjunction_words` entry of the project's base
 language, English "or"; comparisons ask "X or Y" by design, and other
-languages rely on the judge), topical binding (service areas do not bind
+languages rely on the judge), advice (`advice`: a core draft the drafter
+labels `general_advice`, or containing an `advice_phrases` frame of the
+project's base language such as "how to" or "what kind of"; a buyer question's
+best answer recommends specific, named products, services, brands or
+providers, never general advice, ideas or kinds of things, and these frames
+hold in every industry), topical binding (service areas do not bind
 generated or proposed text), a place named in a cell without a market
 (`location_unplanned`, decided on the project's geography vocabulary with the
 model's `names_place` label recorded beside it), texts already tracked or
@@ -297,8 +302,9 @@ revision was published on 28 September 2026 and production carries the key).
 It judges the admitted draft pool within the configured call cap, one call per
 draft: yes/no fit, buyer relevance, decision value, naturalness, standalone,
 sensibility and one need (`single_need`: no two settings, audiences or
-requirements joined or stacked), plus for core candidates whether naming a
-business answers the question (`names_a_business`) and for brand diagnostics
+requirements joined or stacked), plus for core candidates whether a good
+answer recommends specific, named products, services, brands or providers
+rather than advice, ideas or kinds of things (`names_a_business`) and for brand diagnostics
 (not comparisons, whose competitor the judge's state cannot tell apart)
 whether the question attributes to the business only what its cell's
 `grounded_attributes` state (`grounded_claims`); intent and stage labels
@@ -314,8 +320,10 @@ already recorded in the set is reused (re-flagged for the new candidate under
 the current policy; the stored decision is never rewritten).
 
 The [gate policy](../frontend/services/api/src/prompts/generation-quality.ts) gives each
-decision a verdict. **Fail**: a yes/no answer below `JEV_FAIL_BELOW` or a
-duplicate choice at or above `JEV_DUPLICATE_FAIL_AT`. **Uncertain**: an answer
+decision a verdict. **Fail**: a yes/no answer below `JEV_FAIL_BELOW`, a
+duplicate choice at or above `JEV_DUPLICATE_FAIL_AT`, or a core draft whose
+judged intent is one of `core_advice_intents` (learn, implement), flagged
+`advice_intent` whatever the drafter labelled it. **Uncertain**: an answer
 below `JEV_FLAG_BELOW`, a duplicate at or above `JEV_DUPLICATE_FLAG_AT`, or a
 missing answer (`incomplete`); the row is shown flagged. **Pass**: everything
 else. `names_a_business` uses its own provisional thresholds
