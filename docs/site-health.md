@@ -263,7 +263,22 @@ bypassing access controls, and a challenge page is terminal `bot_blocked`.
   reason.
 
 Attempts and artifacts are append-only. `site_fetch_artifacts.normalized_facts`
-is the bounded evidence store, and no raw HTML is kept. Facts distinguish an
+is the bounded evidence store, and no raw HTML is kept beyond one redacted
+reference snippet per page: the page's first unnamed form control within its
+label context (the wrapping label, else its parent element). The snippet keeps
+tags and attribute names only; text becomes `[text]`, and every attribute value
+outside `reference_snippet_kept_attributes`, or that looks like an email or
+token, becomes `[redacted]`. Comments, event handlers, scripts, styles and
+embedded documents are dropped, and drawing content (`svg`, `math`) is kept as
+an empty element. A context longer than `reference_snippet_chars` falls back to
+the control alone, which is cut at that cap and marked `truncated`.
+
+The Issues catalog (`site_issue_catalogs.reference_snippets`) keeps at most one
+snippet per issue family per crawl: the first affected page in URL order (then
+issue id) whose facts carry one, with its page URL and exact issue and artifact
+IDs. Only `web.accessibility_form_names` captures one today. No UI read serves
+it; the Agent's `read_site_pages` returns it as `reference_snippet` when given
+that rule. Facts distinguish an
 available extraction from parse failure, unsupported media, client rendering
 and truncation. Declared canonicals are observations, never URL identity.
 Hidden nodes enter accessible names only through `aria-labelledby`. Labels

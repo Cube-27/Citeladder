@@ -15,6 +15,7 @@ import {
   pageRows,
 } from '../site-health/reads/page-rows.ts';
 import { isKnownRule } from '../site-health/reads/rules.ts';
+import { referenceSnippetSchema } from '../site-health/issue-catalog.ts';
 import { policy } from '../config.ts';
 
 const FORMULA_VERSION = policy.site_health.link_metrics.formula_version;
@@ -288,6 +289,31 @@ function urlFilter(value: string | null | undefined) {
   return url;
 }
 
+/**
+ * The issue family's one reference snippet in the crawl's persisted catalog
+ * (`site-health/issue-catalog.ts`): redacted markup of the failing element and
+ * its label context on the first affected page, or null when none was kept.
+ */
+async function familySnippet({ db, scope }: ProjectRead, crawlId: string, ruleId: string) {
+  const rows = await new WorkspaceScope(scope.workspaceId)
+    .selectFrom(db, 'site_issue_catalogs')
+    .select('reference_snippets')
+    .where('project_id', '=', scope.projectId)
+    .where('crawl_id', '=', crawlId)
+    .execute();
+  const snippet = rows
+    .flatMap((row) => referenceSnippetList.parse(row.reference_snippets))
+    .find((item) => item.rule_id === ruleId);
+  if (!snippet) return null;
+  return {
+    page_url: snippet.page_url,
+    site_url_id: snippet.site_url_id,
+    html: snippet.html,
+    truncated: snippet.truncated,
+  };
+}
+const referenceSnippetList = z.array(referenceSnippetSchema);
+
 export async function sitePages(
   read: ProjectRead,
   args: Page & {
@@ -338,11 +364,12 @@ export async function sitePages(
   ]);
   const selected = rows.slice(0, count);
   const analysisIds = selected.flatMap((row) => (row.analysis_id ? [row.analysis_id] : []));
-  const [rules, evidence] = await Promise.all([
+  const [rules, evidence, snippet] = await Promise.all([
     currentIssueRules(read.db, crawl, analysisIds),
     args.rule_id
       ? currentRuleEvidence(read.db, crawl, analysisIds, args.rule_id)
       : Promise.resolve(new Map<string, unknown>()),
+    args.rule_id ? familySnippet(read, crawl.id, args.rule_id) : Promise.resolve(null),
   ]);
   // Compact rows: the next read's ids, the page, its states and failing rules.
   const items = selected.map((row) => ({
@@ -390,6 +417,8 @@ export async function sitePages(
       root_errors: root.errors,
     },
     items,
+    // The issue family's one redacted markup sample, for an exact fix.
+    ...(snippet ? { reference_snippet: snippet } : {}),
     pagination: pagination(
       items,
       rows.length > count && last
