@@ -4,7 +4,7 @@ import { TRIAL_NOTE, type PlatformPage } from './platform-page-types';
 export const MEASURE_PAGES: readonly PlatformPage[] = [
   {
     path: '/platform',
-    updated: '2026-11-10',
+    updated: '2026-11-11',
     title: 'AI Search Visibility Platform | CiteLadder',
     description:
       'See how ChatGPT, Gemini, Claude and Google AI Overviews answer your buyers, which pages they cite, and a ranked list of what to change on your site.',
@@ -24,7 +24,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Improve',
-        body: 'You use this when you know what is wrong and need the work done. It gives you one ranked Action per page, the content angles competitor and publisher pages are cited for and your site lacks, briefs and edits drafted by the Agent, and MCP access for confirmed changes from Claude or ChatGPT.',
+        body: 'You use this when you know what is wrong and need the work done. It gives you ranked Actions, one per page or per repeated site defect, the content angles competitor and publisher pages are cited for and your site lacks, briefs and edits drafted by the Agent, and MCP access for confirmed changes from Claude or ChatGPT.',
       },
     ],
     features: [
@@ -61,10 +61,10 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
         media: { kind: 'split', screen: 'crawler-access' },
       },
       {
-        title: 'Get one ranked Action per page',
-        body: 'CiteLadder groups site, search, citation and visibility findings into one Action for each page, query, prompt or product. Fixed scoring rules set the order. Send an Action to the Agent for a brief or an edit. Your team decides what ships, and the next collection shows whether it changed anything.',
+        title: 'Get one ranked Action per page or issue',
+        body: 'CiteLadder groups site, search, citation and visibility findings into one Action for each page, query, prompt or product, and a technical defect that repeats across pages becomes one Action for all of them. Fixed scoring rules set the order. Send an Action to the Agent for a brief or an edit. Your team decides what ships, and the next collection shows whether it changed anything.',
         points: [
-          'One Action per page, query, prompt or product',
+          'One Action per page, repeated defect, query, prompt or product',
           'Briefs and edits built from saved answers and crawl data',
           'Nothing is published or sent without you',
           'Shipped work checked against the next collection',
@@ -83,7 +83,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Collect and connect',
-        body: 'Run audits on a schedule, crawl your site, and connect Search Console, GA4 or crawler logs when you want them.',
+        body: 'Run audits and site crawls on a schedule, and connect Search Console, GA4 or crawler logs when you want them.',
       },
       {
         title: 'Act and verify',

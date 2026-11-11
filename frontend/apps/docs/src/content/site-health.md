@@ -3,10 +3,20 @@ title: 'Site Health'
 description: 'Inspect website issues, understand Web and AEO scores, and choose changes with supporting page evidence.'
 group: 'Measure and understand'
 order: 130
-updated: '2026-11-10'
+updated: '2026-11-11'
 ---
 
 A Site Health crawl captures pages from your website and analyzes their technical and content properties. Begin with **Run new crawl**, then review the crawl's scope, progress and coverage. **Recrawl** reruns the shown crawl with the same scope and settings, so Changes compares like with like.
+
+## Schedule crawls
+
+**Schedule** beside the crawl buttons reruns the latest crawl automatically, **Weekly** or **Monthly**, with the same scope and settings as **Recrawl**. It is off until you turn it on, on every plan, and shows the next crawl's date. A scheduled crawl uses your crawl allowance like one you start. If a crawl is still running, or the allowance is used up, that occurrence is skipped and the schedule shows why; repeated failures turn it off.
+
+## Crawl pages robots.txt excludes
+
+CiteLadder respects your robots.txt by default. To audit pages it disallows on your own site, open the menu beside **Run new crawl** and choose **Run new crawl ignoring robots.txt…**, then confirm that you are authorized to crawl the site. Crawl delay, rate limits and access controls still apply, and the crawl only ignores robots.txt on your site's domain and its subdomains.
+
+Your confirmation is recorded on the crawl with your email. **Recrawl** and scheduled crawls keep the choice and say so. Pages fetched only because of it are marked **Robots.txt excluded**. CiteLadder's other fetches, such as competitor, cited-source and product pages, always respect robots.txt.
 
 ## Read the score with its coverage
 
@@ -62,6 +72,8 @@ conversation about the evidence.
 ## Work through an issue
 
 Use **Ask agent** on supported evidence screens, or **Work on this** on the related Action. Ask for a small, reviewable correction tied to the affected page.
+
+A website issue that fails on many pages, such as a shared template or component, is [one Action across all of them](/agent/actions/#fix-one-issue-across-many-pages). The Agent gets the affected pages without reading each one. For form fields without an accessible name, the crawl also keeps one redacted HTML example of a failing field (tags and attribute names, with text and values removed), so the Agent can write an exact fix.
 
 On a content page, such as an article or guide, the related Action also holds any [content gaps](/content-optimization/) on that page. The issue still appears in **Issues**.
 

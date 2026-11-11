@@ -192,7 +192,7 @@ markup. Sitemap indexes compare declared child sitemap addresses without recursi
 | AI Traffic: Overview, Crawlers, Referrals, Activity | /ai-traffic | [AI Traffic](ai-traffic.md) |
 | Agent: chats, Actions, Skills and Context | /agent, /agent/chats/:chatId, /agent/actions, /agent/actions/:actionId, /agent/skills, /agent/context | [Agent](agents.md), [Actions](opportunities.md#actions) |
 | Prompts, Visibility and runs | /prompts, /visibility, /runs | [Visibility](visibility-prompt.md) |
-| Commerce | /products | [Commerce](commerce-intelligence.md) |
+| Commerce: Shopping overview, Products and product pages | /products/overview, /products, /products/:id | [Commerce](commerce-intelligence.md) |
 | Settings and account management | /settings and account routes | [Workspace access](workspace-access.md), [Billing](billing-entitlements.md) |
 | Public guides, Agent documentation, MCP setup and changelog | docs.citeladder.com | Static Astro app in `frontend/apps/docs` |
 

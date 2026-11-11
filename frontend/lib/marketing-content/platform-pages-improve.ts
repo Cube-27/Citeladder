@@ -248,7 +248,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
   },
   {
     path: '/platform/mcp',
-    updated: '2026-11-06',
+    updated: '2026-11-11',
     title: 'AI Visibility MCP Server for Claude, ChatGPT & More | CiteLadder',
     description:
       'Connect Claude, ChatGPT, Gemini, Grok, Cursor and other MCP clients to your CiteLadder visibility, site and search evidence, with changes only after you confirm them.',
@@ -273,7 +273,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     features: [
       {
         title: 'Ask questions grounded in recorded evidence',
-        body: 'Read visibility results and trends, perception, ads, cited sources, Actions, Site Health, performance, AI referrals, AI crawler logs, the AI Shelf, search performance and saved Keyword Research datasets. Every answer comes from a dated record.',
+        body: 'Read visibility results and trends, perception, ads, cited sources, Actions, Site Health, performance, AI referrals, AI crawler logs, per-product Commerce metrics, search performance and saved Keyword Research datasets. Every answer comes from a dated record.',
         points: [
           'Interactive visibility and Site Health views in assistants that show apps',
           'Unavailable data is reported as unavailable, never as zero',
@@ -357,7 +357,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
   },
   {
     path: '/platform/integrations',
-    updated: '2026-11-06',
+    updated: '2026-11-11',
     title: 'Search, Analytics, Log & AI Integrations | CiteLadder',
     description:
       'Connect Google Search Console, GA4, Bing Webmaster Tools, Cloudflare, Amazon CloudFront and Google Cloud logs, model providers, DataForSEO and MCP clients to CiteLadder.',
@@ -438,7 +438,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Is there a native Shopify sync?',
-        a: 'No. Commerce catalogs come from your site or a CSV import.',
+        a: 'No. Commerce imports a public Shopify storefront by its URL, a Merchant Center feed file or a CSV, and can find products on your site. There is no Shopify app or automatic sync.',
       },
       {
         q: 'Which servers can send crawler logs?',

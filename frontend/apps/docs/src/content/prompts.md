@@ -3,7 +3,7 @@ title: 'Prompts and topics'
 description: 'Track questions that represent real buying decisions, and keep their purpose clear.'
 group: 'Measure and understand'
 order: 100
-updated: '2026-11-03'
+updated: '2026-11-11'
 ---
 
 A prompt is a question you want to investigate in AI search. Topics organize related questions; the prompt's cohort preserves what kind of question it is.
@@ -43,6 +43,15 @@ When Search Console is connected or you have published keyword research, generat
 
 A suggestion is not permission to activate or run it. Use the review and activation controls in the app, then select the portfolio you want to measure.
 
+## Shopping prompts
+
+Commerce prompts measure your products and are generated from **Commerce**, not the Prompt Builder. Each one targets a category or a product.
+
+- **A category's matrix.** On a category's page, **Shopping prompts matrix** generates one question for each buyer context and buying stage: three contexts, such as a beginner or a runner training for a marathon, at the consideration and decision stages. A few branded comparisons that name your brand are added, at most a fifth of the set. Branded comparisons stay out of organic visibility and product metrics, like other branded prompts.
+- **Hero products.** For the products that matter most, **Generate 3 for this hero product** on the product's page adds questions about that product alone. Every other product is covered by its category's prompts.
+
+Generated shopping prompts stay disabled until you approve them, and generation uses AI credits like other prompt generation. See [Commerce](/commerce/#prepare-shopping-prompts).
+
 ## Keep a stable baseline
 
 A small, coherent portfolio is easier to interpret than a large collection of loosely related questions. Once you have a baseline, record deliberate changes to prompt wording, cohorts or engine selection. A [scheduled audit](/visibility/#schedule-audits) measures the same prompt set on a regular cadence.
@@ -57,4 +66,4 @@ Missing, failed and not-run answers are different from successful answers that d
 
 ## What to do next
 
-Run an audit and use [AI Visibility](/visibility/) to inspect results. For product-specific buying questions and AI Shelf, use [Commerce](/commerce/).
+Run an audit and use [AI Visibility](/visibility/) to inspect results. For product metrics and shopping prompts, use [Commerce](/commerce/).

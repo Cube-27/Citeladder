@@ -3,7 +3,7 @@ title: 'MCP tool reference'
 description: 'Choose the narrowest registered read tool that answers your question, and see which tools make changes.'
 group: 'Connect with MCP'
 order: 320
-updated: '2026-11-01'
+updated: '2026-11-11'
 ---
 
 Start with project discovery, inspect available evidence, then ask for the concrete record or dataset you need. List tools are bounded; follow returned cursors instead of assuming the first page is complete.
@@ -23,7 +23,7 @@ Start with project discovery, inspect available evidence, then ask for the concr
 | Who cites one specific URL?                     | `read_source_url`                                              |
 | What should I work on next?                     | `read_actions`                                                 |
 | How do cited competitor pages differ from mine? | `read_content_differentiation`                                 |
-| Which products do AI answers recommend?         | `read_ai_shelf`                                                |
+| How do AI answers rank each of our products?    | `read_ai_shelf`                                                |
 | What did the website crawl find?                | `read_site_health`, then `read_site_pages`                     |
 | Can AI crawlers reach the site?                 | `read_ai_crawlability`                                         |
 | Which AI crawlers visited, per server logs?     | `read_crawl_logs`                                              |

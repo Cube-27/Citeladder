@@ -3,7 +3,7 @@ title: 'AI Traffic'
 description: 'Read crawler requests, AI referral sessions and coverage, and configure customer-operated crawl logs.'
 group: 'Measure and understand'
 order: 145
-updated: '2026-10-10'
+updated: '2026-11-11'
 ---
 
 AI Traffic separates crawler **requests**, GA4 referral **sessions** and citations
@@ -26,8 +26,9 @@ within retention and exports the selected filters.
 
 Pages joins each path's crawler requests, AI referral sessions and key events,
 tracked citations and latest Site Health findings. Each measure shows its own
-coverage and availability. Filter by folder, resource class and verification,
-choose the sort, page through saved results or export matching rows as CSV.
+coverage and availability. Filter by folder, resource class and verification
+under **All filters** at the right of the tabs, choose the sort in the table's
+toolbar, page through saved results or export matching rows as CSV.
 Open a path from Pages, referral landing pages, crawler drill-downs or Site Health
 to see its first and last crawl, first referral, citation dates and links to each
 owning view. Query strings and fragments are excluded from path identity.

@@ -52,6 +52,10 @@ export const PLATFORM_GUIDES: Readonly<Record<string, { title: string; desc: str
     title: 'How to optimize content for AI search',
     desc: 'Find the pages AI engines cite for your buyers, then improve or create yours.',
   },
+  '/blog/track-products-in-chatgpt-shopping': {
+    title: 'Track products in ChatGPT shopping',
+    desc: 'What a carousel card carries and how to measure each product.',
+  },
   '/blog/how-accurate-are-ai-citations': {
     title: 'How accurate are AI citations?',
     desc: 'What accuracy studies measure and how to verify a citation.',

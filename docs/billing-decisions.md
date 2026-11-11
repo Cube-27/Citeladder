@@ -583,7 +583,7 @@ charged, as with B60's funding refusal after a document; B58's refund applies
 only when nothing was saved or streamed. (b) Stop on a turn whose lease has
 already expired settles the way recovery does, with B58's refund, instead of
 ending charged. Source: owner answer in the state-machine fixes session;
-[state-machine fixes](plans/state-machine-fixes.md) OQ1.
+the state-machine fixes plan, OQ1.
 
 **B70 — Owner, 2026-11-07.** A refund cancels the subscription, and a
 cancellation is just a cancellation; refunds are issued manually by an
@@ -594,8 +594,8 @@ once and the period's grants, the upgrade's included, are revoked, so no
 scheduled upgrade survives to bill the next cycle. Source: owner answers in the
 state-machine fixes session ("if a customer asked for a refund the subscription
 is cancelled … any cancellation request ends the subscription"; "there is no
-concept of partial refund for now"); [state-machine
-fixes](plans/state-machine-fixes.md) OQ2.
+concept of partial refund for now"); the state-machine
+fixes plan, OQ2.
 
 **B71 — Owner, 2026-11-07.** Money collected for a period the subscription no
 longer grants. (i) A base checkout paid while the abandon sweep cancels it is
@@ -603,7 +603,7 @@ granted the paid period's bundle until the paid end. (ii) A renewal charged
 after a B52 cancellation leaves the subscription cancelled: the receipt is
 recorded, nothing is granted, and it is flagged for an operator refund (the
 B25/B30 pattern). Source: owner answer in the state-machine fixes session;
-[state-machine fixes](plans/state-machine-fixes.md) OQ3.
+the state-machine fixes plan, OQ3.
 
 **B72 — Owner, 2026-11-07.** Billing edge cases found after B69–B71, while
 building the state-machine fixes, change no code for now. Refunds are handled

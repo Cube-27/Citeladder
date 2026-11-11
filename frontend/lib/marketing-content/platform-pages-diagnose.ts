@@ -4,7 +4,7 @@ import { type PlatformPage } from './platform-page-types';
 export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
   {
     path: '/platform/site-health',
-    updated: '2026-11-06',
+    updated: '2026-11-11',
     title: 'AEO Website Audit & Technical SEO Checks | CiteLadder',
     description:
       'Crawl your site for technical SEO, answer-readiness and AI crawler access issues, with page-level evidence for every finding and a recrawl to verify fixes.',
@@ -61,11 +61,11 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'From a finding to a verified fix',
-        body: 'Hand any issue to the Agent to prepare a bounded developer brief. Your team implements it, marks it done, and a later crawl checks the result against the same evidence.',
+        body: 'A technical defect that repeats across pages, usually from a shared template, is one Action covering every affected page, not one per page. Hand it to the Agent with the failing check and the affected pages so it writes one fix, or prepare a developer ticket with the dated evidence. Your team implements it, marks it done, and the next comparable crawl reports it verified, partially resolved, still failing or inconclusive.',
         points: [
-          'Ask the Agent from any issue group',
-          'Briefs cite the captured evidence',
-          'Recrawl to verify the change',
+          'One Action for a defect across all its pages',
+          'Developer ticket in Markdown, with a minimal patch',
+          'Pages still failing named after the recrawl',
           'CSV and Markdown exports for your developers',
         ],
         media: { kind: 'split', screen: 'agent-chat' },
@@ -74,7 +74,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     steps: [
       {
         title: 'Crawl',
-        body: 'CiteLadder samples your site within your plan’s page allowance, respecting robots.txt.',
+        body: 'CiteLadder samples your site within your plan’s page allowance, on demand or on a weekly or monthly schedule, respecting robots.txt unless you choose otherwise.',
       },
       {
         title: 'Classify',
@@ -112,6 +112,14 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
       {
         q: 'How many pages are crawled?',
         a: 'Up to your plan’s monitored page allowance. Pages are sampled across your site in a reproducible way, and the coverage figure tells you how much was checked.',
+      },
+      {
+        q: 'Can crawls run on a schedule?',
+        a: 'Yes, on every plan. Turn on a weekly or monthly schedule for a project and each run repeats the latest crawl’s scope and settings. Schedules are off until you turn them on.',
+      },
+      {
+        q: 'Does the crawl respect robots.txt?',
+        a: 'Yes, by default. For your own site you can run a crawl that ignores robots.txt after confirming you are authorized to crawl it; crawl delay, rate limits and access controls still apply, and pages fetched despite an exclusion are marked. Every other fetch, such as competitor, cited-source and product pages, always respects robots.txt.',
       },
       {
         q: 'Is robots permission the same as crawler traffic?',
