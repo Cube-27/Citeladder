@@ -16,12 +16,22 @@ type Tenant = Awaited<ReturnType<typeof auditTenant>>;
 
 export type RecordedAnswer = { auditId: string; taskId: string };
 
+/** What an answer cited and searched for, as the provider returned it. */
+export type AnswerEvidence = { citations: { url: string; title: string }[]; queries: string[] };
+const NO_EVIDENCE: AnswerEvidence = { citations: [], queries: [] };
+
 export async function recordAnswer(
   db: Database,
   t: Tenant,
   text: string,
-  options: { runtime: AuditRuntime; worker: string; auditScope?: 'brand' | 'commerce' },
+  options: {
+    runtime: AuditRuntime;
+    worker: string;
+    auditScope?: 'brand' | 'commerce';
+    evidence?: AnswerEvidence;
+  },
 ): Promise<RecordedAnswer> {
+  const evidence = options.evidence ?? NO_EVIDENCE;
   const [auditId] = await createAudits(
     db,
     t.workspaceId,
@@ -44,14 +54,28 @@ export async function recordAnswer(
     transport_provider: 'openai',
     transport_model: task.transport_model,
     answer_text: text,
-    search_used: false,
-    search_events: [],
+    search_used: evidence.queries.length > 0,
+    search_events: evidence.queries.map((query, sequence) => ({
+      sequence,
+      query,
+      call_id: `call-${sequence}`,
+      call_sequence: 0,
+      query_sequence: sequence,
+    })),
     finish_reason: 'stop',
     raw_finish_reason: 'stop',
     latency_ms: 1,
     provider_metadata: {},
     retrieved_sources: null,
-    citations: [],
+    citations: evidence.citations.map(({ url, title }, ordinal) => ({
+      ordinal,
+      url,
+      title,
+      domain: new URL(url).hostname,
+      start_index: null,
+      end_index: null,
+      cited_text: '',
+    })),
     normalized_usage: {
       uncached_input_tokens: null,
       cached_input_tokens: null,

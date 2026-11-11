@@ -3,7 +3,7 @@
  * and product rankings, the catalog's most and least visible products, the
  * merchants answers send shoppers to and the fan-out queries of answers that
  * held a product, over the same answers and slots as the Products table
- * (`answerSlots`).
+ * (`scopedSlots`).
  *
  * A brand folds its products' slots to one per execution, at the best rank
  * (a ranked slot beats an unranked one, a carousel card's rank a text-list
@@ -26,7 +26,7 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
-import { answerSlots, holderRows } from './products.ts';
+import { holderRows, scopedSlots } from './products.ts';
 import type { CommerceScope } from './reads.ts';
 
 export type OverviewQuery = { windowDays: number; category: string | null };
@@ -117,8 +117,7 @@ async function categoryShelf(db: Database, scope: CommerceScope, categoryId: str
 
 export async function shoppingOverview(db: Database, scope: CommerceScope, query: OverviewQuery) {
   const limits = policy.commerce.overview;
-  const slotsInScope = answerSlots({
-    ...scope,
+  const slotsInScope = scopedSlots(scope, {
     windowDays: query.windowDays,
     engine: null,
     promptSet: null,

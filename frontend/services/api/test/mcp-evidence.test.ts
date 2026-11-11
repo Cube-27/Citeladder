@@ -14,6 +14,9 @@ import { attachOrCreateAction, updateActionStatus } from '../src/opportunities/a
 import { getVisibility } from '../src/visibility/dashboard.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 import { seedImport } from './referral-fixtures.ts';
+import { extractPageFacts } from '../src/site-health/analysis/facts.ts';
+import { refreshIssueCurrency } from '../src/site-health/issue-currency.ts';
+import { loadCrawl } from '../src/site-health/reads/crawl.ts';
 
 const db = testDatabase();
 const fixtures = new VisibilityFixtures(db);
@@ -821,8 +824,8 @@ it('serves ads in ChatGPT answers with the same numbers as the Ads read', async 
 });
 
 /** A finalized, measured page observed in the crawl. */
-async function sitePage(seed: SiteSeed, path: string) {
-  const page = await siteFixtures.page(seed, path, {}, { observed: true });
+async function sitePage(seed: SiteSeed, path: string, facts: Record<string, unknown> = {}) {
+  const page = await siteFixtures.page(seed, path, facts, { observed: true });
   await db
     .updateTable('site_page_analyses')
     .set({
@@ -968,6 +971,89 @@ it("lists exactly the pages a Site Health rule affects, with each page's failing
       distinct_failing_target_count: 2,
     },
   ]);
+});
+
+/** Facts the extractor persists for a page whose body is `body`. */
+const factsOf = (body: string) =>
+  extractPageFacts(Buffer.from(`<html lang="en"><body>${body}</body></html>`), {
+    finalUrl: 'https://example.test/',
+    contentType: 'text/html',
+    statusCode: 200,
+  });
+
+it("keeps one redacted reference snippet per issue family from the first affected page, never another workspace's", async () => {
+  const seed = await siteFixtures.crawl();
+  // Created out of URL order: the snippet still comes from /a.
+  const later = await sitePage(
+    seed,
+    '/b',
+    factsOf('<form><p><select name="size"></select></p></form>'),
+  );
+  const first = await sitePage(
+    seed,
+    '/a',
+    factsOf(
+      '<form><div class="field"><span>Your email</span>' +
+        '<input type="email" name="email" value="jo@example.com" onchange="track()">' +
+        '<script>steal()</script></div></form>',
+    ),
+  );
+  await siteIssue(seed, later, 'web.accessibility_form_names');
+  await siteIssue(seed, first, 'web.accessibility_form_names');
+  await refreshIssueCurrency(db, await loadCrawl(db, seed.workspaceId, seed.crawlId));
+
+  const other = await siteFixtures.crawl();
+  const elsewhere = await sitePage(
+    other,
+    '/a',
+    factsOf('<form><span><textarea name="note"></textarea></span></form>'),
+  );
+  await siteIssue(other, elsewhere, 'web.accessibility_form_names');
+  await refreshIssueCurrency(db, await loadCrawl(db, other.workspaceId, other.crawlId));
+
+  const pages = (tenant: SiteSeed, args: Record<string, unknown> = {}) =>
+    dispatchTool(
+      db,
+      siteMember(tenant),
+      'read_site_pages',
+      { project_id: tenant.projectId, rule_id: 'web.accessibility_form_names', ...args },
+      origin,
+    );
+  expect((await pages(seed)).reference_snippet).toEqual({
+    page_url: 'https://example.test/a',
+    site_url_id: first.id,
+    html: '<div class="field"><span>[text]</span><input type="email" name="email" value="[redacted]"></div>',
+    truncated: false,
+  });
+  // One snippet for the family in the crawl's catalog, not one per affected page.
+  const catalogs = await db
+    .selectFrom('site_issue_catalogs')
+    .select('reference_snippets')
+    .where('workspace_id', '=', seed.workspaceId)
+    .where('crawl_id', '=', seed.crawlId)
+    .execute();
+  expect(
+    catalogs.flatMap((row) =>
+      (row.reference_snippets as { rule_id: string; page_url: string }[]).map((item) => [
+        item.rule_id,
+        item.page_url,
+      ]),
+    ),
+  ).toEqual([['web.accessibility_form_names', 'https://example.test/a']]);
+  // Each workspace reads only its own crawl's snippet.
+  expect((await pages(other)).reference_snippet).toEqual({
+    page_url: 'https://example.test/a',
+    site_url_id: elsewhere.id,
+    html: '<span><textarea name="note"></textarea></span>',
+    truncated: false,
+  });
+  await expect(pages(other, { crawl_id: seed.crawlId })).rejects.toThrow(
+    'Crawl was not found in this project',
+  );
+  // A rule without a kept snippet names none.
+  expect(await pages(seed, { rule_id: 'technical.title_present' })).not.toHaveProperty(
+    'reference_snippet',
+  );
 });
 
 it("finds a crawled page by the address a person types and reads its copy, never another project's", async () => {

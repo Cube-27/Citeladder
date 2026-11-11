@@ -192,10 +192,22 @@ and:
 - **Answers**: each execution with win/loss and rank, opening the existing
   answer viewer.
 - **Setup**: competitor discovery and review, hero-product prompts, and the
-  Actions with Generate action / Work with the agent.
+  product's open commerce Actions, each with Work with the agent, plus Work
+  with the agent on the product's own URL. As shipped there is no Generate
+  action button (a deviation from the plan; the owner decides whether a later
+  PR adds one for product pages).
 
 The `target-*` components and `GET ai-shelf` are retired (the split-pane
 workspace already went in PR 3). `read_ai_shelf` (MCP/Agent) returns the per-product metrics.
+
+As built: the read is `GET /commerce/products/{holder_id}`; every holder,
+competitors included, has a page, and a category id keeps a setup page (its
+competitors and shopping-prompt matrix). The header image is the latest
+shopping card's (the catalog has no image field until PR 6). Actions offer
+Work with the agent (per Action, and on the product's page); there is no
+Generate action button, since the existing one (Analyze a page) accepts only
+content pages and commerce Actions come from audits (PR 9 adds the metric
+rules). No migration.
 
 ### PR 5: Shopping overview
 

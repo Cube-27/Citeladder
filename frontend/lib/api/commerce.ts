@@ -1,5 +1,5 @@
-/** Typed Commerce catalog, discovery, prompt, and AI Shelf client. */
-import { mutationOptions, queryOptions, skipToken, type QueryClient } from '@tanstack/react-query';
+/** Typed Commerce catalog, product metrics, discovery and prompt client. */
+import { mutationOptions, queryOptions, type QueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
@@ -21,13 +21,13 @@ import {
   buyerPromptSchema,
   catalogImportSchema,
   commerceCatalogSchema,
+  commerceProductDetailSchema,
   commerceProductPageSchema,
   commerceProjectionSchema,
   commerceShoppingOverviewSchema,
   competitorDiscoverySchema,
   competitorDiscoveryTaskSchema,
   competitorCandidateSchema,
-  shelfSchema,
   type CommerceTarget,
   type CompetitorDiscoveryTask,
 } from '@citeladder/contracts/commerce-suite';
@@ -165,15 +165,19 @@ export const commerceApi = {
       await apiClient.get(`${path(projectId, 'overview')}?${search}`, options),
       'commerce.overview',
     ),
-  shelf: async (projectId: string, target: CommerceTarget, options?: ApiRequestOptions) =>
-    strictValidate(
-      shelfSchema,
-      await apiClient.get(
-        `${path(projectId, 'ai-shelf')}?target_kind=${target.kind}&target_id=${encodeURIComponent(target.id)}`,
-        options,
-      ),
-      'commerce.shelf',
-    ),
+  productDetail: async (
+    projectId: string,
+    holderId: string,
+    search: string,
+    options?: ApiRequestOptions,
+  ) => {
+    const resource = path(projectId, 'products/' + encodeURIComponent(holderId));
+    return strictValidate(
+      commerceProductDetailSchema,
+      await apiClient.get(`${resource}?${search}`, options),
+      'commerce.productDetail',
+    );
+  },
 };
 
 const scoped = (scope: ProjectScope, signal?: AbortSignal) => ({
@@ -226,13 +230,19 @@ export const commerceQueries = {
       queryKey: queryKeys.commerce.buyerPrompts(scope),
       queryFn: ({ signal }) => commerceApi.buyerPrompts(scope.projectId, scoped(scope, signal)),
     }),
-  /** One target's AI Shelf; skips until a target is selected. */
-  shelf: (scope: ProjectScope, target: CommerceTarget | null) =>
+  /**
+   * One product holder's page for the window's query string (`window=30`).
+   * The previous window's page stays on screen while the next one loads.
+   */
+  productDetail: (scope: ProjectScope, holderId: string, search: string) =>
     queryOptions({
-      queryKey: queryKeys.commerce.shelf(scope, target),
-      queryFn: target
-        ? ({ signal }) => commerceApi.shelf(scope.projectId, target, scoped(scope, signal))
-        : skipToken,
+      queryKey: queryKeys.commerce.productDetail(scope, holderId, search),
+      queryFn: ({ signal }) =>
+        commerceApi.productDetail(scope.projectId, holderId, search, scoped(scope, signal)),
+      placeholderData: (previous, previousQuery) =>
+        previous?.product.holder_id === holderId
+          ? retainPreviousDataForScope(scope.projectId, previous, previousQuery)
+          : undefined,
     }),
   /**
    * Discovery task status: the tracked ids, or, with none (after a reload),

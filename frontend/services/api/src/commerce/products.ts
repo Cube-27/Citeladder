@@ -43,6 +43,8 @@ export type ProductQuery = {
   sort: CommerceProductSort;
   cursor: string | null;
   limit: number;
+  /** One holder's row only: the detail page's KPIs, never set by the table. */
+  holder?: string;
 };
 
 const CURSOR_SCOPE = 'commerce.products';
@@ -108,40 +110,40 @@ function cursorPosition(query: ProductQuery, filters: Record<string, unknown>) {
   }
 }
 
-/** The answers a Commerce read measures: its project, window and optional filters. */
-export type AnswerScope = CommerceScope & {
-  windowDays: number;
-  engine: string | null;
-  promptSet: string | null;
-};
+/** The executions a product read covers: its window, engine and prompt set. */
+export type ExecutionScope = Pick<ProductQuery, 'windowDays' | 'engine' | 'promptSet'>;
 
-/** The first instant of the window; a window outside the configured ones is refused. */
-function windowStart(windowDays: number) {
+export function requireWindow(windowDays: number) {
   if (!policy.commerce.products.window_days.includes(windowDays))
     throw new ApiError(422, 'window must be one of the configured windows', {
       code: 'validation_error',
     });
-  return new Date(Date.now() - windowDays * DAY_MS);
 }
 
-/** Which slot of a holder in one execution counts: its best, per the module comment. */
+/** A slot's best observation first: ordered, then carousel, then rank. */
 const SLOT_RANKING = sql`(o.order_observable AND o.rank IS NOT NULL) DESC,
-    (o.surface_kind = 'shopping_result') DESC, o.rank ASC NULLS LAST, o.created_at, o.id`;
+      (o.surface_kind = 'shopping_result') DESC, o.rank ASC NULLS LAST, o.created_at, o.id`;
 
 /**
- * The CTEs every Commerce metrics read shares: `scoped_passes` (the latest
- * pass of each answer in scope), `executions` (their count, the visibility
- * denominator), `observed` (their holder observations) and `slots` (one per
- * holder per execution, at its best rank).
+ * The CTEs every Commerce metrics read (the Products table, a product's page
+ * and the Shopping overview) starts from: `scoped_passes`, each successful
+ * non-branded execution in scope once, through its latest match pass;
+ * `executions`, their count (the visibility denominator); `observed`, the
+ * holder observations of those passes; and `slots`, each holder's one slot
+ * per execution at its best rank. A window outside the configured ones is
+ * refused.
  */
-export function answerSlots(scope: AnswerScope) {
+export function scopedSlots(scope: CommerceScope, executions: ExecutionScope) {
+  requireWindow(executions.windowDays);
   const ws = scope.workspaceId,
     project = scope.projectId;
-  const since = windowStart(scope.windowDays);
+  const since = new Date(Date.now() - executions.windowDays * DAY_MS);
   const branded = [...policy.prompts.branded_cohorts];
-  const engineFilter = scope.engine ? sql`AND t.logical_engine = ${scope.engine}` : NOTHING;
-  const promptSetFilter = scope.promptSet
-    ? sql`AND pr.prompt_set_id = ${scope.promptSet}`
+  const engineFilter = executions.engine
+    ? sql`AND t.logical_engine = ${executions.engine}`
+    : NOTHING;
+  const promptSetFilter = executions.promptSet
+    ? sql`AND pr.prompt_set_id = ${executions.promptSet}`
     : NOTHING;
   return sql`
     scoped_passes AS (
@@ -218,7 +220,7 @@ export function holderRows(
 }
 
 export async function productMetrics(db: Database, scope: CommerceScope, query: ProductQuery) {
-  const slotsInScope = answerSlots({ ...scope, ...query });
+  const slotsInScope = scopedSlots(scope, query);
   // A cursor is bound to its project and filters; any other read refuses it.
   const { cursor: _cursor, limit: _limit, ...rest } = query;
   const filters = { ...rest, project: scope.projectId };
@@ -227,8 +229,9 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
     project = scope.projectId;
   const search = query.q?.trim() ? likePattern(query.q.trim()) : null;
   const searchFilter = search
-    ? sql`WHERE h.name ILIKE ${search} OR h.brand ILIKE ${search} OR h.url ILIKE ${search}`
+    ? sql`AND (h.name ILIKE ${search} OR h.brand ILIKE ${search} OR h.url ILIKE ${search})`
     : NOTHING;
+  const holderFilter = query.holder ? sql`AND h.holder_id = ${query.holder}` : NOTHING;
   const afterCursor = position
     ? sql`WHERE (k.sort_key, k.name_key, k.holder_id)
               > (${position.sortKey}::float8, ${position.name}, ${position.id}::uuid)`
@@ -262,7 +265,7 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
              CASE WHEN m.ordered > 0 THEN m.wins::float8 / m.ordered END AS win_rate
       FROM holders h CROSS JOIN executions e
       LEFT JOIN slot_metrics m ON m.holder_id = h.holder_id
-      ${searchFilter}
+      WHERE true ${searchFilter} ${holderFilter}
     ),
     keyed AS (SELECT f.*, ${SORT_KEYS[query.sort]} AS sort_key FROM filtered f)
     SELECT e.n AS executions, (SELECT count(*)::int FROM filtered) AS total, page.*

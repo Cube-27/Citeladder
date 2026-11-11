@@ -4,17 +4,13 @@ import {
   commerceProjectionSchema,
   competitorCandidateSchema,
   competitorDiscoveryTaskSchema,
-  shelfHolderSchema,
-  shelfSchema,
 } from '@citeladder/contracts/commerce-suite';
 import { sql } from 'kysely';
-import { z } from 'zod';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
 import { catalogApplicability, UNCATEGORIZED_KEY } from './projection-facts.ts';
-import { holderIdentity, orderedRank } from './shelf-metrics.ts';
 import { ApiError } from '../errors.ts';
 
 export type CommerceScope = { workspaceId: string; projectId: string };
@@ -236,134 +232,10 @@ export async function buyerPrompts(db: Database, scope: CommerceScope, id?: stri
   );
 }
 
-type HolderKind = z.infer<typeof shelfHolderSchema>['kind'];
 const SETTLED_ACTION_STATUSES = ['done', 'dismissed'];
 
-/**
- * The latest measurement of one target, the recommendations behind it and the
- * Actions open against it.
- *
- * Holders come from exactly the observations the snapshot was computed from,
- * so the list and the numbers above it always describe the same answers.
- */
-export async function shelf(
-  db: Database,
-  scope: CommerceScope,
-  target: { kind: 'category' | 'product'; id: string },
-) {
-  // Independent of the snapshot; read alongside it.
-  const actions = targetActions(db, scope, target);
-  const snapshot = await db
-    .selectFrom('commerce_shelf_snapshots')
-    .select([
-      'product_visibility',
-      'share_of_shelf',
-      'average_shelf_position',
-      'first_position_win_rate',
-      'successful_execution_count',
-      'recognized_slot_count',
-      'ranked_execution_count',
-      'source_observation_ids',
-      'created_at',
-    ])
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .where('target_kind', '=', target.kind)
-    .where('target_id', '=', target.id)
-    .orderBy('created_at', 'desc')
-    .orderBy('id')
-    .limit(1)
-    .executeTakeFirst();
-  const sourceIds = z.array(z.uuid()).parse(snapshot?.source_observation_ids ?? []);
-  const observations = sourceIds.length
-    ? await db
-        .selectFrom('commerce_recommendation_observations')
-        .select([
-          'task_id',
-          'classification',
-          'product_id',
-          'competitor_candidate_id',
-          'observed_product',
-          'observed_brand',
-          'merchant_domain',
-          'rank',
-          'order_observable',
-        ])
-        .where('workspace_id', '=', scope.workspaceId)
-        .where('project_id', '=', scope.projectId)
-        .where('id', 'in', sourceIds)
-        .orderBy('created_at')
-        .orderBy('id')
-        .execute()
-    : [];
-  const holders = new Map<
-    string,
-    {
-      kind: HolderKind;
-      name: string;
-      brand: string;
-      merchant_domain: string;
-      tasks: Set<string>;
-      best_rank: number | null;
-    }
-  >();
-  let unresolved = 0;
-  for (const row of observations) {
-    // A rejected candidate is excluded from the shelf, not an unresolved recommendation.
-    if (row.classification === 'rejected_competitor') continue;
-    const identity = holderIdentity(row);
-    const kind = shelfHolderSchema.shape.kind.safeParse(row.classification);
-    if (identity === null || !kind.success) {
-      unresolved++;
-      continue;
-    }
-    const key = JSON.stringify([kind.data, identity]);
-    const holder = holders.get(key) ?? {
-      kind: kind.data,
-      name: row.observed_product,
-      brand: row.observed_brand,
-      merchant_domain: row.merchant_domain,
-      tasks: new Set<string>(),
-      best_rank: null,
-    };
-    holder.tasks.add(row.task_id);
-    holder.merchant_domain ||= row.merchant_domain;
-    const rank = orderedRank(row);
-    if (rank !== null && (holder.best_rank === null || rank < holder.best_rank))
-      holder.best_rank = rank;
-    holders.set(key, holder);
-  }
-  return shelfSchema.parse({
-    target,
-    snapshot: snapshot
-      ? {
-          product_visibility: snapshot.successful_execution_count
-            ? snapshot.product_visibility
-            : null,
-          share_of_shelf: snapshot.share_of_shelf,
-          average_shelf_position: snapshot.average_shelf_position,
-          first_position_win_rate: snapshot.first_position_win_rate,
-          successful_execution_count: snapshot.successful_execution_count,
-          recognized_slot_count: snapshot.recognized_slot_count,
-          ranked_execution_count: snapshot.ranked_execution_count,
-          measured_at: snapshot.created_at.toISOString(),
-        }
-      : null,
-    holders: [...holders.values()]
-      .map(({ tasks, ...holder }) => ({ ...holder, appearances: tasks.size }))
-      .sort(
-        (a, b) =>
-          b.appearances - a.appearances ||
-          (a.best_rank ?? Infinity) - (b.best_rank ?? Infinity) ||
-          a.name.localeCompare(b.name),
-      ),
-    unresolved_count: unresolved,
-    actions: await actions,
-  });
-}
-
 /** Live commerce Opportunities keyed to the target, by the Action that holds them. */
-async function targetActions(
+export async function targetActions(
   db: Database,
   scope: CommerceScope,
   target: { kind: 'category' | 'product'; id: string },

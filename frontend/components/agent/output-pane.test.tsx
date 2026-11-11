@@ -22,6 +22,7 @@ const output = (kind: string): AgentOutput => ({
   format_id: null,
   target_kind: null,
   target_label: null,
+  named_target: null,
   latest_revision: {
     id: '22222222-2222-4222-8222-222222222222',
     number: 1,

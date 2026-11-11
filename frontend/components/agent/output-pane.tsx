@@ -91,7 +91,13 @@ export function OutputPane({
           />
         )}
         {editing ? null : (
-          <OutputDeclaration workspaceId={workspaceId} output={output} runActive={runActive} />
+          <OutputDeclaration
+            workspaceId={workspaceId}
+            chatId={chatId}
+            output={output}
+            runActive={runActive}
+            canEdit={canEdit}
+          />
         )}
         {editing ? null : <PromptBuilderHandoff kind={output.kind} />}
       </Stack>

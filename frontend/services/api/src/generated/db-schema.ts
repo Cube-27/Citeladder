@@ -3091,6 +3091,7 @@ export interface SiteIssueCatalogs {
   finding_class: string;
   items: Json;
   project_id: string;
+  reference_snippets: Generated<Json>;
   rule_catalog_version: string;
   sources: Json;
   summary: Json;

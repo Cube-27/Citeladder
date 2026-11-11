@@ -44,6 +44,7 @@ import {
   type AgentChatCreateRequest,
   type AgentMessageRequest,
   type AgentOutputEditRequest,
+  type AgentOutputTargetRequest,
 } from '@citeladder/contracts/agent';
 import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
@@ -245,6 +246,17 @@ const agentApi = {
       ),
       'agent.dismissAllSuggestions',
     ),
+  /** Link a document to the page it names, or keep it with its Action; answers the chat. */
+  chooseOutputTarget: async (
+    document: { chatId: string; outputId: string },
+    input: AgentOutputTargetRequest,
+    options?: ApiRequestOptions,
+  ) =>
+    strictValidate(
+      agentChatDetailSchema,
+      await apiClient.post(`${outputPath(document)}/target`, input, options),
+      'agent.chooseOutputTarget',
+    ),
   instructions: async (projectId: string, options?: ApiRequestOptions) =>
     strictValidate(
       agentInstructionsSchema,
@@ -428,6 +440,22 @@ export const agentMutations = {
       mutationFn: (vars: { chatId: string; outputId: string; revisionId: string }) =>
         agentApi.restoreRevision(vars, vars.revisionId, { workspaceId }),
       onSuccess: (_revision, vars, _result, { client }) => refreshAgentOutput(client, vars.chatId),
+    }),
+  /**
+   * Link a document to the page it names or keep it with its Action. The
+   * answer is the chat as now saved; a refusal reads the chat again. Either
+   * Action's status may move; the chat keeps its own Action.
+   */
+  chooseOutputTarget: (workspaceId: string | null) =>
+    mutationOptions({
+      mutationFn: (vars: { chatId: string; outputId: string; decision: 'link' | 'keep' }) =>
+        agentApi.chooseOutputTarget(vars, { decision: vars.decision }, { workspaceId }),
+      onSuccess: (detail, vars, _result, { client }) => {
+        client.setQueryData(queryKeys.agent.chat(workspaceId, vars.chatId), detail);
+      },
+      onError: (_error, vars, _context, { client }) => void refreshAgentChat(client, vars.chatId),
+      onSettled: (_result, _error, _vars, _context, { client }) =>
+        client.invalidateQueries({ queryKey: queryKeys.actions.all }),
     }),
   /** Apply, Dismiss or Revert one suggestion; any answer reads the page again. */
   changeSuggestion: (workspaceId: string | null) =>
