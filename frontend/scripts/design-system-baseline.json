@@ -1,20 +1,4 @@
 {
   "format_version": 1,
-  "files": {
-    "public/blog/editorial/article-audit.svg": {
-      "svg-color": 46
-    },
-    "public/blog/editorial/article-connect.svg": {
-      "svg-color": 59
-    },
-    "public/blog/editorial/article-internal-links.svg": {
-      "svg-color": 18
-    },
-    "public/blog/editorial/article-playbook.svg": {
-      "svg-color": 37
-    },
-    "public/blog/editorial/article-prompts.svg": {
-      "svg-color": 22
-    }
-  }
+  "files": {}
 }

@@ -18,6 +18,26 @@ test('a brand asset may paint only the tokens it is allowed', () => {
   assert.match(drifted[0].message, /is not --color-accent/);
 });
 
+test('other assets may paint with a palette token and its light fallback', () => {
+  const label = 'public/blog/editorial/example.svg';
+  assert.deepEqual(
+    svgColorFindings(
+      '<svg><rect fill="var(--color-ink, #111111)"/><path style="stroke: var(--color-accent)"/></svg>',
+      label,
+      palette,
+    ),
+    [],
+  );
+  assert.equal(
+    svgColorFindings('<svg><rect fill="var(--color-ink, #222222)"/></svg>', label, palette).length,
+    1,
+  );
+  assert.equal(
+    svgColorFindings('<svg><rect fill="var(--color-nope)"/></svg>', label, palette).length,
+    1,
+  );
+});
+
 test('other assets paint with currentColor or none', () => {
   const label = 'public/blog/editorial/example.svg';
   assert.deepEqual(
