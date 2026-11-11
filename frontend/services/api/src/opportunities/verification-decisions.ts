@@ -35,7 +35,7 @@ export type CheckOutcome = {
   /** An issue-family check's per-page reading of its cohort; absent for every other kind. */
   pages?: IssueFamilyPages;
 };
-export type IssueFamilyPages = z.infer<typeof issueFamilyPagesSchema>;
+type IssueFamilyPages = z.infer<typeof issueFamilyPagesSchema>;
 export type Evaluation = {
   /** Outcomes by expected-check index, for the checks this source can read. */
   outcomes: Map<number, CheckOutcome>;

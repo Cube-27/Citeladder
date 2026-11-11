@@ -245,8 +245,10 @@ per page ([BL2](decisions.md#backlog-closure)): a shared component failing on
 rule maps to a per-page finding; config load refuses one. The finding carries
 its Site Health rule's severity and label, and its evidence holds the
 **cohort**: the rule, the crawl it was read from, the family's issue group in
-that crawl's catalog, the affected page count and the pages in URL order, at
-most `COHORT_PAGES_MAX` (500). Action sync stamps the cohort on
+that crawl's catalog, the exact affected page count and the pages in URL
+order, at most `COHORT_PAGES_MAX` (500). The refresh loads family defects apart
+from the per-page findings and outside their `RECOMPUTE_MAX_ISSUES` cap, so a
+large family is never undercounted. Action sync stamps the cohort on
 `actions.cohort` (only an `issue_family` Action has one) and keeps the last
 cohort when a recrawl clears the family, like its last member set. The list
 returns `page_count`; the detail returns the cohort with its crawl's
@@ -317,7 +319,7 @@ distinct expectation, each scoped to what the Action changed:
 | Finding | Check | Read by |
 |---|---|---|
 | Site Health rule | the rule passes on the page | the next crawl that analyzes the page after go-live |
-| Issue family (`issue_family`) | the rule passes (or no longer applies) on every frozen cohort page: met reads **Verified**; some pages passing and some failing is `unmet` `partially_resolved`, none passing `unmet` `still_failing`, both naming the pages still failing; a crawl with another analyzer or rule catalog than the cohort's crawl, or one that read none or only some of the cohort without a failure, is `unavailable` (**Inconclusive**) with its reason | each crawl after go-live, comparable when its analyzer and rule catalog match the cohort's crawl |
+| Issue family (`issue_family`) | the rule passes (or no longer applies, counted apart) on every frozen cohort page: met reads **Verified**; some pages passing and some failing is `unmet` `partially_resolved`, none passing `unmet` `still_failing`, both naming the pages still failing; a crawl with another analyzer or rule catalog than the cohort's crawl, or one that read none or only some of the cohort without a failure, is `unavailable` (**Inconclusive**) with its reason | each crawl after go-live, comparable when its analyzer and rule catalog match the cohort's crawl |
 | Contextual link | the selected link is in main content | the next compatible crawl |
 | Search Console (page or query) | clicks per day on that page or query rise against the rate in the last daily window that ended before go-live (sync windows differ in length, so windows compare as rates) | each synced daily window that starts after the go-live day (that day is partly before the change) |
 | Keyword gap | the project appears for the search: Search Console impressions, or an owned ranking in a later Keyword Research dataset whose provider check postdates go-live; still missing or not ranking yet reads `waiting`, never `unmet` | each synced window that starts after go-live, and each later published ranking, shared or missing-keyword dataset for the same website and market |

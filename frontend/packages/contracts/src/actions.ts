@@ -112,10 +112,12 @@ export const measurementLegSchema = responseObject({
   source_id: uuid().nullable(),
 });
 
-// An issue-family check's reading of its cohort in one crawl.
+// An issue-family check's reading of its cohort in one crawl: the pages still
+// failing, and how many pass, no longer apply or went unread.
 export const issueFamilyPagesSchema = responseObject({
   failing: z.array(responseObject({ site_url_id: uuid(), url: z.string() })),
   passing: z.number().int(),
+  not_applicable: z.number().int(),
   unread: z.number().int(),
 });
 

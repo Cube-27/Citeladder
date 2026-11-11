@@ -50,6 +50,18 @@ export type SiteEvidence = {
     finding_class: string;
   }[];
   urls: { site_url_id: string; normalized_url: string }[];
+  /**
+   * Issue-family defects (`SITE_ISSUE_FAMILY`), loaded apart from `issues` and
+   * never under its cap: each rule's exact affected page count and its first
+   * `COHORT_PAGES_MAX` owned pages in URL order, with their issues.
+   */
+  families: {
+    rule_id: string;
+    severity: string;
+    category: string;
+    page_count: number;
+    pages: { site_url_id: string; url: string; issue_ids: string[] }[];
+  }[];
   coverage: Record<string, unknown>;
   limitations: string[];
 };

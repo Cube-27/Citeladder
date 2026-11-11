@@ -252,14 +252,19 @@ describe('Declaration status', () => {
       index: number,
       state: 'met' | 'unmet' | 'unavailable',
       reason: string | null,
-      failing: { site_url_id: string; url: string }[],
+      pages: {
+        failing: { site_url_id: string; url: string }[];
+        passing: number;
+        not_applicable: number;
+        unread: number;
+      },
     ) => ({
       ...pageCheck(state),
       index,
       kind: 'issue_family',
       reason,
       subject: 'Missing viewport meta tag',
-      pages: { failing, passing: 2, unread: state === 'unavailable' ? 1 : 0 },
+      pages,
     });
     const stuck = {
       site_url_id: '77777777-7777-4777-8777-777777777777',
@@ -268,10 +273,27 @@ describe('Declaration status', () => {
     renderWithProviders(
       <DeclarationStatus
         declaration={declaration([
-          family(0, 'met', null, []),
-          family(1, 'unmet', 'partially_resolved', [stuck]),
-          family(2, 'unmet', 'still_failing', [stuck]),
-          family(3, 'unavailable', 'cohort_partly_analyzed', []),
+          family(0, 'met', null, { failing: [], passing: 2, not_applicable: 1, unread: 0 }),
+          family(1, 'unmet', 'partially_resolved', {
+            failing: [stuck],
+            passing: 1,
+            not_applicable: 0,
+            unread: 0,
+          }),
+          family(2, 'unmet', 'still_failing', {
+            failing: [stuck],
+            passing: 0,
+            not_applicable: 0,
+            unread: 2,
+          }),
+          family(3, 'unavailable', 'cohort_partly_analyzed', {
+            failing: [],
+            passing: 2,
+            not_applicable: 0,
+            unread: 1,
+          }),
+          // A reason this screen does not know claims no failure subtype.
+          family(4, 'unmet', null, { failing: [], passing: 0, not_applicable: 0, unread: 0 }),
         ])}
         workspaceId={WORKSPACE}
       />,
@@ -283,10 +305,11 @@ describe('Declaration status', () => {
     const subject = 'Missing viewport meta tag';
     const read = 'Read Sep 25, 2026';
     expect(rows.map((item) => item.textContent)).toEqual([
-      `${check}Verified${subject}2 pages pass · 0 pages still fail${read}`,
-      `${check}Partially resolved${subject}2 pages pass · 1 page still failhttps://acme.test/bSome affected pages now pass; the pages listed still fail. · ${read}`,
-      `${check}Still failing${subject}2 pages pass · 1 page still failhttps://acme.test/bNo affected page the crawl read passes yet. · ${read}`,
+      `${check}Verified${subject}2 pages pass · 0 pages still fail · 1 page no longer applies${read}`,
+      `${check}Partially resolved${subject}1 page passes · 1 page still failshttps://acme.test/bSome affected pages now pass; the pages listed still fail. · ${read}`,
+      `${check}Still failing${subject}0 pages pass · 1 page still fails · 2 pages not readhttps://acme.test/bNo affected page the crawl read passes yet. · ${read}`,
       `${check}Inconclusive${subject}2 pages pass · 0 pages still fail · 1 page not readThe affected pages that crawl read pass, but it did not read them all. Run a crawl that includes the rest. · ${read}`,
+      `${check}Not met${subject}0 pages pass · 0 pages still fail${read}`,
     ]);
     expect(screen.getAllByRole('list', { name: 'Pages still failing' })).toHaveLength(2);
   });

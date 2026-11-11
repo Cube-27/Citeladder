@@ -125,14 +125,19 @@ async function familyProject(): Promise<{ seed: SiteSeed; pages: Page[] }> {
 
 /**
  * A later crawl of the same project: the first `failing` pages still miss the
- * viewport, the rest pass. `values` override the crawl's defaults.
+ * viewport, the last `notApplicable` no longer have the rule apply, the rest
+ * pass. `values` override the crawl's defaults.
  */
 async function laterCrawl(
   seed: SiteSeed,
   pages: Page[],
   failing: number,
-  values: { rule_catalog_version?: string } = {},
+  { notApplicable = 0, ...values }: { rule_catalog_version?: string; notApplicable?: number } = {},
 ) {
+  const outcomeAt = (index: number) => {
+    if (index < failing) return 'missing';
+    return index >= pages.length - notApplicable ? 'not_applicable' : 'satisfied';
+  };
   return db.transaction().execute(async (trx) => {
     const fixtures = new SiteFixtures(trx);
     const crawlId = await fixtures.sibling(seed, values);
@@ -140,7 +145,7 @@ async function laterCrawl(
     for (const [index, page] of pages.entries())
       // NOSONAR -- One transaction: fixture statements run in order.
       await readPage(trx, fixtures, later, path(index), {
-        outcome: index < failing ? 'missing' : 'satisfied',
+        outcome: outcomeAt(index),
         fetchedAt: new Date(),
         siteUrlId: page.id,
       });
@@ -170,11 +175,30 @@ async function familyAction(seed: SiteSeed) {
 
 let own: { seed: SiteSeed; pages: Page[] };
 let foreign: { seed: SiteSeed; pages: Page[] };
+let fixedLater: { seed: SiteSeed; pages: Page[] };
 
 beforeAll(async () => {
   own = await familyProject();
   foreign = await familyProject();
+  fixedLater = await familyProject();
 });
+
+/** Declares `project`'s family Action as implemented an hour ago. */
+async function declareFamily(project: { seed: SiteSeed }) {
+  const [action] = await familyAction(project.seed);
+  const { row } = await declareAction(
+    db,
+    scopeOf(project.seed),
+    action!.id,
+    project.seed.userId,
+    `family-${randomUUID()}`,
+    {
+      output_revision_id: null,
+      declared_implemented_at: new Date(Date.now() - HOUR).toISOString(),
+    },
+  );
+  return { action: action!, row };
+}
 
 afterAll(async () => {
   for (const seed of seeds) {
@@ -255,16 +279,7 @@ describe('an issue family', () => {
   });
 
   it('declares the whole cohort, and the next comparable crawl names the pages still failing', async () => {
-    const [action] = await familyAction(own.seed);
-    const declaredAt = new Date(Date.now() - HOUR).toISOString();
-    const { row } = await declareAction(
-      db,
-      scopeOf(own.seed),
-      action!.id,
-      own.seed.userId,
-      `family-${randomUUID()}`,
-      { output_revision_id: null, declared_implemented_at: declaredAt },
-    );
+    const { action, row } = await declareFamily(own);
     expect([...(row.target_site_url_ids as string[])].sort()).toEqual(
       own.pages.map((page) => page.id).sort(),
     );
@@ -281,7 +296,7 @@ describe('an issue family', () => {
     // A crawl with another rule catalog cannot be compared: inconclusive.
     const other = await laterCrawl(own.seed, own.pages, 0, { rule_catalog_version: 'other' });
     await drainWorkspace(db, own.seed.workspaceId, { owner: `a4-${randomUUID()}` });
-    let detail = await getAction(db, own.seed.workspaceId, action!.id);
+    let detail = await getAction(db, own.seed.workspaceId, action.id);
     expect(detail.declaration?.checks).toMatchObject([
       {
         kind: 'issue_family',
@@ -294,7 +309,7 @@ describe('an issue family', () => {
     // Two pages still fail in the next comparable crawl.
     const next = await laterCrawl(own.seed, own.pages, 2);
     await drainWorkspace(db, own.seed.workspaceId, { owner: `a4-${randomUUID()}` });
-    detail = await getAction(db, own.seed.workspaceId, action!.id);
+    detail = await getAction(db, own.seed.workspaceId, action.id);
     expect(detail.declaration?.state).toBe('contradicted');
     expect(detail.declaration?.checks).toMatchObject([
       {
@@ -306,6 +321,7 @@ describe('an issue family', () => {
         pages: {
           failing: own.pages.slice(0, 2).map((page) => ({ site_url_id: page.id, url: page.url })),
           passing: PAGES - 2,
+          not_applicable: 0,
           unread: 0,
         },
       },
@@ -318,5 +334,37 @@ describe('an issue family', () => {
     const [foreignAction] = await familyAction(foreign.seed);
     const foreignDetail = await getAction(db, foreign.seed.workspaceId, foreignAction!.id);
     expect(foreignDetail.declaration).toBeNull();
+  });
+
+  it('reads still failing until every page passes or no longer applies, then verified', async () => {
+    const { seed, pages } = fixedLater;
+    const { action } = await declareFamily(fixedLater);
+
+    // Every page still fails: each one is named.
+    await laterCrawl(seed, pages, PAGES);
+    await drainWorkspace(db, seed.workspaceId, { owner: `a4-${randomUUID()}` });
+    let detail = await getAction(db, seed.workspaceId, action.id);
+    expect(detail.declaration?.checks).toMatchObject([
+      {
+        state: 'unmet',
+        reason: 'still_failing',
+        pages: { passing: 0, not_applicable: 0, unread: 0 },
+      },
+    ]);
+    expect(detail.declaration?.checks[0]?.pages?.failing).toHaveLength(PAGES);
+
+    // Every page passes, or no longer has the rule apply (counted apart): verified.
+    const fixed = await laterCrawl(seed, pages, 0, { notApplicable: 1 });
+    await drainWorkspace(db, seed.workspaceId, { owner: `a4-${randomUUID()}` });
+    detail = await getAction(db, seed.workspaceId, action.id);
+    expect(detail.declaration?.state).toBe('verified');
+    expect(detail.declaration?.checks).toMatchObject([
+      {
+        state: 'met',
+        reason: null,
+        source_id: fixed,
+        pages: { failing: [], passing: PAGES - 1, not_applicable: 1, unread: 0 },
+      },
+    ]);
   });
 });

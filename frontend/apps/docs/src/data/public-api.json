@@ -3261,13 +3261,18 @@
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
           },
+          "not_applicable": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
           "unread": {
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
           }
         },
-        "required": ["failing", "passing", "unread"],
+        "required": ["failing", "passing", "not_applicable", "unread"],
         "additionalProperties": false
       },
       "IssueOccurrence": {

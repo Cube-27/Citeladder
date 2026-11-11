@@ -173,16 +173,24 @@ function CheckRow({ check }: Readonly<{ check: ActionDeclaration['checks'][numbe
 /** How many of the shown failing pages an issue-family reading lists before "and N more". */
 const FAILING_PAGES_SHOWN = 20;
 
-/** An issue-family reading: how many cohort pages pass, fail or went unread, and which still fail. */
+/**
+ * An issue-family reading: how many cohort pages pass, fail, no longer apply
+ * or went unread, and which still fail.
+ */
 function FamilyPages({
   pages,
 }: Readonly<{ pages: NonNullable<ActionDeclaration['checks'][number]['pages']> }>) {
   const shown = pages.failing.slice(0, FAILING_PAGES_SHOWN);
   const more = pages.failing.length - shown.length;
+  const count = (n: number, one: string, many: string) =>
+    `${pluralCount(n, 'page')} ${n === 1 ? one : many}`;
   const counts = [
-    `${pluralCount(pages.passing, 'page')} pass`,
-    `${pluralCount(pages.failing.length, 'page')} still fail`,
-    pages.unread ? `${pluralCount(pages.unread, 'page')} not read` : null,
+    count(pages.passing, 'passes', 'pass'),
+    count(pages.failing.length, 'still fails', 'still fail'),
+    pages.not_applicable
+      ? count(pages.not_applicable, 'no longer applies', 'no longer apply')
+      : null,
+    pages.unread ? count(pages.unread, 'not read', 'not read') : null,
   ]
     .filter(Boolean)
     .join(' · ');

@@ -159,7 +159,7 @@ export function contentGapCheckPreview(evidence: ContentGapEvidence): string {
   return `${checkKindLabel('owned_url_cited')}: checks whether an AI answer to the angle's prompts cites ${page}.`;
 }
 
-export const CHECK_STATE_LABEL: Record<'waiting' | 'met' | 'unmet' | 'unavailable', string> = {
+const CHECK_STATE_LABEL: Record<'waiting' | 'met' | 'unmet' | 'unavailable', string> = {
   waiting: 'Waiting',
   met: 'Met',
   unmet: 'Not met',
@@ -211,21 +211,28 @@ export function checkReasonLabel(reason: string | null): string | null {
   return reason ? (CHECK_REASON[reason] ?? null) : null;
 }
 
+const FAMILY_UNMET_LABEL: Record<string, string> = {
+  partially_resolved: 'Partially resolved',
+  still_failing: 'Still failing',
+};
+
 /**
  * A check's state as a reader is told it. An issue-family check reads its
  * whole cohort, so it is verified, partially resolved, still failing or
- * inconclusive; every other check keeps `CHECK_STATE_LABEL`.
+ * inconclusive; an unmet reading with an unknown reason, and every other
+ * check, keep `CHECK_STATE_LABEL`.
  */
 export function checkStateLabel(check: {
   kind: string;
   state: 'waiting' | 'met' | 'unmet' | 'unavailable';
   reason: string | null;
 }): string {
-  if (check.kind !== 'issue_family' || check.state === 'waiting')
-    return CHECK_STATE_LABEL[check.state];
+  if (check.kind !== 'issue_family') return CHECK_STATE_LABEL[check.state];
   if (check.state === 'met') return 'Verified';
   if (check.state === 'unavailable') return 'Inconclusive';
-  return check.reason === 'partially_resolved' ? 'Partially resolved' : 'Still failing';
+  if (check.state === 'unmet' && check.reason !== null && FAMILY_UNMET_LABEL[check.reason])
+    return FAMILY_UNMET_LABEL[check.reason];
+  return CHECK_STATE_LABEL[check.state];
 }
 
 /** The declaration's overall reading, never the raw observation kind. */

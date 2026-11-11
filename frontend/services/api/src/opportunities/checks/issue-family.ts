@@ -2,9 +2,9 @@
  * One Site Health rule across a frozen cohort of pages (an issue family),
  * read in a crawl comparable with the one the cohort came from.
  *
- * Every cohort page passing verifies the check. Some passing and some failing
- * is `partially_resolved`, none passing is `still_failing`; both name the
- * pages still failing. A crawl with a different analyzer or rule catalog, or
+ * Every cohort page passing (or no longer applying, counted apart) verifies
+ * the check. Some cleared and some failing is `partially_resolved`, none
+ * cleared is `still_failing`; both name the pages still failing. A crawl with a different analyzer or rule catalog, or
  * one that read no cohort page (or only passing ones, leaving the rest
  * unread), is inconclusive and says why.
  */
@@ -19,9 +19,14 @@ import { outcome, type CheckOutcome } from '../verification-decisions.ts';
 import type { CheckModule, MemberFacts } from './kind.ts';
 import { once, type ReadContext } from './read-context.ts';
 
-/** A page whose rule now passes, or no longer applies, has the defect cleared. */
-const PASSING = new Set(['satisfied', 'not_applicable']);
+/**
+ * A page whose rule now passes, or no longer applies, has the defect cleared;
+ * the reading counts the two apart.
+ */
+const PASSING = 'satisfied';
+const NOT_APPLICABLE = 'not_applicable';
 const FAILING = new Set(['missing', 'partial']);
+const ANSWERED = new Set([PASSING, NOT_APPLICABLE, ...FAILING]);
 
 function cohortOf(member: MemberFacts) {
   if (member.rule_id !== policy.opportunity.opportunities.SITE_ISSUE_FAMILY.RULE_ID) return null;
@@ -91,17 +96,14 @@ async function readCohort(
   crawlId: string,
   check: { rule_id: string; baseline_crawl_id: string; site_url_ids: string[] },
 ): Promise<CheckOutcome> {
-  const [baseline, current] = await Promise.all([
-    crawlVersions(ctx, check.baseline_crawl_id),
-    crawlVersions(ctx, crawlId),
-  ]);
+  // One verification connection runs one statement at a time.
+  const baseline = await crawlVersions(ctx, check.baseline_crawl_id);
+  const current = await crawlVersions(ctx, crawlId);
   if (!baseline) return outcome(ctx.reading, 'unavailable', 'baseline_crawl_unavailable');
   if (!current || !comparable(baseline, current))
     return outcome(ctx.reading, 'unavailable', 'non_comparable_crawl');
   const readings = await cohortReadings(ctx, crawlId, check.rule_id, check.site_url_ids);
-  const answered = readings.filter(
-    (row) => row.outcome !== null && (PASSING.has(row.outcome) || FAILING.has(row.outcome)),
-  );
+  const answered = readings.filter((row) => row.outcome !== null && ANSWERED.has(row.outcome));
   for (const row of answered) {
     ctx.result.analysis_ids.add(row.analysis_id);
     if (row.evaluation_id) ctx.result.rule_evaluation_ids.add(row.evaluation_id);
@@ -110,12 +112,14 @@ async function readCohort(
     .filter((row) => row.outcome !== null && FAILING.has(row.outcome))
     .map((row) => ({ site_url_id: row.site_url_id, url: row.url }))
     .sort((left, right) => compareText(left.url, right.url));
-  const passing = answered.length - failing.length;
+  const passing = answered.filter((row) => row.outcome === PASSING).length;
+  const notApplicable = answered.filter((row) => row.outcome === NOT_APPLICABLE).length;
+  const cleared = passing + notApplicable;
   const unread = check.site_url_ids.length - answered.length;
-  const pages = { failing, passing, unread };
+  const pages = { failing, passing, not_applicable: notApplicable, unread };
   if (failing.length)
     return {
-      ...outcome(ctx.reading, 'unmet', passing ? 'partially_resolved' : 'still_failing'),
+      ...outcome(ctx.reading, 'unmet', cleared ? 'partially_resolved' : 'still_failing'),
       pages,
     };
   if (unread)
@@ -123,7 +127,7 @@ async function readCohort(
       ...outcome(
         ctx.reading,
         'unavailable',
-        passing ? 'cohort_partly_analyzed' : 'cohort_not_analyzed',
+        cleared ? 'cohort_partly_analyzed' : 'cohort_not_analyzed',
       ),
       pages,
     };
