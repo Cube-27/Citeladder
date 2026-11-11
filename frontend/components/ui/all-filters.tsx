@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import {
   Menu,
+  MenuCheckboxItem,
   MenuContent,
   MenuItem,
   MenuLabel,
@@ -113,17 +114,71 @@ export function choiceFilter<T extends string>({
   };
 }
 
+/**
+ * A multi-select filter for All filters: a check per option, any number on,
+ * none on meaning unfiltered. The submenu stays open while the reader picks.
+ */
+export function manyFilter<T extends string>({
+  id,
+  label,
+  allLabel,
+  values,
+  options,
+  onChange,
+}: Readonly<{
+  id: string;
+  label: string;
+  /** The value shown while nothing is checked: "All intents". */
+  allLabel: string;
+  values: readonly T[];
+  options: readonly FilterOption<T>[];
+  onChange: (values: T[]) => void;
+}>): FilterDefinition {
+  const chosen = new Set<string>(values);
+  const picked = options.filter((option) => chosen.has(option.value));
+  const [only] = picked;
+  return {
+    kind: 'custom',
+    id,
+    label,
+    valueLabel: picked.length > 1 ? `${picked.length} selected` : (only?.label ?? allLabel),
+    isDefault: picked.length === 0,
+    content: (
+      <>
+        <MenuLabel>{label}</MenuLabel>
+        {options.map((option) => (
+          <MenuCheckboxItem
+            key={option.value || 'unspecified'}
+            checked={chosen.has(option.value)}
+            onSelect={(event) => {
+              event.preventDefault();
+              onChange(
+                chosen.has(option.value)
+                  ? values.filter((value) => value !== option.value)
+                  : [...values, option.value],
+              );
+            }}
+          >
+            {option.label}
+          </MenuCheckboxItem>
+        ))}
+      </>
+    ),
+  };
+}
+
 /** How many filters are off their default value. */
 function activeFilterCount(filters: readonly FilterDefinition[]): number {
   return filters.filter((filter) => !filter.isDefault).length;
 }
 
 /**
- * AllFilters — every filter of a page behind one button: at the far right of
- * its tabs row, or leading a control row. The menu opens toward the content
- * from the button's edge on that side (`align`): `start` (the default) for a
- * button leading its row, so the menu and its submenus open to the right and
- * never over the sidebar; `end` for one at the row's far right. The button counts the filters moved off their defaults
+ * AllFilters — every filter of a list behind one button, after the search in
+ * its control row (`FilterBar` draws it from its `filters`, D57). The menu
+ * opens toward the content from the button's edge on that side (`align`):
+ * `start` (the default), so the menu and its submenus open to the right and
+ * never over the sidebar; `end` for a button at its row's far right. The
+ * button counts the filters moved off their defaults
  * ("All filters (2)", D16); its menu lists each filter with its current value,
  * and each opens a submenu of its options with a check on the selected one.
  * Long lists get a search box. Radix's menu keyboard model throughout: arrows

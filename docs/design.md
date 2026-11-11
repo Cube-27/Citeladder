@@ -83,6 +83,7 @@ Light and dark on every surface, defaulting to the system preference.
 | D54 | Two families in the app, and one sans face everywhere (owner, 10 November 2026: the app uses "only two font families", the body font and mono, and one body face on the app and marketing). The sans face is the same on the app, website and docs; the mono face is unchanged. The app sets no display face: the PageHeader title (`type-page-title`, `display-sm` 24/32 at 500) and the auth card titles (`display-lg` at 500) are the sans face, and the app no longer preloads the display face. The website and docs keep the display face for their display headings (D28). Supersedes D7's and D37's display face in the app. |
 | D55 | Faces are named only in `lib/config/brand-fonts.json` (owner, 11 November 2026: "i want minimum file changes while switching a font theres no need to mention font names in documents"). Code comments, the token contract and these docs say the role (display, sans, mono face), never a family, so switching a face is an edit to that JSON's `family` and `file` and `pnpm fonts:pull`, nothing else. The PDFs' own face (D4, `pdf-brand.ts`) is separate. |
 | D56 | App spacing is a set of named relationships, owned by the component that holds both elements (owner, 11 November 2026, from an approved Issues mockup: "consistency from components to full layouts … every text every component which exist should have defined spacing/padding in relation to other elements"; Carbon and Material are a check that each relationship has one name, not a source of values). **Roles (app values, 4px grid):** `tight` 4 binds the parts of one fact (a title and its meta line, a label and its sentence, a name and its URL, a table cell's title and caption); `item` 8 separates atoms in one row (a badge and its text, buttons, filter controls, a card title and its header actions); `workspace` 12 separates blocks in one pane and cards from cards, and is a full-bleed row's vertical padding and the space each side of a ledger rule; the card inset 16 pads a card, both panes of a split card, a dialog and a drawer, so their text starts on one line; `section` 16 runs from the page-title rule to the control row; the band 8 runs from the control row to the content. **Rules:** the control row is one 32px line, search first, then All filters, controls 8 apart and the count describing the list at the row's end in caption. A list of selectable rows is full-bleed, with no gap or radius between rows, 16 across and 12 down, and a selected row is a full-width overlay with the 2px Flare bar (`ListDetailRow`). A card is the only bordered surface; a fact that is not a row is the sunken inset (`insetClasses`, a Panel inside a container: 12 down, 16 across, lines 4 apart); a list of peers is a ledger. A card or pane header closes with a hairline across the full width, padded 16 above it with the body 16 below (`CardHeader`, `ListDetailPane`). A `DataTable` in its own card is full-bleed: its outer cells take the card inset, its header band is square, its title is the card-title size with the description bound 4 under it, and its header, table and foot sit 12 apart. Long URLs keep to one row with the whole address in the tooltip. A page passes roles (`Stack`/`Inline` gaps) and never a number; a wrong gap is fixed once in the organism that owns it. |
+| D57 | Every page places controls in one anatomy, ordered from the most likely action to the least likely, left to right and top to bottom (owner, 11 November 2026: "every single page should have defined structure and how elements are kept … if a page has search bar and all filters it shouldnt happen that another page has all filters first then search bar"; "the ordering becomes the most likely user action to the least likely from left to right … same rule goes for top to bottom"; "the recorded design rules could be wrong"). **Page:** header (title, then its actions), tabs, the control row, content. **The tab row holds tabs only;** nothing sits at its far end. **A control row** (`FilterBar`, as a page's `controls` or a table's `toolbar`) is, left to right: the view (one `SegmentedControl` choosing which set is listed: Active / Archived, Domains / URLs, Issues / Advisories, a run status, a date range on Performance), the search, **All filters**, then at the row's end the count describing the list in caption (or a live note), then one action on what it lists (Export, Columns). Its `filters` slot takes filter definitions only, and the row draws them as the one All filters menu, so no page can place a filter as a control of its own or put it before the search. Every filter is in All filters: period, market, engine, prompt set, page kind, category, status, a typed value, a chart's interval, a saved scope or result. **Controls sit in the row of the thing they act on:** the page's control row when they scope the whole page, a table's toolbar when they scope one table (Website Pages' view and page kind, the Sources table's type, standing and domain, the fanout grouping), with that table's Export at the toolbar's end. A choice of how one card draws (a chart's plotted metric) is in that card's header actions. A table sorts from its column headers, never a sort menu. Supersedes D40's separate Topic and Filter menus (Topic is the first entry of the prompt library's All filters, its Add topic and Manage topics in its submenu) and the AI Visibility contract's All filters at the tab row's far end. |
 
 D5–D17 come from the owner's reviews of the shipped app and docs on 5 November
 2026. D18–D25 are the website review rounds in the design system rollout
@@ -269,8 +270,8 @@ These hold whatever a component looks like:
   reader may drag its inner edge out to 480px, kept per browser), and below 900px the navigation drawer behind the page
   header's menu button (D41); `labelled:` styles the sidebar wherever its
   labels show. Below 1280px `AppGrid` halves, main-aside and table-chart stack, the KPI layouts (quarters,
-  fifths, pair, thirds) stay one row from `desktop:` and the `FilterBar` puts
-  its filters on a second row; a child spanning an AppGrid
+  fifths, pair, thirds) stay one row from `desktop:` and the `FilterBar` wraps
+  its controls in its one order (D57); a child spanning an AppGrid
   row spans at `shell:` too. Product components use no other breakpoint.
 - **Atoms have one form.** Geometry lives in `components/ui` and
   `components/layout`; a feature folder composes them and sets no spacing,
@@ -318,13 +319,13 @@ widget, so neither entering edit mode nor saving moves anything.
 **AI Visibility.** Exactly three tabs: Trends (default), Sources, Query
 fanouts. A backend token reaches a reader only through
 `lib/visibility/vocabulary.ts`; an unmapped token renders as nothing. Run
-bookkeeping stays out of the default view. No filter row: every filter, each a
-question a customer would ask, is in one All filters menu (`AllFilters`) at the
-far right of the tabs row, listing each filter with its value and opening its
+bookkeeping stays out of the default view. Every filter the tabs share, each a
+question a customer would ask, is in the control row's one All filters menu
+(`AllFilters`, D57), listing each filter with its value and opening its
 options in a submenu (a search box on long lists); the button counts the
-filters off their defaults. Each tab lists only its own: the period and
-grouping only for "All runs in period", last, and the Sources and Query
-fanouts filters after the shared ones. Trends shows Visibility, Share of voice and
+filters off their defaults. The period and grouping show only for "All runs in
+period", last. The Sources and Query fanouts tables keep their own filters in
+their toolbar's All filters, after the search. Trends shows Visibility, Share of voice and
 Owned citation rate (the same names and whole percents as Overview, whose
 Rank is the table's Rank, unlike "Average position in answers"), one
 metric-selectable history chart and one competitor table; a change column
@@ -335,8 +336,8 @@ three fifths of the row (`AppGrid` `table-chart`) so every brand keeps its name
 beside the compact figure columns; a break between incomparable runs keeps the solid line apart and is
 bridged by a faint dashed segment. Prompt results belong to the prompt row;
 Sources splits Domains and URLs on a segmented control leading the table's
-toolbar, before its search; Query fanouts is one table grouped from All
-filters.
+toolbar: the switch, the search, All filters, then Export. Query fanouts is
+one table grouped from its toolbar's All filters, its counts at the row's end.
 
 **Site Health.** The crawl control and URL inventory lead; Run new crawl before
 and after a run, Stop crawl while one is active. Issues and Advisories are

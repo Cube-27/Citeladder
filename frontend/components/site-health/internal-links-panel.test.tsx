@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 
 import { mswServer } from '@/test/msw-server';
+import { openFilterOptions } from '@/test/all-filters';
 import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
 import { downloadCsv } from '@/lib/csv/download';
@@ -197,11 +198,9 @@ describe('Internal links', () => {
     }));
     mswServer.use(http.get(endpoint, () => HttpResponse.json({ ...read(analysis()), history })));
     renderPanel();
-    const controls = await screen.findByRole('group', { name: 'Search and filters' });
-    await userEvent.click(
-      await within(controls).findByRole('combobox', { name: 'Saved analysis' }),
-    );
-    const labels = (await screen.findAllByRole('option')).map((option) =>
+    await screen.findByRole('button', { name: /^All filters/ });
+    await openFilterOptions(userEvent.setup(), 'Saved analysis');
+    const labels = (await screen.findAllByRole('menuitemradio')).map((option) =>
       option.textContent?.split(' · ').at(-1),
     );
     expect(labels).toEqual([
@@ -297,10 +296,11 @@ describe('Internal links', () => {
     const firstRow = screen.getByRole('row', { name: /Anchor 0/ });
     expect(within(firstRow).getByText('No Action yet')).toHaveClass('sr-only');
     expect(within(firstRow).getByText('–')).toBeVisible();
-    // One export, in the page header beside the tab's primary action.
+    // One export, at the end of the control row; the header keeps the tab's primary action.
     const header = screen.getByRole('banner');
     expect(within(header).getByRole('button', { name: 'Analyze again' })).toBeInTheDocument();
-    await userEvent.click(within(header).getByRole('button', { name: 'Export' }));
+    const controls = screen.getByRole('group', { name: 'Search and filters' });
+    await userEvent.click(within(controls).getByRole('button', { name: 'Export' }));
     expect(downloadCsv).toHaveBeenCalledWith(
       'internal-links',
       expect.arrayContaining([

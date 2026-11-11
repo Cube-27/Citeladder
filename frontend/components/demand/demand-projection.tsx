@@ -235,6 +235,15 @@ function SearchDemandView({
         />
       }
       controls={{
+        // Which signals the table lists is the row's view; it leads.
+        view: (
+          <DemandSignalFilters
+            snapshot={snapshot}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            tabCounts={tabCounts}
+          />
+        ),
         search: (
           <SearchField
             value={searchQuery}
@@ -243,13 +252,19 @@ function SearchDemandView({
             aria-label="Filter queries or pages"
           />
         ),
-        filters: (
-          <DemandSignalFilters
-            snapshot={snapshot}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            tabCounts={tabCounts}
-          />
+        // What the table holds, and over which window, closes the row.
+        status: (
+          <>
+            <span>
+              <InlineFigure>{formatCount(snapshot.signals.length)}</InlineFigure>
+              {snapshot.signals.length === 1 ? ' signal observed' : ' signals observed'}
+            </span>
+            <Inline as="span" gap="tight">
+              <Icon icon={Calendar} />
+              {windowLabel}
+            </Inline>
+            <DemandLatentDemand snapshot={snapshot} />
+          </>
         ),
       }}
     >
@@ -263,19 +278,10 @@ function SearchDemandView({
           />
         ) : null}
         <RecomputeFailure mutation={recomputeMutation} />
-        {/* The summary line, then the table the top strip's filters narrow.
-            A queued recompute rides the summary line and the header button. */}
+        {/* What the figures mean, then the table the control row narrows.
+            A queued recompute rides this line and the header button. */}
         <Stack>
           <Inline as="p" gap="meta">
-            <span className="type-caption">
-              <InlineFigure>{formatCount(snapshot.signals.length)}</InlineFigure>
-              {snapshot.signals.length === 1 ? ' signal observed' : ' signals observed'}
-            </span>
-            <Inline as="span" gap="tight" className="type-caption">
-              <Icon icon={Calendar} />
-              {windowLabel}
-            </Inline>
-            <DemandLatentDemand snapshot={snapshot} />
             <SignalLegend signals={snapshot.signals} />
             <DemandDataCaveats snapshot={snapshot} />
             <RecomputeStatus mutation={recomputeMutation} />

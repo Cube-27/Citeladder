@@ -13,7 +13,7 @@ import { TextLink } from '@/components/ui/text-link';
 import { TrendChart } from '@/components/ui/trend-chart';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
-import { MarketFilter } from '@/components/visibility/visibility-toolbar';
+import { marketFilter } from '@/components/visibility/visibility-toolbar';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate } from '@/lib/format';
 import { formatWholePercent } from '@/lib/visibility/dashboard';
@@ -44,6 +44,8 @@ export function PromptDetailScreen() {
     }),
     enabled: Boolean(promptId),
   });
+  // A single market has nothing to choose, so the row is not drawn empty.
+  const marketChoice = marketFilter({ markets, market, onChangeMarket: setMarket });
 
   if (query.isError)
     return (
@@ -66,20 +68,7 @@ export function PromptDetailScreen() {
     <DetailScreen
       title={history.prompt.text}
       back={BACK}
-      // A single market has nothing to choose, so the band is not drawn empty.
-      controls={
-        markets.length > 1
-          ? {
-              filters: (
-                <MarketFilter
-                  markets={markets}
-                  market={market}
-                  onChangeMarket={(next) => setMarket(next)}
-                />
-              ),
-            }
-          : undefined
-      }
+      controls={marketChoice ? { filters: [marketChoice] } : undefined}
     >
       <Stack gap="workspace" aria-busy={query.isFetching}>
         <HistoryCard history={history} />

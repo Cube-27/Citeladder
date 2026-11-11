@@ -5,7 +5,7 @@ import { useState } from 'react';
 
 import { DateRangeDialog } from './date-range-dialog';
 import {
-  GranularitySelect,
+  granularityFilter,
   PerformanceActions,
   PerformanceToolbar,
   PerformanceWindowCaption,
@@ -244,19 +244,6 @@ function PerformanceLoading() {
   );
 }
 
-/**
- * The chart's bucket size is a control of what is shown, so it rides the one
- * control band, not the KPI card's header (2026-11-03 review), at its end so
- * it does not read as part of the range. Absent while there is no chart.
- */
-function granularityAction(
-  shown: boolean,
-  value: PerformanceDashboard['granularity'],
-  onChange: (value: PerformanceDashboard['granularity']) => void,
-) {
-  return shown ? <GranularitySelect value={value} onChange={onChange} /> : undefined;
-}
-
 export function PerformanceScreen() {
   const { projectId, workspaceId } = useProjectScope();
   const scope = { workspaceId, projectId };
@@ -333,8 +320,9 @@ export function PerformanceScreen() {
         />
       }
       controls={{
-        actions: granularityAction(evidence.hasSearchConsoleTotals, granularity, setGranularity),
-        filters: (
+        // The range is the page's most used control, so it leads as the view;
+        // the chart interval waits in All filters while there is a chart.
+        view: (
           <PerformanceToolbar
             selection={selection}
             onOpenRange={() => {
@@ -350,6 +338,9 @@ export function PerformanceScreen() {
             onReset={resetFilters}
           />
         ),
+        filters: evidence.hasSearchConsoleTotals
+          ? [granularityFilter(granularity, setGranularity)]
+          : undefined,
         status: <PerformanceWindowCaption label={selectedLabel} />,
       }}
     >

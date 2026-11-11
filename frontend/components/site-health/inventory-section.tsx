@@ -4,13 +4,15 @@ import { useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FileText } from 'lucide-react';
 
+import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { Inline, Stack } from '@/components/ui/layout';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
+import { Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
-import { PageKindSelect } from '@/components/site-health/page-kind-select';
+import { pageKindFilter } from '@/components/site-health/page-kind-select';
 import { PagesTable } from '@/components/site-health/pages-table';
 import { RootErrorsBlock } from '@/components/site-health/root-errors-block';
 import { type PagesParams, type PagesSort } from '@/lib/api/site-health';
@@ -45,11 +47,14 @@ export function InventorySection({
   mode,
   crawl,
   active,
+  exportPages,
 }: Readonly<{
   mode: InventoryMode;
   crawl: SiteCrawl | null;
   /** True while the crawl is non-terminal (keeps inventory/pages polling). */
   active: boolean;
+  /** The crawl's pages export, at the end of the table's toolbar; absent where it is withheld. */
+  exportPages?: Readonly<{ onExport: () => void; exporting: boolean }>;
 }>) {
   let content: ReactNode;
   if (mode === 'none' || !crawl) {
@@ -64,7 +69,7 @@ export function InventorySection({
   } else if (mode === 'discovering') {
     content = <DiscoveringInventory crawl={crawl} />;
   } else {
-    content = <ScoredInventory crawl={crawl} active={active} />;
+    content = <ScoredInventory crawl={crawl} active={active} exportPages={exportPages} />;
   }
 
   return (
@@ -175,21 +180,18 @@ function usePagesInventoryState() {
   return { view, setView, pageKind, setPageKind };
 }
 
+type ExportPages = Readonly<{ onExport: () => void; exporting: boolean }>;
+
 /**
- * The page browser's own controls, directly above its table (owner,
- * 2026-11-10): the Monitored / All Discovered / Errors & Blocked switch at
- * the start and the page-kind filter at the end. Both are server-backed and
- * live in the address.
+ * The page browser's toolbar, in the table's own header row because it scopes
+ * this table alone (D57): the Monitored / All Discovered / Errors & Blocked
+ * view, All filters (page kind), then Export at the end. Both choices are
+ * server-backed and live in the address.
  */
-function PagesViewBar({
-  active,
-}: Readonly<{
-  /** True while the crawl is non-terminal: Monitored then reads "Audited so far". */
-  active: boolean;
-}>) {
+function usePagesToolbar(active: boolean, exportPages: ExportPages | undefined): FilterBarProps {
   const { view, setView, pageKind, setPageKind } = usePagesInventoryState();
-  return (
-    <Inline className="flex-wrap justify-between">
+  return {
+    view: (
       <SegmentedControl
         value={view}
         onChange={(next) => setView(next)}
@@ -201,16 +203,21 @@ function PagesViewBar({
         }))}
         ariaLabel="Page inventory views"
       />
-      <PageKindSelect value={pageKind} onChange={(next) => setPageKind(next)} />
-    </Inline>
-  );
+    ),
+    filters: [pageKindFilter({ value: pageKind, onChange: (next) => setPageKind(next) })],
+    actions: exportPages ? (
+      <Button variant="secondary" onClick={exportPages.onExport} disabled={exportPages.exporting}>
+        {exportPages.exporting ? 'Exporting…' : 'Export'}
+      </Button>
+    ) : undefined,
+  };
 }
 
 /**
  * The page browser (design mockup 713): three server-backed views, each its
  * own query restarting from its first page — filtering is server-side, never
  * a filter over the current client page. The view switch and page-kind filter
- * sit directly above the table (`PagesViewBar`).
+ * lead the table's own toolbar (`usePagesToolbar`).
  *
  * Used for the WHOLE audit lifecycle: while analysis runs the first page of
  * the active view polls, so each row's status badge advances queued → running
@@ -220,9 +227,11 @@ function PagesViewBar({
 function ScoredInventory({
   crawl,
   active,
+  exportPages,
 }: Readonly<{
   crawl: SiteCrawl;
   active: boolean;
+  exportPages: ExportPages | undefined;
 }>) {
   const requestedSort = useSearchParams()[0].get('sort');
   return (
@@ -231,6 +240,7 @@ function ScoredInventory({
       crawl={crawl}
       active={active}
       requestedSort={requestedSort}
+      exportPages={exportPages}
     />
   );
 }
@@ -239,15 +249,18 @@ function ScoredInventoryState({
   crawl,
   active,
   requestedSort,
+  exportPages,
 }: Readonly<{
   crawl: SiteCrawl;
   active: boolean;
   requestedSort: string | null;
+  exportPages: ExportPages | undefined;
 }>) {
   // The view and the shared page-kind filter (v2 P1) live in the address,
-  // drawn above the table: server-backed values that compose with
+  // drawn in the table's toolbar: server-backed values that compose with
   // each other — never a client filter over the page window.
   const { view, pageKind } = usePagesInventoryState();
+  const toolbar = usePagesToolbar(active, exportPages);
   // Shared server-side ordering. Like the filter, it is part of the cursor
   // fingerprint, so changing it restarts paging.
   const [sort, setSort] = useState<PagesSort>(() => initialPagesSort(requestedSort));
@@ -304,9 +317,9 @@ function ScoredInventoryState({
 
   return (
     <Stack>
-      <PagesViewBar active={active} />
       <RootErrorsBlock errors={rootErrors} />
       <PagesTable
+        toolbar={toolbar}
         pages={page?.items ?? []}
         crawlId={crawl.id}
         sort={sort}

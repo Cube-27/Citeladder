@@ -33,7 +33,7 @@ import { useLatestPromptMeasurements } from './use-latest-prompt-measurements';
 import { ListScreen, RESERVED_CONTROLS } from '@/components/layout/page-shell';
 
 import { PromptActions, promptFilterControls } from './prompt-toolbar';
-import { type TopicDialog, TopicDialogs, TopicFilter } from './topic-controls';
+import { type TopicDialog, TopicDialogs, topicFilter } from './topic-controls';
 import { useTopicMutations } from './use-topic-mutations';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 
@@ -282,15 +282,13 @@ export function PromptLibrary({
         filters,
         onFiltersChange: setFilters,
         personas,
-        topic: (
-          <TopicFilter
-            topics={topics}
-            selectedTopicId={selectedTopicId}
-            onSelect={setSelectedTopicId}
-            onAdd={openAddTopic}
-            onManage={() => setTopicDialog('manage')}
-          />
-        ),
+        topic: topicFilter({
+          topics,
+          selectedTopicId,
+          onSelect: setSelectedTopicId,
+          onAdd: openAddTopic,
+          onManage: () => setTopicDialog('manage'),
+        }),
       })}
     >
       <>

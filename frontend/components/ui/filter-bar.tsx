@@ -3,6 +3,7 @@
 import type { ComponentPropsWithoutRef, ReactNode, Ref } from 'react';
 import { ChevronDown } from 'lucide-react';
 
+import { AllFilters, type FilterDefinition } from '@/components/ui/all-filters';
 import { FIELD_BOX } from '@/components/ui/input';
 import {
   Menu,
@@ -12,108 +13,78 @@ import {
   MenuRadioItem,
   MenuTrigger,
 } from '@/components/ui/menu';
-import { ControlCount } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
 /**
- * What a route puts in its control band. A route passes these to its screen
+ * What a route puts in its control row. A route passes these to its screen
  * template's `controls` (or a `DataTable`'s `toolbar`); it never renders a
- * `FilterBar` itself, so no feature draws a toolbar of its own.
+ * `FilterBar` itself, so no feature draws a toolbar of its own. The slots are
+ * the row's order (D57): a page fills slots, it never arranges controls.
  */
 export type FilterBarProps = Readonly<{
-  /** A `SegmentedControl` choosing which view the content shows (Domains | URLs). It leads the row. */
+  /**
+   * A `SegmentedControl` choosing which set the content shows (Active |
+   * Archived, Domains | URLs, Issues | Advisories). It leads the row.
+   */
   view?: ReactNode;
-  /** A `SearchField`. */
+  /** A `SearchField`, after the view. */
   search?: ReactNode;
   /**
-   * The filters: `FilterTrigger`/`FilterChoice` menus, `FilterField`s, a
-   * `SegmentedControl`. A fragment, so each is one of the strip's own items.
+   * Every filter of the list, drawn as the one All filters menu after the
+   * search: period, market, engine, kind, status and typed values alike. A
+   * row never draws a filter as a control of its own.
    */
-  filters?: ReactNode;
+  filters?: readonly FilterDefinition[];
   /**
-   * A live note such as "Updating data… Previous data shown." A row that
-   * reports status passes `null` while idle, so its live region is mounted
-   * before the first update and that update is announced.
+   * What the row shows, in caption at its end: the count describing the list
+   * ("12 issues · 40 pages") or a live note ("Updating data… Previous data
+   * shown."). A row that reports status passes `null` while idle, so its live
+   * region is mounted before the first update and that update is announced.
    */
   status?: ReactNode;
-  /** The strip's one secondary action (Export), at the end. */
+  /** The row's one action on what it lists (Export), last. */
   actions?: ReactNode;
 }>;
 
 /**
- * FilterBar — the control strip at the top of every list and report page:
- * search first, then the filters, then the action at the end, every control
- * 32px and 8 apart, across and between wrapped rows alike. Filter triggers keep one width (224px) whatever their
- * value says, so choosing a filter never moves the strip; a trigger given
- * `sizeTo` instead keeps the width of its longest option, at every viewport.
- * The search grows to 360px.
- *
- * Below 1280px it takes two rows: search and the action, then the filters
- * sharing the second row in equal widths. On a phone the search keeps at
- * least 12rem and wraps below the view rather than collapsing.
+ * FilterBar — the control row at the top of every list and report page, in
+ * one order on every page: the view, the search, All filters, then the count
+ * and the action at the row's end. Every control is 32px and 8 apart, across
+ * and between wrapped rows alike. The search grows to 360px; on a phone it
+ * keeps at least 12rem and wraps below the view rather than collapsing.
  */
 export function FilterBar({ view, search, filters, status, actions }: FilterBarProps) {
   return (
     <fieldset
       data-filter-bar=""
       aria-label="Search and filters"
-      // Rows are 8 apart. Below 1280px the filters' row break is a row of its
-      // own (zero tall), so two 4px row gaps make the 8.
-      className="shell:gap-y-2 flex min-h-[var(--control-md)] w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1"
+      className="flex min-h-[var(--control-md)] w-full min-w-0 flex-wrap items-center gap-2"
     >
-      {view ? <div className="flex min-w-0">{view}</div> : null}
-      {/* The search never shrinks below 12rem: where the view leaves less
-          room on its row (a phone) it wraps to a row of its own. */}
+      {view ? <div className="flex max-w-full min-w-0">{view}</div> : null}
       {search ? (
         <div className="shell:max-w-[360px] shell:flex-[1_1_240px] min-w-0 flex-[1_1_12rem]">
           {search}
         </div>
       ) : null}
-      {actions ? (
-        <div className="shell:order-last ms-auto flex max-w-full min-w-0 flex-wrap items-center justify-end gap-2">
-          {actions}
-        </div>
-      ) : null}
-      {filters ? (
-        <>
-          {/* Below 1280px the filters start their own row, under whatever
-              leads the strip; leading it themselves, they need no break. */}
-          {view || search || actions ? (
-            <span aria-hidden className="shell:hidden order-2 h-0 basis-full" />
-          ) : null}
-          {/* A trigger sized to its options (`data-fit`) keeps that width on
-              the shared row rather than taking an equal share of it. */}
-          <div className="shell:order-none shell:[&>*:not([data-fit])]:flex-none shell:[&>*:not([data-fit])]:basis-auto contents [&>*]:order-3 [&>*]:min-w-0 [&>*:not([data-fit])]:flex-1 [&>*:not([data-fit])]:basis-0">
-            {filters}
-          </div>
-        </>
-      ) : null}
+      {filters && filters.length > 0 ? <AllFilters filters={filters} /> : null}
       {status === undefined ? null : (
-        <output className="type-caption shell:order-none order-4 flex min-w-0 items-center gap-2 empty:hidden">
+        <output className="type-caption ms-auto flex min-w-0 items-center gap-2 empty:hidden">
           {status}
         </output>
       )}
+      {actions ? (
+        // At the row's end; after a shown count it keeps the 8 between them.
+        <div className="ms-auto flex max-w-full min-w-0 flex-wrap items-center justify-end gap-2 [output:not(:empty)+&]:ms-0">
+          {actions}
+        </div>
+      ) : null}
     </fieldset>
   );
 }
 
 /**
- * FilterField — the one width a typed or picked filter value takes (a folder,
- * a status code, a minimum volume, a chart's bucket size): the filter width,
- * so a field never resizes as its value changes. The `Input` or `Select`
- * inside fills it.
- */
-export function FilterField({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <div data-filter-field="" className="shell:w-[var(--filter-width)] min-w-0 shrink-0 *:w-full">
-      {children}
-    </div>
-  );
-}
-
-/**
- * FilterTrigger — the button that opens a filter menu, drawn on the Select
- * trigger recipe at the one filter width.
+ * FilterTrigger — the button that opens a single-choice menu (`FilterChoice`),
+ * drawn on the Select trigger recipe at the one filter width.
  *
  * The accessible name always contains the visible value, so a voice user can
  * say what is on screen.
@@ -121,11 +92,8 @@ export function FilterField({ children }: Readonly<{ children: ReactNode }>) {
  *   - `label` names the filter ("Surface"). With a `value` it prints as a
  *     muted prefix ("Surface: All surfaces"); `hideLabel` keeps it for
  *     assistive tech only, so the name still contains the visible value.
- *   - `count` is the number of active selections in a multi-select menu: a
- *     count in brackets after the name (`ControlCount`, D16), announced as
- *     "N active".
- *   - `active` marks a filter moved off its default (`data-active`); the
- *     value or count says how.
+ *   - `active` marks a choice moved off its default (`data-active`); the
+ *     value says how.
  *   - `sizeTo` lists every value the trigger can show. The trigger then takes
  *     the width of the longest of them instead of the one filter width, so it
  *     fits its content and still never resizes when the choice changes.
@@ -137,7 +105,6 @@ export function FilterTrigger({
   label,
   value,
   hideLabel = false,
-  count,
   active = false,
   sizeTo,
   className,
@@ -148,20 +115,18 @@ export function FilterTrigger({
     label: string;
     value?: ReactNode;
     hideLabel?: boolean;
-    count?: number;
     active?: boolean;
     /** Every value the trigger can show; it takes the longest one's width. */
     sizeTo?: readonly string[];
     ref?: Ref<HTMLButtonElement>;
   }
 >) {
-  const showCount = typeof count === 'number' && count > 0;
   const fit = sizeTo !== undefined && sizeTo.length > 0;
   return (
     <button
       ref={ref}
       type="button"
-      data-active={active || showCount || undefined}
+      data-active={active || undefined}
       data-fit={fit || undefined}
       className={cn(
         FIELD_BOX,
@@ -197,14 +162,6 @@ export function FilterTrigger({
       ) : (
         <FilterTriggerText label={label} value={value} hideLabel={hideLabel} />
       )}
-      {showCount ? (
-        <>
-          <span aria-hidden>
-            <ControlCount count={count} />
-          </span>
-          <span className="sr-only">, {count} active</span>
-        </>
-      ) : null}
       <ChevronDown className="text-ink-muted ms-auto size-4 shrink-0" aria-hidden />
     </button>
   );
@@ -225,9 +182,11 @@ function FilterTriggerText({
 }
 
 /**
- * FilterChoice — a single-choice filter menu: the trigger names the filter by
+ * FilterChoice — a single choice of how one card draws (a chart's plotted
+ * metric), in that card's header actions: the trigger names the choice by
  * its visible value (`label` stays for assistive tech), the menu lists the
- * options.
+ * options. A list's filters are never this: they live in its row's All
+ * filters (D57).
  */
 export function FilterChoice<T extends string>({
   label,

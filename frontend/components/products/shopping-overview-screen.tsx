@@ -8,7 +8,6 @@ import { AppGrid } from '@/components/ui/app-grid';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { DisplayTime } from '@/components/ui/display-time';
-import { FilterChoice } from '@/components/ui/filter-bar';
 import { Inline, Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
 import { readErrorProps } from '@/components/ui/read-error';
@@ -25,11 +24,8 @@ import type {
   CommerceShoppingOverview,
 } from '@citeladder/contracts/commerce-suite';
 import { commerceQueries } from '@/lib/api/commerce';
-import {
-  PRODUCT_DEFAULT_WINDOW,
-  PRODUCT_WINDOW_DAYS,
-  type ProductWindowDays,
-} from '@/lib/config/commerce';
+import type { ProductWindowDays } from '@/lib/config/commerce';
+import { categoryFilter, windowFilter } from './product-scope-filters';
 import { formatCount, pluralCount } from '@/lib/format';
 import { formatPosition, formatRate } from '@/lib/products/product-columns';
 import {
@@ -39,8 +35,6 @@ import {
 } from '@/lib/products/product-filters';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 
-const WINDOWS = PRODUCT_WINDOW_DAYS.map((days) => ({ value: days, label: `Last ${days} days` }));
-const EVERY = '__all__';
 const RANKINGS = [
   { value: 'brands', label: 'Brands' },
   { value: 'products', label: 'Products' },
@@ -408,31 +402,13 @@ export function ShoppingOverviewScreen() {
     // A category in the URL waits for the catalog that says whether it is this project's.
     enabled: !filters.category || !catalog.isPending,
   });
-  const categories = [
-    { value: EVERY, label: 'All categories' },
-    ...known.map((row) => ({ value: row.id, label: row.name })),
-  ];
   return (
     <ListScreen
       controls={{
-        filters: (
-          <>
-            <FilterChoice
-              label="Window"
-              value={filters.window}
-              defaultValue={PRODUCT_DEFAULT_WINDOW}
-              options={WINDOWS}
-              onChange={overviewFilters.setWindow}
-            />
-            <FilterChoice
-              label="Category"
-              value={category ?? EVERY}
-              defaultValue={EVERY}
-              options={categories}
-              onChange={(value) => overviewFilters.setCategory(value === EVERY ? null : value)}
-            />
-          </>
-        ),
+        filters: [
+          windowFilter(filters.window, overviewFilters.setWindow),
+          categoryFilter(category, known, overviewFilters.setCategory),
+        ],
       }}
     >
       <OverviewSections query={query} windowDays={filters.window} />

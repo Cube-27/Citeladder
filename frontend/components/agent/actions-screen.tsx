@@ -14,7 +14,6 @@ import {
 import { ActionPriorityBadge } from '@/components/agent/action-status-badge';
 import { AnalyzePageButton } from '@/components/agent/analyze-page-dialog';
 import { ListScreen } from '@/components/layout/page-shell';
-import { AllFilters } from '@/components/ui/all-filters';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Icon } from '@/components/ui/icon';
@@ -47,10 +46,7 @@ export function ActionsScreen() {
   const filters = useActionFilters();
   const scope = { workspaceId, projectId };
   return (
-    <ListScreen
-      actions={<AnalyzePageButton />}
-      controls={{ filters: <AllFilters filters={filters.definitions} /> }}
-    >
+    <ListScreen actions={<AnalyzePageButton />} controls={{ filters: filters.definitions }}>
       {filters.group ? (
         <GroupList {...scope} query={filters.query} group={filters.group} />
       ) : (

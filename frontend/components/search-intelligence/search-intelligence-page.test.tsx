@@ -1,3 +1,4 @@
+import { chooseFilterOption, openFilterRow } from '@/test/all-filters';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -158,9 +159,9 @@ it('offers citation matching only for the website whose list is on screen', asyn
     ],
   });
   await userEvent.click(await screen.findByRole('tab', { name: 'Backlinks' }));
-  expect(await screen.findByRole('combobox', { name: 'Saved target' })).toHaveTextContent(
-    'www.example.com',
-  );
+  await screen.findByRole('radiogroup', { name: 'backlinks view' });
+  expect(await openFilterRow(userEvent.setup(), 'Website', 'www.example.com')).toBeVisible();
+  await userEvent.keyboard('{Escape}');
   // The website and market read as one caption in the strip, not a filter.
   expect(
     screen.getByText(
@@ -172,8 +173,7 @@ it('offers citation matching only for the website whose list is on screen', asyn
   expect(
     screen.queryByRole('button', { name: 'Match with Visibility citations' }),
   ).not.toBeInTheDocument();
-  await userEvent.click(screen.getByRole('combobox', { name: 'Saved target' }));
-  await userEvent.click(screen.getByRole('option', { name: 'blog.example.com' }));
+  await chooseFilterOption(userEvent.setup(), 'Website', 'blog.example.com');
   expect(
     await screen.findByRole('button', { name: 'Match with Visibility citations' }),
   ).toBeInTheDocument();

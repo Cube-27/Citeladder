@@ -61,7 +61,7 @@ describe('SiteHealthScreen — Website tab deep links', () => {
       'true',
     );
     expect(await screen.findByText('Architecture is not available yet.')).toBeVisible();
-    // The pages export belongs to Pages: another tab's header carries none.
+    // The pages export belongs to the Pages table's toolbar: another tab has none.
     expect(screen.getByRole('button', { name: 'Run new crawl' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('tab', { name: 'Pages' }));
@@ -183,7 +183,7 @@ describe('SiteHealthScreen — Pages tab reads', () => {
       'aria-checked',
       'true',
     );
-    expect(screen.getByRole('button', { name: /^Filter by page kind: FAQ/ })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeVisible();
 
     await user.click(screen.getByRole('tab', { name: 'Overview' }));
     const params = new URLSearchParams(window.location.search);

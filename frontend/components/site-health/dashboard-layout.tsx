@@ -22,8 +22,8 @@ import { ICONS } from '@/lib/icons';
  *
  * Reading order is answer-first: the status line (where the crawl stands and
  * its page counts), the headline score cards, the URL inventory, then page-kind
- * diagnostics. The inventory's view switch and page-kind filter sit directly
- * above its table.
+ * diagnostics. The inventory's view switch, page-kind filter and export lead
+ * its table's own toolbar.
  */
 export function SiteHealthDashboardLayout({
   screen,
@@ -46,6 +46,8 @@ export function SiteHealthDashboardLayout({
     startPending,
     startCrawl,
     cancelMutation,
+    runExport,
+    exporting,
   } = screen;
 
   return (
@@ -90,7 +92,16 @@ export function SiteHealthDashboardLayout({
             <ScoreSection crawl={crawl} dashboard={dashboardQuery.data} />
           </Stack>
 
-          <InventorySection mode={inventoryMode} crawl={crawl} active={active} />
+          <InventorySection
+            mode={inventoryMode}
+            crawl={crawl}
+            active={active}
+            exportPages={
+              mutationsAllowed
+                ? { onExport: () => void runExport('csv', 'pages'), exporting }
+                : undefined
+            }
+          />
 
           <PageKindScores crawl={crawl} dashboard={dashboardQuery.data} />
 

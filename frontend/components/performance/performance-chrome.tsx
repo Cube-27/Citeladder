@@ -2,14 +2,17 @@
 
 import { ChevronDown, RefreshCw, RotateCcw } from 'lucide-react';
 
-import { INITIAL_SELECTION, type RangeSelection } from '@/lib/performance/performance';
+import {
+  INITIAL_GRANULARITY,
+  INITIAL_SELECTION,
+  type RangeSelection,
+} from '@/lib/performance/performance';
 import type { usePerformanceSync } from './use-performance-sync';
 import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import type { StatusMessage } from '@/components/ui/status-line';
-import { FilterField } from '@/components/ui/filter-bar';
+import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { SegmentedAction, SegmentedControl } from '@/components/ui/tabs';
-import { Select } from '@/components/ui/select';
 import type { PerformanceGranularity } from '@/lib/api/performance';
 import { formatWindowDate } from '@/lib/format';
 import {
@@ -63,7 +66,7 @@ export function PerformanceWindowCaption({ label }: Readonly<{ label: string }>)
   return <span data-testid="performance-window">{label}</span>;
 }
 
-/** The dashboard's range controls: the quick windows, More, and Reset. */
+/** The dashboard's range controls, leading its control row as its view: the quick windows, More, and Reset. */
 export function PerformanceToolbar({
   selection,
   onOpenRange,
@@ -159,30 +162,21 @@ export function PerformanceActions({
 }
 
 /**
- * The chart's bucket-size control, at the end of the control band.
- *
- * Apart from the range quick-selects at the band's start: the range picks
- * which window is charted, this picks how that window is bucketed, and
- * putting the two side by side invites reading them as the same control
- * (they even share the words day/week/month).
+ * The chart's bucket size, in All filters (D57): it changes how the window is
+ * read, like AI Traffic's chart interval, while the range leads the row.
  */
-export function GranularitySelect({
-  value,
-  onChange,
-}: Readonly<{
-  value: PerformanceGranularity;
-  onChange: (next: PerformanceGranularity) => void;
-}>) {
-  return (
-    <FilterField>
-      <Select
-        value={value}
-        onValueChange={onChange}
-        options={GRANULARITY_OPTIONS}
-        ariaLabel="Chart bucket size"
-      />
-    </FilterField>
-  );
+export function granularityFilter(
+  value: PerformanceGranularity,
+  onChange: (next: PerformanceGranularity) => void,
+): FilterDefinition {
+  return choiceFilter({
+    id: 'granularity',
+    label: 'Chart interval',
+    value,
+    defaultValue: INITIAL_GRANULARITY,
+    groups: [{ options: GRANULARITY_OPTIONS }],
+    onChange,
+  });
 }
 
 /**

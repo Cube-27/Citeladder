@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/
 
 import { makePageSummary, makeSiteCrawl, SITE_HEALTH_UUID_2 } from '@/test/fixtures/site-health';
 import { mswServer } from '@/test/msw-server';
+import { chooseFilterOption } from '@/test/all-filters';
 import { renderWithProviders } from '@/test/render';
 import { InventorySection } from './inventory-section';
 
@@ -82,7 +83,7 @@ describe('InventorySection', () => {
     );
   });
 
-  it('asks the server for the page kind picked above the table', async () => {
+  it('asks the server for the page kind picked in the table toolbar', async () => {
     const requested: Array<string | null> = [];
     mswServer.use(
       http.get(PAGES, ({ request }) => {
@@ -100,8 +101,7 @@ describe('InventorySection', () => {
     expect(await screen.findByText('Homepage')).toBeInTheDocument();
 
     expect(requested.at(-1)).toBeNull();
-    await user.click(screen.getByRole('button', { name: /^Filter by page kind:/ }));
-    await user.click(await screen.findByRole('menuitemradio', { name: 'FAQ' }));
+    await chooseFilterOption(user, 'Page kind', 'FAQ');
 
     expect(await screen.findByText('FAQ page')).toBeInTheDocument();
     expect(requested.at(-1)).toBe('faq');

@@ -2,16 +2,14 @@
 
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { X } from 'lucide-react';
 
 import { ListScreen } from '@/components/layout/page-shell';
 import { Inline, Stack } from '@/components/ui/layout';
 import { IssueDetailRail } from '@/components/site-health/issue-detail-rail';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { pageKindFilter } from '@/components/site-health/page-kind-select';
-import { AllFilters, choiceFilter } from '@/components/ui/all-filters';
-import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
+import { choiceFilter } from '@/components/ui/all-filters';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { ListDetailCard, ListDetailRow } from '@/components/ui/list-detail';
 import { Pager } from '@/components/ui/pager';
 import { QueryState } from '@/components/ui/query-state';
@@ -118,7 +116,15 @@ export function IssuesCatalog({
     catalog.occurrenceCursor,
   );
 
-  const controls = {
+  const controls: FilterBarProps = {
+    // The Issues | Advisories switch changes what the list is, so it is the view.
+    view: (
+      <FindingClassFilter
+        value={findingView}
+        summary={summary}
+        onChange={(value) => updateFilters(findingClassChange(value))}
+      />
+    ),
     search: (
       <IssueSearch
         key={filters.query}
@@ -126,53 +132,51 @@ export function IssuesCatalog({
         onApply={(query) => updateFilters({ query })}
       />
     ),
-    // Search first, then every filter behind one All filters menu, as on the
-    // other list pages; the Issues | Advisories switch stays visible because
-    // it changes what the list is, not which of it shows.
-    filters: (
-      <>
-        <AllFilters
-          filters={[
-            pageKindFilter({
-              value: filters.page_kind,
-              onChange: (page_kind) => updateFilters({ page_kind }),
-            }),
-            // Severity and category share one choice, as they share the API's one filter class.
+    filters: [
+      pageKindFilter({
+        value: filters.page_kind,
+        onChange: (page_kind) => updateFilters({ page_kind }),
+      }),
+      // Severity and category share one choice, as they share the API's one filter class.
+      choiceFilter({
+        id: 'class',
+        label: findingView === 'defect' ? 'Severity or category' : 'Category',
+        value: issueFilterClass(filters),
+        defaultValue: 'all',
+        onChange: (value) => updateFilters(issueFilterClassChange(value)),
+        groups: [
+          {
+            options: issueFilterClasses(findingView).map((item) => ({
+              value: item.key,
+              label: summary
+                ? `${item.label} (${filterCount(item.key, summary, findingView)})`
+                : item.label,
+            })),
+          },
+        ],
+      }),
+      // A deep link's one-issue filter, counted on the button and cleared in its menu.
+      ...(filters.rule_id
+        ? [
             choiceFilter({
-              id: 'class',
-              label: findingView === 'defect' ? 'Severity or category' : 'Category',
-              value: issueFilterClass(filters),
-              defaultValue: 'all',
-              onChange: (value) => updateFilters(issueFilterClassChange(value)),
+              id: 'rule',
+              label: 'Issue',
+              value: filters.rule_id,
+              defaultValue: '',
+              onChange: (rule_id) => updateFilters({ rule_id }),
               groups: [
                 {
-                  options: issueFilterClasses(findingView).map((item) => ({
-                    value: item.key,
-                    label: summary
-                      ? `${item.label} (${filterCount(item.key, summary, findingView)})`
-                      : item.label,
-                  })),
+                  options: [
+                    { value: '', label: 'All issues' },
+                    { value: filters.rule_id, label: ruleFilterTitle(rows, filters.rule_id) },
+                  ],
                 },
               ],
             }),
-          ]}
-        />
-        <FindingClassFilter
-          value={findingView}
-          summary={summary}
-          onChange={(value) => updateFilters(findingClassChange(value))}
-        />
-        {/* Last of the filters, so clearing it moves no other control. */}
-        {filters.rule_id ? (
-          <RuleFilterChip
-            title={ruleFilterTitle(rows, filters.rule_id)}
-            onClear={() => updateFilters({ rule_id: '' })}
-          />
-        ) : null}
-      </>
-    ),
-    // The count that describes the list closes the row it filters, in caption.
-    actions: summary ? <IssueSummary summary={summary} findingView={findingView} /> : null,
+          ]
+        : []),
+    ],
+    status: summary ? <IssueSummary summary={summary} findingView={findingView} /> : null,
   };
 
   // Wait for the issues page, and only for that.
@@ -256,17 +260,6 @@ export function IssuesCatalog({
 function ruleFilterTitle(rows: SiteIssue[], ruleId: string): string {
   const row = rows.find((issue) => issue.rule_id === ruleId);
   return row ? issueTitle(row) : 'one issue';
-}
-
-/** A deep link's one-issue filter, visible and removable rather than silent. */
-function RuleFilterChip({ title, onClear }: Readonly<{ title: string; onClear: () => void }>) {
-  return (
-    <Button variant="secondary" onClick={onClear}>
-      Showing: {title}
-      <Icon icon={X} />
-      <span className="sr-only">(show all issues)</span>
-    </Button>
-  );
 }
 
 function IssueSearch({

@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 
 import { mswServer } from '@/test/msw-server';
+import { chooseFilterOption } from '@/test/all-filters';
 import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
 
@@ -73,7 +74,7 @@ describe('AiReferralsScreen', () => {
     expect(
       await screen.findByRole('region', { name: 'Connect Google Analytics 4' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Range:/ })).toBeVisible();
+    expect(screen.getByRole('button', { name: /^All filters/ })).toBeVisible();
   });
 
   it('renders persisted referral measurement by source', async () => {
@@ -111,7 +112,7 @@ describe('AiReferralsScreen', () => {
     expect(
       await screen.findByText(/no sessions matched a known AI source in this window/i),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Range:/ })).toBeVisible();
+    expect(screen.getByRole('button', { name: /^All filters/ })).toBeVisible();
     expect(screen.queryByText('Other')).not.toBeInTheDocument();
   });
 
@@ -139,7 +140,7 @@ describe('AiReferralsScreen', () => {
     ).toBeInTheDocument();
   });
 
-  it('keeps the chart and keyboard focus while the interval refetches', async () => {
+  it('keeps the chart while the interval refetches', async () => {
     let releaseMonth: ((response: Response) => void) | undefined;
     mswServer.use(
       http.get(endpoint, ({ request }) => {
@@ -155,10 +156,8 @@ describe('AiReferralsScreen', () => {
     renderWithProviders(<AiReferralsScreen />, { projectSelection: { activeProject } });
 
     expect(await screen.findAllByText('3 days')).toHaveLength(2);
-    const month = screen.getByRole('radio', { name: 'Month' });
-    await user.click(month);
+    await chooseFilterOption(user, 'Chart interval', 'Month');
 
-    expect(month).toHaveFocus();
     expect(screen.getByRole('status')).toHaveTextContent('Updating data… Previous data shown.');
     expect(screen.getAllByText('3 days')).toHaveLength(2);
 

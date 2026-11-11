@@ -9,6 +9,7 @@ import {
   type TrafficDataTab,
 } from '@/lib/ai-traffic/use-traffic-data';
 import { ListScreen, RESERVED_CONTROLS } from '@/components/layout/page-shell';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
 import { TabsRoot, TabPanel, type TabRowProps } from '@/components/ui/tabs';
@@ -16,7 +17,7 @@ import { MutationNotice } from '@/components/ui/mutation-notice';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { readErrorProps } from '@/components/ui/read-error';
 import { AiReferralsScreen } from './referrals-screen';
-import { PagesSort, TrafficAllFilters, TrafficControls, TrafficExport } from './traffic-controls';
+import { TrafficExport, trafficFilters } from './traffic-controls';
 import { TrafficOverview, TrafficCrawlers, TrafficActivity } from './traffic-views';
 import { TrafficPages } from './pages-view';
 import { CrawlLogAvailabilityNotice } from './crawl-log-availability';
@@ -100,20 +101,18 @@ function TrafficDataView({
 }: Readonly<{ tab: TrafficDataTab; tabs: TabRowProps; crawlAvailable: boolean }>) {
   const model = useTrafficData(tab);
   const { summary } = model;
-  const controls = { filters: <TrafficControls model={model} /> };
-  // The narrowings sit in All filters at the tabs row's far right.
-  const rowTabs: TabRowProps = {
-    ...tabs,
-    controls: <TrafficAllFilters model={model} crawlAvailable={crawlAvailable} />,
+  // The control row (D57): every narrowing in All filters, then Export at the
+  // end on the tabs that list rows.
+  const controls: FilterBarProps = {
+    filters: trafficFilters({ model, crawlAvailable }),
+    actions: tab === 'overview' ? undefined : <TrafficExport model={model} />,
   };
-  // Export is a route action, so the control band keeps one short row on every tab.
-  const actions = tab === 'overview' ? undefined : <TrafficExport model={model} />;
   // First load keeps the identity, tab and control bands; only the work waits.
   // The table tabs draw their own loading, error and empty states inside the
   // table, in the footprint of a page of rows.
   if (tab === 'overview' && summary.isLoading)
     return (
-      <ListScreen tabs={rowTabs} actions={actions} controls={controls}>
+      <ListScreen tabs={tabs} controls={controls}>
         <QueryState kind="loading" label="Loading AI Traffic…" />
       </ListScreen>
     );
@@ -121,7 +120,7 @@ function TrafficDataView({
   // footprint its loading state took.
   if (tab === 'overview' && summary.isError)
     return (
-      <ListScreen tabs={rowTabs} actions={actions} controls={controls}>
+      <ListScreen tabs={tabs} controls={controls}>
         <QueryState
           kind="error"
           {...readErrorProps(summary)}
@@ -130,7 +129,7 @@ function TrafficDataView({
       </ListScreen>
     );
   return (
-    <ListScreen tabs={rowTabs} actions={actions} controls={controls}>
+    <ListScreen tabs={tabs} controls={controls}>
       <TrafficTabContent tab={tab} model={model} crawlAvailable={crawlAvailable} />
     </ListScreen>
   );
@@ -163,7 +162,7 @@ function TrafficTabContent({
       {tab === 'activity' ? <TrafficActivity {...scope} /> : null}
       {tab === 'pages' ? (
         <TabPanel value="pages">
-          <TrafficPages {...scope} sort={<PagesSort model={model} />} />
+          <TrafficPages {...scope} sort={model.selection.sort} onSort={model.selection.setSort} />
         </TabPanel>
       ) : null}
     </Stack>

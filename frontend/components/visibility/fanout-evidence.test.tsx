@@ -10,13 +10,7 @@ import { visibilityApi } from '@/lib/api/visibility';
 import { ActiveProjectScopeProvider } from '@/lib/project/active-project-scope';
 import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
-import { AllFilters } from '@/components/ui/all-filters';
-import { FanoutEvidence, useFanoutGroupFilter } from './fanout-evidence';
-
-/** The grouping as the page lists it, in All filters. */
-function GroupFilter() {
-  return <AllFilters filters={[useFanoutGroupFilter()]} />;
-}
+import { FanoutEvidence } from './fanout-evidence';
 
 const A = '11111111-1111-4111-8111-111111111111';
 const B = '22222222-2222-4222-8222-222222222222';
@@ -114,15 +108,10 @@ describe('Fanout evidence scope', () => {
 });
 
 describe('Fanout grouping', () => {
-  it('groups the table by prompt from the page filters, naming each surface', async () => {
+  it('groups the table by prompt from its own filters, naming each surface', async () => {
     vi.spyOn(visibilityApi, 'getFanoutSummary').mockReturnValue(new Promise(() => {}));
     const user = userEvent.setup();
-    renderWithProviders(
-      <>
-        <GroupFilter />
-        <Panel projectId={A} />
-      </>,
-    );
+    renderWithProviders(<Panel projectId={A} />);
     expect(screen.getByRole('columnheader', { name: 'Surface' })).toBeVisible();
     expect(screen.queryByText('Best CRM?')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'All filters' }));

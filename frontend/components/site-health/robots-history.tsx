@@ -4,10 +4,10 @@ import type { z } from 'zod';
 import { FileText } from 'lucide-react';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { TableTime } from '@/components/ui/display-time';
-import { FilterField, type FilterBarProps } from '@/components/ui/filter-bar';
+import { choiceFilter } from '@/components/ui/all-filters';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Stack } from '@/components/ui/layout';
 import { LineDiff } from '@/components/ui/line-diff';
-import { Select } from '@/components/ui/select';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { diffLines } from '@/lib/agent/diff';
@@ -71,21 +71,28 @@ export function RobotsHistory({
       : [];
   });
   const choose = (side: Side, value: string) => setSelection({ ...selected, [side]: value });
+  // The two observations to compare, in All filters; one observation has nothing to compare.
   const toolbar: FilterBarProps = {
-    filters: (['before', 'after'] as const).map((side) => (
-      <FilterField key={side}>
-        <Select
-          ariaLabel={`${side === 'before' ? 'Before' : 'After'} robots.txt observation`}
-          value={selected[side]}
-          onValueChange={(value) => choose(side, value)}
-          disabled={versions.length < 2}
-          options={[
-            { value: '', label: `Select ${side} observation` },
-            ...versions.map(({ value, label }) => ({ value, label })),
-          ]}
-        />
-      </FilterField>
-    )),
+    filters:
+      versions.length < 2
+        ? []
+        : (['before', 'after'] as const).map((side) =>
+            choiceFilter({
+              id: side,
+              label: side === 'before' ? 'Before' : 'After',
+              value: selected[side],
+              defaultValue: '',
+              groups: [
+                {
+                  options: [
+                    { value: '', label: `Select ${side} observation` },
+                    ...versions.map(({ value, label }) => ({ value, label })),
+                  ],
+                },
+              ],
+              onChange: (value) => choose(side, value),
+            }),
+          ),
   };
   return (
     <Stack>

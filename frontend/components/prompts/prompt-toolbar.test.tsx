@@ -7,6 +7,7 @@ import { emptyFilters } from '@/lib/prompts/filter';
 import { renderWithProviders } from '@/test/render';
 
 import { FilterBar } from '@/components/ui/filter-bar';
+import { chooseFilterOption, openFilterRow } from '@/test/all-filters';
 
 import { PromptActions, promptFilterControls } from './prompt-toolbar';
 
@@ -69,8 +70,8 @@ describe('promptFilterControls', () => {
   });
 });
 
-describe('promptFilterControls single choices', () => {
-  it('offers Enabled and Branded as one choice each, checking only the chosen option', async () => {
+describe('promptFilterControls filters', () => {
+  it('offers Enabled and Branded as one choice each in All filters, counting a chosen one', async () => {
     const user = userEvent.setup();
     function Harness() {
       const [filters, setFilters] = useState(emptyFilters);
@@ -88,15 +89,11 @@ describe('promptFilterControls single choices', () => {
     }
 
     render(<Harness />);
-    await user.click(screen.getByRole('button', { name: /^Filter/u }));
-    await user.click(screen.getByRole('menuitemradio', { name: 'Branded only' }));
-    expect(screen.getByRole('menuitemradio', { name: 'Branded only' })).toBeChecked();
-    expect(screen.getByRole('menuitemradio', { name: 'Unbranded only' })).not.toBeChecked();
-    expect(
-      screen
-        .getAllByRole('menuitemradio', { name: 'All' })
-        .map((item) => item.getAttribute('aria-checked')),
-    ).toEqual(['true', 'false']);
+    await chooseFilterOption(user, 'Branded', 'Branded only');
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeInTheDocument();
+    expect(await openFilterRow(user, 'Branded', 'Branded only')).toBeVisible();
+    expect(screen.getByRole('menuitem', { name: 'Enabled: All' })).toBeVisible();
   });
 });
 

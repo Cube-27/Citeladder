@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Settings2, Unplug } from 'lucide-react';
 
@@ -19,7 +19,8 @@ import { QueryState } from '@/components/ui/query-state';
 import { readErrorProps } from '@/components/ui/read-error';
 import { ProjectLink } from '@/components/ui/project-link';
 import { TextLink } from '@/components/ui/text-link';
-import { SavedViewControls, scopeControls } from './search-intelligence-scope';
+import type { FilterDefinition } from '@/components/ui/all-filters';
+import { savedViewFilters, scopeControls } from './search-intelligence-scope';
 import { Stack } from '@/components/ui/layout';
 import { TabPanel, TabsRoot } from '@/components/ui/tabs';
 import {
@@ -224,23 +225,21 @@ export function SearchIntelligencePage() {
             setCitationOpen(true);
           },
           onExpand: () => openReview('increase_depth'),
-          savedView: (
-            <SavedViewControls
-              scopes={scopes}
-              scope={activeScope}
-              markets={markets}
-              market={activeMarket}
-              tab={tab}
-              onScope={(value) => {
-                setScope(value);
-                setComparison(null);
-              }}
-              onMarket={(value) => {
-                setMarket(value);
-                setComparison(null);
-              }}
-            />
-          ),
+          savedView: savedViewFilters({
+            scopes,
+            scope: activeScope,
+            markets,
+            market: activeMarket,
+            tab,
+            onScope: (value) => {
+              setScope(value);
+              setComparison(null);
+            },
+            onMarket: (value) => {
+              setMarket(value);
+              setComparison(null);
+            },
+          }),
         })}
       >
         <Stack gap="workspace" className="min-w-0">
@@ -362,7 +361,7 @@ function pageControls({
   tab: Tab;
   datasets: SearchIntelligenceDataset[];
   collection: SearchCollection | null;
-  savedView: ReactNode;
+  savedView: FilterDefinition[];
   onSeed: () => void;
   onMatch: (targetOrigin: string | undefined) => void;
   onExpand: () => void;

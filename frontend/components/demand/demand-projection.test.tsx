@@ -31,7 +31,8 @@ function signalRows() {
 /** The pager's announced position, e.g. "1–10 of 28 signals". */
 function pagerSummary() {
   return screen.getByText(
-    (_, node) => node?.tagName === 'OUTPUT' && /signals$/.test(node.textContent ?? ''),
+    (_, node) =>
+      node?.tagName === 'OUTPUT' && /^\d+–\d+ of .* signals$/.test(node.textContent ?? ''),
   ).textContent;
 }
 

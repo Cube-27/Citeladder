@@ -81,11 +81,11 @@ const groupCodec = stringUrlCodec(
 );
 
 /**
- * How the searches are grouped, for the page's All filters menu. It reads and
+ * How the searches are grouped, in the table's own All filters. It reads and
  * writes the same `group` URL state the table reads, so the menu and the
  * table never disagree.
  */
-export function useFanoutGroupFilter(): FilterDefinition {
+function useFanoutGroupFilter(): FilterDefinition {
   const [grouping, setGrouping] = useUrlState('group', groupCodec);
   return choiceFilter({
     id: 'fanout-group',
@@ -145,6 +145,7 @@ export function FanoutEvidence({
     scopeReady: boolean;
     scopeNarrowed: boolean;
   }>) {
+  const groupFilter = useFanoutGroupFilter();
   const {
     grouping,
     search,
@@ -191,14 +192,18 @@ export function FanoutEvidence({
             maxLength={SEARCH_MAX_LENGTH}
           />
         ),
-        status:
-          needle && matched != null ? <SearchScopeNote search={needle} matched={matched} /> : null,
-        // Grouping is a page filter (`useFanoutGroupFilter`, in All filters);
-        // the table keeps its search and its counts.
-        actions: (
-          <span aria-busy={!summaryMatchesInput}>
-            <FanoutCounts summary={summary} fallback={totals} selectionWide={selectionWide} />
-          </span>
+        // How the table groups is its own filter, after the search.
+        filters: [groupFilter],
+        // What the table holds closes the row: the counts, and what a search kept.
+        status: (
+          <>
+            {needle && matched != null ? (
+              <SearchScopeNote search={needle} matched={matched} />
+            ) : null}
+            <span aria-busy={!summaryMatchesInput}>
+              <FanoutCounts summary={summary} fallback={totals} selectionWide={selectionWide} />
+            </span>
+          </>
         ),
       }}
       columns={COLUMNS}
