@@ -81,6 +81,14 @@ async function targetIdentity(db: Database, scope: Scope, kind: string, target: 
     throw new ActionTargetError('Page target is outside the owned domains');
   return { key: pageGroupKey(target), url: target };
 }
+/**
+ * The Action group an Agent target names, without creating it: equal keys are
+ * one Action. Throws `ActionTargetError` for a target no Action can carry.
+ */
+export async function agentTargetKey(db: Database, scope: Scope, kind: string, rawTarget: string) {
+  if (!a.AGENT_TARGET_KINDS.includes(kind)) throw new ActionTargetError('Unsupported Agent target');
+  return (await targetIdentity(db, scope, kind, rawTarget.trim())).key;
+}
 /** Caller owns the transaction. Refresh and attachments share its project lock. */
 export async function attachOrCreateAction(
   db: Database,

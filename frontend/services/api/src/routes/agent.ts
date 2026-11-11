@@ -30,6 +30,8 @@ import type { TurnEvents } from '../agent/stream.ts';
 import { agentPolicy, AgentError, budgetSchema, type Scope } from '../agent/contracts.ts';
 import { interactiveSlots } from '../http/interactive-slots.ts';
 import { workspaceChat } from '../agent/messages.ts';
+import { changeIdleChat } from '../agent/outputs.ts';
+import { chooseOutputTarget } from '../agent/target-adapter.ts';
 import { readChat, listChats, listRevisions, runView, revisionView } from '../agent/reads.ts';
 import { defineGetRoute, definePostRoute, definePutRoute, defineDeleteRoute } from './define.ts';
 
@@ -474,6 +476,24 @@ export const agentRoutes = [
       return revisionView(
         await mapped(() => outputs.restore(value, path.chat_id, path.output_id, path.revision_id)),
       );
+    },
+  }),
+  definePostRoute({
+    family,
+    path: '/api/v1/agent/chats/{chat_id}/outputs/{output_id}/target',
+    capability: 'run',
+    params: { path: outputPath, query: {} },
+    body: body.target,
+    response: agentChatDetailSchema,
+    async handle({ db, c }, { path }) {
+      const input = await readBody(c, body.target),
+        value = await chatScope(db, c, path.chat_id);
+      await mapped(() =>
+        changeIdleChat(db, value, path.chat_id, (trx, chat) =>
+          chooseOutputTarget(trx, value, chat, path.output_id, input.decision),
+        ),
+      );
+      return readChat(db, workspaceOf(c), path.chat_id);
     },
   }),
   defineGetRoute({
