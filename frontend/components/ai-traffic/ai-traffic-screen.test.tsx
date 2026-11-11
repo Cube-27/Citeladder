@@ -677,21 +677,33 @@ describe('AI Traffic state and navigation', () => {
     expect(
       await within(activityTable).findByRole('heading', { name: 'No matching requests' }),
     ).toBeVisible();
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'Response status' }), {
+    await user.click(screen.getByRole('button', { name: /^All filters/ }));
+    await user.click(screen.getByRole('menuitem', { name: /^Status code/ }));
+    fireEvent.change(await screen.findByRole('spinbutton', { name: 'Response status' }), {
       target: { value: '404' },
     });
+    await user.keyboard('{Escape}{Escape}');
     await user.click(screen.getByRole('button', { name: 'Export CSV' }));
     await waitFor(() => expect(exportStatus).toBe('404'));
     await user.click(screen.getByRole('tab', { name: 'Referrals' }));
     expect(await screen.findByLabelText('Chart interval')).toBeVisible();
     await user.click(screen.getByRole('tab', { name: 'Pages' }));
     await screen.findByRole('table', { name: 'Path-level AI Traffic with separate signal units' });
-    fireEvent.change(screen.getByRole('textbox', { name: 'Folder' }), {
+    await user.click(screen.getByRole('button', { name: /^All filters/ }));
+    await user.click(screen.getByRole('menuitem', { name: /^Resource class/ }));
+    const pageOption = await screen.findByRole('menuitemradio', { name: 'Page' });
+    pageOption.focus();
+    await user.keyboard('{Enter}');
+    await waitFor(() =>
+      expect(new URLSearchParams(window.location.search).get('resource')).toBe('page'),
+    );
+    await user.click(await screen.findByRole('button', { name: /^All filters/ }));
+    await user.click(screen.getByRole('menuitem', { name: /^Folder/ }));
+    fireEvent.change(await screen.findByRole('textbox', { name: 'Folder' }), {
       target: { value: '/page' },
     });
-    await user.click(screen.getByRole('button', { name: 'Filter' }));
-    await user.click(screen.getByRole('menuitemradio', { name: 'Page' }));
-    expect(screen.getByRole('button', { name: 'Filter, 1 active' })).toBeVisible();
+    await user.keyboard('{Escape}{Escape}');
+    expect(await screen.findByRole('button', { name: 'All filters (2)' })).toBeVisible();
     await user.click(screen.getByRole('combobox', { name: 'Sort pages' }));
     await user.click(screen.getByRole('option', { name: 'AI referral sessions' }));
     await user.click(screen.getByRole('button', { name: 'Export CSV' }));
@@ -724,7 +736,7 @@ describe('AI Traffic state and navigation', () => {
     await waitFor(() =>
       expect(within(panel).queryByText(/0 requests · Measured zero/)).not.toBeInTheDocument(),
     );
-  });
+  }, 20_000);
   it('leads with Referrals and drops crawl-only views when crawl logs are unavailable', async () => {
     const dashboards: URLSearchParams[] = [];
     mswServer.use(
@@ -770,7 +782,7 @@ describe('AI Traffic state and navigation', () => {
     await user.click(screen.getByRole('tab', { name: 'Overview' }));
     expect(await screen.findByText(/not available for this workspace yet/)).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Connect crawl logs' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Filter/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^All filters/ })).not.toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Reporting range' })).toHaveTextContent(
       'Last 90 days',
     );

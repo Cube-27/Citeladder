@@ -33,7 +33,12 @@ const PAGE_COLUMNS: readonly DataTableColumn[] = [
  * page turn or filter keeps the rows, the line and the pager on screen until
  * the next page lands. The crawler drawer reads the same view for one bot.
  */
-export function TrafficPages({ workspaceId, projectId, filters }: TrafficTableScope) {
+export function TrafficPages({
+  workspaceId,
+  projectId,
+  filters,
+  sort,
+}: TrafficTableScope & Readonly<{ sort?: ReactNode }>) {
   const [urlHash, setUrlHash] = useState<string | null>(null);
   const { page, table } = useCursorTableQuery({
     workspaceId,
@@ -58,6 +63,7 @@ export function TrafficPages({ workspaceId, projectId, filters }: TrafficTableSc
         label="Path-level AI Traffic with separate signal units"
         columns={PAGE_COLUMNS}
         minWidth="xl"
+        toolbar={sort ? { filters: sort } : undefined}
         {...table}
       >
         {page?.items.map((r) => (
