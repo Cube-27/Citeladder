@@ -1,0 +1,35 @@
+/* ---------- Breadcrumbs ---------- */
+.cl-crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-crumbs li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+}
+
+.cl-crumbs a {
+  border-radius: var(--radius-xs);
+  color: var(--color-ink-muted);
+  text-decoration: none;
+}
+
+.cl-crumbs a:hover {
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cl-crumbs [aria-current] {
+  color: var(--color-ink-secondary);
+}

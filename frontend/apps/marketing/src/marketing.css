@@ -1,8 +1,8 @@
 /*
  * The public site's stylesheet entry: Tailwind, the system's tokens and the
- * sources it scans. The website's components live in site.css and the
- * product screens in screens.css, both imported after this by
- * MarketingLayout.
+ * sources it scans. MarketingLayout loads it, then site-base.css (the shared
+ * base). Every component's rules (website sections, chrome, product screens)
+ * sit in a .css file next to the component and load only on pages that render it.
  *
  * Same reasoning as `apps/app/src/app.css`, pointed the other way: the
  * marketing pages were shipping the product's utilities — the whole site-health

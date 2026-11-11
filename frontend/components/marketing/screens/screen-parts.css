@@ -1,0 +1,159 @@
+/* ---------- Sites and engine marks ---------- */
+.cl-screen-site {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--color-ink);
+  vertical-align: middle;
+}
+
+.cl-screen-marks {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  vertical-align: middle;
+}
+
+.cl-screen-mark {
+  display: inline-flex;
+  color: var(--color-ink);
+}
+
+/* An engine that did not name the brand: muted, still 4.5:1 on its card in
+   both themes, so its hidden name never reads below text contrast (D36). */
+
+.cl-screen-mark.is-off {
+  color: var(--color-ink-muted);
+}
+
+.cl-screen-site-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Figures ---------- */
+.cl-screen-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cl-screen-stat-value {
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-weight: var(--text-stat--font-weight);
+  font-size: var(--text-stat);
+  line-height: var(--text-stat--line-height);
+  letter-spacing: var(--text-stat--letter-spacing);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cl-screen-stat-unit {
+  margin-left: 4px;
+  color: var(--color-ink-secondary);
+  font-size: var(--text-label-lg);
+  line-height: var(--text-label-lg--line-height);
+}
+
+.cl-screen-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 32px;
+}
+
+.cl-screen-kpi {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* Engine meters flow down two columns; the second, holding "Google AI Overviews", is wider. */
+
+.cl-screen-meters {
+  display: grid;
+  grid-template-rows: repeat(2, auto);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  grid-auto-flow: column;
+  gap: 16px 24px;
+}
+
+/* ---------- Tables ---------- */
+.cl-screen-col--xs {
+  width: 80px;
+}
+
+.cl-screen-col--sm {
+  width: 96px;
+}
+
+.cl-screen-col--md {
+  width: 128px;
+}
+
+.cl-screen-col--lg {
+  width: 160px;
+}
+
+.cl-screen-col--xl {
+  width: 200px;
+}
+
+.cl-screen-cell {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The drawn-screen helpers: mono text, a card's title and note, a stack and
+   a main column beside an aside. Shared by the vignettes and the app screens. */
+
+.cl-screen-mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-data);
+  line-height: var(--text-data--line-height);
+}
+
+/* A drawn card's title: the app's CardTitle look (label-lg, 500) on a plain
+   paragraph, since a picture of the app holds no headings of the page (D36). */
+
+.cl-screen-card-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-label-lg);
+  font-weight: var(--text-label-lg--font-weight);
+  line-height: var(--text-label-lg--line-height);
+}
+
+.cl-screen-note {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+}
+
+.cl-screen-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.cl-screen-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  min-width: 0;
+}
+
+.cl-screen-cols > * {
+  min-width: 0;
+}

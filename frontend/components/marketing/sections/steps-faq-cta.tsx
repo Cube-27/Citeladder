@@ -3,6 +3,8 @@ import { Plus } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
+import './steps-faq-cta.css';
+
 /**
  * Steps: a numbered process, side by side (two up under 1024, stacked on
  * phones) or as a vertical list with the number in its own column.

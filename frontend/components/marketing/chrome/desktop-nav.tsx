@@ -14,6 +14,7 @@ import { NAV_DROPS, NAV_LINKS } from '@/lib/marketing-content/nav';
 
 import { MegaMenu } from './mega-menu';
 import { inSection } from './site-nav';
+import './site-nav.css';
 
 /**
  * Hover intent (D22): a resting pointer opens the first menu after this

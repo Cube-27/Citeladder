@@ -1,0 +1,274 @@
+/* ---------- RelatedCards: a full-width editorial index (D44) ----------
+   number 64 | title 5fr | summary 6fr | arrow, between hairline rules. */
+.cl-related {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--color-line-strong);
+  list-style: none;
+}
+
+.cl-related > li {
+  border-bottom: 1px solid var(--color-line);
+}
+
+.cl-related-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 5fr) minmax(0, 6fr) 20px;
+  align-items: baseline;
+  column-gap: 32px;
+  padding: 28px 0;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.cl-related-n {
+  color: var(--color-ink-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-data);
+  line-height: var(--text-data--line-height);
+}
+
+.cl-related-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cl-related-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-heading-lg);
+  font-weight: 500;
+  line-height: var(--text-heading-lg--line-height);
+  letter-spacing: var(--text-heading-lg--letter-spacing);
+  text-wrap: balance;
+}
+
+.cl-related-text {
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  text-wrap: pretty;
+}
+
+/* The summary column starts with the title's first line. */
+
+.cl-related-text {
+  grid-column: 3;
+}
+
+.cl-related-arrow {
+  grid-column: 4;
+  align-self: center;
+  color: var(--color-ink-muted);
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
+}
+
+.cl-related-row:hover .cl-related-arrow,
+.cl-related-row:focus-visible .cl-related-arrow {
+  color: var(--color-ink);
+  transform: translateX(4px);
+}
+
+.cl-related-row:hover .cl-related-title {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cl-related-row:hover .cl-related-arrow,
+  .cl-related-row:focus-visible .cl-related-arrow {
+    transform: none;
+  }
+}
+
+/* Narrower: the summary drops under the title. */
+
+@media (max-width: 899px) {
+  .cl-related-row {
+    grid-template-columns: 40px minmax(0, 1fr) 20px;
+    row-gap: 8px;
+    column-gap: 16px;
+    padding: 24px 0;
+  }
+
+  .cl-related-text {
+    grid-row: 2;
+    grid-column: 2;
+  }
+
+  .cl-related-arrow {
+    grid-row: 1 / span 2;
+    grid-column: 3;
+  }
+}
+
+/* ---------- QuestionCards ---------- */
+.cl-qcards {
+  --cl-list-gap: 24px;
+
+  display: grid;
+  gap: var(--cl-list-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-qcard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  padding: 24px;
+  border-radius: var(--site-radius-card);
+  background: var(--tint-mint);
+  color: var(--color-ink);
+}
+
+.cl-qcard:nth-child(4n + 2) {
+  background: var(--tint-sky);
+}
+
+.cl-qcard:nth-child(4n + 3) {
+  background: var(--tint-lilac);
+}
+
+.cl-qcard:nth-child(4n + 4) {
+  background: var(--tint-peach);
+}
+
+.cl-qcard-q {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-heading-lg);
+  font-weight: 500;
+  line-height: var(--text-heading-lg--line-height);
+  letter-spacing: var(--text-heading-lg--letter-spacing);
+}
+
+.cl-qcard-q {
+  flex: 1;
+  margin-bottom: 12px;
+  text-wrap: pretty;
+}
+
+.cl-qcard-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-line);
+}
+
+.cl-qcard-meta {
+  color: var(--color-ink-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-data);
+  line-height: var(--text-data--line-height);
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .cl-qcards {
+    --cl-list-gap: 16px;
+  }
+}
+
+/* ---------- EngineStrip ---------- */
+/* Centred under the landing opening it follows (D18). */
+
+.cl-engines,
+.cl-engines-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px 40px;
+  text-align: center;
+}
+
+.cl-engines-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-engines-label {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+}
+
+.cl-engine {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-ink-secondary);
+  font-size: var(--text-label-lg);
+  font-weight: 400;
+  line-height: var(--text-label-lg--line-height);
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .cl-engines,
+  .cl-engines-list {
+    gap: 16px 24px;
+  }
+}
+
+/* ---------- LogoTile ---------- */
+.cl-logotile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 128px;
+  padding: 24px;
+  border-radius: var(--site-radius-card);
+  background: var(--tint-neutral);
+  color: var(--color-ink-secondary);
+  text-align: center;
+  text-decoration: none;
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
+}
+
+a.cl-logotile:hover {
+  background: color-mix(in srgb, var(--color-ink) 8%, var(--color-paper));
+  color: var(--color-ink);
+}
+
+/* Every mark sits in one 32px-tall box, so the names in a row line up
+   whatever the logo's own size. */
+
+.cl-logotile-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  color: inherit;
+}
+
+.cl-logotile-name {
+  color: inherit;
+  font-size: var(--text-label-lg);
+  font-weight: 400;
+  line-height: var(--text-label-lg--line-height);
+}
+
+/* A description is a sentence, so it is the sans face (D36). */
+
+.cl-logotile-caption {
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+}

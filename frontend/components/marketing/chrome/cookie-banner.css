@@ -1,0 +1,105 @@
+/* ---------- CookieBanner: bottom-left, Reject and Accept as equals (D36) ----------
+   Both answers are the same outlined button. On a short or narrow screen
+   (a phone, or 200% zoom) the card becomes a slim bar along the bottom that
+   never takes more than a quarter of the height: its text scrolls inside the
+   bar before the bar grows past that, so both buttons stay in view. */
+.cl-cookie {
+  position: fixed;
+  z-index: var(--z-index-toast);
+  bottom: max(20px, env(safe-area-inset-bottom));
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(400px, calc(100vw - 40px));
+  padding: 20px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--site-radius-inner);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-pop);
+}
+
+@media (max-width: 767px), (max-height: 640px) {
+  .cl-cookie {
+    right: 0;
+    bottom: 0;
+    left: 0;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    width: auto;
+    max-height: 25vh;
+    padding: 8px 16px max(8px, env(safe-area-inset-bottom));
+    border-width: 1px 0 0;
+    border-radius: 0;
+  }
+
+  /* The region keeps its name ("Cookie consent"); the bar drops the title line. */
+  .cl-cookie-title {
+    display: none;
+  }
+
+  .cl-cookie-text {
+    flex: 1;
+    min-width: 0;
+    max-height: 100%;
+    overflow-y: auto;
+  }
+
+  .cl-cookie-actions {
+    flex: none;
+    grid-template-columns: auto auto;
+    padding-top: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  .cl-cookie {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .cl-cookie-text {
+    flex: 0 1 auto;
+    min-height: 0;
+  }
+
+  .cl-cookie-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.cl-cookie[hidden] {
+  display: none;
+}
+
+.cl-cookie-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-label);
+  font-weight: 500;
+  line-height: var(--text-label--line-height);
+}
+
+.cl-cookie-text {
+  margin: 0;
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+}
+
+.cl-cookie-text a {
+  border-radius: var(--radius-xs);
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.cl-cookie-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding-top: 8px;
+}

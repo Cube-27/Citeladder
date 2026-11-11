@@ -1,0 +1,301 @@
+/*
+ * The website's shared base, loaded on every page by MarketingLayout: the page
+ * root and container, the section rhythm, text roles, check lists, card-grid
+ * columns, the large buttons and the stage tokens. Everything else lives next
+ * to the component that draws it and ships only on pages that render it.
+ */
+
+/* ---------- Page root, container and section rhythm ---------- */
+/* The website sits on paper and its cards on surface with the card shadow
+   (D29): grey with white cards in light, black with lighter cards in dark. */
+
+.cl-site {
+  /* D36: the website sets exactly eight sizes, 12 · 14 · 16 · 18 · 22 · 28 ·
+     56 · 80, with nothing under 12px and 12px text at least 1.4 leading. The
+     product roles the website reuses (the eyebrow, the mono data and code
+     roles, the drawn app's page title, the 18px title) and the shared
+     components drawn in product images are re-pointed onto that scale here,
+     so the app's own tokens stay as they are. */
+  --text-eyebrow: var(--text-caption);
+  --text-eyebrow--line-height: var(--text-body-sm--line-height);
+  --text-caption--line-height: var(--text-body-sm--line-height);
+  --text-data: var(--text-caption);
+  --text-code: var(--text-body-sm);
+  --text-title-sm--line-height: var(--text-heading-lg--line-height);
+  --text-display-sm: var(--text-title);
+  --text-display-sm--line-height: var(--text-title--line-height);
+  --text-display-lg: var(--text-display-md);
+  --text-display-lg--line-height: var(--text-display-md--line-height);
+  --text-lead: var(--text-body-lg);
+  --text-lead--line-height: var(--text-body-lg--line-height);
+  --text-site-feature: var(--text-display-md);
+  --text-site-feature--line-height: var(--text-display-md--line-height);
+
+  /* D36, D47: surfaces take three radii (each 8px under D36's 12/20/24, so
+     an inner card stays concentric in a card's 8px inset), controls and
+     chips the system's 2–8. */
+  --site-radius-inner: 4px;
+  --site-radius-card: 12px;
+  --site-radius-stage: 16px;
+
+  /* D44: panels are told apart by a soft fill, never a border or a shadow.
+     The four stage colours thinned with paper, and a near-paper neutral. */
+  --tint-mint: color-mix(in srgb, var(--color-stage-mint) 55%, var(--color-paper));
+  --tint-sky: color-mix(in srgb, var(--color-stage-sky) 55%, var(--color-paper));
+  --tint-lilac: color-mix(in srgb, var(--color-stage-lilac) 55%, var(--color-paper));
+  --tint-peach: color-mix(in srgb, var(--color-stage-peach) 55%, var(--color-paper));
+  --tint-neutral: color-mix(in srgb, var(--color-ink) 4%, var(--color-paper));
+
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+.cl-container {
+  width: 100%;
+  max-width: calc(var(--container-site) + 128px);
+  margin-inline: auto;
+  padding-inline: var(--site-gutter);
+}
+
+.cl-section {
+  padding-top: 128px;
+}
+
+@media (max-width: 1023px) {
+  .cl-section {
+    padding-top: 96px;
+  }
+}
+
+.cl-eyebrow {
+  margin: 0;
+}
+
+/* The lead under a heading: body-lg 18/30 at every width (D26). */
+
+.cl-lead {
+  margin: 0;
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body-lg);
+  line-height: var(--text-body-lg--line-height);
+  text-wrap: pretty;
+}
+
+/* Body copy outside a component (an aside line, an empty state): body 16/26. */
+
+.cl-body {
+  margin: 0;
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  text-wrap: pretty;
+}
+
+/* A small note beside a control or under a list: body-sm 14/20, muted. */
+
+.cl-note {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+}
+
+/* A check list: FeatureSplit points and PricingCard features. */
+
+.cl-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-checks li {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 12px;
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+
+.cl-checks svg {
+  margin-top: 4px;
+  color: var(--color-ink);
+}
+
+.cl-checks--sm {
+  gap: 8px;
+}
+
+.cl-checks--sm li {
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+}
+
+/* The 16px mark centres in a box its line's height, so no off-grid nudge. */
+
+.cl-checks--sm svg {
+  height: var(--text-body-sm--line-height);
+  margin-top: 0;
+}
+
+/* Card grids whose column count follows the item count, so 2, 3 or 4 cards
+   always fill the row. `--cols` carries the count to the card lists below. */
+
+.cl-cols-1 {
+  --cols: 1;
+}
+
+.cl-cols-2 {
+  --cols: 2;
+}
+
+.cl-cols-3 {
+  --cols: 3;
+}
+
+.cl-cols-4 {
+  --cols: 4;
+}
+
+@media (max-width: 1279px) {
+  .cl-cols-4 {
+    --cols: 2;
+  }
+}
+
+@media (max-width: 899px) {
+  .cl-cols-3 {
+    --cols: 1;
+  }
+}
+
+@media (max-width: 767px) {
+  .cl-cols-2,
+  .cl-cols-4 {
+    --cols: 1;
+  }
+}
+
+:is(.cl-cols-1, .cl-cols-2, .cl-cols-3, .cl-cols-4) {
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+}
+
+/* D21: a card list never leaves an empty cell. A short last row (five cards
+   at three a row) sits centred under the full rows instead. */
+
+:is(.cl-tiles, .cl-qcards):is(.cl-cols-2, .cl-cols-3, .cl-cols-4) {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* `height: auto` lets a card that is itself the list item stretch to its row. */
+
+:is(.cl-tiles, .cl-qcards):is(.cl-cols-2, .cl-cols-3, .cl-cols-4) > li {
+  flex: 0 0 calc((100% - (var(--cols) - 1) * var(--cl-list-gap)) / var(--cols));
+  height: auto;
+}
+
+/* ---------- Large website buttons and the standalone arrow link ---------- */
+.cl-btn-lg {
+  height: var(--control-lg);
+  padding-inline: 16px;
+  font-size: var(--text-label-lg);
+  line-height: var(--text-label-lg--line-height);
+}
+
+.cl-arrowlink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--radius-xs);
+  color: var(--color-ink);
+  font-size: var(--text-label-lg);
+  font-weight: 500;
+  line-height: var(--text-label-lg--line-height);
+  text-decoration: none;
+}
+
+.cl-arrowlink-text {
+  text-decoration-line: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  transition: text-decoration-color var(--motion-fast) var(--ease-standard);
+}
+
+.cl-arrowlink-icon {
+  flex-shrink: 0;
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+
+a.cl-arrowlink:hover .cl-arrowlink-text,
+a:hover .cl-arrowlink .cl-arrowlink-text {
+  text-decoration-color: currentColor;
+}
+
+a.cl-arrowlink:hover .cl-arrowlink-icon,
+a:hover .cl-arrowlink .cl-arrowlink-icon {
+  transform: translateX(2px);
+}
+
+/* ---------- The page above the footer: a paper sheet with a curved foot ----------
+   D29: the page's last section ends on a rounded edge that the dark footer
+   shows round, so the footer reads as the ground the page sits on. */
+.cl-site-main {
+  padding-bottom: 128px;
+  border-radius: 0 0 40px 40px;
+  background: var(--color-paper);
+}
+
+@media (max-width: 1023px) {
+  .cl-site-main {
+    padding-bottom: 96px;
+    border-radius: 0 0 24px 24px;
+  }
+}
+
+/* ---------- Tile grids: cards or tiles in a list, columns from `cl-cols-*` ---------- */
+.cl-tiles {
+  --cl-list-gap: 16px;
+
+  display: grid;
+  gap: var(--cl-list-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-tiles > li {
+  display: grid;
+  min-width: 0;
+}
+
+/* Several marks on one tile (the model providers' three logos). */
+
+.cl-logo-group {
+  display: inline-flex;
+  gap: 8px;
+}
+
+/* ---------- The stage: tints over paper, with grain ---------- */
+.cl-site {
+  /* The default stage mix; a context re-mixes it by setting the three tints. */
+  --stage-a: var(--color-stage-peach);
+  --stage-b: var(--color-stage-lilac);
+  --stage-c: var(--color-stage-sky);
+  --stage-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --stage-wash: 0.8;
+}
+
+/* Soft-light grain reads far louder on a dark ground: the same noise at a
+   third of its strength, and a dimmer hero wash. */
+
+:root[data-theme='dark'] .cl-site {
+  --stage-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='0.3' filter='url(%23n)'/%3E%3C/svg%3E");
+  --stage-wash: 0.6;
+}

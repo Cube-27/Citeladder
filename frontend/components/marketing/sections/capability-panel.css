@@ -1,0 +1,526 @@
+/* ---------- CapabilityPanel (D52, D53) ---------- */
+/* A question and the short statements that answer it, one centred linked row
+   each, straight on the hero with no card: a faint band and hairlines that
+   fade out at both sides, and one lifted bar that rises out of them
+   (the depth rules below draw the bar, the heading's glow and the motion). */
+
+.cl-capl {
+  --capl-row: 40px;
+  --capl-band: color-mix(in srgb, var(--color-ink) 3%, transparent);
+  --capl-rule: color-mix(in srgb, var(--color-ink) 8%, transparent);
+  /* A column's edges fade over its outer quarters (a mask: only alpha counts). */
+  --capl-fade: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-ink) 25%,
+    var(--color-ink) 75%,
+    transparent
+  );
+
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+  text-align: center;
+}
+
+.cl-capl-ask {
+  position: relative;
+  isolation: isolate;
+  width: fit-content;
+  margin: 0 auto 16px;
+  padding: 4px 24px 12px;
+  color: var(--color-ink);
+  font-size: var(--text-title-sm);
+  line-height: var(--text-title-sm--line-height);
+  font-weight: 500;
+}
+
+.cl-capl-list {
+  position: relative;
+  display: grid;
+  grid-template-rows: repeat(5, var(--capl-row));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: var(--capl-row);
+  grid-auto-flow: column;
+  column-gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The band and the hairlines between rows, faded at each column's sides.
+   Drawn first, so the lifted bar covers them where it rises. */
+
+.cl-capl-list::before {
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(to bottom, var(--capl-rule) 0 1px, transparent 1px var(--capl-row)) 0
+      var(--capl-row) / 100% calc(var(--capl-row) * 4) no-repeat,
+    linear-gradient(var(--capl-band), var(--capl-band));
+  -webkit-mask:
+    var(--capl-fade) left / calc(50% - 4px) 100% no-repeat,
+    var(--capl-fade) right / calc(50% - 4px) 100% no-repeat;
+  mask:
+    var(--capl-fade) left / calc(50% - 4px) 100% no-repeat,
+    var(--capl-fade) right / calc(50% - 4px) 100% no-repeat;
+  content: '';
+  pointer-events: none;
+}
+
+/* Rows sit over the bar. */
+
+.cl-capl-list > li:not(.cl-capl-glide) {
+  position: relative;
+  z-index: 1;
+}
+
+.cl-capl-row {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--capl-row);
+  padding: 0 16px;
+  border-radius: var(--radius-lg);
+  color: var(--color-ink-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+
+.cl-capl-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+
+.cl-capl-row:is(:hover, :focus-visible) {
+  color: var(--color-ink);
+}
+
+/* The lifted bar that steps down the rows while the tour runs (the depth rules below). */
+
+.cl-capl-glide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(50% - 4px);
+  height: var(--capl-row);
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (min-width: 1280px) {
+  .cl-capl-list {
+    grid-template-rows: none;
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-flow: row;
+  }
+
+  .cl-capl-list::before {
+    background-size:
+      100% calc(var(--capl-row) * 9),
+      100% 100%;
+    -webkit-mask: var(--capl-fade);
+    mask: var(--capl-fade);
+  }
+
+  .cl-capl-glide {
+    width: 100%;
+  }
+}
+
+/* ---------- The capability panel's depth (D53) ---------- */
+/* The heading: a soft accent glow behind it and an accent hairline under it
+   that fades out at both ends, like the list's rules. */
+
+.cl-capl-ask::before {
+  position: absolute;
+  inset: -16px -32px -4px;
+  z-index: -1;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--color-accent) 18%, transparent),
+    transparent
+  );
+  filter: blur(6px);
+  content: '';
+  pointer-events: none;
+}
+
+.cl-capl-ask::after {
+  position: absolute;
+  inset: auto 0 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-accent) 70%, transparent),
+    transparent
+  );
+  content: '';
+}
+
+/* The lifted bar, on the touring glide and on a pointed or focused row: a
+   face narrower than the row whose ends fade into the band, so it reads as a
+   bump rising out of the page, over a soft oval shadow that fades the same
+   way. It sits 3px above the row's line. */
+
+.cl-capl {
+  --capl-shadow: rgb(0 0 0 / 16%);
+}
+
+:root[data-theme='dark'] .cl-capl {
+  --capl-shadow: rgb(0 0 0 / 55%);
+}
+
+.cl-capl-glide {
+  translate: 0 -3px;
+}
+
+:is(.cl-capl-glide, .cl-capl-row)::before {
+  position: absolute;
+  inset: 45% 18% auto;
+  height: 100%;
+  background: radial-gradient(ellipse 50% 50% at 50% 35%, var(--capl-shadow), transparent 75%);
+  filter: blur(7px);
+  content: '';
+  pointer-events: none;
+}
+
+:is(.cl-capl-glide, .cl-capl-row)::after {
+  position: absolute;
+  inset: 0 6%;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(
+      40% 100% at 50% 100%,
+      color-mix(in srgb, var(--color-accent) 14%, transparent),
+      transparent 70%
+    ),
+    var(--color-surface);
+  -webkit-mask: var(--capl-fade);
+  mask: var(--capl-fade);
+  content: '';
+  pointer-events: none;
+}
+
+/* A row draws its own bar only while pointed at or focused, which stops the
+   tour; its text rises with it. */
+
+.cl-capl-row::before,
+.cl-capl-row::after {
+  z-index: -1;
+  opacity: 0;
+  translate: 0 0;
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    translate var(--motion-fast) var(--ease-standard);
+}
+
+.cl-capl-row:is(:hover, :focus-visible)::before,
+.cl-capl-row:is(:hover, :focus-visible)::after {
+  opacity: 1;
+  translate: 0 -3px;
+}
+
+.cl-capl-row:is(:hover, :focus-visible) .cl-capl-text {
+  transform: translateY(-3px);
+}
+
+/* ---------- Motion (D36) ---------- */
+/* The capability panel's tour (D52, D53): the lifted bar reaches a row at the
+   start of that row's tenth of the cycle, rests on it and leaves as the next
+   begins. Ten rows, so each keyframe step is 10%. The row's text inks and
+   rises with it. */
+
+@keyframes cl-capl-row {
+  0%,
+  12%,
+  100% {
+    color: var(--color-ink-secondary);
+  }
+
+  2%,
+  10% {
+    color: var(--color-ink);
+  }
+}
+
+@keyframes cl-capl-rise {
+  0%,
+  12%,
+  100% {
+    transform: none;
+  }
+
+  2%,
+  10% {
+    transform: translateY(-3px);
+  }
+}
+
+/* Once per row: while the bar travels it dips toward the page (a little
+   smaller, its shadow faint), then lifts again as it lands. The travel is the
+   first fifth of each row's step. */
+
+@keyframes cl-capl-dip {
+  0%,
+  20%,
+  100% {
+    scale: 1;
+  }
+
+  10% {
+    scale: 0.97;
+  }
+}
+
+@keyframes cl-capl-dip-shadow {
+  0%,
+  20%,
+  100% {
+    opacity: 1;
+  }
+
+  10% {
+    opacity: 0.25;
+  }
+}
+
+/* The heading: a light sweeps across it now and then. */
+
+@keyframes cl-capl-sheen {
+  0%,
+  20% {
+    background-position: 100% 0;
+  }
+
+  60%,
+  100% {
+    background-position: 0 0;
+  }
+}
+
+/* One column: the bar slides down a row at a time and fades at the foot. */
+
+@keyframes cl-capl-glide {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+
+  2% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  10% {
+    transform: translateY(0);
+  }
+
+  12%,
+  20% {
+    transform: translateY(var(--capl-row));
+  }
+
+  22%,
+  30% {
+    transform: translateY(calc(var(--capl-row) * 2));
+  }
+
+  32%,
+  40% {
+    transform: translateY(calc(var(--capl-row) * 3));
+  }
+
+  42%,
+  50% {
+    transform: translateY(calc(var(--capl-row) * 4));
+  }
+
+  52%,
+  60% {
+    transform: translateY(calc(var(--capl-row) * 5));
+  }
+
+  62%,
+  70% {
+    transform: translateY(calc(var(--capl-row) * 6));
+  }
+
+  72%,
+  80% {
+    transform: translateY(calc(var(--capl-row) * 7));
+  }
+
+  82%,
+  90% {
+    transform: translateY(calc(var(--capl-row) * 8));
+  }
+
+  92% {
+    transform: translateY(calc(var(--capl-row) * 9));
+  }
+
+  98% {
+    opacity: 1;
+    transform: translateY(calc(var(--capl-row) * 9));
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(calc(var(--capl-row) * 9));
+  }
+}
+
+/* Two columns of five: the same, fading across to the second column. */
+
+@keyframes cl-capl-glide-cols {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+
+  2% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+
+  10% {
+    transform: translate(0, 0);
+  }
+
+  12%,
+  20% {
+    transform: translate(0, var(--capl-row));
+  }
+
+  22%,
+  30% {
+    transform: translate(0, calc(var(--capl-row) * 2));
+  }
+
+  32%,
+  40% {
+    transform: translate(0, calc(var(--capl-row) * 3));
+  }
+
+  42% {
+    transform: translate(0, calc(var(--capl-row) * 4));
+  }
+
+  50% {
+    opacity: 1;
+    transform: translate(0, calc(var(--capl-row) * 4));
+  }
+
+  51% {
+    opacity: 0;
+    transform: translate(0, calc(var(--capl-row) * 4));
+  }
+
+  51.01% {
+    opacity: 0;
+    transform: translate(calc(100% + 8px), 0);
+  }
+
+  52% {
+    opacity: 1;
+    transform: translate(calc(100% + 8px), 0);
+  }
+
+  60% {
+    transform: translate(calc(100% + 8px), 0);
+  }
+
+  62%,
+  70% {
+    transform: translate(calc(100% + 8px), var(--capl-row));
+  }
+
+  72%,
+  80% {
+    transform: translate(calc(100% + 8px), calc(var(--capl-row) * 2));
+  }
+
+  82%,
+  90% {
+    transform: translate(calc(100% + 8px), calc(var(--capl-row) * 3));
+  }
+
+  92% {
+    transform: translate(calc(100% + 8px), calc(var(--capl-row) * 4));
+  }
+
+  98% {
+    opacity: 1;
+    transform: translate(calc(100% + 8px), calc(var(--capl-row) * 4));
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(100% + 8px), calc(var(--capl-row) * 4));
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cl-capl-list > li:not(.cl-capl-glide) {
+    animation: mk-rise-in var(--motion-reveal) var(--ease-reveal) both;
+    animation-delay: calc(var(--motion-reveal-step) * (8 + var(--capl-i)));
+  }
+
+  /* The tour runs on a list of ten until a row is pointed at or focused. */
+  .cl-capl-list[data-rows='10']:not(:hover, :focus-within) {
+    --capl-tour: calc(var(--motion-tour-step) * 10) var(--ease-reveal) infinite;
+  }
+
+  .cl-capl-list[data-rows='10']:not(:hover, :focus-within) > li {
+    --capl-at: calc(var(--motion-tour-start) + var(--motion-tour-step) * var(--capl-i));
+  }
+
+  .cl-capl-list[data-rows='10']:not(:hover, :focus-within) .cl-capl-row {
+    animation: cl-capl-row var(--capl-tour);
+    animation-delay: var(--capl-at);
+  }
+
+  .cl-capl-list[data-rows='10']:not(:hover, :focus-within) .cl-capl-text {
+    animation: cl-capl-rise var(--capl-tour);
+    animation-delay: var(--capl-at);
+  }
+
+  .cl-capl-list[data-rows='10']:not(:hover, :focus-within) .cl-capl-glide {
+    animation:
+      cl-capl-glide-cols var(--capl-tour),
+      cl-capl-dip var(--motion-tour-step) var(--ease-reveal) infinite;
+    animation-delay: var(--motion-tour-start);
+  }
+
+  .cl-capl-list[data-rows='10']:not(:hover, :focus-within) .cl-capl-glide::before {
+    animation: cl-capl-dip-shadow var(--motion-tour-step) var(--ease-reveal) infinite;
+    animation-delay: var(--motion-tour-start);
+  }
+
+  @media (min-width: 1280px) {
+    .cl-capl-list[data-rows='10']:not(:hover, :focus-within) .cl-capl-glide {
+      animation-name: cl-capl-glide, cl-capl-dip;
+    }
+  }
+
+  .cl-capl-ask > span {
+    background: linear-gradient(
+        100deg,
+        var(--color-ink) 38%,
+        var(--color-accent) 50%,
+        var(--color-ink) 62%
+      )
+      100% 0 / 250% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: cl-capl-sheen var(--motion-sheen) var(--ease-card) infinite;
+  }
+}

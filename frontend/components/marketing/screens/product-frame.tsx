@@ -2,12 +2,14 @@ import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
+import './product-frame.css';
+
 /**
  * How a product image fits its frame. `fluid`: a vignette (screen-vignette.tsx)
  * laid out at the well's width, text at real size, the frame at most 760px
  * wide and centred. `scale`: a full app screen laid out at its natural size
  * and scaled down whole to the well's width (CSS only, see `.cl-frame--scale`
- * in screens.css), never up and never cropped.
+ * in product-frame.css), never up and never cropped.
  */
 export type FrameFit = 'fluid' | 'scale';
 

@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 
 import type { Change } from './demo-data';
 import { ScreenDelta } from './screen-parts';
+import './screen-vignette.css';
 
 /**
  * The website's one card image: a vignette. One white card at the width of

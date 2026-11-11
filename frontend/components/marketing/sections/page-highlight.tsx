@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
+import './page-highlight.css';
+
 export type HighlightStat = Readonly<{ label: string; value: string; sub?: ReactNode }>;
 
 /** Stat columns: a set of stats holds one row (six included), never 4 + 2. */

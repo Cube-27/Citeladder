@@ -3,6 +3,7 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { FREE_TOOL_LIMITS } from '@/lib/config/free-tools';
 import { socialTags } from '@/lib/free-tools/generators';
+import '../sections/features.css';
 import { ToolForm, ToolInput } from './tool-form';
 
 export function SocialPreview() {

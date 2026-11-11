@@ -1,0 +1,437 @@
+/* ---------- CardRail: one sideways-scrolling row of fixed-width cards ---------- */
+.cl-rail {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+/* The heading on the left, the buttons on the right of its last line. */
+
+.cl-rail-top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.cl-rail-top > .cl-shead {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cl-rail-nav {
+  display: flex;
+  flex: none;
+  gap: 16px;
+}
+
+/* The buttons keep their space before the script mounts them, so nothing moves. */
+
+.cl-rail-nav:not([data-ready]) {
+  visibility: hidden;
+}
+
+/* Outlined circles: the only round controls on the site. */
+
+.cl-rail-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 1px solid var(--color-ink);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+
+.cl-rail-btn:hover:not(:disabled) {
+  background: var(--tint-neutral);
+}
+
+.cl-rail-btn:disabled {
+  border-color: var(--color-line-strong);
+  color: var(--color-ink-muted);
+  cursor: default;
+}
+
+/* A RailCard: tint panel, copy on top, its image inset below and cut by the foot. */
+
+.cl-railcard {
+  --cl-tint: var(--tint-neutral);
+  --cl-card-h: 460px;
+
+  position: relative;
+  height: var(--cl-card-h);
+  overflow: hidden;
+  border-radius: var(--site-radius-card);
+  background: var(--cl-tint);
+  color: var(--color-ink);
+  text-decoration: none;
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+
+/* Once mounted, a closed card opens on a press anywhere on it. */
+
+.cl-rail[data-ready] .cl-railcard:not([data-expanded]) {
+  cursor: pointer;
+}
+
+.cl-rail[data-ready] .cl-railcard:not([data-expanded]):hover {
+  background: color-mix(in srgb, var(--color-ink) 5%, var(--cl-tint));
+}
+
+.cl-railcard-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cl-railcard-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.cl-railcard-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 28px 28px 0;
+}
+
+/* The headline keeps the closed card's measure, so opening never moves or
+   rewraps it; only the close slides out with the card's right edge. */
+
+.cl-railcard-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: calc(var(--cl-card-w) - 120px);
+  min-width: 0;
+}
+
+.cl-railcard-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-heading-lg);
+  font-weight: 500;
+  line-height: var(--text-heading-lg--line-height);
+  letter-spacing: var(--text-heading-lg--letter-spacing);
+}
+
+/* The plus turns a quarter to a close when the card is open. Before the
+   script mounts it, it holds its space hidden. */
+
+.cl-railcard-toggle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 1px solid var(--color-ink);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.cl-rail:not([data-ready]) .cl-railcard-toggle {
+  visibility: hidden;
+}
+
+.cl-railcard-toggle > svg {
+  transition: transform var(--motion-card) var(--ease-card);
+}
+
+.cl-railcard-toggle[aria-expanded='true'] > svg {
+  transform: rotate(45deg);
+}
+
+/* Under the header, three layers cross-fade in place while the card widens,
+   all together and over the same time as the widening (as the reference
+   does): the closed card's miniature out, the open card's page in the app
+   and its paragraph with the button in, and back on close. Each holds a
+   fixed size and place, so nothing reflows as it fades. */
+
+.cl-railcard-shot,
+.cl-railcard-page,
+.cl-railcard-more {
+  position: absolute;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--motion-card) var(--ease-card),
+    visibility 0s var(--ease-card) var(--motion-card);
+}
+
+.cl-railcard:not([data-expanded]) .cl-railcard-shot,
+.cl-railcard[data-expanded] :is(.cl-railcard-page, .cl-railcard-more) {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity var(--motion-card) var(--ease-card),
+    visibility 0s;
+}
+
+/* The miniature: whole, at the card's foot, inset by the card's own 28px
+   padding on the sides and below. */
+
+.cl-railcard-shot {
+  bottom: 28px;
+  left: 28px;
+  width: calc(var(--cl-card-w) - 56px);
+}
+
+/* The open card's image (the reference's open panel): the feature's page in
+   the app, sidebar first, at 70% of its real size, in the right half under
+   the close, running off the card's right edge and ending 28px above its
+   foot. */
+
+.cl-railcard-page {
+  top: 100px;
+  left: calc(var(--cl-open-w) / 2 + 16px);
+  width: 1000px;
+}
+
+.cl-railcard-page .cl-frame {
+  max-width: none;
+  margin-inline: 0;
+}
+
+/* Zoom scales a length too, so the drawn height is the card's less the
+   page's top and the foot's padding. */
+
+.cl-railcard-page .cl-screen {
+  height: calc((var(--cl-card-h) - 128px) / 0.7);
+  zoom: 0.7;
+}
+
+/* The open card's paragraph and button, at the foot of its left half. */
+
+.cl-railcard-more {
+  bottom: 28px;
+  left: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+  width: min(420px, calc(var(--cl-open-w) / 2 - 56px));
+}
+
+/* The button stays under the paragraph's left edge, where the phone rule
+   for marketing buttons would centre it. */
+
+.cl-railcard .cl-railcard-more > a {
+  align-self: flex-start;
+}
+
+.cl-railcard-body {
+  max-width: 420px;
+  margin: 0;
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body-lg);
+  line-height: var(--text-body-lg--line-height);
+}
+
+/* Both images: the bare screen with its shadow. */
+
+:is(.cl-railcard-shot, .cl-railcard-page) :is(.cl-frame, .cl-frame-card) {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+}
+
+/* A miniature, as in the reference: the screen lays out at 1/0.7 of the
+   slot's width with its real type, then draws at 70%, so the card shows the
+   whole panel small rather than a close-up of its top. */
+
+.cl-railcard-shot .cl-frame {
+  zoom: 0.7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cl-rail .cl-railcard :is(.cl-railcard-shot, .cl-railcard-page, .cl-railcard-more) {
+    transition: none;
+  }
+}
+
+/* A flex row, so one item can widen when its card opens. As in the
+   reference it runs to both edges of the screen: its padding puts the first
+   card (and each card the arrows bring to the start) on the page's column,
+   and the others show to either side. Its content box is that column, the
+   cards' size container: a closed card is 420px, an open one 720px (the
+   whole column when narrower). */
+
+.cl-rail-track {
+  --cl-card-w: min(420px, 85cqw);
+  --cl-open-w: min(720px, 100cqw);
+  /* The rail is the page's column (a size container), so this is a length
+     scroll-padding can use, unlike a percentage of the row. */
+  --cl-bleed: calc(50vw - 50cqw);
+
+  container-type: inline-size;
+  display: flex;
+  gap: 16px;
+  margin: 0 calc(-1 * var(--cl-bleed));
+  padding: 0 var(--cl-bleed);
+  overflow-x: auto;
+  scroll-padding-inline: var(--cl-bleed);
+  overscroll-behavior-x: contain;
+  list-style: none;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.cl-rail-track::-webkit-scrollbar {
+  display: none;
+}
+
+/* 100vw counts a classic scrollbar, so the full-bleed row would overhang
+   the page by half of one; its section clips that. */
+
+.cl-page-section:has(.cl-rail) {
+  overflow-x: clip;
+}
+
+.cl-rail-item {
+  flex: 0 0 var(--cl-card-w);
+  scroll-snap-align: start;
+  transition: flex-basis var(--motion-card) var(--ease-card);
+}
+
+.cl-rail-item:has(> [data-expanded]) {
+  flex-basis: var(--cl-open-w);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cl-rail-item {
+    transition: none;
+  }
+}
+
+/* On a phone the rail is a list, as the reference's phone page lists its
+   tools: one hairline row per module, its name after an accent plus. A
+   press opens the row in place to its miniature, paragraph and button; the
+   app page is left out. */
+
+@media (max-width: 767px) {
+  .cl-rail {
+    gap: 24px;
+  }
+
+  .cl-rail-nav {
+    display: none;
+  }
+
+  .cl-rail-track {
+    display: block;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+
+  .cl-rail-item {
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .cl-railcard {
+    height: auto;
+    overflow: visible;
+    border-radius: 0;
+    background: none;
+  }
+
+  .cl-rail[data-ready] .cl-railcard:not([data-expanded]):hover {
+    background: none;
+  }
+
+  .cl-railcard-head {
+    flex-direction: row-reverse;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 0;
+  }
+
+  .cl-railcard-copy {
+    flex: 1 1 auto;
+    width: auto;
+  }
+
+  .cl-railcard-copy > .cl-eyebrow {
+    margin: 0;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body-lg);
+    font-weight: 500;
+    line-height: var(--text-body-lg--line-height);
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  /* The row reads the same before and after the script mounts, so nothing
+     below it moves; the section's own link still leads to every module. */
+  .cl-railcard-title,
+  .cl-railcard-page {
+    display: none;
+  }
+
+  .cl-rail:not([data-ready]) .cl-railcard-toggle {
+    visibility: visible;
+  }
+
+  .cl-railcard-toggle {
+    width: 24px;
+    height: 24px;
+    border: none;
+    /* A lighter orange with a white plus; the dark theme's on-ink is dark,
+       on its own lighter accent below. */
+    background: color-mix(in srgb, var(--color-accent) 70%, var(--color-on-ink));
+    color: var(--color-on-ink);
+  }
+
+  :root[data-theme='dark'] .cl-railcard-toggle {
+    background: var(--color-accent-ink);
+  }
+
+  .cl-railcard-toggle > svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .cl-rail .cl-railcard :is(.cl-railcard-shot, .cl-railcard-more) {
+    position: static;
+    display: none;
+    width: auto;
+    opacity: 1;
+    visibility: visible;
+    transition: none;
+  }
+
+  /* The whole miniature on the card's tint, inset equally on every side; the
+     tint grows with the screen, so a tall one never spills past it. */
+  .cl-rail .cl-railcard[data-expanded] .cl-railcard-shot {
+    display: block;
+    padding: 16px;
+    border-radius: var(--site-radius-card);
+    background: var(--cl-tint);
+  }
+
+  .cl-rail .cl-railcard[data-expanded] .cl-railcard-more {
+    display: flex;
+    gap: 16px;
+    padding: 16px 0 24px;
+  }
+
+  .cl-railcard-body {
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+}
