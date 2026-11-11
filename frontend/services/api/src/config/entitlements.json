@@ -153,6 +153,14 @@
       "public": false,
       "rolling_window_seconds": null
     },
+    "operator_controls": {
+      "type": "flag",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": false,
+      "rolling_window_seconds": null
+    },
     "market_slots": {
       "type": "counter.occupancy",
       "levels": 0,
@@ -180,6 +188,7 @@
   "commerce": "commerce",
   "search_intelligence": "search_intelligence",
   "billing_checkout": "billing_checkout",
+  "operator_controls": "operator_controls",
   "capacity_lock": {
     "namespace": 1128353857,
     "person": "citeladder-cap"

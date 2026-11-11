@@ -3,6 +3,7 @@ import { appHref } from '@/lib/config/app-link';
 import { docsHref } from '@/lib/config/docs';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { cn } from '@/lib/utils';
+import '../chrome/mega-menu.css';
 import { PLATFORM_GROUPS, PLATFORM_OVERVIEW, platformLabel } from '@/lib/marketing-content/nav';
 import { PLATFORM_GUIDES } from '@/lib/marketing-content/platform-guides';
 import type {

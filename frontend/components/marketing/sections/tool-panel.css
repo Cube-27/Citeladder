@@ -1,0 +1,120 @@
+/* ---------- ToolPanel: form 5/12, result well 7/12 at a 420px floor ---------- */
+.cl-tool {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 8px;
+  padding: 8px;
+  border-radius: var(--site-radius-card);
+  background: var(--tint-neutral);
+}
+
+.cl-tool-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+}
+
+.cl-tool-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-heading-lg);
+  font-weight: 500;
+  line-height: var(--text-heading-lg--line-height);
+  letter-spacing: var(--text-heading-lg--letter-spacing);
+}
+
+.cl-tool-desc {
+  margin: 0;
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+
+.cl-tool-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.cl-tool-result {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 420px;
+  border-radius: var(--site-radius-inner);
+  background: var(--color-paper);
+}
+
+.cl-tool-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  min-height: 52px;
+  padding: 8px 8px 8px 20px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.cl-tool-rtitle {
+  margin: 0;
+  color: var(--color-ink-secondary);
+  font-size: var(--text-label);
+  font-weight: 400;
+  line-height: var(--text-label--line-height);
+}
+
+.cl-tool-status {
+  color: var(--color-ink-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-data);
+  line-height: var(--text-data--line-height);
+  white-space: nowrap;
+}
+
+.cl-tool-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.cl-tool-copy {
+  min-width: 92px;
+}
+
+.cl-tool-output {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  padding: 20px;
+  overflow-x: auto;
+}
+
+.cl-tool-empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  min-height: 280px;
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+  text-align: center;
+}
+
+@media (max-width: 1023px) {
+  .cl-tool {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .cl-tool-form {
+    padding: 16px;
+  }
+
+  .cl-tool-result {
+    min-height: 360px;
+  }
+}

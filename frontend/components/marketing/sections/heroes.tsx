@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 import { Breadcrumbs, type Crumb } from '../chrome/breadcrumbs';
+import './heroes.css';
 
 /**
  * PageHero: an inner page's opening, its H1 the site title (80, 32 on

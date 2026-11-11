@@ -5,6 +5,7 @@ import { PLATFORM_OVERVIEW, type NavDrop } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
 import { NavIcon, hasNavIcon } from './nav-icons';
+import './mega-menu.css';
 
 /**
  * One navbar menu (the system's MegaMenu): one fixed-width column per group,

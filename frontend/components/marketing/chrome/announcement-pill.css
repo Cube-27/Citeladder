@@ -1,0 +1,67 @@
+/* ---------- AnnouncementPill ---------- */
+.cl-announce {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  height: 32px;
+  padding: 0 12px 0 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+  text-decoration: none;
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+
+.cl-announce:not(:has(.cl-announce-tag)) {
+  padding-left: 12px;
+}
+
+a.cl-announce:hover {
+  color: var(--color-ink);
+}
+
+.cl-announce-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink);
+}
+
+.cl-announce-tag,
+.cl-announce > svg {
+  flex: none;
+}
+
+.cl-announce-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* On a phone the pill stays one row: caption-size type and a tighter tag,
+   the message cut with an ellipsis only where even that will not fit. */
+
+@media (max-width: 767px) {
+  .cl-announce {
+    gap: 4px;
+    padding-right: 8px;
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
+  }
+
+  .cl-announce-tag {
+    padding: 0 8px;
+  }
+
+  /* The whole pill is the link; its arrow gives the message the room. */
+  .cl-announce > svg {
+    display: none;
+  }
+}

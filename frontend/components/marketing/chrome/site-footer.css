@@ -1,0 +1,226 @@
+/* ---------- Footer: dark in both themes, with a fine film grain (D29) ----------
+   It tucks 40px under the page's curved foot. Its own four tokens keep one
+   value in both themes; the focus ring follows them. */
+.cl-footer {
+  --color-focus: var(--color-footer-ink);
+
+  position: relative;
+  isolation: isolate;
+  margin-top: -40px;
+  padding: 136px 0 40px;
+  background: var(--color-footer);
+  color: var(--color-footer-ink-muted);
+  color-scheme: dark;
+}
+
+/* Tiled fractal noise with its colour removed, faded until it reads only up
+   close; decoration, no colour of its own. */
+
+.cl-footer::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 240px 240px;
+  opacity: 0.12;
+  content: '';
+  pointer-events: none;
+}
+
+.cl-footer-top {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  gap: 48px;
+}
+
+.cl-footer-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.cl-footer-logo {
+  display: inline-flex;
+  margin: -4px;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  color: var(--color-footer-ink);
+}
+
+.cl-footer-tagline {
+  max-width: 320px;
+  margin: 0;
+  color: var(--color-footer-ink-muted);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+
+.cl-footer-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+/* A text link under a badge: a 24px target, never a 16px line of caption. */
+
+.cl-footer-badge-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border-radius: var(--radius-xs);
+  color: var(--color-footer-ink-muted);
+  font-size: var(--text-caption);
+  font-weight: 400;
+  line-height: var(--text-caption--line-height);
+  text-decoration: none;
+}
+
+.cl-footer-badge-link:hover {
+  color: var(--color-footer-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* D20: the social profiles, one row of icon links under the badges. The row
+   pulls left by the icon's inset so the first glyph lines up with the copy. */
+
+.cl-footer-social {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 0 -8px;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-footer-social-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-md);
+  height: var(--control-md);
+  border-radius: var(--radius-md);
+  color: var(--color-footer-ink-muted);
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+
+.cl-footer-social-link:hover {
+  background: var(--color-footer-line);
+  color: var(--color-footer-ink);
+}
+
+.cl-footer-cols {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 32px 24px;
+}
+
+.cl-footer-head {
+  margin: 0 0 16px;
+  color: var(--color-footer-ink);
+  font-size: var(--text-label);
+  font-weight: 500;
+  line-height: var(--text-label--line-height);
+}
+
+.cl-footer-col ul {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-footer-col a,
+.cl-footer-legal a,
+.cl-footer-cookie {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: var(--radius-xs);
+  color: var(--color-footer-ink-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+  text-decoration: none;
+}
+
+.cl-footer-col a svg {
+  color: var(--color-footer-ink-muted);
+}
+
+.cl-footer-col a:hover,
+.cl-footer-legal a:hover,
+.cl-footer-cookie:hover,
+.cl-footer-copy a:hover {
+  color: var(--color-footer-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cl-footer-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 64px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-footer-line);
+}
+
+.cl-footer-copy {
+  margin: 0;
+  color: var(--color-footer-ink-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+}
+
+.cl-footer-copy a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cl-footer-legal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-footer-legal a,
+.cl-footer-cookie {
+  color: var(--color-footer-ink-muted);
+}
+
+.cl-footer-cookie {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-sans);
+  cursor: pointer;
+}
+
+@media (max-width: 1023px) {
+  .cl-footer-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cl-footer-cols {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .cl-footer {
+    padding-top: 104px;
+  }
+
+  .cl-footer-cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

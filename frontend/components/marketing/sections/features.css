@@ -1,0 +1,378 @@
+/* ---------- FeatureCard ---------- */
+/* D44: no borders, no shadows, no lift. Two editorial forms:
+   - with a product image, or linked: a soft tint panel (the tint turns per
+     tile) holding the white product image and the copy;
+   - static, text only: a column under a hairline rule. */
+
+.cl-fcard {
+  --cl-tint: var(--tint-neutral);
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px;
+  border-radius: var(--site-radius-card);
+  background: var(--cl-tint);
+  color: var(--color-ink);
+  text-decoration: none;
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+
+:is(.cl-tiles > li, .cl-bento-cell, .cl-rail-item):nth-child(4n + 1)
+  > :is(.cl-fcard, .cl-railcard) {
+  --cl-tint: var(--tint-mint);
+}
+
+:is(.cl-tiles > li, .cl-bento-cell, .cl-rail-item):nth-child(4n + 2)
+  > :is(.cl-fcard, .cl-railcard) {
+  --cl-tint: var(--tint-sky);
+}
+
+:is(.cl-tiles > li, .cl-bento-cell, .cl-rail-item):nth-child(4n + 3)
+  > :is(.cl-fcard, .cl-railcard) {
+  --cl-tint: var(--tint-lilac);
+}
+
+:is(.cl-tiles > li, .cl-bento-cell, .cl-rail-item):nth-child(4n + 4)
+  > :is(.cl-fcard, .cl-railcard) {
+  --cl-tint: var(--tint-peach);
+}
+
+/* A large linked card on its own (the blog's featured post) is lilac, with
+   room round its copy. */
+
+a.cl-fcard--lg {
+  --cl-tint: var(--tint-lilac);
+
+  padding: 32px;
+}
+
+@media (max-width: 767px) {
+  a.cl-fcard--lg {
+    padding: 16px;
+  }
+}
+
+a.cl-fcard:hover {
+  background: color-mix(in srgb, var(--color-ink) 5%, var(--cl-tint));
+}
+
+.cl-fcard:has(> .cl-frame) {
+  padding: 8px;
+}
+
+.cl-fcard:not(a):not(:has(> .cl-frame)) {
+  padding: 0;
+  border-top: 1px solid var(--color-line-strong);
+  border-radius: 0;
+  background: none;
+}
+
+.cl-fcard > .cl-frame {
+  flex: 1;
+}
+
+.cl-fcard > .cl-frame > .cl-frame-card {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.cl-fcard-body {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 8px;
+}
+
+.cl-fcard:not(:has(> .cl-frame)) > .cl-fcard-body {
+  flex: 1;
+}
+
+.cl-fcard > .cl-frame + .cl-fcard-body {
+  padding: 16px 16px 8px;
+}
+
+.cl-fcard:not(a):not(:has(> .cl-frame)) > .cl-fcard-body {
+  padding: 20px 0 0;
+}
+
+.cl-fcard-body .cl-eyebrow + .cl-fcard-title {
+  margin-top: 4px;
+}
+
+/* D28: the display face is the section's heading alone, so a card title is the sans face at 500. */
+
+.cl-fcard-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-heading-lg);
+  font-weight: 500;
+  line-height: var(--text-heading-lg--line-height);
+  letter-spacing: var(--text-heading-lg--letter-spacing);
+}
+
+.cl-fcard--lg .cl-fcard-title {
+  font-size: var(--text-display-md);
+  line-height: var(--text-display-md--line-height);
+}
+
+.cl-fcard-text {
+  max-width: 520px;
+  margin: 0;
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+
+.cl-fcard-more {
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+/* D21: a card alone in its row sets its points in a column beside the title
+   and copy, so the row has no empty half. */
+
+.cl-fcard--wide .cl-fcard-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto 1fr;
+  align-items: start;
+  gap: 8px 48px;
+}
+
+.cl-fcard--wide .cl-fcard-body > .cl-checks {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+}
+
+@media (max-width: 899px) {
+  .cl-fcard--wide .cl-fcard-body {
+    display: flex;
+  }
+}
+
+/* ---------- Bento: authored spans hold to 900px, halves to 768, one column below ---------- */
+.cl-bento {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.cl-bento-cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cl-span-3 {
+  grid-column: span 3;
+}
+
+.cl-span-4 {
+  grid-column: span 4;
+}
+
+.cl-span-5 {
+  grid-column: span 5;
+}
+
+.cl-span-6 {
+  grid-column: span 6;
+}
+
+.cl-span-7 {
+  grid-column: span 7;
+}
+
+.cl-span-8 {
+  grid-column: span 8;
+}
+
+.cl-span-9 {
+  grid-column: span 9;
+}
+
+.cl-span-12 {
+  grid-column: span 12;
+}
+
+/* D21: a product image beside a taller tile fills its cell; its well grows
+   and centres the screen (screens/product-frame.css) instead of leaving a strip under it. */
+
+.cl-bento-cell > * {
+  flex: 1;
+}
+
+@media (max-width: 1023px) {
+  .cl-bento {
+    gap: 16px;
+  }
+}
+
+@media (max-width: 899px) {
+  .cl-bento-cell[data-span-band='small'] {
+    grid-column: span 4;
+  }
+
+  .cl-bento-cell[data-span-band='medium'] {
+    grid-column: span 6;
+  }
+
+  .cl-bento-cell[data-span-band='large'] {
+    grid-column: span 12;
+  }
+}
+
+@media (max-width: 767px) {
+  .cl-bento {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cl-bento .cl-bento-cell {
+    grid-column: auto;
+  }
+}
+
+/* ---------- FeatureSplit: 5/12 copy beside a 7/12 frame ---------- */
+.cl-split {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  align-items: center;
+  gap: 64px;
+}
+
+.cl-split--reverse {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+}
+
+.cl-split--reverse .cl-split-copy {
+  order: 2;
+}
+
+.cl-split + .cl-split {
+  margin-top: 128px;
+}
+
+.cl-split-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+/* D28: a split's title is the sans face at 500 under a section header or beside
+   other splits, so a section never sets the display face twice. */
+
+.cl-split-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-display-md);
+  font-weight: 500;
+  line-height: var(--text-display-md--line-height);
+  letter-spacing: var(--text-display-md--letter-spacing);
+  text-wrap: balance;
+}
+
+/* The one split in a section without a header is that section's heading. */
+
+.cl-page-section:not(:has(.cl-shead-title, .cl-split ~ .cl-split)) .cl-split-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.cl-split-text {
+  margin: 0;
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body-lg);
+  line-height: var(--text-body-lg--line-height);
+}
+
+.cl-split-copy .cl-checks {
+  padding: 4px 0;
+}
+
+.cl-split-media {
+  min-width: 0;
+}
+
+.cl-split-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}
+
+@media (max-width: 1023px) {
+  .cl-split,
+  .cl-split--reverse {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+  }
+
+  .cl-split--reverse .cl-split-copy {
+    order: 0;
+  }
+
+  .cl-split + .cl-split {
+    margin-top: 96px;
+  }
+}
+
+/* On a phone a split's product image is the desktop drawing scaled down
+   whole, as the hero's app is, never re-flowed to the phone's width: it lays
+   out 600px wide and zooms to the well (never up). Zoom scales layout too,
+   so the well's height follows with no script or shift. */
+
+@media (max-width: 767px) {
+  .cl-split-media .cl-frame--fluid .cl-frame-screen {
+    container-type: inline-size;
+  }
+
+  .cl-split-media .cl-frame--fluid .cl-frame-screen > * {
+    width: 600px;
+    zoom: min(1, tan(atan2(100cqi, 600px)));
+  }
+}
+
+/* ---------- The stage: tints over paper, with grain ---------- */
+/* Neighbouring tiles and splits take different mixes, so a row of cards is
+   four colours of one light, never one colour four times. */
+
+.cl-bento-cell:nth-child(4n + 2),
+.cl-split--reverse {
+  --stage-a: var(--color-stage-sky);
+  --stage-b: var(--color-stage-mint);
+  --stage-c: var(--color-stage-lilac);
+}
+
+.cl-bento-cell:nth-child(4n + 3) {
+  --stage-a: var(--color-stage-mint);
+  --stage-b: var(--color-stage-sky);
+  --stage-c: var(--color-stage-peach);
+}
+
+.cl-bento-cell:nth-child(4n + 4) {
+  --stage-a: var(--color-stage-lilac);
+  --stage-b: var(--color-stage-peach);
+  --stage-c: var(--color-stage-mint);
+}
+
+/* ---------- A FeatureCard: its tint panel holds the white image (D44) ---------- */
+.cl-fcard > .cl-frame .cl-frame-well {
+  padding: 24px;
+  border: 0;
+}
+
+.cl-fcard > .cl-frame .cl-vig {
+  border-color: transparent;
+}
+
+@media (max-width: 767px) {
+  .cl-fcard > .cl-frame .cl-frame-well {
+    padding: 12px;
+  }
+}

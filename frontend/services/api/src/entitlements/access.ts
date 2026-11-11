@@ -167,6 +167,15 @@ export function requireFlag(db: Database, workspaceId: string, key: GatedFlag): 
 }
 
 /**
+ * Whether the workspace holds the non-public `operator_controls` grant (BL9):
+ * the operator's own workspace, granted explicitly with `billing:admin grant`.
+ * It never extends to another workspace and is never part of bootstrap access.
+ */
+export function hasOperatorControls(db: Database, workspaceId: string): Promise<boolean> {
+  return new WorkspaceEntitlements(db, workspaceId).grants(policy.entitlements.operator_controls);
+}
+
+/**
  * `requireWorkspaceAccess` for a long-running worker: a grant is reused for
  * `ttlMs`, so a revocation takes effect within that window, while a denial or
  * failure is never cached and concurrent checks share one read. Requests never

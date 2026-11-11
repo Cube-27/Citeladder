@@ -608,8 +608,8 @@ append-only ledger refunds while every attempt keeps its tokens and debit
 stays charged, and so does a turn the browser closed after it staged a
 document, which saves it (B69). The full output cap is the gateway's
 `DEFAULT_AGENT_MAX_OUTPUT_TOKENS` (64 000, about 42 credits at Haiku 5.5
-prices; each web search adds 13). The configured development
-login (`DEV_LOGIN_EMAIL`, an active admin) runs as `development` funding with
+prices; each web search adds 13). In local development, the configured
+development login (`DEV_LOGIN_EMAIL`, an active admin) runs as `development` funding with
 no hold or debit but the same dispatch evidence. Capability and credit rate are
 keyed `agent`; [Billing](billing-entitlements.md) owns the ledger.
 

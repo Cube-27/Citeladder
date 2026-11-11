@@ -19,7 +19,6 @@ locals {
     ENCRYPTION_KEY                   = "citeladder-encryption-key"
     REFERRAL_HASH_SALT               = "citeladder-referral-salt"
     API_KEY_PEPPER                   = "citeladder-api-key-pepper"
-    DEV_LOGIN_PASSWORD               = "citeladder-demo-password"
     INTEGRATION_GOOGLE_CLIENT_ID     = "citeladder-google-oauth-client-id"
     INTEGRATION_GOOGLE_CLIENT_SECRET = "citeladder-google-oauth-client-secret"
     # Signs checkout quotes; generated, and independent of every provider secret.
@@ -28,6 +27,8 @@ locals {
   # Present only while the protected environment supplies a value; Cloud Run
   # cannot reference a secret without an enabled version.
   optional_secret_env = {
+    # Demo mode's single account only; production carries no development login (BL9).
+    DEV_LOGIN_PASSWORD                  = "citeladder-demo-password"
     RESEND_API_KEY                      = "citeladder-resend-api-key"
     DEFAULT_AGENT_API_KEY               = "citeladder-default-agent-api-key"
     KEENABLE_API_KEY                    = "citeladder-keenable-api-key"

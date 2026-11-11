@@ -18,6 +18,9 @@ import {
   ScreenTabs,
 } from './screen-parts';
 import { BrandTable, VisibilityTrend } from './visibility-demo';
+// The vignette sheet comes first: `.cl-app-page > .cl-vig` overrides `.cl-fcard .cl-vig`.
+import './screen-vignette.css';
+import './screen-app.css';
 
 /**
  * The app's Dashboard navigation as the sidebar shows it

@@ -6,6 +6,7 @@ import { Rungs, type RungLevel } from '@/components/ui/rungs';
 import { cn } from '@/lib/utils';
 
 import { Eyebrow, columnsFor } from './site-parts';
+import './cards.css';
 
 const ENGINE_NAMES: Readonly<Record<EngineKey, string>> = {
   chatgpt: 'ChatGPT',

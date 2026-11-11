@@ -1,0 +1,110 @@
+/* ---------- SectionHeader ---------- */
+.cl-shead {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cl-shead-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cl-shead-title {
+  max-width: 960px;
+  margin: 0;
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: var(--text-site-section);
+  font-weight: 400;
+  line-height: var(--text-site-section--line-height);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.cl-shead-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.cl-shead-lead {
+  max-width: var(--container-narrow);
+  margin: 0;
+}
+
+/* ---------- PageSection: header, 48, content; sections never set spacing themselves ---------- */
+.cl-page-section > .cl-container > .cl-shead + .cl-page-section-body {
+  margin-top: 48px;
+}
+
+.cl-page-section--compact {
+  padding-top: 64px;
+}
+
+@media (max-width: 1023px) {
+  .cl-page-section--compact {
+    padding-top: 48px;
+  }
+}
+
+.cl-page-section-body {
+  min-width: 0;
+}
+
+/* A list under its left-aligned header reads at the 720 measure (D33). */
+
+.cl-page-section-body--reading {
+  max-width: var(--container-prose);
+}
+
+.cl-page-section-body > * + * {
+  margin-top: 32px;
+}
+
+.cl-page-section-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  align-items: start;
+  gap: 24px;
+}
+
+.cl-page-section-grid--even {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.cl-page-section-aside {
+  position: sticky;
+  top: calc(var(--nav-height) + 32px);
+  padding-right: 24px;
+}
+
+.cl-page-section-aside > .cl-shead + .cl-page-section-aside-body {
+  margin-top: 32px;
+}
+
+/* Compact aside (content pages): a quieter header, display-md title and body lead. */
+
+.cl-page-section--aside.cl-page-section--compact .cl-shead-title {
+  font-size: var(--text-display-md);
+  line-height: var(--text-display-md--line-height);
+}
+
+.cl-page-section--aside.cl-page-section--compact .cl-shead-lead {
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+
+@media (max-width: 1023px) {
+  .cl-page-section-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 48px;
+  }
+
+  .cl-page-section-aside {
+    position: static;
+    padding-right: 0;
+  }
+}

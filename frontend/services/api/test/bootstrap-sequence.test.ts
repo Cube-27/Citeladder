@@ -5,7 +5,7 @@ import { disposableDatabase } from './disposable-database.ts';
 import { bootstrapDeployment } from '../src/auth/deployment-bootstrap.ts';
 import { initializeCatalog } from '../src/billing/admin.ts';
 import { verifyPassword } from '../src/auth/password.ts';
-import { productionEnv } from './production-config.ts';
+import { demoLoginPassword, productionEnv } from './production-config.ts';
 const { db, env, root, execute } = disposableDatabase();
 const native = (overrides: Record<string, string> = {}, args: string[] = []) =>
   execute(
@@ -65,10 +65,37 @@ it('commits identity before a catalog failure, refuses unauthorized publication,
     ).publication_state,
   ).toBe('published');
 }, 60000);
+it('production startup refuses a development login and touches no identity, publishing the catalog once the operator exists', async () => {
+  // Startup admission never connects: the fixture database URL only satisfies the policy.
+  const production = { ...env, ...productionEnv };
+  await expect(bootstrapDeployment(db, production)).rejects.toThrow(
+    'DEV_LOGIN_PASSWORD must be unset',
+  );
+  const passwordless = { ...production, DEV_LOGIN_PASSWORD: '' };
+  expect(await bootstrapDeployment(db, passwordless)).toEqual({ skipped: true, catalog: false });
+  expect(await db.selectFrom('users').select('id').execute()).toEqual([]);
+  expect(await db.selectFrom('billing_catalog_revisions').select('id').execute()).toEqual([]);
+  // The operator identity exists from an earlier (development) bootstrap.
+  await bootstrapDeployment(db, env, async () => {
+    throw new Error('catalog deferred');
+  }).catch(() => undefined);
+  const operator = await db.selectFrom('users').selectAll().executeTakeFirstOrThrow();
+  const grants = await db.selectFrom('account_grants').selectAll().execute();
+  expect(await bootstrapDeployment(db, passwordless)).toEqual({ skipped: true, catalog: true });
+  expect(await db.selectFrom('users').selectAll().executeTakeFirstOrThrow()).toEqual(operator);
+  expect(await db.selectFrom('account_grants').selectAll().execute()).toEqual(grants);
+  expect(
+    await db
+      .selectFrom('billing_catalog_revisions')
+      .select(['publication_state', 'published_by_user_id'])
+      .execute(),
+  ).toEqual([{ publication_state: 'published', published_by_user_id: operator.id }]);
+}, 60000);
 it('demo startup grants only expiring monitored URLs, rotates sessions and refuses an unexpected identity', async () => {
   const demo = {
     ...env,
     ...productionEnv,
+    DEV_LOGIN_PASSWORD: demoLoginPassword,
     DEMO_MODE: 'true',
     DEMO_EXPIRES_AT: '2099-01-01T00:00:00Z',
     DEMO_MONITORED_URL_LIMIT: '50',
