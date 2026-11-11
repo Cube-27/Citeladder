@@ -6,6 +6,7 @@ import postcss from 'postcss';
 
 import { paletteDeclarations, resolvePalette } from './design-system-contrast.mjs';
 import { contractTokenNames } from './design-system-contract.mjs';
+import { readMarketingCss } from './marketing-css.mjs';
 import { parseSource, stringFragments } from './source-ast.mjs';
 
 /**
@@ -18,8 +19,6 @@ import { parseSource, stringFragments } from './source-ast.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const TOKEN_CSS = 'apps/app/src/globals.css';
-/** The website's components, which own its type roles. */
-const WEBSITE_CSS = 'apps/marketing/src/site.css';
 /** The website's type roles: the page, section and card titles, lead, body and note. */
 const WEBSITE_ROLE = /^\.cl-(?:(?:phero|lhero|shead|fcard)-title|lead|body|note)$/;
 const MARKETING_SURFACE = '[data-marketing-surface]';
@@ -364,7 +363,8 @@ export function refreshGeneratedBlocks(document, blocks) {
 function readSources(base) {
   return {
     tokenCss: readFileSync(join(base, TOKEN_CSS), 'utf8'),
-    websiteCss: readFileSync(join(base, WEBSITE_CSS), 'utf8'),
+    // The website's components, which own its type roles, across all their sheets.
+    websiteCss: readMarketingCss(base),
     document: readFileSync(join(base, DESIGN_DOC), 'utf8'),
   };
 }

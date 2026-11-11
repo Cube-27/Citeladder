@@ -1,0 +1,21 @@
+/* ---------- Reading pages: guides, posts, legal and reference (D36) ----------
+   The shared Prose keeps its 720 column for tables, figures and code; on the
+   website running text holds to a 65-character measure inside it, and links
+   in copy, footnote markers included, are ink with an underline: the accent
+   stays a mark (D35). */
+.cl-site .cl-prose > :is(p, ul, ol, h2, h3, h4, blockquote, dl) {
+  max-width: 65ch;
+}
+
+.cl-site .cl-prose a,
+.cl-site .cl-ahead .cl-ahead-lead a {
+  color: var(--color-ink);
+}
+
+.cl-site .cl-icite a,
+.cl-site .cl-prose .cl-icite a {
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}

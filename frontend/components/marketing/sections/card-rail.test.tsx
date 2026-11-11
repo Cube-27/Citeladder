@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 
 import { mountCardRail } from './card-rail';
-import { CardRail, RailCard } from './features';
+import { CardRail, RailCard } from './rail-cards';
 
 function renderRail({ scrollWidth, clientWidth }: { scrollWidth: number; clientWidth: number }) {
   const { container } = render(

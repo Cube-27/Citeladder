@@ -1,0 +1,226 @@
+/* ---------- PricingCard and PagePlans ---------- */
+.cl-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  height: 100%;
+  padding: 32px;
+  border-radius: var(--site-radius-card);
+  background: var(--tint-neutral);
+  color: var(--color-ink);
+}
+
+.cl-plan--featured {
+  background: var(--tint-mint);
+}
+
+.cl-plan-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cl-plan-namerow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 24px;
+}
+
+.cl-plan-name {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-title-sm);
+  font-weight: 500;
+  line-height: var(--text-title-sm--line-height);
+}
+
+.cl-plan-desc {
+  min-height: 52px;
+  margin: 0;
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+
+.cl-plan-pricing {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cl-plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+}
+
+.cl-plan-amount {
+  color: var(--color-ink);
+  font-size: var(--text-site-feature);
+  font-weight: 500;
+  line-height: var(--text-site-feature--line-height);
+  letter-spacing: var(--text-stat--letter-spacing);
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-plan-period {
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+}
+
+.cl-plan-note {
+  min-height: 20px;
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+}
+
+.cl-plan-cta > * {
+  width: 100%;
+}
+
+.cl-plan-features {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-line);
+}
+
+.cl-plan-ftitle {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-label);
+  font-weight: 400;
+  line-height: var(--text-label--line-height);
+}
+
+.cl-page-plans-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 24px;
+}
+
+.cl-page-plans-grid {
+  display: grid;
+  align-items: stretch;
+  gap: 24px;
+}
+
+@media (max-width: 1023px) {
+  .cl-page-plans-grid {
+    gap: 16px;
+  }
+}
+
+/* ---------- Website tables: PricingTable ---------- */
+.cl-wtable {
+  position: relative;
+  overflow-x: auto;
+  border-radius: var(--site-radius-card);
+  background: var(--tint-neutral);
+}
+
+.cl-wtable table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.cl-wtable th,
+.cl-wtable td {
+  padding: 16px 20px;
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+  text-align: left;
+  vertical-align: top;
+}
+
+.cl-wtable thead th {
+  padding-top: 24px;
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink-secondary);
+  font-weight: 400;
+  vertical-align: bottom;
+}
+
+.cl-wtable tbody th {
+  color: var(--color-ink);
+  font-weight: 400;
+}
+
+.cl-wtable tbody td {
+  color: var(--color-ink);
+}
+
+.cl-wtable tbody tr + tr > * {
+  border-top: 1px solid var(--color-line);
+}
+
+.cl-wt-group th {
+  padding: 8px 20px;
+  background: var(--color-surface-sunken);
+}
+
+.cl-wtable tbody + tbody .cl-wt-group th {
+  border-top: 1px solid var(--color-line);
+}
+
+.cl-wt-yes {
+  display: inline-flex;
+  color: var(--color-ink);
+}
+
+.cl-wt-no {
+  display: inline-flex;
+  color: var(--color-ink-muted);
+}
+
+.cl-ptable-label {
+  width: 34%;
+}
+
+.cl-ptable-plan {
+  display: block;
+  color: var(--color-ink);
+  font-size: var(--text-title-sm);
+  font-weight: 500;
+  line-height: var(--text-title-sm--line-height);
+}
+
+.cl-ptable-price {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-ink-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-data);
+  font-weight: 400;
+  line-height: var(--text-data--line-height);
+}
+
+@media (max-width: 767px) {
+  .cl-wtable table {
+    min-width: 560px;
+  }
+
+  .cl-ptable-label {
+    width: 160px;
+  }
+
+  .cl-wtable thead th:first-child,
+  .cl-wtable tbody th[scope='row'] {
+    position: sticky;
+    z-index: 1;
+    left: 0;
+    background: var(--color-surface);
+  }
+}

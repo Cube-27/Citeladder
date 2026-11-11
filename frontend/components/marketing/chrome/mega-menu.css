@@ -1,0 +1,111 @@
+/* ---------- MegaMenu (the shared popup draws its frame) ---------- */
+.cl-mega {
+  padding: 12px;
+}
+
+/* Fixed columns give each menu its own width for the popup to follow. */
+
+.cl-mega .cl-mega-groups {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 280px);
+  gap: 8px;
+}
+
+.cl-mega-group {
+  min-width: 0;
+  padding-top: 12px;
+}
+
+.cl-mega-head {
+  margin-bottom: 8px;
+  padding: 0 12px;
+}
+
+.cl-mega-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-mega-item {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+
+.cl-mega-item--text {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 8px 12px;
+}
+
+.cl-mega-item:hover,
+.cl-mega-foot:hover {
+  background: var(--color-surface-sunken);
+}
+
+.cl-mega-icon {
+  display: inline-flex;
+  color: var(--color-ink-secondary);
+}
+
+.cl-mega-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* An external row's arrow stays inline after the label, centred on its line. */
+
+.cl-mega-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-ink);
+  font-size: var(--text-heading);
+  font-weight: 400;
+  line-height: var(--text-heading--line-height);
+  white-space: nowrap;
+}
+
+.cl-mega-item[aria-current='page'] .cl-mega-title {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cl-mega-ext {
+  flex: none;
+  color: var(--color-ink-muted);
+}
+
+.cl-mega-desc {
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body-sm);
+  font-weight: 400;
+  line-height: var(--text-body-sm--line-height);
+}
+
+.cl-mega-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-paper);
+  text-decoration: none;
+}
+
+.cl-mega-foot .cl-mega-desc {
+  flex: 1;
+  min-width: 0;
+}
+
+.cl-mega-foot-arrow {
+  color: var(--color-ink);
+}

@@ -14,7 +14,7 @@ test('type metrics must consume a text role in every stylesheet', () => {
   );
   assert.deepEqual(rules('.a { line-height: 1; } .b { font-size: inherit; }'), []);
   // The stylesheet that owns the website's type roles reads the scale too.
-  const website = 'apps/marketing/src/site.css';
+  const website = 'apps/marketing/src/site-base.css';
   assert.deepEqual(rules('.cl-lead, .cl-body { font-size: 1.125rem; }', website), ['css-type']);
   assert.deepEqual(
     rules(

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 import { CheckList, columnsFor } from './site-parts';
+import './pricing.css';
 
 /**
  * PricingCard: one plan. The description, price note and name row reserve

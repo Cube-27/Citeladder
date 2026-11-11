@@ -3,6 +3,7 @@ import { Callout, type CalloutTone } from '@/components/ui/callout';
 import { Tag } from '@/components/ui/tag';
 
 import { headingId, withOccurrenceKeys } from './heading-id';
+import './reading.css';
 
 type RichPart = Extract<BlogBlock, { type: 'richParagraph' }>['content'][number];
 

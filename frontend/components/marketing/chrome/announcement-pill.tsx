@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { ArrowRight } from 'lucide-react';
 
+import './announcement-pill.css';
+
 /**
  * AnnouncementPill: one line of news above the landing hero, with an
  * optional tag. With an `href` the whole pill is the link.

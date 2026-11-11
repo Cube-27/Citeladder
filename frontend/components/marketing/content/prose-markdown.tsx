@@ -6,6 +6,7 @@ import { rehypeProseBlocks } from '@/components/content/prose-blocks';
 
 import { FaqList } from '../sections/steps-faq-cta';
 import { headingId } from './heading-id';
+import './reading.css';
 
 /** The guide's h2 headings, as Toc items whose ids match the rendered headings. */
 export function researchHeadings(markdown: string) {

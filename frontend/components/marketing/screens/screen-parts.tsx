@@ -19,6 +19,7 @@ import { ControlCount, TAB_TRACK, tabClasses } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
 import { ENGINE_KEYS, ENGINE_NAMES, type Change } from './demo-data';
+import './screen-parts.css';
 
 /**
  * The parts the full app screens share (`ScreenAppVisibility`,

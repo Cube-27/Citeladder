@@ -1,6 +1,8 @@
 import type { FormEvent, ReactNode } from 'react';
 import { Lock } from 'lucide-react';
 
+import './page-form.css';
+
 /**
  * PageForm: a website form card (contact, demo) with its header, a status
  * slot, the fields, and a foot holding the Turnstile check and the submit

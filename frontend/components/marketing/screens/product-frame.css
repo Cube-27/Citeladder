@@ -1,0 +1,181 @@
+/* ---------- ProductFrame ---------- */
+.cl-frame {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+}
+
+/* The product image's frame: a 20px radius, 8px round its well (D31). It is
+   set off by its stage fill (below), never a border or shadow (D44). */
+
+.cl-frame-card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 8px;
+  border-radius: var(--site-radius-card);
+  background: var(--color-surface);
+}
+
+/* The well holds the screen; its height is the screen's. In a cell taller
+   than the screen (a bento row beside a taller tile) it grows and centres the
+   screen. `overflow` only guards browsers without container query units.
+   With no supporting text the frame is one card (D31): the well has no fill
+   or edge and the vignette sits straight on the card. */
+
+.cl-frame-well {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Only a FeatureCard, whose copy sits under its image, gets the well (D31,
+   a stage since D35): the card radius (D36), and small padding round the
+   screen, tighter top and bottom. */
+
+.cl-fcard .cl-frame-well {
+  padding: 12px 16px;
+  border-radius: var(--site-radius-card);
+}
+
+@media (max-width: 767px) {
+  .cl-fcard .cl-frame-well {
+    padding: 8px 12px;
+  }
+}
+
+/* A vignette's frame is at most 760 wide (a 694px card at 1440), centred in
+   a wider slot, so a card image is never stretched across the page. In a
+   FeatureCard the card is the frame and the well takes the card's width.
+   When a bento row is taller than a tile's own content, the vignette fills
+   its well and its rows share the extra height, so neighbouring tiles match
+   with no empty band of grey. */
+
+.cl-frame--fluid {
+  width: 100%;
+  max-width: 760px;
+  margin-inline: auto;
+}
+
+.cl-fcard > .cl-frame--fluid {
+  max-width: none;
+}
+
+.cl-frame--fluid .cl-frame-screen {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+/* The fit: this box is the query container and its screen scales to
+   min(1, container width / screen width). `tan(atan2(a, b))` is a / b as a
+   plain number (CSS cannot divide two lengths yet). A transform leaves
+   layout alone, so negative margins shrink the screen's layout box to its
+   scaled size and the well's height follows: no script, no layout shift. */
+
+.cl-frame--scale .cl-frame-screen {
+  display: flex;
+  justify-content: center;
+  container-type: inline-size;
+}
+
+.cl-frame--scale .cl-frame-screen > .cl-screen {
+  --screen-fit: min(1, tan(atan2(100cqi, var(--screen-w))));
+
+  flex: none;
+  margin-right: calc(var(--screen-w) * (var(--screen-fit) - 1));
+  margin-bottom: calc(var(--screen-h) * (var(--screen-fit) - 1));
+  transform: scale(var(--screen-fit));
+  transform-origin: 0 0;
+}
+
+.cl-frame-caption {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px 8px 0;
+}
+
+.cl-frame-title {
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: var(--text-title-sm);
+  line-height: var(--text-title-sm--line-height);
+}
+
+.cl-frame-text {
+  max-width: var(--container-narrow);
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+
+/* ---------- The stage: tints over paper, with grain ---------- */
+.cl-frame-card {
+  background-color: var(--color-paper);
+  background-image:
+    var(--stage-grain), radial-gradient(90% 120% at 0% 0%, var(--stage-a) 0%, transparent 70%),
+    radial-gradient(90% 120% at 100% 100%, var(--stage-b) 0%, transparent 70%),
+    radial-gradient(70% 90% at 100% 0%, var(--stage-c) 0%, transparent 70%);
+  background-size:
+    200px 200px,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+  background-blend-mode: soft-light, normal, normal, normal;
+}
+
+/* ---------- A product image on its own: stage, then its white card ---------- */
+/* The frame's card becomes the stage: no edge or shadow of its own. */
+
+.cl-frame-card {
+  padding: 48px;
+  border: 0;
+  border-radius: var(--site-radius-stage);
+  box-shadow: none;
+}
+
+/* The well has no fill of its own (D45), and lets the card's shadow out. */
+
+.cl-frame-card > .cl-frame-well {
+  overflow: visible;
+  border: 0;
+}
+
+/* The picture's own white card, lifted off its ground by a shadow (D45). */
+
+.cl-frame-card > .cl-frame-well > .cl-frame-screen {
+  overflow: hidden;
+  border-radius: var(--site-radius-inner);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-pop);
+}
+
+@media (max-width: 767px) {
+  .cl-frame-card {
+    padding: 16px;
+    border-radius: var(--site-radius-card);
+  }
+}
+
+/* A full app screen rises out of the bottom of its stage and fades into the
+   page there, like a window seen through the paper. */
+
+.cl-frame--scale > .cl-frame-card {
+  padding-bottom: 0;
+  -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+}
+
+.cl-frame--scale > .cl-frame-card > .cl-frame-well {
+  border-bottom: 0;
+  border-radius: var(--site-radius-card) var(--site-radius-card) 0 0;
+}
+
+.cl-frame--scale > .cl-frame-card > .cl-frame-well > .cl-frame-screen {
+  border-radius: var(--site-radius-inner) var(--site-radius-inner) 0 0;
+}

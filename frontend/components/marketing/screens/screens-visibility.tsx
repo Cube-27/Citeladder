@@ -30,6 +30,8 @@ import {
 } from './screen-parts';
 import { Vignette, VignetteBar, VignetteRows, fourRows } from './screen-vignette';
 import { BrandTable, VisibilityTrend, percent } from './visibility-demo';
+import './screen-vignette.css';
+import './screen-app.css';
 
 function Cite({ index }: Readonly<{ index: number }>) {
   const source = ANSWER_SOURCES.find((entry) => entry.index === index);

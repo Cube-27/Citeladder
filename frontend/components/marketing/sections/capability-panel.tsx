@@ -1,5 +1,7 @@
 import { useId, type CSSProperties } from 'react';
 
+import './capability-panel.css';
+
 export type Capability = Readonly<{ href: string; text: string }>;
 
 /** A row's place in the list, which sets when the lifted bar reaches it. */
