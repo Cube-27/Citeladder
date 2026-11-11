@@ -10,10 +10,10 @@
  * copy and anything a visitor could have typed never reach it.
  */
 import type { HtmlElement, HtmlNode } from '../../web-evidence/html.ts';
-import { ancestors, parentElement } from '../../web-evidence/html.ts';
+import { ancestors, isElement, parentElement } from '../../web-evidence/html.ts';
 import { analysisPolicy, limits } from './policy.ts';
 
-export type ReferenceSnippet = { html: string; truncated: boolean };
+type ReferenceSnippet = { html: string; truncated: boolean };
 
 const KEPT = new Set(analysisPolicy.facts.reference_snippet_kept_attributes);
 /** Elements whose content is code or embedded documents: dropped whole. */
@@ -67,8 +67,6 @@ function openTag(node: HtmlElement) {
   }
   return `<${parts.join(' ')}>`;
 }
-
-const isElement = (node: HtmlNode): node is HtmlElement => 'tagName' in node;
 
 type Pending = HtmlNode | { close: string };
 

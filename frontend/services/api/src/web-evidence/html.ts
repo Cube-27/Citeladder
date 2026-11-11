@@ -21,7 +21,7 @@ export function document(body: Buffer, charset = '') {
   const declared = META_CHARSET.exec(body.subarray(0, SNIFF_BYTES).toString('latin1'))?.[1];
   return parse((decoder(charset) ?? decoder(declared) ?? new TextDecoder('utf-8')).decode(body));
 }
-const isElement = (node: HtmlNode): node is HtmlElement => 'tagName' in node;
+export const isElement = (node: HtmlNode): node is HtmlElement => 'tagName' in node;
 const isText = (node: HtmlNode): node is HtmlText => node.nodeName === '#text';
 /**
  * Pushes `items` last-first so the stack pops them in order. A loop, not a

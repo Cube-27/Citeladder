@@ -15,7 +15,7 @@ import { createApp } from '../src/app.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { importCatalog } from './commerce-support.ts';
 import { auditTenant } from './audit-fixtures.ts';
-import { recordAnswer } from './commerce-answer-fixtures.ts';
+import { addCompetitor, recordAnswer } from './commerce-answer-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
@@ -39,32 +39,6 @@ async function answer(t: Tenant, text: string): Promise<string> {
   const { taskId } = await recordAnswer(db, t, text, { runtime, worker: 'overview-worker' });
   tasks.push(taskId);
   return taskId;
-}
-
-async function approvedCompetitor(t: Tenant, name: string) {
-  const product = await db
-    .selectFrom('commerce_products')
-    .select('id')
-    .where('workspace_id', '=', t.workspaceId)
-    .where('name', '=', 'Acme Road Runner')
-    .executeTakeFirstOrThrow();
-  await db
-    .insertInto('commerce_competitor_candidates')
-    .values({
-      id: randomUUID(),
-      workspace_id: t.workspaceId,
-      project_id: t.projectId,
-      target_kind: 'product',
-      target_id: product.id,
-      canonical_url: `https://rival.example/products/${name.toLowerCase().replaceAll(' ', '-')}`,
-      product_name: name,
-      brand_name: name.split(' ')[0]!,
-      evidence: '{}',
-      source_kind: 'provider',
-      state: 'approved',
-      created_at: new Date(),
-    })
-    .execute();
 }
 
 const merchant = (task: string, product: string, host: string) =>
@@ -121,7 +95,7 @@ beforeAll(async () => {
       { workspaceId: tenant.workspaceId, projectId: tenant.projectId },
       CATALOG,
     );
-  await approvedCompetitor(t, 'Rival Pacer');
+  await addCompetitor(db, t, 'Rival Pacer');
 
   const first = await answer(
     t,

@@ -148,15 +148,7 @@ function anchorDiagnostics(value: unknown) {
         ? { anchor_text: withoutQuery(text) }
         : {}),
       ...(Array.isArray(diagnostic.destinations)
-        ? {
-            destinations: [
-              ...new Set(
-                diagnostic.destinations
-                  .filter((url): url is string => typeof url === 'string')
-                  .map(withoutQuery),
-              ),
-            ],
-          }
+        ? { destinations: distinctWithoutQuery(diagnostic.destinations) }
         : {}),
     };
   });
@@ -262,7 +254,10 @@ export function withoutQuery(url: string) {
   const end = url.search(/[?#]/u);
   return end < 0 ? url : url.slice(0, end);
 }
-const nullableWithoutQuery = (url: string | null) => (url === null ? null : withoutQuery(url));
+/** The string URLs among `values` without query or fragment, query variants folded, in order. */
+const distinctWithoutQuery = (values: readonly unknown[]) => [
+  ...new Set(values.filter((url): url is string => typeof url === 'string').map(withoutQuery)),
+];
 const looksLikeUrl = (value: string) => /^https?:\/\//iu.test(value);
 const SUMMARY_TEXT_CHARS = 160;
 
@@ -298,14 +293,7 @@ function failingTargetsSummary(evidence: Record<string, unknown>, targets: reado
  * check's own total of pages.
  */
 function affectedPagesSummary(evidence: Record<string, unknown>, pages: readonly unknown[]) {
-  const urls = [
-    ...new Set(
-      pages
-        .map((page) => record(page).url)
-        .filter((url): url is string => typeof url === 'string')
-        .map(withoutQuery),
-    ),
-  ];
+  const urls = distinctWithoutQuery(pages.map((page) => record(page).url));
   return {
     affected_pages: urls.slice(0, mcpPolicy.rule_evidence_items),
     affected_page_count: typeof evidence.count === 'number' ? evidence.count : urls.length,
@@ -643,7 +631,7 @@ export async function pageText(
     state: 'available',
     url: withoutQuery(page.url),
     ...pageCopy(page),
-    final_url: nullableWithoutQuery(page.final_url),
+    final_url: page.final_url === null ? null : withoutQuery(page.final_url),
     page_kind: page.page_kind,
     site_url_id: page.site_url_id,
     fetched_at: page.fetched_at,

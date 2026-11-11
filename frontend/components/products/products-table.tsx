@@ -19,7 +19,7 @@ import type {
   CommerceProductSort,
 } from '@citeladder/contracts/commerce-suite';
 import {
-  holderLabel,
+  holderCaption,
   PRODUCT_COLUMNS,
   productCell,
   type ProductCell,
@@ -62,18 +62,20 @@ export function MetricValue({ cell }: Readonly<{ cell: ProductCell }>) {
   );
 }
 
-/** The product cell: its page (in the table's window), its brand and who holds it. */
-function ProductName({
+/** The product cell: its page (in the read's window), its brand and who holds it. */
+export function ProductName({
   row,
   scope,
-}: Readonly<{ row: CommerceProductRow; scope: ProductScopeFilters }>) {
-  const caption = [row.brand, holderLabel(row.kind)].filter(Boolean).join(' · ');
+}: Readonly<{
+  row: Pick<CommerceProductRow, 'holder_id' | 'name' | 'brand' | 'kind'>;
+  scope: ProductScopeFilters;
+}>) {
   const name = (
     <TextLink href={productHref(row.holder_id, scope)} text="inherit">
       {row.name}
     </TextLink>
   );
-  return <TableCellLines title primary={name} secondary={caption} />;
+  return <TableCellLines title primary={name} secondary={holderCaption(row)} />;
 }
 
 /**

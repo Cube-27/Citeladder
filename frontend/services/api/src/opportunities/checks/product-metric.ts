@@ -8,6 +8,7 @@
 import { z } from 'zod';
 
 import { ownedHosts } from '../../commerce/discovery-validation.ts';
+import type { ExecutionScope } from '../../commerce/products.ts';
 import type { Database } from '../../db/database.ts';
 import { policy } from '../../config.ts';
 import {
@@ -36,15 +37,22 @@ function productOf(member: MemberFacts) {
   return parsed.success ? { rule: productMetricRule(member.rule_id), ...parsed.data } : null;
 }
 
+/** The check's executions: every engine and prompt over its window, within `bounds`. */
+const checkWindow = (check: Check, bounds: { after?: Date; until: Date }): ExecutionScope => ({
+  windowDays: check.window_days,
+  engine: null,
+  promptSet: null,
+  ...bounds,
+});
+
 /** The check's metric over one window of executions. */
 async function reading(
   db: Database,
   scope: Scope,
   check: Check,
-  bounds: { after?: Date; until: Date },
+  window: ExecutionScope,
   owned: readonly string[],
 ): Promise<{ reading: MetricReading; executions: number } | null> {
-  const window = { windowDays: check.window_days, engine: null, promptSet: null, ...bounds };
   const found = await productRow(db, scope, window, check.product_id);
   if (!found) return null;
   return {
@@ -72,7 +80,8 @@ export const productMetricCheck: CheckModule<'product_metric'> = {
         ...product.rule,
         window_days: m.WINDOW_DAYS,
       };
-      const before = await reading(db, scope, check, { until: new Date(declaredAt) }, owned); // NOSONAR -- One transaction connection.
+      const window = checkWindow(check, { until: new Date(declaredAt) });
+      const before = await reading(db, scope, check, window, owned); // NOSONAR -- One transaction connection.
       if (before?.reading.state === 'measured') check.baseline_value = before.reading.value;
       checks.push({ member, check });
     }
@@ -84,11 +93,11 @@ export const productMetricCheck: CheckModule<'product_metric'> = {
       return outcome(ctx.reading, 'unavailable', 'unsupported_window');
     const scope = { workspaceId: d.workspace_id, projectId: d.project_id };
     const owned = await once(ctx, 'owned_hosts', () => ownedHosts(ctx.db, scope));
-    const bounds = {
+    const window = checkWindow(check, {
       after: new Date(d.declared_implemented_at),
       until: new Date(source.observed_at),
-    };
-    const after = await reading(ctx.db, scope, check, bounds, owned);
+    });
+    const after = await reading(ctx.db, scope, check, window, owned);
     if (!after) return outcome(ctx.reading, 'unavailable', 'product_not_in_catalog');
     const read = after.reading;
     if (read.state === 'unknown') return outcome(ctx.reading, 'unavailable', read.reason);
@@ -98,7 +107,6 @@ export const productMetricCheck: CheckModule<'product_metric'> = {
         'waiting',
         after.executions ? read.reason : 'no_answers_after_go_live',
       );
-    const window = { windowDays: check.window_days, engine: null, promptSet: null, ...bounds };
     const ids = await observationIds(ctx.db, scope, window, [check.product_id]);
     for (const id of ids.get(check.product_id) ?? []) ctx.result.metric_ids.add(id);
     return outcome(ctx.reading, clears(check, read.value) ? 'met' : 'unmet');
