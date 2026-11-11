@@ -81,13 +81,17 @@ async function targetIdentity(db: Database, scope: Scope, kind: string, target: 
     throw new ActionTargetError('Page target is outside the owned domains');
   return { key: pageGroupKey(target), url: target };
 }
+/** An Agent target's text, trimmed; throws `ActionTargetError` for a kind the Agent cannot target. */
+function agentTarget(kind: string, rawTarget: string) {
+  if (!a.AGENT_TARGET_KINDS.includes(kind)) throw new ActionTargetError('Unsupported Agent target');
+  return rawTarget.trim();
+}
 /**
  * The Action group an Agent target names, without creating it: equal keys are
  * one Action. Throws `ActionTargetError` for a target no Action can carry.
  */
 export async function agentTargetKey(db: Database, scope: Scope, kind: string, rawTarget: string) {
-  if (!a.AGENT_TARGET_KINDS.includes(kind)) throw new ActionTargetError('Unsupported Agent target');
-  return (await targetIdentity(db, scope, kind, rawTarget.trim())).key;
+  return (await targetIdentity(db, scope, kind, agentTarget(kind, rawTarget))).key;
 }
 /** Caller owns the transaction. Refresh and attachments share its project lock. */
 export async function attachOrCreateAction(
@@ -97,8 +101,7 @@ export async function attachOrCreateAction(
   rawTarget: string,
   userId: string | null,
 ) {
-  if (!a.AGENT_TARGET_KINDS.includes(kind)) throw new ActionTargetError('Unsupported Agent target');
-  const target = rawTarget.trim();
+  const target = agentTarget(kind, rawTarget);
   await acquireProjectLock(db, scope.projectId);
   const identity = await targetIdentity(db, scope, kind, target);
   const now = new Date();
@@ -378,12 +381,10 @@ function declarableIds(action: ActionRow): string[] {
  * or missing rows are never read.
  */
 export async function declarableMembers(db: Database, action: ActionRow) {
-  const current = stringList(action.member_opportunity_ids);
-  if (current.length)
-    return { members: await findingsOf(db, action, current, false), resolved: false };
-  const ids = stringList(action.last_member_opportunity_ids);
+  const ids = declarableIds(action);
   if (!ids.length) return { members: [], resolved: false };
-  return { members: await findingsOf(db, action, ids, true), resolved: true };
+  const resolved = stringList(action.member_opportunity_ids).length === 0;
+  return { members: await findingsOf(db, action, ids, resolved), resolved };
 }
 
 /** The Action's live members keyed by its id, so it runs beside the Action read. */

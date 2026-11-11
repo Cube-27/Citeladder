@@ -16,6 +16,16 @@ type NamedTarget = { kind: 'page' | 'planned_page'; target: string };
 /** The longest target a document can hold for the person's choice (`agent_outputs.target_label`). */
 const NAMED_TARGET_MAX_CHARS = 255;
 
+/** `work`'s result, or null for a target no Action can carry (`ActionTargetError`). */
+async function unlessInvalidTarget<T>(work: Promise<T>): Promise<T | null> {
+  try {
+    return await work;
+  } catch (error) {
+    if (error instanceof ActionTargetError) return null;
+    throw error;
+  }
+}
+
 function namedTarget(payload: OutputPayload): NamedTarget | null {
   const target = payload.target?.trim();
   return payload.target_kind && target ? { kind: payload.target_kind, target } : null;
@@ -36,13 +46,10 @@ export const attachAgentTarget: AttachTarget = async (db, chat, output, payload,
     await recordNamedTarget(db, chat, output, output.action_id, named);
     return;
   }
-  let action;
-  try {
-    action = await attachOrCreateAction(db, ownerOf(chat), named.kind, named.target, userId);
-  } catch (error) {
-    if (error instanceof ActionTargetError) return;
-    throw error;
-  }
+  const action = await unlessInvalidTarget(
+    attachOrCreateAction(db, ownerOf(chat), named.kind, named.target, userId),
+  );
+  if (!action) return;
   await db
     .updateTable('agent_chats')
     .set({ action_id: action.id })
@@ -64,13 +71,10 @@ async function recordNamedTarget(
 ) {
   if (output.target_kind !== null) return;
   const action = await outputAction(db, chat, actionId);
-  let key: string;
-  try {
-    key = await agentTargetKey(db, ownerOf(chat), named.kind, named.target);
-  } catch (error) {
-    if (error instanceof ActionTargetError) return;
-    throw error;
-  }
+  const key = await unlessInvalidTarget(
+    agentTargetKey(db, ownerOf(chat), named.kind, named.target),
+  );
+  if (key === null) return;
   if (key === action.group_key) {
     await setOutputAction(db, chat, output.id, action);
     return;
@@ -120,19 +124,16 @@ export async function chooseOutputTarget(
   await acquireProjectLock(db, chat.project_id);
   if (await anchorsDeclaration(db, chat, output.id, proposal.action.id))
     throw new AgentError('output_conflict');
-  let target;
-  try {
-    target = await attachOrCreateAction(
+  const target = await unlessInvalidTarget(
+    attachOrCreateAction(
       db,
       ownerOf(chat),
       proposal.named.kind,
       proposal.named.target,
       scope.userId,
-    );
-  } catch (error) {
-    if (error instanceof ActionTargetError) throw new AgentError('output_conflict');
-    throw error;
-  }
+    ),
+  );
+  if (!target) throw new AgentError('output_conflict');
   await setOutputAction(db, chat, output.id, target);
   // The Action it left may read as open again; the one it joined, as in progress.
   await refreshActionStatus(db, chat.workspace_id, proposal.action.id);

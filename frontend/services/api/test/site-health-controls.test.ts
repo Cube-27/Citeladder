@@ -1080,6 +1080,72 @@ describe('crawl-control HTTP contracts', () => {
     );
   });
 
+  it('records who chose to ignore robots.txt, and Recrawl keeps that choice', async () => {
+    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+    const { email } = await db
+      .selectFrom('users')
+      .select('email')
+      .where('id', '=', tenant.userId)
+      .executeTakeFirstOrThrow();
+    // The person is the signed-in caller; a body cannot name someone else.
+    const forged = await request(tenant, '/site-crawls', 'POST', {
+      project_id: tenant.projectId,
+      robots: 'ignore',
+      robots_decision: { user_id: randomUUID(), email: 'x@example.test', decided_at: null },
+    });
+    expect(forged.status).toBe(422);
+    const created = await request(tenant, '/site-crawls', 'POST', {
+      project_id: tenant.projectId,
+      robots: 'ignore',
+    });
+    expect(created.status).toBe(201);
+    const source = siteCrawlSchema.parse(await created.json());
+    expect(source.robots).toMatchObject({ handling: 'ignore', decided_by_email: email });
+    const frozen = async (id: string) =>
+      record(
+        (
+          await db
+            .selectFrom('site_crawls')
+            .select('configuration')
+            .where('id', '=', id)
+            .executeTakeFirstOrThrow()
+        ).configuration,
+      );
+    expect(record((await frozen(source.id)).robots_decision).user_id).toBe(tenant.userId);
+
+    await db
+      .updateTable('site_crawls')
+      .set({ status: 'completed' })
+      .where('id', '=', source.id)
+      .execute();
+    const rerun = await request(tenant, `/site-crawls/${source.id}/recrawl`, 'POST');
+    expect(rerun.status).toBe(201);
+    const next = siteCrawlSchema.parse(await rerun.json());
+    expect(next.robots).toEqual(source.robots);
+    expect((await frozen(next.id)).robots_decision).toEqual(
+      (await frozen(source.id)).robots_decision,
+    );
+
+    // A crawl started without the choice respects robots.txt.
+    await db
+      .updateTable('site_crawls')
+      .set({ status: 'completed' })
+      .where('id', '=', next.id)
+      .execute();
+    const plain = await request(tenant, '/site-crawls', 'POST', { project_id: tenant.projectId });
+    expect(siteCrawlSchema.parse(await plain.json()).robots).toEqual({
+      handling: 'respect',
+      decided_by_email: null,
+      decided_at: null,
+    });
+  });
+
+  it('refuses to ignore robots.txt without a confirming person', () => {
+    expect(() => controls({ project_id: randomUUID(), robots: 'ignore' })).toThrow(
+      'ignoring robots.txt needs a confirmed, signed-in person',
+    );
+  });
+
   it('serializes a terminal rerun with full-crawl admission and keeps one active run', async () => {
     const seed = await fixtures.crawl();
     await allow(seed, 1);

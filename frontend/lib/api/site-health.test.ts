@@ -53,6 +53,7 @@ const inventoryRow = {
   aeo_measurement_state: 'not_measured' as const,
   aeo_measurement_reason: '',
   main_content_indexable: null,
+  robots_excluded: false,
   last_audited: null,
   page_kind: null,
 };
@@ -220,6 +221,7 @@ describe('inventoryRowSchema (nullable analysis summaries)', () => {
       aeo_measurement_state: 'measured',
       aeo_measurement_reason: '',
       main_content_indexable: true,
+      robots_excluded: false,
       last_audited: '2026-07-15T00:00:00Z',
       page_kind: 'article',
     };
@@ -363,6 +365,7 @@ describe('pageDetailSchema (field_cwv_available literal false)', () => {
     aeo_measurement_state: 'measured',
     aeo_measurement_reason: '',
     main_content_indexable: true,
+    robots_excluded: false,
     issue_count: 2,
     last_audited: '2026-07-15T00:00:00Z',
     page_kind: 'homepage',
