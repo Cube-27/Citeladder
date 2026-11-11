@@ -41,6 +41,8 @@ function metric(visibilityRate: number) {
     owned_citation_rate: null,
     avg_position: null,
     visibility_delta: null,
+    mentions: 0,
+    brands: [],
   };
 }
 
@@ -99,8 +101,9 @@ describe('PromptLibrary first load', () => {
     ).toEqual([
       'Prompt',
       'Visibility',
-      'Owned citation rate',
-      'Avg. mention position',
+      expect.stringMatching(/^Mentions/),
+      expect.stringMatching(/^Citations/),
+      expect.stringMatching(/^Position/),
       'Change',
       'Enabled',
       'Actions',

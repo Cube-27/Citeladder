@@ -106,6 +106,8 @@ function history(latestStates: PromptHistory['points'][number]['answer_states'])
       scoring_rule_version: 'v1',
       created_at: '2026-03-16T00:00:00Z',
       action_id: ACTION,
+      mentions: 0,
+      brands: [],
       counts: counts(latestStates ? 2 : 0, 1),
       answer_states: latestStates,
       outcomes: latestStates

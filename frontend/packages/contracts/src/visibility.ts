@@ -21,6 +21,18 @@ export const measurementCountsSchema = responseObject({
   not_run: z.number().int().nullable(),
 });
 
+// One brand named in a set of answers: the tracked brand or a competitor, with
+// how many of those answers named it. The cached mark this project holds, or a
+// site to derive one from.
+export const namedBrandSchema = responseObject({
+  kind: z.enum(['brand', 'competitor']),
+  name: z.string(),
+  responses: z.number().int(),
+  logo_url: z.string().nullable(),
+  website: z.string().nullable(),
+});
+export type NamedBrand = z.infer<typeof namedBrandSchema>;
+
 // ---------------------------------------------------------------------------
 // Visibility dashboard (selected-run projection)
 // ---------------------------------------------------------------------------
@@ -170,6 +182,10 @@ export const promptMetricItemSchema = responseObject({
   answer_states: answerStatesSchema.nullable().optional(),
   // The Action that targets this prompt, when the refresh opened one.
   action_id: uuid().nullable().optional(),
+  // Brands named in this prompt's answers: `mentions` is the distinct count;
+  // `brands` is the leading few, most answers first.
+  mentions: z.number().int(),
+  brands: z.array(namedBrandSchema),
   outcomes: z
     .array(
       responseObject({

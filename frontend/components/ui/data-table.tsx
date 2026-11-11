@@ -61,8 +61,10 @@ export type DataTablePager = Omit<ComponentProps<typeof Pager>, 'frame' | 'class
  *            of a paged table is exactly `rowLines` tall: its text is cut to
  *            that many lines (the rest in a tooltip), so a page of long
  *            values is no taller than a page of short ones. Rows of two
- *            lines (`rowLines={2}`, cells on `TableCellLines`; 3 for a
- *            two-line title) are padded with blanks. A fixed list with `pageSize` and no
+ *            lines (`rowLines={2}`, cells on `TableCellLines`) are padded
+ *            with blanks. `rowLines={3}` lets a title wrap to two lines, and
+ *            only a row whose title wraps grows; a title that fits keeps its
+ *            row compact (owner, 2026-11-11). A fixed list with `pageSize` and no
  *            pager (top movers) always reserves its rows.
  *   pager  — the shared `Pager`, framed as the table's footer, drawn only
  *            while the rows run past one page: a table that fits on one page

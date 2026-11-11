@@ -12,7 +12,8 @@ import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/compone
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { Switch } from '@/components/ui/switch';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
-import type { Prompt, PromptStatus } from '@citeladder/contracts';
+import { NamedBrandMarks } from '@/components/visibility/named-brand-marks';
+import type { NamedBrand, Prompt, PromptStatus } from '@citeladder/contracts';
 import { ICONS } from '@/lib/icons';
 import { promptHistoryHref } from '@/lib/prompts/history';
 import { formatPosition, formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
@@ -24,6 +25,9 @@ export type PromptMeasurement = {
   ownedCitationRate: number | null;
   change: number | null;
   position: number | null;
+  /** Distinct brands named in the answers; `brands` is the leading few. */
+  mentions: number;
+  brands: readonly NamedBrand[];
 };
 
 /** Rows per page on the prompt table (client-side; the list arrives whole). */
@@ -161,9 +165,8 @@ export function PromptTable({
 }
 
 /**
- * The measured columns are drawn only once a run exists. "Avg. mention
- * position" is a mean mention ordinal, not a competitive rank — the rankings
- * table owns that word — so it is named for what it measures.
+ * The measured columns are drawn only once a run exists. The headers are one
+ * word (owner, 2026-11-11); each hint says exactly what its figure measures.
  */
 function promptColumns(measured: boolean): DataTableColumn[] {
   return [
@@ -176,8 +179,26 @@ function promptColumns(measured: boolean): DataTableColumn[] {
 
 const MEASURED_COLUMNS: readonly DataTableColumn[] = [
   { key: 'visibility', label: 'Visibility', width: 'figure', numeric: true },
-  { key: 'owned', label: 'Owned citation rate', width: 'metric', numeric: true },
-  { key: 'position', label: 'Avg. mention position', width: 'metric', numeric: true },
+  {
+    key: 'mentions',
+    label: 'Mentions',
+    width: 'status',
+    hint: "The brands named in this prompt's answers: yours and your competitors'.",
+  },
+  {
+    key: 'citations',
+    label: 'Citations',
+    width: 'figure',
+    numeric: true,
+    hint: "The share of this prompt's answers that cited one of your pages.",
+  },
+  {
+    key: 'position',
+    label: 'Position',
+    width: 'figure',
+    numeric: true,
+    hint: 'Where your brand was named among the brands in an answer, averaged over the answers that named it.',
+  },
   { key: 'change', label: 'Change', width: 'figure', numeric: true },
 ];
 
@@ -188,6 +209,17 @@ function MeasuredCells({ measurement }: Readonly<{ measurement?: PromptMeasureme
       <TableCell numeric>
         {measurement ? (
           formatRate(measurement.visibilityRate)
+        ) : (
+          <UnavailableValue state="not_measured" />
+        )}
+      </TableCell>
+      <TableCell>
+        {measurement ? (
+          <NamedBrandMarks
+            brands={measurement.brands}
+            total={measurement.mentions}
+            answers="this prompt's answers"
+          />
         ) : (
           <UnavailableValue state="not_measured" />
         )}
