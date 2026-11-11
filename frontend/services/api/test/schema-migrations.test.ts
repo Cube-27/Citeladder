@@ -87,6 +87,7 @@ describe('a fresh database', () => {
       '0018_drop_action_surface',
       '0019_page_documents',
       '0020_page_suggestions',
+      '0021_commerce_carousel',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -112,6 +113,7 @@ describe('a fresh database', () => {
       { version: '0018_drop_action_surface' },
       { version: '0019_page_documents' },
       { version: '0020_page_suggestions' },
+      { version: '0021_commerce_carousel' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -161,6 +163,7 @@ describe('an existing database', () => {
       '0018_drop_action_surface',
       '0019_page_documents',
       '0020_page_suggestions',
+      '0021_commerce_carousel',
     ]);
     // A URL identity keeps no per-sighting discovery status.
     expect(await columns(client, 'site_urls')).not.toContain('discovery_status');
@@ -240,6 +243,7 @@ describe('an existing database', () => {
       { version: '0018_drop_action_surface' },
       { version: '0019_page_documents' },
       { version: '0020_page_suggestions' },
+      { version: '0021_commerce_carousel' },
     ]);
   }, 120000);
 });
