@@ -230,9 +230,8 @@ export function checkStateLabel(check: {
   if (check.kind !== 'issue_family') return CHECK_STATE_LABEL[check.state];
   if (check.state === 'met') return 'Verified';
   if (check.state === 'unavailable') return 'Inconclusive';
-  if (check.state === 'unmet' && check.reason !== null && FAMILY_UNMET_LABEL[check.reason])
-    return FAMILY_UNMET_LABEL[check.reason];
-  return CHECK_STATE_LABEL[check.state];
+  const subtype = check.state === 'unmet' && check.reason ? FAMILY_UNMET_LABEL[check.reason] : null;
+  return subtype ?? CHECK_STATE_LABEL[check.state];
 }
 
 /** The declaration's overall reading, never the raw observation kind. */
