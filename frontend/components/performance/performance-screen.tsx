@@ -22,7 +22,6 @@ import { useRangeProjection } from './use-range-projection';
 import { ListScreen, RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { Stack } from '@/components/ui/layout';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import type { FilterDefinition } from '@/components/ui/all-filters';
 import type { ChartTone } from '@/components/ui/chart';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { QueryState } from '@/components/ui/query-state';
@@ -31,7 +30,11 @@ import { StatusLine } from '@/components/ui/status-line';
 import { formatCount, formatWindowDate } from '@/lib/format';
 import { ChartNoAxesColumn } from 'lucide-react';
 import { integrationsQueries } from '@/lib/api/integrations';
-import { performanceQueries, type PerformanceDashboard } from '@/lib/api/performance';
+import {
+  performanceQueries,
+  type PerformanceDashboard,
+  type PerformanceGranularity,
+} from '@/lib/api/performance';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import {
@@ -244,14 +247,19 @@ function performanceControls({
   onSelectRange,
   onOpenDialog,
   onReset,
-  interval,
+  hasChart,
+  granularity,
+  onGranularityChange,
   windowLabel,
 }: Readonly<{
   selection: RangeSelection;
   onSelectRange: (selection: RangeSelection) => void;
   onOpenDialog: (tab: 'filter' | 'compare') => void;
   onReset: () => void;
-  interval: FilterDefinition | null;
+  /** The chart interval is a filter only while there is a chart to draw. */
+  hasChart: boolean;
+  granularity: PerformanceGranularity;
+  onGranularityChange: (next: PerformanceGranularity) => void;
   windowLabel: string;
 }>): FilterBarProps {
   return {
@@ -265,7 +273,7 @@ function performanceControls({
         onReset={onReset}
       />
     ),
-    filters: interval ? [interval] : undefined,
+    filters: hasChart ? [granularityFilter(granularity, onGranularityChange)] : undefined,
     status: <PerformanceWindowCaption label={windowLabel} />,
   };
 }
@@ -365,9 +373,9 @@ export function PerformanceScreen() {
           setDialogOpen(true);
         },
         onReset: resetFilters,
-        interval: evidence.hasSearchConsoleTotals
-          ? granularityFilter(granularity, setGranularity)
-          : null,
+        hasChart: evidence.hasSearchConsoleTotals,
+        granularity,
+        onGranularityChange: setGranularity,
         windowLabel: selectedLabel,
       })}
     >
