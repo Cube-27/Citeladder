@@ -424,8 +424,8 @@ describe('A content-gap Action', () => {
     renderDetail();
 
     const evidence = await screen.findByRole('list', { name: 'Evidence records' });
-    expect(within(evidence).getByRole('listitem')).toHaveTextContent(
-      /^Missing structured data on owned page · Inferred · Nov 10, 2026$/,
+    expect(within(evidence).getByRole('listitem').textContent).toBe(
+      'Missing structured data on owned page · Inferred · Nov 10, 2026',
     );
 
     const overview = screen.getByRole('region', { name: 'Overview' });

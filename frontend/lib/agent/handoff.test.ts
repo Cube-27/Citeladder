@@ -202,7 +202,11 @@ describe('developerTicket', () => {
     ]);
     expect(lines).toContain('- https://acme.test/p/49');
     expect(lines).not.toContain('- https://acme.test/p/50');
-    expect(lines).toContain('- and 70 more, listed on the Action in CiteLadder');
+    // 52 stored pages of 120: 2 more are on the Action, 68 are stored nowhere.
+    expect(lines.slice(lines.indexOf('- https://acme.test/p/49') + 1).slice(0, 2)).toEqual([
+      '- and 2 more pages, listed on the Action in CiteLadder',
+      '- and 68 more pages with this issue, not listed',
+    ]);
     expect(lines).toContain('- No evidence is recorded for this Action.');
     expect(
       ticket.endsWith(

@@ -15,6 +15,7 @@ import type { DatedEvidence } from '@/lib/agent/evidence';
 import { checkKindLabel, checkStateLabel, measurementLegLabel } from '@/lib/agent/vocabulary';
 import type { ActionDetail } from '@/lib/api/actions';
 import { DEVELOPER_TICKET_PAGES_MAX } from '@/lib/config/agent';
+import { pluralCount } from '@/lib/format';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -323,12 +324,20 @@ function affectedPages(action: TicketAction, formatDate: (iso: string) => string
     ? `crawl completed ${formatDate(cohort.crawl_completed_at)}`
     : 'crawl completion not recorded';
   const shown = cohort.pages.slice(0, DEVELOPER_TICKET_PAGES_MAX);
-  const more = cohort.page_count - shown.length;
+  // The Action lists the cohort's stored pages; a large family stores only the
+  // first of its affected pages, so the rest are listed nowhere.
+  const onAction = cohort.pages.length - shown.length;
+  const unlisted = cohort.page_count - cohort.pages.length;
   return [
-    `${cohort.rule_label} on ${cohort.page_count} ${cohort.page_count === 1 ? 'page' : 'pages'} (${read}):`,
+    `${cohort.rule_label} on ${pluralCount(cohort.page_count, 'page')} (${read}):`,
     '',
     ...shown.map((page) => line(page.url)),
-    ...(more > 0 ? [line(`and ${more} more, listed on the Action in CiteLadder`)] : []),
+    ...(onAction > 0
+      ? [line(`and ${pluralCount(onAction, 'more page')}, listed on the Action in CiteLadder`)]
+      : []),
+    ...(unlisted > 0
+      ? [line(`and ${pluralCount(unlisted, 'more page')} with this issue, not listed`)]
+      : []),
   ];
 }
 
@@ -352,10 +361,10 @@ function verification(action: TicketAction, formatDate: (iso: string) => string)
   return [
     ...action.members.map((member) => {
       const leg = action.member_measurement[member.id];
-      const by = leg ? measurementLegLabel(leg) : null;
-      return line(
-        `${member.title}: ${by ? `checked by ${by.toLowerCase()}` : 'not measured automatically'}`,
-      );
+      const how = leg
+        ? 'checked by ' + measurementLegLabel(leg).toLowerCase()
+        : 'not measured automatically';
+      return line(`${member.title}: ${how}`);
     }),
     '',
     'When it ships, record the deployment on the Action in CiteLadder: Mark implemented with the day it went live and the release, pull request or commit. Readings before that day are not counted.',
