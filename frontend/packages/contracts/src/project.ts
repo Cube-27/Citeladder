@@ -143,6 +143,9 @@ const promptAdmissionDropReasons = [
   'placeholder',
   // Joins two alternatives ("for a spare room or a commercial bay"): one need per prompt.
   'two_needs',
+  // A core question answered with general advice, ideas or kinds of things,
+  // not specific named products, services, brands or providers.
+  'advice',
   'observed_copy',
   'off_topic',
   'location_unplanned',

@@ -529,13 +529,22 @@ describe('GET /visibility/prompts', () => {
       ...best,
       engine: 'chatgpt',
       transportModel: 'model-a',
-      analysis: { brandMentioned: true, avgPosition: 1 },
+      analysis: {
+        brandMentioned: true,
+        avgPosition: 1,
+        brandMentions: ['Acme Corp'],
+        competitorMentions: ['Globex'],
+      },
     });
     await fixtures.execution(tenant, {
       ...best,
       engine: 'claude',
       transportModel: 'model-b',
-      analysis: { brandMentioned: false, score: { competitors_mentioned: ['Globex'] } },
+      analysis: {
+        brandMentioned: false,
+        score: { competitors_mentioned: ['Globex'] },
+        competitorMentions: ['Globex', 'Initech'],
+      },
     });
     await fixtures.execution(tenant, {
       ...best,
@@ -567,6 +576,16 @@ describe('GET /visibility/prompts', () => {
       avg_position: 1,
       comparison_status: 'no_baseline',
     });
+    // Every brand the answers named, most answers first: competitors count too.
+    expect(scored).toMatchObject({
+      mentions: 3,
+      brands: [
+        { kind: 'competitor', name: 'Globex', responses: 2 },
+        { kind: 'brand', name: 'Acme Corp', responses: 1 },
+        { kind: 'competitor', name: 'Initech', responses: 1 },
+      ],
+    });
+    expect([body[0]!.mentions, body[0]!.brands]).toEqual([0, []]);
     expect(scored.outcomes).toEqual([
       expect.objectContaining({
         logical_engine: 'chatgpt',
@@ -601,7 +620,11 @@ describe('GET /visibility/prompts', () => {
         auditId,
         promptIndex: 0,
         promptText: 'best crm',
-        analysis: { brandMentioned: brand },
+        analysis: {
+          brandMentioned: brand,
+          brandMentions: brand ? ['Acme Corp'] : [],
+          competitorMentions: ['Globex'],
+        },
       });
       await fixtures.promptScore(tenant, auditId, {
         promptIndex: 0,
@@ -620,6 +643,12 @@ describe('GET /visibility/prompts', () => {
       rolling_four: [],
       counts: { responses: 2, brand_responses: 1 },
       visibility_rate: 0.5,
+      // A name's answers are summed across the pooled runs.
+      mentions: 2,
+      brands: [
+        { name: 'Globex', responses: 2 },
+        { name: 'Acme Corp', responses: 1 },
+      ],
     });
   });
 });

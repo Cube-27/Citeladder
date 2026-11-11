@@ -6,11 +6,49 @@
  * the tracked brand wins a name collision, and a name that resolves to
  * nothing has no mark rather than a borrowed one.
  */
+import type { NamedBrand } from '@citeladder/contracts/visibility';
+
 import { brandLogoUrl, competitorLogoUrl } from '../projects/logos.ts';
 import type { Database } from '../db/database.ts';
-import { scalarText } from '../text-order.ts';
+import { compareText, scalarText } from '../text-order.ts';
 
 export type BrandIdentity = { logo_url: string | null; website: string | null };
+
+/** How many named brands a table row shows before its overflow count. */
+const LEADING_BRANDS = 3;
+
+/** One name recorded in a set of answers, and how many of them named it. */
+export type BrandCount = Pick<NamedBrand, 'kind' | 'name' | 'responses'>;
+
+/**
+ * A row's named brands: the distinct count, and the leading few with their
+ * marks — most answers first, then the tracked brand before competitors, then
+ * by name.
+ */
+export function leadingBrands(
+  counts: readonly BrandCount[],
+  identities: ReadonlyMap<string, BrandIdentity>,
+): { mentions: number; brands: NamedBrand[] } {
+  const ordered = [...counts].sort(
+    (left, right) =>
+      right.responses - left.responses ||
+      compareText(left.kind, right.kind) ||
+      compareText(left.name, right.name),
+  );
+  return {
+    mentions: ordered.length,
+    brands: ordered.slice(0, LEADING_BRANDS).map((entry) => {
+      const identity = identities.get(identityKey(entry.name));
+      return {
+        kind: entry.kind,
+        name: entry.name,
+        responses: entry.responses,
+        logo_url: identity?.logo_url ?? null,
+        website: identity?.website ?? null,
+      };
+    }),
+  };
+}
 
 /**
  * `identity_key`: whitespace-collapsed and lowercased. Lowercasing rather than

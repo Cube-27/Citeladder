@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { citationSchema } from './audits.ts';
 import { pageEntitySchema } from './source-pages.ts';
+import { namedBrandSchema } from './visibility.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
@@ -168,16 +169,7 @@ export const visibilitySourcesSchema = responseObject({
       // Brands named in the ANSWERS that cited this page, never found on it.
       // `mentions` is the distinct count; `brands` is the leading few.
       mentions: z.number().int(),
-      brands: z.array(
-        responseObject({
-          kind: z.enum(['brand', 'competitor']),
-          name: z.string(),
-          responses: z.number().int(),
-          // The cached mark this project holds, or a site to derive one from.
-          logo_url: z.string().nullable(),
-          website: z.string().nullable(),
-        }),
-      ),
+      brands: z.array(namedBrandSchema),
     }),
   ),
 });

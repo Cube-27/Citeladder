@@ -230,10 +230,11 @@ function isPlainText(children: ReactNode) {
 export const TableTextLinesContext = createContext<1 | 2>(2);
 
 /**
- * The lines a `TableCellLines` title takes: one by default; two in a
+ * The lines a `TableCellLines` title may take: one by default; up to two in a
  * `DataTable` of three-line rows (`rowLines={3}`), where a long title (a
- * prompt) wraps over its caption instead of being cut at one line. The
- * title then always holds two lines, so every row keeps one height.
+ * prompt) wraps over its caption instead of being cut at one line. A title
+ * that fits on one line keeps its row compact (owner, 2026-11-11): only a
+ * wrapping title makes its row taller.
  */
 export const TableTitleLinesContext = createContext<1 | 2>(1);
 
@@ -357,10 +358,7 @@ export function TableCellLines({
   const titleLines = useContext(TableTitleLinesContext);
   return (
     <span className="grid min-w-0">
-      <ClampText
-        lines={titleLines}
-        className={cn(title ? textRole('itemTitle') : undefined, titleLines === 2 && 'min-h-[2lh]')}
-      >
+      <ClampText lines={titleLines} className={title ? textRole('itemTitle') : undefined}>
         {primary}
       </ClampText>
       {secondary ? (

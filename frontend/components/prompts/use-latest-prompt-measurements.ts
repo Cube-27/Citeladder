@@ -45,6 +45,8 @@ export function useLatestPromptMeasurements(
         ownedCitationRate: row.owned_citation_rate ?? null,
         change: row.visibility_delta ?? null,
         position: row.avg_position ?? null,
+        mentions: row.mentions,
+        brands: row.brands,
       });
     }
     return map;

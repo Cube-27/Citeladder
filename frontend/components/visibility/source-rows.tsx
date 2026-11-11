@@ -7,7 +7,6 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Inline } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
-import { BrandMark } from '@/components/ui/brand-mark';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
 import { MissingValue } from '@/components/ui/unavailable-value';
@@ -32,6 +31,7 @@ import {
   SourceName,
   sortProps,
 } from '@/components/visibility/source-cells';
+import { NamedBrandMarks } from '@/components/visibility/named-brand-marks';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { standingLabel } from '@/lib/visibility/source-pages';
 import { pageFormatBasis } from '@/lib/visibility/vocabulary';
@@ -225,43 +225,6 @@ export function DomainTable({
   );
 }
 
-/**
- * The brands named alongside this source, as the marks a reader recognises.
- *
- * Real logos only — `BrandMark` falls back to initials rather than inventing a
- * mark. The overflow count is the rest of the distinct brands, so the cell
- * never grows past three chips no matter how crowded the answer was.
- */
-function MentionedChips({
-  brands,
-  total,
-}: Readonly<{ brands: SourceItem['brands']; total: number }>) {
-  if (!brands.length) return <MissingValue />;
-  const overflow = total - brands.length;
-  return (
-    <Inline as="span" gap="tight">
-      {brands.map((brand) => (
-        <Tooltip
-          key={`${brand.kind}:${brand.name}`}
-          content={`${brand.name} — named in ${brand.responses} of the answers citing this URL`}
-        >
-          <span className="inline-flex">
-            <BrandMark
-              name={brand.name}
-              logoUrl={brand.logo_url}
-              websiteUrl={brand.website}
-              placement="inline"
-            />
-          </span>
-        </Tooltip>
-      ))}
-      {overflow > 0 ? (
-        <span className={textRole('caption', 'text-ink-secondary tabular-nums')}>+{overflow}</span>
-      ) : null}
-    </Inline>
-  );
-}
-
 function standingTone(standing: SourceItem['standing']) {
   if (standing === 'gap') return 'warning';
   if (standing === 'listed') return 'success';
@@ -431,7 +394,11 @@ export function UrlTable({
           <NumericCell value={ratio(row.citation_rate)} />
           <NumericCell value={count(row.mentions)} desktopOnly />
           <TableCell desktopOnly>
-            <MentionedChips brands={row.brands} total={row.mentions} />
+            <NamedBrandMarks
+              brands={row.brands}
+              total={row.mentions}
+              answers="the answers citing this URL"
+            />
           </TableCell>
           <NumericCell value={sinceLabel(row.last_cited_at)} desktopOnly />
         </TableRow>

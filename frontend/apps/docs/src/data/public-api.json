@@ -3396,6 +3396,31 @@
         "required": ["used", "limit"],
         "additionalProperties": false
       },
+      "NamedBrand": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["brand", "competitor"]
+          },
+          "name": {
+            "type": "string"
+          },
+          "responses": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "logo_url": {
+            "type": ["string", "null"]
+          },
+          "website": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["kind", "name", "responses", "logo_url", "website"],
+        "additionalProperties": false
+      },
       "ObservedCompetitor": {
         "type": "object",
         "properties": {
@@ -4816,6 +4841,7 @@
                 "too_many_words",
                 "placeholder",
                 "two_needs",
+                "advice",
                 "observed_copy",
                 "off_topic",
                 "location_unplanned",
@@ -5221,6 +5247,17 @@
               }
             ]
           },
+          "mentions": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "brands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NamedBrand"
+            }
+          },
           "outcomes": {
             "type": "array",
             "items": {
@@ -5295,7 +5332,9 @@
           "decline_confirmed",
           "analyzer_version",
           "scoring_rule_version",
-          "created_at"
+          "created_at",
+          "mentions",
+          "brands"
         ],
         "additionalProperties": false
       },
@@ -8089,29 +8128,7 @@
                 "brands": {
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "enum": ["brand", "competitor"]
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "responses": {
-                        "type": "integer",
-                        "minimum": -9007199254740991,
-                        "maximum": 9007199254740991
-                      },
-                      "logo_url": {
-                        "type": ["string", "null"]
-                      },
-                      "website": {
-                        "type": ["string", "null"]
-                      }
-                    },
-                    "required": ["kind", "name", "responses", "logo_url", "website"],
-                    "additionalProperties": false
+                    "$ref": "#/components/schemas/NamedBrand"
                   }
                 }
               },

@@ -66,13 +66,21 @@ describe('PromptTable pagination', () => {
     scrollWidth.mockRestore();
   });
 
-  it('opens each question on its history and shows its measured rates', () => {
+  it('opens each question on its history and shows its measured rates and named brands', () => {
     const prompt = makePrompt(7);
+    const unnamed = makePrompt(8);
+    const brand = (name: string, kind: 'brand' | 'competitor') => ({
+      kind,
+      name,
+      responses: 1,
+      logo_url: null,
+      website: null,
+    });
     render(
       <MemoryRouter>
         <TooltipProvider>
           <PromptTable
-            prompts={[prompt]}
+            prompts={[prompt, unnamed]}
             onEdit={() => {}}
             onDelete={() => {}}
             onToggleEnabled={() => {}}
@@ -80,7 +88,29 @@ describe('PromptTable pagination', () => {
               new Map([
                 [
                   prompt.id,
-                  { visibilityRate: 0.5, ownedCitationRate: 0.25, change: null, position: null },
+                  {
+                    visibilityRate: 0.5,
+                    ownedCitationRate: 0.25,
+                    change: null,
+                    position: 2,
+                    mentions: 4,
+                    brands: [
+                      brand('Acme', 'brand'),
+                      brand('Globex', 'competitor'),
+                      brand('Initech', 'competitor'),
+                    ],
+                  },
+                ],
+                [
+                  unnamed.id,
+                  {
+                    visibilityRate: 0,
+                    ownedCitationRate: 0,
+                    change: null,
+                    position: null,
+                    mentions: 0,
+                    brands: [],
+                  },
                 ],
               ])
             }
@@ -93,15 +123,26 @@ describe('PromptTable pagination', () => {
       'href',
       '/prompts/00000000-0000-4000-8000-000000000007',
     );
-    const [header, row] = screen.getAllByRole('row');
+    const [header, row, unnamedRow] = screen.getAllByRole('row');
     const columns = within(header!)
       .getAllByRole('columnheader')
       .map((cell) => cell.textContent);
-    const cells = within(row!)
-      .getAllByRole('cell')
-      .map((cell) => cell.textContent);
-    expect(cells[columns.indexOf('Visibility')]).toBe('50%');
-    expect(cells[columns.indexOf('Owned citation rate')]).toBe('25%');
+    expect(columns.slice(0, 6)).toEqual([
+      'Prompt',
+      'Visibility',
+      expect.stringMatching(/^Mentions/),
+      expect.stringMatching(/^Citations/),
+      expect.stringMatching(/^Position/),
+      'Change',
+    ]);
+    const cells = within(row!).getAllByRole('cell');
+    expect(cells[1]!.textContent).toBe('50%');
+    // Three marks, each named for a screen reader, then the fourth as overflow.
+    expect(cells[2]).toHaveTextContent('AcmeAGlobexGInitechI+1 more');
+    expect(cells[3]!.textContent).toBe('25%');
+    expect(cells[4]!.textContent).toBe('#2');
+    // Measured, and no brand named: zero, not the "not measured" mark.
+    expect(within(unnamedRow!).getAllByRole('cell')[2]!.textContent).toBe('None');
   });
 
   it('pages through rows with the page indicator and ghost buttons', async () => {
