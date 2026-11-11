@@ -1,5 +1,4 @@
 'use client';
-import type { KeyboardEvent } from 'react';
 import { Download, Folder } from 'lucide-react';
 import { crawlerResourceClassSchema } from '@citeladder/contracts/site-health';
 import { trafficStatusCode, type useTrafficData } from '@/lib/ai-traffic/use-traffic-data';
@@ -8,7 +7,12 @@ import { TRAFFIC_RANGES, VERIFICATION_OPTIONS } from '@/lib/config/crawl-logs';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { AllFilters, choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
+import {
+  AllFilters,
+  choiceFilter,
+  menuFieldKeys,
+  type FilterDefinition,
+} from '@/components/ui/all-filters';
 import { FilterField } from '@/components/ui/filter-bar';
 import { MenuItem } from '@/components/ui/menu';
 import { Icon } from '@/components/ui/icon';
@@ -193,17 +197,6 @@ function insightFilter({ model }: TrafficControlsProps): FilterDefinition | null
   };
 }
 
-/**
- * A typed field inside a menu: its keys edit the text, so they stop before the
- * menu, which would otherwise jump to an item by letter. Escape and Tab pass
- * through, and so does Left from an empty field, which returns to the list.
- */
-function fieldKeys(event: KeyboardEvent<HTMLInputElement>) {
-  if (event.key === 'Escape' || event.key === 'Tab') return;
-  if (event.key === 'ArrowLeft' && event.currentTarget.value === '') return;
-  event.stopPropagation();
-}
-
 function FolderField({ model }: ControlProps) {
   const { folder, setFolder } = model.selection;
   return (
@@ -212,7 +205,7 @@ function FolderField({ model }: ControlProps) {
       placeholder="Folder"
       value={folder ?? ''}
       onChange={(e) => setFolder(e.target.value || null)}
-      onKeyDown={fieldKeys}
+      onKeyDown={menuFieldKeys}
       startContent={<Icon icon={Folder} />}
     />
   );
@@ -252,7 +245,7 @@ function StatusField({ model }: ControlProps) {
       step={1}
       value={status ?? ''}
       onChange={(e) => setStatus(e.target.value || null)}
-      onKeyDown={fieldKeys}
+      onKeyDown={menuFieldKeys}
     />
   );
 }

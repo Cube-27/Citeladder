@@ -205,16 +205,10 @@ function settleSelectedGuess(
 }
 
 /**
- * The explicitly requested project. The workspace's list carries summaries,
- * so the detail read answers; it authorizes from the path, so a stale or
- * foreign remembered workspace can never hide a project.
- */
-function findRequestedProject(client: QueryClient, projectId: string): Promise<Project | null> {
-  return settle(client.ensureQueryData(projectQueries.detail(projectId)));
-}
-
-/**
- * Resolve the requested project and, once it names its workspace, settle the
+ * Resolve the requested project from its detail read (the workspace's list
+ * carries summaries only); the read authorizes from the path, so a stale or
+ * foreign remembered workspace can never hide a project. Once the project
+ * names its workspace, settle the
  * guess and make sure its reads are running. A guess that named the project's
  * own workspace already started them, and repeating the warm joins those
  * requests. A project contradicting the address's workspace is rejected by
@@ -233,7 +227,7 @@ async function requestedProject(
     guess: Guess | null;
   }>,
 ): Promise<Project | null> {
-  const project = await findRequestedProject(client, projectId);
+  const project = await settle(client.ensureQueryData(projectQueries.detail(projectId)));
   const scope =
     project && (!urlWorkspaceId || project.workspace_id === urlWorkspaceId)
       ? { projectId: project.id, workspaceId: project.workspace_id }

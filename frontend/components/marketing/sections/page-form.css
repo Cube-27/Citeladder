@@ -133,6 +133,7 @@
 @media (max-width: 767px) {
   .cl-page-form {
     padding: 24px 20px;
+    border-radius: var(--site-radius-card);
   }
 
   .cl-page-form-turnstile,
@@ -147,10 +148,4 @@
 
 .cl-page-form :is(.cl-page-form-head, .cl-page-form-foot) {
   border-color: color-mix(in srgb, var(--color-ink) 10%, transparent);
-}
-
-@media (max-width: 767px) {
-  .cl-page-form {
-    border-radius: var(--site-radius-card);
-  }
 }

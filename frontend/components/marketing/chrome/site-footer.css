@@ -192,11 +192,6 @@
   list-style: none;
 }
 
-.cl-footer-legal a,
-.cl-footer-cookie {
-  color: var(--color-footer-ink-muted);
-}
-
 .cl-footer-cookie {
   padding: 0;
   border: 0;
