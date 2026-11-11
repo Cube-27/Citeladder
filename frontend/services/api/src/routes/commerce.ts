@@ -11,6 +11,7 @@ import {
   commerceProductDetailSchema,
   commerceProductPageSchema,
   commerceProjectionSchema,
+  commerceShoppingOverviewSchema,
   competitorCandidateSchema,
   competitorDiscoveryTaskSchema,
   competitorDiscoverySchema,
@@ -28,6 +29,7 @@ import {
   manualBuyerPrompt,
 } from '../commerce/buyer-prompts.ts';
 import { importCatalog } from '../commerce/import.ts';
+import { shoppingOverview } from '../commerce/overview.ts';
 import { productDetail } from '../commerce/product-detail.ts';
 import { productMetrics } from '../commerce/products.ts';
 import {
@@ -207,6 +209,21 @@ export const commerceRoutes = [
         sort: query.sort,
         cursor: query.cursor,
         limit: query.limit,
+      });
+    },
+  }),
+  defineGetRoute({
+    ...family,
+    path: `${root}/overview`,
+    params: {
+      path: projectPath,
+      query: { category: { scalar: { kind: 'uuid' } }, window: windowParam },
+    },
+    response: commerceShoppingOverviewSchema,
+    async handle({ c, db }, { path, query }) {
+      return shoppingOverview(db, scopeOf(c, path.project_id), {
+        windowDays: query.window,
+        category: query.category,
       });
     },
   }),

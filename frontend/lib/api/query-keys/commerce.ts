@@ -12,6 +12,8 @@ export const commerceKeys = {
   /** One Products page: the filters' query string and the page's cursor. */
   products: (scope: ProjectScope, search: string, cursor: string | null) =>
     commerce.read('products', scope, search, cursor ?? 'first'),
+  /** The Shopping overview for the filters' query string (`overviewSearch`). */
+  overview: (scope: ProjectScope, search: string) => commerce.read('overview', scope, search),
   competitors: (scope: ProjectScope) => commerce.read('competitors', scope),
   buyerPrompts: (scope: ProjectScope) => commerce.read('buyer-prompts', scope),
   discoveryTasks: (scope: ProjectScope, taskIds: readonly string[]) =>
