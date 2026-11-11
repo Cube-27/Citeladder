@@ -45,10 +45,7 @@ export function nextOccurrence(cadence: CrawlScheduleCadence, anchor: Date, afte
 
 const iso = (value: Date | null) => value?.toISOString() ?? null;
 
-export function scheduleProjection(
-  projectId: string,
-  row: CrawlScheduleRow | undefined,
-): CrawlSchedule {
+function scheduleProjection(projectId: string, row: CrawlScheduleRow | undefined): CrawlSchedule {
   return {
     project_id: projectId,
     enabled: row?.enabled ?? false,
@@ -75,14 +72,20 @@ export async function readSchedule(db: Database, workspaceId: string, projectId:
   );
 }
 
+/**
+ * `last_outcome` describes the plan the person last chose, so turning the
+ * schedule off or replanning it clears it; only the scheduler turns a
+ * schedule off with a `failed` outcome left in place.
+ */
 function scheduleChange(current: CrawlScheduleRow, request: CrawlScheduleUpdateRequest, at: Date) {
   const { cadence } = request;
-  if (!request.enabled) return { cadence, enabled: false, next_run_at: null };
+  if (!request.enabled) return { cadence, enabled: false, next_run_at: null, last_outcome: null };
   if (current.enabled && current.cadence === cadence) return { cadence };
   return {
     cadence,
     enabled: true,
     next_run_at: nextOccurrence(cadence, at, at),
+    last_outcome: null,
     failure_count: 0,
     last_error: '',
     last_failure_at: null,

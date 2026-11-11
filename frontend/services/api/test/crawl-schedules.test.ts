@@ -178,6 +178,41 @@ describe('scheduled crawl occurrences', () => {
     });
   });
 
+  it('turns itself off after the last allowed failure, and turning it back on starts clean', async () => {
+    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+    await allow(tenant, 5);
+    await weekly(tenant);
+    await db
+      .updateTable('projects')
+      .set({ website_url: 'not a website' })
+      .where('id', '=', tenant.projectId)
+      .execute();
+    await db
+      .updateTable('crawl_schedules')
+      .set({ failure_count: 4 })
+      .where('project_id', '=', tenant.projectId)
+      .execute();
+
+    expect(await scheduler('exhausted').runOnce(due)).toBe(0);
+
+    expect(await schedule(tenant)).toMatchObject({
+      enabled: false,
+      next_run_at: null,
+      failure_count: 5,
+      last_outcome: 'failed',
+      last_error: 'invalid_root',
+    });
+
+    await weekly(tenant);
+    expect(await schedule(tenant)).toMatchObject({
+      enabled: true,
+      next_run_at: firstRun,
+      failure_count: 0,
+      last_outcome: null,
+      last_error: '',
+    });
+  });
+
   it('gives one due occurrence to one of two concurrent schedulers and leaves a live lease alone', async () => {
     const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
     await allow(tenant, 5);

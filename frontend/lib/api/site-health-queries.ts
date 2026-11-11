@@ -293,11 +293,6 @@ export const siteHealthMutations = {
         start.refreshed = refreshCrawlStart(client, input.project_id);
       },
     }),
-  /**
-   * Cancellation also changes the server-owned phase, so the whole projection
-   * refreshes at once instead of pairing the terminal crawl row with an
-   * active phase in the cache.
-   */
   /** The answer is the saved schedule, so it replaces the cached read. */
   updateCrawlSchedule: (scope: ProjectScope) =>
     mutationOptions({
@@ -306,6 +301,11 @@ export const siteHealthMutations = {
       onSuccess: (schedule, _input, _result, { client }) =>
         client.setQueryData(queryKeys.siteHealth.crawlSchedule(scope), schedule),
     }),
+  /**
+   * Cancellation also changes the server-owned phase, so the whole projection
+   * refreshes at once instead of pairing the terminal crawl row with an
+   * active phase in the cache.
+   */
   cancelCrawl: (scope: ProjectScope) =>
     mutationOptions({
       mutationFn: (crawlId: string) => siteHealthApi.cancelCrawl(crawlId, scoped(scope)),

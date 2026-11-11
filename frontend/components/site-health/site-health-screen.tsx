@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
@@ -16,7 +16,7 @@ import { PAGES_INVENTORY_URL_KEYS } from '@/components/site-health/inventory-sec
 import { AeoReadinessPanel } from '@/components/site-health/aeo-readiness-panel';
 import { ArchitecturePanel } from '@/components/site-health/architecture-panel';
 import { ChangesPanel } from '@/components/site-health/changes-panel';
-import { CrawlScheduleControl } from '@/components/site-health/crawl-schedule-control';
+import { useCrawlSchedule } from '@/components/site-health/crawl-schedule-control';
 import { InternalLinksPanel } from '@/components/site-health/internal-links-panel';
 import {
   useInternalLinksBands,
@@ -28,7 +28,7 @@ import { ReadError } from '@/components/ui/read-error';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { warmQuery } from '@/lib/api/query-client';
-import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
+import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { internalLinksQueries } from '@/lib/api/site-health-internal-links';
 import type { SiteHealthEntitlement } from '@citeladder/contracts';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -76,15 +76,7 @@ function SiteHealthContent({
   });
   const blocking = projectBlockingState(screen);
   const mutationsAllowed = !entitlementQuery.isError;
-  const scheduleScope = { workspaceId, projectId };
-  const scheduleQuery = useQuery({
-    ...siteHealthQueries.crawlSchedule(scheduleScope),
-    enabled: Boolean(crawl) && mutationsAllowed,
-  });
-  const scheduleMutation = useMutation(siteHealthMutations.updateCrawlSchedule(scheduleScope));
-  const saveSchedule = () => {
-    if (scheduleMutation.variables) scheduleMutation.mutate(scheduleMutation.variables);
-  };
+  const schedule = useCrawlSchedule({ workspaceId, projectId }, Boolean(crawl) && mutationsAllowed);
   // Internal links' search, filters and header actions act on the analysis its panel draws.
   const links = useInternalLinksBands({
     scope: { projectId, workspaceId },
@@ -106,13 +98,7 @@ function SiteHealthContent({
         startPending={startPending}
         onExport={tab === 'pages' ? () => runExport('csv', 'pages') : undefined}
         tabActions={linksActions}
-        schedule={
-          <CrawlScheduleControl
-            schedule={scheduleQuery.data}
-            pending={scheduleMutation.isPending}
-            onChange={(input) => scheduleMutation.mutate(input)}
-          />
-        }
+        schedule={schedule.control}
         onCancel={cancelCrawl}
         onStart={startCrawl}
         onRecrawl={recrawl}
@@ -145,14 +131,7 @@ function SiteHealthContent({
         ) : (
           <Stack gap="section" className="min-w-0">
             <SiteHealthNotices screen={screen} mutationsAllowed={mutationsAllowed} />
-            {scheduleMutation.isError ? (
-              <MutationNotice
-                notice={mutationNoticeForError(scheduleMutation.error, {
-                  action: 'save the crawl schedule',
-                })}
-                onRetry={saveSchedule}
-              />
-            ) : null}
+            {schedule.notice}
             {refreshFailures}
             <AnalysisPanel
               tab={tab}

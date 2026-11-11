@@ -1,6 +1,7 @@
 'use client';
 
 import { ChevronDown } from 'lucide-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import type { CrawlSchedule, CrawlScheduleCadence } from '@citeladder/contracts';
 
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,10 @@ import {
   MenuSeparator,
   MenuTrigger,
 } from '@/components/ui/menu';
+import { MutationNotice } from '@/components/ui/mutation-notice';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
+import type { ProjectScope } from '@/lib/api/query-keys/scope';
+import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 
 type Choice = 'off' | CrawlScheduleCadence;
 
@@ -30,8 +35,17 @@ const SKIPPED: Partial<Record<NonNullable<CrawlSchedule['last_outcome']>, string
   failed: 'Last run could not start a crawl. It will try again.',
 };
 
+/** The schedule turns itself off only after repeated failures; turning it off clears the outcome. */
+const TURNED_OFF = 'Turned off: scheduled crawls kept failing to start.';
+
 function choiceOf(schedule: CrawlSchedule | undefined): Choice {
   return schedule?.enabled ? schedule.cadence : 'off';
+}
+
+function outcomeNote(schedule: CrawlSchedule | undefined) {
+  if (!schedule?.last_outcome) return null;
+  if (schedule.enabled) return SKIPPED[schedule.last_outcome] ?? null;
+  return schedule.last_outcome === 'failed' ? TURNED_OFF : null;
 }
 
 /**
@@ -39,29 +53,37 @@ function choiceOf(schedule: CrawlSchedule | undefined): Choice {
  * reruns the newest crawl's scope and settings, as Recrawl does, and uses the
  * plan's page fetches like any crawl.
  */
-export function CrawlScheduleControl({
+function CrawlScheduleControl({
   schedule,
+  unavailable,
   pending,
   onChange,
 }: Readonly<{
-  /** Undefined while the schedule loads. */
+  /** Undefined while the schedule loads or when it could not be read. */
   schedule: CrawlSchedule | undefined;
+  /** The schedule could not be read. */
+  unavailable: boolean;
   pending: boolean;
   onChange: (choice: Readonly<{ enabled: boolean; cadence: CrawlScheduleCadence }>) => void;
 }>) {
   const current = choiceOf(schedule);
-  const label = CHOICES.find((choice) => choice.value === current)?.label ?? 'Off';
-  const skipped =
-    schedule?.enabled && schedule.last_outcome ? SKIPPED[schedule.last_outcome] : null;
+  const label = schedule
+    ? (CHOICES.find((choice) => choice.value === current)?.label ?? 'Off')
+    : null;
+  const note = outcomeNote(schedule);
+  let text = 'Schedule';
+  if (pending) text = 'Saving…';
+  else if (unavailable) text = 'Schedule unavailable';
+  else if (label) text = `Schedule: ${label}`;
   return (
     <Menu>
       <MenuTrigger asChild>
         <Button
           variant="secondary"
           disabled={!schedule || pending}
-          aria-label={`Crawl schedule: ${label}`}
+          aria-label={label ? `Crawl schedule: ${label}` : text}
         >
-          {pending ? 'Saving…' : `Schedule: ${label}`}
+          {text}
           <Icon icon={ChevronDown} />
         </Button>
       </MenuTrigger>
@@ -85,16 +107,42 @@ export function CrawlScheduleControl({
             </MenuRadioItem>
           ))}
         </MenuRadioGroup>
+        {schedule?.enabled || note ? <MenuSeparator /> : null}
         {schedule?.enabled ? (
-          <>
-            <MenuSeparator />
-            <MenuLabel>
-              Next crawl <DisplayTime value={schedule.next_run_at} dateOnly />
-            </MenuLabel>
-            {skipped ? <MenuLabel>{skipped}</MenuLabel> : null}
-          </>
+          <MenuLabel>
+            Next crawl <DisplayTime value={schedule.next_run_at} dateOnly />
+          </MenuLabel>
         ) : null}
+        {note ? <MenuLabel>{note}</MenuLabel> : null}
       </MenuContent>
     </Menu>
   );
+}
+
+/**
+ * The project's crawl schedule: the header control and, when saving failed, the
+ * notice with its retry. Reads only while `enabled`.
+ */
+export function useCrawlSchedule(scope: ProjectScope, enabled: boolean) {
+  const query = useQuery({ ...siteHealthQueries.crawlSchedule(scope), enabled });
+  const mutation = useMutation(siteHealthMutations.updateCrawlSchedule(scope));
+  const retry = () => {
+    if (mutation.variables) mutation.mutate(mutation.variables);
+  };
+  return {
+    control: (
+      <CrawlScheduleControl
+        schedule={query.data}
+        unavailable={query.isError}
+        pending={mutation.isPending}
+        onChange={(input) => mutation.mutate(input)}
+      />
+    ),
+    notice: mutation.isError ? (
+      <MutationNotice
+        notice={mutationNoticeForError(mutation.error, { action: 'save the crawl schedule' })}
+        onRetry={retry}
+      />
+    ) : null,
+  };
 }

@@ -140,6 +140,7 @@ export class CrawlScheduler {
           return false;
         }
         const failures = schedule.failure_count + 1;
+        const retrying = failures < this.settings.max_consecutive_failures;
         await scoped
           .set({
             ...release,
@@ -148,8 +149,10 @@ export class CrawlScheduler {
             last_outcome: 'failed',
             last_error: code ?? 'crawl_planning_failed',
             last_failure_at: at,
-            enabled: failures < this.settings.max_consecutive_failures,
-            next_run_at: new Date(at.getTime() + this.settings.failure_retry_seconds * 1000),
+            enabled: retrying,
+            next_run_at: retrying
+              ? new Date(at.getTime() + this.settings.failure_retry_seconds * 1000)
+              : null,
           })
           .execute();
         logger.warning('scheduled_crawl_failed', {
