@@ -422,13 +422,14 @@ async function namedBrands(
   scope: RunScope,
   query: { auditIds: readonly string[]; cohort: string; engine: string | null },
 ) {
+  const engine = query.engine ? sql`and answer.logical_engine = ${query.engine}` : sql``;
   const answers = sql`
     select answer.id, answer.audit_id, answer.prompt_index
     from response_analyses answer
     where answer.workspace_id = ${scope.workspaceId}
       and answer.audit_id in (${sql.join(query.auditIds)})
       and answer.cohort in (${sql.join([...selectedCohorts(query.cohort)])})
-      ${query.engine ? sql`and answer.logical_engine = ${query.engine}` : sql``}`;
+      ${engine}`;
   const { rows } = await sql<BrandCount & { audit_id: string; prompt_index: number }>`
     with answer as (${answers})
     select answer.audit_id, answer.prompt_index, 'brand' as kind, mention.brand_name as name,
