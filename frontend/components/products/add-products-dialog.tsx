@@ -234,7 +234,9 @@ export function AddProductsDialog({
           onClick={() =>
             apply.mutate({
               importId: staged.import_id,
-              excluded_categories: [...unticked],
+              // Every category shown cleared, so one also reached by a path
+              // without its cleared parent is left out as the review showed.
+              excluded_categories: [...leftOutCategories(staged.categories, unticked)],
             })
           }
         >

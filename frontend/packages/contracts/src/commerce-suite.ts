@@ -68,9 +68,9 @@ export const catalogImportSchema = z.strictObject({
     }),
   ),
 });
-export const catalogImportFormatSchema = z.enum(['csv', 'merchant_center', 'shopify']);
+const catalogImportFormatSchema = z.enum(['csv', 'merchant_center', 'shopify']);
 /** One category of a staged import's proposed tree, by its category key. */
-export const catalogCategoryProposalSchema = z.strictObject({
+const catalogCategoryProposalSchema = z.strictObject({
   key: z.string(),
   name: z.string(),
   /** The key one level up; null at the top. */

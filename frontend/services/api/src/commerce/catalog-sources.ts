@@ -99,7 +99,7 @@ export function parsePrice(value: string): { amount: number; currency: string } 
 }
 
 /** `A > B` into its category names; empty segments and non-names are dropped. */
-export function categoryPath(value: string): CategoryPath {
+function categoryPath(value: string): CategoryPath {
   const segments = value
     .split('>')
     .map((segment) => segment.trim().replaceAll(/\s+/gu, ' '))
@@ -177,7 +177,7 @@ function boundedRows<T>(rows: T[]): T[] {
 }
 
 /** The CSV template: `title` and `brand` required, the other columns optional. */
-export function parseTemplate(content: string): CatalogItem[] {
+function parseTemplate(content: string): CatalogItem[] {
   const { header, rows } = delimitedRecords(content);
   const missing = CATALOG_TEMPLATE_REQUIRED.filter((name) => !header.includes(name));
   if (missing.length) refuse(`The CSV template needs these columns: ${missing.join(', ')}`);
@@ -220,6 +220,13 @@ const xml = new XMLParser({
   isArray: (name) => name === 'item' || name === 'entry' || name === 'product_type',
 });
 
+/**
+ * An XML field's text. A repeated tag (an Atom entry's `<link href>` beside
+ * its `g:link`, both `link` without their prefix) gives its first text.
+ */
+const xmlText = (value: unknown): string =>
+  Array.isArray(value) ? (value.map(text).find(Boolean) ?? '') : text(value);
+
 function xmlFeed(content: string): FeedItem[] {
   if (XMLValidator.validate(content) !== true) refuse('Invalid XML feed');
   const document = record(xml.parse(content));
@@ -230,7 +237,9 @@ function xmlFeed(content: string): FeedItem[] {
     const types = fields.product_type;
     return {
       row_number: index + 1,
-      fields: Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, text(value)])),
+      fields: Object.fromEntries(
+        Object.entries(fields).map(([key, value]) => [key, xmlText(value)]),
+      ),
       product_types: Array.isArray(types) ? types.map(text) : [],
     };
   });
@@ -326,7 +335,7 @@ function feedProduct(group: NonEmpty<FeedItem>, grouped: boolean): CatalogItem {
 }
 
 /** A Merchant Center feed: CSV, TSV, XML (RSS or Atom) or JSON; `item_group_id` groups variants. */
-export function parseMerchantFeed(content: string): CatalogItem[] {
+function parseMerchantFeed(content: string): CatalogItem[] {
   const start = content.replace(/^\uFEFF/u, '').trimStart();
   let items: FeedItem[];
   if (start.startsWith('<')) items = xmlFeed(start);
@@ -360,12 +369,13 @@ const shopifyProduct = z.object({
 const shopifyPage = z.object({ products: z.array(z.unknown()) });
 
 /** The stored payload of a storefront fetch: the store host and each page body as fetched. */
-export const shopifyPayloadSchema = z.object({ store: z.string(), pages: z.array(z.string()) });
+const shopifyPayloadSchema = z.object({ store: z.string(), pages: z.array(z.string()) });
 
 /** HTML description text: tags removed, whitespace collapsed. */
 const plainText = (html: string) =>
   html
-    .replaceAll(/<[^>]*>/gu, ' ')
+    // `[^<>]` keeps an unclosed `<` from rescanning the rest of the text.
+    .replaceAll(/<[^<>]*>/gu, ' ')
     .replaceAll('&nbsp;', ' ')
     .replaceAll('&amp;', '&')
     .replaceAll(/\s+/gu, ' ')
@@ -413,7 +423,7 @@ function shopifyItem(store: string, rowNumber: number, raw: unknown): CatalogIte
 }
 
 /** A fetched storefront's products, numbered in page order. */
-export function parseShopifyPayload(content: string): CatalogItem[] {
+function parseShopifyPayload(content: string): CatalogItem[] {
   const payload = shopifyPayloadSchema.parse(JSON.parse(content));
   const products = payload.pages.flatMap((page) => shopifyPage.parse(JSON.parse(page)).products);
   return boundedRows(products).map((raw, index) => shopifyItem(payload.store, index + 1, raw));

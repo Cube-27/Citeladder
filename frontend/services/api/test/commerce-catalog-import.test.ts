@@ -183,6 +183,17 @@ describe('re-imports', () => {
     expect(revisions).toHaveLength(1);
   });
 
+  it('reports a later row repeating a product of the same file, categories included, as unchanged', async () => {
+    const t = await fixtures.tenant();
+    const row = 'Trail,Acme,TR-1,Footwear > Running';
+    const result = await importCatalog(
+      db,
+      scopeOf(t),
+      `title,brand,sku,category\n${row}\n${row}\n`,
+    );
+    expect(result).toMatchObject({ created: 1, updated: 0, unchanged: 1, rejected: 0 });
+  });
+
   it('updates the product a SKU matches under a different URL and records that URL as an alias', async () => {
     const t = await fixtures.tenant();
     const scope = scopeOf(t);

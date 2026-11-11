@@ -18,7 +18,7 @@ const shopify = policy.commerce.catalog_sources.shopify;
 const pageSchema = z.object({ products: z.array(z.unknown()) });
 
 /** The host a person typed as their store: a domain or a URL. */
-export function storeHost(value: string): string {
+function storeHost(value: string): string {
   try {
     const url = new URL(/^[a-z][a-z0-9+.-]*:\/\//iu.test(value) ? value : `https://${value}`);
     return url.hostname.toLowerCase().replace(/\.$/u, '');
@@ -34,6 +34,51 @@ const hosted = (host: string) =>
 
 function unavailable(message: string): never {
   throw new ApiError(422, message, { code: 'commerce_store_unavailable' });
+}
+
+/** One `products.json` page: the host that answered, after redirects, and its body. */
+async function fetchPage(
+  url: string,
+  context: {
+    fetcher: WebsiteFetcher;
+    allowed: (host: string) => boolean;
+    deadline: AbortSignal;
+  },
+): Promise<{ host: string; body: string }> {
+  try {
+    const response = await context.fetcher(url, {
+      maxBytes: shopify.page_max_bytes,
+      timeoutSeconds: shopify.timeout_seconds,
+      redirects: shopify.redirects,
+      signal: context.deadline,
+      contentTypes: shopify.content_types,
+      authorize: async (next) => {
+        if (!context.allowed(next.hostname.toLowerCase())) throw new FetchError('out_of_scope');
+      },
+    });
+    if (response.status !== 200)
+      unavailable(`The store answered HTTP ${response.status} for its product list`);
+    return {
+      host: new URL(response.url).hostname.toLowerCase(),
+      body: response.body.toString('utf8'),
+    };
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    return unavailable(
+      error instanceof FetchError
+        ? `The store could not be read (${error.code})`
+        : 'The store could not be read',
+    );
+  }
+}
+
+/** How many products a fetched page lists; a page that is not a product list is refused. */
+function pageProducts(body: string): number {
+  try {
+    return pageSchema.parse(JSON.parse(body)).products.length;
+  } catch {
+    return unavailable('The store did not return a Shopify product list');
+  }
 }
 
 /**
@@ -56,46 +101,23 @@ export async function fetchShopifyStore(
       "Only the project's own domains or a .myshopify.com store can be imported",
       { code: 'commerce_store_not_allowed' },
     );
-  const deadline = AbortSignal.timeout(shopify.deadline_seconds * 1000);
+  const context = {
+    fetcher,
+    allowed,
+    deadline: AbortSignal.timeout(shopify.deadline_seconds * 1000),
+  };
   const pages: string[] = [];
   let host = requested;
   let total = 0;
   for (let page = 1; page <= shopify.max_pages; page++) {
     const url = `https://${host}/products.json?limit=${shopify.page_size}&page=${page}`;
-    let body: string;
-    try {
-      const response = await fetcher(url, {
-        maxBytes: shopify.page_max_bytes,
-        timeoutSeconds: shopify.timeout_seconds,
-        redirects: shopify.redirects,
-        signal: deadline,
-        contentTypes: shopify.content_types,
-        authorize: async (next) => {
-          if (!allowed(next.hostname.toLowerCase())) throw new FetchError('out_of_scope');
-        },
-      });
-      if (response.status !== 200)
-        unavailable(`The store answered HTTP ${response.status} for its product list`);
-      host = new URL(response.url).hostname.toLowerCase();
-      body = response.body.toString('utf8');
-    } catch (error) {
-      if (error instanceof ApiError) throw error;
-      unavailable(
-        error instanceof FetchError
-          ? `The store could not be read (${error.code})`
-          : 'The store could not be read',
-      );
-    }
-    total += Buffer.byteLength(body, 'utf8');
+    const fetched = await fetchPage(url, context); // NOSONAR -- Pages follow one another: each starts on the host the last answered from.
+    host = fetched.host;
+    total += Buffer.byteLength(fetched.body, 'utf8');
     if (total > shopify.max_total_bytes) unavailable('The store catalog exceeds the size limit');
-    let products: unknown[];
-    try {
-      products = pageSchema.parse(JSON.parse(body)).products;
-    } catch {
-      unavailable('The store did not return a Shopify product list');
-    }
-    pages.push(body);
-    if (products.length < shopify.page_size) break;
+    const count = pageProducts(fetched.body);
+    pages.push(fetched.body);
+    if (count < shopify.page_size) break;
   }
   return { host, content: JSON.stringify({ store: host, pages }) };
 }

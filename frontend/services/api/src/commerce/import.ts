@@ -48,6 +48,7 @@ import {
   type CatalogFormat,
   type CatalogItem,
   type CatalogValues,
+  type CatalogVariant,
 } from './catalog-sources.ts';
 import { categorySet, comparable, editHolds, importedBaseline } from './edits.ts';
 import { categoryKey } from './projection-facts.ts';
@@ -185,7 +186,10 @@ class ProductIndex {
       db
         .selectFrom('commerce_product_categories as m')
         .innerJoin('commerce_categories as c', (join) =>
-          join.onRef('c.id', '=', 'm.category_id').onRef('c.workspace_id', '=', 'm.workspace_id'),
+          join
+            .onRef('c.id', '=', 'm.category_id')
+            .onRef('c.workspace_id', '=', 'm.workspace_id')
+            .onRef('c.project_id', '=', 'm.project_id'),
         )
         .select(['m.product_id', 'c.normalized_name'])
         .where('m.workspace_id', '=', scope.workspaceId)
@@ -265,6 +269,39 @@ function changes(product: Product, applied: CatalogValues) {
   });
 }
 
+/** An identifier match keeps the product's URL; a different URL in the row is an alias. */
+const aliasOf = (product: Product, url: string | undefined) =>
+  product.canonical_url && url && product.canonical_url !== url ? url : undefined;
+
+/**
+ * The columns a row writes beyond its applied values, and whether any of it
+ * changes the product: a price without a range ends the range an earlier
+ * import gave the product, and listed variants replace the product's.
+ */
+function rowColumns(product: Product, applied: CatalogValues, variants: CatalogVariant[]) {
+  const priceMax = applied.price === undefined ? undefined : (applied.price_max ?? null);
+  const listed = variants.length ? JSON.stringify(variants) : undefined;
+  const changed =
+    changes(product, applied) ||
+    (priceMax === null && product.price_max !== null) ||
+    (listed !== undefined && listed !== JSON.stringify(product.variants));
+  const columns: Updateable<CommerceProducts> = {
+    ...applied,
+    ...(priceMax === undefined ? {} : { price_max: priceMax }),
+    ...(listed ? { variants: listed } : {}),
+  };
+  /** The product as the index keeps it once the row is written. */
+  const after = (sources: Record<string, unknown>): Product => ({
+    ...product,
+    ...applied,
+    price: applied.price === undefined ? product.price : String(applied.price),
+    price_max: priceMax === undefined ? product.price_max : stored(priceMax),
+    variants: listed ? variants : product.variants,
+    field_sources: sources,
+  });
+  return { columns, listed: listed !== undefined, changed, after };
+}
+
 async function importItem(
   db: Database,
   scope: CommerceScope,
@@ -281,11 +318,7 @@ async function importItem(
       'Its URL, SKU, GTIN or name belong to different products',
     );
   const product = matches[0] ?? indexed(await newProduct(db, scope, values.canonical_url ?? ''));
-  // An identifier match keeps the product's URL; a different one is an alias.
-  const alias =
-    product.canonical_url && values.canonical_url && product.canonical_url !== values.canonical_url
-      ? values.canonical_url
-      : undefined;
+  const alias = aliasOf(product, values.canonical_url);
   if (alias) delete values.canonical_url;
   const sources = { ...product.field_sources };
   const provenance = {
@@ -297,26 +330,14 @@ async function importItem(
   };
   const categories = keptCategories(item.paths, run.excluded);
   const { applied, added, replaces } = editAware(sources, values, categories, provenance);
-  // A price without a range ends the range an earlier import gave the product.
-  const priceMax = applied.price === undefined ? undefined : (applied.price_max ?? null);
-  const variants = item.variants.length ? JSON.stringify(item.variants) : undefined;
-  const changed =
-    changes(product, applied) ||
-    (priceMax === null && product.price_max !== null) ||
-    (variants !== undefined && variants !== JSON.stringify(product.variants)) ||
-    index.joins(product.id, added);
+  const row = rowColumns(product, applied, item.variants);
+  // Always recorded, so a later row of this file joining the same categories is unchanged.
+  const joined = index.joins(product.id, added);
   for (const field of Object.keys(applied)) sources[field] = provenance;
-  if (variants) sources.variants = provenance;
-  const update: Updateable<CommerceProducts> = {
-    ...applied,
-    ...(priceMax === undefined ? {} : { price_max: priceMax }),
-    ...(variants ? { variants } : {}),
-    field_sources: JSON.stringify(sources),
-    updated_at: new Date(),
-  };
+  if (row.listed) sources.variants = provenance;
   await db
     .updateTable('commerce_products')
-    .set(update)
+    .set({ ...row.columns, field_sources: JSON.stringify(sources), updated_at: new Date() })
     .where('id', '=', product.id)
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
@@ -333,14 +354,7 @@ async function importItem(
     }),
     importer_version: policy.commerce.importer_version,
   });
-  index.put({
-    ...product,
-    ...applied,
-    price: applied.price === undefined ? product.price : String(applied.price),
-    price_max: priceMax === undefined ? product.price_max : stored(priceMax),
-    variants: variants ? item.variants : product.variants,
-    field_sources: sources,
-  });
+  index.put(row.after(sources));
   await writeCategories(db, scope, index, {
     productId: product.id,
     observationId,
@@ -348,7 +362,7 @@ async function importItem(
     replaces,
   });
   if (!matches.length) return outcome(item.row_number, 'created', product.id);
-  return outcome(item.row_number, changed ? 'updated' : 'unchanged', product.id);
+  return outcome(item.row_number, row.changed || joined ? 'updated' : 'unchanged', product.id);
 }
 
 /** The parents of the categories this import wrote, from its proposed tree. */
@@ -409,7 +423,7 @@ function contentType(format: CatalogFormat, content: string) {
     : 'text/csv';
 }
 
-export type CatalogSource = {
+type CatalogSource = {
   format: CatalogFormat;
   content: string;
   /** The file name, or the Shopify store host. */

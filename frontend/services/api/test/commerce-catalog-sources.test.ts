@@ -105,6 +105,32 @@ describe('a Merchant Center feed', () => {
     });
   });
 
+  it('reads an Atom feed’s g:link beside the entry’s own link element', () => {
+    const atom = [
+      '<?xml version="1.0"?>',
+      '<feed xmlns="http://www.w3.org/2005/Atom" xmlns:g="http://base.google.com/ns/1.0">',
+      '<entry><title>Wool Sock</title><link href="https://shop.example/feed"/>',
+      '<g:id>SK-1</g:id><g:link>https://shop.example/products/sock</g:link>',
+      '<g:price>12.00 EUR</g:price></entry>',
+      '</feed>',
+    ].join('');
+    expect(catalogItems('merchant_center', atom)).toEqual([
+      {
+        kind: 'item',
+        row_number: 1,
+        values: {
+          name: 'Wool Sock',
+          price: 12,
+          currency: 'EUR',
+          canonical_url: 'https://shop.example/products/sock',
+          sku: 'SK-1',
+        },
+        variants: [],
+        paths: [],
+      },
+    ]);
+  });
+
   it('reads Content API JSON and refuses an ambiguous price', () => {
     expect(catalogItems('merchant_center', fixture('merchant-center.json'))).toEqual([
       {

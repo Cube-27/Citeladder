@@ -106,7 +106,8 @@ describe('AddProductsDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Import 2 products' }));
 
     const rows = await screen.findByRole('list', { name: 'Rows' });
-    expect(applied).toEqual([{ excluded_categories: ['footwear'] }]);
+    // Everything shown cleared is left out, not only the box the person cleared.
+    expect(applied).toEqual([{ excluded_categories: ['footwear', 'running'] }]);
     expect(screen.getByLabelText('Import results')).toHaveTextContent(
       '1 added, 1 updated, 0 unchanged, 1 rejected',
     );
