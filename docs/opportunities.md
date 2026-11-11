@@ -232,7 +232,7 @@ whose evidence vanished once, leaving already-cleared rows untouched. Each promo
 Search Demand signal's read carries the Action its live Opportunity joined, for
 the Search Demand "Act on this" band.
 
-There is one Actions list (AS1, [Actions simplification](plans/actions-simplification.md)):
+There is one Actions list ([AS1](decisions.md#one-actions-feature-content-gaps-from-content-pages-only)):
 content-gap findings are ordinary Actions on it, and a content page's Site
 Health findings and content gaps share its one Action. Every link to an
 Action is `/agent/actions/{id}`. The evidence behind content gaps is in
