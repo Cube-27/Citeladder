@@ -125,12 +125,16 @@ const SLOT_RANKING = sql`(o.order_observable AND o.rank IS NOT NULL) DESC,
       (o.surface_kind = 'shopping_result') DESC, o.rank ASC NULLS LAST, o.created_at, o.id`;
 
 /**
- * The `scoped_passes`, `observed` and `slots` CTEs every product read starts
- * from: each successful non-branded execution in scope once, through its
- * latest match pass; the holder observations of those passes; and each
- * holder's one slot per execution at its best rank.
+ * The CTEs every Commerce metrics read (the Products table, a product's page
+ * and the Shopping overview) starts from: `scoped_passes`, each successful
+ * non-branded execution in scope once, through its latest match pass;
+ * `executions`, their count (the visibility denominator); `observed`, the
+ * holder observations of those passes; and `slots`, each holder's one slot
+ * per execution at its best rank. A window outside the configured ones is
+ * refused.
  */
 export function scopedSlots(scope: CommerceScope, executions: ExecutionScope) {
+  requireWindow(executions.windowDays);
   const ws = scope.workspaceId,
     project = scope.projectId;
   const since = new Date(Date.now() - executions.windowDays * DAY_MS);
@@ -143,7 +147,7 @@ export function scopedSlots(scope: CommerceScope, executions: ExecutionScope) {
     : NOTHING;
   return sql`
     scoped_passes AS (
-      SELECT DISTINCT ON (p.artifact_id) p.id AS pass_id, p.task_id
+      SELECT DISTINCT ON (p.artifact_id) p.id AS pass_id, p.task_id, p.artifact_id
       FROM commerce_match_passes p
       JOIN audit_tasks t ON t.id = p.task_id AND t.workspace_id = p.workspace_id
       JOIN audit_prompt_snapshots s ON s.id = t.prompt_snapshot_id AND s.audit_id = t.audit_id
@@ -157,6 +161,7 @@ export function scopedSlots(scope: CommerceScope, executions: ExecutionScope) {
         ${promptSetFilter}
       ORDER BY p.artifact_id, r.revision_number DESC NULLS LAST, p.created_at DESC, p.id DESC
     ),
+    executions AS (SELECT count(DISTINCT task_id)::int AS n FROM scoped_passes),
     observed AS (
       SELECT o.*,
              CASE WHEN o.classification = 'owned' THEN o.product_id
@@ -167,23 +172,24 @@ export function scopedSlots(scope: CommerceScope, executions: ExecutionScope) {
         AND o.classification IN ('owned', 'approved_competitor', 'ai_observed_competitor')
     ),
     slots AS (
-      SELECT DISTINCT ON (o.task_id, o.holder_id) o.task_id, o.holder_id,
+      SELECT DISTINCT ON (o.task_id, o.holder_id) o.task_id, o.holder_id, o.surface_kind,
              CASE WHEN o.order_observable THEN o.rank END AS best_rank
       FROM observed o WHERE o.holder_id IS NOT NULL
       ORDER BY o.task_id, o.holder_id, ${SLOT_RANKING}
     )`;
 }
 
-export async function productMetrics(db: Database, scope: CommerceScope, query: ProductQuery) {
-  requireWindow(query.windowDays);
-  // A cursor is bound to its project and filters; any other read refuses it.
-  const { cursor: _cursor, limit: _limit, ...rest } = query;
-  const filters = { ...rest, project: scope.projectId };
-  const position = cursorPosition(query, filters);
+/**
+ * The product holders a read lists, as `kind, holder_id, name, brand, url,
+ * catalog_price, catalog_currency` rows: the active catalog, and with `all`
+ * the approved and AI-observed competitors; with a category, only its own.
+ */
+export function holderRows(
+  scope: CommerceScope,
+  { source, category }: { source: CommerceProductSource; category: string | null },
+) {
   const ws = scope.workspaceId,
     project = scope.projectId;
-  const search = query.q?.trim() ? likePattern(query.q.trim()) : null;
-  const category = query.category;
   const inCategory = (column: RawBuilder<string>) => sql`${column} IN (
       SELECT m.product_id FROM commerce_product_categories m
       WHERE m.workspace_id = ${ws} AND m.project_id = ${project} AND m.category_id = ${category})`;
@@ -193,7 +199,7 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
            OR (c.target_kind = 'product' AND ${inCategory(COMPETITOR_TARGET)}))`
     : NOTHING;
   const competitors =
-    query.source === 'all'
+    source === 'all'
       ? sql`UNION ALL
         SELECT CASE WHEN c.state = 'approved' THEN 'approved_competitor'
                     ELSE 'ai_observed_competitor' END,
@@ -204,6 +210,24 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
           ${competitorInCategory}`
       : NOTHING;
   const ownedInCategory = category ? sql`AND ${inCategory(OWNED_PRODUCT)}` : NOTHING;
+  return sql`
+      SELECT 'owned'::text AS kind, p.id AS holder_id, p.name, p.brand, p.canonical_url AS url,
+             p.price::float8 AS catalog_price, p.currency AS catalog_currency
+      FROM commerce_products p
+      WHERE p.workspace_id = ${ws} AND p.project_id = ${project} AND p.lifecycle_state = 'active'
+        ${ownedInCategory}
+      ${competitors}`;
+}
+
+export async function productMetrics(db: Database, scope: CommerceScope, query: ProductQuery) {
+  const slotsInScope = scopedSlots(scope, query);
+  // A cursor is bound to its project and filters; any other read refuses it.
+  const { cursor: _cursor, limit: _limit, ...rest } = query;
+  const filters = { ...rest, project: scope.projectId };
+  const position = cursorPosition(query, filters);
+  const ws = scope.workspaceId,
+    project = scope.projectId;
+  const search = query.q?.trim() ? likePattern(query.q.trim()) : null;
   const searchFilter = search
     ? sql`AND (h.name ILIKE ${search} OR h.brand ILIKE ${search} OR h.url ILIKE ${search})`
     : NOTHING;
@@ -213,8 +237,7 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
               > (${position.sortKey}::float8, ${position.name}, ${position.id}::uuid)`
     : NOTHING;
   const result = await sql<unknown>`
-    WITH ${scopedSlots(scope, query)},
-    executions AS (SELECT count(DISTINCT task_id)::int AS n FROM scoped_passes),
+    WITH ${slotsInScope},
     slot_metrics AS (
       SELECT holder_id, count(*)::int AS appearances, count(best_rank)::int AS ordered,
              count(*) FILTER (WHERE best_rank = 1)::int AS wins,
@@ -232,14 +255,7 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
       FROM observed o WHERE o.holder_id IS NOT NULL AND o.merchant_domain <> ''
       GROUP BY o.holder_id, o.merchant_domain
     ),
-    holders AS (
-      SELECT 'owned'::text AS kind, p.id AS holder_id, p.name, p.brand, p.canonical_url AS url,
-             p.price::float8 AS catalog_price, p.currency AS catalog_currency
-      FROM commerce_products p
-      WHERE p.workspace_id = ${ws} AND p.project_id = ${project} AND p.lifecycle_state = 'active'
-        ${ownedInCategory}
-      ${competitors}
-    ),
+    holders AS (${holderRows(scope, query)}),
     filtered AS (
       SELECT h.*, lower(h.name) AS name_key,
              coalesce(m.appearances, 0) AS appearances,

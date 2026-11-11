@@ -152,6 +152,18 @@ export const commerce = {
      */
     detail: { list_limit: 10, prompt_limit: 50, answer_limit: 50 },
   },
+  /**
+   * The Shopping overview (`/products/overview`), over the Products table's
+   * windows: how many brands and products each ranking lists, how many catalog
+   * products the most and least visible lists show, and the merchant and
+   * fan-out query lists' lengths.
+   */
+  overview: {
+    ranking_limit: 10,
+    extremes_limit: 5,
+    merchant_limit: 10,
+    fanout_query_limit: 10,
+  },
   import_max_bytes: 2000000,
   import_max_rows: 10000,
   import_error_limit: 100,
