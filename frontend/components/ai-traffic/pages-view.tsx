@@ -1,5 +1,5 @@
 'use client';
-import { Fragment, useState } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import type { z } from 'zod';
 import type { aiTrafficPagesSchema } from '@citeladder/contracts/ai-traffic';
 import { SearchX } from 'lucide-react';
@@ -9,6 +9,7 @@ import { Stack } from '@/components/ui/layout';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Pressable } from '@/components/ui/pressable';
 import { MISSING_MARK } from '@/lib/format';
+import type { TrafficPagesSort } from '@/lib/config/crawl-logs';
 import { DisplayTime, TableTime } from '@/components/ui/display-time';
 import { aiTrafficQueries, type TrafficTableScope } from '@/lib/api/ai-traffic';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
@@ -16,14 +17,6 @@ import { UrlPanel, TrafficLeg, trafficLegExplanation } from './url-panel';
 
 /** A non-breaking space: a blank line that still takes a line's height. */
 const BLANK_LINE = ' ';
-
-/** The orders the pages read offers, each on its column's header. */
-export type TrafficPagesSort =
-  | 'requests_desc'
-  | 'sessions_desc'
-  | 'key_events_desc'
-  | 'citations_desc'
-  | 'url_asc';
 
 /** The sort a header button sets: the path ascending, a figure descending. */
 const SORT_BY_COLUMN: Readonly<Record<string, TrafficPagesSort>> = {

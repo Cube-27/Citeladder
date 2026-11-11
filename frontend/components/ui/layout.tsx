@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
  *                 controls, the lines of a short list (8px)
  *   `tight`     — the parts of one fact: a title and its meta line, a label
  *                 and its sentence, a name and its URL (4px)
- * docs/design.md (D56) lists every role and the components that own it.
+ * docs/design.md (Layout) lists every role; D56 in docs/design-decisions.md records why.
  */
 const STACK_GAP = {
   section: 'gap-[var(--page-section-gap)]',

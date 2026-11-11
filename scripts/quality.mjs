@@ -237,7 +237,7 @@ function frontendChecks() {
   // pre-existing findings here and whose tsgolint rejects the marketing
   // tsconfig's baseUrl. See the comment in frontend/vp-shared-config.ts.
   pnpm('TypeScript', ['exec', 'tsc', '--noEmit']);
-  // docs/design.md's value tables are generated from CSS; fix mode refreshes
+  // docs/design.md's token blocks are generated from CSS; fix mode refreshes
   // them so the policy check below judges current documentation.
   if (mode === 'fix') {
     step(

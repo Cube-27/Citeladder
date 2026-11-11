@@ -16,7 +16,7 @@ const SERIES = ['data-1', 'data-2', 'data-3'].map(color);
 const STAGES = ['stage-sky', 'stage-mint', 'stage-lilac', 'stage-peach'].map(color);
 
 /**
- * The contrast matrix, the design system's own (docs/design.md, Colour): every
+ * The contrast matrix, the design system's own (docs/design.md, Colors): every
  * text pair a token's usage names holds 4.5:1 in both themes; marks, control
  * borders and the focus ring hold 3:1. Each row pairs every ink with every
  * surface. A translucent surface is composited on each ground a row names in

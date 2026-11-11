@@ -14,7 +14,7 @@ import { parseSource, stringFragments } from './source-ast.mjs';
  *
  *   (no flag)  print the colour inventory with each token's consumers
  *   --check    fail on duplicate values, unconsumed tokens and stale docs
- *   --write    regenerate the docs/design.md value tables from CSS
+ *   --write    regenerate the docs/design.md token blocks from CSS
  */
 
 const root = resolve(import.meta.dirname, '..');
@@ -181,13 +181,20 @@ export function zeroConsumerTokens(source, files, required = new Set()) {
     .sort(byName);
 }
 
-const cell = (value) => (value ? `\`${value}\`` : '—');
-const table = (header, rows) =>
+/**
+ * One DESIGN.md token group as a fenced YAML block: `group:` then one
+ * `name: value` line per token, with an optional trailing comment.
+ */
+const tokenBlock = (group, entries) =>
   [
-    `| ${header.join(' | ')} |`,
-    `| ${header.map(() => '---').join(' | ')} |`,
-    ...rows.map((row) => `| ${row.join(' | ')} |`),
+    '```yaml',
+    `${group}:`,
+    ...entries.map(({ name, value, note }) => `  ${name}: ${value}${note ? ` # ${note}` : ''}`),
+    '```',
   ].join('\n');
+// Single quotes, as the repository's formatter writes YAML, so a formatted
+// design.md stays current. No colour value contains a quote.
+const quoted = (value) => `'${value}'`;
 
 /** Resolve `var(--x)` chains and rem literals against a declaration map. */
 function resolveLength(value, declarations, seen = new Set()) {
@@ -251,13 +258,22 @@ function typeRoles(css, selectorPart, declarations, wideMedia = null) {
   return roles;
 }
 
-const typeCell = (metrics) =>
-  metrics['font-size']
-    ? `\`${metrics['font-size']} / ${metrics['line-height'] ?? 'inherit'}\``
-    : '—';
+/** A type role as a DESIGN.md typography value: its size and line height. */
+const typeValue = (metrics) => {
+  const parts = [`fontSize: ${metrics['font-size']}`];
+  if (metrics['line-height']) parts.push(`lineHeight: ${metrics['line-height']}`);
+  return `{ ${parts.join(', ')} }`;
+};
+const typeEntry = (role, metrics) => ({
+  name: role.slice(1),
+  value: typeValue(metrics.base),
+  note: metrics.wide?.['font-size']
+    ? `768–1023px: ${metrics.wide['font-size']} / ${metrics.wide['line-height'] ?? 'inherit'}`
+    : undefined,
+});
 
 /**
- * Markdown for every generated region of docs/design.md.
+ * The fenced YAML token block for every generated region of docs/design.md.
  * @public — also imported by the scripts/frontend fixture tests.
  */
 export function generatedBlocks(tokenCss, websiteCss) {
@@ -283,49 +299,36 @@ export function generatedBlocks(tokenCss, websiteCss) {
       ),
     )
     .map(([token, value]) => [token, resolveLength(value, light)]);
+  const sized = (roles) =>
+    [...roles]
+      .filter(([, metrics]) => metrics.base['font-size'])
+      .sort(([first], [second]) => byName(first, second))
+      .map(([role, metrics]) => typeEntry(role, metrics));
   return new Map([
     [
       'tokens',
-      table(
-        ['Token', 'Light', 'Dark'],
-        tokenInventory(tokenCss).map(({ token, light: day, dark: night }) => [
-          cell(token),
-          cell(day),
-          cell(night),
-        ]),
+      tokenBlock(
+        'colors',
+        tokenInventory(tokenCss).map(({ token, light: day, dark: night }) => ({
+          name: token.slice('--color-'.length),
+          value: quoted(day),
+          note: `dark ${quoted(night)}`,
+        })),
       ),
     ],
     [
       'radii',
-      table(
-        ['Token', 'Value'],
-        radii.map(([token, value]) => [cell(token), cell(value)]),
+      tokenBlock(
+        'rounded',
+        radii.map(([token, value]) => ({ name: token.slice('--radius-'.length), value })),
       ),
     ],
-    [
-      'type',
-      table(
-        ['Role', 'Surface', 'Size / line height', '768–1023px'],
-        [
-          ...[...product]
-            .sort(([first], [second]) => byName(first, second))
-            .map(([role, metrics]) => [cell(role), 'product', typeCell(metrics.base), '—']),
-          ...[...site]
-            .sort(([first], [second]) => byName(first, second))
-            .map(([role, metrics]) => [
-              cell(role),
-              'public',
-              typeCell(metrics.base),
-              typeCell(metrics.wide),
-            ]),
-        ],
-      ),
-    ],
+    ['type', tokenBlock('typography', [...sized(product), ...sized(site)])],
     [
       'controls',
-      table(
-        ['Token', 'Value'],
-        controls.map(([token, value]) => [cell(token), cell(value)]),
+      tokenBlock(
+        'spacing',
+        controls.map(([token, value]) => ({ name: token.slice(2), value })),
       ),
     ],
   ]);
@@ -351,7 +354,8 @@ export function refreshGeneratedBlocks(document, blocks) {
       missing.push(name);
       continue;
     }
-    const fresh = `\n${block}\n`;
+    // A blank line each side of the block, as the Markdown formatter leaves it.
+    const fresh = `\n\n${block}\n\n`;
     if (match[2].replaceAll('\r\n', '\n') !== fresh) stale.push(name);
     // Write in the document's own line endings: no mixed endings on a CRLF checkout.
     const written = fresh.replaceAll('\n', eol);

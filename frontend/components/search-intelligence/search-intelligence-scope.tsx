@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { DisplayTime } from '@/components/ui/display-time';
 import type { FilterBarProps } from '@/components/ui/filter-bar';

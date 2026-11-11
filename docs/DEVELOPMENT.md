@@ -335,8 +335,8 @@ The design-system policy ratchets its stylesheet, TSX geometry and SVG colour
 rules against `frontend/scripts/design-system-baseline.json`: a file's count per
 rule may fall but never rise, and a new file starts at zero. When a count falls,
 lower the baseline with `node scripts/check-design-system.mjs --write-baseline`
-from `frontend/`; never raise it to make a change pass. The generated value
-tables in `docs/design.md` are refreshed with
+from `frontend/`; never raise it to make a change pass. The generated token
+blocks in `docs/design.md` are refreshed with
 `node scripts/audit-design-tokens.mjs --write` (quality fix mode runs it).
 
 The same run ratchets the type-discipline rules
