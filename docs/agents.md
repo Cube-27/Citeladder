@@ -82,8 +82,13 @@ the revision on screen; see [declaration](opportunities.md#explicit-implementati
 A targeted output (a page or a planned page) attaches the chat to the existing
 [Action](opportunities.md#actions) for that target or creates one, so work on
 one target converges. Other target kinds attach only to an Action their
-evidence already created. An Action's status is derived from, never written by,
-the Agent.
+evidence already created. A document in a chat that already has an Action
+carries that Action; when it names another page or topic, the output pane asks
+the person once, before offering **Mark implemented**: **Link to /x** re-attaches
+the document to that target's Action (created when none exists), **Keep with
+this Action** keeps it (`POST …/outputs/{output_id}/target`). The chat keeps its
+own Action, and a document whose revision a declaration names stays with that
+Action. An Action's status is derived from, never written by, the Agent.
 
 ## Context and the bounded loop
 

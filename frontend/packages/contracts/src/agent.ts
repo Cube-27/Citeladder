@@ -127,6 +127,14 @@ export const agentOutputSchema = responseObject({
   format_id: z.string().nullable(),
   target_kind: z.string().nullable(),
   target_label: z.string().nullable(),
+  // The page or topic the document names apart from its Action, until the
+  // person links the document to it or keeps it with its Action.
+  named_target: responseObject({
+    kind: z.enum(['page', 'planned_page']),
+    target: z.string(),
+  })
+    .nullable()
+    .default(null),
   // Every document has at least one revision.
   latest_revision: agentRevisionSchema,
 });
@@ -528,6 +536,8 @@ export function agentRequestSchemas(bounds: {
     instructions: z.strictObject({ text: z.string().max(bounds.instructions_max_chars) }),
     // Every suggestion change names the latest revision the person saw.
     suggestion: z.strictObject({ base_revision_id: uuid() }),
+    // A document naming another page than its Action: link it there or keep it.
+    target: z.strictObject({ decision: z.enum(['link', 'keep']) }),
   };
 }
 type AgentRequestSchemas = ReturnType<typeof agentRequestSchemas>;
@@ -536,3 +546,4 @@ export type AgentChatCreateRequest = z.input<AgentRequestSchemas['create']>;
 export type AgentMessageRequest = z.input<AgentRequestSchemas['message']>;
 export type AgentOutputEditRequest = z.input<AgentRequestSchemas['edit']>;
 export type AgentInstructionsRequest = z.input<AgentRequestSchemas['instructions']>;
+export type AgentOutputTargetRequest = z.input<AgentRequestSchemas['target']>;
