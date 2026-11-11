@@ -361,9 +361,8 @@ function verification(action: TicketAction, formatDate: (iso: string) => string)
   return [
     ...action.members.map((member) => {
       const leg = action.member_measurement[member.id];
-      const how = leg
-        ? 'checked by ' + measurementLegLabel(leg).toLowerCase()
-        : 'not measured automatically';
+      const by = leg ? measurementLegLabel(leg) : null;
+      const how = by ? 'checked by ' + by.toLowerCase() : 'not measured automatically';
       return line(`${member.title}: ${how}`);
     }),
     '',

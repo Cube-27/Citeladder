@@ -142,6 +142,7 @@ export function MarkImplementedButton({
                 value={attempt.day}
                 min={range.min}
                 max={range.max}
+                disabled={declare.isPending}
                 onChange={(day) => {
                   declare.reset();
                   setAttempt((current) => ({
@@ -162,6 +163,7 @@ export function MarkImplementedButton({
                 {...field}
                 value={attempt.reference}
                 maxLength={DEPLOYMENT_REFERENCE_MAX}
+                disabled={declare.isPending}
                 onChange={(event) => {
                   const reference = event.target.value;
                   declare.reset();

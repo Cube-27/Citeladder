@@ -237,13 +237,14 @@ export const actionDeclarationRequestSchema = z.strictObject({
   declared_implemented_at: z.iso
     .datetime({ offset: true })
     .refine((value) => !value.startsWith('0000-'), 'A valid calendar year is required'),
-  // What shipped it: a release, pull request or commit. One line, at most 500
+  // What shipped it: a release, pull request or commit. One line without
+  // control characters (PostgreSQL text cannot store NUL), at most 500
   // characters once trimmed; blank records none.
   deployment_reference: z
     .string()
     .trim()
     .max(500)
-    .regex(/^[^\r\n]*$/, 'Use one line')
+    .regex(/^\P{Cc}*$/u, 'Use one line of text')
     .nullable()
     .default(null),
 });

@@ -195,7 +195,7 @@
               {
                 "type": "string",
                 "maxLength": 500,
-                "pattern": "^[^\\r\\n]*$"
+                "pattern": "^\\P{Cc}*$"
               },
               {
                 "type": "null"

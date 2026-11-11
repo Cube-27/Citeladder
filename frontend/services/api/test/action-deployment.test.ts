@@ -116,16 +116,18 @@ describe('recording a deployment', () => {
     ]);
   });
 
-  it('records no reference when none or a blank one is given and refuses a multi-line one', async () => {
+  it('records no reference when none or a blank one is given and refuses a multi-line or NUL one', async () => {
     const s = await seed();
-    expect(
-      (
-        await request(s, `${actionPath(s)}/declaration`, {
-          body: { declared_implemented_at: goLive, deployment_reference: 'v1\nv2' },
-          key: 'multi-line',
-        })
-      ).status,
-    ).toBe(422);
+    for (const reference of ['v1\nv2', 'v1\u0000']) {
+      expect(
+        (
+          await request(s, `${actionPath(s)}/declaration`, {
+            body: { declared_implemented_at: goLive, deployment_reference: reference },
+            key: `refused-${reference.length}`,
+          })
+        ).status,
+      ).toBe(422);
+    }
     const created = await request(s, `${actionPath(s)}/declaration`, {
       body: { declared_implemented_at: goLive, deployment_reference: '   ' },
       key: 'blank',
