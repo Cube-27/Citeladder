@@ -10,13 +10,10 @@ import { crawlScheduleCadenceSchema } from '@citeladder/contracts/site-health';
 import { policy } from '../config.ts';
 import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
-import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { ApiError } from '../errors.ts';
 import { getLogger } from '../logging.ts';
-import { pageRerunSql } from '../site-health/page-rerun.ts';
 import { createCrawl } from '../site-health/planner.ts';
-import type { CrawlAdmission } from '../site-health/planner-policy.ts';
-import { recrawlRequest } from '../site-health/recrawl.ts';
+import { scheduledCrawlRequest } from '../site-health/recrawl.ts';
 import { claimDueCrawlSchedules, nextOccurrence } from '../site-health/schedules.ts';
 
 export function crawlSchedulerSettings(env: SettingSource = process.env) {
@@ -33,28 +30,6 @@ const SKIPPED = new Set(['crawl_already_active', 'site_health_fetches_exhausted'
 
 type ScheduleClaim = Awaited<ReturnType<typeof claimDueCrawlSchedules>>[number];
 const logger = getLogger('workers.crawl_scheduler');
-
-/**
- * A scheduled crawl reruns the project's newest site crawl's scope and
- * settings, its robots choice included, as Recrawl does, so Changes compares
- * like with like; a project
- * that has never crawled gets the default crawl.
- */
-async function scheduledRequest(
-  db: Database,
-  workspaceId: string,
-  projectId: string,
-): Promise<CrawlAdmission> {
-  const latest = await new WorkspaceScope(workspaceId)
-    .selectFrom(db, 'site_crawls')
-    .select('id')
-    .where('project_id', '=', projectId)
-    .where(pageRerunSql, '=', false)
-    .orderBy('created_at', 'desc')
-    .orderBy('id', 'desc')
-    .executeTakeFirst();
-  return latest ? recrawlRequest(db, workspaceId, latest.id) : { project_id: projectId };
-}
 
 export class CrawlScheduler {
   readonly db: Database;
@@ -114,7 +89,7 @@ export class CrawlScheduler {
         const crawl = await createCrawl(
           trx,
           schedule.workspace_id,
-          await scheduledRequest(trx, schedule.workspace_id, schedule.project_id),
+          await scheduledCrawlRequest(trx, schedule.workspace_id, schedule.project_id),
         );
         await sql`release savepoint crawl_schedule_planning`.execute(trx);
         await scoped
@@ -140,15 +115,16 @@ export class CrawlScheduler {
           logger.info('scheduled_crawl_skipped', { schedule_id: schedule.id, reason: code });
           return false;
         }
+        // The admission reason (invalid root, plan change) is what the owner can act on.
+        const reason = code ?? 'crawl_planning_failed';
         const failures = schedule.failure_count + 1;
         const retrying = failures < this.settings.max_consecutive_failures;
         await scoped
           .set({
             ...release,
             failure_count: failures,
-            // The admission reason (invalid root, plan change) is what the owner can act on.
             last_outcome: 'failed',
-            last_error: code ?? 'crawl_planning_failed',
+            last_error: reason,
             last_failure_at: at,
             enabled: retrying,
             next_run_at: retrying
@@ -156,10 +132,7 @@ export class CrawlScheduler {
               : null,
           })
           .execute();
-        logger.warning('scheduled_crawl_failed', {
-          schedule_id: schedule.id,
-          error: code ?? 'crawl_planning_failed',
-        });
+        logger.warning('scheduled_crawl_failed', { schedule_id: schedule.id, error: reason });
         return false;
       }
     });

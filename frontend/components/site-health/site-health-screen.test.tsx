@@ -13,6 +13,7 @@ import {
   ENTITLEMENT_PATH,
   PROJECT,
   crawl,
+  crawlSchedule,
   entitlement,
   inventoryRow,
   mockRoutes,
@@ -667,29 +668,29 @@ describe('SiteHealthScreen — canonical single-screen flow (regression)', () =>
 });
 
 describe('SiteHealthScreen — crawl schedule', () => {
+  /** Opens the schedule menu of a schedule that is off, once it has loaded. */
+  async function openOffSchedule() {
+    const trigger = await screen.findByRole('button', { name: 'Crawl schedule: Off' });
+    await waitFor(() => expect(trigger).toBeEnabled());
+    await userEvent.click(trigger);
+    return screen.findByRole('menu');
+  }
+
   it('turns on a weekly crawl beside Run new crawl and shows the next run', async () => {
     mockRoutes();
     const saved: unknown[] = [];
     mswServer.use(
       http.put(`/api/v1/projects/${PROJECT}/crawl-schedule`, async ({ request }) => {
         saved.push(await request.json());
-        return HttpResponse.json({
-          project_id: PROJECT,
-          enabled: true,
-          cadence: 'weekly',
-          next_run_at: '2027-01-11T09:00:00Z',
-          last_run_at: null,
-          last_outcome: null,
-          last_crawl_id: null,
-        });
+        return HttpResponse.json(
+          crawlSchedule({ enabled: true, next_run_at: '2027-01-11T09:00:00Z' }),
+        );
       }),
     );
 
     renderScreen();
 
-    const trigger = await screen.findByRole('button', { name: 'Crawl schedule: Off' });
-    await waitFor(() => expect(trigger).toBeEnabled());
-    await userEvent.click(trigger);
+    await openOffSchedule();
     await userEvent.click(await screen.findByRole('menuitemradio', { name: 'Weekly' }));
 
     await waitFor(() => expect(saved).toEqual([{ enabled: true, cadence: 'weekly' }]));
@@ -702,24 +703,13 @@ describe('SiteHealthScreen — crawl schedule', () => {
     mockRoutes();
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/crawl-schedule`, () =>
-        HttpResponse.json({
-          project_id: PROJECT,
-          enabled: false,
-          cadence: 'weekly',
-          next_run_at: null,
-          last_run_at: null,
-          last_outcome: 'failed',
-          last_crawl_id: null,
-        }),
+        HttpResponse.json(crawlSchedule({ last_outcome: 'failed' })),
       ),
     );
 
     renderScreen();
 
-    const trigger = await screen.findByRole('button', { name: 'Crawl schedule: Off' });
-    await waitFor(() => expect(trigger).toBeEnabled());
-    await userEvent.click(trigger);
-    const menu = await screen.findByRole('menu');
+    const menu = await openOffSchedule();
     expect(
       within(menu).getByText('Turned off: scheduled crawls kept failing to start.'),
     ).toBeVisible();
@@ -737,11 +727,8 @@ describe('SiteHealthScreen — crawl schedule', () => {
 
     renderScreen();
 
-    const trigger = await screen.findByRole('button', { name: 'Crawl schedule: Off' });
-    await waitFor(() => expect(trigger).toBeEnabled());
-    await userEvent.click(trigger);
     expect(
-      within(await screen.findByRole('menu')).getByText(
+      within(await openOffSchedule()).getByText(
         'Ignores robots.txt (confirmed by owner@example.test)',
       ),
     ).toBeVisible();
