@@ -3,10 +3,10 @@ import { describe, expect, it, vi } from 'vite-plus/test';
 
 import { renderWithProviders } from '@/test/render';
 
-import { BulkActions } from './commerce-workspace';
+import { BulkActions } from './bulk-actions';
 
 describe('BulkActions', () => {
-  it('enables bulk actions and reports the checked target count', () => {
+  it('enables bulk actions and reports the checked product count', () => {
     const onDiscover = vi.fn();
     const onClear = vi.fn();
     renderWithProviders(
@@ -19,7 +19,7 @@ describe('BulkActions', () => {
       />,
     );
 
-    expect(screen.getByText('2 targets selected')).toBeVisible();
+    expect(screen.getByText('2 products selected')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Find competitors' }));
     fireEvent.click(screen.getByRole('button', { name: 'Clear selection' }));
     expect(onDiscover).toHaveBeenCalledOnce();
@@ -40,7 +40,7 @@ describe('BulkActions', () => {
 
     expect(screen.getByRole('button', { name: 'Find competitors' })).toBeDisabled();
     expect(
-      screen.getByText('Competitors can be found for up to 10 targets at a time.'),
+      screen.getByText('Competitors can be found for up to 10 products at a time.'),
     ).toBeVisible();
     expect(screen.getByRole('button', { name: 'Clear selection' })).toBeEnabled();
   });

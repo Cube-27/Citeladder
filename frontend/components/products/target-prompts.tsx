@@ -18,7 +18,7 @@ import { LaunchDialog } from '@/components/runs/launch-dialog';
 import { ProjectLink } from '@/components/ui/project-link';
 import { useRunEvents } from '@/lib/runs/use-run-events';
 import { CategoryMatrixSheet } from './category-matrix-sheet';
-import { sameTarget } from '@/lib/products/use-commerce-target';
+import { sameTarget } from '@/lib/products/targets';
 
 import type { CommerceQueries } from './commerce-queries';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';

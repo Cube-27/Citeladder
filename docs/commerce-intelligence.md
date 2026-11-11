@@ -1,10 +1,10 @@
 # Commerce
 
 Commerce measures how AI answers recommend a business's products and
-categories, and turns that measurement into Actions. It has one `/products`
-workspace: the catalog is the navigation, and the selected target (`?target=`,
-validated as `category|product:<uuid>`) shows its AI Shelf, competitors and buyer
-prompts. Commerce reuses Site Health acquisition and the shared audit system;
+categories, and turns that measurement into Actions. `/products` is the
+Products table (below); a catalog product or category opens its own page,
+`/products/:id`, which shows its AI Shelf, competitors and buyer prompts (the
+target detail). Commerce reuses Site Health acquisition and the shared audit system;
 it does not own a crawler, response store, prompt store or opportunity store.
 Present runtime is not evidence that credentialed manual gates passed.
 
@@ -53,12 +53,55 @@ the latest projected crawl only. While work is in flight it polls only the
 projection state, then re-reads the catalog once when that reports nothing in
 flight. The catalog read is navigation: product and category names, memberships
 and counts, never a row's evidence; products are listed first by name up to the
-configured `catalog_product_limit`, beside the full product count. The
-rail renders products beneath every category they belong to, keeps products
-without a category under `Uncategorized`, and keeps catalog search pinned while
-the list scrolls. Categories are ordered by descending product count, then
-name; they are collapsed initially except the one holding a deep-linked product.
-Bulk checking a category includes its products.
+configured `catalog_product_limit`, beside the full product count. Categories
+are ordered by descending product count, then name. Categories are flat; the
+category tree (`parent_category_id`) arrives with catalog ingestion.
+
+## Products table
+
+`GET /commerce/products?source=catalog|all&category=&window=&engine=&prompt_set=&q=&sort=&cursor=&limit=`
+([products read](../frontend/services/api/src/commerce/products.ts)) is one
+keyset-paged SQL read of every product holder's metrics. `source=catalog`
+lists active catalog products; `all` adds approved competitors and pending
+AI-observed competitors (CM6), never rejected, excluded or unreviewed
+discovery candidates. A category narrows products to its members and
+competitors to those targeting it or one of its products; `q` matches name,
+brand or URL.
+
+Scope is the successful executions completed in the window (7, 30 or 90 days,
+`products` in `config/commerce.ts`; no previous-period deltas, CM8), of one
+engine and one prompt set when filtered, whose answer has a match pass. Each
+answer counts once, through its latest pass; branded comparisons stay out, as
+they stay out of the AI Shelf. A holder holds at most one slot per execution,
+at its best rank (a ranked slot beats an unranked one, a carousel card's rank
+wins over a text-list rank). Per holder (formula version 1):
+
+- Visibility: executions with a slot ÷ executions in scope; null with none.
+- Appearances: executions with a slot; 0 is a real zero.
+- Win rate: ordered appearances at rank 1 ÷ ordered appearances; null with none.
+- Position: mean best rank over ordered appearances; null with none.
+- Mentioned price: per execution the best-placed quoted price, then the median
+  of those in the catalog currency (a competitor or a product without one uses
+  the most quoted currency); other currencies are counted, not converted.
+- Catalog price: the catalog price as a min–max pair (variants carry no price
+  yet); null is unknown.
+- Merchants: distinct merchant domains the answers name, by executions, up to
+  `merchant_limit`.
+
+Sorts are visibility, win rate, position (each best first) or name; the cursor
+is bound to the filters and a cursor from other filters is refused (422).
+
+The screen puts the My catalog / All products switch, search, window, engine,
+prompt set and column settings in the top control strip; the catalog's
+categories with their product counts sit beside the table, and the chosen
+category's own page opens from there. Hidden columns are a per-browser
+preference and leave the read unchanged. Export writes the rows on screen in
+the shown columns, a missing value as an empty field and a count of quotes in
+other currencies in brackets after the price, as the table shows it beside the
+price (even when none was quoted in the row's own currency). Checked catalog products
+start competitor discovery (at most `COMMERCE_TARGETS_MAX`); competitor rows
+cannot be checked and, until the product detail page, have no page of their
+own. Unavailable, unknown, none and zero render as different values.
 
 ## Competitors
 

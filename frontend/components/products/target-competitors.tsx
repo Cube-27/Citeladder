@@ -21,7 +21,7 @@ import { competitorHost, competitorState, discoveryMessage } from './commerce-fo
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { useProjectScope } from '@/lib/project/active-project-scope';
-import { sameTarget } from '@/lib/products/use-commerce-target';
+import { sameTarget } from '@/lib/products/targets';
 
 type Discovery = ReturnType<typeof useCompetitorDiscovery>;
 

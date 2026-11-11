@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
 import { startInteractiveWork } from './interactive-work';
+import { retainPreviousDataForScope } from './query-client';
 import { queryKeys } from './query-keys';
 import type { ProjectScope } from './query-keys/scope';
 import { COMMERCE_BUYER_PROMPT_REQUEST_TIMEOUT_MS } from '@/lib/config/operational';
@@ -20,6 +21,7 @@ import {
   buyerPromptSchema,
   catalogImportSchema,
   commerceCatalogSchema,
+  commerceProductPageSchema,
   commerceProjectionSchema,
   competitorDiscoverySchema,
   competitorDiscoveryTaskSchema,
@@ -142,6 +144,20 @@ export const commerceApi = {
       await apiClient.patch(path(projectId, `buyer-prompts/${promptId}`), input, options),
       'commerce.decideBuyerPrompt',
     ),
+  products: async (
+    projectId: string,
+    search: string,
+    cursor: string | null,
+    options?: ApiRequestOptions,
+  ) => {
+    const params = new URLSearchParams(search);
+    if (cursor) params.set('cursor', cursor);
+    return strictValidate(
+      commerceProductPageSchema,
+      await apiClient.get(`${path(projectId, 'products')}?${params.toString()}`, options),
+      'commerce.products',
+    );
+  },
   shelf: async (projectId: string, target: CommerceTarget, options?: ApiRequestOptions) =>
     strictValidate(
       shelfSchema,
@@ -171,6 +187,19 @@ export const commerceQueries = {
       queryKey: queryKeys.commerce.catalogProjection(scope),
       queryFn: ({ signal }) =>
         commerceApi.catalogProjection(scope.projectId, scoped(scope, signal)),
+    }),
+  /**
+   * One Products page for the filters' query string (`productSearch`). The
+   * project's previous page stays on screen while the next one loads, so a
+   * filter or a page turn never empties the table; another project's never does.
+   */
+  products: (scope: ProjectScope, search: string, cursor: string | null) =>
+    queryOptions({
+      queryKey: queryKeys.commerce.products(scope, search, cursor),
+      queryFn: ({ signal }) =>
+        commerceApi.products(scope.projectId, search, cursor, scoped(scope, signal)),
+      placeholderData: (previous, previousQuery) =>
+        retainPreviousDataForScope(scope.projectId, previous, previousQuery),
     }),
   competitors: (scope: ProjectScope) =>
     queryOptions({
@@ -250,6 +279,10 @@ export const refreshCatalog = (
     { cancelRefetch: !joinInFlight },
   );
 
+/** Every Products page, after the catalog or the approved competitors change. */
+const refreshProducts = (client: QueryClient, projectId: string) =>
+  client.invalidateQueries({ queryKey: queryKeys.commerce.resource(projectId, 'products') });
+
 /** The project's competitor candidates, after a decision or a finished discovery. */
 const refreshCompetitors = (client: QueryClient, projectId: string) =>
   client.invalidateQueries({ queryKey: queryKeys.commerce.resource(projectId, 'competitors') });
@@ -267,7 +300,11 @@ export const commerceMutations = {
           { content: await file.text(), filename: file.name },
           scoped(scope),
         ),
-      onSuccess: (_result, _file, _context, { client }) => refreshCatalog(client, scope.projectId),
+      onSuccess: (_result, _file, _context, { client }) =>
+        Promise.all([
+          refreshCatalog(client, scope.projectId),
+          refreshProducts(client, scope.projectId),
+        ]),
     }),
   discoverCompetitors: (scope: ProjectScope) =>
     mutationOptions({
@@ -279,7 +316,10 @@ export const commerceMutations = {
       mutationFn: ({ id, decision }: { id: string } & CompetitorDecisionRequest) =>
         commerceApi.decideCompetitor(scope.projectId, id, { decision }, scoped(scope)),
       onSuccess: (_candidate, _input, _context, { client }) =>
-        refreshCompetitors(client, scope.projectId),
+        Promise.all([
+          refreshCompetitors(client, scope.projectId),
+          refreshProducts(client, scope.projectId),
+        ]),
     }),
   generateBuyerPrompts: (scope: ProjectScope) =>
     mutationOptions({

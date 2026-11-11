@@ -149,6 +149,9 @@ function measure({ route, shellMinWidth }: { route: string; shellMinWidth: numbe
     if (element.closest(':has(> input)')) continue;
     // The sidebar's project and account rows are their own role below.
     if (element.matches('[data-sidebar-ident]')) continue;
+    // A checkbox is its own 16px box, and a column header's sort or hint
+    // button is the header's label, measured as `data-table-header.height`.
+    if (element.getAttribute('role') === 'checkbox' || element.closest('th')) continue;
     const style = getComputedStyle(element);
     if (Number.parseFloat(style.marginTop) < 0) continue;
     if (

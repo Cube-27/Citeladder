@@ -23,6 +23,7 @@ import { searchIntelligenceQueries } from '@/lib/api/search-intelligence';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { INITIAL_VISIBILITY_PARAMS } from '@/lib/api/visibility';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
+import { DEFAULT_PRODUCT_FILTERS, productSearch } from '@/lib/products/product-filters';
 import { pendingOverviewHandlers, recordedProjectRead } from '@/test/fixtures/overview';
 import { makeSiteCrawl } from '@/test/fixtures/site-health';
 import { mswServer } from '@/test/msw-server';
@@ -209,9 +210,8 @@ describe('prefetchRoute', () => {
     [
       '/products',
       [
-        commerceQueries.buyerPrompts(PROJECT).queryKey,
         commerceQueries.catalog(PROJECT).queryKey,
-        commerceQueries.competitors(PROJECT).queryKey,
+        commerceQueries.products(PROJECT, productSearch(DEFAULT_PRODUCT_FILTERS), null).queryKey,
       ],
     ],
   ])('warms %s under the exact keys its screen reads', async (href, keys) => {

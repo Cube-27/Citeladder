@@ -9,6 +9,9 @@ export const commerceKeys = {
   catalogReadCount: (scope: ProjectScope) => commerce.read('catalog-read-count', scope),
   /** Projection progress alone; a sibling of `catalog`, so invalidating one leaves the other. */
   catalogProjection: (scope: ProjectScope) => commerce.read('catalog-projection', scope),
+  /** One Products page: the filters' query string and the page's cursor. */
+  products: (scope: ProjectScope, search: string, cursor: string | null) =>
+    commerce.read('products', scope, search, cursor ?? 'first'),
   competitors: (scope: ProjectScope) => commerce.read('competitors', scope),
   buyerPrompts: (scope: ProjectScope) => commerce.read('buyer-prompts', scope),
   discoveryTasks: (scope: ProjectScope, taskIds: readonly string[]) =>
