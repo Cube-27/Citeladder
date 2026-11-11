@@ -371,4 +371,22 @@ describe('ProjectProvider', () => {
       timeout: 10_000,
     });
   });
+
+  it('offers retry when the list fails even though a stored project’s view answers', async () => {
+    // Only the list says what the workspace holds; the remembered project's
+    // own view answering must not leave pickers waiting on a list that failed.
+    window.localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, PROJECT_1);
+    mswServer.use(
+      http.get('/api/v1/projects', () =>
+        HttpResponse.json({ error: { message: 'unavailable' } }, { status: 503 }),
+      ),
+      ...served(project(PROJECT_1, 'Acme')),
+    );
+
+    renderProvider();
+
+    await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('error'), {
+      timeout: 10_000,
+    });
+  });
 });

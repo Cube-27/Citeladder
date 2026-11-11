@@ -59,10 +59,12 @@ function useWorkspaceProjects(workspaceId: string | null, allowed: boolean) {
  * alongside the list, not after it — and an explicit address shares the
  * requested project's read.
  *
- * It has failed with nothing usable when there is no active project and
- * either the list failed or the selection's own view did. A stored selection
- * is read before the list confirms it, so only a settled list makes its view
- * failing count; an explicit address reports through its own detail read.
+ * It has failed with nothing usable when the list failed and nothing but the
+ * list could vouch for the selection — no project at all, or a stored one the
+ * list never confirmed (its view answering does not make the workspace's
+ * projects known) — or when a settled list's selection has no view. An
+ * explicit address is authorized by its own detail read, which reports its
+ * own failure.
  */
 function useActiveProjectView({
   activeProjectId,
@@ -92,7 +94,9 @@ function useActiveProjectView({
   const viewFailed = viewQuery.isError && listSettled && !explicit;
   return {
     activeProject,
-    failedWithNothingUsable: activeProject === null && (listFailed || viewFailed),
+    failedWithNothingUsable:
+      (listFailed && (activeProject === null || !explicit)) ||
+      (activeProject === null && viewFailed),
   };
 }
 
