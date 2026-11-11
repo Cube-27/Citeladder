@@ -2,7 +2,7 @@
 /**
  * ContentArticle — the website's reading layout for research guides, blog
  * posts, the FAQ and the AI reference: the `header` slot (an ArticleHeader)
- * and the body (Prose) in one 720px column, the end matter (the `end` slot:
+ * and the body (Prose) in one 840px column, the end matter (the `end` slot:
  * FAQ, sources, author, pager) under the body, 64px under the navbar.
  *
  * - **With `toc`:** from 1280px the column sits in the middle of the
@@ -57,13 +57,18 @@ const hasEnd = Astro.slots.has('end');
 
 <style is:global>
   .cl-cpage-article {
+    /* A little wider than the prose token, so tables and code have room; the Toc keeps 200px. */
+    --cpage-article-width: 840px;
     padding-top: 64px;
   }
   .cl-cpage-article-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, var(--container-prose)) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, var(--cpage-article-width)) minmax(0, 1fr);
     column-gap: 48px;
     container-type: inline-size;
+  }
+  .cl-cpage-article--toc .cl-cpage-article-grid {
+    grid-template-columns: minmax(200px, 1fr) minmax(0, var(--cpage-article-width)) minmax(0, 1fr);
   }
   .cl-cpage-article-head,
   .cl-cpage-article-body,
@@ -103,7 +108,7 @@ const hasEnd = Astro.slots.has('end');
   }
   @media (max-width: 1279px) {
     .cl-cpage-article--toc .cl-cpage-article-grid {
-      grid-template-columns: 200px minmax(0, var(--container-prose));
+      grid-template-columns: 200px minmax(0, var(--cpage-article-width));
       justify-content: center;
     }
     .cl-cpage-article--toc :is(.cl-cpage-article-head, .cl-cpage-article-body, .cl-cpage-article-end) {
@@ -112,7 +117,7 @@ const hasEnd = Astro.slots.has('end');
   }
   @media (max-width: 899px) {
     .cl-cpage-article--toc .cl-cpage-article-grid {
-      grid-template-columns: minmax(0, var(--container-prose));
+      grid-template-columns: minmax(0, var(--cpage-article-width));
     }
     .cl-cpage-article--toc :is(.cl-cpage-article-head, .cl-cpage-article-body, .cl-cpage-article-end) {
       grid-column: 1;
