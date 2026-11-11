@@ -15,15 +15,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../src/app.ts';
 import { auditRuntime } from '../src/audits/config.ts';
-import { createAudits } from '../src/audits/creation.ts';
-import { auditInput } from '../src/audits/inputs.ts';
-import { persistExecutionSuccess, type ExecutionResult } from '../src/audits/result-persistence.ts';
 import { importCatalog } from '../src/commerce/import.ts';
-import { prepareShelfExecution } from '../src/commerce/shelf.ts';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
-import { AuditQueue } from '../src/queue/audit-queue.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { auditTenant } from './audit-fixtures.ts';
+import { recordAnswer, type AnswerEvidence } from './commerce-answer-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
@@ -42,70 +38,15 @@ const CATALOG = [
   'https://shop.example/products/trail,Acme Trail Climber,Acme,,,Trail',
 ].join('\n');
 
-/** What an answer cited and searched for, as the provider returned it. */
-type Evidence = { citations: { url: string; title: string }[]; queries: string[] };
-const NO_EVIDENCE: Evidence = { citations: [], queries: [] };
-
-/** One brand-run audit whose single ChatGPT answer is `answer`; its task id. */
-async function answer(t: Tenant, text: string, evidence = NO_EVIDENCE): Promise<string> {
-  const [auditId] = await createAudits(
-    db,
-    t.workspaceId,
-    auditInput.parse({
-      project_id: t.projectId,
-      prompt_ids: [t.promptId],
-      engines: ['chatgpt'],
-      repetitions: 1,
-      audit_scope: 'brand',
-    }),
-    {},
+/** One brand-run answer of `text` with its evidence; its task id. */
+async function answer(t: Tenant, text: string, evidence?: AnswerEvidence): Promise<string> {
+  const { taskId } = await recordAnswer(db, t, text, {
     runtime,
-  );
-  const queue = new AuditQueue(db, 120);
-  const [claim] = await queue.claim('products-worker', 1, { workspaceId: t.workspaceId, auditId });
-  const running = await queue.markRunning(claim!, claim!.lease_owner);
-  const task = running!.task;
-  tasks.push(task.id);
-  const result: ExecutionResult = {
-    logical_engine: 'chatgpt',
-    transport_provider: 'openai',
-    transport_model: task.transport_model,
-    answer_text: text,
-    search_used: evidence.queries.length > 0,
-    search_events: evidence.queries.map((query, sequence) => ({
-      sequence,
-      query,
-      call_id: `call-${sequence}`,
-      call_sequence: 0,
-      query_sequence: sequence,
-    })),
-    finish_reason: 'stop',
-    raw_finish_reason: 'stop',
-    latency_ms: 1,
-    provider_metadata: {},
-    retrieved_sources: null,
-    citations: evidence.citations.map(({ url, title }, ordinal) => ({
-      ordinal,
-      url,
-      title,
-      domain: new URL(url).hostname,
-      start_index: null,
-      end_index: null,
-      cited_text: '',
-    })),
-    normalized_usage: {
-      uncached_input_tokens: null,
-      cached_input_tokens: null,
-      output_tokens: null,
-      reasoning_tokens: null,
-      total_tokens: null,
-      web_search_requests: null,
-      provider_cost_microusd: null,
-    },
-  };
-  const derive = await prepareShelfExecution(db, task, result, null);
-  await persistExecutionSuccess(db, task, claim!.lease_owner, result, derive);
-  return task.id;
+    worker: 'products-worker',
+    evidence,
+  });
+  tasks.push(taskId);
+  return taskId;
 }
 
 async function candidate(t: Tenant, values: { name: string; state: string; source: string }) {

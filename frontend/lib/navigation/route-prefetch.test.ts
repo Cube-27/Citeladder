@@ -214,6 +214,13 @@ describe('prefetchRoute', () => {
         commerceQueries.products(PROJECT, productSearch(DEFAULT_PRODUCT_FILTERS), null).queryKey,
       ],
     ],
+    [
+      '/products/overview',
+      [
+        commerceQueries.catalog(PROJECT).queryKey,
+        commerceQueries.overview(PROJECT, 'window=30').queryKey,
+      ],
+    ],
   ])('warms %s under the exact keys its screen reads', async (href, keys) => {
     const asked: string[] = [];
     mswServer.use(

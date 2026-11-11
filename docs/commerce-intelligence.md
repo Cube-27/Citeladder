@@ -1,10 +1,11 @@
 # Commerce
 
 Commerce measures how AI answers recommend a business's products and
-categories, and turns that measurement into Actions. `/products` is the
-Products table (below); every product holder opens its own page,
-`/products/:id` (the product detail page, below), and a category's id opens
-its competitors and shopping prompts. Commerce reuses Site Health acquisition and the shared audit system;
+categories, and turns that measurement into Actions. `/products/overview` is
+the Shopping overview and `/products` the Products table (below); every product
+holder opens its own page, `/products/:id` (the product detail page, below),
+and a category's id opens its competitors and shopping prompts. Commerce reuses
+Site Health acquisition and the shared audit system;
 it does not own a crawler, response store, prompt store or opportunity store.
 Present runtime is not evidence that credentialed manual gates passed.
 
@@ -138,6 +139,40 @@ agent, and Work with the agent on the product's page), competitor discovery
 and review, and hero-product prompts. Commerce Actions come from measured
 answers, so the page has no Generate action of its own. A category's page
 holds its competitor discovery and shopping-prompt matrix.
+
+## Shopping overview
+
+`GET /commerce/overview?window=&category=`
+([overview read](../frontend/services/api/src/commerce/overview.ts)) reads the
+same scope, answers and slots as the Products table and the product detail
+page (their shared `scopedSlots` CTEs) over the catalog and its approved and AI-observed competitors, in one
+SQL read. `/products/overview` draws it; the sidebar's Commerce group holds
+Overview and Products. Per window (the table's windows):
+
+- Ranking: brands, then products, by appearances, up to `ranking_limit`
+  (`overview` in `config/commerce.ts`), with visibility, win rate and position
+  as the table defines them. A brand folds its products' slots to one per
+  execution at the best rank. Share of Shelf is for brands only: the brand's
+  product slots ÷ every product slot in scope, null when no answer held a
+  product. A holder with no brand is unknown, not a brand: it stays out of the
+  brand ranking and its slots stay in the denominator.
+- Most and least visible: catalog products by appearances, up to
+  `extremes_limit` each; the two lists never share a product.
+- Top merchants: merchant domains by answers naming them, with the number of
+  holders sent there, up to `merchant_limit`.
+- Top fan-out queries: of the answers that held a product, the search queries
+  their latest response analysis captured, by answers, up to
+  `fanout_query_limit`, beside how many of those answers exposed their
+  queries and how many ran no search; the rest (searched without exposing
+  queries, or not analyzed yet) are unknown.
+
+A category narrows every list to its holders (as the table's category filter
+does) and reads its latest Commerce audit snapshot: the category-target metrics
+(Product Visibility, Share of Shelf, Average Shelf Position, First-Position Win
+Rate) keep their definitions and are not windowed. A category outside the
+project is not found (404); a category no audit measured has no snapshot
+(null, "not measured"), and one measured with no successful answer reports
+visibility unavailable. The overview shows no previous-period deltas (CM8).
 
 ## Competitors
 

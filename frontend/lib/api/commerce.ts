@@ -24,6 +24,7 @@ import {
   commerceProductDetailSchema,
   commerceProductPageSchema,
   commerceProjectionSchema,
+  commerceShoppingOverviewSchema,
   competitorDiscoverySchema,
   competitorDiscoveryTaskSchema,
   competitorCandidateSchema,
@@ -158,6 +159,12 @@ export const commerceApi = {
       'commerce.products',
     );
   },
+  overview: async (projectId: string, search: string, options?: ApiRequestOptions) =>
+    strictValidate(
+      commerceShoppingOverviewSchema,
+      await apiClient.get(`${path(projectId, 'overview')}?${search}`, options),
+      'commerce.overview',
+    ),
   productDetail: async (
     projectId: string,
     holderId: string,
@@ -202,6 +209,14 @@ export const commerceQueries = {
       queryKey: queryKeys.commerce.products(scope, search, cursor),
       queryFn: ({ signal }) =>
         commerceApi.products(scope.projectId, search, cursor, scoped(scope, signal)),
+      placeholderData: (previous, previousQuery) =>
+        retainPreviousDataForScope(scope.projectId, previous, previousQuery),
+    }),
+  /** The Shopping overview; like a Products page, the project's previous one stays while the next loads. */
+  overview: (scope: ProjectScope, search: string) =>
+    queryOptions({
+      queryKey: queryKeys.commerce.overview(scope, search),
+      queryFn: ({ signal }) => commerceApi.overview(scope.projectId, search, scoped(scope, signal)),
       placeholderData: (previous, previousQuery) =>
         retainPreviousDataForScope(scope.projectId, previous, previousQuery),
     }),
@@ -289,9 +304,13 @@ export const refreshCatalog = (
     { cancelRefetch: !joinInFlight },
   );
 
-/** Every Products page, after the catalog or the approved competitors change. */
+/** Every Products page and Shopping overview, after the catalog or the approved competitors change. */
 const refreshProducts = (client: QueryClient, projectId: string) =>
-  client.invalidateQueries({ queryKey: queryKeys.commerce.resource(projectId, 'products') });
+  Promise.all(
+    (['products', 'overview'] as const).map((resource) =>
+      client.invalidateQueries({ queryKey: queryKeys.commerce.resource(projectId, resource) }),
+    ),
+  );
 
 /** The project's competitor candidates, after a decision or a finished discovery. */
 const refreshCompetitors = (client: QueryClient, projectId: string) =>
