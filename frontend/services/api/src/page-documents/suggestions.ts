@@ -28,6 +28,7 @@ import type {
   AgentOutputSuggestions,
 } from '../generated/db-schema.ts';
 import { bodyChanges, mapSpan, overlaps, quoteOf, type Span } from './anchors.ts';
+import { ruleGuidance } from './content-rules.ts';
 
 export type Anchor = z.infer<typeof agentSuggestionAnchorSchema>;
 export type Dependency = z.infer<typeof agentSuggestionDependencySchema>;
@@ -358,7 +359,7 @@ export type NewSuggestion = {
   dependsOn: Dependency[];
   replacement: string | null;
   needsInput: string | null;
-  category: string;
+  /** A content rule catalog id; its category, source and strength are stored with it. */
   ruleId: string;
   rationale: string;
 } & (
@@ -397,6 +398,7 @@ export async function insertSuggestion(
   input: NewSuggestion,
 ) {
   const anchor = storedAnchor(input.anchor, owner.revision);
+  const { category, guidance } = ruleGuidance(input.ruleId);
   const row = await db
     .insertInto('agent_output_suggestions')
     .values({
@@ -410,8 +412,9 @@ export async function insertSuggestion(
       depends_on: JSON.stringify(input.dependsOn),
       replacement: input.replacement,
       needs_input: input.needsInput,
-      category: input.category,
+      category,
       rule_id: input.ruleId,
+      rule_guidance: JSON.stringify(guidance),
       rationale: input.rationale,
       source: input.source,
       run_id: input.source === 'model' ? input.runId : null,

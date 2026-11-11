@@ -215,7 +215,12 @@ departure and ownership-transfer receipts in the mutation transaction. A
 rollback removes its receipt; repeated unchanged roles emit nothing. Google
 sign-in and customer provider-credential mutations also use this bounded
 writer. Event records contain identifiers and event kinds, never request
-bodies, provider credentials or prompts.
+bodies, provider credentials or prompts. Security events are kept for 30 days
+(`ABUSE_SECURITY_EVENT_RETENTION_DAYS`): the runner's periodic
+`security-event-retention` owner deletes older rows in bounded batches
+(`ABUSE_SECURITY_EVENT_PRUNE_BATCH`), so the log is a recent audit trail, not an
+archive. Retention must stay longer than `signup_notice_window_seconds`, whose
+`auth.signup_notified` marker stops a repeat notice.
 
 [Workspace APIs](../frontend/services/api/src/routes/workspaces.ts) use the
 [workspace owner](../frontend/services/api/src/workspaces/) for invitations,

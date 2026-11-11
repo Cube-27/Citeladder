@@ -261,6 +261,41 @@ it('keeps crawlability unavailable without a crawl, including business context',
   expect(context.crawlability).toMatchObject({ state: 'unavailable', reason: 'no_site_crawl' });
 });
 
+it('reads the newest completed crawl by completion, never a running one or another workspace', async () => {
+  const at = (minutes: number) => new Date(Date.UTC(2026, 0, 1, 12, minutes));
+  const seed = await siteFixtures.crawl('completed');
+  await db
+    .updateTable('site_crawls')
+    .set({ created_at: at(0), completed_at: at(30) })
+    .where('id', '=', seed.crawlId)
+    .execute();
+  // Created later but completed earlier: it must lose to the first crawl.
+  const earlierFinish = await siteFixtures.sibling(seed, {
+    created_at: at(10),
+    completed_at: at(20),
+  });
+  // Newest row, still running: a mid-turn read must not see it.
+  await siteFixtures.sibling(seed, { status: 'running', created_at: at(40), completed_at: null });
+  // Another workspace's later crawl is never read through this project.
+  await siteFixtures.crawl('completed');
+  const member = {
+    kind: 'member' as const,
+    userId: seed.userId,
+    workspaceId: seed.workspaceId,
+    projectId: seed.projectId,
+  };
+  const crawlability = (crawl_id?: string) =>
+    dispatchTool(
+      db,
+      member,
+      'read_ai_crawlability',
+      { project_id: seed.projectId, crawl_id },
+      origin,
+    );
+  expect(await crawlability()).toMatchObject({ crawl_id: seed.crawlId, crawl_status: 'completed' });
+  expect(await crawlability(earlierFinish)).toMatchObject({ crawl_id: earlierFinish });
+});
+
 it('pages prompts stably while context includes only active prompts and foreign IDs cannot fetch', async () => {
   const set = await promptSet(db, tenant.projectId);
   const nets = await topic(db, tenant.projectId, 'Golf nets', 'Home practice');
