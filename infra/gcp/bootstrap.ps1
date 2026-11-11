@@ -80,6 +80,7 @@ $apis = @(
     'compute.googleapis.com',
     'iam.googleapis.com',
     'iamcredentials.googleapis.com',
+    # The owner's break-glass database shell and tunnel; the deployer never uses it.
     'iap.googleapis.com',
     # The crawl-log reader pulls customers' subscriptions with this project's identity.
     'pubsub.googleapis.com',
@@ -163,7 +164,6 @@ gcloud iam service-accounts add-iam-policy-binding $serviceAccount --project=$Pr
     --role='roles/iam.workloadIdentityUser' --member=$principal --quiet *> $null
 
 Write-Output "GCP_PROJECT_ID=$ProjectId"
-Write-Output "GCP_PROJECT_NUMBER=$projectNumber"
 Write-Output "GCP_REGION=$Region"
 Write-Output "GCP_ZONE=$Zone"
 Write-Output "GCP_WIF_PROVIDER=projects/$projectNumber/locations/global/workloadIdentityPools/$pool/providers/$provider"

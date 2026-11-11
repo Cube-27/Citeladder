@@ -349,8 +349,7 @@ Cloudflare Worker secrets. Do not paste secret values into a PR, issue or chat.
    `app.citeladder.com` can be attached as Custom Domains to their named
    Workers. Keep MX, SPF, DKIM and DMARC untouched. Turn off public
    `workers.dev` and version preview URLs, as checked-in configuration
-   requires. Delete the retired `origin.citeladder.com` record and revoke its
-   Origin CA certificate once the Cloud Run cutover is accepted.
+   requires.
 3. **Cloudflare → Worker secrets:** put `ORIGIN_TOKEN` on `citeladder-app` and
    `citeladder-marketing`, matching `CITELADDER_ORIGIN_TOKEN`. Rotate it using
    the overlap procedure above; never use local `.env` as delivery.

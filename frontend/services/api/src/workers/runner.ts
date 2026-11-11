@@ -26,7 +26,7 @@ import { integrationSettings } from '../integrations/config.ts';
 import { siteWorkerSettings } from '../site-health/runtime.ts';
 import { getLogger } from '../logging.ts';
 import { cleanupMcpProtocol } from '../mcp/maintenance.ts';
-import { pruneUsageWindows } from '../abuse/usage.ts';
+import { pruneSecurityEvents, pruneUsageWindows } from '../abuse/usage.ts';
 import { purgeApiIdempotency } from '../public-api/idempotency.ts';
 import { purgeExpiredTrialProjects } from '../projects/trial-purge.ts';
 import { notifyVerifiedSignups } from '../auth/signup-notifications.ts';
@@ -423,6 +423,23 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
             db,
             new Date(),
             Number(resolveSettingSpec(policy.abuse.usage_window_cleanup_batch, config.settings)),
+            canAdmit,
+          ),
+      },
+      {
+        name: 'security-event-retention',
+        run: (canAdmit) =>
+          pruneSecurityEvents(
+            db,
+            new Date(),
+            {
+              retentionDays: Number(
+                resolveSettingSpec(policy.abuse.security_event_retention_days, config.settings),
+              ),
+              batch: Number(
+                resolveSettingSpec(policy.abuse.security_event_prune_batch, config.settings),
+              ),
+            },
             canAdmit,
           ),
       },

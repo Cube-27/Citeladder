@@ -38,10 +38,15 @@ export const competitorDecisionRequestSchema = z.object({
 });
 export type CompetitorDecisionRequest = z.input<typeof competitorDecisionRequestSchema>;
 
-/** Generate buyer prompts for targets; the API bounds and defaults `count`. */
+/**
+ * Generate buyer prompts for targets. A category target yields its configured
+ * matrix; a product target is accepted only as a hero pick (`hero`), with the
+ * API bounding and defaulting `count` per hero product.
+ */
 export const buyerPromptGenerateRequestSchema = z.object({
   targets: commerceTargetsSchema,
   count: z.number().int().optional(),
+  hero: z.boolean().optional(),
 });
 export type BuyerPromptGenerateRequest = z.input<typeof buyerPromptGenerateRequestSchema>;
 

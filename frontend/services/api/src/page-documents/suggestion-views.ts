@@ -6,7 +6,11 @@
  * holds is marked stale only by the next write.
  */
 import { z } from 'zod';
-import { agentSuggestionSchema, agentSuggestionsPageSchema } from '@citeladder/contracts/agent';
+import {
+  agentSuggestionGuidanceSchema,
+  agentSuggestionSchema,
+  agentSuggestionsPageSchema,
+} from '@citeladder/contracts/agent';
 import type { Scope } from '../agent/contracts.ts';
 import { workspaceChat } from '../agent/messages.ts';
 import { policy } from '../config.ts';
@@ -28,6 +32,7 @@ import {
 
 const p = policy.content_optimization.suggestions;
 const iso = (date: Date) => date.toISOString();
+const guidanceSchema = agentSuggestionGuidanceSchema.nullable();
 
 /** One suggestion against the latest revision. `located` is set for an open one only. */
 export type Entry = {
@@ -91,6 +96,8 @@ export function suggestionView(entry: Entry): z.infer<typeof agentSuggestionSche
     source: row.source,
     category: row.category,
     rule_id: row.rule_id,
+    // As stored when it was made; a later catalog change never rewrites it.
+    guidance: guidanceSchema.parse(row.rule_guidance),
     rationale: row.rationale,
     anchor,
     depends_on: dependsOn,
@@ -121,7 +128,7 @@ function countsOf(entries: readonly Entry[]) {
     dismissed: status('dismissed').length,
     stale: status('stale').length,
     needs_input: open.filter((entry) => readinessOf(entry.suggestion) === 'needs_input').length,
-    by_category: p.categories.flatMap((category) => {
+    by_category: policy.content_rules.categories.flatMap((category) => {
       const count = open.filter((entry) => entry.suggestion.row.category === category).length;
       return count ? [{ category, open: count }] : [];
     }),

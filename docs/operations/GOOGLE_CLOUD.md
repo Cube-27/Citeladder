@@ -43,20 +43,28 @@ Docs Worker (static, no origin)                            │ starts runner aft
 - **Database.** The VM has no external address. PostgreSQL accepts
   `hostssl` SCRAM connections for `citeladder` only from the private subnet,
   plus loopback for break-glass shells. The firewall admits 5432 from the
-  subnet and 22 from IAP only. OS Login is on, project SSH keys are blocked
-  and the serial port is disabled. It runs Shielded VM with Secure Boot, vTPM
-  and integrity monitoring.
+  subnet and 22 from IAP only, for the owner's own account (the break-glass
+  database shell and the operator account tool's tunnel); the deployer holds
+  no SSH or IAP role. OS Login is on, project SSH keys are blocked and the
+  serial port is disabled. It runs Shielded VM with Secure Boot, vTPM and
+  integrity monitoring.
 - **Identities.** The deployer authenticates through Workload Identity
   Federation pinned to `Cube-27/Citeladder`, `refs/heads/main` and the
-  `gcp-demo` environment. No service-account keys exist. The runtime
-  account reads only its runtime secrets and may start only the runner job.
-  The scheduler account holds no grant; its ID token admits only the API's
-  tick route. The database account
-  reads only the database password and pulls from the image repository.
+  `gcp-demo` environment. No service-account keys exist. The API account
+  (`citeladder-runtime`, an account ID older than the split) and the job
+  account (`citeladder-jobs`, for the runner, migrate and billing jobs) read
+  the shared runtime secrets; only the
+  API account reads the origin tokens and the Turnstile secret. Each may
+  start only the runner job and mint crawl-log reader tokens. The scheduler
+  account holds no grant; its ID token admits only the API's tick route. The
+  database account reads only the database password, pulls from the image
+  repository and writes logs.
 - **Secrets.** Terraform declares Secret Manager containers only. The deploy
   workflow writes values through stdin; generated secrets never leave GCP.
-  Cloud Run references them by name, so values are absent from state,
-  arguments, logs and outputs.
+  Cloud Run references them by name at `latest`, so values are absent from
+  state, arguments, logs and outputs. After synchronizing a secret the deploy
+  destroys its superseded versions; a rotation's old value lives in its own
+  `-previous` secret, never in an older version.
 - **Images.** Every image is deployed by immutable digest from one Artifact
   Registry repository. Tags stay mutable because immutable tags block the
   cleanup policy, which keeps the last three versions of each image and

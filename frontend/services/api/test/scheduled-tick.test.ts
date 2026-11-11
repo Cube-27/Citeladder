@@ -65,6 +65,7 @@ describe('scheduled tick', () => {
       'mcp-protocol-cleanup',
       'api-idempotency-cleanup',
       'usage-window-cleanup',
+      'security-event-retention',
       'trial-data-purge',
       'signup-notices',
       'audit-maintenance',

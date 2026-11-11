@@ -120,13 +120,39 @@ made against one revision: a `span` of the Markdown body (UTF-16 offsets and
 its exact quote with about 32 characters of context each side), an SEO `field`
 with the value it had (`expected`), or the `page`; what its judgement read
 (`depends_on`: its section, the whole body, or a field); a replacement, a
-`needs_input` question, or neither (advice); its category, rule and rationale;
-and its source. Suggestions are insert-only in `agent_output_suggestions`
-(migration 0020); every status change is an append-only
+`needs_input` question, or neither (advice); its rule, the category the rule
+sets, and its rationale; its source; and its rule's guidance. Suggestions are
+insert-only in `agent_output_suggestions` (migration 0020); every status change
+is an append-only
 `agent_output_suggestion_events` row (`open`, `applied`, `dismissed`,
 `reverted`, `stale`) with its actor and, when the text lands in a revision,
 that revision and the span there. Both are workspace-scoped.
 
+- **The rule catalog** (CO13,
+  [content-rules.ts](../frontend/services/api/src/config/content-rules.ts)).
+  Every suggestion applies one catalog rule, seeded from the
+  [rules engine's](plans/content-rules-engine.md#appendix-research-rule-catalog)
+  research catalog. Each rule has a user-facing category, a layer, a check, a
+  `source` (a link to the guidance) and a `strength`: `requirement` (a
+  search-engine policy), `recommendation` or `heuristic` (a tool convention or
+  contested evidence, such as the GEO effect sizes and AI-writing tells).
+  Site Health's rules (L0) are listed only so their findings carry a source and
+  strength; the model pass never raises them. The model rules (L4) are the
+  ones the Agent judges, and the deterministic L1–L3 rules join when their
+  linters run. The catalog's version is a fingerprint of its content, folded
+  into the Agent skill catalog's, so a change asks a queued turn again.
+- **Evidence eligibility.** A model rule is offered only when everything it
+  `requires` is present in the turn's context: the fetched page; its Site
+  Health page kind, for a rule limited to some page types; and the page's
+  prompts (the Action's content-gap evidence or the chat's `target_prompts`)
+  for coverage. Rules that need cited pages' text, other site pages, link
+  checks or fact retrieval are never offered yet. Each page turn's context gets
+  a `content_rules` section (first, so trimming drops it last) with the
+  offered rules, how each strength is phrased, the catalog's Site Health rules
+  failing on the fetched page (its page-local checks, with what Site Health
+  found) whose fix the model may write, the Site Health rules it never raises
+  itself, and the rules not checked for missing evidence, which the model
+  never guesses at.
 - **From the fetch.** The fetch's page-local Site Health findings that a field
   fixes (`site_health_field_rules`: a missing title or meta description)
   become `site_health` suggestions on revision 1, as advice, in the same
@@ -135,7 +161,13 @@ that revision and the span there. Both are workspace-scoped.
   the first turn the list to work from, and needs no run; every other finding
   stays in the SEO tab only (CO11). When the model writes the text for one (the
   same rule on the same field), the new suggestion replaces it.
-- **From the Agent.** `suggest_edits` resolves `old_string` (which must match
+- **From the Agent.** `suggest_edits` accepts a `rule_id` the turn offered;
+  the rule of a Site Health check failing on the fetched page (such as
+  answer-first), whose fix is a `model` suggestion under that rule and carries
+  its source and strength; or the rule of a Site Health suggestion open on the
+  page (writing its text). A Site Health rule that passes or was not checked,
+  and any other rule, is refused with the reason, so the model corrects it. The
+  rule sets the category. It resolves `old_string` (which must match
   exactly once) to a span, or a field to its current value, stages the
   suggestions, and commits them with the reply against the page's latest
   revision. A suggestion can name open ones it `replaces`, such as a
@@ -166,8 +198,12 @@ that revision and the span there. Both are workspace-scoped.
   applied, left to choose, needs input and stale.
 - **Reading them** (`GET …/outputs/{output_id}/suggestions`): the open, applied
   and dismissed suggestions in position order with where each one's text is
-  now, and counts per status and open ones per category. No scores (CO14) and
-  no Issues entries (CO11).
+  now, each one's `guidance` (its rule's strength, source label and link), and
+  counts per status and open ones per category. Guidance is resolved from the
+  catalog when the suggestion is stored, with the catalog version, in
+  `rule_guidance` (migration 0021), so a later catalog change never rewrites
+  it; suggestions stored before the catalog have none. No scores (CO14) and no
+  Issues entries (CO11).
 
 ### The page workspace (CO7)
 
@@ -188,7 +224,9 @@ thread (E1); every other chat keeps the thread. The workspace is a lazy chunk
 - **Suggestions.** To review / Applied / Dismissed, cards grouped by the
   passage (or SEO field, or the whole page) they sit in; Apply, Dismiss,
   Revert and, for a needs-input one, Add to context; Apply all and Dismiss
-  all report the server's counts. A card shows "Choose one" for an
+  all report the server's counts. A card links its rule's source: "Required
+  by" for a policy, and otherwise worded as an option, with a heuristic
+  labelled "Heuristic". A card shows "Choose one" for an
   overlapping suggestion; stale ones are a count only. Pressing a highlight
   opens its card and a card's text shows its highlight. Every change names
   the revision on screen: `agent_output_conflict` reads the chat and the
@@ -264,8 +302,9 @@ gap will be measured by.
 ## Not yet
 
 - Optimizing any URL (a paid add-on).
-- The [content rules engine](plans/content-rules-engine.md) and its rule
-  findings (CO13), including its deterministic linters.
+- The [content rules engine's](plans/content-rules-engine.md) deterministic
+  linters (L1–L3) and LanguageTool or Vale (L5), and showing rules not
+  checked for missing evidence in the workspace.
 - Reading the competitor and publisher pages cited for tracked prompts, and
   suggesting passage-level additions from what they cover (CO3).
 - The rules applied to Agent drafts of new content (CO18).

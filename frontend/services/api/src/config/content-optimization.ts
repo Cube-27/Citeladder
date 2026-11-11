@@ -118,24 +118,15 @@ export const contentOptimization = {
   /**
    * Suggestions on a page document (phase 2, PR 2): what `suggest_edits`
    * accepts, how a span is quoted, and which page-local Site Health findings
-   * become suggestions. Categories are the rules engine's user-facing ones.
+   * become suggestions. A suggestion's rule, and so its category, source and
+   * strength, comes from the content rule catalog (`content-rules.ts`).
    */
   suggestions: {
-    categories: [
-      'correctness',
-      'clarity',
-      'ai_answers',
-      'proof',
-      'search_guidelines',
-      'natural_voice',
-      'coverage',
-    ],
     /** Characters of context kept on each side of a span's exact quote (W3C TextQuoteSelector). */
     quote_context_chars: 32,
     /** Suggestions one `suggest_edits` call may stage, and one turn in all. */
     max_per_call: 20,
     max_per_turn: 60,
-    rule_id_max_chars: 64,
     rationale_max_chars: 600,
     needs_input_max_chars: 300,
     /** A body replacement's length; a longer rewrite asks the person instead. */
@@ -157,6 +148,5 @@ export const contentOptimization = {
       'technical.title_present': 'title',
       'technical.meta_description_present': 'meta_description',
     },
-    site_health_category: 'search_guidelines',
   },
 } as const;
