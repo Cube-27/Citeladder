@@ -34,6 +34,7 @@ import {
   currentDemandSnapshot,
   resolveAudit,
   resolveCommerceAuditId,
+  resolveCommerceMatchPassId,
   resolveCrawl,
   type AuditSource,
   type CrawlSource,
@@ -45,8 +46,12 @@ const o = policy.opportunity.opportunities;
 
 /** The sources one refresh reads, resolved once and shared by every family. */
 export type Sources = {
+  /** The instant the sources were resolved; windowed reads end here. */
+  at: Date;
   audit: AuditSource | null;
   commerceAuditId: string | null;
+  /** The project's newest match pass: product metrics move with every pass. */
+  commerceMatchPassId: string | null;
   crawl: CrawlSource | null;
   demand: DemandSource | null;
   gaps: SearchGapSource | null;
@@ -78,8 +83,10 @@ type Family = {
  */
 export async function resolveSources(db: Database, scope: Scope, at: Date): Promise<Sources> {
   return {
+    at,
     audit: await resolveAudit(db, scope),
     commerceAuditId: await resolveCommerceAuditId(db, scope),
+    commerceMatchPassId: await resolveCommerceMatchPassId(db, scope),
     crawl: await resolveCrawl(db, scope),
     demand: await currentDemandSnapshot(db, scope),
     gaps: await searchGapSource(db, scope, at),
@@ -158,14 +165,21 @@ const visibility: Family = {
   present: (_sources, found) => found.sourceMix !== undefined,
 };
 
-/** Commerce reads its own latest run, so brand and Commerce Actions never replace each other. */
+/**
+ * Commerce reads the per-product metrics over every matched answer (brand and
+ * Commerce runs alike) and its own latest run's shelf, so brand and Commerce
+ * Actions never replace each other.
+ */
 const commerce: Family = {
-  identity: async (_db, _scope, { commerceAuditId }) => ({ commerce_audit_id: commerceAuditId }),
-  hits: async (db, scope, { commerceAuditId }) =>
-    commerceAuditId === null
+  identity: async (_db, _scope, { commerceAuditId, commerceMatchPassId }) => ({
+    commerce_audit_id: commerceAuditId,
+    commerce_match_pass_id: commerceMatchPassId,
+  }),
+  hits: async (db, scope, { at, commerceAuditId, commerceMatchPassId }) =>
+    commerceAuditId === null && commerceMatchPassId === null
       ? none()
-      : { hits: await commerceHits(db, scope, commerceAuditId), limitations: [] },
-  present: (sources) => sources.commerceAuditId !== null,
+      : { hits: await commerceHits(db, scope, commerceAuditId, at), limitations: [] },
+  present: (sources) => sources.commerceAuditId !== null || sources.commerceMatchPassId !== null,
 };
 
 /** The crawl: Site Health findings, contextual links and page changes. */
@@ -218,6 +232,7 @@ const FAMILIES: readonly Family[] = [demand, visibility, commerce, site, searchG
 const EMPTY_IDENTITY: SourceIdentity = {
   audit_id: null,
   commerce_audit_id: null,
+  commerce_match_pass_id: null,
   site_crawl_id: null,
   demand_snapshot_id: null,
   demand_source_revision: null,

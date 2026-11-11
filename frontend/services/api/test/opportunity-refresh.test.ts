@@ -19,6 +19,7 @@ import { enqueueOpportunityRefresh } from '../src/opportunities/enqueue.ts';
 import { drainWorkspace } from './analytics-drain.ts';
 import { angleRun, seedOpportunityScenario, type OpportunitySeed } from './opportunity-fixtures.ts';
 import { sourcePage } from './action-support.ts';
+import { prompt, promptSet } from './prompt-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
@@ -245,10 +246,37 @@ describe('opportunity_refresh', () => {
     expect(await snapshotCount(s)).toBe(before + 1);
   });
 
-  /** A completed Commerce run whose one product was never named. */
-  async function unseenProductRun(tenant: Tenant, completedAt: Date) {
+  /**
+   * A completed Commerce run whose one category prompt was answered with a
+   * third-party citation and no uploaded product.
+   */
+  async function uncoveredCategoryRun(tenant: Tenant, completedAt: Date) {
     const auditId = await visibility.audit(tenant, { scope: 'commerce', completedAt });
-    const productId = randomUUID();
+    const categoryId = randomUUID();
+    const promptId = await prompt(db, await promptSet(db, tenant.projectId), `best ${categoryId}`);
+    await db
+      .insertInto('commerce_prompt_targets')
+      .values({
+        id: randomUUID(),
+        workspace_id: tenant.workspaceId,
+        project_id: tenant.projectId,
+        prompt_id: promptId,
+        target_kind: 'category',
+        target_id: categoryId,
+        template_version: 'test',
+        approved_at: new Date(),
+        created_at: new Date(),
+      })
+      .execute();
+    await visibility.execution(tenant, {
+      auditId,
+      analysis: { citations: [{ url: 'https://reviews.example/best-shoes' }] },
+    });
+    await db
+      .updateTable('audit_prompt_snapshots')
+      .set({ prompt_id: promptId })
+      .where('audit_id', '=', auditId)
+      .execute();
     await db
       .insertInto('commerce_shelf_snapshots')
       .values({
@@ -256,8 +284,8 @@ describe('opportunity_refresh', () => {
         workspace_id: tenant.workspaceId,
         project_id: tenant.projectId,
         audit_id: auditId,
-        target_kind: 'product',
-        target_id: productId,
+        target_kind: 'category',
+        target_id: categoryId,
         product_visibility: 0,
         share_of_shelf: null,
         average_shelf_position: null,
@@ -271,23 +299,23 @@ describe('opportunity_refresh', () => {
         created_at: new Date(),
       })
       .execute();
-    return productId;
+    return categoryId;
   }
 
   it('keeps brand and Commerce Actions when a Commerce run follows the brand run', async () => {
     const s = await seed();
     const tenant = { userId: s.user_id, workspaceId: s.workspace_id, projectId: s.project_id };
     // Completed after the seed's brand run, so it is the project's newest run of any scope.
-    const productId = await unseenProductRun(tenant, new Date(Date.now() + 60_000));
+    const categoryId = await uncoveredCategoryRun(tenant, new Date(Date.now() + 60_000));
     await recomputeOpportunities(db, scope(s));
     const rows = await live(s);
     const rules = rows.map((row) => [row.rule_id, row.target_key]).toSorted();
     expect(rules).toEqual([
       ['brand_absent_high_value_prompt', `prompt:${s.prompt0_id}`],
+      ['cited_alternatives_without_uploaded_presence', `category:${categoryId}`],
       ['content_structure_incomplete', expect.any(String)],
       ['missing_structured_data', expect.any(String)],
       ['owned_page_not_cited', expect.any(String)],
-      ['product_not_mentioned', `product:${productId}`],
     ]);
     const snapshot = await db
       .selectFrom('opportunity_snapshots')
@@ -302,9 +330,9 @@ describe('opportunity_refresh', () => {
   it('refreshes a project whose only source is Commerce when a newer Commerce run lands', async () => {
     const tenant = await visibility.tenant();
     const scoped = { workspaceId: tenant.workspaceId, projectId: tenant.projectId };
-    await unseenProductRun(tenant, new Date(Date.now() - 60_000));
+    await uncoveredCategoryRun(tenant, new Date(Date.now() - 60_000));
     await recomputeOpportunities(db, scoped);
-    const second = await unseenProductRun(tenant, new Date());
+    const second = await uncoveredCategoryRun(tenant, new Date());
     await recomputeOpportunities(db, scoped);
 
     const rows = await db
@@ -314,7 +342,7 @@ describe('opportunity_refresh', () => {
       .where('superseded_at', 'is', null)
       .execute();
     expect(rows.map((row) => [row.rule_id, row.target_key])).toEqual([
-      ['product_not_mentioned', `product:${second}`],
+      ['cited_alternatives_without_uploaded_presence', `category:${second}`],
     ]);
   });
 

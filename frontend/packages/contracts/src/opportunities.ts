@@ -412,8 +412,26 @@ const ownedUrlCitedExpectedCheckSchema = responseObject({
     }),
   ]),
 });
+/**
+ * One product's metric over the answers after go-live: the Products read's
+ * window, limited to executions after the declaration. Met once the reading
+ * clears the rule (`at_least` / `at_most` the frozen target); a window with
+ * fewer than `min_samples` samples is still waiting. Frozen at declaration.
+ */
+export const productMetricExpectedCheckSchema = responseObject({
+  kind: z.literal('product_metric'),
+  product_id: uuid(),
+  product_name: z.string(),
+  metric: z.enum(['appearances', 'price_gap_share', 'win_rate', 'owned_merchant_answers']),
+  comparison: z.enum(['at_least', 'at_most']),
+  target: z.number(),
+  min_samples: z.number().int(),
+  window_days: z.number().int(),
+  baseline_value: z.number().optional(),
+});
 export const expectedCheckSchema = z.discriminatedUnion('kind', [
   keywordPresenceExpectedCheckSchema,
+  productMetricExpectedCheckSchema,
   ownedUrlCitedExpectedCheckSchema,
   responseObject({
     kind: z.literal('contextual_link'),

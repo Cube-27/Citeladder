@@ -45,6 +45,12 @@ export type ProductQuery = {
   limit: number;
   /** One holder's row only: the detail page's KPIs, never set by the table. */
   holder?: string;
+  /** Every merchant, not the table's top few: commerce Actions judge the whole list. */
+  allMerchants?: boolean;
+  /** The window ends here rather than now: an Action records the instant it measured. */
+  until?: Date;
+  /** Only executions completed after this instant: an Action's later window. */
+  after?: Date;
 };
 
 const CURSOR_SCOPE = 'commerce.products';
@@ -111,7 +117,10 @@ function cursorPosition(query: ProductQuery, filters: Record<string, unknown>) {
 }
 
 /** The executions a product read covers: its window, engine and prompt set. */
-export type ExecutionScope = Pick<ProductQuery, 'windowDays' | 'engine' | 'promptSet'>;
+export type ExecutionScope = Pick<
+  ProductQuery,
+  'windowDays' | 'engine' | 'promptSet' | 'until' | 'after'
+>;
 
 export function requireWindow(windowDays: number) {
   if (!policy.commerce.products.window_days.includes(windowDays))
@@ -137,8 +146,11 @@ export function scopedSlots(scope: CommerceScope, executions: ExecutionScope) {
   requireWindow(executions.windowDays);
   const ws = scope.workspaceId,
     project = scope.projectId;
-  const since = new Date(Date.now() - executions.windowDays * DAY_MS);
+  const end = executions.until ?? new Date();
+  const since = new Date(end.getTime() - executions.windowDays * DAY_MS);
   const branded = [...policy.prompts.branded_cohorts];
+  const untilFilter = executions.until ? sql`AND t.completed_at <= ${executions.until}` : NOTHING;
+  const afterFilter = executions.after ? sql`AND t.completed_at > ${executions.after}` : NOTHING;
   const engineFilter = executions.engine
     ? sql`AND t.logical_engine = ${executions.engine}`
     : NOTHING;
@@ -157,6 +169,8 @@ export function scopedSlots(scope: CommerceScope, executions: ExecutionScope) {
       WHERE p.workspace_id = ${ws} AND p.project_id = ${project}
         AND t.status = 'succeeded' AND t.completed_at >= ${since}
         AND s.cohort <> ALL(${branded}::text[])
+        ${untilFilter}
+        ${afterFilter}
         ${engineFilter}
         ${promptSetFilter}
       ORDER BY p.artifact_id, r.revision_number DESC NULLS LAST, p.created_at DESC, p.id DESC
@@ -242,6 +256,8 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
     ? sql`AND (h.name ILIKE ${search} OR h.brand ILIKE ${search} OR h.url ILIKE ${search})`
     : NOTHING;
   const holderFilter = query.holder ? sql`AND h.holder_id = ${query.holder}` : NOTHING;
+  // LIMIT NULL is no limit.
+  const merchantLimit = query.allMerchants ? null : policy.commerce.products.merchant_limit;
   const afterCursor = position
     ? sql`WHERE (k.sort_key, k.name_key, k.holder_id)
               > (${position.sortKey}::float8, ${position.name}, ${position.id}::uuid)`
@@ -305,7 +321,7 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
         SELECT coalesce(json_agg(json_build_object('domain', mc.domain, 'count', mc.n)
                                  ORDER BY mc.n DESC, mc.domain), '[]'::json) AS merchants
         FROM (SELECT * FROM merchant_counts mc WHERE mc.holder_id = k.holder_id
-              ORDER BY mc.n DESC, mc.domain LIMIT ${policy.commerce.products.merchant_limit}) mc
+              ORDER BY mc.n DESC, mc.domain LIMIT ${merchantLimit}) mc
       ) merch ON true
       LEFT JOIN LATERAL (
         SELECT coalesce(array_agg(m.category_id::text ORDER BY m.category_id), '{}') AS category_ids
