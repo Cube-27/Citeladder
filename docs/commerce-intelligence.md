@@ -85,7 +85,8 @@ states and discovery failures read as sentences.
 ## Buyer Prompts
 
 Every Commerce prompt has a typed category or product target. Generation is
-bounded and rejects owned-name leakage; admission binds a prompt to the target
+bounded and rejects owned-name leakage; a category's branded comparisons are the
+one bounded exception (below). Admission binds a prompt to the target
 through the category's own name, its products and category terms, and for a
 product its name and description. Archived products never feed the context.
 Generated and manual prompts use the shared Prompt owner and stay disabled until
@@ -95,6 +96,30 @@ targets and capacity before writing. Each target keeps the prompts it admitted:
 a weak batch or a later model failure does not discard earlier targets' paid
 prompts, and only a request that admitted nothing is unavailable (503). The
 screen says when fewer prompts than asked were usable.
+
+**Category matrix.** A category target generates a shopping matrix in one
+bounded model call: buyer contexts × intent stages (configured: 3 contexts ×
+`consideration` and `decision`), one non-branded prompt per cell, plus branded
+comparisons so that branded prompts stay within `branded_share` (0.2) of the
+batch. All of these numbers live in `buyer_prompts.matrix` in
+`config/commerce.ts`. The context is stored as the prompt's persona and the
+stage as its buyer stage; admission keeps at most one prompt per cell and the
+configured number of contexts. Non-branded prompts keep the owned-name
+rejection. A branded comparison must name the owned brand and is filed in the
+shared `comparison` cohort, so `prompts.branded` is true and it stays out of
+organic metrics (no schema change). The Buyer Prompts read returns `branded`,
+`buyer_stage` and `context` per prompt.
+
+**Hero products.** Per-product prompts exist only for hero products the user
+picks (configured 3 each, `buyer_prompts.default`). A generate request naming a
+product target must set `hero: true` or it is refused (422
+`commerce_prompt_hero_required`) before any quota or model call; every other
+product is covered by its category's matrix. The hero pick is a per-request
+choice, not stored on the product.
+
+The category's prompts section opens the standalone matrix sheet
+(`category-matrix-sheet.tsx`), which generates the matrix, shows coverage
+(contexts × stages filled, branded count) and approves prompts one at a time.
 
 For one target, the prompts section opens the shared audit launcher over only
 its approved prompt IDs and explains why launch is disabled until one is

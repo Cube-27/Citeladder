@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { actionStatusSchema } from './actions.ts';
+import { buyerStageSchema } from './project.ts';
 
 const uuid = z.uuid();
 /** Targets one discovery or prompt-generation request may name: each is a paid search or model call. */
@@ -89,6 +90,12 @@ export const buyerPromptSchema = z.strictObject({
   prompt_set_id: uuid,
   target: commerceTargetSchema,
   text: z.string(),
+  /** A comparison that names the owned brand; the only prompts allowed to. */
+  branded: z.boolean(),
+  /** The category matrix's intent stage; empty for hero-product and manual prompts. */
+  buyer_stage: buyerStageSchema,
+  /** The category matrix's buyer context; empty outside a matrix. */
+  context: z.string(),
   enabled: z.boolean(),
   approved_at: z.string().nullable(),
 });

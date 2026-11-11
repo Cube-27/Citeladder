@@ -17,13 +17,15 @@ import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import { LaunchDialog } from '@/components/runs/launch-dialog';
 import { ProjectLink } from '@/components/ui/project-link';
 import { useRunEvents } from '@/lib/runs/use-run-events';
+import { CategoryMatrixSheet } from './category-matrix-sheet';
 import { sameTarget } from '@/lib/products/use-commerce-target';
 
 import type { CommerceQueries } from './commerce-queries';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
-const GENERATED_COUNT = 5;
+// Per hero product; the API defaults the count, and a category generates its matrix.
+const HERO_COUNT = 3;
 
 function forTarget(
   rows: NonNullable<CommerceQueries['buyerPrompts']['data']>,
@@ -48,16 +50,16 @@ export function TargetPrompts({
   const [launchOpen, setLaunchOpen] = useState(false);
   const [launchedAuditId, setLaunchedAuditId] = useState<string | null>(null);
   const [shortfall, setShortfall] = useState<number | null>(null);
+  const [matrixOpen, setMatrixOpen] = useState(false);
   // The audit stream refreshes AI Shelf and Actions here when the run finishes.
   useRunEvents(launchedAuditId, projectId, Boolean(launchedAuditId));
   const scope = { workspaceId, projectId };
   const generate = useMutation(commerceMutations.generateBuyerPrompts(scope));
   const generatePrompts = () =>
     generate.mutate(
-      { targets: [target], count: GENERATED_COUNT },
+      { targets: [target], count: HERO_COUNT, hero: true },
       {
-        onSuccess: (created) =>
-          setShortfall(created.length < GENERATED_COUNT ? created.length : null),
+        onSuccess: (created) => setShortfall(created.length < HERO_COUNT ? created.length : null),
       },
     );
   const manual = useMutation(commerceMutations.addBuyerPrompt(scope));
@@ -75,9 +77,17 @@ export function TargetPrompts({
       <CardHeader
         actions={
           <>
-            <Button variant="secondary" disabled={busy} onClick={generatePrompts}>
-              {generate.isPending ? 'Generating…' : `Generate ${GENERATED_COUNT}`}
-            </Button>
+            {target.kind === 'category' ? (
+              <Button variant="secondary" disabled={busy} onClick={() => setMatrixOpen(true)}>
+                Shopping prompts matrix
+              </Button>
+            ) : (
+              <Button variant="secondary" disabled={busy} onClick={generatePrompts}>
+                {generate.isPending
+                  ? 'Generating…'
+                  : `Generate ${HERO_COUNT} for this hero product`}
+              </Button>
+            )}
             <Button
               variant="primary"
               disabled={!approvedIds.length || busy}
@@ -102,8 +112,7 @@ export function TargetPrompts({
           ) : null}
           {shortfall !== null ? (
             <Callout tone="info">
-              {shortfall} of {GENERATED_COUNT} generated prompts were usable. Generate again for
-              more.
+              {shortfall} of {HERO_COUNT} generated prompts were usable. Generate again for more.
             </Callout>
           ) : null}
           {launchedAuditId ? (
@@ -111,6 +120,16 @@ export function TargetPrompts({
               Audit launched. Shelf metrics update here when it finishes.{' '}
               <ProjectLink href={`/runs/${launchedAuditId}`}>View the run</ProjectLink>
             </Callout>
+          ) : null}
+          {target.kind === 'category' ? (
+            <CategoryMatrixSheet
+              projectId={projectId}
+              categoryId={target.id}
+              categoryLabel={targetLabel}
+              rows={rows}
+              open={matrixOpen}
+              onOpenChange={setMatrixOpen}
+            />
           ) : null}
           <LaunchDialog
             open={launchOpen}

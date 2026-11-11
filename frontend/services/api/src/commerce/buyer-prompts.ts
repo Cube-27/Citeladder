@@ -4,6 +4,7 @@ import {
   buyerPromptGenerateRequestSchema,
   buyerPromptManualRequestSchema,
 } from '@citeladder/contracts/commerce-requests';
+import { buyerStageSchema, type BuyerStage } from '@citeladder/contracts/project';
 import { sql } from 'kysely';
 import { z } from 'zod';
 
@@ -30,8 +31,23 @@ const stringField = (value: unknown) => (typeof value === 'string' ? value.trim(
 const targetSchema = z.object({ kind: z.enum(['product', 'category']), id: z.uuid() });
 type Target = z.infer<typeof targetSchema>;
 export const buyerGenerateInput = buyerPromptGenerateRequestSchema.extend({
+  /** Prompts per hero product; a category's size is its configured matrix. */
   count: z.number().int().min(P.min).max(P.max).default(P.default),
+  /** The caller picked the product targets as hero products. */
+  hero: z.boolean().default(false),
 });
+const M = P.matrix;
+const matrixCells = M.contexts * M.stages.length;
+/** Branded prompts that keep `branded_share` of a batch with `organic` non-branded ones. */
+const brandedQuota = (organic: number) =>
+  Math.floor((organic * M.branded_share) / (1 - M.branded_share));
+/** One admitted prompt and the matrix cell it fills (empty outside a category matrix). */
+type Draft = { text: string; context: string; stage: BuyerStage; branded: boolean };
+const plainDraft = (text: string): Draft => ({ text, context: '', stage: '', branded: false });
+const heroRequired = () =>
+  new ApiError(422, 'Product prompts are generated only for hero products you pick', {
+    code: 'commerce_prompt_hero_required',
+  });
 export const buyerManualInput = buyerPromptManualRequestSchema.extend({
   text: z.string().trim().min(1).max(policy.prompts.text_max_chars),
 });
@@ -100,8 +116,17 @@ async function targetContext(db: Database, scope: CommerceScope, target: Target)
 }
 type TargetContext = Awaited<ReturnType<typeof targetContext>>;
 
-/** `tracked` holds normalized hashes already in the set or kept for this request. */
-function admittedTexts(texts: string[], context: TargetContext, tracked: Set<string>) {
+/**
+ * `tracked` holds normalized hashes already in the set or kept for this request.
+ * `branded` rows are the bounded exception to the owned-name rejection: they
+ * must name the owned brand, and nothing else may.
+ */
+function admittedTexts<T extends { text: string }>(
+  rows: T[],
+  context: TargetContext,
+  tracked: Set<string>,
+  branded = false,
+): T[] {
   const words = (text: string) => text.toLowerCase().match(/[a-z0-9']+/gu) ?? [];
   const vocabulary = new Set(
     [
@@ -115,11 +140,11 @@ function admittedTexts(texts: string[], context: TargetContext, tracked: Set<str
         : []),
     ].flatMap((value) => [...bindingTokens(value)]),
   );
-  const admitted: string[] = [],
+  const admitted: T[] = [],
     seen = new Set<string>(),
     openings = new Map<string, number>();
-  for (const raw of texts) {
-    const text = raw.trim().replace(/\s+/gu, ' '),
+  for (const row of rows) {
+    const text = row.text.trim().replace(/\s+/gu, ' '),
       lower = text.toLowerCase(),
       parts = words(text),
       key = parts.join(' '),
@@ -135,19 +160,67 @@ function admittedTexts(texts: string[], context: TargetContext, tracked: Set<str
       (openings.get(opening) ?? 0) >= 2
     )
       continue;
-    if (vocabulary.size && ![...bindingTokens(text)].some((token) => vocabulary.has(token)))
-      continue;
-    if (
-      [context.brand, ...(context.target_kind === 'product' ? [context.name] : [])].some(
-        (name) => name.trim() && lower.includes(name.trim().toLowerCase()),
+    const brand = context.brand.trim().toLowerCase();
+    if (branded) {
+      if (!brand || !lower.includes(brand)) continue;
+    } else {
+      if (vocabulary.size && ![...bindingTokens(text)].some((token) => vocabulary.has(token)))
+        continue;
+      if (
+        [context.brand, ...(context.target_kind === 'product' ? [context.name] : [])].some(
+          (name) => name.trim() && lower.includes(name.trim().toLowerCase()),
+        )
       )
-    )
-      continue;
-    admitted.push(text);
+        continue;
+    }
+    admitted.push({ ...row, text });
     seen.add(key);
     openings.set(opening, (openings.get(opening) ?? 0) + 1);
   }
   return admitted;
+}
+
+const matrixRowSchema = z.object({
+  text: z.string(),
+  context: z.string().default(''),
+  stage: z.string().default(''),
+  branded: z.boolean().default(false),
+});
+type MatrixRow = z.infer<typeof matrixRowSchema>;
+
+/**
+ * A category's matrix: at most one non-branded prompt per context × stage
+ * cell and at most the configured number of contexts, then the branded
+ * comparisons the share allows for what was admitted.
+ */
+function matrixDrafts(rows: MatrixRow[], context: TargetContext, tracked: Set<string>): Draft[] {
+  const stages = new Set<string>(M.stages);
+  const label = (value: string) =>
+    value.trim().replaceAll(/\s+/gu, ' ').slice(0, M.context_max_chars);
+  const organicRows = rows
+    .filter((row) => !row.branded && label(row.context) && stages.has(row.stage))
+    .map((row) => ({ ...row, context: label(row.context) }));
+  const contexts = new Set<string>(),
+    cells = new Set<string>(),
+    organic: Draft[] = [];
+  for (const row of admittedTexts(organicRows, context, tracked)) {
+    const key = row.context.toLowerCase(),
+      cell = `${key}|${row.stage}`;
+    if (cells.has(cell) || (!contexts.has(key) && contexts.size >= M.contexts)) continue;
+    contexts.add(key);
+    cells.add(cell);
+    organic.push({ ...row, stage: buyerStageSchema.parse(row.stage), branded: false });
+  }
+  const brandedRows = rows.filter((row) => row.branded && stages.has(row.stage));
+  const branded = admittedTexts(brandedRows, context, tracked, true)
+    .slice(0, brandedQuota(organic.length))
+    .map((row): Draft => ({
+      ...row,
+      context: '',
+      stage: buyerStageSchema.parse(row.stage),
+      branded: true,
+    }));
+  return [...organic, ...branded];
 }
 
 const findCommerceSet = (db: Database, scope: CommerceScope) =>
@@ -207,7 +280,7 @@ async function commerceTopic(trx: Database, scope: CommerceScope, name: string, 
   return find().executeTakeFirstOrThrow();
 }
 
-type Batch = { target: Target; texts: string[]; evidence: Record<string, unknown> | null };
+type Batch = { target: Target; drafts: Draft[]; evidence: Record<string, unknown> | null };
 
 /**
  * One batch's disabled prompts and their target bindings; a normalized
@@ -224,19 +297,20 @@ async function insertBatch(
   batch: Batch,
   now: Date,
 ) {
-  const labels = batch.evidence
-    ? { theme: owner.name, buyer_stage: 'consideration', prompt_intent: 'recommend' }
-    : { theme: 'Commerce', buyer_stage: '', prompt_intent: '' };
+  const generated = batch.evidence !== null;
   const prompts = await insertPrompts(
     trx,
     owner.set,
-    batch.texts.map((text) => ({
-      text,
+    batch.drafts.map((draft) => ({
+      text: draft.text,
       topic_id: owner.topic,
-      ...labels,
+      theme: generated ? owner.name : 'Commerce',
+      buyer_stage: generated ? draft.stage || 'consideration' : '',
+      prompt_intent: generated ? (draft.branded ? 'compare' : 'recommend') : '',
       intent: 'comparison',
-      persona: '',
-      cohort: 'commerce',
+      persona: draft.context,
+      // The comparison cohort is the shared branded one: its prompts stay out of organic metrics.
+      cohort: draft.branded ? 'comparison' : 'commerce',
       enabled: false,
       generation_evidence: batch.evidence,
     })),
@@ -301,7 +375,7 @@ export async function manualBuyerPrompt(
   input: z.infer<typeof buyerManualInput>,
 ) {
   const rows = await persist(db, scope, [
-    { target: input.target, texts: [input.text], evidence: null },
+    { target: input.target, drafts: [plainDraft(input.text)], evidence: null },
   ]);
   return firstOf(rows, 'the persisted manual buyer prompt');
 }
@@ -332,6 +406,10 @@ export async function generateBuyerPrompts(
   gatewayFactory: () => ModelGateway = createModelGateway,
   meter: Meter = meterFor(db, scope.workspaceId),
 ) {
+  // Per-product prompts are an explicit hero choice; every other product is
+  // covered by its category's matrix.
+  if (!input.hero && input.targets.some((target) => target.kind === 'product'))
+    throw heroRequired();
   const contexts = [];
   for (const target of input.targets) contexts.push(await targetContext(db, scope, target)); // NOSONAR -- The first unavailable target, in request order, is the error.
   // Skip already tracked texts so a repeat generation is not a 409; the
@@ -348,12 +426,22 @@ export async function generateBuyerPrompts(
   for (const [index, context] of contexts.entries()) {
     let response;
     const startedAt = performance.now();
+    const matrix = context.target_kind === 'category';
     try {
       response = await gateway.structured(
-        commerceBuyerPromptSystem(context.business_model),
-        JSON.stringify({ count: input.count, context }),
+        commerceBuyerPromptSystem(context.business_model, matrix),
+        JSON.stringify(
+          matrix
+            ? {
+                contexts: M.contexts,
+                stages: M.stages,
+                branded: brandedQuota(matrixCells),
+                context,
+              }
+            : { count: input.count, context },
+        ),
         // Unusable items are dropped one by one during admission, never the batch.
-        z.object({ prompts: z.array(z.object({ text: z.string() })) }),
+        z.object({ prompts: z.array(matrixRowSchema) }),
       );
     } catch (error) {
       if (!(error instanceof ModelError)) throw error;
@@ -366,16 +454,16 @@ export async function generateBuyerPrompts(
       });
       break;
     }
-    const texts = admittedTexts(
-      response.value.prompts.map((row) => row.text),
-      context,
-      tracked,
-    ).slice(0, input.count);
-    if (!texts.length) continue;
-    for (const kept of texts) tracked.add(promptTextHash(kept));
+    const drafts = matrix
+      ? matrixDrafts(response.value.prompts, context, tracked)
+      : admittedTexts(response.value.prompts, context, tracked)
+          .slice(0, input.count)
+          .map((row) => plainDraft(row.text));
+    if (!drafts.length) continue;
+    for (const kept of drafts) tracked.add(promptTextHash(kept.text));
     const target = input.targets[index]!;
     const { content: _content, ...model } = response.result;
-    batches.push({ target, texts, evidence: { target, template_version: P.version, model } });
+    batches.push({ target, drafts, evidence: { target, template_version: P.version, model } });
   }
   if (!batches.length) throw unavailable();
   return persist(db, scope, batches);
