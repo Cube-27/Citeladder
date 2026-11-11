@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { TabsRoot } from '@/components/ui/tabs';
-import { Tooltip } from '@/components/ui/tooltip';
 import { ListScreen, RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -30,7 +29,8 @@ import { httpErrorStatus } from '@/lib/api/errors';
 import { warmQuery } from '@/lib/api/query-client';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { internalLinksQueries } from '@/lib/api/site-health-internal-links';
-import type { SiteHealthEntitlement } from '@citeladder/contracts';
+import type { CrawlRobotsHandling, SiteCrawl, SiteHealthEntitlement } from '@citeladder/contracts';
+import { RecrawlButton, StartCrawlControl } from '@/components/site-health/robots-choice';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
@@ -76,7 +76,11 @@ function SiteHealthContent({
   });
   const blocking = projectBlockingState(screen);
   const mutationsAllowed = !entitlementQuery.isError;
-  const schedule = useCrawlSchedule({ workspaceId, projectId }, Boolean(crawl) && mutationsAllowed);
+  const schedule = useCrawlSchedule(
+    { workspaceId, projectId },
+    Boolean(crawl) && mutationsAllowed,
+    crawl?.robots,
+  );
   // Internal links' search, filters and header actions act on the analysis its panel draws.
   const links = useInternalLinksBands({
     scope: { projectId, workspaceId },
@@ -92,6 +96,7 @@ function SiteHealthContent({
   const headerActions =
     crawl && mutationsAllowed ? (
       <CrawlActions
+        crawl={crawl}
         active={active}
         exporting={exporting}
         cancelPending={cancelMutation.isPending}
@@ -100,7 +105,7 @@ function SiteHealthContent({
         tabActions={linksActions}
         schedule={schedule.control}
         onCancel={cancelCrawl}
-        onStart={startCrawl}
+        onStart={(robots) => startCrawl({ project_id: projectId, robots })}
         onRecrawl={recrawl}
       />
     ) : (
@@ -427,6 +432,7 @@ function screenBlockingState({
 }
 
 function CrawlActions({
+  crawl,
   active,
   exporting,
   cancelPending,
@@ -438,6 +444,8 @@ function CrawlActions({
   onStart,
   onRecrawl,
 }: Readonly<{
+  /** The shown crawl: its site and robots choice, which Recrawl keeps. */
+  crawl: Pick<SiteCrawl, 'root_url' | 'robots'>;
   active: boolean;
   exporting: boolean;
   cancelPending: boolean;
@@ -453,7 +461,7 @@ function CrawlActions({
   /** The crawl schedule, beside Run new crawl. */
   schedule: ReactNode;
   onCancel: () => void;
-  onStart: () => void;
+  onStart: (robots: CrawlRobotsHandling) => void;
   onRecrawl: () => void;
 }>) {
   return (
@@ -465,23 +473,22 @@ function CrawlActions({
       ) : null}
       {schedule}
       {/* Always present, so starting a crawl never reflows the header. */}
-      <Tooltip content="Rerun this crawl's scope and settings, so Changes compares like with like.">
-        <Button variant="secondary" onClick={onRecrawl} disabled={active || startPending}>
-          Recrawl
-        </Button>
-      </Tooltip>
+      <RecrawlButton
+        robots={crawl.robots}
+        disabled={active || startPending}
+        onRecrawl={onRecrawl}
+      />
       {active ? (
         <Button variant="danger" onClick={onCancel} disabled={cancelPending}>
           {cancelPending ? 'Stopping…' : 'Stop crawl'}
         </Button>
       ) : (
-        <Button
-          variant={tabActions ? 'secondary' : 'primary'}
-          onClick={() => onStart()}
-          disabled={startPending}
-        >
-          {startPending ? 'Starting…' : 'Run new crawl'}
-        </Button>
+        <StartCrawlControl
+          siteUrl={crawl.root_url}
+          primary={!tabActions}
+          pending={startPending}
+          onStart={onStart}
+        />
       )}
       {tabActions}
     </Inline>

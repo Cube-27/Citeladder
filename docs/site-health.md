@@ -266,6 +266,21 @@ Readable policies are cached for `robots_cache_ttl_seconds`. A crawl delay
 above `max_crawl_delay_seconds` blocks the host. A missing file never permits
 bypassing access controls, and a challenge page is terminal `bot_blocked`.
 
+**Ignoring robots.txt.** Start crawl offers "Ignore robots.txt" after the
+person confirms they are authorized to crawl the site. The crawl freezes
+`robots: 'ignore'` and `robots_decision` (user id, email, time) in its
+configuration; Recrawl and scheduled crawls copy both from the crawl they rerun.
+Only the crawl's own `discover` and `analyze` fetches pass the choice to
+`SitePageFetcher` and `PageAcquirer`, per request: it covers only the crawl's
+registrable domain and its subdomains, so a redirect to another host respects
+that host's robots.txt. It waives only the disallow rules of a readable file:
+access-blocked or unreachable robots.txt, crawl delay, pacing, SSRF checks and
+suppression still apply. `site_setup` still records the robots snapshot, and
+every other fetcher (competitors, earned sources, commerce, page documents)
+respects robots.txt. A page fetched despite an exclusion carries
+`acquisition_options.robots_excluded` on its artifact and reads as
+`robots_excluded: true`.
+
 **Operator stop.** Run
 `pnpm --filter @citeladder/api acquisition:control --actor <admin-email> --domain <domain-or-*> --reason <reason> [--resume] [--apply]`.
 

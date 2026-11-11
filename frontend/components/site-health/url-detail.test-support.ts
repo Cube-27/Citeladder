@@ -25,6 +25,7 @@ export function pageDetail(overrides: Partial<PageDetail> = {}): PageDetail {
     aeo_measurement_state: 'measured',
     aeo_measurement_reason: '',
     main_content_indexable: true,
+    robots_excluded: false,
     issue_count: 2,
     last_audited: '2026-07-16T00:00:00Z',
     page_kind: 'product',

@@ -2382,6 +2382,26 @@
         "type": "string",
         "enum": ["queued", "running", "completed", "partially_completed", "failed", "cancelled"]
       },
+      "CrawlRobotsChoice": {
+        "type": "object",
+        "properties": {
+          "handling": {
+            "$ref": "#/components/schemas/CrawlRobotsHandling"
+          },
+          "decided_by_email": {
+            "type": ["string", "null"]
+          },
+          "decided_at": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["handling", "decided_by_email", "decided_at"],
+        "additionalProperties": false
+      },
+      "CrawlRobotsHandling": {
+        "type": "string",
+        "enum": ["respect", "ignore"]
+      },
       "CrawlSource": {
         "type": "object",
         "properties": {
@@ -3850,6 +3870,9 @@
           "main_content_indexable": {
             "type": ["boolean", "null"]
           },
+          "robots_excluded": {
+            "type": "boolean"
+          },
           "last_audited": {
             "type": ["string", "null"]
           },
@@ -3919,6 +3942,7 @@
           "aeo_measurement_state",
           "aeo_measurement_reason",
           "main_content_indexable",
+          "robots_excluded",
           "last_audited",
           "page_kind",
           "inbound_count",
@@ -6221,6 +6245,9 @@
           "seed": {
             "type": "string"
           },
+          "robots": {
+            "$ref": "#/components/schemas/CrawlRobotsChoice"
+          },
           "inventory_complete": {
             "type": "boolean"
           },
@@ -6398,6 +6425,7 @@
           "root_url",
           "sample_mode",
           "seed",
+          "robots",
           "inventory_complete",
           "partial_reason",
           "visible_url_count",

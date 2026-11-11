@@ -117,8 +117,18 @@ export const siteHealthCrawlRoutes = [
     async handle({ c, db, config }) {
       const request = await readBody(c, createCrawlRequest);
       const workspaceId = c.get('workspace').workspaceId;
+      const user = c.get('user');
+      // Ignoring robots.txt is the signed-in person's confirmation, recorded on the crawl.
+      const robotsDecision =
+        request.robots === 'ignore'
+          ? { user_id: user.id, email: user.profile.email, decided_at: new Date().toISOString() }
+          : null;
       await spendBudget(db, budget('crawl_create', config.settings), workspaceId);
-      const crawl = await db.transaction().execute((trx) => createCrawl(trx, workspaceId, request));
+      const crawl = await db
+        .transaction()
+        .execute((trx) =>
+          createCrawl(trx, workspaceId, { ...request, robots_decision: robotsDecision }),
+        );
       return siteCrawlSchema.parse(await crawlProjection(db, crawl));
     },
   }),

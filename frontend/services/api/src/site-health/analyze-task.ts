@@ -23,7 +23,7 @@ import {
   type AttemptOutcome,
 } from './analysis-rows.ts';
 import { releaseNonPage } from './frontier.ts';
-import { isBotBlock } from './page-fetch.ts';
+import { crawlRobotsHandling, isBotBlock } from './page-fetch.ts';
 import type { SiteWorkerSettings } from './runtime.ts';
 import {
   Abandoned,
@@ -54,6 +54,7 @@ type Outcome = AttemptOutcome & {
   facts: Facts | null;
   page: Parameters<typeof writeArtifact>[3] | null;
   reusedArtifactId: string | null;
+  robotsExcluded: boolean;
   retryable: boolean;
   errorDetail: string;
   retryAfterSeconds?: number;
@@ -167,10 +168,13 @@ async function setupPending(db: Database, crawl: Crawl, task: SiteTask) {
 const expectClassification = (db: Database, task: SiteTask, owner: string) =>
   owned(db, task, owner).set({ classification_expected: true, updated_at: new Date() }).execute();
 
-async function acquire(ctx: SiteTaskContext, task: SiteTask): Promise<Outcome> {
+async function acquire(ctx: SiteTaskContext, crawl: Crawl, task: SiteTask): Promise<Outcome> {
   await ctx.checkAccess();
-  const fetched = await ctx.fetcher.fetch(task.requested_url, { signal: ctx.signal });
-  const base = { facts: null, page: null, reusedArtifactId: null };
+  const fetched = await ctx.fetcher.fetch(task.requested_url, {
+    signal: ctx.signal,
+    robots: crawlRobotsHandling(crawl.configuration),
+  });
+  const base = { facts: null, page: null, reusedArtifactId: null, robotsExcluded: false };
   if (!fetched.ok)
     return {
       ...base,
@@ -189,6 +193,7 @@ async function acquire(ctx: SiteTaskContext, task: SiteTask): Promise<Outcome> {
     latencyMs: fetched.latencyMs,
     calls: fetched.calls,
     page,
+    robotsExcluded: fetched.robotsExcluded,
   };
   if (failure)
     return {
@@ -277,6 +282,7 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
         policyVersion: ctx.fetcher.settings.policyVersion,
         latencyMs: outcome.latencyMs ?? 0,
         purpose: 'analyze',
+        robotsExcluded: outcome.robotsExcluded,
       });
       const analysis = await writePageAnalysis(
         trx,
@@ -357,12 +363,13 @@ async function prepare(
     return deferred ? 'deferred' : null;
   }
   if (!(await markRunning(ctx, task))) return null;
-  if (!artifact) return acquire(ctx, task);
+  if (!artifact) return acquire(ctx, crawl, task);
   if (artifact.facts.has_html) await expectClassification(ctx.db, task, ctx.owner);
   return {
     facts: artifact.facts,
     page: null,
     reusedArtifactId: artifact.id,
+    robotsExcluded: false,
     succeeded: true,
     errorCode: '',
     errorDetail: '',

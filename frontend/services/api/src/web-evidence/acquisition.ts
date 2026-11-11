@@ -1,6 +1,7 @@
 /** Durable operator suppression, destination robots, and publisher pacing at every hop. */
 import { setTimeout as delay } from 'node:timers/promises';
 import robotsModule from 'robots-parser';
+import type { CrawlRobotsHandling } from '@citeladder/contracts/site-health';
 
 import { policy } from '../config.ts';
 import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
@@ -161,6 +162,10 @@ export function robotsPolicy(
   const robots = robotsParser(`${origin}/robots.txt`, fetched ? body : '');
   const declared = robots.getCrawlDelay(policy.web_fetch.user_agent);
   const seconds = declared === undefined ? settings.defaultDelay : Math.max(0, declared);
+  // Readable, not access-blocked, and asking for a delay the crawler honours.
+  const fetchable = readable && Number.isFinite(seconds) && seconds <= settings.maxDelay;
+  const permits = (url: string) =>
+    fetchable && robots.isAllowed(url, policy.web_fetch.user_agent) === true;
   return {
     status,
     /** The policy text when robots.txt answered 2xx, else null. */
@@ -180,15 +185,23 @@ export function robotsPolicy(
         : ('no_rules' as const);
     },
     sitemaps: robots.getSitemaps(),
-    permits: (url: string) =>
-      !unavailable &&
-      !restricted &&
-      Number.isFinite(seconds) &&
-      seconds <= settings.maxDelay &&
-      robots.isAllowed(url, policy.web_fetch.user_agent) === true,
+    permits,
+    /** The rules disallow the crawler from `url` (not whether robots.txt was readable). */
+    excludes: (url: string) => robots.isAllowed(url, policy.web_fetch.user_agent) === false,
+    /**
+     * Whether a fetch of `url` may go ahead. `ignore` waives only the disallow
+     * rules: an unreadable or access-blocked robots.txt, or an unsupported
+     * crawl delay, still stops it.
+     */
+    admits: (url: string, handling: CrawlRobotsHandling) =>
+      handling === 'ignore' ? fetchable : permits(url),
   };
 }
 export type RobotsPolicy = ReturnType<typeof robotsPolicy>;
+/** How one fetch treats robots.txt at each destination it requests. */
+export type RobotsChoice = (destination: URL) => CrawlRobotsHandling;
+/** Every caller but the project's own site crawl respects robots.txt everywhere. */
+export const respectRobots: RobotsChoice = () => 'respect';
 
 export class PageAcquirer {
   readonly #cache = new Map<string, { expires: number; value: Promise<RobotsPolicy> }>();
@@ -253,14 +266,20 @@ export class PageAcquirer {
   coolDown(origin: string, seconds: number) {
     this.#pacer.coolDown(origin, seconds);
   }
-  /** `admit` screens each page hop (never robots.txt) before the shared authorization. */
+  /**
+   * `admit` screens each page hop (never robots.txt) before the shared
+   * authorization. `robots` decides per hop and respects robots.txt unless the
+   * caller is the project's own site crawl, that crawl chose to ignore
+   * robots.txt, and the hop is on the crawl's own site.
+   */
   fetch(
     url: string,
     options: Omit<FetchOptions, 'gate' | 'authorize'> & {
       admit?: (url: URL) => void;
+      robots?: RobotsChoice;
     },
   ) {
-    const { admit, ...rest } = options;
+    const { admit, robots: handling = respectRobots, ...rest } = options;
     return this.fetcher(url, {
       ...rest,
       authorize: admit
@@ -272,7 +291,7 @@ export class PageAcquirer {
       gate: async (destination, send, signal) => {
         admit?.(destination);
         const robots = await this.robots(destination.origin);
-        if (!robots.permits(destination.href))
+        if (!robots.admits(destination.href, handling(destination)))
           throw new FetchError(robots.unavailable ? 'robots_unavailable' : 'robots_disallowed');
         return this.#pacer.slot(
           destination.origin,

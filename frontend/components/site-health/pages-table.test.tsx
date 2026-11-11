@@ -73,6 +73,22 @@ describe('PagesTable', () => {
     expect(within(done).queryByText('Completed')).not.toBeInTheDocument();
   });
 
+  it('marks only a page fetched despite a robots.txt exclusion', () => {
+    renderPages(
+      <PagesTable
+        crawlId={CRAWL}
+        pages={[
+          page({ title: 'Open page' }),
+          page({ site_url_id: SOURCE_CRAWL, title: 'Private page', robots_excluded: true }),
+        ]}
+      />,
+    );
+    const open = screen.getByRole('row', { name: /Open page/ });
+    const excluded = screen.getByRole('row', { name: /Private page/ });
+    expect(within(excluded).getByText('Robots.txt excluded')).toBeInTheDocument();
+    expect(within(open).queryByText('Robots.txt excluded')).not.toBeInTheDocument();
+  });
+
   it('keeps a limited-evidence score from reading as fully measured', () => {
     renderPages(
       <PagesTable
@@ -142,6 +158,7 @@ describe('PagesTable', () => {
             aeo_measurement_coverage: null,
             aeo_measurement_state: 'not_measured',
             main_content_indexable: null,
+            robots_excluded: false,
             last_audited: null,
             page_kind: null,
           }),
