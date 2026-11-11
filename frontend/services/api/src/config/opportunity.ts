@@ -301,6 +301,19 @@ export const opportunities = {
       severity: 'low',
       title: 'Page has weak internal-link authority',
     },
+    // One Site Health issue family across its pages (BL2): `SITE_ISSUE_FAMILY`.
+    // Severity and title are the family's own Site Health rule's.
+    site_issue_family: {
+      action_path: 'owned',
+      enabled: true,
+      opportunity_type: 'site',
+      remediation:
+        'This defect fails on many pages for one cause, usually a shared template or component. Fix that cause once, then let the next comparable crawl confirm every affected page passes.',
+      rule_id: 'site_issue_family',
+      check_kind: 'issue_family',
+      severity: 'high',
+      title: 'A Site Health defect repeats across pages',
+    },
     site_change_potential_regression: {
       action_path: 'owned',
       enabled: true,
@@ -447,6 +460,17 @@ export const opportunities = {
     'aeo.organization_identity': 'citability_trust_incomplete',
     'aeo.trust_path_present': 'citability_trust_incomplete',
     'aeo.product_brand_identity': 'citability_trust_incomplete',
+  },
+  // Site Health defects whose rule id starts with `ISSUE_RULE_PREFIX` become one
+  // finding per rule across its affected pages, never one per page, so a shared
+  // component failing on 179 pages is one Action. The cohort lists at most
+  // `COHORT_PAGES_MAX` pages in URL order, which bounds what a declaration
+  // freezes and a crawl re-reads; the Agent reads at most `AGENT_PAGES_MAX`.
+  SITE_ISSUE_FAMILY: {
+    RULE_ID: 'site_issue_family',
+    ISSUE_RULE_PREFIX: 'web.',
+    COHORT_PAGES_MAX: 500,
+    AGENT_PAGES_MAX: 50,
   },
   SEVERITY_WEIGHTS: {
     critical: 4,

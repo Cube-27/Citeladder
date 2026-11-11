@@ -247,6 +247,50 @@ describe('Declaration status', () => {
     ]);
   });
 
+  it('reads an issue family as verified, partially resolved, still failing or inconclusive', () => {
+    const family = (
+      index: number,
+      state: 'met' | 'unmet' | 'unavailable',
+      reason: string | null,
+      failing: { site_url_id: string; url: string }[],
+    ) => ({
+      ...pageCheck(state),
+      index,
+      kind: 'issue_family',
+      reason,
+      subject: 'Missing viewport meta tag',
+      pages: { failing, passing: 2, unread: state === 'unavailable' ? 1 : 0 },
+    });
+    const stuck = {
+      site_url_id: '77777777-7777-4777-8777-777777777777',
+      url: 'https://acme.test/b',
+    };
+    renderWithProviders(
+      <DeclarationStatus
+        declaration={declaration([
+          family(0, 'met', null, []),
+          family(1, 'unmet', 'partially_resolved', [stuck]),
+          family(2, 'unmet', 'still_failing', [stuck]),
+          family(3, 'unavailable', 'cohort_partly_analyzed', []),
+        ])}
+        workspaceId={WORKSPACE}
+      />,
+      { projectSelection: selection },
+    );
+    // Each check's own row; a family's failing pages are a list inside it.
+    const rows = [...screen.getByRole('list', { name: 'Checks' }).children];
+    const check = 'Every affected page passes the Site Health check';
+    const subject = 'Missing viewport meta tag';
+    const read = 'Read Sep 25, 2026';
+    expect(rows.map((item) => item.textContent)).toEqual([
+      `${check}Verified${subject}2 pages pass · 0 pages still fail${read}`,
+      `${check}Partially resolved${subject}2 pages pass · 1 page still failhttps://acme.test/bSome affected pages now pass; the pages listed still fail. · ${read}`,
+      `${check}Still failing${subject}2 pages pass · 1 page still failhttps://acme.test/bNo affected page the crawl read passes yet. · ${read}`,
+      `${check}Inconclusive${subject}2 pages pass · 0 pages still fail · 1 page not readThe affected pages that crawl read pass, but it did not read them all. Run a crawl that includes the rest. · ${read}`,
+    ]);
+    expect(screen.getAllByRole('list', { name: 'Pages still failing' })).toHaveLength(2);
+  });
+
   it('offers a crawl while a page check lacks a met reading, and says why', () => {
     const { unmount } = renderWithProviders(
       <DeclarationStatus

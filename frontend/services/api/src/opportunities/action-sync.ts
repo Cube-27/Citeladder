@@ -13,7 +13,10 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { parseContentGapEvidence } from '@citeladder/contracts/opportunity-evidence';
+import {
+  parseContentGapEvidence,
+  siteIssueFamilyEvidenceSchema,
+} from '@citeladder/contracts/opportunity-evidence';
 import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
@@ -50,7 +53,14 @@ export function actionMember(row: NewMember): ActionMember {
     source_issue_ids: [...(row.source_issue_ids ?? [])],
     source_metric_ids: [...(row.source_metric_ids ?? [])],
     facts: handoffFacts(row.rule_id, evidence),
+    ...issueFamilyCohort(row.rule_id, evidence),
   };
+}
+
+/** An issue-family finding's cohort as its evidence stores it; nothing for any other rule. */
+function issueFamilyCohort(rule: string, evidence: Record<string, unknown>) {
+  if (rule !== policy.opportunity.opportunities.SITE_ISSUE_FAMILY.RULE_ID) return {};
+  return { cohort: siteIssueFamilyEvidenceSchema.parse(evidence).cohort };
 }
 
 /**
@@ -83,6 +93,7 @@ const GROUP_COLUMN_TYPES = [
   ['last_member_opportunity_ids', 'jsonb'],
   ['opportunity_snapshot_id', 'uuid'],
   ['evidence_cleared_at', 'timestamptz'],
+  ['cohort', 'jsonb'],
 ] as const;
 type GroupColumn = (typeof GROUP_COLUMN_TYPES)[number][0];
 const GROUP_COLUMNS = GROUP_COLUMN_TYPES.map(([column]) => column);
@@ -104,6 +115,8 @@ function groupFields(group: Group, snapshotId: string) {
     last_member_opportunity_ids: members,
     opportunity_snapshot_id: snapshotId,
     evidence_cleared_at: null,
+    // Clearing leaves an issue family's last cohort as it was, like its last members.
+    cohort: group.cohort ? JSON.stringify(group.cohort) : null,
   } satisfies Record<GroupColumn, unknown>;
 }
 

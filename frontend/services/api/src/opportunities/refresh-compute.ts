@@ -66,6 +66,12 @@ export function siteCoverage(crawl: CoverageCrawl | null): [Json, string[]] {
 const mergedIds = (left: string[], right: string[]) =>
   [...new Set([...left, ...right])].sort(compareText);
 
+/** The hit's own severity when it carries a known one, else its rule's. */
+function hitSeverity(hit: DetectorHit): string {
+  const own = hit.finding?.severity;
+  return own && o.OPPORTUNITY_SEVERITIES.includes(own) ? own : rules[hit.rule_id]!.severity;
+}
+
 /** Positive when `left` is the higher-scored hit. */
 const preference = (left: Scored, right: Scored) => left[1] - right[1];
 
@@ -75,7 +81,7 @@ export function scoreHits(hits: DetectorHit[]): Scored[] {
   for (const hit of hits) {
     const rule = rules[hit.rule_id];
     if (!rule) throw new Error(`unknown opportunity rule_id: ${hit.rule_id}`);
-    const score = priorityScore(rule.severity, hit.value_factor, hit.gap_factor);
+    const score = priorityScore(hitSeverity(hit), hit.value_factor, hit.gap_factor);
     if (score < o.MIN_PRIORITY_TO_SURFACE) continue;
     const key = JSON.stringify([hit.rule_id, targetKey(hit.target)]);
     const current = consolidated.get(key);
@@ -109,9 +115,9 @@ export function newOpportunity(hit: DetectorHit, score: number) {
   return {
     rule_id: rule.rule_id,
     opportunity_type: rule.opportunity_type,
-    severity: rule.severity,
+    severity: hitSeverity(hit),
     priority_score: score,
-    title: rule.title,
+    title: hit.finding?.title || rule.title,
     remediation: rule.remediation,
     ...targetColumns(hit.target),
     evidence: hit.evidence,

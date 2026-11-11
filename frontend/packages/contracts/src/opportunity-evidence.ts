@@ -72,6 +72,33 @@ const siteIssueEvidenceSchema = z.object({
   limitations: z.array(z.string()),
 });
 
+/**
+ * One Site Health issue family: one rule across the pages it fails on in one
+ * crawl. `group_id` is the family's issue group in that crawl's catalog.
+ * `pages` is the cohort a declaration freezes, in URL order and bounded;
+ * `page_count` counts every affected page, so fewer listed pages means the
+ * list was cut.
+ */
+export const issueFamilyCohortSchema = z.object({
+  rule_id: z.string(),
+  rule_label: z.string(),
+  crawl_id: z.string(),
+  group_id: z.string(),
+  page_count: z.number().int(),
+  pages: z.array(z.object({ site_url_id: z.string(), url: z.string() })),
+});
+export type IssueFamilyCohort = z.infer<typeof issueFamilyCohortSchema>;
+
+/** A Site Health defect repeated across pages, as one finding. */
+export const siteIssueFamilyEvidenceSchema = z.object({
+  issue_rule_id: z.string(),
+  issue_severity: z.string(),
+  category: z.string(),
+  cohort: issueFamilyCohortSchema,
+  coverage: json,
+  limitations: z.array(z.string()),
+});
+
 /** Suggested contextual links from one owned page, from one link run. */
 const contextualLinksEvidenceSchema = z.object({
   site_url_id: z.string(),
@@ -255,6 +282,7 @@ export const opportunityEvidenceSchemas = {
   site_contextual_links: contextualLinksEvidenceSchema,
   site_link_near_orphan: siteIssue,
   site_link_weak_authority: siteIssue,
+  site_issue_family: siteIssueFamilyEvidenceSchema,
   site_change_potential_regression: siteChange,
   site_change_critical_regression: siteChange,
   site_change_metadata_inconsistency: siteChange,

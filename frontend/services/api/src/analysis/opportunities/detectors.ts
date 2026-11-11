@@ -13,7 +13,9 @@ import {
 } from './scoring.ts';
 import { summarizeSourcePattern } from './source-patterns.ts';
 import { compareText } from '../../text-order.ts';
+import type { NonEmpty } from '../../lists.ts';
 import { targetKey } from './targets.ts';
+import { issueGroupId, ruleTitle } from '../../site-health/reads/rules.ts';
 const p = policy.opportunity.opportunities;
 export const rules = p.OPPORTUNITY_RULES_BY_ID as Record<
   string,
@@ -103,6 +105,72 @@ export const detectBrandAbsentHighValuePrompt = (e: VisibilityEvidence) =>
   visibilityGaps(e, 'brand_absent_high_value_prompt', true);
 export const detectOwnedPageNotCited = (e: VisibilityEvidence) =>
   visibilityGaps(e, 'owned_page_not_cited', false);
+type SiteIssue = SiteEvidence['issues'][number];
+const family = p.SITE_ISSUE_FAMILY;
+const isFamilyIssue = (issue: SiteIssue) =>
+  issue.finding_class === policy.opportunity.refresh.finding_class_defect &&
+  issue.rule_id.startsWith(family.ISSUE_RULE_PREFIX);
+
+/**
+ * One finding per issue-family rule across every page it fails on: its
+ * cohort lists the pages in URL order, at most `COHORT_PAGES_MAX`, and cites
+ * every issue. A page outside the project's URLs is not in the cohort.
+ */
+function issueFamilyHits(e: SiteEvidence, urls: ReadonlyMap<string, string>): DetectorHit[] {
+  if (!rules[family.RULE_ID]!.enabled) return [];
+  const byRule = new Map<string, NonEmpty<{ issue: SiteIssue; url: string }>>();
+  for (const issue of e.issues.filter(isFamilyIssue)) {
+    const url = urls.get(issue.site_url_id);
+    if (url === undefined) continue;
+    const found = byRule.get(issue.rule_id);
+    if (found) found.push({ issue, url });
+    else byRule.set(issue.rule_id, [{ issue, url }]);
+  }
+  return [...byRule]
+    .sort(([left], [right]) => compareText(left, right))
+    .map(([ruleId, entries]) => {
+      const issues = entries.map((entry) => entry.issue);
+      const pages = [
+        ...new Map(
+          entries.map(({ issue, url }) => [
+            issue.site_url_id,
+            { site_url_id: issue.site_url_id, url },
+          ]),
+        ).values(),
+      ].sort(
+        (left, right) =>
+          compareText(left.url, right.url) || compareText(left.site_url_id, right.site_url_id),
+      );
+      const first = entries[0].issue;
+      const label = ruleTitle(ruleId);
+      return {
+        rule_id: family.RULE_ID,
+        target: { kind: 'issue_family', rule_id: ruleId, label },
+        evidence: {
+          issue_rule_id: ruleId,
+          issue_severity: first.severity,
+          category: first.category,
+          cohort: {
+            rule_id: ruleId,
+            rule_label: label,
+            crawl_id: e.crawl_id,
+            group_id: issueGroupId(e.crawl_id, ruleId, first.finding_class),
+            page_count: pages.length,
+            pages: pages.slice(0, family.COHORT_PAGES_MAX),
+          },
+          coverage: e.coverage,
+          limitations: [...e.limitations],
+        },
+        source_analysis_ids: [],
+        source_issue_ids: sortedUnique(issues.map((issue) => issue.issue_id)),
+        source_metric_ids: [],
+        value_factor: p.SITE_VALUE_FACTOR,
+        gap_factor: p.SITE_GAP_FACTOR,
+        finding: { severity: first.severity, title: label },
+      };
+    });
+}
+
 export function detectSiteIssueOpportunities(e: SiteEvidence): DetectorHit[] {
   const urls = new Map(e.urls.map((u) => [u.site_url_id, u.normalized_url]));
   const mapping: Record<string, string> = p.SITE_ISSUE_TO_OPPORTUNITY_RULE_ID;
@@ -142,12 +210,15 @@ export function detectSiteIssueOpportunities(e: SiteEvidence): DetectorHit[] {
       },
     });
   }
-  return hits
-    .toSorted(
-      (a, b) =>
-        compareText(a.hit.rule_id, b.hit.rule_id) ||
-        compareText(targetKey(a.hit.target), targetKey(b.hit.target)) ||
-        compareText(a.issueId, b.issueId),
-    )
-    .map(({ hit }) => hit);
+  return [
+    ...hits
+      .toSorted(
+        (a, b) =>
+          compareText(a.hit.rule_id, b.hit.rule_id) ||
+          compareText(targetKey(a.hit.target), targetKey(b.hit.target)) ||
+          compareText(a.issueId, b.issueId),
+      )
+      .map(({ hit }) => hit),
+    ...issueFamilyHits(e, urls),
+  ];
 }

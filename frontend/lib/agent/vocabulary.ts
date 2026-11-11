@@ -58,6 +58,7 @@ const TARGET_KIND_LABEL: Record<string, string> = {
   query: 'Search query',
   prompt: 'Prompt',
   planned_page: 'Planned page',
+  issue_family: 'Issue across pages',
 };
 
 export const ACTION_TARGET_KINDS = Object.keys(TARGET_KIND_LABEL);
@@ -120,6 +121,7 @@ const CHECK_KIND_LABEL: Record<string, string> = {
   keyword_presence: 'You appear for the search',
   owned_url_cited: 'An AI answer cites your page',
   product_metric: 'The product metric clears in later answers',
+  issue_family: 'Every affected page passes the Site Health check',
 };
 
 export function checkKindLabel(kind: string): string {
@@ -194,10 +196,36 @@ const CHECK_REASON: Record<string, string> = {
   unsupported_window: 'The check names a window the Products read no longer offers.',
   provider_serp_predates_change:
     'DataForSEO last checked this search before the go-live date. A later analysis can answer it.',
+  partially_resolved: 'Some affected pages now pass; the pages listed still fail.',
+  still_failing: 'No affected page the crawl read passes yet.',
+  non_comparable_crawl:
+    'That crawl used a different analyzer or rule set than the one that found the issue, so it cannot be compared.',
+  baseline_crawl_unavailable: 'The crawl that found the issue is no longer stored.',
+  cohort_not_analyzed:
+    'That crawl did not read the affected pages after go-live. Run a crawl that includes them.',
+  cohort_partly_analyzed:
+    'The affected pages that crawl read pass, but it did not read them all. Run a crawl that includes the rest.',
 };
 
 export function checkReasonLabel(reason: string | null): string | null {
   return reason ? (CHECK_REASON[reason] ?? null) : null;
+}
+
+/**
+ * A check's state as a reader is told it. An issue-family check reads its
+ * whole cohort, so it is verified, partially resolved, still failing or
+ * inconclusive; every other check keeps `CHECK_STATE_LABEL`.
+ */
+export function checkStateLabel(check: {
+  kind: string;
+  state: 'waiting' | 'met' | 'unmet' | 'unavailable';
+  reason: string | null;
+}): string {
+  if (check.kind !== 'issue_family' || check.state === 'waiting')
+    return CHECK_STATE_LABEL[check.state];
+  if (check.state === 'met') return 'Verified';
+  if (check.state === 'unavailable') return 'Inconclusive';
+  return check.reason === 'partially_resolved' ? 'Partially resolved' : 'Still failing';
 }
 
 /** The declaration's overall reading, never the raw observation kind. */

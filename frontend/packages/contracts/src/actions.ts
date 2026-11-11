@@ -7,7 +7,10 @@ import {
   verificationEventSchema,
 } from './opportunities.ts';
 import { agentRunSchema } from './agent.ts';
-import { contentGapFindingEvidenceSchema } from './opportunity-evidence.ts';
+import {
+  contentGapFindingEvidenceSchema,
+  issueFamilyCohortSchema,
+} from './opportunity-evidence.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
@@ -71,6 +74,9 @@ export const actionItemSchema = responseObject({
   // The findings a declaration would freeze: the current members, or the last
   // non-empty set once a recrawl resolved them all. Zero: nothing to declare.
   declarable_member_count: z.number().int(),
+  // An issue-family Action's affected pages (its cohort's count); null for
+  // every other target kind.
+  page_count: z.number().int().nullable().default(null),
   handoff: actionHandoffSchema,
   evidence_cleared_at: z.string().nullable(),
   created_at: z.string(),
@@ -106,6 +112,13 @@ export const measurementLegSchema = responseObject({
   source_id: uuid().nullable(),
 });
 
+// An issue-family check's reading of its cohort in one crawl.
+export const issueFamilyPagesSchema = responseObject({
+  failing: z.array(responseObject({ site_url_id: uuid(), url: z.string() })),
+  passing: z.number().int(),
+  unread: z.number().int(),
+});
+
 // One expected check's latest reading. Each check keeps the state its own
 // evidence last gave it, so a crawl and a Search Console window together can
 // settle a page Action that neither settles alone.
@@ -126,6 +139,9 @@ export const declarationCheckSchema = responseObject({
   subject: z.string().nullable(),
   // The tracked prompt a visibility check measures, whose history it links to.
   prompt_id: uuid().nullable().optional(),
+  // An issue-family check's per-page reading: the cohort pages still failing,
+  // and how many passed or the crawl did not read. Null for every other kind.
+  pages: issueFamilyPagesSchema.nullable().optional(),
 });
 
 // The user's declaration, frozen server-side: members, targets and checks.
@@ -176,6 +192,13 @@ export const actionDetailSchema = actionItemSchema.extend({
   // The target is one of the latest crawl's content pages (CO15), so Work with
   // the agent opens it as a page document (phase 2, E3). Read-time only.
   editable_page: z.boolean().default(false),
+  // An issue-family Action's cohort, with when its crawl completed: the
+  // declared cohort once declared, else the latest refresh's. Null for every
+  // other target kind.
+  cohort: issueFamilyCohortSchema
+    .extend({ crawl_completed_at: z.string().nullable() })
+    .nullable()
+    .default(null),
 });
 
 export const actionsPageSchema = responseObject({

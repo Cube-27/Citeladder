@@ -94,6 +94,7 @@ describe('a fresh database', () => {
       '0025_issue_reference_snippets',
       '0026_crawl_schedules',
       '0027_commerce_category_tree',
+      '0028_issue_family_actions',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -126,6 +127,7 @@ describe('a fresh database', () => {
       { version: '0025_issue_reference_snippets' },
       { version: '0026_crawl_schedules' },
       { version: '0027_commerce_category_tree' },
+      { version: '0028_issue_family_actions' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -182,6 +184,7 @@ describe('an existing database', () => {
       '0025_issue_reference_snippets',
       '0026_crawl_schedules',
       '0027_commerce_category_tree',
+      '0028_issue_family_actions',
     ]);
     // A URL identity keeps no per-sighting discovery status.
     expect(await columns(client, 'site_urls')).not.toContain('discovery_status');
@@ -246,6 +249,8 @@ describe('an existing database', () => {
     );
     // An issue catalog keeps one reference snippet per issue family.
     expect(await columns(client, 'site_issue_catalogs')).toContain('reference_snippets');
+    // An issue-family Action keeps the cohort it was grouped from.
+    expect(await columns(client, 'actions')).toContain('cohort');
     // A project's crawl schedule is claimed under a lease.
     expect(await columns(client, 'crawl_schedules')).toEqual(
       expect.arrayContaining(['cadence', 'next_run_at', 'lease_owner', 'failure_count']),
@@ -290,6 +295,7 @@ describe('an existing database', () => {
       { version: '0025_issue_reference_snippets' },
       { version: '0026_crawl_schedules' },
       { version: '0027_commerce_category_tree' },
+      { version: '0028_issue_family_actions' },
     ]);
   }, 120000);
 });

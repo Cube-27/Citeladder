@@ -72,6 +72,7 @@ function checkStates(
       source_id: found?.source_id ?? null,
       subject: subject(check, prompts),
       prompt_id: promptId && prompts.has(promptId) ? promptId : null,
+      pages: found?.pages ?? null,
     };
   });
 }

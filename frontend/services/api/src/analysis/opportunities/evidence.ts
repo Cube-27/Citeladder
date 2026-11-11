@@ -63,6 +63,11 @@ export type DetectorHit = {
   source_metric_ids: string[];
   value_factor: number;
   gap_factor: number;
+  /**
+   * The severity and title this finding carries instead of its rule's: an
+   * issue family's are its own Site Health rule's. Absent for every other hit.
+   */
+  finding?: Readonly<{ severity: string; title: string }>;
 };
 type PageEntityEvidence = {
   entity_kind: string;

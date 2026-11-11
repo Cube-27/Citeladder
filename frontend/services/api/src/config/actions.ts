@@ -34,6 +34,8 @@ export const actions = {
   TARGET_QUERY: 'query',
   TARGET_PROMPT: 'prompt',
   TARGET_PLANNED_PAGE: 'planned_page',
+  /** One Site Health issue family across its pages; its row carries the cohort. */
+  TARGET_ISSUE_FAMILY: 'issue_family',
   ACTION_TARGET_KINDS: [
     'page',
     'earned_page',
@@ -42,6 +44,7 @@ export const actions = {
     'query',
     'prompt',
     'planned_page',
+    'issue_family',
   ],
   AGENT_TARGET_KINDS: ['page', 'planned_page'],
   PLANNED_PAGE_TOPIC_MAX_CHARS: 120,
@@ -80,6 +83,7 @@ export const actions = {
     site_link_near_orphan: 'link_graph',
     site_contextual_links: 'link_graph',
     site_link_weak_authority: 'link_graph',
+    site_issue_family: 'site_health',
     site_change_potential_regression: 'site_changes',
     site_change_critical_regression: 'site_changes',
     site_change_metadata_inconsistency: 'site_changes',
@@ -122,6 +126,18 @@ export const actions = {
         'Do not send outreach from CiteLadder; drafts only.',
       ],
       target_kinds: [],
+    },
+    {
+      // One fix for a defect a shared template or component causes on every page.
+      approach: 'fix_technical',
+      rule_ids: ['site_issue_family'],
+      skill_id: 'technical_health',
+      messages: ['Write one fix that clears "{target}" on every affected page.'],
+      donts: [
+        'Do not fix the affected pages one by one when one shared template or component causes the defect.',
+        'Do not rewrite the page copy to work around a technical defect.',
+      ],
+      target_kinds: ['issue_family'],
     },
     {
       approach: 'fix_technical',
@@ -274,6 +290,13 @@ const unmappedRules = Object.keys(opportunities.OPPORTUNITY_RULES_BY_ID).filter(
 );
 if (unmappedRules.length)
   throw new Error(`Rules without an evidence family: ${unmappedRules.join(', ')}`);
+
+// An issue-family rule maps to its family finding only, never to a per-page one.
+const perPageFamilyRules = Object.keys(opportunities.SITE_ISSUE_TO_OPPORTUNITY_RULE_ID).filter(
+  (rule) => rule.startsWith(opportunities.SITE_ISSUE_FAMILY.ISSUE_RULE_PREFIX),
+);
+if (perPageFamilyRules.length)
+  throw new Error(`Issue-family rules mapped per page: ${perPageFamilyRules.join(', ')}`);
 
 // Every handoff template names known facts, and every branch ends on one that
 // needs only the Action's label, so a message always fills.
