@@ -8,8 +8,10 @@ import { frozenRevisionId, frozenVersions, prepareShelfExecution } from './shelf
 
 /**
  * Older writers saved answers before derivation. Prepare recovery outside the
- * audit transaction for every succeeded answer that has no live pass yet:
- * Commerce audits, and any audit that froze a catalog revision.
+ * audit transaction for every succeeded answer that no pass covers yet under
+ * the audit's frozen versions: Commerce audits, and any audit that froze a
+ * catalog revision. A backfill pass counts, so recovery never spends resolver
+ * quota on an answer whose derivation would be discarded.
  */
 export async function prepareSavedShelf(
   db: Database,
@@ -43,7 +45,6 @@ export async function prepareSavedShelf(
     .select(['task_id', 'artifact_id', 'parser_version', 'matcher_version'])
     .where('workspace_id', '=', workspaceId)
     .where('audit_id', '=', auditId)
-    .where('mode', '=', 'live')
     .execute();
   const { parser, matcher } = frozenVersions(
     record(

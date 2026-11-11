@@ -124,8 +124,9 @@ export const commerce = {
   /**
    * Catalog matching in every answer (CM1). A new catalog revision re-matches
    * the successful answers of the last `backfill_days`, `batch_size` answers
-   * per transaction. Crawl projection asks for a revision once its pages
-   * settle: `projection_delay_seconds` after the latest projected page.
+   * per transaction. Crawl projection's revision requests coalesce: one
+   * revision `projection_delay_seconds` after the first projected page that
+   * finds none queued, so a long crawl records at most one per interval.
    */
   answer_matching: {
     backfill_days: 30,

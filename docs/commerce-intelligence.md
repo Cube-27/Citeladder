@@ -143,8 +143,9 @@ memberships, and approved competitors with their targets. It records what
 created it (`import`, `projection`, `competitor_decision` or `audit`) and is
 written only when that identity's hash changed. CSV imports and competitor
 decisions record one in their own transaction; crawl projection, which writes
-one page per task, asks once its pages settle (a coalesced request
-`projection_delay_seconds` after the latest page); every audit admission, of
+one page per task, asks through a coalesced request that keeps the earliest
+deadline, so a long crawl records at most one revision per
+`projection_delay_seconds` (120); every audit admission, of
 any scope, records one when the catalog changed since the last and freezes it
 as `configuration.commerce_catalog`.
 
@@ -164,8 +165,8 @@ re-matches the successful answers of the last `backfill_days` (30) that have
 no pass for that revision, `batch_size` answers per transaction, as `backfill`
 passes. Backfill is deterministic only: token and URL matching and carousel
 cards, never the model resolver, so a span that would need it reads
-`unavailable`. A revision a newer one superseded ends at once, since the newer
-revision's task covers the same answers. Leases, retries and cancellation stay
+`unavailable`. A revision a newer one superseded stops before its next batch,
+since the newer revision's task covers the same answers. Leases, retries and cancellation stay
 with the shared analytics worker. Raw answers are never rewritten: reads use
 the latest pass per answer (highest revision, then newest) and keep older
 passes as history. Policy lives in `answer_matching` in `config/commerce.ts`.

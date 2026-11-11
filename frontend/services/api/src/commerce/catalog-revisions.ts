@@ -134,9 +134,10 @@ export async function recordCatalogRevision(
 }
 
 /**
- * Crawl projection writes the catalog one page at a time, so it asks for one
- * revision after its pages settle instead of one per page: queued requests
- * coalesce, and the task records the revision (`matchAnswers`).
+ * Crawl projection writes the catalog one page at a time, so it asks for a
+ * revision instead of recording one per page: queued requests coalesce and
+ * keep the earliest deadline, so a long crawl records at most one revision per
+ * `projection_delay_seconds`, and the task records it (`matchAnswers`).
  */
 export async function requestProjectionRevision(
   db: Database,

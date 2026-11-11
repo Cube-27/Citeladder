@@ -13,6 +13,7 @@ import { persistExecutionSuccess, type ExecutionResult } from '../src/audits/res
 import { categoryByName } from '../src/commerce/catalog-store.ts';
 import { importCatalog } from '../src/commerce/import.ts';
 import { prepareShelfExecution } from '../src/commerce/shelf.ts';
+import { prepareSavedShelf } from '../src/commerce/shelf-recovery.ts';
 import { finalizeCommerceShelf } from '../src/commerce/shelf-metrics.ts';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
 import { enqueueTask } from '../src/queue/enqueue.ts';
@@ -318,6 +319,30 @@ describe('catalog matching in every answer', () => {
     expect(new Set(snapshot.source_observation_ids as string[])).toEqual(
       new Set(latest.map((row) => row.id)),
     );
+
+    // Recovery of an answer saved without its live pass: the backfill pass
+    // already covers it, so no resolver quota is spent on it.
+    let calls = 0;
+    const resolver = {
+      model: 'fixture',
+      resolve: async () => {
+        calls++;
+        return { recommendations: [] };
+      },
+    };
+    await db
+      .deleteFrom('commerce_match_passes')
+      .where('workspace_id', '=', t.workspaceId)
+      .where('mode', '=', 'live')
+      .execute();
+    expect((await prepareSavedShelf(db, t.workspaceId, auditId, resolver)).size).toBe(0);
+    expect(calls).toBe(0);
+    await db
+      .deleteFrom('commerce_match_passes')
+      .where('workspace_id', '=', t.workspaceId)
+      .execute();
+    expect((await prepareSavedShelf(db, t.workspaceId, auditId, resolver)).size).toBe(1);
+    expect(calls).toBe(1);
   });
 
   it('refuses a revision from another workspace', async () => {

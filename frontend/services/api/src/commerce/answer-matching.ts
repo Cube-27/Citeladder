@@ -7,8 +7,9 @@
  * batches, one transaction per batch. Matching is deterministic only (token
  * and URL rules, carousel cards): the model resolver is never called. Each
  * pass is unique on answer, revision and versions, so a retried or repeated
- * task records nothing twice; a revision a newer one superseded ends at once,
- * since the newer revision's own task re-matches the same answers. Leases,
+ * task records nothing twice; a revision a newer one superseded stops before
+ * its next batch, since the newer revision's own task re-matches the same
+ * answers. Leases,
  * retries and cancellation stay with the shared analytics worker.
  */
 import { z } from 'zod';
@@ -143,18 +144,22 @@ export const matchAnswers: Executor = async (task, { db, checkCancelled }) => {
   }
   const revision = await loadRevision(db, scope, z.uuid().parse(revisionId));
   if (!revision) return;
-  const newer = await db
-    .selectFrom('commerce_catalog_revisions')
-    .select('id')
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .where('revision_number', '>', revision.revision_number)
-    .executeTakeFirst();
-  if (newer) return;
+  const superseded = async () =>
+    Boolean(
+      await db
+        .selectFrom('commerce_catalog_revisions')
+        .select('id')
+        .where('workspace_id', '=', scope.workspaceId)
+        .where('project_id', '=', scope.projectId)
+        .where('revision_number', '>', revision.revision_number)
+        .executeTakeFirst(),
+    );
   const days = policy.commerce.answer_matching.backfill_days;
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
   for (;;) {
     await checkCancelled('commerce answer matching batch');
+    // A revision recorded mid-run queues its own task; this one stops at the next batch.
+    if (await superseded()) return; // NOSONAR -- Checked before each batch, in order.
     const matched = await matchBatch(db, scope, revision, since); // NOSONAR -- Batches run in order until the window is matched.
     if (matched < policy.commerce.answer_matching.batch_size) return;
   }
