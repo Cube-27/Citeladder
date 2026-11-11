@@ -13,6 +13,7 @@ import {
   addMembership,
   appendObservation,
   categoryByName,
+  editedField,
   lockCatalog,
   newProduct,
 } from './catalog-store.ts';
@@ -120,9 +121,31 @@ function editAware(
   );
   const keys = categorySet(categories);
   if (!keys.length || editHolds(sources, 'categories', keys))
-    return { applied, added: new Set<string>() };
+    return { applied, added: new Set<string>(), replaces: false };
+  // Taking over an edited set makes the row's categories the whole set, as a field.
+  const replaces = editedField(sources, 'categories');
   sources.categories = { ...provenance, keys };
-  return { applied, added: categories };
+  return { applied, added: categories, replaces };
+}
+
+/** Adds the row's categories; a row taking over an edited set removes the rest. */
+async function writeCategories(
+  db: Database,
+  scope: CommerceScope,
+  index: ProductIndex,
+  write: { productId: string; observationId: string; added: Set<string>; replaces: boolean },
+) {
+  const ids: string[] = [];
+  for (const name of write.added) ids.push(await index.category(db, scope, name)); // NOSONAR -- Index creates missing categories on the import transaction.
+  for (const id of ids) await addMembership(db, scope, write.productId, id, write.observationId); // NOSONAR -- One import transaction: statements run in order.
+  if (!write.replaces) return;
+  await db
+    .deleteFrom('commerce_product_categories')
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('product_id', '=', write.productId)
+    .where('category_id', 'not in', ids)
+    .execute();
 }
 
 function outcome(rowNumber: number, status: Outcome['status'], productId: string): Outcome {
@@ -255,7 +278,7 @@ async function importRow(
     row_number: rowNumber,
     version: policy.commerce.importer_version,
   };
-  const { applied, added } = editAware(sources, parsed, provenance);
+  const { applied, added, replaces } = editAware(sources, parsed, provenance);
   let changed = false;
   for (const [field, value] of Object.entries(applied)) {
     const previous = product[field as keyof typeof values];
@@ -288,14 +311,12 @@ async function importRow(
     price: applied.price === undefined ? product.price : String(applied.price),
     field_sources: sources,
   });
-  for (const name of added)
-    await /* NOSONAR -- One import transaction: statements run in order. */ addMembership(
-      db,
-      scope,
-      product.id,
-      await index.category(db, scope, name), // NOSONAR -- Index creates missing categories on the import transaction.
-      observationId,
-    );
+  await writeCategories(db, scope, index, {
+    productId: product.id,
+    observationId,
+    added,
+    replaces,
+  });
   if (!matches.length) return outcome(rowNumber, 'created', product.id);
   return outcome(rowNumber, changed ? 'updated' : 'unchanged', product.id);
 }

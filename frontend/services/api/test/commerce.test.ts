@@ -484,6 +484,34 @@ describe('decisions and persisted reads', () => {
     expect(context.targets.map((row) => [row.kind, row.id])).toEqual([['product', productId]]);
     expect(context.prompt_target_ids).toHaveLength(2);
   });
+  it('leaves an archived product out of the frozen prompt context instead of refusing', async () => {
+    const productId = (await importCsv()).body.row_outcomes[0]!.product_id!;
+    const { promptId } = await commerceFixture<{ promptId: string }>(
+      'prompt',
+      t.workspaceId,
+      t.projectId,
+      productId,
+    );
+    await db
+      .updateTable('commerce_prompt_targets')
+      .set({ approved_at: new Date() })
+      .where('project_id', '=', t.projectId)
+      .execute();
+    const archive = await call(`/products/${productId}/lifecycle`, {
+      method: 'PUT',
+      body: { lifecycle_state: 'archived' },
+    });
+    expect(archive.status).toBe(200);
+    const context = await freezeCommerceContext(db, t, [promptId]);
+    expect([context.targets, context.prompt_target_ids]).toEqual([[], []]);
+
+    await call(`/products/${productId}/lifecycle`, {
+      method: 'PUT',
+      body: { lifecycle_state: 'active' },
+    });
+    const restored = await freezeCommerceContext(db, t, [promptId]);
+    expect(restored.targets.map((row) => [row.kind, row.id])).toEqual([['product', productId]]);
+  });
   it('reads active and requested discovery tasks without starting discovery', async () => {
     const target = { kind: 'product', id: randomUUID() };
     const id = await enqueue(db, {

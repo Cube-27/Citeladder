@@ -53,9 +53,14 @@ const TEXT_FIELDS = [
   'mpn',
 ] as const;
 
+/** A text field as the server stores it: trimmed, a currency upper-cased. */
+const stored = (field: (typeof TEXT_FIELDS)[number], value: string) =>
+  field === 'currency' ? value.trim().toUpperCase() : value.trim();
+
+/** Category names as the catalog keys them: case and inner whitespace do not count. */
 const sameSet = (a: readonly string[], b: readonly string[]) => {
   const key = (values: readonly string[]) =>
-    [...new Set(values.map((value) => value.trim().toLowerCase()))]
+    [...new Set(values.map((value) => value.trim().replaceAll(/\s+/gu, ' ').toLowerCase()))]
       .sort((a, b) => a.localeCompare(b))
       .join('\n');
   return key(a) === key(b);
@@ -77,7 +82,8 @@ export function productEditChanges(
 ): ProductEditResult {
   const changed: Record<string, unknown> = {};
   for (const field of TEXT_FIELDS)
-    if (values[field].trim() !== initial[field].trim()) changed[field] = values[field];
+    if (stored(field, values[field]) !== stored(field, initial[field]))
+      changed[field] = values[field];
   if (values.price.trim() !== initial.price.trim()) {
     const price = values.price.trim();
     if (price && !Number.isFinite(Number(price)))

@@ -96,10 +96,11 @@ describe('product edits', () => {
     expect(await stored(id)).toMatchObject({ name: 'Edited', price: '21.00', brand: 'Acme' });
     expect(await categoryNames(id)).toEqual(['Gear']);
 
-    // A new imported name changes the field; the untouched price keeps its edit.
+    // A new imported name or category set changes that field; the untouched
+    // price keeps its edit.
     await importCsv('sku,name,price,category\nA1,Renamed,19.25,Outdoor\n');
     expect(await stored(id)).toMatchObject({ name: 'Renamed', price: '21.00' });
-    expect(await categoryNames(id)).toEqual(['Gear', 'Outdoor']);
+    expect(await categoryNames(id)).toEqual(['Outdoor']);
 
     const detail = await call<CommerceProductDetail>(`/products/${id}`);
     expect(detail.body.product).toMatchObject({

@@ -37,8 +37,24 @@ describe('productEditChanges', () => {
     });
   });
 
-  it('treats the same category set in another case as unchanged', () => {
-    expect(productEditChanges(initial, { ...initial, categories: ['ROAD'] })).toEqual({
+  it('treats values the server stores the same as unchanged', () => {
+    expect(
+      productEditChanges(initial, { ...initial, currency: 'usd', categories: ['ROAD'] }),
+    ).toEqual({ kind: 'unchanged' });
+    const spaced = productEditForm(
+      { name: 'Road Runner', brand: 'Acme', description: '', url: 'https://shop.example/road' },
+      {
+        lifecycle_state: 'active',
+        price: null,
+        currency: '',
+        sku: '',
+        gtin: '',
+        mpn: '',
+        image_url: '',
+        categories: ['Road Shoes'],
+      },
+    );
+    expect(productEditChanges(spaced, { ...spaced, categories: ['road  shoes'] })).toEqual({
       kind: 'unchanged',
     });
   });
