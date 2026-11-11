@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { useQuery } from '@tanstack/react-query';
 
 import { mswServer } from '@/test/msw-server';
@@ -85,7 +85,11 @@ function Harness({
   checked = new Set<string>(),
   onCheck = vi.fn(),
   onSort = vi.fn(),
+  trackable = false,
+  selectable,
 }: Readonly<{
+  trackable?: boolean;
+  selectable?: boolean;
   columns?: ProductColumnKey[];
   checked?: ReadonlySet<string>;
   onCheck?: (ids: string[], checked: boolean) => void;
@@ -99,6 +103,8 @@ function Harness({
       query={query}
       scope={{ window: '90', engine: 'chatgpt', promptSet: null }}
       columns={columns}
+      trackable={trackable}
+      {...(selectable === undefined ? {} : { selectable })}
       sort="visibility"
       onSort={onSort}
       checked={checked}
@@ -187,6 +193,49 @@ describe('ProductsTable', () => {
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select all products on this page' }));
     expect(onCheck).toHaveBeenCalledWith([ROAD, TRAIL], true);
+  });
+
+  it('lets no archived product be checked for bulk discovery', async () => {
+    serve(ITEMS);
+    const onCheck = vi.fn();
+    renderWithProviders(<Harness selectable={false} onCheck={onCheck} />, projectRoute);
+
+    await screen.findByText('Acme Road Runner');
+    expect(screen.getByRole('checkbox', { name: 'Select Acme Road Runner' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all products on this page' }));
+    expect(onCheck).toHaveBeenCalledWith([], true);
+  });
+
+  it('offers Add to tracking on AI-observed competitor rows only, approving the candidate', async () => {
+    serve(ITEMS);
+    const sent: unknown[] = [];
+    mswServer.use(
+      http.patch(`/api/v1/projects/${PROJECT_ID}/commerce/competitors/:id`, async (info) => {
+        sent.push([info.params.id, await info.request.json()]);
+        return HttpResponse.json({
+          id: RIVAL,
+          target_kind: 'product',
+          target_id: ROAD,
+          canonical_url: 'https://zoom.example/glide',
+          product_name: 'Zoom Glide',
+          brand_name: 'Zoom',
+          evidence: {},
+          source_kind: 'ai_observed',
+          state: 'approved',
+          decision_at: '2026-11-11T00:00:00Z',
+        });
+      }),
+    );
+    renderWithProviders(<Harness trackable />, projectRoute);
+
+    await screen.findByText('Acme Road Runner');
+    expect(
+      screen
+        .getAllByRole('button', { name: /to tracking/ })
+        .map((button) => button.getAttribute('aria-label')),
+    ).toEqual(['Add Zoom Glide to tracking']);
+    fireEvent.click(screen.getByRole('button', { name: 'Add Zoom Glide to tracking' }));
+    await waitFor(() => expect(sent).toEqual([[RIVAL, { decision: 'approved' }]]));
   });
 
   it('sorts from a metric header and draws only the shown columns', async () => {

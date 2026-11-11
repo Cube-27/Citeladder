@@ -24,11 +24,19 @@ import type {
   CommerceShoppingOverview,
 } from '@citeladder/contracts/commerce-suite';
 import { commerceQueries } from '@/lib/api/commerce';
-import { PRODUCT_DEFAULT_WINDOW, PRODUCT_WINDOW_DAYS } from '@/lib/config/commerce';
+import {
+  PRODUCT_DEFAULT_WINDOW,
+  PRODUCT_WINDOW_DAYS,
+  type ProductWindowDays,
+} from '@/lib/config/commerce';
 import { formatCount, formatPercent, pluralCount } from '@/lib/format';
 import { holderLabel } from '@/lib/products/product-columns';
-import { overviewSearch, useOverviewFilters } from '@/lib/products/product-filters';
-import { targetHref } from '@/lib/products/targets';
+import {
+  overviewSearch,
+  productHref,
+  useOverviewFilters,
+  type ProductScopeFilters,
+} from '@/lib/products/product-filters';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 
 const WINDOWS = PRODUCT_WINDOW_DAYS.map((days) => ({ value: days, label: `Last ${days} days` }));
@@ -102,22 +110,25 @@ function MetricCells({ row }: Readonly<{ row: CommerceOverviewProduct | Commerce
   );
 }
 
-/** A catalog product opens its own page; a competitor is its name and who holds it. */
-function ProductName({ row }: Readonly<{ row: CommerceOverviewProduct }>) {
+/** Every product opens its own page in the overview's window, as the Products table's rows do. */
+function ProductName({
+  row,
+  scope,
+}: Readonly<{ row: CommerceOverviewProduct; scope: ProductScopeFilters }>) {
   const caption = [row.brand, holderLabel(row.kind)].filter(Boolean).join(' · ');
-  const name =
-    row.kind === 'owned' ? (
-      <TextLink href={targetHref(row.holder_id)} text="inherit">
-        {row.name}
-      </TextLink>
-    ) : (
-      row.name
-    );
+  const name = (
+    <TextLink href={productHref(row.holder_id, scope)} text="inherit">
+      {row.name}
+    </TextLink>
+  );
   return <TableCellLines title primary={name} secondary={caption} />;
 }
 
 /** Brands (with Share of Shelf) or products, by appearances in the window. */
-function RankingTable({ overview }: Readonly<{ overview: Overview }>) {
+function RankingTable({
+  overview,
+  scope,
+}: Readonly<{ overview: Overview; scope: ProductScopeFilters }>) {
   const [ranking, setRanking] = useState<Ranking>('brands');
   const brands = ranking === 'brands';
   const count = brands ? overview.brands.length : overview.products.length;
@@ -164,7 +175,7 @@ function RankingTable({ overview }: Readonly<{ overview: Overview }>) {
         : overview.products.map((row) => (
             <TableRow key={row.holder_id}>
               <TableCell>
-                <ProductName row={row} />
+                <ProductName row={row} scope={scope} />
               </TableCell>
               <MetricCells row={row} />
             </TableRow>
@@ -178,11 +189,13 @@ function ProductList({
   description,
   empty,
   rows,
+  scope,
 }: Readonly<{
   title: string;
   description: string;
   empty: string;
   rows: readonly CommerceOverviewProduct[];
+  scope: ProductScopeFilters;
 }>) {
   return (
     <DataTable
@@ -206,7 +219,7 @@ function ProductList({
       {rows.map((row) => (
         <TableRow key={row.holder_id}>
           <TableCell>
-            <ProductName row={row} />
+            <ProductName row={row} scope={scope} />
           </TableCell>
           <TableCell numeric>{formatCount(row.appearances)}</TableCell>
           <TableCell numeric>
@@ -342,8 +355,14 @@ function CategoryShelf({ shelf }: Readonly<{ shelf: Overview['category_shelf'] }
   );
 }
 
-/** What the screen draws below its filters for one read of the overview. */
-export function OverviewSections({ query }: Readonly<{ query: UseQueryResult<Overview> }>) {
+/**
+ * What the screen draws below its filters for one read of the overview; each
+ * product links to its page in `windowDays`, the window the overview was read in.
+ */
+export function OverviewSections({
+  query,
+  windowDays,
+}: Readonly<{ query: UseQueryResult<Overview>; windowDays: ProductWindowDays }>) {
   if (query.isPending) return <QueryState kind="loading" label="Loading the Shopping overview" />;
   if (query.isError)
     return (
@@ -354,6 +373,7 @@ export function OverviewSections({ query }: Readonly<{ query: UseQueryResult<Ove
       />
     );
   const overview = query.data;
+  const scope: ProductScopeFilters = { window: windowDays, engine: null, promptSet: null };
   return (
     <Stack gap="section">
       <Inline as="p" gap="meta" className="type-caption">
@@ -368,19 +388,21 @@ export function OverviewSections({ query }: Readonly<{ query: UseQueryResult<Ove
         </span>
       </Inline>
       {overview.category ? <CategoryShelf shelf={overview.category_shelf} /> : null}
-      <RankingTable overview={overview} />
+      <RankingTable overview={overview} scope={scope} />
       <AppGrid layout="halves">
         <ProductList
           title="Most visible"
           description="Your products named in the most answers."
           empty="No product in the catalog yet."
           rows={overview.most_visible}
+          scope={scope}
         />
         <ProductList
           title="Least visible"
           description="Your products named in the fewest answers."
           empty="Every product is listed under Most visible."
           rows={overview.least_visible}
+          scope={scope}
         />
       </AppGrid>
       <AppGrid layout="halves">
@@ -438,7 +460,7 @@ export function ShoppingOverviewScreen() {
         ),
       }}
     >
-      <OverviewSections query={query} />
+      <OverviewSections query={query} windowDays={filters.window} />
     </ListScreen>
   );
 }

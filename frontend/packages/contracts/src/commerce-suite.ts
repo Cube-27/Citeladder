@@ -112,8 +112,13 @@ const shelfSnapshotSchema = z.strictObject({
   measured_at: z.string(),
 });
 
-/** Which holders the Products table lists: the catalog alone, or with competitors (CM6). */
-export const commerceProductSourceSchema = z.enum(['catalog', 'all']);
+/**
+ * Which holders the Products table lists: the active catalog alone, with
+ * competitors (CM6), or the archived catalog products alone.
+ */
+export const commerceProductSourceSchema = z.enum(['catalog', 'all', 'archived']);
+/** A catalog product is active, or archived: out of the catalog, matching and prompts, history kept. */
+export const commerceLifecycleStateSchema = z.enum(['active', 'archived']);
 /** The Products table's sort keys; each has one direction (best first, then name). */
 export const commerceProductSortSchema = z.enum(['visibility', 'win_rate', 'position', 'name']);
 /**
@@ -253,8 +258,26 @@ export const commerceProductDetailSchema = z.strictObject({
   product: commerceProductRowSchema.extend({
     /** The catalog description; empty for a competitor or when the catalog has none. */
     description: z.string(),
-    /** The image of its latest shopping card in an answer; null when no card carried one. */
+    /**
+     * The image an edit set, else that of its latest shopping card in an
+     * answer; null when neither has one.
+     */
     image_url: z.string().nullable(),
+    /** The editable catalog record of an owned product; null for a competitor. */
+    catalog: z
+      .strictObject({
+        lifecycle_state: commerceLifecycleStateSchema,
+        price: z.number().nullable(),
+        currency: z.string(),
+        sku: z.string(),
+        gtin: z.string(),
+        mpn: z.string(),
+        /** The image an edit set; empty when none was. */
+        image_url: z.string(),
+        /** Its category names, by name. */
+        categories: z.array(z.string()),
+      })
+      .nullable(),
   }),
   /** Holders that held a slot in the same executions, by shared executions. */
   competing: z.array(
@@ -321,10 +344,12 @@ export type CommerceShoppingOverview = z.infer<typeof commerceShoppingOverviewSc
 export type CommerceOverviewProduct = z.infer<typeof commerceOverviewProductSchema>;
 export type CommerceOverviewBrand = z.infer<typeof commerceOverviewBrandSchema>;
 export type CommerceProductSource = z.infer<typeof commerceProductSourceSchema>;
+export type CommerceLifecycleState = z.infer<typeof commerceLifecycleStateSchema>;
 export type CommerceProductSort = z.infer<typeof commerceProductSortSchema>;
 export type CommerceProductRow = z.infer<typeof commerceProductRowSchema>;
 export type CommerceProductPage = z.infer<typeof commerceProductPageSchema>;
 export type CommerceCatalog = z.infer<typeof commerceCatalogSchema>;
+export type CommerceProduct = z.infer<typeof commerceProductSchema>;
 export type CommerceProjection = z.infer<typeof commerceProjectionSchema>;
 export type CatalogImport = z.infer<typeof catalogImportSchema>;
 export type CompetitorCandidate = z.infer<typeof competitorCandidateSchema>;

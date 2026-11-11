@@ -195,12 +195,19 @@ export function scopedSlots(scope: CommerceScope, executions: ExecutionScope) {
 
 /**
  * The product holders a read lists, as `kind, holder_id, name, brand, url,
- * catalog_price, catalog_currency` rows: the active catalog, and with `all`
- * the approved and AI-observed competitors; with a category, only its own.
+ * catalog_price, catalog_currency` rows: the active catalog (or with
+ * `archived` the archived one), and with `all` the approved and AI-observed
+ * competitors; with a category, only its own. One `holder`'s read under
+ * `all` (the product page) takes its product in either state; under `catalog`
+ * it stays the active product alone.
  */
 export function holderRows(
   scope: CommerceScope,
-  { source, category }: { source: CommerceProductSource; category: string | null },
+  {
+    source,
+    category,
+    holder,
+  }: { source: CommerceProductSource; category: string | null; holder?: string },
 ) {
   const ws = scope.workspaceId,
     project = scope.projectId;
@@ -224,11 +231,16 @@ export function holderRows(
           ${competitorInCategory}`
       : NOTHING;
   const ownedInCategory = category ? sql`AND ${inCategory(OWNED_PRODUCT)}` : NOTHING;
+  // A product page reads its holder archived or not; any other read takes one state.
+  const listedState = source === 'archived' ? 'archived' : 'active';
+  const anyState = holder !== undefined && source === 'all';
+  const ownedLifecycle = anyState ? NOTHING : sql`AND p.lifecycle_state = ${listedState}`;
   return sql`
       SELECT 'owned'::text AS kind, p.id AS holder_id, p.name, p.brand, p.canonical_url AS url,
              p.price::float8 AS catalog_price, p.currency AS catalog_currency
       FROM commerce_products p
-      WHERE p.workspace_id = ${ws} AND p.project_id = ${project} AND p.lifecycle_state = 'active'
+      WHERE p.workspace_id = ${ws} AND p.project_id = ${project}
+        ${ownedLifecycle}
         ${ownedInCategory}
       ${competitors}`;
 }

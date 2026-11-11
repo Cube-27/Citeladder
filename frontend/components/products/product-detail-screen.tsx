@@ -16,6 +16,7 @@ import { TextLink } from '@/components/ui/text-link';
 import { InlineFigure, textRole } from '@/components/ui/typography';
 import type { CommerceCatalog, CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
 import { commerceQueries } from '@/lib/api/commerce';
+import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { promptsQueries } from '@/lib/api/prompts';
 import { PRODUCT_DEFAULT_WINDOW, PRODUCT_WINDOW_DAYS } from '@/lib/config/commerce';
 import { formatCount } from '@/lib/format';
@@ -32,6 +33,7 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 
 import type { CommerceQueries } from './commerce-queries';
 import { ProductActions } from './product-actions';
+import { AddToTracking, ProductCatalogControls } from './product-catalog-controls';
 import {
   Answers,
   CompetingProducts,
@@ -220,7 +222,7 @@ function HolderDetail({
       title={data.product.name}
       back={back}
       controls={controls}
-      lead={<ProductHeader detail={data} />}
+      lead={<ProductHeader detail={data} scope={projectScope} />}
     >
       <Stack gap="workspace" aria-busy={detail.isFetching}>
         <ProductKpis detail={data} />
@@ -232,7 +234,8 @@ function HolderDetail({
         </AppGrid>
         <PromptMetrics detail={data} />
         <Answers detail={data} />
-        {data.product.kind === 'owned' ? (
+        {/* An archived product takes no new competitors or shopping prompts until restored. */}
+        {data.product.kind === 'owned' && data.product.catalog?.lifecycle_state !== 'archived' ? (
           <ProductSetup detail={data} projectId={projectId} queries={queries} />
         ) : null}
       </Stack>
@@ -240,26 +243,43 @@ function HolderDetail({
   );
 }
 
-/** Brand, who holds it, image, description and a link to its page. */
-function ProductHeader({ detail }: Readonly<{ detail: CommerceProductDetail }>) {
+/**
+ * Brand, who holds it, image, description and a link to its page; a catalog
+ * product's Edit and Archive controls, or Add to tracking for a product the
+ * answers showed.
+ */
+function ProductHeader({
+  detail,
+  scope,
+}: Readonly<{ detail: CommerceProductDetail; scope: ProjectScope }>) {
   const { product } = detail;
   return (
     <Card>
       <CardContent>
-        <Inline gap="compact" className="items-start">
-          {product.image_url ? <ProductImage src={product.image_url} /> : null}
-          <Stack gap="tight" className="min-w-0 flex-1">
-            <span className={textRole('label')}>
-              {[product.brand, holderLabel(product.kind)].filter(Boolean).join(' · ')}
-            </span>
-            {product.description ? <p className={textRole('body')}>{product.description}</p> : null}
-            {product.url ? (
-              <TextLink variant="external" href={product.url} text="caption">
-                {product.url}
-              </TextLink>
-            ) : null}
-          </Stack>
-        </Inline>
+        <Stack gap="compact">
+          <Inline gap="compact" className="items-start">
+            {product.image_url ? <ProductImage src={product.image_url} /> : null}
+            <Stack gap="tight" className="min-w-0 flex-1">
+              <span className={textRole('label')}>
+                {[product.brand, holderLabel(product.kind)].filter(Boolean).join(' · ')}
+              </span>
+              {product.description ? (
+                <p className={textRole('body')}>{product.description}</p>
+              ) : null}
+              {product.url ? (
+                <TextLink variant="external" href={product.url} text="caption">
+                  {product.url}
+                </TextLink>
+              ) : null}
+            </Stack>
+          </Inline>
+          {product.catalog ? (
+            <ProductCatalogControls scope={scope} product={product} catalog={product.catalog} />
+          ) : null}
+          {product.kind === 'ai_observed_competitor' ? (
+            <AddToTracking scope={scope} candidateId={product.holder_id} name={product.name} />
+          ) : null}
+        </Stack>
       </CardContent>
     </Card>
   );

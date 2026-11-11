@@ -16,6 +16,7 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { utcTextOf, wireUtc } from '../db/timestamps.ts';
+import { UNCATEGORIZED_KEY } from './projection-facts.ts';
 import { productMetrics, requireWindow, scopedSlots, type ExecutionScope } from './products.ts';
 import { commerceMissing, targetActions, type CommerceScope } from './reads.ts';
 
@@ -183,11 +184,60 @@ async function sections(
   return sectionsSchema.parse(result.rows[0]);
 }
 
+const catalogSchema = commerceProductDetailSchema.shape.product.shape.catalog.unwrap();
+
+/** An owned product's editable record: its fields, edited image and category names. */
+async function catalogRecord(db: Database, scope: CommerceScope, holder: string) {
+  const [product, categories, image] = await Promise.all([
+    db
+      .selectFrom('commerce_products')
+      .select(['lifecycle_state', 'price', 'currency', 'sku', 'gtin', 'mpn'])
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .where('id', '=', holder)
+      .executeTakeFirstOrThrow(),
+    db
+      .selectFrom('commerce_product_categories as m')
+      .innerJoin('commerce_categories as c', (join) =>
+        join.onRef('c.id', '=', 'm.category_id').onRef('c.workspace_id', '=', 'm.workspace_id'),
+      )
+      .select('c.name')
+      .where('m.workspace_id', '=', scope.workspaceId)
+      .where('m.project_id', '=', scope.projectId)
+      .where('m.product_id', '=', holder)
+      .where('c.normalized_name', '!=', UNCATEGORIZED_KEY)
+      .orderBy('c.name')
+      .execute(),
+    // The latest edit that set the image; an empty one cleared it.
+    db
+      .selectFrom('commerce_product_observations')
+      .select(sql<string>`observed_fields->>'image_url'`.as('image_url'))
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .where('product_id', '=', holder)
+      .where('source_kind', '=', 'edit')
+      .where(sql<boolean>`observed_fields->>'image_url' IS NOT NULL`)
+      .orderBy('created_at', 'desc')
+      .orderBy('id', 'desc')
+      .limit(1)
+      .executeTakeFirst(),
+  ]);
+  return catalogSchema.parse({
+    lifecycle_state: product.lifecycle_state,
+    price: product.price === null ? null : Number(product.price),
+    currency: product.currency,
+    sku: product.sku ?? '',
+    gtin: product.gtin ?? '',
+    mpn: product.mpn ?? '',
+    image_url: image?.image_url ?? '',
+    categories: categories.map((row) => row.name),
+  });
+}
+
 /**
- * The page for `holder`: an owned product, an approved competitor or an
- * AI-observed one, exactly as the Products table lists it under All products.
- * A holder the table would not list (archived, rejected, another project's)
- * is not found.
+ * The page for `holder`: an owned product (active or archived), an approved
+ * competitor or an AI-observed one, as the Products table lists it. A holder
+ * the table would not list (rejected, another project's) is not found.
  */
 export async function productDetail(
   db: Database,
@@ -211,13 +261,21 @@ export async function productDetail(
   ]);
   const [row] = page.items;
   if (!row) commerceMissing('Product not found');
-  const actions =
-    row.kind === 'owned' ? await targetActions(db, scope, { kind: 'product', id: holder }) : [];
+  const owned = row.kind === 'owned';
+  const [actions, record] = await Promise.all([
+    owned ? targetActions(db, scope, { kind: 'product', id: holder }) : [],
+    owned ? catalogRecord(db, scope, holder) : null,
+  ]);
   const { description, image_url, prompts, answers, ...lists } = detail;
   return commerceProductDetailSchema.parse({
     window_days: page.window_days,
     executions: page.executions,
-    product: { ...row, description: description ?? '', image_url },
+    product: {
+      ...row,
+      description: description ?? '',
+      image_url: record?.image_url || image_url,
+      catalog: record,
+    },
     ...lists,
     prompts: prompts.map(({ ordered, wins, appearances, executions: asked, ...prompt }) => ({
       ...prompt,
