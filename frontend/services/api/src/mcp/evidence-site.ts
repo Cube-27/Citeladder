@@ -130,7 +130,7 @@ const neighborList = z.array(z.unknown()).catch([]);
 const neighbors = (value: unknown) =>
   neighborList.parse(value).flatMap((item) => {
     const parsed = neighborSchema.safeParse(item);
-    return parsed.success ? [parsed.data] : [];
+    return parsed.success ? [{ ...parsed.data, url: withoutQuery(parsed.data.url) }] : [];
   });
 
 /** Anchor diagnostics as counts by kind: the compact form for several named pages. */
@@ -191,7 +191,7 @@ export async function siteLinks(
   const sample = pages.length ? mcpPolicy.named_link_page_neighbors : undefined;
   const items = selected.map((row) => ({
     site_url_id: row.site_url_id,
-    url: row.url,
+    url: withoutQuery(row.url),
     inbound_count: row.inbound_count,
     outbound_count: row.outbound_count,
     main_content_inbound_count: row.main_content_inbound_count,
@@ -224,11 +224,17 @@ export async function siteLinks(
   };
 }
 
-/** A URL without its query string or fragment. */
+/**
+ * A URL without its query string or fragment. Every page URL these reads hand
+ * the model passes through it: a query or fragment can carry a token, session
+ * or email. Pages that differ only by query stay apart by `site_url_id`.
+ */
 function withoutQuery(url: string) {
   const end = url.search(/[?#]/u);
   return end < 0 ? url : url.slice(0, end);
 }
+const nullableWithoutQuery = (url: string | null) => (url === null ? null : withoutQuery(url));
+const looksLikeUrl = (value: string) => /^https?:\/\//iu.test(value);
 const SUMMARY_TEXT_CHARS = 160;
 
 /** Where one failing target ended: a loop, its landing URL, its status, else a plain failure. */
@@ -257,24 +263,34 @@ function failingTargetsSummary(evidence: Record<string, unknown>, targets: reado
   };
 }
 
-/** A site-level architecture finding sits on the homepage and names its pages. */
+/**
+ * A site-level architecture finding sits on the homepage and names its pages,
+ * query-string variants of one page folded into one entry; the count stays the
+ * check's own total of pages.
+ */
 function affectedPagesSummary(evidence: Record<string, unknown>, pages: readonly unknown[]) {
-  const urls = pages
-    .map((page) => record(page).url)
-    .filter((url): url is string => typeof url === 'string');
+  const urls = [
+    ...new Set(
+      pages
+        .map((page) => record(page).url)
+        .filter((url): url is string => typeof url === 'string')
+        .map(withoutQuery),
+    ),
+  ];
   return {
     affected_pages: urls.slice(0, mcpPolicy.rule_evidence_items),
     affected_page_count: typeof evidence.count === 'number' ? evidence.count : urls.length,
   };
 }
 
-/** The evidence's scalar facts, ids left out and text capped. */
+/** The evidence's scalar facts, ids left out, URLs without query and text capped. */
 function scalarFacts(evidence: Record<string, unknown>) {
   const facts: Record<string, string | number | boolean> = {};
   for (const [key, item] of Object.entries(evidence)) {
     if (key === 'id' || key.endsWith('_id') || key.endsWith('_ids')) continue;
     if (typeof item === 'number' || typeof item === 'boolean') facts[key] = item;
-    else if (typeof item === 'string' && item) facts[key] = item.slice(0, SUMMARY_TEXT_CHARS);
+    else if (typeof item === 'string' && item)
+      facts[key] = (looksLikeUrl(item) ? withoutQuery(item) : item).slice(0, SUMMARY_TEXT_CHARS);
   }
   return facts;
 }
@@ -324,13 +340,32 @@ async function familySnippet({ db, scope }: ProjectRead, crawlId: string, ruleId
     .find((item) => item.rule_id === ruleId);
   if (!snippet) return null;
   return {
-    page_url: snippet.page_url,
+    page_url: withoutQuery(snippet.page_url),
     site_url_id: snippet.site_url_id,
     html: snippet.html,
     truncated: snippet.truncated,
   };
 }
 const referenceSnippetList = z.array(referenceSnippetSchema);
+
+/**
+ * Where a page cursor resumes. The cursor carries only the last page's id, never
+ * its URL (a readable cursor would hand the model the query string); the URL
+ * the page order resumes after is read back from the project's own page.
+ */
+async function pageCursor({ db, scope }: ProjectRead, cursor: string, filterKey: string) {
+  const [fingerprint, id] = decodeCursor(cursor, 2);
+  const siteUrlId = parseUuid(id);
+  if (fingerprint !== filterKey || !siteUrlId) throw new McpInputError('cursor is invalid');
+  const page = await new WorkspaceScope(scope.workspaceId)
+    .selectFrom(db, 'site_urls')
+    .select('normalized_url')
+    .where('project_id', '=', scope.projectId)
+    .where('id', '=', siteUrlId)
+    .executeTakeFirst();
+  if (!page) throw new McpInputError('cursor is invalid');
+  return { value: page.normalized_url, id: siteUrlId };
+}
 
 export async function sitePages(
   read: ProjectRead,
@@ -359,13 +394,7 @@ export async function sitePages(
     args.rule_id ?? null,
     url,
   ]);
-  let after: { value: string; id: string } | null = null;
-  if (args.cursor) {
-    const [fingerprint, url, id] = decodeCursor(args.cursor, 3);
-    if (fingerprint !== filterKey || !url || !parseUuid(id))
-      throw new McpInputError('cursor is invalid');
-    after = { value: url, id: id! };
-  }
+  const after = args.cursor ? await pageCursor(read, args.cursor, filterKey) : null;
   const [rows, root] = await Promise.all([
     pageRows(read.db, crawl, {
       filters: {
@@ -392,7 +421,7 @@ export async function sitePages(
   // Compact rows: the next read's ids, the page, its states and failing rules.
   const items = selected.map((row) => ({
     site_url_id: row.site_url_id,
-    url: row.display_url,
+    url: withoutQuery(row.display_url),
     title: row.title,
     page_kind: row.page_kind,
     status: row.analysis_status,
@@ -439,9 +468,7 @@ export async function sitePages(
     ...(snippet ? { reference_snippet: snippet } : {}),
     pagination: pagination(
       items,
-      rows.length > count && last
-        ? encodeCursor(filterKey, last.normalized_url, last.site_url_id)
-        : null,
+      rows.length > count && last ? encodeCursor(filterKey, last.site_url_id) : null,
     ),
     artifact_refs: [
       reference('site_crawl', crawl.id),
@@ -574,14 +601,16 @@ export async function pageText(
       ...unavailable('page_not_crawled'),
       ...identity,
       // Near matches let the caller pick the page the crawl did reach.
-      crawled_urls: candidates.slice(0, mcpPolicy.page_text_url_suggestions).map((row) => row.url),
+      crawled_urls: candidates
+        .slice(0, mcpPolicy.page_text_url_suggestions)
+        .map((row) => withoutQuery(row.url)),
       artifact_refs: [reference('site_crawl', crawl.id)],
     };
   return {
     state: 'available',
-    url: page.url,
+    url: withoutQuery(page.url),
     ...pageCopy(page),
-    final_url: page.final_url,
+    final_url: nullableWithoutQuery(page.final_url),
     page_kind: page.page_kind,
     site_url_id: page.site_url_id,
     fetched_at: page.fetched_at,
