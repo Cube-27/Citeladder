@@ -1,0 +1,252 @@
+/* ---------- Full app screens ---------- */
+.cl-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: var(--screen-w);
+  height: var(--screen-h);
+  overflow: hidden;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+  text-align: left;
+}
+
+/* The AI Visibility overview: KPIs, the trend and the brand ranking. */
+
+.cl-screen--visibility {
+  --screen-w: 1200px;
+  --screen-h: 680px;
+}
+
+/* ---------- The app in its chrome (D25): the home page's first view ----------
+   The shell's own geometry: the sidebar column, the ruled top bar
+   (`page-header-band`) shared by the project switcher and the page title,
+   the tab and filter bands `page-band-gap` apart, then the content
+   `page-section-gap` below. The live rows fold to a rail below 1280px, so
+   the screen draws them at full width with the same tokens. */
+.cl-screen--app {
+  /* The app's density (D11, `:root:not([data-public-surface])` in
+     globals.css): the website keeps the system's looser spacing, so the
+     screen restores the app's values for everything inside it. */
+  --content-gutter: 24px;
+  --page-section-gap: 16px;
+  --workspace-gap: 12px;
+  --compact-gap: 8px;
+  --card-padding: 16px;
+  --table-row-height: var(--row-app);
+  --screen-w: 1440px;
+  --screen-h: 820px;
+
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  gap: 0;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-paper);
+}
+
+/* On the website the display face is the hero's H1 alone (D28), so the drawn
+   app's page title is the sans face at 500 at its own size. */
+
+.cl-screen--app .type-page-title {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: normal;
+}
+
+.cl-app-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-section-gap);
+  min-width: 0;
+  padding: 0 12px 12px;
+  border-right: 1px solid var(--color-line);
+}
+
+.cl-app-topbar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: var(--page-header-band);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.cl-app-side > .cl-app-topbar {
+  margin-inline: -12px;
+  padding-inline: 12px;
+}
+
+.cl-app-ident {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: var(--row-app);
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+}
+
+.cl-app-ident-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cl-app-side-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-band-gap);
+}
+
+.cl-app-mode > span {
+  display: flex;
+  width: 100%;
+}
+
+.cl-app-mode > span > span {
+  flex: 1;
+  justify-content: center;
+}
+
+.cl-app-palette {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: var(--control-md);
+  /* 8px each side and 4px gaps, so the placeholder shows in full beside the shortcut hint. */
+  padding: 0 8px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+}
+
+.cl-app-palette > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cl-app-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cl-app-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cl-app-nav-title {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  margin: 0;
+  padding: 0 12px;
+}
+
+.cl-app-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--control-md);
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  color: var(--color-ink-secondary);
+}
+
+/* The current row is the only 500 in the drawn sidebar, as in the app. */
+
+.cl-app-nav-row.is-active {
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xs);
+  color: var(--color-ink);
+  font-weight: 500;
+}
+
+.cl-app-nav-icon {
+  flex: none;
+  color: var(--color-ink-muted);
+}
+
+.cl-app-nav-row.is-active .cl-app-nav-icon {
+  color: var(--color-accent);
+}
+
+.cl-app-nav-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.cl-app-nav-count {
+  color: var(--color-ink-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-app-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0 var(--content-gutter) var(--content-gutter);
+}
+
+.cl-app-header {
+  justify-content: space-between;
+  gap: var(--card-padding);
+  margin-inline: calc(var(--content-gutter) * -1);
+  padding-inline: var(--content-gutter);
+}
+
+.cl-app-actions,
+.cl-app-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cl-app-bands {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--page-band-gap);
+  margin-top: var(--page-section-gap);
+}
+
+.cl-app-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--workspace-gap);
+  margin-top: var(--page-section-gap);
+}
+
+/* A feature's page (ScreenAppPage): its screen as one card on the page, at
+   a reading width from the sidebar, as the app sets a section. */
+
+.cl-app-page > .cl-vig {
+  flex: none;
+  max-width: 760px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.cl-app-content .cl-screen-cols {
+  gap: var(--workspace-gap);
+}
+
+/* The KPI row is one row of four here at every viewport. */
+
+.cl-app-content [data-kpi-row] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}

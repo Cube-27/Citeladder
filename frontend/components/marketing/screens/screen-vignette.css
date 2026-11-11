@@ -1,0 +1,368 @@
+/* ---------- Vignettes: every card image ----------
+   One white card at the width of its well: the title (`heading`, the sans face at 500
+   16/24) over a meta line (`body-sm`, muted) with an optional badge at the
+   right, then one body of the same height in every vignette, so tiles in a
+   bento row match: four rows of 56, three figures over a small chart, or a
+   short panel. Row labels are `label` (14/20, 500), secondary lines
+   `body-sm` muted, values `label` tabular; figures take `stat` (28/36). Key
+   text wraps, never ellipsizes; below 420px of card width a row drops its
+   middle column. Without supporting text the frame's card is the vignette's
+   card, so it draws no second edge or fill (D31). */
+.cl-vig {
+  container-type: inline-size;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+  text-align: left;
+}
+
+/* On a FeatureCard's well the vignette is its own white inner card (12px, D36). */
+
+.cl-fcard .cl-vig {
+  border-radius: var(--site-radius-inner);
+  background: var(--color-surface);
+}
+
+.cl-vig p {
+  margin: 0;
+}
+
+.cl-vig-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.cl-vig-heading {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cl-vig-title {
+  color: var(--color-ink);
+  font-size: var(--text-heading);
+  font-weight: var(--text-heading--font-weight);
+  line-height: var(--text-heading--line-height);
+  overflow-wrap: anywhere;
+}
+
+/* Quiet lines in a product image sit on surface, paper and the tinted chips
+   of a highlighted row, so they take the secondary ink that holds 4.5:1 on
+   all of them in both themes (D36). */
+
+.cl-vig-meta,
+.cl-vig-secondary,
+.cl-vig-muted {
+  color: var(--color-ink-secondary);
+}
+
+.cl-vig-badge {
+  display: flex;
+  flex: none;
+  align-items: center;
+  min-height: 24px;
+}
+
+.cl-vig-label {
+  color: var(--color-ink);
+  font-size: var(--text-label);
+  font-weight: 400;
+  line-height: var(--text-label--line-height);
+  overflow-wrap: anywhere;
+}
+
+.cl-vig-mono {
+  font-family: var(--font-mono);
+}
+
+/* Rows: one grid per list, its rows on a subgrid, so the columns line up.
+   In a taller well the rows share the extra height. */
+
+.cl-vig-rows {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-vig-rows--lead {
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+}
+
+.cl-vig-rows--extra {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.cl-vig-rows--lead.cl-vig-rows--extra {
+  grid-template-columns: 24px minmax(0, 1fr) auto auto;
+}
+
+.cl-vig-row {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  align-items: center;
+  min-height: 56px;
+  padding-block: 8px;
+  border-top: 1px solid var(--color-line);
+}
+
+.cl-vig-row:first-child {
+  border-top: 0;
+}
+
+.cl-vig-lead {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  color: var(--color-ink);
+}
+
+.cl-vig-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cl-vig-extra {
+  display: flex;
+}
+
+.cl-vig-value {
+  justify-self: end;
+  color: var(--color-ink);
+  font-size: var(--text-label);
+  font-weight: 400;
+  line-height: var(--text-label--line-height);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@container (max-width: 419px) {
+  .cl-vig-extra {
+    display: none;
+  }
+
+  .cl-vig-rows--extra {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .cl-vig-rows--lead.cl-vig-rows--extra {
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+  }
+}
+
+/* A share as a thin bar on the chart track, as the app's Meter draws it. */
+
+.cl-vig-bar {
+  display: block;
+  width: 96px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-2xs);
+  background: var(--color-chart-grid);
+}
+
+.cl-vig-bar > span {
+  display: block;
+  height: 100%;
+}
+
+/* Figures: three in a row, each label over its value over its change. */
+
+.cl-vig-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+
+.cl-vig-stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cl-vig-stats dd {
+  margin: 0;
+}
+
+.cl-vig-stat-label {
+  color: var(--color-ink-muted);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+}
+
+.cl-vig-stat-value {
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-stat);
+  font-weight: var(--text-stat--font-weight);
+  line-height: var(--text-stat--line-height);
+  letter-spacing: var(--text-stat--letter-spacing);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@container (max-width: 419px) {
+  .cl-vig-stat-value {
+    font-size: var(--text-display-sm);
+    line-height: var(--text-display-sm--line-height);
+  }
+}
+
+/* A small chart: a plot stretched to the card's width, its axis labels in
+   HTML at real size (12px mono, muted). */
+
+.cl-vig-chart {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  margin: 0;
+}
+
+.cl-vig-plot {
+  display: grid;
+  flex: 1;
+  grid-template-rows: minmax(108px, 1fr) auto;
+  grid-template-columns: 40px minmax(0, 1fr);
+  row-gap: 8px;
+  color: var(--color-ink-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-vig-yaxis,
+.cl-vig-area {
+  position: relative;
+}
+
+.cl-vig-yaxis > span {
+  position: absolute;
+  left: 0;
+  transform: translateY(-50%);
+}
+
+.cl-vig-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  /* Half the 8px dot: a circle. */
+  border-radius: var(--radius-sm);
+  transform: translate(-50%, -50%);
+}
+
+.cl-vig-xaxis {
+  display: flex;
+  grid-column: 2;
+  justify-content: space-between;
+}
+
+/* A short panel (an answer, a chat, a brief) holds the rows' height; in a
+   taller well its parts stay together at the top and only its foot drops
+   to the bottom, so no gap opens between them. */
+
+.cl-vig-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 224px;
+  color: var(--color-ink-secondary);
+}
+
+.cl-vig-panel strong {
+  color: var(--color-ink);
+  font-weight: 500;
+}
+
+.cl-vig-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.cl-vig-outline {
+  margin: 4px 0 0;
+  padding-left: 20px;
+  list-style: decimal;
+}
+
+.cl-vig-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-line);
+}
+
+.cl-vig-chips.cl-vig-foot {
+  justify-content: flex-start;
+}
+
+.cl-vig-user {
+  align-self: flex-end;
+  max-width: 85%;
+  padding: 8px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+.cl-vig-added {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+}
+
+/* ---------- Motion (D36) ---------- */
+@keyframes cl-ping {
+  0% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+
+  60%,
+  100% {
+    opacity: 0;
+    transform: scale(3);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The latest point stays live: a ring pings out from it. */
+  .cl-vig-dot::after {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: inherit;
+    animation: cl-ping var(--motion-ping) var(--ease-standard) infinite;
+    content: '';
+  }
+}

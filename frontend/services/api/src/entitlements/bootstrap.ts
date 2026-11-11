@@ -148,11 +148,14 @@ export async function ensureWorkspaceBilling(
 export function fullAccessSpecs(allowance: number) {
   if (!Number.isSafeInteger(allowance) || allowance < 1)
     throw new Error('invalid_development_allowance');
-  // The checkout allow-list is an operator switch (B2), never part of access.
+  // The checkout allow-list (B2) and operator controls (BL9) are explicit
+  // operator grants, never part of access.
+  const explicit = new Set<string>([
+    policy.entitlements.billing_checkout,
+    policy.entitlements.operator_controls,
+  ]);
   return Object.entries(policy.entitlements.capabilities)
-    .filter(
-      ([key, definition]) => definition.issuable && key !== policy.entitlements.billing_checkout,
-    )
+    .filter(([key, definition]) => definition.issuable && !explicit.has(key))
     .map(([key, definition]) => {
       let value = allowance;
       if (definition.type === 'flag') value = 1;

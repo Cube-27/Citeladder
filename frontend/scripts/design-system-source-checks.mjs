@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join } from 'node:path';
 
 import { visitorKeys } from 'oxc-parser';
 export { textContrastViolations } from './design-system-contrast.mjs';
 
+import { marketingCssFiles, readMarketingCss } from './marketing-css.mjs';
 import {
   lineIndex,
   nameText,
@@ -46,11 +47,7 @@ const EDITORIAL_SIZES = [
 const EDITORIAL_SIZE = new RegExp(
   String.raw`(?<![\w-])text-(?:${EDITORIAL_SIZES.join('|')})(?![\w-])`,
 );
-/** The website's components, which own its type roles (the `cl-*` titles, lead, body and note). */
-const WEBSITE_CSS = 'apps/marketing/src/site.css';
 const TOKEN_CSS = 'apps/app/src/globals.css';
-/** The stylesheets the landing page is drawn with: the website components and the product screens. */
-const LANDING_CSS = ['apps/marketing/src/site.css', 'apps/marketing/src/screens.css'];
 
 const LINE_TERMINATOR = /[\n\r\p{Zl}\p{Zp}]/u;
 const WHITESPACE = /\s/;
@@ -1198,7 +1195,8 @@ export function textRoleBackgroundViolations(source, label) {
 export function productContractViolations(root) {
   const violations = [];
   const css = readFileSync(join(root, ...TOKEN_CSS.split('/')), 'utf8');
-  const websiteCss = readFileSync(join(root, ...WEBSITE_CSS.split('/')), 'utf8');
+  // The website's components own its type roles (the `cl-*` titles, lead, body and note).
+  const websiteCss = readMarketingCss(root);
   // Every role the product builds on has to be defined somewhere. The value is
   // the design system's to choose: pinning `--color-accent` to a literal hex
   // meant a rebrand failed a test rather than a review.
@@ -1265,9 +1263,9 @@ export function productContractViolations(root) {
   return violations;
 }
 
-/** The landing page's theme rules, on every stylesheet that draws it. */
+/** The landing page's theme rules, on every website stylesheet: the shared base, components and product screens. */
 export function landingThemeViolations(root) {
-  return LANDING_CSS.flatMap((file) => {
+  return marketingCssFiles(root).flatMap((file) => {
     const css = readFileSync(join(root, ...file.split('/')), 'utf8').replace(
       /\/\*[\s\S]*?\*\//g,
       '',
@@ -1326,9 +1324,9 @@ function selectorPattern(selector) {
 
 export function websiteContractViolations(root) {
   const violations = [];
-  const cssPath = join(root, ...WEBSITE_CSS.split('/'));
-  const cssLabel = relative(root, cssPath).replaceAll('\\', '/');
-  const rules = cssRules(readFileSync(cssPath, 'utf8'));
+  const cssLabel = 'website CSS (site-base.css and components/marketing/**/*.css)';
+  const websiteCss = readMarketingCss(root);
+  const rules = cssRules(websiteCss);
 
   for (const selector of TOKEN_COLORED_ROLES) {
     const selectorRegex = selectorPattern(selector);
@@ -1350,7 +1348,7 @@ export function websiteContractViolations(root) {
   }
 
   for (const role of SHARED_GEOMETRY_ROLES) {
-    if (new RegExp(escapeRegExp(role) + String.raw`\s*:`).test(readFileSync(cssPath, 'utf8'))) {
+    if (new RegExp(escapeRegExp(role) + String.raw`\s*:`).test(websiteCss)) {
       violations.push(
         cssLabel + ': ' + role + ' is a shared geometry role and must not be redefined per surface',
       );

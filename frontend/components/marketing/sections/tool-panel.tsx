@@ -6,6 +6,8 @@ import { Check, Copy, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 
+import './tool-panel.css';
+
 /** How long "Copied" shows before the button reads "Copy" again. */
 const COPIED_MS = 1600;
 

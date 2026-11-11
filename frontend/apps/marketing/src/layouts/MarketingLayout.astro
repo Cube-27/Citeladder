@@ -1,4 +1,8 @@
 ---
+// First, so the tokens and utilities precede every component sheet (each ships
+// next to its component and loads only on pages that render it).
+import '@/apps/marketing/src/marketing.css';
+import '@/apps/marketing/src/site-base.css';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics.astro';
 import CookieBanner from '@/components/marketing/chrome/CookieBanner.astro';
 import PublicFonts from '@/components/marketing/chrome/PublicFonts.astro';
@@ -18,13 +22,6 @@ import {
   SITE_NAME,
   SITE_TAGLINE,
 } from '@/lib/seo/site';
-import '@/apps/marketing/src/marketing.css';
-// The system's website components and product screens, after the tokens and
-// utilities so they win.
-import '@/apps/marketing/src/site.css';
-import '@/apps/marketing/src/screens.css';
-// The depth layer (D35, D36): stages, washes, frosted rims and the hero's load-in.
-import '@/apps/marketing/src/layers.css';
 
 interface Props {
   title?: string;
