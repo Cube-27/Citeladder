@@ -195,6 +195,22 @@ const crawlFailureSummarySchema = responseObject({
 // A crawl projection. `total_url_count` is null while full discovery runs and
 // ALWAYS null for a Free sample crawl; `has_more_site_urls`/`discovered_count`
 // are absent (optional) or null under Free redaction — never a leaked total.
+/**
+ * How a crawl of the project's own site treats robots.txt exclusions. `ignore`
+ * waives only the disallow rules; crawl delay, an unreadable or access-blocked
+ * robots.txt, rate limits and suppression still apply.
+ */
+export const crawlRobotsHandlingSchema = z.enum(['respect', 'ignore']);
+export type CrawlRobotsHandling = z.infer<typeof crawlRobotsHandlingSchema>;
+
+/** The crawl's robots choice and, when it ignores robots.txt, who confirmed authorization. */
+export const crawlRobotsChoiceSchema = responseObject({
+  handling: crawlRobotsHandlingSchema,
+  decided_by_email: z.string().nullable(),
+  decided_at: z.string().nullable(),
+});
+export type CrawlRobotsChoice = z.infer<typeof crawlRobotsChoiceSchema>;
+
 export const siteCrawlSchema = responseObject({
   id: uuid(),
   workspace_id: uuid(),
@@ -206,6 +222,7 @@ export const siteCrawlSchema = responseObject({
   root_url: z.string(),
   sample_mode: z.boolean(),
   seed: z.string(),
+  robots: crawlRobotsChoiceSchema,
   inventory_complete: z.boolean(),
   // Why a `partially_completed` crawl is partial. Empty on every other status.
   // URLs that could not be FETCHED are routine on a real site and are not an

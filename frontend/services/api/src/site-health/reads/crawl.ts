@@ -205,6 +205,19 @@ export async function crawlProjection(
   return projectCrawl(crawl, await crawlCounters(db, crawl), options);
 }
 
+/** The crawl's frozen robots choice and who confirmed an `ignore`. */
+function robotsChoice(crawl: Crawl) {
+  const frozen = record(crawl.configuration);
+  if (frozen.robots !== 'ignore')
+    return { handling: 'respect' as const, decided_by_email: null, decided_at: null };
+  const decision = record(frozen.robots_decision);
+  return {
+    handling: 'ignore' as const,
+    decided_by_email: typeof decision.email === 'string' ? decision.email : null,
+    decided_at: typeof decision.decided_at === 'string' ? decision.decided_at : null,
+  };
+}
+
 /** The crawl contract; `counters` come from `crawlCounters`, the one chooser. */
 export function projectCrawl(
   crawl: Crawl,
@@ -225,6 +238,7 @@ export function projectCrawl(
     root_url: crawl.root_url,
     sample_mode: crawl.sample_mode,
     seed: crawl.random_seed,
+    robots: robotsChoice(crawl),
     inventory_complete: crawl.inventory_complete,
     partial_reason: crawl.partial_reason,
     visible_url_count: crawl.admitted_url_count,

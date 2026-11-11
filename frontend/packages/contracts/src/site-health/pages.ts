@@ -183,6 +183,7 @@ export const pageDetailSchema = responseObject({
   aeo_measurement_state: z.enum(['measured', 'limited_evidence', 'not_measured', 'excluded']),
   aeo_measurement_reason: z.string(),
   main_content_indexable: z.boolean().nullable(),
+  robots_excluded: z.boolean(),
   issue_count: z.number().int().nullable(),
   last_audited: z.string().nullable(),
   page_kind: pageKindSchema.nullable(),

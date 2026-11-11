@@ -96,6 +96,8 @@ export type PageRow = {
   aeo_measurement_state: string;
   aeo_measurement_reason: string;
   main_content_indexable: boolean | null;
+  /** The analyzed fetch was made despite a robots.txt exclusion. */
+  robots_excluded: boolean;
   finalized_at: Date | null;
   issue_count: number | null;
   inbound_count: number | null;
@@ -115,6 +117,7 @@ export const measurementFields = (row: PageRow) => ({
   aeo_measurement_state: row.aeo_measurement_state,
   aeo_measurement_reason: row.aeo_measurement_reason,
   main_content_indexable: row.main_content_indexable,
+  robots_excluded: row.robots_excluded,
   last_audited: row.finalized_at?.toISOString() ?? null,
   issue_count: row.issue_count,
 });
@@ -211,6 +214,11 @@ export async function pageRows(
         coalesce(a.aeo_measurement_state, 'not_measured') as aeo_measurement_state,
         coalesce(a.aeo_measurement_reason, '') as aeo_measurement_reason,
         a.main_content_indexable,
+        coalesce((
+          select (f.acquisition_options ->> 'robots_excluded')::boolean
+          from site_fetch_artifacts f
+          where f.workspace_id = u.workspace_id and f.id = a.artifact_id
+        ), false) as robots_excluded,
         a.finalized_at,
         case when a.id is null then null else (
           select count(*)::int from site_issues i
