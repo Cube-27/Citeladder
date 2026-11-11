@@ -1135,6 +1135,7 @@ export interface CommerceCategories {
   id: string;
   name: string;
   normalized_name: string;
+  parent_category_id: string | null;
   project_id: string;
   projector_version: string;
   role: string;
@@ -1179,10 +1180,12 @@ export interface CommerceCompetitorCandidates {
 }
 
 export interface CommerceCsvImports {
+  applied_at: Timestamp | null;
   content_hash: string;
   content_type: string;
   created_at: Timestamp;
   created_count: number;
+  excluded_categories: Json;
   filename: string;
   id: string;
   importer_version: string;
@@ -1190,6 +1193,8 @@ export interface CommerceCsvImports {
   raw_payload: string;
   rejected_count: number;
   row_outcomes: Json;
+  source_format: string;
+  source_ref: string;
   unchanged_count: number;
   updated_count: number;
   workspace_id: string;
@@ -1256,11 +1261,13 @@ export interface CommerceProducts {
   field_sources: Json;
   gtin: string | null;
   id: string;
+  image_url: string;
   lifecycle_state: string;
   mpn: string | null;
   name: string;
   observed_external_id: string;
   price: Numeric | null;
+  price_max: Numeric | null;
   project_id: string;
   sku: string | null;
   updated_at: Timestamp;

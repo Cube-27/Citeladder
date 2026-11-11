@@ -93,6 +93,7 @@ describe('a fresh database', () => {
       '0024_declaration_ordering',
       '0025_issue_reference_snippets',
       '0026_crawl_schedules',
+      '0027_commerce_category_tree',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -124,6 +125,7 @@ describe('a fresh database', () => {
       { version: '0024_declaration_ordering' },
       { version: '0025_issue_reference_snippets' },
       { version: '0026_crawl_schedules' },
+      { version: '0027_commerce_category_tree' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -179,6 +181,7 @@ describe('an existing database', () => {
       '0024_declaration_ordering',
       '0025_issue_reference_snippets',
       '0026_crawl_schedules',
+      '0027_commerce_category_tree',
     ]);
     // A URL identity keeps no per-sighting discovery status.
     expect(await columns(client, 'site_urls')).not.toContain('discovery_status');
@@ -247,6 +250,14 @@ describe('an existing database', () => {
     expect(await columns(client, 'crawl_schedules')).toEqual(
       expect.arrayContaining(['cadence', 'next_run_at', 'lease_owner', 'failure_count']),
     );
+    // Catalog categories nest; imports stage their category tree before applying.
+    expect(await columns(client, 'commerce_categories')).toContain('parent_category_id');
+    expect(await columns(client, 'commerce_products')).toEqual(
+      expect.arrayContaining(['image_url', 'price_max']),
+    );
+    expect(await columns(client, 'commerce_csv_imports')).toEqual(
+      expect.arrayContaining(['source_format', 'source_ref', 'excluded_categories', 'applied_at']),
+    );
     // One internal-cost view across platform calls, Agent calls and answer engines.
     expect(await columns(client, 'internal_costs')).toEqual(
       expect.arrayContaining(['source', 'workspace_id', 'charge', 'cost_microusd', 'occurred_at']),
@@ -278,6 +289,7 @@ describe('an existing database', () => {
       { version: '0024_declaration_ordering' },
       { version: '0025_issue_reference_snippets' },
       { version: '0026_crawl_schedules' },
+      { version: '0027_commerce_category_tree' },
     ]);
   }, 120000);
 });
