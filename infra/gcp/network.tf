@@ -46,7 +46,10 @@ resource "google_compute_firewall" "postgres" {
   }
 }
 
-# Operator break-glass shell through IAP only; nothing else reaches the VM.
+# The owner's own account reaches the VM over SSH through IAP only: the
+# break-glass database shell and the database tunnel of
+# scripts/provision-dev-login.ps1 (runbook section 3). The deployer holds no
+# SSH or IAP role; nothing else reaches the VM.
 resource "google_compute_firewall" "iap_ssh" {
   name      = "${local.name}-iap-ssh"
   network   = google_compute_network.main.name
