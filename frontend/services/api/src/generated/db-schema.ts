@@ -251,6 +251,7 @@ export interface AgentOutputSuggestions {
   rationale: string;
   replacement: string | null;
   revision_id: string;
+  rule_guidance: Json | null;
   rule_id: string;
   rule_version: string | null;
   run_id: string | null;
@@ -1114,6 +1115,18 @@ export interface ClaimVerdicts {
   workspace_id: string;
 }
 
+export interface CommerceCatalogRevisions {
+  created_at: Timestamp;
+  id: string;
+  identity_hash: string;
+  identity_snapshot: Json;
+  project_id: string;
+  revision_number: number;
+  source_id: string | null;
+  source_kind: string;
+  workspace_id: string;
+}
+
 export interface CommerceCategories {
   canonical_url: string;
   created_at: Timestamp;
@@ -1178,6 +1191,22 @@ export interface CommerceCsvImports {
   row_outcomes: Json;
   unchanged_count: number;
   updated_count: number;
+  workspace_id: string;
+}
+
+export interface CommerceMatchPasses {
+  artifact_id: string;
+  audit_id: string;
+  catalog_revision_id: string | null;
+  created_at: Timestamp;
+  id: string;
+  matcher_version: string;
+  mode: string;
+  parser_version: string;
+  project_id: string;
+  target_id: string | null;
+  target_kind: string | null;
+  task_id: string;
   workspace_id: string;
 }
 
@@ -1264,19 +1293,24 @@ export interface CommerceRecommendationObservations {
   model_version: string;
   observed_brand: string;
   observed_currency: string;
+  observed_external_product_id: string | null;
+  observed_image_url: string | null;
+  observed_merchant_name: string | null;
   observed_price: Numeric | null;
   observed_product: string;
+  observed_tag: string | null;
   observed_title: string;
   order_observable: boolean;
   parser_version: string;
+  pass_id: string;
   product_id: string | null;
   project_id: string;
   rank: number | null;
   resolver_outcome: string | null;
   resolver_template_version: string | null;
   surface_kind: string;
-  target_id: string;
-  target_kind: string;
+  target_id: string | null;
+  target_kind: string | null;
   task_id: string;
   workspace_id: string;
 }
@@ -3544,10 +3578,12 @@ export interface DB {
   brands: Brands;
   citations: Citations;
   claim_verdicts: ClaimVerdicts;
+  commerce_catalog_revisions: CommerceCatalogRevisions;
   commerce_categories: CommerceCategories;
   commerce_competitor_attempts: CommerceCompetitorAttempts;
   commerce_competitor_candidates: CommerceCompetitorCandidates;
   commerce_csv_imports: CommerceCsvImports;
+  commerce_match_passes: CommerceMatchPasses;
   commerce_observation_citations: CommerceObservationCitations;
   commerce_product_categories: CommerceProductCategories;
   commerce_product_observations: CommerceProductObservations;

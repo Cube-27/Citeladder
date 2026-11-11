@@ -124,9 +124,6 @@ owner as required reviewer.
 | `BILLING_FUNDED_MONTHLY_BUDGET_MINOR` | optional | managed-plan monthly platform spend ceiling in US cents; app default `50000` |
 | `PROVIDER_PLATFORM_OPENAI_CREDENTIAL_REF` / `…_GOOGLE_…` / `…_ANTHROPIC_…` | optional | opaque reference that the platform connection for that engine stores; it must match for the platform key to be used. Empty by default |
 | `DATAFORSEO_PLATFORM_CREDENTIAL_REF` | optional | the same for the platform DataForSEO connection, which uses the `DATAFORSEO_API_*` pair |
-| `ORIGIN_DOMAIN_NAME` | **delete** | no longer used |
-| `API_DB_POOL_SIZE` | **delete** | Cloud Run uses a fixed pool of 4 |
-| `GCP_PROJECT_NUMBER` | delete (optional) | unused |
 
 To open sign-up, set `OAUTH_GOOGLE_ENABLED` and `PUBLIC_SIGNUP_ENABLED` here
 and the `SELF_SERVE_SIGNUP` repository variable used by the Worker builds.
@@ -157,10 +154,11 @@ leaves checkout closed. The deploy refuses a name ending in `SECRET`,
 | `BILLING_RAZORPAY_WEBHOOK_SECRET` | **new**, optional | Razorpay webhook signing secret, never the API key secret; required when the mode is not `disabled` |
 | `BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET` | **new**, optional | only during a webhook-secret rotation, with the window variables in section 1.3 |
 | `PROVIDER_PLATFORM_OPENAI_API_KEY` / `…_GOOGLE_…` / `…_ANTHROPIC_…` | **new**, optional | platform engine keys that managed plans measure on; each is used only while its `…_CREDENTIAL_REF` matches |
-| `CLOUDFLARE_ORIGIN_CERT` / `CLOUDFLARE_ORIGIN_KEY` | **delete** | the Origin CA path is retired |
 
 Every deploy copies these into Secret Manager. Changed values create a new
-version; an emptied optional secret has its versions disabled and is dropped
+version, and every older version of that secret is destroyed: Cloud Run reads
+only `latest`, and a rotation keeps the old value in its own `…_PREVIOUS`
+secret. An emptied optional secret has its versions disabled and is dropped
 from Cloud Run. The database, JWT, encryption, referral, API key pepper
 (`API_KEY_PEPPER`, `citeladder-api-key-pepper`) and checkout quote-signing
 (`BILLING_QUOTE_SIGNING_SECRET`, `citeladder-billing-quote-secret`) secrets are
@@ -189,9 +187,8 @@ verification review.
 - Workers keep their existing `ORIGIN_TOKEN` secret. It must equal
   `CITELADDER_ORIGIN_TOKEN`. `ORIGIN_UPSTREAM` is committed in each
   `wrangler.jsonc` as `https://citeladder-api-44437656491.us-central1.run.app`,
-  the deterministic Cloud Run URL for this project number.
-- After the first successful cutover, delete the `origin.citeladder.com` DNS
-  record and revoke its Cloudflare Origin CA certificate.
+  the deterministic Cloud Run URL for this project number. There is no origin
+  hostname or Origin CA certificate.
 
 ### 1.7 Legal hosting location
 
@@ -277,8 +274,9 @@ Billing → Reports grouped by SKU and remove anything unexpectedly non-zero.
   drained that queue since; run the tick and read its log.
 
 - **Crawl-log reader:** Terraform creates `citeladder-log-reader`, a service
-  account with no key and no role in this project, and grants the runtime
-  service account `roles/iam.serviceAccountTokenCreator` on it alone. Its email
+  account with no key and no role in this project, and grants the API
+  (`citeladder-runtime`) and job (`citeladder-jobs`) service accounts
+  `roles/iam.serviceAccountTokenCreator` on it alone. Its email
   (`terraform output crawl_log_reader_email`) reaches every Cloud Run workload
   as `CRAWL_LOG_READER_EMAIL`; customers grant it subscriber and viewer on
   their own Pub/Sub subscription. Empty hides the Google Cloud connector. The

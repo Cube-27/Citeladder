@@ -357,8 +357,15 @@ describe('project owner', () => {
         'X-Workspace-Id': a.workspaceId,
       },
     });
-    expect(((await response.json()) as { id: string }[]).map((row) => row.id)).toEqual([
-      project.id,
+    // The switcher's summary, not the project view: no prompts, competitors or domains.
+    expect(await response.json()).toEqual([
+      {
+        id: project.id,
+        name: 'Mine',
+        brand_name: project.brand_name,
+        website_url: project.website_url,
+        brand: { logo_url: null },
+      },
     ]);
     expect((await app.request('/api/v1/projects')).status).toBe(401);
   });
@@ -641,6 +648,47 @@ describe('project owner', () => {
     await expect(
       commandCenter(db, { workspaceId: t.workspaceId, projectId: project.id }, randomUUID()),
     ).rejects.toMatchObject({ status: 404 });
+  });
+  it('reads the action order once for the overview and versions its actions with it', async () => {
+    const t = await tenant();
+    const project = await createProject(
+      db,
+      t.workspaceId,
+      t.userId,
+      projectCreate.parse({ name: 'Ordered' }),
+    );
+    const scope = { workspaceId: t.workspaceId, projectId: project.id };
+    const now = new Date();
+    await db
+      .insertInto('opportunity_orders')
+      .values({
+        id: randomUUID(),
+        workspace_id: t.workspaceId,
+        project_id: project.id,
+        ordered_keys: '[]',
+        version: 3,
+        updated_by_user_id: t.userId,
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+    let orderReads = 0;
+    const observed = db.withPlugin({
+      transformQuery: ({ node }) => {
+        if (
+          node.kind === 'SelectQueryNode' &&
+          JSON.stringify(node).includes('"opportunity_orders"')
+        )
+          orderReads += 1;
+        return node;
+      },
+      transformResult: ({ result }) => Promise.resolve(result),
+    });
+
+    const view = await commandCenter(observed, scope, null);
+
+    expect(view.action_order_version).toBe(3);
+    expect(orderReads).toBe(1);
   });
   it('retains exact declaration and verified observation IDs in resolved action summaries', async () => {
     // Immutable fixture evidence is retained until the disposable database is dropped.

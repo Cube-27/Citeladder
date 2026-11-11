@@ -89,7 +89,18 @@ export const commerce = {
     version: 'commerce-buyer-prompts-1',
     min: 2,
     max: 10,
-    default: 5,
+    /** Prompts per hero product: the only per-product generation. */
+    default: 3,
+    /**
+     * A category's matrix: buyer contexts × intent stages, one prompt per cell,
+     * plus branded comparisons so branded stay at most `branded_share` of the batch.
+     */
+    matrix: {
+      contexts: 3,
+      stages: ['consideration', 'decision'],
+      branded_share: 0.2,
+      context_max_chars: 80,
+    },
     min_words: 4,
     max_words: 24,
     survey_markers: [
@@ -109,6 +120,18 @@ export const commerce = {
     ],
     product_limit: 12,
     term_limit: 8,
+  },
+  /**
+   * Catalog matching in every answer (CM1). A new catalog revision re-matches
+   * the successful answers of the last `backfill_days`, `batch_size` answers
+   * per transaction. Crawl projection's revision requests coalesce: one
+   * revision `projection_delay_seconds` after the first projected page that
+   * finds none queued, so a long crawl records at most one per interval.
+   */
+  answer_matching: {
+    backfill_days: 30,
+    batch_size: 25,
+    projection_delay_seconds: 120,
   },
   /** Products the catalog read lists, first by name; the rail is one unpaged list. */
   catalog_product_limit: 5000,
@@ -175,9 +198,12 @@ exemplars.marketplace = exemplars.retail!;
 exemplars.d2c_product = exemplars.retail!;
 const template =
   'You write the search prompts a SHOPPER TYPES INTO AN AI ASSISTANT when they are\nlooking to buy. Each prompt is the shopper speaking, in their own words, about\nwhat they want.\n\nThe context names the shop, what it sells, and -- for a category -- the actual\nproducts on that shelf. Every prompt must be one a buyer of THOSE products\nwould type. A category name alone is ambiguous ("accessories" means one thing\nin fashion and another in electronics); the products and the category terms\nare what settle it. They, not the examples below, are the subject.\n\nNever write a question addressed to the shopper. You are not running a survey,\nan interview, or a market-research panel. "What do you prefer", "how important\nis", "what is your budget", "have you encountered" are all wrong: nobody types\nthose into a shopping assistant.\n\nWrite the way people actually type: lowercase is fine, fragments are fine, a\nconcrete constraint (a price, a use case, a compatibility, a material) is\nbetter than a general one. Vary the shape across the batch -- do not apply one\nsentence frame to every prompt.\n\n{exemplars}\n\nThe examples above show the SHAPE and register of a buyer prompt, never the\nsubject. Write about what this shop sells.\n\nNever name the owned brand or the exact owned product: the prompt has to be one\na buyer would type BEFORE they know about it. Return only the schema.';
+const matrixTemplate =
+  '\n\nThis request is a CATEGORY MATRIX. The request gives "contexts" (how many\ndistinct buyer situations to invent for this category: who is buying, for what\nuse or constraint), "stages" (the buying stages) and "branded" (how many\nbranded comparisons to add). Return, for every context and every stage, exactly\none prompt with that context\'s short label in "context", the stage in "stage"\nand "branded": false. Then return exactly "branded" extra prompts, each a buyer\ncomparing the owned brand ("brand" in the request) with a competing brand, with\n"branded": true; these alone may name the owned brand, use "context": "" and\ntheir own "stage". Reuse the same context labels across stages, exactly spelled.';
 const fallback =
   "  GOOD  best instant read thermometer for grilling under $50\n  BAD   What features do you prioritize when comparing thermometers?\n  GOOD  which hygrometer is most accurate for a humidor\n  BAD   How important is accuracy to you when selecting a hygrometer?\n  GOOD  wireless meat thermometer that works with an iPhone\n  BAD   Do you prefer a built-in display or a minimalist design?\n  GOOD  cheapest stainless steel cookware set that is oven safe\n  BAD   What's your budget range, and does it depend on features?";
 
-export function commerceBuyerPromptSystem(businessModel: string): string {
-  return template.replace('{exemplars}', exemplars[businessModel.trim()] ?? fallback);
+export function commerceBuyerPromptSystem(businessModel: string, matrix = false): string {
+  const base = template.replace('{exemplars}', exemplars[businessModel.trim()] ?? fallback);
+  return matrix ? base + matrixTemplate : base;
 }

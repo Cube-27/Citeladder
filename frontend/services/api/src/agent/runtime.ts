@@ -29,6 +29,7 @@ import {
   SUGGEST_EDITS,
   type DocumentState,
 } from './builtin-tools.ts';
+import { offeredRuleIds } from '../page-documents/content-rules.ts';
 import { pageStates, saveSuggestions } from './suggest-edits.ts';
 import { fetchesPage } from './skills.ts';
 import { agentPageFieldsSchema } from '@citeladder/contracts/agent';
@@ -353,6 +354,8 @@ export class AgentRuntime {
         ),
         manifest,
         pages: await pageStates(trx, scope.workspaceId, pageDocuments(documents)),
+        // The content rules this turn's context offered; suggest_edits accepts only these.
+        rules: offeredRuleIds({ sections: manifest.package.sections, action: manifest.action }),
         // Fixed for the turn: computed once, not on every call.
         context: suppliedManifest(manifest, budget.context_package_max_chars),
         transcripts: await chatTranscripts(trx, scope, chat.id),
@@ -570,6 +573,7 @@ export class AgentRuntime {
       staged: new Map(),
       personIds: turn.personIds,
       pages: turn.pages,
+      rules: turn.rules,
       suggestions: [],
       read: [],
       web: new Map(),

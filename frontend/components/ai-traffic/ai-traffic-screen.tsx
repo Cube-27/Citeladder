@@ -16,7 +16,7 @@ import { MutationNotice } from '@/components/ui/mutation-notice';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { readErrorProps } from '@/components/ui/read-error';
 import { AiReferralsScreen } from './referrals-screen';
-import { TrafficControls, TrafficExport } from './traffic-controls';
+import { PagesSort, TrafficAllFilters, TrafficControls, TrafficExport } from './traffic-controls';
 import { TrafficOverview, TrafficCrawlers, TrafficActivity } from './traffic-views';
 import { TrafficPages } from './pages-view';
 import { CrawlLogAvailabilityNotice } from './crawl-log-availability';
@@ -100,7 +100,12 @@ function TrafficDataView({
 }: Readonly<{ tab: TrafficDataTab; tabs: TabRowProps; crawlAvailable: boolean }>) {
   const model = useTrafficData(tab);
   const { summary } = model;
-  const controls = { filters: <TrafficControls model={model} crawlAvailable={crawlAvailable} /> };
+  const controls = { filters: <TrafficControls model={model} /> };
+  // The narrowings sit in All filters at the tabs row's far right.
+  const rowTabs: TabRowProps = {
+    ...tabs,
+    controls: <TrafficAllFilters model={model} crawlAvailable={crawlAvailable} />,
+  };
   // Export is a route action, so the control band keeps one short row on every tab.
   const actions = tab === 'overview' ? undefined : <TrafficExport model={model} />;
   // First load keeps the identity, tab and control bands; only the work waits.
@@ -108,7 +113,7 @@ function TrafficDataView({
   // table, in the footprint of a page of rows.
   if (tab === 'overview' && summary.isLoading)
     return (
-      <ListScreen tabs={tabs} actions={actions} controls={controls}>
+      <ListScreen tabs={rowTabs} actions={actions} controls={controls}>
         <QueryState kind="loading" label="Loading AI Traffic…" />
       </ListScreen>
     );
@@ -116,7 +121,7 @@ function TrafficDataView({
   // footprint its loading state took.
   if (tab === 'overview' && summary.isError)
     return (
-      <ListScreen tabs={tabs} actions={actions} controls={controls}>
+      <ListScreen tabs={rowTabs} actions={actions} controls={controls}>
         <QueryState
           kind="error"
           {...readErrorProps(summary)}
@@ -125,7 +130,7 @@ function TrafficDataView({
       </ListScreen>
     );
   return (
-    <ListScreen tabs={tabs} actions={actions} controls={controls}>
+    <ListScreen tabs={rowTabs} actions={actions} controls={controls}>
       <TrafficTabContent tab={tab} model={model} crawlAvailable={crawlAvailable} />
     </ListScreen>
   );
@@ -158,7 +163,7 @@ function TrafficTabContent({
       {tab === 'activity' ? <TrafficActivity {...scope} /> : null}
       {tab === 'pages' ? (
         <TabPanel value="pages">
-          <TrafficPages {...scope} />
+          <TrafficPages {...scope} sort={<PagesSort model={model} />} />
         </TabPanel>
       ) : null}
     </Stack>

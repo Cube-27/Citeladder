@@ -215,7 +215,12 @@ departure and ownership-transfer receipts in the mutation transaction. A
 rollback removes its receipt; repeated unchanged roles emit nothing. Google
 sign-in and customer provider-credential mutations also use this bounded
 writer. Event records contain identifiers and event kinds, never request
-bodies, provider credentials or prompts.
+bodies, provider credentials or prompts. Security events are kept for 30 days
+(`ABUSE_SECURITY_EVENT_RETENTION_DAYS`): the runner's periodic
+`security-event-retention` owner deletes older rows in bounded batches
+(`ABUSE_SECURITY_EVENT_PRUNE_BATCH`), so the log is a recent audit trail, not an
+archive. Retention must stay longer than `signup_notice_window_seconds`, whose
+`auth.signup_notified` marker stops a repeat notice.
 
 [Workspace APIs](../frontend/services/api/src/routes/workspaces.ts) use the
 [workspace owner](../frontend/services/api/src/workspaces/) for invitations,
@@ -321,14 +326,16 @@ geometry; only a confirmed 401 clears session state and redirects to sign-in.
 directly. Otherwise explicit workspace selection wins, then session/device
 selection, then the first membership. Device storage is convenience, never
 authorization. Conflicting project/workspace URL parameters are rejected.
-A cold load of a project address asks the remembered workspace's project list
-first; a listed project needs no separate detail read, and any other project is
-still authorized by its own detail read. Every project list seeds the details
-of the projects it returns. The same round as the session read also asks for
-the addressed or remembered workspace's access, entitlement, Terms status and
-project list, and for the addressed or remembered project's shell and screen
-reads. A project that turns out to belong to another workspace has its
-unanswered reads withdrawn before its own workspace's reads start.
+The workspace's project list carries summaries (id, name, brand name, website
+and logo), only what the switcher and other pickers show; the active project's
+full view is always its own detail read, which authorizes it from the path and
+is accepted only when it belongs to the resolved workspace. The switcher asks
+for a project's view while its row is highlighted, so a switch rarely waits on
+it. The same round as the session read asks for the addressed or remembered
+workspace's access, entitlement, Terms status and project list, and for the
+addressed or remembered project's detail, shell and screen reads. A project
+that turns out to belong to another workspace has its unanswered reads
+withdrawn before its own workspace's reads start.
 
 Project lists, provider state, usage and entitlements carry workspace identity
 in both query key and request. Late responses cannot answer for a workspace

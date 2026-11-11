@@ -85,7 +85,8 @@ states and discovery failures read as sentences.
 ## Buyer Prompts
 
 Every Commerce prompt has a typed category or product target. Generation is
-bounded and rejects owned-name leakage; admission binds a prompt to the target
+bounded and rejects owned-name leakage; a category's branded comparisons are the
+one bounded exception (below). Admission binds a prompt to the target
 through the category's own name, its products and category terms, and for a
 product its name and description. Archived products never feed the context.
 Generated and manual prompts use the shared Prompt owner and stay disabled until
@@ -95,6 +96,30 @@ targets and capacity before writing. Each target keeps the prompts it admitted:
 a weak batch or a later model failure does not discard earlier targets' paid
 prompts, and only a request that admitted nothing is unavailable (503). The
 screen says when fewer prompts than asked were usable.
+
+**Category matrix.** A category target generates a shopping matrix in one
+bounded model call: buyer contexts × intent stages (configured: 3 contexts ×
+`consideration` and `decision`), one non-branded prompt per cell, plus branded
+comparisons so that branded prompts stay within `branded_share` (0.2) of the
+batch. All of these numbers live in `buyer_prompts.matrix` in
+`config/commerce.ts`. The context is stored as the prompt's persona and the
+stage as its buyer stage; admission keeps at most one prompt per cell and the
+configured number of contexts. Non-branded prompts keep the owned-name
+rejection. A branded comparison must name the owned brand and is filed in the
+shared `comparison` cohort, so `prompts.branded` is true and it stays out of
+organic Visibility and the AI Shelf snapshot (no schema change). The Buyer Prompts read returns `branded`,
+`buyer_stage` and `context` per prompt.
+
+**Hero products.** Per-product prompts exist only for hero products the user
+picks (configured 3 each, `buyer_prompts.default`). A generate request naming a
+product target must set `hero: true` or it is refused (422
+`commerce_prompt_hero_required`) before any quota or model call; every other
+product is covered by its category's matrix. The hero pick is a per-request
+choice, not stored on the product.
+
+The category's prompts section opens the standalone matrix sheet
+(`category-matrix-sheet.tsx`), which generates the matrix, shows coverage
+(contexts × stages filled, branded count) and approves prompts one at a time.
 
 For one target, the prompts section opens the shared audit launcher over only
 its approved prompt IDs and explains why launch is disabled until one is
@@ -106,10 +131,51 @@ the same freeze, execution, observation and snapshot path. After a launch the
 section follows the run's event stream and refreshes AI Shelf and Actions when
 it finishes. Typed text belongs to one target and resets on switch.
 
+## Catalog matching in every answer
+
+Products are matched in every successful answer, brand and Commerce runs alike
+(CM1), for a project whose plan grants `commerce` and whose catalog or approved
+competitor list is non-empty; any other project records nothing extra.
+
+A **catalog revision** (`commerce_catalog_revisions`) is an immutable, numbered
+copy of the project's matching identity: active products with their category
+memberships, and approved competitors with their targets. It records what
+created it (`import`, `projection`, `competitor_decision` or `audit`) and is
+written only when that identity's hash changed. CSV imports and competitor
+decisions record one in their own transaction; crawl projection, which writes
+one page per task, asks through a coalesced request that keeps the earliest
+deadline, so a long crawl records at most one revision per
+`projection_delay_seconds` (120); every audit admission, of
+any scope, records one when the catalog changed since the last and freezes it
+as `configuration.commerce_catalog`.
+
+A **match pass** (`commerce_match_passes`) is one derivation of observations
+from one stored answer under one revision and one parser/matcher version pair,
+unique on those four, so a repeated derivation is a no-op. Every observation
+references its pass. `live` passes are written with the answer; a buyer
+prompt's answer is matched against its target's frozen products and approved
+competitors (the AI Shelf below, resolver included), and any other answer
+against the whole frozen revision. An answer no buyer prompt targets has no
+`target_*`, keeps only the spans that name a catalog product or approved
+competitor plus every organic carousel card, never calls the resolver and
+creates no AI-observed competitor.
+
+Each new revision queues one `commerce_answer_matching` analytics task. It
+re-matches the successful answers of the last `backfill_days` (30) that have
+no pass for that revision, `batch_size` answers per transaction, as `backfill`
+passes. Backfill is deterministic only: token and URL matching and carousel
+cards, never the model resolver, so a span that would need it reads
+`unavailable`. A revision a newer one superseded stops before its next batch,
+since the newer revision's task covers the same answers. Leases, retries and cancellation stay
+with the shared analytics worker. Raw answers are never rewritten: reads use
+the latest pass per answer (highest revision, then newest) and keep older
+passes as history. Policy lives in `answer_matching` in `config/commerce.ts`.
+
 ## AI Shelf
 
 Successful Commerce executions create append-only recommendation observations
-linked to the raw response artifact and any persisted Citations. Answers split
+linked to the raw response artifact, their match pass and any persisted
+Citations. Answers split
 into list items (ordered items carry a one-based rank) or, without a list,
 prose sentences (unranked). Deterministic matching reads the catalog and
 approved competitors frozen into the audit: names and identifiers match whole
@@ -132,6 +198,23 @@ when the answer is recorded: approved holds a slot like a frozen competitor,
 pending is `ai_observed_competitor` (shown, outside the share) and rejected is
 excluded from the shelf.
 
+ChatGPT shopping carousels are read from the stored provider response
+([parsing](../frontend/services/api/src/search-surfaces/parsing.ts)), beside the
+text spans: each organic `chat_gpt_products` card becomes one ordered slot with
+`surface_kind = 'shopping_result'`, ranked by its one-based position among the
+organic cards of its carousel; text spans stay `recommendation`. A card records
+its title, tag, price and currency, merchant name, link and host, ChatGPT's
+product key and first image URL; every field but the title is optional and an
+absent one is stored as absent, not zero. The card's rating is never read.
+Sponsored items stay with Ads and never hold a slot or a position. Cards are
+matched deterministically and never sent to the resolver: first by link
+(canonical page, tracking parameters ignored) to a frozen product or approved
+competitor, then by the product key a card in the project was matched to before
+this answer was captured (used only when that holder is on this target's frozen shelf or is this
+target's AI-observed candidate), then by the name rules above over the title.
+An unmatched card whose link is off the business's hosts creates or reuses an
+AI-observed competitor; the card is that evidence.
+
 The persisted, formula-versioned snapshot per target and audit exposes:
 
 - Product Visibility: successful target executions with an owned appearance
@@ -142,8 +225,17 @@ The persisted, formula-versioned snapshot per target and audit exposes:
 - First-Position Win Rate: ordered executions whose first slot is owned divided
   by ordered executions.
 
+A snapshot reads each answer's latest match pass, so a backfill that lands
+before an audit finalizes is the pass it counts; a persisted snapshot keeps the
+exact observation IDs it was computed from.
+
 A slot is one product or competitor per execution, at its best rank, so an
-answer naming a product three times recommends it once. A target with no
+answer naming a product three times recommends it once. In an execution with a
+carousel, a card's rank wins over a text-list rank: the carousel orders the
+slots and names the execution's first slot. Only executions of unbranded
+prompts count: a branded comparison names the owned brand by design, so its
+executions and observations stay out of the snapshot, as branded cohorts stay
+out of organic Visibility. A target with no
 successful execution reads Product Visibility as unavailable, not zero, and
 raises no `product_not_mentioned` or `cited_alternatives` Opportunity; other
 metrics without a denominator are unavailable.
@@ -177,7 +269,10 @@ enqueues for catalog page kinds. Project and target IDs are re-authorized; an
 object ID alone is never a catalog boundary.
 
 [Audit context](../frontend/services/api/src/commerce/audit-context.ts) freezes
-target identity before shared audit execution;
+target identity and the catalog revision before shared audit execution;
+[catalog revisions](../frontend/services/api/src/commerce/catalog-revisions.ts)
+own revision recording and [answer matching](../frontend/services/api/src/commerce/answer-matching.ts)
+the backfill;
 [shelf parsing](../frontend/services/api/src/commerce/shelf-parsing.ts) owns
 matching and resolution, and [shelf metrics](../frontend/services/api/src/commerce/shelf-metrics.ts)
 the formulas. No browser aggregate or current-catalog lookup may reinterpret an

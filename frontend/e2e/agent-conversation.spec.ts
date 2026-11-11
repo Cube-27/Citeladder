@@ -215,6 +215,13 @@ for (const width of [1280, 390]) {
       await reply.fill('Draft kept while working');
       // While the turn runs, Stop takes Send's place and drafting continues.
       await expect(page.getByRole('button', { name: 'Send', exact: true })).toHaveCount(0);
+      // A long skill label truncates beside Stop rather than wrapping the control row.
+      const skillBox = await page
+        .getByRole('button', { name: 'Skill: Continue with Growth plan' })
+        .boundingBox();
+      const stopBox = await page.getByRole('button', { name: 'Stop', exact: true }).boundingBox();
+      expect(Math.abs(skillBox!.y - stopBox!.y)).toBeLessThanOrEqual(1);
+      expect(skillBox!.x + skillBox!.width).toBeLessThanOrEqual(stopBox!.x);
       // Only the thread scrolls, in its own region on both surfaces.
       const thread = page.getByRole('region', { name: 'Agent conversation' });
       await thread.evaluate((element) => element.scrollTo(0, 0));

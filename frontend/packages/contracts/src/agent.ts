@@ -316,6 +316,18 @@ const agentSuggestionEventSchema = responseObject({
 });
 
 /**
+ * Where a suggestion's rule comes from, as stored when it was made: a
+ * `requirement` restates a search-engine policy, a `recommendation` is guidance
+ * offered as an option, and a `heuristic` is a tool convention or contested
+ * evidence, also an option.
+ */
+export const agentSuggestionGuidanceSchema = responseObject({
+  strength: z.enum(['requirement', 'recommendation', 'heuristic']),
+  source_label: z.string(),
+  source_url: z.string(),
+});
+
+/**
  * One suggestion on a page document. `ready` carries replacement text,
  * `needs_input` asks the person for a fact and `advice` has neither.
  * `position` is where its text is in the latest revision: an open span's
@@ -330,6 +342,8 @@ export const agentSuggestionSchema = responseObject({
   source: z.enum(['model', 'site_health']),
   category: z.string(),
   rule_id: z.string(),
+  /** Null for a suggestion made before the rule catalog. */
+  guidance: agentSuggestionGuidanceSchema.nullable(),
   rationale: z.string(),
   anchor: agentSuggestionAnchorSchema,
   depends_on: z.array(agentSuggestionDependencySchema),

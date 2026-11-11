@@ -70,6 +70,8 @@ export type DocumentState = {
   personIds: ReadonlySet<string>;
   /** Each page document's SEO fields and stored suggestions, by number. */
   pages: ReadonlyMap<number, PageState>;
+  /** The rules this turn's `content_rules` section offers, Site Health findings on the page included. */
+  rules: ReadonlySet<string>;
   /** This turn's staged suggestions; committed only with the reply. */
   suggestions: StagedSuggestion[];
 };
@@ -491,6 +493,7 @@ export function suggestEdits(
       number,
       body,
       state: resolved.state,
+      rules: state.rules,
       staged: [...state.suggestions, ...accepted],
     };
     const checked = checkSuggestion(page, item, scrub);
