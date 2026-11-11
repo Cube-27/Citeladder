@@ -132,6 +132,23 @@ when the answer is recorded: approved holds a slot like a frozen competitor,
 pending is `ai_observed_competitor` (shown, outside the share) and rejected is
 excluded from the shelf.
 
+ChatGPT shopping carousels are read from the stored provider response
+([parsing](../frontend/services/api/src/search-surfaces/parsing.ts)), beside the
+text spans: each organic `chat_gpt_products` card becomes one ordered slot with
+`surface_kind = 'shopping_result'`, ranked by its one-based position among the
+organic cards of its carousel; text spans stay `recommendation`. A card records
+its title, tag, price and currency, merchant name, link and host, ChatGPT's
+product key and first image URL; every field but the title is optional and an
+absent one is stored as absent, not zero. The card's rating is never read.
+Sponsored items stay with Ads and never hold a slot or a position. Cards are
+matched deterministically and never sent to the resolver: first by link
+(canonical page, tracking parameters ignored) to a frozen product or approved
+competitor, then by the product key an earlier card in the project was matched
+to (used only when that holder is on this target's frozen shelf or is this
+target's AI-observed candidate), then by the name rules above over the title.
+An unmatched card whose link is off the business's hosts creates or reuses an
+AI-observed competitor; the card is that evidence.
+
 The persisted, formula-versioned snapshot per target and audit exposes:
 
 - Product Visibility: successful target executions with an owned appearance

@@ -6,7 +6,7 @@ import { auditTenant } from './audit-fixtures.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { createAudits } from '../src/audits/creation.ts';
-import { AuditQueue } from '../src/queue/audit-queue.ts';
+import { AuditQueue, type AuditTask } from '../src/queue/audit-queue.ts';
 import { persistExecutionSuccess, type ExecutionResult } from '../src/audits/result-persistence.ts';
 import { categoryByName, newProduct, addMembership } from '../src/commerce/catalog-store.ts';
 import { prepareShelfExecution } from '../src/commerce/shelf.ts';
@@ -481,5 +481,208 @@ describe('frozen Commerce shelf projections', () => {
       new Set([artifactId]),
     );
     await projections.finalize(t.workspaceId, auditId);
+  });
+  it('ranks organic carousel cards as shopping slots and matches a repeat card by its ChatGPT product key', async () => {
+    const t = await auditTenant(db, fixtures),
+      foreign = await auditTenant(db, fixtures);
+    workspaces.push(t.workspaceId, foreign.workspaceId);
+    const scope = { workspaceId: t.workspaceId, projectId: t.projectId };
+    const category = await categoryByName(db, scope, 'Shoes');
+    const product = await newProduct(db, scope, 'https://shop.example/products/road');
+    await db
+      .updateTable('commerce_products')
+      .set({ name: 'Frozen road shoe', brand: 'Acme' })
+      .where('id', '=', product.id)
+      .execute();
+    await addMembership(db, scope, product.id, category.id, null);
+    await db
+      .insertInto('commerce_prompt_targets')
+      .values({
+        id: randomUUID(),
+        workspace_id: t.workspaceId,
+        project_id: t.projectId,
+        prompt_id: t.promptId,
+        target_kind: 'category',
+        target_id: category.id,
+        template_version: 'test',
+        approved_at: new Date(),
+        created_at: new Date(),
+      })
+      .execute();
+    const [auditId] = await createAudits(
+      db,
+      t.workspaceId,
+      auditInput.parse({
+        project_id: t.projectId,
+        prompt_ids: [t.promptId],
+        engines: ['chatgpt'],
+        repetitions: 2,
+        audit_scope: 'commerce',
+      }),
+      {},
+      runtime,
+    );
+    const queue = new AuditQueue(db, 120),
+      claims = await queue.claim('carousel-worker', 2, { workspaceId: t.workspaceId, auditId });
+    expect(claims).toHaveLength(2);
+    const carousel = (items: Record<string, unknown>[]) => ({
+      status_code: 20000,
+      tasks: [
+        {
+          id: 'scraper-task',
+          status_code: 20000,
+          result: [{ items: [{ type: 'chat_gpt_products', items }] }],
+        },
+      ],
+    });
+    const card = (fields: Record<string, unknown>) => ({
+      type: 'chat_gpt_products_element',
+      ...fields,
+    });
+    const answer = (task: AuditTask, envelope: unknown): ExecutionResult => ({
+      logical_engine: 'chatgpt',
+      transport_provider: 'openai',
+      transport_model: task.transport_model,
+      answer_text: 'These are the top picks.',
+      search_used: false,
+      search_events: [],
+      finish_reason: 'stop',
+      raw_finish_reason: 'stop',
+      latency_ms: 1,
+      provider_metadata: { raw_response: envelope },
+      retrieved_sources: null,
+      citations: [],
+      normalized_usage: {
+        uncached_input_tokens: null,
+        cached_input_tokens: null,
+        output_tokens: null,
+        reasoning_tokens: null,
+        total_tokens: null,
+        web_search_requests: null,
+        provider_cost_microusd: null,
+      },
+    });
+    const envelopes = [
+      carousel([
+        { type: 'chat_gpt_ad', title: 'Sponsored runner', url: 'https://ads.example/runner' },
+        card({
+          title: 'Acme Road Runner in Grey, Size: 9 | …',
+          url: 'https://shop.example/products/road?utm_source=chatgpt.com',
+          product_id: 'own-key',
+          price: 12.5,
+          currency: 'USD',
+          merchants: 'Acme Store',
+          tag: 'Best overall value',
+          images: ['https://images.example/own.jpg'],
+        }),
+        card({
+          title: 'Rival Trail Runner',
+          url: 'https://rival.example/products/trail?utm_source=chatgpt.com',
+          product_id: 'rival-key',
+          merchants: 'Rival',
+        }),
+      ]),
+      // A later answer names both by product key only, under other titles.
+      carousel([
+        card({ title: 'Another listing for the rival', product_id: 'rival-key' }),
+        card({ title: 'Renamed listing', product_id: 'own-key' }),
+      ]),
+    ];
+    const taskIds: string[] = [];
+    const running: AuditTask[] = [];
+    for (const [index, claim] of claims.entries()) {
+      const marked = await queue.markRunning(claim, claim.lease_owner);
+      const task = marked!.task;
+      tasks.push(task.id);
+      taskIds.push(task.id);
+      running.push(task);
+      const result = answer(task, envelopes[index]);
+      const derive = await prepareShelfExecution(db, task, result, null);
+      const artifactId = await persistExecutionSuccess(db, task, claim.lease_owner, result, derive);
+      await db.transaction().execute((trx) => derive(trx, task, marked!.audit, artifactId!));
+    }
+    const slots = await db
+      .selectFrom('commerce_recommendation_observations')
+      .selectAll()
+      .where('workspace_id', '=', t.workspaceId)
+      .where('audit_id', '=', auditId)
+      .where('surface_kind', '=', 'shopping_result')
+      .orderBy('rank')
+      .execute();
+    const slotsOf = (taskId: string) => slots.filter((row) => row.task_id === taskId);
+    const candidate = await db
+      .selectFrom('commerce_competitor_candidates')
+      .selectAll()
+      .where('workspace_id', '=', t.workspaceId)
+      .executeTakeFirstOrThrow();
+    expect(candidate).toMatchObject({
+      state: 'pending',
+      source_kind: 'ai_observed',
+      canonical_url: 'https://rival.example/products/trail',
+      product_name: 'Rival Trail Runner',
+    });
+    // The sponsored card holds no slot; the organic cards rank from 1.
+    expect(slotsOf(taskIds[0]!)).toMatchObject([
+      {
+        rank: 1,
+        order_observable: true,
+        classification: 'owned',
+        product_id: product.id,
+        observed_product: 'Frozen road shoe',
+        observed_title: 'Acme Road Runner in Grey, Size: 9 | …',
+        observed_price: '12.50',
+        observed_currency: 'USD',
+        merchant_url: 'https://shop.example/products/road?utm_source=chatgpt.com',
+        merchant_domain: 'shop.example',
+        observed_tag: 'Best overall value',
+        observed_merchant_name: 'Acme Store',
+        observed_external_product_id: 'own-key',
+        observed_image_url: 'https://images.example/own.jpg',
+        resolver_outcome: 'not_needed',
+        model_version: '',
+      },
+      {
+        rank: 2,
+        classification: 'ai_observed_competitor',
+        competitor_candidate_id: candidate.id,
+        observed_price: null,
+        observed_currency: '',
+        observed_tag: null,
+        observed_external_product_id: 'rival-key',
+      },
+    ]);
+    expect(
+      slotsOf(taskIds[1]!).map((row) => [
+        row.rank,
+        row.classification,
+        row.product_id,
+        row.competitor_candidate_id,
+      ]),
+    ).toEqual([
+      [1, 'ai_observed_competitor', null, candidate.id],
+      [2, 'owned', product.id, null],
+    ]);
+    // Text spans stay recommendations beside the carousel.
+    const surfaces = await db
+      .selectFrom('commerce_recommendation_observations')
+      .select('surface_kind')
+      .where('workspace_id', '=', t.workspaceId)
+      .where('audit_id', '=', auditId)
+      .where('task_id', '=', taskIds[0]!)
+      .execute();
+    expect(surfaces.map((row) => row.surface_kind).sort()).toEqual([
+      'recommendation',
+      'shopping_result',
+      'shopping_result',
+    ]);
+    // Another workspace cannot read this audit's shelf context.
+    await expect(
+      prepareShelfExecution(
+        db,
+        { ...running[0]!, workspace_id: foreign.workspaceId },
+        answer(running[0]!, envelopes[0]),
+        null,
+      ),
+    ).rejects.toThrow();
   });
 });
