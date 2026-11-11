@@ -63,6 +63,7 @@ const SCALAR_FIELDS = [
   'sku',
   'gtin',
   'mpn',
+  'image_url',
 ] as const;
 type ScalarField = (typeof SCALAR_FIELDS)[number];
 
@@ -140,8 +141,13 @@ function columnValues(edit: ProductEdit): Updateable<CommerceProducts> {
   if (edit.name !== undefined) values.name = edit.name;
   if (edit.description !== undefined) values.description = edit.description;
   if (edit.brand !== undefined) values.brand = edit.brand;
-  if (edit.price !== undefined) values.price = edit.price;
+  // An edited price is the whole catalog price: an imported variant range ends.
+  if (edit.price !== undefined) {
+    values.price = edit.price;
+    values.price_max = null;
+  }
   if (edit.currency !== undefined) values.currency = edit.currency;
+  if (edit.image_url !== undefined) values.image_url = edit.image_url;
   for (const field of ['sku', 'gtin', 'mpn'] as const) {
     const value = edit[field];
     if (value !== undefined) values[field] = value || null;
@@ -244,8 +250,6 @@ export function editProduct(db: Database, scope: CommerceScope, id: string, edit
           currentValue(product, field),
           observationId,
         );
-    if (edit.image_url !== undefined)
-      sources.image_url = editSource(sources.image_url, 'image_url', undefined, observationId);
     if (edit.categories !== undefined) {
       const prior = provenance(sources.categories, 'categories');
       sources.categories = editSource(

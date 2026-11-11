@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type {
   CatalogImport,
+  CatalogImportStage,
   CommerceCatalog,
   CommerceProduct,
   CommerceProductDetail,
@@ -44,8 +45,20 @@ async function call<T>(
   return { status: response.status, body: (await response.json()) as T };
 }
 
-const importCsv = (content: string, tenant?: Tenant) =>
-  call<CatalogImport>('/catalog/import', { method: 'POST', body: { content }, tenant });
+/** Stage a CSV and apply it with every proposed category, as a person does. */
+async function importCsv(content: string, tenant?: Tenant) {
+  const staged = await call<CatalogImportStage>('/catalog/imports', {
+    method: 'POST',
+    body: { source: 'csv', content, filename: 'catalog.csv' },
+    tenant,
+  });
+  expect(staged.status).toBe(201);
+  return call<CatalogImport>(`/catalog/imports/${staged.body.import_id}/apply`, {
+    method: 'POST',
+    body: { excluded_categories: [] },
+    tenant,
+  });
+}
 const edit = (id: string, body: unknown, tenant?: Tenant) =>
   call<CommerceProduct>(`/products/${id}`, { method: 'PATCH', body, tenant });
 const lifecycle = (id: string, state: string, tenant?: Tenant) =>
@@ -56,7 +69,7 @@ const lifecycle = (id: string, state: string, tenant?: Tenant) =>
   });
 
 const ONE =
-  'canonical_url,name,price,sku,category\nhttps://shop.example/products/one,"One, large",19.25,A1,Tools\n';
+  'link,title,price,sku,category,brand\nhttps://shop.example/products/one,"One, large",19.25,A1,Tools,Acme\n';
 
 async function importedProduct(tenant?: Tenant) {
   const imported = await importCsv(ONE, tenant);
@@ -88,17 +101,17 @@ describe('product edits', () => {
     expect(edited.status).toBe(200);
     expect(edited.body).toMatchObject({ id, name: 'Edited' });
 
-    // The row repeats every value it imported before, and adds a brand.
+    // The row repeats every value it imported before, and adds a GTIN.
     const repeat = await importCsv(
-      'canonical_url,name,price,sku,category,brand\nhttps://shop.example/products/one,"One, large",19.25,A1,Tools,Acme\n',
+      'link,title,price,sku,category,brand,gtin\nhttps://shop.example/products/one,"One, large",19.25,A1,Tools,Acme,0123456789012\n',
     );
-    expect(repeat.status).toBe(201);
+    expect(repeat.status).toBe(200);
     expect(await stored(id)).toMatchObject({ name: 'Edited', price: '21.00', brand: 'Acme' });
     expect(await categoryNames(id)).toEqual(['Gear']);
 
     // A new imported name or category set changes that field; the untouched
     // price keeps its edit.
-    await importCsv('sku,name,price,category\nA1,Renamed,19.25,Outdoor\n');
+    await importCsv('sku,title,brand,price,category\nA1,Renamed,Acme,19.25,Outdoor\n');
     expect(await stored(id)).toMatchObject({ name: 'Renamed', price: '21.00' });
     expect(await categoryNames(id)).toEqual(['Outdoor']);
 
@@ -132,12 +145,12 @@ describe('product edits', () => {
   });
 
   it('matches a re-import of the URL an edit replaced to the edited product', async () => {
-    const first = await importCsv('canonical_url,name\nhttps://shop.example/old,Old\n');
+    const first = await importCsv('link,title,brand\nhttps://shop.example/old,Old,Acme\n');
     const id = first.body.row_outcomes[0]!.product_id!;
     expect((await edit(id, { canonical_url: 'https://shop.example/new' })).status).toBe(200);
 
     // The same row in a new file (an identical file is the same import).
-    const repeat = await importCsv('name,canonical_url\nOld,https://shop.example/old\n');
+    const repeat = await importCsv('title,brand,link\nOld,Acme,https://shop.example/old\n');
     expect(repeat.body.row_outcomes).toEqual([
       { row_number: 2, status: 'unchanged', product_id: id, error_code: '', detail: '' },
     ]);
@@ -148,7 +161,7 @@ describe('product edits', () => {
 
   it('clears identifiers, refuses another product identity and invalid values', async () => {
     await importCsv(
-      'canonical_url,name,sku\nhttps://shop.example/a,A,A1\nhttps://shop.example/b,B,B1\n',
+      'link,title,sku,brand\nhttps://shop.example/a,A,A1,Acme\nhttps://shop.example/b,B,B1,Acme\n',
     );
     const catalog = await call<CommerceCatalog>('/catalog');
     const [a, b] = catalog.body.products;
@@ -168,7 +181,7 @@ describe('product edits', () => {
 describe('archive and restore', () => {
   it('moves a product out of the catalog, matching identity and table, keeping its page', async () => {
     const imported = await importCsv(
-      'canonical_url,name,category\nhttps://shop.example/a,Ash,Wood\nhttps://shop.example/b,Birch,Wood\n',
+      'link,title,category,brand\nhttps://shop.example/a,Ash,Wood,Acme\nhttps://shop.example/b,Birch,Wood,Acme\n',
     );
     const [ash] = imported.body.row_outcomes.map((row) => row.product_id!);
     const archived = await lifecycle(ash!, 'archived');

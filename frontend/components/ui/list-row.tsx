@@ -3,6 +3,7 @@
 import { Check } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 
+import { Checkbox } from '@/components/ui/checkbox';
 import { Icon } from '@/components/ui/icon';
 import { Pressable } from '@/components/ui/pressable';
 import { Spinner } from '@/components/ui/spinner';
@@ -131,27 +132,69 @@ export function TreeItem({
   );
 }
 
+/** A tree option's indent per depth, 16 a level (category paths stop at six levels). */
+const TREE_INDENT = ['', 'ms-4', 'ms-8', 'ms-12', 'ms-16', 'ms-20'] as const;
+const treeIndent = (depth: number) => TREE_INDENT[Math.min(depth, TREE_INDENT.length - 1)];
+
+/**
+ * A tree list's row that is a box to tick (a proposed category to keep):
+ * the checkbox and its label, an optional badge after it, indented 16 a
+ * level of `depth`.
+ */
+export function TreeCheckOption({
+  label,
+  checked,
+  disabled = false,
+  depth = 0,
+  badge,
+  onCheckedChange,
+}: Readonly<{
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
+  depth?: number;
+  badge?: ReactNode;
+  onCheckedChange: (checked: boolean) => void;
+}>) {
+  return (
+    <li
+      className={cn(
+        'flex min-h-[var(--nav-item-height)] min-w-0 items-center gap-2',
+        treeIndent(depth),
+      )}
+    >
+      <Checkbox
+        label={label}
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={(next) => onCheckedChange(next === true)}
+      />
+      {badge}
+    </li>
+  );
+}
+
 /**
  * A tree list's row that is itself the choice (a category narrowing a table):
  * one control tall, the label truncated and its count at the end, pressed to
- * select, marked `aria-current` while selected. A nested item (one level
- * deep) is indented 12 from its parent, as `TreeItem`.
+ * select, marked `aria-current` while selected. Each level of `depth` is
+ * indented 16 from its parent.
  */
 export function TreeOption({
   label,
   count,
   selected,
-  nested = false,
+  depth = 0,
   onSelect,
 }: Readonly<{
   label: string;
   count?: string;
   selected: boolean;
-  nested?: boolean;
+  depth?: number;
   onSelect: () => void;
 }>) {
   return (
-    <li className={cn('min-w-0', nested && 'ms-3')}>
+    <li className={cn('min-w-0', treeIndent(depth))}>
       <Pressable
         type="button"
         onClick={onSelect}

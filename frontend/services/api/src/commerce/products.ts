@@ -88,6 +88,7 @@ const rowSchema = z.object({
   win_rate: z.number().nullable(),
   position: z.number().nullable(),
   catalog_price: z.number().nullable(),
+  catalog_price_max: z.number().nullable(),
   catalog_currency: z.string().nullable(),
   price_currency: z.string().nullable(),
   price_median: z.number().nullable(),
@@ -195,7 +196,7 @@ export function scopedSlots(scope: CommerceScope, executions: ExecutionScope) {
 
 /**
  * The product holders a read lists, as `kind, holder_id, name, brand, url,
- * catalog_price, catalog_currency` rows: the active catalog (or with
+ * catalog_price, catalog_price_max, catalog_currency` rows: the active catalog (or with
  * `archived` the archived one), and with `all` the approved and AI-observed
  * competitors; with a category, only its own. One `holder`'s read under
  * `all` (the product page) takes its product in either state; under `catalog`
@@ -224,7 +225,7 @@ export function holderRows(
       ? sql`UNION ALL
         SELECT CASE WHEN c.state = 'approved' THEN 'approved_competitor'
                     ELSE 'ai_observed_competitor' END,
-               c.id, c.product_name, c.brand_name, c.canonical_url, NULL::float8, ''
+               c.id, c.product_name, c.brand_name, c.canonical_url, NULL::float8, NULL::float8, ''
         FROM commerce_competitor_candidates c
         WHERE c.workspace_id = ${ws} AND c.project_id = ${project}
           AND (c.state = 'approved' OR (c.state = 'pending' AND c.source_kind = 'ai_observed'))
@@ -237,7 +238,8 @@ export function holderRows(
   const ownedLifecycle = anyState ? NOTHING : sql`AND p.lifecycle_state = ${listedState}`;
   return sql`
       SELECT 'owned'::text AS kind, p.id AS holder_id, p.name, p.brand, p.canonical_url AS url,
-             p.price::float8 AS catalog_price, p.currency AS catalog_currency
+             p.price::float8 AS catalog_price,
+             coalesce(p.price_max, p.price)::float8 AS catalog_price_max, p.currency AS catalog_currency
       FROM commerce_products p
       WHERE p.workspace_id = ${ws} AND p.project_id = ${project}
         ${ownedLifecycle}
@@ -301,7 +303,7 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
     LEFT JOIN LATERAL (
       SELECT k.holder_id, k.kind, k.name, k.name_key, k.brand, k.url, k.sort_key,
              k.appearances, k.ordered_appearances, k.visibility, k.win_rate, k.position,
-             k.catalog_price, k.catalog_currency,
+             k.catalog_price, k.catalog_price_max, k.catalog_currency,
              cur.currency AS price_currency, price.median AS price_median,
              price.quoted AS price_quoted, price.other AS price_other,
              merch.merchants, cats.category_ids
@@ -372,7 +374,7 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
           ? null
           : {
               min: row.catalog_price,
-              max: row.catalog_price,
+              max: row.catalog_price_max ?? row.catalog_price,
               currency: row.catalog_currency ?? '',
             },
       merchants: row.merchants ?? [],

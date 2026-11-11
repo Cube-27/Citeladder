@@ -170,9 +170,33 @@ export const commerce = {
     merchant_limit: 10,
     fanout_query_limit: 10,
   },
+  /** A catalog import's file size, its products and the row outcomes a result returns. */
   import_max_bytes: 2000000,
   import_max_rows: 10000,
   import_error_limit: 100,
+  /**
+   * Catalog sources (CM3): category path depth, how many Shopify tags become
+   * categories per product, variants kept per product, and the Shopify
+   * storefront fetch (`/products.json`, `page_size` products a page, at most
+   * `max_pages` pages and `max_total_bytes` in all, through the safe fetcher).
+   */
+  catalog_sources: {
+    category_depth_max: 6,
+    tag_category_limit: 5,
+    variant_limit: 100,
+    shopify: {
+      hosted_suffix: '.myshopify.com',
+      page_size: 250,
+      max_pages: 40,
+      page_max_bytes: 5000000,
+      max_total_bytes: 20000000,
+      timeout_seconds: 15,
+      /** The whole storefront fetch; the browser waits this long plus overhead. */
+      deadline_seconds: 120,
+      redirects: 3,
+      content_types: ['application/json'],
+    },
+  },
   breadcrumb_index_names: [
     'catalog',
     'categories',

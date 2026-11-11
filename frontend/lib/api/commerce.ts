@@ -7,12 +7,16 @@ import { startInteractiveWork } from './interactive-work';
 import { retainPreviousDataForScope } from './query-client';
 import { queryKeys } from './query-keys';
 import type { ProjectScope } from './query-keys/scope';
-import { COMMERCE_BUYER_PROMPT_REQUEST_TIMEOUT_MS } from '@/lib/config/operational';
+import {
+  COMMERCE_BUYER_PROMPT_REQUEST_TIMEOUT_MS,
+  COMMERCE_STORE_IMPORT_REQUEST_TIMEOUT_MS,
+} from '@/lib/config/operational';
 import { strictValidate } from '@citeladder/contracts/validation';
 import type {
   BuyerPromptDecisionRequest,
   BuyerPromptGenerateRequest,
   BuyerPromptManualRequest,
+  CatalogImportApplyRequest,
   CatalogImportRequest,
   CompetitorDecisionRequest,
   CompetitorDiscoveryRequest,
@@ -22,6 +26,7 @@ import type {
 import {
   buyerPromptSchema,
   catalogImportSchema,
+  catalogImportStageSchema,
   commerceCatalogSchema,
   commerceProductDetailSchema,
   commerceProductPageSchema,
@@ -50,15 +55,33 @@ export const commerceApi = {
       await apiClient.get(path(projectId, 'catalog/projection'), options),
       'commerce.catalogProjection',
     ),
-  importCatalog: async (
+  stageImport: async (
     projectId: string,
     input: CatalogImportRequest,
     options?: ApiRequestOptions,
   ) =>
     strictValidate(
+      catalogImportStageSchema,
+      await apiClient.post(
+        path(projectId, 'catalog/imports'),
+        input,
+        // A store import fetches the storefront before it answers.
+        input.source === 'shopify'
+          ? { ...options, timeoutMs: COMMERCE_STORE_IMPORT_REQUEST_TIMEOUT_MS }
+          : options,
+      ),
+      'commerce.stageImport',
+    ),
+  applyImport: async (
+    projectId: string,
+    importId: string,
+    input: CatalogImportApplyRequest,
+    options?: ApiRequestOptions,
+  ) =>
+    strictValidate(
       catalogImportSchema,
-      await apiClient.post(path(projectId, 'catalog/import'), input, options),
-      'commerce.importCatalog',
+      await apiClient.post(path(projectId, `catalog/imports/${importId}/apply`), input, options),
+      'commerce.applyImport',
     ),
   competitors: async (projectId: string, options?: ApiRequestOptions) =>
     strictValidate(
@@ -366,18 +389,21 @@ const refreshBuyerPrompts = (client: QueryClient, projectId: string) =>
 
 /** Commerce writes; each success refreshes every read it changes. */
 export const commerceMutations = {
-  importCatalog: (scope: ProjectScope) =>
+  /** Stage an import for review; nothing reaches the catalog until it is applied. */
+  stageImport: (scope: ProjectScope) =>
     mutationOptions({
-      mutationFn: async (file: File) =>
-        commerceApi.importCatalog(
-          scope.projectId,
-          { content: await file.text(), filename: file.name },
-          scoped(scope),
-        ),
-      onSuccess: (_result, _file, _context, { client }) =>
+      mutationFn: (input: CatalogImportRequest) =>
+        commerceApi.stageImport(scope.projectId, input, scoped(scope)),
+    }),
+  applyImport: (scope: ProjectScope) =>
+    mutationOptions({
+      mutationFn: ({ importId, ...input }: { importId: string } & CatalogImportApplyRequest) =>
+        commerceApi.applyImport(scope.projectId, importId, input, scoped(scope)),
+      onSuccess: (_result, _input, _context, { client }) =>
         Promise.all([
           refreshCatalog(client, scope.projectId),
           refreshProducts(client, scope.projectId),
+          refreshProductDetails(client, scope.projectId),
         ]),
     }),
   discoverCompetitors: (scope: ProjectScope) =>

@@ -166,7 +166,28 @@ export function categoryTitle(facts: CatalogFacts, fallback: string): string {
   return (crumb || heading || (isCategoryName(title) ? title : '')).trim().slice(0, 255);
 }
 
-export function productCategories(facts: CatalogFacts, url: string, aliases: string[]): string[] {
+/** The category a listing's breadcrumb trail names one level above `name`; '' at the top. */
+export function breadcrumbParent(facts: CatalogFacts, name: string): string {
+  const crumbs = facts.commerce.breadcrumbs.filter(
+    (crumb) => isCategoryName(crumb) && !indexNames.has(categoryKey(crumb)),
+  );
+  const position = crumbs.findLastIndex((crumb) => categoryKey(crumb) === categoryKey(name));
+  return position > 0 ? crumbs[position - 1]!.trim().replaceAll(/\s+/gu, ' ').slice(0, 255) : '';
+}
+
+/** A product page's categories: its structured categories, then its breadcrumb path top first. */
+export function productCategories(facts: CatalogFacts, url: string, aliases: string[]) {
+  const path = breadcrumbPath(facts, url, aliases);
+  return {
+    names: [...new Set([...facts.structured_data.product.category, ...path])].filter(
+      (name) => isCategoryName(name) && !indexNames.has(categoryKey(name)),
+    ),
+    path,
+  };
+}
+
+/** The breadcrumb categories above a product page, top first. */
+function breadcrumbPath(facts: CatalogFacts, url: string, aliases: string[]): string[] {
   const crumbs = facts.commerce.breadcrumbs
     .map((value) => value.trim().replaceAll(/\s+/gu, ' '))
     .filter(named);
@@ -183,10 +204,9 @@ export function productCategories(facts: CatalogFacts, url: string, aliases: str
     const target = canonicalUrl(link.url, base);
     if (target && !ownUrls.has(target) && !ownUrls.has(productAlias(target))) linked.add(position);
   }
-  const ancestors = crumbs.slice(1, linked.has(crumbs.length - 1) ? undefined : -1);
-  return [...new Set([...facts.structured_data.product.category, ...ancestors])].filter(
-    (name) => isCategoryName(name) && !indexNames.has(categoryKey(name)),
-  );
+  return crumbs
+    .slice(1, linked.has(crumbs.length - 1) ? undefined : -1)
+    .filter((name) => isCategoryName(name) && !indexNames.has(categoryKey(name)));
 }
 
 export function shelfLinks(facts: CatalogFacts, base: string): string[] {

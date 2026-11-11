@@ -8,7 +8,7 @@ import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
 import { auditRuntime } from '../src/audits/config.ts';
 import { categoryByName } from '../src/commerce/catalog-store.ts';
-import { importCatalog } from '../src/commerce/import.ts';
+import { importCatalog } from './commerce-support.ts';
 import { prepareSavedShelf } from '../src/commerce/shelf-recovery.ts';
 import { finalizeCommerceShelf } from '../src/commerce/shelf-metrics.ts';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
@@ -39,7 +39,7 @@ afterAll(async () => {
 
 type Tenant = Awaited<ReturnType<typeof auditTenant>>;
 const scopeOf = (t: Tenant) => ({ workspaceId: t.workspaceId, projectId: t.projectId });
-const csv = (rows: string[]) => ['canonical_url,name,brand', ...rows].join('\n');
+const csv = (rows: string[]) => ['link,title,brand', ...rows].join('\n');
 const ROAD = 'https://shop.example/products/road,Acme Road Runner,Acme';
 const TRAIL = 'https://shop.example/products/trail,Acme Trail Climber,Acme';
 const ANSWER =
@@ -114,11 +114,7 @@ async function runMatching(workspaceId: string, taskIds: string[]) {
 describe('catalog matching in every answer', () => {
   it('matches a brand-run answer against the catalog revision its audit froze', async () => {
     const t = await auditTenant(db, fixtures);
-    await importCatalog(db, scopeOf(t), {
-      content: csv([ROAD]),
-      filename: 'catalog.csv',
-      content_type: 'text/csv',
-    });
+    await importCatalog(db, scopeOf(t), csv([ROAD]));
     const auditId = await brandAnswer(t, ANSWER);
 
     const audit = await db
@@ -146,11 +142,7 @@ describe('catalog matching in every answer', () => {
     // Before any catalog the answer has nothing to match.
     expect(await passes(t.workspaceId)).toEqual([]);
 
-    await importCatalog(db, scopeOf(t), {
-      content: csv([ROAD]),
-      filename: 'catalog.csv',
-      content_type: 'text/csv',
-    });
+    await importCatalog(db, scopeOf(t), csv([ROAD]));
     const [first] = await matchingTasks(t.workspaceId);
     await runMatching(t.workspaceId, [first!.id]);
     expect(await passes(t.workspaceId)).toEqual([
@@ -169,19 +161,11 @@ describe('catalog matching in every answer', () => {
     await runMatching(t.workspaceId, [again!]);
     expect(await passes(t.workspaceId)).toHaveLength(1);
     // The same file again is the same import: no new revision.
-    await importCatalog(db, scopeOf(t), {
-      content: csv([ROAD]),
-      filename: 'catalog.csv',
-      content_type: 'text/csv',
-    });
+    await importCatalog(db, scopeOf(t), csv([ROAD]));
     expect(await matchingTasks(t.workspaceId)).toHaveLength(2);
 
     // A changed catalog is a new revision whose pass becomes the answer's latest.
-    await importCatalog(db, scopeOf(t), {
-      content: csv([ROAD, TRAIL]),
-      filename: 'catalog-2.csv',
-      content_type: 'text/csv',
-    });
+    await importCatalog(db, scopeOf(t), csv([ROAD, TRAIL]));
     const queued = await matchingTasks(t.workspaceId);
     await runMatching(t.workspaceId, [queued.at(-1)!.id]);
     expect(await passes(t.workspaceId)).toEqual([
@@ -200,12 +184,8 @@ describe('catalog matching in every answer', () => {
   it("counts a Commerce answer's latest pass in its AI Shelf snapshot", async () => {
     const t = await auditTenant(db, fixtures);
     const shoes = (rows: string[]) =>
-      ['canonical_url,name,brand,category', ...rows.map((row) => `${row},Shoes`)].join('\n');
-    await importCatalog(db, scopeOf(t), {
-      content: shoes([ROAD]),
-      filename: 'catalog.csv',
-      content_type: 'text/csv',
-    });
+      ['link,title,brand,category', ...rows.map((row) => `${row},Shoes`)].join('\n');
+    await importCatalog(db, scopeOf(t), shoes([ROAD]));
     const category = await categoryByName(db, scopeOf(t), 'Shoes');
     await db
       .insertInto('commerce_prompt_targets')
@@ -223,11 +203,7 @@ describe('catalog matching in every answer', () => {
       .execute();
     const auditId = await brandAnswer(t, ANSWER, 'commerce');
     // The trail shoe joins the category after the answer: revision 2 re-matches it.
-    await importCatalog(db, scopeOf(t), {
-      content: shoes([ROAD, TRAIL]),
-      filename: 'catalog-2.csv',
-      content_type: 'text/csv',
-    });
+    await importCatalog(db, scopeOf(t), shoes([ROAD, TRAIL]));
     const queued = await matchingTasks(t.workspaceId);
     await runMatching(t.workspaceId, [queued.at(-1)!.id]);
     expect(await passes(t.workspaceId)).toEqual([
@@ -308,11 +284,7 @@ describe('catalog matching in every answer', () => {
     const t = await auditTenant(db, fixtures);
     const foreign = await auditTenant(db, fixtures);
     await brandAnswer(foreign, ANSWER);
-    await importCatalog(db, scopeOf(t), {
-      content: csv([ROAD]),
-      filename: 'catalog.csv',
-      content_type: 'text/csv',
-    });
+    await importCatalog(db, scopeOf(t), csv([ROAD]));
     const [own] = await matchingTasks(t.workspaceId);
     // The foreign workspace's task names this workspace's revision.
     const stolen = await enqueueTask(db, {
@@ -332,11 +304,7 @@ describe('catalog matching in every answer', () => {
       .execute();
     expect(foreignRevisions).toEqual([]);
     // The foreign answer matches once its own catalog names the product.
-    await importCatalog(db, scopeOf(foreign), {
-      content: csv([ROAD]),
-      filename: 'catalog.csv',
-      content_type: 'text/csv',
-    });
+    await importCatalog(db, scopeOf(foreign), csv([ROAD]));
     const [foreignOwn] = await matchingTasks(foreign.workspaceId).then((rows) =>
       rows.filter((row) => row.id !== stolen),
     );
@@ -353,11 +321,7 @@ describe('catalog matching in every answer', () => {
       .where('billing_account_id', '=', await billingAccount(db, withoutCapability.workspaceId))
       .where('key', '=', 'commerce')
       .execute();
-    await importCatalog(db, scopeOf(withoutCapability), {
-      content: csv([ROAD]),
-      filename: 'catalog.csv',
-      content_type: 'text/csv',
-    });
+    await importCatalog(db, scopeOf(withoutCapability), csv([ROAD]));
     const withoutCatalog = await auditTenant(db, fixtures);
     for (const t of [withoutCapability, withoutCatalog]) {
       const auditId = await brandAnswer(t, ANSWER);
@@ -372,11 +336,7 @@ describe('catalog matching in every answer', () => {
     }
     // The same import and answer in a qualifying project are matched.
     const qualifying = await auditTenant(db, fixtures);
-    await importCatalog(db, scopeOf(qualifying), {
-      content: csv([ROAD]),
-      filename: 'catalog.csv',
-      content_type: 'text/csv',
-    });
+    await importCatalog(db, scopeOf(qualifying), csv([ROAD]));
     await brandAnswer(qualifying, ANSWER);
     expect(await matchingTasks(qualifying.workspaceId)).toHaveLength(1);
     expect((await passes(qualifying.workspaceId)).map((pass) => pass.observed)).toEqual([

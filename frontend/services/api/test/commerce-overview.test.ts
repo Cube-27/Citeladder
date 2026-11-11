@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../src/app.ts';
 import { auditRuntime } from '../src/audits/config.ts';
-import { importCatalog } from '../src/commerce/import.ts';
+import { importCatalog } from './commerce-support.ts';
 import { auditTenant } from './audit-fixtures.ts';
 import { recordAnswer } from './commerce-answer-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
@@ -28,7 +28,7 @@ const tasks: string[] = [];
 
 type Tenant = Awaited<ReturnType<typeof auditTenant>>;
 const CATALOG = [
-  'canonical_url,name,brand,price,currency,category',
+  'link,title,brand,price,currency,category',
   'https://shop.example/products/road,Acme Road Runner,Acme,120,USD,Road',
   'https://shop.example/products/trail,Acme Trail Climber,Acme,,,Trail',
   'https://shop.example/products/sock,Acme Merino Sock,Acme,15,USD,Road',
@@ -119,7 +119,7 @@ beforeAll(async () => {
     await importCatalog(
       db,
       { workspaceId: tenant.workspaceId, projectId: tenant.projectId },
-      { content: CATALOG, filename: 'catalog.csv', content_type: 'text/csv' },
+      CATALOG,
     );
   await approvedCompetitor(t, 'Rival Pacer');
 
@@ -283,7 +283,7 @@ describe('Shopping overview read', () => {
     await importCatalog(
       db,
       { workspaceId: empty.workspaceId, projectId: empty.projectId },
-      { content: CATALOG, filename: 'catalog.csv', content_type: 'text/csv' },
+      CATALOG,
     );
     const { body } = await read(empty, 'window=7');
     expect(body).toMatchObject({ window_days: 7, executions: 0, slots: 0 });

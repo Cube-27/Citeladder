@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Insertable, Selectable } from 'kysely';
+import { sql, type Insertable, type Selectable } from 'kysely';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -43,6 +43,8 @@ export function newProduct(
       description: '',
       brand: '',
       price: null,
+      price_max: null,
+      image_url: '',
       currency: '',
       sku: null,
       gtin: null,
@@ -88,6 +90,47 @@ export async function categoryByName(db: Database, scope: CommerceScope, name: s
     })
     .returningAll()
     .executeTakeFirstOrThrow();
+}
+
+/**
+ * Name `parentId` the category one level up of `childId`, both of this
+ * project. A parent that would close a cycle is never written. Crawl
+ * projection only fills a category that has no parent (`replace: false`); an
+ * applied import, an explicit decision, replaces it.
+ */
+export async function setCategoryParent(
+  db: Database,
+  scope: CommerceScope,
+  link: { childId: string; parentId: string; replace: boolean },
+) {
+  if (link.childId === link.parentId) return;
+  const ws = scope.workspaceId,
+    project = scope.projectId;
+  const { rows } = await sql<{ cycle: boolean }>`
+    WITH RECURSIVE up(id) AS (
+      SELECT ${link.parentId}::uuid
+      UNION
+      SELECT c.parent_category_id FROM commerce_categories c JOIN up ON c.id = up.id
+      WHERE c.workspace_id = ${ws} AND c.project_id = ${project}
+        AND c.parent_category_id IS NOT NULL
+    )
+    SELECT EXISTS (SELECT 1 FROM up WHERE id = ${link.childId}) AS cycle`.execute(db);
+  if (rows[0]?.cycle) return;
+  await db
+    .updateTable('commerce_categories')
+    .set({ parent_category_id: link.parentId, updated_at: new Date() })
+    .where('workspace_id', '=', ws)
+    .where('project_id', '=', project)
+    .where('id', '=', link.childId)
+    .where((eb) =>
+      link.replace
+        ? eb.or([
+            eb('parent_category_id', 'is', null),
+            eb('parent_category_id', '!=', link.parentId),
+          ])
+        : eb('parent_category_id', 'is', null),
+    )
+    .execute();
 }
 
 export async function addMembership(

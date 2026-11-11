@@ -16,7 +16,7 @@ import { auditRuntime } from '../src/audits/config.ts';
 import { createAudits } from '../src/audits/creation.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { persistExecutionSuccess, type ExecutionResult } from '../src/audits/result-persistence.ts';
-import { importCatalog } from '../src/commerce/import.ts';
+import { importCatalog } from './commerce-support.ts';
 import { prepareShelfExecution } from '../src/commerce/shelf.ts';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
 import { getAction } from '../src/opportunities/actions.ts';
@@ -45,7 +45,7 @@ const METRIC_RULES = [
 type Tenant = Awaited<ReturnType<typeof auditTenant>>;
 // The fixture project's website is acme.example, so shop.acme.example is the business's own store.
 const CATALOG = [
-  'canonical_url,name,brand,price,currency,category',
+  'link,title,brand,price,currency,category',
   'https://shop.example/products/road,Acme Road Runner,Acme,120,USD,Road',
   'https://shop.example/products/trail,Acme Trail Climber,Acme,80,USD,Trail',
   'https://shop.example/products/gem,Acme Hidden Gem,Acme,50,USD,Road',
@@ -204,7 +204,7 @@ beforeAll(async () => {
     await importCatalog(
       db,
       { workspaceId: tenant.workspaceId, projectId: tenant.projectId },
-      { content: CATALOG, filename: 'catalog.csv', content_type: 'text/csv' },
+      CATALOG,
     );
   await candidate(t, 'Rival Pacer');
   const first = await answer(

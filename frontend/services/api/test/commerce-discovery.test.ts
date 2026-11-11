@@ -6,7 +6,7 @@ import { competitorSearch, type CompetitorSearch } from '../src/commerce/discove
 import { discoveryQuery } from '../src/commerce/discovery-validation.ts';
 import { policy } from '../src/config.ts';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
-import { importCatalog } from '../src/commerce/import.ts';
+import { importCatalog } from './commerce-support.ts';
 import { setLogSink } from '../src/logging.ts';
 import type { WebsiteFetcher } from '../src/safe-fetch.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
@@ -30,11 +30,11 @@ beforeEach(async () => {
     .set({ website_url: 'https://owned.example/' })
     .where('id', '=', t.projectId)
     .execute();
-  await importCatalog(db, scope(), {
-    content: 'canonical_url,name,price\nhttps://owned.example/products/tool,Kitchen tool,40\n',
-    filename: 'test.csv',
-    content_type: 'text/csv',
-  });
+  await importCatalog(
+    db,
+    scope(),
+    'link,title,price,brand\nhttps://owned.example/products/tool,Kitchen tool,40,Acme\n',
+  );
   // The import's answer-matching backfill runs first, so these workers see only discovery work.
   const backfill = await db
     .selectFrom('analytics_tasks')

@@ -66,22 +66,30 @@ export function useCsvImportFile<T>(parse: (text: string) => T) {
   return { fileName, inputRef, parsed, reset, selectFile };
 }
 
-/** The consistent CSV picker; feature-owned parsers receive the selected File. */
+/**
+ * The consistent file picker (a CSV by default; `label` and `accept` name
+ * another kind, such as a product feed); feature-owned parsers receive the
+ * selected File.
+ */
 export function CsvImportFileInput({
   inputRef,
   onSelect,
+  label = 'CSV file',
+  accept = '.csv,text/csv',
 }: Readonly<{
-  inputRef: RefObject<HTMLInputElement | null>;
+  inputRef?: RefObject<HTMLInputElement | null>;
   onSelect: (file: File | undefined) => void;
+  label?: string;
+  accept?: string;
 }>) {
   return (
     <label className="grid gap-2">
-      <span className="type-label">CSV file</span>
+      <span className="type-label">{label}</span>
       <input
         ref={inputRef}
         type="file"
-        accept=".csv,text/csv"
-        aria-label="CSV file"
+        accept={accept}
+        aria-label={label}
         onChange={(event) => {
           const file = event.currentTarget.files?.[0];
           onSelect(file);

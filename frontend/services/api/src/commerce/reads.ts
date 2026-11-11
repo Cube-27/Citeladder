@@ -50,7 +50,7 @@ export async function catalog(db: Database, scope: CommerceScope) {
     // products read as uncategorized.
     db
       .selectFrom('commerce_categories')
-      .select(['id', 'name'])
+      .select(['id', 'name', 'parent_category_id'])
       .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
       .where('normalized_name', '!=', UNCATEGORIZED_KEY)
@@ -83,7 +83,12 @@ export async function catalog(db: Database, scope: CommerceScope) {
     })),
     product_total: Number(total.count),
     categories: categories
-      .map((row) => ({ ...row, product_count: counts.get(row.id) ?? 0 }))
+      .map(({ parent_category_id: parent, ...row }) => ({
+        ...row,
+        // A parent the list does not show leaves its child at the top.
+        parent_id: parent && shown.has(parent) ? parent : null,
+        product_count: counts.get(row.id) ?? 0,
+      }))
       .sort(
         (a, b) =>
           b.product_count - a.product_count ||

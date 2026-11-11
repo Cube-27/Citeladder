@@ -186,12 +186,12 @@ async function sections(
 
 const catalogSchema = commerceProductDetailSchema.shape.product.shape.catalog.unwrap();
 
-/** An owned product's editable record: its fields, edited image and category names. */
+/** An owned product's editable record: its fields, catalog image and category names. */
 async function catalogRecord(db: Database, scope: CommerceScope, holder: string) {
-  const [product, categories, image] = await Promise.all([
+  const [product, categories] = await Promise.all([
     db
       .selectFrom('commerce_products')
-      .select(['lifecycle_state', 'price', 'currency', 'sku', 'gtin', 'mpn'])
+      .select(['lifecycle_state', 'price', 'currency', 'sku', 'gtin', 'mpn', 'image_url'])
       .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
       .where('id', '=', holder)
@@ -208,19 +208,6 @@ async function catalogRecord(db: Database, scope: CommerceScope, holder: string)
       .where('c.normalized_name', '!=', UNCATEGORIZED_KEY)
       .orderBy('c.name')
       .execute(),
-    // The latest edit that set the image; an empty one cleared it.
-    db
-      .selectFrom('commerce_product_observations')
-      .select(sql<string>`observed_fields->>'image_url'`.as('image_url'))
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('project_id', '=', scope.projectId)
-      .where('product_id', '=', holder)
-      .where('source_kind', '=', 'edit')
-      .where(sql<boolean>`observed_fields->>'image_url' IS NOT NULL`)
-      .orderBy('created_at', 'desc')
-      .orderBy('id', 'desc')
-      .limit(1)
-      .executeTakeFirst(),
   ]);
   return catalogSchema.parse({
     lifecycle_state: product.lifecycle_state,
@@ -229,7 +216,7 @@ async function catalogRecord(db: Database, scope: CommerceScope, holder: string)
     sku: product.sku ?? '',
     gtin: product.gtin ?? '',
     mpn: product.mpn ?? '',
-    image_url: image?.image_url ?? '',
+    image_url: product.image_url,
     categories: categories.map((row) => row.name),
   });
 }

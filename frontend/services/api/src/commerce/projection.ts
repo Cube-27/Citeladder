@@ -16,10 +16,12 @@ import {
   editedField,
   lockCatalog,
   newProduct,
+  setCategoryParent,
 } from './catalog-store.ts';
 import type { CommerceScope } from './reads.ts';
 import { requestProjectionRevision } from './catalog-revisions.ts';
 import {
+  breadcrumbParent,
   categoryKey,
   categoryTitle,
   pageIdentity,
@@ -118,6 +120,12 @@ async function projectCategory(
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
     .execute();
+  // The listing's breadcrumb names its parent, where it has none yet.
+  const parent = breadcrumbParent(facts, name);
+  if (parent) {
+    const parentId = (await categoryByName(db, scope, parent)).id;
+    await setCategoryParent(db, scope, { childId: category.id, parentId, replace: false });
+  }
   return { shelfId: category.id };
 }
 
@@ -227,9 +235,19 @@ async function projectProduct(
   });
   // An edited category set wins over the page's breadcrumbs, as edited fields do.
   if (editedField(sources, 'categories')) return { productId: product.id };
-  for (const name of productCategories(facts, url, [source.final_url, source.requested_url])) {
+  const categories = productCategories(facts, url, [source.final_url, source.requested_url]);
+  const ids = new Map<string, string>();
+  for (const name of categories.names) {
     const category = await categoryByName(db, scope, name.slice(0, 255)); // NOSONAR -- One projection transaction: statements run in order.
+    ids.set(categoryKey(name), category.id);
     await addMembership(db, scope, product.id, category.id, observation); // NOSONAR -- One projection transaction: statements run in order.
+  }
+  // The breadcrumb path nests its categories, where none has a parent yet.
+  for (const [index, name] of categories.path.entries()) {
+    const childId = ids.get(categoryKey(name));
+    const parentId = index ? ids.get(categoryKey(categories.path[index - 1]!)) : undefined;
+    if (childId && parentId)
+      await setCategoryParent(db, scope, { childId, parentId, replace: false }); // NOSONAR -- One projection transaction: statements run in order.
   }
   return { productId: product.id };
 }

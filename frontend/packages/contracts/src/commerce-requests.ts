@@ -14,13 +14,43 @@ import {
   competitorCandidateSchema,
 } from './commerce-suite.ts';
 
-/** A catalog CSV upload; the API bounds its size. */
-export const catalogImportRequestSchema = z.object({
-  content: z.string(),
-  filename: z.string().max(255).default('catalog.csv'),
-  content_type: z.string().max(128).default('text/csv'),
-});
+/**
+ * The catalog CSV template's columns, in template order. `title` and `brand`
+ * are required; `category` is a path (`A > B`), several separated by `|`.
+ */
+export const CATALOG_TEMPLATE_COLUMNS = [
+  'title',
+  'brand',
+  'description',
+  'price',
+  'currency',
+  'link',
+  'image_link',
+  'category',
+  'sku',
+  'gtin',
+] as const;
+export const CATALOG_TEMPLATE_REQUIRED = ['title', 'brand'] as const;
+
+const fileName = z.string().trim().min(1).max(255);
+/**
+ * Stage a catalog import from one of the three sources (CM3): the CSV
+ * template, a Merchant Center feed file (CSV, TSV, XML or JSON) or a Shopify
+ * storefront by its domain. The API bounds the content's size; nothing is
+ * written to the catalog until the staged import is applied.
+ */
+export const catalogImportRequestSchema = z.discriminatedUnion('source', [
+  z.strictObject({ source: z.literal('csv'), content: z.string(), filename: fileName }),
+  z.strictObject({ source: z.literal('merchant_center'), content: z.string(), filename: fileName }),
+  z.strictObject({ source: z.literal('shopify'), store: z.string().trim().min(1).max(255) }),
+]);
 export type CatalogImportRequest = z.input<typeof catalogImportRequestSchema>;
+
+/** Apply a staged import, leaving out the proposed categories named by key. */
+export const catalogImportApplyRequestSchema = z.strictObject({
+  excluded_categories: z.array(z.string().min(1).max(255)),
+});
+export type CatalogImportApplyRequest = z.input<typeof catalogImportApplyRequestSchema>;
 
 /** Queue one competitor discovery per target. */
 export const competitorDiscoveryRequestSchema = z.object({

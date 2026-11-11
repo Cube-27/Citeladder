@@ -9,6 +9,7 @@ import { readErrorProps } from '@/components/ui/read-error';
 import { textRole } from '@/components/ui/typography';
 import type { CommerceCatalog } from '@citeladder/contracts/commerce-suite';
 import { formatCount } from '@/lib/format';
+import { nestedCategories } from '@/lib/products/category-tree';
 import { targetHref } from '@/lib/products/targets';
 
 import type { CommerceQueries } from './commerce-queries';
@@ -16,8 +17,8 @@ import type { CommerceQueries } from './commerce-queries';
 /**
  * The catalog's categories with their product counts, beside the Products
  * table: choosing one narrows the table to it, and the chosen category's own
- * page (its competitors and shopping prompts) opens from here.
- * Categories are flat today; the list is ready for nesting.
+ * page (its competitors and shopping prompts) opens from here. Categories
+ * nest under their parents; a parent's count includes its children's products.
  */
 export function CategorySidebar({
   query,
@@ -70,12 +71,13 @@ function CategoryList({
           selected={category === null}
           onSelect={() => onCategory(null)}
         />
-        {catalog.categories.map((row) => (
+        {nestedCategories(catalog.categories).map(({ category: row, depth }) => (
           <TreeOption
             key={row.id}
             label={row.name}
             count={formatCount(row.product_count)}
             selected={row.id === category}
+            depth={depth}
             onSelect={() => onCategory(row.id)}
           />
         ))}

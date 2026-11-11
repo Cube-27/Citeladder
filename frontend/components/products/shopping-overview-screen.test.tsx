@@ -222,7 +222,7 @@ describe('Shopping overview', () => {
         HttpResponse.json({
           products: [],
           product_total: 3,
-          categories: [{ id: CATEGORY, name: 'Road', product_count: 2 }],
+          categories: [{ id: CATEGORY, name: 'Road', parent_id: null, product_count: 2 }],
           projection: { applicability: 'applicable', in_flight: 0, failed: 0 },
         }),
       ),

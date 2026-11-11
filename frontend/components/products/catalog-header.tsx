@@ -6,12 +6,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
-import { CsvImportTrigger } from '@/components/ui/csv-import';
 import { Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { KpiRow, type StatSegment } from '@/components/ui/stat-row';
-import { textRole } from '@/components/ui/typography';
-import { commerceMutations, followCatalogAnalysis } from '@/lib/api/commerce';
+import { followCatalogAnalysis } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 import { pluralCount } from '@/lib/format';
@@ -20,6 +18,7 @@ import { crawlPollInterval } from '@/lib/site-health/status';
 import type { SiteCrawl } from '@citeladder/contracts';
 import type { CommerceProjection } from '@citeladder/contracts/commerce-suite';
 
+import { AddProductsDialog } from './add-products-dialog';
 import type { CommerceQueries } from './commerce-queries';
 
 /**
@@ -121,7 +120,6 @@ export function useCatalogHeader({
   projection: CommerceProjection | undefined;
 }>) {
   const client = useQueryClient();
-  const [result, setResult] = useState('');
   const dashboard = useQuery({
     ...siteHealthQueries.dashboard({ workspaceId, projectId }),
     refetchInterval: (state) => {
@@ -139,14 +137,7 @@ export function useCatalogHeader({
     if (analyzed === undefined || !hasCatalog) return;
     followCatalogAnalysis(client, { workspaceId, projectId }, { readAt: catalogReadAt, analyzed });
   }, [analyzed, catalogReadAt, hasCatalog, client, workspaceId, projectId]);
-  const importCatalog = useMutation(commerceMutations.importCatalog({ workspaceId, projectId }));
-  const importFile = (file: File) =>
-    importCatalog.mutate(file, {
-      onSuccess: (data) =>
-        setResult(
-          `${data.created} created, ${data.updated} updated, ${data.unchanged} unchanged, ${data.rejected} rejected`,
-        ),
-    });
+  const [adding, setAdding] = useState(false);
   // The descriptor refreshes the Site Health dashboard; the catalog is this screen's own read.
   const discover = useMutation(siteHealthMutations.createCrawl(workspaceId));
   const startDiscovery = () =>
@@ -157,76 +148,44 @@ export function useCatalogHeader({
     crawl ? void Promise.all([dashboard.refetch(), query.refetch()]) : startDiscovery();
   return {
     actions: (
-      <CatalogActions
-        crawl={crawl}
-        importing={importCatalog.isPending}
-        onImport={importFile}
-        refreshing={discover.isPending || dashboard.isPending}
-        onRefresh={refresh}
-      />
+      <>
+        <Button variant="secondary" onClick={() => setAdding(true)}>
+          Add products
+        </Button>
+        <Button
+          variant="primary"
+          disabled={discover.isPending || dashboard.isPending}
+          onClick={refresh}
+        >
+          {crawl ? 'Refresh from Site Health' : 'Run Site Health crawl'}
+        </Button>
+        <AddProductsDialog
+          workspaceId={workspaceId}
+          projectId={projectId}
+          open={adding}
+          onOpenChange={setAdding}
+        />
+      </>
     ),
     stats: <CatalogStats counts={counts} projection={projection} crawl={crawl} />,
     notices: (
-      <CatalogNotices
-        result={result}
-        importError={importCatalog.error}
-        refreshError={discover.error ?? dashboard.error}
-        onRefresh={refresh}
-      />
+      <CatalogNotices refreshError={discover.error ?? dashboard.error} onRefresh={refresh} />
     ),
   };
 }
 
-/** The catalog's route actions, for the identity band. */
-function CatalogActions({
-  crawl,
-  importing,
-  onImport,
-  refreshing,
-  onRefresh,
-}: Readonly<{
-  crawl: SiteHealthCrawl;
-  importing: boolean;
-  onImport: (file: File) => void;
-  refreshing: boolean;
-  onRefresh: () => void;
-}>) {
-  return (
-    <>
-      <CsvImportTrigger
-        accessibleLabel="Import catalog CSV"
-        pending={importing}
-        onSelect={onImport}
-      />
-      <Button variant="primary" disabled={refreshing} onClick={onRefresh}>
-        {crawl ? 'Refresh from Site Health' : 'Run Site Health crawl'}
-      </Button>
-    </>
-  );
-}
-
 /** Whatever the last catalog-wide action has to report, above the counts. */
 function CatalogNotices({
-  result,
-  importError,
   refreshError,
   onRefresh,
 }: Readonly<{
-  result: string;
-  importError: unknown;
   refreshError: unknown;
   /** Re-runs the refresh, the recovery for a failed one. */
   onRefresh: () => void;
 }>) {
-  if (!result && !importError && !refreshError) return null;
+  if (!refreshError) return null;
   return (
     <Stack>
-      {result ? <p className={textRole('body')}>{result}</p> : null}
-      {importError ? (
-        <MutationNotice
-          notice={mutationNoticeForError(importError, { action: 'import the catalog' })}
-        />
-      ) : null}
       {refreshError ? (
         <MutationNotice
           notice={mutationNoticeForError(refreshError, {

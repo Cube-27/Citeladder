@@ -241,6 +241,17 @@ Commerce becomes a group with Overview and Products. The read is
   first, with each row's reason.
 - A new catalog revision triggers PR 2's backfill.
 
+As built: migration 0027 also adds the product `image_url` and `price_max`
+columns (so the image no longer comes from the latest edit) and staging columns
+on `commerce_csv_imports` (`source_format`, `source_ref`,
+`excluded_categories`, `applied_at`). The review step is two routes:
+`POST /commerce/catalog/imports` stages (a store is fetched before anything is
+stored) and `POST /commerce/catalog/imports/{import_id}/apply` applies; the old
+`POST /commerce/catalog/import` is gone. Every format keeps field-source kind
+`csv`, with the format beside it, so PR 7's edit holds apply unchanged. A row
+whose identifiers belong to two products is a rejected row, not a 409 for the
+whole file; a row with no URL, SKU or GTIN matches by name and brand.
+
 ### PR 7: Product edit and archive
 
 Edit name, brand, description, price, currency, URL, image, identifiers and

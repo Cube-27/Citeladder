@@ -3,9 +3,9 @@ import { sql } from 'kysely';
 import { afterAll, describe, expect, it } from 'vitest';
 import { policy } from '../src/config.ts';
 import { editProduct } from '../src/commerce/edits.ts';
-import { importCatalog } from '../src/commerce/import.ts';
 import { enqueueCatalogProjection, projectCatalog } from '../src/commerce/projection.ts';
 import {
+  breadcrumbParent,
   categoryTitle,
   pageIdentity,
   productCategories,
@@ -16,7 +16,7 @@ import {
 import { catalog } from '../src/commerce/reads.ts';
 import { record } from '../src/db/json.ts';
 import { drainWorkspace } from './analytics-drain.ts';
-import { commerceFixture } from './commerce-support.ts';
+import { commerceFixture, importCatalog } from './commerce-support.ts';
 import { storedFacts } from './site-health-fixtures.ts';
 import { freezeCommerceContext } from '../src/commerce/audit-context.ts';
 import { enqueue } from './referral-fixtures.ts';
@@ -172,11 +172,11 @@ describe('catalog projection PostgreSQL boundary', () => {
     });
     await Promise.all([
       drainWorkspace(db, s.workspaceId, { owner: 'commerce-ts-test' }),
-      importCatalog(db, s, {
-        filename: 'catalog.csv',
-        content_type: 'text/csv',
-        content: 'canonical_url,name,price\nhttps://example.com/products/widget,Edited,44\n',
-      }),
+      importCatalog(
+        db,
+        s,
+        'link,title,price,brand\nhttps://example.com/products/widget,Edited,44,Acme\n',
+      ),
     ]);
     const result = await catalog(db, s);
     expect(await storedProducts(s)).toMatchObject([{ name: 'Edited', price: '44.00' }]);
@@ -213,11 +213,11 @@ describe('catalog projection PostgreSQL boundary', () => {
   }, 20_000);
   it('projects a shelf onto the category owning its name when another row holds its URL', async () => {
     const s = await seed();
-    await importCatalog(db, s, {
-      filename: 'catalog.csv',
-      content_type: 'text/csv',
-      content: 'canonical_url,name,sku,category\nhttps://example.com/p/x,X,X1,tools\n',
-    });
+    await importCatalog(
+      db,
+      s,
+      'link,title,sku,category,brand\nhttps://example.com/p/x,X,X1,tools,Acme\n',
+    );
     const stale = randomUUID();
     await db
       .insertInto('commerce_categories')
@@ -253,11 +253,11 @@ describe('catalog projection PostgreSQL boundary', () => {
   }, 20_000);
   it('keeps edited fields and an edited category set over later crawl evidence', async () => {
     const s = await seed();
-    const imported = await importCatalog(db, s, {
-      filename: 'catalog.csv',
-      content_type: 'text/csv',
-      content: 'canonical_url,name\nhttps://example.com/products/widget,Imported\n',
-    });
+    const imported = await importCatalog(
+      db,
+      s,
+      'link,title,brand\nhttps://example.com/products/widget,Imported,Acme\n',
+    );
     const id = imported.row_outcomes[0]!.product_id!;
     await editProduct(db, s, id, { name: 'Gadget', categories: ['Gear'] });
     for (const task of s.tasks) await execute(task);
@@ -475,7 +475,7 @@ describe('projection decisions over stored facts', () => {
       },
     });
     expect(categoryTitle(facts, '')).toBe('Dresses');
-    expect(productCategories(facts, 'https://shop.example.com/products/dress', [])).toEqual([
+    expect(productCategories(facts, 'https://shop.example.com/products/dress', []).names).toEqual([
       'Dresses',
     ]);
     expect(
@@ -483,8 +483,25 @@ describe('projection decisions over stored facts', () => {
         stored({ commerce: { breadcrumbs: ['Home', '/', 'Dresses', '/', 'Linen dress'] } }),
         'https://shop.example.com/products/dress',
         [],
-      ),
+      ).names,
     ).toEqual(['Dresses']);
+    // The breadcrumb trail is the category path, top first.
+    expect(
+      productCategories(
+        stored({ commerce: { breadcrumbs: ['Home', 'Women', 'Dresses', 'Linen dress'] } }),
+        'https://shop.example.com/products/dress',
+        [],
+      ).path,
+    ).toEqual(['Women', 'Dresses']);
+    expect(
+      breadcrumbParent(
+        stored({ commerce: { breadcrumbs: ['Home', 'Shop all', 'Women', 'Dresses'] } }),
+        'Dresses',
+      ),
+    ).toBe('Women');
+    expect(breadcrumbParent(stored({ commerce: { breadcrumbs: ['Dresses'] } }), 'Dresses')).toBe(
+      '',
+    );
     expect(
       categoryTitle(
         stored({ commerce: { breadcrumbs: ['/', '»'] }, headings: { h1_texts: ['Tools'] } }),

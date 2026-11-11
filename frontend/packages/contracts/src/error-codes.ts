@@ -33,6 +33,8 @@ const API_ERROR_CODES = [
   'commerce_not_found',
   'commerce_prompt_generation_unavailable',
   'commerce_prompt_hero_required',
+  'commerce_store_not_allowed',
+  'commerce_store_unavailable',
   'competitor_not_found',
   'conflict',
   'connection',
