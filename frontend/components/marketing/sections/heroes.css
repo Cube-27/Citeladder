@@ -1,6 +1,9 @@
 /* ---------- Heroes: the page's H1 is the site title, 60 → 32, never larger ---------- */
+/* Relative and isolated for the hero wash (below). */
 .cl-phero,
 .cl-lhero {
+  position: relative;
+  isolation: isolate;
   padding-top: 64px;
 }
 
@@ -149,12 +152,6 @@
 }
 
 /* ---------- Hero washes: a tinted glow that fades into the page ---------- */
-.cl-phero,
-.cl-lhero {
-  position: relative;
-  isolation: isolate;
-}
-
 /* Behind the floating navbar too, so the glow starts at the top of the
    window; it never takes pointer events. */
 

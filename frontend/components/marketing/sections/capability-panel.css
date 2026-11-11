@@ -17,6 +17,9 @@
     transparent
   );
 
+  /* The lifted bar's shadow (the depth rules below). */
+  --capl-shadow: rgb(0 0 0 / 16%);
+
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
   text-align: center;
@@ -109,6 +112,7 @@
   width: calc(50% - 4px);
   height: var(--capl-row);
   opacity: 0;
+  translate: 0 -3px;
   pointer-events: none;
 }
 
@@ -168,16 +172,8 @@
    bump rising out of the page, over a soft oval shadow that fades the same
    way. It sits 3px above the row's line. */
 
-.cl-capl {
-  --capl-shadow: rgb(0 0 0 / 16%);
-}
-
 :root[data-theme='dark'] .cl-capl {
   --capl-shadow: rgb(0 0 0 / 55%);
-}
-
-.cl-capl-glide {
-  translate: 0 -3px;
 }
 
 :is(.cl-capl-glide, .cl-capl-row)::before {

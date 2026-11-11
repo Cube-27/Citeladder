@@ -4,10 +4,29 @@
    account-access height (D24). */
 .cl-page-form {
   --control-md: 44px;
+  /* The stage's tints: its fields are solid wells on it. */
+  --stage-a: var(--color-stage-mint);
+  --stage-b: var(--color-stage-sky);
+  --stage-c: var(--color-stage-lilac);
+
   display: flex;
   flex-direction: column;
   padding: 40px;
+  border: 1px solid color-mix(in srgb, var(--color-surface) 70%, transparent);
+  border-radius: var(--site-radius-stage);
   color: var(--color-ink);
+  /* The stage: tints over paper, with grain. */
+  background-color: var(--color-paper);
+  background-image:
+    var(--stage-grain), radial-gradient(90% 120% at 0% 0%, var(--stage-a) 0%, transparent 70%),
+    radial-gradient(90% 120% at 100% 100%, var(--stage-b) 0%, transparent 70%),
+    radial-gradient(70% 90% at 100% 0%, var(--stage-c) 0%, transparent 70%);
+  background-size:
+    200px 200px,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+  background-blend-mode: soft-light, normal, normal, normal;
 }
 
 .cl-page-form-head {
@@ -123,30 +142,7 @@
   }
 }
 
-/* ---------- The stage: tints over paper, with grain ---------- */
-.cl-page-form {
-  background-color: var(--color-paper);
-  background-image:
-    var(--stage-grain), radial-gradient(90% 120% at 0% 0%, var(--stage-a) 0%, transparent 70%),
-    radial-gradient(90% 120% at 100% 100%, var(--stage-b) 0%, transparent 70%),
-    radial-gradient(70% 90% at 100% 0%, var(--stage-c) 0%, transparent 70%);
-  background-size:
-    200px 200px,
-    100% 100%,
-    100% 100%,
-    100% 100%;
-  background-blend-mode: soft-light, normal, normal, normal;
-}
-
-/* ---------- A PageForm: its fields are solid wells on a stage ---------- */
-.cl-page-form {
-  --stage-a: var(--color-stage-mint);
-  --stage-b: var(--color-stage-sky);
-  --stage-c: var(--color-stage-lilac);
-  border: 1px solid color-mix(in srgb, var(--color-surface) 70%, transparent);
-  border-radius: var(--site-radius-stage);
-}
-
+/* ---------- A PageForm on its stage ---------- */
 /* The stage's own rules are translucent, so the tint runs through them. */
 
 .cl-page-form :is(.cl-page-form-head, .cl-page-form-foot) {

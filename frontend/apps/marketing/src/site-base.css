@@ -46,6 +46,14 @@
   --tint-peach: color-mix(in srgb, var(--color-stage-peach) 55%, var(--color-paper));
   --tint-neutral: color-mix(in srgb, var(--color-ink) 4%, var(--color-paper));
 
+  /* The stage: tints over paper, with grain. The default stage mix; a context
+     re-mixes it by setting the three tints. */
+  --stage-a: var(--color-stage-peach);
+  --stage-b: var(--color-stage-lilac);
+  --stage-c: var(--color-stage-sky);
+  --stage-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --stage-wash: 0.8;
+
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-sans);
@@ -243,6 +251,17 @@ a:hover .cl-arrowlink .cl-arrowlink-icon {
   transform: translateX(2px);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .cl-arrowlink-icon {
+    transition: none;
+  }
+
+  a.cl-arrowlink:hover .cl-arrowlink-icon,
+  a:hover .cl-arrowlink .cl-arrowlink-icon {
+    transform: none;
+  }
+}
+
 /* ---------- The page above the footer: a paper sheet with a curved foot ----------
    D29: the page's last section ends on a rounded edge that the dark footer
    shows round, so the footer reads as the ground the page sits on. */
@@ -282,16 +301,7 @@ a:hover .cl-arrowlink .cl-arrowlink-icon {
   gap: 8px;
 }
 
-/* ---------- The stage: tints over paper, with grain ---------- */
-.cl-site {
-  /* The default stage mix; a context re-mixes it by setting the three tints. */
-  --stage-a: var(--color-stage-peach);
-  --stage-b: var(--color-stage-lilac);
-  --stage-c: var(--color-stage-sky);
-  --stage-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  --stage-wash: 0.8;
-}
-
+/* ---------- The stage's dark grain ---------- */
 /* Soft-light grain reads far louder on a dark ground: the same noise at a
    third of its strength, and a dimmer hero wash. */
 

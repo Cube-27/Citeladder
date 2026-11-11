@@ -280,6 +280,12 @@
   background-blend-mode: soft-light, normal, normal, normal;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .cl-faq-icon {
+    transition: none;
+  }
+}
+
 /* ---------- The CtaBand: the page's last stage ---------- */
 .cl-cta {
   border: 0;

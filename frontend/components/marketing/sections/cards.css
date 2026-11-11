@@ -45,17 +45,14 @@
   text-wrap: balance;
 }
 
-.cl-related-text {
-  color: var(--color-ink-secondary);
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
-  text-wrap: pretty;
-}
-
 /* The summary column starts with the title's first line. */
 
 .cl-related-text {
   grid-column: 3;
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  text-wrap: pretty;
 }
 
 .cl-related-arrow {
@@ -142,17 +139,13 @@
 }
 
 .cl-qcard-q {
-  margin: 0;
+  flex: 1;
+  margin: 0 0 12px;
   color: var(--color-ink);
   font-size: var(--text-heading-lg);
   font-weight: 500;
   line-height: var(--text-heading-lg--line-height);
   letter-spacing: var(--text-heading-lg--letter-spacing);
-}
-
-.cl-qcard-q {
-  flex: 1;
-  margin-bottom: 12px;
   text-wrap: pretty;
 }
 
