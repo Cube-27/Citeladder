@@ -192,7 +192,10 @@ and:
 - **Answers**: each execution with win/loss and rank, opening the existing
   answer viewer.
 - **Setup**: competitor discovery and review, hero-product prompts, and the
-  Actions with Generate action / Work with the agent.
+  product's open commerce Actions, each with Work with the agent, plus Work
+  with the agent on the product's own URL. As shipped there is no Generate
+  action button (a deviation from the plan; the owner decides whether a later
+  PR adds one for product pages).
 
 The `target-*` components and `GET ai-shelf` are retired (the split-pane
 workspace already went in PR 3). `read_ai_shelf` (MCP/Agent) returns the per-product metrics.
