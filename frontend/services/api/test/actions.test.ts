@@ -10,12 +10,13 @@ import {
 } from '@citeladder/contracts/actions';
 import { searchConsoleState } from '../src/opportunities/measurement-legs.ts';
 import { refreshActionStatus } from '../src/opportunities/action-status.ts';
+import { syncActions } from '../src/opportunities/action-sync.ts';
 import { policy } from '../src/config.ts';
 import { declarationChecks } from '../src/opportunities/declaration-checks.ts';
 import { CHECKS, memberMeasurementLeg } from '../src/opportunities/checks/registry.ts';
 import type { OpportunityRow } from '../src/opportunities/projection.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
-import { actionRow } from './opportunity-fixtures.ts';
+import { actionRow, opportunityRow, snapshotRow } from './opportunity-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 
 const config = testConfig();
@@ -696,6 +697,177 @@ describe('Action routes', () => {
       });
     }
     expect(await eventCount(s)).toBe(1);
+  });
+});
+
+describe('Declaration ordering', () => {
+  /** An Opportunity snapshot of the seed's project committed at `at`. */
+  async function snapshotAt(s: ActionSeed, at: Date, values = {}) {
+    const row = snapshotRow(
+      { workspace_id: s.workspace_id, project_id: s.project_id },
+      { created_at: at, ...values },
+    );
+    await db.insertInto('opportunity_snapshots').values(row).execute();
+    return row.id;
+  }
+  /** A refresh that found none of the project's findings: Action sync clears every Action. */
+  async function resolveAll(s: ActionSeed, at: Date) {
+    const snapshot = await snapshotAt(s, at);
+    await db.transaction().execute(async (trx) => {
+      await trx
+        .updateTable('opportunities')
+        .set({ superseded_at: at })
+        .where('workspace_id', '=', s.workspace_id)
+        .where('project_id', '=', s.project_id)
+        .execute();
+      await syncActions(
+        trx,
+        { workspaceId: s.workspace_id, projectId: s.project_id },
+        [],
+        snapshot,
+      );
+    });
+    return snapshot;
+  }
+  const verifications = async (s: ActionSeed) =>
+    (
+      await db
+        .selectFrom('analytics_tasks')
+        .select(sql<number>`count(*)::int`.as('n'))
+        .where('workspace_id', '=', s.workspace_id)
+        .where('task_kind', '=', 'opportunity_verification')
+        .executeTakeFirstOrThrow()
+    ).n;
+  const seedSnapshot = async (s: ActionSeed) =>
+    (
+      await db
+        .selectFrom('opportunity_snapshots')
+        .select('id')
+        .where('workspace_id', '=', s.workspace_id)
+        .where('project_id', '=', s.project_id)
+        .orderBy('created_at')
+        .limit(1)
+        .executeTakeFirstOrThrow()
+    ).id;
+
+  it('baselines on the newest snapshot at or before go-live, and on none when none existed', async () => {
+    const s = await seed();
+    const before = await snapshotAt(s, new Date(Date.parse(boundary) - 3_600_000));
+    // A refresh after go-live is not what the change was declared against.
+    await snapshotAt(s, new Date());
+    const body = await declarationBody(await declare(s, 'ordered'));
+    expect(body.opportunity_snapshot_id).toBe(before);
+    expect(body.resolved_before_snapshot_id).toBeNull();
+
+    const late = await seed();
+    await db
+      .updateTable('opportunity_snapshots')
+      .set({ created_at: new Date() })
+      .where('workspace_id', '=', late.workspace_id)
+      .execute();
+    const created = await declare(late, 'no-baseline', promptRule);
+    expect(created.status).toBe(201);
+    const unavailable = await declarationBody(created);
+    expect(unavailable.opportunity_snapshot_id).toBeNull();
+    // With no baseline audit the prompt check keeps no baseline reading.
+    expect(unavailable.expected_checks[0]).toMatchObject({ kind: 'visibility_metric' });
+    expect(unavailable.expected_checks[0]).not.toHaveProperty('baseline_metric_snapshot_id');
+    expect((await detailBody(await request(late, actionPath(late, promptRule)))).status).toBe(
+      'implemented',
+    );
+  });
+
+  it('declares the findings a recrawl after go-live resolved, measured by later readings', async () => {
+    const s = await seed();
+    await resolveAll(s, new Date());
+    const cleared = await detailBody(await request(s, actionPath(s)));
+    expect([cleared.member_count, cleared.declarable_member_count]).toEqual([0, 1]);
+    const created = await declare(s, 'resolved-after');
+    expect(created.status).toBe(201);
+    const body = await declarationBody(created);
+    expect(body.member_opportunity_ids).toEqual([s.members[pageRule]]);
+    expect(body.opportunity_snapshot_id).toBe(await seedSnapshot(s));
+    expect(body.resolved_before_snapshot_id).toBeNull();
+    expect(body.expected_checks).toEqual([
+      { kind: 'site_rule', rule_id: 'aeo.structured_data_present', expected_outcome: 'pass' },
+    ]);
+    // The crawl and audit after go-live are read for this declaration at once.
+    expect(await verifications(s)).toBe(2);
+  });
+
+  it('declares a resolved link finding, whose suggestions left with it, without a link check', async () => {
+    const s = await seed();
+    await resolveAll(s, new Date());
+    const page = await db
+      .selectFrom('opportunities')
+      .select(['opportunity_type', 'severity'])
+      .where('workspace_id', '=', s.workspace_id)
+      .where('id', '=', s.members[pageRule]!)
+      .executeTakeFirstOrThrow();
+    const row = opportunityRow(
+      { workspace_id: s.workspace_id, project_id: s.project_id },
+      {
+        ...page,
+        rule_id: 'site_contextual_links',
+        target_key: 'fixture:resolved-link',
+        superseded_at: new Date(),
+      },
+    );
+    await db.insertInto('opportunities').values(row).execute();
+    const link = row.id;
+    await db
+      .updateTable('actions')
+      .set({ last_member_opportunity_ids: JSON.stringify([s.members[pageRule], link]) })
+      .where('id', '=', actionId(s))
+      .execute();
+    const created = await declare(s, 'resolved-link');
+    expect(created.status).toBe(201);
+    const body = await declarationBody(created);
+    expect(body.member_opportunity_ids).toEqual([s.members[pageRule], link]);
+    expect(body.expected_checks).toEqual([
+      { kind: 'site_rule', rule_id: 'aeo.structured_data_present', expected_outcome: 'pass' },
+    ]);
+  });
+
+  it('records findings resolved before go-live without crediting the deployment', async () => {
+    const s = await seed();
+    const resolving = await resolveAll(s, new Date(Date.parse(boundary) - 3_600_000));
+    const body = await declarationBody(await declare(s, 'resolved-before'));
+    expect(body.member_opportunity_ids).toEqual([s.members[pageRule]]);
+    expect(body.opportunity_snapshot_id).toBe(resolving);
+    expect(body.resolved_before_snapshot_id).toBe(resolving);
+    expect(body.expected_checks).toEqual([]);
+    expect(await verifications(s)).toBe(0);
+    expect((await detailBody(await request(s, actionPath(s)))).status).toBe('implemented');
+  });
+
+  it('never declares another workspace’s Action or its findings', async () => {
+    const s = await seed();
+    const foreign = await seed();
+    await resolveAll(s, new Date());
+    expect(
+      (
+        await request(
+          foreign,
+          `${actionPath(s)}/declaration`,
+          'POST',
+          {
+            declared_implemented_at: boundary,
+          },
+          'foreign',
+        )
+      ).status,
+    ).toBe(404);
+    // A last member set naming another workspace's finding declares nothing.
+    await db
+      .updateTable('actions')
+      .set({ last_member_opportunity_ids: JSON.stringify([foreign.members[pageRule]]) })
+      .where('id', '=', actionId(s))
+      .execute();
+    expect((await detailBody(await request(s, actionPath(s)))).declarable_member_count).toBe(1);
+    expect((await declare(s, 'foreign-last')).status).toBe(409);
+    expect(await eventCount(s)).toBe(0);
+    expect(await eventCount(foreign)).toBe(0);
   });
 });
 

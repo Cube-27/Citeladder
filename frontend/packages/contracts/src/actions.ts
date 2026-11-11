@@ -68,6 +68,9 @@ export const actionItemSchema = responseObject({
   group: actionGroupSchema,
   skill_id: z.string(),
   member_count: z.number().int(),
+  // The findings a declaration would freeze: the current members, or the last
+  // non-empty set once a recrawl resolved them all. Zero: nothing to declare.
+  declarable_member_count: z.number().int(),
   handoff: actionHandoffSchema,
   evidence_cleared_at: z.string().nullable(),
   created_at: z.string(),
@@ -131,7 +134,13 @@ export const actionDeclarationSchema = responseObject({
   action_id: uuid(),
   output_revision_id: uuid().nullable(),
   member_opportunity_ids: z.array(uuid()),
-  opportunity_snapshot_id: uuid(),
+  // The newest snapshot at or before go-live; null when none existed, so the
+  // baseline is unavailable.
+  opportunity_snapshot_id: uuid().nullable(),
+  // The refresh that resolved the declared findings at or before go-live: the
+  // outcome predates the deployment and is never credited to it. Null when
+  // the findings were still live at go-live.
+  resolved_before_snapshot_id: uuid().nullable(),
   target_site_url_ids: z.array(uuid()),
   // Populated instead of the owned ids for an earned Action: the publisher
   // page the listing was requested on. Never both.

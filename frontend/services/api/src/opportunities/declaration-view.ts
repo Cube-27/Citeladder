@@ -110,6 +110,7 @@ export async function declarationView(
     output_revision_id: row.output_revision_id,
     member_opportunity_ids: strings(row.member_opportunity_ids),
     opportunity_snapshot_id: row.opportunity_snapshot_id,
+    resolved_before_snapshot_id: row.resolved_before_snapshot_id,
     target_site_url_ids: strings(row.target_site_url_ids),
     target_external_url: row.target_external_url,
     declared_implemented_at: wireUtc(timestamp.at),

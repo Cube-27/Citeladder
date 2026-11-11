@@ -8,7 +8,8 @@
  * the Agent only inserts its own `agent`-origin rows under the same project
  * lock, so the locked read below sees them and the refresh adopts the row on
  * that key. Identity and origin never change here. An Action no member
- * targets any more keeps its row with its evidence cleared, written once.
+ * targets any more keeps its row with its evidence cleared, written once, and
+ * its last non-empty member set, which a later declaration freezes.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -79,6 +80,7 @@ const GROUP_COLUMN_TYPES = [
   ['skill_id', 'varchar'],
   ['diagnosis', 'jsonb'],
   ['member_opportunity_ids', 'jsonb'],
+  ['last_member_opportunity_ids', 'jsonb'],
   ['opportunity_snapshot_id', 'uuid'],
   ['evidence_cleared_at', 'timestamptz'],
 ] as const;
@@ -87,6 +89,7 @@ const GROUP_COLUMNS = GROUP_COLUMN_TYPES.map(([column]) => column);
 
 /** The persisted fields one group writes onto its Action. */
 function groupFields(group: Group, snapshotId: string) {
+  const members = JSON.stringify(group.members.map((member) => member.opportunity_id));
   return {
     target_label: group.target.label,
     target_url: group.target.url,
@@ -96,7 +99,9 @@ function groupFields(group: Group, snapshotId: string) {
     approach: group.approach,
     skill_id: group.skill_id,
     diagnosis: JSON.stringify(group.diagnosis),
-    member_opportunity_ids: JSON.stringify(group.members.map((member) => member.opportunity_id)),
+    member_opportunity_ids: members,
+    // A group always has members; clearing leaves this set as it was.
+    last_member_opportunity_ids: members,
     opportunity_snapshot_id: snapshotId,
     evidence_cleared_at: null,
   } satisfies Record<GroupColumn, unknown>;

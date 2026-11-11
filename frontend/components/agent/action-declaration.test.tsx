@@ -9,7 +9,7 @@ import { renderWithProviders } from '@/test/render';
 import type { ActionDeclaration } from '@/lib/api/actions';
 import { localDay } from '@/lib/opportunities/declaration-date';
 
-import { MarkImplementedButton } from './action-declaration';
+import { isDeclarable, MarkImplementedButton } from './action-declaration';
 import { DeclarationStatus } from './declaration-status';
 
 const PROJECT = '11111111-1111-4111-8111-111111111111';
@@ -121,6 +121,15 @@ describe('Mark implemented', () => {
   });
 });
 
+describe('Declarable', () => {
+  it('offers an open Action whose findings a recrawl resolved, but not one that never had any', () => {
+    expect(isDeclarable({ status: 'open', declarable_member_count: 1 })).toBe(true);
+    expect(isDeclarable({ status: 'in_progress', declarable_member_count: 2 })).toBe(true);
+    expect(isDeclarable({ status: 'open', declarable_member_count: 0 })).toBe(false);
+    expect(isDeclarable({ status: 'dismissed', declarable_member_count: 1 })).toBe(false);
+  });
+});
+
 describe('Declaration status', () => {
   const declaration = (checks: ActionDeclaration['checks']): ActionDeclaration => ({
     id: '44444444-4444-4444-8444-444444444444',
@@ -128,6 +137,7 @@ describe('Declaration status', () => {
     output_revision_id: null,
     member_opportunity_ids: [MEMBER],
     opportunity_snapshot_id: '55555555-5555-4555-8555-555555555555',
+    resolved_before_snapshot_id: null,
     target_site_url_ids: [],
     target_external_url: null,
     declared_implemented_at: NOW,
@@ -158,6 +168,31 @@ describe('Declaration status', () => {
     source_kind: 'site_crawl',
     source_id: null,
     subject: 'Missing structured data',
+  });
+
+  it('says findings resolved before go-live are not credited, apart from unmeasurable ones', () => {
+    const unmeasured = renderWithProviders(
+      <DeclarationStatus declaration={declaration([])} workspaceId={WORKSPACE} />,
+      { projectSelection: selection },
+    );
+    expect(screen.getByText(/No automatic check applies to these findings/)).toBeVisible();
+    unmeasured.unmount();
+    renderWithProviders(
+      <DeclarationStatus
+        declaration={{
+          ...declaration([]),
+          resolved_before_snapshot_id: '66666666-6666-4666-8666-666666666666',
+        }}
+        workspaceId={WORKSPACE}
+      />,
+      { projectSelection: selection },
+    );
+    expect(
+      screen.getByText(
+        'These findings were already resolved before this went live, so the outcome is not credited to this change and nothing is measured.',
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText(/No automatic check applies/)).not.toBeInTheDocument();
   });
 
   it("links a prompt check to that prompt's history", () => {

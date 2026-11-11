@@ -66,6 +66,7 @@ export interface Actions {
   families: Json;
   group_key: string;
   id: string;
+  last_member_opportunity_ids: Generated<Json>;
   member_opportunity_ids: Json;
   opportunity_snapshot_id: string | null;
   origin: string;
@@ -2067,10 +2068,11 @@ export interface OpportunityImplementationEvents {
   id: string;
   idempotency_key: string;
   member_opportunity_ids: Json;
-  opportunity_snapshot_id: string;
+  opportunity_snapshot_id: string | null;
   output_revision_id: string | null;
   project_id: string;
   request_fingerprint: string;
+  resolved_before_snapshot_id: string | null;
   target_external_url: string | null;
   target_site_url_ids: Json;
   workspace_id: string;
