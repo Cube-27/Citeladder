@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createHash, randomUUID } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { sql } from 'kysely';
@@ -22,8 +22,6 @@ import { pagesRead } from '../src/ai-traffic/pages.ts';
 import { dispatchTool } from '../src/mcp/tools.ts';
 import { verifyBot } from '../src/crawl-logs/identity.ts';
 import { sourceList } from '../src/crawl-logs/source-reads.ts';
-import { hasDevelopmentWorkspace } from '../src/auth/development-access.ts';
-import { createCrawl } from '../src/site-health/planner.ts';
 import {
   logLines,
   parseLogLine,
@@ -99,69 +97,6 @@ afterAll(async () => {
 });
 
 describe('bounded formats', () => {
-  it('keeps the site-health development gate through a concurrent ownership transfer', async () => {
-    const tenant = await fixtures.tenant();
-    const incoming = await fixtures.user();
-    await fixtures.member(tenant.workspaceId, incoming, 'admin');
-    const email = `dev-${tenant.userId}@example.test`;
-    vi.stubEnv('DEV_LOGIN_EMAIL', email);
-    vi.stubEnv('DEV_LOGIN_PASSWORD', 'test-only-development-password');
-    vi.stubEnv('SITE_HEALTH_ADVANCED_CONTROLS_ENABLED', 'false');
-    let admission: Promise<unknown> | undefined;
-    const transfer = await db.startTransaction().execute();
-    try {
-      await db
-        .updateTable('users')
-        .set({ email, role: 'admin' })
-        .where('id', '=', tenant.userId)
-        .execute();
-      expect(await hasDevelopmentWorkspace(db, tenant.workspaceId)).toBe(true);
-      await transfer
-        .selectFrom('workspaces')
-        .select('id')
-        .where('id', '=', tenant.workspaceId)
-        .forUpdate()
-        .execute();
-      const blocker = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(transfer);
-      admission = db
-        .transaction()
-        .execute((trx) =>
-          createCrawl(trx, tenant.workspaceId, {
-            project_id: tenant.projectId,
-            input_mode: 'exact_urls',
-            seed_urls: ['https://acme.example/page'],
-          }),
-        )
-        .catch((error: unknown) => error);
-      await vi.waitFor(
-        async () => {
-          const blocked = await sql<{ waiting: boolean }>`select exists (
-            select 1 from pg_stat_activity where ${blocker.rows[0]!.pid} = any(pg_blocking_pids(pid))
-          ) as waiting`.execute(db);
-          expect(blocked.rows[0]!.waiting).toBe(true);
-        },
-        { timeout: 2000, interval: 20 },
-      );
-      await transfer
-        .updateTable('workspace_members')
-        .set({ role: 'admin' })
-        .where('workspace_id', '=', tenant.workspaceId)
-        .where('user_id', '=', tenant.userId)
-        .execute();
-      await transfer
-        .updateTable('workspace_members')
-        .set({ role: 'owner' })
-        .where('workspace_id', '=', tenant.workspaceId)
-        .where('user_id', '=', incoming)
-        .execute();
-      await transfer.commit().execute();
-      expect(await admission).toMatchObject({ status: 422 });
-    } finally {
-      if (!transfer.isCommitted) await transfer.rollback().execute();
-      await admission;
-      vi.unstubAllEnvs();
-    }
-  });
   it('admits crawl logs on the plan grant and refuses a workspace without it', async () => {
     const paid = await fixtures.tenant();
     const trial = await fixtures.tenant();

@@ -11,7 +11,6 @@ param(
     [string] $Zone = 'us-central1-a',
     [string] $DatabaseInstance = 'citeladder-db',
     [string] $DatabaseSecret = 'citeladder-database-url',
-    [string] $OperatorPasswordSecret = 'citeladder-demo-password',
     [string] $Actor = 'dev@citeladder.com',
     [ValidateRange(1024, 65535)][int] $LocalPort = 15432,
     [switch] $UseExistingTunnel
@@ -23,7 +22,6 @@ $previousEnvironment = @{}
 foreach ($name in $environmentNames) { $previousEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
 $tunnel = $null
 $productionDatabase = $null
-$operatorPassword = $null
 
 function Invoke-GcloudRead {
     param([string[]] $Arguments)
@@ -39,9 +37,6 @@ try {
     $databaseUri = [UriBuilder]$productionDatabase
     if ($databaseUri.Host -ne $instance.networkInterfaces[0].networkIP) {
         throw 'The database secret does not target the selected production database instance.'
-    }
-    if ($Actor -eq 'dev@citeladder.com') {
-        $operatorPassword = Invoke-GcloudRead -Arguments @('secrets', 'versions', 'access', 'latest', "--secret=$OperatorPasswordSecret", "--project=$ProjectId")
     }
     Write-Host "Production: project $ProjectId, database $DatabaseInstance, operator $Actor"
     if (-not $UseExistingTunnel) {
@@ -93,7 +88,8 @@ try {
     # Transport encryption is supplied by the authenticated IAP/SSH tunnel.
     $env:DB_SSL_MODE = 'disable'
     $env:CITELADDER_DISABLE_DOTENV = '1'
-    $env:ACCOUNT_MANAGER_OPERATOR_PASSWORD = $operatorPassword
+    # Production keeps no operator password secret (BL9): the manager prompts without echo.
+    $env:ACCOUNT_MANAGER_OPERATOR_PASSWORD = $null
     & node (Join-Path $root 'frontend/services/api/src/cli/account-manager.ts') --platform --actor $Actor
     if ($LASTEXITCODE -ne 0) { throw 'Account management failed; no further operations were attempted.' }
 } finally {
@@ -103,6 +99,5 @@ try {
     }
     foreach ($name in $environmentNames) { [Environment]::SetEnvironmentVariable($name, $previousEnvironment[$name], 'Process') }
     $productionDatabase = $null
-    $operatorPassword = $null
     $databaseUri = $null
 }

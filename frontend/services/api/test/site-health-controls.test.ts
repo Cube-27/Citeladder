@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import { spawn } from 'node:child_process';
 import { setTimeout } from 'node:timers/promises';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
@@ -17,6 +18,7 @@ import { replaceMonitoredSet, rerunPage } from '../src/site-health/selection.ts'
 import { publishCancelledCrawls } from '../src/site-health/lifecycle.ts';
 import { lockSiteTask } from '../src/site-health/site-task.ts';
 import { record } from '../src/db/json.ts';
+import { revokeBundle } from '../src/entitlements/grants.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
@@ -244,19 +246,27 @@ describe('crawl control admission', () => {
     ).toBe(3);
   });
 
-  it('crawls the development operator workspace past an exhausted fetch allowance, unreserved', async () => {
+  it('crawls an operator_controls workspace past an exhausted fetch allowance, unreserved, and no other', async () => {
     const seed = await fixtures.crawl();
     const other = await otherProject(seed);
-    await allow(seed, 4, 0);
+    const outsiderSeed = await fixtures.crawl();
+    const outsider = await otherProject(outsiderSeed);
+    const operatorAccount = await allow(seed, 4, 0);
+    await allow(outsiderSeed, 4, 0);
     await expect(create(other)).rejects.toMatchObject({ code: 'site_health_fetches_exhausted' });
-    const email = `dev-${seed.userId}@example.test`;
-    vi.stubEnv('DEV_LOGIN_EMAIL', email);
+    // The development login no longer confers anything (BL9).
+    vi.stubEnv('DEV_LOGIN_EMAIL', `dev-${seed.userId}@example.test`);
     vi.stubEnv('DEV_LOGIN_PASSWORD', 'test-only-development-password');
     await db
       .updateTable('users')
-      .set({ email, role: 'admin' })
+      .set({ email: `dev-${seed.userId}@example.test`, role: 'admin' })
       .where('id', '=', seed.userId)
       .execute();
+    await expect(create(other)).rejects.toMatchObject({ code: 'site_health_fetches_exhausted' });
+    await grant(db, operatorAccount, { key: 'operator_controls', value: 1 });
+    await expect(create(outsider)).rejects.toMatchObject({
+      code: 'site_health_fetches_exhausted',
+    });
     const crawl = await create(other);
     expect(crawl.discovery_requested_count).toBe(100);
     expect(
@@ -268,7 +278,7 @@ describe('crawl control admission', () => {
     ).toEqual([]);
   });
 
-  it.each(['global', 'development'])(
+  it.each(['global', 'operator_controls'])(
     'freezes exact seeds when advanced controls are enabled by %s access',
     async (access) => {
       vi.stubEnv('SITE_HEALTH_ADVANCED_CONTROLS_ENABLED', 'false');
@@ -283,14 +293,14 @@ describe('crawl control admission', () => {
       const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
       if (access === 'global') vi.stubEnv('SITE_HEALTH_ADVANCED_CONTROLS_ENABLED', 'true');
       else {
-        const email = `dev-${tenant.userId}@example.test`;
-        vi.stubEnv('DEV_LOGIN_EMAIL', email);
-        vi.stubEnv('DEV_LOGIN_PASSWORD', 'test-only-development-password');
-        await db
-          .updateTable('users')
-          .set({ email, role: 'admin' })
-          .where('id', '=', tenant.userId)
-          .execute();
+        const outsider = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+        const account = await billingAccount(db, tenant.workspaceId);
+        accounts.push(account);
+        await grant(db, account, { key: 'operator_controls', value: 1 });
+        // The grant is the operator's workspace alone.
+        await expect(
+          create(outsider, { input_mode: 'exact_urls', seed_urls: ['https://example.test/a'] }),
+        ).rejects.toMatchObject({ code: 'advanced_controls_unavailable' });
       }
       const crawl = await create(tenant, {
         input_mode: 'exact_urls',
@@ -320,6 +330,49 @@ describe('crawl control admission', () => {
       expect(tasks.some((task) => task.task_kind === 'analyze')).toBe(false);
     },
   );
+
+  it('refuses advanced controls once a concurrent operator_controls revocation commits', async () => {
+    vi.stubEnv('SITE_HEALTH_ADVANCED_CONTROLS_ENABLED', 'false');
+    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+    const accountId = await billingAccount(db, tenant.workspaceId);
+    accounts.push(accountId);
+    const grantId = await grant(db, accountId, { key: 'operator_controls', value: 1 });
+    let admission: Promise<unknown> | undefined;
+    const revocation = await db.startTransaction().execute();
+    try {
+      await revokeBundle(revocation, {
+        workspaceId: tenant.workspaceId,
+        accountId,
+        grantIds: [grantId],
+        key: randomUUID(),
+        reason: 'operator controls withdrawn',
+        actorKind: 'operator',
+        actorId: null,
+        at: new Date(),
+      });
+      const blocker = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(
+        revocation,
+      );
+      admission = create(tenant, {
+        input_mode: 'exact_urls',
+        seed_urls: ['https://example.test/a'],
+      }).catch((error: unknown) => error);
+      await vi.waitFor(
+        async () => {
+          const blocked = await sql<{ waiting: boolean }>`select exists (
+            select 1 from pg_stat_activity where ${blocker.rows[0]!.pid} = any(pg_blocking_pids(pid))
+          ) as waiting`.execute(db);
+          expect(blocked.rows[0]!.waiting).toBe(true);
+        },
+        { timeout: 5000, interval: 20 },
+      );
+      await revocation.commit().execute();
+      expect(await admission).toMatchObject({ status: 422, code: 'advanced_controls_unavailable' });
+    } finally {
+      if (!revocation.isCommitted) await revocation.rollback().execute();
+      await admission;
+    }
+  });
 
   it('re-seeds only active in-scope monitored URLs and freezes full inventory lineage across a sample crawl', async () => {
     const seed = await fixtures.crawl();

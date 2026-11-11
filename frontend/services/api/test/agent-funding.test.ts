@@ -593,6 +593,14 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       { code: 'model_changed' },
     );
   });
+  it('recognizes the development login only in a development environment', () => {
+    const login = { DEV_LOGIN_EMAIL: 'developer@example.test', DEV_LOGIN_PASSWORD: 'fixture-pw' };
+    expect(
+      ['development', 'production'].map(
+        (APP_ENV) => agentSettings({ ...login, APP_ENV }).devPasswordConfigured,
+      ),
+    ).toEqual([true, false]);
+  });
   it('admits development funding only for the configured active administrator', async () => {
     const { scope } = await tenant();
     const dev = {

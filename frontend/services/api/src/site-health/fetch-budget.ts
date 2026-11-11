@@ -6,8 +6,8 @@
  */
 import { sql } from 'kysely';
 import { ApiError } from '../errors.ts';
-import { hasDevelopmentWorkspace } from '../auth/development-access.ts';
 import type { Database } from '../db/database.ts';
+import { hasOperatorControls } from '../entitlements/access.ts';
 import {
   LedgerError,
   billingAccountId,
@@ -29,7 +29,7 @@ export const unresolvedEntitlement = () =>
 
 /**
  * Capacity stays locked through the hold and the caller's admission commit.
- * The configured development operator's workspace, a workspace without a
+ * A workspace holding the operator controls grant, a workspace without a
  * billing account and a plan without a fetch grant crawl unmetered.
  */
 export async function budgetedPageLimit(
@@ -38,7 +38,7 @@ export async function budgetedPageLimit(
   requested: number,
   at: Date,
 ) {
-  if (await hasDevelopmentWorkspace(db, workspaceId)) return { limit: requested, metered: false };
+  if (await hasOperatorControls(db, workspaceId)) return { limit: requested, metered: false };
   const accountId = await billingAccountId(db, workspaceId);
   if (!accountId) return { limit: requested, metered: false };
   let available: Awaited<ReturnType<typeof remaining>>;
