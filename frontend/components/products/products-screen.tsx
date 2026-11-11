@@ -101,6 +101,15 @@ function useCursorStack(search: string) {
  */
 export function ProductsScreen() {
   const { workspaceId, projectId } = useProjectScope();
+  // Keyed by project, so the page cursors and checked products of one project
+  // never carry to the next.
+  return <ProductsContent key={projectId} workspaceId={workspaceId} projectId={projectId} />;
+}
+
+function ProductsContent({
+  workspaceId,
+  projectId,
+}: Readonly<{ workspaceId: string; projectId: string }>) {
   const scope = { workspaceId, projectId };
   const productFilters = useProductFilters();
   const { filters } = productFilters;

@@ -315,6 +315,12 @@ describe('Products table read', () => {
       `window=90&source=catalog&sort=win_rate&limit=1&cursor=${first.body.next_cursor}`,
     );
     expect(replayed.status).toBe(422);
+    // The same filters in another project refuse the cursor too.
+    const elsewhere = await read(
+      foreign,
+      `window=90&source=all&sort=win_rate&limit=1&cursor=${first.body.next_cursor}`,
+    );
+    expect(elsewhere.status).toBe(422);
     expect((await read(t, 'window=14')).status).toBe(422);
   });
 

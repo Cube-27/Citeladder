@@ -113,7 +113,9 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
     throw new ApiError(422, 'window must be one of the configured windows', {
       code: 'validation_error',
     });
-  const { cursor: _cursor, limit: _limit, ...filters } = query;
+  // A cursor is bound to its project and filters; any other read refuses it.
+  const { cursor: _cursor, limit: _limit, ...rest } = query;
+  const filters = { ...rest, project: scope.projectId };
   const position = cursorPosition(query, filters);
   const ws = scope.workspaceId,
     project = scope.projectId;

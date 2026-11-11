@@ -1,15 +1,10 @@
 /** Typed Commerce catalog, discovery, prompt, and AI Shelf client. */
-import {
-  keepPreviousData,
-  mutationOptions,
-  queryOptions,
-  skipToken,
-  type QueryClient,
-} from '@tanstack/react-query';
+import { mutationOptions, queryOptions, skipToken, type QueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
 import { startInteractiveWork } from './interactive-work';
+import { retainPreviousDataForScope } from './query-client';
 import { queryKeys } from './query-keys';
 import type { ProjectScope } from './query-keys/scope';
 import { COMMERCE_BUYER_PROMPT_REQUEST_TIMEOUT_MS } from '@/lib/config/operational';
@@ -195,15 +190,16 @@ export const commerceQueries = {
     }),
   /**
    * One Products page for the filters' query string (`productSearch`). The
-   * previous page stays on screen while the next one loads, so a filter or a
-   * page turn never empties the table.
+   * project's previous page stays on screen while the next one loads, so a
+   * filter or a page turn never empties the table; another project's never does.
    */
   products: (scope: ProjectScope, search: string, cursor: string | null) =>
     queryOptions({
       queryKey: queryKeys.commerce.products(scope, search, cursor),
       queryFn: ({ signal }) =>
         commerceApi.products(scope.projectId, search, cursor, scoped(scope, signal)),
-      placeholderData: keepPreviousData,
+      placeholderData: (previous, previousQuery) =>
+        retainPreviousDataForScope(scope.projectId, previous, previousQuery),
     }),
   competitors: (scope: ProjectScope) =>
     queryOptions({
