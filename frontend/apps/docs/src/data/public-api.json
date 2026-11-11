@@ -262,6 +262,19 @@
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
           },
+          "page_count": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "handoff": {
             "$ref": "#/components/schemas/ActionHandoff"
           },
@@ -821,6 +834,65 @@
           "editable_page": {
             "default": false,
             "type": "boolean"
+          },
+          "cohort": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "rule_id": {
+                    "type": "string"
+                  },
+                  "rule_label": {
+                    "type": "string"
+                  },
+                  "crawl_id": {
+                    "type": "string"
+                  },
+                  "group_id": {
+                    "type": "string"
+                  },
+                  "page_count": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "pages": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "site_url_id": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["site_url_id", "url"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "crawl_completed_at": {
+                    "type": ["string", "null"]
+                  }
+                },
+                "required": [
+                  "rule_id",
+                  "rule_label",
+                  "crawl_id",
+                  "group_id",
+                  "page_count",
+                  "pages",
+                  "crawl_completed_at"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -840,6 +912,7 @@
           "skill_id",
           "member_count",
           "declarable_member_count",
+          "page_count",
           "handoff",
           "evidence_cleared_at",
           "created_at",
@@ -849,7 +922,8 @@
           "diagnosis",
           "members",
           "declaration",
-          "editable_page"
+          "editable_page",
+          "cohort"
         ],
         "additionalProperties": false
       },
@@ -993,6 +1067,19 @@
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
           },
+          "page_count": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "handoff": {
             "$ref": "#/components/schemas/ActionHandoff"
           },
@@ -1023,6 +1110,7 @@
           "skill_id",
           "member_count",
           "declarable_member_count",
+          "page_count",
           "handoff",
           "evidence_cleared_at",
           "created_at",
@@ -2772,6 +2860,16 @@
                 "type": "null"
               }
             ]
+          },
+          "pages": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IssueFamilyPages"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -2821,6 +2919,39 @@
       },
       "ExpectedCheck": {
         "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "issue_family"
+              },
+              "rule_id": {
+                "type": "string"
+              },
+              "baseline_crawl_id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "site_url_ids": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                }
+              },
+              "page_count": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["kind", "rule_id", "baseline_crawl_id", "site_url_ids", "page_count"],
+            "additionalProperties": false
+          },
           {
             "$ref": "#/components/schemas/KeywordPresenceExpectedCheck"
           },
@@ -3103,6 +3234,46 @@
       "IssueDimension": {
         "type": "string",
         "enum": ["technical", "aeo"]
+      },
+      "IssueFamilyPages": {
+        "type": "object",
+        "properties": {
+          "failing": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "site_url_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": ["site_url_id", "url"],
+              "additionalProperties": false
+            }
+          },
+          "passing": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "not_applicable": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "unread": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["failing", "passing", "not_applicable", "unread"],
+        "additionalProperties": false
       },
       "IssueOccurrence": {
         "type": "object",

@@ -7,6 +7,7 @@ import type { RecordScope } from '../db/workspace-scope.ts';
 import { resolveOwnedPages } from '../demand/page-equivalence.ts';
 import { ApiError } from '../errors.ts';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
+import { siteIssueFamilyEvidenceSchema } from '@citeladder/contracts/opportunity-evidence';
 import { epochMicros, isoformat, parseDatetime, toUtc } from '../http/datetimes.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { record } from '../db/json.ts';
@@ -88,6 +89,13 @@ async function checkedRevision(db: Database, action: ActionRow, revisionId: stri
   if (!revision) throw declarationConflict('The output revision does not belong to this Action');
 }
 
+/** An issue-family finding's cohort pages; none for any other finding or unreadable evidence. */
+function issueFamilyPages(member: OpportunityRow) {
+  if (member.rule_id !== o.SITE_ISSUE_FAMILY.RULE_ID) return [];
+  const parsed = siteIssueFamilyEvidenceSchema.safeParse(member.evidence);
+  return parsed.success ? parsed.data.cohort.pages : [];
+}
+
 async function targets(
   db: Database,
   action: ActionRow,
@@ -104,12 +112,17 @@ async function targets(
     if (!action.target_url) throw declarationConflict('Implementation target is unresolved');
     return { target_site_url_ids: [], target_external_url: action.target_url };
   }
+  const family = action.target_kind === a.TARGET_ISSUE_FAMILY;
   const ids = [
     ...new Set(
       members.flatMap((member) => {
-        const raw = record(member.evidence).site_url_id;
-        const id = typeof raw === 'string' ? parseUuid(raw) : null;
-        return id ? [id] : [];
+        const raw = family
+          ? issueFamilyPages(member).map((page) => page.site_url_id)
+          : [record(member.evidence).site_url_id];
+        return raw.flatMap((value) => {
+          const id = typeof value === 'string' ? parseUuid(value) : null;
+          return id ? [id] : [];
+        });
       }),
     ),
   ];
@@ -137,7 +150,9 @@ async function targets(
       throw declarationConflict('Implementation target is ambiguous or unresolved');
     selected.push(resolved.site_url_id);
   }
-  if (selected.length > o.IMPLEMENTATION_TARGETS_MAX)
+  // An issue family's cohort is server-derived and bounded by `COHORT_PAGES_MAX`.
+  if (family && !selected.length) throw declarationConflict('Implementation target is unresolved');
+  if (!family && selected.length > o.IMPLEMENTATION_TARGETS_MAX)
     throw declarationConflict('Too many implementation targets');
   return { target_site_url_ids: selected, target_external_url: null };
 }

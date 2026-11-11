@@ -10,6 +10,7 @@ import {
   MarkImplementedButton,
   ContextualLinkDeclarationRoute,
 } from '@/components/agent/action-declaration';
+import { AffectedPages } from '@/components/agent/action-affected-pages';
 import { ContentGapWhy, contentGapMembers } from '@/components/agent/content-gap-evidence';
 import { DeclarationStatus } from '@/components/agent/declaration-status';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
@@ -120,6 +121,7 @@ function ActionDetailView({
       ) : null}
       <Overview action={action} />
       <Details action={action} />
+      <AffectedPages action={action} />
       {action.declaration ? (
         <Section title="Implementation" id="action-implementation">
           <DeclarationStatus

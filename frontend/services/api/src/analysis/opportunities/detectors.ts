@@ -14,6 +14,7 @@ import {
 import { summarizeSourcePattern } from './source-patterns.ts';
 import { compareText } from '../../text-order.ts';
 import { targetKey } from './targets.ts';
+import { issueGroupId, ruleTitle } from '../../site-health/reads/rules.ts';
 const p = policy.opportunity.opportunities;
 export const rules = p.OPPORTUNITY_RULES_BY_ID as Record<
   string,
@@ -103,6 +104,49 @@ export const detectBrandAbsentHighValuePrompt = (e: VisibilityEvidence) =>
   visibilityGaps(e, 'brand_absent_high_value_prompt', true);
 export const detectOwnedPageNotCited = (e: VisibilityEvidence) =>
   visibilityGaps(e, 'owned_page_not_cited', false);
+/**
+ * One finding per issue-family rule across every owned page it fails on: its
+ * cohort counts every affected page and lists the first `COHORT_PAGES_MAX` in
+ * URL order, citing their issues.
+ */
+function issueFamilyHits(e: SiteEvidence): DetectorHit[] {
+  if (!rules[p.SITE_ISSUE_FAMILY.RULE_ID]!.enabled) return [];
+  return e.families
+    .toSorted((left, right) => compareText(left.rule_id, right.rule_id))
+    .map((found) => {
+      const label = ruleTitle(found.rule_id);
+      return {
+        rule_id: p.SITE_ISSUE_FAMILY.RULE_ID,
+        target: { kind: 'issue_family', rule_id: found.rule_id, label },
+        evidence: {
+          issue_rule_id: found.rule_id,
+          issue_severity: found.severity,
+          category: found.category,
+          cohort: {
+            rule_id: found.rule_id,
+            rule_label: label,
+            crawl_id: e.crawl_id,
+            group_id: issueGroupId(
+              e.crawl_id,
+              found.rule_id,
+              policy.opportunity.refresh.finding_class_defect,
+            ),
+            page_count: found.page_count,
+            pages: found.pages.map(({ site_url_id, url }) => ({ site_url_id, url })),
+          },
+          coverage: e.coverage,
+          limitations: [...e.limitations],
+        },
+        source_analysis_ids: [],
+        source_issue_ids: sortedUnique(found.pages.flatMap((page) => page.issue_ids)),
+        source_metric_ids: [],
+        value_factor: p.SITE_VALUE_FACTOR,
+        gap_factor: p.SITE_GAP_FACTOR,
+        finding: { severity: found.severity, title: label },
+      };
+    });
+}
+
 export function detectSiteIssueOpportunities(e: SiteEvidence): DetectorHit[] {
   const urls = new Map(e.urls.map((u) => [u.site_url_id, u.normalized_url]));
   const mapping: Record<string, string> = p.SITE_ISSUE_TO_OPPORTUNITY_RULE_ID;
@@ -142,12 +186,15 @@ export function detectSiteIssueOpportunities(e: SiteEvidence): DetectorHit[] {
       },
     });
   }
-  return hits
-    .toSorted(
-      (a, b) =>
-        compareText(a.hit.rule_id, b.hit.rule_id) ||
-        compareText(targetKey(a.hit.target), targetKey(b.hit.target)) ||
-        compareText(a.issueId, b.issueId),
-    )
-    .map(({ hit }) => hit);
+  return [
+    ...hits
+      .toSorted(
+        (a, b) =>
+          compareText(a.hit.rule_id, b.hit.rule_id) ||
+          compareText(targetKey(a.hit.target), targetKey(b.hit.target)) ||
+          compareText(a.issueId, b.issueId),
+      )
+      .map(({ hit }) => hit),
+    ...issueFamilyHits(e),
+  ];
 }

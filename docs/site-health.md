@@ -307,7 +307,9 @@ snippet per issue family per crawl: the first affected page in URL order (then
 issue id) whose facts carry one, with its page URL and exact issue and artifact
 IDs. Only `web.accessibility_form_names` captures one today. No UI read serves
 it; the Agent's `read_site_pages` returns it as `reference_snippet` when given
-that rule.
+that rule, and an [issue-family Action](opportunities.md#issue-families) hands
+it to its chat. Every `web.` defect becomes one such Action across its
+affected pages, not one per page.
 
 Facts distinguish an available extraction from parse failure, unsupported
 media, client rendering and truncation. Declared canonicals are observations,
