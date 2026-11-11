@@ -4,6 +4,7 @@ import type { CommerceProducts } from '../generated/db-schema.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { auditPolicy } from '../audits/config.ts';
 import type { CommerceScope } from './reads.ts';
+import { recordCatalogRevision } from './catalog-revisions.ts';
 
 const unavailable = (message: string) => new ApiError(400, message);
 function productEvidence(product: Selectable<CommerceProducts>) {
@@ -112,4 +113,25 @@ export async function freezeCommerceContext(
     prompt_target_ids: targets.map((target) => target.id),
     ...auditPolicy.commerce_versions,
   };
+}
+
+/**
+ * Every audit scope of a project that qualifies for catalog matching freezes
+ * the current catalog revision, recording a new one when the catalog changed
+ * since the last, so brand answers are matched too (CM1). Projects without the
+ * `commerce` capability or with no catalog and no approved competitor freeze
+ * nothing and pay nothing.
+ */
+export async function freezeCatalogRevision(db: Database, scope: CommerceScope) {
+  const revision = await recordCatalogRevision(db, scope, { kind: 'audit', id: null });
+  return revision
+    ? {
+        commerce_catalog: {
+          revision_id: revision.id,
+          revision_number: revision.revision_number,
+          parser_version: auditPolicy.commerce_versions.parser_version,
+          matcher_version: auditPolicy.commerce_versions.matcher_version,
+        },
+      }
+    : {};
 }

@@ -488,10 +488,7 @@ describe('frozen Commerce shelf projections', () => {
         observations.map((row) => row.id),
       )
       .execute();
-    await db
-      .deleteFrom('commerce_recommendation_observations')
-      .where('audit_id', '=', auditId)
-      .execute();
+    await db.deleteFrom('commerce_match_passes').where('audit_id', '=', auditId).execute();
     const projections = auditProjections(db, null, {});
     await projections.finalize(t.workspaceId, auditId);
     const recovered = await db

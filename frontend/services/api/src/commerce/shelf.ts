@@ -18,6 +18,7 @@ import { createModelGateway, gatewaySettings } from '../models/gateway.ts';
 import { budget, spendBudget } from '../abuse/usage.ts';
 import { meterFor, type Meter } from '../billing/metering.ts';
 import { lockCatalog } from './catalog-store.ts';
+import { loadRevision, type ShelfTargetRef } from './catalog-revisions.ts';
 import { ownedHosts } from './discovery-validation.ts';
 import {
   boundedText,
@@ -32,13 +33,19 @@ import {
   resolvedBatchSchema,
   resolvedCompetitorUrl,
   shelfPolicy,
-  type FrozenShelfTarget,
+  type PreparedRecommendation,
+  type ShelfCatalog,
   type ShelfMatch,
   type ShelfResolver,
 } from './shelf-parsing.ts';
 
 export function frozenShelfIds(frozen: Record<string, unknown>) {
   return strings(frozen.prompt_target_ids).filter((id) => z.uuid().safeParse(id).success);
+}
+/** The catalog revision an audit froze at admission (`configuration.commerce_catalog`), if any. */
+export function frozenRevisionId(configuration: unknown): string | null {
+  const parsed = z.uuid().safeParse(record(record(configuration).commerce_catalog).revision_id);
+  return parsed.success ? parsed.data : null;
 }
 /** A resolver that runs its model call under the answer's workspace meter. */
 export type MeterableShelfResolver = {
@@ -90,9 +97,8 @@ function metered(
   };
 }
 
-type PreparedItem = Awaited<ReturnType<typeof prepareRecommendations>>[number];
 type Candidate = Selectable<CommerceCompetitorCandidates>;
-/** The columns one shelf slot sets; the rest come from the execution's context. */
+/** The columns one shelf slot sets; the rest come from the pass. */
 type SlotFields = Omit<
   Insertable<CommerceRecommendationObservations>,
   | 'id'
@@ -101,25 +107,48 @@ type SlotFields = Omit<
   | 'audit_id'
   | 'task_id'
   | 'artifact_id'
+  | 'pass_id'
   | 'target_kind'
   | 'target_id'
   | 'parser_version'
   | 'matcher_version'
   | 'created_at'
 >;
-type ShelfContext = {
-  task: AuditTask;
-  audit: Selectable<Audits>;
-  target: { target_kind: string; target_id: string };
-  catalog: FrozenShelfTarget;
-  versions: { parser: string; matcher: string; resolver: string };
+type Versions = { parser: string; matcher: string; resolver: string };
+/**
+ * One derivation of one stored answer: the catalog it is matched against and
+ * the target, revision and versions its pass records. A targeted pass keeps
+ * every span, as the AI Shelf always has; an untargeted pass (an answer no
+ * buyer prompt targets) keeps only spans that name a holder, and every
+ * organic carousel card.
+ */
+export type PassContext = {
+  workspaceId: string;
+  projectId: string;
+  auditId: string;
+  taskId: string;
+  target: ShelfTargetRef | null;
+  catalog: ShelfCatalog;
+  revisionId: string | null;
+  mode: 'live' | 'backfill';
+  versions: Versions;
   owned: string[];
   locale: string;
+};
+type Pass = PassContext & { passId: string };
+/** The stored answer a pass reads: raw text, provider response and citations. */
+export type StoredAnswer = {
+  artifactId: string;
+  answerText: string;
+  providerMetadata: unknown;
+  citations: unknown;
+  capturedAt: Date;
 };
 
 async function findOrCreateCandidate(
   db: Database,
-  { task, audit, target }: ShelfContext,
+  { workspaceId, projectId }: PassContext,
+  target: ShelfTargetRef,
   observed: { title: string; brand: string; evidence: Record<string, unknown> },
   url: string,
 ): Promise<Candidate> {
@@ -127,8 +156,8 @@ async function findOrCreateCandidate(
     db
       .selectFrom('commerce_competitor_candidates')
       .selectAll()
-      .where('workspace_id', '=', task.workspace_id)
-      .where('project_id', '=', audit.project_id)
+      .where('workspace_id', '=', workspaceId)
+      .where('project_id', '=', projectId)
       .where('target_kind', '=', target.target_kind)
       .where('target_id', '=', target.target_id)
       .where('canonical_url', '=', url)
@@ -136,15 +165,15 @@ async function findOrCreateCandidate(
   const existing = await find();
   if (existing) return existing;
   // Concurrent audit completions serialize new pending candidates on the owning project.
-  await lockCatalog(db, { workspaceId: task.workspace_id, projectId: audit.project_id });
+  await lockCatalog(db, { workspaceId, projectId });
   const raced = await find();
   if (raced) return raced;
   return db
     .insertInto('commerce_competitor_candidates')
     .values({
       id: randomUUID(),
-      workspace_id: task.workspace_id,
-      project_id: audit.project_id,
+      workspace_id: workspaceId,
+      project_id: projectId,
       target_kind: target.target_kind,
       target_id: target.target_id,
       canonical_url: url,
@@ -160,15 +189,19 @@ async function findOrCreateCandidate(
     .returningAll()
     .executeTakeFirstOrThrow();
 }
-/** A recommendation matching neither catalog product nor approved competitor may be a new AI-observed competitor. */
+/**
+ * A recommendation matching neither catalog product nor approved competitor
+ * may be a new AI-observed competitor of the answer's target; an answer no
+ * buyer prompt targets creates none.
+ */
 async function observedCandidate(
   db: Database,
-  ctx: ShelfContext,
-  { span, resolved }: PreparedItem,
+  ctx: PassContext,
+  { span, resolved }: PreparedRecommendation,
   matched: ShelfMatch,
   evidence: { answerText: string; sourceUrls: string[] },
 ) {
-  if (matched.product || matched.competitor || !resolved) return null;
+  if (matched.product || matched.competitor || !resolved || !ctx.target) return null;
   const url = resolvedCompetitorUrl(resolved.product_url, {
     answer: evidence.answerText,
     citations: evidence.sourceUrls,
@@ -178,6 +211,7 @@ async function observedCandidate(
   return findOrCreateCandidate(
     db,
     ctx,
+    ctx.target,
     {
       title: resolved.title,
       brand: resolved.brand,
@@ -229,26 +263,22 @@ function holderFields(
     match_confidence: matched.confidence,
   };
 }
-async function insertObservation(
-  db: Database,
-  { task, audit, target, versions }: ShelfContext,
-  artifactId: string,
-  slot: SlotFields,
-) {
+async function insertObservation(db: Database, pass: Pass, artifactId: string, slot: SlotFields) {
   const id = randomUUID();
   await db
     .insertInto('commerce_recommendation_observations')
     .values({
       id,
-      workspace_id: task.workspace_id,
-      project_id: audit.project_id,
-      audit_id: audit.id,
-      task_id: task.id,
+      workspace_id: pass.workspaceId,
+      project_id: pass.projectId,
+      audit_id: pass.auditId,
+      task_id: pass.taskId,
       artifact_id: artifactId,
-      target_kind: target.target_kind,
-      target_id: target.target_id,
-      parser_version: versions.parser,
-      matcher_version: versions.matcher,
+      pass_id: pass.passId,
+      target_kind: pass.target?.target_kind ?? null,
+      target_id: pass.target?.target_id ?? null,
+      parser_version: pass.versions.parser,
+      matcher_version: pass.versions.matcher,
       created_at: new Date(),
       ...slot,
     })
@@ -257,8 +287,8 @@ async function insertObservation(
 }
 async function recordObservation(
   db: Database,
-  ctx: ShelfContext,
-  { span, resolved, model, outcome }: PreparedItem,
+  pass: Pass,
+  { span, resolved, model, outcome }: PreparedRecommendation,
   evidence: {
     matched: ShelfMatch;
     candidate: Candidate | null;
@@ -270,13 +300,13 @@ async function recordObservation(
   const { matched, candidate, artifactId, answerText, citations } = evidence;
   // Price and seller come from the answer's own text; a resolver-supplied
   // merchant link counts only when the answer carries it.
-  const price = observedPrice(span.text, ctx.locale);
+  const price = observedPrice(span.text, pass.locale);
   const merchantUrl = resolved?.merchant_url.trim() ?? '';
   const merchant = observedMerchant(
     span.text,
     merchantUrl && answerText.includes(merchantUrl) ? merchantUrl : undefined,
   );
-  const id = await insertObservation(db, ctx, artifactId, {
+  const id = await insertObservation(db, pass, artifactId, {
     ...holderFields(matched, candidate, {
       title: resolved?.title ?? span.text,
       brand: resolved?.brand ?? '',
@@ -289,7 +319,7 @@ async function recordObservation(
     model_version: model,
     resolver_outcome: outcome,
     // The resolver's prompt template, recorded whenever its model was called.
-    resolver_template_version: model ? ctx.versions.resolver : null,
+    resolver_template_version: model ? pass.versions.resolver : null,
     rank: span.rank,
     order_observable: span.orderObservable,
     surface_kind: resolved?.surface_kind ?? 'recommendation',
@@ -309,26 +339,24 @@ async function recordObservation(
 }
 
 type CardHolder = { matched: ShelfMatch; candidate: Candidate | null };
-/** The stored answer a carousel card was read from. */
-type CardSource = { artifactId: string; capturedAt: Date };
 /**
  * The holder an earlier card with the same ChatGPT product key was matched
- * to, when that holder is on this target's shelf: a frozen product or
- * approved competitor, or this target's AI-observed candidate. Only matches
- * recorded before the answer was captured count, so re-deriving an older
- * answer never inherits a match a later audit made.
+ * to, when that holder is on this pass's shelf: a catalog product or approved
+ * competitor, or this target's AI-observed candidate. Only matches recorded
+ * before the answer was captured count, so re-deriving an older answer never
+ * inherits a match a later audit made.
  */
 async function rememberedHolder(
   db: Database,
-  { task, audit, target, catalog }: ShelfContext,
+  { workspaceId, projectId, target, catalog }: PassContext,
   externalProductId: string,
   capturedAt: Date,
 ): Promise<CardHolder | null> {
   const earlier = await db
     .selectFrom('commerce_recommendation_observations')
     .select(['product_id', 'competitor_candidate_id'])
-    .where('workspace_id', '=', task.workspace_id)
-    .where('project_id', '=', audit.project_id)
+    .where('workspace_id', '=', workspaceId)
+    .where('project_id', '=', projectId)
     .where('observed_external_product_id', '=', externalProductId)
     .where('created_at', '<', capturedAt)
     .where((eb) =>
@@ -344,12 +372,12 @@ async function rememberedHolder(
     (row) => row.id === earlier.competitor_candidate_id,
   );
   if (competitor) return { matched: { product: null, competitor, confidence: 1 }, candidate: null };
-  if (!earlier.competitor_candidate_id) return null;
+  if (!earlier.competitor_candidate_id || !target) return null;
   const candidate = await db
     .selectFrom('commerce_competitor_candidates')
     .selectAll()
-    .where('workspace_id', '=', task.workspace_id)
-    .where('project_id', '=', audit.project_id)
+    .where('workspace_id', '=', workspaceId)
+    .where('project_id', '=', projectId)
     .where('target_kind', '=', target.target_kind)
     .where('target_id', '=', target.target_id)
     .where('id', '=', earlier.competitor_candidate_id)
@@ -360,11 +388,11 @@ async function rememberedHolder(
  * Card matching order: the card's URL, then its ChatGPT product key as an
  * earlier card was matched, then the shelf's name rules over the title. An
  * unmatched card linking a page off the business's hosts may create an
- * AI-observed competitor; the card itself is that evidence.
+ * AI-observed competitor of the answer's target; the card itself is that evidence.
  */
 async function cardHolder(
   db: Database,
-  ctx: ShelfContext,
+  ctx: PassContext,
   card: ShoppingResult,
   capturedAt: Date,
 ): Promise<CardHolder> {
@@ -376,11 +404,12 @@ async function cardHolder(
   if (remembered) return remembered;
   const byName = matchRecommendation(card.title, ctx.catalog);
   if (byName.product || byName.competitor) return { matched: byName, candidate: null };
-  const url = card.url ? competitorPageUrl(card.url, ctx.owned) : null;
-  if (!url) return { matched: NO_MATCH, candidate: null };
+  const url = card.url && ctx.target ? competitorPageUrl(card.url, ctx.owned) : null;
+  if (!url || !ctx.target) return { matched: NO_MATCH, candidate: null };
   const candidate = await findOrCreateCandidate(
     db,
     ctx,
+    ctx.target,
     {
       title: card.title,
       brand: '',
@@ -400,15 +429,10 @@ async function cardHolder(
 const cardPrice = (price: number | null) =>
   price !== null && price < 1e12 ? price.toFixed(2) : null;
 /** One ranked `shopping_result` slot per organic carousel card; never sent to the resolver. */
-async function recordCard(
-  db: Database,
-  ctx: ShelfContext,
-  card: ShoppingResult,
-  { artifactId, capturedAt }: CardSource,
-) {
-  const { matched, candidate } = await cardHolder(db, ctx, card, capturedAt);
+async function recordCard(db: Database, pass: Pass, card: ShoppingResult, answer: StoredAnswer) {
+  const { matched, candidate } = await cardHolder(db, pass, card, answer.capturedAt);
   const bounded = (value: string | null) => (value === null ? null : boundedText(value, 255));
-  await insertObservation(db, ctx, artifactId, {
+  await insertObservation(db, pass, answer.artifactId, {
     ...holderFields(matched, candidate, { title: card.title, brand: '' }),
     observed_title: boundedText(card.title, 512),
     observed_price: cardPrice(card.price),
@@ -427,6 +451,204 @@ async function recordCard(
     surface_kind: 'shopping_result',
   });
 }
+
+/**
+ * Record one pass over a stored answer: the pass row, then its observations.
+ * The pass is unique on answer, revision and versions, so a repeated
+ * derivation records nothing and returns false.
+ */
+export async function recordPass(
+  trx: Database,
+  ctx: PassContext,
+  answer: StoredAnswer,
+  prepared: PreparedRecommendation[],
+): Promise<boolean> {
+  const inserted = await trx
+    .insertInto('commerce_match_passes')
+    .values({
+      id: randomUUID(),
+      workspace_id: ctx.workspaceId,
+      project_id: ctx.projectId,
+      audit_id: ctx.auditId,
+      task_id: ctx.taskId,
+      artifact_id: answer.artifactId,
+      catalog_revision_id: ctx.revisionId,
+      target_kind: ctx.target?.target_kind ?? null,
+      target_id: ctx.target?.target_id ?? null,
+      parser_version: ctx.versions.parser,
+      matcher_version: ctx.versions.matcher,
+      mode: ctx.mode,
+      created_at: new Date(),
+    })
+    .onConflict((conflict) =>
+      ctx.revisionId === null
+        ? conflict
+            .columns(['artifact_id', 'parser_version', 'matcher_version'])
+            .where('catalog_revision_id', 'is', null)
+            .doNothing()
+        : conflict
+            .columns(['artifact_id', 'catalog_revision_id', 'parser_version', 'matcher_version'])
+            .where('catalog_revision_id', 'is not', null)
+            .doNothing(),
+    )
+    .returning('id')
+    .executeTakeFirst();
+  if (!inserted) return false;
+  const pass: Pass = { ...ctx, passId: inserted.id };
+  const citations = await trx
+    .selectFrom('citations')
+    .select(['id', 'url'])
+    .where('workspace_id', '=', ctx.workspaceId)
+    .where('audit_id', '=', ctx.auditId)
+    .where('artifact_id', '=', answer.artifactId)
+    .execute();
+  const sourceUrls = Array.isArray(answer.citations)
+    ? answer.citations
+        .map((value) => record(value).url)
+        .filter((value): value is string => typeof value === 'string')
+    : [];
+  for (const item of prepared) {
+    const { span, resolved } = item;
+    const identity = resolved
+      ? `${resolved.title} ${resolved.brand} ${resolved.product_url}`
+      : span.text;
+    const matched = matchRecommendation(identity, ctx.catalog);
+    const candidate =
+      await /* NOSONAR -- One transaction: statements run in order. */ observedCandidate(
+        trx,
+        ctx,
+        item,
+        matched,
+        { answerText: answer.answerText, sourceUrls },
+      );
+    // An untargeted answer keeps only the spans that name a holder.
+    if (!ctx.target && !matched.product && !matched.competitor) continue;
+    await /* NOSONAR -- One transaction: statements run in order. */ recordObservation(
+      trx,
+      pass,
+      item,
+      {
+        matched,
+        candidate,
+        artifactId: answer.artifactId,
+        answerText: answer.answerText,
+        citations,
+      },
+    );
+  }
+  // ChatGPT carousel cards come from the stored provider response, beside the text spans.
+  const cards = parseShoppingResults(record(answer.providerMetadata).raw_response);
+  for (const card of cards)
+    await /* NOSONAR -- One transaction: statements run in order. */ recordCard(
+      trx,
+      pass,
+      card,
+      answer,
+    );
+  return true;
+}
+
+const targetRefSchema = z.object({
+  target_kind: z.enum(['product', 'category']),
+  target_id: z.uuid(),
+});
+/** The buyer-prompt target an audit froze for one execution's prompt, if any. */
+export async function promptTarget(
+  db: Database,
+  audit: Selectable<Audits>,
+  promptSnapshotId: string,
+): Promise<ShelfTargetRef | null> {
+  if (audit.audit_scope !== 'commerce') return null;
+  const ids = frozenShelfIds(record(record(audit.configuration).commerce_measurement));
+  if (!ids.length) return null;
+  const target = await db
+    .selectFrom('commerce_prompt_targets as c')
+    .innerJoin('audit_prompt_snapshots as s', 's.prompt_id', 'c.prompt_id')
+    .select(['c.target_kind', 'c.target_id'])
+    .where('c.workspace_id', '=', audit.workspace_id)
+    .where('c.project_id', '=', audit.project_id)
+    .where('c.id', 'in', ids)
+    .where('s.audit_id', '=', audit.id)
+    .where('s.id', '=', promptSnapshotId)
+    .executeTakeFirst();
+  const parsed = targetRefSchema.safeParse(target);
+  return parsed.success ? parsed.data : null;
+}
+/** The answer's locale, for currency markers such as `$`. */
+export function auditLocale(audit: Selectable<Audits>) {
+  const config = record(audit.configuration);
+  return [config.language_code, config.country_code]
+    .filter((value) => typeof value === 'string' && value)
+    .join('-');
+}
+const frozenString = (frozen: Record<string, unknown>, key: string, fallback: string) => {
+  const value = frozen[key];
+  return typeof value === 'string' ? value : fallback;
+};
+/** The parser, matcher and resolver versions an audit froze; the policy's for keys it lacks. */
+export function frozenVersions(frozen: Record<string, unknown>): Versions {
+  const current = auditPolicy.commerce_versions;
+  return {
+    parser: frozenString(frozen, 'parser_version', current.parser_version),
+    matcher: frozenString(frozen, 'matcher_version', current.matcher_version),
+    resolver: frozenString(frozen, 'resolver_template_version', current.resolver_template_version),
+  };
+}
+
+/**
+ * The live pass context of one execution. A buyer prompt's answer is matched
+ * against the target evidence the audit froze; any other answer of a project
+ * with a frozen catalog revision against that whole revision. Null when the
+ * answer has nothing to match.
+ */
+async function liveContext(
+  db: Database,
+  task: AuditTask,
+  audit: Selectable<Audits>,
+): Promise<PassContext | null> {
+  const config = record(audit.configuration);
+  const scope = { workspaceId: task.workspace_id, projectId: audit.project_id };
+  const revisionId = frozenRevisionId(config);
+  const base = {
+    workspaceId: task.workspace_id,
+    projectId: audit.project_id,
+    auditId: audit.id,
+    taskId: task.id,
+    revisionId,
+    mode: 'live' as const,
+    locale: auditLocale(audit),
+  };
+  const target = await promptTarget(db, audit, task.prompt_snapshot_id);
+  if (target) {
+    const frozen = record(config.commerce_measurement);
+    const values = Array.isArray(frozen.targets) ? frozen.targets : [];
+    const parsed = frozenTargetSchema.safeParse(
+      values.find((value) => {
+        const row = record(value);
+        return row.kind === target.target_kind && row.id === target.target_id;
+      }),
+    );
+    if (!parsed.success) return null;
+    return {
+      ...base,
+      target,
+      catalog: parsed.data,
+      versions: frozenVersions(frozen),
+      owned: await ownedHosts(db, scope),
+    };
+  }
+  if (!revisionId) return null;
+  const revision = await loadRevision(db, scope, revisionId);
+  if (!revision) return null;
+  return {
+    ...base,
+    target: null,
+    catalog: revision.identity,
+    versions: frozenVersions(record(config.commerce_catalog)),
+    owned: await ownedHosts(db, scope),
+  };
+}
+
 /** Read frozen context, then finish optional model I/O before the caller opens its persistence transaction. */
 export async function prepareShelfExecution(
   db: Database,
@@ -440,58 +662,22 @@ export async function prepareShelfExecution(
     .where('workspace_id', '=', task.workspace_id)
     .where('id', '=', task.audit_id)
     .executeTakeFirstOrThrow();
-  if (audit.audit_scope !== 'commerce') return deriveExecution;
-  const config = record(audit.configuration),
-    frozen = record(config.commerce_measurement);
-  const ids = frozenShelfIds(frozen);
-  if (!ids.length) return deriveExecution;
-  const target = await db
-    .selectFrom('commerce_prompt_targets as c')
-    .innerJoin('audit_prompt_snapshots as s', 's.prompt_id', 'c.prompt_id')
-    .selectAll('c')
-    .where('c.workspace_id', '=', task.workspace_id)
-    .where('c.project_id', '=', audit.project_id)
-    .where('c.id', 'in', ids)
-    .where('s.audit_id', '=', audit.id)
-    .where('s.id', '=', task.prompt_snapshot_id)
-    .executeTakeFirst();
-  if (!target) return deriveExecution;
-  const values = Array.isArray(frozen.targets) ? frozen.targets : [];
-  const parsed = frozenTargetSchema.safeParse(
-    values.find((value) => {
-      const row = record(value);
-      return row.kind === target.target_kind && row.id === target.target_id;
-    }),
-  );
-  if (!parsed.success) return deriveExecution;
-  const catalog = parsed.data;
+  const ctx = await liveContext(db, task, audit);
+  if (!ctx) return deriveExecution;
+  // Only a buyer prompt's answer calls the resolver: an untargeted pass keeps
+  // only holder matches and creates no AI-observed competitor, so a model call
+  // could add nothing the deterministic matcher misses.
   const prepared = await prepareRecommendations(
     result.answer_text,
-    catalog,
-    metered(db, task.workspace_id, resolver === undefined ? configuredShelfResolver() : resolver),
+    ctx.catalog,
+    ctx.target
+      ? metered(
+          db,
+          task.workspace_id,
+          resolver === undefined ? configuredShelfResolver() : resolver,
+        )
+      : undefined,
   );
-  const owned = await ownedHosts(db, {
-    workspaceId: task.workspace_id,
-    projectId: audit.project_id,
-  });
-  const versions = {
-    parser:
-      typeof frozen.parser_version === 'string'
-        ? frozen.parser_version
-        : auditPolicy.commerce_versions.parser_version,
-    matcher:
-      typeof frozen.matcher_version === 'string'
-        ? frozen.matcher_version
-        : auditPolicy.commerce_versions.matcher_version,
-    resolver:
-      typeof frozen.resolver_template_version === 'string'
-        ? frozen.resolver_template_version
-        : auditPolicy.commerce_versions.resolver_template_version,
-  };
-  const locale = [config.language_code, config.country_code]
-    .filter((value) => typeof value === 'string' && value)
-    .join('-');
-  const ctx: ShelfContext = { task, audit, target, catalog, versions, owned, locale };
   return async (trx, current, lockedAudit, artifactId) => {
     await deriveExecution(trx, current, lockedAudit, artifactId);
     if (
@@ -501,13 +687,14 @@ export async function prepareShelfExecution(
     )
       throw new Error('Commerce execution scope mismatch');
     const existing = await trx
-      .selectFrom('commerce_recommendation_observations')
-      .select(['id', 'artifact_id'])
+      .selectFrom('commerce_match_passes')
+      .select('artifact_id')
       .where('workspace_id', '=', task.workspace_id)
       .where('audit_id', '=', audit.id)
       .where('task_id', '=', task.id)
-      .where('parser_version', '=', versions.parser)
-      .where('matcher_version', '=', versions.matcher)
+      .where('catalog_revision_id', ctx.revisionId === null ? 'is' : '=', ctx.revisionId)
+      .where('parser_version', '=', ctx.versions.parser)
+      .where('matcher_version', '=', ctx.versions.matcher)
       .executeTakeFirst();
     if (existing) {
       if (existing.artifact_id !== artifactId) throw new Error('Commerce artifact mismatch');
@@ -522,54 +709,17 @@ export async function prepareShelfExecution(
       .executeTakeFirstOrThrow();
     if (artifact.answer_text !== result.answer_text)
       throw new Error('Prepared Commerce evidence mismatch');
-    const citations = await trx
-      .selectFrom('citations')
-      .select(['id', 'url'])
-      .where('workspace_id', '=', task.workspace_id)
-      .where('audit_id', '=', audit.id)
-      .where('artifact_id', '=', artifactId)
-      .execute();
-    const sourceUrls = Array.isArray(artifact.citations)
-      ? artifact.citations
-          .map((value) => record(value).url)
-          .filter((value): value is string => typeof value === 'string')
-      : [];
-    for (const item of prepared) {
-      const { span, resolved } = item;
-      const identity = resolved
-        ? `${resolved.title} ${resolved.brand} ${resolved.product_url}`
-        : span.text;
-      const matched = matchRecommendation(identity, catalog);
-      const candidate =
-        await /* NOSONAR -- One transaction: statements run in order. */ observedCandidate(
-          trx,
-          ctx,
-          item,
-          matched,
-          {
-            answerText: artifact.answer_text,
-            sourceUrls,
-          },
-        );
-      await /* NOSONAR -- One transaction: statements run in order. */ recordObservation(
-        trx,
-        ctx,
-        item,
-        {
-          matched,
-          candidate,
-          artifactId,
-          answerText: artifact.answer_text,
-          citations,
-        },
-      );
-    }
-    // ChatGPT carousel cards come from the stored provider response, beside the text spans.
-    const cards = parseShoppingResults(record(artifact.provider_metadata).raw_response);
-    for (const card of cards)
-      await /* NOSONAR -- One transaction: statements run in order. */ recordCard(trx, ctx, card, {
+    await recordPass(
+      trx,
+      ctx,
+      {
         artifactId,
+        answerText: artifact.answer_text,
+        providerMetadata: artifact.provider_metadata,
+        citations: artifact.citations,
         capturedAt: artifact.created_at,
-      });
+      },
+      prepared,
+    );
   };
 }

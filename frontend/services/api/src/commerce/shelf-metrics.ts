@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Selectable } from 'kysely';
+import { sql, type Selectable } from 'kysely';
 import type { Database } from '../db/database.ts';
 import type { Audits, CommerceRecommendationObservations } from '../generated/db-schema.ts';
 import { policy } from '../config.ts';
@@ -113,6 +113,33 @@ export function shelfMetrics(taskIds: string[], observations: Observation[]) {
   };
 }
 
+/**
+ * The latest match pass of each answer of one audit: the pass of the highest
+ * catalog revision, then the most recent. Older passes stay as history and
+ * are never read for current numbers.
+ */
+export function latestPasses(
+  db: Database,
+  audit: Pick<Selectable<Audits>, 'workspace_id' | 'project_id' | 'id'>,
+) {
+  return db
+    .selectFrom('commerce_match_passes as p')
+    .leftJoin('commerce_catalog_revisions as r', (join) =>
+      join
+        .onRef('r.id', '=', 'p.catalog_revision_id')
+        .onRef('r.workspace_id', '=', 'p.workspace_id'),
+    )
+    .distinctOn('p.artifact_id')
+    .select('p.id')
+    .where('p.workspace_id', '=', audit.workspace_id)
+    .where('p.project_id', '=', audit.project_id)
+    .where('p.audit_id', '=', audit.id)
+    .orderBy('p.artifact_id')
+    .orderBy(sql`r.revision_number desc nulls last`)
+    .orderBy('p.created_at', 'desc')
+    .orderBy('p.id', 'desc');
+}
+
 /** Caller holds the workspace-scoped audit lock. Historical snapshots never read the current catalog. */
 export async function finalizeCommerceShelf(db: Database, audit: Selectable<Audits>) {
   if (audit.audit_scope !== 'commerce') return;
@@ -174,8 +201,13 @@ export async function finalizeCommerceShelf(db: Database, audit: Selectable<Audi
       .where('audit_id', '=', audit.id)
       .where('target_kind', '=', target.target_kind)
       .where('target_id', '=', target.target_id)
-      .where('parser_version', '=', versions.parser_version!)
-      .where('matcher_version', '=', versions.matcher_version!)
+      .where(
+        'pass_id',
+        'in',
+        latestPasses(db, audit)
+          .where('p.parser_version', '=', versions.parser_version!)
+          .where('p.matcher_version', '=', versions.matcher_version!),
+      )
       .orderBy('created_at')
       .orderBy('id')
       .execute();

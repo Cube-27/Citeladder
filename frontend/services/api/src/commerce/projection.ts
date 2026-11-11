@@ -17,6 +17,7 @@ import {
   newProduct,
 } from './catalog-store.ts';
 import type { CommerceScope } from './reads.ts';
+import { requestProjectionRevision } from './catalog-revisions.ts';
 import {
   categoryKey,
   categoryTitle,
@@ -329,7 +330,9 @@ export const projectCatalog: Executor = async (task, { db, checkCancelled }) => 
       source.page_kind === 'category'
         ? await projectCategory(trx, scope, source, facts, url)
         : await projectProduct(trx, scope, source, facts, url);
-    if (projected) await linkShelves(trx, scope, source.crawl_id, projected);
+    if (!projected) return;
+    await linkShelves(trx, scope, source.crawl_id, projected);
+    await requestProjectionRevision(trx, scope, source.crawl_id);
   });
 };
 

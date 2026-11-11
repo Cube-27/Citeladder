@@ -35,6 +35,17 @@ beforeEach(async () => {
     filename: 'test.csv',
     content_type: 'text/csv',
   });
+  // The import's answer-matching backfill runs first, so these workers see only discovery work.
+  const backfill = await db
+    .selectFrom('analytics_tasks')
+    .select('id')
+    .where('workspace_id', '=', t.workspaceId)
+    .where('task_kind', '=', 'commerce_answer_matching')
+    .execute();
+  await new AnalyticsWorker(db, settings, {
+    owner: 'discovery-test-setup',
+    taskScope: { workspaceId: t.workspaceId, taskIds: backfill.map((row) => row.id) },
+  }).runOnce();
   const product = await db
     .selectFrom('commerce_products')
     .select('id')
