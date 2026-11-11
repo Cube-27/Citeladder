@@ -390,8 +390,31 @@ export const keywordPresenceExpectedCheckSchema = responseObject({
   location_code: z.number().int().nullable(),
   language_code: z.string(),
 });
+/**
+ * An answer to one of the frozen prompts cites an owned URL, in a run after
+ * go-live. `page`: the improved page's URL. `new_page`: any owned URL outside
+ * the ones already cited for those prompts from `baseline_from` to go-live.
+ * Frozen at declaration, so a later reclustering or rematch never changes it.
+ * It says whether a URL was cited, never which version of the page was read.
+ */
+const ownedUrlCitedExpectedCheckSchema = responseObject({
+  kind: z.literal('owned_url_cited'),
+  prompt_ids: z.array(uuid()).min(1),
+  // The content-angle lineage that raised the gap; null for Analyze a page.
+  lineage_id: z.string().nullable(),
+  expectation: z.discriminatedUnion('target', [
+    responseObject({ target: z.literal('page'), url: z.string().min(1), site_url_id: uuid() }),
+    responseObject({
+      target: z.literal('new_page'),
+      baseline_from: z.string(),
+      baseline_audit_ids: z.array(uuid()),
+      baseline_urls: z.array(z.string()),
+    }),
+  ]),
+});
 export const expectedCheckSchema = z.discriminatedUnion('kind', [
   keywordPresenceExpectedCheckSchema,
+  ownedUrlCitedExpectedCheckSchema,
   responseObject({
     kind: z.literal('contextual_link'),
     recommendation_id: uuid(),

@@ -338,8 +338,9 @@ while building, with no product effect:
    `content_optimize` skill, the `suggest_edits` built-in, the `page` kind, the
    CodeMirror editor with Apply / Dismiss / Revert / Apply all, needs-input via
    chat, export.
-3. **Measurement.** The `owned_url_cited` check kind and Mark implemented from
-   the editor.
+3. **Measurement** (done; see
+   [Content optimization](../content-optimization.md#what-ships-phase-3-measurement)).
+   The `owned_url_cited` check kind and Mark implemented from the editor.
 4. **Next.** The rules engine's deterministic linters (L1–L3), reading cited
    pages, any-URL optimization as a paid add-on, rules for new Agent drafts
    (CO18), and CMS publishing.

@@ -2777,6 +2777,81 @@
             "properties": {
               "kind": {
                 "type": "string",
+                "const": "owned_url_cited"
+              },
+              "prompt_ids": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                }
+              },
+              "lineage_id": {
+                "type": ["string", "null"]
+              },
+              "expectation": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "target": {
+                        "type": "string",
+                        "const": "page"
+                      },
+                      "url": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "site_url_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      }
+                    },
+                    "required": ["target", "url", "site_url_id"],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "target": {
+                        "type": "string",
+                        "const": "new_page"
+                      },
+                      "baseline_from": {
+                        "type": "string"
+                      },
+                      "baseline_audit_ids": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        }
+                      },
+                      "baseline_urls": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": ["target", "baseline_from", "baseline_audit_ids", "baseline_urls"],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "required": ["kind", "prompt_ids", "lineage_id", "expectation"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
                 "const": "contextual_link"
               },
               "recommendation_id": {

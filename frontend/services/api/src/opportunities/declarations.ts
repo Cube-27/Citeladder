@@ -279,12 +279,13 @@ export function declareAction(
       members,
       {
         auditId: snapshot.audit_id,
-        declaredDay: declaredAt.slice(0, 10),
+        declaredAt,
+        outputRevisionId: input.output_revision_id,
       },
       input.recommendation_ids ?? [],
     );
     // Every finding is declared; contextual links only as far as selected.
-    const linked = new Set(checks.map(({ member }) => member.id));
+    const linked = new Set(checks.flatMap(({ member }) => (member ? [member.id] : [])));
     const declaredMembers = members.filter(
       (member) => ruleCheckKind(member.rule_id) !== 'contextual_link' || linked.has(member.id),
     );

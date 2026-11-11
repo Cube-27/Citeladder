@@ -237,11 +237,31 @@ chosen prompts it still holds, and how many no longer resolve). An Action has
 one `target_prompt_id` and a diagnosis owned by its evidence, so neither holds
 a per-analysis prompt list.
 
+## What ships (phase 3: measurement)
+
+Both content-gap rules freeze the declaration check `owned_url_cited`
+([Opportunities](opportunities.md#explicit-implementation-declaration)), and
+Mark implemented in the page workspace declares the revision on screen.
+
+- **Improve page.** The declaration freezes the page's canonical URL and the
+  angle's prompts (those the library held at the refresh). It is met when a
+  later visibility run that asked one of those prompts cites that URL.
+- **New page.** It freezes the prompts and the owned URLs already cited for
+  them from the gap's window start to go-live. It is met when a later run
+  cites an owned URL outside that set for those prompts. The user names no
+  URL, and an angle matched later plays no part.
+- **Analyze a page.** A shipped revision from an Analyze a page chat also
+  freezes a page check on the page and prompts the chat was started for.
+
+A frozen check never follows a later reclustering, rematch or prompt edit. A
+run that asked none of the prompts reads as not measurable, never as not met.
+The check says only whether a URL was cited, never which version of the page
+the engine read; the Action detail says so beside it, and the causality notice
+stays. The declaration dialog names the page (or "a new page of yours") each
+gap will be measured by.
+
 ## Not yet
 
 - Optimizing any URL (a paid add-on).
 - The [content rules engine](plans/content-rules-engine.md) and its rule
   findings (CO13).
-- The `owned_url_cited` declaration check: both content-gap rules have no
-  automatic check yet, so a declaration on them measures nothing beyond the
-  page's other findings.

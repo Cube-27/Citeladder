@@ -15,7 +15,9 @@ import { textRole } from '@/components/ui/typography';
 import {
   CHECK_STATE_LABEL,
   checkKindLabel,
+  checkKindNote,
   checkReasonLabel,
+  checkSubject,
   IMPLEMENTATION_STATE_LABEL,
   measurementLegLabel,
 } from '@/lib/agent/vocabulary';
@@ -57,7 +59,7 @@ export function DeclarationStatus({
   useEffect(() => {
     if (focusOnMount) heading.current?.focus();
   }, [focusOnMount]);
-  const hasVisibility = declaration.checks.some((check) => check.kind === 'visibility_metric');
+  const hasVisibility = declaration.checks.some((check) => check.leg === 'next_visibility_run');
   // A crawl is worth starting while any page check still lacks a met reading.
   const crawlOpen = declaration.checks.some(
     (check) => check.leg === 'next_crawl' && check.state !== 'met',
@@ -117,6 +119,8 @@ const CHECK_TONE = { met: 'success', unmet: 'danger', unavailable: 'warning' } a
 function CheckRow({ check }: Readonly<{ check: ActionDeclaration['checks'][number] }>) {
   const tone = check.state === 'waiting' ? null : CHECK_TONE[check.state];
   const reason = checkReasonLabel(check.reason);
+  const subject = checkSubject(check);
+  const note = checkKindNote(check.kind);
   return (
     <Stack as="li" gap="tight">
       <Inline as="span" className="flex-wrap">
@@ -129,7 +133,8 @@ function CheckRow({ check }: Readonly<{ check: ActionDeclaration['checks'][numbe
           <Badge>{CHECK_STATE_LABEL[check.state]}</Badge>
         )}
       </Inline>
-      {check.subject ? <CheckSubject subject={check.subject} promptId={check.prompt_id} /> : null}
+      {subject ? <CheckSubject subject={subject} promptId={check.prompt_id} /> : null}
+      {note ? <span className={textRole('caption')}>{note}</span> : null}
       {reason || check.observed_at ? (
         <span className={textRole('caption')}>
           {reason}
