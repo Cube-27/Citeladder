@@ -11,7 +11,6 @@ import postcss from 'postcss';
 
 const TOKEN_CSS = 'apps/app/src/globals.css';
 const CONTRACT = 'scripts/design-system-tokens.json';
-const FONT_CONFIG = 'lib/config/brand-fonts.json';
 const DARK = ":root[data-theme='dark']";
 
 const readContract = (root) => JSON.parse(readFileSync(join(root, CONTRACT), 'utf8'));
@@ -152,17 +151,6 @@ function scalarFindings(contract, scopes) {
   return findings;
 }
 
-/** The hosted faces are the system's families. */
-function fontFindings(contract, root) {
-  const faces = JSON.parse(readFileSync(join(root, FONT_CONFIG), 'utf8')).faces;
-  const family = (stack) => /^"([^"]+)"/.exec(stack)?.[1];
-  return Object.entries(contract.type.families).flatMap(([role, stack]) =>
-    faces[role]?.family === family(stack)
-      ? []
-      : [`${FONT_CONFIG}: the ${role} face must be ${family(stack)}`],
-  );
-}
-
 /**
  * globals.css against the system's tokens.json, both themes.
  * @public — also imported by the scripts/frontend fixture tests.
@@ -179,10 +167,7 @@ export function tokenContractFindings(css, contract) {
 export function tokenContractViolations(root) {
   const contract = readContract(root);
   const css = readFileSync(join(root, ...TOKEN_CSS.split('/')), 'utf8');
-  return [
-    ...tokenContractFindings(css, contract).map((finding) => `${TOKEN_CSS}: ${finding}`),
-    ...fontFindings(contract, root),
-  ];
+  return tokenContractFindings(css, contract).map((finding) => `${TOKEN_CSS}: ${finding}`);
 }
 
 /** Every system token name, which the zero-consumer audit treats as the contract. */

@@ -52,7 +52,7 @@ export function modeSegmentClasses(selected: boolean) {
 }
 
 /**
- * The count a tab, segment or filter chip carries after its label: Inter at
+ * The count a tab, segment or filter chip carries after its label: the sans face at
  * the control's own size, `ink-muted`, in brackets ("All signals (107)",
  * decision D16), never mono. Its text leads with a space, so an accessible
  * name reads "All signals (107)".
