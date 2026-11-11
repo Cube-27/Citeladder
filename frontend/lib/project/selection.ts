@@ -174,9 +174,7 @@ export function pickActiveProject(
   workspaceId: string | null,
 ): Project | null {
   return (
-    views.find(
-      (view) => view && view.id === activeProjectId && view.workspace_id === workspaceId,
-    ) ?? null
+    views.find((view) => view?.id === activeProjectId && view.workspace_id === workspaceId) ?? null
   );
 }
 
