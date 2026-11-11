@@ -1,6 +1,6 @@
 {
   "repository": "Cube-27/cube27-fonts",
-  "revision": "55dd958223801ab12a0977fa8bc712353bf809e9",
+  "revision": "302689afa47ff9e7431d13f444427a91b4efb018",
   "faces": {
     "display": {
       "family": "Cal Sans",
@@ -15,15 +15,15 @@
       }
     },
     "sans": {
-      "family": "Satoshi",
-      "file": "Satoshi-Variable.woff2",
+      "family": "Spline Sans",
+      "file": "SplineSans-Variable.woff2",
       "preload": ["app", "public"],
       "weights": "400 600",
       "fallback": {
-        "sizeAdjust": "96.34%",
-        "ascentOverride": "104.84%",
-        "descentOverride": "24.91%",
-        "lineGapOverride": "10.38%"
+        "sizeAdjust": "105.11%",
+        "ascentOverride": "91.67%",
+        "descentOverride": "22.5%",
+        "lineGapOverride": "0%"
       }
     },
     "mono": {
