@@ -78,7 +78,12 @@ export function TargetPrompts({
         actions={
           <>
             {target.kind === 'category' ? (
-              <Button variant="secondary" disabled={busy} onClick={() => setMatrixOpen(true)}>
+              // The sheet reads loaded prompts only; the list below owns loading and error states.
+              <Button
+                variant="secondary"
+                disabled={busy || !query.data}
+                onClick={() => setMatrixOpen(true)}
+              >
                 Shopping prompts matrix
               </Button>
             ) : (

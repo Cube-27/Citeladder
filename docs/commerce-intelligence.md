@@ -107,7 +107,7 @@ stage as its buyer stage; admission keeps at most one prompt per cell and the
 configured number of contexts. Non-branded prompts keep the owned-name
 rejection. A branded comparison must name the owned brand and is filed in the
 shared `comparison` cohort, so `prompts.branded` is true and it stays out of
-organic metrics (no schema change). The Buyer Prompts read returns `branded`,
+organic Visibility and the AI Shelf snapshot (no schema change). The Buyer Prompts read returns `branded`,
 `buyer_stage` and `context` per prompt.
 
 **Hero products.** Per-product prompts exist only for hero products the user
@@ -168,7 +168,10 @@ The persisted, formula-versioned snapshot per target and audit exposes:
   by ordered executions.
 
 A slot is one product or competitor per execution, at its best rank, so an
-answer naming a product three times recommends it once. A target with no
+answer naming a product three times recommends it once. Only executions of
+unbranded prompts count: a branded comparison names the owned brand by design,
+so its executions and observations stay out of the snapshot, as branded cohorts
+stay out of organic Visibility. A target with no
 successful execution reads Product Visibility as unavailable, not zero, and
 raises no `product_not_mentioned` or `cited_alternatives` Opportunity; other
 metrics without a denominator are unavailable.

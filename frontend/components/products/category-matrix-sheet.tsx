@@ -9,12 +9,13 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { commerceMutations } from '@/lib/api/commerce';
+import { pluralCount } from '@/lib/format';
 import { buyerStageLabels } from '@/lib/prompts/forms';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import type { BuyerPrompt } from '@citeladder/contracts/commerce-suite';
 
 /** What a category's matrix covers: contexts × stages of non-branded prompts, plus branded ones. */
-export function matrixCoverage(rows: readonly BuyerPrompt[]) {
+function matrixCoverage(rows: readonly BuyerPrompt[]) {
   const organic = rows.filter((row) => !row.branded && row.context && row.buyer_stage);
   const contexts = [...new Set(organic.map((row) => row.context))];
   const stages = [...new Set(organic.map((row) => row.buyer_stage))];
@@ -108,7 +109,7 @@ export function CategoryMatrixSheet({
         ) : null}
         <p aria-label="Matrix coverage" className={textRole('body')}>
           {coverage.contexts.length
-            ? `${coverage.contexts.length} contexts × ${coverage.stages.length} stages (${coverage.filledCells} of ${coverage.contexts.length * coverage.stages.length} filled) · ${coverage.branded.length} branded`
+            ? `${pluralCount(coverage.contexts.length, 'context')} × ${pluralCount(coverage.stages.length, 'stage')} (${coverage.filledCells} of ${coverage.contexts.length * coverage.stages.length} filled) · ${coverage.branded.length} branded`
             : 'No matrix yet for this category.'}
         </p>
         {list('Buyer contexts × stages', coverage.organic)}

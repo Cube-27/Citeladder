@@ -116,19 +116,9 @@ async function targetContext(db: Database, scope: CommerceScope, target: Target)
 }
 type TargetContext = Awaited<ReturnType<typeof targetContext>>;
 
-/**
- * `tracked` holds normalized hashes already in the set or kept for this request.
- * `branded` rows are the bounded exception to the owned-name rejection: they
- * must name the owned brand, and nothing else may.
- */
-function admittedTexts<T extends { text: string }>(
-  rows: T[],
-  context: TargetContext,
-  tracked: Set<string>,
-  branded = false,
-): T[] {
-  const words = (text: string) => text.toLowerCase().match(/[a-z0-9']+/gu) ?? [];
-  const vocabulary = new Set(
+/** The tokens a prompt must share with its target to be about it. */
+function targetVocabulary(context: TargetContext) {
+  return new Set(
     [
       context.sells,
       ...context.category_terms,
@@ -140,39 +130,66 @@ function admittedTexts<T extends { text: string }>(
         : []),
     ].flatMap((value) => [...bindingTokens(value)]),
   );
+}
+
+/** A buyer's prompt in length and register, before any target or brand rule. */
+function wellFormed(text: string, parts: readonly string[]) {
+  const lower = text.toLowerCase();
+  return (
+    text.length <= policy.prompts.text_max_chars &&
+    parts.length >= P.min_words &&
+    parts.length <= P.max_words &&
+    !P.survey_markers.some((marker) => lower.includes(marker))
+  );
+}
+
+/**
+ * `branded` rows are the bounded exception to the owned-name rejection: they
+ * must name the owned brand. Every other row must bind to the target and name
+ * neither the brand nor, for a product, the product itself.
+ */
+function fitsBrandRule(
+  text: string,
+  context: TargetContext,
+  vocabulary: ReadonlySet<string>,
+  branded: boolean,
+) {
+  const lower = text.toLowerCase();
+  if (branded) {
+    const brand = context.brand.trim().toLowerCase();
+    return brand !== '' && lower.includes(brand);
+  }
+  if (vocabulary.size && ![...bindingTokens(text)].some((token) => vocabulary.has(token)))
+    return false;
+  const owned = [context.brand, ...(context.target_kind === 'product' ? [context.name] : [])];
+  return !owned.some((name) => name.trim() && lower.includes(name.trim().toLowerCase()));
+}
+
+/** `tracked` holds normalized hashes already in the set or kept for this request. */
+function admittedTexts<T extends { text: string }>(
+  rows: T[],
+  context: TargetContext,
+  tracked: Set<string>,
+  branded = false,
+): T[] {
+  const words = (text: string) => text.toLowerCase().match(/[a-z0-9']+/gu) ?? [];
+  const vocabulary = targetVocabulary(context);
   const admitted: T[] = [],
     seen = new Set<string>(),
     openings = new Map<string, number>();
   for (const row of rows) {
     const text = row.text.trim().replace(/\s+/gu, ' '),
-      lower = text.toLowerCase(),
       parts = words(text),
       key = parts.join(' '),
       opening = parts.slice(0, 3).join(' ');
-    const hash = promptTextHash(text);
     if (
-      text.length > policy.prompts.text_max_chars ||
-      parts.length < P.min_words ||
-      parts.length > P.max_words ||
-      P.survey_markers.some((marker) => lower.includes(marker)) ||
+      !wellFormed(text, parts) ||
       seen.has(key) ||
-      tracked.has(hash) ||
-      (openings.get(opening) ?? 0) >= 2
+      tracked.has(promptTextHash(text)) ||
+      (openings.get(opening) ?? 0) >= 2 ||
+      !fitsBrandRule(text, context, vocabulary, branded)
     )
       continue;
-    const brand = context.brand.trim().toLowerCase();
-    if (branded) {
-      if (!brand || !lower.includes(brand)) continue;
-    } else {
-      if (vocabulary.size && ![...bindingTokens(text)].some((token) => vocabulary.has(token)))
-        continue;
-      if (
-        [context.brand, ...(context.target_kind === 'product' ? [context.name] : [])].some(
-          (name) => name.trim() && lower.includes(name.trim().toLowerCase()),
-        )
-      )
-        continue;
-    }
     admitted.push({ ...row, text });
     seen.add(key);
     openings.set(opening, (openings.get(opening) ?? 0) + 1);
@@ -221,6 +238,36 @@ function matrixDrafts(rows: MatrixRow[], context: TargetContext, tracked: Set<st
       branded: true,
     }));
   return [...organic, ...branded];
+}
+
+/** The model request for one target: a category's matrix, or a hero product's count. */
+function generationRequest(context: TargetContext, count: number) {
+  return context.target_kind === 'category'
+    ? { contexts: M.contexts, stages: M.stages, branded: brandedQuota(matrixCells), context }
+    : { count, context };
+}
+
+/** One target's admitted drafts from the model's rows. */
+function targetDrafts(
+  rows: MatrixRow[],
+  context: TargetContext,
+  tracked: Set<string>,
+  count: number,
+): Draft[] {
+  if (context.target_kind === 'category') return matrixDrafts(rows, context, tracked);
+  return admittedTexts(rows, context, tracked)
+    .slice(0, count)
+    .map((row) => plainDraft(row.text));
+}
+
+/** Generated prompts carry the target's theme and the draft's stage and intent; manual ones none. */
+function promptLabels(draft: Draft, themeName: string | null) {
+  if (themeName === null) return { theme: 'Commerce', buyer_stage: '', prompt_intent: '' };
+  return {
+    theme: themeName,
+    buyer_stage: draft.stage || 'consideration',
+    prompt_intent: draft.branded ? 'compare' : 'recommend',
+  };
 }
 
 const findCommerceSet = (db: Database, scope: CommerceScope) =>
@@ -297,16 +344,14 @@ async function insertBatch(
   batch: Batch,
   now: Date,
 ) {
-  const generated = batch.evidence !== null;
+  const themeName = batch.evidence === null ? null : owner.name;
   const prompts = await insertPrompts(
     trx,
     owner.set,
     batch.drafts.map((draft) => ({
       text: draft.text,
       topic_id: owner.topic,
-      theme: generated ? owner.name : 'Commerce',
-      buyer_stage: generated ? draft.stage || 'consideration' : '',
-      prompt_intent: generated ? (draft.branded ? 'compare' : 'recommend') : '',
+      ...promptLabels(draft, themeName),
       intent: 'comparison',
       persona: draft.context,
       // The comparison cohort is the shared branded one: its prompts stay out of organic metrics.
@@ -426,20 +471,10 @@ export async function generateBuyerPrompts(
   for (const [index, context] of contexts.entries()) {
     let response;
     const startedAt = performance.now();
-    const matrix = context.target_kind === 'category';
     try {
       response = await gateway.structured(
-        commerceBuyerPromptSystem(context.business_model, matrix),
-        JSON.stringify(
-          matrix
-            ? {
-                contexts: M.contexts,
-                stages: M.stages,
-                branded: brandedQuota(matrixCells),
-                context,
-              }
-            : { count: input.count, context },
-        ),
+        commerceBuyerPromptSystem(context.business_model, context.target_kind === 'category'),
+        JSON.stringify(generationRequest(context, input.count)),
         // Unusable items are dropped one by one during admission, never the batch.
         z.object({ prompts: z.array(matrixRowSchema) }),
       );
@@ -454,11 +489,7 @@ export async function generateBuyerPrompts(
       });
       break;
     }
-    const drafts = matrix
-      ? matrixDrafts(response.value.prompts, context, tracked)
-      : admittedTexts(response.value.prompts, context, tracked)
-          .slice(0, input.count)
-          .map((row) => plainDraft(row.text));
+    const drafts = targetDrafts(response.value.prompts, context, tracked, input.count);
     if (!drafts.length) continue;
     for (const kept of drafts) tracked.add(promptTextHash(kept.text));
     const target = input.targets[index]!;

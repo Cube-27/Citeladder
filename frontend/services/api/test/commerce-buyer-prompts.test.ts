@@ -288,7 +288,7 @@ describe('category matrix and hero products', () => {
     const { gateway } = gatewayAnswering([
       [
         ...organicCells,
-        // A seventh context and a duplicate cell are over the configured matrix.
+        // A fourth context and a duplicate cell are over the configured matrix.
         cell('rain jacket for a ferry commuter', 'Ferry commuter', 'decision'),
         cell('another rain jacket for a commuting cyclist', 'Commuting cyclist', 'decision'),
         branded('Acme Corp rain jacket vs another brand for cycling'),

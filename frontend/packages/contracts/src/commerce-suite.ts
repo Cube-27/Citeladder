@@ -92,7 +92,7 @@ export const buyerPromptSchema = z.strictObject({
   text: z.string(),
   /** A comparison that names the owned brand; the only prompts allowed to. */
   branded: z.boolean(),
-  /** The category matrix's intent stage; empty for hero-product and manual prompts. */
+  /** The intent stage: a matrix cell's stage, `consideration` for a hero product, empty when manual. */
   buyer_stage: buyerStageSchema,
   /** The category matrix's buyer context; empty outside a matrix. */
   context: z.string(),
