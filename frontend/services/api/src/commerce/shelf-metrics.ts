@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Selectable } from 'kysely';
 import type { Database } from '../db/database.ts';
 import type { Audits, CommerceRecommendationObservations } from '../generated/db-schema.ts';
+import { policy } from '../config.ts';
 import { record } from '../db/json.ts';
 import { auditPolicy } from '../audits/config.ts';
 import { frozenShelfIds } from './shelf.ts';
@@ -160,7 +161,11 @@ export async function finalizeCommerceShelf(db: Database, audit: Selectable<Audi
       .where('c.id', 'in', ids)
       .where('c.target_kind', '=', target.target_kind)
       .where('c.target_id', '=', target.target_id)
+      // A branded comparison names the owned brand, so it would always find the
+      // owned product: like brand Visibility, the shelf counts unbranded prompts only.
+      .where('s.cohort', 'not in', policy.prompts.branded_cohorts)
       .execute();
+    const taskIds = new Set(tasks.map((task) => task.id));
     const observations = await db // NOSONAR -- Runs on the caller's audit-lock transaction.
       .selectFrom('commerce_recommendation_observations')
       .selectAll()
@@ -185,8 +190,8 @@ export async function finalizeCommerceShelf(db: Database, audit: Selectable<Audi
         target_id: target.target_id,
         formula_version: versions.formula_version!,
         ...shelfMetrics(
-          tasks.map((task) => task.id),
-          observations,
+          [...taskIds],
+          observations.filter((row) => taskIds.has(row.task_id)),
         ),
         context_snapshot: JSON.stringify({
           target: { kind: target.target_kind, id: target.target_id },

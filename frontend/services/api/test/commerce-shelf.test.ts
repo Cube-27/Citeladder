@@ -512,6 +512,27 @@ describe('frozen Commerce shelf projections', () => {
       new Set([artifactId]),
     );
     await projections.finalize(t.workspaceId, auditId);
+    // The same answer to a branded comparison prompt names the owned brand by
+    // design, so it leaves the shelf: no execution, no slot, no source.
+    await db.deleteFrom('commerce_shelf_snapshots').where('audit_id', '=', auditId).execute();
+    await db
+      .updateTable('audit_prompt_snapshots')
+      .set({ cohort: 'comparison' })
+      .where('audit_id', '=', auditId)
+      .execute();
+    await db.transaction().execute((trx) => finalizeCommerceShelf(trx, audit));
+    const branded = await db
+      .selectFrom('commerce_shelf_snapshots')
+      .selectAll()
+      .where('workspace_id', '=', t.workspaceId)
+      .where('audit_id', '=', auditId)
+      .executeTakeFirstOrThrow();
+    expect(branded).toMatchObject({
+      product_visibility: 0,
+      share_of_shelf: null,
+      successful_execution_count: 0,
+      source_observation_ids: [],
+    });
   });
   it('ranks organic carousel cards as shopping slots and matches a repeat card by its ChatGPT product key', async () => {
     const { t, foreign, product, auditId } = await shoeAudit(3);
