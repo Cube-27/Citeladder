@@ -43,6 +43,9 @@ export async function ownedHosts(db: Database, scope: { workspaceId: string; pro
 }
 const belongs = (host: string, domains: readonly string[]) =>
   domains.some((domain) => domain && (host === domain || host.endsWith(`.${domain}`)));
+/** Whether a URL or domain is on one of the business's own hosts (`ownedHosts`). */
+export const isOwnedHost = (value: string, owned: readonly string[]) =>
+  belongs(competitorHost(value), owned);
 export function exclusion(url: string, title: string, owned: readonly string[]) {
   const host = competitorHost(url),
     text = `${url} ${title}`.toLowerCase();

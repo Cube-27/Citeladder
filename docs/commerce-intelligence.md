@@ -351,10 +351,33 @@ prompts count: a branded comparison names the owned brand by design, so its
 executions and observations stay out of the snapshot, as branded cohorts stay
 out of organic Visibility. A target with no
 successful execution reads Product Visibility as unavailable, not zero, and
-raises no `product_not_mentioned` or `cited_alternatives` Opportunity; other
-metrics without a denominator are unavailable.
+raises no `cited_alternatives` Opportunity; other metrics without a
+denominator are unavailable.
 
-Snapshots feed the commerce Opportunities; no route reads one target's snapshot any more (`GET ai-shelf` and the
+Category snapshots feed the `cited_alternatives` Opportunity. The per-product
+Opportunities read the Products read instead, over the configured window
+(`PRODUCT_METRICS` in the [opportunity config](../frontend/services/api/src/config/opportunity.ts))
+for every active owned product, ending when the refresh resolved its sources:
+
+- `product_not_mentioned`: no appearance in the window's answers;
+- `price_mismatch`: the median quoted price in the catalog currency is
+  outside the catalog price (or variant range) by more than the configured
+  share; quotes in other currencies are not converted;
+- `losing_position`: the win rate over ordered appearances is below the
+  configured rate;
+- `merchant_absent`: the answers name merchants for the product and none is an
+  owned host (the project website or an owned domain).
+
+Each rule needs a configured number of samples (executions, quotes in the
+catalog currency, ordered appearances, merchant answers); below it the product
+has too little data and raises nothing, and a product without a catalog price
+raises no price finding. A finding stores the window, the reading, the
+threshold and the row's figures, with the observation IDs it was read from. A
+declared Action freezes each finding's rule as a `product_metric` check that
+reads the same metric over the answers completed after go-live
+([Opportunities](opportunities.md)).
+
+No route reads one target's snapshot any more (`GET ai-shelf` and the
 target detail were retired with the product detail page). The MCP and Agent
 tool `read_ai_shelf` returns the Products read's per-product metrics (with
 the categories and their counts), or, given a `holder_id`, the product detail

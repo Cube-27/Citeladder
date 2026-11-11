@@ -109,10 +109,29 @@ const demandSignalEvidenceSchema = z.object({
   query_relevance: z.unknown(),
 });
 
-const productNotMentionedEvidenceSchema = z.object({
+/**
+ * What every per-product metric rule stores: the product, the window the
+ * Products read measured (ending at `as_of`), the metric's reading and the
+ * threshold it failed, beside the row's own figures.
+ */
+const productMetricEvidenceSchema = z.object({
   product_id: z.string(),
-  product_visibility: z.number(),
-  audit_id: z.string(),
+  product_name: z.string(),
+  window_days: z.number().int(),
+  as_of: z.string(),
+  executions: z.number().int(),
+  metric: z.string(),
+  value: z.number(),
+  samples: z.number().int(),
+  threshold: z.number(),
+  appearances: z.number().int(),
+  ordered_appearances: z.number().int(),
+  win_rate: z.number().nullable(),
+  mentioned_price: z
+    .object({ median: z.number().nullable(), currency: z.string(), quoted: z.number().int() })
+    .nullable(),
+  catalog_price: z.object({ amount: z.number(), currency: z.string() }).nullable(),
+  merchants: z.array(z.object({ domain: z.string(), count: z.number().int() })),
 });
 
 const catalogFieldsEvidenceSchema = z.object({
@@ -251,7 +270,10 @@ export const opportunityEvidenceSchemas = {
   search_keyword_gap: keywordGapEvidenceSchema,
   content_gap_improve_page: contentGapImprovePageEvidenceSchema,
   content_gap_new_page: contentGapNewPageEvidenceSchema,
-  product_not_mentioned: productNotMentionedEvidenceSchema,
+  product_not_mentioned: productMetricEvidenceSchema,
+  price_mismatch: productMetricEvidenceSchema,
+  losing_position: productMetricEvidenceSchema,
+  merchant_absent: productMetricEvidenceSchema,
   catalog_fields_missing: catalogFieldsEvidenceSchema,
   cited_alternatives_without_uploaded_presence: citedAlternativesEvidenceSchema,
 } as const;

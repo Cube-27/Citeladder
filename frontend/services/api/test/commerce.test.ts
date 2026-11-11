@@ -15,8 +15,6 @@ import { freezeCommerceContext } from '../src/commerce/audit-context.ts';
 import { enqueue } from './referral-fixtures.ts';
 import { actionRow, opportunityRow } from './opportunity-fixtures.ts';
 import { prompt } from './prompt-fixtures.ts';
-import { commerceHits } from '../src/opportunities/refresh-hits.ts';
-import { targetKey } from '../src/analysis/opportunities/targets.ts';
 import { updateActionStatus } from '../src/opportunities/actions.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
@@ -483,44 +481,6 @@ describe('decisions and persisted reads', () => {
     const context = await freezeCommerceContext(db, t, [first.promptId, second]);
     expect(context.targets.map((row) => [row.kind, row.id])).toEqual([['product', productId]]);
     expect(context.prompt_target_ids).toHaveLength(2);
-  });
-  it('opens no unmentioned-product Action for a target whose every answer failed', async () => {
-    const audit = await fixtures.audit(t, { scope: 'commerce' });
-    const measured = randomUUID(),
-      failed = randomUUID();
-    await db
-      .insertInto('commerce_shelf_snapshots')
-      .values(
-        [
-          [measured, 2],
-          [failed, 0],
-        ].map(([targetId, executions]) => ({
-          id: randomUUID(),
-          workspace_id: t.workspaceId,
-          project_id: t.projectId,
-          audit_id: audit,
-          target_kind: 'product',
-          target_id: String(targetId),
-          product_visibility: 0,
-          share_of_shelf: null,
-          average_shelf_position: null,
-          first_position_win_rate: null,
-          successful_execution_count: Number(executions),
-          recognized_slot_count: 0,
-          ranked_execution_count: 0,
-          formula_version: 'commerce-shelf-formulas-1',
-          source_observation_ids: '[]',
-          context_snapshot: '{}',
-          created_at: new Date(),
-        })),
-      )
-      .execute();
-    const hits = await commerceHits(db, t, audit);
-    expect(
-      hits
-        .filter((hit) => hit.rule_id === 'product_not_mentioned')
-        .map((hit) => targetKey(hit.target)),
-    ).toEqual([`product:${measured}`]);
   });
   it('reads active and requested discovery tasks without starting discovery', async () => {
     const target = { kind: 'product', id: randomUUID() };
