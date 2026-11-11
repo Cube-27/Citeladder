@@ -12,13 +12,14 @@ import type {
   CommerceShoppingOverview,
 } from '@citeladder/contracts/commerce-suite';
 
-import { OverviewSections } from './shopping-overview-screen';
+import { OverviewSections, ShoppingOverviewScreen } from './shopping-overview-screen';
 
 const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
 const ROAD = '22222222-2222-4222-8222-222222222222';
 const SOCK = '33333333-3333-4333-8333-333333333333';
 const RIVAL = '44444444-4444-4444-8444-444444444444';
 const CATEGORY = '55555555-5555-4555-8555-555555555555';
+const FOREIGN_CATEGORY = '66666666-6666-4666-8666-666666666666';
 const projectRoute = { projectSelection: { activeProject: makeProject({ id: PROJECT_ID }) } };
 
 const product = (overrides: Partial<CommerceOverviewProduct>): CommerceOverviewProduct => ({
@@ -72,8 +73,9 @@ const OVERVIEW: CommerceShoppingOverview = {
   least_visible: [SOCK_ROW],
   merchants: [{ domain: 'runnerstore.com', answers: 2, products: 1 }],
   fanout: {
-    answers: 2,
+    answers: 3,
     answers_with_queries: 1,
+    answers_without_search: 1,
     queries: [{ query: 'best road running shoes', answers: 2 }],
   },
   category_shelf: null,
@@ -151,7 +153,10 @@ describe('Shopping overview', () => {
       '1',
     ]);
     const fanout = table('Top fan-out queries');
-    expect(fanout).toHaveTextContent('From the 2 answers that named a product, 1 with searches.');
+    // The third answer searched without exposing its queries: unknown, not "no search".
+    expect(fanout).toHaveTextContent(
+      'From the 3 answers that named a product: 1 with readable search queries, 1 without a search, 1 unknown.',
+    );
     expect(rowCells(fanout, 'best road running shoes')).toEqual(['best road running shoes', '2']);
     // No category chosen: no category shelf.
     expect(screen.queryByText('Category shelf')).not.toBeInTheDocument();
@@ -165,7 +170,7 @@ describe('Shopping overview', () => {
       slots: 0,
       brands: [],
       merchants: [],
-      fanout: { answers: 0, answers_with_queries: 0, queries: [] },
+      fanout: { answers: 0, answers_with_queries: 0, answers_without_search: 0, queries: [] },
       category_shelf: null,
     });
     renderWithProviders(<Harness />, projectRoute);
@@ -200,6 +205,35 @@ describe('Shopping overview', () => {
     expect(within(shelf).getByText('40.0%')).toBeInTheDocument();
     expect(within(shelf).getByText('25.0%')).toBeInTheDocument();
     expect(within(shelf).getByText('2.00')).toBeInTheDocument();
+    // Measured, but no answer ranked a product: unavailable, not "not measured".
+    expect(within(shelf).getByText('Unavailable')).toBeInTheDocument();
+    expect(within(shelf).queryByText('Not measured')).not.toBeInTheDocument();
+  });
+
+  it('reads a category another project owns as no category', async () => {
+    const asked: string[] = [];
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT_ID}/commerce/catalog`, () =>
+        HttpResponse.json({
+          products: [],
+          product_total: 3,
+          categories: [{ id: CATEGORY, name: 'Road', product_count: 2 }],
+          projection: { applicability: 'applicable', in_flight: 0, failed: 0 },
+        }),
+      ),
+      http.get(`/api/v1/projects/${PROJECT_ID}/commerce/overview`, ({ request }) => {
+        asked.push(new URL(request.url).search);
+        return HttpResponse.json(OVERVIEW);
+      }),
+    );
+    // A project switch kept the previous project's category in the URL.
+    renderWithProviders(<ShoppingOverviewScreen />, {
+      ...projectRoute,
+      initialEntries: [`/products/overview?project=${PROJECT_ID}&category=${FOREIGN_CATEGORY}`],
+    });
+
+    await screen.findByRole('region', { name: 'Ranking' });
+    expect(asked).toEqual(['?window=30']);
   });
 
   it('reports a failed read as an error, not an empty overview', async () => {

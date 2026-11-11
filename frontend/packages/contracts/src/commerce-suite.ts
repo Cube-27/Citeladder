@@ -247,8 +247,13 @@ export const commerceShoppingOverviewSchema = z.strictObject({
   fanout: z.strictObject({
     /** Executions whose answer held a product. */
     answers: z.number().int(),
-    /** Of those, executions whose answer ran at least one search query. */
+    /** Of those, executions whose latest analysis captured the search queries' text. */
     answers_with_queries: z.number().int(),
+    /**
+     * Of those, executions that ran no search. The rest searched without
+     * exposing their queries, or have no analysis yet: unknown, never zero.
+     */
+    answers_without_search: z.number().int(),
     queries: z.array(z.strictObject({ query: z.string(), answers: z.number().int() })),
   }),
   /**

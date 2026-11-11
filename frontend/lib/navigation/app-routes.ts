@@ -100,14 +100,9 @@ function flow<const P extends string>(
 }
 
 /** A nav entry listed in a Dashboard group and the matching palette group. */
-const PALETTE_OF = {
-  analyze: 'palette:Analyze',
-  commerce: 'palette:Commerce',
-  track: 'palette:Track',
-} as const satisfies Partial<Record<DashboardGroup, NavPlacement>>;
-
-function listed(label: string, icon: IconName, group: keyof typeof PALETTE_OF): NavEntry {
-  return { label, icon, placements: [`dashboard:${group}`, PALETTE_OF[group]] };
+function listed(label: string, icon: IconName, group: 'analyze' | 'commerce' | 'track'): NavEntry {
+  const palette = ({ analyze: 'Analyze', commerce: 'Commerce', track: 'Track' } as const)[group];
+  return { label, icon, placements: [`dashboard:${group}`, `palette:${palette}`] };
 }
 
 /** Every screen's loader, named once; a route refers to its screen by name. */

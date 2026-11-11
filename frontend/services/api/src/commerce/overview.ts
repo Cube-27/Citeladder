@@ -49,6 +49,7 @@ const rowSchema = z.object({
   slots: z.number().int(),
   holding: z.number().int(),
   searched: z.number().int(),
+  unsearched: z.number().int(),
   brands: z.array(
     z.object({ brand: z.string(), owned: z.boolean(), slots: z.number().int(), ...counts }),
   ),
@@ -181,7 +182,7 @@ export async function shoppingOverview(db: Database, scope: CommerceScope, query
     ),
     holding AS (SELECT DISTINCT task_id FROM held),
     analyses AS (
-      SELECT DISTINCT ON (ra.artifact_id) ra.task_id, ra.fanout_queries
+      SELECT DISTINCT ON (ra.artifact_id) ra.task_id, ra.fanout_state, ra.fanout_queries
       FROM response_analyses ra
       JOIN scoped_passes sp ON sp.artifact_id = ra.artifact_id AND sp.task_id = ra.task_id
       WHERE ra.workspace_id = ${scope.workspaceId}
@@ -197,7 +198,10 @@ export async function shoppingOverview(db: Database, scope: CommerceScope, query
     SELECT e.n AS executions,
       (SELECT count(*) FROM held)::int AS slots,
       (SELECT count(*) FROM holding)::int AS holding,
-      (SELECT count(*) FROM analyses WHERE cardinality(fanout_queries) > 0)::int AS searched,
+      (SELECT count(DISTINCT task_id) FROM analyses
+        WHERE fanout_state = 'queries_available')::int AS searched,
+      (SELECT count(DISTINCT task_id) FROM analyses WHERE fanout_state = 'no_search')::int
+        AS unsearched,
       (SELECT coalesce(json_agg(json_build_object('brand', m.brand, 'owned', m.owned,
                 'slots', m.slots, 'appearances', m.appearances, 'ordered', m.ordered,
                 'wins', m.wins, 'position', m.position)
@@ -249,7 +253,12 @@ export async function shoppingOverview(db: Database, scope: CommerceScope, query
     most_visible: row.most_visible.map(productOf),
     least_visible: row.least_visible.map(productOf),
     merchants: row.merchants,
-    fanout: { answers: row.holding, answers_with_queries: row.searched, queries: row.queries },
+    fanout: {
+      answers: row.holding,
+      answers_with_queries: row.searched,
+      answers_without_search: row.unsearched,
+      queries: row.queries,
+    },
     category_shelf: shelf,
   });
 }

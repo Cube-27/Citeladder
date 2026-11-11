@@ -126,7 +126,9 @@ Overview and Products. Per window (the table's windows):
   holders sent there, up to `merchant_limit`.
 - Top fan-out queries: of the answers that held a product, the search queries
   their latest response analysis captured, by answers, up to
-  `fanout_query_limit`, beside how many of those answers searched at all.
+  `fanout_query_limit`, beside how many of those answers exposed their
+  queries and how many ran no search; the rest (searched without exposing
+  queries, or not analyzed yet) are unknown.
 
 A category narrows every list to its holders (as the table's category filter
 does) and reads its latest Commerce audit snapshot: the category-target metrics

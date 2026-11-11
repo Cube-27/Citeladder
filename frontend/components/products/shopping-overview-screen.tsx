@@ -121,6 +121,7 @@ function RankingTable({ overview }: Readonly<{ overview: Overview }>) {
   const [ranking, setRanking] = useState<Ranking>('brands');
   const brands = ranking === 'brands';
   const count = brands ? overview.brands.length : overview.products.length;
+  const emptyMessage = brands ? 'No brand yet.' : 'No product yet.';
   return (
     <DataTable
       title="Ranking"
@@ -142,7 +143,7 @@ function RankingTable({ overview }: Readonly<{ overview: Overview }>) {
       ]}
       rowCount={count}
       rowLines={2}
-      state={count ? undefined : emptyRow(brands ? 'No brand yet.' : 'No product yet.')}
+      state={count ? undefined : emptyRow(emptyMessage)}
     >
       {brands
         ? overview.brands.map((row) => (
@@ -241,15 +242,28 @@ function MerchantTable({ rows }: Readonly<{ rows: Overview['merchants'] }>) {
   );
 }
 
+/**
+ * What the query list stands on. An answer that searched without exposing its
+ * queries, or has no analysis yet, is unknown: neither a search nor none.
+ */
+function fanoutCoverage(fanout: Overview['fanout']) {
+  const unknown = fanout.answers - fanout.answers_with_queries - fanout.answers_without_search;
+  const parts = [
+    `${formatCount(fanout.answers_with_queries)} with readable search queries`,
+    `${formatCount(fanout.answers_without_search)} without a search`,
+    ...(unknown ? [`${formatCount(unknown)} unknown`] : []),
+  ];
+  return `From the ${pluralCount(fanout.answers, 'answer')} that named a product: ${parts.join(', ')}.`;
+}
+
 function FanoutTable({ fanout }: Readonly<{ fanout: Overview['fanout'] }>) {
-  // Answers that held a product but searched nothing have no query to list.
   const empty = fanout.answers
-    ? 'No search query behind these answers.'
+    ? 'No answer exposed its search queries.'
     : 'No answer named a product.';
   return (
     <DataTable
       title="Top fan-out queries"
-      description={`From the ${pluralCount(fanout.answers, 'answer')} that named a product, ${formatCount(fanout.answers_with_queries)} with searches.`}
+      description={fanoutCoverage(fanout)}
       columns={[
         { key: 'query', label: 'Query' },
         { key: 'answers', label: 'Answers', width: 'figure', numeric: true },
@@ -274,8 +288,8 @@ const shelfPercent = (value: number | null) => (value === null ? null : percent(
  * category-target metrics, unchanged. Not measured until a run covers it.
  */
 function CategoryShelf({ shelf }: Readonly<{ shelf: Overview['category_shelf'] }>) {
-  // No successful answer is a failed measurement, not an unmeasured category.
-  const missing = shelf?.successful_execution_count === 0 ? 'unavailable' : 'not_measured';
+  // A run measured it but a metric had no denominator: unavailable, not unmeasured.
+  const missing = shelf ? 'unavailable' : 'not_measured';
   const segments = [
     {
       label: 'Product visibility',
@@ -388,11 +402,18 @@ export function ShoppingOverviewScreen() {
   const scope = { workspaceId, projectId };
   const overviewFilters = useOverviewFilters();
   const { filters } = overviewFilters;
-  const query = useQuery(commerceQueries.overview(scope, overviewSearch(filters)));
   const catalog = useQuery(commerceQueries.catalog(scope));
+  const known = catalog.data?.categories ?? [];
+  // A project switch keeps the `category` parameter; another project's category reads as none.
+  const category = known.some((row) => row.id === filters.category) ? filters.category : null;
+  const query = useQuery({
+    ...commerceQueries.overview(scope, overviewSearch({ ...filters, category })),
+    // A category in the URL waits for the catalog that says whether it is this project's.
+    enabled: !filters.category || !catalog.isPending,
+  });
   const categories = [
     { value: EVERY, label: 'All categories' },
-    ...(catalog.data?.categories ?? []).map((row) => ({ value: row.id, label: row.name })),
+    ...known.map((row) => ({ value: row.id, label: row.name })),
   ];
   return (
     <ListScreen
@@ -408,7 +429,7 @@ export function ShoppingOverviewScreen() {
             />
             <FilterChoice
               label="Category"
-              value={filters.category ?? EVERY}
+              value={category ?? EVERY}
               defaultValue={EVERY}
               options={categories}
               onChange={(value) => overviewFilters.setCategory(value === EVERY ? null : value)}

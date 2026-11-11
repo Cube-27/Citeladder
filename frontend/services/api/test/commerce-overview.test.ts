@@ -13,13 +13,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../src/app.ts';
 import { auditRuntime } from '../src/audits/config.ts';
-import { createAudits } from '../src/audits/creation.ts';
-import { auditInput } from '../src/audits/inputs.ts';
-import { persistExecutionSuccess, type ExecutionResult } from '../src/audits/result-persistence.ts';
 import { importCatalog } from '../src/commerce/import.ts';
-import { prepareShelfExecution } from '../src/commerce/shelf.ts';
-import { AuditQueue } from '../src/queue/audit-queue.ts';
 import { auditTenant } from './audit-fixtures.ts';
+import { recordAnswer } from './commerce-answer-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
@@ -38,52 +34,11 @@ const CATALOG = [
   'https://shop.example/products/sock,Acme Merino Sock,Acme,15,USD,Road',
 ].join('\n');
 
-/** One brand-run audit whose single ChatGPT answer is `text`; its task id. */
+/** One brand-run answer of `text`; its task id. */
 async function answer(t: Tenant, text: string): Promise<string> {
-  const [auditId] = await createAudits(
-    db,
-    t.workspaceId,
-    auditInput.parse({
-      project_id: t.projectId,
-      prompt_ids: [t.promptId],
-      engines: ['chatgpt'],
-      repetitions: 1,
-      audit_scope: 'brand',
-    }),
-    {},
-    runtime,
-  );
-  const queue = new AuditQueue(db, 120);
-  const [claim] = await queue.claim('overview-worker', 1, { workspaceId: t.workspaceId, auditId });
-  const running = await queue.markRunning(claim!, claim!.lease_owner);
-  const task = running!.task;
-  tasks.push(task.id);
-  const result: ExecutionResult = {
-    logical_engine: 'chatgpt',
-    transport_provider: 'openai',
-    transport_model: task.transport_model,
-    answer_text: text,
-    search_used: false,
-    search_events: [],
-    finish_reason: 'stop',
-    raw_finish_reason: 'stop',
-    latency_ms: 1,
-    provider_metadata: {},
-    retrieved_sources: null,
-    citations: [],
-    normalized_usage: {
-      uncached_input_tokens: null,
-      cached_input_tokens: null,
-      output_tokens: null,
-      reasoning_tokens: null,
-      total_tokens: null,
-      web_search_requests: null,
-      provider_cost_microusd: null,
-    },
-  };
-  const derive = await prepareShelfExecution(db, task, result, null);
-  await persistExecutionSuccess(db, task, claim!.lease_owner, result, derive);
-  return task.id;
+  const { taskId } = await recordAnswer(db, t, text, { runtime, worker: 'overview-worker' });
+  tasks.push(taskId);
+  return taskId;
 }
 
 async function approvedCompetitor(t: Tenant, name: string) {
@@ -120,10 +75,14 @@ const merchant = (task: string, product: string, host: string) =>
     .where('observed_product', '=', product)
     .execute();
 
+/** The fan-out the answer's analysis settled: its queries, or a search that exposed none. */
 const fanout = (task: string, queries: string[]) =>
   db
     .updateTable('response_analyses')
-    .set({ fanout_queries: queries, fanout_state: 'queries_available' })
+    .set({
+      fanout_queries: queries,
+      fanout_state: queries.length ? 'queries_available' : 'count_only',
+    })
     .where('task_id', '=', task)
     .execute();
 
@@ -179,7 +138,8 @@ beforeAll(async () => {
   await merchant(second, 'Acme Road Runner', 'runnerstore.com');
   await merchant(second, 'Rival Pacer', 'rival.example');
   await fanout(first, ['best road running shoes', 'best road running shoes', 'acme reviews']);
-  await fanout(second, ['best road running shoes']);
+  // It searched, but its provider exposed no query text.
+  await fanout(second, []);
   await fanout(third, ['gait analysis near me']);
   roadCategory = await categoryId(t, 'Road');
 });
@@ -251,12 +211,15 @@ describe('Shopping overview read', () => {
       { domain: 'runnerstore.com', answers: 2, products: 1 },
       { domain: 'rival.example', answers: 1, products: 1 },
     ]);
+    // The second answer searched without exposing its queries: neither with
+    // queries nor without a search.
     expect(body.fanout).toEqual({
       answers: 2,
-      answers_with_queries: 2,
+      answers_with_queries: 1,
+      answers_without_search: 0,
       queries: [
-        { query: 'best road running shoes', answers: 2 },
         { query: 'acme reviews', answers: 1 },
+        { query: 'best road running shoes', answers: 1 },
       ],
     });
   });
@@ -349,6 +312,13 @@ describe('Shopping overview read', () => {
       ['Acme Trail Climber', 0],
     ]);
     expect(theirs.body.merchants).toEqual([]);
+    // Their answer ran no search.
+    expect(theirs.body.fanout).toEqual({
+      answers: 1,
+      answers_with_queries: 0,
+      answers_without_search: 1,
+      queries: [],
+    });
     // Another project's category is not found here.
     expect((await read(foreign, `category=${roadCategory}`)).status).toBe(404);
     expect((await read(t, '', foreign.workspaceId)).status).toBe(404);
