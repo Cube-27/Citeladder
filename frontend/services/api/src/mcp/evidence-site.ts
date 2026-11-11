@@ -133,6 +133,35 @@ const neighbors = (value: unknown) =>
     return parsed.success ? [{ ...parsed.data, url: withoutQuery(parsed.data.url) }] : [];
   });
 
+/**
+ * Anchor diagnostics as the model reads them: destinations (and an anchor text
+ * that is itself a URL) without query or fragment, query variants of one
+ * destination folded; `destination_count` stays the persisted count.
+ */
+function anchorDiagnostics(value: unknown) {
+  return neighborList.parse(value).map((item) => {
+    const diagnostic = record(item);
+    const text = diagnostic.anchor_text;
+    return {
+      ...diagnostic,
+      ...(typeof text === 'string' && looksLikeUrl(text)
+        ? { anchor_text: withoutQuery(text) }
+        : {}),
+      ...(Array.isArray(diagnostic.destinations)
+        ? {
+            destinations: [
+              ...new Set(
+                diagnostic.destinations
+                  .filter((url): url is string => typeof url === 'string')
+                  .map(withoutQuery),
+              ),
+            ],
+          }
+        : {}),
+    };
+  });
+}
+
 /** Anchor diagnostics as counts by kind: the compact form for several named pages. */
 function diagnosticCounts(value: unknown): Record<string, number> {
   const counts: Record<string, number> = {};
@@ -202,7 +231,7 @@ export async function siteLinks(
     top_inbound: neighbors(row.top_inbound).slice(0, sample),
     top_outbound: neighbors(row.top_outbound).slice(0, sample),
     ...(sample === undefined
-      ? { anchor_diagnostics: row.anchor_diagnostics ?? [] }
+      ? { anchor_diagnostics: anchorDiagnostics(row.anchor_diagnostics) }
       : { anchor_diagnostic_counts: diagnosticCounts(row.anchor_diagnostics) }),
   }));
   return {

@@ -1299,6 +1299,75 @@ it('reads the internal links of several pages in one call, by page URL rather th
   });
 });
 
+it('reads internal links with page, neighbor and anchor destination URLs stripped of query and fragment', async () => {
+  const seed = await siteFixtures.crawl();
+  const page = await sitePage(seed, '/p?token=abc&email=a@b.com#x');
+  await db
+    .insertInto('site_page_link_metrics')
+    .values({
+      id: randomUUID(),
+      workspace_id: seed.workspaceId,
+      project_id: seed.projectId,
+      crawl_id: seed.crawlId,
+      site_url_id: page.id,
+      inbound_count: 1,
+      outbound_count: 2,
+      main_content_inbound_count: 1,
+      main_content_outbound_count: 2,
+      nofollow_inbound_count: 0,
+      depth_from_home: 1,
+      source_page_count: 1,
+      authority_share: 0,
+      authority_rank: 1,
+      anchor_diagnostics: JSON.stringify([
+        {
+          kind: 'generic',
+          anchor_text: 'https://example.test/q?session=s1',
+          occurrences: 2,
+          destination_count: 2,
+          destinations: [
+            'https://example.test/q?session=s1',
+            'https://example.test/q?session=s2#y',
+          ],
+          regions: ['main'],
+          title_coverage: null,
+          h1_coverage: null,
+        },
+      ]),
+      top_inbound: JSON.stringify([
+        { url: 'https://example.test/in?email=a@b.com', anchor_count: 1 },
+      ]),
+      top_outbound: JSON.stringify([]),
+      extractor_version: policy.site_health.versions.extractor,
+      formula_version: policy.site_health.link_metrics.formula_version,
+      created_at: new Date(),
+    })
+    .execute();
+
+  const links = await dispatchTool(
+    db,
+    siteMember(seed),
+    'read_site_links',
+    { project_id: seed.projectId },
+    origin,
+  );
+  expect(links.items).toMatchObject([
+    {
+      site_url_id: page.id,
+      url: 'https://example.test/p',
+      top_inbound: [{ url: 'https://example.test/in', anchor_count: 1 }],
+      anchor_diagnostics: [
+        {
+          kind: 'generic',
+          anchor_text: 'https://example.test/q',
+          destination_count: 2,
+          destinations: ['https://example.test/q'],
+        },
+      ],
+    },
+  ]);
+});
+
 it('reports performance as not connected until a search source is connected, then as not projected', async () => {
   expect(await read('read_performance', { range: 'month' })).toMatchObject({
     state: 'unavailable',
