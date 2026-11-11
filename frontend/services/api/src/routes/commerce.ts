@@ -10,6 +10,7 @@ import {
   commerceCatalogSchema,
   commerceProductDetailSchema,
   commerceProductPageSchema,
+  commerceProductSchema,
   commerceProjectionSchema,
   commerceShoppingOverviewSchema,
   competitorCandidateSchema,
@@ -28,6 +29,12 @@ import {
   generateBuyerPrompts,
   manualBuyerPrompt,
 } from '../commerce/buyer-prompts.ts';
+import {
+  editProduct,
+  productEditInput,
+  productLifecycleInput,
+  setProductLifecycle,
+} from '../commerce/edits.ts';
 import { importCatalog } from '../commerce/import.ts';
 import { shoppingOverview } from '../commerce/overview.ts';
 import { productDetail } from '../commerce/product-detail.ts';
@@ -44,7 +51,7 @@ import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
 import { readBody } from '../http/body.ts';
 import { requireFlag } from '../entitlements/access.ts';
-import { defineGetRoute, definePatchRoute, definePostRoute } from './define.ts';
+import { defineGetRoute, definePatchRoute, definePostRoute, definePutRoute } from './define.ts';
 
 /** Every route here reads the path project inside the active workspace. */
 const family = { family: 'commerce', authorize: 'active-project' } as const;
@@ -180,7 +187,10 @@ export const commerceRoutes = [
     params: {
       path: projectPath,
       query: {
-        source: { scalar: { kind: 'literal', values: ['catalog', 'all'] }, default: 'catalog' },
+        source: {
+          scalar: { kind: 'literal', values: ['catalog', 'all', 'archived'] },
+          default: 'catalog',
+        },
         category: { scalar: { kind: 'uuid' } },
         window: windowParam,
         engine: engineParam,
@@ -241,6 +251,31 @@ export const commerceRoutes = [
         engine: query.engine,
         promptSet: query.prompt_set,
       });
+    },
+  }),
+  definePatchRoute({
+    ...family,
+    path: `${root}/products/{holder_id}`,
+    capability: 'write',
+    params: { path: { ...projectPath, holder_id: uuid }, query: {} },
+    body: productEditInput,
+    response: commerceProductSchema,
+    async handle({ c, db }, { path }) {
+      const scope = await writeScopeOf(db, c, path.project_id);
+      return editProduct(db, scope, path.holder_id, await readBody(c, productEditInput));
+    },
+  }),
+  definePutRoute({
+    ...family,
+    path: `${root}/products/{holder_id}/lifecycle`,
+    capability: 'write',
+    params: { path: { ...projectPath, holder_id: uuid }, query: {} },
+    body: productLifecycleInput,
+    response: commerceProductSchema,
+    async handle({ c, db }, { path }) {
+      const scope = await writeScopeOf(db, c, path.project_id);
+      const { lifecycle_state } = await readBody(c, productLifecycleInput);
+      return setProductLifecycle(db, scope, path.holder_id, lifecycle_state);
     },
   }),
   defineGetRoute({

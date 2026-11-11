@@ -130,8 +130,17 @@ type Evidence = Pick<Insertable<CommerceProductObservations>, 'source_kind' | 'o
       | 'classifier_version'
       | 'importer_version'
       | 'projector_version'
+      | 'edit_version'
     >
   >;
+
+/** Whether an in-app edit owns this field now: crawl never replaces it. */
+export function editedField(sources: Record<string, unknown>, field: string) {
+  const source = sources[field];
+  return (
+    typeof source === 'object' && source !== null && 'kind' in source && source.kind === 'edit'
+  );
+}
 
 export async function appendObservation(
   db: Database,

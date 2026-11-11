@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { afterAll, describe, expect, it } from 'vitest';
 import { policy } from '../src/config.ts';
+import { editProduct } from '../src/commerce/edits.ts';
 import { importCatalog } from '../src/commerce/import.ts';
 import { enqueueCatalogProjection, projectCatalog } from '../src/commerce/projection.ts';
 import {
@@ -244,6 +245,28 @@ describe('catalog projection PostgreSQL boundary', () => {
     expect(result.categories.find((row) => row.id === stale)!.name).toBe('Old tools');
     const widget = result.products.find((row) => row.name === 'Widget')!;
     expect(widget.category_ids).toEqual([tools.id]);
+    await db
+      .updateTable('analytics_tasks')
+      .set({ status: 'succeeded' })
+      .where('workspace_id', '=', s.workspaceId)
+      .execute();
+  }, 20_000);
+  it('keeps edited fields and an edited category set over later crawl evidence', async () => {
+    const s = await seed();
+    const imported = await importCatalog(db, s, {
+      filename: 'catalog.csv',
+      content_type: 'text/csv',
+      content: 'canonical_url,name\nhttps://example.com/products/widget,Imported\n',
+    });
+    const id = imported.row_outcomes[0]!.product_id!;
+    await editProduct(db, s, id, { name: 'Gadget', categories: ['Gear'] });
+    for (const task of s.tasks) await execute(task);
+    expect(await storedProducts(s)).toMatchObject([{ name: 'Gadget', price: '12.50' }]);
+    const result = await catalog(db, s);
+    const gear = result.categories.find((row) => row.name === 'Gear')!;
+    expect(result.products.map((row) => [row.name, row.category_ids])).toEqual([
+      ['Gadget', [gear.id]],
+    ]);
     await db
       .updateTable('analytics_tasks')
       .set({ status: 'succeeded' })

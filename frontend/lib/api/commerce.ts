@@ -16,6 +16,8 @@ import type {
   CatalogImportRequest,
   CompetitorDecisionRequest,
   CompetitorDiscoveryRequest,
+  ProductEditRequest,
+  ProductLifecycleRequest,
 } from '@citeladder/contracts/commerce-requests';
 import {
   buyerPromptSchema,
@@ -23,6 +25,7 @@ import {
   commerceCatalogSchema,
   commerceProductDetailSchema,
   commerceProductPageSchema,
+  commerceProductSchema,
   commerceProjectionSchema,
   commerceShoppingOverviewSchema,
   competitorDiscoverySchema,
@@ -144,6 +147,36 @@ export const commerceApi = {
       buyerPromptSchema,
       await apiClient.patch(path(projectId, `buyer-prompts/${promptId}`), input, options),
       'commerce.decideBuyerPrompt',
+    ),
+  editProduct: async (
+    projectId: string,
+    productId: string,
+    input: ProductEditRequest,
+    options?: ApiRequestOptions,
+  ) =>
+    strictValidate(
+      commerceProductSchema,
+      await apiClient.patch(
+        path(projectId, 'products/' + encodeURIComponent(productId)),
+        input,
+        options,
+      ),
+      'commerce.editProduct',
+    ),
+  setProductLifecycle: async (
+    projectId: string,
+    productId: string,
+    input: ProductLifecycleRequest,
+    options?: ApiRequestOptions,
+  ) =>
+    strictValidate(
+      commerceProductSchema,
+      await apiClient.put(
+        path(projectId, `products/${encodeURIComponent(productId)}/lifecycle`),
+        input,
+        options,
+      ),
+      'commerce.setProductLifecycle',
     ),
   products: async (
     projectId: string,
@@ -312,6 +345,18 @@ const refreshProducts = (client: QueryClient, projectId: string) =>
     ),
   );
 
+/** Every product page, after a product's catalog record or a competitor's state changes. */
+const refreshProductDetails = (client: QueryClient, projectId: string) =>
+  client.invalidateQueries({ queryKey: queryKeys.commerce.resource(projectId, 'product-detail') });
+
+/** Every read a catalog product's edit, archive or restore changes. */
+const refreshCatalogProduct = (client: QueryClient, projectId: string) =>
+  Promise.all([
+    refreshCatalog(client, projectId),
+    refreshProducts(client, projectId),
+    refreshProductDetails(client, projectId),
+  ]);
+
 /** The project's competitor candidates, after a decision or a finished discovery. */
 const refreshCompetitors = (client: QueryClient, projectId: string) =>
   client.invalidateQueries({ queryKey: queryKeys.commerce.resource(projectId, 'competitors') });
@@ -348,7 +393,22 @@ export const commerceMutations = {
         Promise.all([
           refreshCompetitors(client, scope.projectId),
           refreshProducts(client, scope.projectId),
+          refreshProductDetails(client, scope.projectId),
         ]),
+    }),
+  editProduct: (scope: ProjectScope) =>
+    mutationOptions({
+      mutationFn: ({ id, ...input }: { id: string } & ProductEditRequest) =>
+        commerceApi.editProduct(scope.projectId, id, input, scoped(scope)),
+      onSuccess: (_product, _input, _context, { client }) =>
+        refreshCatalogProduct(client, scope.projectId),
+    }),
+  setProductLifecycle: (scope: ProjectScope) =>
+    mutationOptions({
+      mutationFn: ({ id, ...input }: { id: string } & ProductLifecycleRequest) =>
+        commerceApi.setProductLifecycle(scope.projectId, id, input, scoped(scope)),
+      onSuccess: (_product, _input, _context, { client }) =>
+        refreshCatalogProduct(client, scope.projectId),
     }),
   generateBuyerPrompts: (scope: ProjectScope) =>
     mutationOptions({
