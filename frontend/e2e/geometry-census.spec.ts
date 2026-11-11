@@ -9,7 +9,7 @@ import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/
  * `check:policy` guards the inputs (tokens, classes). It cannot see a 28px
  * button beside a 32px tab, a toolbar rebinding a token, or an error block
  * that is 88px on one route and 152px on the next — and those are what made
- * the app look inconsistent (docs/design.md, Behaviour every surface keeps). So this
+ * the app look inconsistent (docs/design.md, Layout). So this
  * walks every product route at the owner's viewport (982×900, DPR 1) and at
  * 1280×900 (light: dark rebinds only colours and shadows), measures every visible control, badge, tab,
  * band, box and query state, and asserts ONE value per role — the same

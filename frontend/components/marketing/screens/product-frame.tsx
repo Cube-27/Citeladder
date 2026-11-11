@@ -20,7 +20,7 @@ export type FrameFit = 'fluid' | 'scale';
  *
  * Inside a FeatureCard the card's own border stands in for the frame's, and
  * the well becomes a grey inset holding the screen as a white card above the
- * card's copy (docs/design.md D31).
+ * card's copy (docs/design-decisions.md D31).
  *
  * The screen is `inert` (no tab stops, out of the accessibility tree); `label`
  * describes it as one image.

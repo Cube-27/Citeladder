@@ -4,7 +4,12 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 import { aiTrafficApi, aiTrafficQueries } from '@/lib/api/ai-traffic';
 import { stringUrlCodec, optionalStringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { saveBlob } from '@/lib/download';
-import { TRAFFIC_RANGES, VERIFICATION_OPTIONS } from '@/lib/config/crawl-logs';
+import {
+  TRAFFIC_PAGE_SORTS,
+  TRAFFIC_RANGES,
+  VERIFICATION_OPTIONS,
+  type TrafficPagesSort,
+} from '@/lib/config/crawl-logs';
 export type TrafficDataTab = 'overview' | 'crawlers' | 'activity' | 'pages';
 const rangeCodec = stringUrlCodec(
   TRAFFIC_RANGES.map((t) => t.value),
@@ -25,10 +30,7 @@ function useTrafficSelection() {
   const [pattern, setPattern] = useUrlState('pattern', optionalStringUrlCodec);
   const [sort, setSort] = useUrlState(
     'sort',
-    stringUrlCodec(
-      ['requests_desc', 'sessions_desc', 'key_events_desc', 'citations_desc', 'url_asc'],
-      'requests_desc',
-    ),
+    stringUrlCodec<TrafficPagesSort>(TRAFFIC_PAGE_SORTS, TRAFFIC_PAGE_SORTS[0]),
   );
   return {
     range,

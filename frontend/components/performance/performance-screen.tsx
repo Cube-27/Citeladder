@@ -22,7 +22,9 @@ import { useRangeProjection } from './use-range-projection';
 import { ListScreen, RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { Stack } from '@/components/ui/layout';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import type { FilterDefinition } from '@/components/ui/all-filters';
 import type { ChartTone } from '@/components/ui/chart';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { QueryState } from '@/components/ui/query-state';
 import { readErrorProps } from '@/components/ui/read-error';
 import { StatusLine } from '@/components/ui/status-line';
@@ -233,6 +235,42 @@ function Ga4Workspace({
 }
 
 /**
+ * The page's control row: the range is its most used control, so it leads as
+ * the view; the chart interval waits in All filters while there is a chart,
+ * and the window it covers closes the row.
+ */
+function performanceControls({
+  selection,
+  onSelectRange,
+  onOpenDialog,
+  onReset,
+  interval,
+  windowLabel,
+}: Readonly<{
+  selection: RangeSelection;
+  onSelectRange: (selection: RangeSelection) => void;
+  onOpenDialog: (tab: 'filter' | 'compare') => void;
+  onReset: () => void;
+  interval: FilterDefinition | null;
+  windowLabel: string;
+}>): FilterBarProps {
+  return {
+    view: (
+      <PerformanceToolbar
+        selection={selection}
+        onOpenRange={() => onOpenDialog('filter')}
+        onOpenCompare={() => onOpenDialog('compare')}
+        onSelectRange={onSelectRange}
+        comparing={selection.compare !== 'none'}
+        onReset={onReset}
+      />
+    ),
+    filters: interval ? [interval] : undefined,
+    status: <PerformanceWindowCaption label={windowLabel} />,
+  };
+}
+
+/**
  * The first load holds the control band the loaded page draws its range
  * toolbar in, so the work starts on the same line before and after.
  */
@@ -319,30 +357,19 @@ export function PerformanceScreen() {
           sync={sync}
         />
       }
-      controls={{
-        // The range is the page's most used control, so it leads as the view;
-        // the chart interval waits in All filters while there is a chart.
-        view: (
-          <PerformanceToolbar
-            selection={selection}
-            onOpenRange={() => {
-              setDialogTab('filter');
-              setDialogOpen(true);
-            }}
-            onOpenCompare={() => {
-              setDialogTab('compare');
-              setDialogOpen(true);
-            }}
-            onSelectRange={setSelection}
-            comparing={selection.compare !== 'none'}
-            onReset={resetFilters}
-          />
-        ),
-        filters: evidence.hasSearchConsoleTotals
-          ? [granularityFilter(granularity, setGranularity)]
-          : undefined,
-        status: <PerformanceWindowCaption label={selectedLabel} />,
-      }}
+      controls={performanceControls({
+        selection,
+        onSelectRange: setSelection,
+        onOpenDialog: (tab) => {
+          setDialogTab(tab);
+          setDialogOpen(true);
+        },
+        onReset: resetFilters,
+        interval: evidence.hasSearchConsoleTotals
+          ? granularityFilter(granularity, setGranularity)
+          : null,
+        windowLabel: selectedLabel,
+      })}
     >
       <Stack gap="workspace">
         <DataSourceSetup

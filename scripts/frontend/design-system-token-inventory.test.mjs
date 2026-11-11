@@ -69,17 +69,33 @@ test('a refreshed region keeps a CRLF document in CRLF', () => {
   assert.equal(refreshGeneratedBlocks(text, blocks).stale.length, 0);
 });
 
-test('the radius table lists the ladder from CSS in size order', () => {
+test('the rounded block lists the radius ladder from CSS in size order', () => {
   const radii = generatedBlocks(
     '@theme { --radius-*: initial; --radius-full: 9999px; --radius-xs: 4px; } :root { --radius-card: 0.75rem; }',
     '',
   ).get('radii');
-  const rows = radii
-    .split('\n')
-    .slice(2)
-    .map((row) => row.split('|')[1].trim());
-  assert.deepEqual(rows, ['`--radius-xs`', '`--radius-card`', '`--radius-full`']);
-  assert.match(radii, /`--radius-card` \| `12px`/);
+  assert.equal(
+    radii,
+    ['```yaml', 'rounded:', '  xs: 4px', '  card: 12px', '  full: 9999px', '```'].join('\n'),
+  );
+});
+
+test('the colors block names each token with its light value and its dark one', () => {
+  const colors = generatedBlocks(
+    `@theme { --color-ink: #111111; --color-scrim: rgb(17 17 17 / 40%); }
+    :root[data-theme='dark'] { --color-ink: #f4f4f4; }`,
+    '',
+  ).get('tokens');
+  assert.equal(
+    colors,
+    [
+      '```yaml',
+      'colors:',
+      "  ink: '#111111' # dark '#f4f4f4'",
+      "  scrim: 'rgb(17 17 17 / 40%)' # dark 'rgb(17 17 17 / 40%)'",
+      '```',
+    ].join('\n'),
+  );
 });
 
 test('a website role reading the marketing sizes is documented at desktop and tablet', () => {
@@ -95,8 +111,11 @@ test('a website role reading the marketing sizes is documented at desktop and ta
     .cl-phero--lg .cl-phero-title { font-size: 2rem; }
     .cl-frame { font-size: var(--text-body); }`,
   ).get('type');
-  assert.match(type, /\| `\.cl-phero-title` \| public \| `44px \/ 1\.1` \| `36px \/ 1\.1` \|/);
-  assert.match(type, /\| `\.cl-body` \| public \| `16px \/ 1\.6` \| — \|/);
+  assert.match(
+    type,
+    /^ {2}cl-phero-title: \{ fontSize: 44px, lineHeight: 1\.1 \} # 768–1023px: 36px \/ 1\.1$/m,
+  );
+  assert.match(type, /^ {2}cl-body: \{ fontSize: 16px, lineHeight: 1\.6 \}$/m);
   // Only the roles themselves: a modifier rule or another component is not a role.
   assert.doesNotMatch(type, /cl-frame|32px/);
 });

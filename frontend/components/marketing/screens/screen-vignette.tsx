@@ -12,7 +12,7 @@ import './screen-vignette.css';
  * its well (never scaled), a title over an optional meta line with an
  * optional badge at the right, then one body: four rows, three figures over
  * a small chart, or a short panel. Every vignette uses the same type scale,
- * so neighbouring tiles read alike (docs/design.md, "Website product images").
+ * so neighbouring tiles read alike (docs/design-decisions.md, "Website product images").
  */
 export function Vignette({
   title,
