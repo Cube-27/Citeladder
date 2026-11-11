@@ -241,6 +241,9 @@ async function resolvedBeforeGoLive(trx: Database, action: ActionRow, declaredAt
   return clearing?.id ?? null;
 }
 
+const isContextualLink = (member: { rule_id: string }) =>
+  ruleCheckKind(member.rule_id) === 'contextual_link';
+
 export function declareAction(
   db: Database,
   scope: RecordScope,
@@ -300,12 +303,15 @@ export function declareAction(
     // credit this deployment with an outcome that predates it.
     if (resolvedBefore && input.recommendation_ids?.length)
       throw declarationConflict('The selected links were resolved before the change went live');
+    // A cleared Action's link suggestions left with its findings, so none can
+    // be selected: those findings are declared and freeze no link check.
+    const unselectable = membersResolved && !input.recommendation_ids?.length;
     const checks = resolvedBefore
       ? []
       : await declarationChecks(
           trx,
           { workspaceId, projectId: action.project_id },
-          members,
+          unselectable ? members.filter((member) => !isContextualLink(member)) : members,
           {
             auditId: snapshot?.audit_id ?? null,
             declaredAt,
@@ -313,13 +319,11 @@ export function declareAction(
           },
           input.recommendation_ids ?? [],
         );
-    // Every finding is declared; contextual links only as far as selected.
+    // Every finding is declared; selectable contextual links only as far as selected.
     const linked = new Set(checks.flatMap(({ member }) => (member ? [member.id] : [])));
-    const declaredMembers = resolvedBefore
+    const declaredMembers = unselectable
       ? members
-      : members.filter(
-          (member) => ruleCheckKind(member.rule_id) !== 'contextual_link' || linked.has(member.id),
-        );
+      : members.filter((member) => !isContextualLink(member) || linked.has(member.id));
     const resolved = await targets(trx, action, declaredMembers, project.website_url);
     const row = await trx
       .insertInto('opportunity_implementation_events')

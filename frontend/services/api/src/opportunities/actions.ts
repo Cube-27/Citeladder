@@ -342,18 +342,16 @@ function inMemberOrder<T extends { id: string }>(ids: readonly string[], rows: r
   });
 }
 
-export async function actionMembers(db: Database, action: ActionRow) {
-  const ids = stringList(action.member_opportunity_ids);
-  if (!ids.length) return [];
-  const rows = await db
+/** The Action's project findings among `ids`, in that order; only live ones unless `superseded`. */
+async function findingsOf(db: Database, action: ActionRow, ids: string[], superseded: boolean) {
+  let query = db
     .selectFrom('opportunities')
     .select(OPPORTUNITY_COLUMNS)
     .where('workspace_id', '=', action.workspace_id)
     .where('project_id', '=', action.project_id)
-    .where('id', 'in', ids)
-    .where('superseded_at', 'is', null)
-    .execute();
-  return inMemberOrder(ids, rows);
+    .where('id', 'in', ids);
+  if (!superseded) query = query.where('superseded_at', 'is', null);
+  return inMemberOrder(ids, await query.execute());
 }
 
 /**
@@ -371,21 +369,15 @@ function declarableIds(action: ActionRow): string[] {
  * or missing rows are never read.
  */
 export async function declarableMembers(db: Database, action: ActionRow) {
-  if (stringList(action.member_opportunity_ids).length)
-    return { members: await actionMembers(db, action), resolved: false };
+  const current = stringList(action.member_opportunity_ids);
+  if (current.length)
+    return { members: await findingsOf(db, action, current, false), resolved: false };
   const ids = stringList(action.last_member_opportunity_ids);
   if (!ids.length) return { members: [], resolved: false };
-  const rows = await db
-    .selectFrom('opportunities')
-    .select(OPPORTUNITY_COLUMNS)
-    .where('workspace_id', '=', action.workspace_id)
-    .where('project_id', '=', action.project_id)
-    .where('id', 'in', ids)
-    .execute();
-  return { members: inMemberOrder(ids, rows), resolved: true };
+  return { members: await findingsOf(db, action, ids, true), resolved: true };
 }
 
-/** `actionMembers` keyed by the Action id, so it runs beside the Action read. */
+/** The Action's live members keyed by its id, so it runs beside the Action read. */
 function memberRows(db: Database, workspaceId: string, actionId: string) {
   return db
     .selectFrom('opportunities')

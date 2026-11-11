@@ -269,7 +269,8 @@ the declaration freezes that last set, and the list and detail return it as
 `declarable_member_count`. An Action that never had a finding is refused. When
 the refresh that cleared the members was committed after go-live, the
 declaration freezes its checks as usual and the first reading after go-live
-decides them. When it was committed at or before go-live, the declaration
+decides them; its contextual-link findings are declared without a link check,
+because their suggestions left with them and none can be selected. When it was committed at or before go-live, the declaration
 names that snapshot as `resolved_before_snapshot_id`, freezes no check and
 queues no reading: the outcome predates the deployment and is never credited
 to it. Unavailable baseline, resolved before go-live and nothing to measure

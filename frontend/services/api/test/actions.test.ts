@@ -16,7 +16,7 @@ import { declarationChecks } from '../src/opportunities/declaration-checks.ts';
 import { CHECKS, memberMeasurementLeg } from '../src/opportunities/checks/registry.ts';
 import type { OpportunityRow } from '../src/opportunities/projection.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
-import { actionRow, snapshotRow } from './opportunity-fixtures.ts';
+import { actionRow, opportunityRow, snapshotRow } from './opportunity-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 
 const config = testConfig();
@@ -793,6 +793,40 @@ describe('Declaration ordering', () => {
     ]);
     // The crawl and audit after go-live are read for this declaration at once.
     expect(await verifications(s)).toBe(2);
+  });
+
+  it('declares a resolved link finding, whose suggestions left with it, without a link check', async () => {
+    const s = await seed();
+    await resolveAll(s, new Date());
+    const page = await db
+      .selectFrom('opportunities')
+      .select(['opportunity_type', 'severity'])
+      .where('workspace_id', '=', s.workspace_id)
+      .where('id', '=', s.members[pageRule]!)
+      .executeTakeFirstOrThrow();
+    const row = opportunityRow(
+      { workspace_id: s.workspace_id, project_id: s.project_id },
+      {
+        ...page,
+        rule_id: 'site_contextual_links',
+        target_key: 'fixture:resolved-link',
+        superseded_at: new Date(),
+      },
+    );
+    await db.insertInto('opportunities').values(row).execute();
+    const link = row.id;
+    await db
+      .updateTable('actions')
+      .set({ last_member_opportunity_ids: JSON.stringify([s.members[pageRule], link]) })
+      .where('id', '=', actionId(s))
+      .execute();
+    const created = await declare(s, 'resolved-link');
+    expect(created.status).toBe(201);
+    const body = await declarationBody(created);
+    expect(body.member_opportunity_ids).toEqual([s.members[pageRule], link]);
+    expect(body.expected_checks).toEqual([
+      { kind: 'site_rule', rule_id: 'aeo.structured_data_present', expected_outcome: 'pass' },
+    ]);
   });
 
   it('records findings resolved before go-live without crediting the deployment', async () => {
