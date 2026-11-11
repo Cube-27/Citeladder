@@ -64,14 +64,13 @@ function selectedFilters(tab: TrafficDataTab, selection: ReturnType<typeof useTr
 function viewFilters(tab: TrafficDataTab, selection: ReturnType<typeof useTrafficSelection>) {
   if (tab === 'crawlers') return { purpose: selection.purpose };
   if (tab === 'pages') return { sort: selection.sort, pattern: selection.pattern };
-  if (tab === 'activity') {
-    const status = selection.status;
-    return {
-      bot_id: selection.bot,
-      status: status && /^[1-5]\d{2}$/u.test(status) ? Number(status) : undefined,
-    };
-  }
+  if (tab === 'activity')
+    return { bot_id: selection.bot, status: trafficStatusCode(selection.status) };
   return {};
+}
+/** The typed status as the code the Activity read filters by; anything but a 100–599 code filters nothing. */
+export function trafficStatusCode(status: string | null): number | undefined {
+  return status && /^[1-5]\d{2}$/u.test(status) ? Number(status) : undefined;
 }
 /**
  * Start the Overview tab's reads together, before the tab is chosen.
