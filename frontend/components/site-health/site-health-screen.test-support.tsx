@@ -27,16 +27,19 @@ const project = makeProject({ id: PROJECT, workspace_id: WORKSPACE });
 const entitlement = makeWorkspaceEntitlement({ workspace_id: WORKSPACE });
 const ENTITLEMENT_PATH = `/api/v1/workspaces/${WORKSPACE}/entitlements`;
 
-/** A project that has not turned on scheduled crawls. */
-const crawlSchedule: CrawlSchedule = {
-  project_id: PROJECT,
-  enabled: false,
-  cadence: 'weekly',
-  next_run_at: null,
-  last_run_at: null,
-  last_outcome: null,
-  last_crawl_id: null,
-};
+/** The project's crawl schedule; by default one that was never turned on. */
+function crawlSchedule(overrides: Partial<CrawlSchedule> = {}): CrawlSchedule {
+  return {
+    project_id: PROJECT,
+    enabled: false,
+    cadence: 'weekly',
+    next_run_at: null,
+    last_run_at: null,
+    last_outcome: null,
+    last_crawl_id: null,
+    ...overrides,
+  };
+}
 
 /** A crawl that discovered its three pages but failed the analysis pass. */
 function crawl(overrides: Record<string, unknown> = {}) {
@@ -181,7 +184,9 @@ function mockRoutes(
         root_errors: [],
       }),
     ),
-    http.get(`/api/v1/projects/${PROJECT}/crawl-schedule`, () => HttpResponse.json(crawlSchedule)),
+    http.get(`/api/v1/projects/${PROJECT}/crawl-schedule`, () =>
+      HttpResponse.json(crawlSchedule()),
+    ),
     http.get(`/api/v1/projects/${PROJECT}/monitored-urls`, () =>
       HttpResponse.json({
         project_id: PROJECT,
@@ -226,6 +231,7 @@ export {
   ENTITLEMENT_PATH,
   PROJECT,
   crawl,
+  crawlSchedule,
   entitlement,
   inventoryRow,
   mockRoutes,

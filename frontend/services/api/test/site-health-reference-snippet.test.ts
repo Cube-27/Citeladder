@@ -1,19 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { policy } from '../src/config.ts';
-import { extractPageFacts } from '../src/site-health/analysis/facts.ts';
+import { bodyFacts } from './site-health-fixtures.ts';
 
 const cap = policy.site_health.page_analysis.facts.limits.reference_snippet_chars;
 
 /** The reference snippet the extractor keeps for a page whose body is `body`. */
-function snippetOf(body: string) {
-  const facts = extractPageFacts(Buffer.from(`<html lang="en"><body>${body}</body></html>`), {
-    finalUrl: 'https://example.test/',
-    contentType: 'text/html',
-    statusCode: 200,
-  });
-  return facts.accessibility.controls_missing_accessible_name_snippet;
-}
+const snippetOf = (body: string) =>
+  bodyFacts(body).accessibility.controls_missing_accessible_name_snippet;
 
 describe('the reference snippet of an unnamed control', () => {
   it('keeps structure and redacts text, values, secrets, handlers and scripts', () => {

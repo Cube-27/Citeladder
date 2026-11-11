@@ -12,9 +12,8 @@ import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
 import { attachOrCreateAction, updateActionStatus } from '../src/opportunities/actions.ts';
 import { getVisibility } from '../src/visibility/dashboard.ts';
-import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
+import { bodyFacts, SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 import { seedImport } from './referral-fixtures.ts';
-import { extractPageFacts } from '../src/site-health/analysis/facts.ts';
 import { refreshIssueCurrency } from '../src/site-health/issue-currency.ts';
 import { loadCrawl } from '../src/site-health/reads/crawl.ts';
 
@@ -973,26 +972,18 @@ it("lists exactly the pages a Site Health rule affects, with each page's failing
   ]);
 });
 
-/** Facts the extractor persists for a page whose body is `body`. */
-const factsOf = (body: string) =>
-  extractPageFacts(Buffer.from(`<html lang="en"><body>${body}</body></html>`), {
-    finalUrl: 'https://example.test/',
-    contentType: 'text/html',
-    statusCode: 200,
-  });
-
 it("keeps one redacted reference snippet per issue family from the first affected page, never another workspace's", async () => {
   const seed = await siteFixtures.crawl();
   // Created out of URL order: the snippet still comes from /a.
   const later = await sitePage(
     seed,
     '/b',
-    factsOf('<form><p><select name="size"></select></p></form>'),
+    bodyFacts('<form><p><select name="size"></select></p></form>'),
   );
   const first = await sitePage(
     seed,
     '/a',
-    factsOf(
+    bodyFacts(
       '<form><div class="field"><span>Your email</span>' +
         '<input type="email" name="email" value="jo@example.com" onchange="track()">' +
         '<script>steal()</script></div></form>',
@@ -1006,7 +997,7 @@ it("keeps one redacted reference snippet per issue family from the first affecte
   const elsewhere = await sitePage(
     other,
     '/a',
-    factsOf('<form><span><textarea name="note"></textarea></span></form>'),
+    bodyFacts('<form><span><textarea name="note"></textarea></span></form>'),
   );
   await siteIssue(other, elsewhere, 'web.accessibility_form_names');
   await refreshIssueCurrency(db, await loadCrawl(db, other.workspaceId, other.crawlId));
@@ -1059,8 +1050,8 @@ it("keeps one redacted reference snippet per issue family from the first affecte
 it('hands the model page URLs without their query string or fragment, pages differing only by query kept apart by id', async () => {
   const seed = await siteFixtures.crawl();
   const form = '<form><span><textarea name="note"></textarea></span></form>';
-  const tokened = await sitePage(seed, '/p?token=abc&email=a@b.com#x', factsOf(form));
-  const other = await sitePage(seed, '/p?token=def', factsOf(form));
+  const tokened = await sitePage(seed, '/p?token=abc&email=a@b.com#x', bodyFacts(form));
+  const other = await sitePage(seed, '/p?token=def', bodyFacts(form));
   await siteIssue(seed, tokened, 'web.accessibility_form_names');
   await siteIssue(seed, other, 'web.accessibility_form_names');
   await siteIssue(seed, tokened, 'technical.title_present', {
