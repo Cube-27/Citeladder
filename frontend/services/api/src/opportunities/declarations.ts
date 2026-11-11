@@ -306,12 +306,13 @@ export function declareAction(
     // A cleared Action's link suggestions left with its findings, so none can
     // be selected: those findings are declared and freeze no link check.
     const unselectable = membersResolved && !input.recommendation_ids?.length;
+    const measured = unselectable ? members.filter((member) => !isContextualLink(member)) : members;
     const checks = resolvedBefore
       ? []
       : await declarationChecks(
           trx,
           { workspaceId, projectId: action.project_id },
-          unselectable ? members.filter((member) => !isContextualLink(member)) : members,
+          measured,
           {
             auditId: snapshot?.audit_id ?? null,
             declaredAt,
