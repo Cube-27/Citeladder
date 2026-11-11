@@ -224,6 +224,7 @@ describe('CSV evidence and catalog', () => {
         .selectFrom('analytics_tasks')
         .select('id')
         .where('project_id', '=', t.projectId)
+        .where('task_kind', '=', 'commerce_competitor_discovery')
         .execute(),
     ).toHaveLength(2);
   });
@@ -265,13 +266,33 @@ describe('CSV evidence and catalog', () => {
       csv_row_number: 2,
       importer_version: policy.commerce.importer_version,
     });
+    // The one import is one catalog revision, whose only work is re-matching recent answers.
+    const revisions = await db
+      .selectFrom('commerce_catalog_revisions')
+      .select(['id', 'revision_number', 'source_kind', 'source_id'])
+      .where('workspace_id', '=', t.workspaceId)
+      .where('project_id', '=', t.projectId)
+      .execute();
+    expect(revisions).toEqual([
+      {
+        id: expect.any(String),
+        revision_number: 1,
+        source_kind: 'import',
+        source_id: one.body.import_id,
+      },
+    ]);
     expect(
       await db
         .selectFrom('analytics_tasks')
-        .select('id')
+        .select(['task_kind', 'payload'])
         .where('project_id', '=', t.projectId)
         .execute(),
-    ).toEqual([]);
+    ).toEqual([
+      {
+        task_kind: 'commerce_answer_matching',
+        payload: { catalog_revision_id: revisions[0]!.id },
+      },
+    ]);
     const update = await importCsv('sku,name\nA1,Updated\n');
     expect(update.body.updated).toBe(1);
     const stored = await db
@@ -543,6 +564,25 @@ describe('decisions and persisted reads', () => {
       .where('id', '=', execution.analysisId!)
       .executeTakeFirstOrThrow();
     const product = (await importCsv()).body.row_outcomes[0]!.product_id!;
+    const passId = randomUUID();
+    await db
+      .insertInto('commerce_match_passes')
+      .values({
+        id: passId,
+        workspace_id: t.workspaceId,
+        project_id: t.projectId,
+        audit_id: audit,
+        task_id: execution.taskId,
+        artifact_id: evidence.artifact_id,
+        catalog_revision_id: null,
+        target_kind: 'product',
+        target_id: targetId,
+        parser_version: '1',
+        matcher_version: '1',
+        mode: 'live',
+        created_at: new Date(),
+      })
+      .execute();
     const observation = (values: {
       classification: string;
       product_id: string | null;
@@ -555,6 +595,7 @@ describe('decisions and persisted reads', () => {
       audit_id: audit,
       task_id: execution.taskId,
       artifact_id: evidence.artifact_id,
+      pass_id: passId,
       target_kind: 'product',
       target_id: targetId,
       competitor_candidate_id: null,

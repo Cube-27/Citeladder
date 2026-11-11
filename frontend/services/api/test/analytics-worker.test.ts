@@ -650,6 +650,7 @@ describe('analytics kind registry', () => {
         'bot_ip_range_refresh',
         'bot_request_retention_sweep',
         'classify_referrals',
+        'commerce_answer_matching',
         'commerce_catalog_projection',
         'commerce_competitor_discovery',
         'content_angle_refresh',

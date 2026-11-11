@@ -52,7 +52,7 @@ function normalize(value: string) {
     .trim()
     .replaceAll(/\s+/gu, ' ');
 }
-const productSchema = z.object({
+export const productSchema = z.object({
   id: z.uuid(),
   canonical_url: z.string(),
   name: z.string(),
@@ -62,7 +62,7 @@ const productSchema = z.object({
   mpn: z.string().nullish(),
   attributes: z.record(z.string(), z.unknown()).default({}),
 });
-const competitorSchema = z.object({
+export const competitorSchema = z.object({
   id: z.uuid(),
   canonical_url: z.string(),
   product_name: z.string(),
@@ -85,6 +85,8 @@ export const frozenTargetSchema = z.object({
   ),
 });
 export type FrozenShelfTarget = z.output<typeof frozenTargetSchema>;
+/** The products and approved competitors one answer is matched against. */
+export type ShelfCatalog = Pick<FrozenShelfTarget, 'products' | 'approved_competitors'>;
 type FrozenProduct = FrozenShelfTarget['products'][number];
 export type ShelfMatch =
   | { product: FrozenProduct; competitor: null; confidence: number }
@@ -93,7 +95,7 @@ export type ShelfMatch =
 export const NO_MATCH: ShelfMatch = { product: null, competitor: null, confidence: 0 };
 
 /** The catalog product or approved competitor whose page a carousel card links to. */
-export function matchPageUrl(url: string, target: FrozenShelfTarget): ShelfMatch {
+export function matchPageUrl(url: string, target: ShelfCatalog): ShelfMatch {
   const page = canonicalPage(url);
   if (!page) return NO_MATCH;
   const product = target.products.find((row) => canonicalPage(row.canonical_url) === page);
@@ -113,7 +115,7 @@ export function matchPageUrl(url: string, target: FrozenShelfTarget): ShelfMatch
  * that brand on the shelf shares. When a span names both sides ("Rival Y, a
  * cheaper alternative to Owned"), the one named first holds the slot.
  */
-export function matchRecommendation(text: string, target: FrozenShelfTarget): ShelfMatch {
+export function matchRecommendation(text: string, target: ShelfCatalog): ShelfMatch {
   const haystack = ` ${normalize(text)} `;
   const at = (value: string | null | undefined) => {
     const needle = normalize(value ?? '');
@@ -149,7 +151,7 @@ export function matchRecommendation(text: string, target: FrozenShelfTarget): Sh
 }
 
 /** Textual attribute values no other same-brand product on the shelf carries. */
-function distinctiveAttributes(product: FrozenProduct, target: FrozenShelfTarget) {
+function distinctiveAttributes(product: FrozenProduct, target: ShelfCatalog) {
   const textual = (row: FrozenProduct) =>
     Object.values(row.attributes).flatMap((value) => {
       const normalized = typeof value === 'string' ? normalize(value) : '';
@@ -210,7 +212,7 @@ const hasProductSignal = (span: RecommendationSpan) =>
  */
 export async function prepareRecommendations(
   answer: string,
-  target: FrozenShelfTarget,
+  target: ShelfCatalog,
   resolver?: ShelfResolver,
 ): Promise<PreparedRecommendation[]> {
   const spans = recommendationSpans(answer);

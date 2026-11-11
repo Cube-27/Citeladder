@@ -13,7 +13,7 @@ import { approvedEndpoint } from '../providers/connections.ts';
 import { auditPolicy, auditSettings } from './config.ts';
 import type { AuditInput } from './inputs.ts';
 import { frozenConfiguration } from './frozen-configuration.ts';
-import { freezeCommerceContext } from '../commerce/audit-context.ts';
+import { freezeCatalogRevision, freezeCommerceContext } from '../commerce/audit-context.ts';
 import { frozenEntityMatching, projectEntityMatching } from '../analysis/entity-matching.ts';
 import { strings } from '../db/json.ts';
 import { admittedFactCheck, admittedPerceptionVersions } from '../perception/admission.ts';
@@ -516,6 +516,7 @@ export async function prepareAudit(
         { ...route, ...auditPolicy.route_policies[route.logical_engine] },
       ]),
     ),
+    ...(await freezeCatalogRevision(db, { workspaceId, projectId: project.id })),
     ...(input.audit_scope === 'commerce'
       ? {
           commerce_measurement: await freezeCommerceContext(

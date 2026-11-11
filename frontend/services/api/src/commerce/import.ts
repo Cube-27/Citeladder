@@ -17,6 +17,7 @@ import {
   newProduct,
 } from './catalog-store.ts';
 import type { CommerceScope } from './reads.ts';
+import { recordCatalogRevision } from './catalog-revisions.ts';
 import { categoryKey, isCategoryName } from './projection-facts.ts';
 import { canonicalUrl } from '../site-health/url-identity.ts';
 
@@ -315,6 +316,8 @@ export function importCatalog(
       .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
       .execute();
+    // A changed catalog becomes a revision that re-matches recent answers.
+    await recordCatalogRevision(trx, scope, { kind: 'import', id });
     return {
       import_id: id,
       ...counts,
