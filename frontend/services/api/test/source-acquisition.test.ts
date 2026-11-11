@@ -80,6 +80,74 @@ it.each(['https://first.test/private', 'https://second.test/private'])(
     expect(sent).not.toContain(destination);
   },
 );
+/** A site whose robots.txt answers `robots` and whose pages answer 200 HTML. */
+function robotsSite(robots: { status: number; body: string }, sent: string[]) {
+  return createWebsiteFetcher(
+    async () => [{ address: '93.184.216.34', family: 4 }],
+    async (url) => {
+      sent.push(url.pathname);
+      return url.pathname === '/robots.txt'
+        ? { ...robots, location: undefined, type: 'text/plain', body: Buffer.from(robots.body) }
+        : { status: 200, location: undefined, type: 'text/html', body: Buffer.from('<p>ok</p>') };
+    },
+  );
+}
+it('fetches a disallowed page only when the caller ignores robots.txt; by default it respects it', async () => {
+  const sent: string[] = [];
+  const acquirer = new PageAcquirer(
+    async () => {},
+    robotsSite({ status: 200, body: 'User-agent: *\nDisallow: /private' }, sent),
+    settings,
+    0,
+  );
+  await expect(acquirer.fetch('https://shop.test/private', options)).rejects.toMatchObject({
+    code: 'robots_disallowed',
+  });
+  const page = await acquirer.fetch('https://shop.test/private', {
+    ...options,
+    robots: () => 'ignore',
+  });
+  expect(page.status).toBe(200);
+  expect(sent).toEqual(['/robots.txt', '/private']);
+});
+it.each([
+  ['access-blocked', 403, 'robots_disallowed'],
+  ['unreachable', 503, 'robots_unavailable'],
+])(
+  'never fetches past an %s robots.txt, even when ignoring robots.txt',
+  async (_label, status, code) => {
+    const sent: string[] = [];
+    const acquirer = new PageAcquirer(
+      async () => {},
+      robotsSite({ status, body: '' }, sent),
+      settings,
+      0,
+    );
+    await expect(
+      acquirer.fetch('https://shop.test/private', { ...options, robots: () => 'ignore' }),
+    ).rejects.toMatchObject({ code });
+    expect(sent).toEqual(['/robots.txt']);
+  },
+);
+it('keeps an unsupported crawl delay binding when the crawl ignores robots.txt', () => {
+  const slow = robotsPolicy('https://example.test', 200, 'User-agent: *\nCrawl-delay: 2', settings);
+  expect(slow.admits('https://example.test/', 'ignore')).toBe(false);
+  // A 3xx answer is not a readable robots.txt, whatever the crawl chose.
+  const unread = robotsPolicy('https://example.test', 304, '', settings);
+  expect([
+    unread.admits('https://example.test/', 'ignore'),
+    unread.admits('https://example.test/', 'respect'),
+  ]).toEqual([false, false]);
+  const rules = robotsPolicy('https://example.test', 200, 'User-agent: *\nDisallow: /a', settings);
+  expect([
+    rules.admits('https://example.test/a', 'ignore'),
+    rules.excludes('https://example.test/a'),
+  ]).toEqual([true, true]);
+  expect([
+    rules.admits('https://example.test/a', 'respect'),
+    rules.excludes('https://example.test/b'),
+  ]).toEqual([false, false]);
+});
 it('applies crawler-specific robots rules, longest allow, refusal and retryable unavailability', () => {
   const body =
     'User-agent: *\nDisallow: /private\nAllow: /private/public\nSitemap: https://example.test/map.xml';

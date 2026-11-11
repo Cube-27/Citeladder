@@ -7,7 +7,12 @@ import type { Database } from '../db/database.ts';
 import { jsonObject, strings } from '../db/json.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { isPageRerun, pageRerunSql } from './page-rerun.ts';
-import { crawlError, createCrawlRequest, type CreateCrawlRequest } from './planner-policy.ts';
+import {
+  crawlError,
+  createCrawlRequest,
+  robotsDecisionSchema,
+  type CrawlAdmission,
+} from './planner-policy.ts';
 import { loadCrawl } from './reads/crawl.ts';
 
 /**
@@ -30,15 +35,19 @@ async function siteCrawl(db: Database, workspaceId: string, crawlId: string) {
   return earlier ?? crawlError('No site crawl to rerun yet', 'invalid_crawl_request');
 }
 
+/**
+ * The rerun keeps the crawl's robots choice and the person who confirmed it,
+ * so a recrawl or a scheduled crawl ignores robots.txt only where its source did.
+ */
 export async function recrawlRequest(
   db: Database,
   workspaceId: string,
   crawlId: string,
-): Promise<CreateCrawlRequest> {
+): Promise<CrawlAdmission> {
   const crawl = await siteCrawl(db, workspaceId, crawlId);
   const frozen = jsonObject(crawl.configuration, 'site_crawls.configuration');
-  // The same random seed draws the same sample, so a sampled crawl compares too.
-  return createCrawlRequest.parse({
+  const ignore = frozen.robots === 'ignore';
+  const request = createCrawlRequest.parse({
     project_id: crawl.project_id,
     include_globs: strings(frozen.include_globs),
     exclude_globs: strings(frozen.exclude_globs),
@@ -46,6 +55,12 @@ export async function recrawlRequest(
     requested_page_limit: frozen.requested_page_limit,
     seed_urls: strings(frozen.seed_urls),
     page_kinds: strings(frozen.page_kinds),
+    // The same random seed draws the same sample, so a sampled crawl compares too.
     seed: crawl.random_seed,
+    robots: ignore ? 'ignore' : 'respect',
   });
+  return {
+    ...request,
+    robots_decision: ignore ? robotsDecisionSchema.parse(frozen.robots_decision) : null,
+  };
 }

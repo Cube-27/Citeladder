@@ -5,6 +5,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { InternalLinksCard } from '@/components/site-health/internal-links-card';
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
+import { RobotsExcludedBadge } from '@/components/site-health/robots-choice';
 import { UrlScoreSummary } from '@/components/site-health/url-score-summary';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -104,6 +105,7 @@ function PageMetaLine({ detail }: Readonly<{ detail: PageDetail }>) {
           {statusLabel(detail.analysis_status)}
         </Badge>
       )}
+      {detail.robots_excluded ? <RobotsExcludedBadge /> : null}
     </Inline>
   );
 }

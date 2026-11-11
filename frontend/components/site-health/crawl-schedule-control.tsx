@@ -2,7 +2,7 @@
 
 import { ChevronDown } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import type { CrawlSchedule, CrawlScheduleCadence } from '@citeladder/contracts';
+import type { CrawlRobotsChoice, CrawlSchedule, CrawlScheduleCadence } from '@citeladder/contracts';
 
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -17,6 +17,7 @@ import {
   MenuTrigger,
 } from '@/components/ui/menu';
 import { MutationNotice } from '@/components/ui/mutation-notice';
+import { robotsChoiceNote } from '@/components/site-health/robots-choice';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
@@ -57,6 +58,7 @@ function CrawlScheduleControl({
   schedule,
   unavailable,
   pending,
+  robotsNote,
   onChange,
 }: Readonly<{
   /** Undefined while the schedule loads or when it could not be read. */
@@ -64,13 +66,14 @@ function CrawlScheduleControl({
   /** The schedule could not be read. */
   unavailable: boolean;
   pending: boolean;
+  /** The latest crawl ignores robots.txt, so scheduled runs do too; null otherwise. */
+  robotsNote: string | null;
   onChange: (choice: Readonly<{ enabled: boolean; cadence: CrawlScheduleCadence }>) => void;
 }>) {
   const current = choiceOf(schedule);
   const label = schedule
     ? (CHOICES.find((choice) => choice.value === current)?.label ?? 'Off')
     : null;
-  const note = outcomeNote(schedule);
   let text = 'Schedule';
   if (pending) text = 'Saving…';
   else if (unavailable) text = 'Schedule unavailable';
@@ -107,15 +110,30 @@ function CrawlScheduleControl({
             </MenuRadioItem>
           ))}
         </MenuRadioGroup>
-        {schedule?.enabled || note ? <MenuSeparator /> : null}
-        {schedule?.enabled ? (
-          <MenuLabel>
-            Next crawl <DisplayTime value={schedule.next_run_at} dateOnly />
-          </MenuLabel>
-        ) : null}
-        {note ? <MenuLabel>{note}</MenuLabel> : null}
+        <ScheduleNotes schedule={schedule} robotsNote={robotsNote} />
       </MenuContent>
     </Menu>
+  );
+}
+
+/** Under the choices: the kept robots choice, the next run and the last outcome. */
+function ScheduleNotes({
+  schedule,
+  robotsNote,
+}: Readonly<{ schedule: CrawlSchedule | undefined; robotsNote: string | null }>) {
+  const note = outcomeNote(schedule);
+  if (!schedule?.enabled && !note && !robotsNote) return null;
+  return (
+    <>
+      <MenuSeparator />
+      {robotsNote ? <MenuLabel>{robotsNote}</MenuLabel> : null}
+      {schedule?.enabled ? (
+        <MenuLabel>
+          Next crawl <DisplayTime value={schedule.next_run_at} dateOnly />
+        </MenuLabel>
+      ) : null}
+      {note ? <MenuLabel>{note}</MenuLabel> : null}
+    </>
   );
 }
 
@@ -123,7 +141,12 @@ function CrawlScheduleControl({
  * The project's crawl schedule: the header control and, when saving failed, the
  * notice with its retry. Reads only while `enabled`.
  */
-export function useCrawlSchedule(scope: ProjectScope, enabled: boolean) {
+export function useCrawlSchedule(
+  scope: ProjectScope,
+  enabled: boolean,
+  /** The latest crawl's robots choice, which each scheduled run keeps. */
+  robots: CrawlRobotsChoice | undefined,
+) {
   const query = useQuery({ ...siteHealthQueries.crawlSchedule(scope), enabled });
   const mutation = useMutation(siteHealthMutations.updateCrawlSchedule(scope));
   const retry = () => {
@@ -135,6 +158,7 @@ export function useCrawlSchedule(scope: ProjectScope, enabled: boolean) {
         schedule={query.data}
         unavailable={query.isError}
         pending={mutation.isPending}
+        robotsNote={robotsChoiceNote(robots)}
         onChange={(input) => mutation.mutate(input)}
       />
     ),

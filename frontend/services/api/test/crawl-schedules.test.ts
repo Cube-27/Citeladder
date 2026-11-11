@@ -141,6 +141,37 @@ describe('scheduled crawl occurrences', () => {
     });
   });
 
+  it('keeps the latest crawl’s choice to ignore robots.txt and who confirmed it', async () => {
+    const seed = await fixtures.crawl('completed');
+    const decision = {
+      user_id: seed.userId,
+      email: 'owner@example.test',
+      decided_at: '2026-01-02T03:04:05.000Z',
+    };
+    await db
+      .updateTable('site_crawls')
+      .set({
+        random_seed: '7',
+        configuration: JSON.stringify({
+          input_mode: 'auto',
+          robots: 'ignore',
+          robots_decision: decision,
+        }),
+      })
+      .where('id', '=', seed.crawlId)
+      .execute();
+    await allow(seed, 5);
+    await weekly(seed);
+
+    expect(await scheduler('robots').runOnce(due)).toBe(1);
+
+    const [, scheduled] = await crawls(seed);
+    expect(scheduled!.configuration).toMatchObject({
+      robots: 'ignore',
+      robots_decision: decision,
+    });
+  });
+
   it('skips an occurrence the fetch budget refuses and holds nothing', async () => {
     const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
     await allow(tenant, 0);

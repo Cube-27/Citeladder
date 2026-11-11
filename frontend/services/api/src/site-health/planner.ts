@@ -26,7 +26,7 @@ import {
   normalizeGlobs,
   normalizedSeed,
   projectWebsiteRoot,
-  type CreateCrawlRequest,
+  type CrawlAdmission,
 } from './planner-policy.ts';
 import { inventoryCrawlIds } from './reads/crawl.ts';
 import { recordCrawlEvent } from './site-task.ts';
@@ -281,7 +281,7 @@ function refreshProfile(
 }
 
 /** Caller owns the transaction: project -> capacity/account -> runtime -> profile. */
-export async function createCrawl(db: Database, workspaceId: string, request: CreateCrawlRequest) {
+export async function createCrawl(db: Database, workspaceId: string, request: CrawlAdmission) {
   const project = await db
     .selectFrom('projects')
     .select('website_url')
@@ -403,6 +403,8 @@ export async function createPageRerunCrawl(
       limit: budget.limit,
       seeds: [],
       kinds: [],
+      robots: 'respect',
+      robotsDecision: null,
     }),
     // Marks a page re-read, which Changes never compares as a site crawl.
     page_rerun: true,

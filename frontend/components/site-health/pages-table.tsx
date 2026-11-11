@@ -13,6 +13,7 @@ import { TextLink } from '@/components/ui/text-link';
 import type { PagesSort } from '@/lib/api/site-health';
 import type { PageSummary } from '@citeladder/contracts';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
+import { RobotsExcludedBadge } from '@/components/site-health/robots-choice';
 import {
   DEFAULT_PAGES_SORT,
   PLACEHOLDER,
@@ -167,6 +168,7 @@ export function PagesTable({
                       {statusLabel(page.analysis_status)}
                     </Badge>
                   )}
+                  {page.robots_excluded ? <RobotsExcludedBadge /> : null}
                 </Inline>
                 <ClampText lines={1} className="type-caption tabular-nums">
                   {page.display_url}

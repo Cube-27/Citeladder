@@ -5,7 +5,7 @@
  * `z.input` of them.
  */
 import { z } from 'zod';
-import { crawlScheduleCadenceSchema } from './site-health/crawl.ts';
+import { crawlRobotsHandlingSchema, crawlScheduleCadenceSchema } from './site-health/crawl.ts';
 
 const optionalList = () => z.array(z.string()).nullable().optional();
 
@@ -21,6 +21,12 @@ export const siteCrawlCreateRequestSchema = z.strictObject({
   discovery_count: z.int().min(1).nullable().optional(),
   seed_urls: optionalList(),
   page_kinds: optionalList(),
+  /**
+   * `ignore` fetches the project's own pages despite robots.txt exclusions;
+   * sending it confirms the person is authorized to crawl this site. Absent
+   * means `respect`.
+   */
+  robots: crawlRobotsHandlingSchema.nullable().optional(),
 });
 export type SiteCrawlCreateRequest = z.input<typeof siteCrawlCreateRequestSchema>;
 
