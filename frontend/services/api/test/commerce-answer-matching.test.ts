@@ -3,14 +3,17 @@
  * answer is matched against the catalog revision its audit froze, and a new
  * revision re-matches earlier answers once through the shared analytics worker.
  */
+import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { createAudits } from '../src/audits/creation.ts';
 import { persistExecutionSuccess, type ExecutionResult } from '../src/audits/result-persistence.ts';
+import { categoryByName } from '../src/commerce/catalog-store.ts';
 import { importCatalog } from '../src/commerce/import.ts';
 import { prepareShelfExecution } from '../src/commerce/shelf.ts';
+import { finalizeCommerceShelf } from '../src/commerce/shelf-metrics.ts';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
 import { enqueueTask } from '../src/queue/enqueue.ts';
 import { AuditQueue } from '../src/queue/audit-queue.ts';
@@ -45,8 +48,8 @@ const TRAIL = 'https://shop.example/products/trail,Acme Trail Climber,Acme';
 const ANSWER =
   '1. Acme Road Runner for daily road miles\n2. Acme Trail Climber for rocky trails\n3. A generic foam trainer';
 
-/** A brand audit of one prompt whose single ChatGPT answer is `answer`; the audit id. */
-async function brandAnswer(t: Tenant, answer: string) {
+/** An audit (brand by default) of one prompt whose single ChatGPT answer is `answer`; the audit id. */
+async function brandAnswer(t: Tenant, answer: string, auditScope: 'brand' | 'commerce' = 'brand') {
   const [auditId] = await createAudits(
     db,
     t.workspaceId,
@@ -55,7 +58,7 @@ async function brandAnswer(t: Tenant, answer: string) {
       prompt_ids: [t.promptId],
       engines: ['chatgpt'],
       repetitions: 1,
-      audit_scope: 'brand',
+      audit_scope: auditScope,
     }),
     {},
     runtime,
@@ -232,6 +235,89 @@ describe('catalog matching in every answer', () => {
     ]);
     // Another workspace's answer naming the same products is never matched.
     expect(await passes(foreign.workspaceId)).toEqual([]);
+  });
+
+  it("counts a Commerce answer's latest pass in its AI Shelf snapshot", async () => {
+    const t = await auditTenant(db, fixtures);
+    const shoes = (rows: string[]) =>
+      ['canonical_url,name,brand,category', ...rows.map((row) => `${row},Shoes`)].join('\n');
+    await importCatalog(db, scopeOf(t), {
+      content: shoes([ROAD]),
+      filename: 'catalog.csv',
+      content_type: 'text/csv',
+    });
+    const category = await categoryByName(db, scopeOf(t), 'Shoes');
+    await db
+      .insertInto('commerce_prompt_targets')
+      .values({
+        id: randomUUID(),
+        workspace_id: t.workspaceId,
+        project_id: t.projectId,
+        prompt_id: t.promptId,
+        target_kind: 'category',
+        target_id: category.id,
+        template_version: 'test',
+        approved_at: new Date(),
+        created_at: new Date(),
+      })
+      .execute();
+    const auditId = await brandAnswer(t, ANSWER, 'commerce');
+    // The trail shoe joins the category after the answer: revision 2 re-matches it.
+    await importCatalog(db, scopeOf(t), {
+      content: shoes([ROAD, TRAIL]),
+      filename: 'catalog-2.csv',
+      content_type: 'text/csv',
+    });
+    const queued = await matchingTasks(t.workspaceId);
+    await runMatching(t.workspaceId, [queued.at(-1)!.id]);
+    expect(await passes(t.workspaceId)).toEqual([
+      {
+        mode: 'live',
+        target: 'category',
+        revision: 1,
+        observed: [
+          '1:owned:Acme Road Runner',
+          '2:unresolved:Acme Trail Climber for rocky trails',
+          '3:unresolved:A generic foam trainer',
+        ],
+      },
+      {
+        mode: 'backfill',
+        target: 'category',
+        revision: 2,
+        observed: [
+          '1:owned:Acme Road Runner',
+          '2:owned:Acme Trail Climber',
+          '3:unresolved:A generic foam trainer',
+        ],
+      },
+    ]);
+
+    const audit = await db
+      .selectFrom('audits')
+      .selectAll()
+      .where('workspace_id', '=', t.workspaceId)
+      .where('id', '=', auditId)
+      .executeTakeFirstOrThrow();
+    await db.transaction().execute((trx) => finalizeCommerceShelf(trx, audit));
+    const snapshot = await db
+      .selectFrom('commerce_shelf_snapshots')
+      .select(['successful_execution_count', 'source_observation_ids'])
+      .where('workspace_id', '=', t.workspaceId)
+      .where('audit_id', '=', auditId)
+      .executeTakeFirstOrThrow();
+    const latest = await db
+      .selectFrom('commerce_recommendation_observations as o')
+      .innerJoin('commerce_match_passes as p', 'p.id', 'o.pass_id')
+      .select('o.id')
+      .where('o.workspace_id', '=', t.workspaceId)
+      .where('p.mode', '=', 'backfill')
+      .execute();
+    expect(latest).toHaveLength(3);
+    expect(snapshot.successful_execution_count).toBe(1);
+    expect(new Set(snapshot.source_observation_ids as string[])).toEqual(
+      new Set(latest.map((row) => row.id)),
+    );
   });
 
   it('refuses a revision from another workspace', async () => {

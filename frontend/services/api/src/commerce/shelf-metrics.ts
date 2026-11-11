@@ -118,7 +118,7 @@ export function shelfMetrics(taskIds: string[], observations: Observation[]) {
  * catalog revision, then the most recent. Older passes stay as history and
  * are never read for current numbers.
  */
-export function latestPasses(
+function latestPasses(
   db: Database,
   audit: Pick<Selectable<Audits>, 'workspace_id' | 'project_id' | 'id'>,
 ) {

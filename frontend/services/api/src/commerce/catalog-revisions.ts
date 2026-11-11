@@ -19,7 +19,7 @@ import { enqueueCoalesced, enqueueTask } from '../queue/enqueue.ts';
 import type { CommerceScope } from './reads.ts';
 import { competitorSchema, productSchema, type ShelfCatalog } from './shelf-parsing.ts';
 
-export const ANSWER_MATCHING_KIND = 'commerce_answer_matching';
+const ANSWER_MATCHING_KIND = 'commerce_answer_matching';
 
 const targetKindSchema = z.enum(['product', 'category']);
 export type ShelfTargetRef = { target_kind: z.infer<typeof targetKindSchema>; target_id: string };

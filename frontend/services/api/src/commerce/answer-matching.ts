@@ -57,6 +57,7 @@ function pendingAnswers(db: Database, scope: CommerceScope, revisionId: string, 
         exists(
           selectFrom('commerce_match_passes as p')
             .select('p.id')
+            .where('p.workspace_id', '=', scope.workspaceId)
             .whereRef('p.artifact_id', '=', 'r.id')
             .where('p.catalog_revision_id', '=', revisionId)
             .where('p.parser_version', '=', versions.parser_version)
