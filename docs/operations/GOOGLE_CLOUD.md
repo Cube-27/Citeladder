@@ -51,8 +51,9 @@ Docs Worker (static, no origin)                            │ starts runner aft
 - **Identities.** The deployer authenticates through Workload Identity
   Federation pinned to `Cube-27/Citeladder`, `refs/heads/main` and the
   `gcp-demo` environment. No service-account keys exist. The API account
-  (`citeladder-api`) and the job account (`citeladder-runtime`, for the
-  runner, migrate and billing jobs) read the shared runtime secrets; only the
+  (`citeladder-runtime`, an account ID older than the split) and the job
+  account (`citeladder-jobs`, for the runner, migrate and billing jobs) read
+  the shared runtime secrets; only the
   API account reads the origin tokens and the Turnstile secret. Each may
   start only the runner job and mint crawl-log reader tokens. The scheduler
   account holds no grant; its ID token admits only the API's tick route. The

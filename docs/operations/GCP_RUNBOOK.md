@@ -274,7 +274,7 @@ Billing → Reports grouped by SKU and remove anything unexpectedly non-zero.
 
 - **Crawl-log reader:** Terraform creates `citeladder-log-reader`, a service
   account with no key and no role in this project, and grants the API
-  (`citeladder-api`) and job (`citeladder-runtime`) service accounts
+  (`citeladder-runtime`) and job (`citeladder-jobs`) service accounts
   `roles/iam.serviceAccountTokenCreator` on it alone. Its email
   (`terraform output crawl_log_reader_email`) reaches every Cloud Run workload
   as `CRAWL_LOG_READER_EMAIL`; customers grant it subscriber and viewer on

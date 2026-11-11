@@ -166,10 +166,13 @@ jobs:
               billing_env:$billing_env,optional_secrets:[]}' > deploy.auto.tfvars.json
           # Images and secret versions need the registry and secret containers
           # first. On the first run this also replaces the retired asia-south1
-          # registry, deleting every stale image with it.
+          # registry, deleting every stale image with it. The jobs' secret
+          # grants go first too, so they have propagated by the time the
+          # migrate job starts under that identity.
           terraform apply -input=false -auto-approve \
             -target=google_artifact_registry_repository.images \
-            -target=google_secret_manager_secret.runtime
+            -target=google_secret_manager_secret.runtime \
+            -target=google_secret_manager_secret_iam_member.jobs
       - name: Build and push immutable images
         working-directory: infra/gcp
         shell: bash

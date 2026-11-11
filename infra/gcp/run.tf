@@ -15,7 +15,7 @@ resource "google_cloud_run_v2_service" "api" {
   labels               = local.labels
 
   template {
-    service_account = google_service_account.api.email
+    service_account = google_service_account.runtime.email
     # An Agent turn lives inside its streamed request (turn_timeout_seconds 1800).
     timeout                          = "1860s"
     max_instance_request_concurrency = 40
@@ -85,7 +85,7 @@ resource "google_cloud_run_v2_service" "api" {
     }
   }
 
-  depends_on = [google_secret_manager_secret_iam_member.api]
+  depends_on = [google_secret_manager_secret_iam_member.runtime]
 }
 
 resource "google_cloud_run_v2_job" "execution" {
@@ -106,7 +106,7 @@ resource "google_cloud_run_v2_job" "execution" {
     parallelism = 1
 
     template {
-      service_account = google_service_account.runtime.email
+      service_account = google_service_account.jobs.email
       max_retries     = 0
       # Admission stops at the budget; claimed work then finishes before exit.
       timeout = "${var.runner_budget_seconds + 600}s"
@@ -156,7 +156,7 @@ resource "google_cloud_run_v2_job" "execution" {
     }
   }
 
-  depends_on = [google_secret_manager_secret_iam_member.runtime]
+  depends_on = [google_secret_manager_secret_iam_member.jobs]
 }
 
 resource "google_cloud_run_v2_job" "migrate" {
@@ -169,7 +169,7 @@ resource "google_cloud_run_v2_job" "migrate" {
     task_count = 1
 
     template {
-      service_account = google_service_account.runtime.email
+      service_account = google_service_account.jobs.email
       max_retries     = 0
       timeout         = "900s"
 
@@ -219,7 +219,7 @@ resource "google_cloud_run_v2_job" "migrate" {
 
   # Targeting this job in the deploy also converges the database it migrates.
   depends_on = [
-    google_secret_manager_secret_iam_member.runtime,
+    google_secret_manager_secret_iam_member.jobs,
     google_compute_instance.db,
     google_compute_firewall.postgres,
   ]
