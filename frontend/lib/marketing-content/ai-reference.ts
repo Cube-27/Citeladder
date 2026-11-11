@@ -61,7 +61,8 @@ export const AI_INSTRUCTIONS: readonly ReferenceSection[] = [
     title: 'Product capabilities',
     bullets: [
       'AI Visibility tracks brand mentions, cited sources, and competitor presence in observed AI answers, with access to the underlying responses.',
-      'Site Health crawls owned pages, identifies their structural purpose, and records checks, issues, and later recrawl evidence.',
+      'Site Health crawls owned pages, on demand or on an optional weekly or monthly schedule, identifies their structural purpose, and records checks, issues, and later recrawl evidence.',
+      'Product Visibility matches a catalog in tracked AI answers, including ChatGPT shopping carousel cards, and reports each product’s visibility, win rate, position, quoted price and merchants.',
       'Content Optimization groups the titles of competitor and publisher pages cited in AI answers into content angles, and lists each angle the brand’s site has no cited page for as an Action: improve a matching owned content page or write a new one. The Agent drafts that work for review. Agent access is not included in the public trial.',
       'Search Demand connects Google Search Console and Google Analytics 4 evidence to owned pages and search opportunities.',
       'The Agent helps explain evidence, plan work, and produce reviewable deliverables. It uses the same project evidence and read tools as the MCP server.',

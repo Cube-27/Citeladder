@@ -5,16 +5,19 @@ Remaining work is consolidated in the backlog; historical plans are not active a
 
 ## Active
 
-- [Commerce improvement](commerce-improvement.md) (owner decisions CM1–CM9
-  recorded 2026-11-11): not started; ten PRs from ChatGPT carousel capture and
-  all-runs product matching to a Products table, detail page and Shopping
-  overview, new catalog sources and category-matrix shopping prompts, ending
-  with marketing, blog, docs and changelog.
+None. Commerce product tracking (CM1–CM9) and backlog tier 1 (BL1–BL12) shipped
+on 11 November 2026 and their plans were deleted; the owner decisions are in
+[decisions](../decisions.md#commerce-product-tracking) and
+[backlog closure](../decisions.md#backlog-closure), and the feature owners in
+[the documentation index](../README.md) describe what shipped.
 
-- [Backlog implementation](backlog-implementation.md) (owner decisions BL1–BL12
-  recorded 2026-11-11): not started; tier 1 of the backlog in six parallel
-  tracks (app UI, public site, Agent verified completion, element evidence,
-  Site Health crawling, platform and security), fifteen PRs, UI first.
+## Partly delivered
+
+- [Billing improvement](billing-improvement.md): PRs 1–3 merged; operator
+  acceptance, plan and add-on sizing (B55) and the enable PR remain, tracked in
+  the [backlog's billing section](backlog.md#billing-and-entitlements).
+- [Content rules engine](content-rules-engine.md): the rule catalog and the L4
+  model pass shipped; the L1–L3 linters and L5 are not assigned.
 
 ## Queued
 

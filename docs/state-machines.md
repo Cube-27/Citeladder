@@ -5,8 +5,9 @@ that hold over them and where each is enforced, and the transitions with their
 trigger, location and guard. Verified against `main` at `f090d718b`
 (2026-11-07). Code, tests and the feature owners in the
 [documentation index](README.md) remain the authority; this file records where
-each rule is enforced so a change can find every writer. Known invalid states
-link to rows of the [state-machine fixes plan](plans/state-machine-fixes.md).
+each rule is enforced so a change can find every writer. Row IDs such as WS1
+name the state-machine fixes (S01–S12, merged 2026-11-07); git history keeps
+that completed plan.
 
 Paths are relative to `frontend/services/api/src/` unless they start with
 `frontend/`; `0001:<line>` is `migrations/0001_baseline.sql`. **Enforced**:
@@ -400,7 +401,8 @@ Dispatch attempts are insert-only, one `outcome` per ordinal (DB
 |---|---|---|
 | `brand_discoveries` (status + stage) | `pending` → `running`/phase → `ready`/review → `project_created`; or `failed`; rerun creates a new row `projects/discovery.ts:212` | App: worker writes fenced `discovery-worker.ts:175-302`; recovery skips `ready`/`project_created` `queue/recovery.ts:125-129`; DB one task per discovery |
 | Commerce candidates | `pending` → `approved` ↔ `rejected`, no from-state guard `commerce/decisions.ts:6-31` (by design) | App |
-| `commerce_products.lifecycle_state` | only `active` written | — |
+| `commerce_products.lifecycle_state` | `active` ↔ `archived` only through `setProductLifecycle` (`commerce/edits.ts`), each change appending an `edit` observation; setting the current state writes nothing | App project-row lock (`FOR NO KEY UPDATE`) and product row lock |
+| `commerce_csv_imports.applied_at` | ∅ → staged (`applied_at` null, `stageImport`, content-hash idempotent) → applied (`applied_at` set once by `applyImport`, `commerce/import.ts`); applying an applied import returns its first result | App project-row lock and import row `FOR UPDATE` |
 | `commerce_catalog_revisions` | insert-only: ∅ → revision `n + 1` only when the matching identity's hash differs from revision `n` (`recordCatalogRevision`, `commerce/catalog-revisions.ts`); each new revision enqueues one `commerce_answer_matching` task in the same transaction | DB `uq_commerce_catalog_revisions_number` 0023; App per-project advisory lock, always the last lock its caller takes |
 | `commerce_match_passes.mode` | insert-only, terminal at insert: ∅ → `live` (with the answer) \| `backfill` (`commerce/answer-matching.ts`); a repeated derivation inserts nothing; reads take the latest pass per answer (highest revision, then newest) | DB `ck_commerce_match_passes_mode`, `uq_commerce_match_passes_derivation` 0023 |
 | `provider_connections.last_test_status` | `''` → `ok`/`failed` only while `credential_revision` and `base_url` are unchanged; key rotation resets | App `probes.ts` |

@@ -6,7 +6,7 @@ order: 210
 updated: '2026-11-11'
 ---
 
-An Action groups work around a target: an owned page, planned page, earned-source page, product, category, search query or visibility prompt. Multiple findings can support the same Action.
+An Action groups work around a target: an owned page, planned page, earned-source page, product, category, search query, visibility prompt or a Site Health issue across every page it affects. Multiple findings can support the same Action.
 
 This gives your team one place to understand the diagnosis, start Agent work and track implementation.
 
@@ -28,6 +28,18 @@ Every page that the Sources URL table shows as a **Gap** becomes a "Get mentione
 Read the diagnosis, contributing evidence, recommended approach and what to avoid. The priority comes from CiteLadder's deterministic rules. An Agent explanation does not replace that ranking or create new measured facts.
 
 Choose **Work on this** when the Action is suitable for your team. Linked chats remain visible on the Action.
+
+## Fix one issue across many pages
+
+A website issue from Site Health, such as a broken component in a shared template, is one Action across every page it affects, not one Action per page. It lists under **Fix how AI reads your site** with its page count. Its detail shows the crawl it was found in and the affected pages; **Show all** lists every page.
+
+**Work with the agent** on such an Action gives the chat the check that failed, the page count and the first 50 pages, so the Agent can write one fix for the shared cause without reading each page. For form fields without an accessible name, it also gets one redacted HTML example of a failing field from that crawl. When you declare it implemented, the declaration covers every affected page.
+
+## Hand the work to a developer
+
+**Prepare developer ticket** on an Action's page writes it as Markdown your team can paste into its tracker: the issue, the affected page or pages, the dated evidence, the smallest change that fixes it and how CiteLadder will verify it. **Copy Markdown** copies it; nothing is sent anywhere.
+
+The **Evidence** chips on the page list each record behind the Action with its date and whether it was **Observed** (a crawl, visibility run or Search Console window) or **Inferred** (a finding a rule derived from observations).
 
 ## Analyze one of your pages
 
@@ -66,11 +78,15 @@ You can dismiss or reopen eligible Actions. Declared work follows its measuremen
 
 ## Declare implementation
 
-First make the change in your website, publishing workflow or external process. Then use **Mark implemented** for the relevant Action and choose the day it went live: today or any day in the last 30 days. Readings from before that day are not counted.
+First make the change in your website, publishing workflow or external process. Then use **Mark implemented** for the relevant Action and choose the day it went live: today or any day in the last 30 days. Readings from before that day are not counted. **What shipped it?** optionally records the release, pull request or commit.
 
-When work came from the Agent, confirm the output revision that matches what you shipped. Work done outside CiteLadder can be declared without an Agent output.
+Declaring is the Action's deployment record: the **Implementation** section shows the go-live day, who recorded it (the signed-in person, never a typed name) and what shipped it, linked when it is a web address.
 
-CiteLadder uses the Action's current findings to determine the expected checks, and the dialog shows what each finding will be measured by before you declare. Some findings, such as a product or theme with no specific prompt, have no reading that isolates your change; they are recorded but not measured automatically. An Action without a current finding cannot be declared merely to create a measurement plan.
+When work came from the Agent, confirm the output revision that matches what you shipped. Work done outside CiteLadder can be declared without an Agent output. A document that names a different page than the chat's Action asks once before you declare: **Link to** that page's Action, or **Keep with this Action**.
+
+CiteLadder uses the Action's findings to determine the expected checks, and the dialog shows what each finding will be measured by before you declare. Some findings, such as a product or theme with no specific prompt, have no reading that isolates your change; they are recorded but not measured automatically. An Action that never had a finding cannot be declared merely to create a measurement plan.
+
+If a crawl has already cleared the Action's findings, you can still declare it. When that crawl came after your go-live day, the next readings decide the checks as usual. When it came on or before that day, the issue was resolved before your deployment: the declaration records that, measures nothing and never credits the change with it.
 
 ## Read the measurement result
 
@@ -82,6 +98,15 @@ The declaration keeps the target, baseline and expected checks tied to that impl
 - a keyword gap by whether your site now appears for that search, in Search Console or in a later Keyword Research dataset.
 
 Each check keeps its own latest reading, so a crawl and a Search Console window together can complete an Action that neither completes alone.
+
+An Action for an issue across many pages is read by each crawl after go-live that uses the same checks as the crawl it came from:
+
+| Result             | Meaning                                                                               |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| Verified           | The check passes, or no longer applies, on every affected page                        |
+| Partially resolved | Some pages pass and some still fail; the pages still failing are named                |
+| Still failing      | No affected page passes yet; the pages are named                                      |
+| Inconclusive       | The crawl used different checks or did not read every affected page; the reason shows |
 
 Review each check and what its reading is waiting for. A page check that is still waiting offers **Run crawl now**. A page the crawl did not read, or an incompatible window, is a reason for limited measurement, not an observed failure. New evidence is read for 30 days after the go-live day, or 90 days for a keyword check, because a new page takes longer to rank than an edited one takes to recrawl. After that, the last reading stands.
 

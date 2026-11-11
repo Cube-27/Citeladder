@@ -428,8 +428,8 @@ its verification window (`measured_until`), and what each
 for, read from persisted rows: the next scheduled visibility run, the next
 Search Console window — a synced window that starts after the
 declaration day, due a few days later, or a sync once that has passed — the
-next crawl (none is scheduled until someone runs one), each with the row it
-read. Nothing is triggered by a read.
+next crawl (the leg reads no [crawl schedule](site-health.md), so it names no
+due date), each with the row it read. Nothing is triggered by a read.
 
 **Mark implemented** in the Agent output pane declares the revision on screen;
 the Action detail declares work done outside CiteLadder. The dialog asks when

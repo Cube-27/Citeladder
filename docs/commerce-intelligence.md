@@ -7,7 +7,9 @@ holder opens its own page, `/products/:id` (the product detail page, below),
 and a category's id opens its competitors and shopping prompts. Commerce reuses
 Site Health acquisition and the shared audit system;
 it does not own a crawler, response store, prompt store or opportunity store.
-Present runtime is not evidence that credentialed manual gates passed.
+Present runtime is not evidence that credentialed manual gates passed. The
+owner decisions cited as CM1–CM9 are in
+[decisions](decisions.md#commerce-product-tracking).
 
 ## Catalog
 
@@ -161,8 +163,8 @@ wins over a text-list rank). Per holder (formula version 1):
 - Mentioned price: per execution the best-placed quoted price, then the median
   of those in the catalog currency (a competitor or a product without one uses
   the most quoted currency); other currencies are counted, not converted.
-- Catalog price: the catalog price as a min–max pair (variants carry no price
-  yet); null is unknown.
+- Catalog price: the catalog price as a min–max pair (`price` to `price_max`,
+  the variant range an import recorded; equal without one); null is unknown.
 - Merchants: distinct merchant domains the answers name, by executions, up to
   `merchant_limit`.
 
@@ -335,9 +337,10 @@ competitor list is non-empty; any other project records nothing extra.
 A **catalog revision** (`commerce_catalog_revisions`) is an immutable, numbered
 copy of the project's matching identity: active products with their category
 memberships, and approved competitors with their targets. It records what
-created it (`import`, `projection`, `competitor_decision` or `audit`) and is
-written only when that identity's hash changed. CSV imports and competitor
-decisions record one in their own transaction; crawl projection, which writes
+created it (`import`, `projection`, `competitor_decision`, `edit` or `audit`)
+and is written only when that identity's hash changed. Applied imports, edits,
+archive and restore, and competitor decisions record one in their own
+transaction; crawl projection, which writes
 one page per task, asks through a coalesced request that keeps the earliest
 deadline, so a long crawl records at most one revision per
 `projection_delay_seconds` (120); every audit admission, of
@@ -500,7 +503,15 @@ gates remain unverified; applicable acceptance remains in
 
 ## Current limits
 
-Revenue attribution, order facts, feed remediation and publishing, autonomous
-publishing, JavaScript rendering, snapshot
-trends, merchant dashboards, family aggregation, sentiment and composite
-product scores are not part of the shipped feature.
+Not part of the shipped feature:
+
+- previous-period deltas and metric charts over time (later, CM8); the
+  windows are read without a comparison;
+- product ratings and attribute extraction (CM4): card ratings are never read;
+- shopping carousels from engines other than ChatGPT, whose products come only
+  from answer text;
+- Merchant Center API sync, Shopify OAuth or an app install: the catalog comes
+  from crawls, the public storefront list, a feed file or the CSV template;
+- revenue attribution and order facts, feed remediation and publishing,
+  autonomous publishing, JavaScript rendering, family aggregation, sentiment
+  per product and composite product scores.

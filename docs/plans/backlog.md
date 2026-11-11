@@ -7,19 +7,15 @@ active. Feature owners in [the documentation index](../README.md) and the
 accepted [invariants](../invariants.md) remain authoritative. Establish a
 current owner and code inventory when an item is scoped.
 
-| Tier | What it holds | Where the work is |
-|---|---|---|
-| 1. Build now | Agent verified completion, Site Health scheduling and crawl options, UI remainders, security and cloud cleanup | [Backlog implementation plan](backlog-implementation.md) |
-| 2. Before launch | Compliance, hardening, billing and the release acceptance gates | Below |
-| 3. Low priority | Kept for future reference only; not queued | Below |
+| Tier | What it holds |
+|---|---|
+| 2. Before launch | Compliance, hardening, billing and the release acceptance gates |
+| 3. Low priority | Kept for future reference only; not queued |
 
-Items removed on 11 November 2026 (BL10) are listed at the end so that nobody
-re-adds them from old text.
-
-## Tier 1: build now
-
-All of tier 1 is in the [backlog implementation plan](backlog-implementation.md),
-split into parallel tracks. UI and UX work comes first (BL1).
+Tier 1 (build now: Agent verified completion, Site Health scheduling and crawl
+options, UI remainders, security and cloud cleanup) shipped on 11 November 2026;
+its feature owners describe it. Items removed on 11 November 2026 (BL10) are
+listed at the end so that nobody re-adds them from old text.
 
 ## Tier 2: before launch
 
@@ -76,7 +72,7 @@ Owners: [Workspace access](../workspace-access.md), [MCP](../mcp.md),
 
 ### Production hardening
 
-The cloud cleanup is in tier 1. The rest waits for launch:
+The cloud cleanup shipped with tier 1. The rest waits for launch:
 
 - Measured workspace-wide Demand refresh rate and aggregate limits;
   one-refresh-per-project only partly addresses that risk.
@@ -207,7 +203,7 @@ a fresh scope before work starts.
 | AI Traffic extensions | Customer-authorized Cloudflare deployment, a Queue-backed Worker, more log providers (Vercel, Fastly, Akamai, Netlify), an S3-pull connector for ALB and legacy CloudFront logs, a WordPress plugin, reverse-DNS verification, device and geography breakdowns, first-party session tracking, real-time streaming and Opportunities from insights. |
 | AI answer ads in exports | Add ad observations to audit exports (`src/audits/exports.ts`) with the parser version when exports next change. |
 | Enterprise SSO and SCIM | Deferred until an enterprise customer asks (BL7). WorkOS (D9.1), through a `src/auth/workos.ts` adapter; `sso_connections` with verified domains and `enforce`; SCIM membership create, removal and role; an `sso` entitlement and a security event for every change. D9.2 (which plan carries it) is open. Costs $125 per connection per month each for SSO and Directory Sync. |
-| Domain verification and authorized crawl | Deferred with SSO (BL7): DNS TXT, file or meta verification with append-only receipts, re-verification and revocation, and live authorization checks before robots-excluded requests. The tier 1 ignore-robots option (BL6) does not depend on it. |
+| Domain verification and authorized crawl | Deferred with SSO (BL7): DNS TXT, file or meta verification with append-only receipts, re-verification and revocation, and live authorization checks before robots-excluded requests. The shipped ignore-robots option (BL6) does not depend on it. |
 | Prompt generation extras | Advisory Site Health semantic-quality observations, competitor-candidate cleanup and a stable-core/experimental portfolio split. |
 | Internal links | A separate judgment-policy version, normalized recommendation rows and catalog-based product variants, only if real runs justify them. |
 | Funded billing | Managed AI checkout, funded prices and a scheduled-coverage reserve. Current payment launch scope is BYOK. |

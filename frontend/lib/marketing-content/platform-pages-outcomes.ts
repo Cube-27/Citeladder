@@ -126,93 +126,129 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
   },
   {
     path: '/platform/product-visibility',
-    updated: '2026-11-06',
+    updated: '2026-11-11',
     title: 'AI Product Visibility & Share of Shelf | CiteLadder',
     description:
-      'Measure how your products and categories appear in AI buying answers, including share of shelf and first-position wins where answers rank products.',
+      'Track how AI answers recommend your products: visibility, win rate, position, quoted price and merchants per product, including ChatGPT shopping carousels.',
     heading: 'See how your products show up in AI buying answers',
-    lead: 'See where your products rank when buyers ask AI what to buy.',
+    lead: 'See where your products rank when buyers ask AI what to buy, which price answers quote and where they send shoppers.',
     cta: 'demo',
     screen: 'commerce',
     note: 'Catalog setup depends on your project. Book a demo to check your catalog.',
     highlights: [
       {
-        title: 'Products and categories',
-        body: 'Measure a specific product or a whole category against the competitors you approve.',
+        title: 'Every product, every answer',
+        body: 'Your catalog is matched in every answer your project collects, and a catalog change re-reads the last 30 days of answers.',
       },
       {
-        title: 'Share of shelf',
-        body: 'Your share of the product slots in answers that rank products explicitly.',
+        title: 'ChatGPT shopping carousels',
+        body: 'Each organic carousel card becomes a ranked slot, with its price and merchant when the card shows them.',
       },
       {
-        title: 'What was recommended',
-        body: 'Product identity, brand and cited URL, kept apart for every answer.',
+        title: 'Metrics per product',
+        body: 'Visibility, appearances, win rate, position, quoted against catalog price, and the merchants answers name.',
       },
     ],
     features: [
       {
-        title: 'Review prompts and rivals before you measure',
-        body: 'Approve the buyer prompts and competitor products for each target, check engines and repetitions, then run. Each run keeps its catalog and competitor context, so later runs compare like with like.',
+        title: 'Matched in every answer, ChatGPT carousels included',
+        body: 'Products are matched in every successful answer your project collects, from brand runs as well as shopping prompts. On ChatGPT, each organic shopping carousel card becomes a ranked slot with its title, tag, price, currency and merchant when the card carries them. On every engine, product lists and sentences in the answer text are read too. When you import or change your catalog, CiteLadder re-reads the stored answers from the last 30 days, so a new product is measured against the answers you already have.',
         points: [
-          'Target-specific buyer prompts',
-          'Competitor candidates you approve',
-          'Cost estimate before launch',
-          'Catalog from your site or a CSV file',
-        ],
-        media: { kind: 'split', screen: 'prompts' },
-      },
-      {
-        title: 'Shelf metrics that only count real rankings',
-        body: 'Product Visibility shows how often a product appears. Share of Shelf, Average Shelf Position and First-Position Win Rate count only answers that list products in order. A product mentioned in passing is not scored as ranked.',
-        points: [
-          'Product Visibility per target',
-          'Share of Shelf: your slots out of all recognized slots',
-          'Average Shelf Position and First-Position Win Rate',
-          'Shelf evidence and Actions per product or category',
+          'Cards matched by link, ChatGPT’s product id or name',
+          'Sponsored carousel cards kept out of the shelf',
+          '30-day re-read after a catalog change',
+          'Stored answers never rewritten',
         ],
         media: { kind: 'split', screen: 'answer' },
+      },
+      {
+        title: 'Metrics per product, each with a definition',
+        body: 'The Products table lists your catalog, and on All products the competitor products answers name, over 7, 30 or 90 days, for one engine or prompt set if you choose. Visibility is the share of answers in scope that name the product. Win rate is how often it comes first when an answer ranks it, so it only counts answers the product appears in. Position is its average rank in those answers. Mentioned price is the median price answers quote in your catalog currency, shown beside your catalog price.',
+        points: [
+          'Appearances, where zero is a real zero',
+          'Quotes in other currencies counted, not converted',
+          'Merchant domains the answers name',
+          'Missing data shown as missing, never as zero',
+        ],
+        media: { kind: 'card' },
+      },
+      {
+        title: 'Bring your catalog in, then check it',
+        body: 'Add products from a public Shopify storefront URL, a Google Merchant Center feed file or the CSV template. You confirm the proposed category tree before anything is added, then see which rows were added, updated, unchanged or rejected, with the reason for each rejection. Edit or archive products in the app; an archived product keeps its history.',
+        points: [
+          'Shopify storefront by URL, with no app to install',
+          'Merchant Center feed as CSV, TSV, XML or JSON',
+          'Products found on your site, for catalog businesses',
+          'Edits win over later crawls of the same field',
+        ],
+        media: { kind: 'card' },
+      },
+      {
+        title: 'From the overview to a product’s Actions',
+        body: 'The Shopping overview ranks brands and products by appearances, with Share of Shelf for brands, your most and least visible products, the top merchants and the search queries behind answers that held a product. Each product’s page shows its competing products, merchants, cited sources, results per prompt and every answer it appeared in. Actions flag products that answers never mention, quote at a different price, rarely put first, or send shoppers to other merchants for.',
+        points: [
+          'Brand and product rankings for the window',
+          'Competing products and how often each ranked above yours',
+          'Every answer opens the recorded evidence',
+          'Work with the Agent from any product Action',
+        ],
+        media: { kind: 'full', screen: 'actions' },
       },
     ],
     steps: [
       {
         title: 'Bring your catalog',
-        body: 'Use products found on your site, or import a CSV of products and categories.',
+        body: 'Use products found on your site, or import a Shopify storefront, a Merchant Center feed or the CSV template.',
       },
       {
-        title: 'Pick targets',
-        body: 'Choose the products or categories that matter and approve their prompts and rivals.',
+        title: 'Approve prompts and rivals',
+        body: 'Generate shopping prompts for each category and for the hero products you pick, then approve them and the competitor products to measure.',
       },
       {
         title: 'Run the shelf',
-        body: 'Collect buying answers across engines with repetitions, after reviewing the cost.',
+        body: 'Collect buying answers across engines with repetitions, after reviewing the cost. Your brand runs count too.',
       },
       {
-        title: 'Improve the page',
-        body: 'Open shelf evidence and Actions for the products that lose position.',
+        title: 'Act on products',
+        body: 'Open a product’s page and its Actions when it goes unmentioned, is quoted at the wrong price or rarely comes first.',
       },
     ],
     questions: [
       'When buyers ask AI for the best product in our category, are we on the list?',
       'Which competing products take first position most often?',
+      'Is ChatGPT quoting the right price for our products?',
+      'Which merchants do AI answers send shoppers to for our products?',
       'Which product pages get cited when we are recommended?',
       'Does our category show up for comparison and “alternative to” questions?',
     ],
     faqs: [
       {
         q: 'Who can use Product Visibility?',
-        a: 'Projects that sell from a catalog can use products found on their site. Any project can import products and categories from a CSV file. Book a demo to check your catalog.',
+        a: 'Projects that sell from a catalog can use products found on their site. Any project can import products from a Shopify storefront, a Merchant Center feed or a CSV file. Book a demo to check your catalog.',
       },
       {
         q: 'What is share of shelf?',
-        a: 'Your share of the product slots in answers that rank products explicitly. Answers that only mention products in passing do not count toward shelf position.',
+        a: 'Your share of the recognized product slots in answers: your products’ slots divided by your slots plus those of the competitors you approved. Every recognized slot counts, ranked or not, and a product holds at most one slot per answer. Position and win rate are read only from answers that list products in order.',
+      },
+      {
+        q: 'Why can win rate be higher than visibility?',
+        a: 'Win rate only counts the answers that rank the product, so a product that appears in few answers can still come first in most of them. Read the two together.',
       },
       {
         q: 'Does this cover every place AI shows products?',
-        a: 'No. It reports the product and category answers from the audits CiteLadder runs. It does not cover every shopping carousel in every assistant.',
+        a: 'No. It reports the answers from the audits CiteLadder runs. Shopping carousels are captured from ChatGPT; on other engines, products are read from the answer text.',
       },
       {
         q: 'Do I need a Shopify connection?',
-        a: 'No. Catalog targets come from your website and CSV workflows. A native Shopify sync is not offered.',
+        a: 'No. You can import a public Shopify storefront by its URL, upload a Merchant Center feed file or a CSV, or use products found on your site. There is no Shopify app to install and no automatic sync with Shopify or Merchant Center, so import again when your catalog changes.',
+      },
+      {
+        q: 'Does it read product ratings?',
+        a: 'No. The ChatGPT carousel cards we tested carried no ratings, so CiteLadder does not read them.',
+      },
+      {
+        q: 'Does it show how products trend over time?',
+        a: 'No. Figures cover the window you choose, 7, 30 or 90 days, without comparisons to the previous period or charts over time.',
       },
       {
         q: 'Does it report sales or revenue from AI answers?',
@@ -221,6 +257,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
     ],
     closing: 'See where your products rank in AI answers',
     related: [
+      '/blog/track-products-in-chatgpt-shopping',
       '/platform/ai-visibility',
       '/platform/cited-sources',
       '/platform/content-optimization',

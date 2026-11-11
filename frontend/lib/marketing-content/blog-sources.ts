@@ -76,6 +76,13 @@ export const BLOG_SOURCES = {
     publisher: 'OpenAI Platform Docs',
     url: 'https://developers.openai.com/api/docs/bots',
   },
+  openaiProductDiscovery: {
+    id: 'openai-product-discovery',
+    title: 'Powering Product Discovery in ChatGPT',
+    publisher: 'OpenAI',
+    url: 'https://openai.com/index/powering-product-discovery-in-chatgpt/',
+    publishedDate: '2026-03-24',
+  },
   googleAiModeFanout: {
     id: 'google-ai-mode-fanout',
     title: 'Google Search: Introducing AI Mode in India',

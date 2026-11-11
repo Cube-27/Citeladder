@@ -59,7 +59,7 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
     label: 'Ecommerce',
     title: 'Ecommerce: the product questions buyers ask',
     lead: 'You use this when buyers ask AI about use cases, compatibility, how to choose and what a product cannot do. You see how engines answer those questions and whether your own pages explain the same points clearly.',
-    body: 'The cited sources and page-level checks show which product, category or buying-guide page to improve first.',
+    body: 'The cited sources and page-level checks show which product, category or buying-guide page to improve first. Product Visibility adds each product’s visibility, win rate, position, quoted price and merchants across your tracked answers, ChatGPT shopping carousels included.',
     guide: {
       label: 'Explore Product Visibility for eligible projects',
       href: '/platform/product-visibility',

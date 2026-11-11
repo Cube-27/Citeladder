@@ -357,7 +357,8 @@ buried too deeply we can go with option a").
 
 ## Generated prompts are short buyer questions under user control
 
-Four decisions for the [Prompt Builder plan](plans/prompt-builder.md):
+Four decisions for the Prompt Builder (shipped November 2026;
+[Prompts and Visibility](visibility-prompt.md) owns it):
 
 - **A. Word cap.** Admission drops a generated or proposed prompt over 16 words,
   and the run result reports those drops under their own reason. The owner
@@ -658,8 +659,8 @@ content gaps drawn only from content pages and tracked prompts (AS5).
 ## Backlog closure
 
 The owner went through the backlog item by item and closed it into three tiers.
-The [backlog implementation plan](plans/backlog-implementation.md) holds the
-work to build now; the [backlog](plans/backlog.md) holds the pre-launch and
+The work to build now (tier 1) shipped on 11 November 2026, and its owner
+documents describe it; the [backlog](plans/backlog.md) holds the pre-launch and
 low-priority tiers.
 
 | ID | Decision |
@@ -681,3 +682,24 @@ Source: owner, in chat, 11 November 2026, in the backlog closure session:
 answers to four rounds of questions on each backlog section, plus the
 follow-up asking for one tiered backlog file and one implementation plan of
 parallel scoped PRs.
+
+## Commerce product tracking
+
+The owner set the scope of Commerce's product tracking release, shipped on
+11 November 2026; [Commerce](commerce-intelligence.md) owns the resulting
+behavior.
+
+| ID | Decision |
+|---|---|
+| CM1 | Product metrics read **all runs**: the catalog is matched against brand and Commerce answers alike, and importing or changing the catalog re-derives product observations from the stored answers of the last 30 days as a new versioned pass; raw answers are never rewritten. (Owner, in chat, 2026-11-11: "All runs + 30-day backfill".) |
+| CM2 | Structured shopping capture starts with the **ChatGPT carousel**: verify the product-card fields with one live DataForSEO task, then rank products by carousel slot with the card's price and merchant. Text parsing stays for every other engine. (Owner, in chat, 2026-11-11: "ChatGPT carousel first".) |
+| CM3 | New catalog sources: **Shopify storefront URL** (public `products.json`), **Merchant Center feed file**, **CSV template with a category-tree review and import results**, and **product edit and archive**. (Owner, in chat, 2026-11-11, all four selected.) |
+| CM4 | Per-product answer details: **mentioned vs catalog price** and **merchants**. Ratings and attribute extraction are not in scope. (Owner, in chat, 2026-11-11; ratings were first selected, then removed the same day after the live probes returned no card ratings: "remove rating implementation from plan".) |
+| CM5 | Layout: **Shopping overview + Products table + product detail page**; competitor and prompt setup move into the detail page. (Owner, in chat, 2026-11-11.) |
+| CM6 | **My catalog / All products**: approved and AI-observed competitor products get rows and detail pages with the same metrics; one click adds a discovered product to tracking. (Owner, in chat, 2026-11-11.) |
+| CM7 | Shopping prompts are a **category matrix**: per category, buyer contexts × intent stages, mostly non-branded with about 15–20% branded comparisons; per-product prompts only for hero products the user picks. (Owner, in chat, 2026-11-11.) |
+| CM8 | Time-range comparisons (change vs the previous period, charts by day/week/month) come **later**, not in the first release. (Owner, in chat, 2026-11-11.) |
+| CM9 | The final phase updates **marketing, blog, docs and changelog** for the shipped feature. This is the owner's request to change public copy for this feature. (Owner, in chat, 2026-11-11: "add updating marketing, blog, docs and changelog as final phase of plan".) |
+
+Source: owner, in chat, 11 November 2026, in the session that planned the
+release; recorded in its plan, which was deleted once the release shipped.

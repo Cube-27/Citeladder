@@ -8,6 +8,20 @@ updated: '2026-11-11'
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
 
+## November 11, 2026: Product tracking in every answer, and site fixes you can hand off
+
+**Commerce** now measures each product. Products are matched in every successful answer, from brand visibility runs as well as Commerce runs, and adding or changing products re-reads the last 30 days of stored answers, so a new product has numbers the day it is added. ChatGPT shopping carousels are read as ranked slots with each card's label, price and merchant; sponsored cards are not counted. **Commerce → Products** is a table of every product with visibility, appearances, win rate, position, mentioned and catalog price and merchants over 7, 30 or 90 days, for your catalog alone or with competitors and products seen only in AI answers. Each product has its own page with competing products, merchants, sources, fan-out queries, per-prompt results and the answers it appeared in. **Commerce → Overview** ranks brands and products and lists top merchants and fan-out queries.
+
+**Add products** imports from a Shopify store's public product list, a Merchant Center feed file or a CSV template, with a category review before anything is saved and row-by-row results after. Products can be edited, archived and restored. Shopping prompts are generated per category as buyer contexts by buying stage, with a capped share of branded comparisons, and per product only for hero products you pick. New product Actions flag a product never mentioned, a quoted price that differs from your catalog, a product that rarely ranks first, and answers that send shoppers only to other merchants. Over MCP, `read_ai_shelf` returns the same per-product metrics.
+
+**Site Health** crawls can run on a weekly or monthly schedule, off by default. Before a crawl of your own site you can choose to ignore robots.txt after confirming you are authorized; the choice is recorded, kept by Recrawl and schedules, and pages fetched because of it are marked.
+
+**Actions:** a website issue that fails on many pages is now one Action across all of them, which the Agent can fix in one chat from the page list (with a redacted HTML example for unlabeled form fields), and the next comparable crawl reads it as verified, partially resolved, still failing or inconclusive. **Prepare developer ticket** writes an Action as Markdown for your tracker. **Mark implemented** records who recorded the deployment and, optionally, what shipped it, and evidence chips show each record's date and whether it was observed or inferred. An Action whose issue a crawl already cleared can still be declared, and a fix that landed before your go-live day is never credited to it. A document that names another page asks whether to link it to that page's Action.
+
+**For your team:** add your catalog under **Commerce → Products**, generate a category's shopping prompts and run them; turn on a crawl schedule in **Site Health**; and use **Prepare developer ticket** on site issues your developers fix.
+
+[Commerce and AI Shelf](/commerce/)
+
 ## November 11, 2026: Work on a page with the agent
 
 A chat about one of your content pages now opens as a workspace: the page beside the agent's suggestions, its outline and its SEO fields and checks, with the chat underneath. Apply, dismiss or revert each suggestion, or apply every ready one at once; highlighted text shows where each one lands. Suggestions that need a fact from you, and any text you select, can be quoted into the chat without sending anything. You can also edit the page yourself, export it as Markdown, HTML or plain text, and mark it implemented from the same screen. **Work with the agent** on an Action for one of your content pages opens this workspace.

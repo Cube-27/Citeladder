@@ -13,13 +13,13 @@ export const POST_BUYER_PROMPTS: BlogPost = {
   image: '/blog/editorial/article-prompts.png',
   cardImage: '/blog/editorial/article-prompts.svg',
   date: '2026-09-28',
-  dateModified: '2026-11-03',
+  dateModified: '2026-11-11',
   readTime: '9 min read',
   author: PRODUCT_HEAD.name,
   authorRole: PRODUCT_HEAD.role,
   authorUrl: PRODUCT_HEAD.linkedin,
   tags: ['AI Search Prompts', 'Buyer Intent', 'AI Visibility'],
-  relatedSlugs: ['jev-internal-linking-citeladder'],
+  relatedSlugs: ['jev-internal-linking-citeladder', 'track-products-in-chatgpt-shopping'],
   sources: [BLOG_SOURCES.typesafeSystemOne],
   body: [
     {
@@ -242,6 +242,31 @@ export const POST_BUYER_PROMPTS: BlogPost = {
     {
       type: 'paragraph',
       text: 'An assistant connected over MCP with changes allowed can follow the same steps: preview and confirm topics, offer your search data and start a run once you agree. Its suggestions wait in Prompts like any other run, and only Accept in the app tracks them.',
+    },
+    { type: 'heading', text: 'Shopping prompts: one matrix per category' },
+    {
+      type: 'paragraph',
+      text: 'Projects that track products in Commerce get shopping prompts from a separate generator, planned per product category rather than per topic. For each category, one bounded model call fills a matrix of buyer contexts against intent stages: three contexts at the consideration and decision stages by default, with one prompt per cell that names no brand. The context is kept as the prompt’s persona and the stage as its buyer stage.',
+    },
+    {
+      type: 'paragraph',
+      text: 'The batch also gets a few branded comparisons that must name your brand, capped at 20% of it. They are filed as comparisons, so they stay out of organic visibility and out of product metrics: a question that names you by design cannot show whether answers find you on their own.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Per-product prompts exist only for the hero products you pick, three each by default; every other product is covered by its category’s matrix. The matrix sheet shows which contexts and stages are filled and how many prompts are branded, and shopping prompts wait for approval like any other suggestion.',
+    },
+    {
+      type: 'richParagraph',
+      content: [
+        'How those answers become product metrics, ChatGPT shopping carousels included, is covered in ',
+        {
+          type: 'link',
+          text: 'how to track your products in ChatGPT shopping answers',
+          href: '/blog/track-products-in-chatgpt-shopping',
+        },
+        '.',
+      ],
     },
     { type: 'heading', text: 'A stable baseline beats an exhaustive list' },
     {
