@@ -251,6 +251,7 @@ export interface AgentOutputSuggestions {
   rationale: string;
   replacement: string | null;
   revision_id: string;
+  rule_guidance: Json | null;
   rule_id: string;
   rule_version: string | null;
   run_id: string | null;

@@ -12,6 +12,7 @@ import { agentPageFieldsSchema } from '@citeladder/contracts/agent';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { bodyChanges, mapSpan, sectionOf, type Span } from '../page-documents/anchors.ts';
+import { isSiteHealthRule } from '../page-documents/content-rules.ts';
 import { documentBoard, turnDigest } from '../page-documents/suggestion-views.ts';
 import {
   appendEvent,
@@ -29,7 +30,6 @@ import type { PageFields } from './outputs.ts';
 const p = policy.content_optimization.suggestions;
 const FIELDS = ['title', 'meta_description', 'json_ld'] as const satisfies readonly PageField[];
 const DEPENDS = ['section', 'body', ...FIELDS] as const;
-const RULE_ID = /^[a-z0-9][a-z0-9_.-]*$/u;
 
 /** One suggestion as the model writes it. */
 export const suggestionInputSchema = z.strictObject({
@@ -56,8 +56,11 @@ export const suggestionInputSchema = z.strictObject({
     .describe(
       'The one question to ask when the change needs a fact you do not have; new_string is then omitted.',
     ),
-  category: z.enum(p.categories).describe('The suggestion’s category.'),
-  rule_id: z.string().describe('The rule the suggestion applies, such as a catalog rule id.'),
+  rule_id: z
+    .string()
+    .describe(
+      'The rule it applies: a rule_id from the content_rules context section, or the rule of a Site Health finding open in the page’s suggestion list. The rule sets its category.',
+    ),
   rationale: z.string().describe('Why, in one or two plain sentences the person reads.'),
   depends_on: z
     .array(z.enum(DEPENDS))
@@ -97,13 +100,18 @@ export type StagedSuggestion = {
   dependsOn: (typeof DEPENDS)[number][];
   replacement: string | null;
   needsInput: string | null;
-  category: string;
   ruleId: string;
   rationale: string;
   replaces: string[];
 };
-/** What one suggestion is checked against: the page as the turn holds it. */
-type Page = { number: number; body: string; state: PageState; staged: readonly StagedSuggestion[] };
+/** What one suggestion is checked against: the page as the turn holds it and the rules the turn offers. */
+type Page = {
+  number: number;
+  body: string;
+  state: PageState;
+  rules: ReadonlySet<string>;
+  staged: readonly StagedSuggestion[];
+};
 type Checked = { ok: true; suggestion: StagedSuggestion } | { ok: false; text: string };
 
 const refuse = (text: string): Checked => ({ ok: false, text });
@@ -174,16 +182,31 @@ const TEXT_RULES: readonly [(texts: Texts) => boolean, (texts: Texts) => string]
     ({ input }) => blank(input.rationale) || input.rationale.length > p.rationale_max_chars,
     () => `Give a nonblank rationale of at most ${p.rationale_max_chars} characters.`,
   ],
-  [
-    ({ input }) => !RULE_ID.test(input.rule_id) || input.rule_id.length > p.rule_id_max_chars,
-    () =>
-      `rule_id is a lowercase id of at most ${p.rule_id_max_chars} characters, such as aeo.answer_first.`,
-  ],
 ];
 /** Why the texts the model wrote cannot be stored, or null. */
 function textProblem(texts: Texts) {
   const broken = TEXT_RULES.find(([fails]) => fails(texts));
   return broken ? broken[1](texts) : null;
+}
+
+/**
+ * Why the rule cannot be applied this turn, or null: a suggestion applies a
+ * content rule the turn's context offers, or writes the text for a Site Health
+ * finding open on the page (the same rule). The model pass never raises a Site
+ * Health rule itself.
+ */
+function ruleProblem(page: Page, ruleId: string) {
+  if (page.rules.has(ruleId)) return null;
+  const finding = page.state.known.some(
+    (known) => known.open && known.source === 'site_health' && known.ruleId === ruleId,
+  );
+  if (finding) return null;
+  if (isSiteHealthRule(ruleId))
+    return `${ruleId} is a Site Health rule with no open finding on this page; Site Health raises it, not you.`;
+  const offered = [...page.rules];
+  return offered.length
+    ? `rule_id ${ruleId} is not a content rule offered for this page. Use one from the content_rules section: ${offered.join(', ')}.`
+    : `rule_id ${ruleId} is not a content rule offered for this page, and none are offered this turn; suggest only text for an open Site Health finding.`;
 }
 
 /** Why the open suggestions it names cannot be replaced, or null. */
@@ -248,6 +271,8 @@ export function checkSuggestion(
   input: SuggestionInput,
   scrub: (text: string) => string,
 ): Checked {
+  const unknownRule = ruleProblem(page, input.rule_id);
+  if (unknownRule) return refuse(unknownRule);
   const resolved = targetOf(page, input);
   if ('text' in resolved) return refuse(resolved.text);
   const problem = textProblem({ input, current: resolved.current, max: resolved.max });
@@ -279,7 +304,6 @@ function staging(
     ...resolved,
     replacement: input.new_string == null ? null : scrub(input.new_string),
     needsInput: input.needs_input == null ? null : scrub(input.needs_input.trim()),
-    category: input.category,
     ruleId: input.rule_id,
     rationale: scrub(input.rationale.trim()),
     replaces: [...new Set([...(input.replaces ?? []), ...attachedTo(page, input)])],
@@ -387,7 +411,6 @@ export async function saveSuggestions(
           dependsOn: storedDependencies(suggestion, revision.body),
           replacement: suggestion.replacement,
           needsInput: suggestion.needsInput,
-          category: suggestion.category,
           ruleId: suggestion.ruleId,
           rationale: suggestion.rationale,
           source: 'model',

@@ -43,6 +43,7 @@ function state(overrides: Partial<DocumentState> = {}): DocumentState {
     staged: new Map(),
     personIds: new Set(),
     pages: new Map(),
+    rules: new Set(['ai_answers.precise_terms', 'proof.specific_statistics']),
     suggestions: [],
     ...overrides,
   };
@@ -300,8 +301,7 @@ describe('Agent built-in tools', () => {
     const suggestion = (overrides: Record<string, unknown> = {}) => ({
       old_string: 'Sizes run small.',
       new_string: 'Sizes run half a size small.',
-      category: 'clarity',
-      rule_id: 'clarity.precise_terms',
+      rule_id: 'ai_answers.precise_terms',
       rationale: 'Say how small.',
       ...overrides,
     });
@@ -317,15 +317,13 @@ describe('Agent built-in tools', () => {
             {
               field: 'meta_description',
               new_string: 'School shoes for kids, sized by age.',
-              category: 'search_guidelines',
               rule_id: 'technical.meta_description_present',
               rationale: 'The page has no meta description.',
             },
             {
               old_string: 'Shop now.',
               needs_input: 'How many sizes do you stock?',
-              category: 'proof',
-              rule_id: 'proof.specific_facts',
+              rule_id: 'proof.specific_statistics',
               rationale: 'A count is more convincing.',
             },
           ],
@@ -404,6 +402,51 @@ describe('Agent built-in tools', () => {
       ).toBe(
         'Suggestions are for a page document, and this chat has none. Change other documents with edit_document.',
       );
+    });
+
+    it('accepts only a rule the turn offers, or the rule of a Site Health finding open on the page', () => {
+      const refused = (overrides: Record<string, unknown>, turn = pageTurn()) =>
+        suggestEdits(catalog, turn, { suggestions: [suggestion(overrides)] }, bounds).text;
+      // A catalog rule whose evidence the turn lacks is not offered.
+      expect(refused({ rule_id: 'coverage.cited_angles' })).toBe(
+        'rule_id coverage.cited_angles is not a content rule offered for this page. Use one from the content_rules section: ai_answers.precise_terms, proof.specific_statistics. No suggestions were staged.',
+      );
+      expect(refused({ rule_id: 'clarity.made_up' })).toBe(
+        'rule_id clarity.made_up is not a content rule offered for this page. Use one from the content_rules section: ai_answers.precise_terms, proof.specific_statistics. No suggestions were staged.',
+      );
+      // Site Health raises its own rules; the model only writes text for an open finding.
+      expect(refused({ rule_id: 'aeo.answer_first' })).toBe(
+        'aeo.answer_first is a Site Health rule with no open finding on this page; Site Health raises it, not you. No suggestions were staged.',
+      );
+      expect(
+        refused(
+          { rule_id: 'ai_answers.precise_terms' },
+          state({ ...pageTurn(), rules: new Set() }),
+        ),
+      ).toBe(
+        'rule_id ai_answers.precise_terms is not a content rule offered for this page, and none are offered this turn; suggest only text for an open Site Health finding. No suggestions were staged.',
+      );
+      // The open meta description finding takes its text even when no rule is offered.
+      const bare = state({ ...pageTurn(), rules: new Set() });
+      const finding = suggestEdits(
+        catalog,
+        bare,
+        {
+          suggestions: [
+            {
+              field: 'meta_description',
+              new_string: 'School shoes for kids.',
+              rule_id: 'technical.meta_description_present',
+              rationale: 'The page has no meta description.',
+            },
+          ],
+        },
+        bounds,
+      );
+      expect(finding.ok).toBe(true);
+      expect(bare.suggestions.map((item) => [item.ruleId, item.replaces])).toEqual([
+        ['technical.meta_description_present', [open]],
+      ]);
     });
 
     it('moves staged suggestions through a later edit and drops the one it changed', () => {
