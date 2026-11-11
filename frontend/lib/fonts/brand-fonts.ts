@@ -3,13 +3,13 @@
  * every runtime that loads them (the app's index.html through its Vite build,
  * the website and docs through `PublicFonts.astro`).
  *
- * Three roles, the design system's families: `display` (Cal Sans, weight 400
- * only, the website's and docs' alone: the app sets none, so it never
- * preloads it, and a declared face nothing uses is never fetched), `sans`
- * (Inter) and `mono` (Geist Mono). Changing a face is an edit to
- * that JSON (`family` and `file`) followed by `pnpm fonts:pull`, which copies
- * the files from the private font repository and recomputes the weight range
- * and fallback metrics stored beside them. Nothing else names a face.
+ * Three roles, the design system's families: `display` (the website's and
+ * docs' headings alone: the app sets none, so it never preloads it, and a
+ * declared face nothing uses is never fetched), `sans` and `mono`. Changing a
+ * face is an edit to that JSON (`family` and `file`) followed by
+ * `pnpm fonts:pull`, which copies the files from the private font repository
+ * and recomputes the weight range and fallback metrics stored beside them.
+ * Nothing else names a face: code, comments and docs say the role.
  */
 // The attribute is required where Node loads this module itself (Playwright).
 import config from '../config/brand-fonts.json' with { type: 'json' };
@@ -47,7 +47,7 @@ function brandFontPreloads(surface: FontSurface): string[] {
  * page whenever a slow face lands.
  *
  * Each face declares only the weights it has, and `font-synthesis-weight:
- * none` stops a faux bold on top (Cal Sans is 400 alone).
+ * none` stops a faux bold on top of a single-weight face.
  */
 function hostedFace(role: FontRole, face: Face): string {
   return `@font-face {

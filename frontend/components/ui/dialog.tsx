@@ -41,7 +41,7 @@ export function useReturnFocus(open: boolean) {
 /**
  * Dialog — a modal panel for one short task, centred on the scrim: `surface`,
  * `radius-lg`, the floating face (1px `line` border, `shadow-float`), `modal-padding` (16 in the app) padding and gaps, `container-narrow` wide.
- * The title is the section title (Inter 500 22/28), the description
+ * The title is the section title (500, 22/28), the description
  * `ink-secondary`, the footer right-aligned (Cancel first, then the action). `tone="danger"` is a
  * confirmation: an `alertdialog`, 440px, a `negative` warning icon by the
  * title and no close button, so the person picks Cancel or the named action.

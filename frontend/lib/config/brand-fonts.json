@@ -15,15 +15,15 @@
       }
     },
     "sans": {
-      "family": "Inter",
-      "file": "InterVariable.woff2",
+      "family": "Satoshi",
+      "file": "Satoshi-Variable.woff2",
       "preload": ["app", "public"],
       "weights": "400 600",
       "fallback": {
-        "sizeAdjust": "105.18%",
-        "ascentOverride": "92.1%",
-        "descentOverride": "22.93%",
-        "lineGapOverride": "0%"
+        "sizeAdjust": "96.34%",
+        "ascentOverride": "104.84%",
+        "descentOverride": "24.91%",
+        "lineGapOverride": "10.38%"
       }
     },
     "mono": {

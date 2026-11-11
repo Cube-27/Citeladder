@@ -108,7 +108,7 @@ export function AuthShell({
 
 /**
  * The card's head: an optional 40px icon tile, the title 32/38 in the sans
- * face at 500 (the app sets no Cal Sans, decision D54) and a 16/26 line
+ * face at 500 (the app sets no display face, decision D54) and a 16/26 line
  * under it. The title is the page's one `h1`; it takes focus by
  * script (`tabIndex -1`) when a flow moves to a new step.
  */
