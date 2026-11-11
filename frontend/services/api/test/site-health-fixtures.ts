@@ -38,6 +38,13 @@ export function storedFacts(override: Record<string, unknown> = {}): Record<stri
   });
   return overlay(empty, override) as Record<string, unknown>;
 }
+/** Page facts the extractor persists for an English page whose body is `body`. */
+export const bodyFacts = (body: string) =>
+  extractPageFacts(Buffer.from(`<html lang="en"><body>${body}</body></html>`), {
+    finalUrl: 'https://example.test/',
+    contentType: 'text/html',
+    statusCode: 200,
+  });
 export type SiteSeed = Tenant & { crawlId: string; profileId: string; root: string };
 export class SiteFixtures extends VisibilityFixtures {
   readonly siteDb: Database;
