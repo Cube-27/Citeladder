@@ -1,6 +1,12 @@
 /** Opportunity catalog: deterministic decisions over persisted evidence. */
 import type { ExpectedCheck } from '@citeladder/contracts/opportunities';
 
+/** What a per-product metric rule reads and the value that clears it. */
+type ProductMetricRule = Pick<
+  Extract<ExpectedCheck, { kind: 'product_metric' }>,
+  'metric' | 'comparison' | 'target' | 'min_samples'
+>;
+
 export const opportunities = {
   ANALYZER_VERSION: 'opp-analyzer-1',
   RULE_VERSION: 'opp-rules-1',
@@ -8,7 +14,6 @@ export const opportunities = {
   CODE_IMPLEMENTATION_IDEMPOTENCY_CONFLICT: 'implementation_idempotency_conflict',
   CODE_IMPLEMENTATION_TARGET_CONFLICT: 'implementation_target_conflict',
   CODE_OPPORTUNITY_ORDER_CONFLICT: 'opportunity_order_conflict',
-  RULE_PRODUCT_NOT_MENTIONED: 'product_not_mentioned',
   RULE_CITED_ALTERNATIVES: 'cited_alternatives_without_uploaded_presence',
   RULE_CATALOG_FIELDS_MISSING: 'catalog_fields_missing',
   // A confirmed decline already passed the audit's materiality and agreement
@@ -136,11 +141,44 @@ export const opportunities = {
       enabled: true,
       opportunity_type: 'commerce',
       remediation:
-        "No answer engine mentioned this product anywhere in the latest audit. Add product-named prompts that mirror how buyers ask, and strengthen the product's owned pages with quotable specs, pricing, and comparisons so engines have a citable source.",
+        "No answer engine mentioned this product in any answer of the measured window. Add product-named prompts that mirror how buyers ask, and strengthen the product's owned pages with quotable specs, pricing, and comparisons so engines have a citable source.",
       rule_id: 'product_not_mentioned',
-      check_kind: null,
+      check_kind: 'product_metric',
       severity: 'high',
       title: 'Catalog product never mentioned by answer engines',
+    },
+    price_mismatch: {
+      action_path: 'owned',
+      enabled: true,
+      opportunity_type: 'commerce',
+      remediation:
+        'Answers quote a price for this product that differs from your catalog price. Make the current price explicit and consistent on the product page, its structured data and your feeds, so engines quote the price you sell at.',
+      rule_id: 'price_mismatch',
+      check_kind: 'product_metric',
+      severity: 'medium',
+      title: 'Answers quote a different price than your catalog',
+    },
+    losing_position: {
+      action_path: 'owned',
+      enabled: true,
+      opportunity_type: 'commerce',
+      remediation:
+        'Answers list this product but rarely first. Strengthen the product page with the comparisons, specs and proof that answers use to rank products, so engines have a reason to put it ahead of the alternatives.',
+      rule_id: 'losing_position',
+      check_kind: 'product_metric',
+      severity: 'medium',
+      title: 'Product is visible but rarely ranked first',
+    },
+    merchant_absent: {
+      action_path: 'owned',
+      enabled: true,
+      opportunity_type: 'commerce',
+      remediation:
+        'Answers send shoppers to other merchants for this product and never to your store. Make the product page on your own site clearly purchasable, with price, availability and structured data, so engines can link to it.',
+      rule_id: 'merchant_absent',
+      check_kind: 'product_metric',
+      severity: 'medium',
+      title: 'Answers send shoppers only to other merchants',
     },
     cited_alternatives_without_uploaded_presence: {
       action_path: 'owned',
@@ -478,6 +516,47 @@ export const opportunities = {
     // 1 + log10(citations) + this × the share of cited domains that are competitors, capped.
     COMPETITOR_SHARE_WEIGHT: 1,
     GAP_FACTOR_CAP: 3,
+  },
+  // Commerce Actions from the per-product metrics (commerce improvement PR 9).
+  // Each rule names the metric it reads, the value that clears it and the
+  // fewest samples a reading needs: below that the product has too little data
+  // and fires nothing. A rule fires when a sufficient reading is not cleared;
+  // a declared Action is met when a later window's reading clears it.
+  PRODUCT_METRICS: {
+    // One of `policy.commerce.products.window_days`.
+    WINDOW_DAYS: 30,
+    PAGE_SIZE: 500,
+    RULES: {
+      // Samples: executions in the window. Cleared by one appearance.
+      product_not_mentioned: {
+        metric: 'appearances',
+        comparison: 'at_least',
+        target: 1,
+        min_samples: 5,
+      },
+      // Samples: quotes in the catalog currency. Cleared within 10% of the catalog price.
+      price_mismatch: {
+        metric: 'price_gap_share',
+        comparison: 'at_most',
+        target: 0.1,
+        min_samples: 2,
+      },
+      // Samples: ordered appearances. Cleared by a win rate of 20% or more.
+      losing_position: {
+        metric: 'win_rate',
+        comparison: 'at_least',
+        target: 0.2,
+        min_samples: 3,
+      },
+      // Samples: merchant mentions (answers per merchant domain). Cleared by
+      // one answer sending shoppers to your own store.
+      merchant_absent: {
+        metric: 'owned_merchant_answers',
+        comparison: 'at_least',
+        target: 1,
+        min_samples: 2,
+      },
+    } satisfies Record<string, ProductMetricRule>,
   },
   GAP_COMPETITOR_WEIGHT: 1,
   GAP_COMPETITOR_CAP: 3,

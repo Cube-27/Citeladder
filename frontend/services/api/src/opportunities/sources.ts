@@ -86,6 +86,26 @@ export async function resolveCommerceAuditId(db: Database, scope: Scope): Promis
   return latest?.id ?? null;
 }
 
+/**
+ * The project's newest catalog match pass, or null with none: the per-product
+ * metrics read every answer's latest pass, so a new pass (a live match or a
+ * backfill) is new Commerce evidence.
+ */
+export async function resolveCommerceMatchPassId(
+  db: Database,
+  scope: Scope,
+): Promise<string | null> {
+  const latest = await new WorkspaceScope(scope.workspaceId)
+    .selectFrom(db, 'commerce_match_passes')
+    .select('id')
+    .where('project_id', '=', scope.projectId)
+    .orderBy('created_at', 'desc')
+    .orderBy('id', 'desc')
+    .limit(1)
+    .executeTakeFirst();
+  return latest?.id ?? null;
+}
+
 /** The latest terminal crawl with usable evidence, or null. */
 export async function resolveCrawl(db: Database, scope: Scope) {
   return (await crawls(db, scope).executeTakeFirst()) ?? null;

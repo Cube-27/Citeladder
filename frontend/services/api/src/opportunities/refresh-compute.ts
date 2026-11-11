@@ -213,6 +213,8 @@ export type SourceIdentity = {
   audit_id: string | null;
   /** The latest Commerce run, read for Commerce hits apart from the brand run. */
   commerce_audit_id: string | null;
+  /** The newest match pass, read for the per-product metric findings. */
+  commerce_match_pass_id: string | null;
   site_crawl_id: string | null;
   demand_snapshot_id: string | null;
   demand_source_revision: string | null;
