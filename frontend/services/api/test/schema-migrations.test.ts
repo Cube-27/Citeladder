@@ -88,6 +88,7 @@ describe('a fresh database', () => {
       '0019_page_documents',
       '0020_page_suggestions',
       '0021_commerce_carousel',
+      '0022_suggestion_rule_guidance',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -114,6 +115,7 @@ describe('a fresh database', () => {
       { version: '0019_page_documents' },
       { version: '0020_page_suggestions' },
       { version: '0021_commerce_carousel' },
+      { version: '0022_suggestion_rule_guidance' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -164,6 +166,7 @@ describe('an existing database', () => {
       '0019_page_documents',
       '0020_page_suggestions',
       '0021_commerce_carousel',
+      '0022_suggestion_rule_guidance',
     ]);
     // A URL identity keeps no per-sighting discovery status.
     expect(await columns(client, 'site_urls')).not.toContain('discovery_status');
@@ -216,6 +219,8 @@ describe('an existing database', () => {
     expect(await columns(client, 'agent_output_suggestion_events')).toEqual(
       expect.arrayContaining(['suggestion_id', 'sequence', 'status', 'revision_id', 'reason']),
     );
+    // Each suggestion keeps the source and strength its rule had when it was made.
+    expect(await columns(client, 'agent_output_suggestions')).toContain('rule_guidance');
     // One Actions list: an Action names no screen of its own.
     expect(await columns(client, 'actions')).not.toContain('surface');
     // One internal-cost view across platform calls, Agent calls and answer engines.
@@ -244,6 +249,7 @@ describe('an existing database', () => {
       { version: '0019_page_documents' },
       { version: '0020_page_suggestions' },
       { version: '0021_commerce_carousel' },
+      { version: '0022_suggestion_rule_guidance' },
     ]);
   }, 120000);
 });
