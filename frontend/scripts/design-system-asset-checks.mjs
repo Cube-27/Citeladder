@@ -28,24 +28,27 @@ function normalHex(value) {
   return value.toLowerCase();
 }
 
-const TOKEN_PAINT = /^var\(\s*(--color-[\w-]+)\s*(?:,\s*(#[\da-f]{6}))?\s*\)$/i;
+const TOKEN_PAINT = /^var\(\s*(--color-[\w-]+)\s*(?:,\s*(#[\da-f]{6})\s*)?\)$/i;
 
 /**
- * A paint that names a palette token, `var(--color-x)` or `var(--color-x, #hex)`.
- * The token must resolve in the palette and a fallback must equal its light
- * value, so the file reads the same standalone as inside the themed page.
+ * The token a paint names, `var(--color-x)` or `var(--color-x, #hex)`, or
+ * undefined. The token must resolve in the palette and a fallback must equal
+ * its light value, so the file reads the same standalone as inside the themed
+ * page.
  */
-function isPaletteToken(value, palette) {
+function paletteToken(value, palette) {
   const match = TOKEN_PAINT.exec(value);
-  if (!match) return false;
+  if (!match) return undefined;
   const light = palette.get(match[1]);
-  if (!isHex(light)) return false;
-  return !match[2] || normalHex(match[2]) === light.toLowerCase();
+  if (!isHex(light)) return undefined;
+  if (match[2] && normalHex(match[2]) !== light.toLowerCase()) return undefined;
+  return match[1];
 }
 
 /**
- * Findings for one SVG. `palette` maps each brand token to its resolved hex;
- * it is consulted only for files in BRAND_ASSETS.
+ * Findings for one SVG. `palette` maps each token to its resolved light hex:
+ * a brand asset may paint only its allowed tokens, as hex or `var()`; any
+ * other asset may paint any palette token through `var()`.
  * @public — also imported by the scripts/frontend fixture tests.
  */
 export function svgColorFindings(source, label, palette = new Map()) {
@@ -62,7 +65,8 @@ export function svgColorFindings(source, label, palette = new Map()) {
     const [, attribute, quoted, styled] = match;
     const value = (quoted ?? styled ?? '').trim();
     if (!value || NEUTRAL_PAINT.test(value)) continue;
-    if (isPaletteToken(value, palette)) continue;
+    const token = paletteToken(value, palette);
+    if (token && (!brand || brand.includes(token))) continue;
     const hex = normalHex(value);
     if (brand && allowed.has(hex)) continue;
     let message = `${attribute} ${value} must be currentColor or none`;
@@ -71,6 +75,8 @@ export function svgColorFindings(source, label, palette = new Map()) {
         ([first], [second]) => deltaE2000(hex, first) - deltaE2000(hex, second),
       );
       message = `${attribute} ${value} is not ${nearest[1]} (${nearest[0]})`;
+    } else if (brand && token) {
+      message = `${attribute} ${value} is not one of ${brand.join(', ')}`;
     }
     findings.push({ rule: 'svg-color', file: label, line: lineOf(match.index), message });
   }
