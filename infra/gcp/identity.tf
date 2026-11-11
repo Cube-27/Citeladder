@@ -3,9 +3,16 @@ resource "google_service_account" "db" {
   display_name = "CiteLadder PostgreSQL VM"
 }
 
+# The API service; alone reads the Worker origin tokens and the Turnstile secret.
+resource "google_service_account" "api" {
+  account_id   = "${local.name}-api"
+  display_name = "CiteLadder Cloud Run API"
+}
+
+# The runner, migrate and billing jobs.
 resource "google_service_account" "runtime" {
   account_id   = "${local.name}-runtime"
-  display_name = "CiteLadder Cloud Run API, runner, tick and migration"
+  display_name = "CiteLadder Cloud Run jobs (runner, migration, billing)"
 }
 
 resource "google_service_account" "scheduler" {
@@ -20,18 +27,31 @@ resource "google_service_account" "log_reader" {
   display_name = "CiteLadder crawl-log reader (customer Pub/Sub subscriptions)"
 }
 
-# The runtime mints short-lived reader tokens through IAM Credentials.
+# Short-lived reader tokens through IAM Credentials: the runner drains
+# customers' subscriptions and the API verifies a newly connected one.
 resource "google_service_account_iam_member" "runtime_impersonates_log_reader" {
   service_account_id = google_service_account.log_reader.name
   role               = "roles/iam.serviceAccountTokenCreator"
   member             = "serviceAccount:${google_service_account.runtime.email}"
 }
 
+resource "google_service_account_iam_member" "api_impersonates_log_reader" {
+  service_account_id = google_service_account.log_reader.name
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:${google_service_account.api.email}"
+}
+
+# COS ships the PostgreSQL container's logs; no monitoring agent runs, so the
+# VM holds no metrics role.
 resource "google_project_iam_member" "db_logging" {
-  for_each = toset(["roles/logging.logWriter", "roles/monitoring.metricWriter"])
-  project  = var.project_id
-  role     = each.value
-  member   = "serviceAccount:${google_service_account.db.email}"
+  project = var.project_id
+  role    = "roles/logging.logWriter"
+  member  = "serviceAccount:${google_service_account.db.email}"
+}
+
+moved {
+  from = google_project_iam_member.db_logging["roles/logging.logWriter"]
+  to   = google_project_iam_member.db_logging
 }
 
 resource "google_artifact_registry_repository_iam_member" "db_reader" {
@@ -47,7 +67,16 @@ resource "google_secret_manager_secret_iam_member" "db_password" {
   member    = "serviceAccount:${google_service_account.db.email}"
 }
 
+# The jobs read the shared secrets only.
 resource "google_secret_manager_secret_iam_member" "runtime" {
+  for_each  = toset(concat(values(local.required_secret_env), values(local.optional_secret_env)))
+  secret_id = google_secret_manager_secret.runtime[each.value].secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.runtime.email}"
+}
+
+# The API reads the shared secrets plus its own.
+resource "google_secret_manager_secret_iam_member" "api" {
   for_each = toset(concat(
     values(local.required_secret_env),
     values(local.optional_secret_env),
@@ -56,15 +85,29 @@ resource "google_secret_manager_secret_iam_member" "runtime" {
   ))
   secret_id = google_secret_manager_secret.runtime[each.value].secret_id
   role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.runtime.email}"
+  member    = "serviceAccount:${google_service_account.api.email}"
 }
 
-# The API starts a runner execution after committed work or a scheduled tick
-# that finds work due, and a runner starts its successor (run.jobs.run only).
-# The scheduler needs no grant: the API checks its Google ID token itself.
-resource "google_cloud_run_v2_job_iam_member" "api_starts_runner" {
+# run.jobs.run on the runner job only: the API starts an execution after
+# committed work or a scheduled tick that finds work due, and a runner starts
+# its successor. The scheduler needs no grant: the API checks its Google ID
+# token itself.
+resource "google_cloud_run_v2_job_iam_member" "api_invokes_runner" {
+  name     = google_cloud_run_v2_job.execution["runner"].name
+  location = var.region
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.api.email}"
+}
+
+resource "google_cloud_run_v2_job_iam_member" "runner_starts_successor" {
   name     = google_cloud_run_v2_job.execution["runner"].name
   location = var.region
   role     = "roles/run.invoker"
   member   = "serviceAccount:${google_service_account.runtime.email}"
+}
+
+# The runtime's existing grant keeps its binding under the new name.
+moved {
+  from = google_cloud_run_v2_job_iam_member.api_starts_runner
+  to   = google_cloud_run_v2_job_iam_member.runner_starts_successor
 }

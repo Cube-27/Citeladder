@@ -15,7 +15,7 @@ resource "google_cloud_run_v2_service" "api" {
   labels               = local.labels
 
   template {
-    service_account = google_service_account.runtime.email
+    service_account = google_service_account.api.email
     # An Agent turn lives inside its streamed request (turn_timeout_seconds 1800).
     timeout                          = "1860s"
     max_instance_request_concurrency = 40
@@ -85,7 +85,7 @@ resource "google_cloud_run_v2_service" "api" {
     }
   }
 
-  depends_on = [google_secret_manager_secret_iam_member.runtime]
+  depends_on = [google_secret_manager_secret_iam_member.api]
 }
 
 resource "google_cloud_run_v2_job" "execution" {

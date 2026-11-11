@@ -240,6 +240,22 @@ jobs:
             has_version "$1" || openssl rand -hex 32 \
               | gcloud secrets versions add "$1" --project "$PROJECT_ID" --data-file=- >/dev/null
           }
+          # Cloud Run and the database VM read only `latest`, and a rotation's
+          # old value lives in its own *-previous secret, so every older
+          # version of a synchronized secret is superseded: destroy it.
+          destroy_superseded() {
+            local name="$1" newest
+            newest="$(gcloud secrets versions describe latest --secret "$name" --project "$PROJECT_ID" --format='value(name)')"
+            test -n "$newest"
+            gcloud secrets versions list "$name" --project "$PROJECT_ID" \
+              --filter='state!=DESTROYED' --format='value(name)' \
+              | while read -r version; do
+                  if [ -n "$version" ] && [ "${version##*/}" != "${newest##*/}" ]; then
+                    gcloud secrets versions destroy "${version##*/}" \
+                      --secret "$name" --project "$PROJECT_ID" --quiet >/dev/null
+                  fi
+                done
+          }
           sync_value() {
             local name="$1" value="$2" current_hash incoming_hash
             if [ -z "$value" ]; then
@@ -249,9 +265,11 @@ jobs:
             if has_version "$name"; then
               current_hash="$(gcloud secrets versions access latest --secret "$name" --project "$PROJECT_ID" | sha256sum | cut -d' ' -f1)"
               incoming_hash="$(printf '%s' "$value" | sha256sum | cut -d' ' -f1)"
-              test "$current_hash" != "$incoming_hash" || return 0
             fi
-            printf '%s' "$value" | gcloud secrets versions add "$name" --project "$PROJECT_ID" --data-file=- >/dev/null
+            if [ "${current_hash:-}" != "${incoming_hash:-none}" ]; then
+              printf '%s' "$value" | gcloud secrets versions add "$name" --project "$PROJECT_ID" --data-file=- >/dev/null
+            fi
+            destroy_superseded "$name"
           }
           enabled_optional=()
           # An unset optional secret has its versions disabled and is left out
