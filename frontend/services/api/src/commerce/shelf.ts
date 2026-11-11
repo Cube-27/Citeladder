@@ -1,9 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import type { Selectable } from 'kysely';
+import type { Insertable, Selectable } from 'kysely';
 import type { SettingSource } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
-import type { Audits } from '../generated/db-schema.ts';
+import type {
+  Audits,
+  CommerceCompetitorCandidates,
+  CommerceRecommendationObservations,
+} from '../generated/db-schema.ts';
+import { parseShoppingResults, type ShoppingResult } from '../search-surfaces/parsing.ts';
 import { record, strings } from '../db/json.ts';
 import type { AuditTask } from '../queue/audit-queue.ts';
 import type { DeriveExecution, ExecutionResult } from '../audits/result-persistence.ts';
@@ -16,8 +21,11 @@ import { lockCatalog } from './catalog-store.ts';
 import { ownedHosts } from './discovery-validation.ts';
 import {
   boundedText,
+  competitorPageUrl,
   frozenTargetSchema,
+  matchPageUrl,
   matchRecommendation,
+  NO_MATCH,
   observedMerchant,
   observedPrice,
   prepareRecommendations,
@@ -25,6 +33,7 @@ import {
   resolvedCompetitorUrl,
   shelfPolicy,
   type FrozenShelfTarget,
+  type ShelfMatch,
   type ShelfResolver,
 } from './shelf-parsing.ts';
 
@@ -82,7 +91,22 @@ function metered(
 }
 
 type PreparedItem = Awaited<ReturnType<typeof prepareRecommendations>>[number];
-type ShelfMatch = ReturnType<typeof matchRecommendation>;
+type Candidate = Selectable<CommerceCompetitorCandidates>;
+/** The columns one shelf slot sets; the rest come from the execution's context. */
+type SlotFields = Omit<
+  Insertable<CommerceRecommendationObservations>,
+  | 'id'
+  | 'workspace_id'
+  | 'project_id'
+  | 'audit_id'
+  | 'task_id'
+  | 'artifact_id'
+  | 'target_kind'
+  | 'target_id'
+  | 'parser_version'
+  | 'matcher_version'
+  | 'created_at'
+>;
 type ShelfContext = {
   task: AuditTask;
   audit: Selectable<Audits>;
@@ -96,10 +120,9 @@ type ShelfContext = {
 async function findOrCreateCandidate(
   db: Database,
   { task, audit, target }: ShelfContext,
-  resolved: NonNullable<PreparedItem['resolved']>,
-  spanText: string,
+  observed: { title: string; brand: string; evidence: Record<string, unknown> },
   url: string,
-) {
+): Promise<Candidate> {
   const find = () =>
     db
       .selectFrom('commerce_competitor_candidates')
@@ -125,15 +148,11 @@ async function findOrCreateCandidate(
       target_kind: target.target_kind,
       target_id: target.target_id,
       canonical_url: url,
-      product_name: resolved.title,
-      brand_name: resolved.brand,
+      product_name: boundedText(observed.title, 512),
+      brand_name: boundedText(observed.brand, 255),
       state: 'pending',
       source_kind: 'ai_observed',
-      evidence: JSON.stringify({
-        observation_text: boundedText(spanText, shelfPolicy.span_chars),
-        resolved_product_url: url,
-        merchant_url: resolved.merchant_url,
-      }),
+      evidence: JSON.stringify(observed.evidence),
       attempt_id: null,
       decision_at: null,
       created_at: new Date(),
@@ -155,7 +174,21 @@ async function observedCandidate(
     citations: evidence.sourceUrls,
     ownedHosts: ctx.owned,
   });
-  return url ? findOrCreateCandidate(db, ctx, resolved, span.text, url) : null;
+  if (!url) return null;
+  return findOrCreateCandidate(
+    db,
+    ctx,
+    {
+      title: resolved.title,
+      brand: resolved.brand,
+      evidence: {
+        observation_text: boundedText(span.text, shelfPolicy.span_chars),
+        resolved_product_url: url,
+        merchant_url: resolved.merchant_url,
+      },
+    },
+    url,
+  );
 }
 /**
  * An AI-observed candidate is classified by its review state when the answer
@@ -169,27 +202,39 @@ function observationClassification(matched: ShelfMatch, candidate: { state: stri
   if (candidate.state === 'approved') return 'approved_competitor';
   return candidate.state === 'rejected' ? 'rejected_competitor' : 'ai_observed_competitor';
 }
-async function recordObservation(
-  db: Database,
-  { task, audit, target, versions, locale }: ShelfContext,
-  { span, resolved, model, outcome }: PreparedItem,
-  evidence: {
-    matched: ShelfMatch;
-    candidate: { id: string; product_name: string; brand_name: string; state: string } | null;
-    artifactId: string;
-    answerText: string;
-    citations: { id: string; url: string }[];
-  },
+/** The identity columns of a slot held by a match or an AI-observed candidate. */
+function holderFields(
+  matched: ShelfMatch,
+  candidate: Candidate | null,
+  observed: { title: string; brand: string },
 ) {
-  const { matched, candidate, artifactId, answerText, citations } = evidence;
-  // Price and seller come from the answer's own text; a resolver-supplied
-  // merchant link counts only when the answer carries it.
-  const price = observedPrice(span.text, locale);
-  const merchantUrl = resolved?.merchant_url.trim() ?? '';
-  const merchant = observedMerchant(
-    span.text,
-    merchantUrl && answerText.includes(merchantUrl) ? merchantUrl : undefined,
-  );
+  return {
+    product_id: matched.product?.id ?? null,
+    competitor_candidate_id: matched.competitor?.id ?? candidate?.id ?? null,
+    classification: observationClassification(matched, candidate),
+    observed_product: boundedText(
+      matched.product?.name ??
+        matched.competitor?.product_name ??
+        candidate?.product_name ??
+        observed.title,
+      512,
+    ),
+    observed_brand: boundedText(
+      matched.product?.brand ??
+        matched.competitor?.brand_name ??
+        candidate?.brand_name ??
+        observed.brand,
+      255,
+    ),
+    match_confidence: matched.confidence,
+  };
+}
+async function insertObservation(
+  db: Database,
+  { task, audit, target, versions }: ShelfContext,
+  artifactId: string,
+  slot: SlotFields,
+) {
   const id = randomUUID();
   await db
     .insertInto('commerce_recommendation_observations')
@@ -204,37 +249,51 @@ async function recordObservation(
       target_id: target.target_id,
       parser_version: versions.parser,
       matcher_version: versions.matcher,
-      product_id: matched.product?.id ?? null,
-      competitor_candidate_id: matched.competitor?.id ?? candidate?.id ?? null,
-      classification: observationClassification(matched, candidate),
-      observed_product:
-        matched.product?.name ??
-        matched.competitor?.product_name ??
-        candidate?.product_name ??
-        resolved?.title ??
-        boundedText(span.text, 512),
-      observed_brand:
-        matched.product?.brand ??
-        matched.competitor?.brand_name ??
-        candidate?.brand_name ??
-        resolved?.brand ??
-        '',
-      observed_title: resolved?.title ?? boundedText(span.text, 512),
-      observed_price: price.price === null ? null : String(price.price),
-      observed_currency: price.currency,
-      merchant_url: merchant.url,
-      merchant_domain: merchant.domain,
-      model_version: model,
-      resolver_outcome: outcome,
-      // The resolver's prompt template, recorded whenever its model was called.
-      resolver_template_version: model ? versions.resolver : null,
-      match_confidence: matched.confidence,
-      rank: span.rank,
-      order_observable: span.orderObservable,
-      surface_kind: resolved?.surface_kind ?? 'recommendation',
       created_at: new Date(),
+      ...slot,
     })
     .execute();
+  return id;
+}
+async function recordObservation(
+  db: Database,
+  ctx: ShelfContext,
+  { span, resolved, model, outcome }: PreparedItem,
+  evidence: {
+    matched: ShelfMatch;
+    candidate: Candidate | null;
+    artifactId: string;
+    answerText: string;
+    citations: { id: string; url: string }[];
+  },
+) {
+  const { matched, candidate, artifactId, answerText, citations } = evidence;
+  // Price and seller come from the answer's own text; a resolver-supplied
+  // merchant link counts only when the answer carries it.
+  const price = observedPrice(span.text, ctx.locale);
+  const merchantUrl = resolved?.merchant_url.trim() ?? '';
+  const merchant = observedMerchant(
+    span.text,
+    merchantUrl && answerText.includes(merchantUrl) ? merchantUrl : undefined,
+  );
+  const id = await insertObservation(db, ctx, artifactId, {
+    ...holderFields(matched, candidate, {
+      title: resolved?.title ?? span.text,
+      brand: resolved?.brand ?? '',
+    }),
+    observed_title: resolved?.title ?? boundedText(span.text, 512),
+    observed_price: price.price === null ? null : String(price.price),
+    observed_currency: price.currency,
+    merchant_url: merchant.url,
+    merchant_domain: merchant.domain,
+    model_version: model,
+    resolver_outcome: outcome,
+    // The resolver's prompt template, recorded whenever its model was called.
+    resolver_template_version: model ? ctx.versions.resolver : null,
+    rank: span.rank,
+    order_observable: span.orderObservable,
+    surface_kind: resolved?.surface_kind ?? 'recommendation',
+  });
   const linked = citations.filter((citation) => citation.url && span.text.includes(citation.url));
   if (linked.length)
     await db
@@ -249,6 +308,125 @@ async function recordObservation(
       .execute();
 }
 
+type CardHolder = { matched: ShelfMatch; candidate: Candidate | null };
+/** The stored answer a carousel card was read from. */
+type CardSource = { artifactId: string; capturedAt: Date };
+/**
+ * The holder an earlier card with the same ChatGPT product key was matched
+ * to, when that holder is on this target's shelf: a frozen product or
+ * approved competitor, or this target's AI-observed candidate. Only matches
+ * recorded before the answer was captured count, so re-deriving an older
+ * answer never inherits a match a later audit made.
+ */
+async function rememberedHolder(
+  db: Database,
+  { task, audit, target, catalog }: ShelfContext,
+  externalProductId: string,
+  capturedAt: Date,
+): Promise<CardHolder | null> {
+  const earlier = await db
+    .selectFrom('commerce_recommendation_observations')
+    .select(['product_id', 'competitor_candidate_id'])
+    .where('workspace_id', '=', task.workspace_id)
+    .where('project_id', '=', audit.project_id)
+    .where('observed_external_product_id', '=', externalProductId)
+    .where('created_at', '<', capturedAt)
+    .where((eb) =>
+      eb.or([eb('product_id', 'is not', null), eb('competitor_candidate_id', 'is not', null)]),
+    )
+    .orderBy('created_at', 'desc')
+    .orderBy('id', 'desc')
+    .executeTakeFirst();
+  if (!earlier) return null;
+  const product = catalog.products.find((row) => row.id === earlier.product_id);
+  if (product) return { matched: { product, competitor: null, confidence: 1 }, candidate: null };
+  const competitor = catalog.approved_competitors.find(
+    (row) => row.id === earlier.competitor_candidate_id,
+  );
+  if (competitor) return { matched: { product: null, competitor, confidence: 1 }, candidate: null };
+  if (!earlier.competitor_candidate_id) return null;
+  const candidate = await db
+    .selectFrom('commerce_competitor_candidates')
+    .selectAll()
+    .where('workspace_id', '=', task.workspace_id)
+    .where('project_id', '=', audit.project_id)
+    .where('target_kind', '=', target.target_kind)
+    .where('target_id', '=', target.target_id)
+    .where('id', '=', earlier.competitor_candidate_id)
+    .executeTakeFirst();
+  return candidate ? { matched: NO_MATCH, candidate } : null;
+}
+/**
+ * Card matching order: the card's URL, then its ChatGPT product key as an
+ * earlier card was matched, then the shelf's name rules over the title. An
+ * unmatched card linking a page off the business's hosts may create an
+ * AI-observed competitor; the card itself is that evidence.
+ */
+async function cardHolder(
+  db: Database,
+  ctx: ShelfContext,
+  card: ShoppingResult,
+  capturedAt: Date,
+): Promise<CardHolder> {
+  const byUrl = card.url ? matchPageUrl(card.url, ctx.catalog) : NO_MATCH;
+  if (byUrl.product || byUrl.competitor) return { matched: byUrl, candidate: null };
+  const remembered = card.external_product_id
+    ? await rememberedHolder(db, ctx, card.external_product_id, capturedAt)
+    : null;
+  if (remembered) return remembered;
+  const byName = matchRecommendation(card.title, ctx.catalog);
+  if (byName.product || byName.competitor) return { matched: byName, candidate: null };
+  const url = card.url ? competitorPageUrl(card.url, ctx.owned) : null;
+  if (!url) return { matched: NO_MATCH, candidate: null };
+  const candidate = await findOrCreateCandidate(
+    db,
+    ctx,
+    {
+      title: card.title,
+      brand: '',
+      evidence: {
+        surface_kind: 'shopping_result',
+        observation_text: boundedText(card.title, shelfPolicy.span_chars),
+        card_product_url: card.url,
+        merchant_name: card.merchant_name,
+        external_product_id: card.external_product_id,
+      },
+    },
+    url,
+  );
+  return { matched: NO_MATCH, candidate };
+}
+/** numeric(14,2) holds prices below 10^12; anything larger is not a price. */
+const cardPrice = (price: number | null) =>
+  price !== null && price < 1e12 ? price.toFixed(2) : null;
+/** One ranked `shopping_result` slot per organic carousel card; never sent to the resolver. */
+async function recordCard(
+  db: Database,
+  ctx: ShelfContext,
+  card: ShoppingResult,
+  { artifactId, capturedAt }: CardSource,
+) {
+  const { matched, candidate } = await cardHolder(db, ctx, card, capturedAt);
+  const bounded = (value: string | null) => (value === null ? null : boundedText(value, 255));
+  await insertObservation(db, ctx, artifactId, {
+    ...holderFields(matched, candidate, { title: card.title, brand: '' }),
+    observed_title: boundedText(card.title, 512),
+    observed_price: cardPrice(card.price),
+    observed_currency: card.currency,
+    merchant_url: card.url,
+    merchant_domain: boundedText(card.domain, 512),
+    observed_tag: bounded(card.tag),
+    observed_merchant_name: bounded(card.merchant_name),
+    observed_external_product_id: bounded(card.external_product_id),
+    observed_image_url: card.image_url,
+    model_version: '',
+    resolver_outcome: 'not_needed',
+    resolver_template_version: null,
+    rank: card.position,
+    order_observable: true,
+    surface_kind: 'shopping_result',
+  });
+}
 /** Read frozen context, then finish optional model I/O before the caller opens its persistence transaction. */
 export async function prepareShelfExecution(
   db: Database,
@@ -337,7 +515,7 @@ export async function prepareShelfExecution(
     }
     const artifact = await trx
       .selectFrom('raw_response_artifacts')
-      .select(['answer_text', 'citations'])
+      .select(['answer_text', 'citations', 'provider_metadata', 'created_at'])
       .where('id', '=', artifactId)
       .where('audit_id', '=', audit.id)
       .where('task_id', '=', task.id)
@@ -386,5 +564,12 @@ export async function prepareShelfExecution(
         },
       );
     }
+    // ChatGPT carousel cards come from the stored provider response, beside the text spans.
+    const cards = parseShoppingResults(record(artifact.provider_metadata).raw_response);
+    for (const card of cards)
+      await /* NOSONAR -- One transaction: statements run in order. */ recordCard(trx, ctx, card, {
+        artifactId,
+        capturedAt: artifact.created_at,
+      });
   };
 }

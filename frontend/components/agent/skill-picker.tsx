@@ -72,8 +72,13 @@ export function SkillPicker({
   return (
     <Menu open={disabled ? false : open} onOpenChange={onOpenChange}>
       <MenuTrigger asChild>
-        <Button variant="ghost" disabled={disabled} aria-label={`Skill: ${current}`}>
-          Skill: {current}
+        <Button
+          variant="ghost"
+          disabled={disabled}
+          aria-label={`Skill: ${current}`}
+          className="max-w-full min-w-0"
+        >
+          <span className="min-w-0 truncate">Skill: {current}</span>
           <Icon icon={ChevronDown} />
         </Button>
       </MenuTrigger>

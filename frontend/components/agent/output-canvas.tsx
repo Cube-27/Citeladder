@@ -15,13 +15,19 @@ import { textRole } from '@/components/ui/typography';
 import { treeBranchClasses } from '@/components/ui/workspace';
 import { agentWriteFailure } from '@/lib/agent/errors';
 import { replaceSection, splitSections, type OutputSection } from '@/lib/agent/sections';
+import {
+  clearSectionDraft,
+  sectionDraftKey,
+  setSectionDraft,
+  useSectionDraft,
+} from '@/lib/agent/section-drafts';
 import { agentMutations, type AgentDocumentRef, type AgentRevision } from '@/lib/api/agent';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
 
 /** Outputs with at least this many titled sections get a contents list. */
 const CONTENTS_MIN_SECTIONS = 3;
 
-type SectionMode = { index: number; mode: 'revise' | 'edit' } | null;
+type SectionMode = { index: number; mode: 'revise' | 'edit'; revisionId: string };
 
 /**
  * The output as a document the reader works on section by section. A section
@@ -45,7 +51,9 @@ export function OutputCanvas({
   onRevise: (message: string) => void;
 }>) {
   const sections = splitSections(revision.body);
-  const [active, setActive] = useState<SectionMode>(null);
+  const [opened, setOpened] = useState<SectionMode | null>(null);
+  // An open editor or revise form belongs to the revision it was opened on.
+  const active = opened?.revisionId === revision.id ? opened : null;
   const titled = sections.filter((section) => section.heading !== null);
   return (
     <Stack gap="workspace">
@@ -77,12 +85,13 @@ export function OutputCanvas({
           key={`${revision.id}-${section.start}`}
           id={sectionId(revision.id, index)}
           section={section}
+          draftKey={sectionDraftKey(target.outputId, revision.id, index)}
           mode={active?.index === index ? active.mode : null}
           locked={locked}
           canSend={canSend}
-          onMode={(mode) => setActive(mode ? { index, mode } : null)}
+          onMode={(next) => setOpened(next ? { index, mode: next, revisionId: revision.id } : null)}
           onRevise={(instruction) => {
-            setActive(null);
+            setOpened(null);
             onRevise(reviseMessage(target.number, section, instruction));
           }}
           editor={
@@ -92,7 +101,8 @@ export function OutputCanvas({
               revision={revision}
               index={index}
               initial={section.text}
-              onDone={() => setActive(null)}
+              // Closing one section's editor leaves another section's open form alone.
+              onDone={() => setOpened((current) => (current?.index === index ? null : current))}
             />
           }
         />
@@ -116,8 +126,9 @@ function reviseMessage(number: number, section: OutputSection, instruction: stri
 
 function SectionBlock({
   id,
+  draftKey,
   section,
-  mode,
+  mode: requestedMode,
   locked,
   canSend,
   onMode,
@@ -125,6 +136,7 @@ function SectionBlock({
   editor,
 }: Readonly<{
   id: string;
+  draftKey: string;
   section: OutputSection;
   mode: 'revise' | 'edit' | null;
   locked: boolean;
@@ -133,6 +145,8 @@ function SectionBlock({
   onRevise: (instruction: string) => void;
   editor: ReactNode;
 }>) {
+  // A kept draft reopens its editor when the reader returns to this revision.
+  const mode = useSectionDraft(draftKey) === undefined ? requestedMode : 'edit';
   if (!section.text.trim()) return null;
   const name = sectionName(section);
   return (
@@ -219,7 +233,13 @@ function SectionEditor({
   initial: string;
   onDone: () => void;
 }>) {
-  const [text, setText] = useState(initial);
+  const draftKey = sectionDraftKey(target.outputId, revision.id, index);
+  const text = useSectionDraft(draftKey) ?? initial;
+  const setText = (next: string) => setSectionDraft(draftKey, next);
+  const done = () => {
+    clearSectionDraft(draftKey);
+    onDone();
+  };
   const save = useMutation(agentMutations.editOutput(workspaceId));
   const body = replaceSection(revision.body, index, text);
   const inputId = `section-editor-${revision.id}-${index}`;
@@ -229,11 +249,14 @@ function SectionEditor({
       gap="compact"
       onSubmit={(event: FormEvent) => {
         event.preventDefault();
-        // The descriptor refreshes the chat and its revisions before this closes the editor.
-        save.mutate(
-          { ...target, baseRevisionId: revision.id, title: revision.title, body },
-          { onSuccess: onDone },
-        );
+        // The descriptor's refresh shows the saved revision, which unmounts this
+        // editor before a mutate callback could run, so the draft is cleared
+        // from the settled promise instead.
+        save
+          .mutateAsync({ ...target, baseRevisionId: revision.id, title: revision.title, body })
+          .then(done, () => {
+            // The notice below reports the failure; the draft stays for another try.
+          });
       }}
     >
       <label htmlFor={inputId} className="sr-only">
@@ -249,7 +272,7 @@ function SectionEditor({
         <MutationNotice notice={agentWriteFailure(save.error, 'save the section')} />
       ) : null}
       <Inline className="justify-end">
-        <Button type="button" variant="ghost" onClick={onDone} disabled={save.isPending}>
+        <Button type="button" variant="ghost" onClick={done} disabled={save.isPending}>
           Cancel
         </Button>
         <Button

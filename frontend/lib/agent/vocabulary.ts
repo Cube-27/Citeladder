@@ -348,6 +348,27 @@ export function suggestionCategoryLabel(category: string): string {
   return SUGGESTION_CATEGORY_LABEL[category] ?? 'Suggestion';
 }
 
+/**
+ * How a suggestion's rule strength reads on its card. A requirement restates a
+ * search engine policy; recommendations and heuristics are options, and a
+ * heuristic is labelled as one. No strength is a score.
+ */
+const SUGGESTION_STRENGTH_COPY = {
+  requirement: { badge: 'Search policy', lead: 'Required by' },
+  recommendation: { badge: null, lead: 'Optional. Recommended in' },
+  heuristic: {
+    badge: 'Heuristic',
+    lead: 'Optional. A heuristic, not search engine guidance, from',
+  },
+} as const satisfies Record<
+  'requirement' | 'recommendation' | 'heuristic',
+  { badge: string | null; lead: string }
+>;
+
+export function suggestionStrengthCopy(strength: keyof typeof SUGGESTION_STRENGTH_COPY) {
+  return SUGGESTION_STRENGTH_COPY[strength];
+}
+
 /** Why a suggestion no longer fits the page, as Apply reports it. */
 const SUGGESTION_STALE_COPY: Record<string, string> = {
   span_changed: 'The text it would change was edited since it was suggested.',

@@ -86,11 +86,23 @@ export const frozenTargetSchema = z.object({
 });
 export type FrozenShelfTarget = z.output<typeof frozenTargetSchema>;
 type FrozenProduct = FrozenShelfTarget['products'][number];
-type Match =
+export type ShelfMatch =
   | { product: FrozenProduct; competitor: null; confidence: number }
   | { product: null; competitor: FrozenShelfTarget['approved_competitors'][number]; confidence: 1 }
   | { product: null; competitor: null; confidence: 0 };
-const NO_MATCH: Match = { product: null, competitor: null, confidence: 0 };
+export const NO_MATCH: ShelfMatch = { product: null, competitor: null, confidence: 0 };
+
+/** The catalog product or approved competitor whose page a carousel card links to. */
+export function matchPageUrl(url: string, target: FrozenShelfTarget): ShelfMatch {
+  const page = canonicalPage(url);
+  if (!page) return NO_MATCH;
+  const product = target.products.find((row) => canonicalPage(row.canonical_url) === page);
+  if (product) return { product, competitor: null, confidence: 1 };
+  const competitor = target.approved_competitors.find(
+    (row) => canonicalPage(row.canonical_url) === page,
+  );
+  return competitor ? { product: null, competitor, confidence: 1 } : NO_MATCH;
+}
 
 /**
  * The catalog product or approved competitor the span names first.
@@ -101,7 +113,7 @@ const NO_MATCH: Match = { product: null, competitor: null, confidence: 0 };
  * that brand on the shelf shares. When a span names both sides ("Rival Y, a
  * cheaper alternative to Owned"), the one named first holds the slot.
  */
-export function matchRecommendation(text: string, target: FrozenShelfTarget): Match {
+export function matchRecommendation(text: string, target: FrozenShelfTarget): ShelfMatch {
   const haystack = ` ${normalize(text)} `;
   const at = (value: string | null | undefined) => {
     const needle = normalize(value ?? '');
@@ -111,7 +123,7 @@ export function matchRecommendation(text: string, target: FrozenShelfTarget): Ma
   };
   const first = (values: Array<string | null | undefined>) => Math.min(...values.map(at));
   let best = { index: Infinity, match: NO_MATCH };
-  const consider = (index: number, match: Match) => {
+  const consider = (index: number, match: ShelfMatch) => {
     if (index < best.index) best = { index, match };
   };
   for (const product of target.products) {
@@ -298,11 +310,19 @@ export function resolvedCompetitorUrl(
   const inAnswer = (evidence.answer.match(/https?:\/\/[^\s)\]}>,"']+/giu) ?? []).some(
     (value) => canonicalPage(stripTrailing(value, '.;:!?')) === canonical,
   );
-  if (!inAnswer) return null;
+  return inAnswer ? competitorPageUrl(canonical, evidence.ownedHosts) : null;
+}
+/**
+ * A product page that may stand for an AI-observed competitor: a web page off
+ * the business's own hosts, not a known non-product host or path.
+ */
+export function competitorPageUrl(url: string, ownedHosts: string[]): string | null {
+  const canonical = canonicalPage(url);
+  if (!canonical) return null;
   const parsed = new URL(canonical);
   const within = (domains: readonly string[]) =>
     domains.some((domain) => domainMatches(parsed.hostname, domain));
-  if (within(shelfPolicy.non_pdp_hosts) || within(evidence.ownedHosts)) return null;
+  if (within(shelfPolicy.non_pdp_hosts) || within(ownedHosts)) return null;
   if (shelfPolicy.excluded_paths.some((token) => parsed.pathname.toLowerCase().includes(token)))
     return null;
   return canonical;

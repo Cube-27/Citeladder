@@ -150,8 +150,9 @@ calls none. Its final text is the reply.
   with the document's label ("Document 2: …"). `suggest_edits` stages
   suggestions on a page document, all or none: each names `old_string`
   (matching once), an SEO `field`, or neither for the whole page, with
-  `new_string` or a `needs_input` question, and is resolved to a stored anchor
-  when staged; a later `edit_document` in the same turn moves staged
+  `new_string` or a `needs_input` question, and a `rule_id` from the turn's
+  `content_rules` context section (or of a Site Health finding open on the
+  page), and is resolved to a stored anchor when staged; a later `edit_document` in the same turn moves staged
   suggestions and drops the ones it changed. Every staged document is
   committed as a new revision only with the reply, with the same sources and
   Action attachment, and staged suggestions after it, against that revision. A
@@ -323,7 +324,10 @@ text. These files under
 production model input, not coding-agent skills, and the API image packages
 them read-only. A body may name an application vocabulary as `{{name}}`, which
 the loader expands from its owner's listing. The catalog version is a content
-fingerprint of every file after expansion, including `workflows.json`.
+fingerprint of every file after expansion, including `workflows.json`, and of
+the [content rule catalog](content-optimization.md#suggestions), whose rules
+the `content_optimize` methodology applies from its turn's `content_rules`
+context section.
 
 The contract and skills are lean
 ([decision](decisions.md#the-agent-works-proportionately-with-simple-skills)).

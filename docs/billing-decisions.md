@@ -412,7 +412,8 @@ price tier (Claude Haiku 5.5 costs five times as much above 100K prompt tokens),
 so one price row per model stays exact; a model whose calls can cross a tier
 needs a tiered price before use. The verified published rates live in the
 [provider rate card](operations/CiteLadder_Launch_Config.md#7-provider-rate-card-internal-cost).
-See the [Agent native runtime plan](plans/agent-native-runtime.md).
+From the Agent native runtime plan, closed on 11 November 2026; its unbuilt
+PRs are in the [backlog](plans/backlog.md#tier-3-low-priority).
 
 **B54 — Owner, 2026-10-12.** Claude Sonnet 5.5 is offered in the Agent on
 Growth and Scale, not on the free trial or Starter. This is a current business
@@ -435,8 +436,8 @@ GST rate of 18% (`BILLING_INDIA_GST_RATE=0.18`) and the approval reference
 **B57 — Owner, 2026-10-16.** Prompt tags and the unbranded toggle, retrieved
 versus cited sources, top movers and the editable Overview with its PDF export
 are on every plan, including the free trial. They read persisted data only, so
-they add no entitlement, grant or credit charge. See the
-[Insight parity plan](plans/insight-parity.md).
+they add no entitlement, grant or credit charge. From the Insight parity plan,
+since completed and deleted.
 
 ## Agent chat behaviour (2026-11-04)
 
@@ -486,7 +487,7 @@ pay for."
 whole length, no top-ups; Agent access stays excluded. Amends B16's 5,000
 trial credits; Starter, Growth and Scale allowances are unchanged. The pricing
 page and FAQ state the 500 credits. Source: owner decision OD4 in the
-[architecture untangle plan](plans/architecture-untangle.md#owner-decisions-2026-11-06).
+architecture untangle plan (2026-11-06, since completed and deleted).
 
 ## Architecture untangle P10 (2026-11-06)
 
@@ -499,8 +500,8 @@ Grants that cannot resolve refuse with 403 `occupancy_unresolved` at every
 gate, where the crawl log, fact-checking and public API checks used to answer
 "not in plan"; those requests pass the access gate first, which already
 refuses an unresolvable account, so a customer does not see the difference.
-Reads that only show whether a flag is on stay unlocked. Source:
-[architecture untangle](plans/architecture-untangle.md) OD2.
+Reads that only show whether a flag is on stay unlocked. Source: architecture
+untangle OD2.
 
 **B63 — Engineering, 2026-11-06.** One hold module owns consumable holds
 (prompt runs, AI credits, Site Health page fetches). Settling a hold debits
@@ -540,8 +541,7 @@ executions; unknown costs stay null. Uncharged calls' cost rows are no longer
 best-effort: they are written on the caller's connection (in its transaction
 when it has one) and a write failure fails the call. Unpriced gateway models
 keep the Haiku rate (architecture untangle OD6). No customer price, allowance
-or credit charge changes. Source: [architecture untangle](plans/architecture-untangle.md)
-K1, OD6.
+or credit charge changes. Source: architecture untangle K1, OD6.
 
 **B66 — Engineering, 2026-11-07.** A platform-wide daily spend breaker
 (architecture untangle K2). Credit-funded calls are paid by their holds, and
@@ -555,7 +555,7 @@ with 503 `platform_spend_paused` before any network I/O, until the next UTC
 day; credit-funded calls are unaffected. Calls already in flight may carry the
 day's spend past the ceiling. The ceiling is internal cost policy, not a
 customer limit; the $25 figure is engineering's conservative pre-launch value
-for the owner to confirm. Source: [architecture untangle](plans/architecture-untangle.md) K2.
+for the owner to confirm. Source: architecture untangle K2.
 
 **B67 — Engineering, 2026-11-07.** Each feature declares its own output cap
 for platform gateway calls (architecture untangle K3), in
@@ -567,8 +567,7 @@ sizes the call's hold (B15), never above the gateway's configured maximum
 holds 11 (16,000 tokens) or 6 (8,000), so a low balance no longer refuses a
 small call; what a call is charged is unchanged (its reported tokens). A
 feature that reaches the gateway without a declared cap fails loudly. The Agent
-keeps its own output sizing (B60). Source:
-[architecture untangle](plans/architecture-untangle.md) K3.
+keeps its own output sizing (B60). Source: architecture untangle K3.
 
 **B68 — Owner, 2026-11-07.** The owner confirmed both engineering values: the
 $25 a day ceiling on included and uncharged platform cost (B66), and the
@@ -634,6 +633,17 @@ between included and credit-funded:
 Source: owner answer in the content optimization architecture session
 ("Clustering free, suggestions use AI credits"); [content
 optimization](decisions.md#content-optimization) CO8.
+
+## Backlog closure (2026-11-11)
+
+**B74 — Owner, 2026-11-11.** A platform call whose provider request failed, and
+whose settlement then also failed, is released and never charged. It does not
+settle at the B35 10-credit fallback. B47 wins; this narrows B35 and B48 for
+that case only, and B35 is otherwise unchanged. The code
+change is in the pre-launch tier of the [backlog](plans/backlog.md) and lands
+before payments are enabled. Source: owner answer in the backlog closure
+session ("Release the hold"), settling the conflict raised by the billing
+review (#383).
 
 ## Owner inputs still required
 
