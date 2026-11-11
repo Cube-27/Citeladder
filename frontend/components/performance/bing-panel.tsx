@@ -46,7 +46,7 @@ export function BingPanel({
     <Stack as="section" gap="compact" aria-label="Bing performance" data-testid="bing-panel">
       <EditorialSectionHeader
         title="Bing"
-        description="Bing Webmaster Tools, counted separately. These figures are never added to the Search Console totals above."
+        description="Counted separately from Search Console totals."
       />
       <Tabs
         value={dimension}

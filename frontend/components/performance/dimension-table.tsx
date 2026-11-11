@@ -283,7 +283,7 @@ export function DimensionTable({
           kind: 'empty',
           icon: SearchX,
           heading: `No ${tab.noun} imported`,
-          description: `Search Console does not provide ${tab.noun} alongside a date range, so this breakdown is not imported. Every other tab is unaffected.`,
+          description: `Search Console does not provide ${tab.noun} with a date range.`,
         }}
       />
     );

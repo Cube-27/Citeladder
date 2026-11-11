@@ -253,13 +253,11 @@ export function DataSourceSetup({
   required,
   optional = [],
   title,
-  description,
   whenReady = null,
 }: Readonly<{
   required: readonly IntegrationProvider[];
   optional?: readonly IntegrationProvider[];
   title: string;
-  description: string;
   /** Shown in place of the setup card once every required source is ready. */
   whenReady?: ReactNode;
 }>) {
@@ -289,7 +287,6 @@ export function DataSourceSetup({
     <Card data-testid="data-source-setup">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
-        <p className="type-body max-w-[60ch]">{description}</p>
       </CardHeader>
       <Stack gap="compact">
         {oauth.error ? <Callout tone="negative">{oauthErrorMessage(oauth.error)}</Callout> : null}

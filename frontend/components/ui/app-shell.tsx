@@ -110,10 +110,9 @@ export function AppShellPlaceholder({
  * under it the controls (mode switch, then the palette field
  * `page-band-gap` below, as the page's tabs and filters are), then the
  * scrolling destinations and the account at the foot. There is no logo
- * (decision D11). Below the controls the column is GitHub-dense: 8 to the
- * destinations, 4 between groups and to the account, so every Dashboard
- * destination fits a 700px-tall window unscrolled; a shorter window scrolls
- * the destinations. In the rail the destinations do not scroll, so their
+ * (decision D11). Below the controls: 8 to the destinations, 12 between
+ * groups, and the account under a rule 8 below them; a window too short for
+ * every destination scrolls them. In the rail the destinations do not scroll, so their
  * tooltips are never clipped. In the navigation drawer the ident row leaves
  * room for the drawer's close button. The column is as wide as the reader
  * made it (`--sidebar-width`), and every row follows that width.
@@ -136,10 +135,10 @@ export function SidebarFrame({
         {controls}
       </div>
       {/* The 4px inset keeps the first and last rows' focus rings inside the scroller. */}
-      <div className="labelled:overflow-y-auto -mx-3 mt-2 flex min-h-0 flex-1 flex-col gap-1 px-3 py-1">
+      <div className="labelled:overflow-y-auto -mx-3 mt-2 flex min-h-0 flex-1 flex-col gap-3 px-3 py-1">
         {nav}
       </div>
-      <div className="mt-1 flex">{foot}</div>
+      <div className="border-line -mx-3 mt-2 flex border-t px-3 pt-2">{foot}</div>
     </div>
   );
 }
@@ -196,26 +195,26 @@ export function SidebarIdentButton({
 }
 
 /**
- * A titled group of destinations; the title hides in the rail. Rows touch
- * (each is a full control tall, so its label keeps its own air) and the
- * title is one caption line straight over them, so the groups stay dense.
+ * A titled group of destinations; the title hides in the rail. Rows sit 2px
+ * apart, so the current row's pill and a hovered row's never touch, and the
+ * title is one caption line 4px over them.
  */
 export function SidebarNavGroup({
   title,
   children,
 }: Readonly<{ title?: string | null; children: ReactNode }>) {
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col gap-1">
       {title ? (
         <p className="type-caption labelled:flex hidden min-h-4 items-end px-3">{title}</p>
       ) : null}
-      <ul className="flex flex-col">{children}</ul>
+      <ul className="flex flex-col gap-0.5">{children}</ul>
     </div>
   );
 }
 
 /**
- * A destination row's face, for the link that carries it: one control tall,
+ * A destination row's face, for the link that carries it: `row-app` tall,
  * the label in `ink-secondary` at weight 400; the current row's label is 500
  * (owner, 2026-11-10). Hover is the hover overlay; the current row takes the
  * selected overlay (D51) and a 2px Flare bar on its leading edge, and its
@@ -226,7 +225,7 @@ export function SidebarNavGroup({
  */
 export function sidebarNavRowClasses(active: boolean, plain = false) {
   return cn(
-    'focus-ring group type-control labelled:justify-start labelled:px-3 relative flex min-h-[var(--control-md)] shrink-0 items-center justify-center gap-2 rounded-md transition-colors',
+    'focus-ring group type-control labelled:justify-start labelled:px-3 labelled:min-h-[var(--row-app)]relative flex min-h-[var(--control-md)] shrink-0 items-center justify-center gap-2 rounded-md transition-colors',
     active
       ? 'overlay-selected text-ink font-medium before:bg-accent before:absolute before:inset-y-1.5 before:start-0 before:w-0.5 before:rounded-full'
       : 'text-ink-secondary hover:overlay-hover hover:text-ink font-normal',

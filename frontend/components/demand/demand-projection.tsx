@@ -349,7 +349,6 @@ function SearchConsoleSetup() {
     <DataSourceSetup
       required={['gsc']}
       title="Connect Search Console"
-      description="Search Demand finds opportunities in this project's own search queries. Connect Google and use the property for this site."
       whenReady={
         <QueryState
           kind="empty"

@@ -135,7 +135,7 @@ function StartState({ read }: Readonly<{ read: LinksRead }>) {
       kind="empty"
       icon={ICONS.site}
       heading="Find missing internal links"
-      description="Compare related pages from your latest crawl and suggest the contextual links each page is missing."
+      description="Find the contextual links each page is missing."
       action={
         canRun ? (
           <Button variant="primary" pending={read.analyze.isPending} onClick={read.startAnalysis}>
