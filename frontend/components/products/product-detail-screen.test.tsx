@@ -108,7 +108,7 @@ function serve(detail: Record<string, CommerceProductDetail>) {
       HttpResponse.json({
         products: [],
         product_total: 0,
-        categories: [{ id: CATEGORY, name: 'Road', product_count: 1 }],
+        categories: [{ id: CATEGORY, name: 'Road', parent_id: null, product_count: 1 }],
         projection: { applicability: 'applicable', in_flight: 0, failed: 0 },
       }),
     ),

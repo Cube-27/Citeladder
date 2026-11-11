@@ -13,6 +13,7 @@ import { CategorySidebar } from './category-sidebar';
 const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
 const ROAD = '22222222-2222-4222-8222-222222222222';
 const TRAIL = '33333333-3333-4333-8333-333333333333';
+const FLATS = '44444444-4444-4444-8444-444444444444';
 const projectRoute = { projectSelection: { activeProject: makeProject({ id: PROJECT_ID }) } };
 
 function Harness({
@@ -34,8 +35,9 @@ function serveCatalog() {
         products: [],
         product_total: 1240,
         categories: [
-          { id: ROAD, name: 'Road shoes', product_count: 812 },
-          { id: TRAIL, name: 'Trail shoes', product_count: 0 },
+          { id: ROAD, name: 'Road shoes', parent_id: null, product_count: 812 },
+          { id: TRAIL, name: 'Trail shoes', parent_id: null, product_count: 0 },
+          { id: FLATS, name: 'Racing flats', parent_id: ROAD, product_count: 0 },
         ],
         projection: { applicability: 'applicable', in_flight: 0, failed: 0 },
       }),
@@ -44,7 +46,7 @@ function serveCatalog() {
 }
 
 describe('CategorySidebar', () => {
-  it('lists every category with its product count and narrows the table to one', async () => {
+  it('lists every category under its parent with its product count and narrows the table to one', async () => {
     serveCatalog();
     const onCategory = vi.fn();
     renderWithProviders(<Harness category={null} onCategory={onCategory} />, projectRoute);
@@ -54,7 +56,7 @@ describe('CategorySidebar', () => {
       within(list)
         .getAllByRole('button')
         .map((button) => button.textContent),
-    ).toEqual(['All categories1,240', 'Road shoes812', 'Trail shoes0']);
+    ).toEqual(['All categories1,240', 'Road shoes812', 'Racing flats0', 'Trail shoes0']);
     expect(within(list).getByRole('button', { name: /All categories/ })).toHaveAttribute(
       'aria-current',
       'true',

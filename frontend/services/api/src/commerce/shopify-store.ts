@@ -56,6 +56,7 @@ export async function fetchShopifyStore(
       "Only the project's own domains or a .myshopify.com store can be imported",
       { code: 'commerce_store_not_allowed' },
     );
+  const deadline = AbortSignal.timeout(shopify.deadline_seconds * 1000);
   const pages: string[] = [];
   let host = requested;
   let total = 0;
@@ -67,6 +68,7 @@ export async function fetchShopifyStore(
         maxBytes: shopify.page_max_bytes,
         timeoutSeconds: shopify.timeout_seconds,
         redirects: shopify.redirects,
+        signal: deadline,
         contentTypes: shopify.content_types,
         authorize: async (next) => {
           if (!allowed(next.hostname.toLowerCase())) throw new FetchError('out_of_scope');

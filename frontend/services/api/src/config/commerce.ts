@@ -191,6 +191,8 @@ export const commerce = {
       page_max_bytes: 5000000,
       max_total_bytes: 20000000,
       timeout_seconds: 15,
+      /** The whole storefront fetch; the browser waits this long plus overhead. */
+      deadline_seconds: 120,
       redirects: 3,
       content_types: ['application/json'],
     },
