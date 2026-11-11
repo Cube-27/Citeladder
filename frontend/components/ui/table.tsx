@@ -196,9 +196,9 @@ export function TableHead({
       className={cn(
         tableHeadClasses,
         'aria-[sort=ascending]:text-ink aria-[sort=descending]:text-ink',
-        // The header is a `surface-sunken` band with rounded ends; its opaque
-        // fill keeps a sticky header over scrolled rows.
-        'bg-surface-sunken sticky top-0 z-10 h-[var(--table-header-height)] px-[var(--table-cell-padding-x)] text-left align-middle first:rounded-l-sm last:rounded-r-sm',
+        // The header is a square `surface-sunken` band, full-bleed like the
+        // rows under it; its opaque fill keeps a sticky header over scrolled rows.
+        'bg-surface-sunken sticky top-0 z-10 h-[var(--table-header-height)] px-[var(--table-cell-padding-x)] text-left align-middle',
         numeric && 'tabular-nums text-right',
         trailing && 'text-right',
         desktopOnly && desktopOnlyClasses,
@@ -357,7 +357,8 @@ export function TableCellLines({
 }>) {
   const titleLines = useContext(TableTitleLinesContext);
   return (
-    <span className="grid min-w-0">
+    // The title and its caption are one fact: 4 apart.
+    <span className="grid min-w-0 gap-1">
       <ClampText lines={titleLines} className={title ? textRole('itemTitle') : undefined}>
         {primary}
       </ClampText>

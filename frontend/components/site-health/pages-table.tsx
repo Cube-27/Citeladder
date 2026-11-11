@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
-import { Inline } from '@/components/ui/layout';
+import { Inline, Stack } from '@/components/ui/layout';
 import { ClampText, mutedWhenMissing, TableCell, TableRow } from '@/components/ui/table';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { TextLink } from '@/components/ui/text-link';
@@ -151,7 +151,7 @@ export function PagesTable({
             {/* A URL is one unbreakable token: every line is clamped to the
                 column and carries the full value in a tooltip when cut. */}
             <TableCell>
-              <span className="flex min-w-0 flex-col">
+              <Stack as="span" gap="tight" className="min-w-0">
                 <Inline as="span">
                   <ClampText lines={1}>
                     <TextLink
@@ -174,7 +174,7 @@ export function PagesTable({
                   {page.display_url}
                 </ClampText>
                 <LinkedFromLine page={page} />
-              </span>
+              </Stack>
             </TableCell>
             <TableCell className="whitespace-nowrap">
               <PageKindBadge pageKind={page.page_kind} />

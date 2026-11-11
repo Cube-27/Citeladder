@@ -158,16 +158,21 @@ export function DataTable({
       aria-label={naming.ariaLabel}
       aria-busy={busy?.active || undefined}
       data-data-table=""
-      className={cn(fit, 'relative grid min-w-0 content-start gap-4')}
+      className={cn(fit, 'relative grid min-w-0 content-start gap-[var(--workspace-gap)]')}
     >
       {busy ? <BusyBar active={busy.active} label={busy.label} /> : null}
-      <DataTableHeader title={title} headingId={headingId} toolbar={toolbar} />
-      {description ? (
-        <p data-data-table-description="" className="text-caption text-ink-muted">
-          {description}
-        </p>
-      ) : null}
-      <DataTableFrame minWidth={minWidth} naming={naming} pinFirstColumn={pinFirstColumn}>
+      <DataTableHeader
+        title={title}
+        headingId={headingId}
+        toolbar={toolbar}
+        description={description}
+      />
+      <DataTableFrame
+        minWidth={minWidth}
+        naming={naming}
+        pinFirstColumn={pinFirstColumn}
+        fullBleed={!nested}
+      >
         <DataTableColumns columns={columns} selection={selection} />
         <TableTextLinesContext value={(pager || pageSize !== undefined) && rowLines === 1 ? 1 : 2}>
           <TableTitleLinesContext value={rowLines === 3 ? 2 : 1}>
@@ -192,22 +197,32 @@ export function DataTable({
  * The table in its scrolling frame, with the overflow fades laid over the
  * frame's edges. The box is isolated, so the fades never paint over the
  * page's sticky header. A pinned first column keeps the leading edge clear.
+ *
+ * In its own card the rows are full-bleed: the frame runs to the card's
+ * edges and the outer cells take the card's 16 inset, so a cell's text
+ * starts on the same line as the title above it and the row rules meet the
+ * card's border.
  */
 function DataTableFrame({
   minWidth,
   naming,
   pinFirstColumn,
+  fullBleed,
   children,
 }: Readonly<{
   minWidth?: TableMinWidth;
   naming: { ariaLabelledBy?: string; ariaLabel?: string };
   pinFirstColumn: boolean;
+  fullBleed: boolean;
   children: ReactNode;
 }>) {
   const frame = useRef<HTMLDivElement>(null);
   const edges = useScrollEdges(frame);
   return (
-    <div data-data-table-frame="" className="relative isolate min-w-0">
+    <div
+      data-data-table-frame=""
+      className={cn('relative isolate min-w-0', fullBleed && FULL_BLEED_FRAME)}
+    >
       <Table
         fixed
         minWidth={minWidth}
@@ -232,7 +247,7 @@ function DataTableFoot({
 }: Readonly<{ footer: ReactNode; pager: DataTablePager | undefined }>) {
   if (!pager && !footer) return null;
   return (
-    <div className="flex min-h-[var(--control-md)] min-w-0 flex-wrap items-center justify-between gap-4">
+    <div className="flex min-h-[var(--control-md)] min-w-0 flex-wrap items-center justify-between gap-2">
       {footer ? <div className="type-caption grid min-w-0 gap-1">{footer}</div> : null}
       {pager ? (
         <div className="ms-auto min-w-0">
@@ -277,36 +292,57 @@ function pagingLayout(
 }
 
 /**
- * The system's TableCard: the table sits inside the card's 24 inset, 16 below
- * the title row and 16 above the pager and footnote. Inside a box that
- * already frames it, there is no card of its own.
+ * The system's TableCard: the header (title, toolbar, description) in the
+ * card's 16 inset, the table 12 below it with full-bleed rows, and the pager
+ * and footnote 12 below the table. Inside a box that already frames it, there
+ * is no card of its own and the table keeps that box's inset.
  */
 const FITS = { card: cardClasses(), nested: undefined } as const;
+
+/** The frame out to the card's edges, its outer cells back on the card's inset. */
+const FULL_BLEED_FRAME =
+  '-mx-[var(--card-padding)] [&_:is(th,td):first-child]:ps-[var(--card-padding)] [&_:is(th,td):last-child]:pe-[var(--card-padding)]';
 
 /** The first column stays in view while a wide table scrolls in its frame. */
 const PINNED_FIRST_COLUMN =
   '[&_tr>:first-child]:sticky [&_tr>:first-child]:left-0 [&_tbody_tr>:first-child]:z-10 [&_tbody_tr>:first-child]:bg-surface [&_thead_tr>:first-child]:z-20';
 
+/**
+ * The title row (the title at the card-title size, then the toolbar 8 along),
+ * with the description bound 4 under it as one fact.
+ */
 function DataTableHeader({
   title,
   headingId,
   toolbar,
-}: Readonly<{ title?: string; headingId: string; toolbar?: FilterBarProps }>) {
-  if (!title && !toolbar) return null;
+  description,
+}: Readonly<{
+  title?: string;
+  headingId: string;
+  toolbar?: FilterBarProps;
+  description?: ReactNode;
+}>) {
+  if (!title && !toolbar && !description) return null;
   return (
-    <header
-      data-data-table-header=""
-      className="flex min-h-[var(--control-md)] min-w-0 flex-wrap items-center gap-x-4 gap-y-2"
-    >
-      {title ? (
-        <h3 id={headingId} className={textRole('itemTitle', 'min-w-0 truncate')}>
-          {title}
-        </h3>
-      ) : null}
-      {toolbar ? (
-        <div className="min-w-0 flex-1">
-          <FilterBar {...toolbar} />
+    <header data-data-table-header="" className="grid min-w-0 gap-1">
+      {title || toolbar ? (
+        <div className="flex min-h-[var(--control-md)] min-w-0 flex-wrap items-center gap-2">
+          {title ? (
+            <h3 id={headingId} className={textRole('sectionTitle', 'min-w-0 truncate')}>
+              {title}
+            </h3>
+          ) : null}
+          {toolbar ? (
+            <div className="min-w-0 flex-1">
+              <FilterBar {...toolbar} />
+            </div>
+          ) : null}
         </div>
+      ) : null}
+      {description ? (
+        <p data-data-table-description="" className="type-caption">
+          {description}
+        </p>
       ) : null}
     </header>
   );
@@ -390,8 +426,8 @@ function DataTableBody({
  */
 const ROW_HEIGHT = {
   1: 'var(--table-row-height)',
-  2: 'calc(2*var(--table-cell-padding-y)+var(--text-body-sm--line-height)+var(--text-caption--line-height))',
-  3: 'calc(2*var(--table-cell-padding-y)+2*var(--text-body-sm--line-height)+var(--text-caption--line-height))',
+  2: 'calc(2*var(--table-cell-padding-y)+var(--text-body-sm--line-height)+var(--spacing)+var(--text-caption--line-height))',
+  3: 'calc(2*var(--table-cell-padding-y)+2*var(--text-body-sm--line-height)+var(--spacing)+var(--text-caption--line-height))',
 } as const satisfies Record<RowLines, string>;
 
 type RowLines = 1 | 2 | 3;

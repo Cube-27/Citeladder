@@ -1083,6 +1083,12 @@ a.focus-ring:active .type-caption {
   background: var(--color-surface-sunken);
 }
 
+/* A Panel that lands inside a container is a sunken inset, so it takes the
+   inset's 12 down and 16 across rather than a container's 16 all round. */
+:where(.surface-card, .surface-panel, [role='dialog']) .surface-panel.surface-inset {
+  padding-block: calc(var(--spacing) * 3);
+}
+
 /* A card composed inside a dialog or drawer (settings sections in the
    account-security dialog, a framed table in an evidence drawer) steps down
    to the inset too, so an overlay never shows a box drawn inside a box. */

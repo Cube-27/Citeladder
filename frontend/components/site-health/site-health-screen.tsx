@@ -115,7 +115,7 @@ function SiteHealthContent({
   if (blocking?.kind === 'state') {
     return (
       <ListScreen>
-        <Stack gap="section" className="min-w-0">
+        <Stack gap="workspace" className="min-w-0">
           {blocking.node}
         </Stack>
       </ListScreen>
@@ -134,7 +134,7 @@ function SiteHealthContent({
         {blocking ? (
           <QueryState kind="loading" label={blocking.label} />
         ) : (
-          <Stack gap="section" className="min-w-0">
+          <Stack gap="workspace" className="min-w-0">
             <SiteHealthNotices screen={screen} mutationsAllowed={mutationsAllowed} />
             {schedule.notice}
             {refreshFailures}

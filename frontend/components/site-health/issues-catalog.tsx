@@ -8,7 +8,8 @@ import { ListScreen } from '@/components/layout/page-shell';
 import { Inline, Stack } from '@/components/ui/layout';
 import { IssueDetailRail } from '@/components/site-health/issue-detail-rail';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
-import { PageKindSelect } from '@/components/site-health/page-kind-select';
+import { pageKindFilter } from '@/components/site-health/page-kind-select';
+import { AllFilters, choiceFilter } from '@/components/ui/all-filters';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ListDetailCard, ListDetailRow } from '@/components/ui/list-detail';
@@ -33,7 +34,6 @@ import {
 } from '@/lib/site-health/issue-filters';
 import { issueTitle } from '@/lib/site-health/issues';
 import { InlineFigure, textRole } from '@/components/ui/typography';
-import { FilterChoice } from '@/components/ui/filter-bar';
 import { formatCount } from '@/lib/format';
 
 /** The toggle's count, only once a summary has landed. */
@@ -126,32 +126,43 @@ export function IssuesCatalog({
         onApply={(query) => updateFilters({ query })}
       />
     ),
+    // Search first, then every filter behind one All filters menu, as on the
+    // other list pages; the Issues | Advisories switch stays visible because
+    // it changes what the list is, not which of it shows.
     filters: (
       <>
-        <PageKindSelect
-          value={filters.page_kind}
-          onChange={(page_kind) => updateFilters({ page_kind })}
+        <AllFilters
+          filters={[
+            pageKindFilter({
+              value: filters.page_kind,
+              onChange: (page_kind) => updateFilters({ page_kind }),
+            }),
+            // Severity and category share one choice, as they share the API's one filter class.
+            choiceFilter({
+              id: 'class',
+              label: findingView === 'defect' ? 'Severity or category' : 'Category',
+              value: issueFilterClass(filters),
+              defaultValue: 'all',
+              onChange: (value) => updateFilters(issueFilterClassChange(value)),
+              groups: [
+                {
+                  options: issueFilterClasses(findingView).map((item) => ({
+                    value: item.key,
+                    label: summary
+                      ? `${item.label} (${filterCount(item.key, summary, findingView)})`
+                      : item.label,
+                  })),
+                },
+              ],
+            }),
+          ]}
         />
         <FindingClassFilter
           value={findingView}
           summary={summary}
           onChange={(value) => updateFilters(findingClassChange(value))}
         />
-        {/* Severity and category share one menu: as three segmented groups
-            the band wrapped to two rows at the owner's 982px. */}
-        <FilterChoice
-          label="Severity or category"
-          value={issueFilterClass(filters)}
-          defaultValue="all"
-          onChange={(value) => updateFilters(issueFilterClassChange(value))}
-          options={issueFilterClasses(findingView).map((item) => ({
-            value: item.key,
-            label: summary
-              ? `${item.label} (${filterCount(item.key, summary, findingView)})`
-              : item.label,
-          }))}
-        />
-        {/* Last in the strip, so clearing it moves no other control. */}
+        {/* Last of the filters, so clearing it moves no other control. */}
         {filters.rule_id ? (
           <RuleFilterChip
             title={ruleFilterTitle(rows, filters.rule_id)}
@@ -160,6 +171,8 @@ export function IssuesCatalog({
         ) : null}
       </>
     ),
+    // The count that describes the list closes the row it filters, in caption.
+    actions: summary ? <IssueSummary summary={summary} findingView={findingView} /> : null,
   };
 
   // Wait for the issues page, and only for that.
@@ -176,7 +189,7 @@ export function IssuesCatalog({
   if (issuesQuery.isPending && !issuesQuery.data)
     return (
       <ListScreen controls={controls}>
-        <Stack gap="section" className="min-w-0" aria-busy="true">
+        <Stack gap="workspace" className="min-w-0" aria-busy="true">
           {notice}
           <QueryState kind="loading" label="Loading issues…" />
         </Stack>
@@ -228,15 +241,9 @@ export function IssuesCatalog({
 
   return (
     <ListScreen controls={controls}>
-      <Stack gap="section" className="min-w-0">
+      <Stack gap="workspace" className="min-w-0">
         {notice}
-        {/* The summary line belongs to the list it counts: it sits the
-            Overview crawl line's compact gap above it, not a section apart. */}
-        <Stack className="min-w-0">
-          {summary ? <IssueSummary summary={summary} findingView={findingView} /> : null}
-          {issuesBody}
-        </Stack>
-
+        {issuesBody}
         {rows.length > 0 ? (
           <CatalogPager cursor={cursor} page={issuesQuery.data} onGo={catalog.goToPage} />
         ) : null}
@@ -338,7 +345,7 @@ function IssueSummary({
   const defects = findingView === 'defect';
   const typeCount = defects ? summary.defect_issue_type_count : summary.advisory_issue_type_count;
   return (
-    <p className="type-body">
+    <p className="type-caption whitespace-nowrap">
       <SummaryCount
         value={typeCount}
         singular={defects ? 'issue' : 'advisory'}

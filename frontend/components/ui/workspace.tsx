@@ -32,6 +32,16 @@ export function ledgerItemClasses(className?: string) {
 }
 
 /**
+ * The sunken inset: a shared fact inside a card that is not one of its rows
+ * (the element several affected pages share, over the pages themselves).
+ * 12 down, 16 across, its lines 4 apart; inside a card it is the sunken fill
+ * with no edge, so the card stays the only bordered surface (D51).
+ */
+export function insetClasses(className?: string) {
+  return cn('surface-inset grid min-w-0 gap-1 rounded-md px-4 py-3', className);
+}
+
+/**
  * One level of a tree (a page hierarchy): its items 8 apart, hung off a
  * hairline and indented 16 from their parent, so depth reads as indentation
  * and the rule shows which parent a branch belongs to. Nest a branch inside
