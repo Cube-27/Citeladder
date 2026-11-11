@@ -1,10 +1,11 @@
 # Content optimization
 
 Owner of the content-gap evidence and the `content_gaps` Opportunity family.
-The owner decisions (CO1–CO18) and the later phases are in the
-[architecture](plans/content-optimization.md); CO1 and CO10 (a separate
+The owner decisions (CO1–CO18, E1–E5) are in
+[decisions](decisions.md#content-optimization); CO1 and CO10 (a separate
 Content screen and per-page-kind routing) are superseded by the
-[Actions simplification](plans/actions-simplification.md) (AS1, AS5). Credits
+[Actions simplification](decisions.md#one-actions-feature-content-gaps-from-content-pages-only)
+(AS1, AS5). Credits
 are [B73](billing-decisions.md#content-optimization-2026-11-10). Generic
 Opportunity, Action, declaration and verification behaviour is owned by
 [Opportunities](opportunities.md).
@@ -264,4 +265,11 @@ gap will be measured by.
 
 - Optimizing any URL (a paid add-on).
 - The [content rules engine](plans/content-rules-engine.md) and its rule
-  findings (CO13).
+  findings (CO13), including its deterministic linters.
+- Reading the competitor and publisher pages cited for tracked prompts, and
+  suggesting passage-level additions from what they cover (CO3).
+- The rules applied to Agent drafts of new content (CO18).
+- Publishing to a CMS.
+- A prompt-score check beside `owned_url_cited`: a rule names one check kind,
+  so a content-gap declaration does not also freeze prompt-score checks on the
+  same prompts.

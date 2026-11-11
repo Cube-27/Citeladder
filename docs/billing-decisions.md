@@ -633,7 +633,7 @@ between included and credit-funded:
 
 Source: owner answer in the content optimization architecture session
 ("Clustering free, suggestions use AI credits"); [content
-optimization](plans/content-optimization.md) CO8.
+optimization](decisions.md#content-optimization) CO8.
 
 ## Owner inputs still required
 

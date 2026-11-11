@@ -3,7 +3,7 @@
 Status: **architecture reviewed with the owner, 2026-11-10**. Not on
 [plan status](ACTIVE.md) and not authorized for execution until the owner
 assigns it. Requested by the owner (CO9 in
-[content optimization](content-optimization.md)) as a separate document: this
+[decisions](../decisions.md#content-optimization)) as a separate document: this
 one owns *how a page's copy is audited and what a suggestion is*; content
 optimization owns the gap evidence, the screen, the editor and measurement, and
 consumes this engine.
@@ -77,7 +77,7 @@ Delivery; ours are tied to search and AI answers):
 | Proof | Statistics with source and date, attributed quotes, sourced claims, vague attributions, unanchored superlatives (B9–B11, B14, E8, G1–G2) |
 | Search guidelines | Accurate title and headings, people-first value, no keyword stuffing, no fake freshness, author and YMYL signals (A1–A15 subset, C-rules via Site Health) |
 | Natural voice | AI-vocabulary clusters, chatbot artifacts, negative parallelism, rule of three, trailing "-ing" clauses, em-dash overuse, copula avoidance, puffery (E1–E9, E11) |
-| Coverage | Content angles cited for the page's prompts that the page lacks ([content optimization](content-optimization.md)) |
+| Coverage | Content angles cited for the page's prompts that the page lacks ([content optimization](../content-optimization.md)) |
 
 The 82-rule research catalog in the [appendix](#appendix-research-rule-catalog)
 seeds `content-rules.ts`. Contested rules (see below) ship as heuristics or not
@@ -164,7 +164,7 @@ A finding belongs to one immutable revision and has one of three anchors:
 
   The browser shows staleness as soon as the user edits. Accept and Apply all
   enforce it on the server together with the revision check (see
-  [content optimization](content-optimization.md#3-optimize-content-agent-turn-ai-credits)).
+  [suggestions](../content-optimization.md#suggestions)).
   Imported site-context L0 findings follow the crawl rule in
   [Layers](#layers) instead. Stale findings can't be applied; the next
   deterministic run or model pass raises them again if they still hold.

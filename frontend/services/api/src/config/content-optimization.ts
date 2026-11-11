@@ -1,8 +1,7 @@
 /**
  * Content optimization policy: the content-angle refresh's window, bounds and
- * versions (docs/plans/content-optimization.md sections 1-2, CO3, CO4, CO15),
- * the page fetch that starts a page document (phase 2, PR 1) and the
- * suggestions made on it (phase 2, PR 2).
+ * versions (docs/content-optimization.md; CO3, CO4, CO15 in docs/decisions.md),
+ * the page fetch that starts a page document and the suggestions made on it.
  */
 import agentRuntime from './agent-runtime.json' with { type: 'json' };
 

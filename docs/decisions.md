@@ -596,13 +596,48 @@ The page describes only what ships
 redirect) and update the website page with relevant material based on current
 implementation (ignore phase 2 which is not implemented yet)".
 
+## Content optimization
+
+[Content optimization](content-optimization.md) owns what ships; its plans
+are closed and deleted.
+
+| ID | Decision |
+|---|---|
+| CO1 | ~~Content optimization is its own sidebar entry directly below Actions. Actions and Content optimization never show the same work.~~ Superseded by AS1: one Actions list; content gaps are ordinary Actions. |
+| CO2 | Storage stays in the one Opportunity/Action store. Declaration, verification and Agent attachment are reused. |
+| CO3 | MVP evidence is the **titles** of URLs already cited in answers from **competitor sites and editorial/publisher sites** (not UGC, social, directories or marketplaces), grouped to find content the user lacks. Reading those pages is a later phase. |
+| CO4 | Titles are grouped by the citing prompt's topic, then a model clusters them into content angles; the clustering is persisted with its version and reused while its inputs are unchanged. Window: dashboard-ready audits of the last **30 days**. |
+| CO5 | Both gap types: an existing owned page that is not cited (opens the editor) and a missing page (a new-page brief through the existing content-creation workflow). |
+| CO6 | Both triggers: automatic detection after audits, and a manual **Analyze a page** that lets the user pick only from the crawl's content pages (no free URL entry). Optimizing any URL is a later paid add-on. |
+| CO7 | Per-suggestion editing: page on the left, suggestions on the right, Accept / Dismiss / Apply all; suggestions that need a fact go to the Agent with the user's input. |
+| CO8 | Clustering is free (internal cost of the audit); generating suggestions is an Agent turn that draws AI credits. Recorded as [B73](billing-decisions.md#content-optimization-2026-11-10). |
+| CO9 | The rules for auditing content are designed in a separate document ([content rules engine](plans/content-rules-engine.md)), inspired by Grammarly. |
+| CO10 | ~~Route by page kind, not by rule: every Action on a content page is fixed in the editor; all other pages stay in Actions.~~ Superseded by AS1: no Action is routed to a screen by page kind; `actions.surface` is removed. |
+| CO11 | **Issues is unchanged.** Site Health issues, including those on content pages, stay in Issues exactly as today. The new rule-based content suggestions never appear in Issues; they exist only in the editor. |
+| CO12 | **Fetch on Optimize.** Opening the editor queues a one-page fetch of the live page; its main content becomes the editor's base Markdown. The crawl's flat text is not used as the base. |
+| CO13 | MVP rules: imported Site Health findings plus one model pass over the rule catalog. Deterministic linters (Harper, retext) come next. |
+| CO14 | **No grading or scores**, not even a readability grade. Suggestions are options grounded in what tends to do well, never a verdict on the content. |
+| CO15 | Content page kinds: `article`, `guide`, `how_to`, `listicle`, `comparison`, `alternative`, `case_study_review`. FAQ, docs and every other kind stay in Actions. |
+| CO16 | Angles match **content pages only**. When no content page covers an angle it becomes a new-page brief, even if a non-content page (pricing, product) touches the topic. |
+| CO17 | The model pass works in the project's language. The later deterministic linters start English-only. |
+| CO18 | Agent drafts of *new* content follow these rules in a later phase. The MVP covers existing content pages and new-page briefs through today's content-creation workflow. |
+| E1 | The editor lives inside the Agent window. When a chat works on a page, `/agent/chats/:id` becomes a workspace: the page on the left, and on the right Suggestions / Outline / SEO with the chat docked below. There is no separate editor route and no slide-out panel. Chats without a page keep today's single column. |
+| E2 | The page is Markdown edited in CodeMirror 6 with live-preview styling: headings, bold and links render as text, and their Markdown marks show only on the cursor's line. Server offsets equal editor offsets, so suggestions anchor exactly with no conversion layer. A true rich-text editor (ProseMirror) is deferred. |
+| E3 | The workspace opens for an Action whose target is an owned page of a content kind (CO15), or a page picked in Analyze a page. Other Actions keep today's chat. |
+| E4 | Revert on an applied or dismissed suggestion returns it to To review. Reverting an applied one restores the original text while that span is unchanged; otherwise the revert is refused and explains why. |
+| E5 | The SEO tab shows Site Health's page-local checks from the editor's fetch, labelled with the fetch time. Editing the page doesn't rerun them. |
+
+Source: owner, in chat, 10 November 2026: CO1–CO18 in the content
+optimization architecture session; E1 ("Option 1") and E2–E5 ("Accept all")
+in the phase 2 editor planning session.
+
 ## One Actions feature; content gaps from content pages only
 
 There is one Actions feature. The decisions below supersede content
 optimization CO1 (a separate Content optimization sidebar entry) and CO10
-(routing Actions to screens by page kind) in the
-[content optimization architecture](plans/content-optimization.md). The
-[Actions simplification](plans/actions-simplification.md) plan holds the work.
+(routing Actions to screens by page kind), [above](#content-optimization).
+The [Actions simplification](plans/actions-simplification.md) plan holds the
+work.
 
 | ID | Decision |
 |---|---|
