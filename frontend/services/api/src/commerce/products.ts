@@ -82,9 +82,11 @@ export const holderKindSchema = commerceProductRowSchema.shape.kind;
  * The competitor candidates a Commerce metrics read lists, on the candidate
  * table aliased `alias`: approved ones, and pending ones the AI observed.
  */
-export const listedCompetitor = (alias: string) =>
-  sql`(${sql.ref(`${alias}.state`)} = 'approved'
-       OR (${sql.ref(`${alias}.state`)} = 'pending' AND ${sql.ref(`${alias}.source_kind`)} = 'ai_observed'))`;
+export function listedCompetitor(alias: string) {
+  const state = sql.ref(alias + '.state');
+  const source = sql.ref(alias + '.source_kind');
+  return sql`(${state} = 'approved' OR (${state} = 'pending' AND ${source} = 'ai_observed'))`;
+}
 
 const rowSchema = z.object({
   executions: z.number().int(),
