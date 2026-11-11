@@ -679,10 +679,14 @@ describe('AI Traffic state and navigation', () => {
     ).toBeVisible();
     await user.click(screen.getByRole('button', { name: /^All filters/ }));
     await user.click(screen.getByRole('menuitem', { name: /^Status code/ }));
-    fireEvent.change(await screen.findByRole('spinbutton', { name: 'Response status' }), {
-      target: { value: '404' },
-    });
+    const statusField = await screen.findByRole('spinbutton', { name: 'Response status' });
+    // A partly typed code narrows nothing, so the menu does not report it.
+    fireEvent.change(statusField, { target: { value: '40' } });
+    expect(screen.getByRole('menuitem', { name: /^Status code/ })).toHaveTextContent('Any status');
+    fireEvent.change(statusField, { target: { value: '404' } });
+    expect(screen.getByRole('menuitem', { name: /^Status code/ })).toHaveTextContent('404');
     await user.keyboard('{Escape}{Escape}');
+    expect(await screen.findByRole('button', { name: 'All filters (1)' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Export CSV' }));
     await waitFor(() => expect(exportStatus).toBe('404'));
     await user.click(screen.getByRole('tab', { name: 'Referrals' }));

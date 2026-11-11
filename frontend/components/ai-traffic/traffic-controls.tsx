@@ -2,13 +2,14 @@
 import type { KeyboardEvent } from 'react';
 import { Download, Folder } from 'lucide-react';
 import { crawlerResourceClassSchema } from '@citeladder/contracts/site-health';
-import type { useTrafficData } from '@/lib/ai-traffic/use-traffic-data';
+import { trafficStatusCode, type useTrafficData } from '@/lib/ai-traffic/use-traffic-data';
 import { words } from '@/lib/ai-traffic/vocabulary';
 import { TRAFFIC_RANGES, VERIFICATION_OPTIONS } from '@/lib/config/crawl-logs';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { AllFilters, choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
+import { FilterField } from '@/components/ui/filter-bar';
 import { MenuItem } from '@/components/ui/menu';
 import { Icon } from '@/components/ui/icon';
 type ControlProps = Readonly<{ model: ReturnType<typeof useTrafficData> }>;
@@ -58,177 +59,200 @@ export function TrafficAllFilters(props: TrafficControlsProps) {
   return <AllFilters filters={trafficFilters(props)} align="end" />;
 }
 
-const ALL_OPTION = { value: '', label: '' };
+/** One filter of All filters, or none where the tab does not offer it. */
+type FilterBuilder = (props: TrafficControlsProps) => FilterDefinition | null;
 
-function trafficFilters({ model, crawlAvailable }: TrafficControlsProps): FilterDefinition[] {
-  const { tab, selection } = model;
-  const filters: FilterDefinition[] = [];
-  // Verification filters crawler requests only.
-  if (crawlAvailable)
-    filters.push(
-      choiceFilter({
-        id: 'verification',
-        label: 'Verification',
-        value: selection.verification,
-        defaultValue: 'default',
-        groups: [{ options: VERIFICATION_OPTIONS }],
-        onChange: selection.setVerification,
-      }),
-    );
-  if (tab === 'crawlers')
-    filters.push(
-      choiceFilter({
-        id: 'purpose',
-        label: 'Crawler purpose',
-        value: selection.purpose ?? '',
-        defaultValue: '',
-        groups: [
-          {
-            options: [
-              { ...ALL_OPTION, label: 'All purposes' },
-              ...[...new Set(model.catalog.data?.bots.map((b) => b.purpose) ?? [])].map(
-                (value) => ({
-                  value,
-                  label: words(value),
-                }),
-              ),
-            ],
-          },
-        ],
-        onChange: (value) => selection.setPurpose(value || null),
-      }),
-    );
-  if (tab === 'activity')
-    filters.push(
-      choiceFilter({
-        id: 'bot',
-        label: 'Bot',
-        value: selection.bot ?? '',
-        defaultValue: '',
-        groups: [
-          {
-            options: [
-              { ...ALL_OPTION, label: 'All bots' },
-              ...(model.catalog.data?.bots.map((b) => ({ value: b.bot_id, label: b.label })) ?? []),
-            ],
-          },
-        ],
-        onChange: (value) => selection.setBot(value || null),
-      }),
-    );
-  if (tab !== 'overview')
-    filters.push(
-      choiceFilter({
-        id: 'resource',
-        label: 'Resource class',
-        value: selection.resource ?? '',
-        defaultValue: '',
-        groups: [
-          {
-            options: [
-              { ...ALL_OPTION, label: 'All resources' },
-              ...crawlerResourceClassSchema.options.map((value) => ({
-                value,
-                label: words(value),
-              })),
-            ],
-          },
-        ],
-        onChange: (value) => selection.setResource(value || null),
-      }),
-    );
-  if (tab !== 'overview')
-    filters.push({
-      kind: 'custom',
-      id: 'folder',
-      label: 'Folder',
-      valueLabel: selection.folder || 'Any folder',
-      isDefault: !selection.folder,
-      content: <FolderField model={model} />,
-    });
-  if (tab === 'activity')
-    filters.push({
-      kind: 'custom',
-      id: 'status',
-      label: 'Status code',
-      valueLabel: selection.status || 'Any status',
-      isDefault: !selection.status,
-      content: <StatusField model={model} />,
-    });
-  if (tab === 'pages' && selection.pattern)
-    filters.push({
-      kind: 'custom',
-      id: 'insight',
-      label: 'Insight',
-      valueLabel: 'Filtered',
-      isDefault: false,
-      content: (
-        <MenuItem onSelect={() => selection.setPattern(null)}>Clear insight filter</MenuItem>
-      ),
-    });
-  return filters;
+/** In menu order. */
+const FILTER_BUILDERS: readonly FilterBuilder[] = [
+  verificationFilter,
+  purposeFilter,
+  botFilter,
+  resourceFilter,
+  folderFilter,
+  statusFilter,
+  insightFilter,
+];
+
+function trafficFilters(props: TrafficControlsProps): FilterDefinition[] {
+  return FILTER_BUILDERS.flatMap((build) => build(props) ?? []);
+}
+
+/** A choice filter whose unset value is `null` in the URL and "All …" in the menu. */
+function optionalChoice({
+  id,
+  label,
+  allLabel,
+  value,
+  options,
+  onChange,
+}: Readonly<{
+  id: string;
+  label: string;
+  allLabel: string;
+  value: string | null;
+  options: readonly { value: string; label: string }[];
+  onChange: (value: string | null) => void;
+}>): FilterDefinition {
+  return choiceFilter({
+    id,
+    label,
+    value: value ?? '',
+    defaultValue: '',
+    groups: [{ options: [{ value: '', label: allLabel }, ...options] }],
+    onChange: (picked) => onChange(picked || null),
+  });
+}
+
+// Verification filters crawler requests only.
+function verificationFilter({ model, crawlAvailable }: TrafficControlsProps) {
+  if (!crawlAvailable) return null;
+  return choiceFilter({
+    id: 'verification',
+    label: 'Verification',
+    value: model.selection.verification,
+    defaultValue: 'default',
+    groups: [{ options: VERIFICATION_OPTIONS }],
+    onChange: model.selection.setVerification,
+  });
+}
+
+function purposeFilter({ model }: TrafficControlsProps) {
+  if (model.tab !== 'crawlers') return null;
+  const purposes = new Set(model.catalog.data?.bots.map((bot) => bot.purpose));
+  return optionalChoice({
+    id: 'purpose',
+    label: 'Crawler purpose',
+    allLabel: 'All purposes',
+    value: model.selection.purpose,
+    options: [...purposes].map((value) => ({ value, label: words(value) })),
+    onChange: model.selection.setPurpose,
+  });
+}
+
+function botFilter({ model }: TrafficControlsProps) {
+  if (model.tab !== 'activity') return null;
+  return optionalChoice({
+    id: 'bot',
+    label: 'Bot',
+    allLabel: 'All bots',
+    value: model.selection.bot,
+    options: model.catalog.data?.bots.map((bot) => ({ value: bot.bot_id, label: bot.label })) ?? [],
+    onChange: model.selection.setBot,
+  });
+}
+
+function resourceFilter({ model }: TrafficControlsProps) {
+  if (model.tab === 'overview') return null;
+  return optionalChoice({
+    id: 'resource',
+    label: 'Resource class',
+    allLabel: 'All resources',
+    value: model.selection.resource,
+    options: crawlerResourceClassSchema.options.map((value) => ({ value, label: words(value) })),
+    onChange: model.selection.setResource,
+  });
+}
+
+function folderFilter({ model }: TrafficControlsProps): FilterDefinition | null {
+  if (model.tab === 'overview') return null;
+  const { folder } = model.selection;
+  return {
+    kind: 'custom',
+    id: 'folder',
+    label: 'Folder',
+    valueLabel: folder || 'Any folder',
+    isDefault: !folder,
+    content: <FolderField model={model} />,
+  };
+}
+
+function statusFilter({ model }: TrafficControlsProps): FilterDefinition | null {
+  if (model.tab !== 'activity') return null;
+  // A partly typed code ("40") narrows nothing yet, so it is neither shown nor counted.
+  const code = trafficStatusCode(model.selection.status);
+  return {
+    kind: 'custom',
+    id: 'status',
+    label: 'Status code',
+    valueLabel: code === undefined ? 'Any status' : String(code),
+    isDefault: code === undefined,
+    content: <StatusField model={model} />,
+  };
+}
+
+function insightFilter({ model }: TrafficControlsProps): FilterDefinition | null {
+  const { pattern, setPattern } = model.selection;
+  if (model.tab !== 'pages' || !pattern) return null;
+  return {
+    kind: 'custom',
+    id: 'insight',
+    label: 'Insight',
+    valueLabel: 'Filtered',
+    isDefault: false,
+    content: <MenuItem onSelect={() => setPattern(null)}>Clear insight filter</MenuItem>,
+  };
 }
 
 /**
  * A typed field inside a menu: its keys edit the text, so they stop before the
- * menu, which would otherwise jump to an item by letter or close on Left.
+ * menu, which would otherwise jump to an item by letter. Escape and Tab pass
+ * through, and so does Left from an empty field, which returns to the list.
  */
-const stopMenuKeys = (event: KeyboardEvent) => {
-  if (event.key !== 'Escape' && event.key !== 'Tab') event.stopPropagation();
-};
+function fieldKeys(event: KeyboardEvent<HTMLInputElement>) {
+  if (event.key === 'Escape' || event.key === 'Tab') return;
+  if (event.key === 'ArrowLeft' && event.currentTarget.value === '') return;
+  event.stopPropagation();
+}
 
 function FolderField({ model }: ControlProps) {
   const { folder, setFolder } = model.selection;
   return (
-    <div>
-      <Input
-        aria-label="Folder"
-        placeholder="Folder"
-        value={folder ?? ''}
-        onChange={(e) => setFolder(e.target.value || null)}
-        onKeyDown={stopMenuKeys}
-        startContent={<Icon icon={Folder} />}
-      />
-    </div>
+    <Input
+      aria-label="Folder"
+      placeholder="Folder"
+      value={folder ?? ''}
+      onChange={(e) => setFolder(e.target.value || null)}
+      onKeyDown={fieldKeys}
+      startContent={<Icon icon={Folder} />}
+    />
   );
 }
 
-/** Pages' sort, in the table's toolbar beside the rows it orders. */
+/** Pages' sort, in the table's toolbar beside the rows it orders, at the one filter width. */
 export function PagesSort({ model }: ControlProps) {
   const { sort, setSort } = model.selection;
   return (
-    <Select
-      ariaLabel="Sort pages"
-      value={sort}
-      onValueChange={setSort}
-      options={[
-        { value: 'requests_desc', label: 'Requests' },
-        { value: 'sessions_desc', label: 'AI referral sessions' },
-        { value: 'key_events_desc', label: 'Key events' },
-        { value: 'citations_desc', label: 'Tracked citations' },
-        { value: 'url_asc', label: 'URL' },
-      ]}
-      className={FIELD}
-    />
+    <FilterField>
+      <Select
+        ariaLabel="Sort pages"
+        value={sort}
+        onValueChange={setSort}
+        options={[
+          { value: 'requests_desc', label: 'Requests' },
+          { value: 'sessions_desc', label: 'AI referral sessions' },
+          { value: 'key_events_desc', label: 'Key events' },
+          { value: 'citations_desc', label: 'Tracked citations' },
+          { value: 'url_asc', label: 'URL' },
+        ]}
+      />
+    </FilterField>
   );
 }
 
 function StatusField({ model }: ControlProps) {
   const { status, setStatus } = model.selection;
   return (
-    <div>
-      <Input
-        aria-label="Response status"
-        placeholder="Status code"
-        type="number"
-        inputMode="numeric"
-        min={100}
-        max={599}
-        step={1}
-        value={status ?? ''}
-        onChange={(e) => setStatus(e.target.value || null)}
-        onKeyDown={stopMenuKeys}
-      />
-    </div>
+    <Input
+      aria-label="Response status"
+      placeholder="Status code"
+      type="number"
+      inputMode="numeric"
+      min={100}
+      max={599}
+      step={1}
+      value={status ?? ''}
+      onChange={(e) => setStatus(e.target.value || null)}
+      onKeyDown={fieldKeys}
+    />
   );
 }

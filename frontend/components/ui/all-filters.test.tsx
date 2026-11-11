@@ -98,6 +98,45 @@ describe('AllFilters', () => {
     expect(screen.getByTestId('selection')).toHaveTextContent('all p11');
   });
 
+  it('types into a custom filter field opened with the keyboard alone', async () => {
+    function FolderPage() {
+      const [folder, setFolder] = useState('');
+      return (
+        <>
+          <AllFilters
+            filters={[
+              {
+                kind: 'custom',
+                id: 'folder',
+                label: 'Folder',
+                valueLabel: folder || 'Any folder',
+                isDefault: !folder,
+                content: (
+                  <input
+                    aria-label="Folder"
+                    value={folder}
+                    onChange={(event) => setFolder(event.target.value)}
+                    onKeyDown={(event) => event.stopPropagation()}
+                  />
+                ),
+              },
+            ]}
+          />
+          <output data-testid="folder">{folder}</output>
+        </>
+      );
+    }
+    const user = userEvent.setup();
+    render(<FolderPage />);
+    screen.getByRole('button', { name: 'All filters' }).focus();
+    await user.keyboard('{Enter}{ArrowDown}{ArrowRight}');
+
+    expect(screen.getByRole('textbox', { name: 'Folder' })).toHaveFocus();
+    await user.keyboard('/blog');
+    expect(screen.getByTestId('folder')).toHaveTextContent('/blog');
+    expect(screen.getByRole('menuitem', { name: /^Folder/ })).toHaveTextContent('/blog');
+  });
+
   it('on a phone opens a filter in the menu itself, with a way back to the list', async () => {
     vi.stubGlobal('matchMedia', (query: string) => ({
       matches: query === '(max-width: 639px)',
