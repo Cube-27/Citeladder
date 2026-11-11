@@ -132,6 +132,47 @@ export function TreeItem({
 }
 
 /**
+ * A tree list's row that is itself the choice (a category narrowing a table):
+ * one control tall, the label truncated and its count at the end, pressed to
+ * select, marked `aria-current` while selected. A nested item (one level
+ * deep) is indented 12 from its parent, as `TreeItem`.
+ */
+export function TreeOption({
+  label,
+  count,
+  selected,
+  nested = false,
+  onSelect,
+}: Readonly<{
+  label: string;
+  count?: string;
+  selected: boolean;
+  nested?: boolean;
+  onSelect: () => void;
+}>) {
+  return (
+    <li className={cn('min-w-0', nested && 'ms-3')}>
+      <Pressable
+        type="button"
+        onClick={onSelect}
+        aria-current={selected ? 'true' : undefined}
+        className={cn(
+          listRowClasses({ selected }),
+          'focus-ring flex min-h-[var(--nav-item-height)] w-full min-w-0 items-center gap-2 ps-3 pe-2 text-start',
+        )}
+      >
+        <ClampText lines={1} className="type-control flex-1">
+          {label}
+        </ClampText>
+        {count === undefined ? null : (
+          <span className="type-caption shrink-0 tabular-nums">{count}</span>
+        )}
+      </Pressable>
+    </li>
+  );
+}
+
+/**
  * A tree item's name edited in place: the field and its submit on one row,
  * at the item's own indent so the edit stays where the name was.
  */

@@ -164,14 +164,14 @@ Rate) keep their definitions and move to the overview's category view.
 - `GET /commerce/products?source=catalog|all&category=&window=&engine=&prompt_set=&q=&sort=&cursor=`:
   one keyset-paged SQL read over persisted observations returning the metric
   columns above per holder; the slim catalog read from the backlog.
-- `/products` becomes the table: the nested category sidebar with counts (the
-  current rail's categories), search, My catalog / All products, window, engine
-  and prompt-set filters in the top control strip, column settings, CSV export,
-  bulk find-competitors (limit unchanged). Clicking a row opens
-  `/products/:holderId`, which in this PR still renders today's target detail.
-- Migration `0023_commerce_category_tree.sql`: `parent_category_id` on
-  `commerce_categories`; projection and import write the parent from breadcrumb
-  or `A > B` paths.
+- `/products` becomes the table: the category sidebar with counts (the
+  current rail's categories, flat until PR 6 adds the tree), search, My catalog
+  / All products, window, engine and prompt-set filters in the top control
+  strip, column settings, CSV export, bulk find-competitors (limit unchanged).
+  Clicking a catalog row opens `/products/:holderId`, which in this PR still
+  renders today's target detail.
+- No migration: the category-tree migration moved to PR 6 (the migration slot
+  was held by other work when PR 3 ran).
 - Replacement gate: inventory every `?target=` link (Actions, Agent, MCP,
   next-step links) before coding; all move to `/products/:id`; `?target=` is
   deleted, not redirected.
@@ -194,8 +194,8 @@ and:
 - **Setup**: competitor discovery and review, hero-product prompts, and the
   Actions with Generate action / Work with the agent.
 
-The split-pane workspace, `target-*` components and `GET ai-shelf` without a
-target are retired. `read_ai_shelf` (MCP/Agent) returns the per-product metrics.
+The `target-*` components and `GET ai-shelf` are retired (the split-pane
+workspace already went in PR 3). `read_ai_shelf` (MCP/Agent) returns the per-product metrics.
 
 ### PR 5: Shopping overview
 
@@ -218,6 +218,10 @@ Commerce becomes a group with Overview and Products.
   idempotency, append-only observations and URL/SKU/GTIN matching. The SKU merge
   policy from the backlog: a SKU match with a different URL updates the
   existing product and records the new URL as an alias observation.
+- Migration `commerce_category_tree` (next free number; moved here from
+  PR 3): `parent_category_id` on `commerce_categories`; projection and import
+  write the parent from breadcrumb or `A > B` paths, and the Products sidebar
+  nests by it.
 - **Category review step**: the proposed tree is shown for confirmation before
   products go live; confirming writes the categories.
 - **Import results**: added, updated, unchanged and rejected rows, rejected

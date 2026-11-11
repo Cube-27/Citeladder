@@ -129,6 +129,7 @@ const screens = {
     'PerformanceScreen',
   ),
   products: pick(() => import('@/components/products/products-screen'), 'ProductsScreen'),
+  product: pick(() => import('@/components/products/product-detail-screen'), 'ProductDetailScreen'),
   newChat: pick(() => import('@/components/agent/new-chat-screen'), 'NewChatScreen'),
   chat: pick(() => import('@/components/agent/chat-screen'), 'ChatScreen'),
   actions: pick(() => import('@/components/agent/actions-screen'), 'ActionsScreen'),
@@ -220,6 +221,12 @@ export const APP_ROUTES = [
     title: 'Commerce Suite',
     screen: screens.products,
     nav: [listed('Commerce Suite', 'products', 'analyze')],
+  }),
+  page({
+    path: '/products/:targetId',
+    title: 'Commerce Suite',
+    collection: '/products',
+    screen: screens.product,
   }),
   page({
     path: '/agent',

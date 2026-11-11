@@ -1,0 +1,308 @@
+/**
+ * The Products table read: one keyset-paged SQL read of every product holder's
+ * metrics over persisted observations (commerce improvement PR 3, formula
+ * version 1 of the plan's "Metric definitions").
+ *
+ * Scope is the successful executions in the window (and engine and prompt set,
+ * when filtered) whose answer has a match pass; each answer counts once,
+ * through its latest pass (highest catalog revision, then newest). Branded
+ * comparisons stay out, as they stay out of organic Visibility and the AI
+ * Shelf. A holder (an owned product or a competitor candidate) holds at most
+ * one slot per execution, at its best rank: a ranked slot beats an unranked
+ * one and a carousel card's rank wins over a text-list rank.
+ *
+ * It reads only persisted rows: no provider, model or repair, and every table
+ * is filtered to the authorized workspace and project.
+ */
+import { commerceProductPageSchema } from '@citeladder/contracts/commerce-suite';
+import type {
+  CommerceProductSort,
+  CommerceProductSource,
+} from '@citeladder/contracts/commerce-suite';
+import { sql, type RawBuilder } from 'kysely';
+import { z } from 'zod';
+
+import { policy } from '../config.ts';
+import type { Database } from '../db/database.ts';
+import { ApiError } from '../errors.ts';
+import {
+  decodeKeysetCursor,
+  encodeKeysetCursor,
+  InvalidCursorError,
+} from '../http/keyset-cursor.ts';
+import { UNCATEGORIZED_KEY } from './projection-facts.ts';
+import type { CommerceScope } from './reads.ts';
+
+export type ProductQuery = {
+  source: CommerceProductSource;
+  category: string | null;
+  windowDays: number;
+  engine: string | null;
+  promptSet: string | null;
+  q: string | null;
+  sort: CommerceProductSort;
+  cursor: string | null;
+  limit: number;
+};
+
+const CURSOR_SCOPE = 'commerce.products';
+const DAY_MS = 86_400_000;
+
+/**
+ * Every sort is ascending on one float key, then the lowercased name, then the
+ * holder id, so a keyset cursor is one row comparison. A descending metric is
+ * negated; a missing one sorts last. Visibility shares its denominator across
+ * rows, so it orders by appearances, an exact integer.
+ */
+const SORT_KEYS: Record<CommerceProductSort, RawBuilder<number>> = {
+  visibility: sql`-f.appearances::float8`,
+  win_rate: sql`-coalesce(f.win_rate, -1)`,
+  position: sql`coalesce(f.position, 1e9)`,
+  name: sql`0::float8`,
+};
+
+const rowSchema = z.object({
+  executions: z.number().int(),
+  total: z.number().int(),
+  holder_id: z.uuid().nullable(),
+  kind: z.enum(['owned', 'approved_competitor', 'ai_observed_competitor']).nullable(),
+  name: z.string().nullable(),
+  name_key: z.string().nullable(),
+  brand: z.string().nullable(),
+  url: z.string().nullable(),
+  sort_key: z.number().nullable(),
+  appearances: z.number().int().nullable(),
+  ordered_appearances: z.number().int().nullable(),
+  visibility: z.number().nullable(),
+  win_rate: z.number().nullable(),
+  position: z.number().nullable(),
+  catalog_price: z.number().nullable(),
+  catalog_currency: z.string().nullable(),
+  price_currency: z.string().nullable(),
+  price_median: z.number().nullable(),
+  price_quoted: z.number().int().nullable(),
+  price_other: z.number().int().nullable(),
+  merchants: z.array(z.object({ domain: z.string(), count: z.number().int() })).nullable(),
+  category_ids: z.array(z.uuid()).nullable(),
+});
+
+/** `%` and `_` in the reader's text match themselves, not any character. */
+const likePattern = (text: string) => `%${text.replaceAll(/[\\%_]/gu, (c) => `\\${c}`)}%`;
+
+function cursorPosition(query: ProductQuery, filters: Record<string, unknown>) {
+  if (!query.cursor) return null;
+  try {
+    const [key, name, id] = decodeKeysetCursor(query.cursor, CURSOR_SCOPE, filters);
+    if (key === undefined || name === undefined || !id || !z.uuid().safeParse(id).success)
+      throw new InvalidCursorError('invalid Products cursor');
+    const sortKey = Number(key);
+    if (!Number.isFinite(sortKey)) throw new InvalidCursorError('invalid Products cursor');
+    return { sortKey, name, id };
+  } catch (error) {
+    if (error instanceof InvalidCursorError) throw new ApiError(422, error.message);
+    throw error;
+  }
+}
+
+export async function productMetrics(db: Database, scope: CommerceScope, query: ProductQuery) {
+  if (!policy.commerce.products.window_days.includes(query.windowDays))
+    throw new ApiError(422, 'window must be one of the configured windows', {
+      code: 'validation_error',
+    });
+  const { cursor: _cursor, limit: _limit, ...filters } = query;
+  const position = cursorPosition(query, filters);
+  const ws = scope.workspaceId,
+    project = scope.projectId;
+  const since = new Date(Date.now() - query.windowDays * DAY_MS);
+  const branded = [...policy.prompts.branded_cohorts];
+  const search = query.q?.trim() ? likePattern(query.q.trim()) : null;
+  const category = query.category;
+  const inCategory = (column: RawBuilder<string>) => sql`${column} IN (
+      SELECT m.product_id FROM commerce_product_categories m
+      WHERE m.workspace_id = ${ws} AND m.project_id = ${project} AND m.category_id = ${category})`;
+  const competitors =
+    query.source === 'all'
+      ? sql`UNION ALL
+        SELECT CASE WHEN c.state = 'approved' THEN 'approved_competitor'
+                    ELSE 'ai_observed_competitor' END,
+               c.id, c.product_name, c.brand_name, c.canonical_url, NULL::float8, ''
+        FROM commerce_competitor_candidates c
+        WHERE c.workspace_id = ${ws} AND c.project_id = ${project}
+          AND (c.state = 'approved' OR (c.state = 'pending' AND c.source_kind = 'ai_observed'))
+          ${
+            category
+              ? sql`AND ((c.target_kind = 'category' AND c.target_id = ${category})
+                     OR (c.target_kind = 'product' AND ${inCategory(sql`c.target_id`)}))`
+              : sql``
+          }`
+      : sql``;
+  const ranking = sql`(o.order_observable AND o.rank IS NOT NULL) DESC,
+      (o.surface_kind = 'shopping_result') DESC, o.rank ASC NULLS LAST, o.created_at, o.id`;
+  const result = await sql<unknown>`
+    WITH scoped_passes AS (
+      SELECT DISTINCT ON (p.artifact_id) p.id AS pass_id, p.task_id
+      FROM commerce_match_passes p
+      JOIN audit_tasks t ON t.id = p.task_id AND t.workspace_id = p.workspace_id
+      JOIN audit_prompt_snapshots s ON s.id = t.prompt_snapshot_id AND s.audit_id = t.audit_id
+      LEFT JOIN prompts pr ON pr.id = s.prompt_id
+      LEFT JOIN commerce_catalog_revisions r
+        ON r.id = p.catalog_revision_id AND r.workspace_id = p.workspace_id
+      WHERE p.workspace_id = ${ws} AND p.project_id = ${project}
+        AND t.status = 'succeeded' AND t.completed_at >= ${since}
+        AND s.cohort <> ALL(${branded}::text[])
+        ${query.engine ? sql`AND t.logical_engine = ${query.engine}` : sql``}
+        ${query.promptSet ? sql`AND pr.prompt_set_id = ${query.promptSet}` : sql``}
+      ORDER BY p.artifact_id, r.revision_number DESC NULLS LAST, p.created_at DESC, p.id DESC
+    ),
+    executions AS (SELECT count(DISTINCT task_id)::int AS n FROM scoped_passes),
+    observed AS (
+      SELECT o.*,
+             CASE WHEN o.classification = 'owned' THEN o.product_id
+                  ELSE o.competitor_candidate_id END AS holder_id
+      FROM commerce_recommendation_observations o
+      JOIN scoped_passes sp ON sp.pass_id = o.pass_id
+      WHERE o.workspace_id = ${ws} AND o.project_id = ${project}
+        AND o.classification IN ('owned', 'approved_competitor', 'ai_observed_competitor')
+    ),
+    slots AS (
+      SELECT DISTINCT ON (o.task_id, o.holder_id) o.holder_id,
+             CASE WHEN o.order_observable THEN o.rank END AS best_rank
+      FROM observed o WHERE o.holder_id IS NOT NULL
+      ORDER BY o.task_id, o.holder_id, ${ranking}
+    ),
+    slot_metrics AS (
+      SELECT holder_id, count(*)::int AS appearances, count(best_rank)::int AS ordered,
+             count(*) FILTER (WHERE best_rank = 1)::int AS wins,
+             avg(best_rank)::float8 AS position
+      FROM slots GROUP BY holder_id
+    ),
+    priced AS (
+      SELECT DISTINCT ON (o.task_id, o.holder_id) o.holder_id,
+             o.observed_price::float8 AS price, o.observed_currency AS currency
+      FROM observed o WHERE o.holder_id IS NOT NULL AND o.observed_price IS NOT NULL
+      ORDER BY o.task_id, o.holder_id, ${ranking}
+    ),
+    merchant_counts AS (
+      SELECT o.holder_id, o.merchant_domain AS domain, count(DISTINCT o.task_id)::int AS n
+      FROM observed o WHERE o.holder_id IS NOT NULL AND o.merchant_domain <> ''
+      GROUP BY o.holder_id, o.merchant_domain
+    ),
+    holders AS (
+      SELECT 'owned'::text AS kind, p.id AS holder_id, p.name, p.brand, p.canonical_url AS url,
+             p.price::float8 AS catalog_price, p.currency AS catalog_currency
+      FROM commerce_products p
+      WHERE p.workspace_id = ${ws} AND p.project_id = ${project} AND p.lifecycle_state = 'active'
+        ${category ? sql`AND ${inCategory(sql`p.id`)}` : sql``}
+      ${competitors}
+    ),
+    filtered AS (
+      SELECT h.*, lower(h.name) AS name_key,
+             coalesce(m.appearances, 0) AS appearances,
+             coalesce(m.ordered, 0) AS ordered_appearances,
+             m.position,
+             CASE WHEN e.n > 0 THEN coalesce(m.appearances, 0)::float8 / e.n END AS visibility,
+             CASE WHEN m.ordered > 0 THEN m.wins::float8 / m.ordered END AS win_rate
+      FROM holders h CROSS JOIN executions e
+      LEFT JOIN slot_metrics m ON m.holder_id = h.holder_id
+      ${
+        search
+          ? sql`WHERE h.name ILIKE ${search} OR h.brand ILIKE ${search} OR h.url ILIKE ${search}`
+          : sql``
+      }
+    ),
+    keyed AS (SELECT f.*, ${SORT_KEYS[query.sort]} AS sort_key FROM filtered f)
+    SELECT e.n AS executions, (SELECT count(*)::int FROM filtered) AS total, page.*
+    FROM executions e
+    LEFT JOIN LATERAL (
+      SELECT k.holder_id, k.kind, k.name, k.name_key, k.brand, k.url, k.sort_key,
+             k.appearances, k.ordered_appearances, k.visibility, k.win_rate, k.position,
+             k.catalog_price, k.catalog_currency,
+             cur.currency AS price_currency, price.median AS price_median,
+             price.quoted AS price_quoted, price.other AS price_other,
+             merch.merchants, cats.category_ids
+      FROM keyed k
+      LEFT JOIN LATERAL (
+        SELECT coalesce(nullif(k.catalog_currency, ''), (
+          SELECT pq.currency FROM priced pq
+          WHERE pq.holder_id = k.holder_id AND pq.currency <> ''
+          GROUP BY pq.currency ORDER BY count(*) DESC, pq.currency LIMIT 1), '') AS currency
+      ) cur ON true
+      LEFT JOIN LATERAL (
+        SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY pq.price)
+                 FILTER (WHERE pq.currency = cur.currency) AS median,
+               count(*) FILTER (WHERE pq.currency = cur.currency)::int AS quoted,
+               count(*) FILTER (WHERE pq.currency <> cur.currency)::int AS other
+        FROM priced pq WHERE pq.holder_id = k.holder_id
+      ) price ON true
+      LEFT JOIN LATERAL (
+        SELECT coalesce(json_agg(json_build_object('domain', mc.domain, 'count', mc.n)
+                                 ORDER BY mc.n DESC, mc.domain), '[]'::json) AS merchants
+        FROM (SELECT * FROM merchant_counts mc WHERE mc.holder_id = k.holder_id
+              ORDER BY mc.n DESC, mc.domain LIMIT ${policy.commerce.products.merchant_limit}) mc
+      ) merch ON true
+      LEFT JOIN LATERAL (
+        SELECT coalesce(array_agg(m.category_id::text ORDER BY m.category_id), '{}') AS category_ids
+        FROM commerce_product_categories m
+        JOIN commerce_categories c ON c.id = m.category_id AND c.workspace_id = m.workspace_id
+        WHERE m.workspace_id = ${ws} AND m.project_id = ${project}
+          AND m.product_id = k.holder_id AND c.normalized_name <> ${UNCATEGORIZED_KEY}
+      ) cats ON true
+      ${
+        position
+          ? sql`WHERE (k.sort_key, k.name_key, k.holder_id)
+                    > (${position.sortKey}::float8, ${position.name}, ${position.id}::uuid)`
+          : sql``
+      }
+      ORDER BY k.sort_key, k.name_key, k.holder_id
+      LIMIT ${query.limit + 1}
+    ) page ON true
+  `.execute(db);
+  const rows = result.rows.map((row) => rowSchema.parse(row));
+  // The executions row always exists; the page joins to it laterally.
+  const [first] = rows;
+  if (!first) throw new Error('Products read returned no executions row');
+  const present = rows.filter((row) => row.holder_id !== null);
+  const shown = present.slice(0, query.limit);
+  const last = shown.at(-1);
+  return commerceProductPageSchema.parse({
+    window_days: query.windowDays,
+    executions: first.executions,
+    total: first.total,
+    items: shown.map((row) => ({
+      holder_id: row.holder_id,
+      kind: row.kind,
+      name: row.name,
+      brand: row.brand,
+      url: row.url,
+      category_ids: row.category_ids ?? [],
+      visibility: row.visibility,
+      appearances: row.appearances,
+      ordered_appearances: row.ordered_appearances,
+      win_rate: row.win_rate,
+      position: row.position,
+      mentioned_price: {
+        median: row.price_median,
+        currency: row.price_currency ?? '',
+        quoted: row.price_quoted ?? 0,
+        other_currency: row.price_other ?? 0,
+      },
+      catalog_price:
+        row.catalog_price === null
+          ? null
+          : {
+              min: row.catalog_price,
+              max: row.catalog_price,
+              currency: row.catalog_currency ?? '',
+            },
+      merchants: row.merchants ?? [],
+    })),
+    next_cursor:
+      present.length > query.limit && last
+        ? encodeKeysetCursor(CURSOR_SCOPE, filters, [
+            String(last.sort_key),
+            last.name_key ?? '',
+            last.holder_id ?? '',
+          ])
+        : null,
+  });
+}

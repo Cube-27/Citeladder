@@ -133,8 +133,20 @@ export const commerce = {
     batch_size: 25,
     projection_delay_seconds: 120,
   },
-  /** Products the catalog read lists, first by name; the rail is one unpaged list. */
+  /** Products the catalog read lists, first by name, beside the full count. */
   catalog_product_limit: 5000,
+  /**
+   * The Products table read: windows a reader may choose (days, no deltas:
+   * CM8), page size, and how many merchant domains a row carries.
+   */
+  products: {
+    window_days: [7, 30, 90],
+    default_window_days: 30,
+    page_size: 50,
+    max_page_size: 200,
+    merchant_limit: 5,
+    search_max_chars: 200,
+  },
   import_max_bytes: 2000000,
   import_max_rows: 10000,
   import_error_limit: 100,

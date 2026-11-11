@@ -81,6 +81,7 @@ describe('Commerce workspace boundaries', () => {
   const routes = [
     ['/catalog', 'GET', undefined],
     ['/catalog/projection', 'GET', undefined],
+    ['/products?source=all', 'GET', undefined],
     ['/catalog/import', 'POST', { content: csv }],
     ['/competitors', 'GET', undefined],
     ['/competitors/discoveries', 'GET', undefined],

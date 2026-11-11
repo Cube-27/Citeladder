@@ -137,7 +137,65 @@ export const shelfSchema = z.strictObject({
   actions: z.array(shelfActionSchema),
 });
 
+/** Which holders the Products table lists: the catalog alone, or with competitors (CM6). */
+export const commerceProductSourceSchema = z.enum(['catalog', 'all']);
+/** The Products table's sort keys; each has one direction (best first, then name). */
+export const commerceProductSortSchema = z.enum(['visibility', 'win_rate', 'position', 'name']);
+/**
+ * One product holder's metrics over the filtered executions (formula version
+ * 1). Each holder holds at most one slot per execution, at its best rank.
+ * Null is unavailable or unknown, never zero.
+ */
+export const commerceProductRowSchema = z.strictObject({
+  /** The product id for `owned`, the competitor candidate id otherwise. */
+  holder_id: uuid,
+  kind: z.enum(['owned', 'approved_competitor', 'ai_observed_competitor']),
+  name: z.string(),
+  brand: z.string(),
+  url: z.string(),
+  category_ids: z.array(uuid),
+  /** Executions with a slot ÷ executions in scope; null with no execution in scope. */
+  visibility: z.number().nullable(),
+  /** Executions with a slot; 0 is a real zero. */
+  appearances: z.number().int(),
+  /** Appearances in an ordered answer, the denominator of win rate and position. */
+  ordered_appearances: z.number().int(),
+  /** Ordered appearances at rank 1 ÷ ordered appearances; null with none. */
+  win_rate: z.number().nullable(),
+  /** Mean best rank over ordered appearances; null with none. */
+  position: z.number().nullable(),
+  mentioned_price: z.strictObject({
+    /** Median quoted price in `currency`; null when none was quoted in it. */
+    median: z.number().nullable(),
+    /** The catalog currency, else the most quoted one; empty when unknown. */
+    currency: z.string(),
+    /** Executions that quoted a price in `currency`. */
+    quoted: z.number().int(),
+    /** Executions that quoted a price in another currency: counted, not converted. */
+    other_currency: z.number().int(),
+  }),
+  /** The catalog price or min–max across variants; null when the catalog has none. */
+  catalog_price: z
+    .strictObject({ min: z.number(), max: z.number(), currency: z.string() })
+    .nullable(),
+  /** Merchant domains the answers send shoppers to, by executions, most first. */
+  merchants: z.array(z.strictObject({ domain: z.string(), count: z.number().int() })),
+});
+export const commerceProductPageSchema = z.strictObject({
+  window_days: z.number().int(),
+  /** Successful matched executions in scope: the visibility denominator. */
+  executions: z.number().int(),
+  /** Holders matching the filters, across every page. */
+  total: z.number().int(),
+  items: z.array(commerceProductRowSchema),
+  next_cursor: z.string().nullable(),
+});
+
 export type CommerceTarget = z.infer<typeof commerceTargetSchema>;
+export type CommerceProductSource = z.infer<typeof commerceProductSourceSchema>;
+export type CommerceProductSort = z.infer<typeof commerceProductSortSchema>;
+export type CommerceProductRow = z.infer<typeof commerceProductRowSchema>;
+export type CommerceProductPage = z.infer<typeof commerceProductPageSchema>;
 export type CommerceCatalog = z.infer<typeof commerceCatalogSchema>;
 export type CommerceProjection = z.infer<typeof commerceProjectionSchema>;
 export type CatalogImport = z.infer<typeof catalogImportSchema>;

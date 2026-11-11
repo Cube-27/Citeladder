@@ -8,6 +8,7 @@ import {
   buyerPromptSchema,
   catalogImportSchema,
   commerceCatalogSchema,
+  commerceProductPageSchema,
   commerceProjectionSchema,
   competitorCandidateSchema,
   competitorDiscoveryTaskSchema,
@@ -27,6 +28,7 @@ import {
   manualBuyerPrompt,
 } from '../commerce/buyer-prompts.ts';
 import { importCatalog } from '../commerce/import.ts';
+import { productMetrics } from '../commerce/products.ts';
 import {
   buyerPrompts,
   candidates,
@@ -162,6 +164,47 @@ export const commerceRoutes = [
     async handle({ c, db }, { path }) {
       const scope = await writeScopeOf(db, c, path.project_id);
       return importCatalog(db, scope, await readBody(c, importBody));
+    },
+  }),
+  defineGetRoute({
+    ...family,
+    path: `${root}/products`,
+    params: {
+      path: projectPath,
+      query: {
+        source: { scalar: { kind: 'literal', values: ['catalog', 'all'] }, default: 'catalog' },
+        category: { scalar: { kind: 'uuid' } },
+        window: {
+          scalar: { kind: 'int', ge: 1, le: 366 },
+          default: policy.commerce.products.default_window_days,
+        },
+        engine: { scalar: { kind: 'str', minLength: 1, maxLength: 64 } },
+        prompt_set: { scalar: { kind: 'uuid' } },
+        q: { scalar: { kind: 'str', maxLength: policy.commerce.products.search_max_chars } },
+        sort: {
+          scalar: { kind: 'literal', values: ['visibility', 'win_rate', 'position', 'name'] },
+          default: 'visibility',
+        },
+        cursor: { scalar: { kind: 'str', minLength: 1, maxLength: 1024 } },
+        limit: {
+          scalar: { kind: 'int', ge: 1, le: policy.commerce.products.max_page_size },
+          default: policy.commerce.products.page_size,
+        },
+      },
+    },
+    response: commerceProductPageSchema,
+    async handle({ c, db }, { path, query }) {
+      return productMetrics(db, scopeOf(c, path.project_id), {
+        source: query.source,
+        category: query.category,
+        windowDays: query.window,
+        engine: query.engine,
+        promptSet: query.prompt_set,
+        q: query.q,
+        sort: query.sort,
+        cursor: query.cursor,
+        limit: query.limit,
+      });
     },
   }),
   defineGetRoute({

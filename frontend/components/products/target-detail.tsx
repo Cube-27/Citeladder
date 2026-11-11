@@ -12,7 +12,7 @@ import { TargetPrompts } from './target-prompts';
 import { TargetNextStep } from './target-next-step';
 import { TargetShelfBand } from './target-shelf-band';
 import { TargetShelfEvidence } from './target-shelf-evidence';
-import { sameTarget, targetKey } from '@/lib/products/use-commerce-target';
+import { sameTarget, targetKey } from '@/lib/products/targets';
 import { Stack } from '@/components/ui/layout';
 
 type ShownTarget = Readonly<{

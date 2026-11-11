@@ -45,12 +45,16 @@ const ROUTE_PREFETCHERS: Readonly<Partial<Record<AppRoutePath, RoutePrefetcher>>
     warmQuery(client, searchIntelligenceQueries.readiness(scope));
   },
   '/products': async (client, scope) => {
-    const { commerceQueries } = await import('@/lib/api/commerce');
-    // The screen always loads the catalog (its navigation), the competitors
-    // and the buyer prompts; the shelf waits for a selected target.
+    const [{ commerceQueries }, { DEFAULT_PRODUCT_FILTERS, productSearch }] = await Promise.all([
+      import('@/lib/api/commerce'),
+      import('@/lib/products/product-filters'),
+    ]);
+    // The catalog (header and categories) and the landing page of the table.
     warmQuery(client, commerceQueries.catalog(scope));
-    warmQuery(client, commerceQueries.competitors(scope));
-    warmQuery(client, commerceQueries.buyerPrompts(scope));
+    warmQuery(
+      client,
+      commerceQueries.products(scope, productSearch(DEFAULT_PRODUCT_FILTERS), null),
+    );
   },
   // New chat: its recommended Actions are the screen's one project read.
   '/agent': async (client, scope) => {

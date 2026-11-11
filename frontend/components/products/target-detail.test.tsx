@@ -52,7 +52,7 @@ const staticDiscovery = {
  * Drives `TargetDetail` with a real, MSW-backed `shelf` query — the one
  * Commerce read keyed by the selection — while `catalog`, `competitors`, and
  * `buyerPrompts` stay static. Re-rendering with a new `target` is what
- * `CommerceWorkspace` does on a catalog click.
+ * opening another product's page does.
  */
 function ShelfHarness({ target, label }: Readonly<{ target: CommerceTarget; label: string }>) {
   const shelf = useQuery({
