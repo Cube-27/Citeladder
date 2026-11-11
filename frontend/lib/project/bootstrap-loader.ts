@@ -32,7 +32,7 @@ import { projectQueries } from '@/lib/api/projects';
 import { workspaceQueries } from '@/lib/api/workspaces';
 import { getAppQueryClient, warmQuery } from '@/lib/api/query-client';
 import { queryKeys } from '@/lib/api/query-keys';
-import type { Project, Workspace } from '@citeladder/contracts';
+import type { Project, ProjectSummary, Workspace } from '@citeladder/contracts';
 import { projectDestination, workspaceDestination } from '@/lib/navigation/project-destination';
 import {
   prefetchProjectShell,
@@ -51,12 +51,7 @@ import {
   resolveGate,
   chooserShortcut,
 } from '@/lib/project/bootstrap';
-import {
-  pickActiveProject,
-  resolveProjectId,
-  resolveStatus,
-  resolveWorkspaceId,
-} from '@/lib/project/selection';
+import { resolveProjectId, resolveStatus, resolveWorkspaceId } from '@/lib/project/selection';
 
 /**
  * Ask for something the decision needs, and treat any failure as "unknown".
@@ -155,6 +150,9 @@ function guessScope(client: QueryClient, url: URL): Guess | null {
   const projectId =
     url.searchParams.get('project') || (urlWorkspaceId ? null : readStoredActiveProjectId());
   if (!projectId || isWorkspaceOnlyRoute(url.pathname)) return { workspaceId, project: null };
+  // The shell renders the project's full view, which the summary list does
+  // not carry: its detail read goes out in this same round.
+  void client.prefetchQuery(projectQueries.detail(projectId));
   const issued = warmProject(client, url, { projectId, workspaceId });
   return { workspaceId, project: { id: projectId, issued } };
 }
@@ -207,27 +205,11 @@ function settleSelectedGuess(
 }
 
 /**
- * The explicitly requested project, in as few reads as possible.
- *
- * A returning reader's address names a project in the workspace they last
- * used, and that workspace's list is a read the shell needs anyway. Asked
- * first, it answers for the project too — the list's members are the same
- * authorized objects the detail read returns — so the separate detail read
- * runs only when the list cannot answer: no remembered workspace, a list the
- * backend refused, or a project that is not in it (another workspace's, or one
- * created after the list was read). The detail read still authorizes from the
- * path, so a stale or foreign remembered workspace can never hide a project.
+ * The explicitly requested project. The workspace's list carries summaries,
+ * so the detail read answers; it authorizes from the path, so a stale or
+ * foreign remembered workspace can never hide a project.
  */
-async function findRequestedProject(
-  client: QueryClient,
-  projectId: string,
-  candidateWorkspaceId: string | null,
-): Promise<Project | null> {
-  if (candidateWorkspaceId) {
-    const listed = await settle(client.ensureQueryData(projectQueries.list(candidateWorkspaceId)));
-    const project = listed?.find((candidate) => candidate.id === projectId);
-    if (project) return project;
-  }
+function findRequestedProject(client: QueryClient, projectId: string): Promise<Project | null> {
   return settle(client.ensureQueryData(projectQueries.detail(projectId)));
 }
 
@@ -251,11 +233,7 @@ async function requestedProject(
     guess: Guess | null;
   }>,
 ): Promise<Project | null> {
-  const project = await findRequestedProject(
-    client,
-    projectId,
-    urlWorkspaceId ?? readStoredActiveWorkspaceId(),
-  );
+  const project = await findRequestedProject(client, projectId);
   const scope =
     project && (!urlWorkspaceId || project.workspace_id === urlWorkspaceId)
       ? { projectId: project.id, workspaceId: project.workspace_id }
@@ -350,7 +328,7 @@ function readWorkspaceState(client: QueryClient, workspaceId: string, pathname: 
   const queries = workspaceStateQueries(workspaceId, pathname);
   void client.prefetchQuery(queries.policies);
   return Promise.all([
-    settle<Project[]>(client.ensureQueryData(queries.projects)),
+    settle<ProjectSummary[]>(client.ensureQueryData(queries.projects)),
     settle(client.ensureQueryData(queries.entitlement)),
     queries.access ? settle(client.ensureQueryData(queries.access)) : null,
   ]);
@@ -375,11 +353,12 @@ function warmUsage(client: QueryClient, workspaceId: string, workspaces: readonl
  * The algebra itself is `lib/project/selection.ts`, shared with the provider so
  * the loader cannot answer differently from the tree it is seeding.
  */
-function resolveSelection(scope: Scope, listed: Project[]) {
+function resolveSelection(scope: Scope, listed: ProjectSummary[]) {
   const { workspaceId, resolvedProject, requestedProjectId } = scope;
   // Include an authorized detail the list may predate.
   const known = listed.some((project) => project.id === resolvedProject?.id);
-  const projects = resolvedProject && !known ? [...listed, resolvedProject] : listed;
+  const projects: ProjectSummary[] =
+    resolvedProject && !known ? [...listed, resolvedProject] : listed;
   const activeProjectId = resolveProjectId({
     requestedProjectId,
     selectedProjectId: readStoredActiveProjectId(),
@@ -394,7 +373,9 @@ function resolveSelection(scope: Scope, listed: Project[]) {
     noWorkspace: false,
     workspaceId,
     activeProjectId,
-    hasResolvedProject: pickActiveProject(resolvedProject, projects, activeProjectId) !== null,
+    // A listed project is authorized; the provider reads its view before any
+    // screen renders against it.
+    hasResolvedProject: projects.some((project) => project.id === activeProjectId),
     listSettled: true,
   });
   return { activeProjectId, status };

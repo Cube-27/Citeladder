@@ -15,6 +15,7 @@ import {
   writeStoredActiveWorkspaceId,
 } from '@/lib/project/active-project-storage';
 import { ProjectSelectionProvider, type ProjectContextValue } from '@/lib/project/project-scope';
+import type { Project, ProjectSummary } from '@citeladder/contracts';
 import {
   pickActiveProject,
   resolveFailed,
@@ -44,12 +45,55 @@ function useRequestedScope() {
   };
 }
 
-/** One workspace's projects, keyed by AND requested for that workspace. */
+/** One workspace's project summaries, keyed by AND requested for that workspace. */
 function useWorkspaceProjects(workspaceId: string | null, allowed: boolean) {
   return useQuery({
     ...projectQueries.list(workspaceId ?? 'unresolved'),
     enabled: workspaceId !== null && allowed,
   });
+}
+
+/**
+ * The active project's full view. The list carries summaries, so the view is
+ * the project's own detail read. It starts as soon as a selection exists —
+ * alongside the list, not after it — and an explicit address shares the
+ * requested project's read.
+ *
+ * It has failed with nothing usable when there is no active project and
+ * either the list failed or the selection's own view did. A stored selection
+ * is read before the list confirms it, so only a settled list makes its view
+ * failing count; an explicit address reports through its own detail read.
+ */
+function useActiveProjectView({
+  activeProjectId,
+  activeWorkspaceId,
+  resolvedProject,
+  explicit,
+  listSettled,
+  listFailed,
+  allowed,
+}: Readonly<{
+  activeProjectId: string | null;
+  activeWorkspaceId: string | null;
+  resolvedProject: Project | null;
+  explicit: boolean;
+  listSettled: boolean;
+  listFailed: boolean;
+  allowed: boolean;
+}>) {
+  const viewQuery = useQuery({
+    ...projectQueries.detail(activeProjectId ?? 'none'),
+    enabled: activeProjectId !== null && allowed,
+  });
+  const activeProject = useMemo(
+    () => pickActiveProject([resolvedProject, viewQuery.data], activeProjectId, activeWorkspaceId),
+    [resolvedProject, viewQuery.data, activeProjectId, activeWorkspaceId],
+  );
+  const viewFailed = viewQuery.isError && listSettled && !explicit;
+  return {
+    activeProject,
+    failedWithNothingUsable: activeProject === null && (listFailed || viewFailed),
+  };
 }
 
 /**
@@ -108,7 +152,7 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
   const projectsQuery = useWorkspaceProjects(activeWorkspaceId, !contradictoryRequest);
   const listSettled = projectsQuery.isSuccess;
   // Include an authorized detail even if the list predates its creation.
-  const projects = useMemo(() => {
+  const projects = useMemo<ProjectSummary[]>(() => {
     const listed = projectsQuery.data ?? [];
     // A project whose workspace contradicts the URL is rejected, not merged.
     if (!resolvedProject || contradictoryRequest) return listed;
@@ -127,16 +171,21 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
     [requestedProjectId, selectedProjectId, projects, listSettled],
   );
 
-  const activeProject = useMemo(
-    () => pickActiveProject(resolvedProject, projects, activeProjectId),
-    [resolvedProject, projects, activeProjectId],
-  );
+  const { activeProject, failedWithNothingUsable } = useActiveProjectView({
+    activeProjectId,
+    activeWorkspaceId,
+    resolvedProject,
+    explicit: requestedProjectId !== null,
+    listSettled,
+    listFailed: projectsQuery.isError,
+    allowed: !contradictoryRequest,
+  });
 
   const requestedProjectMissing = isMissing(detailQuery.error);
   const failures = {
     detailFailed: detailQuery.isError && !requestedProjectMissing,
     membershipFailed: workspacesQuery.isError,
-    listFailedWithNothingUsable: projectsQuery.isError && activeProject === null,
+    listFailedWithNothingUsable: failedWithNothingUsable,
   };
   const failed = resolveFailed(failures);
   const errorScope = failed ? resolveFailureScope(failures) : null;
