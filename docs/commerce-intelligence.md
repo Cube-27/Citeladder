@@ -15,7 +15,8 @@ Site Health's config-versioned extractor, analyzer and classifier emit generic
 category and PDP facts. The config-versioned Commerce projector creates catalog
 rows from crawled pages only for brands whose confirmed business model, primary
 or secondary, sells a catalog; unknown context fails closed. Any business can
-import a CSV. The catalog read reports whether crawl projection is applicable,
+add products from a Shopify store, a Merchant Center feed or the CSV template
+([catalog import](#catalog-import)). The catalog read reports whether crawl projection is applicable,
 not applicable (a recognized model that sells no catalog) or unknown (no
 recognized model confirmed); the header and the empty catalog say which instead
 of telling every business to run a crawl.
@@ -24,8 +25,9 @@ Structured Product price is preferred; when it is absent, a validated visible
 PDP price is retained with its evidence path. The normalized, in-scope declared
 canonical PDP URL is the catalog identity when present; the final delivered URL
 is its resolution base and fallback, or the admitted URL when delivery
-provenance lacks one. The admitted URL remains crawler identity. CSV imports
-match existing products by URL, SKU or GTIN; projection matches by URL.
+provenance lacks one. The admitted URL remains crawler identity. Imports
+match existing products by URL, SKU or GTIN (by name and brand when a row has
+none of them); projection matches by URL.
 
 A product page with SKU, GTIN, MPN, or a name with a price is a product. An
 unidentifiable "product" page that lists product cards is projected as the shelf
@@ -35,12 +37,52 @@ skipped, and "Uncategorized" (the platform default) names no category. Products
 without a category read as uncategorized; no sentinel row is stored, and rows
 named "Uncategorized" from earlier writers are left out of the read.
 
-CSV imports and explicit edits are append-only observations. Current product
+Imports and explicit edits are append-only observations. Current product
 rows are read projections whose `field_sources` identify the exact observation
-and version controlling every field. CSV authority is not silently overwritten
+and version controlling every field. Import authority (field-source kind `csv`
+for every import format, with the format beside it) is not silently overwritten
 by later crawl projection. Imports are content-hash idempotent, read the
 project's products once into an in-memory identifier index, and expose bounded,
-row-level outcomes; an identifier conflict names its row.
+row-level outcomes.
+
+### Catalog import
+
+Add products ([sources](../frontend/services/api/src/commerce/catalog-sources.ts),
+[admission](../frontend/services/api/src/commerce/import.ts)) takes three
+sources into one admission path (CM3):
+
+- **Shopify store**: a domain whose public `/products.json` is fetched page by
+  page ([storefront fetch](../frontend/services/api/src/commerce/shopify-store.ts))
+  through the shared safe fetcher, only for the project's own hosts or a
+  `*.myshopify.com` store (redirects included), within configured page, byte
+  and deadline bounds. Variants become a price range (`price` the lowest,
+  `price_max` the highest); the first image is the product image; the product
+  type and the first configured number of tags become categories. The
+  storefront list has no currency, so its prices carry none.
+- **Merchant Center feed**: CSV, TSV, XML (RSS or Atom) or Content API JSON with
+  Google's field names. Items sharing `item_group_id` become one product with
+  its variants and price range (variants priced in two currencies are
+  rejected); `product_type` is the category path; prices such as `59.00 EUR`
+  are parsed, and ambiguous ones (`$59`, `1,299.00`) are rejected, not guessed.
+- **CSV template** (downloadable in the dialog): `title` and `brand` required;
+  `description`, `price`, `currency`, `link`, `image_link`, `category` (a path
+  `A > B`, several separated by `|`), `sku` and `gtin` optional.
+
+`POST /commerce/catalog/imports` stages the source: it keeps the raw content
+(the fetched pages for a store) and returns the proposed category tree, the
+products ready and the rows that cannot be imported. Nothing reaches the
+catalog yet, and the same content returns the earlier import. A store is
+fetched with no transaction open; the import is stored afterwards.
+`POST /commerce/catalog/imports/{import_id}/apply` applies it once the person
+confirms the tree, leaving out the categories they cleared and everything under
+them: products join every category on their kept paths, the categories record
+their parents, and the result lists added, updated, unchanged and rejected rows,
+rejected first with each row's reason (bounded by `import_error_limit`).
+Applying twice returns the first result. A row whose identifiers belong to two
+products is rejected (`identity_conflict`). A row matched by an identifier
+whose URL differs from the product's keeps the product's URL and records the
+new one on its observation as `alias_url` (the SKU merge policy). The applied
+import records a catalog revision, which queues the answer backfill.
 
 ### Edit and archive
 
@@ -57,8 +99,9 @@ other value replaces it (a new category set replaces the edited set whole). A
 row naming no current URL, SKU or GTIN still matches the product whose edit
 replaced the identifier it repeats, so re-importing a file never splits an
 edited product. An edit claiming another product's URL, SKU or GTIN is refused
-(409). The image has no product column: the detail read takes it from the
-latest edit that set it, before any shopping card's.
+(409). The image is the product's `image_url`, set by an import or an edit; the
+detail read shows it before any shopping card's. An edited price ends an
+imported variant range.
 
 `PUT /commerce/products/{holder_id}/lifecycle` archives
 (`lifecycle_state = 'archived'`) or restores a product, also as an edit
@@ -86,8 +129,11 @@ projection state, then re-reads the catalog once when that reports nothing in
 flight. The catalog read is navigation: product and category names, memberships
 and counts, never a row's evidence; products are listed first by name up to the
 configured `catalog_product_limit`, beside the full product count. Categories
-are ordered by descending product count, then name. Categories are flat; the
-category tree (`parent_category_id`) arrives with catalog ingestion.
+are ordered by descending product count, then name, each with its `parent_id`;
+the Products sidebar nests them. A category's parent
+(`parent_category_id`, always a category of the same project, never a cycle)
+comes from an applied import's paths, which replace it, or from crawled
+breadcrumbs, which only fill a category that has none.
 
 ## Products table
 
@@ -421,7 +467,7 @@ read.
 ## Entry points and lifecycle
 
 The [TypeScript Commerce API](../frontend/services/api/src/routes/commerce.ts)
-authorizes persisted reads, CSV imports and explicit decisions using active
+authorizes persisted reads, catalog imports and explicit decisions using active
 workspace membership and run/write capabilities. The
 [discovery executor](../frontend/services/api/src/commerce/discovery.ts) uses the
 shared Site Health safe fetcher, acquisition controls, robots policy, parser and
@@ -429,8 +475,7 @@ classifier. Provider calls and candidate verification finish before the worker
 locks the live claim and appends the attempt, pending candidates and queue
 outcome; no transaction spans network I/O. A target removed before execution or
 publication terminalizes with `commerce_target_unavailable`.
-[CSV admission](../frontend/services/api/src/commerce/import.ts) and
-[catalog projection](../frontend/services/api/src/commerce/projection.ts) consume
+[Catalog projection](../frontend/services/api/src/commerce/projection.ts) consumes
 persisted Site Health analyses through analytics tasks the Site Health
 [analyze executor](../frontend/services/api/src/site-health/analyze-task.ts)
 enqueues for catalog page kinds. Project and target IDs are re-authorized; an
