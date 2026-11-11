@@ -8,11 +8,14 @@
  * one that read no cohort page (or only passing ones, leaving the rest
  * unread), is inconclusive and says why.
  */
-import { siteIssueFamilyEvidenceSchema } from '@citeladder/contracts/opportunity-evidence';
+import {
+  siteIssueFamilyEvidenceSchema,
+  type IssueFamilyCohort,
+} from '@citeladder/contracts/opportunity-evidence';
 import { sql } from 'kysely';
 
 import { policy } from '../../config.ts';
-import { parseUuid } from '../../http/uuid.ts';
+import { parseUuid, parseUuids } from '../../http/uuid.ts';
 import { ruleTitle } from '../../site-health/reads/rules.ts';
 import { compareText } from '../../text-order.ts';
 import { outcome, type CheckOutcome } from '../verification-decisions.ts';
@@ -28,16 +31,23 @@ const NOT_APPLICABLE = 'not_applicable';
 const FAILING = new Set(['missing', 'partial']);
 const ANSWERED = new Set([PASSING, NOT_APPLICABLE, ...FAILING]);
 
-function cohortOf(member: MemberFacts) {
+/**
+ * An issue-family finding's cohort as its evidence stores it; null for any
+ * other finding or unreadable evidence.
+ */
+export function familyCohort(
+  member: Pick<MemberFacts, 'rule_id' | 'evidence'>,
+): IssueFamilyCohort | null {
   if (member.rule_id !== policy.opportunity.opportunities.SITE_ISSUE_FAMILY.RULE_ID) return null;
   const parsed = siteIssueFamilyEvidenceSchema.safeParse(member.evidence);
-  if (!parsed.success) return null;
-  const { cohort } = parsed.data;
+  return parsed.success ? parsed.data.cohort : null;
+}
+
+function cohortOf(member: MemberFacts) {
+  const cohort = familyCohort(member);
+  if (!cohort) return null;
   const crawlId = parseUuid(cohort.crawl_id);
-  const ids = cohort.pages.flatMap((page) => {
-    const id = parseUuid(page.site_url_id);
-    return id ? [id] : [];
-  });
+  const ids = parseUuids(cohort.pages.map((page) => page.site_url_id));
   return crawlId && ids.length ? { cohort, crawlId, ids } : null;
 }
 

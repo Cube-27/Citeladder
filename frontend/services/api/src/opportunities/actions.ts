@@ -13,7 +13,6 @@ import {
 } from '@citeladder/contracts/actions';
 import {
   issueFamilyCohortSchema,
-  siteIssueFamilyEvidenceSchema,
   type IssueFamilyCohort,
 } from '@citeladder/contracts/opportunity-evidence';
 import { sql, type Selectable, type SqlBool } from 'kysely';
@@ -33,6 +32,7 @@ import { refreshActionStatus, validateStatus } from './action-status.ts';
 import { OPPORTUNITY_COLUMNS, projectItem } from './projection.ts';
 import type { Scope } from './sources.ts';
 import { declarationView } from './declaration-view.ts';
+import { familyCohort } from './checks/issue-family.ts';
 import { memberMeasurementLeg } from './checks/registry.ts';
 import { contentGapEvidence } from './content-gap-reads.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
@@ -169,9 +169,7 @@ async function actionCohort(db: Database, action: ActionRow, declaredMemberIds: 
   const declared = declaredMemberIds.length
     ? await findingsOf(db, action, [...declaredMemberIds], true)
     : [];
-  const frozen = declared
-    .map((row) => siteIssueFamilyEvidenceSchema.safeParse(row.evidence))
-    .find((parsed) => parsed.success)?.data?.cohort;
+  const frozen = declared.map((row) => familyCohort(row)).find((found) => found !== null);
   const cohort = frozen ?? storedCohort(action);
   if (!cohort) return null;
   const crawl = await db

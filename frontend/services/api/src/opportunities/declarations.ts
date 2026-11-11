@@ -7,14 +7,14 @@ import type { RecordScope } from '../db/workspace-scope.ts';
 import { resolveOwnedPages } from '../demand/page-equivalence.ts';
 import { ApiError } from '../errors.ts';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
-import { siteIssueFamilyEvidenceSchema } from '@citeladder/contracts/opportunity-evidence';
 import { epochMicros, isoformat, parseDatetime, toUtc } from '../http/datetimes.ts';
-import { parseUuid } from '../http/uuid.ts';
+import { parseUuids } from '../http/uuid.ts';
 import { record } from '../db/json.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { declarableMembers, recordStatus, requireAction, type ActionRow } from './actions.ts';
 import { rules } from '../analysis/opportunities/detectors.ts';
 import { declarationChecks } from './declaration-checks.ts';
+import { familyCohort } from './checks/issue-family.ts';
 import { ruleCheckKind } from './checks/registry.ts';
 import { enqueueImplementationVerification } from './enqueue.ts';
 import { DASHBOARD_AUDIT_STATUSES } from './sources.ts';
@@ -92,13 +92,6 @@ async function checkedRevision(db: Database, action: ActionRow, revisionId: stri
   if (!revision) throw declarationConflict('The output revision does not belong to this Action');
 }
 
-/** An issue-family finding's cohort pages; none for any other finding or unreadable evidence. */
-function issueFamilyPages(member: OpportunityRow) {
-  if (member.rule_id !== o.SITE_ISSUE_FAMILY.RULE_ID) return [];
-  const parsed = siteIssueFamilyEvidenceSchema.safeParse(member.evidence);
-  return parsed.success ? parsed.data.cohort.pages : [];
-}
-
 async function targets(
   db: Database,
   action: ActionRow,
@@ -118,15 +111,13 @@ async function targets(
   const family = action.target_kind === a.TARGET_ISSUE_FAMILY;
   const ids = [
     ...new Set(
-      members.flatMap((member) => {
-        const raw = family
-          ? issueFamilyPages(member).map((page) => page.site_url_id)
-          : [record(member.evidence).site_url_id];
-        return raw.flatMap((value) => {
-          const id = typeof value === 'string' ? parseUuid(value) : null;
-          return id ? [id] : [];
-        });
-      }),
+      members.flatMap((member) =>
+        parseUuids(
+          family
+            ? (familyCohort(member)?.pages.map((page) => page.site_url_id) ?? [])
+            : [record(member.evidence).site_url_id],
+        ),
+      ),
     ),
   ];
   const owned = ids.length
