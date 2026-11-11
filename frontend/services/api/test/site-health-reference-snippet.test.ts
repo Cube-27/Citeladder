@@ -46,6 +46,15 @@ describe('the reference snippet of an unnamed control', () => {
     expect(snippetOf('<label>Email <input type="email"></label>')).toBeNull();
   });
 
+  it('redacts an address in a kept attribute and keeps a plain one', () => {
+    expect(snippetOf('<p><input name="jo.smith@example.co.uk" id="contact-field.v2"></p>')).toEqual(
+      {
+        html: '<p><input name="[redacted]" id="contact-field.v2"></p>',
+        truncated: false,
+      },
+    );
+  });
+
   it('falls back to the control alone, then cuts it at the cap', () => {
     const filler = '<span>x</span>'.repeat(cap);
     expect(snippetOf(`<div>${filler}<input name="q">${filler}</div>`)).toEqual({

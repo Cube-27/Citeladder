@@ -278,13 +278,14 @@ snippet per issue family per crawl: the first affected page in URL order (then
 issue id) whose facts carry one, with its page URL and exact issue and artifact
 IDs. Only `web.accessibility_form_names` captures one today. No UI read serves
 it; the Agent's `read_site_pages` returns it as `reference_snippet` when given
-that rule. Facts distinguish an
-available extraction from parse failure, unsupported media, client rendering
-and truncation. Declared canonicals are observations, never URL identity.
-Hidden nodes enter accessible names only through `aria-labelledby`. Labels
-follow HTML's labeled control: a label with `for` names only the first element
-with that id (an empty `for` names nothing), and a label without `for` names only
-its first labelable descendant.
+that rule.
+
+Facts distinguish an available extraction from parse failure, unsupported
+media, client rendering and truncation. Declared canonicals are observations,
+never URL identity. Hidden nodes enter accessible names only through
+`aria-labelledby`. Labels follow HTML's labeled control: a label with `for`
+names only the first element with that id (an empty `for` names nothing), and a
+label without `for` names only its first labelable descendant.
 
 ### Crawler permissions and robots history
 

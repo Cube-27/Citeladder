@@ -1070,7 +1070,7 @@
     {
       "name": "read_site_pages",
       "title": "Read site pages",
-      "description": "Pages from a crawl, paged: URL, title, page type, status, scores, issue count and the rule ids of each page's issues by finding class. Pass url to find a page by its address, rule_id (from read_site_health top_issues or an issue group) to list exactly the pages affected by that issue, each with rule_evidence: what that check found on that page (a site-level architecture issue is recorded once on the home page, and its rule_evidence names the affected pages); filter by page_kind or status to find pages by type or status. This returns metadata, not page copy: use read_page_text for a page's words. read_site_health gives the totals.",
+      "description": "Pages from a crawl, paged: URL, title, page type, status, scores, issue count and the rule ids of each page's issues by finding class. Pass url to find a page by its address, rule_id (from read_site_health top_issues or an issue group) to list exactly the pages affected by that issue, each with rule_evidence: what that check found on that page (a site-level architecture issue is recorded once on the home page, and its rule_evidence names the affected pages), and, when the crawl kept one, a reference_snippet: redacted markup of the failing element and its label context from one affected page (text and attribute values replaced by [text] and [redacted]), to write an exact fix; filter by page_kind or status to find pages by type or status. This returns metadata, not page copy: use read_page_text for a page's words. read_site_health gives the totals.",
       "input_schema": {
         "type": "object",
         "properties": {

@@ -47,7 +47,33 @@ export const referenceSnippetSchema = z.object({
   html: z.string(),
   truncated: z.boolean(),
 });
-export type IssueReferenceSnippet = z.infer<typeof referenceSnippetSchema>;
+type IssueReferenceSnippet = z.infer<typeof referenceSnippetSchema>;
+
+/** The family's first affected page, by URL then issue id, whose facts carry a snippet at `path`. */
+async function firstSnippetRow(
+  db: Database,
+  crawl: Crawl,
+  family: { findingClass: string; ruleId: string; path: readonly string[] },
+) {
+  const { rows } = await sql<{
+    issue_id: string;
+    site_url_id: string;
+    source_artifact_id: string;
+    page_url: string;
+    snippet: unknown;
+  }>`
+    select i.id as issue_id, i.site_url_id, i.source_artifact_id,
+      coalesce(nullif(u.display_url, ''), u.normalized_url) as page_url,
+      f.normalized_facts #> ${family.path}::text[] as snippet
+    from site_issues i
+    join site_urls u on u.workspace_id = i.workspace_id and u.id = i.site_url_id
+    join site_fetch_artifacts f on f.workspace_id = i.workspace_id and f.id = i.source_artifact_id
+    where i.workspace_id = ${crawl.workspace_id} and i.crawl_id = ${crawl.id} and i.is_current
+      and i.finding_class = ${family.findingClass} and i.rule_id = ${family.ruleId}
+      and jsonb_typeof(f.normalized_facts #> ${family.path}::text[]) = 'object'
+    order by u.normalized_url, i.id limit 1`.execute(db);
+  return rows[0];
+}
 
 /** Each issue family's one snippet: its first affected page, by URL then issue id, that has one. */
 async function referenceSnippets(
@@ -57,24 +83,7 @@ async function referenceSnippets(
 ): Promise<IssueReferenceSnippet[]> {
   const snippets: IssueReferenceSnippet[] = [];
   for (const [ruleId, path] of Object.entries(SNIPPET_FACTS)) {
-    const { rows } = await sql<{
-      issue_id: string;
-      site_url_id: string;
-      source_artifact_id: string;
-      page_url: string;
-      snippet: unknown;
-    }>`
-      select i.id as issue_id, i.site_url_id, i.source_artifact_id,
-        coalesce(nullif(u.display_url, ''), u.normalized_url) as page_url,
-        f.normalized_facts #> ${path}::text[] as snippet
-      from site_issues i
-      join site_urls u on u.workspace_id = i.workspace_id and u.id = i.site_url_id
-      join site_fetch_artifacts f on f.workspace_id = i.workspace_id and f.id = i.source_artifact_id
-      where i.workspace_id = ${crawl.workspace_id} and i.crawl_id = ${crawl.id} and i.is_current
-        and i.finding_class = ${findingClass} and i.rule_id = ${ruleId}
-        and jsonb_typeof(f.normalized_facts #> ${path}::text[]) = 'object'
-      order by u.normalized_url, i.id limit 1`.execute(db); // NOSONAR -- In order on the writer's connection.
-    const row = rows[0];
+    const row = await firstSnippetRow(db, crawl, { findingClass, ruleId, path }); // NOSONAR -- In order on the writer's connection.
     const snippet = snippetSchema.safeParse(row?.snippet);
     if (!row || !snippet.success) continue;
     snippets.push({

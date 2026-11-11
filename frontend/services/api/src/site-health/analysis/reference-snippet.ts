@@ -36,17 +36,25 @@ const VOID = new Set([
   'wbr',
 ]);
 const ATTRIBUTE_NAME = /^[a-z][a-z0-9_.:-]*$/iu;
-const EMAIL = /[^\s@]+@[^\s@]+\.[^\s@]+/u;
-/** A long run mixing letters and digits: an id, hash, session or API token. */
-const TOKEN = /(?=[\w+/=-]*\d)(?=[\w+/=-]*[a-z])[\w+/=-]{24,}/iu;
-export const REDACTED = '[redacted]';
-export const TEXT = '[text]';
+/**
+ * Linear-time shapes, since attribute values come from the crawled page: an
+ * address (a character, `@`, a domain label and a dot), and a run of 24 or more
+ * token characters, which is a token when it mixes letters and digits (an id,
+ * hash, session or API token).
+ */
+const EMAIL = /[^\s@]@[^\s@.]+\.[^\s@]/u;
+const TOKEN_RUN = /[\w+/=-]{24,}/gu;
+const REDACTED = '[redacted]';
+const TEXT = '[text]';
+
+const looksLikeToken = (value: string) =>
+  (value.match(TOKEN_RUN) ?? []).some((run) => /\d/u.test(run) && /[a-z]/iu.test(run));
 
 const escapeValue = (value: string) =>
   value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
 
 function attributeValue(name: string, value: string) {
-  if (!KEPT.has(name) || EMAIL.test(value) || TOKEN.test(value)) return REDACTED;
+  if (!KEPT.has(name) || EMAIL.test(value) || looksLikeToken(value)) return REDACTED;
   return escapeValue(Array.from(value).slice(0, limits.accessibility_identifier_chars).join(''));
 }
 
@@ -62,6 +70,22 @@ function openTag(node: HtmlElement) {
 
 const isElement = (node: HtmlNode): node is HtmlElement => 'tagName' in node;
 
+type Pending = HtmlNode | { close: string };
+
+/** The markup one pending item adds; an element queues its close tag and children. */
+function emit(item: Pending, pending: Pending[]): string {
+  if ('close' in item) return item.close;
+  if (item.nodeName === '#text') return 'value' in item && item.value.trim() ? TEXT : '';
+  if (!isElement(item) || DROPPED.has(item.tagName)) return '';
+  if (VOID.has(item.tagName)) return openTag(item);
+  pending.push({ close: `</${item.tagName}>` });
+  if (!SHELLS.has(item.tagName)) {
+    for (let index = item.childNodes.length - 1; index >= 0; index--)
+      pending.push(item.childNodes[index]!);
+  }
+  return openTag(item);
+}
+
 /**
  * The redacted markup of `root`, depth-first without recursion. It stops once
  * the markup passes `budget` characters, so a large context costs no more than
@@ -69,25 +93,8 @@ const isElement = (node: HtmlNode): node is HtmlElement => 'tagName' in node;
  */
 function serialize(root: HtmlElement, budget = Infinity) {
   let html = '';
-  const pending: (HtmlNode | { close: string })[] = [root];
-  while (pending.length && html.length <= budget) {
-    const item = pending.pop()!;
-    if ('close' in item) {
-      html += item.close;
-      continue;
-    }
-    if (item.nodeName === '#text') {
-      if ('value' in item && item.value.trim()) html += TEXT;
-      continue;
-    }
-    if (!isElement(item) || DROPPED.has(item.tagName)) continue;
-    html += openTag(item);
-    if (VOID.has(item.tagName)) continue;
-    pending.push({ close: `</${item.tagName}>` });
-    if (SHELLS.has(item.tagName)) continue;
-    for (let index = item.childNodes.length - 1; index >= 0; index--)
-      pending.push(item.childNodes[index]!);
-  }
+  const pending: Pending[] = [root];
+  while (pending.length && html.length <= budget) html += emit(pending.pop()!, pending);
   return html;
 }
 
