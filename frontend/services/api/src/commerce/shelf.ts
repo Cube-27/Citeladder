@@ -667,17 +667,15 @@ export async function prepareShelfExecution(
   // Only a buyer prompt's answer calls the resolver: an untargeted pass keeps
   // only holder matches and creates no AI-observed competitor, so a model call
   // could add nothing the deterministic matcher misses.
-  const prepared = await prepareRecommendations(
-    result.answer_text,
-    ctx.catalog,
-    ctx.target
-      ? metered(
-          db,
-          task.workspace_id,
-          resolver === undefined ? configuredShelfResolver() : resolver,
-        )
-      : undefined,
-  );
+  const modelResolver = (): ShelfResolver | undefined => {
+    if (!ctx.target) return undefined;
+    return metered(
+      db,
+      task.workspace_id,
+      resolver === undefined ? configuredShelfResolver() : resolver,
+    );
+  };
+  const prepared = await prepareRecommendations(result.answer_text, ctx.catalog, modelResolver());
   return async (trx, current, lockedAudit, artifactId) => {
     await deriveExecution(trx, current, lockedAudit, artifactId);
     if (

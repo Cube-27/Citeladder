@@ -118,13 +118,11 @@ async function matchBatch(db: Database, scope: CommerceScope, revision: Revision
     });
   }
   await db.transaction().execute(async (trx) => {
-    for (const { ctx, answer } of passes)
-      await recordPass(
-        trx,
-        ctx,
-        answer,
-        await prepareRecommendations(answer.answerText, ctx.catalog),
-      ); // NOSONAR -- One transaction: statements run in order.
+    for (const { ctx, answer } of passes) {
+      // Deterministic: no resolver, so no model call inside the transaction.
+      const prepared = await prepareRecommendations(answer.answerText, ctx.catalog); // NOSONAR -- Local parsing; one answer at a time.
+      await recordPass(trx, ctx, answer, prepared); // NOSONAR -- One transaction: statements run in order.
+    }
   });
   return answers.length;
 }
