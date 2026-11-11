@@ -166,6 +166,7 @@ export function VignetteChart({
   const line = chartPath(points);
   const last = points.at(-1);
   const area = last ? `${line}L${PLOT} ${PLOT}L0 ${PLOT}Z` : '';
+  const readings = values.map((value, index) => `${weeks[index] ?? ''} ${format(value)}`);
   return (
     <figure className="cl-vig-chart">
       <div className="cl-vig-plot" aria-hidden>
@@ -220,9 +221,7 @@ export function VignetteChart({
           <span>{weeks.at(-1)}</span>
         </div>
       </div>
-      <figcaption className="sr-only">
-        {`${label}: ${values.map((value, index) => `${weeks[index] ?? ''} ${format(value)}`).join(', ')}`}
-      </figcaption>
+      <figcaption className="sr-only">{`${label}: ${readings.join(', ')}`}</figcaption>
     </figure>
   );
 }

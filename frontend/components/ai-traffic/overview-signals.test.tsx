@@ -72,6 +72,6 @@ it('shows a measured zero as 0 and a window with no completed run as not availab
     />,
   );
   expect(screen.getByText('No AI Visibility run completed in this window.')).toBeVisible();
-  expect(screen.getAllByText('Not available yet').length).toBe(2);
+  expect(screen.getAllByText('Not available yet')).toHaveLength(2);
   expect(screen.queryByText('0')).not.toBeInTheDocument();
 });

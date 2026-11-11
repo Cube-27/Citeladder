@@ -6,16 +6,29 @@
   margin: 0;
 }
 
-/* The product image's frame: a 20px radius, 8px round its well (D31). It is
-   set off by its stage fill (below), never a border or shadow (D44). */
+/* The product image's frame, which is its stage: tints over paper, with
+   grain, and no edge or shadow of its own (D44). On its own the stage holds
+   the picture's white card (below). */
 
 .cl-frame-card {
   display: flex;
   flex: 1;
   flex-direction: column;
-  padding: 8px;
-  border-radius: var(--site-radius-card);
-  background: var(--color-surface);
+  padding: 48px;
+  border: 0;
+  border-radius: var(--site-radius-stage);
+  background: var(--color-paper);
+  background-image:
+    var(--stage-grain), radial-gradient(90% 120% at 0% 0%, var(--stage-a) 0%, transparent 70%),
+    radial-gradient(90% 120% at 100% 100%, var(--stage-b) 0%, transparent 70%),
+    radial-gradient(70% 90% at 100% 0%, var(--stage-c) 0%, transparent 70%);
+  background-size:
+    200px 200px,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+  background-blend-mode: soft-light, normal, normal, normal;
+  box-shadow: none;
 }
 
 /* The well holds the screen; its height is the screen's. In a cell taller
@@ -114,31 +127,7 @@
   line-height: var(--text-body--line-height);
 }
 
-/* ---------- The stage: tints over paper, with grain ---------- */
-.cl-frame-card {
-  background-color: var(--color-paper);
-  background-image:
-    var(--stage-grain), radial-gradient(90% 120% at 0% 0%, var(--stage-a) 0%, transparent 70%),
-    radial-gradient(90% 120% at 100% 100%, var(--stage-b) 0%, transparent 70%),
-    radial-gradient(70% 90% at 100% 0%, var(--stage-c) 0%, transparent 70%);
-  background-size:
-    200px 200px,
-    100% 100%,
-    100% 100%,
-    100% 100%;
-  background-blend-mode: soft-light, normal, normal, normal;
-}
-
 /* ---------- A product image on its own: stage, then its white card ---------- */
-/* The frame's card becomes the stage: no edge or shadow of its own. */
-
-.cl-frame-card {
-  padding: 48px;
-  border: 0;
-  border-radius: var(--site-radius-stage);
-  box-shadow: none;
-}
-
 /* The well has no fill of its own (D45), and lets the card's shadow out. */
 
 .cl-frame-card > .cl-frame-well {

@@ -386,40 +386,50 @@ export async function saveSuggestions(
   staged: readonly StagedSuggestion[],
   turn: { runId: string; messageId: string; outputs: ReadonlyMap<number, string> },
 ) {
-  const owner = { workspaceId: chat.workspace_id, projectId: chat.project_id };
-  const by = { actor: 'agent' as const, runId: turn.runId };
   for (const [number, outputId] of turn.outputs) {
     const mine = staged.filter((suggestion) => suggestion.document === number);
-    if (!mine.length) continue;
-    const revision = await latestRevision(db, chat.workspace_id, outputId);
-    const replaced = new Set(mine.flatMap((suggestion) => suggestion.replaces));
-    for (const suggestion of await loadSuggestions(db, chat.workspace_id, outputId))
-      if (replaced.has(suggestion.row.id) && statusOf(suggestion) === 'open')
-        await appendEvent(db, owner, suggestion, { status: 'stale', by, reason: 'replaced' });
-    for (const suggestion of mine) {
-      const { target } = suggestion;
-      if (
-        target.kind === 'span' &&
-        revision.body.slice(target.at.start, target.at.end) !== target.exact
-      )
-        throw new TypeError('A staged suggestion does not match its committed revision');
-      await insertSuggestion(
-        db,
-        { ...owner, outputId, revision, by },
-        {
-          id: suggestion.id,
-          anchor: target.kind === 'span' ? { kind: 'span', position: target.at } : target,
-          dependsOn: storedDependencies(suggestion, revision.body),
-          replacement: suggestion.replacement,
-          needsInput: suggestion.needsInput,
-          ruleId: suggestion.ruleId,
-          rationale: suggestion.rationale,
-          source: 'model',
-          runId: turn.runId,
-          messageId: turn.messageId,
-        },
-      );
-    }
+    if (mine.length) await saveDocumentSuggestions(db, chat, outputId, mine, turn);
+  }
+}
+
+/** One document's share of {@link saveSuggestions}: stales what it replaces, then stores it. */
+async function saveDocumentSuggestions(
+  db: Database,
+  chat: Chat,
+  outputId: string,
+  mine: readonly StagedSuggestion[],
+  turn: { runId: string; messageId: string },
+) {
+  const owner = { workspaceId: chat.workspace_id, projectId: chat.project_id };
+  const by = { actor: 'agent' as const, runId: turn.runId };
+  const revision = await latestRevision(db, chat.workspace_id, outputId);
+  const replaced = new Set(mine.flatMap((suggestion) => suggestion.replaces));
+  for (const suggestion of await loadSuggestions(db, chat.workspace_id, outputId))
+    if (replaced.has(suggestion.row.id) && statusOf(suggestion) === 'open')
+      await appendEvent(db, owner, suggestion, { status: 'stale', by, reason: 'replaced' });
+  for (const suggestion of mine) {
+    const { target } = suggestion;
+    if (
+      target.kind === 'span' &&
+      revision.body.slice(target.at.start, target.at.end) !== target.exact
+    )
+      throw new TypeError('A staged suggestion does not match its committed revision');
+    await insertSuggestion(
+      db,
+      { ...owner, outputId, revision, by },
+      {
+        id: suggestion.id,
+        anchor: target.kind === 'span' ? { kind: 'span', position: target.at } : target,
+        dependsOn: storedDependencies(suggestion, revision.body),
+        replacement: suggestion.replacement,
+        needsInput: suggestion.needsInput,
+        ruleId: suggestion.ruleId,
+        rationale: suggestion.rationale,
+        source: 'model',
+        runId: turn.runId,
+        messageId: turn.messageId,
+      },
+    );
   }
 }
 

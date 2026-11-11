@@ -194,6 +194,7 @@ function cursorPosition(cursor: string, filters: Record<string, unknown>) {
   }
 }
 
+const AND = sql` and `;
 /** `actionGroup` as SQL over the stored target kind and approach: the same rules in the same order. */
 const groupSql = sql<ActionGroup>`(case ${sql.join(
   a.ACTION_GROUPS.map((rule) => {
@@ -201,7 +202,7 @@ const groupSql = sql<ActionGroup>`(case ${sql.join(
       rule.target_kinds ? sql`actions.target_kind in (${sql.join(rule.target_kinds)})` : null,
       rule.approaches ? sql`actions.approach in (${sql.join(rule.approaches)})` : null,
     ].filter((test) => test !== null);
-    return sql`when ${sql.join(tests, sql` and `)} then ${rule.group}`;
+    return sql`when ${sql.join(tests, AND)} then ${rule.group}`;
   }),
   sql` `,
 )} else ${a.ACTION_GROUP_DEFAULT} end)`;

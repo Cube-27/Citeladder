@@ -195,29 +195,26 @@ function inkViolation(palette, { scope, cssLabel, minimum }, inkToken, surfaceTo
   return null;
 }
 
+/** One contrast row's violations: each ink on each surface, over each of the row's grounds. */
+function rowViolations(palette, { scope, cssLabel }, row) {
+  const { inks, surfaces, over = [color('surface')], minimum } = row;
+  return over.flatMap((groundToken) => {
+    const ground = palette.get(groundToken);
+    return surfaces.flatMap((surfaceToken) => {
+      const surface = opaque(palette, surfaceToken, ground);
+      // A row with several grounds names the one a failure sits on.
+      const label = over.length > 1 ? `${surfaceToken} over ${groundToken}` : surfaceToken;
+      return inks
+        .map((inkToken) =>
+          inkViolation(palette, { scope, cssLabel, minimum }, inkToken, label, surface),
+        )
+        .filter((violation) => violation !== null);
+    });
+  });
+}
+
 function contrastViolations(palette, scope, cssLabel) {
-  const violations = [];
-  for (const { inks, surfaces, over = [color('surface')], minimum } of CONTRAST_PAIRS) {
-    for (const groundToken of over) {
-      const ground = palette.get(groundToken);
-      for (const surfaceToken of surfaces) {
-        const surface = opaque(palette, surfaceToken, ground);
-        // A row with several grounds names the one a failure sits on.
-        const label = over.length > 1 ? `${surfaceToken} over ${groundToken}` : surfaceToken;
-        for (const inkToken of inks) {
-          const violation = inkViolation(
-            palette,
-            { scope, cssLabel, minimum },
-            inkToken,
-            label,
-            surface,
-          );
-          if (violation) violations.push(violation);
-        }
-      }
-    }
-  }
-  return violations;
+  return CONTRAST_PAIRS.flatMap((row) => rowViolations(palette, { scope, cssLabel }, row));
 }
 
 function separationViolations(palette, scope, cssLabel) {

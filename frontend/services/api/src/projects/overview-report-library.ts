@@ -208,8 +208,9 @@ const retrieval: Section = async (context) => {
     asOf: new Date().toISOString(),
     limit: ROWS,
   });
+  const verb = misses.unavailable_engines.length === 1 ? 'does' : 'do';
   const unavailable = misses.unavailable_engines.length
-    ? ` ${engines(misses.unavailable_engines)} ${misses.unavailable_engines.length === 1 ? 'does' : 'do'} not show what was read.`
+    ? ` ${engines(misses.unavailable_engines)} ${verb} not show what was read.`
     : '';
   report.text(
     `${plural(misses.responses, 'answer')} showed which pages the engine read.${unavailable}`,

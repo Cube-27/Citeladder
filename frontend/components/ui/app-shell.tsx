@@ -440,11 +440,11 @@ export function SidebarTextTooltip({
 }: Readonly<{ inRail?: boolean; children: ReactNode }>) {
   const [lines, setLines] = useState<readonly SidebarTextLine[]>([]);
   const openWhenCut = (trigger: HTMLElement) => {
-    const parts = [...trigger.querySelectorAll('[data-sidebar-text]')];
+    const parts = [...trigger.querySelectorAll<HTMLElement>('[data-sidebar-text]')];
     if (!(inRail && isRail(trigger)) && !parts.some(isTextCut)) return false;
     const next = parts
       .map((part) => ({
-        line: part.getAttribute('data-sidebar-text') ?? '',
+        line: part.dataset.sidebarText ?? '',
         text: part.textContent?.trim() ?? '',
       }))
       .filter(({ text }) => text !== '');

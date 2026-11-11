@@ -23,6 +23,24 @@ describe('pageOutline', () => {
       { level: 2, text: 'Teams', from: body.indexOf('## [Teams]') },
     ]);
   });
+
+  it('drops only a closing # sequence that follows a blank', () => {
+    const body = '## C# tips #  \n### Plans ## and #\n#### ##\n# \t \n##### Done\t##\t\n';
+    expect(pageOutline(body).map(({ level, text }) => [level, text])).toEqual([
+      [2, 'C# tips'],
+      [3, 'Plans ## and'],
+      [4, '##'],
+      [5, 'Done'],
+    ]);
+  });
+
+  it('reads links and images in a heading as their text', () => {
+    const body = '# ![Logo](/logo.png) and [Teams](/teams) [not closed\n## [a [b](/b)\n';
+    expect(pageOutline(body).map(({ text }) => text)).toEqual([
+      'Logo and Teams [not closed',
+      '[a b',
+    ]);
+  });
 });
 
 describe('groupByPassage', () => {
