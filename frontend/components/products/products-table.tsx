@@ -4,6 +4,7 @@ import { PackageOpen } from 'lucide-react';
 
 import { DataTable, type DataTableColumn, type DataTablePager } from '@/components/ui/data-table';
 import {
+  TableActionsCell,
   TableCell,
   TableCellLines,
   TableRow,
@@ -26,7 +27,10 @@ import {
 } from '@/lib/products/product-columns';
 import { productHref, type ProductScopeFilters } from '@/lib/products/product-filters';
 import { PRODUCT_PAGE_SIZE } from '@/lib/config/commerce';
+import { useProjectScope } from '@/lib/project/active-project-scope';
 import type { UseQueryResult } from '@tanstack/react-query';
+
+import { AddToTracking } from './product-catalog-controls';
 
 /** The metric columns a reader can sort by; each sorts best first. */
 const SORTABLE: Partial<Record<ProductColumnKey, CommerceProductSort>> = {
@@ -86,8 +90,11 @@ export function ProductsTable({
   onCheck,
   pager,
   scope,
+  trackable = false,
 }: Readonly<{
   query: UseQueryResult<CommerceProductPage>;
+  /** All products: an AI-observed competitor's row offers Add to tracking (CM6). */
+  trackable?: boolean;
   /** The window, engine and prompt set a row's page opens with. */
   scope: ProductScopeFilters;
   columns: readonly ProductColumnKey[];
@@ -123,7 +130,19 @@ export function ProductsTable({
           : {}),
       };
     }),
+    ...(trackable
+      ? [
+          {
+            key: 'track',
+            label: 'Tracking',
+            width: 'name',
+            trailing: true,
+            hideLabel: true,
+          } satisfies DataTableColumn,
+        ]
+      : []),
   ];
+  const projectScope = useProjectScope();
   const rows = query.data?.items ?? [];
   const owned = rows.filter((row) => row.kind === 'owned').map((row) => row.holder_id);
   const checkedOnPage = owned.filter((id) => checked.has(id)).length;
@@ -171,6 +190,20 @@ export function ProductsTable({
               </TableCell>
             );
           })}
+          {trackable ? (
+            <TableActionsCell>
+              {row.kind === 'ai_observed_competitor' ? (
+                <AddToTracking
+                  scope={{
+                    workspaceId: projectScope.workspaceId,
+                    projectId: projectScope.projectId,
+                  }}
+                  candidateId={row.holder_id}
+                  name={row.name}
+                />
+              ) : null}
+            </TableActionsCell>
+          ) : null}
         </TableRow>
       ))}
     </DataTable>

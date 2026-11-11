@@ -91,6 +91,8 @@ describe('Commerce workspace boundaries', () => {
     ['/buyer-prompts', 'GET', undefined],
     [`/buyer-prompts/${randomUUID()}`, 'PATCH', { approved: true }],
     [`/products/${randomUUID()}`, 'GET', undefined],
+    [`/products/${randomUUID()}`, 'PATCH', { name: 'Renamed' }],
+    [`/products/${randomUUID()}/lifecycle`, 'PUT', { lifecycle_state: 'archived' }],
   ] as const;
   it('requires sessions, membership, the active project workspace, and write capability on every route', async () => {
     const outsider = await fixtures.user();

@@ -42,7 +42,33 @@ by later crawl projection. Imports are content-hash idempotent, read the
 project's products once into an in-memory identifier index, and expose bounded,
 row-level outcomes; an identifier conflict names its row.
 
-Catalog writers (import, projection, discovery publication, AI-observed
+### Edit and archive
+
+`PATCH /commerce/products/{holder_id}`
+([edits](../frontend/services/api/src/commerce/edits.ts)) edits a catalog
+product's name, brand, description, price, currency, URL, image, SKU, GTIN, MPN
+and category set; only the fields sent change. Each edit appends a
+`source_kind = 'edit'` observation with `edit_version` and points the edited
+fields' `field_sources` at it. An edited field wins over crawl projection
+(scalars, breadcrumb categories and shelf links alike) and over CSV until a
+later import changes that field: the edit keeps the value the field last
+imported, and an import row repeating it leaves the edit in place while any
+other value replaces it. An edit claiming another product's URL, SKU or GTIN is
+refused (409). The image has no product column: the detail read takes it from
+the latest edit that set it, before any shopping card's.
+
+`PUT /commerce/products/{holder_id}/lifecycle` archives
+(`lifecycle_state = 'archived'`) or restores a product, also as an edit
+observation. An archived product leaves the catalog read and its category
+counts, the Products table's My catalog and All products (it lists under
+`source=archived`), catalog revisions and so new answer matching, and audit
+prompt context; its observations and answers stay, and its page still opens
+with a Restore control. Every edit, archive and restore records a catalog
+revision (`source_kind = 'edit'`) when the matching identity changed. "Add to
+tracking" on an AI-observed competitor (an All products row or its page)
+approves the candidate through the competitor decision route (CM6).
+
+Catalog writers (import, projection, edits, discovery publication, AI-observed
 competitors) serialize on the project row with `FOR NO KEY UPDATE`, which still
 excludes each other and a project delete but no longer blocks the project's
 foreign-key inserts (audits, crawls, queue writes) while a large import runs.
@@ -60,12 +86,12 @@ category tree (`parent_category_id`) arrives with catalog ingestion.
 
 ## Products table
 
-`GET /commerce/products?source=catalog|all&category=&window=&engine=&prompt_set=&q=&sort=&cursor=&limit=`
+`GET /commerce/products?source=catalog|all|archived&category=&window=&engine=&prompt_set=&q=&sort=&cursor=&limit=`
 ([products read](../frontend/services/api/src/commerce/products.ts)) is one
 keyset-paged SQL read of every product holder's metrics. `source=catalog`
 lists active catalog products; `all` adds approved competitors and pending
 AI-observed competitors (CM6), never rejected, excluded or unreviewed
-discovery candidates. A category narrows products to its members and
+discovery candidates; `archived` lists archived catalog products alone. A category narrows products to its members and
 competitors to those targeting it or one of its products; `q` matches name,
 brand or URL.
 
@@ -92,7 +118,7 @@ wins over a text-list rank). Per holder (formula version 1):
 Sorts are visibility, win rate, position (each best first) or name; the cursor
 is bound to the filters and a cursor from other filters is refused (422).
 
-The screen puts the My catalog / All products switch, search, window, engine,
+The screen puts the My catalog / All products / Archived switch, search, window, engine,
 prompt set and column settings in the top control strip; the catalog's
 categories with their product counts sit beside the table, and the chosen
 category's own page opens from there. Hidden columns are a per-browser
@@ -111,12 +137,16 @@ Unavailable, unknown, none and zero render as different values.
 ([detail read](../frontend/services/api/src/commerce/product-detail.ts)) reads
 one holder over the same executions as the table: its row is the table's read
 narrowed to that holder, so the two never disagree, and a holder the table
-would not list under All products (archived, rejected, unreviewed discovery,
-another project's) is not found (404). Beside the row it returns, from the
-same scoped slots and bounded by `products.detail` in `config/commerce.ts`:
+would not list (rejected, unreviewed discovery, another project's) is not found
+(404); an archived catalog product still has its page. Beside the row it
+returns, from the same scoped slots and bounded by `products.detail` in
+`config/commerce.ts`:
 
-- the catalog description, and the image of the holder's latest shopping card
-  (null when no card carried one; the catalog has no image field yet);
+- the catalog description, and the image an edit set, else that of the
+  holder's latest shopping card (null when neither has one);
+- for a catalog product, its editable record (lifecycle state, price,
+  currency, identifiers, edited image and category names); null for a
+  competitor;
 - competing products: holders with a slot in the same executions, by shared
   executions, with how often each ranked above this one and its mean rank;
   only holders the table lists, so a competitor rejected after the answers
@@ -398,6 +428,6 @@ gates remain unverified; applicable acceptance remains in
 ## Current limits
 
 Revenue attribution, order facts, feed remediation and publishing, autonomous
-publishing, JavaScript rendering, product edit and archive flows, snapshot
+publishing, JavaScript rendering, snapshot
 trends, merchant dashboards, family aggregation, sentiment and composite
 product scores are not part of the shipped feature.

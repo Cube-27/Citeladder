@@ -2,6 +2,12 @@
 export const commerce = {
   importer_version: 'commerce-catalog-importer-1',
   projector_version: 'commerce-projector-1',
+  /** In-app product edits (commerce improvement PR 7): the edit version and its bounds. */
+  edit: {
+    version: 'commerce-product-edit-1',
+    description_max_chars: 10_000,
+    category_limit: 50,
+  },
   discovery: {
     provider_version: 'tavily-commerce-1',
     validator_version: 'commerce-competitor-validator-1',

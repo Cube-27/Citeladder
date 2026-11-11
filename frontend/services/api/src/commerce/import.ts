@@ -18,6 +18,7 @@ import {
 } from './catalog-store.ts';
 import type { CommerceScope } from './reads.ts';
 import { recordCatalogRevision } from './catalog-revisions.ts';
+import { categorySet, comparable, editHolds } from './edits.ts';
 import { categoryKey, isCategoryName } from './projection-facts.ts';
 import { canonicalUrl } from '../site-health/url-identity.ts';
 
@@ -200,8 +201,27 @@ async function importRow(
     };
   const product = matches[0] ?? indexed(await newProduct(db, scope, values.canonical_url!));
   const sources = { ...product.field_sources };
+  // An edited field keeps its edit while this row repeats what it last imported.
+  const applied = productInput.parse(
+    Object.fromEntries(
+      Object.entries(values).filter(
+        ([field, value]) => !editHolds(sources, field, comparable(field, value)),
+      ),
+    ),
+  );
+  const categoryKeys = categorySet(categories);
+  const appliesCategories =
+    categoryKeys.length > 0 && !editHolds(sources, 'categories', categoryKeys);
+  if (appliesCategories)
+    sources.categories = {
+      kind: 'csv',
+      source_id: importId,
+      row_number: rowNumber,
+      version: policy.commerce.importer_version,
+      keys: categoryKeys,
+    };
   let changed = false;
-  for (const [field, value] of Object.entries(values)) {
+  for (const [field, value] of Object.entries(applied)) {
     const previous = product[field as keyof typeof values];
     if ((field === 'price' && previous !== null ? Number(previous) : previous) !== value)
       changed = true;
@@ -213,7 +233,7 @@ async function importRow(
     };
   }
   const update: Updateable<CommerceProducts> = {
-    ...values,
+    ...applied,
     field_sources: JSON.stringify(sources),
     updated_at: new Date(),
   };
@@ -233,10 +253,11 @@ async function importRow(
   });
   index.put({
     ...product,
-    ...values,
-    price: values.price === undefined ? product.price : String(values.price),
+    ...applied,
+    price: applied.price === undefined ? product.price : String(applied.price),
     field_sources: sources,
   });
+  if (!appliesCategories) categories.clear();
   for (const name of categories)
     await /* NOSONAR -- One import transaction: statements run in order. */ addMembership(
       db,

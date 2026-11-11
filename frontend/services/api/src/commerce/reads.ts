@@ -27,10 +27,12 @@ export function commerceMissing(message: string): never {
  * cover every product. The reads are independent and run together.
  */
 export async function catalog(db: Database, scope: CommerceScope) {
+  // Archived products are out of the catalog; their history stays on their pages.
   const ownedProducts = db
     .selectFrom('commerce_products')
     .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId);
+    .where('project_id', '=', scope.projectId)
+    .where('lifecycle_state', '=', 'active');
   // The listed products, first by name; memberships are read for these only.
   const listed = ownedProducts
     .orderBy('name')
@@ -57,9 +59,10 @@ export async function catalog(db: Database, scope: CommerceScope) {
       .select(['product_id', 'category_id'])
       .where('product_id', 'in', listed.select('id'))
       .execute(),
-    // Category counts cover every product, listed or not.
+    // Category counts cover every active product, listed or not.
     ownedMemberships
       .select((eb) => ['category_id', eb.fn.countAll<string>().as('count')])
+      .where('product_id', 'in', ownedProducts.select('id'))
       .groupBy('category_id')
       .execute(),
     catalogProjection(db, scope),
