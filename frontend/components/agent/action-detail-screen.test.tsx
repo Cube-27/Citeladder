@@ -156,7 +156,7 @@ describe('An Action page', () => {
     );
     expect(
       screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent),
-    ).toEqual(['Overview', 'What to do', 'Measure with', 'Avoid', 'Findings', 'Chats']);
+    ).toEqual(['Overview', 'Evidence', 'What to do', 'Measure with', 'Avoid', 'Findings', 'Chats']);
 
     const overview = screen.getByRole('region', { name: 'Overview' });
     expect(within(overview).getByText(MESSAGE)).toBeVisible();
@@ -416,6 +416,41 @@ describe('A content-gap Action', () => {
     await user.click(within(section).getByRole('button', { name: 'Show all 25 listed pages' }));
     expect(within(list).getAllByRole('link')).toHaveLength(25);
     expect(within(list).getAllByRole('link')[0]).toHaveAttribute('href', 'https://acme.test/p00');
+  });
+
+  it('prepares a developer ticket as Markdown and lists each record dated and marked inferred or observed', async () => {
+    serve(action);
+    const user = userEvent.setup();
+    renderDetail();
+
+    const evidence = await screen.findByRole('list', { name: 'Evidence records' });
+    expect(within(evidence).getByRole('listitem').textContent).toBe(
+      'Missing structured data on owned page · Inferred · Nov 10, 2026',
+    );
+
+    const overview = screen.getByRole('region', { name: 'Overview' });
+    await user.click(within(overview).getByRole('button', { name: 'Prepare developer ticket' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Developer ticket' });
+    const markdown = within(dialog).getByRole('textbox', { name: 'Developer ticket Markdown' });
+    expect((markdown as HTMLTextAreaElement).value.split('\n').slice(0, 15)).toEqual([
+      '# https://acme.test/pricing',
+      '',
+      MESSAGE,
+      '',
+      '## Issue',
+      '',
+      '- Missing structured data on owned page',
+      '',
+      '## Affected pages',
+      '',
+      '- https://acme.test/pricing',
+      '',
+      '## Evidence',
+      '',
+      '- Missing structured data on owned page: inferred, Nov 10, 2026',
+    ]);
+    await user.click(within(dialog).getByRole('button', { name: 'Copy Markdown' }));
+    expect(await navigator.clipboard.readText()).toBe((markdown as HTMLTextAreaElement).value);
   });
 
   it('hands a planned page to the article workflow with its finding', async () => {

@@ -95,6 +95,7 @@ describe('a fresh database', () => {
       '0026_crawl_schedules',
       '0027_commerce_category_tree',
       '0028_issue_family_actions',
+      '0029_deployment_record',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -128,6 +129,7 @@ describe('a fresh database', () => {
       { version: '0026_crawl_schedules' },
       { version: '0027_commerce_category_tree' },
       { version: '0028_issue_family_actions' },
+      { version: '0029_deployment_record' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -185,6 +187,7 @@ describe('an existing database', () => {
       '0026_crawl_schedules',
       '0027_commerce_category_tree',
       '0028_issue_family_actions',
+      '0029_deployment_record',
     ]);
     // A URL identity keeps no per-sighting discovery status.
     expect(await columns(client, 'site_urls')).not.toContain('discovery_status');
@@ -296,6 +299,7 @@ describe('an existing database', () => {
       { version: '0026_crawl_schedules' },
       { version: '0027_commerce_category_tree' },
       { version: '0028_issue_family_actions' },
+      { version: '0029_deployment_record' },
     ]);
   }, 120000);
 });

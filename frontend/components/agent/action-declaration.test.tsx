@@ -34,11 +34,11 @@ const daysAgo = (days: number) => {
 };
 
 describe('Mark implemented', () => {
-  it('declares the chosen go-live day and refuses one outside the window', async () => {
-    const posted: { declared_implemented_at: string }[] = [];
+  it('declares the chosen go-live day and what shipped it, and refuses a day outside the window', async () => {
+    const posted: { declared_implemented_at: string; deployment_reference: string | null }[] = [];
     mswServer.use(
       http.post(`/api/v1/actions/${ACTION}/declaration`, async ({ request }) => {
-        posted.push((await request.json()) as { declared_implemented_at: string });
+        posted.push((await request.json()) as (typeof posted)[number]);
         return HttpResponse.json({ error: { message: 'stop here' } }, { status: 409 });
       }),
     );
@@ -69,9 +69,11 @@ describe('Mark implemented', () => {
     const day = localDay(daysAgo(3));
     await user.clear(field);
     await user.type(field, day);
+    await user.type(within(dialog).getByLabelText('What shipped it?'), '  v2.4.1 ');
     await user.click(submit);
     expect(await within(dialog).findByRole('alert')).toBeVisible();
     expect(localDay(new Date(posted[0]!.declared_implemented_at))).toBe(day);
+    expect(posted[0]!.deployment_reference).toBe('v2.4.1');
   });
 
   it('says which page a content gap will be measured by before declaring', async () => {
@@ -141,6 +143,8 @@ describe('Declaration status', () => {
     target_site_url_ids: [],
     target_external_url: null,
     declared_implemented_at: NOW,
+    deployed_by: 'dev@acme.test',
+    deployment_reference: null,
     expected_checks: [],
     state: 'observed',
     limitations: [],
@@ -168,6 +172,35 @@ describe('Declaration status', () => {
     source_kind: 'site_crawl',
     source_id: null,
     subject: 'Missing structured data',
+  });
+
+  it('shows who recorded the deployment and links what shipped it', () => {
+    const recorded = renderWithProviders(
+      <DeclarationStatus
+        declaration={{
+          ...declaration([]),
+          deployment_reference: 'https://git.acme.test/site/pull/42',
+        }}
+        workspaceId={WORKSPACE}
+      />,
+      { projectSelection: selection },
+    );
+    expect(screen.getByText(/Deployment recorded by dev@acme\.test/)).toBeVisible();
+    expect(
+      screen.getByRole('link', { name: /https:\/\/git\.acme\.test\/site\/pull\/42/ }),
+    ).toHaveAttribute('href', 'https://git.acme.test/site/pull/42');
+    recorded.unmount();
+    renderWithProviders(
+      <DeclarationStatus
+        declaration={{ ...declaration([]), deployed_by: null, deployment_reference: 'v2.4.1' }}
+        workspaceId={WORKSPACE}
+      />,
+      { projectSelection: selection },
+    );
+    expect(
+      screen.getByText('Deployment recorded by a former workspace member', { exact: false }),
+    ).toHaveTextContent('Deployment recorded by a former workspace member · v2.4.1');
+    expect(screen.queryByRole('link', { name: /v2\.4\.1/ })).not.toBeInTheDocument();
   });
 
   it('says findings resolved before go-live are not credited, apart from unmeasurable ones', () => {

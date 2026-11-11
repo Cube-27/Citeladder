@@ -8,6 +8,7 @@ import { VerificationObservations } from '@/components/opportunities/verificatio
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
+import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Inline, Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { TextLink } from '@/components/ui/text-link';
@@ -105,6 +106,7 @@ export function DeclarationStatus({
         Went live on <DisplayTime value={declaration.declared_implemented_at} dateOnly />
         {revisionNote(declaration.output_revision_id, shownRevision)}
       </p>
+      <Deployment declaration={declaration} />
       <h3 ref={heading} tabIndex={-1} className={textRole('itemTitle', 'focus-ring w-fit')}>
         Measurement
       </h3>
@@ -223,6 +225,27 @@ function CheckSubject({
       </TextLink>
     );
   return <span className={textRole('caption', 'break-all')}>{subject}</span>;
+}
+
+/**
+ * The recorded deployment step: who recorded the go-live and what shipped it.
+ * A reference that is a web address opens in a new tab; any other stays text.
+ */
+function Deployment({ declaration }: Readonly<{ declaration: ActionDeclaration }>) {
+  const { deployed_by: by, deployment_reference: reference } = declaration;
+  return (
+    <p className={textRole('caption', 'break-words')}>
+      {by ? `Deployment recorded by ${by}` : 'Deployment recorded by a former workspace member'}
+      {reference ? (
+        <>
+          {' · '}
+          <ExternalHttpLink href={reference} className="underline underline-offset-2">
+            {reference}
+          </ExternalHttpLink>
+        </>
+      ) : null}
+    </p>
+  );
 }
 
 function revisionNote(

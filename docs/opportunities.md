@@ -290,6 +290,15 @@ verified. The Action row is locked and one Action carries at most one
 declaration; a same-key replay returns it, and same-key conflicting input is
 rejected. The user must reopen a dismissed Action first.
 
+The declaration is the Action's recorded deployment step (BL4). Its go-live
+time is when the fix shipped, so the deployment and the baseline share one
+clock. Who recorded it is the authenticated user (`actor_user_id`), never a
+request field. The caller may add `deployment_reference`, the release, pull
+request or commit that shipped it: one line of at most 500 characters, blank
+recording none. It is part of the replay identity. The declaration read returns
+the reference and `deployed_by`, the recorder's email while they are still a
+member of the workspace, else null.
+
 The baseline is the newest Opportunity snapshot at or before the go-live
 time, never one a later refresh wrote; when none existed the declaration
 records its baseline as unavailable (no snapshot, so no baseline audit), and
@@ -424,7 +433,10 @@ read. Nothing is triggered by a read.
 
 **Mark implemented** in the Agent output pane declares the revision on screen;
 the Action detail declares work done outside CiteLadder. The dialog asks when
-the change went live and lists what each finding will be measured by. After
+the change went live and, optionally, what shipped it, and lists what each
+finding will be measured by. The Implementation section then shows the
+go-live day, who recorded the deployment and the reference, linked when it is
+a web address. After
 declaring, focus moves to the measurement checklist: each check with its state
 and the reason it could not be read, and **Run crawl now** while a page check
 lacks a met reading. Observation state stays separate from workflow status, and
