@@ -1,5 +1,6 @@
 import {
   buyerPromptDecisionRequestSchema,
+  catalogImportApplyRequestSchema,
   catalogImportRequestSchema,
   competitorDecisionRequestSchema,
   competitorDiscoveryExecuteRequestSchema,
@@ -7,6 +8,7 @@ import {
 import {
   buyerPromptSchema,
   catalogImportSchema,
+  catalogImportStageSchema,
   commerceCatalogSchema,
   commerceProductDetailSchema,
   commerceProductPageSchema,
@@ -35,7 +37,8 @@ import {
   productLifecycleInput,
   setProductLifecycle,
 } from '../commerce/edits.ts';
-import { importCatalog } from '../commerce/import.ts';
+import { applyImport, stageImport } from '../commerce/import.ts';
+import { fetchShopifyStore } from '../commerce/shopify-store.ts';
 import { shoppingOverview } from '../commerce/overview.ts';
 import { productDetail } from '../commerce/product-detail.ts';
 import { productMetrics } from '../commerce/products.ts';
@@ -65,14 +68,16 @@ const windowParam = {
 } as const;
 const engineParam = { scalar: { kind: 'str', minLength: 1, maxLength: 64 } } as const;
 const promptSetParam = { scalar: { kind: 'uuid' } } as const;
-const importBody = catalogImportRequestSchema.extend({
-  content: z
-    .string()
-    .refine(
-      (value) => Buffer.byteLength(value, 'utf8') <= policy.commerce.import_max_bytes,
-      'CSV exceeds the byte limit',
-    ),
-});
+const importBody = catalogImportRequestSchema.refine(
+  (body) =>
+    !('content' in body) ||
+    Buffer.byteLength(body.content, 'utf8') <= policy.commerce.import_max_bytes,
+  { message: 'The file exceeds the byte limit', path: ['content'] },
+);
+const applyBody = catalogImportApplyRequestSchema.refine(
+  (body) => body.excluded_categories.length <= policy.commerce.import_max_rows,
+  { message: 'Too many excluded categories', path: ['excluded_categories'] },
+);
 const candidateBody = competitorDecisionRequestSchema;
 const promptBody = buyerPromptDecisionRequestSchema;
 const executeDiscoveriesBody = competitorDiscoveryExecuteRequestSchema;
@@ -170,15 +175,40 @@ export const commerceRoutes = [
   }),
   definePostRoute({
     ...family,
-    path: `${root}/catalog/import`,
+    path: `${root}/catalog/imports`,
     capability: 'run',
     status: 201,
     params: { path: projectPath, query: {} },
     body: importBody,
+    response: catalogImportStageSchema,
+    async handle({ c, db }, { path }) {
+      const scope = await writeScopeOf(db, c, path.project_id);
+      const body = await readBody(c, importBody);
+      if (body.source !== 'shopify')
+        return stageImport(db, scope, {
+          format: body.source,
+          content: body.content,
+          label: body.filename,
+        });
+      const store = await fetchShopifyStore(db, scope, body.store);
+      return stageImport(db, scope, {
+        format: 'shopify',
+        content: store.content,
+        label: store.host,
+      });
+    },
+  }),
+  definePostRoute({
+    ...family,
+    path: `${root}/catalog/imports/{import_id}/apply`,
+    capability: 'run',
+    params: { path: { ...projectPath, import_id: uuid }, query: {} },
+    body: applyBody,
     response: catalogImportSchema,
     async handle({ c, db }, { path }) {
       const scope = await writeScopeOf(db, c, path.project_id);
-      return importCatalog(db, scope, await readBody(c, importBody));
+      const { excluded_categories } = await readBody(c, applyBody);
+      return applyImport(db, scope, path.import_id, excluded_categories);
     },
   }),
   defineGetRoute({

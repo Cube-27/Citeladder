@@ -15,7 +15,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../src/app.ts';
 import { auditRuntime } from '../src/audits/config.ts';
-import { importCatalog } from '../src/commerce/import.ts';
+import { importCatalog } from './commerce-support.ts';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { auditTenant } from './audit-fixtures.ts';
@@ -33,7 +33,7 @@ const tasks: string[] = [];
 
 type Tenant = Awaited<ReturnType<typeof auditTenant>>;
 const CATALOG = [
-  'canonical_url,name,brand,price,currency,category',
+  'link,title,brand,price,currency,category',
   'https://shop.example/products/road,Acme Road Runner,Acme,120,USD,Road',
   'https://shop.example/products/trail,Acme Trail Climber,Acme,,,Trail',
 ].join('\n');
@@ -121,7 +121,7 @@ beforeAll(async () => {
     await importCatalog(
       db,
       { workspaceId: tenant.workspaceId, projectId: tenant.projectId },
-      { content: CATALOG, filename: 'catalog.csv', content_type: 'text/csv' },
+      CATALOG,
     );
   // Approved competitors enter the next audit's catalog revision; the others
   // are listed by state alone (AI-observed pending) or not at all.
@@ -292,18 +292,10 @@ describe('Products table read', () => {
     const later = await auditTenant(db, fixtures);
     const scope = { workspaceId: later.workspaceId, projectId: later.projectId };
     const [header, road, trail] = CATALOG.split('\n');
-    await importCatalog(db, scope, {
-      content: [header, road].join('\n'),
-      filename: 'catalog.csv',
-      content_type: 'text/csv',
-    });
+    await importCatalog(db, scope, [header, road].join('\n'));
     // Revision 1 knows only the road shoe, so the live pass misses the trail shoe.
     await answer(later, '1. Acme Road Runner for daily miles\n2. Acme Trail Climber for trails');
-    await importCatalog(db, scope, {
-      content: [header, road, trail].join('\n'),
-      filename: 'catalog-2.csv',
-      content_type: 'text/csv',
-    });
+    await importCatalog(db, scope, [header, road, trail].join('\n'));
     const matching = await db
       .selectFrom('analytics_tasks')
       .select('id')

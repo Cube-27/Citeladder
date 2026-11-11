@@ -21,6 +21,8 @@ export const commerceCategoryRoleSchema = z.enum(['hub', 'leaf', 'unknown']);
 export const commerceCategorySchema = z.strictObject({
   id: uuid,
   name: z.string(),
+  /** The category one level up; null at the top of the tree. */
+  parent_id: uuid.nullable(),
   product_count: z.number().int(),
 });
 export const commerceProductSchema = z.strictObject({
@@ -49,6 +51,7 @@ export const commerceCatalogSchema = z.strictObject({
   categories: z.array(commerceCategorySchema),
   projection: commerceProjectionSchema,
 });
+/** An applied import's results; `row_outcomes` lists rejected rows first, each with its reason. */
 export const catalogImportSchema = z.strictObject({
   import_id: uuid,
   created: z.number().int(),
@@ -64,6 +67,37 @@ export const catalogImportSchema = z.strictObject({
       detail: z.string(),
     }),
   ),
+});
+export const catalogImportFormatSchema = z.enum(['csv', 'merchant_center', 'shopify']);
+/** One category of a staged import's proposed tree, by its category key. */
+export const catalogCategoryProposalSchema = z.strictObject({
+  key: z.string(),
+  name: z.string(),
+  /** The key one level up; null at the top. */
+  parent_key: z.string().nullable(),
+  depth: z.number().int(),
+  /** Products of this import the category would hold. */
+  product_count: z.number().int(),
+  /** Whether the catalog already has a category by this name. */
+  existing: z.boolean(),
+});
+/**
+ * A staged catalog import: what it would write, shown for review before the
+ * products go live. `result` is set once it was applied (the same content
+ * imported again returns the earlier import).
+ */
+export const catalogImportStageSchema = z.strictObject({
+  import_id: uuid,
+  source_format: catalogImportFormatSchema,
+  /** The file name, or the Shopify store host. */
+  source_label: z.string(),
+  /** Products the import would add or update. */
+  products: z.number().int(),
+  /** Rows that cannot be imported, before any matching. */
+  rejected: z.number().int(),
+  /** The proposed category tree, depth-first by name. */
+  categories: z.array(catalogCategoryProposalSchema),
+  result: catalogImportSchema.nullable(),
 });
 export const competitorCandidateSchema = z.strictObject({
   id: uuid,
@@ -259,8 +293,8 @@ export const commerceProductDetailSchema = z.strictObject({
     /** The catalog description; empty for a competitor or when the catalog has none. */
     description: z.string(),
     /**
-     * The image an edit set, else that of its latest shopping card in an
-     * answer; null when neither has one.
+     * The catalog image (imported or edited), else that of its latest
+     * shopping card in an answer; null when neither has one.
      */
     image_url: z.string().nullable(),
     /** The editable catalog record of an owned product; null for a competitor. */
@@ -272,7 +306,7 @@ export const commerceProductDetailSchema = z.strictObject({
         sku: z.string(),
         gtin: z.string(),
         mpn: z.string(),
-        /** The image an edit set; empty when none was. */
+        /** The catalog image an import or edit set; empty when none did. */
         image_url: z.string(),
         /** Its category names, by name. */
         categories: z.array(z.string()),
@@ -352,6 +386,8 @@ export type CommerceCatalog = z.infer<typeof commerceCatalogSchema>;
 export type CommerceProduct = z.infer<typeof commerceProductSchema>;
 export type CommerceProjection = z.infer<typeof commerceProjectionSchema>;
 export type CatalogImport = z.infer<typeof catalogImportSchema>;
+export type CatalogImportStage = z.infer<typeof catalogImportStageSchema>;
+export type CatalogCategoryProposal = z.infer<typeof catalogCategoryProposalSchema>;
 export type CompetitorCandidate = z.infer<typeof competitorCandidateSchema>;
 export type CompetitorDiscoveryTask = z.infer<typeof competitorDiscoveryTaskSchema>;
 export type BuyerPrompt = z.infer<typeof buyerPromptSchema>;

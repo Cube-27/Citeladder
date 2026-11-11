@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type {
   BuyerPrompt,
   CatalogImport,
+  CatalogImportStage,
   CommerceCatalog,
   CommerceProductDetail,
   CompetitorCandidate,
@@ -71,16 +72,29 @@ async function call<T>(
   return { status: response.status, body: (await response.json()) as T };
 }
 const csv =
-  'canonical_url,name,price,sku,category\nhttps://shop.example/products/one,"One, large",19.25,A1,Tools\n';
-const importCsv = (content = csv) =>
-  call<CatalogImport>('/catalog/import', { method: 'POST', body: { content } });
+  'link,title,brand,price,sku,category\nhttps://shop.example/products/one,"One, large",Acme,19.25,A1,Tools\n';
+const stageCsv = (content = csv) =>
+  call<CatalogImportStage>('/catalog/imports', {
+    method: 'POST',
+    body: { source: 'csv', content, filename: 'catalog.csv' },
+  });
+/** Stage the CSV and apply it with every proposed category. */
+const importCsv = async (content = csv) => {
+  const staged = await stageCsv(content);
+  expect(staged.status).toBe(201);
+  return call<CatalogImport>(`/catalog/imports/${staged.body.import_id}/apply`, {
+    method: 'POST',
+    body: { excluded_categories: [] },
+  });
+};
 
 describe('Commerce workspace boundaries', () => {
   const routes = [
     ['/catalog', 'GET', undefined],
     ['/catalog/projection', 'GET', undefined],
     ['/products?source=all', 'GET', undefined],
-    ['/catalog/import', 'POST', { content: csv }],
+    ['/catalog/imports', 'POST', { source: 'csv', content: csv, filename: 'catalog.csv' }],
+    [`/catalog/imports/${randomUUID()}/apply`, 'POST', { excluded_categories: [] }],
     ['/competitors', 'GET', undefined],
     ['/competitors/discoveries', 'GET', undefined],
     ['/competitors/discover', 'POST', { targets: [{ kind: 'product', id: randomUUID() }] }],
@@ -231,8 +245,13 @@ describe('CSV evidence and catalog', () => {
   });
   it('serializes simultaneous imports, keeps raw evidence, and publishes shared-contract values', async () => {
     const [one, two] = await Promise.all([importCsv(), importCsv()]);
-    expect(one.status).toBe(201);
+    expect(one.status).toBe(200);
     expect(two).toEqual(one);
+    // Staging the same content again returns the applied import and its results.
+    expect((await stageCsv()).body).toMatchObject({
+      import_id: one.body.import_id,
+      result: { import_id: one.body.import_id, created: 1 },
+    });
     const catalog = await call<CommerceCatalog>('/catalog');
     // The list is navigation: names and memberships, never the row's evidence.
     expect(catalog.body).toEqual({
@@ -241,12 +260,14 @@ describe('CSV evidence and catalog', () => {
           id: one.body.row_outcomes[0]!.product_id,
           canonical_url: 'https://shop.example/products/one',
           name: 'One, large',
-          brand: '',
+          brand: 'Acme',
           category_ids: [catalog.body.categories[0]!.id],
         },
       ],
       product_total: 1,
-      categories: [{ id: catalog.body.categories[0]!.id, name: 'Tools', product_count: 1 }],
+      categories: [
+        { id: catalog.body.categories[0]!.id, name: 'Tools', parent_id: null, product_count: 1 },
+      ],
       // No brand profile confirms a business model yet.
       projection: { applicability: 'unknown', in_flight: 0, failed: 0 },
     });
@@ -294,7 +315,7 @@ describe('CSV evidence and catalog', () => {
         payload: { catalog_revision_id: revisions[0]!.id },
       },
     ]);
-    const update = await importCsv('sku,name\nA1,Updated\n');
+    const update = await importCsv('sku,title,brand\nA1,Updated,Acme\n');
     expect(update.body.updated).toBe(1);
     const stored = await db
       .selectFrom('commerce_products')
@@ -309,7 +330,7 @@ describe('CSV evidence and catalog', () => {
   });
   it('bounds the listed products by name while counting every product and membership', async () => {
     await importCsv(
-      'canonical_url,name,sku,category\nhttps://shop.example/c,Cedar,C1,Wood\nhttps://shop.example/a,Ash,A1,Wood\nhttps://shop.example/b,Birch,B1,Wood\n',
+      'link,title,brand,sku,category\nhttps://shop.example/c,Cedar,Acme,C1,Wood\nhttps://shop.example/a,Ash,Acme,A1,Wood\nhttps://shop.example/b,Birch,Acme,B1,Wood\n',
     );
     const limit = policy.commerce.catalog_product_limit;
     policy.commerce.catalog_product_limit = 2;
@@ -342,15 +363,26 @@ describe('CSV evidence and catalog', () => {
     const otherWorkspace = await fixtures.joinedWorkspace(t.userId);
     expect((await call('/catalog/projection', { workspace: otherWorkspace })).status).toBe(404);
   });
-  it('records invalid rows, rejects identity conflicts atomically, and orders categories by membership', async () => {
+  it('rejects invalid and conflicting rows with their reasons first, and orders categories by membership', async () => {
     const result = await importCsv(
-      'canonical_url,name,sku,price,category\nhttps://shop.example/a,A,A1,4,Small\nhttps://shop.example/b,B,B1,5,Large\nhttps://shop.example/c,C,C1,6,Large\nhttps://shop.example/d,Bad,D1,NaN,Large\n',
+      'link,title,brand,sku,price,category\nhttps://shop.example/a,A,Acme,A1,4,Small\nhttps://shop.example/b,B,Acme,B1,5,Large\nhttps://shop.example/c,C,Acme,C1,6,Large\nhttps://shop.example/d,Bad,Acme,D1,NaN,Large\n',
     );
     expect(result.body).toMatchObject({ created: 3, rejected: 1 });
+    expect(result.body.row_outcomes[0]).toEqual({
+      row_number: 5,
+      status: 'rejected',
+      product_id: null,
+      error_code: 'invalid_row',
+      detail: 'Price "NaN" is not a number with an optional currency code',
+    });
     const conflict = await importCsv(
-      'canonical_url,sku,name\nhttps://shop.example/a,B1,Conflict\n',
+      'link,sku,title,brand\nhttps://shop.example/a,B1,Conflict,Acme\n',
     );
-    expect(conflict.status).toBe(409);
+    expect(conflict.body).toMatchObject({
+      created: 0,
+      rejected: 1,
+      row_outcomes: [{ row_number: 2, status: 'rejected', error_code: 'identity_conflict' }],
+    });
     expect(
       (await call<CommerceCatalog>('/catalog')).body.categories.map((row) => [
         row.name,
@@ -366,17 +398,31 @@ describe('CSV evidence and catalog', () => {
         .select('id')
         .where('project_id', '=', t.projectId)
         .execute(),
-    ).toHaveLength(1);
+    ).toHaveLength(2);
   });
   it('bounds bytes and rows and rejects malformed CSV and corrupt persisted JSON', async () => {
-    for (const content of ['', 'name,name\na,b\n', 'name;sku\na;b\n', 'name\n"unterminated'])
-      expect((await importCsv(content)).status).toBe(422);
+    for (const content of [
+      '',
+      'title,title,brand\na,b,c\n',
+      'title;brand\na;b\n',
+      'title,brand\n"unterminated',
+    ])
+      expect((await stageCsv(content)).status).toBe(422);
     expect(
-      (await importCsv('name\n' + 'é'.repeat(policy.commerce.import_max_bytes / 2))).status,
+      (await stageCsv('title,brand\n' + 'é'.repeat(policy.commerce.import_max_bytes / 2))).status,
     ).toBe(422);
     expect(
-      (await importCsv('name\n' + 'a\n'.repeat(policy.commerce.import_max_rows + 1))).status,
+      (await stageCsv('title,brand\n' + 'a,b\n'.repeat(policy.commerce.import_max_rows + 1)))
+        .status,
     ).toBe(422);
+    // A refused file stores nothing.
+    expect(
+      await db
+        .selectFrom('commerce_csv_imports')
+        .select('id')
+        .where('project_id', '=', t.projectId)
+        .execute(),
+    ).toEqual([]);
     const imported = await importCsv();
     await db
       .updateTable('commerce_products')

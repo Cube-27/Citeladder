@@ -7,7 +7,7 @@ import {
   manualBuyerPrompt,
 } from '../src/commerce/buyer-prompts.ts';
 import { budget, spendBudget } from '../src/abuse/usage.ts';
-import { importCatalog } from '../src/commerce/import.ts';
+import { importCatalog } from './commerce-support.ts';
 import { createModelGateway, gatewaySettings } from '../src/models/gateway.ts';
 import { reviewCandidates } from '../src/prompts/candidates.ts';
 import { billingAccount, candidate, generationRun, grant } from './prompt-fixtures.ts';
@@ -22,12 +22,11 @@ let scope: { workspaceId: string; projectId: string },
 beforeEach(async () => {
   scope = await fixtures.tenant();
   account = await billingAccount(db, scope.workspaceId);
-  await importCatalog(db, scope, {
-    content:
-      'canonical_url,name,description\nhttps://shop.test/shoes,Trail master,Running shoes for wet trails\n',
-    filename: 'catalog.csv',
-    content_type: 'text/csv',
-  });
+  await importCatalog(
+    db,
+    scope,
+    'link,title,description,brand\nhttps://shop.test/shoes,Trail master,Running shoes for wet trails,Acme\n',
+  );
   const product = await db
     .selectFrom('commerce_products')
     .select('id')
@@ -158,11 +157,11 @@ it('generates target-bound prompts and fails atomically on unusable or foreign t
 });
 
 it("keeps each target's usable prompts and binds category prompts through the category's own name", async () => {
-  await importCatalog(db, scope, {
-    content: 'canonical_url,name,category\nhttps://shop.test/shell,Storm shell,Rain jackets\n',
-    filename: 'jackets.csv',
-    content_type: 'text/csv',
-  });
+  await importCatalog(
+    db,
+    scope,
+    'link,title,category,brand\nhttps://shop.test/shell,Storm shell,Rain jackets,Acme\n',
+  );
   const category = await db
     .selectFrom('commerce_categories')
     .select('id')
@@ -226,11 +225,11 @@ describe('category matrix and hero products', () => {
   type Row = { text: string; context?: string; stage?: string; branded?: boolean };
   const cell = (text: string, context: string, stage: string): Row => ({ text, context, stage });
   async function jacketCategory() {
-    await importCatalog(db, scope, {
-      content: 'canonical_url,name,category\nhttps://shop.test/shell,Storm shell,Rain jackets\n',
-      filename: 'jackets.csv',
-      content_type: 'text/csv',
-    });
+    await importCatalog(
+      db,
+      scope,
+      'link,title,category,brand\nhttps://shop.test/shell,Storm shell,Rain jackets,Acme\n',
+    );
     const category = await db
       .selectFrom('commerce_categories')
       .select('id')
