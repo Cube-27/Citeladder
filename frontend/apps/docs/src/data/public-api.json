@@ -50,9 +50,28 @@
             }
           },
           "opportunity_snapshot_id": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resolved_before_snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "target_site_url_ids": {
             "type": "array",
@@ -114,6 +133,7 @@
           "output_revision_id",
           "member_opportunity_ids",
           "opportunity_snapshot_id",
+          "resolved_before_snapshot_id",
           "target_site_url_ids",
           "target_external_url",
           "declared_implemented_at",
@@ -233,6 +253,11 @@
             "type": "string"
           },
           "member_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "declarable_member_count": {
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
@@ -814,6 +839,7 @@
           "group",
           "skill_id",
           "member_count",
+          "declarable_member_count",
           "handoff",
           "evidence_cleared_at",
           "created_at",
@@ -962,6 +988,11 @@
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
           },
+          "declarable_member_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
           "handoff": {
             "$ref": "#/components/schemas/ActionHandoff"
           },
@@ -991,6 +1022,7 @@
           "group",
           "skill_id",
           "member_count",
+          "declarable_member_count",
           "handoff",
           "evidence_cleared_at",
           "created_at",

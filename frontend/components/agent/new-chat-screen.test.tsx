@@ -86,6 +86,7 @@ function actionItem(id: string, label: string) {
     group: 'own_pages',
     skill_id: 'gsc_optimize',
     member_count: 1,
+    declarable_member_count: 1,
     handoff: { context: 'action', message: `Work on ${label}.` },
     evidence_cleared_at: null,
     created_at: '2026-09-25T10:00:00Z',

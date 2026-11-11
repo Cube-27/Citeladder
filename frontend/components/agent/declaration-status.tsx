@@ -39,6 +39,40 @@ const LEG_OWNER: Record<MeasurementLeg['leg'], { href: string; label: string } |
 };
 
 /**
+ * What the declaration measures. Findings a refresh resolved before go-live
+ * are not credited to the change, which is distinct from findings no check
+ * applies to.
+ */
+function Measurement({ declaration }: Readonly<{ declaration: ActionDeclaration }>) {
+  if (declaration.resolved_before_snapshot_id)
+    return (
+      <p className={textRole('body')}>
+        These findings were already resolved before this went live, so the outcome is not credited
+        to this change and nothing is measured.
+      </p>
+    );
+  if (declaration.checks.length === 0)
+    return (
+      <p className={textRole('body')}>
+        No automatic check applies to these findings, so CiteLadder records the work but cannot
+        verify it.
+      </p>
+    );
+  return (
+    <>
+      <p className={textRole('body')} aria-live="polite">
+        {IMPLEMENTATION_STATE_LABEL[declaration.state]}
+      </p>
+      <Stack as="ul" gap="compact" aria-label="Checks">
+        {declaration.checks.map((check) => (
+          <CheckRow key={check.index} check={check} />
+        ))}
+      </Stack>
+    </>
+  );
+}
+
+/**
  * A declared Action: when it went live, each check's latest reading, what the
  * next readings wait for, and what the readings can and cannot show.
  */
@@ -73,23 +107,7 @@ export function DeclarationStatus({
       <h3 ref={heading} tabIndex={-1} className={textRole('itemTitle', 'focus-ring w-fit')}>
         Measurement
       </h3>
-      {declaration.checks.length === 0 ? (
-        <p className={textRole('body')}>
-          No automatic check applies to these findings, so CiteLadder records the work but cannot
-          verify it.
-        </p>
-      ) : (
-        <>
-          <p className={textRole('body')} aria-live="polite">
-            {IMPLEMENTATION_STATE_LABEL[declaration.state]}
-          </p>
-          <Stack as="ul" gap="compact" aria-label="Checks">
-            {declaration.checks.map((check) => (
-              <CheckRow key={check.index} check={check} />
-            ))}
-          </Stack>
-        </>
-      )}
+      <Measurement declaration={declaration} />
       {declaration.legs.length > 0 ? (
         <Stack as="ul" gap="compact" aria-label="Next readings">
           {declaration.legs.map((leg) => (

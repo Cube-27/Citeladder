@@ -31,6 +31,7 @@ const action = {
   group: 'own_pages',
   skill_id: 'gsc_optimize',
   member_count: 1,
+  declarable_member_count: 1,
   handoff: { context: 'action', message: 'Work on https://acme.test/pricing.' },
   evidence_cleared_at: null,
   created_at: NOW,

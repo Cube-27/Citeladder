@@ -583,6 +583,7 @@ describe('ChatScreen', () => {
               group: 'fix_site',
               skill_id: 'technical_health',
               member_count: 1,
+              declarable_member_count: 1,
               handoff: { context: 'action', message: 'Work on Pricing page.' },
               evidence_cleared_at: null,
               created_at: NOW,
