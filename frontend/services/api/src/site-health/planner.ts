@@ -33,7 +33,7 @@ import { recordCrawlEvent } from './site-task.ts';
 import type { Crawl } from './site-task.ts';
 import { classifyUrlAdmission, type Scope } from './url-admission.ts';
 import { canonicalIdentity } from './url-identity.ts';
-import { hasDevelopmentWorkspace } from '../auth/development-access.ts';
+import { hasOperatorControls } from '../entitlements/access.ts';
 
 export async function admissionRuntime(db: Database, workspaceId: string) {
   const accountId = (await billingAccountId(db, workspaceId)) ?? null;
@@ -280,15 +280,8 @@ function refreshProfile(
     .executeTakeFirstOrThrow();
 }
 
-/** Caller owns the transaction: workspace -> project -> capacity/account -> runtime -> profile. */
+/** Caller owns the transaction: project -> capacity/account -> runtime -> profile. */
 export async function createCrawl(db: Database, workspaceId: string, request: CreateCrawlRequest) {
-  if (crawlSetting('advanced_controls_enabled') !== true)
-    await db
-      .selectFrom('workspaces')
-      .select('id')
-      .where('id', '=', workspaceId)
-      .forShare()
-      .executeTakeFirst();
   const project = await db
     .selectFrom('projects')
     .select('website_url')
@@ -313,7 +306,9 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
   };
   if (!classifyUrlAdmission(root, scope).accepted)
     crawlError('crawl root is not admissible', 'invalid_root');
-  const selected = controls(request, await hasDevelopmentWorkspace(db, workspaceId));
+  const runtime = await admissionRuntime(db, workspaceId);
+  // Read under the account lock, so a concurrent grant or revocation serializes with admission.
+  const selected = controls(request, await hasOperatorControls(db, workspaceId));
   const seeds = [
     ...new Set(
       selected.seeds.map((url) => {
@@ -324,7 +319,6 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
       }),
     ),
   ];
-  const runtime = await admissionRuntime(db, workspaceId);
   const now = new Date();
   const requested =
     runtime.discovery_url_cap == null

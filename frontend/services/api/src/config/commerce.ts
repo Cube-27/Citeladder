@@ -121,6 +121,18 @@ export const commerce = {
     product_limit: 12,
     term_limit: 8,
   },
+  /**
+   * Catalog matching in every answer (CM1). A new catalog revision re-matches
+   * the successful answers of the last `backfill_days`, `batch_size` answers
+   * per transaction. Crawl projection's revision requests coalesce: one
+   * revision `projection_delay_seconds` after the first projected page that
+   * finds none queued, so a long crawl records at most one per interval.
+   */
+  answer_matching: {
+    backfill_days: 30,
+    batch_size: 25,
+    projection_delay_seconds: 120,
+  },
   /** Products the catalog read lists, first by name; the rail is one unpaged list. */
   catalog_product_limit: 5000,
   import_max_bytes: 2000000,

@@ -55,6 +55,15 @@ const PROJECT_ROW = {
   updated_at: '2026-01-01T00:00:00Z',
 };
 
+/** What the workspace's list carries for the project. */
+const PROJECT_SUMMARY = {
+  id: PROJECT,
+  name: 'Acme',
+  brand_name: 'Acme',
+  website_url: 'https://acme.example',
+  brand: { logo_url: null },
+};
+
 function entitlement(remainingProjectSlots: number) {
   return {
     workspace_id: WORKSPACE,
@@ -165,7 +174,7 @@ describe('bootstrapPrivateRoutes', () => {
   );
 
   it('leaves a failed access read to the gate rather than failing the route', async () => {
-    stub({ projects: [PROJECT_ROW] });
+    stub({ projects: [PROJECT_SUMMARY] });
     mswServer.use(
       http.get(`/api/v1/workspaces/${WORKSPACE}/access`, () =>
         HttpResponse.json({ error: { message: 'Access unavailable' } }, { status: 403 }),
@@ -235,12 +244,12 @@ describe('bootstrapPrivateRoutes', () => {
   });
 
   it('puts the resolved project in the address instead of rewriting it a frame later', async () => {
-    stub({ projects: [PROJECT_ROW] });
+    stub({ projects: [PROJECT_SUMMARY] });
     expect(await run('/projects')).toBe(`/projects?project=${PROJECT}`);
   });
 
   it('leaves an address that already names its project alone', async () => {
-    stub({ projects: [PROJECT_ROW] });
+    stub({ projects: [PROJECT_SUMMARY] });
     mswServer.use(http.get(`/api/v1/projects/${PROJECT}`, () => HttpResponse.json(PROJECT_ROW)));
     expect(await run(`/projects?project=${PROJECT}`)).toBeNull();
   });
@@ -332,7 +341,7 @@ describe('bootstrapPrivateRoutes', () => {
     });
 
     it('lands the redirected address on its project in the same document', async () => {
-      stub({ projects: [PROJECT_ROW] });
+      stub({ projects: [PROJECT_SUMMARY] });
       expect(await run('/workspaces')).toBe(`/projects?workspace=${WORKSPACE}`);
       expect(await run(`/projects?workspace=${WORKSPACE}`)).toBe(`/projects?project=${PROJECT}`);
     });
@@ -352,42 +361,39 @@ describe('bootstrapPrivateRoutes', () => {
     const projectReads = (paths: string[]) =>
       paths.filter((path) => path === '/api/v1/projects' || path === `/api/v1/projects/${PROJECT}`);
 
-    it('resolves the project from the remembered workspace list it needs anyway', async () => {
-      window.localStorage.setItem(ACTIVE_WORKSPACE_STORAGE_KEY, WORKSPACE);
-      stub({ projects: [PROJECT_ROW] });
-      mswServer.use(http.get(`/api/v1/projects/${PROJECT}`, () => HttpResponse.json(PROJECT_ROW)));
-      const requests = recordRequests();
+    it.each([
+      ['lists it', [PROJECT_SUMMARY]],
+      ['does not list it yet', []],
+    ])(
+      'reads the project’s view once beside the list when the remembered workspace %s',
+      async (_case, listed) => {
+        window.localStorage.setItem(ACTIVE_WORKSPACE_STORAGE_KEY, WORKSPACE);
+        stub({ projects: listed });
+        mswServer.use(
+          http.get(`/api/v1/projects/${PROJECT}`, () => HttpResponse.json(PROJECT_ROW)),
+        );
+        const requests = recordRequests();
 
-      expect(await run(`/settings?project=${PROJECT}`)).toBeNull();
-      requests.stop();
+        expect(await run(`/settings?project=${PROJECT}`)).toBeNull();
+        requests.stop();
 
-      expect(projectReads(requests.paths)).toEqual(['/api/v1/projects']);
-    });
-
-    it('asks for the project itself when the remembered workspace does not list it', async () => {
-      window.localStorage.setItem(ACTIVE_WORKSPACE_STORAGE_KEY, WORKSPACE);
-      stub({ projects: [] });
-      mswServer.use(http.get(`/api/v1/projects/${PROJECT}`, () => HttpResponse.json(PROJECT_ROW)));
-      const requests = recordRequests();
-
-      expect(await run(`/settings?project=${PROJECT}`)).toBeNull();
-      requests.stop();
-
-      expect(projectReads(requests.paths)).toEqual([
-        '/api/v1/projects',
-        `/api/v1/projects/${PROJECT}`,
-      ]);
-    });
+        expect(projectReads(requests.paths).sort()).toEqual([
+          '/api/v1/projects',
+          `/api/v1/projects/${PROJECT}`,
+        ]);
+      },
+    );
 
     it('starts the landing screen’s reads while the access gate is still answering', async () => {
       window.localStorage.setItem(ACTIVE_WORKSPACE_STORAGE_KEY, WORKSPACE);
-      stub({ projects: [PROJECT_ROW] });
+      stub({ projects: [PROJECT_SUMMARY] });
       let answer!: (response: HttpResponse<DefaultBodyType>) => void;
       const access = new Promise<HttpResponse<DefaultBodyType>>((resolve) => {
         answer = resolve;
       });
       mswServer.use(
         http.get(`/api/v1/workspaces/${WORKSPACE}/access`, () => access),
+        http.get(`/api/v1/projects/${PROJECT}`, () => HttpResponse.json(PROJECT_ROW)),
         // What the screen reads answer is not this test's concern.
         http.get(`/api/v1/projects/${PROJECT}/*`, () =>
           HttpResponse.json({ error: { message: 'not here' } }, { status: 404 }),
@@ -423,10 +429,11 @@ describe('bootstrapPrivateRoutes', () => {
 
     it('asks for the gates, the shell’s reads and the screen’s in the same round as the session', async () => {
       window.localStorage.setItem(ACTIVE_WORKSPACE_STORAGE_KEY, WORKSPACE);
-      stub({ projects: [PROJECT_ROW] });
+      stub({ projects: [PROJECT_SUMMARY] });
       const me = deferred();
       const memberships = deferred();
       mswServer.use(
+        http.get(`/api/v1/projects/${PROJECT}`, () => HttpResponse.json(PROJECT_ROW)),
         http.get('/api/v1/auth/me', () => me.response),
         http.get('/api/v1/workspaces', () => memberships.response),
         http.get(`/api/v1/projects/${PROJECT}/*`, () =>
@@ -439,6 +446,7 @@ describe('bootstrapPrivateRoutes', () => {
       const pending = run(`/site?project=${PROJECT}`);
       const firstRound = [
         '/api/v1/projects',
+        `/api/v1/projects/${PROJECT}`,
         `/api/v1/workspaces/${WORKSPACE}/access`,
         `/api/v1/workspaces/${WORKSPACE}/entitlements`,
         `/api/v1/workspaces/${WORKSPACE}/policies`,
@@ -483,7 +491,7 @@ describe('bootstrapPrivateRoutes', () => {
         ),
         http.get('/api/v1/projects', ({ request }) =>
           HttpResponse.json(
-            request.headers.get('x-workspace-id') === WORKSPACE ? [PROJECT_ROW] : [],
+            request.headers.get('x-workspace-id') === WORKSPACE ? [PROJECT_SUMMARY] : [],
           ),
         ),
         http.get(`/api/v1/projects/${PROJECT}`, () => HttpResponse.json(PROJECT_ROW)),
@@ -516,7 +524,8 @@ describe('bootstrapPrivateRoutes', () => {
   it('keeps a stored workspace that the membership list still contains', async () => {
     window.localStorage.setItem(ACTIVE_WORKSPACE_STORAGE_KEY, WORKSPACE);
     window.localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, PROJECT);
-    stub({ projects: [PROJECT_ROW] });
+    stub({ projects: [PROJECT_SUMMARY] });
+    mswServer.use(http.get(`/api/v1/projects/${PROJECT}`, () => HttpResponse.json(PROJECT_ROW)));
     expect(await run('/projects')).toBe(`/projects?project=${PROJECT}`);
   });
 });

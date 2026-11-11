@@ -89,6 +89,7 @@ describe('a fresh database', () => {
       '0020_page_suggestions',
       '0021_commerce_carousel',
       '0022_suggestion_rule_guidance',
+      '0023_commerce_match_passes',
     ]);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
@@ -116,6 +117,7 @@ describe('a fresh database', () => {
       { version: '0020_page_suggestions' },
       { version: '0021_commerce_carousel' },
       { version: '0022_suggestion_rule_guidance' },
+      { version: '0023_commerce_match_passes' },
     ]);
 
     // A CRLF checkout is the same file.
@@ -167,6 +169,7 @@ describe('an existing database', () => {
       '0020_page_suggestions',
       '0021_commerce_carousel',
       '0022_suggestion_rule_guidance',
+      '0023_commerce_match_passes',
     ]);
     // A URL identity keeps no per-sighting discovery status.
     expect(await columns(client, 'site_urls')).not.toContain('discovery_status');
@@ -250,6 +253,7 @@ describe('an existing database', () => {
       { version: '0020_page_suggestions' },
       { version: '0021_commerce_carousel' },
       { version: '0022_suggestion_rule_guidance' },
+      { version: '0023_commerce_match_passes' },
     ]);
   }, 120000);
 });
@@ -282,6 +286,57 @@ describe('a chat with a document before multi-document chats', () => {
     await expect(insert(third!, 2)).rejects.toThrow(/uq_agent_output_chat_number/u);
     expect(await columns(client, 'agent_messages')).toContain('web_sources');
     expect(await columns(client, 'agent_model_attempts')).toContain('web_search_requests');
+  }, 120000);
+});
+
+describe('shelf observations recorded before match passes', () => {
+  it('each answer gets one live pass its observations reference, and answers become untargetable', async () => {
+    const { client } = await freshDatabase();
+    clients.push(client);
+    const before = migrations.findIndex((file) => file.version === '0023_commerce_match_passes');
+    await applyMigrations(client, migrations.slice(0, before));
+    const [workspace, project, audit, task, artifact, target] = Array.from({ length: 6 }, () =>
+      randomUUID(),
+    );
+    // Only the observation rows matter here; the referenced rows are not built.
+    await client.query('SET session_replication_role = replica');
+    const observe = (id: string) =>
+      client.query(
+        `insert into public.commerce_recommendation_observations (id, workspace_id, project_id, audit_id, task_id, artifact_id, target_kind, target_id, observed_product, observed_brand, classification, observed_title, observed_currency, merchant_url, merchant_domain, surface_kind, order_observable, match_confidence, parser_version, matcher_version, model_version, created_at)
+         values ($1, $2, $3, $4, $5, $6, 'category', $7, 'Shoe', 'Acme', 'owned', 'Shoe', '', '', '', 'recommendation', false, 1, 'p1', 'm1', '', now())`,
+        [id, workspace, project, audit, task, artifact, target],
+      );
+    await observe(randomUUID());
+    await observe(randomUUID());
+
+    expect(await applyMigrations(client, migrations.slice(0, before + 1))).toEqual([
+      '0023_commerce_match_passes',
+    ]);
+    const passes = await client.query(
+      'select id, artifact_id, catalog_revision_id, target_kind, mode from public.commerce_match_passes',
+    );
+    expect(passes.rows).toEqual([
+      {
+        id: expect.any(String),
+        artifact_id: artifact,
+        catalog_revision_id: null,
+        target_kind: 'category',
+        mode: 'live',
+      },
+    ]);
+    const linked = await client.query(
+      'select distinct pass_id from public.commerce_recommendation_observations',
+    );
+    expect(linked.rows).toEqual([{ pass_id: passes.rows[0].id }]);
+    // An answer no buyer prompt targets keeps no target, but never half of one.
+    await client.query(
+      'update public.commerce_recommendation_observations set target_kind = null, target_id = null',
+    );
+    await expect(
+      client.query(
+        "update public.commerce_recommendation_observations set target_kind = 'product'",
+      ),
+    ).rejects.toThrow(/ck_commerce_observation_target/u);
   }, 120000);
 });
 

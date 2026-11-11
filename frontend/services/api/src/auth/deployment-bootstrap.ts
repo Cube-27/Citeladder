@@ -24,14 +24,15 @@ export async function bootstrapDeployment(
   if (config.demo.enabled) assertDeployable(config, true);
   const setting = (key: keyof typeof policy.settings) =>
     resolveSettingSpec(policy.settings[key], env);
-  const password = String(setting('dev_login_password'));
-  if (
-    !config.demo.enabled &&
-    policy.development_env_names.includes(config.appEnv.trim().toLowerCase()) &&
-    !password
-  )
-    return { skipped: true };
   const email = z.email().parse(String(setting('dev_login_email')).trim().toLowerCase());
+  if (!config.demo.enabled) {
+    // Production has no development login (BL9): the operator's identity already
+    // exists, so only the idempotent catalog runs, and only once that operator does.
+    if (!policy.development_env_names.includes(config.appEnv.trim().toLowerCase()))
+      return { skipped: true, catalog: await operatorCatalog(db, env, email, catalog) };
+    if (!String(setting('dev_login_password'))) return { skipped: true, catalog: false };
+  }
+  const password = String(setting('dev_login_password'));
   passwordSchema.parse(password);
   if (config.demo.enabled && !config.demo.expiresAt) throw new Error('demo_expiry_required');
   const encoded = await hashPassword(password);
@@ -121,11 +122,37 @@ export async function bootstrapDeployment(
     }
   });
   // Commit identity first. A catalog failure fails rollout and remains safely retryable.
-  if (!config.demo.enabled) {
-    const adapter = razorpaySettings(env);
-    const mode =
-      billingSettings(env).provider === 'razorpay' && configured(adapter) ? adapter.mode : null;
-    await catalog(db, email, mode);
-  }
-  return { skipped: false };
+  if (!config.demo.enabled) await initialize(db, env, email, catalog);
+  return { skipped: false, catalog: !config.demo.enabled };
+}
+
+async function initialize(
+  db: Database,
+  env: Record<string, string | undefined>,
+  email: string,
+  catalog: typeof initializeCatalog,
+) {
+  const adapter = razorpaySettings(env);
+  const mode =
+    billingSettings(env).provider === 'razorpay' && configured(adapter) ? adapter.mode : null;
+  await catalog(db, email, mode);
+}
+
+/** A fresh production database waits for the operator before its catalog. */
+async function operatorCatalog(
+  db: Database,
+  env: Record<string, string | undefined>,
+  email: string,
+  catalog: typeof initializeCatalog,
+) {
+  const operator = await db
+    .selectFrom('users')
+    .select('id')
+    .where('email', '=', email)
+    .where('role', '=', 'admin')
+    .where('is_active', '=', true)
+    .executeTakeFirst();
+  if (!operator) return false;
+  await initialize(db, env, email, catalog);
+  return true;
 }

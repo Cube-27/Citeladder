@@ -151,6 +151,7 @@ function mockRoutes(
 ) {
   mswServer.use(
     http.get('/api/v1/projects', () => HttpResponse.json([project])),
+    http.get(`/api/v1/projects/${PROJECT}`, () => HttpResponse.json(project)),
     http.get('/api/v1/audits', () => HttpResponse.json([])),
     http.post('/api/v1/projects/:id/logos/refresh', () => HttpResponse.json(project)),
     http.post('/api/v1/site-crawls/:id/run', ({ params }) =>

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { ConfigError, loadConfig } from '../src/config.ts';
-import { productionEnv } from './production-config.ts';
+import { demoLoginPassword, productionEnv } from './production-config.ts';
+
+const demoEnv = {
+  ...productionEnv,
+  DEMO_MODE: 'true',
+  DEMO_EXPIRES_AT: '2099-01-01T00:00:00Z',
+  DEV_LOGIN_PASSWORD: demoLoginPassword,
+};
 
 describe('production startup admission', () => {
   it.each([
@@ -23,12 +30,23 @@ describe('production startup admission', () => {
       'true',
       'dev_test_login_allow_platform_credentials',
     ],
-    ['DEV_LOGIN_PASSWORD', 'password', 'login password'],
-    ['DEV_LOGIN_PASSWORD', 'a'.repeat(20), 'login password'],
-    ['DEV_LOGIN_PASSWORD', 'xY12'.repeat(33), 'login password'],
-    ['DEV_LOGIN_PASSWORD', productionEnv.ENCRYPTION_KEY, 'independent'],
+    ['DEV_LOGIN_PASSWORD', demoLoginPassword, 'DEV_LOGIN_PASSWORD must be unset'],
   ])('refuses unsafe %s configuration', (name, value, reason) => {
     expect(() => loadConfig({ ...productionEnv, [name]: value })).toThrow(reason);
+  });
+
+  it.each([
+    ['password', 'login password'],
+    ['a'.repeat(20), 'login password'],
+    ['xY12'.repeat(33), 'login password'],
+    [productionEnv.ENCRYPTION_KEY, 'independent'],
+  ])('refuses the unsafe demo login password %s', (DEV_LOGIN_PASSWORD, reason) => {
+    expect(() => loadConfig({ ...demoEnv, DEV_LOGIN_PASSWORD })).toThrow(reason);
+  });
+
+  it('starts production without a development login and demo mode with its password', () => {
+    expect(loadConfig(productionEnv).demo.enabled).toBe(false);
+    expect(loadConfig(demoEnv).demo.enabled).toBe(true);
   });
 
   it.each([
@@ -72,13 +90,10 @@ describe('production startup admission', () => {
 
   it('requires a timezone-aware demo deadline at startup', () => {
     for (const DEMO_EXPIRES_AT of ['', '2099-01-01T00:00:00'])
-      expect(() => loadConfig({ ...productionEnv, DEMO_MODE: 'true', DEMO_EXPIRES_AT })).toThrow(
-        'demo_expires_at',
-      );
-    expect(
-      loadConfig({ ...productionEnv, DEMO_MODE: 'true', DEMO_EXPIRES_AT: '2000-01-01T00:00:00Z' })
-        .demo.enabled,
-    ).toBe(true);
+      expect(() => loadConfig({ ...demoEnv, DEMO_EXPIRES_AT })).toThrow('demo_expires_at');
+    expect(loadConfig({ ...demoEnv, DEMO_EXPIRES_AT: '2000-01-01T00:00:00Z' }).demo.enabled).toBe(
+      true,
+    );
   });
 
   it('reports violations without disclosing credentials or the database URL', () => {

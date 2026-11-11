@@ -50,17 +50,3 @@ export function workspaceOwner(db: Database, workspaceId: string) {
     .where('workspace_members.workspace_id', '=', workspaceId)
     .executeTakeFirstOrThrow();
 }
-
-/**
- * Whether the active platform admin with `email` owns a tenant workspace
- * (`workspaceId`, when named).
- */
-export async function adminOwnsWorkspace(db: Database, email: string, workspaceId?: string) {
-  let owned = ownerships(db)
-    .select('workspaces.id')
-    .where('users.email', '=', email)
-    .where('users.role', '=', 'admin')
-    .where('users.is_active', '=', true);
-  if (workspaceId !== undefined) owned = owned.where('workspaces.id', '=', workspaceId);
-  return (await owned.executeTakeFirst()) !== undefined;
-}

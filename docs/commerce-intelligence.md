@@ -131,10 +131,51 @@ the same freeze, execution, observation and snapshot path. After a launch the
 section follows the run's event stream and refreshes AI Shelf and Actions when
 it finishes. Typed text belongs to one target and resets on switch.
 
+## Catalog matching in every answer
+
+Products are matched in every successful answer, brand and Commerce runs alike
+(CM1), for a project whose plan grants `commerce` and whose catalog or approved
+competitor list is non-empty; any other project records nothing extra.
+
+A **catalog revision** (`commerce_catalog_revisions`) is an immutable, numbered
+copy of the project's matching identity: active products with their category
+memberships, and approved competitors with their targets. It records what
+created it (`import`, `projection`, `competitor_decision` or `audit`) and is
+written only when that identity's hash changed. CSV imports and competitor
+decisions record one in their own transaction; crawl projection, which writes
+one page per task, asks through a coalesced request that keeps the earliest
+deadline, so a long crawl records at most one revision per
+`projection_delay_seconds` (120); every audit admission, of
+any scope, records one when the catalog changed since the last and freezes it
+as `configuration.commerce_catalog`.
+
+A **match pass** (`commerce_match_passes`) is one derivation of observations
+from one stored answer under one revision and one parser/matcher version pair,
+unique on those four, so a repeated derivation is a no-op. Every observation
+references its pass. `live` passes are written with the answer; a buyer
+prompt's answer is matched against its target's frozen products and approved
+competitors (the AI Shelf below, resolver included), and any other answer
+against the whole frozen revision. An answer no buyer prompt targets has no
+`target_*`, keeps only the spans that name a catalog product or approved
+competitor plus every organic carousel card, never calls the resolver and
+creates no AI-observed competitor.
+
+Each new revision queues one `commerce_answer_matching` analytics task. It
+re-matches the successful answers of the last `backfill_days` (30) that have
+no pass for that revision, `batch_size` answers per transaction, as `backfill`
+passes. Backfill is deterministic only: token and URL matching and carousel
+cards, never the model resolver, so a span that would need it reads
+`unavailable`. A revision a newer one superseded stops before its next batch,
+since the newer revision's task covers the same answers. Leases, retries and cancellation stay
+with the shared analytics worker. Raw answers are never rewritten: reads use
+the latest pass per answer (highest revision, then newest) and keep older
+passes as history. Policy lives in `answer_matching` in `config/commerce.ts`.
+
 ## AI Shelf
 
 Successful Commerce executions create append-only recommendation observations
-linked to the raw response artifact and any persisted Citations. Answers split
+linked to the raw response artifact, their match pass and any persisted
+Citations. Answers split
 into list items (ordered items carry a one-based rank) or, without a list,
 prose sentences (unranked). Deterministic matching reads the catalog and
 approved competitors frozen into the audit: names and identifiers match whole
@@ -184,6 +225,10 @@ The persisted, formula-versioned snapshot per target and audit exposes:
 - First-Position Win Rate: ordered executions whose first slot is owned divided
   by ordered executions.
 
+A snapshot reads each answer's latest match pass, so a backfill that lands
+before an audit finalizes is the pass it counts; a persisted snapshot keeps the
+exact observation IDs it was computed from.
+
 A slot is one product or competitor per execution, at its best rank, so an
 answer naming a product three times recommends it once. In an execution with a
 carousel, a card's rank wins over a text-list rank: the carousel orders the
@@ -224,7 +269,10 @@ enqueues for catalog page kinds. Project and target IDs are re-authorized; an
 object ID alone is never a catalog boundary.
 
 [Audit context](../frontend/services/api/src/commerce/audit-context.ts) freezes
-target identity before shared audit execution;
+target identity and the catalog revision before shared audit execution;
+[catalog revisions](../frontend/services/api/src/commerce/catalog-revisions.ts)
+own revision recording and [answer matching](../frontend/services/api/src/commerce/answer-matching.ts)
+the backfill;
 [shelf parsing](../frontend/services/api/src/commerce/shelf-parsing.ts) owns
 matching and resolution, and [shelf metrics](../frontend/services/api/src/commerce/shelf-metrics.ts)
 the formulas. No browser aggregate or current-catalog lookup may reinterpret an
