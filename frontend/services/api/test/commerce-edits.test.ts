@@ -9,6 +9,7 @@ import type {
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { createApp } from '../src/app.ts';
+import { productRow } from '../src/opportunities/product-metric-rules.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
@@ -207,11 +208,23 @@ describe('archive and restore', () => {
       body: { targets: [{ kind: 'product', id: ash }] },
     });
     expect(discover.status).toBe(404);
+    // Nor do the commerce Actions read it as a catalog product.
+    const actionRow = async () =>
+      (
+        await productRow(
+          db,
+          { workspaceId: t.workspaceId, projectId: t.projectId },
+          { windowDays: 30, engine: null, promptSet: null },
+          ash!,
+        )
+      )?.row.name;
+    expect(await actionRow()).toBeUndefined();
 
     expect((await lifecycle(ash!, 'active')).status).toBe(200);
     expect(await listed('catalog')).toEqual(['Ash', 'Birch']);
     expect(await listed('archived')).toEqual([]);
     expect(await matched()).toEqual(['edit', ['Ash', 'Birch']]);
+    expect(await actionRow()).toBe('Ash');
     const id = ash!;
     const kinds = await db
       .selectFrom('commerce_product_observations')
