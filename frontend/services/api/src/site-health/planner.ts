@@ -33,7 +33,7 @@ import { recordCrawlEvent } from './site-task.ts';
 import type { Crawl } from './site-task.ts';
 import { classifyUrlAdmission, type Scope } from './url-admission.ts';
 import { canonicalIdentity } from './url-identity.ts';
-import { hasDevelopmentWorkspace } from '../auth/development-access.ts';
+import { hasOperatorControls } from '../entitlements/access.ts';
 
 export async function admissionRuntime(db: Database, workspaceId: string) {
   const accountId = (await billingAccountId(db, workspaceId)) ?? null;
@@ -313,7 +313,7 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
   };
   if (!classifyUrlAdmission(root, scope).accepted)
     crawlError('crawl root is not admissible', 'invalid_root');
-  const selected = controls(request, await hasDevelopmentWorkspace(db, workspaceId));
+  const selected = controls(request, await hasOperatorControls(db, workspaceId));
   const seeds = [
     ...new Set(
       selected.seeds.map((url) => {

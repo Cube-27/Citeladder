@@ -292,8 +292,7 @@ received on, or carrying lines from, the refreshed days. Dates older than
 only observations, preserving receipts and projections. Rollups keep bounded
 source batch IDs and the canonical queryless URL for joinable identities.
 Retention and abandoned-upload cleanup continue when ingestion is disabled;
-IP-range provider refresh is gated by ingestion enablement, including the
-configured development workspace exception.
+IP-range provider refresh is gated by ingestion enablement.
 
 ## Read APIs, MCP and configuration
 

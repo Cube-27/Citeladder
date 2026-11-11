@@ -317,11 +317,17 @@ Never acquire project/domain locks after billing locks or hold a transaction
 across network I/O.
 
 The configured development operator (default `dev@citeladder.com`) receives all
-issuable capabilities and highest feature levels through development bootstrap.
-Its owned workspace also bypasses the Crawl Logs and advanced Site Health rollout
-switches through `auth/development-access.ts`. This requires the configured
-development password and active admin identity. It does not confer access to other
-workspaces or replace provider credentials, payment consent or execution bounds.
+issuable capabilities and highest feature levels through development bootstrap,
+except the explicit operator grants `billing_checkout` and `operator_controls`.
+Development bootstrap runs only in local development and demo mode; production
+carries no development login (BL9).
+
+The non-public `operator_controls` grant (BL9) gives its workspace advanced Site
+Health crawl controls and page limit and unmetered crawl fetches. The operator
+issues it to their own workspace with `billing:admin grant` after deployment
+([operator guide](operations/billing-operator-guide.md#operator-controls)). It
+does not confer access to other workspaces or replace provider credentials,
+payment consent or execution bounds.
 
 ## Read and UI surfaces
 

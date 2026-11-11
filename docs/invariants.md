@@ -258,7 +258,7 @@ through the same idempotent activation owner. A workspace's own provider keys
 (BYOK) consume no platform credits and never silently fall back to platform
 keys. Every platform model call spends AI credits at the serving model's
 configured token price and is refused without one (B12, B14, B35); the sole
-exception is the provisioned development login's unmetered `development` Agent
+exception is the local development login's unmetered `development` Agent
 funding, which still records every model attempt. The
 [billing decision log](billing-decisions.md) records each rule's owner decision.
 

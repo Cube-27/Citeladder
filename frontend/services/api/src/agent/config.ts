@@ -13,7 +13,11 @@ export function agentSettings(env: SettingSource = process.env) {
     leaseSeconds: Number(setting('lease_seconds')),
     leaseMarginSeconds: Number(setting('lease_margin_seconds')),
     devEmail: String(resolveSettingSpec(policy.settings.dev_login_email, env)).trim().toLowerCase(),
-    devPasswordConfigured: Boolean(resolveSettingSpec(policy.settings.dev_login_password, env)),
+    /** The development login exists only in a development environment (BL9). */
+    devPasswordConfigured:
+      policy.development_env_names.includes(
+        String(resolveSettingSpec(policy.settings.app_env, env)).trim().toLowerCase(),
+      ) && Boolean(resolveSettingSpec(policy.settings.dev_login_password, env)),
     activeLimit: Number(resolveSettingSpec(policy.abuse.active_agent_runs_per_workspace, env)),
     dailyRuns: budget('agent_runs', env),
     retryAfterSeconds: Number(resolveSettingSpec(policy.abuse.active_job_retry_after_seconds, env)),

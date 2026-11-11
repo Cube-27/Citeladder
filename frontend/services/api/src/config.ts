@@ -369,6 +369,12 @@ function productionSecretProblems(config: ServiceConfig): string[] {
   if (values.includes(password))
     issues.push('database password must be independent of application secrets');
   const login = String(resolveSetting('dev_login_password', config.settings));
+  // Production carries no development login (BL9); only demo mode's single
+  // provisioned account still signs in with it.
+  if (!config.demo.enabled)
+    return login
+      ? [...issues, 'DEV_LOGIN_PASSWORD must be unset outside development and demo mode']
+      : issues;
   const rules = policy.secret_policy.login_password;
   const length = [...login].length;
   if (

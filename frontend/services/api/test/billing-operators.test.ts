@@ -297,6 +297,11 @@ it('concurrent baseline repair freezes cohort and development top-ups stay in on
   expect(resolved.status === 'resolved' && resolved.values.get('monitored_urls')).toBe(
     Number(baselineLimit) + 150,
   );
+  // Full development access carries every flag except the explicit operator grants.
+  const flag = (key: string) => (resolved.status === 'resolved' && resolved.values.get(key)) || 0;
+  expect([flag('crawl_logs'), flag('operator_controls'), flag('billing_checkout')]).toEqual([
+    1, 0, 0,
+  ]);
   expect(
     (
       await db

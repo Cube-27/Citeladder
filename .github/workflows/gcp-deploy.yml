@@ -281,15 +281,21 @@ jobs:
           db_password_uri="$(jq -rn --arg value "$db_password" '$value | @uri')"
           sync_value citeladder-database-url \
             "postgresql://citeladder:${db_password_uri}@10.28.0.10:5432/citeladder"
-          if [ "${#DEMO_LOGIN_PASSWORD}" -lt 8 ] || [ "${#DEMO_LOGIN_PASSWORD}" -gt 128 ]; then
-            echo '::error::DEMO_LOGIN_PASSWORD must hold 8 to 128 characters.'
-            exit 1
+          # Only demo mode's single account signs in with a configured password;
+          # production carries none, so its versions are disabled (BL9).
+          if [ "$DEMO_MODE" = true ]; then
+            if [ "${#DEMO_LOGIN_PASSWORD}" -lt 8 ] || [ "${#DEMO_LOGIN_PASSWORD}" -gt 128 ]; then
+              echo '::error::DEMO_LOGIN_PASSWORD must hold 8 to 128 characters in demo mode.'
+              exit 1
+            fi
+            sync_optional_value citeladder-demo-password "$DEMO_LOGIN_PASSWORD"
+          else
+            sync_optional_value citeladder-demo-password ""
           fi
           if [ "${#CITELADDER_ORIGIN_TOKEN}" -lt 32 ]; then
             echo '::error::CITELADDER_ORIGIN_TOKEN must hold at least 32 characters.'
             exit 1
           fi
-          sync_value citeladder-demo-password "$DEMO_LOGIN_PASSWORD"
           sync_value citeladder-worker-origin-token "$CITELADDER_ORIGIN_TOKEN"
           # Without it, sign-up and email-link requests answer 503 (fail closed).
           sync_value citeladder-turnstile-secret "$TURNSTILE_SECRET_KEY"

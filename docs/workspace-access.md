@@ -376,13 +376,13 @@ entry point (its historical filename is retained). Run it from the repository ro
 ```
 
 It uses the active `gcloud` login to verify the database instance against the
-database secret, authenticate SSH, open a loopback IAP tunnel, and load the
-configured development operator password into process memory. It restores the
+database secret, authenticate SSH and open a loopback IAP tunnel; production
+keeps no operator password secret (BL9), so the manager prompts for the
+operator's password without echo. It restores the
 calling shell's environment and closes only its own tunnel on exit. A first
 connection may ask gcloud's SSH host-key trust question. With a tunnel already
-open, use `-UseExistingTunnel -LocalPort 15432`. Project, instance, zone, secret
-names and actor can be selected explicitly; a custom actor is prompted for a
-password without echo. No password is passed on argv or saved to disk.
+open, use `-UseExistingTunnel -LocalPort 15432`. Project, instance, zone,
+database secret name and actor can be selected explicitly. No password is passed on argv or saved to disk.
 
 The platform menu lists identities/workspaces, creates batches of customer
 accounts with owned workspaces or immediate assignable memberships in an

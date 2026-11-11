@@ -36,7 +36,7 @@ Browser ─► Cloudflare Workers (marketing citeladder.com, app app.citeladder.
          Cloud Run us-central1: citeladder-api (min 0, max 2)
               │ commits work, then starts ─► job citeladder-runner (drain, exit)
               │ Cloud Scheduler every 20 min ─► API POST /internal/tick (OIDC)
-              │ deploy only ─► job citeladder-migrate (SQL baseline + dev bootstrap, API image)
+              │ deploy only ─► job citeladder-migrate (SQL baseline + catalog bootstrap, API image)
               │ operator only ─► job citeladder-billing (billing CLIs, API image)
               ▼ Direct VPC egress (private IP 10.28.0.10)
          e2-micro VM citeladder-db (free tier, COS, no public IP): PostgreSQL 16 only
@@ -103,8 +103,8 @@ owner as required reviewer.
 | `APP_DOMAIN_NAME` | optional | `app.citeladder.com` (default) |
 | `DEMO_MODE` | optional | `false` (default); `true` restores the single-account demo |
 | `DEMO_EXPIRES_AT` | optional | RFC 3339; required only when `DEMO_MODE=true` |
-| `DEMO_LOGIN_EMAIL` | optional | defaults to `dev@citeladder.com` |
-| `DEV_LOGIN_COUNTER_ALLOWANCE` | optional | defaults to `200` |
+| `DEMO_LOGIN_EMAIL` | optional | defaults to `dev@citeladder.com`; outside demo mode, the platform admin whose existence lets the migrate job initialize the catalog |
+| `DEV_LOGIN_COUNTER_ALLOWANCE` | optional | defaults to `200`; demo and local development only |
 | `OAUTH_GOOGLE_ENABLED` | **new**, optional | `false` (default); `true` turns on Google sign-in |
 | `PUBLIC_SIGNUP_ENABLED` | **new**, optional | `false` (default); `true` opens self-serve sign-up |
 | `TICK_SCHEDULE` | **new**, optional | cron in UTC; default `*/10 * * * *` |
@@ -142,7 +142,7 @@ leaves checkout closed. The deploy refuses a name ending in `SECRET`,
 
 | Secret | Action | Notes |
 |---|---|---|
-| `DEMO_LOGIN_PASSWORD` | keep, required | 8–128 characters; password of `DEMO_LOGIN_EMAIL` |
+| `DEMO_LOGIN_PASSWORD` | demo mode only | 8–128 characters; password of `DEMO_LOGIN_EMAIL` in demo mode. Outside demo mode the deploy disables the `citeladder-demo-password` versions and production carries no development login (BL9); the operator signs in with their own account password |
 | `CITELADDER_ORIGIN_TOKEN` | keep, required | at least 32 characters; must equal the Workers' `ORIGIN_TOKEN` |
 | `CITELADDER_ORIGIN_TOKEN_PREVIOUS` | optional | only during a token rotation |
 | `TURNSTILE_SECRET_KEY` | **new**, required | secret of the Turnstile widget whose site key is the `APP_TURNSTILE_SITE_KEY` repository variable; API only (`citeladder-turnstile-secret`). Without it sign-up and email-link requests answer 503 |
@@ -210,7 +210,8 @@ curl.exe --fail https://app.citeladder.com/api/v1/auth/oauth/providers
 curl.exe --fail https://api.citeladder.com/.well-known/oauth-authorization-server
 ```
 
-Sign in as `DEMO_LOGIN_EMAIL`, create a project, start a Site Health crawl
+Sign in as `DEMO_LOGIN_EMAIL` (outside demo mode, with that account's own
+password), create a project, start a Site Health crawl
 and confirm it progresses (a runner execution appears under Cloud Run →
 Jobs → `citeladder-runner`). A week after an infrastructure change, check
 Billing → Reports grouped by SKU and remove anything unexpectedly non-zero.
@@ -307,6 +308,17 @@ gcloud run jobs execute citeladder-billing --region us-central1 --wait `
 
 `revoke` takes `--grant-id` and `--effective-from` the same way, and
 `account-inspect` reads the account's grants first.
+
+Grant the operator's own workspace its controls (BL9: advanced Site Health crawl
+controls and page limit, unmetered crawl fetches). Production carries no
+development login, so this explicit grant is the only way the operator's
+workspace gets them; do it once after the first deploy that ships it (dry run,
+then add `--apply`):
+
+```powershell
+gcloud run jobs execute citeladder-billing --region us-central1 --wait `
+  '--args=src/cli/billing-admin.ts,grant,--workspace-id,<operator-workspace-uuid>,--account-id,<billing-account-uuid>,--key,operator_controls,--value,1,--valid-from,<now-rfc3339>,--actor,<admin-email>,--reason,operator-controls,--idempotency-key,grant:operator-controls:<operator-workspace-uuid>'
+```
 
 Bind Razorpay plan IDs to a revision, store the result as a draft and publish
 it. The job's `BILLING_RAZORPAY_MODE` must equal `--environment`. The refs JSON

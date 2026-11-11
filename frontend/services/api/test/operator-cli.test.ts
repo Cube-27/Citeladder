@@ -134,7 +134,7 @@ it('native local configuration preserves dotenv precedence and disable admission
 }, 90000);
 
 it.each([false, true])(
-  'production wrapper keeps secrets off argv and restores the environment after child failure=%s',
+  'production wrapper reads no operator password, keeps secrets off argv and restores the environment after child failure=%s',
   async (failure) => {
     const psQuote = (value: string) => "'" + value.replaceAll("'", "''") + "'";
     const script = `
@@ -145,12 +145,11 @@ function gcloud {
   $global:LASTEXITCODE = 0
   if ($args -contains 'describe') { return '{"networkInterfaces":[{"networkIP":"10.28.0.10"}]}' }
   if ($args -contains '--secret=citeladder-database-url') { return 'postgresql://fixture-user:fixture-database-password@10.28.0.10:5432/fixture' }
-  if ($args -contains '--secret=citeladder-demo-password') { return 'fixture-private-operator' }
   throw 'Unexpected GCP operation'
 }
 function node {
-  if ($args -contains 'fixture-private-operator' -or $args -notcontains '--platform') { throw 'Unsafe arguments' }
-  if ($env:ACCOUNT_MANAGER_OPERATOR_PASSWORD -ne 'fixture-private-operator') { throw 'Missing operator secret' }
+  if ($args -contains 'fixture-database-password' -or $args -notcontains '--platform') { throw 'Unsafe arguments' }
+  if ($env:ACCOUNT_MANAGER_OPERATOR_PASSWORD) { throw 'Inherited operator password reached the manager' }
   if (([Uri]$env:DATABASE_URL).Host -ne '127.0.0.1') { throw 'Missing tunnel target' }
   $global:LASTEXITCODE = ${failure ? '1' : '0'}
 }
@@ -164,7 +163,7 @@ Write-Output 'environment-restored'
       timeout: 30000,
     });
     expect(result.stdout).toContain('environment-restored');
-    expect(result.stdout + result.stderr).not.toContain('fixture-private-operator');
+    expect(result.stdout + result.stderr).not.toContain('fixture-database-password');
     if (failure) expect(result.stdout).toContain('expected-child-failure');
   },
   // A cold PowerShell start alone can exceed the default 5 s on CI runners.

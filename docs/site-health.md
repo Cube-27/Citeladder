@@ -41,8 +41,8 @@ profile, and allows one active crawl per project. In order, it:
    it also selects the root.
 
 Input modes other than `auto`, seeds and page-kind filters are advanced
-controls (`advanced_controls_enabled`, or the development operator's
-workspace). A page rerun (`selection.ts`) creates a one-page crawl from a
+controls (`advanced_controls_enabled`, or a workspace holding the
+`operator_controls` grant, which also crawls unmetered). A page rerun (`selection.ts`) creates a one-page crawl from a
 terminal crawl, or the next task generation of an active one (cancelling the
 page's older generation if it is still open, and counted by its latest). Its
 configuration carries `page_rerun`; it hands its page to verification and
