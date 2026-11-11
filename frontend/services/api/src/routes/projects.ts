@@ -1,4 +1,4 @@
-import { projectSchema } from '@citeladder/contracts/project';
+import { projectSchema, projectSummarySchema } from '@citeladder/contracts/project';
 import { commandCenterSchema } from '@citeladder/contracts/opportunities';
 import { projectMarketCreateSchema, projectMarketSchema } from '@citeladder/contracts/markets';
 import { z } from 'zod';
@@ -9,7 +9,7 @@ import { projectCreate, projectUpdate } from '../projects/inputs.ts';
 import {
   createProject,
   readProject,
-  listProjects,
+  listProjectSummaries,
   updateProject,
   deleteProject,
 } from '../projects/service.ts';
@@ -29,8 +29,8 @@ export const projectRoutes = [
     family,
     path: root,
     params: { path: {}, query: {} },
-    response: z.array(projectSchema),
-    handle: ({ c, db }) => listProjects(db, c.get('entitlements')),
+    response: z.array(projectSummarySchema),
+    handle: ({ c, db }) => listProjectSummaries(db, c.get('workspace').workspaceId),
   }),
   definePostRoute({
     family,

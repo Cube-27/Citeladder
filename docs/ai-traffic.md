@@ -168,7 +168,7 @@ subscription (`projects/<p>/subscriptions/<s>`, validated) that a Cloud Logging
 sink fills with load balancer and Cloud Run request entries. It holds no token.
 Every pull source is read as one reader service account, `citeladder-log-reader`
 (`CRAWL_LOG_READER_EMAIL`; empty hides the connector as `pull_unavailable`),
-which the runtime service account impersonates through IAM Credentials
+which the API and job service accounts impersonate through IAM Credentials
 ([`gcp-client.ts`](../frontend/services/api/src/crawl-logs/gcp-client.ts): plain
 `fetch`, metadata token → 900 s Pub/Sub token cached until 60 s before expiry;
 a failed mint is `unavailable`, never the customer's fault). Because that

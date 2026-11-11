@@ -1,53 +1,38 @@
 'use client';
-import { Fragment } from 'react';
+import type { KeyboardEvent } from 'react';
 import { Download, Folder } from 'lucide-react';
 import { crawlerResourceClassSchema } from '@citeladder/contracts/site-health';
-import type { useTrafficData } from '@/lib/ai-traffic/use-traffic-data';
+import { trafficStatusCode, type useTrafficData } from '@/lib/ai-traffic/use-traffic-data';
 import { words } from '@/lib/ai-traffic/vocabulary';
 import { TRAFFIC_RANGES, VERIFICATION_OPTIONS } from '@/lib/config/crawl-logs';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { FilterField, FilterTrigger } from '@/components/ui/filter-bar';
-import {
-  Menu,
-  MenuContent,
-  MenuItem,
-  MenuLabel,
-  MenuRadioGroup,
-  MenuRadioItem,
-  MenuSeparator,
-  MenuTrigger,
-} from '@/components/ui/menu';
+import { AllFilters, choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
+import { FilterField } from '@/components/ui/filter-bar';
+import { MenuItem } from '@/components/ui/menu';
 import { Icon } from '@/components/ui/icon';
 type ControlProps = Readonly<{ model: ReturnType<typeof useTrafficData> }>;
 type TrafficControlsProps = ControlProps & Readonly<{ crawlAvailable: boolean }>;
 /** Narrow screens give every field the band's full width instead of a ragged wrap. */
 const FIELD = 'w-full desktop:w-auto';
 /**
- * The control band: the range, one Filter menu holding every picked narrowing
- * (verification, resource class, crawler purpose, bot, an insight's filter),
- * then the typed fields and the Pages sort. Every tab draws the same short
- * row, so switching tabs never wraps the band or moves the content below it
- * (2026-11-03 app review); export is a route action in the identity band.
+ * The control band: the reporting range, alone. Every other narrowing lives in
+ * the All filters menu at the right of the tabs row (`TrafficAllFilters`), so
+ * every tab draws the same short row at any width and switching tabs never
+ * wraps the band or moves the content below it. Export is a route action in
+ * the identity band.
  */
-export function TrafficControls({ model, crawlAvailable }: TrafficControlsProps) {
-  const { tab } = model;
+export function TrafficControls({ model }: ControlProps) {
   const { range, setRange } = model.selection;
   return (
-    <>
-      <Select
-        ariaLabel="Reporting range"
-        value={range}
-        onValueChange={setRange}
-        options={TRAFFIC_RANGES}
-        className={FIELD}
-      />
-      <TrafficFilterMenu model={model} crawlAvailable={crawlAvailable} />
-      {tab === 'overview' ? null : <FolderField model={model} />}
-      {tab === 'activity' ? <StatusField model={model} /> : null}
-      {tab === 'pages' ? <PagesSort model={model} /> : null}
-    </>
+    <Select
+      ariaLabel="Reporting range"
+      value={range}
+      onValueChange={setRange}
+      options={TRAFFIC_RANGES}
+      className={FIELD}
+    />
   );
 }
 
@@ -65,163 +50,209 @@ export function TrafficExport({ model }: ControlProps) {
   );
 }
 
-type MenuGroup = Readonly<{
-  key: string;
-  label: string;
-  value: string;
-  options: readonly { value: string; label: string }[];
-  onChange: (value: string) => void;
-  /** Moved off its unfiltered value. */
-  active: boolean;
-}>;
-
-function menuGroups({ model, crawlAvailable }: TrafficControlsProps): MenuGroup[] {
-  const { tab, selection } = model;
-  const groups: MenuGroup[] = [];
-  // Verification filters crawler requests only.
-  if (crawlAvailable)
-    groups.push({
-      key: 'verification',
-      label: 'Verification',
-      value: selection.verification,
-      options: VERIFICATION_OPTIONS,
-      onChange: (value) => {
-        const next = VERIFICATION_OPTIONS.find((option) => option.value === value);
-        if (next) selection.setVerification(next.value);
-      },
-      active: selection.verification !== 'default',
-    });
-  if (tab === 'crawlers')
-    groups.push({
-      key: 'purpose',
-      label: 'Crawler purpose',
-      value: selection.purpose ?? '',
-      options: [
-        { value: '', label: 'All purposes' },
-        ...[...new Set(model.catalog.data?.bots.map((b) => b.purpose) ?? [])].map((value) => ({
-          value,
-          label: words(value),
-        })),
-      ],
-      onChange: (value) => selection.setPurpose(value || null),
-      active: Boolean(selection.purpose),
-    });
-  if (tab === 'activity')
-    groups.push({
-      key: 'bot',
-      label: 'Bot',
-      value: selection.bot ?? '',
-      options: [
-        { value: '', label: 'All bots' },
-        ...(model.catalog.data?.bots.map((b) => ({ value: b.bot_id, label: b.label })) ?? []),
-      ],
-      onChange: (value) => selection.setBot(value || null),
-      active: Boolean(selection.bot),
-    });
-  if (tab !== 'overview')
-    groups.push({
-      key: 'resource',
-      label: 'Resource class',
-      value: selection.resource ?? '',
-      options: [
-        { value: '', label: 'All resources' },
-        ...crawlerResourceClassSchema.options.map((value) => ({ value, label: words(value) })),
-      ],
-      onChange: (value) => selection.setResource(value || null),
-      active: Boolean(selection.resource),
-    });
-  return groups;
+/**
+ * Every narrowing the tab offers behind one button at the tabs row's far
+ * right: verification, resource class, crawler purpose, bot, the typed folder
+ * and status code, and an insight's filter.
+ */
+export function TrafficAllFilters(props: TrafficControlsProps) {
+  return <AllFilters filters={trafficFilters(props)} align="end" />;
 }
 
-function TrafficFilterMenu(props: TrafficControlsProps) {
-  const groups = menuGroups(props);
-  const { pattern, setPattern } = props.model.selection;
-  const insight = props.model.tab === 'pages' && Boolean(pattern);
-  if (groups.length === 0 && !insight) return null;
-  const count = groups.filter((group) => group.active).length + (insight ? 1 : 0);
-  return (
-    <Menu>
-      <MenuTrigger asChild>
-        <FilterTrigger label="Filter" count={count} />
-      </MenuTrigger>
-      <MenuContent align="start">
-        {groups.map((group, index) => (
-          <Fragment key={group.key}>
-            {index > 0 ? <MenuSeparator /> : null}
-            <MenuLabel>{group.label}</MenuLabel>
-            <MenuRadioGroup value={group.value}>
-              {group.options.map((option) => (
-                <MenuRadioItem
-                  key={option.value || 'all'}
-                  value={option.value}
-                  onSelect={() => group.onChange(option.value)}
-                >
-                  {option.label}
-                </MenuRadioItem>
-              ))}
-            </MenuRadioGroup>
-          </Fragment>
-        ))}
-        {insight ? (
-          <>
-            {groups.length ? <MenuSeparator /> : null}
-            <MenuItem onSelect={() => setPattern(null)}>Clear insight filter</MenuItem>
-          </>
-        ) : null}
-      </MenuContent>
-    </Menu>
-  );
+/** One filter of All filters, or none where the tab does not offer it. */
+type FilterBuilder = (props: TrafficControlsProps) => FilterDefinition | null;
+
+/** In menu order. */
+const FILTER_BUILDERS: readonly FilterBuilder[] = [
+  verificationFilter,
+  purposeFilter,
+  botFilter,
+  resourceFilter,
+  folderFilter,
+  statusFilter,
+  insightFilter,
+];
+
+function trafficFilters(props: TrafficControlsProps): FilterDefinition[] {
+  return FILTER_BUILDERS.flatMap((build) => build(props) ?? []);
+}
+
+/** A choice filter whose unset value is `null` in the URL and "All …" in the menu. */
+function optionalChoice({
+  id,
+  label,
+  allLabel,
+  value,
+  options,
+  onChange,
+}: Readonly<{
+  id: string;
+  label: string;
+  allLabel: string;
+  value: string | null;
+  options: readonly { value: string; label: string }[];
+  onChange: (value: string | null) => void;
+}>): FilterDefinition {
+  return choiceFilter({
+    id,
+    label,
+    value: value ?? '',
+    defaultValue: '',
+    groups: [{ options: [{ value: '', label: allLabel }, ...options] }],
+    onChange: (picked) => onChange(picked || null),
+  });
+}
+
+// Verification filters crawler requests only.
+function verificationFilter({ model, crawlAvailable }: TrafficControlsProps) {
+  if (!crawlAvailable) return null;
+  return choiceFilter({
+    id: 'verification',
+    label: 'Verification',
+    value: model.selection.verification,
+    defaultValue: 'default',
+    groups: [{ options: VERIFICATION_OPTIONS }],
+    onChange: model.selection.setVerification,
+  });
+}
+
+function purposeFilter({ model }: TrafficControlsProps) {
+  if (model.tab !== 'crawlers') return null;
+  const purposes = new Set(model.catalog.data?.bots.map((bot) => bot.purpose));
+  return optionalChoice({
+    id: 'purpose',
+    label: 'Crawler purpose',
+    allLabel: 'All purposes',
+    value: model.selection.purpose,
+    options: [...purposes].map((value) => ({ value, label: words(value) })),
+    onChange: model.selection.setPurpose,
+  });
+}
+
+function botFilter({ model }: TrafficControlsProps) {
+  if (model.tab !== 'activity') return null;
+  return optionalChoice({
+    id: 'bot',
+    label: 'Bot',
+    allLabel: 'All bots',
+    value: model.selection.bot,
+    options: model.catalog.data?.bots.map((bot) => ({ value: bot.bot_id, label: bot.label })) ?? [],
+    onChange: model.selection.setBot,
+  });
+}
+
+function resourceFilter({ model }: TrafficControlsProps) {
+  if (model.tab === 'overview') return null;
+  return optionalChoice({
+    id: 'resource',
+    label: 'Resource class',
+    allLabel: 'All resources',
+    value: model.selection.resource,
+    options: crawlerResourceClassSchema.options.map((value) => ({ value, label: words(value) })),
+    onChange: model.selection.setResource,
+  });
+}
+
+function folderFilter({ model }: TrafficControlsProps): FilterDefinition | null {
+  if (model.tab === 'overview') return null;
+  const { folder } = model.selection;
+  return {
+    kind: 'custom',
+    id: 'folder',
+    label: 'Folder',
+    valueLabel: folder || 'Any folder',
+    isDefault: !folder,
+    content: <FolderField model={model} />,
+  };
+}
+
+function statusFilter({ model }: TrafficControlsProps): FilterDefinition | null {
+  if (model.tab !== 'activity') return null;
+  // A partly typed code ("40") narrows nothing yet, so it is neither shown nor counted.
+  const code = trafficStatusCode(model.selection.status);
+  return {
+    kind: 'custom',
+    id: 'status',
+    label: 'Status code',
+    valueLabel: code === undefined ? 'Any status' : String(code),
+    isDefault: code === undefined,
+    content: <StatusField model={model} />,
+  };
+}
+
+function insightFilter({ model }: TrafficControlsProps): FilterDefinition | null {
+  const { pattern, setPattern } = model.selection;
+  if (model.tab !== 'pages' || !pattern) return null;
+  return {
+    kind: 'custom',
+    id: 'insight',
+    label: 'Insight',
+    valueLabel: 'Filtered',
+    isDefault: false,
+    content: <MenuItem onSelect={() => setPattern(null)}>Clear insight filter</MenuItem>,
+  };
+}
+
+/**
+ * A typed field inside a menu: its keys edit the text, so they stop before the
+ * menu, which would otherwise jump to an item by letter. Escape and Tab pass
+ * through, and so does Left from an empty field, which returns to the list.
+ */
+function fieldKeys(event: KeyboardEvent<HTMLInputElement>) {
+  if (event.key === 'Escape' || event.key === 'Tab') return;
+  if (event.key === 'ArrowLeft' && event.currentTarget.value === '') return;
+  event.stopPropagation();
 }
 
 function FolderField({ model }: ControlProps) {
   const { folder, setFolder } = model.selection;
   return (
-    <FilterField>
-      <Input
-        aria-label="Folder"
-        placeholder="Folder"
-        value={folder ?? ''}
-        onChange={(e) => setFolder(e.target.value || null)}
-        startContent={<Icon icon={Folder} />}
-      />
-    </FilterField>
+    <Input
+      aria-label="Folder"
+      placeholder="Folder"
+      value={folder ?? ''}
+      onChange={(e) => setFolder(e.target.value || null)}
+      onKeyDown={fieldKeys}
+      startContent={<Icon icon={Folder} />}
+    />
   );
 }
 
-function PagesSort({ model }: ControlProps) {
+/** Pages' sort, in the table's toolbar beside the rows it orders, at the one filter width. */
+export function PagesSort({ model }: ControlProps) {
   const { sort, setSort } = model.selection;
   return (
-    <Select
-      ariaLabel="Sort pages"
-      value={sort}
-      onValueChange={setSort}
-      options={[
-        { value: 'requests_desc', label: 'Requests' },
-        { value: 'sessions_desc', label: 'AI referral sessions' },
-        { value: 'key_events_desc', label: 'Key events' },
-        { value: 'citations_desc', label: 'Tracked citations' },
-        { value: 'url_asc', label: 'URL' },
-      ]}
-      className={FIELD}
-    />
+    <FilterField>
+      <Select
+        ariaLabel="Sort pages"
+        value={sort}
+        onValueChange={setSort}
+        options={[
+          { value: 'requests_desc', label: 'Requests' },
+          { value: 'sessions_desc', label: 'AI referral sessions' },
+          { value: 'key_events_desc', label: 'Key events' },
+          { value: 'citations_desc', label: 'Tracked citations' },
+          { value: 'url_asc', label: 'URL' },
+        ]}
+      />
+    </FilterField>
   );
 }
 
 function StatusField({ model }: ControlProps) {
   const { status, setStatus } = model.selection;
   return (
-    <FilterField>
-      <Input
-        aria-label="Response status"
-        placeholder="Status code"
-        type="number"
-        inputMode="numeric"
-        min={100}
-        max={599}
-        step={1}
-        value={status ?? ''}
-        onChange={(e) => setStatus(e.target.value || null)}
-      />
-    </FilterField>
+    <Input
+      aria-label="Response status"
+      placeholder="Status code"
+      type="number"
+      inputMode="numeric"
+      min={100}
+      max={599}
+      step={1}
+      value={status ?? ''}
+      onChange={(e) => setStatus(e.target.value || null)}
+      onKeyDown={fieldKeys}
+    />
   );
 }

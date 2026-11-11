@@ -1,5 +1,6 @@
 'use client';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { Building2, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -13,6 +14,7 @@ import {
   MenuTrigger,
 } from '@/components/ui/menu';
 import { BrandMark } from '@/components/ui/brand-mark';
+import { projectQueries } from '@/lib/api/projects';
 import { logoDomain } from '@/lib/brand/logo-dev';
 import {
   newProjectDestination,
@@ -42,6 +44,7 @@ import { useProjectCreation } from '@/components/layout/use-project-creation';
  */
 export function ProjectSwitcher() {
   const router = useNavigate();
+  const queryClient = useQueryClient();
   const selectProject = useSelectProject();
   const selectWorkspace = useSelectWorkspace();
   const {
@@ -119,6 +122,12 @@ export function ProjectSwitcher() {
             <MenuItem
               key={project.id}
               data-active={selected}
+              // The list carries summaries, so a switch renders only once the
+              // project's own view has answered. Highlighting a row (pointer
+              // or keyboard) asks for it, so a choice rarely waits on it.
+              onFocus={() => {
+                if (!selected) void queryClient.prefetchQuery(projectQueries.detail(project.id));
+              }}
               onSelect={() => selectProject(project.id)}
               icon={
                 <BrandMark

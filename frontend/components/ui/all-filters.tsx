@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type FocusEvent,
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
@@ -175,7 +176,7 @@ export function AllFilters({
             <MenuSub key={filter.id}>
               <MenuSubTrigger value={filter.valueLabel}>{filter.label}</MenuSubTrigger>
               {filter.kind === 'custom' ? (
-                <MenuSubContent>{filter.content}</MenuSubContent>
+                <MenuSubContent onFocus={focusFieldOnEntry}>{filter.content}</MenuSubContent>
               ) : (
                 <ChoiceSubmenu filter={filter} />
               )}
@@ -262,6 +263,18 @@ function DrillInFilters({ filters }: Readonly<{ filters: readonly FilterDefiniti
   );
 }
 
+/**
+ * Opened from the keyboard, a submenu panel takes focus; a field in it (a
+ * choice list's search box, a custom filter's typed value) takes it instead, so
+ * typing edits the field rather than jumping by letter. After the menu has
+ * moved focus to its first option in the same event.
+ */
+function focusFieldOnEntry(event: FocusEvent<HTMLDivElement>) {
+  if (event.target !== event.currentTarget) return;
+  const input = event.currentTarget.querySelector('input');
+  if (input) queueMicrotask(() => input.focus());
+}
+
 type ChoiceFilter = Extract<FilterDefinition, { kind: 'choice' }>;
 
 function isSearchable(filter: ChoiceFilter): boolean {
@@ -273,14 +286,7 @@ function ChoiceSubmenu({ filter }: Readonly<{ filter: ChoiceFilter }>) {
   const searchable = isSearchable(filter);
   return (
     <MenuSubContent
-      // Opened from the keyboard, the panel takes focus; with a search box the
-      // box takes it instead, so typing searches rather than jumping by letter.
-      // After the menu has moved focus to its first option in the same event.
-      onFocus={(event) => {
-        if (!searchable || event.target !== event.currentTarget) return;
-        const input = event.currentTarget.querySelector('input');
-        queueMicrotask(() => input?.focus());
-      }}
+      onFocus={focusFieldOnEntry}
       onKeyDown={(event) => {
         // Up from the first option goes back to the search box.
         if (!searchable || event.key !== 'ArrowUp') return;

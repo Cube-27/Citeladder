@@ -2,7 +2,7 @@
 
 import { createContext, useContext, type ReactNode } from 'react';
 
-import type { Project, Workspace } from '@citeladder/contracts';
+import type { Project, ProjectSummary, Workspace } from '@citeladder/contracts';
 import type { FailureScope, SelectionStatus } from '@/lib/project/selection';
 
 /**
@@ -24,8 +24,11 @@ export type ProjectContextValue = {
   activeWorkspace: Workspace | null;
   /** Select a workspace by id (persists; callers own any navigation). */
   setActiveWorkspaceId: (workspaceId: string) => void;
-  /** The active workspace's projects (empty while loading / none yet). */
-  projects: Project[];
+  /**
+   * The active workspace's projects as pickers show them (empty while loading
+   * / none yet). A summary, not a view: read `activeProject` for the full one.
+   */
+  projects: ProjectSummary[];
   /**
    * Whether `projects` is a SETTLED answer rather than a loading placeholder.
    *
