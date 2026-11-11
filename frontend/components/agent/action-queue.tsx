@@ -3,7 +3,7 @@
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import type { DataTableState } from '@/components/ui/data-table';
-import { Inline } from '@/components/ui/layout';
+import { Inline, Stack } from '@/components/ui/layout';
 import { ClampText, TableCell } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
@@ -212,7 +212,8 @@ export function ActionTargetCell({
   const label = readableUrl(action.target_label);
   return (
     <TableCell>
-      <div className="grid min-w-0">
+      {/* Title over its caption, one fact 4 apart, as `TableCellLines` binds them. */}
+      <Stack gap="tight" className="min-w-0">
         <Inline>
           <ClampText lines={1} tooltip={label}>
             <TextLink href={`/agent/actions/${action.id}`} text="itemTitle">
@@ -226,7 +227,7 @@ export function ActionTargetCell({
         <ClampText lines={1} className={textRole('caption')}>
           {workSummary(action)}
         </ClampText>
-      </div>
+      </Stack>
     </TableCell>
   );
 }

@@ -73,8 +73,8 @@ export function SiteHealthDashboardLayout({
       ) : (
         <>
           {/* Where the crawl stands, then the headline score cards (owner,
-              2026-11-10: as before the one-line status strip). */}
-          <Stack>
+              2026-11-10: as before the one-line status strip), two blocks 12 apart. */}
+          <Stack gap="workspace">
             <StatusStrip
               crawl={crawl}
               phase={phase}

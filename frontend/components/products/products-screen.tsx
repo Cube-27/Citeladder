@@ -204,7 +204,7 @@ function ProductsContent({
         ),
       }}
     >
-      <Stack gap="section">
+      <Stack gap="workspace">
         {header.stats}
         {header.notices}
         {checked.size ? (

@@ -35,7 +35,8 @@ const TONE: Record<CalloutTone, { box: string; title: string; icon: LucideIcon; 
 /**
  * Callout — an in-page message that stays until the condition changes: a
  * data caveat, a finished crawl, failed checks. `radius-md`, 12/16px padding,
- * the tone's 16px icon, 14/20 text with a 500-weight title, and one optional
+ * the tone's 16px icon 8 before its text, 14/20 text with a 500-weight title
+ * bound 4 over its sentence, and one optional
  * action at the right. Say what is true, then what to do. Negative and
  * warning callouts are announced as alerts; the rest as status.
  */
@@ -69,7 +70,7 @@ export function Callout({
       role={urgent ? 'alert' : undefined}
       data-callout-tone={tone}
       className={cn(
-        'flex items-start gap-3 rounded-md border border-transparent px-4 py-3 text-body-sm',
+        'flex items-start gap-2 rounded-md border border-transparent px-4 py-3 text-body-sm',
         style.box,
         className,
       )}
@@ -77,7 +78,7 @@ export function Callout({
       <span aria-hidden className="inline-flex h-5 shrink-0 items-center">
         <Icon icon={icon ?? style.icon} className="my-0" />
       </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
         {title != null ? (
           <p className={cn('font-medium', style.title)}>
             {word}

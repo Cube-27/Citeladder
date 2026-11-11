@@ -147,7 +147,9 @@ function DemandEvidenceContent({
             <div className={ledgerClasses()}>
               {details.pages.map((page) => (
                 <Stack key={page.url} gap="tight" className={ledgerItemClasses('type-caption')}>
-                  <div className={textRole('emphasis', 'text-ink break-all')}>{page.url}</div>
+                  <div className={textRole('emphasis', 'text-ink truncate')} title={page.url}>
+                    {page.url}
+                  </div>
                   <div className="type-caption flex items-center justify-between">
                     <span>{formatCount(page.impressions)} impressions</span>
                     <span className={textRole('emphasis', 'text-ink tabular-nums')}>

@@ -81,7 +81,7 @@ export function PromptDetailScreen() {
           : undefined
       }
     >
-      <Stack gap="section" aria-busy={query.isFetching}>
+      <Stack gap="workspace" aria-busy={query.isFetching}>
         <HistoryCard history={history} />
         <Implementations history={history} />
         <PromptAnswerStates latest={history.latest} />

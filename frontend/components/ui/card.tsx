@@ -44,8 +44,15 @@ export function Card({
  * CardHeader — the eyebrow, title and description on the left and `actions`
  * (a secondary or ghost Button, a Badge, a small control group) on the same
  * row at the right; when the row is too narrow the actions wrap below the
- * title rather than squeezing it. 16 below it when the card has more content.
+ * title rather than squeezing it. Title and description are one fact, 4
+ * apart. When the card has more content the header closes with a hairline
+ * across the card's full width: the header pads 16 above the rule and the
+ * body starts 16 below it (the card inset on both sides), with no other
+ * margin across the rule.
  */
+const HEADER_RULE =
+  'not-last:-mx-[var(--card-padding)] not-last:mb-[var(--card-padding)] not-last:border-b not-last:border-line not-last:px-[var(--card-padding)] not-last:pb-[var(--card-padding)]';
+
 export function CardHeader({
   children,
   className,
@@ -59,7 +66,7 @@ export function CardHeader({
 >) {
   if (!actions) {
     return (
-      <header {...props} className={cn('flex flex-col gap-1 not-last:pb-4', className)}>
+      <header {...props} className={cn('flex flex-col gap-1', HEADER_RULE, className)}>
         {children}
       </header>
     );
@@ -67,10 +74,7 @@ export function CardHeader({
   return (
     <header
       {...props}
-      className={cn(
-        'flex flex-wrap items-start justify-between gap-x-4 gap-y-2 not-last:pb-4',
-        className,
-      )}
+      className={cn('flex flex-wrap items-start justify-between gap-2', HEADER_RULE, className)}
     >
       <div className="grid min-w-0 flex-1 basis-60 gap-1">{children}</div>
       <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>

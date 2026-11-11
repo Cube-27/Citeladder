@@ -43,7 +43,7 @@ export type FilterBarProps = Readonly<{
 /**
  * FilterBar — the control strip at the top of every list and report page:
  * search first, then the filters, then the action at the end, every control
- * 36px and 8 apart. Filter triggers keep one width (224px) whatever their
+ * 32px and 8 apart, across and between wrapped rows alike. Filter triggers keep one width (224px) whatever their
  * value says, so choosing a filter never moves the strip; a trigger given
  * `sizeTo` instead keeps the width of its longest option, at every viewport.
  * The search grows to 360px.
@@ -57,6 +57,8 @@ export function FilterBar({ view, search, filters, status, actions }: FilterBarP
     <fieldset
       data-filter-bar=""
       aria-label="Search and filters"
+      // Rows are 8 apart. Below 1280px the filters' row break is a row of its
+      // own (zero tall), so two 4px row gaps make the 8.
       className="shell:gap-y-2 flex min-h-[var(--control-md)] w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1"
     >
       {view ? <div className="flex min-w-0">{view}</div> : null}

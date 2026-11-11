@@ -1,11 +1,10 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
 import { EvidenceLine } from '@/components/site-health/issue-evidence';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { ledgerItemClasses } from '@/components/ui/workspace';
+import { insetClasses, ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import type { SiteIssue } from '@citeladder/contracts';
 import { issueTitle } from '@/lib/site-health/issues';
@@ -50,8 +49,8 @@ export function SharedOccurrences({
   scope: SharedScope;
 }>) {
   return (
-    <Stack as="li" gap="item" className={ledgerItemClasses()}>
-      <Stack gap="tight">
+    <Stack as="li" gap="workspace" className={ledgerItemClasses()}>
+      <div className={insetClasses()}>
         <EvidenceLine
           lead={sharedEvidenceLead(entry.ruleId)}
           facts={entry.facts}
@@ -69,10 +68,10 @@ export function SharedOccurrences({
         >
           Ask agent about these pages
         </TextLink>
-      </Stack>
-      <Stack as="ul" gap="item">
+      </div>
+      <ul className={ledgerClasses()}>
         {entry.occurrences.map((occurrence) => (
-          <li key={occurrence.occurrence_id} className="min-w-0">
+          <li key={occurrence.occurrence_id} className={ledgerItemClasses()}>
             <AffectedPageLink
               crawlId={crawlId}
               siteUrlId={occurrence.site_url_id}
@@ -82,12 +81,16 @@ export function SharedOccurrences({
             />
           </li>
         ))}
-      </Stack>
+      </ul>
     </Stack>
   );
 }
 
-/** One affected page: its title and kind, linking to its detail, over its URL. */
+/**
+ * One affected page, linking to its detail: its title with its kind at the
+ * row's end, bound 4 over its URL. The URL keeps to one line (the full
+ * address in its tooltip), so a long query string never stacks the row.
+ */
 export function AffectedPageLink({
   crawlId,
   siteUrlId,
@@ -104,18 +107,22 @@ export function AffectedPageLink({
   return (
     <TextLink
       text="itemTitle"
-      className="flex min-w-0 flex-col"
+      className="block min-w-0"
       href={`/site/crawls/${crawlId}/pages/${siteUrlId}`}
     >
-      <Inline as="span" className="flex-wrap">
-        <span className={textRole('itemTitle', '[overflow-wrap:anywhere]')}>
-          {pageDisplayTitle(title, url)}
+      <Stack as="span" gap="tight" className="min-w-0">
+        <Inline as="span" className="items-baseline justify-between">
+          <span className={textRole('itemTitle', 'min-w-0 [overflow-wrap:anywhere]')}>
+            {pageDisplayTitle(title, url)}
+          </span>
+          {pageKind ? (
+            <span className="type-caption shrink-0">{pageKindLabel(pageKind)}</span>
+          ) : null}
+        </Inline>
+        <span className="type-caption min-w-0 truncate tabular-nums" title={url}>
+          {url}
         </span>
-        {pageKind ? <Badge>{pageKindLabel(pageKind)}</Badge> : null}
-      </Inline>
-      <span className="type-caption [overflow-wrap:anywhere] tabular-nums" title={url}>
-        {url}
-      </span>
+      </Stack>
     </TextLink>
   );
 }
