@@ -183,7 +183,7 @@ describe('SiteHealthScreen — Pages tab reads', () => {
       'aria-checked',
       'true',
     );
-    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeVisible();
+    expect(screen.getByRole('button', { name: /^Page kind: (?!All page kinds)/ })).toBeVisible();
 
     await user.click(screen.getByRole('tab', { name: 'Overview' }));
     const params = new URLSearchParams(window.location.search);

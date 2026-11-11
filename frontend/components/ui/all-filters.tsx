@@ -174,7 +174,8 @@ function activeFilterCount(filters: readonly FilterDefinition[]): number {
 
 /**
  * AllFilters — every filter of a list behind one button, after the search in
- * its control row (`FilterBar` draws it from its `filters`, D57). The menu
+ * its control row (`FilterBar` draws it from its `filters` when there are two
+ * or more, D57; a lone filter is its own trigger, `FilterControls`). The menu
  * opens toward the content from the button's edge on that side (`align`):
  * `start` (the default), so the menu and its submenus open to the right and
  * never over the sidebar; `end` for a button at its row's far right. The
@@ -324,7 +325,7 @@ function DrillInFilters({ filters }: Readonly<{ filters: readonly FilterDefiniti
  * typing edits the field rather than jumping by letter. After the menu has
  * moved focus to its first option in the same event.
  */
-function focusFieldOnEntry(event: FocusEvent<HTMLDivElement>) {
+export function focusFieldOnEntry(event: FocusEvent<HTMLDivElement>) {
   if (event.target !== event.currentTarget) return;
   const input = event.currentTarget.querySelector('input');
   if (input) queueMicrotask(() => input.focus());
@@ -357,7 +358,7 @@ function ChoiceSubmenu({ filter }: Readonly<{ filter: ChoiceFilter }>) {
 }
 
 /** A choice filter's options: a search box on a long list, then the options by group. */
-function ChoiceOptions({ filter }: Readonly<{ filter: ChoiceFilter }>) {
+export function ChoiceOptions({ filter }: Readonly<{ filter: ChoiceFilter }>) {
   const [query, setQuery] = useState('');
   const needle = query.trim().toLowerCase();
   const groups = needle

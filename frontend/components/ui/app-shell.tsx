@@ -214,7 +214,7 @@ export function SidebarNavGroup({
 }
 
 /**
- * A destination row's face, for the link that carries it: `row-app` tall,
+ * A destination row's face, for the link that carries it: `control-md` (32) tall,
  * the label in `ink-secondary` at weight 400; the current row's label is 500
  * (owner, 2026-11-10). Hover is the hover overlay; the current row takes the
  * selected overlay (D51) and a 2px Flare bar on its leading edge, and its
@@ -225,7 +225,7 @@ export function SidebarNavGroup({
  */
 export function sidebarNavRowClasses(active: boolean, plain = false) {
   return cn(
-    'focus-ring group type-control labelled:justify-start labelled:px-3 labelled:min-h-[var(--row-app)]relative flex min-h-[var(--control-md)] shrink-0 items-center justify-center gap-2 rounded-md transition-colors',
+    'focus-ring group type-control labelled:justify-start labelled:px-3 relative flex min-h-[var(--control-md)] shrink-0 items-center justify-center gap-2 rounded-md transition-colors',
     active
       ? 'overlay-selected text-ink font-medium before:bg-accent before:absolute before:inset-y-1.5 before:start-0 before:w-0.5 before:rounded-full'
       : 'text-ink-secondary hover:overlay-hover hover:text-ink font-normal',

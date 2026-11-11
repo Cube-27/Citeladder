@@ -169,8 +169,8 @@ describe('ProductDetailScreen', () => {
     const kpis = within(screen.getByRole('group', { name: 'Product metrics' }));
     expect(kpis.getByText('75.0%')).toBeInTheDocument();
     expect(kpis.getByText('$120.00')).toBeInTheDocument();
-    // No ordered win, no quoted price: unavailable, never zero.
-    expect(kpis.getAllByText('Unavailable')).toHaveLength(2);
+    // No ordered win, no quoted price: the missing mark, never zero.
+    expect(kpis.getAllByText('Not measured')).toHaveLength(2);
 
     const rival = screen.getByRole('link', { name: 'Rival Pacer' });
     expect(new URL(rival.getAttribute('href')!, 'https://app.test').pathname).toBe(

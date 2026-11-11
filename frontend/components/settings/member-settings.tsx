@@ -10,7 +10,6 @@ import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { SearchField } from '@/components/ui/search-field';
-import { textRole } from '@/components/ui/typography';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
   refreshWorkspaces,
@@ -199,11 +198,8 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
 
   return (
     <Stack gap="workspace">
-      {/* The tab already names this section; the row states the scope and
-          carries the roster's controls. */}
-      <p className={textRole('body')}>
-        Who can work in {workspaceName}, and what each of them may do.
-      </p>
+      {/* The tab names this section and the role line above states the scope,
+          so the roster follows directly. */}
       <MemberFailure failure={failure} onRetry={refresh} />
 
       <InviteDialog

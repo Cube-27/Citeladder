@@ -53,12 +53,12 @@ export function WorkspacePanel() {
           </h2>
           <Badge>{roleLabel(activeWorkspace.role)}</Badge>
         </Inline>
-        <p className={textRole('body')}>{ROLE_SUMMARY[activeWorkspace.role]}</p>
-        {isOwner ? (
-          <p className={textRole('caption')}>
-            To leave this workspace, make another member its owner first.
-          </p>
-        ) : (
+        {/* What the role allows and, for the Owner, the way out: one line. */}
+        <p className={textRole('body')}>
+          {ROLE_SUMMARY[activeWorkspace.role]}
+          {isOwner ? ' To leave, first make another member the owner.' : null}
+        </p>
+        {isOwner ? null : (
           <Button
             type="button"
             variant="danger"

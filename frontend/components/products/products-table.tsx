@@ -26,7 +26,6 @@ import {
   type ProductColumnKey,
 } from '@/lib/products/product-columns';
 import { productHref, type ProductScopeFilters } from '@/lib/products/product-filters';
-import { PRODUCT_PAGE_SIZE } from '@/lib/config/commerce';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import type { UseQueryResult } from '@tanstack/react-query';
 
@@ -41,14 +40,22 @@ const SORTABLE: Partial<Record<ProductColumnKey, CommerceProductSort>> = {
 
 function MissingCell({ state }: Readonly<{ state: 'unavailable' | 'unknown' | 'none' }>) {
   if (state === 'none') return <span className="text-ink-muted">None</span>;
-  // Unavailable (nothing in scope to measure) and unknown (the catalog has no
-  // price) are words, never a zero.
-  return state === 'unknown' ? (
-    <UnavailableValue state="unknown" />
-  ) : (
-    <MissingValue state="unavailable" />
-  );
+  // Unavailable (nothing in scope to measure) is the missing mark, so a row of
+  // unmeasured figures is not a row of repeated words; unknown (the catalog has
+  // no price) keeps its word. Neither is ever a zero.
+  return state === 'unknown' ? <UnavailableValue state="unknown" /> : <MissingValue />;
 }
+
+/** Each metric column's width role; the product name takes a quarter of the table. */
+const COLUMN_WIDTHS: Record<ProductColumnKey, DataTableColumn['width']> = {
+  visibility: 'shortMetric',
+  appearances: 'shortMetric',
+  win_rate: 'shortMetric',
+  position: 'shortMetric',
+  mentioned_price: 'figure',
+  catalog_price: 'figure',
+  merchants: 'name',
+};
 
 /** A metric's text, or the word for its missing state, with its note beneath. */
 export function MetricValue({ cell }: Readonly<{ cell: ProductCell }>) {
@@ -91,10 +98,13 @@ export function ProductsTable({
   checked,
   onCheck,
   pager,
+  pageSize,
   scope,
   trackable = false,
   selectable = true,
 }: Readonly<{
+  /** The reader's rows per page: the footprint the table reserves. */
+  pageSize: number;
   query: UseQueryResult<CommerceProductPage>;
   /** All products: an AI-observed competitor's row offers Add to tracking (CM6). */
   trackable?: boolean;
@@ -114,6 +124,7 @@ export function ProductsTable({
     {
       key: 'product',
       label: 'Product',
+      width: 'lead',
       sort: { active: sort === 'name', descending: false, onSort: () => onSort('name') },
     },
     ...shown.map((column): DataTableColumn => {
@@ -122,7 +133,7 @@ export function ProductsTable({
         key: column.key,
         label: column.label,
         hint: column.hint,
-        width: column.key === 'merchants' ? 'name' : 'figure',
+        width: COLUMN_WIDTHS[column.key],
         numeric: column.key !== 'merchants',
         ...(sortKey
           ? {
@@ -161,7 +172,7 @@ export function ProductsTable({
       label="Products"
       columns={tableColumns}
       rowCount={rows.length}
-      pageSize={PRODUCT_PAGE_SIZE}
+      pageSize={pageSize}
       rowLines={2}
       minWidth="xl"
       pinFirstColumn

@@ -333,7 +333,8 @@ describe('FilterBar and FilterTrigger', () => {
     const order = [
       screen.getByRole('radiogroup', { name: 'Pages shown' }),
       screen.getByRole('searchbox', { name: 'Search pages' }),
-      screen.getByRole('button', { name: 'All filters (1)' }),
+      // A lone filter is its own trigger, named by its value.
+      screen.getByRole('button', { name: 'Page kind: FAQ' }),
       screen.getByText('12 pages'),
       screen.getByRole('button', { name: 'Export' }),
     ];
@@ -343,6 +344,27 @@ describe('FilterBar and FilterTrigger', () => {
         Boolean(order[index]!.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING),
       );
     expect(follows).toEqual([true, true, true, true]);
+  });
+  it('puts two or more filters behind All filters, counting the changed ones', () => {
+    const filter = (id: string, value: string) =>
+      choiceFilter({
+        id,
+        label: id,
+        value,
+        defaultValue: 'all',
+        groups: [
+          {
+            options: [
+              { value: 'all', label: 'All' },
+              { value: 'one', label: 'One' },
+            ],
+          },
+        ],
+        onChange: () => undefined,
+      });
+    render(<FilterBar filters={[filter('Kind', 'one'), filter('Engine', 'all')]} />);
+    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Kind: One' })).toBeNull();
   });
   it('names a trigger by its visible value', () => {
     render(<FilterTrigger label="Surface" value="ChatGPT" hideLabel active />);

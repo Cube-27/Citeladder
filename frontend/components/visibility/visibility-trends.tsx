@@ -117,9 +117,10 @@ export function VisibilityTrends({
       {/* The trend sits beside the table once there is one to draw (owner,
           2026-11-10): a single period has no line, so the table takes the
           row. A failed history read keeps its card, so it can be retried.
-          The table takes three fifths of the row, so every brand keeps its
-          name beside its figure columns from 1280px, and the chart keeps two
-          fifths for its line (an even split cut the names to their logos). */}
+          The table takes five ninths of the row, so every brand keeps its
+          name beside its figure columns from 1280px, and the chart keeps four
+          ninths for its lines (an even split cut the names to their logos;
+          three fifths left the chart cramped, owner 2026-11-11). */}
       {hasTrend(query) ? (
         <AppGrid layout="table-chart">
           {rankingTable}

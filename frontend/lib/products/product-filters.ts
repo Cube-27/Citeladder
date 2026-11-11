@@ -9,10 +9,10 @@ import {
 
 import {
   PRODUCT_DEFAULT_WINDOW,
-  PRODUCT_PAGE_SIZE,
   PRODUCT_WINDOW_DAYS,
   type ProductWindowDays,
 } from '@/lib/config/commerce';
+import { TABLE_DEFAULT_PAGE_SIZE, type TablePageSize } from '@/lib/config/tables';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 
 export type ProductFilters = Readonly<{
@@ -42,14 +42,18 @@ export const DEFAULT_PRODUCT_FILTERS: ProductFilters = {
 
 /**
  * The read's query string for the filters, in a fixed order: the cache key of
- * a page and the request it sends. Unset filters are left out.
+ * a page and the request it sends, at the reader's rows per page. Unset
+ * filters are left out.
  */
-export function productSearch(filters: ProductFilters): string {
+export function productSearch(
+  filters: ProductFilters,
+  pageSize: TablePageSize = TABLE_DEFAULT_PAGE_SIZE,
+): string {
   const params = new URLSearchParams({
     source: filters.source,
     window: filters.window,
     sort: filters.sort,
-    limit: String(PRODUCT_PAGE_SIZE),
+    limit: String(pageSize),
   });
   if (filters.category) params.set('category', filters.category);
   if (filters.engine) params.set('engine', filters.engine);

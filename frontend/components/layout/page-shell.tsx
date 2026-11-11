@@ -6,7 +6,8 @@ import { useLocation } from 'react-router-dom';
 import { AppGrid } from '@/components/ui/app-grid';
 import { NavMenuButton } from '@/components/ui/app-shell';
 import { BackButton } from '@/components/ui/back-button';
-import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
+import type { FilterDefinition } from '@/components/ui/all-filters';
+import { FilterBar, FilterControls, type FilterBarProps } from '@/components/ui/filter-bar';
 import { PageHeader } from '@/components/ui/page-header';
 import { QueryState } from '@/components/ui/query-state';
 import { TabRow, type TabRowProps } from '@/components/ui/tabs';
@@ -53,7 +54,8 @@ type ScreenBands<T extends string> = Readonly<{
   tabs?: TabRowProps<T>;
   /**
    * The selected tab's control row, drawn as the `FilterBar`: view, search,
-   * All filters, then the count and the action at its end (D57).
+   * All filters, then the count and the action at its end (D57). A row of
+   * filters alone (a detail page's scope) follows the header's title instead.
    */
   controls?: FilterBarProps;
   children?: ReactNode;
@@ -178,21 +180,26 @@ function PageShell<T extends string>({
   const shell = useContext(ShellContext);
   const navDrawer = shell?.navDrawer;
   const content = <PageContent {...layout}>{children}</PageContent>;
+  // A control row holding only filters is one button: it follows the title
+  // rather than taking a band of its own, its menus opening toward the content.
+  const headerFilters = !tabs && controls && filtersOnly(controls) ? controls.filters : undefined;
   const tabBand = tabs ? (
     <div data-page-band="control">
       <TabRow {...tabs} />
     </div>
   ) : null;
-  const filterBand = controls ? (
-    <div data-page-band="control">
-      <FilterBar {...controls} />
-    </div>
-  ) : null;
+  const filterBand =
+    controls && !headerFilters ? (
+      <div data-page-band="control">
+        <FilterBar {...controls} />
+      </div>
+    ) : null;
   return (
     // header → 16 → tabs → 8 → filters → 8 → content; header → 16 → content.
     <div className="flex min-w-0 flex-col gap-[var(--page-section-gap)]">
       <PageHeader
         title={resolved}
+        filters={headerFilters ? <FilterControls filters={headerFilters} /> : undefined}
         lead={
           <>
             {/* Below 900px the header leads with the navigation menu. */}
@@ -221,6 +228,19 @@ function PageShell<T extends string>({
         content
       )}
     </div>
+  );
+}
+
+/** Whether a control row carries filters and nothing else (no view, search, count or action). */
+function filtersOnly(controls: FilterBarProps): controls is FilterBarProps & {
+  filters: readonly FilterDefinition[];
+} {
+  return (
+    Boolean(controls.filters?.length) &&
+    !controls.view &&
+    !controls.search &&
+    controls.status === undefined &&
+    !controls.actions
   );
 }
 

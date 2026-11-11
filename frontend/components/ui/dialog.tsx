@@ -39,7 +39,9 @@ export function useReturnFocus(open: boolean) {
 }
 
 /**
- * Dialog — a modal panel for one short task, centred on the scrim: `surface`,
+ * Dialog — a modal panel for one short task, centred across the scrim with its
+ * top edge fixed at 12vh, so content that changes inside it (a tab, a picked
+ * file) grows or shrinks it downward and nothing above moves: `surface`,
  * `radius-lg`, the floating face (1px `line` border, `shadow-float`), `modal-padding` (16 in the app) padding and gaps, `container-narrow` wide.
  * The title is the section title (500, 22/28), the description
  * `ink-secondary`, the footer right-aligned (Cancel first, then the action). `tone="danger"` is a
@@ -91,7 +93,7 @@ export function Dialog({
           onCloseAutoFocus={returnFocus}
           className={cn(
             FLOAT_FACE,
-            'dialog-panel z-modal fixed top-1/2 left-1/2 flex max-h-[calc(100dvh-3rem)] w-[calc(100vw-3rem)] -translate-x-1/2 -translate-y-1/2 flex-col gap-[var(--card-padding)] rounded-lg p-[var(--card-padding)]',
+            'dialog-panel z-modal fixed top-[12vh] left-1/2 flex max-h-[calc(88dvh-1.5rem)] w-[calc(100vw-3rem)] -translate-x-1/2 flex-col gap-[var(--card-padding)] rounded-lg p-[var(--card-padding)]',
             danger && 'max-w-110',
             !danger && (width === 'wide' ? 'max-w-180' : 'max-w-narrow'),
           )}
