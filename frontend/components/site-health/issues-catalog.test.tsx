@@ -19,10 +19,7 @@ import {
 
 type User = ReturnType<typeof userEvent.setup>;
 
-/**
- * Opens All filters and returns one filter's row, whose name says its current
- * value ("Page kind: All page kinds").
- */
+/** Opens All filters; returns one filter's row, named with its value ("Page kind: All page kinds"). */
 async function openFilter(user: User, label: string, value?: string) {
   await user.click(screen.getByRole('button', { name: /^All filters/ }));
   return screen.findByRole('menuitem', {
@@ -50,9 +47,8 @@ async function chooseFilter(user: User, label: string, choice: string) {
   await user.keyboard('{Enter}');
 }
 
-async function chooseClass(user: User, choice: string) {
-  await chooseFilter(user, 'Severity or category', choice);
-}
+const chooseClass = (user: User, choice: string) =>
+  chooseFilter(user, 'Severity or category', choice);
 
 function currentUrl(): string {
   return window.location.pathname + window.location.search;
@@ -796,6 +792,6 @@ describe('IssuesCatalog', () => {
 
     const meta = (await screen.findByText('32 pages affected')).parentElement;
     // The count closes the meta line: no page-type list follows it.
-    expect(meta?.lastElementChild).toHaveTextContent(/^32 pages affected$/);
+    expect(meta?.lastElementChild?.textContent).toBe('32 pages affected');
   });
 });
