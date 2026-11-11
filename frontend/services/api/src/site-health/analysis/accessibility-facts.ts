@@ -10,6 +10,7 @@ import {
   type HtmlNode,
 } from '../../web-evidence/html.ts';
 import { limits, squash } from './policy.ts';
+import { referenceSnippet } from './reference-snippet.ts';
 
 const HEADINGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
 const CONTROLS = new Set(['input', 'select', 'textarea', 'button']);
@@ -116,24 +117,28 @@ function controlFacts(root: HtmlNode) {
     const id = attribute(node, 'id').trim();
     if (id && referenced.has(id)) labelled.set(id, Boolean(accessibleText(node, true)));
   }
-  const missing = controls.flatMap((control, index) =>
-    hasName(control, explicit, labelled)
-      ? []
-      : [
-          {
-            tag: control.tagName,
-            type: control.tagName === 'input' ? inputType(control) || 'text' : control.tagName,
-            id: identifier(control, 'id'),
-            name: identifier(control, 'name'),
-            ordinal: index + 1,
-          },
-        ],
+  const unnamed = controls.flatMap((control, index) =>
+    hasName(control, explicit, labelled) ? [] : [{ control, ordinal: index + 1 }],
   );
-  return { count: controls.length, missing };
+  const missing = unnamed.map(({ control, ordinal }) => ({
+    tag: control.tagName,
+    type: control.tagName === 'input' ? inputType(control) || 'text' : control.tagName,
+    id: identifier(control, 'id'),
+    name: identifier(control, 'name'),
+    ordinal,
+  }));
+  // One reference snippet per page, of its first unnamed control: the issue
+  // catalog keeps one per issue family from these (`issue-catalog.ts`).
+  const first = unnamed[0];
+  return {
+    count: controls.length,
+    missing,
+    snippet: first ? referenceSnippet(first.control) : null,
+  };
 }
 
 export function accessibilityFacts(root: HtmlNode, maxHeadings: number) {
-  const { count, missing } = controlFacts(root);
+  const { count, missing, snippet } = controlFacts(root);
   const levels = [...elements(root)]
     .filter((node) => HEADINGS.has(node.tagName) && !excluded(node))
     .map((node) => Number(node.tagName[1]));
@@ -146,6 +151,7 @@ export function accessibilityFacts(root: HtmlNode, maxHeadings: number) {
       0,
       limits.accessibility_control_descriptors,
     ),
+    controls_missing_accessible_name_snippet: snippet,
     heading_levels: levels.slice(0, maxHeadings),
     heading_level_skips: skips,
     document_language: html ? attribute(html, 'lang').trim().slice(0, 32) : '',
