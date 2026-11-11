@@ -163,8 +163,7 @@ export function robotsPolicy(
   const declared = robots.getCrawlDelay(policy.web_fetch.user_agent);
   const seconds = declared === undefined ? settings.defaultDelay : Math.max(0, declared);
   // Readable, not access-blocked, and asking for a delay the crawler honours.
-  const fetchable =
-    !unavailable && !restricted && Number.isFinite(seconds) && seconds <= settings.maxDelay;
+  const fetchable = readable && Number.isFinite(seconds) && seconds <= settings.maxDelay;
   const permits = (url: string) =>
     fetchable && robots.isAllowed(url, policy.web_fetch.user_agent) === true;
   return {
@@ -199,6 +198,10 @@ export function robotsPolicy(
   };
 }
 export type RobotsPolicy = ReturnType<typeof robotsPolicy>;
+/** How one fetch treats robots.txt at each destination it requests. */
+export type RobotsChoice = (destination: URL) => CrawlRobotsHandling;
+/** Every caller but the project's own site crawl respects robots.txt everywhere. */
+export const respectRobots: RobotsChoice = () => 'respect';
 
 export class PageAcquirer {
   readonly #cache = new Map<string, { expires: number; value: Promise<RobotsPolicy> }>();
@@ -265,17 +268,18 @@ export class PageAcquirer {
   }
   /**
    * `admit` screens each page hop (never robots.txt) before the shared
-   * authorization. `robots` is `respect` unless the caller is the project's
-   * own site crawl and that crawl chose to ignore robots.txt.
+   * authorization. `robots` decides per hop and respects robots.txt unless the
+   * caller is the project's own site crawl, that crawl chose to ignore
+   * robots.txt, and the hop is on the crawl's own site.
    */
   fetch(
     url: string,
     options: Omit<FetchOptions, 'gate' | 'authorize'> & {
       admit?: (url: URL) => void;
-      robots?: CrawlRobotsHandling;
+      robots?: RobotsChoice;
     },
   ) {
-    const { admit, robots: handling = 'respect', ...rest } = options;
+    const { admit, robots: handling = respectRobots, ...rest } = options;
     return this.fetcher(url, {
       ...rest,
       authorize: admit
@@ -287,7 +291,7 @@ export class PageAcquirer {
       gate: async (destination, send, signal) => {
         admit?.(destination);
         const robots = await this.robots(destination.origin);
-        if (!robots.admits(destination.href, handling))
+        if (!robots.admits(destination.href, handling(destination)))
           throw new FetchError(robots.unavailable ? 'robots_unavailable' : 'robots_disallowed');
         return this.#pacer.slot(
           destination.origin,

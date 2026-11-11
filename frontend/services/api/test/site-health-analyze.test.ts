@@ -5,7 +5,12 @@ import { afterAll, describe, expect, it, vi } from 'vitest';
 import { policy } from '../src/config.ts';
 import { record } from '../src/db/json.ts';
 import type { FetchedPage } from '../src/safe-fetch.ts';
-import { isBotBlock, SitePageFetcher, siteFetchSettings } from '../src/site-health/page-fetch.ts';
+import {
+  crawlRobotsHandling,
+  isBotBlock,
+  SitePageFetcher,
+  siteFetchSettings,
+} from '../src/site-health/page-fetch.ts';
 import { crawlCounters } from '../src/site-health/reads/crawl.ts';
 import { pageDetail, pages } from '../src/site-health/reads/pages.ts';
 import * as interpretation from '../src/site-health/analysis/off-thread.ts';
@@ -37,6 +42,8 @@ const fetchSettings = siteFetchSettings({
 const RICH =
   "<html lang='en'><head><title>Rich page about widgets</title><meta name='description' content='Widgets.'></head>" +
   '<body><main><h1>Widgets</h1><p>Widgets are useful tools for small workshops.</p></main></body></html>';
+/** A crawl of example.test that chose to ignore robots.txt. */
+const IGNORE_ROBOTS = JSON.stringify({ robots: 'ignore', root_registrable_domain: 'example.test' });
 
 const site = (pages: Record<string, Served>, requests: string[] = []) =>
   new SitePageFetcher(db, recordedSite(pages, requests), fetchSettings);
@@ -493,7 +500,7 @@ describe('analyze failures', () => {
   });
 
   it('fetches a disallowed page for a crawl that ignores robots.txt and marks the page', async () => {
-    const seed = await running({ configuration: JSON.stringify({ robots: 'ignore' }) });
+    const seed = await running({ configuration: IGNORE_ROBOTS });
     const page = await fixtures.analyzable(seed, '/private');
     const open = await fixtures.analyzable(seed, '/open');
     const requests: string[] = [];
@@ -560,9 +567,35 @@ describe('analyze failures', () => {
       ok: false,
       code: codes.robots_denied,
     });
-    expect(await fetcher.fetch('https://example.test/private', { robots: 'ignore' })).toMatchObject(
-      { ok: true, robotsExcluded: true },
+    expect(
+      await fetcher.fetch('https://example.test/private', {
+        robots: crawlRobotsHandling(JSON.parse(IGNORE_ROBOTS)),
+      }),
+    ).toMatchObject({ ok: true, robotsExcluded: true });
+  });
+
+  it('respects robots.txt on a host off the crawl’s own site, even when the crawl ignores it', async () => {
+    const seed = await running({ configuration: IGNORE_ROBOTS });
+    const page = await fixtures.analyzable(seed, '/go');
+    const requests: string[] = [];
+    await analyze(
+      site(
+        {
+          // Both hosts disallow every path.
+          '/robots.txt': { body: 'User-agent: *\nDisallow: /\n', contentType: 'text/plain' },
+          '/go': { status: 302, redirect: 'https://elsewhere.test/private' },
+          '/private': { body: RICH },
+        },
+        requests,
+      ),
+      page.taskId,
     );
+    expect(await task(page.taskId)).toMatchObject({
+      status: 'failed',
+      error_code: codes.robots_denied,
+    });
+    // The own-site page is fetched; the off-site hop stops at its robots.txt.
+    expect(requests).toEqual(['/robots.txt', '/go', '/robots.txt']);
   });
 
   it.each([
@@ -571,7 +604,7 @@ describe('analyze failures', () => {
   ])(
     'still stops at an %s robots.txt when the crawl ignores robots.txt',
     async (_label, robots, code) => {
-      const seed = await running({ configuration: JSON.stringify({ robots: 'ignore' }) });
+      const seed = await running({ configuration: IGNORE_ROBOTS });
       const page = await fixtures.analyzable(seed, '/private');
       const requests: string[] = [];
       await analyze(site({ '/robots.txt': robots }, requests), page.taskId);

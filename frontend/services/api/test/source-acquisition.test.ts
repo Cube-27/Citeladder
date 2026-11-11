@@ -103,7 +103,10 @@ it('fetches a disallowed page only when the caller ignores robots.txt; by defaul
   await expect(acquirer.fetch('https://shop.test/private', options)).rejects.toMatchObject({
     code: 'robots_disallowed',
   });
-  const page = await acquirer.fetch('https://shop.test/private', { ...options, robots: 'ignore' });
+  const page = await acquirer.fetch('https://shop.test/private', {
+    ...options,
+    robots: () => 'ignore',
+  });
   expect(page.status).toBe(200);
   expect(sent).toEqual(['/robots.txt', '/private']);
 });
@@ -121,7 +124,7 @@ it.each([
       0,
     );
     await expect(
-      acquirer.fetch('https://shop.test/private', { ...options, robots: 'ignore' }),
+      acquirer.fetch('https://shop.test/private', { ...options, robots: () => 'ignore' }),
     ).rejects.toMatchObject({ code });
     expect(sent).toEqual(['/robots.txt']);
   },
@@ -129,6 +132,12 @@ it.each([
 it('keeps an unsupported crawl delay binding when the crawl ignores robots.txt', () => {
   const slow = robotsPolicy('https://example.test', 200, 'User-agent: *\nCrawl-delay: 2', settings);
   expect(slow.admits('https://example.test/', 'ignore')).toBe(false);
+  // A 3xx answer is not a readable robots.txt, whatever the crawl chose.
+  const unread = robotsPolicy('https://example.test', 304, '', settings);
+  expect([
+    unread.admits('https://example.test/', 'ignore'),
+    unread.admits('https://example.test/', 'respect'),
+  ]).toEqual([false, false]);
   const rules = robotsPolicy('https://example.test', 200, 'User-agent: *\nDisallow: /a', settings);
   expect([
     rules.admits('https://example.test/a', 'ignore'),

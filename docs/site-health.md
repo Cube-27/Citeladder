@@ -271,7 +271,9 @@ person confirms they are authorized to crawl the site. The crawl freezes
 `robots: 'ignore'` and `robots_decision` (user id, email, time) in its
 configuration; Recrawl and scheduled crawls copy both from the crawl they rerun.
 Only the crawl's own `discover` and `analyze` fetches pass the choice to
-`SitePageFetcher` and `PageAcquirer`, and it waives only the 2xx disallow rules:
+`SitePageFetcher` and `PageAcquirer`, per request: it covers only the crawl's
+registrable domain and its subdomains, so a redirect to another host respects
+that host's robots.txt. It waives only the disallow rules of a readable file:
 access-blocked or unreachable robots.txt, crawl delay, pacing, SSRF checks and
 suppression still apply. `site_setup` still records the robots snapshot, and
 every other fetcher (competitors, earned sources, commerce, page documents)

@@ -74,7 +74,6 @@ function CrawlScheduleControl({
   const label = schedule
     ? (CHOICES.find((choice) => choice.value === current)?.label ?? 'Off')
     : null;
-  const note = outcomeNote(schedule);
   let text = 'Schedule';
   if (pending) text = 'Saving…';
   else if (unavailable) text = 'Schedule unavailable';
@@ -111,16 +110,30 @@ function CrawlScheduleControl({
             </MenuRadioItem>
           ))}
         </MenuRadioGroup>
-        {schedule?.enabled || note || robotsNote ? <MenuSeparator /> : null}
-        {robotsNote ? <MenuLabel>{robotsNote}</MenuLabel> : null}
-        {schedule?.enabled ? (
-          <MenuLabel>
-            Next crawl <DisplayTime value={schedule.next_run_at} dateOnly />
-          </MenuLabel>
-        ) : null}
-        {note ? <MenuLabel>{note}</MenuLabel> : null}
+        <ScheduleNotes schedule={schedule} robotsNote={robotsNote} />
       </MenuContent>
     </Menu>
+  );
+}
+
+/** Under the choices: the kept robots choice, the next run and the last outcome. */
+function ScheduleNotes({
+  schedule,
+  robotsNote,
+}: Readonly<{ schedule: CrawlSchedule | undefined; robotsNote: string | null }>) {
+  const note = outcomeNote(schedule);
+  if (!schedule?.enabled && !note && !robotsNote) return null;
+  return (
+    <>
+      <MenuSeparator />
+      {robotsNote ? <MenuLabel>{robotsNote}</MenuLabel> : null}
+      {schedule?.enabled ? (
+        <MenuLabel>
+          Next crawl <DisplayTime value={schedule.next_run_at} dateOnly />
+        </MenuLabel>
+      ) : null}
+      {note ? <MenuLabel>{note}</MenuLabel> : null}
+    </>
   );
 }
 

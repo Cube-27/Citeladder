@@ -33,7 +33,7 @@ export function crawlError(
 // Seed, glob and page-kind bounds are configured, so `controls`/`normalizeGlobs` check them.
 export const createCrawlRequest = siteCrawlCreateRequestSchema;
 export const previewRequest = urlPreviewRequestSchema;
-export type CreateCrawlRequest = z.infer<typeof createCrawlRequest>;
+type CreateCrawlRequest = z.infer<typeof createCrawlRequest>;
 
 /** Who confirmed being authorized to crawl the site while ignoring robots.txt, and when. */
 export const robotsDecisionSchema = z.object({
