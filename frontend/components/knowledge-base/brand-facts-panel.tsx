@@ -202,7 +202,12 @@ function FactRow({
         />
       )}
       {fact.source_url ? (
-        <span className={textRole('caption', 'text-ink-muted break-all')}>{fact.source_url}</span>
+        <span
+          className={textRole('caption', 'text-ink-muted block truncate')}
+          title={fact.source_url}
+        >
+          {fact.source_url}
+        </span>
       ) : null}
       {mayEdit ? (
         <Inline as="span" className="flex-wrap">

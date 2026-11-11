@@ -106,7 +106,7 @@ export function Dialog({
               <DialogPrimitive.Title className="type-section-title">{title}</DialogPrimitive.Title>
               {description ? (
                 <DialogPrimitive.Description asChild>
-                  <div className="text-body-sm text-ink-secondary mt-2">{description}</div>
+                  <div className="text-body-sm text-ink-secondary mt-1">{description}</div>
                 </DialogPrimitive.Description>
               ) : null}
             </div>

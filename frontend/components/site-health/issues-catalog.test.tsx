@@ -17,16 +17,41 @@ import {
   summary,
 } from './issues-catalog.test-support';
 
-/** The severity-or-category menu's trigger, which names the current choice. */
-function classFilter(choice?: string) {
-  return screen.getByRole('button', {
-    name: choice ? `Severity or category: ${choice}` : /^Severity or category:/,
+type User = ReturnType<typeof userEvent.setup>;
+
+/**
+ * Opens All filters and returns one filter's row, whose name says its current
+ * value ("Page kind: All page kinds").
+ */
+async function openFilter(user: User, label: string, value?: string) {
+  await user.click(screen.getByRole('button', { name: /^All filters/ }));
+  return screen.findByRole('menuitem', {
+    name: value ? `${label}: ${value}` : new RegExp(`^${label}:`),
   });
 }
 
-async function chooseClass(user: ReturnType<typeof userEvent.setup>, choice: string) {
-  await user.click(classFilter());
-  await user.click(await screen.findByRole('menuitemradio', { name: choice }));
+/** The severity-or-category filter is set to `choice`; the menu closes again. */
+async function expectClass(user: User, choice: string) {
+  expect(await openFilter(user, 'Severity or category', choice)).toBeVisible();
+  await user.keyboard('{Escape}');
+}
+
+/** Opens one filter's options from All filters, with the keyboard as a reader would. */
+async function openOptions(user: User, label: string, value?: string) {
+  const row = await openFilter(user, label, value);
+  row.focus();
+  await user.keyboard('{ArrowRight}');
+}
+
+/** Opens a filter's options from All filters and picks one. */
+async function chooseFilter(user: User, label: string, choice: string) {
+  await openOptions(user, label);
+  (await screen.findByRole('menuitemradio', { name: choice })).focus();
+  await user.keyboard('{Enter}');
+}
+
+async function chooseClass(user: User, choice: string) {
+  await chooseFilter(user, 'Severity or category', choice);
 }
 
 function currentUrl(): string {
@@ -283,7 +308,7 @@ describe('IssuesCatalog', () => {
     expect(seen.at(-1)?.get('page_kind')).toBe('article');
     expect(seen.at(-1)?.get('cursor')).toBe('page-two');
     expect(screen.getByRole('searchbox', { name: 'Search issues' })).toHaveValue('schema');
-    expect(classFilter('AEO (17)')).toBeInTheDocument();
+    await expectClass(userEvent.setup(), 'AEO (17)');
   });
 
   it('writes filters to history and reflects back/forward navigation', async () => {
@@ -308,11 +333,12 @@ describe('IssuesCatalog', () => {
     expect(screen.queryByRole('button', { name: /^Showing:/ })).not.toBeInTheDocument();
 
     window.history.back();
-    await waitFor(() => expect(classFilter('All severities (47)')).toBeInTheDocument());
-    expect(currentUrl()).not.toContain('severity=medium');
+    await waitFor(() => expect(currentUrl()).not.toContain('severity=medium'));
+    await expectClass(user, 'All severities (47)');
 
     window.history.forward();
-    await waitFor(() => expect(classFilter('Medium (23)')).toBeInTheDocument());
+    await waitFor(() => expect(currentUrl()).toContain('severity=medium'));
+    await expectClass(user, 'Medium (23)');
   });
 
   it('drops a filter-bound cursor while preserving unknown URL params', async () => {
@@ -324,12 +350,9 @@ describe('IssuesCatalog', () => {
     );
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-    const trigger = await screen.findByRole('button', {
-      name: 'Filter by page kind: All page kinds',
-    });
+    await screen.findAllByText('WebSite schema is missing');
 
-    await user.click(trigger);
-    await user.click(await screen.findByRole('menuitemradio', { name: 'Article' }));
+    await chooseFilter(user, 'Page kind', 'Article');
 
     await waitFor(() => expect(currentUrl()).toContain('page_kind=article'));
     expect(currentUrl()).not.toContain('cursor=');
@@ -383,11 +406,12 @@ describe('IssuesCatalog', () => {
     expect(await screen.findAllByText('WebSite schema is missing')).not.toHaveLength(0);
     // Filter counts (tiles removed): All severities (47), Medium (23), AEO
     // (17). The counts come from the API-owned summary, not a client
-    // re-count. The closed trigger names what "All" ranges over.
-    await userEvent.setup().click(classFilter('All severities (47)'));
+    // re-count. The filter's row names what "All" ranges over.
+    const user = userEvent.setup();
+    await openOptions(user, 'Severity or category', 'All severities (47)');
     expect(await screen.findByRole('menuitemradio', { name: 'Medium (23)' })).toBeInTheDocument();
     expect(screen.getByRole('menuitemradio', { name: 'AEO (17)' })).toBeInTheDocument();
-    await userEvent.setup().keyboard('{Escape}');
+    await user.keyboard('{Escape}');
     // Evidence is the notation of the fix, with no "Observed evidence" label
     // and no restatement of the title above it.
     expect(
@@ -395,14 +419,9 @@ describe('IssuesCatalog', () => {
     ).toBeInTheDocument();
     expect(screen.queryByText('Observed evidence')).not.toBeInTheDocument();
     expect(screen.queryByText('Reason: expected_schema_absent')).not.toBeInTheDocument();
-    // How to fix is one labelled line in the rail's header, not a card of its own.
-    expect(
-      screen.getByText(
-        (_, element) =>
-          element?.tagName === 'P' &&
-          element.textContent === 'How to fix: Add a JSON-LD WebSite schema.',
-      ),
-    ).toBeInTheDocument();
+    // How to fix is a labelled sentence in the rail's header, not a card of its own.
+    expect(screen.getByText('How to fix')).toBeInTheDocument();
+    expect(screen.getByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
     // The rule description states the PASSING expectation; under a failing
     // title it read as a contradiction, so neither the row nor the rail prints it.
     expect(
@@ -599,7 +618,7 @@ describe('IssuesCatalog', () => {
       ),
     ).toBeInTheDocument();
     // Advisories have no severity, so their unfiltered choice ranges over categories.
-    await user.click(classFilter('All categories (2)'));
+    await openOptions(user, 'Category', 'All categories (2)');
     expect(
       await screen.findByRole('menuitemradio', { name: 'All categories (2)' }),
     ).toBeInTheDocument();
@@ -618,20 +637,17 @@ describe('IssuesCatalog', () => {
 
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-    const trigger = await screen.findByRole('button', { name: /^Filter by page kind:/ });
     // The initial unfiltered request carries no page-kind param.
     await screen.findAllByText('WebSite schema is missing');
     expect(seen.at(-1)).toBeNull();
 
-    await user.click(trigger);
-    await user.click(await screen.findByRole('menuitemradio', { name: 'Article' }));
+    await chooseFilter(user, 'Page kind', 'Article');
     await waitFor(() => expect(seen.at(-1)).toBe('article'));
 
     // Clearing back to "All page kinds" drops the param entirely. The
     // unfiltered combination is already cached (no new request), so force a
     // fresh combination via a chip and assert THAT request omits page_kind.
-    await user.click(trigger);
-    await user.click(await screen.findByRole('menuitemradio', { name: 'All page kinds' }));
+    await chooseFilter(user, 'Page kind', 'All page kinds');
     await chooseClass(user, 'Medium (23)');
     await waitFor(() => expect(seen.at(-1)).toBeNull());
   });
@@ -653,10 +669,10 @@ describe('IssuesCatalog', () => {
     await user.click(screen.getByRole('button', { name: /WebSite schema is missing/ }));
     await waitFor(() => expect(currentUrl()).toContain(`issue=${ISSUE_A}`));
 
-    expect(await screen.findByText('How to fix:')).toBeInTheDocument();
+    expect(await screen.findByText('How to fix')).toBeInTheDocument();
     const link = await screen.findByRole('link', { name: /Homepage/ });
     expect(link).toHaveAttribute('href', `/site/crawls/${CRAWL}/pages/${URL_A}`);
-    // The affected page's v2 P1 type badge renders inside the row (scoped —
+    // The affected page's v2 P1 type renders inside the row (scoped —
     // the filter <select> also lists the type label as an option).
     expect(within(link).getByText('Article')).toBeInTheDocument();
     // Ask agent hands the Agent the page's id, never its evidence.
@@ -764,14 +780,9 @@ describe('IssuesCatalog', () => {
 
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
-    // One line: the count, then the types it spans.
-    expect(
-      await screen.findByText(
-        (_, element) =>
-          element?.tagName === 'P' &&
-          element.textContent === '32 pages affected · Page types: Product, Category',
-      ),
-    ).toBeInTheDocument();
+    // The header's meta line: the count, then the types it spans.
+    expect(await screen.findByText('32 pages affected')).toBeInTheDocument();
+    expect(screen.getByText('Product, Category')).toBeInTheDocument();
   });
 
   it('omits the page-type row for an issue with no classified pages', async () => {
@@ -783,10 +794,8 @@ describe('IssuesCatalog', () => {
 
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
-    expect(
-      await screen.findByText(
-        (_, element) => element?.tagName === 'P' && element.textContent === '32 pages affected',
-      ),
-    ).toBeInTheDocument();
+    const meta = (await screen.findByText('32 pages affected')).parentElement;
+    // The count closes the meta line: no page-type list follows it.
+    expect(meta?.lastElementChild).toHaveTextContent(/^32 pages affected$/);
   });
 });

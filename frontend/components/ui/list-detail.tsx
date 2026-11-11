@@ -23,12 +23,16 @@ export function ListDetailCard({
     <Card
       // `overflow-clip` (not `hidden`) rounds the corners without becoming a
       // scroll container, so the detail pane stays sticky against the page.
-      className="desktop:grid-cols-[var(--pane-list-detail)] grid min-w-0 items-start overflow-clip"
+      // The card adds no inset of its own: each pane carries the card's 16,
+      // so the rows and the pane's rule run to the card's edges.
+      className="desktop:grid-cols-[var(--pane-list-detail)] grid min-w-0 items-start overflow-clip p-0"
       aria-busy={busy}
     >
       {/* One vertical list at every width: above the detail when the panes
-          stack, beside it on desktop. */}
-      <div className="border-line desktop:border-r desktop:border-b-0 grid min-w-0 content-start gap-0.5 border-b p-2">
+          stack, beside it on desktop. The rows are full-bleed: the column
+          adds no inset of its own, so a row's text starts on the card's
+          16px line, the same line the detail pane's text starts on. */}
+      <div className="border-line desktop:border-r desktop:border-b-0 grid min-w-0 content-start border-b">
         {list}
       </div>
       {detail}
@@ -37,9 +41,11 @@ export function ListDetailCard({
 }
 
 /**
- * One row of the list: a pressed toggle for the item it selects, at least
- * 56px, `radius-sm`, the hover overlay when hovered and the selected overlay
- * when selected (D51), so the two never look alike.
+ * One row of the list: a pressed toggle for the item it selects, full-bleed
+ * in its column (no gap, no radius), padded 16 across like the card and 12
+ * down, its lines 4 apart. Hovered it takes the hover overlay; selected, the
+ * selected overlay across the full width plus the 2px accent bar at its
+ * start (D51), so the two never look alike.
  */
 export function ListDetailRow({
   selected,
@@ -52,8 +58,10 @@ export function ListDetailRow({
       onClick={onSelect}
       aria-pressed={selected}
       className={cn(
-        'focus-ring grid min-h-14 w-full gap-1 rounded-sm px-3 py-2 text-left transition-colors focus-visible:-outline-offset-2',
-        selected ? 'overlay-selected' : 'hover:overlay-hover',
+        'focus-ring relative grid w-full gap-1 rounded-[inherit] px-[var(--card-padding)] py-3 text-left transition-colors focus-visible:-outline-offset-2',
+        selected
+          ? 'overlay-selected before:bg-accent before:absolute before:inset-y-0 before:start-0 before:w-0.5'
+          : 'hover:overlay-hover',
       )}
     >
       {children}
@@ -64,7 +72,8 @@ export function ListDetailRow({
 /**
  * The selected item's pane: a header band closed by a hairline (title,
  * facts, actions), a body that scrolls inside the pane on desktop, and an
- * optional footer (a pager) pinned under it.
+ * optional footer (a pager) pinned under it. Header and body each pad 16
+ * and stack their blocks 12 apart; nothing adds margin across the rule.
  */
 export function ListDetailPane({
   header,
@@ -86,7 +95,7 @@ export function ListDetailPane({
     >
       <div className="desktop:max-h-[calc(100dvh-var(--sticky-header-offset)-2*var(--workspace-gap))] relative flex flex-col">
         {busy ? <BusyBar active={busy.active} label={busy.label} /> : null}
-        <header className="border-line grid min-w-0 shrink-0 gap-[var(--compact-gap)] border-b p-[var(--card-padding)]">
+        <header className="border-line grid min-w-0 shrink-0 gap-[var(--workspace-gap)] border-b p-[var(--card-padding)]">
           {header}
         </header>
         <div className="content-scroll desktop:flex-1 desktop:overflow-y-auto grid min-h-0 gap-[var(--workspace-gap)] p-[var(--card-padding)]">

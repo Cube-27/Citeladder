@@ -110,7 +110,7 @@ export function Drawer({
               'min-h-0 flex-1',
               body === 'dock'
                 ? 'flex flex-col overflow-hidden'
-                : 'flex flex-col gap-4 overflow-x-hidden overflow-y-auto overscroll-contain p-[var(--card-padding)]',
+                : 'flex flex-col gap-[var(--workspace-gap)] overflow-x-hidden overflow-y-auto overscroll-contain p-[var(--card-padding)]',
             )}
           >
             {children}

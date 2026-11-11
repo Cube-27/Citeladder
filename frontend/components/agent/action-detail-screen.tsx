@@ -160,20 +160,21 @@ function ActionDetailView({
 
 /**
  * Where the Action sits: Actions, then this Action by its full target (the
- * header names it short), wrapping rather than cut so all of it shows.
+ * header names it short), kept to one row like every long URL in the app,
+ * with the whole target in its tooltip.
  */
 function Breadcrumb({ label }: Readonly<{ label: string }>) {
   return (
     <nav aria-label="Breadcrumb">
-      <Inline as="ol" gap="tight" className="flex-wrap">
-        <Inline as="li" gap="tight">
+      <Inline as="ol" gap="tight">
+        <Inline as="li" gap="tight" className="shrink-0">
           <TextLink href={ACTIONS} text="caption">
             Actions
           </TextLink>
           <Icon icon={ChevronRight} className="text-ink-muted" />
         </Inline>
         <li className="min-w-0">
-          <span aria-current="page" className={textRole('caption', 'block break-all')}>
+          <span aria-current="page" title={label} className={textRole('caption', 'block truncate')}>
             {label}
           </span>
         </li>

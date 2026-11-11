@@ -117,7 +117,8 @@ export function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
         <CardEyebrow>Next action</CardEyebrow>
         <CardTitle id="next-action">{data.next_action.title}</CardTitle>
       </CardHeader>
-      <Stack as={CardContent} gap="compact">
+      {/* The reason, its evidence and the button are blocks: 12 apart. */}
+      <Stack as={CardContent} gap="workspace">
         {copy.reason ? <p className={textRole('body')}>{copy.reason}</p> : null}
         {nextActionEvidence(data)}
         <div>

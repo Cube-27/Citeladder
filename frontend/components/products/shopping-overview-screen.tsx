@@ -375,7 +375,7 @@ export function OverviewSections({
   const overview = query.data;
   const scope: ProductScopeFilters = { window: windowDays, engine: null, promptSet: null };
   return (
-    <Stack gap="section">
+    <Stack gap="workspace">
       <Inline as="p" gap="meta" className="type-caption">
         <span>
           <InlineFigure>{formatCount(overview.executions)}</InlineFigure>

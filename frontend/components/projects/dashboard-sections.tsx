@@ -55,10 +55,16 @@ export function ProjectMeta({ data }: Readonly<{ data: CommandCenter }>) {
     <Inline as="p" gap="meta" className={textRole('caption')}>
       {href ? (
         <TextLink variant="external" text="caption" tone="muted" href={href} className="min-w-0">
-          <span className="truncate">{shown}</span>
+          <span className="truncate" title={shown}>
+            {shown}
+          </span>
         </TextLink>
       ) : null}
-      {website && !href ? <span className="truncate">{shown}</span> : null}
+      {website && !href ? (
+        <span className="truncate" title={shown}>
+          {shown}
+        </span>
+      ) : null}
       {measurement ? (
         <span>
           Tracked <DisplayTime value={measurement.completed_at} /> ·{' '}
@@ -146,7 +152,8 @@ export function DashboardActions({
 function FactSummary({ value }: Readonly<{ value: string }>) {
   if (!value.trim()) return <UnavailableValue state="not_set" />;
   return (
-    <ClampText lines={2} className={textRole('body')}>
+    // A value, so the primary ink under its grey label, not grey on grey.
+    <ClampText lines={2} className={textRole('itemTitle')}>
       {value}
     </ClampText>
   );
@@ -260,7 +267,7 @@ export function ProjectStateCard({ data }: Readonly<{ data: CommandCenter }>) {
  */
 export function Track({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <Card aria-labelledby="citation-share-track" className="flex h-full flex-col justify-between">
+    <Card aria-labelledby="citation-share-track" className="h-full">
       <CardHeader
         actions={
           data.track.observed_at ? (
@@ -271,9 +278,10 @@ export function Track({ data }: Readonly<{ data: CommandCenter }>) {
         }
       >
         <CardTitle id="citation-share-track">Owned citation rate</CardTitle>
+        {/* What the figure measures is the title's description, bound 4 under it. */}
+        <CardDescription>Answers that link to a page you own</CardDescription>
       </CardHeader>
       <Stack as={CardContent} gap="tight">
-        <span className={textRole('label')}>Answers that link to a page you own</span>
         <MetricValue
           value={
             data.track.citation_share.value === null

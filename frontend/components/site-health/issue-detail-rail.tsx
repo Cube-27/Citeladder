@@ -61,33 +61,31 @@ export function IssueDetailRail({
     <ListDetailPane
       busy={{ active: detailQuery.isFetching, label: 'Updating issue evidence' }}
       header={
+        // Three blocks 12 apart (the pane's header rhythm): the title bound
+        // 4 to its one meta line, the fix bound 4 to its label, the actions.
         <>
-          <Stack gap="item" className="min-w-0">
+          <Stack gap="tight" className="min-w-0">
             <h2 className={textRole('sectionTitle')}>{issueTitle(issue)}</h2>
-            <IssueMetadata issue={issue} />
-            {/* One line in one role: the count and the page types it spans.
-                It was a body-size count beside a caption-size list, with a
-                dot between every type and none between the two halves. */}
-            <p className="type-caption tabular-nums">
-              {issue.affected_url_count} {issue.affected_url_count === 1 ? 'page' : 'pages'}{' '}
-              affected
+            <IssueMetadata issue={issue}>
+              <span className="tabular-nums">
+                {issue.affected_url_count} {issue.affected_url_count === 1 ? 'page' : 'pages'}{' '}
+                affected
+              </span>
               {issue.page_kinds.length > 0 ? (
-                <>
-                  <span aria-hidden> · </span>
-                  Page types: {issue.page_kinds.map(pageKindLabel).join(', ')}
-                </>
+                <span>{issue.page_kinds.map(pageKindLabel).join(', ')}</span>
               ) : null}
-            </p>
-            {/* The rule's description is phrased as the PASSING state ("Page
-                is not blocked from indexing…"); printed under a failing title
-                it read as a contradiction. The fix is what the reader came
-                for, so it is part of the header, not a card under it. */}
-            {issue.remediation ? (
-              <p className="type-body text-ink whitespace-pre-line">
-                <span className={textRole('label')}>How to fix:</span> {issue.remediation}
-              </p>
-            ) : null}
+            </IssueMetadata>
           </Stack>
+          {/* The rule's description is phrased as the PASSING state ("Page
+              is not blocked from indexing…"); printed under a failing title
+              it read as a contradiction. The fix is what the reader came
+              for, so it is part of the header, not a card under it. */}
+          {issue.remediation ? (
+            <Stack gap="tight" className="min-w-0">
+              <span className="type-caption">How to fix</span>
+              <p className={textRole('itemTitle', 'whitespace-pre-line')}>{issue.remediation}</p>
+            </Stack>
+          ) : null}
           <IssueActions issue={issue} crawlId={crawlId} />
         </>
       }
@@ -108,7 +106,7 @@ export function IssueDetailRail({
         ) : null
       }
     >
-      <Stack as="section">
+      <Stack as="section" gap="workspace">
         <h3 className={textRole('sectionTitle')}>Affected pages</h3>
         <OccurrenceList
           issue={issue}

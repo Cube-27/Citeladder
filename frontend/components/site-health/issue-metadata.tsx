@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import { Badge } from '@/components/ui/badge';
 import { Inline } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
@@ -9,9 +11,13 @@ import { dimensionLabel, severityBadgeValue, severityLabel } from '@/lib/site-he
  * a glance. Shared by the catalog list and the detail rail so a row and the
  * panel it opens cannot describe the same issue differently. Severity is the
  * same status badge it is on Overview and the page detail; an advisory has no
- * severity, so it is the neutral tag.
+ * severity, so it is the neutral tag. The detail rail appends its own facts
+ * (the page count, the page types) as `children`, so they share the one line.
  */
-export function IssueMetadata({ issue }: Readonly<{ issue: SiteIssue }>) {
+export function IssueMetadata({
+  issue,
+  children,
+}: Readonly<{ issue: SiteIssue; children?: ReactNode }>) {
   return (
     <Inline as="span" className={textRole('label', 'flex-wrap')}>
       {issue.finding_class === 'defect' ? (
@@ -22,6 +28,7 @@ export function IssueMetadata({ issue }: Readonly<{ issue: SiteIssue }>) {
         <Badge>Advisory</Badge>
       )}
       <span className="text-ink-secondary">{dimensionLabel(issue.dimension)}</span>
+      {children}
     </Inline>
   );
 }

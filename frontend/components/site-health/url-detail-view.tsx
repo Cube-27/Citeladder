@@ -94,7 +94,8 @@ function PageMetaLine({ detail }: Readonly<{ detail: PageDetail }>) {
         variant="external"
         text="caption"
         href={detail.display_url}
-        className="min-w-0 [overflow-wrap:anywhere]"
+        title={detail.display_url}
+        className="min-w-0 truncate"
       >
         {detail.display_url}
       </TextLink>
@@ -126,7 +127,8 @@ function LinkedFrom({ detail }: Readonly<{ detail: PageDetail }>) {
               <TextLink
                 variant="external"
                 href={referrer.url}
-                className="min-w-0 [overflow-wrap:anywhere] tabular-nums"
+                title={referrer.url}
+                className="block min-w-0 truncate tabular-nums"
               >
                 {referrer.url}
               </TextLink>
