@@ -32,6 +32,7 @@ const API_ERROR_CODES = [
   'commerce_invalid',
   'commerce_not_found',
   'commerce_prompt_generation_unavailable',
+  'commerce_prompt_hero_required',
   'commerce_target_required',
   'competitor_not_found',
   'conflict',
