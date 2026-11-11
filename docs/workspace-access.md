@@ -71,9 +71,6 @@ mails the owner one notice (`mailbox.signup_notice_recipient`) with Reply-To set
 to the new address. The `auth.signup_notified` security event marks it sent; a
 refused send retries on the next tick under the same Resend idempotency key,
 for as long as the verification is inside `signup_notice_window_seconds`.
-Security events are kept for 30 days (`security_event_retention_days`): the
-runner's `security-event-retention` phase deletes older rows in batches of
-`security_event_prune_batch`, so the log is a recent audit trail, not an archive.
 Email/password login and Google sign-in establish the HttpOnly session;
 session-version checks invalidate stale sessions. Neither signing up nor signing
 in creates a workspace. Onboarding creates the person's own workspace
@@ -218,7 +215,12 @@ departure and ownership-transfer receipts in the mutation transaction. A
 rollback removes its receipt; repeated unchanged roles emit nothing. Google
 sign-in and customer provider-credential mutations also use this bounded
 writer. Event records contain identifiers and event kinds, never request
-bodies, provider credentials or prompts.
+bodies, provider credentials or prompts. Security events are kept for 30 days
+(`ABUSE_SECURITY_EVENT_RETENTION_DAYS`): the runner's periodic
+`security-event-retention` owner deletes older rows in bounded batches
+(`ABUSE_SECURITY_EVENT_PRUNE_BATCH`), so the log is a recent audit trail, not an
+archive. Retention must stay longer than `signup_notice_window_seconds`, whose
+`auth.signup_notified` marker stops a repeat notice.
 
 [Workspace APIs](../frontend/services/api/src/routes/workspaces.ts) use the
 [workspace owner](../frontend/services/api/src/workspaces/) for invitations,

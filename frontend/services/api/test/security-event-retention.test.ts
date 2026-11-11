@@ -6,7 +6,9 @@ import { testConfig, testDatabase } from './support.ts';
 const db = testDatabase(testConfig());
 const actor = randomUUID();
 // The clock is fixed years in the past so the cutoff never reaches rows other
-// test files write at the real time on the shared database.
+// test files write at the real time on the shared database. Only this file
+// writes rows that old, so assertions read this run's rows alone and tolerate
+// a crashed earlier run's leftovers being pruned alongside them.
 const now = new Date('2020-01-31T00:00:00Z');
 const days = (n: number) => new Date(now.getTime() - n * 86_400_000);
 
@@ -42,16 +44,19 @@ it('deletes events older than the retention period in batches and keeps newer on
   const recent = await record(days(29));
   const today = await record(now);
 
-  expect(await pruneSecurityEvents(db, now, 30, 2)).toBe(2);
-  expect(await remaining()).toHaveLength(3);
-  expect(await pruneSecurityEvents(db, now, 30, 2)).toBe(1);
-  expect(await pruneSecurityEvents(db, now, 30, 2)).toBe(0);
+  // Three rows are past the cutoff, so one batch of two stops at two.
+  expect(await pruneSecurityEvents(db, now, { retentionDays: 30, batch: 2 })).toBe(2);
+  let pruned: number;
+  do {
+    pruned = await pruneSecurityEvents(db, now, { retentionDays: 30, batch: 2 });
+  } while (pruned > 0);
   expect(await remaining()).toEqual([recent, today].sort());
 });
 
 it('deletes nothing once admission has closed', async () => {
   const old = await record(days(60));
-  expect(await pruneSecurityEvents(db, now, 30, 10, () => false)).toBe(0);
+  expect(await pruneSecurityEvents(db, now, { retentionDays: 30, batch: 10 }, () => false)).toBe(0);
   expect(await remaining()).toContain(old);
-  expect(await pruneSecurityEvents(db, now, 30, 10)).toBe(1);
+  await pruneSecurityEvents(db, now, { retentionDays: 30, batch: 10 });
+  expect(await remaining()).not.toContain(old);
 });

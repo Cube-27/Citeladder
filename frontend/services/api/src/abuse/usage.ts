@@ -157,8 +157,7 @@ const DAY_MS = 86_400_000;
 export async function pruneSecurityEvents(
   db: Database,
   now: Date,
-  retentionDays: number,
-  batch: number,
+  { retentionDays, batch }: { retentionDays: number; batch: number },
   canAdmit: () => boolean = () => true,
 ): Promise<number> {
   if (!canAdmit()) return 0;

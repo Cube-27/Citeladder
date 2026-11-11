@@ -432,8 +432,14 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
           pruneSecurityEvents(
             db,
             new Date(),
-            Number(resolveSettingSpec(policy.abuse.security_event_retention_days, config.settings)),
-            Number(resolveSettingSpec(policy.abuse.security_event_prune_batch, config.settings)),
+            {
+              retentionDays: Number(
+                resolveSettingSpec(policy.abuse.security_event_retention_days, config.settings),
+              ),
+              batch: Number(
+                resolveSettingSpec(policy.abuse.security_event_prune_batch, config.settings),
+              ),
+            },
             canAdmit,
           ),
       },
