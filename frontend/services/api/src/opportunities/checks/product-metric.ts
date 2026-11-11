@@ -96,7 +96,7 @@ export const productMetricCheck: CheckModule<'product_metric'> = {
       return outcome(
         ctx.reading,
         'waiting',
-        after.executions ? 'too_few_samples' : 'no_answers_after_go_live',
+        after.executions ? read.reason : 'no_answers_after_go_live',
       );
     const window = { windowDays: check.window_days, engine: null, promptSet: null, ...bounds };
     const ids = await observationIds(ctx.db, scope, window, [check.product_id]);

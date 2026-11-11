@@ -39,10 +39,18 @@ export const productMetricRule = (id: ProductMetricRuleId): ProductMetricRule =>
 
 export type MetricReading =
   | { state: 'measured'; value: number; samples: number }
-  | { state: 'insufficient'; samples: number }
+  | {
+      state: 'insufficient';
+      samples: number;
+      /** Only quotes in other currencies, which are not converted, or too few samples. */
+      reason: 'quotes_in_other_currencies' | 'too_few_samples';
+    }
   | { state: 'unknown'; reason: 'no_catalog_price' };
 
-type Raw = { value: number | null; samples: number } | { unknown: 'no_catalog_price' };
+/** A value and its samples; `excluded` counts readings left out (quotes in other currencies). */
+type Raw =
+  | { value: number | null; samples: number; excluded: number }
+  | { unknown: 'no_catalog_price' };
 
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
 
@@ -65,16 +73,17 @@ function raw(
 ): Raw {
   switch (metric) {
     case 'appearances':
-      return { value: row.appearances, samples: executions };
+      return { value: row.appearances, samples: executions, excluded: 0 };
     case 'win_rate':
-      return { value: row.win_rate, samples: row.ordered_appearances };
+      return { value: row.win_rate, samples: row.ordered_appearances, excluded: 0 };
     case 'price_gap_share': {
       const catalog = row.catalog_price;
       if (!catalog?.currency || catalog.min <= 0) return { unknown: 'no_catalog_price' };
       // The read medians quotes in the catalog currency; others are not converted.
-      const { median, currency, quoted } = row.mentioned_price;
-      if (median === null || currency !== catalog.currency) return { value: null, samples: 0 };
-      return { value: priceGap(median, catalog), samples: quoted };
+      const { median, currency, quoted, other_currency: excluded } = row.mentioned_price;
+      if (median === null || currency !== catalog.currency)
+        return { value: null, samples: 0, excluded };
+      return { value: priceGap(median, catalog), samples: quoted, excluded };
     }
     case 'owned_merchant_answers':
       return {
@@ -82,6 +91,7 @@ function raw(
           row.merchants.filter((item) => isOwnedHost(item.domain, owned)).map((item) => item.count),
         ),
         samples: sum(row.merchants.map((item) => item.count)),
+        excluded: 0,
       };
     default: {
       const _exhaustive: never = metric;
@@ -100,7 +110,14 @@ export function readMetric(
   const found = raw(rule.metric, row, executions, owned);
   if ('unknown' in found) return { state: 'unknown', reason: found.unknown };
   if (found.value === null || found.samples < rule.min_samples)
-    return { state: 'insufficient', samples: found.samples };
+    return {
+      state: 'insufficient',
+      samples: found.samples,
+      reason:
+        found.samples === 0 && found.excluded > 0
+          ? 'quotes_in_other_currencies'
+          : 'too_few_samples',
+    };
   return { state: 'measured', value: found.value, samples: found.samples };
 }
 

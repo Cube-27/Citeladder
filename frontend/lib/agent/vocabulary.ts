@@ -186,6 +186,8 @@ const CHECK_REASON: Record<string, string> = {
   no_answers: 'That run has no answers to these prompts.',
   too_few_samples:
     'The answers since go-live are too few to read this metric yet. Later runs add to them.',
+  quotes_in_other_currencies:
+    'The answers since go-live quote this product only in other currencies, which are not converted. Later runs may quote the catalog currency.',
   no_answers_after_go_live: 'No matched answer has completed since the go-live date yet.',
   no_catalog_price: 'The product has no catalog price to compare quoted prices with.',
   product_not_in_catalog: 'The product is no longer an active catalog product.',

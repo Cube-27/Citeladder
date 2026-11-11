@@ -126,10 +126,16 @@ async function candidate(t: Tenant, name: string) {
 }
 
 /** The quote and merchant on one task's observation of a product. */
-async function quote(task: string, product: string, price: string | null, host: string) {
+async function quote(
+  task: string,
+  product: string,
+  price: string | null,
+  host: string,
+  currency = 'USD',
+) {
   await db
     .updateTable('commerce_recommendation_observations')
-    .set({ observed_price: price, observed_currency: price ? 'USD' : '', merchant_domain: host })
+    .set({ observed_price: price, observed_currency: price ? currency : '', merchant_domain: host })
     .where('task_id', '=', task)
     .where('observed_product', '=', product)
     .execute();
@@ -367,30 +373,39 @@ describe('Commerce Actions from the per-product metrics', () => {
       win_rate: ['waiting', null, road_],
     });
 
-    // One answer after go-live is too few to judge any of them.
+    // One answer after go-live is too few to judge any of them; its only
+    // quote is in euros, which the price check does not convert.
     const later = await answer(t, '1. Acme Road Runner for daily miles');
-    await quote(later, 'Acme Road Runner', '120', 'runnerstore.com');
+    await quote(later, 'Acme Road Runner', '120', 'runnerstore.com', 'EUR');
     await settle(t, later);
     expect(await checks()).toEqual({
       owned_merchant_answers: ['waiting', 'too_few_samples', road_],
-      price_gap_share: ['waiting', 'too_few_samples', road_],
+      price_gap_share: ['waiting', 'quotes_in_other_currencies', road_],
       win_rate: ['waiting', 'too_few_samples', road_],
     });
 
     // A second answer quotes the catalog price and sends shoppers to the
-    // business's own store; the win rate still needs a third ordered answer.
+    // business's own store; one dollar quote and three ordered answers are
+    // still needed.
     const own = await answer(t, '1. Acme Road Runner for long runs');
     await quote(own, 'Acme Road Runner', '120', 'shop.acme.example');
     await settle(t, own);
     expect(await checks()).toEqual({
       owned_merchant_answers: ['met', null, road_],
-      price_gap_share: ['met', null, road_],
+      price_gap_share: ['waiting', 'too_few_samples', road_],
       win_rate: ['waiting', 'too_few_samples', road_],
     });
 
-    // A third answer lists it first again: three wins in three ordered answers.
-    await settle(t, await answer(t, '1. Acme Road Runner for tempo runs\n2. Rival Pacer'));
-    expect((await checks()).win_rate).toEqual(['met', null, road_]);
+    // A third answer lists it first again at the catalog price: three wins in
+    // three ordered answers, and two dollar quotes at the catalog price.
+    const third = await answer(t, '1. Acme Road Runner for tempo runs\n2. Rival Pacer');
+    await quote(third, 'Acme Road Runner', '120', 'runnerstore.com');
+    await settle(t, third);
+    expect(await checks()).toEqual({
+      owned_merchant_answers: ['met', null, road_],
+      price_gap_share: ['met', null, road_],
+      win_rate: ['met', null, road_],
+    });
     const detail = await getAction(db, t.workspaceId, actionId);
     expect(detail.declaration?.state).toBe('verified');
   });
