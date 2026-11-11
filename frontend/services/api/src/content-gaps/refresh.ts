@@ -266,7 +266,7 @@ function reusedClustering(previous: readonly PreviousAngle[], groups: readonly T
     const members = angle.memberUrls.map((url) =>
       current.get(JSON.stringify([angle.topicId, url])),
     );
-    if (members.some((member) => member === undefined)) return null;
+    if (members.includes(undefined)) return null;
     angles.push({
       topicId: angle.topicId,
       label: angle.label,

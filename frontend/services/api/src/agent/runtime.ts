@@ -179,10 +179,24 @@ function suggestedNotices(suggestions: TurnState['suggestions']) {
   for (const { document } of suggestions) counts.set(document, (counts.get(document) ?? 0) + 1);
   return [...counts]
     .toSorted(([left], [right]) => left - right)
-    .map(
-      ([number, count]) =>
-        `${count === 1 ? 'One suggestion' : `${count} suggestions`} added to ${documentLabel(number)}.`,
+    .map(([number, count]) => {
+      const added = count === 1 ? 'One suggestion' : `${count} suggestions`;
+      return `${added} added to ${documentLabel(number)}.`;
+    });
+}
+/** Why a read cannot run in this step, or null when it may. */
+function readLimit(budget: Budget, toolsUsed: number, parallel: number): ToolOutcome | null {
+  if (toolsUsed >= budget.max_tool_calls)
+    return refused(
+      'tool_budget_spent',
+      'The read budget for this turn is spent. Answer from what you have read.',
     );
+  if (parallel >= budget.max_parallel_tool_calls)
+    return refused(
+      'parallel_limit',
+      `At most ${budget.max_parallel_tool_calls} reads run in one step. Make this call in your next step.`,
+    );
+  return null;
 }
 /**
  * The web searches the next call may run, and is held for: what is left of the
@@ -639,17 +653,7 @@ export class AgentRuntime {
         tool(outcome.ok ? 'completed' : 'refused');
         return Promise.resolve(result(call, outcome.text, !outcome.ok));
       }
-      let limit: ToolOutcome | null = null;
-      if (state.toolsUsed >= turn.budget.max_tool_calls)
-        limit = refused(
-          'tool_budget_spent',
-          'The read budget for this turn is spent. Answer from what you have read.',
-        );
-      else if (parallel >= turn.budget.max_parallel_tool_calls)
-        limit = refused(
-          'parallel_limit',
-          `At most ${turn.budget.max_parallel_tool_calls} reads run in one step. Make this call in your next step.`,
-        );
+      const limit = readLimit(turn.budget, state.toolsUsed, parallel);
       if (!limit && this.deps.tools.has(call.name)) {
         state.toolsUsed++;
         parallel++;

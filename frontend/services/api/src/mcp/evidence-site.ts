@@ -224,46 +224,52 @@ export async function siteLinks(
   };
 }
 
-const withoutQuery = (url: string) => url.replace(/[?#].*$/u, '');
+/** A URL without its query string or fragment. */
+function withoutQuery(url: string) {
+  const end = url.search(/[?#]/u);
+  return end < 0 ? url : url.slice(0, end);
+}
 const SUMMARY_TEXT_CHARS = 160;
 
-/**
- * One page's evidence for a rule, compact: its distinct failing targets
- * (query-string variants of one link folded together) up to a cap with the
- * total, else its scalar facts. Record ids never reach the model.
- */
-function ruleEvidenceSummary(value: unknown): Record<string, string | number | boolean | string[]> {
-  const evidence = record(value);
-  if (Array.isArray(evidence.failing_targets)) {
-    const distinct = new Set<string>();
-    for (const target of evidence.failing_targets.map(record)) {
-      if (typeof target.url !== 'string') continue;
-      let outcome = 'failed';
-      if (target.reason === 'redirect_limit') outcome = 'redirect loop';
-      else if (typeof target.final_url === 'string') outcome = withoutQuery(target.final_url);
-      else if (typeof target.status_code === 'number') outcome = String(target.status_code);
-      distinct.add(`${withoutQuery(target.url)} → ${outcome}`);
-    }
-    const lines = [...distinct];
-    return {
-      failing_targets: lines.slice(0, mcpPolicy.rule_evidence_items),
-      // Distinct within the persisted (bounded) sample; failure_count is the check's own total.
-      distinct_failing_target_count: lines.length,
-      ...(typeof evidence.failure_count === 'number'
-        ? { failure_count: evidence.failure_count }
-        : {}),
-    };
+/** Where one failing target ended: a loop, its landing URL, its status, else a plain failure. */
+function targetOutcome(target: Record<string, unknown>) {
+  if (target.reason === 'redirect_limit') return 'redirect loop';
+  if (typeof target.final_url === 'string') return withoutQuery(target.final_url);
+  if (typeof target.status_code === 'number') return String(target.status_code);
+  return 'failed';
+}
+
+/** Distinct failing targets, query-string variants of one link folded together. */
+function failingTargetsSummary(evidence: Record<string, unknown>, targets: readonly unknown[]) {
+  const distinct = new Set<string>();
+  for (const target of targets.map(record)) {
+    if (typeof target.url !== 'string') continue;
+    distinct.add(`${withoutQuery(target.url)} → ${targetOutcome(target)}`);
   }
-  // A site-level architecture finding sits on the homepage and names its pages.
-  if (Array.isArray(evidence.pages)) {
-    const urls = evidence.pages
-      .map((page) => record(page).url)
-      .filter((url): url is string => typeof url === 'string');
-    return {
-      affected_pages: urls.slice(0, mcpPolicy.rule_evidence_items),
-      affected_page_count: typeof evidence.count === 'number' ? evidence.count : urls.length,
-    };
-  }
+  const lines = [...distinct];
+  return {
+    failing_targets: lines.slice(0, mcpPolicy.rule_evidence_items),
+    // Distinct within the persisted (bounded) sample; failure_count is the check's own total.
+    distinct_failing_target_count: lines.length,
+    ...(typeof evidence.failure_count === 'number'
+      ? { failure_count: evidence.failure_count }
+      : {}),
+  };
+}
+
+/** A site-level architecture finding sits on the homepage and names its pages. */
+function affectedPagesSummary(evidence: Record<string, unknown>, pages: readonly unknown[]) {
+  const urls = pages
+    .map((page) => record(page).url)
+    .filter((url): url is string => typeof url === 'string');
+  return {
+    affected_pages: urls.slice(0, mcpPolicy.rule_evidence_items),
+    affected_page_count: typeof evidence.count === 'number' ? evidence.count : urls.length,
+  };
+}
+
+/** The evidence's scalar facts, ids left out and text capped. */
+function scalarFacts(evidence: Record<string, unknown>) {
   const facts: Record<string, string | number | boolean> = {};
   for (const [key, item] of Object.entries(evidence)) {
     if (key === 'id' || key.endsWith('_id') || key.endsWith('_ids')) continue;
@@ -274,13 +280,25 @@ function ruleEvidenceSummary(value: unknown): Record<string, string | number | b
 }
 
 /**
+ * One page's evidence for a rule, compact: its distinct failing targets
+ * (query-string variants of one link folded together) up to a cap with the
+ * total, else its scalar facts. Record ids never reach the model.
+ */
+function ruleEvidenceSummary(value: unknown): Record<string, string | number | boolean | string[]> {
+  const evidence = record(value);
+  if (Array.isArray(evidence.failing_targets))
+    return failingTargetsSummary(evidence, evidence.failing_targets);
+  if (Array.isArray(evidence.pages)) return affectedPagesSummary(evidence, evidence.pages);
+  return scalarFacts(evidence);
+}
+
+/**
  * A page URL as the crawl's URLs are matched, the way the Agent's context
  * matches its target page, without query or fragment: a user's
  * `https://www.site.com/a/` and a crawled `https://site.com/a` are one page.
  */
 function matchableUrl(value: string) {
-  const end = value.search(/[?#]/u);
-  return comparableUrl(end < 0 ? value : value.slice(0, end));
+  return comparableUrl(withoutQuery(value));
 }
 function urlFilter(value: string | null | undefined) {
   if (value === null || value === undefined) return null;

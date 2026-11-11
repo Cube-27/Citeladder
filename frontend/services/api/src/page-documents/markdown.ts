@@ -59,6 +59,12 @@ function copyOf(node: ChildNode, base: string): ChildNode {
   };
 }
 
+/** Whether a region node is kept: not a comment, doctype, repeated card list or hidden subtree. */
+function isKept(child: ChildNode, cards: ReadonlySet<HtmlElement>) {
+  if (child.nodeName === '#comment' || child.nodeName === '#documentType') return false;
+  return !isElement(child) || (!cards.has(child) && regionNodeIsVisible(child));
+}
+
 /**
  * The region without what Site Health leaves out of it: chrome landmarks,
  * non-rendered and hidden subtrees, comments, and repeated card lists such as
@@ -72,8 +78,7 @@ function keptRegion(region: HtmlNode, cards: ReadonlySet<HtmlElement>, base: str
     const [source, target] = pending.pop()!;
     if (!('childNodes' in source)) continue;
     for (const child of source.childNodes) {
-      if (child.nodeName === '#comment' || child.nodeName === '#documentType') continue;
-      if (isElement(child) && (cards.has(child) || !regionNodeIsVisible(child))) continue;
+      if (!isKept(child, cards)) continue;
       const copy = copyOf(child, base);
       target.childNodes.push(copy);
       if (isElement(child) && 'childNodes' in copy) pending.push([child, copy]);

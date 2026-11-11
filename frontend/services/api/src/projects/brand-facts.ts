@@ -111,7 +111,7 @@ function revisionOf(row: Selectable<BrandFacts>, userId: string | null) {
 }
 
 /** A new draft fact; drafts are never checked against until confirmed. */
-export async function createBrandFact(
+export function createBrandFact(
   db: Database,
   scope: ProjectScope,
   userId: string,
@@ -154,7 +154,7 @@ export async function createBrandFact(
 }
 
 /** Apply an edit to the revision the editor read, appending the next revision. */
-export async function updateBrandFact(
+export function updateBrandFact(
   db: Database,
   scope: ProjectScope,
   userId: string,

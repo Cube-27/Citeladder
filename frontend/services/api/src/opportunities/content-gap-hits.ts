@@ -54,7 +54,7 @@ export async function contentGapSource(
   };
 }
 
-async function runAngles(db: Database, scope: Scope, runId: string) {
+function runAngles(db: Database, scope: Scope, runId: string) {
   return db
     .selectFrom('content_angles as angle')
     .innerJoin('content_angle_lineages as lineage', (join) =>

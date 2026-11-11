@@ -191,15 +191,28 @@
 
 /* ---------- CtaBand: a stage inside the container, never full-bleed ----------
    D18/D21: the copy and actions stack centred, so the band has no empty side.
-   D44: set off by its tinted stage (below), no border or shadow. */
+   D44: set off by its stage, tints over paper with grain, and no border or
+   shadow: the page's last stage. */
 .cl-cta {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 32px;
   padding: 64px;
+  border: 0;
   border-radius: var(--site-radius-stage);
-  background: var(--color-surface);
+  background: var(--color-paper);
+  background-image:
+    var(--stage-grain), radial-gradient(90% 120% at 0% 0%, var(--stage-a) 0%, transparent 70%),
+    radial-gradient(90% 120% at 100% 100%, var(--stage-b) 0%, transparent 70%),
+    radial-gradient(70% 90% at 100% 0%, var(--stage-c) 0%, transparent 70%);
+  background-size:
+    200px 200px,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+  background-blend-mode: soft-light, normal, normal, normal;
+  box-shadow: none;
   text-align: center;
 }
 
@@ -265,30 +278,8 @@
   }
 }
 
-/* ---------- The stage: tints over paper, with grain ---------- */
-.cl-cta {
-  background-color: var(--color-paper);
-  background-image:
-    var(--stage-grain), radial-gradient(90% 120% at 0% 0%, var(--stage-a) 0%, transparent 70%),
-    radial-gradient(90% 120% at 100% 100%, var(--stage-b) 0%, transparent 70%),
-    radial-gradient(70% 90% at 100% 0%, var(--stage-c) 0%, transparent 70%);
-  background-size:
-    200px 200px,
-    100% 100%,
-    100% 100%,
-    100% 100%;
-  background-blend-mode: soft-light, normal, normal, normal;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .cl-faq-icon {
     transition: none;
   }
-}
-
-/* ---------- The CtaBand: the page's last stage ---------- */
-.cl-cta {
-  border: 0;
-  border-radius: var(--site-radius-stage);
-  box-shadow: none;
 }

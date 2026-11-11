@@ -183,7 +183,8 @@ jobs:
           # `images list` resolves a digest from the registry alone (no
           # Container Analysis permission). Prints nothing for a missing tag.
           image_digest() {
-            gcloud artifacts docker images list "$registry/$1" --include-tags --filter="tags:$2" \
+            local name="$1" tag="$2"
+            gcloud artifacts docker images list "$registry/$name" --include-tags --filter="tags:$tag" \
               --format='value(version)' --quiet 2>/dev/null | head -n 1
           }
           # Reuses an image already pushed for this tag, so retries are safe.
@@ -236,12 +237,14 @@ jobs:
         run: |
           set -euo pipefail
           has_version() {
-            gcloud secrets versions list "$1" --project "$PROJECT_ID" --format=json \
+            local name="$1"
+            gcloud secrets versions list "$name" --project "$PROJECT_ID" --format=json \
               | jq -e 'any(.[]; .state == "ENABLED")' >/dev/null
           }
           add_generated() {
-            has_version "$1" || openssl rand -hex 32 \
-              | gcloud secrets versions add "$1" --project "$PROJECT_ID" --data-file=- >/dev/null
+            local name="$1"
+            has_version "$name" || openssl rand -hex 32 \
+              | gcloud secrets versions add "$name" --project "$PROJECT_ID" --data-file=- >/dev/null
           }
           # Cloud Run and the database VM read only `latest`, and a rotation's
           # old value lives in its own *-previous secret, so every older
@@ -342,7 +345,10 @@ jobs:
           for pair in citeladder-bing-oauth-client citeladder-dataforseo; do
             count=0
             for name in "${enabled_optional[@]}"; do
-              case "$name" in "$pair"-*) count=$((count + 1)) ;; esac
+              case "$name" in
+                "$pair"-*) count=$((count + 1)) ;;
+                *) ;;
+              esac
             done
             if [ "$count" = 1 ]; then
               echo "::error::Set both $pair secrets or neither."

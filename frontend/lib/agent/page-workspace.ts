@@ -12,13 +12,31 @@ type AgentPageField = Extract<AgentSuggestion['anchor'], { kind: 'field' }>['fie
 /** One heading of the body and the offset its line starts at. */
 export type OutlineHeading = Readonly<{ level: number; text: string; from: number }>;
 
-const ATX_HEADING = /^ {0,3}(#{1,6})[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$/;
+const ATX_HEADING = /^ {0,3}(#{1,6})[ \t]+(\S.*)$/;
 const FENCE = /^ {0,3}(`{3,}|~{3,})/;
+
+const isBlank = (char: string | undefined) => char === ' ' || char === '\t';
+
+/** End of `text` once trailing spaces and tabs before `end` are dropped. */
+function blankTrimmedEnd(text: string, end: number): number {
+  let at = end;
+  while (at > 0 && isBlank(text[at - 1])) at--;
+  return at;
+}
+
+/** A heading's content without trailing blanks or its optional closing `#` sequence. */
+function headingContent(content: string): string {
+  const end = blankTrimmedEnd(content, content.length);
+  let hashes = end;
+  while (hashes > 0 && content[hashes - 1] === '#') hashes--;
+  const closed = hashes > 0 && hashes < end && isBlank(content[hashes - 1]);
+  return content.slice(0, closed ? blankTrimmedEnd(content, hashes) : end);
+}
 
 /** Markdown's inline marks taken out, so a heading or passage reads as text. */
 function inlineText(markdown: string): string {
   return markdown
-    .replaceAll(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replaceAll(/!?\[([^[\]]*)\]\([^)[]*\)/g, '$1')
     .replaceAll(/(\*\*|__|\*|_|`)/g, '')
     .replaceAll(/\s+/g, ' ')
     .trim();
@@ -27,7 +45,7 @@ function inlineText(markdown: string): string {
 /** A fence closes on the same character at least as long; anything else keeps it open. */
 function nextFence(open: string | null, marker: string): string | null {
   if (open === null) return marker;
-  return marker[0] === open[0] && marker.length >= open.length ? null : open;
+  return marker.startsWith(open.charAt(0)) && marker.length >= open.length ? null : open;
 }
 
 /** The body's ATX headings in order; a `#` line inside fenced code is content. */
@@ -40,7 +58,7 @@ export function pageOutline(body: string): OutlineHeading[] {
     if (marker) fence = nextFence(fence, marker);
     else if (fence === null) {
       const match = ATX_HEADING.exec(line);
-      const text = match?.[2] ? inlineText(match[2]) : '';
+      const text = match?.[2] ? inlineText(headingContent(match[2])) : '';
       if (match?.[1] && text) headings.push({ level: match[1].length, text, from: offset });
     }
     offset += line.length + 1;

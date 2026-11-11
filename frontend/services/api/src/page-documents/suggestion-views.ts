@@ -68,12 +68,8 @@ function board(suggestions: readonly Suggestion[], chain: RevisionChain): Entry[
   const entries = suggestions.map((suggestion): Entry => {
     const status = statusOf(suggestion);
     const located = status === 'open' ? locate(suggestion, chain) : null;
-    const position =
-      status === 'applied'
-        ? appliedPosition(suggestion, chain)
-        : located?.ok
-          ? located.position
-          : null;
+    let position = located?.ok ? located.position : null;
+    if (status === 'applied') position = appliedPosition(suggestion, chain);
     return { suggestion, status, located, position, chooseOne: false };
   });
   const live = entries
@@ -172,22 +168,24 @@ const clip = (text: string) =>
     text.length > p.turn_list_quote_chars ? `${text.slice(0, p.turn_list_quote_chars)}…` : text,
   );
 
+/** What a suggestion targets, as the model reads it. */
+function digestTarget(anchor: Entry['suggestion']['anchor']) {
+  if (anchor.kind === 'span') return `text ${clip(anchor.quote.exact)}`;
+  if (anchor.kind === 'field') return `${anchor.field} ${clip(anchor.expected)}`;
+  return 'the page';
+}
+
+/** What a suggestion offers: its text, the input it needs, else advice only. */
+function digestOffer(row: Entry['suggestion']['row']) {
+  if (row.replacement !== null) return `→ ${clip(row.replacement)}`;
+  if (row.needs_input !== null) return `asks ${clip(row.needs_input)}`;
+  return 'advice';
+}
+
 /** One suggestion as a line the model reads: its id, status, what it targets and what it offers. */
 function digestLine(entry: Entry) {
   const { row, anchor } = entry.suggestion;
-  const target =
-    anchor.kind === 'span'
-      ? `text ${clip(anchor.quote.exact)}`
-      : anchor.kind === 'field'
-        ? `${anchor.field} ${clip(anchor.expected)}`
-        : 'the page';
-  const offer =
-    row.replacement !== null
-      ? `→ ${clip(row.replacement)}`
-      : row.needs_input !== null
-        ? `asks ${clip(row.needs_input)}`
-        : 'advice';
-  return `- ${row.id} [${entry.status}] ${row.category}, ${row.rule_id}, ${row.source}: ${target} ${offer}`;
+  return `- ${row.id} [${entry.status}] ${row.category}, ${row.rule_id}, ${row.source}: ${digestTarget(anchor)} ${digestOffer(row)}`;
 }
 
 /**
