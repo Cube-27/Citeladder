@@ -111,9 +111,43 @@ describe('SiteHealthScreen — Website tab deep links', () => {
     const start = screen.getByRole('button', { name: 'Run new crawl' });
     await waitFor(() => expect(start).toBeEnabled());
     await user.click(start);
-    await waitFor(() => expect(started).toEqual([{ project_id: PROJECT }]));
+    await waitFor(() => expect(started).toEqual([{ project_id: PROJECT, robots: 'respect' }]));
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
     expect(new URLSearchParams(window.location.search).get('tab')).toBe('overview');
+  });
+
+  it('ignores robots.txt only after the person confirms they are authorized', async () => {
+    const user = userEvent.setup();
+    const started: unknown[] = [];
+    mockRoutes();
+    mswServer.use(
+      http.post('/api/v1/site-crawls', async ({ request }) => {
+        started.push(await request.json());
+        return HttpResponse.json(crawl({ status: 'running', analysis_status: 'pending' }));
+      }),
+    );
+
+    renderScreen();
+    const options = await screen.findByRole('button', { name: 'More crawl options' });
+    await waitFor(() => expect(options).toBeEnabled());
+    await user.click(options);
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'Run new crawl ignoring robots.txt…' }),
+    );
+    const dialog = await screen.findByRole('dialog', { name: 'Ignore robots.txt for this crawl?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(started).toEqual([]);
+
+    await user.click(options);
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'Run new crawl ignoring robots.txt…' }),
+    );
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', {
+        name: 'I am authorized, run crawl',
+      }),
+    );
+    await waitFor(() => expect(started).toEqual([{ project_id: PROJECT, robots: 'ignore' }]));
   });
 });
 
@@ -690,6 +724,27 @@ describe('SiteHealthScreen — crawl schedule', () => {
       within(menu).getByText('Turned off: scheduled crawls kept failing to start.'),
     ).toBeVisible();
     expect(within(menu).queryByText(/Next crawl/)).not.toBeInTheDocument();
+  });
+
+  it('says scheduled crawls keep the latest crawl’s choice to ignore robots.txt', async () => {
+    mockRoutes({
+      robots: {
+        handling: 'ignore',
+        decided_by_email: 'owner@example.test',
+        decided_at: '2026-01-02T03:04:05.000Z',
+      },
+    });
+
+    renderScreen();
+
+    const trigger = await screen.findByRole('button', { name: 'Crawl schedule: Off' });
+    await waitFor(() => expect(trigger).toBeEnabled());
+    await userEvent.click(trigger);
+    expect(
+      within(await screen.findByRole('menu')).getByText(
+        'Ignores robots.txt (confirmed by owner@example.test)',
+      ),
+    ).toBeVisible();
   });
 
   it('tells an unreadable schedule apart from one that is off', async () => {

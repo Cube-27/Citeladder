@@ -28,7 +28,7 @@ import {
   releaseNonPage,
   type Candidate,
 } from './frontier.ts';
-import { isBotBlock } from './page-fetch.ts';
+import { crawlRobotsHandling, isBotBlock } from './page-fetch.ts';
 import {
   Abandoned,
   commitTask,
@@ -55,6 +55,7 @@ type Outcome = AttemptOutcome & {
   page: FetchedPage | null;
   discovery: Discovery | null;
   facts: PageFacts | null;
+  robotsExcluded: boolean;
   retryable: boolean;
   errorDetail: string;
 };
@@ -69,8 +70,9 @@ async function acquire(ctx: SiteTaskContext, crawl: Crawl, task: SiteTask): Prom
       ? (hop) => classifyUrlAdmission(hop.href, scope).accepted
       : (hop) => !hardExcluded(hop),
     contentTypes: [...acquisition.html_content_types, ...crawlPolicy.document_media_types],
+    robots: crawlRobotsHandling(crawl.configuration),
   });
-  const empty = { page: null, discovery: null, facts: null };
+  const empty = { page: null, discovery: null, facts: null, robotsExcluded: false };
   if (!fetched.ok)
     return {
       ...empty,
@@ -101,7 +103,14 @@ async function acquire(ctx: SiteTaskContext, crawl: Crawl, task: SiteTask): Prom
       errorDetail: '',
       retryable: failure[1],
     };
-  const success = { ...common, succeeded: true, errorCode: '', errorDetail: '', retryable: false };
+  const success = {
+    ...common,
+    robotsExcluded: fetched.robotsExcluded,
+    succeeded: true,
+    errorCode: '',
+    errorDetail: '',
+    retryable: false,
+  };
   if (DOCUMENT_TYPES.has(page.contentType))
     return { ...success, discovery: { title: '', links: [] }, facts: null };
   // One parse, off the event loop: discovery reads every anchor of the whole
@@ -340,6 +349,7 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
         policyVersion: ctx.fetcher.settings.policyVersion,
         latencyMs: outcome.latencyMs ?? 0,
         purpose: 'discover',
+        robotsExcluded: outcome.robotsExcluded,
       });
       const referrerId = await writeObservation(trx, crawl, task, page, discovery, artifactId);
       const exact = record(crawl.configuration).input_mode === 'exact_urls';

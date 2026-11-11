@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 
@@ -6,6 +7,7 @@ import { record } from '../src/db/json.ts';
 import type { FetchedPage } from '../src/safe-fetch.ts';
 import { isBotBlock, SitePageFetcher, siteFetchSettings } from '../src/site-health/page-fetch.ts';
 import { crawlCounters } from '../src/site-health/reads/crawl.ts';
+import { pageDetail, pages } from '../src/site-health/reads/pages.ts';
 import * as interpretation from '../src/site-health/analysis/off-thread.ts';
 import { hardExcluded } from '../src/site-health/url-admission.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
@@ -489,6 +491,94 @@ describe('analyze failures', () => {
       expect.objectContaining({ error_code: codes.robots_denied, status_code: null }),
     ]);
   });
+
+  it('fetches a disallowed page for a crawl that ignores robots.txt and marks the page', async () => {
+    const seed = await running({ configuration: JSON.stringify({ robots: 'ignore' }) });
+    const page = await fixtures.analyzable(seed, '/private');
+    const open = await fixtures.analyzable(seed, '/open');
+    const requests: string[] = [];
+    await analyze(
+      site(
+        {
+          '/robots.txt': { body: 'User-agent: *\nDisallow: /private\n', contentType: 'text/plain' },
+          '/private': { body: RICH },
+          '/open': { body: RICH },
+        },
+        requests,
+      ),
+      page.taskId,
+      open.taskId,
+    );
+    expect(await task(page.taskId)).toMatchObject({ status: 'succeeded', error_code: '' });
+    expect(requests).toEqual(['/robots.txt', '/private', '/open']);
+    // Discovery would have observed both pages in this crawl.
+    await db
+      .insertInto('site_url_observations')
+      .values(
+        [page, open].map(({ siteUrlId }) => ({
+          id: randomUUID(),
+          workspace_id: seed.workspaceId,
+          project_id: seed.projectId,
+          crawl_id: seed.crawlId,
+          site_url_id: siteUrlId,
+          source_kind: 'link',
+          observed_url: '',
+          final_url: '',
+          status_code: 200,
+          content_type: 'text/html',
+          depth: 0,
+          title: '',
+          rewrite_reason: '',
+          rewrite_version: '',
+          value_kind: '',
+          value_priority: 0,
+          created_at: new Date(),
+        })),
+      )
+      .execute();
+    const listed = await pages(db, seed.workspaceId, seed.crawlId, {}, 'url', {
+      limit: 10,
+      cursor: null,
+    });
+    expect(
+      listed.items.map((item) => [item.normalized_url, item.analysis_status, item.robots_excluded]),
+    ).toEqual([
+      ['https://example.test/open', 'completed', false],
+      ['https://example.test/private', 'completed', true],
+    ]);
+    const detail = await pageDetail(db, seed.workspaceId, seed.crawlId, page.siteUrlId);
+    expect(detail.robots_excluded).toBe(true);
+  });
+
+  it('respects robots.txt for every caller that does not pass the crawl’s ignore choice', async () => {
+    const fetcher = site({
+      '/robots.txt': { body: 'User-agent: *\nDisallow: /private\n', contentType: 'text/plain' },
+      '/private': { body: RICH },
+    });
+    // Page documents and other non-crawl fetches call without a choice.
+    expect(await fetcher.fetch('https://example.test/private')).toMatchObject({
+      ok: false,
+      code: codes.robots_denied,
+    });
+    expect(await fetcher.fetch('https://example.test/private', { robots: 'ignore' })).toMatchObject(
+      { ok: true, robotsExcluded: true },
+    );
+  });
+
+  it.each([
+    ['access-blocked (403)', { status: 403 }, codes.access_blocked],
+    ['unreachable (503)', { status: 503 }, codes.robots_unavailable],
+  ])(
+    'still stops at an %s robots.txt when the crawl ignores robots.txt',
+    async (_label, robots, code) => {
+      const seed = await running({ configuration: JSON.stringify({ robots: 'ignore' }) });
+      const page = await fixtures.analyzable(seed, '/private');
+      const requests: string[] = [];
+      await analyze(site({ '/robots.txt': robots }, requests), page.taskId);
+      expect(await task(page.taskId)).toMatchObject({ status: 'failed', error_code: code });
+      expect(requests).toEqual(['/robots.txt']);
+    },
+  );
 
   it('never follows a redirect into a hard-excluded endpoint', async () => {
     const seed = await running();

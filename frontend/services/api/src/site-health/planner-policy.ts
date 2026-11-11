@@ -4,6 +4,7 @@ import { parse } from 'csv-parse/sync';
 import { getDomain } from 'tldts';
 import { z } from 'zod';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
+import type { CrawlRobotsHandling } from '@citeladder/contracts/site-health';
 import {
   siteCrawlCreateRequestSchema,
   urlPreviewRequestSchema,
@@ -34,6 +35,21 @@ export const createCrawlRequest = siteCrawlCreateRequestSchema;
 export const previewRequest = urlPreviewRequestSchema;
 export type CreateCrawlRequest = z.infer<typeof createCrawlRequest>;
 
+/** Who confirmed being authorized to crawl the site while ignoring robots.txt, and when. */
+export const robotsDecisionSchema = z.object({
+  user_id: z.uuid(),
+  email: z.string(),
+  decided_at: z.iso.datetime(),
+});
+export type RobotsDecision = z.infer<typeof robotsDecisionSchema>;
+
+/**
+ * A crawl to admit: the request plus the robots decision behind an `ignore`.
+ * The decision comes from the signed-in person on Start crawl, or from the
+ * crawl a recrawl or schedule reruns; never from the request body.
+ */
+export type CrawlAdmission = CreateCrawlRequest & { robots_decision?: RobotsDecision | null };
+
 export function normalizeGlobs(values: string[] | null | undefined) {
   const result = (values ?? []).map((value) => value.trim()).filter(Boolean);
   if (
@@ -48,10 +64,15 @@ export function normalizedSeed(seed: string | null | undefined) {
   if (!/^[+-]?\d+$/u.test(seed.trim())) crawlError('random_seed must be an integer');
   return BigInt.asUintN(64, BigInt(seed.trim())).toString();
 }
-export function controls(request: CreateCrawlRequest, developmentAccess = false) {
+export function controls(request: CrawlAdmission, developmentAccess = false) {
   const mode = request.input_mode ?? 'auto';
   const seeds = request.seed_urls ?? [];
   const kinds = request.page_kinds ?? [];
+  const robots = request.robots ?? 'respect';
+  // Ignoring robots.txt is recorded against the person who confirmed authorization.
+  const decision = robots === 'ignore' ? (request.robots_decision ?? null) : null;
+  if (robots === 'ignore' && !decision)
+    crawlError('ignoring robots.txt needs a confirmed, signed-in person');
   const advanced = developmentAccess || crawlSetting('advanced_controls_enabled') === true;
   if (seeds.length > Number(crawlSetting('max_seed_urls'))) crawlError('too many seed_urls');
   if (
@@ -70,7 +91,7 @@ export function controls(request: CreateCrawlRequest, developmentAccess = false)
   );
   if (limit <= 0 || limit > maximum)
     crawlError('requested_page_limit is outside the allowed range', 'discovery_limit_exceeded');
-  return { mode, seeds, kinds, limit };
+  return { mode, seeds, kinds, limit, robots, robotsDecision: decision };
 }
 async function projectRoot(db: Database, workspaceId: string, projectId: string, lock = false) {
   const query = db
@@ -98,7 +119,14 @@ export function projectWebsiteRoot(websiteUrl: string | null) {
 export function frozenConfiguration(
   scope: Scope,
   runtime: Selectable<WorkspaceSiteHealthRuntime>,
-  selected: { mode: string; limit: number; seeds: string[]; kinds: string[] },
+  selected: {
+    mode: string;
+    limit: number;
+    seeds: string[];
+    kinds: string[];
+    robots: CrawlRobotsHandling;
+    robotsDecision: RobotsDecision | null;
+  },
 ) {
   const sample = runtime.discovery_mode === 'sample';
   const configuration: Record<string, unknown> = {
@@ -120,6 +148,9 @@ export function frozenConfiguration(
     requested_page_limit: selected.limit,
     seed_urls: selected.seeds,
     page_kinds: selected.kinds,
+    // Read per fetch by the site crawl's discover and analyze tasks.
+    robots: selected.robots,
+    robots_decision: selected.robotsDecision,
     extractor_version: policy.site_health.versions.extractor,
     analyzer_version: policy.site_health.versions.analyzer,
     rule_catalog_version: policy.site_health.versions.rules,

@@ -539,6 +539,31 @@ describe('discover', () => {
     expect(await crawlRow(seed)).toMatchObject({ admitted_url_count: 0, discovered_url_count: 0 });
   });
 
+  it('discovers past a robots disallow when the crawl ignores robots.txt, and records it', async () => {
+    const seed = await crawl({ config: { robots: 'ignore' } });
+    const root = await queued(seed, 'discover');
+    const requests: string[] = [];
+    await run(
+      worker(
+        {
+          '/robots.txt': { body: 'User-agent: *\nDisallow: /\n', contentType: 'text/plain' },
+          '/': { body: links('/a') },
+        },
+        requests,
+      ),
+      root,
+    );
+    const settled = await task(root);
+    expect(settled).toMatchObject({ status: 'succeeded', error_code: '' });
+    expect(requests).toEqual(['/robots.txt', '/']);
+    const artifact = await db
+      .selectFrom('site_fetch_artifacts')
+      .select('acquisition_options')
+      .where('id', '=', settled.result_artifact_id!)
+      .executeTakeFirstOrThrow();
+    expect(artifact.acquisition_options).toEqual({ robots_excluded: true });
+  });
+
   it.each([
     ['lost', { lease_owner: 'another-worker' }],
     ['expired', { lease_expires_at: new Date(Date.now() - 1000) }],

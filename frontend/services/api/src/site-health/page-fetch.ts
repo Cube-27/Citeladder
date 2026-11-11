@@ -4,7 +4,9 @@
  * per-call trace so each real network request becomes one attempt row. Errors
  * use the Site Health fetch-error vocabulary the read API classifies.
  */
+import type { CrawlRobotsHandling } from '@citeladder/contracts/site-health';
 import { policy } from '../config.ts';
+import { record } from '../db/json.ts';
 import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import {
@@ -85,7 +87,14 @@ export type SiteFetchResult = {
   page: FetchedPage;
   calls: FetchCall[];
   latencyMs: number;
+  /** Fetched despite a robots.txt exclusion, because the crawl ignores robots.txt. */
+  robotsExcluded: boolean;
 };
+
+/** The crawl's frozen robots choice; a crawl without one respects robots.txt. */
+export function crawlRobotsHandling(configuration: unknown): CrawlRobotsHandling {
+  return record(configuration).robots === 'ignore' ? 'ignore' : 'respect';
+}
 
 export class SitePageFetcher {
   readonly acquirer: PageAcquirer;
@@ -106,9 +115,9 @@ export class SitePageFetcher {
   }
 
   /** The robots decision for the requested URL, before any page request. */
-  async #robotsDenial(url: URL): Promise<SiteFetchFailure | null> {
+  async #robotsDenial(url: URL, handling: CrawlRobotsHandling): Promise<SiteFetchFailure | null> {
     const robots = await this.acquirer.robots(url.origin);
-    if (robots.permits(url.href)) return null;
+    if (robots.admits(url.href, handling)) return null;
     let code: string = codes.robots_denied;
     let detail = 'robots.txt disallows the crawler user-agent for this URL';
     if (robots.unavailable || robots.delay > this.settings.maxCrawlDelay) {
@@ -122,10 +131,21 @@ export class SitePageFetcher {
     return { ok: false, code, detail, retryable: false, calls: [], latencyMs: null };
   }
 
+  /** Whether robots.txt excludes the requested or the final URL, for an `ignore` crawl. */
+  async #excluded(handling: CrawlRobotsHandling, urls: string[]) {
+    if (handling === 'respect') return false;
+    for (const href of urls) {
+      const robots = await this.acquirer.robots(new URL(href).origin);
+      if (robots.excludes(href)) return true;
+    }
+    return false;
+  }
+
   /**
    * `admit` screens the page and every redirect hop (default: the hard
    * exclusions); discovery narrows it to the crawl's scope. `contentTypes`
-   * defaults to HTML.
+   * defaults to HTML. `robots` is the crawl's own choice and defaults to
+   * `respect`; only the project's site crawl passes `ignore`.
    */
   async fetch(
     requested: string,
@@ -133,12 +153,14 @@ export class SitePageFetcher {
       admit?: (hop: URL) => boolean;
       contentTypes?: readonly string[];
       signal?: AbortSignal;
+      robots?: CrawlRobotsHandling;
     } = {},
   ): Promise<SiteFetchResult | SiteFetchFailure> {
     options.signal?.throwIfAborted();
     const admit = options.admit ?? ((hop: URL) => !hardExcluded(hop));
+    const handling = options.robots ?? 'respect';
     const url = new URL(requested);
-    const denied = await this.#robotsDenial(url);
+    const denied = await this.#robotsDenial(url, handling);
     if (denied) return denied;
     const calls: FetchCall[] = [];
     const started = performance.now();
@@ -156,6 +178,7 @@ export class SitePageFetcher {
           if (!admit(hop)) throw new FetchError(codes.url_admission_rejected);
         },
         onCall: (call) => calls.push(call),
+        robots: handling,
       });
       // A 429 slows every task bound for the host, not just this one.
       if (page.status === 429)
@@ -163,7 +186,9 @@ export class SitePageFetcher {
           new URL(page.url).origin,
           Math.min(this.settings.rateLimitCooldown, this.settings.maxCrawlDelay),
         );
-      return { ok: true, page, calls, latencyMs: Math.round(performance.now() - started) };
+      const latencyMs = Math.round(performance.now() - started);
+      const robotsExcluded = await this.#excluded(handling, [url.href, page.url]);
+      return { ok: true, page, calls, latencyMs, robotsExcluded };
     } catch (error) {
       const code = errorCode(error);
       return {

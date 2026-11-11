@@ -15,7 +15,7 @@ import { ApiError } from '../errors.ts';
 import { getLogger } from '../logging.ts';
 import { pageRerunSql } from '../site-health/page-rerun.ts';
 import { createCrawl } from '../site-health/planner.ts';
-import type { CreateCrawlRequest } from '../site-health/planner-policy.ts';
+import type { CrawlAdmission } from '../site-health/planner-policy.ts';
 import { recrawlRequest } from '../site-health/recrawl.ts';
 import { claimDueCrawlSchedules, nextOccurrence } from '../site-health/schedules.ts';
 
@@ -36,14 +36,15 @@ const logger = getLogger('workers.crawl_scheduler');
 
 /**
  * A scheduled crawl reruns the project's newest site crawl's scope and
- * settings, as Recrawl does, so Changes compares like with like; a project
+ * settings, its robots choice included, as Recrawl does, so Changes compares
+ * like with like; a project
  * that has never crawled gets the default crawl.
  */
 async function scheduledRequest(
   db: Database,
   workspaceId: string,
   projectId: string,
-): Promise<CreateCrawlRequest> {
+): Promise<CrawlAdmission> {
   const latest = await new WorkspaceScope(workspaceId)
     .selectFrom(db, 'site_crawls')
     .select('id')

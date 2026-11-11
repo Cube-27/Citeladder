@@ -23,6 +23,9 @@ export const analysisSummaryFields = {
   aeo_measurement_state: z.enum(['measured', 'limited_evidence', 'not_measured', 'excluded']),
   aeo_measurement_reason: z.string(),
   main_content_indexable: z.boolean().nullable(),
+  // The analyzed fetch was made despite a robots.txt exclusion, because the
+  // crawl ignored robots.txt. False for every other page.
+  robots_excluded: z.boolean(),
   last_audited: z.string().nullable(),
   page_kind: pageKindSchema.nullable(),
   // Bounded industry-role fields on list rows. These are pack-defined IDs, not
