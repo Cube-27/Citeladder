@@ -21,42 +21,35 @@ const RECOMMENDED = 'Action recommended';
  */
 const NEXT_ACTION_COPY: Record<
   CommandCenter['next_action']['kind'],
-  { status: string; link: string; reason: string }
+  { status: string; link: string; reason: string | null }
 > = {
-  opportunity: {
-    status: RECOMMENDED,
-    link: 'Open the Action',
-    reason: 'The first open Action in the shared ranked order.',
-  },
+  // The Action's title and evidence already say why it is next.
+  opportunity: { status: RECOMMENDED, link: 'Open the Action', reason: null },
   connect: {
     status: RECOMMENDED,
     link: 'Open Integrations',
-    reason: 'Search Console or GA4 data sharpens which Actions matter most.',
+    reason: 'Search Console or GA4 data sharpens which Actions matter.',
   },
   crawl: {
     status: RECOMMENDED,
     link: 'Open Site Health',
-    reason: 'A site crawl finds the page issues that sharpen later Actions.',
+    reason: 'A crawl finds the page issues behind later Actions.',
   },
   configure_prompts: {
     status: RECOMMENDED,
     link: 'Choose prompts',
-    reason: 'Nothing can be measured until the project tracks the questions buyers ask.',
+    reason: 'Track the questions buyers ask to start measuring.',
   },
   audit: {
     status: RECOMMENDED,
     link: 'Open Runs',
-    reason: 'A run measures how answer engines name and cite you for every tracked prompt.',
+    reason: 'A run measures how answer engines cite you.',
   },
-  audit_running: {
-    status: 'In progress',
-    link: 'View progress',
-    reason: 'Results appear here as soon as the run finishes.',
-  },
+  audit_running: { status: 'In progress', link: 'View progress', reason: null },
   monitor: {
     status: 'Up to date',
     link: 'View trends',
-    reason: 'Every open Action is handled; the next run shows whether visibility moves.',
+    reason: 'The next run shows whether visibility moves.',
   },
 };
 
@@ -78,7 +71,7 @@ function nextActionEvidence(data: CommandCenter): ReactNode {
           </Badge>
           <span className={textRole('caption', 'min-w-0 truncate')}>
             {action.target_label ? readableUrl(action.target_label) : 'Project-wide'} ·{' '}
-            {pluralCount(action.evidence_summary.count, 'persisted evidence item')}
+            {pluralCount(action.evidence_summary.count, 'evidence item')}
           </span>
         </Inline>
       );
@@ -125,7 +118,7 @@ export function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
         <CardTitle id="next-action">{data.next_action.title}</CardTitle>
       </CardHeader>
       <Stack as={CardContent} gap="compact">
-        <p className={textRole('body')}>{copy.reason}</p>
+        {copy.reason ? <p className={textRole('body')}>{copy.reason}</p> : null}
         {nextActionEvidence(data)}
         <div>
           <Button asChild variant="primary">

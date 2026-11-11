@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
 import { QueryState } from '@/components/ui/query-state';
 import { readErrorProps } from '@/components/ui/read-error';
+import { ProjectLink } from '@/components/ui/project-link';
 import { TextLink } from '@/components/ui/text-link';
 import { SavedViewControls, scopeControls } from './search-intelligence-scope';
 import { Stack } from '@/components/ui/layout';
@@ -171,8 +172,12 @@ export function SearchIntelligencePage() {
               kind="empty"
               icon={Unplug}
               heading="Connect DataForSEO"
-              description="Keyword Research uses your workspace’s own DataForSEO account. Add its login once; every analysis shows its cost before anything is fetched."
-              action={<TextLink href={PROVIDER_SETTINGS}>Open provider settings</TextLink>}
+              description="Add your DataForSEO login once to run analyses."
+              action={
+                <Button asChild variant="secondary">
+                  <ProjectLink href={PROVIDER_SETTINGS}>Open provider settings</ProjectLink>
+                </Button>
+              }
             />
           )}
         </ListScreen>
@@ -186,7 +191,7 @@ export function SearchIntelligencePage() {
             kind="empty"
             icon={Settings2}
             heading="Add your website address"
-            description="Keyword Research studies the project’s own website, so the project needs its homepage address (for example https://www.example.com)."
+            description="Keyword Research needs the project’s homepage address."
             action={<TextLink href="/projects">Edit the project</TextLink>}
           />
         </ListScreen>

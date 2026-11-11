@@ -156,7 +156,7 @@ function PerformanceEmptyState({
       heading={firstUse ? 'No search performance evidence yet' : 'No performance evidence here'}
       description={
         firstUse
-          ? 'Your numbers appear here as soon as the first import lands.'
+          ? undefined
           : 'Choose a range inside the imported history, or sync the missing dates.'
       }
     />
@@ -358,7 +358,6 @@ export function PerformanceScreen() {
           required={['gsc']}
           optional={['ga4', 'bing']}
           title="Connect Search Console"
-          description="Performance reads this project's own search data. Connect Google and use the property for this site; Analytics and Bing are optional."
         />
         {readiness.isError ? null : (
           <ReadinessLadder

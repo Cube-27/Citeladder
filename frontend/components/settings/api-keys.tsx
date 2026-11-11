@@ -297,7 +297,7 @@ export function ApiKeys() {
       <Stack as="section" gap="compact">
         <EditorialSectionHeader
           title="API keys"
-          description={`Read your reports and manage prompts, competitors, audits and actions from your own code through the REST API at ${API_BASE_URL}.`}
+          description={`Call the REST API at ${API_BASE_URL} from your own code.`}
         />
         {available ? null : (
           <Callout tone="info">
@@ -325,7 +325,6 @@ export function ApiKeys() {
                   icon: KeyRound,
                   headingLevel: 3,
                   heading: 'No API keys yet',
-                  description: 'Create a key to call the REST API from your own code.',
                 }
               : undefined
           }

@@ -82,9 +82,7 @@ function connectionsState(
     kind: 'empty',
     icon: ICONS.agent,
     headingLevel: 3,
-    heading: adminView
-      ? 'No connection can read this workspace'
-      : 'No assistant is connected yet. Use Connect above to add one',
+    heading: adminView ? 'No connection can read this workspace' : 'No assistant connected yet',
   };
 }
 
@@ -159,7 +157,7 @@ export function McpConnections() {
       <Stack as="section" gap="compact">
         <EditorialSectionHeader
           title="Connect an AI assistant"
-          description="Read your CiteLadder data from Claude, ChatGPT, Gemini, Cursor or Grok and, if you allow it, make changes you confirm. You choose which workspaces it can use when you approve the connection."
+          description="Use CiteLadder from Claude, ChatGPT, Gemini, Cursor or Grok."
         />
         <ConnectStrip />
       </Stack>

@@ -330,20 +330,12 @@ export function Movement({ data }: Readonly<{ data: CommandCenter }>) {
 
 function NoMovement({ comparable }: Readonly<{ comparable: boolean }>) {
   if (comparable)
-    return (
-      <EmptyState
-        variant="inline"
-        icon={TrendingUp}
-        title="No movement to show"
-        description="The comparable run gave no engine movement to compare against this one."
-      />
-    );
+    return <EmptyState variant="inline" icon={TrendingUp} title="No movement to show" />;
   return (
     <EmptyState
       variant="inline"
       icon={TrendingUp}
       title="No comparable measurement yet"
-      description="Needs a second run with the same prompts and engines."
       primary={<LaunchAuditButton variant="secondary" />}
     />
   );

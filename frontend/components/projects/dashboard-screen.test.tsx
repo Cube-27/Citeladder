@@ -383,8 +383,7 @@ describe('DashboardScreen', () => {
       </TooltipProvider>,
     );
     const next = within(screen.getByRole('region', { name: 'Publish a comparison page' }));
-    expect(next.getByText('The first open Action in the shared ranked order.')).toBeVisible();
-    expect(next.getByText('/pricing · 3 persisted evidence items')).toBeVisible();
+    expect(next.getByText('/pricing · 3 evidence items')).toBeVisible();
     expect(next.getByText('High')).toBeVisible();
     expect(next.getByRole('link', { name: 'Open the Action' })).toHaveAttribute(
       'href',

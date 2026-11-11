@@ -93,7 +93,7 @@ function AnalyzePageDialog({ onClose }: Readonly<{ onClose: () => void }>) {
         if (!next && !analyze.isPending) onClose();
       }}
       title="Analyze a page"
-      description="Pick one of your content pages and the prompts it should answer. The agent reads the live page and suggests how to improve it."
+      description="Pick a page and the prompts it should answer."
       footer={
         <>
           <Button onClick={onClose} disabled={analyze.isPending}>

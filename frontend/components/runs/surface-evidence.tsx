@@ -236,7 +236,7 @@ export function SurfaceEvidence({ evidence }: Readonly<{ evidence: SearchSurface
           <Stack as="section" gap="compact">
             <SubsectionHeader
               title="Who appeared, and how"
-              description="Three independent observations. A brand can be linked without being cited, and cited without being named."
+              description="Three independent observations."
             />
             <PresenceTable entities={evidence.entities} />
           </Stack>
