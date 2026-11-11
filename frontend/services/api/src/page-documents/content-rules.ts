@@ -48,7 +48,7 @@ const diagnosisSchema = z.object({
 });
 
 /** The context a turn's rules are judged from: its persisted manifest's sections and Action. */
-export type TurnContext = {
+type TurnContext = {
   sections: Manifest['package']['sections'];
   action: Manifest['action'];
 };
