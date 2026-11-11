@@ -51,7 +51,7 @@ export function OutputCanvas({
   onRevise: (message: string) => void;
 }>) {
   const sections = splitSections(revision.body);
-  const [opened, setActive] = useState<SectionMode | null>(null);
+  const [opened, setOpened] = useState<SectionMode | null>(null);
   // An open editor or revise form belongs to the revision it was opened on.
   const active = opened?.revisionId === revision.id ? opened : null;
   const titled = sections.filter((section) => section.heading !== null);
@@ -89,9 +89,9 @@ export function OutputCanvas({
           mode={active?.index === index ? active.mode : null}
           locked={locked}
           canSend={canSend}
-          onMode={(next) => setActive(next ? { index, mode: next, revisionId: revision.id } : null)}
+          onMode={(next) => setOpened(next ? { index, mode: next, revisionId: revision.id } : null)}
           onRevise={(instruction) => {
-            setActive(null);
+            setOpened(null);
             onRevise(reviseMessage(target.number, section, instruction));
           }}
           editor={
@@ -101,7 +101,8 @@ export function OutputCanvas({
               revision={revision}
               index={index}
               initial={section.text}
-              onDone={() => setActive(null)}
+              // Closing one section's editor leaves another section's open form alone.
+              onDone={() => setOpened((current) => (current?.index === index ? null : current))}
             />
           }
         />
@@ -248,11 +249,14 @@ function SectionEditor({
       gap="compact"
       onSubmit={(event: FormEvent) => {
         event.preventDefault();
-        // The descriptor refreshes the chat and its revisions before this closes the editor.
-        save.mutate(
-          { ...target, baseRevisionId: revision.id, title: revision.title, body },
-          { onSuccess: done },
-        );
+        // The descriptor's refresh shows the saved revision, which unmounts this
+        // editor before a mutate callback could run, so the draft is cleared
+        // from the settled promise instead.
+        save
+          .mutateAsync({ ...target, baseRevisionId: revision.id, title: revision.title, body })
+          .then(done, () => {
+            // The notice below reports the failure; the draft stays for another try.
+          });
       }}
     >
       <label htmlFor={inputId} className="sr-only">

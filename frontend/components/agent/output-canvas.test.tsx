@@ -1,14 +1,21 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vite-plus/test';
+import { http, HttpResponse } from 'msw';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
 
 import { resetSectionDrafts } from '@/lib/agent/section-drafts';
 import type { AgentRevision } from '@/lib/api/agent';
+import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
 import { OutputCanvas } from './output-canvas';
 
-afterEach(resetSectionDrafts);
+beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
+afterEach(() => {
+  mswServer.resetHandlers();
+  resetSectionDrafts();
+});
+afterAll(() => mswServer.close());
 
 const target = {
   chatId: '44444444-4444-4444-8444-444444444444',
@@ -65,5 +72,41 @@ describe('a section draft', () => {
     expect(screen.getByRole('textbox', { name: 'Section text (Markdown)' })).toHaveValue(
       '## Topics\n\nKeep golf nets.',
     );
+  });
+
+  it('is dropped once saved, even when the saved revision replaces the editor first', async () => {
+    const user = userEvent.setup();
+    const saved: unknown[] = [];
+    let answer!: () => void;
+    const answered = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    mswServer.use(
+      http.post(
+        `/api/v1/agent/chats/${target.chatId}/outputs/${target.outputId}/revisions`,
+        async ({ request }) => {
+          saved.push(await request.json());
+          await answered;
+          return HttpResponse.json(second);
+        },
+      ),
+    );
+    const view = renderWithProviders(canvas(first));
+    await user.click(screen.getByRole('button', { name: 'Edit Topics' }));
+    await user.type(screen.getByRole('textbox', { name: 'Section text (Markdown)' }), ' Saved.');
+    await user.click(screen.getByRole('button', { name: 'Save section' }));
+    await waitFor(() => expect(saved).toHaveLength(1));
+    // The chat refresh shows the new revision before the save settles.
+    view.rerender(canvas(second));
+    answer();
+
+    view.rerender(canvas(first));
+    await waitFor(() =>
+      expect(screen.queryByRole('textbox', { name: 'Section text (Markdown)' })).toBeNull(),
+    );
+    expect(saved[0]).toMatchObject({
+      base_revision_id: first.id,
+      body: '## Topics\n\nKeep golf nets. Saved.',
+    });
   });
 });
