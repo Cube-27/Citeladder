@@ -250,6 +250,15 @@ Archive sets `lifecycle_state = 'archived'`: the product leaves My catalog, new
 matching and prompt context, and keeps its history; restore reverses it. "Add to
 tracking" on an All products row approves the competitor candidate (CM6).
 
+As built: no migration (the baseline already had `edit_version`,
+`lifecycle_state` and the `edit` observation source). "Until a later import
+changes that field" means the import's value differs from what the field last
+imported; repeating it keeps the edit. The image is read from the latest edit
+observation, since the catalog has no image column until PR 6. Archived
+products list under a third table view (`source=archived`) and keep their
+page, where Restore lives; "Add to tracking" also shows on an AI-observed
+competitor's page.
+
 ### PR 8: Category-matrix shopping prompts
 
 - Per category: buyer contexts (config default 3) × intent stages (config

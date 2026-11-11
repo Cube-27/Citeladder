@@ -42,6 +42,16 @@ const ROAD_DETAIL: CommerceProductDetail = {
     merchants: [],
     description: 'A daily trainer for road miles.',
     image_url: null,
+    catalog: {
+      lifecycle_state: 'active',
+      price: 120,
+      currency: 'USD',
+      sku: 'RR-1',
+      gtin: '',
+      mpn: '',
+      image_url: '',
+      categories: ['Road'],
+    },
   },
   competing: [
     {
@@ -206,6 +216,7 @@ describe('ProductDetailScreen', () => {
           holder_id: RIVAL,
           kind: 'approved_competitor',
           name: 'Rival Pacer',
+          catalog: null,
         },
         actions: [],
       },
@@ -215,6 +226,154 @@ describe('ProductDetailScreen', () => {
     expect(await screen.findByRole('heading', { name: 'Rival Pacer' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Competing products' })).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Setup' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit product' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /to tracking/ })).not.toBeInTheDocument();
+  });
+
+  it('saves only the edited fields of a catalog product', async () => {
+    serve({ [ROAD]: ROAD_DETAIL });
+    const sent: unknown[] = [];
+    mswServer.use(
+      http.patch(`${base}/products/:holder`, async ({ request }) => {
+        sent.push(await request.json());
+        return HttpResponse.json({
+          id: ROAD,
+          canonical_url: 'https://shop.example/products/road',
+          name: 'Acme Road Runner 2',
+          brand: 'Acme',
+          category_ids: [],
+        });
+      }),
+    );
+    renderAt(`/products/${ROAD}`);
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Edit product' }));
+    const name = await screen.findByRole('textbox', { name: /Name/ });
+    expect(name).toHaveValue('Acme Road Runner');
+    await user.clear(name);
+    await user.type(name, 'Acme Road Runner 2');
+    const price = screen.getByRole('textbox', { name: 'Price' });
+    await user.clear(price);
+    await user.type(price, '99.5');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => expect(sent).toEqual([{ name: 'Acme Road Runner 2', price: 99.5 }]));
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument(),
+    );
+  });
+
+  it('keeps the record the drawer opened on when the page refetches under it', async () => {
+    serve({ [ROAD]: ROAD_DETAIL });
+    const sent: unknown[] = [];
+    mswServer.use(
+      http.patch(`${base}/products/:holder`, async ({ request }) => {
+        sent.push(await request.json());
+        return HttpResponse.json({
+          id: ROAD,
+          canonical_url: 'https://shop.example/products/road',
+          name: 'Renamed elsewhere',
+          brand: 'Acme',
+          category_ids: [],
+        });
+      }),
+    );
+    const { queryClient } = renderAt(`/products/${ROAD}`);
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Edit product' }));
+    const price = await screen.findByRole('textbox', { name: 'Price' });
+    await user.clear(price);
+    await user.type(price, '99.5');
+    // Someone renames the product; the page refetches while the drawer is open.
+    let refetched = 0;
+    mswServer.use(
+      http.get(`${base}/products/:holder`, () => {
+        refetched += 1;
+        return HttpResponse.json({
+          ...ROAD_DETAIL,
+          product: { ...ROAD_DETAIL.product, name: 'Renamed elsewhere' },
+        });
+      }),
+    );
+    await queryClient.invalidateQueries();
+    await waitFor(() => expect(refetched).toBeGreaterThan(0));
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => expect(sent).toEqual([{ price: 99.5 }]));
+  });
+
+  it('shows an archived product as archived, without setup, and restores it', async () => {
+    serve({
+      [ROAD]: {
+        ...ROAD_DETAIL,
+        product: {
+          ...ROAD_DETAIL.product,
+          catalog: { ...ROAD_DETAIL.product.catalog!, lifecycle_state: 'archived' },
+        },
+      },
+    });
+    const sent: unknown[] = [];
+    mswServer.use(
+      http.put(`${base}/products/:holder/lifecycle`, async ({ request }) => {
+        sent.push(await request.json());
+        return HttpResponse.json({
+          id: ROAD,
+          canonical_url: 'https://shop.example/products/road',
+          name: 'Acme Road Runner',
+          brand: 'Acme',
+          category_ids: [],
+        });
+      }),
+    );
+    renderAt(`/products/${ROAD}`);
+
+    expect(await screen.findByText('Archived')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Setup' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Archive' })).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Restore' }));
+    await waitFor(() => expect(sent).toEqual([{ lifecycle_state: 'active' }]));
+  });
+
+  it('adds a product the answers showed to tracking', async () => {
+    serve({
+      [RIVAL]: {
+        ...ROAD_DETAIL,
+        product: {
+          ...ROAD_DETAIL.product,
+          holder_id: RIVAL,
+          kind: 'ai_observed_competitor',
+          name: 'Rival Pacer',
+          catalog: null,
+        },
+        actions: [],
+      },
+    });
+    const sent: unknown[] = [];
+    mswServer.use(
+      http.patch(`${base}/competitors/:id`, async ({ params, request }) => {
+        sent.push([params.id, await request.json()]);
+        return HttpResponse.json({
+          id: RIVAL,
+          target_kind: 'product',
+          target_id: ROAD,
+          canonical_url: 'https://rival.example/pacer',
+          product_name: 'Rival Pacer',
+          brand_name: 'Rival',
+          evidence: {},
+          source_kind: 'ai_observed',
+          state: 'approved',
+          decision_at: '2026-11-11T00:00:00Z',
+        });
+      }),
+    );
+    renderAt(`/products/${RIVAL}`);
+
+    await userEvent
+      .setup()
+      .click(await screen.findByRole('button', { name: 'Add Rival Pacer to tracking' }));
+    await waitFor(() => expect(sent).toEqual([[RIVAL, { decision: 'approved' }]]));
   });
 
   it('opens a category’s setup and reports an unknown product as not loaded', async () => {

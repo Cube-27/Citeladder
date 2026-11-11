@@ -21,6 +21,7 @@ import { IntegrationDispatcher } from './integration-dispatcher.ts';
 import { AgentWorker } from './agent-worker.ts';
 import { AuditWorker } from '../audits/worker.ts';
 import { AuditScheduler, schedulerSettings } from './audit-scheduler.ts';
+import { CrawlScheduler, crawlSchedulerSettings } from './crawl-scheduler.ts';
 import { SiteHealthWorker } from './site-health-worker.ts';
 import { integrationSettings } from '../integrations/config.ts';
 import { siteWorkerSettings } from '../site-health/runtime.ts';
@@ -358,6 +359,7 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
   const owner = `runner-discovery:${randomUUID()}`;
   const maintenance = new AuditMaintenance(db, projections.finalize);
   const scheduler = new AuditScheduler(db, runtime, schedulerSettings(env));
+  const crawlScheduler = new CrawlScheduler(db, crawlSchedulerSettings(env));
   const dispatcher = new IntegrationDispatcher(db);
   // Owners that fetch public websites take turns, as interactive crawls and
   // competitor discovery do under the drain lock, to keep publisher pacing.
@@ -459,6 +461,10 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
           (await settleResearchCharges(db, new Date(), canAdmit)),
       },
       { name: 'audit-scheduler', run: (canAdmit) => scheduler.runOnce(scheduler.now(), canAdmit) },
+      {
+        name: 'crawl-scheduler',
+        run: (canAdmit) => crawlScheduler.runOnce(crawlScheduler.now(), canAdmit),
+      },
       { name: 'integration-dispatcher', run: (canAdmit) => dispatcher.runOnce(canAdmit) },
       { name: 'crawl-log-maintenance', run: (canAdmit) => crawlLogTick(db, new Date(), canAdmit) },
       { name: 'billing-recovery', run: billing },

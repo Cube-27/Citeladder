@@ -1598,6 +1598,25 @@ export interface CrawlLogUploads {
   workspace_id: string;
 }
 
+export interface CrawlSchedules {
+  cadence: string;
+  created_at: Timestamp;
+  enabled: boolean;
+  failure_count: number;
+  id: string;
+  last_crawl_id: string | null;
+  last_error: string;
+  last_failure_at: Timestamp | null;
+  last_outcome: string | null;
+  last_run_at: Timestamp | null;
+  lease_expires_at: Timestamp | null;
+  lease_owner: string | null;
+  next_run_at: Timestamp | null;
+  project_id: string;
+  updated_at: Timestamp;
+  workspace_id: string;
+}
+
 export interface DemandSignals {
   analyzer_version: string;
   coverage: Json;
@@ -3609,6 +3628,7 @@ export interface DB {
   crawl_log_sources: CrawlLogSources;
   crawl_log_states: CrawlLogStates;
   crawl_log_uploads: CrawlLogUploads;
+  crawl_schedules: CrawlSchedules;
   demand_signals: DemandSignals;
   demand_snapshots: DemandSnapshots;
   enterprise_agreement_references: EnterpriseAgreementReferences;

@@ -631,3 +631,87 @@ describe('SiteHealthScreen — canonical single-screen flow (regression)', () =>
     expect(screen.queryByTestId('site-health-overview')).not.toBeInTheDocument();
   });
 });
+
+describe('SiteHealthScreen — crawl schedule', () => {
+  it('turns on a weekly crawl beside Run new crawl and shows the next run', async () => {
+    mockRoutes();
+    const saved: unknown[] = [];
+    mswServer.use(
+      http.put(`/api/v1/projects/${PROJECT}/crawl-schedule`, async ({ request }) => {
+        saved.push(await request.json());
+        return HttpResponse.json({
+          project_id: PROJECT,
+          enabled: true,
+          cadence: 'weekly',
+          next_run_at: '2027-01-11T09:00:00Z',
+          last_run_at: null,
+          last_outcome: null,
+          last_crawl_id: null,
+        });
+      }),
+    );
+
+    renderScreen();
+
+    const trigger = await screen.findByRole('button', { name: 'Crawl schedule: Off' });
+    await waitFor(() => expect(trigger).toBeEnabled());
+    await userEvent.click(trigger);
+    await userEvent.click(await screen.findByRole('menuitemradio', { name: 'Weekly' }));
+
+    await waitFor(() => expect(saved).toEqual([{ enabled: true, cadence: 'weekly' }]));
+    await userEvent.click(await screen.findByRole('button', { name: 'Crawl schedule: Weekly' }));
+    const menu = await screen.findByRole('menu');
+    expect(within(menu).getByText(/Next crawl/)).toHaveTextContent('Next crawl Jan 11, 2027');
+  });
+
+  it('says why a schedule that kept failing turned itself off', async () => {
+    mockRoutes();
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/crawl-schedule`, () =>
+        HttpResponse.json({
+          project_id: PROJECT,
+          enabled: false,
+          cadence: 'weekly',
+          next_run_at: null,
+          last_run_at: null,
+          last_outcome: 'failed',
+          last_crawl_id: null,
+        }),
+      ),
+    );
+
+    renderScreen();
+
+    const trigger = await screen.findByRole('button', { name: 'Crawl schedule: Off' });
+    await waitFor(() => expect(trigger).toBeEnabled());
+    await userEvent.click(trigger);
+    const menu = await screen.findByRole('menu');
+    expect(
+      within(menu).getByText('Turned off: scheduled crawls kept failing to start.'),
+    ).toBeVisible();
+    expect(within(menu).queryByText(/Next crawl/)).not.toBeInTheDocument();
+  });
+
+  it('tells an unreadable schedule apart from one that is off', async () => {
+    mockRoutes();
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/crawl-schedule`, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: 'internal_error',
+              message: 'unavailable',
+              request_id: 'req-1',
+              retryable: false,
+            },
+          },
+          { status: 500 },
+        ),
+      ),
+    );
+
+    renderScreen();
+
+    expect(await screen.findByRole('button', { name: 'Schedule unavailable' })).toBeDisabled();
+  });
+});

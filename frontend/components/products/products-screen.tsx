@@ -40,6 +40,7 @@ import { ProductsTable } from './products-table';
 const SOURCES: readonly { value: CommerceProductSource; label: string }[] = [
   { value: 'catalog', label: 'My catalog' },
   { value: 'all', label: 'All products' },
+  { value: 'archived', label: 'Archived' },
 ];
 const WINDOWS = PRODUCT_WINDOW_DAYS.map((days) => ({ value: days, label: `Last ${days} days` }));
 const EVERY = '__all__';
@@ -238,6 +239,8 @@ function ProductsContent({
             <ProductsTable
               query={page}
               scope={filters}
+              trackable={filters.source === 'all'}
+              selectable={filters.source !== 'archived'}
               columns={columns.shown}
               sort={filters.sort}
               onSort={productFilters.setSort}

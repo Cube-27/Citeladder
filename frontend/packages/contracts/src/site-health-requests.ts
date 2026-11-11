@@ -1,10 +1,11 @@
 /**
  * Request bodies of Site Health crawl control: a new crawl, a URL preview and
- * the monitored-URL set. These own the wire shape; the API `.extend`s them
+ * the monitored-URL set and the crawl schedule. These own the wire shape; the API `.extend`s them
  * with its configured bounds, and the browser types its arguments as
  * `z.input` of them.
  */
 import { z } from 'zod';
+import { crawlScheduleCadenceSchema } from './site-health/crawl.ts';
 
 const optionalList = () => z.array(z.string()).nullable().optional();
 
@@ -38,6 +39,13 @@ export const monitoredUrlsReplaceRequestSchema = z.strictObject({
   site_url_ids: z.array(z.uuid()),
   expected_selection_version: z.int(),
 });
+
+/** Turn the project's scheduled crawl on at a cadence, or off. */
+export const crawlScheduleUpdateRequestSchema = z.strictObject({
+  enabled: z.boolean(),
+  cadence: crawlScheduleCadenceSchema,
+});
+export type CrawlScheduleUpdateRequest = z.input<typeof crawlScheduleUpdateRequestSchema>;
 
 /** A bulk monitored-URL selection from one crawl's inventory. */
 export const monitoredUrlsBulkSelectRequestSchema = z.strictObject({
