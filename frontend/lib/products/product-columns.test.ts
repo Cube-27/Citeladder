@@ -48,4 +48,32 @@ describe('productCsv', () => {
       ],
     });
   });
+
+  it('keeps the count of quotes in other currencies, with or without a median', () => {
+    const quotedAbroad = (median: number | null): CommerceProductRow => ({
+      ...road,
+      mentioned_price: {
+        median,
+        currency: 'EUR',
+        quoted: median === null ? 0 : 1,
+        other_currency: 2,
+      },
+    });
+    expect(productCsv([quotedAbroad(99.5), quotedAbroad(null)], ['mentioned_price']).rows).toEqual([
+      [
+        'Acme Road Runner',
+        'Acme',
+        'Your product',
+        'https://shop.example/products/road',
+        '€99.50 (+2 in other currencies)',
+      ],
+      [
+        'Acme Road Runner',
+        'Acme',
+        'Your product',
+        'https://shop.example/products/road',
+        '(+2 in other currencies)',
+      ],
+    ]);
+  });
 });

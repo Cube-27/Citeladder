@@ -42,15 +42,17 @@ export type ProductColumnKey = (typeof PRODUCT_COLUMNS)[number]['key'];
 /**
  * A cell's text, or the state that stands in for a missing value: no answer
  * in scope is `unavailable`, a price the catalog lacks is `unknown`. A real
- * zero is text ("0", "0%"), never a state.
+ * zero is text ("0", "0%"), never a state. A note (quotes in other
+ * currencies) can accompany either.
  */
 export type ProductCell =
   | Readonly<{ kind: 'value'; text: string; note?: string }>
-  | Readonly<{ kind: 'missing'; state: 'unavailable' | 'unknown' | 'none' }>;
+  | Readonly<{ kind: 'missing'; state: 'unavailable' | 'unknown' | 'none'; note?: string }>;
 
-const missing = (state: 'unavailable' | 'unknown' | 'none'): ProductCell => ({
+const missing = (state: 'unavailable' | 'unknown' | 'none', note?: string): ProductCell => ({
   kind: 'missing',
   state,
+  ...(note ? { note } : {}),
 });
 
 /** A price in its currency when the code is a currency, else the bare amount. */
@@ -66,49 +68,54 @@ export function formatPrice(amount: number, currency: string): string {
   return currency ? `${number} ${currency}` : number;
 }
 
+/** A rate or mean, unavailable when nothing in scope measured it. */
+const measured = (value: number | null, format: (value: number) => string): ProductCell =>
+  value === null ? missing('unavailable') : { kind: 'value', text: format(value) };
+
+/**
+ * The median quote in the row's currency; quotes in other currencies are
+ * counted beside it, even when none was in its own currency.
+ */
+function mentionedPrice(row: CommerceProductRow): ProductCell {
+  const { median, currency, other_currency } = row.mentioned_price;
+  const note = other_currency ? `+${formatCount(other_currency)} in other currencies` : undefined;
+  if (median === null) return missing('unavailable', note);
+  return { kind: 'value', text: formatPrice(median, currency), ...(note ? { note } : {}) };
+}
+
+/** The catalog price or range; a competitor has none, a catalog product's is unknown. */
+function catalogPrice(row: CommerceProductRow): ProductCell {
+  const price = row.catalog_price;
+  if (price === null) return missing(row.kind === 'owned' ? 'unknown' : 'none');
+  const min = formatPrice(price.min, price.currency);
+  if (price.min === price.max) return { kind: 'value', text: min };
+  return { kind: 'value', text: `${min}–${formatPrice(price.max, price.currency)}` };
+}
+
+function merchantList(row: CommerceProductRow): ProductCell {
+  if (!row.merchants.length) return missing('none');
+  const text = row.merchants
+    .map((merchant) => `${merchant.domain} (${formatCount(merchant.count)})`)
+    .join(', ');
+  return { kind: 'value', text };
+}
+
 export function productCell(row: CommerceProductRow, key: ProductColumnKey): ProductCell {
   switch (key) {
     case 'visibility':
-      return row.visibility === null
-        ? missing('unavailable')
-        : { kind: 'value', text: formatPercent(row.visibility, 1) };
+      return measured(row.visibility, (value) => formatPercent(value, 1));
     case 'appearances':
       return { kind: 'value', text: formatCount(row.appearances) };
     case 'win_rate':
-      return row.win_rate === null
-        ? missing('unavailable')
-        : { kind: 'value', text: formatPercent(row.win_rate, 1) };
+      return measured(row.win_rate, (value) => formatPercent(value, 1));
     case 'position':
-      return row.position === null
-        ? missing('unavailable')
-        : { kind: 'value', text: row.position.toFixed(1) };
-    case 'mentioned_price': {
-      const { median, currency, other_currency } = row.mentioned_price;
-      const note = other_currency
-        ? `+${formatCount(other_currency)} in other currencies`
-        : undefined;
-      return median === null
-        ? missing('unavailable')
-        : { kind: 'value', text: formatPrice(median, currency), note };
-    }
-    case 'catalog_price': {
-      const price = row.catalog_price;
-      if (price === null) return missing(row.kind === 'owned' ? 'unknown' : 'none');
-      const text =
-        price.min === price.max
-          ? formatPrice(price.min, price.currency)
-          : `${formatPrice(price.min, price.currency)}–${formatPrice(price.max, price.currency)}`;
-      return { kind: 'value', text };
-    }
+      return measured(row.position, (value) => value.toFixed(1));
+    case 'mentioned_price':
+      return mentionedPrice(row);
+    case 'catalog_price':
+      return catalogPrice(row);
     case 'merchants':
-      return row.merchants.length
-        ? {
-            kind: 'value',
-            text: row.merchants
-              .map((merchant) => `${merchant.domain} (${formatCount(merchant.count)})`)
-              .join(', '),
-          }
-        : missing('none');
+      return merchantList(row);
     default: {
       const exhaustive: never = key;
       return exhaustive;
@@ -124,8 +131,15 @@ const HOLDER_LABELS = {
 
 export const holderLabel = (kind: CommerceProductRow['kind']) => HOLDER_LABELS[kind];
 
-/** A cell as CSV text: a missing value is an empty field, not a word. */
-const csvText = (cell: ProductCell) => (cell.kind === 'value' ? cell.text : '');
+/**
+ * A cell as CSV text: a missing value is empty rather than a word, and a note
+ * (quotes in other currencies) follows the value in brackets.
+ */
+function csvText(cell: ProductCell): string {
+  const text = cell.kind === 'value' ? cell.text : '';
+  if (!cell.note) return text;
+  return text ? `${text} (${cell.note})` : `(${cell.note})`;
+}
 
 /** The shown columns' headers and rows, for the export of the rows on screen. */
 export function productCsv(
@@ -147,13 +161,13 @@ export function productCsv(
 
 const STORAGE_KEY = 'citeladder:commerce:product-columns';
 const ALL_KEYS = PRODUCT_COLUMNS.map((column) => column.key);
-const isColumnKey = (value: unknown): value is ProductColumnKey =>
-  ALL_KEYS.some((key) => key === value);
+const KNOWN_KEYS: ReadonlySet<unknown> = new Set(ALL_KEYS);
+const isColumnKey = (value: unknown): value is ProductColumnKey => KNOWN_KEYS.has(value);
 
 function storedColumns(): ProductColumnKey[] {
   try {
     const parsed: unknown = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? 'null');
-    if (Array.isArray(parsed)) return ALL_KEYS.filter((key) => parsed.some((v) => v === key));
+    if (Array.isArray(parsed)) return ALL_KEYS.filter((key) => parsed.includes(key));
   } catch {
     // Unreadable storage keeps every column.
   }

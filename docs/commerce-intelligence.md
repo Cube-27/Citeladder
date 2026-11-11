@@ -96,7 +96,9 @@ prompt set and column settings in the top control strip; the catalog's
 categories with their product counts sit beside the table, and the chosen
 category's own page opens from there. Hidden columns are a per-browser
 preference and leave the read unchanged. Export writes the rows on screen in
-the shown columns, a missing value as an empty field. Checked catalog products
+the shown columns, a missing value as an empty field and a count of quotes in
+other currencies in brackets after the price, as the table shows it beside the
+price (even when none was quoted in the row's own currency). Checked catalog products
 start competitor discovery (at most `COMMERCE_TARGETS_MAX`); competitor rows
 cannot be checked and, until the product detail page, have no page of their
 own. Unavailable, unknown, none and zero render as different values.

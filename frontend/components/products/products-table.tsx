@@ -35,23 +35,25 @@ const SORTABLE: Partial<Record<ProductColumnKey, CommerceProductSort>> = {
   position: 'position',
 };
 
-function MetricValue({ cell }: Readonly<{ cell: ProductCell }>) {
-  if (cell.kind === 'value')
-    return cell.note ? (
-      <span title={cell.note}>
-        {cell.text}
-        <span className="type-caption block">{cell.note}</span>
-      </span>
-    ) : (
-      cell.text
-    );
-  if (cell.state === 'none') return <span className="text-ink-muted">None</span>;
+function MissingCell({ state }: Readonly<{ state: 'unavailable' | 'unknown' | 'none' }>) {
+  if (state === 'none') return <span className="text-ink-muted">None</span>;
   // Unavailable (nothing in scope to measure) and unknown (the catalog has no
   // price) are words, never a zero.
-  return cell.state === 'unknown' ? (
+  return state === 'unknown' ? (
     <UnavailableValue state="unknown" />
   ) : (
     <MissingValue state="unavailable" />
+  );
+}
+
+function MetricValue({ cell }: Readonly<{ cell: ProductCell }>) {
+  const value = cell.kind === 'value' ? cell.text : <MissingCell state={cell.state} />;
+  if (!cell.note) return value;
+  return (
+    <span title={cell.note}>
+      {value}
+      <span className="type-caption block">{cell.note}</span>
+    </span>
   );
 }
 

@@ -46,6 +46,9 @@ export type ProductQuery = {
 };
 
 const CURSOR_SCOPE = 'commerce.products';
+const NOTHING = sql``;
+const OWNED_PRODUCT = sql<string>`p.id`;
+const COMPETITOR_TARGET = sql<string>`c.target_id`;
 const DAY_MS = 86_400_000;
 
 /**
@@ -87,7 +90,8 @@ const rowSchema = z.object({
 });
 
 /** `%` and `_` in the reader's text match themselves, not any character. */
-const likePattern = (text: string) => `%${text.replaceAll(/[\\%_]/gu, (c) => `\\${c}`)}%`;
+const ESCAPED_MATCH = String.raw`\$&`;
+const likePattern = (text: string) => `%${text.replaceAll(/[\\%_]/gu, ESCAPED_MATCH)}%`;
 
 function cursorPosition(query: ProductQuery, filters: Record<string, unknown>) {
   if (!query.cursor) return null;
@@ -120,6 +124,11 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
   const inCategory = (column: RawBuilder<string>) => sql`${column} IN (
       SELECT m.product_id FROM commerce_product_categories m
       WHERE m.workspace_id = ${ws} AND m.project_id = ${project} AND m.category_id = ${category})`;
+  // Optional fragments are built here, so the read below has no nested templates.
+  const competitorInCategory = category
+    ? sql`AND ((c.target_kind = 'category' AND c.target_id = ${category})
+           OR (c.target_kind = 'product' AND ${inCategory(COMPETITOR_TARGET)}))`
+    : NOTHING;
   const competitors =
     query.source === 'all'
       ? sql`UNION ALL
@@ -129,13 +138,20 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
         FROM commerce_competitor_candidates c
         WHERE c.workspace_id = ${ws} AND c.project_id = ${project}
           AND (c.state = 'approved' OR (c.state = 'pending' AND c.source_kind = 'ai_observed'))
-          ${
-            category
-              ? sql`AND ((c.target_kind = 'category' AND c.target_id = ${category})
-                     OR (c.target_kind = 'product' AND ${inCategory(sql`c.target_id`)}))`
-              : sql``
-          }`
-      : sql``;
+          ${competitorInCategory}`
+      : NOTHING;
+  const ownedInCategory = category ? sql`AND ${inCategory(OWNED_PRODUCT)}` : NOTHING;
+  const engineFilter = query.engine ? sql`AND t.logical_engine = ${query.engine}` : NOTHING;
+  const promptSetFilter = query.promptSet
+    ? sql`AND pr.prompt_set_id = ${query.promptSet}`
+    : NOTHING;
+  const searchFilter = search
+    ? sql`WHERE h.name ILIKE ${search} OR h.brand ILIKE ${search} OR h.url ILIKE ${search}`
+    : NOTHING;
+  const afterCursor = position
+    ? sql`WHERE (k.sort_key, k.name_key, k.holder_id)
+              > (${position.sortKey}::float8, ${position.name}, ${position.id}::uuid)`
+    : NOTHING;
   const ranking = sql`(o.order_observable AND o.rank IS NOT NULL) DESC,
       (o.surface_kind = 'shopping_result') DESC, o.rank ASC NULLS LAST, o.created_at, o.id`;
   const result = await sql<unknown>`
@@ -150,8 +166,8 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
       WHERE p.workspace_id = ${ws} AND p.project_id = ${project}
         AND t.status = 'succeeded' AND t.completed_at >= ${since}
         AND s.cohort <> ALL(${branded}::text[])
-        ${query.engine ? sql`AND t.logical_engine = ${query.engine}` : sql``}
-        ${query.promptSet ? sql`AND pr.prompt_set_id = ${query.promptSet}` : sql``}
+        ${engineFilter}
+        ${promptSetFilter}
       ORDER BY p.artifact_id, r.revision_number DESC NULLS LAST, p.created_at DESC, p.id DESC
     ),
     executions AS (SELECT count(DISTINCT task_id)::int AS n FROM scoped_passes),
@@ -192,7 +208,7 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
              p.price::float8 AS catalog_price, p.currency AS catalog_currency
       FROM commerce_products p
       WHERE p.workspace_id = ${ws} AND p.project_id = ${project} AND p.lifecycle_state = 'active'
-        ${category ? sql`AND ${inCategory(sql`p.id`)}` : sql``}
+        ${ownedInCategory}
       ${competitors}
     ),
     filtered AS (
@@ -204,11 +220,7 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
              CASE WHEN m.ordered > 0 THEN m.wins::float8 / m.ordered END AS win_rate
       FROM holders h CROSS JOIN executions e
       LEFT JOIN slot_metrics m ON m.holder_id = h.holder_id
-      ${
-        search
-          ? sql`WHERE h.name ILIKE ${search} OR h.brand ILIKE ${search} OR h.url ILIKE ${search}`
-          : sql``
-      }
+      ${searchFilter}
     ),
     keyed AS (SELECT f.*, ${SORT_KEYS[query.sort]} AS sort_key FROM filtered f)
     SELECT e.n AS executions, (SELECT count(*)::int FROM filtered) AS total, page.*
@@ -247,15 +259,11 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
         WHERE m.workspace_id = ${ws} AND m.project_id = ${project}
           AND m.product_id = k.holder_id AND c.normalized_name <> ${UNCATEGORIZED_KEY}
       ) cats ON true
-      ${
-        position
-          ? sql`WHERE (k.sort_key, k.name_key, k.holder_id)
-                    > (${position.sortKey}::float8, ${position.name}, ${position.id}::uuid)`
-          : sql``
-      }
+      ${afterCursor}
       ORDER BY k.sort_key, k.name_key, k.holder_id
       LIMIT ${query.limit + 1}
     ) page ON true
+    ORDER BY page.sort_key, page.name_key, page.holder_id
   `.execute(db);
   const rows = result.rows.map((row) => rowSchema.parse(row));
   // The executions row always exists; the page joins to it laterally.

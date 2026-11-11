@@ -17,7 +17,9 @@ import { auditInput } from '../src/audits/inputs.ts';
 import { persistExecutionSuccess, type ExecutionResult } from '../src/audits/result-persistence.ts';
 import { importCatalog } from '../src/commerce/import.ts';
 import { prepareShelfExecution } from '../src/commerce/shelf.ts';
+import { loadWorkerSettings } from '../src/config/analytics.ts';
 import { AuditQueue } from '../src/queue/audit-queue.ts';
+import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { auditTenant } from './audit-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
@@ -314,6 +316,42 @@ describe('Products table read', () => {
     );
     expect(replayed.status).toBe(422);
     expect((await read(t, 'window=14')).status).toBe(422);
+  });
+
+  it('counts each answer once, through the pass of the latest catalog revision', async () => {
+    const later = await auditTenant(db, fixtures);
+    const scope = { workspaceId: later.workspaceId, projectId: later.projectId };
+    const [header, road, trail] = CATALOG.split('\n');
+    await importCatalog(db, scope, {
+      content: [header, road].join('\n'),
+      filename: 'catalog.csv',
+      content_type: 'text/csv',
+    });
+    // Revision 1 knows only the road shoe, so the live pass misses the trail shoe.
+    await answer(later, '1. Acme Road Runner for daily miles\n2. Acme Trail Climber for trails');
+    await importCatalog(db, scope, {
+      content: [header, road, trail].join('\n'),
+      filename: 'catalog-2.csv',
+      content_type: 'text/csv',
+    });
+    const matching = await db
+      .selectFrom('analytics_tasks')
+      .select('id')
+      .where('workspace_id', '=', later.workspaceId)
+      .where('task_kind', '=', 'commerce_answer_matching')
+      .orderBy('created_at', 'desc')
+      .executeTakeFirstOrThrow();
+    await new AnalyticsWorker(db, loadWorkerSettings({}), {
+      owner: 'products-test',
+      taskScope: { workspaceId: later.workspaceId, taskIds: [matching.id] },
+    }).runOnce();
+
+    const { body } = await read(later, 'window=90');
+    expect(body.executions).toBe(1);
+    expect(summary(body)).toEqual([
+      ['Acme Road Runner', 'owned', 1, 1, 1, 1],
+      ['Acme Trail Climber', 'owned', 1, 1, 0, 2],
+    ]);
   });
 
   it('reads only the authorized workspace’s answers and holders', async () => {
