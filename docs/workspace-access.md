@@ -71,6 +71,9 @@ mails the owner one notice (`mailbox.signup_notice_recipient`) with Reply-To set
 to the new address. The `auth.signup_notified` security event marks it sent; a
 refused send retries on the next tick under the same Resend idempotency key,
 for as long as the verification is inside `signup_notice_window_seconds`.
+Security events are kept for 30 days (`security_event_retention_days`): the
+runner's `security-event-retention` phase deletes older rows in batches of
+`security_event_prune_batch`, so the log is a recent audit trail, not an archive.
 Email/password login and Google sign-in establish the HttpOnly session;
 session-version checks invalidate stale sessions. Neither signing up nor signing
 in creates a workspace. Onboarding creates the person's own workspace
