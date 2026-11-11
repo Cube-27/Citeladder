@@ -10,16 +10,6 @@ import { cn } from '@/lib/utils';
  */
 
 /**
- * The one sticky offset for a pane that stays in view while its neighbour
- * scrolls (the list beside a long detail). It sticks `workspace-gap` under
- * the app's sticky top bar (decision D12), never beneath it. The pane scrolls
- * inside itself once it is taller than the viewport, so a long list never
- * pins its own end out of reach.
- */
-export const stickyPaneClasses =
-  'desktop:sticky desktop:top-[calc(var(--sticky-header-offset)+var(--workspace-gap))] desktop:max-h-[calc(100dvh-var(--sticky-header-offset)-2*var(--workspace-gap))] desktop:overflow-y-auto';
-
-/**
  * The ledger: a vertical list of peers separated by rules rather than boxed
  * individually. Six different wrappers existed for this one idea — borderless,
  * hung off a rule, and boxed at two different radii — so the same list of

@@ -56,7 +56,7 @@ const missing = (state: 'unavailable' | 'unknown' | 'none', note?: string): Prod
 });
 
 /** A price in its currency when the code is a currency, else the bare amount. */
-export function formatPrice(amount: number, currency: string): string {
+function formatPrice(amount: number, currency: string): string {
   if (/^[A-Z]{3}$/u.test(currency)) {
     try {
       return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);

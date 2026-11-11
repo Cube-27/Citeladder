@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
  * Layout (padding, gap, grid) stays with the caller: rows differ in anatomy,
  * not in state.
  */
-export function listRowClasses({ selected = false }: Readonly<{ selected?: boolean }> = {}) {
+function listRowClasses({ selected = false }: Readonly<{ selected?: boolean }> = {}) {
   return cn(
     'relative rounded-md transition-[background-color,color] duration-[var(--motion-fast)] ease-[var(--ease-standard)]',
     // Three states, three overlays (D51): selected never looks hovered.
