@@ -11,14 +11,14 @@ import { Icon } from '@/components/ui/icon';
 import { DateField } from '@/components/ui/date-field';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
-import { Stack } from '@/components/ui/layout';
+import { Inline, Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { ReadError } from '@/components/ui/read-error';
 import { textRole } from '@/components/ui/typography';
 import { newIdempotencyKey } from '@/lib/agent/idempotency';
 import { contentGapCheckPreview, measurementLegLabel } from '@/lib/agent/vocabulary';
 import { actionsMutations, actionsQueries, type ActionDetail } from '@/lib/api/actions';
-import type { AgentOutput } from '@/lib/api/agent';
+import { agentMutations, type AgentOutput } from '@/lib/api/agent';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
   declarationDays,
@@ -245,13 +245,23 @@ function newAttempt() {
 
 /**
  * The output pane's implementation state. Declaring anchors the Action to the
- * revision on screen; an output with no target has no Action to declare.
+ * revision on screen; an output with no target has no Action to declare. A
+ * document naming another page than its Action asks where it belongs first,
+ * so a declaration never anchors it to the wrong Action.
  */
 export function OutputDeclaration({
   workspaceId,
+  chatId,
   output,
   runActive,
-}: Readonly<{ workspaceId: string; output: AgentOutput; runActive: boolean }>) {
+  canEdit,
+}: Readonly<{
+  workspaceId: string;
+  chatId: string;
+  output: AgentOutput;
+  runActive: boolean;
+  canEdit: boolean;
+}>) {
   const revision = output.latest_revision;
   if (!revision) return null;
   if (!output.action_id)
@@ -260,6 +270,16 @@ export function OutputDeclaration({
         Name the page or topic this output is for to declare it implemented.
       </p>
     );
+  if (output.named_target)
+    return (
+      <TargetChoice
+        workspaceId={workspaceId}
+        chatId={chatId}
+        outputId={output.id}
+        named={output.named_target}
+        disabled={runActive || !canEdit}
+      />
+    );
   return (
     <AttachedDeclaration
       workspaceId={workspaceId}
@@ -267,6 +287,74 @@ export function OutputDeclaration({
       revision={revision}
       runActive={runActive}
     />
+  );
+}
+
+type NamedTarget = NonNullable<AgentOutput['named_target']>;
+
+/** A page by its path ("/pricing"), a planned page by its topic. */
+function targetName(named: NamedTarget) {
+  if (named.kind === 'planned_page') return named.target;
+  try {
+    const url = new URL(named.target);
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return named.target;
+  }
+}
+
+/** Where a document naming another page than its Action belongs: there, or with the Action. */
+function TargetChoice({
+  workspaceId,
+  chatId,
+  outputId,
+  named,
+  disabled,
+}: Readonly<{
+  workspaceId: string;
+  chatId: string;
+  outputId: string;
+  named: NamedTarget;
+  disabled: boolean;
+}>) {
+  const choose = useMutation(agentMutations.chooseOutputTarget(workspaceId));
+  const name = targetName(named);
+  const submit = (decision: 'link' | 'keep') => choose.mutate({ chatId, outputId, decision });
+  const pending = (decision: 'link' | 'keep') =>
+    choose.isPending && choose.variables?.decision === decision;
+  return (
+    <Stack gap="tight">
+      <p className={textRole('caption', 'break-words')}>
+        This document names {name}, not the page of this chat&apos;s Action.
+      </p>
+      <Inline className="flex-wrap">
+        <Button
+          variant="primary"
+          disabled={disabled || pending('keep')}
+          pending={pending('link')}
+          pendingLabel="Linking…"
+          onClick={() => submit('link')}
+        >
+          Link to {name}
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={disabled || pending('link')}
+          pending={pending('keep')}
+          pendingLabel="Keeping…"
+          onClick={() => submit('keep')}
+        >
+          Keep with this Action
+        </Button>
+      </Inline>
+      {choose.isError ? (
+        <MutationNotice
+          notice={mutationNoticeForError(choose.error, {
+            action: 'choose where this document belongs',
+          })}
+        />
+      ) : null}
+    </Stack>
   );
 }
 

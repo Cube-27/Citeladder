@@ -43,6 +43,8 @@ export type ProductQuery = {
   sort: CommerceProductSort;
   cursor: string | null;
   limit: number;
+  /** One holder's row only: the detail page's KPIs, never set by the table. */
+  holder?: string;
 };
 
 const CURSOR_SCOPE = 'commerce.products';
@@ -108,19 +110,78 @@ function cursorPosition(query: ProductQuery, filters: Record<string, unknown>) {
   }
 }
 
-export async function productMetrics(db: Database, scope: CommerceScope, query: ProductQuery) {
-  if (!policy.commerce.products.window_days.includes(query.windowDays))
+/** The executions a product read covers: its window, engine and prompt set. */
+export type ExecutionScope = Pick<ProductQuery, 'windowDays' | 'engine' | 'promptSet'>;
+
+export function requireWindow(windowDays: number) {
+  if (!policy.commerce.products.window_days.includes(windowDays))
     throw new ApiError(422, 'window must be one of the configured windows', {
       code: 'validation_error',
     });
+}
+
+/** A slot's best observation first: ordered, then carousel, then rank. */
+const SLOT_RANKING = sql`(o.order_observable AND o.rank IS NOT NULL) DESC,
+      (o.surface_kind = 'shopping_result') DESC, o.rank ASC NULLS LAST, o.created_at, o.id`;
+
+/**
+ * The `scoped_passes`, `observed` and `slots` CTEs every product read starts
+ * from: each successful non-branded execution in scope once, through its
+ * latest match pass; the holder observations of those passes; and each
+ * holder's one slot per execution at its best rank.
+ */
+export function scopedSlots(scope: CommerceScope, executions: ExecutionScope) {
+  const ws = scope.workspaceId,
+    project = scope.projectId;
+  const since = new Date(Date.now() - executions.windowDays * DAY_MS);
+  const branded = [...policy.prompts.branded_cohorts];
+  const engineFilter = executions.engine
+    ? sql`AND t.logical_engine = ${executions.engine}`
+    : NOTHING;
+  const promptSetFilter = executions.promptSet
+    ? sql`AND pr.prompt_set_id = ${executions.promptSet}`
+    : NOTHING;
+  return sql`
+    scoped_passes AS (
+      SELECT DISTINCT ON (p.artifact_id) p.id AS pass_id, p.task_id
+      FROM commerce_match_passes p
+      JOIN audit_tasks t ON t.id = p.task_id AND t.workspace_id = p.workspace_id
+      JOIN audit_prompt_snapshots s ON s.id = t.prompt_snapshot_id AND s.audit_id = t.audit_id
+      LEFT JOIN prompts pr ON pr.id = s.prompt_id
+      LEFT JOIN commerce_catalog_revisions r
+        ON r.id = p.catalog_revision_id AND r.workspace_id = p.workspace_id
+      WHERE p.workspace_id = ${ws} AND p.project_id = ${project}
+        AND t.status = 'succeeded' AND t.completed_at >= ${since}
+        AND s.cohort <> ALL(${branded}::text[])
+        ${engineFilter}
+        ${promptSetFilter}
+      ORDER BY p.artifact_id, r.revision_number DESC NULLS LAST, p.created_at DESC, p.id DESC
+    ),
+    observed AS (
+      SELECT o.*,
+             CASE WHEN o.classification = 'owned' THEN o.product_id
+                  ELSE o.competitor_candidate_id END AS holder_id
+      FROM commerce_recommendation_observations o
+      JOIN scoped_passes sp ON sp.pass_id = o.pass_id
+      WHERE o.workspace_id = ${ws} AND o.project_id = ${project}
+        AND o.classification IN ('owned', 'approved_competitor', 'ai_observed_competitor')
+    ),
+    slots AS (
+      SELECT DISTINCT ON (o.task_id, o.holder_id) o.task_id, o.holder_id,
+             CASE WHEN o.order_observable THEN o.rank END AS best_rank
+      FROM observed o WHERE o.holder_id IS NOT NULL
+      ORDER BY o.task_id, o.holder_id, ${SLOT_RANKING}
+    )`;
+}
+
+export async function productMetrics(db: Database, scope: CommerceScope, query: ProductQuery) {
+  requireWindow(query.windowDays);
   // A cursor is bound to its project and filters; any other read refuses it.
   const { cursor: _cursor, limit: _limit, ...rest } = query;
   const filters = { ...rest, project: scope.projectId };
   const position = cursorPosition(query, filters);
   const ws = scope.workspaceId,
     project = scope.projectId;
-  const since = new Date(Date.now() - query.windowDays * DAY_MS);
-  const branded = [...policy.prompts.branded_cohorts];
   const search = query.q?.trim() ? likePattern(query.q.trim()) : null;
   const category = query.category;
   const inCategory = (column: RawBuilder<string>) => sql`${column} IN (
@@ -143,51 +204,17 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
           ${competitorInCategory}`
       : NOTHING;
   const ownedInCategory = category ? sql`AND ${inCategory(OWNED_PRODUCT)}` : NOTHING;
-  const engineFilter = query.engine ? sql`AND t.logical_engine = ${query.engine}` : NOTHING;
-  const promptSetFilter = query.promptSet
-    ? sql`AND pr.prompt_set_id = ${query.promptSet}`
-    : NOTHING;
   const searchFilter = search
-    ? sql`WHERE h.name ILIKE ${search} OR h.brand ILIKE ${search} OR h.url ILIKE ${search}`
+    ? sql`AND (h.name ILIKE ${search} OR h.brand ILIKE ${search} OR h.url ILIKE ${search})`
     : NOTHING;
+  const holderFilter = query.holder ? sql`AND h.holder_id = ${query.holder}` : NOTHING;
   const afterCursor = position
     ? sql`WHERE (k.sort_key, k.name_key, k.holder_id)
               > (${position.sortKey}::float8, ${position.name}, ${position.id}::uuid)`
     : NOTHING;
-  const ranking = sql`(o.order_observable AND o.rank IS NOT NULL) DESC,
-      (o.surface_kind = 'shopping_result') DESC, o.rank ASC NULLS LAST, o.created_at, o.id`;
   const result = await sql<unknown>`
-    WITH scoped_passes AS (
-      SELECT DISTINCT ON (p.artifact_id) p.id AS pass_id, p.task_id
-      FROM commerce_match_passes p
-      JOIN audit_tasks t ON t.id = p.task_id AND t.workspace_id = p.workspace_id
-      JOIN audit_prompt_snapshots s ON s.id = t.prompt_snapshot_id AND s.audit_id = t.audit_id
-      LEFT JOIN prompts pr ON pr.id = s.prompt_id
-      LEFT JOIN commerce_catalog_revisions r
-        ON r.id = p.catalog_revision_id AND r.workspace_id = p.workspace_id
-      WHERE p.workspace_id = ${ws} AND p.project_id = ${project}
-        AND t.status = 'succeeded' AND t.completed_at >= ${since}
-        AND s.cohort <> ALL(${branded}::text[])
-        ${engineFilter}
-        ${promptSetFilter}
-      ORDER BY p.artifact_id, r.revision_number DESC NULLS LAST, p.created_at DESC, p.id DESC
-    ),
+    WITH ${scopedSlots(scope, query)},
     executions AS (SELECT count(DISTINCT task_id)::int AS n FROM scoped_passes),
-    observed AS (
-      SELECT o.*,
-             CASE WHEN o.classification = 'owned' THEN o.product_id
-                  ELSE o.competitor_candidate_id END AS holder_id
-      FROM commerce_recommendation_observations o
-      JOIN scoped_passes sp ON sp.pass_id = o.pass_id
-      WHERE o.workspace_id = ${ws} AND o.project_id = ${project}
-        AND o.classification IN ('owned', 'approved_competitor', 'ai_observed_competitor')
-    ),
-    slots AS (
-      SELECT DISTINCT ON (o.task_id, o.holder_id) o.holder_id,
-             CASE WHEN o.order_observable THEN o.rank END AS best_rank
-      FROM observed o WHERE o.holder_id IS NOT NULL
-      ORDER BY o.task_id, o.holder_id, ${ranking}
-    ),
     slot_metrics AS (
       SELECT holder_id, count(*)::int AS appearances, count(best_rank)::int AS ordered,
              count(*) FILTER (WHERE best_rank = 1)::int AS wins,
@@ -198,7 +225,7 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
       SELECT DISTINCT ON (o.task_id, o.holder_id) o.holder_id,
              o.observed_price::float8 AS price, o.observed_currency AS currency
       FROM observed o WHERE o.holder_id IS NOT NULL AND o.observed_price IS NOT NULL
-      ORDER BY o.task_id, o.holder_id, ${ranking}
+      ORDER BY o.task_id, o.holder_id, ${SLOT_RANKING}
     ),
     merchant_counts AS (
       SELECT o.holder_id, o.merchant_domain AS domain, count(DISTINCT o.task_id)::int AS n
@@ -222,7 +249,7 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
              CASE WHEN m.ordered > 0 THEN m.wins::float8 / m.ordered END AS win_rate
       FROM holders h CROSS JOIN executions e
       LEFT JOIN slot_metrics m ON m.holder_id = h.holder_id
-      ${searchFilter}
+      WHERE true ${searchFilter} ${holderFilter}
     ),
     keyed AS (SELECT f.*, ${SORT_KEYS[query.sort]} AS sort_key FROM filtered f)
     SELECT e.n AS executions, (SELECT count(*)::int FROM filtered) AS total, page.*

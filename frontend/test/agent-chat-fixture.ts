@@ -1,4 +1,4 @@
-import type { AgentMessage } from '@/lib/api/agent';
+import type { AgentMessage, AgentOutput } from '@/lib/api/agent';
 
 export const PROJECT = '11111111-1111-4111-8111-111111111111';
 export const CHAT = '22222222-2222-4222-8222-222222222222';
@@ -111,6 +111,7 @@ export function detail(latest: ReturnType<typeof revision>, run: DetailRun = DEF
         format_id: null,
         target_kind: null,
         target_label: null,
+        named_target: null as AgentOutput['named_target'],
         latest_revision: latest,
       },
     ],

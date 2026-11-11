@@ -485,19 +485,31 @@ export const definitions = {
   }),
   read_ai_shelf: projectTool({
     title: 'Read the AI Shelf',
-    description: `Read how AI answers recommend products for an ecommerce project: which products and merchants hold the "shelf" when buyers ask for a product category. Call it first with no target to get the catalog: categories with product counts, and up to ${mcpPolicy.max_list_limit} products with their category ids (products_omitted counts the rest). Then call it again with target_kind and target_id for one category or product: product visibility, share of shelf, average position, first-position win rate, the answer counts they rest on, when it was measured, and the holders (your products, competitors, merchants) with their best rank. unavailable no_product_catalog means the project has no product catalog, which is normal for non-ecommerce brands; use read_visibility_overview for brand mentions instead.`,
+    description: `Read how AI answers recommend products for an ecommerce project, per product over a window of days. Without holder_id it returns the categories with product counts and one page of products, most visible first: for each, its holder_id, kind (owned, approved_competitor or ai_observed_competitor), visibility (share of the answers in scope that named it), appearances, win rate (share of its ordered appearances at rank 1), mean position, the median mentioned price beside the catalog price, and the merchant domains answers send shoppers to; executions is the number of answers in scope. source all adds competitors to your catalog; category_id narrows to one category; pass next_cursor for more. With holder_id it returns that product's page: the same metrics, its description and image, the products competing in the same answers, merchants, cited sources, fan-out queries, per-prompt metrics, the answers it appeared in (won, lost or unranked, with rank) and its open Actions. A null metric is unavailable (no answer in scope, or no ordered appearance), never zero. unavailable no_product_catalog means the project has no product catalog, which is normal for non-ecommerce brands; use read_visibility_overview for brand mentions instead.`,
     schema: z.strictObject({
       ...project,
-      target_kind: optional(
+      holder_id: optional(
+        uuid.describe('A holder_id from a previous product list, to read that product in full.'),
+      ),
+      source: optional(
         z
-          .enum(['category', 'product'])
-          .describe('Pass together with target_id: whether it names a category or a product.'),
+          .enum(['catalog', 'all'])
+          .describe(
+            'catalog (the default) lists your products; all adds approved and AI-observed competitors.',
+          ),
       ),
-      target_id: optional(
-        uuid.describe(
-          'A category or product id from the catalog this tool returns without a target; pass together with target_kind.',
-        ),
+      category_id: optional(
+        uuid.describe('A category id from this tool, to list only its products.'),
       ),
+      window_days: optional(
+        z
+          .number()
+          .int()
+          .describe(
+            `Days of answers to read, one of ${policy.commerce.products.window_days.join(', ')}; omit for ${policy.commerce.products.default_window_days}.`,
+          ),
+      ),
+      ...page,
     }),
     read: shelfRead,
   }),

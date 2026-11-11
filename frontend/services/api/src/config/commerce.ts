@@ -146,6 +146,11 @@ export const commerce = {
     max_page_size: 200,
     merchant_limit: 5,
     search_max_chars: 200,
+    /**
+     * The product detail read: rows per ranked list (competing products,
+     * merchants, sources, fan-out queries), prompts, and newest answers.
+     */
+    detail: { list_limit: 10, prompt_limit: 50, answer_limit: 50 },
   },
   import_max_bytes: 2000000,
   import_max_rows: 10000,

@@ -7,7 +7,10 @@
  * observations afterwards, since text answers rarely carry both.
  */
 import { randomUUID } from 'node:crypto';
-import type { CommerceProductPage } from '@citeladder/contracts/commerce-suite';
+import type {
+  CommerceProductDetail,
+  CommerceProductPage,
+} from '@citeladder/contracts/commerce-suite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../src/app.ts';
@@ -39,8 +42,12 @@ const CATALOG = [
   'https://shop.example/products/trail,Acme Trail Climber,Acme,,,Trail',
 ].join('\n');
 
+/** What an answer cited and searched for, as the provider returned it. */
+type Evidence = { citations: { url: string; title: string }[]; queries: string[] };
+const NO_EVIDENCE: Evidence = { citations: [], queries: [] };
+
 /** One brand-run audit whose single ChatGPT answer is `answer`; its task id. */
-async function answer(t: Tenant, text: string): Promise<string> {
+async function answer(t: Tenant, text: string, evidence = NO_EVIDENCE): Promise<string> {
   const [auditId] = await createAudits(
     db,
     t.workspaceId,
@@ -64,14 +71,28 @@ async function answer(t: Tenant, text: string): Promise<string> {
     transport_provider: 'openai',
     transport_model: task.transport_model,
     answer_text: text,
-    search_used: false,
-    search_events: [],
+    search_used: evidence.queries.length > 0,
+    search_events: evidence.queries.map((query, sequence) => ({
+      sequence,
+      query,
+      call_id: `call-${sequence}`,
+      call_sequence: 0,
+      query_sequence: sequence,
+    })),
     finish_reason: 'stop',
     raw_finish_reason: 'stop',
     latency_ms: 1,
     provider_metadata: {},
     retrieved_sources: null,
-    citations: [],
+    citations: evidence.citations.map(({ url, title }, ordinal) => ({
+      ordinal,
+      url,
+      title,
+      domain: new URL(url).hostname,
+      start_index: null,
+      end_index: null,
+      cited_text: '',
+    })),
     normalized_usage: {
       uncached_input_tokens: null,
       cached_input_tokens: null,
@@ -150,6 +171,7 @@ const summary = (page: CommerceProductPage) =>
 let t: Tenant;
 let foreign: Tenant;
 let trailCategory: string;
+let first: string, second: string, third: string;
 
 beforeAll(async () => {
   t = await auditTenant(db, fixtures);
@@ -167,17 +189,18 @@ beforeAll(async () => {
   await candidate(t, { name: 'Dropped Dash', state: 'rejected', source: 'ai_observed' });
   await candidate(t, { name: 'Unreviewed Racer', state: 'pending', source: 'provider' });
 
-  const first = await answer(
+  first = await answer(
     t,
     '1. Acme Road Runner for daily miles\n2. Rival Pacer for tempo days\n3. Acme Trail Climber for rocky trails',
+    {
+      citations: [{ url: 'https://reviews.example/best-road', title: 'Best road shoes' }],
+      queries: ['best road running shoes'],
+    },
   );
   // Asked of another engine, so the engine filter has something to drop.
-  const second = await answer(
-    t,
-    '1. Rival Pacer is the best value\n2. Acme Road Runner close behind',
-  );
+  second = await answer(t, '1. Rival Pacer is the best value\n2. Acme Road Runner close behind');
   // Older than 30 days, so only the 90-day window holds it.
-  const third = await answer(t, '1. Acme Road Runner for long road runs');
+  third = await answer(t, '1. Acme Road Runner for long road runs');
   await answer(t, 'Most runners should get a gait analysis before buying anything new.');
   await answer(foreign, '1. Acme Road Runner for daily miles');
   await db
@@ -369,5 +392,135 @@ describe('Products table read', () => {
     ]);
     // Another workspace's header never reaches this project.
     expect((await read(t, '', foreign.workspaceId)).status).toBe(404);
+  });
+});
+
+async function detail(t: Tenant, holder: string, query = 'window=90') {
+  const token = await sessionToken({ sub: t.userId, ver: 0 });
+  const response = await app.request(
+    `/api/v1/projects/${t.projectId}/commerce/products/${holder}?${query}`,
+    {
+      headers: {
+        'x-workspace-id': t.workspaceId,
+        cookie: `${config.session.cookieName}=${token}`,
+      },
+    },
+  );
+  return { status: response.status, body: (await response.json()) as CommerceProductDetail };
+}
+
+async function holderId(t: Tenant, name: string) {
+  const all = await read(t, 'window=90&source=all');
+  return all.body.items.find((row) => row.name === name)!.holder_id;
+}
+
+describe('Product detail read', () => {
+  it('reads one product’s metrics and the answers behind them', async () => {
+    const { status, body } = await detail(t, await holderId(t, 'Acme Road Runner'));
+    expect(status).toBe(200);
+    expect(body.executions).toBe(4);
+    // The same row the Products table reads.
+    expect(body.product).toMatchObject({
+      name: 'Acme Road Runner',
+      kind: 'owned',
+      appearances: 3,
+      visibility: 0.75,
+      win_rate: 2 / 3,
+      position: 4 / 3,
+      catalog_price: { min: 120, max: 120, currency: 'USD' },
+      description: '',
+      image_url: null,
+    });
+    // Rival Pacer beat it once (rank 1 over its 2); the trail shoe never did.
+    expect(
+      body.competing.map((row) => [row.name, row.kind, row.shared, row.ahead, row.position]),
+    ).toEqual([
+      ['Rival Pacer', 'approved_competitor', 2, 1, 1.5],
+      ['Acme Trail Climber', 'owned', 1, 0, 3],
+    ]);
+    expect(body.merchants).toEqual([
+      { domain: 'runnerstore.com', count: 2 },
+      { domain: 'shoes.example.eu', count: 1 },
+    ]);
+    expect(body.sources).toEqual([
+      {
+        url: 'https://reviews.example/best-road',
+        title: 'Best road shoes',
+        domain: 'reviews.example',
+        count: 1,
+      },
+    ]);
+    expect(body.fan_out_queries).toEqual([{ query: 'best road running shoes', count: 1 }]);
+    expect(body.prompts).toEqual([
+      expect.objectContaining({
+        prompt_id: t.promptId,
+        executions: 4,
+        appearances: 3,
+        visibility: 0.75,
+        win_rate: 2 / 3,
+        position: 4 / 3,
+      }),
+    ]);
+    expect(body.answers.map((row) => [row.task_id, row.engine, row.rank, row.outcome])).toEqual([
+      [second, 'gemini', 2, 'lost'],
+      [first, 'chatgpt', 1, 'won'],
+      [third, 'chatgpt', 1, 'won'],
+    ]);
+    expect(body.answer_total).toBe(3);
+    expect(body.actions).toEqual([]);
+  });
+
+  it('reads a competitor’s page and narrows every section to the chosen executions', async () => {
+    const rival = await detail(t, await holderId(t, 'Rival Pacer'));
+    expect(rival.body.product).toMatchObject({ kind: 'approved_competitor', appearances: 2 });
+    expect(rival.body.competing.map((row) => [row.name, row.shared, row.ahead])).toEqual([
+      ['Acme Road Runner', 2, 1],
+      ['Acme Trail Climber', 1, 0],
+    ]);
+
+    const chatgpt = await detail(
+      t,
+      await holderId(t, 'Acme Road Runner'),
+      'window=30&engine=chatgpt',
+    );
+    expect(chatgpt.body.executions).toBe(2);
+    expect(chatgpt.body.answers.map((row) => row.task_id)).toEqual([first]);
+    expect(chatgpt.body.competing.map((row) => [row.name, row.shared, row.ahead])).toEqual([
+      ['Acme Trail Climber', 1, 0],
+      ['Rival Pacer', 1, 0],
+    ]);
+  });
+
+  it('finds no page for a holder outside the authorized project or the listed holders', async () => {
+    const road = await holderId(t, 'Acme Road Runner');
+    expect((await detail(foreign, road)).status).toBe(404);
+    // A rejected candidate is listed nowhere, so it has no page either.
+    const rejected = await db
+      .selectFrom('commerce_competitor_candidates')
+      .select('id')
+      .where('workspace_id', '=', t.workspaceId)
+      .where('product_name', '=', 'Dropped Dash')
+      .executeTakeFirstOrThrow();
+    expect((await detail(t, rejected.id)).status).toBe(404);
+    // The other project's own product reads its own answers only.
+    const theirs = await detail(foreign, await holderId(foreign, 'Acme Road Runner'));
+    expect(theirs.body.answer_total).toBe(1);
+    expect(theirs.body.sources).toEqual([]);
+  });
+
+  // Last in the file: it rejects the approved competitor the reads above count.
+  it('drops a competitor rejected after its answers from the competing products', async () => {
+    const road = await holderId(t, 'Acme Road Runner');
+    const rival = await holderId(t, 'Rival Pacer');
+    await db
+      .updateTable('commerce_competitor_candidates')
+      .set({ state: 'rejected' })
+      .where('id', '=', rival)
+      .execute();
+    const { body } = await detail(t, road);
+    expect(body.competing.map((row) => [row.name, row.kind])).toEqual([
+      ['Acme Trail Climber', 'owned'],
+    ]);
+    expect((await detail(t, rival)).status).toBe(404);
   });
 });
