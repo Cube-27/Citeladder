@@ -58,6 +58,7 @@ export interface AccountPolicyAcceptances {
 
 export interface Actions {
   approach: string;
+  cohort: Json | null;
   created_at: Timestamp;
   created_by_user_id: string | null;
   diagnosis: Json;

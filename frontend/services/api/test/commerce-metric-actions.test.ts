@@ -13,20 +13,16 @@ import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { auditRuntime } from '../src/audits/config.ts';
-import { createAudits } from '../src/audits/creation.ts';
-import { auditInput } from '../src/audits/inputs.ts';
-import { persistExecutionSuccess, type ExecutionResult } from '../src/audits/result-persistence.ts';
 import { importCatalog } from './commerce-support.ts';
-import { prepareShelfExecution } from '../src/commerce/shelf.ts';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
 import { getAction } from '../src/opportunities/actions.ts';
 import { declareAction } from '../src/opportunities/declarations.ts';
 import { enqueueImplementationVerification } from '../src/opportunities/enqueue.ts';
 import { recomputeOpportunities } from '../src/opportunities/refresh.ts';
-import { AuditQueue } from '../src/queue/audit-queue.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { workspaceTaskIds } from './analytics-drain.ts';
 import { auditTenant } from './audit-fixtures.ts';
+import { addCompetitor, recordAnswer } from './commerce-answer-fixtures.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
@@ -51,78 +47,11 @@ const CATALOG = [
   'https://shop.example/products/gem,Acme Hidden Gem,Acme,50,USD,Road',
 ].join('\n');
 
-/** One brand-run audit whose single ChatGPT answer is `text`; its task id. */
+/** One brand-run answer of `text`; its task id. */
 async function answer(t: Tenant, text: string): Promise<string> {
-  const [auditId] = await createAudits(
-    db,
-    t.workspaceId,
-    auditInput.parse({
-      project_id: t.projectId,
-      prompt_ids: [t.promptId],
-      engines: ['chatgpt'],
-      repetitions: 1,
-      audit_scope: 'brand',
-    }),
-    {},
-    runtime,
-  );
-  const queue = new AuditQueue(db, 120);
-  const [claim] = await queue.claim('metric-actions', 1, { workspaceId: t.workspaceId, auditId });
-  const running = await queue.markRunning(claim!, claim!.lease_owner);
-  const task = running!.task;
-  tasks.push(task.id);
-  const result: ExecutionResult = {
-    logical_engine: 'chatgpt',
-    transport_provider: 'openai',
-    transport_model: task.transport_model,
-    answer_text: text,
-    search_used: false,
-    search_events: [],
-    finish_reason: 'stop',
-    raw_finish_reason: 'stop',
-    latency_ms: 1,
-    provider_metadata: {},
-    retrieved_sources: null,
-    citations: [],
-    normalized_usage: {
-      uncached_input_tokens: null,
-      cached_input_tokens: null,
-      output_tokens: null,
-      reasoning_tokens: null,
-      total_tokens: null,
-      web_search_requests: null,
-      provider_cost_microusd: null,
-    },
-  };
-  const derive = await prepareShelfExecution(db, task, result, null);
-  await persistExecutionSuccess(db, task, claim!.lease_owner, result, derive);
-  return task.id;
-}
-
-async function candidate(t: Tenant, name: string) {
-  const product = await db
-    .selectFrom('commerce_products')
-    .select('id')
-    .where('workspace_id', '=', t.workspaceId)
-    .where('name', '=', 'Acme Road Runner')
-    .executeTakeFirstOrThrow();
-  await db
-    .insertInto('commerce_competitor_candidates')
-    .values({
-      id: randomUUID(),
-      workspace_id: t.workspaceId,
-      project_id: t.projectId,
-      target_kind: 'product',
-      target_id: product.id,
-      canonical_url: 'https://rival.example/products/pacer',
-      product_name: name,
-      brand_name: name.split(' ')[0]!,
-      evidence: '{}',
-      source_kind: 'provider',
-      state: 'approved',
-      created_at: new Date(),
-    })
-    .execute();
+  const { taskId } = await recordAnswer(db, t, text, { runtime, worker: 'metric-actions' });
+  tasks.push(taskId);
+  return taskId;
 }
 
 /** The quote and merchant on one task's observation of a product. */
@@ -206,7 +135,7 @@ beforeAll(async () => {
       { workspaceId: tenant.workspaceId, projectId: tenant.projectId },
       CATALOG,
     );
-  await candidate(t, 'Rival Pacer');
+  await addCompetitor(db, t, 'Rival Pacer');
   const first = await answer(
     t,
     '1. Rival Pacer for tempo days\n2. Acme Road Runner for daily miles\n3. Acme Trail Climber for rocky trails',

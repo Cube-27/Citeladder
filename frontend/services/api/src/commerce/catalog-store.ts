@@ -4,7 +4,7 @@ import { sql, type Insertable, type Selectable } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import type { CommerceProducts, CommerceProductObservations } from '../generated/db-schema.ts';
-import { categoryKey, isCategoryName } from './projection-facts.ts';
+import { categoryKey, isCategoryName, UNCATEGORIZED_KEY } from './projection-facts.ts';
 import { commerceMissing, type CommerceScope } from './reads.ts';
 
 /**
@@ -131,6 +131,22 @@ export async function setCategoryParent(
         : eb('parent_category_id', 'is', null),
     )
     .execute();
+}
+
+/**
+ * A product's category memberships joined to their categories (`m`, `c`),
+ * the platform's "Uncategorized" left out; the caller selects and orders.
+ */
+export function productCategories(db: Database, scope: CommerceScope, productId: string) {
+  return db
+    .selectFrom('commerce_product_categories as m')
+    .innerJoin('commerce_categories as c', (join) =>
+      join.onRef('c.id', '=', 'm.category_id').onRef('c.workspace_id', '=', 'm.workspace_id'),
+    )
+    .where('m.workspace_id', '=', scope.workspaceId)
+    .where('m.project_id', '=', scope.projectId)
+    .where('m.product_id', '=', productId)
+    .where('c.normalized_name', '!=', UNCATEGORIZED_KEY);
 }
 
 export async function addMembership(

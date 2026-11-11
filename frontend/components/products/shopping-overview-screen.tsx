@@ -14,10 +14,11 @@ import { QueryState } from '@/components/ui/query-state';
 import { readErrorProps } from '@/components/ui/read-error';
 import { StatRow } from '@/components/ui/stat-row';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
-import { TextLink } from '@/components/ui/text-link';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { InlineFigure } from '@/components/ui/typography';
-import { MissingValue, UnavailableValue } from '@/components/ui/unavailable-value';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Measured } from '@/components/products/measured';
+import { ProductName } from '@/components/products/products-table';
 import type {
   CommerceOverviewBrand,
   CommerceOverviewProduct,
@@ -29,11 +30,10 @@ import {
   PRODUCT_WINDOW_DAYS,
   type ProductWindowDays,
 } from '@/lib/config/commerce';
-import { formatCount, formatPercent, pluralCount } from '@/lib/format';
-import { holderLabel } from '@/lib/products/product-columns';
+import { formatCount, pluralCount } from '@/lib/format';
+import { formatPosition, formatRate } from '@/lib/products/product-columns';
 import {
   overviewSearch,
-  productHref,
   useOverviewFilters,
   type ProductScopeFilters,
 } from '@/lib/products/product-filters';
@@ -47,17 +47,6 @@ const RANKINGS = [
 ] as const;
 type Ranking = (typeof RANKINGS)[number]['value'];
 type Overview = CommerceShoppingOverview;
-
-const percent = (value: number) => formatPercent(value, 1);
-const rank = (value: number) => value.toFixed(1);
-
-/** A rate or mean, or the unavailable mark when nothing in scope measured it (never a zero). */
-function Measured({
-  value,
-  format,
-}: Readonly<{ value: number | null; format: (value: number) => string }>) {
-  return value === null ? <MissingValue state="unavailable" /> : format(value);
-}
 
 /** One row in place of rows: what is absent. */
 const emptyRow = (message: string) => ({ kind: 'empty', inline: true, message }) as const;
@@ -98,30 +87,16 @@ function MetricCells({ row }: Readonly<{ row: CommerceOverviewProduct | Commerce
   return (
     <>
       <TableCell numeric>
-        <Measured value={row.visibility} format={percent} />
+        <Measured value={row.visibility} format={formatRate} />
       </TableCell>
       <TableCell numeric>
-        <Measured value={row.win_rate} format={percent} />
+        <Measured value={row.win_rate} format={formatRate} />
       </TableCell>
       <TableCell numeric>
-        <Measured value={row.position} format={rank} />
+        <Measured value={row.position} format={formatPosition} />
       </TableCell>
     </>
   );
-}
-
-/** Every product opens its own page in the overview's window, as the Products table's rows do. */
-function ProductName({
-  row,
-  scope,
-}: Readonly<{ row: CommerceOverviewProduct; scope: ProductScopeFilters }>) {
-  const caption = [row.brand, holderLabel(row.kind)].filter(Boolean).join(' · ');
-  const name = (
-    <TextLink href={productHref(row.holder_id, scope)} text="inherit">
-      {row.name}
-    </TextLink>
-  );
-  return <TableCellLines title primary={name} secondary={caption} />;
 }
 
 /** Brands (with Share of Shelf) or products, by appearances in the window. */
@@ -168,7 +143,7 @@ function RankingTable({
               </TableCell>
               <MetricCells row={row} />
               <TableCell numeric>
-                <Measured value={row.share_of_shelf} format={percent} />
+                <Measured value={row.share_of_shelf} format={formatRate} />
               </TableCell>
             </TableRow>
           ))
@@ -223,7 +198,7 @@ function ProductList({
           </TableCell>
           <TableCell numeric>{formatCount(row.appearances)}</TableCell>
           <TableCell numeric>
-            <Measured value={row.visibility} format={percent} />
+            <Measured value={row.visibility} format={formatRate} />
           </TableCell>
         </TableRow>
       ))}
@@ -294,7 +269,7 @@ function FanoutTable({ fanout }: Readonly<{ fanout: Overview['fanout'] }>) {
   );
 }
 
-const shelfPercent = (value: number | null) => (value === null ? null : percent(value));
+const shelfPercent = (value: number | null) => (value === null ? null : formatRate(value));
 
 /**
  * The chosen category's AI Shelf from its latest Commerce run: the

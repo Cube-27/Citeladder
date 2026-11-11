@@ -23,9 +23,15 @@ import { jsonObject } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
 import type { CommerceProducts } from '../generated/db-schema.ts';
 import { canonicalUrl } from '../site-health/url-identity.ts';
-import { addMembership, appendObservation, categoryByName, lockCatalog } from './catalog-store.ts';
+import {
+  addMembership,
+  appendObservation,
+  categoryByName,
+  lockCatalog,
+  productCategories,
+} from './catalog-store.ts';
 import { recordCatalogRevision } from './catalog-revisions.ts';
-import { categoryKey, isCategoryName, UNCATEGORIZED_KEY } from './projection-facts.ts';
+import { categoryKey, isCategoryName } from './projection-facts.ts';
 import { commerceMissing, type CommerceScope } from './reads.ts';
 
 export const productEditInput = productEditRequestSchema
@@ -208,16 +214,8 @@ async function catalogProduct(db: Database, scope: CommerceScope, product: { id:
     .where('project_id', '=', scope.projectId)
     .where('id', '=', product.id)
     .executeTakeFirstOrThrow();
-  const memberships = await db
-    .selectFrom('commerce_product_categories as m')
-    .innerJoin('commerce_categories as c', (join) =>
-      join.onRef('c.id', '=', 'm.category_id').onRef('c.workspace_id', '=', 'm.workspace_id'),
-    )
+  const memberships = await productCategories(db, scope, product.id)
     .select('m.category_id')
-    .where('m.workspace_id', '=', scope.workspaceId)
-    .where('m.project_id', '=', scope.projectId)
-    .where('m.product_id', '=', product.id)
-    .where('c.normalized_name', '!=', UNCATEGORIZED_KEY)
     .orderBy('m.category_id')
     .execute();
   return commerceProductSchema.parse({

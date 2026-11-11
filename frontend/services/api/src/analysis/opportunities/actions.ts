@@ -4,6 +4,7 @@ import {
   type ActionHandoff,
   type ActionPriorityBand,
 } from '@citeladder/contracts/actions';
+import type { IssueFamilyCohort } from '@citeladder/contracts/opportunity-evidence';
 
 import { policy } from '../../config.ts';
 import type { ActionGroupRule } from '../../config/actions.ts';
@@ -28,6 +29,8 @@ export type ActionMember = {
   source_metric_ids: string[];
   /** What the member's evidence states that a handoff message names. */
   facts: HandoffFacts;
+  /** An issue-family finding's cohort; absent for every other rule. */
+  cohort?: IssueFamilyCohort;
 };
 /** The competitors read on an earned page, and a content gap's angle; empty when the rule has none. */
 export type HandoffFacts = Readonly<{ competitors: readonly string[]; angle: string | null }>;
@@ -108,11 +111,13 @@ function target(
 }
 const pageTarget = (member: ActionMember, url: string) =>
   target(pageGroupKey(url), p.TARGET_PAGE, member, url);
-/** The Action a member groups into: one per page, prompt, query, product or listing. */
+/** The Action a member groups into: one per page, prompt, query, product, listing or issue family. */
 export function targetFor(member: ActionMember) {
   const ref = member.target;
   const key = targetKey(ref);
   switch (ref.kind) {
+    case 'issue_family':
+      return target(key, p.TARGET_ISSUE_FAMILY, member);
     case 'earned_page':
       return target(`earned:${key}`, p.TARGET_EARNED_PAGE, member, ref.url);
     case 'product':
@@ -264,6 +269,8 @@ function group(t: ReturnType<typeof targetFor>, members: NonEmpty<ActionMember>)
   return {
     target: t,
     members: ordered,
+    // An issue-family Action holds one family, so its one cohort.
+    cohort: ordered.find((m) => m.cohort)?.cohort ?? null,
     families,
     // The strongest finding ranks the Action. Agreement is not rewarded: most
     // findings on a page come from the one crawl, so a count would double it.

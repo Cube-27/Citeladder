@@ -21,7 +21,7 @@ import { promptsQueries } from '@/lib/api/prompts';
 import { PRODUCT_DEFAULT_WINDOW, PRODUCT_WINDOW_DAYS } from '@/lib/config/commerce';
 import { formatCount } from '@/lib/format';
 import { useCompetitorDiscovery } from '@/lib/products/competitor-discovery';
-import { holderLabel, PRODUCT_COLUMNS, productCell } from '@/lib/products/product-columns';
+import { holderCaption, PRODUCT_COLUMNS, productCell } from '@/lib/products/product-columns';
 import {
   productScopeSearch,
   useProductScopeFilters,
@@ -260,9 +260,7 @@ function ProductHeader({
           <Inline gap="compact" className="items-start">
             {product.image_url ? <ProductImage src={product.image_url} /> : null}
             <Stack gap="tight" className="min-w-0 flex-1">
-              <span className={textRole('label')}>
-                {[product.brand, holderLabel(product.kind)].filter(Boolean).join(' · ')}
-              </span>
+              <span className={textRole('label')}>{holderCaption(product)}</span>
               {product.description ? (
                 <p className={textRole('body')}>{product.description}</p>
               ) : null}

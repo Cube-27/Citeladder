@@ -44,6 +44,7 @@ const action: Action = {
   skill_id: 'technical_health',
   member_count: 1,
   declarable_member_count: 1,
+  page_count: null,
   handoff: { context: 'action', message: MESSAGE },
   evidence_cleared_at: null,
   created_at: NOW,
@@ -369,6 +370,52 @@ describe('A content-gap Action', () => {
       workflow: 'optimize_page',
       project: PROJECT,
     });
+  });
+
+  it('shows an issue family’s crawl and affected pages, and says how many are not listed', async () => {
+    const family: Action = {
+      ...action,
+      target_kind: 'issue_family',
+      target_label: 'Missing viewport meta tag',
+      target_url: null,
+      page_count: 179,
+      handoff: {
+        context: 'action',
+        message: 'Write one fix that clears "Missing viewport meta tag" on every affected page.',
+      },
+    };
+    const pages = Array.from({ length: 25 }, (_, index) => ({
+      site_url_id: `77777777-7777-4777-8777-${String(index).padStart(12, '0')}`,
+      url: `https://acme.test/p${String(index).padStart(2, '0')}`,
+    }));
+    serve(family, {
+      cohort: {
+        rule_id: 'web.mobile_viewport',
+        rule_label: 'Missing viewport meta tag',
+        crawl_id: '88888888-8888-4888-8888-888888888888',
+        group_id: '99999999-9999-4999-8999-999999999999',
+        page_count: 179,
+        pages,
+        crawl_completed_at: '2026-11-01T09:00:00Z',
+      },
+    });
+    const user = userEvent.setup();
+    renderDetail();
+
+    const section = await screen.findByRole('region', { name: 'Affected pages' });
+    expect(
+      within(section).getByText(
+        /Missing viewport meta tag fails on 179 pages in the crawl completed/,
+      ),
+    ).toBeVisible();
+    const list = within(section).getByRole('list', { name: 'Affected pages' });
+    expect(within(list).getAllByRole('link')).toHaveLength(20);
+    expect(
+      within(section).getByText('154 more pages share this issue and are not listed.'),
+    ).toBeVisible();
+    await user.click(within(section).getByRole('button', { name: 'Show all 25 listed pages' }));
+    expect(within(list).getAllByRole('link')).toHaveLength(25);
+    expect(within(list).getAllByRole('link')[0]).toHaveAttribute('href', 'https://acme.test/p00');
   });
 
   it('hands a planned page to the article workflow with its finding', async () => {

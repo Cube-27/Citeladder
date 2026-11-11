@@ -11,6 +11,11 @@ import {
   type ActionGroup,
   type ActionPriorityBand,
 } from '@citeladder/contracts/actions';
+import {
+  issueFamilyCohortSchema,
+  siteIssueFamilyEvidenceSchema,
+  type IssueFamilyCohort,
+} from '@citeladder/contracts/opportunity-evidence';
 import { sql, type Selectable, type SqlBool } from 'kysely';
 
 import { policy } from '../config.ts';
@@ -148,6 +153,37 @@ const jsonList = (value: unknown): unknown[] => (Array.isArray(value) ? value : 
 const stringList = (value: unknown): string[] =>
   jsonList(value).filter((v): v is string => typeof v === 'string');
 
+/** An issue-family Action's stored cohort; null for any other Action. */
+function storedCohort(row: Pick<ActionRow, 'cohort'>): IssueFamilyCohort | null {
+  if (row.cohort === null) return null;
+  return issueFamilyCohortSchema.parse(row.cohort);
+}
+
+/**
+ * The cohort an issue-family Action shows: the one its declaration froze (its
+ * declared finding's evidence, superseded or not), else the latest refresh's,
+ * with when its crawl completed.
+ */
+async function actionCohort(db: Database, action: ActionRow, declaredMemberIds: readonly string[]) {
+  if (action.target_kind !== a.TARGET_ISSUE_FAMILY) return null;
+  const declared = declaredMemberIds.length
+    ? await findingsOf(db, action, [...declaredMemberIds], true)
+    : [];
+  const frozen = declared
+    .map((row) => siteIssueFamilyEvidenceSchema.safeParse(row.evidence))
+    .find((parsed) => parsed.success)?.data?.cohort;
+  const cohort = frozen ?? storedCohort(action);
+  if (!cohort) return null;
+  const crawl = await db
+    .selectFrom('site_crawls')
+    .select('completed_at')
+    .where('workspace_id', '=', action.workspace_id)
+    .where('project_id', '=', action.project_id)
+    .where('id', '=', cohort.crawl_id)
+    .executeTakeFirst();
+  return { ...cohort, crawl_completed_at: crawl?.completed_at?.toISOString() ?? null };
+}
+
 function actionItem(row: ActionRow) {
   return {
     id: row.id,
@@ -166,6 +202,7 @@ function actionItem(row: ActionRow) {
     skill_id: row.skill_id,
     member_count: jsonList(row.member_opportunity_ids).length,
     declarable_member_count: declarableIds(row).length,
+    page_count: storedCohort(row)?.page_count ?? null,
     handoff: readHandoff(record(row.diagnosis).handoff, row.target_label),
     evidence_cleared_at: row.evidence_cleared_at?.toISOString() ?? null,
     created_at: row.created_at.toISOString(),
@@ -440,6 +477,7 @@ export async function getAction(db: Database, workspaceId: string, actionId: str
       members.map((row) => [row.id, measuredBy.parse(memberMeasurementLeg(row))]),
     ),
     declaration: declaration ? await declarationView(db, declaration) : null,
+    cohort: await actionCohort(db, action, stringList(declaration?.member_opportunity_ids)),
   };
 }
 

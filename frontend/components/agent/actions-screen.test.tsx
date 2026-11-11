@@ -32,6 +32,7 @@ const action = {
   skill_id: 'gsc_optimize',
   member_count: 1,
   declarable_member_count: 1,
+  page_count: null,
   handoff: { context: 'action', message: 'Work on https://acme.test/pricing.' },
   evidence_cleared_at: null,
   created_at: NOW,
@@ -50,11 +51,14 @@ const ownPages = (count: number) =>
     priority_band: 'low',
   }));
 
+/** One Site Health defect across 179 pages: one Action, not 179. */
 const fix = {
   ...action,
   id: '44444444-4444-4444-8444-444444444444',
-  target_label: 'acme.test/schema',
-  target_url: 'https://acme.test/schema',
+  target_kind: 'issue_family',
+  target_label: 'Missing viewport meta tag',
+  target_url: null,
+  page_count: 179,
   approach: 'fix_technical',
   group: 'fix_site',
   priority_band: 'medium',
@@ -158,7 +162,18 @@ describe('Actions', () => {
     expect(await screen.findByRole('link', { name: 'acme.test/page-5' })).toBeVisible();
     expect(window.location.search).toBe('?group=own_pages');
     expect(reads.at(-1)).toBe('group=own_pages&limit=10');
-    expect(screen.queryByRole('link', { name: 'acme.test/schema' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Missing viewport meta tag' })).toBeNull();
+  });
+
+  it('lists an issue family in Fix how AI reads your site with its page count', async () => {
+    serveActions([]);
+    renderActions();
+    const row = (await screen.findByRole('link', { name: 'Missing viewport meta tag' })).closest(
+      'tr',
+    )!;
+    expect(
+      within(row).getByText('Issue across pages · 179 pages · 1 finding in Site Health'),
+    ).toBeVisible();
   });
 
   it('sets every filter from All filters as URL state and reads the list through it', async () => {
@@ -193,7 +208,9 @@ describe('Actions', () => {
     serveActions([]);
     const user = userEvent.setup();
     renderActions();
-    const row = (await screen.findByRole('link', { name: 'acme.test/schema' })).closest('tr')!;
+    const row = (await screen.findByRole('link', { name: 'Missing viewport meta tag' })).closest(
+      'tr',
+    )!;
     await user.click(within(row).getByText('Fix a technical issue'));
     expect(await screen.findByText('Action detail')).toBeVisible();
   });

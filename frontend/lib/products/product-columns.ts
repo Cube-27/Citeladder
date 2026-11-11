@@ -68,6 +68,11 @@ function formatPrice(amount: number, currency: string): string {
   return currency ? `${number} ${currency}` : number;
 }
 
+/** A rate (visibility, win rate, share) as a percentage to one decimal. */
+export const formatRate = (value: number) => formatPercent(value, 1);
+/** A mean rank to one decimal. */
+export const formatPosition = (value: number) => value.toFixed(1);
+
 /** A rate or mean, unavailable when nothing in scope measured it. */
 const measured = (value: number | null, format: (value: number) => string): ProductCell =>
   value === null ? missing('unavailable') : { kind: 'value', text: format(value) };
@@ -103,13 +108,13 @@ function merchantList(row: CommerceProductRow): ProductCell {
 export function productCell(row: CommerceProductRow, key: ProductColumnKey): ProductCell {
   switch (key) {
     case 'visibility':
-      return measured(row.visibility, (value) => formatPercent(value, 1));
+      return measured(row.visibility, formatRate);
     case 'appearances':
       return { kind: 'value', text: formatCount(row.appearances) };
     case 'win_rate':
-      return measured(row.win_rate, (value) => formatPercent(value, 1));
+      return measured(row.win_rate, formatRate);
     case 'position':
-      return measured(row.position, (value) => value.toFixed(1));
+      return measured(row.position, formatPosition);
     case 'mentioned_price':
       return mentionedPrice(row);
     case 'catalog_price':
@@ -129,7 +134,11 @@ const HOLDER_LABELS = {
   ai_observed_competitor: 'Seen in answers',
 } as const satisfies Record<CommerceProductRow['kind'], string>;
 
-export const holderLabel = (kind: CommerceProductRow['kind']) => HOLDER_LABELS[kind];
+const holderLabel = (kind: CommerceProductRow['kind']) => HOLDER_LABELS[kind];
+
+/** A holder's brand, when it has one, and what it is: "Acme · Competitor". */
+export const holderCaption = (holder: Pick<CommerceProductRow, 'brand' | 'kind'>) =>
+  [holder.brand, holderLabel(holder.kind)].filter(Boolean).join(' · ');
 
 /**
  * A cell as CSV text: a missing value is empty rather than a word, and a note
