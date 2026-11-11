@@ -83,9 +83,9 @@ const OVERVIEW: CommerceShoppingOverview = {
 
 function Harness() {
   const query = useQuery(
-    commerceQueries.overview({ workspaceId: null, projectId: PROJECT_ID }, 'window=30'),
+    commerceQueries.overview({ workspaceId: null, projectId: PROJECT_ID }, 'window=90'),
   );
-  return <OverviewSections query={query} />;
+  return <OverviewSections query={query} windowDays="90" />;
 }
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
@@ -131,9 +131,14 @@ describe('Shopping overview', () => {
       'Unavailable',
       'Unavailable',
     ]);
+    // Every product opens its page in the overview's window, competitors included.
     expect(within(ranking).getByRole('link', { name: 'Acme Road Runner' })).toHaveAttribute(
       'href',
-      `/products/${ROAD}`,
+      `/products/${ROAD}?window=90`,
+    );
+    expect(within(ranking).getByRole('link', { name: 'Rival Pacer' })).toHaveAttribute(
+      'href',
+      `/products/${RIVAL}?window=90`,
     );
   });
 

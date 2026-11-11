@@ -250,6 +250,19 @@ async function scan(
 
 type PersistedWindow = { start: string; end: string; granularity: string };
 
+/** Every preset window ending at the Search Console anchor, at every granularity. */
+function presetTargets(anchor: string): TargetWindow[] {
+  return p.PERFORMANCE_SNAPSHOT_WINDOW_DAYS.flatMap((days) =>
+    p.TRAFFIC_SNAPSHOT_GRANULARITIES.map((grain) => ({
+      start: addDays(anchor, -(days - 1)),
+      end: anchor,
+      grain,
+      preset: days,
+      verifies: false,
+    })),
+  );
+}
+
 /**
  * The snapshots one refresh writes: the trigger window (display ranges only
  * where a granularity is missing), the presets ending at the Search Console
@@ -265,7 +278,16 @@ function planTargets(input: {
   existing: readonly string[];
   overlapping: readonly PersistedWindow[];
 }) {
-  const targets: TargetWindow[] = [];
+  const targets: TargetWindow[] = p.TRAFFIC_SNAPSHOT_GRANULARITIES.filter(
+    (grain) => !input.existing.includes(grain),
+  ).map((grain) => ({
+    start: input.windowStart,
+    end: input.windowEnd,
+    grain,
+    preset: null,
+    verifies: !input.displayOnly && grain === p.TRAFFIC_DEFAULT_GRANULARITY,
+  }));
+  if (!input.displayOnly && input.anchor) targets.push(...presetTargets(input.anchor));
   const add = (
     start: string,
     end: string,
@@ -273,19 +295,6 @@ function planTargets(input: {
     preset: number | null,
     verifies: boolean,
   ) => targets.push({ start, end, grain, preset, verifies });
-  for (const grain of p.TRAFFIC_SNAPSHOT_GRANULARITIES)
-    if (!input.existing.includes(grain))
-      add(
-        input.windowStart,
-        input.windowEnd,
-        grain,
-        null,
-        !input.displayOnly && grain === p.TRAFFIC_DEFAULT_GRANULARITY,
-      );
-  if (!input.displayOnly && input.anchor)
-    for (const days of p.PERFORMANCE_SNAPSHOT_WINDOW_DAYS)
-      for (const grain of p.TRAFFIC_SNAPSHOT_GRANULARITIES)
-        add(addDays(input.anchor, -(days - 1)), input.anchor, grain, days, false);
   // Demand always reads the policy window ending at the anchor; the trigger
   // window only decides whether that window's evidence changed.
   const demandEnd = input.anchor ?? input.windowEnd;

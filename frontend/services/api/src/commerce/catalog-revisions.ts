@@ -37,6 +37,7 @@ export type RevisionSource =
   | { kind: 'import'; id: string }
   | { kind: 'projection'; id: string | null }
   | { kind: 'competitor_decision'; id: string }
+  | { kind: 'edit'; id: string }
   | { kind: 'audit'; id: null };
 
 export type CatalogRevision = { id: string; revision_number: number };

@@ -247,7 +247,7 @@ function TechnicalDetails({ detail }: Readonly<{ detail: PageDetail }>) {
 }
 
 function measured(value: string | null): ReactNode {
-  return value === null ? <UnavailableValue state="not_measured" /> : value;
+  return value ?? <UnavailableValue state="not_measured" />;
 }
 
 function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {

@@ -8,6 +8,7 @@ import { z } from 'zod';
 
 import {
   COMMERCE_TARGETS_MAX,
+  commerceLifecycleStateSchema,
   commerceTargetSchema,
   commerceTargetsSchema,
   competitorCandidateSchema,
@@ -56,6 +57,40 @@ export const buyerPromptManualRequestSchema = z.object({
   text: z.string().trim().min(1),
 });
 export type BuyerPromptManualRequest = z.input<typeof buyerPromptManualRequestSchema>;
+
+/**
+ * Edit a catalog product: only the fields sent change, each recorded as an
+ * edit that wins over CSV and crawl until a later import changes that field.
+ * An empty identifier, currency or image clears it; `price: null` clears the
+ * price; `categories` replaces the product's category set.
+ */
+export const productEditRequestSchema = z
+  .strictObject({
+    name: z.string().trim().min(1).max(512),
+    brand: z.string().trim().max(255),
+    description: z.string().trim(),
+    price: z.number().nonnegative().max(999_999_999_999.99).nullable(),
+    currency: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^(?:[A-Z]{3})?$/u, 'A currency is a three-letter code'),
+    canonical_url: z.url(),
+    image_url: z.union([z.url(), z.literal('')]),
+    sku: z.string().trim().max(255),
+    gtin: z.string().trim().max(64),
+    mpn: z.string().trim().max(255),
+    categories: z.array(z.string().trim().min(1).max(255)),
+  })
+  .partial()
+  .refine((edit) => Object.keys(edit).length > 0, 'An edit changes at least one field');
+export type ProductEditRequest = z.input<typeof productEditRequestSchema>;
+
+/** Archive a catalog product, or restore it. */
+export const productLifecycleRequestSchema = z.strictObject({
+  lifecycle_state: commerceLifecycleStateSchema,
+});
+export type ProductLifecycleRequest = z.input<typeof productLifecycleRequestSchema>;
 
 /** Approve or disapprove one buyer prompt. */
 export const buyerPromptDecisionRequestSchema = z.object({ approved: z.boolean() });

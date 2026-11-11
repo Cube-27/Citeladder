@@ -59,7 +59,8 @@ const highlightPress = (callbacks: { current: Callbacks }) =>
   EditorView.domEventHandlers({
     click: (event) => {
       const target = event.target instanceof Element ? event.target : null;
-      const id = target?.closest('[data-suggestion-id]')?.getAttribute('data-suggestion-id');
+      const marked = target?.closest('[data-suggestion-id]');
+      const id = marked instanceof HTMLElement ? marked.dataset.suggestionId : undefined;
       if (id) callbacks.current.onHighlight(id);
       return false;
     },

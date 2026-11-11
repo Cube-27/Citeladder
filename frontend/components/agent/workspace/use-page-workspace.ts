@@ -78,12 +78,14 @@ export function usePageDraft(workspaceId: string, output: AgentOutput, chatId: s
       );
     },
     saving: save.isPending,
-    failure: save.isError
-      ? isOutputConflict(save.error)
-        ? { ...agentWriteFailure(save.error, 'save the page'), message: EDIT_CONFLICT }
-        : agentWriteFailure(save.error, 'save the page')
-      : null,
+    failure: save.isError ? saveFailure(save.error) : null,
   };
+}
+
+/** Why a page save failed; a conflict with a newer revision says so in its own words. */
+function saveFailure(error: unknown) {
+  const failure = agentWriteFailure(error, 'save the page');
+  return isOutputConflict(error) ? { ...failure, message: EDIT_CONFLICT } : failure;
 }
 
 export type PageDraft = ReturnType<typeof usePageDraft>;

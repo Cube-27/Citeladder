@@ -57,7 +57,9 @@ export function* anchorElements(
     const { node, inTemplate } = pending.pop()!;
     if (isElement(node) && node.tagName === 'a') yield { anchor: node, inTemplate };
     const content = isElement(node) && isTemplate(node) ? node.content : null;
-    const children = content ? content.childNodes : 'childNodes' in node ? node.childNodes : [];
+    let children: readonly HtmlNode[] = [];
+    if (content) children = content.childNodes;
+    else if ('childNodes' in node) children = node.childNodes;
     const nested = inTemplate || content !== null;
     pushReversed(pending, children, (child) => ({ node: child, inTemplate: nested }));
   }

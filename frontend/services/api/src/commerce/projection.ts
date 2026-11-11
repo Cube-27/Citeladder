@@ -13,6 +13,7 @@ import {
   addMembership,
   appendObservation,
   categoryByName,
+  editedField,
   lockCatalog,
   newProduct,
 } from './catalog-store.ts';
@@ -123,6 +124,43 @@ async function projectCategory(
 /** What a projection may newly link: its own shelf, or its own product. */
 type Linkable = { shelfId: string } | { productId: string };
 
+/**
+ * The crawled values a product projection writes, recording their provenance
+ * in `sources`: never over a CSV or edited field, and never an empty value.
+ */
+function crawledValues(
+  projection: ReturnType<typeof productFacts>,
+  sources: Record<string, unknown>,
+  source: Source,
+) {
+  const values: Partial<typeof projection.values> = { ...projection.values };
+  for (const field of PRODUCT_FIELDS) {
+    const value = projection.values[field];
+    const provenance =
+      sources[field] === undefined ? {} : jsonObject(sources[field], `field_sources.${field}`);
+    if (
+      provenance.kind === 'csv' ||
+      provenance.kind === 'edit' ||
+      value === null ||
+      value === '' ||
+      (typeof value === 'object' && Object.keys(value).length === 0)
+    ) {
+      delete values[field];
+      continue;
+    }
+    sources[field] = {
+      kind: 'site_health',
+      source_id: source.id,
+      artifact_id: source.artifact_id,
+      version: policy.commerce.projector_version,
+      ...(projection.evidencePaths[field]
+        ? { evidence_path: projection.evidencePaths[field] }
+        : {}),
+    };
+  }
+  return values;
+}
+
 async function projectProduct(
   db: Database,
   scope: CommerceScope,
@@ -157,31 +195,7 @@ async function projectProduct(
     .executeTakeFirst();
   const product = existing ?? (await newProduct(db, scope, url));
   const sources = jsonObject(product.field_sources, 'commerce_products.field_sources');
-  const values: Partial<typeof projection.values> = { ...projection.values };
-  for (const field of PRODUCT_FIELDS) {
-    const value = projection.values[field];
-    const provenance =
-      sources[field] === undefined ? {} : jsonObject(sources[field], `field_sources.${field}`);
-    if (
-      provenance.kind === 'csv' ||
-      provenance.kind === 'edit' ||
-      value === null ||
-      value === '' ||
-      (typeof value === 'object' && Object.keys(value).length === 0)
-    ) {
-      delete values[field];
-      continue;
-    }
-    sources[field] = {
-      kind: 'site_health',
-      source_id: source.id,
-      artifact_id: source.artifact_id,
-      version: policy.commerce.projector_version,
-      ...(projection.evidencePaths[field]
-        ? { evidence_path: projection.evidencePaths[field] }
-        : {}),
-    };
-  }
+  const values = crawledValues(projection, sources, source);
   // Values are selected from one typed product projection. JSON columns are
   // serialized explicitly for pg; no ORM defaults.
   const { variants, attributes, ...scalarValues } = values;
@@ -211,6 +225,8 @@ async function projectProduct(
     classifier_version: source.classifier_version,
     projector_version: policy.commerce.projector_version,
   });
+  // An edited category set wins over the page's breadcrumbs, as edited fields do.
+  if (editedField(sources, 'categories')) return { productId: product.id };
   for (const name of productCategories(facts, url, [source.final_url, source.requested_url])) {
     const category = await categoryByName(db, scope, name.slice(0, 255)); // NOSONAR -- One projection transaction: statements run in order.
     await addMembership(db, scope, product.id, category.id, observation); // NOSONAR -- One projection transaction: statements run in order.
@@ -293,7 +309,9 @@ async function linkShelves(db: Database, scope: CommerceScope, crawlId: string, 
     .selectFrom('commerce_products')
     .select(['id', 'canonical_url'])
     .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId);
+    .where('project_id', '=', scope.projectId)
+    // A shelf never adds itself to a product whose category set was edited.
+    .where(sql<boolean>`coalesce(field_sources->'categories'->>'kind', '') <> 'edit'`);
   if ('productId' in from) productQuery = productQuery.where('id', '=', from.productId);
   const productsByUrl = new Map(
     (await productQuery.execute()).map((row) => [canonicalUrl(row.canonical_url) ?? '', row.id]),

@@ -231,12 +231,7 @@ export class AgentStore {
         },
         this.dependencies.context,
       );
-      const skill = await this.turnSkill(
-        trx,
-        chat,
-        input.skillId,
-        manifest.action?.skill_id ?? null,
-      );
+      const skill = this.turnSkill(chat, input.skillId, manifest.action?.skill_id ?? null);
       const workflow =
         chosen ?? (input.chatId ? await this.inheritedWorkflow(trx, chat, skill.id) : undefined);
       const message = await appendMessage(trx, chat, {
@@ -501,12 +496,7 @@ export class AgentStore {
       key: pageTurnKey(fetch.taskId),
       hash: payload.request_fingerprint,
       funding: { funding_source: payload.funding_source, requested_model: payload.requested_model },
-      skill: await this.turnSkill(
-        trx,
-        chat,
-        workflow?.skill_id ?? null,
-        manifest.action?.skill_id ?? null,
-      ),
+      skill: this.turnSkill(chat, workflow?.skill_id ?? null, manifest.action?.skill_id ?? null),
       workflow,
       manifest,
       pinnedSkillId: chat.pinned_skill_id,
@@ -562,12 +552,7 @@ export class AgentStore {
       : undefined;
     return workflow?.skill_id === skillId ? workflow : undefined;
   }
-  private async turnSkill(
-    db: Database,
-    chat: Chat,
-    explicit: string | null | undefined,
-    actionSkill: string | null,
-  ) {
+  private turnSkill(chat: Chat, explicit: string | null | undefined, actionSkill: string | null) {
     const catalog = this.dependencies.catalog.skills;
     // A chat holds documents of several kinds, so any skill may run in it.
     const id =
