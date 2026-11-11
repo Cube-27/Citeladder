@@ -2,14 +2,13 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Download } from 'lucide-react';
+import { Columns3, Download } from 'lucide-react';
 
 import { ListScreen } from '@/components/layout/page-shell';
 import { AppGrid } from '@/components/ui/app-grid';
 import { Button } from '@/components/ui/button';
-import { FilterChoice, FilterTrigger } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Stack } from '@/components/ui/layout';
 import { Menu, MenuCheckboxItem, MenuContent, MenuLabel, MenuTrigger } from '@/components/ui/menu';
 import { SearchField } from '@/components/ui/search-field';
 import { SegmentedControl } from '@/components/ui/tabs';
@@ -17,7 +16,6 @@ import { InlineFigure } from '@/components/ui/typography';
 import type { CommerceProductSource, CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import { commerceQueries } from '@/lib/api/commerce';
 import { promptsQueries } from '@/lib/api/prompts';
-import { PRODUCT_DEFAULT_WINDOW, PRODUCT_WINDOW_DAYS } from '@/lib/config/commerce';
 import { downloadCsv } from '@/lib/csv/download';
 import { formatCount } from '@/lib/format';
 import { useCatalogProjection } from '@/lib/products/use-catalog-projection';
@@ -33,6 +31,7 @@ import { useEngineCatalog } from '@/lib/providers/engines';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 
 import { BulkActions } from './bulk-actions';
+import { productScopeFilters } from './product-scope-filters';
 import { useCatalogHeader } from './catalog-header';
 import { CategorySidebar } from './category-sidebar';
 import { ProductsTable } from './products-table';
@@ -42,10 +41,11 @@ const SOURCES: readonly { value: CommerceProductSource; label: string }[] = [
   { value: 'all', label: 'All products' },
   { value: 'archived', label: 'Archived' },
 ];
-const WINDOWS = PRODUCT_WINDOW_DAYS.map((days) => ({ value: days, label: `Last ${days} days` }));
-const EVERY = '__all__';
 
-/** The column settings: which metric columns the table draws and exports. */
+/**
+ * The column settings: which metric columns the table draws and exports. A
+ * setting of the table, not a filter, so it sits with Export at the row's end.
+ */
 function ColumnSettings({
   shown,
   onToggle,
@@ -53,11 +53,13 @@ function ColumnSettings({
   return (
     <Menu>
       <MenuTrigger asChild>
-        <FilterTrigger
-          label="Columns"
-          value={`${shown.length} of ${PRODUCT_COLUMNS.length}`}
-          active={shown.length !== PRODUCT_COLUMNS.length}
-        />
+        <Button variant="secondary">
+          <Icon icon={Columns3} />
+          Columns
+          <span className="text-ink-muted">
+            {shown.length} of {PRODUCT_COLUMNS.length}
+          </span>
+        </Button>
       </MenuTrigger>
       <MenuContent>
         <MenuLabel>Columns</MenuLabel>
@@ -141,14 +143,6 @@ function ProductsContent({
       csv.rows,
     );
   };
-  const engineOptions = [
-    { value: EVERY, label: 'All engines' },
-    ...engines.order.map((key) => ({ value: key, label: engines.label(key) })),
-  ];
-  const setOptions = [
-    { value: EVERY, label: 'All prompt sets' },
-    ...(promptSets.data?.prompt_sets ?? []).map((set) => ({ value: set.id, label: set.name })),
-  ];
   return (
     <ListScreen
       actions={header.actions}
@@ -170,37 +164,33 @@ function ProductsContent({
             aria-label="Search products"
           />
         ),
-        filters: (
+        filters: productScopeFilters({
+          scope: productFilters,
+          engines,
+          promptSets: promptSets.data?.prompt_sets ?? [],
+        }),
+        // What the table lists closes the row: its products and the answers they came from.
+        status: page.data ? (
           <>
-            <FilterChoice
-              label="Window"
-              value={filters.window}
-              defaultValue={PRODUCT_DEFAULT_WINDOW}
-              options={WINDOWS}
-              onChange={productFilters.setWindow}
-            />
-            <FilterChoice
-              label="Engine"
-              value={filters.engine ?? EVERY}
-              defaultValue={EVERY}
-              options={engineOptions}
-              onChange={(value) => productFilters.setEngine(value === EVERY ? null : value)}
-            />
-            <FilterChoice
-              label="Prompt set"
-              value={filters.promptSet ?? EVERY}
-              defaultValue={EVERY}
-              options={setOptions}
-              onChange={(value) => productFilters.setPromptSet(value === EVERY ? null : value)}
-            />
-            <ColumnSettings shown={columns.shown} onToggle={columns.toggle} />
+            <span>
+              <InlineFigure>{formatCount(page.data.total)}</InlineFigure>
+              {page.data.total === 1 ? ' product' : ' products'}
+            </span>
+            <span>
+              <InlineFigure>{formatCount(page.data.executions)}</InlineFigure>
+              {page.data.executions === 1 ? ' answer' : ' answers'} in the last{' '}
+              {page.data.window_days} days
+            </span>
           </>
-        ),
+        ) : null,
         actions: (
-          <Button variant="secondary" onClick={exportRows} disabled={rows.length === 0}>
-            <Icon icon={Download} />
-            Export
-          </Button>
+          <>
+            <ColumnSettings shown={columns.shown} onToggle={columns.toggle} />
+            <Button variant="secondary" onClick={exportRows} disabled={rows.length === 0}>
+              <Icon icon={Download} />
+              Export
+            </Button>
+          </>
         ),
       }}
     >
@@ -223,19 +213,6 @@ function ProductsContent({
             onCategory={productFilters.setCategory}
           />
           <Stack>
-            {page.data ? (
-              <Inline as="p" gap="meta" className="type-caption">
-                <span>
-                  <InlineFigure>{formatCount(page.data.total)}</InlineFigure>
-                  {page.data.total === 1 ? ' product' : ' products'}
-                </span>
-                <span>
-                  <InlineFigure>{formatCount(page.data.executions)}</InlineFigure>
-                  {page.data.executions === 1 ? ' answer' : ' answers'} in the last{' '}
-                  {page.data.window_days} days
-                </span>
-              </Inline>
-            ) : null}
             <ProductsTable
               query={page}
               scope={filters}

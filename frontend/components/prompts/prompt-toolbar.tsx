@@ -1,23 +1,13 @@
 'use client';
 
 import { ChevronDown, Plus, Sparkles, Upload } from 'lucide-react';
-import type { ReactNode } from 'react';
 
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { Button } from '@/components/ui/button';
-import { FilterTrigger, type FilterBarProps } from '@/components/ui/filter-bar';
+import { choiceFilter, manyFilter, type FilterDefinition } from '@/components/ui/all-filters';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
-import {
-  Menu,
-  MenuCheckboxItem,
-  MenuContent,
-  MenuItem,
-  MenuLabel,
-  MenuRadioGroup,
-  MenuRadioItem,
-  MenuSeparator,
-  MenuTrigger,
-} from '@/components/ui/menu';
+import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { SearchField } from '@/components/ui/search-field';
 import { SegmentedControl } from '@/components/ui/tabs';
 import type { PromptStatus } from '@citeladder/contracts';
@@ -35,23 +25,19 @@ const PROMPT_STATUSES: readonly { value: PromptStatus; label: string }[] = [
 ];
 
 /**
- * The prompt library's narrowing controls, on one row: the Active / Archived
- * status, a search box, the Topic filter and the intent / enabled / branded
- * filter menu. For the `ListScreen` control band.
- *
- * The bulk-upload, generate and add buttons used to sit on this same row.
- * They are not filters — they act on the library rather than narrowing it — so
- * they moved to the identity band with every other route action, and this is
- * what was left. Presentational; state lives in the page.
+ * The prompt library's control row (D57): the Active / Archived view, the
+ * search, then every filter in All filters: Topic first, then Intent, Buyer
+ * stage, Persona (when the library has any), Enabled and Branded.
+ * Presentational; state lives in the page.
  */
-/** The two filter menus share a vocabulary but not their wording. */
-const ENABLED_FILTER_LABEL: Record<'all' | 'enabled' | 'disabled', string> = {
+/** The two single choices share a vocabulary but not their wording. */
+const ENABLED_FILTER_LABEL: Record<EnabledFilter, string> = {
   all: 'All',
   enabled: 'Enabled only',
   disabled: 'Disabled only',
 };
 
-const BRANDED_FILTER_LABEL: Record<'all' | 'enabled' | 'disabled', string> = {
+const BRANDED_FILTER_LABEL: Record<EnabledFilter, string> = {
   all: 'All',
   enabled: 'Branded only',
   disabled: 'Unbranded only',
@@ -59,32 +45,23 @@ const BRANDED_FILTER_LABEL: Record<'all' | 'enabled' | 'disabled', string> = {
 
 const SINGLE_CHOICES = ['all', 'enabled', 'disabled'] as const;
 
-/** One of three, in the filter menu; the menu stays open, like its checkboxes. */
-function SingleChoice({
-  value,
-  labels,
-  onChange,
-}: Readonly<{
-  value: EnabledFilter;
-  labels: Record<EnabledFilter, string>;
-  onChange: (value: EnabledFilter) => void;
-}>) {
-  return (
-    <MenuRadioGroup value={value}>
-      {SINGLE_CHOICES.map((choice) => (
-        <MenuRadioItem
-          key={choice}
-          value={choice}
-          onSelect={(event) => {
-            event.preventDefault();
-            onChange(choice);
-          }}
-        >
-          {labels[choice]}
-        </MenuRadioItem>
-      ))}
-    </MenuRadioGroup>
-  );
+function singleChoice(
+  id: string,
+  label: string,
+  labels: Record<EnabledFilter, string>,
+  value: EnabledFilter,
+  onChange: (value: EnabledFilter) => void,
+): FilterDefinition {
+  return choiceFilter({
+    id,
+    label,
+    value,
+    defaultValue: 'all',
+    groups: [
+      { options: SINGLE_CHOICES.map((choice) => ({ value: choice, label: labels[choice] })) },
+    ],
+    onChange,
+  });
 }
 
 export function promptFilterControls({
@@ -108,37 +85,10 @@ export function promptFilterControls({
   onFiltersChange: (filters: PromptFilters) => void;
   /** The personas the library uses; the menu lists them when there are any. */
   personas?: readonly string[];
-  /** The Topic filter (`TopicFilter`), first of the filters. */
-  topic?: ReactNode;
+  /** The Topic filter (`topicFilter`), first in All filters. */
+  topic?: FilterDefinition;
 }>): FilterBarProps {
-  const activeFilterCount =
-    filters.intents.length +
-    filters.stages.length +
-    filters.personas.length +
-    (filters.enabled === 'all' ? 0 : 1) +
-    (filters.branded === 'all' ? 0 : 1);
-
-  // Set lookups: `checked` is computed per option in the render loops.
-  const selectedIntents = new Set(filters.intents);
-  const selectedStages = new Set(filters.stages);
-  const selectedPersonas = new Set(filters.personas);
-
-  const toggle = (key: 'intents' | 'stages' | 'personas', value: string) => {
-    const current = filters[key];
-    const next = current.includes(value)
-      ? current.filter((entry) => entry !== value)
-      : [...current, value];
-    onFiltersChange({ ...filters, [key]: next });
-  };
-  const toggleIntent = (value: string) => toggle('intents', value);
-  const toggleStage = (value: string) => toggle('stages', value);
-
-  const setEnabled = (value: EnabledFilter) => onFiltersChange({ ...filters, enabled: value });
-  const setBranded = (value: EnabledFilter) => onFiltersChange({ ...filters, branded: value });
-
   return {
-    // The status leads the one control row and pushes search and the filter
-    // menu to its end, so a count changing never moves them.
     view: (
       <SegmentedControl
         ariaLabel="Prompt status"
@@ -159,79 +109,43 @@ export function promptFilterControls({
         aria-label="Search prompts"
       />
     ),
-    filters: (
-      <>
-        {topic}
-        <Menu>
-          <MenuTrigger asChild>
-            <FilterTrigger label="Filter" count={activeFilterCount} />
-          </MenuTrigger>
-          <MenuContent align="end">
-            <MenuLabel>Intent</MenuLabel>
-            {intentValues.map((value) => (
-              <MenuCheckboxItem
-                key={value || 'unspecified'}
-                checked={selectedIntents.has(value)}
-                onSelect={(event) => {
-                  event.preventDefault();
-                  toggleIntent(value);
-                }}
-              >
-                {intentLabels[value]}
-              </MenuCheckboxItem>
-            ))}
-            <MenuSeparator />
-            <MenuLabel>Buyer stage</MenuLabel>
-            {buyerStageValues.map((value) => (
-              <MenuCheckboxItem
-                key={value || 'unspecified'}
-                checked={selectedStages.has(value)}
-                onSelect={(event) => {
-                  event.preventDefault();
-                  toggleStage(value);
-                }}
-              >
-                {buyerStageLabels[value]}
-              </MenuCheckboxItem>
-            ))}
-            <MenuSeparator />
-            {personas.length ? (
-              <>
-                <MenuLabel>Persona</MenuLabel>
-                {personas.map((value) => (
-                  <MenuCheckboxItem
-                    key={value}
-                    checked={selectedPersonas.has(value)}
-                    onSelect={(event) => {
-                      event.preventDefault();
-                      toggle('personas', value);
-                    }}
-                  >
-                    {value}
-                  </MenuCheckboxItem>
-                ))}
-                <MenuSeparator />
-              </>
-            ) : null}
-            {/* Enabled and Branded are one choice each: radio groups, not
-                checkboxes that only pretend to exclude each other. */}
-            <MenuLabel>Enabled</MenuLabel>
-            <SingleChoice
-              value={filters.enabled}
-              labels={ENABLED_FILTER_LABEL}
-              onChange={setEnabled}
-            />
-            <MenuSeparator />
-            <MenuLabel>Branded</MenuLabel>
-            <SingleChoice
-              value={filters.branded}
-              labels={BRANDED_FILTER_LABEL}
-              onChange={setBranded}
-            />
-          </MenuContent>
-        </Menu>
-      </>
-    ),
+    filters: [
+      ...(topic ? [topic] : []),
+      manyFilter({
+        id: 'intent',
+        label: 'Intent',
+        allLabel: 'All intents',
+        values: filters.intents,
+        options: intentValues.map((value) => ({ value, label: intentLabels[value] })),
+        onChange: (intents) => onFiltersChange({ ...filters, intents }),
+      }),
+      manyFilter({
+        id: 'stage',
+        label: 'Buyer stage',
+        allLabel: 'All stages',
+        values: filters.stages,
+        options: buyerStageValues.map((value) => ({ value, label: buyerStageLabels[value] })),
+        onChange: (stages) => onFiltersChange({ ...filters, stages }),
+      }),
+      ...(personas.length
+        ? [
+            manyFilter({
+              id: 'persona',
+              label: 'Persona',
+              allLabel: 'All personas',
+              values: filters.personas,
+              options: personas.map((value) => ({ value, label: value })),
+              onChange: (next) => onFiltersChange({ ...filters, personas: next }),
+            }),
+          ]
+        : []),
+      singleChoice('enabled', 'Enabled', ENABLED_FILTER_LABEL, filters.enabled, (enabled) =>
+        onFiltersChange({ ...filters, enabled }),
+      ),
+      singleChoice('branded', 'Branded', BRANDED_FILTER_LABEL, filters.branded, (branded) =>
+        onFiltersChange({ ...filters, branded }),
+      ),
+    ],
   };
 }
 

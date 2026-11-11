@@ -6,7 +6,6 @@ import { useParams } from 'react-router-dom';
 import { DetailScreen } from '@/components/layout/page-shell';
 import { AppGrid } from '@/components/ui/app-grid';
 import { Card, CardContent } from '@/components/ui/card';
-import { FilterChoice } from '@/components/ui/filter-bar';
 import { Inline, Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
 import { readErrorProps } from '@/components/ui/read-error';
@@ -18,7 +17,6 @@ import type { CommerceCatalog, CommerceProductDetail } from '@citeladder/contrac
 import { commerceQueries } from '@/lib/api/commerce';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { promptsQueries } from '@/lib/api/prompts';
-import { PRODUCT_DEFAULT_WINDOW, PRODUCT_WINDOW_DAYS } from '@/lib/config/commerce';
 import { formatCount } from '@/lib/format';
 import { useCompetitorDiscovery } from '@/lib/products/competitor-discovery';
 import { holderCaption, PRODUCT_COLUMNS, productCell } from '@/lib/products/product-columns';
@@ -33,6 +31,7 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 
 import type { CommerceQueries } from './commerce-queries';
 import { ProductActions } from './product-actions';
+import { productScopeFilters } from './product-scope-filters';
 import { AddToTracking, ProductCatalogControls } from './product-catalog-controls';
 import {
   Answers,
@@ -46,8 +45,6 @@ import { MetricValue } from './products-table';
 import { SetupCompetitors } from './setup-competitors';
 import { SetupPrompts } from './setup-prompts';
 
-const WINDOWS = PRODUCT_WINDOW_DAYS.map((days) => ({ value: days, label: `Last ${days} days` }));
-const EVERY = '__all__';
 /** The KPIs, in the plan's order; merchants have their own section below. */
 const KPIS = [
   'visibility',
@@ -164,40 +161,11 @@ function HolderDetail({
   const promptSets = useQuery(promptsQueries.sets(projectScope));
   const engines = useEngineCatalog();
   const controls = {
-    filters: (
-      <>
-        <FilterChoice
-          label="Window"
-          value={filters.window}
-          defaultValue={PRODUCT_DEFAULT_WINDOW}
-          options={WINDOWS}
-          onChange={scope.setWindow}
-        />
-        <FilterChoice
-          label="Engine"
-          value={filters.engine ?? EVERY}
-          defaultValue={EVERY}
-          options={[
-            { value: EVERY, label: 'All engines' },
-            ...engines.order.map((key) => ({ value: key, label: engines.label(key) })),
-          ]}
-          onChange={(value) => scope.setEngine(value === EVERY ? null : value)}
-        />
-        <FilterChoice
-          label="Prompt set"
-          value={filters.promptSet ?? EVERY}
-          defaultValue={EVERY}
-          options={[
-            { value: EVERY, label: 'All prompt sets' },
-            ...(promptSets.data?.prompt_sets ?? []).map((set) => ({
-              value: set.id,
-              label: set.name,
-            })),
-          ]}
-          onChange={(value) => scope.setPromptSet(value === EVERY ? null : value)}
-        />
-      </>
-    ),
+    filters: productScopeFilters({
+      scope,
+      engines,
+      promptSets: promptSets.data?.prompt_sets ?? [],
+    }),
   };
   const back = backTo(filters);
   if (detail.isError)

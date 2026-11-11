@@ -8,11 +8,6 @@ import type { DataTableState } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { SourceDomainDetail } from '@/components/visibility/source-domain-detail';
-import { AllFilters } from '@/components/ui/all-filters';
-import {
-  useHasSourceFiltersMenu,
-  usePublishSourceFilters,
-} from '@/components/visibility/source-filter-registry';
 import {
   sourceTableFilters,
   type PageStandingFilter,
@@ -295,8 +290,8 @@ export function SourcesPanel({
         : { column, direction: 'desc' },
     );
 
-  // The filters are listed in the page's All filters menu; the table's toolbar
-  // keeps the switch, search and export. On a domain's own page the publisher
+  // The table's own filters, in its toolbar's All filters after the search
+  // (D57): they narrow this table alone. On a domain's own page the publisher
   // is fixed.
   const tableFilters = sourceTableFilters({
     dimension,
@@ -306,8 +301,6 @@ export function SourcesPanel({
       ? null
       : { value: pickedDomain, options: domainOptions, onChange: setPickedDomain },
   });
-  const inMenu = useHasSourceFiltersMenu();
-  usePublishSourceFilters(tableFilters);
   // One toolbar for both bodies, so switching to near misses moves nothing.
   const toolbar = sourceTableToolbar({
     dimension,
@@ -316,7 +309,7 @@ export function SourcesPanel({
     onSearch: setSearch,
     rows,
     domain: activeDomain,
-    filters: inMenu ? undefined : <AllFilters filters={tableFilters} />,
+    filters: tableFilters,
   });
 
   return (

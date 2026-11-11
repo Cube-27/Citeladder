@@ -6,6 +6,7 @@ import { Route, Routes } from 'react-router-dom';
 
 import { mswServer } from '@/test/msw-server';
 import { makeProject } from '@/test/fixtures/project';
+import { chooseFilterOption } from '@/test/all-filters';
 import { renderWithProviders } from '@/test/render';
 import type { CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
 
@@ -202,8 +203,7 @@ describe('ProductDetailScreen', () => {
 
     const user = userEvent.setup();
     await screen.findByRole('heading', { name: 'Acme Road Runner' });
-    await user.click(screen.getByRole('button', { name: /Window/ }));
-    await user.click(await screen.findByRole('menuitemradio', { name: 'Last 7 days' }));
+    await chooseFilterOption(user, 'Window', 'Last 7 days');
     await waitFor(() => expect(requested).toEqual(['?window=30', '?window=7']));
   });
 

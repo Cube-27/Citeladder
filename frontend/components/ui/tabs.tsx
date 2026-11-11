@@ -86,11 +86,6 @@ export type TabsProps<T extends string> = TabStripProps<T> & {
   rootClassName?: string;
   /** Section tabs over their panel: one workspace gap between strip and panel. */
   spaced?: boolean;
-  /**
-   * Filters that apply to every tab, at the strip's right end on the same row,
-   * so the panel below spends no row on them.
-   */
-  controls?: ReactNode;
 };
 
 /**
@@ -124,21 +119,16 @@ export function TabsRoot<T extends string>({
 
 /** What a route passes to its screen template's `tabs`. */
 export type TabRowProps<T extends string = string> = Readonly<
-  Pick<TabStripProps<T>, 'items' | 'ariaLabel' | 'onIntent'> & {
-    /**
-     * The route's filters as one `AllFilters` button, at the row's far right,
-     * so the tabs and the filters share one band.
-     */
-    controls?: ReactNode;
-  }
+  Pick<TabStripProps<T>, 'items' | 'ariaLabel' | 'onIntent'>
 >;
 
 /**
- * TabRow — the route's navigation band, inside a `TabsRoot`: the tabs, and at
- * the far right the route's All filters button when it has one.
+ * TabRow — the route's navigation band, inside a `TabsRoot`: the tabs only.
+ * A tab's search and filters are the control row under it (D57), never on
+ * this row, so every page's All filters sits in the same place.
  */
-export function TabRow<T extends string>({ items, ariaLabel, onIntent, controls }: TabRowProps<T>) {
-  return <TabStrip items={items} ariaLabel={ariaLabel} onIntent={onIntent} controls={controls} />;
+export function TabRow<T extends string>({ items, ariaLabel, onIntent }: TabRowProps<T>) {
+  return <TabStrip items={items} ariaLabel={ariaLabel} onIntent={onIntent} />;
 }
 
 /**
@@ -151,20 +141,12 @@ function TabStrip<T extends string>({
   className,
   onIntent,
   fill = false,
-  controls,
-}: Readonly<TabStripProps<T> & { controls?: ReactNode }>) {
+}: Readonly<TabStripProps<T>>) {
   const active = useContext(ActiveTabContext);
-  const list = (
+  return (
     <TabsPrimitive.List
       aria-label={ariaLabel}
-      // Beside controls the track gives way and scrolls, so the controls keep
-      // their place at the row's end on a narrow screen.
-      className={cn(
-        TAB_TRACK,
-        fill && 'flex w-full',
-        controls != null && 'min-w-0 shrink',
-        className,
-      )}
+      className={cn(TAB_TRACK, fill && 'flex w-full', className)}
     >
       {items.map((item) => (
         <TabsPrimitive.Trigger
@@ -186,15 +168,6 @@ function TabStrip<T extends string>({
         </TabsPrimitive.Trigger>
       ))}
     </TabsPrimitive.List>
-  );
-  if (controls == null) return list;
-  return (
-    <div className="flex min-w-0 items-center justify-between gap-4">
-      {list}
-      <div data-tab-controls="" className="flex shrink-0 items-center gap-2">
-        {controls}
-      </div>
-    </div>
   );
 }
 

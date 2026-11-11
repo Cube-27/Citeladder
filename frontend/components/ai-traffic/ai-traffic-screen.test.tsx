@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 import { mswServer } from '@/test/msw-server';
+import { openFilterRow } from '@/test/all-filters';
 import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
 import { AiTrafficScreen } from './ai-traffic-screen';
@@ -690,7 +691,8 @@ describe('AI Traffic state and navigation', () => {
     await user.click(screen.getByRole('button', { name: 'Export CSV' }));
     await waitFor(() => expect(exportStatus).toBe('404'));
     await user.click(screen.getByRole('tab', { name: 'Referrals' }));
-    expect(await screen.findByLabelText('Chart interval')).toBeVisible();
+    expect(await openFilterRow(user, 'Chart interval', 'Week')).toBeVisible();
+    await user.keyboard('{Escape}');
     await user.click(screen.getByRole('tab', { name: 'Pages' }));
     await screen.findByRole('table', { name: 'Path-level AI Traffic with separate signal units' });
     await user.click(screen.getByRole('button', { name: /^All filters/ }));
@@ -708,8 +710,8 @@ describe('AI Traffic state and navigation', () => {
     });
     await user.keyboard('{Escape}{Escape}');
     expect(await screen.findByRole('button', { name: 'All filters (2)' })).toBeVisible();
-    await user.click(screen.getByRole('combobox', { name: 'Sort pages' }));
-    await user.click(screen.getByRole('option', { name: 'AI referral sessions' }));
+    // Pages sort from their column headers, like every other table.
+    await user.click(screen.getByRole('button', { name: /^AI referral sessions/ }));
     await user.click(screen.getByRole('button', { name: 'Export CSV' }));
     await waitFor(() => expect(exportedPages.value?.get('folder')).toBe('/page'));
     expect(exportedPages.value?.get('resource_class')).toBe('page');
@@ -786,9 +788,7 @@ describe('AI Traffic state and navigation', () => {
     await user.click(screen.getByRole('tab', { name: 'Overview' }));
     expect(await screen.findByText(/not available for this workspace yet/)).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Connect crawl logs' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^All filters/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Reporting range' })).toHaveTextContent(
-      'Last 90 days',
-    );
+    expect(await openFilterRow(user, 'Reporting range', 'Last 90 days')).toBeVisible();
+    expect(screen.queryByRole('menuitem', { name: /^Verification/ })).not.toBeInTheDocument();
   });
 });

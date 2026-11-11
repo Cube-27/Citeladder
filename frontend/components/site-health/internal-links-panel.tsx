@@ -7,7 +7,6 @@ import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
-import { DisplayTime } from '@/components/ui/display-time';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
@@ -32,7 +31,7 @@ import {
 /**
  * The Internal links tab's content. Its read, header actions and control band
  * come from `useInternalLinksBands`, which the screen owns: this draws the
- * one-line summary, the notices, the suggestions and the review drawer.
+ * notices, the suggestions and the review drawer.
  */
 export function InternalLinksPanel({
   read,
@@ -48,11 +47,6 @@ export function InternalLinksPanel({
   const selected = analysis?.recommendations.find((link) => link.id === params.get('link'));
   return (
     <Stack gap="workspace" className="min-w-0">
-      {analysis ? (
-        <output className="type-caption min-w-0">
-          {analysisSummary(analysis)} · <DisplayTime value={analysis.created_at} />
-        </output>
-      ) : null}
       <Notices read={read} />
       {analysis ? (
         <LinksResult
@@ -76,22 +70,6 @@ export function InternalLinksPanel({
       ) : null}
     </Stack>
   );
-}
-
-/** One line: what was analyzed and when. */
-function analysisSummary(analysis: InternalLinkAnalysis): string {
-  const parts = [
-    `${formatCount(analysis.recommendations.length)} suggestions`,
-    `${formatCount(analysis.page_count)} pages`,
-  ];
-  const summary = analysis.diagnostics;
-  if (summary && !isRunning(analysis.state))
-    parts.push(
-      `${formatCount(summary.candidates)} page pairs checked in ${Math.round(summary.elapsed_seconds)}s`,
-    );
-  if (analysis.omitted_pages)
-    parts.push(`${formatCount(analysis.omitted_pages)} pages over the limit`);
-  return parts.join(' · ');
 }
 
 function Notices({ read }: Readonly<{ read: LinksRead }>) {

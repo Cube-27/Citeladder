@@ -4,9 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import { AiReferralsContent } from '@/components/ai-traffic/referrals-content';
-import { FilterChoice, type FilterBarProps } from '@/components/ui/filter-bar';
+import { choiceFilter } from '@/components/ui/all-filters';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Spinner } from '@/components/ui/spinner';
-import { SegmentedControl, type TabRowProps } from '@/components/ui/tabs';
+import type { TabRowProps } from '@/components/ui/tabs';
 import { aiTrafficQueries } from '@/lib/api/ai-traffic';
 import { GRANULARITY_OPTIONS } from '@/lib/format';
 import {
@@ -81,24 +82,25 @@ function referralsControls({
         Updating data… Previous data shown.
       </>
     ) : null,
-    filters: (
-      // Segments, then the range trigger: the one order Performance uses too.
-      <>
-        <SegmentedControl
-          value={granularity}
-          onChange={onChangeGranularity}
-          options={GRANULARITY_OPTIONS}
-          ariaLabel="Chart interval"
-        />
-        <FilterChoice
-          label="Range"
-          menuLabel="Date range"
-          value={range}
-          defaultValue="latest"
-          options={RANGE_OPTIONS}
-          onChange={onChangeRange}
-        />
-      </>
-    ),
+    // The same control row as the other AI Traffic tabs: the window and the
+    // chart interval in All filters, the live note at the row's end.
+    filters: [
+      choiceFilter({
+        id: 'range',
+        label: 'Reporting range',
+        value: range,
+        defaultValue: 'latest',
+        groups: [{ options: RANGE_OPTIONS }],
+        onChange: onChangeRange,
+      }),
+      choiceFilter({
+        id: 'granularity',
+        label: 'Chart interval',
+        value: granularity,
+        defaultValue: 'week',
+        groups: [{ options: GRANULARITY_OPTIONS }],
+        onChange: onChangeGranularity,
+      }),
+    ],
   };
 }

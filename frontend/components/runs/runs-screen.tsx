@@ -78,10 +78,10 @@ export function RunsScreen() {
       Launch audit
     </Button>
   );
-  // A status filter is the one shared segmented control, each choice with the
-  // number of runs it keeps (2026-11-03 app review).
+  // The status choice is the row's view: the one shared segmented control,
+  // each choice with the number of runs it keeps (2026-11-03 app review).
   const controls = {
-    filters: (
+    view: (
       <SegmentedControl
         ariaLabel="Filter by status"
         value={statusFilter}

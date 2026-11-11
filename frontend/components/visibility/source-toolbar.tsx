@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { Download } from 'lucide-react';
 
+import type { FilterDefinition } from '@/components/ui/all-filters';
 import { Button } from '@/components/ui/button';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
@@ -37,10 +38,9 @@ const URL_HEADERS = [
 ] as const;
 
 /**
- * The Domains | URLs switch (`view`, the inventory only), search and export,
- * above whichever table is showing. The domain, type and standing filters are
- * listed in the page's All filters menu; `filters` carries them here only for
- * a panel rendered without that menu.
+ * The table's toolbar, above whichever table is showing (D57): the Domains |
+ * URLs switch (`view`, the inventory only), search, All filters (domain,
+ * type, standing), then Export at the end.
  *
  * Export writes the rows AS SHOWN — after the filter, the search and the sort.
  * Widening it to the unfiltered set would hand back a different answer from the
@@ -62,7 +62,7 @@ export function sourceTableToolbar({
   onSearch: (value: string) => void;
   rows: readonly SourceItem[];
   domain: string | null;
-  filters?: ReactNode;
+  filters?: readonly FilterDefinition[];
 }>): FilterBarProps {
   const onExport = () => {
     const stamp = new Date().toISOString().slice(0, 10);

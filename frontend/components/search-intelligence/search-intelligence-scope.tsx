@@ -1,16 +1,19 @@
-import type { ReactNode } from 'react';
-import { Select } from '@/components/ui/select';
+import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { DisplayTime } from '@/components/ui/display-time';
-import { FilterField, type FilterBarProps } from '@/components/ui/filter-bar';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 import type {
   SearchIntelligenceDataset,
   SearchIntelligenceReadiness,
 } from '@/lib/api/search-intelligence';
 import { searchScopeLabel, searchMarketLabel } from '@/lib/config/search-intelligence';
-import { CollectionFilters, CollectionViewControl } from './search-intelligence-controls';
+import { CollectionViewControl, collectionFilters } from './search-intelligence-controls';
 import type { SearchCollection } from './search-intelligence-collection-state';
 
-export function SavedViewControls({
+/**
+ * The saved scope and market, first in the control row's All filters. They
+ * pick which saved result the tab reads, so they count as no filter.
+ */
+export function savedViewFilters({
   scopes,
   scope,
   onScope,
@@ -26,31 +29,34 @@ export function SavedViewControls({
   market: string | undefined;
   onMarket: (value: string) => void;
   tab: string;
-}>) {
-  return (
-    <>
-      {scopes.length ? (
-        <FilterField>
-          <Select
-            ariaLabel="Saved scope"
-            value={scope}
-            onValueChange={onScope}
-            options={scopes.map((value) => ({ value, label: searchScopeLabel(value) }))}
-          />
-        </FilterField>
-      ) : null}
-      {markets.length > 1 && tab !== 'backlinks' ? (
-        <FilterField>
-          <Select
-            ariaLabel="Saved market"
-            value={market}
-            onValueChange={onMarket}
-            options={markets}
-          />
-        </FilterField>
-      ) : null}
-    </>
-  );
+}>): FilterDefinition[] {
+  const filters: FilterDefinition[] = [];
+  const [firstScope] = scopes;
+  if (firstScope)
+    filters.push(
+      choiceFilter({
+        id: 'scope',
+        label: 'Saved scope',
+        value: scope ?? firstScope,
+        // Which saved result to read, not a narrowing: never counted on the button.
+        defaultValue: scope ?? firstScope,
+        groups: [{ options: scopes.map((value) => ({ value, label: searchScopeLabel(value) })) }],
+        onChange: onScope,
+      }),
+    );
+  const [firstMarket] = markets;
+  if (firstMarket && markets.length > 1 && tab !== 'backlinks')
+    filters.push(
+      choiceFilter({
+        id: 'market',
+        label: 'Saved market',
+        value: market ?? firstMarket.value,
+        defaultValue: market ?? firstMarket.value,
+        groups: [{ options: markets }],
+        onChange: onMarket,
+      }),
+    );
+  return filters;
 }
 
 /**
@@ -72,7 +78,7 @@ export function scopeControls({
   tab: string;
   latest?: SearchIntelligenceDataset;
   /** The scope and market pickers. */
-  savedView: ReactNode;
+  savedView: FilterDefinition[];
   /** The open tab's collection; absent on the overview. */
   collection?: SearchCollection;
   /** The tab's next step. */
@@ -80,12 +86,7 @@ export function scopeControls({
 }>): FilterBarProps {
   return {
     view: collection ? <CollectionViewControl collection={collection} /> : undefined,
-    filters: (
-      <>
-        {savedView}
-        {collection ? <CollectionFilters collection={collection} /> : null}
-      </>
-    ),
+    filters: [...savedView, ...(collection ? collectionFilters(collection) : [])],
     status: <SavedCaption data={data} tab={tab} latest={latest} />,
     actions: action,
   };

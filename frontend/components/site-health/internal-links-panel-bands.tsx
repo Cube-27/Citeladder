@@ -7,15 +7,16 @@ import type { InternalLink, InternalLinkAnalysis } from '@citeladder/contracts/s
 
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { Button } from '@/components/ui/button';
-import { FilterField, type FilterBarProps } from '@/components/ui/filter-bar';
+import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
+import { DisplayTime } from '@/components/ui/display-time';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { SearchField } from '@/components/ui/search-field';
-import { Select } from '@/components/ui/select';
 import { ACTION_STATUS_LABEL } from '@/lib/agent/vocabulary';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { internalLinksMutations, internalLinksQueries } from '@/lib/api/site-health-internal-links';
 import type { UrlHistory } from '@/lib/navigation/url-state';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayTimestamp } from '@/lib/format';
+import { formatCount, formatDisplayTimestamp } from '@/lib/format';
 import { downloadInternalLinksCsv } from '@/lib/site-health/internal-link-csv';
 import { INTERNAL_LINK_STATES, pollInternalLinks } from '@/lib/site-health/status';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
@@ -88,8 +89,8 @@ export function filterLinks(links: InternalLink[], search: string, status: strin
 
 /**
  * Internal links' share of the page bands: the read the panel draws, the
- * header's actions (Export and the one primary, Analyze again) and the
- * control band (search, status, saved analysis). `enabled` is false on every
+ * header's one primary (Analyze again) and the control row: search, All
+ * filters (status, saved analysis), the summary, then Export. `enabled` is false on every
  * other tab, so nothing is read there.
  */
 export function useInternalLinksBands({
@@ -108,6 +109,7 @@ export function useInternalLinksBands({
 }> {
   const read = useInternalLinks(scope, enabled);
   const { params, update } = useLinkParams();
+  const timeZone = useDisplayTimeZone();
   const analysis = read.data?.analysis;
   const links = filterLinks(
     analysis?.recommendations ?? [],
@@ -116,22 +118,29 @@ export function useInternalLinksBands({
   );
   return {
     read,
-    actions: analysis ? (
-      <LinksActions read={read} links={links} analysis={analysis} canAnalyze={canAnalyze} />
-    ) : null,
-    controls: linksControls(read, params, update),
+    actions: analysis ? <LinksRun read={read} analysis={analysis} canAnalyze={canAnalyze} /> : null,
+    controls: linksControls({ read, params, update, links, timeZone }),
   };
 }
 
-function linksControls(
-  read: LinksRead,
-  params: URLSearchParams,
-  update: ParamChange,
-): FilterBarProps | undefined {
+function linksControls({
+  read,
+  params,
+  update,
+  links,
+  timeZone,
+}: Readonly<{
+  read: LinksRead;
+  params: URLSearchParams;
+  update: ParamChange;
+  links: InternalLink[];
+  timeZone: string;
+}>): FilterBarProps | undefined {
   // The first read holds the band, so the table starts on the same line once it lands.
   if (read.query.isPending) return RESERVED_CONTROLS;
   const data = read.data;
-  if (!data?.analysis) return undefined;
+  const analysis = data?.analysis;
+  if (!data || !analysis) return undefined;
   return {
     search: (
       <SearchField
@@ -141,60 +150,92 @@ function linksControls(
         aria-label="Search pages and anchors"
       />
     ),
-    filters: (
-      <>
-        <FilterField>
-          <Select
-            ariaLabel="Action status"
-            value={params.get('links_status') ?? ''}
-            onValueChange={(value) => update('links_status', value)}
-            options={[
+    filters: [
+      choiceFilter({
+        id: 'status',
+        label: 'Action status',
+        value: params.get('links_status') ?? '',
+        defaultValue: '',
+        groups: [
+          {
+            options: [
               { value: '', label: 'All statuses' },
               ...Object.entries(ACTION_STATUS_LABEL).map(([value, label]) => ({ value, label })),
-            ]}
-          />
-        </FilterField>
-        <SavedAnalysis history={data.history} analysisId={data.analysis.id} update={update} />
+            ],
+          },
+        ],
+        onChange: (value) => update('links_status', value),
+      }),
+      ...savedAnalysisFilter(data.history, analysis.id, update, timeZone),
+    ],
+    status: (
+      <>
+        {analysisSummary(analysis)} · <DisplayTime value={analysis.created_at} />
       </>
+    ),
+    // Held while the filters match nothing, so the row never reflows.
+    actions: (
+      <Button
+        variant="secondary"
+        disabled={!links.length}
+        onClick={() => downloadInternalLinksCsv(links)}
+      >
+        Export
+      </Button>
     ),
   };
 }
 
-function SavedAnalysis({
-  history,
-  analysisId,
-  update,
-}: Readonly<{
-  history: NonNullable<LinksRead['data']>['history'];
-  analysisId: string;
-  update: ParamChange;
-}>) {
-  const timeZone = useDisplayTimeZone();
-  if (history.length < 2) return null;
-  return (
-    <FilterField>
-      <Select
-        ariaLabel="Saved analysis"
-        value={analysisId}
-        onValueChange={(value) => update('analysis', value)}
-        options={history.map((run) => ({
-          value: run.id,
-          label: `${formatDisplayTimestamp(run.created_at, timeZone)} · ${INTERNAL_LINK_STATES[run.state].label}`,
-        }))}
-      />
-    </FilterField>
-  );
+/** Which saved analysis the tab reads; offered once there are two to choose from. */
+function savedAnalysisFilter(
+  history: NonNullable<LinksRead['data']>['history'],
+  analysisId: string,
+  update: ParamChange,
+  timeZone: string,
+): FilterDefinition[] {
+  if (history.length < 2) return [];
+  return [
+    choiceFilter({
+      id: 'analysis',
+      label: 'Saved analysis',
+      value: analysisId,
+      defaultValue: history[0]?.id ?? analysisId,
+      groups: [
+        {
+          options: history.map((run) => ({
+            value: run.id,
+            label: `${formatDisplayTimestamp(run.created_at, timeZone)} · ${INTERNAL_LINK_STATES[run.state].label}`,
+          })),
+        },
+      ],
+      onChange: (value) => update('analysis', value),
+    }),
+  ];
 }
 
-/** The tab's header actions: the links export, then run or cancel. */
-function LinksActions({
+/** What was analyzed and when, closing the control row. */
+function analysisSummary(analysis: InternalLinkAnalysis): string {
+  const parts = [
+    `${formatCount(analysis.recommendations.length)} suggestions`,
+    `${formatCount(analysis.page_count)} pages`,
+  ];
+  const summary = analysis.diagnostics;
+  if (summary && !isRunning(analysis.state))
+    parts.push(
+      `${formatCount(summary.candidates)} page pairs checked in ${Math.round(summary.elapsed_seconds)}s`,
+    );
+  if (analysis.omitted_pages)
+    parts.push(`${formatCount(analysis.omitted_pages)} pages over the limit`);
+  return parts.join(' · ');
+}
+
+/** The tab's header action: run the analysis again, or cancel the running one. */
+function LinksRun({
   read,
-  links,
   analysis,
   canAnalyze,
 }: Readonly<{
   read: LinksRead;
-  links: InternalLink[];
   analysis: InternalLinkAnalysis;
   canAnalyze: boolean;
 }>) {
@@ -218,17 +259,5 @@ function LinksActions({
         Analyze again
       </Button>
     );
-  return (
-    <>
-      {/* Held while the filters match nothing, so the header never reflows. */}
-      <Button
-        variant="secondary"
-        disabled={!links.length}
-        onClick={() => downloadInternalLinksCsv(links)}
-      >
-        Export
-      </Button>
-      {run}
-    </>
-  );
+  return run;
 }

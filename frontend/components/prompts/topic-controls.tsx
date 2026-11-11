@@ -9,19 +9,16 @@ import { MutationNotice } from '@/components/ui/mutation-notice';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
-import { FilterTrigger } from '@/components/ui/filter-bar';
+import type { FilterDefinition } from '@/components/ui/all-filters';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { TreeItem, TreeItemForm, TreeList } from '@/components/ui/list-row';
 import {
-  Menu,
-  MenuContent,
   MenuItem,
   MenuLabel,
   MenuRadioGroup,
   MenuRadioItem,
   MenuSeparator,
-  MenuTrigger,
 } from '@/components/ui/menu';
 import { QueryState } from '@/components/ui/query-state';
 import { Select } from '@/components/ui/select';
@@ -39,13 +36,13 @@ const TOPICS_LOAD_ERROR = "Couldn't load topics. Check your connection and try a
 const ALL_TOPICS = '';
 
 /**
- * The Topic filter in the prompt library's control strip (owner, 2026-11-06:
- * it replaced the topics side panel so the table keeps the page's width).
- * "All topics", then every topic with its active-prompt count, a subtopic
- * named with its parent; the menu ends with "Add topic" and "Manage
- * topics…", which open the dialogs below. Selection filters the table.
+ * The Topic filter, first in the prompt library's All filters (owner,
+ * 2026-11-06: it replaced the topics side panel so the table keeps the page's
+ * width). "All topics", then every topic with its active-prompt count, a
+ * subtopic named with its parent; the submenu ends with "Add topic" and
+ * "Manage topics…", which open the dialogs below. Selection filters the table.
  */
-export function TopicFilter({
+export function topicFilter({
   topics,
   selectedTopicId,
   onSelect,
@@ -58,20 +55,17 @@ export function TopicFilter({
   onSelect: (topicId: string | null) => void;
   onAdd: () => void;
   onManage: () => void;
-}>) {
+}>): FilterDefinition {
   const ordered = orderTopicsForRail(topics);
   const selected = ordered.find(({ topic }) => topic.id === selectedTopicId);
-  return (
-    <Menu>
-      <MenuTrigger asChild>
-        <FilterTrigger
-          label="Topic"
-          hideLabel
-          value={selected?.label ?? 'All topics'}
-          active={selectedTopicId !== null}
-        />
-      </MenuTrigger>
-      <MenuContent>
+  return {
+    kind: 'custom',
+    id: 'topic',
+    label: 'Topic',
+    valueLabel: selected?.label ?? 'All topics',
+    isDefault: selectedTopicId === null,
+    content: (
+      <>
         <MenuLabel>Topic</MenuLabel>
         <MenuRadioGroup value={selectedTopicId ?? ALL_TOPICS}>
           <MenuRadioItem value={ALL_TOPICS} onSelect={() => onSelect(null)}>
@@ -91,9 +85,9 @@ export function TopicFilter({
         <MenuItem icon={<Icon icon={Settings2} />} onSelect={onManage}>
           Manage topics…
         </MenuItem>
-      </MenuContent>
-    </Menu>
-  );
+      </>
+    ),
+  };
 }
 
 /**

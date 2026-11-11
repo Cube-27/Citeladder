@@ -402,8 +402,9 @@ after reopening; its quality description is associated with its checkbox. The li
 prioritizes question text, topic, measurement and enabled state; classification
 is secondary detail on the question, available on keyboard focus and to screen readers.
 
-`/prompts` opens directly on the prompt library: Active/Archived, search, the
-Topic filter and the Filter menu in one control strip over the full-width
+`/prompts` opens directly on the prompt library: Active/Archived, search and
+All filters (Topic first, then intent, stage, persona, enabled, branded) in one
+control row (design D57) over the full-width
 table with each prompt's topic tag, latest measured visibility and owned
 citation rate. A prompt's question opens its detail view (below). Its actions are
 Bulk upload, Prompt Builder, Add prompt and **Launch audit**, which reuses the

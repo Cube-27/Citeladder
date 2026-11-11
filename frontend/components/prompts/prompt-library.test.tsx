@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
@@ -6,6 +6,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-p
 import { makeProject } from '@/test/fixtures/project';
 import { makePrompt, makeSet, makeSetList } from '@/test/fixtures/prompts';
 import { mswServer } from '@/test/msw-server';
+import { chooseFilterOption, openFilterRow } from '@/test/all-filters';
 import { renderWithProviders } from '@/test/render';
 
 import { PromptLibrary } from './prompt-library';
@@ -173,11 +174,11 @@ describe('PromptLibrary topic filter', () => {
 
     const table = await screen.findByRole('table', { name: 'Prompts' });
     expect(within(table).getByText('Best road shoes?')).toBeVisible();
-    await user.click(await screen.findByRole('button', { name: 'Topic: All topics' }));
-    await user.click(await screen.findByRole('menuitemradio', { name: /^Trail/ }));
+    await screen.findByRole('button', { name: 'All filters' });
+    await chooseFilterOption(user, 'Topic', /^Trail/);
 
-    expect(within(table).getByText('Best trail shoes?')).toBeVisible();
+    await waitFor(() => expect(within(table).getByText('Best trail shoes?')).toBeVisible());
     expect(within(table).queryByText('Best road shoes?')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Topic: Trail' })).toBeVisible();
+    expect(await openFilterRow(user, 'Topic', 'Trail')).toBeVisible();
   });
 });

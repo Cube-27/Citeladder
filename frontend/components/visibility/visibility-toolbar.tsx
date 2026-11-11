@@ -5,15 +5,6 @@ import { CircleHelp } from 'lucide-react';
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { IconButton } from '@/components/ui/button';
-import { FilterTrigger } from '@/components/ui/filter-bar';
-import {
-  Menu,
-  MenuContent,
-  MenuLabel,
-  MenuRadioGroup,
-  MenuRadioItem,
-  MenuTrigger,
-} from '@/components/ui/menu';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { LogicalEngine } from '@citeladder/contracts';
 import type { ProjectMarket } from '@citeladder/contracts/markets';
@@ -137,11 +128,11 @@ export function useVisibilityFilterMenu(props: ToolbarProps): FilterDefinition[]
 const DEFAULT_MARKET = 'default';
 
 /** Which market the page reads; offered only once a project measures more than one. */
-function marketFilter({
+export function marketFilter({
   markets = [],
   market = null,
   onChangeMarket,
-}: ToolbarProps): FilterDefinition | null {
+}: Pick<ToolbarProps, 'markets' | 'market' | 'onChangeMarket'>): FilterDefinition | null {
   if (markets.length < 2 || !onChangeMarket) return null;
   return choiceFilter({
     id: 'market',
@@ -267,51 +258,6 @@ function outcomeFilter({ outcome, onChangeOutcome }: ToolbarProps): FilterDefini
     groups: [{ options: ANSWER_OUTCOMES }],
     onChange: (value) => onChangeOutcome(value === 'all' ? null : value),
   });
-}
-
-/**
- * The market picker as its own trigger, for a page that draws its filters in
- * a row (a prompt's own page). The trigger prints its label before the value
- * and stays sized to its longest option, so a choice never moves its
- * neighbours.
- */
-export function MarketFilter({
-  markets = [],
-  market = null,
-  onChangeMarket,
-}: Pick<ToolbarProps, 'markets' | 'market' | 'onChangeMarket'>) {
-  if (markets.length < 2 || !onChangeMarket) return null;
-  const value = market ?? DEFAULT_MARKET;
-  const options = markets.map((option) => ({
-    value: option.id ?? DEFAULT_MARKET,
-    label: option.label,
-  }));
-  return (
-    <Menu>
-      <MenuTrigger asChild>
-        <FilterTrigger
-          label="Market"
-          value={options.find((option) => option.value === value)?.label ?? 'Market'}
-          active={value !== DEFAULT_MARKET}
-          sizeTo={options.map((option) => option.label)}
-        />
-      </MenuTrigger>
-      <MenuContent>
-        <MenuLabel>Market</MenuLabel>
-        <MenuRadioGroup value={value}>
-          {options.map((option) => (
-            <MenuRadioItem
-              key={option.value}
-              value={option.value}
-              onSelect={() => onChangeMarket(option.value === DEFAULT_MARKET ? null : option.value)}
-            >
-              {option.label}
-            </MenuRadioItem>
-          ))}
-        </MenuRadioGroup>
-      </MenuContent>
-    </Menu>
-  );
 }
 
 /** Header actions beside the page title: run a new audit, and how the metrics work. */

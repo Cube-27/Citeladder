@@ -4,11 +4,7 @@ import type { ReactNode } from 'react';
 
 import { ActiveRunBanner } from '@/components/visibility/active-run-banner';
 import { VisibilityEmptyState } from '@/components/visibility/empty-state';
-import { FanoutEvidence, useFanoutGroupFilter } from '@/components/visibility/fanout-evidence';
-import {
-  SourceFiltersProvider,
-  useSourceFilters,
-} from '@/components/visibility/source-filter-registry';
+import { FanoutEvidence } from '@/components/visibility/fanout-evidence';
 import { VisibilitySources } from '@/components/visibility/visibility-sources';
 import { VisibilityPerception } from '@/components/visibility/visibility-perception';
 import { VisibilityAccuracy } from '@/components/visibility/visibility-accuracy';
@@ -19,7 +15,7 @@ import {
   useVisibilityFilterMenu,
 } from '@/components/visibility/visibility-toolbar';
 import { VisibilityTrends } from '@/components/visibility/visibility-trends';
-import { AllFilters, type FilterDefinition } from '@/components/ui/all-filters';
+import type { FilterDefinition } from '@/components/ui/all-filters';
 import { TabPanel, TabsRoot } from '@/components/ui/tabs';
 import { ListScreen } from '@/components/layout/page-shell';
 import { QueryState } from '@/components/ui/query-state';
@@ -44,11 +40,7 @@ export function VisibilityDashboard() {
   );
   // The Sources filters are listed in the page's All filters but stay owned
   // by the Sources panel; the provider spans both.
-  return (
-    <SourceFiltersProvider>
-      <VisibilityWorkspace filters={filters} queries={queries} state={state} />
-    </SourceFiltersProvider>
-  );
+  return <VisibilityWorkspace filters={filters} queries={queries} state={state} />;
 }
 
 function dashboardState(
@@ -94,6 +86,7 @@ function VisibilityWorkspace({
 }>) {
   // The Accuracy tab exists only inside the fact-checking pilot.
   const factChecking = useBrandFacts().data?.enabled ?? false;
+  const pageFilters = useVisibilityPageFilters({ filters, queries });
   if (state === 'empty') {
     return (
       <ListScreen actions={<VisibilityActions />}>
@@ -102,9 +95,9 @@ function VisibilityWorkspace({
       </ListScreen>
     );
   }
-  // The root spans the whole page: the strip is the navigation band and its
-  // panels are one band below, in the content region. Every filter is in the
-  // All filters menu at the strip's far right; there is no filter row.
+  // The root spans the whole page: the strip is the navigation band, the
+  // control row holds the filters every tab shares (D57), and the panels are
+  // one band below. A table's own filters lead its toolbar.
   return (
     <TabsRoot value={filters.activeTab} onValueChange={filters.selectTab}>
       <ListScreen
@@ -116,8 +109,8 @@ function VisibilityWorkspace({
           })),
           ariaLabel: 'Visibility views',
           onIntent: queries.prefetchTab,
-          controls: <VisibilityAllFilters filters={filters} queries={queries} state={state} />,
         }}
+        controls={{ filters: pageFilters }}
       >
         {queries.activeRun ? <ActiveRunBanner run={queries.activeRun} /> : null}
         <TabPanel value={filters.activeTab} className="focus-ring">
@@ -133,20 +126,17 @@ function VisibilityWorkspace({
 }
 
 /**
- * The page's All filters: the filters every tab shares, then the active tab's
- * own (the Sources table's, published by its panel; the fanout grouping), so
- * a tab's own filters never move the shared ones.
+ * The page's All filters: the filters every tab shares (measurement, surface,
+ * prompts, period). A tab's table keeps its own in its toolbar.
  */
-function VisibilityAllFilters({
+function useVisibilityPageFilters({
   filters,
   queries,
-  state,
 }: Readonly<{
   filters: ReturnType<typeof useVisibilityFilters>;
   queries: ReturnType<typeof useVisibilityQueries>;
-  state: VisibilityDashboardState;
-}>) {
-  const shared = useVisibilityFilterMenu({
+}>): readonly FilterDefinition[] {
+  return useVisibilityFilterMenu({
     activeTab: filters.activeTab,
     runs: queries.runOptions,
     selectedRunId: filters.selectedRunId,
@@ -170,15 +160,6 @@ function VisibilityAllFilters({
     market: filters.market,
     onChangeMarket: filters.setMarket,
   });
-  const sources = useSourceFilters();
-  const fanoutGroup = useFanoutGroupFilter();
-  const own: Partial<Record<VisibilityTab, readonly FilterDefinition[]>> = {
-    sources,
-    'query-fanout': [fanoutGroup],
-  };
-  const tabFilters = state ? [] : (own[filters.activeTab] ?? []);
-  // At the tabs row's far right, so the menu opens back from the button's end.
-  return <AllFilters filters={[...shared, ...tabFilters]} align="end" />;
 }
 
 function DashboardPanel({

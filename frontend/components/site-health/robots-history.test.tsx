@@ -3,6 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterAll, afterEach, beforeAll, expect, it } from 'vite-plus/test';
 
+import { openFilterOptions } from '@/test/all-filters';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import { SITE_HEALTH_SITE_FACTS } from '@/test/site-health-api-fixtures';
@@ -12,6 +13,17 @@ const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const PROJECT = '11111111-1111-4111-8111-111111111111';
 const OLD = '22222222-2222-4222-8222-222222222222';
 const NEW = '33333333-3333-4333-8333-333333333333';
+
+/** Picks the observation at `index` in one side's options (0 is the placeholder). */
+async function pickObservation(
+  user: ReturnType<typeof userEvent.setup>,
+  side: 'Before' | 'After',
+  index: number,
+) {
+  await openFilterOptions(user, side);
+  (await screen.findAllByRole('menuitemradio'))[index]!.focus();
+  await user.keyboard('{Enter}');
+}
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => mswServer.resetHandlers());
@@ -93,10 +105,9 @@ it('diffs two observations line by line across line-ending styles', async () => 
   renderWithProviders(<RobotsHistory workspaceId={WORKSPACE} projectId={PROJECT} />);
 
   // Options list the placeholder, then observations newest first.
-  await user.click(await screen.findByRole('combobox', { name: 'Before robots.txt observation' }));
-  await user.click((await screen.findAllByRole('option'))[2]!);
-  await user.click(screen.getByRole('combobox', { name: 'After robots.txt observation' }));
-  await user.click((await screen.findAllByRole('option'))[1]!);
+  await screen.findByRole('button', { name: 'All filters' });
+  await pickObservation(user, 'Before', 2);
+  await pickObservation(user, 'After', 1);
 
   const diff = within(screen.getByRole('list', { name: 'robots.txt line diff' }));
   expect(diff.getAllByRole('listitem').map((line) => line.textContent)).toEqual([
@@ -107,8 +118,7 @@ it('diffs two observations line by line across line-ending styles', async () => 
   ]);
 
   // The same observation on both sides has nothing to compare.
-  await user.click(screen.getByRole('combobox', { name: 'Before robots.txt observation' }));
-  await user.click((await screen.findAllByRole('option'))[1]!);
+  await pickObservation(user, 'Before', 1);
   expect(screen.queryByRole('list', { name: 'robots.txt line diff' })).not.toBeInTheDocument();
 });
 

@@ -68,8 +68,6 @@ function SiteHealthContent({
     startCrawl,
     recrawl,
     cancelCrawl,
-    runExport,
-    exporting,
   } = screen;
   const [tab, selectTab] = useUrlState('tab', TAB_CODEC, {
     clearKeys: ['cursor', 'sort', ...PAGES_INVENTORY_URL_KEYS],
@@ -90,18 +88,16 @@ function SiteHealthContent({
   const linksActions = tab === 'internal-links' ? links.actions : null;
   const controls = tabControls({ tab, blocking, links: links.controls });
   const refreshFailures = !blocking ? <SiteHealthRefreshFailures screen={screen} /> : null;
-  // Each tab's header carries its own export: pages on Pages, links on Internal
-  // links. The links export reads the saved analysis, so it stays when the
-  // crawl controls are withheld.
+  // Each export sits at the end of the row of the list it exports: the pages
+  // table's toolbar, Internal links' control row. The header keeps the crawl
+  // controls and a tab's primary action.
   const headerActions =
     crawl && mutationsAllowed ? (
       <CrawlActions
         crawl={crawl}
         active={active}
-        exporting={exporting}
         cancelPending={cancelMutation.isPending}
         startPending={startPending}
-        onExport={tab === 'pages' ? () => runExport('csv', 'pages') : undefined}
         tabActions={linksActions}
         schedule={schedule.control}
         onCancel={cancelCrawl}
@@ -156,9 +152,10 @@ function SiteHealthContent({
 }
 
 /**
- * The selected tab's control band: Internal links alone has one (Pages keeps
- * its view switch and filter above its table). It holds the band through the
- * first load, so its work starts on the same line once it lands.
+ * The selected tab's control row: Internal links alone has one (Pages' view,
+ * filter and export scope its table, so they lead that table's toolbar). It
+ * holds the row through the first load, so its work starts on the same line
+ * once it lands.
  */
 function tabControls({
   tab,
@@ -434,10 +431,8 @@ function screenBlockingState({
 function CrawlActions({
   crawl,
   active,
-  exporting,
   cancelPending,
   startPending,
-  onExport,
   tabActions,
   schedule,
   onCancel,
@@ -447,15 +442,12 @@ function CrawlActions({
   /** The shown crawl: its site and robots choice, which Recrawl keeps. */
   crawl: Pick<SiteCrawl, 'root_url' | 'robots'>;
   active: boolean;
-  exporting: boolean;
   cancelPending: boolean;
   startPending: boolean;
-  /** The pages export, on the Pages tab only. */
-  onExport: (() => void) | undefined;
   /**
-   * A tab's own export and primary action (Internal links' Export and
-   * Analyze again). Run new crawl then steps down to secondary, so the
-   * header keeps one primary button.
+   * A tab's own primary action (Internal links' Analyze again). Run new
+   * crawl then steps down to secondary, so the header keeps one primary
+   * button.
    */
   tabActions: ReactNode;
   /** The crawl schedule, beside Run new crawl. */
@@ -466,11 +458,6 @@ function CrawlActions({
 }>) {
   return (
     <Inline>
-      {onExport ? (
-        <Button variant="secondary" onClick={onExport} disabled={exporting}>
-          {exporting ? 'Exporting…' : 'Export'}
-        </Button>
-      ) : null}
       {schedule}
       {/* Always present, so starting a crawl never reflows the header. */}
       <RecrawlButton

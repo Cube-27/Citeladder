@@ -318,15 +318,13 @@ describe('IssuesCatalog', () => {
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
     await screen.findAllByText('WebSite schema is missing');
 
-    // The deep link's one-issue filter is shown, and any other filter ends it.
-    expect(
-      screen.getByRole('button', { name: /^Showing: WebSite schema is missing/ }),
-    ).toBeInTheDocument();
+    // The deep link's one-issue filter is counted in All filters, and any other filter ends it.
+    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeInTheDocument();
     await chooseClass(user, 'Medium (23)');
     await waitFor(() => expect(currentUrl()).toContain('severity=medium'));
     expect(currentUrl()).not.toContain('rule=');
     expect(currentUrl()).toContain('campaign=overview');
-    expect(screen.queryByRole('button', { name: /^Showing:/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeInTheDocument();
 
     window.history.back();
     await waitFor(() => expect(currentUrl()).not.toContain('severity=medium'));
@@ -355,7 +353,7 @@ describe('IssuesCatalog', () => {
     expect(currentUrl()).toContain('campaign=overview');
   });
 
-  it('clears a deep-linked issue filter from its chip', async () => {
+  it('clears a deep-linked issue filter from All filters', async () => {
     window.history.replaceState(null, '', '/issues?rule=aeo.website_schema');
     mswServer.use(
       http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
@@ -364,10 +362,11 @@ describe('IssuesCatalog', () => {
     );
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+    await screen.findAllByText('WebSite schema is missing');
 
-    await user.click(
-      await screen.findByRole('button', { name: /^Showing: WebSite schema is missing/ }),
-    );
+    expect(await openFilter(user, 'Issue', 'WebSite schema is missing')).toBeVisible();
+    await user.keyboard('{Escape}');
+    await chooseFilter(user, 'Issue', 'All issues');
     await waitFor(() => expect(currentUrl()).not.toContain('rule='));
   });
 
