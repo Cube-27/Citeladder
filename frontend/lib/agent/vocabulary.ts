@@ -6,6 +6,7 @@
  */
 import type { PriorityValue } from '@/components/ui/badge';
 import type { ActionGroup, ActionPriorityBand, ActionStatus } from '@/lib/api/actions';
+import type { ContentGapEvidence } from '@citeladder/contracts/opportunity-evidence';
 
 /** The band the server put an Action's priority score in; the score itself only ranks. */
 export const PRIORITY_BAND_LABEL: Record<ActionPriorityBand, string> = {
@@ -117,10 +118,42 @@ const CHECK_KIND_LABEL: Record<string, string> = {
   visibility_metric: 'Prompt score rises',
   traffic_metric: 'Search Console clicks rise',
   keyword_presence: 'You appear for the search',
+  owned_url_cited: 'An AI answer cites your page',
 };
 
 export function checkKindLabel(kind: string): string {
   return CHECK_KIND_LABEL[kind] ?? 'Check';
+}
+
+/** What a check names when the server names nothing: a new page has no URL until it is cited. */
+const CHECK_SUBJECT_FALLBACK: Record<string, string> = {
+  owned_url_cited: 'A new page of yours, not one already cited for these prompts',
+};
+
+export function checkSubject(check: { kind: string; subject: string | null }): string | null {
+  return check.subject ?? CHECK_SUBJECT_FALLBACK[check.kind] ?? null;
+}
+
+/** What a check's reading cannot show, said beside it. */
+const CHECK_KIND_NOTE: Record<string, string> = {
+  owned_url_cited:
+    'A citation shows the page was cited, not which version of it the AI engine read.',
+};
+
+export function checkKindNote(kind: string): string | null {
+  return CHECK_KIND_NOTE[kind] ?? null;
+}
+
+/**
+ * What declaring a content-gap finding will check, before the user commits:
+ * the improved page's address, or a new page of theirs.
+ */
+export function contentGapCheckPreview(evidence: ContentGapEvidence): string {
+  const page =
+    'planned_page_key' in evidence
+      ? 'a new page of yours, one not already cited for them'
+      : evidence.url;
+  return `${checkKindLabel('owned_url_cited')}: checks whether an AI answer to the angle's prompts cites ${page}.`;
 }
 
 export const CHECK_STATE_LABEL: Record<'waiting' | 'met' | 'unmet' | 'unavailable', string> = {
@@ -148,6 +181,8 @@ const CHECK_REASON: Record<string, string> = {
   no_search_console_row: 'Search Console reported no row for this page or query.',
   not_ranking_yet: 'A later Keyword Research analysis does not show you ranking yet.',
   still_missing: 'A later Keyword Research analysis still lists this as a gap.',
+  prompts_not_in_run: 'None of these prompts was part of that run.',
+  no_answers: 'That run has no answers to these prompts.',
   provider_serp_predates_change:
     'DataForSEO last checked this search before the go-live date. A later analysis can answer it.',
 };

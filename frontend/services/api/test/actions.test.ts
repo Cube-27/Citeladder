@@ -508,6 +508,25 @@ describe('Action routes', () => {
       target_resolution: { state: 'no_covering_page', candidates: [] },
       provider: 'dataforseo',
       statement: 'Competitors rank for crm for startups.',
+      // Content gaps: one angle of a content-angle run.
+      run_id: randomUUID(),
+      lineage_id: randomUUID(),
+      angle_label: 'CRM pricing',
+      topic_id: null,
+      prompts: [{ id: s.prompt0_id, text: 'best crm for small teams' }],
+      engines: ['chatgpt'],
+      citation_count: 4,
+      domain_count: 2,
+      competitor_count: 1,
+      member_count: 0,
+      members: [],
+      window: { start: new Date(Date.now() - 30 * 86_400_000).toISOString(), end: boundary },
+      methodology_version: '1',
+      formula_version: '1',
+      limitations: [],
+      url: 'https://acme.test/a',
+      match_method: 'model_pick',
+      planned_page_key: 'planned:crm-pricing',
     };
     const member = (rule_id: string, values: Partial<OpportunityRow> = {}): OpportunityRow => ({
       id: randomUUID(),
@@ -542,7 +561,7 @@ describe('Action routes', () => {
         db,
         { workspaceId: scope.workspace_id, projectId: scope.project_id },
         [row],
-        { auditId: s.audit_id, declaredDay: day },
+        { auditId: s.audit_id, declaredAt: boundary, outputRevisionId: null },
       );
     // Contextual links freeze only selected suggestions; internal-links-routes declares one.
     const enabled = Object.values(policy.opportunity.opportunities.OPPORTUNITY_RULES_BY_ID).filter(

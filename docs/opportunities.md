@@ -276,6 +276,7 @@ distinct expectation, each scoped to what the Action changed:
 | Keyword gap | the project appears for the search: Search Console impressions, or an owned ranking in a later Keyword Research dataset whose provider check postdates go-live; still missing or not ranking yet reads `waiting`, never `unmet` | each synced window that starts after go-live, and each later published ranking, shared or missing-keyword dataset for the same website and market |
 | Prompt-targeted visibility | the prompt's composite score rises against its score in the snapshot's audit | the next audit that ran the prompt |
 | Earned page | each tracked prompt whose answers cited the page: its composite score rises against its score in the snapshot's audit | the next audit that ran the prompt |
+| Content gap (`owned_url_cited`) | an answer to the angle's prompts cites an owned URL: the improved page's URL, or for a new page any owned URL outside those already cited for the prompts from the gap's window start to go-live | the next default-market visibility run that asked one of the prompts |
 
 A finding nothing can isolate — a product, category or theme, or a visibility
 finding with no prompt — gets no check: the project-wide score moves for
@@ -300,6 +301,20 @@ their own checks in the same declaration. Same-key
 replay must name the same selection. Later complete, compatible crawl evidence
 checks for a main-content link to the destination; the anchor was a suggestion,
 so rewording it still verifies. Navigation-only links do not satisfy the check, and missing or incompatible capture stays inconclusive.
+
+An `owned_url_cited` check ([module](../frontend/services/api/src/opportunities/checks/owned-url-cited.ts))
+freezes its whole expectation at declaration, so a later reclustering, rematch
+or prompt edit never changes what it measures: the angle's prompts the library
+held at the refresh, the lineage, and either the improved page's canonical URL
+or, for a new page, the owned URLs Visibility's evidence statement cited for
+those prompts from the gap's window start to go-live, with the runs that cited
+them. The user names no URL. When the shipped revision comes from an
+**Analyze a page** chat, the page and prompts that chat was started for are
+frozen as one more page check. A later run is read only when it is the default
+market's dashboard-ready brand run; one that asked none of the prompts (a
+prompt deleted since) or answered none reads `unavailable`, never `unmet`, and
+no run yet reads `waiting`. The check says only whether a URL was cited, never
+which version of the page the engine read.
 
 An earned declaration is measured on prompts, not on the page: whether the
 listing went live shows on the cited URL's page from the next reading, and the
@@ -412,5 +427,8 @@ producer, worker and persisted-reader boundary;
 [Action PostgreSQL tests](../frontend/services/api/test/actions.test.ts) cover
 declaration admission, go-live bounds, unmeasurable findings, earned
 declarations measured on their prompts, concurrent replay, workspace
-isolation and frozen checks. The pending integrations
+isolation and frozen checks;
+[owned-URL PostgreSQL tests](../frontend/services/api/test/owned-url-cited.test.ts)
+cover what content-gap and Analyze a page declarations freeze and how later
+runs read them. The pending integrations
 follow-up may improve these read surfaces; it is not a second action store.

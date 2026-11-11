@@ -319,7 +319,7 @@ export const opportunities = {
       title: 'Competitors rank for a search you do not',
     },
     // Content gaps from persisted content angles (content optimization section 2).
-    // No check isolates the work until phase 3 adds `owned_url_cited`.
+    // Measured by `owned_url_cited`: an answer to the angle's prompts cites your page.
     content_gap_improve_page: {
       action_path: 'owned',
       enabled: true,
@@ -327,7 +327,7 @@ export const opportunities = {
       remediation:
         'Answers to your tracked prompts cite competitor and editorial pages on this angle, and your matching page is not cited for those prompts. Improve the page so it covers the angle as directly as the cited pages do.',
       rule_id: 'content_gap_improve_page',
-      check_kind: null,
+      check_kind: 'owned_url_cited',
       severity: 'medium',
       title: 'Cited content angle your page does not win',
     },
@@ -338,7 +338,7 @@ export const opportunities = {
       remediation:
         'Answers to your tracked prompts cite competitor and editorial pages on this angle, and no matching page was found among your crawled content pages that were reviewed for it. Plan a page that answers the angle directly, or improve an existing page if one already covers it.',
       rule_id: 'content_gap_new_page',
-      check_kind: null,
+      check_kind: 'owned_url_cited',
       severity: 'medium',
       title: 'Cited content angle you have no page for',
     },

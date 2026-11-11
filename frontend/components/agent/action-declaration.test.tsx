@@ -73,6 +73,52 @@ describe('Mark implemented', () => {
     expect(await within(dialog).findByRole('alert')).toBeVisible();
     expect(localDay(new Date(posted[0]!.declared_implemented_at))).toBe(day);
   });
+
+  it('says which page a content gap will be measured by before declaring', async () => {
+    const user = userEvent.setup();
+    const gap = { prompts: [], members: [], window: { start: NOW, end: NOW } };
+    const NEW_PAGE = '66666666-6666-4666-8666-666666666666';
+    renderWithProviders(
+      <MarkImplementedButton
+        workspaceId={WORKSPACE}
+        revision={{ id: '77777777-7777-4777-8777-777777777777', number: 2 }}
+        action={{
+          id: ACTION,
+          project_id: PROJECT,
+          members: [
+            {
+              id: MEMBER,
+              title: 'Cited content angle your page does not win',
+              content_gap_evidence: { ...gap, url: 'https://acme.test/pricing' },
+            } as never,
+            {
+              id: NEW_PAGE,
+              title: 'Cited content angle you have no page for',
+              content_gap_evidence: { ...gap, planned_page_key: 'planned:setup-guide' },
+            } as never,
+          ],
+          member_measurement: {
+            [MEMBER]: 'next_visibility_run',
+            [NEW_PAGE]: 'next_visibility_run',
+          },
+          declarable_since: daysAgo(30).toISOString(),
+        }}
+      />,
+      { projectSelection: selection },
+    );
+    await user.click(screen.getByRole('button', { name: 'Mark implemented' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Mark implemented' });
+    expect(
+      within(dialog).getByText(
+        "An AI answer cites your page: checks whether an AI answer to the angle's prompts cites https://acme.test/pricing.",
+      ),
+    ).toBeVisible();
+    expect(
+      within(dialog).getByText(
+        "An AI answer cites your page: checks whether an AI answer to the angle's prompts cites a new page of yours, one not already cited for them.",
+      ),
+    ).toBeVisible();
+  });
 });
 
 describe('Declaration status', () => {
@@ -135,6 +181,35 @@ describe('Declaration status', () => {
       'href',
       expect.stringMatching(new RegExp(`^/prompts/${promptId}(\\?|$)`)),
     );
+  });
+
+  it('names the page an owned-URL check waits for, or a new page of yours, and what it cannot show', () => {
+    const cited = (subject: string | null, state: 'waiting' | 'unavailable') => ({
+      ...pageCheck(state),
+      kind: 'owned_url_cited',
+      leg: 'next_visibility_run' as const,
+      reason: state === 'unavailable' ? 'prompts_not_in_run' : null,
+      subject,
+    });
+    renderWithProviders(
+      <DeclarationStatus
+        declaration={declaration([
+          cited('https://acme.test/pricing', 'unavailable'),
+          { ...cited(null, 'waiting'), index: 1 },
+        ])}
+        workspaceId={WORKSPACE}
+      />,
+      { projectSelection: selection },
+    );
+    const checks = within(screen.getByRole('list', { name: 'Checks' })).getAllByRole('listitem');
+    expect(checks.map((item) => item.textContent)).toEqual([
+      expect.stringMatching(
+        /^An AI answer cites your pageNot measurable yethttps:\/\/acme\.test\/pricingA citation shows the page was cited, not which version of it the AI engine read\.None of these prompts was part of that run\./,
+      ),
+      expect.stringMatching(
+        /^An AI answer cites your pageWaitingA new page of yours, not one already cited for these prompts/,
+      ),
+    ]);
   });
 
   it('offers a crawl while a page check lacks a met reading, and says why', () => {

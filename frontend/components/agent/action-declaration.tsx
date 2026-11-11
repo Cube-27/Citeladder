@@ -16,7 +16,7 @@ import { MutationNotice } from '@/components/ui/mutation-notice';
 import { ReadError } from '@/components/ui/read-error';
 import { textRole } from '@/components/ui/typography';
 import { newIdempotencyKey } from '@/lib/agent/idempotency';
-import { measurementLegLabel } from '@/lib/agent/vocabulary';
+import { contentGapCheckPreview, measurementLegLabel } from '@/lib/agent/vocabulary';
 import { actionsMutations, actionsQueries, type ActionDetail } from '@/lib/api/actions';
 import type { AgentOutput } from '@/lib/api/agent';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -205,6 +205,11 @@ function MeasurementPreview({ action }: Readonly<{ action: Declarable }>) {
           return (
             <Stack as="li" gap="tight" key={member.id}>
               <span className={textRole('itemTitle')}>{member.title}</span>
+              {leg && member.content_gap_evidence ? (
+                <span className={textRole('caption', 'break-words')}>
+                  {contentGapCheckPreview(member.content_gap_evidence)}
+                </span>
+              ) : null}
               <span className={textRole('caption')}>
                 {leg
                   ? `Measured by ${measurementLegLabel(leg)?.toLowerCase() ?? 'the next reading'}.`
