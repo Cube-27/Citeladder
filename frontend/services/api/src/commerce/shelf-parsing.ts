@@ -90,11 +90,10 @@ export type ShelfMatch =
   | { product: FrozenProduct; competitor: null; confidence: number }
   | { product: null; competitor: FrozenShelfTarget['approved_competitors'][number]; confidence: 1 }
   | { product: null; competitor: null; confidence: 0 };
-type Match = ShelfMatch;
-export const NO_MATCH: Match = { product: null, competitor: null, confidence: 0 };
+export const NO_MATCH: ShelfMatch = { product: null, competitor: null, confidence: 0 };
 
 /** The catalog product or approved competitor whose page a carousel card links to. */
-export function matchPageUrl(url: string, target: FrozenShelfTarget): Match {
+export function matchPageUrl(url: string, target: FrozenShelfTarget): ShelfMatch {
   const page = canonicalPage(url);
   if (!page) return NO_MATCH;
   const product = target.products.find((row) => canonicalPage(row.canonical_url) === page);
@@ -114,7 +113,7 @@ export function matchPageUrl(url: string, target: FrozenShelfTarget): Match {
  * that brand on the shelf shares. When a span names both sides ("Rival Y, a
  * cheaper alternative to Owned"), the one named first holds the slot.
  */
-export function matchRecommendation(text: string, target: FrozenShelfTarget): Match {
+export function matchRecommendation(text: string, target: FrozenShelfTarget): ShelfMatch {
   const haystack = ` ${normalize(text)} `;
   const at = (value: string | null | undefined) => {
     const needle = normalize(value ?? '');
@@ -124,7 +123,7 @@ export function matchRecommendation(text: string, target: FrozenShelfTarget): Ma
   };
   const first = (values: Array<string | null | undefined>) => Math.min(...values.map(at));
   let best = { index: Infinity, match: NO_MATCH };
-  const consider = (index: number, match: Match) => {
+  const consider = (index: number, match: ShelfMatch) => {
     if (index < best.index) best = { index, match };
   };
   for (const product of target.products) {

@@ -48,6 +48,49 @@ const emptyTarget: FrozenShelfTarget = {
   products: [],
   approved_competitors: [],
 };
+/** A Commerce audit whose prompt targets a Shoes category holding one frozen Acme product. */
+async function shoeAudit(repetitions: number) {
+  const t = await auditTenant(db, fixtures),
+    foreign = await auditTenant(db, fixtures);
+  workspaces.push(t.workspaceId, foreign.workspaceId);
+  const scope = { workspaceId: t.workspaceId, projectId: t.projectId };
+  const category = await categoryByName(db, scope, 'Shoes');
+  const product = await newProduct(db, scope, 'https://shop.example/products/road');
+  await db
+    .updateTable('commerce_products')
+    .set({ name: 'Frozen road shoe', brand: 'Acme', price: '12.50' })
+    .where('id', '=', product.id)
+    .execute();
+  await addMembership(db, scope, product.id, category.id, null);
+  await db
+    .insertInto('commerce_prompt_targets')
+    .values({
+      id: randomUUID(),
+      workspace_id: t.workspaceId,
+      project_id: t.projectId,
+      prompt_id: t.promptId,
+      target_kind: 'category',
+      target_id: category.id,
+      template_version: 'test',
+      approved_at: new Date(),
+      created_at: new Date(),
+    })
+    .execute();
+  const [auditId] = await createAudits(
+    db,
+    t.workspaceId,
+    auditInput.parse({
+      project_id: t.projectId,
+      prompt_ids: [t.promptId],
+      engines: ['chatgpt'],
+      repetitions,
+      audit_scope: 'commerce',
+    }),
+    {},
+    runtime,
+  );
+  return { t, foreign, product, auditId };
+}
 describe('frozen Commerce shelf projections', () => {
   it('retains list rank and prose boundaries across long whitespace runs', async () => {
     const gap = ' '.repeat(20_000);
@@ -198,6 +241,7 @@ describe('frozen Commerce shelf projections', () => {
       order_observable: false,
       product_id: 'product',
       competitor_candidate_id: null,
+      surface_kind: 'recommendation',
       ...values,
     });
     expect(shelfMetrics(['one'], [])).toMatchObject({
@@ -235,6 +279,30 @@ describe('frozen Commerce shelf projections', () => {
       first_position_win_rate: 1,
       recognized_slot_count: 2,
     });
+    // Text list and carousel both rank from 1; the carousel's ranks order the execution.
+    const rival = { product_id: null, competitor_candidate_id: 'rival' };
+    expect(
+      shelfMetrics(
+        ['one'],
+        [
+          row({ rank: 1, order_observable: true }),
+          row({ classification: 'approved_competitor', ...rival, rank: 2, order_observable: true }),
+          row({
+            classification: 'approved_competitor',
+            ...rival,
+            rank: 1,
+            order_observable: true,
+            surface_kind: 'shopping_result',
+          }),
+          row({ rank: 2, order_observable: true, surface_kind: 'shopping_result' }),
+        ],
+      ),
+    ).toMatchObject({
+      share_of_shelf: 0.5,
+      average_shelf_position: 2,
+      first_position_win_rate: 0,
+      recognized_slot_count: 2,
+    });
   });
   it('shares the shelf between owned products and approved competitors only', () => {
     const row = (classification: string, holder: string) => ({
@@ -245,6 +313,7 @@ describe('frozen Commerce shelf projections', () => {
       order_observable: false,
       product_id: classification === 'owned' ? holder : null,
       competitor_candidate_id: classification === 'owned' ? null : holder,
+      surface_kind: 'recommendation',
     });
     const owned = row('owned', 'product');
     const approved = row('approved_competitor', 'approved-rival');
@@ -266,45 +335,7 @@ describe('frozen Commerce shelf projections', () => {
     });
   });
   it('persists frozen matches, pending independent PDPs, citation provenance and replay-safe target snapshots', async () => {
-    const t = await auditTenant(db, fixtures),
-      foreign = await auditTenant(db, fixtures);
-    workspaces.push(t.workspaceId, foreign.workspaceId);
-    const scope = { workspaceId: t.workspaceId, projectId: t.projectId };
-    const category = await categoryByName(db, scope, 'Shoes');
-    const product = await newProduct(db, scope, 'https://shop.example/products/road');
-    await db
-      .updateTable('commerce_products')
-      .set({ name: 'Frozen road shoe', brand: 'Acme', price: '12.50' })
-      .where('id', '=', product.id)
-      .execute();
-    await addMembership(db, scope, product.id, category.id, null);
-    await db
-      .insertInto('commerce_prompt_targets')
-      .values({
-        id: randomUUID(),
-        workspace_id: t.workspaceId,
-        project_id: t.projectId,
-        prompt_id: t.promptId,
-        target_kind: 'category',
-        target_id: category.id,
-        template_version: 'test',
-        approved_at: new Date(),
-        created_at: new Date(),
-      })
-      .execute();
-    const [auditId] = await createAudits(
-      db,
-      t.workspaceId,
-      auditInput.parse({
-        project_id: t.projectId,
-        prompt_ids: [t.promptId],
-        engines: ['chatgpt'],
-        repetitions: 1,
-        audit_scope: 'commerce',
-      }),
-      {},
-      runtime,
-    );
+    const { t, foreign, product, auditId } = await shoeAudit(1);
     const queue = new AuditQueue(db, 120),
       [claim] = await queue.claim('shelf-worker', 1, { workspaceId: t.workspaceId, auditId });
     const running = await queue.markRunning(claim!, claim!.lease_owner);
@@ -483,48 +514,11 @@ describe('frozen Commerce shelf projections', () => {
     await projections.finalize(t.workspaceId, auditId);
   });
   it('ranks organic carousel cards as shopping slots and matches a repeat card by its ChatGPT product key', async () => {
-    const t = await auditTenant(db, fixtures),
-      foreign = await auditTenant(db, fixtures);
-    workspaces.push(t.workspaceId, foreign.workspaceId);
-    const scope = { workspaceId: t.workspaceId, projectId: t.projectId };
-    const category = await categoryByName(db, scope, 'Shoes');
-    const product = await newProduct(db, scope, 'https://shop.example/products/road');
-    await db
-      .updateTable('commerce_products')
-      .set({ name: 'Frozen road shoe', brand: 'Acme' })
-      .where('id', '=', product.id)
-      .execute();
-    await addMembership(db, scope, product.id, category.id, null);
-    await db
-      .insertInto('commerce_prompt_targets')
-      .values({
-        id: randomUUID(),
-        workspace_id: t.workspaceId,
-        project_id: t.projectId,
-        prompt_id: t.promptId,
-        target_kind: 'category',
-        target_id: category.id,
-        template_version: 'test',
-        approved_at: new Date(),
-        created_at: new Date(),
-      })
-      .execute();
-    const [auditId] = await createAudits(
-      db,
-      t.workspaceId,
-      auditInput.parse({
-        project_id: t.projectId,
-        prompt_ids: [t.promptId],
-        engines: ['chatgpt'],
-        repetitions: 2,
-        audit_scope: 'commerce',
-      }),
-      {},
-      runtime,
-    );
+    const { t, foreign, product, auditId } = await shoeAudit(3);
     const queue = new AuditQueue(db, 120),
-      claims = await queue.claim('carousel-worker', 2, { workspaceId: t.workspaceId, auditId });
-    expect(claims).toHaveLength(2);
+      claims = await queue.claim('carousel-worker', 3, { workspaceId: t.workspaceId, auditId });
+    expect(claims).toHaveLength(3);
+    const beforeAnyMatch = new Date(Date.now() - 1000);
     const carousel = (items: Record<string, unknown>[]) => ({
       status_code: 20000,
       tasks: [
@@ -582,12 +576,15 @@ describe('frozen Commerce shelf projections', () => {
           merchants: 'Rival',
         }),
       ]),
-      // A later answer names both by product key only, under other titles.
-      carousel([
-        card({ title: 'Another listing for the rival', product_id: 'rival-key' }),
-        card({ title: 'Renamed listing', product_id: 'own-key' }),
-      ]),
     ];
+    // A later answer names both by product key only, under other titles.
+    const keysOnly = carousel([
+      card({ title: 'Another listing for the rival', product_id: 'rival-key' }),
+      card({ title: 'Renamed listing', product_id: 'own-key' }),
+    ]);
+    // The same cards in an answer captured before any key was matched, derived last.
+    envelopes.push(keysOnly, keysOnly);
+    const capturedAt = [undefined, undefined, beforeAnyMatch];
     const taskIds: string[] = [];
     const running: AuditTask[] = [];
     for (const [index, claim] of claims.entries()) {
@@ -598,7 +595,16 @@ describe('frozen Commerce shelf projections', () => {
       running.push(task);
       const result = answer(task, envelopes[index]);
       const derive = await prepareShelfExecution(db, task, result, null);
-      const artifactId = await persistExecutionSuccess(db, task, claim.lease_owner, result, derive);
+      const artifactId = await persistExecutionSuccess(
+        db,
+        task,
+        claim.lease_owner,
+        result,
+        derive,
+        {
+          at: capturedAt[index],
+        },
+      );
       await db.transaction().execute((trx) => derive(trx, task, marked!.audit, artifactId!));
     }
     const slots = await db
@@ -661,6 +667,17 @@ describe('frozen Commerce shelf projections', () => {
     ).toEqual([
       [1, 'ai_observed_competitor', null, candidate.id],
       [2, 'owned', product.id, null],
+    ]);
+    expect(
+      slotsOf(taskIds[2]!).map((row) => [
+        row.rank,
+        row.classification,
+        row.product_id,
+        row.competitor_candidate_id,
+      ]),
+    ).toEqual([
+      [1, 'unresolved', null, null],
+      [2, 'unresolved', null, null],
     ]);
     // Text spans stay recommendations beside the carousel.
     const surfaces = await db

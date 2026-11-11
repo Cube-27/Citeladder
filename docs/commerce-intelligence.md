@@ -143,8 +143,8 @@ absent one is stored as absent, not zero. The card's rating is never read.
 Sponsored items stay with Ads and never hold a slot or a position. Cards are
 matched deterministically and never sent to the resolver: first by link
 (canonical page, tracking parameters ignored) to a frozen product or approved
-competitor, then by the product key an earlier card in the project was matched
-to (used only when that holder is on this target's frozen shelf or is this
+competitor, then by the product key a card in the project was matched to before
+this answer was captured (used only when that holder is on this target's frozen shelf or is this
 target's AI-observed candidate), then by the name rules above over the title.
 An unmatched card whose link is off the business's hosts creates or reuses an
 AI-observed competitor; the card is that evidence.
@@ -160,7 +160,9 @@ The persisted, formula-versioned snapshot per target and audit exposes:
   by ordered executions.
 
 A slot is one product or competitor per execution, at its best rank, so an
-answer naming a product three times recommends it once. A target with no
+answer naming a product three times recommends it once. In an execution with a
+carousel, a card's rank wins over a text-list rank: the carousel orders the
+slots and names the execution's first slot. A target with no
 successful execution reads Product Visibility as unavailable, not zero, and
 raises no `product_not_mentioned` or `cited_alternatives` Opportunity; other
 metrics without a denominator are unavailable.

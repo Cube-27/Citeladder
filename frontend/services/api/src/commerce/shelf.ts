@@ -309,15 +309,20 @@ async function recordObservation(
 }
 
 type CardHolder = { matched: ShelfMatch; candidate: Candidate | null };
+/** The stored answer a carousel card was read from. */
+type CardSource = { artifactId: string; capturedAt: Date };
 /**
  * The holder an earlier card with the same ChatGPT product key was matched
  * to, when that holder is on this target's shelf: a frozen product or
- * approved competitor, or this target's AI-observed candidate.
+ * approved competitor, or this target's AI-observed candidate. Only matches
+ * recorded before the answer was captured count, so re-deriving an older
+ * answer never inherits a match a later audit made.
  */
 async function rememberedHolder(
   db: Database,
   { task, audit, target, catalog }: ShelfContext,
   externalProductId: string,
+  capturedAt: Date,
 ): Promise<CardHolder | null> {
   const earlier = await db
     .selectFrom('commerce_recommendation_observations')
@@ -325,6 +330,7 @@ async function rememberedHolder(
     .where('workspace_id', '=', task.workspace_id)
     .where('project_id', '=', audit.project_id)
     .where('observed_external_product_id', '=', externalProductId)
+    .where('created_at', '<', capturedAt)
     .where((eb) =>
       eb.or([eb('product_id', 'is not', null), eb('competitor_candidate_id', 'is not', null)]),
     )
@@ -360,11 +366,12 @@ async function cardHolder(
   db: Database,
   ctx: ShelfContext,
   card: ShoppingResult,
+  capturedAt: Date,
 ): Promise<CardHolder> {
   const byUrl = card.url ? matchPageUrl(card.url, ctx.catalog) : NO_MATCH;
   if (byUrl.product || byUrl.competitor) return { matched: byUrl, candidate: null };
   const remembered = card.external_product_id
-    ? await rememberedHolder(db, ctx, card.external_product_id)
+    ? await rememberedHolder(db, ctx, card.external_product_id, capturedAt)
     : null;
   if (remembered) return remembered;
   const byName = matchRecommendation(card.title, ctx.catalog);
@@ -397,9 +404,9 @@ async function recordCard(
   db: Database,
   ctx: ShelfContext,
   card: ShoppingResult,
-  artifactId: string,
+  { artifactId, capturedAt }: CardSource,
 ) {
-  const { matched, candidate } = await cardHolder(db, ctx, card);
+  const { matched, candidate } = await cardHolder(db, ctx, card, capturedAt);
   const bounded = (value: string | null) => (value === null ? null : boundedText(value, 255));
   await insertObservation(db, ctx, artifactId, {
     ...holderFields(matched, candidate, { title: card.title, brand: '' }),
@@ -508,7 +515,7 @@ export async function prepareShelfExecution(
     }
     const artifact = await trx
       .selectFrom('raw_response_artifacts')
-      .select(['answer_text', 'citations', 'provider_metadata'])
+      .select(['answer_text', 'citations', 'provider_metadata', 'created_at'])
       .where('id', '=', artifactId)
       .where('audit_id', '=', audit.id)
       .where('task_id', '=', task.id)
@@ -560,11 +567,9 @@ export async function prepareShelfExecution(
     // ChatGPT carousel cards come from the stored provider response, beside the text spans.
     const cards = parseShoppingResults(record(artifact.provider_metadata).raw_response);
     for (const card of cards)
-      await /* NOSONAR -- One transaction: statements run in order. */ recordCard(
-        trx,
-        ctx,
-        card,
+      await /* NOSONAR -- One transaction: statements run in order. */ recordCard(trx, ctx, card, {
         artifactId,
-      );
+        capturedAt: artifact.created_at,
+      });
   };
 }

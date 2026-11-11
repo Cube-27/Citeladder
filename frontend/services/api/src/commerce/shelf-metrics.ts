@@ -15,11 +15,27 @@ type Observation = Pick<
   | 'order_observable'
   | 'product_id'
   | 'competitor_candidate_id'
+  | 'surface_kind'
 >;
 
 /** A rank only an ordered answer supplies. */
 export const orderedRank = (row: Pick<Observation, 'order_observable' | 'rank'>) =>
   row.order_observable ? row.rank : null;
+
+/**
+ * Whether `row` ranks ahead of `other` in the same execution: a ranked slot
+ * beats an unranked one, a carousel card's rank wins over a text-list rank
+ * (both start at 1), then the lower rank wins.
+ */
+function outranks(row: Observation, other: Observation) {
+  const rank = orderedRank(row),
+    otherRank = orderedRank(other);
+  if (rank === null) return false;
+  if (otherRank === null) return true;
+  const card = row.surface_kind === 'shopping_result',
+    otherCard = other.surface_kind === 'shopping_result';
+  return card === otherCard ? rank < otherRank : card;
+}
 
 /**
  * The product or competitor an observation recommends, or null when it names
@@ -50,9 +66,7 @@ function shelfSlots(observations: Observation[]) {
     if (holder === null) continue;
     const key = JSON.stringify([row.task_id, row.classification, holder]);
     const kept = held.get(key);
-    const rank = orderedRank(row),
-      keptRank = kept ? orderedRank(kept) : null;
-    if (!kept || (rank !== null && (keptRank === null || rank < keptRank))) held.set(key, row);
+    if (!kept || outranks(row, kept)) held.set(key, row);
   }
   return [...held.values()];
 }
@@ -68,11 +82,13 @@ export function shelfMetrics(taskIds: string[], observations: Observation[]) {
   const rankedOwned = owned.filter((row) => orderedRank(row) !== null);
   // The first-ranked observation of each execution that ranked any.
   const ranked = taskIds
-    .map(
-      (id) =>
-        observations
-          .filter((row) => row.task_id === id && row.order_observable && row.rank !== null)
-          .sort((a, b) => a.rank! - b.rank!)[0],
+    .map((id) =>
+      observations
+        .filter((row) => row.task_id === id && orderedRank(row) !== null)
+        .reduce<Observation | undefined>(
+          (first, row) => (!first || outranks(row, first) ? row : first),
+          undefined,
+        ),
     )
     .filter((row) => row !== undefined);
   return {
