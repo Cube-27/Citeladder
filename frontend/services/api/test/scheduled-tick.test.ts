@@ -71,6 +71,7 @@ describe('scheduled tick', () => {
       'audit-maintenance',
       'research-recovery',
       'audit-scheduler',
+      'crawl-scheduler',
       'integration-dispatcher',
       'crawl-log-maintenance',
       'billing-recovery',

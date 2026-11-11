@@ -262,6 +262,31 @@ export const urlPreviewResponseSchema = responseObject({
   policy_version: z.string(),
 });
 
+/** How often a scheduled crawl runs. */
+export const crawlScheduleCadenceSchema = z.enum(['weekly', 'monthly']);
+/**
+ * What the last scheduled occurrence did: started a crawl, or skipped because
+ * a crawl was already queued or running, or the page-fetch budget refused it.
+ */
+export const crawlScheduleOutcomeSchema = z.enum([
+  'created',
+  'crawl_already_active',
+  'site_health_fetches_exhausted',
+  'failed',
+]);
+// `GET|PUT /projects/{id}/crawl-schedule` — a project without one reads as off.
+export const crawlScheduleSchema = responseObject({
+  project_id: uuid(),
+  enabled: z.boolean(),
+  cadence: crawlScheduleCadenceSchema,
+  next_run_at: z.string().nullable(),
+  last_run_at: z.string().nullable(),
+  last_outcome: crawlScheduleOutcomeSchema.nullable(),
+  last_crawl_id: uuid().nullable(),
+});
+
+export type CrawlScheduleCadence = z.infer<typeof crawlScheduleCadenceSchema>;
+export type CrawlSchedule = z.infer<typeof crawlScheduleSchema>;
 export type CrawlOverallStatus = z.infer<typeof crawlOverallStatusSchema>;
 export type CrawlDiscoveryStatus = z.infer<typeof crawlDiscoveryStatusSchema>;
 export type CrawlAnalysisStatus = z.infer<typeof crawlAnalysisStatusSchema>;

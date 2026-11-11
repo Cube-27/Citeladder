@@ -49,6 +49,20 @@ configuration carries `page_rerun`; it hands its page to verification and
 Opportunities but is never compared as a site crawl, and a read that names no
 crawl (Overview, AEO readiness, Architecture) never defaults to it.
 
+**Scheduled crawls.** A project may turn on one crawl schedule
+(`crawl_schedules`, `GET|PUT /api/v1/projects/{project_id}/crawl-schedule`),
+off by default, weekly or monthly, on every plan. The `crawl-scheduler`
+periodic owner (`workers/crawl-scheduler.ts`) leases each due schedule and
+admits the crawl through `createCrawl`, rerunning the newest site crawl's scope
+and settings as Recrawl does (the default crawl when there is none), so the
+fetch budget, grants and the one-active-crawl rule apply unchanged. An
+occurrence refused with `crawl_already_active` or
+`site_health_fetches_exhausted` is skipped: `next_run_at` advances to the next
+occurrence and `last_outcome` records why. Any other refusal counts a failure,
+retries after `failure_retry_seconds` and turns the schedule off after
+`max_consecutive_failures` (`config/crawl-schedules.ts`, overrides
+`CRAWL_SCHEDULE_<SETTING>`).
+
 | Task kind (`site_crawl_tasks`) | Does |
 |---|---|
 | `site_setup` | robots.txt, crawler stance, llms.txt, sitemap walk and admission |
@@ -785,6 +799,7 @@ All paths are under `frontend/services/api/src/`.
 |---|---|
 | Claims and drain | `workers/site-health-worker.ts`, `workers/runner.ts` |
 | Crawl, stop, selection | `site-health/planner.ts`, `controls.ts`, `selection.ts` |
+| Scheduled crawls | `site-health/schedules.ts`, `workers/crawl-scheduler.ts` |
 | Admission | `site-health/url-admission.ts`, `url-identity.ts`, `frontier.ts` |
 | Executors | `site-health/site-setup-task.ts`, `discover-task.ts`, `analyze-task.ts`, `page-fetch.ts` |
 | Terminal and measurement | `site-health/lifecycle*.ts`, `terminal-analysis.ts`, `terminal-counters.ts`, `issue-currency.ts`, `issue-catalog.ts`, `canonical-alias.ts`, `score-summary.ts`, `coverage.ts` |

@@ -16,6 +16,7 @@ import { PAGES_INVENTORY_URL_KEYS } from '@/components/site-health/inventory-sec
 import { AeoReadinessPanel } from '@/components/site-health/aeo-readiness-panel';
 import { ArchitecturePanel } from '@/components/site-health/architecture-panel';
 import { ChangesPanel } from '@/components/site-health/changes-panel';
+import { useCrawlSchedule } from '@/components/site-health/crawl-schedule-control';
 import { InternalLinksPanel } from '@/components/site-health/internal-links-panel';
 import {
   useInternalLinksBands,
@@ -75,6 +76,7 @@ function SiteHealthContent({
   });
   const blocking = projectBlockingState(screen);
   const mutationsAllowed = !entitlementQuery.isError;
+  const schedule = useCrawlSchedule({ workspaceId, projectId }, Boolean(crawl) && mutationsAllowed);
   // Internal links' search, filters and header actions act on the analysis its panel draws.
   const links = useInternalLinksBands({
     scope: { projectId, workspaceId },
@@ -96,6 +98,7 @@ function SiteHealthContent({
         startPending={startPending}
         onExport={tab === 'pages' ? () => runExport('csv', 'pages') : undefined}
         tabActions={linksActions}
+        schedule={schedule.control}
         onCancel={cancelCrawl}
         onStart={startCrawl}
         onRecrawl={recrawl}
@@ -128,6 +131,7 @@ function SiteHealthContent({
         ) : (
           <Stack gap="section" className="min-w-0">
             <SiteHealthNotices screen={screen} mutationsAllowed={mutationsAllowed} />
+            {schedule.notice}
             {refreshFailures}
             <AnalysisPanel
               tab={tab}
@@ -429,6 +433,7 @@ function CrawlActions({
   startPending,
   onExport,
   tabActions,
+  schedule,
   onCancel,
   onStart,
   onRecrawl,
@@ -445,6 +450,8 @@ function CrawlActions({
    * header keeps one primary button.
    */
   tabActions: ReactNode;
+  /** The crawl schedule, beside Run new crawl. */
+  schedule: ReactNode;
   onCancel: () => void;
   onStart: () => void;
   onRecrawl: () => void;
@@ -456,6 +463,7 @@ function CrawlActions({
           {exporting ? 'Exporting…' : 'Export'}
         </Button>
       ) : null}
+      {schedule}
       {/* Always present, so starting a crawl never reflows the header. */}
       <Tooltip content="Rerun this crawl's scope and settings, so Changes compares like with like.">
         <Button variant="secondary" onClick={onRecrawl} disabled={active || startPending}>

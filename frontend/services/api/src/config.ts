@@ -30,6 +30,7 @@ import { crawlers } from './config/crawlers.ts';
 import { validateSiteHealthSettings } from './config/site-health/validation.ts';
 import { commerce, commerceShelf } from './config/commerce.ts';
 import { auditSchedules } from './config/audit-schedules.ts';
+import { crawlSchedules } from './config/crawl-schedules.ts';
 import { industryLibrary } from './config/industry-library.ts';
 import { opportunities, opportunityDefaults } from './config/opportunity.ts';
 import { earnedActions } from './config/earned-actions.ts';
@@ -106,6 +107,7 @@ export const policy = {
     selectable_engines: selectableEngines,
     min_interval_minutes: auditSchedules.settings.min_interval_minutes,
   },
+  crawl_schedules: crawlSchedules,
   discovery: { ...discovery, industry_library: industryLibrary },
   source_pages: sourcePages,
   audits: { ...audits, url_identity: urlIdentity, commerce_shelf: commerceShelf },
