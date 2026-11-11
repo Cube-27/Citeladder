@@ -15,9 +15,8 @@ const BASIS_LABEL: Record<DatedEvidence['basis'], string> = {
  */
 export function DatedEvidenceChips({
   records,
-  label = 'Evidence',
-}: Readonly<{ records: readonly DatedEvidence[]; label?: string }>) {
-  if (records.length === 0) return null;
+  label,
+}: Readonly<{ records: readonly DatedEvidence[]; label: string }>) {
   return (
     <Inline as="ul" aria-label={label} className="flex-wrap">
       {records.map((item) => {

@@ -313,8 +313,13 @@ type TicketAction = Pick<ActionDetail, 'target_label' | 'target_url' | 'member_m
     | null;
 };
 
-/** One Markdown list line: stored text never breaks the list. */
-const line = (text: string) => `- ${text.replaceAll(/\s+/g, ' ').trim()}`;
+/** Stored text on one line, so it never breaks the Markdown around it. */
+const oneLine = (text: string) => text.replaceAll(/\s+/g, ' ').trim();
+/** One Markdown list line. */
+const line = (text: string) => `- ${oneLine(text)}`;
+/** A Markdown list of `items`, or one line saying there are `none`. */
+const list = (items: readonly string[], none: string) =>
+  items.length ? items.map((item) => line(item)) : [line(none)];
 const unique = (values: readonly string[]) => [...new Set(values.filter(Boolean))];
 
 function affectedPages(action: TicketAction, formatDate: (iso: string) => string): string[] {
@@ -351,11 +356,12 @@ function verification(action: TicketAction, formatDate: (iso: string) => string)
     return [
       `Deployed on ${formatDate(declaration.declared_implemented_at)}, recorded by ${by}${reference}.`,
       '',
-      ...(declaration.checks.length
-        ? declaration.checks.map((check) =>
-            line(`${checkKindLabel(check.kind)}: ${checkStateLabel(check)}`),
-          )
-        : [line('No automatic check applies; CiteLadder records the work but cannot verify it.')]),
+      ...list(
+        declaration.checks.map(
+          (check) => `${checkKindLabel(check.kind)}: ${checkStateLabel(check)}`,
+        ),
+        'No automatic check applies; CiteLadder records the work but cannot verify it.',
+      ),
     ];
   }
   return [
@@ -386,29 +392,25 @@ export function developerTicket(
   const steps = unique(action.members.map((member) => member.remediation));
   const donts = action.diagnosis.donts ?? [];
   const sections: string[][] = [
-    [`# ${action.target_label.replaceAll(/\s+/g, ' ').trim()}`, '', action.handoff.message],
-    [
-      '## Issue',
-      '',
-      ...(findings.length ? findings.map(line) : [line('No current finding targets this Action.')]),
-    ],
+    [`# ${oneLine(action.target_label)}`, '', action.handoff.message],
+    ['## Issue', '', ...list(findings, 'No current finding targets this Action.')],
     ['## Affected pages', '', ...affectedPages(action, formatDate)],
     [
       '## Evidence',
       '',
-      ...(evidence.length
-        ? evidence.map((item) =>
-            line(
-              `${item.label}: ${item.basis}, ${item.at ? formatDate(item.at) : 'date not recorded'}`,
-            ),
-          )
-        : [line('No evidence is recorded for this Action.')]),
+      ...list(
+        evidence.map(
+          (item) =>
+            `${item.label}: ${item.basis}, ${item.at ? formatDate(item.at) : 'date not recorded'}`,
+        ),
+        'No evidence is recorded for this Action.',
+      ),
     ],
     [
       '## Minimal patch',
       '',
       ...(steps.length
-        ? steps.map((step, index) => `${index + 1}. ${step.replaceAll(/\s+/g, ' ').trim()}`)
+        ? steps.map((step, index) => `${index + 1}. ${oneLine(step)}`)
         : [line('No step is recorded; see the issue above.')]),
       ...(donts.length ? ['', 'Avoid:', '', ...donts.map(line)] : []),
     ],
