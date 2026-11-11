@@ -100,7 +100,7 @@ export const buyerPromptSchema = z.strictObject({
   approved_at: z.string().nullable(),
 });
 /** The latest measured snapshot of one target. */
-const shelfSnapshotSchema = z.strictObject({
+export const shelfSnapshotSchema = z.strictObject({
   /** Null when no execution for the target succeeded: unavailable, not zero. */
   product_visibility: z.number().nullable(),
   share_of_shelf: z.number().nullable(),
@@ -191,7 +191,77 @@ export const commerceProductPageSchema = z.strictObject({
   next_cursor: z.string().nullable(),
 });
 
+/**
+ * A ranked holder's metrics over the window (formula version 1). Null is
+ * unavailable, never zero.
+ */
+const overviewMetrics = {
+  /** Executions with a slot ÷ executions in scope; null with no execution in scope. */
+  visibility: z.number().nullable(),
+  /** Executions with a slot; 0 is a real zero. */
+  appearances: z.number().int(),
+  ordered_appearances: z.number().int(),
+  /** Ordered appearances at rank 1 ÷ ordered appearances; null with none. */
+  win_rate: z.number().nullable(),
+  /** Mean best rank over ordered appearances; null with none. */
+  position: z.number().nullable(),
+};
+export const commerceOverviewProductSchema = z.strictObject({
+  holder_id: uuid,
+  kind: commerceProductRowSchema.shape.kind,
+  name: z.string(),
+  brand: z.string(),
+  ...overviewMetrics,
+});
+/** A brand: its products' slots folded to one per execution, at the best rank. */
+export const commerceOverviewBrandSchema = z.strictObject({
+  brand: z.string(),
+  /** A catalog product carries this brand. */
+  owned: z.boolean(),
+  ...overviewMetrics,
+  /** Product slots this brand holds, the Share of Shelf numerator. */
+  slots: z.number().int(),
+  /** Its slots ÷ every product slot in scope; null when no answer held a product. */
+  share_of_shelf: z.number().nullable(),
+});
+/** The Shopping overview: rankings, extremes, merchants and fan-out for one window. */
+export const commerceShoppingOverviewSchema = z.strictObject({
+  window_days: z.number().int(),
+  /** The category filter, or null for the whole catalog and its competitors. */
+  category: uuid.nullable(),
+  /** Successful matched executions in scope: the visibility denominator. */
+  executions: z.number().int(),
+  /** Product slots across those executions, the Share of Shelf denominator. */
+  slots: z.number().int(),
+  /** Brands by appearances; holders with no brand are left out. */
+  brands: z.array(commerceOverviewBrandSchema),
+  /** Every product holder (catalog and competitors) by appearances. */
+  products: z.array(commerceOverviewProductSchema),
+  /** Catalog products most and least visible; the two lists never share a product. */
+  most_visible: z.array(commerceOverviewProductSchema),
+  least_visible: z.array(commerceOverviewProductSchema),
+  /** Merchant domains the answers send shoppers to, by executions. */
+  merchants: z.array(
+    z.strictObject({ domain: z.string(), answers: z.number().int(), products: z.number().int() }),
+  ),
+  fanout: z.strictObject({
+    /** Executions whose answer held a product. */
+    answers: z.number().int(),
+    /** Of those, executions whose answer ran at least one search query. */
+    answers_with_queries: z.number().int(),
+    queries: z.array(z.strictObject({ query: z.string(), answers: z.number().int() })),
+  }),
+  /**
+   * The category-target metrics of the category's latest Commerce audit; null
+   * without a category filter or before any audit measured it.
+   */
+  category_shelf: shelfSnapshotSchema.nullable(),
+});
+
 export type CommerceTarget = z.infer<typeof commerceTargetSchema>;
+export type CommerceShoppingOverview = z.infer<typeof commerceShoppingOverviewSchema>;
+export type CommerceOverviewProduct = z.infer<typeof commerceOverviewProductSchema>;
+export type CommerceOverviewBrand = z.infer<typeof commerceOverviewBrandSchema>;
 export type CommerceProductSource = z.infer<typeof commerceProductSourceSchema>;
 export type CommerceProductSort = z.infer<typeof commerceProductSortSchema>;
 export type CommerceProductRow = z.infer<typeof commerceProductRowSchema>;

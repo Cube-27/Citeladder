@@ -19,8 +19,8 @@ import type { NavigationMode } from '@/lib/navigation/mode-memory';
  */
 type RouteScope = 'public' | 'workspace' | 'project';
 
-type DashboardGroup = 'overview' | 'analyze' | 'act' | 'track' | 'setup';
-type PaletteGroup = 'Overview' | 'Analyze' | 'Track' | 'Agent' | 'Settings';
+type DashboardGroup = 'overview' | 'analyze' | 'commerce' | 'act' | 'track' | 'setup';
+type PaletteGroup = 'Overview' | 'Analyze' | 'Commerce' | 'Track' | 'Agent' | 'Settings';
 
 /**
  * Where a nav entry is listed: a Dashboard sidebar group, Agent mode's fixed
@@ -100,9 +100,14 @@ function flow<const P extends string>(
 }
 
 /** A nav entry listed in a Dashboard group and the matching palette group. */
-function listed(label: string, icon: IconName, group: 'analyze' | 'track'): NavEntry {
-  const palette = group === 'analyze' ? 'palette:Analyze' : 'palette:Track';
-  return { label, icon, placements: [`dashboard:${group}`, palette] };
+const PALETTE_OF = {
+  analyze: 'palette:Analyze',
+  commerce: 'palette:Commerce',
+  track: 'palette:Track',
+} as const satisfies Partial<Record<DashboardGroup, NavPlacement>>;
+
+function listed(label: string, icon: IconName, group: keyof typeof PALETTE_OF): NavEntry {
+  return { label, icon, placements: [`dashboard:${group}`, PALETTE_OF[group]] };
 }
 
 /** Every screen's loader, named once; a route refers to its screen by name. */
@@ -129,6 +134,10 @@ const screens = {
     'PerformanceScreen',
   ),
   products: pick(() => import('@/components/products/products-screen'), 'ProductsScreen'),
+  shoppingOverview: pick(
+    () => import('@/components/products/shopping-overview-screen'),
+    'ShoppingOverviewScreen',
+  ),
   product: pick(() => import('@/components/products/product-detail-screen'), 'ProductDetailScreen'),
   newChat: pick(() => import('@/components/agent/new-chat-screen'), 'NewChatScreen'),
   chat: pick(() => import('@/components/agent/chat-screen'), 'ChatScreen'),
@@ -216,11 +225,19 @@ export const APP_ROUTES = [
     screen: screens.performance,
     nav: [listed('Performance', 'performance', 'analyze')],
   }),
+  // Commerce: the Shopping overview, then the Products table. The overview is
+  // declared before `/products/:targetId`, which would otherwise match it.
+  page({
+    path: '/products/overview',
+    title: 'Shopping overview',
+    screen: screens.shoppingOverview,
+    nav: [listed('Overview', 'reports', 'commerce')],
+  }),
   page({
     path: '/products',
-    title: 'Commerce Suite',
+    title: 'Products',
     screen: screens.products,
-    nav: [listed('Commerce Suite', 'products', 'analyze')],
+    nav: [listed('Products', 'products', 'commerce')],
   }),
   page({
     path: '/products/:targetId',

@@ -56,6 +56,15 @@ const ROUTE_PREFETCHERS: Readonly<Partial<Record<AppRoutePath, RoutePrefetcher>>
       commerceQueries.products(scope, productSearch(DEFAULT_PRODUCT_FILTERS), null),
     );
   },
+  '/products/overview': async (client, scope) => {
+    const [{ commerceQueries }, { DEFAULT_OVERVIEW_FILTERS, overviewSearch }] = await Promise.all([
+      import('@/lib/api/commerce'),
+      import('@/lib/products/product-filters'),
+    ]);
+    // The category filter's options and the landing window's overview.
+    warmQuery(client, commerceQueries.catalog(scope));
+    warmQuery(client, commerceQueries.overview(scope, overviewSearch(DEFAULT_OVERVIEW_FILTERS)));
+  },
   // New chat: its recommended Actions are the screen's one project read.
   '/agent': async (client, scope) => {
     const { actionsQueries } = await import('@/lib/api/actions');

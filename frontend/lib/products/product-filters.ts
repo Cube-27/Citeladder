@@ -59,6 +59,29 @@ export function productSearch(filters: ProductFilters): string {
   return params.toString();
 }
 
+/** The Shopping overview's filters: one window and, optionally, one category. */
+export type OverviewFilters = Readonly<{ category: string | null; window: ProductWindowDays }>;
+
+export const DEFAULT_OVERVIEW_FILTERS: OverviewFilters = {
+  category: null,
+  window: PRODUCT_DEFAULT_WINDOW,
+};
+
+/** The overview read's query string for the filters: its cache key and request. */
+export function overviewSearch(filters: OverviewFilters): string {
+  const params = new URLSearchParams({ window: filters.window });
+  if (filters.category) params.set('category', filters.category);
+  return params.toString();
+}
+
+/** The Shopping overview's filters, held in the URL like the Products table's. */
+export function useOverviewFilters() {
+  const [category, setCategory] = useUrlState('category', optionalStringUrlCodec);
+  const [windowDays, setWindow] = useUrlState('window', WINDOW_CODEC);
+  const filters: OverviewFilters = { category, window: windowDays };
+  return { filters, setCategory, setWindow };
+}
+
 /**
  * The Products table's filters, held in the URL so a reload, a deep link and
  * the back button keep them. Typing a search replaces the entry rather than

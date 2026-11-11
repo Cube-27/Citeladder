@@ -203,7 +203,8 @@ workspace already went in PR 3). `read_ai_shelf` (MCP/Agent) returns the per-pro
 position for the window, with Share of Shelf for brands only; the most and least
 visible products; top merchants; top fan-out queries from answers holding a
 product; category filter, where the category-target metrics live. Navigation:
-Commerce becomes a group with Overview and Products.
+Commerce becomes a group with Overview and Products. The read is
+`GET /commerce/overview` over PR 3's shared answer and slot CTEs; no migration.
 
 ### PR 6: Catalog ingestion
 
