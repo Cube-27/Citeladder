@@ -16,8 +16,14 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { utcTextOf, wireUtc } from '../db/timestamps.ts';
-import { UNCATEGORIZED_KEY } from './projection-facts.ts';
-import { productMetrics, requireWindow, scopedSlots, type ExecutionScope } from './products.ts';
+import { productCategories } from './catalog-store.ts';
+import {
+  holderKindSchema,
+  listedCompetitor,
+  productMetrics,
+  scopedSlots,
+  type ExecutionScope,
+} from './products.ts';
 import { commerceMissing, targetActions, type CommerceScope } from './reads.ts';
 
 const count = z.number().int();
@@ -25,7 +31,7 @@ const sectionsSchema = z.object({
   competing: z.array(
     z.object({
       holder_id: z.uuid(),
-      kind: z.enum(['owned', 'approved_competitor', 'ai_observed_competitor']),
+      kind: holderKindSchema,
       name: z.string(),
       brand: z.string(),
       shared: count,
@@ -123,7 +129,7 @@ async function sections(
           AND p.lifecycle_state = 'active'
         LEFT JOIN commerce_competitor_candidates cc
           ON cc.id = o.holder_id AND cc.workspace_id = ${ws} AND cc.project_id = ${project}
-          AND (cc.state = 'approved' OR (cc.state = 'pending' AND cc.source_kind = 'ai_observed'))
+          AND ${listedCompetitor('cc')}
         -- Only holders the Products table lists, so each links to a page.
         WHERE p.id IS NOT NULL OR cc.id IS NOT NULL
         ORDER BY o.shared DESC, name, o.holder_id
@@ -196,18 +202,7 @@ async function catalogRecord(db: Database, scope: CommerceScope, holder: string)
       .where('project_id', '=', scope.projectId)
       .where('id', '=', holder)
       .executeTakeFirstOrThrow(),
-    db
-      .selectFrom('commerce_product_categories as m')
-      .innerJoin('commerce_categories as c', (join) =>
-        join.onRef('c.id', '=', 'm.category_id').onRef('c.workspace_id', '=', 'm.workspace_id'),
-      )
-      .select('c.name')
-      .where('m.workspace_id', '=', scope.workspaceId)
-      .where('m.project_id', '=', scope.projectId)
-      .where('m.product_id', '=', holder)
-      .where('c.normalized_name', '!=', UNCATEGORIZED_KEY)
-      .orderBy('c.name')
-      .execute(),
+    productCategories(db, scope, holder).select('c.name').orderBy('c.name').execute(),
   ]);
   return catalogSchema.parse({
     lifecycle_state: product.lifecycle_state,
@@ -232,7 +227,7 @@ export async function productDetail(
   holder: string,
   executions: ExecutionScope,
 ) {
-  requireWindow(executions.windowDays);
+  // Both reads refuse a window outside the configured ones before any query.
   const [page, detail] = await Promise.all([
     productMetrics(db, scope, {
       ...executions,

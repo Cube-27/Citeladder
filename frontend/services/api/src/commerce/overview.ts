@@ -26,7 +26,7 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
-import { holderRows, scopedSlots } from './products.ts';
+import { holderKindSchema, holderRows, scopedSlots } from './products.ts';
 import type { CommerceScope } from './reads.ts';
 
 export type OverviewQuery = { windowDays: number; category: string | null };
@@ -39,7 +39,7 @@ const counts = {
 };
 const productSchema = z.object({
   holder_id: z.uuid(),
-  kind: z.enum(['owned', 'approved_competitor', 'ai_observed_competitor']),
+  kind: holderKindSchema,
   name: z.string(),
   brand: z.string(),
   ...counts,

@@ -14,7 +14,10 @@
  * It reads only persisted rows: no provider, model or repair, and every table
  * is filtered to the authorized workspace and project.
  */
-import { commerceProductPageSchema } from '@citeladder/contracts/commerce-suite';
+import {
+  commerceProductPageSchema,
+  commerceProductRowSchema,
+} from '@citeladder/contracts/commerce-suite';
 import type {
   CommerceProductSort,
   CommerceProductSource,
@@ -72,11 +75,22 @@ const SORT_KEYS: Record<CommerceProductSort, RawBuilder<number>> = {
   name: sql`0::float8`,
 };
 
+/** Owned, approved competitor or AI-observed competitor: the holders a Commerce metrics read lists. */
+export const holderKindSchema = commerceProductRowSchema.shape.kind;
+
+/**
+ * The competitor candidates a Commerce metrics read lists, on the candidate
+ * table aliased `alias`: approved ones, and pending ones the AI observed.
+ */
+export const listedCompetitor = (alias: string) =>
+  sql`(${sql.ref(`${alias}.state`)} = 'approved'
+       OR (${sql.ref(`${alias}.state`)} = 'pending' AND ${sql.ref(`${alias}.source_kind`)} = 'ai_observed'))`;
+
 const rowSchema = z.object({
   executions: z.number().int(),
   total: z.number().int(),
   holder_id: z.uuid().nullable(),
-  kind: z.enum(['owned', 'approved_competitor', 'ai_observed_competitor']).nullable(),
+  kind: holderKindSchema.nullable(),
   name: z.string().nullable(),
   name_key: z.string().nullable(),
   brand: z.string().nullable(),
@@ -123,7 +137,7 @@ export type ExecutionScope = Pick<
   'windowDays' | 'engine' | 'promptSet' | 'until' | 'after'
 >;
 
-export function requireWindow(windowDays: number) {
+function requireWindow(windowDays: number) {
   if (!policy.commerce.products.window_days.includes(windowDays))
     throw new ApiError(422, 'window must be one of the configured windows', {
       code: 'validation_error',
@@ -228,7 +242,7 @@ export function holderRows(
                c.id, c.product_name, c.brand_name, c.canonical_url, NULL::float8, NULL::float8, ''
         FROM commerce_competitor_candidates c
         WHERE c.workspace_id = ${ws} AND c.project_id = ${project}
-          AND (c.state = 'approved' OR (c.state = 'pending' AND c.source_kind = 'ai_observed'))
+          AND ${listedCompetitor('c')}
           ${competitorInCategory}`
       : NOTHING;
   const ownedInCategory = category ? sql`AND ${inCategory(OWNED_PRODUCT)}` : NOTHING;
