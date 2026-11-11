@@ -11,10 +11,7 @@
  * records a catalog revision, so recent answers re-match the new identity.
  */
 import { isDeepStrictEqual } from 'node:util';
-import {
-  productEditRequestSchema,
-  productLifecycleRequestSchema,
-} from '@citeladder/contracts/commerce-requests';
+import { productEditRequestSchema } from '@citeladder/contracts/commerce-requests';
 import { commerceProductSchema } from '@citeladder/contracts/commerce-suite';
 import type { CommerceLifecycleState } from '@citeladder/contracts/commerce-suite';
 import type { Selectable, Updateable } from 'kysely';
@@ -53,7 +50,7 @@ export const productEditInput = productEditRequestSchema
     'Unsupported catalog URL',
   );
 export type ProductEdit = z.output<typeof productEditInput>;
-export const productLifecycleInput = productLifecycleRequestSchema;
+export { productLifecycleRequestSchema as productLifecycleInput } from '@citeladder/contracts/commerce-requests';
 
 /** The product columns an edit writes directly. */
 const SCALAR_FIELDS = [
@@ -70,7 +67,7 @@ const SCALAR_FIELDS = [
 type ScalarField = (typeof SCALAR_FIELDS)[number];
 
 /** A field's value as the import baseline compares it: missing is empty, prices are numbers. */
-export function comparable(field: string, value: unknown): string {
+export function comparable(field: string, value: string | number | null | undefined): string {
   if (value === null || value === undefined) return '';
   if (field === 'price') return String(Number(value));
   return String(value);
@@ -84,16 +81,20 @@ function provenance(value: unknown, field: string): Record<string, unknown> {
   return value === undefined ? {} : jsonObject(value, `field_sources.${field}`);
 }
 
+/** What an edited field last imported; undefined when it is not edited or was never imported. */
+export function importedBaseline(sources: Record<string, unknown>, field: string): unknown {
+  const source = provenance(sources[field], field);
+  return source.kind === 'edit' ? source.imported : undefined;
+}
+
 /**
  * True when an edit holds `field` against an import supplying `value`: the
  * edit's baseline is exactly what the field last imported, so this import
  * does not change the field.
  */
 export function editHolds(sources: Record<string, unknown>, field: string, value: unknown) {
-  const source = provenance(sources[field], field);
-  return (
-    source.kind === 'edit' && 'imported' in source && isDeepStrictEqual(source.imported, value)
-  );
+  const imported = importedBaseline(sources, field);
+  return imported !== undefined && isDeepStrictEqual(imported, value);
 }
 
 /**

@@ -240,6 +240,7 @@ function ProductsContent({
               query={page}
               scope={filters}
               trackable={filters.source === 'all'}
+              selectable={filters.source !== 'archived'}
               columns={columns.shown}
               sort={filters.sort}
               onSort={productFilters.setSort}

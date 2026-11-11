@@ -86,8 +86,10 @@ function Harness({
   onCheck = vi.fn(),
   onSort = vi.fn(),
   trackable = false,
+  selectable,
 }: Readonly<{
   trackable?: boolean;
+  selectable?: boolean;
   columns?: ProductColumnKey[];
   checked?: ReadonlySet<string>;
   onCheck?: (ids: string[], checked: boolean) => void;
@@ -102,6 +104,7 @@ function Harness({
       scope={{ window: '90', engine: 'chatgpt', promptSet: null }}
       columns={columns}
       trackable={trackable}
+      {...(selectable === undefined ? {} : { selectable })}
       sort="visibility"
       onSort={onSort}
       checked={checked}
@@ -190,6 +193,17 @@ describe('ProductsTable', () => {
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select all products on this page' }));
     expect(onCheck).toHaveBeenCalledWith([ROAD, TRAIL], true);
+  });
+
+  it('lets no archived product be checked for bulk discovery', async () => {
+    serve(ITEMS);
+    const onCheck = vi.fn();
+    renderWithProviders(<Harness selectable={false} onCheck={onCheck} />, projectRoute);
+
+    await screen.findByText('Acme Road Runner');
+    expect(screen.getByRole('checkbox', { name: 'Select Acme Road Runner' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all products on this page' }));
+    expect(onCheck).toHaveBeenCalledWith([], true);
   });
 
   it('offers Add to tracking on AI-observed competitor rows only, approving the candidate', async () => {

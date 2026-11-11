@@ -51,7 +51,9 @@ function ProductEditDrawer({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }>) {
-  const initial = productEditForm(product, catalog);
+  // The record as the drawer opened on it: a refetch while it is open never
+  // turns an untouched field into a change that would overwrite newer data.
+  const [initial] = useState(() => productEditForm(product, catalog));
   const [values, setValues] = useState<ProductEditForm>(initial);
   const [invalid, setInvalid] = useState<string | null>(null);
   const save = useMutation(commerceMutations.editProduct(scope));

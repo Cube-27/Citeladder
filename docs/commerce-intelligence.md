@@ -53,16 +53,18 @@ fields' `field_sources` at it. An edited field wins over crawl projection
 (scalars, breadcrumb categories and shelf links alike) and over CSV until a
 later import changes that field: the edit keeps the value the field last
 imported, and an import row repeating it leaves the edit in place while any
-other value replaces it. An edit claiming another product's URL, SKU or GTIN is
-refused (409). The image has no product column: the detail read takes it from
+other value replaces it. A row naming no current URL, SKU or GTIN still matches
+the product whose edit replaced the identifier it repeats, so re-importing a
+file never splits an edited product. An edit claiming another product's URL,
+SKU or GTIN is refused (409). The image has no product column: the detail read takes it from
 the latest edit that set it, before any shopping card's.
 
 `PUT /commerce/products/{holder_id}/lifecycle` archives
 (`lifecycle_state = 'archived'`) or restores a product, also as an edit
 observation. An archived product leaves the catalog read and its category
 counts, the Products table's My catalog and All products (it lists under
-`source=archived`), catalog revisions and so new answer matching, and audit
-prompt context; its observations and answers stay, and its page still opens
+`source=archived`), catalog revisions and so new answer matching, audit
+prompt context and competitor discovery (a target, 404); its observations and answers stay, and its page still opens
 with a Restore control. Every edit, archive and restore records a catalog
 revision (`source_kind = 'edit'`) when the matching identity changed. "Add to
 tracking" on an AI-observed competitor (an All products row or its page)

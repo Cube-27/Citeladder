@@ -55,7 +55,9 @@ const TEXT_FIELDS = [
 
 const sameSet = (a: readonly string[], b: readonly string[]) => {
   const key = (values: readonly string[]) =>
-    [...new Set(values.map((value) => value.trim().toLowerCase()))].sort().join('\n');
+    [...new Set(values.map((value) => value.trim().toLowerCase()))]
+      .sort((a, b) => a.localeCompare(b))
+      .join('\n');
   return key(a) === key(b);
 };
 

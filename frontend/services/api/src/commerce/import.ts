@@ -18,7 +18,7 @@ import {
 } from './catalog-store.ts';
 import type { CommerceScope } from './reads.ts';
 import { recordCatalogRevision } from './catalog-revisions.ts';
-import { categorySet, comparable, editHolds } from './edits.ts';
+import { categorySet, comparable, editHolds, importedBaseline } from './edits.ts';
 import { categoryKey, isCategoryName } from './projection-facts.ts';
 import { canonicalUrl } from '../site-health/url-identity.ts';
 
@@ -101,6 +101,30 @@ function productValues(row: Record<string, string>) {
   return { values: parsed.data, categories };
 }
 
+/**
+ * What a row writes over a product: an edited field keeps its edit while the
+ * row repeats what it last imported. The categories it adds, when it changes
+ * the category set, also record their CSV provenance in `sources`.
+ */
+function editAware(
+  sources: Record<string, unknown>,
+  { values, categories }: ReturnType<typeof productValues>,
+  provenance: Record<string, unknown>,
+) {
+  const applied = productInput.parse(
+    Object.fromEntries(
+      Object.entries(values).filter(
+        ([field, value]) => !editHolds(sources, field, comparable(field, value)),
+      ),
+    ),
+  );
+  const keys = categorySet(categories);
+  if (!keys.length || editHolds(sources, 'categories', keys))
+    return { applied, added: new Set<string>() };
+  sources.categories = { ...provenance, keys };
+  return { applied, added: categories };
+}
+
 function outcome(rowNumber: number, status: Outcome['status'], productId: string): Outcome {
   return { row_number: rowNumber, status, product_id: productId, error_code: '', detail: '' };
 }
@@ -120,14 +144,30 @@ const identityKeys = (row: Identity) =>
     row.gtin ? `gtin:${row.gtin}` : '',
   ].filter(Boolean);
 
+/** The identifiers an edit replaced, as the field last imported them. */
+function importedKeys(row: Product) {
+  const imported = (field: keyof Identity) => {
+    const value = importedBaseline(row.field_sources, field);
+    return typeof value === 'string' ? value : null;
+  };
+  return identityKeys({
+    canonical_url: imported('canonical_url'),
+    sku: imported('sku'),
+    gtin: imported('gtin'),
+  });
+}
+
 /**
  * The project's products by URL, SKU and GTIN, read once per import (under the
  * catalog lock) and kept current as rows write, so each row matches in memory
- * instead of scanning unindexed identifier columns.
+ * instead of scanning unindexed identifier columns. A row naming no current
+ * identifier still matches the product whose edit replaced the identifier it
+ * repeats, so re-importing the same file never splits an edited product.
  */
 class ProductIndex {
   private readonly rows = new Map<string, Product>();
   private readonly keys = new Map<string, Set<string>>();
+  private readonly replaced = new Map<string, Set<string>>();
   private readonly categories = new Map<string, string>();
 
   static async load(db: Database, scope: CommerceScope) {
@@ -143,16 +183,24 @@ class ProductIndex {
   }
 
   matches(values: Identity): Product[] {
-    const ids = new Set(identityKeys(values).flatMap((key) => [...(this.keys.get(key) ?? [])]));
+    const lookup = (map: Map<string, Set<string>>) =>
+      new Set(identityKeys(values).flatMap((key) => [...(map.get(key) ?? [])]));
+    let ids = lookup(this.keys);
+    if (!ids.size) ids = lookup(this.replaced);
     return [...ids].flatMap((id) => this.rows.get(id) ?? []);
   }
 
   put(row: Product) {
     const prior = this.rows.get(row.id);
-    if (prior) for (const key of identityKeys(prior)) this.keys.get(key)?.delete(row.id);
+    if (prior) {
+      for (const key of identityKeys(prior)) this.keys.get(key)?.delete(row.id);
+      for (const key of importedKeys(prior)) this.replaced.get(key)?.delete(row.id);
+    }
     this.rows.set(row.id, row);
     for (const key of identityKeys(row))
       this.keys.set(key, (this.keys.get(key) ?? new Set()).add(row.id));
+    for (const key of importedKeys(row))
+      this.replaced.set(key, (this.replaced.get(key) ?? new Set()).add(row.id));
   }
 
   async category(db: Database, scope: CommerceScope, name: string) {
@@ -185,7 +233,7 @@ async function importRow(
       detail: String((error as Error).message).slice(0, 500),
     };
   }
-  const { values, categories } = parsed;
+  const { values } = parsed;
   const matches = index.matches(values);
   if (matches.length > 1)
     throw new ApiError(409, `Row ${rowNumber}: identifiers resolve to different products`, {
@@ -201,36 +249,19 @@ async function importRow(
     };
   const product = matches[0] ?? indexed(await newProduct(db, scope, values.canonical_url!));
   const sources = { ...product.field_sources };
-  // An edited field keeps its edit while this row repeats what it last imported.
-  const applied = productInput.parse(
-    Object.fromEntries(
-      Object.entries(values).filter(
-        ([field, value]) => !editHolds(sources, field, comparable(field, value)),
-      ),
-    ),
-  );
-  const categoryKeys = categorySet(categories);
-  const appliesCategories =
-    categoryKeys.length > 0 && !editHolds(sources, 'categories', categoryKeys);
-  if (appliesCategories)
-    sources.categories = {
-      kind: 'csv',
-      source_id: importId,
-      row_number: rowNumber,
-      version: policy.commerce.importer_version,
-      keys: categoryKeys,
-    };
+  const provenance = {
+    kind: 'csv',
+    source_id: importId,
+    row_number: rowNumber,
+    version: policy.commerce.importer_version,
+  };
+  const { applied, added } = editAware(sources, parsed, provenance);
   let changed = false;
   for (const [field, value] of Object.entries(applied)) {
     const previous = product[field as keyof typeof values];
     if ((field === 'price' && previous !== null ? Number(previous) : previous) !== value)
       changed = true;
-    sources[field] = {
-      kind: 'csv',
-      source_id: importId,
-      row_number: rowNumber,
-      version: policy.commerce.importer_version,
-    };
+    sources[field] = provenance;
   }
   const update: Updateable<CommerceProducts> = {
     ...applied,
@@ -257,8 +288,7 @@ async function importRow(
     price: applied.price === undefined ? product.price : String(applied.price),
     field_sources: sources,
   });
-  if (!appliesCategories) categories.clear();
-  for (const name of categories)
+  for (const name of added)
     await /* NOSONAR -- One import transaction: statements run in order. */ addMembership(
       db,
       scope,

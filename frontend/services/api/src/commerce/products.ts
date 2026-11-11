@@ -217,9 +217,8 @@ export function holderRows(
       : NOTHING;
   const ownedInCategory = category ? sql`AND ${inCategory(OWNED_PRODUCT)}` : NOTHING;
   // One holder's page reads it archived or not; a listing reads one state.
-  const ownedLifecycle = holder
-    ? NOTHING
-    : sql`AND p.lifecycle_state = ${source === 'archived' ? 'archived' : 'active'}`;
+  const listedState = source === 'archived' ? 'archived' : 'active';
+  const ownedLifecycle = holder ? NOTHING : sql`AND p.lifecycle_state = ${listedState}`;
   return sql`
       SELECT 'owned'::text AS kind, p.id AS holder_id, p.name, p.brand, p.canonical_url AS url,
              p.price::float8 AS catalog_price, p.currency AS catalog_currency

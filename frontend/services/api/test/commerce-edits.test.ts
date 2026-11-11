@@ -129,6 +129,21 @@ describe('product edits', () => {
     expect(revisions.map((row) => row.source_kind)).toEqual(['import', 'edit', 'import', 'import']);
   });
 
+  it('matches a re-import of the URL an edit replaced to the edited product', async () => {
+    const first = await importCsv('canonical_url,name\nhttps://shop.example/old,Old\n');
+    const id = first.body.row_outcomes[0]!.product_id!;
+    expect((await edit(id, { canonical_url: 'https://shop.example/new' })).status).toBe(200);
+
+    // The same row in a new file (an identical file is the same import).
+    const repeat = await importCsv('name,canonical_url\nOld,https://shop.example/old\n');
+    expect(repeat.body.row_outcomes).toEqual([
+      { row_number: 2, status: 'unchanged', product_id: id, error_code: '', detail: '' },
+    ]);
+    expect(await stored(id)).toMatchObject({ canonical_url: 'https://shop.example/new' });
+    const catalog = await call<CommerceCatalog>('/catalog');
+    expect(catalog.body.products.map((row) => row.id)).toEqual([id]);
+  });
+
   it('clears identifiers, refuses another product identity and invalid values', async () => {
     await importCsv(
       'canonical_url,name,sku\nhttps://shop.example/a,A,A1\nhttps://shop.example/b,B,B1\n',
@@ -186,6 +201,12 @@ describe('archive and restore', () => {
       return [revision.source_kind, identity.products.map((row) => row.name).sort()];
     };
     expect(await matched()).toEqual(['edit', ['Birch']]);
+    // Nor does it take new competitors until restored.
+    const discover = await call('/competitors/discover', {
+      method: 'POST',
+      body: { targets: [{ kind: 'product', id: ash }] },
+    });
+    expect(discover.status).toBe(404);
 
     expect((await lifecycle(ash!, 'active')).status).toBe(200);
     expect(await listed('catalog')).toEqual(['Ash', 'Birch']);

@@ -264,6 +264,46 @@ describe('ProductDetailScreen', () => {
     );
   });
 
+  it('keeps the record the drawer opened on when the page refetches under it', async () => {
+    serve({ [ROAD]: ROAD_DETAIL });
+    const sent: unknown[] = [];
+    mswServer.use(
+      http.patch(`${base}/products/:holder`, async ({ request }) => {
+        sent.push(await request.json());
+        return HttpResponse.json({
+          id: ROAD,
+          canonical_url: 'https://shop.example/products/road',
+          name: 'Renamed elsewhere',
+          brand: 'Acme',
+          category_ids: [],
+        });
+      }),
+    );
+    const { queryClient } = renderAt(`/products/${ROAD}`);
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Edit product' }));
+    const price = await screen.findByRole('textbox', { name: 'Price' });
+    await user.clear(price);
+    await user.type(price, '99.5');
+    // Someone renames the product; the page refetches while the drawer is open.
+    let refetched = 0;
+    mswServer.use(
+      http.get(`${base}/products/:holder`, () => {
+        refetched += 1;
+        return HttpResponse.json({
+          ...ROAD_DETAIL,
+          product: { ...ROAD_DETAIL.product, name: 'Renamed elsewhere' },
+        });
+      }),
+    );
+    await queryClient.invalidateQueries();
+    await waitFor(() => expect(refetched).toBeGreaterThan(0));
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => expect(sent).toEqual([{ price: 99.5 }]));
+  });
+
   it('shows an archived product as archived, without setup, and restores it', async () => {
     serve({
       [ROAD]: {
