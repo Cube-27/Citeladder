@@ -351,8 +351,10 @@ JourneyDefinition and reviewed conversion-journey mapping were proposed in older
 documentation but are not implemented persistence/API owners. Do not describe
 them as shipped, infer a conversion definition from GA4 events or interpret
 missing event configuration as zero. First-party generative-AI report ingestion
-is also unverified; [pending work](plans/backlog.md#integrations-and-ai-visibility)
-retains the evidence/authorization gate.
+is not implemented and is not planned ([decision BL10](decisions.md#backlog-closure)).
+Building it would need a documented endpoint, supported authentication and an
+authorized successful response; never scrape an authenticated dashboard or
+substitute ordinary search traffic.
 
 ## Read and UI
 

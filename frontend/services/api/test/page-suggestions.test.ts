@@ -143,8 +143,7 @@ const suggest = (suggestions: Record<string, Json>[]): Response => [
 const span = (oldString: string, newString: string, extra: Record<string, Json> = {}) => ({
   old_string: oldString,
   new_string: newString,
-  category: 'clarity',
-  rule_id: 'clarity.precise_terms',
+  rule_id: 'clarity.fluent_prose',
   rationale: 'Plainer wording.',
   ...extra,
 });
@@ -217,7 +216,6 @@ describe('suggestions from the fetch and the Agent', () => {
           {
             field: 'meta_description',
             new_string: 'Compare CRM plans and monthly prices for small teams.',
-            category: 'search_guidelines',
             rule_id: 'technical.meta_description_present',
             rationale: 'The page has no meta description.',
           },
@@ -225,8 +223,7 @@ describe('suggestions from the fetch and the Agent', () => {
           {
             old_string: 'It suits two users.',
             needs_input: 'How many users does Starter include?',
-            category: 'proof',
-            rule_id: 'proof.specific_facts',
+            rule_id: 'proof.specific_statistics',
             rationale: 'A number from you is more precise.',
           },
         ]),
@@ -240,6 +237,10 @@ describe('suggestions from the fetch and the Agent', () => {
     expect(seen[0]).toContain(
       `${finding} [open] search_guidelines, technical.meta_description_present`,
     );
+    // Its context offers the content rules the fetched page has evidence for:
+    // coverage needs the page's prompts, which this chat has none of.
+    expect(seen[0]).toContain('ai_answers.self_contained_passages [ai_answers, recommendation');
+    expect(seen[0]).toContain('coverage.cited_angles (needs page_prompts)');
     const detail = await readChat(db, chat.scope, chat.chatId);
     expect(detail.messages.at(-1)?.content).toBe(
       'I suggested three changes.\n\n3 suggestions added to Document 1.',
@@ -354,8 +355,7 @@ describe('applying suggestions', () => {
     const field = (text: string) => ({
       field: 'title',
       new_string: text,
-      category: 'search_guidelines',
-      rule_id: 'search.accurate_title',
+      rule_id: 'search_guidelines.descriptive_title',
       rationale: 'Name the comparison.',
     });
     const { chat, ids } = await suggested([
@@ -390,8 +390,7 @@ describe('applying suggestions', () => {
       {
         field: 'title',
         new_string: 'CRM prices compared',
-        category: 'search_guidelines',
-        rule_id: 'search.accurate_title',
+        rule_id: 'search_guidelines.descriptive_title',
         rationale: 'Shorter.',
       },
     ]);
@@ -416,8 +415,7 @@ describe('Apply all and Dismiss all', () => {
       span('Compare plans across five tools.', 'Five CRM tools compared.'),
       {
         needs_input: 'Which customer could we quote?',
-        category: 'proof',
-        rule_id: 'proof.quotes',
+        rule_id: 'proof.attributed_quotes',
         rationale: 'A named customer adds proof.',
       },
     ]);
@@ -552,8 +550,30 @@ describe('guards', () => {
     const own = agentSuggestionsPageSchema.parse(
       await (await app.request(path, { headers: chat.headers })).json(),
     );
-    expect(own.items.filter((item) => item.source === 'model').map((item) => item.id)).toEqual([
-      ids[0],
+    // Each suggestion carries its rule's source and strength, as stored when it was made.
+    expect(
+      own.items.map(({ id, rule_id, category, guidance }) => ({ id, rule_id, category, guidance })),
+    ).toEqual([
+      {
+        id: ids[0],
+        rule_id: 'clarity.fluent_prose',
+        category: 'clarity',
+        guidance: {
+          strength: 'heuristic',
+          source_label: 'Aggarwal et al. 2024, GEO (research)',
+          source_url: 'https://arxiv.org/abs/2311.09735',
+        },
+      },
+      {
+        id: expect.any(String),
+        rule_id: 'technical.meta_description_present',
+        category: 'search_guidelines',
+        guidance: {
+          strength: 'recommendation',
+          source_label: 'Google Search Central: snippets and meta descriptions',
+          source_url: 'https://developers.google.com/search/docs/appearance/snippet',
+        },
+      },
     ]);
     const other = await project();
     expect((await app.request(path, { headers: other.headers })).status).toBe(404);

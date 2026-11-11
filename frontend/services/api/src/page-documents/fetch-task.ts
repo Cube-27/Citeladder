@@ -282,7 +282,6 @@ async function siteHealthSuggestions(
         dependsOn: [],
         replacement: null,
         needsInput: null,
-        category: SUGGESTED.site_health_category,
         ruleId: check.rule_id,
         rationale: rule ? `${rule.display_label}. ${rule.remediation}` : check.rule_id,
         source: 'site_health',

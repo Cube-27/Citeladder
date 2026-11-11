@@ -120,8 +120,8 @@ behind the platform gateway. The default model is Claude Haiku 5.5 at medium
 effort (A3). This replaces the JSON step protocol, which allowed one read per
 step, threw away earlier reasoning and re-sent a rebuilt prompt each step.
 
-Source: owner decisions A1–A3 of 12 October 2026 in the
-[Agent native runtime plan](plans/agent-native-runtime.md); pricing in
+Source: owner decisions A1–A3 of 12 October 2026 in the Agent native runtime
+plan (closed 11 November 2026); pricing in
 [B53](billing-decisions.md#agent-native-runtime-2026-10-12). [Agent](agents.md)
 owns the shipped behavior.
 
@@ -636,8 +636,7 @@ in the phase 2 editor planning session.
 There is one Actions feature. The decisions below supersede content
 optimization CO1 (a separate Content optimization sidebar entry) and CO10
 (routing Actions to screens by page kind), [above](#content-optimization).
-The [Actions simplification](plans/actions-simplification.md) plan holds the
-work.
+The Actions simplification plan built them (#699, #700, #701 and #703) and has been deleted.
 
 | ID | Decision |
 |---|---|
@@ -655,3 +654,30 @@ simplification plan: keep one Actions feature, remove the Content screen and
 fold content work back into Actions (AS1), with the list, chat, filter,
 detail-page and AI visibility layout directions above (AS2–AS4, AS6–AS8), and
 content gaps drawn only from content pages and tracked prompts (AS5).
+
+## Backlog closure
+
+The owner went through the backlog item by item and closed it into three tiers.
+The [backlog implementation plan](plans/backlog-implementation.md) holds the
+work to build now; the [backlog](plans/backlog.md) holds the pre-launch and
+low-priority tiers.
+
+| ID | Decision |
+|---|---|
+| BL1 | UI and UX improvements are the first priority among the work to build. |
+| BL2 | Site Health `web.*` issues become Actions, but only through an issue-family scope. One Action covers one defect family across every page it affects. The Agent resolves the family in a single chat without reading each page. A later comparable crawl decides the outcome: verified, partially resolved (naming the pages still failing), still failing or inconclusive. |
+| BL3 | The crawler keeps one bounded, redacted HTML reference snippet per issue family, not one per page, so the Agent can write an exact patch. |
+| BL4 | Developer handoff is built: "Prepare developer ticket", a recorded deployment step tied to the Action, and dated evidence. The journey-coverage eval and end-to-end journey are dropped. |
+| BL5 | Site Health gets scheduled crawls, weekly or monthly per project and off by default. |
+| BL6 | Before starting a crawl of the project's own site, the user may choose to ignore robots.txt. Domain verification is not required for this. |
+| BL7 | Domain verification, authorized-crawl receipts and enterprise SSO/SCIM are deferred until an enterprise customer asks. D9.2 (which plan carries SSO) stays open until then. |
+| BL8 | `security_events` rows are kept for 30 days. |
+| BL9 | An explicit operator entitlement replaces the production `DEV_LOGIN_PASSWORD` gate. |
+| BL10 | The remaining Integrations and AI Visibility items, the feature-review leftovers (Opportunities, AI Traffic, Commerce, Onboarding, Visibility, Earned sources), Traffic impact and the fact-checking follow-ups are removed from the backlog. |
+| BL11 | Of Production hardening, only the cloud cleanup is built now. Audit remediation, the remaining hardening, the acceptance and calibration gates and the billing review items move to the pre-launch tier. |
+| BL12 | Agent native runtime PR 2 (model and reasoning picker) and PR 3, the Agent and MCP deferred proposals, sliding sessions, AI Traffic extensions and ad observations in audit exports move to the low-priority tier for future reference. Search Intelligence limits, indexes and retention wait for billing and production row counts. |
+
+Source: owner, in chat, 11 November 2026, in the backlog closure session:
+answers to four rounds of questions on each backlog section, plus the
+follow-up asking for one tiered backlog file and one implementation plan of
+parallel scoped PRs.

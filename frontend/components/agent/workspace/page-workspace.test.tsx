@@ -121,6 +121,41 @@ describe('The page workspace', () => {
     expect(screen.getByText(/Editing the page doesn’t rerun them/)).toBeVisible();
   });
 
+  it('shows where each suggestion’s rule comes from, as an option unless it is a policy', async () => {
+    const policy = spanSuggestion(NEEDS, BODY, 'Teams pay more', {
+      category: 'search_guidelines',
+      rule_id: 'search_guidelines.no_keyword_stuffing',
+      guidance: {
+        strength: 'requirement',
+        source_label: 'Google Search Central: spam policies',
+        source_url: 'https://developers.google.com/search/docs/essentials/spam-policies',
+      },
+    });
+    serve({ chat: pageChat(), suggestions: suggestionsPage([ready(), policy]) });
+    const user = userEvent.setup();
+    renderChat();
+
+    await user.click(await screen.findByRole('tab', { name: counted('Suggestions', 2) }));
+    await screen.findAllByRole('button', { name: 'Dismiss' });
+    const card = (id: string) => {
+      const element = document.getElementById(`suggestion-${id}`);
+      if (!element) throw new Error(`No card for ${id}`);
+      return element;
+    };
+    const heuristic = card(READY);
+    expect(within(heuristic).getByText('Heuristic')).toBeVisible();
+    expect(heuristic).toHaveTextContent(
+      'Optional. A heuristic, not search engine guidance, from Aggarwal et al. 2024, GEO (research)',
+    );
+    expect(
+      within(heuristic).getByRole('link', { name: /Aggarwal et al\. 2024, GEO \(research\)/u }),
+    ).toHaveAttribute('href', 'https://arxiv.org/abs/2311.09735');
+    const required = card(NEEDS);
+    expect(within(required).getByText('Search policy')).toBeVisible();
+    expect(required).toHaveTextContent('Required by Google Search Central: spam policies');
+    expect(within(required).queryByText('Heuristic')).not.toBeInTheDocument();
+  });
+
   it('keeps every other chat as its thread', async () => {
     serve({ chat: detail(revision(REV1, 1, 'agent', 'Body.')), suggestions: suggestionsPage([]) });
     renderChat();

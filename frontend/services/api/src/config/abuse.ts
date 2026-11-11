@@ -47,6 +47,8 @@ const defaults = {
   active_job_retry_after_seconds: 60,
   sse_streams_per_user: 3,
   usage_window_cleanup_batch: 500,
+  security_event_retention_days: 30,
+  security_event_prune_batch: 1000,
 };
 
 export const abuse = Object.fromEntries(
