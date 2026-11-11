@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
+import { withContentRules } from '../page-documents/content-rules.ts';
 import { authorize } from './access.ts';
 import { agentPolicy, AgentError, type Scope, type Json } from './contracts.ts';
 
@@ -90,11 +91,13 @@ export async function buildManifest(
     .orderBy('revision', 'desc')
     .limit(1)
     .executeTakeFirst();
+  const action = input.actionId ? (actions.get(input.actionId) ?? null) : null;
   return manifestSchema.parse({
     version: agentPolicy.context_manifest_version,
     refs: input.refs,
-    package: await read(db, scope, input.refs, input.request),
-    action: input.actionId ? actions.get(input.actionId) : null,
+    // A page turn's content rules are judged from this same manifest (`offeredRuleIds`).
+    package: withContentRules(await read(db, scope, input.refs, input.request), action),
+    action,
     mentions: input.mentionIds.map((id) => actions.get(id)),
     instructions: instructions ?? null,
   });

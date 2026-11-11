@@ -84,8 +84,8 @@ Light and dark on every surface, defaulting to the system preference.
 | D55 | Faces are named only in `lib/config/brand-fonts.json` (owner, 11 November 2026: "i want minimum file changes while switching a font theres no need to mention font names in documents"). Code comments, the token contract and these docs say the role (display, sans, mono face), never a family, so switching a face is an edit to that JSON's `family` and `file` and `pnpm fonts:pull`, nothing else. The PDFs' own face (D4, `pdf-brand.ts`) is separate. |
 
 D5–D17 come from the owner's reviews of the shipped app and docs on 5 November
-2026. D18–D25 are the website review rounds in the
-[rollout plan](plans/design-system-rollout.md); D26 is the owner's website
+2026. D18–D25 are the website review rounds in the design system rollout
+plan (completed and deleted); D26 is the owner's website
 type rule of the same day. D39–D43 are the owner's answers in chat on
 6 November 2026 to the app UI audit (D38).
 

@@ -151,6 +151,40 @@ async function enforceSubjectRequest(
   if (consumed === undefined) throw throttled(subjectKind, operation, expires, now);
 }
 
+const DAY_MS = 86_400_000;
+
+/** Delete a bounded batch of security events older than the retention cutoff. */
+export async function pruneSecurityEvents(
+  db: Database,
+  now: Date,
+  { retentionDays, batch }: { retentionDays: number; batch: number },
+  canAdmit: () => boolean = () => true,
+): Promise<number> {
+  if (!canAdmit()) return 0;
+  const cutoff = new Date(now.getTime() - retentionDays * DAY_MS);
+  return await db.transaction().execute(async (trx) => {
+    const rows = await trx
+      .selectFrom('security_events')
+      .select('id')
+      .where('occurred_at', '<', cutoff)
+      .orderBy('occurred_at')
+      .limit(batch)
+      .forUpdate()
+      .skipLocked()
+      .execute();
+    if (!rows.length) return 0;
+    const deleted = await trx
+      .deleteFrom('security_events')
+      .where(
+        'id',
+        'in',
+        rows.map((row) => row.id),
+      )
+      .executeTakeFirst();
+    return Number(deleted.numDeletedRows);
+  });
+}
+
 /** Delete a bounded batch of expired windows; live windows are never touched. */
 export async function pruneUsageWindows(
   db: Database,

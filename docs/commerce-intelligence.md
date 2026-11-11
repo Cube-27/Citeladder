@@ -85,7 +85,8 @@ states and discovery failures read as sentences.
 ## Buyer Prompts
 
 Every Commerce prompt has a typed category or product target. Generation is
-bounded and rejects owned-name leakage; admission binds a prompt to the target
+bounded and rejects owned-name leakage; a category's branded comparisons are the
+one bounded exception (below). Admission binds a prompt to the target
 through the category's own name, its products and category terms, and for a
 product its name and description. Archived products never feed the context.
 Generated and manual prompts use the shared Prompt owner and stay disabled until
@@ -95,6 +96,30 @@ targets and capacity before writing. Each target keeps the prompts it admitted:
 a weak batch or a later model failure does not discard earlier targets' paid
 prompts, and only a request that admitted nothing is unavailable (503). The
 screen says when fewer prompts than asked were usable.
+
+**Category matrix.** A category target generates a shopping matrix in one
+bounded model call: buyer contexts × intent stages (configured: 3 contexts ×
+`consideration` and `decision`), one non-branded prompt per cell, plus branded
+comparisons so that branded prompts stay within `branded_share` (0.2) of the
+batch. All of these numbers live in `buyer_prompts.matrix` in
+`config/commerce.ts`. The context is stored as the prompt's persona and the
+stage as its buyer stage; admission keeps at most one prompt per cell and the
+configured number of contexts. Non-branded prompts keep the owned-name
+rejection. A branded comparison must name the owned brand and is filed in the
+shared `comparison` cohort, so `prompts.branded` is true and it stays out of
+organic Visibility and the AI Shelf snapshot (no schema change). The Buyer Prompts read returns `branded`,
+`buyer_stage` and `context` per prompt.
+
+**Hero products.** Per-product prompts exist only for hero products the user
+picks (configured 3 each, `buyer_prompts.default`). A generate request naming a
+product target must set `hero: true` or it is refused (422
+`commerce_prompt_hero_required`) before any quota or model call; every other
+product is covered by its category's matrix. The hero pick is a per-request
+choice, not stored on the product.
+
+The category's prompts section opens the standalone matrix sheet
+(`category-matrix-sheet.tsx`), which generates the matrix, shows coverage
+(contexts × stages filled, branded count) and approves prompts one at a time.
 
 For one target, the prompts section opens the shared audit launcher over only
 its approved prompt IDs and explains why launch is disabled until one is
@@ -132,6 +157,23 @@ when the answer is recorded: approved holds a slot like a frozen competitor,
 pending is `ai_observed_competitor` (shown, outside the share) and rejected is
 excluded from the shelf.
 
+ChatGPT shopping carousels are read from the stored provider response
+([parsing](../frontend/services/api/src/search-surfaces/parsing.ts)), beside the
+text spans: each organic `chat_gpt_products` card becomes one ordered slot with
+`surface_kind = 'shopping_result'`, ranked by its one-based position among the
+organic cards of its carousel; text spans stay `recommendation`. A card records
+its title, tag, price and currency, merchant name, link and host, ChatGPT's
+product key and first image URL; every field but the title is optional and an
+absent one is stored as absent, not zero. The card's rating is never read.
+Sponsored items stay with Ads and never hold a slot or a position. Cards are
+matched deterministically and never sent to the resolver: first by link
+(canonical page, tracking parameters ignored) to a frozen product or approved
+competitor, then by the product key a card in the project was matched to before
+this answer was captured (used only when that holder is on this target's frozen shelf or is this
+target's AI-observed candidate), then by the name rules above over the title.
+An unmatched card whose link is off the business's hosts creates or reuses an
+AI-observed competitor; the card is that evidence.
+
 The persisted, formula-versioned snapshot per target and audit exposes:
 
 - Product Visibility: successful target executions with an owned appearance
@@ -143,7 +185,12 @@ The persisted, formula-versioned snapshot per target and audit exposes:
   by ordered executions.
 
 A slot is one product or competitor per execution, at its best rank, so an
-answer naming a product three times recommends it once. A target with no
+answer naming a product three times recommends it once. In an execution with a
+carousel, a card's rank wins over a text-list rank: the carousel orders the
+slots and names the execution's first slot. Only executions of unbranded
+prompts count: a branded comparison names the owned brand by design, so its
+executions and observations stay out of the snapshot, as branded cohorts stay
+out of organic Visibility. A target with no
 successful execution reads Product Visibility as unavailable, not zero, and
 raises no `product_not_mentioned` or `cited_alternatives` Opportunity; other
 metrics without a denominator are unavailable.

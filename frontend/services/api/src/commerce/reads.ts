@@ -212,6 +212,9 @@ export async function buyerPrompts(db: Database, scope: CommerceScope, id?: stri
       'p.id',
       'p.prompt_set_id',
       'p.text',
+      'p.branded',
+      'p.buyer_stage',
+      'p.persona',
       'p.enabled',
       't.target_kind',
       't.target_id',
@@ -223,9 +226,10 @@ export async function buyerPrompts(db: Database, scope: CommerceScope, id?: stri
     .where('t.project_id', '=', scope.projectId);
   if (id) query = query.where('p.id', '=', id);
   return (await query.orderBy('p.created_at').orderBy('p.id').execute()).map(
-    ({ target_kind, target_id, approved_at, ...row }) =>
+    ({ target_kind, target_id, approved_at, persona, ...row }) =>
       buyerPromptSchema.parse({
         ...row,
+        context: persona,
         target: { kind: target_kind, id: target_id },
         approved_at: approved_at?.toISOString() ?? null,
       }),
