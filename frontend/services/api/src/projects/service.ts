@@ -159,7 +159,7 @@ export async function readProject(
   const result = await views(db, entitlements, [await projectRow(db, scope)]);
   return firstOf(result, 'the view built for the loaded project');
 }
-export type ProjectSummaryView = z.input<typeof projectSummarySchema>;
+type ProjectSummaryView = z.input<typeof projectSummarySchema>;
 
 /**
  * The workspace's projects as the switcher shows them: one read, newest
