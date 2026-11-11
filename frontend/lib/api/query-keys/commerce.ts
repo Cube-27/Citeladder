@@ -19,6 +19,7 @@ export const commerceKeys = {
   /** Whatever discovery is in flight for the project, per the server. */
   activeDiscoveries: (scope: ProjectScope) =>
     commerce.read('competitor-discoveries', scope, 'active'),
-  shelf: (scope: ProjectScope, target: { kind: string; id: string } | null) =>
-    commerce.read('ai-shelf', scope, target?.kind ?? 'no-target', target?.id ?? 'no-target'),
+  /** One product holder's page for the window's query string. */
+  productDetail: (scope: ProjectScope, holderId: string, search: string) =>
+    commerce.read('product-detail', scope, holderId, search),
 };

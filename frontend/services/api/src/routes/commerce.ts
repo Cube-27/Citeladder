@@ -8,12 +8,12 @@ import {
   buyerPromptSchema,
   catalogImportSchema,
   commerceCatalogSchema,
+  commerceProductDetailSchema,
   commerceProductPageSchema,
   commerceProjectionSchema,
   competitorCandidateSchema,
   competitorDiscoveryTaskSchema,
   competitorDiscoverySchema,
-  shelfSchema,
 } from '@citeladder/contracts/commerce-suite';
 import type { Context } from 'hono';
 import { z } from 'zod';
@@ -28,6 +28,7 @@ import {
   manualBuyerPrompt,
 } from '../commerce/buyer-prompts.ts';
 import { importCatalog } from '../commerce/import.ts';
+import { productDetail } from '../commerce/product-detail.ts';
 import { productMetrics } from '../commerce/products.ts';
 import {
   buyerPrompts,
@@ -35,12 +36,10 @@ import {
   catalog,
   catalogProjection,
   discoveries,
-  shelf,
 } from '../commerce/reads.ts';
 import { policy } from '../config.ts';
 import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
-import { ApiError } from '../errors.ts';
 import { readBody } from '../http/body.ts';
 import { requireFlag } from '../entitlements/access.ts';
 import { defineGetRoute, definePatchRoute, definePostRoute } from './define.ts';
@@ -50,6 +49,13 @@ const family = { family: 'commerce', authorize: 'active-project' } as const;
 const root = '/api/v1/projects/{project_id}/commerce';
 const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const projectPath = { project_id: uuid } as const;
+/** The executions a product read covers, shared by the table and the detail page. */
+const windowParam = {
+  scalar: { kind: 'int', ge: 1, le: 366 },
+  default: policy.commerce.products.default_window_days,
+} as const;
+const engineParam = { scalar: { kind: 'str', minLength: 1, maxLength: 64 } } as const;
+const promptSetParam = { scalar: { kind: 'uuid' } } as const;
 const importBody = catalogImportRequestSchema.extend({
   content: z
     .string()
@@ -174,12 +180,9 @@ export const commerceRoutes = [
       query: {
         source: { scalar: { kind: 'literal', values: ['catalog', 'all'] }, default: 'catalog' },
         category: { scalar: { kind: 'uuid' } },
-        window: {
-          scalar: { kind: 'int', ge: 1, le: 366 },
-          default: policy.commerce.products.default_window_days,
-        },
-        engine: { scalar: { kind: 'str', minLength: 1, maxLength: 64 } },
-        prompt_set: { scalar: { kind: 'uuid' } },
+        window: windowParam,
+        engine: engineParam,
+        prompt_set: promptSetParam,
         q: { scalar: { kind: 'str', maxLength: policy.commerce.products.search_max_chars } },
         sort: {
           scalar: { kind: 'literal', values: ['visibility', 'win_rate', 'position', 'name'] },
@@ -204,6 +207,22 @@ export const commerceRoutes = [
         sort: query.sort,
         cursor: query.cursor,
         limit: query.limit,
+      });
+    },
+  }),
+  defineGetRoute({
+    ...family,
+    path: `${root}/products/{holder_id}`,
+    params: {
+      path: { ...projectPath, holder_id: uuid },
+      query: { window: windowParam, engine: engineParam, prompt_set: promptSetParam },
+    },
+    response: commerceProductDetailSchema,
+    async handle({ c, db }, { path, query }) {
+      return productDetail(db, scopeOf(c, path.project_id), path.holder_id, {
+        windowDays: query.window,
+        engine: query.engine,
+        promptSet: query.prompt_set,
       });
     },
   }),
@@ -261,26 +280,6 @@ export const commerceRoutes = [
     async handle({ c, db }, { path }) {
       const scope = await writeScopeOf(db, c, path.project_id);
       return decideBuyerPrompt(db, scope, path.prompt_id, (await readBody(c, promptBody)).approved);
-    },
-  }),
-  defineGetRoute({
-    ...family,
-    path: `${root}/ai-shelf`,
-    params: {
-      path: projectPath,
-      query: {
-        target_id: { scalar: { kind: 'uuid' } },
-        target_kind: { scalar: { kind: 'literal', values: ['category', 'product'] } },
-      },
-    },
-    response: shelfSchema,
-    async handle({ c, db }, { path, query }) {
-      const scope = scopeOf(c, path.project_id);
-      if (!query.target_kind || !query.target_id)
-        throw new ApiError(422, 'AI Shelf requires a product or category target', {
-          code: 'commerce_target_required',
-        });
-      return shelf(db, scope, { kind: query.target_kind, id: query.target_id });
     },
   }),
 ];

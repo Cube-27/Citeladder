@@ -16,7 +16,7 @@ import type { CommerceQueries } from './commerce-queries';
 /**
  * The catalog's categories with their product counts, beside the Products
  * table: choosing one narrows the table to it, and the chosen category's own
- * page (its AI Shelf, competitors and shopping prompts) opens from here.
+ * page (its competitors and shopping prompts) opens from here.
  * Categories are flat today; the list is ready for nesting.
  */
 export function CategorySidebar({
@@ -82,7 +82,7 @@ function CategoryList({
       </TreeList>
       {selected ? (
         <TextLink href={targetHref(selected.id)} text="caption">
-          Open {selected.name}: its shelf, competitors and prompts
+          Open {selected.name}: its competitors and shopping prompts
         </TextLink>
       ) : null}
       {!catalog.categories.length ? (

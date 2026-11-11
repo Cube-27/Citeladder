@@ -2,9 +2,9 @@
 
 Commerce measures how AI answers recommend a business's products and
 categories, and turns that measurement into Actions. `/products` is the
-Products table (below); a catalog product or category opens its own page,
-`/products/:id`, which shows its AI Shelf, competitors and buyer prompts (the
-target detail). Commerce reuses Site Health acquisition and the shared audit system;
+Products table (below); every product holder opens its own page,
+`/products/:id` (the product detail page, below), and a category's id opens
+its competitors and shopping prompts. Commerce reuses Site Health acquisition and the shared audit system;
 it does not own a crawler, response store, prompt store or opportunity store.
 Present runtime is not evidence that credentialed manual gates passed.
 
@@ -100,8 +100,42 @@ the shown columns, a missing value as an empty field and a count of quotes in
 other currencies in brackets after the price, as the table shows it beside the
 price (even when none was quoted in the row's own currency). Checked catalog products
 start competitor discovery (at most `COMMERCE_TARGETS_MAX`); competitor rows
-cannot be checked and, until the product detail page, have no page of their
-own. Unavailable, unknown, none and zero render as different values.
+cannot be checked. Every row links to its holder's page with the table's
+window, engine and prompt set, and the page's Back link returns them.
+Unavailable, unknown, none and zero render as different values.
+
+## Product detail page
+
+`GET /commerce/products/{holder_id}?window=&engine=&prompt_set=`
+([detail read](../frontend/services/api/src/commerce/product-detail.ts)) reads
+one holder over the same executions as the table: its row is the table's read
+narrowed to that holder, so the two never disagree, and a holder the table
+would not list under All products (archived, rejected, unreviewed discovery,
+another project's) is not found (404). Beside the row it returns, from the
+same scoped slots and bounded by `products.detail` in `config/commerce.ts`:
+
+- the catalog description, and the image of the holder's latest shopping card
+  (null when no card carried one; the catalog has no image field yet);
+- competing products: holders with a slot in the same executions, by shared
+  executions, with how often each ranked above this one and its mean rank;
+- merchants, the citations of the executions it appeared in (by URL) and their
+  fan-out queries (from each answer's settled analysis), each by executions;
+- per prompt (it appeared for, or targets it): executions, appearances,
+  visibility, win rate and position over that prompt's executions;
+- the executions it appeared in, newest first, with best rank and `won`,
+  `lost` or `unranked`, and their total;
+- for an owned product, the Actions not done or dismissed whose live commerce
+  Opportunities target it.
+
+The page shows the header (brand, holder, image, description, link), the KPIs
+(visibility, win rate, position, appearances, mentioned and catalog price,
+with the table's missing states), the sections above (an answer opens the
+shared execution evidence drawer), and the window, engine and prompt-set
+filters. An owned product adds Setup: its Actions (each with Work with the
+agent, and Work with the agent on the product's page), competitor discovery
+and review, and hero-product prompts. Commerce Actions come from measured
+answers, so the page has no Generate action of its own. A category's page
+holds its competitor discovery and shopping-prompt matrix.
 
 ## Competitors
 
@@ -171,8 +205,8 @@ with the audit owner. Audit creation freezes approved prompts, the current
 catalog identity of each distinct target once, approved competitors and the
 parser, matcher, formula and template versions. Scheduled Commerce runs enter
 the same freeze, execution, observation and snapshot path. After a launch the
-section follows the run's event stream and refreshes AI Shelf and Actions when
-it finishes. Typed text belongs to one target and resets on switch.
+section follows the run's event stream and refreshes the product metrics and
+Actions when it finishes. Typed text belongs to one page and resets on leaving it.
 
 ## Catalog matching in every answer
 
@@ -283,15 +317,11 @@ successful execution reads Product Visibility as unavailable, not zero, and
 raises no `product_not_mentioned` or `cited_alternatives` Opportunity; other
 metrics without a denominator are unavailable.
 
-The AI Shelf read requires a target and returns its latest snapshot with the
-measurement date and sample size, the holders folded from exactly the
-observations that snapshot was computed from (you, approved competitors,
-AI-observed competitors; appearances and best rank), the count of unresolved
-recommendations, and the Actions not done or dismissed whose live commerce
-Opportunities target it. The target detail shows the metrics with one-line
-definitions, one guided next step (find competitors, review them, generate and
-approve prompts, launch, then the Actions), the Actions with links, and who
-held the shelf.
+Snapshots feed the commerce Opportunities; no route reads one target's snapshot any more (`GET ai-shelf` and the
+target detail were retired with the product detail page). The MCP and Agent
+tool `read_ai_shelf` returns the Products read's per-product metrics (with
+the categories and their counts), or, given a `holder_id`, the product detail
+read.
 
 ## Entry points and lifecycle
 

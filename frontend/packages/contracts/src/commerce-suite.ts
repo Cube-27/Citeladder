@@ -99,44 +99,6 @@ export const buyerPromptSchema = z.strictObject({
   enabled: z.boolean(),
   approved_at: z.string().nullable(),
 });
-/** The latest measured snapshot of one target. */
-const shelfSnapshotSchema = z.strictObject({
-  /** Null when no execution for the target succeeded: unavailable, not zero. */
-  product_visibility: z.number().nullable(),
-  share_of_shelf: z.number().nullable(),
-  average_shelf_position: z.number().nullable(),
-  first_position_win_rate: z.number().nullable(),
-  successful_execution_count: z.number().int(),
-  recognized_slot_count: z.number().int(),
-  ranked_execution_count: z.number().int(),
-  measured_at: z.string(),
-});
-/** Who an answer recommended for the target, folded across the latest audit's executions. */
-export const shelfHolderSchema = z.strictObject({
-  kind: z.enum(['owned', 'approved_competitor', 'ai_observed_competitor']),
-  name: z.string(),
-  brand: z.string(),
-  merchant_domain: z.string(),
-  /** Executions whose answer recommended it. */
-  appearances: z.number().int(),
-  /** Its best position in an ordered answer, or null when no answer ordered it. */
-  best_rank: z.number().int().nullable(),
-});
-const shelfActionSchema = z.strictObject({
-  id: uuid,
-  title: z.string(),
-  status: actionStatusSchema,
-});
-export const shelfSchema = z.strictObject({
-  target: commerceTargetSchema,
-  snapshot: shelfSnapshotSchema.nullable(),
-  holders: z.array(shelfHolderSchema),
-  /** Recommendations in the latest audit that named nothing the catalog or competitors know. */
-  unresolved_count: z.number().int(),
-  /** Actions not yet done or dismissed whose evidence targets this product or category. */
-  actions: z.array(shelfActionSchema),
-});
-
 /** Which holders the Products table lists: the catalog alone, or with competitors (CM6). */
 export const commerceProductSourceSchema = z.enum(['catalog', 'all']);
 /** The Products table's sort keys; each has one direction (best first, then name). */
@@ -191,6 +153,85 @@ export const commerceProductPageSchema = z.strictObject({
   next_cursor: z.string().nullable(),
 });
 
+const holderKindSchema = commerceProductRowSchema.shape.kind;
+/** Mean best rank over ordered appearances; null with none. */
+const positionSchema = z.number().nullable();
+/**
+ * One product holder's page (commerce improvement PR 4): its Products row and
+ * the answers behind it, over the same window, engine and prompt set. Every
+ * list is bounded by configuration, most first; `answer_total` counts every
+ * answer it appeared in.
+ */
+export const commerceProductDetailSchema = z.strictObject({
+  window_days: z.number().int(),
+  /** Successful matched executions in scope: the visibility denominator. */
+  executions: z.number().int(),
+  product: commerceProductRowSchema.extend({
+    /** The catalog description; empty for a competitor or when the catalog has none. */
+    description: z.string(),
+    /** The image of its latest shopping card in an answer; null when no card carried one. */
+    image_url: z.string().nullable(),
+  }),
+  /** Holders that held a slot in the same executions, by shared executions. */
+  competing: z.array(
+    z.strictObject({
+      holder_id: uuid,
+      kind: holderKindSchema,
+      name: z.string(),
+      brand: z.string(),
+      /** Executions both held a slot in. */
+      shared: z.number().int(),
+      /** Shared executions where it ranked above this product (or this one was unranked). */
+      ahead: z.number().int(),
+      /** Its mean best rank over the shared ordered executions. */
+      position: positionSchema,
+    }),
+  ),
+  /** Merchant domains the answers send shoppers to for it, by executions. */
+  merchants: z.array(z.strictObject({ domain: z.string(), count: z.number().int() })),
+  /** Pages cited by the executions it appeared in, by executions. */
+  sources: z.array(
+    z.strictObject({
+      url: z.string(),
+      title: z.string(),
+      domain: z.string(),
+      count: z.number().int(),
+    }),
+  ),
+  /** Search queries those executions ran (fan-out), by executions. */
+  fan_out_queries: z.array(z.strictObject({ query: z.string(), count: z.number().int() })),
+  /** Prompts it appeared for, or that target it, with its metrics over each prompt's executions. */
+  prompts: z.array(
+    z.strictObject({
+      /** Null for an execution whose prompt was deleted; its text remains. */
+      prompt_id: uuid.nullable(),
+      text: z.string(),
+      executions: z.number().int(),
+      appearances: z.number().int(),
+      visibility: z.number().nullable(),
+      win_rate: z.number().nullable(),
+      position: positionSchema,
+    }),
+  ),
+  /** The executions it appeared in, newest first. */
+  answers: z.array(
+    z.strictObject({
+      task_id: uuid,
+      audit_id: uuid,
+      prompt_text: z.string(),
+      engine: z.string(),
+      completed_at: z.string(),
+      /** Its best rank in an ordered answer; null when the answer did not order it. */
+      rank: z.number().int().nullable(),
+      /** `won` at rank 1, `lost` ranked below another, `unranked` without an order. */
+      outcome: z.enum(['won', 'lost', 'unranked']),
+    }),
+  ),
+  answer_total: z.number().int(),
+  /** Actions not yet done or dismissed whose evidence targets this owned product. */
+  actions: z.array(z.strictObject({ id: uuid, title: z.string(), status: actionStatusSchema })),
+});
+
 export type CommerceTarget = z.infer<typeof commerceTargetSchema>;
 export type CommerceProductSource = z.infer<typeof commerceProductSourceSchema>;
 export type CommerceProductSort = z.infer<typeof commerceProductSortSchema>;
@@ -202,4 +243,4 @@ export type CatalogImport = z.infer<typeof catalogImportSchema>;
 export type CompetitorCandidate = z.infer<typeof competitorCandidateSchema>;
 export type CompetitorDiscoveryTask = z.infer<typeof competitorDiscoveryTaskSchema>;
 export type BuyerPrompt = z.infer<typeof buyerPromptSchema>;
-export type Shelf = z.infer<typeof shelfSchema>;
+export type CommerceProductDetail = z.infer<typeof commerceProductDetailSchema>;

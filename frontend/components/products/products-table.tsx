@@ -24,7 +24,7 @@ import {
   type ProductCell,
   type ProductColumnKey,
 } from '@/lib/products/product-columns';
-import { targetHref } from '@/lib/products/targets';
+import { productHref, type ProductScopeFilters } from '@/lib/products/product-filters';
 import { PRODUCT_PAGE_SIZE } from '@/lib/config/commerce';
 import type { UseQueryResult } from '@tanstack/react-query';
 
@@ -46,7 +46,8 @@ function MissingCell({ state }: Readonly<{ state: 'unavailable' | 'unknown' | 'n
   );
 }
 
-function MetricValue({ cell }: Readonly<{ cell: ProductCell }>) {
+/** A metric's text, or the word for its missing state, with its note beneath. */
+export function MetricValue({ cell }: Readonly<{ cell: ProductCell }>) {
   const value = cell.kind === 'value' ? cell.text : <MissingCell state={cell.state} />;
   if (!cell.note) return value;
   return (
@@ -57,19 +58,17 @@ function MetricValue({ cell }: Readonly<{ cell: ProductCell }>) {
   );
 }
 
-/** The product cell: its page for a catalog product, its name and who holds it otherwise. */
-function ProductName({ row }: Readonly<{ row: CommerceProductRow }>) {
+/** The product cell: its page (in the table's window), its brand and who holds it. */
+function ProductName({
+  row,
+  scope,
+}: Readonly<{ row: CommerceProductRow; scope: ProductScopeFilters }>) {
   const caption = [row.brand, holderLabel(row.kind)].filter(Boolean).join(' · ');
-  // Competitor detail pages arrive with the product detail page; until then
-  // only a catalog product opens its own page.
-  const name =
-    row.kind === 'owned' ? (
-      <TextLink href={targetHref(row.holder_id)} text="inherit">
-        {row.name}
-      </TextLink>
-    ) : (
-      row.name
-    );
+  const name = (
+    <TextLink href={productHref(row.holder_id, scope)} text="inherit">
+      {row.name}
+    </TextLink>
+  );
   return <TableCellLines title primary={name} secondary={caption} />;
 }
 
@@ -86,8 +85,11 @@ export function ProductsTable({
   checked,
   onCheck,
   pager,
+  scope,
 }: Readonly<{
   query: UseQueryResult<CommerceProductPage>;
+  /** The window, engine and prompt set a row's page opens with. */
+  scope: ProductScopeFilters;
   columns: readonly ProductColumnKey[];
   sort: CommerceProductSort;
   onSort: (sort: CommerceProductSort) => void;
@@ -155,7 +157,7 @@ export function ProductsTable({
             onCheckedChange={(next) => onCheck([row.holder_id], next)}
           />
           <TableCell>
-            <ProductName row={row} />
+            <ProductName row={row} scope={scope} />
           </TableCell>
           {shown.map((column) => {
             const cell = productCell(row, column.key);

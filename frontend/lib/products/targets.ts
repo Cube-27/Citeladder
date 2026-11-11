@@ -1,10 +1,5 @@
 import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 
-/** `category:<uuid>`: the one spelling of a target, keying React lists and target-scoped state. */
-export function targetKey(target: CommerceTarget): string {
-  return `${target.kind}:${target.id}`;
-}
-
 /** Whether two targets name the same category or product. */
 export function sameTarget(a: CommerceTarget, b: CommerceTarget): boolean {
   return a.kind === b.kind && a.id === b.id;

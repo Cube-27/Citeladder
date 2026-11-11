@@ -33,7 +33,11 @@ function forTarget(
   return rows.filter((row) => sameTarget({ kind: row.target_kind, id: row.target_id }, target));
 }
 
-export function TargetCompetitors({
+/**
+ * Competitor discovery and review for one catalog product or category, on its
+ * page's Setup: Find competitors, then approve or reject each candidate.
+ */
+export function SetupCompetitors({
   projectId,
   target,
   query,
@@ -65,7 +69,7 @@ export function TargetCompetitors({
           </Button>
         }
       >
-        <CardTitle>Competitors on this shelf</CardTitle>
+        <CardTitle>Competitors</CardTitle>
         <CardDescription>Candidates do not enter measurement until approved.</CardDescription>
       </CardHeader>
       <CardContent>
@@ -143,7 +147,7 @@ function CompetitorRows({
       <QueryState
         kind="empty"
         icon={Users}
-        heading={running ? 'Looking for competitors…' : 'No candidates yet for this target'}
+        heading={running ? 'Looking for competitors…' : 'No candidates yet'}
         description={running ? undefined : 'Run Find competitors.'}
         headingLevel={3}
       />

@@ -97,6 +97,7 @@ function Harness({
   return (
     <ProductsTable
       query={query}
+      scope={{ window: '90', engine: 'chatgpt', promptSet: null }}
       columns={columns}
       sort="visibility"
       onSort={onSort}
@@ -169,16 +170,19 @@ describe('ProductsTable', () => {
     ]);
   });
 
-  it('links catalog products to their page and keeps competitors out of bulk selection', async () => {
+  it('links every product to its page in the same window, and keeps competitors out of bulk selection', async () => {
     serve(ITEMS);
     const onCheck = vi.fn();
     renderWithProviders(<Harness onCheck={onCheck} />, projectRoute);
 
-    const link = await screen.findByRole('link', { name: 'Acme Road Runner' });
-    expect(new URL(link.getAttribute('href')!, 'https://app.test').pathname).toBe(
-      `/products/${ROAD}`,
-    );
-    expect(screen.queryByRole('link', { name: 'Zoom Glide' })).not.toBeInTheDocument();
+    const page = (name: string) => {
+      const href = screen.getByRole('link', { name }).getAttribute('href')!;
+      const url = new URL(href, 'https://app.test');
+      return `${url.pathname}?${url.searchParams.toString()}`;
+    };
+    await screen.findByRole('link', { name: 'Acme Road Runner' });
+    expect(page('Acme Road Runner')).toBe(`/products/${ROAD}?window=90&engine=chatgpt`);
+    expect(page('Zoom Glide')).toBe(`/products/${RIVAL}?window=90&engine=chatgpt`);
     expect(screen.getByRole('checkbox', { name: 'Select Zoom Glide' })).toBeDisabled();
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select all products on this page' }));

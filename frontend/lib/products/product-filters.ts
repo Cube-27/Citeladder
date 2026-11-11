@@ -59,6 +59,35 @@ export function productSearch(filters: ProductFilters): string {
   return params.toString();
 }
 
+/** The executions a product's page reads: the table's window, engine and prompt set. */
+export type ProductScopeFilters = Pick<ProductFilters, 'window' | 'engine' | 'promptSet'>;
+
+/**
+ * The scope filters' query string, in a fixed order with unset ones left out:
+ * a product page's read (and cache key), and the link between the table and
+ * a product's page, so either keeps the other's window.
+ */
+export function productScopeSearch(filters: ProductScopeFilters): string {
+  const params = new URLSearchParams({ window: filters.window });
+  if (filters.engine) params.set('engine', filters.engine);
+  if (filters.promptSet) params.set('prompt_set', filters.promptSet);
+  return params.toString();
+}
+
+/** A product's page, keeping the scope filters it was opened with. */
+export function productHref(holderId: string, filters: ProductScopeFilters): string {
+  return `/products/${holderId}?${productScopeSearch(filters)}`;
+}
+
+/** A product page's scope filters, held in the same URL keys as the table's. */
+export function useProductScopeFilters() {
+  const [windowDays, setWindow] = useUrlState('window', WINDOW_CODEC);
+  const [engine, setEngine] = useUrlState('engine', optionalStringUrlCodec);
+  const [promptSet, setPromptSet] = useUrlState('prompt_set', optionalStringUrlCodec);
+  const filters: ProductScopeFilters = { window: windowDays, engine, promptSet };
+  return { filters, setWindow, setEngine, setPromptSet };
+}
+
 /**
  * The Products table's filters, held in the URL so a reload, a deep link and
  * the back button keep them. Typing a search replaces the entry rather than
