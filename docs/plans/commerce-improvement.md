@@ -270,6 +270,14 @@ differs from the catalog price by more than a set share), `losing_position`
 third-party merchants only). Verification reads later windows of the same
 metric.
 
+As built: the rules read the Products read (`commerce/products.ts`, with
+optional window end, after-instant and full merchant list) for owned
+products over a 30-day window; thresholds and minimum samples live in
+`PRODUCT_METRICS` (opportunity config). The refresh's commerce identity adds
+the newest match pass, so brand-run answers move the findings. Verification is
+a new `product_metric` check kind read on every completed audit. No
+migration.
+
 ### PR 10: Marketing, blog, docs and changelog (CM9)
 
 Runs after PR 9 merges and describes only what shipped; if a PR above is cut

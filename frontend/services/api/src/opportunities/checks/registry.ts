@@ -8,6 +8,7 @@ import { contextualLinkCheck } from './contextual-link.ts';
 import { keywordPresenceCheck } from './keyword-presence.ts';
 import type { CheckKind, CheckModule, MeasurementLeg, MemberFacts, SourceKind } from './kind.ts';
 import { ownedUrlCitedCheck } from './owned-url-cited.ts';
+import { productMetricCheck } from './product-metric.ts';
 import { siteRuleCheck } from './site-rule.ts';
 import { trafficMetricCheck } from './traffic-metric.ts';
 import { visibilityMetricCheck } from './visibility-metric.ts';
@@ -20,6 +21,7 @@ export const CHECKS: { readonly [K in CheckKind]: CheckModule<K> } = {
   keyword_presence: keywordPresenceCheck,
   contextual_link: contextualLinkCheck,
   owned_url_cited: ownedUrlCitedCheck,
+  product_metric: productMetricCheck,
 };
 
 export const CHECK_KINDS = Object.values(CHECKS).map((check) => check.kind);

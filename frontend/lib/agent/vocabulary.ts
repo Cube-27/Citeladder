@@ -119,6 +119,7 @@ const CHECK_KIND_LABEL: Record<string, string> = {
   traffic_metric: 'Search Console clicks rise',
   keyword_presence: 'You appear for the search',
   owned_url_cited: 'An AI answer cites your page',
+  product_metric: 'The product metric clears in later answers',
 };
 
 export function checkKindLabel(kind: string): string {
@@ -183,6 +184,12 @@ const CHECK_REASON: Record<string, string> = {
   still_missing: 'A later Keyword Research analysis still lists this as a gap.',
   prompts_not_in_run: 'None of these prompts was part of that run.',
   no_answers: 'That run has no answers to these prompts.',
+  too_few_samples:
+    'The answers since go-live are too few to read this metric yet. Later runs add to them.',
+  no_answers_after_go_live: 'No matched answer has completed since the go-live date yet.',
+  no_catalog_price: 'The product has no catalog price to compare quoted prices with.',
+  product_not_in_catalog: 'The product is no longer an active catalog product.',
+  unsupported_window: 'The check names a window the Products read no longer offers.',
   provider_serp_predates_change:
     'DataForSEO last checked this search before the go-live date. A later analysis can answer it.',
 };

@@ -87,7 +87,9 @@ declaration with its evidence cleared, and the page's finding names it as
 A refresh first resolves its source identity: the audit (the default market's
 latest dashboard-ready brand run, the one Visibility and Overview call latest),
 the latest dashboard-ready Commerce run (read for Commerce findings only, so
-neither kind of run replaces the other's Actions), crawl, demand snapshot and
+neither kind of run replaces the other's Actions), the newest catalog match
+pass (the per-product metric findings read every matched answer in their
+window), crawl, demand snapshot and
 revision, internal-link run, newest inspected source-page reading, keyword-gap
 datasets and content-angle run. When the latest snapshot already records that identity under the
 current versions, the refresh loads no evidence. Otherwise it loads evidence
@@ -295,8 +297,10 @@ distinct expectation, each scoped to what the Action changed:
 | Earned page | each tracked prompt whose answers cited the page: its composite score rises against its score in the snapshot's audit | the next audit that ran the prompt |
 | Content gap (`owned_url_cited`) | an answer to the angle's prompts cites an owned URL: the improved page's URL, or for a new page any owned URL outside those already cited for the prompts from the gap's window start to go-live | the next default-market visibility run that asked one of the prompts |
 
-A finding nothing can isolate — a product, category or theme, or a visibility
-finding with no prompt — gets no check: the project-wide score moves for
+| Per-product commerce metric (`product_metric`) | the rule's metric for the product clears its frozen target over the matched answers completed after go-live and up to the run: one appearance (`product_not_mentioned`), a median quoted price within the configured share of the catalog price (`price_mismatch`), the configured win rate (`losing_position`), one answer sending shoppers to an owned host (`merchant_absent`); fewer samples than the rule needs reads `waiting`, a missing catalog price or archived product `unavailable` | each completed audit, brand or Commerce, after go-live |
+
+A finding nothing else can isolate — a category, a catalog field gap or a
+theme, or a visibility finding with no prompt — gets no check: the project-wide score moves for
 reasons the Action never touched, and site-wide clicks include every other
 page. The declaration still records the work, and the Action reads as
 implemented with nothing to measure.
