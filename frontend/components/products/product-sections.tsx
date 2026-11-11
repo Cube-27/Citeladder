@@ -10,11 +10,11 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { MissingValue } from '@/components/ui/unavailable-value';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
+import { Measured } from '@/components/products/measured';
 import type { CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
-import { formatCount, formatPercent, pluralCount } from '@/lib/format';
-import { holderLabel } from '@/lib/products/product-columns';
+import { formatCount, pluralCount } from '@/lib/format';
+import { formatPosition, formatRate, holderCaption } from '@/lib/products/product-columns';
 import { productHref, type ProductScopeFilters } from '@/lib/products/product-filters';
 import { useEngineCatalog } from '@/lib/providers/engines';
 
@@ -25,16 +25,6 @@ const OUTCOMES: Record<Answer['outcome'], { label: string; tone: StatusValue }> 
   lost: { label: 'Lost', tone: 'danger' },
   unranked: { label: 'Unranked', tone: 'info' },
 };
-
-/** A rate or mean, the word for unavailable when nothing in scope measured it. */
-function Measured({
-  value,
-  format,
-}: Readonly<{ value: number | null; format: (v: number) => string }>) {
-  return value === null ? <MissingValue state="unavailable" /> : <>{format(value)}</>;
-}
-const percent = (value: number) => formatPercent(value, 1);
-const rank = (value: number) => value.toFixed(1);
 
 /** One titled card holding a ledger, or a sentence when the ledger is empty. */
 function Section({
@@ -96,16 +86,13 @@ export function CompetingProducts({
             </TextLink>
           }
           secondary={[
-            row.brand,
-            holderLabel(row.kind),
+            holderCaption(row),
             `In ${pluralCount(row.shared, 'shared answer')}`,
             `ranked above it in ${formatCount(row.ahead)}`,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
+          ].join(' · ')}
           end={
             <span className="type-caption tabular-nums">
-              Position <Measured value={row.position} format={rank} />
+              Position <Measured value={row.position} format={formatPosition} />
             </span>
           }
         />
@@ -196,10 +183,10 @@ export function PromptMetrics({ detail }: Readonly<{ detail: CommerceProductDeta
           primary={row.text}
           secondary={
             <>
-              Visibility <Measured value={row.visibility} format={percent} /> (
+              Visibility <Measured value={row.visibility} format={formatRate} /> (
               {formatCount(row.appearances)} of {pluralCount(row.executions, 'answer')}) · Win rate{' '}
-              <Measured value={row.win_rate} format={percent} /> · Position{' '}
-              <Measured value={row.position} format={rank} />
+              <Measured value={row.win_rate} format={formatRate} /> · Position{' '}
+              <Measured value={row.position} format={formatPosition} />
             </>
           }
         />

@@ -19,7 +19,7 @@ import { importCatalog } from './commerce-support.ts';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { auditTenant } from './audit-fixtures.ts';
-import { recordAnswer, type AnswerEvidence } from './commerce-answer-fixtures.ts';
+import { addCompetitor, recordAnswer, type AnswerEvidence } from './commerce-answer-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
@@ -47,32 +47,6 @@ async function answer(t: Tenant, text: string, evidence?: AnswerEvidence): Promi
   });
   tasks.push(taskId);
   return taskId;
-}
-
-async function candidate(t: Tenant, values: { name: string; state: string; source: string }) {
-  const product = await db
-    .selectFrom('commerce_products')
-    .select('id')
-    .where('workspace_id', '=', t.workspaceId)
-    .where('name', '=', 'Acme Road Runner')
-    .executeTakeFirstOrThrow();
-  await db
-    .insertInto('commerce_competitor_candidates')
-    .values({
-      id: randomUUID(),
-      workspace_id: t.workspaceId,
-      project_id: t.projectId,
-      target_kind: 'product',
-      target_id: product.id,
-      canonical_url: `https://rival.example/products/${values.name.toLowerCase().replaceAll(' ', '-')}`,
-      product_name: values.name,
-      brand_name: values.name.split(' ')[0]!,
-      evidence: '{}',
-      source_kind: values.source,
-      state: values.state,
-      created_at: new Date(),
-    })
-    .execute();
 }
 
 /** The quote and merchant on one task's observation of a product. */
@@ -125,10 +99,10 @@ beforeAll(async () => {
     );
   // Approved competitors enter the next audit's catalog revision; the others
   // are listed by state alone (AI-observed pending) or not at all.
-  await candidate(t, { name: 'Rival Pacer', state: 'approved', source: 'provider' });
-  await candidate(t, { name: 'Zoom Glide', state: 'pending', source: 'ai_observed' });
-  await candidate(t, { name: 'Dropped Dash', state: 'rejected', source: 'ai_observed' });
-  await candidate(t, { name: 'Unreviewed Racer', state: 'pending', source: 'provider' });
+  await addCompetitor(db, t, 'Rival Pacer');
+  await addCompetitor(db, t, 'Zoom Glide', { state: 'pending', source: 'ai_observed' });
+  await addCompetitor(db, t, 'Dropped Dash', { state: 'rejected', source: 'ai_observed' });
+  await addCompetitor(db, t, 'Unreviewed Racer', { state: 'pending' });
 
   first = await answer(
     t,

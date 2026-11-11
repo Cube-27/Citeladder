@@ -3,6 +3,8 @@
  * path: one audit of the tenant's prompt whose single ChatGPT answer is the
  * given text, claimed, matched against the catalog and persisted as a success.
  */
+import { randomUUID } from 'node:crypto';
+
 import type { AuditRuntime } from '../src/audits/config.ts';
 import { createAudits } from '../src/audits/creation.ts';
 import { auditInput } from '../src/audits/inputs.ts';
@@ -89,4 +91,40 @@ export async function recordAnswer(
   const derive = await prepareShelfExecution(db, task, result, null);
   await persistExecutionSuccess(db, task, claim!.lease_owner, result, derive);
   return { auditId: auditId!, taskId: task.id };
+}
+
+/**
+ * A competitor candidate of the catalog's Acme Road Runner, at its own
+ * rival.example page; approved from a provider unless `state` and `source` say
+ * otherwise.
+ */
+export async function addCompetitor(
+  db: Database,
+  t: Tenant,
+  name: string,
+  { state = 'approved', source = 'provider' }: { state?: string; source?: string } = {},
+) {
+  const product = await db
+    .selectFrom('commerce_products')
+    .select('id')
+    .where('workspace_id', '=', t.workspaceId)
+    .where('name', '=', 'Acme Road Runner')
+    .executeTakeFirstOrThrow();
+  await db
+    .insertInto('commerce_competitor_candidates')
+    .values({
+      id: randomUUID(),
+      workspace_id: t.workspaceId,
+      project_id: t.projectId,
+      target_kind: 'product',
+      target_id: product.id,
+      canonical_url: `https://rival.example/products/${name.toLowerCase().replaceAll(' ', '-')}`,
+      product_name: name,
+      brand_name: name.split(' ')[0]!,
+      evidence: '{}',
+      source_kind: source,
+      state,
+      created_at: new Date(),
+    })
+    .execute();
 }
