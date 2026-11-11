@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
-import { benchmarkModeSchema, projectSchema } from '@citeladder/contracts/project';
+import {
+  benchmarkModeSchema,
+  projectSchema,
+  projectSummarySchema,
+} from '@citeladder/contracts/project';
 import type { Insertable, Selectable } from 'kysely';
 import type { z } from 'zod';
 
@@ -155,6 +159,53 @@ export async function readProject(
   const result = await views(db, entitlements, [await projectRow(db, scope)]);
   return firstOf(result, 'the view built for the loaded project');
 }
+export type ProjectSummaryView = z.input<typeof projectSummarySchema>;
+
+/**
+ * The workspace's projects as the switcher shows them: one read, newest
+ * first, with the brand entity's name and logo where it has them.
+ */
+export async function listProjectSummaries(
+  db: Database,
+  workspaceId: string,
+): Promise<ProjectSummaryView[]> {
+  const rows = await db
+    .selectFrom('projects')
+    .leftJoinLateral(
+      (eb) =>
+        eb
+          .selectFrom('brands')
+          .select(['brands.name', 'brands.logo_asset_id'])
+          .whereRef('brands.project_id', '=', 'projects.id')
+          .where('brands.workspace_id', '=', workspaceId)
+          .orderBy('brands.created_at')
+          .orderBy('brands.id')
+          .limit(1)
+          .as('brand'),
+      (join) => join.onTrue(),
+    )
+    .select([
+      'projects.id',
+      'projects.name',
+      'projects.brand_name',
+      'projects.website_url',
+      'brand.name as brand_entity_name',
+      'brand.logo_asset_id',
+    ])
+    .where('projects.workspace_id', '=', workspaceId)
+    .orderBy('projects.created_at', 'desc')
+    .orderBy('projects.id', 'desc')
+    .execute();
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    brand_name: row.brand_entity_name ?? row.brand_name,
+    website_url: row.website_url,
+    brand: { logo_url: row.logo_asset_id ? brandLogoUrl(row.id) : null },
+  }));
+}
+
+/** Full views of every project: the public API's list. */
 export async function listProjects(
   db: Database,
   entitlements: WorkspaceEntitlements,

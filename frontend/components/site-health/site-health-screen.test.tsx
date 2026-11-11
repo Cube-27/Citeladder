@@ -520,6 +520,7 @@ describe('SiteHealthScreen — canonical single-screen flow (regression)', () =>
 
     mswServer.use(
       http.get('/api/v1/projects', () => HttpResponse.json([project])),
+      http.get(`/api/v1/projects/${PROJECT}`, () => HttpResponse.json(project)),
       http.get(ENTITLEMENT_PATH, () => HttpResponse.json(entitlement)),
       http.get(`/api/v1/projects/${PROJECT}/site-health`, () =>
         HttpResponse.json({
