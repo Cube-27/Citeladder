@@ -20,7 +20,7 @@ type Observation = Pick<
 >;
 
 /** A rank only an ordered answer supplies. */
-export const orderedRank = (row: Pick<Observation, 'order_observable' | 'rank'>) =>
+const orderedRank = (row: Pick<Observation, 'order_observable' | 'rank'>) =>
   row.order_observable ? row.rank : null;
 
 /**
@@ -44,7 +44,7 @@ function outranks(row: Observation, other: Observation) {
  * does not recognize. A pending AI-observed competitor has an identity but
  * holds no slot (`shelfMetrics`).
  */
-export function holderIdentity(
+function holderIdentity(
   row: Pick<Observation, 'classification' | 'product_id' | 'competitor_candidate_id'>,
 ): string | null {
   if (row.classification === 'owned') return row.product_id;

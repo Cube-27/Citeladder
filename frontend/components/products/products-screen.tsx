@@ -237,6 +237,7 @@ function ProductsContent({
             ) : null}
             <ProductsTable
               query={page}
+              scope={filters}
               columns={columns.shown}
               sort={filters.sort}
               onSort={productFilters.setSort}

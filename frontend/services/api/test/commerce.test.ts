@@ -3,9 +3,9 @@ import type {
   BuyerPrompt,
   CatalogImport,
   CommerceCatalog,
+  CommerceProductDetail,
   CompetitorCandidate,
   CompetitorDiscoveryTask,
-  Shelf,
 } from '@citeladder/contracts/commerce-suite';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.ts';
@@ -90,7 +90,7 @@ describe('Commerce workspace boundaries', () => {
     [`/competitors/${randomUUID()}`, 'PATCH', { decision: 'approved' }],
     ['/buyer-prompts', 'GET', undefined],
     [`/buyer-prompts/${randomUUID()}`, 'PATCH', { approved: true }],
-    [`/ai-shelf?target_kind=product&target_id=${randomUUID()}`, 'GET', undefined],
+    [`/products/${randomUUID()}`, 'GET', undefined],
   ] as const;
   it('requires sessions, membership, the active project workspace, and write capability on every route', async () => {
     const outsider = await fixtures.user();
@@ -547,132 +547,23 @@ describe('decisions and persisted reads', () => {
     ).toMatchObject({ target, terminal: true, error_code: 'unavailable' });
     expect((await call(`/competitors/discoveries?task_ids=${randomUUID()}`)).status).toBe(404);
   });
-  it('reads the latest snapshot, the recommendations behind it and open target Actions', async () => {
-    expect((await call('/ai-shelf')).status).toBe(422);
-    const targetId = randomUUID();
-    const path = `/ai-shelf?target_kind=product&target_id=${targetId}`;
-    expect((await call<Shelf>(path)).body).toMatchObject({
-      snapshot: null,
-      holders: [],
-      unresolved_count: 0,
-      actions: [],
-    });
-    const audit = await fixtures.audit(t, { scope: 'commerce' });
-    const execution = await fixtures.execution(t, { auditId: audit });
-    const evidence = await db
-      .selectFrom('response_analyses')
-      .select('artifact_id')
-      .where('id', '=', execution.analysisId!)
-      .executeTakeFirstOrThrow();
+  it("reads one product's page with its open Actions, and no page for an unknown holder", async () => {
+    expect((await call(`/products/${randomUUID()}`)).status).toBe(404);
     const product = (await importCsv()).body.row_outcomes[0]!.product_id!;
-    const passId = randomUUID();
-    await db
-      .insertInto('commerce_match_passes')
-      .values({
-        id: passId,
-        workspace_id: t.workspaceId,
-        project_id: t.projectId,
-        audit_id: audit,
-        task_id: execution.taskId,
-        artifact_id: evidence.artifact_id,
-        catalog_revision_id: null,
-        target_kind: 'product',
-        target_id: targetId,
-        parser_version: '1',
-        matcher_version: '1',
-        mode: 'live',
-        created_at: new Date(),
-      })
-      .execute();
-    const observation = (values: {
-      classification: string;
-      product_id: string | null;
-      rank: number | null;
-      observed_product: string;
-    }) => ({
-      id: randomUUID(),
-      workspace_id: t.workspaceId,
-      project_id: t.projectId,
-      audit_id: audit,
-      task_id: execution.taskId,
-      artifact_id: evidence.artifact_id,
-      pass_id: passId,
-      target_kind: 'product',
-      target_id: targetId,
-      competitor_candidate_id: null,
-      observed_brand: '',
-      observed_title: values.observed_product,
-      observed_price: null,
-      observed_currency: '',
-      merchant_url: '',
-      merchant_domain: 'shop.example',
-      surface_kind: 'recommendation',
-      order_observable: values.rank !== null,
-      match_confidence: 1,
-      model_version: '',
-      parser_version: '1',
-      matcher_version: '1',
-      created_at: new Date(),
-      ...values,
-    });
-    const rows = [
-      observation({
-        classification: 'owned',
-        product_id: product,
-        rank: 2,
-        observed_product: 'Widget',
-      }),
-      observation({
-        classification: 'owned',
-        product_id: product,
-        rank: null,
-        observed_product: 'Widget',
-      }),
-      observation({
-        classification: 'unresolved',
-        product_id: null,
-        rank: 1,
-        observed_product: 'Gadget',
-      }),
-    ];
-    await db.insertInto('commerce_recommendation_observations').values(rows).execute();
-    const snapshot = (auditId: string, createdAt: Date, executions: number) => ({
-      id: randomUUID(),
-      workspace_id: t.workspaceId,
-      project_id: t.projectId,
-      audit_id: auditId,
-      target_kind: 'product',
-      target_id: targetId,
-      product_visibility: executions ? 1 : 0,
-      share_of_shelf: executions ? 1 : null,
-      average_shelf_position: executions ? 2 : null,
-      first_position_win_rate: null,
-      successful_execution_count: executions,
-      recognized_slot_count: executions,
-      ranked_execution_count: executions,
-      formula_version: 'commerce-shelf-formulas-1',
-      source_observation_ids: JSON.stringify(executions ? rows.map((row) => row.id) : []),
-      context_snapshot: '{}',
-      created_at: createdAt,
-    });
-    await db
-      .insertInto('commerce_shelf_snapshots')
-      .values(snapshot(audit, new Date('2026-10-01T00:00:00Z'), 1))
-      .execute();
     const opportunity = opportunityRow(
       { workspace_id: t.workspaceId, project_id: t.projectId },
       {
         rule_id: 'catalog_fields_missing',
         opportunity_type: 'commerce',
         severity: 'medium',
-        target_key: `product:${targetId}`,
+        target_key: `product:${product}`,
         title: 'Add the missing price',
       },
     );
     await db.insertInto('opportunities').values(opportunity).execute();
     const action = actionRow(
       { workspace_id: t.workspaceId, project_id: t.projectId },
-      { group_key: `product:${targetId}`, target_kind: 'product', target_label: 'Widget' },
+      { group_key: `product:${product}`, target_kind: 'product', target_label: 'One, large' },
     );
     await db.insertInto('actions').values(action).execute();
     await db
@@ -681,30 +572,23 @@ describe('decisions and persisted reads', () => {
       .where('id', '=', opportunity.id)
       .execute();
 
-    const measured = (await call<Shelf>(path)).body;
-    expect(measured.snapshot).toMatchObject({ product_visibility: 1, average_shelf_position: 2 });
-    // Two mentions of one product in one answer are one holder, at its best rank.
-    expect(measured.holders).toEqual([
-      {
-        kind: 'owned',
-        name: 'Widget',
-        brand: '',
-        merchant_domain: 'shop.example',
-        appearances: 1,
-        best_rank: 2,
-      },
-    ]);
-    expect(measured.unresolved_count).toBe(1);
+    const path = `/products/${product}`;
+    const measured = (await call<CommerceProductDetail>(path)).body;
+    // No answer in scope: visibility is unavailable, appearances a real zero.
+    expect(measured.product).toMatchObject({
+      name: 'One, large',
+      visibility: null,
+      appearances: 0,
+      win_rate: null,
+      catalog_price: { min: 19.25, max: 19.25, currency: '' },
+      image_url: null,
+    });
+    expect(measured.answers).toEqual([]);
     expect(measured.actions).toEqual([
       { id: action.id, title: 'Add the missing price', status: 'open' },
     ]);
+    expect((await call(`${path}?window=14`)).status).toBe(422);
 
-    // A later audit in which no answer succeeded is unavailable, not zero.
-    const later = await fixtures.audit(t, { scope: 'commerce' });
-    await db
-      .insertInto('commerce_shelf_snapshots')
-      .values(snapshot(later, new Date('2026-10-02T00:00:00Z'), 0))
-      .execute();
     await updateActionStatus(
       db,
       { workspaceId: t.workspaceId, projectId: null },
@@ -712,12 +596,6 @@ describe('decisions and persisted reads', () => {
       'dismissed',
       t.userId,
     );
-    const failed = (await call<Shelf>(path)).body;
-    expect(failed.snapshot).toMatchObject({
-      product_visibility: null,
-      successful_execution_count: 0,
-    });
-    expect(failed.holders).toEqual([]);
-    expect(failed.actions).toEqual([]);
+    expect((await call<CommerceProductDetail>(path)).body.actions).toEqual([]);
   });
 });

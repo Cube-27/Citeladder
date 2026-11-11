@@ -34,7 +34,12 @@ function forTarget(
   return rows.filter((row) => sameTarget(row.target, target));
 }
 
-export function TargetPrompts({
+/**
+ * The buyer prompts that measure one catalog product (hero-product prompts)
+ * or category (its shopping-prompt matrix), on its page's Setup: generate,
+ * approve, add manually, and review and launch an audit.
+ */
+export function SetupPrompts({
   projectId,
   target,
   targetLabel,
@@ -51,7 +56,7 @@ export function TargetPrompts({
   const [launchedAuditId, setLaunchedAuditId] = useState<string | null>(null);
   const [shortfall, setShortfall] = useState<number | null>(null);
   const [matrixOpen, setMatrixOpen] = useState(false);
-  // The audit stream refreshes AI Shelf and Actions here when the run finishes.
+  // The audit stream refreshes the product metrics and Actions when the run finishes.
   useRunEvents(launchedAuditId, projectId, Boolean(launchedAuditId));
   const scope = { workspaceId, projectId };
   const generate = useMutation(commerceMutations.generateBuyerPrompts(scope));
@@ -107,7 +112,7 @@ export function TargetPrompts({
         <CardDescription>
           {approvedIds.length
             ? 'Generated prompts stay disabled until you approve them.'
-            : 'Approve at least one prompt to launch an audit for this target.'}
+            : `Approve at least one prompt to launch an audit for this ${target.kind}.`}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -122,7 +127,7 @@ export function TargetPrompts({
           ) : null}
           {launchedAuditId ? (
             <Callout tone="info">
-              Audit launched. Shelf metrics update here when it finishes.{' '}
+              Audit launched. The metrics update when it finishes.{' '}
               <ProjectLink href={`/runs/${launchedAuditId}`}>View the run</ProjectLink>
             </Callout>
           ) : null}
@@ -191,7 +196,7 @@ function PromptRows({
       <QueryState
         kind="empty"
         icon={MessageSquare}
-        heading="No prompts yet for this target"
+        heading="No prompts yet"
         description="Generate a set, or add one manually."
         headingLevel={3}
       />
