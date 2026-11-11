@@ -12,6 +12,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { Pressable } from '@/components/ui/pressable';
 import { SegmentedControl } from '@/components/ui/tabs';
+import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { agentWriteFailure, isOutputConflict } from '@/lib/agent/errors';
 import { groupByPassage } from '@/lib/agent/page-workspace';
@@ -19,6 +20,7 @@ import {
   PAGE_CHANGED_COPY,
   suggestionCategoryLabel,
   suggestionStaleCopy,
+  suggestionStrengthCopy,
 } from '@/lib/agent/vocabulary';
 import {
   agentMutations,
@@ -106,6 +108,27 @@ function SuggestionText({ suggestion }: Readonly<{ suggestion: AgentSuggestion }
         </span>
       ) : null}
     </Stack>
+  );
+}
+
+type Guidance = NonNullable<AgentSuggestion['guidance']>;
+
+/** A heuristic or a search policy says so beside the category; a recommendation needs no label. */
+function StrengthBadge({ guidance }: Readonly<{ guidance: Guidance | null }>) {
+  const badge = guidance ? suggestionStrengthCopy(guidance.strength).badge : null;
+  return badge ? <Badge tone="neutral">{badge}</Badge> : null;
+}
+
+/** Where the suggestion's rule comes from, linked, worded as an option unless it is a policy. */
+function RuleSource({ guidance }: Readonly<{ guidance: Guidance | null }>) {
+  if (!guidance) return null;
+  return (
+    <p className={textRole('caption')}>
+      {suggestionStrengthCopy(guidance.strength).lead}{' '}
+      <TextLink variant="external" href={guidance.source_url} text="inherit">
+        {guidance.source_label}
+      </TextLink>
+    </p>
   );
 }
 
@@ -197,6 +220,7 @@ function SuggestionCard({
         <Badge tone={suggestion.readiness === 'needs_input' ? 'warning' : 'info'}>
           {suggestionCategoryLabel(suggestion.category)}
         </Badge>
+        <StrengthBadge guidance={suggestion.guidance} />
         {suggestion.readiness === 'needs_input' ? <Badge tone="warning">Needs input</Badge> : null}
         {suggestion.choose_one ? <Badge tone="neutral">Choose one</Badge> : null}
       </Inline>
@@ -211,6 +235,7 @@ function SuggestionCard({
       {suggestion.readiness !== 'advice' ? (
         <p className={textRole('caption')}>{suggestion.rationale}</p>
       ) : null}
+      <RuleSource guidance={suggestion.guidance} />
       {suggestion.choose_one ? (
         <p className={textRole('caption')}>
           It overlaps another suggestion, so Apply all leaves it for you to choose.

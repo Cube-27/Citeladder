@@ -251,6 +251,7 @@ export interface AgentOutputSuggestions {
   rationale: string;
   replacement: string | null;
   revision_id: string;
+  rule_guidance: Json | null;
   rule_id: string;
   rule_version: string | null;
   run_id: string | null;
@@ -1264,8 +1265,12 @@ export interface CommerceRecommendationObservations {
   model_version: string;
   observed_brand: string;
   observed_currency: string;
+  observed_external_product_id: string | null;
+  observed_image_url: string | null;
+  observed_merchant_name: string | null;
   observed_price: Numeric | null;
   observed_product: string;
+  observed_tag: string | null;
   observed_title: string;
   order_observable: boolean;
   parser_version: string;

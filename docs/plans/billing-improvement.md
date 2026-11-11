@@ -1,7 +1,8 @@
 # Billing, entitlements and usage improvement
 
-Feature 11 of the [feature review programme](../archive/feature-review-tracker.md),
-started 2026-10-11 from the [backlog](backlog.md#billing-entitlements-and-usage-review).
+Feature 11 of the feature review programme (now deleted),
+started 2026-10-11 from the backlog; its remaining items are in the
+[backlog's billing section](backlog.md#billing-and-entitlements).
 Owner documents: [Billing and entitlements](../billing-entitlements.md) and
 [provider readiness](../billing-provider-readiness.md).
 

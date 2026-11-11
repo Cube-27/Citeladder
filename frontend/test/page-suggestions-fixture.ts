@@ -60,7 +60,12 @@ export function spanSuggestion(
     revision_id: REV1,
     source: 'model',
     category: 'clarity',
-    rule_id: 'clarity.plain_words',
+    rule_id: 'clarity.fluent_prose',
+    guidance: {
+      strength: 'heuristic',
+      source_label: 'Aggarwal et al. 2024, GEO (research)',
+      source_url: 'https://arxiv.org/abs/2311.09735',
+    },
     rationale: `Say "${exact}" more plainly.`,
     anchor: { kind: 'span', position, quote: { exact, prefix: '', suffix: '' } },
     depends_on: [{ kind: 'span' }],

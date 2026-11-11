@@ -884,10 +884,9 @@ persisted against the response, so nothing links one to a citation.
 Browser history restores the analytical context. Competitor suggestions remain
 in Overview Facts rather than becoming measurement evidence automatically.
 
-The [pending integrations work](plans/backlog.md#integrations-and-ai-visibility)
-covers Opportunity sorting, Trends summaries and selected-search-query generation.
-Existing observed-query context does not mean that selection/provenance UX is
-complete. Historical evaluation numbers do not establish current acceptance
+Evidence-backed Opportunity sorting and a Trends summary are not planned
+([decision BL10](decisions.md#backlog-closure)). Existing observed-query
+context does not mean that selection/provenance UX is complete. Historical evaluation numbers do not establish current acceptance
 or a model recommendation.
 
 ### One prompt over time
