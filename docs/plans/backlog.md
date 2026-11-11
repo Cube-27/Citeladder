@@ -1,389 +1,234 @@
 # Backlog
 
-Consolidated on 7 October 2026 and again on 11 October 2026, when the feature
-review programme and the competitive feature tracker were archived. This is the single remaining-work record, queued
-through [plan status](ACTIVE.md). It records documented status, not a fresh code
-audit or production acceptance. Historical plans have been archived; their removal
-does not close the unfinished work below.
+Closed into three tiers by the owner on 11 November 2026
+([decisions BL1–BL12](../decisions.md#backlog-closure), [B74](../billing-decisions.md#backlog-closure-2026-11-11)).
+This is the single remaining-work record; [plan status](ACTIVE.md) says what is
+active. Feature owners in [the documentation index](../README.md) and the
+accepted [invariants](../invariants.md) remain authoritative. Establish a
+current owner and code inventory when an item is scoped.
 
-Select and scope an item before implementation. Order here is organizational, not
-an approved delivery sequence. Feature owners in [the documentation index](../README.md)
-and accepted [invariants](../invariants.md) remain authoritative. No archived document
-is required to select work; establish a current owner/code inventory when scoping it.
+| Tier | What it holds | Where the work is |
+|---|---|---|
+| 1. Build now | Agent verified completion, Site Health scheduling and crawl options, UI remainders, security and cloud cleanup | [Backlog implementation plan](backlog-implementation.md) |
+| 2. Before launch | Compliance, hardening, billing and the release acceptance gates | Below |
+| 3. Low priority | Kept for future reference only; not queued | Below |
 
-## Remaining engineering
+Items removed on 11 November 2026 (BL10) are listed at the end so that nobody
+re-adds them from old text.
 
-### Agent verified completion
+## Tier 1: build now
 
-Queued in the [priority backlog](priority_backlog.md): the remaining Agent
-trust fixes, then issue-group Actions, element-level evidence, developer
-handoff and journey coverage, pending the owner's Phase B plan.
+All of tier 1 is in the [backlog implementation plan](backlog-implementation.md),
+split into parallel tracks. UI and UX work comes first (BL1).
 
-### Site Health recrawl and scheduled crawls (top priority)
+## Tier 2: before launch
 
-The owner set these two as the top Site Health priorities on 17 October 2026
-([decision](../decisions.md#site-health-crawler-parity-checks-and-apples-crawlers)).
-
-- **Recrawl** moved to [Insight parity](insight-parity.md) PR 3 (I13).
-- **Scheduled crawls.** Site Health has no schedule; `audits/schedules.ts` covers
-  visibility audits only. Add a per-project recrawl cadence that runs through the
-  existing PostgreSQL queue and tick, reserves the period's fetch budget like a
-  manual crawl, and skips a run while one is still active. Decide cadence options
-  and plan gating with the owner before building.
-
-Owners: [Site Health](../site-health.md) and
-[Billing and entitlements](../billing-entitlements.md) for budgets.
+Work that matters once customers or payments exist. Build each item before the
+first paying customer, or before payments are enabled where it says so.
 
 ### Audit remediation and enterprise readiness
 
-PR 1 (#156) and partial PR 2 (#158) are implemented. Extend existing workspace,
-integration, Agent, MCP, acquisition and security-event owners:
+PR 1 (#156) and part of PR 2 (#158) are implemented. Extend the existing
+workspace, integration, Agent, MCP, acquisition and security-event owners:
 
-- Durable operator export/deletion jobs with verified authority, scope, deadlines,
-  idempotency, progress, failures and category-specific legal holds. Distinguish
-  account, workspace, project and integration-history requests.
-- Execution/access fences across API admission, schedules, queues, credentials,
-  Agent and MCP, including dispatch and terminal writes. Retries and late workers
-  must not recreate deleted data; preserve other members' workspaces and require
-  ownership transfer or explicit closure for a sole owner's workspace.
-- Redacted JSON/CSV exports and Agent Markdown with provenance and omission/licensing
-  manifests; no secrets. Retryable purge, deletion replay before restored access
-  reopens, and separate backup-expiry verification. Reactivation may cancel scheduled
-  offboarding before purge, never silently cancel explicit deletion.
-- Remaining security-event callers and recoverable policy-revision history. Enterprise
-  agreement references and some membership, Google and credential events already
-  exist. Events must reflect committed operations and exclude confidential payloads.
-- Owned-site authority receipts and broader direct-acquisition robots/pacing coverage.
-  Resolve the sitemap/link observation ordering dependency before the broader cutover;
+- Durable operator export and deletion jobs with verified authority, scope,
+  deadlines, idempotency, progress, failures and category-specific legal holds.
+  Distinguish account, workspace, project and integration-history requests.
+- Execution and access fences across API admission, schedules, queues,
+  credentials, Agent and MCP, including dispatch and terminal writes. Retries
+  and late workers must not recreate deleted data. Preserve other members'
+  workspaces, and require ownership transfer or explicit closure for a sole
+  owner's workspace.
+- Redacted JSON/CSV exports and Agent Markdown with provenance and
+  omission/licensing manifests, and no secrets. Retryable purge, deletion replay
+  before restored access reopens, and separate backup-expiry verification.
+  Reactivation may cancel scheduled offboarding before purge, but never silently
+  cancels an explicit deletion.
+- The remaining security-event callers and recoverable policy-revision history.
+  Events reflect committed operations and exclude confidential payloads.
+- Broader direct-acquisition robots and pacing coverage. Resolve the
+  sitemap/link observation ordering dependency before the broader cutover;
   preserve immutable provenance, SSRF controls, suppression and the kill switch.
-- Enforced provider licensing permissions for storage, display, export, Agent and MCP;
-  Google revocation/history deletion and permitted downstream-use controls. Ambiguous
-  rights block the affected use until approved evidence exists.
-- Policy/enterprise package closure, deployed dependency and asset notices, and
-  subprocessor-change notification mechanics with an accountable owner.
+- Enforced provider licensing permissions for storage, display, export, Agent
+  and MCP; Google revocation and history deletion, and permitted downstream-use
+  controls. Ambiguous rights block the affected use until approved evidence
+  exists.
+- Policy and enterprise package closure, deployed dependency and asset notices,
+  and subprocessor-change notification mechanics with an accountable owner.
 
-**Retention requirements:** trial expiry requires active-data purge within 30 calendar
-days; paid-service end allows 30 calendar days for export, then a further 30 to purge;
-verified deletion requests require deletion within 30 calendar days or sooner where
-required. Residual backups expire within 90 calendar days of active deletion, preserving
-shorter existing lifetimes. Necessary legal records/holds are category-scoped exceptions.
+**Retention requirements:** trial expiry requires active-data purge within 30
+calendar days. Paid-service end allows 30 calendar days for export, then a
+further 30 to purge. Verified deletion requests require deletion within 30
+calendar days, or sooner where required. Residual backups expire within 90
+calendar days of active deletion, keeping shorter existing lifetimes. Necessary
+legal records and holds are category-scoped exceptions.
 
-**Scope decision:** reconcile purge with immutable billing/financial evidence and
-restrictive foreign keys. Decide whether narrow retention-related schema separation
-is allowed; do not cascade or weaken accounting provenance. Affected purge stays
-disabled until resolved. Independent engineering is not blocked wholesale.
+**Scope decision still open:** reconcile purge with immutable billing and
+financial evidence and restrictive foreign keys. Decide whether narrow
+retention-related schema separation is allowed; never cascade or weaken
+accounting provenance. Affected purge stays disabled until this is resolved.
 
 Owners: [Workspace access](../workspace-access.md), [MCP](../mcp.md),
-[Agent](../agents.md), [Site Health](../site-health.md), [Earned sources](../earned-sources.md),
-[Connected data](../integrations-traffic-analytics.md) and [Billing](../billing-entitlements.md).
-
-### Integrations and AI Visibility
-
-- Improve evidence-backed Opportunity sorting/labels without another blended score;
-  expose existing three-leg verification, gap changes, overlapping actions and
-  the causality notice.
-- Add an evidence-grounded Trends summary with comparable selection.
-- Match GA4 properties to the project through their web data-stream URL. Search
-  Console and Bing properties are already matched to the project's site; GA4
-  summaries carry no URL, and matching them would add a provider call per property.
-  Assess moving history-backfill fan-out from HTTP into the existing task owner.
-- Connected-data storage (feature 6 review): snapshot retention, and storing
-  page/query stats once per window instead of once per granularity. This needs a
-  reference inventory across verification, Opportunity and Demand provenance, and
-  a growth measurement on production, before anything is pruned.
-- Retire the referral events and classification tables in favour of inline
-  classification from metric rows (the `ga4_referrer_daily` half is never read),
-  under the replacement gate. The retention sweep is never scheduled; if it
-  is scheduled first, set its retention to at least the longest preset.
-- Extend history after a plan upgrade, with per-provider history caps (Search
-  Console keeps 16 months, so longer requests would read as false zeros). Wait
-  until billing is live.
-- Per-stat coverage in the Performance contract, so that one flagged day stops
-  turning zeros into unavailable values across the whole window.
-- A UI for branded-query overrides (API only today), and a decision on the two
-  query-evidence routes that only MCP or nothing calls.
-- Review server-side Query Fanout grouping; full-selection totals already run there.
-- Verify public copy and correct unsupported claims of importing first-party
-  generative-AI Search Console reports. Integration requires a documented endpoint,
-  supported authentication and an authorized successful response. Do not scrape an
-  authenticated dashboard or substitute ordinary search traffic; keep first-party
-  AI observations separate from search traffic and CiteLadder experiments.
-
-Quick generation is grounded in persisted Search Console queries and published
-Search Intelligence keywords (F6); observed queries steer phrasing and are never
-adoptable candidates. Never auto-replace the tracked portfolio, equate GSC impressions with AI prompt volume,
-overwrite the user's Content skill choice or auto-publish.
-
-Owners: [Connected data](../integrations-traffic-analytics.md),
-[Visibility](../visibility-prompt.md) and [Opportunities](../opportunities.md).
-
-### Authorized crawl and domain verification
-
-AI Traffic A1–A3 are implemented (#257/#258/#260). Part B remains separate:
-
-- Domain/host verification using DNS TXT, file or meta challenges; scoped attestation,
-  append-only authorization receipts, re-verification, downgrade and revocation.
-  DNS proves the named domain/subdomain with descendants only by opt-in; file/meta
-  verification proves the serving host only; attestation covers the project host.
-- Crawl-policy decisions with live authorization checks before each robots-excluded
-  request, including redirects. Leaving the authorized scope falls back to Standard
-  handling; revocation/downgrade stops further excluded fetches immediately.
-- Settings, verified-scope status and result presentation distinguishing authorized
-  robots-excluded pages from ordinary pages and page-level access failures.
-
-Authorization changes robots handling only, never page access controls, credentials,
-WAF/CAPTCHA handling, rate limits, SSRF protections or suppression. Competitor and
-earned/source acquisition remain Standard. Frozen receipts preserve provenance, not
-perpetual permission. Verification commits before network I/O; reads never verify.
-
-Depends on audit-remediation authority receipts. Before enablement, decide whether
-attestation alone is sufficient, any depth/page-limit differences and legal Terms wording.
-
-Owners: [Site Health](../site-health.md) and [AI Traffic](../ai-traffic.md).
+[Agent](../agents.md), [Site Health](../site-health.md),
+[Earned sources](../earned-sources.md),
+[Connected data](../integrations-traffic-analytics.md) and
+[Billing](../billing-entitlements.md).
 
 ### Production hardening
 
-Repository Phase 1 replay, saved-window/manual-refresh admission and CSP controls
-are shipped. Remaining investigation and policy-dependent work:
+The cloud cleanup is in tier 1. The rest waits for launch:
 
-- Inventory current cloud callers/dependencies before retiring obsolete integrations,
-  keys, APIs or resources and narrowing IAM. Historical VM observations are not
-  current topology evidence.
-- Define and implement measured workspace-wide Demand refresh rate/aggregate limits;
-  one-refresh-per-project only partially addresses that risk.
-- Choose recovery objectives, backup/deletion protections and verify isolated restore.
-- Establish data-preserving release/schema-evolution policy before customer data;
-  protect against accidental reset/destruction.
-- Apply approved production access, recovery access, key lifecycle and purpose-specific
-  log/access/retention controls; measure capacity against agreed workload and budget.
-- Reconcile older provisioning proposals with completed self-serve authentication
-  before scoping additional admission work.
-- Site Health claim scale (from the Site Health review, item 1.8): claim ranking
-  windows over every claimable task row. Add a partial claim index or a
-  per-workspace lateral top-N once queued tasks approach tens of thousands; the
-  acceptance is an index-bounded claim plan with 50k queued tasks.
-- Execution platform remainder (from the feature 14 review, 2026-10-10):
-  - A billing `nextDue` once payments are live.
-  - A due-work probe before a request wake, and a persisted runner-seconds cap,
-    once job cost is measured from billing SKUs.
-  - Alerts on failed job executions and errors, wanted before customers: two
-    multi-hour outages went unnoticed.
-  - Destroy superseded Secret Manager versions.
+- Measured workspace-wide Demand refresh rate and aggregate limits;
+  one-refresh-per-project only partly addresses that risk.
+- Recovery objectives, backup and deletion protections, and a verified isolated
+  restore.
+- A data-preserving release and schema-evolution policy before customer data,
+  with protection against accidental reset or destruction.
+- Approved production access, recovery access, key lifecycle and
+  purpose-specific log, access and retention controls; capacity measured against
+  the agreed workload and budget.
+- Site Health claim scale: the claim ranks windows over every claimable task
+  row. Add a partial claim index or a per-workspace lateral top-N once queued
+  tasks approach tens of thousands. Acceptance is an index-bounded claim plan
+  with 50k queued tasks.
+- Alerts on failed job executions and errors. Two multi-hour outages went
+  unnoticed.
+- Security alerts, explicitly deferred until now.
 
-Security alerts remain explicitly deferred, not an implicit release prerequisite.
-Infrastructure redesigns and paid security tiers require demonstrated need. Recovery,
-retention, access and cost decisions must precede their dependent implementation.
+Infrastructure redesigns and paid security tiers require demonstrated need.
+Recovery, retention, access and cost decisions come before the work that
+depends on them.
 
 Owners: [Google Cloud operations](../operations/GOOGLE_CLOUD.md),
-[GCP runbook](../operations/GCP_RUNBOOK.md) and [Workers runbook](../operations/WORKERS_RUNBOOK.md).
+[GCP runbook](../operations/GCP_RUNBOOK.md) and
+[Workers runbook](../operations/WORKERS_RUNBOOK.md).
 
-### Search Intelligence remainder
+### Billing and entitlements
 
-Deferred by the [Search Intelligence review](../archive/search-intelligence-improvement.md):
+Payments stay disabled until the Razorpay acceptance gate below is signed off.
+Build these before enabling them:
 
-- Per-workspace acquisition limits (feature 11): an entitlement-owned depth and
-  spend limit so enterprise workspaces can run exhaustive research. Today
-  `max_depth` is one configuration value and the confirmed estimate is the
-  per-run ceiling.
-- Bounded readiness and dataset paging indexes: readiness loads every published
-  dataset, and each row page counts with `ilike`. Neither is slow at current
-  volumes; revisit with production row counts.
-- Raw response retention: receipts (up to 8 MB each) are append-only
-  provenance. Retention needs the same reference inventory as the Connected data
-  snapshot-retention item.
+- **B74:** release, never charge, a platform call whose provider request failed
+  and whose settlement also failed (`settleAbandonedCalls` and `settleCall` in
+  `billing/metering.ts` charge it the B35 fallback today).
+- Review the entitlement registry's plan bundles, trial and add-on shape as a
+  whole.
+- Settle the funded monthly reservation to recorded spend once every paid path,
+  including search-surface submissions, records its attempt cost.
+- A billing `nextDue`, a due-work probe before a request wake, and a persisted
+  runner-seconds cap once job cost is measured from billing SKUs.
+- Extend connected-data history after a plan upgrade, with per-provider history
+  caps (Search Console keeps 16 months, so longer requests would read as false
+  zeros).
+- One app-origin source for the public site's pricing CTAs once pricing is
+  enabled.
+- **Billing edge cases (B72).** Re-check each against Razorpay's real webhook,
+  polling and reconciliation behaviour in B8 test mode before deciding:
+  - A full refund of an upgrade bought in an earlier, ended period revokes only
+    that upgrade's grants and does not cancel the subscription.
+  - A base checkout that the abandon sweep already marked `abandoned` ignores a
+    payment that arrives afterwards: no grant, so the payment needs a manual
+    refund.
+  - Razorpay's evidence shape for a subscription it has just cancelled is
+    unverified. S10's handling of a payment on an ended or B52-cancelled
+    subscription (B71) was tested only against the provider fake.
+  - An Agent turn that streamed a document is saved and charged only when it
+    ends `interrupted` (B69). A turn that hits `turn_timeout`, or that the
+    browser closes while a search is pending or before the document's save call
+    was accepted, is still refunded under B58, and its document is not saved.
+
+Owners: [Billing and entitlements](../billing-entitlements.md),
+[billing provider readiness](../billing-provider-readiness.md) and the
+[billing decision log](../billing-decisions.md).
+
+### Search Intelligence
+
+These wait for billing and production row counts:
+
+- Per-workspace acquisition limits: an entitlement-owned depth and spend limit,
+  so enterprise workspaces can run exhaustive research. Today `max_depth` is one
+  configuration value and the confirmed estimate is the per-run ceiling.
+- Bounded readiness and dataset paging indexes. Readiness loads every published
+  dataset, and each row page counts with `ilike`. Revisit with production row
+  counts.
+- Raw response retention. Receipts (up to 8 MB each) are append-only
+  provenance; retention needs a reference inventory first.
 
 Owner: [Connected data](../integrations-traffic-analytics.md#keyword-research-acquisition).
 
-### Public site remainder
+### Acceptance, calibration and rollout
 
-From the [public site review](../archive/public-site-improvement.md): per-page
-stylesheets, and one app-origin source for pricing CTAs once pricing is enabled. Owner:
-[Frontend architecture](../frontend-architecture.md).
-
-### Design system remainder
-
-The [design system consistency plan](../archive/design-system-consistency.md) shipped in
-#318–#320. Its [known remainder](../archive/design-system-consistency.md#known-remainder)
-stays ratcheted by `pnpm check:policy`: hand-rolled `TrendChart` axes,
-section-level skeletons, drawer and table width roles, accent check marks in
-dropdowns, and the blog illustration palette. Each names the owner to change
-first. Owner: [Design](../design.md).
-
-### App geometry remainder
-
-The [app geometry consistency plan](../archive/app-geometry-consistency.md)
-shipped in #434–#442 and PR 7 (zero layering debt, a hard-failing layering
-check). Left, found by the rendered census in PR 7: AI Traffic's Crawlers,
-Activity and Pages control bands hold more filters than fit one row at 982px,
-so the band wraps to 89px against the product's 49 (it fits at 1280). Those
-tabs stay out of `e2e/geometry-census.spec.ts` until the band fits, which
-also leaves `FilterField` (its only fixture-rendered users) unmeasured.
-Fixing it means choosing which filters leave the band. Owner:
-[Design](../design.md).
-
-### App shell review remainder
-
-Deferred by the feature 15 review (2026-10-10, [plan](../archive/app-shell-improvement.md#deferred-to-the-backlog)):
-a first-wave bootstrap that
-starts the project list, entitlement and access reads from the URL or stored
-workspace; a slimmer project list for the switcher; and a command-center
-comparable-audit lookup by narrow columns with one `opportunity_orders` read.
-
-### Billing, entitlements and usage review
-
-Feature 11, the only feature the 2026-10-07 review programme
-([tracker](../archive/feature-review-tracker.md)) did not reach. Important and
-complex: a full audit and rebuild of `billing`, `entitlements` and
-`components/billing` against [Billing and entitlements](../billing-entitlements.md)
-and [billing provider readiness](../billing-provider-readiness.md), following the
-tracker's per-feature process (inventory, verified audit on the four review
-parameters, a plan with owner decisions, phased PRs, then the owner documents).
-
-Items already waiting on it:
-
-- Per-workspace acquisition limits for Search Intelligence (entitlement-owned
-  depth and spend; see Search Intelligence remainder).
-- The registry has grown one version per feature (`entitlements-v6` API access,
-  `v7` the `fact_checking` pilot grant, `v8` market slots): review the plan
-  bundles, trial and add-on shape as a whole.
-- Settle the funded monthly reservation to recorded spend once every paid path
-  records its attempt cost (Visibility review row); billing `nextDue` and a
-  runner-seconds cap (Production hardening); extended history after a plan
-  upgrade (Integrations).
-- Which plan carries SSO and SCIM (D9.2, below).
-- Owner decision (raised by the billing review, #383): when a platform call's
-  provider request fails and its settlement also fails, the call stays reserved
-  and `settleAbandonedCalls` later charges the B35 fallback (up to 10 credits),
-  which may conflict with B47 (a failed request is never billed). Releasing such
-  holds instead needs an Owner entry in [billing decisions](../billing-decisions.md)
-  before code.
-
-Payments stay disabled until the Razorpay acceptance gate below is signed off.
-
-- **Billing edge cases to settle before payments are enabled (B72).** Found while
-  building the [state-machine fixes](state-machine-fixes.md) S10 and S11. The owner
-  deferred all of them: no code change until billing is enabled. Refunds are manual,
-  and a cancellation simply ends the subscription. Re-check each against Razorpay's
-  real webhook, polling and reconciliation behaviour in B8 test mode before deciding:
-  - A full refund of an upgrade bought in an earlier period (one that has already
-    ended) revokes only that upgrade's grants and does not cancel the subscription.
-  - A base checkout that the abandon sweep already marked `abandoned` ignores a
-    payment that arrives afterwards: no grant, so the payment needs a manual refund.
-  - Razorpay's evidence shape for a subscription it has just cancelled is unverified.
-    S10's handling of a payment on an ended or B52-cancelled subscription (B71) was
-    tested only against the provider fake.
-  - An Agent turn that streamed a document is saved and charged only when it ends
-    `interrupted` (B69). A turn that hits `turn_timeout`, or that the browser closes
-    while a search is pending or before the document's save call was accepted, is
-    still refunded under B58, and its document is not saved.
-
-### Enterprise SSO and SCIM
-
-F9 of the [competitive feature tracker](../archive/competitive-feature-tracker.md#f9-enterprise-sso-and-scim-last),
-moved here unbuilt. Important and complex; one or two PRs. Decided (D9.1,
-2026-10-10): WorkOS, implemented last. Open: **D9.2**, which plan carries SSO and
-SCIM (decide with feature 11).
-
-- Prerequisite: the domain verification owner from Authorized crawl and domain
-  verification (DNS TXT challenge, append-only receipts, re-verification,
-  revocation).
-- WorkOS SSO and Directory Sync through a `src/auth/workos.ts` adapter on the
-  shared safe fetcher; a signed directory-event webhook on `api.citeladder.com`.
-- `sso_connections` (workspace, provider, external id, verified domains,
-  `enforce`, default role, disabled_at). Login: email domain lookup, WorkOS
-  redirect, signed-state callback, identity origin `sso`, just-in-time
-  membership with the default role. `enforce` blocks password and Google sign-in
-  for members on verified domains, except the Owner's break-glass path.
-- SCIM: user created, deactivated and group changed map to membership create,
-  removal and role; removal ends sessions and revokes MCP grants and that
-  member's API keys.
-- Entitlement `sso`; a security event for every change.
-- Cost: WorkOS SSO and Directory Sync are each $125 per connection per month
-  at 1–15 connections (volume discounts above); audit log streaming is $125
-  per SIEM connection per month.
-
-Owners: [Workspace access](../workspace-access.md) and [invariants](../invariants.md).
-
-## Deferred proposals
-
-Optional later assignments, not prerequisites for completed features:
-
-| Area | Retained proposal and boundary |
-|---|---|
-| Agent partial-text resume | Display-only SSE streaming is implemented; a dropped stream falls back to polling and the saved reply. Durable partial-text resume (reconnecting mid-reply to text already written) was declined for now; it would need persisted partial text that can never become a saved or approved artifact, and reconnect must not replay execution. |
-| Agent memory promotion | Reviewed Save to Context with expected-base revision, idempotency and source-message provenance. Preferences use instruction revisions; company facts use the reviewed brand-profile owner. |
-| Agent plan execution | Durable user-approved steps/child-chat links, fresh authorization/funding and retry semantics; no autonomous execution chain. |
-| Agent skill policy | Server-enforced per-project enablement/order and frozen run policy; user-authored skills remain out of scope. |
-| Agent evaluation and outputs | Expanded skill evaluation corpus and structured measurement-plan outputs. Durable checkpoint/resume, aggregate elapsed-time policy and bulk page orchestration need separately measured/scoped work. |
-| MCP Events | Measured Visibility change events, scoped subscription lifecycle/callback verification, durable delivery and host acceptance. Use canonical comparable measurements, exact source IDs, explicit units/thresholds and distinct zero/unavailable states. PostgreSQL owns intents/retries; recheck grants, membership, expiry and entitlements before dispatch; unsubscribe/revocation fence delivery. Decide baseline, expiry, replay, retention, retry/cooldown, entitlements and volume first. Recheck current protocol requirements when assigned; independent of plugin release. |
-| Security event retention | Deferred by the feature 12 review (2026-10-10): `security_events` is never pruned. Owner to choose a retention period (or none) before a runner prune is added. |
-| Operator gate in production | Deferred by the feature 12 review: production keeps `DEV_LOGIN_PASSWORD` in the API environment, and the operator's workspace passes the development gate for Site Health crawl controls. Replace with an explicit entitlement when that feature is next reviewed. (Crawl-log ingestion uses the `crawl_logs` grant since F2a.) |
-| Sessions | Deferred by the feature 12 review: fixed 24-hour sessions without sliding renewal; per-device sign-out needs session rows. |
-| Prompt generation | Next: the operator-run live calibration round of [Prompt generation v3](../archive/prompt-generation-v3.md#eval-and-calibration) (`pnpm prompts:eval --live`, six fixtures × count 20, before/after), threshold review with the owner, and a shadow comparison of `context_required` defaults against `always`. From the [Prompt Builder plan](prompt-builder.md#follow-ups): calibrate the judge's "answerable by naming a business" thresholds (`JEV_ANSWERABLE_FLAG_BELOW`, `JEV_ANSWERABLE_FAIL_BELOW`) and `near_duplicate_jaccard` from review outcomes once live runs exist. Later: advisory Site Health semantic-quality observations, competitor-candidate cleanup and a stable-core/experimental portfolio split. |
-| Visibility review | Deferred by the feature 3 review (2026-10-08): settle the funded monthly reservation to recorded spend once every paid path (including search-surface submissions) records its attempt cost; import results (added and skipped counts); a failed prompt-measurements read shown as unavailable rather than hidden. |
-| Onboarding review | Deferred by the onboarding review (2026-10-08): show the evidence URLs behind the suggested category and competitors on the review step. |
-| Opportunities review | Deferred by the feature 4 review (2026-10-08): manual order applies within one keyset page, so a pinned row on page 2 never rises; a "why this rank" explanation from the persisted priority factors; scoping the commerce catalog-field load to the audit; a top-level source id column for placement and traffic observations (today only inside `result`); trimming the per-observation comparison result (about 20 queries). |
-| AI Traffic review | Deferred by the feature 8 review (2026-10-09): comparability after GA4 first sets the reporting timezone (frozen days keep UTC, so crawl-first projects show non-comparable pages until those days leave the window; needs a persisted change date); pushing the URL-hash filter into each Pages CTE for URL detail and pattern reads; receipt retention plus an index for the overlap and source-list scans (schema change, decide with enablement); upload presets for raw Cloudflare Logpush and nginx JSON exports and resume across reloads without the upload ID; accepted hosts beyond the exact host (apex and `www`) with per-source out-of-scope counts; ending a revoked source's overlap claim at revocation without double-counting the switchover day; a token-only rotate dialog. |
-| Commerce review | Deferred by the feature 10 review (2026-10-09): a slim catalog list read with per-target product detail (today the whole catalog is returned and polled during projection); rejected import rows first in `row_outcomes` and an import outcome view; a merge policy for a CSV product and a crawled product that share a SKU under different URLs; product edit and archive flows (`edit_version`, `lifecycle_state` and `observed_external_id` stay unused until then); a snapshot trend per target; Tavily country targeting in place of the locale in the query text, verified against the live provider. |
-| Earned sources review | Deferred by the feature 9 review (2026-10-09): an authorized "read this page now" command within the inspection budget. |
-| Traffic impact | Owner request (2026-10-08), its own PR: show how visibility work converts to website traffic from the connected sources (Search Console, analytics, AI referrals, crawl logs), as observed change around declared work with overlapping actions named — never as attributed causation. May need public copy, which changes only on the owner's request. |
-| AI answer ads | Deferred by F5: ad observations are not in audit exports (`src/audits/exports.ts`); add them with the parser version when exports are next changed. |
-| Fact-checking follow-ups | Deferred by F8 (D8.3, D8.6), after the pilot's false-contradiction review: an Action rule `fact_contradiction` (target the owned page for the topic if one exists, else an earned source; verify on later runs by a verdict change on the same prompts), and draft brand facts suggested from the onboarding research snapshot. |
-| Internal links | Separate judgment-policy version, normalized recommendation rows and catalog-based product variants, only if real runs justify them. |
-| AI Traffic extensions | Customer-authorized Cloudflare deployment, durable Queue-backed Worker, additional log providers/presets (Vercel, Fastly, Akamai, Netlify; Google Cloud and Amazon CloudFront shipped), an S3-pull connector for ALB and legacy CloudFront logs (cross-account role with a per-source ExternalId), a WordPress plugin, reverse-DNS verification, device/geography breakdowns, first-party session tracking, real-time streaming and Opportunities from insights. |
-| Funded billing | Managed AI checkout, funded prices and scheduled-coverage reserve remain separate; current payment launch scope is BYOK. |
-
-Owners: [Agent](../agents.md), [MCP](../mcp.md), [Workspace access](../workspace-access.md),
-[Visibility](../visibility-prompt.md), [Site Health](../site-health.md),
-[AI Traffic](../ai-traffic.md) and [Billing](../billing-entitlements.md).
-
-## Acceptance, calibration and rollout
-
-Implemented code is not deployed, provider or legal acceptance. Failures found here
-may require focused fixes; these rows do not presume another implementation.
+Implemented code is not deployed, provider or legal acceptance. Failures found
+here may need focused fixes; these rows do not presume another implementation.
 
 | Area | Remaining gate |
 |---|---|
-| Self-serve authentication | #280 implementation complete. Verify deployed-schema compatibility, Google callback/configuration, Resend sender and controlled-inbox delivery, verification/trial enforcement and coordinated API/product/marketing signup rollout. Preserve existing login/recovery on rollback. |
-| ChatGPT plugin | Visibility, Site Health, public workflows and sidebar/context implementation complete. Installed-client acceptance, reviewer account/cases/walkthrough, CIMD assessment, domain verification/scans, submission, approval and publication remain distinct gates. Founder-pilot gating was waived for fixture/mock-host checks. |
-| Razorpay | Commercial core, payment paths and customer surfaces implemented. Complete B8 test-mode payments/webhooks/refunds, the deferred billing edge cases (B72, above), commercial/tax inputs, live provisioning and sign-off, then controlled live purchase/refund and rollout. Payments stay disabled until sign-off; rollback closes checkout while webhooks/reconciliation continue. |
-| Prompt generation v2 | Implementation through #173 complete; policy published and production key configured on 28 September. Calibrate provisional thresholds from live accept/reject outcomes. |
-| Fact-checking (F8) | Pilot-gated by the `fact_checking` grant. Before granting: run `pnpm perception:eval --live` and `pnpm facts:eval --live` against the thresholds; then grant two pilot workspaces and review contradicted claims (false-contradiction rate) with the owner before any general release, plan bundle change or Action rule. |
-| Internal links | Implementation and placement refinement merged in #196/#205. Calibrate against editor-reviewed outcomes. |
-| Content gaps | [Content optimization](../content-optimization.md) phase 1 shipped. `min_citations` and `min_domains` in `frontend/services/api/src/config/content-optimization.ts` are placeholders until measured on real dashboard-ready audits: the empty-title share, URLs per topic, the topicless-prompt share and the number of angles at the current thresholds. Set both from those numbers and record why. |
-| Agent | Capabilities foundations/MVP and conversation A–D complete; reliability A–G merged in #271. Deployment, manual conversational acceptance and live-provider quality evaluation remain separate from native/mocked coverage. |
-| Hardening | Obtain current deployed TLS/cache/provisioning and authenticated scanner evidence, effective ingress/state protection and cloud dependency inventory. Successful delivery workflows do not establish manual acceptance. |
-| Cross-feature release | Manual feature/cloud acceptance, isolated restore and incident exercises, privileged access/MFA, log retrieval/retention, credential rotation and verified-request handling remain external evidence gates. |
+| Self-serve authentication | #280 implementation complete. Verify deployed-schema compatibility, Google callback and configuration, Resend sender and controlled-inbox delivery, verification and trial enforcement, and a coordinated API/product/marketing signup rollout. Preserve existing login and recovery on rollback. |
+| ChatGPT plugin | Implementation complete. Installed-client acceptance, reviewer account, cases and walkthrough, CIMD assessment, domain verification and scans, submission, approval and publication remain distinct gates. |
+| Razorpay | Commercial core, payment paths and customer surfaces implemented. Complete B8 test-mode payments, webhooks and refunds, the billing items above, commercial and tax inputs, live provisioning and sign-off, then a controlled live purchase and refund and rollout. Rollback closes checkout while webhooks and reconciliation continue. |
+| Prompt generation | Run the operator live calibration round (`pnpm prompts:eval --live`, six fixtures × count 20, before/after), review thresholds with the owner, and shadow-compare `context_required` defaults against `always`. Calibrate the judge's answerability thresholds (`JEV_ANSWERABLE_FLAG_BELOW`, `JEV_ANSWERABLE_FAIL_BELOW`) and `near_duplicate_jaccard` from live accept/reject outcomes. |
+| Fact-checking (F8) | Pilot-gated by the `fact_checking` grant. Before granting, run `pnpm perception:eval --live` and `pnpm facts:eval --live` against the thresholds; then grant two pilot workspaces and review contradicted claims (false-contradiction rate) with the owner before any general release or plan bundle change. |
+| Internal links | Calibrate against editor-reviewed outcomes. |
+| Content gaps | `min_citations` and `min_domains` in `frontend/services/api/src/config/content-optimization.ts` are placeholders. Measure on real dashboard-ready audits (empty-title share, URLs per topic, topicless-prompt share, number of angles at current thresholds), set both from those numbers and record why. |
+| Agent | Deployment, manual conversational acceptance and live-provider quality evaluation remain separate from native and mocked coverage. |
+| Hardening | Obtain current deployed TLS, cache and provisioning evidence and authenticated scanner evidence, effective ingress and state protection, and a cloud dependency inventory. Successful delivery workflows do not establish manual acceptance. |
+| Cross-feature release | Manual feature and cloud acceptance, isolated restore and incident exercises, privileged access and MFA, log retrieval and retention, credential rotation and verified-request handling remain external evidence gates. |
 
-Current acceptance owners: [release checklist](../release-checklist.md),
+Acceptance owners: [release checklist](../release-checklist.md),
 [Google Cloud acceptance](../operations/GOOGLE_CLOUD.md),
 [billing provider readiness](../billing-provider-readiness.md),
 [payment owner requirements](../operations/razorpay-and-demo-owner-requirements.md)
 and [launch configuration](../operations/CiteLadder_Launch_Config.md).
 
-## Legal, management and operational decisions
+### Legal and operational
 
 Open and resolved legal decisions, and the engineering items that keep the
-published legal pages true, live in [legal decisions](../operations/legal-decisions.md).
-Operational items that remain here:
+published legal pages true, live in
+[legal decisions](../operations/legal-decisions.md). Operational items:
 
-- Named incident/support owners, recovery objectives and operational evidence.
-- [Console spend-cap setup](../operations/GCP_RUNBOOK.md#budget-and-log-controls),
-  retained from completed security/backend work.
+- Named incident and support owners, recovery objectives and operational
+  evidence.
+- [Console spend-cap setup](../operations/GCP_RUNBOOK.md#budget-and-log-controls).
 
-## Completed baseline
+## Tier 3: low priority
 
-Security hardening (#255), design contracts (#230) and design-system consistency
-(#318–#320) are complete implementation history, not new assignments. Their
-operational/legal exceptions are retained above.
+Kept for future reference. None is queued; each needs the owner's go-ahead and
+a fresh scope before work starts.
 
-The [feature review programme](../archive/feature-review-tracker.md) (features
-1–10 and 12–16) and the [competitive feature tracker](../archive/competitive-feature-tracker.md)
-(F1–F8, #352–#363) are complete; their plans are archived and their remaining
-items are recorded above.
+| Area | What it would add |
+|---|---|
+| Agent model and reasoning picker | Native runtime PR 2: a Haiku/Sonnet and reasoning-level picker, with a Sonnet price row and public copy. |
+| Agent runtime extensions | Native runtime PR 3: web search and fetch, actions that run after the user confirms, turns that continue on the server after the browser closes (durable execution, today deliberately tied to the request), scheduled follow-ups and optional cross-chat memory. Each changes an accepted rule (invariants §10 and §13), so the owner chooses between Managed Agents and the native runtime first. |
+| Agent memory promotion | Reviewed Save to Context with expected-base revision, idempotency and source-message provenance. Preferences use instruction revisions; company facts use the reviewed brand-profile owner. |
+| Agent plan execution | Durable user-approved steps and child-chat links, fresh authorization and funding, and retry semantics; no autonomous execution chain. |
+| Agent skill policy | Server-enforced per-project skill enablement and order, and a frozen run policy. User-authored skills stay out of scope. |
+| MCP Events | Measured Visibility change events, a scoped subscription lifecycle with callback verification, durable delivery and host acceptance. Decide baseline, expiry, replay, retention, retry and cooldown, entitlements and volume first. |
+| Sliding sessions | Sessions are a fixed 24 hours without sliding renewal; per-device sign-out would need session rows. |
+| AI Traffic extensions | Customer-authorized Cloudflare deployment, a Queue-backed Worker, more log providers (Vercel, Fastly, Akamai, Netlify), an S3-pull connector for ALB and legacy CloudFront logs, a WordPress plugin, reverse-DNS verification, device and geography breakdowns, first-party session tracking, real-time streaming and Opportunities from insights. |
+| AI answer ads in exports | Add ad observations to audit exports (`src/audits/exports.ts`) with the parser version when exports next change. |
+| Enterprise SSO and SCIM | Deferred until an enterprise customer asks (BL7). WorkOS (D9.1), through a `src/auth/workos.ts` adapter; `sso_connections` with verified domains and `enforce`; SCIM membership create, removal and role; an `sso` entitlement and a security event for every change. D9.2 (which plan carries it) is open. Costs $125 per connection per month each for SSO and Directory Sync. |
+| Domain verification and authorized crawl | Deferred with SSO (BL7): DNS TXT, file or meta verification with append-only receipts, re-verification and revocation, and live authorization checks before robots-excluded requests. The tier 1 ignore-robots option (BL6) does not depend on it. |
+| Prompt generation extras | Advisory Site Health semantic-quality observations, competitor-candidate cleanup and a stable-core/experimental portfolio split. |
+| Internal links | A separate judgment-policy version, normalized recommendation rows and catalog-based product variants, only if real runs justify them. |
+| Funded billing | Managed AI checkout, funded prices and a scheduled-coverage reserve. Current payment launch scope is BYOK. |
 
-Invitation delivery is implemented, the prompt-generation policy is published and
-internal-links work is merged. Do not reopen these tasks from stale historical text.
-Update this backlog when remaining scope, blockers or completion change; update
-ACTIVE.md when selection or queue state changes. Routine validation belongs in PR/CI
-records, not another progress document.
+## Removed
+
+Removed by the owner on 11 November 2026 (BL10, BL12). Do not reopen these from
+older text:
+
+- Integrations and AI Visibility: evidence-backed Opportunity sorting and
+  labels, a Trends summary, GA4 property matching by stream URL, connected-data
+  snapshot retention, retiring the referral tables, per-stat Performance
+  coverage, a branded-query override UI, server-side Query Fanout grouping, and
+  the first-party generative-AI Search Console report check.
+- Feature-review leftovers for Opportunities, AI Traffic, Commerce, Onboarding,
+  Visibility and Earned sources.
+- Traffic impact and the fact-checking follow-ups.
+- Agent journey coverage (eval and end-to-end journey), Agent partial-text
+  resume and the expanded Agent evaluation corpus.
+- Already shipped: Site Health Recrawl, the app shell's first-wave bootstrap,
+  shared section skeletons, and drawer and table width roles.
+- No longer defects: accent check marks in dropdowns (D34 deleted the
+  accent-as-mark rule) and TrendChart's own SVG axes (product charts are plain
+  SVG by decision).
