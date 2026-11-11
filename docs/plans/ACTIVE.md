@@ -5,10 +5,11 @@ Remaining work is consolidated in the backlog; historical plans are not active a
 
 ## Active
 
-None. Commerce product tracking (CM1–CM9) and backlog tier 1 (BL1–BL12) shipped
-on 11 November 2026 and their plans were deleted; the owner decisions are in
-[decisions](../decisions.md#commerce-product-tracking) and
-[backlog closure](../decisions.md#backlog-closure), and the feature owners in
+None. Commerce product tracking and backlog tier 1 shipped on 11 November 2026
+and their plans were deleted. The owner decisions behind them are in
+[decisions](../decisions.md#commerce-product-tracking) (CM1–CM9) and
+[backlog closure](../decisions.md#backlog-closure) (BL1–BL12, which also defer,
+move and remove other backlog work); the feature owners in
 [the documentation index](../README.md) describe what shipped.
 
 ## Partly delivered
