@@ -599,8 +599,6 @@ async function attachSitePage(
     ...issue,
     record_uri: `citeladder://site_issue/${text(issue.occurrence_id)}`,
   }));
-  // Page and link URLs leave without query or fragment, as the Site tools return them.
-  for (const [key, value] of Object.entries(row)) row[key] = withoutQueryDeep(value);
   return title;
 }
 
@@ -637,6 +635,9 @@ async function resolveSpecRecord(
   attachCounts(kind, row);
   rowShapers[kind]?.(row);
   if (kind === 'site_page') title = await attachSitePage(db, row, recordScope, title);
+  // Site records' page and link URLs leave without query or fragment, as the Site tools return them.
+  if (kind.startsWith('site_'))
+    for (const [key, value] of Object.entries(row)) row[key] = withoutQueryDeep(value);
   // Put the diagnosis ahead of bulky crawl facts in continuation documents.
   const record =
     kind === 'site_page' ? { issues: row.issues, evaluations: row.evaluations, ...row } : row;

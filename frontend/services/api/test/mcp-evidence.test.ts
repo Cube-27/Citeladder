@@ -533,6 +533,12 @@ it('fetches a site page without the query string or fragment of any URL it carri
       })
       .where('id', '=', page.artifact_id)
       .execute();
+    await db
+      .updateTable('site_issues')
+      .set({ evidence: JSON.stringify({ url: tokened }) })
+      .where('crawl_id', '=', seed.crawl_id)
+      .where('site_url_id', '=', page.site_url_id)
+      .execute();
     principal.userId = seed.user_id;
     await db
       .updateTable('mcp_oauth_grants')
@@ -553,6 +559,13 @@ it('fetches a site page without the query string or fragment of any URL it carri
       },
     });
     expect(String(fetched.text)).not.toContain('s3cret');
+    // The issue URI the page hands out fetches the same evidence, stripped too.
+    const [issue] = (record(fetched) as { issues: { record_uri: string; evidence: unknown }[] })
+      .issues;
+    expect(issue.evidence).toEqual({ url: 'https://acme.example/pricing' });
+    expect(record(await fetchRecord(db, principal, issue.record_uri, origin)).evidence).toEqual({
+      url: 'https://acme.example/pricing',
+    });
   } finally {
     await db.deleteFrom('mcp_oauth_grants').where('id', '=', principal.grantId).execute();
     await db.deleteFrom('workspaces').where('id', '=', seed.workspace_id).execute();

@@ -97,11 +97,20 @@ export function slottedEventStream(
   }
   if (signal.aborted) release();
   else signal.addEventListener('abort', release, { once: true });
+  // Ended access closes the stream even if the inner one never finishes:
+  // cancelling discards its queue and ends a pending read as done.
+  accessEnded.signal.addEventListener(
+    'abort',
+    () => {
+      reader.cancel().catch(() => {});
+    },
+    { once: true },
+  );
   return new ReadableStream<Uint8Array>({
     async pull(controller) {
       try {
         const next = await reader.read();
-        if (next.done || accessEnded.signal.aborted) {
+        if (next.done) {
           release();
           controller.close();
         } else controller.enqueue(next.value);

@@ -124,7 +124,8 @@ deliveries to this host do. It uses the same origin token as the other Workers.
   because they record the full URL and an OAuth callback's `code` and `state`
   (or an emailed token) would land in the edge logs. Each Worker logs one JSON
   line per request instead ([request log](../../frontend/lib/server/worker-request-log.ts)):
-  method, host, path and status, or the error name; never the query string.
+  method, host, path, ray ID, duration and status, or the error name; never
+  the query string. Cloudflare has no setting that redacts only the URL.
 - The API admits the host from `PUBLIC_API_URL` and serves it `/v1/...` and
   the MCP paths only. The apex and app hosts refuse both with 404.
 
