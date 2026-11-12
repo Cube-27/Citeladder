@@ -10,8 +10,9 @@
  *
  * The unfiltered list and summary of each finding class are persisted per
  * crawl once its issues are final, and again when a page rerun lands in it
- * (`site-health/issue-catalog.ts`), and read from there. A filtered read (search, severity, category, dimension, rule,
- * page, page kind) and a crawl whose catalog is not written yet compute them
+ * (`site-health/issue-catalog.ts`), and read from there. A filtered read
+ * (search, severity, category, dimension, rule, page, page kind) and a crawl
+ * whose catalog is not written yet compute them
  * here. The monitored affected count is always live: the selection is
  * configuration.
  */

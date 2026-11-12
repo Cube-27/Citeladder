@@ -183,10 +183,12 @@ let foreign: { seed: SiteSeed; pages: Page[] };
 let fixedLater: { seed: SiteSeed; pages: Page[] };
 let partialBeforeDeclaring: { seed: SiteSeed; pages: Page[] };
 let sampled: { seed: SiteSeed; pages: Page[] };
+let rerunFixed: { seed: SiteSeed; pages: Page[] };
 
 beforeAll(async () => {
-  // Five independent tenants, each seeded in its own transaction.
-  [own, foreign, fixedLater, partialBeforeDeclaring, sampled] = await Promise.all([
+  // Six independent tenants, each seeded in its own transaction.
+  [own, foreign, fixedLater, partialBeforeDeclaring, sampled, rerunFixed] = await Promise.all([
+    familyProject(),
     familyProject(),
     familyProject(),
     familyProject(),
@@ -404,6 +406,51 @@ describe('an issue family', () => {
         reason: 'cohort_sampled',
         source_id: fixed,
         pages: { failing: [], passing: PAGES - 2, not_applicable: 0, unread: 0, uncovered: 2 },
+      },
+    ]);
+  });
+
+  it('is verified when a page rerun clears the last failing tracked page of the crawl it lands in', async () => {
+    const { seed, pages } = rerunFixed;
+    await new SiteFixtures(db).monitor(
+      seed,
+      pages.map((page) => page.id),
+    );
+    const { action } = await declareFamily(rerunFixed);
+    const next = await laterCrawl(seed, pages, 1);
+    await drainWorkspace(db, seed.workspaceId, { owner: `b3-${randomUUID()}` });
+    let detail = await getAction(db, seed.workspaceId, action.id);
+    expect(detail.declaration?.checks).toMatchObject([
+      { state: 'unmet', reason: 'partially_resolved', source_id: next },
+    ]);
+
+    // The rerun reads one page; its reading takes every tracked page's latest audit.
+    const rerun = await db.transaction().execute(async (trx) => {
+      const fixtures = new SiteFixtures(trx);
+      const crawlId = await fixtures.sibling(seed, {
+        configuration: JSON.stringify({ page_rerun: true }),
+      });
+      await readPage(trx, fixtures, { ...seed, crawlId }, path(0), {
+        outcome: 'satisfied',
+        fetchedAt: new Date(),
+        siteUrlId: pages[0]!.id,
+      });
+      await enqueueImplementationVerification(trx, {
+        workspaceId: seed.workspaceId,
+        projectId: seed.projectId,
+        triggerKind: 'site_crawl',
+        triggerId: crawlId,
+      });
+      return crawlId;
+    });
+    await drainWorkspace(db, seed.workspaceId, { owner: `b3-${randomUUID()}` });
+    detail = await getAction(db, seed.workspaceId, action.id);
+    expect(detail.declaration?.state).toBe('verified');
+    expect(detail.declaration?.checks).toMatchObject([
+      {
+        state: 'met',
+        source_id: rerun,
+        pages: { failing: [], passing: PAGES, not_applicable: 0, unread: 0, uncovered: 0 },
       },
     ]);
   });

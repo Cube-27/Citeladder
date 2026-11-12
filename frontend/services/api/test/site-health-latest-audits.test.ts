@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import { policy } from '../src/config.ts';
+import { record } from '../src/db/json.ts';
+import { recomputeOpportunities } from '../src/opportunities/refresh.ts';
 import { issueHistory, issues, unfilteredIssues } from '../src/site-health/reads/issues.ts';
 import { pageDetail, pages } from '../src/site-health/reads/pages.ts';
 import { publishFinalPageAnalyses } from '../src/site-health/terminal-analysis.ts';
@@ -114,6 +116,11 @@ describe("Site Health reads show each tracked page's latest audit", () => {
     ]);
 
     const rerun = await crawlAt(seed, minutes(10), { rerun: true });
+    await db
+      .updateTable('site_crawls')
+      .set({ scoring_version: 'rerun-scoring' })
+      .where('id', '=', rerun.crawlId)
+      .execute();
     const fixed = await audit(rerun, '/a', SITEMAP, 'satisfied', a.id);
     await land(rerun);
 
@@ -130,6 +137,8 @@ describe("Site Health reads show each tracked page's latest audit", () => {
     ]);
     const detail = await pageDetail(db, seed.workspaceId, full.crawlId, a.id);
     expect(detail.issues).toEqual([]);
+    // The page reports the versions of the audit that measured it.
+    expect(detail.scoring_version).toBe('rerun-scoring');
     const history = await issueHistory(db, seed.workspaceId, full.crawlId, a.id, paging);
     expect(history.items.map((item) => [item.rule_id, item.crawl_id])).toEqual([
       [SITEMAP, full.crawlId],
@@ -185,5 +194,27 @@ describe("Site Health reads show each tracked page's latest audit", () => {
     expect(groups(await issues(db, seed.workspaceId, rerun.crawlId, all, paging))).toEqual([
       [CLIENT, 1],
     ]);
+  });
+
+  it('refreshes Opportunities once a rerun lands in the current crawl, and not before', async () => {
+    const seed = await fixtures.crawl('completed');
+    // After the seed's own crawl, so this full crawl is the current one.
+    const full = await crawlAt(seed, new Date(Date.now() + 60_000));
+    const a = await audit(full, '/a', SITEMAP, 'missing');
+    await fixtures.monitor(seed, [a.id]);
+    await land(full);
+    const scope = { workspaceId: seed.workspaceId, projectId: seed.projectId };
+    const first = await recomputeOpportunities(db, scope, { skipIfCurrent: true });
+    expect((await recomputeOpportunities(db, scope, { skipIfCurrent: true })).id).toBe(first.id);
+
+    const rerun = await crawlAt(seed, new Date(Date.now() + 120_000), { rerun: true });
+    await audit(rerun, '/a', SITEMAP, 'satisfied', a.id);
+    await land(rerun);
+    const refreshed = await recomputeOpportunities(db, scope, { skipIfCurrent: true });
+    expect(refreshed.id).not.toBe(first.id);
+    expect(record(refreshed.coverage.source_identity)).toMatchObject({
+      site_crawl_id: full.crawlId,
+      site_rerun_id: rerun.crawlId,
+    });
   });
 });

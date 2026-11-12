@@ -83,8 +83,17 @@ earlier audit. Site-level findings (architecture rules, sitewide links) are
 the site crawl's own. A page rerun read by id shows only its own page. Pages,
 page detail, issue history, the Issues catalog and detail, the snapshot and
 score summary, Opportunities' Site Health evidence, the Agent's content
-context, MCP and AI Traffic findings all read through it; the analyze task and
-link metrics stay the crawl's own. When a rerun lands, the site crawl it falls
+context, MCP, AI Traffic findings, internal-link suggestion pages and
+verification's page and issue-family readings all read through it; the analyze
+task and link metrics stay the crawl's own. A verification reading triggered by
+a page rerun reads a declared page through the rerun, and an issue family's
+cohort through the site crawl the rerun lands in, so re-auditing the last
+failing page can verify the family. The read stays bounded by the tracked set:
+it takes the crawl's own analyses and those of audits that began after it, and
+looks further back one page at a time only for a tracked page the crawl never
+analyzed. The Opportunity refresh keys the crawl source on the crawl and the
+newest rerun it folds in, so a landed rerun refreshes Opportunities. When a
+rerun lands, the site crawl it falls
 in (`foldingSiteCrawl`: the newest usable site crawl created before it) has its
 persisted Issues catalog, snapshot page columns and score summary recomputed in
 the rerun's landing transaction (`issue-currency.ts`,

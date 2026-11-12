@@ -19,6 +19,7 @@ import {
 import { policy } from '../config.ts';
 import { sourcePageVocabulary } from '../config/source-pages.ts';
 import type { Database } from '../db/database.ts';
+import { foldedRerunId } from '../site-health/reads/crawl.ts';
 import { contentGapHits, contentGapSource, type ContentGapSource } from './content-gap-hits.ts';
 import { earnedPageHits } from './earned-page-hits.ts';
 import { internalLinkHits, internalLinkRunId } from './internal-link-hits.ts';
@@ -186,6 +187,8 @@ const commerce: Family = {
 const site: Family = {
   identity: async (db, scope, { crawl }) => ({
     site_crawl_id: crawl?.id ?? null,
+    // A page rerun landing in the crawl moves its evidence (SH-B9).
+    site_rerun_id: crawl ? await foldedRerunId(db, crawl) : null,
     internal_link_run_id: crawl ? await internalLinkRunId(db, scope, crawl.id) : null,
   }),
   async hits(db, scope, { crawl }, identity) {
@@ -234,6 +237,7 @@ const EMPTY_IDENTITY: SourceIdentity = {
   commerce_audit_id: null,
   commerce_match_pass_id: null,
   site_crawl_id: null,
+  site_rerun_id: null,
   demand_snapshot_id: null,
   demand_source_revision: null,
   internal_link_run_id: null,

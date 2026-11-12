@@ -92,7 +92,8 @@ latest dashboard-ready brand run, the one Visibility and Overview call latest),
 the latest dashboard-ready Commerce run (read for Commerce findings only, so
 neither kind of run replaces the other's Actions), the newest catalog match
 pass (the per-product metric findings read every matched answer in their
-window), crawl, demand snapshot and
+window), crawl and the newest page rerun it folds in (its pages read their
+latest audit, SH-B9), demand snapshot and
 revision, internal-link run, newest inspected source-page reading, keyword-gap
 datasets and content-angle run. When the latest snapshot already records that identity under the
 current versions, the refresh loads no evidence. Otherwise it loads evidence
