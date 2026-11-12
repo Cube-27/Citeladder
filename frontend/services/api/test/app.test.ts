@@ -77,9 +77,9 @@ describe('health and readiness', () => {
     expect(await status('POST', ingest, 'api.example.test')).toBe(401);
     for (const publicHost of ['app.example.test', 'example.test'])
       expect(await status('POST', ingest, publicHost)).toBe(404);
-    for (const path of ['/health', '/api/v1/auth/me', '/mcp/oauth/consent'])
+    for (const path of ['/ready', '/api/v1/auth/me', '/mcp/oauth/consent'])
       expect(await status('GET', path, 'api.example.test')).toBe(404);
-    expect(await status('GET', '/health', 'app.example.test')).toBe(200);
+    expect(await status('GET', '/ready', 'app.example.test')).toBe(200);
     // MCP moved to the API host outright: the apex and app hosts no longer route it.
     expect(await status('GET', '/.well-known/oauth-authorization-server', 'api.example.test')).toBe(
       200,
@@ -89,7 +89,7 @@ describe('health and readiness', () => {
       for (const path of ['/mcp', '/.well-known/oauth-authorization-server', '/token'])
         expect(await status('GET', path, publicHost)).toBe(404);
   });
-  it('protects the raw origin, including probes and MCP, and accepts rotated keys', async () => {
+  it('protects the raw origin, including readiness and MCP, and accepts rotated keys', async () => {
     const current = 'current-origin-token-0123456789abcdef';
     const previous = 'previous-origin-token-0123456789abcdef';
     const protectedApp = createApp(
@@ -105,7 +105,7 @@ describe('health and readiness', () => {
     const code = async (path: string, headers: Record<string, string>) =>
       (await protectedApp.request(path, { headers })).status;
     const publicHost = 'app.example.test';
-    for (const path of ['/health', '/ready', '/api/v1/auth/me', '/mcp']) {
+    for (const path of ['/ready', '/api/v1/auth/me', '/mcp']) {
       expect(await code(path, { 'X-CiteLadder-Public-Host': publicHost })).toBe(403);
       // The raw key is never a credential, and a foreign key's signature is refused.
       expect(
@@ -121,29 +121,53 @@ describe('health and readiness', () => {
     for (const token of [current, previous])
       for (const host of ['app.example.test', 'EXAMPLE.test'])
         expect(
-          await code('/health', await signed(token, { path: '/health', publicHost: host })),
+          await code('/ready', await signed(token, { path: '/ready', publicHost: host })),
         ).toBe(200);
     // A signature covers its path, method, host and time: none can be swapped.
-    const health = await signed(current, { path: '/health', publicHost });
-    expect(await code('/ready', health)).toBe(403);
-    expect(
-      (await protectedApp.request('/health', { method: 'POST', headers: health })).status,
-    ).toBe(403);
-    expect(await code('/health', { ...health, 'X-CiteLadder-Public-Host': 'example.test' })).toBe(
+    const ready = await signed(current, { path: '/ready', publicHost });
+    expect(await code('/api/v1/auth/me', ready)).toBe(403);
+    expect((await protectedApp.request('/ready', { method: 'POST', headers: ready })).status).toBe(
+      403,
+    );
+    expect(await code('/ready', { ...ready, 'X-CiteLadder-Public-Host': 'example.test' })).toBe(
       403,
     );
     const stale = Math.floor(Date.now() / 1000) - 3600;
     expect(
-      await code(
-        '/health',
-        await signed(current, { path: '/health', publicHost, timestamp: stale }),
-      ),
+      await code('/ready', await signed(current, { path: '/ready', publicHost, timestamp: stale })),
     ).toBe(403);
     // A valid signature alone is not enough: the public host must be one the Workers serve.
     for (const host of ['attacker.example', 'api-123.us-central1.run.app'])
       expect(
-        await code('/health', await signed(current, { path: '/health', publicHost: host })),
+        await code('/ready', await signed(current, { path: '/ready', publicHost: host })),
       ).toBe(403);
+  });
+
+  it('answers liveness probes without the origin token, and only for GET /health', async () => {
+    const protectedApp = createApp(
+      testConfig({
+        K_SERVICE: 'api',
+        CITELADDER_ORIGIN_TOKEN: 'current-origin-token-0123456789abcdef',
+        FRONTEND_URL: 'https://app.example.test',
+      }),
+      db,
+    );
+    const live = await protectedApp.request('/health');
+    expect(live.status).toBe(200);
+    expect(await live.json()).toEqual({ status: 'ok' });
+    expect((await protectedApp.request('/health', { method: 'POST' })).status).toBe(403);
+    // Only the exact path is exempt: no suffix, prefix, case or traversal variant.
+    for (const path of [
+      '/health/',
+      '/healthz',
+      '/health/x',
+      '/HEALTH',
+      '//health',
+      '/health/../ready',
+      '/health/%2e%2e/ready',
+      '/ready',
+    ])
+      expect((await protectedApp.request(path)).status, path).toBe(403);
   });
   it('takes the visitor address only from a signed Worker request', async () => {
     const key = 'current-origin-token-0123456789abcdef';
@@ -318,6 +342,7 @@ describe('request ids and the error envelope', () => {
         expect.objectContaining({
           event: 'unhandled_api_exception',
           level: 'error',
+          severity: 'ERROR',
           correlation_id: 'trace-500',
         }),
       );

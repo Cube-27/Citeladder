@@ -40,6 +40,8 @@ jobs:
       BILLING_ACCOUNT: ${{ vars.GCP_BILLING_ACCOUNT }}
       BUDGET_CURRENCY_CODE: ${{ vars.GCP_BUDGET_CURRENCY_CODE || 'INR' }}
       BUDGET_UNITS: ${{ vars.GCP_BUDGET_UNITS || '500' }}
+      # Receives the monitoring alerts (infra/gcp/monitoring.tf).
+      ALERT_EMAIL: ${{ vars.GCP_ALERT_EMAIL }}
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME || 'citeladder.com' }}
       APP_DOMAIN_NAME: ${{ vars.APP_DOMAIN_NAME || 'app.citeladder.com' }}
       # 'true' restores the single-account demo (no public sign-up).
@@ -111,6 +113,10 @@ jobs:
           set -euo pipefail
           test -n "$PROJECT_ID" && test -n "$STATE_BUCKET" && test -n "$BILLING_ACCOUNT"
           test -n "$DEPLOY_SERVICE_ACCOUNT"
+          if [ -z "$ALERT_EMAIL" ]; then
+            echo "::error::Set the GCP_ALERT_EMAIL repository variable; monitoring alerts go to it."
+            exit 1
+          fi
           test -n "$DEFAULT_AGENT_BASE_URL" && test -n "$DEFAULT_AGENT_MODEL"
           [[ "$DEMO_MODE" =~ ^(true|false)$ ]]
           [[ "$OAUTH_GOOGLE_ENABLED" =~ ^(true|false)$ ]]
@@ -151,7 +157,7 @@ jobs:
           registry="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder"
           jq -n \
             --arg project "$PROJECT_ID" --arg deployer "$DEPLOY_SERVICE_ACCOUNT" \
-            --arg billing "$BILLING_ACCOUNT" \
+            --arg billing "$BILLING_ACCOUNT" --arg alert_email "$ALERT_EMAIL" \
             --arg currency "$BUDGET_CURRENCY_CODE" --argjson units "$BUDGET_UNITS" \
             --arg region "$REGION" --arg zone "$ZONE" \
             --arg domain "$DOMAIN_NAME" --arg app "$APP_DOMAIN_NAME" \
@@ -163,7 +169,7 @@ jobs:
             --argjson google "$OAUTH_GOOGLE_ENABLED" --argjson signup "$PUBLIC_SIGNUP_ENABLED" \
             --arg tick "$TICK_SCHEDULE" --argjson billing_env "$billing_env" \
             '{project_id:$project,deployer_service_account:$deployer,
-              billing_account:$billing,budget_currency_code:$currency,
+              billing_account:$billing,alert_email:$alert_email,budget_currency_code:$currency,
               budget_units:$units,region:$region,zone:$zone,domain_name:$domain,
               app_domain_name:$app,api_image:$api,postgres_image:$postgres,
               agent_base_url:$agent_url,agent_model:$agent_model,demo_mode:$demo,
@@ -498,18 +504,20 @@ jobs:
           ready="$(admitted "$APP_DOMAIN_NAME" /ready)"
           providers="$(admitted "$APP_DOMAIN_NAME" /api/v1/auth/oauth/providers)"
           mcp="$(admitted "api.$DOMAIN_NAME" /.well-known/oauth-authorization-server)"
-          anonymous="$(code "$API_URL/health")"
-          foreign="$(signed attacker.example /health)"
+          # GET /health alone skips the origin token (liveness probe, uptime check).
+          live="$(code "$API_URL/health")"
+          anonymous="$(code "$API_URL/ready")"
+          foreign="$(signed attacker.example /ready)"
           unscheduled="$(code --request POST "$API_URL/internal/tick")"
-          if [[ "$ready" != 200 || "$providers" != 200 || "$mcp" != 200 || "$anonymous" != 403 || "$foreign" != 403 || "$unscheduled" != 403 ]]; then
-            echo "::error::Origin smoke failed: ready=$ready providers=$providers mcp=$mcp anonymous=$anonymous foreign=$foreign unscheduled=$unscheduled"
+          if [[ "$ready" != 200 || "$providers" != 200 || "$mcp" != 200 || "$live" != 200 || "$anonymous" != 403 || "$foreign" != 403 || "$unscheduled" != 403 ]]; then
+            echo "::error::Origin smoke failed: ready=$ready providers=$providers mcp=$mcp live=$live anonymous=$anonymous foreign=$foreign unscheduled=$unscheduled"
             exit 1
           fi
           {
             echo '### GCP deployment'
             echo "- Source commit: \`$GITHUB_SHA\`"
             cat /tmp/release-images.md
-            echo "- Revision \`$REVISION\` at \`$API_URL\` before any traffic: ready $ready, providers $providers, MCP metadata $mcp; anonymous $anonymous, foreign host $foreign, unscheduled tick $unscheduled"
+            echo "- Revision \`$REVISION\` at \`$API_URL\` before any traffic: ready $ready, providers $providers, MCP metadata $mcp, anonymous liveness $live; anonymous readiness $anonymous, foreign host $foreign, unscheduled tick $unscheduled"
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Shift API traffic to the smoked revision
         shell: bash

@@ -3,6 +3,7 @@ deployer_service_account = "citeladder-github-deploy@replace-with-project-id.iam
 billing_account          = "000000-000000-000000"
 budget_currency_code     = "INR"
 budget_units             = 500
+alert_email              = "alerts@example.com"
 domain_name              = "citeladder.com"
 app_domain_name          = "app.citeladder.com"
 api_image                = "us-central1-docker.pkg.dev/project/citeladder/api-service@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"

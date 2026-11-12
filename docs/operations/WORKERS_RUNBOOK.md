@@ -205,7 +205,7 @@ credential. Configure no Titan incoming-mail or DNS changes for this feature.
 
 The Workers call the Cloud Run API directly; there is no origin hostname,
 Origin CA certificate or reverse proxy. The API rejects every request,
-including `/health`, `/ready` and MCP, unless it carries a fresh origin
+including `/ready` and MCP, unless it carries a fresh origin
 signature and an allowlisted public host (`citeladder.com`,
 `app.citeladder.com` or `api.citeladder.com`). The API host reaches only
 `/v1/...` routes and `/v1/...` routes answer only for the API host; every other
@@ -216,7 +216,9 @@ address), `X-CiteLadder-Public-Host` and `X-CiteLadder-Client-IP` (from
 `CF-Connecting-IP`), and strip any client-supplied copies. A signature expires
 after `policy.api.origin_signature_max_skew_seconds`, so the API and Workers
 must keep their clocks and key in step; deploy the API and the Workers
-back-to-back when the signing scheme changes.
+back-to-back when the signing scheme changes. The one unsigned exception besides
+the scheduled tick is `GET /health`, a constant liveness answer for the Cloud
+Run probe and the uptime check (AR-10).
 
 1. Generate a dedicated random value of at least 32 characters outside chat.
    Store it in the protected `gcp-demo` GitHub environment secret

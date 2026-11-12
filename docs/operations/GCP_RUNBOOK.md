@@ -72,11 +72,13 @@ and state bucket:
 ```
 
 `gcloud billing projects describe project-setup-20260711` shows the billing
-account. The script is idempotent. It enables Cloud Run and Cloud Scheduler
-and grants the deployer its project roles (Cloud Run, Cloud Scheduler,
+account. The script is idempotent. It enables Cloud Run, Cloud Scheduler and
+Cloud Monitoring and grants the deployer its project roles (Cloud Run, Cloud Scheduler,
 Artifact Registry and service-account administration; the compute instance,
 network and firewall roles; `logging.configWriter` for the API request-log
-exclusion; and the `citeladderSecretContainers` custom role for Secret Manager
+exclusion and the log-based metrics; the Monitoring alert-policy,
+notification-channel and uptime-check editor roles and `monitoring.viewer` for
+`monitoring.tf`; and the `citeladderSecretContainers` custom role for Secret Manager
 containers without payloads), plus object access on the state bucket only.
 It removes the retired SSH/IAP, project-deletion, project-IAM and project-wide
 compute, secret and storage administration grants. It creates the database
@@ -107,6 +109,7 @@ owner as required reviewer.
 | `GCP_BILLING_ACCOUNT` | keep | billing-account ID |
 | `GCP_BUDGET_CURRENCY_CODE` | keep | `INR` (default) |
 | `GCP_BUDGET_UNITS` | **change** | `500` (default) |
+| `GCP_ALERT_EMAIL` | **new**, required | address that receives the monitoring alerts; the deploy refuses to start without it |
 | `DEFAULT_AGENT_BASE_URL` | keep, required | HTTPS base URL of the platform Agent provider; `https://api.anthropic.com` selects the Anthropic Messages API, anything else is OpenAI-compatible |
 | `DEFAULT_AGENT_MODEL` | keep, required | exact provider model ID |
 | `DOMAIN_NAME` | optional | `citeladder.com` (default) |
@@ -216,6 +219,11 @@ curl.exe --fail https://app.citeladder.com/health
 curl.exe --fail https://app.citeladder.com/api/v1/auth/oauth/providers
 curl.exe --fail https://api.citeladder.com/.well-known/oauth-authorization-server
 ```
+
+After the first deploy with monitoring, confirm alert delivery once: Cloud
+Monitoring → Alerting → a `citeladder` policy → **Send test notification**
+reaches `GCP_ALERT_EMAIL`, and Uptime checks shows `citeladder-api /health`
+passing.
 
 Sign in as `DEMO_LOGIN_EMAIL` (outside demo mode, with that account's own
 password), create a project, start a Site Health crawl

@@ -15,6 +15,7 @@ The GCP project is reused; nothing here creates or deletes it.
 | `identity.tf` | Database, API (`runtime`), job (`jobs`), scheduler and crawl-log reader service accounts and their least-privilege grants |
 | `registry.tf` | Artifact Registry with a cleanup policy, and the Secret Manager containers |
 | `budget.tf` | Monthly budget alert, including a forecast rule |
+| `monitoring.tf` | `/health` uptime check, log-based metrics and email alerts (uptime, API 5xx, failed job executions, webhook quarantine, database size) sent to `alert_email` |
 
 Terraform state lives in the bootstrap state bucket under the historic
 `citeladder-demo/terraform` prefix. Terraform declares secret containers only.

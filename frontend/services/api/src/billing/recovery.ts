@@ -21,7 +21,7 @@ import {
   settleSubscription,
 } from './settlement.ts';
 import { pushChange } from './plan-changes.ts';
-import { webhookSummary } from './webhooks.ts';
+import { reportQuarantined, webhookSummary } from './webhooks.ts';
 import { getLogger } from '../logging.ts';
 import { refreshRuntime } from '../site-health/plan-runtime.ts';
 
@@ -385,7 +385,7 @@ async function webhookProbe(
     });
     if (settled) await refreshRuntime(db, settled);
   } catch (error) {
-    await db
+    const failed = await db
       .updateTable('billing_webhook_events')
       .set({
         processing_state:
@@ -398,12 +398,14 @@ async function webhookProbe(
       })
       .where('id', '=', receipt.id)
       .where('lease_token', '=', receipt.lease_token)
+      .returning(['id', 'processing_state', 'error_code'])
       .execute();
+    reportQuarantined(failed.filter((row) => row.processing_state === 'quarantined'));
   } finally {
     await stopLease();
   }
   // An unmatched refund can precede its payment; retry boundedly, then quarantine.
-  await db
+  const exhausted = await db
     .updateTable('billing_webhook_events')
     .set({
       lease_token: null,
@@ -415,7 +417,9 @@ async function webhookProbe(
     .where('id', '=', receipt.id)
     .where('processing_state', '=', 'pending')
     .where('lease_token', '=', receipt.lease_token)
+    .returning(['id', 'processing_state', 'error_code'])
     .execute();
+  reportQuarantined(exhausted.filter((row) => row.processing_state === 'quarantined'));
   return receipt.id;
 }
 
@@ -569,7 +573,7 @@ async function quarantineExhaustedWebhooks(
   mode: BillingProvider['mode'],
 ) {
   const now = new Date();
-  await db
+  const quarantined = await db
     .updateTable('billing_webhook_events')
     .set({
       processing_state: 'quarantined',
@@ -582,7 +586,9 @@ async function quarantineExhaustedWebhooks(
     .where('processing_state', '=', 'pending')
     .where('attempt_count', '>=', config.billing.webhookAttempts)
     .where((eb) => eb.or([eb('lease_expires_at', 'is', null), eb('lease_expires_at', '<=', now)]))
+    .returning(['id', 'error_code'])
     .execute();
+  reportQuarantined(quarantined);
 }
 
 /** Three bounded sweeps, with persisted leases and no transaction across I/O. */

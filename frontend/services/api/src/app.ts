@@ -77,6 +77,9 @@ export function createApp(
   const startRunner = options.startRunner ?? runnerStarter(config, db);
   // Before the origin token: its admission is Cloud Scheduler's Google ID token.
   registerScheduledTick(app, config, db, { startRunner, keys: options.schedulerKeys });
+  // Liveness, before the origin token too: Cloud Run's probe and the uptime
+  // check cannot sign. Dependency-free and byte-stable, so it reveals nothing.
+  app.get('/health', (c) => c.json({ status: 'ok' }));
   app.use(originToken(config));
   app.use((_c, next) => observeCommittedWork(next, startRunner));
   const ordinaryBodyLimit = bodyLimit({
@@ -93,9 +96,6 @@ export function createApp(
   app.onError(onError);
   app.notFound(onNotFound);
   registerMcpRoutes(app, config, db);
-
-  // Liveness: dependency-free and byte-stable, like the backend's /health.
-  app.get('/health', (c) => c.json({ status: 'ok' }));
 
   // Readiness: bounded database reachability; never calls a provider.
   app.get('/ready', async (c) =>

@@ -8,6 +8,7 @@ import { settlePending, settleRefund, settleSubscription } from '../src/billing/
 import { cancelSubscription, resumeSubscription } from '../src/billing/cancellation.ts';
 import { ProviderError, type RefundEvidence } from '../src/billing/razorpay.ts';
 import type { Database } from '../src/db/database.ts';
+import { setLogSink } from '../src/logging.ts';
 import { recoverBilling } from '../src/billing/recovery.ts';
 import { entitlementRead, usageRead, workspaceEntitlementRead } from '../src/billing/reads.ts';
 import { claimOffer, endOffer, offerRead } from '../src/billing/journeys.ts';
@@ -1701,8 +1702,17 @@ describe('billing money and access owner', () => {
     // An event not yet applied is quarantined for review instead.
     const unapplied = randomUUID();
     expect(await deliver(body, unapplied)).toBe(204);
-    expect(await deliver(conflicting, unapplied)).toBe(400);
+    const records: Record<string, unknown>[] = [];
+    const restore = setLogSink((line) => records.push(JSON.parse(line)));
+    try {
+      expect(await deliver(conflicting, unapplied)).toBe(400);
+    } finally {
+      setLogSink(restore);
+    }
     expect(await state(unapplied)).toBe('quarantined');
+    expect(records.filter((record) => record.event === 'billing.webhook_quarantined')).toEqual([
+      expect.objectContaining({ severity: 'ERROR', error_code: 'event_id_digest_conflict' }),
+    ]);
     const tiny = createApp({ ...config, billing: { ...config.billing, webhookBytes: 8 } }, db);
     expect(
       (
@@ -1833,13 +1843,22 @@ describe('billing money and access owner', () => {
     const refund = vi.fn(async () => {
       throw new Error('An exhausted row is never attempted again');
     });
-    await recoverBilling(db, config, fakeProvider({ refund }));
+    const records: Record<string, unknown>[] = [];
+    const restore = setLogSink((line) => records.push(JSON.parse(line)));
+    try {
+      await recoverBilling(db, config, fakeProvider({ refund }));
+    } finally {
+      setLogSink(restore);
+    }
     const rows = await db
       .selectFrom('billing_webhook_events')
-      .select(['external_event_id', 'processing_state', 'error_code'])
+      .select(['id', 'external_event_id', 'processing_state', 'error_code'])
       .where('external_event_id', 'in', [expired, leased])
       .execute();
-    expect(Object.fromEntries(rows.map((row) => [row.external_event_id, row]))).toEqual({
+    const byEvent = Object.fromEntries(
+      rows.map(({ id: _id, ...row }) => [row.external_event_id, row]),
+    );
+    expect(byEvent).toEqual({
       [expired]: {
         external_event_id: expired,
         processing_state: 'quarantined',
@@ -1847,6 +1866,21 @@ describe('billing money and access owner', () => {
       },
       [leased]: { external_event_id: leased, processing_state: 'pending', error_code: '' },
     });
+    // The quarantine alert matches one ERROR record per newly quarantined event.
+    const ids = new Set(rows.map((row) => row.id));
+    expect(
+      records.filter(
+        (record) =>
+          record.event === 'billing.webhook_quarantined' &&
+          ids.has(String(record.webhook_event_id)),
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        severity: 'ERROR',
+        webhook_event_id: rows.find((row) => row.external_event_id === expired)?.id,
+        error_code: 'attempts_exhausted',
+      }),
+    ]);
   });
   it('isolates billing reads and activation IDs, and never repairs a missing account', async () => {
     const t = await activated();
