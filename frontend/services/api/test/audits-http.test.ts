@@ -7,7 +7,8 @@ import { auditRuntime } from '../src/audits/config.ts';
 import { createAudits } from '../src/audits/creation.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { auditEvents } from '../src/audits/reads.ts';
-import { auditEventFrames, resumeCursor } from '../src/audits/events.ts';
+import { auditEventTail } from '../src/audits/events.ts';
+import { eventFrames } from '../src/http/event-stream.ts';
 import { auditEventSchema } from '@citeladder/contracts/audit-events';
 
 const config = testConfig({
@@ -304,18 +305,17 @@ describe('audit HTTP family cutover', () => {
   it('stops a stream on cancellation without polling or retaining a transaction', async () => {
     const t = await seed(),
       signal = new AbortController();
-    const frames = auditEventFrames(
-      db,
-      t.workspaceId,
-      t.auditId,
-      undefined,
-      runtime,
+    const frames = eventFrames(
+      auditEventTail(
+        db,
+        { workspaceId: t.workspaceId, auditId: t.auditId, after: undefined },
+        runtime,
+      ),
       signal.signal,
     );
     expect((await frames.next()).done).toBe(false);
     signal.abort();
     expect((await frames.next()).done).toBe(true);
-    expect(resumeCursor(`{${t.auditId}}`)).toBe(t.auditId);
   });
 
   it('ends a running audit stream at its maximum duration', async () => {
@@ -325,12 +325,12 @@ describe('audit HTTP family cutover', () => {
       AUDIT_SSE_MAX_DURATION_SECONDS: '1',
       AUDIT_SSE_POLL_SECONDS: '5',
     });
-    const frames = auditEventFrames(
-      db,
-      t.workspaceId,
-      t.auditId,
-      undefined,
-      bounded,
+    const frames = eventFrames(
+      auditEventTail(
+        db,
+        { workspaceId: t.workspaceId, auditId: t.auditId, after: undefined },
+        bounded,
+      ),
       new AbortController().signal,
     );
     const started = Date.now();

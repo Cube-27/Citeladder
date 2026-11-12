@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import { policy } from '../config.ts';
 import { amount, type Pending } from './contracts.ts';
-import { conflict } from '../errors.ts';
+import { refuse } from './refusals.ts';
 import type { BillingSettings, RazorpaySettings } from './config.ts';
 
 const reference = z
@@ -214,7 +214,7 @@ export class RazorpayProvider implements BillingProvider {
   private readonly adapter: RazorpaySettings;
   private readonly transport: typeof fetch;
   constructor(shared: BillingSettings, adapter: RazorpaySettings, transport: typeof fetch = fetch) {
-    if (!configured(adapter)) conflict('checkout_unavailable');
+    if (!configured(adapter)) refuse('checkout_unavailable');
     this.shared = shared;
     this.adapter = adapter;
     this.transport = transport;
@@ -452,10 +452,10 @@ export function verifyCallback(
     fields[order ? 'razorpay_order_id' : 'razorpay_subscription_id'] !== stored ||
     !fields.razorpay_payment_id?.startsWith('pay_')
   )
-    conflict('checkout_unavailable');
+    refuse('checkout_unavailable');
   const message = order
     ? `${stored}|${fields.razorpay_payment_id}`
     : `${fields.razorpay_payment_id}|${stored}`;
   if (!authenticateSignature(settings.keySecret, message, fields.razorpay_signature ?? ''))
-    conflict('checkout_unavailable');
+    refuse('checkout_unavailable');
 }

@@ -7,6 +7,14 @@ export function lockIdentityAdministration(db: Database) {
   return subjectXactLock(db, 'operator.identity.administration');
 }
 
+/** The refusal when the acting identity is not an active platform administrator. */
+export class PlatformAdminRequired extends Error {
+  constructor() {
+    super('An active platform administrator is required');
+    this.name = 'PlatformAdminRequired';
+  }
+}
+
 /** Operator admission is independent of customer workspace roles. Held until commit. */
 export async function requirePlatformAdmin(db: Database, email: string) {
   await lockIdentityAdministration(db);
@@ -19,6 +27,6 @@ export async function requirePlatformAdmin(db: Database, email: string) {
     .where('role', '=', 'admin')
     .forUpdate()
     .executeTakeFirst();
-  if (!actor) throw new Error('An active platform administrator is required');
+  if (!actor) throw new PlatformAdminRequired();
   return actor;
 }

@@ -10,6 +10,7 @@ import { isActiveCrawl } from '@citeladder/contracts/site-health';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
+import { retryAfterSeconds } from '../http/retry-after.ts';
 import type { SiteTask } from '../queue/task-queue.ts';
 import { enqueueCatalogProjection } from '../commerce/projection.ts';
 import { factSettings } from './analysis/facts.ts';
@@ -36,7 +37,6 @@ import {
   markRunning,
   owned,
   recordCrawlEvent,
-  retryAfterSeconds,
   settleTask,
   startCrawl,
   statuses,

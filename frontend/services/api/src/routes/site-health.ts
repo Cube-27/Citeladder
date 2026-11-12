@@ -30,10 +30,10 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
+import { eventStreamResponse, eventTailStream, resumeCursor } from '../http/event-stream.ts';
 import { InvalidCursorError } from '../http/keyset-cursor.ts';
 import type { RequestParams } from '../http/params.ts';
 import { slottedEventStream, streamOwner } from '../http/stream-slots.ts';
-import { parseUuid } from '../http/uuid.ts';
 import { revalidatable } from '../http/revalidate.ts';
 import {
   currentSiteCrawl,
@@ -43,7 +43,7 @@ import {
   rootFailure,
 } from '../site-health/reads/crawl.ts';
 import { dashboard } from '../site-health/reads/dashboard.ts';
-import { eventReplay, eventStream } from '../site-health/reads/events.ts';
+import { crawlEventTail, eventReplay } from '../site-health/reads/events.ts';
 import {
   architectureMarkdown,
   TABLE_VIEWS,
@@ -337,22 +337,24 @@ export const siteHealthRoutes = [
     async handle({ c, db, config }, { path, query }) {
       const workspaceId = c.get('workspace').workspaceId;
       // Resume after the client's last event, from the SSE header or the query.
-      const after = parseUuid(c.req.header('last-event-id') ?? query.last_event_id);
+      const after = resumeCursor({
+        header: c.req.header('last-event-id'),
+        query: query.last_event_id,
+      });
       if (!query.stream) return c.json(await eventReplay(db, workspaceId, path.crawl_id, after));
-      const crawl = await loadCrawl(db, workspaceId, path.crawl_id);
-      const signal = c.req.raw.signal;
-      const body = slottedEventStream({
-        ...streamOwner(c, db, config.auth.limits),
-        signal,
-        open: (held) => eventStream(db, workspaceId, crawl, after, held),
-      });
-      return new Response(body, {
-        headers: {
-          'content-type': 'text/event-stream',
-          'cache-control': 'no-cache',
-          'x-accel-buffering': 'no',
-        },
-      });
+      const tail = crawlEventTail(
+        db,
+        workspaceId,
+        await loadCrawl(db, workspaceId, path.crawl_id),
+        after,
+      );
+      return eventStreamResponse(
+        slottedEventStream({
+          ...streamOwner(c, db, config.auth.limits),
+          signal: c.req.raw.signal,
+          open: (held) => eventTailStream(tail, held),
+        }),
+      );
     },
   }),
   exportRoute('csv'),

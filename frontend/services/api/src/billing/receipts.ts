@@ -6,7 +6,7 @@ import { jsonObject } from '../db/json.ts';
 import type { BillingPayments } from '../generated/db-schema.ts';
 import { amount, taxSnapshotSchema, type Pending } from './contracts.ts';
 import { digest } from '../crypto-text.ts';
-import { conflict } from '../errors.ts';
+import { refuse } from './refusals.ts';
 import { roundedRatio, type Quote } from './quotes.ts';
 import type { PaymentEvidence, RefundEvidence } from './razorpay.ts';
 import { lockAccount } from '../entitlements/grants.ts';
@@ -45,7 +45,7 @@ function invoiceDay(at: Date): { day: string; year: string } {
 }
 
 async function numbers(db: Database, at: Date, prefix: string, credit: boolean) {
-  if (!/^[A-Z0-9]{1,3}$/u.test(prefix)) conflict('invoice_prefix_invalid');
+  if (!/^[A-Z0-9]{1,3}$/u.test(prefix)) refuse('invoice_prefix_invalid');
   const { day, year } = invoiceDay(at);
   const series = credit ? `CN:${year}` : year;
   await db
@@ -63,7 +63,7 @@ async function numbers(db: Database, at: Date, prefix: string, credit: boolean) 
   const suffix = `${year.slice(2, 4)}${year.slice(-2)}/${serial}`;
   const invoice = `${prefix}${credit ? 'C' : ''}/${suffix}`;
   const receipt = credit ? invoice : `${prefix}R/${suffix}`;
-  if (invoice.length > 16 || receipt.length > 16) conflict('invoice_number_too_long');
+  if (invoice.length > 16 || receipt.length > 16) refuse('invoice_number_too_long');
   return { day, year, invoice, receipt };
 }
 
@@ -121,7 +121,7 @@ export async function recordPayment(
     evidence.amount !== quote.total_price.amount_minor ||
     evidence.currency !== quote.total_price.currency
   )
-    conflict('payment_amount_mismatch');
+    refuse('payment_amount_mismatch');
   const fingerprint = digest({
     account: pending.billing_account_id,
     pending: pending.id,
@@ -152,7 +152,7 @@ export async function recordPayment(
       existing.payment_method !== evidence.method ||
       existing.status !== 'paid'
     )
-      conflict('payment_receipt_conflict');
+      refuse('payment_receipt_conflict');
     return existing;
   }
   const payment = await db
@@ -188,7 +188,7 @@ export async function recordPayment(
     .select('users.email')
     .where('billing_accounts.id', '=', pending.billing_account_id)
     .executeTakeFirst();
-  if (!customer) conflict('invoice_customer_email_missing');
+  if (!customer) refuse('invoice_customer_email_missing');
   const numbered = await numbers(db, evidence.paidAt, snapshot.seller.invoice_prefix ?? '', false);
   const kind = pending.country_code === 'IN' ? 'gst_tax_receipt' : 'export_receipt';
   const amounts = { ...tax, currency: evidence.currency, tax_treatment: tax.treatment };
@@ -237,7 +237,7 @@ export function creditAmounts(
   );
   const taxLeft = remaining.cgst_minor! + remaining.sgst_minor! + remaining.igst_minor!;
   const total = remaining.taxable_minor! + taxLeft;
-  if (refunded <= 0 || refunded > total) conflict('credit_note_amount_invalid');
+  if (refunded <= 0 || refunded > total) refuse('credit_note_amount_invalid');
   if (refunded === total)
     return {
       ...original,
@@ -260,7 +260,7 @@ export function creditAmounts(
     cgst = Math.min(Math.floor(tax / 2), remaining.cgst_minor!);
     sgst = Math.min(tax - cgst, remaining.sgst_minor!);
     cgst = tax - sgst;
-  } else if (tax) conflict('credit_note_tax_invalid');
+  } else if (tax) refuse('credit_note_tax_invalid');
   return {
     ...original,
     subtotal_minor: taxable,
@@ -299,7 +299,7 @@ export async function recordRefund(
     .where('external_payment_id', '=', refund.paymentId)
     .forUpdate()
     .executeTakeFirst();
-  if (!payment) conflict('refund_payment_missing');
+  if (!payment) refuse('refund_payment_missing');
   const prior = await db
     .selectFrom('billing_payments')
     .selectAll()
@@ -314,7 +314,7 @@ export async function recordRefund(
       prior.status !== refund.status ||
       prior.parent_payment_id !== payment.id
     )
-      conflict('refund_receipt_conflict');
+      refuse('refund_receipt_conflict');
     return;
   }
   const previous = await db
@@ -324,7 +324,7 @@ export async function recordRefund(
     .where('receipt_kind', '=', 'refund')
     .executeTakeFirstOrThrow();
   const total = Number(previous.total) + refund.amount;
-  if (total > payment.amount_minor) conflict('refund_amount_exceeds_payment');
+  if (total > payment.amount_minor) refuse('refund_amount_exceeds_payment');
   const original = await db
     .selectFrom('billing_invoices')
     .selectAll()

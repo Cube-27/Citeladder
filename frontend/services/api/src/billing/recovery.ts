@@ -21,6 +21,7 @@ import {
   settleSubscription,
 } from './settlement.ts';
 import { pushChange } from './plan-changes.ts';
+import { refuse } from './refusals.ts';
 import { reportQuarantined, webhookSummary } from './webhooks.ts';
 import { getLogger } from '../logging.ts';
 import { refreshRuntime } from '../site-health/plan-runtime.ts';
@@ -61,7 +62,7 @@ async function applyReference(
       .where('external_subscription_id', '=', reference)
       .executeTakeFirst();
     if (sub) await settleSubscription(db, sub, evidence.subscription, pending, workspace);
-  } else if (pending.status !== 'activated') throw new ApiError(409, 'payment_for_closed_intent');
+  } else if (pending.status !== 'activated') refuse('payment_for_closed_intent');
   return true;
 }
 
@@ -215,7 +216,7 @@ async function pendingProbe(
           notes.citeladder_catalog_revision !== owned.catalog_revision ||
           (evidence?.kind === 'base' && evidence.subscription.priceRef !== owned.external_price_id)
         )
-          throw new ApiError(409, 'provider_reference_mismatch');
+          refuse('provider_reference_mismatch');
         await trx
           .updateTable('pending_activations')
           .set({ external_reference: reference })

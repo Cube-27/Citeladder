@@ -211,7 +211,7 @@ it('issues and revokes once, exposes same-transaction projection, and enforces e
   ).rejects.toThrow();
   await expect(
     grantMutation(db, context(), target(), { ...operation, key: 'retired_capability' }),
-  ).rejects.toThrow('invalid');
+  ).rejects.toMatchObject({ status: 409, code: 'grant_bundle_invalid' });
   const issued = await grantMutation(db, ctx, target(), operation);
   await grantMutation(db, ctx, target(), operation);
   expect(await version()).toBe(initialVersion + 1);
@@ -225,10 +225,10 @@ it('issues and revokes once, exposes same-transaction projection, and enforces e
   ).toEqual([{ reason: 'reviewed fixture operation' }]);
   await expect(
     grantMutation(db, { ...ctx, reason: 'a different reason' }, target(), operation),
-  ).rejects.toThrow('grant_idempotency_conflict');
-  await expect(grantMutation(db, ctx, target(), { ...operation, value: 200 })).rejects.toThrow(
-    'idempotency_conflict',
-  );
+  ).rejects.toMatchObject({ status: 409, code: 'grant_idempotency_conflict' });
+  await expect(
+    grantMutation(db, ctx, target(), { ...operation, value: 200 }),
+  ).rejects.toMatchObject({ status: 409, code: 'grant_idempotency_conflict' });
   const effective = await resolveAccountEntitlement(db, { workspaceId, accountId }, new Date());
   expect(effective.status === 'resolved' && effective.values.get('monitored_urls')).toBe(
     Number(baselineLimit) + 100,
@@ -252,7 +252,7 @@ it('issues and revokes once, exposes same-transaction projection, and enforces e
   ).toBe(baselineLimit);
   await expect(
     grantMutation(db, revokeCtx, target(), { ...revoked, at: new Date(revoked.at.getTime() + 1) }),
-  ).rejects.toThrow('idempotency_conflict');
+  ).rejects.toMatchObject({ status: 409, code: 'revocation_idempotency_conflict' });
   const another = await grantMutation(db, context(), target(), {
     ...operation,
     key: 'ai_credits',
@@ -260,7 +260,7 @@ it('issues and revokes once, exposes same-transaction projection, and enforces e
   });
   await expect(
     grantMutation(db, revokeCtx, target(), { ...revoked, grantId: another.grant_ids![0]! }),
-  ).rejects.toThrow('revocation_idempotency_conflict');
+  ).rejects.toMatchObject({ status: 409, code: 'revocation_idempotency_conflict' });
   await expect(
     inspectAccount(db, context(), { workspaceId: foreignWorkspace, accountId }),
   ).rejects.toThrow();

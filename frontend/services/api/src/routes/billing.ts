@@ -35,7 +35,7 @@ import {
 } from '../billing/purchases.ts';
 import { changePlan } from '../billing/plan-changes.ts';
 import { identitySchema } from '../billing/contracts.ts';
-import { conflict } from '../errors.ts';
+import { refuse } from '../billing/refusals.ts';
 import { offerRead, claimOffer, endOffer, claimRequest } from '../billing/journeys.ts';
 import { cancelSubscription, resumeSubscription } from '../billing/cancellation.ts';
 import { checkoutAvailable, configured, verifyCallback } from '../billing/razorpay.ts';
@@ -289,7 +289,7 @@ export const billingRoutes = [
         pending.provider_mode !== config.razorpay.mode ||
         !checkoutAvailable(config.billing, config.razorpay, pending.region, allowListed)
       )
-        conflict('checkout_unavailable');
+        refuse('checkout_unavailable');
       return subscriptionCheckoutSchema.parse({
         activation_id: pending.id,
         provider: pending.provider,
@@ -324,7 +324,7 @@ export const billingRoutes = [
         pending.provider_mode !== config.razorpay.mode ||
         !configured(config.razorpay)
       )
-        conflict('checkout_unavailable');
+        refuse('checkout_unavailable');
       verifyCallback(config.razorpay, pending.external_reference, input.fields);
       if (pending.status === 'activated') return activationResponse(pending);
       // The callback authenticates only; recovery verifies captured funds. A
@@ -334,7 +334,7 @@ export const billingRoutes = [
         pending.status === 'failed' ||
         (pending.status === 'abandoned' && pending.activation_kind === 'base')
       )
-        conflict('checkout_unavailable');
+        refuse('checkout_unavailable');
       // Re-checked in the update: the sweep may abandon a base intent meanwhile.
       // Clearing the lease voids any in-flight probe's stale unpaid reading.
       const now = new Date();

@@ -243,8 +243,11 @@ account-capacity locks are the sole business authority. Native config owns the
 capability registry; native PostgreSQL tests cover the schema's constraints.
 Do not introduce Redis without measured need.
 
-The audit and Site Health event streams (Server-Sent Events) each end at a
-maximum duration, and a user may hold at most `ABUSE_SSE_STREAMS_PER_USER`
+The audit and Site Health event streams (Server-Sent Events) share one tail,
+[`http/event-stream.ts`](../frontend/services/api/src/http/event-stream.ts):
+a `Last-Event-ID` (or `last_event_id`) that is not a UUID is refused with 422,
+the next page is read only when the client asks for more, and each stream ends
+at a maximum duration. A user may hold at most `ABUSE_SSE_STREAMS_PER_USER`
 (default 3) open at once on each API instance. The
 [stream slot counter](../frontend/services/api/src/http/stream-slots.ts) lives in
 process memory, not PostgreSQL: a further stream is refused with 429 and

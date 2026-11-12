@@ -2,6 +2,7 @@
 import { setTimeout } from 'node:timers/promises';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
+import { isRetryableContention } from '../db/errors.ts';
 import { policy } from '../config.ts';
 import { notFound } from '../errors.ts';
 import {
@@ -122,11 +123,9 @@ async function cancelWithRetry(
   try {
     await cancelOnce(db, workspaceId, crawlId);
   } catch (error) {
-    const code = error && typeof error === 'object' && 'code' in error ? error.code : null;
     if (
       attempt >= policy.site_health.crawl.cancel_db_conflict_retries ||
-      typeof code !== 'string' ||
-      !['40001', '40P01', '55P03'].includes(code)
+      !isRetryableContention(error)
     )
       throw error;
     const delay =

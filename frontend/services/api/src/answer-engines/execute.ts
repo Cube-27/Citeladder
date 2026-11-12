@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { retryAfterSeconds } from '../http/retry-after.ts';
 import { providerErrorCode, transientStatus } from '../models/http.ts';
 import { approvedEndpoint } from '../providers/connections.ts';
 import { openaiReasoning, providerPolicy, type ProviderSettings } from '../providers/config.ts';
@@ -100,14 +101,6 @@ function authHeaders(
   if (provider === 'google') return { 'x-goog-api-key': secret };
   return { 'x-api-key': secret, 'anthropic-version': settings.anthropicVersion };
 }
-function retryAfterSeconds(response: Response) {
-  const raw = response.headers.get('retry-after');
-  if (raw === null) return undefined;
-  const seconds = Number.isFinite(Number(raw))
-    ? Math.max(0, Number(raw))
-    : Math.max(0, (Date.parse(raw) - Date.now()) / 1000);
-  return Number.isFinite(seconds) ? seconds : undefined;
-}
 function assertNoAnthropicSearchError(payload: unknown) {
   const parsed = z.object({ content: z.array(z.unknown()).optional() }).safeParse(payload);
   for (const block of parsed.data?.content ?? []) {
@@ -160,7 +153,7 @@ export async function executeAnswer(
     throw new ProviderError(
       providerErrorCode(response.status),
       transientStatus(response.status),
-      retryAfterSeconds(response),
+      retryAfterSeconds(response.headers.get('retry-after')),
     );
   }
   let payload: unknown;

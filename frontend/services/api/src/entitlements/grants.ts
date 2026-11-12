@@ -39,6 +39,9 @@ export async function bumpLifecycle(
   await update.execute();
 }
 
+const invalidBundle = () =>
+  conflict('grant_bundle_invalid', 'The grant bundle names an unknown or out-of-range capability.');
+
 const bump = (db: Database, workspaceId: string, accountId: string, at: Date) =>
   bumpLifecycle(db, { workspaceId, accountId, at });
 
@@ -151,7 +154,10 @@ export async function issueBundle(
           ),
       )
     )
-      conflict('grant_idempotency_conflict');
+      conflict(
+        'grant_idempotency_conflict',
+        'This grant key was already used for a different grant.',
+      );
     getLogger('api.entitlements').info('billing.duplicate_grant_prevented', {
       account_id: accountId,
     });
@@ -164,7 +170,7 @@ export async function issueBundle(
     new Set(specs.map((spec) => spec.key)).size !== specs.length ||
     !(policy.entitlements.grant_source_kinds as readonly string[]).includes(input.sourceKind)
   )
-    conflict('grant_bundle_invalid');
+    invalidBundle();
   for (const spec of specs) {
     const definition =
       policy.entitlements.capabilities[spec.key as keyof typeof policy.entitlements.capabilities];
@@ -175,7 +181,7 @@ export async function issueBundle(
       (definition.type === 'flag' && spec.value > 1) ||
       (definition.type === 'level' && spec.value >= definition.levels)
     )
-      conflict('grant_bundle_invalid');
+      invalidBundle();
   }
   const now = new Date();
   const rows = await db
@@ -231,8 +237,10 @@ export async function revokeBundle(
     .orderBy('id')
     .forUpdate()
     .execute();
-  if (rows.length !== new Set(input.grantIds).size) conflict('grant_not_found');
-  if (!Number.isFinite(input.at.getTime())) conflict('invalid_revocation_time');
+  if (rows.length !== new Set(input.grantIds).size)
+    conflict('grant_not_found', 'A grant to revoke was not found on this account.');
+  if (!Number.isFinite(input.at.getTime()))
+    conflict('invalid_revocation_time', 'The revocation time is not a valid date.');
   const prior = await db
     .selectFrom('grant_revocations')
     .innerJoin('account_grants', 'account_grants.id', 'grant_revocations.grant_id')
@@ -252,7 +260,10 @@ export async function revokeBundle(
         row.actor_user_id !== input.actorId,
     )
   )
-    conflict('revocation_idempotency_conflict');
+    conflict(
+      'revocation_idempotency_conflict',
+      'This revocation key was already used for a different revocation.',
+    );
   const inserted = await db
     .insertInto('grant_revocations')
     .values(

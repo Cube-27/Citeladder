@@ -1,5 +1,7 @@
+import { PlatformAdminRequired } from '../auth/operators.ts';
 import { loadConfig } from '../config.ts';
 import { createDatabase, type Database, type DatabaseConfig } from '../db/database.ts';
+import { ApiError } from '../errors.ts';
 
 export function required(value: string | undefined, name: string): string {
   if (!value) throw new Error(`--${name} is required`);
@@ -25,8 +27,6 @@ const safeFailures = new Set([
   'invalid_plan_operation',
   'path_outside_workspace',
   'operator_input_too_large',
-  'revocation_idempotency_conflict',
-  'grant_not_found',
   'invalid_grant_validity',
   'invalid_development_allowance',
   'invalid_workspace_id',
@@ -58,9 +58,10 @@ export class OperatorRefusal extends Error {}
 
 export function operatorDiagnostic(error: unknown): string {
   if (error instanceof OperatorRefusal) return error.message;
+  if (error instanceof PlatformAdminRequired) return 'active_admin_required';
+  // An API refusal's code is a declared machine code, never input.
+  if (error instanceof ApiError) return error.code;
   if (error instanceof Error && safeFailures.has(error.message)) return error.message;
-  if (error instanceof Error && error.message === 'An active platform administrator is required')
-    return 'active_admin_required';
   // A PostgreSQL SQLSTATE (28P01: password rejected) names the cause without any input.
   if (
     error instanceof Error &&

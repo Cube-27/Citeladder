@@ -12,7 +12,7 @@ import {
   sourceRef,
 } from '../entitlements/grants.ts';
 import { catalog } from './catalog.ts';
-import { conflict } from '../errors.ts';
+import { refuse } from './refusals.ts';
 import { amount, taxSnapshotSchema, type Pending, type Subscription } from './contracts.ts';
 import type { Evidence, RefundEvidence, SubscriptionEvidence } from './razorpay.ts';
 import { recordPayment, recordRefund, type Payment } from './receipts.ts';
@@ -121,7 +121,7 @@ type PaymentRecord = Extract<Evidence, { kind: 'payment' }>;
 /** The provider record must be this intent's, in its mode and catalog revision. */
 function verifiedReference(pending: Pending, mode: string, evidence: Evidence) {
   if (pending.provider !== 'razorpay' || pending.provider_mode !== mode)
-    conflict('provider_identity_mismatch');
+    refuse('provider_identity_mismatch');
   const ref = evidence.kind === 'base' ? evidence.subscription.id : evidence.reference;
   const notes = evidence.kind === 'base' ? evidence.subscription.notes : evidence.notes;
   const differs = (value: string | undefined, expected: string) =>
@@ -132,7 +132,7 @@ function verifiedReference(pending: Pending, mode: string, evidence: Evidence) {
     differs(notes.citeladder_account_ref, pending.billing_account_id) ||
     differs(notes.citeladder_catalog_revision, pending.catalog_revision)
   )
-    conflict('provider_reference_mismatch');
+    refuse('provider_reference_mismatch');
   return ref;
 }
 
@@ -161,14 +161,14 @@ async function settleBase(
     pending.activation_kind !== 'base' ||
     evidence.subscription.priceRef !== pending.external_price_id
   )
-    conflict('price_ref_mismatch');
+    refuse('price_ref_mismatch');
   // A checkout paid as the abandon sweep cancels it is still the customer's
   // paid period: it settles and runs to the paid end (B71).
   const { status } = evidence.subscription;
   if (!evidence.subscription.payment || !(grantedStates.has(status) || terminalStates.has(status)))
     return false;
   const plan = frozen.payload.plans.find((row) => row.key === pending.catalog_key);
-  if (!plan?.grants.length) conflict('grant_bundle_missing');
+  if (!plan?.grants.length) refuse('grant_bundle_missing');
   const terms = frozenTermsSchema.parse({
     catalog_key: pending.catalog_key,
     catalog_revision: pending.catalog_revision,
@@ -186,7 +186,7 @@ async function settleBase(
     .where('billing_account_id', '=', pending.billing_account_id)
     .where('is_current', '=', true)
     .executeTakeFirst();
-  if (current) conflict('subscription_already_active');
+  if (current) refuse('subscription_already_active');
   const now = new Date();
   const sub = await db
     .insertInto('billing_subscriptions')
@@ -243,7 +243,7 @@ async function settlePack(
     (row) => row.key === pending.catalog_key,
   );
   const specs = item?.modes.byok?.grants;
-  if (!item || !specs?.length) conflict('grant_bundle_missing');
+  if (!item || !specs?.length) refuse('grant_bundle_missing');
   // The receipt stands whatever happens to the grant: money was collected.
   await recordPayment(db, pending, payment, quote, pending.tax_snapshot, null, item.name);
   if (
@@ -281,7 +281,7 @@ async function settleOneOff(
   evidence: Extract<Evidence, { kind: 'payment' }>,
   context: { quote: Quote; frozen: Frozen; workspaceId: string },
 ) {
-  if (pending.activation_kind === 'base') conflict('provider_record_kind_mismatch');
+  if (pending.activation_kind === 'base') refuse('provider_record_kind_mismatch');
   if (!evidence.payment) return false;
   if (pending.activation_kind === 'upgrade')
     await settleUpgrade(db, pending, evidence, context.workspaceId);
@@ -327,7 +327,7 @@ export async function settlePending(
     return;
   }
   const quote = resolvedQuoteSchema.parse(pending.quote);
-  if (quote.catalog_revision !== pending.catalog_revision) conflict('catalog_revision_mismatch');
+  if (quote.catalog_revision !== pending.catalog_revision) refuse('catalog_revision_mismatch');
   const frozen = await catalog(db, pending.catalog_revision);
   const settled =
     evidence.kind === 'base'
@@ -377,7 +377,7 @@ async function settlePeriod(
     event.notes.citeladder_catalog_revision !== pending.catalog_revision ||
     !payment.invoiceId
   )
-    conflict('subscription_payment_mismatch');
+    refuse('subscription_payment_mismatch');
   const start = event.start,
     end = event.end;
   if (
@@ -387,7 +387,7 @@ async function settlePeriod(
     payment.periodStart?.getTime() !== start.getTime() ||
     payment.periodEnd?.getTime() !== end.getTime()
   )
-    conflict('subscription_period_bounds_invalid');
+    refuse('subscription_period_bounds_invalid');
   const overlap = await db
     .selectFrom('account_grants')
     .select('id')
@@ -397,7 +397,7 @@ async function settlePeriod(
     .where('period_end', '>', start)
     .where((eb) => eb.or([eb('period_start', '!=', start), eb('period_end', '!=', end)]))
     .executeTakeFirst();
-  if (overlap) conflict('subscription_period_overlap');
+  if (overlap) refuse('subscription_period_overlap');
   await recordPayment(
     db,
     { ...pending, catalog_key: terms.catalog_key, catalog_revision: terms.catalog_revision },
@@ -570,12 +570,12 @@ export async function settleSubscription(
     .where('billing_account_id', '=', input.billing_account_id)
     .forUpdate()
     .executeTakeFirstOrThrow();
-  if (event.id !== sub.external_subscription_id) conflict('provider_reference_mismatch');
+  if (event.id !== sub.external_subscription_id) refuse('provider_reference_mismatch');
   // bigint arrives as a string; a Unix-second version is a safe integer.
   if (event.version < Number(sub.provider_state_version)) return;
   if (!sub.is_current && sub.ended_at) return;
   const { terms, renewal, lapsed } = effectiveTerms(sub, event);
-  if (event.priceRef !== terms.price_ref) conflict('price_ref_mismatch');
+  if (event.priceRef !== terms.price_ref) refuse('price_ref_mismatch');
   if (event.payment)
     await settlePeriod(db, sub, event, event.payment, { pending, terms, workspaceId });
   const now = new Date();

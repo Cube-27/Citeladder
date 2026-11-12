@@ -12,6 +12,7 @@ import type { Selectable } from 'kysely';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import { isRetryableContention } from '../db/errors.ts';
 import { record } from '../db/json.ts';
 import type { SiteCrawls } from '../generated/db-schema.ts';
 import { getLogger } from '../logging.ts';
@@ -76,14 +77,6 @@ const jitter = (seconds: number) => randomInt(Math.max(1, Math.round(seconds * 1
 const retryDelay = (settings: SiteWorkerSettings, attempt: number) =>
   Math.min(settings.retryMax, settings.retryBase * 2 ** Math.max(0, attempt - 1)) +
   jitter(settings.retryJitter);
-
-/** Server retry advice: delta seconds or an HTTP date; invalid advice uses normal backoff. */
-export function retryAfterSeconds(header: string | undefined, now = Date.now()) {
-  if (!header?.trim()) return undefined;
-  const raw = header.trim();
-  const seconds = /^\d+$/u.test(raw) ? Number(raw) : (Date.parse(raw) - now) / 1000;
-  return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
-}
 
 /** An update of the task that applies only while this worker still holds its lease. */
 export const owned = (db: Database, task: SiteTask, owner: string) =>
@@ -363,10 +356,6 @@ export async function recordCrawlEvent(
 
 const failureDetail = (error: unknown) =>
   error instanceof Error ? error.message.slice(0, 2000) : 'Site Health task failed';
-function isConflict(error: unknown) {
-  const code = error && typeof error === 'object' && 'code' in error ? error.code : null;
-  return typeof code === 'string' && ['40001', '40P01', '55P03'].includes(code);
-}
 
 /** A transaction kind: the task held for the body, then settled under the settling lock. */
 async function runInTransaction(
@@ -395,7 +384,7 @@ async function runInTransaction(
  */
 async function settleThrown(ctx: SiteTaskContext, claimed: SiteTask, error: unknown) {
   const detail = failureDetail(error);
-  const outcome: SiteTaskOutcome = isConflict(error)
+  const outcome: SiteTaskOutcome = isRetryableContention(error)
     ? { kind: 'conflict', errorDetail: detail, cause: error }
     : {
         kind: 'failed',
@@ -410,7 +399,7 @@ async function settleThrown(ctx: SiteTaskContext, claimed: SiteTask, error: unkn
       if (held) await settleTask(trx, ctx, held.task, outcome);
     });
   } catch (error_) {
-    if (!isConflict(error_)) throw error_;
+    if (!isRetryableContention(error_)) throw error_;
     // The task row alone, through the lease fence: a re-claimed lease is never settled here.
     await ctx.db.transaction().execute(async (trx) => {
       const task = await ctx.queue.fence(trx, claimed, ctx.owner);

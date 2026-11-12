@@ -31,6 +31,7 @@ import {
   callOutputCap,
   ModelError,
   providerErrorCode,
+  retryAfterHeader,
   type Complete,
   type Transport,
 } from './http.ts';
@@ -61,8 +62,11 @@ function modelError(error: unknown, signal: AbortSignal) {
       status: error.status,
       error_code: providerErrorCode(error.status),
     });
-    const retryAfter = error.headers?.get('retry-after') ?? undefined;
-    return new ModelError('http', error.status, retryAfter);
+    return new ModelError(
+      'http',
+      error.status,
+      retryAfterHeader(error.headers?.get('retry-after')),
+    );
   }
   // A stream that ends in an error event, or a response the SDK cannot read.
   return new ModelError(error instanceof APIError ? 'connection' : 'parse');

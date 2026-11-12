@@ -7,7 +7,8 @@ import type { Database } from '../db/database.ts';
 import type { ServiceConfig } from '../config.ts';
 import { policy } from '../config.ts';
 import { lockAccount } from '../entitlements/grants.ts';
-import { ApiError, conflict, notFound } from '../errors.ts';
+import { ApiError, notFound } from '../errors.ts';
+import { refuse } from './refusals.ts';
 import { digest } from '../crypto-text.ts';
 import {
   identitySchema,
@@ -46,7 +47,9 @@ export function idempotencyKey(raw: string | undefined) {
     key.length > policy.billing.contracts.idempotency_key_max_length ||
     /\s/u.test(key)
   )
-    throw new ApiError(400, 'idempotency_key_required');
+    throw new ApiError(400, 'A valid Idempotency-Key header is required.', {
+      code: 'idempotency_key_required',
+    });
   return key;
 }
 
@@ -56,7 +59,7 @@ export async function workspaceAccount(db: Database, workspaceId: string) {
     .selectAll()
     .where('workspace_id', '=', workspaceId)
     .executeTakeFirst();
-  if (!account) conflict('billing_account_unavailable');
+  if (!account) refuse('billing_account_unavailable');
   return account;
 }
 export async function workspaceActivation(db: Database, workspaceId: string, id: string) {
@@ -219,20 +222,20 @@ async function purchasable(db: Database, accountId: string, request: Purchase) {
     .execute();
   if (request.kind === 'base') {
     // Any current row refuses, including a halted one awaiting its cancellation.
-    if (current) conflict('subscription_already_active');
-    if (pending.some((row) => row.activation_kind === 'base')) conflict('subscription_pending');
+    if (current) refuse('subscription_already_active');
+    if (pending.some((row) => row.activation_kind === 'base')) refuse('subscription_pending');
   } else {
     if (
       !current?.current_period_end ||
       current.current_period_end <= new Date() ||
       !policy.billing.contracts.live_subscription_statuses.includes(current.status)
     )
-      conflict('base_subscription_required');
+      refuse('base_subscription_required');
     if (
       request.kind === 'addon' &&
       pending.some((row) => row.activation_kind === 'addon' && row.catalog_key === request.key)
     )
-      conflict('addon_pending');
+      refuse('addon_pending');
   }
   return current;
 }
@@ -248,7 +251,7 @@ function purchaseIntent(
   let intent: Intent;
   if (request.kind === 'base') {
     const plan = frozen.payload.plans.find((row) => row.key === request.key);
-    if (!plan) conflict('catalog_key_unknown');
+    if (!plan) refuse('catalog_key_unknown');
     intent = baseIntent(
       config.billing,
       plan,
@@ -259,12 +262,12 @@ function purchaseIntent(
       now,
     );
     const price = plan.regional_prices[intent.mode][intent.region];
-    if (price?.provider_mode !== config.razorpay.mode) conflict('checkout_unavailable');
+    if (price?.provider_mode !== config.razorpay.mode) refuse('checkout_unavailable');
   } else {
     const item = (request.kind === 'addon' ? frozen.payload.addons : frozen.payload.topups).find(
       (row) => row.key === request.key,
     );
-    if (!item) conflict('catalog_key_unknown');
+    if (!item) refuse('catalog_key_unknown');
     intent = packIntent(config.billing, item, {
       kind: request.kind,
       mode: credentialMode.parse(current!.credential_mode),
@@ -298,7 +301,7 @@ export async function purchase(
       .where('idempotency_key', '=', key)
       .executeTakeFirst();
     if (prior) {
-      if (!matches(prior, identity)) conflict('idempotency_key_reused');
+      if (!matches(prior, identity)) refuse('idempotency_key_reused');
       return { pending: prior, fresh: false };
     }
     if (
@@ -309,14 +312,14 @@ export async function purchase(
         .where('idempotency_key', '=', key)
         .executeTakeFirst()
     )
-      conflict('idempotency_key_reused');
+      refuse('idempotency_key_reused');
     const current = await purchasable(trx, account.id, request);
     const frozen = await catalog(trx);
     const now = new Date();
     const intent = purchaseIntent(config, frozen, request, identity, current, now);
     const allowListed = await onCheckoutAllowList(trx, config, workspaceId);
     if (!checkoutAvailable(config.billing, config.razorpay, intent.region, allowListed))
-      conflict('checkout_unavailable');
+      refuse('checkout_unavailable');
     if (request.kind === 'base')
       await trx
         .updateTable('billing_accounts')

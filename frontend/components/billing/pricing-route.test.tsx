@@ -95,12 +95,22 @@ describe('app pricing continuation', () => {
     expect(writes[0]).toEqual({ workspace: workspaceId, key: 'captured-key' });
   });
 
-  it('reports a refused purchase once, in reader copy', async () => {
+  it('reports a refused purchase once, in the server sentence', async () => {
     mswServer.use(
       http.get('/api/v1/billing/workspace-catalog', () => HttpResponse.json(catalog)),
       http.get('/api/v1/auth/me', () => HttpResponse.json({ user: signedInUser })),
       http.post('/api/v1/billing/addons', () =>
-        HttpResponse.json({ error: { message: 'checkout_unavailable' } }, { status: 409 }),
+        HttpResponse.json(
+          {
+            error: {
+              code: 'billing_gstin_state_mismatch',
+              message: 'The GSTIN does not match the selected state. Check both and try again.',
+              request_id: 'req-1',
+              retryable: false,
+            },
+          },
+          { status: 409 },
+        ),
       ),
     );
     globalThis.sessionStorage.setItem(
@@ -121,11 +131,10 @@ describe('app pricing continuation', () => {
 
     renderWithProviders(<PricingRoute />);
     await userEvent.click(await screen.findByRole('button', { name: 'Review current quote' }));
-    expect(
-      await screen.findByText('Checkout is not available for this purchase yet.'),
-    ).toBeInTheDocument();
-    expect(screen.getAllByText('Checkout is not available for this purchase yet.')).toHaveLength(1);
-    expect(screen.queryByText('checkout_unavailable')).not.toBeInTheDocument();
+    const sentence = 'The GSTIN does not match the selected state. Check both and try again.';
+    expect(await screen.findByText(sentence)).toBeInTheDocument();
+    expect(screen.getAllByText(sentence)).toHaveLength(1);
+    expect(screen.queryByText('Quote unavailable.')).not.toBeInTheDocument();
   });
 
   it('shows the server quote before opening payment checkout', async () => {

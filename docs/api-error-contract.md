@@ -60,6 +60,12 @@ throw new ApiError(403, 'You already own a workspace', {
 });
 ```
 
+A 409 refusal uses `conflict(code, message)`: the machine reason is the
+`code`, never the `message`. Billing refusals go through `refuse(reason)` in
+`billing/refusals.ts`, which pairs each reason code with its sentence, so a
+checkout refusal such as `billing_gstin_state_mismatch` reaches the buyer as
+"The GSTIN does not match the selected state. Check both and try again."
+
 Unhandled errors
 log internal diagnostics with a request ID and return a fixed 500 message.
 Never return stack traces, SQL, credentials or raw provider bodies.
@@ -89,8 +95,9 @@ falls back to the response status text.
 `MutationNotice` (`components/ui/mutation-notice.tsx` + `lib/api/mutation-notice.ts`) is
 the shared mutation-failure surface; with `ReadError` (`components/ui/read-error.tsx`) for a
 failed read, it is the only way a failure renders. A domain that words its own refusals
-(the Agent's `agentWriteFailure`, billing's `billingFailureNotice`) builds the same notice
-and swaps only the message; no screen renders a bare error Callout.
+(the Agent's `agentWriteFailure`) builds the same notice and swaps only the message; no
+screen renders a bare error Callout. Billing shows the server's sentence; it words only
+the reason codes its reads carry (`unavailable_reason`).
 
 - **4xx** — show the server's reason **verbatim**. It is actionable and user-caused; a
   "try again" invitation would be wrong (the same request will fail identically).
