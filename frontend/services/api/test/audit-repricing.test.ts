@@ -72,7 +72,7 @@ it('uses one latest projection per artifact without fabricating missing usage', 
   const { taskId } = await fixtures.execution(t, { auditId });
   const artifact = await db
     .selectFrom('raw_response_artifacts')
-    .select('id')
+    .select(['id', 'logical_engine', 'transport_provider', 'transport_model'])
     .where('task_id', '=', taskId)
     .executeTakeFirstOrThrow();
   for (const [version, timestamp] of [
@@ -87,6 +87,9 @@ it('uses one latest projection per artifact without fabricating missing usage', 
         audit_id: auditId,
         task_id: taskId,
         raw_response_artifact_id: artifact.id,
+        logical_engine: artifact.logical_engine,
+        transport_provider: artifact.transport_provider,
+        transport_model: artifact.transport_model,
         pricing_version: version,
         formula_version: 'fixture',
         projection_status: 'partial',

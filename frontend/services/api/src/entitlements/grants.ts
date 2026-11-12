@@ -107,10 +107,13 @@ export async function issueBundle(
     priority: number;
     periodStart?: Date;
     periodEnd?: Date;
+    /** Why an operator issued this bundle, stored as its evidence; a replay must repeat it. */
+    reason?: string;
   },
 ) {
   const { accountId, workspaceId, key, specs } = input;
   const ref = sourceRef(input.source);
+  const reason = input.reason?.trim() ?? '';
   await lockAccount(db, workspaceId, accountId);
   // Existing period bundles retain their original writer's key and UUIDs.
   let priorQuery = db
@@ -143,7 +146,8 @@ export async function issueBundle(
               row.period_start?.getTime() === input.periodStart?.getTime() &&
               row.period_end?.getTime() === input.periodEnd?.getTime() &&
               row.valid_from.getTime() === input.from.getTime() &&
-              row.valid_until?.getTime() === input.until?.getTime(),
+              row.valid_until?.getTime() === input.until?.getTime() &&
+              row.reason === reason,
           ),
       )
     )
@@ -156,6 +160,7 @@ export async function issueBundle(
   // The resolver fails closed on an unknown source kind, so never write one.
   if (
     !specs.length ||
+    reason.length > 255 ||
     new Set(specs.map((spec) => spec.key)).size !== specs.length ||
     !(policy.entitlements.grant_source_kinds as readonly string[]).includes(input.sourceKind)
   )
@@ -193,6 +198,7 @@ export async function issueBundle(
         profile_key: input.profile,
         profile_priority: input.priority,
         idempotency_key: key,
+        reason,
         created_at: now,
       })),
     )

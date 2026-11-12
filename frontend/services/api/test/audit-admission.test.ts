@@ -68,7 +68,7 @@ async function recordSpend(
   const { taskId } = await fixtures.execution(t, { auditId: spentAudit });
   const artifact = await db
     .selectFrom('raw_response_artifacts')
-    .select('id')
+    .select(['id', 'logical_engine', 'transport_provider', 'transport_model'])
     .where('task_id', '=', taskId)
     .executeTakeFirstOrThrow();
   const now = new Date();
@@ -89,6 +89,9 @@ async function recordSpend(
         audit_id: spentAudit,
         task_id: taskId,
         raw_response_artifact_id: artifact.id,
+        logical_engine: artifact.logical_engine,
+        transport_provider: artifact.transport_provider,
+        transport_model: artifact.transport_model,
         pricing_version: `fixture-${version}`,
         formula_version: 'fixture',
         projection_status: 'complete',

@@ -116,7 +116,11 @@ provider.
 [recovery](../frontend/services/api/src/billing/recovery.ts) converge on
 [settlement](../frontend/services/api/src/billing/settlement.ts). Authenticated
 payment/subscription evidence, period identity and stable grant keys make
-settlement idempotent. A duplicate event ID with a conflicting digest is refused
+settlement idempotent. Subscription evidence is a provider read, versioned by
+the second the provider served it (the response's `Date` header; the
+subscription entity has no update time). Settlement ignores a read older than
+the version it has applied, and a read without that time is refused. A
+duplicate event ID with a conflicting digest is refused
 and quarantines the event if it is still unapplied; an applied event keeps its
 outcome. An event whose final attempt died with its process is quarantined
 (`attempts_exhausted`) once that attempt's lease expires.
@@ -267,9 +271,11 @@ holds only the customer side: the credit's value, the markup and what each
 feature spends. Every recorded cost is one row of the `internal_costs` view:
 platform calls (`platform_calls.cost_microusd`), Agent model calls
 (`agent_model_attempts.cost_microusd`, recorded whoever funds the call) and
-answer-engine executions (their latest `execution_cost_projections` row). A
-null cost is unknown, never zero. An uncharged call's cost row is written on
-the caller's connection, inside its transaction when it has one, and a row
+answer-engine executions (their latest `execution_cost_projections` row). An
+answer-engine cost row keeps its source IDs and the engine, provider and model
+it was priced for, and outlives a deleted project, like the other two. A null
+cost is unknown, never zero. An uncharged call's cost row is written on the
+caller's connection, inside its transaction when it has one, and a row
 that cannot be written fails the call; an Agent call's cost is written in the
 transaction that settles its debit (B65). A platform-wide daily breaker in the
 metering owner refuses included and uncharged calls with 503

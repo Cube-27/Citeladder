@@ -57,13 +57,18 @@ export type CatalogOperation =
 type CatalogRow = Selectable<BillingCatalogRevisions>;
 type ParsedContext = z.output<typeof contextSchema>;
 
-async function checkCatalogReplay(
+/** A publication replay must repeat its revision, actor and reason. */
+async function checkPublishReplay(
   db: Database,
   ctx: ParsedContext,
   actorId: string,
   revision: string,
-  kind: CatalogOperation['kind'],
 ) {
+  const imported = await db
+    .selectFrom('billing_catalog_imports')
+    .select('id')
+    .where('idempotency_key', '=', ctx.idempotencyKey)
+    .executeTakeFirst();
   const prior = await db
     .selectFrom('billing_catalog_revisions')
     .selectAll()
@@ -74,14 +79,69 @@ async function checkCatalogReplay(
       ]),
     )
     .executeTakeFirst();
-  if (!prior) return;
-  const publishing = kind === 'publish';
-  const key = publishing ? prior.published_idempotency_key : prior.created_idempotency_key;
-  if (key !== ctx.idempotencyKey) throw new Error('catalog_idempotency_operation_conflict');
-  const recordedActor = publishing ? prior.published_by_user_id : prior.created_by_user_id;
-  const reason = publishing ? prior.published_reason : prior.created_reason;
-  if (prior.revision !== revision || recordedActor !== actorId || reason !== ctx.reason)
+  if (imported || (prior && prior.published_idempotency_key !== ctx.idempotencyKey))
+    throw new Error('catalog_idempotency_operation_conflict');
+  if (
+    prior &&
+    (prior.revision !== revision ||
+      prior.published_by_user_id !== actorId ||
+      prior.published_reason !== ctx.reason)
+  )
     throw new Error('catalog_idempotency_conflict');
+}
+
+/**
+ * An import replay must repeat its revision, payload, actor and reason. It
+ * answers from the request's own record, so a draft a later import replaced
+ * is never rewritten by an earlier request's replay; null for a new request.
+ */
+async function importReplay(
+  db: Database,
+  ctx: ParsedContext,
+  actorId: string,
+  revision: string,
+  payloadDigest: string,
+) {
+  const published = await db
+    .selectFrom('billing_catalog_revisions')
+    .select('id')
+    .where('published_idempotency_key', '=', ctx.idempotencyKey)
+    .executeTakeFirst();
+  if (published) throw new Error('catalog_idempotency_operation_conflict');
+  const prior = await db
+    .selectFrom('billing_catalog_imports')
+    .selectAll()
+    .where('idempotency_key', '=', ctx.idempotencyKey)
+    .executeTakeFirst();
+  if (!prior) return null;
+  if (
+    prior.revision !== revision ||
+    prior.payload_sha256 !== payloadDigest ||
+    prior.actor_user_id !== actorId ||
+    prior.reason !== ctx.reason
+  )
+    throw new Error('catalog_idempotency_conflict');
+  return db
+    .selectFrom('billing_catalog_revisions')
+    .selectAll()
+    .where('revision', '=', revision)
+    .executeTakeFirstOrThrow();
+}
+
+async function recordImport(db: Database, ctx: ParsedContext, actorId: string, row: CatalogRow) {
+  await db
+    .insertInto('billing_catalog_imports')
+    .values({
+      id: randomUUID(),
+      idempotency_key: ctx.idempotencyKey,
+      revision: row.revision,
+      payload_sha256: row.payload_sha256,
+      actor_user_id: actorId,
+      reason: ctx.reason,
+      created_at: new Date(),
+    })
+    .execute();
+  return row;
 }
 
 async function importCatalog(
@@ -89,14 +149,9 @@ async function importCatalog(
   row: CatalogRow | undefined,
   ctx: ParsedContext,
   actorId: string,
+  payload: ReturnType<typeof validateCatalog>,
   revision: string,
-  operation: Exclude<CatalogOperation, { kind: 'publish' }>,
 ) {
-  const payload = validateCatalog(
-    operation.kind === 'seed'
-      ? launchCatalog({ mode: operation.mode, rate: operation.rate })
-      : operation.payload,
-  );
   if (row) {
     const changed =
       digest(validateCatalog(jsonObject(row.payload, 'billing_catalog_revisions.payload'))) !==
@@ -109,40 +164,50 @@ async function importCatalog(
       row.created_idempotency_key &&
       row.created_idempotency_key !== ctx.idempotencyKey
     )
-      return await db
-        .updateTable('billing_catalog_revisions')
-        .set({
-          payload: JSON.stringify(payload),
-          payload_sha256: digest(payload),
-          created_by_user_id: actorId,
-          created_reason: ctx.reason,
-          created_idempotency_key: ctx.idempotencyKey,
-          created_at: new Date(),
-        })
-        .where('id', '=', row.id)
-        .returningAll()
-        .executeTakeFirstOrThrow();
+      return recordImport(
+        db,
+        ctx,
+        actorId,
+        await db
+          .updateTable('billing_catalog_revisions')
+          .set({
+            payload: JSON.stringify(payload),
+            payload_sha256: digest(payload),
+            created_by_user_id: actorId,
+            created_reason: ctx.reason,
+            created_idempotency_key: ctx.idempotencyKey,
+            created_at: new Date(),
+          })
+          .where('id', '=', row.id)
+          .returningAll()
+          .executeTakeFirstOrThrow(),
+      );
     if (changed) throw new Error('catalog_revision_conflict');
     if (!row.created_idempotency_key) throw new Error('catalog_bootstrap_revision_exists');
     if (row.created_idempotency_key !== ctx.idempotencyKey)
       throw new Error('catalog_revision_conflict');
     return row;
   }
-  return await db
-    .insertInto('billing_catalog_revisions')
-    .values({
-      id: randomUUID(),
-      revision,
-      payload: JSON.stringify(payload),
-      payload_sha256: digest(payload),
-      publication_state: 'draft',
-      created_by_user_id: actorId,
-      created_reason: ctx.reason,
-      created_idempotency_key: ctx.idempotencyKey,
-      created_at: new Date(),
-    })
-    .returningAll()
-    .executeTakeFirstOrThrow();
+  return recordImport(
+    db,
+    ctx,
+    actorId,
+    await db
+      .insertInto('billing_catalog_revisions')
+      .values({
+        id: randomUUID(),
+        revision,
+        payload: JSON.stringify(payload),
+        payload_sha256: digest(payload),
+        publication_state: 'draft',
+        created_by_user_id: actorId,
+        created_reason: ctx.reason,
+        created_idempotency_key: ctx.idempotencyKey,
+        created_at: new Date(),
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow(),
+  );
 }
 
 async function publishCatalog(
@@ -191,17 +256,27 @@ export function catalogMutation(
       .min(1)
       .max(64)
       .parse(operation.kind === 'seed' ? catalogAuthoring.revision : operation.revision);
-    await checkCatalogReplay(trx, ctx, actor.id, revision, operation.kind);
-    const existing = await trx
-      .selectFrom('billing_catalog_revisions')
-      .selectAll()
-      .where('revision', '=', revision)
-      .forUpdate()
-      .executeTakeFirst();
-    const row =
-      operation.kind === 'publish'
-        ? await publishCatalog(trx, existing, ctx, actor.id)
-        : await importCatalog(trx, existing, ctx, actor.id, revision, operation);
+    const locked = () =>
+      trx
+        .selectFrom('billing_catalog_revisions')
+        .selectAll()
+        .where('revision', '=', revision)
+        .forUpdate()
+        .executeTakeFirst();
+    let row: CatalogRow;
+    if (operation.kind === 'publish') {
+      await checkPublishReplay(trx, ctx, actor.id, revision);
+      row = await publishCatalog(trx, await locked(), ctx, actor.id);
+    } else {
+      const payload = validateCatalog(
+        operation.kind === 'seed'
+          ? launchCatalog({ mode: operation.mode, rate: operation.rate })
+          : operation.payload,
+      );
+      row =
+        (await importReplay(trx, ctx, actor.id, revision, digest(payload))) ??
+        (await importCatalog(trx, await locked(), ctx, actor.id, payload, revision));
+    }
     getLogger('api.billing.operator').info('billing.catalog', {
       actor_id: actor.id,
       operation: operation.kind,
@@ -240,6 +315,7 @@ export async function grantMutation(
         key: ctx.idempotencyKey,
         sourceKind: 'override',
         source: { kind: 'override', actorId: actor.id },
+        reason: ctx.reason,
         specs: [{ key: operation.key, value: operation.value }],
         revision: policy.entitlements.registry_revision,
         from: operation.from,

@@ -105,16 +105,19 @@ export async function purgeExpiredTrialProjects(
       .execute();
     for (const { id: projectId } of projects) {
       const scope = { workspaceId, projectId };
-      const removed = await /* NOSONAR -- One project lock at a time keeps the pool free. */ db
-        .transaction()
-        .execute(async (trx) => {
-          await acquireProjectLock(trx, projectId);
-          if (!(await lockProjectRow(trx, scope))) return false;
-          if (!(await stillPurgeable(trx, workspaceId, now, cutoff))) return false;
-          if (await projectHoldsReservations(trx, workspaceId, projectId)) return false;
-          await removeProject(trx, scope);
-          return true;
-        });
+      const removed =
+        await /* NOSONAR -- One project lock at a time keeps the pool free. */ retainedOnRecheck(
+          db,
+          async (trx) => {
+            await acquireProjectLock(trx, projectId);
+            if (!(await lockProjectRow(trx, scope))) return false;
+            if (await projectHoldsReservations(trx, workspaceId, projectId)) return false;
+            // The cascade locks the project's domain rows before the capacity lock (lock DAG).
+            await removeProject(trx, scope);
+            return true;
+          },
+          { workspaceId, now, cutoff },
+        );
       if (!removed) continue;
       purged += 1;
       logger.info('project.trial_purged', { workspace_id: workspaceId, project_id: projectId });
@@ -130,46 +133,90 @@ export async function purgeExpiredTrialProjects(
 /**
  * Lock the workspace's capacity and recheck its access. The capacity lock
  * serializes with grant issuance and reservations, so an upgrade or new work
- * committed before it is seen here. A checkout still pending settlement keeps
- * the workspace: its payment may already have been captured.
+ * committed before it is seen here. A workspace that ever held a non-trial
+ * grant, even an expired one, is never purged. A checkout still pending
+ * settlement keeps the workspace: its payment may already have been captured.
  */
 async function stillPurgeable(trx: Database, workspaceId: string, now: Date, cutoff: Date) {
-  await lockWorkspaceCapacity(trx, workspaceId);
+  const accountId = await lockWorkspaceCapacity(trx, workspaceId);
   const access = await workspaceAccess(trx, workspaceId, now);
   if (access.status !== 'trial_expired' || !access.expires_at) return false;
   if (Date.parse(access.expires_at) > cutoff.getTime()) return false;
+  const nonTrial = await trx
+    .selectFrom('account_grants')
+    .select('id')
+    .where('billing_account_id', '=', accountId)
+    .where('source_kind', '!=', 'trial')
+    .executeTakeFirst();
+  if (nonTrial) return false;
   const checkout = await trx
     .selectFrom('pending_activations')
-    .innerJoin('billing_accounts', 'billing_accounts.id', 'pending_activations.billing_account_id')
-    .select('pending_activations.id')
-    .where('billing_accounts.workspace_id', '=', workspaceId)
-    .where('pending_activations.status', '=', 'pending')
+    .select('id')
+    .where('billing_account_id', '=', accountId)
+    .where('status', '=', 'pending')
     .executeTakeFirst();
   return !checkout;
+}
+
+/** Thrown to roll back a deletion the locked recheck no longer allows. */
+class Retained extends Error {}
+
+/**
+ * Runs `remove` and then rechecks the workspace under its capacity lock, in
+ * one transaction. The lock DAG puts domain rows before the capacity lock, so
+ * the deletion takes its row locks first and is rolled back when the recheck
+ * refuses it. Returns what `remove` returned, or false when rolled back.
+ */
+async function retainedOnRecheck<T>(
+  db: Database,
+  remove: (trx: Database) => Promise<T>,
+  scope: { workspaceId: string; now: Date; cutoff: Date },
+): Promise<T | false> {
+  try {
+    return await db.transaction().execute(async (trx) => {
+      const removed = await remove(trx);
+      if (!removed) return removed;
+      if (!(await stillPurgeable(trx, scope.workspaceId, scope.now, scope.cutoff)))
+        throw new Retained();
+      return removed;
+    });
+  } catch (error) {
+    if (error instanceof Retained) return false;
+    throw error;
+  }
 }
 
 /**
  * A discovery that never produced a project has no project to cascade from;
  * remove it and its tasks with the workspace's projects. Returns how many went.
  */
-function purgeIncompleteDiscoveries(db: Database, workspaceId: string, now: Date, cutoff: Date) {
-  return db.transaction().execute(async (trx) => {
-    if (!(await stillPurgeable(trx, workspaceId, now, cutoff))) return 0;
-    const incomplete = trx
-      .selectFrom('brand_discoveries')
-      .select('id')
-      .where('workspace_id', '=', workspaceId)
-      .where('project_id', 'is', null);
-    await trx
-      .deleteFrom('brand_discovery_tasks')
-      .where('workspace_id', '=', workspaceId)
-      .where('discovery_id', 'in', incomplete)
-      .execute();
-    const deleted = await trx
-      .deleteFrom('brand_discoveries')
-      .where('workspace_id', '=', workspaceId)
-      .where('project_id', 'is', null)
-      .executeTakeFirst();
-    return Number(deleted.numDeletedRows);
-  });
+async function purgeIncompleteDiscoveries(
+  db: Database,
+  workspaceId: string,
+  now: Date,
+  cutoff: Date,
+) {
+  const deleted = await retainedOnRecheck(
+    db,
+    async (trx) => {
+      const incomplete = trx
+        .selectFrom('brand_discoveries')
+        .select('id')
+        .where('workspace_id', '=', workspaceId)
+        .where('project_id', 'is', null);
+      await trx
+        .deleteFrom('brand_discovery_tasks')
+        .where('workspace_id', '=', workspaceId)
+        .where('discovery_id', 'in', incomplete)
+        .execute();
+      const result = await trx
+        .deleteFrom('brand_discoveries')
+        .where('workspace_id', '=', workspaceId)
+        .where('project_id', 'is', null)
+        .executeTakeFirst();
+      return Number(result.numDeletedRows);
+    },
+    { workspaceId, now, cutoff },
+  );
+  return deleted || 0;
 }

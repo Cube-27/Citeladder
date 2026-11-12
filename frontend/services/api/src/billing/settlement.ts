@@ -571,7 +571,8 @@ export async function settleSubscription(
     .forUpdate()
     .executeTakeFirstOrThrow();
   if (event.id !== sub.external_subscription_id) conflict('provider_reference_mismatch');
-  if (event.version < sub.provider_state_version) return;
+  // bigint arrives as a string; a Unix-second version is a safe integer.
+  if (event.version < Number(sub.provider_state_version)) return;
   if (!sub.is_current && sub.ended_at) return;
   const { terms, renewal, lapsed } = effectiveTerms(sub, event);
   if (event.priceRef !== terms.price_ref) conflict('price_ref_mismatch');

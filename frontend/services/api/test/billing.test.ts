@@ -1412,7 +1412,8 @@ describe('billing money and access owner', () => {
     await settle({ ...halted, version: 4 });
     let provider = { ...halted, version: 4 };
     const cancel = vi.fn(async (_reference: string, _atEnd: boolean) => {
-      provider = { ...halted, status: 'cancelled', version: 5 };
+      // A version is the provider's Unix second: this one is past January 2038.
+      provider = { ...halted, status: 'cancelled', version: 2_200_000_000 };
       throw new ProviderError(false, 'provider_rejected');
     });
     await recoverBilling(
@@ -1432,7 +1433,7 @@ describe('billing money and access owner', () => {
       status: 'cancel_scheduled',
       is_current: true,
       current_period_end: t.sub.current_period_end,
-      provider_state_version: 5,
+      provider_state_version: '2200000000',
     });
   });
   it('schedules a downgrade while checkout is closed, which charges nothing', async () => {

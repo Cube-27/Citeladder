@@ -202,6 +202,7 @@ async function grantAccess(
     key: request.key,
     sourceKind: 'override',
     source: { kind: 'override', actorId: session.actorId },
+    reason: request.reason,
     specs,
     revision: policy.entitlements.registry_revision,
     from,

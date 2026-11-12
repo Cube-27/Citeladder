@@ -19,7 +19,6 @@ const subscriptionSchema = z.object({
   plan_id: reference,
   current_start: amount.nullish(),
   current_end: amount.nullish(),
-  updated_at: amount.optional().default(0),
   cancel_at_cycle_end: z
     .union([z.boolean(), z.literal(0), z.literal(1)])
     .optional()
@@ -94,6 +93,14 @@ export interface BillingProvider {
   refund(reference: string): Promise<RefundEvidence>;
 }
 
+/** A provider response body and the Unix second the provider served it, if it said. */
+type ProviderResponse = { data: Record<string, unknown>; servedAt: number | null };
+
+function servedAt(response: Response): number | null {
+  const millis = Date.parse(response.headers.get('date') ?? '');
+  return Number.isFinite(millis) ? Math.floor(millis / 1000) : null;
+}
+
 function basicCredentials(keyId: string, keySecret: string) {
   return Buffer.from(`${keyId}:${keySecret}`).toString('base64');
 }
@@ -153,8 +160,17 @@ export function checkoutAvailable(
   );
 }
 
-function subscription(data: unknown): SubscriptionEvidence {
+/**
+ * The subscription a provider response reports. Its state version is the
+ * second the provider served it (the response's `Date` header): the
+ * subscription entity carries no update time, and a webhook only prompts this
+ * read, so the provider's own clock at the read is the time the state is
+ * known at. A later read never ranks below an earlier one already settled; a
+ * response without the header is refused.
+ */
+function subscription({ data, servedAt }: ProviderResponse): SubscriptionEvidence {
   const row = subscriptionSchema.parse(data);
+  if (servedAt === null) throw new ProviderError(true, 'provider_invalid_response');
   const statuses: Record<string, string> = policy.billing.contracts.razorpay_status_map;
   const status = statuses[row.status];
   if (!status) throw new ProviderError(true, 'provider_invalid_response');
@@ -164,7 +180,7 @@ function subscription(data: unknown): SubscriptionEvidence {
     priceRef: row.plan_id,
     start: row.current_start == null ? null : new Date(row.current_start * 1000),
     end: row.current_end == null ? null : new Date(row.current_end * 1000),
-    version: row.updated_at,
+    version: servedAt,
     cancelAtEnd: Boolean(row.cancel_at_cycle_end),
     notes: row.notes,
     payment: null,
@@ -209,6 +225,9 @@ export class RazorpayProvider implements BillingProvider {
     path: string,
     body?: unknown,
   ): Promise<Record<string, unknown>> {
+    return (await this.exchange(method, path, body)).data;
+  }
+  private async exchange(method: string, path: string, body?: unknown): Promise<ProviderResponse> {
     let response: Response;
     try {
       response = await this.transport(`${policy.billing.razorpay_origin}${path}`, {
@@ -230,7 +249,10 @@ export class RazorpayProvider implements BillingProvider {
         'provider_rejected',
       );
     try {
-      return z.record(z.string(), z.unknown()).parse(await response.json());
+      return {
+        data: z.record(z.string(), z.unknown()).parse(await response.json()),
+        servedAt: servedAt(response),
+      };
     } catch {
       throw new ProviderError(true, 'provider_invalid_response');
     }
@@ -256,14 +278,15 @@ export class RazorpayProvider implements BillingProvider {
       citeladder_catalog_revision: pending.catalog_revision,
     };
     if (pending.activation_kind === 'base') {
-      const data = await this.request('POST', '/subscriptions', {
-        plan_id: pending.external_price_id,
-        total_count: this.shared.cycles,
-        quantity: 1,
-        customer_notify: 1,
-        notes: meta,
-      });
-      const row = subscription(data);
+      const row = subscription(
+        await this.exchange('POST', '/subscriptions', {
+          plan_id: pending.external_price_id,
+          total_count: this.shared.cycles,
+          quantity: 1,
+          customer_notify: 1,
+          notes: meta,
+        }),
+      );
       if (row.priceRef !== pending.external_price_id)
         throw new ProviderError(true, 'provider_price_mismatch');
       return row.id;
@@ -334,7 +357,7 @@ export class RazorpayProvider implements BillingProvider {
   }
 
   private async subscriptionEvidence(id: string): Promise<Evidence> {
-    const sub = subscription(await this.request('GET', `/subscriptions/${id}`));
+    const sub = subscription(await this.exchange('GET', `/subscriptions/${id}`));
     if (sub.id !== id) throw new ProviderError(true, 'provider_reference_mismatch');
     const invoices = await this.collection(`/invoices?subscription_id=${encodeURIComponent(id)}`);
     const matches = invoices.filter(
@@ -372,7 +395,7 @@ export class RazorpayProvider implements BillingProvider {
   async cancel(id: string, atEnd: boolean) {
     reference.parse(id);
     return subscription(
-      await this.request('POST', `/subscriptions/${id}/cancel`, {
+      await this.exchange('POST', `/subscriptions/${id}/cancel`, {
         cancel_at_cycle_end: Number(atEnd),
       }),
     );

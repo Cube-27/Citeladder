@@ -40,6 +40,7 @@ export interface AccountGrants {
   period_start: Timestamp | null;
   profile_key: Generated<string>;
   profile_priority: Generated<number>;
+  reason: Generated<string>;
   source_kind: string;
   source_ref: string;
   valid_from: Timestamp;
@@ -747,6 +748,16 @@ export interface BillingAccounts {
   workspace_id: string;
 }
 
+export interface BillingCatalogImports {
+  actor_user_id: string;
+  created_at: Timestamp;
+  id: string;
+  idempotency_key: string;
+  payload_sha256: string;
+  reason: string;
+  revision: string;
+}
+
 export interface BillingCatalogRevisions {
   created_at: Timestamp;
   created_by_user_id: string;
@@ -831,7 +842,7 @@ export interface BillingSubscriptions {
   is_current: boolean;
   provider: string;
   provider_mode: string;
-  provider_state_version: number;
+  provider_state_version: Int8;
   quantity: Generated<number>;
   reconciliation_lease_expires_at: Timestamp | null;
   reconciliation_lease_token: string | null;
@@ -1704,6 +1715,7 @@ export interface ExecutionCostProjections {
   created_at: Timestamp;
   formula_version: string;
   id: string;
+  logical_engine: string;
   output_cost_microusd: Int8 | null;
   output_tokens: number | null;
   pricing_version: string;
@@ -1717,6 +1729,8 @@ export interface ExecutionCostProjections {
   search_requests: number | null;
   task_id: string;
   total_tokens: number | null;
+  transport_model: string;
+  transport_provider: string;
   uncached_input_cost_microusd: Int8 | null;
   uncached_input_tokens: number | null;
   workspace_id: string;
@@ -3634,6 +3648,7 @@ export interface DB {
   audits: Audits;
   auth_challenges: AuthChallenges;
   billing_accounts: BillingAccounts;
+  billing_catalog_imports: BillingCatalogImports;
   billing_catalog_revisions: BillingCatalogRevisions;
   billing_invoice_counters: BillingInvoiceCounters;
   billing_invoices: BillingInvoices;
