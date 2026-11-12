@@ -42,7 +42,7 @@ export async function admissionRuntime(db: Database, held: Runtime) {
   return runtime;
 }
 
-export async function enqueueCrawlTask(
+async function enqueueCrawlTask(
   db: Database,
   crawl: Crawl,
   input: {
