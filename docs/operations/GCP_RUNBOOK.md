@@ -426,7 +426,8 @@ the database to restore service.
 ## Troubleshooting
 
 - **WIF fails:** compare the repository and its ID, the `gcp-deploy.yml`
-  workflow, `main` ref and `gcp-demo` environment with the bootstrap trust. Never substitute a service-account key.
+  workflow, `main` ref and `gcp-demo` environment with the bootstrap trust.
+  Never substitute a service-account key.
 - **Migrate job cannot connect:** the database VM may still be initializing.
   The job waits up to 5 minutes. Check the `citeladder-db` serial or Cloud
   Logging output for `citeladder-db:` lines (secret access, image pull, swap).

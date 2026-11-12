@@ -490,7 +490,10 @@ jobs:
         run: |
           set -euo pipefail
           run=(--project "$PROJECT_ID" --region "$REGION")
-          gcloud run services update-traffic "$API_SERVICE" "${run[@]}" --to-latest --quiet >/dev/null
+          # Name the smoked revision: --to-latest would route to any newer,
+          # unsmoked revision created since the tag.
+          gcloud run services update-traffic "$API_SERVICE" "${run[@]}" \
+            --to-revisions="$REVISION=100" --quiet >/dev/null
           gcloud run services update-traffic "$API_SERVICE" "${run[@]}" --remove-tags=candidate --quiet >/dev/null
           serving="$(gcloud run services describe "$API_SERVICE" "${run[@]}" --format=json \
             | jq -r '[.status.traffic[]? | select(.percent == 100) | .revisionName] | first // empty')"
