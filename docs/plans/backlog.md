@@ -77,7 +77,9 @@ The cloud cleanup shipped with tier 1. The rest waits for launch:
 - Measured workspace-wide Demand refresh rate and aggregate limits;
   one-refresh-per-project only partly addresses that risk.
 - Recovery objectives, backup and deletion protections, and a verified isolated
-  restore.
+  restore. The audit's open owner decisions O-1 (database VM protection) and O-2
+  (backups) in the [audit remediation plan](audit-remediation.md#open-owner-decisions)
+  feed this.
 - A data-preserving release and schema-evolution policy before customer data,
   with protection against accidental reset or destruction.
 - Approved production access, recovery access, key lifecycle and
@@ -87,8 +89,8 @@ The cloud cleanup shipped with tier 1. The rest waits for launch:
   row. Add a partial claim index or a per-workspace lateral top-N once queued
   tasks approach tens of thousands. Acceptance is an index-bounded claim plan
   with 50k queued tasks.
-- Alerts on failed job executions and errors. Two multi-hour outages went
-  unnoticed.
+- Alerts on failed job executions and errors: moved to the
+  [audit remediation plan](audit-remediation.md), Spec 3 PR 9.
 - Security alerts, explicitly deferred until now.
 
 Infrastructure redesigns and paid security tiers require demonstrated need.
@@ -118,6 +120,13 @@ Build these before enabling them:
   zeros).
 - One app-origin source for the public site's pricing CTAs once pricing is
   enabled.
+- **Billing owner after ownership transfer** (audit finding BE-302, owner
+  2026-11-12). `billing_accounts.owner_user_id` is set once and never follows a
+  workspace ownership transfer (`workspaces/service.ts`,
+  `entitlements/bootstrap.ts`, `billing/receipts.ts`), so tax receipts name a
+  former owner. That former owner can also delete their account while still
+  owning billing. Decide whether billing follows ownership or uses a separate
+  billing contact, then refuse deleting an account that still owns billing.
 - **Billing edge cases (B72).** Re-check each against Razorpay's real webhook,
   polling and reconciliation behaviour in B8 test mode before deciding:
   - A full refund of an upgrade bought in an earlier, ended period revokes only
