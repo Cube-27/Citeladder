@@ -25,6 +25,7 @@ beforeEach(async () => {
     await db.deleteFrom('analytics_tasks').where('workspace_id', '=', tenant.workspaceId).execute();
   t = await fixtures.tenant();
   tenants.push(t);
+  queued = [];
   await db
     .updateTable('projects')
     .set({ website_url: 'https://owned.example/' })
@@ -79,11 +80,18 @@ const candidates = () =>
     .execute();
 const queueTask = (id: string) =>
   db.selectFrom('analytics_tasks').selectAll().where('id', '=', id).executeTakeFirstOrThrow();
-const enqueue = async () =>
-  (await enqueueDiscoveries(db, scope(), { targets: [target] })).task_ids[0]!;
+/** This test's discovery tasks; workers claim only these from the shared database. */
+let queued: string[] = [];
+const enqueueTargets = async (targets: Parameters<typeof enqueueDiscoveries>[2]['targets']) => {
+  const { task_ids } = await enqueueDiscoveries(db, scope(), { targets });
+  queued.push(...task_ids);
+  return task_ids;
+};
+const enqueue = async () => (await enqueueTargets([target]))[0]!;
 const worker = (search: CompetitorSearch, fetcher?: WebsiteFetcher) =>
   new AnalyticsWorker(db, settings, {
     owner: 'discovery-test',
+    taskScope: { workspaceId: t.workspaceId, taskIds: [...queued] },
     executors: { commerce_competitor_discovery: competitorDiscovery({ search, fetcher }) },
   });
 const productHtml = `<html><head><title>Merchant tool</title></head><body><main><h1>Merchant tool</h1><p>$40.00</p><button>Add to cart</button><script type="application/ld+json">{"@type":"Product","name":"Merchant tool","sku":"T1","offers":{"@type":"Offer","price":"40","priceCurrency":"USD"}}</script></main></body></html>`;
@@ -449,7 +457,7 @@ it('requires target-compatible structural evidence rather than schema claims alo
       updated_at: new Date(),
     })
     .execute();
-  await enqueueDiscoveries(db, scope(), { targets: [{ kind: 'category', id: category }] });
+  await enqueueTargets([{ kind: 'category', id: category }]);
   await worker(successful, fetcher).runOnce();
   expect(await candidates()).toEqual([]);
   const id = await enqueue();

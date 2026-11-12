@@ -1,5 +1,9 @@
 /** Live provider configuration and secrets a test runner must never inherit. */
 export const isInheritedCredential = (name: string) =>
   /(?:_API_KEY|_CLIENT_SECRET|_CLIENT_ID|_SECRET_KEY|_CREDENTIAL_REF)$/iu.test(name) ||
-  /^(?:DEFAULT_AGENT_(?:BASE_URL|MODEL)|BILLING_|RAZORPAY_|DATAFORSEO_API_)/iu.test(name) ||
-  /^(?:ENCRYPTION_KEY|API_KEY_PEPPER|DEV_LOGIN_PASSWORD)$/iu.test(name);
+  /^(?:DEFAULT_AGENT_(?:BASE_URL|MODEL)|BILLING_|RAZORPAY_|DATAFORSEO_API_|CITELADDER_ORIGIN_TOKEN)/iu.test(
+    name,
+  ) ||
+  /^(?:ENCRYPTION_KEY|API_KEY_PEPPER|DEV_LOGIN_PASSWORD|ACCOUNT_MANAGER_OPERATOR_PASSWORD)$/iu.test(
+    name,
+  );

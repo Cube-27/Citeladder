@@ -441,8 +441,18 @@ it('has a resource factory for every registered route family outside a project p
 
 it('serves each family resource to its own workspace, so the stranger 404s are not missing rows', async () => {
   const session = `${config.session.cookieName}=${await sessionToken({ sub: owner.userId, ver: 0 })}`;
-  // The family's own read, where it has one: the resource itself, nothing nested.
-  const reads = ROUTES.filter(({ method, path, family }) => method === 'GET' && path === family);
+  // Every read that names only the family's resource, nothing nested, except reads
+  // that need more state than one bare row: a provider order, a rendered receipt
+  // (`billing-documents.test.ts`) or finished executions.
+  const stateful = new Set([
+    '/api/v1/billing/activations/{activation_id}/checkout',
+    '/api/v1/billing/invoices/{invoice_id}/pdf',
+    '/api/v1/audits/{audit_id}/metrics',
+  ]);
+  const reads = ROUTES.filter(
+    ({ method, path, family }) =>
+      method === 'GET' && !path.includes('{', family.length) && !stateful.has(path),
+  );
   const answers = [];
   for (const { path, family } of reads) {
     const concrete = path.replace(family.slice(family.lastIndexOf('{')), resources.get(family)!);

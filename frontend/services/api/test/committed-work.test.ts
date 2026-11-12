@@ -144,7 +144,9 @@ describe('committed API work at PostgreSQL', () => {
     }, wake);
     const afterPayload = wake.mock.calls.length;
     // The same observer wakes for a real task insert.
-    await observeCommittedWork(() => enqueue(db), wake);
+    await observeCommittedWork(async () => {
+      await enqueue(db);
+    }, wake);
     expect([afterPayload, wake.mock.calls.length]).toEqual([0, 1]);
   });
 

@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import { isInheritedCredential } from './inherited-credentials.ts';
 
 it('refuses inherited provider credentials and secrets but keeps the local database and test settings', () => {
-  const names = [
+  const refused = [
     'DATAFORSEO_API_LOGIN',
     'DATAFORSEO_API_PASSWORD',
     'DATAFORSEO_PLATFORM_CREDENTIAL_REF',
@@ -16,6 +16,11 @@ it('refuses inherited provider credentials and secrets but keeps the local datab
     'OAUTH_GOOGLE_CLIENT_SECRET',
     'BILLING_RAZORPAY_WEBHOOK_SECRET',
     'RAZORPAY_TEST_KEY_SECRET',
+    'CITELADDER_ORIGIN_TOKEN',
+    'CITELADDER_ORIGIN_TOKEN_PREVIOUS',
+    'ACCOUNT_MANAGER_OPERATOR_PASSWORD',
+  ];
+  const kept = [
     'POSTGRES_PASSWORD',
     'DATABASE_URL',
     'API_TEST_DATABASE_URL',
@@ -23,5 +28,5 @@ it('refuses inherited provider credentials and secrets but keeps the local datab
     'APP_ENV',
     'CITELADDER_DISABLE_DOTENV',
   ];
-  expect(names.filter(isInheritedCredential)).toEqual(names.slice(0, 13));
+  expect([...refused, ...kept].filter(isInheritedCredential)).toEqual(refused);
 });
