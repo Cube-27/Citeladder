@@ -1339,7 +1339,7 @@ describe('snapshot projections', () => {
       'technical.title_present': 'content',
       'fixture.retired_rule': null,
     });
-    expect(overview.trend.reason).toBe('no_comparable_snapshot');
+    expect(overview.open_issue_trend).toEqual([]);
 
     const readiness = await json(
       seed,
@@ -1347,6 +1347,49 @@ describe('snapshot projections', () => {
       aeoReadinessSchema,
     );
     expect(readiness).toMatchObject({ state: 'limited_evidence', score: 40 });
+  });
+
+  it("plot the project's persisted open issues per day, oldest first", async () => {
+    const seed = await fixtures.crawl();
+    await db
+      .updateTable('site_health_snapshots')
+      .set({
+        aeo_measurement_state: 'not_measured',
+        web_fundamentals_state: 'not_measured',
+        classification_state: 'not_measured',
+      })
+      .where('id', '=', await fixtures.snapshot(seed, 'complete'))
+      .execute();
+    const other = await fixtures.crawl();
+    const point = (owner: SiteSeed, day: string, openCount: number) => ({
+      id: randomUUID(),
+      workspace_id: owner.workspaceId,
+      project_id: owner.projectId,
+      day,
+      open_count: openCount,
+      source_crawl_id: owner.crawlId,
+      policy_version: '1',
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+    await db
+      .insertInto('site_issue_trend')
+      .values([
+        point(seed, '2026-11-03', 9),
+        point(seed, '2026-11-01', 12),
+        point(other, '2026-11-02', 40),
+      ])
+      .execute();
+
+    const overview = await json(
+      seed,
+      `/projects/${seed.projectId}/site-health/overview`,
+      siteHealthOverviewSchema,
+    );
+    expect(overview.open_issue_trend).toEqual([
+      { day: '2026-11-01', open_count: 12 },
+      { day: '2026-11-03', open_count: 9 },
+    ]);
   });
 
   it('render the snapshot without its provenance id lists, which stay persisted', async () => {

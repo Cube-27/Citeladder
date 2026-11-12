@@ -51,7 +51,8 @@ function outcomeNote(schedule: CrawlSchedule | undefined) {
 
 /**
  * Scheduled crawls beside Run new crawl: off, weekly or monthly. Each run
- * reruns the newest crawl's scope and settings, as Recrawl does, and uses the
+ * audits the tracked pages again with the newest crawl's robots choice, as the
+ * crawl button does, and uses the
  * plan's page fetches like any crawl.
  */
 function CrawlScheduleControl({

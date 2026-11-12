@@ -112,78 +112,9 @@ describe('SiteHealthScreen — Website tab deep links', () => {
     const start = screen.getByRole('button', { name: 'Run new crawl' });
     await waitFor(() => expect(start).toBeEnabled());
     await user.click(start);
-    await waitFor(() => expect(started).toEqual([{ project_id: PROJECT, robots: 'respect' }]));
+    await waitFor(() => expect(started).toEqual([{ project_id: PROJECT }]));
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
     expect(new URLSearchParams(window.location.search).get('tab')).toBe('overview');
-  });
-
-  it('ignores robots.txt only after the person confirms they are authorized', async () => {
-    const user = userEvent.setup();
-    const started: unknown[] = [];
-    mockRoutes();
-    mswServer.use(
-      http.post('/api/v1/site-crawls', async ({ request }) => {
-        started.push(await request.json());
-        return HttpResponse.json(crawl({ status: 'running', analysis_status: 'pending' }));
-      }),
-    );
-
-    renderScreen();
-    const options = await screen.findByRole('button', { name: 'More crawl options' });
-    await waitFor(() => expect(options).toBeEnabled());
-    await user.click(options);
-    await user.click(
-      await screen.findByRole('menuitem', { name: 'Run new crawl ignoring robots.txt…' }),
-    );
-    const dialog = await screen.findByRole('dialog', { name: 'Ignore robots.txt for this crawl?' });
-    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
-    expect(started).toEqual([]);
-
-    await user.click(options);
-    await user.click(
-      await screen.findByRole('menuitem', { name: 'Run new crawl ignoring robots.txt…' }),
-    );
-    await user.click(
-      within(await screen.findByRole('dialog')).getByRole('button', {
-        name: 'I am authorized, run crawl',
-      }),
-    );
-    await waitFor(() => expect(started).toEqual([{ project_id: PROJECT, robots: 'ignore' }]));
-  });
-
-  it('retries a failed crawl start with the same request it sent', async () => {
-    const user = userEvent.setup();
-    const started: unknown[] = [];
-    mockRoutes();
-    mswServer.use(
-      http.post('/api/v1/site-crawls', async ({ request }) => {
-        started.push(await request.json());
-        return started.length === 1
-          ? HttpResponse.json({ detail: 'Unavailable' }, { status: 503 })
-          : HttpResponse.json(crawl({ status: 'running', analysis_status: 'pending' }));
-      }),
-    );
-
-    renderScreen();
-    const options = await screen.findByRole('button', { name: 'More crawl options' });
-    await waitFor(() => expect(options).toBeEnabled());
-    await user.click(options);
-    await user.click(
-      await screen.findByRole('menuitem', { name: 'Run new crawl ignoring robots.txt…' }),
-    );
-    await user.click(
-      within(await screen.findByRole('dialog')).getByRole('button', {
-        name: 'I am authorized, run crawl',
-      }),
-    );
-
-    await user.click(await screen.findByRole('button', { name: 'Try again' }));
-    await waitFor(() =>
-      expect(started).toEqual([
-        { project_id: PROJECT, robots: 'ignore' },
-        { project_id: PROJECT, robots: 'ignore' },
-      ]),
-    );
   });
 });
 
@@ -287,7 +218,7 @@ describe('SiteHealthScreen — loading failures', () => {
     const { queryClient } = renderScreen();
     // The crawl's own controls mean the evidence has loaded; the tab row alone
     // is already drawn by the loading frame.
-    expect(await screen.findByRole('button', { name: 'Recrawl' })).toBeVisible();
+    expect(await screen.findByRole('button', { name: 'Run new crawl' })).toBeVisible();
 
     available = false;
     void refreshSiteHealthDashboard(queryClient, PROJECT);
@@ -404,7 +335,7 @@ describe('SiteHealthScreen — loading frames', () => {
 
     // The crawl is known but its Overview is not: still the one box, no scores.
     dashboard.release();
-    expect(await screen.findByRole('button', { name: 'Recrawl' })).toBeVisible();
+    expect(await screen.findByRole('button', { name: 'Run new crawl' })).toBeVisible();
     expect(loadingRegions()).toHaveLength(1);
     expect(screen.queryByTestId('overview-metrics')).not.toBeInTheDocument();
 
@@ -447,29 +378,6 @@ describe('SiteHealthScreen — loading frames', () => {
     expect(screen.getByRole('tablist', { name: 'Website analysis' })).toBeVisible();
     expect(loadingRegions()).toHaveLength(0);
     refresh.release();
-  });
-});
-
-describe('SiteHealthScreen — recrawl', () => {
-  it('starts the one crawl action for the project, keeping the newest robots choice', async () => {
-    const user = userEvent.setup();
-    const bodies: unknown[] = [];
-    mockRoutes();
-    mswServer.use(
-      http.post('/api/v1/site-crawls', async ({ request }) => {
-        bodies.push(await request.json());
-        return HttpResponse.json(
-          crawl({ status: 'queued', discovery_status: 'pending', analysis_status: 'pending' }),
-        );
-      }),
-    );
-
-    renderScreen();
-
-    const button = await screen.findByRole('button', { name: 'Recrawl' });
-    await waitFor(() => expect(button).toBeEnabled());
-    await user.click(button);
-    await waitFor(() => expect(bodies).toEqual([{ project_id: PROJECT }]));
   });
 });
 

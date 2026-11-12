@@ -40,11 +40,11 @@ function direction(delta: number | null) {
 }
 
 /**
- * Earlier snapshots of usable, non-empty site crawls under the same versions
- * and scope, oldest first. A failed or empty crawl, or a page rerun, is never a
- * trend point; with none left the trend reports no comparable snapshot.
+ * The change since the newest earlier snapshot of a usable, non-empty site crawl
+ * under the same versions and scope. A failed or empty crawl, or a page rerun,
+ * is never compared; with none left it reports no comparable snapshot.
  */
-async function history(db: Database, crawl: Crawl, projection: MeasurementProjection, now: Date) {
+async function changeSummary(db: Database, crawl: Crawl, projection: MeasurementProjection) {
   const candidates = await db
     .selectFrom('site_health_snapshots as s')
     .innerJoin('site_crawls as c', (join) =>
@@ -54,8 +54,8 @@ async function history(db: Database, crawl: Crawl, projection: MeasurementProjec
     .select(['c.root_url', 'c.configuration'])
     .where('s.workspace_id', '=', crawl.workspace_id)
     .where('s.project_id', '=', crawl.project_id)
-    // Only crawls created before this one, so a late publication never trends
-    // against a newer crawl (Changes picks its predecessor the same way).
+    // Only crawls created before this one, so a late publication never compares
+    // with a newer crawl (Changes picks its predecessor the same way).
     .where('c.created_at', '<', crawl.created_at)
     .where('c.status', 'in', USABLE_CRAWL_STATUSES)
     .where('c.analyzed_url_count', '>', 0)
@@ -76,52 +76,30 @@ async function history(db: Database, crawl: Crawl, projection: MeasurementProjec
     // Scope is compared in code, so search as many earlier crawls as Changes does.
     .limit(policy.site_health.change_intel.max_crawl_candidates)
     .execute();
-  const rows = candidates
-    .filter((row) => sameScope(row, crawl))
-    .slice(0, reads.overview_trend_point_limit - 1)
-    .reverse();
-  const previous = rows.at(-1);
+  const previous = candidates.find((row) => sameScope(row, crawl));
   const { changed, composition } = cohortComposition({
     previous: numberRecord(previous?.scored_page_count_by_kind),
     current: projection.classification.scored_page_count_by_kind,
     shareShiftPoints: reads.overview_cohort_share_shift_points,
   });
-  const common = {
+  return {
     state: previous ? 'measured' : 'unavailable',
     reason: comparisonReason(Boolean(previous), changed),
     cohort_composition: composition,
-  };
-  return {
-    trend: {
-      ...common,
-      metric: 'aeo_readiness_score',
-      series: [
-        ...rows.map((row) => ({
-          label: new Date(row.created_at).toISOString().slice(0, 10),
-          value: row.aeo_readiness_score,
-        })),
-        { label: now.toISOString().slice(0, 10), value: projection.aggregate.aeo_readiness_score },
-      ],
-    },
-    change_summary: {
-      ...common,
-      metrics: metrics.map(([key, label]) => {
-        const before = previous?.[key] ?? null;
-        const current = projection.aggregate[key];
-        const delta =
-          before === null || current === null
-            ? null
-            : Math.round((current - before) * 10000) / 10000;
-        return {
-          key,
-          label,
-          previous: before,
-          current,
-          delta,
-          direction: direction(delta),
-        };
-      }),
-    },
+    metrics: metrics.map(([key, label]) => {
+      const before = previous?.[key] ?? null;
+      const current = projection.aggregate[key];
+      const delta =
+        before === null || current === null ? null : Math.round((current - before) * 10000) / 10000;
+      return {
+        key,
+        label,
+        previous: before,
+        current,
+        delta,
+        direction: direction(delta),
+      };
+    }),
   };
 }
 
@@ -136,18 +114,17 @@ function checkCounts(projection: MeasurementProjection) {
 
 /**
  * Every snapshot column the pages' latest audits decide: scores,
- * classification, eligibility, issue rollups, the trend's current point and
+ * classification, eligibility, issue rollups, the change summary and
  * their exact sources. Coverage and discovery stay the crawl's own.
  */
 async function pageColumns(
   db: Database,
   crawl: Crawl,
   projection: MeasurementProjection,
-  { evaluationIds, at }: { evaluationIds: string[]; at: Date },
+  evaluationIds: string[],
 ) {
   const issues = await snapshotIssues(db, crawl, evaluationIds);
   const eligibility = await snapshotEligibility(db, crawl, projection);
-  const trends = await history(db, crawl, projection, at);
   const {
     readiness_dimensions: dimensions,
     scoring_version: _scoring,
@@ -174,8 +151,7 @@ async function pageColumns(
       status_counts: JSON.stringify(eligibility.status_counts),
       ...issueColumns(issues),
       web_fundamentals: JSON.stringify(webDiagnostic(projection)),
-      trend: JSON.stringify(trends.trend),
-      change_summary: JSON.stringify(trends.change_summary),
+      change_summary: JSON.stringify(await changeSummary(db, crawl, projection)),
       source_analysis_ids: projection.rows.map((row) => row.id),
       source_artifact_ids: projection.rows.map((row) => row.artifact_id),
       source_evaluation_ids: evaluationIds,
@@ -205,7 +181,7 @@ async function publishScoreSummary(
 
 /**
  * A page rerun re-reads one page: it writes no project snapshot and keeps no
- * site score summary, so it never becomes a trend point or a one-page score.
+ * site score summary, so it never becomes a compared snapshot or a one-page score.
  * A site crawl's snapshot reads each tracked page's latest audit (SH-B9).
  */
 export async function persistCrawlSnapshot(db: Database, crawl: Crawl, persistEmpty = false) {
@@ -219,7 +195,7 @@ export async function persistCrawlSnapshot(db: Database, crawl: Crawl, persistEm
     return false;
   const evaluationIds = projection.evaluations.map((row) => row.id);
   const now = new Date();
-  const published = await pageColumns(db, crawl, projection, { evaluationIds, at: now });
+  const published = await pageColumns(db, crawl, projection, evaluationIds);
   const coverage = await crawlCoverage(db, crawl);
   const inserted = await db
     .insertInto('site_health_snapshots')
@@ -288,10 +264,7 @@ export async function refreshSiteSnapshot(db: Database, crawl: Crawl) {
   const own = projection.evaluations.map((row) => row.id);
   const architecture = await architectureEvaluationIds(db, crawl);
   const evaluationIds = [...new Set([...own, ...architecture])];
-  const published = await pageColumns(db, crawl, projection, {
-    evaluationIds,
-    at: snapshot.created_at,
-  });
+  const published = await pageColumns(db, crawl, projection, evaluationIds);
   await db
     .updateTable('site_health_snapshots')
     .set({

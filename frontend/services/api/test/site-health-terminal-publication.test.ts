@@ -102,55 +102,66 @@ describe('terminal analysis publication', () => {
         .executeTakeFirstOrThrow(),
     ).toEqual(first);
   });
-  it('trends only earlier usable, non-empty site crawls of the same scope', async () => {
+  it('compares only with earlier usable, non-empty site crawls of the same scope', async () => {
     const seed = await fixtures.crawl('completed');
     const publish = async (values: Partial<Insertable<SiteCrawls>>) => {
       const crawlId = await fixtures.sibling(seed, { analyzed_url_count: 1, ...values });
       await persistCrawlSnapshot(db, await crawlRow(crawlId), true);
       return crawlId;
     };
-    const trendOf = async (crawlId: string) =>
+    const changeOf = async (crawlId: string) =>
       record(
         (
           await db
             .selectFrom('site_health_snapshots')
-            .select('trend')
+            .select('change_summary')
             .where('crawl_id', '=', crawlId)
             .executeTakeFirstOrThrow()
-        ).trend,
+        ).change_summary,
       );
-    const comparable = await publish({});
-    await publish({ status: 'failed' });
-    await publish({ analyzed_url_count: 0 });
-    await publish({ configuration: JSON.stringify({ root_registrable_domain: 'blog.test' }) });
+    // Each earlier snapshot reads a distinct AEO Readiness score, so the compared one shows.
+    const scored = async (values: Partial<Insertable<SiteCrawls>>, score: number) => {
+      const crawlId = await publish(values);
+      await db
+        .updateTable('site_health_snapshots')
+        .set({ aeo_readiness_score: score })
+        .where('crawl_id', '=', crawlId)
+        .execute();
+      return crawlId;
+    };
+    const comparable = await scored({}, 70);
+    await scored({ status: 'failed' }, 11);
+    await scored({ analyzed_url_count: 0 }, 12);
+    await scored({ configuration: JSON.stringify({ root_registrable_domain: 'blog.test' }) }, 13);
     // A rerun snapshot written before reruns stopped writing them.
-    const rerun = await publish({});
+    const rerun = await scored({}, 14);
     await db
       .updateTable('site_crawls')
       .set({ configuration: JSON.stringify({ page_rerun: true }) })
       .where('id', '=', rerun)
       .execute();
     const current = await publish({});
-    const trend = await trendOf(current);
-    expect(trend).toMatchObject({ state: 'measured', reason: 'comparable_snapshot' });
-    expect(trend.series).toHaveLength(2);
+    const change = await changeOf(current);
+    expect(change).toMatchObject({ state: 'measured', reason: 'comparable_snapshot' });
+    expect(change.metrics).toContainEqual(
+      expect.objectContaining({ key: 'aeo_readiness_score', previous: 70 }),
+    );
 
     // The first crawl of a scope has nothing to compare with.
-    expect(await trendOf(comparable)).toMatchObject({
+    expect(await changeOf(comparable)).toMatchObject({
       state: 'unavailable',
       reason: 'no_comparable_snapshot',
     });
     const otherScope = await publish({
       configuration: JSON.stringify({ root_registrable_domain: 'other.test' }),
     });
-    expect(await trendOf(otherScope)).toMatchObject({
+    expect(await changeOf(otherScope)).toMatchObject({
       state: 'unavailable',
       reason: 'no_comparable_snapshot',
-      series: [expect.objectContaining({ label: expect.any(String) })],
     });
-    // A crawl older than all of them, published late, has no earlier crawl to trend against.
+    // A crawl older than all of them, published late, has no earlier crawl to compare with.
     const late = await publish({ created_at: LONG_AGO });
-    expect(await trendOf(late)).toMatchObject({
+    expect(await changeOf(late)).toMatchObject({
       state: 'unavailable',
       reason: 'no_comparable_snapshot',
     });
