@@ -150,6 +150,41 @@ describe('SiteHealthScreen — Website tab deep links', () => {
     );
     await waitFor(() => expect(started).toEqual([{ project_id: PROJECT, robots: 'ignore' }]));
   });
+
+  it('retries a failed crawl start with the same request it sent', async () => {
+    const user = userEvent.setup();
+    const started: unknown[] = [];
+    mockRoutes();
+    mswServer.use(
+      http.post('/api/v1/site-crawls', async ({ request }) => {
+        started.push(await request.json());
+        return started.length === 1
+          ? HttpResponse.json({ detail: 'Unavailable' }, { status: 503 })
+          : HttpResponse.json(crawl({ status: 'running', analysis_status: 'pending' }));
+      }),
+    );
+
+    renderScreen();
+    const options = await screen.findByRole('button', { name: 'More crawl options' });
+    await waitFor(() => expect(options).toBeEnabled());
+    await user.click(options);
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'Run new crawl ignoring robots.txt…' }),
+    );
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', {
+        name: 'I am authorized, run crawl',
+      }),
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Try again' }));
+    await waitFor(() =>
+      expect(started).toEqual([
+        { project_id: PROJECT, robots: 'ignore' },
+        { project_id: PROJECT, robots: 'ignore' },
+      ]),
+    );
+  });
 });
 
 describe('SiteHealthScreen — Pages tab reads', () => {

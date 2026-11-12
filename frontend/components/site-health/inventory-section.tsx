@@ -320,7 +320,7 @@ function ScoredInventoryState({
   // view switch, page turn or filter change keeps the rows and the pager on
   // screen until the next page lands. No exact total: these are FILTERED
   // views and no persisted count describes a filtered set.
-  const { page, table } = useCursorTableQuery({
+  const { page, table, rowOffset } = useCursorTableQuery({
     workspaceId: crawl.workspace_id,
     scopeId: crawl.id,
     scope: [view, activeViewParams, pageKind, query, sort],
@@ -354,6 +354,7 @@ function ScoredInventoryState({
       <PagesTable
         toolbar={toolbar}
         pages={page?.items ?? []}
+        rowOffset={rowOffset}
         crawlId={crawl.id}
         sort={sort}
         onSortChange={setSort}

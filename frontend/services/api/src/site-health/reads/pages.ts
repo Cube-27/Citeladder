@@ -305,7 +305,8 @@ export async function pageDetail(
     page_kind_evidence: analysis ? record(analysis.page_kind_evidence) : null,
     page_traits: analysis ? strings(analysis.page_traits) : null,
     issue_count: analysis ? issues.length : null,
-    facts: pageFacts(facts),
+    // A page with no analyzed fetch has no facts, not zero of each.
+    facts: analysis?.artifact_id ? pageFacts(facts) : null,
     delivery: deliveryFacts(facts, analysis?.decoded_bytes ?? null),
     issues: issues.map((issue) => ({
       ...issueOccurrence(issue, page),

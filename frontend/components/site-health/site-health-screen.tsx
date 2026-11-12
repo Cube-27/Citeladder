@@ -37,28 +37,19 @@ import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 
 export function SiteHealthScreen() {
   const { workspaceId, projectId } = useProjectScope();
-  const screen = useSiteHealthScreen();
-  // Keyed by project, so one project's analyze or cancel outcome and its
-  // idempotency key never carry to the next.
-  return (
-    <SiteHealthContent
-      key={projectId}
-      projectId={projectId}
-      workspaceId={workspaceId}
-      screen={screen}
-    />
-  );
+  // Keyed by project, so one project's crawl start, stop or analyze outcome
+  // and its idempotency key never carry to the next.
+  return <SiteHealthContent key={projectId} projectId={projectId} workspaceId={workspaceId} />;
 }
 
 function SiteHealthContent({
   projectId,
   workspaceId,
-  screen,
 }: Readonly<{
   projectId: string;
   workspaceId: string;
-  screen: ReturnType<typeof useSiteHealthScreen>;
 }>) {
+  const screen = useSiteHealthScreen();
   const {
     entitlementQuery,
     crawl,
@@ -266,7 +257,7 @@ function SiteHealthNotices({
           notice={mutationNoticeForError(screen.createMutation.error, {
             action: 'start a crawl',
           })}
-          onRetry={screen.startCrawl}
+          onRetry={screen.retryStart}
         />
       ) : null}
       {mutationsAllowed && screen.cancelMutation.isError ? (

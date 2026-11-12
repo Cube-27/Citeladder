@@ -95,9 +95,12 @@ export function PagesTable({
   pager,
   pageSize,
   busy,
+  rowOffset = 0,
 }: Readonly<{
   pages: PageSummary[];
   crawlId: string;
+  /** Rows on the pages before this one, so "#" runs on across keyset pages. */
+  rowOffset?: number;
   sort?: PagesSort;
   /** Omitted where the table is read-only; the Page header then renders plain. */
   onSortChange?: (sort: PagesSort) => void;
@@ -146,7 +149,7 @@ export function PagesTable({
             className="focus-ring cursor-pointer"
           >
             <TableCell numeric className="type-caption tabular-nums">
-              {index + 1}
+              {rowOffset + index + 1}
             </TableCell>
             {/* A URL is one unbreakable token: every line is clamped to the
                 column and carries the full value in a tooltip when cut. */}
