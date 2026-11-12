@@ -91,6 +91,17 @@ The documentation Worker serves assets only, with no Worker script, so Astro emi
 `<meta>` element with the same script hashing; `X-Frame-Options` in its
 `_headers` file denies framing because browsers ignore `frame-ancestors` there.
 
+Supported browsers are the `browserslist` in `frontend/package.json`: Chrome
+and Edge 120, Firefox 128, Safari and iOS Safari 17.4, and Samsung Internet 25
+or newer. The product build targets the same versions
+(`apps/app/vite.config.ts`). `pnpm check:compat`
+(`scripts/check-browser-compat.mjs`) fails when browser source calls a global,
+static or well-known instance API that a matrix browser lacks, by MDN's
+browser-compat-data; TypeScript's `lib` covers JavaScript instance methods. On
+an older browser the app's external `public/browser-support.js` fills the root
+with an "Update your browser" notice before the shell runs, and `main.tsx` does
+not mount.
+
 ## Routes and shared shell
 
 ### Public platform pages
