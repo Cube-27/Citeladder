@@ -8,9 +8,15 @@ import { QueryState, screenState } from '@/components/ui/query-state';
 import type { Visibility } from '@citeladder/contracts';
 import { isMetricsPending } from '@/lib/api/visibility-queries';
 
-/** A projection that names a measured run, and a range that pooled at least one. */
+/**
+ * A projection that names a measured run. A range counts only when it lists
+ * the runs it pooled: without them the tabs' reads would have no run set to
+ * scope to.
+ */
 function isMeasured(data: Visibility | null): data is Visibility {
-  return data !== null && data.source_audit_ids?.length !== 0;
+  if (data === null) return false;
+  if (data.selection_mode !== 'range') return true;
+  return (data.source_audit_ids?.length ?? 0) > 0;
 }
 
 /**

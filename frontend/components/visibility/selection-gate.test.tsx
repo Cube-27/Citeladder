@@ -87,11 +87,14 @@ describe('SelectionGate', () => {
     ).toBeVisible();
   });
 
-  it('treats a period that pooled no runs as not measured', async () => {
+  it.each([
+    ['pooled no runs', []],
+    ['lists no pooled runs', undefined],
+  ])('treats a period that %s as not measured', async (_case, sourceAuditIds) => {
     render(
       <Gate
         answer={() =>
-          Promise.resolve(projection({ selection_mode: 'range', source_audit_ids: [] }))
+          Promise.resolve(projection({ selection_mode: 'range', source_audit_ids: sourceAuditIds }))
         }
       />,
     );
