@@ -283,6 +283,11 @@ migrate job. Verify a change from an empty disposable database with
 `pnpm migrate` and `pnpm db:types:check`. Semantic versions follow invariant 5.
 The migration files are the only schema author: TypeScript services hold
 generated Kysely types and contain no other DDL (`scripts/quality.mjs --scope api`).
+Only the migrate job connects as the schema owner; services connect as the
+least-privilege `citeladder_app` role, and a migration that adds an append-only
+evidence, attempt or ledger table revokes UPDATE and DELETE on it from that role,
+or, when the code row-locks it, DELETE plus the `refuse_app_role_update` trigger
+(invariants 4 and 16).
 
 ## 18. Input and extraction boundaries
 

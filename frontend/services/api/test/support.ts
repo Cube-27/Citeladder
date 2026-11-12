@@ -39,6 +39,30 @@ export function testDatabase(config: ServiceConfig = testConfig()): Database {
   return createDatabase(config);
 }
 
+/** The schema owner's URL: fixtures that arrange or remove append-only rows, and schema tests. */
+export function ownerDatabaseUrl(): string {
+  const url = process.env.API_TEST_OWNER_DATABASE_URL;
+  if (!url)
+    throw new Error(
+      'API_TEST_OWNER_DATABASE_URL must name the schema owner of the test database (`pnpm test:api` sets it).',
+    );
+  return url;
+}
+
+/**
+ * Run fixture work as the schema owner. The code under test connects as the
+ * application role, which cannot update or delete append-only evidence,
+ * attempt and ledger rows; a test that arranges or removes them does it here.
+ */
+export async function asOwner<T>(work: (owner: Database) => Promise<T>): Promise<T> {
+  const owner = createDatabase(testConfig({ DATABASE_URL: ownerDatabaseUrl() }));
+  try {
+    return await work(owner);
+  } finally {
+    await owner.destroy();
+  }
+}
+
 export function sessionToken(claims: Record<string, unknown>, key = TEST_SESSION_KEY) {
   return new SignJWT(claims)
     .setProtectedHeader({ alg: 'HS256' })
@@ -172,10 +196,10 @@ export class Fixtures {
   async cleanup(): Promise<void> {
     if (this.workspaces.length) {
       // The append-only ledger does not cascade; every audit holds prompt runs.
-      await this.db
-        .deleteFrom('consumable_ledger')
-        .where('workspace_id', 'in', this.workspaces)
-        .execute();
+      const workspaces = this.workspaces;
+      await asOwner((owner) =>
+        owner.deleteFrom('consumable_ledger').where('workspace_id', 'in', workspaces).execute(),
+      );
       await this.db.deleteFrom('workspaces').where('id', 'in', this.workspaces).execute();
     }
     if (this.users.length) {

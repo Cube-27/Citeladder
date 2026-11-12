@@ -5,6 +5,7 @@ import { vi } from 'vitest';
 import type { Database } from '../src/db/database.ts';
 import { createModelGateway, gatewaySettings } from '../src/models/gateway.ts';
 import { promptTextHash } from '../src/prompts/normalization.ts';
+import { asOwner } from './support.ts';
 
 const now = () => new Date();
 
@@ -52,12 +53,14 @@ export async function grant(db: Database, accountId: string, input: GrantInput):
   const key = input.key ?? 'prompt_slots';
   // An explicit grant sets the limit the test means, not one added to the default.
   if (!input.fixtureDefault)
-    await db
-      .deleteFrom('account_grants')
-      .where('billing_account_id', '=', accountId)
-      .where('key', '=', key)
-      .where('source_ref', '=', FIXTURE_DEFAULT)
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .deleteFrom('account_grants')
+        .where('billing_account_id', '=', accountId)
+        .where('key', '=', key)
+        .where('source_ref', '=', FIXTURE_DEFAULT)
+        .execute(),
+    );
   await db
     .insertInto('account_grants')
     .values({

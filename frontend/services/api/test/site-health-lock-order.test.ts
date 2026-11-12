@@ -18,7 +18,7 @@ import { createCrawl } from '../src/site-health/planner.ts';
 import { replaceMonitoredSet, rerunPage } from '../src/site-health/selection.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
-import { testConfig, testDatabase } from './support.ts';
+import { asOwner, testConfig, testDatabase } from './support.ts';
 
 vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 const config = testConfig();
@@ -37,7 +37,10 @@ const logged: Database = new Kysely<DB>({
 
 afterAll(async () => {
   if (accounts.length) {
-    await db.deleteFrom('consumable_ledger').where('billing_account_id', 'in', accounts).execute();
+    // The ledger is append-only for the application role.
+    await asOwner((owner) =>
+      owner.deleteFrom('consumable_ledger').where('billing_account_id', 'in', accounts).execute(),
+    );
     await db.deleteFrom('billing_accounts').where('id', 'in', accounts).execute();
   }
   await fixtures.cleanup();

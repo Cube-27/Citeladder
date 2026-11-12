@@ -13,7 +13,7 @@ import { entitlementRead, usageRead, workspaceEntitlementRead } from '../src/bil
 import { claimOffer, endOffer, offerRead } from '../src/billing/journeys.ts';
 import { ensureWorkspaceBilling } from '../src/entitlements/bootstrap.ts';
 import { workspaceAccess } from '../src/entitlements/access.ts';
-import { sessionToken, testDatabase } from './support.ts';
+import { asOwner, sessionToken, testDatabase } from './support.ts';
 import {
   BillingFixtures,
   billingConfig,
@@ -519,16 +519,20 @@ describe('billing money and access owner', () => {
   it('uses frozen renewal terms, preserves an existing bundle identity, and rejects overlap and stale regressions', async () => {
     const t = await activated();
     if (t.evidence.kind !== 'base') throw new Error('fixture');
-    await db
-      .updateTable('account_grants')
-      .set({ idempotency_key: 'earlier-period-key', bundle_id: 'earlier-period-key' })
-      .where('billing_account_id', '=', t.accountId)
-      .execute();
-    await db
-      .updateTable('billing_payments')
-      .set({ receipt_sha256: 'a'.repeat(64) })
-      .where('billing_account_id', '=', t.accountId)
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .updateTable('account_grants')
+        .set({ idempotency_key: 'earlier-period-key', bundle_id: 'earlier-period-key' })
+        .where('billing_account_id', '=', t.accountId)
+        .execute(),
+    );
+    await asOwner((owner) =>
+      owner
+        .updateTable('billing_payments')
+        .set({ receipt_sha256: 'a'.repeat(64) })
+        .where('billing_account_id', '=', t.accountId)
+        .execute(),
+    );
     await db
       .transaction()
       .execute((trx) =>
@@ -2097,15 +2101,17 @@ describe('billing money and access owner', () => {
           .executeTakeFirstOrThrow()
       ).id,
     };
-    await db
-      .updateTable('account_grants')
-      .set({
-        valid_from: sql`valid_from - interval '8 days'`,
-        valid_until: sql`valid_until - interval '8 days'`,
-      })
-      .where('billing_account_id', '=', t.accountId)
-      .where('source_kind', '=', 'trial')
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .updateTable('account_grants')
+        .set({
+          valid_from: sql`valid_from - interval '8 days'`,
+          valid_until: sql`valid_until - interval '8 days'`,
+        })
+        .where('billing_account_id', '=', t.accountId)
+        .where('source_kind', '=', 'trial')
+        .execute(),
+    );
     expect((await workspaceAccess(db, t.workspaceId)).status).toBe('trial_expired');
     const app = createApp(config, db);
     const headers = {

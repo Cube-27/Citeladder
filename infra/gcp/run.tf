@@ -1,7 +1,8 @@
 locals {
-  # Waits for a fresh or replaced database VM, applies the SQL baseline (a
-  # changed baseline or unledgered tables fail here), then runs the
-  # native identity/grants/catalog bootstrap. Any failure prevents the API
+  # Waits for a fresh or replaced database VM, applies the pending migrations
+  # as the schema owner (a changed applied file or unledgered tables fail
+  # here), sets the citeladder_app role's password from DATABASE_URL, then
+  # runs the native identity/grants/catalog bootstrap. Any failure prevents the API
   # rollout; the job can be retried idempotently.
   migrate_script = "node src/cli/migrate.ts --wait-seconds 300 && exec node src/cli/bootstrap-account.ts"
 }
@@ -176,7 +177,7 @@ resource "google_cloud_run_v2_job" "migrate" {
     task_count = 1
 
     template {
-      service_account = google_service_account.jobs.email
+      service_account = google_service_account.migrate.email
       max_retries     = 0
       timeout         = "900s"
 
@@ -209,7 +210,9 @@ resource "google_cloud_run_v2_job" "migrate" {
         }
 
         dynamic "env" {
-          for_each = local.shared_secret_env
+          # Migrations run as the schema owner; the identity bootstrap that
+          # follows connects as the application role, like every service.
+          for_each = merge(local.shared_secret_env, local.migration_secret_env)
           content {
             name = env.key
             value_source {
@@ -226,7 +229,7 @@ resource "google_cloud_run_v2_job" "migrate" {
 
   # Targeting this job in the deploy also converges the database it migrates.
   depends_on = [
-    google_secret_manager_secret_iam_member.jobs,
+    google_secret_manager_secret_iam_member.migrate,
     google_compute_instance.db,
     google_compute_firewall.postgres,
   ]

@@ -17,7 +17,7 @@ import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { auditTenant } from './audit-fixtures.ts';
 import { recordAnswer } from './commerce-answer-fixtures.ts';
 import { billingAccount } from './prompt-fixtures.ts';
-import { testDatabase } from './support.ts';
+import { asOwner, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
 const db = testDatabase(),
@@ -28,7 +28,9 @@ const tasks: string[] = [];
 afterEach(async () => {
   if (tasks.length) {
     await db.deleteFrom('execution_cost_projections').where('task_id', 'in', tasks).execute();
-    await db.deleteFrom('provider_attempts').where('task_id', 'in', tasks).execute();
+    await asOwner((owner) =>
+      owner.deleteFrom('provider_attempts').where('task_id', 'in', tasks).execute(),
+    );
   }
   await fixtures.cleanup();
   tasks.length = 0;
@@ -316,11 +318,14 @@ describe('catalog matching in every answer', () => {
 
   it('gives a project without the Commerce capability or a catalog no matching work', async () => {
     const withoutCapability = await auditTenant(db, fixtures);
-    await db
-      .deleteFrom('account_grants')
-      .where('billing_account_id', '=', await billingAccount(db, withoutCapability.workspaceId))
-      .where('key', '=', 'commerce')
-      .execute();
+    const account = await billingAccount(db, withoutCapability.workspaceId);
+    await asOwner((owner) =>
+      owner
+        .deleteFrom('account_grants')
+        .where('billing_account_id', '=', account)
+        .where('key', '=', 'commerce')
+        .execute(),
+    );
     await importCatalog(db, scopeOf(withoutCapability), csv([ROAD]));
     const withoutCatalog = await auditTenant(db, fixtures);
     for (const t of [withoutCapability, withoutCatalog]) {

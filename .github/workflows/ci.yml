@@ -199,7 +199,9 @@ jobs:
     env:
       APP_ENV: test
       CITELADDER_DISABLE_DOTENV: '1'
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
+      # Migrations run as the schema owner and set the application role's password.
+      MIGRATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
+      DATABASE_URL: postgresql://citeladder_app:postgres@localhost:5432/citeladder
       TYPES_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -247,10 +249,14 @@ jobs:
     env:
       APP_ENV: test
       CITELADDER_DISABLE_DOTENV: '1'
-      # The SQL baseline authors the schema; the migrate CLI applies it once.
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
+      # The migrations author the schema; the migrate CLI applies them once as
+      # the owner. The suite runs as the application role, as the services do,
+      # and its fixtures use the owner only for append-only rows and DDL.
+      MIGRATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
+      DATABASE_URL: postgresql://citeladder_app:postgres@localhost:5432/citeladder
       TYPES_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
-      API_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
+      API_TEST_DATABASE_URL: postgresql://citeladder_app:postgres@localhost:5432/citeladder
+      API_TEST_OWNER_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

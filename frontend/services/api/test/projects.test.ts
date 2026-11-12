@@ -24,7 +24,7 @@ import { createDiscovery } from '../src/projects/discovery.ts';
 import { discoveryCreate } from '../src/projects/discovery-inputs.ts';
 import { policy } from '../src/config.ts';
 import { billingAccount, grant, prompt, promptSet } from './prompt-fixtures.ts';
-import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
+import { asOwner, Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
 
@@ -526,7 +526,9 @@ describe('project owner', () => {
         randomUUID(),
       );
       // The fixture's operator access grant is not a trial; this account is trial-only.
-      await db.deleteFrom('account_grants').where('billing_account_id', '=', t.accountId).execute();
+      await asOwner((owner) =>
+        owner.deleteFrom('account_grants').where('billing_account_id', '=', t.accountId).execute(),
+      );
       const end = new Date(Date.now() - endedDaysAgo * day);
       await db
         .insertInto('account_grants')

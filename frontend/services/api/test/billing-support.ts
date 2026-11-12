@@ -6,7 +6,7 @@ import { digest } from '../src/crypto-text.ts';
 import type { BillingProvider, Evidence, SubscriptionEvidence } from '../src/billing/razorpay.ts';
 import type { Database } from '../src/db/database.ts';
 import { billingAccount } from './prompt-fixtures.ts';
-import { Fixtures, testConfig } from './support.ts';
+import { asOwner, Fixtures, testConfig } from './support.ts';
 
 // Deterministic launch catalog input.
 export function billingConfig() {
@@ -131,10 +131,12 @@ export class BillingFixtures extends Fixtures {
   }
   override async cleanup() {
     if (this.accounts.length) {
-      await this.database
-        .deleteFrom('consumable_ledger')
-        .where('billing_account_id', 'in', this.accounts)
-        .execute();
+      await asOwner((owner) =>
+        owner
+          .deleteFrom('consumable_ledger')
+          .where('billing_account_id', 'in', this.accounts)
+          .execute(),
+      );
       await this.database
         .deleteFrom('introductory_claims')
         .where('billing_account_id', 'in', this.accounts)
@@ -143,10 +145,12 @@ export class BillingFixtures extends Fixtures {
         .deleteFrom('billing_invoices')
         .where('billing_account_id', 'in', this.accounts)
         .execute();
-      await this.database
-        .deleteFrom('billing_payments')
-        .where('billing_account_id', 'in', this.accounts)
-        .execute();
+      await asOwner((owner) =>
+        owner
+          .deleteFrom('billing_payments')
+          .where('billing_account_id', 'in', this.accounts)
+          .execute(),
+      );
     }
     if (this.operatorCodes.length)
       await this.database

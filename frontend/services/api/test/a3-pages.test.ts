@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
-import { testConfig, testDatabase, sessionToken } from './support.ts';
+import { asOwner, testConfig, testDatabase, sessionToken } from './support.ts';
 import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
 import { seedClassifiedPairs, seedImport } from './referral-fixtures.ts';
@@ -104,18 +104,20 @@ beforeAll(async () => {
     window: [day, day],
   });
   artifactId = imported.artifactId;
-  await db
-    .updateTable('integration_import_artifacts')
-    .set({
-      extract_metadata: JSON.stringify({
-        timeZone: 'UTC',
-        currencyCode: 'USD',
-        analytics_quality: [],
-        truncated: false,
-      }),
-    })
-    .where('id', '=', artifactId)
-    .execute();
+  await asOwner((owner) =>
+    owner
+      .updateTable('integration_import_artifacts')
+      .set({
+        extract_metadata: JSON.stringify({
+          timeZone: 'UTC',
+          currencyCode: 'USD',
+          analytics_quality: [],
+          truncated: false,
+        }),
+      })
+      .where('id', '=', artifactId)
+      .execute(),
+  );
   for (const [i, source] of ['chatgpt.com', 'claude.ai'].entries())
     await db
       .insertInto('integration_metric_rows')
@@ -471,29 +473,36 @@ describe('A3 persisted Pages join', () => {
       .set({ reporting_timezone: 'UTC' })
       .where('project_id', '=', seed.projectId)
       .execute();
-    await db
-      .updateTable('integration_import_artifacts')
-      .set({
-        extract_metadata: JSON.stringify({ timeZone: 'UTC', analytics_quality: ['thresholding'] }),
-      })
-      .where('id', '=', artifactId)
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .updateTable('integration_import_artifacts')
+        .set({
+          extract_metadata: JSON.stringify({
+            timeZone: 'UTC',
+            analytics_quality: ['thresholding'],
+          }),
+        })
+        .where('id', '=', artifactId)
+        .execute(),
+    );
     const flagged = await pagesRead(db, scope(), filters);
     expect(flagged.items.find((r) => r.display_path === '/quiet')?.referrals).toMatchObject({
       state: 'flagged',
       value: null,
     });
-    await db
-      .updateTable('integration_import_artifacts')
-      .set({
-        extract_metadata: JSON.stringify({
-          timeZone: 'UTC',
-          currencyCode: 'USD',
-          analytics_quality: [],
-        }),
-      })
-      .where('id', '=', artifactId)
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .updateTable('integration_import_artifacts')
+        .set({
+          extract_metadata: JSON.stringify({
+            timeZone: 'UTC',
+            currencyCode: 'USD',
+            analytics_quality: [],
+          }),
+        })
+        .where('id', '=', artifactId)
+        .execute(),
+    );
     const missing = await fixtures.crawl();
     await fixtures.page(missing, '/known', {}, { observed: true });
     expect(
@@ -818,20 +827,27 @@ describe('A3 persisted insight gates', () => {
       result.patterns.find((r) => r.pattern === 'crawler_errors_on_valuable_pages')?.numbers
         .status_403,
     ).toBe(2);
-    await db
-      .updateTable('integration_import_artifacts')
-      .set({
-        extract_metadata: JSON.stringify({ timeZone: 'UTC', analytics_quality: ['thresholding'] }),
-      })
-      .where('id', '=', artifactId)
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .updateTable('integration_import_artifacts')
+        .set({
+          extract_metadata: JSON.stringify({
+            timeZone: 'UTC',
+            analytics_quality: ['thresholding'],
+          }),
+        })
+        .where('id', '=', artifactId)
+        .execute(),
+    );
     await db.transaction().execute((trx) => refreshInsightWindow(trx, scope(), filters));
     expect((await insightsRead(db, scope(), filters)).patterns).toEqual([]);
-    await db
-      .updateTable('integration_import_artifacts')
-      .set({ extract_metadata: JSON.stringify({ timeZone: 'UTC', analytics_quality: [] }) })
-      .where('id', '=', artifactId)
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .updateTable('integration_import_artifacts')
+        .set({ extract_metadata: JSON.stringify({ timeZone: 'UTC', analytics_quality: [] }) })
+        .where('id', '=', artifactId)
+        .execute(),
+    );
     await db
       .updateTable('crawl_log_coverage_daily')
       .set({ coverage: 'partial' })

@@ -7,13 +7,13 @@
  * changes; a later change is a new numbered file, so a populated database is
  * migrated in place and never needs a reset.
  */
-import { createHash } from 'node:crypto';
+import { createHash, createHmac, pbkdf2Sync, randomBytes } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 
 import pg from 'pg';
 
 import { databaseSettings, migrationTimeouts } from '../config.ts';
-import { poolOptions } from '../db/database.ts';
+import { APP_DATABASE_ROLE, poolOptions } from '../db/database.ts';
 import { OperatorRefusal } from './operator.ts';
 
 export type Migration = { version: string; sql: string };
@@ -139,6 +139,48 @@ export async function applyMigrations(
     await client.query('rollback').catch(() => undefined);
     throw error;
   }
+}
+
+/**
+ * PostgreSQL's SCRAM-SHA-256 verifier (RFC 7677 with PostgreSQL's 4096
+ * iterations), so the role password never reaches the server or its logs in
+ * plain text. Printable ASCII only: it is unchanged by SASLprep.
+ */
+function scramVerifier(password: string): string {
+  const salt = randomBytes(16);
+  const iterations = 4096;
+  const salted = pbkdf2Sync(password, salt, iterations, 32, 'sha256');
+  const clientKey = createHmac('sha256', salted).update('Client Key').digest();
+  const storedKey = createHash('sha256').update(clientKey).digest();
+  const serverKey = createHmac('sha256', salted).update('Server Key').digest();
+  const b64 = (bytes: Buffer) => bytes.toString('base64');
+  return `SCRAM-SHA-256$${iterations}:${b64(salt)}$${b64(storedKey)}:${b64(serverKey)}`;
+}
+
+/** The application role's password from the services' `DATABASE_URL`, which must name that role. */
+export function appRolePassword(appDatabaseUrl: string): string {
+  let url: URL;
+  try {
+    url = new URL(appDatabaseUrl);
+  } catch {
+    throw new OperatorRefusal('DATABASE_URL is not a valid URL.');
+  }
+  if (decodeURIComponent(url.username) !== APP_DATABASE_ROLE)
+    throw new OperatorRefusal(`DATABASE_URL must connect as the ${APP_DATABASE_ROLE} role.`);
+  const password = decodeURIComponent(url.password);
+  if (!/^[\x20-\x7e]+$/u.test(password))
+    throw new OperatorRefusal('The DATABASE_URL password must be non-empty printable ASCII.');
+  return password;
+}
+
+/**
+ * Let the application role log in with `password`. Runs as the schema owner
+ * after the migrations that created the role; rerunning it with the same
+ * password is harmless, and a new one takes effect for new connections.
+ */
+export async function convergeAppRole(client: pg.ClientBase, password: string) {
+  const verifier = client.escapeLiteral(scramVerifier(password));
+  await client.query(`alter role ${APP_DATABASE_ROLE} with login password ${verifier}`);
 }
 
 /** One line for the operator: what was applied, or that the schema is current. */

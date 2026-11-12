@@ -21,14 +21,22 @@ const args = process.argv.slice(2).filter((arg) => arg !== '--');
 const types = args.includes('--types');
 const files = args.filter((arg) => arg !== '--types');
 
-// Always the local POSTGRES_* database: an inherited DATABASE_URL could name a
-// shared or remote one, and the suite writes and deletes rows.
-const url = localEnvironment({ ...process.env, DATABASE_URL: undefined }).DATABASE_URL;
-if (!url) throw new Error('Set POSTGRES_* in .env (see .env.example).');
+// Always the local POSTGRES_* database: an inherited URL could name a shared or
+// remote one, and the suite writes and deletes rows. Code under test connects
+// as the application role; fixtures and schema tests use the owner.
+const local = localEnvironment({
+  ...process.env,
+  DATABASE_URL: undefined,
+  MIGRATION_DATABASE_URL: undefined,
+});
+const appUrl = local.DATABASE_URL;
+const ownerUrl = local.MIGRATION_DATABASE_URL;
+if (!appUrl || !ownerUrl) throw new Error('Set POSTGRES_* in .env (see .env.example).');
 const env = Object.fromEntries(
   Object.entries(process.env).filter(([name]) => !isInheritedCredential(name)),
 );
-env[types ? 'TYPES_DATABASE_URL' : 'API_TEST_DATABASE_URL'] = url;
+if (types) env.TYPES_DATABASE_URL = ownerUrl;
+else Object.assign(env, { API_TEST_DATABASE_URL: appUrl, API_TEST_OWNER_DATABASE_URL: ownerUrl });
 
 // Developer tooling runs git and pnpm from the caller's PATH, like quality.mjs.
 const gitArgs = ['-C', apiRoot, 'rev-parse', '--absolute-git-dir'];

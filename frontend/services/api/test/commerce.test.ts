@@ -17,7 +17,7 @@ import { enqueue } from './referral-fixtures.ts';
 import { actionRow, opportunityRow } from './opportunity-fixtures.ts';
 import { prompt } from './prompt-fixtures.ts';
 import { updateActionStatus } from '../src/opportunities/actions.ts';
-import { sessionToken, testConfig, testDatabase } from './support.ts';
+import { asOwner, sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
 const db = testDatabase();
@@ -36,10 +36,12 @@ afterAll(async () => {
     await db.deleteFrom('actions').where('workspace_id', '=', tenant.workspaceId).execute();
   }
   for (const tenant of tenants)
-    await db
-      .deleteFrom('commerce_recommendation_observations')
-      .where('workspace_id', '=', tenant.workspaceId)
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .deleteFrom('commerce_recommendation_observations')
+        .where('workspace_id', '=', tenant.workspaceId)
+        .execute(),
+    );
   for (const tenant of tenants)
     await db
       .deleteFrom('commerce_shelf_snapshots')
@@ -122,13 +124,15 @@ describe('Commerce workspace boundaries', () => {
   });
   it('refuses new Commerce work without the plan capability, keeping collected data readable', async () => {
     await importCsv();
-    await db
-      .deleteFrom('account_grants')
-      .where('key', '=', 'commerce')
-      .where('billing_account_id', '=', (eb) =>
-        eb.selectFrom('billing_accounts').select('id').where('workspace_id', '=', t.workspaceId),
-      )
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .deleteFrom('account_grants')
+        .where('key', '=', 'commerce')
+        .where('billing_account_id', '=', (eb) =>
+          eb.selectFrom('billing_accounts').select('id').where('workspace_id', '=', t.workspaceId),
+        )
+        .execute(),
+    );
     for (const [path, method, body] of routes.filter(([, method]) => method !== 'GET'))
       expect(await call(path, { method, body })).toMatchObject({
         status: 403,

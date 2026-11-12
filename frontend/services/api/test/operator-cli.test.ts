@@ -127,6 +127,25 @@ it('native local configuration preserves dotenv precedence and disable admission
         DATABASE_URL: 'postgresql://isolated-fixture/four',
       }),
     ).toBe('postgresql://isolated-fixture/four');
+    // POSTGRES_* name the local owner; the services connect as the application role.
+    await writeFile(
+      join(cli, 'roles.ts'),
+      "import { localEnvironment } from './local-environment.ts'; const env = localEnvironment(); console.log(`${env.DATABASE_URL} ${env.MIGRATION_DATABASE_URL}`);",
+    );
+    const roles = await execute(process.execPath, [join(cli, 'roles.ts')], {
+      env: {
+        ...systemEnv,
+        CITELADDER_DISABLE_DOTENV: '1',
+        POSTGRES_USER: 'postgres',
+        POSTGRES_PASSWORD: 'local p@ss',
+        POSTGRES_DB: 'citeladder',
+        POSTGRES_HOST: '127.0.0.1',
+        POSTGRES_HOST_PORT: '55432',
+      },
+    });
+    expect(roles.stdout.trim()).toBe(
+      'postgresql://citeladder_app:local%20p%40ss@127.0.0.1:55432/citeladder postgresql://postgres:local%20p%40ss@127.0.0.1:55432/citeladder',
+    );
   } finally {
     await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }

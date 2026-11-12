@@ -17,7 +17,7 @@ import * as interpretation from '../src/site-health/analysis/off-thread.ts';
 import { hardExcluded } from '../src/site-health/url-admission.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
-import { testDatabase } from './support.ts';
+import { asOwner, testDatabase } from './support.ts';
 import { recordedSite, SiteFixtures, type Served, type SiteSeed } from './site-health-fixtures.ts';
 
 const db = testDatabase();
@@ -718,11 +718,13 @@ describe('analyze guards', () => {
       delivery: { final_url: page.url },
     });
     // Inconsistent persisted references must still fail closed at the read boundary.
-    await db
-      .updateTable('site_fetch_artifacts')
-      .set({ crawl_id: seed.crawlId })
-      .where('id', '=', discovered.artifactId!)
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .updateTable('site_fetch_artifacts')
+        .set({ crawl_id: seed.crawlId })
+        .where('id', '=', discovered.artifactId!)
+        .execute(),
+    );
     const requests: string[] = [];
     await analyze(site({ '/isolated': { body: RICH } }, requests), page.taskId);
     const settled = await task(page.taskId);

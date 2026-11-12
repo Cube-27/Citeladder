@@ -398,16 +398,21 @@ deployed. A migration that drops or renames a column or table, or adds
   deletes every row with no backup, and then migrates. It refuses demo mode.
   Schema changes never need it: they arrive as forward migrations. Production
   is never reset.
-- **PostgreSQL image update:** a deploy that changes `infra/gcp/postgres/Dockerfile`
-  updates the VM's startup script in place. The new image runs after the next
-  restart (`gcloud compute instances reset citeladder-db --zone us-central1-a`),
-  which keeps the data directory. Expect about a minute of database downtime.
-- **Database password rotation:** the secret is the source of truth, and the
-  VM applies it to the role on every boot. Add a new `citeladder-db-password`
-  version, then restart the VM
-  (`gcloud compute instances reset citeladder-db --zone us-central1-a`) and
-  redeploy, which rewrites `citeladder-database-url`. Connections fail between
-  the two steps, so rotate during a quiet window.
+- **PostgreSQL image or startup-script update:** a deploy that changes
+  `infra/gcp/postgres/Dockerfile` or `infra/gcp/postgres-vm.sh` updates the
+  VM's startup script in place, then restarts the VM before the migrate job,
+  so the new image and access rules apply. The restart keeps the data
+  directory; expect about a minute of database downtime.
+- **Database password rotation:** each secret is the source of truth. For the
+  schema owner, add a new `citeladder-db-password` version, then restart the VM
+  (`gcloud compute instances reset citeladder-db --zone us-central1-a`), which
+  applies it to the `citeladder` role, and redeploy, which rewrites
+  `citeladder-migration-database-url`; only the migrate job uses it, so
+  serving traffic is unaffected. For the services' `citeladder_app` role, add
+  a new `citeladder-db-app-password` version and redeploy: the deploy rewrites
+  `citeladder-database-url` and the migrate job sets the role's password.
+  New API or runner instances fail to connect between those two steps, so
+  rotate during a quiet window.
 - **Origin token rotation:** set `CITELADDER_ORIGIN_TOKEN_PREVIOUS` to the old
   value and `CITELADDER_ORIGIN_TOKEN` to the new one, then deploy. Next, update
   both Workers' `ORIGIN_TOKEN` and deploy them. Finally, clear the previous

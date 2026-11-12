@@ -7,7 +7,7 @@ import type { Database } from '../src/db/database.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { drainLanes, runnerOwners, tickAndDrain } from '../src/workers/runner.ts';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
-import { Fixtures, testConfig, testDatabase } from './support.ts';
+import { Fixtures, ownerDatabaseUrl, testConfig, testDatabase } from './support.ts';
 import { setLogSink } from '../src/logging.ts';
 
 const config = testConfig({ DB_POOL_SIZE: '4', DB_MAX_OVERFLOW: '0' });
@@ -266,9 +266,9 @@ it('overlapping runners share real leases and settle each workspace task once', 
 
 it('composes every production lane and periodic owner on an idle disposable database', async () => {
   // Global workers must not claim rows retained by other files in the shared suite.
+  // A scratch schema is DDL, so this test connects as the schema owner throughout.
   const schema = `runner_test_${randomUUID().replaceAll('-', '')}`;
-  await sql`create schema ${sql.id(schema)}`.execute(db);
-  const url = new URL(config.databaseUrl);
+  const url = new URL(ownerDatabaseUrl());
   url.searchParams.set('options', `-c search_path=${schema}`);
   const isolatedConfig = testConfig({
     DATABASE_URL: url.toString(),
@@ -276,14 +276,15 @@ it('composes every production lane and periodic owner on an idle disposable data
     DB_MAX_OVERFLOW: '0',
   });
   const isolated = testDatabase(isolatedConfig);
+  await sql`create schema ${sql.id(schema)}`.execute(isolated);
   try {
     const tables = await sql<{
       tablename: string;
-    }>`select tablename from pg_catalog.pg_tables where schemaname = 'public'`.execute(db);
+    }>`select tablename from pg_catalog.pg_tables where schemaname = 'public'`.execute(isolated);
     // Idle owners need column contracts, without duplicating every production index.
     for (const table of tables.rows)
       await sql`create table ${sql.id(schema, table.tablename)} (like ${sql.id('public', table.tablename)})`.execute(
-        db,
+        isolated,
       );
     const owners = await runnerOwners(isolated, isolatedConfig);
     expect(
@@ -294,7 +295,7 @@ it('composes every production lane and periodic owner on an idle disposable data
       }),
     ).toBe(0);
   } finally {
+    await sql`drop schema ${sql.id(schema)} cascade`.execute(isolated);
     await isolated.destroy();
-    await sql`drop schema ${sql.id(schema)} cascade`.execute(db);
   }
 });

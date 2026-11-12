@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { createApp } from '../src/app.ts';
-import { testConfig, testDatabase } from './support.ts';
+import { asOwner, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 import { crawlLogs } from '../src/config/crawl-logs.ts';
 import { createSource, createSourceSchema, mutateSource } from '../src/crawl-logs/sources.ts';
@@ -222,18 +222,20 @@ describe('Firehose delivery', () => {
     const options = { requestId: 'req-409' };
     expect((await deliver(revoked.id, revoked.token, body, options)).status).toBe(409);
     const lapsed = await firehoseSource();
-    await db
-      .deleteFrom('account_grants')
-      .where('key', '=', 'crawl_logs')
-      .where(
-        'billing_account_id',
-        'in',
-        db
-          .selectFrom('billing_accounts')
-          .select('id')
-          .where('workspace_id', '=', lapsed.tenant.workspaceId),
-      )
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .deleteFrom('account_grants')
+        .where('key', '=', 'crawl_logs')
+        .where(
+          'billing_account_id',
+          'in',
+          db
+            .selectFrom('billing_accounts')
+            .select('id')
+            .where('workspace_id', '=', lapsed.tenant.workspaceId),
+        )
+        .execute(),
+    );
     expect((await deliver(lapsed.id, lapsed.token, body, options)).status).toBe(409);
     const paused = await firehoseSource();
     crawlLogs.ingestion_enabled = false;

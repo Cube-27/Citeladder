@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it, vi } from 'vitest';
-import { testDatabase } from './support.ts';
+import { asOwner, testDatabase } from './support.ts';
 import {
   AgentFixtures,
   read,
@@ -618,19 +618,21 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     expect((await admit()).funding_source).toBe('development');
     await db.updateTable('users').set({ role: 'user' }).where('id', '=', scope.userId).execute();
     expect((await admit()).funding_source).toBe('platform');
-    await db
-      .updateTable('account_grants')
-      .set({ valid_until: new Date(Date.now() - 1000) })
-      .where(
-        'billing_account_id',
-        'in',
-        db
-          .selectFrom('billing_accounts')
-          .select('id')
-          .where('workspace_id', '=', scope.workspaceId),
-      )
-      .where('key', '=', 'agent')
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .updateTable('account_grants')
+        .set({ valid_until: new Date(Date.now() - 1000) })
+        .where(
+          'billing_account_id',
+          'in',
+          db
+            .selectFrom('billing_accounts')
+            .select('id')
+            .where('workspace_id', '=', scope.workspaceId),
+        )
+        .where('key', '=', 'agent')
+        .execute(),
+    );
     await expect(admit()).rejects.toMatchObject({
       code: 'capability_unavailable',
     });

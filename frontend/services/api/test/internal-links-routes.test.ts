@@ -5,7 +5,7 @@ import { internalLinksReadSchema } from '@citeladder/contracts/site-health';
 
 import { createApp } from '../src/app.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
-import { sessionToken, testConfig, testDatabase } from './support.ts';
+import { asOwner, sessionToken, testConfig, testDatabase } from './support.ts';
 import { record } from '../src/db/json.ts';
 import { publishInternalLinks } from '../src/site-health/internal-link-publish.ts';
 import { recomputeOpportunities } from '../src/opportunities/refresh.ts';
@@ -321,13 +321,15 @@ describe('internal link analysis admission', () => {
       .where('analysis.crawl_id', '=', seed.crawl_id)
       .orderBy('url.normalized_url')
       .executeTakeFirstOrThrow();
-    await db
-      .updateTable('site_fetch_artifacts')
-      .set({
-        normalized_facts: sql`jsonb_set(normalized_facts, '{extraction,truncated}', 'true'::jsonb)`,
-      })
-      .where('id', '=', first.artifact_id)
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .updateTable('site_fetch_artifacts')
+        .set({
+          normalized_facts: sql`jsonb_set(normalized_facts, '{extraction,truncated}', 'true'::jsonb)`,
+        })
+        .where('id', '=', first.artifact_id)
+        .execute(),
+    );
     const limits = policy.internal_links as { max_pages: number };
     const cap = limits.max_pages;
     limits.max_pages = 2;
@@ -338,14 +340,16 @@ describe('internal link analysis admission', () => {
       expect(omittedPages).toBe(0);
       const source = pages[0]!;
       expect(source.source_passages?.length).toBeGreaterThan(0);
-      await db
-        .updateTable('site_fetch_artifacts')
-        .set({
-          normalized_facts: sql`jsonb_set(normalized_facts, '{primary_content_truncated}', 'true'::jsonb)`,
-        })
-        .where('id', '=', source.artifact_id)
-        .where('workspace_id', '=', seed.workspace_id)
-        .execute();
+      await asOwner((owner) =>
+        owner
+          .updateTable('site_fetch_artifacts')
+          .set({
+            normalized_facts: sql`jsonb_set(normalized_facts, '{primary_content_truncated}', 'true'::jsonb)`,
+          })
+          .where('id', '=', source.artifact_id)
+          .where('workspace_id', '=', seed.workspace_id)
+          .execute(),
+      );
       const loaded = await loadLinkPages(db, scope, seed.crawl_id);
       const truncated = loaded.pages.find((page) => page.analysis_id === source.analysis_id)!;
       expect(truncated.source_passages).toBeNull();

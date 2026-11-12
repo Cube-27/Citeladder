@@ -42,8 +42,15 @@ Docs Worker (static, no origin)                            │ starts runner aft
   Google-signed ID token for the scheduler account with the configured
   audience, and it is served only when both are configured.
 - **Database.** The VM has no external address. PostgreSQL accepts
-  `hostssl` SCRAM connections for `citeladder` only from the private subnet,
-  plus loopback for break-glass shells. The firewall admits 5432 from the
+  `hostssl` SCRAM connections to the `citeladder` database only from the
+  private subnet, plus loopback for break-glass shells, for two roles: the
+  bootstrap superuser `citeladder`, which owns the schema and which only the
+  migrate job uses (`citeladder-migration-database-url`), and the
+  least-privilege `citeladder_app` that the API, runner and billing jobs use
+  (`citeladder-database-url`). `citeladder_app` reads and writes rows only: no
+  DDL, and no UPDATE or DELETE on append-only evidence, attempt and ledger
+  tables. The migrate job sets its password from `citeladder-db-app-password`
+  on every run. The firewall admits 5432 from the
   subnet and 22 from IAP only, for the owner's own account (the break-glass
   database shell and the operator account tool's tunnel); the deployer holds
   no SSH or IAP role. OS Login is on, project SSH keys are blocked and the
@@ -60,11 +67,13 @@ Docs Worker (static, no origin)                            │ starts runner aft
   Secret Manager it manages containers and their IAM project-wide, and reads
   and writes versions only of the CiteLadder runtime secrets. On Cloud
   Storage it holds only the Terraform state bucket. The API account
-  (`citeladder-runtime`, an account ID older than the split) and the job
-  account (`citeladder-jobs`, for the runner, migrate and billing jobs) read
-  the shared runtime secrets; only the
-  API account reads the origin tokens and the Turnstile secret. Each may
-  start only the runner job and mint crawl-log reader tokens. The scheduler
+  (`citeladder-runtime`, an account ID older than the split), the job
+  account (`citeladder-jobs`, for the runner and billing jobs) and the migrate
+  account (`citeladder-migrate`) read the shared runtime secrets; only the
+  API account reads the origin tokens and the Turnstile secret, and only the
+  migrate account reads the schema owner's database URL. The API and job
+  accounts may start only the runner job and mint crawl-log reader tokens; the
+  migrate account holds no other grant. The scheduler
   account holds no grant; its ID token admits only the API's tick route. The
   database account reads only the database password, pulls from the image
   repository and writes logs.

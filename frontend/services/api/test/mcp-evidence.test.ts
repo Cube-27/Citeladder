@@ -7,7 +7,7 @@ import { fetchRecord } from '../src/mcp/retrieval.ts';
 import { agentTools } from '../src/agent/tool-adapters.ts';
 import type { McpPrincipal } from '../src/mcp/types.ts';
 import { prompt, promptSet, topic } from './prompt-fixtures.ts';
-import { testDatabase } from './support.ts';
+import { asOwner, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
 import { attachOrCreateAction, updateActionStatus } from '../src/opportunities/actions.ts';
@@ -535,15 +535,18 @@ it('fetches a site page without the query string or fragment of any URL it carri
       .set({ display_url: tokened, latest_title: tokened })
       .where('id', '=', page.site_url_id)
       .execute();
-    await db
-      .updateTable('site_fetch_artifacts')
-      .set({
-        requested_url: tokened,
-        final_url: tokened,
-        normalized_facts: JSON.stringify({ canonical: tokened, h1: ['Which plan? Compare'] }),
-      })
-      .where('id', '=', page.artifact_id)
-      .execute();
+    // Fetch artifacts are append-only for the application role.
+    await asOwner((owner) =>
+      owner
+        .updateTable('site_fetch_artifacts')
+        .set({
+          requested_url: tokened,
+          final_url: tokened,
+          normalized_facts: JSON.stringify({ canonical: tokened, h1: ['Which plan? Compare'] }),
+        })
+        .where('id', '=', page.artifact_id)
+        .execute(),
+    );
     await db
       .updateTable('site_issues')
       .set({ evidence: JSON.stringify({ url: tokened }) })

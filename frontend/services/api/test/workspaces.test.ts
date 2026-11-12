@@ -9,7 +9,7 @@ import { ownedWorkspaceAccount, workspaceOwner } from '../src/workspaces/owned.t
 import { recordAccountTermsDecision } from '../src/workspaces/policies.ts';
 import { sql } from 'kysely';
 import { billingAccount, grant } from './prompt-fixtures.ts';
-import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
+import { asOwner, Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
 
 const config = testConfig();
 const db = testDatabase(config);
@@ -381,11 +381,13 @@ describe('team members need a plan', () => {
       token: string;
       invitation: { id: string };
     };
-    await db
-      .updateTable('account_grants')
-      .set({ valid_until: new Date(Date.now() - 1000) })
-      .where('id', '=', team)
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .updateTable('account_grants')
+        .set({ valid_until: new Date(Date.now() - 1000) })
+        .where('id', '=', team)
+        .execute(),
+    );
     const accept = await request('/invitations/accept', 'POST', { token }, await userCookie(guest));
     expect(accept.status).toBe(403);
     expect(
@@ -505,8 +507,11 @@ describe('membership continuity and transactional receipts', () => {
     const space = await fixtures.ownedWorkspace(spaceOwner);
     await fixtures.member(space, user, 'member');
     const constraint = `pr14_receipt_${randomUUID().replaceAll('-', '')}`;
-    await sql`ALTER TABLE security_events ADD CONSTRAINT ${sql.id(constraint)} CHECK (workspace_id <> ${sql.lit(space)}::uuid OR event <> 'membership.role')`.execute(
-      db,
+    // DDL is the schema owner's; the API under test connects as the application role.
+    await asOwner((owner) =>
+      sql`ALTER TABLE security_events ADD CONSTRAINT ${sql.id(constraint)} CHECK (workspace_id <> ${sql.lit(space)}::uuid OR event <> 'membership.role')`.execute(
+        owner,
+      ),
     );
     try {
       const response = await request(
@@ -534,7 +539,9 @@ describe('membership continuity and transactional receipts', () => {
           .execute(),
       ).toHaveLength(0);
     } finally {
-      await sql`ALTER TABLE security_events DROP CONSTRAINT ${sql.id(constraint)}`.execute(db);
+      await asOwner((owner) =>
+        sql`ALTER TABLE security_events DROP CONSTRAINT ${sql.id(constraint)}`.execute(owner),
+      );
     }
   });
 

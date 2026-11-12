@@ -5,7 +5,7 @@ import { createAudits } from '../src/audits/creation.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { record } from '../src/db/json.ts';
-import { testDatabase } from './support.ts';
+import { asOwner, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { auditTenant, managedPlan } from './audit-fixtures.ts';
@@ -188,7 +188,9 @@ describe('atomic audit admission', () => {
       ).toBe(true);
     } finally {
       setLogSink(prior);
-      await db.deleteFrom('consumable_ledger').where('workspace_id', '=', t.workspaceId).execute();
+      await asOwner((owner) =>
+        owner.deleteFrom('consumable_ledger').where('workspace_id', '=', t.workspaceId).execute(),
+      );
     }
   });
   it('counts only the latest projection of a repriced execution toward the funded month', async () => {
@@ -208,7 +210,9 @@ describe('atomic audit admission', () => {
         createAudits(db, t.workspaceId, input(t), {}, fundedRuntime),
       ).rejects.toMatchObject({ code: 'funded_budget_exhausted' });
     } finally {
-      await db.deleteFrom('consumable_ledger').where('workspace_id', '=', t.workspaceId).execute();
+      await asOwner((owner) =>
+        owner.deleteFrom('consumable_ledger').where('workspace_id', '=', t.workspaceId).execute(),
+      );
     }
   });
   it('persists replayable slots, immutable snapshots, credential identity and queue events together', async () => {

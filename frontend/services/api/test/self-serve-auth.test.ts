@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import { policy } from '../src/config.ts';
-import { signupTestConfig, testDatabase } from './support.ts';
+import { asOwner, signupTestConfig, testDatabase } from './support.ts';
 import { registerUser, authenticateUser, issueSession } from '../src/auth/service.ts';
 import { requestChallenge, consumeChallenge } from '../src/auth/challenges.ts';
 import { createWorkspace, provisionAccount } from '../src/workspaces/service.ts';
@@ -111,14 +111,16 @@ describe('verified self-serve lifecycle', () => {
       .select('id')
       .where('workspace_id', '=', workspaceId)
       .executeTakeFirstOrThrow();
-    await db
-      .updateTable('account_grants')
-      .set({
-        valid_from: new Date(Date.now() - 8 * 86400000),
-        valid_until: new Date(Date.now() - 86400000),
-      })
-      .where('billing_account_id', '=', account.id)
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .updateTable('account_grants')
+        .set({
+          valid_from: new Date(Date.now() - 8 * 86400000),
+          valid_until: new Date(Date.now() - 86400000),
+        })
+        .where('billing_account_id', '=', account.id)
+        .execute(),
+    );
     const denied = await app.request('/api/v1/projects', { headers });
     expect(denied.status).toBe(403);
     expect(await denied.json()).toMatchObject({ error: { code: 'trial_expired' } });
