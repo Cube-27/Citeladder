@@ -19,8 +19,45 @@ const robotsParser = robotsModule as unknown as (
   isAllowed: (url: string, userAgent: string) => boolean | undefined;
   getCrawlDelay: (userAgent: string) => number | undefined;
   getSitemaps: () => string[];
-  _rules: Record<string, unknown>;
 };
+
+const RULE_FIELDS = new Set(['allow', 'disallow', 'crawl-delay']);
+
+/** One robots.txt line's lower-cased field and value, comment removed; no colon, no field. */
+function robotsLine(raw: string) {
+  const line = raw.split('#', 1)[0] ?? '';
+  const colon = line.indexOf(':');
+  return {
+    field: line.slice(0, Math.max(colon, 0)).trim().toLowerCase(),
+    value: line.slice(colon + 1).trim(),
+  };
+}
+
+/** A `User-agent` value as the parser keys it: lower-cased, without a version. */
+const agentToken = (value: string) => value.toLowerCase().split('/', 1)[0]?.trim() ?? '';
+
+/**
+ * The user-agent groups robots.txt gives rules (allow, disallow or crawl
+ * delay), lower-cased without a version, grouped as the parser groups them:
+ * consecutive `User-agent` lines share the rules that follow.
+ */
+function ruleGroups(body: string) {
+  const groups = new Set<string>();
+  let agents: string[] = [];
+  let collecting = false;
+  for (const raw of body.split(/\r\n|\r|\n/u)) {
+    const { field, value } = robotsLine(raw);
+    if (field === 'user-agent') {
+      agents = collecting ? agents : [];
+      collecting = true;
+      if (value) agents.push(agentToken(value));
+    } else if (field) {
+      collecting = false;
+      if (RULE_FIELDS.has(field)) agents.forEach((agent) => groups.add(agent));
+    }
+  }
+  return groups;
+}
 
 export function acquisitionSettings(env: SettingSource = process.env) {
   const spec = policy.site_health.settings;
@@ -30,7 +67,8 @@ export function acquisitionSettings(env: SettingSource = process.env) {
     maxDelay: number('max_crawl_delay_seconds'),
     robotsBytes: number('robots_max_decoded_bytes'),
     robotsTtl: number('robots_cache_ttl_seconds'),
-    robotsRetry: number('robots_unreachable_recheck_seconds'),
+    robotsAttempts: number('robots_transient_attempts'),
+    robotsBackoff: number('robots_transient_backoff_seconds'),
     robotsAuthorities: number('robots_cache_max_authorities'),
     timeout: number('request_timeout_seconds'),
     redirects: number('max_redirects'),
@@ -160,6 +198,7 @@ export function robotsPolicy(
   // A missing file (other 4xx) is readable as "no rules"; 1xx, 3xx and failures are not.
   const readable = fetched || (status >= 400 && status < 500 && !unavailable && !restricted);
   const robots = robotsParser(`${origin}/robots.txt`, fetched ? body : '');
+  const groups = fetched ? ruleGroups(body) : new Set<string>();
   const declared = robots.getCrawlDelay(policy.web_fetch.user_agent);
   const seconds = declared === undefined ? settings.defaultDelay : Math.max(0, declared);
   // Readable, not access-blocked, and asking for a delay the crawler honours.
@@ -178,11 +217,8 @@ export function robotsPolicy(
     allows: (url: string, agent: string) =>
       !fetched || !body.trim() || robots.isAllowed(url, agent) !== false,
     matched: (tokens: string[]) => {
-      if (tokens.some((token) => Object.hasOwn(robots._rules, token.toLowerCase())))
-        return 'specific_group' as const;
-      return Object.hasOwn(robots._rules, '*')
-        ? ('wildcard_group' as const)
-        : ('no_rules' as const);
+      if (tokens.some((token) => groups.has(token.toLowerCase()))) return 'specific_group' as const;
+      return groups.has('*') ? ('wildcard_group' as const) : ('no_rules' as const);
     },
     sitemaps: robots.getSitemaps(),
     permits,
@@ -237,11 +273,21 @@ export class PageAcquirer {
       }
     }
     const result = await value;
-    if (result.unavailable)
-      this.#cache.set(origin, { value, expires: Date.now() + this.settings.robotsRetry * 1000 });
+    // A transient failure is never cached: the next request asks the host again.
+    if (result.unavailable && this.#cache.get(origin)?.value === value) this.#cache.delete(origin);
     return result;
   }
-  async #robots(origin: string) {
+  /**
+   * robots.txt, with a transient failure (429, 5xx, network) retried after an
+   * exponential backoff up to `robotsAttempts` requests in all.
+   */
+  async #robots(origin: string, tried = 1): Promise<RobotsPolicy> {
+    const attempt = await this.#robotsAttempt(origin);
+    if (!attempt.transient || tried >= this.settings.robotsAttempts) return attempt.robots;
+    await delay(this.settings.robotsBackoff * 1000 * 2 ** (tried - 1));
+    return this.#robots(origin, tried + 1);
+  }
+  async #robotsAttempt(origin: string): Promise<{ robots: RobotsPolicy; transient: boolean }> {
     const startedAt = performance.now();
     try {
       const result = await this.fetcher(`${origin}/robots.txt`, {
@@ -252,14 +298,22 @@ export class PageAcquirer {
         authorize: this.authorize,
         gate: (url, send, signal) => this.#pacer.slot(url.origin, this.floor, send, signal),
       });
-      return robotsPolicy(origin, result.status, result.body.toString('utf8'), this.settings);
+      const robots = robotsPolicy(
+        origin,
+        result.status,
+        result.body.toString('utf8'),
+        this.settings,
+      );
+      return { robots, transient: robots.unavailable };
     } catch (error) {
-      // Status 0 reads as unreachable robots, rechecked sooner than a fetched file.
+      // Status 0 reads as unreachable robots.
       logger.info('robots_fetch_failed', {
         ...failureFacts(error),
         elapsed_ms: Math.round(performance.now() - startedAt),
       });
-      return robotsPolicy(origin, 0, '', this.settings);
+      // A refusal (SSRF, suppression, size, redirects) repeats on retry; a network failure may not.
+      const transient = !(error instanceof FetchError) || error.code === 'dns_resolution_failed';
+      return { robots: robotsPolicy(origin, 0, '', this.settings), transient };
     }
   }
   /** Pause new requests to an origin, e.g. after it answered 429. */

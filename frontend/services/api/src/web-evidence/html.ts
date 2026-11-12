@@ -104,3 +104,20 @@ export function visibleText(root: HtmlNode, prune = true): string {
 }
 /** The visible text of an HTML fragment (a stored description body): entities decoded, scripts dropped. */
 export const fragmentText = (html: string) => visibleText(parseFragment(html));
+/**
+ * The URL a document's relative links resolve against, as browsers resolve
+ * them: the first `<base>` with an `href`, itself resolved against the
+ * document URL, else the document URL. An unusable or non-web base is ignored.
+ */
+export function documentBaseUrl(root: HtmlNode, documentUrl: string): string {
+  for (const base of elements(root, 'base')) {
+    if (!hasAttribute(base, 'href')) continue;
+    try {
+      const resolved = new URL(attribute(base, 'href').trim(), documentUrl);
+      return ['http:', 'https:'].includes(resolved.protocol) ? resolved.href : documentUrl;
+    } catch {
+      return documentUrl;
+    }
+  }
+  return documentUrl;
+}

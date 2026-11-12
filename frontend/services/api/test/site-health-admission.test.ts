@@ -159,6 +159,21 @@ describe('discovery links', () => {
     ]);
   });
 
+  it('resolves relative links against the document base, not the page URL', () => {
+    const root = document(
+      Buffer.from(
+        '<head><base href="/shop/"></head><a href="boots">b</a><a href="/about">a</a>' +
+          '<a href="../blog/news">n</a>',
+      ),
+    );
+    const { links } = discoveryLinks(root, 'https://example.test/blog/post', scope, 10);
+    expect(links.map((link) => link.admission.url)).toEqual([
+      'https://example.test/shop/boots',
+      'https://example.test/about',
+      'https://example.test/blog/news',
+    ]);
+  });
+
   it('discovers a tagged link once, as its clean target', () => {
     const root = document(
       Buffer.from(

@@ -21,7 +21,13 @@ import { pageIdentity } from '../src/source-pages/identity.ts';
 import { policy } from '../src/config.ts';
 import { organicResults } from '../src/source-pages/sync.ts';
 
-const settings = { ...acquisitionSettings({}), defaultDelay: 0, maxDelay: 1, timeout: 0.02 };
+const settings = {
+  ...acquisitionSettings({}),
+  defaultDelay: 0,
+  maxDelay: 1,
+  timeout: 0.02,
+  robotsBackoff: 0.001,
+};
 const options = {
   maxBytes: 10000,
   timeoutSeconds: 0.02,
@@ -112,11 +118,12 @@ it('fetches a disallowed page only when the caller ignores robots.txt; by defaul
   expect(sent).toEqual(['/robots.txt', '/private']);
 });
 it.each([
-  ['access-blocked', 403, 'robots_disallowed'],
-  ['unreachable', 503, 'robots_unavailable'],
+  ['access-blocked', 403, 'robots_disallowed', ['/robots.txt']],
+  // A transient failure is retried before the page is refused.
+  ['unreachable', 503, 'robots_unavailable', ['/robots.txt', '/robots.txt', '/robots.txt']],
 ])(
   'never fetches past an %s robots.txt, even when ignoring robots.txt',
-  async (_label, status, code) => {
+  async (_label, status, code, requests) => {
     const sent: string[] = [];
     const acquirer = new PageAcquirer(
       async () => {},
@@ -127,9 +134,51 @@ it.each([
     await expect(
       acquirer.fetch('https://shop.test/private', { ...options, robots: () => 'ignore' }),
     ).rejects.toMatchObject({ code });
-    expect(sent).toEqual(['/robots.txt']);
+    expect(sent).toEqual(requests);
   },
 );
+it('retries a transient robots.txt failure and never caches one', async () => {
+  const sent: string[] = [];
+  const answers = [503, 429, 200, 503, 503, 503];
+  const fetcher = createWebsiteFetcher(
+    async () => [{ address: '93.184.216.34', family: 4 }],
+    async (url) => {
+      sent.push(url.pathname);
+      if (url.pathname !== '/robots.txt')
+        return { status: 200, location: undefined, type: 'text/html', body: Buffer.from('ok') };
+      const status = answers.shift() ?? 200;
+      return { status, location: undefined, type: 'text/plain', body: Buffer.from('') };
+    },
+  );
+  const acquirer = new PageAcquirer(async () => {}, fetcher, settings, 0);
+  expect((await acquirer.fetch('https://shop.test/page', options)).status).toBe(200);
+  expect(sent).toEqual(['/robots.txt', '/robots.txt', '/robots.txt', '/page']);
+  // A readable answer is cached for the TTL; a transient failure is asked again next time.
+  const other = 'https://other.test';
+  expect((await acquirer.robots(other)).unavailable).toBe(true);
+  expect((await acquirer.robots(other)).unavailable).toBe(false);
+  expect(sent).toHaveLength(4 + 3 + 1);
+});
+it('names the robots group that applies to a crawler without reading parser internals', () => {
+  const body = [
+    'User-agent: GPTBot/1.1',
+    'User-agent: ClaudeBot',
+    'Disallow: /',
+    'User-agent: *',
+    'Allow: /',
+    '# A trailing agent without rules forms no group.',
+    'User-agent: Bingbot',
+  ].join('\n');
+  const robots = robotsPolicy('https://example.test', 200, body, settings);
+  expect([
+    robots.matched(['GPTBot']),
+    robots.matched(['claudebot']),
+    robots.matched(['Bingbot']),
+    robotsPolicy('https://example.test', 200, 'User-agent: GPTBot\nDisallow: /', settings).matched([
+      'Googlebot',
+    ]),
+  ]).toEqual(['specific_group', 'specific_group', 'wildcard_group', 'no_rules']);
+});
 it('keeps an unsupported crawl delay binding when the crawl ignores robots.txt', () => {
   const slow = robotsPolicy('https://example.test', 200, 'User-agent: *\nCrawl-delay: 2', settings);
   expect(slow.admits('https://example.test/', 'ignore')).toBe(false);

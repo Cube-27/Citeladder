@@ -33,6 +33,7 @@ const codes = policy.site_health.page_analysis.acquisition.error_codes;
 const fetchSettings = siteFetchSettings({
   SITE_HEALTH_PER_HOST_DELAY_SECONDS: '0',
   SITE_HEALTH_DEFAULT_CRAWL_DELAY_SECONDS: '0',
+  SITE_HEALTH_ROBOTS_TRANSIENT_BACKOFF_SECONDS: '0.001',
 });
 const workerSettings = {
   ...siteWorkerSettings({}),
@@ -526,6 +527,12 @@ describe('discover', () => {
       codes.robots_denied,
     ],
     ['a 503', { '/': { status: 503 } }, 'retry_wait', codes.http_5xx],
+    [
+      'an unreachable robots.txt',
+      { '/robots.txt': { status: 503 } },
+      'retry_wait',
+      codes.robots_unavailable,
+    ],
     [
       'a redirect off the crawl scope',
       { '/': { status: 301, redirect: 'https://elsewhere.test/' } },

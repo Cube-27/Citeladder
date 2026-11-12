@@ -342,7 +342,7 @@ redirect hop.
 | 2xx | Rules honored; an empty body allows all |
 | 401 / 403 | Host blocked (`access_blocked`) |
 | other 4xx | No rules (`not_found`) |
-| 429, 5xx, network failure | Disallowed; rechecked after `robots_unreachable_recheck_seconds` |
+| 429, 5xx, network failure | Retried up to `robots_transient_attempts` times with exponential backoff from `robots_transient_backoff_seconds`; still failing, the page fails retryable (`robots_unavailable`) and the result is never cached |
 
 Readable policies are cached for `robots_cache_ttl_seconds`. A crawl delay
 above `max_crawl_delay_seconds` blocks the host. A missing file never permits
@@ -435,7 +435,16 @@ current observations and pager on screen while the next page loads. MCP
 
 Interpretation runs on a persistent pool of `interpretation_worker_threads`
 Node threads (`analysis/off-thread.ts`). Idle threads don't hold the process
-open, and a crashed thread fails only its own jobs.
+open, and a crashed thread fails only its own jobs. A job running longer than
+`interpretation_job_timeout_seconds` fails; its thread is replaced and the jobs
+queued behind it move to another thread.
+
+Relative links, assets, hreflang alternates and meta-refresh targets resolve
+against the document base (the first `<base href>`, else the final URL), as a
+browser resolves them; stored link facts hold the resolved URL. Microdata items
+are read as their equivalent JSON-LD objects, so both syntaxes meet one
+required-property contract. Separate `X-Robots-Tag` header lines are scoped
+separately: an agent-scoped line never swallows a generic one.
 
 - **Discover:** parses once. Links come from the whole document, including
   `<template>`, up to `max_links_per_page`; facts come from the region-pruned
@@ -559,7 +568,9 @@ rule it out: canonical integrity without a declared canonical stays
 
 **Crawler access.** A bot fails when its root, or every sampled URL, is
 disallowed. Partial closure is `restricted` and passes. Without a fetched
-robots.txt the result is `unknown` (`robots_not_fetched`); a fetched but
+robots.txt the result is `unknown` (`robots_not_fetched`), except that a
+missing file (`not_found`, RFC 9309) means no rules, so every bot is measured
+as allowed; a fetched but
 unreadable one with no observed block is `unknown` (`robots_unreadable`). Check membership is
 each bot's `checks` array:
 
@@ -964,11 +975,11 @@ bounds. Settings marked *frozen* are copied into each crawl.
 | `sample_url_limit` / `sample_discovery_url_cap` | 10 / 200 |
 | `max_sitemap_documents` / `sitemap_fetch_concurrency` / `max_sitemap_admitted_urls` | 32 / 4 / 5000 |
 | `robots_policy_sample_size` / `robots_snapshot_max_bytes` | 100 / 524288 |
-| `robots_cache_ttl_seconds` / `robots_unreachable_recheck_seconds` | 86400 / 300 |
+| `robots_cache_ttl_seconds` / `robots_transient_attempts` / `robots_transient_backoff_seconds` | 86400 / 3 / 1 |
 | `global_concurrency` / `per_host_concurrency` / `per_host_delay_seconds` (frozen) | 8 / 6 / 0.15 |
 | `max_crawl_delay_seconds` / `request_timeout_seconds` / `max_redirects` | 30 / 20 / 5 |
 | `worker_concurrency` / `claim_window_seconds` / `drain_budget_seconds` | 8 / 30 / 300 |
-| `interpretation_worker_threads` | 1 |
+| `interpretation_worker_threads` / `interpretation_job_timeout_seconds` | 1 / 60 |
 | `lease_ttl_seconds` / `heartbeat_interval_seconds` / `max_attempts` | 120 / 30 / 4 |
 | `analysis_dependency_max_wait_seconds` | 180 |
 | `backstop_interval_seconds` / `stalled_crawl_reconcile_seconds` / `overdue_crawl_seconds` | 15 / 240 / 3600 |
