@@ -6,6 +6,7 @@
  */
 import type { PriorityValue } from '@/components/ui/badge';
 import type { ActionGroup, ActionPriorityBand, ActionStatus } from '@/lib/api/actions';
+import type { ActionTargetKind } from '@citeladder/contracts/actions';
 import type { ContentGapEvidence } from '@citeladder/contracts/opportunity-evidence';
 
 /** The band the server put an Action's priority score in; the score itself only ranks. */
@@ -50,7 +51,7 @@ export const ACTION_STATUS_TONE: Record<ActionStatus, 'neutral' | 'info' | 'succ
     dismissed: 'neutral',
   };
 
-const TARGET_KIND_LABEL: Record<string, string> = {
+const TARGET_KIND_LABEL: Record<ActionTargetKind, string> = {
   page: 'Page',
   earned_page: 'Earned page',
   product: 'Product',
@@ -61,10 +62,15 @@ const TARGET_KIND_LABEL: Record<string, string> = {
   issue_family: 'Issue across pages',
 };
 
-export const ACTION_TARGET_KINDS = Object.keys(TARGET_KIND_LABEL);
+// Keyed by the contract's kinds, so a kind without a label fails the type check;
+// the contract is imported as a type only, keeping its schemas out of the eager bundle.
+const isTargetKind = (kind: unknown): kind is ActionTargetKind =>
+  typeof kind === 'string' && Object.hasOwn(TARGET_KIND_LABEL, kind);
+
+export const ACTION_TARGET_KINDS = Object.keys(TARGET_KIND_LABEL).filter(isTargetKind);
 
 export function targetKindLabel(kind: string | null | undefined): string | null {
-  return kind ? (TARGET_KIND_LABEL[kind] ?? null) : null;
+  return isTargetKind(kind) ? TARGET_KIND_LABEL[kind] : null;
 }
 
 const FAMILY_LABEL: Record<string, string> = {

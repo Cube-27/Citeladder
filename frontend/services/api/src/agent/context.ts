@@ -1,14 +1,10 @@
-import { issueFamilyCohortSchema } from '@citeladder/contracts/opportunity-evidence';
 import { z } from 'zod';
-import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { familySnippet, withoutQuery } from '../mcp/evidence-site.ts';
 import { jsonObject } from '../db/json.ts';
+import { targetAgentContext } from '../opportunities/targets/registry.ts';
 import { withContentRules } from '../page-documents/content-rules.ts';
 import { authorize } from './access.ts';
 import { agentPolicy, AgentError, type Scope, type Json } from './contracts.ts';
-
-const familyPolicy = policy.opportunity.opportunities.SITE_ISSUE_FAMILY;
 
 const actionSchema = z
   .object({
@@ -47,33 +43,6 @@ export type ContextReader = (
   request: string,
 ) => Promise<Manifest['package']>;
 
-/**
- * What an issue-family Action gives its chat, so the Agent writes one fix for
- * the shared cause without reading each page: the rule, the affected page
- * count and the first pages of the cohort (without query strings), and the
- * family's one redacted reference snippet from that crawl's catalog. Null for
- * any other Action.
- */
-async function issueFamilyContext(
-  db: Database,
-  scope: Scope,
-  stored: unknown,
-): Promise<Json | null> {
-  if (stored === null || stored === undefined) return null;
-  const cohort = issueFamilyCohortSchema.parse(stored);
-  const snippet = await familySnippet({ db, scope }, cohort.crawl_id, cohort.rule_id);
-  const pages = cohort.pages.slice(0, familyPolicy.AGENT_PAGES_MAX);
-  return {
-    rule_id: cohort.rule_id,
-    rule: cohort.rule_label,
-    crawl_id: cohort.crawl_id,
-    page_count: cohort.page_count,
-    // Fewer pages than `page_count`: the rest share the rule and are not listed.
-    pages: pages.map((page) => withoutQuery(page.url)),
-    reference_snippet: snippet,
-  };
-}
-
 export async function buildManifest(
   db: Database,
   scope: Scope,
@@ -99,16 +68,17 @@ export async function buildManifest(
         .execute()
     : [];
   if (rows.length !== ids.length) throw new AgentError('agent_context_unavailable');
-  const families = new Map(
+  // What each Action's target kind adds, such as an issue family's pages and snippet.
+  const extras = new Map(
     await Promise.all(
-      rows.map(async (row) => [row.id, await issueFamilyContext(db, scope, row.cohort)] as const),
+      rows.map(async (row) => [row.id, await targetAgentContext(db, scope, row)] as const),
     ),
   );
   const actions = new Map(
     rows.map((row) => [
       row.id,
       actionSchema.parse({
-        ...(families.get(row.id) ? { issue_family: families.get(row.id) } : {}),
+        ...extras.get(row.id),
         id: row.id,
         target_label: row.target_label,
         skill_id: row.skill_id,

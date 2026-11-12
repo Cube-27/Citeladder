@@ -3,16 +3,17 @@ import {
   type ActionGroup,
   type ActionHandoff,
   type ActionPriorityBand,
+  type ActionTargetKind,
 } from '@citeladder/contracts/actions';
 import type { IssueFamilyCohort } from '@citeladder/contracts/opportunity-evidence';
 
 import { policy } from '../../config.ts';
 import type { ActionGroupRule } from '../../config/actions.ts';
 import { roundScaled } from '../../numbers.ts';
-import { normalizedUrlForCompare } from '../url-compare.ts';
 import { compareText } from '../../text-order.ts';
 import type { NonEmpty } from '../../lists.ts';
-import { targetColumns, targetKey, type TargetRef } from './targets.ts';
+import { actionTargetOf, type ActionTarget } from '../../opportunities/targets/registry.ts';
+import type { TargetRef } from './targets.ts';
 const p = policy.opportunity.actions;
 const MEASUREMENT_LEG_ORDER = [p.LEG_VISIBILITY_RUN, p.LEG_SEARCH_CONSOLE_WINDOW, p.LEG_CRAWL];
 export type ActionMember = {
@@ -80,81 +81,6 @@ function handoffMessage(templates: readonly string[], facts: MessageFacts): stri
   }
   return facts.target ?? '';
 }
-export const pageGroupKey = (url: string) => `page:${normalizedUrlForCompare(url)}`;
-/** One planned page per topic, whether the Agent or evidence names it first; null without one. */
-export function plannedPageKey(topic: string): string | null {
-  // Letters in any script, so a keyword in Hindi or Japanese still names a page.
-  const slug = topic
-    .normalize('NFKC')
-    .toLowerCase()
-    .replaceAll(/[^\p{L}\p{M}\p{N}]+/gu, '-')
-    .replace(/^-|-$/gu, '');
-  return slug ? `planned:${[...slug].slice(0, p.PLANNED_PAGE_TOPIC_MAX_CHARS).join('')}` : null;
-}
-function target(
-  key: string,
-  kind: string,
-  member: ActionMember,
-  url: string | null = null,
-  prompt: string | null = null,
-) {
-  const theme = targetColumns(member.target).target_theme;
-  return {
-    group_key: key,
-    kind,
-    label: [...(url || member.label_hint || theme || member.title)]
-      .slice(0, p.ACTION_LABEL_MAX_CHARS)
-      .join(''),
-    url,
-    prompt_id: prompt,
-  };
-}
-const pageTarget = (member: ActionMember, url: string) =>
-  target(pageGroupKey(url), p.TARGET_PAGE, member, url);
-/** The Action a member groups into: one per page, prompt, query, product, listing or issue family. */
-export function targetFor(member: ActionMember) {
-  const ref = member.target;
-  const key = targetKey(ref);
-  switch (ref.kind) {
-    case 'issue_family':
-      return target(key, p.TARGET_ISSUE_FAMILY, member);
-    case 'earned_page':
-      return target(`earned:${key}`, p.TARGET_EARNED_PAGE, member, ref.url);
-    case 'product':
-      return target(key, p.TARGET_PRODUCT, member);
-    case 'category':
-      return target(key, p.TARGET_CATEGORY, member);
-    case 'prompt':
-      return target(key, p.TARGET_PROMPT, member, null, ref.prompt_id);
-    case 'prompt_index':
-      return target(key, p.TARGET_PROMPT, member);
-    case 'site_page':
-    case 'site_change':
-    case 'link_source':
-      return pageTarget(member, ref.url);
-    case 'demand':
-      if (ref.url) return pageTarget(member, ref.url);
-      return ref.query
-        ? target(`query:${ref.query.toLowerCase().trim()}`, p.TARGET_QUERY, member)
-        : target(key, p.TARGET_QUERY, member);
-    case 'search_gap': {
-      if (ref.url) return pageTarget(member, ref.url);
-      // A keyword gap no existing page covers is a page to create.
-      const planned = plannedPageKey(ref.keyword);
-      return planned
-        ? target(planned, p.TARGET_PLANNED_PAGE, member)
-        : target(key, p.TARGET_QUERY, member);
-    }
-    case 'planned_page':
-      // The stored key is the group key, so a renamed label keeps its Action.
-      return target(ref.key, p.TARGET_PLANNED_PAGE, member);
-    default: {
-      const unknownTarget: never = ref;
-      throw new Error(`Unknown Opportunity target: ${JSON.stringify(unknownTarget)}`);
-    }
-  }
-}
-
 type ApproachBranch = ReturnType<typeof selectApproach>;
 
 /** A branch's templates filled from one member's facts and the Action's label. */
@@ -220,8 +146,10 @@ export function readHandoff(persisted: unknown, label: string): ActionHandoff {
 type GroupedAction = Readonly<{ approach: string; target_kind: string }>;
 
 function groupAdmits(rule: ActionGroupRule, action: GroupedAction): boolean {
+  // Widened so a stored kind, read as a string, can be looked up.
+  const kinds: readonly string[] | undefined = rule.target_kinds;
   return (
-    (!rule.target_kinds || rule.target_kinds.includes(action.target_kind)) &&
+    (!kinds || kinds.includes(action.target_kind)) &&
     (!rule.approaches || rule.approaches.includes(action.approach))
   );
 }
@@ -239,7 +167,7 @@ export function priorityBand(score: number | null): ActionPriorityBand | null {
   return score >= p.ACTION_PRIORITY_BANDS.medium ? 'medium' : 'low';
 }
 
-export function selectApproach(ids: string[], kind: string) {
+function selectApproach(ids: string[], kind: ActionTargetKind) {
   return (
     p.APPROACH_TREE.find(
       (b) =>
@@ -248,7 +176,7 @@ export function selectApproach(ids: string[], kind: string) {
     ) ?? p.DEFAULT_APPROACH
   );
 }
-function group(t: ReturnType<typeof targetFor>, members: NonEmpty<ActionMember>) {
+function group(t: ActionTarget, members: NonEmpty<ActionMember>) {
   const ordered: [ActionMember, ...ActionMember[]] = [...members];
   ordered.sort(
     (a, b) =>
@@ -304,10 +232,10 @@ function group(t: ReturnType<typeof targetFor>, members: NonEmpty<ActionMember>)
 export function groupMembers(members: ActionMember[]) {
   const groups = new Map<
     string,
-    { target: ReturnType<typeof targetFor>; members: [ActionMember, ...ActionMember[]] }
+    { target: ActionTarget; members: [ActionMember, ...ActionMember[]] }
   >();
   for (const member of members) {
-    const t = targetFor(member);
+    const t = actionTargetOf(member);
     const entry = groups.get(t.group_key);
     if (entry) entry.members.push(member);
     else groups.set(t.group_key, { target: t, members: [member] });

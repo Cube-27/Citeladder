@@ -7,6 +7,7 @@ import { AgentError } from '../agent/contracts.ts';
 import { contentPageAnalyses } from '../content-gaps/load.ts';
 import type { Database } from '../db/database.ts';
 import { resolveCrawlId } from '../opportunities/sources.ts';
+import { actionPageUrl } from '../opportunities/targets/registry.ts';
 import { canonicalIdentity, canonicalUrl, hostTwinHash } from '../site-health/url-identity.ts';
 
 type Scope = { workspaceId: string; projectId: string };
@@ -62,7 +63,7 @@ async function actionPage(
     .where('project_id', '=', scope.projectId)
     .where('id', '=', actionId)
     .executeTakeFirst();
-  if (action?.target_kind !== 'page' || canonicalUrl(action.target_url) !== canonical) return null;
+  if (!action || canonicalUrl(actionPageUrl(action)) !== canonical) return null;
   const known = await db
     .selectFrom('site_urls')
     .select('id')

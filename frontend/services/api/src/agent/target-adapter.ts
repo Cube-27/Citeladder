@@ -3,16 +3,18 @@ import type { Database } from '../db/database.ts';
 import type { AgentOutputs } from '../generated/db-schema.ts';
 import { refreshActionStatus } from '../opportunities/action-status.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
+import { attachOrCreateAction } from '../opportunities/actions.ts';
 import {
-  agentTargetKey,
-  attachOrCreateAction,
   ActionTargetError,
-} from '../opportunities/actions.ts';
+  isAgentTargetKind,
+  namedTarget,
+  type AgentTargetKind,
+} from '../opportunities/targets/registry.ts';
 import { AgentError, type Chat, type OutputPayload, type Scope } from './contracts.ts';
 import type { AttachTarget } from './outputs.ts';
 
 type Output = Selectable<AgentOutputs>;
-type NamedTarget = { kind: 'page' | 'planned_page'; target: string };
+type NamedTarget = { kind: AgentTargetKind; target: string };
 /** The longest target a document can hold for the person's choice (`agent_outputs.target_label`). */
 const NAMED_TARGET_MAX_CHARS = 255;
 
@@ -26,7 +28,7 @@ async function unlessInvalidTarget<T>(work: Promise<T>): Promise<T | null> {
   }
 }
 
-function namedTarget(payload: OutputPayload): NamedTarget | null {
+function payloadTarget(payload: OutputPayload): NamedTarget | null {
   const target = payload.target?.trim();
   return payload.target_kind && target ? { kind: payload.target_kind, target } : null;
 }
@@ -40,7 +42,7 @@ function namedTarget(payload: OutputPayload): NamedTarget | null {
  * person links to or declines (`chooseOutputTarget`).
  */
 export const attachAgentTarget: AttachTarget = async (db, chat, output, payload, userId) => {
-  const named = namedTarget(payload);
+  const named = payloadTarget(payload);
   if (!named) return;
   if (output.action_id) {
     await recordNamedTarget(db, chat, output, output.action_id, named);
@@ -71,11 +73,11 @@ async function recordNamedTarget(
 ) {
   if (output.target_kind !== null) return;
   const action = await outputAction(db, chat, actionId);
-  const key = await unlessInvalidTarget(
-    agentTargetKey(db, ownerOf(chat), named.kind, named.target),
+  const identity = await unlessInvalidTarget(
+    namedTarget(db, ownerOf(chat), named.kind, named.target),
   );
-  if (key === null) return;
-  if (key === action.group_key) {
+  if (identity === null) return;
+  if (identity.key === action.group_key) {
     await setOutputAction(db, chat, output.id, action);
     return;
   }
@@ -149,7 +151,7 @@ export function openTargetChoice(
   action: { target_kind: string; target_label: string } | undefined,
 ): NamedTarget | null {
   if (!action || !output.action_id || !output.target_label) return null;
-  if (output.target_kind !== 'page' && output.target_kind !== 'planned_page') return null;
+  if (!isAgentTargetKind(output.target_kind)) return null;
   if (action.target_kind === output.target_kind && action.target_label === output.target_label)
     return null;
   return { kind: output.target_kind, target: output.target_label };

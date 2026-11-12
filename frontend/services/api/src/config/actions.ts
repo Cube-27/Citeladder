@@ -1,13 +1,20 @@
 /** Actions catalog: deterministic decisions over persisted evidence. */
-import type { ActionGroup } from '@citeladder/contracts/actions';
+import {
+  actionTargetKindSchema,
+  type ActionGroup,
+  type ActionTargetKind,
+} from '@citeladder/contracts/actions';
 import { opportunities } from './opportunity.ts';
 
 /** One group rule: it admits an Action whose target kind and approach are both listed; an absent list admits every value. */
 export type ActionGroupRule = Readonly<{
   group: ActionGroup;
-  target_kinds?: readonly string[];
+  target_kinds?: readonly ActionTargetKind[];
   approaches?: readonly string[];
 }>;
+
+/** An approach branch's target kinds, checked against the contract's; none admits every kind. */
+const kinds = (...listed: ActionTargetKind[]): ActionTargetKind[] => listed;
 
 /**
  * The Actions list's groups (AS2), derived at read time from the stored
@@ -27,26 +34,9 @@ export const actions = {
   ACTION_GROUPING_VERSION: 'action-grouping-1',
   ACTION_DIAGNOSIS_VERSION: 'action-diagnosis-1',
   ACTION_PRIORITY_VERSION: 'action-priority-1',
-  TARGET_PAGE: 'page',
-  TARGET_EARNED_PAGE: 'earned_page',
-  TARGET_PRODUCT: 'product',
-  TARGET_CATEGORY: 'category',
-  TARGET_QUERY: 'query',
-  TARGET_PROMPT: 'prompt',
-  TARGET_PLANNED_PAGE: 'planned_page',
-  /** One Site Health issue family across its pages; its row carries the cohort. */
-  TARGET_ISSUE_FAMILY: 'issue_family',
-  ACTION_TARGET_KINDS: [
-    'page',
-    'earned_page',
-    'product',
-    'category',
-    'query',
-    'prompt',
-    'planned_page',
-    'issue_family',
-  ],
-  AGENT_TARGET_KINDS: ['page', 'planned_page'],
+  ACTION_TARGET_KINDS: actionTargetKindSchema.options,
+  /** The target kinds a document the Agent saves may name, and an Agent-origin Action may have. */
+  AGENT_TARGET_KINDS: ['page', 'planned_page'] as const satisfies readonly ActionTargetKind[],
   PLANNED_PAGE_TOPIC_MAX_CHARS: 120,
   ACTION_ORIGIN_EVIDENCE: 'evidence',
   ACTION_ORIGIN_AGENT: 'agent',
@@ -125,7 +115,7 @@ export const actions = {
         'Do not change an owned page to fix a third-party listing.',
         'Do not send outreach from CiteLadder; drafts only.',
       ],
-      target_kinds: [],
+      target_kinds: kinds(),
     },
     {
       // One fix for a defect a shared template or component causes on every page.
@@ -137,7 +127,7 @@ export const actions = {
         'Do not fix the affected pages one by one when one shared template or component causes the defect.',
         'Do not rewrite the page copy to work around a technical defect.',
       ],
-      target_kinds: ['issue_family'],
+      target_kinds: kinds('issue_family'),
     },
     {
       approach: 'fix_technical',
@@ -154,7 +144,7 @@ export const actions = {
         'Do not rewrite the page copy to work around a technical defect.',
         'Do not add markup that states facts the visible page does not.',
       ],
-      target_kinds: [],
+      target_kinds: kinds(),
     },
     {
       approach: 'consolidate',
@@ -162,7 +152,7 @@ export const actions = {
       skill_id: 'gsc_optimize',
       messages: ['Merge or differentiate the pages that compete for {target}.'],
       donts: ['Do not create another URL for this demand.'],
-      target_kinds: [],
+      target_kinds: kinds(),
     },
     {
       approach: 'create_new',
@@ -172,7 +162,7 @@ export const actions = {
       donts: [
         'Do not create a new URL if an existing page already answers this question; improve that page instead.',
       ],
-      target_kinds: ['prompt'],
+      target_kinds: kinds('prompt'),
     },
     {
       approach: 'create_new',
@@ -183,7 +173,7 @@ export const actions = {
         'Do not create a new URL if an existing page already answers this search; improve that page instead.',
         'Do not present provider ranking estimates as measured traffic.',
       ],
-      target_kinds: ['planned_page'],
+      target_kinds: kinds('planned_page'),
     },
     {
       approach: 'create_new',
@@ -197,7 +187,7 @@ export const actions = {
         'Do not claim the page will be cited.',
         'Do not invent statistics, quotes or sources.',
       ],
-      target_kinds: ['planned_page'],
+      target_kinds: kinds('planned_page'),
       // The Agent workflow (`workflows.json` id) a finding of this branch hands
       // off with, and what it carries: the finding's Opportunity, or the page URL.
       handoff: { workflow_id: 'article', context: 'opportunity' },
@@ -214,7 +204,7 @@ export const actions = {
         'Do not claim the page will be cited.',
         'Do not invent statistics, quotes or sources.',
       ],
-      target_kinds: ['page'],
+      target_kinds: kinds('page'),
       // The page is fetched into a page document before the first turn (phase 2, E3).
       handoff: { workflow_id: 'optimize_page', context: 'page_url' },
     },
@@ -227,7 +217,7 @@ export const actions = {
         'Improve the internal links of {target}.',
       ],
       donts: ['Do not add links from unrelated pages to hit a link count.'],
-      target_kinds: [],
+      target_kinds: kinds(),
     },
     {
       approach: 'improve_existing',
@@ -244,7 +234,7 @@ export const actions = {
         'Improve {target} for its search demand.',
       ],
       donts: ['Do not create another URL: an indexable page already maps to this demand.'],
-      target_kinds: [],
+      target_kinds: kinds(),
     },
   ],
   DEFAULT_APPROACH: {
@@ -253,7 +243,7 @@ export const actions = {
     skill_id: 'content_create',
     messages: ['Work on {target}: "{issue}".', 'Work on {target}.'],
     donts: ['Do not create another URL for a target that already has a page.'],
-    target_kinds: [],
+    target_kinds: kinds(),
   },
   AGENT_ORIGIN_DEFAULT_SKILL: 'content_create',
   ACTION_GROUPS,

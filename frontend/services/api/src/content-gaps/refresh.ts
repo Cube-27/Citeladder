@@ -19,7 +19,7 @@ import { randomUUID } from 'node:crypto';
 import type { z } from 'zod';
 
 import { lexicalTokens } from '../analysis/lexical.ts';
-import { plannedPageKey } from '../analysis/opportunities/actions.ts';
+import { plannedPageKey } from '../opportunities/targets/registry.ts';
 import { meterFor } from '../billing/metering.ts';
 import { policy } from '../config.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
