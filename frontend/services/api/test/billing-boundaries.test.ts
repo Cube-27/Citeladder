@@ -235,6 +235,26 @@ describe('billing input and provider boundaries', () => {
       'provider_collection_incomplete',
     );
   });
+  it('versions subscription evidence by the provider update time, else the time the provider served it, else refuses it', async () => {
+    const responses = paidRenewal({});
+    const read = async (subscription: Record<string, unknown>, date: string | null) => {
+      const transport = vi.fn<typeof fetch>(async (input) => {
+        const path = new URL(String(input)).pathname.replace('/v1', '');
+        const body = path === '/subscriptions/sub_fixture' ? subscription : responses[path];
+        return Response.json(body, { headers: date === null ? {} : { date } });
+      });
+      const provider = new RazorpayProvider(config.billing, config.razorpay, transport);
+      const evidence = await provider.evidence('sub_fixture', true);
+      return evidence.kind === 'base' ? evidence.subscription.version : null;
+    };
+    const { updated_at: _omitted, ...withoutUpdate } = responses[
+      '/subscriptions/sub_fixture'
+    ] as Record<string, unknown>;
+    const served = 'Thu, 12 Nov 2026 10:00:00 GMT';
+    expect(await read({ ...withoutUpdate, updated_at: 300 }, served)).toBe(300);
+    expect(await read(withoutUpdate, served)).toBe(1_794_477_600);
+    await expect(read(withoutUpdate, null)).rejects.toThrow('provider_invalid_response');
+  });
   it('reads a refunded capture as the paid period it was, but never an uncaptured auto-refund or declined attempts', async () => {
     const responses: Record<string, unknown> = {
       ...paidRenewal({ status: 'refunded' }),

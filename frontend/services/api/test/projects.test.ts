@@ -498,85 +498,106 @@ describe('project owner', () => {
     expect(await remove('admin')).toBe(204);
   });
 
-  it('purges trial-only projects and incomplete discoveries 30 days after the trial ends, and nothing else', async () => {
-    const day = 86_400_000;
-    async function trialWorkspace(
-      endedDaysAgo: number,
-      { paid = false, project = true, checkout = false } = {},
-    ) {
-      const t = await tenant();
+  const day = 86_400_000;
+  /** A public workspace whose only access was a trial that ended `endedDaysAgo` days ago. */
+  async function trialWorkspace(
+    endedDaysAgo: number,
+    { paid = false, project = true, checkout = false } = {},
+  ) {
+    const t = await tenant();
+    await db
+      .updateTable('billing_accounts')
+      .set({ registration_origin: 'public' })
+      .where('id', '=', t.accountId)
+      .execute();
+    // Made while the trial was open, then the fixture's operator grants give way to it.
+    const created = project
+      ? await createProject(db, t.workspaceId, t.userId, projectCreate.parse({ name: 'Trial' }))
+      : null;
+    // A discovery still in progress has no project to cascade from.
+    const discovery = await createDiscovery(
+      db,
+      t.workspaceId,
+      discoveryCreate.parse({
+        brand_name: 'Acme',
+        website_url: 'acme.com',
+        primary_market: 'US',
+      }),
+      randomUUID(),
+    );
+    // The fixture's operator access grant is not a trial; this account is trial-only.
+    await asOwner((owner) =>
+      owner.deleteFrom('account_grants').where('billing_account_id', '=', t.accountId).execute(),
+    );
+    const end = new Date(Date.now() - endedDaysAgo * day);
+    await db
+      .insertInto('account_grants')
+      .values({
+        id: randomUUID(),
+        billing_account_id: t.accountId,
+        source_kind: 'trial',
+        source_ref: 'test',
+        bundle_role: 'primary',
+        bundle_id: `trial-${t.accountId}`,
+        profile_key: policy.entitlements.public_trial.profile,
+        key: 'workspace_access',
+        value: 1,
+        valid_from: new Date(end.getTime() - 7 * day),
+        valid_until: end,
+        catalog_revision: 'test',
+        idempotency_key: randomUUID(),
+        created_at: new Date(),
+      })
+      .execute();
+    if (paid) await grant(db, t.accountId, { key: 'project_slots', value: 1 });
+    // A returning customer paid for a plan whose settlement has not landed yet.
+    if (checkout)
       await db
-        .updateTable('billing_accounts')
-        .set({ registration_origin: 'public' })
-        .where('id', '=', t.accountId)
-        .execute();
-      // Made while the trial was open, then the fixture's operator grants give way to it.
-      const created = project
-        ? await createProject(db, t.workspaceId, t.userId, projectCreate.parse({ name: 'Trial' }))
-        : null;
-      // A discovery still in progress has no project to cascade from.
-      const discovery = await createDiscovery(
-        db,
-        t.workspaceId,
-        discoveryCreate.parse({
-          brand_name: 'Acme',
-          website_url: 'acme.com',
-          primary_market: 'US',
-        }),
-        randomUUID(),
-      );
-      // The fixture's operator access grant is not a trial; this account is trial-only.
-      await asOwner((owner) =>
-        owner.deleteFrom('account_grants').where('billing_account_id', '=', t.accountId).execute(),
-      );
-      const end = new Date(Date.now() - endedDaysAgo * day);
-      await db
-        .insertInto('account_grants')
+        .insertInto('pending_activations')
         .values({
           id: randomUUID(),
           billing_account_id: t.accountId,
-          source_kind: 'trial',
-          source_ref: 'test',
-          bundle_role: 'primary',
-          bundle_id: `trial-${t.accountId}`,
-          profile_key: policy.entitlements.public_trial.profile,
-          key: 'workspace_access',
-          value: 1,
-          valid_from: new Date(end.getTime() - 7 * day),
-          valid_until: end,
+          activation_kind: 'base',
+          catalog_key: 'tier_1',
           catalog_revision: 'test',
+          country_code: 'US',
+          credential_mode: 'byok',
+          region: 'international',
+          quantity: 1,
+          provider: 'razorpay',
+          provider_mode: 'test',
+          external_reference: `sub_${randomUUID().replaceAll('-', '')}`,
           idempotency_key: randomUUID(),
+          request_fingerprint: 'test',
+          status: 'pending',
+          expires_at: new Date(Date.now() + day),
           created_at: new Date(),
+          updated_at: new Date(),
         })
         .execute();
-      if (paid) await grant(db, t.accountId, { key: 'project_slots', value: 1 });
-      // A returning customer paid for a plan whose settlement has not landed yet.
-      if (checkout)
-        await db
-          .insertInto('pending_activations')
-          .values({
-            id: randomUUID(),
-            billing_account_id: t.accountId,
-            activation_kind: 'base',
-            catalog_key: 'tier_1',
-            catalog_revision: 'test',
-            country_code: 'US',
-            credential_mode: 'byok',
-            region: 'international',
-            quantity: 1,
-            provider: 'razorpay',
-            provider_mode: 'test',
-            external_reference: `sub_${randomUUID().replaceAll('-', '')}`,
-            idempotency_key: randomUUID(),
-            request_fingerprint: 'test',
-            status: 'pending',
-            expires_at: new Date(Date.now() + day),
-            created_at: new Date(),
-            updated_at: new Date(),
-          })
-          .execute();
-      return { projectId: created?.id ?? null, discoveryId: discovery.id };
-    }
+    return {
+      accountId: t.accountId,
+      projectId: created?.id ?? null,
+      discoveryId: discovery.id,
+    };
+  }
+
+  /** Which of the workspace's project and discovery are still stored. */
+  async function survivors(workspace: { projectId: string | null; discoveryId: string }) {
+    const projects = await db
+      .selectFrom('projects')
+      .select('id')
+      .where('id', '=', workspace.projectId!)
+      .execute();
+    const discoveries = await db
+      .selectFrom('brand_discoveries')
+      .select('id')
+      .where('id', '=', workspace.discoveryId)
+      .execute();
+    return { project: projects.length === 1, discovery: discoveries.length === 1 };
+  }
+
+  it('purges trial-only projects and incomplete discoveries 30 days after the trial ends, and nothing else', async () => {
     const expired = await trialWorkspace(31);
     const discoveryOnly = await trialWorkspace(31, { project: false });
     const recent = await trialWorkspace(10);
@@ -610,6 +631,63 @@ describe('project owner', () => {
     expect(tasks.map((row) => row.discovery_id).sort()).toEqual(
       kept.map((w) => w.discoveryId).sort(),
     );
+  });
+
+  it('keeps a trial workspace that gained an expired non-trial grant after the purge picked it', async () => {
+    const workspace = await trialWorkspace(31);
+    const purge = await db.transaction().execute(async (issuer) => {
+      const blocker = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(issuer);
+      await advisoryXactLock(issuer, policy.entitlements.capacity_lock, workspace.accountId);
+      // An operator grant that has already ended, committed after the candidates were chosen.
+      await grant(issuer, workspace.accountId, {
+        key: 'workspace_access',
+        value: 1,
+        sourceKind: 'override',
+        validFrom: new Date(Date.now() - 40 * day),
+        validUntil: new Date(Date.now() - 35 * day),
+      });
+      const running = purgeExpiredTrialProjects(db, new Date()).catch((error: unknown) => error);
+      await vi.waitFor(
+        async () => {
+          const blocked = await sql<{ waiting: boolean }>`select exists (
+            select 1 from pg_stat_activity where ${blocker.rows[0]!.pid} = any(pg_blocking_pids(pid))
+          ) as waiting`.execute(db);
+          expect(blocked.rows[0]!.waiting).toBe(true);
+        },
+        { timeout: 5000, interval: 20 },
+      );
+      return { running };
+    });
+    expect(typeof (await purge.running)).toBe('number');
+    expect(await survivors(workspace)).toEqual({ project: true, discovery: true });
+  });
+
+  it('purges while a domain-first transaction holds a project row and then takes the capacity lock', async () => {
+    const workspace = await trialWorkspace(31);
+    const purge = await db.transaction().execute(async (holder) => {
+      const blocker = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(holder);
+      // Lock DAG: a domain row first, then the account's capacity lock.
+      await holder
+        .selectFrom('brands')
+        .select('id')
+        .where('project_id', '=', workspace.projectId!)
+        .forUpdate()
+        .execute();
+      const running = purgeExpiredTrialProjects(db, new Date()).catch((error: unknown) => error);
+      await vi.waitFor(
+        async () => {
+          const blocked = await sql<{ waiting: boolean }>`select exists (
+            select 1 from pg_stat_activity where ${blocker.rows[0]!.pid} = any(pg_blocking_pids(pid))
+          ) as waiting`.execute(db);
+          expect(blocked.rows[0]!.waiting).toBe(true);
+        },
+        { timeout: 5000, interval: 20 },
+      );
+      await advisoryXactLock(holder, policy.entitlements.capacity_lock, workspace.accountId);
+      return { running };
+    });
+    expect(typeof (await purge.running)).toBe('number');
+    expect(await survivors(workspace)).toEqual({ project: false, discovery: false });
   });
 
   it('overview reads persisted state and counts only enabled active prompts', async () => {
