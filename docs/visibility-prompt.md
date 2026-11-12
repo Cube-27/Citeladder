@@ -661,7 +661,10 @@ frozen copy, and the comparison key includes it. One
 [matcher](../frontend/services/api/src/analysis/aliases.ts) serves scoring, entity
 assessment and generation admission; text in scripts written without spaces is
 word-segmented first, so a Chinese, Japanese or Thai name inside a sentence is
-found. These semantics are `grounded-analysis-v1` and `entity-assessment-1`. Source-pattern and Opportunity mapping stay in
+found. Words join only through a configured name or alias (AR-6): "Ace
+Hardware" also matches "acehardware", but separate words in the text never join
+to spell a name, so "your sales force" is not Salesforce unless "Sales Force"
+is one of its aliases. These semantics are `grounded-analysis-v1` and `entity-assessment-1`. Source-pattern and Opportunity mapping stay in
 [Opportunities](opportunities.md).
 
 **Visibility** means the brand mention rate everywhere: the share of answers

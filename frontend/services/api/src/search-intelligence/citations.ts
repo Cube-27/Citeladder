@@ -7,10 +7,11 @@
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { createHash, randomUUID } from 'node:crypto';
 
+import { normalizeDomain } from '../analysis/domains.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { chunksOf } from '../lists.ts';
-import { compareText, stripTrailing } from '../text-order.ts';
+import { compareText } from '../text-order.ts';
 import type { Scope } from './reads.ts';
 import { datasetView } from './views.ts';
 
@@ -22,17 +23,6 @@ const PARSER_VERSION = 'citation-match-1';
 const MATCH_INSERT_CHUNK = 1000;
 
 const sha256 = (text: string) => createHash('sha256').update(text).digest('hex');
-
-/** Lower-cased, dot-trimmed and without a leading `www.`. */
-function comparableDomain(value: string): string {
-  let domain = stripTrailing(value.trim().toLowerCase(), '.');
-  while (domain.startsWith('.')) domain = domain.slice(1);
-  return domain.startsWith('www.') ? domain.slice('www.'.length) : domain;
-}
-
-function hostnameOf(url: string): string {
-  return URL.parse(url)?.hostname ?? '';
-}
 
 type Citation = {
   id: string;
@@ -130,9 +120,9 @@ export function deriveCitationMatches(
         .orderBy('id')
         .execute(),
     ]);
-    const linkingDomains = new Set(linking.map((row) => comparableDomain(row.domain)));
+    const linkingDomains = new Set(linking.map((row) => normalizeDomain(row.domain)));
     const matches = citations.flatMap((citation) => {
-      const domain = comparableDomain(citation.domain || hostnameOf(citedUrl(citation)));
+      const domain = normalizeDomain(citation.domain || citedUrl(citation));
       return linkingDomains.has(domain) ? [{ citation, domain }] : [];
     });
 

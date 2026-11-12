@@ -41,7 +41,18 @@ identity, while unsupported extra citations are dropped. One optional search
 then feeds at most three sequential competitor suggestion requests, which share
 what is left of the budget, for up to ten provisional names and domains.
 Cleanup excludes owned, duplicate and reference sites; it does not prove
-commercial equivalence.
+commercial equivalence. An identity the model judges `insufficient_evidence` is
+recorded on the snapshot (`identity_status`) and raises the review warning
+`insufficient_evidence`.
+
+Every website, owned domain and competitor domain is stored as its site
+([`siteDomain`](../frontend/services/api/src/analysis/domains.ts), AR-5): the
+registrable domain, except that a host on a shared platform is a site of its
+own. The public suffix list's private section covers most platforms
+(`acme.myshopify.com`, `acme.github.io`); `shared_platform_domains` in
+`config/discovery.json` covers the rest (`acme.wordpress.com`). So
+`acme.myshopify.com` owns only itself, two stores on one platform are distinct
+competitors, and a first-party redirect to another store is out of scope.
 
 An identity request that fails, times out or returns an unusable answer is never
 saved as a review without competitors: the task retries within its attempts,

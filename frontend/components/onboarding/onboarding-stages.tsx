@@ -417,6 +417,8 @@ function warningMessage(code: string): string {
       'We used the website details we could confirm. Review them before continuing.',
     conflicting_evidence:
       'Sources disagreed about this business. Review the suggested positioning carefully.',
+    insufficient_evidence:
+      'Too little evidence was found to confirm this business. Review the suggested positioning carefully.',
     site_health_deferred:
       'The project is ready; its Site Health review will need to be started later.',
   };

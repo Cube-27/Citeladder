@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { normalizeDomain as domain } from '../analysis/domains.ts';
 import type {
   Answer,
   AnswerRequest,
@@ -36,16 +37,6 @@ const sum = (...values: (number | null)[]) =>
     : null;
 const subtract = (total: number | null, part: number | null) =>
   total !== null && part !== null ? Math.max(0, total - part) : total;
-function domain(value: string) {
-  try {
-    return new URL(value.includes('://') ? value : `https://${value}`).hostname
-      .toLowerCase()
-      .replace(/^www\./u, '')
-      .replace(/\.$/u, '');
-  } catch {
-    return '';
-  }
-}
 function citation(
   block: ObjectValue,
   annotation: ObjectValue,

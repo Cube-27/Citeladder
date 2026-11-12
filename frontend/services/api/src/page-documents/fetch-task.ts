@@ -15,6 +15,7 @@ import type { Chat } from '../agent/contracts.ts';
 import { appendMessage, touchChat } from '../agent/messages.ts';
 import { createFetchedDocument } from '../agent/outputs.ts';
 import type { AgentStore } from '../agent/store.ts';
+import { normalizeDomain } from '../analysis/domains.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { taskProject, type Executor } from '../queue/executor.ts';
@@ -56,7 +57,7 @@ export type FetchResult =
 type Failure = Extract<FetchResult, { outcome: Exclude<Outcome, 'fetched'> }>;
 
 /** The page's site with or without `www.`: a redirect off it is not this page. */
-const site = (url: URL) => url.hostname.toLowerCase().replace(/^www\./u, '');
+const site = (url: URL) => normalizeDomain(url.hostname);
 
 /** A failed request's outcome from its Site Health acquisition code. */
 function failedFetch(code: string, fetchedAt: Date): Failure {

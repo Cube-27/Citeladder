@@ -1,4 +1,5 @@
 /** Content, identity, question and product readiness checks over persisted facts. */
+import { normalizeDomain } from '../../analysis/domains.ts';
 import { compareText } from '../../text-order.ts';
 import { analysisPolicy } from './policy.ts';
 import { passFail } from './delivery-checks.ts';
@@ -135,16 +136,9 @@ function contentRecency(facts: Facts): CheckResult {
   return ['missing', { ...evidence, reason: 'content_not_recent' }];
 }
 
-const bareHost = (value: string) => {
-  try {
-    const url = new URL(value);
-    return ['http:', 'https:'].includes(url.protocol)
-      ? url.hostname.toLowerCase().replace(/^www\./u, '')
-      : '';
-  } catch {
-    return '';
-  }
-};
+/** The host of an absolute web URL; empty for anything else. */
+const bareHost = (value: string) =>
+  /^https?:\/\//iu.test(value.trim()) ? normalizeDomain(value) : '';
 /** The organization links to profiles elsewhere (Wikidata, LinkedIn, ...) that confirm the entity. */
 function entityProfiles(facts: Facts): CheckResult {
   const types = new Set(analysisPolicy.rules.organization_bearing_schema_types);

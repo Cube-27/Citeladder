@@ -1,13 +1,7 @@
 /** The project page a person's message names, read from its words alone. */
+import { normalizeDomain as hostOf } from '../analysis/domains.ts';
 import { stripLeading, stripTrailing } from '../text-order.ts';
 
-const hostOf = (value: string) => {
-  try {
-    return new URL(value).hostname.toLowerCase().replace(/^www\./u, '');
-  } catch {
-    return '';
-  }
-};
 const QUOTES = '<>"\'`()[]';
 /**
  * The first address in the person's message on the project's own site, with
