@@ -725,6 +725,30 @@ finalized one, and a duplicate alias retiring analyses recompute it in their own
 transaction; architecture findings are written current. Issues and evaluations
 are otherwise never rewritten.
 
+An issue's state across audits is kept per project, page and rule in
+`site_issue_states` (`issue-states.ts`; SH-B2, SH-B8, SH-B9). Every audit that
+lands updates the pages it audited, in its own transaction: the terminal
+publication of a full crawl, a cancelled crawl or a single-page rerun (one
+whose pages all answered 404 included), the same refreshes of `is_current`
+above, and the architecture writer for the root page's site-level findings.
+On a page analyzed at its own URL, a current issue opens (or reads `regressed`
+when it had been `resolved`), and a rule whose evaluation now reads `satisfied`
+or `not_applicable` resolves. A rule the audit did not judge (unknown, error,
+not evaluated) keeps its state. A page whose newest analyze attempt answered
+404/410 gets a `technical.page_not_found` issue, and a page whose fetch ended
+at another URL gets `technical.page_redirects`. Its other unresolved issues
+read `page_unavailable`, never `resolved`. When the page answers at its own URL
+again, the availability issue resolves and the rest are judged as usual; one the
+audit did not judge returns to `open`. Any other failed fetch is no audit and
+changes nothing. An audit older than one the page already landed changes
+nothing, so a late cancelled crawl never overwrites a rerun. `marked_fixed` and
+`no_longer_tracked` are reserved for Mark fixed and the tracked set. Each row
+names the crawl and the exact issue, evaluation, analysis or fetch attempt that
+decided it. After each landing, `site_issue_trend` stores the project's open
+count for the UTC day: issues in the configured open states (`open`,
+`regressed`, `marked_fixed`; `config/site-health/reads.json` `issue_states`).
+Reads do not use these tables yet.
+
 The same refresh, and the architecture writer after its findings, persists the
 crawl's unfiltered Issues catalog per finding class (`site_issue_catalogs`,
 `issue-catalog.ts`): the ranked groups as the list shows them and the summary
@@ -860,6 +884,6 @@ All paths are under `frontend/services/api/src/`.
 | Scheduled crawls | `site-health/schedules.ts`, `workers/crawl-scheduler.ts` |
 | Admission | `site-health/url-admission.ts`, `url-identity.ts`, `frontier.ts` |
 | Executors | `site-health/site-setup-task.ts`, `discover-task.ts`, `analyze-task.ts`, `page-fetch.ts` |
-| Terminal and measurement | `site-health/lifecycle*.ts`, `terminal-analysis.ts`, `terminal-counters.ts`, `issue-currency.ts`, `issue-catalog.ts`, `canonical-alias.ts`, `score-summary.ts`, `coverage.ts` |
+| Terminal and measurement | `site-health/lifecycle*.ts`, `terminal-analysis.ts`, `terminal-counters.ts`, `issue-currency.ts`, `issue-states.ts`, `issue-catalog.ts`, `canonical-alias.ts`, `score-summary.ts`, `coverage.ts` |
 | Analysis | `site-health/analysis/` (`page-kinds.ts`, `rules.ts`, `*-checks.ts`, `scoring.ts`) |
 | Policy | `config/site-health.ts`, `config/site-health/*.json`, `config/crawlers.json` |

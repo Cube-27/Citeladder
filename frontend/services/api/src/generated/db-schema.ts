@@ -3150,6 +3150,43 @@ export interface SiteIssues {
   workspace_id: string;
 }
 
+export interface SiteIssueStates {
+  analyzer_version: string;
+  created_at: Timestamp;
+  evidence: Json | null;
+  first_seen_at: Timestamp;
+  id: string;
+  last_audit_at: Timestamp;
+  last_seen_at: Timestamp;
+  marked_fixed_at: Timestamp | null;
+  policy_version: string;
+  project_id: string;
+  resolved_at: Timestamp | null;
+  rule_id: string;
+  rule_version: string;
+  site_url_id: string;
+  source_analysis_id: string | null;
+  source_attempt_id: string | null;
+  source_crawl_id: string;
+  source_evaluation_id: string | null;
+  source_issue_id: string | null;
+  state: string;
+  updated_at: Timestamp;
+  workspace_id: string;
+}
+
+export interface SiteIssueTrend {
+  created_at: Timestamp;
+  day: Timestamp;
+  id: string;
+  open_count: number;
+  policy_version: string;
+  project_id: string;
+  source_crawl_id: string;
+  updated_at: Timestamp;
+  workspace_id: string;
+}
+
 export interface SiteObservedArchitectures {
   analyzer_version: string;
   archetype: Json | null;
@@ -3718,6 +3755,8 @@ export interface DB {
   site_internal_link_events: SiteInternalLinkEvents;
   site_internal_link_runs: SiteInternalLinkRuns;
   site_issue_catalogs: SiteIssueCatalogs;
+  site_issue_states: SiteIssueStates;
+  site_issue_trend: SiteIssueTrend;
   site_issues: SiteIssues;
   site_observed_architectures: SiteObservedArchitectures;
   site_page_analyses: SitePageAnalyses;

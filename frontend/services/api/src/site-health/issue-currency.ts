@@ -19,6 +19,7 @@ import { sql } from 'kysely';
 
 import type { Database } from '../db/database.ts';
 import { persistIssueCatalog } from './issue-catalog.ts';
+import { landIssueStates } from './issue-states.ts';
 import type { Crawl } from './site-task.ts';
 
 /** Recompute the flag for every issue of the crawl, writing only the rows that change. */
@@ -44,4 +45,6 @@ export async function refreshIssueCurrency(db: Database, crawl: Crawl): Promise<
     where i.id = c.id and i.workspace_id = ${crawl.workspace_id}
       and i.is_current is distinct from c.current`.execute(db);
   await persistIssueCatalog(db, crawl);
+  // The crawl's current issues are what its audit found (`issue-states.ts`).
+  await landIssueStates(db, crawl);
 }

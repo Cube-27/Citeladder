@@ -58,6 +58,15 @@
       ],
       "gone_status_codes": [404, 410]
     },
+    "issue_states": {
+      "policy_version": "sh-issue-states-1",
+      "open_states": ["open", "regressed", "marked_fixed"],
+      "resolving_outcomes": ["satisfied", "not_applicable"],
+      "unavailable_rules": {
+        "gone": "technical.page_not_found",
+        "redirect": "technical.page_redirects"
+      }
+    },
     "fetch_attempt_error_outcome": "error",
     "defect_impact_bands": {
       "critical": 4,
