@@ -192,6 +192,30 @@ export function pageAuditsSql(crawl: ViewCrawl, page?: RawBuilder<unknown>) {
 }
 
 /**
+ * The crawl's pages at their latest audit (`pageAuditsSql`), each analysis
+ * `a` with its fetch `f` and URL `u`, for readers that choose their columns.
+ */
+export function latestPagesQuery(db: Database, crawl: ViewCrawl) {
+  return db
+    .selectFrom('site_page_analyses as a')
+    .innerJoin('site_fetch_artifacts as f', (join) =>
+      join
+        .onRef('f.id', '=', 'a.artifact_id')
+        .onRef('f.workspace_id', '=', 'a.workspace_id')
+        .onRef('f.crawl_id', '=', 'a.crawl_id'),
+    )
+    .innerJoin('site_urls as u', (join) =>
+      join
+        .onRef('u.id', '=', 'a.site_url_id')
+        .onRef('u.workspace_id', '=', 'a.workspace_id')
+        .onRef('u.project_id', '=', 'a.project_id'),
+    )
+    .where('a.workspace_id', '=', crawl.workspace_id)
+    .where('a.project_id', '=', crawl.project_id)
+    .where('a.id', 'in', sql<string>`(select v.analysis_id from (${pageAuditsSql(crawl)}) v)`);
+}
+
+/**
  * The issues a site crawl shows (alias `alias`): each page's current issues
  * from its latest audit (`pageAuditsSql`), and the crawl's own site-level
  * findings (architecture and sitewide links), which only a site crawl

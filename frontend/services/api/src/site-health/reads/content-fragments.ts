@@ -7,7 +7,7 @@ import { record, strings } from '../../db/json.ts';
 import { lexicalTokens } from '../../analysis/lexical.ts';
 import { compareText, scalarText, stripTrailing } from '../../text-order.ts';
 import type { Scope } from '../../opportunities/sources.ts';
-import { currentSiteCrawlQuery, pageAuditsSql, type ViewCrawl } from './crawl.ts';
+import { currentSiteCrawlQuery, latestPagesQuery, type ViewCrawl } from './crawl.ts';
 
 const p = policy.agent_context;
 /** A URL as pages are matched: scheme, `www.` and a trailing slash do not tell pages apart. */
@@ -31,34 +31,14 @@ function clean(value: unknown, cap = p.content_context_field_max_chars) {
     .trim()
     .slice(0, cap);
 }
-function pagesQuery(db: Database, scope: Scope) {
-  return db
-    .selectFrom('site_page_analyses as a')
-    .innerJoin('site_fetch_artifacts as f', (join) =>
-      join
-        .onRef('f.id', '=', 'a.artifact_id')
-        .onRef('f.workspace_id', '=', 'a.workspace_id')
-        .onRef('f.crawl_id', '=', 'a.crawl_id'),
-    )
-    .innerJoin('site_urls as u', (join) =>
-      join
-        .onRef('u.id', '=', 'a.site_url_id')
-        .onRef('u.workspace_id', '=', 'a.workspace_id')
-        .onRef('u.project_id', '=', 'a.project_id'),
-    )
-    .where('a.workspace_id', '=', scope.workspaceId)
-    .where('a.project_id', '=', scope.projectId)
-    .where('a.is_current', '=', true)
+type PageRow = Awaited<ReturnType<ReturnType<typeof rowsQuery>['execute']>>[number];
+/** The crawl's finalized pages with facts, at their latest audit (`latestPagesQuery`, SH-B9). */
+function rowsQuery(db: Database, crawl: ViewCrawl) {
+  return latestPagesQuery(db, crawl)
     .where('a.finalized_at', 'is not', null)
     .where(
       sql<boolean>`jsonb_typeof(f.normalized_facts) = 'object' and f.normalized_facts <> '{}'::jsonb`,
-    );
-}
-type PageRow = Awaited<ReturnType<ReturnType<typeof rowsQuery>['execute']>>[number];
-/** The crawl's pages at their latest audit (`pageAuditsSql`, SH-B9). */
-function rowsQuery(db: Database, scope: Scope, crawl: ViewCrawl) {
-  return pagesQuery(db, scope)
-    .where('a.id', 'in', sql<string>`(select v.analysis_id from (${pageAuditsSql(crawl)}) v)`)
+    )
     .select([
       'u.id as site_url_id',
       'u.normalized_url',
@@ -199,7 +179,7 @@ export async function selectContentFragments(
   const chosen = await candidate
     .select(['id', 'workspace_id', 'project_id', 'created_at', 'configuration', 'completed_at'])
     .executeTakeFirst();
-  const page = chosen && (await rowsQuery(db, scope, chosen).limit(1).executeTakeFirst());
+  const page = chosen && (await rowsQuery(db, chosen).limit(1).executeTakeFirst());
   const crawl = page ? chosen : undefined;
   if (!crawl)
     return {
@@ -246,9 +226,7 @@ export async function selectContentFragments(
   let after: string | null = null;
   let omitted = 0;
   for (;;) {
-    let query = rowsQuery(db, scope, crawl)
-      .orderBy('u.id')
-      .limit(p.content_context_read_batch_size);
+    let query = rowsQuery(db, crawl).orderBy('u.id').limit(p.content_context_read_batch_size);
     if (after) query = query.where('u.id', '>', after);
     const batch = await query.execute();
     candidates.push(

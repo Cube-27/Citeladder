@@ -1,6 +1,4 @@
-import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
-import { policy } from '../src/config.ts';
 import { record } from '../src/db/json.ts';
 import { recomputeOpportunities } from '../src/opportunities/refresh.ts';
 import { issueHistory, issues, unfilteredIssues } from '../src/site-health/reads/issues.ts';
@@ -60,33 +58,7 @@ async function audit(
 ) {
   const page = await fixtures.page(seed, path, {}, { siteUrlId, observed: true });
   const evaluationId = await fixtures.evaluation(seed, page, ruleId, outcome);
-  if (outcome === 'missing') {
-    const rule = policy.site_health.rule_catalog.find((item) => item.rule_id === ruleId)!;
-    await db
-      .insertInto('site_issues')
-      .values({
-        id: randomUUID(),
-        workspace_id: seed.workspaceId,
-        project_id: seed.projectId,
-        crawl_id: seed.crawlId,
-        site_url_id: page.id,
-        analysis_id: page.analysisId,
-        evaluation_id: evaluationId,
-        source_artifact_id: page.artifactId,
-        rule_id: ruleId,
-        dimension: rule.dimension,
-        category: rule.category,
-        severity: rule.severity,
-        finding_class: rule.finding_class,
-        evidence: JSON.stringify({}),
-        description: rule.description,
-        remediation: rule.remediation,
-        analyzer_version: policy.site_health.versions.analyzer,
-        rule_version: rule.rule_version,
-        created_at: new Date(),
-      })
-      .execute();
-  }
+  if (outcome === 'missing') await fixtures.issue(seed, page, ruleId, evaluationId);
   return page;
 }
 
