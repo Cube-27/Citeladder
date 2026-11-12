@@ -42,8 +42,8 @@ repository check script includes the documentation build.
 ```bash
 cd frontend
 pnpm install
-export DATABASE_URL="postgresql://postgres:<password>@localhost:5432/citeladder"
-pnpm --filter @citeladder/api migrate   # applies the pending SQL migrations
+pnpm --filter @citeladder/api migrate   # applies the pending SQL migrations (URLs from POSTGRES_* in .env)
+export DATABASE_URL="postgresql://citeladder_app:<password>@localhost:55432/citeladder"
 pnpm --filter @citeladder/api start
 ```
 
@@ -563,14 +563,36 @@ newer schema. So a migration must work with the code already deployed:
   it. A rename is an expand (new name), a release that moves the code, then a
   contract (old name).
 
-`DATABASE_URL` must be explicit; `DB_SSL_MODE=require` encrypts the
-connection. `--wait-seconds N` retries the first connection, for a database VM
-that is still starting. Bring the local development database forward with the
-same command; verify the complete schema from an empty disposable database:
+**Two database roles.** The migrate CLI connects as the schema owner
+(`MIGRATION_DATABASE_URL`). Every service, operator job and the API test suite
+connects as the least-privilege `citeladder_app` role (`DATABASE_URL`), created
+by migration `0030`: it reads and writes rows, holds no DDL, cannot read
+`schema_migrations`, and cannot UPDATE or DELETE the append-only evidence,
+attempt and ledger tables (invariants 4 and 16). After migrating, the CLI sets
+that role's password from `DATABASE_URL`, which must name `citeladder_app`.
+New tables get the role's row grants by default privileges; a migration that
+adds an append-only table also revokes UPDATE and DELETE on it from
+`citeladder_app`, and `test/app-database-role.test.ts` lists those tables.
+PostgreSQL grants `SELECT … FOR UPDATE` only with UPDATE privilege, so an
+append-only table that the code row-locks (today the grants, ledger, payment
+receipts and raw answer artifacts) keeps that privilege, loses DELETE, and
+carries the `refuse_app_role_update` statement trigger, which refuses the
+role's UPDATE with the same permission error.
+Foreign-key cascades still remove such rows when their workspace is deleted.
+Locally, `pnpm migrate` derives both URLs from `POSTGRES_*` (both roles share
+`POSTGRES_PASSWORD`); explicit values win. API tests that arrange or remove
+append-only rows, or run DDL, do it through `asOwner`/`ownerDatabaseUrl` in
+`test/support.ts` (`API_TEST_OWNER_DATABASE_URL`).
+
+`DB_SSL_MODE=require` encrypts the connection. `--wait-seconds N` retries the
+first connection, for a database VM that is still starting. Bring the local
+development database forward with the same command; verify the complete schema
+from an empty disposable database:
 
 ```bash
 cd frontend/services/api
-DATABASE_URL="postgresql://postgres:<password>@127.0.0.1:<port>/<empty-db>" pnpm migrate
+MIGRATION_DATABASE_URL="postgresql://postgres:<password>@127.0.0.1:<port>/<empty-db>" \
+  DATABASE_URL="postgresql://citeladder_app:<password>@127.0.0.1:<port>/<empty-db>" pnpm migrate
 TYPES_DATABASE_URL="<same database>" pnpm db:types        # regenerate Kysely types
 TYPES_DATABASE_URL="<same database>" pnpm db:types:check  # CI runs this
 ```

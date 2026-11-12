@@ -19,7 +19,7 @@ import { mutateMember } from '../src/workspaces/service.ts';
 import { auditTenant } from './audit-fixtures.ts';
 import { actionRow } from './opportunity-fixtures.ts';
 import { billingAccount, grant, prompt, promptSet, topic } from './prompt-fixtures.ts';
-import { sessionToken, testConfig, testDatabase } from './support.ts';
+import { asOwner, sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
 const config = testConfig();
@@ -195,11 +195,14 @@ describe('API keys', () => {
 
     const paid = await withApiAccess(await fixtures.tenant());
     const { secret } = await createKey(paid);
-    await db
-      .deleteFrom('account_grants')
-      .where('key', '=', 'api_access')
-      .where('billing_account_id', '=', await billingAccount(db, paid.workspaceId))
-      .execute();
+    const account = await billingAccount(db, paid.workspaceId);
+    await asOwner((owner) =>
+      owner
+        .deleteFrom('account_grants')
+        .where('key', '=', 'api_access')
+        .where('billing_account_id', '=', account)
+        .execute(),
+    );
     const lapsed = await api(secret, '/projects');
     expect(lapsed.status).toBe(403);
     expect(await errorCode(lapsed)).toBe('api_access_not_in_plan');

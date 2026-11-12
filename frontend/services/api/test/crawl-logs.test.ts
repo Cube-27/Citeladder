@@ -3,7 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { sql } from 'kysely';
 import { createApp } from '../src/app.ts';
-import { testConfig, testDatabase, sessionToken } from './support.ts';
+import { asOwner, testConfig, testDatabase, sessionToken } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 import { crawlLogs } from '../src/config/crawl-logs.ts';
 import { createSource, mutateSource } from '../src/crawl-logs/sources.ts';
@@ -76,15 +76,17 @@ const send = (id: string, token: string, payload: Buffer, key = randomUUID()) =>
   });
 /** The plan no longer grants AI crawler logs: a trial, or a lapsed paid plan. */
 const revokeCrawlLogs = (workspaceId: string) =>
-  db
-    .deleteFrom('account_grants')
-    .where('key', '=', 'crawl_logs')
-    .where(
-      'billing_account_id',
-      'in',
-      db.selectFrom('billing_accounts').select('id').where('workspace_id', '=', workspaceId),
-    )
-    .execute();
+  asOwner((owner) =>
+    owner
+      .deleteFrom('account_grants')
+      .where('key', '=', 'crawl_logs')
+      .where(
+        'billing_account_id',
+        'in',
+        owner.selectFrom('billing_accounts').select('id').where('workspace_id', '=', workspaceId),
+      )
+      .execute(),
+  );
 beforeAll(() => {
   crawlLogs.ingestion_enabled = true;
 });

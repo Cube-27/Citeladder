@@ -20,7 +20,7 @@ import { loadWorkerSettings } from '../src/config/analytics.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { auditTenant } from './audit-fixtures.ts';
 import { addCompetitor, recordAnswer, type AnswerEvidence } from './commerce-answer-fixtures.ts';
-import { sessionToken, testConfig, testDatabase } from './support.ts';
+import { asOwner, sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
 const db = testDatabase(),
@@ -51,12 +51,14 @@ async function answer(t: Tenant, text: string, evidence?: AnswerEvidence): Promi
 
 /** The quote and merchant on one task's observation of a product. */
 async function quote(task: string, product: string, price: string, currency: string, host: string) {
-  await db
-    .updateTable('commerce_recommendation_observations')
-    .set({ observed_price: price, observed_currency: currency, merchant_domain: host })
-    .where('task_id', '=', task)
-    .where('observed_product', '=', product)
-    .execute();
+  await asOwner((owner) =>
+    owner
+      .updateTable('commerce_recommendation_observations')
+      .set({ observed_price: price, observed_currency: currency, merchant_domain: host })
+      .where('task_id', '=', task)
+      .where('observed_product', '=', product)
+      .execute(),
+  );
 }
 
 async function read(t: Tenant, query = '', workspace = t.workspaceId) {
@@ -144,7 +146,9 @@ beforeAll(async () => {
 afterAll(async () => {
   if (tasks.length) {
     await db.deleteFrom('execution_cost_projections').where('task_id', 'in', tasks).execute();
-    await db.deleteFrom('provider_attempts').where('task_id', 'in', tasks).execute();
+    await asOwner((owner) =>
+      owner.deleteFrom('provider_attempts').where('task_id', 'in', tasks).execute(),
+    );
   }
   await fixtures.cleanup();
   await db.destroy();

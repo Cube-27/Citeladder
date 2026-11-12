@@ -19,7 +19,7 @@ import { lockSiteTask } from '../src/site-health/site-task.ts';
 import { record } from '../src/db/json.ts';
 import { revokeBundle } from '../src/entitlements/grants.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
-import { sessionToken, testConfig, testDatabase } from './support.ts';
+import { asOwner, sessionToken, testConfig, testDatabase } from './support.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 import type { Tenant } from './visibility-fixtures.ts';
 
@@ -32,7 +32,9 @@ const accounts: string[] = [];
 afterEach(() => vi.unstubAllEnvs());
 afterAll(async () => {
   if (accounts.length) {
-    await db.deleteFrom('consumable_ledger').where('billing_account_id', 'in', accounts).execute();
+    await asOwner((owner) =>
+      owner.deleteFrom('consumable_ledger').where('billing_account_id', 'in', accounts).execute(),
+    );
     await db.deleteFrom('billing_accounts').where('id', 'in', accounts).execute();
   }
   await fixtures.cleanup();

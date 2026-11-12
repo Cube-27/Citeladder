@@ -8,7 +8,7 @@ import { renderInvoicePdf } from '../src/billing/invoices.ts';
 import type { BillingInvoices } from '../src/generated/db-schema.ts';
 import { pdfText } from './pdf-text.ts';
 import { billingAccount } from './prompt-fixtures.ts';
-import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
+import { asOwner, Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
 
 const paidAt = new Date('2026-09-08T21:30:00Z');
 function invoice(
@@ -85,7 +85,9 @@ describe('persisted billing documents', () => {
   afterAll(async () => {
     if (accounts.length) {
       await db.deleteFrom('billing_invoices').where('billing_account_id', 'in', accounts).execute();
-      await db.deleteFrom('billing_payments').where('billing_account_id', 'in', accounts).execute();
+      await asOwner((owner) =>
+        owner.deleteFrom('billing_payments').where('billing_account_id', 'in', accounts).execute(),
+      );
     }
     await fixtures.cleanup();
     await db.destroy();

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { Fixtures, testDatabase } from './support.ts';
+import { asOwner, Fixtures, testDatabase } from './support.ts';
 import { seedImport, seedProject, type ImportSeed } from './referral-fixtures.ts';
 import { tenant, task, requests, type Tenant } from './traffic-fixtures.ts';
 import { refreshTrafficSnapshot } from '../src/traffic/snapshot.ts';
@@ -35,11 +35,13 @@ it('falls back from a legacy landing contract and flags wholly incompatible evid
   const legacy = await imported('ga4_landing_daily', current, 1);
   await row(legacy, ['/guide', 'chatgpt.com', 'referral', day], { sessions: 100 });
   const oldDimensions = ['landingPage', 'sessionSource', 'sessionMedium', 'date'];
-  await db
-    .updateTable('integration_import_artifacts')
-    .set({ query_snapshot: JSON.stringify({ dimensions: oldDimensions }) })
-    .where('id', '=', legacy.artifactId)
-    .execute();
+  await asOwner((owner) =>
+    owner
+      .updateTable('integration_import_artifacts')
+      .set({ query_snapshot: JSON.stringify({ dimensions: oldDimensions }) })
+      .where('id', '=', legacy.artifactId)
+      .execute(),
+  );
   const scope = { workspaceId: t.workspaceId, projectId: t.projectId, start: day, end: day };
   const evidence = await referralEvidence(db, scope);
   expect(evidence.rows.map((r) => r.id)).toEqual([retained]);
@@ -47,11 +49,13 @@ it('falls back from a legacy landing contract and flags wholly incompatible evid
     revision: 0,
     flags: expect.arrayContaining(['extract_contract_mismatch', 'partition_fallback']),
   });
-  await db
-    .updateTable('integration_import_artifacts')
-    .set({ query_snapshot: JSON.stringify({ dimensions: oldDimensions }) })
-    .where('id', '=', current.artifactId)
-    .execute();
+  await asOwner((owner) =>
+    owner
+      .updateTable('integration_import_artifacts')
+      .set({ query_snapshot: JSON.stringify({ dimensions: oldDimensions }) })
+      .where('id', '=', current.artifactId)
+      .execute(),
+  );
   const unavailable = await referralEvidence(db, scope);
   expect(unavailable.rows).toEqual([]);
   expect(unavailable.quality.ga4_landing_daily?.[0]).toMatchObject({
@@ -134,18 +138,20 @@ async function imported(dataset: string, previous?: ImportSeed, revision = 0) {
       provider,
     });
   if (!base) providers.set(provider, seed);
-  await db
-    .updateTable('integration_import_artifacts')
-    .set({
-      extract_metadata: JSON.stringify({
-        timeZone: 'UTC',
-        currencyCode: 'USD',
-        analytics_quality: [],
-        truncated: false,
-      }),
-    })
-    .where('id', '=', seed.artifactId)
-    .execute();
+  await asOwner((owner) =>
+    owner
+      .updateTable('integration_import_artifacts')
+      .set({
+        extract_metadata: JSON.stringify({
+          timeZone: 'UTC',
+          currencyCode: 'USD',
+          analytics_quality: [],
+          truncated: false,
+        }),
+      })
+      .where('id', '=', seed.artifactId)
+      .execute(),
+  );
   return seed;
 }
 async function row(seed: ImportSeed, values: string[], metrics: Record<string, number>) {
@@ -357,16 +363,18 @@ describe('A3 integration partition replacement', () => {
     await classify(source);
     await row(channel, ['Organic Search', day], { sessions: 0, engagedSessions: 0, keyEvents: 0 });
     for (const artifact of [landing, source, channel])
-      await db
-        .updateTable('integration_import_artifacts')
-        .set({
-          extract_metadata: JSON.stringify({
-            timeZone: 'UTC',
-            analytics_quality: ['thresholding'],
-          }),
-        })
-        .where('id', '=', artifact.artifactId)
-        .execute();
+      await asOwner((owner) =>
+        owner
+          .updateTable('integration_import_artifacts')
+          .set({
+            extract_metadata: JSON.stringify({
+              timeZone: 'UTC',
+              analytics_quality: ['thresholding'],
+            }),
+          })
+          .where('id', '=', artifact.artifactId)
+          .execute(),
+      );
     await refreshAiReferralsSnapshot(
       await task(db, t, 'ai_referrals_snapshot_refresh', window),
       context,
@@ -531,13 +539,18 @@ describe('A3 integration partition replacement', () => {
       ).referral_volume[0]?.value,
     ).toBe(0);
     const truncated = await imported(first.dataset, first, 2);
-    await db
-      .updateTable('integration_import_artifacts')
-      .set({
-        extract_metadata: JSON.stringify({ truncated: true, analytics_quality: ['invalid_rows'] }),
-      })
-      .where('id', '=', truncated.artifactId)
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .updateTable('integration_import_artifacts')
+        .set({
+          extract_metadata: JSON.stringify({
+            truncated: true,
+            analytics_quality: ['invalid_rows'],
+          }),
+        })
+        .where('id', '=', truncated.artifactId)
+        .execute(),
+    );
     expect(await quality()).toEqual({ revision: 0, flags: ['partition_fallback'] });
   });
   it('classifies session-attributed landings, excludes other hosts and redacted paths, and scopes reads to the workspace', async () => {

@@ -16,7 +16,7 @@ import { auditRuntime } from '../src/audits/config.ts';
 import { importCatalog } from './commerce-support.ts';
 import { auditTenant } from './audit-fixtures.ts';
 import { addCompetitor, recordAnswer } from './commerce-answer-fixtures.ts';
-import { sessionToken, testConfig, testDatabase } from './support.ts';
+import { asOwner, sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
 const db = testDatabase(),
@@ -42,12 +42,14 @@ async function answer(t: Tenant, text: string): Promise<string> {
 }
 
 const merchant = (task: string, product: string, host: string) =>
-  db
-    .updateTable('commerce_recommendation_observations')
-    .set({ merchant_domain: host })
-    .where('task_id', '=', task)
-    .where('observed_product', '=', product)
-    .execute();
+  asOwner((owner) =>
+    owner
+      .updateTable('commerce_recommendation_observations')
+      .set({ merchant_domain: host })
+      .where('task_id', '=', task)
+      .where('observed_product', '=', product)
+      .execute(),
+  );
 
 /** The fan-out the answer's analysis settled: its queries, or a search that exposed none. */
 const fanout = (task: string, queries: string[]) =>
@@ -121,7 +123,9 @@ beforeAll(async () => {
 afterAll(async () => {
   if (tasks.length) {
     await db.deleteFrom('execution_cost_projections').where('task_id', 'in', tasks).execute();
-    await db.deleteFrom('provider_attempts').where('task_id', 'in', tasks).execute();
+    await asOwner((owner) =>
+      owner.deleteFrom('provider_attempts').where('task_id', 'in', tasks).execute(),
+    );
   }
   await fixtures.cleanup();
   await db.destroy();

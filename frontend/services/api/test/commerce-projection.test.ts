@@ -20,7 +20,7 @@ import { commerceFixture, importCatalog } from './commerce-support.ts';
 import { storedFacts } from './site-health-fixtures.ts';
 import { freezeCommerceContext } from '../src/commerce/audit-context.ts';
 import { enqueue } from './referral-fixtures.ts';
-import { testDatabase } from './support.ts';
+import { asOwner, testDatabase } from './support.ts';
 
 const db = testDatabase();
 type Seed = {
@@ -305,15 +305,17 @@ describe('catalog projection outcomes', () => {
       .executeTakeFirstOrThrow();
     // A sold-out PDP: no SKU, no price, no product cards. As a "shelf" it
     // would take its own heading's name and claim products it does not list.
-    await db
-      .updateTable('site_fetch_artifacts')
-      .set({
-        normalized_facts: sql`jsonb_set(normalized_facts, '{structured_data}', ${JSON.stringify(
-          storedFacts().structured_data,
-        )}::jsonb)`,
-      })
-      .where('id', '=', artifact.artifact_id)
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .updateTable('site_fetch_artifacts')
+        .set({
+          normalized_facts: sql`jsonb_set(normalized_facts, '{structured_data}', ${JSON.stringify(
+            storedFacts().structured_data,
+          )}::jsonb)`,
+        })
+        .where('id', '=', artifact.artifact_id)
+        .execute(),
+    );
     for (const task of [...sold.tasks].reverse()) await execute(task);
     const soldCatalog = await catalog(db, sold);
     expect(soldCatalog.products).toEqual([]);

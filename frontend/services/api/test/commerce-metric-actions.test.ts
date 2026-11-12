@@ -23,7 +23,7 @@ import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { workspaceTaskIds } from './analytics-drain.ts';
 import { auditTenant } from './audit-fixtures.ts';
 import { addCompetitor, recordAnswer } from './commerce-answer-fixtures.ts';
-import { testDatabase } from './support.ts';
+import { asOwner, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
 const db = testDatabase(),
@@ -62,12 +62,18 @@ async function quote(
   host: string,
   currency = 'USD',
 ) {
-  await db
-    .updateTable('commerce_recommendation_observations')
-    .set({ observed_price: price, observed_currency: price ? currency : '', merchant_domain: host })
-    .where('task_id', '=', task)
-    .where('observed_product', '=', product)
-    .execute();
+  await asOwner((owner) =>
+    owner
+      .updateTable('commerce_recommendation_observations')
+      .set({
+        observed_price: price,
+        observed_currency: price ? currency : '',
+        merchant_domain: host,
+      })
+      .where('task_id', '=', task)
+      .where('observed_product', '=', product)
+      .execute(),
+  );
 }
 
 async function productId(t: Tenant, name: string) {
@@ -178,7 +184,9 @@ afterAll(async () => {
   }
   if (tasks.length) {
     await db.deleteFrom('execution_cost_projections').where('task_id', 'in', tasks).execute();
-    await db.deleteFrom('provider_attempts').where('task_id', 'in', tasks).execute();
+    await asOwner((owner) =>
+      owner.deleteFrom('provider_attempts').where('task_id', 'in', tasks).execute(),
+    );
   }
   await fixtures.cleanup();
   await db.destroy();

@@ -23,10 +23,16 @@ resource "google_service_account" "runtime" {
   display_name = "CiteLadder Cloud Run API"
 }
 
-# The runner, migrate and billing jobs.
+# The runner and billing jobs.
 resource "google_service_account" "jobs" {
   account_id   = "${local.name}-jobs"
-  display_name = "CiteLadder Cloud Run jobs (runner, migration, billing)"
+  display_name = "CiteLadder Cloud Run jobs (runner, billing)"
+}
+
+# The migrate job alone reads the schema owner's database URL.
+resource "google_service_account" "migrate" {
+  account_id   = "${local.name}-migrate"
+  display_name = "CiteLadder schema migration job"
 }
 
 resource "google_service_account" "scheduler" {
@@ -87,6 +93,18 @@ resource "google_secret_manager_secret_iam_member" "jobs" {
   secret_id = google_secret_manager_secret.runtime[each.value].secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.jobs.email}"
+}
+
+# The migrate job reads the shared secrets plus the schema owner's URL.
+resource "google_secret_manager_secret_iam_member" "migrate" {
+  for_each = toset(concat(
+    values(local.required_secret_env),
+    values(local.optional_secret_env),
+    values(local.migration_secret_env),
+  ))
+  secret_id = google_secret_manager_secret.runtime[each.value].secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.migrate.email}"
 }
 
 # The deploy workflow reads, adds, disables and destroys versions of the

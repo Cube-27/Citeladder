@@ -12,8 +12,9 @@ locals {
 
   # Generated once by the deploy workflow, or copied from protected GitHub secrets.
   required_secret_env = {
-    OAUTH_GOOGLE_CLIENT_ID           = "citeladder-google-oauth-client-id"
-    OAUTH_GOOGLE_CLIENT_SECRET       = "citeladder-google-oauth-client-secret"
+    OAUTH_GOOGLE_CLIENT_ID     = "citeladder-google-oauth-client-id"
+    OAUTH_GOOGLE_CLIENT_SECRET = "citeladder-google-oauth-client-secret"
+    # The least-privilege citeladder_app role; the migrate job converges its password.
     DATABASE_URL                     = "citeladder-database-url"
     JWT_SECRET_KEY                   = "citeladder-jwt-secret"
     ENCRYPTION_KEY                   = "citeladder-encryption-key"
@@ -56,8 +57,16 @@ locals {
     CITELADDER_ORIGIN_TOKEN_PREVIOUS = "citeladder-worker-origin-token-previous"
   }
 
+  # The schema owner's URL: only the migrate job reads it.
+  migration_secret_env = {
+    MIGRATION_DATABASE_URL = "citeladder-migration-database-url"
+  }
+
   runtime_secret_ids = toset(concat(
-    ["citeladder-db-password"],
+    # The owner's password (the VM applies it) and the application role's
+    # (composed into DATABASE_URL by the deploy workflow).
+    ["citeladder-db-password", "citeladder-db-app-password"],
+    values(local.migration_secret_env),
     values(local.required_secret_env),
     values(local.optional_secret_env),
     values(local.api_secret_env),

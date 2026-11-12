@@ -19,7 +19,7 @@ import { registerMcpRoutes } from '../src/mcp/server.ts';
 import { cleanupMcpProtocol } from '../src/mcp/maintenance.ts';
 import { mcpPolicy } from '../src/mcp/config.ts';
 import { billingAccount, grant as accountGrant } from './prompt-fixtures.ts';
-import { sessionToken, testConfig, testDatabase } from './support.ts';
+import { asOwner, sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
 let config = testConfig();
@@ -1089,11 +1089,13 @@ async function endedTrialWorkspace() {
     validFrom: new Date(Date.now() - 8 * 86_400_000),
     validUntil: new Date(Date.now() - 86_400_000),
   });
-  await db
-    .updateTable('account_grants')
-    .set({ profile_key: policy.entitlements.public_trial.profile })
-    .where('id', '=', trial)
-    .execute();
+  await asOwner((owner) =>
+    owner
+      .updateTable('account_grants')
+      .set({ profile_key: policy.entitlements.public_trial.profile })
+      .where('id', '=', trial)
+      .execute(),
+  );
   return workspaceId;
 }
 

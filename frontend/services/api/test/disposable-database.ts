@@ -8,13 +8,17 @@ import { beforeAll, afterAll } from 'vitest';
 import { createDatabase } from '../src/db/database.ts';
 import { loadConfig } from '../src/config.ts';
 import { applyMigrations, migrationClient } from '../src/cli/schema-migrations.ts';
+import { ownerDatabaseUrl } from './support.ts';
 
 export function disposableDatabase() {
   const root = fileURLToPath(new URL('../../../../', import.meta.url));
   const name = `citeladder_bootstrap_test_${randomUUID().replaceAll('-', '')}`;
-  const url = new URL(process.env.API_TEST_DATABASE_URL!);
-  const admin = new URL(url);
+  // The owner creates, migrates and drops it; the code under test connects as the application role.
+  const owner = new URL(ownerDatabaseUrl());
+  const admin = new URL(owner);
   admin.pathname = '/postgres';
+  owner.pathname = `/${name}`;
+  const url = new URL(process.env.API_TEST_DATABASE_URL!);
   url.pathname = `/${name}`;
   const env = {
     ...Object.fromEntries(
@@ -43,7 +47,7 @@ export function disposableDatabase() {
     await connection.connect();
     await connection.query(`CREATE DATABASE "${name}"`);
     created = true;
-    const schema = migrationClient(url.href, env);
+    const schema = migrationClient(owner.href, env);
     await schema.connect();
     try {
       await applyMigrations(schema);

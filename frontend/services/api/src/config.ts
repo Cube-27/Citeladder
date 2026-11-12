@@ -1,6 +1,7 @@
 /** Service policy and validated environment overrides. */
 import ipaddr from 'ipaddr.js';
 import { ConfigError } from './config/config-error.ts';
+import { APP_DATABASE_ROLE } from './db/database.ts';
 import { executionSettings, executionSpecs } from './config/execution.ts';
 export { ConfigError } from './config/config-error.ts';
 import { brandEvidence } from './config/brand-evidence.ts';
@@ -406,11 +407,18 @@ function productionSecretProblems(config: ServiceConfig): string[] {
   for (const [name, value] of Object.entries(originTokens))
     if (secretIsPlaceholder(value)) issues.push(`${name} must not be a template placeholder`);
   let password = '';
+  let role = '';
   try {
-    password = decodeURIComponent(new URL(config.databaseUrl).password);
+    const url = new URL(config.databaseUrl);
+    password = decodeURIComponent(url.password);
+    role = decodeURIComponent(url.username);
   } catch {
     /* Report without the URL. */
   }
+  if (role !== APP_DATABASE_ROLE)
+    issues.push(
+      `database_url must connect as the ${APP_DATABASE_ROLE} role, never the schema owner`,
+    );
   if (secretIsWeak(password))
     issues.push('database password does not meet the production strength policy');
   if (values.includes(password))

@@ -6,7 +6,7 @@ import { refreshTrafficSnapshot, projectPerformanceRange } from '../src/traffic/
 import { buildTrafficProjection, TrafficProjectionBuilder } from '../src/traffic/projection.ts';
 import { TaskCancelledError } from '../src/queue/executor.ts';
 import { ReferralClassifications } from '../src/referrals/persisted.ts';
-import { Fixtures, testDatabase } from './support.ts';
+import { asOwner, Fixtures, testDatabase } from './support.ts';
 import {
   importSeed,
   metric,
@@ -180,17 +180,19 @@ describe('traffic projections and Performance', () => {
     const seed = await importSeed(db, t);
     await metric(db, seed, { metrics: { impressions: 0, clicks: 0 } });
     await metric(db, seed, { revision: 1, metrics: { impressions: 500, clicks: 50 } });
-    await db
-      .updateTable('integration_import_artifacts')
-      .set({ extract_metadata: JSON.stringify({ truncated: true }) })
-      .where('sync_run_id', 'in', (q) =>
-        q
-          .selectFrom('integration_sync_runs')
-          .select('id')
-          .where('connection_id', '=', seed.connectionId)
-          .where('resync_seq', '=', 1),
-      )
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .updateTable('integration_import_artifacts')
+        .set({ extract_metadata: JSON.stringify({ truncated: true }) })
+        .where('sync_run_id', 'in', (q) =>
+          q
+            .selectFrom('integration_sync_runs')
+            .select('id')
+            .where('connection_id', '=', seed.connectionId)
+            .where('resync_seq', '=', 1),
+        )
+        .execute(),
+    );
     await refreshTrafficSnapshot(await task(db, t, 'traffic_snapshot_refresh'), context);
     const { body } = await request(`performance?range=custom&from=${WINDOW[0]}&to=${WINDOW[1]}`);
     expect(body.selected.totals).toMatchObject({ clicks: 0, impressions: 0 });

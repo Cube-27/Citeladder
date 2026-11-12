@@ -10,7 +10,7 @@ import { fanoutProjection } from '../src/analysis/fanout.ts';
 import type { Database } from '../src/db/database.ts';
 import { persistComparisonBaselines } from '../src/visibility/baselines.ts';
 import { persistSourceAggregates } from '../src/visibility/source-aggregates.ts';
-import { Fixtures } from './support.ts';
+import { asOwner, Fixtures } from './support.ts';
 
 const now = () => new Date();
 
@@ -688,17 +688,24 @@ export class VisibilityFixtures extends Fixtures {
   override async cleanup(): Promise<void> {
     const workspaces = this.tenants.map((tenant) => tenant.workspaceId);
     if (workspaces.length) {
-      for (const table of TABLES_BY_WORKSPACE) {
-        await this.database.deleteFrom(table).where('workspace_id', 'in', workspaces).execute(); // NOSONAR -- Child tables delete before their parents.
-      }
+      // Observations and raw artifacts are append-only for the application role.
+      await asOwner(async (owner) => {
+        for (const table of TABLES_BY_WORKSPACE) {
+          await owner.deleteFrom(table).where('workspace_id', 'in', workspaces).execute(); // NOSONAR -- Child tables delete before their parents.
+        }
+        await owner
+          .deleteFrom('raw_response_artifacts')
+          .where(
+            'audit_id',
+            'in',
+            owner.selectFrom('audits').select('id').where('workspace_id', 'in', workspaces),
+          )
+          .execute();
+      });
       const audits = this.database
         .selectFrom('audits')
         .select('id')
         .where('workspace_id', 'in', workspaces);
-      await this.database
-        .deleteFrom('raw_response_artifacts')
-        .where('audit_id', 'in', audits)
-        .execute();
       await this.database
         .deleteFrom('audit_tasks')
         .where('workspace_id', 'in', workspaces)

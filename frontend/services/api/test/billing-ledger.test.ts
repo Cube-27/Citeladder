@@ -11,7 +11,7 @@ import {
   type Subject,
 } from '../src/entitlements/ledger.ts';
 import { issueBundle, revokeBundle } from '../src/entitlements/grants.ts';
-import { testDatabase } from './support.ts';
+import { asOwner, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { billingAccount } from './prompt-fixtures.ts';
 
@@ -23,10 +23,9 @@ describe('consumable hold module', () => {
   const accounts: string[] = [];
   afterAll(async () => {
     if (accounts.length)
-      await db
-        .deleteFrom('consumable_ledger')
-        .where('billing_account_id', 'in', accounts)
-        .execute();
+      await asOwner((owner) =>
+        owner.deleteFrom('consumable_ledger').where('billing_account_id', 'in', accounts).execute(),
+      );
     await fixtures.cleanup();
     await db.destroy();
   });
@@ -197,11 +196,13 @@ describe('consumable hold module', () => {
         `{"account_id":"${t.accountId}","audit_id":"${t.auditId}","capability_key":"${capability}","subject_kind":"audit","task_id":"${subject.id}","units":3}`,
       )
       .digest('hex');
-    await db
-      .updateTable('consumable_ledger')
-      .set({ request_fingerprint: historical })
-      .where('reservation_id', '=', reservationId)
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .updateTable('consumable_ledger')
+        .set({ request_fingerprint: historical })
+        .where('reservation_id', '=', reservationId)
+        .execute(),
+    );
     expect((await holdIn({ capability, subject, units: 3, at: t.at })).reservationId).toBe(
       reservationId,
     );

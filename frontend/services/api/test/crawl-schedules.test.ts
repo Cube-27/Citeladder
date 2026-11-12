@@ -5,7 +5,7 @@ import { cancelCrawl } from '../src/site-health/controls.ts';
 import { nextOccurrence, updateSchedule } from '../src/site-health/schedules.ts';
 import { CrawlScheduler, crawlSchedulerSettings } from '../src/workers/crawl-scheduler.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
-import { sessionToken, testConfig, testDatabase } from './support.ts';
+import { asOwner, sessionToken, testConfig, testDatabase } from './support.ts';
 import { SiteFixtures } from './site-health-fixtures.ts';
 import type { Tenant } from './visibility-fixtures.ts';
 
@@ -25,7 +25,9 @@ const due = new Date(firstRun.getTime() + 60_000);
 
 afterEach(async () => {
   if (accounts.length) {
-    await db.deleteFrom('consumable_ledger').where('billing_account_id', 'in', accounts).execute();
+    await asOwner((owner) =>
+      owner.deleteFrom('consumable_ledger').where('billing_account_id', 'in', accounts).execute(),
+    );
     await db.deleteFrom('billing_accounts').where('id', 'in', accounts).execute();
     accounts.length = 0;
   }

@@ -17,6 +17,14 @@ import { observeConnection } from './committed-work.ts';
 export type Database = Kysely<DB>;
 
 /**
+ * The least-privilege login the API, runner and operator jobs connect as. It
+ * holds row access only, without UPDATE or DELETE on append-only evidence,
+ * attempt and ledger tables (migration 0030). The schema owner connects only
+ * to migrate, which also sets this role's password from `DATABASE_URL`.
+ */
+export const APP_DATABASE_ROLE = 'citeladder_app';
+
+/**
  * Run `work` in the caller's transaction when `db` is one, else in a new
  * transaction, so a confirmed MCP change commits with its confirmation.
  */

@@ -4,7 +4,7 @@ import { createReview } from '../src/search-intelligence/reviews.ts';
 import { reviewBody } from '../src/routes/search-intelligence-contracts.ts';
 import { createSecretCipher } from '../src/integrations/fernet.ts';
 import { WorkspaceScope } from '../src/db/workspace-scope.ts';
-import { testDatabase, testConfig, sessionToken } from './support.ts';
+import { asOwner, testDatabase, testConfig, sessionToken } from './support.ts';
 import { createApp } from '../src/app.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
@@ -131,13 +131,15 @@ describe('atomic Search Intelligence reviews', () => {
     const past = (await (await request('/reviews', 'POST', 'before-downgrade')).json()) as {
       id: string;
     };
-    await db
-      .deleteFrom('account_grants')
-      .where('key', '=', 'search_intelligence')
-      .where('billing_account_id', '=', (eb) =>
-        eb.selectFrom('billing_accounts').select('id').where('workspace_id', '=', t.workspaceId),
-      )
-      .execute();
+    await asOwner((owner) =>
+      owner
+        .deleteFrom('account_grants')
+        .where('key', '=', 'search_intelligence')
+        .where('billing_account_id', '=', (eb) =>
+          eb.selectFrom('billing_accounts').select('id').where('workspace_id', '=', t.workspaceId),
+        )
+        .execute(),
+    );
     const refused = await request('/reviews', 'POST');
     expect({ status: refused.status, body: await refused.json() }).toMatchObject({
       status: 403,

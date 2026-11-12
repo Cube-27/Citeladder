@@ -21,6 +21,17 @@
 # `docker compose --profile app up -d --build`.
 # =============================================================================
 
+# The API, runner and migration share this environment. They connect as the
+# least-privilege citeladder_app role, which locally reuses POSTGRES_PASSWORD;
+# only the migrate service also connects as the POSTGRES_USER schema owner.
+x-service-env: &service_env
+  # No fallback (AR-1): the API refuses to start without a known APP_ENV.
+  APP_ENV: ${APP_ENV:?APP_ENV must be set (development, test or production)}
+  # OAuth redirects and invitation links target the local app Worker.
+  FRONTEND_URL: http://127.0.0.1:3001
+  # skipcq: SCT-A000 - password comes from environment, not hardcoded.
+  DATABASE_URL: postgresql://citeladder_app:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@db:5432/${POSTGRES_DB:-citeladder}
+
 services:
   db:
     image: postgres:16-alpine
@@ -40,7 +51,7 @@ services:
       retries: 10
       start_period: 10s
 
-  # Applies the SQL baseline and native bootstrap once, then exits; API +
+  # Applies the migrations and native bootstrap once, then exits; API +
   # workers wait on its success. Same image as the API, as in production.
   migrate:
     build:
@@ -49,13 +60,10 @@ services:
     restart: 'no'
     env_file:
       - ${CITELADDER_ENV_FILE:-.env}
-    environment: &service_env
-      # No fallback (AR-1): the API refuses to start without a known APP_ENV.
-      APP_ENV: ${APP_ENV:?APP_ENV must be set (development, test or production)}
-      # OAuth redirects and invitation links target the local app Worker.
-      FRONTEND_URL: http://127.0.0.1:3001
+    environment:
+      <<: *service_env
       # skipcq: SCT-A000 - password comes from environment, not hardcoded.
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@db:5432/${POSTGRES_DB:-citeladder}
+      MIGRATION_DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@db:5432/${POSTGRES_DB:-citeladder}
     depends_on:
       db:
         condition: service_healthy

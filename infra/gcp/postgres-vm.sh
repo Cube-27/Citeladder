@@ -68,10 +68,12 @@ chown 999:999 "$config/server.key" "$config/server.crt" "$config/db-password"
 chmod 0600 "$config/server.key" "$config/db-password"
 chmod 0644 "$config/server.crt"
 # The socket exists only inside the container; boot uses it to apply the secret.
+# Over the VPC, the migrate job connects as the schema owner and every service
+# as the least-privilege citeladder_app role, whose password the migrate job sets.
 cat > "$config/pg_hba.conf" <<'HBA'
 local     all         all                         trust
 host      all         all         127.0.0.1/32    scram-sha-256
-hostssl   citeladder  citeladder  ${client_cidr}  scram-sha-256
+hostssl   citeladder  citeladder,citeladder_app  ${client_cidr}  scram-sha-256
 HBA
 chmod 0644 "$config/pg_hba.conf"
 

@@ -172,14 +172,16 @@ jobs:
               billing_env:$billing_env,optional_secrets:[]}' > deploy.auto.tfvars.json
           # Images and secret versions need the registry and secret containers
           # first. On the first run this also replaces the retired asia-south1
-          # registry, deleting every stale image with it. The jobs' secret
-          # grants go first too, so they have propagated by the time the
-          # migrate job starts under that identity, and so do the deployer's
-          # own per-secret version grants, first used after the image builds.
+          # registry, deleting every stale image with it. The migrate job's
+          # identity and secret grants go first too, so they have propagated
+          # by the time the migrate job starts under that identity, and so do
+          # the deployer's own per-secret version grants, first used after the
+          # image builds.
           terraform apply -input=false -auto-approve \
             -target=google_artifact_registry_repository.images \
             -target=google_secret_manager_secret.runtime \
             -target=google_secret_manager_secret_iam_member.jobs \
+            -target=google_secret_manager_secret_iam_member.migrate \
             -target=google_secret_manager_secret_iam_member.deployer
       - name: Build and push immutable images
         working-directory: infra/gcp
@@ -303,16 +305,25 @@ jobs:
                 done
           }
           add_generated citeladder-db-password
+          add_generated citeladder-db-app-password
           add_generated citeladder-jwt-secret
           add_generated citeladder-encryption-key
           add_generated citeladder-referral-salt
           add_generated citeladder-api-key-pepper
           add_generated citeladder-billing-quote-secret
           # 10.28.0.10 is the database VM's fixed private address (locals.tf).
-          db_password="$(gcloud secrets versions access latest --secret citeladder-db-password --project "$PROJECT_ID")"
-          db_password_uri="$(jq -rn --arg value "$db_password" '$value | @uri')"
+          # Only the migrate job connects as the schema owner; the API, runner
+          # and billing jobs connect as citeladder_app, whose password the
+          # migrate job sets from this URL.
+          # Assignments, so a failed secret read stops the step (set -e).
+          owner_password="$(gcloud secrets versions access latest --secret citeladder-db-password --project "$PROJECT_ID")"
+          owner_password_uri="$(jq -rn --arg value "$owner_password" '$value | @uri')"
+          app_password="$(gcloud secrets versions access latest --secret citeladder-db-app-password --project "$PROJECT_ID")"
+          app_password_uri="$(jq -rn --arg value "$app_password" '$value | @uri')"
+          sync_value citeladder-migration-database-url \
+            "postgresql://citeladder:${owner_password_uri}@10.28.0.10:5432/citeladder"
           sync_value citeladder-database-url \
-            "postgresql://citeladder:${db_password_uri}@10.28.0.10:5432/citeladder"
+            "postgresql://citeladder_app:${app_password_uri}@10.28.0.10:5432/citeladder"
           # Only demo mode's single account signs in with a configured password;
           # production carries none, so its versions are disabled (BL9).
           if [ "$DEMO_MODE" = true ]; then
@@ -378,7 +389,24 @@ jobs:
           replace=()
           # Replacing the VM deletes its boot disk, which holds every row.
           if [ "$RESET_DATABASE" = true ]; then replace=(-replace=google_compute_instance.db); fi
+          # The VM runs its startup script (image, access rules) only at boot,
+          # and Terraform updates it in place. Restart an existing VM whose
+          # script changed, so the migration and the new revision meet the
+          # database that script describes; the data directory persists. A
+          # created or replaced VM boots with the new script already.
+          vm=(citeladder-db --project "$PROJECT_ID" --zone "$ZONE")
+          vm_state() {
+            gcloud compute instances describe "${vm[@]}" --format=json 2>/dev/null \
+              | jq -r '.id + " " + ([.metadata.items[]? | select(.key == "startup-script") | .value] | first // "" | @base64)'
+          }
+          before="$(vm_state || true)"
           terraform apply -input=false -auto-approve -target=google_cloud_run_v2_job.migrate "${replace[@]}"
+          test "$(terraform output -raw db_instance)" = citeladder-db
+          after="$(vm_state)"
+          if [ -n "$before" ] && [ "${before%% *}" = "${after%% *}" ] && [ "$before" != "$after" ]; then
+            echo 'The database startup script changed; restarting the VM (about a minute of database downtime).'
+            gcloud compute instances reset "${vm[@]}" --quiet
+          fi
           test "$(terraform output -raw db_address)" = 10.28.0.10
           gcloud run jobs execute "$(terraform output -raw migrate_job)" \
             --project "$PROJECT_ID" --region "$REGION" --wait

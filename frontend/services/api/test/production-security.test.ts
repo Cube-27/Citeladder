@@ -81,7 +81,7 @@ describe('.env.example secrets', () => {
       ENCRYPTION_KEY: shippedSecret(secrets, 'ENCRYPTION_KEY'),
       API_KEY_PEPPER: shippedSecret(secrets, 'API_KEY_PEPPER'),
       DEV_LOGIN_PASSWORD: shippedSecret(secrets, 'DEV_LOGIN_PASSWORD'),
-      DATABASE_URL: `postgresql://fixture:${encodeURIComponent(shippedSecret(secrets, 'POSTGRES_PASSWORD'))}@database.test/app`,
+      DATABASE_URL: `postgresql://citeladder_app:${encodeURIComponent(shippedSecret(secrets, 'POSTGRES_PASSWORD'))}@database.test/app`,
     });
     expect(refusal).toContain('JWT_SECRET_KEY does not meet the production strength policy');
     expect(refusal).toContain('ENCRYPTION_KEY does not meet the production strength policy');
@@ -116,11 +116,16 @@ describe('production startup admission', () => {
     ['API_KEY_PEPPER', 'replace-with-a-32-byte-minimum-api-key-pepper', 'API_KEY_PEPPER'],
     ['ENCRYPTION_KEY', productionEnv.JWT_SECRET_KEY, 'independent'],
     ['DATABASE_URL', 'not-a-url', 'database password'],
-    ['DATABASE_URL', 'postgresql://fixture:short@database.test/app', 'database password'],
+    ['DATABASE_URL', 'postgresql://citeladder_app:short@database.test/app', 'database password'],
     [
       'DATABASE_URL',
-      `postgresql://fixture:${encodeURIComponent(productionEnv.JWT_SECRET_KEY)}@database.test/app`,
+      `postgresql://citeladder_app:${encodeURIComponent(productionEnv.JWT_SECRET_KEY)}@database.test/app`,
       'independent',
+    ],
+    [
+      'DATABASE_URL',
+      'postgresql://citeladder:database-owner-password-0123456789@database.test/app',
+      'database_url must connect as the citeladder_app role, never the schema owner',
     ],
     ['TRUSTED_PROXY_CIDRS', '', 'trusted_proxy_cidrs'],
     ['TRUSTED_PROXY_CIDRS', '0.0.0.0/0', 'trusted_proxy_cidrs'],
@@ -178,7 +183,7 @@ describe('production startup admission', () => {
       loadConfig({
         ...productionEnv,
         FRONTEND_URL: 'https://0.app.example.test',
-        DATABASE_URL: `postgresql://fixture:${encodeURIComponent('database-password-with-:/@-and-0123456789')}@database.test/app`,
+        DATABASE_URL: `postgresql://citeladder_app:${encodeURIComponent('database-password-with-:/@-and-0123456789')}@database.test/app`,
         TRUSTED_PROXY_CIDRS: '10.0.0.1/24,2001:db8::/64',
       }).appEnv,
     ).toBe('production');
@@ -197,7 +202,7 @@ describe('production startup admission', () => {
   });
 
   it('reports violations without disclosing credentials or the database URL', () => {
-    const DATABASE_URL = `postgresql://fixture:${productionEnv.JWT_SECRET_KEY}@database.test/app`;
+    const DATABASE_URL = `postgresql://citeladder_app:${productionEnv.JWT_SECRET_KEY}@database.test/app`;
     try {
       loadConfig({ ...productionEnv, DATABASE_URL });
       expect.fail('startup should refuse reused database credentials');

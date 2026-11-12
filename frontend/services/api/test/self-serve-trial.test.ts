@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { afterAll, expect, it } from 'vitest';
-import { testDatabase } from './support.ts';
+import { asOwner, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { ensureWorkspaceBilling } from '../src/entitlements/bootstrap.ts';
 import { reservePromptRuns, settlePromptRun } from '../src/audits/prompt-runs.ts';
@@ -16,15 +16,17 @@ const accounts: string[] = [];
 
 /** The trial starts at workspace creation; move this one's window eight days back. */
 function ageTrial(accountId: string) {
-  return db
-    .updateTable('account_grants')
-    .set({
-      valid_from: sql`valid_from - interval '8 days'`,
-      valid_until: sql`valid_until - interval '8 days'`,
-    })
-    .where('billing_account_id', '=', accountId)
-    .where('source_kind', '=', 'trial')
-    .execute();
+  return asOwner((owner) =>
+    owner
+      .updateTable('account_grants')
+      .set({
+        valid_from: sql`valid_from - interval '8 days'`,
+        valid_until: sql`valid_until - interval '8 days'`,
+      })
+      .where('billing_account_id', '=', accountId)
+      .where('source_kind', '=', 'trial')
+      .execute(),
+  );
 }
 /** A public signup under `email` that has created its workspace. */
 async function publicSignup(email: string) {
@@ -133,7 +135,9 @@ it('lets a worker reuse a grant briefly, but a revocation lands within the TTL a
 });
 afterAll(async () => {
   if (accounts.length)
-    await db.deleteFrom('consumable_ledger').where('billing_account_id', 'in', accounts).execute();
+    await asOwner((owner) =>
+      owner.deleteFrom('consumable_ledger').where('billing_account_id', 'in', accounts).execute(),
+    );
   await fixtures.cleanup();
   await db.destroy();
 });
