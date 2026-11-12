@@ -39,7 +39,7 @@ export function resumeCursor(input: {
 }
 
 /** One event as an SSE frame: its id is the client's resume cursor. */
-export type EventFrame = { id: string; event: string; data: unknown };
+type EventFrame = { id: string; event: string; data: unknown };
 
 /** Where a tail's subject stands after a poll. */
 export type SubjectState = 'open' | 'terminal' | 'gone';
@@ -79,7 +79,8 @@ export async function* eventFrames(tail: EventTail, signal: AbortSignal): AsyncG
     const events = prepared ?? (await tail.page(cursor));
     prepared = undefined;
     for (const event of events) {
-      if (signal.aborted) return;
+      // A slow reader still ends at the deadline; it resumes after the last frame it got.
+      if (signal.aborted || Date.now() >= deadline) return;
       cursor = event.id;
       yield encodeFrame(event);
     }

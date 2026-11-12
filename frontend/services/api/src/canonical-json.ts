@@ -11,7 +11,8 @@ function isPlainObject(value: object): boolean {
 
 /** The JSON text of a scalar, or a throw for a value JSON has no text for. */
 function scalarJson(value: unknown): string {
-  if (value === null || ['string', 'number', 'boolean'].includes(typeof value))
+  const type = typeof value;
+  if (value === null || type === 'string' || type === 'number' || type === 'boolean')
     return JSON.stringify(value);
   throw new TypeError(`canonicalJson cannot encode a ${typeof value} value`);
 }

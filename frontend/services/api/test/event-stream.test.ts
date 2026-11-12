@@ -109,6 +109,14 @@ describe('event tail', () => {
     expect(Date.now() - started).toBeLessThan(1000);
   });
 
+  it('ends mid-page at its maximum duration when the reader falls behind', async () => {
+    const { tail } = numberedTail(3, { pageSize: 5, maxSeconds: 0.05 });
+    const frames = eventFrames(tail, new AbortController().signal);
+    expect((await frames.next()).value).toBe('id: 1\nevent: progress\ndata: {"n":1}\n\n');
+    await sleep(80);
+    expect(await frames.next()).toEqual({ done: true, value: undefined });
+  });
+
   it('reads the next page only when the consumer asks for more', async () => {
     const { tail, reads } = numberedTail(1000, { pageSize: 1 });
     const reader = eventTailStream(tail, new AbortController().signal).getReader();
