@@ -57,7 +57,7 @@ export function scrubRecordRefs(text: string, keep: ReadonlySet<string> = new Se
     .join('\n');
 }
 
-/** The records one read returned, as the `citeladder://` references screens resolve. */
+/** The records one read supplied to the model, as the `citeladder://` references screens resolve. */
 export function readSources(refs: readonly { record_uri?: string | null }[]) {
   return refs.flatMap((ref) => (ref.record_uri ? [ref.record_uri] : []));
 }
