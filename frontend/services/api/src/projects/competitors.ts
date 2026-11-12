@@ -62,10 +62,11 @@ export async function lockProject(db: Database, scope: ProjectScope): Promise<vo
   if (project === undefined) throw notFound('Project');
 }
 
-function competitorsOf(db: Database, projectId: string) {
+function competitorsOf(db: Database, { workspaceId, projectId }: ProjectScope) {
   return db
     .selectFrom('competitors')
     .selectAll()
+    .where('workspace_id', '=', workspaceId)
     .where('project_id', '=', projectId)
     .orderBy('created_at')
     .orderBy('id')
@@ -87,9 +88,7 @@ export async function listCompetitors(db: Database, scope: ProjectScope): Promis
     .where('workspace_id', '=', scope.workspaceId)
     .executeTakeFirst();
   if (project === undefined) throw notFound('Project');
-  return (await competitorsOf(db, scope.projectId)).map((row) =>
-    competitorView(scope.projectId, row),
-  );
+  return (await competitorsOf(db, scope)).map((row) => competitorView(scope.projectId, row));
 }
 
 export function addCompetitor(
@@ -99,7 +98,7 @@ export function addCompetitor(
 ): Promise<Competitor> {
   return inTransaction(db, async (trx) => {
     await lockProject(trx, scope);
-    const rows = await competitorsOf(trx, scope.projectId);
+    const rows = await competitorsOf(trx, scope);
     refuseDuplicate(rows, input.name);
     if (rows.length >= MAX_COMPETITORS)
       throw new ApiError(409, `A project can have at most ${MAX_COMPETITORS} competitors`);
@@ -131,7 +130,7 @@ export function updateCompetitor(
 ): Promise<Competitor> {
   return db.transaction().execute(async (trx) => {
     await lockProject(trx, scope);
-    const rows = await competitorsOf(trx, scope.projectId);
+    const rows = await competitorsOf(trx, scope);
     const current = rows.find((row) => row.id === competitorId);
     if (current === undefined) throw notFound('Competitor');
     if (input.name !== undefined)

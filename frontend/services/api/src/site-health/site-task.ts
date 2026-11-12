@@ -347,6 +347,7 @@ export async function recordCrawlEvent(
     .insertInto('site_crawl_events')
     .values({
       id: randomUUID(),
+      workspace_id: crawl.workspace_id,
       crawl_id: crawl.id,
       event_type: eventType,
       message,

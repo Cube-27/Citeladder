@@ -156,6 +156,75 @@ describe('Site Health', () => {
   });
 });
 
+describe('evidence tenancy keys', () => {
+  it("refuses an answer, event, crawl event or alias naming another workspace's parent", async () => {
+    const owner = await fixtures.tenant();
+    const other = await fixtures.tenant();
+    const auditId = await fixtures.audit(owner);
+    const { taskId } = await fixtures.execution(owner, { auditId });
+    const artifact = await db
+      .selectFrom('raw_response_artifacts')
+      .select('id')
+      .where('task_id', '=', taskId)
+      .executeTakeFirstOrThrow();
+    await clone('raw_response_artifacts', artifact.id);
+    await expect(
+      clone('raw_response_artifacts', artifact.id, { workspace_id: other.workspaceId }),
+    ).rejects.toMatchObject(FOREIGN_KEY);
+
+    const event = (workspaceId: string) =>
+      db
+        .insertInto('audit_events')
+        .values({
+          id: randomUUID(),
+          workspace_id: workspaceId,
+          audit_id: auditId,
+          event_type: 'audit.status',
+          message: 'status',
+          created_at: new Date(),
+        })
+        .execute();
+    await event(owner.workspaceId);
+    await expect(event(other.workspaceId)).rejects.toMatchObject(FOREIGN_KEY);
+
+    await fixtures.brand(owner.projectId, 'Acme');
+    const brand = await db
+      .selectFrom('brands')
+      .select('id')
+      .where('project_id', '=', owner.projectId)
+      .executeTakeFirstOrThrow();
+    const alias = (workspaceId: string) =>
+      db
+        .insertInto('brand_aliases')
+        .values({
+          id: randomUUID(),
+          workspace_id: workspaceId,
+          brand_id: brand.id,
+          alias: 'Acme Co',
+          created_at: new Date(),
+        })
+        .execute();
+    await alias(owner.workspaceId);
+    await expect(alias(other.workspaceId)).rejects.toMatchObject(FOREIGN_KEY);
+
+    const crawl = await fixtures.crawl();
+    const crawlEvent = (workspaceId: string) =>
+      db
+        .insertInto('site_crawl_events')
+        .values({
+          id: randomUUID(),
+          workspace_id: workspaceId,
+          crawl_id: crawl.crawlId,
+          event_type: 'crawl.started',
+          message: 'started',
+          created_at: new Date(),
+        })
+        .execute();
+    await crawlEvent(crawl.workspaceId);
+    await expect(crawlEvent(other.workspaceId)).rejects.toMatchObject(FOREIGN_KEY);
+  });
+});
+
 describe('cited source pages', () => {
   it('keeps one page per project and URL, independently per project', async () => {
     const tenant = await fixtures.tenant();

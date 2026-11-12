@@ -531,7 +531,7 @@ export const integrationRoutes = [
           });
         const project = await trx
           .selectFrom('projects')
-          .select(['id', 'website_url'])
+          .select(['id', 'workspace_id', 'website_url'])
           .where('id', '=', input.project_id)
           .where('workspace_id', '=', workspaceId)
           .executeTakeFirst();

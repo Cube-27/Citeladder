@@ -146,7 +146,7 @@ async function markdownExport(db: Database, tasks: ExportTask[], audit: ExportAu
   const config = record(audit.configuration),
     summary = record(audit.summary),
     cost = record(summary.cost);
-  const routes = await engineSnapshots(db, [audit.id]);
+  const routes = await engineSnapshots(db, audit.workspace_id, [audit.id]);
   const provenance = modelProvenanceFor(routes.get(audit.id) ?? [], config);
   const brand = md(config.brand_name ?? 'Brand'),
     mode = String(config.benchmark_mode ?? audit.benchmark_mode);

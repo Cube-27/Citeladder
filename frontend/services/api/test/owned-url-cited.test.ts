@@ -280,10 +280,14 @@ describe('owned_url_cited', () => {
     const own = await project();
     const foreign = await project();
     const { planned } = await gaps(own);
-    // Another workspace's run before go-live whose snapshot names this project's prompt.
+    // Another workspace's run cannot name this project's prompt at all.
+    await expect(
+      laterRun(foreign, [[own.prompt1_id, [{ url: 'https://acme.test/elsewhere' }]]]),
+    ).rejects.toMatchObject({ code: '23503' });
+    // Another workspace's run before go-live.
     await laterRun(
       foreign,
-      [[own.prompt1_id, [{ url: 'https://acme.test/elsewhere' }]]],
+      [[foreign.prompt1_id, [{ url: 'https://acme.test/elsewhere' }]]],
       new Date(Date.now() - 2.5 * DAY),
     );
     await declare(own, planned);
@@ -291,9 +295,9 @@ describe('owned_url_cited', () => {
       expectation: { baseline_urls: [ALREADY_CITED], baseline_audit_ids: [own.audit_id] },
     });
 
-    // The same after go-live, even when announced to this project, is never read.
+    // Its run citing the page after go-live, even when announced to this project, is never read.
     const foreignRun = await laterRun(foreign, [
-      [own.prompt1_id, [{ url: 'https://acme.test/crm-setup-guide' }]],
+      [foreign.prompt1_id, [{ url: 'https://acme.test/crm-setup-guide' }]],
     ]);
     await enqueueAndDrain(own, foreignRun);
     expect(await citedCheck(own, planned)).toEqual({

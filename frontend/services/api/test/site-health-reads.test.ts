@@ -1095,6 +1095,7 @@ describe('crawl events', () => {
         .insertInto('site_crawl_events')
         .values({
           id,
+          workspace_id: seed.workspaceId,
           crawl_id: seed.crawlId,
           event_type: type,
           message: '',

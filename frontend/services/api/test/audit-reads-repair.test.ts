@@ -108,6 +108,7 @@ describe('persisted audit reads and immutable repair', () => {
         .insertInto('audit_events')
         .values({
           id,
+          workspace_id: t.workspaceId,
           audit_id: t.auditId,
           event_type: index === 0 ? 'audit.running' : 'audit.status',
           message: '',

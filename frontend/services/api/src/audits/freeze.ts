@@ -301,6 +301,7 @@ async function loadBrandContext(
       ? db
           .selectFrom('brand_aliases')
           .select('alias')
+          .where('workspace_id', '=', workspaceId)
           .where('brand_id', '=', brand.id)
           .orderBy('id')
           .execute()
@@ -308,18 +309,21 @@ async function loadBrandContext(
     db
       .selectFrom('owned_domains')
       .select('domain')
+      .where('workspace_id', '=', workspaceId)
       .where('project_id', '=', project.id)
       .orderBy('id')
       .execute(),
     db
       .selectFrom('unintended_domains')
       .select('domain')
+      .where('workspace_id', '=', workspaceId)
       .where('project_id', '=', project.id)
       .orderBy('id')
       .execute(),
     db
       .selectFrom('competitors')
       .select(['id', 'name', 'aliases', 'domains'])
+      .where('workspace_id', '=', workspaceId)
       .where('project_id', '=', project.id)
       .orderBy('id')
       .execute(),
@@ -439,6 +443,7 @@ export async function prepareAudit(
   const brand = await db
     .selectFrom('brands')
     .selectAll()
+    .where('workspace_id', '=', workspaceId)
     .where('project_id', '=', project.id)
     .executeTakeFirst();
   const { aliases, owned, unintended, competitors, profile, factCheck } = await loadBrandContext(

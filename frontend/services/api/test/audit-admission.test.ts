@@ -85,6 +85,7 @@ async function recordSpend(
       .insertInto('execution_cost_projections')
       .values({
         id: randomUUID(),
+        workspace_id: t.workspaceId,
         audit_id: spentAudit,
         task_id: taskId,
         raw_response_artifact_id: artifact.id,

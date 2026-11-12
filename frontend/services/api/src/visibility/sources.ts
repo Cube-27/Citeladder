@@ -473,7 +473,7 @@ async function attachRowMentions(
       where mention.competitor_name <> ''
       group by cited.url, mention.competitor_name
     `.execute(db),
-    brandIdentities(db, selection.projectId),
+    brandIdentities(db, selection),
   ]);
   const found = new Map<string, BrandCount[]>();
   for (const row of named) {

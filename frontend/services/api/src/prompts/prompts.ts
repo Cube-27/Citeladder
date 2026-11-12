@@ -22,6 +22,7 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import { inTransaction, type Database } from '../db/database.ts';
 import type { RecordScope } from '../db/workspace-scope.ts';
+import type { ProjectScope } from '../projects/brand-profile.ts';
 import { isUniqueViolation } from '../db/errors.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { DB } from '../generated/db-schema.ts';
@@ -152,14 +153,19 @@ async function topicText(db: Kysely<DB>, projectId: string, topicId: string): Pr
   return [topic.name, topic.description].filter(Boolean).join(' ');
 }
 
+/** The project scope of a prompt set already found in its workspace. */
+function setScope(set: { workspace_id: string; project_id: string }): ProjectScope {
+  return { workspaceId: set.workspace_id, projectId: set.project_id };
+}
+
 async function requireBinding(
   db: Kysely<DB>,
-  projectId: string,
+  scope: ProjectScope,
   value: string,
   topicId: string | null,
 ): Promise<void> {
-  const context = topicId === null ? '' : await topicText(db, projectId, topicId);
-  const failure = bindingFailure(value, await loadVocabulary(db, projectId), context);
+  const context = topicId === null ? '' : await topicText(db, scope.projectId, topicId);
+  const failure = bindingFailure(value, await loadVocabulary(db, scope), context);
   if (failure !== null) throw bindingError(failure);
 }
 
@@ -196,10 +202,10 @@ type Screened<T> = {
  */
 async function screen<T extends { text: string; topic_id?: string | null }>(
   db: Kysely<DB>,
-  set: { id: string; project_id: string },
+  set: { id: string; workspace_id: string; project_id: string },
   inputs: readonly T[],
 ): Promise<Screened<T>[]> {
-  const vocabulary = await loadVocabulary(db, set.project_id);
+  const vocabulary = await loadVocabulary(db, setScope(set));
   const topicIds = [...new Set(inputs.flatMap((input) => input.topic_id ?? []))];
   const topics = new Map(
     await Promise.all(
@@ -278,7 +284,7 @@ export async function createPrompts(
     const screened = await screen(trx, set, inputs);
     for (const { problem } of screened)
       if (problem?.kind === 'binding') throw bindingError(problem.failure);
-    const filing = await brandFiling(trx, set.project_id);
+    const filing = await brandFiling(trx, setScope(set));
     const rows = await insertPrompts(
       trx,
       set,
@@ -347,6 +353,7 @@ async function applyPromptUpdate(
     promptId,
     scope.projectId,
   );
+  const projectScope = { workspaceId: scope.workspaceId, projectId };
   await acquireProjectLock(db, projectId);
   const prompt = await lockedPrompt(db, promptId);
   // An explicit null detaches the prompt; an absent key leaves its topic.
@@ -358,7 +365,7 @@ async function applyPromptUpdate(
   const refiled =
     topicId !== prompt.topic_id && (input.status ?? prompt.status) === P.status_active;
   if (input.text != null || activates || refiled) {
-    await requireBinding(db, projectId, input.text ?? prompt.text, topicId);
+    await requireBinding(db, projectScope, input.text ?? prompt.text, topicId);
   }
   const changes: Partial<PromptRow> = {
     ...(input.text == null
@@ -422,7 +429,7 @@ export async function bulkSetStatus(
         .where('prompts.prompt_set_id', '=', set.id)
         .where('prompts.id', 'in', ids)
         .execute();
-      const vocabulary = await loadVocabulary(trx, set.project_id);
+      const vocabulary = await loadVocabulary(trx, setScope(set));
       const failed = failures(rows, (row) =>
         bindingFailure(row.text, vocabulary, [row.name, row.description].filter(Boolean).join(' ')),
       );
@@ -473,7 +480,7 @@ export async function importPrompts(
     await acquireProjectLock(trx, set.project_id);
     await acquirePromptSetLock(trx, set.id);
     const rows = input.prompts.map((row, index) => ({ ...row, index }));
-    const vocabulary = await loadVocabulary(trx, set.project_id);
+    const vocabulary = await loadVocabulary(trx, setScope(set));
     const failed = failures(
       rows.filter((row) => row.text),
       (row) => bindingFailure(row.text, vocabulary),
@@ -508,7 +515,7 @@ export async function importPrompts(
       { workspaceId, projectId: set.project_id },
       [...byHash.values()].map((row) => row.topic),
     );
-    const filing = await brandFiling(trx, set.project_id);
+    const filing = await brandFiling(trx, setScope(set));
     await insertPrompts(
       trx,
       set,
