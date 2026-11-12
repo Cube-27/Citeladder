@@ -58,18 +58,21 @@ export async function topicProposalInput(
     .selectFrom('brands')
     .select(['id', 'name'])
     .where('project_id', '=', scope.projectId)
+    .where('workspace_id', '=', scope.workspaceId)
     .executeTakeFirst();
   const aliases = brand
     ? await trx
         .selectFrom('brand_aliases')
         .select('alias')
         .where('brand_id', '=', brand.id)
+        .where('workspace_id', '=', scope.workspaceId)
         .execute()
     : [];
   const existing = await trx
     .selectFrom('topics')
     .select('name')
     .where('project_id', '=', scope.projectId)
+    .where('workspace_id', '=', scope.workspaceId)
     .execute();
   const business = record(profile?.business_context);
   return {
@@ -210,6 +213,7 @@ export function generationContext(
       .selectFrom('topics')
       .select(topicColumns)
       .where('project_id', '=', project.id)
+      .where('workspace_id', '=', workspaceId)
       .orderBy('created_at')
       .orderBy('id')
       .execute();
@@ -224,23 +228,27 @@ export function generationContext(
       .selectFrom('brands')
       .select(['id', 'name'])
       .where('project_id', '=', project.id)
+      .where('workspace_id', '=', workspaceId)
       .executeTakeFirst();
     const aliases = brand
       ? await trx
           .selectFrom('brand_aliases')
           .select('alias')
           .where('brand_id', '=', brand.id)
+          .where('workspace_id', '=', workspaceId)
           .execute()
       : [];
     const competitors = await trx
       .selectFrom('competitors')
       .select(['name', 'aliases'])
       .where('project_id', '=', project.id)
+      .where('workspace_id', '=', workspaceId)
       .execute();
     const prompts = await trx
       .selectFrom('prompts')
       .select(promptColumns)
       .where('prompt_set_id', '=', setId)
+      .where('workspace_id', '=', workspaceId)
       // Oldest first: model and judge context keep the most recent texts.
       .orderBy('created_at')
       .orderBy('id')

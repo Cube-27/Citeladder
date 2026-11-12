@@ -58,22 +58,39 @@ async function views(
   const ids = rows.map((row) => row.id);
   const [brands, aliases, competitors, owned, unintended, profiles, sets, prompts, overLimit] =
     await Promise.all([
-      db.selectFrom('brands').selectAll().where('project_id', 'in', ids).execute(),
+      db
+        .selectFrom('brands')
+        .selectAll()
+        .where('workspace_id', '=', workspaceId)
+        .where('project_id', 'in', ids)
+        .execute(),
       db
         .selectFrom('brand_aliases')
         .innerJoin('brands', 'brands.id', 'brand_aliases.brand_id')
         .selectAll('brand_aliases')
+        .where('brand_aliases.workspace_id', '=', workspaceId)
         .where('brands.project_id', 'in', ids)
         .execute(),
       db
         .selectFrom('competitors')
         .selectAll()
+        .where('workspace_id', '=', workspaceId)
         .where('project_id', 'in', ids)
         .orderBy('created_at')
         .orderBy('id')
         .execute(),
-      db.selectFrom('owned_domains').selectAll().where('project_id', 'in', ids).execute(),
-      db.selectFrom('unintended_domains').selectAll().where('project_id', 'in', ids).execute(),
+      db
+        .selectFrom('owned_domains')
+        .selectAll()
+        .where('workspace_id', '=', workspaceId)
+        .where('project_id', 'in', ids)
+        .execute(),
+      db
+        .selectFrom('unintended_domains')
+        .selectAll()
+        .where('workspace_id', '=', workspaceId)
+        .where('project_id', 'in', ids)
+        .execute(),
       db
         .selectFrom('brand_profiles')
         .select(['project_id', 'business_context', 'products_services'])
@@ -83,6 +100,7 @@ async function views(
       db
         .selectFrom('prompt_sets')
         .selectAll()
+        .where('workspace_id', '=', workspaceId)
         .where('project_id', 'in', ids)
         .orderBy('created_at')
         .orderBy('id')

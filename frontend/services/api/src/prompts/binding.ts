@@ -179,7 +179,11 @@ export async function loadVocabulary(
   const [brand, domains, topics] = await Promise.all([
     db
       .selectFrom('brands')
-      .leftJoin('brand_profiles', 'brand_profiles.brand_id', 'brands.id')
+      .leftJoin('brand_profiles', (join) =>
+        join
+          .onRef('brand_profiles.brand_id', '=', 'brands.id')
+          .onRef('brand_profiles.workspace_id', '=', 'brands.workspace_id'),
+      )
       .select([
         'brands.id',
         'brands.name',
