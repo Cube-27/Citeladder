@@ -6,7 +6,9 @@
  * the check. Some cleared and some failing is `partially_resolved`, none
  * cleared is `still_failing`; both name the pages still failing. A crawl with a different analyzer or rule catalog, or
  * one that read no cohort page (or only passing ones, leaving the rest
- * unread), is inconclusive and says why.
+ * unread), is inconclusive and says why. A family larger than its cohort
+ * counts the pages beyond it as uncovered and is never verified (SH-B2): a
+ * cohort that clears reads `cohort_sampled`.
  */
 import {
   siteIssueFamilyEvidenceSchema,
@@ -104,7 +106,7 @@ async function cohortReadings(
 async function readCohort(
   ctx: ReadContext,
   crawlId: string,
-  check: { rule_id: string; baseline_crawl_id: string; site_url_ids: string[] },
+  check: { rule_id: string; baseline_crawl_id: string; site_url_ids: string[]; page_count: number },
 ): Promise<CheckOutcome> {
   // One verification connection runs one statement at a time.
   const baseline = await crawlVersions(ctx, check.baseline_crawl_id);
@@ -126,7 +128,9 @@ async function readCohort(
   const notApplicable = answered.filter((row) => row.outcome === NOT_APPLICABLE).length;
   const cleared = passing + notApplicable;
   const unread = check.site_url_ids.length - answered.length;
-  const pages = { failing, passing, not_applicable: notApplicable, unread };
+  // The family's pages beyond the frozen cohort: never read, so never verified.
+  const uncovered = Math.max(0, check.page_count - check.site_url_ids.length);
+  const pages = { failing, passing, not_applicable: notApplicable, unread, uncovered };
   if (failing.length)
     return {
       ...outcome(ctx.reading, 'unmet', cleared ? 'partially_resolved' : 'still_failing'),
@@ -141,6 +145,7 @@ async function readCohort(
       ),
       pages,
     };
+  if (uncovered) return { ...outcome(ctx.reading, 'unavailable', 'cohort_sampled'), pages };
   return { ...outcome(ctx.reading, 'met'), pages };
 }
 

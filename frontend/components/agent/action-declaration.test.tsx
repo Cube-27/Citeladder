@@ -290,6 +290,7 @@ describe('Declaration status', () => {
         passing: number;
         not_applicable: number;
         unread: number;
+        uncovered?: number;
       },
     ) => ({
       ...pageCheck(state),
@@ -297,7 +298,7 @@ describe('Declaration status', () => {
       kind: 'issue_family',
       reason,
       subject: 'Missing viewport meta tag',
-      pages,
+      pages: { uncovered: 0, ...pages },
     });
     const stuck = {
       site_url_id: '77777777-7777-4777-8777-777777777777',
@@ -327,6 +328,14 @@ describe('Declaration status', () => {
           }),
           // A reason this screen does not know claims no failure subtype.
           family(4, 'unmet', null, { failing: [], passing: 0, not_applicable: 0, unread: 0 }),
+          // Every checked page passes, but the family ran past its cohort.
+          family(5, 'unavailable', 'cohort_sampled', {
+            failing: [],
+            passing: 2,
+            not_applicable: 0,
+            unread: 0,
+            uncovered: 3,
+          }),
         ])}
         workspaceId={WORKSPACE}
       />,
@@ -343,6 +352,7 @@ describe('Declaration status', () => {
       `${check}Still failing${subject}0 pages pass · 1 page still fails · 2 pages not readhttps://acme.test/bNo affected page the crawl read passes yet. · ${read}`,
       `${check}Inconclusive${subject}2 pages pass · 0 pages still fail · 1 page not readThe affected pages that crawl read pass, but it did not read them all. Run a crawl that includes the rest. · ${read}`,
       `${check}Not met${subject}0 pages pass · 0 pages still fail${read}`,
+      `${check}Inconclusive${subject}2 pages pass · 0 pages still fail · 3 pages not checkedEvery checked page passes or no longer applies, but the issue was on more pages than one check covers, so it cannot be verified on all of them. · ${read}`,
     ]);
     expect(screen.getAllByRole('list', { name: 'Pages still failing' })).toHaveLength(2);
   });

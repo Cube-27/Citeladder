@@ -59,12 +59,23 @@ const earnedListingEvidenceSchema = z.object({
   }),
 });
 
-/** A Site Health defect on one owned page. */
-const siteIssueEvidenceSchema = z.object({
-  issue_rule_id: z.string(),
-  issue_severity: z.string(),
-  category: z.string(),
-  issue_evidence: json,
+/**
+ * The Site Health defects on one owned page that one finding folds together,
+ * every one of them: several rules can map to one finding (SH-B2). `issues` is
+ * in rule order, then issue id.
+ */
+export const siteIssueEvidenceSchema = z.object({
+  issues: z
+    .array(
+      z.object({
+        issue_id: z.string(),
+        rule_id: z.string(),
+        severity: z.string(),
+        category: z.string(),
+        evidence: json,
+      }),
+    )
+    .min(1),
   crawl_id: z.string(),
   site_url_id: z.string(),
   url: z.string(),

@@ -180,10 +180,12 @@ let own: { seed: SiteSeed; pages: Page[] };
 let foreign: { seed: SiteSeed; pages: Page[] };
 let fixedLater: { seed: SiteSeed; pages: Page[] };
 let partialBeforeDeclaring: { seed: SiteSeed; pages: Page[] };
+let sampled: { seed: SiteSeed; pages: Page[] };
 
 beforeAll(async () => {
-  // Four independent tenants, each seeded in its own transaction.
-  [own, foreign, fixedLater, partialBeforeDeclaring] = await Promise.all([
+  // Five independent tenants, each seeded in its own transaction.
+  [own, foreign, fixedLater, partialBeforeDeclaring, sampled] = await Promise.all([
+    familyProject(),
     familyProject(),
     familyProject(),
     familyProject(),
@@ -371,7 +373,35 @@ describe('an issue family', () => {
         state: 'met',
         reason: null,
         source_id: fixed,
-        pages: { failing: [], passing: PAGES - 1, not_applicable: 1, unread: 0 },
+        pages: { failing: [], passing: PAGES - 1, not_applicable: 1, unread: 0, uncovered: 0 },
+      },
+    ]);
+  });
+
+  it('larger than its cohort, counts the pages beyond it and never reads verified', async () => {
+    const { seed, pages } = sampled;
+    // The family's last two pages fall beyond a cohort cut at the rest.
+    const family = policy.opportunity.opportunities.SITE_ISSUE_FAMILY;
+    const cohortMax = family.COHORT_PAGES_MAX;
+    family.COHORT_PAGES_MAX = PAGES - 2;
+    const declared = await declareFamily(sampled).finally(() => {
+      family.COHORT_PAGES_MAX = cohortMax;
+    });
+    expect(declared.row.expected_checks).toMatchObject([
+      { kind: 'issue_family', site_url_ids: pages.slice(0, -2).map((page) => page.id) },
+    ]);
+
+    // Every page passes, but two were never in the cohort: not verified.
+    const fixed = await laterCrawl(seed, pages, 0);
+    await drainWorkspace(db, seed.workspaceId, { owner: `a3-${randomUUID()}` });
+    const detail = await getAction(db, seed.workspaceId, declared.action.id);
+    expect(detail.declaration?.state).not.toBe('verified');
+    expect(detail.declaration?.checks).toMatchObject([
+      {
+        state: 'unavailable',
+        reason: 'cohort_sampled',
+        source_id: fixed,
+        pages: { failing: [], passing: PAGES - 2, not_applicable: 0, unread: 0, uncovered: 2 },
       },
     ]);
   });

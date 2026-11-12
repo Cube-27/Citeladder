@@ -495,7 +495,15 @@ describe('Action routes', () => {
     const other = await seed();
     const evidence = {
       site_url_id: randomUUID(),
-      issue_rule_id: 'aeo.answer_first',
+      issues: [
+        {
+          issue_id: randomUUID(),
+          rule_id: 'aeo.answer_first',
+          severity: 'low',
+          category: 'content',
+          evidence: {},
+        },
+      ],
       content_handoff: { affected_prompts: [{ prompt_id: s.prompt0_id }] },
       keyword: 'crm for startups',
       normalized_keyword: 'crm for startups',
@@ -591,6 +599,41 @@ describe('Action routes', () => {
       evidence: {},
     });
     expect([memberMeasurementLeg(unscoped), await freeze(unscoped)]).toEqual([null, []]);
+    // A site change is no rule a crawl evaluates, so nothing can verify it (BE-801).
+    const change = member('site_change_critical_regression');
+    expect([memberMeasurementLeg(change), await freeze(change)]).toEqual([null, []]);
+    // A page finding naming no Site Health rule freezes no check.
+    const ruleless = member('missing_structured_data', {
+      evidence: { site_url_id: evidence.site_url_id },
+    });
+    expect([memberMeasurementLeg(ruleless), await freeze(ruleless)]).toEqual([null, []]);
+    // A page finding folding two rules verifies each of them (BE-802, SH-B2).
+    const folded = member('content_structure_incomplete', {
+      evidence: {
+        ...evidence,
+        issues: ['aeo.question_headings', 'aeo.answer_first'].map((rule_id) => ({
+          issue_id: randomUUID(),
+          rule_id,
+          severity: 'low',
+          category: 'content',
+          evidence: {},
+        })),
+      },
+    });
+    expect((await freeze(folded)).map(({ check }) => check)).toEqual([
+      {
+        kind: 'site_rule',
+        rule_id: 'aeo.answer_first',
+        expected_outcome: 'pass',
+        target_site_url_id: evidence.site_url_id,
+      },
+      {
+        kind: 'site_rule',
+        rule_id: 'aeo.question_headings',
+        expected_outcome: 'pass',
+        target_site_url_id: evidence.site_url_id,
+      },
+    ]);
     // The baseline comes from this project's audit, never another workspace's.
     await db
       .updateTable('metric_snapshots')

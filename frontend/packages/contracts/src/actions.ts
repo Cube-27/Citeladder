@@ -127,12 +127,14 @@ export const measurementLegSchema = responseObject({
 });
 
 // An issue-family check's reading of its cohort in one crawl: the pages still
-// failing, and how many pass, no longer apply or went unread.
+// failing, and how many pass, no longer apply or went unread. `uncovered`
+// counts the family's pages beyond the frozen cohort, which no crawl checks.
 export const issueFamilyPagesSchema = responseObject({
   failing: z.array(responseObject({ site_url_id: uuid(), url: z.string() })),
   passing: z.number().int(),
   not_applicable: z.number().int(),
   unread: z.number().int(),
+  uncovered: z.number().int(),
 });
 
 // One expected check's latest reading. Each check keeps the state its own
