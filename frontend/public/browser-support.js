@@ -14,11 +14,10 @@
     supported = false;
   }
   if (supported) return;
-  document.documentElement.setAttribute('data-browser-support', 'unsupported');
+  document.documentElement.dataset.browserSupport = 'unsupported';
   var root = document.getElementById('root');
   if (!root) return;
   var notice = document.createElement('main');
-  notice.setAttribute('role', 'alert');
   notice.style.maxWidth = '32rem';
   notice.style.margin = '20vh auto 0';
   notice.style.padding = '0 1.5rem';

@@ -25,7 +25,7 @@ describe('browser-support.js', () => {
     const root = runOnPage();
 
     expect(root.innerHTML).toBe('');
-    expect(document.documentElement.dataset.browserSupport).toBe(undefined);
+    expect(document.documentElement.dataset.browserSupport).toBeUndefined();
   });
 
   it('shows the update notice when URL.canParse is missing', () => {
@@ -33,7 +33,7 @@ describe('browser-support.js', () => {
     const root = runOnPage();
 
     expect(root.querySelector('h1')?.textContent).toBe('Update your browser');
-    expect(root.querySelector('[role="alert"] p')?.textContent).toBe(
+    expect(root.querySelector('main p')?.textContent).toBe(
       'CiteLadder needs a newer browser. Update Chrome, Edge, Firefox, Safari or Samsung Internet to the latest version, then reload this page.',
     );
     expect(document.documentElement.dataset.browserSupport).toBe('unsupported');
