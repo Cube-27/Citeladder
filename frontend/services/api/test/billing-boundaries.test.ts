@@ -12,6 +12,11 @@ import { billingConfig, buyer } from './billing-support.ts';
 import { createHmac } from 'node:crypto';
 import { billingSettings } from '../src/billing/config.ts';
 
+/** A provider response as Razorpay serves it, with its `Date` header. */
+function served(body: unknown, date: string | null = 'Thu, 12 Nov 2026 10:00:00 GMT') {
+  return Response.json(body, { headers: date === null ? {} : { date } });
+}
+
 /** Provider responses for an active subscription whose one invoice was paid by `payment`. */
 function paidRenewal(payment: Record<string, unknown>): Record<string, unknown> {
   return {
@@ -21,7 +26,6 @@ function paidRenewal(payment: Record<string, unknown>): Record<string, unknown> 
       status: 'active',
       current_start: 100,
       current_end: 200,
-      updated_at: 300,
       notes: [],
     },
     '/invoices': {
@@ -193,7 +197,7 @@ describe('billing input and provider boundaries', () => {
       const url = new URL(String(input));
       expect(url.origin).toBe('https://api.razorpay.com');
       expect(init).toMatchObject({ method: 'GET', redirect: 'error' });
-      return Response.json(responses[url.pathname.replace('/v1', '')]);
+      return served(responses[url.pathname.replace('/v1', '')]);
     });
     const provider = new RazorpayProvider(config.billing, config.razorpay, transport);
     const evidence = await provider.evidence('sub_fixture', true);
@@ -235,25 +239,31 @@ describe('billing input and provider boundaries', () => {
       'provider_collection_incomplete',
     );
   });
-  it('versions subscription evidence by the provider update time, else the time the provider served it, else refuses it', async () => {
+  it('versions subscription evidence by the second the provider served it, and refuses a response without that time', async () => {
     const responses = paidRenewal({});
-    const read = async (subscription: Record<string, unknown>, date: string | null) => {
-      const transport = vi.fn<typeof fetch>(async (input) => {
-        const path = new URL(String(input)).pathname.replace('/v1', '');
-        const body = path === '/subscriptions/sub_fixture' ? subscription : responses[path];
-        return Response.json(body, { headers: date === null ? {} : { date } });
-      });
+    const read = async (date: string | null) => {
+      const transport = vi.fn<typeof fetch>(async (input) =>
+        served(responses[new URL(String(input)).pathname.replace('/v1', '')], date),
+      );
       const provider = new RazorpayProvider(config.billing, config.razorpay, transport);
       const evidence = await provider.evidence('sub_fixture', true);
       return evidence.kind === 'base' ? evidence.subscription.version : null;
     };
-    const { updated_at: _omitted, ...withoutUpdate } = responses[
-      '/subscriptions/sub_fixture'
-    ] as Record<string, unknown>;
-    const served = 'Thu, 12 Nov 2026 10:00:00 GMT';
-    expect(await read({ ...withoutUpdate, updated_at: 300 }, served)).toBe(300);
-    expect(await read(withoutUpdate, served)).toBe(1_794_477_600);
-    await expect(read(withoutUpdate, null)).rejects.toThrow('provider_invalid_response');
+    expect(await read('Thu, 12 Nov 2026 10:00:00 GMT')).toBe(1_794_477_600);
+    expect(await read('Thu, 12 Nov 2026 10:00:01 GMT')).toBe(1_794_477_601);
+    await expect(read(null)).rejects.toThrow('provider_invalid_response');
+    // A cancellation's response is evidence too, versioned the same way.
+    const cancel = new RazorpayProvider(
+      config.billing,
+      config.razorpay,
+      vi.fn<typeof fetch>(async () =>
+        served({ ...(responses['/subscriptions/sub_fixture'] as object), status: 'cancelled' }),
+      ),
+    );
+    expect(await cancel.cancel('sub_fixture', false)).toMatchObject({
+      status: 'cancelled',
+      version: 1_794_477_600,
+    });
   });
   it('reads a refunded capture as the paid period it was, but never an uncaptured auto-refund or declined attempts', async () => {
     const responses: Record<string, unknown> = {
@@ -275,7 +285,7 @@ describe('billing input and provider boundaries', () => {
       },
     };
     const transport = vi.fn<typeof fetch>(async (input) =>
-      Response.json(responses[new URL(String(input)).pathname.replace('/v1', '')]),
+      served(responses[new URL(String(input)).pathname.replace('/v1', '')]),
     );
     const provider = new RazorpayProvider(config.billing, config.razorpay, transport);
     expect(await provider.evidence('sub_fixture', true)).toMatchObject({

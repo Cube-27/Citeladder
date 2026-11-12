@@ -256,27 +256,27 @@ export function catalogMutation(
       .min(1)
       .max(64)
       .parse(operation.kind === 'seed' ? catalogAuthoring.revision : operation.revision);
-    const payload =
-      operation.kind === 'publish'
-        ? null
-        : validateCatalog(
-            operation.kind === 'seed'
-              ? launchCatalog({ mode: operation.mode, rate: operation.rate })
-              : operation.payload,
-          );
-    if (payload === null) await checkPublishReplay(trx, ctx, actor.id, revision);
-    const replayed = payload && (await importReplay(trx, ctx, actor.id, revision, digest(payload)));
-    const existing = await trx
-      .selectFrom('billing_catalog_revisions')
-      .selectAll()
-      .where('revision', '=', revision)
-      .forUpdate()
-      .executeTakeFirst();
-    const row =
-      replayed ??
-      (payload === null
-        ? await publishCatalog(trx, existing, ctx, actor.id)
-        : await importCatalog(trx, existing, ctx, actor.id, payload, revision));
+    const locked = () =>
+      trx
+        .selectFrom('billing_catalog_revisions')
+        .selectAll()
+        .where('revision', '=', revision)
+        .forUpdate()
+        .executeTakeFirst();
+    let row: CatalogRow;
+    if (operation.kind === 'publish') {
+      await checkPublishReplay(trx, ctx, actor.id, revision);
+      row = await publishCatalog(trx, await locked(), ctx, actor.id);
+    } else {
+      const payload = validateCatalog(
+        operation.kind === 'seed'
+          ? launchCatalog({ mode: operation.mode, rate: operation.rate })
+          : operation.payload,
+      );
+      row =
+        (await importReplay(trx, ctx, actor.id, revision, digest(payload))) ??
+        (await importCatalog(trx, await locked(), ctx, actor.id, payload, revision));
+    }
     getLogger('api.billing.operator').info('billing.catalog', {
       actor_id: actor.id,
       operation: operation.kind,

@@ -19,7 +19,6 @@ const subscriptionSchema = z.object({
   plan_id: reference,
   current_start: amount.nullish(),
   current_end: amount.nullish(),
-  updated_at: amount.optional(),
   cancel_at_cycle_end: z
     .union([z.boolean(), z.literal(0), z.literal(1)])
     .optional()
@@ -163,14 +162,15 @@ export function checkoutAvailable(
 
 /**
  * The subscription a provider response reports. Its state version is the
- * provider's own `updated_at` when present, else the second the provider
- * served the response (its `Date` header), so a later read never ranks below
- * an earlier one already settled; a response with neither is refused.
+ * second the provider served it (the response's `Date` header): the
+ * subscription entity carries no update time, and a webhook only prompts this
+ * read, so the provider's own clock at the read is the time the state is
+ * known at. A later read never ranks below an earlier one already settled; a
+ * response without the header is refused.
  */
 function subscription({ data, servedAt }: ProviderResponse): SubscriptionEvidence {
   const row = subscriptionSchema.parse(data);
-  const version = row.updated_at ?? servedAt;
-  if (version === null) throw new ProviderError(true, 'provider_invalid_response');
+  if (servedAt === null) throw new ProviderError(true, 'provider_invalid_response');
   const statuses: Record<string, string> = policy.billing.contracts.razorpay_status_map;
   const status = statuses[row.status];
   if (!status) throw new ProviderError(true, 'provider_invalid_response');
@@ -180,7 +180,7 @@ function subscription({ data, servedAt }: ProviderResponse): SubscriptionEvidenc
     priceRef: row.plan_id,
     start: row.current_start == null ? null : new Date(row.current_start * 1000),
     end: row.current_end == null ? null : new Date(row.current_end * 1000),
-    version,
+    version: servedAt,
     cancelAtEnd: Boolean(row.cancel_at_cycle_end),
     notes: row.notes,
     payment: null,
