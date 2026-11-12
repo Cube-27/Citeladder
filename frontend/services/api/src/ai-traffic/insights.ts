@@ -139,7 +139,11 @@ export async function refreshInsightWindow(
   const options = await withReportingTimezone(db, scope, input);
   const w = crawlWindow(options);
   const [data, context] = await Promise.all([
-    pageDataset(db, scope, { ...options, dataset_limit: aiTraffic.max_timeline_items + 1 }),
+    pageDataset(db, scope, {
+      ...options,
+      dataset_limit: aiTraffic.max_timeline_items + 1,
+      provenance: true,
+    }),
     pageContext(db, scope, options),
   ]);
   const bounded = data.rows.length > aiTraffic.max_timeline_items;
