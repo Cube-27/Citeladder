@@ -71,19 +71,12 @@ export function currentSiteCrawlQuery(
   db: Database,
   workspaceId: string,
   projectId: string,
-  filter: { completedAfter?: string } = {},
+  { completedAfter }: { completedAfter?: string } = {},
 ) {
-  const usable = siteCrawls(db, workspaceId, projectId).where(
-    'status',
-    'in',
-    USABLE_CRAWL_STATUSES,
-  );
-  const after = filter.completedAfter;
-  return (
-    after === undefined
-      ? usable
-      : usable.where('completed_at', '>', sql<Date>`${after}::timestamptz`)
-  ).limit(1);
+  let usable = siteCrawls(db, workspaceId, projectId).where('status', 'in', USABLE_CRAWL_STATUSES);
+  if (completedAfter !== undefined)
+    usable = usable.where('completed_at', '>', sql<Date>`${completedAfter}::timestamptz`);
+  return usable.limit(1);
 }
 
 /** The current crawl (`currentSiteCrawlQuery`), or `null` before the project has one. */
@@ -91,9 +84,8 @@ export async function currentSiteCrawl(
   db: Database,
   workspaceId: string,
   projectId: string,
-  filter: { completedAfter?: string } = {},
 ): Promise<Crawl | null> {
-  const crawl = await currentSiteCrawlQuery(db, workspaceId, projectId, filter)
+  const crawl = await currentSiteCrawlQuery(db, workspaceId, projectId)
     .selectAll()
     .executeTakeFirst();
   return crawl ?? null;

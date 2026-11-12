@@ -219,6 +219,26 @@ describe('Agent persisted context binding', () => {
       related_page_count: 2,
     });
   });
+  it('reports no usable crawl when the current crawl holds no content pages, and reads an older crawl only when named', async () => {
+    const seed = await fixtures.crawl();
+    const pricing = await fixtures.page(seed, '/pricing', {
+      title: 'Pricing guide',
+      body: { text: 'Costs pricing plans' },
+    });
+    await db
+      .updateTable('site_page_analyses')
+      .set({ finalized_at: new Date() })
+      .where('workspace_id', '=', seed.workspaceId)
+      .where('crawl_id', '=', seed.crawlId)
+      .execute();
+    await fixtures.sibling(seed, { created_at: new Date(Date.now() + 1000) });
+
+    const current = await selectContentFragments(db, seed, 'pricing guide');
+    expect(current.pages).toEqual([]);
+    expect(current.summary.omissions).toEqual([{ reason: 'no_usable_crawl' }]);
+    const named = await selectContentFragments(db, seed, 'pricing guide', '', seed.crawlId);
+    expect(named.pages.map((page) => page.site_url_id)).toEqual([pricing.id]);
+  });
   it("treats an address on the project's site in the message as the target page, with a longer excerpt", async () => {
     const seed = await fixtures.crawl();
     const copy = 'Every plan includes support. '.repeat(200).trim();

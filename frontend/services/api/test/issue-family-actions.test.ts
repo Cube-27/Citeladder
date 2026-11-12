@@ -182,10 +182,13 @@ let fixedLater: { seed: SiteSeed; pages: Page[] };
 let partialBeforeDeclaring: { seed: SiteSeed; pages: Page[] };
 
 beforeAll(async () => {
-  own = await familyProject();
-  foreign = await familyProject();
-  fixedLater = await familyProject();
-  partialBeforeDeclaring = await familyProject();
+  // Four independent tenants, each seeded in its own transaction.
+  [own, foreign, fixedLater, partialBeforeDeclaring] = await Promise.all([
+    familyProject(),
+    familyProject(),
+    familyProject(),
+    familyProject(),
+  ]);
 });
 
 /** Declares `project`'s family Action as implemented an hour ago. */
