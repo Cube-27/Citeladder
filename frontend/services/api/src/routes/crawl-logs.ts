@@ -60,7 +60,11 @@ const writes = {
 } as const;
 const scope = (workspaceId: string, projectId: string) => ({ workspaceId, projectId });
 const uploadView = (row: Selectable<CrawlLogUploads>) =>
-  crawlUploadSchema.parse({ ...row, created_at: row.created_at.toISOString() });
+  crawlUploadSchema.parse({
+    ...row,
+    created_at: row.created_at.toISOString(),
+    completed_at: row.completed_at?.toISOString() ?? null,
+  });
 export const crawlLogRoutes = [
   defineGetRoute({
     ...base,

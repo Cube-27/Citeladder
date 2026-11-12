@@ -8,6 +8,7 @@ import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { OutputCanvas } from '@/components/agent/output-canvas';
 import { EvidenceChips } from '@/components/agent/evidence-chips';
 import { OutputEditor, type OutputDraft } from '@/components/agent/output-editor';
+import { UnsavedChangesGuard } from '@/components/ui/unsaved-changes-guard';
 import { OutputHistory } from '@/components/agent/output-history';
 import { WebSources } from '@/components/agent/web-sources';
 import { ProjectLink } from '@/components/ui/project-link';
@@ -54,6 +55,8 @@ export function OutputPane({
   // Held here, not in the editor, so switching tabs cannot discard it.
   const [draft, setDraft] = useState<OutputDraft | null>(null);
   const editing = draft !== null;
+  const unsaved =
+    draft !== null && (draft.title !== revision.title || draft.body !== revision.body);
   const locked = runActive || !canEdit;
   const target = { chatId, outputId: output.id, number: output.number };
   const headingId = `document-${output.id}-title`;
@@ -69,6 +72,7 @@ export function OutputPane({
   );
   return (
     <Stack as="section" gap="compact" aria-labelledby={headingId} className="min-w-0 content-start">
+      <UnsavedChangesGuard when={unsaved} />
       <Stack as="header" gap="tight">
         <h2 id={headingId} className={textRole('sectionTitle', 'min-w-0')}>
           {revision.title}

@@ -337,6 +337,8 @@ export const crawlUploadSchema = z.object({
   missing_fields: z.array(z.string()),
   /** Fixes the upload's admission floor, so a resumed scan batches identically. */
   created_at: z.iso.datetime({ offset: true }),
+  /** Server time the upload completed; processing that finishes after it covers the upload. */
+  completed_at: z.iso.datetime({ offset: true }).nullable(),
 });
 export const crawlCatalogSchema = z.object({
   catalog_version: z.string(),

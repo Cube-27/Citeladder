@@ -2,7 +2,7 @@
 /**
  * CodeBlock — a code sample: a `control-md` bar on `surface-sunken` with the
  * language in a mono eyebrow and a fixed-width ghost Copy button that reads
- * "Copied" for 1.6s, over mono `code` (13/22) in `ink`; comment lines and a
+ * "Copied" (or "Copy failed") for 1.6s, over mono `code` (13/22) in `ink`; comment lines and a
  * leading `$ ` prompt in `ink-muted`. The markup comes from Markdown fences
  * (prose-blocks.ts); this component owns its look and the Copy behaviour,
  * and Prose renders it once per page.
@@ -93,26 +93,7 @@
 </style>
 
 <script>
-  // One delegated listener copies the block's code and confirms for 1.6s.
-  const timers = new WeakMap<HTMLElement, number>();
-  document.addEventListener('click', (event) => {
-    if (!(event.target instanceof Element)) return;
-    const button = event.target.closest<HTMLButtonElement>('[data-code-copy]');
-    const code = button?.closest('.cl-code')?.querySelector('code')?.textContent;
-    if (!button || code == null) return;
-    void navigator.clipboard?.writeText(code).catch(() => undefined);
-    const label = button.querySelector('span');
-    button.dataset.copied = '';
-    button.setAttribute('aria-label', 'Copied');
-    if (label) label.textContent = 'Copied';
-    window.clearTimeout(timers.get(button));
-    timers.set(
-      button,
-      window.setTimeout(() => {
-        delete button.dataset.copied;
-        button.setAttribute('aria-label', 'Copy code');
-        if (label) label.textContent = 'Copy';
-      }, 1600),
-    );
-  });
+  // One delegated listener copies the block's code and reports the outcome.
+  import { installCodeCopy } from './code-copy';
+  installCodeCopy();
 </script>

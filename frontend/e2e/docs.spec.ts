@@ -19,14 +19,14 @@ test('search recovers, supports keyboard dismissal and navigates to a guide', as
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: /Search docs/ })).toBeFocused();
   await page.keyboard.press('Control+k');
-  await expect(dialog.getByRole('textbox', { name: 'Search terms' })).toBeFocused();
+  await expect(dialog.getByRole('combobox', { name: 'Search terms' })).toBeFocused();
   await page.keyboard.type('revision history');
-  await expect(dialog.getByRole('link').first()).toBeVisible();
+  await expect(dialog.getByRole('option').first()).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Retry search' })).toHaveCount(0);
-  await dialog.getByRole('textbox', { name: 'Search terms' }).fill('zzzz-no-such-guide');
+  await dialog.getByRole('combobox', { name: 'Search terms' }).fill('zzzz-no-such-guide');
   await expect(dialog.getByRole('status')).toContainText('No matching guides');
-  await dialog.getByRole('textbox', { name: 'Search terms' }).fill('Outputs and revisions');
-  await dialog.getByRole('link').first().click();
+  await dialog.getByRole('combobox', { name: 'Search terms' }).fill('Outputs and revisions');
+  await dialog.getByRole('option').first().click();
   await expect(page).toHaveURL(/\/agent\/outputs\//);
   await page.goBack();
   await expect(page).toHaveURL(/\/$/);
@@ -110,9 +110,9 @@ test('built docs enforce a script policy without breaking hydration', async ({ p
   await expect(page.locator('meta[http-equiv="content-security-policy"]')).toHaveCount(1);
   await openSearch(page);
   // The search UI builds its input lazily after load; slow CI runners need longer.
-  await expect(page.getByRole('dialog').getByRole('textbox', { name: 'Search terms' })).toBeFocused(
-    { timeout: 15_000 },
-  );
+  await expect(
+    page.getByRole('dialog').getByRole('combobox', { name: 'Search terms' }),
+  ).toBeFocused({ timeout: 15_000 });
   expect(violations).toEqual([]);
   await page.evaluate(() => {
     const script = document.createElement('script');

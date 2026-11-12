@@ -232,4 +232,8 @@ describe('formatMoney', () => {
     expect(formatMoney({ currency: 'USD', amount_minor: 4900 }, 2)).toBe('$49');
     expect(formatMoney({ currency: 'INR', amount_minor: 499900 }, 2)).toContain('4,999');
   });
+  it('groups in one fixed locale, so server render and hydration agree', () => {
+    expect(formatMoney({ currency: 'INR', amount_minor: 44990000 }, 2)).toBe('₹449,900');
+    expect(formatMoney({ currency: 'USD', amount_minor: 1234567 }, 2)).toBe('$12,345.67');
+  });
 });

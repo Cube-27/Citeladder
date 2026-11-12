@@ -26,6 +26,7 @@ import { MissingValue } from '@/components/ui/unavailable-value';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { evidenceFields, searchNumber } from './search-intelligence-format';
 import { SEARCH_COLUMNS_BY_KIND } from '@/lib/config/search-intelligence';
+import { visibilityRunSourcesHref } from '@/lib/visibility/use-visibility-dashboard';
 import { SearchIntelligenceExport } from './search-intelligence-export';
 import type { KeywordFilterValues } from './search-intelligence-collection-state';
 import {
@@ -200,10 +201,7 @@ function EvidenceDrawer({
       ) : null}
       {selected?.row_kind === 'citation_match' &&
       typeof selected.auxiliary.audit_id === 'string' ? (
-        <TextLink
-          href={`/visibility?tab=sources&audit=${selected.auxiliary.audit_id}`}
-          className="w-fit"
-        >
+        <TextLink href={visibilityRunSourcesHref(selected.auxiliary.audit_id)} className="w-fit">
           View in Sources
         </TextLink>
       ) : null}

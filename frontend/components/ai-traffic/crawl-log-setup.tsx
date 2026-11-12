@@ -5,7 +5,7 @@ import {
   LOG_FORMATS,
   logFormatLabel,
 } from '@/lib/ai-traffic/vocabulary';
-import type { useCrawlConnections } from '@/lib/ai-traffic/use-crawl-connections';
+import type { UploadProcessing, useCrawlConnections } from '@/lib/ai-traffic/use-crawl-connections';
 import {
   CLOUDFRONT_LOG_FIELDS,
   CRAWL_LOG_SETUPS,
@@ -34,6 +34,13 @@ const SETUP_STEPS: Partial<Record<(typeof CRAWL_LOG_SETUPS)[number]['value'], st
     'Select HTTP requests, the documented field list and RFC3339 timestamps. Set the Authorization header in the HTTP destination and bound batches to the documented limits. Logpush can reach complete coverage only with unsampled delivery and heartbeats.',
   custom:
     'Map timestamp, host, path, method, status and user_agent to the documented JSON fields. Batch at least 60 seconds apart; send empty heartbeat batches when no crawler requests occur.',
+};
+const UPLOAD_PROCESSING_COPY: Record<UploadProcessing, string> = {
+  processing:
+    'Upload complete. Results appear here once processing finishes, usually within a few minutes.',
+  delayed:
+    'Upload complete. Processing is taking longer than usual; reload this page later to see the results.',
+  processed: 'Upload processed. Coverage for these days is declared by the file.',
 };
 export function CrawlLogSetup({
   model,
@@ -94,7 +101,7 @@ export function CrawlLogSetup({
         </Field>
         {fields}
       </Stack>
-      {mutation.isError ? (
+      {mutation.isError && mutation.variables.kind === 'create' ? (
         <MutationNotice
           notice={mutationNoticeForError(mutation.error, { action: 'set up the crawl-log source' })}
         />
@@ -225,8 +232,6 @@ export function CrawlLogCredential({
   model,
 }: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {
   const { issued, sources } = model;
-  const route = issued?.setup === 'aws_firehose' ? 'firehose' : 'ingest';
-  const endpoint = `${CRAWL_INGEST_ORIGIN}/v1/crawl-logs/${route}/${issued?.id ?? ''}`;
   const pullSource =
     issued?.setup === 'gcp_pubsub_pull'
       ? sources.data?.items.find((source) => source.id === issued.id)
@@ -240,7 +245,17 @@ export function CrawlLogCredential({
         workspaceId={model.workspaceId}
       />
     );
-  return issued ? (
+  return issued ? <IssuedToken issued={issued} /> : null;
+}
+/** A newly issued or rotated token with the endpoint its setup sends to. */
+export function IssuedToken({
+  issued,
+}: Readonly<{
+  issued: Readonly<{ id: string; token: string | null; setup?: string }>;
+}>) {
+  const route = issued.setup === 'aws_firehose' ? 'firehose' : 'ingest';
+  const endpoint = `${CRAWL_INGEST_ORIGIN}/v1/crawl-logs/${route}/${issued.id}`;
+  return (
     <Callout tone="info">
       <Stack>
         {issued.token ? (
@@ -253,7 +268,7 @@ export function CrawlLogCredential({
         ) : null}
       </Stack>
     </Callout>
-  ) : null;
+  );
 }
 /** The dialog's one committing action, held in its footer. */
 export function CrawlLogSetupSubmit({
@@ -340,10 +355,8 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
         </output>
       ) : null}
       {upload.isSuccess ? (
-        <Callout tone={processing ? 'info' : 'positive'}>
-          {processing
-            ? 'Upload complete. Results appear here once processing finishes, usually within a few minutes.'
-            : 'Upload processed. Coverage for these days is declared by the file.'}
+        <Callout tone={processing === 'processed' ? 'positive' : 'info'}>
+          {UPLOAD_PROCESSING_COPY[processing ?? 'processed']}
         </Callout>
       ) : null}
       {upload.isError ? (
