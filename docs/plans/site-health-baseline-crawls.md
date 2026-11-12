@@ -139,3 +139,53 @@ covers every Dashboard screen (owner, 2026-11-12):
    - Rerun snapshots polluting the trend.
    - The trend's comparability checks.
    - `dashboardCrawl` following rerun crawls.
+
+   The owner moved the audit's crawl-model findings into this plan
+   (2026-11-12, [below](#audit-findings-absorbed-2026-11-12)); whether they ship
+   first as small PRs is still open.
+
+## Owner decisions (2026-11-12)
+
+Recorded from the owner's answers in the audit follow-up conversation.
+
+- **SH-B1, one rule for the current crawl.** Every surface uses Site Health's
+  rule: Opportunities, Overview, the Agent, MCP, AI Traffic, verification and
+  internal links. The current crawl is the newest usable crawl that is not a
+  one-page rerun. A rerun updates only its own page's evidence.
+- **SH-B2, issues are tracked page-wise.**
+  - Total issues are tracked per page, not per issue family.
+  - An issue stays open until its issues are resolved on all of its tracked
+    pages; resolving one page never resolves the whole family.
+  - Verification of a declared fix follows the same rule. Every rule a page
+    finding folds together must pass, and a sampled family must not read as
+    fully verified.
+
+## Audit findings absorbed (2026-11-12)
+
+The read-only audit of 2026-11-12 (baseline `000be94d2`) found these defects in
+crawl selection, tracking and verification. They belong to this plan's model,
+not to the [audit remediation plan](audit-remediation.md). Re-confirm each
+finding against current `main` before scoping.
+
+| ID | Severity | Defect | Main owners |
+|---|---|---|---|
+| ARC-001 | High | "Current site crawl" is re-implemented in about 10 places with 4 rules. A one-page rerun becomes the project's site evidence for Opportunities, Overview, the Agent and MCP, and hides the other pages' Actions until the next full crawl (SH-B1) | `site-health/reads/crawl.ts`, `opportunities/sources.ts`, `mcp/evidence-site.ts`, `projects/command-center.ts`, `ai-traffic/pages-data.ts`, `opportunities/declarations.ts`, `measurement-legs.ts`, `site-health/internal-link-runs.ts` |
+| BE-801 | Medium | Site-change Actions, critical regressions included, freeze a `site_rule` check for a rule id no crawl evaluates, so a declared fix never verifies | `config/opportunity.ts`, `opportunities/refresh-hits.ts`, `opportunities/checks/site-rule.ts` |
+| BE-802 | Medium | A page finding that merges several rules keeps one arbitrary rule in its evidence, so it can read Verified while other defects fail (SH-B2) | `opportunities/refresh-compute.ts`, `analysis/opportunities/detectors.ts`, `checks/site-rule.ts` |
+| BE-903 | Medium | Monitored-set swaps and page reruns during an active crawl are analyzed outside that crawl's page-fetch hold, so they are unbilled (metering decision open) | `site-health/selection.ts`, `fetch-budget.ts`, `entitlements/ledger.ts` |
+| BE-806 | Info | Issue-family verification reads Verified when the at most 500 sampled pages pass, even when the family is larger (SH-B2) | `opportunities/checks/issue-family.ts` |
+| BE-106 | Low | A backdated declaration re-checks only the latest `completed` crawl and skips `partially_completed` crawls | `opportunities/declarations.ts` |
+| BE-504 | Low | Snapshot trend and Change summary compare against the newest earlier snapshot of any crawl, ignoring scope and status | `site-health/snapshot.ts`, `change-snapshot.ts` |
+| BE-907 | Low | A page's issue history lists the homepage's still-open site-level findings as resolved | `site-health/reads/issues.ts` |
+| BE-904 | Low | When the monitored-URL allowance drops to zero, the person cannot clear the monitored set | `site-health/selection.ts` |
+| BE-505 | Low | Coverage reports `requested_page_limit_reached` when the frontier was exhausted, because released admissions count | `site-health/coverage.ts`, `frontier.ts` |
+| BE-502 | Low | A page excluded as a canonical alias stays excluded when its target later fails, so neither page is analyzed | `site-health/canonical-alias.ts`, `frontier.ts` |
+| BE-508 | Low | A cancelled crawl publishes final scores without the crawl-finalize check, and the gap is not recorded as unknown | `site-health/lifecycle-finalize.ts` |
+| BE-506 | Low | Analyze-time fetches follow redirects out of the crawl's scope, so an off-site page is scored as the customer's (not SSRF) | `site-health/analyze-task.ts`, `page-fetch.ts` |
+| BE-905 | Low | The crawl URL preview rejects a bare JSON array of `{url}` objects that it accepts inside `{urls: […]}` | `routes/site-health-crawls.ts` |
+| PERF-006 | Info | Each discovered page's admission scans and sorts the whole frontier while holding the workspace lock | `site-health/url-admission.ts` |
+| PERF-007 | Low | Page and inventory keyset pages compute the full projection before applying the cursor | `site-health/reads/page-rows.ts` |
+
+The remediation plan's PR 11 (lock order, BE-001) and PR 24 (Site Health
+screen-state fixes) touch the same modules. Coordinate the order before
+starting either side.

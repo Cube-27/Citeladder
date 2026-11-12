@@ -5,8 +5,13 @@ Remaining work is consolidated in the backlog; historical plans are not active a
 
 ## Active
 
-None. Commerce product tracking and backlog tier 1 shipped on 11 November 2026
-and their plans were deleted. The owner decisions behind them are in
+- [Audit remediation](audit-remediation.md) (owner, 2026-11-12): fixes from the
+  2026-11-12 codebase audit in 10 prioritized specs of parallel PRs, beginning
+  with production safety and the deploy trust root. Its open owner decisions
+  (O-1 to O-3) are not authorized for execution.
+
+Commerce product tracking and backlog tier 1 shipped on 11 November 2026 and
+their plans were deleted. The owner decisions behind them are in
 [decisions](../decisions.md#commerce-product-tracking) (CM1–CM9) and
 [backlog closure](../decisions.md#backlog-closure) (BL1–BL12, which also defer,
 move and remove other backlog work); the feature owners in
@@ -24,8 +29,9 @@ move and remove other backlog work); the feature owners in
 
 - [Site Health baseline crawls](site-health-baseline-crawls.md): discovery
   apart from analysis, baselines that track issue resolution over time, Mark
-  fixed, Re-run all and Ask agent in the drawer. Open for review with the
-  owner; not authorized for execution.
+  fixed, Re-run all and Ask agent in the drawer. It now also holds the audit's
+  crawl-model findings and the owner's decisions SH-B1 and SH-B2 (2026-11-12).
+  Open for review with the owner; not authorized for execution.
 
 ## Queued
 
