@@ -22,6 +22,7 @@ import { finalizeCrawlAnalyses } from './lifecycle-finalize.ts';
 import { rootFailure } from './reads/crawl.ts';
 import type { SiteWorkerSettings } from './runtime.ts';
 import { recordCrawlEvent } from './site-task.ts';
+import { isPageRerun, pageRerunSql } from './page-rerun.ts';
 import { persistCrawlSnapshot, refreshLiveScoreSummary } from './snapshot.ts';
 import type { Crawl } from './site-task.ts';
 import { failedAs } from './task-outcome.ts';
@@ -551,22 +552,21 @@ export async function reconcileOverdue(db: Database, settings: SiteWorkerSetting
  * and the snapshot once. The selection mirrors the snapshot writer's own
  * condition (a completed analysis or classification-expected task of an
  * active monitored page), so a crawl with nothing to publish is never chosen.
+ * A page rerun writes no snapshot, so its `change_intel` successor marks it
+ * published instead.
  */
 export async function publishCancelledCrawls(db: Database, batch: number) {
   const pending = await db
     .selectFrom('site_crawls as c')
     .select(['c.id', 'c.workspace_id'])
     .where('c.status', '=', 'cancelled')
-    .where(({ not, exists, selectFrom }) =>
-      not(
-        exists(
-          selectFrom('site_health_snapshots as s')
-            .select('s.id')
-            .whereRef('s.crawl_id', '=', 'c.id')
-            .whereRef('s.workspace_id', '=', 'c.workspace_id'),
-        ),
-      ),
-    )
+    .where(sql<boolean>`not exists (
+      select 1 from site_health_snapshots s
+      where s.crawl_id = c.id and s.workspace_id = c.workspace_id)`)
+    .where(sql<boolean>`not (${pageRerunSql} and exists (
+      select 1 from site_crawl_tasks t
+      where t.crawl_id = c.id and t.workspace_id = c.workspace_id
+        and t.task_kind = 'change_intel'))`)
     .where(sql<boolean>`(
       exists (
         select 1 from site_page_analyses p
@@ -591,7 +591,8 @@ export async function publishCancelledCrawls(db: Database, batch: number) {
       if (crawl?.status !== 'cancelled') return false;
       await publishFinalPageAnalyses(trx, crawl);
       await persistTerminalCounters(trx, crawl);
-      if (await persistCrawlSnapshot(trx, crawl)) await enqueueSuccessors(trx, crawl);
+      if (isPageRerun(crawl) || (await persistCrawlSnapshot(trx, crawl)))
+        await enqueueSuccessors(trx, crawl);
       return true;
     }),
   );
