@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { UserMenuTrigger } from '@/components/layout/user-menu';
 import { AuthShell } from '@/components/ui/auth-shell';
 import { Button } from '@/components/ui/button';
-import { OnboardingStep } from '@/components/ui/onboarding-shell';
+import { OnboardingShell, OnboardingStep } from '@/components/ui/onboarding-shell';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -84,8 +84,9 @@ function NameWorkspace({ termsRevision }: Readonly<{ termsRevision: string }>) {
   };
 
   return (
-    <AuthShell mainLabel="Workspace setup" barEnd={<UserMenuTrigger presenter="compact" />}>
+    <OnboardingShell mainLabel="Workspace setup" barEnd={<UserMenuTrigger presenter="compact" />}>
       <OnboardingStep
+        width="narrow"
         title="Set up your workspace"
         help="Your projects and team live here. Your trial starts when you create it."
         next={
@@ -126,6 +127,6 @@ function NameWorkspace({ termsRevision }: Readonly<{ termsRevision: string }>) {
           </Stack>
         </form>
       </OnboardingStep>
-    </AuthShell>
+    </OnboardingShell>
   );
 }
