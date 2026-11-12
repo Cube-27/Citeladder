@@ -61,8 +61,10 @@ const nextCompetitorKey = () => {
 };
 
 // Aliases are not edited here; each row carries its own so a rename keeps them.
+// A tracked row carries its `id`, so a rename keeps the competitor and its logo.
 type CompetitorDraft = {
   key: string;
+  id?: string;
   name: string;
   aliases: string[];
   domains: string;
@@ -117,6 +119,7 @@ export function ProjectEditPanel({
   const [competitors, setCompetitors] = useState<CompetitorDraft[]>(() =>
     project.competitors.map((competitor) => ({
       key: nextCompetitorKey(),
+      id: competitor.id,
       name: competitor.name,
       aliases: competitor.aliases,
       domains: competitor.domains.join(', '),
@@ -147,6 +150,7 @@ export function ProjectEditPanel({
           return name
             ? [
                 {
+                  ...(competitor.id === undefined ? {} : { id: competitor.id }),
                   name,
                   aliases: competitor.aliases,
                   domains: splitList(competitor.domains),

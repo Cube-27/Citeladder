@@ -139,7 +139,9 @@ map tab shows those read-only with an **Edit in Prompt Builder** link. A changed
 still clears the fields derived from the old one. Competitors, domains and market are edited in the
 [project editor](../frontend/components/projects/project-edit-panel.tsx) (Context's
 Competitors tab opens it from **Edit competitors**), which
-keeps each competitor's aliases across renames. Overview shows a read-only
+keeps each competitor's aliases across renames. A save writes the lists as a
+diff through the competitor command, so a kept competitor or domain keeps its ID
+(and a competitor its logo), including through a rename. Overview shows a read-only
 summary. Prompt generation and Site Health archetypes read the stored category
 and facets, so a correction there changes what later generation asks.
 

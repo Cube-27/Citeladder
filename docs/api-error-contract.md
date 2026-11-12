@@ -105,7 +105,11 @@ Full rationale in [`frontend-architecture.md`](frontend-architecture.md) §6. In
 response objects use `responseObject` (zod `.strip()`), so an **additive** backend field
 can never break a screen, while a **declared** field that goes missing still fails loud.
 The API and browser import the same response schemas from
-`@citeladder/contracts`; route handlers are typed against those schemas.
+`@citeladder/contracts`; route handlers are typed against those schemas. Under
+`APP_ENV=test` every JSON route's body is also parsed against its schema
+([`routes/response-contract.ts`](../frontend/services/api/src/routes/response-contract.ts)),
+and a field the schema does not declare fails the request, so a spread database
+row cannot leak undeclared columns.
 `pnpm check:contract` validates the route-family declarations and
 API/protocol ingress.
 

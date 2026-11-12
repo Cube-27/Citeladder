@@ -26,6 +26,11 @@ import { promptSetView } from '../prompts/views.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { cleanList, type ProjectCreate, type ProjectUpdate } from './inputs.ts';
 import { brandLogoUrl, competitorLogoUrl } from './logos.ts';
+import { saveCompetitorList } from './competitors.ts';
+import {
+  saveCompetitorList as saveCompetitorListCommand,
+  type CompetitorWriter,
+} from '../commands/competitors.ts';
 import type { ProjectScope } from './brand-profile.ts';
 import { firstOf } from '../lists.ts';
 import { searchContext } from '../search-surfaces/locations.ts';
@@ -133,7 +138,16 @@ async function views(
       [{ name: brandName, aliases: brandAliases }, ...rivals],
     );
     return {
-      ...row,
+      id: row.id,
+      workspace_id: row.workspace_id,
+      name: row.name,
+      website_url: row.website_url,
+      industry: row.industry,
+      subindustry: row.subindustry,
+      primary_market: row.primary_market,
+      country_code: row.country_code,
+      language_code: row.language_code,
+      default_repetitions: row.default_repetitions,
       benchmark_mode: benchmarkModeSchema.parse(row.benchmark_mode),
       brand_name: brandName,
       brand: {
@@ -295,7 +309,8 @@ export async function insertProject(
       updated_at: now,
     })
     .execute();
-  await replaceCollections(db, { workspaceId, projectId: id }, brandId, input, now);
+  await saveCollections(db, { workspaceId, projectId: id }, brandId, input, now);
+  await saveCompetitorList(db, { workspaceId, projectId: id }, input.competitors);
   const fields = {
     description: input.description,
     positioning: input.positioning,
@@ -338,11 +353,12 @@ export async function insertProject(
   return id;
 }
 
-async function replaceCollections(
+/** The brand aliases and the owned and unintended domains; competitors have their own owner. */
+async function saveCollections(
   db: Database,
-  { workspaceId, projectId }: { workspaceId: string; projectId: string },
+  { workspaceId, projectId }: ProjectScope,
   brandId: string,
-  input: ProjectUpdate,
+  input: Pick<ProjectUpdate, 'brand' | 'owned_domains' | 'unintended_domains'>,
   now: Date,
 ) {
   if (input.brand !== undefined) {
@@ -360,45 +376,65 @@ async function replaceCollections(
     }));
     if (values.length) await db.insertInto('brand_aliases').values(values).execute();
   }
-  // One transaction connection: finish each delete before inserting its replacement rows.
+  // One transaction connection: each list's statements run in order.
   for (const [table, values] of [
     ['owned_domains', input.owned_domains],
     ['unintended_domains', input.unintended_domains],
   ] as const) {
-    if (values === undefined) continue;
+    if (values !== undefined)
+      await saveDomainList(db, table, { workspaceId, projectId }, cleanList(values), now); // NOSONAR -- One transaction: statements run in order.
+  }
+}
+
+/**
+ * Save a domain list as a diff: a submitted domain matching a stored one
+ * (case-insensitively) keeps its row and ID, new ones are added and the rest
+ * removed.
+ */
+async function saveDomainList(
+  db: Database,
+  table: 'owned_domains' | 'unintended_domains',
+  { workspaceId, projectId }: ProjectScope,
+  domains: readonly string[],
+  now: Date,
+) {
+  const stored = await db
+    .selectFrom(table)
+    .select(['id', 'domain'])
+    .where('workspace_id', '=', workspaceId)
+    .where('project_id', '=', projectId)
+    .execute();
+  const submitted = new Map(domains.map((domain) => [domain.toLowerCase(), domain]));
+  const kept = new Set<string>();
+  const removed: string[] = [];
+  for (const row of stored) {
+    const key = row.domain.toLowerCase();
+    const domain = kept.has(key) ? undefined : submitted.get(key);
+    if (domain === undefined) {
+      removed.push(row.id);
+      continue;
+    }
+    kept.add(key);
+    if (domain !== row.domain)
+      await db.updateTable(table).set({ domain }).where('id', '=', row.id).execute(); // NOSONAR -- One transaction: statements run in order.
+  }
+  if (removed.length)
     await db
       .deleteFrom(table)
       .where('workspace_id', '=', workspaceId)
       .where('project_id', '=', projectId)
-      .execute(); // NOSONAR -- One transaction: delete before its replacement rows.
-    const rows = cleanList(values).map((domain) => ({
+      .where('id', 'in', removed)
+      .execute();
+  const added = [...submitted]
+    .filter(([key]) => !kept.has(key))
+    .map(([, domain]) => ({
       id: randomUUID(),
       workspace_id: workspaceId,
       project_id: projectId,
       domain,
       created_at: now,
     }));
-    if (rows.length) await db.insertInto(table).values(rows).execute(); // NOSONAR -- One transaction: statements run in order.
-  }
-  if (input.competitors !== undefined) {
-    await db
-      .deleteFrom('competitors')
-      .where('workspace_id', '=', workspaceId)
-      .where('project_id', '=', projectId)
-      .execute();
-    const values = input.competitors.map((item) => ({
-      id: randomUUID(),
-      workspace_id: workspaceId,
-      project_id: projectId,
-      name: item.name,
-      aliases: JSON.stringify(cleanList(item.aliases)),
-      domains: JSON.stringify(cleanList(item.domains)),
-      logo_asset_id: null,
-      created_at: now,
-      updated_at: now,
-    }));
-    if (values.length) await db.insertInto('competitors').values(values).execute();
-  }
+  if (added.length) await db.insertInto(table).values(added).execute();
 }
 
 export async function createProject(
@@ -469,7 +505,17 @@ async function replaceEntityMatching(
     .execute();
 }
 
-export async function updateProject(db: Database, scope: ProjectScope, input: ProjectUpdate) {
+/**
+ * The project editor's save. The competitor list goes through the competitor
+ * command as a diff, so the actor is checked against its permission.
+ */
+export async function updateProject(
+  db: Database,
+  actor: CompetitorWriter,
+  projectId: string,
+  input: ProjectUpdate,
+) {
+  const scope = { workspaceId: actor.workspaceId, projectId };
   await db.transaction().execute(async (trx) => {
     await acquireProjectLock(trx, scope.projectId);
     const row = await projectRow(trx, scope);
@@ -507,13 +553,15 @@ export async function updateProject(db: Database, scope: ProjectScope, input: Pr
         .set({ name: input.brand_name, updated_at: new Date() })
         .where('id', '=', brand.id)
         .execute();
-    await replaceCollections(
+    await saveCollections(
       trx,
-      { workspaceId: scope.workspaceId, projectId: row.id },
+      scope,
       brand.id,
-      { brand: brandInput, competitors, owned_domains, unintended_domains },
+      { brand: brandInput, owned_domains, unintended_domains },
       new Date(),
     );
+    if (competitors !== undefined)
+      await saveCompetitorListCommand(trx, actor, scope.projectId, competitors);
     if (entity_matching !== undefined) await replaceEntityMatching(trx, scope, entity_matching);
   });
   return readProject(db, scope);

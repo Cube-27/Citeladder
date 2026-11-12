@@ -4,6 +4,8 @@ import { projectMarketCreateSchema, projectMarketSchema } from '@citeladder/cont
 import { z } from 'zod';
 
 import { budget, spendBudget } from '../abuse/usage.ts';
+import { COMPETITORS_WRITE } from '../commands/competitors.ts';
+import { routeActor } from '../commands/permission.ts';
 import { readBody } from '../http/body.ts';
 import { projectCreate, projectUpdate } from '../projects/inputs.ts';
 import {
@@ -67,14 +69,15 @@ export const projectRoutes = [
     family,
     path: `${root}/{project_id}`,
     authorize: 'active-project',
-    capability: 'write',
+    permission: COMPETITORS_WRITE,
     params: { path: projectPath, query: {} },
     body: projectUpdate,
     response: projectSchema,
     async handle({ c, db }, { path }) {
       return updateProject(
         db,
-        { workspaceId: c.get('workspace').workspaceId, projectId: path.project_id },
+        routeActor(c, COMPETITORS_WRITE),
+        path.project_id,
         await readBody(c, projectUpdate),
       );
     },
