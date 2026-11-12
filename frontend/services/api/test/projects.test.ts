@@ -14,6 +14,7 @@ import {
   removeProject,
 } from '../src/projects/service.ts';
 import { hold } from '../src/entitlements/ledger.ts';
+import { appendCostProjection } from '../src/audits/costs.ts';
 import { advisoryXactLock } from '../src/db/advisory-lock.ts';
 import { commandCenter } from '../src/projects/command-center.ts';
 import { getVisibility } from '../src/visibility/dashboard.ts';
@@ -368,6 +369,47 @@ describe('project owner', () => {
       },
     ]);
     expect((await app.request('/api/v1/projects')).status).toBe(401);
+  });
+  it("keeps a deleted project's answer-engine costs with their exact source IDs", async () => {
+    const retained = new VisibilityFixtures(db);
+    const t = await retained.tenant();
+    const account = await billingAccount(db, t.workspaceId);
+    await grant(db, account, { key: 'project_deletion', value: 1 });
+    const audit = await retained.audit(t);
+    const { taskId } = await retained.execution(t, { auditId: audit });
+    const artifact = await db
+      .selectFrom('raw_response_artifacts')
+      .select('id')
+      .where('task_id', '=', taskId)
+      .executeTakeFirstOrThrow();
+    const projection = await db
+      .transaction()
+      .execute((trx) => appendCostProjection(trx, t.workspaceId, artifact.id));
+    await deleteProject(db, { workspaceId: t.workspaceId, projectId: t.projectId });
+    expect(
+      await db
+        .selectFrom('execution_cost_projections')
+        .select(['audit_id', 'task_id', 'raw_response_artifact_id'])
+        .where('id', '=', projection!.id)
+        .execute(),
+    ).toEqual([{ audit_id: audit, task_id: taskId, raw_response_artifact_id: artifact.id }]);
+    expect(
+      await db
+        .selectFrom('internal_costs')
+        .select(['source', 'workspace_id', 'feature', 'provider', 'model', 'cost_microusd'])
+        .where('source_id', '=', projection!.id)
+        .execute(),
+    ).toEqual([
+      {
+        source: 'answer_engine',
+        workspace_id: t.workspaceId,
+        feature: 'chatgpt',
+        provider: 'test',
+        model: 'test-model',
+        // The fixture's answer reports no usage: its cost is unknown, not zero.
+        cost_microusd: null,
+      },
+    ]);
   });
   it('deletes a project with audit history once its credits are settled, keeping the ledger and its source IDs', async () => {
     const retained = new VisibilityFixtures(db);

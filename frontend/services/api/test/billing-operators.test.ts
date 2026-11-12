@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { beforeAll, afterAll, expect, it } from 'vitest';
 import { setLogSink } from '../src/logging.ts';
-import { Fixtures, testDatabase } from './support.ts';
+import { asOwner, Fixtures, testDatabase } from './support.ts';
 import {
   catalogMutation,
   grantMutation,
@@ -64,8 +64,13 @@ beforeAll(async () => {
   )?.revision;
 });
 afterAll(async () => {
-  if (revisions.length)
+  if (revisions.length) {
+    // Import requests are append-only for the application role.
+    await asOwner((owner) =>
+      owner.deleteFrom('billing_catalog_imports').where('revision', 'in', revisions).execute(),
+    );
     await db.deleteFrom('billing_catalog_revisions').where('revision', 'in', revisions).execute();
+  }
   if (originallyPublished)
     await db
       .updateTable('billing_catalog_revisions')
@@ -101,10 +106,18 @@ it('replaces a draft never published under a new request, and never a published 
         .where('revision', '=', revision)
         .executeTakeFirstOrThrow() as Promise<{ payload: { contact_sales_url: string } }>
     ).then((row) => row.payload.contact_sales_url === `https://example.test/${label}`);
-  await catalogMutation(db, context(), { kind: 'import', revision, payload: authored('first') });
+  const first = context();
+  const firstImport = { kind: 'import' as const, revision, payload: authored('first') };
+  await catalogMutation(db, first, firstImport);
   // Binding provider plans re-imports the draft with its references.
   await catalogMutation(db, context(), { kind: 'import', revision, payload: authored('bound') });
   expect(await payload('bound')).toBe(true);
+  // The first request's replay answers from its own record, not by rewriting the draft.
+  expect(await catalogMutation(db, first, firstImport)).toEqual({ revision, state: 'draft' });
+  expect(await payload('bound')).toBe(true);
+  await expect(
+    catalogMutation(db, { ...first, reason: 'a different reason' }, firstImport),
+  ).rejects.toThrow('catalog_idempotency_conflict');
   await catalogMutation(db, context(), { kind: 'publish', revision });
   await expect(
     catalogMutation(db, context(), { kind: 'import', revision, payload: authored('late') }),
@@ -121,7 +134,7 @@ it('replays immutable imports, rejects changed requests and serializes competing
   await catalogMutation(db, ctx, operation);
   await expect(
     catalogMutation(db, ctx, { ...operation, payload: authored('conflict') }),
-  ).rejects.toThrow('revision_conflict');
+  ).rejects.toThrow('catalog_idempotency_conflict');
   await expect(catalogMutation(db, ctx, { ...operation, revision: b })).rejects.toThrow(
     'idempotency_conflict',
   );
@@ -202,6 +215,17 @@ it('issues and revokes once, exposes same-transaction projection, and enforces e
   const issued = await grantMutation(db, ctx, target(), operation);
   await grantMutation(db, ctx, target(), operation);
   expect(await version()).toBe(initialVersion + 1);
+  // The override's reason is grant evidence, and a replay must repeat it.
+  expect(
+    await db
+      .selectFrom('account_grants')
+      .select('reason')
+      .where('id', 'in', issued.grant_ids!)
+      .execute(),
+  ).toEqual([{ reason: 'reviewed fixture operation' }]);
+  await expect(
+    grantMutation(db, { ...ctx, reason: 'a different reason' }, target(), operation),
+  ).rejects.toThrow('grant_idempotency_conflict');
   await expect(grantMutation(db, ctx, target(), { ...operation, value: 200 })).rejects.toThrow(
     'idempotency_conflict',
   );

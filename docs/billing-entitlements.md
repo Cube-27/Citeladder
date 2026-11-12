@@ -268,7 +268,8 @@ feature spends. Every recorded cost is one row of the `internal_costs` view:
 platform calls (`platform_calls.cost_microusd`), Agent model calls
 (`agent_model_attempts.cost_microusd`, recorded whoever funds the call) and
 answer-engine executions (their latest `execution_cost_projections` row). A
-null cost is unknown, never zero. An uncharged call's cost row is written on
+cost row keeps its source IDs and the engine, provider and model it was priced
+for, and outlives a deleted project, like the other two. A null cost is unknown, never zero. An uncharged call's cost row is written on
 the caller's connection, inside its transaction when it has one, and a row
 that cannot be written fails the call; an Agent call's cost is written in the
 transaction that settles its debit (B65). A platform-wide daily breaker in the

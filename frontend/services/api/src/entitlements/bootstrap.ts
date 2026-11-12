@@ -214,6 +214,7 @@ export async function issueDevelopmentAccess(
     key,
     sourceKind: 'override',
     source: { kind: 'override', actorId: input.userId },
+    reason: input.reason,
     specs,
     revision: policy.entitlements.registry_revision,
     from: new Date(),

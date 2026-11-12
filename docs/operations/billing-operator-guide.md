@@ -47,6 +47,9 @@ input or database diagnostics.
 Use a fresh idempotency key for a different logical request. Reuse the original
 key only to replay the same request. Import/seed and publish are separate requests
 and need separate keys; cross-operation reuse reports `catalog_idempotency_operation_conflict`.
+A replay that changes the revision, payload or reason reports
+`catalog_idempotency_conflict`; a grant replay with another reason reports
+`grant_idempotency_conflict`. A grant stores its `--reason` with the grant.
 A bootstrap-created revision cannot be reimported to replace its attribution:
 `catalog_bootstrap_revision_exists` requires preparing a new reviewed revision.
 Save the command, redacted output, reviewer,
@@ -113,6 +116,8 @@ the key with a `:publish` suffix. A dry-run import is rolled back, so dry-run
 without `--publish` and add `--publish --apply` once reviewed. A draft that was
 never published is replaced by a later import under a new idempotency key (for
 example once its plans are bound); a published or retired revision never is.
+Replaying the earlier import request returns its revision without restoring its
+payload.
 
 ```bash
 pnpm --filter @citeladder/api billing:plans bind \
