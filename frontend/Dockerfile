@@ -73,8 +73,8 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
-# This image runs the marketing Worker in local Compose only. Protected GCP
-# delivery keeps the captured pre-cutover image digest for rollback.
+# This image runs the marketing Worker in local Compose only; GCP delivery
+# publishes no frontend image.
 COPY --from=wrangler --chown=node:node /wrangler/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/apps/marketing/dist ./apps/marketing/dist
 COPY --from=builder --chown=node:node /app/apps/marketing/wrangler.jsonc ./apps/marketing/wrangler.jsonc

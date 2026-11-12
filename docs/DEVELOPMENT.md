@@ -536,11 +536,30 @@ fails, and the deploy stops before the API rolls forward, when:
 
 - an applied file's recorded checksum differs from the file (it was edited);
 - the database recorded a version this release lacks, or skipped one;
-- the database has tables but no ledger.
+- the database has tables but no ledger;
+- a statement waits on a lock longer than `MIGRATION_LOCK_TIMEOUT_MS`
+  (default 3 s) or runs longer than `MIGRATION_STATEMENT_TIMEOUT_MS` (default
+  5 min). A DDL statement queued behind a serving transaction would otherwise
+  queue every later query on that table behind itself. The whole apply rolls
+  back, so a rerun is safe.
 
 Every schema change is a new file that applies cleanly to the production
 schema and its existing rows; never edit an applied file, the baseline
-included. `DATABASE_URL` must be explicit; `DB_SSL_MODE=require` encrypts the
+included.
+
+**Expand and contract.** A deploy migrates while the previous API revision and
+any running runner execution still serve, and a rollback runs older code on the
+newer schema. So a migration must work with the code already deployed:
+
+- **Expand** (new tables, nullable columns or columns with a default, new
+  indexes, relaxed constraints) ships with the code that uses it.
+- **Contract** (`DROP COLUMN`, `DROP TABLE`, a rename, `SET NOT NULL`, a
+  tightened constraint) ships one release after the code stops using the name:
+  release N stops reading and writing it, and is deployed; release N+1 drops
+  it. A rename is an expand (new name), a release that moves the code, then a
+  contract (old name).
+
+`DATABASE_URL` must be explicit; `DB_SSL_MODE=require` encrypts the
 connection. `--wait-seconds N` retries the first connection, for a database VM
 that is still starting. Bring the local development database forward with the
 same command; verify the complete schema from an empty disposable database:

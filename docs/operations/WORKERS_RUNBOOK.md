@@ -340,7 +340,8 @@ protected release record. Local `.env` values do not populate GitHub Actions or
 Cloudflare Worker secrets. Do not paste secret values into a PR, issue or chat.
 
 1. **GitHub → Settings → Environments:** verify `gcp-demo`,
-   `workers-app-production` and `workers-marketing-production`. Restrict each
+   `workers-app-production` (which also deploys the API host Worker),
+   `workers-marketing-production` and `workers-docs-production`. Restrict each
    deployment to `main` and require the release reviewer. In each Worker
    environment, set secret `CLOUDFLARE_API_TOKEN` and variable
    `CLOUDFLARE_ACCOUNT_ID`. The token needs permissions to publish Workers and
@@ -357,8 +358,8 @@ Cloudflare Worker secrets. Do not paste secret values into a PR, issue or chat.
    Workers. Keep MX, SPF, DKIM and DMARC untouched. Turn off public
    `workers.dev` and version preview URLs, as checked-in configuration
    requires.
-3. **Cloudflare → Worker secrets:** put `ORIGIN_TOKEN` on `citeladder-app` and
-   `citeladder-marketing`, matching `CITELADDER_ORIGIN_TOKEN`. Rotate it using
+3. **Cloudflare → Worker secrets:** put `ORIGIN_TOKEN` on `citeladder-app`,
+   `citeladder-marketing` and `citeladder-api-host`, matching `CITELADDER_ORIGIN_TOKEN`. Rotate it using
    the overlap procedure above; never use local `.env` as delivery.
 4. **Google / enabled integrations:** register the exact app-host OAuth
    callbacks in the existing Google client:
