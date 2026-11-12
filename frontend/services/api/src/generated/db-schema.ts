@@ -842,7 +842,7 @@ export interface BillingSubscriptions {
   is_current: boolean;
   provider: string;
   provider_mode: string;
-  provider_state_version: number;
+  provider_state_version: Int8;
   quantity: Generated<number>;
   reconciliation_lease_expires_at: Timestamp | null;
   reconciliation_lease_token: string | null;

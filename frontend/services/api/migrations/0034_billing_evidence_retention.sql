@@ -107,3 +107,9 @@ FROM (
     FROM public.execution_cost_projections AS e
     ORDER BY e.raw_response_artifact_id, e.created_at DESC, e.id DESC
 ) AS p;
+
+-- 4. A subscription's evidence version is the Unix second the provider served
+--    it (BE-004), which outgrows integer in January 2038.
+
+ALTER TABLE public.billing_subscriptions
+    ALTER COLUMN provider_state_version TYPE bigint;
