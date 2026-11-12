@@ -46,6 +46,12 @@ beforeEach(async () => {
     owner: 'discovery-test-setup',
     taskScope: { workspaceId: t.workspaceId, taskIds: backfill.map((row) => row.id) },
   }).runOnce();
+  // The import and its backfill also ask for an Opportunity refresh; that is not discovery work.
+  await db
+    .deleteFrom('analytics_tasks')
+    .where('workspace_id', '=', t.workspaceId)
+    .where('task_kind', '=', 'opportunity_refresh')
+    .execute();
   const product = await db
     .selectFrom('commerce_products')
     .select('id')

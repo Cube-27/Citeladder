@@ -141,6 +141,26 @@ describe('frozen Commerce shelf projections', () => {
     expect(observedPrice('$1,299.50', 'en-US')).toEqual({ price: 1299.5, currency: 'USD' });
     expect(observedPrice('$12.50', 'en')).toEqual({ price: 12.5, currency: '' });
   });
+  // The narrow no-break space `Intl.NumberFormat('fr-FR')` groups thousands with.
+  const NARROW_NBSP = String.fromCodePoint(0x202f);
+  it.each([
+    ['Grab it for $59.', 'en-US', 59, 'USD'],
+    ['The Pro costs $129.99, the Lite less.', 'en-US', 129.99, 'USD'],
+    ['Around $1,299. Worth it', 'en-US', 1299, 'USD'],
+    ['Only €1.299,50; ships today', 'de-DE', 1299.5, 'EUR'],
+    [`Priced at €1${NARROW_NBSP}299,50 in France`, 'fr-FR', 1299.5, 'EUR'],
+    ['Swiss list: EUR 1’299.00 here', 'de-CH', 1299, 'EUR'],
+    ['Listed at ₹1,23,456.', 'en-IN', 123456, 'INR'],
+  ])('reads the price in %j', (span, locale, price, currency) => {
+    expect(observedPrice(span, locale)).toEqual({ price, currency });
+  });
+  it('reads no price from malformed grouping', () => {
+    expect(observedPrice('about $1,23,4 each', 'en-US')).toEqual({ price: null, currency: 'USD' });
+    expect(observedPrice(`about $12${NARROW_NBSP}34 each`, 'en-US')).toEqual({
+      price: null,
+      currency: 'USD',
+    });
+  });
   it('sends one resolver call per answer, for unmatched spans with a product signal only', async () => {
     const calls: string[][] = [];
     await prepareRecommendations(

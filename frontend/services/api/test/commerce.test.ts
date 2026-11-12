@@ -292,7 +292,8 @@ describe('CSV evidence and catalog', () => {
       csv_row_number: 2,
       importer_version: policy.commerce.importer_version,
     });
-    // The one import is one catalog revision, whose only work is re-matching recent answers.
+    // The one import is one catalog revision, whose work is re-matching recent
+    // answers and refreshing the Opportunities its catalog fields feed.
     const revisions = await db
       .selectFrom('commerce_catalog_revisions')
       .select(['id', 'revision_number', 'source_kind', 'source_id'])
@@ -312,11 +313,16 @@ describe('CSV evidence and catalog', () => {
         .selectFrom('analytics_tasks')
         .select(['task_kind', 'payload'])
         .where('project_id', '=', t.projectId)
+        .orderBy('task_kind')
         .execute(),
     ).toEqual([
       {
         task_kind: 'commerce_answer_matching',
         payload: { catalog_revision_id: revisions[0]!.id },
+      },
+      {
+        task_kind: 'opportunity_refresh',
+        payload: { trigger_kind: 'commerce_catalog_import', trigger_id: one.body.import_id },
       },
     ]);
     const update = await importCsv('sku,title,brand\nA1,Updated,Acme\n');

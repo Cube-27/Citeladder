@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { auditPolicy } from '../audits/config.ts';
 import { casefold } from '../casefold.ts';
 import { canonicalPage } from '../page-identity.ts';
-import { localizedPrice } from './projection-facts.ts';
+import { AMOUNT_CHARACTERS, localizedPrice } from './projection-facts.ts';
 import { onlyOf } from '../lists.ts';
 import { domainMatches } from '../analysis/domains.ts';
 import { stripTrailing } from '../text-order.ts';
@@ -264,12 +264,15 @@ export async function prepareRecommendations(
   });
 }
 
+const OBSERVED_PRICE = new RegExp(
+  String.raw`([$£€₹]|AUD|USD|CAD|NZD|GBP|EUR|INR)\s*(\d[${AMOUNT_CHARACTERS}]*)`,
+  'iu',
+);
 export function observedPrice(
   span: string,
   locale: string,
 ): { price: number | null; currency: string } {
-  const [, symbol, amount] =
-    /([$£€₹]|AUD|USD|CAD|NZD|GBP|EUR|INR)\s*(\d[\d,.]*)/iu.exec(span) ?? [];
+  const [, symbol, amount] = OBSERVED_PRICE.exec(span) ?? [];
   if (symbol === undefined || amount === undefined) return { price: null, currency: '' };
   const marker = symbol.toUpperCase();
   const currencies = new Set(

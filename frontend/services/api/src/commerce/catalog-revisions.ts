@@ -15,6 +15,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
 import { WorkspaceEntitlements } from '../entitlements/access.ts';
+import { enqueueDerivedOpportunityRefresh } from '../opportunities/enqueue.ts';
 import { enqueueCoalesced, enqueueTask } from '../queue/enqueue.ts';
 import type { CommerceScope } from './reads.ts';
 import { competitorSchema, productSchema, type ShelfCatalog } from './shelf-parsing.ts';
@@ -92,6 +93,15 @@ export async function recordCatalogRevision(
   source: RevisionSource,
 ): Promise<CatalogRevision | null> {
   if (!(await grantsCommerce(db, scope.workspaceId))) return null;
+  // A catalog write moves catalog-field findings even when the matching
+  // identity is unchanged (a description or price edit), so it asks for a
+  // refresh; an audit admission's own completion already announces one.
+  if (source.kind !== 'audit')
+    await enqueueDerivedOpportunityRefresh(db, {
+      ...scope,
+      triggerKind: `commerce_catalog_${source.kind}`,
+      triggerId: source.id ?? scope.projectId,
+    });
   // Revision numbers are per project; concurrent writers take them in turn.
   await subjectXactLock(db, `commerce_catalog_revision:${scope.workspaceId}:${scope.projectId}`);
   const identity = await catalogIdentity(db, scope);

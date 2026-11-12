@@ -199,6 +199,21 @@ describe('a Shopify storefront', () => {
       },
     ]);
   });
+  it('reads a description as the visible text of its HTML', () => {
+    const page = JSON.stringify({
+      products: [
+        {
+          title: 'Café Mug',
+          handle: 'cafe-mug',
+          body_html:
+            '<p title="a > b">Caf&eacute; &lt;mug&gt;&nbsp;&mdash; it&apos;s</p><script>track("x")</script><style>p{}</style><p>500&nbsp;ml',
+          variants: [],
+        },
+      ],
+    });
+    const [item] = catalogItems('shopify', JSON.stringify({ store: 'acme.com', pages: [page] }));
+    expect(item).toMatchObject({ values: { description: "Café <mug> — it's 500 ml" } });
+  });
 });
 
 describe('prices and the category tree', () => {

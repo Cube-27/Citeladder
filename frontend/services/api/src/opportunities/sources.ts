@@ -102,6 +102,24 @@ export async function resolveCommerceMatchPassId(
   return latest?.id ?? null;
 }
 
+/**
+ * A digest of every catalog product row, or null without one: catalog-field
+ * findings and the per-product metrics read the products' own fields, so an
+ * edit, import or projection that changes any of them is new Commerce evidence
+ * even when no match pass is recorded.
+ */
+export async function resolveCommerceCatalogRevision(
+  db: Database,
+  scope: Scope,
+): Promise<string | null> {
+  const { rows } = await sql<{ revision: string | null }>`
+    select md5(string_agg(to_jsonb(p)::text, ',' order by p.id)) as revision
+    from commerce_products p
+    where p.workspace_id = ${scope.workspaceId} and p.project_id = ${scope.projectId}
+  `.execute(db);
+  return rows[0]?.revision ?? null;
+}
+
 /** The current Site Health crawl, or null before the project has one. */
 export async function resolveCrawl(db: Database, scope: Scope) {
   return (await crawls(db, scope).executeTakeFirst()) ?? null;

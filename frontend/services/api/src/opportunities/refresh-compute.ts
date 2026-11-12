@@ -210,7 +210,8 @@ type CurrentSnapshot = {
 };
 
 /**
- * Every persisted input a refresh reads, by identity: the audit, crawl (and the
+ * Every persisted input a refresh reads, by identity: the audit, the Commerce
+ * run, match pass and catalog fields, crawl (and the
  * newest page rerun it folds in), demand revision, internal-link run,
  * source-page revision, keyword-gap datasets and content-angle run.
  * Two refreshes over equal identities compute the same set.
@@ -221,6 +222,8 @@ export type SourceIdentity = {
   commerce_audit_id: string | null;
   /** The newest match pass, read for the per-product metric findings. */
   commerce_match_pass_id: string | null;
+  /** The catalog products' fields, read for catalog-field and per-product findings. */
+  commerce_catalog_revision: string | null;
   site_crawl_id: string | null;
   /** The newest page rerun the crawl's view folds in (`foldedRerunId`). */
   site_rerun_id: string | null;

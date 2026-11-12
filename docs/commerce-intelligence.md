@@ -364,7 +364,11 @@ no pass for that revision, `batch_size` answers per transaction, as `backfill`
 passes. Backfill is deterministic only: token and URL matching and carousel
 cards, never the model resolver, so a span that would need it reads
 `unavailable`. A revision a newer one superseded stops before its next batch,
-since the newer revision's task covers the same answers. Leases, retries and cancellation stay
+since the newer revision's task covers the same answers. A matched window
+requests an `opportunity_refresh` (trigger `commerce_catalog_revision`), and so
+does every catalog write (import, edit, projection, competitor decision) whether
+or not it records a revision; both join a refresh still queued for the project
+([Opportunities](opportunities.md)). Leases, retries and cancellation stay
 with the shared analytics worker. Raw answers are never rewritten: reads use
 the latest pass per answer (highest revision, then newest) and keep older
 passes as history. Policy lives in `answer_matching` in `config/commerce.ts`.

@@ -21,6 +21,7 @@ import { record } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
 import { groupBy, type NonEmpty } from '../lists.ts';
 import { canonicalUrl } from '../site-health/url-identity.ts';
+import { fragmentText } from '../web-evidence/html.ts';
 import { categoryKey, isCategoryName } from './projection-facts.ts';
 
 export type CatalogFormat = CatalogImportStage['source_format'];
@@ -371,16 +372,6 @@ const shopifyPage = z.object({ products: z.array(z.unknown()) });
 /** The stored payload of a storefront fetch: the store host and each page body as fetched. */
 const shopifyPayloadSchema = z.object({ store: z.string(), pages: z.array(z.string()) });
 
-/** HTML description text: tags removed, whitespace collapsed. */
-const plainText = (html: string) =>
-  html
-    // `[^<>]` keeps an unclosed `<` from rescanning the rest of the text.
-    .replaceAll(/<[^<>]*>/gu, ' ')
-    .replaceAll('&nbsp;', ' ')
-    .replaceAll('&amp;', '&')
-    .replaceAll(/\s+/gu, ' ')
-    .trim();
-
 function shopifyItem(store: string, rowNumber: number, raw: unknown): CatalogItem {
   return rowItem(rowNumber, () => {
     const parsed = shopifyProduct.safeParse(raw);
@@ -405,7 +396,7 @@ function shopifyItem(store: string, rowNumber: number, raw: unknown): CatalogIte
       values: validValues({
         name: product.title,
         brand: product.vendor ?? '',
-        description: plainText(product.body_html ?? ''),
+        description: fragmentText(product.body_html ?? ''),
         price: low,
         price_max: high !== undefined && high !== low ? high : undefined,
         canonical_url: `https://${store}/products/${encodeURIComponent(product.handle)}`,

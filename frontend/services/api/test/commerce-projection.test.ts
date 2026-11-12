@@ -433,6 +433,20 @@ describe('projection decisions over stored facts', () => {
       expect(projected.values.price).toBeNull();
     },
   );
+  it.each([
+    ['$59.', 59, ''],
+    ['$129.99,', 129.99, ''],
+    // `Intl.NumberFormat('fr-FR')`: narrow no-break space groups, no-break space before the sign.
+    [`1${String.fromCodePoint(0x202f)}299,50${String.fromCodePoint(0xa0)}€`, 1299.5, 'EUR'],
+    ['EUR 1’299.–', 1299, 'EUR'],
+    ['₹12,34,567', 1234567, 'INR'],
+  ])('reads the visible price %j', (visible, price, currency) => {
+    const projected = productFacts(
+      stored({ title: 'Widget', commerce: { visible_price: visible } }),
+      'https://shop.example.com/p',
+    );
+    expect([projected.values.price, projected.values.currency]).toEqual([price, currency]);
+  });
   it('uses structured prices before visible prices and rejects invalid stored facts', () => {
     const projected = productFacts(
       stored({
