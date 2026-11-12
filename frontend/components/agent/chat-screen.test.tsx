@@ -415,10 +415,13 @@ describe('ChatScreen', () => {
     expect(await screen.findByText('Deciding the next step…')).toBeVisible();
     expect(live).toHaveTextContent('Partly written');
     release();
-    expect(await screen.findByText('The saved answer.')).toBeVisible();
-    expect(
-      screen.queryByRole('article', { name: 'Agent reply in progress' }),
-    ).not.toBeInTheDocument();
+    // The saved reply replaces the live one; the two may land in separate renders.
+    await vi.waitFor(() => {
+      expect(screen.getByText('The saved answer.')).toBeVisible();
+      expect(
+        screen.queryByRole('article', { name: 'Agent reply in progress' }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it('waits while the page is read, then runs the turn the fetch queued', async () => {
