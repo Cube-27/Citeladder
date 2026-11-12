@@ -153,13 +153,7 @@ const terminalOverview = (overrides: Record<string, unknown> = {}) => ({
     },
     limitations: ['HTTP evidence only; browser layout was not measured.'],
   },
-  trend: {
-    state: 'unavailable',
-    reason: 'no_comparable_snapshot',
-    metric: 'aeo_readiness_score',
-    series: [{ label: '2026-08-30', value: 72 }],
-    cohort_composition: UNCHANGED_COHORT_COMPOSITION,
-  },
+  open_issue_trend: [{ day: '2026-08-30', open_count: 7 }],
   change_summary: {
     state: 'unavailable',
     reason: 'no_comparable_snapshot',
@@ -317,6 +311,37 @@ describe('OverviewPanel', () => {
     ]);
   });
 
+  it('plots open issues per day, oldest first', async () => {
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
+        HttpResponse.json(
+          terminalOverview({
+            open_issue_trend: [
+              { day: '2026-08-28', open_count: 12 },
+              { day: '2026-08-30', open_count: 9 },
+            ],
+          }),
+        ),
+      ),
+    );
+    renderWithProviders(
+      <OverviewPanel
+        projectId={PROJECT}
+        crawlId={CRAWL}
+        crawl={{ status: 'completed' } as never}
+        dashboard={undefined}
+      />,
+    );
+
+    const table = await screen.findByRole('table', { name: 'Open issues over time' });
+    expect(
+      within(table)
+        .getAllByRole('row')
+        .map((row) => row.textContent),
+    ).toEqual(['Series2026-08-282026-08-30', 'Open issues129']);
+    expect(screen.queryByRole('heading', { name: 'AEO Readiness trend' })).not.toBeInTheDocument();
+  });
+
   it('explains a changed scored cohort once, beside the score changes', async () => {
     const changedComposition = {
       added_page_kinds: ['product'],
@@ -328,16 +353,6 @@ describe('OverviewPanel', () => {
       http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
         HttpResponse.json(
           terminalOverview({
-            trend: {
-              state: 'measured',
-              reason: 'cohort_composition_changed',
-              metric: 'aeo_readiness_score',
-              series: [
-                { label: '2026-08-29', value: 70 },
-                { label: '2026-08-30', value: 72 },
-              ],
-              cohort_composition: changedComposition,
-            },
             change_summary: {
               state: 'measured',
               reason: 'cohort_composition_changed',
@@ -357,7 +372,7 @@ describe('OverviewPanel', () => {
       />,
     );
 
-    expect(await screen.findByRole('heading', { name: 'AEO Readiness trend' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Change summary' })).toBeVisible();
     expect(screen.getAllByText('Scored cohort composition changed.')).toHaveLength(1);
     expect(
       screen.getByText(

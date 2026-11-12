@@ -6,17 +6,17 @@ order: 130
 updated: '2026-11-12'
 ---
 
-A Site Health crawl captures pages from your website and analyzes their technical and content properties. Begin with **Run new crawl**, then review the crawl's scope, progress and coverage. **Recrawl** reruns the shown crawl with the same scope and settings, so Changes compares like with like.
+A Site Health crawl captures pages from your website and analyzes their technical and content properties. Begin with **Run new crawl**, then review the crawl's scope, progress and coverage. Every crawl audits the same tracked pages, so **Run new crawl** is the one crawl button and Changes always compares like with like. The Overview's **Open issues over time** card plots your open issues, one point for each day a crawl or re-audit landed.
 
 ## Schedule crawls
 
-**Schedule** beside the crawl buttons reruns the latest crawl automatically, **Weekly** or **Monthly**, with the same scope and settings as **Recrawl**. It is off until you turn it on, on every plan, and shows the next crawl's date. A scheduled crawl uses your crawl allowance like one you start. If a crawl is still running, or the allowance is used up, that occurrence is skipped and the schedule shows why; repeated failures turn it off.
+**Schedule** beside **Run new crawl** runs it automatically, **Weekly** or **Monthly**. It is off until you turn it on, on every plan, and shows the next crawl's date. A scheduled crawl uses your crawl allowance like one you start. If a crawl is still running, or the allowance is used up, that occurrence is skipped and the schedule shows why; repeated failures turn it off.
 
 ## Crawl pages robots.txt excludes
 
 CiteLadder respects your robots.txt by default. To audit pages it disallows on your own site, open the menu beside **Run new crawl** and choose **Run new crawl ignoring robots.txt…**, then confirm that you are authorized to crawl the site. Crawl delay, rate limits and access controls still apply, and the crawl only ignores robots.txt on your site's domain and its subdomains.
 
-Your confirmation is recorded on the crawl with your email. **Recrawl** and scheduled crawls keep the choice and say so. Pages fetched only because of it are marked **Robots.txt excluded**. CiteLadder's other fetches, such as competitor, cited-source and product pages, always respect robots.txt.
+Your confirmation is recorded on the crawl with your email. Later and scheduled crawls keep the choice and say so; to respect robots.txt again, choose **Run new crawl respecting robots.txt** from the same menu. Pages fetched only because of it are marked **Robots.txt excluded**. CiteLadder's other fetches, such as competitor, cited-source and product pages, always respect robots.txt.
 
 ## Read the score with its coverage
 

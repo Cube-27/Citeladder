@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import type { CrawlRobotsChoice } from '@citeladder/contracts';
+import type { CrawlRobotsChoice, CrawlRobotsHandling } from '@citeladder/contracts';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ export function RobotsExcludedBadge() {
   );
 }
 
-/** How a crawl's robots choice reads beside Recrawl and the schedule; null when it respects robots.txt. */
+/** How a crawl's robots choice reads beside the crawl button and the schedule; null when it respects robots.txt. */
 export function robotsChoiceNote(choice: CrawlRobotsChoice | undefined) {
   if (choice?.handling !== 'ignore') return null;
   return choice.decided_by_email
@@ -28,41 +28,30 @@ export function robotsChoiceNote(choice: CrawlRobotsChoice | undefined) {
     : 'Ignores robots.txt';
 }
 
-/** Recrawl reruns the shown crawl's scope and settings, its robots choice included. */
-export function RecrawlButton({
-  robots,
-  disabled,
-  onRecrawl,
-}: Readonly<{ robots: CrawlRobotsChoice; disabled: boolean; onRecrawl: () => void }>) {
-  const note = robotsChoiceNote(robots);
-  const rerun = "Rerun this crawl's scope and settings, so Changes compares like with like.";
-  return (
-    <Tooltip content={note ? `${rerun} ${note}.` : rerun}>
-      <Button variant="secondary" onClick={onRecrawl} disabled={disabled}>
-        Recrawl
-      </Button>
-    </Tooltip>
-  );
-}
-
 /**
- * Run new crawl, with a second option that ignores robots.txt after the person
- * confirms they are authorized to crawl the site. The server records who
- * confirmed it on the crawl.
+ * The one crawl action (SH-B7): it audits the project's tracked pages again and
+ * keeps the newest crawl's robots choice. Its menu switches that choice for
+ * this crawl on; ignoring robots.txt needs the person to confirm they are
+ * authorized to crawl the site, and the server records who confirmed it.
  */
 export function StartCrawlControl({
   siteUrl,
+  robots,
   primary,
   pending,
   onStart,
 }: Readonly<{
   siteUrl: string;
+  /** The newest crawl's robots choice, which the crawl keeps. */
+  robots: CrawlRobotsChoice;
   /** Primary unless the tab has its own primary action. */
   primary: boolean;
   pending: boolean;
-  onStart: (robots: 'respect' | 'ignore') => void;
+  /** No choice keeps the newest crawl's. */
+  onStart: (robots?: CrawlRobotsHandling) => void;
 }>) {
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
+  const note = robotsChoiceNote(robots);
   const askToIgnore = () =>
     setConfirm({
       title: 'Ignore robots.txt for this crawl?',
@@ -70,8 +59,7 @@ export function StartCrawlControl({
         <>
           The crawl will also fetch pages on {siteUrl} that robots.txt disallows. Crawl delay, rate
           limits and access controls still apply. Continue only if you are authorized to crawl this
-          site. Your confirmation is recorded on the crawl, and Recrawl and scheduled crawls keep
-          it.
+          site. Your confirmation is recorded on the crawl, and later and scheduled crawls keep it.
         </>
       ),
       confirmLabel: 'I am authorized, run crawl',
@@ -80,15 +68,18 @@ export function StartCrawlControl({
         onStart('ignore');
       },
     });
+  const button = (
+    <Button
+      variant={primary ? 'primary' : 'secondary'}
+      onClick={() => onStart()}
+      disabled={pending}
+    >
+      {pending ? 'Starting…' : 'Run new crawl'}
+    </Button>
+  );
   return (
     <>
-      <Button
-        variant={primary ? 'primary' : 'secondary'}
-        onClick={() => onStart('respect')}
-        disabled={pending}
-      >
-        {pending ? 'Starting…' : 'Run new crawl'}
-      </Button>
+      {note ? <Tooltip content={`${note}.`}>{button}</Tooltip> : button}
       <Menu>
         <MenuTrigger asChild>
           <Button variant="secondary" disabled={pending} aria-label="More crawl options">
@@ -96,7 +87,13 @@ export function StartCrawlControl({
           </Button>
         </MenuTrigger>
         <MenuContent align="end">
-          <MenuItem onSelect={askToIgnore}>Run new crawl ignoring robots.txt…</MenuItem>
+          {note ? (
+            <MenuItem onSelect={() => onStart('respect')}>
+              Run new crawl respecting robots.txt
+            </MenuItem>
+          ) : (
+            <MenuItem onSelect={askToIgnore}>Run new crawl ignoring robots.txt…</MenuItem>
+          )}
         </MenuContent>
       </Menu>
       <ConfirmDialog request={confirm} onCancel={() => setConfirm(null)} />

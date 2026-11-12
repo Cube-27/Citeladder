@@ -89,8 +89,8 @@ export function ChangesPanel({
         <CardHeader>
           <CardTitle>Since the previous crawl</CardTitle>
           <CardDescription>
-            What changed on your pages between your last two crawls with the same scope and
-            settings. Expected means the change matches an implementation you declared.
+            What changed on your pages between your last two crawls. Expected means the change
+            matches an implementation you declared.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -188,7 +188,7 @@ function comparisonState(
       icon: GitCompare,
       headingLevel: 3,
       heading: 'These crawls are not comparable',
-      description: `Reason: ${summary.data.reason_code?.replaceAll('_', ' ') ?? 'scope or version mismatch'}. Recrawl to compare the same scope and settings.`,
+      description: `Reason: ${summary.data.reason_code?.replaceAll('_', ' ') ?? 'scope or version mismatch'}.`,
     };
   if (!pairAvailable)
     return {
@@ -196,7 +196,7 @@ function comparisonState(
       icon: GitCompare,
       headingLevel: 3,
       heading: 'This comparison is no longer available',
-      description: 'Recrawl to compare again.',
+      description: 'Run a new crawl to compare again.',
     };
   return undefined;
 }

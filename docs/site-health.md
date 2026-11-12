@@ -28,7 +28,7 @@ does not restate them.
 
 **Admission.** `POST /api/v1/site-crawls` (`planner.ts` `createCrawl`) is the
 one crawl action ([SH-B7](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12)):
-Recrawl, Run new crawl and a scheduled crawl all admit through it. It runs as
+the one Run new crawl button and a scheduled crawl both admit through it. It runs as
 one transaction. It locks workspace, project, runtime, membership, profile,
 then capacity/account, and allows one active crawl per project. Page reruns
 (`selection.ts`) lock project, runtime, membership, the active crawl, profile,
@@ -58,7 +58,7 @@ tracked pages it names, one page or an issue's
 `crawl_already_active`, so no work joins a crawl outside its fetch hold
 (SH-B4). Its configuration carries `page_rerun`; it hands its pages to
 verification and Opportunities but is never compared as a site crawl. It writes
-no project snapshot and no score summary, so it is never a trend point.
+no project snapshot and no score summary, so it is never a compared snapshot.
 
 **The current crawl** ([SH-B1](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12))
 is the project's newest usable crawl (`completed`, `partially_completed` or
@@ -99,9 +99,8 @@ in (`foldingSiteCrawl`: the newest usable site crawl created before it) has its
 persisted Issues catalog, snapshot page columns and score summary recomputed in
 the rerun's landing transaction (`issue-currency.ts`,
 `refreshSiteSnapshot` in `snapshot.ts`). Coverage and discovery figures stay
-the crawl's own, and the snapshot keeps its id and time, so until the
-open-issues trend replaces it the score trend's current point moves with the
-latest audits. An active crawl's provisional score summary still scores only
+the crawl's own, and the snapshot keeps its id and time, so the Change
+summary's current values move with the latest audits. An active crawl's provisional score summary still scores only
 its own analyzed pages.
 
 The dashboard shows a running site crawl,
@@ -349,10 +348,12 @@ Readable policies are cached for `robots_cache_ttl_seconds`. A crawl delay
 above `max_crawl_delay_seconds` blocks the host. A missing file never permits
 bypassing access controls, and a challenge page is terminal `bot_blocked`.
 
-**Ignoring robots.txt.** Start crawl offers "Ignore robots.txt" after the
-person confirms they are authorized to crawl the site. The crawl freezes
+**Ignoring robots.txt.** Run new crawl sends no robots choice, so it keeps the
+newest crawl's. Its menu offers ignoring robots.txt after the person confirms
+they are authorized to crawl the site, or, after a crawl that ignored it,
+respecting it again. The crawl freezes
 `robots: 'ignore'` and `robots_decision` (user id, email, time) in its
-configuration; a crawl request naming no robots choice, as Recrawl and a
+configuration; a crawl request naming no robots choice, as Run new crawl and a
 scheduled crawl do, copies both from the project's newest site crawl.
 Only the crawl's own `discover` and `analyze` fetches pass the choice to
 `SitePageFetcher` and `PageAcquirer`, per request: it covers only the crawl's
@@ -709,11 +710,11 @@ is absence from the crawl, not proof of absence from the site.
 `coverage-by-kind.tsx` shows "Pages analyzed by type" separately from "Not
 found on the site", and omits `root` and `other`.
 
-**Scored cohort composition.** Trend and Change summary compare against the
+**Scored cohort composition.** The Change summary compares against the
 newest earlier comparable snapshot (`snapshot.ts`): one under the same versions
 from a usable crawl (not failed), created earlier, that analyzed a page, is not a page rerun, and
-has the same origin and scope as Changes requires (`sameScope`). With none, the
-trend reads `no_comparable_snapshot`. `cohort-composition.ts`
+has the same origin and scope as Changes requires (`sameScope`). With none, it
+reads `no_comparable_snapshot`. `cohort-composition.ts`
 sets `cohort_composition_changed` only when a page kind joined or left the
 scored cohort, or a kind's share moved by at least
 `overview_cohort_share_shift_points` (`reads.json`); smaller count drift is
@@ -767,7 +768,7 @@ JEV judges pairs through the analytics queue. Limits are in
 
 `change_intel` compares a terminal crawl with the newest earlier crawl that has
 the same origin, scope and analyzer/extractor versions. Every full crawl,
-Recrawl and [scheduled crawls](#crawl-lifecycle) included, audits the same
+Run new crawl and [scheduled crawls](#crawl-lifecycle) included, audits the same
 tracked pages, so consecutive crawls are comparable by construction. Scope excludes the
 page limit, which is the fetch budget left at admission; the comparison reads
 only pages both crawls analyzed. Page reruns write no snapshot and are never a
@@ -826,7 +827,9 @@ decided it. After each landing, `site_issue_trend` stores the project's open
 count for the UTC day: issues in the configured open states (`open`,
 `regressed`, `marked_fixed`; `config/site-health/reads.json` `issue_states`).
 The Issues reads do not use these tables yet; Mark fixed and Re-run all below
-do.
+do. The Overview's open-issues trend card (SH-B9, SH-B11) reads `site_issue_trend`
+as `open_issue_trend`, oldest first, up to `overview_issue_trend_day_limit` days;
+it is the only change graph, and there is no score trend.
 
 **Mark fixed and Re-run all** ([SH-B12](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12);
 `issue-fixes.ts`, routes in the `site-health-crawls` family) act on one issue

@@ -363,13 +363,13 @@ export const siteHealthOverviewSchema = responseObject({
     }),
     limitations: z.array(z.string()),
   }),
-  trend: responseObject({
-    state: z.enum(['unavailable', 'measured']),
-    reason: z.enum(['no_comparable_snapshot', 'comparable_snapshot', 'cohort_composition_changed']),
-    metric: z.literal('aeo_readiness_score'),
-    series: z.array(responseObject({ label: z.string(), value: z.number().nullable() })),
-    cohort_composition: cohortCompositionSchema,
-  }),
+  /**
+   * The project's open issues over time, one point per UTC day an audit landed,
+   * oldest first (SH-B9). Empty until the first audit lands.
+   */
+  open_issue_trend: z.array(
+    responseObject({ day: z.iso.date(), open_count: z.number().int().nonnegative() }),
+  ),
   change_summary: responseObject({
     state: z.enum(['unavailable', 'measured']),
     reason: z.enum(['no_comparable_snapshot', 'comparable_snapshot', 'cohort_composition_changed']),

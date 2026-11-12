@@ -143,13 +143,7 @@ function overview(crawlId = CRAWL) {
     aeo_dimensions: [],
     top_issues: [],
     web_fundamentals: EMPTY_WEB_FUNDAMENTALS,
-    trend: {
-      state: 'unavailable',
-      reason: 'no_comparable_snapshot',
-      metric: 'aeo_readiness_score',
-      series: [],
-      cohort_composition: UNCHANGED_COHORT_COMPOSITION,
-    },
+    open_issue_trend: [],
     change_summary: {
       state: 'unavailable',
       reason: 'no_comparable_snapshot',

@@ -45,7 +45,7 @@ export function OverviewDetails({ data }: Readonly<{ data: SiteHealthOverview }>
           data={data.web_fundamentals}
           onOpen={() => setWebFundamentalsOpen(true)}
         />
-        <TrendCard data={data.trend} />
+        <OpenIssuesTrendCard points={data.open_issue_trend} />
         <ChangeSummaryCard data={data.change_summary} />
       </AppGrid>
       <WebFundamentalsDrawer
@@ -206,24 +206,34 @@ function WebFundamentalsCard({
   );
 }
 
-function TrendCard({ data }: Readonly<{ data: SiteHealthOverview['trend'] }>) {
+/** Open issues on the tracked pages, one point per day an audit landed (SH-B9). */
+function OpenIssuesTrendCard({
+  points,
+}: Readonly<{ points: SiteHealthOverview['open_issue_trend'] }>) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>AEO Readiness trend</CardTitle>
-        <CardDescription>Only finished crawls measured the same way are compared.</CardDescription>
+        <CardTitle>Open issues over time</CardTitle>
+        <CardDescription>
+          Each day&rsquo;s count after that day&rsquo;s crawls and re-audits of your tracked pages.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Stack gap="item">
           <TrendChart
-            data={data.series}
-            label="AEO Readiness trend"
-            name="AEO Readiness"
+            data={points.map((point) => ({
+              label: point.day,
+              value: point.open_count,
+              timestamp: Date.parse(point.day),
+            }))}
+            label="Open issues over time"
+            name="Open issues"
             height="sm"
-            yMax={100}
+            yMin={0}
+            yFormat={(value) => `${Math.round(value)}`}
           />
-          {data.state === 'unavailable' ? (
-            <p className="type-caption">Run a second comparable crawl to establish a trend.</p>
+          {points.length < 2 ? (
+            <p className="type-caption">The trend starts once audits land on two days.</p>
           ) : null}
         </Stack>
       </CardContent>

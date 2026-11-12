@@ -202,8 +202,6 @@ export function useSiteHealthScreen() {
   };
   // A failed start is retried with exactly what it sent: its project and robots choice.
   const retryStart = () => startCrawl(createMutation.variables);
-  // The one crawl action audits the tracked pages again and keeps the newest crawl's robots choice.
-  const recrawl = () => crawl && startCrawl({ project_id: projectId });
   const cancelCrawl = () => crawl && cancelMutation.mutate(crawl.id);
 
   // A create is genuinely in flight, or its projection refresh has not yet
@@ -243,7 +241,6 @@ export function useSiteHealthScreen() {
     cancelMutation,
     startCrawl,
     retryStart,
-    recrawl,
     cancelCrawl,
     runExport,
     exporting,

@@ -4,7 +4,7 @@ import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
 import { Stack } from '@/components/ui/layout';
 
-type CohortComposition = SiteHealthOverview['trend']['cohort_composition'];
+type CohortComposition = SiteHealthOverview['change_summary']['cohort_composition'];
 
 export function CohortCompositionContext({
   reason,

@@ -112,7 +112,7 @@ describe('SiteHealthScreen — Website tab deep links', () => {
     const start = screen.getByRole('button', { name: 'Run new crawl' });
     await waitFor(() => expect(start).toBeEnabled());
     await user.click(start);
-    await waitFor(() => expect(started).toEqual([{ project_id: PROJECT, robots: 'respect' }]));
+    await waitFor(() => expect(started).toEqual([{ project_id: PROJECT }]));
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
     expect(new URLSearchParams(window.location.search).get('tab')).toBe('overview');
   });
@@ -287,7 +287,7 @@ describe('SiteHealthScreen — loading failures', () => {
     const { queryClient } = renderScreen();
     // The crawl's own controls mean the evidence has loaded; the tab row alone
     // is already drawn by the loading frame.
-    expect(await screen.findByRole('button', { name: 'Recrawl' })).toBeVisible();
+    expect(await screen.findByRole('button', { name: 'Run new crawl' })).toBeVisible();
 
     available = false;
     void refreshSiteHealthDashboard(queryClient, PROJECT);
@@ -404,7 +404,7 @@ describe('SiteHealthScreen — loading frames', () => {
 
     // The crawl is known but its Overview is not: still the one box, no scores.
     dashboard.release();
-    expect(await screen.findByRole('button', { name: 'Recrawl' })).toBeVisible();
+    expect(await screen.findByRole('button', { name: 'Run new crawl' })).toBeVisible();
     expect(loadingRegions()).toHaveLength(1);
     expect(screen.queryByTestId('overview-metrics')).not.toBeInTheDocument();
 
@@ -450,11 +450,13 @@ describe('SiteHealthScreen — loading frames', () => {
   });
 });
 
-describe('SiteHealthScreen — recrawl', () => {
-  it('starts the one crawl action for the project, keeping the newest robots choice', async () => {
+describe('SiteHealthScreen — the one crawl action', () => {
+  it('keeps a crawl that ignored robots.txt ignoring it, and offers to respect it again', async () => {
     const user = userEvent.setup();
     const bodies: unknown[] = [];
-    mockRoutes();
+    mockRoutes({
+      robots: { handling: 'ignore', decided_by_email: 'owner@example.test', decided_at: null },
+    });
     mswServer.use(
       http.post('/api/v1/site-crawls', async ({ request }) => {
         bodies.push(await request.json());
@@ -466,10 +468,20 @@ describe('SiteHealthScreen — recrawl', () => {
 
     renderScreen();
 
-    const button = await screen.findByRole('button', { name: 'Recrawl' });
+    const button = await screen.findByRole('button', { name: 'Run new crawl' });
     await waitFor(() => expect(button).toBeEnabled());
+    expect(screen.queryByRole('button', { name: 'Recrawl' })).toBeNull();
     await user.click(button);
     await waitFor(() => expect(bodies).toEqual([{ project_id: PROJECT }]));
+
+    bodies.length = 0;
+    const options = screen.getByRole('button', { name: 'More crawl options' });
+    await waitFor(() => expect(options).toBeEnabled());
+    await user.click(options);
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'Run new crawl respecting robots.txt' }),
+    );
+    await waitFor(() => expect(bodies).toEqual([{ project_id: PROJECT, robots: 'respect' }]));
   });
 });
 

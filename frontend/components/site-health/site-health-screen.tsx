@@ -30,7 +30,7 @@ import { warmQuery } from '@/lib/api/query-client';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { internalLinksQueries } from '@/lib/api/site-health-internal-links';
 import type { CrawlRobotsHandling, SiteCrawl, SiteHealthEntitlement } from '@citeladder/contracts';
-import { RecrawlButton, StartCrawlControl } from '@/components/site-health/robots-choice';
+import { StartCrawlControl } from '@/components/site-health/robots-choice';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
@@ -49,16 +49,8 @@ function SiteHealthContent({
   workspaceId: string;
 }>) {
   const screen = useSiteHealthScreen();
-  const {
-    entitlementQuery,
-    crawl,
-    active,
-    startPending,
-    cancelMutation,
-    startCrawl,
-    recrawl,
-    cancelCrawl,
-  } = screen;
+  const { entitlementQuery, crawl, active, startPending, cancelMutation, startCrawl, cancelCrawl } =
+    screen;
   const [tab, selectTab] = useUrlState('tab', TAB_CODEC, {
     clearKeys: ['cursor', 'sort', ...PAGES_INVENTORY_URL_KEYS],
   });
@@ -96,7 +88,6 @@ function SiteHealthContent({
         schedule={schedule.control}
         onCancel={cancelCrawl}
         onStart={(robots) => startCrawl({ project_id: projectId, robots })}
-        onRecrawl={recrawl}
       />
     ) : (
       (linksActions ?? undefined)
@@ -423,9 +414,8 @@ function CrawlActions({
   schedule,
   onCancel,
   onStart,
-  onRecrawl,
 }: Readonly<{
-  /** The shown crawl: its site and robots choice, which Recrawl keeps. */
+  /** The shown crawl: its site and robots choice, which the next crawl keeps. */
   crawl: Pick<SiteCrawl, 'root_url' | 'robots'>;
   active: boolean;
   cancelPending: boolean;
@@ -436,21 +426,14 @@ function CrawlActions({
    * button.
    */
   tabActions: ReactNode;
-  /** The crawl schedule, beside Run new crawl. */
+  /** The crawl schedule, beside the crawl button. */
   schedule: ReactNode;
   onCancel: () => void;
-  onStart: (robots: CrawlRobotsHandling) => void;
-  onRecrawl: () => void;
+  onStart: (robots?: CrawlRobotsHandling) => void;
 }>) {
   return (
     <Inline>
       {schedule}
-      {/* Always present, so starting a crawl never reflows the header. */}
-      <RecrawlButton
-        robots={crawl.robots}
-        disabled={active || startPending}
-        onRecrawl={onRecrawl}
-      />
       {active ? (
         <Button variant="danger" onClick={onCancel} disabled={cancelPending}>
           {cancelPending ? 'Stopping…' : 'Stop crawl'}
@@ -458,6 +441,7 @@ function CrawlActions({
       ) : (
         <StartCrawlControl
           siteUrl={crawl.root_url}
+          robots={crawl.robots}
           primary={!tabActions}
           pending={startPending}
           onStart={onStart}
