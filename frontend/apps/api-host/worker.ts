@@ -1,5 +1,6 @@
 import { MCP_API_HOST_PATHS } from '@citeladder/contracts/route-ownership';
 import { proxyWorkerRequest } from '../../lib/server/worker-origin-proxy';
+import { withRequestLog } from '../../lib/server/worker-request-log';
 
 /**
  * The `api.citeladder.com` Worker (API-OWNED): machine senders only, no assets,
@@ -87,7 +88,7 @@ export async function routeApiHostRequest(request: Request, env: ApiHostEnv): Pr
 }
 
 const apiHostWorker = {
-  fetch: (request: Request, env: ApiHostEnv) => routeApiHostRequest(request, env),
+  fetch: withRequestLog(routeApiHostRequest),
 };
 
 export default apiHostWorker;

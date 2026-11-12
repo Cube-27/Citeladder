@@ -509,6 +509,57 @@ it('fetches the exact page analysis after a newer analysis replaces it, with fac
   }
 });
 
+it('fetches a site page without the query string or fragment of any URL it carries', async () => {
+  const seed = await actionFixture<ActionSeed>('content');
+  try {
+    const page = await db
+      .selectFrom('site_page_analyses')
+      .select(['id', 'site_url_id', 'artifact_id'])
+      .where('crawl_id', '=', seed.crawl_id)
+      .orderBy('id')
+      .executeTakeFirstOrThrow();
+    const tokened = 'https://acme.example/pricing?token=s3cret#owner@acme.example';
+    await db
+      .updateTable('site_urls')
+      .set({ display_url: tokened, latest_title: '' })
+      .where('id', '=', page.site_url_id)
+      .execute();
+    await db
+      .updateTable('site_fetch_artifacts')
+      .set({
+        requested_url: tokened,
+        final_url: tokened,
+        normalized_facts: JSON.stringify({ canonical: tokened, h1: ['Which plan? Compare'] }),
+      })
+      .where('id', '=', page.artifact_id)
+      .execute();
+    principal.userId = seed.user_id;
+    await db
+      .updateTable('mcp_oauth_grants')
+      .set({ user_id: seed.user_id, workspace_ids: JSON.stringify([seed.workspace_id]) })
+      .where('id', '=', principal.grantId)
+      .execute();
+    const fetched = await fetchRecord(db, principal, `citeladder://site_page/${page.id}`, origin);
+    expect(fetched.title).toBe('https://acme.example/pricing');
+    expect(record(fetched)).toMatchObject({
+      display_url: 'https://acme.example/pricing',
+      artifact: {
+        requested_url: 'https://acme.example/pricing',
+        final_url: 'https://acme.example/pricing',
+        normalized_facts: {
+          canonical: 'https://acme.example/pricing',
+          h1: ['Which plan? Compare'],
+        },
+      },
+    });
+    expect(String(fetched.text)).not.toContain('s3cret');
+  } finally {
+    await db.deleteFrom('mcp_oauth_grants').where('id', '=', principal.grantId).execute();
+    await db.deleteFrom('workspaces').where('id', '=', seed.workspace_id).execute();
+    await db.deleteFrom('users').where('id', '=', seed.user_id).execute();
+  }
+});
+
 it('exposes published dataset aggregates without treating them as backlink edges or letting auxiliary data replace identity', async () => {
   const scope = { workspace_id: tenant.workspaceId, project_id: tenant.projectId };
   const connectionId = randomUUID(),

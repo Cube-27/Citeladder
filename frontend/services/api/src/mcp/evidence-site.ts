@@ -259,6 +259,20 @@ const distinctWithoutQuery = (values: readonly unknown[]) => [
   ...new Set(values.filter((url): url is string => typeof url === 'string').map(withoutQuery)),
 ];
 const looksLikeUrl = (value: string) => /^https?:\/\//iu.test(value);
+/**
+ * `value` with every absolute http(s) URL string inside it, at any depth,
+ * stripped of its query and fragment: a fetched record's crawl facts and
+ * evidence carry page and link URLs in many shapes. Other text keeps any `?`.
+ */
+export function withoutQueryDeep(value: unknown): unknown {
+  if (typeof value === 'string') return looksLikeUrl(value) ? withoutQuery(value) : value;
+  if (Array.isArray(value)) return value.map(withoutQueryDeep);
+  if (value !== null && typeof value === 'object' && !(value instanceof Date))
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, withoutQueryDeep(item)]),
+    );
+  return value;
+}
 const SUMMARY_TEXT_CHARS = 160;
 
 /** Where one failing target ended: a loop, its landing URL, its status, else a plain failure. */

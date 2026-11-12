@@ -247,7 +247,10 @@ maximum duration, and a user may hold at most `ABUSE_SSE_STREAMS_PER_USER`
 [stream slot counter](../frontend/services/api/src/http/stream-slots.ts) lives in
 process memory, not PostgreSQL: a further stream is refused with 429 and
 `Retry-After`, and a slot frees when its stream completes, errors, is cancelled
-or the client disconnects.
+or the client disconnects. An open stream re-checks its caller's session and
+workspace membership every `ABUSE_SSE_ACCESS_RECHECK_SECONDS` (default 30) and
+closes once access ends (or the check fails); the client's reconnect then goes
+through full authorization.
 
 Backend schemas own the wire contract. Coordinate frontend schemas and API
 clients when a DTO changes. [API errors](api-error-contract.md) owns coded

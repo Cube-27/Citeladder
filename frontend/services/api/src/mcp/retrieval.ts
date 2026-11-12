@@ -11,6 +11,7 @@ import { getAction } from '../opportunities/actions.ts';
 import { getExecutionEvidence } from '../visibility/execution.ts';
 import { authorizedWorkspaceIds, authorizeProject } from './data.ts';
 import { businessContext } from './context.ts';
+import { withoutQuery, withoutQueryDeep } from './evidence-site.ts';
 import { appLink, recordPath } from './links.ts';
 import { mcpPolicy } from './config.ts';
 import { McpInputError, type Evidence, type EvidencePrincipal } from './types.ts';
@@ -530,7 +531,7 @@ async function attachSitePage(
     .where('project_id', '=', projectId)
     .executeTakeFirst();
   if (!url) throw missing();
-  const title = url.latest_title || url.display_url || fallbackTitle;
+  const title = url.latest_title || withoutQuery(url.display_url) || fallbackTitle;
   Object.assign(row, url);
   const artifact = await db
     .selectFrom('site_fetch_artifacts')
@@ -598,6 +599,8 @@ async function attachSitePage(
     ...issue,
     record_uri: `citeladder://site_issue/${text(issue.occurrence_id)}`,
   }));
+  // Page and link URLs leave without query or fragment, as the Site tools return them.
+  for (const [key, value] of Object.entries(row)) row[key] = withoutQueryDeep(value);
   return title;
 }
 

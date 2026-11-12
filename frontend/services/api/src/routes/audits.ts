@@ -32,6 +32,7 @@ import { auditPerformance } from '../audits/performance.ts';
 import { createRepairAudit, repairInput } from '../audits/repair.ts';
 import { exportAudit } from '../audits/exports.ts';
 import { resumeCursor, eventStreamResponse } from '../audits/events.ts';
+import { streamOwner } from '../http/stream-slots.ts';
 import { defineGetRoute, definePostRoute } from './define.ts';
 
 const family = 'audits',
@@ -214,7 +215,7 @@ export const auditRoutes = [
             { workspaceId: workspace, auditId: path.audit_id, after, initial: events },
             runtime,
             c.req.raw.signal,
-            { userId: c.get('user').id, limits: config.auth.limits },
+            streamOwner(c, db, config.auth.limits),
           )
         : c.json(events);
     },

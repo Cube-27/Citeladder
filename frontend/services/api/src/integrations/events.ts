@@ -9,6 +9,7 @@ import type { Database } from '../db/database.ts';
 type IntegrationEventType =
   | 'integration.connected'
   | 'integration.disconnected'
+  | 'integration.mapping_retired'
   | 'integration.tested'
   | 'integration.revoked'
   | 'integration.revoke_failed'

@@ -5,6 +5,7 @@ import {
   MCP_CONSENT_PATH,
 } from '@citeladder/contracts/route-ownership';
 import { proxyWorkerRequest } from '../../lib/server/worker-origin-proxy';
+import { withRequestLog } from '../../lib/server/worker-request-log';
 import { APP_CONTENT_SECURITY_POLICY } from '../../lib/config/content-security-policy';
 import { SECURITY_HEADERS as SHARED_SECURITY_HEADERS } from '../../lib/config/security-headers';
 import { routePath } from '../../lib/navigation/route-path';
@@ -176,5 +177,5 @@ export async function handleAppRequest(request: Request, env: WorkerEnv): Promis
   return result;
 }
 
-const appWorker = { fetch: handleAppRequest };
+const appWorker = { fetch: withRequestLog(handleAppRequest) };
 export default appWorker;

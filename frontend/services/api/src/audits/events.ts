@@ -21,9 +21,9 @@ export function resumeCursor(value: string | undefined) {
 }
 /**
  * Each page finishes its reads before yielding or waiting; no streaming
- * transaction remains open. A stream ends after its maximum duration, so a
- * held connection cannot outlast the caller's access: the client resumes
- * with Last-Event-ID through the full authorization path.
+ * transaction remains open. A stream ends after its maximum duration, or
+ * sooner when the stream slot finds the caller's access ended: the client
+ * resumes with Last-Event-ID through the full authorization path.
  */
 export async function* auditEventFrames(
   db: Database,
@@ -75,10 +75,11 @@ export function eventStreamResponse(
   owner: StreamOwner,
 ) {
   const { workspaceId, auditId, after, initial } = stream;
-  const cancellation = new AbortController(),
-    signal = AbortSignal.any([cancellation.signal, requestSignal]);
   const encoder = new TextEncoder();
-  const open = () => {
+  // `held` aborts on disconnect or once the owner's access ends.
+  const open = (held: AbortSignal) => {
+    const cancellation = new AbortController(),
+      signal = AbortSignal.any([cancellation.signal, held]);
     const frames = auditEventFrames(db, workspaceId, auditId, after, runtime, signal, initial);
     return new ReadableStream<Uint8Array>({
       async pull(controller) {
