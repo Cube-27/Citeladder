@@ -36,7 +36,7 @@ import { slottedEventStream, streamOwner } from '../http/stream-slots.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { revalidatable } from '../http/revalidate.ts';
 import {
-  dashboardCrawl,
+  currentSiteCrawl,
   isTerminal,
   loadCrawl,
   crawlProjection,
@@ -153,9 +153,9 @@ const readIssues = (db: Database, workspaceId: string, crawlId: string, query: I
     ),
   );
 
-/** The project's newest crawl, the one its dashboard shows, or 404 before any. */
-async function newestCrawl(db: Database, workspaceId: string, projectId: string) {
-  const crawl = await dashboardCrawl(db, workspaceId, projectId, null);
+/** The project's current crawl (SH-B1), or 404 before it has one. */
+async function requireCurrentCrawl(db: Database, workspaceId: string, projectId: string) {
+  const crawl = await currentSiteCrawl(db, workspaceId, projectId);
   if (crawl === null) throw notFound('Crawl');
   return crawl;
 }
@@ -366,7 +366,7 @@ export const siteHealthRoutes = [
     handle: ({ c, db }, { path, query }) =>
       dashboard(db, c.get('workspace').workspaceId, path.project_id, query.crawl_id),
   }),
-  // The dashboard crawl's pages and issues, for a reader that does not know the
+  // The current crawl's pages and issues, for a reader that does not know the
   // crawl yet: the route prefetchers start them beside the dashboard rather
   // than after it.
   defineGetRoute({
@@ -376,7 +376,7 @@ export const siteHealthRoutes = [
     response: latestCrawlPagesPageSchema,
     async handle({ c, db }, { path, query }) {
       const workspaceId = c.get('workspace').workspaceId;
-      const crawl = await newestCrawl(db, workspaceId, path.project_id);
+      const crawl = await requireCurrentCrawl(db, workspaceId, path.project_id);
       const page = await readPages(db, workspaceId, crawl.id, query);
       return latestCrawlPagesPageSchema.parse({
         ...page,
@@ -392,10 +392,10 @@ export const siteHealthRoutes = [
     response: latestCrawlIssuesPageSchema,
     async handle({ c, db }, { path, query }) {
       const workspaceId = c.get('workspace').workspaceId;
-      // The crawl, and so its status, is read before the page, as the crawl's own route does.
-      const crawl = await newestCrawl(db, workspaceId, path.project_id);
+      // The current crawl is terminal, so its issues are published and revalidatable.
+      const crawl = await requireCurrentCrawl(db, workspaceId, path.project_id);
       const page = { ...(await readIssues(db, workspaceId, crawl.id, query)), crawl_id: crawl.id };
-      return isTerminal(crawl) ? revalidatable(c, page) : page;
+      return revalidatable(c, page);
     },
   }),
   defineGetRoute({

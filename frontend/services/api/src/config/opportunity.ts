@@ -601,7 +601,6 @@ export const opportunities = {
 export const opportunityDefaults = {
   refresh: {
     task_kind: 'opportunity_refresh',
-    evidence_crawl_statuses: ['completed', 'partially_completed', 'cancelled'],
     crawl_status_completed: 'completed',
   },
 };

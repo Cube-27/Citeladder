@@ -147,7 +147,7 @@ describe('Agent persisted context binding', () => {
       ),
     ).rejects.toMatchObject({ code: 'agent_context_unavailable' });
   });
-  it('falls back past factless terminal crawls and ranks an explicit target before lexical matches and brand background', async () => {
+  it('reads the current crawl past a later page rerun and ranks an explicit target before lexical matches and brand background', async () => {
     const seed = await fixtures.crawl();
     const home = await fixtures.page(seed, '/', {
       title: 'Home',
@@ -168,13 +168,20 @@ describe('Agent persisted context binding', () => {
       .where('workspace_id', '=', seed.workspaceId)
       .where('crawl_id', '=', seed.crawlId)
       .execute();
-    const emptyId = await fixtures.sibling(seed, { created_at: new Date(Date.now() + 1000) });
-    await fixtures.page({ ...seed, crawlId: emptyId }, '/empty', {});
+    // A later one-page rerun re-reads one page; it is never the site's content.
+    const rerunId = await fixtures.sibling(seed, {
+      configuration: JSON.stringify({ page_rerun: true }),
+      created_at: new Date(Date.now() + 1000),
+    });
+    await fixtures.page({ ...seed, crawlId: rerunId }, '/pricing-guide', {
+      title: 'Rerun pricing guide',
+      body: { text: 'Pricing guide re-read' },
+    });
     await db
       .updateTable('site_page_analyses')
       .set({ finalized_at: new Date() })
       .where('workspace_id', '=', seed.workspaceId)
-      .where('crawl_id', '=', emptyId)
+      .where('crawl_id', '=', rerunId)
       .execute();
     const selection = await selectContentFragments(
       db,

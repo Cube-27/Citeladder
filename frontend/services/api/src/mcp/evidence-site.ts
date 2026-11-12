@@ -7,7 +7,11 @@ import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { record } from '../db/json.ts';
 import { containsPattern } from '../db/like.ts';
 import { parseUuid } from '../http/uuid.ts';
-import { rootFailure } from '../site-health/reads/crawl.ts';
+import {
+  currentSiteCrawl,
+  currentSiteSnapshotQuery,
+  rootFailure,
+} from '../site-health/reads/crawl.ts';
 import { comparableUrl } from '../site-health/reads/content-fragments.ts';
 import {
   currentIssueRules,
@@ -32,16 +36,19 @@ export async function siteSnapshot(
   { db, scope, origin }: ProjectRead,
   args: { snapshot_id?: string | null },
 ): Promise<Evidence> {
-  let query = new WorkspaceScope(scope.workspaceId)
-    .selectFrom(db, 'site_health_snapshots')
-    .selectAll()
-    .where('project_id', '=', scope.projectId);
   // The id may name the snapshot or the crawl it was built from: an issue in
-  // the Agent's context carries only its crawl id.
+  // the Agent's context carries only its crawl id. Without one, the current
+  // crawl's snapshot answers, never a one-page rerun's.
   const selected = args.snapshot_id;
-  if (selected)
-    query = query.where((eb) => eb.or([eb('id', '=', selected), eb('crawl_id', '=', selected)]));
-  const row = await query.orderBy('created_at', 'desc').orderBy('id', 'desc').executeTakeFirst();
+  const query = selected
+    ? new WorkspaceScope(scope.workspaceId)
+        .selectFrom(db, 'site_health_snapshots')
+        .where('project_id', '=', scope.projectId)
+        .where((eb) => eb.or([eb('id', '=', selected), eb('crawl_id', '=', selected)]))
+        .orderBy('created_at', 'desc')
+        .orderBy('id', 'desc')
+    : currentSiteSnapshotQuery(db, scope.workspaceId, scope.projectId);
+  const row = await query.selectAll().executeTakeFirst();
   if (args.snapshot_id && !row) throw new McpInputError('Selected snapshot is unavailable');
   if (!row) return unavailable('no_site_snapshot');
   return {
@@ -77,24 +84,20 @@ export async function siteSnapshot(
 }
 
 /**
- * The selected crawl, or the newest finished one (by completion), so a crawl
- * still running mid-turn never answers a read; an explicit crawl from elsewhere
- * is refused.
+ * The selected crawl, or the current one (SH-B1), so neither a crawl still
+ * running mid-turn nor a one-page rerun answers a default read; an explicit
+ * crawl from elsewhere is refused.
  */
 async function selectCrawl({ db, scope }: ProjectRead, crawlId: string | null | undefined) {
-  let query = new WorkspaceScope(scope.workspaceId)
+  if (!crawlId)
+    return (await currentSiteCrawl(db, scope.workspaceId, scope.projectId)) ?? undefined;
+  const crawl = await new WorkspaceScope(scope.workspaceId)
     .selectFrom(db, 'site_crawls')
     .selectAll()
-    .where('project_id', '=', scope.projectId);
-  query = crawlId
-    ? query.where('id', '=', crawlId)
-    : query.where('status', 'in', ['completed', 'partially_completed']);
-  const crawl = await query
-    .orderBy('completed_at', 'desc')
-    .orderBy('created_at', 'desc')
-    .orderBy('id', 'desc')
+    .where('project_id', '=', scope.projectId)
+    .where('id', '=', crawlId)
     .executeTakeFirst();
-  if (crawlId && !crawl) throw new McpInputError('Crawl was not found in this project');
+  if (!crawl) throw new McpInputError('Crawl was not found in this project');
   return crawl;
 }
 

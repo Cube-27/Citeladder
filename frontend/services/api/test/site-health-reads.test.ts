@@ -26,6 +26,9 @@ import { issueGroupId } from '../src/site-health/reads/rules.ts';
 import { issueDetail } from '../src/site-health/reads/issues.ts';
 import { refreshIssueCurrency } from '../src/site-health/issue-currency.ts';
 import { loadCrawl } from '../src/site-health/reads/crawl.ts';
+import { latestLinkCrawl } from '../src/site-health/internal-link-runs.ts';
+import { crawlability, siteSnapshot } from '../src/mcp/evidence-site.ts';
+import { resolveCrawl } from '../src/opportunities/sources.ts';
 import { record } from '../src/db/json.ts';
 import { compareText } from '../src/text-order.ts';
 import { encodeKeysetCursor } from '../src/http/keyset-cursor.ts';
@@ -241,10 +244,20 @@ describe('page projections', () => {
     ]);
   });
 
-  it('serve the newest crawl’s pages by project, named with that crawl and its status', async () => {
+  it('serve the current crawl’s pages by project, named with that crawl and its status', async () => {
     const empty = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
     expect((await get(empty, `/projects/${empty.projectId}/site-health/pages`)).status).toBe(404);
-    const seed = await fixtures.crawl('running');
+    const seed = await fixtures.crawl('partially_completed');
+    // Neither a later one-page rerun nor a crawl still running is the current crawl.
+    for (const [status, configuration, offset] of [
+      ['completed', { page_rerun: true }, 60_000],
+      ['running', {}, 120_000],
+    ] as const)
+      await fixtures.sibling(seed, {
+        status,
+        configuration: JSON.stringify(configuration),
+        created_at: new Date(Date.now() + offset),
+      });
     await page(seed, '/');
     const blocked = await page(seed, '/robots', { current: false });
     await db
@@ -258,7 +271,7 @@ describe('page projections', () => {
       `/projects/${seed.projectId}/site-health/pages?status=error_or_blocked`,
       latestCrawlPagesPageSchema,
     );
-    expect(body).toMatchObject({ crawl_id: seed.crawlId, crawl_status: 'running' });
+    expect(body).toMatchObject({ crawl_id: seed.crawlId, crawl_status: 'partially_completed' });
     expect(body.items.map((item) => new URL(item.normalized_url).pathname)).toEqual(['/robots']);
   });
 
@@ -856,6 +869,21 @@ describe('issue catalog', () => {
 });
 
 describe('dashboard', () => {
+  it('shows a running site crawl, else the current crawl, never a page rerun or a later failure', async () => {
+    const seed = await fixtures.crawl();
+    const later = (offset: number, values: Parameters<SiteFixtures['sibling']>[1]) =>
+      fixtures.sibling(seed, { ...values, created_at: new Date(Date.now() + offset) });
+    const shown = async () =>
+      (await json(seed, `/projects/${seed.projectId}/site-health`, siteHealthDashboardSchema)).crawl
+        ?.id;
+
+    await later(60_000, { configuration: JSON.stringify({ page_rerun: true }) });
+    await later(120_000, { status: 'failed' });
+    expect(await shown()).toBe(seed.crawlId);
+    const running = await later(180_000, { status: 'running', completed_at: null });
+    expect(await shown()).toBe(running);
+  });
+
   it('reports a failed root fetch and resolves the quota without writing the runtime', async () => {
     const seed = await fixtures.crawl('failed');
     const task = await fixtures.task(seed, 'discover');
@@ -1057,15 +1085,15 @@ describe('conditional snapshot reads', () => {
     expect(growing.status).toBe(200);
     expect(growing.headers.get('etag')).toBeNull();
     expect(growing.headers.get('cache-control')).toBe('private, no-store, max-age=0');
-    // The project's newest-crawl read follows the same rule.
+    // The project's read answers only for a current (terminal) crawl.
     const latest = (seed: SiteSeed) => get(seed, `/projects/${seed.projectId}/site-health/issues`);
     expect((await latest(terminal)).headers.get('etag')).toMatch(/^W\/"[\w-]{43}"$/);
-    expect((await latest(running)).headers.get('etag')).toBeNull();
+    expect((await latest(running)).status).toBe(404);
   });
 });
 
 describe('snapshot projections', () => {
-  it('read the earlier site crawl after a page rerun, unless the rerun is named', async () => {
+  it('read the earlier site crawl after a page rerun on every surface, unless the rerun is named', async () => {
     const seed = await fixtures.crawl();
     const site = await fixtures.snapshot(seed, 'complete');
     const rerun = {
@@ -1091,6 +1119,20 @@ describe('snapshot projections', () => {
       (await json(seed, `${path}${query}`, siteHealthOverviewSchema)).snapshot_id;
     expect(await read('')).toBe(site);
     expect(await read(`?crawl_id=${rerun.crawlId}`)).toBe(rerunSnapshot);
+
+    // Opportunities, MCP and internal links read the same site crawl (SH-B1).
+    const scope = { workspaceId: seed.workspaceId, projectId: seed.projectId };
+    const mcp = { db, scope, origin: '' };
+    expect((await resolveCrawl(db, scope))?.id).toBe(seed.crawlId);
+    expect(await siteSnapshot(mcp, {})).toMatchObject({
+      snapshot_id: site,
+      crawl_id: seed.crawlId,
+    });
+    expect(await siteSnapshot(mcp, { snapshot_id: rerun.crawlId })).toMatchObject({
+      snapshot_id: rerunSnapshot,
+    });
+    expect(await crawlability(mcp, {})).toMatchObject({ crawl_id: seed.crawlId });
+    expect(await latestLinkCrawl(db, scope)).toEqual({ id: seed.crawlId });
   });
 
   it('fill presentation fields an older frozen snapshot lacks, and never recompute it', async () => {

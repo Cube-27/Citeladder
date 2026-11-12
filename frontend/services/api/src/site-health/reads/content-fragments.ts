@@ -7,6 +7,7 @@ import { record, strings } from '../../db/json.ts';
 import { lexicalTokens } from '../../analysis/lexical.ts';
 import { compareText, scalarText, stripTrailing } from '../../text-order.ts';
 import type { Scope } from '../../opportunities/sources.ts';
+import { currentSiteCrawlQuery } from './crawl.ts';
 
 const p = policy.agent_context;
 /** A URL as pages are matched: scheme, `www.` and a trailing slash do not tell pages apart. */
@@ -183,23 +184,26 @@ export async function selectContentFragments(
   targetUrl = '',
   crawlId?: string,
 ) {
-  let crawlQuery = db
-    .selectFrom('site_crawls as c')
-    .select(['c.id', 'c.completed_at'])
-    .where('c.workspace_id', '=', scope.workspaceId)
-    .where('c.project_id', '=', scope.projectId)
-    .where('c.status', 'in', TERMINAL_CRAWL_STATUSES)
-    .where((eb) =>
-      eb.exists(
-        pagesQuery(db, scope)
-          .select('a.id')
-          .where('a.crawl_id', '=', sql<string>`c.id`),
-      ),
-    )
-    .orderBy('c.created_at', 'desc')
-    .orderBy('c.id', 'desc');
-  if (crawlId) crawlQuery = crawlQuery.where('c.id', '=', crawlId);
-  const crawl = await crawlQuery.executeTakeFirst();
+  // The named terminal crawl or, without one, the current crawl (SH-B1); either
+  // must hold content pages. A current crawl without them never falls back to
+  // an older crawl: it reports no usable crawl.
+  const candidate = crawlId
+    ? db
+        .selectFrom('site_crawls')
+        .where('workspace_id', '=', scope.workspaceId)
+        .where('project_id', '=', scope.projectId)
+        .where('id', '=', crawlId)
+        .where('status', 'in', TERMINAL_CRAWL_STATUSES)
+    : currentSiteCrawlQuery(db, scope.workspaceId, scope.projectId);
+  const chosen = await candidate.select(['id', 'completed_at']).executeTakeFirst();
+  const page =
+    chosen &&
+    (await pagesQuery(db, scope)
+      .select('a.id')
+      .where('a.crawl_id', '=', chosen.id)
+      .limit(1)
+      .executeTakeFirst());
+  const crawl = page ? chosen : undefined;
   if (!crawl)
     return {
       pages: [],

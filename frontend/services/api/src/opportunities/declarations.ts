@@ -9,6 +9,7 @@ import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { epochMicros, isoformat, parseDatetime, toUtc } from '../http/datetimes.ts';
 import { record } from '../db/json.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
+import { currentSiteCrawlQuery } from '../site-health/reads/crawl.ts';
 import { declarableMembers, recordStatus, requireAction, type ActionRow } from './actions.ts';
 import { declarationChecks } from './declaration-checks.ts';
 import { ruleCheckKind } from './checks/registry.ts';
@@ -130,15 +131,11 @@ async function verifyExistingEvidence(
   declaredAt: string,
 ) {
   const after = sql<Date>`${declaredAt}::timestamptz`;
-  const crawl = await trx
-    .selectFrom('site_crawls')
+  // The current crawl among those that finished after go-live, a partial one included.
+  const crawl = await currentSiteCrawlQuery(trx, row.workspace_id, row.project_id, {
+    completedAfter: declaredAt,
+  })
     .select('id')
-    .where('workspace_id', '=', row.workspace_id)
-    .where('project_id', '=', row.project_id)
-    .where('status', '=', policy.opportunity.refresh.crawl_status_completed)
-    .where('completed_at', '>', after)
-    .orderBy('completed_at', 'desc')
-    .limit(1)
     .executeTakeFirst();
   const audit = await trx
     .selectFrom('audits')
