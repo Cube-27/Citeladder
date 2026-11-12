@@ -121,6 +121,12 @@ async function pageSelection(db: Database, scope: CrawlScope, input: PageOptions
   const rollupIds = ids(sql`jsonb_agg(id)`),
     citationIds = ids(sql`jsonb_agg(c.id order by r.audit_id,c.n)`),
     auditIds = ids(sql`jsonb_agg(distinct r.audit_id)`);
+  const rowConditions = [sql`canonical_url is not null`];
+  if (options.url_hash) rowConditions.push(sql`url_hash=${options.url_hash}`);
+  if (options.url_hashes) rowConditions.push(sql`url_hash=any(${options.url_hashes}::text[])`);
+  if (options.folder) rowConditions.push(sql`folder=${options.folder}`);
+  if (options.resource_class) rowConditions.push(sql`resource_class=${options.resource_class}`);
+  const rowFilter = sql.join(rowConditions, sql` and `);
   const path = sql`regexp_replace(canonical_url,'^https?://[^/]+','')`;
   const resources = sql`case ${sql.join(
     crawlers.resource_rules.map(
@@ -182,11 +188,7 @@ async function pageSelection(db: Database, scope: CrawlScope, input: PageOptions
       coalesce(stored_folder,
         '/'||array_to_string((string_to_array(trim(both '/' from ${path}),'/'))[1:${crawlLogs.folder_depth}],'/')) as folder,
       coalesce(stored_resource_class,${resources}) as resource_class from joined)
-    select * from formatted where canonical_url is not null
-      and ${options.url_hash ? sql`url_hash=${options.url_hash}` : sql`true`}
-      and ${options.url_hashes ? sql`url_hash=any(${options.url_hashes}::text[])` : sql`true`}
-      and ${options.folder ? sql`folder=${options.folder}` : sql`true`}
-      and ${options.resource_class ? sql`resource_class=${options.resource_class}` : sql`true`}`;
+    select * from formatted where ${rowFilter}`;
   return { options, crawl, filtered };
 }
 export function aiBots(includeTraining = false) {
