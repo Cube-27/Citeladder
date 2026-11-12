@@ -11,6 +11,7 @@ import { revokeCreatorKeys } from '../api-keys/revocation.ts';
 import { revokeDelegatedAccess } from '../auth/challenges.ts';
 import { baselineGrantKey, fullAccessSpecs } from '../entitlements/bootstrap.ts';
 import { issueBundle, revokeBundle } from '../entitlements/grants.ts';
+import { refreshRuntime } from '../site-health/plan-runtime.ts';
 import { resolveAccountEntitlement } from '../entitlements/state.ts';
 import { operatorTransaction } from '../db/operator-transaction.ts';
 import { policy } from '../config.ts';
@@ -276,6 +277,16 @@ async function placeAccount(
   if (!target) throw new Error('account_workspace_unresolved');
   if (shared) await joinSharedWorkspace(db, actorId, shared, user.id);
   return { personal, target };
+}
+
+/** The workspaces a created account's grants can land in: its target and its personal workspace. */
+function accountWorkspaces(account: {
+  workspace_id: string;
+  personal_workspace_id: string | null;
+}) {
+  return account.personal_workspace_id
+    ? [account.workspace_id, account.personal_workspace_id]
+    : [account.workspace_id];
 }
 
 async function createAccounts(
@@ -549,17 +560,24 @@ export async function managePlatformAccounts(
     action.kind === 'create' || action.kind === 'password'
       ? await hashPassword(passwordSchema.parse(action.password))
       : null;
+  const granted: string[] = [];
   const result = await operatorTransaction(db, request.apply === true, async (trx) => {
     await authorizePlatform(trx, session);
     if (action.kind === 'role' || action.kind === 'password' || action.kind === 'remove')
       return applyMemberAction(trx, session, action, encoded);
-    if (action.kind === 'create') return createAccounts(trx, session, action, request, encoded!);
+    if (action.kind === 'create') {
+      const accounts = await createAccounts(trx, session, action, request, encoded!);
+      granted.push(...accounts.created.flatMap(accountWorkspaces));
+      return accounts;
+    }
     if (action.kind === 'access') {
+      granted.push(action.workspaceId);
       z.uuid().parse(action.workspaceId);
       z.uuid().parse(action.accountId);
       return grantAccess(trx, session, action, action.access, request);
     }
     if (action.kind === 'revoke') {
+      granted.push(action.workspaceId);
       await revokeBundle(trx, {
         workspaceId: z.uuid().parse(action.workspaceId),
         accountId: z.uuid().parse(action.accountId),
@@ -604,6 +622,9 @@ export async function managePlatformAccounts(
     }
     throw new Error('unknown_account_action');
   });
+  // Grants committed under the capacity lock; each runtime follows in its own order.
+  if (request.apply === true)
+    for (const workspaceId of new Set(granted)) await refreshRuntime(db, workspaceId); // NOSONAR -- One workspace's runtime per transaction.
   getLogger('api.billing.operator').info('account.management', {
     actor_id: session.actorId,
     operation: action.kind,

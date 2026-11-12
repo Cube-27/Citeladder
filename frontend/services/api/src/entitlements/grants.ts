@@ -4,7 +4,6 @@ import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
 import { advisoryXactLock } from '../db/advisory-lock.ts';
 import { conflict } from '../errors.ts';
-import { refreshRuntime } from '../site-health/plan-runtime.ts';
 import { getLogger } from '../logging.ts';
 
 export async function lockAccount(db: Database, workspaceId: string, accountId: string) {
@@ -20,9 +19,10 @@ export async function lockAccount(db: Database, workspaceId: string, accountId: 
 
 /**
  * The only entitlement lifecycle bump: every grant, revocation and
- * subscription change advances the account's version, then the Site Health
- * runtime is refreshed from the new grants. With `expectedVersion` the bump
- * is optimistic: it applies only if no other writer bumped since that read.
+ * subscription change advances the account's version. With `expectedVersion`
+ * the bump is optimistic: it applies only if no other writer bumped since that
+ * read. The caller holds the capacity lock, so it never touches the Site Health
+ * runtime: the transaction's owner calls `refreshRuntime` after it commits.
  */
 export async function bumpLifecycle(
   db: Database,
@@ -37,7 +37,6 @@ export async function bumpLifecycle(
   if (expectedVersion !== undefined)
     update = update.where('entitlement_lifecycle_version', '=', expectedVersion);
   await update.execute();
-  await refreshRuntime(db, workspaceId, accountId, at);
 }
 
 const bump = (db: Database, workspaceId: string, accountId: string, at: Date) =>

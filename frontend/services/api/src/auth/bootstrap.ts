@@ -7,6 +7,7 @@ import { ownedWorkspaceAccount } from '../workspaces/owned.ts';
 import { provisionAccount } from '../workspaces/service.ts';
 import { issueDevelopmentAccess } from '../entitlements/bootstrap.ts';
 import { lockAccount } from '../entitlements/grants.ts';
+import { refreshRuntime } from '../site-health/plan-runtime.ts';
 import { createIdentity } from './service.ts';
 import { hashPassword, passwordSchema, verifyPassword } from './password.ts';
 
@@ -29,7 +30,7 @@ export async function provisionDevelopmentLogin(db: Database, config: ServiceCon
   requireLocalDevelopment(config);
   const input = developmentLoginInput.parse(raw);
   const encoded = await hashPassword(input.password);
-  return db.transaction().execute(async (trx) => {
+  const provisioned = await db.transaction().execute(async (trx) => {
     await subjectXactLock(trx, `identity.bootstrap:${input.email}`);
     let user = await trx
       .selectFrom('users')
@@ -79,4 +80,7 @@ export async function provisionDevelopmentLogin(db: Database, config: ServiceCon
     });
     return { email: user.email, workspace_id: scope.workspaceId, user_id: user.id };
   });
+  // Grants committed under the capacity lock; the runtime follows in its own order.
+  await refreshRuntime(db, provisioned.workspace_id);
+  return provisioned;
 }

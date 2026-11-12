@@ -7,6 +7,7 @@ import { notFound } from '../errors.ts';
 import type { Database } from '../db/database.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { admissionRuntime, createPageRerunCrawl, enqueueCrawlTask } from './planner.ts';
+import { holdRuntime } from './plan-runtime.ts';
 import { crawlError } from './planner-policy.ts';
 import { inventoryCrawlIds } from './reads/crawl.ts';
 import { monitoredQuota } from './reads/runtime.ts';
@@ -60,7 +61,13 @@ export async function monitoredSet(db: Database, workspaceId: string, projectId:
   };
 }
 
-/** Lock the parent and active crawl before runtime/profile, matching worker publication. */
+/**
+ * Lock a project's Site Health controls in the combined lock DAG: project,
+ * runtime, membership, the active crawl, profile, then the capacity and
+ * account locks that resolve the runtime. Workers publish runtime, membership,
+ * crawl, task and settle crawl, profile, capacity, so neither waits on a lock
+ * the other holds out of order.
+ */
 export async function lockControlScope(db: Database, workspaceId: string, projectId: string) {
   const project = await db
     .selectFrom('projects')
@@ -70,6 +77,15 @@ export async function lockControlScope(db: Database, workspaceId: string, projec
     .forUpdate()
     .executeTakeFirst();
   if (!project) throw notFound('Project');
+  const held = await holdRuntime(db, workspaceId);
+  const members = await db
+    .selectFrom('monitored_site_urls')
+    .selectAll()
+    .where('workspace_id', '=', workspaceId)
+    .where('project_id', '=', projectId)
+    .orderBy('id')
+    .forUpdate()
+    .execute();
   const crawl = await db
     .selectFrom('site_crawls')
     .selectAll()
@@ -79,7 +95,6 @@ export async function lockControlScope(db: Database, workspaceId: string, projec
     .orderBy('created_at', 'desc')
     .forUpdate()
     .executeTakeFirst();
-  const runtime = await admissionRuntime(db, workspaceId);
   const profile = await db
     .selectFrom('site_health_profiles')
     .selectAll()
@@ -88,7 +103,8 @@ export async function lockControlScope(db: Database, workspaceId: string, projec
     .forUpdate()
     .executeTakeFirst();
   if (!profile) crawlError('Site Health profile not found', 'invalid_selection');
-  return { crawl, runtime, profile };
+  const runtime = await admissionRuntime(db, held);
+  return { crawl, runtime, profile, members };
 }
 
 export async function replaceMonitoredSet(
@@ -99,7 +115,8 @@ export async function replaceMonitoredSet(
   expectedVersion: number,
   scope?: Awaited<ReturnType<typeof lockControlScope>>,
 ) {
-  const { crawl, runtime, profile } = scope ?? (await lockControlScope(db, workspaceId, projectId));
+  const { crawl, runtime, profile, members } =
+    scope ?? (await lockControlScope(db, workspaceId, projectId));
   if (runtime.monitored_url_limit <= 0)
     crawlError(
       'A monitored-URL allowance is required to select monitored URLs',
@@ -132,13 +149,6 @@ export async function replaceMonitoredSet(
     .execute();
   if (urls.length !== requested.length)
     crawlError('Selection contains ids that are not discovered project URLs', 'invalid_selection');
-  const members = await db
-    .selectFrom('monitored_site_urls')
-    .selectAll()
-    .where('workspace_id', '=', workspaceId)
-    .where('project_id', '=', projectId)
-    .forUpdate()
-    .execute();
   const others = await db
     .selectFrom('monitored_site_urls')
     .select(sql<number>`count(*)::int`.as('count'))

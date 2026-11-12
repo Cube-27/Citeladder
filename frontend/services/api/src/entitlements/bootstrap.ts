@@ -15,6 +15,7 @@ import { parseUuid } from '../http/uuid.ts';
 import { getLogger } from '../logging.ts';
 import { stripTrailing } from '../text-order.ts';
 import { workspaceOwner } from '../workspaces/owned.ts';
+import { refreshRuntime } from '../site-health/plan-runtime.ts';
 
 /**
  * The mailbox an address delivers to, for trial eligibility: lowercased, any
@@ -232,7 +233,7 @@ export async function issueDevelopmentAccess(
   );
 }
 /** Explicit workspace operator repair. Public signup never calls development issuance. */
-export function provisionWorkspaceBilling(
+export async function provisionWorkspaceBilling(
   db: Database,
   input: {
     actor: string;
@@ -245,7 +246,7 @@ export function provisionWorkspaceBilling(
   const workspaceId = parseUuid(input.workspaceId);
   if (!workspaceId) throw new Error('invalid_workspace_id');
   if (!input.reason.trim() || input.reason.length > 255) throw new Error('reason_required');
-  return operatorTransaction(db, input.apply === true, async (trx) => {
+  const provisioned = await operatorTransaction(db, input.apply === true, async (trx) => {
     const actor = await requirePlatformAdmin(trx, input.actor);
     const owner = await workspaceOwner(trx, workspaceId);
     await ensureWorkspaceBilling(trx, workspaceId, owner);
@@ -270,4 +271,7 @@ export function provisionWorkspaceBilling(
     }
     return { workspace_id: workspaceId, account_id: account.id };
   });
+  // Grants committed under the capacity lock; the runtime follows in its own order.
+  if (input.apply === true) await refreshRuntime(db, workspaceId);
+  return provisioned;
 }

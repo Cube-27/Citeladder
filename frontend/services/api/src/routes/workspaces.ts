@@ -19,6 +19,7 @@ import { workspaceAccess } from '../entitlements/access.ts';
 import { deliverInvitation } from '../workspaces/invitation-mail.ts';
 import { defineGetRoute, definePostRoute, definePatchRoute, defineDeleteRoute } from './define.ts';
 import { readBody } from '../http/body.ts';
+import { refreshRuntime } from '../site-health/plan-runtime.ts';
 import {
   acceptPolicy,
   policyStatus,
@@ -103,7 +104,7 @@ export const workspaceRoutes = [
       // The creator's own recorded Terms decision (signup or review) carries
       // into the workspace they create; without it the request is refused.
       await requireAccountTermsDecision(db, userId, terms_revision);
-      return db.transaction().execute(async (trx) => {
+      const created = await db.transaction().execute(async (trx) => {
         const workspace = await createWorkspace(trx, userId, name);
         await recordPolicyAcceptance(trx, {
           workspaceId: workspace.id,
@@ -113,6 +114,9 @@ export const workspaceRoutes = [
         });
         return workspace;
       });
+      // Its grants committed under the capacity lock; the runtime follows in its own order.
+      await refreshRuntime(db, created.id);
+      return created;
     },
   }),
   definePostRoute({
