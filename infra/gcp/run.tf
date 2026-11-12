@@ -85,6 +85,13 @@ resource "google_cloud_run_v2_service" "api" {
     }
   }
 
+  # The deploy workflow owns traffic: it pins the serving revision before an
+  # apply, smokes the new revision at a tagged URL with no traffic, and only
+  # then moves traffic to it. A failed smoke leaves the old revision serving.
+  lifecycle {
+    ignore_changes = [traffic]
+  }
+
   depends_on = [google_secret_manager_secret_iam_member.runtime]
 }
 

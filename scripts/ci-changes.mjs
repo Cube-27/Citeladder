@@ -241,8 +241,11 @@ export function selectDiff({
   const usableBefore = beforeSha && !/^0+$/.test(beforeSha);
   if (eventName !== 'pull_request') {
     // Main stays a full validation; the push range only lets an owner-free
-    // push (documentation or inert configuration) skip it.
-    const range = eventName === 'push' && usableBefore && beforeIsAncestor;
+    // push (documentation or inert configuration) skip it, and only when this
+    // workflow already passed on the previous main commit. Otherwise a green
+    // owner-free push would vouch for code whose own run failed or never ran,
+    // and the deploy gate reads only the exact deployed commit's run.
+    const range = eventName === 'push' && usableBefore && beforeIsAncestor && previousRunTrusted;
     return { full: true, range: range ? `${beforeSha}..${headSha}` : null };
   }
   // A force-push (rebase or amend) orphans the previous head, so its incremental
@@ -309,20 +312,55 @@ export function hasTrustworthyJobEvidence(jobs, workflowFile) {
   );
 }
 
+/**
+ * True when the newest `main` push run of this workflow for the previous
+ * commit completed successfully. That run was itself either a full validation
+ * or an owner-free push vouched for the same way, so success is inductive.
+ */
+export function previousMainRunPassed(runs, beforeSha) {
+  if (!Array.isArray(runs)) return false;
+  const previous = runs
+    .filter((run) => run.head_sha === beforeSha && run.event === 'push')
+    .sort((left, right) => right.run_number - left.run_number)[0];
+  return previous?.status === 'completed' && previous.conclusion === 'success';
+}
+
+function githubHeaders(token) {
+  return {
+    Accept: 'application/vnd.github+json',
+    Authorization: `Bearer ${token}`,
+    'X-GitHub-Api-Version': '2022-11-28',
+  };
+}
+
+async function previousMainRunIsTrusted(environment) {
+  const token = environment.GITHUB_TOKEN;
+  const repository = environment.GITHUB_REPOSITORY;
+  const workflowFile = environment.CI_WORKFLOW_FILE;
+  if (!token || !repository || !workflowFile) return false;
+  const runsUrl = new URL(
+    `https://api.github.com/repos/${repository}/actions/workflows/${encodeURIComponent(workflowFile)}/runs`,
+  );
+  runsUrl.searchParams.set('event', 'push');
+  runsUrl.searchParams.set('branch', 'main');
+  runsUrl.searchParams.set('head_sha', environment.CI_BEFORE_SHA);
+  runsUrl.searchParams.set('per_page', '30');
+  const response = await fetch(runsUrl, { headers: githubHeaders(token) });
+  if (!response.ok) throw new Error(`workflow-runs query returned ${response.status}`);
+  const runs = await response.json();
+  return previousMainRunPassed(runs.workflow_runs, environment.CI_BEFORE_SHA);
+}
+
 async function previousRunIsTrusted(environment) {
-  if (environment.GITHUB_EVENT_ACTION !== 'synchronize' || !environment.CI_BEFORE_SHA) {
-    return true;
-  }
+  if (!environment.CI_BEFORE_SHA || /^0+$/u.test(environment.CI_BEFORE_SHA)) return true;
+  if (environment.GITHUB_EVENT_NAME === 'push') return previousMainRunIsTrusted(environment);
+  if (environment.GITHUB_EVENT_ACTION !== 'synchronize') return true;
   const token = environment.GITHUB_TOKEN;
   const repository = environment.GITHUB_REPOSITORY;
   const workflowFile = environment.CI_WORKFLOW_FILE;
   if (!token || !repository || !workflowFile) return false;
 
-  const headers = {
-    Accept: 'application/vnd.github+json',
-    Authorization: `Bearer ${token}`,
-    'X-GitHub-Api-Version': '2022-11-28',
-  };
+  const headers = githubHeaders(token);
   const runsUrl = new URL(
     `https://api.github.com/repos/${repository}/actions/workflows/${encodeURIComponent(workflowFile)}/runs`,
   );
@@ -367,7 +405,7 @@ async function main(environment = process.env) {
   } catch (error) {
     previousRunTrusted = false;
     process.stderr.write(
-      `Unable to read the previous CI result; using the cumulative PR scope: ${error.message}\n`,
+      `Unable to read the previous CI result; validating the full scope: ${error.message}\n`,
     );
   }
 

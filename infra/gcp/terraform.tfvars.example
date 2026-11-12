@@ -1,4 +1,5 @@
 project_id           = "replace-with-project-id"
+deployer_service_account = "citeladder-github-deploy@replace-with-project-id.iam.gserviceaccount.com"
 billing_account      = "000000-000000-000000"
 budget_currency_code = "INR"
 budget_units         = 500

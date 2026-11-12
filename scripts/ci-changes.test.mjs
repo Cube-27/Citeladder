@@ -7,6 +7,7 @@ import {
   e2eSpecArgs,
   hasTrustworthyJobEvidence,
   isOwnerFreeChange,
+  previousMainRunPassed,
   selectE2EFiles,
   selectDiff,
 } from './ci-changes.mjs';
@@ -371,5 +372,44 @@ test('pull-request synchronization uses latest-push diff and main is full', () =
       beforeIsAncestor: false,
     }),
     { full: true, range: null },
+  );
+  // A previous main commit whose run did not pass cannot be skipped over.
+  assert.deepEqual(
+    selectDiff({
+      eventName: 'push',
+      beforeSha: 'before',
+      headSha: 'head',
+      previousRunTrusted: false,
+    }),
+    { full: true, range: null },
+  );
+});
+
+test('an owner-free main push is vouched for only by a passed run on the previous commit', () => {
+  const run = (overrides) => ({
+    head_sha: 'before',
+    event: 'push',
+    status: 'completed',
+    conclusion: 'success',
+    run_number: 1,
+    ...overrides,
+  });
+  assert.equal(previousMainRunPassed([run({})], 'before'), true);
+  assert.equal(previousMainRunPassed([run({ conclusion: 'failure' })], 'before'), false);
+  assert.equal(previousMainRunPassed([run({ conclusion: 'cancelled' })], 'before'), false);
+  assert.equal(
+    previousMainRunPassed([run({ status: 'in_progress', conclusion: null })], 'before'),
+    false,
+  );
+  assert.equal(previousMainRunPassed([run({ head_sha: 'other' })], 'before'), false);
+  assert.equal(previousMainRunPassed([run({ event: 'workflow_dispatch' })], 'before'), false);
+  assert.equal(previousMainRunPassed([], 'before'), false);
+  // The newest run for the commit decides.
+  assert.equal(
+    previousMainRunPassed(
+      [run({ run_number: 1 }), run({ run_number: 2, conclusion: 'failure' })],
+      'before',
+    ),
+    false,
   );
 });

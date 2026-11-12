@@ -1,6 +1,18 @@
+# bootstrap.ps1 creates this account first and grants its only project role
+# (logging.logWriter): the deployer cannot edit project IAM.
 resource "google_service_account" "db" {
-  account_id   = "${local.name}-db"
-  display_name = "CiteLadder PostgreSQL VM"
+  account_id                   = "${local.name}-db"
+  display_name                 = "CiteLadder PostgreSQL VM"
+  create_ignore_already_exists = true
+}
+
+# The log-writer grant moved to bootstrap.ps1; forget it without revoking it.
+removed {
+  from = google_project_iam_member.db_logging
+
+  lifecycle {
+    destroy = false
+  }
 }
 
 # The API service; alone reads the Worker origin tokens and the Turnstile
@@ -43,15 +55,6 @@ resource "google_service_account_iam_member" "jobs_impersonate_log_reader" {
   member             = "serviceAccount:${google_service_account.jobs.email}"
 }
 
-# COS ships the PostgreSQL container's logs; no monitoring agent runs, so the
-# VM holds no metrics role.
-resource "google_project_iam_member" "db_logging" {
-  for_each = toset(["roles/logging.logWriter"])
-  project  = var.project_id
-  role     = each.value
-  member   = "serviceAccount:${google_service_account.db.email}"
-}
-
 resource "google_artifact_registry_repository_iam_member" "db_reader" {
   location   = google_artifact_registry_repository.images.location
   repository = google_artifact_registry_repository.images.name
@@ -84,6 +87,20 @@ resource "google_secret_manager_secret_iam_member" "jobs" {
   secret_id = google_secret_manager_secret.runtime[each.value].secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.jobs.email}"
+}
+
+# The deploy workflow reads, adds, disables and destroys versions of the
+# CiteLadder secrets only; its project role covers containers, not payloads.
+resource "google_secret_manager_secret_iam_member" "deployer" {
+  for_each = {
+    for pair in setproduct(local.runtime_secret_ids, [
+      "roles/secretmanager.secretAccessor",
+      "roles/secretmanager.secretVersionManager",
+    ]) : "${pair[0]} ${pair[1]}" => { secret = pair[0], role = pair[1] }
+  }
+  secret_id = google_secret_manager_secret.runtime[each.value.secret].secret_id
+  role      = each.value.role
+  member    = "serviceAccount:${var.deployer_service_account}"
 }
 
 # run.jobs.run on the runner job only: the API starts an execution after

@@ -72,13 +72,23 @@ and state bucket:
 ```
 
 `gcloud billing projects describe project-setup-20260711` shows the billing
-account. The script is idempotent. It enables Cloud Run and Cloud Scheduler,
-grants the deployer `run.admin`, `cloudscheduler.admin` and
-`logging.configWriter` (for the API request-log exclusion), and removes the
-retired SSH/IAP and project-deletion grants. It also relabels the project
-`environment=production` and keeps the existing GitHub OIDC trust for
-`Cube-27/Citeladder`, `refs/heads/main` and the `gcp-demo` environment. Its
-printed `NAME=value` lines are the values for section 1.3.
+account. The script is idempotent. It enables Cloud Run and Cloud Scheduler
+and grants the deployer its project roles (Cloud Run, Cloud Scheduler,
+Artifact Registry and service-account administration; the compute instance,
+network and firewall roles; `logging.configWriter` for the API request-log
+exclusion; and the `citeladderSecretContainers` custom role for Secret Manager
+containers without payloads), plus object access on the state bucket only.
+It removes the retired SSH/IAP, project-deletion, project-IAM and project-wide
+compute, secret and storage administration grants. It creates the database
+VM's account if missing and grants its log writer role, which the deployer
+cannot. It relabels the project `environment=production` and converges the
+GitHub OIDC trust to the `Cube-27/Citeladder` repository (name and ID), the
+`gcp-deploy.yml` workflow, `refs/heads/main` and the `gcp-demo` environment.
+Its printed `NAME=value` lines are the values for section 1.3.
+
+Order after a change to the deployer's roles: run **GCP - Deploy** once with
+the new configuration (Terraform grants the deployer its per-secret version
+roles), then re-run this script to remove the retired grants.
 
 ### 1.3 GitHub `gcp-demo` environment: variables
 
@@ -338,9 +348,12 @@ Other operator entry points under `src/cli/` (for example `catalog-seed` in
 
 ## 4. Updates and rollback
 
-Merge to `main`, wait for CI, and rerun **GCP - Deploy**. Each run builds
-digests (reused on retry), applies secrets, migrates before the API rolls
-forward, applies Terraform and smokes. The migrate job applies the pending
+Merge to `main`, wait for CI and the Compose smoke, and rerun **GCP - Deploy**.
+Each run builds digests (reused on retry), applies secrets, migrates before the
+API rolls forward, and applies Terraform with the API's traffic pinned to the
+serving revision. It smokes the new revision at its `candidate` tagged URL and
+only then moves traffic to it; a failed smoke leaves the previous revision
+serving. The migrate job applies the pending
 numbered migrations in `frontend/services/api/migrations/` in order, in place on
 the existing database, and is a no-op when every file is recorded. An edited
 applied file, a missing or skipped version, or unledgered tables fail the job,
@@ -412,8 +425,8 @@ the database to restore service.
 
 ## Troubleshooting
 
-- **WIF fails:** compare the repository, `main` ref and `gcp-demo` environment
-  with the bootstrap trust. Never substitute a service-account key.
+- **WIF fails:** compare the repository and its ID, the `gcp-deploy.yml`
+  workflow, `main` ref and `gcp-demo` environment with the bootstrap trust. Never substitute a service-account key.
 - **Migrate job cannot connect:** the database VM may still be initializing.
   The job waits up to 5 minutes. Check the `citeladder-db` serial or Cloud
   Logging output for `citeladder-db:` lines (secret access, image pull, swap).

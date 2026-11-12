@@ -3,6 +3,15 @@ variable "project_id" {
   description = "Existing CiteLadder GCP project ID (reused; never recreated)."
 }
 
+variable "deployer_service_account" {
+  type        = string
+  description = "Email of the bootstrap deploy identity; Terraform grants it version access on each runtime secret."
+  validation {
+    condition     = can(regex("^[a-z][a-z0-9-]+@[a-z0-9-]+\\.iam\\.gserviceaccount\\.com$", var.deployer_service_account))
+    error_message = "deployer_service_account must be a service-account email."
+  }
+}
+
 variable "billing_account" {
   type        = string
   description = "Billing account that owns the monthly budget alert."

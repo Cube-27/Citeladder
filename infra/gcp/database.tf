@@ -60,10 +60,10 @@ resource "google_compute_instance" "db" {
     ignore_changes = [boot_disk[0].initialize_params[0].image]
   }
 
-  # The startup script reads its secret and pulls its image on first boot.
+  # The startup script reads its secret and pulls its image on first boot. Its
+  # log-writer grant comes from bootstrap.ps1, before any deploy.
   depends_on = [
     google_secret_manager_secret_iam_member.db_password,
     google_artifact_registry_repository_iam_member.db_reader,
-    google_project_iam_member.db_logging,
   ]
 }
