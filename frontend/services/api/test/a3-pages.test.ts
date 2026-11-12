@@ -378,7 +378,7 @@ describe('A3 persisted Pages join', () => {
       vi.useRealTimers();
     }
   });
-  it('exports in one bounded read exactly the CSV that walking every page cursor yields', async () => {
+  it('streams an export of exactly the CSV that walking every page cursor yields', async () => {
     const paged: Awaited<ReturnType<typeof pagesRead>>['items'] = [];
     let cursor: string | null = null,
       pages = 0;
@@ -427,15 +427,18 @@ describe('A3 persisted Pages join', () => {
           },
         },
       );
-    const response = await exportCsv();
-    expect(response.status).toBe(200);
-    expect(await response.text()).toBe(expected + '\r\n');
-    const bound = crawlLogs.max_export_rows;
-    crawlLogs.max_export_rows = pages - 1;
+    const { max_export_rows: bound, export_batch_rows: batch } = crawlLogs;
+    // One-row batches: every row after the first continues from the previous batch's keyset.
+    crawlLogs.export_batch_rows = 1;
     try {
+      const response = await exportCsv();
+      expect(response.status).toBe(200);
+      expect(await response.text()).toBe(expected + '\r\n');
+      crawlLogs.max_export_rows = pages - 1;
       expect((await exportCsv()).status).toBe(422);
     } finally {
       crawlLogs.max_export_rows = bound;
+      crawlLogs.export_batch_rows = batch;
     }
   });
   it('keeps timezone mismatches non-comparable, flagged absence unavailable, and missing connections distinct', async () => {

@@ -1186,6 +1186,8 @@ describe('persisted analytics and coverage decisions', () => {
       cursor = next.next_cursor;
     } while (cursor);
     expect(activityRows.length).toBeGreaterThan(1);
+    // One-row batches: every row after the first continues from the previous batch's keyset.
+    crawlLogs.export_batch_rows = 1;
     const all = await app.request(
       '/api/v1/projects/' + tenant.projectId + '/ai-traffic/activity/export',
       { headers: { cookie } },
@@ -1218,6 +1220,7 @@ describe('persisted analytics and coverage decisions', () => {
       ),
       '',
     ]);
+    crawlLogs.export_batch_rows = original.export_batch_rows;
   });
 });
 

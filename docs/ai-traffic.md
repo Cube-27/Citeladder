@@ -302,7 +302,11 @@ CSV exports. Shared
 [`ai-traffic.ts` contracts](../frontend/packages/contracts/src/ai-traffic.ts)
 own the wire shapes. All reads render persisted data without crawling,
 refreshing or calling providers. Cursors bind workspace, project, view, filters
-and page size; exports use the same filters, sanitization and bounded paging.
+and page size; exports use the same filters, sanitization and ordering. An
+export counts its rows first and refuses past `max_export_rows` before reading
+any, then streams keyset batches of `export_batch_rows` to the response, so the
+API holds one batch at a time. Pages reads aggregate source-ID provenance only
+for the persisted insight derivation.
 The cross-signal composition (overview, Pages, URL detail, insights and the
 citation-run selector) lives in `src/ai-traffic/`; it reads crawl-log windows
 from `src/crawl-logs/` and owns the `ai_traffic_insights_refresh` kind.
