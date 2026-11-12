@@ -4,14 +4,17 @@ import { beforeEach, expect, it, vi } from 'vite-plus/test';
 import { renderWithProviders } from '@/test/render';
 import { WorkspaceAccessGate } from './workspace-access-gate';
 
-const { access, project, security, capability } = vi.hoisted(() => ({
+const { access, project, security, capability, logout, navigate } = vi.hoisted(() => ({
   access: vi.fn(),
   project: vi.fn(),
   security: vi.fn(),
   capability: vi.fn(),
+  logout: vi.fn(),
+  navigate: vi.fn(),
 }));
+vi.mock('@/lib/navigation/hard-navigate', () => ({ hardNavigate: navigate }));
 vi.mock('@/lib/api/auth', () => ({
-  authApi: { security },
+  authApi: { security, logout },
   authQueries: { security: () => ({ queryKey: ['auth', 'security'], queryFn: () => security() }) },
 }));
 // The transport is replaced on the module's own client object, so the gate's
@@ -65,6 +68,8 @@ vi.mock('@/lib/billing/use-workspace-catalog', () => ({
 }));
 beforeEach(() => {
   access.mockReset();
+  logout.mockReset();
+  navigate.mockReset();
   capability.mockReturnValue(true);
   security.mockResolvedValue({
     email: 'owner@example.test',
@@ -187,11 +192,38 @@ it('rechecks current authority instead of copying another workspace denial', asy
 
 it('offers retry when workspace discovery has failed without an active workspace', async () => {
   const retry = vi.fn();
-  project.mockReturnValue({ activeWorkspaceId: null, workspaces: [], isLoading: false, retry });
+  project.mockReturnValue({
+    activeWorkspaceId: null,
+    workspaces: [],
+    isLoading: false,
+    isError: true,
+    retry,
+  });
   renderWithProviders(<WorkspaceAccessGate>Private report</WorkspaceAccessGate>);
+  expect(screen.getByText("Couldn't load workspace access")).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Workspace access' })).not.toBeInTheDocument();
   await act(async () => screen.getByRole('button', { name: 'Retry' }).click());
   expect(retry).toHaveBeenCalledOnce();
-  expect(screen.queryByText('Checking your access…')).not.toBeInTheDocument();
+});
+
+it('reports a failed access read as a retryable error, not as access that ended', async () => {
+  vi.useFakeTimers();
+  try {
+    access.mockRejectedValue(new ApiError('Service unavailable', 503, ''));
+    renderWithProviders(<WorkspaceAccessGate>Private report</WorkspaceAccessGate>);
+    // The read's own automatic retries run out first.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+  } finally {
+    vi.useRealTimers();
+  }
+  expect(screen.getByText("Couldn't load workspace access")).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Workspace access' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Contact support' })).not.toBeInTheDocument();
+  access.mockResolvedValue({ status: 'active', expires_at: null });
+  await act(async () => screen.getByRole('button', { name: 'Retry' }).click());
+  expect(await screen.findByText('Private report')).toBeInTheDocument();
 });
 
 it('removes visible and cached product evidence when a server request denies access', async () => {
@@ -258,6 +290,20 @@ it('offers an ended trial a plan to continue, and tells a member who may buy it'
     await screen.findByText('Ask a workspace Owner or Admin to choose a plan for this workspace.'),
   ).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Choose a plan' })).toBeNull();
+});
+
+it('says so when signing out of an ended workspace fails, and leaves on an expired session', async () => {
+  access.mockResolvedValue({ status: 'access_unresolved', expires_at: null });
+  logout.mockRejectedValueOnce(new ApiError('Service unavailable', 503, ''));
+  renderWithProviders(<WorkspaceAccessGate>Private report</WorkspaceAccessGate>);
+  const signOutButton = await screen.findByRole('button', { name: 'Sign out' });
+  await act(async () => signOutButton.click());
+  expect(await screen.findByText(/Sign out failed/)).toBeInTheDocument();
+  expect(navigate).not.toHaveBeenCalled();
+
+  logout.mockRejectedValueOnce(new ApiError('Unauthorized', 401, ''));
+  await act(async () => screen.getByRole('button', { name: 'Sign out' }).click());
+  await waitFor(() => expect(navigate).toHaveBeenCalledWith('/login'));
 });
 
 it('distinguishes missing authority from an expired trial', async () => {

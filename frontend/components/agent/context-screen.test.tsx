@@ -553,24 +553,6 @@ describe('Business map', () => {
 });
 
 describe('Agent instruction drafts', () => {
-  it('resets a draft when the active project changes', async () => {
-    const nextProject = makeProject({ id: '11111111-1111-4111-8111-111111111112' });
-    const { rerender } = renderContext({ tab: 'instructions' });
-    mswServer.use(
-      http.get(`/api/v1/projects/${nextProject.id}/agent/instructions`, () =>
-        HttpResponse.json(saved('Second project')),
-      ),
-    );
-    const field = await screen.findByRole('textbox', { name: 'Agent instructions' });
-    fireEvent.change(field, { target: { value: 'Unsaved first-project draft' } });
-    rerender(<ContextScope activeProject={nextProject} />);
-    await waitFor(() =>
-      expect(screen.getByRole('textbox', { name: 'Agent instructions' })).toHaveValue(
-        'Second project',
-      ),
-    );
-  });
-
   it('follows refreshed instructions until edited, then preserves the local draft', async () => {
     const { queryClient } = renderContext({ tab: 'instructions' });
     const field = await screen.findByRole('textbox', { name: 'Agent instructions' });

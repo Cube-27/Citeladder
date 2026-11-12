@@ -4,7 +4,7 @@ import { DetailScreen, type PageBack } from '@/components/layout/page-shell';
 import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { Inline, Stack } from '@/components/ui/layout';
 import { InternalLinksCard } from '@/components/site-health/internal-links-card';
-import { PageIssues } from '@/components/site-health/page-issues';
+import { PageIssues, type RerunControl } from '@/components/site-health/page-issues';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { RobotsExcludedBadge } from '@/components/site-health/robots-choice';
 import { UrlScoreSummary } from '@/components/site-health/url-score-summary';
@@ -42,14 +42,13 @@ const rerunLabel = (pending: boolean) => (pending ? 'Re-auditing…' : 'Re-audit
  */
 export function UrlDetailView({
   detail,
-  rerunPending,
-  onRerun,
+  rerun,
   history,
   children,
 }: Readonly<{
   detail: PageDetail;
-  rerunPending: boolean;
-  onRerun: () => void;
+  /** Re-audits the page, for a role that may run one. */
+  rerun?: RerunControl;
   /** The page action that opens its resolved-issue history. */
   history?: ReactNode;
   children?: ReactNode;
@@ -64,9 +63,11 @@ export function UrlDetailView({
           {history}
           {detail.url_hash ? <TrafficUrlButton urlHash={detail.url_hash} /> : null}
           <AskAgentLink handoff={pageHandoff(detail)}>Ask agent about this page</AskAgentLink>
-          <Button variant="primary" onClick={onRerun} disabled={rerunPending}>
-            {rerunLabel(rerunPending)}
-          </Button>
+          {rerun ? (
+            <Button variant="primary" onClick={rerun.onRerun} disabled={rerun.busy}>
+              {rerunLabel(rerun.busy)}
+            </Button>
+          ) : null}
         </>
       }
     >
@@ -77,7 +78,7 @@ export function UrlDetailView({
         issues={detail.issues}
         audited={detail.analysis_status === 'completed'}
         crawlId={detail.crawl_id}
-        rerun={{ onRerun, busy: rerunPending }}
+        rerun={rerun}
       />
       <TechnicalDetails detail={detail} />
     </DetailScreen>

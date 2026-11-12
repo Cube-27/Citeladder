@@ -36,6 +36,7 @@ import { PromptActions, promptFilterControls } from './prompt-toolbar';
 import { type TopicDialog, TopicDialogs, topicFilter } from './topic-controls';
 import { useTopicMutations } from './use-topic-mutations';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 import type { BuilderStep } from './prompt-builder';
 
@@ -80,6 +81,8 @@ export function PromptLibrary({
 }>) {
   const { workspaceId, projectId, project } = useProjectScope();
   const scope = { workspaceId, projectId };
+  // A role that may not edit prompts reads the library with no edit controls.
+  const canWrite = useWorkspaceCapability('write');
   const { promptSet, prompts, limits, isLoading, error, ensurePromptSet, retry, retrying } =
     usePromptSet();
 
@@ -149,10 +152,10 @@ export function PromptLibrary({
   };
   const openFromUrl = useEffectEvent((step: BuilderStep) => openBuilder(step));
   useEffect(() => {
-    if (generateRequest === 0) return;
+    if (generateRequest === 0 || !canWrite) return;
     // oxlint-disable-next-line react-hooks/set-state-in-effect -- open the builder for a URL request.
     openFromUrl(reviewRequest ? 'review' : 'business');
-  }, [generateRequest, reviewRequest]);
+  }, [generateRequest, reviewRequest, canWrite]);
 
   const topicMutations = useTopicMutations({
     scope,
@@ -217,25 +220,34 @@ export function PromptLibrary({
       : createMutation.mutateAsync(formValuesToPromptInput(values));
     await mutation.then(closeForm, () => undefined);
   };
+  // Every edit control of the library, for a role that may edit prompts.
+  const edits = canWrite
+    ? {
+        rows: {
+          onEdit: openEdit,
+          onDelete: (prompt: Prompt) => setPendingDelete({ kind: 'prompt', prompt }),
+          onToggleEnabled: (prompt: Prompt) => {
+            setBusyId(prompt.id);
+            rowMutation.mutate(
+              { promptId: prompt.id, input: { enabled: !prompt.enabled } },
+              clearBusy,
+            );
+          },
+          onSetStatus: (prompt: Prompt, status: PromptStatus) => {
+            setBusyId(prompt.id);
+            rowMutation.mutate({ promptId: prompt.id, input: { status } }, clearBusy);
+          },
+          busyId,
+        },
+        add: { onGenerate: () => openBuilder('business'), onAdd: openAdd },
+        topics: { onAdd: openAddTopic, onManage: () => setTopicDialog('manage') },
+      }
+    : undefined;
 
   // An empty library and a library filtered to nothing read differently: one
   // needs a way to add prompts, the other needs its filter loosened.
   let libraryBody: ReactNode = (
-    <PromptTable
-      prompts={visible}
-      onEdit={openEdit}
-      onDelete={(prompt) => setPendingDelete({ kind: 'prompt', prompt })}
-      onToggleEnabled={(prompt) => {
-        setBusyId(prompt.id);
-        rowMutation.mutate({ promptId: prompt.id, input: { enabled: !prompt.enabled } }, clearBusy);
-      }}
-      onSetStatus={(prompt, status) => {
-        setBusyId(prompt.id);
-        rowMutation.mutate({ promptId: prompt.id, input: { status } }, clearBusy);
-      }}
-      busyId={busyId}
-      measurements={measurements}
-    />
+    <PromptTable prompts={visible} actions={edits?.rows} measurements={measurements} />
   );
   // A failed read with nothing to show takes the empty state's slot; a failed
   // refresh keeps the prompts already shown and says so above them.
@@ -251,7 +263,7 @@ export function PromptLibrary({
       />
     );
   } else if (!hasPrompts) {
-    libraryBody = <PromptEmptyState onGenerate={() => openBuilder('business')} onAdd={openAdd} />;
+    libraryBody = <PromptEmptyState add={edits?.add} />;
   }
 
   // Status, search and filters share one control band once loaded; the first
@@ -286,8 +298,7 @@ export function PromptLibrary({
           topics,
           selectedTopicId,
           onSelect: setSelectedTopicId,
-          onAdd: openAddTopic,
-          onManage: () => setTopicDialog('manage'),
+          manage: edits?.topics,
         }),
       })}
     >
@@ -302,7 +313,7 @@ export function PromptLibrary({
         ) : null}
         <PendingReviewNotice
           count={review.candidates.length}
-          hidden={builderOpen}
+          hidden={builderOpen || !canWrite}
           onReview={() => openBuilder('review')}
         />
 

@@ -12,6 +12,7 @@ import { createAppQueryClient } from '@/lib/api/query-client';
 import { ActiveProjectScopeProvider } from '@/lib/project/active-project-scope';
 import { makeProject } from '@/test/fixtures/project';
 import { focusByKeyboard } from '@/test/keyboard-focus';
+import { roles } from '@/services/api/src/config/workspaces.json';
 
 import { DemandProjection } from './demand-projection';
 
@@ -50,6 +51,8 @@ function rankOf(row: HTMLElement) {
 const project = vi.hoisted(() => ({
   id: '11111111-1111-4111-8111-111111111111',
   workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  /** What the reader's role may do in the workspace. */
+  capabilities: ['read', 'run', 'write'] as readonly string[],
 }));
 
 vi.mock('@/components/integrations/data-source-setup', () => ({
@@ -68,6 +71,7 @@ vi.mock('@/lib/project/project-context', () => {
     useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     useOptionalProjectContext: context,
     useProjectContext: context,
+    useWorkspaceCapability: (capability: string) => project.capabilities.includes(capability),
   };
 });
 
@@ -192,6 +196,7 @@ describe('DemandProjection', () => {
     // The filter and selection live in the address, which outlives a render.
     window.history.replaceState(null, '', '/demand');
     project.id = '11111111-1111-4111-8111-111111111111';
+    project.capabilities = roles.member;
     vi.mocked(demandApi.getLatest).mockResolvedValue(snapshot);
   });
 
@@ -637,6 +642,14 @@ describe('DemandProjection', () => {
     // must NOT silently refetch the identical snapshot as if it had rebuilt.
     expect(await screen.findByText(/Recompute queued/i)).toBeInTheDocument();
     expect(vi.mocked(demandApi.getLatest).mock.calls).toHaveLength(fetchesBeforeRecompute);
+  });
+
+  it('shows a viewer the signals without offering a recompute', async () => {
+    project.capabilities = roles.viewer;
+    renderProjection();
+
+    expect(await findSignalCount('2 signals observed')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Recompute signals/i })).toBeNull();
   });
 
   it('shows no snapshot from the project that was just switched away from', async () => {

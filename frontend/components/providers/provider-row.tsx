@@ -18,6 +18,7 @@ import {
   type ProviderGroup,
 } from '@/lib/providers/catalog';
 import { useProviderConnection } from '@/lib/providers/use-provider-connection';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 import { ProviderConnectionFields } from './provider-connection-fields';
 
@@ -125,7 +126,10 @@ export function ProviderRow({
   connections: ProviderConnection[];
   defaultOpen?: boolean;
 }>) {
-  const [open, setOpen] = useState(defaultOpen);
+  // A credential is offered only to a role that manages credentials; the rest
+  // read whether each provider works.
+  const canManage = useWorkspaceCapability('manage_credentials');
+  const [open, setOpen] = useState(defaultOpen && canManage);
   const formId = useId();
   const state = useProviderConnection({ group, connections, onSaved: () => setOpen(false) });
   const closedAction = state.configured ? 'Manage' : 'Connect';
@@ -146,20 +150,22 @@ export function ProviderRow({
         </Inline>
         <Inline>
           <StatusBadge group={group} connection={state.connection} />
-          <Button
-            type="button"
-            variant={open ? 'ghost' : 'secondary'}
-            aria-expanded={open}
-            aria-controls={formId}
-            aria-label={`${toggleLabel} ${group.label}`}
-            onClick={() => setOpen((current) => !current)}
-          >
-            {toggleLabel}
-          </Button>
+          {canManage ? (
+            <Button
+              type="button"
+              variant={open ? 'ghost' : 'secondary'}
+              aria-expanded={open}
+              aria-controls={formId}
+              aria-label={`${toggleLabel} ${group.label}`}
+              onClick={() => setOpen((current) => !current)}
+            >
+              {toggleLabel}
+            </Button>
+          ) : null}
         </Inline>
       </Inline>
       <LastFailure group={group} />
-      {open ? <CredentialForm id={formId} state={state} /> : null}
+      {open && canManage ? <CredentialForm id={formId} state={state} /> : null}
     </Stack>
   );
 }

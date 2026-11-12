@@ -24,6 +24,18 @@ type SseEventStreamOptions = {
   streamName: string;
 };
 
+/**
+ * Refusals a reconnect cannot change: the session ended (401), access to the
+ * workspace or record ended (403), or the run or crawl is gone (404). Anything
+ * else (a dropped connection, 408, 429, 5xx) is worth asking again.
+ */
+const REFUSALS: ReadonlySet<number> = new Set([401, 403, 404]);
+
+type StreamOutcome =
+  | Readonly<{ kind: 'read'; frames: number }>
+  | Readonly<{ kind: 'dropped' }>
+  | Readonly<{ kind: 'refused' }>;
+
 export function streamHeaders(
   workspaceId: string | null,
   lastEventId: string | null,
@@ -95,7 +107,7 @@ export function useSseEventStream({
       }, invalidateDebounceMs);
     };
 
-    const connect = async (): Promise<number | null> => {
+    const connect = async (): Promise<StreamOutcome> => {
       const response = await fetch(url, {
         method: 'GET',
         headers: streamHeaders(workspaceId, stream.lastEventId),
@@ -103,8 +115,9 @@ export function useSseEventStream({
         cache: 'no-store',
         signal: controller.signal,
       });
-      if (!response.ok || !response.body) return null;
-      return readSseResponse(
+      if (REFUSALS.has(response.status)) return { kind: 'refused' };
+      if (!response.ok || !response.body) return { kind: 'dropped' };
+      const frames = await readSseResponse(
         response.body,
         () => cancelled,
         (frame) => {
@@ -112,19 +125,24 @@ export function useSseEventStream({
           if (onFrame(frame)) scheduleInvalidate();
         },
       );
+      return { kind: 'read', frames };
     };
 
     const run = async (attempt = 0) => {
-      let frameCount: number | null = null;
+      let outcome: StreamOutcome = { kind: 'dropped' };
       try {
-        frameCount = await connect();
+        outcome = await connect();
       } catch (error) {
         if (cancelled || controller.signal.aborted) return;
         console.error(`[${streamName}] event stream failed`, { attempt, error });
       }
       if (cancelled || controller.signal.aborted) return;
+      // Asking again cannot change a refusal. The screen's polled read stays
+      // authoritative and reports why (an ended session reaches the session
+      // guard from there).
+      if (outcome.kind === 'refused') return;
 
-      const hitDurationCap = frameCount !== null && frameCount > 0;
+      const hitDurationCap = outcome.kind === 'read' && outcome.frames > 0;
       const delay = hitDurationCap
         ? reconnectBaseMs
         : Math.min(reconnectBaseMs * 2 ** attempt, reconnectMaxMs);

@@ -30,6 +30,15 @@ export type PromptMeasurement = {
   brands: readonly NamedBrand[];
 };
 
+/** What a prompt row's controls do. */
+export type PromptRowActions = Readonly<{
+  onEdit: (prompt: Prompt) => void;
+  onDelete: (prompt: Prompt) => void;
+  onToggleEnabled: (prompt: Prompt) => void;
+  onSetStatus?: (prompt: Prompt, status: PromptStatus) => void;
+  busyId?: string | null;
+}>;
+
 /** Rows per page on the prompt table (client-side; the list arrives whole). */
 const PAGE_SIZE = 10;
 
@@ -49,19 +58,15 @@ const PAGE_SIZE = 10;
  */
 export function PromptTable({
   prompts,
-  onEdit,
-  onDelete,
-  onToggleEnabled,
-  onSetStatus,
-  busyId,
+  actions,
   measurements,
 }: Readonly<{
   prompts: Prompt[];
-  onEdit: (prompt: Prompt) => void;
-  onDelete: (prompt: Prompt) => void;
-  onToggleEnabled: (prompt: Prompt) => void;
-  onSetStatus?: (prompt: Prompt, status: PromptStatus) => void;
-  busyId?: string | null;
+  /**
+   * The row controls, for a role that may edit prompts. Without them the
+   * table states each prompt's enabled state and offers no control.
+   */
+  actions?: PromptRowActions;
   /** Latest-run measurement per prompt id. Omitted before any run exists. */
   measurements?: ReadonlyMap<string, PromptMeasurement>;
 }>) {
@@ -78,7 +83,7 @@ export function PromptTable({
       // that the table scrolls with the prompt pinned.
       minWidth={measured ? 'md' : 'sm'}
       pinFirstColumn
-      columns={promptColumns(measured)}
+      columns={promptColumns(measured, actions !== undefined)}
       pageSize={PAGE_SIZE}
       rowCount={pagedPrompts.length}
       rowLines={3}
@@ -118,63 +123,79 @@ export function PromptTable({
             />
           </TableCell>
           {measured ? <MeasuredCells measurement={measurements?.get(prompt.id)} /> : null}
-          <TableCell>
-            <Switch
-              checked={prompt.enabled}
-              label={`${prompt.enabled ? 'Disable' : 'Enable'} prompt`}
-              disabled={busyId === prompt.id}
-              onCheckedChange={() => onToggleEnabled(prompt)}
-            />
-          </TableCell>
-          <TableActionsCell>
-            <Menu>
-              <MenuTrigger asChild>
-                <IconButton icon={MoreHorizontal} label="Prompt actions" />
-              </MenuTrigger>
-              <MenuContent align="end">
-                {onSetStatus && prompt.status === 'archived' ? (
-                  <MenuItem
-                    icon={<Icon icon={Check} />}
-                    onSelect={() => onSetStatus(prompt, 'active')}
-                  >
-                    Restore
-                  </MenuItem>
-                ) : null}
-                <MenuItem icon={<Icon icon={Pencil} />} onSelect={() => onEdit(prompt)}>
-                  Edit
-                </MenuItem>
-                {onSetStatus && prompt.status !== 'archived' ? (
-                  <MenuItem
-                    icon={<Icon icon={Archive} />}
-                    onSelect={() => onSetStatus(prompt, 'archived')}
-                  >
-                    Archive
-                  </MenuItem>
-                ) : null}
-                <MenuSeparator />
-                <MenuItem icon={<Icon icon={Trash2} />} danger onSelect={() => onDelete(prompt)}>
-                  Delete
-                </MenuItem>
-              </MenuContent>
-            </Menu>
-          </TableActionsCell>
+          {actions ? (
+            <PromptRowControls prompt={prompt} actions={actions} />
+          ) : (
+            <TableCell>{prompt.enabled ? 'Yes' : 'No'}</TableCell>
+          )}
         </TableRow>
       ))}
     </DataTable>
   );
 }
 
+/** The enabled switch and the actions menu of one editable row. */
+function PromptRowControls({
+  prompt,
+  actions: { onEdit, onDelete, onToggleEnabled, onSetStatus, busyId },
+}: Readonly<{ prompt: Prompt; actions: PromptRowActions }>) {
+  return (
+    <>
+      <TableCell>
+        <Switch
+          checked={prompt.enabled}
+          label={`${prompt.enabled ? 'Disable' : 'Enable'} prompt`}
+          disabled={busyId === prompt.id}
+          onCheckedChange={() => onToggleEnabled(prompt)}
+        />
+      </TableCell>
+      <TableActionsCell>
+        <Menu>
+          <MenuTrigger asChild>
+            <IconButton icon={MoreHorizontal} label="Prompt actions" />
+          </MenuTrigger>
+          <MenuContent align="end">
+            {onSetStatus && prompt.status === 'archived' ? (
+              <MenuItem icon={<Icon icon={Check} />} onSelect={() => onSetStatus(prompt, 'active')}>
+                Restore
+              </MenuItem>
+            ) : null}
+            <MenuItem icon={<Icon icon={Pencil} />} onSelect={() => onEdit(prompt)}>
+              Edit
+            </MenuItem>
+            {onSetStatus && prompt.status !== 'archived' ? (
+              <MenuItem
+                icon={<Icon icon={Archive} />}
+                onSelect={() => onSetStatus(prompt, 'archived')}
+              >
+                Archive
+              </MenuItem>
+            ) : null}
+            <MenuSeparator />
+            <MenuItem icon={<Icon icon={Trash2} />} danger onSelect={() => onDelete(prompt)}>
+              Delete
+            </MenuItem>
+          </MenuContent>
+        </Menu>
+      </TableActionsCell>
+    </>
+  );
+}
+
 /**
  * The measured columns are drawn only once a run exists. The headers are one
  * word (owner, 2026-11-11); each hint says exactly what its figure measures.
+ * A reader who may not edit reads the enabled state as text, with no actions.
  */
-function promptColumns(measured: boolean): DataTableColumn[] {
-  return [
+function promptColumns(measured: boolean, editable: boolean): DataTableColumn[] {
+  const columns: DataTableColumn[] = [
     { key: 'prompt', label: 'Prompt' },
     ...(measured ? MEASURED_COLUMNS : []),
     { key: 'enabled', label: 'Enabled', width: 'control' },
-    { key: 'actions', label: 'Actions', width: 'control', trailing: true },
   ];
+  if (editable)
+    columns.push({ key: 'actions', label: 'Actions', width: 'control', trailing: true });
+  return columns;
 }
 
 const MEASURED_COLUMNS: readonly DataTableColumn[] = [

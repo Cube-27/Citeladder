@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Settings2, Unplug } from 'lucide-react';
+import { Settings2 } from 'lucide-react';
 
 import { ListScreen, RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { SearchIntelligenceCitationMatcher } from '@/components/search-intelligence/search-intelligence-citation-matcher';
@@ -11,13 +11,12 @@ import { useSearchCollection, type SearchCollection } from './search-intelligenc
 import { SearchIntelligenceReviewDrawer } from '@/components/search-intelligence/search-intelligence-review-drawer';
 import { SearchIntelligenceOverview } from '@/components/search-intelligence/search-intelligence-overview';
 import { referringLists } from './search-intelligence-format';
+import { NotConnected, UnavailableNotice } from './search-intelligence-availability';
 import { CostDetails, RunNotice } from './search-intelligence-runs';
-import { Callout } from '@/components/ui/callout';
 import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
 import { QueryState } from '@/components/ui/query-state';
 import { readErrorProps } from '@/components/ui/read-error';
-import { ProjectLink } from '@/components/ui/project-link';
 import { TextLink } from '@/components/ui/text-link';
 import type { FilterDefinition } from '@/components/ui/all-filters';
 import { savedViewFilters, scopeControls } from './search-intelligence-scope';
@@ -35,8 +34,8 @@ import { searchMarketLabel } from '@/lib/config/search-intelligence';
 import { pollSearchRun } from '@/lib/search-intelligence/status';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 
-const PROVIDER_SETTINGS = '/settings?tab=providers';
 const TABS = [
   { value: 'overview', label: 'Overview' },
   { value: 'keywords', label: 'Keywords' },
@@ -116,6 +115,14 @@ export function SearchIntelligencePage() {
     setAction(nextAction);
     setDrawerOpen(true);
   };
+  const actions = useRoleActions({
+    openReview,
+    cancel: (runId) => cancelMutation.mutate(runId),
+    openMatch: (origin) => {
+      setCitationOrigin(origin);
+      setCitationOpen(true);
+    },
+  });
   const { scopes, activeScope, markets, activeMarket, datasets } = selectDatasets(
     readiness.data?.datasets ?? [],
     scope,
@@ -161,26 +168,7 @@ export function SearchIntelligencePage() {
     return (
       <TabsRoot value={tab} onValueChange={setTab}>
         <ListScreen tabs={tabs}>
-          {data.credential_mode === 'funded' ? (
-            <QueryState
-              kind="empty"
-              icon={Unplug}
-              heading="Keyword Research is unavailable"
-              description="Research is temporarily unavailable on your plan. Try again later."
-            />
-          ) : (
-            <QueryState
-              kind="empty"
-              icon={Unplug}
-              heading="Connect DataForSEO"
-              description="Add your DataForSEO login once to run analyses."
-              action={
-                <Button asChild variant="secondary">
-                  <ProjectLink href={PROVIDER_SETTINGS}>Open provider settings</ProjectLink>
-                </Button>
-              }
-            />
-          )}
+          <NotConnected funded={data.credential_mode === 'funded'} />
         </ListScreen>
       </TabsRoot>
     );
@@ -198,11 +186,11 @@ export function SearchIntelligencePage() {
         </ListScreen>
       </TabsRoot>
     );
-  const firstRun = (
-    <Button variant="primary" onClick={() => openReview('analysis')}>
+  const firstRun = actions.analysis ? (
+    <Button variant="primary" onClick={actions.analysis}>
       Review first analysis
     </Button>
-  );
+  ) : undefined;
   return (
     <TabsRoot value={tab} onValueChange={setTab}>
       <ListScreen
@@ -210,7 +198,7 @@ export function SearchIntelligencePage() {
         actions={
           <PageActions
             hasDatasets={Boolean(data.datasets.length)}
-            onReview={openReview}
+            onReview={actions.review}
             onCost={() => setCostOpen(true)}
           />
         }
@@ -219,12 +207,9 @@ export function SearchIntelligencePage() {
           tab,
           datasets,
           collection,
-          onSeed: () => openReview('seed'),
-          onMatch: (origin) => {
-            setCitationOrigin(origin);
-            setCitationOpen(true);
-          },
-          onExpand: () => openReview('increase_depth'),
+          onSeed: actions.onSeed,
+          onMatch: actions.onMatch,
+          onExpand: actions.onExpand,
           savedView: savedViewFilters({
             scopes,
             scope: activeScope,
@@ -246,8 +231,8 @@ export function SearchIntelligencePage() {
           <UnavailableNotice data={data} />
           <RunNotice
             run={data.latest_run}
-            onCancel={(runId) => cancelMutation.mutate(runId)}
-            onReview={() => openReview('analysis')}
+            onCancel={actions.cancel}
+            onReview={actions.analysis}
             cancelling={cancelMutation.isPending}
           />
           <TabPanel value="overview" className="min-w-0">
@@ -313,20 +298,59 @@ export function SearchIntelligencePage() {
   );
 }
 
+/**
+ * The page's actions, each only for a role that may take it: reviews and
+ * cancels spend or stop credits (run); saving citation matches is a write.
+ */
+function useRoleActions({
+  openReview,
+  cancel,
+  openMatch,
+}: Readonly<{
+  openReview: (action: SearchReviewAction) => void;
+  cancel: (runId: string) => void;
+  openMatch: (targetOrigin: string | undefined) => void;
+}>): Readonly<
+  CollectionActions & {
+    review?: (action: SearchReviewAction) => void;
+    /** Opens the analysis review: the first run, or the recovery for a stopped one. */
+    analysis?: () => void;
+    cancel?: (runId: string) => void;
+  }
+> {
+  const canRun = useWorkspaceCapability('run');
+  const canWrite = useWorkspaceCapability('write');
+  const onMatch = canWrite ? openMatch : undefined;
+  if (!canRun) return { onMatch };
+  return {
+    review: openReview,
+    analysis: () => openReview('analysis'),
+    cancel,
+    onSeed: () => openReview('seed'),
+    onExpand: () => openReview('increase_depth'),
+    onMatch,
+  };
+}
+
 function PageActions({
   hasDatasets,
   onReview,
   onCost,
 }: Readonly<{
   hasDatasets: boolean;
-  onReview: (action: SearchReviewAction) => void;
+  /** Opens a credit-spending review; omitted for a role that may not run one. */
+  onReview?: (action: SearchReviewAction) => void;
   onCost: () => void;
 }>) {
+  const costDetails = (
+    <Button variant="ghost" onClick={onCost}>
+      Cost details
+    </Button>
+  );
+  if (!onReview) return costDetails;
   return (
     <>
-      <Button variant="ghost" onClick={onCost}>
-        Cost details
-      </Button>
+      {costDetails}
       {hasDatasets ? (
         <>
           <Button variant="secondary" onClick={() => onReview('refresh')}>
@@ -356,16 +380,15 @@ function pageControls({
   collection,
   savedView,
   ...actions
-}: Readonly<{
-  data: SearchIntelligenceReadiness;
-  tab: Tab;
-  datasets: SearchIntelligenceDataset[];
-  collection: SearchCollection | null;
-  savedView: FilterDefinition[];
-  onSeed: () => void;
-  onMatch: (targetOrigin: string | undefined) => void;
-  onExpand: () => void;
-}>) {
+}: Readonly<
+  {
+    data: SearchIntelligenceReadiness;
+    tab: Tab;
+    datasets: SearchIntelligenceDataset[];
+    collection: SearchCollection | null;
+    savedView: FilterDefinition[];
+  } & CollectionActions
+>) {
   const newest = datasets.find((item) =>
     tab === 'backlinks' ? item.location_code === null : item.location_code !== null,
   );
@@ -381,6 +404,16 @@ function pageControls({
   });
 }
 
+/** A tab's next steps; each is omitted for a role that may not take it. */
+type CollectionActions = {
+  /** Reviews a keyword to research, a run. */
+  onSeed?: () => void;
+  /** Saves citation matches, a write. */
+  onMatch?: (targetOrigin: string | undefined) => void;
+  /** Reviews a deeper collection, a run. */
+  onExpand?: () => void;
+};
+
 /**
  * The tab's own next step, at the end of the control strip: its research
  * action, then a deeper review of the saved result on screen.
@@ -391,13 +424,12 @@ function CollectionAction({
   onSeed,
   onMatch,
   onExpand,
-}: Readonly<{
-  collection: SearchCollection;
-  datasets: SearchIntelligenceDataset[];
-  onSeed: () => void;
-  onMatch: (targetOrigin: string | undefined) => void;
-  onExpand: () => void;
-}>) {
+}: Readonly<
+  {
+    collection: SearchCollection;
+    datasets: SearchIntelligenceDataset[];
+  } & CollectionActions
+>) {
   // Only the website on screen: matching another website's list would save
   // matches for a site the reader is not looking at.
   const matchable =
@@ -406,40 +438,21 @@ function CollectionAction({
   const expandable = !collection.listingCompetitors && Boolean(collection.dataset);
   return (
     <>
-      {collection.tab === 'keywords' ? (
+      {collection.tab === 'keywords' && onSeed ? (
         <Button variant="secondary" onClick={onSeed}>
           Research a keyword
         </Button>
       ) : null}
-      {matchable ? (
+      {matchable && onMatch ? (
         <Button variant="secondary" onClick={() => onMatch(collection.target)}>
           Match with Visibility citations
         </Button>
       ) : null}
-      {expandable ? (
+      {expandable && onExpand ? (
         <Button variant="ghost" onClick={onExpand}>
           Review depth
         </Button>
       ) : null}
     </>
-  );
-}
-
-/** Why saved results cannot be refreshed: a missing connection, or managed research being down. */
-function UnavailableNotice({
-  data,
-}: Readonly<{ data: { connected: boolean; credential_mode: 'byok' | 'funded' } }>) {
-  if (data.connected) return null;
-  if (data.credential_mode === 'funded')
-    return (
-      <Callout tone="negative">
-        Research is temporarily unavailable, so saved results can be read but not refreshed.
-      </Callout>
-    );
-  return (
-    <Callout tone="negative">
-      DataForSEO is not connected, so saved results can be read but not refreshed.{' '}
-      <TextLink href={PROVIDER_SETTINGS}>Open provider settings</TextLink>
-    </Callout>
   );
 }

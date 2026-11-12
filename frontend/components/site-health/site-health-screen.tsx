@@ -32,14 +32,13 @@ import { internalLinksQueries } from '@/lib/api/site-health-internal-links';
 import type { CrawlRobotsHandling, SiteCrawl, SiteHealthEntitlement } from '@citeladder/contracts';
 import { RecrawlButton, StartCrawlControl } from '@/components/site-health/robots-choice';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 
 export function SiteHealthScreen() {
   const { workspaceId, projectId } = useProjectScope();
-  // Keyed by project, so one project's crawl start, stop or analyze outcome
-  // and its idempotency key never carry to the next.
-  return <SiteHealthContent key={projectId} projectId={projectId} workspaceId={workspaceId} />;
+  return <SiteHealthContent projectId={projectId} workspaceId={workspaceId} />;
 }
 
 function SiteHealthContent({
@@ -65,9 +64,13 @@ function SiteHealthContent({
   });
   const blocking = projectBlockingState(screen);
   const mutationsAllowed = !entitlementQuery.isError;
+  // Crawl controls are offered only to a role that may run crawls; the
+  // schedule, a saved setting, only to one that may write.
+  const canRun = useWorkspaceCapability('run');
+  const canWrite = useWorkspaceCapability('write');
   const schedule = useCrawlSchedule(
     { workspaceId, projectId },
-    Boolean(crawl) && mutationsAllowed,
+    Boolean(crawl) && mutationsAllowed && canWrite,
     crawl?.robots,
   );
   // Internal links' search, filters and header actions act on the analysis its panel draws.
@@ -83,7 +86,7 @@ function SiteHealthContent({
   // table's toolbar, Internal links' control row. The header keeps the crawl
   // controls and a tab's primary action.
   const headerActions =
-    crawl && mutationsAllowed ? (
+    crawl && mutationsAllowed && canRun ? (
       <CrawlActions
         crawl={crawl}
         active={active}
@@ -345,20 +348,12 @@ function AnalysisPanel({
   // Architecture reads a project-scoped projection, so it renders its own
   // "derived after the crawl finishes" state rather than needing a crawl here.
   if (tab === 'architecture')
-    return (
-      <ArchitecturePanel
-        key={projectId}
-        projectId={projectId}
-        workspaceId={workspaceId}
-        crawlId={crawlId}
-      />
-    );
+    return <ArchitecturePanel projectId={projectId} workspaceId={workspaceId} crawlId={crawlId} />;
   if (tab === 'aeo-readiness' && crawlId)
     return <AeoReadinessPanel projectId={projectId} workspaceId={workspaceId} crawlId={crawlId} />;
   if (tab === 'internal-links')
-    return <InternalLinksPanel key={projectId} read={linksRead} workspaceId={workspaceId} />;
-  if (tab === 'changes')
-    return <ChangesPanel key={projectId} projectId={projectId} workspaceId={workspaceId} />;
+    return <InternalLinksPanel read={linksRead} workspaceId={workspaceId} />;
+  if (tab === 'changes') return <ChangesPanel projectId={projectId} workspaceId={workspaceId} />;
   return <Callout tone="info">Run a crawl before opening Website analysis.</Callout>;
 }
 

@@ -13,6 +13,7 @@ import { followCatalogAnalysis } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 import { pluralCount } from '@/lib/format';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { crawlPollInterval } from '@/lib/site-health/status';
 
 import type { SiteCrawl } from '@citeladder/contracts';
@@ -181,25 +182,33 @@ export function useCatalogHeader({
   const noCrawl = crawl.kind === 'answered' && crawl.crawl === null;
   const refresh = () =>
     noCrawl ? startDiscovery() : void Promise.all([dashboard.refetch(), query.refetch()]);
+  // Importing products and starting a crawl are runs; re-reading is not.
+  const canRun = useWorkspaceCapability('run');
   return {
     actions: (
       <>
-        <Button variant="secondary" onClick={() => setAdding(true)}>
-          Add products
-        </Button>
-        <Button
-          variant="primary"
-          disabled={discover.isPending || dashboard.isPending}
-          onClick={refresh}
-        >
-          {noCrawl ? 'Run Site Health crawl' : 'Refresh from Site Health'}
-        </Button>
-        <AddProductsDialog
-          workspaceId={workspaceId}
-          projectId={projectId}
-          open={adding}
-          onOpenChange={setAdding}
-        />
+        {canRun ? (
+          <Button variant="secondary" onClick={() => setAdding(true)}>
+            Add products
+          </Button>
+        ) : null}
+        {canRun || !noCrawl ? (
+          <Button
+            variant="primary"
+            disabled={discover.isPending || dashboard.isPending}
+            onClick={refresh}
+          >
+            {noCrawl ? 'Run Site Health crawl' : 'Refresh from Site Health'}
+          </Button>
+        ) : null}
+        {canRun ? (
+          <AddProductsDialog
+            workspaceId={workspaceId}
+            projectId={projectId}
+            open={adding}
+            onOpenChange={setAdding}
+          />
+        ) : null}
       </>
     ),
     stats: <CatalogStats counts={counts} projection={projection} crawl={crawl} />,

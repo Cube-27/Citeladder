@@ -29,6 +29,7 @@ import {
   type SuggestionChange,
 } from '@/lib/api/agent';
 import { pluralCount } from '@/lib/format';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 type Filter = 'open' | 'applied' | 'dismissed';
 type Notice = { tone: CalloutTone; message: string };
@@ -192,12 +193,15 @@ function Actions({
 function SuggestionCard({
   suggestion,
   selected,
+  canChange,
   onShow,
   ...actions
 }: Readonly<
   CardActions & {
     suggestion: AgentSuggestion;
     selected: boolean;
+    /** Whether the reader's role may act on the suggestion at all. */
+    canChange: boolean;
     onShow: (id: string) => void;
   }
 >) {
@@ -241,7 +245,7 @@ function SuggestionCard({
           It overlaps another suggestion, so Apply all leaves it for you to choose.
         </p>
       ) : null}
-      <Actions suggestion={suggestion} textId={textId} {...actions} />
+      {canChange ? <Actions suggestion={suggestion} textId={textId} {...actions} /> : null}
     </Stack>
   );
 }
@@ -251,7 +255,8 @@ function CoverageGaps({
   onAddToContext,
 }: Readonly<{
   gaps: readonly GapMember[];
-  onAddToContext: (reference: ContextReference) => void;
+  /** Hands a gap to the composer; omitted for a role that may not ask the agent. */
+  onAddToContext?: (reference: ContextReference) => void;
 }>) {
   if (gaps.length === 0) return null;
   return (
@@ -269,19 +274,21 @@ function CoverageGaps({
             <Disclosure title="Evidence">
               <GapEvidence evidence={evidence} />
             </Disclosure>
-            <Button
-              variant="secondary"
-              className="justify-self-start"
-              aria-label={`Add to context: ${evidence.angle_label}`}
-              onClick={() =>
-                onAddToContext({
-                  quote: `Coverage gap: ${evidence.angle_label}`,
-                  request: 'Cover this topic on the page.',
-                })
-              }
-            >
-              Add to context
-            </Button>
+            {onAddToContext ? (
+              <Button
+                variant="secondary"
+                className="justify-self-start"
+                aria-label={`Add to context: ${evidence.angle_label}`}
+                onClick={() =>
+                  onAddToContext({
+                    quote: `Coverage gap: ${evidence.angle_label}`,
+                    request: 'Cover this topic on the page.',
+                  })
+                }
+              >
+                Add to context
+              </Button>
+            ) : null}
           </Stack>
         ))}
       </Stack>
@@ -333,6 +340,32 @@ function useSuggestionChanges(
   };
 }
 
+/** Apply all and Dismiss all, while any suggestion is open for review. */
+function BulkActions({
+  open,
+  ready,
+  disabled,
+  changes,
+}: Readonly<{
+  open: number;
+  /** Whether any open suggestion can be applied as it stands. */
+  ready: boolean;
+  disabled: boolean;
+  changes: Pick<ReturnType<typeof useSuggestionChanges>, 'applyAll' | 'dismissAll'>;
+}>) {
+  if (open === 0) return null;
+  return (
+    <Inline className="flex-wrap">
+      <Button variant="secondary" disabled={disabled || !ready} onClick={changes.applyAll}>
+        Apply all
+      </Button>
+      <Button variant="ghost" disabled={disabled} onClick={changes.dismissAll}>
+        Dismiss all
+      </Button>
+    </Inline>
+  );
+}
+
 const EMPTY: Readonly<Record<Filter, string>> = {
   open: 'Nothing to review. Ask the agent below for suggestions on the page.',
   applied: 'No suggestions applied yet.',
@@ -373,6 +406,9 @@ export function SuggestionsPanel({
   const [filter, setFilter] = useState<Filter>('open');
   const [shownSelection, setShownSelection] = useState(selectedId);
   const changes = useSuggestionChanges(workspaceId, target);
+  // Changing the page, or asking the agent to, is a run; a role without it
+  // reads the suggestions with no control to act on them.
+  const canChange = useWorkspaceCapability('run');
   // A highlight pressed in the page opens its card, which is always To review.
   if (selectedId !== shownSelection) {
     setShownSelection(selectedId);
@@ -412,6 +448,7 @@ export function SuggestionsPanel({
                 key={suggestion.id}
                 suggestion={suggestion}
                 selected={suggestion.id === selectedId}
+                canChange={canChange}
                 disabled={disabled}
                 onShow={onShow}
                 onChange={changes.change}
@@ -421,15 +458,8 @@ export function SuggestionsPanel({
           </Stack>
         </Stack>
       ))}
-      {filter === 'open' && counts.open > 0 ? (
-        <Inline className="flex-wrap">
-          <Button variant="secondary" disabled={disabled || !ready} onClick={changes.applyAll}>
-            Apply all
-          </Button>
-          <Button variant="ghost" disabled={disabled} onClick={changes.dismissAll}>
-            Dismiss all
-          </Button>
-        </Inline>
+      {canChange && filter === 'open' ? (
+        <BulkActions open={counts.open} ready={ready} disabled={disabled} changes={changes} />
       ) : null}
       {counts.stale > 0 ? (
         <p className={textRole('caption')}>
@@ -437,7 +467,7 @@ export function SuggestionsPanel({
           {counts.stale === 1 ? 'it is' : 'they are'} not shown.
         </p>
       ) : null}
-      <CoverageGaps gaps={gaps} onAddToContext={onAddToContext} />
+      <CoverageGaps gaps={gaps} onAddToContext={canChange ? onAddToContext : undefined} />
     </Stack>
   );
 }

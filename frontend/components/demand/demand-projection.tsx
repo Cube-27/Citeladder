@@ -41,6 +41,7 @@ import {
 import { formatCount, formatWindowDate } from '@/lib/format';
 import { InlineFigure } from '@/components/ui/typography';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -137,6 +138,7 @@ function SearchDemandView({
   // Recompute is queued: the screen reports that the work was queued and lets
   // the reader check for the new snapshot once it lands.
   const recomputeMutation = useMutation(demandMutations.recompute({ workspaceId, projectId }));
+  const canRun = useWorkspaceCapability('run');
   const refreshSnapshot = () => refreshDemandSnapshot(queryClient, projectId);
 
   const handleInspect = (signal: DemandSignal) => {
@@ -220,19 +222,22 @@ function SearchDemandView({
   return (
     <ListScreen
       actions={
-        <RecomputeAction
-          mutation={recomputeMutation}
-          onRecompute={() =>
-            recomputeMutation.mutate({
-              window_start: snapshot.window_start,
-              window_end: snapshot.window_end,
-            })
-          }
-          onCheck={() => {
-            recomputeMutation.reset();
-            void refreshSnapshot();
-          }}
-        />
+        // Recomputing is a run; a role without it reads the snapshot as is.
+        canRun ? (
+          <RecomputeAction
+            mutation={recomputeMutation}
+            onRecompute={() =>
+              recomputeMutation.mutate({
+                window_start: snapshot.window_start,
+                window_end: snapshot.window_end,
+              })
+            }
+            onCheck={() => {
+              recomputeMutation.reset();
+              void refreshSnapshot();
+            }}
+          />
+        ) : undefined
       }
       controls={{
         // Which signals the table lists is the row's view; it leads.

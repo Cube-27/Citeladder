@@ -80,7 +80,8 @@ export function RunActions({
 }: Readonly<{
   audit: Audit;
   cancelPending: boolean;
-  onCancel: () => void;
+  /** Cancel and rerun are offered only to a role that may run audits. */
+  onCancel?: () => void;
   onRerunFailures?: () => void;
   rerunPending?: boolean;
   onExport: (format: ExportFormat) => void;
@@ -95,9 +96,11 @@ export function RunActions({
       <Button variant="secondary" onClick={() => onExport('md')} disabled={exporting !== null}>
         {exporting === 'md' ? 'Exporting…' : 'Export MD'}
       </Button>
-      <Button variant="danger" onClick={onCancel} disabled={!cancelable || cancelPending}>
-        {cancelPending ? 'Cancelling…' : 'Cancel run'}
-      </Button>
+      {onCancel ? (
+        <Button variant="danger" onClick={onCancel} disabled={!cancelable || cancelPending}>
+          {cancelPending ? 'Cancelling…' : 'Cancel run'}
+        </Button>
+      ) : null}
       {audit.failed_count > 0 && onRerunFailures ? (
         <Button variant="secondary" onClick={onRerunFailures} disabled={rerunPending}>
           {rerunPending ? 'Creating repair…' : 'Rerun failed'}

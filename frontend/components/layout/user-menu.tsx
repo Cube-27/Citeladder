@@ -17,7 +17,7 @@ import {
   MenuTrigger,
 } from '@/components/ui/menu';
 import { ThemeSwitch } from '@/components/ui/theme-switch';
-import { authApi } from '@/lib/api/auth';
+import { revokeSession } from '@/lib/auth/account-transition';
 import { useSession } from '@/lib/auth/session-guard';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -124,7 +124,7 @@ export function UserMenuController({ children }: Readonly<{ children: ReactNode 
   // clearSession removes account-scoped cache only after cookie revocation succeeds.
   // react-doctor-disable-next-line react-doctor/query-mutation-missing-invalidation
   const logout = useMutation({
-    mutationFn: () => authApi.logout(),
+    mutationFn: revokeSession,
     onSuccess: () => clearSession(),
   });
   const setOpen = useCallback(

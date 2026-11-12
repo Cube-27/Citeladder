@@ -37,6 +37,7 @@ vi.mock('@/lib/project/project-context', () => ({
 import { QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 
+import { ApiError } from '@/lib/api/errors';
 import { createAppQueryClient } from '@/lib/api/query-client';
 
 import { UserMenuController, UserMenuTrigger } from './user-menu';
@@ -148,6 +149,18 @@ describe('UserMenu', () => {
 
     expect(logoutMock).toHaveBeenCalledOnce();
     await vi.waitFor(() => expect(clearSession).toHaveBeenCalledOnce());
+  });
+
+  it('finishes signing out when the session had already expired', async () => {
+    logoutMock.mockRejectedValueOnce(new ApiError('Unauthorized', 401, ''));
+    const user = userEvent.setup();
+    renderMenu();
+
+    await user.click(screen.getByRole('button', { name: /test\.user@example\.test/i }));
+    await user.click(await screen.findByRole('menuitem', { name: /sign out/i }));
+
+    await vi.waitFor(() => expect(clearSession).toHaveBeenCalledOnce());
+    expect(screen.queryByText(/session is still active/i)).not.toBeInTheDocument();
   });
 
   it('keeps the authenticated UI visible and offers a retry when logout fails', async () => {

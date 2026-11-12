@@ -46,15 +46,14 @@ export function topicFilter({
   topics,
   selectedTopicId,
   onSelect,
-  onAdd,
-  onManage,
+  manage,
 }: Readonly<{
   topics: readonly Topic[];
   /** null = "All topics". */
   selectedTopicId: string | null;
   onSelect: (topicId: string | null) => void;
-  onAdd: () => void;
-  onManage: () => void;
+  /** Opens the topic dialogs, for a role that may edit topics; omitted otherwise. */
+  manage?: Readonly<{ onAdd: () => void; onManage: () => void }>;
 }>): FilterDefinition {
   const ordered = orderTopicsForRail(topics);
   const selected = ordered.find(({ topic }) => topic.id === selectedTopicId);
@@ -78,13 +77,17 @@ export function topicFilter({
             </MenuRadioItem>
           ))}
         </MenuRadioGroup>
-        <MenuSeparator />
-        <MenuItem icon={<Icon icon={Plus} />} onSelect={onAdd}>
-          Add topic
-        </MenuItem>
-        <MenuItem icon={<Icon icon={Settings2} />} onSelect={onManage}>
-          Manage topics…
-        </MenuItem>
+        {manage ? (
+          <>
+            <MenuSeparator />
+            <MenuItem icon={<Icon icon={Plus} />} onSelect={manage.onAdd}>
+              Add topic
+            </MenuItem>
+            <MenuItem icon={<Icon icon={Settings2} />} onSelect={manage.onManage}>
+              Manage topics…
+            </MenuItem>
+          </>
+        ) : null}
       </>
     ),
   };

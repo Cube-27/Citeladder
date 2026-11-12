@@ -19,6 +19,7 @@ import { runsQueries } from '@/lib/api/runs';
 import type { Audit } from '@citeladder/contracts';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { AUDIT_STATES, pollAudits } from '@/lib/runs/status';
 
 type StatusFilter = 'all' | 'completed' | 'running' | 'failed';
@@ -73,11 +74,13 @@ export function RunsScreen() {
   // (and refetches whenever its card remounts onto the errored cache entry),
   // so gating the whole screen on it would pin the page on a spinner forever.
   // The page keeps its action and status filters while the first load lands.
-  const actions = (
+  // Launching is offered only to a role that may run audits.
+  const canRun = useWorkspaceCapability('run');
+  const actions = canRun ? (
     <Button variant="primary" onClick={() => setLaunchOpen(true)}>
       Launch audit
     </Button>
-  );
+  ) : undefined;
   // The status choice is the row's view: the one shared segmented control,
   // each choice with the number of runs it keeps (2026-11-03 app review).
   const controls = {
@@ -111,17 +114,19 @@ export function RunsScreen() {
         filteredAudits={filteredAudits}
         statusFilter={statusFilter}
         anyActive={anyActive}
-        onLaunch={() => setLaunchOpen(true)}
+        onLaunch={canRun ? () => setLaunchOpen(true) : undefined}
       />
 
       <AuditSchedules projectId={projectId} promptSets={project.prompt_sets} />
 
-      <LaunchDialog
-        open={launchOpen}
-        onOpenChange={setLaunchOpen}
-        projectId={projectId}
-        onLaunched={(audit) => router(projectHref(`/runs/${audit.id}`))}
-      />
+      {canRun ? (
+        <LaunchDialog
+          open={launchOpen}
+          onOpenChange={setLaunchOpen}
+          projectId={projectId}
+          onLaunched={(audit) => router(projectHref(`/runs/${audit.id}`))}
+        />
+      ) : null}
     </ListScreen>
   );
 }
@@ -140,7 +145,8 @@ function RunsContent({
   filteredAudits: Audit[];
   statusFilter: StatusFilter;
   anyActive: boolean;
-  onLaunch: () => void;
+  /** Opens the launch dialog; omitted for a role that may not run audits. */
+  onLaunch?: () => void;
 }>) {
   if (read.error) {
     return (
@@ -157,11 +163,17 @@ function RunsContent({
         kind="empty"
         icon={Play}
         heading="No runs yet"
-        description="Launch your first audit to measure how AI engines answer questions about your brand."
+        description={
+          onLaunch
+            ? 'Launch your first audit to measure how AI engines answer questions about your brand.'
+            : 'No audit has measured how AI engines answer questions about this brand yet.'
+        }
         action={
-          <Button variant="primary" onClick={onLaunch}>
-            Launch your first audit
-          </Button>
+          onLaunch ? (
+            <Button variant="primary" onClick={onLaunch}>
+              Launch your first audit
+            </Button>
+          ) : undefined
         }
       />
     );

@@ -11,7 +11,12 @@ import type {
 } from '@/lib/api/search-intelligence';
 import { makeProject } from '@/test/fixtures/project';
 import { mswServer } from '@/test/msw-server';
-import { renderWithProviders, testProjectSelection } from '@/test/render';
+import {
+  renderWithProviders,
+  selectionAs,
+  testProjectSelection,
+  type TestRole,
+} from '@/test/render';
 import { SearchIntelligencePage } from './search-intelligence-page';
 
 const project = makeProject();
@@ -73,12 +78,24 @@ beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
-function renderPage(data: SearchIntelligenceReadiness) {
+function renderPage(data: SearchIntelligenceReadiness, role: TestRole = 'owner') {
   mswServer.use(http.get(root, () => HttpResponse.json(data)));
   renderWithProviders(<SearchIntelligencePage />, {
-    projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
+    projectSelection: testProjectSelection({
+      ...selectionAs(role),
+      activeProject: project,
+      activeProjectId: project.id,
+    }),
   });
 }
+
+it('lets a viewer read an analysis in progress without offering to start or cancel one', async () => {
+  renderPage({ ...readiness, latest_run: run }, 'viewer');
+  expect(await screen.findByText(/1 of 4 requests complete/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Cost details' })).toBeVisible();
+  for (const name of ['Cancel', 'Review first analysis', 'New analysis', 'Refresh'])
+    expect(screen.queryByRole('button', { name })).toBeNull();
+});
 
 it('offers the first analysis from the empty overview', async () => {
   renderPage(readiness);
@@ -134,6 +151,22 @@ it('says when saved results can no longer be refreshed', async () => {
     await screen.findByText(/saved results can be read but not refreshed/),
   ).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Open provider settings' })).toBeInTheDocument();
+});
+
+it('tells a Member who may not add the login who can, without sending them to settings', async () => {
+  renderPage(
+    {
+      ...readiness,
+      connected: false,
+      connection_id: null,
+      datasets: [dataset('www.example.com', { summary: { organic_keywords: 12 } })],
+    },
+    'member',
+  );
+  expect(
+    await screen.findByText(/A workspace Owner or Admin can add the login\./),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Open provider settings' })).toBeNull();
 });
 
 it('never sends a managed workspace to provider settings it does not have', async () => {

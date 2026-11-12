@@ -32,6 +32,7 @@ import {
   type IntegrationConnection,
 } from '@/lib/api/integrations';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { textRole } from '@/components/ui/typography';
 
 type GrantStatus = IntegrationConnection['grant_status'];
@@ -128,6 +129,7 @@ function ConnectCard({
   family,
 }: Readonly<{ workspaceId: string; family: GrantFamily }>) {
   const meta = FAMILY_META[family];
+  const canManage = useWorkspaceCapability('manage_credentials');
 
   return (
     <Stack as={Card} gap="compact" data-testid={`grant-card-${family}`} className="content-between">
@@ -135,21 +137,24 @@ function ConnectCard({
         <GrantHeader family={family} grant={null} />
         <CardContent>
           <p className={textRole('body')}>
-            Connect your {meta.title} account to automatically import traffic and search visibility
-            metrics.
+            {canManage
+              ? `Connect your ${meta.title} account to automatically import traffic and search visibility metrics.`
+              : `A workspace Owner or Admin can connect ${meta.title} to import traffic and search visibility metrics.`}
           </p>
         </CardContent>
       </div>
-      <CardContent>
-        <Button
-          variant="secondary"
-          onClick={() =>
-            hardNavigate(integrationsApi.oauthStartUrl(meta.connectProvider, workspaceId))
-          }
-        >
-          Connect {meta.title}
-        </Button>
-      </CardContent>
+      {canManage ? (
+        <CardContent>
+          <Button
+            variant="secondary"
+            onClick={() =>
+              hardNavigate(integrationsApi.oauthStartUrl(meta.connectProvider, workspaceId))
+            }
+          >
+            Connect {meta.title}
+          </Button>
+        </CardContent>
+      ) : null}
     </Stack>
   );
 }
@@ -222,6 +227,8 @@ function ConnectedCard({
   grant,
 }: Readonly<{ workspaceId: string; family: GrantFamily; grant: GrantModel }>) {
   const meta = FAMILY_META[family];
+  // Connecting and disconnecting are credential actions.
+  const canManage = useWorkspaceCapability('manage_credentials');
 
   return (
     <Stack as={Card} gap="compact" data-testid={`grant-card-${family}`} className="content-between">
@@ -236,27 +243,29 @@ function ConnectedCard({
           </ul>
         </Stack>
       </div>
-      <CardContent>
-        <MetaFooter
-          trailing={
-            <span className="text-right">
-              Reconnecting renews access for every property in this connection.
-            </span>
-          }
-        >
-          <Inline className="flex-wrap">
-            <Button
-              variant={grant.status === 'connected' ? 'secondary' : 'primary'}
-              onClick={() =>
-                hardNavigate(integrationsApi.oauthStartUrl(meta.connectProvider, workspaceId))
-              }
-            >
-              {grant.status === 'revoked' ? `Connect ${meta.title}` : 'Reconnect'}
-            </Button>
-            {isGrantGone(grant.status) ? null : <DisconnectGrant grant={grant} />}
-          </Inline>
-        </MetaFooter>
-      </CardContent>
+      {canManage ? (
+        <CardContent>
+          <MetaFooter
+            trailing={
+              <span className="text-right">
+                Reconnecting renews access for every property in this connection.
+              </span>
+            }
+          >
+            <Inline className="flex-wrap">
+              <Button
+                variant={grant.status === 'connected' ? 'secondary' : 'primary'}
+                onClick={() =>
+                  hardNavigate(integrationsApi.oauthStartUrl(meta.connectProvider, workspaceId))
+                }
+              >
+                {grant.status === 'revoked' ? `Connect ${meta.title}` : 'Reconnect'}
+              </Button>
+              {isGrantGone(grant.status) ? null : <DisconnectGrant grant={grant} />}
+            </Inline>
+          </MetaFooter>
+        </CardContent>
+      ) : null}
     </Stack>
   );
 }

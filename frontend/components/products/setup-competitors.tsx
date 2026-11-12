@@ -21,6 +21,7 @@ import { competitorHost, competitorState, discoveryMessage } from './commerce-fo
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { sameTarget } from '@/lib/products/targets';
 
 type Discovery = ReturnType<typeof useCompetitorDiscovery>;
@@ -50,6 +51,10 @@ export function SetupCompetitors({
 }>) {
   const { workspaceId } = useProjectScope();
   const decide = useMutation(commerceMutations.decideCompetitor({ workspaceId, projectId }));
+  // Finding competitors is a run; approving one is a write. A role without
+  // either reads the candidates and their state only.
+  const canRun = useWorkspaceCapability('run');
+  const canWrite = useWorkspaceCapability('write');
   // The tracker follows every run in the project, so a bulk discovery across
   // three categories otherwise showed all three banners on each one, and made
   // every target read as "Finding…" while any of them was running.
@@ -60,13 +65,15 @@ export function SetupCompetitors({
     <Card>
       <CardHeader
         actions={
-          <Button
-            variant="secondary"
-            disabled={discovery.discover.isPending || running}
-            onClick={() => discovery.discover.mutate([target])}
-          >
-            {running ? 'Finding…' : 'Find competitors'}
-          </Button>
+          canRun ? (
+            <Button
+              variant="secondary"
+              disabled={discovery.discover.isPending || running}
+              onClick={() => discovery.discover.mutate([target])}
+            >
+              {running ? 'Finding…' : 'Find competitors'}
+            </Button>
+          ) : undefined
         }
       >
         <CardTitle>Competitors</CardTitle>
@@ -83,14 +90,16 @@ export function SetupCompetitors({
                   retryable: false,
                 }}
                 recovery={
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={discovery.discover.isPending || running}
-                    onClick={() => discovery.discover.mutate([target])}
-                  >
-                    Find again
-                  </Button>
+                  canRun ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={discovery.discover.isPending || running}
+                      onClick={() => discovery.discover.mutate([target])}
+                    >
+                      Find again
+                    </Button>
+                  ) : undefined
                 }
               />
             ) : (
@@ -117,8 +126,9 @@ export function SetupCompetitors({
             query={query}
             rows={rows}
             running={running}
+            canFind={canRun}
             pending={decide.isPending}
-            onDecide={(id, decision) => decide.mutate({ id, decision })}
+            onDecide={canWrite ? (id, decision) => decide.mutate({ id, decision }) : undefined}
           />
         </Stack>
       </CardContent>
@@ -130,14 +140,18 @@ function CompetitorRows({
   query,
   rows,
   running,
+  canFind,
   pending,
   onDecide,
 }: Readonly<{
   query: CommerceQueries['competitors'];
   rows: NonNullable<CommerceQueries['competitors']['data']>;
   running: boolean;
+  /** Whether the reader is offered Find competitors. */
+  canFind: boolean;
   pending: boolean;
-  onDecide: (id: string, decision: 'approved' | 'rejected') => void;
+  /** Approves or rejects a candidate; omitted for a role that may not. */
+  onDecide?: (id: string, decision: 'approved' | 'rejected') => void;
 }>) {
   if (query.isError)
     return <ReadError {...readErrorProps(query)} fallback="Competitors could not be loaded." />;
@@ -148,7 +162,7 @@ function CompetitorRows({
         kind="empty"
         icon={Users}
         heading={running ? 'Looking for competitors…' : 'No candidates yet'}
-        description={running ? undefined : 'Run Find competitors.'}
+        description={running || !canFind ? undefined : 'Run Find competitors.'}
         headingLevel={3}
       />
     );
@@ -179,7 +193,7 @@ function CompetitorRows({
           <Badge variant="status" value={competitorState(row.state).tone}>
             {competitorState(row.state).label}
           </Badge>
-          {row.state === 'pending' ? (
+          {row.state === 'pending' && onDecide ? (
             <Inline>
               <Button
                 variant="primary"

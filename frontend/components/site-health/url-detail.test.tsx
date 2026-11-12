@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 
 import { makeProject } from '@/test/fixtures/project';
 import { mswServer } from '@/test/msw-server';
-import { renderWithProviders as raw } from '@/test/render';
+import { renderWithProviders as raw, selectionAs, type TestRole } from '@/test/render';
 import type { ReactElement } from 'react';
 import { useLocation } from 'react-router-dom';
 import type { PageDetail } from '@citeladder/contracts';
@@ -73,6 +73,7 @@ function LocationDisplay() {
 function renderUrlDetail(
   ui: ReactElement,
   initialLocation = `/site/crawls/${CRAWL}/pages/${URL_ID}`,
+  role: TestRole = 'owner',
 ) {
   window.history.replaceState(null, '', initialLocation);
   return raw(
@@ -80,7 +81,7 @@ function renderUrlDetail(
       {ui}
       <LocationDisplay />
     </>,
-    { projectSelection: { activeProject: makeProject() } },
+    { projectSelection: { ...selectionAs(role), activeProject: makeProject() } },
   );
 }
 
@@ -218,6 +219,22 @@ describe('UrlDetail', () => {
       screen.getByText('expected types WebSite, found types Organization'),
     ).toBeInTheDocument();
     expect(screen.queryByText('Observed evidence')).not.toBeInTheDocument();
+  });
+
+  it('offers re-audits only to a role that may run one', async () => {
+    mswServer.use(...handlers(detail()));
+    const { unmount } = renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    expect(await screen.findByRole('button', { name: 'Re-audit this page' })).toBeVisible();
+    expect(screen.getAllByRole('button', { name: 'Re-audit to verify' })).not.toHaveLength(0);
+    unmount();
+
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />, undefined, 'viewer');
+    expect(
+      await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 }),
+    ).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Re-audit this page' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Re-audit to verify' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'History' })).toBeVisible();
   });
 
   it('opens as a page detail with a way back to Pages before its title', async () => {
