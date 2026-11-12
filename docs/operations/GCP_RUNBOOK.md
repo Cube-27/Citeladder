@@ -362,7 +362,10 @@ migration statement that waits on a lock longer than
 `MIGRATION_LOCK_TIMEOUT_MS` (3 s), or runs longer than
 `MIGRATION_STATEMENT_TIMEOUT_MS` (5 min), fails the job the same way and rolls
 the whole apply back. A lock timeout means a serving request or runner held the
-table: rerun **GCP - Deploy**.
+table: rerun **GCP - Deploy**. A statement timeout recurs on a rerun: the
+migration has to raise its own bound
+([migrations](../DEVELOPMENT.md#migrations-forward-only)); the job's
+environment is Terraform-managed, so do not edit it in the console.
 
 The migrate job runs while the previous API revision and any running runner
 execution still serve, so every migration must work with the code already

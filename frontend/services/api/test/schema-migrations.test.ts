@@ -205,7 +205,7 @@ describe('an existing database', () => {
 });
 
 describe('a migration the serving revision would wait behind', () => {
-  it('fails on a held lock or a long statement instead of waiting, and applies nothing', async () => {
+  it('fails on a held lock or a long statement instead of waiting, unless the file raises its own bound', async () => {
     const { client: serving, url } = await freshDatabase();
     clients.push(serving);
     const migrate = migrationClient(url, {
@@ -229,14 +229,23 @@ describe('a migration the serving revision would wait behind', () => {
     await serving.query('rollback');
     expect(await columns(serving, 'workspaces')).not.toContain('probe');
 
-    const slow = { version: '0002_slow', sql: 'SELECT pg_sleep(5);' };
-    await expect(applyMigrations(migrate, [baseline!, slow])).rejects.toThrow(
+    // A file that needs longer raises its own bound; the next file is bounded again.
+    const raised = {
+      version: '0003_raised',
+      sql: "SET LOCAL statement_timeout = '10s';\nSELECT pg_sleep(1.5)",
+    };
+    const slow = { version: '0004_slow', sql: 'SELECT pg_sleep(1.5);' };
+    await expect(applyMigrations(migrate, [baseline!, alter, raised, slow])).rejects.toThrow(
       'canceling statement due to statement timeout',
     );
     expect(await ledger(serving)).toEqual(['0001_baseline']);
+    expect(await columns(serving, 'workspaces')).not.toContain('probe');
 
-    // With the lock free, the same migration applies.
-    expect(await applyMigrations(migrate, [baseline!, alter])).toEqual(['0002_alter']);
+    // With the lock free, the same migrations apply.
+    expect(await applyMigrations(migrate, [baseline!, alter, raised])).toEqual([
+      '0002_alter',
+      '0003_raised',
+    ]);
     expect(await columns(serving, 'workspaces')).toContain('probe');
   }, 60000);
 });

@@ -122,9 +122,12 @@ export async function applyMigrations(
     // migrations themselves then run under the session's migration bounds.
     await client.query('set local statement_timeout = 0; set local lock_timeout = 0');
     await client.query('select pg_advisory_xact_lock($1::bigint)', [LOCK_KEY.toString()]);
-    await client.query('reset statement_timeout; reset lock_timeout');
+    const bounds = 'reset statement_timeout; reset lock_timeout';
+    await client.query(bounds);
     const todo = await pending(client, migrations);
-    for (const migration of todo) await client.query(migration.sql); // NOSONAR -- files apply in order in one transaction.
+    // A file that needs longer raises its own bound with `SET LOCAL`; the next
+    // file starts under the configured bounds again.
+    for (const migration of todo) await client.query(`${migration.sql}\n;${bounds}`); // NOSONAR -- files apply in order in one transaction.
     if (todo.length)
       await client.query(
         'insert into public.schema_migrations (version, checksum) select * from unnest($1::text[], $2::text[])',

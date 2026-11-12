@@ -541,7 +541,11 @@ fails, and the deploy stops before the API rolls forward, when:
   (default 3 s) or runs longer than `MIGRATION_STATEMENT_TIMEOUT_MS` (default
   5 min). A DDL statement queued behind a serving transaction would otherwise
   queue every later query on that table behind itself. The whole apply rolls
-  back, so a rerun is safe.
+  back, so a rerun is safe. A migration that legitimately needs longer raises
+  its own bound on its first line (`SET LOCAL statement_timeout = '12min';`,
+  likewise `lock_timeout`); the next file runs under the configured bounds
+  again. The migrate job's 15-minute timeout (`infra/gcp/run.tf`) still caps
+  the whole apply.
 
 Every schema change is a new file that applies cleanly to the production
 schema and its existing rows; never edit an applied file, the baseline
