@@ -38,7 +38,7 @@ export function VisibilityAds({
   filters,
   queries,
 }: Readonly<{ filters: SourceFilters; queries: SourceQueries }>) {
-  const { query, enabled } = useAds(filters, queries);
+  const query = useAds(filters, queries);
   const [firstPage, ...laterPages] = query.data?.pages ?? [];
   if (query.error)
     return (
@@ -49,9 +49,8 @@ export function VisibilityAds({
         pending={query.isFetching}
       />
     );
-  // A range with no runs reads nothing; otherwise the selection is still resolving.
-  if (!enabled)
-    return queries.selectedRunIds?.length === 0 ? <AdsState state="no_runs" /> : <AdsLoading />;
+  // The selection above has settled on a measured run (`SelectionGate`), so
+  // no page yet is this read still on its way.
   if (!firstPage) return <AdsLoading />;
   return (
     <div className="relative">
@@ -99,7 +98,7 @@ function AdsState({
   state,
   engines = [],
 }: Readonly<{
-  state: Exclude<VisibilityAdsResponse['state'], 'value'> | 'no_runs';
+  state: Exclude<VisibilityAdsResponse['state'], 'value'>;
   engines?: VisibilityAdsResponse['engines'];
 }>) {
   const copy = adsStateCopy(state);

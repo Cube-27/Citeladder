@@ -21,6 +21,7 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { cardClasses } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TextLink } from '@/components/ui/text-link';
@@ -124,6 +125,15 @@ function NewChat({
         ) : null}
         {access.canSend ? null : <Callout tone="info">{access.message}</Callout>}
         {failure ? <MutationNotice notice={failure} /> : null}
+        {/* Without the catalog there are no workflows or skills to offer, and
+            saying nothing read as a plan that has none. */}
+        {catalog.read.status === 'error' ? (
+          <ReadError
+            {...readErrorProps(catalog.read)}
+            title="Couldn't load skills and workflows"
+            fallback="The request failed or timed out."
+          />
+        ) : null}
         <Stack gap="tight">
           <Composer
             id="new-chat-message"

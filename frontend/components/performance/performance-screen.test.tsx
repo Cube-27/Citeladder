@@ -225,6 +225,27 @@ describe('PerformanceScreen evidence states', () => {
     expect(screen.queryAllByRole('alert')).toHaveLength(0);
   });
 
+  it('disables Sync now only when the connections read answered with none', async () => {
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/performance`, () => HttpResponse.json(dashboard())),
+    );
+    const { unmount } = renderPerformance();
+    expect(await screen.findByText('No search performance evidence yet')).toBeVisible();
+    await waitFor(() => expect(screen.getByTestId('sync-now-button')).toBeDisabled());
+    unmount();
+
+    // A failed read is unknown, not "no connections": the sync itself reports
+    // when there is nothing to sync.
+    mswServer.use(
+      http.get('/api/v1/integrations', () =>
+        HttpResponse.json({ detail: 'Bad request' }, { status: 400 }),
+      ),
+    );
+    renderPerformance();
+    expect(await screen.findByText('No search performance evidence yet')).toBeVisible();
+    expect(screen.getByTestId('sync-now-button')).toBeEnabled();
+  });
+
   it('paints the dashboard while a slow readiness read is still pending', async () => {
     let release!: () => void;
     const pending = new Promise<void>((resolve) => {

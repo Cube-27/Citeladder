@@ -44,7 +44,7 @@ export function VisibilityPerception({
   filters,
   queries,
 }: Readonly<{ filters: SourceFilters; queries: SourceQueries }>) {
-  const { query, enabled } = usePerception(filters, queries);
+  const query = usePerception(filters, queries);
   if (query.error)
     return (
       <ReadError
@@ -54,7 +54,8 @@ export function VisibilityPerception({
         pending={query.isFetching}
       />
     );
-  if (!enabled) return <PerceptionState state="no_mentions" reason={null} />;
+  // The selection above has settled on a measured run (`SelectionGate`), so
+  // no data is this read still on its way, never "no mentions".
   if (!query.data) return <PerceptionLoading />;
   return (
     <div className="relative">

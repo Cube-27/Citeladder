@@ -97,7 +97,8 @@ function SuggestionRows({
           ))}
         </ul>
       ) : null}
-      {!suggestionsQuery.data?.length && !suggestionsQuery.isLoading ? (
+      {/* Only an answered, empty list is "none yet"; a failed read says so above. */}
+      {suggestionsQuery.isSuccess && !suggestionsQuery.data.length ? (
         <QueryState kind="empty" inline message="No repeated citation candidates yet." />
       ) : null}
     </>
