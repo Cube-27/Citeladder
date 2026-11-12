@@ -332,6 +332,7 @@ const FACTS_BY_RULE: Readonly<
     text(evidence.declared_name) ? ['visible author'] : ['author'],
   'aeo.source_support_present': () => ['citation'],
   'aeo.llms_txt_present': () => ['/llms.txt'],
+  'technical.sitemap_present': () => ['XML sitemap'],
   'aeo.product_brand_identity': () => ['brand'],
   'aeo.product_evidence_facts': () => ['gtin', 'mpn', 'sku'],
   'aeo.offer_freshness_signal': offerFreshness,

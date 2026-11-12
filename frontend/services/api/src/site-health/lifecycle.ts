@@ -157,7 +157,9 @@ function reconcileDiscovery(crawl: Crawl, summary: Summary) {
   // useful partial evidence; it is not a failed crawl.
   const fullyFailed =
     summary.analyzeSucceeded === 0 && (discoveryFailed || summary.analyzeApplicable > 0);
-  if (!summary.discoverOpen && crawl.discovery_status === 'running')
+  // A full crawl's discovery is pending until site setup settles it; a setup that
+  // failed for good never started it.
+  if (!summary.discoverOpen && ['pending', 'running'].includes(crawl.discovery_status))
     crawl.discovery_status = discoveryFailed ? 'failed' : 'completed';
   return { fullyFailed, discoveryPartial: summary.discoverFailed > 0 && !fullyFailed };
 }
@@ -293,7 +295,7 @@ async function reconcileLockedCrawl(db: Database, crawl: Crawl, options: Reconci
   if (!isActiveCrawl(crawl.status)) return;
   const summary = await taskSummary(db, crawl);
   await refreshCounters(db, crawl, summary);
-  const discoveryWasRunning = crawl.discovery_status === 'running';
+  const discoveryWasRunning = ['pending', 'running'].includes(crawl.discovery_status);
   const { fullyFailed, discoveryPartial } = reconcileDiscovery(crawl, summary);
   await reconcileInventory(db, crawl, summary, discoveryWasRunning);
   reconcileAnalysis(crawl, summary, fullyFailed);

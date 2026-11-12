@@ -215,6 +215,7 @@ describe('sitemaps', () => {
       urls: ['https://example.test/a?x=1&y=2'],
       lastmod: new Map(),
       refs: [],
+      truncated: false,
     });
     const index = Buffer.from(
       '<sitemapindex><sitemap><loc>https://example.test/s1.xml</loc></sitemap></sitemapindex>',
@@ -223,7 +224,29 @@ describe('sitemaps', () => {
       urls: [],
       lastmod: new Map(),
       refs: ['https://example.test/s1.xml'],
+      truncated: false,
     });
+  });
+
+  it('flags a collected list a safety ceiling cut short, so its count is a lower bound', () => {
+    const four = urlset('/1', '/2', '/3', '/4')
+      .toString()
+      .replaceAll('> /', '> https://example.test/');
+    const capped = new SitemapCollector(limits);
+    capped.add('https://example.test/sitemap.xml', Buffer.from(four), 'text/xml', 0);
+    expect([capped.urls.length, capped.truncated]).toEqual([3, true]);
+    const whole = new SitemapCollector(limits);
+    whole.add('https://example.test/sitemap.xml', urlset('https://example.test/1'), 'text/xml', 0);
+    expect([whole.urls.length, whole.truncated]).toEqual([1, false]);
+    // At the depth bound, a reference back to a read index leaves nothing unread.
+    const looped = new SitemapCollector(limits);
+    const index = (loc: string) =>
+      Buffer.from(`<sitemapindex><sitemap><loc>${loc}</loc></sitemap></sitemapindex>`);
+    looped.add('https://example.test/a.xml', index('https://example.test/b.xml'), 'text/xml', 0);
+    looped.add('https://example.test/b.xml', index('https://example.test/a.xml'), 'text/xml', 1);
+    expect(looped.truncated).toBe(false);
+    looped.add('https://example.test/b.xml', index('https://example.test/c.xml'), 'text/xml', 1);
+    expect(looped.truncated).toBe(true);
   });
 
   it('keeps each page URL’s first declared lastmod through the collector', () => {

@@ -451,13 +451,13 @@ describe('SiteHealthScreen — loading frames', () => {
 });
 
 describe('SiteHealthScreen — recrawl', () => {
-  it('reruns the shown crawl through its own recrawl route', async () => {
+  it('starts the one crawl action for the project, keeping the newest robots choice', async () => {
     const user = userEvent.setup();
-    const recrawled: string[] = [];
+    const bodies: unknown[] = [];
     mockRoutes();
     mswServer.use(
-      http.post('/api/v1/site-crawls/:crawlId/recrawl', ({ params }) => {
-        recrawled.push(String(params.crawlId));
+      http.post('/api/v1/site-crawls', async ({ request }) => {
+        bodies.push(await request.json());
         return HttpResponse.json(
           crawl({ status: 'queued', discovery_status: 'pending', analysis_status: 'pending' }),
         );
@@ -469,7 +469,7 @@ describe('SiteHealthScreen — recrawl', () => {
     const button = await screen.findByRole('button', { name: 'Recrawl' });
     await waitFor(() => expect(button).toBeEnabled());
     await user.click(button);
-    await waitFor(() => expect(recrawled).toEqual([CRAWL]));
+    await waitFor(() => expect(bodies).toEqual([{ project_id: PROJECT }]));
   });
 });
 

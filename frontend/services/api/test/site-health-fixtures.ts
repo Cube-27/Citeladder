@@ -372,11 +372,12 @@ export class SiteFixtures extends VisibilityFixtures {
   }
 
   /** Make exactly these URLs the project's active monitored set, as a crawl's admission would. */
+  /** Make exactly these pages the project's tracked set, in this fill order. */
   async monitor(seed: SiteSeed, siteUrlIds: string[]) {
     const now = new Date();
     await this.siteDb
       .updateTable('monitored_site_urls')
-      .set({ active: false, deselected_at: now })
+      .set({ active: false, deselected_at: now, fill_order: null })
       .where('workspace_id', '=', seed.workspaceId)
       .where('project_id', '=', seed.projectId)
       .execute();
@@ -384,7 +385,7 @@ export class SiteFixtures extends VisibilityFixtures {
     await this.siteDb
       .insertInto('monitored_site_urls')
       .values(
-        siteUrlIds.map((siteUrlId) => ({
+        siteUrlIds.map((siteUrlId, fillOrder) => ({
           id: randomUUID(),
           workspace_id: seed.workspaceId,
           project_id: seed.projectId,
@@ -392,15 +393,19 @@ export class SiteFixtures extends VisibilityFixtures {
           site_url_id: siteUrlId,
           active: true,
           selection_source: 'bootstrap',
+          fill_order: fillOrder,
           selected_at: now,
           created_at: now,
           updated_at: now,
         })),
       )
       .onConflict((conflict) =>
-        conflict
-          .columns(['project_id', 'site_url_id'])
-          .doUpdateSet({ active: true, deselected_at: null, selected_at: now }),
+        conflict.columns(['project_id', 'site_url_id']).doUpdateSet((eb) => ({
+          active: true,
+          deselected_at: null,
+          selected_at: now,
+          fill_order: eb.ref('excluded.fill_order'),
+        })),
       )
       .execute();
   }

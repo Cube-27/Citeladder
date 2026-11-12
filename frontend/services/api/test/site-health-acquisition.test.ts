@@ -5,12 +5,8 @@ import { policy } from '../src/config.ts';
 import { record } from '../src/db/json.ts';
 import { setLogSink } from '../src/logging.ts';
 import { FetchError } from '../src/safe-fetch.ts';
-import {
-  admitCandidates,
-  candidate,
-  lockRuntime,
-  orderedUnique,
-} from '../src/site-health/frontier.ts';
+import { admitCandidates, candidate, lockRuntime } from '../src/site-health/frontier.ts';
+import { orderedUnique } from '../src/site-health/tracked-set.ts';
 import { reconcileDuplicateAliases } from '../src/site-health/canonical-alias.ts';
 import { valueKindCoverage } from '../src/site-health/coverage.ts';
 import { reconcileCrawl } from '../src/site-health/lifecycle.ts';
@@ -49,14 +45,20 @@ const html = (body: string, head = '') =>
   `<html><head><title>Page</title>${head}</head><body><main>${body}</main></body></html>`;
 const links = (...paths: string[]) => html(paths.map((path) => `<a href="${path}">x</a>`).join(''));
 
-type CrawlOptions = { sample?: boolean; config?: Record<string, unknown>; siteFacts?: unknown };
+type CrawlOptions = {
+  sample?: boolean;
+  config?: Record<string, unknown>;
+  siteFacts?: unknown;
+  /** A full crawl's discovery before site setup settles it is pending. */
+  discovery?: 'pending' | 'running';
+};
 async function crawl(options: CrawlOptions = {}, limits = { monitored: 50, sample: 10 }) {
   const seed = await fixtures.crawl('running');
   await db
     .updateTable('site_crawls')
     .set({
       completed_at: null,
-      discovery_status: 'running',
+      discovery_status: options.discovery ?? 'running',
       analysis_status: 'running',
       sample_mode: options.sample ?? false,
       site_facts: options.siteFacts === undefined ? null : JSON.stringify(options.siteFacts),
@@ -202,7 +204,7 @@ describe('discover', () => {
       expect(requests).toEqual(sent);
     },
   );
-  it('commits the artifact, observation, ordered frontier and selected analysis with the task', async () => {
+  it('commits the artifact, observation, ordered frontier and the walked page’s tracking with the task', async () => {
     const seed = await crawl({ config: { automatic_monitor_limit: 2 } });
     const root = await queued(seed, 'discover');
     const requests: string[] = [];
@@ -247,20 +249,23 @@ describe('discover', () => {
       url('/c'),
       url('/products/a'),
     ]);
-    // The automatic allowance selects the two most valuable URLs; only the fetched root is analyzed yet.
+    // Only a fetched page joins the tracked set: so far the root, analyzed after its discovery.
     expect(await memberships(seed)).toEqual([
       { normalized_url: url('/'), active: true, selection_source: 'bootstrap' },
-      { normalized_url: url('/products/a'), active: true, selection_source: 'bootstrap' },
     ]);
     expect((await tasks(seed, 'analyze')).map((row) => [row.requested_url, row.priority])).toEqual([
       [url('/'), policy.site_health.crawl.analyze_priority_boost],
     ]);
     expect(await crawlRow(seed)).toMatchObject({ admitted_url_count: 3, discovered_url_count: 1 });
 
-    // A selected child is handed its analysis by its own fetch; an unselected one is inventory only.
+    // Each fetched child joins while the set has room (two pages); the rest is inventory only.
     const children = await tasks(seed, 'discover');
     const child = (path: string) => children.find((row) => row.requested_url === url(path))!.id;
     await run(site, child('/products/a'), child('/blog/b'));
+    expect((await memberships(seed)).map((row) => row.normalized_url)).toEqual([
+      url('/'),
+      url('/products/a'),
+    ]);
     expect((await tasks(seed, 'analyze')).map((row) => row.requested_url)).toEqual([
       url('/'),
       url('/products/a'),
@@ -421,21 +426,24 @@ describe('discover', () => {
     ]);
 
     await reconcileDuplicateAliases(db, await crawlRow(seed));
+    // The 404 never joined the tracked set; an alias that joined stays tracked (SH-B8).
     expect(
       (await memberships(seed)).map((row) => [row.normalized_url.slice(20), row.active]),
     ).toEqual([
       ['/', true],
-      ['/dead', false],
       ['/dead-alias', true],
       ['/live', true],
-      ['/live-alias', false],
+      ['/live-alias', true],
     ]);
     expect((await urlRow(seed, '/live-alias')).disposition_reason).toBe(
       policy.site_health.crawl.exclusions.duplicate,
     );
+    expect((await urlRow(seed, '/dead-alias')).disposition_reason).not.toBe(
+      policy.site_health.crawl.exclusions.duplicate,
+    );
   });
 
-  it('releases the selection of a link that turns out to be no page, keeping a failing page selected', async () => {
+  it('tracks only the walked links that proved to be pages, and excludes the rest', async () => {
     const seed = await crawl({ config: { automatic_monitor_limit: 6 } });
     const root = await queued(seed, 'discover');
     const site = worker({
@@ -457,61 +465,23 @@ describe('discover', () => {
     ).toEqual([
       ['/', true],
       ['/a', true],
-      ['/flaky', true],
-      ['/gone', false],
-      ['/private', false],
-      ['/size-chart', false],
     ]);
-  });
-
-  it('gives a released link’s slot to the next frontier URL, so the crawl reaches its page limit', async () => {
-    const seed = await crawl({ config: { automatic_monitor_limit: 10, requested_page_limit: 3 } });
-    // The root holds one of the three slots, as its admission does in a real crawl.
-    await db
-      .updateTable('site_crawls')
-      .set({ admitted_url_count: 1 })
-      .where('id', '=', seed.crawlId)
-      .execute();
-    const root = await queued(seed, 'discover');
-    const json = { body: '{}', contentType: 'application/json' };
-    const site = worker({
-      '/': { body: links('/a', '/chart-1', '/chart-2', '/chart-3') },
-      '/a': { body: links() },
-      '/chart-1': json,
-      '/chart-2': json,
-      '/chart-3': json,
-    });
-    await run(site, root);
-    const waiting = async () =>
-      (await tasks(seed, 'discover')).filter((row) => row.status === 'queued').map((row) => row.id);
-    for (let ids = await waiting(); ids.length; ids = await waiting()) await run(site, ...ids);
-
-    // Two child slots, four links: whatever order they were admitted in, every
-    // released chart passed its slot on until the one page was reached.
-    expect(
-      (await memberships(seed)).map((row) => [row.normalized_url.slice(20), row.active]),
-    ).toEqual([
-      ['/', true],
-      ['/a', true],
-      ['/chart-1', false],
-      ['/chart-2', false],
-      ['/chart-3', false],
-    ]);
-    const released = await urlRow(seed, '/chart-1');
-    expect([released.corpus_disposition, released.disposition_reason]).toEqual([
+    const chart = await urlRow(seed, '/size-chart');
+    expect([chart.corpus_disposition, chart.disposition_reason]).toEqual([
       'exclude',
       codes.unsupported_content_type,
     ]);
-    const attempt = await db
-      .selectFrom('site_fetch_attempts')
-      .select(['status_code', 'error_code'])
-      .where(
-        'task_id',
-        '=',
-        (await tasks(seed, 'discover')).find((row) => row.requested_url.endsWith('/chart-1'))!.id,
-      )
-      .executeTakeFirstOrThrow();
-    expect(attempt).toEqual({ status_code: 200, error_code: codes.unsupported_content_type });
+  });
+
+  it('keeps a tracked page tracked when it later fails to fetch (SH-B8)', async () => {
+    const seed = await crawl({ config: { automatic_monitor_limit: 5 } });
+    const gone = await fixtures.page(seed, '/gone', {});
+    await fixtures.monitor(seed, [gone.id]);
+    const page = await queued(seed, 'discover', '/gone', 1);
+    await run(worker({ '/gone': { status: 404, body: 'missing' } }), page);
+    expect(
+      (await memberships(seed)).map((row) => [row.normalized_url.slice(20), row.active]),
+    ).toEqual([['/gone', true]]);
   });
 
   it('never resolves the crawl root as a canonical alias, so its site checks stay current', async () => {
@@ -644,8 +614,8 @@ describe('site setup', () => {
     body: `<urlset>${paths.map((path) => `<url><loc>${path}</loc></url>`).join('')}</urlset>`,
   });
 
-  it('publishes robots, AI-crawler stance and llms.txt, then walks and admits the sitemap', async () => {
-    const seed = await crawl();
+  it('publishes robots, AI-crawler stance and llms.txt, then counts the sitemap and tracks its pages', async () => {
+    const seed = await crawl({ discovery: 'pending', config: { automatic_monitor_limit: 5 } });
     const setup = await queued(seed, 'site_setup');
     const requests: string[] = [];
     await run(
@@ -709,6 +679,10 @@ describe('site setup', () => {
       urls: [url('/a')],
       // Only admitted URLs keep their declared lastmod; the cart URL is refused.
       lastmod: { [url('/a')]: '2026-09-01' },
+      discovered_count: 1,
+      discovered_complete: true,
+      limit_reached: false,
+      unread_count: 0,
     });
     expect(requests).toEqual(['/robots.txt', '/llms.txt', '/index.xml', '/pages.xml']);
     const observations = await db
@@ -717,8 +691,98 @@ describe('site setup', () => {
       .where('crawl_id', '=', seed.crawlId)
       .execute();
     expect(observations).toEqual([{ observed_url: url('/a'), source_kind: 'sitemap' }]);
-    expect((await tasks(seed, 'discover')).map((row) => row.requested_url)).toEqual([url('/a')]);
-    expect((await crawlRow(seed)).admitted_url_count).toBe(1);
+    // Discovery fetched no page: the tracked page is analyzed directly.
+    expect(await tasks(seed, 'discover')).toEqual([]);
+    expect((await tasks(seed, 'analyze')).map((row) => row.requested_url)).toEqual([url('/a')]);
+    expect((await memberships(seed)).map((row) => row.normalized_url)).toEqual([url('/a')]);
+    expect(await crawlRow(seed)).toMatchObject({
+      admitted_url_count: 1,
+      discovered_url_count: 1,
+      discovery_status: 'completed',
+    });
+  });
+
+  it('counts every sitemap URL beyond the tracked set, and only a lower bound at a ceiling', async () => {
+    const seed = await crawl({ discovery: 'pending', config: { automatic_monitor_limit: 2 } });
+    const setup = await queued(seed, 'site_setup');
+    const site = worker({
+      '/robots.txt': robots,
+      '/index.xml': urlset(
+        url('/products/manual.pdf'),
+        url('/blog/x'),
+        url('/about'),
+        url('/products/a'),
+        url('/c'),
+      ),
+    });
+    await lease(setup, site.owner);
+    await runSiteTask(
+      {
+        db,
+        owner: site.owner,
+        queue: site.queue,
+        fetcher: site.fetcher,
+        settings: site.settings,
+        checkAccess: async () => {},
+      },
+      await task(setup),
+      {
+        kind: 'acquire',
+        run: (ctx, claimed) => {
+          const settings = setupSettings({});
+          return runSiteSetup(ctx, claimed, {
+            ...settings,
+            sitemap: { ...settings.sitemap, maxUrls: 4 },
+          });
+        },
+      },
+    );
+    // The cap kept four of five URLs: "at least 4". Two pages fill the tracked set, most
+    // valuable first; the PDF counts as discovered but is a document, never a tracked page.
+    expect(record(record((await crawlRow(seed)).site_facts).sitemap)).toMatchObject({
+      discovered_count: 4,
+      discovered_complete: false,
+      limit_reached: true,
+      unread_count: 0,
+    });
+    expect((await crawlRow(seed)).discovered_url_count).toBe(4);
+    expect((await memberships(seed)).map((row) => row.normalized_url)).toEqual([
+      url('/about'),
+      url('/products/a'),
+    ]);
+  });
+
+  it('walks HTML links from the root when the site lists no sitemap URLs', async () => {
+    const seed = await crawl({ discovery: 'pending', config: { automatic_monitor_limit: 5 } });
+    const setup = await queued(seed, 'site_setup');
+    await run(
+      worker({ '/robots.txt': { body: 'User-agent: *\n', contentType: 'text/plain' } }),
+      setup,
+    );
+    // A 404 answers that the site has no sitemap there.
+    expect(record(record((await crawlRow(seed)).site_facts).sitemap)).toMatchObject({
+      fetched: false,
+      discovered_count: 0,
+      unread_count: 0,
+    });
+    expect((await crawlRow(seed)).discovery_status).toBe('running');
+    expect((await tasks(seed, 'discover')).map((row) => row.requested_url)).toEqual([url('/')]);
+
+    // A failing server answers nothing: the walk still runs, and the sitemap stays unread.
+    const failing = await crawl({ discovery: 'pending', config: { automatic_monitor_limit: 5 } });
+    const retried = await queued(failing, 'site_setup');
+    await run(
+      worker({
+        '/robots.txt': { body: 'User-agent: *\n', contentType: 'text/plain' },
+        '/sitemap.xml': { status: 503, body: 'busy', contentType: 'text/plain' },
+      }),
+      retried,
+    );
+    expect(record(record((await crawlRow(failing)).site_facts).sitemap)).toMatchObject({
+      fetched: false,
+      unread_count: 1,
+    });
+    expect((await crawlRow(failing)).discovery_status).toBe('running');
   });
 
   it('counts failed documents against the walk budget and skips llms.txt for a sample', async () => {
@@ -776,6 +840,11 @@ describe('site setup', () => {
       files: [url('/index.xml')],
       urls: [],
       lastmod: {},
+      discovered_count: 0,
+      discovered_complete: false,
+      // The document budget left s3.xml unwalked; s1.xml and s2.xml answered 404.
+      limit_reached: true,
+      unread_count: 0,
     });
   });
 
@@ -897,7 +966,7 @@ describe('frontier admission', () => {
     ]);
   });
 
-  it('stops automatic selection and admission at the frozen limits across batches', async () => {
+  it('stops a walk’s admission at its bound across batches, tracking nothing unfetched', async () => {
     const seed = await crawl({ config: { automatic_monitor_limit: 4, requested_page_limit: 6 } });
     const page = (index: number) => `/page-${index}`;
     await admit(
@@ -908,7 +977,7 @@ describe('frontier admission', () => {
       seed,
       Array.from({ length: 5 }, (_, index) => page(index + 5)),
     );
-    expect((await memberships(seed)).filter((row) => row.active)).toHaveLength(4);
+    expect(await memberships(seed)).toEqual([]);
     expect(await tasks(seed, 'discover')).toHaveLength(6);
     expect((await crawlRow(seed)).admitted_url_count).toBe(6);
   });
@@ -954,17 +1023,18 @@ describe('frontier admission', () => {
     expect(await statements(40)).toBe(await statements(4));
   });
 
-  it('samples each value tier in a seeded order that ignores link position, and keeps one www/apex twin', () => {
-    const pages = candidates(Array.from({ length: 12 }, (_, index) => `/page-${index}`));
-    const order = (items: typeof pages, seed: string) =>
-      orderedUnique(items, seed).map((item) => item.url);
-    const reversed = pages.map((item, index) => ({ ...item, linkOrdinal: pages.length - index }));
-    expect(order(reversed, 'crawl-a')).toEqual(order(pages, 'crawl-a'));
-    expect(order(pages, 'crawl-b')).not.toEqual(order(pages, 'crawl-a'));
+  it('orders by value tier then URL hash, whatever the link position, and keeps one www/apex twin', () => {
+    const pages = candidates(['/blog/x', '/about', '/products/a', '/page-1', '/page-2']);
+    const order = (items: typeof pages) => orderedUnique(items).map((item) => item.url);
+    const reversed = pages
+      .toReversed()
+      .map((item, index) => ({ ...item, linkOrdinal: pages.length - index }));
+    const [first, second] = [canonicalIdentity(url('/page-1')), canonicalIdentity(url('/page-2'))];
+    const others = first.hash < second.hash ? [first.url, second.url] : [second.url, first.url];
+    expect(order(pages)).toEqual([url('/products/a'), url('/about'), url('/blog/x'), ...others]);
+    expect(order(reversed)).toEqual(order(pages));
     const twin = candidates(['/page-0'])[0]!;
-    const wwwUrl = twin.url.replace('://', '://www.');
-    const www = { ...twin, url: wwwUrl, hash: canonicalIdentity(wwwUrl).hash };
-    expect(orderedUnique([twin, www], 'crawl-a')).toHaveLength(1);
+    expect(orderedUnique([twin, twinOf(twin)])).toHaveLength(1);
   });
 
   it('never lets an inadmissible twin displace its pair, and samples one twin per crawl', async () => {

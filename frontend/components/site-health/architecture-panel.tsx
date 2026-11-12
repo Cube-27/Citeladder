@@ -47,6 +47,10 @@ const COVERAGE_REASON_LABELS: Record<string, string> = {
   no_observed_urls: 'no URLs were observed',
   discovery_not_completed: 'discovery did not finish',
   frontier_exhausted: 'the crawl emptied its discovery queue',
+  sitemap_limit_reached: 'the sitemap listed more than the crawl could read',
+  sitemap_documents_unread: 'a sitemap file could not be read',
+  tracked_pages_below_site: 'the sitemap lists more pages than the crawl tracks',
+  sitemap_exhausted: 'the crawl read the whole sitemap and every page it lists',
 };
 
 const DEPTH_LABELS = {

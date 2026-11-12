@@ -42,10 +42,12 @@ function targetHash(crawl: Crawl, hash: string, declared: string, base: string) 
 }
 
 /**
- * The hash this page aliases when it is an active member and its target is an
- * active one this crawl already fetched. A target not fetched yet may still
- * fail and be released, so the alias waits for finalization, which aliases
- * only toward a target that ended active (`reconcileDuplicateAliases`).
+ * The hash this page aliases when its target is an active member this crawl
+ * already fetched. The page is a sample's selected member, or any page a full
+ * crawl's HTML walk fetched: a walked page joins the tracked set only after
+ * this check, so an alias never does. A target not fetched yet may still fail
+ * and be released, so the alias waits for finalization, which aliases only
+ * toward a target that ended active (`reconcileDuplicateAliases`).
  */
 export async function duplicateOf(
   trx: Database,
@@ -63,7 +65,7 @@ export async function duplicateOf(
         .onRef('o.project_id', '=', 'u.project_id')
         .on('o.crawl_id', '=', crawl.id),
     )
-    .innerJoin('monitored_site_urls as m', (join) =>
+    .leftJoin('monitored_site_urls as m', (join) =>
       join
         .onRef('m.site_url_id', '=', 'u.id')
         .onRef('m.workspace_id', '=', 'u.workspace_id')
@@ -77,7 +79,7 @@ export async function duplicateOf(
     .execute();
   const source = rows.find((row) => row.url_hash === page.hash);
   const destination = rows.find((row) => row.url_hash === target);
-  if (!source?.active || !destination?.active) return '';
+  if (!source || (crawl.sample_mode && !source.active) || !destination?.active) return '';
   const fetched = await trx
     .selectFrom('site_crawl_tasks as t')
     .innerJoin('site_fetch_artifacts as a', (join) =>
@@ -95,7 +97,11 @@ export async function duplicateOf(
   return fetched ? target : '';
 }
 
-/** Exclude fetched aliases, release their system memberships and retire their current analyses. */
+/**
+ * Exclude fetched aliases, release their sample memberships and retire their
+ * current analyses. A tracked alias stays tracked (only a downgrade removes a
+ * tracked page); its analysis is retired each crawl like any alias's.
+ */
 export async function markDuplicates(trx: Database, crawl: Crawl, hashes: string[]) {
   if (!hashes.length) return;
   const urls = await trx

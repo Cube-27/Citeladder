@@ -9,12 +9,10 @@ import { crawlRobotsHandlingSchema, crawlScheduleCadenceSchema } from './site-he
 /** A new crawl of the project's website; it analyzes up to the plan's page limit. */
 export const siteCrawlCreateRequestSchema = z.strictObject({
   project_id: z.uuid(),
-  /** Optional deterministic 64-bit seed as a decimal string. */
-  seed: z.string().nullable().optional(),
   /**
    * `ignore` fetches the project's own pages despite robots.txt exclusions;
    * sending it confirms the person is authorized to crawl this site. Absent
-   * means `respect`.
+   * keeps the project's newest site crawl's choice (`respect` before any).
    */
   robots: crawlRobotsHandlingSchema.nullable().optional(),
 });

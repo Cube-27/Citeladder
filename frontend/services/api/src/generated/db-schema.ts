@@ -2028,6 +2028,7 @@ export interface MonitoredSiteUrls {
   active: boolean;
   created_at: Timestamp;
   deselected_at: Timestamp | null;
+  fill_order: number | null;
   id: string;
   profile_id: string;
   project_id: string;

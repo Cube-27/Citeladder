@@ -1,5 +1,4 @@
 /** Bounded crawl request normalization and the policy frozen on each crawl. */
-import { randomBytes } from 'node:crypto';
 import { getDomain } from 'tldts';
 import { z } from 'zod';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
@@ -42,12 +41,6 @@ export type RobotsDecision = z.infer<typeof robotsDecisionSchema>;
  * crawl a recrawl or schedule reruns; never from the request body.
  */
 export type CrawlAdmission = CreateCrawlRequest & { robots_decision?: RobotsDecision | null };
-
-export function normalizedSeed(seed: string | null | undefined) {
-  if (!seed?.trim()) return randomBytes(8).readBigUInt64BE().toString();
-  if (!/^[+-]?\d+$/u.test(seed.trim())) crawlError('random_seed must be an integer');
-  return BigInt.asUintN(64, BigInt(seed.trim())).toString();
-}
 
 /** The crawl's robots handling; the page limit is the configured automatic one (SH-B13). */
 export function controls(request: CrawlAdmission) {

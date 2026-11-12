@@ -226,7 +226,7 @@ describe('Site Health lock order', () => {
     await stopAll();
     expect(
       await lockOrder((trx) => createCrawl(trx, seed.workspaceId, { project_id: seed.projectId })),
-    ).toEqual(['project', 'runtime', 'profile', 'capacity', 'account']);
+    ).toEqual(['project', 'runtime', 'membership', 'profile', 'capacity', 'account']);
     expect(
       await lockOrder((trx) =>
         issueBundle(trx, {
