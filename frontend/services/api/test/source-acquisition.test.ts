@@ -10,6 +10,7 @@ import {
 } from '../src/web-evidence/acquisition.ts';
 import { extractSourcePage } from '../src/source-pages/extract.ts';
 import { assessPage, urlFormat } from '../src/source-pages/assessment.ts';
+import { isListingGap } from '../src/analysis/listing-gap.ts';
 import {
   compareContent,
   ownedFacts,
@@ -304,12 +305,19 @@ it('extracts visible evidence and keeps schema, headings and table structure sep
   expect(extractSourcePage(Buffer.from('<p>Visible without a title</p>')).facts.title).toBe('');
 });
 it('matches names the way answers do, quoting spaced and joined spellings, and keeps absence distinct', () => {
-  const spaced = extractSourcePage(Buffer.from('<p>Admissions open at The Asian School.</p>'));
-  expect(assessPage(spaced, { brand_name: 'theasianschool' }).presences[0]).toMatchObject({
+  const joined = extractSourcePage(Buffer.from('<p>Admissions open at theasianschool.com.</p>'));
+  expect(assessPage(joined, { brand_name: 'The Asian School' }).presences[0]).toMatchObject({
     presence: 'present',
     match_method: 'normalized_alias',
     match_count: 1,
   });
+  // Separate words on the page never join to spell a one-word name (AR-6).
+  const spaced = extractSourcePage(
+    Buffer.from(`<p>Admissions open at The Asian School. ${'Other words '.repeat(100)}</p>`),
+  );
+  expect(assessPage(spaced, { brand_name: 'theasianschool' }).presences[0]?.presence).toBe(
+    'not_detected',
+  );
   const compact = extractSourcePage(Buffer.from('<p>We love BestandLess shoes</p>'));
   expect(assessPage(compact, { brand_name: 'Best & Less' }).presences[0]).toMatchObject({
     presence: 'present',
@@ -341,6 +349,45 @@ it('matches names the way answers do, quoting spaced and joined spellings, and k
       .presences[0]?.presence,
   ).toBe('partial');
   expect(assessPage(full, {}).presences).toEqual([]);
+});
+it('quotes and counts only the mentions the mention rules accept', () => {
+  const page = extractSourcePage(
+    Buffer.from('<p>We baked apple pie today. Later we bought an Apple laptop.</p>'),
+  );
+  const result = assessPage(page, {
+    brand_name: 'Apple',
+    entity_matching: {
+      entities: { apple: { mode: 'always', context_terms: [], exclusion_phrases: ['apple pie'] } },
+    },
+  });
+  expect(result.presences[0]).toMatchObject({
+    presence: 'present',
+    match_count: 1,
+    first_offset: 45,
+  });
+});
+it('never judges a name too short to find on a page absent, so it leaves no listing gap', () => {
+  const page = extractSourcePage(
+    Buffer.from(`<p>Compare HP and Dell laptops. ${'Other words '.repeat(100)}</p>`),
+  );
+  const presences = (brandAliases: string[]) =>
+    assessPage(page, {
+      brand_name: 'HP',
+      brand_aliases: brandAliases,
+      competitors: [{ name: 'Dell' }],
+    }).presences.map((row) => [row.entity_kind, row.presence]);
+  expect(presences([])).toEqual([
+    ['brand', 'not_assessable'],
+    ['competitor', 'present'],
+  ]);
+  expect(
+    isListingGap({ source_class: null }, [
+      { entity_kind: 'brand', presence: 'not_assessable' },
+      { entity_kind: 'competitor', presence: 'present' },
+    ]),
+  ).toBe(false);
+  // A longer alias keeps the brand assessable.
+  expect(presences(['Hewlett-Packard'])[0]).toEqual(['brand', 'not_detected']);
 });
 it('derives page formats from a page address and keeps redirect tokens unresolved', () => {
   expect(urlFormat('https://example.test/compare/tools').format).toBe('comparison');
@@ -442,10 +489,11 @@ it('quotes every named entity even when one of them fills the page', () => {
   expect(
     result.passages.every((passage) => passage.text.length <= policy.source_pages.passage_chars),
   ).toBe(true);
+  // "AI" is too short to judge on a page, so it is never read as absent.
   expect(result.presences.map((presence) => presence.presence)).toEqual([
     'present',
     'present',
-    'not_detected',
+    'not_assessable',
   ]);
   expect(
     assessPage(

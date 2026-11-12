@@ -356,6 +356,49 @@ it('retains supported field citations but refuses a field citing only unknown ev
     ),
   ).toEqual([{ name: 'Globex', domains: ['globex.com'], aliases: [] }]);
 });
+it('keeps stores on a shared platform as separate sites (AR-5)', () => {
+  expect(
+    cleanSuggestions(
+      [
+        { name: 'Rival', domains: ['https://rival.myshopify.com/'], aliases: [] },
+        { name: 'Other', domains: ['other.myshopify.com'], aliases: [] },
+        { name: 'Blog', domains: ['www.blog.wordpress.com'], aliases: [] },
+      ],
+      'Acme',
+      'acme.myshopify.com',
+      10,
+    ).map((item) => item.domains),
+  ).toEqual([['rival.myshopify.com'], ['other.myshopify.com'], ['blog.wordpress.com']]);
+});
+it('refuses a first-party redirect to another store on the same platform', async () => {
+  const send = vi.fn(async () => ({
+    status: 302,
+    location: 'https://rival.myshopify.com/',
+    type: 'text/html',
+    body: Buffer.alloc(0),
+  }));
+  const fetcher = createWebsiteFetcher(async () => [{ address: '93.184.216.34', family: 4 }], send);
+  await expect(resolveSite('acme.myshopify.com', fetcher)).rejects.toMatchObject({
+    code: 'out_of_scope',
+  });
+});
+it('records the identity model finding too little evidence and warns the reviewer', async () => {
+  const { gateway } = recordedGateway([
+    {
+      status: 'insufficient_evidence',
+      profile: { category: 'Analytics' },
+      signature: { category: 'Analytics' },
+    },
+    { competitors: [{ name: 'Globex', domains: ['globex.com'] }] },
+  ]);
+  const result = await researchBrand(
+    discoveryCreate.parse({ brand_name: 'Acme', website_url: 'acme.com', primary_market: 'US' }),
+    { url: 'https://acme.com/', domain: 'acme.com', page: null, warning: '' },
+    { meter, gateway, env: {} },
+  );
+  expect(result.snapshot.identity_status).toBe('insufficient_evidence');
+  expect(result.warnings).toContain('insufficient_evidence');
+});
 it.each([
   ['an unusable answer', new Error('invalid output'), true],
   ['a credit refusal', new ApiError(403, 'Your AI credits are used up'), false],

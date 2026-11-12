@@ -92,7 +92,8 @@ export const visibilityEvidenceResponseSchema = responseObject({
 /**
  * Where the business stands on one cited page, from its latest successful
  * reading: its own or a competitor's page, not read yet (and why), a `gap`
- * (competitors listed and the business not), listed, or read with neither.
+ * (competitors listed and the business not), listed, read with neither, or
+ * `not_assessable` when the business's name is too short to judge on a page.
  */
 export const pageStandingSchema = z.enum([
   'yours',
@@ -103,6 +104,7 @@ export const pageStandingSchema = z.enum([
   'gap',
   'listed',
   'read',
+  'not_assessable',
 ]);
 
 export const visibilitySourcesSchema = responseObject({

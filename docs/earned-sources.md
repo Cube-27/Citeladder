@@ -86,18 +86,25 @@ shared with Site Health (`config/site-health/analysis.json` and
 **Presence uses the answer matcher.** A name counts on a page exactly when it
 would count in an answer: the same normalisation and the project's mention
 rules (context terms, exclusion phrases). A positive verdict always carries a
-quoted window from the raw text, found by the name as written or by its
-characters with short separators between them ("theasianschool" quotes "The
-Asian School"). Each entity has its own small passage allowance, so one name
+quoted window from the raw text, found by the name as written or by its words
+with short separators, or none, between them ("The Asian School" quotes
+"theasianschool.com"); only occurrences the mention rules accept are quoted and
+counted. Each entity has its own small passage allowance, so one name
 that fills the page never leaves the others unquoted. A name matched only in a
 spelling no raw window reproduces ("and" for "&") is `ambiguous`, not present.
 A non-detection carries the extracted length and the matching method instead,
 because no passage can show an absence; too little readable text is `partial`.
+A name whose every spelling is shorter than `min_alias_chars` (3) is
+`not_assessable` (AR-6): it is never judged absent, so it makes no Gap and no
+earned Action; a brand verdict of `not_assessable` gives the page that standing.
 
 **Page state is not an entity verdict.** `not_inspected`, `queued`, `blocked`,
 `failed` and `stale` describe the page and are never written as presence. A
-page is judged on its latest successful reading, so a later failed attempt
-never erases what was learned, and a page nobody read carries no verdicts.
+page is judged on its latest successful reading under the roster in force (the
+roster the project's newest inspection matched with), so a later failed attempt
+never erases what was learned, and a page nobody read carries no verdicts. A
+reading judged against an outdated roster counts nowhere (no standing, Gap or
+Action) until the page is read again, even when a re-read fails or is blocked.
 
 ## The earned Action
 
@@ -152,7 +159,8 @@ with where the business stands:
 | Competitors listed, you are not | Read, a competitor present, the brand not detected. Shows each competitor's line, the Action and an Agent handoff (or a request draft before an Action exists). |
 | You are on this page | The brand is present, with its line. |
 | No tracked competitor listed | Read, nothing to act on. |
-| Not read yet / blocked / last read failed | No successful reading; says why and shows no verdicts. |
+| Not assessable | Read, but the brand's name is too short to judge on a page; never a Gap. |
+| Not read yet / blocked / last read failed | No successful reading under the roster in force; says why and shows no verdicts. |
 | A competitor's or your own page | Never judged as a place to be listed. |
 
 Below that: when the page was last read and how much was readable, its type
