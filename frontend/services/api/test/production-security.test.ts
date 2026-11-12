@@ -1,5 +1,7 @@
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it } from 'vitest';
-import { ConfigError, loadConfig } from '../src/config.ts';
+import { ConfigError, loadConfig, secretIsWeak } from '../src/config.ts';
 import { demoLoginPassword, productionEnv } from './production-config.ts';
 
 const demoEnv = {
@@ -8,6 +10,91 @@ const demoEnv = {
   DEMO_EXPIRES_AT: '2099-01-01T00:00:00Z',
   DEV_LOGIN_PASSWORD: demoLoginPassword,
 };
+
+/** Every non-empty secret-named value `.env.example` ships, commented examples included. */
+function exampleSecrets(): Record<string, string> {
+  const secretName = /(?:SECRET|PASSWORD|PEPPER|SALT|TOKEN|_KEY)(?:_PREVIOUS)?$/u;
+  const text = readFileSync(new URL('../../../../.env.example', import.meta.url), 'utf8');
+  const secrets: Record<string, string> = {};
+  for (const line of text.split(/\r?\n/u)) {
+    const match = /^#?\s*([A-Z][A-Z0-9_]*)=(.+)$/u.exec(line.trim());
+    if (match && secretName.test(match[1]) && !/^(?:NEXT_)?PUBLIC_/u.test(match[1]))
+      secrets[match[1]] = match[2].trim();
+  }
+  return secrets;
+}
+
+function startupRefusal(env: Record<string, string>): string {
+  try {
+    loadConfig(env);
+    return 'started';
+  } catch (error) {
+    return error instanceof ConfigError ? error.message : String(error);
+  }
+}
+
+describe('deployment environment admission (AR-1)', () => {
+  const withoutAppEnv = Object.fromEntries(
+    Object.entries(productionEnv).filter(([name]) => name !== 'APP_ENV'),
+  );
+
+  it('refuses to start without APP_ENV instead of falling back to development', () => {
+    expect(startupRefusal(withoutAppEnv)).toBe(
+      'APP_ENV must be set to one of development, test, production',
+    );
+  });
+
+  it.each(['', 'prod', 'Production', 'staging', 'local'])(
+    'refuses to start with the unknown APP_ENV %j',
+    (APP_ENV) => {
+      expect(startupRefusal({ ...withoutAppEnv, APP_ENV })).toBe(
+        'app_env must be one of development, test, production',
+      );
+    },
+  );
+
+  it('starts each known environment', () => {
+    expect(
+      ['development', 'test', 'production'].map(
+        (APP_ENV) => loadConfig({ ...withoutAppEnv, APP_ENV }).appEnv,
+      ),
+    ).toEqual(['development', 'test', 'production']);
+  });
+});
+
+describe('.env.example secrets', () => {
+  const secrets = exampleSecrets();
+
+  it('refuses the shipped application, database and demo login secrets at production startup', () => {
+    const refusal = startupRefusal({
+      ...demoEnv,
+      JWT_SECRET_KEY: secrets.JWT_SECRET_KEY,
+      ENCRYPTION_KEY: secrets.ENCRYPTION_KEY,
+      API_KEY_PEPPER: secrets.API_KEY_PEPPER,
+      DEV_LOGIN_PASSWORD: secrets.DEV_LOGIN_PASSWORD,
+      DATABASE_URL: `postgresql://fixture:${encodeURIComponent(secrets.POSTGRES_PASSWORD)}@database.test/app`,
+    });
+    expect(refusal).toContain('JWT_SECRET_KEY does not meet the production strength policy');
+    expect(refusal).toContain('ENCRYPTION_KEY does not meet the production strength policy');
+    expect(refusal).toContain('API_KEY_PEPPER does not meet the production strength policy');
+    expect(refusal).toContain('database password does not meet the production strength policy');
+    expect(refusal).toContain('dev_login_password does not meet the login password policy');
+  });
+
+  it('fails every shipped secret against the production strength policy', () => {
+    expect(Object.keys(secrets)).toEqual(
+      expect.arrayContaining(['INTEGRATION_GOOGLE_CLIENT_SECRET', 'CITELADDER_ORIGIN_TOKEN']),
+    );
+    const admitted = Object.entries(secrets)
+      .filter(([, value]) => !secretIsWeak(value))
+      .map(([name]) => name);
+    expect(admitted).toEqual([]);
+  });
+
+  it('admits a deployment-grade secret that only contains a policy word', () => {
+    expect(secretIsWeak('kV8-qZ3n-Lw7-Rt2-secret-Hy6-Pm4-Xc9-Jd1')).toBe(false);
+  });
+});
 
 describe('production startup admission', () => {
   it.each([

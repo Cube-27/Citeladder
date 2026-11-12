@@ -14,8 +14,9 @@
     },
     "app_env": {
       "env": ["APP_ENV"],
-      "type": "str",
-      "default": "development"
+      "type": "literal",
+      "values": ["development", "test", "production"],
+      "default": null
     },
     "database_url": {
       "env": ["DATABASE_URL"],
@@ -93,5 +94,5 @@
       "default": ""
     }
   },
-  "development_env_names": ["", "dev", "development", "local", "test", "testing"]
+  "development_env_names": ["development", "test"]
 }

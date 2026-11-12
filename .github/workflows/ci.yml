@@ -197,6 +197,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
+      APP_ENV: test
       CITELADDER_DISABLE_DOTENV: '1'
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
       TYPES_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
@@ -244,6 +245,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
+      APP_ENV: test
       CITELADDER_DISABLE_DOTENV: '1'
       # The SQL baseline authors the schema; the migrate CLI applies it once.
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder

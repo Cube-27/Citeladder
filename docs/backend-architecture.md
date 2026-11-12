@@ -70,8 +70,12 @@ runs the same image's one-shot migration/bootstrap. Seed/login tools run nativel
 from the local checkout. Commercial operators are packaged into that image. Bounded
 provider provisioning, acquisition control, agreement references and interactive
 account administration run in the native API package/image. Browser calls stay same-origin
-`/api/v1`. Native startup enforces the shared production secret, database, proxy,
-demo and redirect-origin admission policy. The migrate CLI reads only the
+`/api/v1`. Native startup refuses an unset or unknown `APP_ENV`: only
+`development`, `test` and `production` start, and nothing falls back to
+development. Outside development and test it enforces the shared production
+secret, database, proxy, demo and redirect-origin admission policy; the secret
+policy also refuses template-shaped values such as `.env.example`'s
+`replace-with-…` and `<your-…>` placeholders. The migrate CLI reads only the
 database connection settings, so it needs no application secrets.
 Fernet-encrypted provider/OAuth secrets and least-privilege worker environments
 keep credential custody separate from product projections.

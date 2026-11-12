@@ -50,7 +50,8 @@ services:
     env_file:
       - ${CITELADDER_ENV_FILE:-.env}
     environment: &service_env
-      APP_ENV: ${APP_ENV:-development}
+      # No fallback (AR-1): the API refuses to start without a known APP_ENV.
+      APP_ENV: ${APP_ENV:?APP_ENV must be set (development, test or production)}
       # OAuth redirects and invitation links target the local app Worker.
       FRONTEND_URL: http://127.0.0.1:3001
       # skipcq: SCT-A000 - password comes from environment, not hardcoded.
