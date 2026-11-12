@@ -101,7 +101,8 @@ export const visibilitySchema = responseObject({
   cohort: visibilityCohortSchema.default('core'),
   coverage: z.record(z.string(), z.number().nullable()).default({}),
   total_completed: z.number().int(),
-  total_failed: z.number().int(),
+  // Null when the run recorded no coverage: unknown, not zero failures.
+  total_failed: z.number().int().nullable(),
   visibility_score: z.number().nullable(),
   visibility_rate: z.number().nullable().optional(),
   owned_citation_rate: z.number().nullable().optional(),

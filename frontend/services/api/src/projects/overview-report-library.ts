@@ -18,7 +18,7 @@ import { getPerception } from '../visibility/perception.ts';
 import type { PromptMetricItem } from '../visibility/prompts.ts';
 import { getSourceMovers } from '../visibility/source-movers.ts';
 import { getSourceNearMisses } from '../visibility/source-retrieval.ts';
-import type { RunSelection } from '../visibility/selection.ts';
+import { AnalysisNotFoundError, type RunSelection } from '../visibility/selection.ts';
 import { getVisibilityTrends } from '../visibility/trends.ts';
 import type { ProjectScope } from './brand-profile.ts';
 import {
@@ -58,11 +58,21 @@ export function truncated(report: PdfReport, total: number, noun: string) {
   if (total > ROWS) quiet(report, `Showing ${ROWS} of ${plural(total, noun)}.`);
 }
 
-function latest({ scope }: ReportContext): RunSelection {
+/**
+ * The run the cover describes, so a run finishing mid-build cannot change the
+ * sections; null before the first completed run.
+ */
+const reportRun = ({ view }: ReportContext) => view.measurement?.audit_id ?? null;
+
+/** The page defaults on the report's run; AnalysisNotFoundError before the first completed run. */
+function latest(context: ReportContext): RunSelection {
+  const auditId = reportRun(context);
+  if (auditId === null)
+    throw new AnalysisNotFoundError('No completed audit for project', 'not_measured');
   return {
-    ...scope,
+    ...context.scope,
     marketId: null,
-    auditId: null,
+    auditId,
     auditIds: null,
     logicalEngine: null,
     cohort: COHORT,
@@ -71,12 +81,12 @@ function latest({ scope }: ReportContext): RunSelection {
   };
 }
 
-const visibilityRead = ({ db, scope }: ReportContext) =>
+const visibilityRead = (context: ReportContext) =>
   getVisibility(
-    db,
-    { ...scope, marketId: null },
+    context.db,
+    { ...context.scope, marketId: null },
     {
-      auditId: null,
+      auditId: reportRun(context),
       logicalEngine: null,
       baselineId: null,
       selectionMode: 'latest',
@@ -172,7 +182,7 @@ const shareOfVoice: Section = async (context) => {
 const topMovers: Section = async (context) => {
   const { db, report } = context;
   heading(report, 'top_movers');
-  const comparison = (await visibilityRead(context)).comparison;
+  const { comparison } = await visibilityRead(context);
   if (comparison?.status !== 'comparable') {
     quiet(report, 'No comparable earlier period to compare this one with yet.');
     return;

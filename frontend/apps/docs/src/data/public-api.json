@@ -7391,9 +7391,16 @@
             "maximum": 9007199254740991
           },
           "total_failed": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "visibility_score": {
             "type": ["number", "null"]

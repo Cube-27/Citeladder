@@ -93,6 +93,79 @@ describe('audit HTTP family cutover', () => {
     expect((await request(t.userId, t.workspaceId, `/${run.id}/cancel`, 'POST')).status).toBe(200);
     expect((await request(t.userId, t.workspaceId, `/${run.id}/cancel`, 'POST')).status).toBe(409);
   });
+  it('leaves an unscored answer empty in the CSV, never False or 0', async () => {
+    const t = await auditTenant(db, fixtures);
+    const [auditId] = await createAudits(
+      db,
+      t.workspaceId,
+      auditInput.parse({
+        project_id: t.projectId,
+        prompt_set_id: t.setId,
+        engines: ['chatgpt'],
+        repetitions: 2,
+      }),
+      {},
+      runtime,
+    );
+    const [scored, failed] = await db
+      .selectFrom('audit_tasks')
+      .select('id')
+      .where('audit_id', '=', auditId!)
+      .orderBy('repetition')
+      .execute();
+    await db
+      .updateTable('audit_tasks')
+      .set({
+        status: 'succeeded',
+        score: JSON.stringify({
+          search_query_count: 0,
+          brand_mentioned: false,
+          owned_domain_cited: false,
+          owned_citation_count: 0,
+          citation_count: 0,
+        }),
+      })
+      .where('id', '=', scored!.id)
+      .execute();
+    await db
+      .updateTable('audit_tasks')
+      .set({ status: 'failed', error_code: 'provider_timeout' })
+      .where('id', '=', failed!.id)
+      .execute();
+
+    const csv = await request(t.userId, t.workspaceId, `/${auditId}/export.csv`);
+    const [header, ...rows] = (await csv.text()).trim().split('\r\n');
+    const columns = header!.split(',');
+    const cells = (row: string) => {
+      // No cell in these rows holds a comma.
+      const values = row.split(',');
+      return Object.fromEntries(
+        [
+          'status',
+          'search_query_count',
+          'brand_mentioned',
+          'owned_citation_count',
+          'citation_count',
+        ].map((name) => [name, values[columns.indexOf(name)]]),
+      );
+    };
+    expect(rows.map(cells)).toEqual([
+      {
+        status: 'succeeded',
+        search_query_count: '0',
+        brand_mentioned: 'False',
+        owned_citation_count: '0',
+        citation_count: '0',
+      },
+      {
+        status: 'failed',
+        search_query_count: '',
+        brand_mentioned: '',
+        owned_citation_count: '',
+        citation_count: '',
+      },
+    ]);
+  });
   it('drains terminal stream pages and uses the same validated envelopes and safe resume cursor as JSON', async () => {
     const t = await seed(),
       foreign = await seed();
