@@ -24,17 +24,24 @@ export async function projectSiteDomains(
     .where('workspace_id', '=', workspaceId)
     .where('id', '=', projectId)
     .executeTakeFirst();
-  return project ? siteDomainsOf(db, { id: projectId, website_url: project.website_url }) : null;
+  return project
+    ? siteDomainsOf(db, {
+        id: projectId,
+        workspace_id: workspaceId,
+        website_url: project.website_url,
+      })
+    : null;
 }
 
 /** The sites of a project the caller already read inside its workspace. */
 export async function siteDomainsOf(
   db: Database,
-  project: { id: string; website_url: string },
+  project: { id: string; workspace_id: string; website_url: string },
 ): Promise<Set<string>> {
   const domains = await db
     .selectFrom('owned_domains')
     .select('domain')
+    .where('workspace_id', '=', project.workspace_id)
     .where('project_id', '=', project.id)
     .execute();
   return new Set(

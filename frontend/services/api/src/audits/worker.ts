@@ -295,7 +295,7 @@ export class AuditWorker {
       await parkAuditTask(trx, locked.task, 'capacity_wait', available, at);
       await auditEvent(
         trx,
-        task.audit_id,
+        { workspaceId: task.workspace_id, auditId: task.audit_id },
         auditPolicy.constants.event_task_capacity_wait,
         'task capacity wait',
         {

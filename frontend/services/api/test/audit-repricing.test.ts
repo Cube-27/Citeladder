@@ -83,6 +83,7 @@ it('uses one latest projection per artifact without fabricating missing usage', 
       .insertInto('execution_cost_projections')
       .values({
         id: randomUUID(),
+        workspace_id: t.workspaceId,
         audit_id: auditId,
         task_id: taskId,
         raw_response_artifact_id: artifact.id,

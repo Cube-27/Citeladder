@@ -8,6 +8,7 @@
  */
 import type { NamedBrand } from '@citeladder/contracts/visibility';
 
+import type { ProjectScope } from '../projects/brand-profile.ts';
 import { brandLogoUrl, competitorLogoUrl } from '../projects/logos.ts';
 import type { Database } from '../db/database.ts';
 import { compareText, scalarText } from '../text-order.ts';
@@ -63,21 +64,23 @@ function listOf(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
-/** This project's marks keyed by `identityKey`; the project is already authorized. */
+/** The scope's project marks keyed by `identityKey`. */
 export async function brandIdentities(
   db: Database,
-  projectId: string,
+  { workspaceId, projectId }: ProjectScope,
 ): Promise<Map<string, BrandIdentity>> {
   const project = await db
     .selectFrom('projects')
     .select(['id', 'website_url'])
     .where('id', '=', projectId)
+    .where('workspace_id', '=', workspaceId)
     .executeTakeFirst();
   const found = new Map<string, BrandIdentity>();
   if (project === undefined) return found;
   const brand = await db
     .selectFrom('brands')
     .select(['name', 'logo_asset_id'])
+    .where('workspace_id', '=', workspaceId)
     .where('project_id', '=', projectId)
     .executeTakeFirst();
   if (brand?.name) {
@@ -89,6 +92,7 @@ export async function brandIdentities(
   const competitors = await db
     .selectFrom('competitors')
     .select(['id', 'name', 'aliases', 'domains', 'logo_asset_id'])
+    .where('workspace_id', '=', workspaceId)
     .where('project_id', '=', projectId)
     .orderBy('created_at')
     .execute();

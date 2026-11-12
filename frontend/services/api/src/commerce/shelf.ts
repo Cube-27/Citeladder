@@ -331,6 +331,7 @@ async function recordObservation(
       .values(
         linked.map((citation) => ({
           id: randomUUID(),
+          workspace_id: pass.workspaceId,
           observation_id: id,
           citation_id: citation.id,
         })),

@@ -564,6 +564,7 @@ export interface AuditEngineSnapshots {
   logical_engine: string;
   transport_model: string;
   transport_provider: string;
+  workspace_id: string;
 }
 
 export interface AuditEvents {
@@ -573,6 +574,7 @@ export interface AuditEvents {
   id: string;
   message: string;
   payload: Json | null;
+  workspace_id: string;
 }
 
 export interface AuditPromptSnapshots {
@@ -588,6 +590,7 @@ export interface AuditPromptSnapshots {
   prompt_intent: string;
   text: string;
   theme: string;
+  workspace_id: string;
 }
 
 export interface Audits {
@@ -924,6 +927,7 @@ export interface BrandAliases {
   brand_id: string;
   created_at: Timestamp;
   id: string;
+  workspace_id: string;
 }
 
 export interface BrandDiscoveries {
@@ -1221,6 +1225,7 @@ export interface CommerceObservationCitations {
   citation_id: string;
   id: string;
   observation_id: string;
+  workspace_id: string;
 }
 
 export interface CommerceProductCategories {
@@ -1714,6 +1719,7 @@ export interface ExecutionCostProjections {
   total_tokens: number | null;
   uncached_input_cost_microusd: Int8 | null;
   uncached_input_tokens: number | null;
+  workspace_id: string;
 }
 
 export interface FactVerifications {
@@ -2424,6 +2430,7 @@ export interface ProviderAttempts {
   task_id: string;
   transport_model: string;
   transport_provider: string;
+  workspace_id: string;
 }
 
 export interface ProviderCapacityBuckets {
@@ -2574,6 +2581,7 @@ export interface RawResponseArtifacts {
   transport_model: string;
   transport_provider: string;
   usage: Json | null;
+  workspace_id: string;
 }
 
 export interface ReferralClassifications {
@@ -2870,6 +2878,7 @@ export interface SiteCrawlEvents {
   id: string;
   message: string;
   payload: Json | null;
+  workspace_id: string;
 }
 
 export interface SiteCrawls {

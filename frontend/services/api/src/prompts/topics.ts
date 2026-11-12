@@ -26,6 +26,7 @@ import type { RecordScope } from '../db/workspace-scope.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { DB } from '../generated/db-schema.ts';
 import { requireProject } from '../projects/access.ts';
+import type { ProjectScope } from '../projects/brand-profile.ts';
 import { topicLinks } from './generation-plan.ts';
 import { acquireProjectLock } from './locks.ts';
 import { topicView, type TopicRow, type TopicView } from './views.ts';
@@ -89,11 +90,15 @@ async function scopedTopic(db: Kysely<DB>, scope: RecordScope, topicId: string):
 }
 
 /** Active prompts per topic of the project, for the topics rail. */
-async function activeCounts(db: Kysely<DB>, projectId: string): Promise<Map<string, number>> {
+async function activeCounts(
+  db: Kysely<DB>,
+  { workspaceId, projectId }: ProjectScope,
+): Promise<Map<string, number>> {
   const rows = await db
     .selectFrom('prompts')
     .innerJoin('topics', 'topics.id', 'prompts.topic_id')
     .select(['prompts.topic_id', sql<string>`count(*)`.as('count')])
+    .where('topics.workspace_id', '=', workspaceId)
     .where('topics.project_id', '=', projectId)
     .where('prompts.status', '=', P.status_active)
     .groupBy('prompts.topic_id')
@@ -102,7 +107,12 @@ async function activeCounts(db: Kysely<DB>, projectId: string): Promise<Map<stri
 }
 
 async function view(db: Kysely<DB>, topic: TopicRow): Promise<TopicView> {
-  return topicView(topic, (await activeCounts(db, topic.project_id)).get(topic.id) ?? 0);
+  return topicView(
+    topic,
+    (await activeCounts(db, { workspaceId: topic.workspace_id, projectId: topic.project_id })).get(
+      topic.id,
+    ) ?? 0,
+  );
 }
 
 /**
@@ -145,17 +155,18 @@ async function writing<T>(write: () => Promise<T>): Promise<T> {
   }
 }
 
-/** The project's topics; the caller (the route, MCP or a generation run) has authorized the project. */
-export async function listTopics(db: Database, projectId: string): Promise<TopicView[]> {
+/** The scope's project topics. */
+export async function listTopics(db: Database, scope: ProjectScope): Promise<TopicView[]> {
   const [topics, counts] = await Promise.all([
     db
       .selectFrom('topics')
       .selectAll()
-      .where('project_id', '=', projectId)
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
       .orderBy('name')
       .orderBy('id')
       .execute(),
-    activeCounts(db, projectId),
+    activeCounts(db, scope),
   ]);
   return topics.map((topic) => topicView(topic, counts.get(topic.id) ?? 0));
 }
@@ -353,7 +364,7 @@ export async function confirmTopics(
       );
     }),
   );
-  return listTopics(db, projectId);
+  return listTopics(db, { workspaceId, projectId });
 }
 
 /**

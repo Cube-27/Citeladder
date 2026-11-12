@@ -190,7 +190,7 @@ async function selectedRun(
     .executeTakeFirst();
   if (snapshot === undefined)
     throw new AnalysisNotFoundError('Metrics not available for audit', 'metrics_pending');
-  const routes = await engineSnapshots(db, [audit.id]);
+  const routes = await engineSnapshots(db, scope.workspaceId, [audit.id]);
   return {
     snapshotId: snapshot.id,
     auditId: audit.id,
@@ -245,7 +245,7 @@ async function runView(
   const engine = query.logicalEngine;
   const metrics = engine === null ? cohort : engineMetrics(cohort, engine);
   const rankings = rankingRows(metrics);
-  applyMarks(rankings, await rankingMarks(db, scope.projectId));
+  applyMarks(rankings, await rankingMarks(db, scope));
   const counts = measurementCounts(metrics);
   return {
     metrics,
@@ -471,7 +471,7 @@ async function rangeVisibility(
   const point = foldBucket(latest.completedAt, sources);
   const counts = point.counts!;
   const rankings = point.rankings.map(asRankingRow);
-  applyMarks(rankings, await rankingMarks(db, scope.projectId));
+  applyMarks(rankings, await rankingMarks(db, scope));
   const comparison = fromAt
     ? await comparePeriod(db, scope, sources, point, query, { fromAt, toAt })
     : emptyComparison();

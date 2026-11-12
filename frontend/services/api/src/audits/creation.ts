@@ -173,7 +173,7 @@ async function createMarketAudit(
       launch_id: measured.launchId,
     })
     .execute();
-  const snapshots = await persistSnapshots(trx, id, plan, at);
+  const snapshots = await persistSnapshots(trx, { workspaceId, auditId: id }, plan, at);
   const provenance = await persistTasks({
     db: trx,
     scope: { workspaceId, projectId: input.project_id },
@@ -196,7 +196,7 @@ async function createMarketAudit(
   await transitionAudit(trx, workspaceId, id, 'queued', at, 'audit queued');
   await auditEvent(
     trx,
-    id,
+    { workspaceId, auditId: id },
     auditPolicy.constants.event_audit_created,
     'audit created',
     { requested_count: slots.length, engines: plan.configuration.engines },
@@ -204,7 +204,7 @@ async function createMarketAudit(
   );
   await auditEvent(
     trx,
-    id,
+    { workspaceId, auditId: id },
     auditPolicy.constants.event_audit_queued,
     'audit queued',
     { task_count: slots.length },
@@ -213,9 +213,15 @@ async function createMarketAudit(
   return id;
 }
 
-async function persistSnapshots(db: Database, auditId: string, plan: FrozenAudit, at: Date) {
+async function persistSnapshots(
+  db: Database,
+  { workspaceId, auditId }: { workspaceId: string; auditId: string },
+  plan: FrozenAudit,
+  at: Date,
+) {
   const prompts = plan.prompts.map((prompt, index) => ({
     id: randomUUID(),
+    workspace_id: workspaceId,
     audit_id: auditId,
     prompt_id: prompt.id,
     prompt_index: index,
@@ -230,6 +236,7 @@ async function persistSnapshots(db: Database, auditId: string, plan: FrozenAudit
   }));
   const engines = plan.routes.map((route) => ({
     id: randomUUID(),
+    workspace_id: workspaceId,
     audit_id: auditId,
     ...route,
     created_at: at,

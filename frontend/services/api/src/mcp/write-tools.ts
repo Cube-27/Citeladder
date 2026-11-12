@@ -388,7 +388,10 @@ const writeDefinitions = {
         PROMPTS_RUN,
       );
       const preview = await previewTopics(context.db, actor, args.project_id);
-      const existing = await listTopics(context.db, args.project_id);
+      const existing = await listTopics(context.db, {
+        workspaceId: actor.workspaceId,
+        projectId: args.project_id,
+      });
       return {
         state: 'proposed',
         existing_topics: existing.map(({ id, name }) => ({ id, name })),

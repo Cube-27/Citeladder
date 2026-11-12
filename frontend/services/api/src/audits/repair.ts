@@ -228,7 +228,7 @@ export function createRepairAudit(
     await transitionAudit(trx, workspaceId, id, 'queued', at, 'repair audit queued');
     await auditEvent(
       trx,
-      id,
+      { workspaceId, auditId: id },
       auditPolicy.constants.event_audit_created,
       'repair audit created',
       {
@@ -239,7 +239,7 @@ export function createRepairAudit(
     );
     await auditEvent(
       trx,
-      id,
+      { workspaceId, auditId: id },
       auditPolicy.constants.event_audit_queued,
       'repair audit queued',
       { task_count: tasks.length },

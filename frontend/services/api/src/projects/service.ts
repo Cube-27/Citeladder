@@ -328,9 +328,14 @@ async function replaceCollections(
   now: Date,
 ) {
   if (input.brand !== undefined) {
-    await db.deleteFrom('brand_aliases').where('brand_id', '=', brandId).execute();
+    await db
+      .deleteFrom('brand_aliases')
+      .where('workspace_id', '=', workspaceId)
+      .where('brand_id', '=', brandId)
+      .execute();
     const values = cleanList(input.brand.aliases).map((alias) => ({
       id: randomUUID(),
+      workspace_id: workspaceId,
       brand_id: brandId,
       alias,
       created_at: now,

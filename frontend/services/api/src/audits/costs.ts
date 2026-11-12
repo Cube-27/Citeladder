@@ -175,6 +175,7 @@ export async function appendCostProjection(
     .insertInto('execution_cost_projections')
     .values({
       id: randomUUID(),
+      workspace_id: artifact.workspace_id,
       raw_response_artifact_id: artifact.id,
       audit_id: artifact.audit_id,
       task_id: artifact.task_id,

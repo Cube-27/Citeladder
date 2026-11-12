@@ -166,7 +166,7 @@ async function brands(
       (left, right) => right.responses - left.responses || compareText(left.name, right.name),
     )
     .slice(0, SOURCE_URL_MAX_BRANDS);
-  const identities = await brandIdentities(db, selection.projectId);
+  const identities = await brandIdentities(db, selection);
   return ordered.map((entry) => {
     const identity = identities.get(identityKey(entry.name));
     return { ...entry, logo_url: identity?.logo_url ?? null, website: identity?.website ?? null };

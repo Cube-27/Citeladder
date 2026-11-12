@@ -86,7 +86,7 @@ async function attachBrands(
   rows: readonly PromptRow[],
 ): Promise<void> {
   if (!rows.some((row) => row.named.length)) return;
-  const identities = await brandIdentities(db, scope.projectId);
+  const identities = await brandIdentities(db, scope);
   for (const row of rows) Object.assign(row.item, leadingBrands(row.named, identities));
 }
 

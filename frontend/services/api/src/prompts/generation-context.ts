@@ -358,7 +358,7 @@ export function generationContext(
       observed,
       vocabulary: await loadVocabulary(
         trx,
-        project.id,
+        { workspaceId, projectId: project.id },
         policy.prompts.generation.generated_binding_excluded_fields,
       ),
     };
