@@ -84,6 +84,8 @@ export function parseSitemap(body: Buffer, contentType: string, limits: SitemapL
   };
 }
 
+export type SitemapDocument = ReturnType<typeof parseSitemap>;
+
 /** A sitemap reference as one fetchable identity (WHATWG-normalized, no fragment), or null. */
 export function sitemapRef(value: string) {
   try {
@@ -107,10 +109,12 @@ export class SitemapCollector {
   constructor(limits: SitemapLimits) {
     this.limits = limits;
   }
-  /** Ingest one fetched document; return the unvisited child references still within depth. */
-  add(source: string, body: Buffer, contentType: string, depth: number) {
+  /**
+   * Ingest one parsed document (the caller parses, off the event loop); return
+   * the unvisited child references still within depth.
+   */
+  add(source: string, document: SitemapDocument, depth: number) {
     this.#visited.add(sitemapRef(source) ?? source);
-    const document = parseSitemap(body, contentType, this.limits);
     const room = Math.max(0, this.limits.maxUrls - this.urls.length);
     const kept = document.urls.slice(0, room);
     if (document.truncated || kept.length < document.urls.length) this.truncated = true;

@@ -1,13 +1,19 @@
 /**
- * CPU-bound page interpretation stays off the network worker's event loop, on a
- * small persistent pool: spawning a thread (and loading the analyzer) per page
- * cost more than many analyses on a one-vCPU runner. Each job has a time
- * limit: a thread that overruns it is replaced, so one pathological page never
+ * CPU-bound parsing of fetched documents stays off the event loop, on a small
+ * persistent pool: page interpretation, sitemap XML and the logo refresh's
+ * homepage HTML. Spawning a thread (and loading the analyzer) per page cost
+ * more than many analyses on a one-vCPU runner. Each job has a time limit: a
+ * thread that overruns it is replaced, so one pathological document never
  * stalls the jobs queued behind it.
  */
 import { Worker } from 'node:worker_threads';
 import { policy } from '../../config.ts';
 import { resolveSettingSpec } from '../../config/settings.ts';
+import {
+  SitemapParseError,
+  type parseSitemap,
+  type SitemapLimits,
+} from '../../web-evidence/sitemaps.ts';
 import type { analyzePage, PageContext } from './analyze-page.ts';
 import type { Delivery, factSettings, PageFacts } from './facts.ts';
 import type { Facts } from './read-facts.ts';
@@ -28,7 +34,14 @@ export type Interpretation =
       delivery: Delivery;
       settings: ReturnType<typeof factSettings>;
       scope: Scope;
-    };
+    }
+  | { kind: 'sitemap'; body: Uint8Array; contentType: string; limits: SitemapLimits }
+  | { kind: 'page_icons'; body: Uint8Array; url: string };
+
+/** A sitemap job's reply: an invalid document is an answer, not a thread failure. */
+export type SitemapParse =
+  | { kind: 'parsed'; document: ReturnType<typeof parseSitemap> }
+  | { kind: 'invalid'; reason: string };
 
 type Pending = {
   input: Interpretation;
@@ -54,7 +67,7 @@ const poolSize = () =>
 const jobTimeoutMs = () =>
   Number(resolveSettingSpec(settings.interpretation_job_timeout_seconds, process.env)) * 1000;
 
-class InterpretationTimeoutError extends Error {
+export class InterpretationTimeoutError extends Error {
   constructor() {
     super('Page interpretation exceeded its time limit');
     this.name = 'InterpretationTimeoutError';
@@ -170,3 +183,14 @@ export const discoverAsync = (
     settings,
     scope,
   });
+
+/** `parseSitemap` off the event loop; a document that does not parse throws `SitemapParseError`. */
+export async function parseSitemapAsync(body: Buffer, contentType: string, limits: SitemapLimits) {
+  const reply = await interpret<SitemapParse>({ kind: 'sitemap', body, contentType, limits });
+  if (reply.kind === 'invalid') throw new SitemapParseError(reply.reason);
+  return reply.document;
+}
+
+/** The icon links a fetched homepage declares, parsed off the event loop. */
+export const pageIconsAsync = (body: Buffer, url: string) =>
+  interpret<string[]>({ kind: 'page_icons', body, url });

@@ -522,8 +522,10 @@ export class AcquisitionState {
         return true;
       }
       // Bound SQL parameters even when a provider returns more than the requested page.
-      for (let offset = 0; offset < normalized.rows.length; offset += si.page_size)
-        await trx // NOSONAR -- One transaction: pages insert in order.
+      // The locked dataset's saved count grows by the rows this page added; never a recount.
+      let saved = dataset.unique_rows_saved;
+      for (let offset = 0; offset < normalized.rows.length; offset += si.page_size) {
+        const [inserted] = await trx // NOSONAR -- One transaction: pages insert in order.
           .insertInto('search_intelligence_rows')
           .values(
             normalized.rows.slice(offset, offset + si.page_size).map((row) => ({
@@ -540,13 +542,8 @@ export class AcquisitionState {
           )
           .onConflict((oc) => oc.columns(['dataset_id', 'provider_row_key']).doNothing())
           .execute();
-      const count = await trx
-        .selectFrom('search_intelligence_rows')
-        .select(sql<number>`count(*)::int`.as('count'))
-        .where('workspace_id', '=', run.workspace_id)
-        .where('project_id', '=', run.project_id)
-        .where('dataset_id', '=', dataset.id)
-        .executeTakeFirstOrThrow();
+        saved += Number(inserted?.numInsertedOrUpdatedRows ?? 0n);
+      }
       const received = dataset.raw_rows_received + normalized.received,
         exhausted = normalized.received < Number(record(plan.request).limit ?? 1),
         finished = !later.some((item) => item.dataset_key === plan.dataset_key) || exhausted;
@@ -556,7 +553,7 @@ export class AcquisitionState {
         received,
         kind,
         exhausted,
-        saved: count.count,
+        saved,
         requested: dataset.requested_rows,
       });
       const total = normalized.total ?? dataset.provider_total;
@@ -564,7 +561,7 @@ export class AcquisitionState {
         .updateTable('search_intelligence_datasets')
         .set({
           raw_rows_received: received,
-          unique_rows_saved: count.count,
+          unique_rows_saved: saved,
           provider_total: total !== null && total > INT4_MAX ? null : total,
           summary: JSON.stringify({
             ...record(dataset.summary),
@@ -575,7 +572,7 @@ export class AcquisitionState {
             ? {
                 status: 'published',
                 coverage,
-                truncated: isTruncated(coverage, kind, total, count.count),
+                truncated: isTruncated(coverage, kind, total, saved),
                 collection_ended_at: at,
                 published_at: at,
               }

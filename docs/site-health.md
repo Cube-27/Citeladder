@@ -437,7 +437,10 @@ Interpretation runs on a persistent pool of `interpretation_worker_threads`
 Node threads (`analysis/off-thread.ts`). Idle threads don't hold the process
 open, and a crashed thread fails only its own jobs. A job running longer than
 `interpretation_job_timeout_seconds` fails; its thread is replaced and the jobs
-queued behind it move to another thread.
+queued behind it move to another thread. The same pool parses sitemap XML for
+the sitemap walk (a sitemap parse that overruns the limit counts as an unread
+document) and the logo refresh's homepage HTML, so neither blocks the event
+loop.
 
 Relative links, assets, hreflang alternates and meta-refresh targets resolve
 against the document base (the first `<base href>`, else the final URL), as a

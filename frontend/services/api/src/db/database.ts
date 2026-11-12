@@ -47,15 +47,20 @@ export async function observeDatabaseSize(db: Database): Promise<number> {
 }
 
 export type DatabaseConfig = Pick<ServiceConfig, 'database' | 'databaseUrl' | 'appName'> & {
-  execution?: Pick<ServiceConfig['execution'], 'runnerJob' | 'poolSize'>;
+  execution?: Pick<ServiceConfig['execution'], 'poolSize'>;
 };
 
-export function poolOptions(config: DatabaseConfig): pg.PoolConfig {
+type PoolUse = { execution?: boolean };
+
+export function poolOptions(config: DatabaseConfig, use: PoolUse = {}): pg.PoolConfig {
   const db = config.database;
   return {
     connectionString: config.databaseUrl,
-    // pool_size + max_overflow concurrent connections.
-    max: db.poolSize + db.maxOverflow,
+    // A runner execution holds `RUNNER_DB_POOL_SIZE` connections. Every other
+    // process, the API that starts runner jobs included, holds its own
+    // pool_size + max_overflow.
+    max:
+      use.execution && config.execution ? config.execution.poolSize : db.poolSize + db.maxOverflow,
     maxLifetimeSeconds: db.poolRecycleSeconds,
     // node-postgres applies one bound to both waiting for a pooled client and
     // opening a new one, so the larger of the pool and connect timeouts applies.
@@ -72,16 +77,8 @@ export function poolOptions(config: DatabaseConfig): pg.PoolConfig {
   };
 }
 
-export function createDatabase(
-  config: DatabaseConfig,
-  options: { execution?: boolean } = {},
-): Database {
-  const pool = new pg.Pool({
-    ...poolOptions(config),
-    ...(options.execution || config.execution?.runnerJob
-      ? { max: config.execution?.poolSize }
-      : {}),
-  });
+export function createDatabase(config: DatabaseConfig, use: PoolUse = {}): Database {
+  const pool = new pg.Pool(poolOptions(config, use));
   // An idle client that loses its connection (a database restart) is dropped
   // by the pool; without a listener its 'error' event would crash the process.
   pool.on('error', (error) => getLogger('db').exception('database_idle_client_lost', error));

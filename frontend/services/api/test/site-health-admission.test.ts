@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { policy } from '../src/config.ts';
 import { extractPageFacts, factSettings } from '../src/site-health/analysis/facts.ts';
+import { parseSitemapAsync } from '../src/site-health/analysis/off-thread.ts';
 import { discoveryLinks } from '../src/site-health/discovery-links.ts';
 import { classifyUrlAdmission } from '../src/site-health/url-admission.ts';
 import { document } from '../src/web-evidence/html.ts';
@@ -225,6 +226,7 @@ describe('sitemaps', () => {
         .map((loc) => `<url><loc> ${loc} </loc></url>`)
         .join('')}</urlset>`,
     );
+  const read = (body: Buffer) => parseSitemap(body, 'text/xml', limits);
   it('reads page URLs and index references, and decodes gzip under the cap', () => {
     expect(parseSitemap(urlset('https://example.test/a?x=1&amp;y=2'), 'text/xml', limits)).toEqual({
       urls: ['https://example.test/a?x=1&y=2'],
@@ -248,19 +250,19 @@ describe('sitemaps', () => {
       .toString()
       .replaceAll('> /', '> https://example.test/');
     const capped = new SitemapCollector(limits);
-    capped.add('https://example.test/sitemap.xml', Buffer.from(four), 'text/xml', 0);
+    capped.add('https://example.test/sitemap.xml', read(Buffer.from(four)), 0);
     expect([capped.urls.length, capped.truncated]).toEqual([3, true]);
     const whole = new SitemapCollector(limits);
-    whole.add('https://example.test/sitemap.xml', urlset('https://example.test/1'), 'text/xml', 0);
+    whole.add('https://example.test/sitemap.xml', read(urlset('https://example.test/1')), 0);
     expect([whole.urls.length, whole.truncated]).toEqual([1, false]);
     // At the depth bound, a reference back to a read index leaves nothing unread.
     const looped = new SitemapCollector(limits);
     const index = (loc: string) =>
       Buffer.from(`<sitemapindex><sitemap><loc>${loc}</loc></sitemap></sitemapindex>`);
-    looped.add('https://example.test/a.xml', index('https://example.test/b.xml'), 'text/xml', 0);
-    looped.add('https://example.test/b.xml', index('https://example.test/a.xml'), 'text/xml', 1);
+    looped.add('https://example.test/a.xml', read(index('https://example.test/b.xml')), 0);
+    looped.add('https://example.test/b.xml', read(index('https://example.test/a.xml')), 1);
     expect(looped.truncated).toBe(false);
-    looped.add('https://example.test/b.xml', index('https://example.test/c.xml'), 'text/xml', 1);
+    looped.add('https://example.test/b.xml', read(index('https://example.test/c.xml')), 1);
     expect(looped.truncated).toBe(true);
   });
 
@@ -271,7 +273,7 @@ describe('sitemaps', () => {
       <url><loc>https://example.test/a</loc><lastmod>2020-01-01</lastmod></url></urlset>`,
     );
     const collector = new SitemapCollector(limits);
-    collector.add('https://example.test/sitemap.xml', dated, 'text/xml', 0);
+    collector.add('https://example.test/sitemap.xml', read(dated), 0);
     expect(collector.urls).toEqual([
       'https://example.test/a',
       'https://example.test/b',
@@ -298,17 +300,32 @@ describe('sitemaps', () => {
       '<sitemapindex><sitemap><loc>https://example.test/root.xml</loc></sitemap>' +
         '<sitemap><loc>https://example.test/child.xml</loc></sitemap></sitemapindex>',
     );
-    expect(collector.add('https://example.test/root.xml', index, 'text/xml', 0)).toEqual([
+    expect(collector.add('https://example.test/root.xml', read(index), 0)).toEqual([
       'https://example.test/child.xml',
     ]);
-    expect(collector.add('https://example.test/child.xml', index, 'text/xml', 1)).toEqual([]);
-    collector.add('https://example.test/u1.xml', urlset('a', 'b'), 'text/xml', 1);
-    collector.add('https://example.test/u2.xml', urlset('c', 'd'), 'text/xml', 1);
+    expect(collector.add('https://example.test/child.xml', read(index), 1)).toEqual([]);
+    collector.add('https://example.test/u1.xml', read(urlset('a', 'b')), 1);
+    collector.add('https://example.test/u2.xml', read(urlset('c', 'd')), 1);
     expect(collector.urls).toEqual(['a', 'b', 'c']);
     // A fragment or spelling variant of a visited sitemap is the same document.
     const again = Buffer.from(
       '<sitemapindex><sitemap><loc>https://EXAMPLE.test/root.xml#top</loc></sitemap></sitemapindex>',
     );
-    expect(collector.add('https://example.test/other.xml', again, 'text/xml', 0)).toEqual([]);
+    expect(collector.add('https://example.test/other.xml', read(again), 0)).toEqual([]);
+  });
+
+  it('parses a sitemap off the event loop with the same answer and refusals', async () => {
+    const dated = Buffer.from(
+      '<urlset><url><loc>https://example.test/a</loc><lastmod>2026-09-01</lastmod></url></urlset>',
+    );
+    expect(await parseSitemapAsync(gzipSync(dated), 'application/gzip', limits)).toEqual({
+      urls: ['https://example.test/a'],
+      lastmod: new Map([['https://example.test/a', '2026-09-01']]),
+      refs: [],
+      truncated: false,
+    });
+    await expect(
+      parseSitemapAsync(Buffer.from('<urlset><url>'), 'text/xml', limits),
+    ).rejects.toThrow(new SitemapParseError('malformed sitemap XML'));
   });
 });
