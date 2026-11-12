@@ -203,7 +203,9 @@ export const pageDetailSchema = responseObject({
   // Pack-governed industry role. `null` = the pack classifier never ran.
   // A present object with `role_id: null` plus an `abstention_reason` is an
   // EXECUTED abstention — a different fact, rendered differently.
-  facts: pageFactsSchema,
+  // Null when the page was never analyzed: not analyzed, never zero H1s,
+  // words or links.
+  facts: pageFactsSchema.nullable(),
   delivery: deliveryFactsSchema,
   // Null when this crawl persisted no link metric for the URL.
   internal_links: internalLinksSchema.nullable(),

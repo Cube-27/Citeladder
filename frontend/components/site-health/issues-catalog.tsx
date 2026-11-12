@@ -384,7 +384,11 @@ function IssueSearch({
     >
       <SearchField
         value={draft}
-        onValueChange={setDraft}
+        onValueChange={(value) => {
+          setDraft(value);
+          // An emptied box lists everything again: there is nothing to submit.
+          if (value === '' && query !== '') onApply('');
+        }}
         placeholder="Search issues…"
         aria-label="Search issues"
       />

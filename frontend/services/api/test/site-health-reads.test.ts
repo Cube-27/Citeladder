@@ -115,8 +115,12 @@ async function monitor(seed: SiteSeed, siteUrlId: string) {
 type Page = Awaited<ReturnType<SiteFixtures['page']>>;
 
 /** A page observed in the crawl, with its analysis finalized. */
-async function page(seed: SiteSeed, path: string, options: { current?: boolean } = {}) {
-  const row = await fixtures.page(seed, path, {}, options);
+async function page(
+  seed: SiteSeed,
+  path: string,
+  { facts = {}, ...options }: { current?: boolean; facts?: Record<string, unknown> } = {},
+) {
+  const row = await fixtures.page(seed, path, facts, options);
   await observe(seed, row.id);
   await db
     .updateTable('site_page_analyses')
@@ -242,6 +246,32 @@ describe('page projections', () => {
       rows.at(-1)!.id,
       ...rows.slice(0, policy.site_health.reads.max_detail_evaluations - 1).map((row) => row.id),
     ]);
+  });
+
+  it('report a page never analyzed as having no facts, never zero headings, words or links', async () => {
+    const seed = await fixtures.crawl();
+    const analyzed = await page(seed, '/analyzed', {
+      facts: {
+        headings: { h1_count: 1, counts: { h1: 1, h2: 2 } },
+        body: { word_count: 240 },
+        links: { anchors: [{ is_internal: true }, { is_internal: false }] },
+      },
+    });
+    const pending = await fixtures.analyzable(seed, '/pending');
+    await observe(seed, pending.siteUrlId);
+
+    const read = (siteUrlId: string) =>
+      json(seed, `/site-crawls/${seed.crawlId}/pages/${siteUrlId}`, pageDetailSchema);
+    expect((await read(analyzed.id)).facts).toMatchObject({
+      h1_count: 1,
+      heading_count: 3,
+      word_count: 240,
+      internal_link_count: 1,
+      external_link_count: 1,
+    });
+    const never = await read(pending.siteUrlId);
+    expect(never.analysis_status).not.toBe('completed');
+    expect(never.facts).toBeNull();
   });
 
   it('serve the current crawl’s pages by project, named with that crawl and its status', async () => {

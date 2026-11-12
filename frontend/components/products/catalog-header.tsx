@@ -22,6 +22,24 @@ import { AddProductsDialog } from './add-products-dialog';
 import type { CommerceQueries } from './commerce-queries';
 
 /**
+ * What the Site Health dashboard read says about the project's crawl. Only an
+ * answered read says there is none: a read still pending or failed says
+ * nothing, and must never pass for "No crawl yet" (invariant 7).
+ */
+type CrawlRead =
+  | Readonly<{ kind: 'pending' }>
+  | Readonly<{ kind: 'failed' }>
+  | Readonly<{ kind: 'answered'; crawl: SiteCrawl | null }>;
+
+function crawlRead(dashboard: {
+  data: { crawl?: SiteCrawl | null } | undefined;
+  isError: boolean;
+}): CrawlRead {
+  if (dashboard.data) return { kind: 'answered', crawl: dashboard.data.crawl ?? null };
+  return dashboard.isError ? { kind: 'failed' } : { kind: 'pending' };
+}
+
+/**
  * Pages analyzed over the crawl's own inventory.
  *
  * The denominator is the site inventory the crawl holds, which is never below
@@ -29,13 +47,30 @@ import type { CommerceQueries } from './commerce-queries';
  * rendered "49/1". The client still floors it, because a crawl whose counters
  * are mid-flight must not print a fraction that reads backwards.
  */
-/** The dashboard's crawl, exactly as the query returns it (nullable). */
-type SiteHealthCrawl = SiteCrawl | null;
-
-function analyzedLabel(crawl: SiteHealthCrawl): string | null {
-  if (!crawl) return null;
+function analyzedLabel(crawl: SiteCrawl): string {
   const known = crawl.total_url_count ?? crawl.visible_url_count;
   return `${crawl.analyzed_count}/${Math.max(known, crawl.analyzed_count)}`;
+}
+
+/** The two Site Health stats: pages analyzed, and the crawl's status. */
+function crawlSegments(read: CrawlRead): StatSegment[] {
+  if (read.kind !== 'answered') {
+    const loading = read.kind === 'pending';
+    const missingLabel = loading ? undefined : "Couldn't load";
+    return [
+      { key: 'analyzed', label: 'Pages analyzed', value: null, loading, missingLabel },
+      { key: 'site-health', label: 'Site Health', value: null, loading, missingLabel },
+    ];
+  }
+  const { crawl } = read;
+  return [
+    { key: 'analyzed', label: 'Pages analyzed', value: crawl ? analyzedLabel(crawl) : null },
+    {
+      key: 'site-health',
+      label: 'Site Health',
+      value: crawl ? <CrawlStatusBadge crawl={crawl} /> : <Badge>No crawl yet</Badge>,
+    },
+  ];
 }
 
 /**
@@ -71,7 +106,7 @@ function CatalogStats({
 }: Readonly<{
   counts: CommerceQueries['catalog']['data'];
   projection: CommerceProjection | undefined;
-  crawl: SiteHealthCrawl;
+  crawl: CrawlRead;
 }>) {
   const items: StatSegment[] = [
     {
@@ -84,12 +119,7 @@ function CatalogStats({
       label: 'Categories',
       value: counts ? `${counts.categories.length}` : null,
     },
-    { key: 'analyzed', label: 'Pages analyzed', value: analyzedLabel(crawl) },
-    {
-      key: 'site-health',
-      label: 'Site Health',
-      value: crawl ? <CrawlStatusBadge crawl={crawl} /> : <Badge>No crawl yet</Badge>,
-    },
+    ...crawlSegments(crawl),
   ];
   const badge = projectionBadge(projection);
   if (badge) items.push({ key: 'projection', label: 'Projection', value: badge });
@@ -142,10 +172,13 @@ export function useCatalogHeader({
   const discover = useMutation(siteHealthMutations.createCrawl(workspaceId));
   const startDiscovery = () =>
     discover.mutate({ project_id: projectId }, { onSuccess: () => void query.refetch() });
-  const crawl = dashboard.data?.crawl ?? null;
+  const crawl = crawlRead(dashboard);
   const counts = query.data;
+  // Only an answered read with no crawl offers to start one; a failed read
+  // offers to read again, never a crawl nobody asked for.
+  const noCrawl = crawl.kind === 'answered' && crawl.crawl === null;
   const refresh = () =>
-    crawl ? void Promise.all([dashboard.refetch(), query.refetch()]) : startDiscovery();
+    noCrawl ? startDiscovery() : void Promise.all([dashboard.refetch(), query.refetch()]);
   return {
     actions: (
       <>
@@ -157,7 +190,7 @@ export function useCatalogHeader({
           disabled={discover.isPending || dashboard.isPending}
           onClick={refresh}
         >
-          {crawl ? 'Refresh from Site Health' : 'Run Site Health crawl'}
+          {noCrawl ? 'Run Site Health crawl' : 'Refresh from Site Health'}
         </Button>
         <AddProductsDialog
           workspaceId={workspaceId}

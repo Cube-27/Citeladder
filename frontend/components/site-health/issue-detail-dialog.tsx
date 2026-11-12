@@ -95,7 +95,9 @@ export function IssueDetailDialog({
         </IssueMetadata>
       }
       footer={
-        detail ? (
+        // A later page that failed keeps the pager, so the reader can still
+        // step back to the pages that loaded.
+        detail || canPrevious ? (
           // The retained page keeps its `next_cursor` while the next one is in
           // flight, so a second click would push the SAME cursor onto the
           // stack and Previous would need two presses to undo one: `busy`
@@ -103,7 +105,7 @@ export function IssueDetailDialog({
           <Pager
             hideWhenSinglePage
             canPrev={canPrevious}
-            canNext={Boolean(detail.next_cursor)}
+            canNext={Boolean(detail?.next_cursor)}
             onPrev={onPrevious}
             onNext={onNext}
             busy={detailQuery.isFetching}

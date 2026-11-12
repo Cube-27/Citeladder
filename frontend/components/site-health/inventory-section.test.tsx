@@ -24,16 +24,24 @@ afterAll(() => mswServer.close());
 
 describe('InventorySection', () => {
   it('keeps the page browser’s rows and pager on screen while the next page loads', async () => {
+    // A full first page of ten rows, then one more on the second.
+    const firstPage = [
+      makePageSummary({ title: 'Homepage' }),
+      ...Array.from({ length: 9 }, (_, index) =>
+        makePageSummary({
+          site_url_id: `44444444-4444-4444-8444-44444444444${index}`,
+          title: `Article ${index + 1}`,
+        }),
+      ),
+    ];
     mswServer.use(
       http.get(PAGES, async ({ request }) => {
         const next = new URL(request.url).searchParams.has('cursor');
         if (next) await delay(300);
         return HttpResponse.json({
-          items: [
-            next
-              ? makePageSummary({ site_url_id: LATER_PAGE, title: 'Pricing' })
-              : makePageSummary({ title: 'Homepage' }),
-          ],
+          items: next
+            ? [makePageSummary({ site_url_id: LATER_PAGE, title: 'Pricing' })]
+            : firstPage,
           next_cursor: next ? null : 'page-2',
           root_errors: [],
         });
@@ -45,11 +53,15 @@ describe('InventorySection', () => {
     await user.click(await screen.findByRole('button', { name: 'Next page' }));
 
     const table = screen.getByRole('region', { name: 'Pages' });
-    expect(within(table).getByText('Homepage')).toBeInTheDocument();
+    const ordinal = (title: string) =>
+      within(table).getByText(title).closest('tr')?.querySelector('td')?.textContent;
+    expect(ordinal('Homepage')).toBe('1');
     expect(table).toHaveAttribute('aria-busy', 'true');
     expect(within(table).getByRole('button', { name: 'Previous page' })).toBeInTheDocument();
     expect(await within(table).findByText('Pricing')).toBeInTheDocument();
     expect(within(table).queryByText('Homepage')).not.toBeInTheDocument();
+    // The "#" column runs on from the page before rather than restarting.
+    expect(ordinal('Pricing')).toBe('11');
   });
 
   it('keeps the current tab’s rows on screen while another tab’s first page loads', async () => {

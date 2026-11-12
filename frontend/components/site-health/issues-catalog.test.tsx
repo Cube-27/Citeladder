@@ -598,6 +598,50 @@ describe('IssuesCatalog', () => {
     expect(seen.at(-1)?.get('page_kind')).toBeNull();
   });
 
+  it('lists every issue again once the search box is cleared', async () => {
+    window.history.replaceState(null, '', '/issues?query=schema');
+    const seen = serveIssues();
+    const user = userEvent.setup();
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+    await screen.findByRole('button', { name: 'WebSite schema is missing' });
+    expect(seen.at(-1)?.get('query')).toBe('schema');
+
+    await user.click(screen.getByRole('button', { name: 'Clear search' }));
+
+    await waitFor(() => expect(currentUrl()).not.toContain('query='));
+    await waitFor(() => expect(seen.at(-1)?.get('query')).toBeNull());
+    expect(screen.getByRole('searchbox', { name: 'Search issues' })).toHaveValue('');
+  });
+
+  it('keeps the way back when a later page of an issue’s occurrences fails', async () => {
+    serveIssues();
+    mswServer.use(
+      http.get(`${ISSUES}/${ISSUE_A}`, ({ request }) =>
+        new URL(request.url).searchParams.get('cursor') === null
+          ? HttpResponse.json(
+              issueDetail({
+                occurrence_count: 2,
+                affected_url_count: 2,
+                next_cursor: 'cursor-page-2',
+              }),
+            )
+          : HttpResponse.json({ error: { message: 'Bad cursor' } }, { status: 400 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+
+    const dialog = await openIssue(user, 'WebSite schema is missing');
+    await within(dialog).findByRole('link', { name: /Homepage/ });
+    await user.click(within(dialog).getByRole('button', { name: 'Next page' }));
+    expect(await within(dialog).findByText('Bad cursor')).toBeInTheDocument();
+
+    const previous = within(dialog).getByRole('button', { name: 'Previous page' });
+    expect(within(dialog).getByRole('button', { name: 'Next page' })).toBeDisabled();
+    await user.click(previous);
+    expect(await within(dialog).findByRole('link', { name: /Homepage/ })).toBeInTheDocument();
+  });
+
   it('pages an issue’s occurrences in the dialog and the list beneath it', async () => {
     serveIssues([issue()], [], 'catalog-page-2');
     const seenCursors: (string | null)[] = [];

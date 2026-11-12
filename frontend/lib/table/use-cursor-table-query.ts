@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery, type QueryKey, type UseQueryOptions } from '@tanstack/react-query';
 
 import type { DataTablePager, DataTableState } from '@/components/ui/data-table';
@@ -109,6 +110,11 @@ export function useCursorTableQuery<TPage extends CursorPage, TKey extends Query
     },
   });
   const page = query.data;
+  // The rows before the shown page, for a running "#" column. Retained rows
+  // keep the offset of the page they came from until the next page lands.
+  const offset = (cursor.page - 1) * pageSize;
+  const [rowOffset, setRowOffset] = useState(offset);
+  if (page && !query.isPlaceholderData && rowOffset !== offset) setRowOffset(offset);
   let state: DataTableState | undefined;
   if (query.isPending) state = { kind: 'loading', label: loading };
   else if (query.isError) state = { kind: 'error', ...readErrorProps(query), fallback: error };
@@ -140,7 +146,7 @@ export function useCursorTableQuery<TPage extends CursorPage, TKey extends Query
           }
         : undefined,
   };
-  return { query, page, cursor, table };
+  return { query, page, cursor, table, rowOffset };
 }
 
 /**

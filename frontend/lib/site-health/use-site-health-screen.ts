@@ -200,6 +200,9 @@ export function useSiteHealthScreen() {
       },
     });
   };
+  // A failed start is retried with exactly what it sent: its project, robots
+  // choice and recrawl baseline.
+  const retryStart = () => startCrawl(createMutation.variables);
   // Reruns the shown crawl's scope, so Changes always has a comparable baseline.
   const recrawl = () => crawl && startCrawl({ project_id: projectId, recrawl_of: crawl.id });
   const cancelCrawl = () => crawl && cancelMutation.mutate(crawl.id);
@@ -240,6 +243,7 @@ export function useSiteHealthScreen() {
     createMutation,
     cancelMutation,
     startCrawl,
+    retryStart,
     recrawl,
     cancelCrawl,
     runExport,
