@@ -157,7 +157,7 @@ it('retries a transient robots.txt failure and never caches one', async () => {
   const other = 'https://other.test';
   expect((await acquirer.robots(other)).unavailable).toBe(true);
   expect((await acquirer.robots(other)).unavailable).toBe(false);
-  expect(sent.length).toBe(4 + 3 + 1);
+  expect(sent).toHaveLength(4 + 3 + 1);
 });
 it('names the robots group that applies to a crawler without reading parser internals', () => {
   const body = [

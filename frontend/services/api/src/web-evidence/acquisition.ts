@@ -23,6 +23,16 @@ const robotsParser = robotsModule as unknown as (
 
 const RULE_FIELDS = new Set(['allow', 'disallow', 'crawl-delay']);
 
+/** One robots.txt line's lower-cased field and value, comment removed; no colon, no field. */
+function robotsLine(raw: string) {
+  const line = raw.split('#', 1)[0] ?? '';
+  const colon = line.indexOf(':');
+  return {
+    field: line.slice(0, Math.max(colon, 0)).trim().toLowerCase(),
+    value: line.slice(colon + 1).trim(),
+  };
+}
+
 /**
  * The user-agent groups robots.txt gives rules (allow, disallow or crawl
  * delay), lower-cased without a version, grouped as the parser groups them:
@@ -33,11 +43,8 @@ function ruleGroups(body: string) {
   let agents: string[] = [];
   let collecting = false;
   for (const raw of body.split(/\r\n|\r|\n/u)) {
-    const line = raw.split('#', 1)[0] ?? '';
-    const colon = line.indexOf(':');
-    const field = line.slice(0, Math.max(colon, 0)).trim().toLowerCase();
+    const { field, value } = robotsLine(raw);
     if (!field) continue;
-    const value = line.slice(colon + 1).trim();
     if (field === 'user-agent') {
       if (!collecting) agents = [];
       collecting = true;
@@ -272,13 +279,11 @@ export class PageAcquirer {
    * robots.txt, with a transient failure (429, 5xx, network) retried after an
    * exponential backoff up to `robotsAttempts` requests in all.
    */
-  async #robots(origin: string) {
-    let attempt = await this.#robotsAttempt(origin);
-    for (let tried = 1; attempt.transient && tried < this.settings.robotsAttempts; tried++) {
-      await delay(this.settings.robotsBackoff * 1000 * 2 ** (tried - 1));
-      attempt = await this.#robotsAttempt(origin);
-    }
-    return attempt.robots;
+  async #robots(origin: string, tried = 1): Promise<RobotsPolicy> {
+    const attempt = await this.#robotsAttempt(origin);
+    if (!attempt.transient || tried >= this.settings.robotsAttempts) return attempt.robots;
+    await delay(this.settings.robotsBackoff * 1000 * 2 ** (tried - 1));
+    return this.#robots(origin, tried + 1);
   }
   async #robotsAttempt(origin: string): Promise<{ robots: RobotsPolicy; transient: boolean }> {
     const startedAt = performance.now();

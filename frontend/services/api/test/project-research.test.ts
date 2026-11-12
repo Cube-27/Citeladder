@@ -89,6 +89,35 @@ it('dials the pinned address through the native request boundary while preservin
     });
   }
 });
+it('keeps separate X-Robots-Tag header lines apart so each keeps its own agent scope', async () => {
+  const server = createServer((_request, response) => {
+    response.setHeader('content-type', 'text/html');
+    response.setHeader('x-robots-tag', ['googlebot: noindex', 'nosnippet']);
+    response.end('<p>Recorded page</p>');
+  });
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  try {
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Missing test listener');
+    const result = await pinnedRequest(
+      new URL(`http://recorded.example:${address.port}/`),
+      { address: '127.0.0.1', family: 4 },
+      options,
+      AbortSignal.timeout(1000),
+    );
+    expect(result.headers).toMatchObject({
+      'content-type': 'text/html',
+      'x-robots-tag': 'googlebot: noindex\nnosnippet',
+    });
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => (error ? reject(error) : resolve()));
+    });
+  }
+});
 it('preserves recorded research metadata and enforces a shared call budget before I/O', async () => {
   const settings = discoverySettings({ KEENABLE_API_KEY: 'test-only' });
   const budget = new ResearchBudget(2);

@@ -575,7 +575,7 @@ describe('page checklist', () => {
   it('reads the visible text of an element with a very large number of children', () => {
     const items = 200_000;
     const root = document(Buffer.from(`<div>${'<b>x</b>'.repeat(items)}</div>`));
-    expect(visibleText(root).length).toBe(items * 2 - 1);
+    expect(visibleText(root)).toHaveLength(items * 2 - 1);
   });
 
   it('fails an interpretation that overruns its time limit and keeps serving later jobs', async () => {

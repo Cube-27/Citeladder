@@ -24,27 +24,27 @@ const tokens = (value: string) =>
     .map((token) => token.trim().toLowerCase())
     .filter(Boolean);
 
+/** One header line's directives; an agent prefix scopes the following ones to that agent. */
+function lineDirectives(line: string, directives: Set<string>) {
+  let applies = true;
+  for (const token of tokens(line)) {
+    const colon = token.indexOf(':');
+    const prefix = colon === -1 ? token : token.slice(0, colon);
+    if (colon !== -1 && !COLON_DIRECTIVES.has(prefix)) {
+      applies = HEADER_AGENTS.has(prefix);
+      const payload = token.slice(colon + 1).trim();
+      if (applies && payload) directives.add(payload);
+    } else if (applies) directives.add(token);
+  }
+}
+
 /**
- * Header directives, one header line per text line. Within a line, an agent
- * prefix scopes the following directives to that agent; each new line starts
+ * Header directives, one header line per text line. Each new line starts
  * generic again, so an agent-scoped line never swallows a generic one.
  */
 function headerTokens(value: string) {
   const directives = new Set<string>();
-  for (const line of value.split(/\r?\n/u)) {
-    let applies = true;
-    for (const token of tokens(line)) {
-      const colon = token.indexOf(':');
-      const prefix = colon === -1 ? token : token.slice(0, colon);
-      if (colon !== -1 && !COLON_DIRECTIVES.has(prefix)) {
-        applies = HEADER_AGENTS.has(prefix);
-        const payload = token.slice(colon + 1).trim();
-        if (applies && payload) directives.add(payload);
-        continue;
-      }
-      if (applies) directives.add(token);
-    }
-  }
+  for (const line of value.split(/\r?\n/u)) lineDirectives(line, directives);
   return directives;
 }
 

@@ -339,6 +339,12 @@ function* itemProperties(item: HtmlElement): Generator<HtmlElement> {
 const propertyNames = (node: HtmlElement) =>
   attribute(node, 'itemprop').split(/\s+/u).map(cleanType).filter(Boolean);
 
+/** A nested item is its own object, within the JSON-LD depth bound; any other property is text. */
+function propertyValue(property: HtmlElement, depth: number): unknown {
+  if (!hasAttribute(property, 'itemscope')) return microdataValue(property);
+  return depth < limits.jsonld_depth ? microdataObject(property, depth + 1) : undefined;
+}
+
 /**
  * One microdata item as the JSON-LD object it is equivalent to, so both
  * syntaxes meet one property contract. A repeated property becomes a list.
@@ -350,12 +356,10 @@ function microdataObject(item: HtmlElement, depth = 0): JsonObject {
   const id = attribute(item, 'itemid').trim();
   if (id) properties.set('@id', [id]);
   for (const property of itemProperties(item)) {
-    let value: unknown = microdataValue(property);
-    if (hasAttribute(property, 'itemscope'))
-      value = depth < limits.jsonld_depth ? microdataObject(property, depth + 1) : undefined;
+    const value = propertyValue(property, depth);
     if (isEmpty(value)) continue;
-    for (const name of propertyNames(property)) {
-      if (name.startsWith('@')) continue;
+    // A property name never overwrites the item's own `@type` or `@id`.
+    for (const name of propertyNames(property).filter((name) => !name.startsWith('@'))) {
       const list = properties.get(name);
       if (list) list.push(value);
       else properties.set(name, [value]);

@@ -38,6 +38,7 @@ const workerSettings = {
 const fetchSettings = siteFetchSettings({
   SITE_HEALTH_PER_HOST_DELAY_SECONDS: '0',
   SITE_HEALTH_DEFAULT_CRAWL_DELAY_SECONDS: '0',
+  SITE_HEALTH_ROBOTS_TRANSIENT_BACKOFF_SECONDS: '0.001',
 });
 const RICH =
   "<html lang='en'><head><title>Rich page about widgets</title><meta name='description' content='Widgets.'></head>" +
@@ -597,17 +598,24 @@ describe('analyze failures', () => {
   });
 
   it.each([
-    ['access-blocked (403)', { status: 403 }, codes.access_blocked],
-    ['unreachable (503)', { status: 503 }, codes.robots_unavailable],
+    ['access-blocked (403)', { status: 403 }, 'failed', codes.access_blocked, ['/robots.txt']],
+    // A transient failure is retried in place, then the task retries later.
+    [
+      'unreachable (503)',
+      { status: 503 },
+      'retry_wait',
+      codes.robots_unavailable,
+      ['/robots.txt', '/robots.txt', '/robots.txt'],
+    ],
   ])(
     'still stops at an %s robots.txt when the crawl ignores robots.txt',
-    async (_label, robots, code) => {
+    async (_label, robots, status, code, expected) => {
       const seed = await running({ configuration: IGNORE_ROBOTS });
       const page = await fixtures.analyzable(seed, '/private');
       const requests: string[] = [];
       await analyze(site({ '/robots.txt': robots }, requests), page.taskId);
-      expect(await task(page.taskId)).toMatchObject({ status: 'failed', error_code: code });
-      expect(requests).toEqual(['/robots.txt']);
+      expect(await task(page.taskId)).toMatchObject({ status, error_code: code });
+      expect(requests).toEqual(expected);
     },
   );
 
