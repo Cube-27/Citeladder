@@ -30,69 +30,7 @@ export async function purgeExpiredTrialProjects(
 ): Promise<number> {
   if (!canAdmit()) return 0;
   const cutoff = new Date(now.getTime() - setting('trial_data_retention_days') * 86_400_000);
-  // Narrowing only: the locked access read below is the authority.
-  const workspaces = await db
-    .selectFrom('billing_accounts as account')
-    .select('account.workspace_id')
-    .where('account.registration_origin', '=', 'public')
-    .where(({ exists, or, selectFrom }) =>
-      or([
-        exists(
-          selectFrom('projects')
-            .select('projects.id')
-            .whereRef('projects.workspace_id', '=', 'account.workspace_id'),
-        ),
-        exists(
-          selectFrom('brand_discoveries')
-            .select('brand_discoveries.id')
-            .whereRef('brand_discoveries.workspace_id', '=', 'account.workspace_id')
-            .where('brand_discoveries.project_id', 'is', null),
-        ),
-      ]),
-    )
-    .where(({ exists, not, selectFrom }) =>
-      not(
-        exists(
-          selectFrom('account_grants')
-            .select('account_grants.id')
-            .whereRef('account_grants.billing_account_id', '=', 'account.id')
-            .where('account_grants.source_kind', '!=', 'trial'),
-        ),
-      ),
-    )
-    .where(({ exists, selectFrom }) =>
-      exists(
-        selectFrom('account_grants')
-          .select('account_grants.id')
-          .whereRef('account_grants.billing_account_id', '=', 'account.id')
-          .where('account_grants.source_kind', '=', 'trial')
-          .where('account_grants.valid_until', '<=', cutoff),
-      ),
-    )
-    // A workspace still holding reserved units waits, without starving the batch.
-    .where(({ exists, not, selectFrom }) =>
-      not(
-        exists(
-          selectFrom('consumable_ledger')
-            .select('consumable_ledger.reservation_id')
-            .whereRef('consumable_ledger.workspace_id', '=', 'account.workspace_id')
-            .groupBy('consumable_ledger.reservation_id')
-            .having(openReservedUnits, '>', 0),
-        ),
-      ),
-    )
-    // A checkout still awaiting settlement may be the customer's paid plan.
-    .where(({ exists, not, selectFrom }) =>
-      not(
-        exists(
-          selectFrom('pending_activations')
-            .select('pending_activations.id')
-            .whereRef('pending_activations.billing_account_id', '=', 'account.id')
-            .where('pending_activations.status', '=', 'pending'),
-        ),
-      ),
-    )
-    .orderBy('account.workspace_id')
+  const workspaces = await purgeCandidates(db, cutoff)
     .limit(setting('trial_purge_workspace_batch'))
     .execute();
   let purged = 0;
@@ -128,6 +66,78 @@ export async function purgeExpiredTrialProjects(
     logger.info('brand_discovery.trial_purged', { workspace_id: workspaceId, discoveries });
   }
   return purged;
+}
+
+/**
+ * Workspaces whose trial ended before `cutoff` and that never held anything
+ * else, in workspace ID order. Narrowing only: the locked access read in
+ * each purge transaction is the authority.
+ */
+export function purgeCandidates(db: Database, cutoff: Date) {
+  return (
+    db
+      .selectFrom('billing_accounts as account')
+      .select('account.workspace_id')
+      .where('account.registration_origin', '=', 'public')
+      .where(({ exists, or, selectFrom }) =>
+        or([
+          exists(
+            selectFrom('projects')
+              .select('projects.id')
+              .whereRef('projects.workspace_id', '=', 'account.workspace_id'),
+          ),
+          exists(
+            selectFrom('brand_discoveries')
+              .select('brand_discoveries.id')
+              .whereRef('brand_discoveries.workspace_id', '=', 'account.workspace_id')
+              .where('brand_discoveries.project_id', 'is', null),
+          ),
+        ]),
+      )
+      .where(({ exists, not, selectFrom }) =>
+        not(
+          exists(
+            selectFrom('account_grants')
+              .select('account_grants.id')
+              .whereRef('account_grants.billing_account_id', '=', 'account.id')
+              .where('account_grants.source_kind', '!=', 'trial'),
+          ),
+        ),
+      )
+      .where(({ exists, selectFrom }) =>
+        exists(
+          selectFrom('account_grants')
+            .select('account_grants.id')
+            .whereRef('account_grants.billing_account_id', '=', 'account.id')
+            .where('account_grants.source_kind', '=', 'trial')
+            .where('account_grants.valid_until', '<=', cutoff),
+        ),
+      )
+      // A workspace still holding reserved units waits, without starving the batch.
+      .where(({ exists, not, selectFrom }) =>
+        not(
+          exists(
+            selectFrom('consumable_ledger')
+              .select('consumable_ledger.reservation_id')
+              .whereRef('consumable_ledger.workspace_id', '=', 'account.workspace_id')
+              .groupBy('consumable_ledger.reservation_id')
+              .having(openReservedUnits, '>', 0),
+          ),
+        ),
+      )
+      // A checkout still awaiting settlement may be the customer's paid plan.
+      .where(({ exists, not, selectFrom }) =>
+        not(
+          exists(
+            selectFrom('pending_activations')
+              .select('pending_activations.id')
+              .whereRef('pending_activations.billing_account_id', '=', 'account.id')
+              .where('pending_activations.status', '=', 'pending'),
+          ),
+        ),
+      )
+      .orderBy('account.workspace_id')
+  );
 }
 
 /**

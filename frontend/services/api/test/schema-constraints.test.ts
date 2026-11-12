@@ -21,7 +21,19 @@ import { sql } from 'kysely';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { policy } from '../src/config.ts';
+import type { Database } from '../src/db/database.ts';
 import type { DB } from '../src/generated/db-schema.ts';
+import { purgeCandidates } from '../src/projects/trial-purge.ts';
+import {
+  AGENT_LANE,
+  ANALYTICS_LANE,
+  AUDIT_LANE,
+  claimStatement,
+  DISCOVERY_LANE,
+  INTEGRATION_LANE,
+  SITE_HEALTH_LANE,
+} from '../src/queue/task-queue.ts';
+import { expiredBatch } from '../src/referrals/retention.ts';
 import { seedImport, seedMetricRow } from './referral-fixtures.ts';
 import { SiteFixtures } from './site-health-fixtures.ts';
 import { testDatabase } from './support.ts';
@@ -222,6 +234,33 @@ describe('evidence tenancy keys', () => {
         .execute();
     await crawlEvent(crawl.workspaceId);
     await expect(crawlEvent(other.workspaceId)).rejects.toMatchObject(FOREIGN_KEY);
+  });
+
+  it('numbers provider attempts once per task', async () => {
+    const owner = await fixtures.tenant();
+    const auditId = await fixtures.audit(owner);
+    const { taskId } = await fixtures.execution(owner, { auditId });
+    const attempt = (attemptNumber: number) =>
+      db
+        .insertInto('provider_attempts')
+        .values({
+          id: randomUUID(),
+          workspace_id: owner.workspaceId,
+          audit_id: auditId,
+          task_id: taskId,
+          attempt_number: attemptNumber,
+          logical_engine: 'chatgpt',
+          transport_provider: 'test',
+          transport_model: 'test-model',
+          status: 'failed',
+          error_code: 'timeout',
+          error_detail: '',
+          created_at: new Date(),
+        })
+        .execute();
+    await attempt(1);
+    await expect(attempt(1)).rejects.toMatchObject(UNIQUE);
+    await attempt(2);
   });
 });
 
@@ -766,6 +805,16 @@ describe('status vocabularies', () => {
       'disposition',
       [candidate.pending, candidate.accepted, candidate.rejected, ...candidate.outcomes],
     ],
+    ['billing_payments', 'status', ['paid', 'processed']],
+    ['billing_catalog_revisions', 'publication_state', ['draft', 'published', 'retired']],
+    ['idempotency_records', 'state', ['completed']],
+    ['agent_model_attempts', 'outcome', ['dispatched', 'completed', 'failed', 'recovered_unknown']],
+    [
+      'agent_model_attempts',
+      'settlement_status',
+      ['pending', 'not_applicable', 'settled', 'zero_debit'],
+    ],
+    ['execution_cost_projections', 'projection_status', ['complete', 'partial', 'unknown']],
   ];
 
   it.each(columns)(
@@ -827,5 +876,97 @@ describe('project deletion', () => {
       )
       order by reference`.execute(db);
     expect(unindexed.rows.map((row) => row.reference)).toEqual([]);
+  });
+
+  it('finds the rows each set-null reference clears through an index', async () => {
+    // Users are deleted only while they own nothing, so their actor references stay unindexed.
+    const references = await sql<{ child: string; cols: string[] }>`
+      select c.conrelid::regclass::text as child,
+        array(select a.attname::text from unnest(c.conkey) k(attnum)
+              join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k.attnum) as cols
+      from pg_constraint c
+      where c.contype = 'f' and c.confdeltype = 'n' and c.confrelid <> 'public.users'::regclass
+      order by 1, 2`.execute(db);
+    const checked: string[] = [];
+    const scanned: string[] = [];
+    for (const { child, cols } of references.rows) {
+      const reference = `${child}.${cols.join(',')}`;
+      checked.push(reference);
+      // The lookup PostgreSQL runs for each deleted parent row.
+      const lookup = sql.join(
+        cols.map((col) => sql`${sql.ref(col)} = ${randomUUID()}::uuid`),
+        sql` and `,
+      );
+      const scans = await indexScans((trx) =>
+        sql`explain (format json) select 1 from ${sql.table(child)} where ${lookup}`.execute(trx),
+      );
+      // A tenant index alone reads the whole workspace or project per deleted parent.
+      const cleared = cols.filter((col) => col !== 'workspace_id' && col !== 'project_id');
+      const served = scans.some(({ condition }) =>
+        cleared.some((col) => condition.includes(`(${col} = `)),
+      );
+      if (!served) scanned.push(reference);
+    }
+    expect(checked).toContain('commerce_categories.workspace_id,project_id,parent_category_id');
+    expect(scanned).toEqual([]);
+  });
+});
+
+/** The index scans in a query's plan, planned with sequential scans priced out. */
+async function indexScans(explain: (trx: Database) => Promise<unknown>) {
+  const plan = await db.transaction().execute(async (trx) => {
+    await sql`set local enable_seqscan = off`.execute(trx);
+    return explain(trx);
+  });
+  const scans: { index: string; condition: string }[] = [];
+  const visit = (node: unknown): void => {
+    if (Array.isArray(node)) node.forEach(visit);
+    else if (node !== null && typeof node === 'object') {
+      if ('Index Name' in node && typeof node['Index Name'] === 'string')
+        scans.push({
+          index: node['Index Name'],
+          condition:
+            'Index Cond' in node && typeof node['Index Cond'] === 'string'
+              ? node['Index Cond']
+              : '',
+        });
+      Object.values(node).forEach(visit);
+    }
+  };
+  visit(plan);
+  return scans;
+}
+
+/** The names of the indexes a query's plan reads. */
+async function indexesRead(explain: (trx: Database) => Promise<unknown>) {
+  return (await indexScans(explain)).map(({ index }) => index);
+}
+
+describe('background reads', () => {
+  it('checks a trial workspace for open reservations through its ledger index', async () => {
+    expect(
+      await indexesRead((trx) => purgeCandidates(trx, new Date()).limit(10).explain('json')),
+    ).toContain('ix_consumable_ledger_workspace_reservation');
+  });
+
+  it('pages expired referral events through the retention index', async () => {
+    expect(
+      await indexesRead((trx) => expiredBatch(trx, randomUUID(), new Date()).explain('json')),
+    ).toContain('ix_referral_events_retention');
+  });
+
+  it.each([
+    ANALYTICS_LANE,
+    SITE_HEALTH_LANE,
+    DISCOVERY_LANE,
+    AGENT_LANE,
+    INTEGRATION_LANE,
+    AUDIT_LANE,
+  ] as const)('claims $table work through its claimable-only index', async (lane) => {
+    expect(
+      await indexesRead((trx) =>
+        claimStatement(trx, lane, { now: new Date(), limit: 1 }).explain('json'),
+      ),
+    ).toContain(`ix_${lane.table}_claim`);
   });
 });

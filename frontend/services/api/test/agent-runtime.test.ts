@@ -1034,7 +1034,7 @@ describe('Agent runtime on PostgreSQL', () => {
   it('reconciles a lost dispatch as unknown when recovery ends an expired turn', async () => {
     const scope = await fixtures.scope();
     const { run, lease, queue } = await fixtures.claimed(scope);
-    const settle = vi.fn(async () => ({
+    const settle = vi.fn<Funding['settle']>(async () => ({
       credits: 0,
       status: 'zero_debit',
       costMicrousd: null,
@@ -2098,7 +2098,7 @@ describe('Agent runtime on PostgreSQL', () => {
         pricing_revision: 'frozen-policy',
       });
       expect(receipt).toBeNull();
-      return { credits: 50, status: 'unknown_policy', costMicrousd: null };
+      return { credits: 50, status: 'settled', costMicrousd: null };
     });
     const models = new ModelCalls(db, {
       reserve: async () => ({
@@ -2119,7 +2119,7 @@ describe('Agent runtime on PostgreSQL', () => {
         .select(['debited_credits', 'settlement_status'])
         .where('id', '=', attempt.id)
         .executeTakeFirst(),
-    ).toEqual({ debited_credits: '50', settlement_status: 'unknown_policy' });
+    ).toEqual({ debited_credits: '50', settlement_status: 'settled' });
   });
   it('fences a moved output base and never commits its reply on top of that revision', async () => {
     const scope = await fixtures.scope();
