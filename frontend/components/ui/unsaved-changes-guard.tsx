@@ -19,9 +19,12 @@ export function UnsavedChangesGuard({ when }: Readonly<{ when: boolean }>) {
     return () => window.removeEventListener('beforeunload', warn);
   }, [when]);
   // Blocking needs the data router the app runs in; a plain router (an
-  // isolated component render) keeps the tab-close warning alone.
+  // isolated component render) keeps the tab-close warning alone. The router
+  // consults only its last-registered blocker, so only an unsaved guard
+  // registers one: a clean guard mounted later (another output on the same
+  // chat) must not displace it.
   const dataRouter = useContext(UNSAFE_DataRouterContext);
-  return dataRouter ? <NavigationGuard when={when} /> : null;
+  return dataRouter && when ? <NavigationGuard /> : null;
 }
 
 function leavesScreen(current: Location, next: Location): boolean {
@@ -29,9 +32,9 @@ function leavesScreen(current: Location, next: Location): boolean {
   return current.pathname !== next.pathname || project(current) !== project(next);
 }
 
-function NavigationGuard({ when }: Readonly<{ when: boolean }>) {
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) => when && leavesScreen(currentLocation, nextLocation),
+function NavigationGuard() {
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    leavesScreen(currentLocation, nextLocation),
   );
   return (
     <ConfirmDialog

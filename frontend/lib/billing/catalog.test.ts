@@ -234,6 +234,6 @@ describe('formatMoney', () => {
   });
   it('groups in one fixed locale, so server render and hydration agree', () => {
     expect(formatMoney({ currency: 'INR', amount_minor: 44990000 }, 2)).toBe('₹449,900');
-    expect(formatMoney({ currency: 'EUR', amount_minor: 1250 }, 2)).toBe('€12.50');
+    expect(formatMoney({ currency: 'USD', amount_minor: 1234567 }, 2)).toBe('$12,345.67');
   });
 });

@@ -12,6 +12,8 @@ function Editor() {
     <>
       <h1>Editor</h1>
       <UnsavedChangesGuard when={dirty} />
+      {/* A second, clean editor on the same screen (another output of the chat). */}
+      <UnsavedChangesGuard when={false} />
       <button type="button" onClick={() => setDirty(true)}>
         Edit
       </button>

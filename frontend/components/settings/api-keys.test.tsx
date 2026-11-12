@@ -90,7 +90,13 @@ it('sends the end of the chosen day in the display time zone and lists that day'
   const dialog = screen.getByRole('dialog', { name: 'Create an API key' });
   expect(dialog).toHaveTextContent('The key stops working at the end of this day (Asia/Kolkata).');
   await user.type(within(dialog).getByLabelText(/Name/u), 'CI export');
-  await user.type(within(dialog).getByRole('textbox', { name: 'Expiry date' }), '2026-11-30');
+  const expiry = within(dialog).getByRole('textbox', { name: 'Expiry date' });
+  // A day that does not exist is refused in the field, before any request.
+  await user.type(expiry, '2026-02-30');
+  expect(dialog).toHaveTextContent('Enter a date as YYYY-MM-DD.');
+  expect(within(dialog).getByRole('button', { name: 'Create key' })).toBeDisabled();
+  await user.clear(expiry);
+  await user.type(expiry, '2026-11-30');
   await user.click(within(dialog).getByRole('button', { name: 'Create key' }));
   expect(create).toHaveBeenCalledWith(
     WORKSPACE,

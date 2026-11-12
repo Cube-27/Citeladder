@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { KeyRound } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
@@ -150,7 +151,9 @@ function CreateKeyDialog({
     create.reset();
     onClose();
   };
-  const ready = name.trim() !== '' && (projectMode === 'all' || chosen.size > 0);
+  // A typed expiry must be a real calendar day before it becomes an instant.
+  const expiryValid = expiresOn === '' || z.iso.date().safeParse(expiresOn).success;
+  const ready = name.trim() !== '' && (projectMode === 'all' || chosen.size > 0) && expiryValid;
 
   return (
     <Dialog
@@ -238,11 +241,13 @@ function CreateKeyDialog({
           <Field
             label="Expires"
             hint={`Optional. The key stops working at the end of this day (${timeZone}).`}
+            error={expiryValid ? undefined : 'Enter a date as YYYY-MM-DD.'}
           >
             {(props) => (
               <DateField
                 id={props.id}
                 aria-describedby={props['aria-describedby']}
+                aria-invalid={props['aria-invalid']}
                 ariaLabel="Expiry date"
                 value={expiresOn}
                 onChange={setExpiresOn}

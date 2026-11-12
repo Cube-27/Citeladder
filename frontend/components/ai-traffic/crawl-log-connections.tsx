@@ -129,15 +129,12 @@ function Connections({
         onRevoke={(id, onSettled) => model.issueSource({ kind: 'revoke', id }, onSettled)}
         onClose={() => setRevoking(null)}
       />
-      {rotating ? (
-        <RotateTokenDialog
-          key={rotating.id}
-          source={rotating}
-          projectId={input.projectId}
-          workspaceId={input.workspaceId}
-          onClose={() => setRotating(null)}
-        />
-      ) : null}
+      <RotateTokenDialog
+        source={rotating}
+        projectId={input.projectId}
+        workspaceId={input.workspaceId}
+        onClose={() => setRotating(null)}
+      />
       {mutation.isError && !open ? (
         <MutationNotice
           notice={mutationNoticeForError(mutation.error, { action: 'update the crawl-log source' })}
@@ -322,21 +319,24 @@ function SourceDiagnostics({
     </DataTable>
   );
 }
-/**
- * Rotation has its own dialog and mutation: it shows only the rotation, its
- * failure with a retry, and the new token, never the new-source form.
- */
-function RotateTokenDialog({
-  source,
-  projectId,
-  workspaceId,
-  onClose,
-}: Readonly<{
+type RotateTokenProps = Readonly<{
   source: z.infer<typeof crawlSourceSchema>;
   projectId: string;
   workspaceId: string;
   onClose: () => void;
-}>) {
+}>;
+/** Each rotation starts fresh: a new source remounts the dialog and its mutation. */
+function RotateTokenDialog({
+  source,
+  ...props
+}: Omit<RotateTokenProps, 'source'> & Readonly<{ source: RotateTokenProps['source'] | null }>) {
+  return source ? <RotateToken key={source.id} source={source} {...props} /> : null;
+}
+/**
+ * Rotation has its own dialog and mutation: it shows only the rotation, its
+ * failure with a retry, and the new token, never the new-source form.
+ */
+function RotateToken({ source, projectId, workspaceId, onClose }: RotateTokenProps) {
   const rotate = useMutation(aiTrafficMutations.source({ workspaceId, projectId }));
   const run = () => rotate.mutate({ kind: 'rotate', id: source.id });
   return (

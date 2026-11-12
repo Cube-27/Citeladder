@@ -92,7 +92,7 @@ export function toChartPoints(
   metric: TrendMetric,
   timeZone = 'UTC',
   valueOf: (point: VisibilityTrendPoint) => number | null = (point) => metricValue(point, metric),
-): (TrendPoint & { completedAt: string; dateLabel: string })[] {
+): (TrendPoint & { dateLabel: string })[] {
   let prevVersions: string | null = null;
   let previousIdentity: string | null | undefined = undefined;
   return points.map((point) => {
@@ -105,10 +105,9 @@ export function toChartPoints(
     previousIdentity = point.comparison_key;
     prevVersions = versionKey;
     return {
+      ...pointDates(point, timeZone),
       // Preserve unavailable metrics as null — the chart renders a GAP and an
       // "unavailable" label rather than coercing to a misleading zero.
-      ...pointDates(point, timeZone),
-      completedAt: point.completed_at,
       value,
       timestamp: new Date(point.completed_at).getTime(),
       breakBefore: changed || identityChanged || !point.comparison_key,

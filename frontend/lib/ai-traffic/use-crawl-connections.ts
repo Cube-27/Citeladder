@@ -121,16 +121,17 @@ export function useCrawlConnections({
   useEffect(() => {
     if (processing === 'processed') void refreshAiTraffic(client, projectId);
   }, [processing, client, projectId]);
-  // The wait is bounded: a failed or slow rollup stops the rechecks.
-  const waiting = awaiting !== null && !awaiting.timedOut;
+  // The wait is bounded: a failed or slow rollup stops the rechecks. Each
+  // upload's completion starts its own wait.
+  const waitingFor = awaiting && !awaiting.timedOut ? awaiting.completedAt : null;
   useEffect(() => {
-    if (!waiting) return;
+    if (!waitingFor) return;
     const timer = setTimeout(
       () => setAwaiting((current) => current && { ...current, timedOut: true }),
       UPLOAD_PROCESSING_MAX_WAIT_MS,
     );
     return () => clearTimeout(timer);
-  }, [waiting]);
+  }, [waitingFor]);
   const [localOpen, setLocalOpen] = useState(false),
     [setup, setSetup] = useState<(typeof CRAWL_LOG_SETUPS)[number]['value']>('cloudflare_worker');
   const open = controlledOpen ?? localOpen;
