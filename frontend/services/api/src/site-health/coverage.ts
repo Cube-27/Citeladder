@@ -29,10 +29,18 @@ export type ValueKindCoverage = { kind: string; found: number; analyzed: number 
 
 const BOUNDED_DISCOVERY = new Set(['cancelled', 'sample_completed', 'stopped']);
 
-/** A limit, a pending frontier or an explicit bound cut discovery short. */
+/**
+ * A limit, a pending frontier or an explicit bound cut discovery short. The
+ * requested page limit only cut it short when frontier URLs were left: a site
+ * with exactly that many pages exhausted its frontier.
+ */
 function partialReasons(signals: CoverageSignals) {
   const reasons: string[] = [];
-  if (signals.requestedPageLimit > 0 && signals.admittedUrlCount >= signals.requestedPageLimit)
+  if (
+    signals.requestedPageLimit > 0 &&
+    signals.admittedUrlCount >= signals.requestedPageLimit &&
+    signals.pendingFrontierCount > 0
+  )
     reasons.push('requested_page_limit_reached');
   if (signals.frontierLimit > 0 && signals.admittedUrlCount >= signals.frontierLimit)
     reasons.push('frontier_limit_reached');

@@ -8,7 +8,12 @@ import { record } from '../db/json.ts';
 import { firstOf } from '../lists.ts';
 import type { SiteRuleEvaluations } from '../generated/db-schema.ts';
 import type { RuleEvaluation } from './analysis/rules.ts';
-import { appliedSiteChecks, crawlSiteChecks, scoreAnalysis } from './analysis/scoring.ts';
+import {
+  appliedSiteChecks,
+  crawlSiteChecks,
+  finalPageChecks,
+  scoreAnalysis,
+} from './analysis/scoring.ts';
 import { refreshIssueCurrency } from './issue-currency.ts';
 import { landIssueStates } from './issue-states.ts';
 import type { Crawl } from './site-task.ts';
@@ -72,7 +77,11 @@ export async function publishFinalPageAnalyses(db: Database, crawl: Crawl) {
   const revisions = initials.map((initial) => {
     const own = (byAnalysis.get(initial.id) ?? []).filter((row) => row.scope !== 'site');
     const sources = [...own, ...siteSources];
-    const scores = scoreAnalysis(own.map(persistedEvaluation), initial.page_kind, site);
+    const scores = scoreAnalysis(
+      finalPageChecks(own.map(persistedEvaluation)),
+      initial.page_kind,
+      site,
+    );
     const byRule = new Map(sources.map((row) => [row.rule_id, row.id]));
     return {
       ...initial,

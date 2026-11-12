@@ -535,8 +535,17 @@ describe('crawl coverage', () => {
     });
   });
 
+  it('is complete when a site with exactly the requested page limit exhausted its frontier', () => {
+    expect(assessCoverage(signals({ admittedUrlCount: 50 }))).toMatchObject({
+      state: 'complete',
+      evidence: { reasons: ['frontier_exhausted'] },
+    });
+  });
+
   it('is partial when a limit, pending frontier or explicit bound cut discovery short', () => {
-    expect(assessCoverage(signals({ admittedUrlCount: 50 })).state).toBe('partial');
+    expect(
+      assessCoverage(signals({ admittedUrlCount: 50, pendingFrontierCount: 4 })).evidence.reasons,
+    ).toEqual(['requested_page_limit_reached', 'frontier_not_exhausted']);
     expect(assessCoverage(signals({ pendingFrontierCount: 1 })).state).toBe('partial');
     expect(assessCoverage(signals({ cancelled: true })).evidence.reasons).toEqual([
       'discovery_bounded_or_stopped',

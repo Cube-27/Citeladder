@@ -209,6 +209,78 @@ async function siteIssue(
   await refreshIssueCurrency(db, await loadCrawl(db, seed.workspaceId, seed.crawlId));
 }
 
+/**
+ * An architecture finding on the root as `architecture.ts` writes it: attached
+ * to the root's analysis, never named in its `source_evaluation_ids`.
+ */
+async function architectureIssue(seed: SiteSeed, root: Page, ruleId: string) {
+  const rule = policy.site_health.rule_catalog.find((item) => item.rule_id === ruleId)!;
+  const architectureId = randomUUID();
+  await db
+    .insertInto('site_observed_architectures')
+    .values({
+      id: architectureId,
+      workspace_id: seed.workspaceId,
+      project_id: seed.projectId,
+      crawl_id: seed.crawlId,
+      source_snapshot_id: await fixtures.snapshot(seed, 'complete'),
+      coverage_state: 'complete',
+      page_count: 1,
+      hierarchy: '[]',
+      internal_linking: '{}',
+      page_kinds: '[]',
+      structure_depth: '{}',
+      architecture_formula_version: 'fixture',
+      archetype_policy_version: 'fixture',
+      analyzer_version: 'fixture',
+      extractor_version: 'fixture',
+      rule_version: 'fixture',
+      created_at: new Date(),
+    })
+    .execute();
+  const { source_evaluation_ids: named } = await db
+    .selectFrom('site_page_analyses')
+    .select('source_evaluation_ids')
+    .where('id', '=', root.analysisId)
+    .executeTakeFirstOrThrow();
+  const evaluationId = await fixtures.evaluation(seed, root, ruleId, 'missing');
+  await db
+    .updateTable('site_rule_evaluations')
+    .set({ source_architecture_id: architectureId })
+    .where('id', '=', evaluationId)
+    .execute();
+  await db
+    .updateTable('site_page_analyses')
+    .set({ source_evaluation_ids: named })
+    .where('id', '=', root.analysisId)
+    .execute();
+  await db
+    .insertInto('site_issues')
+    .values({
+      id: randomUUID(),
+      workspace_id: seed.workspaceId,
+      project_id: seed.projectId,
+      crawl_id: seed.crawlId,
+      site_url_id: root.id,
+      analysis_id: root.analysisId,
+      evaluation_id: evaluationId,
+      source_artifact_id: root.artifactId,
+      rule_id: ruleId,
+      rule_version: rule.rule_version,
+      dimension: rule.dimension,
+      category: rule.category,
+      severity: rule.severity,
+      finding_class: rule.finding_class,
+      description: rule.description,
+      remediation: rule.remediation,
+      evidence: '{}',
+      analyzer_version: policy.site_health.versions.analyzer,
+      is_current: true,
+      created_at: new Date(),
+    })
+    .execute();
+}
+
 const byUrl = (items: { normalized_url: string; analysis_status: string; error_code: string }[]) =>
   Object.fromEntries(items.map((item) => [new URL(item.normalized_url).pathname, item]));
 
@@ -1484,6 +1556,23 @@ describe('issue history', () => {
       ),
     ).toEqual({ items: [], next_cursor: null, current_analysis_finalized: false });
     expect((await get(await fixtures.crawl(), path)).status).toBe(404);
+  });
+
+  it('keeps the homepage’s still-open site-level findings out of its resolved history', async () => {
+    const seed = await fixtures.crawl();
+    const home = await page(seed, '/');
+    const earlier = await fixtures.page(seed, '/', {}, { current: false, siteUrlId: home.id });
+    await issue(seed, earlier, 'technical.title_present');
+    await architectureIssue(seed, home, 'architecture.orphan_pages');
+
+    const history = await json(
+      seed,
+      `/site-crawls/${seed.crawlId}/pages/${home.id}/issue-history`,
+      issueHistoryPageSchema,
+    );
+    expect(history.items.map((row: { rule_id: string }) => row.rule_id)).toEqual([
+      'technical.title_present',
+    ]);
   });
 });
 

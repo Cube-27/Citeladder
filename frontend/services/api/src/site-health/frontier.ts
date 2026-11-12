@@ -16,7 +16,7 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import type { WorkspaceSiteHealthRuntime } from '../generated/db-schema.ts';
 import { compareText } from '../text-order.ts';
-import { classifyUrlAdmission, type Admission, type Scope } from './url-admission.ts';
+import { classifyUrlAdmission, hardExcluded, type Admission, type Scope } from './url-admission.ts';
 import { canonicalIdentity, hostTwinHash } from './url-identity.ts';
 import { expectedTaskFailure } from './coverage.ts';
 import type { Crawl } from './site-task.ts';
@@ -94,6 +94,18 @@ export function crawlScope(crawl: Crawl): Scope {
     domain:
       typeof config.root_registrable_domain === 'string' ? config.root_registrable_domain : '',
   };
+}
+
+/**
+ * The page fetch's `admit` for this crawl: the page and every redirect hop pass
+ * the same admission and scope as a link, so neither discovery nor analysis
+ * follows a redirect off the site. Without a recorded scope only the hard
+ * exclusions apply.
+ */
+export function crawlAdmit(crawl: Crawl): (hop: URL) => boolean {
+  const scope = crawlScope(crawl);
+  if (!scope.domain) return (hop) => !hardExcluded(hop);
+  return (hop) => classifyUrlAdmission(hop.href, scope).accepted;
 }
 
 /**

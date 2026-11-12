@@ -20,6 +20,7 @@ import { duplicateOf, markDuplicates } from './canonical-alias.ts';
 import {
   admitCandidates,
   candidate,
+  crawlAdmit,
   crawlScope,
   enqueueDiscoveredAnalysis,
   lockRuntime,
@@ -42,7 +43,7 @@ import {
   type SiteTaskContext,
 } from './site-task.ts';
 import { taskOutcome } from './task-outcome.ts';
-import { classifyUrlAdmission, hardExcluded } from './url-admission.ts';
+import { classifyUrlAdmission } from './url-admission.ts';
 import { canonicalIdentity } from './url-identity.ts';
 
 const crawlPolicy = policy.site_health.crawl;
@@ -61,13 +62,9 @@ type Outcome = AttemptOutcome & {
 
 async function acquire(ctx: SiteTaskContext, crawl: Crawl, task: SiteTask): Promise<Outcome> {
   await ctx.checkAccess();
-  const scope = crawlScope(crawl);
   const fetched = await ctx.fetcher.fetch(task.requested_url, {
     signal: ctx.signal,
-    // Redirects may not leave the crawl's scope any more than links may.
-    admit: scope.domain
-      ? (hop) => classifyUrlAdmission(hop.href, scope).accepted
-      : (hop) => !hardExcluded(hop),
+    admit: crawlAdmit(crawl),
     contentTypes: [...acquisition.html_content_types, ...crawlPolicy.document_media_types],
     robots: crawlRobotsHandling(crawl.configuration),
   });
@@ -129,7 +126,7 @@ async function acquire(ctx: SiteTaskContext, crawl: Crawl, task: SiteTask): Prom
       decodedBytes: page.body.length,
     },
     factSettings(),
-    scope,
+    crawlScope(crawl),
   );
   return { ...success, discovery, facts };
 }

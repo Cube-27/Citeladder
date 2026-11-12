@@ -39,6 +39,29 @@ export function crawlSiteChecks(rows: RuleEvaluation[]) {
   ];
 }
 
+const SCORED_FINALIZE_RULES = policy.site_health.rule_catalog
+  .filter(
+    (rule) =>
+      rule.scope === 'page' &&
+      rule.applicability_key === 'crawl_finalize' &&
+      membership(rule.rule_id).score_roles.length,
+  )
+  .map((rule) => rule.rule_id);
+/**
+ * A page's final checks, with every scored crawl-finalize check the crawl never
+ * evaluated (a cancelled crawl skips finalization) as unknown, so the missing
+ * verdict keeps measurement partial instead of silently dropping out.
+ */
+export function finalPageChecks(rows: RuleEvaluation[]) {
+  const seen = new Set(rows.map((row) => row.rule_id));
+  return [
+    ...rows,
+    ...SCORED_FINALIZE_RULES.filter((id) => !seen.has(id)).map((id) =>
+      finalizeEvaluation(id, 'unknown', { reason: 'crawl_not_finalized' }),
+    ),
+  ];
+}
+
 const withSiteChecks = (rows: RuleEvaluation[], siteRows: RuleEvaluation[]) => [
   ...rows.filter((row) => row.scope === 'page'),
   ...appliedSiteChecks(siteRows),
