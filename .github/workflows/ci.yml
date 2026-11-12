@@ -473,9 +473,9 @@ jobs:
             const failed = Object.entries(needs).filter(([job, { result }]) =>
               job === "changes" ? result !== "success" : !["success", "skipped"].includes(result),
             );
-            for (const [job, { result }] of Object.entries(needs)) console.log(`${job}: ${result}`);
+            for (const [job, { result }] of Object.entries(needs)) console.log(job + ": " + result);
             if (failed.length) {
-              console.error(`Failed or incomplete: ${failed.map(([job]) => job).join(", ")}`);
+              console.error("Failed or incomplete: " + failed.map(([job]) => job).join(", "));
               process.exit(1);
             }
           '

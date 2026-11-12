@@ -69,7 +69,22 @@ test('browser-sensitive frontend paths select E2E without escalating every front
     ['e2e/shell.spec.ts'],
   );
   assert.equal(classifyPaths(['frontend/e2e/docs.spec.ts']).e2e, false);
-  assert.equal(classifyPaths(['scripts/quality.mjs', '.github/workflows/ci.yml']).e2e, false);
+  assert.equal(
+    classifyPaths(['scripts/quality.mjs', '.github/workflows/compose-smoke.yml']).e2e,
+    false,
+  );
+});
+
+test('the browser jobs run in full when their workflow or setup action changes', () => {
+  for (const path of ['.github/workflows/ci.yml', '.github/actions/setup-frontend/action.yml']) {
+    const selected = classifyPaths([path]);
+    assert.deepEqual([selected.e2e, selected.workers], [true, true], path);
+    // A mapped frontend change in the same diff does not narrow the suite.
+    assert.deepEqual(e2eSpecArgs([path, 'frontend/components/performance/metric-cards.tsx']), []);
+  }
+  assert.deepEqual(e2eSpecArgs(['frontend/components/performance/metric-cards.tsx']), [
+    'e2e/performance-states.spec.ts',
+  ]);
 });
 
 test('billing selects existing browser suites and browser configuration runs every suite', () => {

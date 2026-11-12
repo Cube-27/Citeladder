@@ -180,45 +180,63 @@ function specsByImportedFile() {
   return e2eImportGraph;
 }
 
+/** The app-suite specs one changed path selects: itself, its importers and its mapped specs. */
+function specsSelectedBy(path) {
+  const spec = path.slice('frontend/'.length);
+  const own =
+    /^frontend\/e2e\/.+\.spec\.ts$/u.test(path) && !OTHER_CONFIG_SPECS.has(spec) ? [spec] : [];
+  const mapped = E2E_RULES.filter(
+    (rule) => Array.isArray(rule.frontendE2E) && matchesAny(path, rule.sources),
+  ).flatMap((rule) => rule.frontendE2E);
+  return [...own, ...(specsByImportedFile().get(path) ?? []), ...mapped];
+}
+
 export function selectE2EFiles(paths) {
   const selected = new Set();
-  const addTest = (test) => {
+  for (const test of paths.flatMap(specsSelectedBy)) {
     if (!/^e2e\/[A-Za-z0-9][A-Za-z0-9_./-]*\.spec\.ts$/u.test(test)) {
       throw new Error(`Invalid E2E mapping: ${test}`);
     }
     selected.add(test);
-  };
-  for (const path of paths) {
-    const spec = path.slice('frontend/'.length);
-    if (/^frontend\/e2e\/.+\.spec\.ts$/u.test(path) && !OTHER_CONFIG_SPECS.has(spec)) {
-      addTest(spec);
-    }
-    for (const test of specsByImportedFile().get(path) ?? []) addTest(test);
-    for (const rule of E2E_RULES) {
-      if (Array.isArray(rule.frontendE2E) && matchesAny(path, rule.sources)) {
-        for (const test of rule.frontendE2E) addTest(test);
-      }
-    }
   }
   // Test paths, so plain code-point order is the intended ordering; the
   // comparator only says so out loud.
   return [...selected].sort((left, right) => (left < right ? -1 : Number(left > right)));
 }
 
-/** True when a changed path maps to `"frontendE2E": "all"` in e2e-paths.json. */
+// The workflow that defines the browser jobs and the setup action they run.
+const BROWSER_JOB_DEFINITIONS = new Set([
+  '.github/workflows/ci.yml',
+  '.github/actions/setup-frontend/action.yml',
+]);
+
+function isNonBrowserTooling(path) {
+  return (
+    !BROWSER_JOB_DEFINITIONS.has(path) &&
+    (path.startsWith('.github/') || path.startsWith('scripts/') || path.startsWith('infra/'))
+  );
+}
+
+/** A path outside the frontend that can change what a browser suite runs. */
+function isSharedBrowserInput(path) {
+  return !isOwnerFree(path) && !isFrontend(path) && !isNonBrowserTooling(path);
+}
+
+/**
+ * True when a changed path is a shared browser input or maps to
+ * `"frontendE2E": "all"` in e2e-paths.json.
+ */
 function selectsEveryE2E(paths) {
-  return paths.some((path) =>
-    E2E_RULES.some((rule) => rule.frontendE2E === 'all' && matchesAny(path, rule.sources)),
+  return paths.some(
+    (path) =>
+      isSharedBrowserInput(path) ||
+      E2E_RULES.some((rule) => rule.frontendE2E === 'all' && matchesAny(path, rule.sources)),
   );
 }
 
 /** The specs the E2E job passes to Playwright; an empty list runs every spec. */
 export function e2eSpecArgs(paths) {
   return selectsEveryE2E(paths) ? [] : selectE2EFiles(paths);
-}
-
-function isNonBrowserTooling(path) {
-  return path.startsWith('.github/') || path.startsWith('scripts/') || path.startsWith('infra/');
 }
 
 function isContract(path) {
@@ -318,7 +336,6 @@ export function classifyPaths(paths, { full = false } = {}) {
   const shared = unowned.length > 0;
   const e2eFiles = selectE2EFiles(normalized);
   const everyE2E = selectsEveryE2E(normalized);
-  const sharedBrowserInput = unowned.some((path) => !isNonBrowserTooling(path));
   const contract = shared || normalized.some(isContract);
   const frontend = shared || contract || normalized.some(isFrontend);
 
@@ -326,9 +343,8 @@ export function classifyPaths(paths, { full = false } = {}) {
     frontend,
     contract,
     api: shared || normalized.some(isApiService),
-    e2e: sharedBrowserInput || e2eFiles.length > 0 || everyE2E,
+    e2e: everyE2E || e2eFiles.length > 0,
     workers:
-      sharedBrowserInput ||
       everyE2E ||
       normalized.some((path) => matchesAny(path, WORKER_SUITE_SOURCES)) ||
       e2eFiles.some((spec) => WORKER_SUITE_SPECS.has(spec)),

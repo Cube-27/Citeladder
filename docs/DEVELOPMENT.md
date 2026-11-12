@@ -401,7 +401,8 @@ browser E2E. Browser-sensitive paths run only the specs mapped in
 `scripts/e2e-paths.json`, and a helper, fixture or shared content file selects
 every spec that imports it; the complete default Playwright suite is reserved
 for `main`, merge-queue validation, unknown shared paths, changes to
-Playwright's global configuration, and paths mapped to `"frontendE2E": "all"`
+Playwright's global configuration, the `CI` workflow and its shared frontend
+setup action (which also run the Worker CSP suite), and paths mapped to `"frontendE2E": "all"`
 (the shared API schemas in `frontend/packages/contracts/`). Shared, configuration, and
 contract paths select native API/browser checks; the SQL migrations select the
 native API owner and the Compose smoke. The API suite also runs for the frontend
