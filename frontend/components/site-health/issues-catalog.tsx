@@ -213,7 +213,7 @@ function issueColumns(sort: IssueSort, onSort: (sort: IssueSort) => void): DataT
     {
       key: 'severity',
       label: 'Severity',
-      width: 'status',
+      width: 'statusLabel',
       sort: { active: sort === 'severity', descending: true, onSort: () => onSort('severity') },
     },
     {

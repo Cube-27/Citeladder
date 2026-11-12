@@ -41,6 +41,8 @@ const COLUMN_WIDTH = {
   metric: 'w-40',
   /** A status badge or a short label. */
   status: 'w-32',
+  /** A status badge and its short label on one line ("Medium · Web fundamentals"). */
+  statusLabel: 'w-64',
   /** A category badge longer than a status ("Striking distance", a purpose). */
   category: 'w-44',
   /** A date or a date-time. */
