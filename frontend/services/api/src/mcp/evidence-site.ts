@@ -259,13 +259,16 @@ const distinctWithoutQuery = (values: readonly unknown[]) => [
   ...new Set(values.filter((url): url is string => typeof url === 'string').map(withoutQuery)),
 ];
 const looksLikeUrl = (value: string) => /^https?:\/\//iu.test(value);
+/** `text` without query or fragment when it is an absolute http(s) URL; other text keeps any `?`. */
+export const textWithoutUrlQuery = (text: string) =>
+  looksLikeUrl(text) ? withoutQuery(text) : text;
 /**
  * `value` with every absolute http(s) URL string inside it, at any depth,
  * stripped of its query and fragment: a fetched record's crawl facts and
- * evidence carry page and link URLs in many shapes. Other text keeps any `?`.
+ * evidence carry page and link URLs in many shapes.
  */
 export function withoutQueryDeep(value: unknown): unknown {
-  if (typeof value === 'string') return looksLikeUrl(value) ? withoutQuery(value) : value;
+  if (typeof value === 'string') return textWithoutUrlQuery(value);
   if (Array.isArray(value)) return value.map(withoutQueryDeep);
   if (value !== null && typeof value === 'object' && !(value instanceof Date))
     return Object.fromEntries(
@@ -321,7 +324,7 @@ function scalarFacts(evidence: Record<string, unknown>) {
     if (key === 'id' || key.endsWith('_id') || key.endsWith('_ids')) continue;
     if (typeof item === 'number' || typeof item === 'boolean') facts[key] = item;
     else if (typeof item === 'string' && item)
-      facts[key] = (looksLikeUrl(item) ? withoutQuery(item) : item).slice(0, SUMMARY_TEXT_CHARS);
+      facts[key] = textWithoutUrlQuery(item).slice(0, SUMMARY_TEXT_CHARS);
   }
   return facts;
 }

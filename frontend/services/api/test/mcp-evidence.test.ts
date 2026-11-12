@@ -521,7 +521,8 @@ it('fetches a site page without the query string or fragment of any URL it carri
     const tokened = 'https://acme.example/pricing?token=s3cret#owner@acme.example';
     await db
       .updateTable('site_urls')
-      .set({ display_url: tokened, latest_title: '' })
+      // A page titled by its own URL.
+      .set({ display_url: tokened, latest_title: tokened })
       .where('id', '=', page.site_url_id)
       .execute();
     await db
