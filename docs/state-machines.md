@@ -20,7 +20,10 @@ Keyword Research run, call and dataset `status`, `pending_activations.status`,
 `billing_webhook_events.processing_state`, `billing_subscriptions.status`,
 `integration_oauth_grants.status`, `actions.status`, `prompts.status` and
 `prompt_candidates.disposition`; `platform_calls.status` and the brand fact
-statuses had theirs in 0001. `test/schema-constraints.test.ts` proves each
+statuses had theirs in 0001. Migration `0035_indexes_and_constraints` adds
+`billing_payments.status`, `billing_catalog_revisions.publication_state`,
+`idempotency_records.state`, `agent_model_attempts.outcome` and
+`settlement_status`, and `execution_cost_projections.projection_status`. `test/schema-constraints.test.ts` proves each
 accepts every value its owner declares. Other status columns hold their
 vocabulary in code only. The CHECK enforces the vocabulary, not the edges.
 
@@ -234,9 +237,9 @@ DB: `(provider, mode, event_id)` unique (0001:4052).
 
 | Machine | States and transitions | Enforced |
 |---|---|---|
-| `billing_catalog_revisions.publication_state` | `draft` (mutable) → `published`, previous → `retired` (final) `billing/admin.ts:107-173` | DB one published 0001:5181; App subject lock |
-| `billing_payments` | insert-only; refund child rows | DB 0001:5183-5185 |
-| `idempotency_records` (plan changes) | ∅ → `completed` only `plan-changes.ts` `scheduleDowngrade`; deleted on `provider_rejected` after the push, or by a same-key replay that finds the current subscription's change from that key `provider_rejected` (`refusedFromKey`); `expires_at` never read | App |
+| `billing_catalog_revisions.publication_state` | `draft` (mutable) → `published`, previous → `retired` (final) `billing/admin.ts:107-173` | DB one published 0001:5181, state CHECK 0035; App subject lock |
+| `billing_payments` | insert-only; `paid` payments and `processed` refund child rows | DB 0001:5183-5185, status CHECK 0035 |
+| `idempotency_records` (plan changes) | ∅ → `completed` only `plan-changes.ts` `scheduleDowngrade`; deleted on `provider_rejected` after the push, or by a same-key replay that finds the current subscription's change from that key `provider_rejected` (`refusedFromKey`); `expires_at` never read | DB state CHECK 0035; App |
 | Access (derived) | `trial_active` / `trial_expired` / `active` / `subscription_lapsed` / `access_unresolved` from grant validity `entitlements/access.ts:38-91`; trial once per mailbox under advisory lock `entitlements/bootstrap.ts:62-113`; purge `projects/trial-purge.ts` deletes first, then rechecks under the capacity lock (`stillPurgeable`) and rolls back for a workspace that ever held a non-trial grant or has a `pending` checkout | App |
 
 ## 4. Agent
@@ -273,8 +276,8 @@ heartbeat that gives up makes `runAgentOnce` call `fail(lease, 'interrupted')`
 
 | Machine | States and transitions | Enforced |
 |---|---|---|
-| `agent_model_attempts.outcome` | `dispatched` → `completed`/`failed` by receipt `agent/model-calls.ts:167-261` (row `FOR UPDATE`, only from `dispatched`); `dispatched` → `recovered_unknown` by reconcile `:303-343` from `fail`, `recover`, `recoverCancelled` | DB slot uniques `uq_agent_model_attempt_slot`, `uq_agent_model_attempt_dispatch`; CHECKs on bytes, output cap (0005), cost (0012); outcome App |
-| `settlement_status` | `pending`/`not_applicable` at dispatch → `settled`/`zero_debit`; failed or unknown with no usage settles 0 `agent/funding.ts:242-246` | App; `settled_at` null iff `dispatched` |
+| `agent_model_attempts.outcome` | `dispatched` → `completed`/`failed` by receipt `agent/model-calls.ts:167-261` (row `FOR UPDATE`, only from `dispatched`); `dispatched` → `recovered_unknown` by reconcile `:303-343` from `fail`, `recover`, `recoverCancelled` | DB slot uniques `uq_agent_model_attempt_slot`, `uq_agent_model_attempt_dispatch`; CHECKs on bytes, output cap (0005), cost (0012), outcome vocabulary (0035); transitions App |
+| `settlement_status` | `pending`/`not_applicable` at dispatch → `settled`/`zero_debit`; failed or unknown with no usage settles 0 `agent/funding.ts:242-246` | DB vocabulary CHECK 0035; App transitions; `settled_at` null iff `dispatched` |
 | Hold per call | reserve `funding.ts:205` → settle (idempotent per dispatch key) → `refundSubject` (failed runs, B58) | App ledger |
 | `agent_tool_attempts.status` | insert-only, written once after the read `agent/runtime.ts:571-605` under `lockRun` | DB `uq_agent_tool_attempt_slot` |
 | `agent_outputs` / revisions | ≥ 1 revision; output + revision in one tx `agent/outputs.ts:54, 110-154`; edits under chat lock + `requireIdle` | DB `uq_agent_output_chat_number`, `uq_agent_output_revision_number`, number > 0 (0004) |

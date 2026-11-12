@@ -51,7 +51,8 @@ export type Funding = {
     usage: Usage | null,
   ) => Promise<{
     credits: number;
-    status: string;
+    /** Stored as `settlement_status`, whose CHECK also admits the dispatch-time values. */
+    status: 'settled' | 'zero_debit';
     /** The call's internal cost; null when unknown. */ costMicrousd: number | null;
   }>;
   /** Refunds every credit the run's settled calls debited; idempotent (B58). */
