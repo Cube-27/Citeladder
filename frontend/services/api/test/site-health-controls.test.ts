@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
-import { spawn } from 'node:child_process';
 import { setTimeout } from 'node:timers/promises';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -466,48 +465,6 @@ describe('crawl control admission', () => {
         .transaction()
         .execute((trx) => replaceMonitoredSet(trx, tenant.workspaceId, tenant.projectId, [], 0)),
     ).rejects.toMatchObject({ status: 403, code: 'monitoring_not_allowed' });
-  });
-
-  it('lets the dev seed invoke real TypeScript creation and bulk selection through its local CLI', async () => {
-    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
-    await allow(tenant, 2);
-    async function seedControl(payload: Record<string, string>) {
-      const child = spawn(process.execPath, ['scripts/seed-site-health.ts'], {
-        cwd: new URL('../', import.meta.url),
-        env: {
-          APP_ENV: 'development',
-          DATABASE_URL: process.env.API_TEST_DATABASE_URL,
-          CITELADDER_DISABLE_DOTENV: '1',
-        },
-        windowsHide: true,
-      });
-      let output = '';
-      child.stdout.setEncoding('utf8');
-      child.stdout.on('data', (chunk: string) => {
-        output += chunk;
-      });
-      const ended = new Promise<number | null>((resolve, reject) => {
-        child.on('error', reject);
-        child.on('close', resolve);
-      });
-      child.stdin.end(
-        JSON.stringify({
-          workspace_id: tenant.workspaceId,
-          project_id: tenant.projectId,
-          ...payload,
-        }),
-      );
-      expect(await ended).toBe(0);
-      return JSON.parse(output) as { id: string };
-    }
-    const crawl = await seedControl({ operation: 'create', seed: '99' });
-    await seedControl({ operation: 'select', crawl_id: crawl.id });
-    const selected = await db
-      .selectFrom('monitored_site_urls')
-      .select('selection_source')
-      .where('project_id', '=', tenant.projectId)
-      .execute();
-    expect(selected).toEqual([{ selection_source: 'user' }]);
   });
 });
 

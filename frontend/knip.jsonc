@@ -54,8 +54,6 @@
     // The TypeScript API service (docs/architecture.md). Its generated inputs
     // are consumed wholesale, so unused generated table types are expected.
     "services/api": {
-      // Native development seed orchestration invokes this CLI entrypoint directly.
-      "entry": ["src/cli/seed-audit.ts"],
       "project": ["src/**/*.ts", "scripts/**/*.ts", "test/**/*.ts"],
       "ignore": ["src/generated/**"],
     },

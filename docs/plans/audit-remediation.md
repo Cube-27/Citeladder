@@ -83,8 +83,8 @@ folder.
   from the existing test fixtures (`test/fixture-workspace.ts`), never from the
   moved scripts.
 - **The committed password:** removing it from the tree does not remove it from
-  git history. Rotate any account in any environment that ever used
-  `DemoPass123!`.
+  git history. Rotate any account in any environment that ever used the
+  password from the former `config/dev-seed.ts`.
 - **OPS-013:** also git-ignore `frontend/apps/api-host/.dev.vars`, and add
   `.dev.vars*` to `.dockerignore`.
 - **Done when:**

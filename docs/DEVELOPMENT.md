@@ -444,33 +444,15 @@ before resets, grants, billing changes, live-provider calls or external mutation
 and verify the target/environment first. Each command states where it runs.
 Use `--help` when arguments are not shown here.
 
-Seed local demo data (**development or disposable database only**):
+Local seed, reset and dev-login tools are not part of the repository. Each
+developer keeps them, if at all, in the git-ignored
+`frontend/services/api/local/` folder and runs them with `node` from there;
+nothing in CI, Compose or the tests depends on them. Tests build their data
+from the test fixtures (`frontend/services/api/test/fixture-workspace.ts`).
 
-The host-side seeder requires Node 26 and installed frontend dependencies. It
-uses the native identity, project, prompt, provider, audit, integration, Site Health
-and Opportunity owners with explicit recorded transports. It requires a local
-development database and clears inherited provider credentials. No separately
-running worker is needed. Repeated static seeding preserves the same identities
-and rows; execution appends fresh evidence. The agency workspace has its own
-Owner and grants; the demo identity joins it as Admin.
-
-From `frontend/`:
+Grant a Site Health allowance (from `frontend/`):
 
 ```bash
-pnpm --filter @citeladder/api seed:dev
-pnpm --filter @citeladder/api seed:dev --static-only
-```
-
-Provision a local development login, or grant a Site Health allowance:
-
-From the repository root in PowerShell:
-
-```powershell
-# The PowerShell provision-dev-login wrapper manages production only.
-# Local provisioning remains available through the native CLI, with the password on stdin:
-pnpm --dir frontend --filter @citeladder/api provision:dev --email <email> --password-stdin --counter-allowance <allowance>
-# Native local-only login admission and catalog initialization; an existing login must authenticate.
-# Run the following native commands from frontend/:
 pnpm --filter @citeladder/api entitlement:site-health --actor <admin-email> --workspace-id <workspace-uuid> --account-id <account-uuid> --reason "local allowance" --idempotency-key <key> --monitored-urls <allowance> --valid-from <ISO-date> # add --apply after preview
 ```
 
@@ -535,24 +517,6 @@ posture keeps checkout and the no-card campaign disabled with card trial
 unavailable. In production, checkout stays hidden behind the non-public
 `billing_checkout` grant issued with `billing:admin grant`
 ([billing decisions](billing-decisions.md) B2, B42).
-
-From the repository root, reset and recreate the database named by
-`DATABASE_URL` (**never against shared, staging, or production data**):
-
-```bash
-./scripts/reset-db.ps1
-```
-
-The wrapper runs `pnpm --filter @citeladder/api reset:db`: it authorizes the
-explicit target once, drops and recreates it and applies every SQL migration
-(`src/cli/reset-schema.ts`), then sequences bounded native login/catalog
-provisioning with the same environment. Dotenv-disable admission applies to both
-stages. Failures stop the sequence.
-
-The reset runs without an extra token only when `APP_ENV` is a development
-value and `DATABASE_URL` targets `localhost`, `127.0.0.1`, or `::1`. A remote
-host is refused even under `APP_ENV=development`; the exceptional case requires
-the explicit `RESET_CONFIRM_DESTRUCTIVE=drop-and-recreate` token.
 
 ## Migrations (forward only)
 
