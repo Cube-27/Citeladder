@@ -82,6 +82,12 @@ const EVIDENCE_HEADERS = [
   'last-modified',
   'strict-transport-security',
 ];
+/**
+ * Headers whose separate lines carry separate scopes: an agent-scoped
+ * `X-Robots-Tag` line does not cover a generic one. Their lines are kept apart,
+ * one per line, rather than comma-joined.
+ */
+const LINE_SCOPED_HEADERS = new Set(['x-robots-tag']);
 export type WebsiteFetcher = (url: string, options: FetchOptions) => Promise<FetchedPage>;
 type Dns = (host: string) => Promise<readonly { address: string; family: number }[]>;
 
@@ -245,9 +251,13 @@ export async function pinnedRequest(
                   String(response.headers['content-type'] ?? ''),
                 )?.[1] ?? '',
               headers: Object.fromEntries(
-                (options.headerNames ?? EVIDENCE_HEADERS).flatMap((key) =>
-                  typeof response.headers[key] === 'string' ? [[key, response.headers[key]]] : [],
-                ),
+                (options.headerNames ?? EVIDENCE_HEADERS).flatMap((key) => {
+                  const lines = response.headersDistinct[key];
+                  if (LINE_SCOPED_HEADERS.has(key) && lines) return [[key, lines.join('\n')]];
+                  return typeof response.headers[key] === 'string'
+                    ? [[key, response.headers[key]]]
+                    : [];
+                }),
               ),
             });
           } catch (error) {

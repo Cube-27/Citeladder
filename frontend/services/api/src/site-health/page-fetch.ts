@@ -28,7 +28,8 @@ import { hardExcluded, inScope } from './url-admission.ts';
 const a = policy.site_health.page_analysis.acquisition;
 const codes = a.error_codes;
 const BOT_MARKERS = a.bot_block_body_markers.map((marker) => marker.toLowerCase());
-const RETRYABLE = new Set([codes.timeout, codes.connection_failed]);
+// A redirect hop refused for an unreachable robots.txt (429, 5xx, network) may pass later.
+const RETRYABLE = new Set([codes.timeout, codes.connection_failed, codes.robots_unavailable]);
 const FETCH_ERROR_CODES: Record<string, string> = {
   invalid_url: codes.url_admission_rejected,
   content_type: codes.unsupported_content_type,
@@ -140,7 +141,9 @@ export class SitePageFetcher {
       detail =
         'robots.txt is access-blocked (401/403); the crawler does not bypass access controls';
     }
-    return { ok: false, code, detail, retryable: false, calls: [], latencyMs: null };
+    // An unreachable robots.txt (429, 5xx, network) may answer later; the task retries.
+    const retryable = robots.unavailable;
+    return { ok: false, code, detail, retryable, calls: [], latencyMs: null };
   }
 
   /** Whether robots.txt excludes any URL this fetch requested under an `ignore` choice. */
