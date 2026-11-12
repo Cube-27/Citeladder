@@ -89,26 +89,7 @@ export async function countUse(
   subject: string,
   { amount = 1, at = new Date() }: { amount?: number; at?: Date } = {},
 ): Promise<void> {
-  const { started, expires } = windowOf(windowSeconds, at);
-  await db
-    .insertInto('usage_windows')
-    .values({
-      id: randomUUID(),
-      subject_kind: kind,
-      subject_hash: subjectHash(subject),
-      operation,
-      window_started_at: started,
-      expires_at: expires,
-      count: amount,
-      created_at: at,
-      updated_at: at,
-    })
-    .onConflict((conflict) =>
-      conflict
-        .constraint('uq_usage_window_subject_operation_start')
-        .doUpdateSet({ count: sql`usage_windows.count + ${amount}`, updated_at: at }),
-    )
-    .execute();
+  await addToWindow(db, kind, subject, { operation, windowSeconds, amount }, at);
 }
 
 /** Whether `subject` has used all of `budget` in the current window. */
@@ -179,9 +160,36 @@ async function enforceSubjectRequest(
   if (![limit, windowSeconds, amount].every((value) => Number.isInteger(value) && value > 0)) {
     throw new Error('Usage limit, window and amount must be positive integers');
   }
-  const { started, expires } = windowOf(windowSeconds, now);
+  const { expires } = windowOf(windowSeconds, now);
   if (amount > limit) throw throttled(subjectKind, operation, expires, now);
-  const consumed = await db
+  const admitted = await addToWindow(
+    db,
+    subjectKind,
+    subjectValue,
+    { operation, windowSeconds, amount, limit },
+    now,
+  );
+  if (!admitted) throw throttled(subjectKind, operation, expires, now);
+}
+
+/**
+ * Add `amount` to the subject's current window in one atomic upsert. With a
+ * `limit`, an addition that would pass it changes nothing and returns false.
+ */
+async function addToWindow(
+  db: Database,
+  subjectKind: BudgetSubject,
+  subjectValue: string,
+  {
+    operation,
+    windowSeconds,
+    amount,
+    limit,
+  }: Pick<Budget, 'operation' | 'windowSeconds'> & { amount: number; limit?: number },
+  now: Date,
+): Promise<boolean> {
+  const { started, expires } = windowOf(windowSeconds, now);
+  const added = await db
     .insertInto('usage_windows')
     .values({
       id: randomUUID(),
@@ -194,15 +202,17 @@ async function enforceSubjectRequest(
       created_at: now,
       updated_at: now,
     })
-    .onConflict((conflict) =>
-      conflict
+    .onConflict((conflict) => {
+      const update = conflict
         .constraint('uq_usage_window_subject_operation_start')
-        .doUpdateSet({ count: sql`usage_windows.count + ${amount}`, updated_at: now })
-        .where(sql<boolean>`usage_windows.count + ${amount} <= ${limit}`),
-    )
+        .doUpdateSet({ count: sql`usage_windows.count + ${amount}`, updated_at: now });
+      return limit === undefined
+        ? update
+        : update.where(sql<boolean>`usage_windows.count + ${amount} <= ${limit}`);
+    })
     .returning('count')
     .executeTakeFirst();
-  if (consumed === undefined) throw throttled(subjectKind, operation, expires, now);
+  return added !== undefined;
 }
 
 const DAY_MS = 86_400_000;

@@ -16,12 +16,11 @@ import {
   registrationResponseSchema,
 } from '@citeladder/contracts/auth';
 import type {
+  AccountEntryRequest,
   MailboxChallengeRequest,
   MailboxLinkRequest,
   PasswordChangeRequest,
   PasswordConfirmationRequest,
-  SignInRequest,
-  SignUpRequest,
 } from '@citeladder/contracts/auth-requests';
 import { strictValidate } from '@citeladder/contracts/validation';
 import type {
@@ -96,7 +95,7 @@ export const authApi = {
         accept_terms: true,
         turnstile_token: input.turnstileToken,
         return_to: input.returnTo,
-      } satisfies SignUpRequest,
+      } satisfies AccountEntryRequest,
       options,
     );
     return strictValidate(registrationResponseSchema, res, 'auth.register');
@@ -117,7 +116,7 @@ export const authApi = {
         terms_revision: input.termsRevision,
         accept_terms: true,
         turnstile_token: input.turnstileToken,
-      } satisfies SignInRequest,
+      } satisfies AccountEntryRequest,
       options,
     );
     return strictValidate(authResponseSchema, res, 'auth.login').user;

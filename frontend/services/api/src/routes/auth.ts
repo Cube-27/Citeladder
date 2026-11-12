@@ -10,12 +10,11 @@ import {
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import { safeAuthReturnPath } from '@citeladder/contracts/auth-continuation';
 import {
+  accountEntryRequestSchema,
   mailboxChallengeRequestSchema,
   mailboxLinkRequestSchema,
   passwordChangeRequestSchema,
   passwordConfirmationRequestSchema,
-  signInRequestSchema,
-  signUpRequestSchema,
 } from '@citeladder/contracts/auth-requests';
 import { sealContinuation, openContinuation, continuationCookie } from '../auth/continuation.ts';
 import { z } from 'zod';
@@ -66,13 +65,9 @@ import {
   requireCurrentRevision,
 } from '../workspaces/policies.ts';
 
-// Signing up and signing in are both Terms decisions: the request must carry it.
-// Both carry the Turnstile token solved on the form; sign-in only once challenged.
-const signInSchema = signInRequestSchema.extend({
-  password: passwordSchema,
-  turnstile_token: turnstileTokenSchema,
-});
-const signUpSchema = signUpRequestSchema.extend({
+// Signing up and signing in share one request: a Terms decision and the
+// Turnstile token solved on the form (sign-in carries one only once challenged).
+const accountEntrySchema = accountEntryRequestSchema.extend({
   password: passwordSchema,
   turnstile_token: turnstileTokenSchema,
 });
@@ -354,11 +349,11 @@ export const authRoutes = [
     path: '/api/v1/auth/register',
     response: registrationResponseSchema,
     status: 202,
-    body: signUpSchema,
+    body: accountEntrySchema,
     async handle({ c, db, config }) {
       if (config.demo.enabled || !config.auth.publicSignup)
         throw new ApiError(403, 'Registration is disabled');
-      const payload = await readBody(c, signUpSchema);
+      const payload = await readBody(c, accountEntrySchema);
       // Refusals that need no verification come first, so they spend no token.
       assertSignupDomainAllowed(config, payload.email);
       requireCurrentRevision(payload.terms_revision);
@@ -376,10 +371,10 @@ export const authRoutes = [
     ...base,
     path: '/api/v1/auth/login',
     response: authResponseSchema,
-    body: signInSchema,
+    body: accountEntrySchema,
     async handle({ c, db, config }) {
       if (demoAccessExpired(config)) throw new ApiError(401, 'Demo access has expired');
-      const payload = await readBody(c, signInSchema);
+      const payload = await readBody(c, accountEntrySchema);
       // A form opened before the Terms changed must be reloaded, not accepted.
       requireCurrentRevision(payload.terms_revision);
       await meter(db, c, config);

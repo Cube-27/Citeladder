@@ -654,11 +654,12 @@ describe('password auth routes', () => {
     });
 
     it('challenges every sign-in once failures everywhere reach the global ceiling', async () => {
-      const clearGlobal = () =>
-        db
+      const clearGlobal = async () => {
+        await db
           .deleteFrom('usage_windows')
           .where('operation', '=', 'auth.login.global_failure')
           .execute();
+      };
       await clearGlobal();
       onTestFinished(clearGlobal);
       const site = freshSite();

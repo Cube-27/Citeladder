@@ -940,12 +940,13 @@ it('keeps a registration flood from spending the authorization budget approved c
       .where('window_started_at', '=', started)
       .execute();
   });
-  const authorize = (clientId: string, visitor: string) =>
-    service
-      .request(`${protocol}/authorize?${authorizationQuery(clientId)}`, {
-        headers: { 'x-test-visitor': visitor },
-      })
-      .then((response) => new URL(response.headers.get('location')!));
+  const authorize = async (clientId: string, visitor: string) => {
+    const response = await service.request(
+      `${protocol}/authorize?${authorizationQuery(clientId)}`,
+      { headers: { 'x-test-visitor': visitor } },
+    );
+    return new URL(response.headers.get('location')!);
+  };
   // Freshly registered clients flood authorization from one /64: its own pool
   // of three admits three, then refuses, and the shared budget is untouched.
   const flood = [await client(), await client()];

@@ -48,7 +48,8 @@ export function clientNetwork(identity: string, scope: ClientNetworkScope): stri
   const address = ipaddr.process(identity);
   if (address.kind() === 'ipv4') return address.toString();
   const prefix = clientNetworkPrefixes[scope];
-  return `${ipaddr.IPv6.networkAddressFromCIDR(`${address.toString()}/${prefix}`).toString()}/${prefix}`;
+  const network = ipaddr.IPv6.networkAddressFromCIDR(`${address.toString()}/${prefix}`);
+  return `${network.toString()}/${prefix}`;
 }
 
 /** The trusted visitor's network: the subject of every per-visitor (`client`) budget. */
