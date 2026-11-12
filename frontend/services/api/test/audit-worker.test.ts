@@ -133,6 +133,30 @@ function worker(
     { owner: 'worker', taskScope: scope, send, env: {}, ...(now ? { now } : {}) },
   );
 }
+/** A Google AI Overview whose paid submission is known (`aio-task`), awaiting its free retrieval. */
+async function submittedOverview(pollCount: number) {
+  const t = await seed(true, [], 'google_ai_overview');
+  const connectionId = record(t.task.provider_route_snapshot).connection_id as string;
+  const { credential_revision } = await db
+    .selectFrom('provider_connections')
+    .select('credential_revision')
+    .where('id', '=', connectionId)
+    .executeTakeFirstOrThrow();
+  await db
+    .updateTable('audit_tasks')
+    .set({
+      provider_submission_ref: 'paid-intent',
+      provider_task_submitted_at: new Date(Date.now() - 60000),
+      provider_task_id: 'aio-task',
+      provider_poll_count: pollCount,
+      attempt_count: 1,
+      provider_connection_id: connectionId,
+      provider_credential_revision: credential_revision,
+    })
+    .where('id', '=', t.task.id)
+    .execute();
+  return t;
+}
 async function ready(id: string) {
   await db
     .updateTable('audit_tasks')
@@ -601,26 +625,7 @@ describe('leased audit worker phases', () => {
     expect(record(artifact.usage).provider_cost_microusd).toBe(2000);
   });
   it('stops a Google AI Overview at the poll ceiling without another provider call', async () => {
-    const t = await seed(true, [], 'google_ai_overview');
-    const connectionId = record(t.task.provider_route_snapshot).connection_id as string;
-    const { credential_revision } = await db
-      .selectFrom('provider_connections')
-      .select('credential_revision')
-      .where('id', '=', connectionId)
-      .executeTakeFirstOrThrow();
-    await db
-      .updateTable('audit_tasks')
-      .set({
-        provider_submission_ref: 'paid-intent',
-        provider_task_submitted_at: new Date(Date.now() - 60000),
-        provider_task_id: 'aio-task',
-        provider_poll_count: 1000,
-        attempt_count: 1,
-        provider_connection_id: connectionId,
-        provider_credential_revision: credential_revision,
-      })
-      .where('id', '=', t.task.id)
-      .execute();
+    const t = await submittedOverview(1000);
     let calls = 0;
     await worker(t, async () => {
       calls++;
@@ -641,25 +646,7 @@ describe('leased audit worker phases', () => {
     ).toEqual({ outcome: 'execution_failure', error_code: 'poll_ceiling_exceeded' });
   });
   it('polls a paid Google AI Overview again when saving its answer fails, never writing it off', async () => {
-    const t = await seed(true, [], 'google_ai_overview');
-    const connectionId = record(t.task.provider_route_snapshot).connection_id as string;
-    const { credential_revision } = await db
-      .selectFrom('provider_connections')
-      .select('credential_revision')
-      .where('id', '=', connectionId)
-      .executeTakeFirstOrThrow();
-    await db
-      .updateTable('audit_tasks')
-      .set({
-        provider_submission_ref: 'paid-intent',
-        provider_task_submitted_at: new Date(Date.now() - 60000),
-        provider_task_id: 'aio-task',
-        attempt_count: 1,
-        provider_connection_id: connectionId,
-        provider_credential_revision: credential_revision,
-      })
-      .where('id', '=', t.task.id)
-      .execute();
+    const t = await submittedOverview(0);
     const paths: string[] = [];
     let tick = Date.now();
     let saves = 0;

@@ -95,7 +95,7 @@ describe('provider-free audit estimates and persisted exports', () => {
     expect([estimate.prompt_count, estimate.execution_count, tasks.length]).toEqual([1, 1, 1]);
     await expect(
       estimateAudit(db, t.workspaceId, { ...input, prompt_ids: [overPlan] }, runtime),
-    ).rejects.toMatchObject({ status: 403, code: 'limit_exceeded' });
+    ).rejects.toMatchObject({ status: 403, code: 'occupancy_limit_exceeded' });
   });
   it('exports persisted scores and frozen unknown retrieval while neutralizing spreadsheet formulas', async () => {
     const t = await auditTenant(db, fixtures),
