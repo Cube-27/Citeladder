@@ -89,17 +89,7 @@ describe('AiReferralsScreen', () => {
     expect(screen.getByText('20.0%')).toBeInTheDocument();
   });
 
-  it('says excluded landing rows are not available without a landing report, and counts them with one', async () => {
-    mswServer.use(http.get(endpoint, () => HttpResponse.json(dashboard)));
-    const view = renderWithProviders(<AiReferralsScreen />, {
-      projectSelection: { activeProject },
-    });
-    expect(
-      await screen.findByText(/Landing rows excluded for out-of-scope hosts: not available\./),
-    ).toBeVisible();
-    expect(screen.queryByText(/0 landing rows excluded/)).not.toBeInTheDocument();
-    view.unmount();
-
+  it('says excluded landing rows are not available without an imported landing day, and counts them with one', async () => {
     const day = {
       revision: 1,
       flags: [],
@@ -113,8 +103,31 @@ describe('AiReferralsScreen', () => {
           ...dashboard,
           analytics_quality: {
             ga4_landing_daily: [
+              { ...day, day: '2026-07-20', revision: null, flags: [], excluded_hosts: 0 },
+            ],
+          },
+        }),
+      ),
+    );
+    const view = renderWithProviders(<AiReferralsScreen />, {
+      projectSelection: { activeProject },
+    });
+    expect(
+      await screen.findByText(/Landing rows excluded for out-of-scope hosts: not available\./),
+    ).toBeVisible();
+    expect(screen.queryByText(/0 landing rows excluded/)).not.toBeInTheDocument();
+    view.unmount();
+
+    mswServer.use(
+      http.get(endpoint, () =>
+        HttpResponse.json({
+          ...dashboard,
+          analytics_quality: {
+            ga4_landing_daily: [
               { ...day, day: '2026-07-20', excluded_hosts: 0 },
               { ...day, day: '2026-07-21', excluded_hosts: 0 },
+              // A day never imported carries no count of its own.
+              { ...day, day: '2026-07-22', revision: null, excluded_hosts: 0 },
             ],
           },
         }),

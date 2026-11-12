@@ -104,8 +104,11 @@ export function ReferralQuality({ data }: Readonly<{ data: AiReferrals }>) {
       Object.values(data.analytics_quality).flatMap((days) => days.flatMap((d) => d.flags)),
     ),
   ];
-  // Without a landing report there is no count of excluded rows, which is not zero.
-  const landingDays = data.analytics_quality.ga4_landing_daily ?? [];
+  // Only an imported landing day (a persisted revision) counts its excluded
+  // rows; without one there is no count, which is not zero.
+  const landingDays = (data.analytics_quality.ga4_landing_daily ?? []).filter(
+    (q) => q.revision !== null,
+  );
   const excluded = landingDays.length
     ? `${formatCount(landingDays.reduce((sum, q) => sum + q.excluded_hosts, 0))} landing rows excluded for out-of-scope hosts.`
     : 'Landing rows excluded for out-of-scope hosts: not available.';

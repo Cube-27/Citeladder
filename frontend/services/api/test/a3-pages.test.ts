@@ -649,6 +649,19 @@ describe('A3 persisted Pages join', () => {
     expect(await read(seed, 'read_ai_traffic_pages', filters)).toMatchObject({
       state: 'available',
     });
+    // Revoking the source keeps its retained history readable.
+    const setStatus = (status: string) =>
+      db.updateTable('crawl_log_sources').set({ status }).where('id', '=', sourceId).execute();
+    await setStatus('revoked');
+    try {
+      expect(await read(seed, 'read_crawl_logs', { view: 'summary', ...filters })).toMatchObject({
+        state: 'available',
+        connection: 'not_connected',
+        requests: 7,
+      });
+    } finally {
+      await setStatus('active');
+    }
   });
 });
 

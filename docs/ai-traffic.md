@@ -310,8 +310,9 @@ from `src/crawl-logs/` and owns the `ai_traffic_insights_refresh` kind.
 `read_ai_traffic_pages`, `read_ai_traffic_url` and `read_ai_traffic_insights` share
 these reads. The URL tool canonicalizes with the existing page owner and rejects
 off-origin input. Reads never enqueue or rebuild insights. The Pages and URL tools
-answer `unavailable` with reason `not_connected` when the window has no crawl-log
-source, no GA4 mapping and no completed Visibility run, rather than empty rows.
+answer `unavailable` with reason `not_connected` when the window has no active
+crawl-log source nor retained crawl measurement, no GA4 mapping and no completed
+Visibility run, rather than empty rows.
 
 The referrals read reports the persisted snapshot's window; with no snapshot both
 `window_start` and `window_end` are null, and Overview offers Connect GA4 rather
@@ -344,8 +345,9 @@ input population. Partial coverage displays a notice. Copy describes co-occurren
 only, and Overview links to persisted pattern-filtered Pages and URL detail.
 
 `read_crawl_logs` supplies summary, crawler, coverage and individual request
-(`requests`) views; without an active crawl-log source it answers `unavailable`
-with reason `not_connected`. Business context accepts the
+(`requests`) views; without an active crawl-log source or a retained measurement
+in the window it answers `unavailable` with reason `not_connected`, while a
+revoked source's history stays readable. Business context accepts the
 `crawl_logs` section. MCP and the in-app Agent call the same authorized readers.
 
 [`crawl-logs.json`](../frontend/services/api/src/config/crawl-logs.json) owns

@@ -10,6 +10,7 @@ import {
   PerformanceToolbar,
   PerformanceWindowCaption,
   performanceNotices,
+  ProjectionFailure,
 } from './performance-chrome';
 import { Ga4SummaryRow, MetricCards } from './metric-cards';
 import { PerformanceBreakdowns } from './performance-breakdowns';
@@ -34,6 +35,7 @@ import {
   performanceQueries,
   type PerformanceDashboard,
   type PerformanceGranularity,
+  type ProjectReadiness,
 } from '@/lib/api/performance';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -91,12 +93,13 @@ function compareLabel(selection: RangeSelection): string {
 }
 
 /**
- * What the selected snapshot can show. `bingConnected` is the project's Bing
- * connection: a connected Bing that measured nothing still has its panel,
- * stating zero rows, while a project without one never shows it.
+ * What the selected snapshot can show. A connected Bing (readiness
+ * `providers`) that measured nothing still has its panel, stating zero rows,
+ * while a project without one never shows it.
  */
-function evidenceAvailability(data: PerformanceDashboard, bingConnected: boolean) {
+function evidenceAvailability(data: PerformanceDashboard, readiness: ProjectReadiness | undefined) {
   const { totals, snapshot_id: snapshotId } = data.selected;
+  const bingConnected = readiness?.providers.includes('bing') ?? false;
   const hasSearchConsoleTotals = totals.clicks !== null || totals.impressions !== null;
   const hasSearchConsoleDimensions = [
     data.dimension_counts.query,
@@ -147,7 +150,10 @@ function coverageSummary(coverage: PerformanceDashboard['coverage']): string {
 function PerformanceEmptyState({
   data,
   projecting,
-}: Readonly<{ data: PerformanceDashboard; projecting: boolean }>) {
+  failed,
+}: Readonly<{ data: PerformanceDashboard; projecting: boolean; failed: boolean }>) {
+  // A failed build is reported by `ProjectionFailure`, never as "no evidence".
+  if (failed) return null;
   if (projecting) {
     return (
       <QueryState
@@ -368,7 +374,7 @@ export function PerformanceScreen() {
   const selectedLabel = describeWindow(selectedWindow);
   const comparisonLabel = compareLabel(selection);
   const series = chartSeries(selectedWindow, comparisonWindow, activeMetrics);
-  const evidence = evidenceAvailability(data, readiness.data?.providers.includes('bing') ?? false);
+  const evidence = evidenceAvailability(data, readiness.data);
   const hasEvidence = evidence.hasSearchConsoleBreakdowns || evidence.hasGa4 || evidence.hasBing;
   const coverage = performanceCoverage(data, hasEvidence);
 
@@ -422,20 +428,14 @@ export function PerformanceScreen() {
           })}
         />
 
-        {projection.failure ? (
-          <QueryState
-            kind="error"
-            title="Couldn't build this range"
-            error={projection.failure.error}
-            fallback="Building this range from imported data failed."
-            onRetry={projection.failure.retry}
-            pending={projection.failure.pending}
+        <ProjectionFailure failure={projection.failure} />
+        {!hasEvidence ? (
+          <PerformanceEmptyState
+            data={data}
+            projecting={projection.projecting}
+            failed={projection.failure !== null}
           />
-        ) : null}
-        {!hasEvidence && !projection.failure ? (
-          <PerformanceEmptyState data={data} projecting={projection.projecting} />
-        ) : null}
-        {hasEvidence ? (
+        ) : (
           <>
             {/* One card holds the strip and the plot it drives: selecting a card
           changes the lines directly beneath it, so a gap between them would
@@ -477,7 +477,7 @@ export function PerformanceScreen() {
               hasBing={evidence.hasBing}
             />
           </>
-        ) : null}
+        )}
         <DateRangeDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}

@@ -424,11 +424,6 @@ function crawlConnection(
   return sources.some((s) => s.connection === 'connected') ? 'connected' : 'awaiting_data';
 }
 
-/** The connection alone, for a read that must say "not connected" before reading figures. */
-export async function crawlLogConnection(db: Database, scope: CrawlScope) {
-  return crawlConnection((await sourceList(db, scope)).items);
-}
-
 export async function crawlSummary(db: Database, scope: CrawlScope, input: CrawlReadOptions = {}) {
   const options = await withReportingTimezone(db, scope, input);
   const w = crawlWindow(options),

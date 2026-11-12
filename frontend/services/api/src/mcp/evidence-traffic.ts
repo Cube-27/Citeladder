@@ -5,7 +5,6 @@ import {
   activityPage,
   coveragePage,
   crawlerPage,
-  crawlLogConnection,
   crawlSummary,
   type CrawlReadOptions,
 } from '../crawl-logs/reads.ts';
@@ -210,10 +209,11 @@ export async function crawlLogsRead(
   { db, scope }: ProjectRead,
   args: CrawlArgs & { view: 'summary' | 'crawlers' | 'coverage' | 'requests' },
 ): Promise<Evidence> {
-  // No source is its own state: empty views would read as an observed zero.
-  if ((await crawlLogConnection(db, scope)) === 'not_connected')
-    return unavailable('not_connected');
   const options = crawlOptions(args);
+  // No source and nothing retained in the window is its own state: empty
+  // views would read as an observed zero. A revoked source keeps its history.
+  if (crawlNotConnected(await crawlSummary(db, scope, options)))
+    return unavailable('not_connected');
   const reader = {
     summary: crawlSummary,
     crawlers: crawlerPage,
@@ -223,9 +223,14 @@ export async function crawlLogsRead(
   return { state: 'available', ...(await reader(db, scope, options)) };
 }
 
+/** No crawl-log source is connected and the window holds no retained crawl measurement. */
+function crawlNotConnected(crawl: Awaited<ReturnType<typeof crawlSummary>>) {
+  return crawl.connection === 'not_connected' && crawl.requests === null;
+}
+
 /**
- * True when none of a page's AI-activity sources exists for the window: no
- * crawl-log source, no GA4 property and no completed AI Visibility run.
+ * True when none of a page's AI-activity sources answers for the window: no
+ * crawl logs, no GA4 property and no completed AI Visibility run.
  */
 async function aiTrafficNotConnected(
   db: ProjectRead['db'],
@@ -234,7 +239,7 @@ async function aiTrafficNotConnected(
 ) {
   const context = await pageContext(db, scope, crawlOptions(args));
   return (
-    context.crawl.connection === 'not_connected' &&
+    crawlNotConnected(context.crawl) &&
     !context.ga4Connected &&
     context.citations === 'no_completed_run'
   );

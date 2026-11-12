@@ -11,6 +11,8 @@ import type { usePerformanceSync } from './use-performance-sync';
 import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import type { StatusMessage } from '@/components/ui/status-line';
+import { QueryState } from '@/components/ui/query-state';
+import type { useRangeProjection } from './use-range-projection';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { SegmentedAction, SegmentedControl } from '@/components/ui/tabs';
 import type { PerformanceGranularity } from '@/lib/api/performance';
@@ -201,6 +203,23 @@ function missingCoverageNotice(
     return 'The comparison period has no imported data, so its columns show as not measured.';
   }
   return null;
+}
+
+/** A failed range build: what happened, and Retry for exactly that window. */
+export function ProjectionFailure({
+  failure,
+}: Readonly<{ failure: ReturnType<typeof useRangeProjection>['failure'] }>) {
+  if (!failure) return null;
+  return (
+    <QueryState
+      kind="error"
+      title="Couldn't build this range"
+      error={failure.error}
+      fallback="Building this range from imported data failed."
+      onRetry={failure.retry}
+      pending={failure.pending}
+    />
+  );
 }
 
 /**
