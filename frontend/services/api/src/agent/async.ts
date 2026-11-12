@@ -28,7 +28,7 @@ export function stoppableReads(db: Database, signal: AbortSignal): Database {
       signal.throwIfAborted();
       return node;
     },
-    transformResult: async ({ result }) => result,
+    transformResult: ({ result }) => Promise.resolve(result),
   };
   return db.withPlugin(stop);
 }
