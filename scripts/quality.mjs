@@ -250,6 +250,7 @@ function frontendChecks() {
   pnpm('Frontend complexity policy', ['check:complexity', ...policyDiffArgs()]);
   pnpm('Duplication policy', ['check:duplicates', ...policyDiffArgs()]);
   pnpm('Design-system and architecture policy', ['check:policy']);
+  pnpm('Browser support matrix', ['check:compat']);
   pnpm('Frontend dead-code and dependency policy', ['check:dead-code']);
 }
 

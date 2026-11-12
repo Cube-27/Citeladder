@@ -205,6 +205,7 @@ pnpm exec vp test run "<test-path>" # targeted Vitest via Vite+; network mocked 
 pnpm lint             # Oxlint via Vite+ (`vp lint`; React/TypeScript/a11y rules)
 pnpm check            # vp check: format + lint; warnings and unused-disable directives fail
 pnpm check:policy     # architecture, design-token, CSS/TSX/SVG, contrast and type-discipline guards
+pnpm check:compat     # browser source uses no API newer than the package.json browserslist
 pnpm check:dead-code  # Knip module-graph/dependency gate
 pnpm exec tsc --noEmit # type check (Vite+ type-aware lint stays off; see vp-shared-config.ts)
 pnpm build            # Astro marketing SSR build

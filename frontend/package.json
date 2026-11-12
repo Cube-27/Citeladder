@@ -43,6 +43,7 @@
     "check:duplicates": "node scripts/check-jscpd.mjs",
     "report:duplicates:tests": "node scripts/check-jscpd.mjs --tests",
     "check:policy": "node scripts/check-design-system.mjs && node scripts/check-frontend-architecture.mjs",
+    "check:compat": "node scripts/check-browser-compat.mjs",
     "check:contract": "pnpm --filter @citeladder/api check:routes",
     "check:bundle": "node scripts/check-bundle-budget.mjs",
     "check:dead-code": "knip",
@@ -88,6 +89,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@mdn/browser-compat-data": "8.1.9",
     "@playwright/test": "^1.65.0",
     "@tailwindcss/postcss": "^4.3.4",
     "@testing-library/jest-dom": "^7.0.1",
@@ -98,6 +100,7 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "^6.2.1",
     "@vitest/coverage-v8": "catalog:",
+    "browserslist": "4.29.5",
     "jscpd": "5.4.2",
     "jsdom": "^31.0.0",
     "knip": "6.44.1",
@@ -116,12 +119,12 @@
     "node": ">=26"
   },
   "browserslist": [
-    "chrome >= 111",
-    "edge >= 111",
+    "chrome >= 120",
+    "edge >= 120",
     "firefox >= 128",
-    "safari >= 16.4",
-    "ios_saf >= 16.4",
-    "samsung >= 23",
+    "safari >= 17.4",
+    "ios_saf >= 17.4",
+    "samsung >= 25",
     "not dead"
   ]
 }
