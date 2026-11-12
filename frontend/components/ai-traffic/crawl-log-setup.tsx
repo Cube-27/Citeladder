@@ -1,4 +1,3 @@
-'use client';
 import {
   collectionPointLabel,
   COLLECTION_POINTS,

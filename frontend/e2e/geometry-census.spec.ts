@@ -452,6 +452,7 @@ const RUNS = [
   workspace_id: FIXTURE_PROJECT.workspace_id,
   project_id: FIXTURE_PROJECT.id,
   status,
+  cancelable: false,
   benchmark_mode: 'consumer_like',
   repetitions: 3,
   random_seed: '7',

@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 
-import { activationSchema, resolvedQuoteSchema } from '@citeladder/contracts/billing';
+import {
+  activationSchema,
+  credentialModeSchema,
+  resolvedQuoteSchema,
+} from '@citeladder/contracts/billing';
 import { subscriptionCheckoutRequestSchema } from '@citeladder/contracts/billing-requests';
 import type { Database } from '../db/database.ts';
 import type { ServiceConfig } from '../config.ts';
@@ -26,8 +30,6 @@ import {
   ProviderError,
   type BillingProvider,
 } from './razorpay.ts';
-
-const credentialMode = z.enum(['byok', 'funded']);
 
 const evidence = subscriptionCheckoutRequestSchema.shape;
 /** The state code and GSTIN must also be valid stored-identity values. */
@@ -255,7 +257,7 @@ function purchaseIntent(
     intent = baseIntent(
       config.billing,
       plan,
-      credentialMode.parse(request.mode),
+      credentialModeSchema.parse(request.mode),
       identity.country,
       identity.identity,
       frozen.revision,
@@ -270,7 +272,7 @@ function purchaseIntent(
     if (!item) refuse('catalog_key_unknown');
     intent = packIntent(config.billing, item, {
       kind: request.kind,
-      mode: credentialMode.parse(current!.credential_mode),
+      mode: credentialModeSchema.parse(current!.credential_mode),
       quantity: request.quantity,
       planKey: current!.catalog_key,
       country: identity.country,

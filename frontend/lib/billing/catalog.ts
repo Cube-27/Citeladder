@@ -16,8 +16,10 @@ import type {
   CredentialMode,
   SelfServePlanKey,
 } from '@/lib/api/billing';
+import type { moneySchema } from '@citeladder/contracts/billing';
+import type { z } from 'zod';
 
-export type Money = { currency: 'USD' | 'INR'; amount_minor: number };
+export type Money = z.infer<typeof moneySchema>;
 
 /**
  * What a tier's headline should show. The `unavailable` variant carries the

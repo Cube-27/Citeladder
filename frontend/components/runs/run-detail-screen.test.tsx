@@ -24,6 +24,7 @@ function audit(status: Audit['status']): Audit {
     project_id: '33333333-3333-4333-8333-333333333333',
     parent_audit_id: null,
     status,
+    cancelable: status === 'running',
     benchmark_mode: 'consumer_like',
     audit_scope: 'commerce',
     model_provenance: [],

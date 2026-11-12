@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 
 import { Tooltip } from '@/components/ui/tooltip';

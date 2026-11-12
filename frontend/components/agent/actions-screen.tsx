@@ -1,5 +1,3 @@
-'use client';
-
 import { Fragment, useState, type MouseEvent } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight } from 'lucide-react';

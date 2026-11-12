@@ -1,5 +1,3 @@
-'use client';
-
 import { useRef, useState, type ComponentProps, type ReactNode, type RefObject } from 'react';
 
 import { Badge } from '@/components/ui/badge';

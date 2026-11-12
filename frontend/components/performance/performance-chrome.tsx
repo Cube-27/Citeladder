@@ -1,5 +1,3 @@
-'use client';
-
 import { ChevronDown, RefreshCw, RotateCcw } from 'lucide-react';
 
 import {

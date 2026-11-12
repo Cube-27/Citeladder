@@ -1685,6 +1685,9 @@
           "status": {
             "$ref": "#/components/schemas/AuditStatus"
           },
+          "cancelable": {
+            "type": "boolean"
+          },
           "benchmark_mode": {
             "type": "string"
           },
@@ -1807,6 +1810,7 @@
           "project_id",
           "parent_audit_id",
           "status",
+          "cancelable",
           "benchmark_mode",
           "audit_scope",
           "model_provenance",
@@ -2855,6 +2859,10 @@
           "not_found",
           "unavailable"
         ]
+      },
+      "CredentialMode": {
+        "type": "string",
+        "enum": ["byok", "funded"]
       },
       "DeclarationCheck": {
         "type": "object",
@@ -6291,8 +6299,7 @@
             "type": "string"
           },
           "credential_mode": {
-            "type": "string",
-            "enum": ["byok", "funded"]
+            "$ref": "#/components/schemas/CredentialMode"
           },
           "estimated_cost_usd": {
             "type": ["string", "null"]

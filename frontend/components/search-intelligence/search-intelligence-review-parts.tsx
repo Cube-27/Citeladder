@@ -2,8 +2,8 @@ import { estimateUsd, runEstimate } from './search-intelligence-format';
 import { SEARCH_DATASET_KINDS } from '@citeladder/contracts/search-intelligence';
 import {
   SEARCH_DATASET_LABELS,
-  SEARCH_MARKET_OPTIONS,
   searchMarketLabel,
+  searchMarketOptions,
   searchScopeLabel,
 } from '@/lib/config/search-intelligence';
 
@@ -44,10 +44,12 @@ export type Advanced = {
   saveDefaults: boolean;
 };
 
-export function marketOptions(location: string) {
-  return location && !SEARCH_MARKET_OPTIONS.some((item) => item.value === location)
-    ? [...SEARCH_MARKET_OPTIONS, { value: location, label: searchMarketLabel(Number(location)) }]
-    : SEARCH_MARKET_OPTIONS;
+/** The offered markets, plus the saved one when the server no longer offers it. */
+export function marketOptions(location: string, markets: SearchIntelligenceReadiness['markets']) {
+  const options = searchMarketOptions(markets);
+  return location && !options.some((item) => item.value === location)
+    ? [...options, { value: location, label: searchMarketLabel(Number(location), markets) }]
+    : options;
 }
 
 /**

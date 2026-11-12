@@ -1,5 +1,3 @@
-'use client';
-
 import { Archive, Check, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
 import { ProjectLink } from '@/components/ui/project-link';

@@ -1,5 +1,3 @@
-'use client';
-
 import { ClipboardList } from 'lucide-react';
 import { useState } from 'react';
 

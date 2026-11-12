@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { QueryState } from '@/components/ui/query-state';
 
 /**
- * Empty state for a project with no completed runs (design.md §9.6). The
+ * Empty state for a project with no completed runs. The
  * dashboard is a projection over completed audits, so there is nothing to
  * render until one finishes. When a run is already in progress
  * (`hasActiveRun`), the copy and CTA switch from "launch one" to "one is on

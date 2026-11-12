@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Settings2 } from 'lucide-react';
@@ -55,6 +53,7 @@ const TAB_CODEC = stringUrlCodec(
  */
 function selectDatasets(
   latestDatasets: readonly SearchIntelligenceDataset[],
+  offered: SearchIntelligenceReadiness['markets'],
   scope: string,
   market: string,
 ) {
@@ -73,7 +72,7 @@ function selectDatasets(
           `${item.location_code}:${item.language_code}`,
           {
             value: `${item.location_code}:${item.language_code}`,
-            label: `${searchMarketLabel(item.location_code)} · ${item.language_code}`,
+            label: `${searchMarketLabel(item.location_code, offered)} · ${item.language_code}`,
           },
         ]),
     ).values(),
@@ -125,6 +124,7 @@ export function SearchIntelligencePage() {
   });
   const { scopes, activeScope, markets, activeMarket, datasets } = selectDatasets(
     readiness.data?.datasets ?? [],
+    readiness.data?.markets ?? [],
     scope,
     market,
   );

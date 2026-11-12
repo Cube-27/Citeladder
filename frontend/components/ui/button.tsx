@@ -1,5 +1,3 @@
-'use client';
-
 import type { ComponentPropsWithRef, ComponentPropsWithoutRef, ReactNode, Ref } from 'react';
 import type { LucideIcon } from 'lucide-react';
 

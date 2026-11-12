@@ -1,5 +1,3 @@
-'use client';
-
 import { ChevronDown, Plus, Sparkles, Upload } from 'lucide-react';
 
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';

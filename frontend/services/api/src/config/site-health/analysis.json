@@ -10,7 +10,6 @@
         "accessibility_identifier_chars": 128,
         "reference_snippet_chars": 1024,
         "url_chars": 2048,
-        "declared_sitemaps": 16,
         "anchor_text_chars": 512,
         "author_chars": 256,
         "date_chars": 64,

@@ -1,5 +1,3 @@
-'use client';
-
 import { useEffect } from 'react';
 
 import { ChatConversation, ReplyComposer, type ChatThread } from '@/components/agent/chat-thread';

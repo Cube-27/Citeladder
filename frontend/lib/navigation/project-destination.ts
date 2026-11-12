@@ -1,5 +1,3 @@
-'use client';
-
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useCallback, useEffect } from 'react';
 

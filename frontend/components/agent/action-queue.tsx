@@ -1,5 +1,3 @@
-'use client';
-
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import type { DataTableState } from '@/components/ui/data-table';

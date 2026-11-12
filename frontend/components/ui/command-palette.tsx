@@ -1,5 +1,3 @@
-'use client';
-
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Search, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

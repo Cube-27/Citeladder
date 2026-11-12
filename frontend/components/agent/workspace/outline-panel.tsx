@@ -1,5 +1,3 @@
-'use client';
-
 import { Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { textRole } from '@/components/ui/typography';

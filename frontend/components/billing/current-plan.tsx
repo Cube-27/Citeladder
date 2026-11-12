@@ -1,5 +1,3 @@
-'use client';
-
 import type { ReactNode } from 'react';
 
 import { SubscriptionDetail } from '@/components/billing/billing-account-details';

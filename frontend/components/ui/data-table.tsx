@@ -1,5 +1,3 @@
-'use client';
-
 import { useId, useRef, type ComponentProps, type CSSProperties, type ReactNode } from 'react';
 
 import { BusyBar } from '@/components/ui/progress-bar';

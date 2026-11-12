@@ -22,6 +22,10 @@ export const contentOptimization = {
   max_urls_per_topic: 60,
   /** Owned content pages the lexical prefilter offers the model per angle. */
   owned_candidates_per_angle: 8,
+  /** Cited titles per angle the owned-match prompt shows the model. */
+  match_max_titles: 10,
+  /** Headings per offered page the owned-match prompt shows the model. */
+  match_max_headings: 10,
   /** Jaccard overlap of member URLs at which a new angle keeps an old lineage. */
   lineage_min_overlap: 0.5,
   /** Site Health page kinds that are content pages (CO15). */

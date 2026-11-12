@@ -1,4 +1,10 @@
 import { z } from 'zod';
+import {
+  billingRegionSchema,
+  credentialModeSchema,
+  currencySchema,
+  providerModeSchema,
+} from '@citeladder/contracts/billing';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
 import { policy } from '../config.ts';
@@ -19,14 +25,14 @@ const grants = z
   )
   .refine((rows) => new Set(rows.map((row) => row.key)).size === rows.length);
 const price = z.object({
-  currency: z.enum(['USD', 'INR']),
+  currency: currencySchema,
   amount_minor: amount,
   tax_behavior: z.enum(['inclusive', 'exclusive']),
   provider_price_ref: z.string().default(''),
 });
 const regional = price.extend({
   tax_minor: amount,
-  provider_mode: z.enum(['test', 'live']),
+  provider_mode: providerModeSchema,
   provider_plan_name: z.string(),
   interval: z.literal(1).default(1),
   period: z.literal('monthly').default('monthly'),
@@ -63,11 +69,11 @@ const item = z
     quantity_max: amount.min(1),
     expiry_days: amount.min(1),
     modes: z.record(
-      z.enum(['byok', 'funded']),
+      credentialModeSchema,
       z.object({
         usd_minor: amount,
         regional_prices: z.partialRecord(
-          z.enum(['india', 'international']),
+          billingRegionSchema,
           // The GST rate is frozen with the price, the one rate its quotes use.
           price.extend({
             fx_inr_per_usd: z.string().default(''),

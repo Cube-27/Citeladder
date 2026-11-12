@@ -1,5 +1,3 @@
-'use client';
-
 import { useMutation, type UseQueryResult } from '@tanstack/react-query';
 
 import { Callout } from '@/components/ui/callout';

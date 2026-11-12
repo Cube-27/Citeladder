@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * The Site Health issues catalog's filter state — ONE owner.
  *

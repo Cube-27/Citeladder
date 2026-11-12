@@ -1,5 +1,3 @@
-'use client';
-
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { mutedWhenMissing, TableCell, TableRow } from '@/components/ui/table';
 import { UnavailableValue } from '@/components/ui/unavailable-value';

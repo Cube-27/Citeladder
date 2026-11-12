@@ -1,5 +1,3 @@
-'use client';
-
 import { useMemo, useState, type ReactNode } from 'react';
 import {
   useMutation,
@@ -287,7 +285,7 @@ function SearchDemandView({
             A queued recompute rides this line and the header button. */}
         <Stack>
           <Inline as="p" gap="meta">
-            <SignalLegend signals={snapshot.signals} />
+            <SignalLegend signals={snapshot.signals} policy={snapshot.detector_policy} />
             <DemandDataCaveats snapshot={snapshot} />
             <RecomputeStatus mutation={recomputeMutation} />
           </Inline>
@@ -296,6 +294,7 @@ function SearchDemandView({
 
         <DemandEvidenceDrawer
           signal={selectedSignal}
+          policy={snapshot.detector_policy}
           open={selectedSignal !== null}
           onOpenChange={(open) => {
             if (!open) setSelectedSignalId(null);

@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 
 import type { CommerceProductRow } from '@citeladder/contracts/commerce-suite';

@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 
 import { billingApi, type BillingInvoice } from '@/lib/api/billing';

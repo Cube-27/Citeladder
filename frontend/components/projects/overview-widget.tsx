@@ -1,5 +1,3 @@
-'use client';
-
 import type { ReactNode } from 'react';
 
 import type { OverviewWidgetKey } from '@citeladder/contracts/overview';

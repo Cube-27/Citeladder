@@ -1,5 +1,3 @@
-'use client';
-
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
@@ -29,7 +27,7 @@ const COLUMNS: readonly DataTableColumn[] = [
 ];
 
 /**
- * Executions table for a run (F10, design.md §9.7), on the shared `DataTable`.
+ * Executions table for a run (F10), on the shared `DataTable`.
  *
  * One row per execution/queue task: the prompt, the
  * engine badge (logical + transport), status badge, and latency (mono).

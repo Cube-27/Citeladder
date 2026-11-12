@@ -1,5 +1,3 @@
-'use client';
-
 import { SearchX, Trash2 } from 'lucide-react';
 
 import { Avatar } from '@/components/ui/avatar';

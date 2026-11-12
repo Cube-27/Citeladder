@@ -72,6 +72,8 @@ const readiness: SearchIntelligenceReadiness = {
   },
   latest_run: null,
   datasets: [],
+  markets: [{ country_code: 'US', location_code: 2840 }],
+  max_depth: 1_000_000,
 };
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));

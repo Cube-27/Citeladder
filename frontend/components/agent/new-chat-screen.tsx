@@ -1,5 +1,3 @@
-'use client';
-
 import { useQuery } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useMemo, useState, type ComponentProps } from 'react';

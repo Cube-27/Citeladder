@@ -1,5 +1,3 @@
-'use client';
-
 import { ChipInput, type ChipItem } from '@/components/ui/chip-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';

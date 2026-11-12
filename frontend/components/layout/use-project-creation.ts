@@ -1,5 +1,3 @@
-'use client';
-
 import { capabilityRemaining } from '@/lib/billing/entitlement-capability';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';

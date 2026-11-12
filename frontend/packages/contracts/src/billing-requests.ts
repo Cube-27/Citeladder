@@ -7,13 +7,15 @@
  */
 import { z } from 'zod';
 
+import { credentialModeSchema } from './billing.ts';
+
 const selfServePlanKey = () => z.enum(['tier_1', 'tier_2', 'tier_3']);
 const nullableText = () => z.string().trim().nullable().default(null);
 
 /** Start a base-plan checkout, with the customer evidence that decides GST or export. */
 export const subscriptionCheckoutRequestSchema = z.strictObject({
   catalog_key: selfServePlanKey(),
-  credential_mode: z.enum(['byok', 'funded']),
+  credential_mode: credentialModeSchema,
   country_code: z
     .string()
     .trim()
@@ -48,7 +50,6 @@ export const noCardClaimRequestSchema = z.strictObject({
   data_sharing_consent: z.boolean(),
   operator_code: z.string().min(16).max(255).nullable().default(null),
 });
-export type NoCardClaimRequest = z.input<typeof noCardClaimRequestSchema>;
 
 /**
  * A provider's browser callback, in the NEUTRAL wrapper the API accepts. The

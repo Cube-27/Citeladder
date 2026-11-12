@@ -1,5 +1,3 @@
-'use client';
-
 import { useRef, useState, type Ref } from 'react';
 
 import { AskAgentLink } from '@/components/agent/ask-agent-link';

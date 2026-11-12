@@ -23,7 +23,7 @@ the command line or in an incident ticket.
 File inputs and outputs are confined to the command's working directory,
 including real symlink targets. `pnpm --filter @citeladder/api` runs in
 `frontend/services/api`; put the `review/` files below that directory. The local
-`billing-test.ps1` wrapper runs native commands from the repository root so its
+`pnpm billing:test` launcher runs native commands from the repository root so its
 private `.runtime/` files remain inside the authorized root.
 
 The CLI cannot create or promote its first admin. Bootstrap an administrator

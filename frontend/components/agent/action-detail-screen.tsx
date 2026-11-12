@@ -1,5 +1,3 @@
-'use client';
-
 import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
 import { ChevronRight } from 'lucide-react';
 import { useState, type ReactNode } from 'react';

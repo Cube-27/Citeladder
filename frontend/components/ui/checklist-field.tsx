@@ -1,5 +1,3 @@
-'use client';
-
 import { Pencil } from 'lucide-react';
 import { useId, useState, type ReactNode } from 'react';
 

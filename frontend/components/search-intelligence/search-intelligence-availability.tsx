@@ -5,6 +5,7 @@ import { Callout } from '@/components/ui/callout';
 import { ProjectLink } from '@/components/ui/project-link';
 import { QueryState } from '@/components/ui/query-state';
 import { TextLink } from '@/components/ui/text-link';
+import type { CredentialMode } from '@/lib/api/billing';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 const PROVIDER_SETTINGS = '/settings?tab=providers';
@@ -52,7 +53,7 @@ export function NotConnected({ funded }: Readonly<{ funded: boolean }>) {
 /** Why saved results cannot be refreshed: a missing connection, or managed research being down. */
 export function UnavailableNotice({
   data,
-}: Readonly<{ data: { connected: boolean; credential_mode: 'byok' | 'funded' } }>) {
+}: Readonly<{ data: { connected: boolean; credential_mode: CredentialMode } }>) {
   const canManage = useWorkspaceCapability('manage_credentials');
   if (data.connected) return null;
   if (data.credential_mode === 'funded')

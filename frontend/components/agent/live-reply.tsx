@@ -1,5 +1,3 @@
-'use client';
-
 import { memo, useDeferredValue } from 'react';
 
 import { AgentTurn } from '@/components/ui/chat-dock';

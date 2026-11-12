@@ -1,5 +1,3 @@
-'use client';
-
 import { SendHorizontal, Square } from 'lucide-react';
 import type { ReactNode } from 'react';
 

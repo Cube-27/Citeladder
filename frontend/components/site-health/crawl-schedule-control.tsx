@@ -1,5 +1,3 @@
-'use client';
-
 import { ChevronDown } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { CrawlRobotsChoice, CrawlSchedule, CrawlScheduleCadence } from '@citeladder/contracts';

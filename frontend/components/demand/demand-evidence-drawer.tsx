@@ -1,5 +1,3 @@
-'use client';
-
 import type { ReactNode } from 'react';
 import { ProjectLink } from '@/components/ui/project-link';
 import { ArrowUpRight, ShieldCheck, Split } from 'lucide-react';
@@ -12,6 +10,7 @@ import { Drawer } from '@/components/ui/drawer';
 import { StatRow } from '@/components/ui/stat-row';
 import { TextLink } from '@/components/ui/text-link';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
+import type { DemandDetectorPolicy } from '@citeladder/contracts';
 import type { DemandSignal } from '@/lib/api/demand';
 import {
   competingPages,
@@ -31,23 +30,34 @@ import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 
 export function DemandEvidenceDrawer({
   signal,
+  policy,
   open,
   onOpenChange,
 }: Readonly<{
   signal: DemandSignal | null;
+  policy: DemandDetectorPolicy;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }>) {
   if (!signal) return null;
-  return <DemandEvidenceContent signal={signal} open={open} onOpenChange={onOpenChange} />;
+  return (
+    <DemandEvidenceContent
+      signal={signal}
+      policy={policy}
+      open={open}
+      onOpenChange={onOpenChange}
+    />
+  );
 }
 
 function DemandEvidenceContent({
   signal,
+  policy,
   open,
   onOpenChange,
 }: Readonly<{
   signal: DemandSignal;
+  policy: DemandDetectorPolicy;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }>) {
@@ -94,7 +104,7 @@ function DemandEvidenceContent({
           )}
         </Stack>
 
-        <SignalInsight signal={signal} />
+        <SignalInsight signal={signal} policy={policy} />
 
         <Stack as="section">
           <h3 className={textRole('label')}>Search Console performance</h3>

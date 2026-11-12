@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { GitCompare } from 'lucide-react';

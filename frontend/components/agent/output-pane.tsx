@@ -1,5 +1,3 @@
-'use client';
-
 import { Download, Pencil } from 'lucide-react';
 import { useState } from 'react';
 

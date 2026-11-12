@@ -1,5 +1,3 @@
-'use client';
-
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 import { FLOAT_FACE } from '@/components/ui/card';

@@ -1,5 +1,3 @@
-'use client';
-
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { PAGE_KINDS, pageKindLabel } from '@/lib/site-health/page-kinds';
 

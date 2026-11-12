@@ -230,6 +230,8 @@ export const commerceShelf = {
   result_limit: 8,
   match_min_chars: 3,
   attribute_min_chars: 4,
+  /** A product matched by its brand plus a distinctive attribute, not an identifier. */
+  brand_attribute_match_confidence: 0.9,
   excluded_paths: ['/blog/', '/news/', '/article/', '/search'],
   non_pdp_hosts: ['reddit.com', 'youtube.com', 'youtu.be', 'medium.com'],
   dollar_currencies: {

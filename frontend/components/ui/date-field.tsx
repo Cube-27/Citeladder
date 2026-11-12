@@ -1,5 +1,3 @@
-'use client';
-
 import * as DropdownPrimitive from '@radix-ui/react-dropdown-menu';
 import { CalendarDays } from 'lucide-react';
 import { useState } from 'react';

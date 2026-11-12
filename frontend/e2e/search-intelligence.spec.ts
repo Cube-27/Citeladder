@@ -159,6 +159,11 @@ for (const viewport of [
             },
             latest_run: null,
             datasets,
+            markets: [
+              { country_code: 'US', location_code: 2840 },
+              { country_code: 'AU', location_code: 2036 },
+            ],
+            max_depth: 1_000_000,
           },
         ],
       ],

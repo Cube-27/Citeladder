@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
+import { currencySchema, type Currency } from '@citeladder/contracts/billing';
 import { policy } from '../config.ts';
 import { amount, type Pending } from './contracts.ts';
 import { refuse } from './refusals.ts';
@@ -30,7 +31,7 @@ const paymentSchema = z.object({
   status: z.string(),
   captured: z.boolean().optional().default(false),
   amount,
-  currency: z.enum(['USD', 'INR']),
+  currency: currencySchema,
   created_at: amount,
   paid_at: amount.nullish(),
   invoice_id: reference.nullish(),
@@ -50,7 +51,7 @@ export type PaymentEvidence = {
   orderId: string | null;
   invoiceId: string | null;
   amount: number;
-  currency: 'USD' | 'INR';
+  currency: Currency;
   paidAt: Date;
   periodStart: Date | null;
   periodEnd: Date | null;

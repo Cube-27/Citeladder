@@ -215,7 +215,10 @@ function demandHit(snapshotId: string, signal: DemandSignal): DetectorHit | null
     source_analysis_ids: [],
     source_issue_ids: [],
     source_metric_ids: Array.isArray(metricIds) ? [...metricIds] : [],
-    value_factor: Math.max(0.01, Math.min(1, (signal.priority_score || 0) / 100)),
+    value_factor: Math.max(
+      o.DEMAND_SIGNAL_VALUE_FACTOR_FLOOR,
+      Math.min(1, (signal.priority_score || 0) / o.DEMAND_SIGNAL_PRIORITY_SCALE),
+    ),
     gap_factor: o.DEMAND_SIGNAL_GAP_FACTOR,
   };
 }

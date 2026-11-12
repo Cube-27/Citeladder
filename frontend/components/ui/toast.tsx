@@ -1,5 +1,3 @@
-'use client';
-
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import * as ToastPrimitive from '@radix-ui/react-toast';

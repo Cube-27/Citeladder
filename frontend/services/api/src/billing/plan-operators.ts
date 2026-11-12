@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { realpath, readFile, writeFile } from 'node:fs/promises';
 import { dirname, basename, relative, resolve, isAbsolute } from 'node:path';
+import { credentialModeSchema, currencySchema } from '@citeladder/contracts/billing';
 import { catalogAuthoring } from '../config/billing-authoring.ts';
 import { policy } from '../config.ts';
 import { validateCatalog } from './catalog-authoring.ts';
@@ -22,7 +23,7 @@ export function recurringPrices(input: unknown) {
     ),
   );
 }
-const MODES = ['byok', 'funded'] as const;
+const MODES = credentialModeSchema.options;
 export function bindPlanRefs(input: unknown, inputRefs: unknown) {
   const payload = validateCatalog(input);
   const refs = z.record(z.string(), planReference).parse(inputRefs);
@@ -45,7 +46,7 @@ export function verifyPlan(
   const actual = z
     .object({
       id: planReference,
-      item: z.object({ name: z.string(), amount, currency: z.enum(['USD', 'INR']) }),
+      item: z.object({ name: z.string(), amount, currency: currencySchema }),
       period: z.literal('monthly'),
       interval: z.literal(1),
     })

@@ -7,13 +7,13 @@ Mocked checks are not payment evidence. The acceptance list to satisfy is
 [owner requirements, section 8](razorpay-and-demo-owner-requirements.md#8-required-sandbox-acceptance-evidence);
 commands and incident procedures are in the
 [billing operator guide](billing-operator-guide.md), and behavior is in
-[billing and entitlements](../billing-entitlements.md). Run the PowerShell
-commands in PowerShell 7 from the repository root.
+[billing and entitlements](../billing-entitlements.md). Run the `pnpm
+billing:test` commands from `frontend/`; the launcher itself runs from the
+repository root, so `billing-test.env` and `.runtime/` paths are relative to it.
 
 ## 1. Start the isolated environment
 
-Install Docker with Compose support for `!override`, PowerShell 7 and
-`cloudflared`. Create a private `billing-test.env` from `.env.example` with local
+Install Docker with Compose support for `!override` and `cloudflared`. Create a private `billing-test.env` from `.env.example` with local
 database and application secrets, and set these explicitly (the launcher refuses
 other values):
 
@@ -48,10 +48,13 @@ serves any workspace in test mode; in production the allow-list applies
 ([B2, B42](../billing-decisions.md)). Do not print the environment or expanded
 Compose configuration.
 
-```powershell
-.\scripts\billing-test.ps1 -Action up
-.\scripts\billing-test.ps1 -Action status
+```bash
+pnpm billing:test up
+pnpm billing:test status
 ```
+
+Another environment file is selected with `--env-file=<path>` straight after the
+action, for example `pnpm billing:test up --env-file=billing-test-2.env`.
 
 Expected: app `http://127.0.0.1:3301`, marketing site `http://127.0.0.1:3300`,
 API port 8300, PostgreSQL port 55433, webhook proxy port 8301; migration exits
@@ -66,13 +69,13 @@ The admin CLI needs an existing active admin and cannot create one. Register
 `billing-operator@example.com` through the UI, then promote it in this
 disposable database only (never the payment customer or a deployed account):
 
-```powershell
+```bash
 docker exec citeladder-billing-test-db-1 psql -U postgres -d citeladder_billing_test -v ON_ERROR_STOP=1 -c "SELECT id,email,role,is_active FROM users WHERE email='billing-operator@example.com';"
 ```
 
 Proceed only if exactly one row returns, then:
 
-```powershell
+```bash
 docker exec citeladder-billing-test-db-1 psql -U postgres -d citeladder_billing_test -v ON_ERROR_STOP=1 -c "UPDATE users SET role='admin' WHERE email='billing-operator@example.com' AND is_active=true RETURNING id,email,role;"
 ```
 
@@ -80,20 +83,20 @@ Require one returned row and record the UUID and this local action.
 
 ## 3. Author the catalog, create plans, bind and publish
 
-The launcher runs `billing-admin.ts` (`-Action admin`) and
-`provision-razorpay-plans.ts` (`-Action plans`) against the isolated database.
-Both are dry runs until `--apply`; there is no `--dry-run` flag. Files must live
-inside the repository (use `.runtime/`).
+The launcher runs `billing-admin.ts` (`admin`) and
+`provision-razorpay-plans.ts` (`plans`) against the isolated database, passing
+every following argument through. Both are dry runs until `--apply`; there is no
+`--dry-run` flag. Files must live inside the repository (use `.runtime/`).
 
-```powershell
-$actor = 'billing-operator@example.com'
-.\scripts\billing-test.ps1 -Action admin -CommandArgs @('catalog-seed','--environment','test','--usd-inr-rate','90','--actor',$actor,'--reason','Author sandbox launch pricing','--idempotency-key','catalog-seed:launch-pricing-v1')
+```bash
+actor=billing-operator@example.com
+pnpm billing:test admin catalog-seed --environment test --usd-inr-rate 90 --actor "$actor" --reason 'Author sandbox launch pricing' --idempotency-key catalog-seed:launch-pricing-v1
 ```
 
-Review the dry run, repeat with `'--apply'`, then print the plan specs:
+Review the dry run, repeat with `--apply`, then print the plan specs:
 
-```powershell
-.\scripts\billing-test.ps1 -Action plans -CommandArgs @('propose','--revision','launch-pricing-v1','--environment','test')
+```bash
+pnpm billing:test plans propose --revision launch-pricing-v1 --environment test
 ```
 
 In the Razorpay Dashboard (**Test mode**, Subscriptions enabled), create exactly
@@ -103,10 +106,10 @@ and gross amounts. Write the created IDs to `.runtime/plans.json` keyed
 operator guide shows the shape. Bind them into a new draft revision, review, then
 publish:
 
-```powershell
-$bind = @('bind','--revision','launch-pricing-v1','--environment','test','--plans','.runtime/plans.json','--import','sandbox-r1','--actor',$actor,'--reason','Bind sandbox plans','--idempotency-key','catalog-bind:sandbox-r1')
-.\scripts\billing-test.ps1 -Action plans -CommandArgs $bind
-.\scripts\billing-test.ps1 -Action plans -CommandArgs ($bind + @('--publish','--apply'))
+```bash
+bind=(bind --revision launch-pricing-v1 --environment test --plans .runtime/plans.json --import sandbox-r1 --actor "$actor" --reason 'Bind sandbox plans' --idempotency-key catalog-bind:sandbox-r1)
+pnpm billing:test plans "${bind[@]}"
+pnpm billing:test plans "${bind[@]}" --publish --apply
 ```
 
 `bind` fetches every plan from Razorpay and fails closed on any missing plan or
@@ -120,8 +123,8 @@ captured payment matches the final total.
 
 In another terminal, keep this running:
 
-```powershell
-.\scripts\billing-test.ps1 -Action tunnel
+```bash
+pnpm billing:test tunnel
 ```
 
 Configure the Razorpay **Test** webhook with the printed HTTPS hostname plus
@@ -151,7 +154,7 @@ BILLING_RAZORPAY_TEST_INDIA_READY=true
 ```
 
 Keep the USD route (`BILLING_RAZORPAY_TEST_INTERNATIONAL_READY`) and live flags
-false until the USD plans are bound and verified. Run `-Action up` again to
+false until the USD plans are bound and verified. Run `pnpm billing:test up` again to
 propagate configuration, then use `/pricing` or in-app Billing, select India, and
 pay as the ordinary customer. Confirm tier, INR amount, test-mode indicator and
 email in Checkout. Use only
@@ -162,8 +165,8 @@ frozen amount and period; a callback alone never grants it. Inspect the account
 (the billing account UUID comes from the signed-in billing API response, not a
 workspace or user ID):
 
-```powershell
-.\scripts\billing-test.ps1 -Action admin -CommandArgs @('account-inspect','--workspace-id','<workspace-uuid>','--account-id','<billing-account-uuid>','--actor',$actor,'--reason','Inspect sandbox payment','--idempotency-key','inspect-inr-1')
+```bash
+pnpm billing:test admin account-inspect --workspace-id '<workspace-uuid>' --account-id '<billing-account-uuid>' --actor "$actor" --reason 'Inspect sandbox payment' --idempotency-key inspect-inr-1
 docker logs --tail 30 citeladder-billing-test-runner-1
 ```
 
@@ -207,8 +210,8 @@ three-day test token window; record unsupported lifecycle simulations explicitly
 
 For a one-shot recovery pass (the `runner` service also runs bounded sweeps):
 
-```powershell
-.\scripts\billing-test.ps1 -Action reconcile
+```bash
+pnpm billing:test reconcile
 ```
 
 Keep `BILLING_RAZORPAY_MODE=test` while using the kill switch; `disabled`
@@ -238,8 +241,8 @@ credentials, signatures, card details and raw payloads.
 To finish, cancel the test subscriptions in Razorpay, disable its test webhook,
 stop the tunnel with Ctrl+C, set `BILLING_CHECKOUT_ENABLED=false`, then:
 
-```powershell
-.\scripts\billing-test.ps1 -Action down
+```bash
+pnpm billing:test down
 ```
 
 This preserves the local volume. The launcher has no destructive reset; remove a

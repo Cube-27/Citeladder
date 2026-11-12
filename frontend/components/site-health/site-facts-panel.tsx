@@ -1,4 +1,3 @@
-'use client';
 import { Fragment, useState } from 'react';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { Badge } from '@/components/ui/badge';

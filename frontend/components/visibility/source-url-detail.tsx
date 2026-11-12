@@ -1,5 +1,3 @@
-'use client';
-
 import { AppGrid } from '@/components/ui/app-grid';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

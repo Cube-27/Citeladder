@@ -130,5 +130,5 @@ function savedMarketLabel(
 ) {
   const market = dataset ? dataset.location_code : data.preferences.location_code;
   const language = dataset ? dataset.language_code : data.preferences.language_code;
-  return `${searchMarketLabel(market)} · ${language || 'Language not set'}`;
+  return `${searchMarketLabel(market, data.markets)} · ${language || 'Language not set'}`;
 }

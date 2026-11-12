@@ -10,8 +10,14 @@ const uuid = () => z.uuid();
 // Plan keys are LOCKED to the four the backend publishes. A retired `free`/
 // `paid` key must fail parsing rather than render as an unknown tier.
 const planCatalogKeySchema = z.enum(['tier_1', 'tier_2', 'tier_3', 'enterprise']);
-const credentialModeSchema = z.enum(['byok', 'funded']);
-const billingRegionSchema = z.enum(['india', 'international']);
+// The billing vocabularies: every package parses these values with these schemas.
+export const credentialModeSchema = z.enum(['byok', 'funded']);
+export type CredentialMode = z.infer<typeof credentialModeSchema>;
+export const billingRegionSchema = z.enum(['india', 'international']);
+export type BillingRegion = z.infer<typeof billingRegionSchema>;
+export const currencySchema = z.enum(['USD', 'INR']);
+export type Currency = z.infer<typeof currencySchema>;
+export const providerModeSchema = z.enum(['test', 'live']);
 export const taxTreatmentSchema = z.enum(['CGST_SGST', 'IGST', 'EXPORT_ZERO_RATED']);
 const catalogAvailabilitySchema = z.enum(['available', 'unavailable']);
 const grantSourceKindSchema = z.enum(['plan', 'addon', 'topup', 'trial', 'override']);
@@ -38,7 +44,7 @@ const activationKindSchema = z.enum(['base', 'addon', 'topup', 'upgrade']);
 const activationStatusSchema = z.enum(['pending', 'activated', 'failed', 'abandoned']);
 
 export const moneySchema = responseObject({
-  currency: z.enum(['USD', 'INR']),
+  currency: currencySchema,
   amount_minor: z.number().int().nonnegative(),
 });
 
@@ -215,7 +221,7 @@ export const billingCatalogSchema = responseObject({
   catalog_revision: z.string(),
   country_code: z.string().nullable(),
   region: billingRegionSchema,
-  currency: z.enum(['USD', 'INR']),
+  currency: currencySchema,
   currency_minor_units: z.number().int(),
   plans: z.array(catalogPlanSchema),
   addons: z.array(catalogAddonSchema),
@@ -392,7 +398,7 @@ export const providerConnectionStatesSchema = responseObject({
 export const subscriptionCheckoutSchema = responseObject({
   activation_id: uuid(),
   provider: z.string(),
-  provider_mode: z.enum(['test', 'live']),
+  provider_mode: providerModeSchema,
   /** The browser SDK adapter that opens this checkout. */
   sdk_name: z.literal('razorpay-checkout'),
   public_key: z.string(),

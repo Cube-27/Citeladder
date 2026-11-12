@@ -21,6 +21,10 @@ export const opportunities = {
   CONFIRMED_DECLINE_CONFIDENCE_FLOOR: 0.5,
   CONFIRMED_DECLINE_GAP_CAP: 2,
   DEMAND_SIGNAL_GAP_FACTOR: 2,
+  // A demand signal's value factor is its priority score over this scale,
+  // capped at 1 and never below the floor, so a zero score still ranks.
+  DEMAND_SIGNAL_PRIORITY_SCALE: 100,
+  DEMAND_SIGNAL_VALUE_FACTOR_FLOOR: 0.01,
   OPPORTUNITY_TYPE_VISIBILITY: 'visibility',
   OPPORTUNITY_TYPE_COMMERCE: 'commerce',
   OPPORTUNITY_TYPE_SITE: 'site',
