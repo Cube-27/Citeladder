@@ -49,8 +49,9 @@ export function BrandFactsPanel({
   const scope = { workspaceId, projectId };
   const create = useMutation(projectMutations.createBrandFact(scope));
   const change = useMutation(projectMutations.updateBrandFact(scope));
+  // Settles with the save; the panel shows the error notice when it fails.
   const addFact = (draft: Draft) =>
-    create.mutate({
+    create.mutateAsync({
       topic: draft.topic,
       statement: draft.statement.trim(),
       source_url: draft.source_url.trim() || null,
@@ -106,8 +107,17 @@ export function BrandFactsPanel({
 function AddFact({
   pending,
   onAdd,
-}: Readonly<{ pending: boolean; onAdd: (draft: Draft) => void }>) {
+}: Readonly<{ pending: boolean; onAdd: (draft: Draft) => Promise<unknown> }>) {
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
+  // A refused fact stays in the form to correct; only a saved one clears it.
+  const submit = async () => {
+    try {
+      await onAdd(draft);
+    } catch {
+      return;
+    }
+    setDraft(EMPTY_DRAFT);
+  };
   return (
     <Stack
       as="form"
@@ -115,9 +125,8 @@ function AddFact({
       className={panelClasses()}
       onSubmit={(event) => {
         event.preventDefault();
-        if (!draft.statement.trim()) return;
-        onAdd(draft);
-        setDraft(EMPTY_DRAFT);
+        if (pending || !draft.statement.trim()) return;
+        void submit();
       }}
     >
       <Field label="Topic">

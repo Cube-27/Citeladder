@@ -13,13 +13,16 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Inline, Stack } from '@/components/ui/layout';
+import { MutationNotice } from '@/components/ui/mutation-notice';
 import { commerceMutations } from '@/lib/api/commerce';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import { LaunchDialog } from '@/components/runs/launch-dialog';
 import { ProjectLink } from '@/components/ui/project-link';
 import { useRunEvents } from '@/lib/runs/use-run-events';
 import { CategoryMatrixSheet } from './category-matrix-sheet';
 import { sameTarget } from '@/lib/products/targets';
+import { useGenerateBuyerPrompts } from '@/lib/products/use-generate-buyer-prompts';
 
 import type { CommerceQueries } from './commerce-queries';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
@@ -60,13 +63,10 @@ export function SetupPrompts({
   // The audit stream refreshes the product metrics and Actions when the run finishes.
   useRunEvents(launchedAuditId, projectId, Boolean(launchedAuditId));
   const scope = { workspaceId, projectId };
-  const generate = useMutation(commerceMutations.generateBuyerPrompts(scope));
+  const { generate: generateFor, mutation: generate } = useGenerateBuyerPrompts(scope);
   const generatePrompts = () =>
-    generate.mutate(
-      { targets: [target], count: HERO_COUNT, hero: true },
-      {
-        onSuccess: (created) => setShortfall(created.length < HERO_COUNT ? created.length : null),
-      },
+    generateFor({ targets: [target], count: HERO_COUNT, hero: true }, (created) =>
+      setShortfall(created.length < HERO_COUNT ? created.length : null),
     );
   const manual = useMutation(commerceMutations.addBuyerPrompt(scope));
   const addPrompt = () => manual.mutate({ target, text }, { onSuccess: () => setText('') });
@@ -81,7 +81,7 @@ export function SetupPrompts({
   const canRun = useWorkspaceCapability('run');
   const canWrite = useWorkspaceCapability('write');
   const busy = [generate.isPending, manual.isPending, decide.isPending].some(Boolean);
-  const failed = [generate.isError, manual.isError, decide.isError].some(Boolean);
+  const failed = [manual.isError, decide.isError].some(Boolean);
   return (
     <Card>
       <CardHeader
@@ -108,6 +108,11 @@ export function SetupPrompts({
       </CardHeader>
       <CardContent>
         <Stack>
+          {generate.isError ? (
+            <MutationNotice
+              notice={mutationNoticeForError(generate.error, { action: 'generate the prompts' })}
+            />
+          ) : null}
           {failed ? (
             <Callout tone="negative">The buyer-prompt update failed. Please try again.</Callout>
           ) : null}

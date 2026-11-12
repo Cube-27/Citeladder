@@ -1,5 +1,14 @@
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vite-plus/test';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -8,6 +17,10 @@ import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 
 import { AddProductsDialog } from './add-products-dialog';
+
+const mocks = vi.hoisted(() => ({ saveBlob: vi.fn() }));
+vi.mock('@/lib/download', () => ({ saveBlob: mocks.saveBlob }));
+beforeEach(() => mocks.saveBlob.mockReset());
 
 const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
 const IMPORT_ID = '22222222-2222-4222-8222-222222222222';
@@ -161,5 +174,74 @@ describe('AddProductsDialog', () => {
       await screen.findByText('This content was imported before; these are its results.'),
     ).toBeVisible();
     expect(screen.getByLabelText('Import results')).toHaveTextContent('1 added, 1 updated');
+  });
+
+  it('refuses a Windows-1252 feed with guidance and sends nothing to the server', async () => {
+    const staged: unknown[] = [];
+    mswServer.use(
+      http.post(`${base}/catalog/imports`, async ({ request }) => {
+        staged.push(await request.json());
+        return HttpResponse.json(STAGE, { status: 201 });
+      }),
+    );
+    open();
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Merchant Center feed' }));
+    // "title,brand\nCafé,Acme\n" with é as the Windows-1252 byte 0xE9.
+    const bytes = new Uint8Array([
+      ...new TextEncoder().encode('title,brand\nCaf'),
+      0xe9,
+      ...new TextEncoder().encode(',Acme\n'),
+    ]);
+    fireEvent.change(screen.getByLabelText('Feed file (CSV, TSV, XML or JSON)'), {
+      target: { files: [new File([bytes], 'feed.csv', { type: 'text/csv' })] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Review categories' }));
+
+    expect(
+      await screen.findByText('This file is not UTF-8 text. Save as CSV UTF-8 and upload again.'),
+    ).toBeVisible();
+    expect(staged).toEqual([]);
+  });
+
+  it('stages the file once when Review categories is clicked twice', async () => {
+    const staged: unknown[] = [];
+    mswServer.use(
+      http.post(`${base}/catalog/imports`, async ({ request }) => {
+        staged.push(await request.json());
+        return HttpResponse.json(STAGE, { status: 201 });
+      }),
+    );
+    open();
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'CSV' }));
+    const file = new File(['title,brand\nShoe,Acme\n'], 'catalog.csv', { type: 'text/csv' });
+    fireEvent.change(screen.getByLabelText('CSV file'), { target: { files: [file] } });
+    const review = screen.getByRole('button', { name: 'Review categories' });
+    fireEvent.click(review);
+    fireEvent.click(review);
+
+    await screen.findByRole('list', { name: 'Proposed categories' });
+    expect(staged).toHaveLength(1);
+  });
+
+  it.each([
+    [
+      'CSV',
+      'catalog-sample.csv',
+      'title,brand,description,price,currency,link,image_link,category,sku,gtin',
+    ],
+    [
+      'Merchant Center feed',
+      'merchant-feed-sample.csv',
+      'id,item_group_id,title,brand,description,price,link,image_link,product_type,gtin',
+    ],
+  ])('offers a sample CSV for the %s import', async (tab, filename, header) => {
+    const user = userEvent.setup();
+    open();
+    await user.click(screen.getByRole('tab', { name: tab }));
+    await user.click(screen.getByRole('button', { name: 'Download sample CSV' }));
+
+    const [blob, name] = mocks.saveBlob.mock.calls[0] as [Blob, string];
+    expect(name).toBe(filename);
+    expect((await blob.text()).replace(/^﻿/u, '').split('\r\n')[0]).toBe(header);
   });
 });

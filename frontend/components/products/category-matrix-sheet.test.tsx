@@ -78,6 +78,45 @@ describe('CategoryMatrixSheet', () => {
     await waitFor(() => expect(body).toEqual({ targets: [{ kind: 'category', id: CATEGORY_ID }] }));
   });
 
+  it('shows why generation was refused and retries it with the same idempotency key', async () => {
+    const keys: (string | null)[] = [];
+    let refuse = true;
+    mswServer.use(
+      http.post(`/api/v1/projects/${PROJECT_ID}/commerce/buyer-prompts/generate`, ({ request }) => {
+        keys.push(request.headers.get('Idempotency-Key'));
+        return refuse
+          ? HttpResponse.json(
+              {
+                error: {
+                  code: 'ai_credits_exhausted',
+                  message: 'Your AI credits for this period are used up',
+                },
+              },
+              { status: 402 },
+            )
+          : HttpResponse.json([], { status: 201 });
+      }),
+    );
+    renderSheet();
+    fireEvent.click(screen.getByRole('button', { name: 'Generate matrix' }));
+
+    expect(await screen.findByText('Your AI credits for this period are used up')).toBeVisible();
+
+    refuse = false;
+    fireEvent.click(screen.getByRole('button', { name: 'Generate matrix' }));
+    await waitFor(() => expect(keys).toHaveLength(2));
+    await waitFor(() =>
+      expect(screen.queryByText('Your AI credits for this period are used up')).toBeNull(),
+    );
+    // A new request after a success gets a new key.
+    fireEvent.click(screen.getByRole('button', { name: 'Generate matrix' }));
+    await waitFor(() => expect(keys).toHaveLength(3));
+
+    expect(keys[0]).toMatch(/^[0-9a-f-]{36}$/u);
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[2]).not.toBe(keys[0]);
+  });
+
   it('approves one prompt at a time', async () => {
     let body: unknown = null;
     mswServer.use(

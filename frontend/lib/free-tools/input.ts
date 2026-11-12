@@ -25,11 +25,14 @@ export async function readToolFile(file: File) {
   if (file.size > FREE_TOOL_LIMITS.fileBytes)
     throw new Error('Choose an uncompressed UTF-8 XML file smaller than 1 MB.');
   const bytes = await file.arrayBuffer();
+  let text: string;
   try {
-    return boundedText(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
   } catch {
     throw new Error(
       `Use valid UTF-8 XML within the ${FREE_TOOL_LIMIT_LABELS.text}-character limit.`,
     );
   }
+  // Over the character limit is the same "Input exceeds" refusal as a paste.
+  return boundedText(text);
 }

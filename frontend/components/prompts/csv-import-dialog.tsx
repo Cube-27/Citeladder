@@ -1,7 +1,7 @@
 'use client';
 
 import { Download } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
@@ -65,9 +65,8 @@ export function CsvImportDialog({
   /** The import bounds the API enforces, from the prompt-set list. */
   limits: PromptCsvLimits;
 }>) {
-  const { fileName, inputRef, parsed, reset, selectFile } = useCsvImportFile<ParsedCsv>((raw) =>
-    parsePromptCsv(raw, limits),
-  );
+  const { fileName, inputRef, parsed, readError, reading, reset, selectFile } =
+    useCsvImportFile<ParsedCsv>((raw) => parsePromptCsv(raw, limits));
 
   const importable = useMemo(() => (parsed ? validRows(parsed) : []), [parsed]);
   const importNoun = importable.length === 1 ? 'prompt' : 'prompts';
@@ -78,10 +77,21 @@ export function CsvImportDialog({
     onOpenChange(next);
   };
 
+  // A second click before the first import settles is ignored, not sent again.
+  const submitting = useRef(false);
+  const [submitted, setSubmitted] = useState(false);
   const confirm = async () => {
-    if (importable.length === 0) return;
-    await onImport(importable);
+    if (importable.length === 0 || submitting.current) return;
+    submitting.current = true;
+    setSubmitted(true);
+    try {
+      await onImport(importable);
+    } finally {
+      submitting.current = false;
+      setSubmitted(false);
+    }
   };
+  const importing = Boolean(isImporting) || submitted;
 
   return (
     <Dialog
@@ -98,9 +108,11 @@ export function CsvImportDialog({
           <Button
             variant="primary"
             onClick={confirm}
-            disabled={isImporting || importable.length === 0 || Boolean(parsed?.errors.length)}
+            disabled={
+              importing || reading || importable.length === 0 || Boolean(parsed?.errors.length)
+            }
           >
-            {isImporting ? 'Importing…' : `Import ${importable.length} ${importNoun}`}
+            {importing ? 'Importing…' : `Import ${importable.length} ${importNoun}`}
           </Button>
         </>
       }
@@ -115,6 +127,8 @@ export function CsvImportDialog({
             Download sample CSV
           </Button>
         </Stack>
+
+        {readError ? <Callout tone="negative">{readError}</Callout> : null}
 
         {parsed && parsed.errors.length > 0 ? (
           <Callout tone="negative">{parsed.errors.join(' ')}</Callout>

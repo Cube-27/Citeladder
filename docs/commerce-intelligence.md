@@ -314,6 +314,14 @@ product target must set `hero: true` or it is refused (422
 product is covered by its category's matrix. The hero pick is a per-request
 choice, not stored on the product.
 
+**Retries.** Generation is metered, so the browser sends an `Idempotency-Key`
+per request and reuses it when retrying the same request after a failure. A
+key whose generation already persisted prompts returns those prompts (from the
+key and request hash kept in their `generation_evidence`) with no model call
+or budget spend; the same key with a different request is a 409
+`generation_idempotency_conflict`. A refusal shows the server's reason, not a
+generic retry message.
+
 The category's prompts section opens the standalone matrix sheet
 (`category-matrix-sheet.tsx`), which generates the matrix, shows coverage
 (contexts × stages filled, branded count) and approves prompts one at a time.

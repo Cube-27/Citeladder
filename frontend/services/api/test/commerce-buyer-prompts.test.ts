@@ -156,6 +156,59 @@ it('generates target-bound prompts and fails atomically on unusable or foreign t
   ]);
 });
 
+it('replays a keyed generation retry from its stored prompts without another model call', async () => {
+  const io = {
+    fetch: vi.fn<typeof fetch>(async () =>
+      Response.json({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                prompts: [
+                  { text: 'best running shoes for wet trails' },
+                  { text: 'lightweight shoes with cushioning for long runs' },
+                ],
+              }),
+            },
+          },
+        ],
+      }),
+    ),
+    sleep: async () => {},
+  };
+  const gateway = () =>
+    createModelGateway(
+      {
+        ...gatewaySettings({}),
+        apiKey: 'test-only',
+        model: 'claude-haiku-5-5',
+        baseUrl: 'https://model.test',
+      },
+      io,
+    );
+  const input = buyerGenerateInput.parse({ targets: [target], count: 2, hero: true });
+  const first = await generateBuyerPrompts(db, scope, input, gateway, undefined, 'retry-key');
+  const again = await generateBuyerPrompts(db, scope, input, gateway, undefined, 'retry-key');
+
+  expect(first.map((row) => row.text)).toEqual([
+    'best running shoes for wet trails',
+    'lightweight shoes with cushioning for long runs',
+  ]);
+  expect(again.map((row) => row.id).sort()).toEqual(first.map((row) => row.id).sort());
+  expect(io.fetch).toHaveBeenCalledTimes(1);
+  await expect(
+    generateBuyerPrompts(
+      db,
+      scope,
+      buyerGenerateInput.parse({ targets: [target], count: 3, hero: true }),
+      gateway,
+      undefined,
+      'retry-key',
+    ),
+  ).rejects.toMatchObject({ status: 409 });
+  expect(io.fetch).toHaveBeenCalledTimes(1);
+});
+
 it("keeps each target's usable prompts and binds category prompts through the category's own name", async () => {
   await importCatalog(
     db,

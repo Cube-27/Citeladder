@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 import {
   buyerPromptGenerateRequestSchema,
@@ -444,12 +444,58 @@ function createGateway(factory: () => ModelGateway) {
   }
 }
 
+type GenerateInput = z.infer<typeof buyerGenerateInput>;
+
+/** The request a keyed generation ran, as a hash its prompts' evidence keeps. */
+function requestHash(input: GenerateInput): string {
+  const request = {
+    targets: input.targets.map((target) => ({ kind: target.kind, id: target.id })),
+    count: input.count,
+    hero: input.hero,
+  };
+  return createHash('sha256').update(JSON.stringify(request)).digest('hex');
+}
+
+/**
+ * The prompts an earlier generation with this key persisted, from stored rows
+ * only, or null when none did. The same key with another request is a 409.
+ */
+async function replayGeneration(
+  db: Database,
+  scope: CommerceScope,
+  input: GenerateInput,
+  key: string,
+) {
+  const set = await findCommerceSet(db, scope);
+  if (!set) return null;
+  const rows = await db
+    .selectFrom('prompts')
+    .select(['id', 'generation_evidence'])
+    .where('prompt_set_id', '=', set.id)
+    .where(sql<string>`generation_evidence->>'idempotency_key'`, '=', key)
+    .execute();
+  if (!rows.length) return null;
+  const hash = requestHash(input);
+  if (rows.some((row) => record(row.generation_evidence).request_hash !== hash))
+    throw new ApiError(409, 'Idempotency-Key was used for another generation request', {
+      code: 'generation_idempotency_conflict',
+    });
+  const ids = new Set(rows.map((row) => row.id));
+  return (await buyerPrompts(db, scope)).filter((row) => ids.has(row.id));
+}
+
+/**
+ * Generate disabled buyer prompts for the targets. With `idempotencyKey`, a
+ * retry of a generation that already persisted prompts returns those prompts
+ * without another model call or budget spend.
+ */
 export async function generateBuyerPrompts(
   db: Database,
   scope: CommerceScope,
-  input: z.infer<typeof buyerGenerateInput>,
+  input: GenerateInput,
   gatewayFactory: () => ModelGateway = createModelGateway,
   meter: Meter = meterFor(db, scope.workspaceId),
+  idempotencyKey: string | null = null,
 ) {
   // Per-product prompts are an explicit hero choice; every other product is
   // covered by its category's matrix.
@@ -457,6 +503,11 @@ export async function generateBuyerPrompts(
     throw heroRequired();
   const contexts = [];
   for (const target of input.targets) contexts.push(await targetContext(db, scope, target)); // NOSONAR -- The first unavailable target, in request order, is the error.
+  // Targets are authorized before revealing whether the key was used.
+  if (idempotencyKey) {
+    const prior = await replayGeneration(db, scope, input, idempotencyKey);
+    if (prior) return prior;
+  }
   // Skip already tracked texts so a repeat generation is not a 409; the
   // unique normalized hash still guards writes that race this read.
   const tracked = await trackedHashes(db, scope);
@@ -494,7 +545,14 @@ export async function generateBuyerPrompts(
     for (const kept of drafts) tracked.add(promptTextHash(kept.text));
     const target = input.targets[index]!;
     const { content: _content, ...model } = response.result;
-    batches.push({ target, drafts, evidence: { target, template_version: P.version, model } });
+    const keyed = idempotencyKey
+      ? { idempotency_key: idempotencyKey, request_hash: requestHash(input) }
+      : {};
+    batches.push({
+      target,
+      drafts,
+      evidence: { target, template_version: P.version, model, ...keyed },
+    });
   }
   if (!batches.length) throw unavailable();
   return persist(db, scope, batches);

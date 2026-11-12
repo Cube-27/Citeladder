@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 
 import type { BrandFactList } from '@citeladder/contracts/fact-checking';
 import { mswServer } from '@/test/msw-server';
@@ -56,5 +56,34 @@ describe('BrandFactsPanel', () => {
     expect(screen.getByRole('textbox', { name: 'Edit fact' })).toHaveValue(
       'Pro costs $69 per month.',
     );
+  });
+
+  it('keeps a new fact in the form when adding it is refused, and clears it once saved', async () => {
+    const user = userEvent.setup({ delay: null });
+    let refuse = true;
+    mswServer.use(
+      http.post(`/api/v1/projects/${projectId}/brand-facts`, () =>
+        refuse
+          ? HttpResponse.json(
+              { error: { message: 'Brand facts are limited to 50 per project' } },
+              { status: 422 },
+            )
+          : HttpResponse.json({ ...list.facts[0], status: 'draft' }, { status: 201 }),
+      ),
+      http.get(`/api/v1/projects/${projectId}/brand-facts`, () => HttpResponse.json(list)),
+    );
+    renderWithProviders(
+      <BrandFactsPanel workspaceId={workspaceId} projectId={projectId} list={list} mayEdit />,
+    );
+    const fact = screen.getByRole('textbox', { name: 'Fact' });
+    await user.type(fact, 'Pro costs $49 per month.');
+    await user.click(screen.getByRole('button', { name: 'Add draft fact' }));
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(fact).toHaveValue('Pro costs $49 per month.');
+
+    refuse = false;
+    await user.click(screen.getByRole('button', { name: 'Add draft fact' }));
+    await vi.waitFor(() => expect(fact).toHaveValue(''));
   });
 });

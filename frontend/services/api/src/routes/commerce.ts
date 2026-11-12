@@ -52,6 +52,7 @@ import {
 import { policy } from '../config.ts';
 import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
+import { ApiError } from '../errors.ts';
 import { readBody } from '../http/body.ts';
 import { requireFlag } from '../entitlements/access.ts';
 import { defineGetRoute, definePatchRoute, definePostRoute, definePutRoute } from './define.ts';
@@ -80,6 +81,13 @@ const applyBody = catalogImportApplyRequestSchema.refine(
 );
 const candidateBody = competitorDecisionRequestSchema;
 const promptBody = buyerPromptDecisionRequestSchema;
+/** A retried generation with the same key replays the prompts its first attempt stored. */
+const buyerGenerateHeaders = z.object({
+  'Idempotency-Key': z
+    .string()
+    .max(policy.commerce.buyer_prompts.idempotency_key_max_chars)
+    .nullish(),
+});
 const executeDiscoveriesBody = competitorDiscoveryExecuteRequestSchema;
 
 function scopeOf(c: Context<AppEnv>, projectId: string) {
@@ -130,12 +138,19 @@ export const commerceRoutes = [
     status: 201,
     params: { path: projectPath, query: {} },
     body: buyerGenerateInput,
+    headers: buyerGenerateHeaders,
     response: z.array(buyerPromptSchema),
     async handle({ c, db }, { path }) {
+      const key = c.req.header('Idempotency-Key')?.trim() || null;
+      if (key && key.length > policy.commerce.buyer_prompts.idempotency_key_max_chars)
+        throw new ApiError(422, 'Idempotency-Key is too long');
       return generateBuyerPrompts(
         db,
         await writeScopeOf(db, c, path.project_id),
         await readBody(c, buyerGenerateInput),
+        undefined,
+        undefined,
+        key,
       );
     },
   }),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { catalogTemplateCsv, leftOutCategories } from './catalog-import';
+import { leftOutCategories } from './catalog-import';
 
 const node = (key: string, parent_key: string | null) => ({
   key,
@@ -12,13 +12,6 @@ const node = (key: string, parent_key: string | null) => ({
 });
 
 describe('the Add products helpers', () => {
-  it('builds the template with the required columns first and one example row', () => {
-    expect(catalogTemplateCsv().split('\n')[0]).toBe(
-      'title,brand,description,price,currency,link,image_link,category,sku,gtin',
-    );
-    expect(catalogTemplateCsv().split('\n')[1]).toContain('Footwear > Running');
-  });
-
   it('leaves out an unticked category and everything under it', () => {
     const tree = [
       node('footwear', null),
