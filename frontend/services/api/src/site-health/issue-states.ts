@@ -40,7 +40,7 @@ const RULE_VERSIONS = new Map(
   policy.site_health.rule_catalog.map((rule) => [rule.rule_id, rule.rule_version]),
 );
 
-export type IssueState =
+type IssueState =
   | 'open'
   | 'marked_fixed'
   | 'resolved'
@@ -59,7 +59,7 @@ type Source = {
 type Finding = { issueId: string; evaluationId: string; ruleVersion: string };
 
 /** One page's outcome in one audit. */
-export type PageAudit =
+type PageAudit =
   | {
       kind: 'analyzed';
       siteUrlId: string;
@@ -88,16 +88,20 @@ type Scope = { workspaceId: string; projectId: string };
 
 const isResolved = (state: string) => state === 'resolved';
 
-/**
- * The rows one page's audit writes, given the page's existing states. Pure: the
- * caller has already decided this audit is the page's newest.
- */
-export function nextIssueStates(
+const NO_SOURCE: Source = {
+  analysisId: null,
+  attemptId: null,
+  evaluationId: null,
+  issueId: null,
+};
+
+/** One page's state rows as an audit decides them, given the page's existing states. */
+function pageStates(
   scope: Scope,
-  audit: PageAudit,
+  siteUrlId: string,
   existing: readonly StateRow[],
   landing: Landing,
-): Insertable<SiteIssueStates>[] {
+) {
   const byRule = new Map(existing.map((row) => [row.rule_id, row]));
   const rows: Insertable<SiteIssueStates>[] = [];
   const write = (
@@ -116,7 +120,7 @@ export function nextIssueStates(
       id: prior?.id ?? randomUUID(),
       workspace_id: scope.workspaceId,
       project_id: scope.projectId,
-      site_url_id: audit.siteUrlId,
+      site_url_id: siteUrlId,
       rule_id: ruleId,
       state,
       first_seen_at: prior?.first_seen_at ?? at,
@@ -141,61 +145,73 @@ export function nextIssueStates(
       updated_at: landing.now,
     });
   };
-  const found = (ruleId: string) => {
-    const prior = byRule.get(ruleId);
-    if (!prior) return 'open';
-    return isResolved(prior.state) || prior.state === 'regressed' ? 'regressed' : 'open';
+  /** The state a rule takes when this audit finds it: a resolved issue found again regressed. */
+  const found = (ruleId: string): IssueState => {
+    const prior = byRule.get(ruleId)?.state;
+    return prior === 'resolved' || prior === 'regressed' ? 'regressed' : 'open';
   };
   const resolve = (ruleId: string, source: Source, ruleVersion?: string) => {
     const prior = byRule.get(ruleId);
     if (prior && !isResolved(prior.state)) write(ruleId, 'resolved', source, { ruleVersion });
   };
-  const none = {
-    analysisId: null,
-    attemptId: null,
-    evaluationId: null,
-    issueId: null,
-  };
+  return { rows, write, found, resolve };
+}
 
-  if (audit.kind === 'analyzed') {
-    const page = { ...none, analysisId: audit.analysisId };
-    for (const [ruleId, finding] of audit.found)
-      write(
-        ruleId,
-        found(ruleId),
-        {
-          ...page,
-          evaluationId: finding.evaluationId,
-          issueId: finding.issueId,
-        },
-        { ruleVersion: finding.ruleVersion, seen: true },
-      );
-    for (const [ruleId, passed] of audit.passed)
-      if (!audit.found.has(ruleId))
-        resolve(ruleId, { ...page, evaluationId: passed.evaluationId }, passed.ruleVersion);
-    // Answering at its own URL is the verification for the availability issues.
-    for (const ruleId of AVAILABILITY_RULES) resolve(ruleId, page);
-    // The page answers again: an issue this audit did not judge is open, not verified.
-    for (const prior of existing)
-      if (
-        prior.state === 'page_unavailable' &&
-        !audit.found.has(prior.rule_id) &&
-        !audit.passed.has(prior.rule_id)
-      )
-        write(prior.rule_id, 'open', page, {});
-    return rows;
-  }
+/**
+ * The rows one page's audit writes, given the page's existing states. Pure: the
+ * caller has already decided this audit is the page's newest.
+ */
+function nextIssueStates(
+  scope: Scope,
+  audit: PageAudit,
+  existing: readonly StateRow[],
+  landing: Landing,
+): Insertable<SiteIssueStates>[] {
+  const states = pageStates(scope, audit.siteUrlId, existing, landing);
+  if (audit.kind === 'analyzed') analyzedStates(states, audit, existing);
+  else unavailableStates(states, audit, existing);
+  return states.rows;
+}
 
-  const source = {
-    ...none,
-    analysisId: audit.analysisId,
-    attemptId: audit.attemptId,
-  };
+type PageStates = ReturnType<typeof pageStates>;
+type Analyzed = Extract<PageAudit, { kind: 'analyzed' }>;
+type Unavailable = Extract<PageAudit, { kind: 'unavailable' }>;
+
+/** A page analyzed at its own URL: what it found opens, what it passed resolves. */
+function analyzedStates(
+  { write, found, resolve }: PageStates,
+  audit: Analyzed,
+  existing: readonly StateRow[],
+) {
+  const page = { ...NO_SOURCE, analysisId: audit.analysisId };
+  for (const [ruleId, finding] of audit.found)
+    write(
+      ruleId,
+      found(ruleId),
+      { ...page, evaluationId: finding.evaluationId, issueId: finding.issueId },
+      { ruleVersion: finding.ruleVersion, seen: true },
+    );
+  for (const [ruleId, passed] of audit.passed)
+    if (!audit.found.has(ruleId))
+      resolve(ruleId, { ...page, evaluationId: passed.evaluationId }, passed.ruleVersion);
+  // Answering at its own URL is the verification for the availability issues.
+  for (const ruleId of AVAILABILITY_RULES) resolve(ruleId, page);
+  // The page answers again: an issue this audit did not judge is open, not verified.
+  const judged = (ruleId: string) => audit.found.has(ruleId) || audit.passed.has(ruleId);
+  for (const prior of existing)
+    if (prior.state === 'page_unavailable' && !judged(prior.rule_id))
+      write(prior.rule_id, 'open', page, {});
+}
+
+/** A page that answered 404/410 or redirected: that issue opens, the rest read unavailable. */
+function unavailableStates(
+  { write, found, resolve }: PageStates,
+  audit: Unavailable,
+  existing: readonly StateRow[],
+) {
+  const source = { ...NO_SOURCE, analysisId: audit.analysisId, attemptId: audit.attemptId };
   const ruleId = UNAVAILABLE_RULES[audit.reason];
-  write(ruleId, found(ruleId), source, {
-    evidence: audit.evidence,
-    seen: true,
-  });
+  write(ruleId, found(ruleId), source, { evidence: audit.evidence, seen: true });
   for (const other of AVAILABILITY_RULES) if (other !== ruleId) resolve(other, source);
   for (const prior of existing)
     if (
@@ -204,7 +220,6 @@ export function nextIssueStates(
       prior.state !== 'page_unavailable'
     )
       write(prior.rule_id, 'page_unavailable', source, {});
-  return rows;
 }
 
 /** When a crawl audited its pages: the crawl's audit time, as its analyses record. */

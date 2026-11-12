@@ -116,7 +116,7 @@ async function notFound(seed: SiteSeed, siteUrlId: string) {
 async function states(seed: SiteSeed) {
   const rows = await db
     .selectFrom('site_issue_states')
-    .select(['site_url_id', 'rule_id', 'state', 'source_crawl_id', 'resolved_at'])
+    .select(['rule_id', 'state'])
     .where('workspace_id', '=', seed.workspaceId)
     .where('project_id', '=', seed.projectId)
     .orderBy('rule_id')
@@ -147,11 +147,7 @@ describe('issue state and trend', () => {
     const opened = await db
       .selectFrom('site_issue_states')
       .innerJoin('site_issues', 'site_issues.id', 'site_issue_states.source_issue_id')
-      .select([
-        'site_issues.crawl_id',
-        'site_issues.site_url_id',
-        'site_issue_states.source_analysis_id',
-      ])
+      .select(['site_issues.crawl_id', 'site_issues.site_url_id'])
       .where('site_issue_states.rule_id', '=', SITEMAP)
       .where('site_issue_states.project_id', '=', seed.projectId)
       .executeTakeFirstOrThrow();
@@ -248,12 +244,26 @@ describe('issue state and trend', () => {
     await audit(one, '/a', { [SITEMAP]: 'missing' });
     await land(one);
     const two = await crawlAt(second, minutes(0));
-    await audit(two, '/a', { [SITEMAP]: 'satisfied', [CLIENT]: 'missing' });
+    const foreign = await audit(two, '/a', { [SITEMAP]: 'satisfied', [CLIENT]: 'missing' });
     await land(two);
 
     expect(await states(first)).toEqual({ [SITEMAP]: 'open' });
     expect(await states(second)).toEqual({ [CLIENT]: 'open' });
     expect(await trend(first)).toEqual([{ open_count: 1, source_crawl_id: one.crawlId }]);
     expect(await trend(second)).toEqual([{ open_count: 1, source_crawl_id: two.crawlId }]);
+
+    // PostgreSQL refuses a state that names another project's page.
+    const own = await db
+      .selectFrom('site_issue_states')
+      .selectAll()
+      .where('workspace_id', '=', first.workspaceId)
+      .where('project_id', '=', first.projectId)
+      .executeTakeFirstOrThrow();
+    await expect(
+      db
+        .insertInto('site_issue_states')
+        .values({ ...own, id: randomUUID(), site_url_id: foreign.id, rule_id: CLIENT })
+        .execute(),
+    ).rejects.toMatchObject({ code: '23503' });
   });
 });

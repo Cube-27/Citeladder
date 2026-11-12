@@ -44,10 +44,11 @@ CREATE TABLE public.site_issue_states (
     CONSTRAINT uq_site_issue_state UNIQUE (workspace_id, project_id, site_url_id, rule_id),
     CONSTRAINT site_issue_states_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id)
         REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE,
-    CONSTRAINT site_issue_states_site_url_id_fkey FOREIGN KEY (site_url_id)
-        REFERENCES public.site_urls(id) ON DELETE CASCADE,
-    CONSTRAINT site_issue_states_source_crawl_id_fkey FOREIGN KEY (source_crawl_id)
-        REFERENCES public.site_crawls(id) ON DELETE CASCADE,
+    -- The page and the deciding crawl belong to the same project and workspace.
+    CONSTRAINT fk_site_issue_state_site_url_scoped FOREIGN KEY (workspace_id, project_id, site_url_id)
+        REFERENCES public.site_urls(workspace_id, project_id, id) ON DELETE CASCADE,
+    CONSTRAINT fk_site_issue_state_crawl_scoped FOREIGN KEY (workspace_id, project_id, source_crawl_id)
+        REFERENCES public.site_crawls(workspace_id, project_id, id) ON DELETE CASCADE,
     CONSTRAINT site_issue_states_source_analysis_id_fkey FOREIGN KEY (source_analysis_id)
         REFERENCES public.site_page_analyses(id) ON DELETE CASCADE,
     CONSTRAINT site_issue_states_source_attempt_id_fkey FOREIGN KEY (source_attempt_id)
@@ -88,8 +89,8 @@ CREATE TABLE public.site_issue_trend (
     CONSTRAINT uq_site_issue_trend_day UNIQUE (workspace_id, project_id, day),
     CONSTRAINT site_issue_trend_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id)
         REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE,
-    CONSTRAINT site_issue_trend_source_crawl_id_fkey FOREIGN KEY (source_crawl_id)
-        REFERENCES public.site_crawls(id) ON DELETE CASCADE
+    CONSTRAINT fk_site_issue_trend_crawl_scoped FOREIGN KEY (workspace_id, project_id, source_crawl_id)
+        REFERENCES public.site_crawls(workspace_id, project_id, id) ON DELETE CASCADE
 );
 
 CREATE INDEX ix_site_issue_trend_source_crawl_id
