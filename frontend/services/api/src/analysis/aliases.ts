@@ -62,20 +62,31 @@ function runEnd(tokens: readonly string[], start: number, words: readonly string
   let index = start;
   let word = 0;
   while (word < words.length) {
-    let candidate = '';
-    if (DENSE_SCRIPT.test(words[word]!)) {
-      const target = words[word++]!;
-      while (index < tokens.length && candidate.length < target.length)
-        candidate += tokens[index++];
-      if (candidate !== target) return null;
-      continue;
-    }
-    const token = tokens[index++];
-    if (token === undefined) return null;
-    while (word < words.length && candidate.length < token.length) candidate += words[word++];
-    if (candidate !== token) return null;
+    const step = DENSE_SCRIPT.test(words[word]!)
+      ? segmentedWord(tokens, index, words[word]!)
+      : joinedWords(tokens[index], words, word);
+    if (!step) return null;
+    index += step.tokens;
+    word += step.words;
   }
   return index;
+}
+
+/** Tokens from `index` that segmentation split one space-free `word` into. */
+function segmentedWord(tokens: readonly string[], index: number, word: string) {
+  let candidate = '';
+  let next = index;
+  while (next < tokens.length && candidate.length < word.length) candidate += tokens[next++];
+  return candidate === word ? { tokens: next - index, words: 1 } : null;
+}
+
+/** The alias words from `word` that `token` spells, run together or alone. */
+function joinedWords(token: string | undefined, words: readonly string[], word: number) {
+  if (token === undefined) return null;
+  let candidate = '';
+  let next = word;
+  while (next < words.length && candidate.length < token.length) candidate += words[next++];
+  return candidate === token ? { tokens: 1, words: next - word } : null;
 }
 
 /** Every whole-token run of `tokens` spelling the alias `words`, with its offsets. */
