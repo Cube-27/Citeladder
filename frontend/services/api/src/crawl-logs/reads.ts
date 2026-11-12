@@ -411,6 +411,19 @@ export async function coveragePage(db: Database, scope: CrawlScope, input: Crawl
         : null,
   });
 }
+type CrawlConnection = z.infer<typeof crawlSummarySchema>['connection'];
+
+/**
+ * The project's crawl-log connection: none without an active source, awaiting
+ * data until one has delivered, then connected.
+ */
+function crawlConnection(
+  sources: readonly Readonly<{ status: string; connection: string }>[],
+): CrawlConnection {
+  if (!sources.some((s) => s.status === 'active')) return 'not_connected';
+  return sources.some((s) => s.connection === 'connected') ? 'connected' : 'awaiting_data';
+}
+
 export async function crawlSummary(db: Database, scope: CrawlScope, input: CrawlReadOptions = {}) {
   const options = await withReportingTimezone(db, scope, input);
   const w = crawlWindow(options),
@@ -453,9 +466,7 @@ export async function crawlSummary(db: Database, scope: CrawlScope, input: Crawl
   ]);
   const quality = coverageQuality(coverage, w, currentReportingDay(options));
   const adequate = quality === 'complete' || quality === 'declared_complete';
-  let connection = 'not_connected';
-  if (sources.some((s) => s.status === 'active'))
-    connection = sources.some((s) => s.connection === 'connected') ? 'connected' : 'awaiting_data';
+  const connection = crawlConnection(sources);
   const measured = total.requests > 0 || adequate;
   return crawlSummarySchema.parse({
     unit: 'requests',

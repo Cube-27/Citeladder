@@ -134,8 +134,9 @@ export async function readAiReferrals(
       snapshotId: null,
       response: aiReferralsSchema.parse({
         project_id: query.projectId,
-        window_start: query.fromDate ?? '',
-        window_end: query.toDate ?? '',
+        // No snapshot resolved a window, whatever was requested.
+        window_start: null,
+        window_end: null,
         granularity: granularitySchema.parse(granularity),
         referral_volume: [],
         referral_share: [],

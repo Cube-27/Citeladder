@@ -11,6 +11,8 @@ import type { usePerformanceSync } from './use-performance-sync';
 import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import type { StatusMessage } from '@/components/ui/status-line';
+import { QueryState } from '@/components/ui/query-state';
+import type { useRangeProjection } from './use-range-projection';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { SegmentedAction, SegmentedControl } from '@/components/ui/tabs';
 import type { PerformanceGranularity } from '@/lib/api/performance';
@@ -203,6 +205,23 @@ function missingCoverageNotice(
   return null;
 }
 
+/** A failed range build: what happened, and Retry for exactly that window. */
+export function ProjectionFailure({
+  failure,
+}: Readonly<{ failure: ReturnType<typeof useRangeProjection>['failure'] }>) {
+  if (!failure) return null;
+  return (
+    <QueryState
+      kind="error"
+      title="Couldn't build this range"
+      error={failure.error}
+      fallback="Building this range from imported data failed."
+      onRetry={failure.retry}
+      pending={failure.pending}
+    />
+  );
+}
+
 /**
  * The screen's notices, most important first, for its one `StatusLine`:
  * they swap in place rather than stacking banners above the chart.
@@ -210,6 +229,7 @@ function missingCoverageNotice(
 export function performanceNotices({
   sync,
   projecting,
+  projectionFailed,
   selectedMissing,
   comparisonMissing,
   qualityFlagged,
@@ -217,6 +237,8 @@ export function performanceNotices({
 }: Readonly<{
   sync: ReturnType<typeof usePerformanceSync>;
   projecting: boolean;
+  /** Building the missing window failed: a failure with Retry, not "no imported data". */
+  projectionFailed: boolean;
   selectedMissing: boolean;
   comparisonMissing: boolean;
   /** Some imported days of a mapped provider are missing, flagged or on a prior revision. */
@@ -252,12 +274,20 @@ export function performanceNotices({
       busy: true,
       text: 'Building this range from imported data…',
     });
+  if (projectionFailed)
+    messages.push({
+      key: 'projection-failed',
+      tone: 'warning',
+      text: "Couldn't build this range from imported data. Retry to build it again.",
+    });
   // Coverage is ONE notice, not one per window: the selected and comparison
   // ranges are routinely both uncovered, and which windows are affected is
-  // the only part that differs, so that is the part the sentence varies.
-  const coverageNotice = projecting
-    ? null
-    : missingCoverageNotice(selectedMissing, comparisonMissing);
+  // the only part that differs, so that is the part the sentence varies. A
+  // failed build is not missing data, so it never claims nothing covers it.
+  const coverageNotice =
+    projecting || projectionFailed
+      ? null
+      : missingCoverageNotice(selectedMissing, comparisonMissing);
   if (coverageNotice) messages.push({ key: 'coverage', tone: 'info', text: coverageNotice });
   if (qualityFlagged)
     messages.push({

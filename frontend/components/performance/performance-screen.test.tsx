@@ -491,6 +491,97 @@ describe('PerformanceScreen evidence states', () => {
     expect(await screen.findByTestId('metric-card-strip')).toBeVisible();
     expect(enqueueCount).toBe(1);
   });
+
+  it('reports a failed range build with Retry instead of claiming no imported data covers it', async () => {
+    const retryTask = '33333333-3333-4333-8333-333333333335';
+    let ready = false;
+    const enqueued: string[] = [];
+    const missing = dashboard({
+      selected: {
+        snapshot_id: null,
+        window_start: '2026-08-01',
+        window_end: '2026-08-28',
+        evidence_state: 'not_run',
+        totals: emptyTotals,
+        series: emptySeries,
+      },
+      coverage: { earliest_date: '2026-08-01', latest_date: '2026-08-28', covered_days: 28 },
+    });
+    const complete = dashboard({
+      selected: measuredWindow({ ...emptyTotals, clicks: 0, impressions: 0 }),
+      coverage: { earliest_date: '2026-08-01', latest_date: '2026-08-28', covered_days: 28 },
+    });
+    const task = (taskId: string, status: string) =>
+      HttpResponse.json({
+        task_id: taskId,
+        status,
+        window_start: '2026-08-01',
+        window_end: '2026-08-28',
+      });
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/performance`, () =>
+        HttpResponse.json(ready ? complete : missing),
+      ),
+      http.post(`/api/v1/projects/${PROJECT}/performance/range`, () => {
+        const taskId = enqueued.length ? retryTask : TASK;
+        enqueued.push(taskId);
+        return task(taskId, 'queued');
+      }),
+      http.get(`/api/v1/projects/${PROJECT}/performance/range/${TASK}`, () => task(TASK, 'failed')),
+      http.get(`/api/v1/projects/${PROJECT}/performance/range/${retryTask}`, () => {
+        ready = true;
+        return task(retryTask, 'succeeded');
+      }),
+      http.get(`/api/v1/projects/${PROJECT}/performance/table`, ({ request }) =>
+        HttpResponse.json(tablePage(new URL(request.url).searchParams.get('dimension')!)),
+      ),
+    );
+
+    renderPerformance();
+
+    const failure = await screen.findByText("Couldn't build this range");
+    expect(failure).toBeVisible();
+    expect(screen.getByTestId('performance-status')).toHaveTextContent(
+      "Couldn't build this range from imported data.",
+    );
+    expect(screen.queryByText(/No imported data covers this range/)).not.toBeInTheDocument();
+    expect(screen.queryByText('No performance evidence here')).not.toBeInTheDocument();
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByTestId('metric-card-strip')).toBeVisible();
+    expect(enqueued).toEqual([TASK, retryTask]);
+    expect(screen.queryByText("Couldn't build this range")).not.toBeInTheDocument();
+  });
+
+  it('shows the Bing panel for a connected Bing that measured no rows', async () => {
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/readiness`, () =>
+        HttpResponse.json({
+          ...readiness,
+          stage: 'analysis_ready',
+          connection_count: 1,
+          providers: ['bing'],
+        }),
+      ),
+      http.get(`/api/v1/projects/${PROJECT}/performance`, () =>
+        HttpResponse.json(
+          dashboard({
+            selected: { ...measuredWindow(emptyTotals), evidence_state: 'observed_zero' },
+            coverage: { earliest_date: '2026-08-01', latest_date: '2026-08-28', covered_days: 28 },
+          }),
+        ),
+      ),
+      http.get(`/api/v1/projects/${PROJECT}/performance/table`, ({ request }) =>
+        HttpResponse.json(tablePage(new URL(request.url).searchParams.get('dimension')!)),
+      ),
+    );
+
+    renderPerformance();
+
+    expect(await screen.findByTestId('bing-panel')).toBeVisible();
+    expect(screen.queryByText('No search performance evidence yet')).not.toBeInTheDocument();
+  });
 });
 
 function tableRows(prefix: string, from: number, to: number) {

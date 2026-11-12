@@ -36,8 +36,8 @@ const crawl = {
 };
 const referrals = {
   project_id: project.id,
-  window_start: '',
-  window_end: '',
+  window_start: null,
+  window_end: null,
   granularity: 'day',
   referral_volume: [],
   referral_share: [],

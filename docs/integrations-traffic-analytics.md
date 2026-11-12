@@ -377,7 +377,9 @@ and dimension tables use that ID so they cannot drift from the chart.
 Comparisons use a second persisted window with absolute differences, not
 client-generated percentage change. Year-over-year remains unavailable until
 sufficient history exists. Missing custom windows request the explicit projection
-action and show progress.
+action and show progress. A refused request or a failed or cancelled projection
+task shows the failure with Retry for that window, never "no imported data
+covers this range".
 
 With no imported source evidence, Performance keeps its scoped range controls
 and readiness path but does not reserve metric, chart, or dimension-table
@@ -385,9 +387,10 @@ scaffolding. Persisted zero, partial-provider evidence, and an available
 selected window with a missing comparison remain measured states rather than
 the first-use empty state. Search Console headline totals control the metric
 strip and chart, while persisted Search Console dimension counts independently
-keep breakdown tables available. A Bing connection alone is not evidence for a
-selected window; Bing tables require persisted Bing query or page counts for
-that snapshot.
+keep breakdown tables available. The Bing panel needs a persisted selected
+snapshot plus either a Bing connection (readiness `providers`) or persisted
+Bing query or page counts: a connected Bing that measured nothing shows its
+panel with zero rows, and a project without Bing never shows it.
 
 Cursors bind project, snapshot, dimension, filters, sorting and page size.
 The browser resets cursor history when those inputs change.

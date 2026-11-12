@@ -621,6 +621,48 @@ describe('A3 persisted Pages join', () => {
     ])
       expect(hash(canonicalPage(url)!)).toBe(canonicalIdentity(url).hash);
   });
+  it('answers not_connected over MCP for a project with no AI-traffic source, and figures for one with a source', async () => {
+    const bare = await fixtures.crawl();
+    const read = (tenant: SiteSeed, tool: string, args: Record<string, unknown>) =>
+      dispatchTool(
+        db,
+        {
+          kind: 'member' as const,
+          userId: tenant.userId,
+          workspaceId: tenant.workspaceId,
+          projectId: tenant.projectId,
+        },
+        tool,
+        { project_id: tenant.projectId, ...args },
+        'https://app.example.test',
+      );
+    const notConnected = { state: 'unavailable', reason: 'not_connected' };
+    expect(await read(bare, 'read_crawl_logs', { view: 'summary' })).toMatchObject(notConnected);
+    expect(await read(bare, 'read_ai_traffic_pages', filters)).toMatchObject(notConnected);
+    expect(
+      await read(bare, 'read_ai_traffic_url', { url: 'https://example.test/guide', ...filters }),
+    ).toMatchObject(notConnected);
+    expect(await read(seed, 'read_crawl_logs', { view: 'summary', ...filters })).toMatchObject({
+      state: 'available',
+      connection: 'connected',
+    });
+    expect(await read(seed, 'read_ai_traffic_pages', filters)).toMatchObject({
+      state: 'available',
+    });
+    // Revoking the source keeps its retained history readable.
+    const setStatus = (status: string) =>
+      db.updateTable('crawl_log_sources').set({ status }).where('id', '=', sourceId).execute();
+    await setStatus('revoked');
+    try {
+      expect(await read(seed, 'read_crawl_logs', { view: 'summary', ...filters })).toMatchObject({
+        state: 'available',
+        connection: 'not_connected',
+        requests: 7,
+      });
+    } finally {
+      await setStatus('active');
+    }
+  });
 });
 
 describe('A3 persisted insight gates', () => {

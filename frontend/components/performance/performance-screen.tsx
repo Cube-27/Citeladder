@@ -10,6 +10,7 @@ import {
   PerformanceToolbar,
   PerformanceWindowCaption,
   performanceNotices,
+  ProjectionFailure,
 } from './performance-chrome';
 import { Ga4SummaryRow, MetricCards } from './metric-cards';
 import { PerformanceBreakdowns } from './performance-breakdowns';
@@ -34,6 +35,7 @@ import {
   performanceQueries,
   type PerformanceDashboard,
   type PerformanceGranularity,
+  type ProjectReadiness,
 } from '@/lib/api/performance';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -90,8 +92,14 @@ function compareLabel(selection: RangeSelection): string {
   );
 }
 
-function evidenceAvailability(data: PerformanceDashboard) {
+/**
+ * What the selected snapshot can show. A connected Bing (readiness
+ * `providers`) that measured nothing still has its panel, stating zero rows,
+ * while a project without one never shows it.
+ */
+function evidenceAvailability(data: PerformanceDashboard, readiness: ProjectReadiness | undefined) {
   const { totals, snapshot_id: snapshotId } = data.selected;
+  const bingConnected = readiness?.providers.includes('bing') ?? false;
   const hasSearchConsoleTotals = totals.clicks !== null || totals.impressions !== null;
   const hasSearchConsoleDimensions = [
     data.dimension_counts.query,
@@ -105,7 +113,7 @@ function evidenceAvailability(data: PerformanceDashboard) {
   const hasGa4 = totals.sessions !== null || totals.key_events !== null;
   const hasBing =
     snapshotId !== null &&
-    (data.dimension_counts.bing_query > 0 || data.dimension_counts.bing_page > 0);
+    (bingConnected || data.dimension_counts.bing_query > 0 || data.dimension_counts.bing_page > 0);
   return {
     hasSearchConsoleTotals,
     hasSearchConsoleBreakdowns,
@@ -142,7 +150,10 @@ function coverageSummary(coverage: PerformanceDashboard['coverage']): string {
 function PerformanceEmptyState({
   data,
   projecting,
-}: Readonly<{ data: PerformanceDashboard; projecting: boolean }>) {
+  failed,
+}: Readonly<{ data: PerformanceDashboard; projecting: boolean; failed: boolean }>) {
+  // A failed build is reported by `ProjectionFailure`, never as "no evidence".
+  if (failed) return null;
   if (projecting) {
     return (
       <QueryState
@@ -363,7 +374,7 @@ export function PerformanceScreen() {
   const selectedLabel = describeWindow(selectedWindow);
   const comparisonLabel = compareLabel(selection);
   const series = chartSeries(selectedWindow, comparisonWindow, activeMetrics);
-  const evidence = evidenceAvailability(data);
+  const evidence = evidenceAvailability(data, readiness.data);
   const hasEvidence = evidence.hasSearchConsoleBreakdowns || evidence.hasGa4 || evidence.hasBing;
   const coverage = performanceCoverage(data, hasEvidence);
 
@@ -409,6 +420,7 @@ export function PerformanceScreen() {
           messages={performanceNotices({
             sync,
             projecting: projection.projecting,
+            projectionFailed: projection.failure !== null,
             selectedMissing: coverage.selectedMissing,
             comparisonMissing: coverage.comparisonMissing,
             qualityFlagged: hasQualityFlags(data.coverage.analytics_quality),
@@ -416,8 +428,13 @@ export function PerformanceScreen() {
           })}
         />
 
+        <ProjectionFailure failure={projection.failure} />
         {!hasEvidence ? (
-          <PerformanceEmptyState data={data} projecting={projection.projecting} />
+          <PerformanceEmptyState
+            data={data}
+            projecting={projection.projecting}
+            failed={projection.failure !== null}
+          />
         ) : (
           <>
             {/* One card holds the strip and the plot it drives: selecting a card
@@ -455,8 +472,8 @@ export function PerformanceScreen() {
               selectedLabel={selectedLabel}
               compareLabel={comparisonLabel}
               hasSearchConsole={evidence.hasSearchConsoleBreakdowns}
-              // Only when a Bing connection exists: Bing's panel states "measured
-              // nothing", which is not what an absent connection means.
+              // Only when Bing is connected or has rows: Bing's panel states
+              // "measured nothing", which is not what an absent connection means.
               hasBing={evidence.hasBing}
             />
           </>
