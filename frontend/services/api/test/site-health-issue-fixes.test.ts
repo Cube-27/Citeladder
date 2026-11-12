@@ -192,6 +192,26 @@ describe('Mark fixed (SH-B12)', () => {
     expect(await stateOf(seed, b.id)).toBe('open');
   });
 
+  it('counts each tracked page at its latest audit, a page verified since the crawl still among M', async () => {
+    const seed = await fixtures.crawl('completed');
+    const full = await crawlAt(seed, at(0));
+    const a = await audit(full, '/a', 'missing');
+    const b = await audit(full, '/b', 'missing');
+    const c = await audit(full, '/c', 'satisfied');
+    await land(full);
+    await fixtures.monitor(seed, [a.id, b.id, c.id]);
+    const groupId = await groupOf(full);
+
+    // A re-audit after the crawl verifies /a and finds the issue on /c.
+    const rerun = await crawlAt(seed, at(10), true);
+    await audit(rerun, '/a', 'satisfied', a.id);
+    await audit(rerun, '/c', 'missing', c.id);
+    await land(rerun);
+
+    // The crawl now shows the issue on /b and /c; /a counts as fixed and verified.
+    expect(await progress(full, groupId)).toEqual({ affected: 3, fixed: 1, verified: 1, rerun: 2 });
+  });
+
   it('keeps marks and progress to the workspace that owns the crawl', async () => {
     const seed = await fixtures.crawl('completed');
     const full = await crawlAt(seed, at(0));

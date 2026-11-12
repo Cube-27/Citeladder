@@ -12,11 +12,15 @@ import { textRole } from '@/components/ui/typography';
 import { ApiError } from '@/lib/api/errors';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 import { formatCount } from '@/lib/format';
+import { useWorkspaceCapability } from '@/lib/project/project-scope';
 
 /** The project whose crawl the issue is in: Re-run all refreshes its dashboard. */
 export type IssueFixScope = Readonly<{ workspaceId: string; projectId: string }>;
 
-/** "N of M pages fixed": pages marked fixed or verified fixed, of the pages the crawl found it on. */
+/**
+ * "N of M pages fixed": pages marked fixed or verified fixed, of the pages the
+ * issue is on at their latest audit plus those verified fixed since the crawl.
+ */
 export function fixedLabel(
   progress: Pick<IssueFixProgress, 'fixed_url_count' | 'affected_url_count'>,
 ) {
@@ -25,11 +29,19 @@ export function fixedLabel(
 }
 
 type Notice = { tone: 'info' | 'negative'; text: string };
+type ActionProps = Readonly<{
+  scope: IssueFixScope;
+  crawlId: string;
+  groupId: string;
+  onNotice: (notice: Notice | null) => void;
+}>;
 
 /**
  * Mark fixed and Re-run all for one issue (SH-B12), with how far its fix has
  * come. Marking says the person fixed it; only an audit verifies it. Re-run all
  * re-audits the tracked pages the issue is still open on, one page fetch each.
+ * A role without `write` sees no Mark fixed, and one without `run` no Re-run
+ * all (AR-7: hidden, not disabled).
  */
 export function IssueFixActions({
   scope,
@@ -37,8 +49,8 @@ export function IssueFixActions({
   groupId,
 }: Readonly<{ scope: IssueFixScope; crawlId: string; groupId: string }>) {
   const query = useQuery(siteHealthQueries.issueFixes(scope.workspaceId, crawlId));
-  const mark = useMutation(siteHealthMutations.markIssueFixed(scope.workspaceId, crawlId));
-  const rerun = useMutation(siteHealthMutations.rerunIssue(scope, crawlId));
+  const canWrite = useWorkspaceCapability('write');
+  const canRun = useWorkspaceCapability('run');
   const [notice, setNotice] = useState<Notice | null>(null);
   if (query.isError && !query.data)
     return (
@@ -64,43 +76,87 @@ export function IssueFixActions({
         ) : null}
       </Inline>
       <Inline className="flex-wrap">
-        <Button
-          disabled={mark.isPending || progress.fixed_url_count >= progress.affected_url_count}
-          onClick={() => {
-            setNotice(null);
-            mark.mutate(groupId, {
-              onError: () =>
-                setNotice({
-                  tone: 'negative',
-                  text: 'Could not mark this issue fixed. Please try again.',
-                }),
-            });
-          }}
-        >
-          {mark.isPending ? 'Marking fixed…' : 'Mark fixed'}
-        </Button>
-        {rerunCount === null ? null : (
-          <Button
-            disabled={rerun.isPending || rerunCount === 0}
-            onClick={() => {
-              setNotice(null);
-              rerun.mutate(groupId, {
-                onSuccess: (result) =>
-                  setNotice({
-                    tone: 'info',
-                    text: `Re-auditing ${pagesLabel(result.page_count)}. The progress updates when the audit finishes.`,
-                  }),
-                onError: (error) => setNotice({ tone: 'negative', text: rerunErrorMessage(error) }),
-              });
-            }}
-          >
-            {rerun.isPending ? 'Re-running…' : 'Re-run all'}
-          </Button>
-        )}
+        {canWrite ? (
+          <MarkFixedButton
+            scope={scope}
+            crawlId={crawlId}
+            groupId={groupId}
+            onNotice={setNotice}
+            done={progress.fixed_url_count >= progress.affected_url_count}
+          />
+        ) : null}
+        {canRun && rerunCount !== null ? (
+          <RerunAllButton
+            scope={scope}
+            crawlId={crawlId}
+            groupId={groupId}
+            onNotice={setNotice}
+            none={rerunCount === 0}
+          />
+        ) : null}
       </Inline>
-      <span className="type-caption">{rerunCaption(rerunCount)}</span>
+      {canRun || rerunCount === null ? (
+        <span className="type-caption">{rerunCaption(rerunCount)}</span>
+      ) : null}
       {notice ? <Callout tone={notice.tone}>{notice.text}</Callout> : null}
     </Stack>
+  );
+}
+
+/** Mark fixed; `done` once every page is marked or verified fixed. */
+function MarkFixedButton({
+  scope,
+  crawlId,
+  groupId,
+  onNotice,
+  done,
+}: ActionProps & Readonly<{ done: boolean }>) {
+  const mark = useMutation(siteHealthMutations.markIssueFixed(scope.workspaceId, crawlId));
+  return (
+    <Button
+      disabled={mark.isPending || done}
+      onClick={() => {
+        onNotice(null);
+        mark.mutate(groupId, {
+          onError: () =>
+            onNotice({
+              tone: 'negative',
+              text: 'Could not mark this issue fixed. Please try again.',
+            }),
+        });
+      }}
+    >
+      {mark.isPending ? 'Marking fixed…' : 'Mark fixed'}
+    </Button>
+  );
+}
+
+/** Re-run all; `none` when no tracked page with the issue is left to re-audit. */
+function RerunAllButton({
+  scope,
+  crawlId,
+  groupId,
+  onNotice,
+  none,
+}: ActionProps & Readonly<{ none: boolean }>) {
+  const rerun = useMutation(siteHealthMutations.rerunIssue(scope, crawlId));
+  return (
+    <Button
+      disabled={rerun.isPending || none}
+      onClick={() => {
+        onNotice(null);
+        rerun.mutate(groupId, {
+          onSuccess: (result) =>
+            onNotice({
+              tone: 'info',
+              text: `Re-auditing ${pagesLabel(result.page_count)}. The progress updates when the audit finishes.`,
+            }),
+          onError: (error) => onNotice({ tone: 'negative', text: rerunErrorMessage(error) }),
+        });
+      }}
+    >
+      {rerun.isPending ? 'Re-running…' : 'Re-run all'}
+    </Button>
   );
 }
 

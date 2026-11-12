@@ -3,11 +3,12 @@
  * crawl found it on, and how far its fix has come ("N of M pages fixed").
  *
  * An issue is a crawl's issue group (one rule and finding class). Its pages are
- * those the crawl's current issues of that group name; each page's state for
- * the rule is its `site_issue_states` row (`issue-states.ts`), so marks and
+ * those the issues the crawl shows name: each page's latest audit
+ * (`viewIssuesSql`, SH-B9), as the Issues list reads them. Each page's state
+ * for the rule is its `site_issue_states` row (`issue-states.ts`), so marks and
  * every later audit, a single-page or Re-run-all re-audit included, move the
- * progress without rewriting the crawl's issues. Fixed counts pages marked fixed
- * or resolved; only an audit resolves one.
+ * progress. Fixed counts pages marked fixed or resolved; only an audit resolves
+ * one.
  */
 import type { IssueFixes, IssueFixProgress } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
@@ -16,29 +17,47 @@ import type { Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
 import { markIssueFixed } from './issue-states.ts';
 import { crawlError } from './planner-policy.ts';
-import { loadCrawl, type Crawl } from './reads/crawl.ts';
-import { issueGroupId } from './reads/rules.ts';
+import { loadCrawl, pageAuditsSql, viewIssuesSql, type Crawl } from './reads/crawl.ts';
+import { issueGroupId, siteLevelRule } from './reads/rules.ts';
 import { rerunTrackedPages } from './selection.ts';
 
 const FIXED_STATES = ['marked_fixed', 'resolved'];
 
 /**
- * The crawl's current issues, each with its page's state for the rule, whether
- * the page is tracked, and whether a site-level (architecture) evaluation found
- * it: a page re-audit never judges those, only a full crawl does.
+ * An issue's pages in the crawl, each with its state for the rule and whether
+ * it is tracked: the pages the issues the crawl shows name, and the pages an
+ * audit since the crawl began verified fixed. A verified page leaves the view
+ * (its latest audit passed), but it stays one of the M its fix is counted
+ * against; a group no page still shows is not listed.
  */
-const issuePagesFrom = (crawl: Crawl) => sql`
-  from site_issues i
-  join site_rule_evaluations e on e.id = i.evaluation_id and e.workspace_id = i.workspace_id
-  left join site_issue_states s on s.workspace_id = i.workspace_id
-    and s.project_id = i.project_id and s.site_url_id = i.site_url_id and s.rule_id = i.rule_id
-  left join monitored_site_urls m on m.workspace_id = i.workspace_id
-    and m.project_id = i.project_id and m.site_url_id = i.site_url_id and m.active
-  where i.workspace_id = ${crawl.workspace_id} and i.crawl_id = ${crawl.id} and i.is_current`;
+const issuePagesFrom = (crawl: Crawl) => {
+  const began = new Date(crawl.started_at ?? crawl.created_at);
+  return sql`
+  from (
+    select v.site_url_id, v.rule_id, v.finding_class
+    from site_issues v where ${viewIssuesSql(crawl, 'v')}
+    union
+    select a.site_url_id, r.rule_id, g.finding_class
+    from (${pageAuditsSql(crawl)}) a
+    join site_issue_states r on r.workspace_id = ${crawl.workspace_id}
+      and r.project_id = ${crawl.project_id} and r.site_url_id = a.site_url_id
+      and r.source_crawl_id = a.crawl_id and r.state = 'resolved' and r.resolved_at > ${began}
+    join (select distinct g.rule_id, g.finding_class from site_issues g
+      where ${viewIssuesSql(crawl, 'g')}) g on g.rule_id = r.rule_id
+  ) i
+  left join site_issue_states s on s.workspace_id = ${crawl.workspace_id}
+    and s.project_id = ${crawl.project_id} and s.site_url_id = i.site_url_id and s.rule_id = i.rule_id
+  left join monitored_site_urls m on m.workspace_id = ${crawl.workspace_id}
+    and m.project_id = ${crawl.project_id} and m.site_url_id = i.site_url_id and m.active`;
+};
 
-/** A page Re-run all re-audits: tracked, not yet resolved, judged by a page audit. */
+/**
+ * A page Re-run all re-audits: tracked, not yet resolved, and judged by a page
+ * audit. A site-level finding (architecture, sitewide links) only a site crawl
+ * evaluates.
+ */
 const rerunnable = sql`m.id is not null and s.state is distinct from 'resolved'
-  and e.source_architecture_id is null`;
+  and not ${siteLevelRule}`;
 
 /** Every issue group's fix progress in the crawl. */
 export async function issueFixes(
@@ -60,7 +79,7 @@ export async function issueFixes(
       count(distinct i.site_url_id) filter (where s.state = any(${FIXED_STATES}::text[]))::int as fixed,
       count(distinct i.site_url_id) filter (where s.state = 'resolved')::int as verified,
       -- A site-level finding has no page a re-audit judges: not applicable, not zero.
-      case when bool_and(e.source_architecture_id is not null) then null
+      case when ${siteLevelRule} then null
         else count(distinct i.site_url_id) filter (where ${rerunnable})::int end as rerun
     ${issuePagesFrom(crawl)}
     group by i.rule_id, i.finding_class
@@ -90,7 +109,7 @@ async function issueGroup(db: Database, crawl: Crawl, groupId: string) {
   const pages = await sql<IssuePage>`
     select i.site_url_id, s.state, bool_and(${rerunnable}) as rerunnable
     ${issuePagesFrom(crawl)}
-      and i.rule_id = ${group.rule_id} and i.finding_class = ${group.finding_class}
+    where i.rule_id = ${group.rule_id} and i.finding_class = ${group.finding_class}
     group by i.site_url_id, s.state
     order by i.site_url_id`.execute(db);
   return { ruleId: group.rule_id, pages: pages.rows };

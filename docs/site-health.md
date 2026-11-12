@@ -830,7 +830,8 @@ do.
 
 **Mark fixed and Re-run all** ([SH-B12](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12);
 `issue-fixes.ts`, routes in the `site-health-crawls` family) act on one issue
-group of a crawl, across the pages its current issues name.
+group of a crawl, across the pages the issues the crawl shows name: each
+page's latest audit (`viewIssuesSql`), as the Issues list reads them.
 `POST /site-crawls/{crawl_id}/issues/{group_id}/mark-fixed` moves the group's
 rule to `marked_fixed` on every page where it is `open` or `regressed`
 (`markIssueFixed`, under the same project lock as a landing), stamping
@@ -839,17 +840,20 @@ resolves it, one that finds it reopens it, except an audit fetched before the
 mark, which cannot judge the fix and leaves the mark standing. A mark keeps the
 issue open, so the trend does not move.
 `GET /site-crawls/{crawl_id}/issue-fixes` reports, per group, "N of M pages
-fixed": M pages the crawl found it on, N of them `marked_fixed` or `resolved`,
-how many of those an audit verified, and how many pages Re-run all would
-re-audit (null, not zero, for a site-level finding). The issue dialog shows it with both actions, and the Issues summary's
-fix-first rows show it once a page is fixed.
+fixed": M pages whose latest audit found it plus those an audit since the crawl
+began verified fixed (a verified page leaves the Issues list but stays among
+M), N of them `marked_fixed` or `resolved`, how many of those an audit verified, and how many pages Re-run all
+would re-audit (null, not zero, for a site-level finding). The issue dialog
+shows it with both actions, and the Issues summary's fix-first rows show it
+once a page is fixed.
 `POST /site-crawls/{crawl_id}/issues/{group_id}/rerun` re-audits every tracked
 page the group is still unresolved on as one page-rerun crawl
 (`createPageRerunCrawl`, which also runs the single-page re-audit). It holds one
 page fetch per page and is refused with `site_health_fetches_exhausted` when
 fewer remain, with `crawl_already_active` while a crawl runs (SH-B4), and with
-`rerun_not_allowed` when no such page exists. A site-level (architecture)
-finding is judged only by a full crawl, so Re-run all never names its page.
+`rerun_not_allowed` when no such page exists. A site-level finding
+(architecture, sitewide links) is judged only by a full crawl, so Re-run all
+never names its page.
 
 The same refresh, the architecture writer after its findings, and a page rerun
 landing in the site crawl that shows it persist the crawl's unfiltered Issues

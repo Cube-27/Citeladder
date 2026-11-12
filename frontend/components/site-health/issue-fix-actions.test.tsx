@@ -4,6 +4,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { mswServer } from '@/test/msw-server';
+import { renderWithProviders, selectionAs } from '@/test/render';
 import {
   CRAWL,
   ISSUE_A,
@@ -133,6 +134,19 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
       await within(dialog).findByText('No tracked page with this issue is left to re-audit.'),
     ).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Re-run all' })).toBeDisabled();
+  });
+
+  it('shows a viewer how many pages are fixed without Mark fixed or Re-run all', async () => {
+    serveFixes(3, 5);
+    window.history.replaceState(null, '', OPEN);
+    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />, {
+      projectSelection: selectionAs('viewer'),
+    });
+
+    const dialog = await screen.findByRole('dialog', { name: TITLE });
+    expect(await within(dialog).findByText('5 of 32 pages fixed')).toBeInTheDocument();
+    for (const name of ['Mark fixed', 'Re-run all'])
+      expect(within(dialog).queryByRole('button', { name })).toBeNull();
   });
 
   it('says the fix progress could not load instead of hiding the actions', async () => {
