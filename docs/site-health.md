@@ -482,7 +482,9 @@ list their IDs; rows are not copied. A scored site check that was never
 evaluated (no root analysis or no site facts) is `unknown`
 (`site_facts_unavailable`) and keeps measurement partial. Likewise a scored
 crawl-finalize check a page's final analysis lacks (a cancelled crawl skips
-finalization) is `unknown` (`crawl_not_finalized`).
+finalization) is `unknown` (`crawl_not_finalized`), unless the page's own facts
+rule it out: canonical integrity without a declared canonical stays
+`not_applicable` (`no_canonical`).
 
 **Crawler access.** A bot fails when its root, or every sampled URL, is
 disallowed. Partial closure is `restricted` and passes. Without a fetched

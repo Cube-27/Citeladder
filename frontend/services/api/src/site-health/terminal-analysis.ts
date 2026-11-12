@@ -66,6 +66,14 @@ export async function publishFinalPageAnalyses(db: Database, crawl: Crawl) {
     .where('crawl_id', '=', crawl.id)
     .where('id', '=', sql<string>`any(${ids}::uuid[])`)
     .execute();
+  // A crawl-finalize check finalization never wrote is judged from the page's own facts.
+  const artifacts = await db
+    .selectFrom('site_fetch_artifacts')
+    .select(['id', 'normalized_facts'])
+    .where('workspace_id', '=', crawl.workspace_id)
+    .where('id', '=', sql<string>`any(${initials.map((row) => row.artifact_id)}::uuid[])`)
+    .execute();
+  const factsOf = new Map(artifacts.map((row) => [row.id, record(row.normalized_facts)]));
   // Site checks score on every page, so each page's manifest names the site evaluations it used.
   const siteSources = evaluations.filter(
     (row) => appliedSiteChecks([persistedEvaluation(row)]).length > 0,
@@ -78,7 +86,7 @@ export async function publishFinalPageAnalyses(db: Database, crawl: Crawl) {
     const own = (byAnalysis.get(initial.id) ?? []).filter((row) => row.scope !== 'site');
     const sources = [...own, ...siteSources];
     const scores = scoreAnalysis(
-      finalPageChecks(own.map(persistedEvaluation)),
+      finalPageChecks(own.map(persistedEvaluation), factsOf.get(initial.artifact_id) ?? {}),
       initial.page_kind,
       site,
     );
