@@ -1,16 +1,22 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, posix } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   classifyPaths,
   e2eSpecArgs,
   hasTrustworthyJobEvidence,
   isOwnerFreeChange,
+  matchesAny,
   previousMainRunPassed,
   selectE2EFiles,
   selectDiff,
 } from './ci-changes.mjs';
+
+const repositoryRoot = fileURLToPath(new URL('../', import.meta.url));
 
 test('frontend paths select only their owning suites', () => {
   assert.deepEqual(classifyPaths(['frontend/components/card.tsx']), {
@@ -18,6 +24,7 @@ test('frontend paths select only their owning suites', () => {
     contract: false,
     api: false,
     e2e: false,
+    workers: false,
     security: false,
     infra: false,
     compose: false,
@@ -38,7 +45,7 @@ test('browser-sensitive frontend paths select E2E without escalating every front
       'frontend/components/agent/chat-screen.tsx',
       'frontend/lib/agent/next-steps.ts',
     ]),
-    ['e2e/action-loop.spec.ts', 'e2e/agent-conversation.spec.ts'],
+    ['e2e/action-loop.spec.ts', 'e2e/agent-conversation.spec.ts', 'e2e/page-workspace.spec.ts'],
   );
   assert.deepEqual(selectE2EFiles(['frontend/components/ui/button.tsx']), []);
   assert.deepEqual(selectE2EFiles(['frontend/components/agent/new-chat-screen.tsx']), [
@@ -119,12 +126,157 @@ test('the native API runs for its code and canonical schema inputs', () => {
   assert.equal(classifyPaths(['frontend/services/api/src/server.ts']).compose, true);
 });
 
+// Every repository file the API's code, scripts and tests name by a literal
+// relative import or `new URL(..., import.meta.url)`, outside the API package
+// and the contracts it depends on. Directories expand to their files.
+function apiExternalReads() {
+  const reference = /(?:\bfrom\s*|\bimport\s*\(\s*|\bnew URL\(\s*)'(\.\.?\/[^'`$]+)'/gu;
+  const reads = new Set();
+  for (const directory of ['src', 'scripts', 'test']) {
+    const root = join(repositoryRoot, 'frontend/services/api', directory);
+    for (const name of readdirSync(root, { recursive: true })) {
+      const file = posix.join('frontend/services/api', directory, name.replaceAll('\\', '/'));
+      if (!/\.[cm]?[jt]s$/u.test(file) || file.includes('/fixtures/')) continue;
+      const source = readFileSync(join(repositoryRoot, file), 'utf8');
+      for (const [, specifier] of source.matchAll(reference)) {
+        const target = posix.normalize(posix.join(posix.dirname(file), specifier));
+        // Bare repository roots locate other paths; they are not reads.
+        if (['.', './', 'frontend/'].includes(target)) continue;
+        if (/^frontend\/(?:services|packages)\//u.test(target) || target.startsWith('..')) continue;
+        const absolute = join(repositoryRoot, target);
+        if (!existsSync(absolute)) continue;
+        if (!statSync(absolute).isDirectory()) reads.add(target.replace(/\/$/u, ''));
+        else {
+          for (const entry of readdirSync(absolute, { recursive: true, withFileTypes: true })) {
+            if (!entry.isFile()) continue;
+            const path = join(entry.parentPath, entry.name).slice(repositoryRoot.length);
+            reads.add(path.replaceAll('\\', '/'));
+          }
+        }
+      }
+    }
+  }
+  return [...reads].sort();
+}
+
+test('every frontend file the API reads outside its package selects the API suite', () => {
+  const reads = apiExternalReads();
+  // The scan must find the reads that once skipped the suite, or it proves nothing.
+  for (const path of [
+    'frontend/apps/app/src/globals.css',
+    'frontend/apps/docs/public/templates/citeladder-crawl-log-worker.js',
+    'frontend/apps/docs/src/data/public-api.json',
+    'frontend/vp-shared-config.ts',
+  ]) {
+    assert.ok(reads.includes(path), `the API read scan missed ${path}`);
+  }
+  for (const path of reads) assert.equal(classifyPaths([path]).api, true, path);
+  // The SPA's own sources stay out of the API suite.
+  assert.equal(classifyPaths(['frontend/apps/app/src/router.tsx']).api, false);
+});
+
+const e2eRules = JSON.parse(readFileSync(new URL('./e2e-paths.json', import.meta.url), 'utf8'));
+const appSuiteSpecs = readdirSync(new URL('../frontend/e2e/', import.meta.url))
+  .filter((name) => name.endsWith('.spec.ts'))
+  .map((name) => `e2e/${name}`)
+  .filter((spec) => !['e2e/docs.spec.ts', 'e2e/worker-csp.spec.ts'].includes(spec));
+
+test('every app E2E spec is selected by the product sources it exercises', () => {
+  const mapped = new Set(
+    e2eRules.flatMap((rule) => (Array.isArray(rule.frontendE2E) ? rule.frontendE2E : [])),
+  );
+  assert.deepEqual(
+    appSuiteSpecs.filter((spec) => !mapped.has(spec)),
+    [],
+  );
+  assert.deepEqual(selectE2EFiles(['frontend/components/performance/metric-cards.tsx']), [
+    'e2e/performance-states.spec.ts',
+  ]);
+  assert.deepEqual(selectE2EFiles(['frontend/components/site-health/issues-screen.tsx']), [
+    'e2e/site-health-recovery.spec.ts',
+  ]);
+  assert.deepEqual(selectE2EFiles(['frontend/components/agent/workspace/page-editor.tsx']), [
+    'e2e/action-loop.spec.ts',
+    'e2e/agent-conversation.spec.ts',
+    'e2e/page-workspace.spec.ts',
+  ]);
+});
+
+test('every E2E path rule names files that exist', () => {
+  const tracked = execFileSync('git', ['ls-files', 'frontend'], {
+    cwd: repositoryRoot,
+    encoding: 'utf8',
+  }).split('\n');
+  const dead = e2eRules
+    .flatMap((rule) => rule.sources)
+    .filter((source) => !tracked.some((path) => matchesAny(path, [source])));
+  assert.deepEqual(dead, []);
+  for (const spec of appSuiteSpecs) {
+    assert.ok(tracked.includes(`frontend/${spec}`), spec);
+  }
+});
+
+test('a fixture or helper change selects every spec that imports it', () => {
+  const fixtureUsers = [
+    'e2e/action-loop.spec.ts',
+    'e2e/agent-conversation.spec.ts',
+    'e2e/design-repair.spec.ts',
+    'e2e/geometry-census.spec.ts',
+    'e2e/page-workspace.spec.ts',
+    'e2e/performance-states.spec.ts',
+    'e2e/providers.spec.ts',
+    'e2e/runs.spec.ts',
+    'e2e/search-intelligence.spec.ts',
+    'e2e/self-serve-auth.spec.ts',
+    'e2e/shell.spec.ts',
+    'e2e/site-health-recovery.spec.ts',
+    'e2e/surface-layout.spec.ts',
+    'e2e/visibility.spec.ts',
+  ];
+  assert.deepEqual(selectE2EFiles(['frontend/e2e/helpers/app-fixture.ts']), fixtureUsers);
+  // Imported by the helper, so every helper user depends on it too.
+  assert.deepEqual(selectE2EFiles(['frontend/test/fixtures/project.ts']), fixtureUsers);
+  assert.deepEqual(selectE2EFiles(['frontend/test/agent-chat-fixture.ts']), [
+    'e2e/agent-conversation.spec.ts',
+    'e2e/page-workspace.spec.ts',
+  ]);
+  // Shared content the marketing specs assert against.
+  assert.deepEqual(selectE2EFiles(['frontend/lib/fonts/brand-fonts.ts']), [
+    'e2e/marketing-pages.spec.ts',
+  ]);
+});
+
+test('the production Worker suite runs for the built Workers and the specs it reruns', () => {
+  for (const path of [
+    'frontend/apps/app/worker.ts',
+    'frontend/apps/marketing/src/site-headers.ts',
+    'frontend/lib/config/content-security-policy.ts',
+    'frontend/lib/consent/cookie-consent.ts',
+    'frontend/e2e/worker-csp.spec.ts',
+    'frontend/playwright.workers.config.ts',
+    'frontend/components/performance/metric-cards.tsx',
+    'frontend/playwright.config.ts',
+  ]) {
+    assert.equal(classifyPaths([path]).workers, true, path);
+  }
+  for (const path of [
+    'frontend/components/card.tsx',
+    'frontend/components/site-health/issues-screen.tsx',
+    'scripts/quality.mjs',
+    'docs/DEVELOPMENT.md',
+  ]) {
+    assert.equal(classifyPaths([path]).workers, false, path);
+  }
+  assert.equal(classifyPaths([], { full: true }).workers, true);
+});
+
 test('documentation-only changes avoid implementation suites', () => {
   assert.deepEqual(classifyPaths(['docs/DEVELOPMENT.md', 'README.md']), {
     frontend: false,
     contract: false,
     api: false,
     e2e: false,
+    workers: false,
     security: false,
     infra: false,
     compose: false,
@@ -139,6 +291,7 @@ test('external-service and deploy-only configuration runs only the security and 
       contract: false,
       api: false,
       e2e: false,
+      workers: false,
       security: true,
       infra: true,
       compose: false,
@@ -203,6 +356,7 @@ test('root governance and product prose avoid implementation suites', () => {
     contract: false,
     api: false,
     e2e: false,
+    workers: false,
     security: false,
     infra: false,
     compose: false,
@@ -217,6 +371,7 @@ test('packaged Agent skills select their native API and image owners', () => {
       contract: false,
       api: true,
       e2e: false,
+      workers: false,
       security: false,
       infra: false,
       compose: true,
@@ -267,12 +422,14 @@ test('previous CI evidence requires every owner to be successful or intentionall
       'API contract and ingress',
       'API service (TypeScript)',
       'E2E (playwright)',
+      'Worker CSP and consent (playwright)',
       'Security (secrets scan)',
       'Infra (Terraform and workflows)',
+      'CI result',
       'Frontend tests (1/3)',
       'Frontend tests (2/3)',
       'Frontend tests (3/3)',
-      'API service tests (${{ matrix.shard }}/3)',
+      'API service tests (${{ matrix.shard }}/6)',
     ].map((name) => ({ name, status: 'completed', conclusion: 'skipped' })),
   ];
   assert.equal(hasTrustworthyJobEvidence(complete, 'ci.yml'), true);

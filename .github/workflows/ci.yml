@@ -32,6 +32,7 @@ jobs:
       api: ${{ steps.classify.outputs.api }}
       e2e: ${{ steps.classify.outputs.e2e }}
       e2e_args: ${{ steps.classify.outputs.e2e_args }}
+      workers: ${{ steps.classify.outputs.workers }}
       security: ${{ steps.classify.outputs.security }}
       infra: ${{ steps.classify.outputs.infra }}
     steps:
@@ -101,10 +102,10 @@ jobs:
             exit "$status"
           fi
 
-  # The whole Vitest suite, split by file across parallel runners: a private
-  # repository's runner has 2 vCPUs, which the config's 2 workers already fill,
-  # so more runners is the only way to more cores. Every shard runs the full
-  # config; together they run every file exactly once.
+  # The whole Vitest suite, split by file across parallel runners. Every shard
+  # runs the full config; together they run every file exactly once. A public
+  # repository's runner has 4 vCPUs, so each shard runs one worker per core
+  # (the config's local default is 2).
   frontend-tests:
     name: Frontend tests (${{ matrix.shard }}/3)
     needs: changes
@@ -113,6 +114,8 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      VITEST_MAX_WORKERS: '4'
     strategy:
       fail-fast: false
       matrix:
@@ -185,7 +188,8 @@ jobs:
     timeout-minutes: 10
     services:
       postgres:
-        image: postgres:16-alpine
+        # The production image family (infra/gcp/postgres/Dockerfile).
+        image: postgres:16-bookworm
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -221,8 +225,9 @@ jobs:
   # The API suite runs its files one at a time against one database, so it is
   # split by file across parallel runners, each with its own PostgreSQL. Every
   # shard applies the same baseline; together they run every file exactly once.
+  # It is the longest owner, so it gets the most shards.
   api-tests:
-    name: API service tests (${{ matrix.shard }}/3)
+    name: API service tests (${{ matrix.shard }}/6)
     needs: changes
     if: needs.changes.outputs.api == 'true'
     permissions:
@@ -232,10 +237,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4, 5, 6]
     services:
       postgres:
-        image: postgres:16-alpine
+        # The production image family (infra/gcp/postgres/Dockerfile).
+        image: postgres:16-bookworm
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -265,9 +271,19 @@ jobs:
       - name: Apply the SQL schema baseline
         working-directory: frontend/services/api
         run: pnpm migrate
-      - name: API service tests (PostgreSQL)
+      - name: API service tests with measured coverage (PostgreSQL)
         working-directory: frontend/services/api
-        run: pnpm test --shard=${{ matrix.shard }}/3
+        env:
+          SHARD: ${{ matrix.shard }}/6
+        run: pnpm test --coverage --shard="$SHARD"
+      - name: Publish API coverage
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: api-coverage-${{ matrix.shard }}
+          path: frontend/services/api/coverage/
+          if-no-files-found: error
+          retention-days: 7
 
   e2e:
     name: E2E (playwright)
@@ -319,6 +335,56 @@ jobs:
             frontend/playwright-report/
             frontend/test-results/
             ${{ runner.temp }}/playwright.log
+          if-no-files-found: warn
+          retention-days: 7
+
+  # Production CSP and analytics consent, enforced by the built app and
+  # marketing Workers under local HTTPS Workerd (playwright.workers.config.ts).
+  # Built with the accepted public origins, as deployed, plus the disposable
+  # analytics ID the consent check asserts.
+  workers:
+    name: Worker CSP and consent (playwright)
+    needs: changes
+    if: needs.changes.outputs.workers == 'true'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PUBLIC_WEBSITE_ORIGIN: https://citeladder.com
+      PUBLIC_APP_ORIGIN: https://app.citeladder.com
+      PUBLIC_API_ORIGIN: https://api.citeladder.com
+      NEXT_PUBLIC_GA_MEASUREMENT_ID: G-CONSENTTEST
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-frontend
+      - name: Build the app and marketing Workers
+        run: |
+          log="$RUNNER_TEMP/worker-builds.log"
+          if pnpm build:app > "$log" 2>&1 && pnpm build:marketing >> "$log" 2>&1; then
+            echo 'Worker builds passed.'
+          else
+            status=$?
+            tail -n 120 "$log"
+            exit "$status"
+          fi
+      # See the E2E job's install step for why there is no `--with-deps`.
+      - name: Install Playwright browser
+        run: ./node_modules/.bin/playwright install --only-shell chromium
+      - name: Playwright (built Workers)
+        run: pnpm test:workers
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: playwright-workers-report
+          path: |
+            frontend/test-results/workers/
+            ${{ runner.temp }}/worker-builds.log
           if-no-files-found: warn
           retention-days: 7
 
@@ -384,3 +450,32 @@ jobs:
           tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" actionlint
       - name: Lint workflows
         run: '"$RUNNER_TEMP/actionlint" -color'
+
+  # The one status the `main` ruleset requires. Owner jobs are selected per
+  # change, and GitHub reports a job skipped by its condition as successful,
+  # so requiring each job by name would also pass a run whose classifier
+  # failed. This passes only when the classifier passed and every selected
+  # owner passed; an owner skipped because it was not selected is fine.
+  result:
+    name: CI result
+    needs: [changes, frontend, frontend-tests, contract, api, api-tests, e2e, workers, security, infra]
+    if: always()
+    permissions: {}
+    runs-on: ubuntu-slim
+    timeout-minutes: 2
+    steps:
+      - name: Every selected owner passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          node --input-type=module -e '
+            const needs = JSON.parse(process.env.NEEDS);
+            const failed = Object.entries(needs).filter(([job, { result }]) =>
+              job === "changes" ? result !== "success" : !["success", "skipped"].includes(result),
+            );
+            for (const [job, { result }] of Object.entries(needs)) console.log(`${job}: ${result}`);
+            if (failed.length) {
+              console.error(`Failed or incomplete: ${failed.map(([job]) => job).join(", ")}`);
+              process.exit(1);
+            }
+          '
