@@ -18,8 +18,9 @@ Feature owners in [the documentation index](../README.md) and the
 [invariants](../invariants.md) remain authoritative.
 
 **Routed elsewhere:**
-- Site Health crawl-model findings go to the
-  [Site Health baseline crawls plan](site-health-baseline-crawls.md#audit-findings-absorbed-2026-11-12).
+- Site Health crawl findings are [Spec 5](#5-site-health-crawling-and-issue-tracking).
+  Their detail lives in the
+  [Site Health crawl plan](site-health-baseline-crawls.md#audit-findings-absorbed-2026-11-12).
 - The billing-owner transfer goes to the [backlog](backlog.md#billing-and-entitlements).
 - The [open owner decisions](#open-owner-decisions) at the end are not
   authorized for execution.
@@ -119,7 +120,7 @@ folder.
 The owner added ruleset `branch protection` on 2026-11-12. It blocks deletion
 and requires a pull request with 0 approvals. Still missing:
 - A required status check: today the list is empty. Add the aggregate CI check
-  once Spec 9's PR 32 has settled its name.
+  once Spec 10's PR 32 has settled its name.
 - Block force pushes (`non_fast_forward`).
 - Decide whether admins keep "always" bypass.
 
@@ -240,8 +241,9 @@ This replaces the backlog's "Alerts on failed job executions and errors" line.
 The PRs run in parallel.
 
 ### a. PR 11: Restore the lock order (decided)
-- **Coordinate with:** the Site Health baseline crawls plan, which will also
-  edit admission. Land this first, or fold it into that plan's first PR.
+- **Coordinate with:** [Spec 5](#5-site-health-crawling-and-issue-tracking),
+  which also edits admission. Land this first: its A2, A5 and B1 start after it
+  merges.
 - **BE-001 (+ARC-004):**
   - Billing and crawl admission write the Site Health runtime row while holding
     the account-capacity lock.
@@ -316,7 +318,44 @@ The PRs run in parallel.
 
 ---
 
-## 5. Measurement correctness
+## 5. Site Health crawling and issue tracking
+
+This spec holds the audit's 16 Site Health crawl findings, including ARC-001
+(High). It also holds the owner's new crawl model. Each project has one fixed
+set of "tracked pages", up to the plan limit. Every crawl re-audits those same
+pages, so issues are tracked page by page over time.
+
+The [Site Health crawl plan](site-health-baseline-crawls.md) contains:
+- the [model](site-health-baseline-crawls.md#model-decided);
+- the owner decisions SH-B1 to SH-B13;
+- the [engineering defaults](site-health-baseline-crawls.md#engineering-defaults);
+- the [findings table](site-health-baseline-crawls.md#audit-findings-absorbed-2026-11-12);
+- the scope and done-when of each PR, under [PR breakdown](site-health-baseline-crawls.md#pr-breakdown).
+
+This spec only orders those PRs; the PR breakdown is authoritative for their
+content. Ask agent in the drawer is not in this spec: it waits on an owner
+decision.
+
+- **Depends on:**
+  - PR 11 (Spec 4), before A2, A5 and B1.
+  - PR 24 (Spec 7), before B4 and B5.
+
+| PR | Scope | Findings | Depends on | Runs in parallel with |
+|---|---|---|---|---|
+| A1 | One current-crawl owner (SH-B1) | ARC-001, BE-106 | nothing | A3, A4, PR 11 |
+| A2 | Reruns are not site crawls | BE-504 | PR 11 | A1, A3, A4, A5 |
+| A3 | Verification follows SH-B2 | BE-801, BE-802, BE-806 | nothing | A1, A4, PR 11 |
+| A4 | Small Site Health correctness fixes | BE-907, BE-505, BE-502, BE-508, BE-506 | nothing | A1, A3, PR 11 |
+| A5 | Freeze the tracked set's inputs (SH-B4, SH-B13) | BE-903, BE-904, BE-905 | PR 11 | A1–A4 |
+| B1 | Sitemap discovery and the tracked set | PERF-006, `random_seed` | A5, PR 11 | B2 |
+| B2 | Issue state and trend | — | A1, A2 | B1 |
+| B3 | Reads move to per-page latest | PERF-007 | B1, B2 | B5 |
+| B4 | One crawl button, open-issues trend, Changes copy | — | B3, PR 24 | nothing (last) |
+| B5 | Mark fixed and Re-run all | — | A5, B2, PR 24 | B3 |
+
+---
+
+## 6. Measurement correctness
 
 The PRs run in parallel. They change what metrics read, so each PR's description
 lists the user-visible metric changes.
@@ -404,7 +443,7 @@ plan.
 
 ---
 
-## 6. Unknown is not zero (invariant 7)
+## 7. Unknown is not zero (invariant 7)
 
 Failed, pending or unmeasured reads must not render as measured zero or "no
 data".
@@ -449,14 +488,15 @@ data".
 - **FE-105:** "Retry" after a failed crawl start posts the click event, and
   start or stop failures follow the reader into the next project.
 - **FE-109:** clearing the Issues search box leaves the list filtered.
-- **Coordinate with:** the baseline plan, which reshapes these screens. Keep this
-  PR small and land it before that plan's UI work.
+- **Coordinate with:** [Spec 5](#5-site-health-crawling-and-issue-tracking).
+  Its backend PRs keep these screens' response shapes, and its UI PRs B4 and B5
+  start after this one merges. Keep this PR small.
 
 ---
 
-## 7. Frontend access, platform and UX
+## 8. Frontend access, platform and UX
 
-- **Depends on:** Spec 6, which edits the same screens.
+- **Depends on:** Spec 7, which edits the same screens.
 - The PRs run in parallel with each other.
 
 ### a. PR 25: Role-aware UI and session handling (AR-7)
@@ -524,7 +564,7 @@ data".
 
 ---
 
-## 8. Performance and capacity
+## 9. Performance and capacity
 
 The PRs run in parallel. PR 30 adds a migration: merge it after Spec 3's
 migrations, renumbering if needed.
@@ -563,7 +603,7 @@ migrations, renumbering if needed.
 
 ---
 
-## 9. CI, tests and dependencies
+## 10. CI, tests and dependencies
 
 The PRs run in parallel. The owner's ruleset should require PR 32's aggregate
 check name once it lands (Spec 1, item d).
@@ -604,9 +644,9 @@ check name once it lands (Spec 1, item d).
 
 ---
 
-## 10. Architecture and code quality
+## 11. Architecture and code quality
 
-- **Depends on:** Specs 4–7 having merged in the touched modules. These PRs are
+- **Depends on:** Specs 4–8 having merged in the touched modules. These PRs are
   cross-cutting and would otherwise conflict.
 - The PRs run in parallel with each other.
 
@@ -673,9 +713,8 @@ Recorded from the owner's answers in the audit follow-up conversation of
 | AR-9 | Non-UTF-8 imports are refused with guidance, and every import offers a sample CSV download | FE-008 |
 
 The owner also decided, and recorded where the work lives:
-- **"Current crawl" rule:** every surface uses Site Health's rule, and Site
-  Health issue tracking is page-wise. See the
-  [baseline crawls plan](site-health-baseline-crawls.md#owner-decisions-2026-11-12).
+- **Site Health crawling and issue tracking (Spec 5):** SH-B1 to SH-B13, in the
+  [Site Health crawl plan](site-health-baseline-crawls.md#owner-decisions-2026-11-12).
 - **The billing owner after an ownership transfer** is
   [backlog](backlog.md#billing-and-entitlements) tier 2.
 - **`main` ruleset:** set by the owner (Spec 1, item d).
