@@ -841,7 +841,7 @@ issue open, so the trend does not move.
 `GET /site-crawls/{crawl_id}/issue-fixes` reports, per group, "N of M pages
 fixed": M pages the crawl found it on, N of them `marked_fixed` or `resolved`,
 how many of those an audit verified, and how many pages Re-run all would
-re-audit. The issue dialog shows it with both actions, and the Issues summary's
+re-audit (null, not zero, for a site-level finding). The issue dialog shows it with both actions, and the Issues summary's
 fix-first rows show it once a page is fixed.
 `POST /site-crawls/{crawl_id}/issues/{group_id}/rerun` re-audits every tracked
 page the group is still unresolved on as one page-rerun crawl

@@ -53,13 +53,15 @@ export async function issueFixes(
     affected: number;
     fixed: number;
     verified: number;
-    rerun: number;
+    rerun: number | null;
   }>`
     select i.rule_id, i.finding_class,
       count(distinct i.site_url_id)::int as affected,
       count(distinct i.site_url_id) filter (where s.state = any(${FIXED_STATES}::text[]))::int as fixed,
       count(distinct i.site_url_id) filter (where s.state = 'resolved')::int as verified,
-      count(distinct i.site_url_id) filter (where ${rerunnable})::int as rerun
+      -- A site-level finding has no page a re-audit judges: not applicable, not zero.
+      case when bool_and(e.source_architecture_id is not null) then null
+        else count(distinct i.site_url_id) filter (where ${rerunnable})::int end as rerun
     ${issuePagesFrom(crawl)}
     group by i.rule_id, i.finding_class
     order by i.rule_id, i.finding_class`.execute(db);

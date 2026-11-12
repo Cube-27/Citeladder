@@ -440,15 +440,17 @@ export async function createPageRerunCrawl(
     rerunPages: urls.length,
   });
   if (budget.metered) await reserveCrawlFetches(db, crawl, budget.limit, now);
-  for (const [position, url] of urls.entries()) {
-    await seedObservation(db, crawl, url, true);
-    await enqueueCrawlTask(db, crawl, {
-      kind: 'analyze',
-      url: url.normalized_url,
-      siteUrlId: url.id,
-      position,
-    });
-  }
+  await Promise.all(urls.map((url) => seedObservation(db, crawl, url, true)));
+  await Promise.all(
+    urls.map((url, position) =>
+      enqueueCrawlTask(db, crawl, {
+        kind: 'analyze',
+        url: url.normalized_url,
+        siteUrlId: url.id,
+        position,
+      }),
+    ),
+  );
   await creationEvents(
     db,
     crawl,

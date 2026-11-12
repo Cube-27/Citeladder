@@ -7,6 +7,7 @@ import type { IssueFixProgress } from '@citeladder/contracts';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
 import { Inline, Stack } from '@/components/ui/layout';
+import { ReadError } from '@/components/ui/read-error';
 import { textRole } from '@/components/ui/typography';
 import { ApiError } from '@/lib/api/errors';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
@@ -23,12 +24,6 @@ export function fixedLabel(
   return `${formatCount(progress.fixed_url_count)} of ${formatCount(total)} ${total === 1 ? 'page' : 'pages'} fixed`;
 }
 
-/** One issue's fix progress in a crawl, from the crawl's one fix-progress read. */
-export function useIssueFixProgress(workspaceId: string, crawlId: string, groupId: string) {
-  const query = useQuery(siteHealthQueries.issueFixes(workspaceId, crawlId));
-  return query.data?.items.find((item) => item.group_id === groupId);
-}
-
 type Notice = { tone: 'info' | 'negative'; text: string };
 
 /**
@@ -41,10 +36,20 @@ export function IssueFixActions({
   crawlId,
   groupId,
 }: Readonly<{ scope: IssueFixScope; crawlId: string; groupId: string }>) {
-  const progress = useIssueFixProgress(scope.workspaceId, crawlId, groupId);
+  const query = useQuery(siteHealthQueries.issueFixes(scope.workspaceId, crawlId));
   const mark = useMutation(siteHealthMutations.markIssueFixed(scope.workspaceId, crawlId));
   const rerun = useMutation(siteHealthMutations.rerunIssue(scope, crawlId));
   const [notice, setNotice] = useState<Notice | null>(null);
+  if (query.isError && !query.data)
+    return (
+      <ReadError
+        error={query.error}
+        fallback="Could not load how many pages are fixed."
+        onRetry={() => void query.refetch()}
+        pending={query.isFetching}
+      />
+    );
+  const progress = query.data?.items.find((item) => item.group_id === groupId);
   if (!progress) return null;
   const awaiting = progress.fixed_url_count - progress.verified_url_count;
   const rerunCount = progress.rerun_url_count;
@@ -74,34 +79,39 @@ export function IssueFixActions({
         >
           {mark.isPending ? 'Marking fixed…' : 'Mark fixed'}
         </Button>
-        <Button
-          disabled={rerun.isPending || rerunCount === 0}
-          onClick={() => {
-            setNotice(null);
-            rerun.mutate(groupId, {
-              onSuccess: (result) =>
-                setNotice({
-                  tone: 'info',
-                  text: `Re-auditing ${pagesLabel(result.page_count)}. The progress updates when the audit finishes.`,
-                }),
-              onError: (error) => setNotice({ tone: 'negative', text: rerunErrorMessage(error) }),
-            });
-          }}
-        >
-          {rerun.isPending ? 'Re-running…' : 'Re-run all'}
-        </Button>
+        {rerunCount === null ? null : (
+          <Button
+            disabled={rerun.isPending || rerunCount === 0}
+            onClick={() => {
+              setNotice(null);
+              rerun.mutate(groupId, {
+                onSuccess: (result) =>
+                  setNotice({
+                    tone: 'info',
+                    text: `Re-auditing ${pagesLabel(result.page_count)}. The progress updates when the audit finishes.`,
+                  }),
+                onError: (error) => setNotice({ tone: 'negative', text: rerunErrorMessage(error) }),
+              });
+            }}
+          >
+            {rerun.isPending ? 'Re-running…' : 'Re-run all'}
+          </Button>
+        )}
       </Inline>
-      <span className="type-caption">
-        {rerunCount > 0
-          ? `Re-run all re-audits ${pagesLabel(rerunCount)}, one page fetch each.`
-          : 'A full crawl re-checks this issue.'}
-      </span>
+      <span className="type-caption">{rerunCaption(rerunCount)}</span>
       {notice ? <Callout tone={notice.tone}>{notice.text}</Callout> : null}
     </Stack>
   );
 }
 
 const pagesLabel = (count: number) => `${formatCount(count)} ${count === 1 ? 'page' : 'pages'}`;
+
+/** What Re-run all would do: null is a site-level finding, which no page re-audit judges. */
+function rerunCaption(count: number | null): string {
+  if (count === null) return 'A full crawl re-checks this site-wide issue.';
+  if (count === 0) return 'No tracked page with this issue is left to re-audit.';
+  return `Re-run all re-audits ${pagesLabel(count)}, one page fetch each.`;
+}
 
 function rerunErrorMessage(error: unknown): string {
   if (!(error instanceof ApiError)) return 'Could not re-run this issue. Please try again.';

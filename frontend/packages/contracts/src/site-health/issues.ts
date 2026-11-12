@@ -113,14 +113,14 @@ export const latestCrawlIssuesPageSchema = siteIssuesPageSchema.extend({ crawl_i
 // from each page's issue state: "N of M pages fixed". `fixed_url_count`
 // counts pages marked fixed or resolved; `verified_url_count` only those an
 // audit resolved. `rerun_url_count` is how many tracked, unresolved pages Re-run
-// all would re-audit (one page fetch each); zero for a site-level finding,
-// which only a full crawl judges.
+// all would re-audit (one page fetch each); null for a site-level finding,
+// which only a full crawl judges, so it never reads as "none left".
 export const issueFixProgressSchema = responseObject({
   group_id: uuid(),
   affected_url_count: z.number().int(),
   fixed_url_count: z.number().int(),
   verified_url_count: z.number().int(),
-  rerun_url_count: z.number().int(),
+  rerun_url_count: z.number().int().nullable(),
 });
 
 // Every issue's fix progress in one crawl, one row per issue group.
