@@ -188,7 +188,7 @@ function comparisonState(
       icon: GitCompare,
       headingLevel: 3,
       heading: 'These crawls are not comparable',
-      description: `Reason: ${summary.data.reason_code?.replaceAll('_', ' ') ?? 'scope or version mismatch'}.`,
+      description: `Reason: ${summary.data.reason_code?.replaceAll('_', ' ') ?? 'unknown'}.`,
     };
   if (!pairAvailable)
     return {
