@@ -400,7 +400,11 @@ Playwright's global configuration, and paths mapped to `"frontendE2E": "all"`
 contract paths select native API/browser checks; the SQL migrations select the
 native API owner and the Compose smoke. The clean-clone Compose smoke runs
 on application/Compose-sensitive PR
-changes, merge queue validation, and every push to `main`.
+changes, merge queue validation, and every push to `main`. A push to `main`
+skips full validation only when it is owner-free (documentation or inert
+deploy configuration) and the same workflow passed on the previous `main`
+commit; otherwise it validates in full. Deploys require both workflows' push
+runs for the exact deployed commit to have passed.
 
 Require every job status from the `CI` and `Compose smoke` workflows. The
 classifier jobs must pass; each selected owner must pass; and GitHub reports an

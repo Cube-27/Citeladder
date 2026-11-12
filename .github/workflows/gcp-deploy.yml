@@ -34,6 +34,9 @@ jobs:
       REGION: ${{ vars.GCP_REGION || 'us-central1' }}
       ZONE: ${{ vars.GCP_ZONE || 'us-central1-a' }}
       STATE_BUCKET: ${{ vars.GCP_TF_STATE_BUCKET }}
+      DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      # The Cloud Run API service infra/gcp/run.tf declares.
+      API_SERVICE: citeladder-api
       BILLING_ACCOUNT: ${{ vars.GCP_BILLING_ACCOUNT }}
       BUDGET_CURRENCY_CODE: ${{ vars.GCP_BUDGET_CURRENCY_CODE || 'INR' }}
       BUDGET_UNITS: ${{ vars.GCP_BUDGET_UNITS || '500' }}
@@ -107,6 +110,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$PROJECT_ID" && test -n "$STATE_BUCKET" && test -n "$BILLING_ACCOUNT"
+          test -n "$DEPLOY_SERVICE_ACCOUNT"
           test -n "$DEFAULT_AGENT_BASE_URL" && test -n "$DEFAULT_AGENT_MODEL"
           [[ "$DEMO_MODE" =~ ^(true|false)$ ]]
           [[ "$OAUTH_GOOGLE_ENABLED" =~ ^(true|false)$ ]]
@@ -146,7 +150,8 @@ jobs:
           placeholder="sha256:$(printf 'a%.0s' $(seq 64))"
           registry="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder"
           jq -n \
-            --arg project "$PROJECT_ID" --arg billing "$BILLING_ACCOUNT" \
+            --arg project "$PROJECT_ID" --arg deployer "$DEPLOY_SERVICE_ACCOUNT" \
+            --arg billing "$BILLING_ACCOUNT" \
             --arg currency "$BUDGET_CURRENCY_CODE" --argjson units "$BUDGET_UNITS" \
             --arg region "$REGION" --arg zone "$ZONE" \
             --arg domain "$DOMAIN_NAME" --arg app "$APP_DOMAIN_NAME" \
@@ -157,7 +162,8 @@ jobs:
             --arg email "$DEMO_LOGIN_EMAIL" --argjson allowance "$DEV_LOGIN_COUNTER_ALLOWANCE" \
             --argjson google "$OAUTH_GOOGLE_ENABLED" --argjson signup "$PUBLIC_SIGNUP_ENABLED" \
             --arg tick "$TICK_SCHEDULE" --argjson billing_env "$billing_env" \
-            '{project_id:$project,billing_account:$billing,budget_currency_code:$currency,
+            '{project_id:$project,deployer_service_account:$deployer,
+              billing_account:$billing,budget_currency_code:$currency,
               budget_units:$units,region:$region,zone:$zone,domain_name:$domain,
               app_domain_name:$app,api_image:$api,postgres_image:$postgres,
               agent_base_url:$agent_url,agent_model:$agent_model,demo_mode:$demo,
@@ -168,11 +174,13 @@ jobs:
           # first. On the first run this also replaces the retired asia-south1
           # registry, deleting every stale image with it. The jobs' secret
           # grants go first too, so they have propagated by the time the
-          # migrate job starts under that identity.
+          # migrate job starts under that identity, and so do the deployer's
+          # own per-secret version grants, first used after the image builds.
           terraform apply -input=false -auto-approve \
             -target=google_artifact_registry_repository.images \
             -target=google_secret_manager_secret.runtime \
-            -target=google_secret_manager_secret_iam_member.jobs
+            -target=google_secret_manager_secret_iam_member.jobs \
+            -target=google_secret_manager_secret_iam_member.deployer
       - name: Build and push immutable images
         working-directory: infra/gcp
         shell: bash
@@ -374,6 +382,26 @@ jobs:
           test "$(terraform output -raw db_address)" = 10.28.0.10
           gcloud run jobs execute "$(terraform output -raw migrate_job)" \
             --project "$PROJECT_ID" --region "$REGION" --wait
+      # Terraform ignores the API's traffic (run.tf). Pinning the serving
+      # revision first means the apply creates the new revision with no traffic.
+      - name: Pin API traffic to the serving revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          run=(--project "$PROJECT_ID" --region "$REGION")
+          existing="$(gcloud run services list "${run[@]}" \
+            --filter="metadata.name=$API_SERVICE" --format='value(metadata.name)')"
+          # The first deploy creates the service; there is no traffic to protect.
+          [ -z "$existing" ] && exit 0
+          serving="$(gcloud run services describe "$API_SERVICE" "${run[@]}" --format=json \
+            | jq -r '[.status.traffic[]? | select(.percent == 100) | .revisionName] | first // empty')"
+          if [ -z "$serving" ]; then
+            echo "::error::$API_SERVICE has no single revision serving all traffic; settle its traffic first."
+            exit 1
+          fi
+          gcloud run services update-traffic "$API_SERVICE" "${run[@]}" \
+            --to-revisions="$serving=100" --quiet >/dev/null
+          echo "Pinned $API_SERVICE traffic to $serving."
       - name: Apply infrastructure
         id: terraform
         working-directory: infra/gcp
@@ -383,11 +411,35 @@ jobs:
           terraform apply -input=false -auto-approve
           echo "api_url=$(terraform output -raw api_url)" >> "$GITHUB_OUTPUT"
           echo "tick_scheduler=$(terraform output -raw tick_scheduler)" >> "$GITHUB_OUTPUT"
-      - name: Smoke the API origin and tick
+      - name: Tag the new API revision
+        id: candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          run=(--project "$PROJECT_ID" --region "$REGION")
+          describe() {
+            gcloud run services describe "$API_SERVICE" "${run[@]}" --format=json
+          }
+          revision="$(describe | jq -r '.status.latestCreatedRevisionName')"
+          ready="$(describe | jq -r '.status.latestReadyRevisionName')"
+          if [ "$revision" != "$ready" ]; then
+            echo "::error::Revision $revision did not become ready; traffic stays on the serving revision."
+            exit 1
+          fi
+          gcloud run services update-traffic "$API_SERVICE" "${run[@]}" \
+            --set-tags="candidate=$revision" --quiet >/dev/null
+          url="$(describe | jq -r '[.status.traffic[]? | select(.tag == "candidate") | .url] | first // empty')"
+          test -n "$url"
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      # Everything up to the traffic shift reaches only the tagged revision; a
+      # failure here leaves the previous revision serving all traffic.
+      - name: Smoke the new revision at its tagged URL
+        id: smoke
         shell: bash
         env:
-          API_URL: ${{ steps.terraform.outputs.api_url }}
-          TICK_SCHEDULER: ${{ steps.terraform.outputs.tick_scheduler }}
+          API_URL: ${{ steps.candidate.outputs.url }}
+          REVISION: ${{ steps.candidate.outputs.revision }}
           ORIGIN_TOKEN: ${{ secrets.CITELADDER_ORIGIN_TOKEN }}
         run: |
           set -euo pipefail
@@ -425,6 +477,39 @@ jobs:
             echo "::error::Origin smoke failed: ready=$ready providers=$providers mcp=$mcp anonymous=$anonymous foreign=$foreign unscheduled=$unscheduled"
             exit 1
           fi
+          {
+            echo '### GCP deployment'
+            echo "- Source commit: \`$GITHUB_SHA\`"
+            cat /tmp/release-images.md
+            echo "- Revision \`$REVISION\` at \`$API_URL\` before any traffic: ready $ready, providers $providers, MCP metadata $mcp; anonymous $anonymous, foreign host $foreign, unscheduled tick $unscheduled"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Shift API traffic to the smoked revision
+        shell: bash
+        env:
+          REVISION: ${{ steps.candidate.outputs.revision }}
+        run: |
+          set -euo pipefail
+          run=(--project "$PROJECT_ID" --region "$REGION")
+          # Name the smoked revision: --to-latest would route to any newer,
+          # unsmoked revision created since the tag.
+          gcloud run services update-traffic "$API_SERVICE" "${run[@]}" \
+            --to-revisions="$REVISION=100" --quiet >/dev/null
+          gcloud run services update-traffic "$API_SERVICE" "${run[@]}" --remove-tags=candidate --quiet >/dev/null
+          serving="$(gcloud run services describe "$API_SERVICE" "${run[@]}" --format=json \
+            | jq -r '[.status.traffic[]? | select(.percent == 100) | .revisionName] | first // empty')"
+          if [ "$serving" != "$REVISION" ]; then
+            echo "::error::$API_SERVICE serves '${serving:-nothing}', not the smoked revision $REVISION."
+            exit 1
+          fi
+      # The scheduler calls the service URL, so the tick runs on the revision
+      # that now serves; its account alone can mint the tick's ID token.
+      - name: Smoke the scheduled tick
+        shell: bash
+        env:
+          API_URL: ${{ steps.terraform.outputs.api_url }}
+          TICK_SCHEDULER: ${{ steps.terraform.outputs.tick_scheduler }}
+        run: |
+          set -euo pipefail
           # The scheduled tick runs every periodic owner in the API; it must finish cleanly.
           scheduler=(--project "$PROJECT_ID" --location "$REGION")
           before="$(gcloud scheduler jobs describe "$TICK_SCHEDULER" "${scheduler[@]}" --format='value(lastAttemptTime)')"
@@ -441,10 +526,6 @@ jobs:
             exit 1
           fi
           {
-            echo '### GCP deployment'
-            echo "- Source commit: \`$GITHUB_SHA\`"
-            cat /tmp/release-images.md
-            echo "- API origin \`$API_URL\`: ready $ready, providers $providers, MCP metadata $mcp; anonymous $anonymous, foreign host $foreign"
-            echo "- Scheduled tick: succeeded; unscheduled call $unscheduled"
-            echo '- The Workers ORIGIN_UPSTREAM must equal the API origin above.'
+            echo "- Serving all traffic at \`$API_URL\`; scheduled tick succeeded"
+            echo '- The Workers ORIGIN_UPSTREAM must equal this serving API origin.'
           } >> "$GITHUB_STEP_SUMMARY"

@@ -49,8 +49,16 @@ Docs Worker (static, no origin)                            │ starts runner aft
   serial port is disabled. It runs Shielded VM with Secure Boot, vTPM and
   integrity monitoring.
 - **Identities.** The deployer authenticates through Workload Identity
-  Federation pinned to `Cube-27/Citeladder`, `refs/heads/main` and the
-  `gcp-demo` environment. No service-account keys exist. The API account
+  Federation pinned to the `Cube-27/Citeladder` repository (name and immutable
+  ID), the `gcp-deploy.yml` workflow, `refs/heads/main` and the `gcp-demo`
+  environment; no other workflow can obtain credentials. No service-account
+  keys exist. The deployer is still powerful: it administers Cloud Run, Cloud
+  Scheduler, Artifact Registry and the project's service accounts, may act as
+  any of them, manages the database VM, VPC and firewall rules, and edits the
+  logging exclusion and the billing budget. It cannot edit project IAM. On
+  Secret Manager it manages containers and their IAM project-wide, and reads
+  and writes versions only of the CiteLadder runtime secrets. On Cloud
+  Storage it holds only the Terraform state bucket. The API account
   (`citeladder-runtime`, an account ID older than the split) and the job
   account (`citeladder-jobs`, for the runner, migrate and billing jobs) read
   the shared runtime secrets; only the
@@ -83,8 +91,10 @@ Docs Worker (static, no origin)                            │ starts runner aft
 - `infra/gcp/*.tf`, `infra/gcp/postgres-vm.sh`, `infra/gcp/postgres/Dockerfile`:
   the environment ([README](../../infra/gcp/README.md)).
 - `infra/gcp/bootstrap.ps1`: APIs, state bucket, deployer and WIF trust.
-- `.github/workflows/gcp-deploy.yml`: green `ci.yml` run for the exact commit,
-  images, secrets, migration, Terraform and smoke.
+- `.github/workflows/gcp-deploy.yml`: green `ci.yml` and `compose-smoke.yml`
+  runs for the exact commit, images, secrets, migration, Terraform, a smoke of
+  the new API revision at its tagged URL before it takes traffic, then the
+  traffic shift and the tick smoke.
 - `frontend/services/api/src/http/origin-token.ts`: origin admission, public
   host and client address.
 - `frontend/services/api/src/workers/runner.ts`, `start-runner.ts`,
@@ -92,9 +102,11 @@ Docs Worker (static, no origin)                            │ starts runner aft
 
 ## Acceptance
 
-- The deploy smoke expects authenticated `/ready`, the OAuth provider catalog
-  and MCP metadata to return `200`. An anonymous or foreign-host request must
-  return `403`, and so must an unauthenticated `POST /internal/tick`. A forced
+- The deploy creates each API revision with no traffic and smokes it at its
+  tagged URL: authenticated `/ready`, the OAuth provider catalog and MCP
+  metadata must return `200`. An anonymous or foreign-host request must return
+  `403`, and so must an unauthenticated `POST /internal/tick`. A failed smoke
+  leaves the previous revision serving all traffic. After the shift, a forced
   run of the tick scheduler must succeed.
 - Owner acceptance after the Worker deploys: sign-in, project creation, a
   Site Health crawl reaching a terminal state through runner executions, and a

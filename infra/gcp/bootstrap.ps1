@@ -7,6 +7,9 @@ param(
     [string] $Region = 'us-central1',
     [string] $Zone = 'us-central1-a',
     [string] $Repository = 'Cube-27/Citeladder',
+    # GitHub's immutable repository ID: a deleted and re-created repository
+    # with the same name cannot inherit the trust.
+    [string] $RepositoryId = '1353174067',
     [string] $Environment = 'gcp-demo'
 )
 
@@ -106,31 +109,66 @@ if (-not (Test-GcloudResource { gcloud iam service-accounts describe $serviceAcc
         --display-name='CiteLadder GitHub deployer'
 }
 
+# Secret containers and their IAM only: no payload reads and no version
+# writes. Terraform grants the deployer accessor and version-manager roles on
+# each CiteLadder secret it declares (identity.tf).
+$secretRole = 'citeladderSecretContainers'
+$secretPermissions = @(
+    'resourcemanager.projects.get',
+    'secretmanager.secrets.create',
+    'secretmanager.secrets.delete',
+    'secretmanager.secrets.get',
+    'secretmanager.secrets.getIamPolicy',
+    'secretmanager.secrets.list',
+    'secretmanager.secrets.setIamPolicy',
+    'secretmanager.secrets.update'
+) -join ','
+if (Test-GcloudResource { gcloud iam roles describe $secretRole --project=$ProjectId }) {
+    gcloud iam roles update $secretRole --project=$ProjectId --permissions=$secretPermissions `
+        --stage=GA --quiet *> $null
+}
+else {
+    gcloud iam roles create $secretRole --project=$ProjectId --title='CiteLadder secret containers' `
+        --permissions=$secretPermissions --stage=GA --quiet *> $null
+}
+
 $projectRoles = @(
     'roles/artifactregistry.admin',
     'roles/cloudscheduler.admin',
-    'roles/compute.admin',
+    # The database VM and its boot disk.
+    'roles/compute.instanceAdmin.v1',
+    # The VPC, subnet and the database's internal address.
+    'roles/compute.networkAdmin',
+    # The PostgreSQL and IAP-SSH firewall rules.
+    'roles/compute.securityAdmin',
     'roles/iam.serviceAccountAdmin',
     'roles/iam.serviceAccountUser',
     # Terraform manages the API request-log exclusion.
     'roles/logging.configWriter',
-    'roles/resourcemanager.projectIamAdmin',
     # Deploys services/jobs and executes migration and smoke executions.
     'roles/run.admin',
-    'roles/secretmanager.admin',
-    'roles/storage.admin'
+    "projects/$ProjectId/roles/$secretRole"
 )
 foreach ($role in $projectRoles) {
     gcloud projects add-iam-policy-binding $ProjectId --member="serviceAccount:$serviceAccount" `
         --role=$role --condition=None --quiet *> $null
 }
+# Terraform state only: the deployer holds no project-wide storage role.
+gcloud storage buckets add-iam-policy-binding "gs://$StateBucket" --member="serviceAccount:$serviceAccount" `
+    --role='roles/storage.objectAdmin' --quiet *> $null
 # The project is reused across rebuilds and never deleted by automation; the
-# VM deployer's SSH/IAP and project-deletion grants are retired.
+# VM deployer's SSH/IAP and project-deletion grants are retired. The deployer
+# never edits project IAM, and its project-wide compute, secret and storage
+# administration is replaced by the narrower grants above.
 $retiredRoles = @(
+    'roles/compute.admin',
     'roles/compute.osAdminLogin',
     'roles/containeranalysis.occurrences.viewer',
     'roles/iap.tunnelResourceAccessor',
-    'roles/resourcemanager.projectDeleter'
+    'roles/resourcemanager.projectDeleter',
+    'roles/resourcemanager.projectIamAdmin',
+    'roles/secretmanager.admin',
+    'roles/storage.admin'
 )
 foreach ($role in $retiredRoles) {
     if (Test-GcloudResource {
@@ -143,20 +181,53 @@ foreach ($role in $retiredRoles) {
 gcloud billing accounts add-iam-policy-binding $BillingAccount --member="serviceAccount:$serviceAccount" `
     --role='roles/billing.costsManager' --quiet *> $null
 
+# The database VM's only project role, granted here because the deployer
+# cannot edit project IAM. Terraform adopts the account (identity.tf).
+$dbAccount = "citeladder-db@$ProjectId.iam.gserviceaccount.com"
+if (-not (Test-GcloudResource { gcloud iam service-accounts describe $dbAccount --project=$ProjectId })) {
+    gcloud iam service-accounts create 'citeladder-db' --project=$ProjectId `
+        --display-name='CiteLadder PostgreSQL VM'
+}
+gcloud projects add-iam-policy-binding $ProjectId --member="serviceAccount:$dbAccount" `
+    --role='roles/logging.logWriter' --condition=None --quiet *> $null
+
 if (-not (Test-GcloudResource { gcloud iam workload-identity-pools describe $pool --location=global --project=$ProjectId })) {
     gcloud iam workload-identity-pools create $pool --location=global --project=$ProjectId `
         --display-name='GitHub Actions'
 }
-$condition = "assertion.repository=='$Repository' && assertion.ref=='refs/heads/main' && assertion.environment=='$Environment'"
-if (-not (Test-GcloudResource {
-            gcloud iam workload-identity-pools providers describe $provider --workload-identity-pool=$pool `
-                --location=global --project=$ProjectId
-        })) {
-    gcloud iam workload-identity-pools providers create-oidc $provider `
-        --project=$ProjectId --location=global --workload-identity-pool=$pool `
-        --issuer-uri='https://token.actions.githubusercontent.com' `
-        --attribute-mapping='google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref,attribute.environment=assertion.environment' `
-        --attribute-condition=$condition --display-name='Cube-27 CiteLadder main gcp-demo'
+# Only the deploy workflow, from main, in the protected environment, of this
+# exact repository: no other workflow in the repository can obtain credentials.
+$deployWorkflow = "$Repository/.github/workflows/gcp-deploy.yml@refs/heads/main"
+$condition = @(
+    "assertion.repository_id=='$RepositoryId'",
+    "assertion.repository=='$Repository'",
+    "assertion.job_workflow_ref=='$deployWorkflow'",
+    "assertion.ref=='refs/heads/main'",
+    "assertion.environment=='$Environment'"
+) -join ' && '
+$mapping = @(
+    'google.subject=assertion.sub',
+    'attribute.repository=assertion.repository',
+    'attribute.repository_id=assertion.repository_id',
+    'attribute.job_workflow_ref=assertion.job_workflow_ref',
+    'attribute.ref=assertion.ref',
+    'attribute.environment=assertion.environment'
+) -join ','
+$providerArgs = @(
+    $provider, "--project=$ProjectId", '--location=global', "--workload-identity-pool=$pool",
+    "--attribute-mapping=$mapping", "--attribute-condition=$condition",
+    '--display-name=Cube-27 CiteLadder main gcp-demo'
+)
+if (Test-GcloudResource {
+        gcloud iam workload-identity-pools providers describe $provider --workload-identity-pool=$pool `
+            --location=global --project=$ProjectId
+    }) {
+    # Re-running the bootstrap converges an existing provider to this trust.
+    gcloud iam workload-identity-pools providers update-oidc @providerArgs
+}
+else {
+    gcloud iam workload-identity-pools providers create-oidc @providerArgs `
+        --issuer-uri='https://token.actions.githubusercontent.com'
 }
 
 $principal = "principalSet://iam.googleapis.com/projects/$projectNumber/locations/global/workloadIdentityPools/$pool/attribute.repository/$Repository"

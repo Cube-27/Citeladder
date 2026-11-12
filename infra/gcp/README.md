@@ -30,6 +30,12 @@ Data lives on the database VM's boot disk. Replacing the VM is the explicit,
 irreversible database reset. No backups are kept.
 
 `bootstrap.ps1` runs once per workstation-authorised setup. It enables APIs,
-creates the state bucket and the deploy identity, and establishes the exact
-GitHub OIDC trust for `Cube-27/Citeladder`, `refs/heads/main` and the
-`gcp-demo` environment.
+creates the state bucket and the deploy identity with its narrowed roles,
+grants the database account's log-writer role (the deployer cannot edit
+project IAM), and establishes the exact GitHub OIDC trust for the
+`Cube-27/Citeladder` repository and ID, the `gcp-deploy.yml` workflow,
+`refs/heads/main` and the `gcp-demo` environment.
+
+Terraform ignores the API service's traffic split. The deploy workflow pins
+the serving revision, applies, smokes the new revision at a tagged URL and only
+then shifts traffic to it.

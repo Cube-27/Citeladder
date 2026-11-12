@@ -19,7 +19,7 @@ jobs:
   build:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    # require-green-main reads ci.yml's run for this commit.
+    # require-green-main reads ci.yml's and compose-smoke.yml's runs for this commit.
     permissions:
       actions: read
       contents: read
