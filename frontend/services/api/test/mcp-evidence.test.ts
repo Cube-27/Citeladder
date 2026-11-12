@@ -563,6 +563,7 @@ it('fetches a site page without the query string or fragment of any URL it carri
     // The issue URI the page hands out fetches the same evidence, stripped too.
     const [issue] = (record(fetched) as { issues: { record_uri: string; evidence: unknown }[] })
       .issues;
+    if (!issue) throw new Error('The fixture page has no current issue');
     expect(issue.evidence).toEqual({ url: 'https://acme.example/pricing' });
     expect(record(await fetchRecord(db, principal, issue.record_uri, origin)).evidence).toEqual({
       url: 'https://acme.example/pricing',
