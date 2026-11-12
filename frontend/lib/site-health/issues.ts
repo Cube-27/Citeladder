@@ -87,13 +87,11 @@ const SCORE_ROLE_LABEL: Readonly<Record<string, string>> = {
 
 /**
  * The page score a finding counts against (the catalog's `score_roles`), by
- * the name the score carries on screen; an unknown role is not shown.
+ * the name the score carries on screen; a role without a name shows as sent,
+ * so it never reads as counting toward nothing.
  */
 export function scoreRoleLabels(roles: readonly string[]): string[] {
-  return roles.flatMap((role) => {
-    const label = SCORE_ROLE_LABEL[role];
-    return label ? [label] : [];
-  });
+  return roles.map((role) => SCORE_ROLE_LABEL[role] ?? role);
 }
 
 /** Short dimension label for a badge (Web fundamentals / AEO). */

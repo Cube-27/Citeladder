@@ -273,14 +273,15 @@ describe('prefetchRoute', () => {
     );
     prefetchRoute(client, '/issues', PROJECT);
 
-    await vi.waitFor(() =>
-      expect(
-        client
-          .getQueryCache()
-          .findAll({ queryKey: queryKeys.siteHealth.crawlIssues(CRAWL_ID) })
-          .map((query) => query.state.data),
-      ).toEqual(expect.arrayContaining([page, worst])),
-    );
+    await vi.waitFor(() => {
+      const filed = client
+        .getQueryCache()
+        .findAll({ queryKey: queryKeys.siteHealth.crawlIssues(CRAWL_ID) })
+        .map((query) => query.state.data);
+      // Exactly the two, in either order.
+      expect(filed).toHaveLength(2);
+      expect(filed).toEqual(expect.arrayContaining([page, worst]));
+    });
     // The summary's worst defects, across every tab.
     expect(asked).toEqual(['?limit=3&finding_class=defect']);
     dashboard.release();

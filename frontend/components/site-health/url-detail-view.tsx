@@ -93,9 +93,10 @@ export function UrlDetailView({
 /** The whole page for the agent: its id and URL, never its evidence. */
 function pageHandoff(detail: PageDetail) {
   const count = detail.issues.filter((issue) => issue.finding_class === 'defect').length;
+  const issues = count === 1 ? '1 Site Health issue' : `${count} Site Health issues`;
   const prompt =
     count > 0
-      ? `Review the ${count} Site Health ${count === 1 ? 'issue' : 'issues'} on ${detail.display_url}, worst first, and propose exact page edits for each.`
+      ? `Review the ${issues} on ${detail.display_url}, worst first, and propose exact page edits for each.`
       : `Review ${detail.display_url} for search and answer-engine readiness and propose improvements.`;
   return {
     siteUrlId: detail.site_url_id,
