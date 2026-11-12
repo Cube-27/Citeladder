@@ -93,13 +93,17 @@ describe('scheduled crawl occurrences', () => {
     expect(await scheduler('first').runOnce(due)).toBe(1);
 
     const [crawl] = await crawls(tenant);
-    expect(crawl).toMatchObject({ status: 'queued', discovery_requested_count: 5 });
+    // Two tracked pages on the plan: the crawl holds two of the five page fetches left.
+    expect(crawl).toMatchObject({
+      status: 'queued',
+      configuration: expect.objectContaining({ requested_page_limit: 2 }),
+    });
     const held = await db
       .selectFrom('consumable_ledger')
       .select(['entry_kind', 'units'])
       .where('site_crawl_id', '=', crawl!.id)
       .execute();
-    expect(held).toEqual([{ entry_kind: 'reservation', units: 5 }]);
+    expect(held).toEqual([{ entry_kind: 'reservation', units: 2 }]);
     expect(await schedule(tenant)).toMatchObject({
       enabled: true,
       next_run_at: new Date(base.getTime() + 14 * DAY),
@@ -110,21 +114,31 @@ describe('scheduled crawl occurrences', () => {
       failure_count: 0,
     });
 
-    // The next occurrence reruns that crawl's scope and seed, as Recrawl does.
+    // The next occurrence audits the same tracked pages, as every crawl action does.
     await cancelCrawl(db, tenant.workspaceId, crawl!.id);
     const later = new Date(base.getTime() + 14 * DAY + 60_000);
     const next = new CrawlScheduler(db, settings, { owner: 'first', now: () => later });
     expect(await next.runOnce(later)).toBe(1);
     const [, rerun] = await crawls(tenant);
-    expect(rerun!.random_seed).toBe(crawl!.random_seed);
+    const audited = async (crawlId: string) =>
+      (
+        await db
+          .selectFrom('site_crawl_tasks')
+          .select('requested_url')
+          .where('crawl_id', '=', crawlId)
+          .where('task_kind', '=', 'analyze')
+          .execute()
+      ).map((task) => task.requested_url);
+    expect(await audited(rerun!.id)).toEqual(['https://example.test/']);
+    expect(await audited(rerun!.id)).toEqual(await audited(crawl!.id));
   });
 
   it('skips an occurrence while a crawl is active, without counting a failure', async () => {
     const seed = await fixtures.crawl('running');
-    // An admitted crawl freezes its settings and a decimal seed, which Recrawl reuses.
+    // An admitted crawl freezes its robots choice, which the next crawl action keeps.
     await db
       .updateTable('site_crawls')
-      .set({ random_seed: '7', configuration: JSON.stringify({ robots: 'respect' }) })
+      .set({ configuration: JSON.stringify({ robots: 'respect' }) })
       .where('id', '=', seed.crawlId)
       .execute();
     await allow(seed, 5);
@@ -153,7 +167,6 @@ describe('scheduled crawl occurrences', () => {
     await db
       .updateTable('site_crawls')
       .set({
-        random_seed: '7',
         configuration: JSON.stringify({
           robots: 'ignore',
           robots_decision: decision,

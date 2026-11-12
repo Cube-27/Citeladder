@@ -360,16 +360,8 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
       await dispose(trx, crawl, task, page, outcome.facts);
     } else if (finalFailure(task, outcome.retryable)) {
       // Membership before the crawl and task, in the Site Health lock order.
-      const runtime = await lockRuntime(trx, crawl.workspace_id);
-      // The freed slot goes to the frontier's next best URL, or the crawl ends a
-      // page short.
-      const released = await releaseNonPage(trx, crawl, task.url_hash, outcome, {
-        record: true,
-      });
-      if (released)
-        ({ admitted, sampleCapped } = await admitCandidates(trx, crawl, [], runtime, {
-          releasing: 1,
-        }));
+      await lockRuntime(trx, crawl.workspace_id);
+      await releaseNonPage(trx, crawl, task.url_hash, outcome, { record: true });
     }
     const locked = await lock();
     if (!artifactId && finalFailure(locked.task, outcome.retryable))

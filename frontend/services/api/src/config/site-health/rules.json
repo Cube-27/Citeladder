@@ -950,6 +950,25 @@
     "composite_contract": null
   },
   {
+    "applicability_key": "crawl_finalize",
+    "category": "indexability",
+    "description": "The site publishes an XML sitemap listing its pages.",
+    "dimension": "technical",
+    "display_label": "No sitemap",
+    "display_label_variants": {},
+    "finding_class": "defect",
+    "kind_evidence": "expectation",
+    "remediation": "Publish an XML sitemap of your indexable pages at /sitemap.xml or declare one in robots.txt.",
+    "rule_id": "technical.sitemap_present",
+    "scope": "site",
+    "score_roles": [],
+    "severity": "medium",
+    "triggered_by": "",
+    "web_fundamentals_area": "",
+    "weight": 1.0,
+    "composite_contract": null
+  },
+  {
     "applicability_key": "has_html",
     "category": "indexability",
     "description": "Sitemap-listed pages declare themselves canonical.",

@@ -138,7 +138,6 @@ export function makeSiteCrawl(overrides: Partial<SiteCrawl> = {}): SiteCrawl {
     analysis_status: 'completed',
     root_url: 'https://acme.com/',
     sample_mode: false,
-    seed: '1',
     robots: { handling: 'respect', decided_by_email: null, decided_at: null },
     inventory_complete: true,
     partial_reason: '',

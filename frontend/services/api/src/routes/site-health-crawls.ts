@@ -20,7 +20,7 @@ import { readBody } from '../http/body.ts';
 import { InvalidCursorError } from '../http/keyset-cursor.ts';
 import { cancelCrawl, listCrawls } from '../site-health/controls.ts';
 import { createCrawl } from '../site-health/planner.ts';
-import { recrawlRequest } from '../site-health/recrawl.ts';
+import { crawlRequest } from '../site-health/crawl-request.ts';
 import { readSchedule, updateSchedule } from '../site-health/schedules.ts';
 import { createCrawlRequest } from '../site-health/planner-policy.ts';
 import { crawlProjection, loadCrawl, rootFailure } from '../site-health/reads/crawl.ts';
@@ -99,34 +99,28 @@ export const siteHealthCrawlRoutes = [
       const request = await readBody(c, createCrawlRequest);
       const workspaceId = c.get('workspace').workspaceId;
       const user = c.get('user');
-      // Ignoring robots.txt is the signed-in person's confirmation, recorded on the crawl.
-      const robotsDecision =
-        request.robots === 'ignore'
-          ? { user_id: user.id, email: user.profile.email, decided_at: new Date().toISOString() }
-          : null;
-      await spendBudget(db, budget('crawl_create', config.settings), workspaceId);
-      const crawl = await db
-        .transaction()
-        .execute((trx) =>
-          createCrawl(trx, workspaceId, { ...request, robots_decision: robotsDecision }),
-        );
-      return siteCrawlSchema.parse(await crawlProjection(db, crawl));
-    },
-  }),
-  definePostRoute({
-    family,
-    path: '/api/v1/site-crawls/{crawl_id}/recrawl',
-    params: { path: { crawl_id: uuid }, query: {} },
-    response: siteCrawlSchema,
-    status: 201,
-    capability: 'run',
-    async handle({ c, db, config }, { path }) {
-      const workspaceId = c.get('workspace').workspaceId;
+      // Ignoring robots.txt is the signed-in person's confirmation, recorded on the crawl;
+      // a request naming no choice keeps the newest site crawl's (SH-B7: one crawl action).
+      let choice: Parameters<typeof crawlRequest>[3] = null;
+      if (request.robots === 'respect') choice = { robots: 'respect' };
+      if (request.robots === 'ignore')
+        choice = {
+          robots: 'ignore',
+          decision: {
+            user_id: user.id,
+            email: user.profile.email,
+            decided_at: new Date().toISOString(),
+          },
+        };
       await spendBudget(db, budget('crawl_create', config.settings), workspaceId);
       const crawl = await db
         .transaction()
         .execute(async (trx) =>
-          createCrawl(trx, workspaceId, await recrawlRequest(trx, workspaceId, path.crawl_id)),
+          createCrawl(
+            trx,
+            workspaceId,
+            await crawlRequest(trx, workspaceId, request.project_id, choice),
+          ),
         );
       return siteCrawlSchema.parse(await crawlProjection(db, crawl));
     },

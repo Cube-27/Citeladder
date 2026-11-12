@@ -1,7 +1,7 @@
 /** Explicit crawl admission freezes policy and commits all initial work together. */
 import { randomUUID } from 'node:crypto';
 import { ACTIVE_CRAWL_STATUSES } from '@citeladder/contracts/site-health';
-import type { Selectable } from 'kysely';
+import { sql, type Selectable } from 'kysely';
 import { policy } from '../config.ts';
 import { measuredTargetPages } from '../opportunities/enqueue.ts';
 import type { Database } from '../db/database.ts';
@@ -13,18 +13,18 @@ import type {
   SiteUrls,
   WorkspaceSiteHealthRuntime,
 } from '../generated/db-schema.ts';
-import { enqueueCrawlTasks, insertObservations } from './admission-writes.ts';
-import { addAutomaticRoot, crawlScope } from './frontier.ts';
+import { enqueueCrawlTasks, fitTrackedSet, insertObservations } from './admission-writes.ts';
+import { addAutomaticRoot, candidate, crawlScope } from './frontier.ts';
 import { budgetedPageLimit, reserveCrawlFetches, unresolvedEntitlement } from './fetch-budget.ts';
 import {
   controls,
   crawlError,
   crawlSetting,
   frozenConfiguration,
-  normalizedSeed,
   projectWebsiteRoot,
   type CrawlAdmission,
 } from './planner-policy.ts';
+import { fillTrackedSet, lockTrackedSet } from './tracked-set.ts';
 import { inventoryCrawlIds } from './reads/crawl.ts';
 import { recordCrawlEvent } from './site-task.ts';
 import type { Crawl } from './site-task.ts';
@@ -103,6 +103,7 @@ async function seedObservation(
   ]);
 }
 
+/** Queue analysis of the active members, in fill order, within the crawl's page limit. */
 async function seedMonitored(db: Database, crawl: Crawl) {
   const rows = await db
     .selectFrom('site_urls as u')
@@ -116,6 +117,7 @@ async function seedMonitored(db: Database, crawl: Crawl) {
     .where('u.workspace_id', '=', crawl.workspace_id)
     .where('u.project_id', '=', crawl.project_id)
     .where('m.active', '=', true)
+    .orderBy(sql`m.fill_order asc nulls last`)
     .orderBy('u.normalized_url')
     .execute();
   // Pages with a declared change still being measured go first, so a budget
@@ -128,9 +130,10 @@ async function seedMonitored(db: Database, crawl: Crawl) {
     if (url.normalized_url === crawl.root_url) return 0;
     return declared.has(url.id) ? 1 : 2;
   };
+  // A stable sort: fill order holds within each rank.
   rows.sort((left, right) => rank(left) - rank(right));
-  // The budget is in pages, not tasks: site setup is no page, and the root's
-  // discover already holds the root's slot, so its analysis spends nothing more.
+  // The budget is in pages, not tasks: site setup is no page, and a URL that
+  // already has a discover task (a sample's root) spends nothing more.
   const held = new Set(
     (
       await db
@@ -185,11 +188,16 @@ function insertCrawl(
     root: string;
     configuration: Record<string, unknown>;
     runtime: Runtime;
-    seed?: string | null;
+    /** How many URLs discovery may admit: a sample's cap or a full crawl's HTML-walk bound. */
+    discoveryLimit: number;
     rerun: boolean;
   },
 ) {
   const now = new Date();
+  const sample = input.runtime.discovery_mode === 'sample';
+  // A full crawl's discovery waits for site setup: its sitemap, or an HTML walk without one.
+  let discovery = sample ? 'running' : 'pending';
+  if (input.rerun) discovery = 'completed';
   return db
     .insertInto('site_crawls')
     .values({
@@ -198,14 +206,16 @@ function insertCrawl(
       project_id: input.projectId,
       profile_id: input.profileId,
       root_url: input.root,
-      random_seed: normalizedSeed(input.seed),
+      // Unread since the tracked set (SH-B6) made every crawl's order stable; the column is
+      // NOT NULL until a later release drops it (expand/contract).
+      random_seed: '0',
       configuration: JSON.stringify(input.configuration),
-      sample_mode: input.runtime.discovery_mode === 'sample',
+      sample_mode: sample,
       status: 'queued',
       analysis_status: 'pending',
-      discovery_status: input.rerun ? 'completed' : 'running',
+      discovery_status: discovery,
       inventory_complete: false,
-      discovery_requested_count: input.rerun ? 0 : Number(input.configuration.requested_page_limit),
+      discovery_requested_count: input.rerun ? 0 : input.discoveryLimit,
       analysis_requested_count: 0,
       discovered_url_count: input.rerun ? 1 : 0,
       admitted_url_count: input.rerun ? 1 : 0,
@@ -275,7 +285,28 @@ function refreshProfile(
     .executeTakeFirstOrThrow();
 }
 
-/** Caller owns the transaction: project -> runtime -> profile -> capacity/account. */
+/** The root as the first tracked page: site checks read its facts. */
+async function trackRoot(db: Database, crawl: Crawl) {
+  const decision = classifyUrlAdmission(crawl.root_url, crawlScope(crawl));
+  if (!decision.accepted || !decision.url) return;
+  const root = candidate(decision, {
+    url: decision.url,
+    hash: decision.hash,
+    depth: 0,
+    sourceKind: 'root',
+    parentPosition: 0,
+    linkOrdinal: 0,
+  });
+  await fillTrackedSet(db, crawl, [root]);
+}
+
+/**
+ * Caller owns the transaction: project -> runtime -> membership -> profile ->
+ * capacity/account. A full crawl audits the tracked set: admission fits it to
+ * the plan's limit (SH-B6), tracks the root on a first crawl and queues every
+ * tracked page's analysis within the fetch hold; site setup then reads the
+ * sitemap and fills any free slots, or starts an HTML walk without one (SH-B5).
+ */
 export async function createCrawl(db: Database, workspaceId: string, request: CrawlAdmission) {
   const project = await db
     .selectFrom('projects')
@@ -298,17 +329,26 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
   if (!classifyUrlAdmission(root, scope).accepted)
     crawlError('crawl root is not admissible', 'invalid_root');
   const held = await holdRuntime(db, workspaceId);
+  await lockTrackedSet(db, workspaceId, request.project_id);
   const profile = await refreshProfile(db, workspaceId, request.project_id, root, domain);
   const runtime = await admissionRuntime(db, held);
   const selected = controls(request);
   const now = new Date();
-  const requested =
-    runtime.discovery_url_cap == null
-      ? selected.limit
-      : Math.min(selected.limit, runtime.discovery_url_cap);
-  const budget = await budgetedPageLimit(db, workspaceId, requested, now);
+  const sample = runtime.discovery_mode === 'sample';
+  const discoveryCap = runtime.discovery_url_cap ?? selected.limit;
+  // A sample's tracked set is empty; a full crawl's is the plan's monitored-URL limit.
+  const tracked = sample ? 0 : runtime.monitored_url_limit;
+  await fitTrackedSet(db, { workspaceId, projectId: request.project_id }, tracked, {
+    releaseSample: !sample,
+  });
+  const budget = await budgetedPageLimit(
+    db,
+    workspaceId,
+    sample ? Math.min(selected.limit, discoveryCap) : tracked,
+    now,
+  );
   const configuration = frozenConfiguration(scope, runtime, { ...selected, limit: budget.limit });
-  if (runtime.discovery_mode !== 'sample') {
+  if (!sample) {
     const previous = await db
       .selectFrom('site_crawls')
       .selectAll()
@@ -330,11 +370,12 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
     root,
     configuration,
     runtime,
-    seed: request.seed,
+    // The HTML walk may discover past the tracked set, so it reaches pages to fill it with.
+    discoveryLimit: sample ? budget.limit : Math.max(discoveryCap, budget.limit),
     rerun: false,
   });
   if (budget.metered) await reserveCrawlFetches(db, crawl, budget.limit, now);
-  if (budget.limit > 0)
+  if (sample && budget.limit > 0)
     await enqueueCrawlTask(db, crawl, { kind: 'discover', url: root, position: 0 });
   await enqueueCrawlTask(db, crawl, {
     kind: 'site_setup',
@@ -342,8 +383,9 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
     priority: policy.site_health.crawl.site_setup_priority_boost,
     position: -1,
   });
+  if (!sample) await trackRoot(db, crawl);
   await seedMonitored(db, crawl);
-  await addAutomaticRoot(db, crawl, runtime);
+  if (sample) await addAutomaticRoot(db, crawl, runtime);
   await creationEvents(db, crawl);
   return crawl;
 }
@@ -379,6 +421,7 @@ export async function createPageRerunCrawl(
     root: profile.root_url || url.normalized_url,
     configuration,
     runtime,
+    discoveryLimit: 0,
     rerun: true,
   });
   if (budget.metered) await reserveCrawlFetches(db, crawl, budget.limit, now);

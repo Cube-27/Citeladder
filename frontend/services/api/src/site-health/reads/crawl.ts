@@ -294,7 +294,6 @@ export function projectCrawl(
     analysis_status: crawl.analysis_status,
     root_url: crawl.root_url,
     sample_mode: crawl.sample_mode,
-    seed: crawl.random_seed,
     robots: robotsChoice(crawl),
     inventory_complete: crawl.inventory_complete,
     partial_reason: crawl.partial_reason,

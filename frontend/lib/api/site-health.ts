@@ -65,10 +65,10 @@ import type {
 } from '@citeladder/contracts';
 
 /**
- * A new crawl, or with `recrawl_of` a rerun of that crawl's seed and robots
- * choice. `recrawl_of` picks the route; it is never part of the body.
+ * The one crawl action: it audits the project's tracked pages. Without a
+ * robots choice the crawl keeps the newest site crawl's.
  */
-export type StartCrawlInput = SiteCrawlCreateRequest & { recrawl_of?: string };
+export type StartCrawlInput = SiteCrawlCreateRequest;
 
 /** Keyset inventory query params. `limit<=200`, ordering is URL-only. */
 export type InventoryParams = {
@@ -125,9 +125,8 @@ export const siteHealthApi = {
     );
     return strictValidate(robotsHistoryPageSchema, res, 'siteHealth.getRobotsHistory');
   },
-  createCrawl: async ({ recrawl_of, ...input }: StartCrawlInput, options?: ApiRequestOptions) => {
-    const path = recrawl_of ? `/site-crawls/${recrawl_of}/recrawl` : '/site-crawls';
-    const res = await apiClient.post<SiteCrawl>(path, recrawl_of ? undefined : input, options);
+  createCrawl: async (input: StartCrawlInput, options?: ApiRequestOptions) => {
+    const res = await apiClient.post<SiteCrawl>('/site-crawls', input, options);
     const crawl = strictValidate(siteCrawlSchema, res, 'siteHealth.createCrawl');
     startInteractiveWork(`/site-crawls/${crawl.id}/run`, {
       ...options,

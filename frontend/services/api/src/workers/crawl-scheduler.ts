@@ -13,7 +13,7 @@ import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { getLogger } from '../logging.ts';
 import { createCrawl } from '../site-health/planner.ts';
-import { scheduledCrawlRequest } from '../site-health/recrawl.ts';
+import { crawlRequest } from '../site-health/crawl-request.ts';
 import { claimDueCrawlSchedules, nextOccurrence } from '../site-health/schedules.ts';
 
 export function crawlSchedulerSettings(env: SettingSource = process.env) {
@@ -89,7 +89,7 @@ export class CrawlScheduler {
         const crawl = await createCrawl(
           trx,
           schedule.workspace_id,
-          await scheduledCrawlRequest(trx, schedule.workspace_id, schedule.project_id),
+          await crawlRequest(trx, schedule.workspace_id, schedule.project_id),
         );
         await sql`release savepoint crawl_schedule_planning`.execute(trx);
         await scoped

@@ -221,7 +221,6 @@ export const siteCrawlSchema = responseObject({
   analysis_status: crawlAnalysisStatusSchema,
   root_url: z.string(),
   sample_mode: z.boolean(),
-  seed: z.string(),
   robots: crawlRobotsChoiceSchema,
   inventory_complete: z.boolean(),
   // Why a `partially_completed` crawl is partial. Empty on every other status.

@@ -6476,9 +6476,6 @@
           "sample_mode": {
             "type": "boolean"
           },
-          "seed": {
-            "type": "string"
-          },
           "robots": {
             "$ref": "#/components/schemas/CrawlRobotsChoice"
           },
@@ -6658,7 +6655,6 @@
           "analysis_status",
           "root_url",
           "sample_mode",
-          "seed",
           "robots",
           "inventory_complete",
           "partial_reason",

@@ -18,6 +18,7 @@ import {
   finalizeEvaluation,
   hreflangConflict,
   sitemapOrphan,
+  sitemapPresent,
 } from './analysis/finalize.ts';
 import { crawlCoverage } from './coverage.ts';
 import { linkTargetUrl } from './discovery-links.ts';
@@ -176,7 +177,7 @@ async function sitemapObservations(db: Database, crawl: Crawl) {
   return rows.map((row) => row.observed_url);
 }
 
-/** The root page also carries the crawl-wide sitemap orphan and reachability checks. */
+/** The root page also carries the crawl-wide sitemap presence, orphan and reachability checks. */
 async function rootEvaluations(
   db: Database,
   crawl: Crawl,
@@ -196,6 +197,10 @@ async function rootEvaluations(
   ];
   const coverage = await crawlCoverage(db, crawl);
   return [
+    sitemapPresent({
+      sampleMode: crawl.sample_mode,
+      sitemap: record(record(crawl.site_facts).sitemap),
+    }),
     sitemapOrphan(observed.length, orphans, coverage.state),
     resolutionSet(targets, resolutions, { sitemap: true }),
     redirectChains(resolutions),

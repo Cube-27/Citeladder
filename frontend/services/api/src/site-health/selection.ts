@@ -9,6 +9,7 @@ import { admissionRuntime, createPageRerunCrawl } from './planner.ts';
 import { holdRuntime } from './plan-runtime.ts';
 import { crawlError } from './planner-policy.ts';
 import { monitoredQuota } from './reads/runtime.ts';
+import { lockTrackedSet } from './tracked-set.ts';
 
 /** The project's monitored set; its route authorizes the path project. */
 export async function monitoredSet(db: Database, workspaceId: string, projectId: string) {
@@ -68,14 +69,7 @@ async function lockControlScope(db: Database, workspaceId: string, projectId: st
     .executeTakeFirst();
   if (!project) throw notFound('Project');
   const held = await holdRuntime(db, workspaceId);
-  await db
-    .selectFrom('monitored_site_urls')
-    .select('id')
-    .where('workspace_id', '=', workspaceId)
-    .where('project_id', '=', projectId)
-    .orderBy('id')
-    .forUpdate()
-    .execute();
+  await lockTrackedSet(db, workspaceId, projectId);
   const crawl = await db
     .selectFrom('site_crawls')
     .select('id')

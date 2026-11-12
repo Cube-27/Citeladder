@@ -200,11 +200,10 @@ export function useSiteHealthScreen() {
       },
     });
   };
-  // A failed start is retried with exactly what it sent: its project, robots
-  // choice and recrawl baseline.
+  // A failed start is retried with exactly what it sent: its project and robots choice.
   const retryStart = () => startCrawl(createMutation.variables);
-  // Reruns the shown crawl's scope, so Changes always has a comparable baseline.
-  const recrawl = () => crawl && startCrawl({ project_id: projectId, recrawl_of: crawl.id });
+  // The one crawl action audits the tracked pages again and keeps the newest crawl's robots choice.
+  const recrawl = () => crawl && startCrawl({ project_id: projectId });
   const cancelCrawl = () => crawl && cancelMutation.mutate(crawl.id);
 
   // A create is genuinely in flight, or its projection refresh has not yet

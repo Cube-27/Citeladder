@@ -26,24 +26,31 @@ does not restate them.
 
 ## Crawl lifecycle
 
-**Admission.** `POST /api/v1/site-crawls` (`planner.ts` `createCrawl`) runs as
-one transaction. It locks workspace, project, runtime, profile, then
-capacity/account, and allows one active crawl per project. Page reruns
+**Admission.** `POST /api/v1/site-crawls` (`planner.ts` `createCrawl`) is the
+one crawl action ([SH-B7](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12)):
+Recrawl, Run new crawl and a scheduled crawl all admit through it. It runs as
+one transaction. It locks workspace, project, runtime, membership, profile,
+then capacity/account, and allows one active crawl per project. Page reruns
 (`selection.ts`) lock project, runtime, membership, the active crawl, profile,
 then capacity/account. In order, admission:
 
 1. refreshes the held runtime from grants under the capacity lock;
 2. admits the root;
-3. freezes scope (the root registrable domain), the page limit, grant
+3. fits the [tracked set](#url-admission-and-selection) to the plan's monitored-URL limit;
+4. freezes scope (the root registrable domain), the page limit, grant
    projection, acquisition bounds and versions into `site_crawls.configuration`;
-4. reserves the fetch budget;
-5. enqueues `discover` for the root, one `site_setup`, and `analyze` for
-   already-monitored URLs, pages named by a declaration still inside its
-   verification window first, and selects the root.
+5. reserves the fetch budget;
+6. enqueues one `site_setup` and `analyze` for the tracked pages: the root
+   first, then pages named by a declaration still inside its verification
+   window, then fill order. A first crawl tracks the root. A sample instead
+   enqueues `discover` for the root and selects it.
 
-The request takes only the project, an optional random seed and the robots
-choice. The page limit is `automatic_page_limit`, capped by the plan's
-discovery cap and the fetch budget left; a workspace holding the
+The request takes only the project and the robots choice
+([`crawl-request.ts`](../frontend/services/api/src/site-health/crawl-request.ts)).
+A request that names no choice keeps the project's newest site crawl's choice
+and who confirmed it (`respect` before any crawl). A full crawl's page limit is
+the plan's monitored-URL limit, capped by the fetch budget left; a sample's is
+`automatic_page_limit` within its discovery cap. A workspace holding the
 `operator_controls` grant crawls unmetered. Nothing edits the monitored set:
 crawls pick it (SH-B13). A page rerun (`selection.ts`) creates a one-page crawl
 from a terminal crawl; while a crawl is running it is refused with
@@ -68,9 +75,9 @@ crawl is usable, the newest site crawl, so a failure still shows.
 (`crawl_schedules`, `GET|PUT /api/v1/projects/{project_id}/crawl-schedule`),
 off by default, weekly or monthly, on every plan. The `crawl-scheduler`
 periodic owner (`workers/crawl-scheduler.ts`) leases each due schedule and
-admits the crawl through `createCrawl`, rerunning the newest site crawl's seed
-and robots choice as Recrawl does (the default crawl when there is none), so the
-fetch budget, grants and the one-active-crawl rule apply unchanged. An
+admits the crawl through `createCrawl` with no robots choice, so it keeps the
+newest site crawl's as every crawl action does, and the fetch budget, grants
+and the one-active-crawl rule apply unchanged. An
 occurrence refused with `crawl_already_active` or
 `site_health_fetches_exhausted` is skipped: `next_run_at` advances to the next
 occurrence and `last_outcome` records why. Any other refusal counts a failure,
@@ -80,8 +87,8 @@ retries after `failure_retry_seconds` and turns the schedule off after
 
 | Task kind (`site_crawl_tasks`) | Does |
 |---|---|
-| `site_setup` | robots.txt, crawler stance, llms.txt, sitemap walk and admission |
-| `discover` | fetches a page; one parse for links and facts; admits children; marks it a document, an alias or for analysis |
+| `site_setup` | robots.txt, crawler stance, llms.txt; a full crawl's discovery: the sitemap walk and tracked-set fill, or the HTML walk's start |
+| `discover` | an HTML walk or sample only: fetches a page; one parse for links and facts; admits children; marks it a document, an alias or for analysis |
 | `analyze` | classifies, evaluates and provisionally scores one monitored page |
 | `link_metrics` → `architecture` | post-terminal link metrics, then the Architecture projection |
 | `change_intel` | post-terminal change snapshot and analytics handoff |
@@ -103,8 +110,8 @@ and a lost lease commits nothing.
 
 `site_setup` commits twice. The first commit holds root robots access, llms.txt
 and the snapshot pointer, with the sitemap `pending`, and it unblocks the root's
-analysis. The second commit holds the sitemap admission and the sampled robots
-policy; a reclaimed task resumes there.
+analysis. The second commit holds discovery and the sampled robots policy; a
+reclaimed task resumes there.
 
 `analyze` reuses the crawl's `discover` artifact when the extractor version
 matches. While that `discover` is open (or `site_setup`, for the root),
@@ -205,24 +212,49 @@ from `value_fallback_tokens`. So `/blog/product-review` is `article`.
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 100 | 90 | 85 | 80 | 70 | 65 | 60 | 45 | 40 | 20 |
 
-Within a tier, candidates sort by `sha256(crawl_id || url_hash)`. The sample is
-random but reproducible per crawl, and not biased toward header or footer
-links.
+Within a tier, candidates sort by `url_hash`, the SHA-256 of the canonical
+URL. The order is the project's, the same in every crawl, and not biased toward
+header or footer links.
 
 **www/apex twins.** A URL whose `www.`/apex twin is already in the batch or the
 frontier is skipped. In sample mode, a twin that was already observed also
 counts. Stored identities are not merged, and scope and depth apply before a
 twin is chosen.
 
-**Budgets.** A full crawl stores eligible candidates in
-`site_discovery_frontier`, up to `max_frontier_urls`. It admits the best
-pending rows up to the requested page limit, and each admission queues a
-`discover`.
+**Discovery** ([SH-B5](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12)).
+Every full crawl's `site_setup` reads the sitemaps first. When they list
+admissible URLs, their deduplicated count is the crawl's `discovered_url_count`
+and `site_facts.sitemap.discovered_count` ("Discovered N").
+`site_facts.sitemap.discovered_complete` is false when a safety ceiling
+(`max_sitemap_documents`, `max_sitemap_urls`, bytes, index depth) or an
+unreadable document cut the walk short ("at least N"); `limit_reached` and
+`unread_count` say which (coverage reasons `sitemap_limit_reached` and
+`sitemap_documents_unread`). A document is unread when no answer settled it
+(no response, a timeout, a 408, 429 or 5xx); a 4xx, a response refused as no
+sitemap type, or a body that does not parse is the server's answer that it
+serves none. Discovery is free, has no plan cap and no manual trigger, and
+fetches no page. A site whose sitemaps list nothing falls back to an HTML walk:
+`site_setup` queues the root's `discover` and discovery runs. Eligible
+candidates enter `site_discovery_frontier`, up to `max_frontier_urls`; the walk
+admits the best pending rows up to its bound (the plan's discovery cap, at
+least the page limit), and each admission queues a `discover`. The root carries
+the `technical.sitemap_present` ("No sitemap") issue when no sitemap document
+was read and every one tried was answered; an unread one leaves it `unknown`.
 
-**Automatic allowance.** The allowance is
-`min(page limit, plan monitored-URL limit)`. While it lasts, admitted HTML
-URLs become system-monitored (`bootstrap`) and are analyzed after discovery;
-only a new activation spends it.
+**Tracked pages** (SH-B6, `tracked-set.ts`). Active `monitored_site_urls` with
+a `fill_order` are the project's tracked pages, and every full crawl analyzes
+exactly them, within its fetch hold. While the set is below the crawl's page
+limit, the crawl fills it in the stable order above: the root at admission,
+then sitemap pages in `site_setup` (a listed document such as a PDF counts as
+discovered but never takes a slot), or, in an HTML walk, each fetched URL that
+proved to be a page (never a dead link, document or alias). Walked pages join
+as their fetches commit, so which pages fill the set from a walk depends on
+fetch timing; once joined, their positions are fixed. A page is tracked
+once and never re-picked. The plan's monitored-URL limit is a window over the
+fill order, applied at admission: a downgrade deactivates the pages past it
+(`deselected_at` is when they left), and an upgrade restores them before any
+new fill. A tracked page that fails, redirects or turns out to be an alias
+stays tracked; a failed fetch releases only a sample's membership.
 
 **Sample mode** (`discovery_mode: sample`) has no frontier. It admits up to
 `sample_discovery_url_cap` URLs directly and analyzes within the workspace-wide
@@ -232,9 +264,9 @@ sitemaps or requests llms.txt.
 **Sitemaps.** The walk starts from the declared sitemaps or `/sitemap.xml`. It
 runs breadth-first in `sitemap_fetch_concurrency` waves, and attempts count
 against `max_sitemap_documents`. URLs are taken in queue order, so response
-timing cannot change what fits. Admissible URLs, up to
-`max_sitemap_admitted_urls`, enter the frontier at depth 1. They are also
-recorded in `site_facts.sitemap.urls`, the only authority for sitemap
+timing cannot change what fits. The first `max_sitemap_admitted_urls`
+admissible URLs in the tracked order fill the tracked set and are recorded in
+`site_facts.sitemap.urls`, the only authority for sitemap
 membership: a crawl without that list has no sitemap members. Each admitted
 URL's first declared `<lastmod>` is kept, as written, in
 `site_facts.sitemap.lastmod` (keyed by the admitted URL); a page's analysis
@@ -283,7 +315,8 @@ bypassing access controls, and a challenge page is terminal `bot_blocked`.
 **Ignoring robots.txt.** Start crawl offers "Ignore robots.txt" after the
 person confirms they are authorized to crawl the site. The crawl freezes
 `robots: 'ignore'` and `robots_decision` (user id, email, time) in its
-configuration; Recrawl and scheduled crawls copy both from the crawl they rerun.
+configuration; a crawl request naming no robots choice, as Recrawl and a
+scheduled crawl do, copies both from the project's newest site crawl.
 Only the crawl's own `discover` and `analyze` fetches pass the choice to
 `SitePageFetcher` and `PageAcquirer`, per request: it covers only the crawl's
 registrable domain and its subdomains, so a redirect to another host respects
@@ -614,9 +647,9 @@ failed.
 
 | State | When |
 |---|---|
-| `partial` | the frontier limit was reached, the frontier was not exhausted (`requested_page_limit_reached` when the page limit left frontier URLs), or discovery was bounded (sample, non-`auto`, cancelled) |
+| `partial` | the frontier limit was reached, the frontier was not exhausted (`requested_page_limit_reached` when the page limit left frontier URLs), or discovery was bounded (sample, non-`auto`, cancelled); for a sitemap crawl, the sitemap read hit a ceiling or left a document unread, or it lists pages the crawl did not observe |
 | `unknown` | discovery failed, observed nothing or did not complete |
-| `complete` | the frontier was exhausted |
+| `complete` | the frontier was exhausted, or the crawl observed every URL of a sitemap read in full |
 
 The evidence records `observation_count`, `analyzed_url_count`,
 `failed_url_count` and `automatic_limit`, which is `null` (never 0) when no
@@ -696,13 +729,9 @@ JEV judges pairs through the analytics queue. Limits are in
 ## Change intelligence
 
 `change_intel` compares a terminal crawl with the newest earlier crawl that has
-the same origin, scope and analyzer/extractor versions. Recrawl
-(`POST /api/v1/site-crawls/{crawl_id}/recrawl`, [recrawl](../frontend/services/api/src/site-health/recrawl.ts),
-the header's Recrawl button) rebuilds the create request from a crawl's random
-seed and robots choice and goes through ordinary admission, so the next crawl is comparable by construction.
-Recrawling a one-page re-read reruns the newest site crawl before it instead.
-[Scheduled crawls](#crawl-lifecycle) rebuild the same request from the newest
-site crawl, so they are comparable the same way. Scope excludes the
+the same origin, scope and analyzer/extractor versions. Every full crawl,
+Recrawl and [scheduled crawls](#crawl-lifecycle) included, audits the same
+tracked pages, so consecutive crawls are comparable by construction. Scope excludes the
 page limit, which is the fetch budget left at admission; the comparison reads
 only pages both crawls analyzed. Page reruns write no snapshot and are never a
 predecessor, and Changes never shows a snapshot an older rerun wrote. With no
@@ -891,7 +920,7 @@ All paths are under `frontend/services/api/src/`.
 | Claims and drain | `workers/site-health-worker.ts`, `workers/runner.ts` |
 | Crawl, stop, selection | `site-health/planner.ts`, `controls.ts`, `selection.ts` |
 | Scheduled crawls | `site-health/schedules.ts`, `workers/crawl-scheduler.ts` |
-| Admission | `site-health/url-admission.ts`, `url-identity.ts`, `frontier.ts` |
+| Admission | `site-health/url-admission.ts`, `url-identity.ts`, `frontier.ts`, `tracked-set.ts`, `crawl-request.ts` |
 | Executors | `site-health/site-setup-task.ts`, `discover-task.ts`, `analyze-task.ts`, `page-fetch.ts` |
 | Terminal and measurement | `site-health/lifecycle*.ts`, `terminal-analysis.ts`, `terminal-counters.ts`, `issue-currency.ts`, `issue-states.ts`, `issue-catalog.ts`, `canonical-alias.ts`, `score-summary.ts`, `coverage.ts` |
 | Analysis | `site-health/analysis/` (`page-kinds.ts`, `rules.ts`, `*-checks.ts`, `scoring.ts`) |
