@@ -325,7 +325,7 @@ interaction recipes live only in [`design.md`](design.md).
 | Table, Badge, Tag, Callout, EmptyState, Skeleton, ProgressBar, pagination | `frontend/components/ui/` |
 | Segmented control | `frontend/components/ui/tabs.tsx` (`SegmentedControl`) |
 | Kbd, ChipInput, ThemeSwitch, BrandMark, EngineMark, Citation, Rungs | `frontend/components/ui/` (`kbd.tsx`, `chip-input.tsx`, `theme-switch.tsx`, `brand-mark.tsx`, `engine-mark.tsx`, `citation.tsx`, `rungs.tsx`) |
-| Read states: loading, read error, empty (block and inline) | `frontend/components/ui/query-state.tsx` (`QueryState`) |
+| Read states: loading, read error, not measured, empty (block and inline); one query mapped to them so a pending, failed or unmeasured read never renders as zero or "no data" | `frontend/components/ui/query-state.tsx` (`QueryState`, `screenState`) |
 | KPI and fact rows | `frontend/components/ui/stat-row.tsx` (`StatRow`) |
 | Record tables: header, toolbar, rows, pager, states | `frontend/components/ui/data-table.tsx` (`DataTable`) |
 | Screen templates (bands, band gaps, detail split) | `frontend/components/layout/page-shell.tsx` (`ListScreen`, `DetailScreen`) |
