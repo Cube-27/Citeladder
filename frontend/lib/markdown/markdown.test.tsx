@@ -41,6 +41,13 @@ describe('leavesForUnknownHost', () => {
     expect(leavesForUnknownHost('https://acme.com@evil.example/', known)).toBe(true);
     expect(leavesForUnknownHost('mailto:x@acme.com?body=secret', known)).toBe(true);
   });
+
+  it('judges a path the browser reads as another host by that host', () => {
+    const app = 'https://app.citeladder.example';
+    expect(leavesForUnknownHost('/\\evil.example/path?d=1', known, app)).toBe(true);
+    expect(leavesForUnknownHost('/agent/chats', known, app)).toBe(false);
+    expect(leavesForUnknownHost('https://app.citeladder.example/agent', known, app)).toBe(false);
+  });
 });
 
 describe('safeUrlTransform', () => {

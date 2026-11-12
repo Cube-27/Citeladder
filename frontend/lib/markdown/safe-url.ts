@@ -53,21 +53,29 @@ export function linkHost(value: string): string | null {
  * Whether opening a sanitised link should first confirm that the person is
  * leaving CiteLadder: a link to a host outside `knownHosts` (or a subdomain of
  * one) could carry project data a prompt-injected page asked the model to put
- * in its address. Links that stay in the app (relative paths, fragments) and
- * inert links do not; `mailto:` always does, since its address can carry data
- * to anyone.
+ * in its address. Links that stay on `appOrigin` (relative paths, fragments)
+ * and inert links do not; `mailto:` always does, since its address can carry
+ * data to anyone.
+ *
+ * The href is resolved the way the browser will resolve it, so a "relative"
+ * value the browser reads as another host (`/\evil.example/x`) is judged by
+ * that host.
  */
-export function leavesForUnknownHost(href: string, knownHosts: readonly string[]): boolean {
+export function leavesForUnknownHost(
+  href: string,
+  knownHosts: readonly string[],
+  appOrigin: string = globalThis.location?.origin ?? 'https://local.invalid',
+): boolean {
   if (href === '') return false;
   let url: URL;
   try {
-    url = new URL(href);
+    url = new URL(href, appOrigin);
   } catch {
-    // Not absolute: resolves against the app's own origin.
-    return false;
+    return true;
   }
   if (url.protocol === 'mailto:') return true;
-  const host = linkHost(href);
+  if (url.origin === new URL(appOrigin).origin) return false;
+  const host = linkHost(url.href);
   if (host === null) return true;
   return !knownHosts.some((known) => host === known || host.endsWith(`.${known}`));
 }
