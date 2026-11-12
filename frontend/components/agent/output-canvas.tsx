@@ -22,6 +22,7 @@ import {
   useSectionDraft,
 } from '@/lib/agent/section-drafts';
 import { agentMutations, type AgentDocumentRef, type AgentRevision } from '@/lib/api/agent';
+import { useAgentLinkHosts } from '@/lib/agent/link-hosts';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
 
 /** Outputs with at least this many titled sections get a contents list. */
@@ -55,6 +56,7 @@ export function OutputCanvas({
   // An open editor or revise form belongs to the revision it was opened on.
   const active = opened?.revisionId === revision.id ? opened : null;
   const titled = sections.filter((section) => section.heading !== null);
+  const knownHosts = useAgentLinkHosts(revision.web_sources);
   return (
     <Stack gap="workspace">
       {titled.length >= CONTENTS_MIN_SECTIONS ? (
@@ -85,6 +87,7 @@ export function OutputCanvas({
           key={`${revision.id}-${section.start}`}
           id={sectionId(revision.id, index)}
           section={section}
+          knownHosts={knownHosts}
           draftKey={sectionDraftKey(target.outputId, revision.id, index)}
           mode={active?.index === index ? active.mode : null}
           locked={locked}
@@ -128,6 +131,7 @@ function SectionBlock({
   id,
   draftKey,
   section,
+  knownHosts,
   mode: requestedMode,
   locked,
   canSend,
@@ -138,6 +142,7 @@ function SectionBlock({
   id: string;
   draftKey: string;
   section: OutputSection;
+  knownHosts: readonly string[];
   mode: 'revise' | 'edit' | null;
   locked: boolean;
   canSend: boolean;
@@ -151,7 +156,11 @@ function SectionBlock({
   const name = sectionName(section);
   return (
     <Stack as="section" gap="compact" id={id} aria-label={name} className="group scroll-mt-4">
-      {mode === 'edit' ? editor : <ContentMarkdown markdown={section.text} density="compact" />}
+      {mode === 'edit' ? (
+        editor
+      ) : (
+        <ContentMarkdown markdown={section.text} density="compact" knownHosts={knownHosts} />
+      )}
       {locked || mode === 'edit' ? null : (
         // Quiet until the section is hovered or focused; always shown on touch.
         <Inline className="flex-wrap transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100">

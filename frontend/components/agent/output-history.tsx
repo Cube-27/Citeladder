@@ -15,6 +15,7 @@ import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { diffLines } from '@/lib/agent/diff';
 import { agentWriteFailure } from '@/lib/agent/errors';
 import { agentMutations, agentQueries, type AgentRevision } from '@/lib/api/agent';
+import { useAgentLinkHosts } from '@/lib/agent/link-hosts';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
 
 type View = { id: string; mode: 'view' | 'compare' } | null;
@@ -103,6 +104,7 @@ function RevisionRow({
   canRestore: boolean;
   onRestore: () => void;
 }>) {
+  const knownHosts = useAgentLinkHosts(revision.web_sources);
   return (
     <>
       <Inline className="flex-wrap">
@@ -133,7 +135,7 @@ function RevisionRow({
       {open === 'view' ? (
         <Stack gap="compact">
           <h4 className={textRole('itemTitle')}>{revision.title}</h4>
-          <ContentMarkdown markdown={revision.body} density="compact" />
+          <ContentMarkdown markdown={revision.body} density="compact" knownHosts={knownHosts} />
         </Stack>
       ) : null}
       {open === 'compare' && current ? <RevisionDiff before={revision} after={current} /> : null}

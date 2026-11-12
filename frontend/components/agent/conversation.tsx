@@ -28,6 +28,7 @@ import { agentHandoffHref } from '@/lib/agent/handoff';
 import { runStepLabel, toolCallLabel } from '@/lib/agent/vocabulary';
 import { runOutcome } from '@/lib/agent/run-state';
 import type { AgentChatDetail, AgentMessage, AgentOutput } from '@/lib/api/agent';
+import { useAgentLinkHosts } from '@/lib/agent/link-hosts';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
 import { cn } from '@/lib/utils';
 
@@ -214,6 +215,7 @@ function MessageBubble({
   message,
   skill,
 }: Readonly<{ message: AgentMessage; skill: string | null }>) {
+  const knownHosts = useAgentLinkHosts(message.web_sources);
   if (message.role === 'user')
     return (
       <UserTurn
@@ -238,7 +240,7 @@ function MessageBubble({
       time={<MessageTime value={message.created_at} />}
       meta={skill ? `Skill: ${skill}` : undefined}
     >
-      <ContentMarkdown markdown={message.content} density="compact" />
+      <ContentMarkdown markdown={message.content} density="compact" knownHosts={knownHosts} />
       <Inline className="flex-wrap">
         <EvidenceChips refs={message.evidence_refs} />
         <CopyButton value={message.content} variant="ghost">
