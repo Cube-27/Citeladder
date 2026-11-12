@@ -26,7 +26,8 @@ function undeclared(wire: unknown, parsed: unknown, path: string): string[] {
 
 /** Throws unless `body`, serialized as JSON, parses against `schema` with no undeclared field. */
 export function assertResponseContract(schema: z.ZodType, body: unknown, route: string): void {
-  const wire: unknown = body === undefined ? null : JSON.parse(JSON.stringify(body));
+  // The wire form, not a clone: Dates become strings and undefined fields drop.
+  const wire: unknown = body === undefined ? null : JSON.parse(JSON.stringify(body)); // NOSONAR -- structuredClone would keep Dates and undefined fields.
   const result = schema.safeParse(wire);
   if (!result.success)
     throw new Error(`The response of ${route} breaks its contract: ${result.error.message}`);

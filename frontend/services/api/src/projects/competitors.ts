@@ -160,7 +160,7 @@ export function updateCompetitor(
 }
 
 /** One editor row: a tracked competitor's `id`, or none for a new one. */
-export type CompetitorListItem = z.output<typeof competitorInput> & { id?: string | undefined };
+export type CompetitorListItem = z.output<typeof competitorInput> & { id?: string };
 
 /**
  * Save the editor's whole list as a diff, so a kept competitor's ID, logo and
