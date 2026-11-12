@@ -629,7 +629,7 @@ describe('Cloud Run wake-up', () => {
   });
   it('is disabled without a job, and failure leaves the committed response usable without secret diagnostics', async () => {
     const send = vi.fn<typeof fetch>().mockRejectedValue(new Error('private bearer token'));
-    await runnerStarter(loadConfig({}), db, send)();
+    await runnerStarter(loadConfig({ APP_ENV: 'test' }), db, send)();
     expect(send).not.toHaveBeenCalled();
     const records: Record<string, unknown>[] = [];
     const restore = setLogSink((line) => records.push(JSON.parse(line)));

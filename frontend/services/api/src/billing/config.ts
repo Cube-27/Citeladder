@@ -109,7 +109,7 @@ export function razorpaySettings(env: SettingSource = process.env) {
     previousStart: get('webhook_previous_secret_started_at') as Date | null,
     previousEnd: get('webhook_previous_secret_expires_at') as Date | null,
     origin: get('api_base_url') as string,
-    production: ['prod', 'production'].includes((get('deployment_env') as string).toLowerCase()),
+    production: resolveSettingSpec(policy.settings.app_env, env) === 'production',
     ready: mode === 'test' ? (get('test_ready') as boolean) : (get('live_ready') as boolean),
     indiaReady: get('test_india_ready') as boolean,
     internationalReady:

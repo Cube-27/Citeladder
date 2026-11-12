@@ -217,6 +217,9 @@ function resolveSetting(name: keyof typeof policy.settings, source: SettingSourc
   return resolveSpec(name, policy.settings[name], source);
 }
 
+/** The deployment environment (AR-1): only these names start the service. */
+type AppEnv = 'development' | 'test' | 'production';
+
 export type ServiceConfig = {
   /** Every owner's settings, resolved once from the startup environment. */
   settings: Settings;
@@ -224,7 +227,7 @@ export type ServiceConfig = {
   billing: BillingSettings;
   razorpay: RazorpaySettings;
   appName: string;
-  appEnv: string;
+  appEnv: AppEnv;
   host: string;
   port: number;
   databaseUrl: string;
@@ -292,12 +295,25 @@ function parsePort(raw: string): number {
   return port;
 }
 
-function isDevelopmentEnv(appEnv: string): boolean {
-  return policy.development_env_names.includes(appEnv.trim().toLowerCase());
+function isDevelopmentEnv(appEnv: AppEnv): boolean {
+  return policy.development_env_names.includes(appEnv);
+}
+
+/**
+ * The startup environment, or a refusal (AR-1): an unset APP_ENV must not fall
+ * back to development, which would switch off every production assertion. The
+ * setting itself already refuses an unknown or misspelled name.
+ */
+function appEnvironment(settings: Settings): AppEnv {
+  const appEnv = resolveSetting('app_env', settings);
+  if (appEnv === 'development' || appEnv === 'test' || appEnv === 'production') return appEnv;
+  throw new ConfigError(
+    `APP_ENV must be set to one of ${policy.settings.app_env.values.join(', ')}`,
+  );
 }
 
 /** Development and test default to Cloudflare's always-pass test secret; nowhere else does. */
-function turnstileSettings(configured: string, appEnv: string): ServiceConfig['auth']['turnstile'] {
+function turnstileSettings(configured: string, appEnv: AppEnv): ServiceConfig['auth']['turnstile'] {
   const development = isDevelopmentEnv(appEnv);
   return {
     secret: configured || (development ? turnstile.development_secret : ''),
@@ -313,13 +329,22 @@ function turnstileProblems(config: ServiceConfig): string[] {
     : [];
 }
 
+const placeholderPatterns = policy.secret_policy.placeholder_patterns.map(
+  (pattern) => new RegExp(pattern, 'iu'),
+);
+
+/** A template value by its shape ("replace-with-…", "<your-…>"), not by an exact-match list. */
+function secretIsPlaceholder(value: string): boolean {
+  return placeholderPatterns.some((pattern) => pattern.test(value.trim()));
+}
+
 /** Deployment secret-strength admission. */
 export function secretIsWeak(value: string): boolean {
   const rules = policy.secret_policy;
   return (
     new TextEncoder().encode(value).length < rules.min_bytes ||
     new Set(value).size < rules.min_unique_chars ||
-    rules.insecure_values.includes(value) ||
+    secretIsPlaceholder(value) ||
     rules.weak_words.includes(value.trim().toLowerCase())
   );
 }
@@ -362,6 +387,13 @@ function productionSecretProblems(config: ServiceConfig): string[] {
     .map(([name]) => `${name} does not meet the production strength policy`);
   if (new Set(values).size !== values.length)
     issues.push('application secrets must be independent');
+  // The execution settings own the origin tokens' length; a copied template is refused here.
+  const originTokens = {
+    CITELADDER_ORIGIN_TOKEN: config.execution.originToken,
+    CITELADDER_ORIGIN_TOKEN_PREVIOUS: config.execution.previousOriginToken,
+  };
+  for (const [name, value] of Object.entries(originTokens))
+    if (secretIsPlaceholder(value)) issues.push(`${name} must not be a template placeholder`);
   let password = '';
   try {
     password = decodeURIComponent(new URL(config.databaseUrl).password);
@@ -385,6 +417,7 @@ function productionSecretProblems(config: ServiceConfig): string[] {
     length < rules.min_chars ||
     length > rules.max_chars ||
     new Set(login).size < rules.min_unique_chars ||
+    secretIsPlaceholder(login) ||
     rules.weak_words.includes(login.trim().toLowerCase())
   )
     issues.push('dev_login_password does not meet the login password policy');
@@ -437,6 +470,7 @@ export function assertDeployable(config: ServiceConfig, force = false): void {
  */
 export function loadConfig(env: Env = process.env): ServiceConfig {
   const settings = resolveSettings(env);
+  const appEnv = appEnvironment(settings);
   const values = <K extends string>(specs: Record<K, SettingSpec>) =>
     Object.fromEntries(
       Object.entries<SettingSpec>(specs).map(([name, spec]) => [name, settings.of(spec)]),
@@ -451,7 +485,7 @@ export function loadConfig(env: Env = process.env): ServiceConfig {
     billing: billingSettings(settings),
     razorpay: razorpaySettings(settings),
     appName: setting('app_name') as string,
-    appEnv: setting('app_env') as string,
+    appEnv,
     // Every interface by default, as a bridged container needs; a host-network
     // local deployment pins loopback.
     host: String(settings.of(listenSpecs.host)).trim() || '0.0.0.0',
@@ -480,10 +514,7 @@ export function loadConfig(env: Env = process.env): ServiceConfig {
         string | number | boolean
       >,
       limits: values(policy.abuse) as ServiceConfig['auth']['limits'],
-      turnstile: turnstileSettings(
-        setting('turnstile_secret_key') as string,
-        setting('app_env') as string,
-      ),
+      turnstile: turnstileSettings(setting('turnstile_secret_key') as string, appEnv),
     },
     demo: {
       enabled: setting('demo_mode') as boolean,

@@ -222,11 +222,6 @@
       "type": "str",
       "default": "https://api.razorpay.com/v1"
     },
-    "deployment_env": {
-      "env": ["APP_ENV"],
-      "type": "str",
-      "default": "development"
-    },
     "test_key_id_alias": {
       "env": ["RAZORPAY_TEST_KEY_ID"],
       "type": "str",
