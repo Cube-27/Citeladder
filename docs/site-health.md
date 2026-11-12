@@ -175,7 +175,9 @@ Stop (`controls.ts`) commits only the cancellation and fetch settlement.
 ## URL admission and selection
 
 `classifyUrlAdmission` (`url-admission.ts`) decides every link, sitemap URL,
-root and page redirect hop, in order:
+root and page redirect hop, in order (discovery and analysis fetches screen
+their hops with the same `crawlAdmit`, so neither follows a redirect off the
+site):
 
 1. Reject scheme-less absolute references and join artifacts (`invalid_url`).
 2. Reject hard-excluded query keys (`page`, `q`, `sort`, `filter`, …).
@@ -252,9 +254,11 @@ HTTP 4XX/5XX counts, with the pages that link it (`linked_from`), even when no
 selected page links it.
 
 **Canonical aliases** (`canonical-alias.ts`). A system-selected page whose
-declared canonical names another active page becomes `duplicate` and loses its
-membership. Finalization resolves chains and cycles. The crawl root is never
-aliased, because it carries the site checks.
+declared canonical names another active page this crawl already fetched becomes
+`duplicate` and loses its membership. A page whose target is not fetched yet is
+analyzed; finalization resolves chains and cycles and excludes it only when its
+target ended active. The crawl root is never aliased, because it carries the
+site checks.
 
 ## Acquisition and evidence guarantees
 
@@ -476,7 +480,11 @@ Pillar weights (`readiness_dimension_weights`) sum to 1:
 each page's site rows with the root's applied evaluations, and final manifests
 list their IDs; rows are not copied. A scored site check that was never
 evaluated (no root analysis or no site facts) is `unknown`
-(`site_facts_unavailable`) and keeps measurement partial.
+(`site_facts_unavailable`) and keeps measurement partial. Likewise a scored
+crawl-finalize check a page's final analysis lacks (a cancelled crawl skips
+finalization) is `unknown` (`crawl_not_finalized`), unless the page's own facts
+rule it out: canonical integrity without a declared canonical stays
+`not_applicable` (`no_canonical`).
 
 **Crawler access.** A bot fails when its root, or every sampled URL, is
 disallowed. Partial closure is `restricted` and passes. Without a fetched
@@ -606,7 +614,7 @@ failed.
 
 | State | When |
 |---|---|
-| `partial` | a page or frontier limit was reached, the frontier was not exhausted, or discovery was bounded (sample, non-`auto`, cancelled) |
+| `partial` | the frontier limit was reached, the frontier was not exhausted (`requested_page_limit_reached` when the page limit left frontier URLs), or discovery was bounded (sample, non-`auto`, cancelled) |
 | `unknown` | discovery failed, observed nothing or did not complete |
 | `complete` | the frontier was exhausted |
 
@@ -825,7 +833,8 @@ Neither shows a per-issue score gain: reads never score.
 A URL's issue history lists only resolved issues: rules recorded on the page in
 the selected crawl's superseded analyses or the project's earlier crawls that its
 current finalized analysis no longer reports, one row per rule at its latest
-record. Current issues stay in page detail and never repeat there. Without a
+record. Current issues, the root's attached site-level (architecture) findings
+included, stay in page detail and never repeat there. Without a
 finalized current analysis nothing is known to be resolved, and the page says so
 (`current_analysis_finalized: false`) instead of reading as an empty history.
 

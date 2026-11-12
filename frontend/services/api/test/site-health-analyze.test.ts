@@ -574,15 +574,13 @@ describe('analyze failures', () => {
     ).toMatchObject({ ok: true, robotsExcluded: true });
   });
 
-  it('respects robots.txt on a host off the crawl’s own site, even when the crawl ignores it', async () => {
+  it('never follows a redirect off the crawl’s own site, as discovery does not', async () => {
     const seed = await running({ configuration: IGNORE_ROBOTS });
     const page = await fixtures.analyzable(seed, '/go');
     const requests: string[] = [];
     await analyze(
       site(
         {
-          // Both hosts disallow every path.
-          '/robots.txt': { body: 'User-agent: *\nDisallow: /\n', contentType: 'text/plain' },
           '/go': { status: 302, redirect: 'https://elsewhere.test/private' },
           '/private': { body: RICH },
         },
@@ -592,10 +590,10 @@ describe('analyze failures', () => {
     );
     expect(await task(page.taskId)).toMatchObject({
       status: 'failed',
-      error_code: codes.robots_denied,
+      error_code: codes.url_admission_rejected,
     });
-    // The own-site page is fetched; the off-site hop stops at its robots.txt.
-    expect(requests).toEqual(['/robots.txt', '/go', '/robots.txt']);
+    // The own-site page is fetched; the off-site hop is never requested.
+    expect(requests).toEqual(['/robots.txt', '/go']);
   });
 
   it.each([

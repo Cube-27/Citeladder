@@ -1,5 +1,6 @@
 /** Cross-page checks use only the persisted acquisition evidence supplied by the caller. */
 import { policy } from '../../config.ts';
+import { strings } from '../../db/json.ts';
 import { scalarText } from '../../text-order.ts';
 import { onlyOf } from '../../lists.ts';
 import { membership, type RuleEvaluation } from './rules.ts';
@@ -77,6 +78,13 @@ export function entitySetEvaluation(
     normalized_score: (checked - failures) / checked,
     normalized_coverage: checked / total,
   });
+}
+
+/** The page's declared canonicals: every `<link rel=canonical>`, or the one extracted URL. */
+export function canonicalDeclarations(facts: Record<string, unknown>) {
+  const declarations = strings(facts.canonical_declarations);
+  const single = scalarText(facts.canonical_url);
+  return declarations.length || !single ? declarations : [single];
 }
 
 /**

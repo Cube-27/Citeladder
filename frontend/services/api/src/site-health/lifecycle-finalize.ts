@@ -13,7 +13,12 @@ import {
   type DuplicateComparison,
   type Fingerprint,
 } from './analysis/duplicate-content.ts';
-import { finalizeEvaluation, hreflangConflict, sitemapOrphan } from './analysis/finalize.ts';
+import {
+  canonicalDeclarations,
+  finalizeEvaluation,
+  hreflangConflict,
+  sitemapOrphan,
+} from './analysis/finalize.ts';
 import { crawlCoverage } from './coverage.ts';
 import { linkTargetUrl } from './discovery-links.ts';
 import { pageAnchors } from './link-graph.ts';
@@ -98,12 +103,6 @@ function hreflang(
     missingReturnTags: [...missing],
     rateLimitedCount: counts.limited,
   });
-}
-
-function canonicalDeclarations(facts: Facts) {
-  const declarations = strings(facts.canonical_declarations);
-  const single = scalarText(facts.canonical_url);
-  return declarations.length || !single ? declarations : [single];
 }
 
 /** The page's one declared canonical in identity form; null for none or a conflicting set. */

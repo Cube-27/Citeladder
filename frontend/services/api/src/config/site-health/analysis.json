@@ -661,6 +661,7 @@
       ],
       "unknown_reasons": [
         "site_facts_unavailable",
+        "crawl_not_finalized",
         "insufficient_evidence",
         "question_answers_unavailable",
         "question_relationships_unavailable",

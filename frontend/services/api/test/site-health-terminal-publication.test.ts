@@ -589,10 +589,10 @@ async function running(changes: Partial<Insertable<SiteCrawls>> = {}) {
   return seed;
 }
 /** A completed analysis of an active monitored page, settled by its own analyze task. */
-async function monitoredPage(seed: SiteSeed, path: string) {
+async function monitoredPage(seed: SiteSeed, path: string, facts: Record<string, unknown> = {}) {
   const member = await fixtures.analyzable(seed, path);
   await db.deleteFrom('site_crawl_tasks').where('id', '=', member.taskId).execute();
-  const page = await fixtures.page(seed, path, {}, { siteUrlId: member.siteUrlId });
+  const page = await fixtures.page(seed, path, facts, { siteUrlId: member.siteUrlId });
   await fixtures.evaluation(seed, page, 'technical.indexable', 'satisfied');
   return page;
 }
@@ -868,7 +868,7 @@ describe('crawl lifecycle', () => {
   });
 
   it('marks the inventory complete only when no page limit cut discovery short', async () => {
-    const discovered = async (changes: Partial<Insertable<SiteCrawls>>) => {
+    const discovered = async (changes: Partial<Insertable<SiteCrawls>>, pending = false) => {
       const seed = await running({ discovery_status: 'running', ...changes });
       const root = await fixtures.task(seed, 'discover');
       await db
@@ -877,12 +877,39 @@ describe('crawl lifecycle', () => {
         .where('id', '=', root)
         .execute();
       await fixtures.page(seed, '/', {}, { observed: true });
+      if (pending)
+        await db
+          .insertInto('site_discovery_frontier')
+          .values({
+            id: randomUUID(),
+            workspace_id: seed.workspaceId,
+            crawl_id: seed.crawlId,
+            url_hash: 'left-behind',
+            normalized_url: 'https://example.test/left-behind',
+            status: 'pending',
+            depth: 1,
+            link_ordinal: 0,
+            parent_position: 0,
+            referrer_site_url_ids: [],
+            rewrite_reason: '',
+            rewrite_version: '',
+            source_kind: 'link',
+            value_kind: 'other',
+            value_priority: 0,
+            admitted_at: null,
+            created_at: new Date(),
+          })
+          .execute();
       await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
       return crawlRow(seed.crawlId);
     };
     expect(await discovered({})).toMatchObject({ status: 'completed', inventory_complete: true });
+    // A site with exactly the requested page count exhausted its frontier.
     expect(await discovered({ discovery_requested_count: 1 })).toMatchObject({
       status: 'completed',
+      inventory_complete: true,
+    });
+    expect(await discovered({ discovery_requested_count: 1 }, true)).toMatchObject({
       inventory_complete: false,
     });
   });
@@ -955,19 +982,38 @@ describe('crawl lifecycle', () => {
 
   it('publishes a cancelled run once and leaves a cancel without evidence unpublished', async () => {
     const seed = await fixtures.crawl('cancelled');
-    const page = await monitoredPage(seed, '/');
+    const page = await monitoredPage(seed, '/', { canonical_url: 'https://example.test/' });
+    const plain = await fixtures.crawl('cancelled');
+    await monitoredPage(plain, '/');
     const empty = await fixtures.crawl('cancelled');
     await publishCancelledCrawls(db, 50);
     await publishCancelledCrawls(db, 50);
     expect(await snapshots(seed.crawlId)).toHaveLength(1);
-    const current = await db
-      .selectFrom('site_page_analyses')
-      .selectAll()
-      .where('crawl_id', '=', seed.crawlId)
-      .where('is_current', '=', true)
-      .executeTakeFirstOrThrow();
+    const final = (crawlId: string) =>
+      db
+        .selectFrom('site_page_analyses')
+        .selectAll()
+        .where('crawl_id', '=', crawlId)
+        .where('is_current', '=', true)
+        .executeTakeFirstOrThrow();
+    const canonicalCheck = (analysis: { expected_checkpoint_profile: unknown }) =>
+      (analysis.expected_checkpoint_profile as { check_id: string }[]).find(
+        (entry) => entry.check_id === 'technical.canonical_integrity',
+      );
+    const current = await final(seed.crawlId);
     expect(current.supersedes_analysis_id).toBe(page.analysisId);
     expect(current.finalized_at).not.toBeNull();
+    // The skipped crawl-finalize canonical check is unknown, not silently absent,
+    // unless the page declared no canonical for it to judge.
+    expect(canonicalCheck(current)).toMatchObject({
+      outcome: 'unknown',
+      reason: 'crawl_not_finalized',
+      web_membership: true,
+    });
+    expect(canonicalCheck(await final(plain.crawlId))).toMatchObject({
+      outcome: 'not_applicable',
+      reason: 'no_canonical',
+    });
     expect((await crawlRow(seed.crawlId)).score_summary).toMatchObject({
       analyzed_count: 1,
       selected_count: 1,

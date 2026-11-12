@@ -22,7 +22,7 @@ import {
   pageAnalysisContext,
   type AttemptOutcome,
 } from './analysis-rows.ts';
-import { releaseNonPage } from './frontier.ts';
+import { crawlAdmit, releaseNonPage } from './frontier.ts';
 import { crawlRobotsHandling, isBotBlock } from './page-fetch.ts';
 import type { SiteWorkerSettings } from './runtime.ts';
 import {
@@ -172,6 +172,7 @@ async function acquire(ctx: SiteTaskContext, crawl: Crawl, task: SiteTask): Prom
   await ctx.checkAccess();
   const fetched = await ctx.fetcher.fetch(task.requested_url, {
     signal: ctx.signal,
+    admit: crawlAdmit(crawl),
     robots: crawlRobotsHandling(crawl.configuration),
   });
   const base = { facts: null, page: null, reusedArtifactId: null, robotsExcluded: false };

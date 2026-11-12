@@ -1,8 +1,8 @@
 /**
  * Discovery-time canonical aliases: a fetched, system-selected page whose
- * declared canonical names another active page of this crawl is excluded
- * rather than analyzed twice. The whole-crawl alias graph (cycles,
- * representatives) is resolved again at finalization.
+ * declared canonical names another active, already fetched page of this crawl
+ * is excluded rather than analyzed twice. The whole-crawl alias graph (cycles,
+ * representatives, targets fetched later) is resolved again at finalization.
  */
 import { sql } from 'kysely';
 import { getDomain } from 'tldts';
@@ -41,7 +41,12 @@ function targetHash(crawl: Crawl, hash: string, declared: string, base: string) 
   return target.hash;
 }
 
-/** The hash this page aliases when it is a system-managed member and its target is an active one. */
+/**
+ * The hash this page aliases when it is an active member and its target is an
+ * active one this crawl already fetched. A target not fetched yet may still
+ * fail and be released, so the alias waits for finalization, which aliases
+ * only toward a target that ended active (`reconcileDuplicateAliases`).
+ */
 export async function duplicateOf(
   trx: Database,
   crawl: Crawl,
@@ -72,8 +77,22 @@ export async function duplicateOf(
     .execute();
   const source = rows.find((row) => row.url_hash === page.hash);
   const destination = rows.find((row) => row.url_hash === target);
-  if (!source?.active) return '';
-  return destination?.active ? target : '';
+  if (!source?.active || !destination?.active) return '';
+  const fetched = await trx
+    .selectFrom('site_crawl_tasks as t')
+    .innerJoin('site_fetch_artifacts as a', (join) =>
+      join
+        .onRef('a.task_id', '=', 't.id')
+        .onRef('a.workspace_id', '=', 't.workspace_id')
+        .onRef('a.crawl_id', '=', 't.crawl_id'),
+    )
+    .select('a.id')
+    .where('t.workspace_id', '=', crawl.workspace_id)
+    .where('t.crawl_id', '=', crawl.id)
+    .where('t.url_hash', '=', target)
+    .limit(1)
+    .executeTakeFirst();
+  return fetched ? target : '';
 }
 
 /** Exclude fetched aliases, release their system memberships and retire their current analyses. */

@@ -398,6 +398,43 @@ describe('discover', () => {
     ]);
   });
 
+  it('analyzes an alias fetched before its target, excluding it at finalization only when the target ended active', async () => {
+    const seed = await crawl({ config: { automatic_monitor_limit: 5 } });
+    const root = await queued(seed, 'discover');
+    const site = worker({
+      '/': { body: links('/live', '/live-alias', '/dead', '/dead-alias') },
+      '/live': { body: links() },
+      '/live-alias': { body: html('', '<link rel="canonical" href="/live">') },
+      '/dead': { status: 404, body: 'missing' },
+      '/dead-alias': { body: html('', '<link rel="canonical" href="/dead">') },
+    });
+    await run(site, root);
+    const children = await tasks(seed, 'discover');
+    const child = (path: string) => children.find((row) => row.requested_url === url(path))!.id;
+    // Each alias commits before its target is fetched.
+    await run(site, child('/live-alias'), child('/dead-alias'), child('/live'), child('/dead'));
+    expect((await tasks(seed, 'analyze')).map((row) => row.requested_url)).toEqual([
+      url('/'),
+      url('/dead-alias'),
+      url('/live'),
+      url('/live-alias'),
+    ]);
+
+    await reconcileDuplicateAliases(db, await crawlRow(seed));
+    expect(
+      (await memberships(seed)).map((row) => [row.normalized_url.slice(20), row.active]),
+    ).toEqual([
+      ['/', true],
+      ['/dead', false],
+      ['/dead-alias', true],
+      ['/live', true],
+      ['/live-alias', false],
+    ]);
+    expect((await urlRow(seed, '/live-alias')).disposition_reason).toBe(
+      policy.site_health.crawl.exclusions.duplicate,
+    );
+  });
+
   it('releases the selection of a link that turns out to be no page, keeping a failing page selected', async () => {
     const seed = await crawl({ config: { automatic_monitor_limit: 6 } });
     const root = await queued(seed, 'discover');
