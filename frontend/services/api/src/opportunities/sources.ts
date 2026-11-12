@@ -9,12 +9,12 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { utcText, utcTextOf } from '../db/timestamps.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
+import { currentSiteCrawlQuery } from '../site-health/reads/crawl.ts';
 import { latestBrandRunId } from '../visibility/selection.ts';
 
 export type Scope = { workspaceId: string; projectId: string };
 
 export const DASHBOARD_AUDIT_STATUSES = policy.visibility.dashboard_audit_statuses;
-const EVIDENCE_CRAWL_STATUSES = policy.opportunity.refresh.evidence_crawl_statuses;
 
 const timestamps = [
   utcText(sql.ref('completed_at')).as('completed_text'),
@@ -28,19 +28,12 @@ function audits(db: Database, scope: Scope) {
     .where('project_id', '=', scope.projectId);
 }
 
-/** The project's latest terminal crawl with usable evidence, as a one-row query. */
-function latestEvidenceCrawl(db: Database, scope: Scope) {
-  return new WorkspaceScope(scope.workspaceId)
-    .selectFrom(db, 'site_crawls')
-    .where('project_id', '=', scope.projectId)
-    .where('status', 'in', EVIDENCE_CRAWL_STATUSES)
-    .orderBy(sql`completed_at desc nulls last`)
-    .orderBy('created_at', 'desc')
-    .limit(1);
-}
+/** The current Site Health crawl (SH-B1): a one-page rerun is never site evidence. */
+const currentCrawl = (db: Database, scope: Scope) =>
+  currentSiteCrawlQuery(db, scope.workspaceId, scope.projectId);
 
 function crawls(db: Database, scope: Scope) {
-  return latestEvidenceCrawl(db, scope).select([
+  return currentCrawl(db, scope).select([
     'id',
     'project_id',
     'status',
@@ -106,14 +99,14 @@ export async function resolveCommerceMatchPassId(
   return latest?.id ?? null;
 }
 
-/** The latest terminal crawl with usable evidence, or null. */
+/** The current Site Health crawl, or null before the project has one. */
 export async function resolveCrawl(db: Database, scope: Scope) {
   return (await crawls(db, scope).executeTakeFirst()) ?? null;
 }
 
-/** `resolveCrawl`'s id alone, for callers that only compare which crawl is latest. */
+/** `resolveCrawl`'s id alone, for callers that only compare which crawl is current. */
 export async function resolveCrawlId(db: Database, scope: Scope): Promise<string | null> {
-  return (await latestEvidenceCrawl(db, scope).select('id').executeTakeFirst())?.id ?? null;
+  return (await currentCrawl(db, scope).select('id').executeTakeFirst())?.id ?? null;
 }
 
 /** The project's most recent snapshot, or null when none was ever computed. */

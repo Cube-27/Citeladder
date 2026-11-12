@@ -324,7 +324,7 @@ never written.
 | `running` → `failed` (`crawl_overdue`) | overdue watchdog | `lifecycle.ts:476-500` | crawl lock, active, age re-checked |
 | `queued`/`running` → `cancelled` | Stop | `site-health/controls.ts:59-108` | crawl `FOR UPDATE`, not terminal; tasks cancelled in the tx |
 
-A crawl read without a named `crawl_id` (`resolveUsableCrawl`, `reads/crawl.ts`)
+A crawl read without a named `crawl_id` (`currentSiteCrawl`, `reads/crawl.ts`)
 is the newest usable crawl that is not a `page_rerun`; a named rerun still
 reads. Sub-states and counters read each page's latest task generation, as the
 terminal counters do. `inventory_complete` is decided when discovery settles

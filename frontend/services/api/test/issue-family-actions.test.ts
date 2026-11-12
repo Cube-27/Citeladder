@@ -132,7 +132,10 @@ async function laterCrawl(
   seed: SiteSeed,
   pages: Page[],
   failing: number,
-  { notApplicable = 0, ...values }: { rule_catalog_version?: string; notApplicable?: number } = {},
+  {
+    notApplicable = 0,
+    ...values
+  }: { rule_catalog_version?: string; status?: string; notApplicable?: number } = {},
 ) {
   const outcomeAt = (index: number) => {
     if (index < failing) return 'missing';
@@ -176,11 +179,16 @@ async function familyAction(seed: SiteSeed) {
 let own: { seed: SiteSeed; pages: Page[] };
 let foreign: { seed: SiteSeed; pages: Page[] };
 let fixedLater: { seed: SiteSeed; pages: Page[] };
+let partialBeforeDeclaring: { seed: SiteSeed; pages: Page[] };
 
 beforeAll(async () => {
-  own = await familyProject();
-  foreign = await familyProject();
-  fixedLater = await familyProject();
+  // Four independent tenants, each seeded in its own transaction.
+  [own, foreign, fixedLater, partialBeforeDeclaring] = await Promise.all([
+    familyProject(),
+    familyProject(),
+    familyProject(),
+    familyProject(),
+  ]);
 });
 
 /** Declares `project`'s family Action as implemented an hour ago. */
@@ -365,6 +373,26 @@ describe('an issue family', () => {
         source_id: fixed,
         pages: { failing: [], passing: PAGES - 1, not_applicable: 1, unread: 0 },
       },
+    ]);
+  });
+
+  it('is read now against a partial site crawl that finished after a backdated go-live, never a later rerun', async () => {
+    const { seed, pages } = partialBeforeDeclaring;
+    // A partial crawl still failing every page finished after the go-live
+    // declared below; a one-page rerun after it is newer, but only its own
+    // page's evidence.
+    const partial = await laterCrawl(seed, pages, PAGES, { status: 'partially_completed' });
+    await new SiteFixtures(db).sibling(seed, {
+      configuration: JSON.stringify({ page_rerun: true }),
+      created_at: new Date(Date.now() + 60_000),
+      completed_at: new Date(Date.now() + 60_000),
+    });
+
+    const { action } = await declareFamily(partialBeforeDeclaring);
+    await drainWorkspace(db, seed.workspaceId, { owner: `a1-${randomUUID()}` });
+    const detail = await getAction(db, seed.workspaceId, action.id);
+    expect(detail.declaration?.checks).toMatchObject([
+      { state: 'unmet', reason: 'still_failing', source_id: partial },
     ]);
   });
 });

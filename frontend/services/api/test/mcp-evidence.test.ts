@@ -263,7 +263,7 @@ it('keeps crawlability unavailable without a crawl, including business context',
   expect(context.crawlability).toMatchObject({ state: 'unavailable', reason: 'no_site_crawl' });
 });
 
-it('reads the newest completed crawl by completion, never a running one or another workspace', async () => {
+it('reads the current crawl, never a running one, a page rerun or another workspace', async () => {
   const at = (minutes: number) => new Date(Date.UTC(2026, 0, 1, 12, minutes));
   const seed = await siteFixtures.crawl('completed');
   await db
@@ -271,10 +271,17 @@ it('reads the newest completed crawl by completion, never a running one or anoth
     .set({ created_at: at(0), completed_at: at(30) })
     .where('id', '=', seed.crawlId)
     .execute();
-  // Created later but completed earlier: it must lose to the first crawl.
-  const earlierFinish = await siteFixtures.sibling(seed, {
+  // Created later, so current, though it completed before the first crawl.
+  const current = await siteFixtures.sibling(seed, {
+    status: 'partially_completed',
     created_at: at(10),
     completed_at: at(20),
+  });
+  // A later one-page rerun re-reads one page; it is never the site crawl.
+  await siteFixtures.sibling(seed, {
+    configuration: JSON.stringify({ page_rerun: true }),
+    created_at: at(35),
+    completed_at: at(36),
   });
   // Newest row, still running: a mid-turn read must not see it.
   await siteFixtures.sibling(seed, { status: 'running', created_at: at(40), completed_at: null });
@@ -294,8 +301,11 @@ it('reads the newest completed crawl by completion, never a running one or anoth
       { project_id: seed.projectId, crawl_id },
       origin,
     );
-  expect(await crawlability()).toMatchObject({ crawl_id: seed.crawlId, crawl_status: 'completed' });
-  expect(await crawlability(earlierFinish)).toMatchObject({ crawl_id: earlierFinish });
+  expect(await crawlability()).toMatchObject({
+    crawl_id: current,
+    crawl_status: 'partially_completed',
+  });
+  expect(await crawlability(seed.crawlId)).toMatchObject({ crawl_id: seed.crawlId });
 });
 
 it('pages prompts stably while context includes only active prompts and foreign IDs cannot fetch', async () => {

@@ -14,7 +14,7 @@ import { crawlers } from '../config/crawlers.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
 import { ApiError } from '../errors.ts';
 import { currentIssueFilter } from '../site-health/reads/page-rows.ts';
-import { inventoryCrawlIds } from '../site-health/reads/crawl.ts';
+import { currentSiteCrawl, inventoryCrawlIds } from '../site-health/reads/crawl.ts';
 
 export type PageOptions = CrawlReadOptions & {
   sort?: string | null;
@@ -74,15 +74,7 @@ export async function pageDataset(db: Database, scope: CrawlScope, input: PageOp
   const options = await withReportingTimezone(db, scope, input);
   const w = crawlWindow(options),
     verification = verificationFilter(options.verification);
-  const crawl = await db
-    .selectFrom('site_crawls')
-    .selectAll()
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .where('status', 'in', ['completed', 'partially_completed', 'failed', 'cancelled'])
-    .orderBy('completed_at', (o) => o.desc().nullsLast())
-    .orderBy('id', 'desc')
-    .executeTakeFirst();
+  const crawl = await currentSiteCrawl(db, scope.workspaceId, scope.projectId);
   const owned = sql`workspace_id=${scope.workspaceId}::uuid and project_id=${scope.projectId}::uuid`;
   const days = sql`reporting_date between ${w.start}::date and ${w.end}::date`;
   const botFilter = options.bot_id ? sql`bot_id=${options.bot_id}` : sql`true`;

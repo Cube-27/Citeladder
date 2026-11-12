@@ -203,9 +203,9 @@ async function prefetchSiteHealth(client: QueryClient, scope: ProjectScope) {
  *
  * The catalog asks one crawl for its issues, and only the dashboard names the
  * crawl. A cached dashboard warms the catalog under its crawl directly;
- * otherwise the project-scoped read answers for the newest crawl (the one the
- * dashboard shows), beside the dashboard rather than after it, and its answer
- * is filed under the crawl it names.
+ * otherwise the project-scoped read answers for the current crawl (the one the
+ * dashboard shows unless a crawl is running), beside the dashboard rather than
+ * after it, and its answer is filed under the crawl it names.
  *
  * Only the DEFAULT page is warmed. A reader arriving with filters in the
  * address wants a different key, and warming this one would spend a request on

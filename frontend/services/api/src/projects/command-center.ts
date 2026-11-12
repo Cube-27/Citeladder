@@ -8,6 +8,7 @@ import type { Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
 import type { Audits } from '../generated/db-schema.ts';
 import { listOpportunities, readOpportunityOrder } from '../opportunities/reads.ts';
+import { currentSiteCrawl } from '../site-health/reads/crawl.ts';
 import { persistedBaseline } from '../visibility/comparison.ts';
 import { getRunVisibility, type VisibilityResponse } from '../visibility/dashboard.ts';
 import { latestBrandRunId } from '../visibility/selection.ts';
@@ -211,16 +212,7 @@ async function loopEvidence(db: Database, scope: ProjectScope) {
       .orderBy('updated_at', 'desc')
       .limit(1)
       .executeTakeFirst(),
-    db
-      .selectFrom('site_crawls')
-      .selectAll()
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('project_id', '=', scope.projectId)
-      .where('status', 'in', ['completed', 'partially_completed'])
-      .orderBy('completed_at', 'desc')
-      .orderBy('id', 'desc')
-      .limit(1)
-      .executeTakeFirst(),
+    currentSiteCrawl(db, scope.workspaceId, scope.projectId),
     db
       .selectFrom('demand_snapshots')
       .selectAll()

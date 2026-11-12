@@ -3,6 +3,7 @@
  * read shares. A foreign or missing crawl is a 404; nothing here writes.
  */
 import {
+  ACTIVE_CRAWL_STATUSES,
   crawlCountersSchema,
   isTerminalCrawl,
   isUsableCrawl,
@@ -48,9 +49,64 @@ export async function loadCrawl(db: Database, workspaceId: string, crawlId: stri
   return crawl;
 }
 
+/** The project's site crawls, newest first: every crawl except one-page reruns. */
+function siteCrawls(db: Database, workspaceId: string, projectId: string) {
+  return new WorkspaceScope(workspaceId)
+    .selectFrom(db, 'site_crawls')
+    .where('project_id', '=', projectId)
+    .where(sql<boolean>`not ${pageRerunSql}`)
+    .orderBy('created_at', 'desc')
+    .orderBy('id', 'desc');
+}
+
 /**
- * The named crawl or, without one, the project's newest crawl in any state:
- * the crawl the dashboard shows. The caller's route has authorized the
+ * The current crawl as a one-row query, for callers that choose their own
+ * columns: the project's newest usable crawl that is not a one-page rerun
+ * (SH-B1). A rerun updates only its own page's evidence; it never becomes the
+ * site evidence Site Health, Opportunities, Overview, the Agent, MCP, AI
+ * Traffic, verification or internal links read. `completedAfter` narrows it to
+ * crawls that finished after a moment, for verifying a backdated declaration.
+ */
+export function currentSiteCrawlQuery(
+  db: Database,
+  workspaceId: string,
+  projectId: string,
+  { completedAfter }: { completedAfter?: string } = {},
+) {
+  let usable = siteCrawls(db, workspaceId, projectId).where('status', 'in', USABLE_CRAWL_STATUSES);
+  if (completedAfter !== undefined)
+    usable = usable.where('completed_at', '>', sql<Date>`${completedAfter}::timestamptz`);
+  return usable.limit(1);
+}
+
+/** The current crawl (`currentSiteCrawlQuery`), or `null` before the project has one. */
+export async function currentSiteCrawl(
+  db: Database,
+  workspaceId: string,
+  projectId: string,
+): Promise<Crawl | null> {
+  const crawl = await currentSiteCrawlQuery(db, workspaceId, projectId)
+    .selectAll()
+    .executeTakeFirst();
+  return crawl ?? null;
+}
+
+/** The current crawl's newest Site Health snapshot, as a one-row query. */
+export function currentSiteSnapshotQuery(db: Database, workspaceId: string, projectId: string) {
+  return new WorkspaceScope(workspaceId)
+    .selectFrom(db, 'site_health_snapshots')
+    .where('project_id', '=', projectId)
+    .where('crawl_id', '=', currentSiteCrawlQuery(db, workspaceId, projectId).select('id'))
+    .orderBy('created_at', 'desc')
+    .orderBy('id', 'desc')
+    .limit(1);
+}
+
+/**
+ * The named crawl or, without one, the crawl the dashboard shows: a running
+ * site crawl, so its progress stays visible; else the current crawl; else the
+ * newest site crawl, so a project whose crawls all failed still sees why. A
+ * page rerun is never the default. The caller's route has authorized the
  * project; a crawl outside it is a 404 and a project with no crawl is `null`.
  */
 export async function dashboardCrawl(
@@ -59,23 +115,22 @@ export async function dashboardCrawl(
   projectId: string,
   crawlId: string | null,
 ): Promise<Crawl | null> {
-  let crawls = new WorkspaceScope(workspaceId)
-    .selectFrom(db, 'site_crawls')
-    .selectAll()
-    .where('project_id', '=', projectId);
-  crawls = crawlId === null ? crawls : crawls.where('id', '=', crawlId);
-  const crawl =
-    (await crawls.orderBy('created_at', 'desc').orderBy('id', 'desc').executeTakeFirst()) ?? null;
-  if (crawl === null && crawlId !== null) throw notFound('Crawl');
-  return crawl;
+  if (crawlId !== null) return loadProjectCrawl(db, workspaceId, projectId, crawlId);
+  const crawls = siteCrawls(db, workspaceId, projectId).selectAll();
+  const active = await crawls.where('status', 'in', ACTIVE_CRAWL_STATUSES).executeTakeFirst();
+  if (active !== undefined) return active;
+  return (
+    (await currentSiteCrawl(db, workspaceId, projectId)) ??
+    (await crawls.executeTakeFirst()) ??
+    null
+  );
 }
 
 /**
- * The named crawl (404 when foreign) or the project's newest usable site
- * crawl; only a named crawl may be a page rerun. A
- * named crawl that has not reached a usable terminal state, or a project with
- * none, is `null`: the caller renders its own "nothing yet" state. The
- * caller's route has authorized the project.
+ * The named crawl (404 when foreign) or the current crawl; only a named crawl
+ * may be a page rerun. A named crawl that has not reached a usable terminal
+ * state, or a project with none, is `null`: the caller renders its own
+ * "nothing yet" state. The caller's route has authorized the project.
  */
 export async function resolveUsableCrawl(
   db: Database,
@@ -83,23 +138,25 @@ export async function resolveUsableCrawl(
   projectId: string,
   crawlId: string | null,
 ): Promise<Crawl | null> {
-  const crawls = new WorkspaceScope(workspaceId)
+  if (crawlId === null) return currentSiteCrawl(db, workspaceId, projectId);
+  const crawl = await loadProjectCrawl(db, workspaceId, projectId, crawlId);
+  return isUsableCrawl(crawl.status) ? crawl : null;
+}
+
+async function loadProjectCrawl(
+  db: Database,
+  workspaceId: string,
+  projectId: string,
+  crawlId: string,
+) {
+  const crawl = await new WorkspaceScope(workspaceId)
     .selectFrom(db, 'site_crawls')
     .selectAll()
-    .where('project_id', '=', projectId);
-  if (crawlId !== null) {
-    const crawl = await crawls.where('id', '=', crawlId).executeTakeFirst();
-    if (crawl === undefined) throw notFound('Crawl');
-    return isUsableCrawl(crawl.status) ? crawl : null;
-  }
-  // A page rerun re-reads one page; it is never the site crawl a default read shows.
-  const latest = await crawls
-    .where('status', 'in', USABLE_CRAWL_STATUSES)
-    .where(sql<boolean>`not ${pageRerunSql}`)
-    .orderBy('created_at', 'desc')
-    .orderBy('id', 'desc')
+    .where('project_id', '=', projectId)
+    .where('id', '=', crawlId)
     .executeTakeFirst();
-  return latest ?? null;
+  if (crawl === undefined) throw notFound('Crawl');
+  return crawl;
 }
 
 /** Only a crawl frozen with count disclosure may reveal discovered totals. */

@@ -17,19 +17,16 @@ import { payloadString } from '../queue/executor.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { linkCandidates, linkRequests } from './internal-link-candidates.ts';
 import { loadLinkPages, type LinkScope } from './internal-link-pages.ts';
+import { currentSiteCrawlQuery } from './reads/crawl.ts';
 
 const { succeeded, failed, cancelled } = policy.task_queue.statuses;
 const terminalTaskStatuses = [succeeded, failed, cancelled];
 const logger = getLogger('app.site_health.internal_links');
 
+/** The crawl link suggestions read: the current Site Health crawl (SH-B1). */
 export function latestLinkCrawl(db: Database, scope: LinkScope) {
-  return db
-    .selectFrom('site_crawls')
+  return currentSiteCrawlQuery(db, scope.workspaceId, scope.projectId)
     .select('id')
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .where('completed_at', 'is not', null)
-    .orderBy('completed_at', 'desc')
     .executeTakeFirst();
 }
 

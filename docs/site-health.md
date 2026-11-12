@@ -49,8 +49,19 @@ terminal crawl, or the next task generation of an active one (cancelling the
 page's older generation if it is still open, and counted by its latest). Its
 configuration carries `page_rerun`; it hands its page to verification and
 Opportunities but is never compared as a site crawl. It writes no project
-snapshot and no score summary, so it is never a trend point, and a read that names no
-crawl (Overview, AEO readiness, Architecture) never defaults to it.
+snapshot and no score summary, so it is never a trend point.
+
+**The current crawl** ([SH-B1](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12))
+is the project's newest usable crawl (`completed`, `partially_completed` or
+`cancelled`, by creation) that is not a page rerun. `currentSiteCrawl` in
+`reads/crawl.ts` owns it, and `currentSiteSnapshotQuery` reads its snapshot.
+Every read that names no crawl uses it: the project `/pages` and `/issues`
+reads, Overview, AEO readiness and Architecture, Opportunities, the Command
+Center, the Agent's content context, MCP, AI Traffic pages, internal links, a
+backdated declaration's evidence and the declaration's crawl leg. A rerun
+updates only its own page's evidence. The dashboard shows a running site crawl,
+so its progress stays visible; otherwise the current crawl, or, before any
+crawl is usable, the newest site crawl, so a failure still shows.
 
 **Scheduled crawls.** A project may turn on one crawl schedule
 (`crawl_schedules`, `GET|PUT /api/v1/projects/{project_id}/crawl-schedule`),
@@ -761,8 +772,8 @@ page rather than the sample, and its group and rail count only that kind's
 pages.
 
 `GET /projects/{id}/site-health/pages` and `/issues` answer the crawl-scoped
-pages and issues reads for the project's newest crawl (the dashboard's) and name
-it (`crawl_id`, and the pages read's `crawl_status`). The Website and Issues
+pages and issues reads for the project's current crawl and name it (`crawl_id`,
+and the pages read's `crawl_status`); a project without one is a 404. The Website and Issues
 route prefetchers use them on a cold load, beside the dashboard rather than
 after it, and file the answer under that crawl's key; a cached dashboard warms
 the crawl-scoped reads directly.
