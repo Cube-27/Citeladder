@@ -723,6 +723,19 @@ not written yet (nothing is final before the terminal publication). The
 monitored affected count is read per request in both: the monitored selection
 is live configuration.
 
+Every rule lists under one Issues tab (`section`: technical, content or aeo).
+The API owns the mapping (`config/site-health/reads.json`
+`issue_section_by_category`): the content and metadata categories list under
+Content, every other rule under its dimension. A tab (`section`) and an order
+(`sort`: `severity`, the default, ranks severity then pages affected; `pages`
+ranks pages affected then severity) are applied to the listed groups, so the
+persisted catalog still answers a tab with no other filter. The summary's
+`section_counts` count the listed groups before the tab is applied: every tab's
+label holds its count, and a search shows which tab holds its matches. Cursors
+are bound to the tab and the order, as to the filters. Overview top issues name
+their tab (`section`, from today's catalog; null for a retired rule), so their
+links open the tab that lists the rule.
+
 The dashboard counters of an active crawl count its tasks and analyses live. A
 terminal crawl's are the ones persisted with its terminal status: by
 terminalization, by Stop in the cancelling transaction, again when the
@@ -752,9 +765,25 @@ crawl resolves, starts, runs or finishes. A tab the reader picks, or a
 `?tab=` link, stays selected ([decision](decisions.md#site-health-always-opens-on-pages)).
 Only the Overview tab draws the score cards; the Pages tab leads with one status
 line (crawl state, the three headline scores as numbers, pages discovered and
-analyzed). Its Monitored / All Discovered / Errors & Blocked switch and page-kind
-filter sit in the page's control band and live in the address (`pages_view`,
-`page_kind`), cleared when the reader changes tab.
+analyzed). Its Monitored / All Discovered / Errors & Blocked switch, page-kind
+filter and URL search sit in the page's control band and live in the address
+(`pages_view`, `page_kind`, `pages_query`), cleared when the reader changes tab.
+The search is the pages read's `query`: a case-insensitive substring of the
+normalized or display URL, matched on the server and bound into the cursor.
+
+The Issues screen leads with a summary: the outstanding issue types, the
+severity split and the crawl's three worst defects across every tab (a separate
+unfiltered read, so the persisted catalog answers it). Below it the issue table
+lists one tab (Technical, Content, AEO) with severity, page-kind and
+issue/advisory filters and severity or pages ordering. A row opens the issue in
+a dialog (`?issue=`) with how to fix it, Ask agent, a copyable fix prompt and
+the affected pages.
+
+Page detail lists the page's issues worst first, then one card per issue with
+its fix, evidence and the scores its rule counts toward (`score_roles`). Each
+issue names its catalog group (`group_id`), so a card's Ask agent carries the
+issue-group reference for that page; the page's own Ask agent carries the page.
+Neither shows a per-issue score gain: reads never score.
 
 A URL's issue history lists only resolved issues: rules recorded on the page in
 the selected crawl's superseded analyses or the project's earlier crawls that its

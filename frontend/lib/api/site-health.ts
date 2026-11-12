@@ -51,6 +51,8 @@ import type {
   CrawlSchedule,
   InventoryPage,
   IssueHistoryPage,
+  IssueSection,
+  IssueSort,
   MonitoredUrlsResponse,
   PageDetail,
   PagesPage,
@@ -92,6 +94,8 @@ export type PagesParams = {
   monitored?: boolean;
   /** v2 P1: filter to one classified page type (omitted = all types). */
   page_kind?: string;
+  /** Case-insensitive part of the page URL. */
+  query?: string;
   /** Ordering. Part of the cursor fingerprint, so changing it resets paging. */
   sort?: PagesSort;
 };
@@ -107,7 +111,8 @@ export type IssuesParams = {
   site_url_id?: string;
   finding_class?: 'defect' | 'advisory';
   page_kind?: string; // v2 P1: issues affecting one classified page type
-  detail_limit?: number; // embeds the first row's detail as `first_issue`
+  section?: IssueSection; // the Issues tab
+  sort?: IssueSort;
 };
 
 /** Keyset params for a grouped issue's affected-URL page and a URL's issue history. */

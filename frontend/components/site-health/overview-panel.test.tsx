@@ -71,6 +71,7 @@ const terminalOverview = (overrides: Record<string, unknown> = {}) => ({
       finding_class: 'defect',
       severity: 'critical',
       category: 'technical',
+      section: 'technical',
       description: 'The page has a non-empty title.',
       remediation: 'Add a title.',
       score_roles: ['web_fundamentals'],
@@ -85,6 +86,7 @@ const terminalOverview = (overrides: Record<string, unknown> = {}) => ({
       finding_class: 'advisory',
       severity: 'medium',
       category: 'content',
+      section: 'content',
       description: 'The page names its author visibly.',
       remediation: 'Add a named author.',
       score_roles: ['aeo_readiness'],
@@ -99,6 +101,7 @@ const terminalOverview = (overrides: Record<string, unknown> = {}) => ({
       finding_class: 'advisory',
       severity: 'info',
       category: 'content',
+      section: 'content',
       description: 'The page has a meta description.',
       remediation: 'Add a meta description.',
       score_roles: [],
@@ -307,8 +310,8 @@ describe('OverviewPanel', () => {
     );
     const links = within(screen.getByTestId('overview-metrics')).getAllByRole('link');
     expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
-      ['View details', '/issues?dimension=technical'],
-      ['View details', '/issues?dimension=aeo'],
+      ['View details', '/issues?section=technical'],
+      ['View details', '/issues?section=aeo'],
       ['View details', '/site?tab=aeo-readiness'],
       ['View details', '/site?tab=pages'],
     ]);
@@ -411,7 +414,10 @@ describe('OverviewPanel', () => {
     const table = await screen.findByRole('table', { name: 'Top issues' });
     expect(
       screen.getByRole('link', { name: 'Visible creator attribution incomplete' }),
-    ).toHaveAttribute('href', '/issues?rule=aeo.visible_attribution&finding_class=advisory');
+    ).toHaveAttribute(
+      'href',
+      '/issues?rule=aeo.visible_attribution&section=content&finding_class=advisory',
+    );
     expect(screen.getByRole('link', { name: 'Missing page title' })).toHaveAttribute(
       'href',
       '/issues?rule=technical.title_present',

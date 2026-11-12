@@ -10,6 +10,7 @@ import {
   ISSUE_A,
   IssuesCatalog,
   URL_A,
+  isSummaryRequest,
   issue,
   issueDetail,
   occurrence,
@@ -19,18 +20,15 @@ import {
 
 type User = ReturnType<typeof userEvent.setup>;
 
+const OTHER = 'bbbbbbbb-2222-4222-8222-222222222222';
+const ISSUES = `/api/v1/site-crawls/${CRAWL}/issues`;
+
 /** Opens All filters; returns one filter's row, named with its value ("Page kind: All page kinds"). */
 async function openFilter(user: User, label: string, value?: string) {
   await user.click(screen.getByRole('button', { name: /^All filters/ }));
   return screen.findByRole('menuitem', {
     name: value ? `${label}: ${value}` : new RegExp(`^${label}:`),
   });
-}
-
-/** The severity-or-category filter is set to `choice`; the menu closes again. */
-async function expectClass(user: User, choice: string) {
-  expect(await openFilter(user, 'Severity or category', choice)).toBeVisible();
-  await user.keyboard('{Escape}');
 }
 
 /** Opens one filter's options from All filters, with the keyboard as a reader would. */
@@ -47,114 +45,192 @@ async function chooseFilter(user: User, label: string, choice: string) {
   await user.keyboard('{Enter}');
 }
 
-const chooseClass = (user: User, choice: string) =>
-  chooseFilter(user, 'Severity or category', choice);
+/** Opens an issue from its row in the table. */
+async function openIssue(user: User, title: string) {
+  await user.click(await screen.findByRole('button', { name: title }));
+  return screen.findByRole('dialog', { name: title });
+}
 
 function currentUrl(): string {
   return window.location.pathname + window.location.search;
 }
 
+/** Both reads answered with one page of `items`; the list's params are recorded. */
+function serveIssues(items = [issue()], seen: URLSearchParams[] = [], nextCursor?: string) {
+  mswServer.use(
+    http.get(ISSUES, ({ request }) => {
+      if (!isSummaryRequest(request)) seen.push(new URL(request.url).searchParams);
+      return HttpResponse.json({
+        items,
+        next_cursor: isSummaryRequest(request) ? null : (nextCursor ?? null),
+        summary,
+      });
+    }),
+  );
+  return seen;
+}
+
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 beforeEach(() => {
   window.history.replaceState(null, '', '/issues');
-
-  mswServer.use(
-    http.get(`/api/v1/site-crawls/${CRAWL}/issues/${ISSUE_A}`, () =>
-      HttpResponse.json(issueDetail()),
-    ),
-  );
+  mswServer.use(http.get(`${ISSUES}/${ISSUE_A}`, () => HttpResponse.json(issueDetail())));
 });
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 describe('IssuesCatalog', () => {
-  /**
-   * The occurrences of the auto-selected issue are a THIRD request, and it
-   * cannot start until the second one names an issue to ask about. Holding the
-   * screen for it meant a reader waited three sequential round trips to see a
-   * list the second had already answered in full.
-   *
-   * So the list opens on its own and the rail carries its own wait. What the
-   * rail must not do is grow under the reader when it lands, which is what the
-   * reserved height and its placeholder rows are for.
-   */
-  it('opens the list as soon as it lands, with the rail still resolving', async () => {
-    let releaseDetail!: () => void;
-    const detailSettled = new Promise<void>((resolve) => {
-      releaseDetail = resolve;
-    });
-    mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
-        HttpResponse.json({ items: [issue()], next_cursor: null, summary }),
-      ),
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues/${ISSUE_A}`, async () => {
-        await detailSettled;
-        return HttpResponse.json(issueDetail());
+  it('opens on the crawl summary, the issues to fix first, and the Technical tab', async () => {
+    const seen = serveIssues([
+      issue(),
+      issue({
+        group_id: OTHER,
+        title: 'Canonical tag is missing',
+        remediation: 'Add a canonical link. Point it at this page.',
       }),
-    );
+    ]);
 
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
-    // Readable and interactive while the occurrences are still in flight.
     expect(
-      await screen.findByRole('heading', { name: 'WebSite schema is missing' }),
+      await screen.findByRole('heading', { name: 'You have 47 outstanding issues' }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('status', { name: 'Loading issues…' })).toBeNull();
-    // "none" must not be claimed while the answer is "not yet".
-    expect(screen.queryByText('No affected URLs found.')).toBeNull();
-
-    act(() => releaseDetail());
-
-    expect(await screen.findByRole('link', { name: /Homepage/ })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        '12 issues need attention first: they hold back how search and answer engines read your site. They affect 50 pages.',
+      ),
+    ).toBeInTheDocument();
+    const fixFirst = screen.getByRole('region', { name: 'Fix these first' });
+    // Each names its fix in one sentence.
+    const [first, second] = within(fixFirst).getAllByRole('listitem');
+    expect(within(first!).getByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
+    expect(within(second!).getByText('Add a canonical link.')).toBeInTheDocument();
+    expect(within(fixFirst).queryByText(/Point it at this page/)).toBeNull();
+    // Each tab says how many issues it holds.
+    expect(
+      screen.getAllByRole('radio').map((tab) => tab.textContent?.replaceAll(/\s+/g, ' ').trim()),
+    ).toEqual(['Technical (24)', 'Content (9)', 'AEO (14)']);
+    expect(screen.getByRole('radio', { name: /^Technical/ })).toBeChecked();
+    const table = screen.getByRole('region', { name: 'Issues' });
+    expect(within(table).getByRole('button', { name: 'Canonical tag is missing' })).toBeVisible();
+    expect(seen.at(-1)?.get('section')).toBe('technical');
+    expect(seen.at(-1)?.get('sort')).toBe('severity');
+    // Nothing opens until the reader picks an issue.
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  /** The screen still waits for the list itself — there is nothing to show without it. */
-  it('holds the screen-shaped loading presentation until the list lands', async () => {
+  it('holds the table in its loading state until the list lands', async () => {
     let releaseIssues!: () => void;
     const issuesSettled = new Promise<void>((resolve) => {
       releaseIssues = resolve;
     });
     mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, async () => {
+      http.get(ISSUES, async () => {
         await issuesSettled;
         return HttpResponse.json({ items: [issue()], next_cursor: null, summary });
       }),
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues/${ISSUE_A}`, () =>
-        HttpResponse.json(issueDetail()),
-      ),
     );
 
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
-    const loadingStatus = await screen.findByRole('status', { name: 'Loading issues…' });
-    expect(loadingStatus.closest('[aria-busy="true"]')).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'WebSite schema is missing' })).toBeNull();
-
+    expect(await screen.findByRole('status', { name: 'Loading issues…' })).toBeInTheDocument();
     act(() => releaseIssues());
-
     expect(
-      await screen.findByRole('heading', { name: 'WebSite schema is missing' }),
+      await screen.findByRole('button', { name: 'WebSite schema is missing' }),
     ).toBeInTheDocument();
   });
 
-  it('starts an addressed issue’s occurrences while the list is still loading', async () => {
-    const OTHER = 'bbbbbbbb-2222-4222-8222-222222222222';
-    let releaseIssues!: () => void;
-    const issuesSettled = new Promise<void>((resolve) => {
-      releaseIssues = resolve;
+  it('opens an issue over the list, links each page to its detail, and closes it again', async () => {
+    serveIssues();
+    const user = userEvent.setup();
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+
+    const dialog = await openIssue(user, 'WebSite schema is missing');
+    await waitFor(() => expect(currentUrl()).toContain(`issue=${ISSUE_A}`));
+
+    expect(within(dialog).getByText('How to fix')).toBeInTheDocument();
+    expect(within(dialog).getByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
+    // The rule description states the PASSING expectation; under a failing
+    // title it reads as a contradiction, so the dialog never prints it.
+    expect(
+      within(dialog).queryByText(
+        'Search engines cannot find WebSite structured data on this page.',
+      ),
+    ).toBeNull();
+    // Evidence is the notation of the fix, with no label restating the title.
+    expect(
+      await within(dialog).findByText('expected types WebSite, found types Organization'),
+    ).toBeInTheDocument();
+    const link = within(dialog).getByRole('link', { name: /Homepage/ });
+    expect(link).toHaveAttribute('href', `/site/crawls/${CRAWL}/pages/${URL_A}`);
+    expect(within(link).getByText('Article')).toBeInTheDocument();
+
+    // Ask agent hands the Agent the issue's ids, never its evidence.
+    const ask = within(dialog).getByRole('link', { name: 'Ask agent' });
+    const handoff = parseAgentHandoff(new URL(ask.getAttribute('href')!, 'http://x').searchParams);
+    expect(handoff.context).toEqual({
+      issue_group_reference: { crawl_id: CRAWL, group_id: ISSUE_A },
     });
-    let detailRequested = false;
+    expect(handoff.skillId).toBe('technical_health');
+    const askPage = within(dialog).getByRole('link', { name: 'Ask agent about this page' });
+    const pageHandoff = parseAgentHandoff(
+      new URL(askPage.getAttribute('href')!, 'http://x').searchParams,
+    );
+    expect(pageHandoff.context).toEqual({
+      issue_group_reference: { crawl_id: CRAWL, group_id: ISSUE_A, site_url_id: URL_A },
+    });
+    expect(pageHandoff.prompt).toContain('https://acme.com/');
+
+    await user.click(within(dialog).getByRole('button', { name: 'Close dialog' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(currentUrl()).not.toContain('issue=');
+  });
+
+  it('opens an issue from the summary’s fix-first list', async () => {
+    serveIssues();
+    const user = userEvent.setup();
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+
+    const fixFirst = await screen.findByRole('region', { name: 'Fix these first' });
+    await user.click(within(fixFirst).getByRole('button', { name: /WebSite schema is missing/ }));
+    expect(
+      await screen.findByRole('dialog', { name: 'WebSite schema is missing' }),
+    ).toBeInTheDocument();
+  });
+
+  it('opens an addressed issue on load, even one the listed page does not hold', async () => {
+    serveIssues();
     mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, async () => {
-        await issuesSettled;
-        return HttpResponse.json({
-          items: [issue(), issue({ group_id: OTHER, title: 'Canonical tag is missing' })],
-          next_cursor: null,
-          summary,
-        });
-      }),
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues/${OTHER}`, () => {
-        detailRequested = true;
+      http.get(`${ISSUES}/${OTHER}`, () =>
+        HttpResponse.json(
+          issueDetail({
+            group_id: OTHER,
+            title: 'Canonical tag is missing',
+            occurrences: [occurrence({ title: 'Pricing page' })],
+          }),
+        ),
+      ),
+    );
+
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />, `/issues?issue=${OTHER}`);
+
+    const dialog = await screen.findByRole('dialog', { name: 'Canonical tag is missing' });
+    expect(await within(dialog).findByRole('link', { name: /Pricing page/ })).toBeInTheDocument();
+  });
+
+  /**
+   * The detail query keeps the previous issue's occurrences while the next
+   * loads. A dialog captioning one issue over another's pages would describe
+   * pages it is not about, so it waits with placeholders instead.
+   */
+  it('never shows one issue’s pages under another issue’s title', async () => {
+    serveIssues([issue(), issue({ group_id: OTHER, title: 'Canonical tag is missing' })]);
+    let releaseOther!: () => void;
+    const otherSettled = new Promise<void>((resolve) => {
+      releaseOther = resolve;
+    });
+    mswServer.use(
+      http.get(`${ISSUES}/${OTHER}`, async () => {
+        await otherSettled;
         return HttpResponse.json(
           issueDetail({
             group_id: OTHER,
@@ -164,163 +240,83 @@ describe('IssuesCatalog', () => {
         );
       }),
     );
-
-    renderIssues(<IssuesCatalog crawlId={CRAWL} />, `/issues?issue=${OTHER}`);
-
-    await screen.findByRole('status', { name: 'Loading issues…' });
-    await waitFor(() => expect(detailRequested).toBe(true));
-
-    act(() => releaseIssues());
-
-    expect(
-      await screen.findByRole('heading', { name: 'Canonical tag is missing', level: 2 }),
-    ).toBeInTheDocument();
-    expect(await screen.findByRole('link', { name: /Pricing page/ })).toBeInTheDocument();
-  });
-
-  it('shows the first issue’s occurrences from the list response alone', async () => {
-    const listRequests: string[] = [];
-    let detailRequests = 0;
-    mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, ({ request }) => {
-        listRequests.push(new URL(request.url).searchParams.get('detail_limit') ?? 'none');
-        return HttpResponse.json({
-          items: [issue()],
-          next_cursor: null,
-          summary,
-          first_issue: issueDetail({ occurrences: [occurrence({ title: 'Embedded page' })] }),
-        });
-      }),
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues/${ISSUE_A}`, () => {
-        detailRequests += 1;
-        return HttpResponse.json(issueDetail());
-      }),
-    );
-
-    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-
-    expect(await screen.findByRole('link', { name: /Embedded page/ })).toBeInTheDocument();
-    expect(listRequests).toEqual(['25']);
-    expect(detailRequests).toBe(0);
-  });
-
-  /**
-   * The counterpart to the gate above: it must close only ONCE. Selecting a
-   * second issue re-keys the detail query, and `siteHealthQueries.issue`
-   * retains the previous crawl-scoped occurrences across that change, so the
-   * catalog stays on screen and the rail marks itself busy instead of the
-   * whole view dropping back to its loading presentation. The rail keeps the
-   * previous issue AND its pages together until the new pair arrives — a new
-   * title over the old issue's URLs would be a caption for pages it does not
-   * describe.
-   */
-  it('keeps the catalog drawn, and the rail coherent, while a later selection loads', async () => {
     const user = userEvent.setup();
-    const OTHER = 'bbbbbbbb-2222-4222-8222-222222222222';
-    let holdSecond = false;
-    let releaseSecond!: () => void;
-    const secondSettled = new Promise<void>((resolve) => {
-      releaseSecond = resolve;
-    });
-    mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
-        HttpResponse.json({
-          items: [issue(), issue({ group_id: OTHER, title: 'Canonical tag is missing' })],
-          next_cursor: null,
-          summary,
-        }),
-      ),
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues/${OTHER}`, async () => {
-        holdSecond = true;
-        await secondSettled;
-        return HttpResponse.json(
-          issueDetail({ group_id: OTHER, title: 'Canonical tag is missing' }),
-        );
-      }),
-    );
-
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-    await screen.findByRole('link', { name: /Homepage/ });
 
-    await user.click(screen.getByRole('button', { name: /Canonical tag is missing/ }));
+    const first = await openIssue(user, 'WebSite schema is missing');
+    await within(first).findByRole('link', { name: /Homepage/ });
+    await user.click(within(first).getByRole('button', { name: 'Close dialog' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 
-    await waitFor(() => expect(holdSecond).toBe(true));
-    expect(screen.queryByRole('status', { name: 'Loading issues…' })).toBeNull();
-    expect(screen.getByRole('link', { name: /Homepage/ })).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: 'WebSite schema is missing', level: 2 }),
-    ).toBeInTheDocument();
-
-    act(() => releaseSecond());
-    await waitFor(() =>
-      expect(screen.getByRole('heading', { name: 'Canonical tag is missing' })).toBeInTheDocument(),
-    );
+    const second = await openIssue(user, 'Canonical tag is missing');
+    expect(within(second).queryByRole('link', { name: /Homepage/ })).toBeNull();
+    act(() => releaseOther());
+    expect(await within(second).findByRole('link', { name: /Pricing page/ })).toBeInTheDocument();
   });
 
   it('shows no pagination when everything already fits on one page', async () => {
-    // Both pagers used to key off "are there rows" and then disable themselves
-    // when there was nowhere to go, so a five-issue crawl rendered two dead
-    // controls in the catalog and two more in the detail panel.
-    mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
-        HttpResponse.json({ items: [issue()], next_cursor: null, summary }),
-      ),
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues/${ISSUE_A}`, () =>
-        HttpResponse.json(issueDetail({ next_cursor: null })),
-      ),
-    );
-
+    serveIssues();
+    const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-    // Anchor on the DETAIL response, not the catalog row: the row renders
-    // first, so asserting here would pass even if the detail pager arrived.
-    await screen.findByRole('link', { name: /Homepage/ });
+    const dialog = await openIssue(user, 'WebSite schema is missing');
+    // Anchor on the detail, so a pager arriving with it would be caught.
+    await within(dialog).findByRole('link', { name: /Homepage/ });
 
     expect(screen.queryByRole('button', { name: 'First page' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Previous page' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Next page' })).toBeNull();
   });
 
+  it('switches tabs and ordering as server params, from the first page', async () => {
+    window.history.replaceState(null, '', '/issues?cursor=page-two&campaign=overview');
+    const seen = serveIssues();
+    const user = userEvent.setup();
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+    await screen.findByRole('button', { name: 'WebSite schema is missing' });
+
+    await user.click(screen.getByRole('radio', { name: /^Content/ }));
+    await waitFor(() => expect(seen.at(-1)?.get('section')).toBe('content'));
+    expect(seen.at(-1)?.get('cursor')).toBeNull();
+    expect(currentUrl()).toContain('section=content');
+    expect(currentUrl()).toContain('campaign=overview');
+
+    await user.click(screen.getByRole('button', { name: /^Pages/ }));
+    await waitFor(() => expect(seen.at(-1)?.get('sort')).toBe('pages'));
+    expect(seen.at(-1)?.get('section')).toBe('content');
+  });
+
   it('seeds the server query from an Overview rule deep link', async () => {
-    const seen: URLSearchParams[] = [];
     window.history.replaceState(
       null,
       '',
-      '/issues?rule=aeo.website_schema&dimension=aeo&query=schema&page_kind=article&cursor=page-two&campaign=overview',
+      '/issues?rule=aeo.website_schema&section=aeo&query=schema&page_kind=article&cursor=page-two&campaign=overview',
     );
-    mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, ({ request }) => {
-        seen.push(new URL(request.url).searchParams);
-        return HttpResponse.json({ items: [issue()], next_cursor: null, summary });
-      }),
-    );
+    const seen = serveIssues();
 
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
-    expect(await screen.findAllByText('WebSite schema is missing')).not.toHaveLength(0);
+    await screen.findByRole('button', { name: 'WebSite schema is missing' });
     expect(screen.getByRole('button', { name: 'First page' })).not.toBeDisabled();
-    expect(seen.at(-1)?.get('rule')).toBe('aeo.website_schema');
-    expect(seen.at(-1)?.get('dimension')).toBe('aeo');
-    expect(seen.at(-1)?.get('query')).toBe('schema');
-    expect(seen.at(-1)?.get('page_kind')).toBe('article');
-    expect(seen.at(-1)?.get('cursor')).toBe('page-two');
+    const sent = seen.at(-1)!;
+    expect(sent.get('rule')).toBe('aeo.website_schema');
+    expect(sent.get('section')).toBe('aeo');
+    expect(sent.get('query')).toBe('schema');
+    expect(sent.get('page_kind')).toBe('article');
+    expect(sent.get('cursor')).toBe('page-two');
     expect(screen.getByRole('searchbox', { name: 'Search issues' })).toHaveValue('schema');
-    await expectClass(userEvent.setup(), 'AEO (17)');
+    expect(screen.getByRole('radio', { name: /^AEO/ })).toBeChecked();
   });
 
   it('writes filters to history and reflects back/forward navigation', async () => {
     window.history.replaceState(null, '', '/issues?rule=aeo.website_schema&campaign=overview');
-    mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
-        HttpResponse.json({ items: [issue()], next_cursor: null, summary }),
-      ),
-    );
+    serveIssues();
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-    await screen.findAllByText('WebSite schema is missing');
+    await screen.findByRole('button', { name: 'WebSite schema is missing' });
 
     // The deep link's one-issue filter is counted in All filters, and any other filter ends it.
     expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeInTheDocument();
-    await chooseClass(user, 'Medium (23)');
+    await chooseFilter(user, 'Severity', 'Medium');
     await waitFor(() => expect(currentUrl()).toContain('severity=medium'));
     expect(currentUrl()).not.toContain('rule=');
     expect(currentUrl()).toContain('campaign=overview');
@@ -328,23 +324,20 @@ describe('IssuesCatalog', () => {
 
     window.history.back();
     await waitFor(() => expect(currentUrl()).not.toContain('severity=medium'));
-    await expectClass(user, 'All severities (47)');
+    expect(await openFilter(user, 'Severity', 'All severities')).toBeVisible();
+    await user.keyboard('{Escape}');
 
     window.history.forward();
     await waitFor(() => expect(currentUrl()).toContain('severity=medium'));
-    await expectClass(user, 'Medium (23)');
+    expect(await openFilter(user, 'Severity', 'Medium')).toBeVisible();
   });
 
   it('drops a filter-bound cursor while preserving unknown URL params', async () => {
     window.history.replaceState(null, '', '/issues?cursor=page-two&campaign=overview');
-    mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
-        HttpResponse.json({ items: [issue()], next_cursor: null, summary }),
-      ),
-    );
+    serveIssues();
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-    await screen.findAllByText('WebSite schema is missing');
+    await screen.findByRole('button', { name: 'WebSite schema is missing' });
 
     await chooseFilter(user, 'Page kind', 'Article');
 
@@ -355,14 +348,10 @@ describe('IssuesCatalog', () => {
 
   it('clears a deep-linked issue filter from All filters', async () => {
     window.history.replaceState(null, '', '/issues?rule=aeo.website_schema');
-    mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
-        HttpResponse.json({ items: [issue()], next_cursor: null, summary }),
-      ),
-    );
+    serveIssues();
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-    await screen.findAllByText('WebSite schema is missing');
+    await screen.findByRole('button', { name: 'WebSite schema is missing' });
 
     expect(await openFilter(user, 'Issue', 'WebSite schema is missing')).toBeVisible();
     await user.keyboard('{Escape}');
@@ -370,58 +359,22 @@ describe('IssuesCatalog', () => {
     await waitFor(() => expect(currentUrl()).not.toContain('rule='));
   });
 
-  it('narrows the rail to the page kind the list is filtered to', async () => {
+  it('narrows an issue’s pages to the page kind the list is filtered to', async () => {
     window.history.replaceState(null, '', '/issues?page_kind=product');
+    serveIssues();
     const detailKinds: Array<string | null> = [];
     mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
-        HttpResponse.json({ items: [issue()], next_cursor: null, summary }),
-      ),
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues/${ISSUE_A}`, ({ request }) => {
+      http.get(`${ISSUES}/${ISSUE_A}`, ({ request }) => {
         detailKinds.push(new URL(request.url).searchParams.get('page_kind'));
         return HttpResponse.json(issueDetail());
       }),
     );
-
-    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-
-    await screen.findByRole('link', { name: /Homepage/ });
-    expect(detailKinds).toEqual(['product']);
-  });
-
-  it('renders the API-owned summary and grouped issue rows', async () => {
-    mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
-        HttpResponse.json({ items: [issue()], next_cursor: null, summary }),
-      ),
-    );
-
-    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-
-    expect(await screen.findAllByText('WebSite schema is missing')).not.toHaveLength(0);
-    // Filter counts (tiles removed): All severities (47), Medium (23), AEO
-    // (17). The counts come from the API-owned summary, not a client
-    // re-count. The filter's row names what "All" ranges over.
     const user = userEvent.setup();
-    await openOptions(user, 'Severity or category', 'All severities (47)');
-    expect(await screen.findByRole('menuitemradio', { name: 'Medium (23)' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitemradio', { name: 'AEO (17)' })).toBeInTheDocument();
-    await user.keyboard('{Escape}');
-    // Evidence is the notation of the fix, with no "Observed evidence" label
-    // and no restatement of the title above it.
-    expect(
-      await screen.findByText('expected types WebSite, found types Organization'),
-    ).toBeInTheDocument();
-    expect(screen.queryByText('Observed evidence')).not.toBeInTheDocument();
-    expect(screen.queryByText('Reason: expected_schema_absent')).not.toBeInTheDocument();
-    // How to fix is a labelled sentence in the rail's header, not a card of its own.
-    expect(screen.getByText('How to fix')).toBeInTheDocument();
-    expect(screen.getByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
-    // The rule description states the PASSING expectation; under a failing
-    // title it read as a contradiction, so neither the row nor the rail prints it.
-    expect(
-      screen.queryByText('Search engines cannot find WebSite structured data on this page.'),
-    ).not.toBeInTheDocument();
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+
+    const dialog = await openIssue(user, 'WebSite schema is missing');
+    await within(dialog).findByRole('link', { name: /Homepage/ });
+    expect(detailKinds).toEqual(['product']);
   });
 
   it('lists the pages a site-level architecture finding names, not the homepage it is filed on', async () => {
@@ -440,11 +393,9 @@ describe('IssuesCatalog', () => {
       depth_from_home: clicks,
       parent_site_url_id: URL_A,
     });
+    serveIssues([depth]);
     mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
-        HttpResponse.json({ items: [depth], next_cursor: null, summary }),
-      ),
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues/${ISSUE_A}`, () =>
+      http.get(`${ISSUES}/${ISSUE_A}`, () =>
         HttpResponse.json(
           issueDetail({
             rule_id: 'architecture.excessive_depth',
@@ -473,36 +424,27 @@ describe('IssuesCatalog', () => {
         ),
       ),
     );
-
+    const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
-    expect(
-      await screen.findByText(
-        (_, element) => element?.tagName === 'SPAN' && element.textContent === '3 pages',
-      ),
-    ).toBeInTheDocument();
-    const winner = await screen.findByRole('link', { name: /Winner announced/ });
+    const dialog = await openIssue(user, 'Pages buried too deeply');
+    expect(within(dialog).getByText('3 pages affected')).toBeInTheDocument();
+    const winner = await within(dialog).findByRole('link', { name: /Winner announced/ });
     expect(winner).toHaveAttribute(
       'href',
       `/site/crawls/${CRAWL}/pages/dddddddd-2222-4111-8111-111111111111`,
     );
-    expect(screen.getByText('7 clicks from the homepage')).toBeInTheDocument();
-    expect(screen.getByText('5 clicks from the homepage')).toBeInTheDocument();
+    expect(within(dialog).getByText('7 clicks from the homepage')).toBeInTheDocument();
+    expect(within(dialog).getByText('5 clicks from the homepage')).toBeInTheDocument();
     // Evidence carried two of three pages: the remainder is said, not hidden.
-    expect(screen.getByText('Showing 2 of 3 pages.')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /Homepage/ })).not.toBeInTheDocument();
+    expect(within(dialog).getByText('Showing 2 of 3 pages.')).toBeInTheDocument();
+    expect(within(dialog).queryByRole('link', { name: /Homepage/ })).not.toBeInTheDocument();
   });
 
   it('lists a sitewide link finding by the link, with how many pages carry it', async () => {
-    const sitewide = issue({
-      rule_id: 'technical.sitewide_link_redirect',
-      affected_url_count: 438,
-    });
+    serveIssues([issue({ rule_id: 'technical.sitewide_link_redirect', affected_url_count: 438 })]);
     mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
-        HttpResponse.json({ items: [sitewide], next_cursor: null, summary }),
-      ),
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues/${ISSUE_A}`, () =>
+      http.get(`${ISSUES}/${ISSUE_A}`, () =>
         HttpResponse.json(
           issueDetail({
             rule_id: 'technical.sitewide_link_redirect',
@@ -539,40 +481,35 @@ describe('IssuesCatalog', () => {
         ),
       ),
     );
+    const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+
+    const dialog = await openIssue(user, 'WebSite schema is missing');
     const link = '/collections/screens → /collections/simulation/';
-    expect(await screen.findByText(link)).toBeInTheDocument();
-    expect(screen.getByText('On 438 pages, including:')).toBeInTheDocument();
-    expect(await screen.findByRole('link', { name: /Winner announced/ })).toHaveAttribute(
+    expect(await within(dialog).findByText(link)).toBeInTheDocument();
+    expect(within(dialog).getByText('On 438 pages, including:')).toBeInTheDocument();
+    expect(within(dialog).getByRole('link', { name: /Winner announced/ })).toHaveAttribute(
       'href',
       `/site/crawls/${CRAWL}/pages/dddddddd-2222-4111-8111-111111111111`,
     );
   });
 
   it('applies a severity filter as a server param (not a client filter)', async () => {
-    const seen: string[] = [];
-    mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, ({ request }) => {
-        const url = new URL(request.url);
-        seen.push(url.searchParams.get('severity') ?? '');
-        return HttpResponse.json({ items: [issue()], next_cursor: null, summary });
-      }),
-    );
-
+    const seen = serveIssues();
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-    await screen.findAllByText('WebSite schema is missing');
+    await screen.findByRole('button', { name: 'WebSite schema is missing' });
 
-    await chooseClass(user, 'Medium (23)');
-    await waitFor(() => expect(seen).toContain('medium'));
+    await chooseFilter(user, 'Severity', 'Medium');
+    await waitFor(() => expect(seen.at(-1)?.get('severity')).toBe('medium'));
   });
 
-  it('keeps advisories in their own server-backed view and labels all quantities', async () => {
+  it('lists advisories from the Show filter, with no severity to filter by', async () => {
     const seen: Array<string | null> = [];
     mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, ({ request }) => {
+      http.get(ISSUES, ({ request }) => {
         const findingClass = new URL(request.url).searchParams.get('finding_class');
-        seen.push(findingClass);
+        if (!isSummaryRequest(request)) seen.push(findingClass);
         return HttpResponse.json({
           items:
             findingClass === 'advisory'
@@ -596,100 +533,52 @@ describe('IssuesCatalog', () => {
     expect(
       await screen.findByText(
         (_, element) =>
-          element?.tagName === 'P' &&
-          element.textContent === '47 issues · 94 occurrences · 50 pages',
+          element?.tagName === 'P' && element.textContent === '47 issues · 12 high · 50 pages',
       ),
     ).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /^Issues\s*\(47\)$/ })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('radio', { name: /^Advisories\s*\(2\)$/ }));
-    expect(await screen.findAllByText('Title length outside recommended band')).not.toHaveLength(0);
-    expect(screen.getAllByText('Advisory')).toHaveLength(2);
+    await chooseFilter(user, 'Show', 'Advisories');
+    const table = screen.getByRole('region', { name: 'Issues' });
+    expect(
+      await within(table).findByRole('button', { name: 'Title length outside recommended band' }),
+    ).toBeInTheDocument();
+    expect(within(table).getByText('Advisory')).toBeInTheDocument();
     expect(
       screen.getByText(
         (_, element) =>
-          element?.tagName === 'P' &&
-          element.textContent === '2 advisories · 94 occurrences · 50 pages',
+          element?.tagName === 'P' && element.textContent === '2 advisories · 50 pages',
       ),
     ).toBeInTheDocument();
-    // Advisories have no severity, so their unfiltered choice ranges over categories.
-    await openOptions(user, 'Category', 'All categories (2)');
-    expect(
-      await screen.findByRole('menuitemradio', { name: 'All categories (2)' }),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole('menuitemradio', { name: /High/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^All filters/ }));
+    expect(await screen.findByRole('menuitem', { name: /^Show:/ })).toBeVisible();
+    expect(screen.queryByRole('menuitem', { name: /^Severity:/ })).toBeNull();
     expect(seen).toContain('advisory');
   });
 
   it('wires the page-kind filter as a server param, set and cleared', async () => {
-    const seen: Array<string | null> = [];
-    mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, ({ request }) => {
-        seen.push(new URL(request.url).searchParams.get('page_kind'));
-        return HttpResponse.json({ items: [issue()], next_cursor: null, summary });
-      }),
-    );
-
+    const seen = serveIssues();
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-    // The initial unfiltered request carries no page-kind param.
-    await screen.findAllByText('WebSite schema is missing');
-    expect(seen.at(-1)).toBeNull();
+    await screen.findByRole('button', { name: 'WebSite schema is missing' });
+    expect(seen.at(-1)?.get('page_kind')).toBeNull();
 
     await chooseFilter(user, 'Page kind', 'Article');
-    await waitFor(() => expect(seen.at(-1)).toBe('article'));
+    await waitFor(() => expect(seen.at(-1)?.get('page_kind')).toBe('article'));
 
-    // Clearing back to "All page kinds" drops the param entirely. The
-    // unfiltered combination is already cached (no new request), so force a
-    // fresh combination via a chip and assert THAT request omits page_kind.
+    // Clearing back to "All page kinds" drops the param. That combination is
+    // already cached, so force a fresh one and assert THAT request omits it.
     await chooseFilter(user, 'Page kind', 'All page kinds');
-    await chooseClass(user, 'Medium (23)');
-    await waitFor(() => expect(seen.at(-1)).toBeNull());
+    await chooseFilter(user, 'Severity', 'Medium');
+    await waitFor(() => expect(seen.at(-1)?.get('severity')).toBe('medium'));
+    expect(seen.at(-1)?.get('page_kind')).toBeNull();
   });
 
-  it('uses the selected issue right rail and links each occurrence to page detail', async () => {
-    mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
-        HttpResponse.json({ items: [issue()], next_cursor: null, summary }),
-      ),
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues/${ISSUE_A}`, () =>
-        HttpResponse.json(issueDetail()),
-      ),
-    );
-
-    const user = userEvent.setup();
-    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-    await screen.findAllByText('WebSite schema is missing');
-
-    await user.click(screen.getByRole('button', { name: /WebSite schema is missing/ }));
-    await waitFor(() => expect(currentUrl()).toContain(`issue=${ISSUE_A}`));
-
-    expect(await screen.findByText('How to fix')).toBeInTheDocument();
-    const link = await screen.findByRole('link', { name: /Homepage/ });
-    expect(link).toHaveAttribute('href', `/site/crawls/${CRAWL}/pages/${URL_A}`);
-    // The affected page's v2 P1 type renders inside the row (scoped —
-    // the filter <select> also lists the type label as an option).
-    expect(within(link).getByText('Article')).toBeInTheDocument();
-    // Ask agent hands the Agent the page's id, never its evidence.
-    const ask = screen.getByRole('link', { name: 'Ask agent about this page' });
-    const handoff = parseAgentHandoff(new URL(ask.getAttribute('href')!, 'http://x').searchParams);
-    expect(handoff.context).toEqual({
-      issue_group_reference: { crawl_id: CRAWL, group_id: issue().group_id, site_url_id: URL_A },
-    });
-    expect(handoff.prompt).toContain('https://acme.com/');
-    // The technical methodology is chosen up front, not left to the model.
-    expect(handoff.skillId).toBe('technical_health');
-  });
-
-  it('pages occurrences with a cursor-aware Next/Previous control', async () => {
+  it('pages an issue’s occurrences in the dialog and the list beneath it', async () => {
+    serveIssues([issue()], [], 'catalog-page-2');
     const seenCursors: (string | null)[] = [];
     mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
-        HttpResponse.json({ items: [issue()], next_cursor: 'catalog-page-2', summary }),
-      ),
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues/${ISSUE_A}`, ({ request }) => {
-        const url = new URL(request.url);
-        const cursor = url.searchParams.get('cursor');
+      http.get(`${ISSUES}/${ISSUE_A}`, ({ request }) => {
+        const cursor = new URL(request.url).searchParams.get('cursor');
         seenCursors.push(cursor);
         const onFirstPage = cursor === null;
         return HttpResponse.json(
@@ -712,85 +601,49 @@ describe('IssuesCatalog', () => {
         );
       }),
     );
-
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-    await screen.findAllByText('WebSite schema is missing');
 
-    await screen.findByRole('link', { name: /Homepage/ });
-
-    // The rail's pager renders before the catalog's, so index 0 is the rail.
-    const innerPrev = screen.getAllByRole('button', { name: 'Previous page' })[0]!;
-    const innerNext = screen.getAllByRole('button', { name: 'Next page' })[0]!;
-    expect(innerPrev).toBeDisabled();
-    expect(innerNext).not.toBeDisabled();
-
-    await user.click(innerNext);
-    await screen.findByRole('link', { name: /Page Two/ });
+    const dialog = await openIssue(user, 'WebSite schema is missing');
+    await within(dialog).findByRole('link', { name: /Homepage/ });
+    expect(within(dialog).getByRole('button', { name: 'Previous page' })).toBeDisabled();
+    await user.click(within(dialog).getByRole('button', { name: 'Next page' }));
+    await within(dialog).findByRole('link', { name: /Page Two/ });
     expect(seenCursors).toEqual([null, 'cursor-page-2']);
-    const innerPrevAfterNext = screen.getAllByRole('button', { name: 'Previous page' })[0]!;
-    const [innerNextAfterNext] = screen.getAllByRole('button', { name: 'Next page' });
-    expect(innerPrevAfterNext).not.toBeDisabled();
-    expect(innerNextAfterNext).toBeDisabled();
+    await user.click(within(dialog).getByRole('button', { name: 'Previous page' }));
+    await within(dialog).findByRole('link', { name: /Homepage/ });
+    await user.click(within(dialog).getByRole('button', { name: 'Close dialog' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 
-    await user.click(innerPrevAfterNext);
-    await screen.findByRole('link', { name: /Homepage/ });
-    // Going back to cursor=null is served from the TanStack Query cache
-    // (already fetched above), so no new request is issued — seenCursors
-    // stays at the two requests already made.
-    expect(seenCursors).toEqual([null, 'cursor-page-2']);
-
-    await user.click(screen.getAllByRole('button', { name: 'Next page' })[0]!);
-    await screen.findByRole('link', { name: /Page Two/ });
-    await user.click(screen.getAllByRole('button', { name: 'Next page' })[1]!);
+    // The list steps forward and back along the cursors it followed.
+    await user.click(screen.getByRole('button', { name: 'Next page' }));
     await waitFor(() => expect(currentUrl()).toContain('cursor=catalog-page-2'));
-    expect(screen.getAllByRole('button', { name: 'Previous page' })[0]!).toBeDisabled();
-
-    await user.click(screen.getAllByRole('button', { name: 'Next page' })[0]!);
-    await screen.findByRole('link', { name: /Page Two/ });
-    await user.click(screen.getByRole('button', { name: 'First page' }));
-    await waitFor(() => expect(currentUrl()).not.toContain('cursor='));
-    expect(screen.getAllByRole('button', { name: 'Previous page' })[0]!).toBeDisabled();
-
-    // The catalog steps back along the cursors it followed.
-    await user.click(screen.getAllByRole('button', { name: 'Next page' })[1]!);
-    await waitFor(() => expect(currentUrl()).toContain('cursor=catalog-page-2'));
-    await user.click(screen.getAllByRole('button', { name: 'Previous page' })[1]!);
+    await user.click(screen.getByRole('button', { name: 'Previous page' }));
     await waitFor(() => expect(currentUrl()).not.toContain('cursor='));
   });
 
-  it('shows which page types an issue affects, and says nothing when it spans none', async () => {
-    // The product question this answers: a Product/offers finding scoped to
-    // product pages is different work from a title finding that touches every
-    // page, and the affected-page COUNT alone cannot tell them apart.
+  it('says which page types an issue affects, and nothing when it spans none', async () => {
+    serveIssues([
+      issue({ page_kinds: ['product', 'category'] }),
+      issue({ group_id: OTHER, title: 'Canonical tag is missing', page_kinds: [] }),
+    ]);
     mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
-        HttpResponse.json({
-          items: [issue({ page_kinds: ['product', 'category'] })],
-          next_cursor: null,
-          summary,
-        }),
+      http.get(`${ISSUES}/${OTHER}`, () =>
+        HttpResponse.json(issueDetail({ group_id: OTHER, title: 'Canonical tag is missing' })),
       ),
     );
-
+    const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
-    // The header's meta line: the count, then the types it spans.
-    expect(await screen.findByText('32 pages affected')).toBeInTheDocument();
-    expect(screen.getByText('Product, Category')).toBeInTheDocument();
-  });
+    const typed = await openIssue(user, 'WebSite schema is missing');
+    expect(within(typed).getByText('32 pages affected')).toBeInTheDocument();
+    expect(within(typed).getByText('Product, Category')).toBeInTheDocument();
+    await user.click(within(typed).getByRole('button', { name: 'Close dialog' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 
-  it('omits the page-type row for an issue with no classified pages', async () => {
-    mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
-        HttpResponse.json({ items: [issue({ page_kinds: [] })], next_cursor: null, summary }),
-      ),
-    );
-
-    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-
-    const meta = (await screen.findByText('32 pages affected')).parentElement;
+    const untyped = await openIssue(user, 'Canonical tag is missing');
     // The count closes the meta line: no page-type list follows it.
+    const meta = within(untyped).getByText('32 pages affected').parentElement;
     expect(meta?.lastElementChild?.textContent).toBe('32 pages affected');
   });
 });

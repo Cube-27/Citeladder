@@ -8,7 +8,12 @@ import {
 } from './crawl.ts';
 import { responseObject, uuid } from './core.ts';
 import { monitoredQuotaSchema } from './inventory.ts';
-import { findingClassSchema, issueDimensionSchema, issueSeveritySchema } from './issues.ts';
+import {
+  findingClassSchema,
+  issueDimensionSchema,
+  issueSectionSchema,
+  issueSeveritySchema,
+} from './issues.ts';
 import { rootErrorSchema } from './pages.ts';
 import { cursorPageSchema } from './pagination.ts';
 
@@ -268,6 +273,8 @@ const overviewIssueSchema = responseObject({
   eligibility_blocker: z.boolean(),
   impact_band: z.number().int(),
   impact_label: z.string(),
+  // The Issues tab the rule is listed under; null for a rule the catalog retired.
+  section: issueSectionSchema.nullable(),
 });
 
 const cohortCompositionSchema = responseObject({

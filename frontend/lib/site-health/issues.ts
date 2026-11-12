@@ -80,6 +80,22 @@ export function severityRank(severity: IssueSeverity): number {
   return SEVERITY_RANK[severity] ?? 99;
 }
 
+const SCORE_ROLE_LABEL: Readonly<Record<string, string>> = {
+  web_fundamentals: 'Web Fundamentals',
+  aeo_readiness: 'AEO Readiness',
+};
+
+/**
+ * The page score a finding counts against (the catalog's `score_roles`), by
+ * the name the score carries on screen; an unknown role is not shown.
+ */
+export function scoreRoleLabels(roles: readonly string[]): string[] {
+  return roles.flatMap((role) => {
+    const label = SCORE_ROLE_LABEL[role];
+    return label ? [label] : [];
+  });
+}
+
 /** Short dimension label for a badge (Web fundamentals / AEO). */
 export function dimensionLabel(dimension: IssueDimension): string {
   return dimension === 'aeo' ? 'AEO' : 'Web fundamentals';

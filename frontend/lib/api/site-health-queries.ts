@@ -27,6 +27,31 @@ const scoped = (scope: ProjectScope, signal?: AbortSignal) => ({
   workspaceId: scope.workspaceId,
 });
 
+const ISSUE_KEY_PARAMS = [
+  'cursor',
+  'limit',
+  'query',
+  'severity',
+  'category',
+  'dimension',
+  'rule',
+  'site_url_id',
+  'page_kind',
+  'section',
+  'sort',
+] as const satisfies ReadonlyArray<keyof IssuesParams>;
+
+/**
+ * An issues read's key: every param named, an absent one as null, so a read
+ * that spells "unset" as undefined shares the entry of one that leaves it out.
+ */
+function issueKeyFilters(params: IssuesParams = {}) {
+  return {
+    ...Object.fromEntries(ISSUE_KEY_PARAMS.map((name) => [name, params[name] ?? null])),
+    finding_class: params.finding_class ?? 'defect',
+  };
+}
+
 /**
  * React Query option factories. Screens, the route prefetchers and cursor
  * tables pass these straight to `useQuery`, so the query key ↔ endpoint
@@ -140,6 +165,7 @@ export const siteHealthQueries = {
         status: params?.status ?? null,
         monitored: params?.monitored ?? null,
         page_kind: params?.page_kind ?? null,
+        query: params?.query ?? null,
         // The sort changes the server's ordering, so it must be part of the
         // cache identity — otherwise two sorts share one entry and the table
         // renders the previous ordering's rows.
@@ -156,19 +182,7 @@ export const siteHealthQueries = {
     }),
   issues: (workspaceId: string | null, crawlId: string, params?: IssuesParams) =>
     queryOptions({
-      queryKey: queryKeys.siteHealth.issues(workspaceId, crawlId, {
-        cursor: params?.cursor ?? null,
-        limit: params?.limit ?? null,
-        query: params?.query ?? null,
-        severity: params?.severity ?? null,
-        category: params?.category ?? null,
-        dimension: params?.dimension ?? null,
-        rule: params?.rule ?? null,
-        site_url_id: params?.site_url_id ?? null,
-        finding_class: params?.finding_class ?? 'defect',
-        page_kind: params?.page_kind ?? null,
-        detail_limit: params?.detail_limit ?? null,
-      }),
+      queryKey: queryKeys.siteHealth.issues(workspaceId, crawlId, issueKeyFilters(params)),
       queryFn: ({ signal }) => siteHealthApi.getIssues(crawlId, params, { signal, workspaceId }),
       placeholderData: (previousData, previousQuery) =>
         retainPreviousDataForScope(crawlId, previousData, previousQuery),

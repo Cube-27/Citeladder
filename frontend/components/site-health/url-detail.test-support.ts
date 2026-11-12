@@ -4,6 +4,9 @@ export const CRAWL = '44444444-4444-4444-8444-444444444444';
 export const URL_ID = 'cccccccc-1111-4111-8111-111111111111';
 export const ISSUE_H = 'aaaaaaaa-1111-4111-8111-111111111111';
 export const ISSUE_L = 'bbbbbbbb-1111-4111-8111-111111111111';
+/** The crawl's Issues groups the two issues belong to. */
+export const GROUP_H = 'aaaaaaaa-2222-4111-8111-111111111111';
+const GROUP_L = 'bbbbbbbb-2222-4111-8111-111111111111';
 
 /** One audited product page; each test overrides only what it is about. */
 export function pageDetail(overrides: Partial<PageDetail> = {}): PageDetail {
@@ -123,6 +126,8 @@ export function pageDetail(overrides: Partial<PageDetail> = {}): PageDetail {
         severity: 'low',
         finding_class: 'defect',
         issue_title: 'FAQ schema not present',
+        group_id: GROUP_L,
+        score_roles: ['aeo_readiness'],
         description: 'FAQ structured data is not present.',
         remediation: '',
         reason_code: 'expected_schema_absent',
@@ -146,6 +151,8 @@ export function pageDetail(overrides: Partial<PageDetail> = {}): PageDetail {
         severity: 'high',
         finding_class: 'defect',
         issue_title: 'WebSite schema is missing',
+        group_id: GROUP_H,
+        score_roles: ['aeo_readiness', 'web_fundamentals'],
         description: 'WebSite structured data is not present.',
         remediation: '',
         reason_code: 'expected_schema_absent',

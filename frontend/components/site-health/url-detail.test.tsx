@@ -10,8 +10,16 @@ import type { ReactElement } from 'react';
 import { useLocation } from 'react-router-dom';
 import type { PageDetail } from '@citeladder/contracts';
 
+import { parseAgentHandoff } from '@/lib/agent/handoff';
 import { UrlDetail } from './url-detail';
-import { CRAWL, ISSUE_H, ISSUE_L, URL_ID, pageDetail as detail } from './url-detail.test-support';
+import {
+  CRAWL,
+  GROUP_H,
+  ISSUE_H,
+  ISSUE_L,
+  URL_ID,
+  pageDetail as detail,
+} from './url-detail.test-support';
 
 const NEW_CRAWL = '55555555-5555-4555-8555-555555555555';
 const TASK_ID = '66666666-6666-4666-8666-666666666666';
@@ -45,6 +53,16 @@ async function openHistory(history: HttpResponseResolver) {
   renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
   await user.click(await screen.findByRole('button', { name: 'History' }));
   return { user, drawer: await screen.findByRole('dialog', { name: 'Issue history' }) };
+}
+
+/** The "All issues" card, found by its heading. */
+function allIssues(heading: string): HTMLElement {
+  return screen.getByRole('heading', { name: heading }).closest('section')!;
+}
+
+/** The new chat a link would start, as the Agent reads it. */
+function handoffOf(link: HTMLElement) {
+  return parseAgentHandoff(new URL(link.getAttribute('href')!, 'http://x').searchParams);
 }
 
 function LocationDisplay() {
@@ -192,8 +210,9 @@ describe('UrlDetail', () => {
     expect(screen.getByText('200')).toBeInTheDocument();
 
     // High-severity issue is ordered before the low-severity one.
-    const high = screen.getByText('WebSite schema is missing');
-    const low = screen.getByText('FAQ schema not present');
+    const list = allIssues('All issues (2)');
+    const high = within(list).getByText('WebSite schema is missing');
+    const low = within(list).getByText('FAQ schema not present');
     expect(high.compareDocumentPosition(low) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(
       screen.getByText('expected types WebSite, found types Organization'),
@@ -591,7 +610,7 @@ describe('UrlDetail', () => {
     expect(screen.getByText('Internal links not measured for this page.')).toBeVisible();
   });
 
-  it('leads with what to fix: defects worst first with their fix, advisories apart', async () => {
+  it('lists every issue worst first, each card with its fix, and advisories apart', async () => {
     const [low, high] = detail().issues;
     mswServer.use(
       ...handlers(
@@ -615,28 +634,79 @@ describe('UrlDetail', () => {
 
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
-    const heading = await screen.findByRole('heading', { name: 'Issues on this page (2)' });
-    const order = [
-      'WebSite schema is missing',
-      'FAQ schema not present',
-      'Missing meta description',
-    ].map((title) => screen.getByText(title));
-    for (const [earlier, later] of [
-      [order[0]!, order[1]!],
-      [order[1]!, order[2]!],
-    ] as const)
-      expect(earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
-        Node.DOCUMENT_POSITION_FOLLOWING,
-      );
-    expect(screen.getByText('Add FAQPage markup to the questions.')).toBeInTheDocument();
+    await screen.findByRole('heading', { name: 'All issues (2)' });
+    const list = allIssues('All issues (2)');
+    expect(
+      within(list)
+        .getAllByRole('button')
+        .map((row) => row.textContent),
+    ).toEqual(['1WebSite schema is missingHighAEO', '2FAQ schema not presentLowAEO']);
+    // Each issue's card carries its fix and the scores it holds down.
+    const faq = screen.getByRole('region', { name: 'FAQ schema not present' });
+    expect(within(faq).getByText('Add FAQPage markup to the questions.')).toBeInTheDocument();
+    expect(within(faq).getByText('2/2')).toBeInTheDocument();
+    const website = screen.getByRole('region', { name: 'WebSite schema is missing' });
+    expect(
+      within(website)
+        .getAllByText(/^(AEO Readiness|Web Fundamentals)$/)
+        .map((badge) => badge.textContent),
+    ).toEqual(['AEO Readiness', 'Web Fundamentals']);
     expect(screen.getByText('Advisories (1)')).toBeInTheDocument();
     // The advisory is labelled as one, never with a severity.
     const advisory = screen.getByText('Missing meta description').closest('li')!;
     expect(within(advisory).getByText('Advisory')).toBeInTheDocument();
     expect(within(advisory).queryByText('Medium')).not.toBeInTheDocument();
-    // The scores come after the fixes.
+    // The page's scores lead, above its issues.
     const score = screen.getByRole('img', { name: 'Web Fundamentals score: 46 out of 100' });
-    expect(heading.compareDocumentPosition(score) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(score.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('hands the agent the page, or one issue on it, by id and never by evidence', async () => {
+    mswServer.use(...handlers(detail()));
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
+
+    const page = handoffOf(screen.getByRole('link', { name: 'Ask agent about this page' }));
+    expect(page.context).toEqual({ target_site_url_id: URL_ID, target_url: 'https://acme.com/' });
+    expect(page.prompt).toBe(
+      'Review the 2 Site Health issues on https://acme.com/, worst first, and propose exact page edits for each.',
+    );
+    const card = screen.getByRole('region', { name: 'WebSite schema is missing' });
+    const issue = handoffOf(within(card).getByRole('link', { name: 'Ask agent' }));
+    expect(issue.context).toEqual({
+      issue_group_reference: { crawl_id: CRAWL, group_id: GROUP_H, site_url_id: URL_ID },
+    });
+    expect(issue.skillId).toBe('technical_health');
+  });
+
+  it('pages the issue cards two at a time and jumps to the one chosen in the list', async () => {
+    const [base] = detail().issues;
+    const issues = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh'].map(
+      (name, index) => ({
+        ...base!,
+        occurrence_id: `ffffffff-${String(index).padStart(4, '0')}-4111-8111-111111111111`,
+        issue_title: `${name} issue`,
+      }),
+    );
+    mswServer.use(...handlers(detail({ issues })));
+    const user = userEvent.setup();
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    await screen.findByRole('heading', { name: 'All issues (7)' });
+
+    const cardTitles = () =>
+      within(screen.getByRole('region', { name: 'Issue details' }))
+        .getAllByRole('heading', { level: 3 })
+        .map((heading) => heading.textContent);
+    expect(cardTitles()).toEqual(['First issue', 'Second issue']);
+    await user.click(screen.getByRole('button', { name: 'Next page' }));
+    expect(cardTitles()).toEqual(['Third issue', 'Fourth issue']);
+
+    // The list shows five until asked for all; choosing one brings its card up.
+    const list = allIssues('All issues (7)');
+    expect(within(list).queryByText('Seventh issue')).toBeNull();
+    await user.click(within(list).getByRole('button', { name: 'View all 7 issues' }));
+    await user.click(within(list).getByRole('button', { name: /Seventh issue/ }));
+    expect(cardTitles()).toEqual(['Seventh issue']);
   });
 
   it('says so plainly when a page has nothing to fix', async () => {
@@ -644,10 +714,9 @@ describe('UrlDetail', () => {
 
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
-    expect(
-      await screen.findByRole('heading', { name: 'Issues on this page (0)' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'All issues (0)' })).toBeInTheDocument();
     expect(screen.getByText('No issues found on this page.')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Issue details' })).toBeNull();
   });
 
   it('does not call a page clean before its audit finishes', async () => {

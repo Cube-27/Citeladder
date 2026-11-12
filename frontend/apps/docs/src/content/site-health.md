@@ -3,7 +3,7 @@ title: 'Site Health'
 description: 'Inspect website issues, understand Web and AEO scores, and choose changes with supporting page evidence.'
 group: 'Measure and understand'
 order: 130
-updated: '2026-11-11'
+updated: '2026-11-12'
 ---
 
 A Site Health crawl captures pages from your website and analyzes their technical and content properties. Begin with **Run new crawl**, then review the crawl's scope, progress and coverage. **Recrawl** reruns the shown crawl with the same scope and settings, so Changes compares like with like.
@@ -25,6 +25,14 @@ Your confirmation is recorded on the crawl with your email. **Recrawl** and sche
 A higher score does not promise rankings, indexing or citations.
 
 A **Partial audit** can still show a score. Read the accompanying coverage to understand how many pages were scored and which applicable checks remain unresolved.
+
+## Find the issues to fix first
+
+**Issues** opens with how many issues the latest crawl found, how they split by severity, and the three worst to fix first. The table below lists one tab at a time: **Technical** (how pages are served and indexed), **Content** (titles, descriptions, headings, accessibility and page copy) and **AEO** (what answer engines need to read and cite a page). Search it, filter by severity or page kind, switch to advisories, and sort by severity or by pages affected. Open an issue to see how to fix it, every affected page, **Ask agent** and **Copy fix prompt**.
+
+In **Site Health → Pages**, search finds pages by any part of their URL.
+
+A page's own screen lists its issues worst first, then one card per issue with the fix, the evidence and the scores it counts toward. **Ask agent about this page** starts a chat about all of the page's issues; each card's **Ask agent** starts one about that issue on that page. **Re-audit to verify** re-checks the page after a fix.
 
 ## Open the affected page
 

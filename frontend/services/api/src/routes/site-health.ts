@@ -11,6 +11,8 @@ import {
   changeSummarySchema,
   inventoryPageSchema,
   issueHistoryPageSchema,
+  issueSectionSchema,
+  issueSortSchema,
   latestCrawlIssuesPageSchema,
   latestCrawlPagesPageSchema,
   pageDetailSchema,
@@ -87,6 +89,7 @@ const pageFilters = {
 const pagesQuery = {
   ...paging,
   ...pageFilters,
+  query: text,
   sort: { scalar: { kind: 'literal', values: PAGE_SORTS }, default: 'status' },
 } as const;
 const issuesQuery = {
@@ -95,18 +98,15 @@ const issuesQuery = {
   severity: text,
   category: text,
   dimension: text,
+  // The Issues tab: categories map to one section, the rest follow their dimension.
+  section: { scalar: { kind: 'literal', values: issueSectionSchema.options } },
+  sort: { scalar: { kind: 'literal', values: issueSortSchema.options }, default: 'severity' },
   rule: text,
   site_url_id: optionalUuid,
   page_kind: text,
   finding_class: {
     scalar: { kind: 'literal', values: ['defect', 'advisory'] },
     default: 'defect',
-  },
-  // Opt-in: embed the first row's detail (`first_issue`) with this many
-  // occurrences, so a list-detail reader's default selection needs no
-  // second request.
-  detail_limit: {
-    scalar: { kind: 'int', ge: 1, le: policy.site_health.reads.page_max_limit },
   },
 } as const;
 const download = z.unknown();
@@ -121,7 +121,12 @@ const readPages = (db: Database, workspaceId: string, crawlId: string, query: Pa
       db,
       workspaceId,
       crawlId,
-      { status: query.status_filter, monitored: query.monitored, pageKind: query.page_kind },
+      {
+        status: query.status_filter,
+        monitored: query.monitored,
+        pageKind: query.page_kind,
+        query: query.query,
+      },
       query.sort,
       query,
     ),
@@ -144,7 +149,7 @@ const readIssues = (db: Database, workspaceId: string, crawlId: string, query: I
         findingClass: query.finding_class,
       },
       query,
-      query.detail_limit ?? null,
+      { section: query.section ?? null, sort: query.sort },
     ),
   );
 

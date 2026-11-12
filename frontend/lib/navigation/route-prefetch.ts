@@ -213,20 +213,27 @@ async function prefetchSiteHealth(client: QueryClient, scope: ProjectScope) {
  */
 async function prefetchIssues(client: QueryClient, scope: ProjectScope) {
   const { workspaceId } = scope;
-  const [{ siteHealthQueries }, { latestCrawlQueries }, { emptyIssueFilters, issueCatalogParams }] =
-    await Promise.all([
-      import('@/lib/api/site-health-queries'),
-      import('@/lib/api/site-health-latest-crawl'),
-      import('@/lib/site-health/issue-filters'),
-    ]);
+  const [
+    { siteHealthQueries },
+    { latestCrawlQueries },
+    { emptyIssueFilters, issueCatalogParams, ISSUE_PRIORITY_PARAMS },
+  ] = await Promise.all([
+    import('@/lib/api/site-health-queries'),
+    import('@/lib/api/site-health-latest-crawl'),
+    import('@/lib/site-health/issue-filters'),
+  ]);
   const dashboard = siteHealthQueries.dashboard(scope);
   const cachedCrawlId = client.getQueryData(dashboard.queryKey)?.crawl?.id;
   warmQuery(client, dashboard);
   // The identical params `IssuesCatalog` builds for an unfiltered first page.
   // Spelling them out differently here would warm a key nothing reads.
   const params = issueCatalogParams(emptyIssueFilters, null);
+  // The summary above the list reads the crawl's worst issues beside it.
+  const warmSummary = (crawlId: string) =>
+    warmQuery(client, siteHealthQueries.issues(workspaceId, crawlId, ISSUE_PRIORITY_PARAMS));
   if (cachedCrawlId) {
     warmQuery(client, siteHealthQueries.issues(workspaceId, cachedCrawlId, params));
+    warmSummary(cachedCrawlId);
     return;
   }
   const latest = await readFromIntent(client, latestCrawlQueries.issues(scope, params));
@@ -234,6 +241,7 @@ async function prefetchIssues(client: QueryClient, scope: ProjectScope) {
   const { crawl_id: crawlId, ...page } = latest;
   const key = siteHealthQueries.issues(workspaceId, crawlId, params).queryKey;
   if (client.getQueryData(key) === undefined) client.setQueryData(key, page);
+  warmSummary(crawlId);
 }
 
 /**

@@ -1,23 +1,19 @@
 'use client';
 
-import { ProjectLink } from '@/components/ui/project-link';
-
+import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { AffectedPageLink, SharedOccurrences } from '@/components/site-health/shared-occurrences';
 import { ReadError } from '@/components/ui/read-error';
 import type { UseQueryResult } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
+import { Dialog } from '@/components/ui/dialog';
 import { QueryState } from '@/components/ui/query-state';
 import { Inline, Stack } from '@/components/ui/layout';
-import { ListDetailPane } from '@/components/ui/list-detail';
 import { Pager } from '@/components/ui/pager';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
-import { agentHandoffHref } from '@/lib/agent/handoff';
 import { useAgentPanelSeed } from '@/lib/agent/panel-context';
 import type { IssueOccurrence, SiteIssue, SiteIssueDetail } from '@citeladder/contracts';
 import { originOf, sitePath } from '@/lib/site-health/evidence-values';
@@ -32,62 +28,71 @@ import { groupOccurrences, loadedPageCount } from '@/lib/site-health/occurrence-
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
 
 /**
- * The right half of the Issues catalog: one issue in full, and the pages it
- * was found on. It lives beside the list rather than inside it because the
- * two answer different questions — which issues exist, and what this one is.
+ * The issue a dialog describes: its catalog row, or — for an issue the address
+ * names that is not on the listed page — its detail, which carries the same
+ * facts but no page types.
  */
-export function IssueDetailRail({
+export type IssueHead = Pick<
+  SiteIssue,
+  | 'group_id'
+  | 'rule_id'
+  | 'title'
+  | 'dimension'
+  | 'severity'
+  | 'finding_class'
+  | 'description'
+  | 'remediation'
+  | 'affected_url_count'
+> &
+  Partial<Pick<SiteIssue, 'page_kinds'>>;
+
+/**
+ * One issue in full, over the Issues list: what it is, how to fix it, the two
+ * ways to act on it, and the pages it was found on, each linking to its page.
+ */
+export function IssueDetailDialog({
   issue,
   crawlId,
   detailQuery,
   canPrevious,
   onPrevious,
   onNext,
+  onClose,
 }: Readonly<{
-  issue: SiteIssue;
+  issue: IssueHead;
   crawlId: string;
   detailQuery: UseQueryResult<SiteIssueDetail>;
   canPrevious: boolean;
   onPrevious: () => void;
   onNext: () => void;
+  onClose: () => void;
 }>) {
-  const detail = detailQuery.isError ? undefined : detailQuery.data;
-  useAgentPanelSeed({
+  // The query keeps the previous issue's page while this one loads; those
+  // pages are not this issue's, so the dialog waits rather than caption them.
+  const loaded = detailQuery.isError ? undefined : detailQuery.data;
+  const detail = loaded?.group_id === issue.group_id ? loaded : undefined;
+  const handoff = {
     issueGroup: { crawlId, groupId: issue.group_id },
     prompt: askAgentPrompt(issue),
     skillId: 'technical_health',
-  });
+  };
+  useAgentPanelSeed(handoff);
+  const pageKinds = issue.page_kinds ?? [];
   return (
-    <ListDetailPane
-      busy={{ active: detailQuery.isFetching, label: 'Updating issue evidence' }}
-      header={
-        // Three blocks 12 apart (the pane's header rhythm): the title bound
-        // 4 to its one meta line, the fix bound 4 to its label, the actions.
-        <>
-          <Stack gap="tight" className="min-w-0">
-            <h2 className={textRole('sectionTitle')}>{issueTitle(issue)}</h2>
-            <IssueMetadata issue={issue}>
-              <span className="tabular-nums">
-                {issue.affected_url_count} {issue.affected_url_count === 1 ? 'page' : 'pages'}{' '}
-                affected
-              </span>
-              {issue.page_kinds.length > 0 ? (
-                <span>{issue.page_kinds.map(pageKindLabel).join(', ')}</span>
-              ) : null}
-            </IssueMetadata>
-          </Stack>
-          {/* The rule's description is phrased as the PASSING state ("Page
-              is not blocked from indexing…"); printed under a failing title
-              it read as a contradiction. The fix is what the reader came
-              for, so it is part of the header, not a card under it. */}
-          {issue.remediation ? (
-            <Stack gap="tight" className="min-w-0">
-              <span className="type-caption">How to fix</span>
-              <p className={textRole('itemTitle', 'whitespace-pre-line')}>{issue.remediation}</p>
-            </Stack>
-          ) : null}
-          <IssueActions issue={issue} crawlId={crawlId} />
-        </>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      width="wide"
+      title={issueTitle(issue)}
+      description={
+        <IssueMetadata issue={issue}>
+          <span className="tabular-nums">
+            {issue.affected_url_count} {issue.affected_url_count === 1 ? 'page' : 'pages'} affected
+          </span>
+          {pageKinds.length > 0 ? <span>{pageKinds.map(pageKindLabel).join(', ')}</span> : null}
+        </IssueMetadata>
       }
       footer={
         detail ? (
@@ -106,7 +111,22 @@ export function IssueDetailRail({
         ) : null
       }
     >
-      <Stack as="section" gap="workspace">
+      {/* The rule's description is phrased as the PASSING state ("Page is not
+          blocked from indexing…"); printed under a failing title it read as a
+          contradiction. The fix is what the reader came for, so it leads. */}
+      {issue.remediation ? (
+        <Stack gap="tight" className="min-w-0">
+          <span className="type-caption">How to fix</span>
+          <p className={textRole('itemTitle', 'whitespace-pre-line')}>{issue.remediation}</p>
+        </Stack>
+      ) : null}
+      <Inline className="flex-wrap">
+        <AskAgentLink appearance="primary" handoff={handoff} />
+        <CopyButton value={buildFixPrompt(issue)} variant="secondary" className="w-fit">
+          Copy fix prompt
+        </CopyButton>
+      </Inline>
+      <Stack as="section" gap="workspace" aria-busy={detailQuery.isFetching || undefined}>
         <h3 className={textRole('sectionTitle')}>Affected pages</h3>
         <OccurrenceList
           issue={issue}
@@ -116,36 +136,15 @@ export function IssueDetailRail({
           firstPage={!canPrevious}
         />
       </Stack>
-    </ListDetailPane>
+    </Dialog>
   );
 }
 
-/**
- * Every issue gets an action: the fix prompt a developer or assistant can use,
- * and Ask agent, which starts a chat about it in the Agent workspace.
- */
-function IssueActions({ issue, crawlId }: Readonly<{ issue: SiteIssue; crawlId: string }>) {
-  return (
-    <Inline className="flex-wrap">
-      <Button asChild variant="primary">
-        <ProjectLink
-          href={agentHandoffHref({
-            issueGroup: { crawlId, groupId: issue.group_id },
-            prompt: askAgentPrompt(issue),
-            skillId: 'technical_health',
-          })}
-        >
-          Ask agent
-        </ProjectLink>
-      </Button>
-      <CopyButton value={buildFixPrompt(issue)} variant="secondary" className="w-fit">
-        Copy fix prompt
-      </CopyButton>
-    </Inline>
-  );
-}
-
-function askAgentPrompt(issue: SiteIssue, page?: string): string {
+/** What to ask the agent about an issue: across its pages, or on one page. */
+export function askAgentPrompt(
+  issue: Pick<SiteIssue, 'title' | 'rule_id' | 'affected_url_count'>,
+  page?: string,
+): string {
   const count = issue.affected_url_count;
   const pages = count === 1 ? 'page' : 'pages';
   const scope = page ? ` on ${page}` : ` (${count} affected ${pages})`;
@@ -163,7 +162,7 @@ function OccurrenceList({
   query,
   firstPage,
 }: Readonly<{
-  issue: SiteIssue;
+  issue: IssueHead;
   detail: SiteIssueDetail | undefined;
   crawlId: string;
   query: UseQueryResult<SiteIssueDetail>;
@@ -240,7 +239,7 @@ function PageOccurrence({
   issue,
   occurrence,
   crawlId,
-}: Readonly<{ issue: SiteIssue; occurrence: IssueOccurrence; crawlId: string }>) {
+}: Readonly<{ issue: IssueHead; occurrence: IssueOccurrence; crawlId: string }>) {
   return (
     <Stack as="li" gap="tight" className={ledgerItemClasses()}>
       <AffectedPageLink
@@ -251,17 +250,16 @@ function PageOccurrence({
         pageKind={occurrence.page_kind}
       />
       <IssueEvidence occurrence={occurrence} />
-      <TextLink
-        text="caption"
-        className="w-fit"
-        href={agentHandoffHref({
+      <AskAgentLink
+        appearance="text"
+        handoff={{
           issueGroup: { crawlId, groupId: issue.group_id, siteUrlId: occurrence.site_url_id },
           prompt: askAgentPrompt(issue, occurrence.display_url),
           skillId: 'technical_health',
-        })}
+        }}
       >
         Ask agent about this page
-      </TextLink>
+      </AskAgentLink>
     </Stack>
   );
 }
@@ -402,7 +400,13 @@ function LinkTargetList({
   );
 }
 
-function buildFixPrompt(issue: SiteIssue): string {
+/** A fix prompt any assistant or developer can act on, from the rule's own words. */
+export function buildFixPrompt(
+  issue: Pick<
+    SiteIssue,
+    'title' | 'rule_id' | 'dimension' | 'severity' | 'finding_class' | 'description' | 'remediation'
+  >,
+): string {
   const rating =
     issue.finding_class === 'defect' ? `${severityLabel(issue.severity)} severity` : 'advisory';
   const lines = [

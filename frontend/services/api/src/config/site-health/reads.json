@@ -9,6 +9,10 @@
     "max_detail_evaluations": 200,
     "scoring_version": "sh-scoring-1",
     "rule_dimensions": ["aeo", "technical"],
+    "issue_section_by_category": {
+      "content": "content",
+      "metadata": "content"
+    },
     "failing_outcomes": ["missing", "partial"],
     "event_count_bearing_keys": [
       "discarded",

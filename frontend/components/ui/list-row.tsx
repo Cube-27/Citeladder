@@ -84,6 +84,42 @@ export function OptionRow({
   );
 }
 
+/**
+ * A ledger list's row that opens its item (an issue's detail): an optional
+ * leading number, the title, the item's meta at the end of the same wrapping
+ * line, and an optional caption under it. The row owns its padding (8 across,
+ * 4 down), its gaps and the hover state; the caller passes the content.
+ */
+export function OpenRow({
+  number,
+  title,
+  meta,
+  caption,
+  onOpen,
+}: Readonly<{
+  number?: number;
+  title: ReactNode;
+  meta?: ReactNode;
+  caption?: ReactNode;
+  onOpen: () => void;
+}>) {
+  return (
+    <Pressable
+      onClick={onOpen}
+      className={cn(listRowClasses(), 'focus-ring grid min-w-0 gap-1 px-2 py-1 text-start')}
+    >
+      <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+        {number === undefined ? null : (
+          <span className="type-caption w-6 shrink-0 tabular-nums">{number}</span>
+        )}
+        <span className={textRole('itemTitle', 'min-w-0 flex-1')}>{title}</span>
+        {meta}
+      </span>
+      {caption ? <span className="type-caption">{caption}</span> : null}
+    </Pressable>
+  );
+}
+
 /** A tree list: its `TreeItem`s and `TreeItemForm`s, 2 apart. */
 export function TreeList({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
   return (
