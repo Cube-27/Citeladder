@@ -53,6 +53,7 @@ export function ReferralSignal({
   data: z.infer<typeof aiTrafficOverviewSchema>['referrals'];
 }>) {
   const latest = data.referral_volume.at(-1);
+  // Only a persisted snapshot carries a window; without one nothing has synced.
   const synced = data.window_end !== null;
   return (
     <SignalCard

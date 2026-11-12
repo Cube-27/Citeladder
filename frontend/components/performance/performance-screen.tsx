@@ -90,7 +90,12 @@ function compareLabel(selection: RangeSelection): string {
   );
 }
 
-function evidenceAvailability(data: PerformanceDashboard) {
+/**
+ * What the selected snapshot can show. `bingConnected` is the project's Bing
+ * connection: a connected Bing that measured nothing still has its panel,
+ * stating zero rows, while a project without one never shows it.
+ */
+function evidenceAvailability(data: PerformanceDashboard, bingConnected: boolean) {
   const { totals, snapshot_id: snapshotId } = data.selected;
   const hasSearchConsoleTotals = totals.clicks !== null || totals.impressions !== null;
   const hasSearchConsoleDimensions = [
@@ -105,7 +110,7 @@ function evidenceAvailability(data: PerformanceDashboard) {
   const hasGa4 = totals.sessions !== null || totals.key_events !== null;
   const hasBing =
     snapshotId !== null &&
-    (data.dimension_counts.bing_query > 0 || data.dimension_counts.bing_page > 0);
+    (bingConnected || data.dimension_counts.bing_query > 0 || data.dimension_counts.bing_page > 0);
   return {
     hasSearchConsoleTotals,
     hasSearchConsoleBreakdowns,
@@ -363,7 +368,7 @@ export function PerformanceScreen() {
   const selectedLabel = describeWindow(selectedWindow);
   const comparisonLabel = compareLabel(selection);
   const series = chartSeries(selectedWindow, comparisonWindow, activeMetrics);
-  const evidence = evidenceAvailability(data);
+  const evidence = evidenceAvailability(data, readiness.data?.providers.includes('bing') ?? false);
   const hasEvidence = evidence.hasSearchConsoleBreakdowns || evidence.hasGa4 || evidence.hasBing;
   const coverage = performanceCoverage(data, hasEvidence);
 
@@ -409,6 +414,7 @@ export function PerformanceScreen() {
           messages={performanceNotices({
             sync,
             projecting: projection.projecting,
+            projectionFailed: projection.failure !== null,
             selectedMissing: coverage.selectedMissing,
             comparisonMissing: coverage.comparisonMissing,
             qualityFlagged: hasQualityFlags(data.coverage.analytics_quality),
@@ -416,9 +422,20 @@ export function PerformanceScreen() {
           })}
         />
 
-        {!hasEvidence ? (
+        {projection.failure ? (
+          <QueryState
+            kind="error"
+            title="Couldn't build this range"
+            error={projection.failure.error}
+            fallback="Building this range from imported data failed."
+            onRetry={projection.failure.retry}
+            pending={projection.failure.pending}
+          />
+        ) : null}
+        {!hasEvidence && !projection.failure ? (
           <PerformanceEmptyState data={data} projecting={projection.projecting} />
-        ) : (
+        ) : null}
+        {hasEvidence ? (
           <>
             {/* One card holds the strip and the plot it drives: selecting a card
           changes the lines directly beneath it, so a gap between them would
@@ -455,12 +472,12 @@ export function PerformanceScreen() {
               selectedLabel={selectedLabel}
               compareLabel={comparisonLabel}
               hasSearchConsole={evidence.hasSearchConsoleBreakdowns}
-              // Only when a Bing connection exists: Bing's panel states "measured
-              // nothing", which is not what an absent connection means.
+              // Only when Bing is connected or has rows: Bing's panel states
+              // "measured nothing", which is not what an absent connection means.
               hasBing={evidence.hasBing}
             />
           </>
-        )}
+        ) : null}
         <DateRangeDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}

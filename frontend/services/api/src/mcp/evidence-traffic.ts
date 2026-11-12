@@ -5,11 +5,12 @@ import {
   activityPage,
   coveragePage,
   crawlerPage,
+  crawlLogConnection,
   crawlSummary,
   type CrawlReadOptions,
 } from '../crawl-logs/reads.ts';
 import { insightsRead } from '../ai-traffic/insights.ts';
-import { pagesRead, urlRead } from '../ai-traffic/pages.ts';
+import { pageContext, pagesRead, urlRead } from '../ai-traffic/pages.ts';
 import { readAiReferrals } from '../analytics/ai-referrals.ts';
 import { queryEvidencePage } from '../demand/reads.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
@@ -209,6 +210,9 @@ export async function crawlLogsRead(
   { db, scope }: ProjectRead,
   args: CrawlArgs & { view: 'summary' | 'crawlers' | 'coverage' | 'requests' },
 ): Promise<Evidence> {
+  // No source is its own state: empty views would read as an observed zero.
+  if ((await crawlLogConnection(db, scope)) === 'not_connected')
+    return unavailable('not_connected');
   const options = crawlOptions(args);
   const reader = {
     summary: crawlSummary,
@@ -219,10 +223,28 @@ export async function crawlLogsRead(
   return { state: 'available', ...(await reader(db, scope, options)) };
 }
 
+/**
+ * True when none of a page's AI-activity sources exists for the window: no
+ * crawl-log source, no GA4 property and no completed AI Visibility run.
+ */
+async function aiTrafficNotConnected(
+  db: ProjectRead['db'],
+  scope: ProjectRead['scope'],
+  args: Window,
+) {
+  const context = await pageContext(db, scope, crawlOptions(args));
+  return (
+    context.crawl.connection === 'not_connected' &&
+    !context.ga4Connected &&
+    context.citations === 'no_completed_run'
+  );
+}
+
 export async function aiTrafficPages(
   { db, scope }: ProjectRead,
   args: CrawlArgs,
 ): Promise<Evidence> {
+  if (await aiTrafficNotConnected(db, scope, args)) return unavailable('not_connected');
   return { state: 'available', ...(await pagesRead(db, scope, crawlOptions(args))) };
 }
 
@@ -249,6 +271,7 @@ export async function aiTrafficUrl(
   // The ingestion owner's identity: a redacted secret path never joins.
   const identity = pathIdentity(args.url, project.website_url);
   if (!identity?.url_hash) return unavailable('url_not_joinable');
+  if (await aiTrafficNotConnected(db, scope, args)) return unavailable('not_connected');
   const result = await urlRead(db, scope, identity.url_hash, crawlOptions(args));
   return { state: result.page ? 'available' : 'unavailable', ...result };
 }

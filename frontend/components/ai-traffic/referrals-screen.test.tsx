@@ -89,6 +89,43 @@ describe('AiReferralsScreen', () => {
     expect(screen.getByText('20.0%')).toBeInTheDocument();
   });
 
+  it('says excluded landing rows are not available without a landing report, and counts them with one', async () => {
+    mswServer.use(http.get(endpoint, () => HttpResponse.json(dashboard)));
+    const view = renderWithProviders(<AiReferralsScreen />, {
+      projectSelection: { activeProject },
+    });
+    expect(
+      await screen.findByText(/Landing rows excluded for out-of-scope hosts: not available\./),
+    ).toBeVisible();
+    expect(screen.queryByText(/0 landing rows excluded/)).not.toBeInTheDocument();
+    view.unmount();
+
+    const day = {
+      revision: 1,
+      flags: [],
+      artifact_ids: [],
+      reporting_timezone: 'UTC',
+      currency_code: null,
+    };
+    mswServer.use(
+      http.get(endpoint, () =>
+        HttpResponse.json({
+          ...dashboard,
+          analytics_quality: {
+            ga4_landing_daily: [
+              { ...day, day: '2026-07-20', excluded_hosts: 0 },
+              { ...day, day: '2026-07-21', excluded_hosts: 0 },
+            ],
+          },
+        }),
+      ),
+    );
+    renderWithProviders(<AiReferralsScreen />, { projectSelection: { activeProject } });
+    expect(
+      await screen.findByText(/0 landing rows excluded for out-of-scope hosts\./),
+    ).toBeVisible();
+  });
+
   it('shows the honest measured-zero state without fabricating a source', async () => {
     mswServer.use(
       http.get(endpoint, () =>
