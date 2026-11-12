@@ -14,6 +14,10 @@ const defaults = {
   login_email_limit: 10,
   login_client_limit: 30,
   login_window_seconds: 300,
+  // Sign-in failures for one address or one network before sign-in is challenged.
+  login_challenge_failures: 5,
+  // Sign-in failures across every address past which every sign-in is challenged.
+  login_failure_global_limit: 200,
   register_client_limit: 20,
   register_window_seconds: 86400,
   mcp_register_burst_limit: 3,
@@ -22,6 +26,8 @@ const defaults = {
   mcp_register_client_window_seconds: 600,
   mcp_register_global_limit: 300,
   mcp_register_global_window_seconds: 3600,
+  // Authorizations per network for clients no person has approved yet, per authorization window.
+  mcp_authorize_unapproved_network_limit: 10,
   agent_call_limit: 30,
   agent_call_window_seconds: 86400,
   bulk_import_limit: 10,
@@ -77,6 +83,14 @@ export type BudgetSubject =
   | 'user'
   | 'integration_connection';
 
+/**
+ * The IPv6 prefix a `client` budget counts as one visitor: one host normally
+ * holds a whole /64, and a registration flood can spread across a /56. IPv4
+ * addresses count as they are.
+ */
+export const clientNetworkPrefixes = { client: 64, registration: 56 } as const;
+export type ClientNetworkScope = keyof typeof clientNetworkPrefixes;
+
 /** A literal policy number, or an overridable setting resolved from the startup settings. */
 type BudgetValue = number | SettingSpec;
 
@@ -93,6 +107,7 @@ export const GLOBAL_MAIL_SUBJECT = 'global-mail';
 export const GLOBAL_TRIAL_SUBJECT = 'global-trial';
 export const MCP_REGISTER_SUBJECT = 'mcp.register';
 export const MCP_AUTHORIZE_SUBJECT = 'mcp.authorize';
+export const LOGIN_FAILURE_GLOBAL_SUBJECT = 'auth.login.failure';
 
 const DAY_SECONDS = 86_400;
 const HOUR_SECONDS = 3600;
@@ -174,6 +189,27 @@ export const budgets = {
     operation: 'auth.login.email_failure',
     subject: 'email',
     limit: abuse.login_email_limit,
+    windowSeconds: abuse.login_window_seconds,
+  },
+  // The challenge thresholds are read, never spent past: reaching one asks for
+  // Turnstile on the next sign-in instead of refusing it. The address threshold
+  // reads the address's failure window above.
+  login_email_challenge: {
+    operation: 'auth.login.email_failure',
+    subject: 'email',
+    limit: abuse.login_challenge_failures,
+    windowSeconds: abuse.login_window_seconds,
+  },
+  login_network_challenge: {
+    operation: 'auth.login.network_failure',
+    subject: 'client',
+    limit: abuse.login_challenge_failures,
+    windowSeconds: abuse.login_window_seconds,
+  },
+  login_global_challenge: {
+    operation: 'auth.login.global_failure',
+    subject: 'global',
+    limit: abuse.login_failure_global_limit,
     windowSeconds: abuse.login_window_seconds,
   },
   login_client: {
@@ -294,6 +330,13 @@ export const budgets = {
     operation: 'mcp.authorize.global',
     subject: 'global',
     limit: mcpLimits.authorization_global_limit,
+    windowSeconds: mcpLimits.authorization_window_seconds,
+  },
+  // A client no person has approved spends this per-network pool, never the global one.
+  mcp_authorize_unapproved_network: {
+    operation: 'mcp.authorize.unapproved_network',
+    subject: 'client',
+    limit: abuse.mcp_authorize_unapproved_network_limit,
     windowSeconds: mcpLimits.authorization_window_seconds,
   },
   mcp_tool_call_grant: {

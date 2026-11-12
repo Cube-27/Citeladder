@@ -1,6 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import {
@@ -19,8 +20,13 @@ import {
 import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-path';
 import { usePublishedTerms } from '@/lib/auth/terms-consent';
 import { useAuthMutation } from '@/lib/auth/use-auth-mutation';
+import { ApiError } from '@/lib/api/errors';
+import { useTurnstile } from '@/lib/turnstile/use-turnstile';
 
 type SearchParams = Pick<URLSearchParams, 'get'>;
+
+/** The refusal that tells an unchallenged sign-in to solve the check first. */
+const CHALLENGE_CODE = 'human_verification_failed';
 
 export function LoginScreen({
   demoMode,
@@ -49,13 +55,33 @@ export function LoginScreen({
     defaultValues: { email: '', password: '' },
   });
   const terms = usePublishedTerms();
+  const verification = useTurnstile('login');
+  // Sign-in is challenged only after repeated failures: the API refuses an
+  // unchallenged attempt with `human_verification_failed`, and from then on
+  // this form shows the widget and sends its token.
+  const [challenged, setChallenged] = useState(false);
   const { mutation, submit } = useAuthMutation(
-    (values: LoginFormValues & { termsRevision: string }) =>
-      authApi.login(values).catch(terms.refreshOnRevisionChange),
+    (values: LoginFormValues & { termsRevision: string; turnstileToken?: string }) =>
+      authApi
+        .login(values)
+        .catch(terms.refreshOnRevisionChange)
+        .catch((error: unknown) => {
+          if (error instanceof ApiError && error.code === CHALLENGE_CODE) setChallenged(true);
+          throw error;
+        }),
     returnTo,
   );
-  const signIn = (values: LoginFormValues) =>
-    terms.revision ? submit({ ...values, termsRevision: terms.revision }) : undefined;
+  const signIn = async (values: LoginFormValues) => {
+    if (!terms.revision) return;
+    if (!challenged) return submit({ ...values, termsRevision: terms.revision });
+    await submit({
+      ...values,
+      termsRevision: terms.revision,
+      turnstileToken: verification.token(),
+    });
+    // The token is single-use, spent or not: a retry solves a fresh one.
+    verification.reset();
+  };
   const failure = mutation.isError ? mutation.error : terms.error;
 
   return (
@@ -76,6 +102,7 @@ export function LoginScreen({
       // after sign-in asks again. Google from here never creates an account:
       // an unknown address is sent to sign up.
       terms={{ revision: terms.revision, signup: false }}
+      verification={challenged ? verification : undefined}
       showFooter={!demoMode && signupOpen}
     >
       <AuthEmailField error={errors.email?.message} inputProps={register('email')} />

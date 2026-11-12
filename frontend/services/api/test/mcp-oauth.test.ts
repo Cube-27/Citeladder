@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomInt, randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { Hono } from 'hono';
 import { parse, type DefaultTreeAdapterMap } from 'parse5';
@@ -47,6 +47,8 @@ beforeEach(async () => {
     ABUSE_MCP_REGISTER_BURST_LIMIT: '2',
     ABUSE_MCP_REGISTER_CLIENT_LIMIT: '100',
     ABUSE_MCP_REGISTER_GLOBAL_LIMIT: '1000',
+    // Every request here comes from one visitor; the pool's own test lowers it.
+    ABUSE_MCP_AUTHORIZE_UNAPPROVED_NETWORK_LIMIT: '1000',
   });
   tenant = await fixtures.tenant();
   await db
@@ -82,12 +84,15 @@ afterAll(async () => {
   await db.destroy();
 });
 
+/** Fixture registrations spend no registration budget; the budget tests spend theirs. */
+const unmetered = () => Promise.resolve();
 async function client(method: 'none' | 'client_secret_basic' = 'none') {
-  const result = await registerClient(db, loadMcpConfig(config), {
-    redirect_uris: [callback],
-    client_name: '<Unverified>',
-    token_endpoint_auth_method: method,
-  });
+  const result = await registerClient(
+    db,
+    loadMcpConfig(config),
+    { redirect_uris: [callback], client_name: '<Unverified>', token_endpoint_auth_method: method },
+    unmetered,
+  );
   clients.push(result.client_id);
   return result;
 }
@@ -220,14 +225,17 @@ it('bounds query bytes and decoded state before writing usage or requests', asyn
   ).toEqual([]);
 });
 
+// A client no person has approved spends its network's pool; an approved one the global budget.
 it.each([
-  ['mcp.authorize.client', 'client', null, mcpPolicy.authorization_client_limit],
-  ['mcp.authorize.source', 'client', 'unavailable', mcpPolicy.authorization_source_limit],
-  ['mcp.authorize.global', 'global', 'mcp.authorize', mcpPolicy.authorization_global_limit],
+  ['mcp.authorize.client', 'client', null, mcpPolicy.authorization_client_limit, false],
+  ['mcp.authorize.source', 'client', 'unavailable', mcpPolicy.authorization_source_limit, false],
+  // The limit `beforeEach` sets for every request's one shared visitor.
+  ['mcp.authorize.unapproved_network', 'client', 'unavailable', 1000, false],
+  ['mcp.authorize.global', 'global', 'mcp.authorize', mcpPolicy.authorization_global_limit, true],
 ] as const)(
   'refuses an exhausted %s budget before allocating a request',
-  async (operation, kind, subject, limit) => {
-    const c = await client();
+  async (operation, kind, subject, limit, approved) => {
+    const c = approved ? (await grant()).client : await client();
     const hash = createHash('sha256')
       .update(subject ?? c.client_id)
       .digest('hex');
@@ -262,6 +270,7 @@ it.each([
           .selectFrom('mcp_authorization_requests')
           .select('id')
           .where('client_id', '=', c.client_id)
+          .where('consumed_at', 'is', null)
           .execute(),
       ).toEqual([]);
     } finally {
@@ -546,13 +555,18 @@ it('consumes denial without minting a grant and safely binds untrusted registrat
   expect((await consent(transaction)).status).toBe(403);
   for (const redirect of ['http://remote.example/callback', 'javascript://x/%0aalert(1)'])
     await expect(
-      registerClient(db, loadMcpConfig(config), { redirect_uris: [redirect] }),
+      registerClient(db, loadMcpConfig(config), { redirect_uris: [redirect] }, unmetered),
     ).rejects.toThrow('Redirect URIs');
-  const native = await registerClient(db, loadMcpConfig(config), {
-    redirect_uris: ['cursor://anysphere.cursor-retrieval/oauth/callback'],
-    grant_types: ['authorization_code', 'refresh_token', 'client_credentials'],
-    scope: 'citeladder:read offline_access',
-  });
+  const native = await registerClient(
+    db,
+    loadMcpConfig(config),
+    {
+      redirect_uris: ['cursor://anysphere.cursor-retrieval/oauth/callback'],
+      grant_types: ['authorization_code', 'refresh_token', 'client_credentials'],
+      scope: 'citeladder:read offline_access',
+    },
+    unmetered,
+  );
   clients.push(native.client_id);
   expect(native).toMatchObject({
     grant_types: ['authorization_code', 'refresh_token'],
@@ -564,10 +578,12 @@ it('consumes denial without minting a grant and safely binds untrusted registrat
 });
 
 it('matches loopback redirects on any port and returns later errors to the client', async () => {
-  const registered = await registerClient(db, loadMcpConfig(config), {
-    redirect_uris: ['http://127.0.0.1:3000/callback'],
-    token_endpoint_auth_method: 'none',
-  });
+  const registered = await registerClient(
+    db,
+    loadMcpConfig(config),
+    { redirect_uris: ['http://127.0.0.1:3000/callback'], token_endpoint_auth_method: 'none' },
+    unmetered,
+  );
   clients.push(registered.client_id);
   const query = authorizationQuery(registered.client_id);
   query.set('redirect_uri', 'http://127.0.0.1:51234/callback');
@@ -753,7 +769,42 @@ it('lets workspace admins remove only their authorization while users cannot rev
   ).toBeNull();
 });
 
-it('meters malformed and oversized registrations, exempts preflight, and serializes concurrent budgets', async () => {
+/** A documentation-range IPv6 /48 (`2001:db8:xxxx`) no earlier run has used. */
+function freshSite() {
+  return `2001:db8:${(0x1000 + randomInt(0xefff)).toString(16)}`;
+}
+
+/** A registration request carrying valid metadata. */
+const registration = { redirect_uris: [callback], token_endpoint_auth_method: 'none' };
+
+/** Register through the route, keeping what it created for cleanup. */
+async function registerOver(service: Hono<AppEnv>, headers: Record<string, string> = {}) {
+  const response = await service.request(`${protocol}/mcp/register`, {
+    method: 'POST',
+    body: JSON.stringify(registration),
+    headers,
+  });
+  if (response.status === 201)
+    clients.push(((await response.clone().json()) as { client_id: string }).client_id);
+  return response;
+}
+
+/**
+ * The routes behind an admitted Worker: `clientIp` is what the origin check
+ * sets from the signed visitor address, here taken from a test header.
+ */
+function visitorApp(settings = config) {
+  const service = new Hono<AppEnv>();
+  service.use(async (c, next) => {
+    const visitor = c.req.header('x-test-visitor');
+    if (visitor) c.set('clientIp', visitor);
+    await next();
+  });
+  registerMcpRoutes(service, settings, db);
+  return service;
+}
+
+it('refuses malformed and invalid registrations before spending, exempts preflight, and serializes concurrent budgets', async () => {
   const identity = randomUUID();
   identities.push(identity);
   // Budgets are fixed clock windows; a held clock keeps every request in one of them.
@@ -762,8 +813,17 @@ it('meters malformed and oversized registrations, exempts preflight, and seriali
     vi.useRealTimers();
   });
   const outcomes = await Promise.allSettled(
-    Array.from({ length: 5 }, () => admitRegistration(db, identity, config.settings)),
+    Array.from({ length: 5 }, () =>
+      registerClient(
+        db,
+        loadMcpConfig(config),
+        registration,
+        admitRegistration(identity, config.settings),
+      ),
+    ),
   );
+  for (const outcome of outcomes)
+    if (outcome.status === 'fulfilled') clients.push(outcome.value.client_id);
   expect(outcomes.filter((r) => r.status === 'fulfilled')).toHaveLength(2);
   expect(
     outcomes
@@ -797,13 +857,120 @@ it('meters malformed and oversized registrations, exempts preflight, and seriali
       })
     ).status,
   ).toBe(413);
-  const limited = await app.request(`${protocol}/mcp/register`, {
-    method: 'POST',
-    body: '{}',
-    headers: { 'x-forwarded-for': '203.0.113.50' },
-  });
+  expect(
+    (await app.request(`${protocol}/mcp/register`, { method: 'POST', body: '{}' })).status,
+  ).toBe(400);
+  // None of the refused requests spent the burst of two: both of these register.
+  expect((await registerOver(app)).status).toBe(201);
+  expect((await registerOver(app, { 'x-forwarded-for': '203.0.113.50' })).status).toBe(201);
+  const limited = await registerOver(app, { 'x-forwarded-for': '203.0.113.51' });
   expect(limited.status).toBe(429);
   expect(limited.headers.get('retry-after')).toBe('45');
+});
+
+it('counts every address in one IPv6 /56 as one registering network', async () => {
+  vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-01T11:00:15Z') });
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
+  // A fresh documentation /48 per run, so earlier runs' windows never count here.
+  const site = freshSite();
+  identities.push(`${site}:500::/56`, `${site}:600::/56`);
+  const service = visitorApp();
+  const from = (visitor: string) => registerOver(service, { 'x-test-visitor': visitor });
+  expect((await from(`${site}:500::1`)).status).toBe(201);
+  expect((await from(`${site}:5ff:1:2:3:4`)).status).toBe(201);
+  // A third address in the same /56 is the same network, past its burst of two.
+  expect((await from(`${site}:5ab::9`)).status).toBe(429);
+  // The next /56 is a different network with its own budget.
+  expect((await from(`${site}:600::1`)).status).toBe(201);
+});
+
+it('keeps a registration flood from spending the authorization budget approved clients use', async () => {
+  vi.useFakeTimers({ toFake: ['Date'], now: new Date() });
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
+  const approved = await grant();
+  const site = `${freshSite()}:1`;
+  const neighbourSite = `${site.slice(0, -2)}:2`;
+  identities.push(`${site}::/64`, `${neighbourSite}::/64`);
+  const service = visitorApp(
+    testConfig({
+      MCP_ENABLED: 'true',
+      PUBLIC_API_URL: protocol,
+      FRONTEND_URL: browser,
+      ENCRYPTION_KEY: 'mcp-test-encryption-not-a-real-secret',
+      MCP_ALLOWED_ACCOUNT_EMAIL: '',
+      ABUSE_MCP_AUTHORIZE_UNAPPROVED_NETWORK_LIMIT: '3',
+    }),
+  );
+  // The shared authorization budget has one unit left in this window.
+  const window = mcpPolicy.authorization_window_seconds;
+  const epoch = Math.floor(Date.now() / 1000);
+  const started = new Date((epoch - (epoch % window)) * 1000);
+  const globalWindow = {
+    subject_kind: 'global',
+    subject_hash: createHash('sha256').update('mcp.authorize').digest('hex'),
+    operation: 'mcp.authorize.global',
+    window_started_at: started,
+  };
+  await db
+    .insertInto('usage_windows')
+    .values({
+      id: randomUUID(),
+      ...globalWindow,
+      expires_at: new Date(started.getTime() + window * 1000),
+      count: mcpPolicy.authorization_global_limit - 1,
+      created_at: new Date(),
+      updated_at: new Date(),
+    })
+    .onConflict((conflict) =>
+      conflict
+        .constraint('uq_usage_window_subject_operation_start')
+        .doUpdateSet({ count: mcpPolicy.authorization_global_limit - 1 }),
+    )
+    .execute();
+  onTestFinished(async () => {
+    await db
+      .deleteFrom('usage_windows')
+      .where('subject_kind', '=', globalWindow.subject_kind)
+      .where('subject_hash', '=', globalWindow.subject_hash)
+      .where('operation', '=', globalWindow.operation)
+      .where('window_started_at', '=', started)
+      .execute();
+  });
+  const authorize = (clientId: string, visitor: string) =>
+    service
+      .request(`${protocol}/authorize?${authorizationQuery(clientId)}`, {
+        headers: { 'x-test-visitor': visitor },
+      })
+      .then((response) => new URL(response.headers.get('location')!));
+  // Freshly registered clients flood authorization from one /64: its own pool
+  // of three admits three, then refuses, and the shared budget is untouched.
+  const flood = [await client(), await client()];
+  const outcomes = [];
+  for (const [index, visitor] of [
+    `${site}::1`,
+    `${site}::2`,
+    `${site}:a:b:c:d`,
+    `${site}::4`,
+  ].entries())
+    outcomes.push(await authorize(flood[index % 2]!.client_id, visitor)); // NOSONAR -- Order decides which request the pool refuses.
+  expect(outcomes.map((url) => url.origin === browser || url.searchParams.get('error'))).toEqual([
+    true,
+    true,
+    true,
+    'temporarily_unavailable',
+  ]);
+  // Another network's new client still has its own pool.
+  const neighbour = await client();
+  expect((await authorize(neighbour.client_id, `${neighbourSite}::1`)).origin).toBe(browser);
+  // The approved client takes the shared budget's last unit, which the flood left.
+  expect((await authorize(approved.client.client_id, `${site}::1`)).origin).toBe(browser);
+  expect((await authorize(approved.client.client_id, `${site}::1`)).searchParams.get('error')).toBe(
+    'temporarily_unavailable',
+  );
 });
 
 it('prunes expired unused clients while preserving a live authorization request', async () => {
@@ -1084,11 +1251,12 @@ it('grants write only when the client asks and the person ticks Allow changes', 
 });
 
 it('never offers changes beyond the scope the client registered', async () => {
-  const registered = await registerClient(db, loadMcpConfig(config), {
-    redirect_uris: [callback],
-    token_endpoint_auth_method: 'none',
-    scope: 'citeladder:read',
-  });
+  const registered = await registerClient(
+    db,
+    loadMcpConfig(config),
+    { redirect_uris: [callback], token_endpoint_auth_method: 'none', scope: 'citeladder:read' },
+    unmetered,
+  );
   clients.push(registered.client_id);
   const transaction = await pending(registered.client_id, 'citeladder:read citeladder:write');
   expect((await consentView(transaction)).changes).toBeUndefined();

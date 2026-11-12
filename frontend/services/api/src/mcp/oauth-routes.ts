@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Hono, type Context } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { sessionUser } from '../auth/session.ts';
-import { trustedClientIdentity } from '../auth/client-identity.ts';
+import { trustedClientNetwork } from '../auth/client-identity.ts';
 import { demoAccessExpired, policy, type ServiceConfig } from '../config.ts';
 import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
@@ -200,9 +200,12 @@ export function registerOAuthRoutes(
     });
   app.get('/.well-known/oauth-protected-resource/mcp', protectedMetadata);
   app.post('/mcp/register', async (c) => {
-    const identity = trustedClientIdentity(c, config);
-    await admitRegistration(db, identity, config.settings);
-    return c.json(await registerClient(db, mcp, await registrationBody(c.req.raw)), 201);
+    const body = await registrationBody(c.req.raw);
+    const admit = admitRegistration(
+      trustedClientNetwork(c, config, 'registration'),
+      config.settings,
+    );
+    return c.json(await registerClient(db, mcp, body, admit), 201);
   });
   app.get('/authorize', async (c) => {
     const url = new URL(c.req.url);
@@ -265,7 +268,18 @@ export function registerOAuthRoutes(
           throw new ApiError(429, 'Too many pending authorization requests; retry later', {
             headers: { 'retry-after': String(Math.max(1, mcp.requestTtl)) },
           });
-        await admitAuthorization(trx, client.client_id, trustedClientIdentity(c, config));
+        const approved = await trx
+          .selectFrom('mcp_oauth_grants')
+          .select('id')
+          .where('client_id', '=', client.client_id)
+          .limit(1)
+          .executeTakeFirst();
+        await admitAuthorization(trx, {
+          clientId: client.client_id,
+          source: trustedClientNetwork(c, config),
+          approved: approved !== undefined,
+          settings: config.settings,
+        });
         await trx
           .insertInto('mcp_authorization_requests')
           .values({

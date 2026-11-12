@@ -1,6 +1,7 @@
 /**
- * Cloudflare Turnstile on sign-up and the public "email me a link" requests.
- * Sign-in is never challenged (owner decision of 2 November 2026).
+ * Cloudflare Turnstile on sign-up and the public "email me a link" requests,
+ * and on sign-in once failures reach a challenge threshold in
+ * `config/abuse.ts` (AR-3, 12 November 2026).
  */
 export const turnstile = {
   verify_url: 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
@@ -10,6 +11,7 @@ export const turnstile = {
   /** The widget `action` each challenged request must have been solved for. */
   actions: {
     signup: 'signup',
+    login: 'login',
     'resend-verification': 'resend-verification',
     'forgot-password': 'forgot-password',
   },

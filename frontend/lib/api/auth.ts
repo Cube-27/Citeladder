@@ -101,9 +101,12 @@ export const authApi = {
     );
     return strictValidate(registrationResponseSchema, res, 'auth.register');
   },
-  /** Sign in; the request carries the Terms decision made on the form. */
+  /**
+   * Sign in; the request carries the Terms decision made on the form, and the
+   * Turnstile token once repeated failures have made sign-in challenged.
+   */
   login: async (
-    input: { email: string; password: string; termsRevision: string },
+    input: { email: string; password: string; termsRevision: string; turnstileToken?: string },
     options?: ApiRequestOptions,
   ) => {
     const res = await apiClient.post<AuthResponse>(
@@ -113,6 +116,7 @@ export const authApi = {
         password: input.password,
         terms_revision: input.termsRevision,
         accept_terms: true,
+        turnstile_token: input.turnstileToken,
       } satisfies SignInRequest,
       options,
     );

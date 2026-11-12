@@ -3,7 +3,10 @@
  * case-folded subject.
  *
  * A request consumes its budget in its own committed transaction before the
- * work it guards starts, so a failed import still spends its attempt.
+ * work it guards starts, so a failed import still spends its attempt. Work that
+ * is one database write with no network I/O (an MCP client registration) may
+ * spend inside that write's transaction instead, so a refusal spends nothing.
+ * Per-visitor (`client`) subjects are networks, from `trustedClientNetwork`.
  */
 import { createHash, randomUUID } from 'node:crypto';
 
@@ -73,6 +76,57 @@ export async function spendBudget(
   { amount = 1, at = new Date() }: { amount?: number; at?: Date } = {},
 ): Promise<void> {
   return enforceSubjectRequest(db, kind, subject, { ...limit, amount }, at);
+}
+
+/**
+ * Count `amount` units for `subject` without refusing: a threshold budget,
+ * read by `budgetReached`, that changes how a request is handled rather than
+ * whether it is admitted.
+ */
+export async function countUse(
+  db: Database,
+  { subject: kind, operation, windowSeconds }: Budget,
+  subject: string,
+  { amount = 1, at = new Date() }: { amount?: number; at?: Date } = {},
+): Promise<void> {
+  const { started, expires } = windowOf(windowSeconds, at);
+  await db
+    .insertInto('usage_windows')
+    .values({
+      id: randomUUID(),
+      subject_kind: kind,
+      subject_hash: subjectHash(subject),
+      operation,
+      window_started_at: started,
+      expires_at: expires,
+      count: amount,
+      created_at: at,
+      updated_at: at,
+    })
+    .onConflict((conflict) =>
+      conflict
+        .constraint('uq_usage_window_subject_operation_start')
+        .doUpdateSet({ count: sql`usage_windows.count + ${amount}`, updated_at: at }),
+    )
+    .execute();
+}
+
+/** Whether `subject` has used all of `budget` in the current window. */
+export async function budgetReached(
+  db: Database,
+  { subject: kind, operation, limit, windowSeconds }: Budget,
+  subject: string,
+  at: Date = new Date(),
+): Promise<boolean> {
+  const row = await db
+    .selectFrom('usage_windows')
+    .select('count')
+    .where('subject_kind', '=', kind)
+    .where('subject_hash', '=', subjectHash(subject))
+    .where('operation', '=', operation)
+    .where('window_started_at', '=', windowOf(windowSeconds, at).started)
+    .executeTakeFirst();
+  return (row?.count ?? 0) >= limit;
 }
 
 /** Forget every window of one subject's named budget (a proven owner resets their failures). */

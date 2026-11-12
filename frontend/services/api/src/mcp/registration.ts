@@ -65,19 +65,43 @@ function validateRegistration(input: unknown) {
   };
 }
 
-export function admitRegistration(db: Database, client: string, settings: SettingSource) {
-  return admitBudgets(db, [
-    [budget('mcp_register_burst', settings), client],
-    [budget('mcp_register_client', settings), client],
-    [budget('mcp_register_global', settings), MCP_REGISTER_SUBJECT],
-  ]);
+/** Spends a registration's budgets inside the transaction that stores the client. */
+export type RegistrationAdmission = (trx: Database) => Promise<void>;
+
+/**
+ * The registering network's burst and window budgets, then the global ceiling
+ * last: a network over its own budget spends none of the global one.
+ */
+export function admitRegistration(network: string, settings: SettingSource): RegistrationAdmission {
+  return (trx) =>
+    admitBudgets(trx, [
+      [budget('mcp_register_burst', settings), network],
+      [budget('mcp_register_client', settings), network],
+      [budget('mcp_register_global', settings), MCP_REGISTER_SUBJECT],
+    ]);
 }
 
-export function admitAuthorization(db: Database, clientId: string, source: string) {
+/**
+ * A client a person has approved spends the shared global authorization
+ * budget. One no person has approved yet (every fresh anonymous registration)
+ * spends its network's own smaller pool instead, so a flood of registered
+ * clients cannot use up authorization for anyone else.
+ */
+export function admitAuthorization(
+  db: Database,
+  {
+    clientId,
+    source,
+    approved,
+    settings,
+  }: { clientId: string; source: string; approved: boolean; settings: SettingSource },
+) {
   return admitBudgets(db, [
     [budget('mcp_authorize_client'), clientId],
     [budget('mcp_authorize_source'), source],
-    [budget('mcp_authorize_global'), MCP_AUTHORIZE_SUBJECT],
+    approved
+      ? [budget('mcp_authorize_global'), MCP_AUTHORIZE_SUBJECT]
+      : [budget('mcp_authorize_unapproved_network', settings), source],
   ]);
 }
 
@@ -98,7 +122,17 @@ async function admitBudgets(db: Database, budgets: readonly (readonly [Budget, s
   for (const [limit, subject] of budgets) await spendBudget(db, limit, subject); // NOSONAR -- A refused budget stops before the next is charged.
 }
 
-export async function registerClient(db: Database, mcp: McpConfig, input: unknown) {
+/**
+ * Store a validated registration. Invalid metadata is refused before any
+ * budget is spent; `admit` spends them last, in the same transaction, so a
+ * refused or failed registration spends nothing.
+ */
+export async function registerClient(
+  db: Database,
+  mcp: McpConfig,
+  input: unknown,
+  admit: RegistrationAdmission,
+) {
   if (!mcp.enabled) throw new OAuthError('invalid_client_metadata', 'MCP access is not enabled');
   const metadata = validateRegistration(input);
   const clientId = randomUUID();
@@ -138,6 +172,8 @@ export async function registerClient(db: Database, mcp: McpConfig, input: unknow
         created_at: new Date(),
       })
       .execute();
+    // Last, so the global window's row lock is held only until commit.
+    await admit(trx);
   });
   return {
     ...metadata,

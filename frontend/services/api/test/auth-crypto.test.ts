@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { hashPassword, verifyPassword } from '../src/auth/password.ts';
-import { clientIdentity, parseTrustedProxies } from '../src/auth/client-identity.ts';
+import { clientIdentity, clientNetwork, parseTrustedProxies } from '../src/auth/client-identity.ts';
 
 describe('persisted authentication crypto', () => {
   it('verifies a hash stored under earlier Argon2 parameters after the cost change', async () => {
@@ -32,5 +32,29 @@ describe('persisted authentication crypto', () => {
     expect(
       clientIdentity('::ffff:127.0.0.1', '2001:db8::1', parseTrustedProxies('127.0.0.0/8')),
     ).toBe('2001:db8::1');
+  });
+  it('counts an IPv6 visitor by its /64, a registration by its /56, and IPv4 by its address', () => {
+    const networks = (scope: 'client' | 'registration', addresses: string[]) =>
+      addresses.map((address) => clientNetwork(address, scope));
+    expect(
+      networks('client', [
+        '2001:db8:1:2:aaaa:bbbb:cccc:dddd',
+        '2001:DB8:1:2::9',
+        '2001:db8:1:3::9',
+        '203.0.113.9',
+        '::ffff:203.0.113.9',
+        'unavailable',
+      ]),
+    ).toEqual([
+      '2001:db8:1:2::/64',
+      '2001:db8:1:2::/64',
+      '2001:db8:1:3::/64',
+      '203.0.113.9',
+      '203.0.113.9',
+      'unavailable',
+    ]);
+    expect(
+      networks('registration', ['2001:db8:1:2::9', '2001:db8:1:ff::9', '2001:db8:1:100::9']),
+    ).toEqual(['2001:db8:1::/56', '2001:db8:1::/56', '2001:db8:1:100::/56']);
   });
 });

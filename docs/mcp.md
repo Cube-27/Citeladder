@@ -66,10 +66,19 @@ clients register before any CiteLadder login exists. There is deliberately no
 redirect-host allowlist; the protections are bounds and binding:
 
 - The [registration guard](../frontend/services/api/src/mcp/registration.ts)
-  charges per-client burst and window budgets and a global ceiling through the
-  shared [usage limiter](../frontend/services/api/src/abuse/usage.ts) before the
-  body is read, keyed by the trusted-proxy client identity. Refusals are 429
-  with `Retry-After`; a client over its own budget does not spend the global one.
+  reads the bounded body and validates the metadata first, so a malformed or
+  invalid registration spends nothing. It then charges the registering
+  network's burst and window budgets and, last, the global ceiling through the
+  shared [usage limiter](../frontend/services/api/src/abuse/usage.ts), inside
+  the transaction that stores the client. The network is the trusted visitor's
+  IPv4 address or IPv6 /56. Refusals are 429 with `Retry-After`; a network over
+  its own budget does not spend the global one.
+- `/authorize` charges the client, its source network (IPv6 /64) and then a
+  third pool. A client a person has already approved (it holds a grant) spends
+  the global authorization budget. A client no person has approved yet, such as
+  every fresh registration, spends its source network's own smaller pool
+  (`ABUSE_MCP_AUTHORIZE_UNAPPROVED_NETWORK_LIMIT`) instead, so a flood of
+  anonymous registrations cannot use up authorization for anyone else.
   Limits are owned by [abuse configuration](../frontend/services/api/src/config/abuse.ts).
 - Redirects are HTTPS on a concrete host, loopback HTTP, or a native app's
   private-use scheme (RFC 8252 §7.1): a reverse-domain scheme or a listed editor

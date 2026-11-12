@@ -2,6 +2,7 @@ import ipaddr from 'ipaddr.js';
 import { getConnInfo } from '@hono/node-server/conninfo';
 import type { Context } from 'hono';
 import type { ServiceConfig } from '../config.ts';
+import { clientNetworkPrefixes, type ClientNetworkScope } from '../config/abuse.ts';
 import type { AppEnv } from '../context.ts';
 
 export type TrustedProxies = readonly [ipaddr.IPv4 | ipaddr.IPv6, number][];
@@ -36,6 +37,33 @@ export function clientIdentity(
   return peer;
 }
 
+/**
+ * The network a per-visitor budget counts: an IPv4 address as it is, an IPv6
+ * address widened to the scope's prefix, so rotating addresses inside one
+ * allocation never earns a fresh budget. A value that is not an address
+ * (`unavailable`) stays one shared subject.
+ */
+export function clientNetwork(identity: string, scope: ClientNetworkScope): string {
+  if (!ipaddr.isValid(identity)) return identity;
+  const address = ipaddr.process(identity);
+  if (address.kind() === 'ipv4') return address.toString();
+  const prefix = clientNetworkPrefixes[scope];
+  return `${ipaddr.IPv6.networkAddressFromCIDR(`${address.toString()}/${prefix}`).toString()}/${prefix}`;
+}
+
+/** The trusted visitor's network: the subject of every per-visitor (`client`) budget. */
+export function trustedClientNetwork(
+  c: Context<AppEnv>,
+  config: ServiceConfig,
+  scope: ClientNetworkScope = 'client',
+): string {
+  return clientNetwork(trustedClientIdentity(c, config), scope);
+}
+
+/**
+ * The trusted visitor's exact address, for what must name one host (Turnstile's
+ * `remoteip`). Budgets count `trustedClientNetwork` instead.
+ */
 export function trustedClientIdentity(c: Context<AppEnv>, config: ServiceConfig): string {
   // Behind Cloud Run the socket peer is Google's front end; the admitted Worker names the visitor.
   const admitted = c.get('clientIp');

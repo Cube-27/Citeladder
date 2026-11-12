@@ -232,10 +232,10 @@ export function AuthFormShell({
    */
   terms?: TermsDecision;
   /**
-   * Sign-up and the email-link requests: the Turnstile widget, in a reserved
-   * slot between the fields and submit. Submit, and a sign-up's
-   * Continue with Google, stay disabled until it hands over a token. Sign-in
-   * omits it.
+   * Sign-up, the email-link requests and a challenged sign-in: the Turnstile
+   * widget, in a reserved slot between the fields and submit. Submit, and a
+   * sign-up's Continue with Google, stay disabled until it hands over a token.
+   * Sign-in passes it only once the API has challenged it.
    */
   verification?: Turnstile;
   children: ReactNode;

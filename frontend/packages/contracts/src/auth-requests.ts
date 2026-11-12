@@ -24,16 +24,23 @@ export type TermsDecisionRequest = z.input<typeof termsDecisionRequestSchema>;
 export const passwordConfirmationRequestSchema = z.object({ password: password() });
 export type PasswordConfirmationRequest = z.input<typeof passwordConfirmationRequestSchema>;
 
-/** Signing in is also a Terms decision: the request must carry it. */
+/**
+ * Signing in is also a Terms decision: the request must carry it. After
+ * repeated failures sign-in is challenged, and then it also carries the
+ * Turnstile token solved on the form.
+ */
 export const signInRequestSchema = z
-  .object({ return_to: returnTo(), email: email(), password: password() })
+  .object({
+    return_to: returnTo(),
+    email: email(),
+    password: password(),
+    turnstile_token: turnstileToken(),
+  })
   .extend(termsDecisionRequestSchema.shape);
 export type SignInRequest = z.input<typeof signInRequestSchema>;
 
-/** Sign-up, unlike sign-in, also carries the Turnstile token solved on the form. */
-export const signUpRequestSchema = signInRequestSchema.extend({
-  turnstile_token: turnstileToken(),
-});
+/** Sign-up has sign-in's shape, and it is always challenged. */
+export const signUpRequestSchema = signInRequestSchema;
 export type SignUpRequest = z.input<typeof signUpRequestSchema>;
 
 /** Asking for an email link (verification or password reset); the request is challenged. */

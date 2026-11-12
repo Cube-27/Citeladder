@@ -8,7 +8,7 @@ import type { Context } from 'hono';
 import { z } from 'zod';
 
 import { budget, spendBudget } from '../abuse/usage.ts';
-import { trustedClientIdentity } from '../auth/client-identity.ts';
+import { trustedClientNetwork } from '../auth/client-identity.ts';
 import { sessionUser, type SessionUser } from '../auth/session.ts';
 import { activeWorkspaceMembership } from '../auth/workspace.ts';
 import { clientErrors } from '../config/client-errors.ts';
@@ -66,7 +66,7 @@ export const clientErrorRoutes = [
       await spendBudget(
         db,
         budget('client_error_report', config.settings),
-        trustedClientIdentity(c, config),
+        trustedClientNetwork(c, config),
       );
       const report = await readBody(c, clientErrorReportSchema);
       const fields = {

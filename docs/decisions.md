@@ -461,18 +461,24 @@ uncommitted. Remove Recharts now, or keep it?", answering "Remove Recharts".
 This supersedes the 2 November 2026 answer "no replace", which had kept
 Recharts.
 
-## Turnstile guards sign-up and email-link requests, never sign-in
+## Turnstile guards sign-up and email-link requests, and sign-in after repeated failures
 
 Cloudflare Turnstile (free, already on the contact form) protects account
 creation and every public "email me a link" request: email sign-up, a Google
-sign-up start, resend verification and forgot password. Sign-in is never
-challenged. The API verifies the token, before any account row or mail exists,
-so the SPA and any non-browser caller meet one rule in one owner; its secret is
-an API secret, and outside development a missing one fails closed.
+sign-up start, resend verification and forgot password. The API verifies the
+token, before any account row or mail exists, so the SPA and any non-browser
+caller meet one rule in one owner; its secret is an API secret, and outside
+development a missing one fails closed.
 
 Source: owner, 2 November 2026, answering "Add Turnstile to sign-up? It's free
 and you already use it on the contact form. I'd add it only to sign-up and to
 email-link requests, not to sign-in," with "yes".
+
+Sign-in was never challenged under that answer. The owner's decision AR-3 of
+12 November 2026 ([audit remediation](plans/audit-remediation.md#owner-decisions-2026-11-12))
+supersedes that part: sign-in is challenged after 5 failures for the address or
+the network, and abuse budgets key on the IPv6 /64 (/56 for registration) with
+a global sign-in failure ceiling.
 [Workspace access](workspace-access.md) owns the shipped behavior.
 
 ## Public sign-up refuses disposable email domains
