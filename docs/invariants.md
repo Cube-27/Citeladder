@@ -195,7 +195,8 @@ fragments before its first model call. Crawl text stays untrusted observation.
 One shared operating contract forbids invented company, product, customer,
 price, policy, statistic, and competitor facts; there is no second model call or
 deterministic claim-validator layer. A turn's sources are the records its
-executed reads returned plus the attached or mentioned Actions' findings; the
+executed reads supplied to the model plus the findings of the attached or
+mentioned Actions its context supplied, never records a size bound dropped; the
 model does not repeat record references, which are removed from user-facing
 text. A fact from a web search is attributed to the page it came from; that
 page is shown as a web source, never as a CiteLadder record. The output remains

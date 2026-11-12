@@ -28,7 +28,7 @@ import { ModelCalls, type Funding, type ModelRequest } from '../src/agent/model-
 import { readChat, listChats, listRevisions, progress } from '../src/agent/reads.ts';
 import { appendMessage, getChat, recoveryReply } from '../src/agent/messages.ts';
 import { ToolRegistry } from '../src/agent/tools.ts';
-import { contextCitations, manifestSchema, suppliedManifest } from '../src/agent/context.ts';
+import { manifestSchema, suppliedManifest } from '../src/agent/context.ts';
 import { bounded } from '../src/agent/runtime.ts';
 import { scrubRecordRefs } from '../src/agent/sources.ts';
 import { parseWorkflows } from '../src/agent/workflows.ts';
@@ -1846,7 +1846,9 @@ describe('Agent runtime on PostgreSQL', () => {
         },
       ],
     };
-    expect(contextCitations(manifest)).toEqual(new Set([`citeladder://opportunity/${id}`]));
+    expect(suppliedManifest(manifest).citations).toEqual(
+      new Set([`citeladder://opportunity/${id}`]),
+    );
     expect(
       suppliedManifest({
         ...manifest,
@@ -1857,6 +1859,52 @@ describe('Agent runtime on PostgreSQL', () => {
       }).text.length,
     ).toBeLessThanOrEqual(agentPolicy.context_package_max_chars);
     expect(bounded('123456', 3, 'CUT')).toBe('CUT');
+  });
+  it('cites only the records a size-bounded read still supplied to the model', async () => {
+    const scope = await fixtures.scope();
+    const shown = randomUUID();
+    const dropped = randomUUID();
+    const uri = (id: string) => `citeladder://prompt/${id}`;
+    const row = (id: string, text: string) => ({ id, record_uri: uri(id), text });
+    const tools = new ToolRegistry('test-tools-1', [
+      {
+        name: 'prompts',
+        description: 'Read prompts.',
+        arguments: z.strictObject({}),
+        read: async () => ({
+          state: 'available',
+          data: {
+            first: row(shown, 'short'),
+            rest: row(dropped, 'x'.repeat(agentPolicy.tool_result_max_chars)),
+          },
+          artifactRefs: [
+            { id: shown, record_uri: uri(shown) },
+            { id: dropped, record_uri: uri(dropped) },
+          ],
+          omissions: [],
+        }),
+      },
+    ]);
+    const { run, lease } = await fixtures.claimed(scope);
+    await fixtures
+      .runtime(scope, scripted([read({}, 'prompts'), reply('Answered.')]), { tools })
+      .execute(lease);
+    // The attempt records every record the read returned ...
+    const attempt = await db
+      .selectFrom('agent_tool_attempts')
+      .select('artifact_refs')
+      .where('run_id', '=', run.id)
+      .executeTakeFirstOrThrow();
+    expect(attempt.artifact_refs).toEqual([
+      { id: shown, record_uri: uri(shown) },
+      { id: dropped, record_uri: uri(dropped) },
+    ]);
+    // ... but the reply cites only the one the size bound left in the model's input.
+    const completed = await readChat(db, scope, run.chat_id);
+    expect(completed.messages.at(-1)).toMatchObject({
+      content: 'Answered.',
+      evidence_refs: [uri(shown)],
+    });
   });
   it('freezes instruction revisions and pages persisted chats without doing work', async () => {
     const scope = await fixtures.scope();

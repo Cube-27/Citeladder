@@ -279,9 +279,11 @@ export function suppliedManifest(
     text: JSON.stringify(supplied),
     omissions,
     included: Object.keys(supplied.package.sections),
+    // Cited from what the model received: a trimmed mention or diagnosis is not a source.
+    citations: contextCitations(supplied),
   };
 }
-export function contextCitations(manifest: Pick<Manifest, 'action' | 'mentions'>): Set<string> {
+function contextCitations(manifest: Pick<Manifest, 'action' | 'mentions'>): Set<string> {
   // Other context blocks are working context, not a record citation grant.
   return new Set(
     [manifest.action, ...manifest.mentions].flatMap((action) => {

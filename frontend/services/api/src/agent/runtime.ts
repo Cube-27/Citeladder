@@ -43,7 +43,7 @@ import {
   type Scope,
   type SkillCatalog,
 } from './contracts.ts';
-import { contextCitations, manifestSchema, suppliedManifest } from './context.ts';
+import { manifestSchema, suppliedManifest } from './context.ts';
 import {
   ModelCalls,
   RefusedDispatch,
@@ -95,7 +95,7 @@ type StepRecord = {
 };
 type PromptSummary = Record<string, Json>;
 type TurnState = DocumentState & {
-  /** Records this turn's reads returned: the reply's sources. */
+  /** Records this turn's reads supplied to the model: the reply's sources. */
   read: string[];
   /** Web pages this turn's searches returned, by URL: sources apart from CiteLadder records. */
   web: Map<string, string>;
@@ -725,7 +725,7 @@ export class AgentRuntime {
       status: outcome.status,
       call_id: call.id,
     });
-    state.read.push(...readSources(outcome.refs));
+    state.read.push(...readSources(outcome.received));
     return outcome;
   }
   private recordTool(
@@ -787,7 +787,7 @@ export class AgentRuntime {
       const run = await lockRun(trx, lease);
       await authorize(trx, turn.scope);
       const chat = await getChat(trx, turn.scope, run.chat_id, true);
-      const sources = uniqueSources(contextCitations(turn.manifest), read);
+      const sources = uniqueSources(turn.context.citations, read);
       const completion = [
         ...staged.map(([number, { payload }]) => {
           const format = payload.format_id;

@@ -205,11 +205,13 @@ read result is bounded to `tool_result_max_chars`, and the frozen context to
 ### Sources
 
 Sources are derived by the server, not reported by the model. The model has no
-`evidence` field. A reply's sources are the records its turn's reads returned
-plus the findings of the attached and mentioned Actions
-([`sources.ts`](../frontend/services/api/src/agent/sources.ts), bounded and
-deduplicated). A new revision keeps its predecessor's sources and adds this
-turn's. Results read in earlier turns stay in the replayed conversation, but
+`evidence` field. A reply's sources are the records its turn's reads supplied
+to the model plus the findings of the attached and mentioned Actions its context
+supplied ([`sources.ts`](../frontend/services/api/src/agent/sources.ts), bounded
+and deduplicated). A record the result-size bound dropped from a read, or a
+mention or diagnosis the context trimming dropped, is not a source; the tool
+attempt still records every record the read returned. A new revision keeps its
+predecessor's sources and adds this turn's. Results read in earlier turns stay in the replayed conversation, but
 only this turn's reads are its sources.
 
 The model never writes record references for the user. Before saving, the
@@ -608,6 +610,8 @@ rechecks lease ownership, cancellation, the member's run permission, the
 capability and the admitted platform model,
 then [commits the dispatch](../frontend/services/api/src/agent/model-calls.ts)
 before any network I/O; no transaction is held across provider or tool I/O.
+A read's timeout, Stop and lease loss end its work, not only the wait: once
+its signal aborts, the shared read issues no further query.
 Settlement survives cancellation and lease loss while replies and revisions
 stay fenced, and recovery runs accounting in the same transaction as its
 terminal write.
