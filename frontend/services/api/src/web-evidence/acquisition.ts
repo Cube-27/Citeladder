@@ -33,6 +33,9 @@ function robotsLine(raw: string) {
   };
 }
 
+/** A `User-agent` value as the parser keys it: lower-cased, without a version. */
+const agentToken = (value: string) => value.toLowerCase().split('/', 1)[0]?.trim() ?? '';
+
 /**
  * The user-agent groups robots.txt gives rules (allow, disallow or crawl
  * delay), lower-cased without a version, grouped as the parser groups them:
@@ -44,15 +47,14 @@ function ruleGroups(body: string) {
   let collecting = false;
   for (const raw of body.split(/\r\n|\r|\n/u)) {
     const { field, value } = robotsLine(raw);
-    if (!field) continue;
     if (field === 'user-agent') {
-      if (!collecting) agents = [];
+      agents = collecting ? agents : [];
       collecting = true;
-      if (value) agents.push(value.toLowerCase().split('/', 1)[0]?.trim() ?? '');
-      continue;
+      if (value) agents.push(agentToken(value));
+    } else if (field) {
+      collecting = false;
+      if (RULE_FIELDS.has(field)) agents.forEach((agent) => groups.add(agent));
     }
-    collecting = false;
-    if (RULE_FIELDS.has(field)) for (const agent of agents) groups.add(agent);
   }
   return groups;
 }
