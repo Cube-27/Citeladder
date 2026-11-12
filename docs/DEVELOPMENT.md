@@ -217,6 +217,9 @@ The default Playwright suite uses mocked browser fixtures and runs its tests in
 parallel. Its `app` project targets the built SPA (`vp preview`) on 3100; its
 `marketing` project targets the built Astro Worker on 3101. It is not
 evidence of live provider acceptance; those checks remain explicit release work.
+A failed test is retried once so the report says whether it is flaky, and in CI
+a flaky test fails the run (`failOnFlakyTests`); the trace kept is the first,
+failing attempt's. Fix the test; never raise the retries.
 
 For browser enforcement of production Worker CSP, build `pnpm build:app` and
 `pnpm build:marketing` with explicit public origins and the disposable marketing
@@ -225,7 +228,8 @@ from `frontend/`. This separate suite starts local HTTPS Workerd on ports
 8793/8794, checks built HTML and hydration, and proves injected inline scripts
 are blocked. It also runs the existing authenticated Performance and analytics
 consent checks against the built Workers. It uses disposable upstream settings and mocks analytics requests;
-it does not enable or test a live checkout/provider.
+it does not enable or test a live checkout/provider. CI runs it as the
+`Worker CSP and consent (playwright)` job, built with the accepted public origins.
 
 ### API service (TypeScript)
 
@@ -394,12 +398,18 @@ to the cumulative PR diff, which includes every failed or unexecuted owner from
 the PR. Schema-only and frontend-only pushes do not repeat unrelated
 successful suites, and ordinary frontend edits do not automatically launch
 browser E2E. Browser-sensitive paths run only the specs mapped in
-`scripts/e2e-paths.json`; the complete default Playwright suite is reserved
+`scripts/e2e-paths.json`, and a helper, fixture or shared content file selects
+every spec that imports it; the complete default Playwright suite is reserved
 for `main`, merge-queue validation, unknown shared paths, changes to
-Playwright's global configuration, and paths mapped to `"frontendE2E": "all"`
+Playwright's global configuration, the `CI` workflow and its shared frontend
+setup action (which also run the Worker CSP suite), and paths mapped to `"frontendE2E": "all"`
 (the shared API schemas in `frontend/packages/contracts/`). Shared, configuration, and
 contract paths select native API/browser checks; the SQL migrations select the
-native API owner and the Compose smoke. The clean-clone Compose smoke runs
+native API owner and the Compose smoke. The API suite also runs for the frontend
+files the API reads (the app's `globals.css` for PDFs, and the docs artifacts
+its reference exporters check). The Worker CSP suite runs for the app and
+marketing Workers, their CSP and consent owners, and the specs it reruns
+against them. The clean-clone Compose smoke runs
 on application/Compose-sensitive PR
 changes, merge queue validation, and every push to `main`. A push to `main`
 skips full validation only when it is owner-free (documentation or inert
@@ -407,12 +417,13 @@ deploy configuration) and the same workflow passed on the previous `main`
 commit; otherwise it validates in full. Deploys require both workflows' push
 runs for the exact deployed commit to have passed.
 
-Require every job status from the `CI` and `Compose smoke` workflows. The
-classifier jobs must pass; each selected owner must pass; and GitHub reports an
-owner skipped by its job-level condition as successful. Requiring the jobs
-directly avoids a final runner-only aggregation job after all useful work has
-finished. Do not add workflow-level `paths` filters to required workflows; a
-skipped workflow can leave its required statuses pending.
+The `CI` workflow's required status is its `CI result` job. GitHub reports an
+owner skipped by its job-level condition as successful, so requiring owner jobs
+by name would also pass a run whose classifier failed; `CI result` passes only
+when the classifier passed and every selected owner passed. Require the
+`Compose smoke` workflow's job statuses alongside it. Do not add
+workflow-level `paths` filters to required workflows; a skipped workflow can
+leave its required statuses pending.
 
 Static-analysis commands, pinned by the frozen locks:
 
@@ -431,8 +442,9 @@ _added_ (widening the gate is a tightening) but never removed.
 
 ### Coverage
 
-Coverage is measured and published whenever its owning CI suite is selected and
-is **not a gate**, in either the repository-wide or the changed-lines form. A
+Coverage is measured and published whenever its owning CI suite is selected
+(the frontend and API Vitest shards upload `frontend-coverage-*` and
+`api-coverage-*` artifacts) and is **not a gate**, in either the repository-wide or the changed-lines form. A
 coverage ratio is a target you can move without improving anything, so enforcing
 one reliably produces tests written to move the number rather than to describe
 behaviour.

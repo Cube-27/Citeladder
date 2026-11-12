@@ -58,34 +58,21 @@
     "frontendE2E": ["e2e/marketing-pages.spec.ts"]
   },
   {
-    "sources": [
-      "frontend/apps/app/src/auth-routes.tsx",
-      "frontend/components/onboarding/**",
-      "frontend/lib/onboarding/**",
-      "frontend/lib/setup/**",
-      "frontend/components/tour/**"
-    ],
+    "sources": ["frontend/components/onboarding/**", "frontend/lib/onboarding/**"],
     "frontendE2E": ["e2e/design-repair.spec.ts"]
   },
   {
     "sources": [
       "frontend/components/layout/**",
       "frontend/lib/navigation/**",
-      "frontend/lib/navigate.ts",
       "frontend/apps/app/src/main.tsx",
       "frontend/apps/app/src/router.tsx",
-      "frontend/apps/app/src/private-routes.tsx",
-      "frontend/apps/app/src/auth-routes.tsx"
+      "frontend/apps/app/src/private-routes.tsx"
     ],
     "frontendE2E": ["e2e/shell.spec.ts"]
   },
   {
-    "sources": [
-      "frontend/apps/app/src/product-routes-visibility-runs.tsx",
-      "frontend/components/visibility/**",
-      "frontend/lib/visibility/**",
-      "frontend/components/intelligence/**"
-    ],
+    "sources": ["frontend/components/visibility/**", "frontend/lib/visibility/**"],
     "frontendE2E": ["e2e/visibility.spec.ts"]
   },
   {
@@ -96,18 +83,11 @@
     "frontendE2E": ["e2e/search-intelligence.spec.ts"]
   },
   {
-    "sources": [
-      "frontend/apps/app/src/product-routes-visibility-runs.tsx",
-      "frontend/components/runs/**",
-      "frontend/lib/runs/**",
-      "frontend/lib/sse/**"
-    ],
+    "sources": ["frontend/components/runs/**", "frontend/lib/runs/**", "frontend/lib/sse/**"],
     "frontendE2E": ["e2e/runs.spec.ts"]
   },
   {
     "sources": [
-      "frontend/apps/app/src/product-routes-actions.tsx",
-      "frontend/apps/app/src/product-routes-agent.tsx",
       "frontend/components/agent/**",
       "frontend/lib/agent/**",
       "frontend/lib/api/actions.ts",
@@ -121,7 +101,6 @@
   },
   {
     "sources": [
-      "frontend/apps/app/src/product-routes-agent.tsx",
       "frontend/components/agent/**",
       "frontend/components/ui/drawer.tsx",
       "frontend/lib/agent/**",
@@ -143,10 +122,38 @@
     "sources": [
       "frontend/lib/billing/**",
       "frontend/components/billing/**",
-      "frontend/components/settings/billing-settings.tsx",
-      "frontend/lib/api/billing.ts",
-      "frontend/components/marketing/pricing/**"
+      "frontend/lib/api/billing.ts"
     ],
     "frontendE2E": ["e2e/design-repair.spec.ts", "e2e/self-serve-auth.spec.ts", "e2e/shell.spec.ts"]
+  },
+  {
+    "sources": [
+      "frontend/components/agent/workspace/**",
+      "frontend/lib/agent/**",
+      "frontend/lib/api/actions.ts",
+      "frontend/lib/api/agent.ts"
+    ],
+    "frontendE2E": ["e2e/page-workspace.spec.ts"]
+  },
+  {
+    "sources": [
+      "frontend/components/performance/**",
+      "frontend/lib/performance/**",
+      "frontend/lib/api/performance.ts",
+      "frontend/lib/api/integrations.ts"
+    ],
+    "frontendE2E": ["e2e/performance-states.spec.ts"]
+  },
+  {
+    "sources": [
+      "frontend/components/site-health/**",
+      "frontend/lib/site-health/**",
+      "frontend/lib/api/site-health*.ts"
+    ],
+    "frontendE2E": ["e2e/site-health-recovery.spec.ts"]
+  },
+  {
+    "sources": ["frontend/apps/marketing/**", "frontend/components/marketing/**"],
+    "frontendE2E": ["e2e/smoke.spec.ts"]
   }
 ]

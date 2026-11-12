@@ -22,7 +22,7 @@ export default defineConfig({
   retries: 0,
   reporter: 'list',
   outputDir: 'test-results/workers',
-  use: { ignoreHTTPSErrors: true },
+  use: { ignoreHTTPSErrors: true, trace: 'retain-on-failure' },
   webServer: [
     {
       command:

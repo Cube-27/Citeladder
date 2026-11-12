@@ -537,8 +537,19 @@ test.describe('marketing routes', () => {
   test('shared navigation and footer work from a subpage', async ({ page }) => {
     await page.goto('/faq');
     const nav = page.getByRole('navigation', { name: 'Main navigation' });
-    await nav.getByRole('button', { name: 'Resources', exact: true }).click();
-    await expect(nav.getByRole('link', { name: /Blog & guides/ })).toHaveAttribute('href', '/blog');
+    // The desktop menu is a `client:load` island that hydrates after the load
+    // event `goto` waits for, and Astro drops the island's `ssr` attribute when
+    // hydration starts, not when it finishes. A click before then reaches
+    // markup with no handler and the menu never opens, so press until it does;
+    // an open menu is not pressed again, which would close it.
+    const blog = nav.getByRole('link', { name: /Blog & guides/ });
+    await expect(async () => {
+      if (!(await blog.isVisible())) {
+        await nav.getByRole('button', { name: 'Resources', exact: true }).click();
+      }
+      await expect(blog).toBeVisible({ timeout: 1000 });
+    }).toPass();
+    await expect(blog).toHaveAttribute('href', '/blog');
 
     const footer = page.getByRole('navigation', { name: 'Footer' });
     await expect(footer.getByRole('link', { name: 'Pricing', exact: true })).toBeVisible();

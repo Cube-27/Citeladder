@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { appendFileSync, readFileSync } from 'node:fs';
+import { appendFileSync, readFileSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
@@ -44,16 +44,31 @@ function isFrontend(path) {
   return path.startsWith('frontend/');
 }
 
-// The TypeScript API service (including its SQL schema baseline) and the
-// contracts package it imports.
+// Frontend files outside the API package that its code, scripts or tests read:
+// the PDF brand tokens, the docs artifacts its reference exporters check and
+// its tests import, and the formatter settings the exporters write with.
+// scripts/ci-changes.test.mjs derives these reads from the API sources.
+const API_EXTERNAL_INPUTS = [
+  'frontend/apps/app/src/globals.css',
+  'frontend/apps/docs/public/templates/',
+  'frontend/apps/docs/src/content/ai-traffic.md',
+  'frontend/apps/docs/src/data/mcp-tools.json',
+  'frontend/apps/docs/src/data/public-api.json',
+  'frontend/vp-shared-config.ts',
+];
 
+// The TypeScript API service (including its SQL schema baseline), the
+// contracts package it imports, and the frontend files it reads.
 function isApiService(path) {
   return (
     path.startsWith('frontend/services/') ||
     path.startsWith('frontend/packages/') ||
     path === 'frontend/package.json' ||
     path === 'frontend/pnpm-lock.yaml' ||
-    path === 'frontend/pnpm-workspace.yaml'
+    path === 'frontend/pnpm-workspace.yaml' ||
+    API_EXTERNAL_INPUTS.some((input) =>
+      input.endsWith('/') ? path.startsWith(input) : path === input,
+    )
   );
 }
 
@@ -84,7 +99,7 @@ function globRegex(pattern) {
   return new RegExp(`${source}$`, 'u');
 }
 
-function matchesAny(path, patterns) {
+export function matchesAny(path, patterns) {
   return patterns.some((pattern) => globRegex(pattern).test(path));
 }
 
@@ -94,44 +109,134 @@ function matchesAny(path, patterns) {
 // app E2E job makes Playwright fail with "No tests found".
 const OTHER_CONFIG_SPECS = new Set(['e2e/docs.spec.ts', 'e2e/worker-csp.spec.ts']);
 
+const REPOSITORY_ROOT = new URL('../', import.meta.url);
+const IMPORT_SPECIFIER = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)['"]([^'"]+)['"]/gu;
+const RESOLVED_EXTENSIONS = ['', '.ts', '.tsx', '.mjs', '.js', '/index.ts', '/index.tsx'];
+
+function readRepositoryFile(path) {
+  try {
+    return readFileSync(new URL(path, REPOSITORY_ROOT), 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+/** The repository file a spec's import names, or null for a package import. */
+function resolveImport(fromPath, specifier) {
+  let base;
+  if (specifier.startsWith('@/')) base = `frontend/${specifier.slice(2)}`;
+  else if (specifier.startsWith('.')) {
+    const parts = fromPath.split('/').slice(0, -1);
+    for (const part of specifier.split('/')) {
+      if (part === '..') parts.pop();
+      else if (part !== '.') parts.push(part);
+    }
+    base = parts.join('/');
+  } else return null;
+  for (const extension of RESOLVED_EXTENSIONS) {
+    const candidate = `${base}${extension}`;
+    if (readRepositoryFile(candidate) !== null) return candidate;
+  }
+  return null;
+}
+
+let e2eImportGraph;
+
+/**
+ * Every repository file each app E2E spec reads at run time, transitively:
+ * helpers, fixtures and the shared content they assert against. A change to
+ * one of them selects every spec that imports it.
+ */
+function specsByImportedFile() {
+  if (e2eImportGraph) return e2eImportGraph;
+  e2eImportGraph = new Map();
+  let specs = [];
+  try {
+    specs = readdirSync(new URL('frontend/e2e/', REPOSITORY_ROOT)).filter((name) =>
+      name.endsWith('.spec.ts'),
+    );
+  } catch {
+    return e2eImportGraph;
+  }
+  for (const name of specs) {
+    const spec = `e2e/${name}`;
+    if (OTHER_CONFIG_SPECS.has(spec)) continue;
+    const pending = [`frontend/${spec}`];
+    const visited = new Set(pending);
+    while (pending.length) {
+      const file = pending.pop();
+      const source = readRepositoryFile(file) ?? '';
+      for (const [, specifier] of source.matchAll(IMPORT_SPECIFIER)) {
+        const imported = resolveImport(file, specifier);
+        if (!imported || visited.has(imported)) continue;
+        visited.add(imported);
+        pending.push(imported);
+        const selecting = e2eImportGraph.get(imported) ?? new Set();
+        selecting.add(spec);
+        e2eImportGraph.set(imported, selecting);
+      }
+    }
+  }
+  return e2eImportGraph;
+}
+
+/** The app-suite specs one changed path selects: itself, its importers and its mapped specs. */
+function specsSelectedBy(path) {
+  const spec = path.slice('frontend/'.length);
+  const own =
+    /^frontend\/e2e\/.+\.spec\.ts$/u.test(path) && !OTHER_CONFIG_SPECS.has(spec) ? [spec] : [];
+  const mapped = E2E_RULES.filter(
+    (rule) => Array.isArray(rule.frontendE2E) && matchesAny(path, rule.sources),
+  ).flatMap((rule) => rule.frontendE2E);
+  return [...own, ...(specsByImportedFile().get(path) ?? []), ...mapped];
+}
+
 export function selectE2EFiles(paths) {
   const selected = new Set();
-  const addTest = (test) => {
+  for (const test of paths.flatMap(specsSelectedBy)) {
     if (!/^e2e\/[A-Za-z0-9][A-Za-z0-9_./-]*\.spec\.ts$/u.test(test)) {
       throw new Error(`Invalid E2E mapping: ${test}`);
     }
     selected.add(test);
-  };
-  for (const path of paths) {
-    const spec = path.slice('frontend/'.length);
-    if (/^frontend\/e2e\/.+\.spec\.ts$/u.test(path) && !OTHER_CONFIG_SPECS.has(spec)) {
-      addTest(spec);
-    }
-    for (const rule of E2E_RULES) {
-      if (Array.isArray(rule.frontendE2E) && matchesAny(path, rule.sources)) {
-        for (const test of rule.frontendE2E) addTest(test);
-      }
-    }
   }
   // Test paths, so plain code-point order is the intended ordering; the
   // comparator only says so out loud.
   return [...selected].sort((left, right) => (left < right ? -1 : Number(left > right)));
 }
 
-/** True when a changed path maps to `"frontendE2E": "all"` in e2e-paths.json. */
+// The workflow that defines the browser jobs and the setup action they run.
+const BROWSER_JOB_DEFINITIONS = new Set([
+  '.github/workflows/ci.yml',
+  '.github/actions/setup-frontend/action.yml',
+]);
+
+function isNonBrowserTooling(path) {
+  return (
+    !BROWSER_JOB_DEFINITIONS.has(path) &&
+    (path.startsWith('.github/') || path.startsWith('scripts/') || path.startsWith('infra/'))
+  );
+}
+
+/** A path outside the frontend that can change what a browser suite runs. */
+function isSharedBrowserInput(path) {
+  return !isOwnerFree(path) && !isFrontend(path) && !isNonBrowserTooling(path);
+}
+
+/**
+ * True when a changed path is a shared browser input or maps to
+ * `"frontendE2E": "all"` in e2e-paths.json.
+ */
 function selectsEveryE2E(paths) {
-  return paths.some((path) =>
-    E2E_RULES.some((rule) => rule.frontendE2E === 'all' && matchesAny(path, rule.sources)),
+  return paths.some(
+    (path) =>
+      isSharedBrowserInput(path) ||
+      E2E_RULES.some((rule) => rule.frontendE2E === 'all' && matchesAny(path, rule.sources)),
   );
 }
 
 /** The specs the E2E job passes to Playwright; an empty list runs every spec. */
 export function e2eSpecArgs(paths) {
   return selectsEveryE2E(paths) ? [] : selectE2EFiles(paths);
-}
-
-function isNonBrowserTooling(path) {
-  return path.startsWith('.github/') || path.startsWith('scripts/') || path.startsWith('infra/');
 }
 
 function isContract(path) {
@@ -157,6 +262,28 @@ function isSecuritySensitive(path) {
 function isInfra(path) {
   return path.startsWith('infra/') || path.startsWith('.github/workflows/');
 }
+
+// The production Worker CSP and consent suite (frontend/playwright.workers.config.ts)
+// serves the built app and marketing Workers under local Workerd. It runs for
+// their sources and policy owners, its own specs, and any change that selects
+// one of the app-suite specs it reruns against the built Workers.
+const WORKER_SUITE_SOURCES = [
+  'frontend/package.json',
+  'frontend/pnpm-lock.yaml',
+  'frontend/playwright.workers.config.ts',
+  'frontend/e2e/worker-csp.spec.ts',
+  'frontend/apps/app/**',
+  'frontend/apps/marketing/**',
+  'frontend/public/**',
+  'frontend/lib/server/**',
+  'frontend/lib/config/content-security-policy.ts',
+  'frontend/lib/consent/**',
+  'frontend/components/analytics/**',
+];
+const WORKER_SUITE_SPECS = new Set([
+  'e2e/marketing-pages.spec.ts',
+  'e2e/performance-states.spec.ts',
+]);
 
 // What Compose uniquely proves: the images build, and a CLEAN database reaches a
 // serving stack. So the trigger is container-shaped changes only -- the images,
@@ -197,6 +324,7 @@ export function classifyPaths(paths, { full = false } = {}) {
       contract: true,
       api: true,
       e2e: true,
+      workers: true,
       security: true,
       infra: true,
       compose: true,
@@ -207,6 +335,7 @@ export function classifyPaths(paths, { full = false } = {}) {
   const unowned = normalized.filter((path) => !isOwnerFree(path) && !isFrontend(path));
   const shared = unowned.length > 0;
   const e2eFiles = selectE2EFiles(normalized);
+  const everyE2E = selectsEveryE2E(normalized);
   const contract = shared || normalized.some(isContract);
   const frontend = shared || contract || normalized.some(isFrontend);
 
@@ -214,10 +343,11 @@ export function classifyPaths(paths, { full = false } = {}) {
     frontend,
     contract,
     api: shared || normalized.some(isApiService),
-    e2e:
-      unowned.some((path) => !isNonBrowserTooling(path)) ||
-      e2eFiles.length > 0 ||
-      selectsEveryE2E(normalized),
+    e2e: everyE2E || e2eFiles.length > 0,
+    workers:
+      everyE2E ||
+      normalized.some((path) => matchesAny(path, WORKER_SUITE_SOURCES)) ||
+      e2eFiles.some((spec) => WORKER_SUITE_SPECS.has(spec)),
     security: shared || normalized.some(isSecuritySensitive),
     infra: normalized.some(isInfra),
     compose: normalized.some(isComposeSensitive),
@@ -290,8 +420,10 @@ export function hasTrustworthyJobEvidence(jobs, workflowFile) {
         'API contract and ingress',
         'API service (TypeScript)',
         'E2E (playwright)',
+        'Worker CSP and consent (playwright)',
         'Security (secrets scan)',
         'Infra (Terraform and workflows)',
+        'CI result',
       ];
   // Matrix jobs report one job per shard, named `<family> (<shard>/<count>)`; a
   // skipped matrix reports a single job. Each family needs at least one job.

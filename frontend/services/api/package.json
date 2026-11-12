@@ -76,6 +76,7 @@
     "@types/node": "^26.6.6",
     "@types/pdfkit": "^0.17.7",
     "@types/pg": "^8.23.1",
+    "@vitest/coverage-istanbul": "catalog:",
     "kysely-codegen": "^0.20.0",
     "pdfjs-dist": "^6.5.438",
     "typescript": "^7.0.2",

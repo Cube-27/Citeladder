@@ -66,12 +66,29 @@ test('built marketing hydrates with one enforced header and blocks injected scri
     if (/violates.*(security policy|directive)/i.test(message.text()))
       violations.push(message.text());
   });
-  for (const path of ['/', '/pricing', '/privacy']) {
+  // Exactly one policy per page (docs/frontend-architecture.md): Astro puts a
+  // prerendered page's policy in a <meta> element, served as a static asset,
+  // and an on-demand page's in the response header. On-demand pricing reads
+  // the plan catalog from ORIGIN_UPSTREAM, which nothing serves here, so it
+  // renders its catalog-outage page (503) under the same policy.
+  const pages = [
+    { path: '/', carrier: 'meta', status: 200 },
+    { path: '/pricing', carrier: 'header', status: 503 },
+    { path: '/privacy', carrier: 'meta', status: 200 },
+  ] as const;
+  for (const { path, carrier, status } of pages) {
     const response = await page.goto(`https://127.0.0.1:8794${path}`);
-    expect(response?.status()).toBe(200);
-    expect(response?.headers()['content-security-policy']).toBeTruthy();
+    expect(response?.status()).toBe(status);
+    const header = response?.headers()['content-security-policy'];
+    const meta = page.locator('meta[http-equiv="content-security-policy"]');
+    if (carrier === 'header') {
+      expect(header).toContain("script-src 'self'");
+      await expect(meta).toHaveCount(0);
+    } else {
+      expect(header).toBeUndefined();
+      await expect(meta).toHaveAttribute('content', /script-src 'self'/);
+    }
     expect(response?.headers()['x-robots-tag']).toBeUndefined();
-    await expect(page.locator('meta[http-equiv="content-security-policy"]')).toHaveCount(0);
     await page.waitForFunction(() =>
       [...document.querySelectorAll('astro-island')].every((island) => !island.hasAttribute('ssr')),
     );
@@ -90,5 +107,7 @@ test('built marketing hydrates with one enforced header and blocks injected scri
   await checkInjectedBeacon(page);
   const missing = await page.request.get('https://127.0.0.1:8794/not-a-page.html');
   expect(missing.status()).toBe(404);
-  expect(missing.headers()['content-security-policy']).toBeTruthy();
+  // The 404 page is prerendered too, so its policy is its one <meta> element.
+  expect(missing.headers()['content-security-policy']).toBeUndefined();
+  expect((await missing.text()).match(/http-equiv="content-security-policy"/gu)).toHaveLength(1);
 });
