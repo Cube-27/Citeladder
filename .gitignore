@@ -15,6 +15,7 @@ frontend/apps/app/.wrangler/
 frontend/apps/app/.dev.vars*
 frontend/apps/marketing/.wrangler/
 frontend/apps/marketing/.dev.vars*
+frontend/apps/api-host/.dev.vars*
 frontend/apps/docs/.wrangler/
 frontend/.wrangler/
 frontend/apps/docs/.astro/
@@ -33,6 +34,10 @@ frontend/apps/docs/public/favicon.ico
 
 # OS
 .DS_Store
+
+# Developer-only seed, reset and dev-login tools. They hold fixture credentials
+# and drop databases, so they stay on each developer's machine, never in git.
+frontend/services/api/local/
 
 # Local screenshot/debug scratch scripts and their output
 frontend/.*.mjs
