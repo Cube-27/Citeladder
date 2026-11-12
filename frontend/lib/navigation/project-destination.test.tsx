@@ -127,9 +127,11 @@ describe('useSelectProject', () => {
     const { result } = renderHook(() => useSelectProject());
 
     act(() => result.current(PROJECT_1));
+    const calls = [...navigate.mock.calls];
+    // The same hook navigates for a different project.
+    act(() => result.current(PROJECT_2));
 
-    expect(navigate).not.toHaveBeenCalled();
-    expect(navigate).not.toHaveBeenCalled();
+    expect([calls, navigate.mock.calls]).toEqual([[], [[`/projects?project=${PROJECT_2}`]]]);
   });
 
   it('replaces when the entry being left behind is dead', () => {

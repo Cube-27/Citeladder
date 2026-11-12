@@ -142,7 +142,10 @@ describe('committed API work at PostgreSQL', () => {
         .where('id', '=', workspaces[0]!)
         .execute();
     }, wake);
-    expect(wake).not.toHaveBeenCalled();
+    const afterPayload = wake.mock.calls.length;
+    // The same observer wakes for a real task insert.
+    await observeCommittedWork(() => enqueue(db), wake);
+    expect([afterPayload, wake.mock.calls.length]).toEqual([0, 1]);
   });
 
   it.each([false, true])(

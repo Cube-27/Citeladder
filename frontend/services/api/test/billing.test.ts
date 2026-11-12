@@ -1725,6 +1725,66 @@ describe('billing money and access owner', () => {
       ).status,
     ).toBe(413);
   });
+  it('accepts the previous webhook secret only inside a rotation overlap of at most 24 hours', async () => {
+    const t = await activated();
+    const body = JSON.stringify({
+      event: 'subscription.charged',
+      payload: {
+        subscription: { entity: { id: t.sub.external_subscription_id, status: 'active' } },
+      },
+    });
+    const hour = 3_600_000;
+    const at = (offset: number) => new Date(Date.now() + offset);
+    const deliver = async (
+      window: { previousStart: Date | null; previousEnd: Date | null },
+      secret: string,
+    ) => {
+      const eventId = randomUUID();
+      const app = createApp(
+        { ...config, razorpay: { ...config.razorpay, previousSecret: 'rotated-out', ...window } },
+        db,
+      );
+      const response = await app.request('/api/v1/billing/webhooks/razorpay', {
+        method: 'POST',
+        body,
+        headers: {
+          'x-razorpay-event-id': eventId,
+          'x-razorpay-signature': createHmac('sha256', secret).update(body).digest('hex'),
+        },
+      });
+      const stored = await db
+        .selectFrom('billing_webhook_events')
+        .select('processing_state')
+        .where('external_event_id', '=', eventId)
+        .execute();
+      return { status: response.status, stored: stored.map((row) => row.processing_state) };
+    };
+    const open = { previousStart: at(-hour), previousEnd: at(hour) };
+    const refused = { status: 400, stored: [] };
+
+    expect(await deliver(open, 'rotated-out')).toEqual({ status: 204, stored: ['pending'] });
+    expect(await deliver(open, config.razorpay.webhookSecret)).toEqual({
+      status: 204,
+      stored: ['pending'],
+    });
+    expect(await deliver(open, 'never-configured')).toEqual(refused);
+    // Expired, not yet started, longer than 24 hours, inverted or unset: the old secret is dead.
+    expect(
+      await deliver({ previousStart: at(-hour), previousEnd: at(-1000) }, 'rotated-out'),
+    ).toEqual(refused);
+    expect(
+      await deliver({ previousStart: at(hour), previousEnd: at(2 * hour) }, 'rotated-out'),
+    ).toEqual(refused);
+    expect(
+      await deliver({ previousStart: at(-hour), previousEnd: at(25 * hour) }, 'rotated-out'),
+    ).toEqual(refused);
+    expect(
+      await deliver({ previousStart: at(hour), previousEnd: at(-hour) }, 'rotated-out'),
+    ).toEqual(refused);
+    expect(await deliver({ previousStart: null, previousEnd: null }, 'rotated-out')).toEqual(
+      refused,
+    );
+  });
   it('defers refund settlement until authoritative processing completes', async () => {
     const t = await activated();
     const payment = await db

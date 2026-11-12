@@ -240,7 +240,7 @@ installs it. Its suite writes and deletes fixture rows. Pre-launch there are no
 customers, so it runs against the one local development database (`citeladder`
 in docker compose; plain `docker compose up -d` starts only it); do not create
 per-branch copies. Run it with `pnpm test:api` from `frontend/`, which drops
-the provider credentials the test guard (`test/inherited-credentials.ts`)
+the provider credentials and secrets the test guard (`test/inherited-credentials.ts`)
 refuses and logs to `<git-dir>/api-test.log`. After a new migration, bring that
 database forward with `pnpm --filter @citeladder/api migrate`. Tests never read `.env`
 (`test/environment.ts` sets `CITELADDER_DISABLE_DOTENV`), and the schema,

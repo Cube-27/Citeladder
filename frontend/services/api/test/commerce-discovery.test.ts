@@ -366,13 +366,18 @@ it('discards publication after cancellation or reclaim even if the same owner is
           .set({ lease_expires_at: new Date(0) })
           .where('id', '=', id)
           .execute();
-        expect(await recoverAnalyticsLeases(db, 10)).toBe(1);
+        const own = { workspaceId: t.workspaceId, taskIds: [id] };
+        expect(await recoverAnalyticsLeases(db, 10, own)).toBe(1);
         const queue = new TaskQueue(db, ANALYTICS_LANE, {
           leaseTtlSeconds: 120,
           now: () => new Date(Date.now() + 1000),
         });
         expect(
-          await queue.claim({ owner: 'discovery-test', kinds: ['commerce_competitor_discovery'] }),
+          await queue.claim({
+            owner: 'discovery-test',
+            kinds: ['commerce_competitor_discovery'],
+            scope: own,
+          }),
         ).toHaveLength(1);
         expect(await queue.markRunning(id, 'discovery-test', 0)).toBe(false);
         expect(await queue.markRunning(id, 'discovery-test', 1)).toBe(true);
@@ -408,7 +413,9 @@ it('recovers exhausted tasks in bounded batches, preserves errors, and drains an
     .set({ error_code: 'prior_error', error_detail: 'Prior failure' })
     .where('id', '=', two)
     .execute();
-  expect(await recoverAnalyticsLeases(db, 1)).toBe(1);
+  expect(
+    await recoverAnalyticsLeases(db, 1, { workspaceId: t.workspaceId, taskIds: [one, two] }),
+  ).toBe(1);
   expect(await worker(successful).runUntilIdle()).toBe(0);
   expect(await queueTask(one)).toMatchObject({
     status: 'failed',
