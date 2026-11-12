@@ -148,42 +148,52 @@ describe('durable paid acquisition boundaries', () => {
       received_rows: 1000,
     });
   });
-  it('ends a parked run whose connection changed as partial, keeping the dataset it published', async () => {
-    const t = await run(),
-      plan = t.plans[0]!,
-      prep = dispatched(await t.state.prepare(plan, 0));
-    await t.state.dispatch(prep);
-    await t.state.saveResponse(prep.call.id, response);
-    await t.state.publish(plan, prep.call.id, []);
-    await t.state.park(new Date(Date.now() + 60_000));
-    // The worker claims the parked task again once its wait is over.
-    await db
-      .updateTable('analytics_tasks')
-      .set({
-        status: 'running',
-        lease_owner: t.task.lease_owner,
-        lease_expires_at: new Date(Date.now() + 120000),
-      })
-      .where('id', '=', t.task.id)
-      .execute();
-    await db
-      .updateTable('provider_connections')
-      .set({ active: false })
-      .where('id', '=', t.connectionId)
-      .execute();
-    expect(await t.state.start()).toBeNull();
-    expect(await t.state.run().executeTakeFirstOrThrow()).toMatchObject({
-      status: 'partial',
-      error_code: 'connection_changed',
-    });
-    expect(
+  it.each(['connection_changed', 'pricing_changed'])(
+    'ends a parked run restarted after %s as partial, keeping the dataset it published',
+    async (change) => {
+      const t = await run(),
+        plan = t.plans[0]!,
+        prep = dispatched(await t.state.prepare(plan, 0));
+      await t.state.dispatch(prep);
+      await t.state.saveResponse(prep.call.id, response);
+      await t.state.publish(plan, prep.call.id, []);
+      await t.state.park(new Date(Date.now() + 60_000));
+      // The worker claims the parked task again once its wait is over.
       await db
-        .selectFrom('search_intelligence_datasets')
-        .select('status')
-        .where('id', '=', prep.dataset.id)
-        .executeTakeFirstOrThrow(),
-    ).toEqual({ status: 'published' });
-  });
+        .updateTable('analytics_tasks')
+        .set({
+          status: 'running',
+          lease_owner: t.task.lease_owner,
+          lease_expires_at: new Date(Date.now() + 120000),
+        })
+        .where('id', '=', t.task.id)
+        .execute();
+      if (change === 'connection_changed')
+        await db
+          .updateTable('provider_connections')
+          .set({ active: false })
+          .where('id', '=', t.connectionId)
+          .execute();
+      else
+        await db
+          .updateTable('search_intelligence_runs')
+          .set({ pricing_version: 'retired-price' })
+          .where('id', '=', t.runId)
+          .execute();
+      expect(await t.state.start()).toBeNull();
+      expect(await t.state.run().executeTakeFirstOrThrow()).toMatchObject({
+        status: 'partial',
+        error_code: change,
+      });
+      expect(
+        await db
+          .selectFrom('search_intelligence_datasets')
+          .select('status')
+          .where('id', '=', prep.dataset.id)
+          .executeTakeFirstOrThrow(),
+      ).toEqual({ status: 'published' });
+    },
+  );
   it.each([null, '1.00'])(
     'closes collecting datasets when a saved receipt stops the run (cost %s)',
     async (cost) => {

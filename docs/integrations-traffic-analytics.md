@@ -228,8 +228,11 @@ selected Search Console day rows. Search Console imports final data only and
 finalizes days late, so days after that anchor are not yet reported
 (`not_yet_reported` in the persisted day quality): neither zero nor a quality
 flag. Search Console finalizes days in order, so a day before the anchor is also
-not yet reported when its selected revision reported no row on or after it: that
-revision read the day before it was final. Performance `covered_days` counts the
+not yet reported when its selected revision reported no row on or after it and
+fetched it within `sync_search_console_finality_days`: that revision may have
+read the day before it was final. A revision fetched later than that read the
+day final, so a silent day reads as measured zero. Sync re-reads a pending day
+until it passes that bound, so the last read decides it. Performance `covered_days` counts the
 days between the earliest and latest rows that a complete partition imported.
 A property that has never reported a row keeps the window-end anchor, so a
 genuinely silent property reads as measured zero. Zero against missing is

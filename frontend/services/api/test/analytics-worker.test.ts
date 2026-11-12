@@ -219,7 +219,8 @@ describe('referral chain', () => {
     ]);
     const [refresh] = await tasks('ai_referrals_snapshot_refresh');
     expect(refresh?.status).toBe('succeeded');
-    expect(refresh?.idempotency_key.endsWith(`:${seed.syncRunId}`)).toBe(true);
+    // The refresh rebuilds this import's revision.
+    expect(refresh?.payload).toMatchObject({ source_revision: seed.syncRunId });
 
     const snapshot = await db
       .selectFrom('ai_referrals_snapshots')

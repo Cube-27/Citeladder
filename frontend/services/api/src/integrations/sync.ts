@@ -9,6 +9,7 @@ import { policy } from '../config.ts';
 import { budget, spendBudget } from '../abuse/usage.ts';
 import { isoDateText } from '../db/timestamps.ts';
 import { addDays, reportingDay } from '../calendar-days.ts';
+import { selectedPartition } from './partitions.ts';
 
 const settings = integrationSettings();
 
@@ -34,7 +35,7 @@ type PropertyZone = { provider: string; reporting_timezone: string | null };
  * A GA4 property whose zone is not yet known uses the latest zone on Earth,
  * so a sync never imports a day the property is still recording.
  */
-export function propertyYesterday(property: PropertyZone, now = new Date()): string {
+function propertyYesterday(property: PropertyZone, now = new Date()): string {
   const zones: Record<string, string> = integrationPolicy.reporting_time_zones;
   const timeZone = property.reporting_timezone ?? zones[property.provider] ?? 'UTC';
   return addDays(reportingDay(now, timeZone), -1);
@@ -239,45 +240,55 @@ async function syncWindow(
   target: Awaited<ReturnType<typeof resolveSyncTarget>>,
 ): Promise<[string, string]> {
   const yesterday = propertyYesterday(target);
-  let [windowStart, windowEnd] = windowFor(input.windowStart, input.windowEnd, yesterday);
-  if (
-    input.windowStart === undefined &&
-    input.windowEnd === undefined &&
-    (input.syncKind ?? 'on_demand') !== 'backfill'
-  ) {
-    const latest = await trx
-      .selectFrom('integration_sync_runs')
-      .select(isoDateText(sql`max(window_end)`).as('covered'))
-      .where('mapping_id', '=', target.id)
-      .where('workspace_id', '=', input.workspaceId)
-      .where('status', '=', 'succeeded')
-      .executeTakeFirst();
-    const covered = latest?.covered ?? null;
-    if (covered !== null) {
-      const earliest = addDays(yesterday, -(settings.sync_backfill_max_days - 1));
-      windowStart = addDays(covered, 1 - settings.sync_late_data_revision_days);
-      const unreported =
-        target.provider === 'gsc'
-          ? await firstUnreportedSearchConsoleDay(trx, input.workspaceId, target)
-          : null;
-      if (unreported !== null) {
-        const bound = addDays(yesterday, 1 - settings.sync_search_console_finality_days);
-        const pending = unreported > bound ? unreported : bound;
-        if (pending < windowStart) windowStart = pending;
-      }
-      if (windowStart < earliest) windowStart = earliest;
-      if (windowStart > yesterday) windowStart = yesterday;
-      windowEnd = yesterday;
-    }
-  }
+  // windowFor refuses a half-open window, so the start alone tells an explicit one.
+  const window = windowFor(input.windowStart, input.windowEnd, yesterday);
+  if (input.windowStart !== undefined || input.syncKind === 'backfill') return window;
+  const latest = await trx
+    .selectFrom('integration_sync_runs')
+    .select(isoDateText(sql`max(window_end)`).as('covered'))
+    .where('mapping_id', '=', target.id)
+    .where('workspace_id', '=', input.workspaceId)
+    .where('status', '=', 'succeeded')
+    .executeTakeFirst();
+  const covered = latest?.covered ?? null;
+  if (covered === null) return window;
+  return [await rereadStart(trx, input.workspaceId, target, covered, yesterday), yesterday];
+}
 
-  return [windowStart, windowEnd];
+const earlierDay = (a: string, b: string) => (a < b ? a : b);
+const laterDay = (a: string, b: string) => (a > b ? a : b);
+
+/**
+ * The first day a routine sync re-reads: the late-data days after `covered`,
+ * and any Search Console day still pending within its finality bound, kept
+ * within the backfill bound and yesterday.
+ */
+async function rereadStart(
+  trx: Database,
+  workspaceId: string,
+  target: Awaited<ReturnType<typeof resolveSyncTarget>>,
+  covered: string,
+  yesterday: string,
+): Promise<string> {
+  let start = addDays(covered, 1 - settings.sync_late_data_revision_days);
+  const unreported =
+    target.provider === 'gsc'
+      ? await firstUnreportedSearchConsoleDay(trx, workspaceId, target)
+      : null;
+  if (unreported !== null) {
+    const bound = addDays(yesterday, 1 - settings.sync_search_console_finality_days);
+    start = earlierDay(start, laterDay(unreported, bound));
+  }
+  const earliest = addDays(yesterday, -(settings.sync_backfill_max_days - 1));
+  return earlierDay(laterDay(start, earliest), yesterday);
 }
 
 /**
  * Search Console returns final days only, so a day after the property's latest
- * reported row may still be pending. A sync re-reads from that day, within
- * `sync_search_console_finality_days`, until Search Console reports it.
+ * selected row may still be pending. A sync re-reads from that day, within
+ * `sync_search_console_finality_days`, until Search Console reports it. Rows of
+ * a failed or superseded extract do not count: they never replaced the
+ * revision that read the earlier days.
  */
 async function firstUnreportedSearchConsoleDay(
   trx: Database,
@@ -291,6 +302,7 @@ async function firstUnreportedSearchConsoleDay(
     .where('project_id', '=', target.project_id)
     .where('property_ref', '=', target.property_ref)
     .where('dataset', '=', policy.traffic.DATASET_GSC_DAY_DAILY)
+    .where(selectedPartition())
     .executeTakeFirst();
   return latest?.day ? addDays(latest.day, 1) : null;
 }

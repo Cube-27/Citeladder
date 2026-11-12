@@ -5,6 +5,9 @@ import { record, strings } from '../db/json.ts';
 import { compareText } from '../text-order.ts';
 import { policy } from '../config.ts';
 import { firstOf } from '../lists.ts';
+import { integrationSettings } from './config.ts';
+
+const searchConsoleFinalityDays = integrationSettings().sync_search_console_finality_days;
 
 const landingDimensions = JSON.stringify(policy.integrations.datasets.ga4_landing_daily.dimensions);
 const aliased = (alias: string, name: string) => sql.ref(`${alias}.${name}`);
@@ -165,15 +168,18 @@ export async function partitionQuality(db: Database, scope: PartitionScope, data
     provider === 'gsc'
       ? sql<boolean>`coalesce(d.day > (select day from search_console),false)`
       : sql<boolean>`false`;
-  // Search Console finalizes days in order, so a selected revision that
-  // reported a row on or after a day read it final. One that did not read it
-  // before Search Console finalized it: not yet reported, even once a later
-  // revision reports later days.
+  // Search Console finalizes days in order, within its finality days. A
+  // selected revision that reported a row on or after a day, or fetched it
+  // after those days, read it final. Otherwise it may have read the day before
+  // Search Console finalized it: not yet reported, even once a later revision
+  // reports later days. Sync re-reads such a day until it is past that bound.
   const unfinalized =
     provider === 'gsc'
       ? sql<boolean>`coalesce(bool_or(s.revision is not null
           and (select day from search_console) is not null
-          and coalesce(rp.through < d.day,true)),false)`
+          and coalesce(rp.through < d.day,true)
+          and d.day > (v.fetched_at at time zone ${policy.integrations.reporting_time_zones.gsc})::date
+            - ${searchConsoleFinalityDays}::integer),false)`
       : sql<boolean>`false`;
   const reported =
     provider === 'gsc'
@@ -194,7 +200,7 @@ export async function partitionQuality(db: Database, scope: PartitionScope, data
   }>`
     with days as (select d::date as day from generate_series(${scope.start}::date,${scope.end}::date,interval '1 day') d),
     search_console as (select ${provider === 'gsc' ? latestSearchConsoleRow(scope.workspaceId, scope.projectId) : sql`null::date`} as day),
-    revisions as (select d.day,r.resync_seq,r.property_ref,a.id,a.extract_metadata,${complete} as complete,
+    revisions as (select d.day,r.resync_seq,r.property_ref,a.id,a.extract_metadata,a.fetched_at,${complete} as complete,
       ${incompatibleLanding('a')} as incompatible, r.status='succeeded' as succeeded
       from days d join integration_sync_runs r on d.day between r.window_start and r.window_end
       join integration_connections connection on connection.id=r.connection_id and connection.workspace_id=r.workspace_id

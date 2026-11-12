@@ -454,29 +454,38 @@ describe('integration sync API and immutable windows', () => {
     }
   });
 
-  it('ends a GA4 property west of UTC on its own yesterday, never its unfinished day', async () => {
-    const target = await seedTarget('ga4');
-    await db
-      .updateTable('integration_property_mappings')
-      .set({ reporting_timezone: 'America/Los_Angeles' })
-      .where('id', '=', target.mappingId)
-      .execute();
+  it.each([
     // 03:00 UTC is 19:00 or 20:00 the previous day in Los Angeles.
-    const day = pinNextUtcHour(3);
-    const plain = await detail(target, (await enqueue(target)).sync_run_id);
-    expect(plain.window_end).toBe(day(-2));
-    await db
-      .updateTable('integration_sync_runs')
-      .set({ status: 'cancelled' })
-      .where('id', '=', plain.id)
-      .execute();
-    const explicit = await enqueue(target, {
-      window_start: day(-3),
-      window_end: day(-1),
-    });
-    const run = await detail(target, explicit.sync_run_id);
-    expect([run.window_start, run.window_end]).toEqual([day(-3), day(-2)]);
-  });
+    ['America/Los_Angeles', 3, -2],
+    // 20:00 UTC is 05:00 the next day in Tokyo, so today's UTC date is finished there.
+    ['Asia/Tokyo', 20, 0],
+    // An unrecorded zone waits for UTC-12: 11:00 UTC is 23:00 the previous day there.
+    [null, 11, -2],
+  ])(
+    'ends a GA4 property in zone %s at %s:00 UTC on its own yesterday, never its unfinished day',
+    async (zone, hour, end) => {
+      const target = await seedTarget('ga4');
+      await db
+        .updateTable('integration_property_mappings')
+        .set({ reporting_timezone: zone })
+        .where('id', '=', target.mappingId)
+        .execute();
+      const day = pinNextUtcHour(hour);
+      const plain = await detail(target, (await enqueue(target)).sync_run_id);
+      expect(plain.window_end).toBe(day(end));
+      await db
+        .updateTable('integration_sync_runs')
+        .set({ status: 'cancelled' })
+        .where('id', '=', plain.id)
+        .execute();
+      const explicit = await enqueue(target, {
+        window_start: day(-3),
+        window_end: day(1),
+      });
+      const run = await detail(target, explicit.sync_run_id);
+      expect([run.window_start, run.window_end]).toEqual([day(-3), day(end)]);
+    },
+  );
 
   it('re-reads Search Console days until they are reported, within the finality bound', async () => {
     const target = await seedTarget();
@@ -488,31 +497,37 @@ describe('integration sync API and immutable windows', () => {
       windowEnd: yesterday,
       syncKind: 'backfill',
     });
-    await db
-      .updateTable('integration_sync_runs')
-      .set({ status: 'succeeded' })
-      .where('id', '=', covered.sync_run_id)
-      .execute();
-    const artifactId = randomUUID();
-    await db
-      .insertInto('integration_import_artifacts')
-      .values({
-        id: artifactId,
-        workspace_id: target.workspaceId,
-        connection_id: target.connectionId,
-        sync_run_id: covered.sync_run_id,
-        provider: 'gsc',
-        dataset: 'gsc_day_daily',
-        query_snapshot: JSON.stringify({}),
-        payload: JSON.stringify({}),
-        payload_hash: randomUUID(),
-        extract_metadata: JSON.stringify({}),
-        row_count: 1,
-        fetched_at: new Date(),
-        created_at: new Date(),
-      })
-      .execute();
-    const reportedThrough = async (date: string) => {
+    /** Ends the run as `status` with one Search Console day extract; its artifact and revision. */
+    const extracted = async (runId: string, status: 'succeeded' | 'failed') => {
+      const run = await db
+        .updateTable('integration_sync_runs')
+        .set({ status })
+        .where('id', '=', runId)
+        .returning('resync_seq')
+        .executeTakeFirstOrThrow();
+      const artifactId = randomUUID();
+      await db
+        .insertInto('integration_import_artifacts')
+        .values({
+          id: artifactId,
+          workspace_id: target.workspaceId,
+          connection_id: target.connectionId,
+          sync_run_id: runId,
+          provider: 'gsc',
+          dataset: 'gsc_day_daily',
+          query_snapshot: JSON.stringify({}),
+          payload: JSON.stringify({}),
+          payload_hash: randomUUID(),
+          extract_metadata: JSON.stringify({}),
+          row_count: 1,
+          fetched_at: new Date(),
+          created_at: new Date(),
+        })
+        .execute();
+      return { artifactId, revision: run.resync_seq };
+    };
+    const selected = await extracted(covered.sync_run_id, 'succeeded');
+    const reportedThrough = async (date: string, extract = selected) => {
       await db
         .insertInto('integration_metric_rows')
         .values({
@@ -525,8 +540,8 @@ describe('integration sync API and immutable windows', () => {
           date,
           dimension_key: date,
           metrics: JSON.stringify({ clicks: 1, impressions: 2 }),
-          source_artifact_id: artifactId,
-          resync_seq: 0,
+          source_artifact_id: extract.artifactId,
+          resync_seq: extract.revision,
           importer_version: 'test-1',
           created_at: new Date(),
         })
@@ -547,6 +562,16 @@ describe('integration sync API and immutable windows', () => {
     expect(await reportedThrough(day(-38))).toEqual([day(-10), yesterday]);
     // Reported up to 8 days ago: every day since may still be pending.
     expect(await reportedThrough(day(-8))).toEqual([day(-7), yesterday]);
+    // A failed run's later row never replaced the revision that read those days.
+    const failed = await enqueueSyncRun(db, {
+      ...target,
+      windowStart: day(-7),
+      windowEnd: yesterday,
+    });
+    expect(await reportedThrough(day(-2), await extracted(failed.sync_run_id, 'failed'))).toEqual([
+      day(-7),
+      yesterday,
+    ]);
     // Reported up to 2 days ago: only the 3 usual late-data days are re-read.
     expect(await reportedThrough(day(-2))).toEqual([day(-3), yesterday]);
   });

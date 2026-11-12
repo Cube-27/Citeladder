@@ -204,18 +204,20 @@ export class IntegrationClient {
       }),
     });
     // RFC 6749 answers a revoked or expired refresh token with 400
-    // `invalid_grant`: the credential is gone, so the user must reconnect.
-    if (form.grant_type === 'refresh_token' && response.status === 400) {
-      if (await isInvalidGrant(response))
-        throw new IntegrationError(
-          codes.ERROR_GRANT_AUTH_FAILED,
-          'Integration refresh token was refused',
-          false,
-          null,
-          400,
-        );
-      throw statusError(response.status, response.headers.get('retry-after'));
-    }
+    // `invalid_grant`: the credential is gone, so the user must reconnect. Any
+    // other refusal keeps its status classification below.
+    if (
+      form.grant_type === 'refresh_token' &&
+      response.status === 400 &&
+      (await isInvalidGrant(response))
+    )
+      throw new IntegrationError(
+        codes.ERROR_GRANT_AUTH_FAILED,
+        'Integration refresh token was refused',
+        false,
+        null,
+        400,
+      );
     const parsed = tokenSchema.safeParse(await this.#json(response));
     if (!parsed.success)
       throw new IntegrationError(codes.ERROR_PROVIDER_API, 'Malformed OAuth token response');
