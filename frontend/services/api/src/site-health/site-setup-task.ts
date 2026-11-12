@@ -364,8 +364,7 @@ async function persist(
     if (live?.task.lease_owner !== ctx.owner) throw new Abandoned();
     const { crawl } = live;
     let admitted = 0;
-    const exact = record(crawl.configuration).input_mode === 'exact_urls';
-    if (urls.length && !crawl.sample_mode && !exact) {
+    if (urls.length && !crawl.sample_mode) {
       const runtime = await lockRuntime(trx, crawl.workspace_id);
       const candidates = sitemapCandidates(urls);
       const admission = await admitCandidates(trx, crawl, candidates, runtime);

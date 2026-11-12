@@ -245,8 +245,8 @@ Razorpay keys and the readiness flags for the mode and region.
 
 ### Operator controls
 
-The non-public `operator_controls` flag (BL9) gives one workspace advanced Site
-Health crawl controls, the advanced page limit and unmetered crawl fetches.
+The non-public `operator_controls` flag (BL9) gives one workspace unmetered Site
+Health crawl fetches.
 Issue it to the operator's own workspace with the same `grant` command
 (`--key operator_controls --value 1`) and remove it with `revoke`. Development
 bootstrap and full development access never include it, and it confers nothing

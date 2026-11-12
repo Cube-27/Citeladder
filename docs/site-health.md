@@ -28,28 +28,29 @@ does not restate them.
 
 **Admission.** `POST /api/v1/site-crawls` (`planner.ts` `createCrawl`) runs as
 one transaction. It locks workspace, project, runtime, profile, then
-capacity/account, and allows one active crawl per project. Monitored-set saves
-and page reruns (`selection.ts`) lock project, runtime, membership, the active
-crawl, profile, then capacity/account. In order, admission:
+capacity/account, and allows one active crawl per project. Page reruns
+(`selection.ts`) lock project, runtime, membership, the active crawl, profile,
+then capacity/account. In order, admission:
 
 1. refreshes the held runtime from grants under the capacity lock;
-2. admits the root and seeds;
-3. freezes scope, input mode, page limit, page-kind filter, grant projection,
-   acquisition bounds and versions into `site_crawls.configuration`;
+2. admits the root;
+3. freezes scope (the root registrable domain), the page limit, grant
+   projection, acquisition bounds and versions into `site_crawls.configuration`;
 4. reserves the fetch budget;
-5. enqueues `discover` for the root and seeds (seeds only in `exact_urls`),
-   one `site_setup`, and `analyze` for already-monitored URLs, pages named by
-   a declaration still inside its verification window first; in `auto` mode
-   it also selects the root.
+5. enqueues `discover` for the root, one `site_setup`, and `analyze` for
+   already-monitored URLs, pages named by a declaration still inside its
+   verification window first, and selects the root.
 
-Input modes other than `auto`, seeds and page-kind filters are advanced
-controls (`advanced_controls_enabled`, or a workspace holding the
-`operator_controls` grant, which also crawls unmetered). A page rerun (`selection.ts`) creates a one-page crawl from a
-terminal crawl, or the next task generation of an active one (cancelling the
-page's older generation if it is still open, and counted by its latest). Its
-configuration carries `page_rerun`; it hands its page to verification and
-Opportunities but is never compared as a site crawl. It writes no project
-snapshot and no score summary, so it is never a trend point.
+The request takes only the project, an optional random seed and the robots
+choice. The page limit is `automatic_page_limit`, capped by the plan's
+discovery cap and the fetch budget left; a workspace holding the
+`operator_controls` grant crawls unmetered. Nothing edits the monitored set:
+crawls pick it (SH-B13). A page rerun (`selection.ts`) creates a one-page crawl
+from a terminal crawl; while a crawl is running it is refused with
+`crawl_already_active`, so no work joins a crawl outside its fetch hold
+(SH-B4). Its configuration carries `page_rerun`; it hands its page to
+verification and Opportunities but is never compared as a site crawl. It writes
+no project snapshot and no score summary, so it is never a trend point.
 
 **The current crawl** ([SH-B1](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12))
 is the project's newest usable crawl (`completed`, `partially_completed` or
@@ -67,8 +68,8 @@ crawl is usable, the newest site crawl, so a failure still shows.
 (`crawl_schedules`, `GET|PUT /api/v1/projects/{project_id}/crawl-schedule`),
 off by default, weekly or monthly, on every plan. The `crawl-scheduler`
 periodic owner (`workers/crawl-scheduler.ts`) leases each due schedule and
-admits the crawl through `createCrawl`, rerunning the newest site crawl's scope
-and settings as Recrawl does (the default crawl when there is none), so the
+admits the crawl through `createCrawl`, rerunning the newest site crawl's seed
+and robots choice as Recrawl does (the default crawl when there is none), so the
 fetch budget, grants and the one-active-crawl rule apply unchanged. An
 occurrence refused with `crawl_already_active` or
 `site_health_fetches_exhausted` is skipped: `next_run_at` advances to the next
@@ -174,7 +175,7 @@ Stop (`controls.ts`) commits only the cancellation and fetch settlement.
 ## URL admission and selection
 
 `classifyUrlAdmission` (`url-admission.ts`) decides every link, sitemap URL,
-seed, root and page redirect hop, in order:
+root and page redirect hop, in order:
 
 1. Reject scheme-less absolute references and join artifacts (`invalid_url`).
 2. Reject hard-excluded query keys (`page`, `q`, `sort`, `filter`, …).
@@ -187,10 +188,9 @@ seed, root and page redirect hop, in order:
    it out of analysis.
 4. Apply hard exclusions: the host's first label; login, account, cart,
    checkout and search paths; asset extensions (sitemaps excepted); URL length.
-5. Apply scope: the root registrable domain and its subdomains, then
-   include/exclude globs (`fnmatch`; exclude wins; no includes admits all).
+5. Apply scope: the root registrable domain and its subdomains.
 
-Globs never override a hard exclusion. Document URLs become `inventory_only`
+Document URLs become `inventory_only`
 and are never analyzed. The lists live in `analysis.json`
 (`acquisition.hard_exclusion_*`) and the reason codes in `acquisition.json`
 (`crawl.exclusions`).
@@ -209,23 +209,18 @@ links.
 
 **www/apex twins.** A URL whose `www.`/apex twin is already in the batch or the
 frontier is skipped. In sample mode, a twin that was already observed also
-counts. Stored identities are not merged, and scope, depth and the page-kind
-filter apply before a twin is chosen.
-
-**Page-kind filter.** Tiers map to page kinds through `value_kind_page_kinds`
-(`about` and `contact` → `about_contact`, `trust` → `trust_policy`). `root` and
-`other` always pass.
+counts. Stored identities are not merged, and scope and depth apply before a
+twin is chosen.
 
 **Budgets.** A full crawl stores eligible candidates in
 `site_discovery_frontier`, up to `max_frontier_urls`. It admits the best
 pending rows up to the requested page limit, and each admission queues a
 `discover`.
 
-**Automatic allowance.** In `auto` mode the allowance is
-`min(requested limit, plan monitored-URL limit)`. While it lasts, admitted HTML
+**Automatic allowance.** The allowance is
+`min(page limit, plan monitored-URL limit)`. While it lasts, admitted HTML
 URLs become system-monitored (`bootstrap`) and are analyzed after discovery;
-only a new activation spends it. Bulk "first N" selection takes the highest
-observed tier first.
+only a new activation spends it.
 
 **Sample mode** (`discovery_mode: sample`) has no frontier. It admits up to
 `sample_discovery_url_cap` URLs directly and analyzes within the workspace-wide
@@ -258,8 +253,8 @@ selected page links it.
 
 **Canonical aliases** (`canonical-alias.ts`). A system-selected page whose
 declared canonical names another active page becomes `duplicate` and loses its
-membership. Finalization resolves chains and cycles. User selections and the
-crawl root are never aliased, because the root carries the site checks.
+membership. Finalization resolves chains and cycles. The crawl root is never
+aliased, because it carries the site checks.
 
 ## Acquisition and evidence guarantees
 
@@ -695,9 +690,8 @@ JEV judges pairs through the analytics queue. Limits are in
 `change_intel` compares a terminal crawl with the newest earlier crawl that has
 the same origin, scope and analyzer/extractor versions. Recrawl
 (`POST /api/v1/site-crawls/{crawl_id}/recrawl`, [recrawl](../frontend/services/api/src/site-health/recrawl.ts),
-the header's Recrawl button) rebuilds the create request from a crawl's frozen
-globs, input mode, page limit, seeds, page kinds and random seed and goes
-through ordinary admission, so the next crawl is comparable by construction.
+the header's Recrawl button) rebuilds the create request from a crawl's random
+seed and robots choice and goes through ordinary admission, so the next crawl is comparable by construction.
 Recrawling a one-page re-read reruns the newest site crawl before it instead.
 [Scheduled crawls](#crawl-lifecycle) rebuild the same request from the newest
 site crawl, so they are comparable the same way. Scope excludes the
@@ -830,7 +824,7 @@ bounds. Settings marked *frozen* are copied into each crawl.
 
 | Setting | Default |
 |---|---|
-| `automatic_page_limit`, `max_requested_page_limit`, `max_advanced_requested_page_limit` | 500 each |
+| `automatic_page_limit` (the page limit; at most `max_discovery_urls`) | 500 |
 | `max_frontier_urls` / `max_crawl_depth` (frozen) | 50000 / 20 |
 | `sample_url_limit` / `sample_discovery_url_cap` | 10 / 200 |
 | `max_sitemap_documents` / `sitemap_fetch_concurrency` / `max_sitemap_admitted_urls` | 32 / 4 / 5000 |
@@ -845,7 +839,6 @@ bounds. Settings marked *frozen* are copied into each crawl.
 | `backstop_interval_seconds` / `stalled_crawl_reconcile_seconds` / `overdue_crawl_seconds` | 15 / 240 / 3600 |
 | `access_check_ttl_seconds` | 30 |
 | `live_score_refresh_page_interval` / `_page_fraction` / `_min_interval_seconds` | 10 / 0.1 / 5 |
-| `advanced_controls_enabled` | false |
 
 The policy files hold the rest:
 

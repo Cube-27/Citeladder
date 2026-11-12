@@ -6,7 +6,7 @@ import { policy } from '../config.ts';
 import { measuredTargetPages } from '../opportunities/enqueue.ts';
 import type { Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
-import { record, strings } from '../db/json.ts';
+import { record } from '../db/json.ts';
 import { holdRuntime, resolveRuntime } from './plan-runtime.ts';
 import type {
   SiteHealthProfiles,
@@ -21,7 +21,6 @@ import {
   crawlError,
   crawlSetting,
   frozenConfiguration,
-  normalizeGlobs,
   normalizedSeed,
   projectWebsiteRoot,
   type CrawlAdmission,
@@ -29,9 +28,8 @@ import {
 import { inventoryCrawlIds } from './reads/crawl.ts';
 import { recordCrawlEvent } from './site-task.ts';
 import type { Crawl } from './site-task.ts';
-import { classifyUrlAdmission, type Scope } from './url-admission.ts';
+import { classifyUrlAdmission } from './url-admission.ts';
 import { canonicalIdentity } from './url-identity.ts';
-import { hasOperatorControls } from '../entitlements/access.ts';
 
 /**
  * Resolve the runtime admission holds against the account's grants now. It
@@ -44,7 +42,7 @@ export async function admissionRuntime(db: Database, held: Runtime) {
   return runtime;
 }
 
-export async function enqueueCrawlTask(
+async function enqueueCrawlTask(
   db: Database,
   crawl: Crawl,
   input: {
@@ -247,15 +245,13 @@ function refreshProfile(
   workspaceId: string,
   projectId: string,
   root: string,
-  scope: Scope,
+  domain: string,
 ) {
   const now = new Date();
   const values = {
     root_url: root,
     root_host: new URL(root).hostname,
-    registrable_domain: scope.domain!,
-    include_globs: JSON.stringify(scope.include),
-    exclude_globs: JSON.stringify(scope.exclude),
+    registrable_domain: domain,
     updated_at: now,
   };
   return db
@@ -264,6 +260,7 @@ function refreshProfile(
       id: randomUUID(),
       workspace_id: workspaceId,
       project_id: projectId,
+      // Unused since SH-B13; the column is NOT NULL until a later release drops it (expand/contract).
       selection_version: 0,
       created_at: now,
       ...values,
@@ -297,39 +294,20 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
     .executeTakeFirst();
   if (existing) crawlError('Project already has an active crawl', 'crawl_already_active', 409);
   const { root, domain } = projectWebsiteRoot(project.website_url);
-  const scope = {
-    domain,
-    include: normalizeGlobs(request.include_globs),
-    exclude: normalizeGlobs(request.exclude_globs),
-  };
+  const scope = { domain };
   if (!classifyUrlAdmission(root, scope).accepted)
     crawlError('crawl root is not admissible', 'invalid_root');
   const held = await holdRuntime(db, workspaceId);
-  const profile = await refreshProfile(db, workspaceId, request.project_id, root, scope);
+  const profile = await refreshProfile(db, workspaceId, request.project_id, root, domain);
   const runtime = await admissionRuntime(db, held);
-  // Read under the account lock, so a concurrent grant or revocation serializes with admission.
-  const selected = controls(request, await hasOperatorControls(db, workspaceId));
-  const seeds = [
-    ...new Set(
-      selected.seeds.map((url) => {
-        const decision = classifyUrlAdmission(url, scope);
-        if (!decision.accepted || !decision.url)
-          crawlError('seed URL is not admissible', decision.reason ?? 'invalid_crawl_request');
-        return decision.url;
-      }),
-    ),
-  ];
+  const selected = controls(request);
   const now = new Date();
   const requested =
     runtime.discovery_url_cap == null
       ? selected.limit
       : Math.min(selected.limit, runtime.discovery_url_cap);
   const budget = await budgetedPageLimit(db, workspaceId, requested, now);
-  const configuration = frozenConfiguration(scope, runtime, {
-    ...selected,
-    limit: budget.limit,
-    seeds,
-  });
+  const configuration = frozenConfiguration(scope, runtime, { ...selected, limit: budget.limit });
   if (runtime.discovery_mode !== 'sample') {
     const previous = await db
       .selectFrom('site_crawls')
@@ -356,15 +334,8 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
     rerun: false,
   });
   if (budget.metered) await reserveCrawlFetches(db, crawl, budget.limit, now);
-  const initial = (selected.mode === 'exact_urls' ? seeds : [root, ...seeds]).slice(
-    0,
-    budget.limit,
-  );
-  await Promise.all(
-    [...new Set(initial)].map((url, position) =>
-      enqueueCrawlTask(db, crawl, { kind: 'discover', url, position }),
-    ),
-  );
+  if (budget.limit > 0)
+    await enqueueCrawlTask(db, crawl, { kind: 'discover', url: root, position: 0 });
   await enqueueCrawlTask(db, crawl, {
     kind: 'site_setup',
     url: root,
@@ -372,7 +343,7 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
     position: -1,
   });
   await seedMonitored(db, crawl);
-  if (selected.mode === 'auto') await addAutomaticRoot(db, crawl, runtime);
+  await addAutomaticRoot(db, crawl, runtime);
   await creationEvents(db, crawl);
   return crawl;
 }
@@ -386,11 +357,7 @@ export async function createPageRerunCrawl(
   url: Selectable<SiteUrls>,
   runtime: Runtime,
 ) {
-  const scope = {
-    domain: profile.registrable_domain || undefined,
-    include: strings(profile.include_globs),
-    exclude: strings(profile.exclude_globs),
-  };
+  const scope = { domain: profile.registrable_domain || undefined };
   const decision = classifyUrlAdmission(url.normalized_url, scope);
   if (!decision.accepted)
     crawlError('page is not admissible for rerun', decision.reason ?? 'invalid_crawl_request');
@@ -398,10 +365,7 @@ export async function createPageRerunCrawl(
   const budget = await budgetedPageLimit(db, workspaceId, 1, now);
   const configuration = {
     ...frozenConfiguration(scope, runtime, {
-      mode: 'auto',
       limit: budget.limit,
-      seeds: [],
-      kinds: [],
       robots: 'respect',
       robotsDecision: null,
     }),

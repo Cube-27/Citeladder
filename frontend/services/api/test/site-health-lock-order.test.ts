@@ -15,7 +15,7 @@ import type { DB } from '../src/generated/db-schema.ts';
 import { lockRuntime } from '../src/site-health/frontier.ts';
 import { refreshRuntime } from '../src/site-health/plan-runtime.ts';
 import { createCrawl } from '../src/site-health/planner.ts';
-import { replaceMonitoredSet, rerunPage } from '../src/site-health/selection.ts';
+import { rerunPage } from '../src/site-health/selection.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 import { asOwner, testConfig, testDatabase } from './support.ts';
@@ -105,9 +105,9 @@ async function monitoredCrawl(limit: number) {
   accounts.push(account);
   await grant(db, account, { key: 'monitored_urls', value: limit });
   const page = await fixtures.page(seed, '/a', {}, { observed: true });
-  await db
-    .transaction()
-    .execute((trx) => replaceMonitoredSet(trx, seed.workspaceId, seed.projectId, [page.id], 1));
+  await fixtures.monitor(seed, [page.id]);
+  // The runtime row the worker and controls lock, resolved from the grant.
+  await refreshRuntime(db, seed.workspaceId);
   return { seed, account, page };
 }
 
@@ -139,7 +139,7 @@ async function monitoredLimit(seed: SiteSeed) {
 }
 
 describe('Site Health lock order', () => {
-  it('lets a page rerun and a discover commit interleave without deadlock, repeatedly', async () => {
+  it('lets a page rerun and a discover commit interleave without deadlock, then refuses the rerun', async () => {
     const { seed, page } = await monitoredCrawl(1);
     for (let round = 0; round < 5; round++) {
       // A discover commit locks the runtime first, then the crawl (lockSiteTask).
@@ -159,11 +159,8 @@ describe('Site Health lock order', () => {
           .executeTakeFirstOrThrow();
         expect(crawl.id).toBe(seed.crawlId);
         await worker.commit().execute();
-        expect(await rerun).toMatchObject({
-          crawl_id: seed.crawlId,
-          site_url_id: page.id,
-          created_new_crawl: false,
-        });
+        // It waited rather than deadlocked, then found the running crawl (SH-B4).
+        await expect(rerun).rejects.toMatchObject({ status: 409, code: 'crawl_already_active' });
       } finally {
         if (!worker.isCommitted) await worker.rollback().execute();
         await rerun?.catch(() => undefined);
@@ -216,19 +213,17 @@ describe('Site Health lock order', () => {
 
   it('takes every admission, control and grant lock in DAG order', async () => {
     const { seed, account, page } = await monitoredCrawl(2);
+    const stopAll = () =>
+      db
+        .updateTable('site_crawls')
+        .set({ status: 'cancelled' })
+        .where('project_id', '=', seed.projectId)
+        .execute();
+    await stopAll();
     expect(
       await lockOrder((trx) => rerunPage(trx, seed.workspaceId, seed.projectId, page.id)),
     ).toEqual(['project', 'runtime', 'membership', 'crawl', 'profile', 'capacity', 'account']);
-    expect(
-      await lockOrder((trx) =>
-        replaceMonitoredSet(trx, seed.workspaceId, seed.projectId, [page.id], 2),
-      ),
-    ).toEqual(['project', 'runtime', 'membership', 'crawl', 'profile', 'capacity', 'account']);
-    await db
-      .updateTable('site_crawls')
-      .set({ status: 'cancelled' })
-      .where('id', '=', seed.crawlId)
-      .execute();
+    await stopAll();
     expect(
       await lockOrder((trx) => createCrawl(trx, seed.workspaceId, { project_id: seed.projectId })),
     ).toEqual(['project', 'runtime', 'profile', 'capacity', 'account']);

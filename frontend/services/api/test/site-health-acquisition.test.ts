@@ -930,13 +930,7 @@ describe('frontier admission', () => {
     expect(orderedUnique([twin, www], 'crawl-a')).toHaveLength(1);
   });
 
-  it('filters by page kind, never lets an inadmissible twin displace its pair, and samples one twin per crawl', async () => {
-    const filtered = await crawl({
-      config: { automatic_monitor_limit: 0, page_kinds: ['about_contact'] },
-    });
-    // About and contact are separate value tiers of the one `about_contact` page kind.
-    expect((await admit(filtered, ['/about-us', '/contact', '/products/widget'])).admitted).toBe(2);
-
+  it('never lets an inadmissible twin displace its pair, and samples one twin per crawl', async () => {
     const full = await crawl({ config: { automatic_monitor_limit: 0 } });
     const [apex] = candidates(['/guide']);
     // Ranked first but too deep to admit: the admissible twin must still get the slot.

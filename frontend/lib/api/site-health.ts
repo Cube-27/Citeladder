@@ -34,13 +34,11 @@ import {
   siteHealthOverviewSchema,
   siteIssueDetailSchema,
   siteIssuesPageSchema,
-  urlPreviewResponseSchema,
   robotsHistoryPageSchema,
 } from '@citeladder/contracts/site-health';
 import type {
   CrawlScheduleUpdateRequest,
   SiteCrawlCreateRequest,
-  UrlPreviewRequest,
 } from '@citeladder/contracts/site-health-requests';
 import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
@@ -64,12 +62,11 @@ import type {
   SiteHealthOverview,
   SiteIssueDetail,
   SiteIssuesPage,
-  UrlPreviewResponse,
 } from '@citeladder/contracts';
 
 /**
- * A new crawl, or with `recrawl_of` a rerun of that crawl's frozen scope and
- * settings. `recrawl_of` picks the route; it is never part of the body.
+ * A new crawl, or with `recrawl_of` a rerun of that crawl's seed and robots
+ * choice. `recrawl_of` picks the route; it is never part of the body.
  */
 export type StartCrawlInput = SiteCrawlCreateRequest & { recrawl_of?: string };
 
@@ -137,14 +134,6 @@ export const siteHealthApi = {
       timeoutMs: SITE_HEALTH_EXECUTION_REQUEST_TIMEOUT_MS,
     });
     return crawl;
-  },
-  previewUrls: async (input: UrlPreviewRequest, options?: ApiRequestOptions) => {
-    const res = await apiClient.post<UrlPreviewResponse>(
-      '/site-crawls/url-preview',
-      input,
-      options,
-    );
-    return strictValidate(urlPreviewResponseSchema, res, 'siteHealth.previewUrls');
   },
   listCrawls: async (params: CrawlListParams, options?: ApiRequestOptions) => {
     const path = withQuery('/site-crawls', definedQuery(params));

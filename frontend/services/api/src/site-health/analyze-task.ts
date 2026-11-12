@@ -48,7 +48,6 @@ import { canonicalIdentity } from './url-identity.ts';
 const codes = policy.site_health.page_analysis.acquisition.error_codes;
 const BODYLESS = new Set(policy.site_health.page_analysis.acquisition.bodyless_status_codes);
 const ACTIVE_TASK = [statuses.queued, statuses.leased, statuses.running, statuses.retry_wait];
-const SAMPLE_SOURCES = new Set<string>(policy.site_health.crawl.sample_analysis_selection_sources);
 
 type Outcome = AttemptOutcome & {
   facts: Facts | null;
@@ -70,8 +69,8 @@ function dependencyDelay(settings: SiteWorkerSettings, waited: number) {
 }
 
 type GuardRows = {
-  monitored: { active: boolean; selection_source: string } | undefined;
-  runtime: { monitored_url_limit: number } | undefined;
+  monitored: { active: boolean } | undefined;
+  runtime: { id: string } | undefined;
 };
 async function guardRows(
   db: Database,
@@ -81,24 +80,25 @@ async function guardRows(
 ): Promise<GuardRows> {
   const runtimeQuery = db
     .selectFrom('workspace_site_health_runtime')
-    .select('monitored_url_limit')
+    .select('id')
     .where('workspace_id', '=', crawl.workspace_id);
   const runtime = await (lock ? runtimeQuery.forUpdate() : runtimeQuery).executeTakeFirst();
   const monitoredQuery = db
     .selectFrom('monitored_site_urls')
-    .select(['active', 'selection_source'])
+    .select('active')
     .where('workspace_id', '=', crawl.workspace_id)
     .where('project_id', '=', crawl.project_id)
     .where('site_url_id', '=', task.site_url_id ?? '00000000-0000-0000-0000-000000000000');
   const monitored = await (lock ? monitoredQuery.forUpdate() : monitoredQuery).executeTakeFirst();
   return { runtime, monitored };
 }
-/** Live crawl, active membership, and an entitlement that still allows this row's analysis. */
+/**
+ * Live crawl, active membership and a resolved runtime. Every membership is
+ * system-picked (`bootstrap` or `free_sample`), and admission already spent its
+ * allowance, so a later grant change never strands its analysis.
+ */
 function guardAllows(crawl: Crawl, rows: GuardRows) {
-  if (!isActiveCrawl(crawl.status) || !rows.monitored?.active || !rows.runtime) return false;
-  return (
-    rows.runtime.monitored_url_limit > 0 || SAMPLE_SOURCES.has(rows.monitored.selection_source)
-  );
+  return isActiveCrawl(crawl.status) && Boolean(rows.monitored?.active) && Boolean(rows.runtime);
 }
 
 /** A discover artifact of this URL to reuse, or whether its discover task is still in flight. */

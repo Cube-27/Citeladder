@@ -64,7 +64,7 @@ export async function duplicateOf(
         .onRef('m.workspace_id', '=', 'u.workspace_id')
         .onRef('m.project_id', '=', 'u.project_id'),
     )
-    .select(['u.url_hash', 'm.active', 'm.selection_source'])
+    .select(['u.url_hash', 'm.active'])
     .distinct()
     .where('u.workspace_id', '=', crawl.workspace_id)
     .where('u.project_id', '=', crawl.project_id)
@@ -72,7 +72,7 @@ export async function duplicateOf(
     .execute();
   const source = rows.find((row) => row.url_hash === page.hash);
   const destination = rows.find((row) => row.url_hash === target);
-  if (!source?.active || source.selection_source === 'user') return '';
+  if (!source?.active) return '';
   return destination?.active ? target : '';
 }
 
@@ -124,20 +124,15 @@ export async function reconcileDuplicateAliases(db: Database, crawl: Crawl) {
         .onRef('m.workspace_id', '=', 'u.workspace_id')
         .onRef('m.project_id', '=', 'u.project_id'),
     )
-    .select(['u.url_hash', 'm.active', 'm.selection_source'])
+    .select(['u.url_hash', 'm.active'])
     .distinct()
     .where('u.workspace_id', '=', crawl.workspace_id)
     .where('u.project_id', '=', crawl.project_id)
     .execute();
   const admitted = new Set(rows.map((row) => row.url_hash));
   const active = new Set(rows.filter((row) => row.active).map((row) => row.url_hash));
-  // User selections and the crawl root, which carries the site-wide checks every page scores.
-  const protectedHashes = new Set([
-    ...rows
-      .filter((row) => row.active && row.selection_source === 'user')
-      .map((row) => row.url_hash),
-    rootHash(crawl),
-  ]);
+  // The crawl root carries the site-wide checks every page scores.
+  const protectedHashes = new Set([rootHash(crawl)]);
   const artifacts = await db
     .selectFrom('site_crawl_tasks as t')
     .innerJoin('site_fetch_artifacts as a', (join) =>
@@ -177,7 +172,7 @@ export type AliasGraph = {
   /** Admitted hashes this crawl fetched. */
   known: Set<string>;
   active: Set<string>;
-  /** Active user selections: never excluded, and a chain stops at one. */
+  /** Pages never excluded (the crawl root); a chain stops at one. */
   protectedHashes: Set<string>;
 };
 

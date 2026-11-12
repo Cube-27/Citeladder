@@ -447,20 +447,20 @@ describe('analyze failures', () => {
     },
   );
 
-  it('releases a system selection that answers 404, but keeps a user selection and a server error', async () => {
+  it('releases a selection that answers 404, but keeps one with a server error', async () => {
     const seed = await running();
-    const gone = await fixtures.analyzable(seed, '/gone', { source: 'bootstrap' });
-    const chosen = await fixtures.analyzable(seed, '/chosen');
-    const broken = await fixtures.analyzable(seed, '/broken', { source: 'bootstrap' });
+    const gone = await fixtures.analyzable(seed, '/gone');
+    const sampled = await fixtures.analyzable(seed, '/sampled', { source: 'free_sample' });
+    const broken = await fixtures.analyzable(seed, '/broken');
     await db
       .updateTable('site_crawl_tasks')
       .set({ max_attempts: 1 })
       .where('id', '=', broken.taskId)
       .execute();
     await analyze(
-      site({ '/gone': { status: 404 }, '/chosen': { status: 404 }, '/broken': { status: 503 } }),
+      site({ '/gone': { status: 404 }, '/sampled': { status: 404 }, '/broken': { status: 503 } }),
       gone.taskId,
-      chosen.taskId,
+      sampled.taskId,
       broken.taskId,
     );
     const active = async (siteUrlId: string) =>
@@ -473,9 +473,9 @@ describe('analyze failures', () => {
       ).active;
     expect([
       await active(gone.siteUrlId),
-      await active(chosen.siteUrlId),
+      await active(sampled.siteUrlId),
       await active(broken.siteUrlId),
-    ]).toEqual([false, true, true]);
+    ]).toEqual([false, false, true]);
   });
 
   it('honors robots before any page request and records one diagnostic attempt', async () => {
@@ -737,18 +737,22 @@ describe('analyze guards', () => {
     expect(await analyses(foreign, page.siteUrlId)).toEqual([]);
   });
 
-  it('cancels before any I/O when the entitlement no longer covers a user selection, but not a free sample', async () => {
+  it('keeps analyzing system selections after the monitored allowance drops to zero', async () => {
     const seed = await running();
-    const user = await fixtures.analyzable(seed, '/user', { monitoredLimit: 0 });
+    const picked = await fixtures.analyzable(seed, '/picked', { monitoredLimit: 0 });
     const sample = await fixtures.analyzable(seed, '/sample', {
       monitoredLimit: 0,
       source: 'free_sample',
     });
     const requests: string[] = [];
-    await analyze(site({ '/sample': { body: RICH } }, requests), user.taskId, sample.taskId);
-    expect(await task(user.taskId)).toMatchObject({ status: 'cancelled', error_code: 'cancelled' });
+    await analyze(
+      site({ '/picked': { body: RICH }, '/sample': { body: RICH } }, requests),
+      picked.taskId,
+      sample.taskId,
+    );
+    expect((await task(picked.taskId)).status).toBe('succeeded');
     expect((await task(sample.taskId)).status).toBe('succeeded');
-    expect(requests).toEqual(['/robots.txt', '/sample']);
+    expect(requests.toSorted()).toEqual(['/picked', '/robots.txt', '/sample']);
   });
 
   it.each([

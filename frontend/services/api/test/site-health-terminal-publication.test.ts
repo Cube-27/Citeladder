@@ -122,7 +122,7 @@ describe('terminal analysis publication', () => {
     const comparable = await publish({});
     await publish({ status: 'failed' });
     await publish({ analyzed_url_count: 0 });
-    await publish({ configuration: JSON.stringify({ include_globs: ['/blog/*'] }) });
+    await publish({ configuration: JSON.stringify({ root_registrable_domain: 'blog.test' }) });
     // A rerun snapshot written before reruns stopped writing them.
     const rerun = await publish({});
     await db
@@ -141,7 +141,7 @@ describe('terminal analysis publication', () => {
       reason: 'no_comparable_snapshot',
     });
     const otherScope = await publish({
-      configuration: JSON.stringify({ exclude_globs: ['/cart/*'] }),
+      configuration: JSON.stringify({ root_registrable_domain: 'other.test' }),
     });
     expect(await trendOf(otherScope)).toMatchObject({
       state: 'unavailable',

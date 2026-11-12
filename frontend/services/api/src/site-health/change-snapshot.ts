@@ -33,16 +33,7 @@ const p = policy.site_health.change_intel;
 // The page limit and the automatic monitor limit derived from it are left out:
 // they follow the fetch budget left at admission, so they vary between
 // otherwise identical crawls, and the comparison reads only pages both analyzed.
-const SCOPE_KEYS = [
-  'discovery_mode',
-  'sample_mode',
-  'root_registrable_domain',
-  'include_globs',
-  'exclude_globs',
-  'input_mode',
-  'seed_urls',
-  'page_kinds',
-] as const;
+const SCOPE_KEYS = ['discovery_mode', 'sample_mode', 'root_registrable_domain'] as const;
 const RULE_FIELDS = new Map(Object.entries(p.field_rules).map(([field, rule]) => [rule, field]));
 
 const sha256 = (text: string) => createHash('sha256').update(text).digest('hex');

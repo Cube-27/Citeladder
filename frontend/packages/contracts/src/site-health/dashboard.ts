@@ -393,11 +393,9 @@ export const siteHealthOverviewSchema = responseObject({
 });
 
 // Stable coded failures (plan §API contract). The frontend keys UX (upgrade
-// prompt, quota feedback, stale-revision refetch, retry copy) off these codes.
+// prompt, quota feedback, retry copy) off these codes.
 const siteHealthErrorCodeSchema = z.enum([
   'starter_required',
-  'site_health_quota_exceeded',
-  'stale_selection_version',
   'crawl_already_active',
   'site_health_discovery_limit_exceeded',
   'site_health_analysis_limit_exceeded',
@@ -414,15 +412,12 @@ const siteHealthErrorCodeSchema = z.enum([
   'http_5xx',
 ]);
 
-// Coded error body. Quota errors carry `limit`/`currently_used`; a stale
-// selection carries the expected/current versions. Extra keys fail loud.
+// Coded error body. Limit errors carry `limit`/`currently_used`. Extra keys fail loud.
 export const siteHealthErrorSchema = responseObject({
   code: siteHealthErrorCodeSchema,
   message: z.string(),
   limit: z.number().int().optional(),
   currently_used: z.number().int().optional(),
-  expected_selection_version: z.number().int().optional(),
-  current_selection_version: z.number().int().optional(),
 });
 
 export type IssueHistoryPage = z.infer<typeof issueHistoryPageSchema>;

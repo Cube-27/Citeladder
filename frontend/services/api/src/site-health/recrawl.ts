@@ -1,10 +1,10 @@
 /**
- * A recrawl reruns an earlier crawl's frozen scope and settings, so Changes
+ * A recrawl reruns an earlier crawl's random seed and robots choice, so Changes
  * always has a comparable baseline. It goes through ordinary crawl admission:
  * plan grants, fetch budgets and the one-active-crawl rule are unchanged.
  */
 import type { Database } from '../db/database.ts';
-import { jsonObject, strings } from '../db/json.ts';
+import { jsonObject } from '../db/json.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { isPageRerun, pageRerunSql } from './page-rerun.ts';
 import {
@@ -70,12 +70,6 @@ function rerunRequest(crawl: Crawl): CrawlAdmission {
   const ignore = frozen.robots === 'ignore';
   const request = createCrawlRequest.parse({
     project_id: crawl.project_id,
-    include_globs: strings(frozen.include_globs),
-    exclude_globs: strings(frozen.exclude_globs),
-    input_mode: frozen.input_mode,
-    requested_page_limit: frozen.requested_page_limit,
-    seed_urls: strings(frozen.seed_urls),
-    page_kinds: strings(frozen.page_kinds),
     // The same random seed draws the same sample, so a sampled crawl compares too.
     seed: crawl.random_seed,
     robots: ignore ? 'ignore' : 'respect',

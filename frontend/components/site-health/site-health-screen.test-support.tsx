@@ -190,7 +190,6 @@ function mockRoutes(
     http.get(`/api/v1/projects/${PROJECT}/monitored-urls`, () =>
       HttpResponse.json({
         project_id: PROJECT,
-        selection_version: 1,
         monitored_urls: [],
         quota: { used: 0, limit: 50 },
       }),

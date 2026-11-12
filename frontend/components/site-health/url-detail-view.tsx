@@ -32,11 +32,7 @@ import { TrafficUrlButton } from '@/components/ai-traffic/url-panel';
 export const PAGE_DETAIL_BACK: PageBack = { href: '/site?tab=pages', label: 'Back to Pages' };
 
 /** Queued is neither "running" nor "ready to ask again": it is its own state. */
-function rerunLabel(pending: boolean, queued: boolean): string {
-  if (pending) return 'Re-auditing…';
-  if (queued) return 'Re-audit queued';
-  return 'Re-audit this page';
-}
+const rerunLabel = (pending: boolean) => (pending ? 'Re-auditing…' : 'Re-audit this page');
 
 /**
  * One page of a crawl, in the order a site owner reads it: how the page
@@ -47,14 +43,12 @@ function rerunLabel(pending: boolean, queued: boolean): string {
 export function UrlDetailView({
   detail,
   rerunPending,
-  rerunQueued,
   onRerun,
   history,
   children,
 }: Readonly<{
   detail: PageDetail;
   rerunPending: boolean;
-  rerunQueued: boolean;
   onRerun: () => void;
   /** The page action that opens its resolved-issue history. */
   history?: ReactNode;
@@ -71,7 +65,7 @@ export function UrlDetailView({
           {detail.url_hash ? <TrafficUrlButton urlHash={detail.url_hash} /> : null}
           <AskAgentLink handoff={pageHandoff(detail)}>Ask agent about this page</AskAgentLink>
           <Button variant="primary" onClick={onRerun} disabled={rerunPending}>
-            {rerunLabel(rerunPending, rerunQueued)}
+            {rerunLabel(rerunPending)}
           </Button>
         </>
       }
