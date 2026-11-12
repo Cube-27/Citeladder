@@ -25,6 +25,7 @@ import { ClampText, TableActionsCell, TableCell, TableRow } from '@/components/u
 import type { ApiKey, ApiKeyCreated, ApiKeyScope } from '@citeladder/contracts/api-keys';
 import { apiKeyMutations, apiKeyQueries } from '@/lib/api/api-keys';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
+import { endOfDayInZone, useDisplayTimeZone } from '@/lib/display-timezone';
 import { API_HOST_ORIGIN } from '@/lib/config/api-host';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -121,14 +122,15 @@ function CreateKeyDialog({
   const [expiresOn, setExpiresOn] = useState('');
   const [created, setCreated] = useState<ApiKeyCreated | null>(null);
   const create = useMutation(apiKeyMutations.create(workspaceId));
+  // The list shows the expiry in the display time zone, so the chosen day is that zone's day.
+  const timeZone = useDisplayTimeZone();
   const createKey = () =>
     create.mutate(
       {
         name,
         scopes: [...scopes],
         project_ids: projectMode === 'all' ? null : [...chosen],
-        // The end of the chosen day where the person is, sent as an instant.
-        expires_at: expiresOn ? new Date(`${expiresOn}T23:59:59`).toISOString() : null,
+        expires_at: expiresOn ? endOfDayInZone(expiresOn, timeZone) : null,
       },
       { onSuccess: setCreated },
     );
@@ -233,7 +235,10 @@ function CreateKeyDialog({
               ))}
             </Stack>
           ) : null}
-          <Field label="Expires" hint="Optional. The key stops working at the end of this day.">
+          <Field
+            label="Expires"
+            hint={`Optional. The key stops working at the end of this day (${timeZone}).`}
+          >
             {(props) => (
               <DateField
                 id={props.id}

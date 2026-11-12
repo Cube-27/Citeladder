@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { z } from 'zod';
 import type { aiTrafficOverviewSchema, crawlSummarySchema } from '@citeladder/contracts/ai-traffic';
-import { formatPercent } from '@/lib/format';
+import { formatPercent, formatWindowDate } from '@/lib/format';
 import {
   citationGapLabel,
   connectionLabel,
@@ -84,11 +84,12 @@ export function ReferralSignal({
           Connect GA4 and sync a source/medium report to measure referral sessions.
         </p>
       )}
-      {synced ? (
+      {data.window_end === null ? null : (
         <p className="type-caption">
-          Report through <DisplayTime value={data.window_end} dateOnly />
+          {/* A report day is a calendar date, not an instant: it reads the same in every zone. */}
+          Report through <time dateTime={data.window_end}>{formatWindowDate(data.window_end)}</time>
         </p>
-      ) : null}
+      )}
     </SignalCard>
   );
 }

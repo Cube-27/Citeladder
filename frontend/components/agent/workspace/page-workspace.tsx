@@ -22,6 +22,7 @@ import { MutationNotice } from '@/components/ui/mutation-notice';
 import { QueryState } from '@/components/ui/query-state';
 import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
+import { UnsavedChangesGuard } from '@/components/ui/unsaved-changes-guard';
 import {
   suggestionHighlights,
   withQuotedReference,
@@ -237,6 +238,7 @@ export function PageWorkspace({
         </>
       }
     >
+      <UnsavedChangesGuard when={editing} />
       {tabs.narrow ? (
         <NarrowWorkspace
           tab={tabs.stackTab}

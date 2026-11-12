@@ -675,6 +675,16 @@ describe('uploads, coverage and serialized recomputation', () => {
       { date: lastDay, complete: false },
     ]);
     await refreshCrawlLogs(db, scope(tenant));
+    // The screen waits for processing by comparing these two server times.
+    const processed = await db
+      .selectFrom('crawl_log_sources')
+      .select('last_processed_at')
+      .where('id', '=', source.id)
+      .executeTakeFirstOrThrow();
+    expect(completed.completed_at).not.toBeNull();
+    expect(processed.last_processed_at!.getTime()).toBeGreaterThanOrEqual(
+      completed.completed_at!.getTime(),
+    );
     expect(
       await crawlSummary(db, scope(tenant), { start_date: middleDay, end_date: middleDay }),
     ).toMatchObject({

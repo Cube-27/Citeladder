@@ -25,12 +25,7 @@ import {
   formatWholePercent,
   type VisibilityFilters,
 } from '@/lib/visibility/dashboard';
-import {
-  formatPointDate,
-  toChartPoints,
-  toCompetitorSeries,
-  toNamedChartPoints,
-} from '@/lib/visibility/trends';
+import { toChartPoints, toCompetitorSeries, toNamedChartPoints } from '@/lib/visibility/trends';
 import { observationLabel } from '@/lib/visibility/vocabulary';
 import { coverageSummary } from '@/lib/visibility/coverage';
 import { formatDisplayDate } from '@/lib/format';
@@ -328,7 +323,7 @@ function HistoryLineChart({
     ...point,
     // The plotted values are already whole percent, so `formatRate` — which
     // scales a 0–1 rate — turned 38% into "3800%" in every hover label.
-    label: `${formatPointDate(point.completedAt, timeZone)} · ${formatWholePercent(point.value)}`,
+    label: `${point.dateLabel} · ${formatWholePercent(point.value)}`,
     // The full date is the hover; the axis tick gets the short form the
     // series was built with, so the ticks stay readable at three across.
     axisLabel: point.label,

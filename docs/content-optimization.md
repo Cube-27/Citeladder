@@ -232,7 +232,8 @@ thread (E1); every other chat keeps the thread. The workspace is a lazy chunk
   the revision on screen: `agent_output_conflict` reads the chat and the
   suggestions again and says the page changed; `agent_suggestion_conflict`
   shows the server's reason. Changes wait while a turn runs or a draft is
-  unsaved. An Action's content-gap evidence follows as coverage gaps with
+  unsaved. Leaving for another screen or project, or closing the tab, with an
+  unsaved draft asks first. An Action's content-gap evidence follows as coverage gaps with
   their evidence and Add to context.
 - **Outline and SEO.** The outline is the current body's ATX headings; a click
   puts the cursor at one. SEO shows the revision's fields and the fetch's

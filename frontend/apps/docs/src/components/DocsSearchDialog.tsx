@@ -83,6 +83,9 @@ export function DocsSearchDialog() {
   const groups = groupResults(searchArticles(entries ?? [], query));
   const results = groups.flatMap((group) => group.items);
   const cursor = active < results.length ? active : 0;
+  // The input is a combobox: ↑↓ move its active descendant, so assistive
+  // technology announces the highlighted guide while focus stays in the field.
+  const optionId = (index: number) => `docs-search-option-${index}`;
 
   const onInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (!results.length) return;
@@ -155,6 +158,11 @@ export function DocsSearchDialog() {
             onKeyDown={onInputKeyDown}
             placeholder="Try revisions or citations"
             autoComplete="off"
+            role="combobox"
+            aria-expanded={results.length > 0}
+            aria-controls="docs-search-results"
+            aria-autocomplete="list"
+            aria-activedescendant={results.length ? optionId(cursor) : undefined}
             className="text-body text-ink placeholder:text-ink-muted h-full min-w-0 flex-1 bg-transparent"
           />
           <Kbd>Esc</Kbd>
@@ -176,39 +184,60 @@ export function DocsSearchDialog() {
               </Button>
             )}
           </div>
-          {groups.map((group) => (
-            <section key={group.label} aria-label={group.label} className="mt-2">
-              <p className="text-caption text-ink-muted px-2 py-1 font-medium">{group.label}</p>
-              <ul>
+          <div
+            id="docs-search-results"
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Guide results are an active-descendant popup of the search field; native select/datalist cannot hold grouped two-line links.
+            role="listbox"
+            aria-label="Matching guides"
+          >
+            {groups.map((group, groupIndex) => (
+              <div
+                key={group.label}
+                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- A listbox may only own options and groups; fieldset is not a permitted child.
+                role="group"
+                aria-labelledby={`docs-search-group-${groupIndex}`}
+                className="mt-2"
+              >
+                <p
+                  id={`docs-search-group-${groupIndex}`}
+                  className="text-caption text-ink-muted px-2 py-1 font-medium"
+                >
+                  {group.label}
+                </p>
                 {group.items.map((result) => {
                   const index = results.indexOf(result);
                   return (
-                    <li key={result.href}>
-                      <a
-                        href={result.href}
-                        data-active={index === cursor}
-                        onMouseMove={() => setActive(index)}
-                        className={cn(
-                          'focus-ring flex h-16 items-start gap-3 rounded-sm p-3 no-underline',
-                          index === cursor && 'bg-surface-sunken',
-                        )}
-                      >
-                        <FileText className="text-ink-muted mt-0.5 size-4 shrink-0" aria-hidden />
-                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                          <span className="text-body-sm text-ink truncate font-medium">
-                            <Marked text={result.title} query={query} />
-                          </span>
-                          <span className="text-body-sm text-ink-secondary truncate">
-                            <Marked text={result.description} query={query} />
-                          </span>
+                    <a
+                      key={result.href}
+                      id={optionId(index)}
+                      href={result.href}
+                      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Focus stays on the search field while these guide links are its active descendants.
+                      role="option"
+                      // Options are reached through the field's active descendant, never by Tab.
+                      tabIndex={-1}
+                      aria-selected={index === cursor}
+                      data-active={index === cursor}
+                      onMouseMove={() => setActive(index)}
+                      className={cn(
+                        'focus-ring flex h-16 items-start gap-3 rounded-sm p-3 no-underline',
+                        index === cursor && 'bg-surface-sunken',
+                      )}
+                    >
+                      <FileText className="text-ink-muted mt-0.5 size-4 shrink-0" aria-hidden />
+                      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span className="text-body-sm text-ink truncate font-medium">
+                          <Marked text={result.title} query={query} />
                         </span>
-                      </a>
-                    </li>
+                        <span className="text-body-sm text-ink-secondary truncate">
+                          <Marked text={result.description} query={query} />
+                        </span>
+                      </span>
+                    </a>
                   );
                 })}
-              </ul>
-            </section>
-          ))}
+              </div>
+            ))}
+          </div>
         </div>
         <div className="border-line text-ink-muted text-caption flex shrink-0 items-center gap-4 border-t px-4 py-2">
           <span className="inline-flex items-center gap-2">

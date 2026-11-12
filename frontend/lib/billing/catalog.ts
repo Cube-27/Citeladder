@@ -157,10 +157,12 @@ export function providerMarketingStates(catalog: BillingCatalog): ProviderMarket
 /**
  * Format a catalog amount using the catalog's own currency and minor units.
  * Contains no currency or price constants — everything comes from the response.
+ * The locale is fixed, like every other figure, so a server-rendered price
+ * hydrates to the same text in any browser locale.
  */
 export function formatMoney(money: Money, minorUnits: number): string {
   const value = money.amount_minor / 10 ** minorUnits;
-  return new Intl.NumberFormat(undefined, {
+  return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: money.currency,
     minimumFractionDigits: value % 1 === 0 ? 0 : minorUnits,

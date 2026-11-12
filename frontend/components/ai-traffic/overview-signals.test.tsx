@@ -1,5 +1,5 @@
 import { screen } from '@testing-library/react';
-import { expect, it } from 'vite-plus/test';
+import { expect, it, onTestFinished } from 'vite-plus/test';
 import { renderWithProviders } from '@/test/render';
 import { CitationSignal, CrawlSignalPanel, ReferralSignal } from './overview-signals';
 
@@ -101,6 +101,11 @@ it('offers Connect GA4 until a referral snapshot exists, then says it synced', (
   expect(screen.getByRole('link', { name: 'Connect GA4' })).toBeVisible();
   expect(screen.queryByText('GA4 · Synced')).not.toBeInTheDocument();
 
+  // The report day keeps its calendar date in a display zone west of UTC.
+  document.cookie = 'citeladder-display-timezone=America%2FNew_York; path=/';
+  onTestFinished(() => {
+    document.cookie = 'citeladder-display-timezone=; path=/; max-age=0';
+  });
   view.rerender(
     <ReferralSignal
       data={{
@@ -114,5 +119,6 @@ it('offers Connect GA4 until a referral snapshot exists, then says it synced', (
   );
   expect(screen.getByText('GA4 · Synced')).toBeVisible();
   expect(screen.getByText('0')).toBeVisible();
+  expect(screen.getByText('Jul 22, 2026')).toBeVisible();
   expect(screen.queryByRole('link', { name: 'Connect GA4' })).not.toBeInTheDocument();
 });

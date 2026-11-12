@@ -234,6 +234,31 @@ it('links a missing keyword that became an Action', async () => {
   );
 });
 
+it('opens Sources on the run a citation match came from', async () => {
+  const runId = '88888888-8888-4888-8888-888888888888';
+  const match = {
+    ...row('99999999-9999-4999-8999-999999999999', 'crm software'),
+    row_kind: 'citation_match',
+    auxiliary: { audit_id: runId },
+  };
+  mswServer.use(
+    http.get(`/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`, () =>
+      HttpResponse.json({ dataset, rows: [match], next_cursor: null }),
+    ),
+  );
+  renderWithProviders(<SearchIntelligenceDatasetView dataset={dataset} />, {
+    projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
+  });
+  await userEvent.click(
+    await screen.findByRole('button', { name: 'View evidence for crm software' }),
+  );
+  const href = screen.getByRole('link', { name: 'View in Sources' }).getAttribute('href')!;
+  const url = new URL(href, 'http://x');
+  expect(url.pathname).toBe('/visibility');
+  expect(url.searchParams.get('tab')).toBe('sources');
+  expect(url.searchParams.get('run')).toBe(runId);
+});
+
 // `empty` is what acquisition records when the provider answered with no rows.
 it.each([
   ['empty', 0, 'The provider returned no data for this saved scope.'],

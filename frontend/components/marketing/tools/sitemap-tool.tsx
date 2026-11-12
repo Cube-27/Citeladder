@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { readToolFile } from '@/lib/free-tools/input';
 import { compareSitemaps } from '@/lib/free-tools/sitemap';
 import { FREE_TOOL_LIMITS } from '@/lib/config/free-tools';
+import { formatCount } from '@/lib/format';
 import { ToolForm, ToolInput } from './tool-form';
 
 function SitemapInput({
@@ -27,7 +28,7 @@ function SitemapInput({
     <div className="flex flex-col gap-3">
       <Field
         label={`Upload ${label.toLowerCase()}`}
-        hint={`Uncompressed UTF-8 XML, up to ${FREE_TOOL_LIMITS.fileBytes / 1_000_000} MB and ${FREE_TOOL_LIMITS.text.toLocaleString()} characters.`}
+        hint={`Uncompressed UTF-8 XML, up to ${FREE_TOOL_LIMITS.fileBytes / 1_000_000} MB and ${formatCount(FREE_TOOL_LIMITS.text)} characters.`}
         error={error}
       >
         {(props) => (

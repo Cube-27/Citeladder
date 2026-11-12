@@ -70,6 +70,11 @@ function setRange(value: TrendRange) {
   });
 }
 
+/** A link to Visibility Sources for one run, in the URL keys `useVisibilityFilters` reads. */
+export function visibilityRunSourcesHref(runId: string) {
+  return `/visibility?${new URLSearchParams({ tab: 'sources', run: runId }).toString()}`;
+}
+
 export function useVisibilityFilters() {
   const [activeTab, selectTab] = useUrlState('tab', tabCodec);
   const [selectedRunId, setSelectedRunId] = useUrlState('run', optionalStringUrlCodec, {
