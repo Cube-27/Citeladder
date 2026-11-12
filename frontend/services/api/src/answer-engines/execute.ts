@@ -185,8 +185,12 @@ export async function executeAnswer(
  * A budget exhausted before any text and an unexplained empty answer can
  * succeed on a fresh call; a safety decline will not. Non-empty text cut off
  * by the budget remains an observation, its `length` finish reason retained.
+ * An exchange the provider reports as failed, cancelled or paused is not an
+ * answer either, whatever text it carries: its text is unfinished.
  */
+const UNFINISHED = new Set<Answer['finish_reason']>(['error', 'cancelled', 'paused']);
 function answered(answer: Answer): Answer {
+  if (UNFINISHED.has(answer.finish_reason)) throw new ProviderError('answer_unfinished', true);
   if (answer.answer_text) return answer;
   if (answer.finish_reason === 'length') throw new ProviderError('truncated_before_answer', true);
   if (answer.finish_reason === 'content_filter') throw new ProviderError('content_filter');

@@ -236,7 +236,7 @@ A record named by ID must belong to that project.
 | --- | --- |
 | Direct (one call, one transaction with its security event) | `create_topic`, `rename_topic`, `delete_topic` (by name; its prompts stay, without a topic), `confirm_topics` (the Prompt Builder's topic plan: create with offering links, rename and delete in one change), `update_prompt_text`, `add_competitor`, `remove_competitor` (by name), `update_action_status`, `cancel_audit` |
 | Prompt Builder runs (metered; no dry run) | `preview_topics` (one model call, writes nothing; existing and proposed topics), `generate_prompts` (the builder's distribution-aware generate; candidates stay staged for review, the result links to `/prompts?review=1`, and the run records `mcp.write.generate_prompts`) |
-| Prepared | `prepare_add_prompts` (1–50; drops duplicates and binding failures with reasons; shows prompt slots after), `prepare_archive_prompts`, `prepare_launch_audit` (estimate shown; `max_attempts` frozen into the payload), `prepare_schedule`, `prepare_declare_implemented` |
+| Prepared | `prepare_add_prompts` (1–50; drops duplicates and binding failures with reasons; shows prompt slots after; an omitted cohort is filed by brand naming, as in the browser), `prepare_archive_prompts`, `prepare_launch_audit` (estimate shown; `max_attempts` frozen into the payload), `prepare_schedule`, `prepare_declare_implemented` |
 | Confirm | `confirm_change` |
 
 The Prompt Builder tools call the same command owners as the builder's routes

@@ -510,8 +510,14 @@ negative brand observations. An API exchange with no answer text fails its
 attempt in the shared [answer execution](../frontend/services/api/src/answer-engines/execute.ts)
 for every engine: `truncated_before_answer` (budget spent before any text) and
 `empty_answer` retry under the transient policy, `content_filter` does not, and
-an exhausted task stays failed. Non-empty text cut off by the budget is still an
-observation and keeps its `length` finish reason. All engines share the frozen
+an exhausted task stays failed. An exchange the provider reports as failed,
+cancelled or paused (Claude `pause_turn`; a Gemini interaction still in
+progress or awaiting continuation) fails as `answer_unfinished` under the
+transient policy, whatever text it carries; a Gemini `completed` interaction
+without text is still `empty_answer`. Non-empty text cut off by the budget is still an
+observation and keeps its `length` finish reason. A Claude answer is the text
+after its last web search, joined exactly as written: the search preamble is
+not answer text, and a sentence split across citation blocks stays one sentence. All engines share the frozen
 `audit_max_output_tokens`; Anthropic thinking counts against it, so the
 Claude route's `anthropic_thinking` (provider config) turns thinking off for
 answer capture instead of raising the budget. Provider costs and
@@ -905,7 +911,9 @@ the frozen comparison key, prompt text or analyzer/scoring versions changed.
 `implementations` lists the Actions whose frozen declaration checks measure the
 prompt (prompt-targeted and earned), with each declaration's id and go-live
 time (the newest `trend_max_points` kept); `latest` is the
-newest such run's prompt row with per-engine outcomes. Prompt rows carry
+newest such run's prompt row with per-engine outcomes: one per engine and
+model the run asked, so an engine whose every answer failed is listed with its
+failed count and no answer states. Prompt rows carry
 `answer_states` (mentioned and cited, mentioned only, cited only, neither; one
 answer counted once) and `action_id`, the live Action that targets the prompt
 (an Action whose evidence was cleared is not offered).
@@ -914,7 +922,7 @@ answer counted once) and `action_id`, the live Action that targets the prompt
 the line at non-comparable runs, and marks each implementation, with the list
 of that work and the notice that a marker shows when work went live, not that
 it moved a rate. Its Mentions and citations card shows the latest run's answer
-states overall and per engine, answer coverage, the competitors named where the
+states overall and per engine (with each engine's failed answers), answer coverage, the competitors named where the
 brand was not, and the hand-off to the prompt's Action. Overview's "Where
 you're missing" lists the latest default-market run's prompts and engines whose
 answers named a competitor but not the brand, each linking to its Action (or

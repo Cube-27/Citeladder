@@ -117,6 +117,8 @@ const FAILURE_REASONS: Record<string, string> = {
   truncated_before_answer:
     'The engine used its output allowance before writing an answer. Run it again.',
   empty_answer: 'The engine returned no answer text. Run it again.',
+  answer_unfinished:
+    'The engine reported that it failed, was cancelled or paused before finishing the answer. Run it again.',
   run_deadline_exceeded: 'The run reached its time limit before this answer finished.',
   poll_ceiling_exceeded: 'Google did not return a result within the polling limit.',
   submission_unreconciled: 'The provider result could not be matched to this answer.',
