@@ -3311,9 +3311,14 @@
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
+          },
+          "uncovered": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
           }
         },
-        "required": ["failing", "passing", "not_applicable", "unread"],
+        "required": ["failing", "passing", "not_applicable", "unread", "uncovered"],
         "additionalProperties": false
       },
       "IssueOccurrence": {

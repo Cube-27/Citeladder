@@ -147,11 +147,20 @@ function issueFamilyHits(e: SiteEvidence): DetectorHit[] {
     });
 }
 
+type PageIssue = SiteEvidence['issues'][number];
+
+/**
+ * One finding per opportunity rule and owned page, folding every defect on the
+ * page that maps to the rule: its evidence lists each of them, so a
+ * declaration verifies every folded Site Health rule, never one (SH-B2).
+ */
 export function detectSiteIssueOpportunities(e: SiteEvidence): DetectorHit[] {
   const urls = new Map(e.urls.map((u) => [u.site_url_id, u.normalized_url]));
   const mapping: Record<string, string> = p.SITE_ISSUE_TO_OPPORTUNITY_RULE_ID;
-  // Each hit cites one issue; ties sort by that issue's id.
-  const hits: { issueId: string; hit: DetectorHit }[] = [];
+  const pages = new Map<
+    string,
+    { rule: string; siteUrlId: string; url: string; issues: PageIssue[] }
+  >();
   for (const issue of e.issues) {
     const rule = mapping[issue.rule_id];
     const url = urls.get(issue.site_url_id);
@@ -162,39 +171,44 @@ export function detectSiteIssueOpportunities(e: SiteEvidence): DetectorHit[] {
       !url
     )
       continue;
-    hits.push({
-      issueId: issue.issue_id,
-      hit: {
-        rule_id: rule,
-        target: { kind: 'site_page', url },
-        evidence: {
-          issue_rule_id: issue.rule_id,
-          issue_severity: issue.severity,
-          category: issue.category,
-          issue_evidence: issue.evidence ?? {},
-          crawl_id: e.crawl_id,
-          site_url_id: issue.site_url_id,
-          url,
-          coverage: e.coverage,
-          limitations: [...e.limitations],
-        },
-        source_analysis_ids: [],
-        source_issue_ids: [issue.issue_id],
-        source_metric_ids: [],
-        value_factor: p.SITE_VALUE_FACTOR,
-        gap_factor: p.SITE_GAP_FACTOR,
-      },
-    });
+    const key = JSON.stringify([rule, issue.site_url_id]);
+    const found = pages.get(key);
+    if (found) found.issues.push(issue);
+    else pages.set(key, { rule, siteUrlId: issue.site_url_id, url, issues: [issue] });
   }
+  const hits = [...pages.values()].map(({ rule, siteUrlId, url, issues }): DetectorHit => {
+    const ordered = issues.toSorted(
+      (a, b) => compareText(a.rule_id, b.rule_id) || compareText(a.issue_id, b.issue_id),
+    );
+    return {
+      rule_id: rule,
+      target: { kind: 'site_page', url },
+      evidence: {
+        issues: ordered.map((issue) => ({
+          issue_id: issue.issue_id,
+          rule_id: issue.rule_id,
+          severity: issue.severity,
+          category: issue.category,
+          evidence: issue.evidence ?? {},
+        })),
+        crawl_id: e.crawl_id,
+        site_url_id: siteUrlId,
+        url,
+        coverage: e.coverage,
+        limitations: [...e.limitations],
+      },
+      source_analysis_ids: [],
+      source_issue_ids: sortedUnique(ordered.map((issue) => issue.issue_id)),
+      source_metric_ids: [],
+      value_factor: p.SITE_VALUE_FACTOR,
+      gap_factor: p.SITE_GAP_FACTOR,
+    };
+  });
   return [
-    ...hits
-      .toSorted(
-        (a, b) =>
-          compareText(a.hit.rule_id, b.hit.rule_id) ||
-          compareText(targetKey(a.hit.target), targetKey(b.hit.target)) ||
-          compareText(a.issueId, b.issueId),
-      )
-      .map(({ hit }) => hit),
+    ...hits.toSorted(
+      (a, b) =>
+        compareText(a.rule_id, b.rule_id) || compareText(targetKey(a.target), targetKey(b.target)),
+    ),
     ...issueFamilyHits(e),
   ];
 }

@@ -16,6 +16,11 @@ export type ActionSeed = OpportunitySeed & {
   members: Record<string, string>;
 };
 
+/** A page finding's evidence as the refresh stores it: the one defect it folds. */
+const pageIssues = (issueId: string, ruleId: string, severity: string) => ({
+  issues: [{ issue_id: issueId, rule_id: ruleId, severity, category: 'content', evidence: {} }],
+});
+
 async function seed(db: Database, content: boolean): Promise<ActionSeed> {
   const scn = await seedOpportunityScenario(db, content);
   return db.transaction().execute(async (trx) => {
@@ -67,7 +72,9 @@ async function seed(db: Database, content: boolean): Promise<ActionSeed> {
         opportunity_type: 'site',
         target_key: 'url:https://acme.test/a',
         target_url: 'https://acme.test/a',
-        evidence: JSON.stringify({ issue_rule_id: 'aeo.structured_data_present' }),
+        evidence: JSON.stringify(
+          pageIssues(scn.issue_structured_id, 'aeo.structured_data_present', 'medium'),
+        ),
         source_issue_ids: JSON.stringify([scn.issue_structured_id]),
       }),
       opportunityRow(scope, {
@@ -78,7 +85,7 @@ async function seed(db: Database, content: boolean): Promise<ActionSeed> {
         opportunity_type: 'site',
         target_key: 'url:https://acme.test/b',
         target_url: 'https://acme.test/b',
-        evidence: JSON.stringify({ issue_rule_id: 'aeo.answer_first' }),
+        evidence: JSON.stringify(pageIssues(scn.issue_content_id, 'aeo.answer_first', 'low')),
         source_issue_ids: JSON.stringify([scn.issue_content_id]),
       }),
     ];

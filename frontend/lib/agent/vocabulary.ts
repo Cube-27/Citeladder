@@ -211,6 +211,8 @@ const CHECK_REASON: Record<string, string> = {
     'That crawl did not read the affected pages after go-live. Run a crawl that includes them.',
   cohort_partly_analyzed:
     'The affected pages that crawl read pass, but it did not read them all. Run a crawl that includes the rest.',
+  cohort_sampled:
+    'Every checked page passes, but the issue was on more pages than one check covers, so it cannot be verified on all of them.',
 };
 
 export function checkReasonLabel(reason: string | null): string | null {

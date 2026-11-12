@@ -343,8 +343,8 @@ distinct expectation, each scoped to what the Action changed:
 
 | Finding | Check | Read by |
 |---|---|---|
-| Site Health rule | the rule passes on the page | the next crawl that analyzes the page after go-live |
-| Issue family (`issue_family`) | the rule passes (or no longer applies, counted apart) on every frozen cohort page: met reads **Verified**; some pages passing and some failing is `unmet` `partially_resolved`, none passing `unmet` `still_failing`, both naming the pages still failing; a crawl with another analyzer or rule catalog than the cohort's crawl, or one that read none or only some of the cohort without a failure, is `unavailable` (**Inconclusive**) with its reason | each crawl after go-live, comparable when its analyzer and rule catalog match the cohort's crawl |
+| Site Health rule | each Site Health rule the page finding folds together passes on the page, one check per rule ([SH-B2](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12)); a finding whose evidence names no rule gets no check | the next crawl that analyzes the page after go-live |
+| Issue family (`issue_family`) | the rule passes (or no longer applies, counted apart) on every frozen cohort page: met reads **Verified**; some pages passing and some failing is `unmet` `partially_resolved`, none passing `unmet` `still_failing`, both naming the pages still failing; a crawl with another analyzer or rule catalog than the cohort's crawl, or one that read none or only some of the cohort without a failure, is `unavailable` (**Inconclusive**) with its reason. A family with more pages than its cohort counts the rest as `uncovered` and is never verified: a cohort that clears is `unavailable` `cohort_sampled` (SH-B2) | each crawl after go-live, comparable when its analyzer and rule catalog match the cohort's crawl |
 | Contextual link | the selected link is in main content | the next compatible crawl |
 | Search Console (page or query) | clicks per day on that page or query rise against the rate in the last daily window that ended before go-live (sync windows differ in length, so windows compare as rates) | each synced daily window that starts after the go-live day (that day is partly before the change) |
 | Keyword gap | the project appears for the search: Search Console impressions, or an owned ranking in a later Keyword Research dataset whose provider check postdates go-live; still missing or not ranking yet reads `waiting`, never `unmet` | each synced window that starts after go-live, and each later published ranking, shared or missing-keyword dataset for the same website and market |
@@ -356,8 +356,10 @@ distinct expectation, each scoped to what the Action changed:
 A finding nothing else can isolate — a category, a catalog field gap or a
 theme, or a visibility finding with no prompt — gets no check: the project-wide score moves for
 reasons the Action never touched, and site-wide clicks include every other
-page. The declaration still records the work, and the Action reads as
-implemented with nothing to measure.
+page. A site change (`site_change_*`) gets none either: it is a field that
+moved between two crawls, not a Site Health rule a crawl evaluates. The
+declaration still records the work, and the Action reads as implemented with
+nothing to measure.
 When the go-live time is earlier than evidence that already exists, the latest
 crawl, audit and Search Console window are queued for this declaration at once.
 Replay checks both the persisted project/Action identity and the original

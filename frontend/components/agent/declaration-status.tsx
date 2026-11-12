@@ -177,7 +177,8 @@ const FAILING_PAGES_SHOWN = 20;
 
 /**
  * An issue-family reading: how many cohort pages pass, fail, no longer apply
- * or went unread, and which still fail.
+ * or went unread, how many affected pages lie beyond the cohort, and which
+ * still fail.
  */
 function FamilyPages({
   pages,
@@ -193,6 +194,7 @@ function FamilyPages({
       ? count(pages.not_applicable, 'no longer applies', 'no longer apply')
       : null,
     pages.unread ? count(pages.unread, 'not read', 'not read') : null,
+    pages.uncovered ? count(pages.uncovered, 'not checked', 'not checked') : null,
   ]
     .filter(Boolean)
     .join(' · ');

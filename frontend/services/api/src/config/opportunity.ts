@@ -314,6 +314,8 @@ export const opportunities = {
       severity: 'high',
       title: 'A Site Health defect repeats across pages',
     },
+    // A site change is a field that moved between two crawls, not a Site
+    // Health rule a crawl evaluates, so no check can read it.
     site_change_potential_regression: {
       action_path: 'owned',
       enabled: true,
@@ -321,7 +323,7 @@ export const opportunities = {
       remediation:
         'Review the exact before/after evidence, restore the intended page signal, and verify it in a later comparable crawl.',
       rule_id: 'site_change_potential_regression',
-      check_kind: 'site_rule',
+      check_kind: null,
       severity: 'high',
       title: 'A crawl-observed page signal regressed',
     },
@@ -332,7 +334,7 @@ export const opportunities = {
       remediation:
         'Review the exact before/after evidence and restore the critical page signal before verifying it in a later comparable crawl.',
       rule_id: 'site_change_critical_regression',
-      check_kind: 'site_rule',
+      check_kind: null,
       severity: 'critical',
       title: 'A critical crawl-observed page signal regressed',
     },
@@ -343,7 +345,7 @@ export const opportunities = {
       remediation:
         'Review the inspected text change and update the modification date only when it accurately describes the published content.',
       rule_id: 'site_change_metadata_inconsistency',
-      check_kind: 'site_rule',
+      check_kind: null,
       severity: 'medium',
       title: 'Content change and modification date disagree',
     },
@@ -354,7 +356,7 @@ export const opportunities = {
       remediation:
         'Confirm whether non-text content changed; otherwise restore an accurate modification date.',
       rule_id: 'site_change_cosmetic_refresh',
-      check_kind: 'site_rule',
+      check_kind: null,
       severity: 'low',
       title: 'Modification date moved without inspected text change',
     },

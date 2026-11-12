@@ -435,7 +435,8 @@ export const productMetricExpectedCheckSchema = responseObject({
  * when every cohort page passes, unmet with `partially_resolved` or
  * `still_failing` otherwise, unavailable (inconclusive) when that crawl could
  * not read the cohort. `page_count` counts the family's pages at declaration;
- * more than `site_url_ids` means the frozen list was cut.
+ * more than `site_url_ids` means the frozen list was cut, and then a passing
+ * cohort is `cohort_sampled`, never met: the pages beyond it are unchecked.
  */
 const issueFamilyExpectedCheckSchema = responseObject({
   kind: z.literal('issue_family'),
