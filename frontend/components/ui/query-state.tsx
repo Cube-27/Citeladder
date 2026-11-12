@@ -5,7 +5,7 @@ import { LOADING_INDICATOR_DELAY_MS } from '@/lib/config/operational';
 import { cn } from '@/lib/utils';
 
 import { EmptyHeadingLevelContext, EmptyState } from './empty-state';
-import { ReadError } from './read-error';
+import { ReadError, readErrorProps, type RetryableRead } from './read-error';
 import { Skeleton } from './skeleton';
 
 /**
@@ -96,13 +96,12 @@ type NotMeasured = NotMeasuredCopy &
   }>;
 
 /** The read a screen state is derived from: a TanStack query, or its shape. */
-type ScreenRead<T> = Readonly<{
-  status: 'pending' | 'error' | 'success';
-  data: T | undefined;
-  error: unknown;
-  refetch: () => unknown;
-  isFetching: boolean;
-}>;
+type ScreenRead<T> = RetryableRead &
+  (
+    | Readonly<{ status: 'pending' }>
+    | Readonly<{ status: 'error' }>
+    | Readonly<{ status: 'success'; data: T }>
+  );
 
 /** A read's measured content, or the `QueryState` it shows instead. */
 type ScreenState<M> =
@@ -127,6 +126,10 @@ type MeasuredOptions<T, M extends T> = Subject &
  * with Retry for exactly that read, a successful one without a measurement is
  * "Not measured yet", and only a measured answer reaches the content. A read
  * whose refetch failed reports the failure rather than its stale answer.
+ *
+ * Pass only a read that has been asked: a query the caller disables stays
+ * pending without fetching, so the caller renders why nothing was asked (no
+ * source connected, nothing selected) before calling this.
  */
 export function screenState<T>(read: ScreenRead<T>, options: Subject): ScreenState<T>;
 export function screenState<T, M extends T>(
@@ -140,16 +143,14 @@ export function screenState<T, M extends T>(
   if (read.status === 'pending') {
     return { kind: 'state', state: { kind: 'loading', label: `Loading ${options.subject}…` } };
   }
-  if (read.status === 'error' || read.data === undefined) {
+  if (read.status === 'error') {
     return {
       kind: 'state',
       state: {
         kind: 'error',
         title: `Couldn't load ${options.subject}`,
-        error: read.error,
         fallback: 'The request failed or timed out.',
-        onRetry: () => void read.refetch(),
-        pending: read.isFetching,
+        ...readErrorProps(read),
       },
     };
   }
