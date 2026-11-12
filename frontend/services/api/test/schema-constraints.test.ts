@@ -887,29 +887,59 @@ describe('project deletion', () => {
       from pg_constraint c
       where c.contype = 'f' and c.confdeltype = 'n' and c.confrelid <> 'public.users'::regclass
       order by 1, 2`.execute(db);
+    const checked: string[] = [];
     const scanned: string[] = [];
     for (const { child, cols } of references.rows) {
+      const reference = `${child}.${cols.join(',')}`;
+      checked.push(reference);
       // The lookup PostgreSQL runs for each deleted parent row.
       const lookup = sql.join(
         cols.map((col) => sql`${sql.ref(col)} = ${randomUUID()}::uuid`),
         sql` and `,
       );
-      const read = await indexesRead((trx) =>
+      const scans = await indexScans((trx) =>
         sql`explain (format json) select 1 from ${sql.table(child)} where ${lookup}`.execute(trx),
       );
-      if (!read.length) scanned.push(`${child}.${cols.join(',')}`);
+      // A tenant index alone reads the whole workspace or project per deleted parent.
+      const cleared = cols.filter((col) => col !== 'workspace_id' && col !== 'project_id');
+      const served = scans.some(({ condition }) =>
+        cleared.some((col) => condition.includes(`(${col} = `)),
+      );
+      if (!served) scanned.push(reference);
     }
+    expect(checked).toContain('commerce_categories.workspace_id,project_id,parent_category_id');
     expect(scanned).toEqual([]);
   });
 });
 
-/** The indexes a query's plan reads, planned with sequential scans priced out. */
-async function indexesRead(explain: (trx: Database) => Promise<unknown>) {
-  return db.transaction().execute(async (trx) => {
+/** The index scans in a query's plan, planned with sequential scans priced out. */
+async function indexScans(explain: (trx: Database) => Promise<unknown>) {
+  const plan = await db.transaction().execute(async (trx) => {
     await sql`set local enable_seqscan = off`.execute(trx);
-    const plan = JSON.stringify(await explain(trx));
-    return [...new Set([...plan.matchAll(/"Index Name":"([^"]+)"/g)].map((match) => match[1]))];
+    return explain(trx);
   });
+  const scans: { index: string; condition: string }[] = [];
+  const visit = (node: unknown): void => {
+    if (Array.isArray(node)) node.forEach(visit);
+    else if (node !== null && typeof node === 'object') {
+      if ('Index Name' in node && typeof node['Index Name'] === 'string')
+        scans.push({
+          index: node['Index Name'],
+          condition:
+            'Index Cond' in node && typeof node['Index Cond'] === 'string'
+              ? node['Index Cond']
+              : '',
+        });
+      Object.values(node).forEach(visit);
+    }
+  };
+  visit(plan);
+  return scans;
+}
+
+/** The names of the indexes a query's plan reads. */
+async function indexesRead(explain: (trx: Database) => Promise<unknown>) {
+  return (await indexScans(explain)).map(({ index }) => index);
 }
 
 describe('background reads', () => {

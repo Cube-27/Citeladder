@@ -23,8 +23,9 @@ Keyword Research run, call and dataset `status`, `pending_activations.status`,
 statuses had theirs in 0001. Migration `0035_indexes_and_constraints` adds
 `billing_payments.status`, `billing_catalog_revisions.publication_state`,
 `idempotency_records.state`, `agent_model_attempts.outcome` and
-`settlement_status`, and `execution_cost_projections.projection_status`. `test/schema-constraints.test.ts` proves each
-accepts every value its owner declares. Other status columns hold their
+`settlement_status`, and `execution_cost_projections.projection_status`.
+`test/schema-constraints.test.ts` proves each accepts every value its owner
+declares. Other status columns hold their
 vocabulary in code only. The CHECK enforces the vocabulary, not the edges.
 
 ## 1. Shared queue lanes
