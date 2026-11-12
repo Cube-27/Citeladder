@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
  * origin; "/" on the app origin is the product root, which a signed-out
  * visitor cannot use.
  */
-function AuthLogo() {
+export function AuthLogo() {
   return (
     <a
       href={websiteHref('/')}
@@ -66,8 +66,9 @@ export function AuthSplitShell({
 }
 
 /**
- * AuthShell — the frame for the workspace chooser, workspace setup and
- * onboarding: the logo top-left, the ThemeSwitch top-right, and one
+ * AuthShell — the frame for the workspace chooser and the setup screens'
+ * loading, failure and blocked states (setup itself is OnboardingShell):
+ * the logo top-left, the ThemeSwitch top-right, and one
  * `container-narrow` column on the `paper` ground. The column is top-aligned
  * with `space-12` above it, so cards of different heights never move their
  * top edge between steps. No navigation, footer links or illustrations.
@@ -155,8 +156,6 @@ type AuthCardProps = Readonly<{
   titleId?: string;
   sub?: ReactNode;
   icon?: LucideIcon;
-  /** The card's last row, under a rule (OnboardingStep's Back and Continue). */
-  footer?: ReactNode;
   /** One line under the card. */
   after?: ReactNode;
   children?: ReactNode;
@@ -167,7 +166,6 @@ function AuthCardFrame({
   titleId,
   sub,
   icon,
-  footer,
   after,
   children,
   signIn,
@@ -195,7 +193,6 @@ function AuthCardFrame({
         ) : null}
         <AuthHead id={headingId} title={title} sub={sub} icon={icon} centred={signIn} />
         {children}
-        {footer}
       </section>
       {after ? <p className="text-body-sm text-ink-secondary text-center">{after}</p> : null}
     </div>
@@ -203,10 +200,11 @@ function AuthCardFrame({
 }
 
 /**
- * AuthCard — one setup step on the Card's face (`surface`, 1px `line`), `radius-lg` and
+ * AuthCard — one card on the Card's face (`surface`, 1px `line`), `radius-lg` and
  * `space-10` padding (`space-6` on phones): the head, then the body
  * (`space-6` apart), and an optional line under the card (`after`). Used by
- * the workspace chooser and the setup screens; OnboardingStep shares it.
+ * the workspace chooser and the setup screens' loading, failure and blocked
+ * states; the setup steps themselves are OnboardingStep.
  */
 export function AuthCard(props: AuthCardProps) {
   return <AuthCardFrame {...props} signIn={false} />;

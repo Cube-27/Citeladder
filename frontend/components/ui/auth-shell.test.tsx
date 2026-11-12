@@ -70,13 +70,36 @@ describe('OnboardingShell', () => {
     );
 
     const progress = screen.getByRole('region', { name: 'Setup progress' });
-    expect(progress).toHaveTextContent('Research');
     expect(progress).toHaveTextContent('Step 2 of 3');
     expect(within(progress).getByRole('progressbar', { name: 'Research' })).toHaveAttribute(
       'value',
       '2',
     );
-    expect(screen.getByRole('heading', { level: 1, name: 'Finding what to track' })).toBeVisible();
+    // A done step shows a check, the current and later steps their numbers.
+    const stepItems = within(progress).getAllByRole('listitem');
+    expect(stepItems.map((item) => item.textContent)).toEqual(['Basics', '2Research', '3Confirm']);
+    expect(stepItems[1]).toHaveAttribute('aria-current', 'step');
+    expect(stepItems[0]).not.toHaveAttribute('aria-current');
+
+    const main = screen.getByRole('main', { name: 'Project setup' });
+    expect(
+      within(main).getByRole('heading', { level: 1, name: 'Finding what to track' }),
+    ).toBeVisible();
+    expect(within(main).getByRole('region', { name: 'Finding what to track' })).toHaveTextContent(
+      'steps',
+    );
+    expect(within(main).getByRole('button', { name: 'Review' })).toBeVisible();
+  });
+
+  it('leaves the stepper out of a one-screen setup', () => {
+    render(
+      <OnboardingShell mainLabel="Workspace setup">
+        <OnboardingStep title="Set up your workspace">name</OnboardingStep>
+      </OnboardingShell>,
+    );
+
+    expect(screen.queryByRole('region', { name: 'Setup progress' })).toBeNull();
+    expect(screen.getByRole('region', { name: 'Set up your workspace' })).toHaveTextContent('name');
   });
 });
 
